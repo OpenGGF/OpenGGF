@@ -25,6 +25,11 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 ## Tools
 
+- [Eggman's Sky voice generator](../../tools/audio/eggmans_sky_voice.py) synthesizes
+  original directed Alice announcements through OpenRouter, preserves raw takes outside
+  Git, verifies literal words after the approved metallic/vocoder/DAC processing, and
+  derives manifest entries and queue leases from the final PCM (2026-10-08).
+
 - [Creator kit builder](../../tools/modding/build_creator_kit.py) exports matching
   engine/SDK/API-doc/testkit artifacts, pinned portable examples and launchers;
   [catalog probe](../../src/main/java/com/openggf/tools/modsdk/CreatorCatalogProbe.java)

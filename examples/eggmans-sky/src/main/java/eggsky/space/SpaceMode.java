@@ -6,6 +6,7 @@ import com.openggf.mods.scene.SceneLevelKit;
 import com.openggf.mods.scene.SceneSprite;
 import com.openggf.mods.scene.SceneSpriteSet;
 import eggsky.Game;
+import eggsky.core.VoiceLine;
 import eggsky.Mode;
 import eggsky.art.Art;
 import eggsky.art.FaunaDef;
@@ -152,7 +153,7 @@ public final class SpaceMode implements Mode {
                 cam.pitch = Math.asin(fy / fl);
                 speed = CRUISE;
                 arrivalTicks = 90;
-                g.toast("LEFT " + (from.spec == null ? "ORBIT" : g.displayName(from.spec).toUpperCase()), 0xFF80C0FF);
+                g.toast(VoiceLine.ORBIT, "LEFT " + (from.spec == null ? "ORBIT" : g.displayName(from.spec).toUpperCase()), 0xFF80C0FF);
                 if (p.tutorial == 5) {
                     g.toast("FLY TO THE EGG STATION TO DOCK", 0xFFFFE060);
                 }
@@ -349,12 +350,14 @@ public final class SpaceMode implements Mode {
         boolean wantPulse = boostHeld > PULSE_HOLD && p.pulse > 1;
         if (wantPulse && (nearDist < 900 || hostiles)) {
             if (boostHeld == PULSE_HOLD + 1) {
-                g.toast(hostiles ? "PULSE JAMMED: HOSTILES NEAR" : "TOO CLOSE TO PULSE", 0xFFFF8060);
+                g.toast(hostiles ? VoiceLine.PULSE_BLOCKED_HOSTILES : VoiceLine.PULSE_BLOCKED_PROXIMITY,
+                        hostiles ? "PULSE JAMMED: HOSTILES NEAR" : "TOO CLOSE TO PULSE", 0xFFFF8060);
                 g.sound.sfx(Sound.ERROR, 30);
             }
             wantPulse = false;
         }
         if (wantPulse && !pulsing) {
+            g.voice.say(VoiceLine.PULSE_ON);
             g.sound.sfx(Sound.LAUNCH_GO, 30);
         }
         pulsing = wantPulse;
@@ -405,6 +408,7 @@ public final class SpaceMode implements Mode {
         updateLoot(g);
         updateEncounters(g);
         if (in.scanPressed) {
+            g.voice.say(VoiceLine.SCAN);
             scanTicks = 60 * 12;
             g.sound.sfx(Sound.ENERGY_ZAP, 10);
         }
@@ -657,7 +661,7 @@ public final class SpaceMode implements Mode {
                 p.cargo.set(i, p.cargo.itemAt(i), p.cargo.countAt(i) / 2);
             }
             p.statDeaths++;
-            g.banner("EGG MOBILE DESTROYED", "Towed to the station. Half your cargo was lost.", 0xFFFF6060);
+            g.banner(VoiceLine.MOBILE_DESTROYED, "EGG MOBILE DESTROYED", "Towed to the station. Half your cargo was lost.", 0xFFFF6060);
             g.sound.sfx(Sound.EXPLODE);
             enemies.clear();
             g.dock();
@@ -671,7 +675,7 @@ public final class SpaceMode implements Mode {
             tornadoChase--;
             if (tornadoChase == 0) {
                 spawnEnemy(g, true);
-                g.banner("THE TORNADO!", "Sonic and Tails are on your tail", 0xFF4080FF);
+                g.banner(VoiceLine.TORNADO, "THE TORNADO!", "Sonic and Tails are on your tail", 0xFF4080FF);
                 g.sound.music(Sound.M_BOSS);
                 combatMusic = true;
             }
@@ -687,7 +691,7 @@ public final class SpaceMode implements Mode {
                 for (int i = 0; i < n; i++) {
                     spawnEnemy(g, false);
                 }
-                g.banner("PIRATES INBOUND!", n + " badnik raiders", 0xFFFF5050);
+                g.banner(VoiceLine.PIRATES, "PIRATES INBOUND!", n + " badnik raiders", 0xFFFF5050);
                 g.sound.sfx(Sound.SIREN, 60);
                 g.sound.music(Sound.M_DDZ);
                 combatMusic = true;
@@ -798,7 +802,7 @@ public final class SpaceMode implements Mode {
             p.statSonicRepelled++;
             loot.add(new double[] {e.x, e.y, e.z, -1, 800, 0});
             loot.add(new double[] {e.x + 40, e.y, e.z, -2, 60, 0});
-            g.banner("TORNADO DOWNED!", "Sonic and Tails bail out. +800 rings", 0xFF80FF80);
+            g.banner(VoiceLine.TORNADO_DOWNED, "TORNADO DOWNED!", "Sonic and Tails bail out. +800 rings", 0xFF80FF80);
         } else {
             p.statPirates++;
             loot.add(new double[] {e.x, e.y, e.z, Catalog.BADNIK_SCRAP, 10 + rng.nextInt(15), 0});
@@ -829,11 +833,11 @@ public final class SpaceMode implements Mode {
                 if (item == -1) {
                     p.rings += count;
                     p.statRingsEarned += count;
-                    g.toast("+" + count + " RINGS", Ui.GOLD);
+                    g.toast(VoiceLine.RINGS_RECEIVED, "+" + count + " RINGS", Ui.GOLD);
                     g.sound.sfx(Sound.RING, 3);
                 } else if (item == -2) {
                     p.shards += count;
-                    g.toast("+" + count + " CHAOS SHARDS", 0xFF80FFE0);
+                    g.toast(VoiceLine.SHARDS_RECEIVED, "+" + count + " CHAOS SHARDS", 0xFF80FFE0);
                     g.sound.sfx(Sound.BLUE_SPHERE, 3);
                 } else {
                     int left = p.cargo.add(item, count);
@@ -841,7 +845,7 @@ public final class SpaceMode implements Mode {
                         g.toasts.pickup(item, count - left, g.catalog.name(item), g.catalog.item(item).colour());
                         g.sound.sfx(Sound.PLINK, 3);
                     } else {
-                        g.toast("CARGO FULL", 0xFFFF5050);
+                        g.toast(VoiceLine.CARGO_FULL, "CARGO FULL", 0xFFFF5050);
                     }
                 }
                 l[5] = -1;

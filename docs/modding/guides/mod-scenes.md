@@ -483,6 +483,16 @@ replacing this output while a song player exists.
 (`saves/mods/<mod-id>/`): `read`, `write`, `delete`, `list`. Slay the Robotnik saves the
 run in progress, the player's records and the compendium there.
 
+Patch scenes may also declare bounded WAV/Ogg one-shots in
+[`audio/audio-manifest.yaml`](../formats/audio-manifest.md) and call
+`ctx.audio().playSfx("local-id")`. The host supplies the scene's owner namespace;
+cross-owner keys and invalid path segments are rejected. The boolean result reports
+whether playback was admitted; missing assets, unavailable headless audio and rewind
+suppression return false. Launch preparation validates and decodes the clips through
+the same owner-atomic asset pipeline as standalone audio. No numeric mod IDs or runtime
+file/network access are needed. These clips accompany the existing driver effects;
+they do not replace base-game SFX IDs. Queue/cooldown policy belongs to the scene.
+
 ## 6. Testing a scene
 
 Scenes run without GL in tests: the host records each frame's draw calls instead of

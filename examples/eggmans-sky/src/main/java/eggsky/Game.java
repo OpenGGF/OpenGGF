@@ -7,6 +7,8 @@ import eggsky.art.Art;
 import eggsky.core.Controls;
 import eggsky.core.Rng;
 import eggsky.core.Sound;
+import eggsky.core.Voice;
+import eggsky.core.VoiceLine;
 import eggsky.game.Catalog;
 import eggsky.game.Player;
 import eggsky.space.SpaceMode;
@@ -37,6 +39,7 @@ public final class Game {
     public SceneContext ctx;
     public final Controls in = new Controls();
     public final Sound sound = new Sound();
+    public final Voice voice = new Voice();
     public final Font font = new Font();
     public final Catalog catalog = new Catalog();
     public final Biomes biomes = new Biomes();
@@ -94,6 +97,8 @@ public final class Game {
             }
         }
         sound.bind(ctx, 0);
+        voice.enabled(!ctx.storage().read(SETTINGS_FILE).orElse("").lines()
+                .anyMatch(line -> line.equals("voice=false")));
         setMode(new TitleMode());
     }
 
@@ -132,6 +137,9 @@ public final class Game {
             mode.enter(this);
         }
         toasts.update(mode != null && mode.live());
+        if (player != null) voice.vitals(player, mode instanceof SurfaceMode, mode instanceof SpaceMode,
+                mode != null && mode.live());
+        voice.update(ctx.audio(), ticks);
         shake *= 0.86f;
         if (shake < 0.2f) {
             shake = 0;
@@ -184,6 +192,29 @@ public final class Game {
         toasts.banner(title, subtitle, colour);
     }
 
+    public void toast(VoiceLine line, String text, int colour) {
+        toast(text, colour);
+        voice.say(line);
+    }
+
+    public void banner(VoiceLine line, String title, String subtitle, int colour) {
+        banner(title, subtitle, colour);
+        voice.say(line);
+    }
+
+    public void toggleVoice() {
+        voice.enabled(!voice.enabled());
+        try {
+            String other = ctx.storage().read(SETTINGS_FILE).orElse("").lines()
+                    .filter(line -> !line.startsWith("voice=")).collect(java.util.stream.Collectors.joining("\n"));
+            if (!ctx.storage().write(SETTINGS_FILE, other+(other.isEmpty() ? "" : "\n")+"voice="+voice.enabled()+"\n")) {
+                toast("SETTINGS COULD NOT BE SAVED", 0xFFFF5050);
+            }
+        } catch (RuntimeException failed) {
+            toast("SETTINGS COULD NOT BE SAVED", 0xFFFF5050);
+        }
+    }
+
     // ---------------------------------------------------------------- the galaxy
 
     public StarSystem system() {
@@ -227,6 +258,7 @@ public final class Game {
 
     /** Lands on planet {@code index}: a loading frame, then the surface descending from the sky. */
     public void land(int index, boolean fromSpace) {
+        if (fromSpace) voice.say(VoiceLine.LANDING);
         PlanetSpec spec = planetSpec(index);
         String title = spec == null ? "" : displayName(spec);
         setMode(new LoadingMode("ENTERING ATMOSPHERE", title, () -> {
@@ -246,11 +278,13 @@ public final class Game {
     }
 
     public void dock() {
+        voice.say(VoiceLine.DOCKING);
         save();
         setMode(new StationMode());
     }
 
     public void undock() {
+        voice.say(VoiceLine.UNDOCKED);
         setMode(new SpaceMode(SpaceMode.ARRIVE_UNDOCK, -1));
     }
 
@@ -266,14 +300,19 @@ public final class Game {
         return ctx.storage().read(SAVE_FILE).isPresent();
     }
 
-    public void save() {
+    public boolean save() {
         if (player == null || galaxy == null) {
-            return;
+            return false;
         }
         try {
-            ctx.storage().write(SAVE_FILE, player.encode());
+            if (!ctx.storage().write(SAVE_FILE, player.encode())) {
+                toast(VoiceLine.SAVE_FAILED, "SAVE FAILED", 0xFFFF5050);
+                return false;
+            }
+            return true;
         } catch (RuntimeException failed) {
-            toast("SAVE FAILED", 0xFFFF5050);
+            toast(VoiceLine.SAVE_FAILED, "SAVE FAILED", 0xFFFF5050);
+            return false;
         }
     }
 
@@ -285,6 +324,8 @@ public final class Game {
         }
         player = new Player(catalog);
         player.decode(text.get());
+        voice.reset();
+        voice.say(VoiceLine.SYSTEMS_ONLINE);
         galaxy = new Galaxy(player.galaxySeed, player.galaxyNumber);
         StarSystem home = galaxy.start();
         if (galaxy.system(player.systemId) == null) {
@@ -295,6 +336,8 @@ public final class Game {
 
     /** A brand-new expedition: crash-landed on the starting system's first planet. */
     public void newExpedition(long seed, int galaxyNumber, Player carry) {
+        voice.reset();
+        voice.say(VoiceLine.SYSTEMS_ONLINE);
         player = new Player(catalog);
         player.galaxySeed = seed;
         player.galaxyNumber = galaxyNumber;

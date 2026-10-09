@@ -2,6 +2,7 @@ package eggsky.surface;
 
 import com.openggf.mods.scene.SceneCanvas;
 import eggsky.Game;
+import eggsky.core.VoiceLine;
 import eggsky.core.Colour;
 import eggsky.core.Rng;
 import eggsky.core.Sound;
@@ -60,7 +61,7 @@ public final class Weather {
         timer--;
         if (!stormActive && timer < 60 * 10 && !warned && spec.storms > 0) {
             warned = true;
-            g.toast("STORM APPROACHING", 0xFFFFC040);
+            g.toast(VoiceLine.STORM_APPROACHING, "STORM APPROACHING", 0xFFFFC040);
             g.sound.sfx(Sound.ALARM, 60);
         }
         if (timer <= 0) {
@@ -68,9 +69,20 @@ public final class Weather {
             warned = false;
             timer = stormActive ? rng.range(60 * 35, 60 * 80) + spec.storms * 600 : calmLength();
             if (stormActive) {
+                g.voice.cancel(VoiceLine.STORM_APPROACHING);
+                if (spec.biome.weather() != Biome.WEATHER_NONE) g.voice.say(switch (spec.biome.weather()) {
+                    case Biome.WEATHER_RAIN -> VoiceLine.RAINSTORM;
+                    case Biome.WEATHER_SNOW -> VoiceLine.BLIZZARD;
+                    case Biome.WEATHER_EMBERS -> VoiceLine.FIRESTORM;
+                    case Biome.WEATHER_SAND -> VoiceLine.SANDSTORM;
+                    case Biome.WEATHER_SPORES -> VoiceLine.SPORES;
+                    case Biome.WEATHER_ACID -> VoiceLine.ACID_RAIN;
+                    case Biome.WEATHER_ASH -> VoiceLine.ASH_STORM;
+                    default -> VoiceLine.ELECTRICAL_STORM;
+                });
                 g.toast(Biome.weatherName(spec.biome.weather()).toUpperCase() + "!", 0xFFFF7050);
             } else {
-                g.toast("THE STORM HAS PASSED", 0xFF80FF90);
+                g.toast(VoiceLine.STORM_PASSED, "THE STORM HAS PASSED", 0xFF80FF90);
             }
         }
         storm += ((stormActive ? 1 : 0) - storm) * 0.01f;

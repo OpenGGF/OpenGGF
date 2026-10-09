@@ -7,9 +7,10 @@ badniks and flora, mine and refine resources, upgrade the Egg Mobile at Egg Stat
 pirates and the Tornado in space, outrun Sonic's wanted-level patrols, follow echidna ruins to the
 seven Chaos Emeralds and warp to the galactic core.
 
-Everything you see and hear — terrain, backgrounds, Eggman, badniks, animals, heroes, the
-Tornado, monitors, capsules, Starposts, music and sounds — comes from your ROMs at runtime. The
-jar holds only code.
+Terrain, backgrounds, Eggman, badniks, animals, heroes, the Tornado, monitors, capsules,
+Starposts, music and gameplay effects come from your ROMs at runtime. The jar also holds
+122 original prerecorded Alice system announcements, generated offline through OpenRouter.
+Players need no API key or network connection.
 
 ## Requirements
 
@@ -109,6 +110,42 @@ Pins and cargo reserves survive saves; menu position is remembered only within t
 
 Progress saves to `saves/mods/eggmans-sky/expedition.txt` (plain `key=value` lines) at
 Starposts, landings, launches, docking, warps, every two minutes and on exit.
+
+### System voice
+
+The system computer speaks plain status statements in a composed feminine voice: life support,
+hazards and storms, launch fuel, hull/shields, travel, security and heroes, discoveries,
+manufacturing, cargo, station services, missions and the galactic core. Generated names and
+quantities stay on screen. Metallic modulation, 6% vocoder and a strong 7-bit/8 kHz sample-and-hold
+effect give it the approved retro DAC sound; this is an artistic effect rather than hardware
+emulation. A small consonant recovery mix preserves intelligibility, with no room reverb.
+
+Speech uses one bounded priority queue. Emergencies precede routine confirmations and discoveries;
+repeated warnings have a 30-second cooldown, obsolete confirmations expire after 15 seconds,
+and resolved vital warnings are removed. The queue waits for each clip's actual PCM duration.
+Choose **SYSTEM → VOICE: ON/OFF** to mute announcements separately from ROM music/effects.
+This setting persists in `settings.txt`; an already playing short clip finishes when muted.
+
+The text/direction catalogue is [voice-bank.json](voice-bank.json), and shipped WAV identities,
+blind word checks and source-edit provenance are in `audio/voice/provenance.json` inside the jar.
+To regenerate offline, use Python with NumPy/SciPy and FFmpeg. Keep raw takes and API receipts
+outside the repository, and provide `OPENROUTER_API_KEY` privately in the environment or `.env`:
+
+```bash
+python3 tools/audio/eggmans_sky_voice.py \
+  --catalogue examples/eggmans-sky/voice-bank.json \
+  --cache /absolute/task-directory/eggmans-sky-voice \
+  --output examples/eggmans-sky/src/main/resources/audio/voice --env-file .env --clean-takes
+python3 tools/audio/eggmans_sky_voice.py \
+  --catalogue examples/eggmans-sky/voice-bank.json \
+  --cache /absolute/task-directory/eggmans-sky-voice \
+  --output examples/eggmans-sky/src/main/resources/audio/voice --publish-only \
+  --enum examples/eggmans-sky/src/main/java/eggsky/core/VoiceLine.java
+```
+
+Inspect any failed word check before publishing. Synthesis is variable; a fresh bank may need
+whole-utterance edits at quiet gaps. The generator preserves completed sources and refuses to
+repeat an uncertain paid request. Publication requires every clip's current hash and word check.
 
 ## How it is built
 
