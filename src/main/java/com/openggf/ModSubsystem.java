@@ -113,6 +113,18 @@ public final class ModSubsystem implements AutoCloseable {
 
     public static ModSubsystem current() { return PROCESS.get(); }
 
+    /**
+     * Runs engine work (a course restore) with no creator callback owner in scope, for engine
+     * packages that may not depend on the mod runtime directly. Engine callers only.
+     */
+    public static <T> T withoutCreatorOwner(java.util.function.Supplier<T> work) {
+        Class<?> caller = com.openggf.util.EngineCallerAccess.callerOutside(ModSubsystem.class);
+        if (caller.getClassLoader() != ModSubsystem.class.getClassLoader()) {
+            throw new SecurityException("Creator code cannot suspend its own callback owner");
+        }
+        return com.openggf.mods.code.EngineOwnerScope.withoutCreatorOwner(work);
+    }
+
     public static void installProcess(ModSubsystem replacement) {
         Objects.requireNonNull(replacement, "replacement");
         ModSubsystem previous = PROCESS.getAndSet(replacement);

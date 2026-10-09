@@ -1012,6 +1012,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   visuals, input formats, random sequences and saved profiles. Creator tests use
   production validation/loading/resolution and record real scene input and draws;
   authored playable routes retain their wider gameplay/rewind coverage obligations.
+  A course checkpoint restored from inside a frame controller now rebuilds engine
+  objects as engine objects, so a stand restore no longer drops engine children the
+  restore re-creates (such as Hydrocity's sliding fan platforms).
   The API descriptor remains the version/publication authority; this
   branch rollover does not publish or freeze it.
 - **Mod API: multi-game mods, scene hand-offs and typed text:** one `baseGame: any`
