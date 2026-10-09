@@ -376,7 +376,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   laser charge on the native frames and flickers while it launches, Cluckoid
   breath debris spawns on the native frames, MHZ pollen starts its sway from the
   current level frame, and the CNZ hover-fan sound and LBZ gate-laser flicker
-  follow the level clock.
+  follow the level clock. In Sonic 2 the WFZ/SCZ vertical propeller's helicopter
+  sound, the OOZ sun heat haze and the CPZ water ripple step on the native frames.
 
 - **Boss parts in their own sprite layers:** ICZ miniboss orbs and shards, ICZ end
   boss body parts, LBZ miniboss panels and box pieces, and HCZ end boss children now
