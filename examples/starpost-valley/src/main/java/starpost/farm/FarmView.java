@@ -41,6 +41,11 @@ public final class FarmView {
     public static final int DOOR_X = 76;
     public static final int SIGNPOST_X = 150;
     public static final int GATE_X = FIELD_X + Farm.COLUMNS * 16 + 56;
+    /** The farm pond in the field's front corner below the house: world x span and feet rows. */
+    public static final int POND_X0 = 22;
+    public static final int POND_X1 = 142;
+    public static final int POND_TOP = 182;
+    public static final int POND_BOTTOM = 210;
     public static final int WIDTH = 5 * Art.BLOCK;
     private final int[] wall = {13, 45, 60, 60, 53};
     /** Feet range: the back of the field to the bottom of the screen. */
@@ -145,8 +150,15 @@ public final class FarmView {
                 runner.speed = 0;
             }
         } else if (!charged && !(chargeTicks > 0)) {
+            float beforeX = runner.x, beforeDepth = runner.depth;
             if (runner.step(16, WIDTH - 16, maxDepth, in.left, in.right, in.up, in.down, in.jump, in.jumpHeld)) {
                 shell.sfx(Sfx.JUMP);
+            }
+            if (runner.height == 0 && inPond(runner.x, feetY())) {
+                runner.x = beforeX;          // the pond's edge stops a walk (a jump clears it)
+                runner.depth = beforeDepth;
+                runner.speed = 0;
+                runner.depthSpeed = 0;
             }
         }
         float entry = LOOP_X + 110;
@@ -205,6 +217,17 @@ public final class FarmView {
         }
         if (Math.abs(runner.x - SIGNPOST_X) < 18 && runner.depth < 22) {
             return Request.SHIP;
+        }
+        if (nearPond()) {
+            Item held = game.inventory.selectedId() == null ? null : game.item(game.inventory.selectedId());
+            if (held != null && held.id().equals("water_shield")) {
+                game.waterCharges = game.waterCapacity;
+                shell.sfx(Sfx.BUBBLE_SHIELD);
+                shell.toast("WATER SHIELD FULL: " + game.waterCapacity);
+            } else {
+                shell.toast("THE FARM POND. HOLD THE WATER SHIELD TO FILL IT.");
+            }
+            return Request.NONE;
         }
         int[] rc = plotUnderfoot();
         if (rc == null) {
@@ -403,6 +426,20 @@ public final class FarmView {
         lastActionColumn = column;
     }
 
+    /** Whether a point of the field is in the pond's water. */
+    private static boolean inPond(float x, float feet) {
+        float cx = (POND_X0 + POND_X1) / 2f, cy = (POND_TOP + POND_BOTTOM) / 2f;
+        float rx = (POND_X1 - POND_X0) / 2f - 4, ry = (POND_BOTTOM - POND_TOP) / 2f - 2;
+        float dx = (x - cx) / rx, dy = (feet - cy) / ry;
+        return dx * dx + dy * dy < 1;
+    }
+
+    /** Whether the farmer stands at the pond's edge. */
+    private boolean nearPond() {
+        float feet = feetY();
+        return runner.x > POND_X0 - 10 && runner.x < POND_X1 + 10 && feet > POND_TOP - 14 && feet < POND_BOTTOM + 8;
+    }
+
     /** {row, column} of the plot under the farmer's feet, or null outside the field. */
     public int[] plotUnderfoot() {
         int column = (int) Math.floor((runner.x - FIELD_X) / 16f);
@@ -462,7 +499,8 @@ public final class FarmView {
         for (int band = 0; band < 6; band++) {
             canvas.fill(0, FIELD_TOP + band * 4, w, 4, (0x48 - band * 0x0C) << 24);
         }
-        // Land still to clear: darker, behind a row of GHZ bridge-log fence posts.
+        drawPond(canvas, look, cx, tint);
+        // Land still to clear: darker.
         int lockedX = FIELD_X + game.farm.open() * 16 - cx;
         if (lockedX < w) {
             canvas.fill(Math.max(0, lockedX), FIELD_TOP, w - Math.max(0, lockedX), h - FIELD_TOP, 0x40002400);
@@ -521,6 +559,25 @@ public final class FarmView {
         // The farmhouse stands at the back of the field; its door (x 56-76 in the picture) is DOOR_X.
         SceneImage house = look.farmhouse;
         canvas.draw(house, DOOR_X - 66 - cx, FIELD_TOP + 4 - house.height(), tint);
+    }
+
+    /** The pond: Green Hill's lake water in a rounded bed with a checker rim. */
+    private void drawPond(SceneCanvas canvas, Art.Seasonal look, int cx, SceneDraw tint) {
+        int x0 = POND_X0 - cx, w = POND_X1 - POND_X0, top = POND_TOP, h = POND_BOTTOM - POND_TOP;
+        for (int row = 0; row < h; row++) {
+            float t = (row + 0.5f) / h * 2 - 1;
+            int inset = Math.round((1 - (float) Math.sqrt(Math.max(0, 1 - t * t))) * w / 2f);
+            int rw = w - inset * 2;
+            if (rw <= 0) {
+                continue;
+            }
+            int src = (int) ((shell.ticks / 6 + row * 7) % Math.max(1, look.water.width() - rw));
+            canvas.drawRegion(look.water, src, row % look.water.height(), Math.min(rw, look.water.width()), 1,
+                    x0 + inset, top + row, rw, 1, tint);
+            canvas.fill(x0 + inset - 2, top + row, 2, 1, 0xFF6D2400);
+            canvas.fill(x0 + inset + rw, top + row, 2, 1, 0xFF6D2400);
+        }
+        canvas.fill(x0 + w / 4, top - 1, w / 2, 2, 0xFF6D2400);
     }
 
     /** The Capsule Garden: the restored capsule's glass over the first twelve columns of the back two rows. */
