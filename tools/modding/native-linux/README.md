@@ -31,6 +31,11 @@ python3 tools/testing/maven_queue.py -Dmse=off exec:exec -Dexec.executable=pytho
 Then run the `qualify` stage with the same artifact arguments and `--roms` followed
 by the three **original absolute** S1/S2/S3K paths, plus `--captures` pointing to an
 explicit task directory outside the repository. Keep path arguments quoted.
+Use `--runtime-rootfs target/linux-toolchain/ubuntu-rootfs` for an Ubuntu 22.04
+runtime with no JDK, a cleared environment, Mesa software rendering and only the
+distribution, captures and original read-only ROMs mounted. It uses the current
+X11 display/socket and `XAUTHORITY` when provided. Build classes, Maven libraries
+and the GraalVM toolchain are absent from this runtime.
 Qualification requires a display. Do not upload ROMs or source-directory saves.
 Omitting ROMs explicitly limits qualification to audit/registration and is
 recorded by the empty `renderedGameplay` list; it does not qualify gameplay.

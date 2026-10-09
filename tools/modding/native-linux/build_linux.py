@@ -145,25 +145,45 @@ def compile_image(args):
             "--setenv","TMPDIR","/tmp","--setenv","PATH","/usr/bin:/bin","--chdir",work / "native",*command]
     run(command,work / "native")
 
+def native_command(args,bundle,*arguments):
+    executable=bundle / "OpenGGF"
+    if not args.runtime_rootfs: return [executable,*arguments]
+    # The runtime root contains no JDK. Expose only the disposable distribution,
+    # owned captures and original read-only ROMs, never build classes/toolchains.
+    prefix=["bwrap","--bind",args.runtime_rootfs.resolve(strict=True),"/","--unshare-user","--uid","0","--gid","0",
+        "--proc","/proc","--dev","/dev","--tmpfs","/tmp","--bind",bundle,bundle,
+        "--clearenv","--setenv","PATH","/usr/bin:/bin","--setenv","HOME","/root",
+        "--setenv","DISPLAY",os.environ.get("DISPLAY",":0"),"--setenv","LIBGL_ALWAYS_SOFTWARE","1"]
+    if Path("/tmp/.X11-unix").exists():prefix += ["--ro-bind","/tmp/.X11-unix","/tmp/.X11-unix"]
+    authority=os.environ.get("XAUTHORITY")
+    if authority:
+        prefix += ["--ro-bind",authority,authority,"--setenv","XAUTHORITY",authority]
+    if args.captures:
+        captures=args.captures.resolve();captures.mkdir(parents=True,exist_ok=True)
+        prefix += ["--bind",captures,captures]
+    for rom in args.roms or []:
+        original=rom.resolve(strict=True);prefix += ["--ro-bind",original,original]
+    return [*prefix,"--chdir",bundle,executable,*arguments]
+
 def qualify(args):
     work=args.output.resolve();engine=args.engine_jar.resolve(strict=True);inputs=args.inputs.resolve(strict=True);graal=args.graal.resolve(strict=True)
     image=work / "native/OpenGGF"; contract=work / "contract"
     evidence={"memberAudit":"pending","registrations":[],"engineBootRegistrations":[],"renderedGameplay":[]}
     bundle=work / "OpenGGF-experimental-linux-x64-with-mods"
     assemble(bundle,image,engine,inputs,contract,graal,evidence)
-    run([bundle / "OpenGGF","--audit"],bundle)
+    run(native_command(args,bundle,"--audit"),bundle)
     original=(bundle / "native-mod-members.tsv").read_bytes()
     for kind,desc in (("F","I"),("M","()V")):
         try:
             (bundle / "native-mod-members.tsv").write_text(f"{kind}\tcom.openggf.game.rules.GameRules\t__absent_control\t{desc}\n")
-            run([bundle / "OpenGGF","--audit"],bundle,"MISSING native member: "+kind)
+            run(native_command(args,bundle,"--audit"),bundle,"MISSING native member: "+kind)
         finally: (bundle / "native-mod-members.tsv").write_bytes(original)
     for mod in json.loads((inputs / "build-info.json").read_text())["mods"]:
         owner,slug=mod["id"],mod["slug"]
         jvm=run([tool("java"),"-Xmx1g","-cp",os.pathsep.join(map(str,(work / "host-classes",engine))),
             "com.openggf.tools.NativeModRegistrationProbe",inputs / "mods",owner],work)
         if f"PASS registration: {owner};" not in jvm: raise AssertionError("No JVM registration result: "+owner)
-        output=run([bundle / "OpenGGF","--check-mods",owner],bundle)
+        output=run(native_command(args,bundle,"--check-mods",owner),bundle)
         if f"PASS registration: {owner};" not in output: raise AssertionError("No registration result: "+owner)
         expected=next(line for line in jvm.splitlines() if line.startswith(f"PASS registration: {owner};"))
         observed=next(line for line in output.splitlines() if line.startswith(f"PASS registration: {owner};"))
@@ -172,15 +192,16 @@ def qualify(args):
         with zipfile.ZipFile(inputs / "mods" / (slug+".jar")) as jar:
             code=any(name.endswith(".class") for name in jar.namelist())
         if code:
-            output=run([bundle / "OpenGGF",f"-Dggfmod.dev.modDir={bundle / 'quick-mods' / slug}","--check-engine",owner],bundle)
+            output=run(native_command(args,bundle,f"-Dggfmod.dev.modDir={bundle / 'quick-mods' / slug}","--check-engine",owner),bundle)
             if f"PASS engine native boot registration: {owner}" not in output: raise AssertionError("No engine result: "+owner)
             evidence["engineBootRegistrations"].append(owner)
         if args.roms:
             captures=args.captures.resolve() / slug
-            output=run([bundle / "OpenGGF","--check-gameplay",slug,captures,*map(lambda p:p.resolve(strict=True),args.roms),*RECIPES.get(slug,[])],bundle)
+            output=run(native_command(args,bundle,"--check-gameplay",slug,captures,*map(lambda p:p.resolve(strict=True),args.roms),*RECIPES.get(slug,[])),bundle)
             if f"PASS native rendered gameplay: {owner}" not in output: raise AssertionError("No gameplay result: "+owner)
             evidence["renderedGameplay"].append(owner)
     evidence["memberAudit"]="passed; missing field and method controls rejected with ordinary exit 1"
+    evidence["runtime"]="Ubuntu 22.04 rootfs; no JDK; Mesa software OpenGL" if args.runtime_rootfs else "host Linux desktop"
     (work / "qualification.json").write_text(json.dumps(evidence,indent=2)+"\n")
     shutil.rmtree(bundle)
     assemble(bundle,image,engine,inputs,contract,graal,evidence)
@@ -191,6 +212,7 @@ if __name__=="__main__":
     parser=argparse.ArgumentParser(description=__doc__)
     for name in ("engine-jar","inputs","runtime-classpath","graal","output"): parser.add_argument("--"+name,required=True,type=Path)
     parser.add_argument("--rootfs",type=Path)
+    parser.add_argument("--runtime-rootfs",type=Path)
     parser.add_argument("--stage",choices=("prepare","compile","qualify","all"),default="all")
     parser.add_argument("--roms",type=Path,nargs=3)
     parser.add_argument("--captures",type=Path)

@@ -43,7 +43,7 @@ def prepare(output):
         "--proc","/proc","--dev","/dev","--ro-bind","/etc/resolv.conf","/etc/resolv.conf",
         "--setenv","TMPDIR","/tmp","--setenv","PATH","/usr/sbin:/usr/bin:/sbin:/bin",
         "--setenv","DEBIAN_FRONTEND","noninteractive","/bin/bash","-c",
-        "apt-get -o APT::Sandbox::User=root update -qq && apt-get -o APT::Sandbox::User=root install -y -qq --no-install-recommends gcc libc6-dev zlib1g-dev"],check=True)
+        "apt-get -o APT::Sandbox::User=root update -qq && apt-get -o APT::Sandbox::User=root install -y -qq --no-install-recommends gcc libc6-dev zlib1g-dev libgl1 libglx-mesa0 libgl1-mesa-dri libx11-6 libxcursor1 libxrandr2 libxinerama1 libxi6 libasound2 libfontconfig1"],check=True)
 
 if __name__=="__main__":
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument("--output",required=True,type=Path)
