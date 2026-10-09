@@ -229,6 +229,242 @@ class TypingHedgehogStandRestoreProbe {
         }
     }
 
+    // ------------------------------------------------------------------ divergence experiment
+
+    /** A packaged-mod Course session on one S3K rail, stepped one row at a time. */
+    final class CourseRun {
+        final ExampleModHarness harness;
+        final HeadlessTestFixture fixture;
+        final InputHandler input = new InputHandler();
+        final Class<?> courseType;
+
+        CourseRun(String tag, int zone, int act, String sidekick) throws Exception {
+            Path project = temp.resolve("project-" + tag);
+            try (Stream<Path> files = Files.walk(SOURCE)) {
+                for (Path p : files.toList()) {
+                    Path target = project.resolve(SOURCE.relativize(p).toString());
+                    if (Files.isDirectory(p)) Files.createDirectories(target);
+                    else Files.copy(p, target);
+                }
+            }
+            Path index = project.resolve("src/main/resources/rails/index.txt");
+            String listed = Files.exists(index) ? Files.readString(index) : "";
+            if (!listed.lines().map(String::strip).toList().contains(RAIL)) Files.writeString(index, listed + "\n" + RAIL + "\n");
+            Path work = temp.resolve("work-" + tag);
+            harness = ExampleModHarness.build(project, work);
+            bootstrap = SharedLevel.load(SonicGame.SONIC_3K, zone, act);
+            var config = SonicConfigurationService.getInstance();
+            config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+            config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, sidekick);
+            config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
+            config.resolveDisplayAspect();
+            config.setSessionOverride(SonicConfiguration.LOAD_TIME_SIMULATION, "FAST");
+            config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
+            config.setSessionOverride(SonicConfiguration.S3K_SKIP_INTROS, false);
+            GameServices.graphics().setProjectionWidth(config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
+            GameModule effective = harness.apply(GameServices.module());
+            Path storage = work.resolve("storage").resolve("mods").resolve(MOD);
+            Files.createDirectories(storage);
+            Files.writeString(storage.resolve("intent.txt"), "mode=ARCADE\ngame=s3k\nzone=" + zone + "\nact=" + act
+                    + "\ndifficulty=EASY\ncapitals=false\npunctuation=false\ndictionaries=standard\nseed=7\n"
+                    + "bossStars=1\nnoFail=true\nslowMotion=false\n");
+            SessionManager.clear();
+            GameModuleRegistry.setCurrent(effective);
+            TestEnvironment.activeGameplayMode();
+            fixture = HeadlessTestFixture.builder().withZoneAndAct(zone, act).build();
+            courseType = harness.loader().loadClass("typinghog.play.Course");
+        }
+
+        Object view() throws Exception {
+            Object course = GameModuleRegistry.getCurrent().getGameService(courseType);
+            return course.getClass().getMethod("view").invoke(course);
+        }
+
+        void step() {
+            ControlledFrameRuntime.step(fixture.runtime(), input, LogicalInputSnapshot.neutral());
+            input.update();
+        }
+
+        void close() throws Exception {
+            harness.close();
+            dispose();
+        }
+    }
+
+    /** The object-manager snapshot's HCZ fan entries (and any entry with dynamic id 92). */
+    static List<String> fanEntries(com.openggf.game.rewind.CompositeSnapshot snapshot) {
+        List<String> out = new ArrayList<>();
+        var om = (com.openggf.game.rewind.snapshot.ObjectManagerSnapshot) snapshot.get("object-manager");
+        for (var e : om.slots()) {
+            if (e.className() != null && e.className().contains("HCZCGZFan")) {
+                out.add("slot " + e.slotIndex() + " " + simple(e.className()) + " " + e.objectId());
+            }
+        }
+        for (var e : om.dynamicObjects()) {
+            boolean id92 = e.objectId() != null && e.objectId().dynamicId() == 92;
+            if (id92 || (e.className() != null && e.className().contains("HCZCGZFan"))) {
+                out.add("dynamic " + simple(e.className()) + " slot " + e.slotIndex() + " " + e.objectId()
+                        + " owner " + e.ownerModId() + " aux " + e.rewindableAuxiliary());
+            }
+        }
+        out.add("dynamic entries " + om.dynamicObjects().size() + ", slot entries " + om.slots().size());
+        return out;
+    }
+
+    /** Live HCZ fan objects with their current rewind identity and slot. */
+    static List<String> liveFans() {
+        List<String> out = new ArrayList<>();
+        var query = GameServices.level().getObjectManager().objectQuery();
+        for (ObjectInstance object : query.activeObjectsOfType(ObjectInstance.class)) {
+            String name = object.getClass().getName();
+            var id = query.identityOf(object);
+            boolean id92 = id.isPresent() && id.get().dynamicId() == 92;
+            if (name.contains("HCZCGZFan") || id92) {
+                int slot = object instanceof com.openggf.level.objects.AbstractObjectInstance a ? a.getSlotIndex() : -9;
+                out.add(simple(name) + " slot " + slot + " " + id.map(Object::toString).orElse("no identity"));
+            }
+        }
+        return out;
+    }
+
+    static String simple(String className) { return className == null ? "null" : className.replaceAll(".*\\.", ""); }
+
+    static List<Integer> stands(String text) {
+        List<Integer> out = new ArrayList<>();
+        for (String line : text.split("\n")) if (line.startsWith("stand ")) out.add(Integer.parseInt(line.substring(6).strip()));
+        return out;
+    }
+
+    /**
+     * Where the real Course and the builder chain first differ around the first stand of
+     * {@code RAIL}: the captured object-manager entries for the HCZ fan objects, the identities
+     * after the Course's failing restore, the same checkpoint restored from outside a mod callback
+     * at the Course's restore row, and the builder chain's restore. Opt-in with
+     * {@code -Dtypinghog.restoreprobe=<rail>} and {@code -Dtypinghog.restoreprobe.divergence=true}.
+     */
+    @Test @RequiresRom(SonicGame.SONIC_3K) void standRestoreDivergence() throws Exception {
+        Assumptions.assumeTrue(RAIL != null && Boolean.getBoolean("typinghog.restoreprobe.divergence"),
+                "opt-in: -Dtypinghog.restoreprobe=<rail> -Dtypinghog.restoreprobe.divergence=true");
+        String text = Files.readString(SOURCE.resolve("src/main/resources/rails").resolve(RAIL));
+        int zone = intKey(text, "zone"), act = intKey(text, "act");
+        String team = strKey(text, "team");
+        String sidekick = team.contains(",") ? team.substring(team.indexOf(',') + 1) : "";
+        int standRow = stands(text).getFirst();
+        com.openggf.game.rewind.CompositeSnapshot snapA = null;
+        int heldUntilRestore = -1;
+        // A1: the Course restores the stand itself.
+        CourseRun a = new CourseRun("a1", zone, act, sidekick);
+        try {
+            int held = 0;
+            String previous = "";
+            for (int i = 0; i < 60_000; i++) {
+                Object view = a.view();
+                String phase = (String) get(view, "phase");
+                int railRow = (int) get(view, "railRow");
+                if (phase.equals("RUN") && railRow == standRow && snapA == null) {
+                    snapA = SessionManager.getCurrentGameplayMode().getRewindRegistry().captureCourse();
+                    System.out.println("DIVERGE|A1 capture before rail row " + standRow + " (the Course captures at this row's beforeTick):");
+                    fanEntries(snapA).forEach(l -> System.out.println("DIVERGE|A1   snapshot " + l));
+                    liveFans().forEach(l -> System.out.println("DIVERGE|A1   live " + l));
+                }
+                if (snapA != null && !phase.equals("RUN")) held++;
+                if (phase.equals("STAND")) typeNext(view, a.input);
+                if (!phase.equals(previous)) System.out.println("DIVERGE|A1 phase " + phase + " at held row " + held);
+                previous = phase;
+                try {
+                    a.step();
+                } catch (Throwable t) {
+                    Throwable cause = t;
+                    while (cause.getCause() != null) cause = cause.getCause();
+                    heldUntilRestore = held;
+                    System.out.println("DIVERGE|A1 Course restore failed on held row " + held + ": " + cause.getMessage());
+                    liveFans().forEach(l -> System.out.println("DIVERGE|A1   live after the object phase " + l));
+                    break;
+                }
+                if (phase.equals("RUN") && snapA != null && held > 0) {
+                    System.out.println("DIVERGE|A1 Course restore succeeded; back in RUN");
+                    break;
+                }
+            }
+        } finally {
+            a.close();
+        }
+        // A2: the same world, but the identical checkpoint is restored from outside a mod callback
+        // on the row before the Course's own restore.
+        CourseRun a2 = new CourseRun("a2", zone, act, sidekick);
+        try {
+            com.openggf.game.mode.CourseCheckpoint checkpoint = null;
+            int held = 0;
+            for (int i = 0; i < 60_000; i++) {
+                Object view = a2.view();
+                String phase = (String) get(view, "phase");
+                int railRow = (int) get(view, "railRow");
+                if (phase.equals("RUN") && railRow == standRow && checkpoint == null) {
+                    checkpoint = com.openggf.game.mode.CourseControlProbeAccess.open(
+                            SessionManager.getCurrentGameplayMode()).capture();
+                }
+                if (checkpoint != null && !phase.equals("RUN")) held++;
+                if (checkpoint != null && heldUntilRestore > 0 && held == heldUntilRestore) {
+                    try {
+                        com.openggf.game.mode.CourseControlProbeAccess.open(SessionManager.getCurrentGameplayMode())
+                                .restore(checkpoint);
+                        System.out.println("DIVERGE|A2 outside restore of the same checkpoint on held row " + held + ": OK");
+                    } catch (Throwable t) {
+                        Throwable cause = t;
+                        while (cause.getCause() != null) cause = cause.getCause();
+                        System.out.println("DIVERGE|A2 outside restore of the same checkpoint on held row " + held + " failed: "
+                                + cause.getMessage());
+                    }
+                    liveFans().forEach(l -> System.out.println("DIVERGE|A2   live after restore " + l));
+                    break;
+                }
+                if (phase.equals("STAND")) typeNext(view, a2.input);
+                a2.step();
+            }
+        } finally {
+            a2.close();
+        }
+        // B: the builder's controller, same stand, held for the same rows.
+        var builder = new TypingHedgehogRailBuilderProbe();
+        var target = TypingHedgehogRailBuilderProbe.targets(SonicGame.SONIC_3K).stream()
+                .filter(t -> RAIL.equals(t.file())).findFirst().orElseThrow();
+        int[] masks = programMasks(text);
+        int[] src = new int[masks.length];
+        java.util.Arrays.fill(src, -1);
+        var program = new TypingHedgehogRailBuilderProbe.Program(masks, src);
+        var s = builder.new Session(target, program);
+        try {
+            while (s.driver.row < standRow) s.step();
+            var snapB = SessionManager.getCurrentGameplayMode().getRewindRegistry().captureCourse();
+            System.out.println("DIVERGE|B capture before rail row " + standRow + ":");
+            fanEntries(snapB).forEach(l -> System.out.println("DIVERGE|B   snapshot " + l));
+            liveFans().forEach(l -> System.out.println("DIVERGE|B   live " + l));
+            if (snapA != null) {
+                var diffs = com.openggf.game.rewind.RewindSnapshotDiff.diffKey("object-manager",
+                        snapA.get("object-manager"), snapB.get("object-manager"));
+                System.out.println("DIVERGE|A1-vs-B object-manager snapshot differences: " + diffs.size());
+                diffs.stream().limit(8).forEach(d -> System.out.println("DIVERGE|   " + d));
+            }
+            var mark = s.mark();
+            s.driver.holding = true;
+            for (int i = 0; i < Math.max(1, heldUntilRestore); i++) s.step();
+            s.driver.holding = false;
+            liveFans().forEach(l -> System.out.println("DIVERGE|B   live before restore " + l));
+            try {
+                s.restore(mark, program.masks());
+                System.out.println("DIVERGE|B restore after " + heldUntilRestore + " held rows: OK");
+            } catch (Throwable t) {
+                Throwable cause = t;
+                while (cause.getCause() != null) cause = cause.getCause();
+                System.out.println("DIVERGE|B restore failed: " + cause.getMessage());
+            }
+            liveFans().forEach(l -> System.out.println("DIVERGE|B   live after restore " + l));
+        } finally {
+            s.close();
+            GameServices.configuration().clearSessionOverrides();
+        }
+    }
+
     /**
      * The S2 MTZ act 3 boss art question: drives {@code s2-mtz3.rail} through the real Course and
      * reports, at 240 controlled rows and at the rail's boss stand, whether the object art provider

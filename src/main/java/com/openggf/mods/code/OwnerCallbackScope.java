@@ -25,5 +25,21 @@ final class OwnerCallbackScope {
         }
     }
 
+    /**
+     * Runs engine work with no creator owner in scope, then reinstates the caller's frame.
+     * Objects the engine rebuilds meanwhile take their owner from their own spawn, captured
+     * entry or class (a creator class keeps its mod), never from an enclosing callback.
+     */
+    static <T> T withoutOwner(Supplier<T> work) {
+        Objects.requireNonNull(work, "work");
+        Frame previous = CURRENT.get();
+        CURRENT.remove();
+        try {
+            return work.get();
+        } finally {
+            if (previous != null) CURRENT.set(previous);
+        }
+    }
+
     private record Frame(String owner, Frame previous) { }
 }
