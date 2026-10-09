@@ -22,7 +22,7 @@ public final class ModApiVersion {
      * bounded semantic ROM music with consumed-sample playback, section parts,
      * and bounded pitch-gliding ROM-part cues that preserve the song clock.
      * Boot-prepared typed mutators declare independent action/option scopes,
-     * immutable gravity/Stealth, scatter, head-presentation, semantic placement,
+     * immutable gravity/Stealth, scatter, fixed or ring-scaled head-presentation, semantic placement,
      * checkpoint, ring-award, stage-entry, defeat-knockback and pacing policies;
      * explicit assembly causes and common
      * modal configuration presentation. The unpublished candidate remains 0.7.0.

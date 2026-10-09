@@ -8,11 +8,11 @@ import java.util.Set;
 public final class LevelFilters {
     private LevelFilters() { }
     public static MutatorDefinition checkpoints() {
-        return toggle("no-checkpoints", "No Checkpoints", "Death returns to the act start. Posts and independent stage-entry/return positions still work.",
+        return toggle("no-checkpoints", "No Checkpoints", "Death returns to the act start. Posts and stage-entry return positions still work.",
                 MutatorScope.LOAD, new MutatorPolicy.NoCheckpoints());
     }
     public static MutatorDefinition rings() {
-        return toggle("no-rings", "No Rings", "Remove main-level rings and ring rewards on the next full load. Special/bonus puzzles keep their rings.",
+        return toggle("no-rings", "No Rings", "Remove main-level rings and ring rewards on a full load. Stage puzzles keep their rings.",
                 MutatorScope.LOAD, new MutatorPolicy.NoRings());
     }
     public static MutatorDefinition specialStages() {
@@ -20,7 +20,7 @@ public final class LevelFilters {
                 MutatorScope.LIVE, new MutatorPolicy.NoSpecialStages());
     }
     public static MutatorDefinition bonusStages() {
-        return toggle("no-bonus-stages", "No Bonus Stages", "Prevent new Sonic 3 & Knuckles bonus-stage entry independently of checkpoint banking and special stages.",
+        return toggle("no-bonus-stages", "No Bonus Stages", "Prevent new Sonic 3 & Knuckles bonus-stage entry. Checkpoints and specials are separate.",
                 MutatorScope.LIVE, new MutatorPolicy.NoBonusStages());
     }
     private static MutatorDefinition toggle(String id, String title, String help, MutatorScope scope, MutatorPolicy policy) {

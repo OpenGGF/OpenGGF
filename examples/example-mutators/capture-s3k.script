@@ -5,18 +5,20 @@
 600 -
 # How to play; return to the title.
 1 D; 1 -; 1 D; 1 -; 1 A; 60 -; 1 C; 1 -
+# Back returns focus to How to play; Configure is one row up.
 # Configure Gravity ON at 50%.
-1 D; 1 -; 1 A; 1 -; 1 A; 1 -; 1 R; 1 -; 1 D; 1 -
+1 U; 1 -; 1 A; 1 -; 1 A; 1 -; 1 R; 1 -; 1 D; 1 -
 repeat 10 { 1 L; 1 - }
 40 -; 1 C; 1 -
 # Big Head ON at its 150% default; native ball/unsupported poses remain stock.
 repeat 2 { 1 D; 1 - }
 1 A; 1 -; 1 R; 40 -; 1 C; 1 -
+# Back keeps focus on Big Head; Stealth is the next row.
 # Prepare Stealth's all-team target and attached effects while it is still off.
-repeat 3 { 1 D; 1 - }
+1 D; 1 -
 1 A; 1 -; 1 D; 1 -; 1 R; 1 -; 1 D; 1 -; 1 R; 40 -; 1 C; 1 -
-# Scroll beyond all eleven definitions and Start.
-repeat 11 { 1 D; 1 - }
+# From Stealth, scroll past the remaining definitions to Start.
+repeat 8 { 1 D; 1 - }
 1 A; 1800 -
 60 R; 1 R+A; 30 R; 90 -
 # Open settings; enable Stealth at row3, then explicitly Resume at row11.

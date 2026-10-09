@@ -475,11 +475,25 @@ public final class MutatorSessionState implements AutoCloseable {
             return contributions(MutatorPolicy.PlayerStealth.class);
         }
 
+        /** Configured size; a ring-scaled contribution counts at its 100-ring maximum. */
         public int headScalePercent(boolean leader) {
+            return headScalePercent(leader, RING_SCALE_FULL);
+        }
+
+        /**
+         * Size for a target holding {@code rings} native rings. Ring-scaled contributions grow
+         * linearly from 100% at zero to their percent at 100 rings, truncated, then clamped.
+         */
+        public int headScalePercent(boolean leader, int rings) {
+            int held = Math.clamp(rings, 0, RING_SCALE_FULL);
             return multiplyPercent(contributions(MutatorPolicy.BigHead.class).stream()
                     .filter(value -> leader || value.target() == MutatorPolicy.Target.ALL_TEAM)
-                    .map(MutatorPolicy.BigHead::percent).toList(), 100, 200);
+                    .map(value -> value.scaleWithRings() ? 100 + (value.percent() - 100) * held / RING_SCALE_FULL
+                            : value.percent()).toList(), 100, 200);
         }
+
+        /** Ring-scaled heads reach their configured size at this many rings. */
+        public static final int RING_SCALE_FULL = 100;
 
         public com.openggf.game.mutators.LevelMutatorPolicy levelPolicy(Set<MutatorCapability> available) {
             var removed = java.util.EnumSet.noneOf(com.openggf.game.mutators.MonitorContent.class);

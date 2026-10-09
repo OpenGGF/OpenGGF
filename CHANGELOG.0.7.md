@@ -18,7 +18,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   title-first capture preserves existing direct-level fade and input-last CSV contracts.
   Its title card sits below the native emblem, How to play names the live key
   bindings, play-hold configuration dims the held frame, and option help wraps to
-  two lines with plain-language boundary feedback.
+  two lines with plain-language boundary feedback. Backing out keeps the focused
+  effect, rows name the choice that applies each edit or why a row is unavailable,
+  and a chosen restart or hub return holds native play behind its fade. Big Head
+  can optionally scale with rings: normal at zero, the chosen size at 100 rings.
   Typed catalogue contributions also declare scatter, head-presentation, semantic
   monitor removal, checkpoint/ring suppression, independent stage-entry gates,
   defeat knockback and whole-step speed across ordinary play and native special/bonus

@@ -19,7 +19,7 @@
 {"op": "key", "key": "Escape", "hold": 0.25, "require_focus": true}
 {"op": "wait", "seconds": 3}
 {"op": "screenshot", "name": "help-back-title"}
-{"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
+{"op": "key", "key": "Up", "hold": 0.25, "require_focus": true}
 {"op": "key", "key": "Return", "hold": 0.25, "require_focus": true}
 {"op": "wait", "seconds": 3}
 {"op": "screenshot", "name": "configuration"}
@@ -47,8 +47,6 @@
 {"op": "screenshot", "name": "big-head-options"}
 {"op": "key", "key": "Escape", "hold": 0.25, "require_focus": true}
 {"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
-{"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
-{"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
 {"op": "key", "key": "Return", "hold": 0.25, "require_focus": true}
 {"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
 {"op": "key", "key": "Right", "hold": 0.25, "require_focus": true}
@@ -57,9 +55,6 @@
 {"op": "wait", "seconds": 3}
 {"op": "screenshot", "name": "stealth-options"}
 {"op": "key", "key": "Escape", "hold": 0.25, "require_focus": true}
-{"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
-{"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
-{"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
 {"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
 {"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
 {"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
@@ -122,13 +117,6 @@
 {"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
 {"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
 {"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
-{"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
-{"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
-{"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
-{"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
-{"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
-{"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
-{"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
 {"op": "key", "key": "Return", "hold": 0.25, "require_focus": true}
 {"op": "wait", "seconds": 1}
 {"op": "key", "keys": ["Right", "space"], "hold": 1.2, "require_focus": true}
@@ -164,13 +152,6 @@
 {"op": "wait", "seconds": 3}
 {"op": "screenshot", "name": "game-speed-four-times"}
 {"op": "key", "key": "Escape", "hold": 0.25, "require_focus": true}
-{"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
-{"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
-{"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
-{"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
-{"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
-{"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
-{"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
 {"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
 {"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}
 {"op": "key", "key": "Down", "hold": 0.25, "require_focus": true}

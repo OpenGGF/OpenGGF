@@ -8,7 +8,7 @@ import java.util.Set;
 public final class Gravity {
     private Gravity() { }
     public static MutatorDefinition definition() {
-        return new MutatorDefinition("gravity", "Gravity", "Scale Sonic's ordinary dry air acceleration; jump impulse, water, hurt and scripted motion stay native.",
+        return new MutatorDefinition("gravity", "Gravity", "Scale Sonic's dry fall acceleration. Jumps, water, hurt and scripted motion stay native.",
                 MutatorScope.LIVE, MutatorScope.LIVE,
                 List.of(new MutatorOption.IntegerSlider("percent", "Fall acceleration", "25 to 200 percent of native fall acceleration (gold mark: 100). Jump impulse stays native.",
                         MutatorScope.LIVE, 100, 25, 200, 5, "%")),

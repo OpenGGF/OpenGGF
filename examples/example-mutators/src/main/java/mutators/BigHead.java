@@ -9,13 +9,16 @@ public final class BigHead {
     private BigHead() { }
     public static MutatorDefinition definition() {
         return new MutatorDefinition("big-head", "Big Head Mode",
-                "Enlarge Sonic's head while his body and hitbox stay native. Curled and unreviewed art stays normal.",
+                "Enlarge Sonic's head; body and hitbox stay native. Curled/unreviewed art stays normal.",
                 MutatorScope.LIVE, MutatorScope.LIVE,
-                List.of(new MutatorOption.IntegerSlider("percent", "Head size", "100 to 200 percent about the native neck anchor. Feet, body and collisions stay unchanged.",
+                List.of(new MutatorOption.IntegerSlider("percent", "Head size", "100 to 200 percent about the neck. With Scale with rings, this is the size at 100 rings.",
                                 MutatorScope.LIVE, 150, 100, 200, 10, "%"),
-                        new MutatorOption.Choice("target", "Target", "Leader or all team members with supported Sonic art. Stealth hides the enlarged head too.",
+                        new MutatorOption.Checkbox("rings", "Scale with rings", "Normal size at 0 rings, growing to Head size at 100 rings. Losing rings shrinks it.",
+                                MutatorScope.LIVE, false),
+                        new MutatorOption.Choice("target", "Target", "Leader or all team members with supported Sonic art. Stealth also hides the head.",
                                 MutatorScope.LIVE, "leader", List.of("leader", "all_team"))),
                 Set.of(MutatorCapability.BIG_HEAD), values -> List.of(new MutatorPolicy.BigHead(values.integer("percent"),
-                        values.choice("target").equals("leader") ? MutatorPolicy.Target.LEADER : MutatorPolicy.Target.ALL_TEAM)));
+                        values.choice("target").equals("leader") ? MutatorPolicy.Target.LEADER : MutatorPolicy.Target.ALL_TEAM,
+                        values.checkbox("rings"))));
     }
 }

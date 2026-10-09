@@ -39,7 +39,7 @@ Compiled creator code is unavailable in the engine's standard native image; see 
 | --- | --- | --- |
 | Gravity | Ordinary dry Sonic fall acceleration, 25–200%, 5% steps | Resume |
 | Ringfall Manipulator | 10–100% of the native spill; optional 1–32 ring ceiling | Resume |
-| Big Head | 100–200% head size; leader or supported team members | Resume |
+| Big Head | 100–200% head size, optionally scaled by rings; leader or supported team | Resume |
 | Stealth | Leader/all supported team; hide attached effects checkbox | Resume |
 | No Powerups | Separate checkbox for every semantic monitor type | Full load/restart |
 | No Checkpoints | Death ignores the checkpoint bank and restarts from the native act start | Full load/restart |
@@ -95,6 +95,10 @@ dry Sonic air acceleration only: jump impulse/release, hurt, water, death, fligh
 glide and scripted movement retain their native owners. The identity value is
 100%; enabling the default therefore changes no acceleration.
 
+With **Scale with rings** on (default off), the head is normal size at zero rings
+and grows linearly to the Head size setting at 100 rings, shrinking again as rings
+are lost. No Rings therefore keeps a normal head, and Stealth still hides it.
+
 Big Head enlarges reviewed anatomical head masks from the actual admitted ROM
 sprite pieces. Feet, torso, collision bounds and camera stay native. Mask identity
 is tied to the actual art, mappings and DPLC structure. Curled ball poses,
@@ -110,9 +114,12 @@ those world effects. Turning Stealth off restores presentation without rewriting
 movement state.
 
 The title card and rows animate on the native 320×224 grid. Long catalogues and
-monitor options scroll while keeping the focused row visible. Unsupported rows
-are dimmed with an explanation; an already saved unavailable toggle can still be
-turned off. Menus use each game's native sound IDs and priority arbitration.
+monitor options scroll while keeping the focused row visible, and backing out of
+a page returns to the row that opened it. Each row names the choice that applies
+its edit: Start before play, then Resume or a restart/death reload. Unsupported
+rows are dimmed with their reason; an already saved unavailable toggle still shows
+On and can be turned off. Choosing Restart or Return to game hub holds native play
+frozen behind its fade-out. Menus use each game's native sound IDs and priority arbitration.
 Actual graphics and PCM verification are recorded in the expansion plan; a queued
 cue, synthetic screenshot or nonzero audio amplitude alone is not audible proof.
 

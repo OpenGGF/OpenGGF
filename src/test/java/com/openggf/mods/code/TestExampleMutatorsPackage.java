@@ -144,6 +144,13 @@ class TestExampleMutatorsPackage {
             var retained=source.forSession(List.copyOf(plan.mutators().values()));
             assertEquals(50,retained.get("example-mutators:gravity").options().get("percent"));
             assertTrue(retained.get("example-mutators:stealth").enabled());
+            var head=plan.mutators().get("example-mutators:big-head").definition();
+            assertEquals(1,head.schemaVersion());assertEquals(false,head.defaults().get("rings"),"ring scaling defaults off");
+            var savedHead=new MutatorPreferences("s2",Map.of("example-mutators:big-head",
+                    new MutatorPreferences.Entry(1,true,Map.of("percent",180,"target","leader"))))
+                    .forSession(List.copyOf(plan.mutators().values())).get("example-mutators:big-head");
+            assertEquals(List.of(new MutatorPolicy.BigHead(180,MutatorPolicy.Target.LEADER)),
+                    head.factory().prepare(new MutatorOptions(savedHead.options())),"a saved fixed head stays fixed");
         }
         try(var jar=new java.util.zip.ZipFile(temp.resolve("example-mutators.jar").toFile())) {
             assertTrue(jar.stream().noneMatch(e->e.getName().endsWith(".gen")||e.getName().endsWith(".png")||e.getName().endsWith(".wav")),"gameplay assets come only from supplied ROMs");

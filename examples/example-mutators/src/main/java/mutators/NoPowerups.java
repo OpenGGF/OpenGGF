@@ -13,10 +13,10 @@ public final class NoPowerups {
     public static MutatorDefinition definition() {
         List<MutatorOption> options = Arrays.stream(MonitorContent.values()).map(content ->
                 (MutatorOption) new MutatorOption.Checkbox(id(content), label(content),
-                        "Remove this monitor before it is created on the next full load. Unsupported types are unavailable.",
+                        "Remove this monitor type on the next full load. Unsupported types are unavailable.",
                         MutatorScope.LOAD, content != MonitorContent.BROKEN_SHELL)).toList();
         return new MutatorDefinition("no-powerups", "No Powerups",
-                "Remove checked item monitors on a full restart. Editing while standing on one leaves it in place until then.",
+                "Remove checked monitors on a full restart. One you stand on stays until then.",
                 MutatorScope.LOAD, MutatorScope.LOAD, options, Set.of(MutatorCapability.MONITOR_FILTER),
                 values -> List.of(new MutatorPolicy.MonitorFilter(Arrays.stream(MonitorContent.values())
                         .filter(content -> values.checkbox(id(content))).collect(Collectors.toSet()))));

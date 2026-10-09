@@ -91,6 +91,25 @@ class TestMutatorExpandedPolicies {
     }
 
     @Test
+    void ringScaledHeadsInterpolateFromNativeSizeAndFixedHeadsKeepTheirContract() {
+        var fixed = new MutatorPolicy.BigHead(160, MutatorPolicy.Target.LEADER);
+        assertFalse(fixed.scaleWithRings(), "the original constructor stays a fixed size");
+        assertEquals(fixed, new MutatorPolicy.BigHead(160, MutatorPolicy.Target.LEADER, false));
+        var scaled = new MutatorSessionState.Effective(1, Map.of("a:head",
+                List.<MutatorPolicy>of(new MutatorPolicy.BigHead(200, MutatorPolicy.Target.ALL_TEAM, true))));
+        int[][] cases = {{-5, 100}, {0, 100}, {25, 125}, {50, 150}, {100, 200}, {101, 200}, {999, 200}};
+        for (int[] pair : cases) assertEquals(pair[1], scaled.headScalePercent(true, pair[0]), pair[0] + " rings");
+        assertEquals(200, scaled.headScalePercent(true), "the configured value is the 100-ring maximum");
+        assertEquals(125, new MutatorSessionState.Effective(1, Map.of("a:head", List.<MutatorPolicy>of(
+                new MutatorPolicy.BigHead(150, MutatorPolicy.Target.LEADER, true)))).headScalePercent(true, 50));
+        var mixed = new MutatorSessionState.Effective(1, Map.of("a:head", List.<MutatorPolicy>of(fixed),
+                "b:head", List.<MutatorPolicy>of(new MutatorPolicy.BigHead(150, MutatorPolicy.Target.LEADER, true))));
+        assertEquals(160, mixed.headScalePercent(true, 0), "a fixed owner keeps its size at zero rings");
+        assertEquals(200, mixed.headScalePercent(true, 100), "owners multiply once, then clamp");
+        assertEquals(100, mixed.headScalePercent(false, 100), "leader-only owners never reach teammates");
+    }
+
+    @Test
     void placementCapabilitiesRejectUnsafeToggleAndOptionScopesAtRegistration() {
         var liveCheckbox = new MutatorOption.Checkbox("rings", "Rings", "", LIVE, true);
         assertThrows(IllegalArgumentException.class, () -> new MutatorDefinition("filter", "Filter", "", LIVE, LIVE,
