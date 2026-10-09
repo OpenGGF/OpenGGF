@@ -272,7 +272,7 @@ final class SchoolScreen implements Screen {
         Hero.speech(c, hub.font, speech, 50, 30, 140, 56, t - speechTick);
         // The lifetime heatmap.
         hub.font.shadow(c, "YOUR KEYS", 8, 126, Gfx.GOLD, 1);
-        keyboard.draw(c, hub.font, 10, 141, 14, 11, -1, hub.profile, t);
+        keyboard.draw(c, hub.font, 12, 141, 12, 11, -1, hub.profile, t);
         int shake = t - shakeTick < 10 ? (int) Math.round(Math.sin((t - shakeTick) * 2.2) * 3) : 0;
         hub.font.shadow(c, "LESSONS", GRID_X + 4, GRID_Y - 2 + 0, 0xFF80D0FF, 1);
         hub.font.shadow(c, "DRILLS", GRID_X + CELL_W + 4, GRID_Y - 2, 0xFF80D0FF, 1);
@@ -357,9 +357,9 @@ final class SchoolScreen implements Screen {
         var card = session.card();
         String hud = String.format(java.util.Locale.ROOT, "WPM %d   ACC %.0f%%   CHAIN %d   SCORE %d",
                 Math.round(card.wpm()), card.accuracy() * 100, card.chain(), card.score());
-        hub.font.shadow(c, hud, 10, 28, Gfx.TEXT, 1);
-        Hero.instructor(c, hub.art, hub.game, t, 26, 122, t - speechTick < 60);
-        Hero.speech(c, hub.font, speech, 8, 40, 100, 22, t - speechTick);
+        hub.font.shadow(c, hud, 118, 28, Gfx.TEXT, 1);
+        Hero.instructor(c, hub.art, hub.game, t, 24, 140, t - speechTick < 60);
+        Hero.speech(c, hub.font, speech, 6, 28, 104, 20, t - speechTick);
         int shake = t - shakeTick < 10 ? (int) Math.round(Math.sin((t - shakeTick) * 2.2) * 3) : 0;
         int cx = 110 + (w - 110) / 2;
         if (session.phase() == DrillSession.Phase.READY) {

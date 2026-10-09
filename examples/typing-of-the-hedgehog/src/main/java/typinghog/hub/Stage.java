@@ -49,7 +49,7 @@ final class Stage {
                 stages = rom.levelStages(zone, act, width, HEADROOM, MAX_RISE);
             }
             if (stages.isEmpty()) return new Stage(backdrop, null, null, 0, 0, width, 0);
-            SceneLevelStage stage = stages.get(stages.size() / 2);
+            SceneLevelStage stage = stages.get(0);
             int top = stage.floorY() - FLOOR_ROW;
             SceneImage fg = rom.levelForeground(zone, act, stage.x(), top, width + slack, height);
             return new Stage(backdrop, fg, stage, stage.x(), top, width, slack);

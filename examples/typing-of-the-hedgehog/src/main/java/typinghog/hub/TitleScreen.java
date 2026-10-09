@@ -129,11 +129,11 @@ final class TitleScreen implements Screen {
             int seed = (int) ((t + i * 37) / 110) * 7 + i * 13;
             char ch = pool.charAt(Math.floorMod(seed, pool.length()));
             float rise = life / 80f;
-            int x = SONIC_X - 14 + (int) Math.round(Math.sin(life * 0.12 + i) * 6) - (int) (rise * 10);
-            int y = floor - 36 - (int) (rise * 46);
-            int a = (int) (255 * (1 - rise));
-            hub.font.draw(c, String.valueOf(ch), x + 1, y + 1, (a / 2) << 24, 1);
-            hub.font.draw(c, String.valueOf(ch), x, y, (a << 24) | 0xFFE060, 1);
+            int x = SONIC_X - 22 + (int) Math.round(Math.sin(life * 0.12 + i) * 8) - (int) (rise * 14);
+            int y = floor - 34 - (int) (rise * 56);
+            float a = rise < 0.7f ? 1f : (1 - rise) / 0.3f;
+            int colour = (i % 2 == 0) ? 0xFFFFE060 : 0xFFFFFFFF;
+            hub.font.outline(c, String.valueOf(ch), x, y, Gfx.alpha(colour, a), Gfx.alpha(0xFF101848, a), 2);
         }
     }
 }

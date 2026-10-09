@@ -15,8 +15,8 @@ import typinghog.save.LaunchIntent;
  */
 final class OptionsScreen implements Screen {
     private static final int ROWS = 10;
-    private static final int ROW_H = 15;
-    private static final int TOP = 34;
+    private static final int ROW_H = 14;
+    private static final int TOP = 33;
 
     private final WordMenu words = new WordMenu(List.of(
             WordMenu.Item.of("DIFFICULTY", "difficulty"),
@@ -196,8 +196,8 @@ final class OptionsScreen implements Screen {
                 hub.font.right(c, shown, x + pw - 8 + shake, y + 1 - (bump ? 1 : 0), colour, 1);
             }
         }
-        int dy = TOP + ROWS * ROW_H + 10;
-        Gfx.panel(c, x - 8, dy, pw + 16, 30, 0xC0101830, 0xFF3058B0);
+        int dy = TOP + ROWS * ROW_H + 8;
+        Gfx.panel(c, x - 8, dy, pw + 16, 26, 0xC0101830, 0xFF3058B0);
         int ly = dy + 5;
         for (String line : hub.font.wrap(describe(cursor), pw, 1)) {
             hub.font.shadow(c, line, x, ly, Gfx.TEXT, 1);

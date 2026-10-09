@@ -159,8 +159,10 @@ final class MenuScreen implements Screen {
             }
         }
         String desc = locked(hub, menu.cursor()) ? "Clear a story act to open this mode." : describe(menu.cursor());
-        int dy = TOP + menu.items().size() * ROW_H + 22;
-        for (String line : hub.font.wrap(desc, pw, 1)) {
+        int dy = TOP + menu.items().size() * ROW_H + 20;
+        var lines = hub.font.wrap(desc, pw - 8, 1);
+        Gfx.panel(c, x - 6, dy - 3, pw + 12, lines.size() * 11 + 6, 0xD0101830, 0xFF3058B0);
+        for (String line : lines) {
             hub.font.shadow(c, line, x, dy, Gfx.TEXT, 1);
             dy += 11;
         }

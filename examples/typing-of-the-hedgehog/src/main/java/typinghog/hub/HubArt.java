@@ -107,6 +107,31 @@ final class HubArt {
         };
     }
 
+    /**
+     * A story zone's signature badnik ({@link ZoneCast}) in the act's own palette, or null
+     * when the zone has none or the ROM cannot draw it.
+     */
+    SceneSpriteSet badnik(String game, int zone, int act) {
+        ZoneCast.Badnik who = ZoneCast.of(game, zone);
+        if (who == null) return null;
+        return load(game + ":badnik:" + zone, () -> {
+            SceneRomArt rom = rom(game);
+            int[] palette = null;
+            if (rom.hasLevelKit(zone, act)) {
+                var kit = rom.levelKit(zone, act);
+                if (kit != null) palette = kit.palette();
+            }
+            if (palette == null) {
+                palette = switch (game) {
+                    case "s1" -> palette(rom, 0x2380, 0x23A0);
+                    case "s2" -> s2Palette(rom, 4);
+                    default -> palette(rom, 0x0A8A3C, 0x0A8B7C);
+                };
+            }
+            return rom.sprites(who.request(), palette);
+        });
+    }
+
     /** A Flicky (the stand-in instructor when no supplied ROM has Tails), or null. */
     SceneSpriteSet flicky(String prefer) {
         for (String g : order(prefer)) {

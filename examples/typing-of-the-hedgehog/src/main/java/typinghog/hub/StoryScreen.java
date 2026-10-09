@@ -213,12 +213,39 @@ final class StoryScreen implements Screen {
         // Sonic runs from the last stop to this one, then waits on it.
         int[] a = node(from, w), b = node(cursor, w);
         float k = Math.min(1, (t - moveTick) / (float) RUN_TICKS);
+        if (k >= 1) guard(hub, c, b, t);
         int sx = Math.round(a[0] + (b[0] - a[0]) * k), sy = Math.round(a[1] + (b[1] - a[1]) * k);
         boolean running = k < 1;
         Hero.sonic(c, hub.art, chapter, running ? HubArt.ANIM_RUN : HubArt.ANIM_WAIT, t, sx + shake, sy - 6,
                 running && b[0] < a[0], 1f);
         info(hub, c, w, t);
         hub.footer(c, words.buffer(), "TYPE A ZONE, THEN GO    UP/DOWN: GAME");
+    }
+
+    /**
+     * The stop's badnik waits beside it with its name on a word plate, a preview of the act;
+     * cleared stops have seen theirs off.
+     */
+    private void guard(HubScene hub, SceneCanvas c, int[] at, long t) {
+        StoryBook.Stop stop = stops.get(cursor);
+        StoryBook.State s = state(hub, cursor);
+        if (s == StoryBook.State.CLEARED || s == StoryBook.State.UNDER_CONSTRUCTION) return;
+        ZoneCast.Badnik who = ZoneCast.of(stop.game(), stop.zone());
+        var set = hub.art.badnik(stop.game(), stop.zone(), stop.act());
+        if (who == null || set == null) return;
+        int perRow = stops.size() > 7 ? (stops.size() + 1) / 2 : stops.size();
+        boolean rowB = cursor >= perRow;
+        int bx = at[0] + (rowB ? -34 : 34);
+        var sprite = set.frame(who.frame(t));
+        int feet = at[1] + 2;
+        int y = feet - (sprite.height() - sprite.originY());
+        float bob = (float) Math.sin(t * 0.08) * 1.5f;
+        c.draw(sprite, bx, y + bob, com.openggf.mods.scene.SceneDraw.plain().withFlipX(rowB));
+        String word = who.name().toLowerCase();
+        int plateW = hub.font.width(word, 1) + 6;
+        int plateCx = rowB ? bx + 10 - plateW / 2 : bx - 10 + plateW / 2;
+        Gfx.plate(c, hub.font, word, 0, plateCx, y - sprite.originY() - 14,
+                s == StoryBook.State.LOCKED ? 0xFF686E80 : 0xFFE0E0E0, 1, 0);
     }
 
     private void tabs(HubScene hub, SceneCanvas c) {
