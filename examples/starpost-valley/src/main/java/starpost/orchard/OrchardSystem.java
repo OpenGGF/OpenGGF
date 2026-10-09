@@ -125,9 +125,9 @@ public final class OrchardSystem {
 
     private static String idleText(String kind) {
         return switch (kind) {
-            case Orchard.PALM -> "NO COCONUTS TODAY. SUMMER AND FALL, OR A STORM.";
-            case Orchard.RING_FRUIT -> "NO RINGS YET. THEY GROW SPRING TO FALL.";
-            default -> "NO CHERRIES TODAY. FREE MORE ANIMALS!";
+            case Orchard.PALM -> "NO COCONUTS YET: SUMMER AND FALL";
+            case Orchard.RING_FRUIT -> "NO RINGS TODAY: SPRING TO FALL";
+            default -> "NO CHERRIES: FREE MORE ANIMALS!";
         };
     }
 

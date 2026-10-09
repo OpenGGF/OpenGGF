@@ -240,15 +240,16 @@ public final class MuseumSystem {
                 if (sys == null) {
                     return false;
                 }
-                List<int[]> spots = DigSpots.farm(game);
-                if (spots.isEmpty()) {
-                    return false;
+                for (Actor actor : sys.play.actors) {
+                    if (actor instanceof DigSpot spot && spot.view() == Actor.FARM && spot.live(game)) {
+                        FarmView farm = sys.play.farm();
+                        farm.runner.x = spot.x();
+                        farm.runner.depth = spot.y() + 2 - (FarmView.FIELD_TOP + 4);
+                        farm.snapCamera();
+                        return true;
+                    }
                 }
-                int[] rc = spots.get(0);
-                FarmView farm = sys.play.farm();
-                farm.runner.x = FarmView.FIELD_X + rc[1] * 16 + 8;
-                farm.runner.depth = FarmView.ROW_Y + rc[0] * FarmView.ROW_STEP - (FarmView.FIELD_TOP + 4);
-                farm.snapCamera();
+                return false;
             }
             case "returned" -> {
                 if (sys == null) {
