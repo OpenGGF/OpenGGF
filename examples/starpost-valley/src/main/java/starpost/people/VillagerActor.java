@@ -251,6 +251,24 @@ final class VillagerActor implements Actor {
         }
         Bodies.draw(sys.art, canvas, body, drawPose, drawPose == Bodies.WALK ? anim : shell.ticks, sx, sy, facingLeft,
                 hop, tint);
+    }
+
+    @Override
+    public void drawOver(Shell shell, SceneCanvas canvas, int cx, int cy) {
+        if (!visible || sys.offstage) {
+            return;
+        }
+        float sx = x - cx, sy = feet - cy;
+        if (sx < -60 || sx > canvas.width() + 60) {
+            return;
+        }
+        String body = def.body();
+        boolean hopper = body.startsWith("animal:") && !body.equals("animal:flicky");
+        float hop = walking && hopper ? Math.abs((float) Math.sin(anim * 0.18)) * 5 : 0;
+        long since = shell.ticks - hopAt;
+        if (since >= 0 && since < 24) {
+            hop += (float) Math.sin(since / 24.0 * Math.PI) * 14;
+        }
         float top = sy - height() - Bodies.lift(body, shell.ticks) - hop;
         if (emote != null && shell.ticks < emoteUntil) {
             sys.drawEmote(canvas, emote, sx, top);

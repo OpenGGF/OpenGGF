@@ -613,6 +613,9 @@ public final class FarmView {
                 default -> here.get((int) item[2]).draw(shell, canvas, cx, 0, tint);
             }
         }
+        for (Actor actor : here) {
+            actor.drawOver(shell, canvas, cx, 0);
+        }
     }
 
     private void drawHouse(SceneCanvas canvas, Art.Seasonal look, int cx, SceneDraw tint) {

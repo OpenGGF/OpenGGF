@@ -194,6 +194,11 @@ public final class ValleyView {
             }
         }
         drawFarmer(canvas, tint, cx, cy);
+        for (Actor actor : actors.apply(Actor.VALLEY)) {
+            if (Math.abs(actor.x() - camX - w / 2f) < w) {
+                actor.drawOver(shell, canvas, cx, cy);
+            }
+        }
         Valley.Place place = valley.placeAt(runner.x);
         if (labels && place != null && runner.onGround && !looping) {
             String label = place.id().equals("farm_gate") ? "< " + place.label() : "UP: " + place.label();

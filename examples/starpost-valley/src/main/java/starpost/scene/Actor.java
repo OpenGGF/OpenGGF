@@ -24,6 +24,10 @@ public interface Actor {
     /** Draws at the camera offset: screen x = x - cx; valley screen y = y - cy (cy is 0 on the farm). */
     void draw(Shell shell, SceneCanvas canvas, int cx, int cy, SceneDraw tint);
 
+    /** Names and bubbles, drawn after everything else in the view so crops and weeds never cover them. */
+    default void drawOver(Shell shell, SceneCanvas canvas, int cx, int cy) {
+    }
+
     /** The action button pressed within {@link #reach()} pixels: true when the actor used it. */
     default boolean interact(Shell shell, PlayScreen play) {
         return false;
