@@ -92,7 +92,7 @@ class TypingHedgehogRailProbe {
     private static final boolean ENABLED = Boolean.getBoolean("typinghog.rails");
     private static final List<String> ONLY = csv(System.getProperty("typinghog.rails.only", ""));
     private static final List<String> PHASES =
-            csv(System.getProperty("typinghog.rails.phases", "runs,controls,badniks,stands"));
+            csv(System.getProperty("typinghog.rails.phases", "runs,controls,badniks,badniks320,stands"));
     private static final Path OUT = Path.of(System.getProperty("typinghog.rails.out", "target/typinghog-rails"));
     private static final Path TRACES = Path.of("src/test/resources/traces");
     private static final Path ROUTES = Path.of("src/test/resources/routes/s3k");
@@ -124,7 +124,7 @@ class TypingHedgehogRailProbe {
      * starting at {@code zone/act} with {@code sidekick} as authored.
      */
     record Source(String id, SonicGame game, Kind kind, Path path, int zone, int act,
-                  String sidekick, boolean emeralds) { }
+                  String sidekick, boolean emeralds, boolean captureAuthored, boolean skipIntros) { }
 
     private static List<Source> s1Sources() {
         return List.of(
@@ -167,7 +167,7 @@ class TypingHedgehogRailProbe {
                 {"dez", "s3k/ssz_completerun"}, {"dezboss", "s3k/dez_completerun"},
                 {"ddz", "s3k/runs/s3k-sonic-tails-complete-emeralds/zone0c"}}) {
             sources.add(new Source(t[0], SonicGame.SONIC_3K, Kind.TRACE, TRACES.resolve(t[1]), -1, -1,
-                    "tails", t[0].equals("ddz")));
+                    "tails", t[0].equals("ddz"), false, false));
         }
         for (Object[] c : new Object[][] {
                 {"mhz1-sonic-fresh-320", 7, 0, ""}, {"mhz1-team-cold-complete-320", 7, 0, "tails"},
@@ -185,16 +185,20 @@ class TypingHedgehogRailProbe {
                 {"ssz1-sonic-solo-cold-complete-320", 10, 0, ""},
                 {"ssz1-sonic-tails-cold-complete-320", 10, 0, "tails"}}) {
             String name = (String) c[0];
+            // MHZ/DDZ routes were authored on HeadlessTestFixture (title card played); the DEZ,
+            // LRZ, SOZ and SSZ routes on GameplayCaptureSession, which omits the initial title
+            // card presentation and skips intros except in its SOZ tests.
+            boolean capture = !name.startsWith("mhz") && !name.startsWith("ddz");
             sources.add(new Source("cold:" + name, SonicGame.SONIC_3K, Kind.COLD,
                     ROUTES.resolve(name + ".bk2"), (int) c[1], (int) c[2], (String) c[3],
-                    name.startsWith("ddz")));
+                    name.startsWith("ddz"), capture, capture && !name.startsWith("soz")));
         }
         return sources;
     }
 
     private static Source trace(String id, SonicGame game, String dir, int zone, int act) {
         return new Source(id, game, Kind.TRACE, TRACES.resolve(dir), zone, act,
-                game == SonicGame.SONIC_1 ? "" : "tails", false);
+                game == SonicGame.SONIC_1 ? "" : "tails", false, false, false);
     }
 
     // ------------------------------------------------------------------ programs
@@ -204,7 +208,8 @@ class TypingHedgehogRailProbe {
      * {@code firstRow + i}; {@code lag[i]} marks rows the ROM did not poll.
      */
     record Program(String id, Source source, int zone, int act, int firstRow, int[] masks,
-                   boolean[] lag, int lagRows, int[] recX, int[] recY, int recFirstHurt, String note) {
+                   boolean[] lag, int lagRows, int[] recX, int[] recY, int recFirstHurt, int primeMask,
+                   String note) {
         int length() { return masks.length; }
     }
 
@@ -214,8 +219,21 @@ class TypingHedgehogRailProbe {
             int n = movie.getFrameCount() - 1;
             int[] masks = new int[n];
             for (int i = 0; i < n; i++) masks[i] = movie.getFrame(i + 1).p1InputMask();
-            return List.of(new Program(source.id(), source, source.zone(), source.act(), 1, masks,
-                    new boolean[n], 0, null, null, -1, "authored cold route, frames 1.." + n));
+            List<Program> cold = new ArrayList<>();
+            // Frame 1 first: the initial Process_Sprites pass owns movie frame 0 (GameLoop SETUP_ONLY).
+            cold.add(new Program(source.id(), source, source.zone(), source.act(), 1, masks,
+                    new boolean[n], 0, null, null, -1, movie.getFrame(0).p1InputMask(),
+                    "authored cold route, frames 1.." + n + (source.captureAuthored() ? " capture-authored" : "")));
+            if (source.captureAuthored()) {
+                // Capture tests that consume the initial pass explicitly after boot (the SOZ ones)
+                // play movie frame 0 as gameplay; the 320 control shows which alignment reproduces.
+                int[] all = new int[n + 1];
+                for (int i = 0; i <= n; i++) all[i] = movie.getFrame(i).p1InputMask();
+                cold.add(new Program(source.id() + "@f0", source, source.zone(), source.act(), 0, all,
+                        new boolean[n + 1], 0, null, null, -1, 0,
+                        "authored cold route, frames 0.." + n + " capture-authored, frame 0 as gameplay"));
+            }
+            return cold;
         }
         TraceData trace = TraceData.load(source.path());
         TraceMetadata meta = trace.metadata();
@@ -284,7 +302,7 @@ class TypingHedgehogRailProbe {
                 lagRows++;
             }
         }
-        return new Program(id, source, zone, act, from, masks, lag, lagRows, recX, recY, recFirstHurt,
+        return new Program(id, source, zone, act, from, masks, lag, lagRows, recX, recY, recFirstHurt, 0,
                 note + " recFirstHurt=" + recFirstHurt);
     }
 
@@ -357,7 +375,7 @@ class TypingHedgehogRailProbe {
             this.program = program;
             this.dropLag = dropLag;
             this.s3k = program.source().game() == SonicGame.SONIC_3K;
-            configure(sidekick, width);
+            configure(sidekick, width, program.source().skipIntros());
             fixture = HeadlessTestFixture.builder().withZoneAndAct(program.zone(), program.act())
                     .withFreshLevelStartLifecycle().build();
             if (fixture.camera().getWidth() != width) {
@@ -377,9 +395,10 @@ class TypingHedgehogRailProbe {
                 }
                 GameServices.level().getObjectManager().resyncSpawnList(kept);
             }
+            if (program.source().captureAuthored()) GameServices.level().skipPendingInitialTitleCardPresentation();
             if (program.source().kind() == Kind.COLD) {
                 GameServices.level().consumePendingInitialProcessSpritesPass();
-                prime(0);
+                prime(program.primeMask());
             }
         }
 
@@ -415,6 +434,7 @@ class TypingHedgehogRailProbe {
         }
 
         void stepMask(int mask) {
+            if (program.source().captureAuthored()) GameServices.level().skipPendingInitialTitleCardPresentation();
             fixture.runner().stepFrame(
                     (mask & AbstractPlayableSprite.INPUT_UP) != 0,
                     (mask & AbstractPlayableSprite.INPUT_DOWN) != 0,
@@ -433,7 +453,7 @@ class TypingHedgehogRailProbe {
         }
     }
 
-    private static void configure(String sidekick, int width) {
+    private static void configure(String sidekick, int width, boolean skipIntros) {
         var config = GameServices.configuration();
         config.clearSessionOverrides();
         config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT,
@@ -445,8 +465,8 @@ class TypingHedgehogRailProbe {
         config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
         config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, sidekick);
-        // Recorded runs and authored routes both start with the native intros (AIZ1, LBZ1, SOZ1).
-        config.setSessionOverride(SonicConfiguration.S3K_SKIP_INTROS, false);
+        // Recorded runs keep the native intros (AIZ1, LBZ1, SOZ1); capture-authored routes declare theirs.
+        config.setSessionOverride(SonicConfiguration.S3K_SKIP_INTROS, skipIntros);
         config.setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, false);
         SessionManager.clear();
         TestEnvironment.activeGameplayMode();
@@ -486,6 +506,24 @@ class TypingHedgehogRailProbe {
      */
     private static RunResult measure(Program program, String team, boolean dropLag, int width,
                                      Set<Integer> removeLayout) {
+        return measure(program, team, dropLag, width, removeLayout, null, null);
+    }
+
+    /**
+     * @param reference per-row P1 centre {x[], y[]} to date divergence against (default: the
+     *                  recording for trace programs; a cold route passes its own 320 control run)
+     * @param track     if non-null, receives this run's per-row P1 centre {x[], y[]}
+     */
+    private static RunResult measure(Program program, String team, boolean dropLag, int width,
+                                     Set<Integer> removeLayout, int[][] reference, int[][] track) {
+        int[] refX = reference != null ? reference[0] : program.recX();
+        int[] refY = reference != null ? reference[1] : program.recY();
+        if (track != null) {
+            track[0] = new int[program.length()];
+            track[1] = new int[program.length()];
+            java.util.Arrays.fill(track[0], -1);
+            java.util.Arrays.fill(track[1], -1);
+        }
         String variant = program.source().kind() == Kind.COLD ? "authored" : (dropLag ? "drop-lag" : "keep-lag");
         Rail rail;
         try {
@@ -522,10 +560,20 @@ class TypingHedgehogRailProbe {
                 // Index of the row just stepped: rows before it are clean when an event fires on it.
                 int row = Math.max(0, rail.cursor - 1);
                 AbstractPlayableSprite p = rail.player();
-                if (firstDiverge < 0 && program.recX() != null && rail.cursor > before && row < program.length()) {
-                    int dx = Math.abs((p.getCentreX() & 0xFFFF) - program.recX()[row]);
-                    int dy = Math.abs((p.getCentreY() & 0xFFFF) - program.recY()[row]);
-                    if (dx > 2 || dy > 2) firstDiverge = row;
+                if (rail.cursor > before && row < program.length()) {
+                    if (track != null) {
+                        track[0][row] = p.getCentreX() & 0xFFFF;
+                        track[1][row] = p.getCentreY() & 0xFFFF;
+                    }
+                    if (firstDiverge < 0 && refX != null && row < refX.length && refX[row] >= 0) {
+                        int dx = Math.abs((p.getCentreX() & 0xFFFF) - refX[row]);
+                        int dy = Math.abs((p.getCentreY() & 0xFFFF) - refY[row]);
+                        if (dx > 2 || dy > 2) {
+                            firstDiverge = row;
+                            lastNewCell = rail.engineFrames;
+                            lastNewCellRow = row;
+                        }
+                    }
                 }
                 var level = GameServices.level();
                 var state = GameServices.gameState();
@@ -569,7 +617,10 @@ class TypingHedgehogRailProbe {
                 if (cells.add(((long) (x >> 5) << 32) | (y >> 5)) || !rail.inputSeen) {
                     lastNewCell = rail.engineFrames;
                     lastNewCellRow = row;
-                } else if (!bossActive && !locked && rail.engineFrames - lastNewCell >= STUCK_FRAMES) {
+                } else if (firstDiverge >= 0 && !bossActive && !locked
+                        && rail.engineFrames - lastNewCell >= STUCK_FRAMES) {
+                    // Only after divergence: while in sync, standing still is the reference's own
+                    // behaviour (cutscenes, waits), not a stuck rail.
                     reason = "stuck";
                     stuckRow = lastNewCellRow;
                     stuckFrame = lastNewCell;
@@ -610,6 +661,9 @@ class TypingHedgehogRailProbe {
     // ------------------------------------------------------------------ badnik classification
 
     private static final Map<String, Set<Integer>> BADNIK_CACHE = new LinkedHashMap<>();
+    private static final Map<String, int[][]> COLD_REFERENCE = new LinkedHashMap<>();
+    /** Per classified act: "objectId-hex\tclass" -> badnik?, for the stock-id badnik tables. */
+    private static final Map<String, Map<String, Boolean>> ACT_OBJECT_CLASSES = new LinkedHashMap<>();
 
     /** Layout indexes of the act's badnik spawns, classified in a throwaway session. */
     private static Set<Integer> badnikLayout(Program program, StringBuilder report) {
@@ -618,8 +672,9 @@ class TypingHedgehogRailProbe {
         if (cached != null) return cached;
         Set<Integer> badniks = new HashSet<>();
         Map<String, Integer> histogram = new TreeMap<>();
+        Map<String, Boolean> classes = new TreeMap<>();
         int failures = 0;
-        configure("", MOD_WIDTH);
+        configure("", MOD_WIDTH, program.source().skipIntros());
         HeadlessTestFixture.builder().withZoneAndAct(program.zone(), program.act()).build();
         ObjectManager manager = GameServices.level().getObjectManager();
         ObjectRegistry registry = registryOf(manager);
@@ -628,9 +683,14 @@ class TypingHedgehogRailProbe {
             try {
                 ObjectInstance instance = ObjectConstructionContext.withProbeConstruction(() ->
                         ObjectConstructionContext.construct(services, () -> registry.create(spawn)));
-                if (instance != null && isBadnik(instance)) {
-                    badniks.add(spawn.layoutIndex());
-                    histogram.merge(instance.getClass().getSimpleName(), 1, Integer::sum);
+                if (instance != null) {
+                    boolean badnik = isBadnik(instance);
+                    classes.put(String.format("0x%02X\t%s", spawn.objectId(), instance.getClass().getSimpleName()),
+                            badnik);
+                    if (badnik) {
+                        badniks.add(spawn.layoutIndex());
+                        histogram.merge(instance.getClass().getSimpleName(), 1, Integer::sum);
+                    }
                 }
             } catch (Throwable t) {
                 failures++;
@@ -639,6 +699,7 @@ class TypingHedgehogRailProbe {
         report.append(key).append(" badniks=").append(badniks.size()).append(" ctorFailures=").append(failures)
                 .append(' ').append(histogram);
         BADNIK_CACHE.put(key, badniks);
+        ACT_OBJECT_CLASSES.put(key, classes);
         SessionManager.clear();
         return badniks;
     }
@@ -767,6 +828,21 @@ class TypingHedgehogRailProbe {
         Final replay = Final.of(rail);
         CompositeSnapshot replayCourse = registry.captureCourse();
         out.append(" final=").append(reference.equals(replay) ? "EQUAL" : "DIFF ref=" + reference + " got=" + replay);
+        // Control: restore and replay with no soak, to separate restore-induced differences from
+        // soak-induced ones.
+        try {
+            course.restore(checkpoint);
+            rail.cursor = standIndex;
+            rail.engineFrames = standEngine;
+            rail.prime(standMask);
+            while (rail.cursor < endIndex && rail.step()) { }
+            CompositeSnapshot noSoakCourse = registry.captureCourse();
+            out.append(" noSoakFinal=").append(reference.equals(Final.of(rail)) ? "EQUAL" : "DIFF")
+                    .append(" noSoakKeysVsReference=").append(differingKeys(referenceCourse, noSoakCourse))
+                    .append(" noSoakKeysVsSoaked=").append(differingKeys(replayCourse, noSoakCourse));
+        } catch (Throwable t) {
+            out.append(" noSoak-exception:").append(brief(t));
+        }
         List<String> differing = new ArrayList<>();
         String firstDiff = "";
         for (String key : referenceCourse.entries().keySet()) {
@@ -786,6 +862,15 @@ class TypingHedgehogRailProbe {
         }
         out.append(" layoutAfterReplay=").append(registry.courseLayoutVersion());
         return out.toString();
+    }
+
+    private static String differingKeys(CompositeSnapshot a, CompositeSnapshot b) {
+        List<String> keys = new ArrayList<>();
+        for (String key : a.entries().keySet()) {
+            List<String> d = RewindSnapshotDiff.diffKey(key, a.get(key), b.get(key));
+            if (!d.isEmpty()) keys.add(key + "#" + d.size());
+        }
+        return keys.isEmpty() ? "none" : keys.toString().replace(' ', '_');
     }
 
     // ------------------------------------------------------------------ drivers
@@ -831,10 +916,13 @@ class TypingHedgehogRailProbe {
                 emit(file, "#program\t" + program.id() + "\tzone=" + program.zone() + "\tact=" + program.act()
                         + "\trows=" + program.length() + "\tlagRows=" + program.lagRows() + "\t" + program.note());
                 if (source.kind() == Kind.COLD) {
-                    if (phase("controls")) keepRun(file, best, program, measure(program, source.sidekick(), false,
-                            NATIVE_WIDTH, null), false);
+                    // The authored 320 run is both the control and the divergence reference.
+                    int[][] reference = new int[2][];
+                    keepRun(file, best, program, measure(program, source.sidekick(), false, NATIVE_WIDTH, null,
+                            null, reference), false);
+                    COLD_REFERENCE.put(program.id(), reference);
                     if (phase("runs")) keepRun(file, best, program, measure(program, source.sidekick(), false,
-                            MOD_WIDTH, null), true);
+                            MOD_WIDTH, null, reference, null), true);
                     continue;
                 }
                 if (phase("controls")) {
@@ -863,15 +951,33 @@ class TypingHedgehogRailProbe {
                     continue;
                 }
                 emit(file, "#badniks\t" + program.id() + "\t" + report);
-                RunResult r = measure(program, b.team(), b.variant().equals("drop-lag"), MOD_WIDTH, remove);
+                String actKey = program.source().game() + ":" + program.zone() + ":" + program.act();
+                Map<String, Boolean> classes = ACT_OBJECT_CLASSES.remove(actKey);
+                if (classes != null) {
+                    for (var c : classes.entrySet()) {
+                        emit(file, "badnik-id\t" + actKey + "\t" + program.id() + "\t" + c.getKey() + "\t"
+                                + (c.getValue() ? "badnik" : "other"));
+                    }
+                }
+                RunResult r = measure(program, b.team(), b.variant().equals("drop-lag"), MOD_WIDTH, remove,
+                        COLD_REFERENCE.get(program.id()), null);
                 badnikRuns.put(program.id(), r);
                 emit(file, "badnik-run\t" + r.tsv());
+                if (phase("badniks320")) {
+                    // 4:3 alternative: the recorded team at 320 px with stock badniks removed, dropped lag
+                    // rows (exact at 320 in S1/S2 controls); cold routes keep their authored team.
+                    boolean cold = program.source().kind() == Kind.COLD;
+                    RunResult n = measure(program, program.source().sidekick(), !cold, NATIVE_WIDTH, remove,
+                            COLD_REFERENCE.get(program.id()), null);
+                    emit(file, "badnik-run-320\t" + n.tsv());
+                }
             }
         }
         if (phase("stands")) {
-            // Two acts per game (distinct zones) with the longest validated mod-config rails; every
-            // team the game offers (a cold route keeps its authored team); stock badniks removed as
-            // the mod runs them. Each team's stand window ends at its own validated end.
+            // Two acts per game (distinct zones) with the longest validated mod-config rails that
+            // offer a stand row; every team the game offers (a cold route keeps its authored team);
+            // stock badniks removed as the mod runs them. Each team's window ends at its own
+            // validated end.
             List<Map.Entry<String, RunResult>> ranked = new ArrayList<>(best.entrySet());
             ranked.sort((a, b) -> Integer.compare(b.getValue().validatedRows(), a.getValue().validatedRows()));
             Set<Integer> zonesDone = new HashSet<>();
@@ -880,7 +986,6 @@ class TypingHedgehogRailProbe {
                 Program program = programById.get(entry.getKey());
                 RunResult b = entry.getValue();
                 if (b.validatedRows() < 900 || zonesDone.contains(program.zone())) continue;
-                zonesDone.add(program.zone());
                 boolean drop = b.variant().equals("drop-lag");
                 Set<Integer> remove;
                 try {
@@ -890,16 +995,20 @@ class TypingHedgehogRailProbe {
                 }
                 List<String> standTeams = program.source().kind() == Kind.COLD
                         ? List.of(program.source().sidekick()) : teams;
+                boolean anyStand = false;
                 for (String team : standTeams) {
-                    RunResult window = measure(program, team, drop, MOD_WIDTH, remove);
+                    RunResult window = measure(program, team, drop, MOD_WIDTH, remove,
+                            COLD_REFERENCE.get(program.id()), null);
                     emit(file, "stand-window\t" + window.tsv());
                     String result = window.validatedRows() < 900
                             ? "skipped(validated=" + window.validatedRows() + ")"
                             : stand(program, team, drop, remove, window.validatedRows());
+                    anyStand |= result.startsWith("standRow=");
                     emit(file, "stand\t" + program.id() + "\t" + (team.isEmpty() ? "sonic" : "sonic+" + team)
                             + "\t" + b.variant() + "\tbadniks=" + (remove == null ? "stock" : "removed")
                             + "\t" + result);
                 }
+                if (anyStand) zonesDone.add(program.zone());
             }
         }
     }
