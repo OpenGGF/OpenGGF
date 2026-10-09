@@ -46,7 +46,8 @@ public final class Plates {
                      boolean punctuation, int shake) {
         String display = prompt.display();
         int w = width(prompt);
-        int x = cx - w / 2 + shake;
+        // Keep the plate on screen; its pointer stays over the target.
+        int x = Math.max(4, Math.min(canvas.width() - w - 4, cx - w / 2)) + shake;
         int y = bottom - HEIGHT;
         canvas.fill(x + 1, y, w - 2, HEIGHT, BOX);
         canvas.fill(x, y + 1, 1, HEIGHT - 2, BOX);

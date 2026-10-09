@@ -226,9 +226,15 @@ public final class Hud {
         boolean punctuation = course.intent().punctuation();
         int[] targets = boss.openTargets();
         if (!boss.question().isEmpty()) {
-            int w = font.width(boss.question());
-            canvas.fill((width - w) / 2 - 6, 30, w + 12, PlateFont.HEIGHT + 8, 0xC0201040);
-            font.shadowed(canvas, boss.question(), (width - w) / 2, 34, WHITE, SHADOW);
+            // Below the score panel, wrapped to the screen: trivia runs longer than 320 pixels.
+            java.util.List<String> lines = wrap(boss.question(), width - 32);
+            int lineHeight = PlateFont.HEIGHT + 3;
+            int top = 38;
+            canvas.fill(10, top - 4, width - 20, lines.size() * lineHeight + 6, 0xC0201040);
+            for (int i = 0; i < lines.size(); i++) {
+                String line = lines.get(i);
+                font.shadowed(canvas, line, (width - font.width(line)) / 2, top + i * lineHeight, WHITE, SHADOW);
+            }
         }
         for (int i = 0; i < targets.length; i++) {
             var target = field.target(targets[i]);
@@ -247,6 +253,23 @@ public final class Hud {
         for (int i = 0; i < Boss.HITS; i++) {
             canvas.fill(width - 12 - i * 8, 20, 6, 6, i < Boss.HITS - boss.hits() ? 0xFFFF4060 : 0x60FFFFFF);
         }
+    }
+
+    /** Greedy word wrap of {@code text} to lines no wider than {@code max} pixels. */
+    private java.util.List<String> wrap(String text, int max) {
+        java.util.List<String> lines = new java.util.ArrayList<>();
+        StringBuilder line = new StringBuilder();
+        for (String word : text.split(" ")) {
+            String candidate = line.isEmpty() ? word : line + " " + word;
+            if (!line.isEmpty() && font.width(candidate) > max) {
+                lines.add(line.toString());
+                line = new StringBuilder(word);
+            } else {
+                line = new StringBuilder(candidate);
+            }
+        }
+        if (!line.isEmpty()) lines.add(line.toString());
+        return lines;
     }
 
     private void drawSparks(PixelCanvas canvas, Effects effects, int cameraX, int cameraY) {
