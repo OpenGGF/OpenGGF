@@ -798,3 +798,17 @@ Default traversal no longer certifies presentation on every intermediate frame.
 Use `-Dopenggf.soz.drawEveryFrame=true` with the same focused command for every-frame
 drawing; screenshot/capture tools keep their own rendering behavior. Exact methods,
 commands and coverage limits are in the [memory/throughput research](../../research/2026-10-07-ordinary-suite-memory-cause.md#soz-drawing-gap-follow-up-2026-10-08).
+
+
+### Route drawing policy follow-up (2026-10-09)
+
+The affected cold-route/checkpoint JUnit checks now simulate every input and
+service queued render work every tick, with drawing at snapshot/replay and
+playable/load checkpoints. Complete forward/replay branches stay fully drawn;
+discarded screenshot readback is omitted. Their normal result establishes route
+behavior and these drawn checkpoints, not presentation on every intervening frame.
+For every-frame drawing use `-Dopenggf.tests.drawEveryFrame=true`. The bounded
+state/pixel controls and their limits are described in the
+[headless testing guide](../../../guide/contributing/headless-testing.md).
+This performance change supplies no new native reference, full-route visual
+certification or missing viewport/donor/character coverage; inherited gaps remain.

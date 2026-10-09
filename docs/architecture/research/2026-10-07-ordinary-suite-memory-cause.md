@@ -1167,3 +1167,91 @@ through ordinary and fresh guards. This task preserves that invocation and
 all foreign jobs; SOZ has not reached main. Updated private composition,
 actual-main focused qualification, publication and owned cleanup remain pending
 that owner's completed delivery. No post-merge result is claimed.
+
+
+## Other route drawing policy follow-up (2026-10-09)
+
+The authorized extension uses a second isolated worktree,
+`.worktrees/ai-route-skip-frame-drawing`, based on published
+`cf0ad0de351800e2e2ae5cf3da5af7ed4bfe9d02`. The immutable comparison source
+`0d550d3b5be98651d8b9f4b4c8fc8aff7b24a3b9` includes the already-qualified private
+SOZ change and this published base. The remaining 23 route classes initially kept
+their original per-tick drawing/readback. No production Java, build, selection,
+ROM, movie, input sequence or existing assertion was changed by the extension.
+
+The first candidate control invocation used a working patch at
+`7baa588d2467903dfeacd613b36e0174d2a7a492`, fingerprint
+`4c56b6934b437eb6895ff799da93c18211d0afd114530dc99d57bad974832594`; the fingerprint
+was unchanged through completion at 2026-10-09T09:07:52Z. The queued
+`maven_queue.py --lean -Dmse=off` command selected `TestRouteFrameDrawing` plus
+`TestSozColdRouteFrameDrawing,TestGameplayCaptureFrameRendering,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`
+and all three verified original absolute ROM paths. Both JVM heaps were 1 GiB.
+It completed **8 reports / 90 cases / 88 passing / 2 failures / 0 errors / 0 skips**,
+Maven exit1; summed class time28.692s. These are completed focused controls, not
+a green candidate or a full-suite pass.
+
+The two failures were MHZ: `mhz2-team-incoming-320` with native Sonic+Tails and
+`mhz2-sonic-incoming-800` with native solo Sonic. Both restored their frame600
+starting snapshots exactly. After 420 skipped draws, the first failing key was
+`palette-colors`: 20 `normalRgb` bytes differed at indices
+55–62,66–67,69–71,73,75–76,78–81 (for example index55: fully drawn109 versus
+skipped73). The pixel comparison was not reached in those two cases. The other
+19 new prefixes matched every registered world key/field and exact reconstructed
+framebuffer pixels after the same poisoned-framebuffer protocol; the previous
+4 SOZ controls,5 capture controls and60 required S3K cases also passed.
+
+The initial hypothesis was the renderer's pending-palette commit, so both MHZ
+controls were rerun with full drawing. This completed 26-case invocation at
+2026-10-09T09:40:26Z:24 passing,2 failures,0 errors/skips,exit1,52.101s Maven.
+Its fingerprint `5d306d27b6a2a4158e5f9ece7b007608f9cf12d40fac3121cbc30a9fb7ac2cb8`
+was unchanged. Both complete 892-character palette failures were identical to
+the initial skipped-drawing failures. **Rejected attribution:** that mismatch
+cannot be assigned to drawing gaps; the fully drawn replay control also fails.
+No runtime palette or rewind owner was changed. The next diagnostic attempted two independent fully drawn cold sessions before
+comparing a third session with the same drawing gap. The other
+19 prefixes keep their successful restore/replay comparison. This control hazard
+is recorded in the existing
+[workflow catalogue](../../agent-workflow/briefing-trace-rounds.md#measurement-hazards--all-produce-plausible-output).
+
+The independent cold experiment completed at2026-10-09T09:58:27Z on the same
+HEAD with unchanged working fingerprint
+`d66a66dbb8dabdfc86c6d0c8991d0c03db69eef385cac697b667c5539aad51b8`:21 cases,
+19 passing,2 failures,zero errors/skips,exit1,25.477s summed test time. Both failures
+were between the first two **fully drawn** cold snapshots, before the skipped run:
+spawn references and dynamic `playerOwner` references belong to separate sessions;
+the first case also has an identity-keyed `childSpawns` entry. The existing
+`RewindSnapshotDiff` is intentionally a same-session replay comparator.
+
+Rejected: normalizing those references to force the cold comparison through that
+API. The two MHZ drawing gaps remain unqualified; their route classes keep every
+scene draw and remove only discarded readback. The final new control class retains
+19 validated restore/gap prefixes for FBZ,LRZ,SSZ,DEZ and supported SSZ donors.
+The failed diagnostic MHZ protocols are removed from the shippable control class;
+no existing test or assertion is removed or weakened. All existing MHZ route
+assertions, including inherited replay/history negatives, remain in the matched
+route qualification. Together with the unchanged4 SOZ,5 rendering and60 S3K
+controls, the final control scope is88 cases.
+
+
+The final 19-case control source completed at2026-10-09T10:08:19Z, Maven exit0,
+zero failures/errors/skips,45.063s Maven including recompilation. The working
+fingerprint remained `2720539bdb9b0a2f02459f1c15bec2a4b62f804285071b48c131b50fba64ef42`.
+The command was `python3 tools/testing/maven_queue.py --lean -Dmse=off
+-Dtest=TestRouteFrameDrawing <three original absolute ROM properties> test -B`.
+Every retained prefix compares all registered fields and all RGBA pixels after
+600 fully drawn inputs, a snapshot restore and a420-input drawing gap.
+
+The immutable matched baseline at0d550 completed at2026-10-09T09:30:40Z:
+29 ordinary reports/189 cases/24 inherited failures/zero errors/skips,
+1,500.313s summed test time,26:18 Maven,exit1. The queued request waited6,245s;
+queue wait is excluded from test timings. The separate normal `-Pfbz-routes`
+invocation passed2 reports/2 cases without skips,112.559s summed test time,exit0.
+The baseline already contains the private SOZ optimization; its nine SOZ cases
+are excluded from the additional23-class extension speedup. All24 complete
+primary assertions match the published
+[actual-main failure table](../audits/2026-10-07-stock-parity-gap-verification.md#updated-actual-main-full-assertion-and-skip-summary),
+removing only its exception prefix and normalizing the two specifically verified
+SSZ `RewindObjectStateBlob` hashes. The entire2,907-character normalized SSZ
+payload was compared, including all fields. No other assertion was normalized.
+These focused results preserve inherited negatives; they are not a whole-suite
+or parity pass.

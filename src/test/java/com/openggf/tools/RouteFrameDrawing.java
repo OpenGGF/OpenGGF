@@ -2,17 +2,22 @@ package com.openggf.tools;
 
 import com.openggf.game.GameServices;
 
-/** Drawing policy for the SOZ route checks; simulation and queued render work always run. */
-final class SozColdRouteFrameDrawing {
+/** Test route drawing policy; simulation and queued render-thread work always run. */
+final class RouteFrameDrawing {
     private final boolean everyFrame;
     private long drawnFrames;
     private long skippedFrames;
 
-    SozColdRouteFrameDrawing() {
-        this(Boolean.getBoolean("openggf.soz.drawEveryFrame"));
+    RouteFrameDrawing() {
+        this(Boolean.getBoolean("openggf.tests.drawEveryFrame"));
     }
 
-    SozColdRouteFrameDrawing(boolean everyFrame) {
+    /** Keep an existing route-specific full-drawing switch compatible. */
+    RouteFrameDrawing(String legacyProperty) {
+        this(Boolean.getBoolean("openggf.tests.drawEveryFrame") || Boolean.getBoolean(legacyProperty));
+    }
+
+    RouteFrameDrawing(boolean everyFrame) {
         this.everyFrame = everyFrame;
     }
 
@@ -33,6 +38,7 @@ final class SozColdRouteFrameDrawing {
         }
     }
 
+    /** Rewind branches and explicit presentation witnesses always draw every frame. */
     void draw(GameplayCaptureSession session) {
         session.renderFrame();
         drawnFrames++;

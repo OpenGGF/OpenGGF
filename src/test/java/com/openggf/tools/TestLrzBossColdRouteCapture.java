@@ -39,11 +39,12 @@ class TestLrzBossColdRouteCapture {
                 "src/test/resources/routes/s3k/lrz-boss-sonic-tails-cold-hpz-320.bk2"));
         assertEquals(53047, movie.getFrameCount());
         boolean sawBoss = false, sawCapsule = false, sawResults = false;
+        var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 9, 0, settings);
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
                 session.step(movie.getFrame(frame));
-                session.render();
+                drawing.afterStep(session);
                 assertFalse(session.player().getDead(), "death at input " + frame);
                 if (frame < 43761) continue;
                 var manager = GameServices.level().getObjectManager();
@@ -61,15 +62,16 @@ class TestLrzBossColdRouteCapture {
                 assertEquals(frame < 52926 ? 0 : 1, GameServices.level().getCurrentAct());
                 checked.add(frame);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                drawing.checkpoint(session);
                 var saved = registry.capture();
                 for (int n = 1; n <= 45; n++) {
-                    session.step(movie.getFrame(frame + n)); session.render();
+                    session.step(movie.getFrame(frame + n)); drawing.draw(session);
                 }
                 var forward = registry.capture();
                 registry.restore(saved);
                 session.restoreInputHistory(movie.getFrame(frame));
                 for (int n = 1; n <= 45; n++) {
-                    session.step(movie.getFrame(frame + n)); session.render();
+                    session.step(movie.getFrame(frame + n)); drawing.draw(session);
                 }
                 var replay = registry.capture();
                 assertEquals(forward.entries().keySet(), replay.entries().keySet());
@@ -80,6 +82,7 @@ class TestLrzBossColdRouteCapture {
                 registry.restore(saved);
                 session.restoreInputHistory(movie.getFrame(frame));
             }
+            drawing.checkpoint(session);
             assertEquals(spots, checked);
             assertTrue(sawBoss && sawCapsule && sawResults, "real boss/capsule/results publication chain");
             assertEquals(22, GameServices.level().getCurrentZone());

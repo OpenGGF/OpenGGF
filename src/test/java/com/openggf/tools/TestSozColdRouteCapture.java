@@ -75,7 +75,7 @@ class TestSozColdRouteCapture {
                 : java.util.Set.of(27290, 28090, 28150, 29200, 29400,
                         29575, 29720, 29855, 29900, 30850, 31020);
         long outgoingHistory = 0;
-        var drawing = new SozColdRouteFrameDrawing();
+        var drawing = new RouteFrameDrawing("openggf.soz.drawEveryFrame");
         try (var session = new GameplayCaptureSession(settings)) {
             GameServices.configuration().setSessionOverride(SonicConfiguration.S3K_SKIP_INTROS, false);
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 8, act, settings);
@@ -245,7 +245,7 @@ class TestSozColdRouteCapture {
     }
     private static void replay(
             GameplayCaptureSession session, com.openggf.debug.playback.Bk2Movie movie, int frame,
-            SozColdRouteFrameDrawing drawing) {
+            RouteFrameDrawing drawing) {
         // Every replay begins from a drawn checkpoint, then draws both complete
         // 45-frame branches. Only traversal outside those checks omits drawing.
         drawing.checkpoint(session);

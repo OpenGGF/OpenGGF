@@ -31,6 +31,8 @@ class TestMhzPairColdRouteCapture {
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "tails", "off", null, null, null);
         long outgoingHistory = 0;
         boolean isolatedHistory = false;
+        // Preserve full drawing: MHZ replay controls cannot isolate a drawing gap.
+        var drawing = new RouteFrameDrawing(true);
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 7, 0, settings);
             assertEquals(320, GameServices.camera().getWidth());
@@ -41,7 +43,7 @@ class TestMhzPairColdRouteCapture {
                     GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, true);
                 }
                 session.step(movie.getFrame(frame));
-                session.render();
+                drawing.afterStep(session);
                 assertFalse(session.player().getDead(), "cold route death at " + frame);
                 assertEquals(CharacterKey.SONIC, session.player().characterKey());
                 var followers = GameServices.sprites().getSidekicks();
@@ -59,6 +61,7 @@ class TestMhzPairColdRouteCapture {
                     isolatedHistory = true;
                 }
             }
+            drawing.checkpoint(session);
             assertTrue(isolatedHistory, "the route must observe the actual history-reset boundary");
             assertEquals(4, GameServices.level().getCurrentZone());
             assertEquals(0, GameServices.level().getCurrentAct());

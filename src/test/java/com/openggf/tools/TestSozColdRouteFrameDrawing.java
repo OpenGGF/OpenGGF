@@ -33,7 +33,7 @@ class TestSozColdRouteFrameDrawing {
             GameServices.configuration().setSessionOverride(SonicConfiguration.S3K_SKIP_INTROS, false);
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 8, act, settings);
             assertTrue(GameServices.level().consumePendingInitialProcessSpritesPass());
-            var everyFrame = new SozColdRouteFrameDrawing(true);
+            var everyFrame = new RouteFrameDrawing(true);
             advance(session, movie, everyFrame, 0, 600);
             var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
             var saved = registry.capture();
@@ -55,7 +55,7 @@ class TestSozColdRouteFrameDrawing {
             assertEquals(1, Arrays.stream(ScreenshotCapture.captureFramebuffer(
                     width, GameplayCaptureSession.HEIGHT).pixels()).distinct().count());
 
-            advance(session, movie, new SozColdRouteFrameDrawing(false), 600, 1020);
+            advance(session, movie, new RouteFrameDrawing(false), 600, 1020);
             same(expected, registry.capture());
             var actualImage = ScreenshotCapture.captureFramebuffer(width, GameplayCaptureSession.HEIGHT);
             assertArrayEquals(expectedImage.pixels(), actualImage.pixels(),
@@ -64,7 +64,7 @@ class TestSozColdRouteFrameDrawing {
     }
 
     private void advance(GameplayCaptureSession session, Bk2Movie movie,
-            SozColdRouteFrameDrawing drawing, int start, int end) {
+            RouteFrameDrawing drawing, int start, int end) {
         for (int frame = start; frame < end; frame++) {
             session.step(movie.getFrame(frame));
             drawing.afterStep(session);
