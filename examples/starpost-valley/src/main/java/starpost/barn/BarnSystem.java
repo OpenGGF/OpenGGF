@@ -92,7 +92,10 @@ public final class BarnSystem {
     public static List<WorkshopOffer> workshopOffers(Shell shell) {
         List<WorkshopOffer> out = new ArrayList<>();
         Game game = shell.game;
-        Barn barn = section(game);
+        Barn barn = game.section(Barn.class);    // read only: the menu also lists offers while drawing
+        if (barn == null) {
+            return out;
+        }
         if (barn.coop == 0) {
             out.add(new WorkshopOffer("CUCKY COOP", "cucky_egg", 2000, inputs("palm_wood", 60, "marble_chip", 20),
                     () -> barn.coop = 1, "A HEN HOUSE ON THE BACK WALL: 4 CUCKIES OR PECKIES."));
