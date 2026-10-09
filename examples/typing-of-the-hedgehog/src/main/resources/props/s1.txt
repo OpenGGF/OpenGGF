@@ -1,0 +1,9 @@
+# Sonic 1 prop art: name artKey frame. Monitor icons are Ani_Monitor's icon frames
+# (_anim/Monitor.asm): Eggman 3, Sonic 4, shoes 5, shield 6, invincibility 7, rings 8.
+monitor_eggman      monitor  3
+monitor_life        monitor  4
+monitor_shoes       monitor  5
+monitor_shield      monitor  6
+monitor_invincible  monitor  7
+monitor_rings       monitor  8
+animal              animal   0

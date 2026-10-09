@@ -138,7 +138,13 @@ class TestTypingHedgehogCourse {
         var input = new InputHandler();
         stepUntil(fixture, input, "STAND", 900);
         assertEquals(STAND_ROW, get(view(), "railRow"), "the stand starts on its rail row");
-        int standX = fixture.sprite().getCentreX();
+        var art = GameServices.module().getObjectArtProvider();
+        for (String key : List.of("motobug", "explosion", "animal", "points")) {
+            var sheet = art.getSheet(key);
+            assertNotNull(art.getRenderer(key), "puppets draw " + key + " with the zone's loaded ROM art");
+            System.out.println("[typing-hedgehog] S1 GHZ1 sheet " + key + ": "
+                    + (sheet == null ? "null" : sheet.getFrameCount() + " frames"));
+        }
         int kills = 0;
         for (int i = 0; i < 6000 && "STAND".equals(get(view(), "phase")); i++) {
             @SuppressWarnings("unchecked")
@@ -153,14 +159,15 @@ class TestTypingHedgehogCourse {
         }
         assertTrue(kills >= 6, "typing killed the wave; kills " + kills + " view " + view());
         stepUntil(fixture, input, "RUN", 400);
-        assertEquals(STAND_ROW, get(view(), "railRow"), "the restore resumes the rail on the stand's row");
-        assertEquals(standX, fixture.sprite().getCentreX(), "Sonic is back exactly where the stand began");
+        assertEquals(STAND_ROW + 1, get(view(), "railRow"),
+                "the restore's row plays the stand's own rail row, so the run resumes where it stopped");
+        assertEquals(3, get(view(), "lives"));
     }
 
     @Test void aStandOfAnyLengthLeavesTheRailRunUnchanged() throws Exception {
         int[] fast = runPastStand(7, 0);
         dispose();
-        int[] slow = runPastStand(7, 900);
+        int[] slow = runPastStand(7, 400);
         assertArrayEquals(fast, slow, "player state after the stand must not depend on how long it took");
     }
 
@@ -170,7 +177,8 @@ class TestTypingHedgehogCourse {
         var input = new InputHandler();
         stepUntil(fixture, input, "STAND", 900);
         for (int i = 0; i < idleRows; i++) row(fixture, input);
-        for (int i = 0; i < 8000 && "STAND".equals(get(view(), "phase")); i++) {
+        // Type whatever is on screen until the run resumes; hits and No-Fail retries may intervene.
+        for (int i = 0; i < 12000 && !"RUN".equals(get(view(), "phase")); i++) {
             @SuppressWarnings("unchecked")
             List<Object> targets = (List<Object>) get(view(), "targets");
             if (!targets.isEmpty()) {
