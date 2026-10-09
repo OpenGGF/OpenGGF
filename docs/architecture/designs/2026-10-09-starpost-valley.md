@@ -696,3 +696,137 @@ Lanes (lead plus a few at a time, each in its own worktree, merged into
 | People | `starpost.people`: the villager roster, schedules, picture speech, the translator, gifts, hearts, heart events, mail, Partners |
 | Ruins | `starpost.ruins`: the Marble Ruins chambers from the Marble Zone kit, spin-jump combat, ores and minerals, Star Post elevators, Scrap Brain Depths |
 | Waters and barns | Fishing (Bubble Bar, fish, badnik legends, the lake), animals and buildings on the farm, artisan machines, badnik automation, Flicky roosts |
+
+## 16. Ruins (lane)
+
+Branch `feature/ai-starpost-ruins` (base `facc4b595`), package `starpost.ruins`. The valley's
+`ruins` doorway opens the Marble Ruins: forty side-view chambers on the ported Sonic controller,
+bands 1–15 Marble Zone, 16–30 Labyrinth Zone, 31–40 Scrap Brain Zone, with the zones' music
+(S1 `$83`, `$82`, `$86`).
+
+### Chambers
+
+- **Kits.** `RuinsArt` loads S1 public zones 1 (MZ), 3 (LZ) and 5 (SBZ), acts 1–3 (SBZ act 3 is
+  Labyrinth-built and unused). `Kit` abstracts a kit (layout, per-block collision, picture opacity)
+  so generation and its checks run without a ROM; `RomKit` wraps `SceneLevelKit`.
+- **Window.** A chamber is 2–4 blocks wide and 1–2 high (one or two screens), copied from the whole
+  stock layout. Each next column continues the act or, 40% of the time, jumps to a column whose
+  pair with the previous one occurs, row for row, side by side in the stock layout; remaining
+  seam cells are repaired with a block seen next to both neighbours and above/below (Eggman's
+  Sky's remixer at chamber scale). Windows with floor under less than 70% of the width or under
+  8% / over 80% collision are refused.
+- **Traversal check (`Reach`).** Standing spots every 8 pixels; from each reached spot the real
+  `Runner` plus `Chamber.afterStep` (springs, water) plays eleven input programs each way (walk,
+  walk off and drop, held/short/late/straight/reversed jumps, short and long run-up jumps, spin
+  dash, dash jump). Every spot stood on is reached; lava and spikes end a program; falling out of
+  the bottom reaches the shaft down (a pit drops you one chamber deeper). Up to 30 windows are
+  tried with up to three entries each, scored by reached spots, reached width and the farthest
+  flat spot; play hugging the top edge (median reached height under 100) is scored down.
+- **Placement.** The exit hatch goes on the farthest flat reached spot, so every exit is reachable
+  by construction; a yellow spring is added where it opens at least a seventh more of the room
+  (two at most). Then badniks, rocks, a ring monitor (20%), a ring trail that follows the found
+  route's floors and arcs over its jumps, a few extra ring groups, spikes from chamber 4 (kept only
+  if the exit, elevator and every placed thing stay reached), and air-bubble vents under water.
+  Chamber seed = mix(section seed, day number, chamber): the same all day, new each morning.
+- **Landmarks** (every fifth chamber; S1 windows chosen by eye from kit surveys, hand-picked entry
+  and find points, Star Post elevator placed by the check): 5 The Broken Temple (MZ2, Lava Ruby),
+  10 The Battlements (MZ1, Pud's Super Sunflower seed), 15 The Pillared Shrine (MZ3, Record:
+  Marble), 20 The Crystal Gallery (LZ1, water at 300, Tide Sapphire), 25 The Drowned Tunnel (LZ3,
+  flooded, Record: Labyrinth), 30 The Golden Stair (LZ3, Emerald Shard), 35 The Conveyor Hall
+  (SBZ2, Record: Invincibility), 40 The Sealed Depths (SBZ1, Records: Final Zone and Boss; no way
+  down yet — Scrap Brain Depths). A kit without the window falls back to a generated chamber with
+  the same elevator and finds.
+- **Marble lava.** The kit draws animated tiles at their first frame, which leaves MZ's lava blank
+  while its top-solid collision stays (S1 stands Sonic on lava; a Lava Tag hurts him). Runs of
+  floor with no picture at least 16 pixels wide, below row 40, become lava down to the bed beneath
+  and are drawn from `Art_MzLava1` (surface, 3 frames, 20 frames each, palette line 3) over
+  `Art_MzLava2` (magma), as `AniArt_MZ` animates them.
+
+### Rules (s1disasm routines)
+
+- **Rings are health.** Rings collected in the Ruins are *in hand* (banked into the wallet on
+  leaving or when the day runs out). A hit scatters them as `RLoss_Count` does (at most 32,
+  mirrored pairs from spread `$288`: sixteen at boost 2, sixteen at boost 1), bouncing per
+  `RLoss_Bounce` (`$18` gravity, floor check every fourth frame, a quarter lost per bounce) for the
+  shared 255-frame timer (FixBugs=0) — about 4.3 s, the ROM's figure rather than the brief's
+  "about 3". `HurtSonic` knock-back (`-$400`/`$200`, under water `-$200`/`$100`), hurt gravity
+  `$30`, 120 frames of flashing, no ring collection above 90 (`ReactToItem`). A hit with none in
+  hand faints: the S3K death leap, up to three non-tool stacks lose half, then `DayEndScreen(true)`
+  (the night's own 10% wallet loss).
+- **Bopping.** Rolling, jumping, spin-dashing or fire-dashing into a badnik pops it (S3K
+  explosion, `$B4`), with `React_Enemy`'s bounce; it frees one of its zone's two animals
+  (`Anml_VarIndex`: MZ squirrel/seal, LZ penguin/seal, SBZ rabbit/chicken) who hops away left at
+  `Anml_Variables` speeds, gives +3 Momentum and drops Scrap 35% of the time. Badniks: MZ Batbrain,
+  Caterkiller, Buzz Bomber, Yadrin; LZ Jaws, Burrobot, Orbinaut; SBZ Caterkiller, Bomb, Ball Hog,
+  with each object's collision size and speeds. The Bomb cannot be popped (`col_hurt`), the
+  Caterkiller's body and the Orbinaut's spike balls always hurt, and the Yadrin's back hurts from
+  above. Lava (unless lava is no threat) and spikes hurt too.
+- **Water** (Labyrinth: a line at 30–80% of the room, or flooded 25% of the time).
+  `Sonic_Water`: top speed, acceleration and deceleration halved, x speed halved and y speed
+  quartered on entry, y doubled (capped `-$1000`) on exit; jump `$380`, release cap `$200`, gravity
+  `$10`. `Drown_Countdown`: 30 seconds, a ding at 25/20/15, S1's drowning music `$92` from 12,
+  number bubbles (`Map_Bub` frames `$E`–`$12`), large vent bubbles refill air. Below the line
+  blocks are recoloured entry by entry to `Pal_LZWater`.
+- **Shields and finds.** Water Shield held: no air loss (S3K Bubble Shield). Fire Shield held:
+  lava is harmless, a second jump press is S3K's `$800` dash, and rocks burn for double yield;
+  eating a Fire Shield Pepper sets `ruins.lava_immune` until morning. Lightning Shield held: rings
+  within 64 pixels fly in. A carried Tide Sapphire is spent to save you from drowning; a carried
+  Spark Topaz makes every popped badnik drop Scrap.
+- **Rocks** (MZ smashable green block, else the S1 purple rock) break when rolled into at 3 px a
+  frame or more (2 Momentum) or burned with the Fire Shield (3, double yield); yields per band:
+  marble chips or scrap always, then Marble Ore, the band's gem, its geode, Emerald Shards (1–2%)
+  and, once, the band's Record (0.8%).
+- **Items** (`RuinsContent`, called from `Content.register`): Marble Ore, Lava Ruby, Tide Sapphire,
+  Spark Topaz, Emerald Shard, three geodes, seven Records (flag `record.s1.<id>` on pickup;
+  `RuinsContent.recordSong` maps them to S1 songs for the Sound Test) and Pud's
+  `super_sunflower_seeds` (registered as a relic until the farm defines its crop). Icons come from
+  `RuinsIcons` through the new `ItemIcons.Source` hook.
+- **Progress.** `RuinsSection` (`ruins.deepest`, `seed`, `popped`, `freed`, `best`, `seedFound`;
+  validated on load; `freed` is the Ruins' share of the valley population). Touching a landmark's
+  Star Post records it; at the doorway the elevator offers chamber 1 and every reached landmark.
+  Leave by the shaft of light at each entry or by riding an elevator (`shell.go(play)`); when the
+  day runs out Sonic passes out in the Ruins straight to `DayEndScreen(true)`, keeping his rings
+  (going to `play` first would show the valley for a frame before its own overtime check faded out: `Shell` starts the second fade from full brightness).
+
+### Seams outside the package
+
+`Catalog.add` public; `Content.register` calls `RuinsContent`; `ItemIcons.Source`/`addSource`/
+`picture`; `Systems.sections` adds `RuinsSection`, `Systems.install` calls `RuinsSystem.install`
+(which overrides the `ruins` toast handler); `DayEndScreen` and `InventoryMenu` public;
+`PlayScreen.drawHotbar` public; `InventoryMenu` sets the lava flag when a Fire Shield Pepper is
+eaten; `Debug` forwards `ruins …` (`ruins N`, `rings N`, `hit`, `spawn KIND DX`, `goto
+exit|elevator|monitor|rock|entry`, `at X Y`, `state`, `deepest N`, `elevator`). `Runner` gains
+`Ground.ceiling` (default none), S1 water physics, `knockBack`/`hurt` and the jump headroom check;
+with no ceilings and dry, its arithmetic is unchanged for the valley.
+
+### Rejected on the way (evidence from `ChamberProbe` and captures)
+
+- Windows from `playableArea()`: S1 MZ1's area is 688 pixels tall (its opening camera bounds), which
+  cut off the whole underground; the full layout is used.
+- Every floor with air above as a standing spot: S1 gives brick masses collision only at their
+  edges, so spots appeared inside walls and became entries; spots now need visible open air.
+- Lava as a thin band at the surface: MZ3's lake bed lies 46 pixels under the surface, so spots on
+  the bed counted as safe and an entry was placed inside the lava; lava now reaches the bed.
+- Ring trails from the route's parent links: one walk program links entry to exit in a single hop,
+  so trails became arcs through walls; trails now follow the floor column by column.
+- Exit on the farthest reached spot: on LZ slopes it fell back next to the entry (chamber 16: 27 of
+  63 spots, exit beside the entry); exits and scoring now use flat spots only.
+- Scattered rings collected on the hit frame: the collect check was read before the hit, so all
+  rings came straight back; it is read after.
+
+### Tests and captures
+
+- Creator tests (`src/test/java/starpost/ruins`, ROM-free on `TestKit`): chambers 1–40 identical on
+  regeneration and their exit, elevator and every placed thing reached by an independent traversal;
+  most chambers change overnight; a 120-pixel wall stops the check and a spring clears it; lava
+  found where floor has no picture and avoided; ring burst, bounces, hit/faint, faint losses, ore
+  yields, air, shields, content, and the section's round trip and damage clamping. 25/25 with the
+  core tests (RunCreatorTests).
+- ROM probe (scratch `ChamberProbe` over `RomKit`): seeds 12345, 777 and 31337 on days 0 and 5, all
+  240 chambers built, every exit and elevator reached, at most 126 ms per chamber.
+- `TestStarpostValleyExample` and `ExampleModCapture` (validation 0 findings); captures in
+  `~/scratch/sv-ruins/final/`.
+
+Not done: Scrap Brain Depths, pushable blocks and electric beams, solid rocks (rocks are
+non-solid so they never block the route), slope speed, Knuckles's and Tails's own moves in the
+Ruins, and Pud's lamp (People lane).
