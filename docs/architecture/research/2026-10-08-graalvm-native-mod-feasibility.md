@@ -489,3 +489,46 @@ CLI/exit-status handling, temporary-output cleanup and documentation links are
 checked separately. The new reproducer qualifies neither full gameplay nor an
 engine suite. Tool preflight passed with `LUA_BIN=/usr/bin/lua5.4`; the default
 `lua` was 5.5 and correctly failed that unrelated engine prerequisite.
+
+### Experimental Linux friends ZIP follow-up (2026-10-09)
+
+The Linux successor starts from `8668a901216717d8f3696945a95bbfe8e628b652`,
+including the new Starfall Frontier, Eggman's Sky and Flappy Tails examples.
+Its builder and extra Java sources live outside Maven source roots under
+[`tools/modding/native-linux`](../../../tools/modding/native-linux/README.md).
+It reuses the independently qualified isolated hosted feature/substitution;
+stock Java, tests, POM, API, hooks, testing tools and release workflow are unchanged.
+
+The pinned CE Linux archive SHA-256 is
+`05ccbbe783210b6886ff7b08fcd0b061c5dce4852b05db87284fc0e24abb08e2`.
+Compilation uses an owned rootless Ubuntu 22.04.5 base archive
+(`242cd8898b33ea806ef5f13b1076ed7c76f9f989d18384452f7166692438ff1a`),
+with Ubuntu's GCC 11/glibc 2.35 build packages, rather than this rolling host's
+newer glibc. GraalVM Community licensing and corresponding-source obligations
+remain those established above; full CE notices accompany the ZIP.
+
+Qualification extends registration with real native OpenGL framebuffers,
+production discovery/loader/fault boundaries, bounded level input sequences,
+mod-owned zone selection and both campaign acts, scene debug routes, lifecycle
+reopening and registered module-state roundtrips. Prepared creator audio is
+installed before level loading. Sitar's asynchronous preparation must reach PLAY
+with nonzero final PCM; elapsed wall time is allowed for preparation rather than
+mistaking a fast artificial tick loop for a completed performance. A new
+ROM-library lease is created for each scene reopening. Data overrides are checked
+against their actual prepared music/art targets. These are smoke checks; complete
+campaign, networking, full-world rewind and recipient performance remain outside
+this evidence. The generated static-member contract and ordinary-exit negative
+controls remain mandatory before creator code executes.
+
+The category plan selects 3,073 ordinary classes because these standalone sources
+are unclassified. That fallback is disproportionate here: no production/test/build
+selection input changes, and the actual new executable/archive consumers are
+exercised directly. Use the native contract, all-mod registration/boot/rendered
+checks, archive/launcher regression controls and separate fresh normal guards.
+This is focused validation, not a green whole-engine suite claim. Initial tool
+preflight found the default Lua was not 5.4; `LUA_BIN=/usr/bin/lua5.4` passed the
+Java/Lua/PowerShell preflight without executing tests.
+
+Final binary, source attribution and terminal qualification results are recorded
+below when completed; this initial implementation checkpoint is not a native
+artifact qualification.
