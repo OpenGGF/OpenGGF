@@ -140,7 +140,8 @@ public final class HubScene implements ModScene, DebuggableScene {
             if (ticks >= pendingAt) {
                 Handoff.Pending p = pendingStart;
                 pendingStart = null;
-                start(p.mode(), p.game(), p.zone(), p.act(), profile.stars(p.game(), p.zone(), p.act()) + 1, false);
+                start(p.mode(), p.game(), p.zone(), p.act(), profile.stars(p.game(), p.zone(), p.act()) + 1, false,
+                        p.demo());
             }
         } else if (!leaving) {
             screen.update(this);
@@ -151,8 +152,8 @@ public final class HubScene implements ModScene, DebuggableScene {
 
     @Override public void draw(SceneContext ctx, SceneCanvas c) {
         screen.draw(this, c);
-        if (pendingStart != null) drawCard(c, "NOW ENTERING", stopTitle(pendingStart.game(), pendingStart.zone(),
-                pendingStart.act()));
+        if (pendingStart != null) drawCard(c, pendingStart.demo() ? "DEMO" : "NOW ENTERING",
+                stopTitle(pendingStart.game(), pendingStart.zone(), pendingStart.act()));
         long since = ticks - screenTick;
         if (since < 10) Gfx.fade(c, 1 - since / 10f);
         if (leaving) Gfx.fade(c, Math.min(1, (ticks - leaveTick) / 30f));
@@ -256,11 +257,32 @@ public final class HubScene implements ModScene, DebuggableScene {
      * {@code g} that continues into the act. Returns false (with a notice) when it cannot.
      */
     boolean play(LaunchIntent.Mode mode, String g, int zone, int act, int bossStars) {
-        return start(mode, g, zone, act, bossStars, true);
+        return start(mode, g, zone, act, bossStars, true, false);
     }
 
-    /** As {@link #play}; a hub reopened by a relaunch never relaunches again for the same act. */
-    private boolean start(LaunchIntent.Mode mode, String g, int zone, int act, int bossStars, boolean mayRelaunch) {
+    /**
+     * The title's attract demo, like an arcade cabinet's: a random railed act from any supplied
+     * game, alternating an Arcade run with a boss fight, played by the course's own typist
+     * ({@code demo=true}: never fails, Normal, the player's voice choice). It goes through the
+     * same hand-off as a real play; the course writes no result, so the hub reopens on the
+     * title. Returns false (doing nothing) when no act has a rail yet.
+     */
+    boolean startDemo() {
+        List<StoryBook.Stop> acts = new java.util.ArrayList<>();
+        for (StoryBook.Stop stop : story.stops()) if (available(stop.game()) && railed(stop)) acts.add(stop);
+        if (acts.isEmpty()) return false;
+        long number = profile.nextDemo();
+        long seed = Handoff.seed(number * 7919 + profile.launches(), ticks);
+        StoryBook.Stop stop = acts.get(Handoff.demoPick(seed, acts.size()));
+        return start(Handoff.demoMode(number), stop.game(), stop.zone(), stop.act(), 1, true, true);
+    }
+
+    /**
+     * As {@link #play}; a hub reopened by a relaunch never relaunches again for the same act.
+     * A {@code demo} launch writes a demo intent and no {@code hub-launch.txt} (nothing to file).
+     */
+    private boolean start(LaunchIntent.Mode mode, String g, int zone, int act, int bossStars, boolean mayRelaunch,
+                          boolean demo) {
         if (!available(g)) {
             refuse("SUPPLY THE " + gameName(g) + " ROM FIRST");
             return false;
@@ -270,7 +292,7 @@ public final class HubScene implements ModScene, DebuggableScene {
                 refuse("COULD NOT SWITCH TO " + gameName(g) + " WITH THE RIGHT TEAM");
                 return false;
             }
-            ctx.storage().write(Handoff.PENDING, new Handoff.Pending(mode, g, zone, act).encode());
+            ctx.storage().write(Handoff.PENDING, new Handoff.Pending(mode, g, zone, act, demo).encode());
             save();
             if (ctx.relaunch(new SceneLaunch(g, Handoff.MAIN_CHARACTER, Handoff.sidekicks(g)))) {
                 leave();
@@ -280,10 +302,15 @@ public final class HubScene implements ModScene, DebuggableScene {
             refuse("COULD NOT SWITCH TO " + gameName(g));
             return false;
         }
-        long seed = Handoff.seed(profile.nextLaunch(), ticks);
-        LaunchIntent intent = Handoff.intent(mode, g, zone, act, profile, bossStars, seed);
+        LaunchIntent intent;
+        if (demo) {
+            intent = Handoff.demoIntent(mode, g, zone, act, profile, Handoff.seed(profile.demos() * 104729, ticks));
+            ctx.storage().delete(Handoff.LAUNCHED);
+        } else {
+            intent = Handoff.intent(mode, g, zone, act, profile, bossStars, Handoff.seed(profile.nextLaunch(), ticks));
+            ctx.storage().write(Handoff.LAUNCHED, intent.encode());
+        }
         ctx.storage().write(LaunchIntent.FILE, intent.encode());
-        ctx.storage().write(Handoff.LAUNCHED, intent.encode());
         save();
         if (ctx.startStockAct(zone, act)) {
             leave();

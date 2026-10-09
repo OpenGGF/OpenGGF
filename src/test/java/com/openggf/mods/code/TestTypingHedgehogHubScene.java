@@ -97,6 +97,7 @@ class TestTypingHedgehogHubScene {
         assertNotNull(intent, "the course reads intent.txt");
         assertTrue(intent.contains("mode=STORY") && intent.contains("game=s1") && intent.contains("act=2"), intent);
         assertTrue(intent.contains("voice=MEGADRIVE"), "the voice choice travels with the act: " + intent);
+        assertFalse(intent.contains("demo=true"), "a real play is never a demo: " + intent);
         assertEquals(intent, f.saves.get("hub-launch.txt"), "the hub keeps its own copy");
     }
 
@@ -234,6 +235,59 @@ class TestTypingHedgehogHubScene {
         f.step(1);
         assertTrue(saves.get("profile.txt").contains("voice=MEGADRIVE"));
         f.drawAll();
+    }
+
+    @Test void anIdleTitlePlaysAnAttractDemoAndComesBackToTheTitle() throws Exception {
+        Map<String, String> saves = new HashMap<>();
+        saves.put("profile.txt", "version=2\ndifficulty=EXPERT\nvoice=CLEAN\n");
+        Fixture f = new Fixture("s3k", List.of("s3k"), saves, Set.of("s3k:12:0"));
+        f.step(1000);
+        f.type("x");
+        f.step(1100);
+        assertTrue(f.started.isEmpty(), "input on the title restarts the twenty-second wait");
+        f.step(200);
+        assertEquals(List.of("12:0"), f.started);
+        String intent = saves.get("intent.txt");
+        assertTrue(intent.contains("demo=true") && intent.contains("noFail=true"), intent);
+        assertTrue(intent.contains("difficulty=NORMAL") && intent.contains("voice=CLEAN"), intent);
+        assertTrue(intent.contains("mode=ARCADE"), "the first demo is an Arcade run: " + intent);
+        assertFalse(saves.containsKey("hub-launch.txt"), "a demo files nothing");
+        f.scene.exit(f);
+
+        // The course writes no result for a demo: the reopened hub is straight back on the title,
+        // with no results screen and no record, and the next demo is a boss fight.
+        saves.remove("intent.txt");
+        Fixture back = new Fixture("s3k", List.of("s3k"), saves, Set.of("s3k:12:0"));
+        assertEquals("TITLE", back.screen());
+        assertFalse(saves.get("profile.txt").contains("record."), saves.get("profile.txt"));
+        back.step(1300);
+        assertEquals(List.of("12:0"), back.started);
+        assertTrue(saves.get("intent.txt").contains("mode=BOSS_RUSH"), saves.get("intent.txt"));
+
+        // A real result still opens the results screen as before.
+        saves.put("result.txt", result("STORY", 0, 2, true, false, 1000));
+        Fixture real = new Fixture("s1", List.of("s1"), saves, Set.of("s1:0:2"));
+        assertEquals("RESULTS", real.screen());
+    }
+
+    @Test void aDemoInAnotherGameRelaunchesAndCarriesOnAsADemo() throws Exception {
+        Map<String, String> saves = new HashMap<>();
+        Fixture f = new Fixture("s1", List.of("s1", "s3k"), saves, Set.of("s3k:12:0"));
+        f.step(1300);
+        assertEquals(List.of(new SceneLaunch("s3k", "sonic", List.of())), f.relaunched);
+        assertTrue(saves.get("pending.txt").contains("demo=true"), saves.get("pending.txt"));
+        f.scene.exit(f);
+        Fixture reopened = new Fixture("s3k", List.of("s1", "s3k"), saves, Set.of("s3k:12:0"));
+        reopened.step(60);
+        assertEquals(List.of("12:0"), reopened.started);
+        assertTrue(saves.get("intent.txt").contains("demo=true"));
+    }
+
+    @Test void noRailsNoDemo() throws Exception {
+        Fixture f = new Fixture("s1", List.of("s1"), new HashMap<>(), Set.of());
+        f.step(1500);
+        assertTrue(f.started.isEmpty() && f.relaunched.isEmpty());
+        assertEquals("TITLE", f.screen());
     }
 
     @Test void voiceLinesFollowTheVoiceOption() throws Exception {

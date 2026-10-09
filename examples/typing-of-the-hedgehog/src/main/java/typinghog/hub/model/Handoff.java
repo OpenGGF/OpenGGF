@@ -68,12 +68,41 @@ public final class Handoff {
                 p.dictionaries(), seed, Math.max(1, bossStars), p.noFail(), p.slowMotion(), p.voice());
     }
 
+    // ---- attract demos -----------------------------------------------------------------------
+
+    /** The title waits this long without input (20 seconds) before it plays a demo. */
+    public static final int DEMO_IDLE_TICKS = 20 * 60;
+
+    /**
+     * An attract demo's intent: the course types for the player, never fails, at Normal, in the
+     * player's voice choice; the dictionaries are the player's mix.
+     */
+    public static LaunchIntent demoIntent(LaunchIntent.Mode mode, String game, int zone, int act, Profile p, long seed) {
+        return new LaunchIntent(mode, game, zone, act, LaunchIntent.Difficulty.NORMAL, false, false,
+                p.dictionaries(), seed, 1, true, false, p.voice(), true);
+    }
+
+    /** Demos alternate an Arcade run with a boss fight so the attract loop shows both. */
+    public static LaunchIntent.Mode demoMode(long demoNumber) {
+        return Math.floorMod(demoNumber, 2) == 0 ? LaunchIntent.Mode.ARCADE : LaunchIntent.Mode.BOSS_RUSH;
+    }
+
+    /** Which of {@code count} railed acts the demo with this seed plays (-1 when there are none). */
+    public static int demoPick(long seed, int count) {
+        return count <= 0 ? -1 : (int) Math.floorMod(seed, (long) count);
+    }
+
     // ---- pending selection ------------------------------------------------------------------
 
-    /** An act to start as soon as the hub opens in {@code game}. */
-    public record Pending(LaunchIntent.Mode mode, String game, int zone, int act) {
+    /** An act to start as soon as the hub opens in {@code game}; {@code demo} for an attract demo. */
+    public record Pending(LaunchIntent.Mode mode, String game, int zone, int act, boolean demo) {
+        public Pending(LaunchIntent.Mode mode, String game, int zone, int act) {
+            this(mode, game, zone, act, false);
+        }
+
         public String encode() {
-            return "mode=" + mode.name() + "\ngame=" + game + "\nzone=" + zone + "\nact=" + act + "\n";
+            return "mode=" + mode.name() + "\ngame=" + game + "\nzone=" + zone + "\nact=" + act + "\n"
+                    + (demo ? "demo=true\n" : "");
         }
 
         /** Null for missing or damaged text. */
@@ -83,7 +112,7 @@ public final class Handoff {
                 String game = v.get("game");
                 if (!List.of("s1", "s2", "s3k").contains(game)) return null;
                 return new Pending(LaunchIntent.Mode.valueOf(v.get("mode")), game, Integer.parseInt(v.get("zone")),
-                        Integer.parseInt(v.get("act")));
+                        Integer.parseInt(v.get("act")), Boolean.parseBoolean(v.getOrDefault("demo", "false")));
             } catch (RuntimeException damaged) {
                 return null;
             }

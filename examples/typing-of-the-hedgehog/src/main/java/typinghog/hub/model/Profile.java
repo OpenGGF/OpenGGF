@@ -66,6 +66,7 @@ public final class Profile {
     private boolean slowMotion;
     private LaunchIntent.Voice voice = LaunchIntent.Voice.MEGADRIVE;
     private long launches;
+    private long demos;
 
     private final Map<String, Set<String>> cleared = new TreeMap<>();
     private final Map<String, Set<String>> emeralds = new TreeMap<>();
@@ -121,6 +122,7 @@ public final class Profile {
                 default -> LaunchIntent.Voice.parse(value);
             };
             case "launches" -> launches = Math.max(0, Long.parseLong(value));
+            case "demos" -> demos = Math.max(0, Long.parseLong(value));
             case "keys.hits" -> keyHits.addEncoded(value);
             case "keys.misses" -> keyMisses.addEncoded(value);
             case "life.chars" -> lifeChars = Math.max(0, Long.parseLong(value));
@@ -178,6 +180,7 @@ public final class Profile {
         put(out, "slowMotion", slowMotion);
         put(out, "voice", voice.name());
         put(out, "launches", launches);
+        put(out, "demos", demos);
         cleared.forEach((game, set) -> { if (!set.isEmpty()) put(out, "cleared." + game, String.join(",", set)); });
         emeralds.forEach((game, set) -> { if (!set.isEmpty()) put(out, "emeralds." + game, String.join(",", set)); });
         stars.forEach((key, n) -> put(out, "stars." + key, n));
@@ -237,6 +240,10 @@ public final class Profile {
     /** Counts a launch and returns its ordinal, which the seed mixes in. */
     public long nextLaunch() { return ++launches; }
     public long launches() { return launches; }
+
+    /** Counts an attract demo and returns how many came before it (demo 0 is the first). */
+    public long nextDemo() { return demos++; }
+    public long demos() { return demos; }
 
     // ---- story ------------------------------------------------------------------------------
 

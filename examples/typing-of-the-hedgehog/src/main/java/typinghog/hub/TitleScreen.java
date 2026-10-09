@@ -20,6 +20,7 @@ final class TitleScreen implements Screen {
     private long exitTick = -1;
     private boolean skipIntro;
     private boolean prompted;
+    private long lastInput;
 
     @Override public String name() { return "TITLE"; }
 
@@ -32,6 +33,7 @@ final class TitleScreen implements Screen {
         exitTick = -1;
         hub.audio.theme(HubAudio.Theme.TITLE);
         prompted = false;
+        lastInput = hub.ticks;
     }
 
     @Override public void update(HubScene hub) {
@@ -47,6 +49,12 @@ final class TitleScreen implements Screen {
         }
         if (age < DROP / 2) return;
         Controls in = hub.controls;
+        // Attract mode: left alone long enough, the title plays a demo; any input restarts the wait.
+        if (in.any()) lastInput = hub.ticks;
+        if (hub.ticks - lastInput >= typinghog.hub.model.Handoff.DEMO_IDLE_TICKS) {
+            lastInput = hub.ticks;
+            if (hub.startDemo()) return;
+        }
         for (char c : in.typed().toCharArray()) {
             char lower = Character.toLowerCase(c);
             if (!Character.isLetterOrDigit(lower)) continue;

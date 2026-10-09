@@ -71,6 +71,14 @@ final class Controls {
 
     boolean tab() { return ctx.keyPressed(SceneKeys.TAB); }
 
+    /** True when the player did anything this tick: typed, pressed a key or button, or used the mouse. */
+    boolean any() {
+        var mouse = ctx.mouse();
+        return !typed.isEmpty() || accept() || back() || backspace() || tab() || up() || down() || left() || right()
+                || injectedAccept || ctx.buttonDown(SceneButtons.ACTIONS | SceneButtons.START | SceneButtons.DIRECTIONS)
+                || (mouse != null && (mouse.moved() || mouse.leftPressed() || mouse.rightPressed()));
+    }
+
     /** The characters typed this tick. */
     String typed() { return typed; }
 
