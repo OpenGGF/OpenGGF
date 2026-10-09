@@ -91,6 +91,8 @@ public final class ValleyView {
             if (in.act && runner.onGround && interact.getAsBoolean()) {
                 in.consume();
             }
+            runner.character = shell.game.farmer;
+            runner.climbUp = in.up;
             if (runner.step(valley, in.left, in.right, in.down, in.jump, in.jumpHeld, (int) shell.ticks)) {
                 shell.sfx(Sfx.JUMP);
             }
@@ -139,7 +141,13 @@ public final class ValleyView {
 
     private void animate() {
         float speed = Math.abs(runner.speed);
-        if (looping || runner.rolling || !runner.onGround && !runner.sprung) {
+        if (runner.flying) {
+            anim.set(runner.flyTimer > 0 ? 0x20 : 0x24, runner.flyTimer > 0 ? 1 : 4);   // TAILS_FLY, TAILS_FLY_TIRED
+        } else if (runner.gliding) {
+            anim.set(0x20, 3);                                                         // Knuckles's glide
+        } else if (runner.climbing) {
+            anim.set(0x22, 8);                                                         // GLIDE_LAND frames on the wall
+        } else if (looping || runner.rolling || !runner.onGround && !runner.sprung) {
             anim.set(Anim.ROLL, Math.max(0, 4 - (int) Math.max(speed, looping ? 6 : 0)));
         } else if (runner.sprung) {
             anim.set(Anim.SPRING, 2);

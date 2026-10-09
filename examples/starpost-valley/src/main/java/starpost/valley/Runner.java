@@ -88,6 +88,20 @@ public final class Runner {
     public boolean underwater;
     /** Knocked back by a hit: no control, lighter gravity, until the next landing. */
     public boolean hurt;
+    /** "sonic", "tails" or "knuckles": the second press of jump in the air is their own move. */
+    public String character = "sonic";
+    /** Tails's flight (Tails_FlyingTimer): eight seconds of flapping, then he tires and sinks. */
+    public boolean flying;
+    public int flyTimer;
+    public static final int FLY_TIME = 8 * 60;
+    /** Tails_Fly: gravity $08 while flying; a press of jump lifts him. */
+    public static final float FLY_GRAVITY = 0x08 / 256f;
+    public static final float FLY_LIFT = 0x200 / 256f;
+    /** Knuckles: gliding (held jump, $400 forward, a slow sink), or clinging to a wall and climbing. */
+    public boolean gliding;
+    public boolean climbing;
+    public static final float GLIDE_SPEED = 0x400 / 256f;
+    public static final float GLIDE_SINK = 0x80 / 256f;
 
     public Runner(float x, float y) {
         this.x = x;
@@ -159,6 +173,10 @@ public final class Runner {
     /** One frame. Returns true when a jump started (for the jump sound). */
     public boolean step(Ground ground, boolean left, boolean right, boolean down, boolean jumpPressed,
             boolean jumpHeld, int tick) {
+        if (climbing) {
+            climb(ground, down, jumpPressed, tick);
+            return false;
+        }
         boolean jumped = false;
         pushing = false;
         if (hurt) {
@@ -214,19 +232,102 @@ public final class Runner {
             if (!jumpHeld && ySpeed < -release && jumpedAt >= 0 && !sprung) {
                 ySpeed = -release;
             }
-            float top = top();
-            if (left) {
-                speed = Math.max(-top, speed - airAccel());
-                facingLeft = true;
-            } else if (right) {
-                speed = Math.min(top, speed + airAccel());
-                facingLeft = false;
+            if (jumpPressed && !hurt && jumpedAt >= 0) {
+                secondMove();
             }
-            ySpeed = Math.min(16, ySpeed + gravity());
+            float top = top();
+            if (gliding) {
+                glide(left, right, jumpHeld);
+            } else {
+                if (left) {
+                    speed = Math.max(-top, speed - airAccel());
+                    facingLeft = true;
+                } else if (right) {
+                    speed = Math.min(top, speed + airAccel());
+                    facingLeft = false;
+                }
+                if (flying) {
+                    if (flyTimer > 0) {
+                        flyTimer--;
+                    }
+                    ySpeed = Math.min(flyTimer > 0 ? 1.5f : 4, ySpeed + (flyTimer > 0 ? FLY_GRAVITY : gravity()));
+                } else {
+                    ySpeed = Math.min(16, ySpeed + gravity());
+                }
+            }
             moveInAir(ground);
         }
         return jumped;
     }
+
+    /** The second press of jump: Tails takes off or flaps, Knuckles starts gliding. */
+    private void secondMove() {
+        if (character.equals("tails")) {
+            if (!flying) {
+                flying = true;
+                flyTimer = FLY_TIME;
+                rolling = false;
+            }
+            if (flyTimer > 0) {
+                ySpeed = Math.max(-2, ySpeed - FLY_LIFT);
+            }
+        } else if (character.equals("knuckles") && !gliding) {
+            gliding = true;
+            rolling = false;
+            speed = (facingLeft ? -1 : 1) * Math.max(GLIDE_SPEED, Math.abs(speed));
+            ySpeed = Math.min(ySpeed, 0);
+        }
+    }
+
+    /** Knuckles_GlideControl: hold jump to keep gliding; pressing the other way turns him round. */
+    private void glide(boolean left, boolean right, boolean jumpHeld) {
+        if (!jumpHeld) {
+            gliding = false;   // let go: he drops
+            return;
+        }
+        float want = facingLeft ? -GLIDE_SPEED : GLIDE_SPEED;
+        if (left && !facingLeft || right && facingLeft) {
+            speed -= Math.signum(speed) * 0.25f;
+            if (Math.abs(speed) < 0.5f) {
+                facingLeft = !facingLeft;
+            }
+        } else {
+            speed += Math.signum(want - speed) * Math.min(Math.abs(want - speed), 0.0625f);
+        }
+        ySpeed = ySpeed < GLIDE_SINK ? Math.min(GLIDE_SINK, ySpeed + 0.125f) : GLIDE_SINK;
+    }
+
+    /**
+     * Knuckles on a wall: up and down climb (pressing toward the screen moves him down), jump
+     * kicks off the wall, and climbing past the top pulls him up onto the ledge.
+     */
+    private void climb(Ground ground, boolean down, boolean jumpPressed, int tick) {
+        int side = facingLeft ? -1 : 1;
+        if (jumpPressed) {
+            climbing = false;
+            facingLeft = !facingLeft;
+            speed = -side * 3;
+            ySpeed = -4;
+            jumpedAt = tick;
+            rolling = true;
+            return;
+        }
+        y += down ? 1 : climbUp ? -1 : 0;
+        int wallX = Math.round(x + side * (HALF_WIDTH + 1));
+        if (!ground.solid(wallX, Math.round(y) - height() + 4)) {
+            // Over the top: pull up onto the ledge.
+            x += side * (HALF_WIDTH + 6);
+            y = ground.floorBelow(Math.round(x), Math.round(y) - height() - 8);
+            climbing = false;
+            onGround = true;
+        } else if (ground.solid(Math.round(x), Math.round(y) + 1) && down) {
+            climbing = false;
+            onGround = true;
+        }
+    }
+
+    /** Set by the screen each tick: up is held (Knuckles climbs). */
+    public boolean climbUp;
 
     /** Sonic_Jump's headroom check (always passes where the ground has no ceilings). */
     private boolean headroom(Ground ground) {
@@ -328,6 +429,13 @@ public final class Runner {
         float nx = clampX(ground, x + speed);
         int probe = Math.round(nx + Math.signum(speed) * HALF_WIDTH);
         if (speed != 0 && ground.solid(probe, Math.round(y) - WALL)) {
+            if (gliding) {
+                // Knuckles grabs the wall (Knuckles_GlideCheckWall) and clings.
+                gliding = false;
+                climbing = true;
+                facingLeft = speed < 0;
+                ySpeed = 0;
+            }
             speed = 0;
         } else {
             x = nx;
@@ -355,6 +463,8 @@ public final class Runner {
                 sprung = false;
                 jumpedAt = -1;
                 rolling = false; // Sonic_ResetOnFloor: landing ends the jump's roll
+                flying = false;
+                gliding = false;
                 if (hurt) {
                     speed = 0;   // Sonic_HurtStop: the knock-back ends with no speed
                 }

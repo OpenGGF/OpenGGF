@@ -99,6 +99,12 @@ public final class Shell {
         in.consume();
     }
 
+    /** Closes every overlay (debug captures; the morning post, menus). */
+    public void closeOverlays() {
+        overlays.clear();
+        in.consume();
+    }
+
     public boolean hasOverlay() {
         return !overlays.isEmpty();
     }

@@ -330,6 +330,8 @@ public final class RuinsScreen implements Screen {
         }
         boolean wasOnGround = runner.onGround;
         boolean wasDashing = runner.dashing;
+        runner.character = shell.game.farmer;
+        runner.climbUp = shell.in.up;
         if (runner.step(chamber, shell.in.left, shell.in.right, shell.in.down, shell.in.jump, shell.in.jumpHeld,
                 (int) ticks)) {
             shell.sfx(Sfx.JUMP);
@@ -805,6 +807,12 @@ public final class RuinsScreen implements Screen {
             anim.set(ANIM_HURT, 8);
         } else if (getAir > 0) {
             anim.set(ANIM_GET_AIR, 8);
+        } else if (runner.flying) {
+            anim.set(runner.flyTimer > 0 ? 0x20 : 0x24, runner.flyTimer > 0 ? 1 : 4);   // TAILS_FLY, TAILS_FLY_TIRED
+        } else if (runner.gliding) {
+            anim.set(0x20, 3);                                                         // Knuckles's glide
+        } else if (runner.climbing) {
+            anim.set(0x22, 8);                                                         // GLIDE_LAND frames on the wall
         } else if (runner.rolling || !runner.onGround && !runner.sprung) {
             anim.set(Anim.ROLL, Math.max(0, 4 - (int) speed));
         } else if (runner.sprung) {
