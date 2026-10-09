@@ -18,6 +18,9 @@ public final class Music {
     public static final int S1_SLZ = 0x84;
     public static final int S1_SYZ = 0x85;
     public static final int S1_SBZ = 0x86;
+    public static final int S1_ENDING = 0x8B;
+    public static final int S1_GOT_THROUGH = 0x8E;
+    public static final int S1_CREDITS = 0x91;
     private static final int LENGTH_FRAMES = 60 * 180;
 
     private final SceneContext ctx;

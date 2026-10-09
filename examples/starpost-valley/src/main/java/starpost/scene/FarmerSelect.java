@@ -44,7 +44,7 @@ final class FarmerSelect implements Screen {
         } else if (shell.in.confirm) {
             shell.game = shell.newGame(System.nanoTime(), code(cursor));
             shell.sfx(Sfx.STARPOST);
-            shell.go(new PlayScreen(shell));
+            shell.go(new IntroScreen());
         }
     }
 

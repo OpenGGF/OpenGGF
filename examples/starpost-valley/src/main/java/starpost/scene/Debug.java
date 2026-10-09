@@ -53,6 +53,10 @@ final class Debug {
                     play.debugPlace(p[0].equals("farm"), Float.parseFloat(p[1]), p.length > 2 ? Float.parseFloat(p[2]) : 30);
                 }
                 case "demo" -> demo(shell.game);
+                case "intro" -> {
+                    shell.game = shell.newGame(1234, p.length > 1 ? p[1] : "sonic");
+                    shell.goNow(new IntroScreen());
+                }
                 case "sleep" -> shell.go(new DayEndScreen(false));
                 case "music" -> shell.music.setEnabled(p[1].equals("on"));
                 default -> {

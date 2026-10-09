@@ -23,7 +23,6 @@ final class DayEndScreen implements Screen {
     private final List<Integer> counts = new ArrayList<>();
     private int paid;
     private long started;
-    private int phase;          // 0 tally, 1 title card
     private long phaseAt;
 
     DayEndScreen(boolean fainted) {
@@ -53,17 +52,12 @@ final class DayEndScreen implements Screen {
     public void update(Shell shell) {
         long age = age(shell);
         boolean skip = shell.in.confirm || shell.in.act;
-        if (phase == 0) {
-            long done = 60 + (items.size() + 1) * COUNT_TICKS * 4L;
-            if (age == done) {
-                shell.sfx(paid > 0 ? Sfx.PERFECT : Sfx.SWITCH);
-            }
-            if (age > done + 60 || skip && age > 20) {
-                phase = 1;
-                phaseAt = shell.ticks;
-            }
-        } else if (age > 150 || skip && age > 20) {
-            shell.go(new PlayScreen(shell));
+        long done = 60 + (items.size() + 1) * COUNT_TICKS * 4L;
+        if (age == done) {
+            shell.sfx(paid > 0 ? Sfx.PERFECT : Sfx.SWITCH);
+        }
+        if (age > done + 60 || skip && age > 20) {
+            shell.go(new MorningCard(() -> new PlayScreen(shell)));
         }
     }
 
@@ -73,10 +67,6 @@ final class DayEndScreen implements Screen {
         int w = canvas.width(), h = canvas.height();
         canvas.drawBackdrop(shell.art.season(game.calendar.season()).backdrop(2), 0, 0, w, h, 8, started * 0.5,
                 shell.ticks);
-        if (phase == 1) {
-            drawTitleCard(shell, canvas, game);
-            return;
-        }
         canvas.fill(0, 0, w, h, 0x60000010);
         long age = age(shell);
         // The signpost spins, slowing to a stop on Sonic's face (Map_Sign frames 0-3).
@@ -107,31 +97,6 @@ final class DayEndScreen implements Screen {
         }
         if (items.isEmpty() && age > 60) {
             Text.centred(canvas, "NOTHING SHIPPED TODAY", 118, Text.GREY);
-        }
-    }
-
-    /**
-     * The morning's card, after Sonic 3 &amp; Knuckles': the red banner drops in on the left while the
-     * season and the valley's name slide in from the right, then the day in Sonic 1's HUD digits.
-     */
-    private void drawTitleCard(Shell shell, SceneCanvas canvas, Game game) {
-        int w = canvas.width();
-        long age = age(shell);
-        canvas.fill(0, 0, w, canvas.height(), 0xFF000000);
-        int in = (int) Math.max(0, 320 - age * 16);
-        if (shell.art.cardBanner != null) {
-            canvas.draw(shell.art.cardBanner, w / 2f - 120, -in * 0.7f, SceneDraw.plain());
-        }
-        var font = shell.art.cardFont;
-        String season = Calendar.seasonName(game.calendar.season());
-        font.draw(canvas, season, w / 2f - 40 + in, 76, SceneDraw.plain());
-        String name = game.farmName + " VALLEY";
-        font.draw(canvas, name, w / 2f - 40 + in * 1.4f, 108, SceneDraw.plain());
-        String day = Integer.toString(game.calendar.day());
-        float dx = w / 2f - 40 + font.width(season) + 12 + in * 1.2f;
-        shell.art.hud.number(canvas, day, dx, 68, 2);
-        if (game.raining && age > 30) {
-            Text.centred(canvas, "RAIN TODAY", 150, Text.BLUE);
         }
     }
 }

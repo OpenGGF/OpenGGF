@@ -30,6 +30,10 @@ public final class PlayScreen implements Screen {
     /** The fold between views: counts down; the view switches half way. */
     private int fold;
     private boolean foldToValley;
+    /** Cutscenes stop the clock (and its overnight faint), hide the HUD and hold the gate shut. */
+    public boolean clockStopped;
+    public boolean hudHidden;
+    public boolean gateLocked;
     /** Everything else in the world, and what each valley doorway does. */
     public final List<Actor> actors = new ArrayList<>();
     public final Map<String, Consumer<Shell>> places = new LinkedHashMap<>();
@@ -82,6 +86,10 @@ public final class PlayScreen implements Screen {
 
     public boolean onFarm() {
         return onFarm;
+    }
+
+    public boolean folding() {
+        return fold > 0;
     }
 
     public FarmView farm() {
@@ -150,10 +158,10 @@ public final class PlayScreen implements Screen {
             shell.push(new InventoryMenu());
             return;
         }
-        if (game.calendar.tick()) {
+        if (!clockStopped && game.calendar.tick()) {
             chooseMusic(shell);
         }
-        if (game.calendar.overtime()) {
+        if (!clockStopped && game.calendar.overtime()) {
             shell.toast(game.farmer.toUpperCase() + " PASSED OUT...");
             shell.go(new DayEndScreen(true));
             return;
@@ -166,7 +174,11 @@ public final class PlayScreen implements Screen {
                 case SLEEP -> shell.push(new ConfirmMenu("GO TO BED FOR THE NIGHT?", () -> shell.go(new DayEndScreen(false))));
                 case SHIP -> shell.push(new ShipMenu());
                 case CHEST -> shell.push(new ChestMenu(farm.openedChest));
-                case TO_VALLEY -> startFold(shell, true);
+                case TO_VALLEY -> {
+                    if (!gateLocked) {
+                        startFold(shell, true);
+                    }
+                }
                 default -> {
                 }
             }
@@ -226,7 +238,9 @@ public final class PlayScreen implements Screen {
             drawRain(shell, canvas);
         }
         drawFold(canvas);
-        drawHud(shell, canvas);
+        if (!hudHidden) {
+            drawHud(shell, canvas);
+        }
     }
 
     /** The fold: Green Hill's checker closes from top and bottom like a shutter, then opens on the other view. */

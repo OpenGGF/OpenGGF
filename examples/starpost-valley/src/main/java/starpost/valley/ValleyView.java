@@ -36,6 +36,8 @@ public final class ValleyView {
     /** Set by the play screen: the valley's actors, and the action button offered to them. */
     public java.util.function.IntFunction<List<Actor>> actors = view -> List.of();
     public java.util.function.BooleanSupplier interact = () -> false;
+    /** Doorway labels over the farmer's head (cutscenes turn them off). */
+    public boolean labels = true;
 
     public enum Request {
         NONE,
@@ -62,6 +64,14 @@ public final class ValleyView {
         looping = false;
         camX = clampX(runner.x - shell.width() / 2f);
         camY = clampY(runner.y - 150);
+    }
+
+    public float cameraX() {
+        return camX;
+    }
+
+    public float cameraY() {
+        return camY;
     }
 
     public void snapCamera() {
@@ -175,7 +185,7 @@ public final class ValleyView {
         }
         drawFarmer(canvas, tint, cx, cy);
         Valley.Place place = valley.placeAt(runner.x);
-        if (place != null && runner.onGround && !looping) {
+        if (labels && place != null && runner.onGround && !looping) {
             String label = place.id().equals("farm_gate") ? "< " + place.label() : "UP: " + place.label();
             int x = Math.round(place.x() - cx) - canvas.textWidth(label) / 2;
             Text.shadow(canvas, label, Math.max(4, Math.min(w - 4 - canvas.textWidth(label), x)),

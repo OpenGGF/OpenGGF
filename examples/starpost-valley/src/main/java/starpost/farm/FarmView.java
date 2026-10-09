@@ -51,6 +51,8 @@ public final class FarmView {
     private final Shell shell;
     public final BeltRunner runner = new BeltRunner(DOOR_X + 40, 0);
     private float camera;
+    /** A cutscene's camera: world x to ease toward instead of following the farmer (NaN: follow). */
+    public float cameraTarget = Float.NaN;
     private int chargeTicks;
     private boolean dashing;
     private long lastActionAt = -100;
@@ -97,6 +99,10 @@ public final class FarmView {
 
     public void snapCamera() {
         camera = clampCamera(runner.x - shell.width() / 2f);
+    }
+
+    public float camera() {
+        return camera;
     }
 
     public float feetY() {
@@ -157,7 +163,9 @@ public final class FarmView {
         if (runner.x >= GATE_X + 8 && runner.speed > 0) {
             request = Request.TO_VALLEY;
         }
-        camera += (clampCamera(runner.x - shell.width() / 2f + (runner.facingLeft ? -20 : 20)) - camera) * 0.15f;
+        float target = Float.isNaN(cameraTarget) ? runner.x - shell.width() / 2f + (runner.facingLeft ? -20 : 20)
+                : cameraTarget - shell.width() / 2f;
+        camera += (clampCamera(target) - camera) * (Float.isNaN(cameraTarget) ? 0.15f : 0.04f);
         animate(charged);
         return request;
     }
