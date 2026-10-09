@@ -656,3 +656,46 @@ python3 tools/testing/maven_queue.py --lean -Dmse=off \
   '-Dtest=TestEggmansSkyStartupAudio,TestModSceneHost,TestEggmansSkyVoice,TestEggmansSkyVoiceAssets,TestExternalContentPolicy,TestAudioManagerStreamedPortOwnership,TestModStreamedMusicPort,TestNamespacedMusicRouting,TestStreamedPresentationSession,TestStreamedAudioVoiceRegistry,TestStreamedBackendIntegration,TestLiveCaptureSurvivesBackendSwap,TestSampleBackedVoice,TestModAudioPreparer,TestBoundedAudioDecode,TestSamplePlatformerIntegration,TestPhase3StandaloneSampleIntegration' \
   "-Ds3k.rom.path=$S3K_ROM" test
 ```
+
+Fix `8bb1555284b42a7843db55ff95d3c7bbc2dc7b85` integrated conflict-free into
+actual develop `50004a4172e0b6e407daad09d511a562602a6377`, against published base
+`209c8b1ad2bf6891ef767bb84d0cc3e54d5b7618`. The intervening base change only
+updates Maven build admission and prose; the adapter, all-bank regression and
+mod inputs exactly match the qualified private tree. The same focused command
+completed on actual main at 2026-10-09T17:58:28Z: 133 cases, zero failures,
+errors or skips, exit 0, 45.551 seconds. Tracked inputs and HEAD remained
+unchanged through this check. The original absolute main S3K ROM independently
+matched CRC32 `63522553` and SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`.
+
+The installed-JAR probe on `8bb1555284b4` completed at 17:57:54Z, exit 0.
+It uses production audio preparation, the transferred session view, the actual
+mod startup scene, its ROM sound wrapper and the bounded `Voice.say` queue,
+with a real LWJGL/OpenAL backend and paced presentation. Ring, mining laser,
+scanner and life-support voice captures contain final 48 kHz stereo PCM:
+
+| Capture | Seconds | Peak sample | RMS |
+| --- | ---: | ---: | ---: |
+| Ring | 2 | 3735 | 533.68 |
+| Mining laser | 2 | 3691 | 764.23 |
+| Scanner | 2 | 3160 | 665.90 |
+| Life support voice | 4 | 21608 | 1819.45 |
+
+The live OpenAL device consumed 581118 stereo frames with zero underruns.
+These observations establish final mixed content and device consumption;
+the automated probe does not measure a listener's perceived latency. The four
+recordings remain in the explicit external audio-check task directory. Temporary
+probe code/logs, isolated copied repository and generated saves are discarded
+once consumed, alongside the clean merged fix worktree and local branch.
+
+At the user's request, the engine was rebuilt on `50004a4172e0` through the
+worktree build lock (bypassing shared test admission), then
+`python3 examples/build_example.py eggmans-sky --skip-engine` validated and
+packaged the mod with zero findings. The installed `mods/eggmans-sky.jar`
+contains all 122 byte-identical voice resources and retains SHA-256
+`75d30e818a41eef5a942bf57028b586154aa4f013e1df9ed6e4e5a5b6600a8cb`.
+The fix is present in freshly compiled engine classes; no audio regeneration,
+paid API request, save change or Mod Manager state change was needed.
+
+This prose-only successor records focused delivery and live playback evidence;
+it does not replace the earlier inherited-failure whole-suite qualification
+with a new full-suite pass.
