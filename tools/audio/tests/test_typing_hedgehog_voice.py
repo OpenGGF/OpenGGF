@@ -139,7 +139,9 @@ class Publication(unittest.TestCase):
                       '"You call that typing? My toaster types faster!")', java)
         self.assertIn('public enum Speaker { ANNOUNCER, ROBOTNIK, TAILS }', java)
         self.assertIn('public static final String RETRO_SUFFIX = "-md";', java)
-        self.assertIn('this.clip = new Announcer.Clip(asset, durationTicks, priority, cooldownTicks);', java)
+        self.assertIn('return new Announcer.Clip(asset, durationTicks, priority, cooldownTicks);', java)
+        self.assertNotIn('static {', java)
+        self.assertNotIn('HashMap', java)
         self.assertIn('public Speaker speaker() {', java)
         text = manifest.read_text()
         self.assertIn('  - id: voice-robotnik-taunt-toaster\n    assetPath: audio/voice/robotnik_taunt_toaster.wav\n'
