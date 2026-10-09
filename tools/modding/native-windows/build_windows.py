@@ -67,7 +67,7 @@ def pe_x64(path):
         raise ValueError("Expected AMD64 Windows binary: " + str(path))
 
 
-def assemble(bundle, image, engine, inputs, contract, graal, evidence):
+def assemble(bundle, image, engine, inputs, contract, graal, evidence, native_source=None):
     """Assemble exclusively owned inputs; also exercised by the fixture tests."""
     bundle.mkdir(parents=True, exist_ok=False)
     shutil.copy2(image, bundle / "OpenGGF.exe")
@@ -87,18 +87,18 @@ def assemble(bundle, image, engine, inputs, contract, graal, evidence):
     shutil.copy2(contract / "members.tsv", bundle / "native-mod-members.tsv")
     catalog.update({"experimental": True, "platform": "windows-x64", "graalVersion": GRAAL_VERSION,
                     "graalArchiveSha256": GRAAL_SHA256, "nativeSha256": digest(image), "validation": evidence})
+    catalog["nativeBuildSourceCommit"] = native_source or catalog["sourceCommit"]
     (bundle / "build-info.json").write_text(json.dumps(catalog, indent=2) + "\n", encoding="utf-8")
     (bundle / "config.yaml").write_text(
         '# Put your own ROMs beside this file.\nroms:\n  sonic1: "s1.gen"\n  sonic2: "s2.gen"\n'
         '  sonic3k: "s3k.gen"\n  directory: "."\n  default: "s2"\nstartup:\n'
         '  titleScreen: true\n  masterTitleScreen: true\n  legalDisclaimer: true\n', encoding="utf-8")
     launcher = ('@echo off\r\nsetlocal\r\npushd "%~dp0"\r\n'
-                'if "%~1"=="" (\r\n  OpenGGF.exe\r\n) else (\r\n'
-                '  OpenGGF.exe "-Dggfmod.dev.modDir=%~dp0quick-mods\\%~1"\r\n)\r\n'
+                'OpenGGF.exe %*\r\n'
                 'set "result=%errorlevel%"\r\npopd\r\n'
-                'if not "%result%"=="0" pause\r\nexit /b %result%\r\n')
+                'if not "%result%"=="0" if not "%OPENGGF_NO_PAUSE%"=="1" pause\r\nexit /b %result%\r\n')
     (bundle / "_launch.bat").write_bytes(launcher.encode("ascii"))
-    (bundle / "OpenGGF.bat").write_bytes(b'@echo off\r\ncall "%~dp0_launch.bat"\r\n')
+    (bundle / "OpenGGF.bat").write_bytes(b'@echo off\r\ncall "%~dp0_launch.bat" %*\r\n')
     for mod in catalog["mods"]:
         slug = mod["slug"]
         if not slug or any(c not in "abcdefghijklmnopqrstuvwxyz0123456789-" for c in slug):
@@ -107,7 +107,8 @@ def assemble(bundle, image, engine, inputs, contract, graal, evidence):
         if digest(jar) != mod["jarSha256"]: raise ValueError("Mod hash drift: " + slug)
         extract_jar(jar, bundle / "quick-mods" / slug)
         (bundle / ("Launch " + slug + ".bat")).write_bytes(
-            ('@echo off\r\ncall "%~dp0_launch.bat" "' + slug + '"\r\n').encode("ascii"))
+            ('@echo off\r\ncall "%~dp0_launch.bat" "-Dggfmod.dev.modDir=%~dp0quick-mods\\'
+             + slug + '" %*\r\n').encode("ascii"))
     shutil.copy2(ROOT / "LICENSE", bundle / "LICENSE")
     shutil.copytree(ROOT / "LICENSES", bundle / "LICENSES")
     for name in ("CREDITS.md", "NOTICE.md"):
@@ -132,9 +133,10 @@ def assemble(bundle, image, engine, inputs, contract, graal, evidence):
         "member audit and Windows native validation/registration; full gameplay and performance\n"
         "of every mod are not certified. The usual released native engine policy is unchanged.\n"
         "Run OpenGGF.exe --audit or --check-mods for bounded diagnostic checks.\n\n"
-        "OpenGGF is distributed under GNU GPL version 3. Corresponding engine, mod and\n"
-        "experimental build source for this exact build:\n"
+        "OpenGGF is distributed under GNU GPL version 3. Corresponding engine and mod source:\n"
         f"https://github.com/OpenGGF/OpenGGF/tree/{catalog['sourceCommit']}\n"
+        "Experimental build tools:\n"
+        f"https://github.com/OpenGGF/OpenGGF/tree/{catalog['nativeBuildSourceCommit']}\n"
         "GraalVM Community source and upstream release:\n"
         "https://github.com/oracle/graal/tree/95ce1499c8c96ab7d5a6697c5b4bf42160f3b68b\n"
         "https://github.com/graalvm/graalvm-ce-builds/releases/tag/graal-25.4.4.1.1\n"
@@ -155,6 +157,24 @@ def archive_bundle(bundle, output):
     output.with_suffix(".zip.sha256").write_text(f"{digest(output)}  {output.name}\n", encoding="ascii")
 
 
+def bootstrap_control(work, engine):
+    # This shared regression source must never enter native image analysis.
+    classes = work / "bootstrap-control-classes"
+    classes.mkdir()
+    run([tool("javac"), "--release", "21", "-cp", engine, "-d", classes,
+         ROOT / "tools/modding/native-linux/BootstrapControl.java"], work)
+    manifest = classes / "META-INF/openggf-mod.yaml"
+    manifest.parent.mkdir()
+    manifest.write_text('formatVersion: 1\nid: native-bootstrap-control\nname: Native bootstrap control\n'
+        'version: 0.1.0\nauthors: [OpenGGF contributors]\ndescription: Runtime-loaded JDK bootstrap regression control.\nengineApiRange: ">=0.7.0 <0.8.0"\n'
+        'type: patch\nbaseGame: s2\nentrypoint: nativecontrol.BootstrapControl\n'
+        'dependencies: []\naudioOverrides: {}\nartOverrides: {}\n', encoding="utf-8")
+    fixture = work / "bootstrap-control.jar"
+    sdk = next((ROOT / "target").glob("*-openggf-mod-sdk.jar"))
+    run([tool("java"), "-cp", os.pathsep.join(map(str, (engine, sdk))),
+         "com.openggf.tools.modsdk.GgfModCli", "package", "--input", classes, "--out", fixture], work)
+
+
 def build(args):
     if os.name != "nt": raise ValueError("Compile on Windows with MSVC and the Windows SDK")
     work = args.output.resolve()
@@ -162,6 +182,9 @@ def build(args):
     engine, inputs = args.engine_jar.resolve(strict=True), args.inputs.resolve(strict=True)
     catalog = json.loads((inputs / "build-info.json").read_text())
     if digest(engine) != catalog["engineSha256"]: raise ValueError("Engine/mod input identity changed")
+    if subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=no"], cwd=ROOT, text=True).strip():
+        raise ValueError("Commit tracked build inputs before compiling the native image")
+    native_source = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     archive = work / "graalvm.zip"
     urllib.request.urlretrieve(GRAAL_URL, archive)
     if digest(archive) != GRAAL_SHA256: raise ValueError("GraalVM publisher checksum mismatch")
@@ -173,14 +196,18 @@ def build(args):
     sources = sorted((ROOT / "tools/modding/native-feasibility").glob("NativeModMember*.java"))
     sources += [ROOT / "tools/modding/native-feasibility/NativeModRegistrationProbe.java"]
     sources += sorted(Path(__file__).parent.glob("*.java"))
-    run([tool("javac"), "--release", "21", "-cp", os.pathsep.join(map(str, (engine, sdk))),
+    sources += [ROOT / "tools/modding/native-linux" / name
+                for name in ("NativeGameplayCheck.java", "NativeSceneInspection.java")]
+    run([tool("javac"), "--release", "21", "-cp", os.pathsep.join(map(str, (engine, sdk, ROOT / "target/classes"))),
          "-d", classes, *sources], work)
     classpath = os.pathsep.join(map(str, (classes, engine)))
     java = [tool("java"), "-cp", classpath]
     run([*java, "com.openggf.tools.NativeModMemberContractTest", work / "fixtures"], work)
     contract = work / "contract"
-    run([*java, "com.openggf.tools.NativeModMemberContract", engine, inputs / "mods", contract], work)
+    run([*java, "com.openggf.tools.NativeModMemberContract", engine, inputs / "mods", contract,
+         "--implementation-root=com.openggf.game.GameModule", "--jdk-members"], work)
     run([*java, "com.openggf.tools.NativeModMemberAudit", contract / "members.tsv"], work)
+    bootstrap_control(work, engine)
     metadata = work / "metadata"
     metadata.mkdir()
     (metadata / "reflect-config.json").write_text(
@@ -190,10 +217,15 @@ def build(args):
                                                ROOT / "target/classes"))) + os.pathsep + deps
     native = work / "native"
     native.mkdir()
-    arguments = ["-march=compatibility", "-J-Xmx5g", "--parallelism=4",
+    packages = set((contract / "jdk-preserve-packages.txt").read_text().splitlines()) | {
+        "java.lang", "java.lang.invoke", "java.lang.runtime", "java.lang.reflect",
+        "java.util", "java.util.function", "java.util.stream", "java.nio.charset"}
+    preserve = f"path={contract / 'preserved-engine.jar'}," + ','.join('package=' + name for name in sorted(packages))
+    arguments = ["-march=compatibility", "-J-Xmx8g", "--parallelism=4",
+        "--add-modules=java.logging",
         "--initialize-at-run-time=org.lwjgl,java.awt,javax.swing,sun.awt,sun.java2d",
         "-H:+UnlockExperimentalVMOptions", "-H:+RuntimeClassLoading",
-        f"-H:Preserve=path={contract / 'preserved-engine.jar'},package=java.lang,package=java.lang.invoke,package=java.util,package=java.util.function",
+        "-H:Preserve=" + preserve,
         r"-H:IncludeResources=com/openggf/.*\.class", f"-H:ConfigurationFileDirectories={metadata}",
         "-J-Dopenggf.experimental.native.mods=true",
         "-J--add-exports=org.graalvm.nativeimage.builder/com.oracle.svm.core.hub=ALL-UNNAMED",
@@ -209,7 +241,7 @@ def build(args):
     evidence = {"memberAudit": "pending", "registrations": [], "engineBootRegistrations": [],
                 "gameplay": "not certified"}
     bundle = work / "OpenGGF-experimental-windows-x64-with-mods"
-    assemble(bundle, image, engine, inputs, contract, graal, evidence)
+    assemble(bundle, image, engine, inputs, contract, graal, evidence, native_source)
     run([bundle / "OpenGGF.exe", "--audit"], bundle)
     original = (bundle / "native-mod-members.tsv").read_bytes()
     for kind, desc in (("F", "I"), ("M", "()V")):
@@ -219,27 +251,45 @@ def build(args):
             run([bundle / "OpenGGF.exe", "--audit"], bundle, "MISSING native member: " + kind)
         finally:
             (bundle / "native-mod-members.tsv").write_bytes(original)
+    fixture = bundle / "mods/native-bootstrap-control.jar"
+    try:
+        shutil.copy2(work / "bootstrap-control.jar", fixture)
+        output = run([bundle / "OpenGGF.exe", "--check-mods", "native-bootstrap-control"], bundle)
+        if "PASS registration: native-bootstrap-control; code=true" not in output:
+            raise AssertionError("Runtime-loaded JDK bootstrap control did not pass")
+        evidence["jdkBootstrapControl"] = "runtime-loaded records, pattern switch, generated proxy, UTF-8, writer, file copy/atomic replace and primitive/reference streams passed on Windows"
+    finally:
+        fixture.unlink(missing_ok=True)
     for mod in catalog["mods"]:
         owner = mod["id"]
+        registrations = []
         for command, cwd in (([*java, "com.openggf.tools.NativeModRegistrationProbe", inputs / "mods", owner], work),
                              ([bundle / "OpenGGF.exe", "--check-mods", owner], bundle)):
             output = run(command, cwd)
             if f"PASS registration: {owner};" not in output: raise AssertionError("Missing registration result: " + owner)
+            registrations.append(next(line for line in output.splitlines() if line.startswith(f"PASS registration: {owner};")))
+        if registrations[0] != registrations[1]: raise AssertionError("JVM/native registration mismatch: " + owner)
         evidence["registrations"].append(owner)
         with zipfile.ZipFile(inputs / "mods" / (mod["slug"] + ".jar")) as jar:
             contains_code = any(name.endswith(".class") for name in jar.namelist())
         if contains_code:
-            output = run([bundle / "OpenGGF.exe",
-                f"-Dggfmod.dev.modDir={bundle / 'quick-mods' / mod['slug']}", "--check-engine", owner], bundle)
+            output = run(["cmd.exe", "/d", "/c", "call", bundle / ("Launch " + mod["slug"] + ".bat"),
+                          "--check-engine", owner], work)
             if f"PASS engine native boot registration: {owner}" not in output:
                 raise AssertionError("Missing actual engine boot result: " + owner)
             evidence["engineBootRegistrations"].append(owner)
+        else:
+            output = run(["cmd.exe", "/d", "/c", "call", bundle / ("Launch " + mod["slug"] + ".bat"),
+                          "--check-mods", owner], work)
+            if f"PASS registration: {owner};" not in output: raise AssertionError("Missing data-mod shortcut result")
+    run(["cmd.exe", "/d", "/c", "call", bundle / "OpenGGF.bat", "--audit"], work)
+    evidence["batchLaunchers"] = "all mod shortcuts and the normal launcher passed from a different working directory"
     evidence["memberAudit"] = "passed; missing field and method controls rejected with exit 1"
     # Reassemble from immutable inputs, excluding every probe-created mutable
     # config/service/cache output, including future new ones. This whole folder
     # belongs to this build; no user-authored input is ever in it.
     shutil.rmtree(bundle)
-    assemble(bundle, image, engine, inputs, contract, graal, evidence)
+    assemble(bundle, image, engine, inputs, contract, graal, evidence, native_source)
     artifact = work / (bundle.name + ".zip")
     archive_bundle(bundle, artifact)
     print(f"PASS Windows native ZIP: {artifact}; {len(catalog['mods'])} JVM/native registrations; SHA256 {digest(artifact)}")

@@ -8,6 +8,10 @@ on:
     paths:
       - '.github/workflows/experimental-windows-friends.yml'
       - 'tools/modding/native-windows/**'
+      - 'tools/modding/native-feasibility/**'
+      - 'tools/modding/native-linux/BootstrapControl.java'
+      - 'tools/modding/native-linux/NativeGameplayCheck.java'
+      - 'tools/modding/native-linux/NativeSceneInspection.java'
   workflow_dispatch:
 
 permissions:

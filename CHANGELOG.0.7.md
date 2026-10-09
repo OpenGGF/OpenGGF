@@ -985,10 +985,16 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   module-only rewind composition isolated from engine artifacts, portable
   example projects, repeatable builds, artifact-only CI and explicit packaging
   warnings suitable for automation.
-  A separate experimental Windows native friends bundle packages the maintained
+  Separate experimental Windows and Linux native friends bundles package the maintained
   example mods and launch shortcuts using GraalVM runtime class loading, with
-  generated member retention and startup checks. Gameplay qualification remains
+  generated engine/JDK member retention, runtime bootstrap controls and startup checks.
+  Windows shortcuts forward diagnostic arguments and are checked through the native executable.
+  The Linux builder also exercises
+  representative rendered gameplay, audio and scene lifecycle paths. Gameplay qualification remains
   experimental; the normal native release policy is unchanged.
+  Art overlays preserve their base provider's title-card and runtime-art admission
+  leases across respawn, transitions and rewind; generated badnik starters resolve
+  the active game's destruction sound through its semantic sound map.
   Owner-local zone and level identities compose across mods and retain namespaced
   save locations. Multi-act campaigns, typed runtime contributions and captured
   zone events use deterministic ordering and inspectable conflict decisions.
@@ -1151,8 +1157,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   column, consolidate equivalent FBZ traversals, and advance integration-test room
   deadlines through a controlled clock with observed membership and publication barriers.
   Measured fixtures release source/evidence caches and owned mock history, with
-  fixed frame-driving stubs installed once. SOZ route checks draw every frame
-  without reading back discarded pixels; screenshot checks keep pixel readback.
+  fixed frame-driving stubs installed once. Route checks avoid discarded pixel
+  readback and omit traversal drawing where state/pixel controls agree, while
+  keeping checkpoints and complete rewind branches drawn, with an opt-in
+  mode that draws every traversal frame. Screenshot checks keep pixel readback.
   Lower-rock puzzle checks compute each whole-world rewind diff once, and
   background checks read pixels only from frames used by their assertions.
   The solo Sonic Sandopolis approach uses a shorter authored controller route,
