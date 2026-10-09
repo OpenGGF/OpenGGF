@@ -14,6 +14,67 @@ class CategoryPolicyTests(unittest.TestCase):
     def setUp(self):
         self.policy = runner.policy()
 
+    def test_rom_discovery_accepts_original_files_in_an_explicit_directory(self):
+        import hashlib
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / 'worktree'
+            originals = Path(tmp) / 'original ROMs'
+            root.mkdir()
+            originals.mkdir()
+            path = originals / 'Original game (REV01) [!].gen'
+            path.write_bytes(b'original test image')
+            digest = hashlib.sha1(path.read_bytes()).hexdigest()
+            with patch.dict(runner.ROM_PROPERTIES, {digest: 'sonic2.rom.path'}, clear=True):
+                self.assertEqual([f'-Dsonic2.rom.path={path.resolve()}'],
+                                 runner.rom_args(root, originals))
+            self.assertEqual([], list(root.iterdir()))
+
+    def test_explicit_rom_directory_must_exist_and_be_a_directory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            file = root / 'not-a-directory'
+            file.write_text('data')
+            for path in (root / 'missing', file):
+                with self.subTest(path=path), self.assertRaises(ValueError):
+                    runner.rom_args(root, path)
+
+    def test_explicit_rom_discovery_keeps_root_priority_and_ignores_unknown_images(self):
+        import hashlib
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / 'worktree'
+            originals = Path(tmp) / 'originals'
+            root.mkdir()
+            originals.mkdir()
+            local = root / 'local.gen'
+            local.write_bytes(b'known image')
+            (originals / 'same.gen').write_bytes(local.read_bytes())
+            (originals / 'unrecognized.gen').write_bytes(b'other image')
+            digest = hashlib.sha1(local.read_bytes()).hexdigest()
+            with patch.dict(runner.ROM_PROPERTIES, {digest: 'sonic1.rom.path'}, clear=True):
+                self.assertEqual([f'-Dsonic1.rom.path={local.resolve()}'],
+                                 runner.rom_args(root, originals))
+
+    def test_explicit_rom_directory_is_passed_to_both_fresh_lanes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            originals = root / 'original ROMs'
+            originals.mkdir()
+            plan = {'tests': ['com/openggf/TestExample.java'], 'full': False,
+                    'guards': True, 'categories': ['common'], 'inventory_count': 1}
+            summary = {'reports': 1, 'tests': 1, 'skipped': 0, 'errors': 0, 'failures': 0}
+            argument = '-Dsonic2.rom.path=/original ROMs/Original [!].gen'
+            with patch.object(runner, 'tree_state', return_value='state'), \
+                    patch.object(runner, 'rom_args', return_value=[argument]) as discover, \
+                    patch.object(runner, 'summarize', side_effect=lambda _: dict(summary)), \
+                    patch.object(runner, 'run_logged', return_value=0) as process:
+                self.assertEqual(0, runner.run_plan(root, plan, rom_directory=originals))
+            self.assertEqual(2, discover.call_count)
+            for call in discover.call_args_list:
+                self.assertEqual((root, originals), call.args)
+            for call in process.call_args_list:
+                self.assertIn(argument, call.args[0])
+            self.assertEqual([], list(originals.iterdir()))
+
     def test_physics_changes_keep_dependent_categories_but_not_audio_oracles(self):
         categories, full, _ = runner.select_changes([
             'src/main/java/com/openggf/physics/CollisionSystem.java',

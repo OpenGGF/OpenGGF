@@ -1088,6 +1088,11 @@ class TestPuttPuttParadise {
         String previousDev = System.getProperty(com.openggf.mods.DevelopmentModSource.PROPERTY);
         int previousWidth = previousServices.graphics().getProjectionWidth();
         var config = SonicConfigurationService.createStandalone(temp.resolve("boot-config-" + act));
+        // This fresh configuration also feeds the real logical-ROM resolver; the
+        // @RequiresRom primary fixture does not populate its independent catalogue.
+        var sonicTwoRom = RomTestUtils.ensureSonic2RomAvailable();
+        assertNotNull(sonicTwoRom);
+        config.setConfigValue(SonicConfiguration.SONIC_2_ROM, sonicTwoRom.getAbsolutePath());
         var entry = MasterTitleScreen.GameEntry.SONIC_2;
         new com.openggf.game.launch.LaunchProfileApplier(config).apply(
                 com.openggf.game.launch.LaunchProfile.stockFor(entry), entry);

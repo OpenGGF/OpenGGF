@@ -597,6 +597,94 @@ The adjacent parity owner reports actual-main `b317e94eb`/base `d499` terminal
 at 2026-10-09T03:23:31Z: 3068 selected/3066 reports/26598 ordinary cases,
 26 fully matched inherited assertions, no errors and 63 literal causal skips;
 87 fresh guard reports/674 cases pass without skips. This is source-qualified
-inherited-failure evidence, not a green whole-suite claim. Publication remains
-held by that owner until final evidence and delivery; final full SHA and light
-negative-case table are still awaited before this branch's actual-base gate.
+inherited-failure evidence, not a green whole-suite claim. That owner subsequently
+published the prose-only successor `019dd454b0d63b10a1d0585450bb28f34e360c04`
+and released the hold. The source-attributed full negative-case table is linked
+from the stock-parity audit; this branch's actual-base gate uses that publication.
+
+
+### Final published-base run and owned repair frontier
+
+Published develop `019dd454b0d63b10a1d0585450bb28f34e360c04` is the
+prose-only successor of the adjacent owner's qualified actual-main `b317e94eb`.
+The owner's complete 26-assertion/63-causal-skip table is in the stock-parity
+audit. The expansion's unchanged `1217399ecfd8e7042cf8ddc6cec74d48056e0b8b`
+ran the normal full selection against that actual destination as
+`20261009T073723Z-e6dc65ee`: 3108 selected classes, 3106 ordinary reports,
+26878 cases, 33 failures, two errors and 158 skips (4975.65 seconds).
+Fresh guards completed 88 reports/675 cases with seven failures and no errors
+or skips (241.33 seconds). The source fingerprint remained unchanged.
+All 26 inherited full assertions and 63 inherited first causal skip lines match;
+seven additional assertions, two errors, 95 additional skips and seven guard
+failures block handoff. The run was inspected, consumed and acknowledged;
+no passing full-suite or readiness claim is made.
+
+The guard messages identify the new probe's singleton/backend reads, a generic
+mixer fallback in the fractional session path, concrete graphics-to-gameplay
+head-mask/replay dependencies, one new sprites-to-util dependency, and an owned
+fixture's misleading object-update parameter name. Three original team members
+own disjoint narrow repairs in fresh worktrees, preserving the original child
+source and histories. No guard baseline, allowlist or size budget is relaxed.
+The owner-bound deferred-load, Eggman's Sky menu and two golf title assertions
+are separately reproduced against a matched clean `019dd454` control before
+attribution; creator quarantine remains active.
+
+Prerequisite investigation found that the lead tree deliberately has no ROM
+aliases. Some older fixtures still open relative `s2.gen`; donor configuration
+also retained relative ROM names. Injecting primary absolute paths through
+`JDK_JAVA_OPTIONS` does not satisfy those reads and adds a launcher notice to
+fresh-JVM stderr. It also reaches a shell test that explicitly rejects that
+environment variable. A maintained optional `--rom-directory` now passes verified
+original filenames as individual Maven arguments without links or Java launch
+injection. Relevant fixtures use the existing game-specific ROM helper instead
+of checking an additional alias. The legacy S2 helper retains explicit legacy
+selection precedence and otherwise accepts the game-specific property.
+An ignored private configuration names the existing original ROM files and
+catalogue directory; no user configuration or ROM is changed. Gameplay/timing
+assertions remain untouched. These repairs still require normal focused and
+final composed verification.
+
+The comparison tool's first run remained invalid because Surefire placed a
+JUnit abort stack in its skip-message attribute. Its new bounded parser accepts
+only a complete JUnit abort causal line followed entirely by stack frames;
+chained causes, arbitrary multiline text and capped messages remain invalid.
+It preserves new skip identities and changed causes as blocking differences.
+No invalid run is retroactively presented as a maintained comparison pass.
+
+
+Bounded root prerequisite checks used normal queued Maven at the unchanged
+expansion source plus the owned fixture/tool repairs. The first 31 selectors
+produced 209 cases: 202 passed, two assertions failed, two errors and three skips.
+The remaining seven selectors, after binding secondary donor paths and the
+fresh golf catalogue explicitly, produced 23 cases: 22 passed, one assertion
+failed, no errors or skips. The complete identity intersection proves that all
+95 previously additional skip identities now execute and pass in these focused
+checks; a final combined run still owns broad completion and attribution.
+No ROM aliases were created and no gameplay assertions were changed.
+
+A separate clean published `019dd454` control executed the nine previously
+additional ordinary identities with the same original three ROM properties,
+tracked-default private configuration, no Java launcher injection and inherited
+`LD_LIBRARY_PATH`. It reproduced the two Tails donor errors, donor HUD palette
+assertion, both golf title assertions, shell launch assertion and Eggman's Sky
+menu assertion exactly. The deferred creator-load assertion and fresh-JVM CLI
+case passed on the control. Only the deferred creator-load failure establishes
+an expansion runtime regression in this matched check.
+
+Secondary-ROM fixtures now bind the same provided original file to their
+runtime catalogue after test-state reset; the primary `@RequiresRom` fixture
+alone did not populate that catalogue. The fresh golf boot's standalone
+configuration likewise names the supplied S2 ROM. The shell security fixture
+launches each positive or negative arm with its declared trusted environment,
+then adds the specific injection under test. It still rejects loader injection,
+including a newly explicit `LD_LIBRARY_PATH` negative control. Production
+security and ROM loaders are unchanged. All of these corrected cases pass.
+Eggman's Sky's unchanged `BatchMode`/`SurfaceMode` assertion still reproduces
+literally on both the clean destination and this focused candidate; it is a
+bounded inherited finding, not a repaired gameplay claim.
+
+The maintained Python safety checks complete 248 cases with no failures or
+errors and one expected absent-preserved-report skip. Tool preflight succeeds
+with Java 21 and explicit Lua 5.4. These are tool/fixture checks, not engine-wide
+qualification. Runtime, producer, graphics and full fresh-guard composition
+remain the lead's delivery gates.

@@ -55,6 +55,22 @@ def identity(case):
     return class_name + '#' + test_name
 
 
+def skip_cause(value, label):
+    require(isinstance(value, str) and bool(value), f'Missing {label}')
+    require(len(value) < 4096, f'Capped {label} needs complete evidence')
+    lines = value.rstrip('\r\n').splitlines()
+    if len(lines) == 1:
+        return line(lines[0], label, 4096)
+    # Surefire sometimes puts the JUnit abort stack in the message attribute.
+    # Only stack frames may follow this complete causal line. A chained cause,
+    # arbitrary multiline message or truncated stack still needs explicit review.
+    require(lines[0].startswith('org.opentest4j.TestAbortedException: '),
+            f'Multiline {label} needs explicit review')
+    require(all(re.fullmatch(r'\s+at [^\r\n]+\([^\r\n]+\)', frame)
+                for frame in lines[1:]), f'Multiline {label} has additional or incomplete evidence')
+    return line(lines[0], label, 4096)
+
+
 def assertion(case):
     key = identity(case)
     message = line(case.get('message'), f'assertion for {key}')
@@ -144,7 +160,7 @@ def compare(lanes, reference, normalize_known_ssz_blobs=False):
     inventories = {lane['lane']: validate_lane(lane) for lane in lanes}
     failed, skipped = inventories['ordinary']
     assertions = {key: assertion(case) for key, case in failed.items()}
-    causes = {key: line(case.get('reason'), f'skip cause: {key}', 4096)
+    causes = {key: skip_cause(case.get('reason'), f'skip cause: {key}')
               for key, case in skipped.items()}
     changed = sorted(key for key in failed.keys() & expected_failures.keys()
                      if failed[key].get('kind') != expected_failures[key]['kind']
@@ -156,7 +172,7 @@ def compare(lanes, reference, normalize_known_ssz_blobs=False):
     for case in guard_failed.values():
         assertion(case)
     for key, case in guard_skipped.items():
-        line(case.get('reason'), f'guard skip cause: {key}', 4096)
+        skip_cause(case.get('reason'), f'guard skip cause: {key}')
     result = {
         'new_failures': sorted(failed.keys() - expected_failures.keys()),
         'missing_expected_failures': sorted(expected_failures.keys() - failed.keys()),

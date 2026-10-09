@@ -89,7 +89,10 @@ Run that additional lane for FBZ traversal changes and exhaustive ROM validation
 The category runner's ordinary/guard result does not include this lane.
 
 The runner discovers existing root `.gen` files by the documented SHA-1 identities and passes
-absolute ROM paths. It never creates ROM links or copies. Missing ROMs still require inspecting
+absolute ROM paths. In an isolated worktree, use `--rom-directory /absolute/original/ROM/directory`
+to discover the originals there as well, including the documented KiS2 lock-on dump when present.
+Each path is one Maven argument, including filenames with spaces. This avoids Java environment
+injection and creates no ROM links or copies. Missing ROMs still require inspecting
 skips; a successful exit alone does not establish ROM-backed coverage.
 
 Each run starts in `target/category-tests/<run-id>/`. The plan retains the tested head,
@@ -473,8 +476,11 @@ python3 -m unittest discover -s tools/testing -p 'test_compare_category_outcomes
 The tool requires both ordinary and guard lanes, reconciles negative-case
 inventories with their counters, and rejects incomplete exits, omitted or
 duplicate identities, and unavailable full assertions. It recovers a capped
-2 KiB assertion only from matching complete runner detail. Changed or absent
-failures, changed skip causes, and any guard failure/skip require review. Exit
+2 KiB assertion only from matching complete runner detail. A Surefire JUnit abort message
+may contain a stack: the tool compares its complete first causal line only when every
+remaining line is a stack frame. Chained causes, arbitrary multiline tails and capped
+messages remain invalid evidence. Changed or absent failures, changed skip causes,
+and any guard failure/skip require review. Exit
 0 means unchanged negative cases; 1 means differences; 2 means invalid evidence.
 A failed comparison writes an invalid verdict rather than leaving a prior
 successful output at the requested path.

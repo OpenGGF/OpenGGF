@@ -56,7 +56,7 @@ class TestMutatorPlacementAdmission {
         var keys = new com.openggf.mods.code.ModObjectKeyRegistry(List.of(
                 new com.openggf.mods.code.ModObjectKeyRegistry.Registration("creator", "creator:monitor",
                         (spawn, registry) -> new AbstractObjectInstance(spawn, "CreatorMonitor") {
-                            @Override public void update(int frame, com.openggf.game.PlayableEntity player) { }
+                            @Override public void update(int vintRunCount, com.openggf.game.PlayableEntity player) { }
                             @Override public void appendRenderCommands(List<com.openggf.graphics.GLCommand> commands) { }
                         })));
         var decorated = new com.openggf.mods.code.ModDecoratedObjectRegistry(new Sonic1ObjectRegistry(), keys);

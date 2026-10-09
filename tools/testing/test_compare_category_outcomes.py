@@ -43,6 +43,34 @@ class CategoryOutcomeComparisonTest(unittest.TestCase):
     def test_unchanged_complete_negative_cases_match(self):
         self.assertTrue(self.compare()['negative_cases_unchanged'])
 
+    def test_junit_abort_stack_compares_the_complete_first_causal_line(self):
+        cause = 'org.opentest4j.TestAbortedException: Assumption failed: original ROM required'
+        self.reference['skips'][0]['message'] = cause
+        self.lanes[0]['skipped_cases'][0]['reason'] = (
+            cause + '\n at org.junit.jupiter.api.Assumptions.assumeTrue(Assumptions.java:64)'
+            + '\n at pkg.Probe.optIn(Probe.java:17)\n')
+        result = self.compare()
+        self.assertTrue(result['negative_cases_unchanged'])
+        self.assertEqual(cause, result['skip_causes']['pkg.Probe#optIn'])
+
+    def test_junit_abort_stack_does_not_hide_a_changed_or_new_skip(self):
+        self.lanes[0]['skipped_cases'][0]['reason'] = (
+            'org.opentest4j.TestAbortedException: Assumption failed: missing donor ROM'
+            + '\n at pkg.Probe.optIn(Probe.java:17)')
+        result = self.compare()
+        self.assertFalse(result['negative_cases_unchanged'])
+        self.assertEqual(['pkg.Probe#optIn'], result['changed_skip_causes'])
+
+    def test_junit_abort_stack_rejects_additional_cause_or_unrecognized_tail(self):
+        for tail in ('Caused by: java.io.IOException: different failure',
+                     'another causal assertion', '... 4096 more'):
+            with self.subTest(tail=tail):
+                self.lanes[0]['skipped_cases'][0]['reason'] = (
+                    'org.opentest4j.TestAbortedException: Assumption failed: missing ROM'
+                    + '\n at pkg.Probe.optIn(Probe.java:17)\n' + tail)
+                with self.assertRaises(comparison.EvidenceError):
+                    self.compare()
+
     def test_same_totals_with_new_failure_identity_require_review(self):
         self.lanes[0]['failed_cases'][0]['test'] = 'different'
         result = self.compare()
