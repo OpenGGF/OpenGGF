@@ -15,10 +15,37 @@ public final class SpritePresentation {
 
     /** Semantic display ownership, independent of native sprite admission and gameplay flags. */
     public enum Part { WORLD, BODY, APPENDAGE, ATTACHED_EFFECT }
-    public record HeadTransform(com.openggf.sprites.render.PlayerHeadProfile.FrameHead mask,
+    /** Immutable source-pixel geometry; pose/art eligibility belongs to the producer. */
+    public record MaskPoint(int x, int y) { }
+    public record HeadMask(int anchorX, int anchorY, java.util.Set<Integer> pieces, List<MaskPoint> polygon) {
+        public HeadMask { pieces = java.util.Set.copyOf(pieces); polygon = List.copyOf(polygon); }
+        public boolean contains(int piece, int x, int y) {
+            if (!pieces.contains(piece)) return false;
+            double px = x + .5, py = y + .5;
+            boolean inside = false;
+            for (int i = 0, j = polygon.size() - 1; i < polygon.size(); j = i++) {
+                MaskPoint a = polygon.get(i), b = polygon.get(j);
+                if ((a.y() > py) != (b.y() > py)
+                        && px < (b.x() - a.x()) * (py - a.y()) / (b.y() - a.y()) + a.x()) inside = !inside;
+            }
+            return inside;
+        }
+    }
+    /** Producer-supplied replay after native admission; graphics does not choose a runtime renderer. */
+    @FunctionalInterface
+    public interface HeadSatReplay {
+        void replay(GraphicsManager graphics, List<SpriteSatEntry> entries,
+                    java.util.function.Consumer<SpriteSatEntry> emitter);
+    }
+    public record HeadTransform(HeadMask mask,
                                 int piece, int originX, int originY, boolean hFlip, boolean vFlip,
-                                int percent, int fragmentBase, Map<Integer, PatternVersion> patterns) {
-        public HeadTransform { patterns = Map.copyOf(patterns); }
+                                int percent, int fragmentBase, Map<Integer, PatternVersion> patterns,
+                                HeadSatReplay replay) {
+        public HeadTransform {
+            java.util.Objects.requireNonNull(mask, "mask");
+            java.util.Objects.requireNonNull(replay, "replay");
+            patterns = Map.copyOf(patterns);
+        }
     }
     public record Subject(String id, Part part, boolean suppressed, int headScalePercent, HeadTransform head) {
         public static final Subject WORLD = new Subject("", Part.WORLD, false);

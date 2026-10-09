@@ -9,7 +9,11 @@ import java.util.function.Predicate;
 
 /** Level-owned conversion between runtime ROM patterns and immutable graphics presentation values. */
 public final class SpritePresentationRenderer {
+    private static final SpritePresentation.HeadSatReplay HEAD_SAT_REPLAY = SpritePresentationRenderer::replayHeadSat;
     private SpritePresentationRenderer() { }
+
+    /** Immutable adapter carried by native head producers across the graphics-owned SAT boundary. */
+    public static SpritePresentation.HeadSatReplay headSatReplay() { return HEAD_SAT_REPLAY; }
 
     public static Frame prepare(GraphicsManager graphics, int cameraX, int cameraY, Runnable producer) {
         return PlayerHeadPresentation.compose(SpritePresentation.prepare(graphics, cameraX, cameraY, producer, descriptor -> {
