@@ -803,6 +803,7 @@ CF-ANNOTATION TYPE com.openggf.mods.scene.SceneContext visible @com.openggf.game
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneDraw visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneImage visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneKeys visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.SceneLevelKit visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneLevelStage visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneMouse visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.SceneMusic visible @com.openggf.game.ModApi
@@ -2699,6 +2700,9 @@ FIELD com.openggf.mods.scene.SceneKeys public,static,final int W
 FIELD com.openggf.mods.scene.SceneKeys public,static,final int X
 FIELD com.openggf.mods.scene.SceneKeys public,static,final int Y
 FIELD com.openggf.mods.scene.SceneKeys public,static,final int Z
+FIELD com.openggf.mods.scene.SceneLevelKit public,static,final byte EMPTY
+FIELD com.openggf.mods.scene.SceneLevelKit public,static,final byte SOLID
+FIELD com.openggf.mods.scene.SceneLevelKit public,static,final byte TOP_SOLID
 FIELD com.openggf.mods.scene.SceneMusicPlayer public,static,final long PLAYHEAD
 FIELD com.openggf.mods.scene.SceneMusicPreparation$State public,static,final com.openggf.mods.scene.SceneMusicPreparation$State CANCELLED
 FIELD com.openggf.mods.scene.SceneMusicPreparation$State public,static,final com.openggf.mods.scene.SceneMusicPreparation$State FAILED
@@ -10991,11 +10995,25 @@ METHOD com.openggf.mods.scene.SceneDraw public  int hashCode()
 METHOD com.openggf.mods.scene.SceneDraw public  int tint()
 METHOD com.openggf.mods.scene.SceneDraw public  java.lang.String toString()
 METHOD com.openggf.mods.scene.SceneDraw public,static  com.openggf.mods.scene.SceneDraw plain()
+METHOD com.openggf.mods.scene.SceneImage public  boolean isStreaming()
 METHOD com.openggf.mods.scene.SceneImage public  com.openggf.mods.scene.SceneImage crop(int,int,int,int)
 METHOD com.openggf.mods.scene.SceneImage public  int height()
 METHOD com.openggf.mods.scene.SceneImage public  int pixel(int,int)
 METHOD com.openggf.mods.scene.SceneImage public  int width()
 METHOD com.openggf.mods.scene.SceneImage public  int[] pixels()
+METHOD com.openggf.mods.scene.SceneImage public  long revision()
+METHOD com.openggf.mods.scene.SceneImage public  void update(int[])
+METHOD com.openggf.mods.scene.SceneImage public,static  com.openggf.mods.scene.SceneImage streaming(int,int)
+METHOD com.openggf.mods.scene.SceneLevelKit public,abstract  byte[] blockSolidity(int)
+METHOD com.openggf.mods.scene.SceneLevelKit public,abstract  com.openggf.mods.scene.SceneBackdrop backdrop()
+METHOD com.openggf.mods.scene.SceneLevelKit public,abstract  com.openggf.mods.scene.SceneImage blockImage(int)
+METHOD com.openggf.mods.scene.SceneLevelKit public,abstract  int block(int,int)
+METHOD com.openggf.mods.scene.SceneLevelKit public,abstract  int blockCount()
+METHOD com.openggf.mods.scene.SceneLevelKit public,abstract  int blockSize()
+METHOD com.openggf.mods.scene.SceneLevelKit public,abstract  int columns()
+METHOD com.openggf.mods.scene.SceneLevelKit public,abstract  int rows()
+METHOD com.openggf.mods.scene.SceneLevelKit public,abstract  int[] palette()
+METHOD com.openggf.mods.scene.SceneLevelKit public,abstract  int[] playableArea()
 METHOD com.openggf.mods.scene.SceneLevelStage public  boolean equals(java.lang.Object)
 METHOD com.openggf.mods.scene.SceneLevelStage public  int floorAt(int)
 METHOD com.openggf.mods.scene.SceneLevelStage public  int floorY()
@@ -11078,6 +11096,8 @@ METHOD com.openggf.mods.scene.ScenePeer$State public,static  com.openggf.mods.sc
 METHOD com.openggf.mods.scene.ScenePreparedMusic public,abstract  int sampleRate()
 METHOD com.openggf.mods.scene.ScenePreparedMusic public,abstract  java.util.List<com.openggf.mods.scene.SceneNoteEvent> notes()
 METHOD com.openggf.mods.scene.ScenePreparedMusic public,abstract  long lengthSamples()
+METHOD com.openggf.mods.scene.SceneRomArt public  boolean hasLevelKit(int,int)
+METHOD com.openggf.mods.scene.SceneRomArt public  com.openggf.mods.scene.SceneLevelKit levelKit(int,int)
 METHOD com.openggf.mods.scene.SceneRomArt public  java.lang.String romSha1()
 METHOD com.openggf.mods.scene.SceneRomArt public,abstract  boolean hasTitleCard(int,int)
 METHOD com.openggf.mods.scene.SceneRomArt public,abstract  boolean hasZonePictures(int,int)
@@ -16346,6 +16366,7 @@ TYPE interface public,abstract com.openggf.mods.scene.SceneArt SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneAudio SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneCanvas SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneContext SUPER <none>
+TYPE interface public,abstract com.openggf.mods.scene.SceneLevelKit SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneMusic SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneMusicPlayer SUPER <none>
 TYPE interface public,abstract com.openggf.mods.scene.SceneMusicPreparation SUPER <none>
@@ -17557,6 +17578,7 @@ TYPE-ANNOTATION com.openggf.mods.scene.SceneContext @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneDraw @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneImage @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneKeys @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.SceneLevelKit @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneLevelStage @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneMouse @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.SceneMusic @com.openggf.game.ModApi

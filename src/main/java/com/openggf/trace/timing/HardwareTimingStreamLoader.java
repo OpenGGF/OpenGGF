@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareWorkKind;
+import com.openggf.trace.TraceFiles;
 import com.openggf.trace.TraceMetadata;
 
 import java.io.IOException;
@@ -46,12 +47,12 @@ public final class HardwareTimingStreamLoader {
                     measurementPath,
                     "load-time measurements are tooling-only and cannot be loaded as trace data");
         }
-        Path timingPath = traceDirectory.resolve(FILE_NAME);
-        boolean hasFile = Files.isRegularFile(timingPath);
-        if (!hasFile) {
+        Path timingPath = TraceFiles.resolve(traceDirectory, FILE_NAME);
+        if (timingPath == null) {
             return HardwareTimingSchedule.empty();
         }
-        if (Files.size(timingPath) == 0) {
+        if (timingPath.getFileName().toString().equals(FILE_NAME)
+                && Files.size(timingPath) == 0) {
             return HardwareTimingSchedule.recordedEmpty();
         }
         return loadVersion(timingPath, metadata.traceFrameCount());

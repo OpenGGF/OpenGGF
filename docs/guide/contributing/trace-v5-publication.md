@@ -33,7 +33,9 @@ verified user-supplied ROM and a destination that does not exist.
 
 Ordinary level rows have 42 columns. Special stages have fixed game/profile
 widths: S1 14, S2 48, and S3K 20. Presence of
-`hardware_timing.jsonl` enables the one module-plus-direct grammar. Every run
+`hardware_timing.jsonl` (or its `.gz` sibling) enables the one current hardware
+timing registry. The loader prefers a plain sibling when both exist and applies
+the same strict UTF-8 and event validation after decompression. Every run
 manifest has `dynamic_art_gap_transitions`, including an empty array.
 
 ## Candidate validation and comparison

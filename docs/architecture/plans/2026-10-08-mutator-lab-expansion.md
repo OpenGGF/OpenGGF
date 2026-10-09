@@ -460,3 +460,69 @@ maintained tool; absent failures always require explicit review.
 No main or foreign-request actions are authorized by this private expansion.
 Final published-destination composition/domain attribution and candidate/full
 guards, Opus polish, refreshed promo and PR 215 delivery remain outstanding.
+
+### Qualified private parity composition
+
+The parity owner qualified private `94bbd3bda56c3dcc81cfcc89a750b8955cb14dc6`
+against canonical published `d4993a7307241bf90f004e0d7cf90936f075cf46`: normal
+run `20261008T232550Z-db7081e2`, 3068 selected/3066 ordinary reports/26598 cases,
+26 fully matched inherited assertions, zero errors and 63 literal matching skips;
+fresh 87 reports/674 guards pass without skips. The extra skip relative to older
+bases is an explicit incoming OpenGL 4.1 renderer availability condition. Clean
+`0135fac91da0f85f4ac4d91c641f41acd88a7d18` changes only prose from that tested
+composition. These are owner-qualified upstream results, not expanded Lab results.
+
+Root intent-composed that exact private checkpoint from clean `cf2507d4e`; both
+prose conflicts preserve the Mutator launch hazard/catalogue and incoming parity
+hazards/Starfall catalogue. The playable death-radius correction auto-merged and
+was checked against its native owner; mutator policy remains intact. The fresh composed
+compilation/export and SDK verification now establish the incoming scene/image
+API union. The normal focused composition checks death, stage pacing/admission/
+rewind, all-game policy/presentation, native results, trace sidecar decoding,
+scene/API consumers and mandatory S3K controls. No expanded full
+candidate, fresh whole guards or final published-base qualification is claimed.
+
+Parity main is integrated and held at `b317e94ebdce60c6f81553113543295c75b1d826`
+against pinned published d499 for its mandatory actual-main qualification. Root
+keeps main/remote publication untouched and waits for the final published SHA and
+light complete assertion/skip table before final expanded-candidate selection.
+
+
+The exact root normal invocation completed at 2026-10-09T02:00:16Z after 3443
+seconds of queue waiting and 117 seconds execution: 39 actual fresh XML suites,
+348 cases, 347 passing, no failures/errors and one explicit
+`TestSceneRenderer#changingBatchSizesPreservesEveryPixelAndStreamingUpdates`
+skip (`Assumption failed: OpenGL 4.1 unavailable`). All 12136 frozen source inputs
+were unchanged. Both S3K level-loading classes were deliberately selected by
+fully qualified name; bootstrap, decoding and AIZ startup controls pass without
+ROM skips. The API/SDK/Javadoc and package artifact verification completed in
+the same normal `verify dependency:build-classpath` invocation, with original
+absolute S1/S2/S3K ROM properties and `-Dmse=off`. Exact selector, command and
+case inventories remain in the task's outside light summary.
+
+The actual compiled candidate surface has 17739 lines, SHA-256
+`e08a807c0ab1c1ed5dc7d7fb3f4258227a45c9d7835c94268f9701abbb89aef1`, and
+is byte-equal to the current pin. It retains all root APIs and adds the 22
+incoming lines; compared with private0135, the expanded Lab adds443 lines and
+removes none. Descriptor candidate0.7 remains unchanged under ordinary pin
+regeneration policy. This is focused composition evidence, not a full expanded
+candidate or fresh whole-guard pass. The exact queue wrapper is gone and no
+own-worktree Maven/Surefire execution survives.
+
+Read-only stage-capture preparation established two limits before native
+measurement: the canonical movie caller cannot qualify interactive Game Speed,
+and its renderer lacks a native special-stage branch. A configured outside
+sampler must declare direct-level boot (the normal hub initializes GL), retain
+actual configuration-bound input, use the normal Engine interactive caller and
+one outer audio owner, and only observe native clocks/epochs/input/remainders.
+A declared host LIVE edit inside an already-admitted stage is distinct from
+physical menu footage: the current Lab overlay opens only during LEVEL. Real
+window stage rendering and headless native clock/PCM observations remain
+separate gates. No sampler runtime or modified-stage movie pass is claimed.
+
+Actual main b317/base d499 admitted at 2026-10-09T01:56:57Z as
+`20261009T015657Z-e417e53f`; the adjacent owner holds main tracked inputs, HEAD
+and publication through terminal and delivery. Root private composition neither
+changes those holds nor requests another baseline. Final published-destination
+comparison, native stage evidence, expanded full candidate, Opus polish and
+refreshed PR215 promo remain pending.

@@ -26,8 +26,12 @@ public final class ExperimentalNativeFeature implements Feature {
                 throw new IllegalStateException("Engine capability field changed; requalify the substitution");
             }
             Class<?> options = Class.forName("com.oracle.svm.core.hub.RuntimeClassLoading$Options");
-            Object key = options.getField("RuntimeClassLoading").get(null);
-            Class<?> keyType = Class.forName("com.oracle.svm.core.option.HostedOptionKey");
+            var optionField = options.getField("RuntimeClassLoading");
+            Object key = optionField.get(null);
+            // The pinned builder declares a public shared.option key type. Use
+            // that declaration, avoiding both a stale package and the private
+            // anonymous subclass of the actual key instance.
+            Class<?> keyType = optionField.getType();
             if (!Boolean.TRUE.equals(keyType.getMethod("getValue").invoke(key))) {
                 throw new IllegalStateException("RuntimeClassLoading must be enabled");
             }

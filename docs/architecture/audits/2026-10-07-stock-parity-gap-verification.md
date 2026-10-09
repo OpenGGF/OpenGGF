@@ -1184,3 +1184,1025 @@ is released after terminal comparison. The exact consumed diagnostic run is
 acknowledged and its directory removed; no raw logs are archived. The final
 follow-up changes evidence/current status prose only and therefore uses relevant
 links, syntax, mirror and policy checks rather than repeating engine tests.
+
+
+## Round 3 continuation — updated base and native PLC boundary
+
+The requested continuation starts privately from published develop
+`098053c4a01c2af283ca6797463bb5051442ef0b` on 2026-10-08. Its complete delta
+from the previous published `c039c0091` is the independently qualified SOZ
+capture throughput change, standalone JFR reader and accompanying prose.
+There is no production Java, POM, hook, workflow or selection-policy delta.
+The two changed SOZ fixtures retain their inputs, frame counts, assertions,
+case identities and drawing; discarded readbacks and duplicate diff computation
+are removed. The upstream matched 32 cases and integrated 23-case subset pass
+without skips. This is focused qualification, not a new full ordinary pass.
+The previous actual-main run at `5d1ff9b82` remains the exact source of the
+27 full failure assertions and 62 literal skip expectations; neither changed
+SOZ fixture is among those failures or skips. Final combined parity qualification
+is still pending and must name its actual source and destination.
+
+Three saved native Sol workers resume in new isolated worktrees: S1 MZ1 death,
+S2 special-stage results/return, and returned S3K HCZ. Root retains integration,
+shared ledgers and unassigned shared runtime ownership. Main remains on develop,
+with its three dirty disassembly submodules and four user-authored untracked
+files preserved. The separate Sitar feedback owner reports only mod and generic
+scene-music cue scope; its private `3afd81879` full run and all unrelated jobs
+are preserved. Integration/source-freeze coordination remains mandatory.
+
+### S1 queue arm: accepted native observation, no runtime correction
+
+The complete original S1 movie, sync settings and verified World REV01 ROM are
+replayed through the existing BizHawk 2.11/GPGX headless host, without RAM writes,
+input substitution, fixture publication or gameplay hydration. The diagnostic
+observes `RunPLC` entry `$0015E4`, the instruction after its count write `$00160E`,
+and its return `$001638`, plus frame ends. The ROM bytes at `$00160A` are
+`31 C2 F6 F8` (`move.w d2,(v_plc_patternsleft).w`), followed by the code-table
+call. This is the shipped `FixBugs=0` branch of `RunPLC`; the fixed branch moves
+that write after table preparation.
+
+The corrected capture completes with exit 0 in95.815 seconds, 38 observations,
+one arm, 71,641 execute callbacks and thirteen consecutive frame-end samples.
+Every compared player position, fraction, velocity, inertia, status, routine,
+animation and mapping value, plus `v_framecount` and the low word at `$FE0E` of `v_vblank_count`, matches
+committed MZ2_3 rows95–107 literally. Native zone/act are2/1; the manifest's act2
+is a one-based label, not a RAM value. The initial act2 assertion rejected the
+first sample before accepted data; that failed attempt is not evidence.
+
+At original BK2 index47,135 (completed frame47,136 / segment row101),
+`RunPLC` enters with zero patterns and descriptor source `$03C040`, destination
+`$B000`. Before `NemDec_BuildCodeTable` it writes eighteen patterns; the same
+row's frame end has gameplay counter102 and VBlank counter46,764. The call
+returns during index47,136 / row102, after VBlank advances to46,765 while the
+gameplay counter remains102. Thus the observed lag interrupted the very call
+that had already exposed its arm. The fixture's prepared=true/remaining18 is
+correct, whereas the current counter-lookahead hold defers it one row.
+
+This disproves treating a held gameplay counter as proof that `RunPLC` has not
+armed. It does not justify moving every arm earlier, using queue comparison
+values as readiness input, widening comparisons or fitting a row-specific
+exception. The existing S1 hardware-timing kind is implemented, but this fixture
+contains no corresponding stream. The three queue comparisons remain an open
+boundary until a matching native timing stream or another general production
+mechanism establishes the arm's service identity. No PLC/timing/fixture behavior
+changes in this continuation are claimed from this diagnostic.
+
+Durable source, provenance, observations and completion marker remain in the
+external task directory `parity-r3-s1-plc-arm-20261008`, capture `capture-headless-v2`.
+The sampler source SHA-256 is
+`22b8ec61b6e0392e21e80685d7e2eabfc171ccb979040752f657d97542184014`;
+the original movie SHA-256 remains
+`f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b`.
+The recurring measurement hazard is recorded in the existing trace briefing.
+
+### Fresh round-3 frontier checks
+
+The three workers independently replay the unchanged stock production at
+`098053c4a`; these are terminal trace-profile checks, separate from ordinary
+suite qualification. All use the original absolute, identity-verified ROMs and
+the unchanged compressed fixtures.
+
+| Lane | Cases / failures / errors / skips | Reproduced frontier |
+| --- | --- | --- |
+| S1 full chain and standalone MZ1 | 2 / 1 / 0 / 0 | Chain MZ1 segment 7 retains 192 physics-group differences, zero animation differences and complete comparison; first row 3261 Y `$03CB/$03D5`. Standalone MZ1 passes. |
+| S2 full chain, prefix and standalone SS7 | 3 / 1 / 0 / 0 | Prefix and SS7 pass. The chain retains the SS7 results walk at cursor 101691 and ten gap-clock axes; the first return edge remains native 10308 / engine 10268. Every reached segment through 17 still has zero physics/art differences. |
+| S3K Sonic+Tails full chain | 1 / 1 / 0 / 0 | Returned HCZ segment 11 retains 69,393 physics and 12,674 animation differences and loses ownership at cursor 68801. The first comparison of any kind is mapping row 1507, native `$63` / engine `$95`, before the first Y difference at row 1510. |
+
+S1's bounded fourteen-case death regression runs against the old production
+first: ten intended failures, zero errors/skips, Maven 24.864 seconds. The
+native rolling-floor reset is missing before death velocity; ordinary standing
+and already-correct reverse/ceiling controls distinguish that omission from a
+blanket position adjustment. Candidate focused and canonical checks remain
+pending at this checkpoint. Later S1 segment totals are sums of physics and
+animation groups, not new physics-only counts.
+
+S2's source proof is the stock `Obj6F_TallyScore` gate: successful acquisition
+with exactly seven emeralds, except native `Player_mode == 2`, selects routine
+`$30` immediately. Its leave/init/return/latch/hold/display sequence is 210
+subsequent dispatches, not an arbitrary replacement timer. The earlier Perfect
+branch has no stock results input in the current model and remains unsupported;
+live results rewind is excluded by the existing GameLoop mode gate. Neither
+limitation is silently extended by this bounded correction. The new regression
+is queued against unchanged production; no candidate pass is claimed yet.
+
+The S3K native fan/belt observation completes with 1,431 samples and seventeen
+matching surrounding player rows. At the first span the fan is already active,
+rejecting a timer-start explanation. ROM `$30834` contains one `MoveSprite2`
+call before `Draw_Sprite`; 565 same-slot/code bubble observations move by exactly
+eight pixels upward. The engine's doubled motion is independently incorrect.
+Native fan slot 10 precedes belt slot 91; the engine baseline has fan slot 24
+after belt slot 11. Whether correcting bubble occupancy explains that reversed
+ordering requires the pending matched engine probe and one-variable candidate
+replay. No dispatcher override, timer fit or full HCZ closure is claimed.
+
+While these checks wait, another owner integrates mod framework readiness into
+main at `bf7c56e1986fd8ca4a4c5e0cafdf3087e73b545a`; its actual-main run and
+publication are pending. Root explicitly preserves that source freeze and all
+Sitar jobs. Round-3 trees remain private on `098053c4a` until the actual published
+successor and qualification can be reconciled. In particular, upstream character
+callback/specification changes must be composed with the separate death-reset
+hunk before final validation. This checkpoint is evidence of verified gaps and
+pending candidates, not delivery or a new whole-suite pass.
+
+### Additional native bubble lifetime evidence and queue interruption
+
+The separate HCZ bubble lifecycle capture completes with 50,341 observations:
+24,404 entries at ROM `$30834` and 25,937 frame-end slot samples. Root independently
+matches all 630 represented frame ends against the existing HCZ2 fixture for
+player X/Y/mapping, camera X/Y, gameplay counter and VBlank low word, with zero
+differences. The original BK2 index minus 63,075 selects the fixture row.
+There are 11,900 same-slot/code updates that survive more than 64 pixels above
+the camera while still below the water surface, each moving upward by eight
+pixels. This directly rejects the engine's camera-based bubble retirement.
+All 254 sampled surface-eligible entries retire or reuse their slot by frame
+end (247 absent, seven reused); none retains the same owner. The longest
+contiguous observed lifetime is 100 updates, so this capture does not exercise
+the engine's 120-update cap. The owning ROM routine has no such cap, and
+`Draw_Sprite` only enqueues drawing; that source proof is distinct from observed
+lifetime coverage.
+
+All 281 frame-end first-appearance or same-slot reset samples with a preceding
+frame-end sample have `Level_frame_counter & 3 == 0`; their VBlank residues vary.
+This corroborates the ROM's gameplay-counter gate, but does not identify every
+allocation call or independently prove random-number ordering. The native
+routine allocates before drawing randomness; the existing reserved-slot factory
+can reproduce that order without changing shared object allocation. Speed,
+lifetime, clock and saturated-pool controls are to be tested independently before
+claiming their contribution to the returned HCZ frontier. Durable source and
+accepted observations are in external task directory
+`parity-r3-s3k-fan-conveyor-20261008`, capture `bubble-lifecycle-v1`; sampler
+SHA-256 is `b59b0b952980f2526b70cd1e81ccf187ce83df08708bfcd2392c39d906327444`.
+
+The first S2 regression request, session60545, ends while queued at
+2026-10-08T10:29:32Z: exit130, 2,447.2 seconds waiting, zero execution/hold time.
+It therefore provides no red test result. Neither root nor the worker requested
+cancellation. Read-only inspection establishes that the wrapper reports this
+outcome for an interrupt/termination signal; the sender is unobserved, and the
+parent app process remains alive. No queue timeout or internal cancellation
+mechanism is established. The unchanged command is retried as session9560;
+no queue code, lock or foreign job is changed.
+
+### Canonical S1 timing capture: native and loader qualification, publication withheld
+
+Root uses the `bizhawk-headless-trace` skill and an isolated producer checkout
+at pinned TraceChaser `e0a2443e086ca657a49227c5467eeecd06e40ece`. Its verified
+Roslyn build and seven `S1PlcHardwareTimingObserver` tests pass with zero
+failures/skips. The complete original 225,101-input movie is then captured with
+`--mode trace --run-id s1-sonic-complete-withemeralds --load-queue-state
+--compress-threshold 1`, explicit producer/consumer/fixture roots and the
+original absolute S1 ROM. Session67758 completes exit 0 with BizHawk2.11,
+34 segments and twelve transitions; the owning process tree is absent.
+There are no input substitutions, RAM writes, observation edits or new
+recorder behavior in this candidate.
+
+The whole manifest is literally unchanged. All 34 decompressed physics streams
+(208,586 represented rows) and all 34 decompressed auxiliary streams
+(2,755,825 events) are byte-identical to the old fixture. Every metadata delta
+is solely `recording_date`, August4 to October8. Differences in some stored
+gzip bytes are encoding differences, not changed observations. The added
+28 level timing streams contain 242 canonically ordered events with gapless
+run-wide ordinals0–241. MZ2_3 row101/ordinal59 has fingerprint
+`sha256:0495d001d7b7d63f2d70ab32c084cb31f69866a3a401d712c7ecc2861dd2206e`;
+root independently computes it from the earlier native source `$03C040`,
+destination tile `$580` and eighteen-pattern ROM header. This corroborates
+the same arm without deriving gameplay expectations from the timing stream.
+Root also independently reads all 32 ROM cue lists at `$01DD86`: 203 entries,
+150 unique descriptor identities. Every one of the 242 native events belongs
+to that ROM-defined set (38 distinct observed identities, zero unmatched).
+This establishes descriptor membership; it does not substitute for proving
+execution order, row ownership or a matching engine submission in replay.
+
+Accepted output remains outside the repo in
+`parity-r3-s1-canonical-timing-20261008/capture-v5`: 131 files, 41,932,357 bytes.
+The ordered JSON inventory (path/bytes/SHA-256, sorted keys, compact separators)
+has SHA-256 `3590bd88eb32c644af297fc8175cbe0abdd925a06f1277b86c4c779f2032e6a2`.
+The fresh producer executable is
+`ecea6c71c94f7800afe303a76da7d70e2ea98aec56756fbeb33383dece0ae178`, distinct
+from the earlier diagnostic binary. The original BK2 remains intact. The
+complete private fixture candidate contains it plus every captured segment;
+timing streams are losslessly gzip-compressed with zero timestamp. Its
+132-file, 41,989,269-byte inventory SHA-256 is
+`b94858c17f194983ea9abd370e9c62b83a8f99fd5b3526171af89811eea96f39`.
+The pinned producer's read-only `traces/validate_trace_v5.py <capture-v5>
+--require-frame-keyed-auxiliary` completes exit 0 in session56500. It validates
+the accepted native output, separately from the pending Java consumer checks.
+The same validator also completes exit 0 against the installed package in
+session75476, exercising the 28 compressed timing streams. The pinned producer
+already supports that storage encoding; no producer source or pin changes.
+
+The existing timing loader otherwise silently ignores `.gz` siblings. Root
+adds the existing trace-file resolver and strict gzip decoding, preserving
+plain-file precedence, exact UTF-8/framing/range checks and the v5 authority
+registry. Six regressions cover equal edges/policies, empty recorded authority,
+invalid UTF-8/framing/range, damaged checksum, zero-byte gzip and sibling
+precedence. Initial eleven-class focus89934 completes with 111 passing cases,
+zero errors/skips, and eleven fresh XML suites. A subsequent one-case
+regression72515 reproduces a truncated zero-byte gzip being accepted as
+recorded-empty timing: the expected rejection is absent. Restricting the old
+empty-file shortcut to the plain filename retains that compatibility while
+decoding every compressed file strictly. Final focus92204 completes at
+2026-10-08T12:13:15Z with eleven fresh suites and 112 passing cases, zero
+failures/errors/skips. Both focus commands use queued `--lean -Dmse=off` Maven
+with the loader, S1 arm, trace-data, loading-contract, manifest, compression,
+movie-alignment, positive-input, authority, interstitial and run-coordinator
+selectors. No authority registry or matching semantics change.
+
+The normal `-Ptrace-replay` canonical chain, two prefix controls and standalone
+MZ1 control run together as session25381 with the original absolute
+S1 ROM. Production death handling remains unchanged in this timing-only tree;
+the separate S1 worker qualifies its radius correction against the old timing
+fixture. At 2026-10-08T12:15:42Z the replay completes exit1: four cases, one
+chain failure, zero errors/skips; both prefix cases and standalone MZ1 pass.
+MZ2_3 and MZ3_2 become complete with zero physics/animation/bootstrap errors
+and zero warnings (previously three and six comparator errors). The original
+MZ1 death mismatch remains 192 errors at row3261. LZ3 improves from 10,212 to
+10,209 total errors, but the later route is not qualified: SLZ1 increases from
+3,880 to 5,214, and SLZ2 acquires 8,606 errors. SLZ1 already misses the ring at
+row1771; at row4570 the native completion `NEMESIS_PLC_QUEUE#170`, fingerprint
+`sha256:766b2fc7fa7662ce89c289f933718b2ffd110d031b70d4e196be0de4a06741b8`,
+has no prepared engine job. At the following completion the engine still
+owns the late job170. The strict port retains these unmatched completions and
+fails run closure. The terminal engine mode is LEVEL rather than the manifest's
+TITLE_SCREEN. These downstream changes block publishing the whole fixture.
+
+Root verifies the exact installed inventory before restoring only this run's
+tracked package to its original state and removing the 28 owned new compressed
+timing files. The complete accepted native capture and original movie remain
+in the external task directory. No edges are dropped, renumbered or fitted to
+engine behavior; no gameplay state, new work or substitute readiness is supplied.
+The native reference can support a future correction of the earliest remaining
+production frontier, after which whole-run timing qualification must be repeated.
+The independently passing gzip transport fix remains in the delivery candidate.
+There is no published S1 timing fixture, closed three-comparison frontier,
+runtime PLC correction or new whole-suite qualification at this checkpoint.
+
+
+### Round 3 composed candidate against the published framework
+
+The three reused Sol workers finish their bounded source lanes independently:
+S1 `1f7e16cab7d0`, S2 `1604e7f7e790`, S3K `fa2ac5e67b91`. Root retains their
+actual commit ancestry in the private integration branch rather than leaving
+cherry-picked worker histories unmerged. Published framework successor
+`d740b7a0fadd97b2e7c104d56481a0235bdffb4c` is fetched and merged without
+conflicts; the main `develop` checkout fast-forwards normally and reports
+already up to date. Main's three dirty disassemblies, four unrelated untracked
+files and every foreign worktree/job remain untouched. Framework source freeze
+is explicitly released by its owner at12:43:48Z. Sitar's separate frozen
+candidate `984cb8e2`, run20261008T123028Z-dbe57c8c/session16502, is preserved;
+there is no implied authority to edit or cancel that lane.
+
+Private composition `84f0c20f11c689a6f7969edfcbd1da349a2fb3e0` contains:
+
+- Cross-game native death floor/radius reset, preserving centres, fractions,
+  reverse-gravity semantics and existing hurt behavior. S1's complete MZ1
+  segment7 closes all192 differences. The inherited segment33 premature-death
+  route changes from3192 to3203 differences and cursor210395 to210396. Matched
+  old/candidate canonical probes account for the exact +9physics/+2animation:
+  one new common-row Y-speed mismatch plus one newly represented end row.
+  This is attributed downstream propagation, not an unchanged or green route.
+- Stock S2 seventh-emerald leave/init/return/hold/display phases, exact-seven
+  and Tails-alone gates, native main-message draw suppression and continued
+  emerald children. The results walk closes, reaching ARZ1/ARZ2. KiS2's existing
+  presentation policy remains separate. Perfect-input support and live results
+  rewind stay open; no stock driver, sequencer, GameLoop or fade changes.
+- Fan-only S3K child movement, water retirement, gameplay clock and allocation
+  before randomness. Native speed/lifecycle observations and independently
+  failing regressions establish each local correction. Returned HCZ and earlier
+  AIZ profiles remain unchanged; fan causation of the conveyor frontier is not
+  established. No shared allocator or unrelated bubbler changes are included.
+- Independently qualified strict compressed timing transport. The fresh whole
+  S1 timing fixture remains withheld for the kill evidence above; the original
+  committed comparison fixture is restored, including removal of the exact
+  28 stale owned compressed resource copies from this worktree's build output.
+
+The updated framework automerge changes no intended parity behavior. The
+`AbstractPlayableSprite` delta against actual `d740` is only the native death
+call. The package-private radius helper adds no exported API. Root focus4920
+finishes at13:04:13Z, Maven exit 0: **31 fresh XML suites, 275 cases,
+zero failures/errors/skips**. The original absolute paths for all three verified
+ROMs are supplied. Four mandatory S3K startup selectors, geometry/custom-profile
+consumers and exact API reflection remain green. Command, from
+`.worktrees/ai-parity-swarm-20261008-r3-integration`:
+
+```sh
+OPENGGF_ROM_ROOT=/absolute/path/to/OpenGGF
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  '-Dtest=TestDeathRadiusTransition,TestHurtAnimationPublication,TestDeathRestartRoutineParity,TestAbstractPlayableSpriteRewindCapture,TestHCZCGZFanObjectInstance,TestS3kHczCgzFanGraphRewind,TestHCZConveyorBeltObjectInstance,TestSonic2SpecialStageSuperResults,TestSonic2SpecialStageResultsTallyCadence,TestSonic2SpecialStageResultsPlcReadiness,TestSonic2SpecialStageResultsWidescreenCommands,TestSplitNameResultsMessages,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestHardwareTimingStreamLoader,TestSonic1PlcArmTiming,TestTraceDataHardwareTiming,TestTraceV5LoadingContract,TestTraceRunManifest,TestTraceFixtureCompressionGuard,TestTraceFixtureMovieAlignmentGuard,TestTraceV5PositiveInputGuard,TestHardwareTimingAuthorityGuard,TestHardwareTimingInterstitialStream,TestTraceRunHardwareTimingCoordinator,TestPlayableGroundTransitions,TestPhysicsProfileEditing,TestModApiSignatureSurface' \
+  "-Dsonic1.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${OPENGGF_ROM_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test
+```
+
+Root submits the three normal-profile canonical chains and controls together
+as session71369, fifteen selectors/seventeen expected cases, alphabetical
+order and the same original ROMs. This is a separate `-Ptrace-replay` lane,
+without lean mode, fork/heap overrides, widened tolerances or injected state.
+It finishes at13:34:11Z, Maven exit1/2:34 execution (1589seconds queue
+waiting excluded): fifteen fresh XML suites, **17 cases, four qualified
+assertion failures, zero errors/skips**. The failures are the three existing
+complete-chain identities plus the matched inherited returned-HCZ standalone.
+All thirteen controls pass. Composed reports exactly retain the worker lane
+profiles: S1 MZ1=0, MZ2_3=3, segment33=3203; S2 ARZ1=119/ARZ2=47450;
+S3K AIZ6=189/AIZ8=13254/HCZ9=0/returnedHCZ11=82067 and standalone3454.
+First mismatch fields/values and incomplete ownership boundaries agree with
+the lane evidence. The runtime/API framework integration introduces no new
+trace frontier in this selection. This is composed domain qualification with
+inherited and attributed failures, not a green complete-run claim. The exact
+union command is recorded in the [frontier log](../../status/trace-frontier-log.md#2026-10-08--stock-parity-swarm-round-3-native-fixes-and-remaining-frontiers).
+
+#### Updated-base evidence and required broad qualification
+
+The framework owner's mandatory actual-main source run at
+`bf7c56e1986fd8ca4a4c5e0cafdf3087e73b545a`, run20261008T103708Z-730bd986,
+is reused as the updated ordinary/guard baseline. It completes 3056 selected
+ordinary classes, 3054 reports, 26514 cases, **27 inherited failures,
+zero errors and62 literal inherited skips**, 4913.15seconds. Separate fresh
+guards complete87 reports/674 cases, all pass without skips, 208.35seconds.
+The owner compares all27 complete concrete first assertions and62 literal
+skip reasons with the previously qualified baseline:26 literal assertions plus
+the full2952-character SSZ first line after only removing its exception prefix
+and normalizing the independently verified `RewindObjectStateBlob@hex` to
+`@HASH`. No new/worsened/unattributed cases, ROM skips, omissions or timeouts.
+This is accepted inherited-failure qualification, not a green whole suite.
+See [framework delivery evidence](../plans/2026-10-07-mod-framework-product-readiness.md).
+
+Root independently checks all eight changed paths from `bf7` to published
+`d740`: release-tree/policy helpers, the exact authored-fixture allowlist,
+Python policy tests and two existing prose files. There is **zero engine Java,
+Java-test, resource, POM or category-runner delta**. The successor's owner
+qualifies32 shell/PowerShell policy cases and137 focused guards and verifies
+the remote develop SHA. Thus this reuse establishes source-equivalent engine
+baseline provenance at actual published `d740`; it is not a freshly rerun
+whole suite at `d740`. No foreign diagnostics are acknowledged by root.
+
+The unmodified runner plan against actual `d740` selects **all3058 ordinary
+classes plus separate fresh guards**. Its launch-environment preflight passes
+Java21, Lua5.4 and PowerShell. Shared death/radius behavior and timing transport
+require that normal combined run; no proportionate scope exception is taken.
+Finish focused/domain fixes and prose before freezing the exact candidate.
+Expected ordinary cost is80–110minutes plus about4minutes guards, based on the
+completed recent full runs. Use150minutes admission-excluded and the unchanged
+ten-minute no-output timeout. A timeout, omitted report, ROM skip or any new,
+worsened or unattributed ordinary failure blocks integration. Compare test
+identity/type/full first assertion and every literal skip reason, not totals.
+Mandatory actual-main qualification, push and owned cleanup remain required.
+
+
+### Round 3 private composition with integrated Sitar source
+
+Sitar privately qualifies frozen source `984cb8e2e317848344883879088762ebac7cbc88`
+and combines the exact published framework policy inputs at `c615362c4552`. Its
+ordinary run20261008T123028Z-dbe57c8c completes3058 selected classes/3056
+reports/26535 cases,27 inherited failures, zero errors and62 literal inherited
+skips in4978.39seconds; separate fresh guards complete87 reports/674 passing
+cases, zero skips in222.71seconds. The owner compares26 literal complete first
+assertions plus the full SSZ assertion after only the verified blob-hash
+normalization, and all62 literal skip identities/reasons. There are no omissions,
+timeouts or ROM skips. This is that owner's private candidate evidence, not
+actual-main qualification or qualification of the later parity composition.
+
+Sitar integrates into main `develop` at
+`eaafa6ee053f5624c00a78652e841d8f78598f5d`, pinned base
+`d740b7a0fadd97b2e7c104d56481a0235bdffb4c`. Its already-owned session21395
+is admitted at14:11:37Z as run20261008T141137Z-f3777bdd: all3058 ordinary
+classes and separate fresh guards under the150-minute admission-excluded cap.
+Main source and publication remain frozen until the owner's terminal result
+and delivery. Root preserves that run, all foreign work and the original clean
+parity candidate `1f3bf97d5c67bdade2f54429e9e00d4740e76cf7`, whose
+run20261008T135710Z-ec467d13/session57481 is separately executing against
+published `d740`. No duplicate baseline invocation or foreign acknowledgment
+is submitted.
+
+Root creates a second isolated worktree,
+`.worktrees/ai-parity-swarm-20261008-r3-composition`, at exact integrated main
+source and merges the original parity branch conflict-free at
+`2683eb992989e33866e91eb5b18b2a4a62465abd`. Both source ancestries and the
+independent changes to the existing changelog and implementation-pitfall
+catalogue are preserved. Against `eaafa6ee`, all Sitar production/test/API
+inputs remain unchanged: the existing `PLAYHEAD` and `cuePart` pin additions
+are retained exactly. No stock music-driver or sequencer change is added.
+
+The combined focus uses the prior30 parity/timing/geometry/API selectors plus
+Sitar's20 audio/model/protocol/API/packaging/documentation selectors, deduplicating
+`TestModApiSignatureSurface`:49 selectors, the three original absolute ROM
+paths and one supported queued `--lean -Dmse=off` invocation. Its session61683
+checks actual compiled combined consumers in the new worktree's own `target/`.
+The unchanged category plan against `eaafa6ee` selects all3060 ordinary classes
+and separate fresh guards; actual launch preflight passes Java21/Lua5.4/
+PowerShell. This plan and tool check execute no engine tests.
+
+The updated published destination, its terminal baseline evidence and the
+combined candidate's normal ordinary/fresh-guard results remain required. Shared death/radius and timing transport still take normal
+validation, not the proportionate exception. A terminal result for the original
+`d740` candidate alone will not qualify the new combined Sitar source. Main
+integration, its mandatory actual-main qualification, push and owned cleanup
+are not yet claimed.
+
+
+#### Read-only next-frontier resumption
+
+Root reuses the same three Sol conversations for a bounded read-only pass while
+qualification runs. No worker starts another build/capture, edits source or
+creates a commit. The findings refine next work without changing the frozen
+parity candidate or either owner's verification.
+
+- **S1 MZ2_3 row101:** old timing input is absent. Held gameplay counter0066
+  with advancing VBlank B6AC→B6AD reaches the untimed held-tail branch in
+  `PlcFrameLifecycleCoordinator.prepareAfterLoop`, withholding preparation.
+  Native `RunPLC` at1379–1415 writes eighteen remaining patterns before
+  table construction under `FixBugs=0`; the measured arm precedes the lag
+  interrupt. Row shape cannot locate the interrupt before or after that write.
+  A future real service/coordinator discriminator should compare identical
+  held classification with matching recorded readiness admitted versus absent,
+  preserving kind/ordinal/fingerprint/boundary rejection. Existing isolated
+  arm tests and generic held-tail tests cover the pieces, not this combination.
+  No counter-only production fix or publication of the withheld whole fixture
+  is established.
+- **S2 ARZ1 row4213:** `Obj0D_Main` clears the HUD timer as Sonic crosses
+  signpost X298C at row4212. Native `Sonic_RevertToNormal` at1ABF2 writes
+  `prev_anim=Run(1)` (`11 7C 00 01 00 1D`) before same-pass `Sonic_Animate`,
+  restarting still-selected Roll(2) at mapping3D. Engine
+  `Sonic2SuperStateController.onRevertStarted` restores the set without that
+  sentinel; `SpriteManager` performs Super work through `tickStatus` after
+  animation/touch rather than native `Sonic_Super` before animation. Mapping
+  continues to41. No earlier compared gameplay difference is reported, but
+  hidden animation state is not in the recording. The next bounded regression
+  must use a real tick: newly paused signpost timer, mid-cycle Super Roll,
+  unchanged movement profile for that tick, same-tick3D then41, and a Run(1)
+  equality control. Callback-only coverage cannot establish dispatch order.
+  This is a source-backed next hypothesis awaiting regression proof, not a
+  delivered reversion fix.
+- **S3K returned HCZ:** native fan slot10 writes ground velocity1 before
+  belt slot91 at row1505. Belt phase0C→12 at1507 chooses mapping0063 while
+  Y remains07DF; phase1E→24 at1510 chooses0064 and Y07CB+0B=07D6. Engine
+  observed marker0/phase0 selects mapping0095 and Y07CB+14=07DF from the
+  same tables. The two first errors correspond to different thresholds of
+  that pose phase; the missing-marker cause is still unproven. Object-owned
+  mapping publication and controlled movement make primary animation overwrite
+  less likely, but actual runtime ownership flags were not sampled. Native
+  unconditional samples first observe Main at1247 with timer/toggle0/0; they
+  do not capture Init or prove earlier lifetime. Next probe must observe
+  unconditional engine fan entry/init/retirement, pre/post marker and belt-entry
+  state, aligned to episode1247 and1499–1515. Active-only logging, slot reversal
+  alone and the rejected fitted timer increment do not establish causality.
+  The delivered fan corrections still show no trace-frontier improvement.
+
+
+#### Destination test-input update during Sitar qualification
+
+A separate owner merges the shorter solo-Sonic Sandopolis controller route at
+`6124a524eef9b42efb800d5bcb95376147507c9e`,14:14:25Z, after Sitar's
+14:11:37 admission. The six paths are one existing Java test, its BK2, the
+authored controller script and three prose files. Engine, Sitar/API, POM and
+hooks remain equivalent to `eaafa6ee`, but `TestSozColdRouteCapture` reads
+its BK2 directly from the source tree. Original validation inputs were not
+retained, so the owner identifies its exact runner3994735/cwd/argv/stdout and
+interrupts only that process. Session21395 exits130; runner and Java3998156
+are absent; status is incomplete with no results and no broad pass.
+
+The owner preserves the merged commit and the other owner's queued focused
+fixture check, reads its updated-base73 passing cases and coordinates an
+extended main tracked-input/publication freeze. It will replace only its
+invalid actual-main request once at `6124a524`, retaining original integration
+base `d740` and the150-minute normal combined cap. Root's frozen candidate
+`1f3`/session57481 remains unchanged. The updated fixture will be privately
+reconciled after the already-owned combined focus completes and its owner's
+terminal fixture evidence is available. No source-equivalent baseline claim
+is made for an input-mutated run.
+
+
+#### Combined focus terminal and input reconciliation
+
+Queued session61683 completes at `2026-10-08T15:05:37Z`, Maven exit 0 /
+BUILD SUCCESS,11:13 execution after1924seconds queue waiting: **50 fresh XML
+suites,476 cases, zero failures/errors/skips**. All49 requested selectors
+are represented (the loading selector matches two packages); fresh XML mtimes
+span14:55:40–15:05:37Z. The API reflection 9, SDK 10, Javadoc 7, release-policy13
+and documentation-link case pass alongside all parity/timing regressions,
+Sitar's152 cases, native music/cues 18 and the four mandatory S3K startup
+selectors. This is focused combined-source qualification at exact `2683eb992`,
+not a full ordinary pass.
+
+The exact combined command, with machine-local paths normalized only to the
+three original root filenames, is:
+
+```sh
+OPENGGF_ROM_ROOT=/absolute/path/to/OpenGGF
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  '-Dtest=TestDeathRadiusTransition,TestHurtAnimationPublication,TestDeathRestartRoutineParity,TestAbstractPlayableSpriteRewindCapture,TestHCZCGZFanObjectInstance,TestS3kHczCgzFanGraphRewind,TestHCZConveyorBeltObjectInstance,TestSonic2SpecialStageSuperResults,TestSonic2SpecialStageResultsTallyCadence,TestSonic2SpecialStageResultsPlcReadiness,TestSonic2SpecialStageResultsWidescreenCommands,TestSplitNameResultsMessages,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestHardwareTimingStreamLoader,TestSonic1PlcArmTiming,TestTraceDataHardwareTiming,TestTraceV5LoadingContract,TestTraceRunManifest,TestTraceFixtureCompressionGuard,TestTraceFixtureMovieAlignmentGuard,TestTraceV5PositiveInputGuard,TestHardwareTimingAuthorityGuard,TestHardwareTimingInterstitialStream,TestTraceRunHardwareTimingCoordinator,TestPlayableGroundTransitions,TestPhysicsProfileEditing,TestModApiSignatureSurface,TestSitarHeroArcade,TestSitarHeroCareer,TestSitarHeroCharts,TestSitarHeroControls,TestSitarHeroFeedback,TestSitarHeroModel,TestSitarHeroOnlineMatch,TestSitarHeroPerformers,TestSitarHeroS1SongCatalogue,TestSitarHeroS2SongCatalogue,TestSitarHeroS3kSongCatalogue,TestSitarHeroStory,TestSitarHeroWorldTour,TestSceneMusicRom,TestScenePartCues,TestModApiSdkPackager,TestModApiJavadocTool,TestModdingDocumentationLinks,TestModApiReleasePolicy' \
+  "-Dsonic1.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${OPENGGF_ROM_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+Root privately merges qualified main input update `6124a524` without conflicts,
+preserving its exact Java test/BK2/controller-script bytes. Its owner reports
+the existing post-merge check terminal at14:54:23Z:73 cases, zero failures/
+errors/skips including all nine SOZ routes, exact prior identities/outcomes
+and unchanged qualified input bytes. Sitar independently checks source
+equivalence of engine/examples/API/POM/hooks to `eaafa6ee` and fixture equality
+to qualified `c02`. The replacement actual-main session75501 is submitted once
+against6124 with original pre-integration based740, all3058 ordinary classes
+and fresh guards under150minutes admission-excluded; it is queued, with no
+terminal result claimed. The invalid f3777bdd run is consumed/acknowledged
+exit 0 and absent. Main's extended tracked-input/publication freeze is preserved.
+
+The completed normal17-case trace selection at `84f0c20f` remains applicable:
+all stock gameplay/physics, walkers, drivers and trace fixture/movie inputs
+are unchanged from frozen `1f3` through the Sitar composition. The production
+upstream delta is four scene-mod files (one has only Javadoc changes), with no
+references to the new scene-music types in the selected stock/trace paths.
+Sandopolis changes an ordinary capture test and its separate route input,
+not any of these fifteen trace selectors or fixtures. Fresh476-case focus
+exercises the changed audio/API consumers. No repeated unchanged trace run is
+submitted; the original13:34:11Z result remains17 cases/four qualified
+failures/zero errors/skips, with the same explicit inherited/attributed limits.
+
+The held-iteration and generic-coordinator Javadocs are corrected to match the
+observed native early arm: a lag counter shape cannot prove `RunPLC` has not
+published its count. Removing block comments gives literal before/after
+executable-source equality in both files; no classification, admission, test
+assertion or dispatch behavior changes. The unsafe cost-based inference is
+removed while the existing untimed fallback and recorded authority remain.
+
+Full assertions are compared from `failed_cases[].detail` first lines, not
+capped messages. Skip identities and literal first-line reasons are compared
+to the retained baseline table; unreported world state and stack-trace suffix
+equality are not claimed. The original private full run remains executing
+with its own unchanged regular-file Sandopolis input matching frozen1f3.
+Updated-base terminal qualification, final combined ordinary/fresh guards,
+actual-main integration/qualification, develop push and cleanup remain pending.
+
+
+At15:06:46Z the sole replacement actual-main request is admitted as
+run20261008T150646Z-9377cfcd/session75501 at exact6124, pinned pre-integration
+based740:3058/3058 ordinary classes, one worker plus fresh guards,150-minute
+admission-excluded cap. The owner verifies plan/actual ROM properties and
+fresh hashes of the three original absolute main files. Both Sitar and the
+fixture owner hold tracked main inputs/commits/push until terminal delivery.
+Root preserves that source/publication freeze.
+
+The final private source composition after the conflict-free6124 merge is
+`6bbdb294df792521d5b80a5f06c14932a8680fc9`; only the evidence above and two
+comments-only native-timing clarifications follow it. Its unmodified plan
+against actual destination6124 selects all3060 ordinary classes plus fresh
+guards. Shared death/radius and timing transport require the normal combined
+run. Expected cost remains80–110minutes ordinary plus about4minutes guards;
+use150minutes excluding admission and the unchanged ten-minute no-output rule.
+Freeze the entire exact candidate tree through both lanes. Any timeout, missing
+required suite, ROM skip or new/worsened/unattributed assertion blocks
+integration. Baseline acceptance waits for the owner's completed updated-main
+qualification; no result is inferred from its still-executing request.
+
+#### Round 3 normal private qualification and published-source reconciliation
+
+The original frozen candidate `1f3bf97d5c67bdade2f54429e9e00d4740e76cf7`,
+base `d740b7a0`, completes normal run `20261008T135710Z-ec467d13` at
+15:29:31Z:3058 selected classes,3056 ordinary reports,26549 cases,27 inherited
+failures, zero errors and62 inherited skips; ordinary5306.89seconds, exit1.
+Separate fresh guards produce87 reports/674 passing cases, zero skips,
+234.28seconds. Every failure identity/type/full first assertion and every skip
+identity/first causal reason match the qualified baseline:26 literal assertions
+and the complete SSZ2952-character line after only exception-prefix removal
+and verified `RewindObjectStateBlob@hex` normalization to2907 characters.
+The whole-tree fingerprint stays
+`5c455596c4f6f63ad8560cc60b921234cbf17b27b94d93c3a357d7ab0eb97a53`.
+The source inventory/report difference is accounted for: one abstract base,
+seven helpers and23 explicitly excluded tagged classes, plus29 nested XML
+suites, give3058−1−7−23+29=3056; eleven package/path aliases map to present
+suites. No unexplained ordinary omission, timeout or ROM skip exists.
+Exact consumed diagnostics are acknowledged exit 0 and removed.
+
+The updated main baseline is qualified by its owner using completed ordinary
+run `20261008T153213Z-5cd93bac` at `6124a524`/base `d740`:3058 selected,
+3056 reports,26535 cases,27 failures/zero errors/62 literal inherited skips,
+5115.06seconds, Maven exit1. Earlier incomplete invocations are not evidence.
+The research-only `17ae561a` HEAD change preserves all ordinary executable,
+test and build bytes and the known dirty-input fingerprint, but correctly
+makes the outer runner exit2 before guards. A separate fresh normal guard
+profile at17ae completes17:15:24Z, exit 0:87 reports/674 cases, zero failures,
+errors or skips. These are qualified separate lanes, not a completed combined
+run. The owner publishes evidence-only `378c1d715`, independently confirms
+remote develop and completes owned cleanup/releasing the main hold. See the
+[Sitar actual-main qualification](../plans/2026-10-08-sitar-hero-fumble-feedback.md).
+
+The final private normal command at exact
+`53d63fb5c68cc4ea272964befde84ffc19568613`, base
+`6124a524eef9b42efb800d5bcb95376147507c9e`, is:
+
+```sh
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py \
+  --base 6124a524eef9b42efb800d5bcb95376147507c9e --max-minutes 150 --run
+```
+
+The native request loses its session before admission (exit143, no run or
+surviving owned request). Only that absent request is replaced once under a
+retained bounded user-service supervisor with explicit exit metadata, Java21,
+Lua5.4 and the same normal runner limits. Run `20261008T165747Z-3db0a1c5`
+admits16:57:47Z and completes18:28:09Z, outer/Maven exit1: **3060 selected,
+3058 ordinary reports,26570 cases,26 inherited failures, zero errors and62
+inherited skips**, ordinary5159.09seconds. Fresh guards: **87 reports/674
+passing cases, zero failures/errors/skips**,262.94seconds. Whole-tree
+fingerprint remains
+`564e503d6191ba51e8732c0e2dc6319de6beb977ff27add0464cef06edc3995c`.
+The actual command uses the three original absolute main ROM files; fresh
+SHA-1/CRC32 identities match before and after execution. Both lanes complete
+without timeout, diagnostic omission or ROM skip. Exact diagnostics are
+consumed/acknowledged exit 0 and deleted; owning supervisor/runner are absent.
+
+All26 remaining failure identities/types/full first assertions match:
+25 literally plus the complete SSZ2951-character line, which becomes the
+same2907 characters after only verified blob-hash and exception-prefix
+normalization. All62 skip identities/first causal reasons match literally.
+The absent failure is
+`TestS1GameplayAudioTimelineCli#shellUsesAbsoluteBootstrapToolsAndRejectsInjectedEnvironmentBeforePathLookup`;
+its complete class passes7 cases in fresh ordinary Maven output. This is
+**an attributed launch-environment resolution, not a source fix**. The script
+and Java test are identical on published base and candidate (SHA-256
+`729d951e6d1342d4351046b107297314449b0ea50b820d46f6a22eadcfe0e540` and
+`91ab13c9675a5d4db8932aea4d0c369c416ae2a6ae2a6559d4d8f3dcc882cfc9`).
+Its first failed production command, the absolute Bash launcher `--help`, is
+checked on both trees with fake PATH tools: each returns4/rejects the native
+app's `LD_LIBRARY_PATH`, and each returns0/help with that variable absent;
+fake tools never execute. Only that variable's presence changes. This matched
+first-assertion branch check explains the baseline's expected0/actual4 without
+another full suite or source edit. Zero new, worsened or unattributed cases
+remain. This qualification accepts inherited failures; it is not a green
+ordinary-suite claim.
+
+After terminal inspection, published `ad3d6a996` and native alias successor
+`913c5a351` are merged privately, conflict-free, at `f1d05e7b7` and
+`e78b2092f`. Shared changelog and hazard/pitfall prose retain both owners'
+changes. The complete imported delta is documentation, standalone native
+feasibility/Windows packaging tools and one experimental Windows workflow.
+Index comparisons against tested53d prove no engine Java, tests/resources,
+examples, POM, `.mvn`, hooks, API-policy or category-runner difference.
+The normal change-based plan against actual published913c still selects all
+3060 ordinary classes plus fresh guards. Completed ordinary and domain
+evidence therefore remains applicable, but the new/changed workflow is a
+guard input: run one fresh normal private guard profile before integration.
+Actual-main normal combined qualification, push and owned cleanup remain
+pending. Native Windows artifacts retain their separate owner's qualification
+limits; this stock-parity work makes no Windows delivery claim.
+
+At exact `163b782ee596d999cf15e60e1a2a81124ab16521`/published base913c,
+the once-submitted separate normal private command is:
+
+```sh
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py \
+  -Dmse=off -Pguards test -B
+```
+
+The actual invocation also passes the three original absolute ROM properties;
+its retained user service preflights Java21/Lua5.4/PowerShell and bounds total
+lifetime without changing the Maven profile. After178seconds queue waiting,
+it completes `2026-10-08T19:08:05Z`, Maven exit 0/BUILD SUCCESS,4:00 execution:
+**87 fresh XML suites,674 cases, zero failures/errors/skips**. All fresh XML
+mtimes are after the owning invocation began. Before/after source fingerprint
+is literally identical:
+`2c1e7e79ad8b07057e64a24fc90720412e317f195ac93de5f34acb9f8204affb`.
+Owned supervisor/runner PIDs are absent after terminal. This closes the
+published experimental-workflow guard obligation; unchanged ordinary/domain
+results retain their exact earlier attribution. No Windows artifact result
+is inferred. Other active gameplay/native owners agree to preserve main
+tracked inputs/HEAD/publication for upcoming parity integration. The SOZ
+owner had already announced a test-only78-case-qualified follow-up before
+this hold, then explicitly confirms that no change/check has reached main:
+all private invocations are terminal and integration is deferred until the
+parity hold is released. Its private update is preserved without composition.
+
+Published `f5de9524a943d55191dbf798d405ca8e8e20ca9e` follows913c with only
+three standalone native-feature/build/prose paths. Private merge `8bdf6d4d0`
+is conflict-free. Engine/test/resources/examples/POM/hooks/API/testing and
+workflow input comparisons against qualified163b are empty, so both normal
+ordinary and fresh guard evidence remain applicable without another unchanged
+private invocation. Main local/remote f5de match after fetch/fast-forward pull;
+the original three dirty submodules and four untracked user paths remain.
+Pin f5de as the actual pre-integration base and run normal combined actual-main
+qualification after merging the private parity branch. Hold tracked inputs,
+HEAD/commits and publication through terminal, then evidence/push/cleanup.
+Actual-main parity integration, qualification, push and cleanup remain pending.
+
+#### Round 3 actual-main qualification
+
+The conflict-free actual-main merge is
+`863683b092f71a8be4bbd928ed4afe86c545e069`, first parent and pinned
+pre-integration base `f5de9524a943d55191dbf798d405ca8e8e20ca9e`;
+its integrated index exactly matches qualified private composition
+`903d3975796bcefb563931e674d46af4eea055af`. Main stays on develop,
+preserving the three dirty disassemblies and four untracked user paths.
+The once-submitted normal command is:
+
+```sh
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py \
+  --base f5de9524a943d55191dbf798d405ca8e8e20ca9e --max-minutes 150 --run
+```
+
+A retained bounded user-service supervisor preserves command lifetime and
+explicit exit metadata. Submission is 19:16:47Z, normal admission 19:45:59Z
+as `20261008T194559Z-9deb33e8`, and terminal 21:09:04Z on
+2026-10-08. The unmodified selection is all **3060 ordinary classes**,
+one worker and separate fresh guards; the 150-minute execution cap excludes
+queue waiting. Java 21/Lua 5.4/PowerShell preflight passes in that launch
+environment. Actual ordinary and guard commands use the three original
+absolute main ROM filenames; fresh SHA-1/CRC32 identities match the repository
+reference table. No alternate selection, heap/fork override or ROM alias is
+used in this normal qualification.
+
+| Completed lane | Reports | Cases | Failures | Errors | Skips | Execution seconds | Maven exit |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Ordinary | 3058 | 26570 | 26 | 0 | 62 | 4748.93 | 1 |
+| Fresh guards | 87 | 674 | 0 | 0 | 0 | 234.79 | 0 |
+
+Both lanes complete without timeout, omitted diagnostics or ROM skips.
+The runner's overall result is `failed` / exit1 because ordinary retains
+inherited failures; this is **accepted inherited-failure qualification,
+not a green ordinary-suite claim**. All 26 failure identities/types/full
+first assertions match the qualified 53d private result: 25 literally, plus
+the complete SSZ 2952-character first line after only exception-prefix removal
+and verified named blob-hash normalization to 2907 characters. All 62 skip
+identities and first causal reasons match literally. There are zero new,
+worsened or unattributed failures or changed/new skips. The previously absent
+CLI failure remains the explicitly attributed launch-environment difference
+described above, with no source-fix claim.
+
+Fresh ordinary XML observed during this owning invocation confirms the
+death-radius 14, S2 super-results 8, HCZ fan 12 and fan-graph rewind 2 cases,
+all 13 Sitar classes/152 cases, host music/cues 18, API reflection 9,
+SDK packaging 10, Javadoc 7, CLI shell 7 and strict timing-loader 19 passing
+without skips. The four required S3K selectors cover 60 passing cases across
+five XML suites (both level-loading packages are included). These are actual
+main observations, not copied private reports.
+
+Initial, admission-plan, ordinary-boundary, terminal and independently
+reconstructed current source fingerprints are identical:
+`8f516b7601c7d9c1cf5e03cb6c282e5b17ce79ce8d80717b76fccf6c6f43bb16`.
+All tracked validation inputs and HEAD remain frozen through both lanes.
+The owning supervisor/runner are absent after terminal; the exact consumed
+run is acknowledged exit 0 and its entire diagnostic directory is absent.
+No foreign request, process, source or publication is changed.
+
+The completed separate 17-case canonical trace qualification retains four
+qualified red frontiers and 13 passing controls, as recorded above. S1's
+native-correct death-radius change propagates the documented additional
+nine physics/two animation mismatches after an inherited early death; it
+does not close that route. Next work remains the combined S1 PLC-arm/service
+boundary, S2 same-tick super-animation publication, and S3K fan-to-conveyor
+ownership/lifecycle evidence. Stock parity and later-route completion are
+still incomplete.
+
+#### Actual-main full assertion and skip summary
+
+This light comparison summary is the complete negative-case projection for
+actual-main 863/run9deb: each fully qualified case identity, failure kind/type
+and full first assertion, followed by every skip identity and literal first
+causal reason. It comes from `failed_cases[].detail`, never the capped
+message. Stack-trace suffixes are not compared or retained. Only the marked
+SSZ row removes the exception prefix and replaces verified
+`RewindObjectStateBlob@hex` with `RewindObjectStateBlob@HASH`; its full
+normalized assertion is 2907 characters. The other 25 assertions and all 62 reasons
+are literal first lines. The immutable tested source, rather than a future
+documentation successor's HEAD, owns these outcomes.
+
+| Failure case | Kind/type | Complete first assertion |
+|---|---|---|
+| `com.openggf.tests.TestS3kMhzAct2AuthoredRoute#incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String, int)[2]` | `failure/org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: late pulley owns Tails ==> expected: <true> but was: <false>` |
+| `com.openggf.tests.TestS3kMhzAct2AuthoredRoute#incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String, int)[3]` | `failure/org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: late pulley owns Sonic ==> expected: <true> but was: <false>` |
+| `com.openggf.tools.TestDezIncomingFinalRouteCapture#coldOrdinarySoloTailsClearsAllFinalPhasesAndLoadsEnding` | `failure/org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: expected: <96> but was: <0>` |
+| `com.openggf.tools.TestDezIncomingFinalRouteCapture#coldOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding` | `failure/org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: expected: <96> but was: <0>` |
+| `com.openggf.tools.TestDezIncomingFinalRouteCapture#incomingFinalFightRestoresAndReplaysEveryPhase(int)[1]` | `failure/org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: death at 26706 ==> expected: <false> but was: <true>` |
+| `com.openggf.tools.TestDezIncomingFinalRouteCapture#incomingFinalFightRestoresAndReplaysEveryPhase(int)[2]` | `failure/org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: death at 26750 ==> expected: <false> but was: <true>` |
+| `com.openggf.tools.TestDezIncomingFinalRouteCapture#coldWideOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding` | `failure/org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: expected: <96> but was: <0>` |
+| `com.openggf.tools.TestDezIncomingFinalRouteCapture#coldEmeraldTeamClearsBothActsFinalFightAndDoomsday` | `failure/org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: death at 53897 ==> expected: <false> but was: <true>` |
+| `com.openggf.tools.TestDezIncomingFinalRouteCapture#coldOrdinaryTeamClearsHandsCoreAndEscapeShipAndLoadsEnding` | `failure/org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: expected: <96> but was: <0>` |
+| `com.openggf.tools.TestLrzActTwoColdRouteCapture#coldTeamCompletesActTwoAndReachesBossActWithRepeatableWorldState` | `failure/org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: death at input 36526 ==> expected: <false> but was: <true>` |
+| `com.openggf.tools.TestLrzBossColdRouteCapture#coldTeamCompletesBossActWithEarnedShieldAndRepeatableWorldState` | `failure/org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: death at input 36526 ==> expected: <false> but was: <true>` |
+| `com.openggf.tools.TestLrzKnucklesColdRouteCapture#coldKnucklesCompletesActTwoAndReachesPlayableHiddenPalace` | `failure/org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: expected: <1069> but was: <899>` |
+| `com.openggf.tools.TestLrzTailsColdRouteCapture#coldTailsClearsActOneAndRestoresTraversalFightAndHandoff` | `failure/org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: death at input 19460 ==> expected: <false> but was: <true>` |
+| `com.openggf.tools.TestLrzTailsColdRouteCapture#coldTailsRestoresActTwoTraversalToTheMiddleCorridor` | `failure/org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: death at input 19460 ==> expected: <false> but was: <true>` |
+| `com.openggf.tools.TestLrzTailsColdRouteCapture#coldTailsCompletesBossActAndReachesPlayableHiddenPalace` | `failure/org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: death at input 19460 ==> expected: <false> but was: <true>` |
+| `com.openggf.tools.TestLrzTailsColdRouteCapture#coldTailsCompletesActTwoAndRestoresTheBoulderHandoff` | `failure/org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: death at input 19460 ==> expected: <false> but was: <true>` |
+| `com.openggf.tools.TestLrzWideBossColdRouteCapture#coldWideTeamClearsBossAndReleasesHiddenPalaceWithRepeatableWorld` | `failure/org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: expected: <2796> but was: <524>` |
+| `com.openggf.tools.TestMhzPairColdRouteCapture#pairedColdCompletionIsolatesTheLiveTimelineAtTheActualFbzLoad` | `failure/org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: the route must observe the actual history-reset boundary ==> expected: <true> but was: <false>` |
+| `com.openggf.tools.TestMhzWideColdRouteCapture#wideSonicCompletesBothActsThroughProductionLoopWithWholeWorldReplay` | `failure/org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: [wide-route-19500] restore 0 zone-runtime: [zone-runtime.stateBytes[2]: A=46 B=26, zone-runtime.stateBytes[3]: A=-104 B=64, zone-runtime.stateBytes[6]: A=38 B=21, zone-runtime.stateBytes[7]: A=-44 B=-32, zone-runtime.stateBytes[10]: A=31 B=17, zone-runtime.stateBytes[11]: A=16 B=-128] ==> expected: <true> but was: <false>` |
+| `com.openggf.tools.TestSszColdRouteCapture#coldCompleteRouteDefeatsMechaAndLoadsDeathEggWithRewindAtLateEvents` | `failure/org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: death at input 7311 ==> expected: <false> but was: <true>` |
+| `com.openggf.tools.TestSszColdRouteCapture#coldRouteDefeatsBothReplicasAndReplaysTraversalAndTransport` | `failure/org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: death at input 7311 ==> expected: <false> but was: <true>` |
+| `com.openggf.tools.TestSszSoloColdRouteCapture#coldSoloSonicDefeatsBothReplicasAndReplaysTheirApproaches` | `failure/org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: death at 7671 ==> expected: <false> but was: <true>` |
+| `com.openggf.tools.TestSszSoloColdRouteCapture#coldSoloSonicDefeatsMechaAndLoadsDezWithIsolatedHistory` | `failure/org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: death at 7671 ==> expected: <false> but was: <true>` |
+| `com.openggf.tools.TestSszTailsColdRouteCapture#coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory(int)[1]` | `failure/org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: expected: <48> but was: <0>` |
+| `com.openggf.tools.TestSszTailsColdRouteCapture#coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory(int)[2]` | `failure/org.opentest4j.AssertionFailedError` | `org.opentest4j.AssertionFailedError: expected: <48> but was: <0>` |
+| `com.openggf.tools.TestSszTailsColdRouteCapture#coldSoloTailsDefeatsBothReplicasAndRidesTheirTeleporters(int)[2]` | `failure/org.opentest4j.AssertionFailedError` | `replay at 4018 object-manager: [object-manager.usedSlotsBits differs, object-manager.usedSlotsBits.onlyA: 24, 29, object-manager.dynamic[6][ObjectRefId[slotIndex=-1, generation=0, spawnId=-1, dynamicId=125, kind=DYNAMIC]] missing in B (A=DynamicObjectEntry[className=com.openggf.game.sonic3k.objects.badniks.EggRoboJetFlameChildInstance, spawn=ObjectSpawn[x=1291, y=2332, objectId=0, subtype=0, renderFlags=1, respawnTracked=false, rawYWord=0, layoutIndex=-1, ownerModId=null, objectKey=null], slotIndex=6, state=PerObjectRewindSnapshot[destroyed=false, destroyedRespawnable=false, hasDynamicSpawn=true, dynamicSpawnX=1291, dynamicSpawnY=2332, preUpdateX=1291, preUpdateY=2332, preUpdateValid=true, preUpdateCollisionFlags=-1, skipTouchThisFrame=false, solidContactFirstFrame=false, slotIndex=6, respawnStateIndex=-1, badnikExtra=null, badnikSubclassExtra=null, objectSubclassExtra=RewindExtra[parentId=null, x=1291, y=2332, mappingFrame=5, hFlip=true], playerExtra=null, genericState=null, compactGenericState=com.openggf.game.rewind.schema.RewindObjectStateBlob@HASH], playerOwner=null, objectId=ObjectRefId[slotIndex=-1, generation=0, spawnId=-1, dynamicId=125, kind=DYNAMIC], ownerModId=null, rewindableAuxiliary=false]), object-manager.dynamic[28][ObjectRefId[slotIndex=-1, generation=0, spawnId=-1, dynamicId=126, kind=DYNAMIC]] missing in B (A=DynamicObjectEntry[className=com.openggf.game.sonic3k.objects.badniks.EggRoboGunArmChildInstance, spawn=ObjectSpawn[x=1307, y=2300, objectId=0, subtype=0, renderFlags=1, respawnTracked=false, rawYWord=0, layoutIndex=-1, ownerModId=null, objectKey=null], slotIndex=28, state=PerObjectRewindSnapshot[destroyed=false, destroyedRespawnable=false, hasDynamicSpawn=true, dynamicSpawnX=1307, dynamicSpawnY=2300, preUpdateX=1307, preUpdateY=2300, preUpdateValid=true, preUpdateCollisionFlags=-1, skipTouchThisFrame=false, solidContactFirstFrame=false, slotIndex=28, respawnStateIndex=-1, badnikExtra=null, badnikSubclassExtra=null, objectSubclassExtra=RewindExtra[parentId=null, x=1307, y=2300, cooldown=-1, hFlip=true], playerExtra=null, genericState=null, compactGenericState=com.openggf.game.rewind.schema.RewindObjectStateBlob@HASH], playerOwner=null, objectId=ObjectRefId[slotIndex=-1, generation=0, spawnId=-1, dynamicId=126, kind=DYNAMIC], ownerModId=null, rewindableAuxiliary=false]), object-manager.dynamic[27][ObjectRefId[slotIndex=-1, generation=0, spawnId=-1, dynamicId=128, kind=DYNAMIC]].slotIndex: A=27 B=6, object-manager.dynamic[27][ObjectRefId[slotIndex=-1, generation=0, spawnId=-1, dynamicId=128, kind=DYNAMIC]].state.slotIndex: A=27 B=6, object-manager.dynamic[33][ObjectRefId[slotIndex=-1, generation=0, spawnId=-1, dynamicId=129, kind=DYNAMIC]].slotIndex: A=33 B=27, object-manager.dynamic[33][ObjectRefId[slotIndex=-1, generation=0, spawnId=-1, dynamicId=129, kind=DYNAMIC]].state.slotIndex: A=33 B=27] ==> expected: <true> but was: <false>` (SSZ normalization only) |
+
+| Skipped case | Literal first causal reason |
+|---|---|
+| `com.openggf.audio.TestSmpsRepeatedPlaybackBenchmark#repeatedPublicMusicAndSfxPlaybackEmitsStableRawSamples` | `System property [openggf.audio.repeatedPlaybackBenchmark] does not exist` |
+| `com.openggf.game.rewind.TestLiveRewindCheckpointCost#compareCheckpointCadencesOnTheSameRecordedRoute` | `System property [openggf.checkpoint.measure] does not exist` |
+| `com.openggf.game.rewind.TestRewindTorture#tortureProgressiveLongRewinds` | `org.opentest4j.TestAbortedException: Assumption failed: Long-running soak profile; excluded from normal runs — run manually with -Drewind.soak=true` |
+| `com.openggf.game.rewind.TestS3kRewindAllocationProbe#measure` | `System property [openggf.rewind.alloc.measure] does not exist` |
+| `com.openggf.game.sonic3k.objects.TestS3kAiz1CompatibilityRoutes#axisRouteCompletes(int, String)` | `System property [openggf.aiz1.routes] does not exist` |
+| `com.openggf.game.sonic3k.objects.TestS3kAiz1EntryMatrix#introReleasesInputAndEntryReplaysTwice(int, String)` | `System property [openggf.aiz1.entry] does not exist` |
+| `com.openggf.game.sonic3k.objects.TestS3kAiz1SpringRecovery#liveSpringJumpCrossesAndReplaysWhileWalkingIsRejected(int, String)` | `System property [openggf.aiz1.recovery] does not exist` |
+| `com.openggf.game.sonic3k.objects.TestSozAct1VictoryCapture#captureVictoryAndHandoff` | `System property [soz.act1.victory.capture] does not exist` |
+| `com.openggf.game.sonic3k.objects.TestSozColdAct1Capture#fixedControllerRouteReachesVisiblePlayableAct2FromColdAct1` | `System property [soz.cold.act1.capture] does not exist` |
+| `com.openggf.game.sonic3k.objects.TestSozColdAct2Capture#fixedControllerRouteReachesVisibleLavaReefFromColdAct2` | `System property [soz.cold.act2.capture] does not exist` |
+| `com.openggf.game.sonic3k.objects.TestSozEndBossVictoryCapture#captureBattleAndLrz` | `System property [soz.endboss.victory.capture] does not exist` |
+| `com.openggf.game.sonic3k.objects.TestSozMinibossCapture#positionedAwakening` | `System property [soz.miniboss.capture] does not exist` |
+| `com.openggf.graphics.TestArenaMaskRenderer#nativeWidthCentrePixelsFrameCadenceAndGlStateSurviveCaptureFbo` | `org.opentest4j.TestAbortedException: Assumption failed: assumption is not true` |
+| `com.openggf.graphics.TestBackgroundScrollWrapPixels#integerScrollNeverSamplesOutsideTheRenderedPeriod` | `org.opentest4j.TestAbortedException: Assumption failed: OpenGL 4.1 unavailable` |
+| `com.openggf.graphics.TestForegroundWindowRendering#windowReplacesScrolledForegroundAndItsPriorityMask` | `org.opentest4j.TestAbortedException: Assumption failed: Surfaceless EGL unavailable (try EGL_PLATFORM=surfaceless)` |
+| `com.openggf.graphics.TestScrollBufferUploadNative#arraysAndViewsUploadExactValuesAcrossResourceAndContextRecreation` | `System property [openggf.scrollNative] does not exist` |
+| `com.openggf.graphics.TestShaderPixelCentreSampling#pixelCentresSurviveNativeIntegerAndFractionalScalingWithViewportOffsets` | `org.opentest4j.TestAbortedException: Assumption failed: OpenGL 4.1 unavailable` |
+| `com.openggf.graphics.TestSlotWindowGpuPassNative#pixelsAndDrawStateSurviveResizeCleanupAndContextRecreation(boolean)` | `System property [openggf.slotNative] does not exist` |
+| `com.openggf.graphics.shaderlib.TestDisplayShaderPackDiagnostics#writeCompatibilityReportForLocalShaderPack` | `org.opentest4j.TestAbortedException: Assumption failed: Set -Dshaderlib.diagnostic.enabled=true to scan a local shader pack` |
+| `com.openggf.level.TestLevelRendererBackgroundSamplingPerformance#captureLiveBackgroundSamplingScenes` | `org.opentest4j.TestAbortedException: Assumption failed: enable with -Dopenggf.capture.backgroundSampling=true` |
+| `com.openggf.level.TestLevelRendererBackgroundSamplingPerformance#postWarmupRenderSamplingAllocationProbe` | `org.opentest4j.TestAbortedException: Assumption failed: enable with -Dopenggf.measure.backgroundSampling=true` |
+| `com.openggf.level.objects.TestObjectRewindTypeSafetyDispatchPerformance#measureMixedRouteDispatchAllocationAndTime` | `System property [openggf.performance.rewindDispatch.measure] does not exist` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[11]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[12]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[19]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[20]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[21]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[22]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[23]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[24]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[25]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[26]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[27]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[28]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[29]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[30]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[31]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[32]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[33]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[34]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[35]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesABounceStretchOffAHoveringFlyer(int, int, WidescreenAspect)[36]` | `org.opentest4j.TestAbortedException: Assumption failed: act has no platform stretches or no flyer to bounce off` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int, int, WidescreenAspect)[11]` | `org.opentest4j.TestAbortedException: Assumption failed: act places no platforms` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int, int, WidescreenAspect)[12]` | `org.opentest4j.TestAbortedException: Assumption failed: act places no platforms` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int, int, WidescreenAspect)[19]` | `org.opentest4j.TestAbortedException: Assumption failed: act places no platforms` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int, int, WidescreenAspect)[20]` | `org.opentest4j.TestAbortedException: Assumption failed: act places no platforms` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int, int, WidescreenAspect)[21]` | `org.opentest4j.TestAbortedException: Assumption failed: act places no platforms` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int, int, WidescreenAspect)[22]` | `org.opentest4j.TestAbortedException: Assumption failed: act places no platforms` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int, int, WidescreenAspect)[23]` | `org.opentest4j.TestAbortedException: Assumption failed: act places no platforms` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int, int, WidescreenAspect)[24]` | `org.opentest4j.TestAbortedException: Assumption failed: act places no platforms` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int, int, WidescreenAspect)[33]` | `org.opentest4j.TestAbortedException: Assumption failed: act places no platforms` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int, int, WidescreenAspect)[34]` | `org.opentest4j.TestAbortedException: Assumption failed: act places no platforms` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int, int, WidescreenAspect)[35]` | `org.opentest4j.TestAbortedException: Assumption failed: act places no platforms` |
+| `com.openggf.mods.code.TestInfiniteSonic#sonicCrossesAPlatformStretchOnSpawnedStockPlatforms(int, int, WidescreenAspect)[36]` | `org.opentest4j.TestAbortedException: Assumption failed: act places no platforms` |
+| `com.openggf.mods.code.TestSonicSurvivors#balanceProbe` | `org.opentest4j.TestAbortedException: Assumption failed: opt-in diagnostic` |
+| `com.openggf.tests.TestCPZObjectBugs#testSpinTubeForcesRolling` | `org.opentest4j.TestAbortedException: Assumption failed: Spin tube at (1920,896) did not capture/release Sonic` |
+| `com.openggf.tests.TestSozAct1ArenaCapture#naturalArenaAdmission` | `System property [soz.act1.capture] does not exist` |
+| `com.openggf.tests.TestSozConnectedMechanismCapture#capture(Scene)` | `System property [soz.connected.capture] does not exist` |
+| `com.openggf.tests.TestSozPostBossRedrawCapture#capture(int)` | `System property [soz.postboss.redraw.capture] does not exist` |
+| `com.openggf.tools.TestS3kSlotsGlassNative#glassOccludesPlayerAfterRealBonusFrame(String, int)` | `System property [openggf.test.gl.native] does not exist` |
+| `com.openggf.tools.audio.parity.TestS1OpenGgfAudioCapture#capturesTheCompleteReferenceControlledInterval` | `org.opentest4j.TestAbortedException: Assumption failed: local deterministic BizHawk reference required` |
+| `com.openggf.tools.audio.timeline.TestS1Ghz1OpenGgfAudioTimelineCapture#captureRequestedOutput` | `org.opentest4j.TestAbortedException: Assumption failed: no local OpenGGF timeline capture was requested` |
+
+Publication and accounted-for owned worktree/agent cleanup follow this
+qualification; their final observed outcome is recorded below.
+
+#### Independent remote publication after the original main qualification
+
+The completed actual-main qualification above remains attributed to863/run9deb.
+Publication of its evidence-only successor `5662ad2c2` is blocked before any
+push: remote develop independently advances to
+`d4993a7307241bf90f004e0d7cf90936f075cf46` through Starfall Frontier and
+Eggman's Sky merges while local main remains frozen. Fetch preserves all
+local source and known dirt. The complete incoming delta is 123 paths,
+including 13 engine Java files, new/changed creator-scene tests, two example
+mods and 22 API signature-pin lines, alongside existing engineering/prose.
+There is no POM, hooks, selection-policy or testing-runner change. This is
+not source-equivalent to the completed 863 validation.
+
+Private reconciliation retains both source histories. All parity production
+and Java-test paths are disjoint from the incoming changes; shared changelog,
+measurement hazards and implementation pitfalls merge by retaining both
+owners' entries. A separate clean updated-remote worktree at exact d499 uses
+its canonical original absolute main ROM files and normal full ordinary plus
+fresh guards, selected against pre-import f5de. The combined parity candidate
+uses the unmodified normal plan against actual destination d499. Fresh focus
+covers incoming creator scenes, detached ROM art/rendering, startup audio,
+API/SDK/Javadoc consumers and S3K startup before combined qualification.
+The published remote's earlier noncanonical-ROM, incomplete broad result
+is not reused as a canonical full baseline. No new/worsened/unattributed
+failure or unexplained skip can be accepted by totals alone.
+
+The earlier complete negative-case table is retained as an immutable source
+comparison. Updated-base, combined private and actual-main results will be
+recorded with their own exact source and command before final publication.
+Foreign private requests and native captures remain untouched; local main
+and publication hold continue while this source-changing reconciliation is
+qualified.
+
+Private composition `d8f7ab7205935a608948ea6813b38e281df0cce8` passes
+its once-submitted queued focus at 2026-10-08T21:48:57Z, Maven exit 0 /
+BUILD SUCCESS, 2:02 execution after normal queue waiting. All 20 selectors
+are represented in 21 fresh XML suites (level loading matches two packages):
+146 cases, 145 passed, zero failures/errors and one explicit GPU skip.
+The skipped identity is
+`com.openggf.mods.scene.host.TestSceneRenderer#changingBatchSizesPreservesEveryPixelAndStreamingUpdates`;
+its literal first causal reason is
+`org.opentest4j.TestAbortedException: Assumption failed: OpenGL 4.1 unavailable`.
+No ROM case skips. This does not certify the skipped GPU pixel behavior.
+API reflection 9, SDK 10, Javadoc 7, both creator mods 22, startup audio 2,
+detached pictures 2, S3K backdrops 10, texture cache 5, host music/cues 18
+and required S3K startup 60 all pass. Fresh reports are selected by mtimes
+after the owning invocation, not earlier target output. Before/after source
+fingerprint is identical:
+`2d7b785be8c2eb4dea26ef7564ab07136fa735f7116bc8cfc592fd7ed874f78d`.
+Owning focus supervisor/runner are absent after terminal.
+
+The exact focused command, with only machine-local path spelling normalized,
+is:
+
+```sh
+OPENGGF_ROM_ROOT=/absolute/path/to/OpenGGF
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  '-Dtest=TestEggmansSkyStartupAudio,TestEggmansSkyFauna,TestEggmansSkyQualityOfLife,TestEggmansSkyScene,TestStarfallFrontierExample,TestStarfallFrontierScene,TestModSceneLauncherAudio,TestSceneBackdropS3k,TestDetachedStockScenePictures,TestSceneRenderer,TestSceneTextureCache,TestModApiSignatureSurface,TestModApiSdkPackager,TestModApiJavadocTool,TestSceneMusicRom,TestScenePartCues,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' \
+  "-Dsonic1.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${OPENGGF_ROM_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+The canonical updated-base normal run admits at 21:47:48Z as
+`20261008T214748Z-737dcb35`, exact d499/base f5de, all 3066 ordinary
+classes plus fresh guards, one worker and 150 minutes excluding admission.
+The combined candidate's unmodified plan against actual destination d499
+selects all 3068 ordinary classes plus fresh guards. Expected execution cost
+is 85–110 minutes ordinary plus 4–5 minutes guards for each invocation; queue
+waiting is additional. A timeout, unexplained omission, ROM skip or new/
+worsened/unattributed failure blocks integration. The incoming GPU skip must
+match the updated canonical baseline by identity and literal reason. Final
+combined private and actual-main qualification, publication and cleanup
+remain pending.
+
+## Updated remote baseline and combined candidate terminal qualification
+
+The canonical updated baseline is tested at
+`d4993a7307241bf90f004e0d7cf90936f075cf46`, selected against
+`f5de9524a943d55191dbf798d405ca8e8e20ca9e`. Run
+`20261008T214748Z-737dcb35` admitted at 2026-10-08T21:47:48Z and
+finished at 2026-10-08T23:19:18Z. The combined candidate is tested at
+`94bbd3bda56c3dcc81cfcc89a750b8955cb14dc6` against the actual
+published destination `d4993a7307241bf90f004e0d7cf90936f075cf46`.
+Run `20261008T232550Z-db7081e2` admitted at
+2026-10-08T23:25:50Z and finished at 2026-10-09T00:51:22Z.
+
+| Exact source/lane | Selected classes | Fresh XML reports | Cases | Failures | Errors | Skips | Execution seconds | Maven exit |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| d499 ordinary | 3,066 | 3,064 | 26,563 | 26 | 0 | 63 | 5,238.46 | 1 |
+| d499 fresh guards | — | 87 | 674 | 0 | 0 | 0 | 251.60 | 0 |
+| 94bb ordinary | 3,068 | 3,066 | 26,598 | 26 | 0 | 63 | 4,870.86 | 1 |
+| 94bb fresh guards | — | 87 | 674 | 0 | 0 | 0 | 260.05 | 0 |
+
+Both invocations use the normal, unmodified ordinary command and a separate
+fresh guard JVM, one worker, canonical original absolute main ROM filenames,
+and the 150-minute admission-excluded cap. Java 21, Lua 5.4 and PowerShell
+preflight pass. All three ROM SHA-1/CRC identities match. No lean, heap or
+fork overrides are added to either broad invocation.
+
+The commands, from the separate updated-base and composition worktrees, are:
+
+```sh
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base f5de9524a943d55191dbf798d405ca8e8e20ca9e --max-minutes 150 --run
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base d4993a7307241bf90f004e0d7cf90936f075cf46 --max-minutes 150 --run
+```
+
+All 26 failure identities, kinds and types match the qualified 863 reference
+on the updated baseline and the candidate. Twenty-five full first assertion
+lines match literally. The complete SSZ first line is 2,952 characters on
+both new runs; removing only the exception prefix and replacing the two
+verified `RewindObjectStateBlob@hex` identities with `@HASH` yields the
+same 2,907-character assertion. No other value or text is normalized.
+The 62 prior skip identities and literal first reasons are preserved, with
+exactly one incoming renderer skip: the identity and OpenGL 4.1 reason
+recorded above. All 63 skip identities/reasons match literally between d499
+and 94bb. There are no new, worsened or unattributed ordinary negative
+cases, duplicate negative identities, omitted diagnostics, timeouts or ROM
+skips. This is inherited-failure qualification, not a green ordinary suite.
+
+The candidate adds exactly 35 passing cases over the updated baseline:
+death-radius 14, S2 super-results 8, seven additional fan cases and six
+additional strict timing-loader cases. Fresh suites confirm fan 12,
+fan-graph rewind 2, timing loader 19, API reflection 9, SDK 10 and Javadoc 7
+pass without skips. All 13 Sitar suites/152 cases and host music/cues 18
+pass without skips. Required S3K startup 60, incoming creator scenes,
+detached stock art and startup-audio checks pass; the explicit renderer GPU
+skip remains a coverage limit. SDK/Javadoc counts are also confirmed by the
+fresh owning ordinary Maven completion lines.
+
+Before/after fingerprints remain identical within each frozen invocation:
+
+- d499: `6de3884fad261de2a57bcd6e0209cd146b4106a8ec09dd3e2cfbb07941ae8833`.
+- 94bb: `c2938174a1f4ad637345cd87ed4fae8644c38cd7be1edc608dae198db1f5324a`.
+
+Both owning supervisor/runner pairs are absent, and their service control
+groups are collected. Complete results were consumed before acknowledging
+each exact run with exit 0; both run directories are absent. No foreign
+request, process or diagnostic was acknowledged or cancelled.
+
+The combined private source is qualified. Its evidence-only successor may
+be integrated into the held main develop branch with d499 as the pinned
+validation base. Updated actual-main normal ordinary plus fresh guards,
+publication and owned cleanup remain required; the earlier 863 main result
+does not certify the incoming engine/API composition.
