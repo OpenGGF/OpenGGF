@@ -35,7 +35,7 @@ class TestStockSceneArtRom {
                     assertEquals(-4, named.frame(0x0A).originY());
                     assertEquals(16, named.frame(0x11).width());
                     assertEquals(8, named.frame(0x11).originY());
-                    for (int index = 0x0A; index <= 0x14; index++) {
+                    for (int index = 0x0A; index <= 0x10; index++) {
                         assertTrue(java.util.Arrays.stream(named.frame(index).image().pixels())
                                 .anyMatch(pixel -> (pixel >>> 24) != 0), "dust frame " + index);
                     }

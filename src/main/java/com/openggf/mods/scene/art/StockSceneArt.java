@@ -21,7 +21,9 @@ public enum StockSceneArt {
     /**
      * Obj_DashDust's dust (spin dash cloud frames $A-$10, skid puffs $11-$14) streamed from
      * 5,952 bytes of uncompressed art through the player DPLC layout, on the player's palette
-     * line 0; its scripts are Ani_DashSplashDrown ($18DC0).
+     * line 0; its scripts are Ani_DashSplashDrown ($18DC0). Skid child frames $11-$14 have
+     * empty cues: their parent preloads the shared bank using cue $15 (DashDust_Load_DPLC).
+     * Decode that ROM-selected bank separately when presenting those child mappings.
      */
     S3K_DASH_DUST(RomSpriteRequest.streamed(0x18A604, 5952, 0x018DF4, 0x018EE2, RomSpriteRequest.DplcLayout.PLAYER, 0),
             "ArtUnc_DashDust / Map_DashDust / DPLC_DashSplashDrown");

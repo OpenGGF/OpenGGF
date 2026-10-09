@@ -164,12 +164,14 @@ public final class Art {
         aizPalette = new int[64];
         System.arraycopy(s3k.palette(PAL_SONIC_TAILS, 16), 0, aizPalette, 0, 16);
         System.arraycopy(s3k.palette(PAL_AIZ, 48), 0, aizPalette, 16, 48);
-        dustBanks = new SceneArtCache(s3k, 4);
+        dustBanks = new SceneArtCache(s3k, 6);
+        RomSpriteRequest skid = skidRequest(s3k);
         for (String code : new String[] {"sonic", "tails", "knuckles"}) {
             farmers.put(code, s3k.character(code));
             // Obj_DashDust's art_tile is make_art_tile(ArtTile_DashDust,0,0): the player's own line 0.
-            dust.put(code, dustBanks.sprites(StockSceneArt.S3K_DASH_DUST,
-                    new PaletteAssembly().line(0, s3k.characterPalette(code)).build()));
+            int[] palette = new PaletteAssembly().line(0, s3k.characterPalette(code)).build();
+            dust.put(code, new DustBank(dustBanks.sprites(StockSceneArt.S3K_DASH_DUST, palette),
+                    dustBanks.sprites(skid, palette)));
         }
         dustScripts = s3k.read(ANI_DASH_SPLASH_DROWN, 52);
         tailsSelection = s3k.read(TAILS_TAIL_ANI_SELECTION, 50);
@@ -254,6 +256,43 @@ public final class Art {
     /** The dust Obj_DashDust draws for this farmer (spin dash cloud, skid puffs). */
     public SceneSpriteSet dust(String code) {
         return dust.getOrDefault(code, dust.get("sonic"));
+    }
+
+    /**
+     * Sonic_MoveLeft/Right sets the parent dust's mapping_frame to $15 before routine 6.
+     * DashDust_Load_DPLC uploads that cue's single 16-tile bank; the four child mappings
+     * ($11-$14) select successive quadrants without issuing their own DPLC loads.
+     * Read the cue from the ROM and reuse the toolkit's uncompressed sprite request.
+     */
+    private static RomSpriteRequest skidRequest(SceneRomArt rom) {
+        RomSpriteRequest source = StockSceneArt.S3K_DASH_DUST.request(rom);
+        byte[] offset = rom.read(source.dplcAddress() + 0x15 * 2, 2);
+        int relative = (offset[0] & 0xFF) << 8 | offset[1] & 0xFF;
+        byte[] cue = rom.read(source.dplcAddress() + relative, 4);
+        if (cue[0] != 0 || cue[1] != 1) {
+            throw new IllegalStateException("The skid preload must contain one tile-bank cue");
+        }
+        int entry = (cue[2] & 0xFF) << 8 | cue[3] & 0xFF;
+        return RomSpriteRequest.uncompressed(source.artAddress() + (entry & 0xFFF) * 32,
+                ((entry >>> 12) + 1) * 32, source.mappingAddress(), source.paletteLine());
+    }
+
+    /** The charging frames stream independently; skid children share their parent's preload. */
+    private static final class DustBank implements SceneSpriteSet {
+        private final SceneSpriteSet charge;
+        private final SceneSpriteSet skid;
+
+        DustBank(SceneSpriteSet charge, SceneSpriteSet skid) {
+            this.charge = charge;
+            this.skid = skid;
+        }
+
+        @Override public int frameCount() { return charge.frameCount(); }
+        @Override public com.openggf.mods.scene.SceneSprite frame(int index) {
+            return index >= 0x11 && index <= 0x14 ? skid.frame(index) : charge.frame(index);
+        }
+        @Override public int[] animationFrames(int id) { return charge.animationFrames(id); }
+        @Override public int animationDelay(int id) { return charge.animationDelay(id); }
     }
 
     /** A new dust object for one farmer, playing the ROM's Ani_DashSplashDrown. */

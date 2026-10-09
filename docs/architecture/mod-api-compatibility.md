@@ -555,9 +555,12 @@ Starpost Valley adds `StockSceneArt.S3K_DASH_DUST`, a named recipe for Obj_DashD
 on the verified S3&K locked-on ROM. Like the other recipes it is ROM-qualified and decodes the
 user's bytes; it adds a private enum constructor for requests that are not compressed art. The
 normalized 0.7 candidate pin gains exactly one additive enum-constant entry, with no removals,
-and the policy-generated release descriptor keeps unpublished candidate `0.7.0`. See the
+and the release descriptor keeps unpublished candidate `0.7.0`. Skid children use
+an existing raw uncompressed request for the bank their parent's cue `$15` preloads;
+no additional API surface is needed. The descriptor accepts strict `key=value` lines,
+so candidate notes belong here, rather than in descriptor comments. See the
 [creator recipe](../modding/guides/creator-helpers.md#rom-art-without-repeated-decoding) and the
-[design note](designs/2026-10-09-starpost-valley.md#20-rom-art-polish).
+[design note](designs/2026-10-09-starpost-valley.md#20-rom-art-polish-lane).
 
 ## Scene SFX candidate
 

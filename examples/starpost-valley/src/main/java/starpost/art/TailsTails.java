@@ -8,7 +8,7 @@ import com.openggf.mods.scene.art.RomAnimationPlayer;
 /**
  * Tails's twin tails, run as the ROM's tail object runs them (Obj_Tails_Tail, sonic3k.asm
  * $160A6). Each frame it copies Tails's position, facing and priority, so the tails share his
- * origin and flip and are drawn just after him in the same priority band: behind him. When his
+ * origin and flip and are drawn before him in the same priority band: behind him. When his
  * body animation changes, Obj_Tails_Tail_AniSelection ($16164, read from the ROM) picks the
  * tails' script in AniTails_Tail ($16196, also read from the ROM), which the shared
  * {@link RomAnimationPlayer} plays: blank while walking and running (those body frames carry

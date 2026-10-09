@@ -97,7 +97,11 @@ twelve commonly reused S3&K locked-on banks, including rings, Robotnik's ship,
 the capsule, explosions, several badniks and the players' dash dust
 (`S3K_DASH_DUST`: the spin dash cloud and skid puffs, streamed through the player
 DPLC layout on palette line 0; play its `Ani_DashSplashDrown` scripts, read from
-the ROM at `$18DC0`, with `RomAnimationPlayer`). A different ROM or an unknown
+the ROM at `$18DC0`, with `RomAnimationPlayer`). Skid child frames `$11–$14`
+issue no DPLC loads: `Sonic_MoveLeft/Right` first selects cue `$15` on their parent,
+which preloads one shared tile bank. Read that cue from the ROM and use a separate
+`RomSpriteRequest.uncompressed` for its bank and the same mappings when drawing
+those four children. Decoding their empty cues in isolation produces blank puffs. A different ROM or an unknown
 identity fails before using its offsets. User-supplied ROM bytes remain the
 source of every decoded bank.
 
