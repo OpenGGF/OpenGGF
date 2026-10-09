@@ -311,9 +311,10 @@ class TestTypingHedgehogHubScene {
                     "game " + p[0] + "\nzone " + p[1] + "\nact " + p[2] + "\nprogram 600:8\n"));
         }
         Class<?> assetsType = loader.loadClass("typinghog.play.CourseAssets");
-        // CourseAssets(lexicon, plates, casts, sounds, props, rails): the hub reads only the
-        // lexicon, sounds and rails.
-        Object assets = assetsType.getConstructors()[0].newInstance(lexicon, plates, Map.of(), sounds, Map.of(), rails);
+        // CourseAssets(lexicon, plates, casts, sounds, props, rails, pictures): the hub reads only
+        // the lexicon, sounds and rails.
+        Object assets = assetsType.getConstructors()[0].newInstance(lexicon, plates, Map.of(), sounds, Map.of(), rails,
+                Map.of());
         Class<?> hubAssetsType = loader.loadClass("typinghog.hub.HubAssets");
         UnaryOperator<String> reader = TestTypingHedgehogHubScene::read;
         Object hubAssets = hubAssetsType.getMethod("read", UnaryOperator.class).invoke(null, reader);

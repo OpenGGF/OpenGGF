@@ -8,11 +8,12 @@ import typinghog.rails.Rail;
 
 /**
  * Everything the course reads from the jar, decoded once at registration (mod files can only be
- * read then): word lists, the plate face, each game's cast, sound and prop tables, and the rails keyed
- * {@code game:zone:act}.
+ * read then): word lists, the plate face, each game's cast, sound and prop tables, the rails keyed
+ * {@code game:zone:act}, and the shipped pixel props ({@code hub/art.txt}, e.g. the backpack).
  */
 public record CourseAssets(Lexicon lexicon, Plates plates, Map<String, Cast> casts, Map<String, Sounds> sounds,
-                           Map<String, Props> props, Map<String, Rail> rails) {
+                           Map<String, Props> props, Map<String, Rail> rails,
+                           Map<String, typinghog.hub.model.TextArt.Picture> pictures) {
 
     public Rail rail(String game, int zone, int act) {
         return rails.get(game + ":" + zone + ":" + act);

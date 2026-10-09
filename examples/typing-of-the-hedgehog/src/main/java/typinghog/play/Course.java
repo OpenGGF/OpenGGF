@@ -11,6 +11,8 @@ import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.mods.ModStorage;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import java.util.SplittableRandom;
+import typinghog.audio.Announcer;
+import typinghog.audio.VoiceLine;
 import typinghog.core.Scorecard;
 import typinghog.core.TypingField;
 import typinghog.rails.Rail;
@@ -80,6 +82,8 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
     private typinghog.core.Lexicon.Picker picker;
     private final KeyStats keyStats = new KeyStats();
     private final RunTags runTags = new RunTags();
+    private final Announcer announcer = new Announcer();
+    private int lastChainCall;
 
     public Course(ModStorage storage, CourseAssets assets, Stagehand stagehand) {
         this.storage = storage;
@@ -94,6 +98,8 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
         rows++;
         detectLevel();
         if (intent == null || rail == null) return true;
+        announcer.update(rows, asset -> GameServices.audio().playNamespacedSfx(
+                new com.openggf.audio.StreamedMusicPort.SfxRef(TypingIds.MOD, asset)));
         if (phase == Phase.IDLE) enter(Phase.ENTRY);
         if (course.keyPressed(GLFW_KEY_ESCAPE) && phase != Phase.TALLY && phase != Phase.LEAVING) paused = !paused;
         String typed = course.typedText();
@@ -187,6 +193,9 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
         random = new SplittableRandom(intent.seed());
         picker = assets.lexicon().new Picker(intent.seed() ^ 0x5EED, 48);
         keyStats.clear();
+        announcer.clear();
+        announcer.mode(Announcer.Mode.parse(intent.voice().name()));
+        lastChainCall = 0;
         encounter = null;
         rings = START_RINGS;
         lives = START_LIVES;
@@ -213,6 +222,7 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
             return stand(course);
         }
         enter(Phase.RUN);
+        say(random.nextBoolean() ? VoiceLine.ANNOUNCER_GET_READY : VoiceLine.ANNOUNCER_TYPE_TO_SURVIVE);
         return true;
     }
 
@@ -257,7 +267,13 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
         field.clear();
         hud.banner(boss ? "WARNING!" : "STAND " + nextStand, boss ? 0xFFFF4040 : 0xFFFFD000);
         play(Sounds.Cue.STAND_START);
-        if (boss) playMusic(Sounds.Cue.BOSS_MUSIC);
+        if (boss) {
+            playMusic(Sounds.Cue.BOSS_MUSIC);
+            say(VoiceLine.ANNOUNCER_BOSS_WARNING);
+        } else {
+            VoiceLine[] calls = {VoiceLine.ANNOUNCER_STAND_GROUND, VoiceLine.ANNOUNCER_HERE_THEY_COME, VoiceLine.ANNOUNCER_INCOMING};
+            say(calls[random.nextInt(calls.length)]);
+        }
     }
 
     private boolean stand(CourseControl course) {
@@ -274,6 +290,7 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
             enter(Phase.STAND_CLEAR);
             hud.banner("WAVE CLEAR!", 0xFF60FF60);
             play(Sounds.Cue.STAND_CLEAR);
+            say(VoiceLine.ANNOUNCER_WAVE_CLEAR);
         }
         return true;
     }
@@ -288,6 +305,7 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
         encounter = null;
         hud.flash(0xFFFFFFFF, 12);
         hud.banner("GO!", 0xFFFFFFFF);
+        say(VoiceLine.ANNOUNCER_GO_GO_GO);
         enter(Phase.RUN);
         return true;
     }
@@ -359,11 +377,11 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
     /** Grants a monitor's power. */
     void grant(Pickup.Kind kind) {
         switch (kind) {
-            case SHIELD -> { shield = true; play(Sounds.Cue.SHIELD); hud.banner("SHIELD!", 0xFF60C0FF); }
-            case SPEED -> { slowRows = 600; hud.banner("SLOW MOTION!", 0xFF60C0FF); }
-            case INVINCIBLE -> { invincibleRows = 600; playMusic(Sounds.Cue.INVINCIBLE_MUSIC); hud.banner("INVINCIBLE!", 0xFFFFD000); }
-            case SUPER_RING -> { addRings(10); hud.banner("SUPER RING!", 0xFFFFD000); }
-            case EXTRA_LIFE -> { lives++; playMusic(Sounds.Cue.EXTRA_LIFE_MUSIC); hud.banner("1-UP!", 0xFF60FF60); }
+            case SHIELD -> { shield = true; play(Sounds.Cue.SHIELD); hud.banner("SHIELD!", 0xFF60C0FF); say(VoiceLine.ANNOUNCER_SHIELD); }
+            case SPEED -> { slowRows = 600; hud.banner("SLOW MOTION!", 0xFF60C0FF); say(VoiceLine.ANNOUNCER_SPEED_SHOES); }
+            case INVINCIBLE -> { invincibleRows = 600; playMusic(Sounds.Cue.INVINCIBLE_MUSIC); hud.banner("INVINCIBLE!", 0xFFFFD000); say(VoiceLine.ANNOUNCER_INVINCIBLE); }
+            case SUPER_RING -> { addRings(10); hud.banner("SUPER RING!", 0xFFFFD000); say(VoiceLine.ANNOUNCER_SUPER_RING); }
+            case EXTRA_LIFE -> { lives++; playMusic(Sounds.Cue.EXTRA_LIFE_MUSIC); hud.banner("1-UP!", 0xFF60FF60); say(VoiceLine.ANNOUNCER_EXTRA_LIFE); }
             case DECOY, RESCUE -> { }
         }
     }
@@ -387,13 +405,36 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
             rings -= spill;
             if (encounter != null) encounter.effects().spill(this, spill);
             play(Sounds.Cue.RING_SPILL);
+            say(rings == 0 ? VoiceLine.ANNOUNCER_NO_RINGS : random.nextBoolean() ? VoiceLine.ANNOUNCER_OUCH : VoiceLine.ANNOUNCER_RINGS_LOST);
             hud.banner("OUCH!", 0xFFFF6060);
             return;
         }
-        lives--;
+        // No-Fail retries the stand without spending a life.
+        if (!intent.noFail()) lives--;
         play(Sounds.Cue.HIT);
         enter(Phase.DYING);
         hud.banner(lives > 0 || intent.noFail() ? "TOO SLOW!" : "GAME OVER", 0xFFFF4040);
+        say(lives <= 0 && !intent.noFail() ? VoiceLine.ANNOUNCER_GAME_OVER : lives == 1 ? VoiceLine.ANNOUNCER_LAST_LIFE
+                : VoiceLine.ANNOUNCER_OUCH);
+    }
+
+    /** Queues a voice line through the shared announcer (silent when voice is off). */
+    void say(VoiceLine line) {
+        if (line != null) announcer.say(line.clip());
+    }
+
+    /** Calls chain milestones once each as the chain climbs. */
+    void chainMilestone(int chain) {
+        int[] marks = {10, 20, 30, 50};
+        VoiceLine[] calls = {VoiceLine.ANNOUNCER_CHAIN_TEN, VoiceLine.ANNOUNCER_CHAIN_TWENTY,
+                VoiceLine.ANNOUNCER_CHAIN_THIRTY, VoiceLine.ANNOUNCER_CHAIN_FIFTY};
+        if (chain < lastChainCall) lastChainCall = 0;
+        for (int i = 0; i < marks.length; i++) {
+            if (chain >= marks[i] && lastChainCall < marks[i]) {
+                lastChainCall = marks[i];
+                say(calls[i]);
+            }
+        }
     }
 
     void addRings(int count) {

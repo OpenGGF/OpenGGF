@@ -170,6 +170,7 @@ public final class Encounter {
         var body = stagehand.add(species.artKey(), x, y);
         body.flipX = species.facesRight() != (enemy.direction > 0);
         Prompt prompt = pickPrompt(course, arrival.elite() ? 4 : course.intent().difficulty().tier, arrival.elite());
+        if (arrival.elite()) course.say(typinghog.audio.VoiceLine.ANNOUNCER_ELITE);
         Enemy.Part part = new Enemy.Part(prompt, body);
         part.targetId = course.field().add(prompt, enemy.rowsToReach(px));
         if (course.invincible()) course.field().assist(part.targetId, prompt.typed().length() / 2);
@@ -202,6 +203,7 @@ public final class Encounter {
         visual.frame = art == null ? 0 : art.frame();
         visual.visible = art != null || arrival.kind() == Pickup.Kind.RESCUE;
         int id = course.field().add(prompt, arrival.kind().monitor() ? Pickup.MONITOR_ROWS : 90);
+        if (arrival.kind() == Pickup.Kind.DECOY) course.say(typinghog.audio.VoiceLine.ANNOUNCER_TRAP);
         pickups.add(new Pickup(arrival.kind(), prompt, visual, id, x, y, vx));
     }
 
@@ -238,11 +240,13 @@ public final class Encounter {
             switch (pickup.kind) {
                 case DECOY -> {
                     course.hud().banner("IT'S A TRAP!", 0xFFFF4040);
+                    course.say(typinghog.audio.VoiceLine.ROBOTNIK_TRAP_TYPED);
                     course.hitSonic();
                 }
                 case RESCUE -> {
                     int points = course.card().rescue(pickup.prompt);
                     course.play(Sounds.Cue.RING);
+                    course.say(typinghog.audio.VoiceLine.ANNOUNCER_ANIMAL_RESCUED);
                     effects.score(course, pickup.px(), pickup.y, points);
                 }
                 default -> {
@@ -361,6 +365,7 @@ public final class Encounter {
                 if (row - lastKillRow > 0) lastKillRow = row;
                 effects.kill(course, enemy.x(), enemy.y(), Scorecard.popupValue(chainBefore));
                 course.play(Sounds.Cue.KILL);
+                course.chainMilestone(card.chain());
                 for (Enemy.Part each : enemy.parts) course.stagehand().remove(each.visual);
                 enemies.remove(enemy);
                 return;

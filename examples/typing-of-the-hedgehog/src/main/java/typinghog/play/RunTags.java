@@ -101,6 +101,7 @@ final class RunTags {
                     if (tag.targetId != event.target()) continue;
                     tag.tagged = true;
                     course.card().add(Math.round(TAG_POINTS * Scorecard.multiplier(course.card().chain())));
+                    course.chainMilestone(course.card().chain());
                     course.play(Sounds.Cue.RING);
                 }
             }

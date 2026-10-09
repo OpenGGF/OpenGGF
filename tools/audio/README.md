@@ -66,3 +66,26 @@ gameplay-sourced S1 audio capture.
 `eggmans_sky_voice.py` is the offline OpenRouter generator for Eggman's Sky's original
 Alice announcements. It requires FFmpeg, NumPy and SciPy. Its private key and raw-source
 cache stay outside shipped assets; see the [mod's regeneration instructions](../../examples/eggmans-sky/README.md#system-voice).
+
+`typing_hedgehog_voice.py` generalises it to Typing of the Hedgehog's multi-speaker cast
+(announcer, Robotnik, Tails). [voice-bank.json](../../examples/typing-of-the-hedgehog/voice-bank.json)
+gives each speaker an ElevenLabs premade voice, a delivery tag and a shipped preset, and tags
+voiced Robotnik taunts with their exact `words/taunts.txt` text. `--list-voices` prints the
+voices OpenRouter offers; `--audition DIR` renders each speaker's candidates (render names
+ending `+md` add the engine's load-time DAC) with blind transcripts into an external directory.
+Only the clean render ships, as bit-exact Ogg Vorbis. Each line's manifest declares
+`voice-<line>` and `voice-<line>-md` on the same file, the latter with a per-SFX `dac:` block
+from the catalogue's `runtime_variant`, which the engine renders at load time. The tool's
+`engine_dac` mirrors that renderer (`ModSfxDac`) on the decoded shipped clip as the
+intelligibility gate: the clean clip must pass the blind word check, and a gate mishearing needs
+a per-line `retro_mishearing_accepted` reason, recorded in provenance.
+Generation and publication refuse a speaker without a chosen voice, or a preset or runtime DAC
+whose hash is not approved in the tool. Every paid run checks reported key usage against the
+catalogue ceiling and an estimate-based `--budget`. Publication copies verified clips into the
+owned `audio/voice/` directory, writes `provenance.json`, owns two marked blocks of the mod's
+`audio-manifest.yaml`, and generates `typinghog.audio.VoiceLine` (clean asset and
+`asset(retro)`, 60 Hz duration, priority, cooldown, speaker, taunt tag and text). Eleven v4
+sometimes repeats a line several times in one take, and the Whisper check can report such a
+take as a single utterance, so every check also bounds clip length. The `pitch_formant` step
+(FFmpeg rate change plus Rubber Band) raises pitch further than formants for younger voices.
+Offline tests: `python3 -m unittest discover -s tools/audio/tests -p test_typing_hedgehog_voice.py`.
