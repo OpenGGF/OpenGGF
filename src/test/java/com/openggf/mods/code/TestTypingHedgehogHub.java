@@ -68,6 +68,7 @@ class TestTypingHedgehogHub {
     @Test void resultsMergeIntoTheProfile() throws Exception { check("resultsMergeIntoTheProfile"); }
     @Test void bossRushRaisesStarsAndEndless() throws Exception { check("bossRushRaisesStarsAndEndless"); }
     @Test void handoffsRoundTrip() throws Exception { check("handoffsRoundTrip"); }
+    @Test void attractDemosPlayThemselves() throws Exception { check("attractDemosPlayThemselves"); }
     @Test void suddenDeathEndsOnTheFirstError() throws Exception { check("suddenDeathEndsOnTheFirstError"); }
     @Test void ringRushRunsSixtySeconds() throws Exception { check("ringRushRunsSixtySeconds"); }
     @Test void reflexTimesLettersAndMisses() throws Exception { check("reflexTimesLettersAndMisses"); }

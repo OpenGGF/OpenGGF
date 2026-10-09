@@ -1,0 +1,134 @@
+# Sonic 2 boss rigs (format: typinghog.play.BossRig). Zones are registry order: 0 EHZ, 1 CPZ,
+# 2 ARZ, 3 CNZ, 4 HTZ, 5 MCZ, 6 OOZ, 7 MTZ, 8 SCZ, 9 WFZ, 10 DEZ. Every S2 boss has its own sheet,
+# registered for each act of its ROM zone (Sonic2ObjectArtProvider.loadBossArt), so frame numbers
+# are per zone. Robotnik's face in the Eggpod-based sheets is the same six ArtNem_Eggpod tiles in
+# order (normal x2, laugh x2, hit, defeat); each boss's Ani_ script plays them 7:normal 7:laugh
+# 7:hit and $F:defeat. pal=0 marks parts the stock objects draw on palette line 0 over a line-1
+# sheet (EHZBossVehicleTop, EHZBossGroundVehicle, CPZBossRobotnik). All art faces left except Oil
+# Ocean's (flipped). Metropolis act 3 loads as ROM zone $05, which registers no mtz_boss sheet.
+
+# Every zone without its own rig: the Egg Mobile from Chemical Plant's own sheets,
+# Obj5D_MapUnc_2ED8C (pod 0, faces 1-6, Ani_obj5D_b) and the exhaust Obj5D_MapUnc_2EE88 0/1
+# (Obj5D_Flame). No Egg Mobile sheet is loaded in every zone; every zone has its own rig below.
+*  ship      cpz_boss_eggpod  0  0   *=15:0
+*  face      cpz_boss_eggpod  0  0   idle=7:1,2 hit=7:5 laugh=7:3,4 defeat=15:6 pal=0
+*  flame     cpz_boss_jets    0  0   *=1:0,1 defeat=- flee=1:0,1
+
+# Emerald Hill: the drill car (Obj56). ehz_boss joins Obj56's three tables: propeller
+# Obj56_MapUnc_2F970 as 0-6, car Obj56_MapUnc_2FA58 as 7-14 (body 7, drill 8-10, wheels 11/12,
+# far wheel 13/14) and Eggpod Obj56_MapUnc_2FAF8 as 15-21 (pod 15, faces 16-21, Ani_obj56_c).
+# The pod rides $14 above the wheels (the wheel y average) with the drill $36 ahead and $10 down
+# (loc_2F098); beaten, he leaves the car and flies off under the propeller (Ani_obj56_a 1:5,6).
+0  hover     -                0  17
+0  pod       ehz_boss         0  0   *=15:15
+0  face      ehz_boss         0  0   idle=7:16,17 hit=7:20 laugh=7:18,19 defeat=15:21 pal=0
+0  propeller ehz_boss         0  0   flee=1:5,6
+0  farwheel  ehz_boss       -44  20  *=15:13 lunge=1:13,14 flee=-
+0  car       ehz_boss         0  8   *=15:7 flee=- pal=0
+0  wheel     ehz_boss        28  20  *=15:11 lunge=1:11,12 flee=-
+0  wheel     ehz_boss       -12  20  *=15:11 lunge=1:11,12 flee=-
+0  drill     ehz_boss       -54  16  *=5:8,9,10 defeat=-
+
+# Chemical Plant: the Egg Mobile with the Mega Mack pump (Obj5D_Init). Pod and faces as the * rig;
+# parts Obj5D_MapUnc_2EADC: pump 0 on top, pipe segment 1 with the pumping bulge 2/3
+# (Ani_Obj5D_Dripper 1, 3), container 10 on its arm $10 ahead and $38 up, run out to $58 as 30
+# (anims 6-8), loose container 32. The pipe hangs from $18 below, 8 a segment, while his window is
+# open; the container swings out over Sonic as he lunges.
+1  hover     -                6  80
+1  container cpz_boss_parts -16 -56  *=15:10 lunge=- defeat=15:32 flee=-
+1  reach     cpz_boss_parts -88 -56  lunge=15:30
+1  pipe      cpz_boss_parts   0  24  open=5:2,3 lunge=- swing=48,0,128 links=cpz_boss_parts:1:0,8,16,24,32,40
+1  ship      cpz_boss_eggpod  0  0   *=15:0
+1  face      cpz_boss_eggpod  0  0   idle=7:1,2 hit=7:5 laugh=7:3,4 defeat=15:6 pal=0
+1  flame     cpz_boss_jets    0  0   *=1:0,1 defeat=- flee=1:0,1
+1  pump      cpz_boss_parts   0  0   *=15:0 defeat=-
+
+# Aquatic Ruin: the Egg Mobile and its hammer (Obj89, Obj89_MapUnc_30E04 with Ani_obj89_b), all
+# drawn at the craft: faces 0,1 / laugh 2,3 / hit 4 / defeat 5, jets 6,7, pod 8, hammer 9
+# swinging 10,11 (2:$A,$A,$B,$B,$B,$B,$B,$A,$A).
+2  hover     -                6  64
+2  jets      arz_boss_main    0  0   *=1:6,7 defeat=- flee=1:6,7
+2  hammer    arz_boss_main    0  0   *=15:9 lunge=2:10,10,11,11,11,11,11,10,10 defeat=-
+2  face      arz_boss_main    0  0   idle=7:0,1 hit=7:4 laugh=7:2,3 defeat=7:5
+2  pod       arz_boss_main    0  0   *=15:8
+
+# Casino Night: the electric generator (Obj51, Obj51_MapUnc_320EA with Ani_obj51). Body 1;
+# generator arm 2, swung to 3 for the zap; electrode 4, out to 5; faces 6,7 / laugh 8,9 / hit 10
+# (defeat face 11 is in the table, though the script keeps the normal face); sparks below $C-$E
+# and the wide zap $F-$11; the spiked ball $12 lowered $2E under him (CNZBossElectricBall).
+3  hover     -                6  80
+3  ball      cnz_boss         0  46  open=15:18 lunge=-
+3  arm       cnz_boss         0  0   *=15:2 lunge=15:3 defeat=-
+3  face      cnz_boss         0  0   idle=7:6,7 hit=7:10 laugh=7:8,9 defeat=15:11
+3  body      cnz_boss         0  0   *=15:1
+3  electrode cnz_boss         0  0   *=15:4 lunge=15:5 defeat=-
+3  spark     cnz_boss         0  0   open=1:12,13,14 lunge=1:15,16,17
+
+# Hill Top: the flamethrower (Obj52, Obj52_MapUnc_302BC with Ani_obj52). Body 1, its beaten form
+# 16; the nozzle's pilot flame 2,3 (delay 6 idle, anim 0's 1:2,3 as he takes aim); the jet 4-11
+# growing from it (anims 1-4) as he lunges.
+4  hover     -                4  16
+4  body      htz_boss         0  0   *=15:1 defeat=15:16
+4  nozzle    htz_boss         0  0   *=6:2,3 open=1:2,3 lunge=- defeat=-
+4  flame     htz_boss         0  0   lunge=3:4,5,6,7,8,9,10,11
+
+# Mystic Cave: the twin drills (Obj57, Obj57_MapUnc_316EC with Ani_obj57). Body 1, lamp lit 0;
+# faces $E,$F / grin $10,$11 / hit $12 (7) / burnt $13; drills upright 2-4 and level 9-$B (1), the
+# second $28 ahead; hover flames 5,6 (anim 2).
+5  drill     mcz_boss       -40  0   *=1:2,3,4 lunge=1:9,10,11 defeat=-
+5  face      mcz_boss         0  0   idle=7:14,15 hit=7:18 laugh=7:16,17 defeat=15:19
+5  body      mcz_boss         0  0   *=15:1 open=15:0
+5  drill     mcz_boss         0  0   *=1:2,3,4 lunge=1:9,10,11 defeat=-
+5  jets      mcz_boss         0  0   *=1:5,6 defeat=- flee=1:5,6
+
+# Oil Ocean: the submarine (Obj55, Obj55_MapUnc_33756 with Ani_obj55), drawn facing right
+# (Obj55_Main_Init) so flipped: sub 1, Robotnik's head 8,9 (anim 0), hit 10, defeat 11; his spiked
+# ball (2, spike leading as in Obj55_SpikeChain_SetAnimFrame) on chain links 7, hung from the hull
+# while his window is open. grounded makes him lunge level so the ball reaches Sonic.
+6  hover     -                6  88  grounded
+6  spike     ooz_boss         0  16  open=15:2 swing=64,40,128 links=ooz_boss:7:16,32,48
+6  sub       ooz_boss         0  0   *=15:1 flip
+6  face      ooz_boss         0  0   idle=9:8,8,8,8,9,9,9,9 hit=15:10 defeat=15:11 flip
+
+# Metropolis: the Egg Mobile in its shield of seven orbs (Obj54 and Obj53, Obj54_MapUnc_32DC6 with
+# Ani_obj53): body 2, faces $C,$D / laugh $E,$F / hit $10 (7) / defeat $11; orb 3 circling at $27,
+# +4 a frame (64 frames a turn), flung out to $68 to attack.
+7  hover     -                6  72  grounded
+7  face      mtz_boss         0  0   idle=7:12,13 hit=7:16 laugh=7:14,15 defeat=7:17
+7  body      mtz_boss         0  0   *=15:2
+7  orbs      mtz_boss         0  0   *=15:3 lunge=- defeat=- orbit=39,64,7
+7  orbswide  mtz_boss         0  0   lunge=15:3 orbit=104,64,7
+
+# Sky Chase has no boss; Robotnik's stand-in is a Turtloid and its rider (Obj9A/Obj9B,
+# Obj9A_Obj98_MapUnc_37B62: shell 0, neck raised 1, rider 2 at +4,-$18, jets 6,7 by Ani_obj9A).
+8  turtloid  turtloid         0  0   *=15:0 open=15:1
+8  rider     turtloid         4 -24  *=15:2
+8  jets      turtloid         0  0   *=1:6,7 defeat=-
+
+# Wing Fortress: the laser case (ObjC5, ObjC5_MapUnc_3CCD8 with Ani_objC5), Robotnik watching from
+# his platform (ObjC6_MapUnc_3D0EE with Ani_objC5_objC6; ObjC5_MapUnc_3CEBC $26 below him). Case
+# shut 0, open 3; it lowers the shooter 4 by 13 (ObjC5_CaseLSDown), charges 13 under it and fires
+# the beam 16 (the third of ObjC5_LaserShoot's $10 steps). Robotnik taunts 6,7, starts 1, runs 2-4.
+9  hover     -                4  96  grounded
+9  laser     wfz_boss         0  61  lunge=1:16
+9  charge    wfz_boss         0  13  open=2:13 lunge=-
+9  shooter   wfz_boss         0  13  open=15:4
+9  case      wfz_boss         0  0   *=15:0 open=15:3
+9  robotnik  wfz_robotnik    72  -8  idle=5:6,7 hit=15:1 defeat=15:1 flee=5:2,3,4
+9  platform  wfz_robotnik_platform 72 30 *=15:0
+
+# Death Egg: the Death Egg Robot (ObjC7, ObjC7_MapUnc_3E5F8) standing as ObjC7_ChildDeltas place
+# its limbs about body 3: shoulder 4 (+$C,-$14), upper arm 5 (+$C,-8), forearm 6 (-$C,+8), thigh
+# $A (+4,+$24), lower leg $B (-4,+$3C), head 2 at -$34 (last of Ani_objC7_a), jet $C,$D
+# (Ani_objC7_b) at +$38,+$18. The far limbs share the near ones' offsets and are left out. He fires
+# the jet and throws the forearm as he lunges.
+10 hover     -                0  73  grounded
+10 jet       dez_boss        56  24  lunge=1:12,13
+10 body      dez_boss         0  0   *=15:3
+10 head      dez_boss         0 -52  *=15:2
+10 thigh     dez_boss         4  36  *=15:10
+10 leg       dez_boss        -4  60  *=15:11
+10 upperarm  dez_boss        12  -8  *=15:5
+10 shoulder  dez_boss        12 -20  *=15:4
+10 forearm   dez_boss       -12  8   *=15:6 lunge=-
+10 punch     dez_boss       -60  8   lunge=15:6

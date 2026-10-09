@@ -1,0 +1,44 @@
+# Sonic 3 & Knuckles cast: each zone's badniks with their stock art keys. Frames and delays are the move
+# cycles from the disassembly's AniRaw/ObjDat scripts; sizes are each cycle's farthest mapping-piece edge.
+# zone@act limits a badnik to the act whose PLCs load its art (Sonic3kPlcArtRegistry: Blastoid HCZ1,
+# Jawz HCZ2, Mantis MGZ2; the Egg Robo is placed in SSZ1 only).
+# zone name           artKey              archetype  facesRight halfW halfH delay frames
+0      Rhinobot       aiz_rhinobot        RUSHER     false      24    16    10    0,1
+0      Bloominator    aiz_bloominator     SHOOTER    false      24    30    7     0,1,2,3
+0      Monkey_Dude    aiz_monkey_dude     SHOOTER    false      32    21    7     0,2
+0      Caterkiller_Jr aiz_caterkiller_jr  SEGMENTED  false      8     8     8     0
+1@1    Jawz           hcz_jawz            RUSHER     false      32    12    1     0,1
+1@0    Blastoid       hcz_blastoid        SHOOTER    false      24    12    9     0,1
+1      Buggernaut     hcz_buggernaut      DIVER      false      20    20    1     0,1,2
+1      Turbo_Spiker   hcz_turbo_spiker    ARMOURED   false      24    16    5     0,1,2
+1      Mega_Chopper   hcz_mega_chopper    RUSHER     false      12    8     2     0,1
+1      Pointdexter    hcz_pointdexter     ARMOURED   false      20    16    4     0,1,2,1
+2      Spiker         mgz_spiker          SHOOTER    false      16    24    8     0
+2@1    Mantis         mgz_mantis          SURFACER   false      26    24    2     1,3,0
+2      Bubbles        mgz_bubbles_badnik  ARMOURED   false      20    12    3     0,1,2,1
+3      Sparkle        cnz_sparkle         SHOOTER    false      12    12    9     0,1
+3      Batbot         cnz_batbot          DIVER      false      32    16    2     0,1,2,1
+3      Clamer         cnz_clamer          SHOOTER    false      24    16    2     0,5,6,7,8,7,6,5
+4      Blaster        fbz_blaster         SHOOTER    false      28    21    3     0,0,0,0,0,0,0,0,1
+4      Technosqueek   fbz_technosqueek    RUSHER     false      12    8     3     0,1
+5      Star_Pointer   icz_star_pointer    ORBITER    false      8     8     8     0
+5      Penguinator    icz_penguinator     RUSHER     false      12    16    7     0,1,0,2
+6      Snale_Blaster  lbz_snale_blaster   SHOOTER    false      12    16    15    4,3
+6      Orbinaut       lbz_orbinaut        ORBITER    false      8     8     8     0
+6      Ribot          lbz_ribot           ORBITER    false      16    12    7     0,1,2,1
+6      Corkey         lbz_corkey          SHOOTER    false      16    8     8     0
+6      Flybot767      lbz_flybot_767      DIVER      false      31    17    4     0,1,2,3,4,5,6,7,8,9
+7      Madmole        mhz_madmole         SURFACER   false      21    24    2     0,1,2
+7      Mushmeanie     mhz_mushmeanie      RUSHER     false      8     21    2     3,2,1,2
+7      Dragonfly      mhz_dragonfly       DIVER      false      16    8     3     0,1,2,3,4,3,2,1
+7      Butterdroid    mhz_butterdroid     DIVER      false      20    24    7     0,1,2,3,4,3,2,1
+7      Cluckoid       mhz_cluckoid        SHOOTER    false      24    16    7     0,1,2,3,4,5,6,7,8,9,10,11,12,13
+8      Skorp          soz_skorp           RUSHER     false      21    14    9     1,0,1,2
+8      Sandworm       soz_sandworm        SURFACER   false      8     12    9     0,2
+8      Rock'n         soz_rockn           ARMOURED   false      16    8     8     0,1,0,2
+9      Fireworm       lrz_fireworm        SEGMENTED  false      12    12    6     1,2,3
+9      Iwamodoki      lrz_iwamodoki       ARMOURED   false      16    13    7     0,1,2,3
+9      Toxomister     lrz_toxomister      SHOOTER    false      8     8     8     1
+10@0   Egg_Robo       ssz_egg_robo        SHOOTER    false      28    32    1     1,3
+11     Spikebonker    dez_spikebonker     ORBITER    false      21    24    8     0
+11     Chainspike     dez_chainspike      RUSHER     false      24    12    5     0,3

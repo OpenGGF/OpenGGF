@@ -33,6 +33,7 @@ public final class HubChecks {
         resultsMergeIntoTheProfile();
         bossRushRaisesStarsAndEndless();
         handoffsRoundTrip();
+        attractDemosPlayThemselves();
         suddenDeathEndsOnTheFirstError();
         ringRushRunsSixtySeconds();
         reflexTimesLettersAndMisses();
@@ -41,7 +42,7 @@ public final class HubChecks {
         weakKeysFollowLifetimeMisses();
         lessonsUseTheirRows();
         textArtParses();
-        System.out.println("16 hub checks passed");
+        System.out.println("17 hub checks passed");
     }
 
     private static void eq(Object expected, Object actual) {
@@ -260,6 +261,30 @@ public final class HubChecks {
         yes(Handoff.teamMatches("s2", "sonic", Handoff.sidekicks("s2")), "team constant matches itself");
         yes(!Handoff.teamMatches("s2", "knuckles", List.of()), "another main character relaunches");
         yes(Handoff.seed(1, 5) != Handoff.seed(2, 5), "seeds change per launch");
+    }
+
+    public static void attractDemosPlayThemselves() {
+        Profile p = new Profile();
+        p.difficulty(LaunchIntent.Difficulty.EXPERT);
+        p.capitals(true);
+        p.voice(LaunchIntent.Voice.CLEAN);
+        LaunchIntent demo = Handoff.demoIntent(LaunchIntent.Mode.BOSS_RUSH, "s3k", 12, 0, p, 5);
+        yes(demo.demo() && demo.noFail(), "a demo types for itself and never fails");
+        eq(LaunchIntent.Difficulty.NORMAL, demo.difficulty());
+        yes(!demo.capitals(), "demos keep the default typing rules");
+        eq(LaunchIntent.Voice.CLEAN, demo.voice());
+        eq(demo, LaunchIntent.decode(demo.encode()));
+        yes(!Handoff.intent(LaunchIntent.Mode.ARCADE, "s3k", 12, 0, p, 1, 5).demo(), "real plays are not demos");
+        eq(LaunchIntent.Mode.ARCADE, Handoff.demoMode(p.nextDemo()));
+        eq(LaunchIntent.Mode.BOSS_RUSH, Handoff.demoMode(p.nextDemo()));
+        eq(LaunchIntent.Mode.ARCADE, Handoff.demoMode(p.nextDemo()));
+        eq(3L, Profile.decode(p.encode()).demos());
+        eq(-1, Handoff.demoPick(42, 0));
+        for (long seed = -50; seed < 50; seed++) yes(Handoff.demoPick(seed * 0x9E3779B97F4A7C15L, 3) >= 0
+                && Handoff.demoPick(seed * 0x9E3779B97F4A7C15L, 3) < 3, "pick in range");
+        var pending = new Handoff.Pending(LaunchIntent.Mode.ARCADE, "s3k", 12, 0, true);
+        eq(pending, Handoff.Pending.decode(pending.encode()));
+        yes(!Handoff.Pending.decode("mode=STORY\ngame=s1\nzone=0\nact=2\n").demo(), "older pending files are plays");
     }
 
     // ---- school -------------------------------------------------------------------------------

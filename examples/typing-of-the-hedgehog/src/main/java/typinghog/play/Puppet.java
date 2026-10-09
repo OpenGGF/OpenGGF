@@ -83,6 +83,16 @@ public final class Puppet extends AbstractObjectInstance implements ModRewindRec
     @Override public void appendRenderCommands(List<GLCommand> commands) {
         Stagehand.Visual visual = visual();
         if (visual == null || !visual.visible || (visual.blink & 2) != 0) return;
+        if (!visual.sprites.isEmpty()) {
+            for (Stagehand.Sprite sprite : visual.sprites) {
+                if (!sprite.visible) continue;
+                var renderer = getRenderer(sprite.artKey);
+                if (renderer != null) {
+                    renderer.drawFrameIndex(sprite.frame, sprite.x, sprite.y, sprite.flipX, false, sprite.palette);
+                }
+            }
+            return;
+        }
         var renderer = getRenderer(visual.artKey);
         if (renderer == null) return;
         renderer.drawFrameIndex(visual.frame, visual.x, visual.y, visual.flipX, visual.flipY);

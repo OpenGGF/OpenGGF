@@ -10,11 +10,12 @@ import java.util.Objects;
  * the level starts and clears it, so a level started any other way plays nothing typed.
  *
  * <p>Stored as {@code key=value} lines in {@code intent.txt}. Keys missing from older files take
- * their defaults ({@code voice} is {@link Voice#MEGADRIVE}).
+ * their defaults ({@code voice} is {@link Voice#MEGADRIVE}). {@code demo} makes the course type
+ * for the player, for attract demos and captures.
  */
 public record LaunchIntent(Mode mode, String game, int zone, int act, Difficulty difficulty,
                            boolean capitals, boolean punctuation, String dictionaries, long seed,
-                           int bossStars, boolean noFail, boolean slowMotion, Voice voice) {
+                           int bossStars, boolean noFail, boolean slowMotion, Voice voice, boolean demo) {
     public static final String FILE = "intent.txt";
 
     public enum Mode { STORY, ARCADE, BOSS_RUSH, ENDLESS }
@@ -50,12 +51,20 @@ public record LaunchIntent(Mode mode, String game, int zone, int act, Difficulty
         Objects.requireNonNull(voice, "voice");
     }
 
+    /** A played (not demo) intent. */
+    public LaunchIntent(Mode mode, String game, int zone, int act, Difficulty difficulty, boolean capitals,
+                        boolean punctuation, String dictionaries, long seed, int bossStars, boolean noFail,
+                        boolean slowMotion, Voice voice) {
+        this(mode, game, zone, act, difficulty, capitals, punctuation, dictionaries, seed, bossStars, noFail,
+                slowMotion, voice, false);
+    }
+
     /** An intent with the default voice ({@link Voice#MEGADRIVE}). */
     public LaunchIntent(Mode mode, String game, int zone, int act, Difficulty difficulty, boolean capitals,
                         boolean punctuation, String dictionaries, long seed, int bossStars, boolean noFail,
                         boolean slowMotion) {
         this(mode, game, zone, act, difficulty, capitals, punctuation, dictionaries, seed, bossStars, noFail,
-                slowMotion, Voice.MEGADRIVE);
+                slowMotion, Voice.MEGADRIVE, false);
     }
 
     public String encode() {
@@ -73,6 +82,7 @@ public record LaunchIntent(Mode mode, String game, int zone, int act, Difficulty
         values.put("noFail", Boolean.toString(noFail));
         values.put("slowMotion", Boolean.toString(slowMotion));
         values.put("voice", voice.name());
+        if (demo) values.put("demo", "true");
         var out = new StringBuilder();
         values.forEach((k, v) -> out.append(k).append('=').append(v).append('\n'));
         return out.toString();
@@ -96,6 +106,7 @@ public record LaunchIntent(Mode mode, String game, int zone, int act, Difficulty
                 Integer.parseInt(values.getOrDefault("bossStars", "1")),
                 Boolean.parseBoolean(values.getOrDefault("noFail", "false")),
                 Boolean.parseBoolean(values.getOrDefault("slowMotion", "false")),
-                Voice.parse(values.get("voice")));
+                Voice.parse(values.get("voice")),
+                Boolean.parseBoolean(values.getOrDefault("demo", "false")));
     }
 }

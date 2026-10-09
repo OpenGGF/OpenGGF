@@ -21,8 +21,8 @@ import typinghog.save.LaunchIntent;
  * into that game and carries straight on into the act.
  */
 final class StoryScreen implements Screen {
-    private static final int ROW_A = 88;
-    private static final int ROW_B = 136;
+    private static final int ROW_A = 86;
+    private static final int ROW_B = 128;
 
     private final List<String> chapters = List.of("s1", "s2", "s3k");
     private static final int RUN_TICKS = 14;
@@ -213,7 +213,6 @@ final class StoryScreen implements Screen {
         // Sonic runs from the last stop to this one, then waits on it.
         int[] a = node(from, w), b = node(cursor, w);
         float k = Math.min(1, (t - moveTick) / (float) RUN_TICKS);
-        if (k >= 1) guard(hub, c, b, t);
         int sx = Math.round(a[0] + (b[0] - a[0]) * k), sy = Math.round(a[1] + (b[1] - a[1]) * k);
         boolean running = k < 1;
         Hero.sonic(c, hub.art, chapter, running ? HubArt.ANIM_RUN : HubArt.ANIM_WAIT, t, sx + shake, sy - 6,
@@ -222,30 +221,20 @@ final class StoryScreen implements Screen {
         hub.footer(c, words.buffer(), "TYPE A ZONE, THEN GO    UP/DOWN: GAME");
     }
 
-    /**
-     * The stop's badnik waits beside it with its name on a word plate, a preview of the act;
-     * cleared stops have seen theirs off.
-     */
-    private void guard(HubScene hub, SceneCanvas c, int[] at, long t) {
-        StoryBook.Stop stop = stops.get(cursor);
-        StoryBook.State s = state(hub, cursor);
-        if (s == StoryBook.State.CLEARED || s == StoryBook.State.UNDER_CONSTRUCTION) return;
+    /** The stop's badnik waits in the panel's bay with its name on a word plate: a preview of the act. */
+    private void guard(HubScene hub, SceneCanvas c, StoryBook.Stop stop, StoryBook.State s, int cx, int feet, long t) {
         ZoneCast.Badnik who = ZoneCast.of(stop.game(), stop.zone());
         var set = hub.art.badnik(stop.game(), stop.zone(), stop.act());
         if (who == null || set == null) return;
-        int perRow = stops.size() > 7 ? (stops.size() + 1) / 2 : stops.size();
-        boolean rowB = cursor >= perRow;
-        int bx = at[0] + (rowB ? -34 : 34);
         var sprite = set.frame(who.frame(t));
-        int feet = at[1] + 2;
         int y = feet - (sprite.height() - sprite.originY());
         float bob = (float) Math.sin(t * 0.08) * 1.5f;
-        c.draw(sprite, bx, y + bob, com.openggf.mods.scene.SceneDraw.plain().withFlipX(rowB));
+        c.draw(sprite, cx, y + bob, com.openggf.mods.scene.SceneDraw.plain());
         String word = who.name().toLowerCase();
         int plateW = hub.font.width(word, 1) + 6;
-        int plateCx = rowB ? bx + 10 - plateW / 2 : bx - 10 + plateW / 2;
-        Gfx.plate(c, hub.font, word, 0, plateCx, y - sprite.originY() - 14,
-                s == StoryBook.State.LOCKED ? 0xFF686E80 : 0xFFE0E0E0, 1, 0);
+        int plateCx = Math.min(cx, c.width() - 12 - plateW / 2);
+        int plateTop = Math.max(PANEL_Y + 3, y - sprite.originY() - 14);
+        Gfx.plate(c, hub.font, word, 0, plateCx, plateTop, s == StoryBook.State.LOCKED ? 0xFF686E80 : 0xFFE0E0E0, 1, 0);
     }
 
     private void tabs(HubScene hub, SceneCanvas c) {
@@ -260,8 +249,10 @@ final class StoryScreen implements Screen {
             hub.font.draw(c, label, x + 7, y + 3, on ? Gfx.WHITE : have ? Gfx.TEXT : 0x70808898, 1);
             x += lw + 4;
         }
-        if (!hub.available("s1") || !hub.available("s2") || !hub.available("s3k")) {
-            hub.font.right(c, "MORE ROMS, MORE CHAPTERS", c.width() - 8, 31, Gfx.DIM, 1);
+        String more = "MORE ROMS, MORE CHAPTERS";
+        if ((!hub.available("s1") || !hub.available("s2") || !hub.available("s3k"))
+                && x + hub.font.width(more, 1) + 8 < c.width()) {
+            hub.font.right(c, more, c.width() - 8, 31, Gfx.DIM, 1);
         }
     }
 
@@ -342,18 +333,26 @@ final class StoryScreen implements Screen {
         }
     }
 
+    private static final int PANEL_Y = 154;
+    private static final int BAY = 64;
+
+    /**
+     * The stop panel: name, act and game, status, best run; the bay at its right holds the
+     * zone's badnik (open and locked stops), its emerald (cleared) or a hazard sign (no rail).
+     */
     private void info(HubScene hub, SceneCanvas c, int w, long t) {
         StoryBook.Stop stop = stops.get(cursor);
         StoryBook.State s = state(hub, cursor);
-        int y = 162, h = 40;
+        int y = PANEL_Y, h = 52;
         Gfx.panel(c, 8, y, w - 16, h);
-        hub.font.outline(c, stop.title().toUpperCase(), 16, y + 6, Gfx.WHITE, 0xFF0A1440, 2);
+        hub.font.outline(c, stop.title().toUpperCase(), 16, y + 5, Gfx.WHITE, 0xFF0A1440, 2);
         String act = "ACT " + (stop.act() + 1) + "  " + HubScene.gameName(stop.game());
-        hub.font.shadow(c, act, 16, y + 27, Gfx.DIM, 1);
+        if (!stop.game().equals(hub.game) && s != StoryBook.State.UNDER_CONSTRUCTION) act += "  (SWITCHES GAME)";
+        hub.font.shadow(c, act, 16, y + 23, Gfx.DIM, 1);
         String status = switch (s) {
-            case CLEARED -> hub.profile.hasEmerald(stop.game(), stop.zone(), stop.act()) ? "CLEARED  EMERALD WON" : "CLEARED";
+            case CLEARED -> hub.profile.hasEmerald(stop.game(), stop.zone(), stop.act()) ? "CLEARED - EMERALD WON" : "CLEARED";
             case OPEN -> "TYPE GO TO PLAY";
-            case LOCKED -> "LOCKED";
+            case LOCKED -> "LOCKED: CLEAR THE STOPS BEFORE IT";
             case UNDER_CONSTRUCTION -> "UNDER CONSTRUCTION";
         };
         int statusColour = switch (s) {
@@ -362,16 +361,35 @@ final class StoryScreen implements Screen {
             case LOCKED -> 0xFF8890A0;
             case UNDER_CONSTRUCTION -> 0xFFE0A020;
         };
-        hub.font.right(c, status, w - 16, y + 6, statusColour, 1);
+        hub.font.shadow(c, status, 16, y + 33, statusColour, 1);
         Profile.Entry best = hub.profile.bestForAct(stop.game(), stop.zone(), stop.act());
         if (best != null) {
-            hub.font.right(c, "BEST " + best.score() + "  RANK " + best.grade() + "  " + Math.round(best.wpm()) + " WPM",
-                    w - 16, y + 18, Gfx.TEXT, 1);
+            hub.font.shadow(c, "BEST " + best.score() + "  RANK " + best.grade() + "  " + Math.round(best.wpm()) + " WPM",
+                    16, y + 43, Gfx.TEXT, 1);
         } else if (s == StoryBook.State.UNDER_CONSTRUCTION) {
-            hub.font.right(c, "THIS ACT'S RAIL IS STILL BEING BUILT", w - 16, y + 18, Gfx.DIM, 1);
+            hub.font.shadow(c, "THIS ACT'S RAIL IS STILL BEING BUILT", 16, y + 43, Gfx.DIM, 1);
         }
-        if (!stop.game().equals(hub.game) && s != StoryBook.State.UNDER_CONSTRUCTION) {
-            hub.font.right(c, "SWITCHES TO " + HubScene.gameName(stop.game()), w - 16, y + 28, Gfx.DIM, 1);
+        bay(hub, c, stop, s, w - 8 - BAY / 2, y + h - 4, t);
+    }
+
+    private void bay(HubScene hub, SceneCanvas c, StoryBook.Stop stop, StoryBook.State s, int cx, int floor, long t) {
+        switch (s) {
+            case CLEARED -> {
+                SceneImage gem = hub.art.image(hub.profile.hasEmerald(stop.game(), stop.zone(), stop.act()) ? "emerald" : "check");
+                if (gem == null) return;
+                float bob = (float) Math.sin(t * 0.1) * 2;
+                var style = com.openggf.mods.scene.SceneDraw.plain().withScale(2);
+                if (hub.profile.hasEmerald(stop.game(), stop.zone(), stop.act())) {
+                    style = style.withTint(HubArt.emeraldColour(emeraldIndex(hub, cursor)));
+                }
+                c.draw(gem, cx - gem.width(), floor - 30 + bob, style);
+            }
+            case UNDER_CONSTRUCTION -> {
+                SceneImage sign = hub.art.image("construction");
+                if (sign != null) c.draw(sign, cx - sign.width(), floor - 26,
+                        com.openggf.mods.scene.SceneDraw.plain().withScale(2));
+            }
+            default -> guard(hub, c, stop, s, cx, floor, t);
         }
     }
 }

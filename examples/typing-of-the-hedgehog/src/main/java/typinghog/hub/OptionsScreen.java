@@ -141,6 +141,7 @@ final class OptionsScreen implements Screen {
 
     private void changed(HubScene hub) {
         changeTick = hub.ticks;
+        hub.voiceMode();
         hub.save();
         hub.audio.cue(HubAudio.Cue.CONFIRM);
     }
@@ -169,7 +170,7 @@ final class OptionsScreen implements Screen {
 
     private static String describe(int row) {
         return switch (row) {
-            case 0 -> "Easy slows badniks and keeps words short; Expert sends them fast with long words and phrases.";
+            case 0 -> "Easy: slow badniks, short words. Expert: fast, long words and phrases.";
             case 1 -> "Mix in names from the games you own: zones, badniks, bosses and items.";
             case 2 -> "Mix in long, awkward words with double letters and far reaches.";
             case 3 -> "Your own list, one word per line, in " + HubScene.MOD_FOLDER + "words.txt.";
@@ -188,7 +189,7 @@ final class OptionsScreen implements Screen {
         hub.backdrop(c, 0.55f);
         hub.header(c, "OPTIONS", "SAVED AS YOU GO");
         int shake = t - shakeTick < 10 ? (int) Math.round(Math.sin((t - shakeTick) * 2.2) * 3) : 0;
-        int x = 40, pw = w - 80;
+        int x = w >= 380 ? 40 : 20, pw = w - 2 * x;
         Gfx.panel(c, x - 8 + shake, TOP - 6, pw + 16, ROWS * ROW_H + 10);
         for (int i = 0; i < ROWS; i++) {
             int y = TOP + i * ROW_H;
@@ -211,9 +212,11 @@ final class OptionsScreen implements Screen {
             }
         }
         int dy = TOP + ROWS * ROW_H + 8;
-        Gfx.panel(c, x - 8, dy, pw + 16, 26, 0xC0101830, 0xFF3058B0);
-        int ly = dy + 5;
-        for (String line : hub.font.wrap(describe(cursor), pw, 1)) {
+        var lines = hub.font.wrap(describe(cursor), pw, 1);
+        while (lines.size() > 1 && dy + 6 + lines.size() * 10 > c.height() - 17) lines.removeLast();
+        Gfx.panel(c, x - 8, dy, pw + 16, lines.size() * 10 + 6, 0xC0101830, 0xFF3058B0);
+        int ly = dy + 4;
+        for (String line : lines) {
             hub.font.shadow(c, line, x, ly, Gfx.TEXT, 1);
             ly += 10;
         }

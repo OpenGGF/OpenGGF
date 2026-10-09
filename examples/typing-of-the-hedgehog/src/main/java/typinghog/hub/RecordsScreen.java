@@ -104,11 +104,13 @@ final class RecordsScreen implements Screen {
         hub.font.shadow(c, HubScene.gameName(g), 10, 30, Gfx.GOLD, 1);
         hub.emeralds(c, w - 86, 28, hub.profile.emeraldCount(g));
         Gfx.panel(c, 6, 42, w - 12, 162);
+        // Columns scale with the width: 150/214/250/304 on a 400-pixel screen.
+        int best = w * 3 / 8, rank = w * 107 / 200, speed = w * 5 / 8, boss = w * 76 / 100;
         hub.font.shadow(c, "ZONE", 14, 47, Gfx.DIM, 1);
-        hub.font.shadow(c, "BEST", 150, 47, Gfx.DIM, 1);
-        hub.font.shadow(c, "RANK", 214, 47, Gfx.DIM, 1);
-        hub.font.shadow(c, "SPEED", 250, 47, Gfx.DIM, 1);
-        hub.font.shadow(c, "BOSS", 304, 47, Gfx.DIM, 1);
+        hub.font.shadow(c, "BEST", best, 47, Gfx.DIM, 1);
+        hub.font.shadow(c, "RANK", rank - 8, 47, Gfx.DIM, 1);
+        hub.font.shadow(c, "SPEED", speed, 47, Gfx.DIM, 1);
+        hub.font.shadow(c, "BOSS", boss, 47, Gfx.DIM, 1);
         int rowH = stops.size() > 11 ? 11 : 13;
         SceneImage gem = hub.art.image("emerald");
         SceneImage star = hub.art.image("star");
@@ -117,19 +119,22 @@ final class RecordsScreen implements Screen {
             StoryBook.Stop s = stops.get(i);
             int y = 59 + i * rowH;
             boolean cleared = hub.profile.isCleared(g, s.zone(), s.act());
-            hub.font.shadow(c, s.title().toUpperCase() + " " + (s.act() + 1), 14, y, cleared ? Gfx.WHITE : 0xFF8890A0, 1);
-            Profile.Entry best = hub.profile.bestForAct(g, s.zone(), s.act());
-            if (best != null) {
-                hub.font.shadow(c, Long.toString(best.score()), 150, y, Gfx.GOLD, 1);
-                hub.font.shadow(c, best.grade(), 222, y, Grades.colour(best.grade()), 1);
-                hub.font.shadow(c, Math.round(best.wpm()) + " WPM", 250, y, Gfx.TEXT, 1);
+            String name = s.title().toUpperCase() + " " + (s.act() + 1);
+            int room = (best - 20) / HubFont.ADVANCE;
+            if (name.length() > room) name = name.substring(0, Math.max(1, room - 1)).strip() + ".";
+            hub.font.shadow(c, name, 14, y, cleared ? Gfx.WHITE : 0xFF8890A0, 1);
+            Profile.Entry top = hub.profile.bestForAct(g, s.zone(), s.act());
+            if (top != null) {
+                hub.font.shadow(c, Long.toString(top.score()), best, y, Gfx.GOLD, 1);
+                hub.font.shadow(c, top.grade(), rank, y, Grades.colour(top.grade()), 1);
+                hub.font.shadow(c, Math.round(top.wpm()) + " WPM", speed, y, Gfx.TEXT, 1);
             } else {
-                hub.font.shadow(c, "-", 150, y, 0x80808898, 1);
+                hub.font.shadow(c, "-", best, y, 0x80808898, 1);
             }
             int stars = hub.profile.stars(g, s.zone(), s.act());
             if (star != null && stars > 0) {
-                c.draw(star, 304, y - 1);
-                hub.font.shadow(c, "x" + stars, 314, y, Gfx.GOLD, 1);
+                c.draw(star, boss, y - 1);
+                hub.font.shadow(c, "x" + stars, boss + 10, y, Gfx.GOLD, 1);
             }
             if (hub.profile.hasEmerald(g, s.zone(), s.act()) && gem != null) {
                 c.draw(gem, w - 26, y - 1, SceneDraw.plain().withTint(HubArt.emeraldColour(emerald++)));
