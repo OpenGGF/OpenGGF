@@ -57,6 +57,8 @@ LINES_MARKS = ('  # BEGIN generated voice lines: '+GENERATOR+'\n', '  # END gene
 # derive the DAC variant at load time.
 APPROVED_PRESET_SHA256 = {
     'clean': '7b560f9f0047ec523d704731bc080533272919ad8916c32cbed4a70dfed0023a',
+    # 2026-10-09: river (Tails) raised +4 semitones with formants +2, after a pitch audition.
+    'clean_boy4': '67ea21cd336ad45561a4094959ed01f46bfda7317182b8256c5bef747f619dd9',
 }
 APPROVED_RUNTIME_VARIANT_SHA256 = '106fbd73679e100a448bb2b0a0e729f136c65230e30b7d3d4803bac4a6efff7c'
 

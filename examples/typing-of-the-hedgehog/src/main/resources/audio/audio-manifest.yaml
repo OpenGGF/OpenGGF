@@ -854,6 +854,330 @@ sfx:
       lowpassHz: 3400
       recoveryMix: 0.1
       recoveryHighpassHz: 2400
+  - id: voice-tails-welcome
+    assetPath: audio/voice/tails_welcome.ogg
+    gain: 1.0
+  - id: voice-tails-welcome-md
+    assetPath: audio/voice/tails_welcome.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-home-row
+    assetPath: audio/voice/tails_home_row.ogg
+    gain: 1.0
+  - id: voice-tails-home-row-md
+    assetPath: audio/voice/tails_home_row.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-top-row
+    assetPath: audio/voice/tails_top_row.ogg
+    gain: 1.0
+  - id: voice-tails-top-row-md
+    assetPath: audio/voice/tails_top_row.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-bottom-row
+    assetPath: audio/voice/tails_bottom_row.ogg
+    gain: 1.0
+  - id: voice-tails-bottom-row-md
+    assetPath: audio/voice/tails_bottom_row.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-numbers
+    assetPath: audio/voice/tails_numbers.ogg
+    gain: 1.0
+  - id: voice-tails-numbers-md
+    assetPath: audio/voice/tails_numbers.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-capitals
+    assetPath: audio/voice/tails_capitals.ogg
+    gain: 1.0
+  - id: voice-tails-capitals-md
+    assetPath: audio/voice/tails_capitals.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-punctuation
+    assetPath: audio/voice/tails_punctuation.ogg
+    gain: 1.0
+  - id: voice-tails-punctuation-md
+    assetPath: audio/voice/tails_punctuation.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-ring-rush
+    assetPath: audio/voice/tails_ring_rush.ogg
+    gain: 1.0
+  - id: voice-tails-ring-rush-md
+    assetPath: audio/voice/tails_ring_rush.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-sudden-death
+    assetPath: audio/voice/tails_sudden_death.ogg
+    gain: 1.0
+  - id: voice-tails-sudden-death-md
+    assetPath: audio/voice/tails_sudden_death.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-reflex
+    assetPath: audio/voice/tails_reflex.ogg
+    gain: 1.0
+  - id: voice-tails-reflex-md
+    assetPath: audio/voice/tails_reflex.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-long-words
+    assetPath: audio/voice/tails_long_words.ogg
+    gain: 1.0
+  - id: voice-tails-long-words-md
+    assetPath: audio/voice/tails_long_words.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-phrases
+    assetPath: audio/voice/tails_phrases.ogg
+    gain: 1.0
+  - id: voice-tails-phrases-md
+    assetPath: audio/voice/tails_phrases.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-boss-training
+    assetPath: audio/voice/tails_boss_training.ogg
+    gain: 1.0
+  - id: voice-tails-boss-training-md
+    assetPath: audio/voice/tails_boss_training.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-weak-keys
+    assetPath: audio/voice/tails_weak_keys.ogg
+    gain: 1.0
+  - id: voice-tails-weak-keys-md
+    assetPath: audio/voice/tails_weak_keys.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-final-exam
+    assetPath: audio/voice/tails_final_exam.ogg
+    gain: 1.0
+  - id: voice-tails-final-exam-md
+    assetPath: audio/voice/tails_final_exam.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-exam-passed
+    assetPath: audio/voice/tails_exam_passed.ogg
+    gain: 1.0
+  - id: voice-tails-exam-passed-md
+    assetPath: audio/voice/tails_exam_passed.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-great
+    assetPath: audio/voice/tails_great.ogg
+    gain: 1.0
+  - id: voice-tails-great-md
+    assetPath: audio/voice/tails_great.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-awesome
+    assetPath: audio/voice/tails_awesome.ogg
+    gain: 1.0
+  - id: voice-tails-awesome-md
+    assetPath: audio/voice/tails_awesome.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-try-again
+    assetPath: audio/voice/tails_try_again.ogg
+    gain: 1.0
+  - id: voice-tails-try-again-md
+    assetPath: audio/voice/tails_try_again.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-keep-going
+    assetPath: audio/voice/tails_keep_going.ogg
+    gain: 1.0
+  - id: voice-tails-keep-going-md
+    assetPath: audio/voice/tails_keep_going.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-slow-down
+    assetPath: audio/voice/tails_slow_down.ogg
+    gain: 1.0
+  - id: voice-tails-slow-down-md
+    assetPath: audio/voice/tails_slow_down.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-grade-a
+    assetPath: audio/voice/tails_grade_a.ogg
+    gain: 1.0
+  - id: voice-tails-grade-a-md
+    assetPath: audio/voice/tails_grade_a.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-grade-b
+    assetPath: audio/voice/tails_grade_b.ogg
+    gain: 1.0
+  - id: voice-tails-grade-b-md
+    assetPath: audio/voice/tails_grade_b.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-grade-c
+    assetPath: audio/voice/tails_grade_c.ogg
+    gain: 1.0
+  - id: voice-tails-grade-c-md
+    assetPath: audio/voice/tails_grade_c.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-grade-d
+    assetPath: audio/voice/tails_grade_d.ogg
+    gain: 1.0
+  - id: voice-tails-grade-d-md
+    assetPath: audio/voice/tails_grade_d.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-grade-e
+    assetPath: audio/voice/tails_grade_e.ogg
+    gain: 1.0
+  - id: voice-tails-grade-e-md
+    assetPath: audio/voice/tails_grade_e.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
+  - id: voice-tails-unlocked
+    assetPath: audio/voice/tails_unlocked.ogg
+    gain: 1.0
+  - id: voice-tails-unlocked-md
+    assetPath: audio/voice/tails_unlocked.ogg
+    gain: 1.0
+    dac:
+      sampleRate: 8000
+      bits: 7
+      lowpassHz: 3400
+      recoveryMix: 0.1
+      recoveryHighpassHz: 2400
   - id: voice-robotnik-taunt-toaster
     assetPath: audio/voice/robotnik_taunt_toaster.ogg
     gain: 1.0

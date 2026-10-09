@@ -148,6 +148,78 @@
         "effect": "edge_fades",
         "milliseconds": 5
       }
+    ],
+    "clean_boy1": [
+      {
+        "effect": "pitch_formant",
+        "semitones": 1,
+        "formant_semitones": 0.5,
+        "method": "rate change by the formant ratio, then Rubber Band tempo restore and residual pitch with formants preserved"
+      },
+      {
+        "effect": "loudness",
+        "integrated_lufs": -18,
+        "true_peak_db": -2.5,
+        "lra": 5
+      },
+      {
+        "effect": "edge_fades",
+        "milliseconds": 5
+      }
+    ],
+    "clean_boy2": [
+      {
+        "effect": "pitch_formant",
+        "semitones": 2,
+        "formant_semitones": 1.0,
+        "method": "rate change by the formant ratio, then Rubber Band tempo restore and residual pitch with formants preserved"
+      },
+      {
+        "effect": "loudness",
+        "integrated_lufs": -18,
+        "true_peak_db": -2.5,
+        "lra": 5
+      },
+      {
+        "effect": "edge_fades",
+        "milliseconds": 5
+      }
+    ],
+    "clean_boy4": [
+      {
+        "effect": "pitch_formant",
+        "semitones": 4,
+        "formant_semitones": 2.0,
+        "method": "rate change by the formant ratio, then Rubber Band tempo restore and residual pitch with formants preserved"
+      },
+      {
+        "effect": "loudness",
+        "integrated_lufs": -18,
+        "true_peak_db": -2.5,
+        "lra": 5
+      },
+      {
+        "effect": "edge_fades",
+        "milliseconds": 5
+      }
+    ],
+    "clean_boy6": [
+      {
+        "effect": "pitch_formant",
+        "semitones": 6,
+        "formant_semitones": 3.0,
+        "method": "rate change by the formant ratio, then Rubber Band tempo restore and residual pitch with formants preserved"
+      },
+      {
+        "effect": "loudness",
+        "integrated_lufs": -18,
+        "true_peak_db": -2.5,
+        "lra": 5
+      },
+      {
+        "effect": "edge_fades",
+        "milliseconds": 5
+      }
     ]
   },
   "speakers": {
@@ -199,8 +271,8 @@
     },
     "tails": {
       "role": "Young boy (about 8-10), bright and eager, running Typing School: lessons, feedback and grades.",
-      "voice": null,
-      "preset": null,
+      "voice": "river",
+      "preset": "clean_boy4",
       "delivery_tag": "[bright eager young boy, about nine years old, excited and cheerful, quick light delivery, clear diction]",
       "audition": {
         "round": "round2",
@@ -233,7 +305,12 @@
             "voice": "river",
             "renders": [
               "clean+md",
-              "clean_boy3+md"
+              "clean_boy1+md",
+              "clean_boy2+md",
+              "clean_boy3+md",
+              "clean_boy4+md",
+              "clean_boy5+md",
+              "clean_boy6+md"
             ]
           },
           {
@@ -257,7 +334,8 @@
           "sarah, alice, lily, matilda": "mature or professional adult women",
           "jessica, laura": "rejected in round 1 as more girly than young"
         },
-        "shift_note": "Shifted renders reuse the same cached takes: liam (the round-1 reference) and will (young male); river (neutral) at +3 only. Median F0 with the boy direction: liam ~300 Hz, will ~280 Hz, river ~340 Hz."
+        "shift_note": "Shifted renders reuse the same cached takes: liam (the round-1 reference) and will (young male); river (neutral) at +3 only. Median F0 with the boy direction: liam ~300 Hz, will ~280 Hz, river ~340 Hz.",
+        "round3_note": "2026-10-09: user asked for River at several pitches; rendered offline from the round-2 takes at +1..+6 semitones (formants half as much) and chose +4 (clean_boy4)."
       },
       "round1": {
         "delivery_tag": "[cheerful upbeat young instructor, friendly and encouraging, bright energy, clear diction]",
@@ -266,7 +344,8 @@
           "laura": "more girly than young",
           "liam": "closer to a Sonic than a Tails"
         }
-      }
+      },
+      "choice": "2026-10-09 user pick after round 3: river pitched +4 semitones (formants +2), Mega Drive DAC as the retro variant."
     }
   },
   "entries": [
@@ -866,7 +945,8 @@
       "group": "lesson",
       "text": "Welcome to my typing school, Sonic!",
       "priority": 3,
-      "cooldown_ticks": 0
+      "cooldown_ticks": 0,
+      "retro_mishearing_accepted": "The clean clip passes; through the 8 kHz DAC at +4 semitones the gate heard 'my typing school' as 'Mike Hiking School'. Tails' speech bubble shows the line verbatim."
     },
     {
       "id": "home_row",
@@ -874,7 +954,8 @@
       "group": "lesson",
       "text": "Let's start with the home row. Fingers on A, S, D, F and J, K, L!",
       "priority": 2,
-      "cooldown_ticks": 0
+      "cooldown_ticks": 0,
+      "retro_mishearing_accepted": "The clean clip passes; through the DAC the gate heard 'A, S, D, F' as 'A, F, D, F' (sibilant blurred). The lesson's keys are on screen in the bubble and on the keyboard."
     },
     {
       "id": "top_row",
@@ -898,7 +979,8 @@
       "group": "lesson",
       "text": "Numbers time! Reach all the way up.",
       "priority": 2,
-      "cooldown_ticks": 0
+      "cooldown_ticks": 0,
+      "retro_mishearing_accepted": "The clean clip passes; through the DAC the gate heard 'Reach' as 'Reek'. The bubble shows the line verbatim."
     },
     {
       "id": "capitals",
@@ -914,7 +996,9 @@
       "group": "lesson",
       "text": "Punctuation! Commas, full stops, and more.",
       "priority": 2,
-      "cooldown_ticks": 0
+      "cooldown_ticks": 0,
+      "take": 2,
+      "retro_mishearing_accepted": "Take 1 dropped 'Punctuation'; take 2's clean clip passes. Through the DAC the gate heard 'full stops' as 'both dots'. The bubble shows the line verbatim."
     },
     {
       "id": "ring_rush",
@@ -946,7 +1030,8 @@
       "group": "lesson",
       "text": "Long words! Take your time and stay accurate.",
       "priority": 2,
-      "cooldown_ticks": 0
+      "cooldown_ticks": 0,
+      "retro_mishearing_accepted": "The clean clip passes; through the DAC the gate heard 'Long words' as 'Long word' (final s lost). The bubble shows the line verbatim."
     },
     {
       "id": "phrases",
@@ -954,7 +1039,8 @@
       "group": "lesson",
       "text": "Phrases! Don't forget the spaces.",
       "priority": 2,
-      "cooldown_ticks": 0
+      "cooldown_ticks": 0,
+      "retro_mishearing_accepted": "The clean clip passes; through the DAC the gate heard 'Phrases' as 'Prazes'. The bubble shows the line verbatim."
     },
     {
       "id": "boss_training",
