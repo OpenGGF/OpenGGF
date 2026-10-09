@@ -63,6 +63,48 @@ public final class NativeModMemberContractTest implements Opcodes {
         if (!Files.readAllLines(implementations.resolve("members.tsv")).contains(
                 "M\tcom.openggf.nativefixture.Unreferenced\tprobe\t()V"))
             throw new AssertionError("Unreferenced implementation method omitted");
+        writeMod(mods, "jdk-fields");
+        Path jdk = root.resolve("jdk-fields");
+        NativeModMemberContract.main(new String[] {engine.toString(), mods.toString(), jdk.toString(),
+                "--references-only", "--jdk-static-fields"});
+        var jdkContract = Files.readAllLines(jdk.resolve("members.tsv"));
+        for (String expected : new String[] {
+                "F\tjava.nio.file.StandardCopyOption\tREPLACE_EXISTING\tLjava/nio/file/StandardCopyOption;",
+                "F\tjava.nio.file.LinkOption\tNOFOLLOW_LINKS\tLjava/nio/file/LinkOption;"}) {
+            if (!jdkContract.contains(expected)) throw new AssertionError("Dormant JDK static field omitted: " + expected);
+        }
+        if (!Files.readAllLines(jdk.resolve("jdk-preserve-packages.txt")).equals(java.util.List.of("java.nio.file")))
+            throw new AssertionError("JDK field preservation package omitted");
+        Path ignoredJdk = root.resolve("ignored-jdk-fields");
+        generate(engine, mods, ignoredJdk);
+        if (Files.readAllLines(ignoredJdk.resolve("members.tsv")).stream().anyMatch(line -> line.contains("java.nio.file")))
+            throw new AssertionError("Opt-in JDK audit changed default contract");
+        writeMod(mods, "jdk-missing");
+        try {
+            NativeModMemberContract.main(new String[] {engine.toString(), mods.toString(), root.resolve("jdk-missing").toString(),
+                    "--references-only", "--jdk-static-fields"});
+            throw new AssertionError("Accepted missing JDK static field");
+        } catch (IllegalStateException expected) {
+            if (!expected.getMessage().contains("MISSING input JDK static field")) throw expected;
+        }
+        writeMod(mods, "jdk-methods");
+        Path jdkMethods = root.resolve("jdk-methods");
+        NativeModMemberContract.main(new String[] {engine.toString(), mods.toString(), jdkMethods.toString(),
+                "--references-only", "--jdk-members"});
+        var methodContract = Files.readAllLines(jdkMethods.resolve("members.tsv"));
+        for (String expected : new String[] {
+                "M\tjava.io.StringWriter\t<init>\t()V",
+                "M\tjava.lang.Object\twait\t(J)V"}) {
+            if (!methodContract.contains(expected)) throw new AssertionError("Dormant/inherited JDK method omitted: " + expected);
+        }
+        writeMod(mods, "jdk-constructor");
+        try {
+            NativeModMemberContract.main(new String[] {engine.toString(), mods.toString(), root.resolve("jdk-constructor").toString(),
+                    "--references-only", "--jdk-members"});
+            throw new AssertionError("Inherited JDK constructor accepted");
+        } catch (IllegalStateException expected) {
+            if (!expected.getMessage().contains("MISSING input JDK method")) throw expected;
+        }
         // The superclass has (I)V, but the child has only ()V. Constructors must not resolve through inheritance.
         for (String kind : new String[] {"field", "method", "constructor", "type"}) {
             writeMod(mods, kind);
@@ -73,7 +115,7 @@ public final class NativeModMemberContractTest implements Opcodes {
                 if (!expected.getMessage().contains("MISSING input engine")) throw expected;
             }
         }
-        System.out.println("PASS contract regression controls: inherited members, dormant handle, arrays/dynamic constants, exact bytes, four omissions");
+        System.out.println("PASS contract regression controls: inherited members, dormant handles/JDK members, arrays/dynamic constants, exact bytes, missing members and non-inherited constructors");
     }
 
     private static void generate(Path engine, Path mods, Path output) throws Exception {
@@ -112,6 +154,16 @@ public final class NativeModMemberContractTest implements Opcodes {
         var method = writer.visitMethod(ACC_PUBLIC | ACC_STATIC, "laterCallback", "()V", null, null);
         method.visitCode();
         switch (mode) {
+            case "jdk-methods" -> {
+                method.visitMethodInsn(INVOKESPECIAL, "java/io/StringWriter", "<init>", "()V", false);
+                method.visitMethodInsn(INVOKEVIRTUAL, "java/io/StringWriter", "wait", "(J)V", false);
+            }
+            case "jdk-constructor" -> method.visitMethodInsn(INVOKESPECIAL, "java/io/StringWriter", "<init>", "(Ljava/lang/Object;)V", false);
+            case "jdk-fields" -> {
+                method.visitFieldInsn(GETSTATIC, "java/nio/file/StandardCopyOption", "REPLACE_EXISTING", "Ljava/nio/file/StandardCopyOption;");
+                method.visitLdcInsn(new Handle(H_GETSTATIC, "java/nio/file/LinkOption", "NOFOLLOW_LINKS", "Ljava/nio/file/LinkOption;", false));
+            }
+            case "jdk-missing" -> method.visitFieldInsn(GETSTATIC, "java/nio/file/StandardCopyOption", "missing", "Ljava/nio/file/StandardCopyOption;");
             case "field" -> method.visitFieldInsn(GETSTATIC, PREFIX + "Child", "missing", "Ljava/lang/Object;");
             case "method" -> method.visitMethodInsn(INVOKEVIRTUAL, PREFIX + "Child", "callback", "(J)I", false);
             case "constructor" -> method.visitMethodInsn(INVOKESPECIAL, PREFIX + "Child", "<init>", "(I)V", false);

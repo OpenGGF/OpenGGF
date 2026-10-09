@@ -29,7 +29,9 @@ class PackagingTests(unittest.TestCase):
             contract=root / "contract";contract.mkdir();(contract / "members.tsv").write_text("C\tcom.openggf.Engine\n")
             graal=root / "graal";(graal / "legal").mkdir(parents=True)
             for name in ("LICENSE.txt","THIRD_PARTY_LICENSE.txt"):(graal / name).write_text("retained")
-            bundle=root / "bundle with spaces";assemble(bundle,image,engine,inputs,contract,graal,{})
+            bundle=root / "bundle with spaces";assemble(bundle,image,engine,inputs,contract,graal,{},"b"*40)
+            self.assertEqual("b"*40,json.loads((bundle / "build-info.json").read_text())["nativeBuildSourceCommit"])
+            self.assertIn("/tree/"+"b"*40,(bundle / "README.txt").read_text())
             shortcut=bundle / "Launch hello-scene.sh"
             subprocess.run(["sh","-n",shortcut],check=True)
             self.assertEqual(0o755,shortcut.stat().st_mode & 0o777)

@@ -609,3 +609,40 @@ the Robotnik aborted with `Cannot load undefined field` for
 the field away from runtime-loaded access. Linux separately preserves
 `java.nio.charset`; the runtime-loaded fixture now roundtrips a non-ASCII UTF-8
 string through the same constant and codecs. Neither failed image is distributed.
+
+The corrected image at composed source `751fdc66d1e61f9526b3dbac98c29d01b037292c`
+passes the stream/UTF-8 fixture. Infinite Sonic then reaches progress saving and
+aborts on `StandardCopyOption.REPLACE_EXISTING`; Slay progresses past UTF-8 and
+aborts on `StringWriter.<init>()`. All other seventeen rendered checks pass again.
+The static-field omission is independently rejected by a single-row metadata
+audit with ordinary exit 1. Static input analysis is now extended rather than
+adding only the latest observed package.
+
+Linux opts into `--jdk-members`: every direct JDK method, constructor and static
+field reference in creator bytecode, including dormant callbacks, method handles
+and nested dynamic constants, enters the same startup contract. Symbolic owners
+resolve through JDK hierarchy without class initialization; constructors never
+resolve through ancestors. The declaring packages enter a generated preservation
+list. Existing Windows/default generation remains unchanged. Controls cover
+dormant JDK fields/handles, inherited methods, constructor non-inheritance, missing
+fields and unchanged default mode. The actual nineteen-mod contract grows to
+15,844 entries / 1,210 types, with eighteen derived JDK packages. Applied to image
+`751fdc66d`, it rejects 71 missing members with ordinary exit 1 before creator code.
+This also catches the dormant `Level.WARNING` field and file-save constants.
+
+Metadata lookup still does not prove virtual invocation or compiler-generated
+bootstrap behavior. The separately runtime-loaded fixture retains record, switch,
+proxy, UTF-8 and primitive/reference stream execution checks, and now exercises a
+writer plus file copy and atomic replacement in an owned temporary directory.
+Reflection-only/dynamically named JDK calls are outside static reference discovery;
+the known reflection seam and direct native gameplay checks remain necessary.
+
+These corrections change only standalone experiment tools. The immutable Maven
+engine/SDK and nineteen mod JARs remain pinned to `751fdc66d`; their bytes are reused
+for the image-only successor. Native-tool source is independently frozen during
+preparation, recorded in `build-info.json`, and linked beside engine/mod source in
+the distribution. This avoids conflating an unchanged engine artifact's commit
+stamp with the experimental compiler configuration. The updated category plan at
+`751fdc66d` against actual published destination `ed45a1990` selects 3,075 ordinary
+classes. The same proportionate scope applies; the incoming route-drawing changes
+affect only tests/documentation and were independently published/qualified.

@@ -3,7 +3,7 @@
 The Linux x64 image uses checksum-pinned GraalVM Community 25.4.4.1.1+1.1
 runtime class loading. It shares the isolated hosted feature and capability
 substitution from [the Windows experiment](../native-windows/README.md).
-Normal engine, Maven native and release policy are unchanged.
+Normal native build policy, Maven configuration and release policy are unchanged.
 
 The complete ZIP contains all maintained top-level example mods and seven code
 samples plus two data samples. Each has an executable shell shortcut. Configuration
@@ -44,10 +44,13 @@ The generated member contract covers dormant creator callbacks as well as live
 ones. The Linux build also retains engine implementations of `GameModule`,
 including anonymous wrappers, because owner-bound dispatch inspects their concrete
 methods reflectively. Their members enter the same mandatory startup audit.
+Direct JDK method, constructor and static-field references also enter the contract,
+including dormant callbacks and method handles. Their declaring packages are
+preserved automatically. JDK constructors are never resolved through inheritance.
 Missing-field and missing-method controls must return ordinary exit 1;
 crashes never pass. A separately compiled, runtime-loaded regression mod exercises
 record equality/hash/string, pattern-switch and generated-proxy bootstraps,
-plus UTF-8 constants/codecs and primitive/reference stream operations; it
+plus UTF-8 constants/codecs, writer/file copy/atomic replacement and primitive/reference stream operations; it
 never enters the image classpath or final distribution. `java.lang.runtime` and
 `java.lang.reflect` are explicitly preserved because preservation of `java.lang`
 does not include its subpackages. `java.util.stream` is retained separately from
@@ -65,6 +68,8 @@ Qualification writes only owned disposable probe directories. The builder then
 reassembles from immutable inputs so caches, saves and generated configuration
 cannot enter the ZIP. The ZIP retains executable bits, engine/third-party licences,
 the CE legal notices, source links, exact input hashes and validation scope.
+Engine/mod source and experimental native-tool source have separate commit pins;
+an image-only correction can reuse unchanged immutable Maven and mod artifacts.
 
 ```bash
 python3 -m unittest discover -s tools/modding/native-linux -p 'test_*.py' -v

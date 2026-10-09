@@ -34,6 +34,25 @@ public final class BootstrapControl implements GgfMod {
                 java.nio.charset.StandardCharsets.UTF_8).equals(text)) {
             throw new AssertionError("Runtime UTF-8 constant/codec failed");
         }
+        var writer = new java.io.StringWriter();
+        writer.write(text);
+        if (!writer.toString().equals(text)) throw new AssertionError("Runtime writer failed");
+        try {
+            var directory = java.nio.file.Files.createTempDirectory(java.nio.file.Path.of("."), ".native-control-");
+            var firstFile = directory.resolve("first");
+            var secondFile = directory.resolve("second");
+            try {
+                java.nio.file.Files.writeString(firstFile, text);
+                java.nio.file.Files.copy(firstFile, secondFile, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                java.nio.file.Files.move(secondFile, firstFile, java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                if (!java.nio.file.Files.readString(firstFile).equals(text)) throw new AssertionError("Runtime file copy/move failed");
+            } finally {
+                java.nio.file.Files.deleteIfExists(firstFile);
+                java.nio.file.Files.deleteIfExists(secondFile);
+                java.nio.file.Files.delete(directory);
+            }
+        } catch (java.io.IOException failure) { throw new AssertionError("Runtime file control failed", failure); }
         int[] numbers = {-4, 7, 7, 2};
         if (java.util.Arrays.stream(numbers).min().orElse(0) != -4
                 || java.util.Arrays.stream(numbers).max().orElse(0) != 7

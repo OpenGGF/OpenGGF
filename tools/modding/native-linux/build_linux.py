@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 import shutil
 import struct
+import subprocess
 import sys
 import zipfile
 
@@ -52,7 +53,7 @@ def bootstrap_control(work, engine):
         "com.openggf.tools.modsdk.GgfModCli","package","--input",classes,"--out",fixture],work)
     return fixture
 
-def assemble(bundle, image, engine, inputs, contract, graal, evidence):
+def assemble(bundle, image, engine, inputs, contract, graal, evidence, native_source=None):
     bundle.mkdir(parents=True, exist_ok=False)
     shutil.copy2(image,bundle / "OpenGGF")
     elf_x64(bundle / "OpenGGF")
@@ -70,6 +71,7 @@ def assemble(bundle, image, engine, inputs, contract, graal, evidence):
     shutil.copy2(contract / "members.tsv",bundle / "native-mod-members.tsv")
     catalog.update({"experimental":True,"platform":"linux-x64","graalVersion":GRAAL_VERSION,
         "graalArchiveSha256":GRAAL_SHA256,"nativeSha256":digest(image),"validation":evidence})
+    catalog["nativeBuildSourceCommit"]=native_source or catalog["sourceCommit"]
     (bundle / "build-info.json").write_text(json.dumps(catalog,indent=2)+"\n")
     (bundle / "config.yaml").write_text(
         '# Put your own ROMs beside this file.\nroms:\n  sonic1: "s1.gen"\n  sonic2: "s2.gen"\n'
@@ -111,8 +113,10 @@ def assemble(bundle, image, engine, inputs, contract, graal, evidence):
         "completed checks. Rendered checks cover representative paths, not every route,\n"
         "network session or performance/driver combination. Production native policy is unchanged.\n"
         "Run ./OpenGGF --audit or --check-mods for bounded diagnostic checks.\n\n"
-        "OpenGGF: GNU GPL version 3. Corresponding engine, mods and build source:\n"
+        "OpenGGF: GNU GPL version 3. Corresponding engine and mod source:\n"
         f"https://github.com/OpenGGF/OpenGGF/tree/{catalog['sourceCommit']}\n"
+        "Experimental native build tools:\n"
+        f"https://github.com/OpenGGF/OpenGGF/tree/{catalog['nativeBuildSourceCommit']}\n"
         "GraalVM Community source and release:\n"
         "https://github.com/oracle/graal/tree/95ce1499c8c96ab7d5a6697c5b4bf42160f3b68b\n"
         "https://github.com/graalvm/graalvm-ce-builds/releases/tag/graal-25.4.4.1.1\n"
@@ -124,6 +128,10 @@ def prepare(args):
     if digest(engine)!=json.loads((inputs / "build-info.json").read_text())["engineSha256"]:
         raise ValueError("Engine/mod input identity changed")
     if digest(graal.parent / "graalvm.tar.gz")!=GRAAL_SHA256: raise ValueError("GraalVM checksum mismatch")
+    if subprocess.check_output(["git","status","--porcelain","--untracked-files=no"],cwd=ROOT,text=True).strip():
+        raise ValueError("Commit tracked build inputs before preparing the native image")
+    source=subprocess.check_output(["git","rev-parse","HEAD"],cwd=ROOT,text=True).strip()
+    (work / "native-build-source.txt").write_text(source+"\n")
     sdk=work / "hosted-sdk.jar"; extract_sdk(graal,sdk)
     sources=sorted((ROOT / "tools/modding/native-feasibility").glob("NativeModMember*.java"))
     sources += [ROOT / "tools/modding/native-feasibility/NativeModRegistrationProbe.java"]
@@ -136,7 +144,7 @@ def prepare(args):
     run([*java,"com.openggf.tools.NativeModMemberContractTest",work / "fixtures"],work)
     contract=work / "contract"
     run([*java,"com.openggf.tools.NativeModMemberContract",engine,inputs / "mods",contract,
-        "--implementation-root=com.openggf.game.GameModule"],work)
+        "--implementation-root=com.openggf.game.GameModule","--jdk-members"],work)
     run([*java,"com.openggf.tools.NativeModMemberAudit",contract / "members.tsv"],work)
     bootstrap_control(work,engine)
     metadata=work / "metadata";metadata.mkdir()
@@ -144,10 +152,14 @@ def prepare(args):
     deps=args.runtime_classpath.resolve(strict=True).read_text().strip()
     native_cp=os.pathsep.join(map(str,(classes,contract / "preserved-engine.jar",ROOT / "target/classes")))+os.pathsep+deps
     native=work / "native";native.mkdir()
+    packages=set((contract / "jdk-preserve-packages.txt").read_text().splitlines()) | {
+        "java.lang","java.lang.invoke","java.lang.runtime","java.lang.reflect",
+        "java.util","java.util.function","java.util.stream","java.nio.charset"}
+    preserve=f"path={contract / 'preserved-engine.jar'},"+','.join('package='+name for name in sorted(packages))
     arguments=["-march=compatibility","-J-Xmx5g","--parallelism=4",
         "--initialize-at-run-time=org.lwjgl,java.awt,javax.swing,sun.awt,sun.java2d",
         "-H:+UnlockExperimentalVMOptions","-H:+RuntimeClassLoading",
-        f"-H:Preserve=path={contract / 'preserved-engine.jar'},package=java.lang,package=java.lang.invoke,package=java.lang.runtime,package=java.lang.reflect,package=java.util,package=java.util.function,package=java.util.stream,package=java.nio.charset",
+        "-H:Preserve="+preserve,
         r"-H:IncludeResources=com/openggf/.*\.class",f"-H:ConfigurationFileDirectories={metadata}",
         "-J-Dopenggf.experimental.native.mods=true",
         "-J--add-exports=org.graalvm.nativeimage.builder/com.oracle.svm.core.hub=ALL-UNNAMED",
@@ -187,9 +199,10 @@ def native_command(args,bundle,*arguments):
 def qualify(args):
     work=args.output.resolve();engine=args.engine_jar.resolve(strict=True);inputs=args.inputs.resolve(strict=True);graal=args.graal.resolve(strict=True)
     image=work / "native/OpenGGF"; contract=work / "contract"
+    native_source=(work / "native-build-source.txt").read_text().strip()
     evidence={"memberAudit":"pending","registrations":[],"engineBootRegistrations":[],"renderedGameplay":[]}
     bundle=work / "OpenGGF-experimental-linux-x64-with-mods"
-    assemble(bundle,image,engine,inputs,contract,graal,evidence)
+    assemble(bundle,image,engine,inputs,contract,graal,evidence,native_source)
     run(native_command(args,bundle,"--audit"),bundle)
     original=(bundle / "native-mod-members.tsv").read_bytes()
     for kind,desc in (("F","I"),("M","()V")):
@@ -203,7 +216,7 @@ def qualify(args):
         output=run(native_command(args,bundle,"--check-mods","native-bootstrap-control"),bundle)
         if "PASS registration: native-bootstrap-control; code=true" not in output:
             raise AssertionError("Runtime-loaded JDK bootstrap control did not pass")
-        evidence["jdkBootstrapControl"]="runtime-loaded records, pattern switch, generated proxy, UTF-8 constant/codec and primitive/reference streams passed"
+        evidence["jdkBootstrapControl"]="runtime-loaded records, pattern switch, generated proxy, UTF-8, writer, file copy/atomic replace and primitive/reference streams passed"
     finally: fixture.unlink(missing_ok=True)
     for mod in json.loads((inputs / "build-info.json").read_text())["mods"]:
         owner,slug=mod["id"],mod["slug"]
@@ -231,7 +244,7 @@ def qualify(args):
     evidence["runtime"]="Ubuntu 22.04 rootfs; no JDK; Mesa software OpenGL" if args.runtime_rootfs else "host Linux desktop"
     (work / "qualification.json").write_text(json.dumps(evidence,indent=2)+"\n")
     shutil.rmtree(bundle)
-    assemble(bundle,image,engine,inputs,contract,graal,evidence)
+    assemble(bundle,image,engine,inputs,contract,graal,evidence,native_source)
     artifact=work / (bundle.name+".zip");archive_bundle(bundle,artifact)
     print(f"PASS Linux native ZIP: {artifact}; SHA256 {digest(artifact)}")
 
