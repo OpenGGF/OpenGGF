@@ -15,12 +15,12 @@ import starpost.core.Item;
 
 /**
  * Fishing's pictures. The badniks, the air bubbles and the countdown digits are the ROMs' own:
- * Sonic 1's Chopper (Nem_Chopper, Map_Chop) in Green Hill's palette, Jaws (Nem_Jaws, Map_Jaws,
- * palette line 1) and the Labyrinth bubbles (Nem_Bubbles, Map_Bub) under Labyrinth's water
- * palette (Pal_LZWater), Labyrinth's splash (Nem_Splash, Map_Splash) in Pal_LZ, and S3K's Jawz and Blastoid (ArtKosM_Jawz/Map_Jawz,
- * ArtKosM_Blastoid/Map_Blastoid, line 1) under Hydrocity's (Pal_HCZ1_Water). The fish themselves
- * are original, the one kind of creature the design lets us draw: small pictures in Mega Drive
- * colours. Built when fishing is installed, never in draw.
+ * Sonic 1's Chopper (Nem_Chopper, Map_Chop) in Green Hill's palette; Jaws (Nem_Jaws, Map_Jaws,
+ * palette line 1) and the Labyrinth bubbles (Nem_Bubbles, Map_Bub) under Labyrinth's water palette
+ * (Pal_LZWater); Labyrinth's splash (Nem_Splash, Map_Splash) in Pal_LZ; and S3K's Jawz and
+ * Blastoid (ArtKosM_Jawz/Map_Jawz, ArtKosM_Blastoid/Map_Blastoid, line 1) under Hydrocity's
+ * (Pal_HCZ1_Water). The fish themselves are original, the one kind of creature the design lets
+ * us draw: small pictures in Mega Drive colours. Built when fishing is installed, never in draw.
  */
 public final class FishArt {
     /** Map_Bub: bubbles growing (0-6, 6 the full 32-pixel bubble), bursting (7-8), digits 5..1 (14-18). */

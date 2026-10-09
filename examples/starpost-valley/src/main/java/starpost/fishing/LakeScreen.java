@@ -43,6 +43,7 @@ public final class LakeScreen implements Screen {
     private static final int SFX_CAST = 0x3C;
     private static final int SFX_PLOP = 0x6C;
     private static final int SFX_STRIKE = 0x4A;
+    private static final String LAKE_BRIDGE = "lake_bridge";
 
     private final Shell shell;
     private final PlayScreen play;
@@ -69,20 +70,37 @@ public final class LakeScreen implements Screen {
     private final SceneImage[] fall = new SceneImage[4];
     private final SceneImage[] pool = new SceneImage[4];
     private int cycledSeason = -1;
+    /** The pool's darkest water colour in this season's tone (Pal_GHZ line 3, colour 8). */
+    private int poolBed = 0xFF244992;
     private int lastLight = -1;
+    /** Barnaby on his jetty now (his schedule, checked in update). */
+    private boolean barnaby;
+    /** The Capsule's Reef chamber rebuilt the lake bridge: Green Hill's log bridge out to the falls. */
+    private boolean bridge;
 
     LakeScreen(Shell shell, PlayScreen play, FishingSystem sys) {
         this.shell = shell;
         this.play = play;
         this.sys = sys;
-        SceneImage bridge = shell.art.kit.blockImage(51);
-        int y = Art.FLOOR - 50;
-        while (y < Art.BLOCK - 8 && bridge.pixel(Art.BLOCK / 2, y) >>> 24 == 0) {
-            y++;
-        }
-        poolY = y;
+        poolY = poolTop(shell.art.kit.blockImage(51));
         runner = new Runner(40, ground.floorBelow(40, 0));
         snapCamera();
+    }
+
+    /** The first row under block 51's log where its water starts (a row a quarter or more drawn). */
+    private static int poolTop(SceneImage bridge) {
+        for (int y = Art.FLOOR - 50; y < Art.BLOCK - 8; y++) {
+            int drawn = 0;
+            for (int x = 0; x < Art.BLOCK; x++) {
+                if (bridge.pixel(x, y) >>> 24 != 0) {
+                    drawn++;
+                }
+            }
+            if (drawn >= Art.BLOCK / 4) {
+                return y;
+            }
+        }
+        return Art.FLOOR - 16;
     }
 
     PlayScreen play() {
@@ -102,7 +120,8 @@ public final class LakeScreen implements Screen {
             if (x < SHORE_END) {
                 return shell.art.solid(1, lx, y);
             }
-            return x < JETTY_END && y < poolY && shell.art.solid(51, lx, y);
+            boolean deck = x < JETTY_END || bridge && x < WIDTH - 16;
+            return deck && y < poolY && shell.art.solid(51, lx, y);
         }
 
         @Override
@@ -122,7 +141,7 @@ public final class LakeScreen implements Screen {
 
         @Override
         public int right() {
-            return WIDTH;
+            return bridge ? WIDTH - 16 : WIDTH;
         }
     }
 
@@ -140,6 +159,8 @@ public final class LakeScreen implements Screen {
     public void update(Shell shell) {
         Game game = shell.game;
         cycle(game.calendar.season());
+        barnaby = barnabyHere(game);
+        bridge = game.flags.contains(LAKE_BRIDGE);
         hotbar(shell);
         if (shell.in.menu && !charging && !line.out()) {
             shell.push(new InventoryMenu());
@@ -340,12 +361,33 @@ public final class LakeScreen implements Screen {
                 steps[i] = base[i % 4];
             }
         }
+        poolBed = look.tone.apply(base[0] | 0xFF000000);
         SceneImage waterfall = art.kit.blockImage(52);
         SceneImage bridge = art.kit.blockImage(51).crop(0, poolY, Art.BLOCK, Art.BLOCK - poolY);
         for (int s = 0; s < 4; s++) {
             fall[s] = look.tone.apply(recolour(waterfall, base, steps, s));
-            pool[s] = look.tone.apply(recolour(bridge, base, steps, s));
+            pool[s] = look.tone.apply(twice(recolour(bridge, base, steps, s)));
         }
+    }
+
+    /** A colour as the light's tint would draw it (fills are not tinted). */
+    private static int multiply(int argb, int tint) {
+        int r = (argb >>> 16 & 255) * (tint >>> 16 & 255) / 255;
+        int g = (argb >>> 8 & 255) * (tint >>> 8 & 255) / 255;
+        int b = (argb & 255) * (tint & 255) / 255;
+        return 0xFF000000 | r << 16 | g << 8 | b;
+    }
+
+    /** The pool's rows twice over: one picture across the jetty's block and the waterfall's. */
+    private static SceneImage twice(SceneImage image) {
+        int w = image.width(), h = image.height();
+        int[] px = new int[w * 2 * h];
+        int[] src = image.pixels();
+        for (int y = 0; y < h; y++) {
+            System.arraycopy(src, y * w, px, y * w * 2, w);
+            System.arraycopy(src, y * w, px, y * w * 2 + w, w);
+        }
+        return new SceneImage(w * 2, h, px);
     }
 
     private static SceneImage recolour(SceneImage image, int[] base, int[] steps, int step) {
@@ -369,6 +411,14 @@ public final class LakeScreen implements Screen {
         runner.speed = 0;
         runner.onGround = true;
         snapCamera();
+    }
+
+    void debugLand(String id) {
+        Fishing.Landed landed = Fishing.land(shell.game, id, false);
+        landedAt = shell.ticks;
+        landedId = landed.id();
+        landedFreed = landed.freed();
+        shell.toast(landed.message());
     }
 
     boolean debugBite(String id) {
@@ -415,13 +465,21 @@ public final class LakeScreen implements Screen {
             canvas.drawRegion(jetty, 0, 0, Art.BLOCK, poolY, SHORE_END - cx, -cy, Art.BLOCK, poolY, tint);
         }
         if (fall[step] != null) {
-            canvas.draw(fall[step], JETTY_END - cx, -cy, tint);
+            // The waterfall down to the pool only: block 52's own ground would show through the
+            // pool's see-through stripes (Green Hill's water is drawn over the background).
+            canvas.drawRegion(fall[step], 0, 0, Art.BLOCK, poolY, JETTY_END - cx, -cy, Art.BLOCK, poolY, tint);
         }
-        for (int b = 1; b < 3 && pool[step] != null; b++) {
-            canvas.draw(pool[step], b * Art.BLOCK - cx, poolY - cy, tint.withAlpha(b == 1 ? 1 : 0.92f));
+        if (pool[step] != null) {
+            // Green Hill's water is see-through stripes over the background; the lake gets a bed of
+            // its own darkest water colour beneath them so the background's hills do not show.
+            canvas.fill(SHORE_END - cx, poolY - cy, WIDTH - SHORE_END, Art.BLOCK - poolY, multiply(poolBed, tint.tint()));
+            canvas.draw(pool[step], SHORE_END - cx, poolY - cy, tint);
         }
         drawShadows(shell, canvas, cx, cy);
         canvas.fill(SHORE_END - cx, poolY - cy, WIDTH - SHORE_END, 1, 0x60FFFFFF);
+        if (bridge) {
+            drawBridge(shell, canvas, cx, cy, tint);
+        }
         drawBarnaby(shell, canvas, cx, cy, tint);
         if (fallen == 0) {
             drawFarmer(shell, canvas, cx, cy, tint);
@@ -444,6 +502,22 @@ public final class LakeScreen implements Screen {
         }
     }
 
+    /**
+     * The lake bridge, once the Reef chamber is restored: Sonic 1's Green Hill bridge logs
+     * (Nem_Bridge, Map_Bri frame 0, each log end 16 pixels) from the jetty's end to the falls.
+     */
+    private void drawBridge(Shell shell, SceneCanvas canvas, int cx, int cy, SceneDraw tint) {
+        SceneSpriteSet logs = shell.art.bridge;
+        if (logs == null || logs.frameCount() == 0) {
+            return;
+        }
+        int top = ground.floorBelow(JETTY_END - 8, 0);
+        SceneSprite log = logs.frame(0);
+        for (int x = JETTY_END; x < WIDTH - 16; x += 16) {
+            canvas.draw(log, x + 8 - cx, top - cy + log.originY(), tint);
+        }
+    }
+
     /** Fish shadows under the surface (more in the deep), drifting and turning. */
     private void drawShadows(Shell shell, SceneCanvas canvas, int cx, int cy) {
         SceneDraw shade = SceneDraw.plain().withFlash(0xFF002448).withAlpha(0.35f);
@@ -463,7 +537,7 @@ public final class LakeScreen implements Screen {
 
     /** Barnaby the Rocky on the end of his jetty when his day puts him there, line in the water. */
     private void drawBarnaby(Shell shell, SceneCanvas canvas, int cx, int cy, SceneDraw tint) {
-        if (!barnabyHere(shell.game)) {
+        if (!barnaby) {
             return;
         }
         SceneSpriteSet seal = shell.art.animal("rocky");
@@ -575,10 +649,13 @@ public final class LakeScreen implements Screen {
             boolean red = def.id().equals(Fishing.RED_CHOPPER);
             SceneImage picture = def.isBadnik() ? sys.art.badnikFrame(def.badnik(), (int) (age / 4 % 2))
                     : sys.art.picture(def.id());
-            if (picture != null) {
-                float scale = red ? 2 : 1;
-                canvas.draw(picture, x - picture.width() * scale / 2, feet - 44 - picture.height() * scale * rise,
-                        SceneDraw.plain().withScale(scale));
+            if (picture != null && red) {
+                // The giant: held up beside the farmer at twice the size, its tail on the jetty.
+                float dir = runner.facingLeft ? -1 : 1;
+                canvas.draw(picture, x + dir * 34 - picture.width(), feet - picture.height() * 2 * rise,
+                        SceneDraw.plain().withScale(2));
+            } else if (picture != null) {
+                canvas.draw(picture, x - picture.width() / 2f, feet - 44 - picture.height() * rise, SceneDraw.plain());
             }
         }
         if (landedFreed && age >= 12) {

@@ -197,8 +197,8 @@ final class BubbleBarScreen implements Screen {
             return;
         }
         float wiggle = bar.inside() ? 0 : (float) Math.sin(shell.ticks / 2.0);
-        boolean flip = def.isBadnik() ? !bar.facingLeft : bar.facingLeft;
-        SceneDraw style = SceneDraw.plain().withFlipX(flip);
+        // Only Jaws turns round (Jaws_Swim flips it on its timer); the rest face the line.
+        SceneDraw style = SceneDraw.plain().withFlipX(def.motion() == FishDef.JAWS && !bar.facingLeft);
         canvas.draw(picture, x - picture.width() / 2f + wiggle, y - picture.height() / 2f, style);
     }
 

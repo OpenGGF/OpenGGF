@@ -71,7 +71,8 @@ public final class FishingSystem {
     /**
      * Debug ({@code fish ...}): {@code lake} goes to Waterfall Lake; {@code bite} makes the line
      * out bite now; {@code bar ID} opens the Bubble Bar on a catch; {@code land ID} lands one;
-     * {@code at X} stands at the lake.
+     * {@code at X} stands at the lake; {@code flag NAME} sets a story flag (the lake bridge,
+     * Barnaby's story).
      */
     public static boolean debug(Shell shell, String[] p) {
         if (shell.game == null || p.length < 2) {
@@ -111,8 +112,16 @@ public final class FishingSystem {
                 }
                 return sys.pond.debugFight(shell, id);
             }
+            case "flag" -> {
+                shell.game.flags.add(id);
+                return true;
+            }
             case "land" -> {
-                shell.toast(Fishing.land(shell.game, id, false).message());
+                if (screen instanceof LakeScreen lake) {
+                    lake.debugLand(id);
+                } else {
+                    sys.pond.debugLand(shell, id);
+                }
                 return true;
             }
             default -> {

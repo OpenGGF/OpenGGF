@@ -233,7 +233,8 @@ public final class BarnSystem {
     /**
      * Debug ({@code barn ...}): {@code build coop|pen [big]}, {@code buy KIND [N]}, {@code feed N},
      * {@code love N} (every animal's affection), {@code night} (run tonight's barn work now),
-     * {@code harvest} (the roosts pick now and their flocks fly it in),
+     * {@code harvest} (the roosts pick now and their flocks fly it in), {@code truffle ROW COL},
+     * {@code rocky ID} (what Rocky is holding), {@code pet [KIND]} (stand by an animal and pet it),
      * {@code goods} (a day's goods in both buildings), {@code place ID ROW COL [READY]} (a placed
      * object, a machine loaded with its first input and READY days to go), {@code menu coop|pen}.
      */
@@ -276,6 +277,36 @@ public final class BarnSystem {
                 }
             }
             case "night" -> barn.nextDay(game);
+            case "truffle" -> {
+                barn.truffles.add(Integer.parseInt(p[2]) + "." + Integer.parseInt(p[3]));
+                BarnSystem sys = of(shell);
+                if (sys != null) {
+                    sys.play.actors.add(new TruffleActor(sys, Integer.parseInt(p[2]), Integer.parseInt(p[3])));
+                }
+            }
+            case "pet" -> {
+                BarnSystem sys = of(shell);
+                if (sys == null) {
+                    return false;
+                }
+                for (Actor actor : sys.play.actors) {
+                    if (actor instanceof AnimalActor a && a.animal.kind.equals(p.length > 2 ? p[2] : a.animal.kind)
+                            && a.visible(game)) {
+                        sys.play.farm().runner.x = a.x();
+                        sys.play.farm().runner.depth = a.y() - starpost.farm.FarmView.FIELD_TOP - 4;
+                        return a.interact(shell, sys.play);
+                    }
+                }
+                return false;
+            }
+            case "rocky" -> {
+                String id = String.join("_", java.util.Arrays.copyOfRange(p, 2, p.length));
+                for (Animal a : barn.animals) {
+                    if (a.kind.equals("rocky") && game.catalog.hasItem(id)) {
+                        a.holding = id;
+                    }
+                }
+            }
             case "harvest" -> {
                 // The roosts' morning harvest now, with fresh flocks to fly it in.
                 BarnSystem sys = of(shell);

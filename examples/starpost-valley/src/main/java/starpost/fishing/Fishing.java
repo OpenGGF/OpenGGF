@@ -92,7 +92,7 @@ public final class Fishing {
             extra = freed ? " AN ANIMAL IS FREE!" : " POPPED!";
             if (id.equals(RED_CHOPPER) && game.flags.add(RED_CHOPPER_CAUGHT) && game.catalog.hasItem(HAT)) {
                 game.inventory.add(game.item(HAT), 1);
-                extra = " BARNABY'S HAT!";
+                return new Landed(id, "THE RED CHOPPER! AND BARNABY'S HAT!", freed, kept);
             }
         }
         String name = (perfect ? "PERFECT! " : "") + def.name();

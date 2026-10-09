@@ -51,6 +51,13 @@ final class PondLine implements Actor {
         return sys;
     }
 
+    /** Debug: lands a catch as if just reeled in (shown over the farmer's head). */
+    void debugLand(Shell shell, String id) {
+        line.toX = play.farm().runner.x - 20;
+        line.toY = play.farm().feetY() + 10;
+        show(shell, Fishing.land(shell.game, id, false));
+    }
+
     /** Debug: the line out bites now (on {@code id}, or the waters' own choice). */
     boolean debugBite(String id) {
         if (line.state != Line.WAITING) {

@@ -88,6 +88,7 @@ public final class BubbleBar {
             turnDelay = 64 * (1 + rng.nextInt(2)) - 1;
             timer = turnDelay;
             fishSpeed = -JAWS_SPEED;
+            facingLeft = true;
         } else if (motion != FishDef.CHOPPER && motion != FishDef.RED_CHOPPER) {
             fish = HEIGHT * (0.3f + rng.nextInt(40) / 100f);
         }
