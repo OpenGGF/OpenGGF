@@ -4,6 +4,10 @@ Date: 2026-10-08. Engine/input baseline: `6124a524eef9b42efb800d5bcb95376147507c
 on `develop`. Investigation branch: `feature/ai-graal-native-mod-feasibility-20261008`.
 Host: Linux x86_64, kernel `7.2.8-2-cachyos`; Java sources compiled with Java 21.
 
+Later source-attributed qualification follows below, including the
+[Windows refresh](#windows-refresh-2026-10-09); the initial sixteen-mod study
+does not describe the coverage of those later artifacts.
+
 ## Decision
 
 **Proceed with an explicitly experimental Community Edition prototype; keep the
@@ -767,3 +771,52 @@ unreported broad run. Final captures/ZIP are preserved externally; rehearsal
 captures and regenerable captured runtime stores have been removed. Publication
 is followed by removal of the clean, fully merged task worktree/local branch and
 consumed temporary logs, without touching foreign jobs or source inputs.
+
+## Windows refresh, 2026-10-09
+
+The Windows rebuild starts from published Linux-delivery source
+`b84398a29771fdaf4198c10d34dd181b4ff058b0`, in isolated
+`bugfix/ai-native-windows-mods-20261009`. Stock engine, tests, API, POM, hooks,
+testing policy and normal release build remain unchanged. The three original ROM
+paths are used only locally; no ROM is uploaded to Actions or included in a ZIP.
+
+The previous Windows ZIP (source `f5de9524a943d55191dbf798d405ca8e8e20ca9e`,
+SHA-256 `382e9d183e89c49e11da9f7116c0cb8770d17be97d3f9aa45f9e25228f304d8c`)
+was preserved. Under Wine 11.19 it passes its original 14,992-entry / 1,097-type
+audit. Substituting the current 19-mod, 15,844-entry contract rejects 280 missing
+members with ordinary exit 1. These include newer engine/mod references as well
+as omitted `StandardCharsets`, `StandardCopyOption`, concrete Sonic modules and
+wrapper methods; the total must not be attributed entirely to one original bug.
+A separately compiled runtime-loaded bootstrap fixture aborts the old PE with
+exit 3: `java.lang.runtime.ObjectMethods.bootstrap` was never compiled, and the
+VM specifically recommends preserving `java.lang.runtime`. This independently
+reproduces the Linux record-bootstrap omission in the Windows image under Wine.
+
+The Windows builder now applies the proven Linux contract options
+`--implementation-root=com.openggf.game.GameModule --jdk-members`, derives the
+JDK preservation packages, retains implicit bootstrap/reflection/stream/charset
+packages, resolves `java.logging`, and uses an 8 GiB compilation heap. The shared
+runtime fixture is absent from image analysis and removed before shipping.
+Registration PASS lines must match the JVM exactly. Every mod shortcut and the
+normal launcher are actually invoked with diagnostic arguments on the Windows
+builder. The Windows entry point also compiles the existing platform-neutral
+OpenGL gameplay checker; its historical Linux package name does not select any
+OS-specific runtime behavior. `qualify_wine.py` consumes the immutable Windows
+artifact and runs the same representative gameplay recipes locally through the
+extracted batch shortcuts, with a private prefix and path containing spaces.
+
+Validation scope: the untouched ordinary engine inputs retain the prior
+Linux-delivery qualification. The change-based plan against `b84398a29` selects
+3,075 ordinary classes via its unclassified standalone-tool/workflow fallback.
+For this bounded experimental image correction, direct native image/contract/
+runtime/packaging checks and fresh structural guards replace that disproportionate
+ordinary rerun. Java 21 / Lua 5.4 / PowerShell preflight passes with
+`LUA_BIN=lua5.4`; the initial unqualified default Lua launch was rejected before
+tests. Development-tree `maven_queue.py -B -Dmse=off -Pguards test` completed
+2026-10-09 16:17:30Z: 674 cases, zero failures/errors/skips, Maven exit 0.
+Portable Windows and Linux packaging controls pass (three cases each).
+This is focused validation, not a whole ordinary-suite pass.
+
+Actual Windows compilation/runtime checks and Wine rendered qualification are
+pending at this source checkpoint. Final artifact hashes, source pins and
+coverage limits will be recorded after those processes finish.
