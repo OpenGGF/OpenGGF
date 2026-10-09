@@ -415,7 +415,7 @@ public final class Runner {
             return;
         }
         x = nx;
-        int floor = ground.floorBelow(Math.round(x), Math.round(y) - WALL + 1);
+        int floor = feetFloor(ground, Math.round(y) - WALL + 1);
         if (floor > y + DROP) {
             onGround = false; // walked off a ledge
             ySpeed = 0;
@@ -455,7 +455,7 @@ public final class Runner {
             }
         }
         if (ySpeed >= 0) {
-            int floor = ground.floorBelow(Math.round(x), Math.round(before) - 2);
+            int floor = feetFloor(ground, Math.round(before) - 2);
             if (y >= floor) {
                 y = floor;
                 onGround = true;
@@ -470,6 +470,16 @@ public final class Runner {
                 }
             }
         }
+    }
+
+    /**
+     * Sonic_AnglePos / Sonic_FindFloor: two foot sensors at x - obWidth and x + obWidth (9 pixels)
+     * look down for the floor and the nearer one holds him. There is no sensor at his centre, so a
+     * gap narrower than his feet never takes him, and he balances on a ledge until both feet are off.
+     */
+    private int feetFloor(Ground ground, int fromY) {
+        int cx = Math.round(x);
+        return Math.min(ground.floorBelow(cx - HALF_WIDTH, fromY), ground.floorBelow(cx + HALF_WIDTH, fromY));
     }
 
     private float clampX(Ground ground, float nx) {
