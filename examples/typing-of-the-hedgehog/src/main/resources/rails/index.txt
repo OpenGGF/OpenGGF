@@ -14,3 +14,11 @@ s2-mtz3.rail
 s2-ooz2.rail
 s2-scz.rail
 s2-wfz.rail
+s3k-cnz1.rail
+s3k-dez1.rail
+s3k-fbz1.rail
+s3k-lrz1.rail
+s3k-mgz1.rail
+s3k-mhz1.rail
+s3k-soz1.rail
+s3k-soz2.rail
