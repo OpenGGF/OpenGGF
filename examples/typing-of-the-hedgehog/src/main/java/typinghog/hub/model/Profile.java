@@ -22,7 +22,8 @@ import typinghog.save.LaunchIntent;
  *
  * <ul>
  *   <li>options: {@code difficulty}, {@code dict.lore}, {@code dict.tricky}, {@code dict.user},
- *       {@code capitals}, {@code punctuation}, {@code noFail}, {@code slowMotion}, {@code voice};</li>
+ *       {@code capitals}, {@code punctuation}, {@code noFail}, {@code slowMotion}, {@code voice}
+ *       ({@code MEGADRIVE}, {@code CLEAN} or {@code OFF});</li>
  *   <li>story: {@code cleared.<game>} and {@code emeralds.<game>} as {@code zone:act} lists;</li>
  *   <li>Boss Rush: {@code stars.<game>:<zone>:<act>};</li>
  *   <li>records: {@code record.<table>} as up to ten {@code score/grade/wpm} entries, best first;</li>
@@ -33,7 +34,8 @@ import typinghog.save.LaunchIntent;
  */
 public final class Profile {
     public static final String FILE = "profile.txt";
-    public static final int VERSION = 1;
+    /** 2: {@code voice} became MEGADRIVE, CLEAN or OFF (version 1's true/false still reads). */
+    public static final int VERSION = 2;
     public static final int RECORD_SLOTS = 10;
     public static final int EMERALDS = 7;
 
@@ -62,7 +64,7 @@ public final class Profile {
     private boolean punctuation;
     private boolean noFail;
     private boolean slowMotion;
-    private boolean voice = true;
+    private LaunchIntent.Voice voice = LaunchIntent.Voice.MEGADRIVE;
     private long launches;
 
     private final Map<String, Set<String>> cleared = new TreeMap<>();
@@ -113,7 +115,11 @@ public final class Profile {
             case "punctuation" -> punctuation = Boolean.parseBoolean(value);
             case "noFail" -> noFail = Boolean.parseBoolean(value);
             case "slowMotion" -> slowMotion = Boolean.parseBoolean(value);
-            case "voice" -> voice = Boolean.parseBoolean(value);
+            case "voice" -> voice = switch (value) {
+                case "true" -> LaunchIntent.Voice.MEGADRIVE;
+                case "false" -> LaunchIntent.Voice.OFF;
+                default -> LaunchIntent.Voice.parse(value);
+            };
             case "launches" -> launches = Math.max(0, Long.parseLong(value));
             case "keys.hits" -> keyHits.addEncoded(value);
             case "keys.misses" -> keyMisses.addEncoded(value);
@@ -170,7 +176,7 @@ public final class Profile {
         put(out, "punctuation", punctuation);
         put(out, "noFail", noFail);
         put(out, "slowMotion", slowMotion);
-        put(out, "voice", voice);
+        put(out, "voice", voice.name());
         put(out, "launches", launches);
         cleared.forEach((game, set) -> { if (!set.isEmpty()) put(out, "cleared." + game, String.join(",", set)); });
         emeralds.forEach((game, set) -> { if (!set.isEmpty()) put(out, "emeralds." + game, String.join(",", set)); });
@@ -216,8 +222,8 @@ public final class Profile {
     public void noFail(boolean v) { noFail = v; }
     public boolean slowMotion() { return slowMotion; }
     public void slowMotion(boolean v) { slowMotion = v; }
-    public boolean voice() { return voice; }
-    public void voice(boolean v) { voice = v; }
+    public LaunchIntent.Voice voice() { return voice; }
+    public void voice(LaunchIntent.Voice v) { voice = java.util.Objects.requireNonNull(v); }
 
     /** The dictionaries in {@code LaunchIntent} form: {@code standard} plus any enabled extras. */
     public String dictionaries() {

@@ -96,6 +96,7 @@ class TestTypingHedgehogHubScene {
         String intent = f.saves.get("intent.txt");
         assertNotNull(intent, "the course reads intent.txt");
         assertTrue(intent.contains("mode=STORY") && intent.contains("game=s1") && intent.contains("act=2"), intent);
+        assertTrue(intent.contains("voice=MEGADRIVE"), "the voice choice travels with the act: " + intent);
         assertEquals(intent, f.saves.get("hub-launch.txt"), "the hub keeps its own copy");
     }
 
@@ -225,7 +226,13 @@ class TestTypingHedgehogHubScene {
         String profile = saves.get("profile.txt");
         assertTrue(profile.contains("dict.tricky=true"), profile);
         assertTrue(profile.contains("difficulty=EXPERT"), profile);
-        assertTrue(profile.contains("voice=false"), profile);
+        assertTrue(profile.contains("voice=CLEAN"), "voice cycles from the Mega Drive render to clean: " + profile);
+        f.type("voice");
+        f.step(1);
+        assertTrue(saves.get("profile.txt").contains("voice=OFF"));
+        f.type("mega drive");
+        f.step(1);
+        assertTrue(saves.get("profile.txt").contains("voice=MEGADRIVE"));
         f.drawAll();
     }
 

@@ -36,6 +36,23 @@ final class HubAudio {
         this.course = course;
     }
 
+    /**
+     * The voice seam: plays a voice line through this mod's audio manifest in the player's
+     * chosen render ({@code voice-<line>} for the Mega Drive DAC version,
+     * {@code voice-<line>-clean} for the clean one; nothing when voice is off). Line names are
+     * the voice lane's {@code typinghog.audio.VoiceLine} ids; until those assets are in the jar
+     * the host reports the clip unavailable and this returns false, so screens can call it now.
+     */
+    boolean voice(String line, typinghog.save.LaunchIntent.Voice mode) {
+        if (leaving || line == null || line.isEmpty() || mode == typinghog.save.LaunchIntent.Voice.OFF) return false;
+        String id = "voice-" + line + (mode == typinghog.save.LaunchIntent.Voice.CLEAN ? "-clean" : "");
+        try {
+            return audio.playSfx(id);
+        } catch (IllegalArgumentException badName) {
+            return false;
+        }
+    }
+
     void cue(Cue cue) {
         if (pending == null || cue.ordinal() > pending.ordinal()) pending = cue;
     }

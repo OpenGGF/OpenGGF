@@ -9,9 +9,10 @@ import typinghog.save.LaunchIntent;
 /**
  * Options: difficulty, dictionaries (the standard list is always on; Sonic lore, tricky words
  * and the player's own {@code words.txt} mix in, as in Overkill), Capitals and Punctuation,
- * the No-Fail and Slow-Motion assists, and the voice switch. Left and Right (or Enter) change
- * a row; typing a row's name toggles it, and typing EASY, NORMAL, HARD or EXPERT sets the
- * difficulty. Every change is saved at once.
+ * the No-Fail and Slow-Motion assists, and the voice (the Mega Drive DAC render, the clean
+ * render, or off). Left and Right (or Enter) change a row; typing a row's name changes it,
+ * typing EASY, NORMAL, HARD or EXPERT sets the difficulty and MEGA DRIVE or CLEAN the voice.
+ * Every change is saved at once and travels in each launch's intent.
  */
 final class OptionsScreen implements Screen {
     private static final int ROWS = 10;
@@ -32,7 +33,9 @@ final class OptionsScreen implements Screen {
             WordMenu.Item.of("EASY", "easy"),
             WordMenu.Item.of("NORMAL", "normal"),
             WordMenu.Item.of("HARD", "hard"),
-            WordMenu.Item.of("EXPERT", "expert")));
+            WordMenu.Item.of("EXPERT", "expert"),
+            WordMenu.Item.of("MEGA DRIVE", "mega drive", "megadrive"),
+            WordMenu.Item.of("CLEAN", "clean")));
     private int cursor;
     private long shakeTick = -100;
     private long changeTick = -100;
@@ -62,7 +65,11 @@ final class OptionsScreen implements Screen {
             }
             case SELECTED -> {
                 int item = words.selected();
-                if (item >= ROWS) {
+                if (item >= ROWS + 4) {
+                    cursor = 8;
+                    hub.profile.voice(item == ROWS + 4 ? LaunchIntent.Voice.MEGADRIVE : LaunchIntent.Voice.CLEAN);
+                    changed(hub);
+                } else if (item >= ROWS) {
                     cursor = 0;
                     set(hub, LaunchIntent.Difficulty.values()[item - ROWS]);
                 } else {
@@ -121,7 +128,10 @@ final class OptionsScreen implements Screen {
             case 5 -> p.punctuation(!p.punctuation());
             case 6 -> p.noFail(!p.noFail());
             case 7 -> p.slowMotion(!p.slowMotion());
-            case 8 -> p.voice(!p.voice());
+            case 8 -> {
+                LaunchIntent.Voice[] all = LaunchIntent.Voice.values();
+                p.voice(all[Math.floorMod(p.voice().ordinal() + delta, all.length)]);
+            }
             default -> {
                 return;
             }
@@ -146,7 +156,11 @@ final class OptionsScreen implements Screen {
             case 5 -> onOff(p.punctuation());
             case 6 -> onOff(p.noFail());
             case 7 -> onOff(p.slowMotion());
-            case 8 -> onOff(p.voice());
+            case 8 -> switch (p.voice()) {
+                case MEGADRIVE -> "MEGA DRIVE";
+                case CLEAN -> "CLEAN";
+                case OFF -> "OFF";
+            };
             default -> "";
         };
     }
@@ -163,7 +177,7 @@ final class OptionsScreen implements Screen {
             case 5 -> "Commas, stops and apostrophes must be typed too.";
             case 6 -> "Running out of rings never ends the act.";
             case 7 -> "Badniks approach at 60% speed.";
-            case 8 -> "The announcer, Robotnik and Tails speak their lines.";
+            case 8 -> "The announcer, Robotnik and Tails: Mega Drive sound chip, clean, or silent.";
             default -> "Back to the main menu.";
         };
     }
@@ -190,9 +204,9 @@ final class OptionsScreen implements Screen {
             }
             String value = value(hub, i);
             boolean bump = on && t - changeTick < 8;
-            int colour = value.startsWith("ON") || i == 0 ? Gfx.GOLD : Gfx.DIM;
+            int colour = value.startsWith("ON") || i == 0 || (i == 8 && !value.equals("OFF")) ? Gfx.GOLD : Gfx.DIM;
             if (!value.isEmpty()) {
-                String shown = i == 0 && on ? "< " + value + " >" : value;
+                String shown = (i == 0 || i == 8) && on ? "< " + value + " >" : value;
                 hub.font.right(c, shown, x + pw - 8 + shake, y + 1 - (bump ? 1 : 0), colour, 1);
             }
         }

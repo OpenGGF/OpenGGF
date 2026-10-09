@@ -65,7 +65,7 @@ public final class Handoff {
     public static LaunchIntent intent(LaunchIntent.Mode mode, String game, int zone, int act, Profile p, int bossStars,
                                       long seed) {
         return new LaunchIntent(mode, game, zone, act, p.difficulty(), p.capitals(), p.punctuation(),
-                p.dictionaries(), seed, Math.max(1, bossStars), p.noFail(), p.slowMotion());
+                p.dictionaries(), seed, Math.max(1, bossStars), p.noFail(), p.slowMotion(), p.voice());
     }
 
     // ---- pending selection ------------------------------------------------------------------

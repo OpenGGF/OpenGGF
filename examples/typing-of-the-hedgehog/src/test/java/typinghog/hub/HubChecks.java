@@ -59,7 +59,7 @@ public final class HubChecks {
         p.difficulty(LaunchIntent.Difficulty.EXPERT);
         p.tricky(true);
         p.lore(false);
-        p.voice(false);
+        p.voice(LaunchIntent.Voice.CLEAN);
         p.clear("s2", 0, 1);
         p.awardEmerald("s2", 0, 1);
         p.raiseStars("s1", 0, 2);
@@ -72,7 +72,10 @@ public final class HubChecks {
         Profile back = Profile.decode(p.encode() + "future.field=kept\n");
         eq(LaunchIntent.Difficulty.EXPERT, back.difficulty());
         eq("standard,tricky", back.dictionaries());
-        yes(!back.voice(), "voice off survives");
+        eq(LaunchIntent.Voice.CLEAN, back.voice());
+        eq(LaunchIntent.Voice.OFF, Profile.decode("version=1\nvoice=false\n").voice());
+        eq(LaunchIntent.Voice.MEGADRIVE, Profile.decode("version=1\nvoice=true\n").voice());
+        eq(LaunchIntent.Voice.MEGADRIVE, new Profile().voice());
         yes(back.isCleared("s2", 0, 1), "clear survives");
         eq(1, back.emeraldCount("s2"));
         eq(2, back.stars("s1", 0, 2));
@@ -246,8 +249,12 @@ public final class HubChecks {
         Profile p = new Profile();
         p.capitals(true);
         p.noFail(true);
+        p.voice(LaunchIntent.Voice.OFF);
         LaunchIntent intent = Handoff.intent(LaunchIntent.Mode.ENDLESS, "s2", 3, 1, p, 0, 99);
         eq(intent, LaunchIntent.decode(intent.encode()));
+        yes(intent.encode().contains("voice=OFF"), "the voice choice travels in the intent");
+        eq(LaunchIntent.Voice.MEGADRIVE, LaunchIntent.decode("mode=STORY\ngame=s1\n").voice());
+        eq(LaunchIntent.Voice.MEGADRIVE, LaunchIntent.decode("mode=STORY\nvoice=LOUD\n").voice());
         eq(1, intent.bossStars());
         yes(intent.capitals() && intent.noFail(), "options travel with the intent");
         yes(Handoff.teamMatches("s2", "sonic", Handoff.sidekicks("s2")), "team constant matches itself");
