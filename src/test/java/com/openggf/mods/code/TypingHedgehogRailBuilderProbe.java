@@ -95,7 +95,7 @@ class TypingHedgehogRailBuilderProbe {
     static final int DRIFT_FAIL_PX = 16;
     static final int SYNC_PX = 4;
     static final int STUCK_FRAMES = 600;
-    static final int RESYNC_HORIZON = 300;
+    static final int RESYNC_HORIZON = 600;
     static final int LOOKAHEAD = 300;
     static final int SOAK_ROWS = 1800;
     static final int STAND_CLEAR_ROWS = 50;
@@ -530,7 +530,7 @@ class TypingHedgehogRailBuilderProbe {
     // ------------------------------------------------------------------ straight runs
 
     /** How a run ended; {@code row} is the program row on which it ended (rows before it are clean). */
-    record Outcome(String kind, int row, int divergeRow, int bossRow, int actEndRow, State[] states) {
+    record Outcome(String kind, int row, int divergeRow, int bossRow, int actEndRow, State[] states, int firstDiverge) {
         boolean success() { return kind.equals("boss") || kind.equals("act-end") || kind.equals("level-change"); }
     }
 
@@ -547,7 +547,7 @@ class TypingHedgehogRailBuilderProbe {
     Outcome run(Session s, Program program, Source source, int limitRow, ArrayDeque<Mark> ring, State[] states,
                 boolean stopAtBoss, int driftFrom) {
         int startZone = s.target.zone(), startAct = s.target.act();
-        int divergeRow = -1, bossRow = -1, actEndRow = -1;
+        int divergeRow = -1, bossRow = -1, actEndRow = -1, firstDiverge = -1;
         boolean wasHurt = false;
         java.util.Set<Long> cells = new HashSet<>();
         int lastNewCell = s.driver.row;
@@ -562,39 +562,42 @@ class TypingHedgehogRailBuilderProbe {
             try {
                 s.step();
             } catch (Throwable t) {
-                return new Outcome("exception:" + brief(t), before, divergeRow, bossRow, actEndRow, states);
+                return new Outcome("exception:" + brief(t), before, divergeRow, bossRow, actEndRow, states, firstDiverge);
             }
             if (s.driver.row == before) continue;
             int row = before;
             State st = State.observe();
             if (states != null && row < states.length) states[row] = st;
             if (st.zone() != startZone || st.act() != startAct) {
-                return new Outcome("level-change", row, divergeRow, bossRow, actEndRow < 0 ? row : actEndRow, states);
+                return new Outcome("level-change", row, divergeRow, bossRow, actEndRow < 0 ? row : actEndRow, states, firstDiverge);
             }
-            if (st.dead()) return new Outcome("death", row, divergeRow, bossRow, actEndRow, states);
-            if (st.hurt() && !wasHurt) return new Outcome("hurt", row, divergeRow, bossRow, actEndRow, states);
+            if (st.dead()) return new Outcome("death", row, divergeRow, bossRow, actEndRow, states, firstDiverge);
+            if (st.hurt() && !wasHurt) return new Outcome("hurt", row, divergeRow, bossRow, actEndRow, states, firstDiverge);
             wasHurt = st.hurt();
             if (st.boss() && bossRow < 0) {
                 bossRow = row;
-                if (stopAtBoss) return new Outcome("boss", row, divergeRow, bossRow, actEndRow, states);
+                if (stopAtBoss) return new Outcome("boss", row, divergeRow, bossRow, actEndRow, states, firstDiverge);
             }
             if (st.actEnd() && actEndRow < 0) {
                 actEndRow = row;
-                return new Outcome("act-end", row, divergeRow, bossRow, actEndRow, states);
+                return new Outcome("act-end", row, divergeRow, bossRow, actEndRow, states, firstDiverge);
             }
             int src = program.src()[row];
             if (source.hasRef && src >= 0 && row >= driftFrom) {
                 int d = Math.max(Math.abs(st.x() - source.refX[src]), Math.abs(st.y() - source.refY[src]));
+                // divergeRow is the onset of the current off-reference stretch (reset when back in sync).
                 if (d > 2 && divergeRow < 0) divergeRow = row;
-                if (d > DRIFT_FAIL_PX) return new Outcome("drift", row, divergeRow, bossRow, actEndRow, states);
+                if (d > 2 && firstDiverge < 0) firstDiverge = row;
+                if (d <= 2) divergeRow = -1;
+                if (d > DRIFT_FAIL_PX) return new Outcome("drift", row, divergeRow, bossRow, actEndRow, states, firstDiverge);
             }
             if (cells.add(((long) (st.x() >> 5) << 32) | (st.y() >> 5)) || st.controlled()) {
                 lastNewCell = row;
             } else if (divergeRow >= 0 && row - lastNewCell >= STUCK_FRAMES) {
-                return new Outcome("stuck", lastNewCell, divergeRow, bossRow, actEndRow, states);
+                return new Outcome("stuck", lastNewCell, divergeRow, bossRow, actEndRow, states, firstDiverge);
             }
         }
-        return new Outcome("exhausted", s.driver.row, divergeRow, bossRow, actEndRow, states);
+        return new Outcome("exhausted", s.driver.row, divergeRow, bossRow, actEndRow, states, firstDiverge);
     }
 
     // ------------------------------------------------------------------ repair search
@@ -657,7 +660,7 @@ class TypingHedgehogRailBuilderProbe {
                     edits.add(new Edit(name + " @" + t + " x" + len, 7 + len / 10, t, new Program(m, p.src())));
                 }
             }
-            for (int len : new int[] {8, 16, 32, 60}) {
+            for (int len : new int[] {8, 16, 32, 60, 120}) {
                 int[] m = new int[n + len];
                 int[] src = new int[n + len];
                 System.arraycopy(p.masks(), 0, m, 0, t);
@@ -690,7 +693,7 @@ class TypingHedgehogRailBuilderProbe {
                    Set<String> tried) {
         int f = failure.row();
         int d = failure.divergeRow() >= 0 ? Math.min(failure.divergeRow(), f) : f;
-        int from = Math.max(1, d - 150);
+        int from = Math.max(1, Math.max(f - 300, d - 150));
         List<Edit> edits = edits(p, from, f + 5);
         long deadline = System.currentTimeMillis() + FAILURE_TIME_BUDGET_MS;
         int evaluated = 0;
@@ -710,53 +713,59 @@ class TypingHedgehogRailBuilderProbe {
                 if (!o.success()) continue;
             }
             int resyncLimit = o.kind().equals("exhausted") ? horizon : o.row();
-            Program spliced = null;
-            int spliceRow = -1, spliceSrc = -1;
+            // Splice proposals: rows after the edit whose state loosely matches a recorded state ahead
+            // of the failure; the best few by closeness go to the strict look-ahead.
+            List<int[]> proposals = new ArrayList<>();
             int startCheck = Math.max(f, edit.firstRow()) + 10;
             int floor = Math.max(0, expectedSource(p, d));
-            for (int m = startCheck; m < resyncLimit && spliced == null; m += 5) {
+            for (int m = startCheck; source.hasRef && m < resyncLimit; m += 5) {
                 State st = states[m];
                 if (st == null) continue;
-                if (!source.hasRef) break;
                 int expected = expectedSource(cand, m);
-                for (int sr = Math.max(floor, expected - 300); sr < Math.min(source.length() - 1, expected + 300); sr++) {
-                    if (Math.abs(st.x() - source.refX[sr]) <= 3 && Math.abs(st.y() - source.refY[sr]) <= 3
-                            && Math.abs(st.xs() - source.refXs[sr]) <= 0x60 && Math.abs(st.ys() - source.refYs[sr]) <= 0x60
-                            && st.air() == source.refAir[sr]) {
-                        spliced = cand.splice(m + 1, source, sr + 1);
-                        // The edited stretch no longer follows its old source rows: no reference there.
-                        for (int r = edit.firstRow(); r <= m; r++) spliced.src()[r] = -1;
-                        spliceRow = m;
-                        spliceSrc = sr;
-                        break;
+                for (int sr = Math.max(floor, expected - 600); sr < Math.min(source.length() - 1, expected + 600); sr++) {
+                    int dx = Math.abs(st.x() - source.refX[sr]), dy = Math.abs(st.y() - source.refY[sr]);
+                    int dxs = Math.abs(st.xs() - source.refXs[sr]), dys = Math.abs(st.ys() - source.refYs[sr]);
+                    if (dx <= 4 && dy <= 4 && dxs <= 0x180 && dys <= 0x180 && st.air() == source.refAir[sr]) {
+                        proposals.add(new int[] {(dx + dy) * 64 + dxs + dys, m, sr});
                     }
                 }
             }
-            if (spliced == null && !source.hasRef && o.kind().equals("exhausted")) {
-                // No reference path (authored route): survive the horizon and keep the edited tail.
-                spliced = cand;
-                spliceRow = horizon;
-            }
-            if (spliced == null) continue;
-            // Look-ahead on the spliced program: no failure and back on the reference.
-            State[] look = new State[spliced.length()];
-            s.restore(mark, spliced.masks());
-            int lookEnd = Math.min(spliced.length(), spliceRow + 1 + LOOKAHEAD);
-            Outcome la = run(s, spliced, source, lookEnd, null, look, false, spliceRow + 1);
-            if (!la.kind().equals("exhausted") && !la.success()) continue;
-            if (source.hasRef && la.divergeRow() >= 0 && la.divergeRow() > spliceRow) {
+            proposals.sort(Comparator.comparingInt((int[] a) -> a[0]).thenComparingInt(a -> a[1]));
+            if (!source.hasRef && o.kind().equals("exhausted")) proposals.add(new int[] {0, horizon, -1});
+            Program accepted = null;
+            int spliceRow = -1, spliceSrc = -1;
+            for (int i = 0; i < Math.min(3, proposals.size()) && accepted == null; i++) {
+                int m = proposals.get(i)[1], sr = proposals.get(i)[2];
+                Program spliced;
+                if (sr < 0) {
+                    // No reference path: survive the horizon and keep the edited tail.
+                    spliced = cand;
+                } else {
+                    spliced = cand.splice(m + 1, source, sr + 1);
+                    // The edited stretch no longer follows its old source rows: no reference there.
+                    for (int r = edit.firstRow(); r <= m; r++) spliced.src()[r] = -1;
+                }
+                State[] look = new State[spliced.length()];
+                s.restore(mark, spliced.masks());
+                int lookEnd = Math.min(spliced.length(), m + 1 + LOOKAHEAD);
+                Outcome la = run(s, spliced, source, lookEnd, null, look, false, m + 1);
+                if (!la.kind().equals("exhausted") && !la.success()) continue;
                 boolean ok = true;
-                for (int r = spliceRow + 1; r < lookEnd && ok; r++) {
+                for (int r = m + 1; sr >= 0 && r < lookEnd && ok; r++) {
                     int src = spliced.src()[r];
                     if (look[r] == null || src < 0) continue;
                     ok = Math.abs(look[r].x() - source.refX[src]) <= SYNC_PX && Math.abs(look[r].y() - source.refY[src]) <= SYNC_PX;
                 }
                 if (!ok) continue;
+                accepted = spliced;
+                spliceRow = m;
+                spliceSrc = sr;
             }
+            if (accepted == null) continue;
             log.append(String.format("  repair %s at row %d (diverged %d): %s; resync row %d -> source %d (trace row %d), %d candidates%n",
                     failure.kind(), f, failure.divergeRow(), edit.description(), spliceRow, spliceSrc,
                     spliceSrc >= 0 ? source.traceRow[spliceSrc] : -1, evaluated));
-            return spliced;
+            return accepted;
         }
         log.append(String.format("  no repair for %s at row %d (diverged %d) after %d candidates%n",
                 failure.kind(), f, failure.divergeRow(), evaluated));
@@ -786,11 +795,12 @@ class TypingHedgehogRailBuilderProbe {
                     s.restore(origin, p.masks());
                     Outcome o = run(s, p, source, Math.min(p.length(), pad + (pass == 0 ? 900 : 4000)), null,
                             new State[p.length()], true);
-                    int good = o.divergeRow() >= 0 ? o.divergeRow() : o.row();
+                    // Source rows kept in sync: a later failure row bought by a longer pad is no gain.
+                    int good = (o.firstDiverge() >= 0 ? o.firstDiverge() : o.row()) - pad;
                     if (good > bestRow) { bestRow = good; bestPad = pad; }
                 }
             }
-            log.append(String.format("  title pad %d rows (in sync to row %d)%n", bestPad, bestRow));
+            log.append(String.format("  title pad %d rows (in sync for %d source rows)%n", bestPad, bestRow));
             return bestPad;
         } finally {
             s.close();
@@ -799,7 +809,8 @@ class TypingHedgehogRailBuilderProbe {
 
     // ------------------------------------------------------------------ build
 
-    record Built(Program program, int validated, int bossRow, List<Integer> stands, String endKind, int repairs) { }
+    record Built(Program program, int validated, int bossRow, List<Integer> stands, String endKind, int repairs,
+                 boolean rejected) { }
 
     Built build(Target target, StringBuilder log) throws IOException {
         Source source = load(target);
@@ -808,6 +819,7 @@ class TypingHedgehogRailBuilderProbe {
         int pad = alignPad(target, source, log);
         Program program = Program.fromSource(source, pad, 0);
         Set<String> tried = new HashSet<>();
+        List<Integer> failures = new ArrayList<>();
         int repairs = 0;
         Outcome last;
         State[] states;
@@ -820,6 +832,13 @@ class TypingHedgehogRailBuilderProbe {
                 log.append(String.format("  straight run: %s at row %d (diverged %d)%n", last.kind(), last.row(), last.divergeRow()));
                 if (last.success() || repairs >= MAX_REPAIRS) break;
                 if (last.kind().equals("exhausted")) break;
+                // A failure that keeps returning after accepted repairs is restore-vs-fresh drift: stop.
+                int f = last.row();
+                if (failures.stream().filter(x -> Math.abs(x - f) <= 10).count() >= 2) {
+                    log.append("  failure at row " + f + " keeps returning; stopping repairs\n");
+                    break;
+                }
+                failures.add(f);
                 Program repaired = repair(s, program, source, last, ring, log, tried);
                 if (repaired == null) break;
                 program = repaired;
@@ -831,10 +850,11 @@ class TypingHedgehogRailBuilderProbe {
         // Validated end: the boss arena / act end, or the last clean row before the failure.
         int end = last.success() ? last.row() : Math.max(0, last.row() - 1);
         Choice choice = chooseStands(target, program, source, states, end, last, log);
-        return new Built(program, choice.bossRow(), choice.bossRow(), choice.stands(), last.kind(), repairs);
+        return new Built(program, choice.bossRow(), choice.bossRow(), choice.stands(), last.kind(), repairs,
+                choice.rejected());
     }
 
-    record Choice(int bossRow, List<Integer> stands) { }
+    record Choice(int bossRow, List<Integer> stands, boolean rejected) { }
 
     /** A row Sonic can be held on: grounded, flat or slow, not riding, not hurt, controllable. */
     static boolean standable(State st) {
@@ -878,9 +898,24 @@ class TypingHedgehogRailBuilderProbe {
             }
             if (chosen >= 0) stands.add(chosen);
         }
-        boolean ok = chain(target, program, source, states, stands, bossRow, log, true);
-        log.append(String.format("  stands %s; full chain %s%n", stands, ok ? "EXACT" : "FAILED"));
-        return new Choice(bossRow, stands);
+        // The whole chain must reproduce in two fresh sessions; a failure drops the stand before it.
+        boolean ok = false;
+        for (int attempt = 0; attempt < 10 && !ok; attempt++) {
+            int bad = chainFailure(target, program, source, states, stands, bossRow, log, true);
+            if (bad < 0) bad = chainFailure(target, program, source, states, stands, bossRow, log, true);
+            if (bad < 0) { ok = true; break; }
+            if (bad == bossRow && !stands.contains(bad)) {
+                if (stands.isEmpty()) break;
+                stands.removeLast();
+                continue;
+            }
+            int drop = -1;
+            for (int stand : stands) if (stand <= bad) drop = stand;
+            if (drop < 0) break;
+            stands.remove(Integer.valueOf(drop));
+        }
+        log.append(String.format("  stands %s; full chain %s%n", stands, ok ? "EXACT (twice)" : "FAILED: rail rejected"));
+        return new Choice(bossRow, stands, !ok);
     }
 
     private static int nearestStandable(State[] states, int row, int radius) {
@@ -897,6 +932,12 @@ class TypingHedgehogRailBuilderProbe {
      */
     boolean chain(Target target, Program program, Source source, State[] straight, List<Integer> stands, int bossRow,
                   StringBuilder log, boolean verbose) throws IOException {
+        return chainFailure(target, program, source, straight, stands, bossRow, log, verbose) < 0;
+    }
+
+    /** -1 when the chain reproduces; else the stand row whose soak failed, the diverging row, or the boss row. */
+    int chainFailure(Target target, Program program, Source source, State[] straight, List<Integer> stands, int bossRow,
+                     StringBuilder log, boolean verbose) throws IOException {
         Session s = new Session(target, program);
         try {
             int next = 0;
@@ -906,7 +947,7 @@ class TypingHedgehogRailBuilderProbe {
                     Mark mark = s.mark();
                     if (!soak(s, SOAK_ROWS + STAND_CLEAR_ROWS)) {
                         if (verbose) log.append("    stand " + at + ": soak failed\n");
-                        return false;
+                        return at;
                     }
                     s.restore(mark, program.masks());
                     next++;
@@ -919,12 +960,12 @@ class TypingHedgehogRailBuilderProbe {
                 State ref = straight[before];
                 if (ref == null || !st.samePlace(ref) || st.hurt() || st.dead()) {
                     if (verbose) log.append("    chain diverged at row " + before + " (" + st + " vs " + ref + ")\n");
-                    return false;
+                    return before;
                 }
             }
             boolean safe = soak(s, SOAK_ROWS);
             if (!safe && verbose) log.append("    boss soak failed at row " + bossRow + "\n");
-            return safe;
+            return safe ? -1 : bossRow;
         } finally {
             s.close();
         }
@@ -971,6 +1012,12 @@ class TypingHedgehogRailBuilderProbe {
 
     void write(Target target, Built built, StringBuilder log) throws IOException {
         Files.createDirectories(OUT);
+        if (built.rejected()) {
+            Files.deleteIfExists(OUT.resolve(target.file()));
+            log.append(String.format("REJECTED %s %s validated=%d: its stand chain does not reproduce%n",
+                    target.code(), target.name(), built.validated()));
+            return;
+        }
         String text = String.join("\n",
                 "# " + target.code() + " " + target.name() + ": built by TypingHedgehogRailBuilderProbe from "
                         + target.source() + " (" + built.repairs() + " repairs, ended " + built.endKind() + ")",
