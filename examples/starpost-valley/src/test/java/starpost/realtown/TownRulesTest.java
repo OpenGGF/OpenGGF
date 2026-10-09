@@ -114,4 +114,16 @@ class TownRulesTest {
         one.pickups().nextDay(one.game()); one.game().calendar.nextDay();
         one.bind(one.game(),one.layout(),null); assertFalse(one.pickups().taken(0));
     }
+    @Test void inputFilterReservesPadBAndBlocksNativeMovementDuringDialogue() {
+        TownSession town=town(); TownInput input=new TownInput(town);
+        var raw=com.openggf.control.PlayerInputState.of(8,8,7,7,true,true);
+        var filtered=input.filter(raw);
+        assertEquals(8,filtered.heldMask()); assertEquals(5,filtered.actionHeldMask());
+        assertEquals(5,filtered.actionPressedMask()); assertTrue(filtered.startPressed());
+        town.game().inventory.select(11); town.talk("dandel");
+        assertEquals(com.openggf.control.PlayerInputState.neutral(),input.filter(raw));
+        town.request("inn",null,896,173); town.consumeHandBack();
+        assertSame(raw,input.filter(raw),"suspended town must not filter other acts");
+    }
+
 }

@@ -6,9 +6,17 @@ import com.openggf.game.LevelInputOverlay;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /** Uses the engine's input edges (including pad B), so held keys never reopen a menu. */
-public final class TownInput implements LevelInputOverlay {
+public final class TownInput implements LevelInputOverlay, com.openggf.game.GameplayInputFilter {
     private final TownSession session;
     public TownInput(TownSession session) { this.session = session; }
+    /** B is town action, not the native jump union. Modal input cannot drive the real player. */
+    public com.openggf.control.PlayerInputState filter(com.openggf.control.PlayerInputState raw) {
+        if (!session.active()) return raw;
+        if (session.modal()) return com.openggf.control.PlayerInputState.neutral();
+        return com.openggf.control.PlayerInputState.of(raw.heldMask(),raw.pressedMask(),
+            raw.actionHeldMask() & ~InputActionMasks.ACTION_B,
+            raw.actionPressedMask() & ~InputActionMasks.ACTION_B,raw.startHeld(),raw.startPressed());
+    }
     public boolean handleInput(InputHandler input) {
         if (!session.active()) return false;
         var pad = input.logical().player1();
@@ -26,7 +34,7 @@ public final class TownInput implements LevelInputOverlay {
                 || input.isKeyPressed(90) || (actions & (InputActionMasks.ACTION_A|InputActionMasks.ACTION_C))!=0,
             input.isKeyPressed(263) || input.isKeyPressed(262) || input.isKeyPressed(265) || input.isKeyPressed(264)
                 || (directions & 15)!=0,
-            input.isKeyPressed(258) || input.isKeyPressed(73),hotbar);
-        return modal;
+            input.isKeyPressed(258) || input.isKeyPressed(73) || pad.startPressed() || !modal && input.isKeyPressed(257),hotbar);
+        return modal || pad.startPressed() || input.isKeyPressed(257);
     }
 }

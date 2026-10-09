@@ -61,9 +61,11 @@ public final class Pickups implements SaveSection {
             }
             Runner r = play.valley().runner;
             if (Math.abs(r.x - x) < 12 && Math.abs(r.y - 16 - y) < 22) {
+                int before = item == null ? 0 : shell.game.inventory.total(item);
                 if (owner.collect(index, item, shell.game)) {
                     shell.sfx(item == null ? Sfx.RING : Sfx.GRAB);
-                    if (item != null) shell.toast("FOUND " + shell.game.item(item).name());
+                    if (item != null) shell.toast("FOUND " + (shell.game.inventory.total(item) - before > 1 ? "TWO " : "")
+                            + shell.game.item(item).name());
                 }
             }
         }

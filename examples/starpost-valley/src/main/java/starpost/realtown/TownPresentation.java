@@ -18,9 +18,13 @@ public final class TownPresentation {
     private final Art art;
     private final PeopleArt peopleArt;
     private final FestivalSystem festivals;
+    private final starpost.scene.PlayScreen play;
     private final Map<SceneImage,List<LevelPictureCanvas.Span>> images=LevelPictureCanvas.cache();
     public TownPresentation(Art art,FestivalSystem festivals) {
-        this.art=art; peopleArt=new PeopleArt(art); this.festivals=festivals;
+        this(art,festivals,null);
+    }
+    public TownPresentation(Art art,FestivalSystem festivals,starpost.scene.PlayScreen play) {
+        this.art=art; peopleArt=new PeopleArt(art); this.festivals=festivals; this.play=play;
     }
     private SceneCanvas canvas(ObjectServices services) {
         return new LevelPictureCanvas(new LevelOverlayCanvas(services.graphicsManager(),
@@ -30,6 +34,10 @@ public final class TownPresentation {
         SceneCanvas canvas=canvas(services);
         int x=place.x()-services.camera().getX();
         int floor=town.layout().ground.floorBelow(place.x(),0), y=floor-services.camera().getY();
+        if (place.id().equals("museum") && play != null) {
+            starpost.museum.MuseumSystem.drawTownAnnex(play,canvas,x,y);
+            return;
+        }
         var look=art.season(town.game().calendar.season());
         SceneImage building=switch (place.id()) {
             case "seed_stall"->look.seedStall; case "inn"->look.inn;

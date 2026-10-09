@@ -21,12 +21,17 @@ public final class TownContent {
         context.registerServiceBundle("town", () -> GameServiceBundle.builder()
             .capturedService("state", TownSession.class, session)
             .service(LevelInputOverlay.class, new TownInput(session)).build());
-        context.registerObject(CONTROLLER, (spawn, registry) -> new TownController(spawn));
-        context.registerObject(VILLAGER, (spawn, registry) -> new TownVillager(spawn));
-        context.registerObject(DOOR, (spawn, registry) -> new TownDoor(spawn));
-        context.registerObject(PICKUP, (spawn, registry) -> new TownPickup(spawn));
-        context.registerObject(DECORATION, (spawn, registry) -> new TownDecoration(spawn));
+        context.registerObject("town-controller", (spawn, registry) -> new TownController(spawn));
+        context.registerObject("town-villager", (spawn, registry) -> new TownVillager(spawn));
+        context.registerObject("town-door", (spawn, registry) -> new TownDoor(spawn));
+        context.registerObject("town-pickup", (spawn, registry) -> new TownPickup(spawn));
+        context.registerObject("town-decoration", (spawn, registry) -> new TownDecoration(spawn));
         return session;
+    }
+
+    /** The terrain/E1 integration registers this for its tagged valley destination. */
+    public static void registerInput(ModContext context, com.openggf.game.ZoneKey.Mod destination, TownSession session) {
+        context.registerInputFilter(new com.openggf.mods.code.ModInputFilterContribution(destination,new TownInput(session)));
     }
 
     public static ObjectSpawn spawn(String key, int index, int x, int y) {

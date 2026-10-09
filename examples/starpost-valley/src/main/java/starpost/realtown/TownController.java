@@ -28,7 +28,7 @@ public final class TownController extends AbstractObjectInstance implements ModR
             services().objectManager().addDynamicObject(new TownDecoration(TownContent.spawn(TownContent.DECORATION,1,150,192)));
             int i=0;
             for (var def : town.people().cast.all()) {
-                var spawn = TownContent.spawn(TownContent.VILLAGER,i++,town.layout().anchor(def.home()),192);
+                var spawn = TownContent.spawn(TownContent.VILLAGER,i++,town.layout().anchor("farm_gate"),192);
                 services().objectManager().addDynamicObject(new TownVillager(spawn));
             }
             for (i=0; i<town.layout().doors.size(); i++) {
@@ -40,6 +40,7 @@ public final class TownController extends AbstractObjectInstance implements ModR
                     pickup.index(),Math.round(pickup.x()),Math.round(pickup.y()))));
         }
         int x=entity.getCentreX(), y=entity.getCentreY();
+        if (entity.getDead()) town.request("fainted",null,x,y);
         boolean held=town.modal();
         town.tick(x,y,!entity.getAir());
         if (!held && !town.modal() && !entity.getAir() && !entity.isObjectControlled()) {

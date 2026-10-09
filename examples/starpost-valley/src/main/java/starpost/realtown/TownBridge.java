@@ -11,7 +11,7 @@ public final class TownBridge {
     private TownBridge() {}
     public static void prepare(TownSession town,Shell shell,PlayScreen play) {
         town.bind(shell.game,TownLayout.from(play.valley().valley),
-            new TownPresentation(shell.art,FestivalSystem.forPlay(play)));
+            new TownPresentation(shell.art,FestivalSystem.forPlay(play),play));
     }
     public static void resume(Shell shell,PlayScreen play,TownSession.HandBack result) {
         if (result==null) return;
