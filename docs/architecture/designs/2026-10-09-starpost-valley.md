@@ -696,3 +696,109 @@ Lanes (lead plus a few at a time, each in its own worktree, merged into
 | People | `starpost.people`: the villager roster, schedules, picture speech, the translator, gifts, hearts, heart events, mail, Partners |
 | Ruins | `starpost.ruins`: the Marble Ruins chambers from the Marble Zone kit, spin-jump combat, ores and minerals, Star Post elevators, Scrap Brain Depths |
 | Waters and barns | Fishing (Bubble Bar, fish, badnik legends, the lake), animals and buildings on the farm, artisan machines, badnik automation, Flicky roosts |
+
+## 15. People (lane)
+
+Branch `feature/ai-starpost-people` (base `facc4b595`), package `starpost.people`. The valley's
+neighbours from §7 with the kickoff decisions: Partners instead of romance, and animal villagers
+who speak in pictures until the Chirp Translator.
+
+### What is built
+
+| Part | Where | Notes |
+|---|---|---|
+| Rules and save | `People` (the `people` `SaveSection`), `Bond`, `VillagerDef`, `Line`, `Situation` | 250 points a heart, ten hearts; villagers without a Partner arc stop at eight. Talking once a day +20; gifts by taste +80/+45/+20/-20/-40 (item entry, else the item's `Kind`, else neutral), one a day and two a week, eight times on a birthday (which does not use up the week). −2 a day without a word, except Partners. Tools are never gifts. |
+| Cast | `cast/*.java`, one builder class per villager, `Cast` lists them | 14 neighbours: Sonic, Tails, Knuckles (two of them, whoever does not farm), Dr. Robotnik, Rusty, Pip, Dandel, Clementine, Pud, Barnaby, Frost, Hazel, the Elder Totem, and Moto the pet. About 25 daily lines each plus gift reactions, second-talk lines and thank-you notes (about 500 lines in all). |
+| Schedules | `Schedule`, `Spot`, `Anchors`, `VillagerActor` | Plans by season, weekday, weather and story flag, most specific first, as timed stops (`at`, `inside`, `farm`). Anchors are `Valley.places` ids at run time (a moved building keeps its regulars), with fallback x positions for tests. Villagers walk along the valley floor, cross the farm gate to visit the belt-view farm, go indoors (not drawn), and come out of the same door. |
+| Talking | `DialogueScreen`, `Speech`, `PeopleArt`, `Pictures`, `Glyphs` | The action button near a villager. The speaker's ROM sprite at 1x in a framed portrait, a name plate and typed, paged text. Holding a giftable item asks "GIVE THE … TO …?" first. Lines are chosen per day: special lines (first meeting, birthday, a date such as a festival eve, the week after a heart event) win; otherwise a weighted draw that favours rain, season, heart and farmer lines and avoids the last six said. |
+| Picture speech | `Pictures`, `Glyphs` | Animals before the translator speak in a bubble of pictures shown one by one: item icons (`art.icons`), faces (head crops of ROM sprites; Sonic and Robotnik are the signpost's frames 3 and 0), the ROM's ring, Motobug and Flicky, and small original glyphs (heart, rain, sun, snow, moon, note, house, gift, clock...). Lines can author their pictures; otherwise they are read from the words (item names, villager names, a word list, then the punctuation's mood). |
+| The translator | `People.TRANSLATOR` story flag in `Game.flags` | Set by Tails's 2-heart event (which also reprograms Moto, flag `moto_reprogrammed`). When Tails farms he is not a villager, so Sonic's 2-heart event (`sonic_2t`) has Tails build it at Sonic's prodding. |
+| Heart events | `HeartEvent`, `Step`, `EventScreen` | Scripts of place/walk/move/face/emote/say/pause/give/flag/music/sfx/pose/hop/leave/fade, positioned relative to where the farmer stood, so a scene plays wherever it triggers. Triggered by standing near an anchor in the valley (or anywhere on the farm) in a time window, with enough hearts and the previous event seen; marked seen when it starts. Letterbox bars hide the HUD; the clock stops. 42 events (table below). |
+| Mail | `Letter`, `cast/Mail.java`, `LetterScreen`, `PeopleSystem` | Each morning a Flicky flies in to the farmer with the day's letters (welcomes, Robotnik's offers and adverts, news, notes the morning after events, thank-you notes for loved gifts, Pip's birthday reminders the day before). Dated letters without `yearOne` come every year. Enclosures are given when read, or wait for room. |
+| Partners | `VillagerDef.partner`, `People.morning` | Tails (10 hearts: +10 Water Shield charges each morning) and Clementine (a Chili Dog in your monitors each morning). |
+| Social page | `SocialPage` | From the monitor slots (UP on the top row, or E): everyone met with hearts (partial fill toward the next), birthday, gifts this week, today's talk, Partner badge, the selected neighbour's line and discovered loved gifts. |
+| Debug | `PeopleDebug` (`jump=people_...`) | `hearts ID|all N`, `partner ID`, `translator on|off`, `talk ID`, `event ID`, `social`, `mail ID`, `hold ID X [DEPTH] [left]`, `release ID`, `pose ID NAME`, `snap`. |
+
+Bodies are ROM sprites only: the S3K heroes (Tails with his tails behind him while standing,
+`Obj_Tails_Tail_AniSelection`'s swish frames $22–$26), the S3K Egg Robo, Sonic 1's on-foot Eggman
+(`ArtNem_SBZ2_Eggman` $5E4CE / `Map_SEgg` $1A1E4 in `Pal_Sonic` $2380 plus `Pal_SBZ2` $2660;
+running is `Ani_SEgg`'s 7, 4, 8, 4), Sonic 1's freed animals at their native 16×24 (`Map_Animal`
+frames 0–1 to hop or flap, 2 to stand), Sonic 1's Motobug and Green Hill's totem pole in the
+season's colours.
+
+### Heart events
+
+| Villager | 2 | 4 | 6 | 8 | 10 |
+|---|---|---|---|---|---|
+| Tails | Chirp Translator, Moto reprogrammed | Buzz Bomber sprinkler blueprint (farm) | The Tornado's engine humming in the Ruins | Under the wing at night: "I'm scared you'll leave" | The engine roars: Partner |
+| Clementine | Second breakfast, radish stew recipe | The Lamppost Cookbook | The Chili Dog recipe (half Fire Shield Pepper) | At the Capsule: the night it opened; she stays | Breakfast at dawn on the farm: Partner |
+| Dr. Robotnik | The salesman: free Egg-plant seeds | Tries to buy the farm (farm) | Appoints himself Fair judge: Eggman Pumpkin seeds | "Badniks were meant to be rides" blueprint | — (out of scope) |
+| Pip | Moves into the signpost (farm) | Her mother's lost letter in the waterfall | Organises the Night of the Flickies | Will lead the migration and come back (farm) | — |
+| Dandel | A slow day: free radish seeds | Sells the farm's crops | Refuses Robotnik's buyout | The stall becomes the co-op | — |
+| Knuckles | Suspects the farmer | A dig test in the meadow | A digging lesson and island grape seeds (farm) | Lonely on the ledge at night | — |
+| Sonic | Translator (Tails farms) / loop dare (Knuckles farms); the valley at speed | Chili dogs on the Inn's porch | | | |
+| Rusty, Pud, Barnaby, Frost, Hazel, Elder Totem | Day off; the lamp; fishing lesson; the cold spot; a race; the meadow's memory | The Star Post chimes; into the Ruins' mouth; the hat story; homesick for Ice Cap; a missing relic; a promise and totem leeks | | | |
+
+Events leave story flags for other systems: `blueprint_buzz_sprinkler`, `blueprint_motobug_ride`,
+`recipe_radish_stew`, `recipe_chili_dog`, `lamppost_cookbook`, `pud_lamp`, `pud_brave`,
+`barnaby_fishing_lesson`, `red_chopper_story`, `knuckles_dig_lesson`, `seed_coop`,
+`starposts_repaired`, `rusty_day_off` (changes his Sundays), `tornado_engine_heard`,
+`museum_relic_missing`, `partner_tails`, `partner_clementine`, `inn_kitchen_garden`.
+
+### Seams touched outside the package
+
+- `Systems.sections` adds `new People()`; `Systems.install` calls `PeopleSystem.install`.
+- `Debug` routes `people ...` to `PeopleDebug`.
+- `InventoryMenu`: UP on the top row (or E) opens the social page, with a hint line.
+
+Notes for the lead: `DayEndScreen` stops the signpost on `Map_Sign` frame 3, which is the
+third spin frame; Sonic's face is frame 4 (`.sonic`). `Debug` splits commands on underscores, so
+ids with underscores need rejoining (`PeopleDebug.merge` does it for people commands; core
+`give_ring_radish_1` cannot reach `ring_radish`).
+
+### Decisions and rejected approaches
+
+- **Hero worship needs a hero.** Lines that only make sense for one farmer are conditioned with
+  `farmer(...)` (`sayIf` in events); a test talks to Tails for forty days with Knuckles farming and
+  checks no Sonic-only line appears.
+- **Pictures read from words, authored where it matters.** Authoring a picture version for every
+  animal line doubles the writing; reading them from item and villager names gives every line
+  pictures (tested), and the key lines (events, gifts, greetings) carry authored ones.
+- **Events triggered by approach, not by doorways.** The doorways' handlers belong to other
+  systems (the Inn, the shop), so events fire when the farmer stands within a radius of an anchor.
+- **No static tables.** Every list (glyph grids, keyword pictures, anchors) is a method returning a
+  new value or a `switch`, for the mod validator.
+- **Picture speech at 2x.** At 1x the 16-pixel icons were hard to read in a 400-pixel bubble
+  (look-test capture of Dandel's greeting); icons and glyphs now draw at 2x, faces and signs
+  (already 22–32 pixels) at 1x. The speakers' portraits stay at 1x as the brief asks.
+- **Names under the feet.** Name labels over villagers' heads collided with the doorway labels
+  ("UP: DANDEL'S SEEDS") and with each other; only the nearest villager is named, on the
+  ground beneath it.
+- **The Egg Robo is three objects.** `Map_EggRobo` frame 0 is empty; Rusty is the body (frame 1)
+  plus the jet flame child (frames 4–6) at `ChildObjDat_919D0`'s offset, without the gun arm.
+- **Not built:** S2's bear and monkey, Partner cabins on the farm, 10-heart events beyond Tails
+  and Clementine (Robotnik's is full-game scope), choices inside events, and gifts or talk with
+  villagers who are indoors.
+
+### Tests
+
+`src/test/java/starpost/people/PeopleRulesTest.java` (engine-free): friendship and caps,
+tastes and kind overrides, the daily and weekly gift limits and birthdays, fading and Partners,
+every schedule resolving every ten minutes of every kind of day to a known spot, heroes absent
+when they farm and Knuckles arriving in Summer, events firing only in their place and time and
+only once, the translator switching speech mode (and every animal line having pictures), the cast
+having its lines, reactions and events, line variety and farmer-specific lines, the morning post
+and Partner perks, the section's round trip through `SaveCodec`, and damaged input rejected or
+clamped.
+
+```
+# fast creator tests through CreatorTestLauncher (a throwaway runner outside the repository)
+java -cp "$R/out:$CP" RunCreatorTests $R/tests $R/main        # 24 tests (9 core, 15 people), all pass
+# captures (ExampleModCapture, scripts use jump=people_...); validation: "Validation passed: 0 findings"
+java -cp "$CP" com.openggf.mods.code.ExampleModCapture --rom "$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  --mod examples/starpost-valley --out <dir> --script-file <script> --every 15 --ticks 430
+python3 tools/testing/maven_queue.py --lean -B -Dmse=off -Dtest=TestStarpostValleyExample test
+```
+
+A mutation check (Partners fading; first-meeting lines always matching) turned two tests red, so
+the rules tests do assert what they claim.
