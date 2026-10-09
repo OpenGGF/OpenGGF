@@ -272,8 +272,8 @@ two-sprite Sonic and Tails roster); (3) typed text from a non-US layout reaches 
 ### Mod structure
 
 - One `baseGame: any` jar: the hub is its startup scene, and one patch per game
-  installs the course controller and removes stock badniks through
-  `transformDecodedLevel`. Shared state crosses the scene/gameplay boundary only
+  installs the course controller. Stock badniks stay in the level: removing them
+  changes the recorded runs the rails replay (see Rails). Shared state crosses the scene/gameplay boundary only
   through the mod's storage: the hub writes `intent.txt` (mode, act, difficulty,
   options, seed) before `startStockAct`; the course writes `result.txt` before its
   title request reopens the hub.
@@ -288,6 +288,21 @@ two-sprite Sonic and Tails roster); (3) typed text from a non-US layout reaches 
   the fallback.
 - The engine-free core (`typinghog.core`: prompt forms, typing field, scorecard,
   lexicon) is checked by `CoreChecks` without the engine.
+- Who each zone stages is data: `cast/<game>.txt` lists its badniks (stock art key,
+  archetype, ROM animation frames), `props/<game>.txt` the monitor icons and animal,
+  and `bosses/<game>.txt` its boss rig (`BossRig`): ROM sprite parts drawn back to front
+  round Robotnik, each with a frame cycle per mood (idle, window open, lunge, hit,
+  laugh, defeat, flee) and optional pendulum (GHZ wrecking ball), chain links or orbit
+  (FZ plasma). Frames and delays come from the stock bosses' mappings and animation
+  scripts. `TestTypingHedgehogArt{Sonic1,Sonic2,S3k}` load every shipped rail's act and
+  fail on any table frame that act cannot draw.
+- The boss plays the stock fight's beats: it enters from the right, lunges at Sonic
+  when a window closes unanswered (wind-up, dash, hit, laughing retreat), shudders
+  back when struck, and when beaten explodes in place for 120 rows before fleeing
+  right with its escape flame, as the stock bosses do.
+- A `demo=true` intent makes the course type for the player (the locked word's next
+  letter, else the most urgent word's, about ten keys a second, on its own random
+  stream). It drives captures, and the hub can use it for an attract demo.
 
 ## Delivery plan
 

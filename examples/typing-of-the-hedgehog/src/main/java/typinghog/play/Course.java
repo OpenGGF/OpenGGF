@@ -79,6 +79,8 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
     private int slowPhase;
     private long rows;
     private SplittableRandom random;
+    private SplittableRandom demoRandom;
+    private int demoWait;
     private typinghog.core.Lexicon.Picker picker;
     private final KeyStats keyStats = new KeyStats();
     private final RunTags runTags = new RunTags();
@@ -110,7 +112,7 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
             return false;
         }
         phaseRows++;
-        typeRow(typed, backspace);
+        typeRow(typed + demoTyped(), backspace);
         if (invincibleRows > 0) invincibleRows--;
         if (slowRows > 0 || intent.slowMotion()) {
             if (slowRows > 0) slowRows--;
@@ -191,6 +193,8 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
         field = new TypingField(intent.capitals());
         card = new Scorecard();
         random = new SplittableRandom(intent.seed());
+        demoRandom = new SplittableRandom(intent.seed() ^ 0xDE30L);
+        demoWait = 30;
         picker = assets.lexicon().new Picker(intent.seed() ^ 0x5EED, 48);
         keyStats.clear();
         announcer.clear();
@@ -224,6 +228,28 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
         enter(Phase.RUN);
         say(random.nextBoolean() ? VoiceLine.ANNOUNCER_GET_READY : VoiceLine.ANNOUNCER_TYPE_TO_SURVIVE);
         return true;
+    }
+
+    /**
+     * A demo intent's typist: the locked word's next letter, else the most urgent word's first, at
+     * a steady human pace (about ten keys a second), on its own random stream so a demo plays the
+     * same course a player would.
+     */
+    private String demoTyped() {
+        if (!intent.demo() || field == null || demoRandom == null) return "";
+        if (--demoWait > 0) return "";
+        demoWait = 4 + demoRandom.nextInt(5);
+        TypingField.Target target = field.locked() >= 0 ? field.target(field.locked()) : null;
+        int preferred = encounter == null ? -1 : encounter.preferredTarget();
+        if (target == null && preferred >= 0) target = field.target(preferred);
+        if (target == null) {
+            target = field.targets().stream().filter(TypingField.Target::typeable)
+                    .min(java.util.Comparator.comparingInt(TypingField.Target::urgency)).orElse(null);
+        }
+        if (target == null) return "";
+        String text = target.prompt().typed();
+        int progress = target.progress();
+        return progress < text.length() ? new String(Character.toChars(text.codePointAt(progress))) : "";
     }
 
     /** Applies the row's typing to whatever is on screen: run tags while running, the stand's targets in a stand. */

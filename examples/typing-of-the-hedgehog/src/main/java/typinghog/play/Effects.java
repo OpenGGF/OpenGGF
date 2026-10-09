@@ -79,6 +79,13 @@ public final class Effects {
         props.add(new Prop(score, Kind.POINTS));
     }
 
+    /** An explosion alone, as a beaten boss throws off while it burns. */
+    void blast(Course course, int x, int y) {
+        var boom = course.stagehand().add("explosion", x, y);
+        boom.bucket = 6;
+        props.add(new Prop(boom, Kind.EXPLOSION));
+    }
+
     /** A score sprite rising from {@code x, y} (rescues and bonuses), without an explosion. */
     void score(Course course, int x, int y, int points) {
         var score = course.stagehand().add("points", x, y - 8);

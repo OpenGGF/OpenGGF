@@ -14,6 +14,7 @@ import typinghog.art.Plates;
 import typinghog.core.Lexicon;
 import typinghog.hub.HubAssets;
 import typinghog.hub.HubScene;
+import typinghog.play.BossRig;
 import typinghog.play.Cast;
 import typinghog.play.Course;
 import typinghog.play.CourseAssets;
@@ -48,7 +49,8 @@ public final class TypingHedgehogMod implements GgfMod {
         Map<String, Rail> rails = new HashMap<>();
         Map<String, String> badniks = new HashMap<>();
         for (String game : games) {
-            casts.put(game, Cast.parse(text(context, "cast/" + game + ".txt", "")));
+            casts.put(game, Cast.parse(text(context, "cast/" + game + ".txt", ""))
+                    .withBosses(BossRig.parse(text(context, "bosses/" + game + ".txt", ""))));
             sounds.put(game, Sounds.parse(text(context, "sounds/" + game + ".txt", "")));
             props.put(game, Props.parse(text(context, "props/" + game + ".txt", "")));
             badniks.put(game, text(context, "badniks/" + game + ".txt", ""));

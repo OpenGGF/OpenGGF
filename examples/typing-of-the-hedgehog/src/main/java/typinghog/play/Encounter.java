@@ -50,7 +50,7 @@ public final class Encounter {
     static Encounter stand(Course course, int standNumber) {
         Encounter encounter = new Encounter(false, null);
         var intent = course.intent();
-        List<Species> cast = course.assets().cast(intent.game()).zone(intent.zone());
+        List<Species> cast = course.assets().cast(intent.game()).zone(intent.zone(), intent.act());
         if (cast.isEmpty()) return encounter;
         var random = course.random();
         int count = 6 + standNumber * 2 + intent.difficulty().tier;
@@ -89,7 +89,7 @@ public final class Encounter {
     private void extendEndless(Course course) {
         if (!endless || nextArrival < arrivals.size()) return;
         wave++;
-        List<Species> cast = course.assets().cast(course.intent().game()).zone(course.intent().zone());
+        List<Species> cast = course.assets().cast(course.intent().game()).zone(course.intent().zone(), course.intent().act());
         if (cast.isEmpty()) return;
         var random = course.random();
         int gap = Math.max(18, 70 - wave * 4);
@@ -110,6 +110,9 @@ public final class Encounter {
     }
 
     boolean isBoss() { return boss; }
+
+    /** The target a demo typist should prefer (the boss quiz's right answer), or -1. */
+    int preferredTarget() { return bossFight == null ? -1 : bossFight.correctTarget(); }
 
     boolean finished() {
         if (boss) return bossFight != null && bossFight.defeated() && effects.idle();

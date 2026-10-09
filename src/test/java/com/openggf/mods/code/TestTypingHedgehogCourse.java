@@ -164,6 +164,17 @@ class TestTypingHedgehogCourse {
         assertEquals(3, get(view(), "lives"));
     }
 
+    @Test void theDemoTypistBeatsTheWreckingBallInBossRush() throws Exception {
+        var fixture = launch(intent(11).replace("mode=ARCADE", "mode=BOSS_RUSH") + "demo=true\n");
+        var input = new InputHandler();
+        stepUntil(fixture, input, "BOSS", 900);
+        for (int i = 0; i < 120; i++) row(fixture, input);
+        // Green Hill's rig: the ball, four chain links, the ship, Robotnik's face and the flame.
+        assertTrue((int) get(view(), "visuals") >= 8, "the boss rig puppets every part; view " + view());
+        stepUntil(fixture, input, "TALLY", 8000);
+        assertEquals(3, get(view(), "lives"), "the demo typist beat the boss without losing a life");
+    }
+
     @Test void aStandOfAnyLengthLeavesTheRailRunUnchanged() throws Exception {
         int[] fast = runPastStand(7, 0);
         dispose();

@@ -6,17 +6,23 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Which badniks each zone stages, read from {@code cast/<game>.txt}. One badnik per line:
+ * Who each zone stages: its badniks, read from {@code cast/<game>.txt}, and its boss's
+ * {@link BossRig}, read from {@code bosses/<game>.txt}. One badnik per line:
  *
  * <pre>
  * # zone  name        artKey      archetype  facesRight halfW halfH delay frames
  * 0       Motobug     motobug     RUSHER     false      20    14    8     0,1
  * </pre>
  *
- * Zones are the game's zone registry indices. Lines starting with {@code #} are comments.
+ * Zones are the game's zone registry indices; {@code 1@0} limits a badnik to one act (index
+ * from 0) of its zone, for art the other act never loads. Lines starting with {@code #} are
+ * comments.
  */
 public final class Cast {
-    private final Map<Integer, List<Species>> zones = new HashMap<>();
+    private record Entry(int act, Species species) { }
+
+    private final Map<Integer, List<Entry>> zones = new HashMap<>();
+    private Map<Integer, BossRig> bosses = Map.of();
 
     public static Cast parse(String text) {
         Cast cast = new Cast();
@@ -33,13 +39,32 @@ public final class Cast {
             Species species = new Species(f[1].replace('_', ' '), f[2], frames, Integer.parseInt(f[7]),
                     Species.Archetype.valueOf(f[3]), Boolean.parseBoolean(f[4]), Integer.parseInt(f[5]),
                     Integer.parseInt(f[6]));
-            cast.zones.computeIfAbsent(Integer.parseInt(f[0]), ignored -> new ArrayList<>()).add(species);
+            int at = f[0].indexOf('@');
+            int zone = Integer.parseInt(at < 0 ? f[0] : f[0].substring(0, at));
+            int act = at < 0 ? -1 : Integer.parseInt(f[0].substring(at + 1));
+            cast.zones.computeIfAbsent(zone, ignored -> new ArrayList<>()).add(new Entry(act, species));
         }
         return cast;
     }
 
-    /** The zone's badniks, or an empty list. */
-    public List<Species> zone(int zone) {
-        return List.copyOf(zones.getOrDefault(zone, List.of()));
+    /** This cast with {@code rigs} (from {@link BossRig#parse}) as its bosses. */
+    public Cast withBosses(Map<Integer, BossRig> rigs) {
+        bosses = Map.copyOf(rigs);
+        return this;
+    }
+
+    /** The zone's boss rig, the game's {@code *} rig, or null. */
+    public BossRig boss(int zone) {
+        BossRig rig = bosses.get(zone);
+        return rig != null ? rig : bosses.get(-1);
+    }
+
+    /** The act's badniks, or an empty list. */
+    public List<Species> zone(int zone, int act) {
+        List<Species> out = new ArrayList<>();
+        for (Entry entry : zones.getOrDefault(zone, List.of())) {
+            if (entry.act() < 0 || entry.act() == act) out.add(entry.species());
+        }
+        return List.copyOf(out);
     }
 }
