@@ -23,7 +23,7 @@ final class LevelLoadAttempt {
     private final LevelLoadContext context;
     private final LevelLoadCause admissionCause;
     private final java.util.function.Consumer<LevelLoadCause> afterAdmission;
-    private ObjectCallbackAbortException deferredProfileAbort;
+    private ObjectCallbackAbortException deferredStepAbort;
 
     LevelLoadAttempt(WorldSession world, SpriteManager sprites, LevelLoadMode mode, LevelLoadContext context) {
         this(world, sprites, mode, context, ignored -> { });
@@ -49,15 +49,6 @@ final class LevelLoadAttempt {
         // owner before any assembly recreates or dispatches players.
         WorldSessionPolicyAccess.bindRoster(world, sprites);
         context.resetInitialProcessSpritesRequestForLoadAttempt();
-        try {
-            executeProfile(moduleSource, levelIndex);
-        } catch (ObjectCallbackAbortException aborted) {
-            deferredProfileAbort = aborted;
-            throw aborted;
-        }
-    }
-
-    private void executeProfile(Supplier<GameModule> moduleSource, int levelIndex) {
         GameModule module = moduleSource.get();
         LevelInitProfile profile = module.getLevelInitProfile();
         context.setLevelIndex(levelIndex);
@@ -69,7 +60,12 @@ final class LevelLoadAttempt {
         }
         for (InitStep step : steps) {
             long start = System.nanoTime();
-            step.execute();
+            try {
+                step.execute();
+            } catch (ObjectCallbackAbortException aborted) {
+                deferredStepAbort = aborted;
+                throw aborted;
+            }
             long elapsed = (System.nanoTime() - start) / 1_000_000;
             LevelManager.LOGGER.fine(() -> String.format("  [%s] %dms — %s", step.name(), elapsed, step.romRoutine()));
         }
@@ -84,9 +80,9 @@ final class LevelLoadAttempt {
             if (!(failure instanceof ObjectCallbackAbortException)) failure.addSuppressed(quarantined);
         }
         if (failure instanceof ObjectCallbackAbortException aborted) {
-            // Policy/roster admission aborts remain direct. Deferred profile callbacks
+            // Supplier/profile/policy/roster aborts remain direct. Deferred step callbacks
             // keep loadLevel's checked contract, with the exact abort retained for recovery.
-            if (aborted != deferredProfileAbort) throw aborted;
+            if (aborted != deferredStepAbort) throw aborted;
             return new DeferredLevelLoadException(aborted);
         }
         Throwable cause = failure.getCause();

@@ -614,9 +614,9 @@ assertions failed identically to the candidate; the golf failures occurred at
 the patched-module prerequisite check before title input. No example or input
 behavior was changed to hide those inherited failures.
 
-A deferred profile abort now has a host-constructed, final checked load carrier
-that retains the original abort object. Policy/roster admission aborts remain
-direct. The frame and creator fault boundaries accept only this carrier, directly
+An abort from the actual deferred `InitStep.execute()` now has a host-constructed, final checked load carrier
+that retains the original abort object. Module/profile construction and
+policy/roster admission aborts remain direct. The frame and creator fault boundaries accept only this carrier, directly
 or as the immediate cause of the existing plain runtime load wrapper; the fault
 boundary also handles its own private checked-callback wrapper. Arbitrary cause
 chains remain untrusted, and fatal failures retain their existing escape behavior.
@@ -647,3 +647,19 @@ The unchanged GameLoop source budget remains 3381; the repaired source is 3372
 effective lines. The actual change-based plan selects all 3108 ordinary classes
 and fresh guards for the root's composed candidate; this focused pass does not
 replace that gate or certify the three inherited example failures.
+
+Root source review of `0606c7a25eacb416f28c8e71a1a8007cd485db3c` found that
+the first recording catch also enclosed module lookup, profile lookup and
+step-list construction. That broader recording was rejected before integration:
+the catch now surrounds only `InitStep.execute()`. The historical 160-case pass
+above remains attributed to its exact source. An affected-only normal follow-up
+(`-Dtest=TestLevelLoadAttempt,TestOwnerBoundGamePatch`) completed at
+2026-10-09T10:13:12Z with two fresh reports/26 cases, no failures/errors/skips,
+and unchanged source fingerprint
+`01e99ef0b7c6f21c29579b27b6dcea47f9e0ee371d78873f8afe3ce8de007eb9`.
+Its three new negative cells preserve the exact direct HostAbort from the module
+supplier, profile getter and step-list constructor. The unchanged original
+cancellation control and real deferred creator-load/consumer ownership tests pass.
+The final compiled API export was rechecked after this compile and remains the
+byte-equal 17739-line pin. No broader repeat was submitted; the root combined
+ordinary/guard gate is still required.
