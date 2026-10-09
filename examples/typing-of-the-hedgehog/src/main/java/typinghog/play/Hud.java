@@ -57,7 +57,11 @@ public final class Hud {
 
     void beginTally(Course course) {
         tally = course.card().tally(Math.max(0, course.rings()));
+        rankCalled = false;
+        course.say(typinghog.audio.VoiceLine.ANNOUNCER_ACT_CLEAR);
     }
+
+    private boolean rankCalled;
 
     boolean tallyDone(int rows) { return rows >= TALLY_ROWS; }
 
@@ -324,6 +328,18 @@ public final class Hud {
             font.shadowed(canvas, v, width / 2 + 110 - font.width(v), y, WHITE, SHADOW);
         }
         if (rows > 220) {
+            if (!rankCalled) {
+                rankCalled = true;
+                course.say(switch (tally.grade()) {
+                    case "S" -> typinghog.audio.VoiceLine.ANNOUNCER_RANK_S;
+                    case "A" -> typinghog.audio.VoiceLine.ANNOUNCER_RANK_A;
+                    case "B" -> typinghog.audio.VoiceLine.ANNOUNCER_RANK_B;
+                    case "C" -> typinghog.audio.VoiceLine.ANNOUNCER_RANK_C;
+                    case "D" -> typinghog.audio.VoiceLine.ANNOUNCER_RANK_D;
+                    default -> typinghog.audio.VoiceLine.ANNOUNCER_RANK_E;
+                });
+                if (tally.perfectBonus() > 0) course.say(typinghog.audio.VoiceLine.ANNOUNCER_PERFECT);
+            }
             String grade = "RANK " + tally.grade();
             drawBig(canvas, grade, (width - font.width(grade) * 2) / 2, 156, tally.grade().equals("S") ? GOLD : WHITE);
         }

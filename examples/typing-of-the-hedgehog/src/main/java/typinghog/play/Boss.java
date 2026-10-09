@@ -1,6 +1,7 @@
 package typinghog.play;
 
 import com.openggf.game.GameServices;
+import typinghog.audio.VoiceLine;
 import typinghog.core.Prompt;
 import typinghog.core.TypingField;
 
@@ -77,6 +78,12 @@ public final class Boss {
             visual = course.stagehand().add(artKey, x, y);
             visual.bucket = 5;
             stateRow = 0;
+            course.say(switch (style) {
+                case QUIZ -> VoiceLine.ROBOTNIK_INTRO_QUIZ;
+                case TALK_BACK -> VoiceLine.ROBOTNIK_TALK_BACK;
+                case WEAK_POINT -> new VoiceLine[] {VoiceLine.ROBOTNIK_INTRO_A, VoiceLine.ROBOTNIK_INTRO_B,
+                        VoiceLine.ROBOTNIK_INTRO_C}[course.random().nextInt(3)];
+            });
         }
         if (flash > 0) flash--;
         visual.blink = flash;
@@ -124,8 +131,12 @@ public final class Boss {
             case TALK_BACK -> {
                 var taunts = lexicon.taunts().stream()
                         .filter(t -> t.tag().equals("any") || t.tag().equals(intent.game())).toList();
-                String text = taunts.isEmpty() ? "You will never win, hedgehog!"
-                        : taunts.get(course.random().nextInt(taunts.size())).text();
+                // Robotnik says the line you must type back when it is one of his voiced taunts.
+                var voiced = taunts.stream().filter(t -> VoiceLine.taunt(t.text()) != null).toList();
+                var pool = !voiced.isEmpty() && course.random().nextInt(4) != 0 ? voiced : taunts;
+                String text = pool.isEmpty() ? "You will never win, hedgehog!"
+                        : pool.get(course.random().nextInt(pool.size())).text();
+                course.say(VoiceLine.taunt(text));
                 targetId = field.add(Prompt.of(text, intent.capitals(), intent.punctuation()), baseRows * 2);
                 windowRows = baseRows * 2;
             }
@@ -160,17 +171,24 @@ public final class Boss {
         closeWindow(course);
         if (!right) {
             course.hud().banner("WRONG!", 0xFFFF4040);
+            if (style == Style.QUIZ) course.say(VoiceLine.ROBOTNIK_QUIZ_WRONG);
             swoop(course);
             return;
         }
         hits++;
         flash = 24;
         course.play(Sounds.Cue.BOSS_HIT);
+        if (style == Style.QUIZ) course.say(VoiceLine.ROBOTNIK_QUIZ_RIGHT);
+        else course.say(new VoiceLine[] {VoiceLine.ROBOTNIK_HURT_A, VoiceLine.ROBOTNIK_HURT_B,
+                VoiceLine.ROBOTNIK_HURT_C, VoiceLine.ROBOTNIK_HURT_D}[course.random().nextInt(4)]);
         course.card().add(1000);
         encounter.effects().kill(course, x, y, 1000);
         if (hits >= HITS) {
             defeated = true;
             course.play(Sounds.Cue.BOSS_DEFEATED);
+            course.say(VoiceLine.ANNOUNCER_BOSS_DEFEATED);
+            course.say(new VoiceLine[] {VoiceLine.ROBOTNIK_DEFEAT_A, VoiceLine.ROBOTNIK_DEFEAT_B,
+                    VoiceLine.ROBOTNIK_DEFEAT_C}[course.random().nextInt(3)]);
             course.hud().banner("BOSS DEFEATED!", 0xFFFFD000);
         }
         stateRow = 0;
