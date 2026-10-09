@@ -1236,13 +1236,17 @@ public final class RuinsScreen implements Screen {
 
     private void drawHud(Shell shell, SceneCanvas canvas) {
         Game game = shell.game;
+        // Sonic 1's own HUD, as in the valley: RINGS (carried, flashing red at zero) and TIME,
+        // with the banked rings beneath in the menu font.
         boolean warn = ringsInHand == 0 && (ticks / 8) % 2 == 0;
-        Text.shadow(canvas, "RINGS", 8, 6, warn ? Text.RED : Text.YELLOW);
-        Text.shadow(canvas, Integer.toString(ringsInHand), 64, 6, Text.WHITE);
-        Text.shadow(canvas, "TIME", 8, 18, Text.YELLOW);
-        Text.shadow(canvas, game.calendar.clock(), 64, 18, Text.WHITE);
-        Text.shadow(canvas, "BANK", 8, 30, Text.YELLOW);
-        Text.shadow(canvas, Integer.toString(game.rings), 64, 30, Text.GREY);
+        var hud = shell.art.hud;
+        canvas.draw(game.calendar.minutes() >= 24 * 60 && (ticks / 8) % 2 == 0 ? hud.timeRed : hud.time, 16, 8,
+                com.openggf.mods.scene.SceneDraw.plain());
+        int h = game.calendar.minutes() / 60 % 24, m = game.calendar.minutes() % 60;
+        hud.number(canvas, (h < 10 ? " " : "") + h + ":" + (m < 10 ? "0" : "") + m, 66, 4);
+        canvas.draw(warn ? hud.ringsRed : hud.rings, 16, 24, com.openggf.mods.scene.SceneDraw.plain());
+        hud.number(canvas, Integer.toString(ringsInHand), 66, 20);
+        com.openggf.mods.ui.CompactFont.shadowed(canvas, "BANK " + game.rings, 16, 40, 1, 0xFFB6B6B6, 0xFF000000);
         Text.right(canvas, "CHAMBER " + number, canvas.width() - 8, 6, Text.WHITE);
         int bw = 72, bx = canvas.width() - 8 - bw, by = 19;
         canvas.fill(bx - 1, by - 1, bw + 2, 8, 0xFF000000);

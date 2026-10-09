@@ -45,8 +45,8 @@ public final class ItemIcons {
             default -> -1;
         };
         if (monitorFrame >= 0 && monitorFrame < art.monitor.frameCount()) {
-            SceneSprite icon = art.monitor.frame(monitorFrame);
-            canvas.draw(icon.image(), x + (16 - icon.width()) / 2f, y + (16 - icon.height()) / 2f, style);
+            SceneImage screen = cache.computeIfAbsent("monitor:" + monitorFrame, k -> monitorScreen(art.monitor.frame(monitorFrame).image()));
+            canvas.draw(screen, x + (16 - screen.width()) / 2f, y + (16 - screen.height()) / 2f, style);
             return;
         }
         SceneImage image = cache.computeIfAbsent(item.id(), id -> build(item));
@@ -101,6 +101,15 @@ public final class ItemIcons {
             case TOOL -> grid(rod(), 0, 0);
             default -> grid(leaf(), 0xFF92FF00, 0xFF49B600);
         };
+    }
+
+    /** A monitor's screen (its icon) cut from the whole monitor: the 16x14 window at its top centre. */
+    private static SceneImage monitorScreen(SceneImage monitor) {
+        if (monitor.width() <= 16 && monitor.height() <= 16) {
+            return monitor;
+        }
+        int x = Math.max(0, (monitor.width() - 16) / 2), y = Math.min(Math.max(0, monitor.height() - 14), 3);
+        return monitor.crop(x, y, Math.min(16, monitor.width()), Math.min(14, monitor.height()));
     }
 
     /** A picture shrunk to fit 16 pixels by dropping evenly spaced rows and columns. */
