@@ -29,5 +29,19 @@ public final class BootstrapControl implements GgfMod {
         Value proxy = (Value) java.lang.reflect.Proxy.newProxyInstance(getClass().getClassLoader(),
                 new Class<?>[] {Value.class}, (instance, method, arguments) -> "proxy control");
         if (!proxy.value().equals("proxy control")) throw new AssertionError("Runtime proxy bootstrap failed");
+        String text = "native contr\u00f4le";
+        if (!new String(text.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                java.nio.charset.StandardCharsets.UTF_8).equals(text)) {
+            throw new AssertionError("Runtime UTF-8 constant/codec failed");
+        }
+        int[] numbers = {-4, 7, 7, 2};
+        if (java.util.Arrays.stream(numbers).min().orElse(0) != -4
+                || java.util.Arrays.stream(numbers).max().orElse(0) != 7
+                || !java.util.Arrays.equals(java.util.Arrays.stream(numbers).distinct().sorted().toArray(),
+                        new int[] {-4, 2, 7})
+                || java.util.List.of("a", "bbb", "cc").stream().filter(item -> item.length() > 1)
+                        .mapToInt(String::length).sum() != 5) {
+            throw new AssertionError("Runtime primitive/reference stream dispatch failed");
+        }
     }
 }

@@ -46,10 +46,13 @@ including anonymous wrappers, because owner-bound dispatch inspects their concre
 methods reflectively. Their members enter the same mandatory startup audit.
 Missing-field and missing-method controls must return ordinary exit 1;
 crashes never pass. A separately compiled, runtime-loaded regression mod exercises
-record equality/hash/string, pattern-switch and generated-proxy bootstraps; it
+record equality/hash/string, pattern-switch and generated-proxy bootstraps,
+plus UTF-8 constants/codecs and primitive/reference stream operations; it
 never enters the image classpath or final distribution. `java.lang.runtime` and
 `java.lang.reflect` are explicitly preserved because preservation of `java.lang`
-does not include its subpackages.
+does not include its subpackages. `java.util.stream` is retained separately from
+`java.util`; `java.nio.charset` retains the runtime-readable charset constants.
+Metadata lookup alone cannot establish executable interface dispatch.
 Each mod runs in a new native process, through production
 discovery, loaders and owner fault boundaries. Rendered checks exercise scene
 menus/debug routes or 600 real gameplay frames, inspect non-flat framebuffers,

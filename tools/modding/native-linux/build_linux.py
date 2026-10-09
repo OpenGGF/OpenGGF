@@ -147,7 +147,7 @@ def prepare(args):
     arguments=["-march=compatibility","-J-Xmx5g","--parallelism=4",
         "--initialize-at-run-time=org.lwjgl,java.awt,javax.swing,sun.awt,sun.java2d",
         "-H:+UnlockExperimentalVMOptions","-H:+RuntimeClassLoading",
-        f"-H:Preserve=path={contract / 'preserved-engine.jar'},package=java.lang,package=java.lang.invoke,package=java.lang.runtime,package=java.lang.reflect,package=java.util,package=java.util.function",
+        f"-H:Preserve=path={contract / 'preserved-engine.jar'},package=java.lang,package=java.lang.invoke,package=java.lang.runtime,package=java.lang.reflect,package=java.util,package=java.util.function,package=java.util.stream,package=java.nio.charset",
         r"-H:IncludeResources=com/openggf/.*\.class",f"-H:ConfigurationFileDirectories={metadata}",
         "-J-Dopenggf.experimental.native.mods=true",
         "-J--add-exports=org.graalvm.nativeimage.builder/com.oracle.svm.core.hub=ALL-UNNAMED",
@@ -203,7 +203,7 @@ def qualify(args):
         output=run(native_command(args,bundle,"--check-mods","native-bootstrap-control"),bundle)
         if "PASS registration: native-bootstrap-control; code=true" not in output:
             raise AssertionError("Runtime-loaded JDK bootstrap control did not pass")
-        evidence["jdkBootstrapControl"]="runtime-loaded record equals/hashCode/toString, pattern switch and generated proxy passed"
+        evidence["jdkBootstrapControl"]="runtime-loaded records, pattern switch, generated proxy, UTF-8 constant/codec and primitive/reference streams passed"
     finally: fixture.unlink(missing_ok=True)
     for mod in json.loads((inputs / "build-info.json").read_text())["mods"]:
         owner,slug=mod["id"],mod["slug"]

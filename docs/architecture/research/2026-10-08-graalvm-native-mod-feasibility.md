@@ -590,3 +590,22 @@ proxy invoked `java.lang.reflect.Proxy.<init>(InvocationHandler)` and aborted
 with exit 134. The runtime-loaded regression fixture now also generates a proxy
 for its own interface; Linux preserves `java.lang.reflect` explicitly. This is
 an experimental image correction, with no further engine/API change.
+
+Image `17babc7b7` passed the runtime-loaded record/switch/proxy fixture and the
+first three rendered scenes, then Infinite Sonic reached its terrain loader and
+raised `AbstractMethodError` at `Arrays.stream(profile).min()`. The interface
+metadata existed, but the primitive-stream implementation was not executable.
+A separately runtime-loaded control reproduces the same ordinary exit 1; its
+JVM counterpart passes. Linux now preserves `java.util.stream` explicitly, and
+the fixture also covers min/max, distinct/sorted arrays and reference-to-primitive
+filter/map/sum dispatch. This is another exact-package omission, not a change to
+Infinite Sonic or the engine's terrain algorithm. Member metadata audit and
+runtime invocation controls answer different questions and both remain required.
+
+The remaining checks on that image passed fourteen other mods (seventeen of
+nineteen total), including both standalone samples and Sitar's PCM route. Slay
+the Robotnik aborted with `Cannot load undefined field` for
+`java.nio.charset.StandardCharsets.UTF_8`. The image's native compiler had folded
+the field away from runtime-loaded access. Linux separately preserves
+`java.nio.charset`; the runtime-loaded fixture now roundtrips a non-ASCII UTF-8
+string through the same constant and codecs. Neither failed image is distributed.
