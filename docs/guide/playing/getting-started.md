@@ -88,8 +88,8 @@ Linux terminal example:
 When the engine starts, you will see:
 
 1. **Master title screen** -- Choose a game with left/right from either pane.
-   Up/down enters its action list, then selects Start Game, Launch Options, Time Attack,
-   Recordings, Mods, Settings, Advanced, or Quit. Confirm from the game pane opens
+   Up/down enters its action list, then selects Start Game, Launch Options, Recordings,
+   Mods, Settings, Advanced, Quit, or a mod's entry such as the bundled **Time Attack**. Confirm from the game pane opens
    **Browse Games**, a full-width list with availability and page navigation.
    Confirm from the action pane opens the selected action; Back returns
    one level. Quit (or Esc/B from game selection) opens an exit confirmation.

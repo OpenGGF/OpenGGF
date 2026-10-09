@@ -7,6 +7,7 @@ import com.sun.source.util.JavacTask;
 import com.sun.source.util.TreePathScanner;
 import com.sun.source.util.Trees;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
@@ -104,21 +105,37 @@ class TestObjectUpdateClockTerminologyGuard {
                     "vIntRunCount", "globalFrameCounter"));
 
     @Test
-    void objectUpdateClockUsesVIntRunCountTerminologyAcrossBoundaryAndFrameworkHooks() throws Exception {
+    void objectUpdateClockUsesVIntRunCountTerminologyAcrossBoundaryAndFrameworkHooks(@TempDir Path temporary)
+            throws Exception {
+        Path log = temporary.resolve("terminology-guard.log");
         Process process = new ProcessBuilder(
                 Path.of(System.getProperty("java.home"), "bin", "java").toString(),
-                "-Xmx1g",
+                // Whole-source attribution approaches the old 1 GiB limit.
+                // Keep compiler headroom in a bounded heap outside Surefire.
+                "-Xmx2g",
                 "-cp", System.getProperty("java.class.path"),
                 GuardProcess.class.getName())
                 .redirectErrorStream(true)
+                // A failing compiler can fill a pipe before waitFor returns.
+                .redirectOutput(log.toFile())
                 .start();
-        boolean finished = process.waitFor(2, TimeUnit.MINUTES);
-        if (!finished) {
-            process.destroyForcibly();
+        try {
+            // This scan takes about a minute locally; two minutes was too
+            // short under CI contention. Retain a bounded execution deadline.
+            boolean finished = process.waitFor(4, TimeUnit.MINUTES);
+            if (!finished) {
+                process.destroyForcibly();
+                assertTrue(process.waitFor(10, TimeUnit.SECONDS), "terminology guard subprocess did not stop");
+            }
+            String output = Files.readString(log);
+            assertTrue(finished, "terminology guard subprocess timed out:\n" + output);
+            assertTrue(process.exitValue() == 0, () -> "terminology guard subprocess failed:\n" + output);
+        } finally {
+            if (process.isAlive()) {
+                process.destroyForcibly();
+                process.waitFor(10, TimeUnit.SECONDS);
+            }
         }
-        String output = new String(process.getInputStream().readAllBytes());
-        assertTrue(finished, "terminology guard subprocess timed out:\n" + output);
-        assertTrue(process.exitValue() == 0, () -> "terminology guard subprocess failed:\n" + output);
     }
 
     private static void runGuard() throws Exception {

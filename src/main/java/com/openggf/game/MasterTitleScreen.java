@@ -17,14 +17,6 @@ import com.openggf.graphics.SolidColorTexture;
 import com.openggf.game.recording.UserRecordingCatalog;
 import com.openggf.game.recording.menu.UserRecordingMenu;
 import com.openggf.game.recording.menu.UserRecordingMenuState;
-import com.openggf.game.timeattack.GhostStore;
-import com.openggf.game.timeattack.TimeAttackMenu;
-import com.openggf.game.timeattack.TimeAttackMenuState;
-import com.openggf.game.timeattack.TimeAttackLaunchRequest;
-import com.openggf.game.timeattack.mp.MultiplayerRaceCoordinator;
-import com.openggf.game.timeattack.mp.RaceLobbyScreen;
-import com.openggf.game.timeattack.mp.ServerBrowserScreen;
-import com.openggf.net.protocol.ControlMessage;
 import com.openggf.testmode.TestModeTracePicker;
 import com.openggf.trace.catalog.TraceCatalog;
 import com.openggf.trace.catalog.TraceEntry;
@@ -187,13 +179,6 @@ public class MasterTitleScreen {
     private UserRecordingMenuFactory userRecordingMenuFactory;
     private UserRecordingMenu.PlaybackStarter userRecordingPlaybackStarter =
             (entry, options) -> LOGGER.info("User recording playback callback not configured.");
-    private TimeAttackMenu timeAttackMenu;
-    private TimeAttackMenuFactory timeAttackMenuFactory = this::createTimeAttackMenu;
-    private TimeAttackMenu.LaunchStarter timeAttackLaunchStarter =
-            request -> LOGGER.info("Time attack launch callback not configured.");
-    private TimeAttackMenu.NetworkStarter timeAttackNetworkStarter = TimeAttackMenu.NetworkStarter.NONE;
-    private RaceLobbyScreen raceLobbyScreen;
-    private ServerBrowserScreen serverBrowserScreen;
     private int bgTextureId;
     private int solidWhiteTextureId; // 1x1 white texture for solid color overlays
     private int titleTextId;
@@ -244,6 +229,10 @@ public class MasterTitleScreen {
     private boolean gameSelected = false;
     private MasterTitleEntry.Launch selectedLaunch;
     private boolean standaloneActionOpen;
+    private List<String> titleEntries = List.of();
+    private java.util.function.ObjIntConsumer<List<String>> titleEntryOpener = (games, index) -> { };
+    private boolean extrasOpen;
+    private int extrasIndex;
     private int standaloneActionIndex;
 
     private static final class RomPreviewState {
@@ -431,9 +420,6 @@ public class MasterTitleScreen {
 
         if (tracePicker != null || configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)) {
             userRecordingMenu = null;
-            timeAttackMenu = null;
-            raceLobbyScreen = null;
-            serverBrowserScreen = null;
             if (tracePicker == null) {
                 Path root = Path.of(System.getProperty("user.dir"))
                         .resolve(configService.getString(SonicConfiguration.TRACE_CATALOG_DIR))
@@ -465,33 +451,11 @@ public class MasterTitleScreen {
             return;
         }
 
-        if (raceLobbyScreen != null) {
-            raceLobbyScreen.update(inputHandler);
-            return;
-        }
-
-        if (serverBrowserScreen != null) {
-            serverBrowserScreen.update(inputHandler);
-            return;
-        }
-
         if (userRecordingMenu != null) {
             UserRecordingMenu menu = userRecordingMenu;
             menu.update(inputHandler);
             if (userRecordingMenu == menu && menu.consumeCloseRequested()) {
                 userRecordingMenu = null;
-            }
-            return;
-        }
-
-        if (timeAttackMenu != null) {
-            TimeAttackMenu menu = timeAttackMenu;
-            menu.update(inputHandler);
-            // The launch starter may synchronously tear this screen down
-            // (Engine.launchTimeAttack -> cleanup()), nulling timeAttackMenu
-            // mid-update; re-check the field before touching it again.
-            if (timeAttackMenu == menu && menu.consumeCloseRequested()) {
-                timeAttackMenu = null;
             }
             return;
         }
@@ -520,6 +484,10 @@ public class MasterTitleScreen {
             updateStandaloneActionChooser(inputHandler);
             return;
         }
+        if (extrasOpen) {
+            updateExtrasChooser();
+            return;
+        }
 
         // Shortcuts remain optional; every action is also in the visible menu.
         boolean modsShortcut = inputHandler.isKeyPressedWithoutModifiers(GLFW_KEY_M);
@@ -530,11 +498,6 @@ public class MasterTitleScreen {
         boolean recordingRequest = inputHandler.isKeyPressed(recordKey) && inputHandler.isShiftDown();
         if (recordingRequest) {
             if (!handleUserRecordingMenuRequest(true)) showActionError("Recordings");
-            return;
-        }
-        boolean timeRequest = inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.TIME_ATTACK_MENU_KEY));
-        if (timeRequest) {
-            if (!isEntryAvailable(selectedEntry()) || !handleTimeAttackMenuRequest(true)) showActionError("Time attack");
             return;
         }
         if (inputHandler.isKeyPressed(GLFW_KEY_TAB) || inputHandler.isGamepadBackButtonPressed()) {
@@ -570,13 +533,70 @@ public class MasterTitleScreen {
         switch (action) {
             case START -> startSelectedEntry();
             case LAUNCH -> { if (!openLaunchOptions()) showActionError("Launch options"); }
-            case TIME_ATTACK -> { if (!isEntryAvailable(selectedEntry()) || !tryOpenTimeAttackMenu()) showActionError("Time attack"); }
             case RECORDINGS -> { if (!tryOpenUserRecordingMenuForSelectedGame()) showActionError("Recordings"); }
             case MODS -> openModManager();
             case SETTINGS -> openSettings();
             case TOOLS -> { toolsOpen = true; toolIndex = 0; playConfirmSound(); }
             case QUIT -> openQuitPrompt();
+            case EXTRAS -> openExtras();
         }
+    }
+
+    /**
+     * Mod-contributed master-title entries (from enabled mods' latest registration pass) and
+     * how to open one; the opener receives the games whose ROMs are present.
+     */
+    public void setTitleEntries(List<String> labels, java.util.function.ObjIntConsumer<List<String>> opener) {
+        titleEntries = List.copyOf(labels);
+        titleEntryOpener = Objects.requireNonNull(opener, "opener");
+        navigation.setExtrasVisible(!titleEntries.isEmpty());
+    }
+
+    private void openExtras() {
+        if (titleEntries.isEmpty()) {
+            showActionError("Extras");
+        } else if (titleEntries.size() == 1) {
+            openTitleEntry(0);
+        } else {
+            extrasOpen = true;
+            extrasIndex = 0;
+            playConfirmSound();
+        }
+    }
+
+    private void openTitleEntry(int index) {
+        List<String> games = entries.stream()
+                .filter(MasterTitleEntry.Stock.class::isInstance)
+                .map(MasterTitleEntry.Stock.class::cast)
+                .filter(this::isEntryAvailable)
+                .map(stock -> stock.game().gameId)
+                .toList();
+        playConfirmSound();
+        titleEntryOpener.accept(games, index);
+    }
+
+    private void updateExtrasChooser() {
+        if (navigation.back() || backClicked()) { extrasOpen = false; playCancelSound(); return; }
+        int previous = extrasIndex;
+        if (navigation.up()) extrasIndex = Math.max(0, extrasIndex - 1);
+        if (navigation.down()) extrasIndex = Math.min(titleEntries.size() - 1, extrasIndex + 1);
+        boolean clicked = false;
+        for (int i = 0; pointer != null && i < titleEntries.size(); i++) {
+            if (pointer.over(viewportWidth / 2 - 90, 76 + i * 28, 180, 23) && (pointer.moved() || pointer.click())) {
+                extrasIndex = i;
+                clicked |= pointer.click();
+            }
+        }
+        if (extrasIndex != previous) playNavigateSound();
+        if (navigation.accept() || clicked) {
+            extrasOpen = false;
+            openTitleEntry(extrasIndex);
+        }
+    }
+
+    private String hubLabel(TitleHubNavigation.Action action) {
+        return action == TitleHubNavigation.Action.EXTRAS && titleEntries.size() == 1
+                ? titleEntries.get(0).toUpperCase(java.util.Locale.ROOT) : action.label;
     }
 
     /** This tick's mouse in menu pixels; null without a window or before the mouse is used. */
@@ -638,7 +658,7 @@ public class MasterTitleScreen {
         int actionX = viewportWidth / 2;
         int actionWidth = viewportWidth - actionX - 9;
         TitleHubNavigation.Action[] actions = TitleHubNavigation.Action.values();
-        for (int i = 0; i < actions.length; i++) {
+        for (int i = 0; i < navigation.count(); i++) {
             if (!pointer.over(actionX, 39 + i * 20, actionWidth, 18) || !(pointer.moved() || pointer.click())) continue;
             if (!navigation.actions()) navigation.enter();
             if (navigation.move(i - navigation.selected())) playNavigateSound();
@@ -1004,23 +1024,8 @@ public class MasterTitleScreen {
             return;
         }
 
-        if (raceLobbyScreen != null) {
-            drawNativePage(raceLobbyScreen::render);
-            return;
-        }
-
-        if (serverBrowserScreen != null) {
-            drawNativePage(serverBrowserScreen::render);
-            return;
-        }
-
         if (userRecordingMenu != null) {
             drawNativePage(userRecordingMenu::render);
-            return;
-        }
-
-        if (timeAttackMenu != null) {
-            drawNativePage(timeAttackMenu::render);
             return;
         }
 
@@ -1100,6 +1105,21 @@ public class MasterTitleScreen {
             drawToolsAndHelp();
             return;
         }
+        if (extrasOpen) {
+            font.beginMegaBatch();
+            MenuStyle.page(font, viewportWidth, "EXTRAS", "Added by mods");
+            for (int i = 0; i < titleEntries.size(); i++) {
+                String label = (i == extrasIndex ? "> " : "  ")
+                        + titleEntries.get(i).toUpperCase(java.util.Locale.ROOT);
+                MenuStyle.panel(font, viewportWidth / 2 - 90, 76 + i * 28, 180, 23);
+                if (i == extrasIndex) MenuStyle.focus(font, viewportWidth / 2 - 90, 76 + i * 28, 180, 23);
+                font.drawTextCentered(label, viewportWidth, 82 + i * 28, 1f, 1f, 1f, 1f);
+            }
+            textFitted(directionHint() + " Choose  " + confirmHint() + " Open  " + backHint() + " Back",
+                    9, 211, viewportWidth - 18, 1f, 0.5f, 0.91f, 1f);
+            font.endMegaBatch();
+            return;
+        }
         if (standaloneActionOpen) {
             font.beginMegaBatch();
             MenuStyle.page(font, viewportWidth, "START GAME", selectedEntry().menuLabel());
@@ -1125,7 +1145,7 @@ public class MasterTitleScreen {
         int leftWidth = viewportWidth / 2 - 18;
         int actionX = viewportWidth / 2;
         int actionWidth = viewportWidth - actionX - 9;
-        for (int i = 0; i < TitleHubNavigation.Action.values().length; i++) {
+        for (int i = 0; i < navigation.count(); i++) {
             int y = 39 + i * 20;
             box(actionX, y, actionWidth, 18, 0.05f, 0.16f, 0.38f, 1f);
             if (navigation.actions() && navigation.selected() == i) focusBox(actionX, y, actionWidth, 18);
@@ -1147,12 +1167,13 @@ public class MasterTitleScreen {
         }
         drawGameCarousel();
         for (TitleHubNavigation.Action action : TitleHubNavigation.Action.values()) {
-            boolean available = action == TitleHubNavigation.Action.MODS || action == TitleHubNavigation.Action.SETTINGS
+            if (action.ordinal() >= navigation.count()) continue;
+            boolean available = action == TitleHubNavigation.Action.EXTRAS || action == TitleHubNavigation.Action.MODS || action == TitleHubNavigation.Action.SETTINGS
                     || action == TitleHubNavigation.Action.TOOLS || action == TitleHubNavigation.Action.QUIT || action == TitleHubNavigation.Action.START
                     && isEntryAvailable(selectedEntry()) || selectedEntry() instanceof MasterTitleEntry.Stock
                     && isEntryAvailable(selectedEntry());
             float brightness = available && navigation.actions() ? 1f : 0.68f;
-            textFitted(action.label, actionX + 5, 43 + action.ordinal() * 20, actionWidth - 10,
+            textFitted(hubLabel(action), actionX + 5, 43 + action.ordinal() * 20, actionWidth - 10,
                     1f, brightness, brightness, brightness);
         }
         if (selectedEntry() instanceof MasterTitleEntry.Stock stock && isEntryAvailable(stock)) {
@@ -1559,65 +1580,8 @@ public class MasterTitleScreen {
         return userRecordingMenu == null ? null : userRecordingMenu.state();
     }
 
-    public void setTimeAttackMenuFactoryForTest(TimeAttackMenuFactory timeAttackMenuFactory) {
-        this.timeAttackMenuFactory = Objects.requireNonNull(timeAttackMenuFactory, "timeAttackMenuFactory");
-    }
-
-    public void setTimeAttackLaunchStarter(TimeAttackMenu.LaunchStarter timeAttackLaunchStarter) {
-        this.timeAttackLaunchStarter = Objects.requireNonNull(timeAttackLaunchStarter, "timeAttackLaunchStarter");
-    }
-
-    public void setTimeAttackNetworkStarter(TimeAttackMenu.NetworkStarter starter) {
-        this.timeAttackNetworkStarter = Objects.requireNonNull(starter, "starter");
-        if (timeAttackMenu != null) {
-            timeAttackMenu.setNetworkStarter(starter);
-        }
-    }
-
-    public void openRaceLobby(MultiplayerRaceCoordinator coordinator, boolean host,
-                              ControlMessage.RoundConfig roundConfig, String character,
-                              java.util.function.Consumer<TimeAttackLaunchRequest> roundLauncher,
-                              Runnable leaveHandler) {
-        timeAttackMenu = null;
-        raceLobbyScreen = new RaceLobbyScreen(coordinator, font, host, roundConfig,
-                character, roundLauncher, leaveHandler);
-        serverBrowserScreen = null;
-    }
-
-    void setRaceLobbyShareCode(String inviteTemplate, java.util.function.Consumer<String> clipboardWriter) {
-        if (raceLobbyScreen != null) {
-            raceLobbyScreen.setShareCode(inviteTemplate, clipboardWriter);
-        }
-    }
-
-    public void openServerBrowser(ServerBrowserScreen browser) {
-        timeAttackMenu = null;
-        raceLobbyScreen = null;
-        serverBrowserScreen = Objects.requireNonNull(browser, "browser");
-    }
-
-    public void closeServerBrowser() {
-        serverBrowserScreen = null;
-    }
-
     public PixelFont pixelFont() {
         return font;
-    }
-
-    public boolean isRaceLobbyOpen() {
-        return raceLobbyScreen != null;
-    }
-
-    public void closeRaceLobby() {
-        raceLobbyScreen = null;
-    }
-
-    public boolean isTimeAttackMenuOpenForTest() {
-        return timeAttackMenu != null;
-    }
-
-    public TimeAttackMenuState timeAttackMenuStateForTest() {
-        return timeAttackMenu == null ? null : timeAttackMenu.state();
     }
 
     void setTracePickerForTest(TestModeTracePicker tracePicker) {
@@ -1682,59 +1646,6 @@ public class MasterTitleScreen {
     }
 
     /**
-     * Opens the Time Attack menu, seeded with the currently highlighted game
-     * entry when its ROM is available (falls back to the first ROM-present
-     * game otherwise). Returns false (no-op) when no game's ROM is available,
-     * test mode is active, or the launch config panel is open.
-     */
-    public boolean tryOpenTimeAttackMenu() {
-        if (state != State.ACTIVE
-                || configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)
-                || launchConfigPanel != null) {
-            return false;
-        }
-        if (!(selectedEntry() instanceof MasterTitleEntry.Stock selectedStock)) return false;
-        List<String> availableGameIds = entries.stream()
-                .filter(MasterTitleEntry.Stock.class::isInstance)
-                .map(MasterTitleEntry.Stock.class::cast)
-                .filter(this::isEntryAvailable)
-                .map(stock -> stock.game().gameId)
-                .toList();
-        if (availableGameIds.isEmpty()) {
-            return false;
-        }
-        String initialGameId = selectedStock.game().gameId;
-        try {
-            timeAttackMenu = timeAttackMenuFactory.create(availableGameIds, initialGameId, font);
-            childInputPending = true;
-            playConfirmSound();
-            return true;
-        } catch (RuntimeException ex) {
-            LOGGER.warning("Failed to open time attack menu: " + ex.getMessage());
-            return false;
-        }
-    }
-
-    public boolean handleTimeAttackMenuRequest(boolean timeAttackMenuRequested) {
-        if (!timeAttackMenuRequested) {
-            return false;
-        }
-        return tryOpenTimeAttackMenu();
-    }
-
-    private TimeAttackMenu createTimeAttackMenu(List<String> availableGameIds, String initialGameId, PixelFont font) {
-        TimeAttackMenu menu = new TimeAttackMenu(
-                availableGameIds,
-                initialGameId,
-                new GhostStore(Path.of("ghosts")),
-                font,
-                timeAttackLaunchStarter);
-        menu.setNetworkStarter(timeAttackNetworkStarter);
-        menu.setJoinAddress(configService.getString(SonicConfiguration.TIME_ATTACK_NET_LAST_JOIN_ADDRESS));
-        return menu;
-    }
-
-    /**
      * Cleans up all GL resources.
      */
     private PixelFont ensurePickerFont() {
@@ -1768,8 +1679,6 @@ public class MasterTitleScreen {
         romPreviews.values().forEach(preview -> PngTextureLoader.deleteTexture(preview.textureId));
         if (renderer != null) renderer.cleanup();
         userRecordingMenu = null;
-        timeAttackMenu = null;
-        raceLobbyScreen = null;
         settingsScreen = null;
         toolsOpen = false;
         helpOpen = false;
@@ -1784,11 +1693,6 @@ public class MasterTitleScreen {
     }
 
     @FunctionalInterface
-    public interface TimeAttackMenuFactory {
-        TimeAttackMenu create(List<String> availableGameIds, String initialGameId, PixelFont font);
-    }
-
-    @FunctionalInterface
     public interface ModManagerScreenFactory {
         ModManagerView create(PixelFont font);
     }
@@ -1797,8 +1701,7 @@ public class MasterTitleScreen {
     boolean blocksGlobalShortcuts() {
         return state != State.ACTIVE || navigation.actions() || quitPrompt || childInputPending
                 || settingsScreen != null || launchConfigPanel != null || modManagerScreen != null
-                || timeAttackMenu != null || userRecordingMenu != null || raceLobbyScreen != null
-                || serverBrowserScreen != null || tracePicker != null || standaloneActionOpen
+                || userRecordingMenu != null || tracePicker != null || standaloneActionOpen || extrasOpen
                 || toolsOpen || helpOpen || gameBrowserOpen || catalogLoad != null || configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED);
     }
 

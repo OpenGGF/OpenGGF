@@ -5,6 +5,25 @@ readable and historical versions can be referenced directly.
 
 ## Unreleased (`next` / 0.8)
 
+- **Time Attack is a bundled mod:** Time Attack now ships as the first-party **Time Attack**
+  mod, bundled with JVM builds and enabled by default (disable it in **Mods**). It adds a
+  Time Attack entry to the master title and plays every run as a stock, non-saving session,
+  so ghost times stay comparable. Ghosts and the player identity stay in `ghosts/` and
+  `identity/`. The engine no longer carries racing code, its `timeAttack.*` settings or the
+  Netty, Bouncy Castle and SQLite libraries; the master server, dedicated host and verifier
+  build separately from `racing/server`. Native builds do not load code mods, so Time Attack
+  is JVM-only. Multiplayer racing lives in the mod too: host a LAN room on the in-process
+  host, join one by invite, or browse and create master-server rooms; the lobby, room browser
+  and settings (port, display name, master URL, minimap) are part of the mod's menu, and its
+  settings are stored by the mod instead of `config.yaml`.
+
+- **Mod API candidate: title entries and gameplay runs:** a mod may add one master-title entry
+  whose scene launches stock gameplay runs through `SceneContext.gameplay()` and is resumed when
+  each ends. A run host observes level starts and executed steps, may hold steps, draws ghosts
+  and an overlay, and issues retry, leave and post-completion spectator commands; a session run
+  policy controls special/bonus stage entry, act-completion handoff, rewind and the editor. See
+  [Title entries and gameplay runs](docs/modding/guides/gameplay-runs.md).
+
 - **Configurable widescreen HUD anchor:** the score, time, rings, and lives HUD can
   keep its centered native-frame position or align to the left edge of the screen.
   Native 4:3 positioning is unchanged.
@@ -28,6 +47,19 @@ readable and historical versions can be referenced directly.
   private from creation and an interrupted identity creation retries cleanly,
   ordinary master replies and final joins stay bound to their request order and
   room context, and a rejected relay attach fails the join immediately.
+
+- **Bundled first-party mods:** an OpenGGF build can ship first-party code mods with
+  its JVM distribution. The engine artifact pins each one's exact jar hash; a bundled
+  mod whose shipped bytes match is enabled and trusted by default, validated like any
+  other code mod, and marked BUNDLED in the Mod Manager, where it can be disabled (the
+  choice survives upgrades) but not uninstalled. Missing, damaged or modified bundled
+  jars are reported and never loaded, and a `mods/` copy with a bundled id is ignored.
+  Deterministic launches and native builds never load bundled mods.
+
+- **Binary mod storage:** code mods can keep binary files of up to 4 MiB, such as
+  recorded inputs or ghosts, in their private save directory beside their text
+  settings. Each write replaces the whole file atomically and an oversized write
+  leaves the previous file untouched.
 
 Work promoted from `next` is recorded in [CHANGELOG.0.7.md](CHANGELOG.0.7.md).
 

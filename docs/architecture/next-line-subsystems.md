@@ -39,12 +39,16 @@ indices. Maintained contracts live in [creator handbook](../modding/index.md) an
 [compatibility contract](mod-api-compatibility.md);
 dated design specs under `docs/architecture/designs/` are historical provenance only.
 
-**Multiplayer time attack.** The direct-connect and master-server core lives under
-`com.openggf.net.protocol`, `.hub`, `.host`, `.client`, and `.master`. These packages are
-engine-free and may share only the canonical `GhostFrame` / `GhostFrameCodec`;
-`TestNetIsolationRules` enforces the boundary. Each `RoomHost` and `GhostHub` is confined
-to a single event-loop thread, and the master server reuses those room classes unchanged.
-Engine and UI adapters belong in `com.openggf.game.timeattack.mp`. Production masters
+**Multiplayer time attack.** Racing is not engine code. The bundled Time Attack mod
+(`racing/time-attack`) carries the engine-free racing library `openggf.racing.protocol`,
+`.hub`, `.client`, `.identity`, `.host` (the transport contract and the JDK in-process room
+host) and `.ghost` (the ghost wire codec), plus the mod's own `openggf.timeattack` and
+`openggf.timeattack.mp` adapters, which reach the engine only through the gameplay-run and
+scene Mod API. The racing server (`racing/server`, `openggf.racing.server.*`) holds the
+master, the Netty dedicated host, the verifier and the operator tools.
+`TestTimeAttackModPackage` keeps the mod packaging through `ggfmod` with warnings as errors.
+Each `RoomHost` and `GhostHub` is confined to a single room thread, and the master server
+reuses those room classes unchanged. Production masters
 require TLS (`plaintextForTest: true` is loopback-test only); the localhost admin HTTP
 endpoint requires its bearer token and appends to `admin-audit.jsonl`. Identity age, clean
 rounds, sanctions, and trust tiers persist in SQLite. An active BAN or TIMEOUT rejects
@@ -122,15 +126,17 @@ audit rather than claimed solved here.
 Operator commands:
 
 Broker-listed `DIRECT` rooms use `wss://`. The host creates a fresh self-signed TLS
-certificate when its direct server starts; Netty's Java 21 certificate generator
-uses Bouncy Castle at runtime. The authenticated host registers the certificate's
+certificate when its direct server starts: the mod's in-process JDK host builds an
+in-memory ECDSA P-256 certificate from JDK APIs, and the server's Netty dedicated host
+uses Netty's generator, which needs Bouncy Castle. The authenticated host registers the certificate's
 SHA-256 digest with the broker, which stores it with the room and returns it to
 joiners. A joining client pins that exact certificate and checks the broker-pinned
 host identity in `Welcome` before signing its challenge. The session token travels
 only after this TLS and identity check, so a fake endpoint cannot collect it and a
-live TCP relay sees ciphertext. The private certificate key is temporary and is
-deleted when the direct server closes. Manual LAN hosting uses the same authenticated
-server; its lobby displays and copies `HOST_IP:port#<share-code>`. The host replaces
+live TCP relay sees ciphertext. The private certificate key is temporary: the JDK host
+never writes it, and the Netty host deletes it when the direct server closes. Manual LAN
+hosting uses the same authenticated protocol; its lobby displays `HOST_IP:port#<share-code>`
+and saves it as `lan-invite.txt` in the mod's storage (scenes have no clipboard). The host replaces
 `HOST_IP` with a reachable LAN address before sharing. The 86-character unpadded
 base64url code contains both 32-byte pins. Manual join decodes those pins, requires
 `wss://`, and verifies both the certificate and host `Welcome` identity before
@@ -141,8 +147,9 @@ This required wire-field change uses protocol version 2; version 1 clients and
 servers cannot mix on control connections.
 
 ```bash
-java -cp target/OpenGGF-0.7.prerelease-jar-with-dependencies.jar com.openggf.tools.net.GhostLoadTestTool --n 256 --duration 30 --mix adversarial
-java -cp target/OpenGGF-0.7.prerelease-jar-with-dependencies.jar com.openggf.tools.verifier.VerifierMain --master https://host:27900 --registration-token <token> --rom s3k.gen --data ./verifier-data
+python3 racing/server/build.py
+target/racing-server/racing-server load-test --n 256 --duration 30 --mix adversarial
+target/racing-server/racing-server verifier --master https://host:27900 --registration-token <token> --rom s3k.gen --data ./verifier-data
 ```
 
 The CI scale gate runs 32 in-JVM bots through `TestGhostLoadTest`; the 128/256-player gate

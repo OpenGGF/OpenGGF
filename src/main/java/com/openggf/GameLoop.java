@@ -75,15 +75,12 @@ import com.openggf.game.recording.UserRecordingStopReason;
 import com.openggf.game.recording.UserRecordingPlaybackState;
 import com.openggf.game.recording.UserRecordingVerificationResult;
 import com.openggf.game.recording.menu.UserRecordingMenu;
-import com.openggf.game.timeattack.GhostStore;
-import com.openggf.game.timeattack.TimeAttackHudOverlay;
-import com.openggf.game.timeattack.TimeAttackDebugInput;
-import com.openggf.game.timeattack.TimeAttackLaunchRequest;
-import com.openggf.game.timeattack.TimeAttackLevelEndRouting;
-import com.openggf.game.timeattack.TimeAttackMenu;
-import com.openggf.game.timeattack.TimeAttackRuntime;
-import com.openggf.game.timeattack.mp.MultiplayerRaceCoordinator;
-import com.openggf.game.timeattack.mp.MultiplayerHudRenderer;
+import com.openggf.game.session.GameplayRunPolicy;
+import com.openggf.mods.run.RunEndReason;
+import com.openggf.mods.run.RunHandle;
+import com.openggf.mods.run.RunHost;
+import com.openggf.mods.run.RunSpec;
+import com.openggf.game.session.GameplayRunRouting;
 import com.openggf.testmode.TraceCameraFocusController;
 import com.openggf.trace.replay.TraceSuppressedRowClosure;
 
@@ -234,14 +231,9 @@ public class GameLoop {
             GameplayTeamBootstrapContext.registryOnly();
     private final UserRecordingSessionLauncher userRecordingSessionLauncher;
     private final UserRecordingRuntimeControls userRecordingControls;
-    private final TimeAttackRuntime timeAttackRuntime;
-    private final TimeAttackHudOverlay timeAttackHudOverlay;
-    private final MultiplayerHudRenderer multiplayerHudRenderer;
-    private MultiplayerRaceCoordinator multiplayerRaceCoordinator;
+    final HostedRunController hostedRuns;
+    private Consumer<RunEndReason> hostedRunReturn = reason -> { };
     private UserRecordingMenu.PlaybackStarter userRecordingPlaybackStarter;
-    private TimeAttackMenu.LaunchStarter timeAttackLaunchHandler =
-            request -> LOGGER.warning("Time attack launch handler not configured.");
-    private TimeAttackMenu.NetworkStarter timeAttackNetworkHandler = TimeAttackMenu.NetworkStarter.NONE;
     private int lastAppliedUserRecordingPlaybackFrame = -1;
     private long gameplayAudioFrame;
     private boolean audioUpdatedThisStep;
@@ -344,13 +336,7 @@ public class GameLoop {
                                 || debugShortcutsEnabled() && debugOverlayManager.isEnabled(DebugOverlayToggle.OBJECT_ART_VIEWER),
                         () -> { userPaused = true; updateAudioPauseState(); },
                         levelIterationAdmission::resetLastAppliedPlaybackFrame), this::returnToMasterTitle);
-        this.timeAttackRuntime = new TimeAttackRuntime(new GhostStore(java.nio.file.Path.of("ghosts")),
-                java.nio.file.Path.of("identity"),
-                () -> TraceSessionLauncher.active() != null
-                        || configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)
-                        || playbackDebugManager.isDriving(GameMode.LEVEL));
-        this.timeAttackHudOverlay = new TimeAttackHudOverlay(timeAttackRuntime::hudState, configService);
-        this.multiplayerHudRenderer = new MultiplayerHudRenderer(configService);
+        this.hostedRuns = new HostedRunController(configService);
         this.userRecordingPlaybackStarter = withPlaybackAppliedFrameReset(userRecordingSessionLauncher::beginPlayback);
         this.masterTitleLaunchCoordinator = new MasterTitleLaunchCoordinator(configService);
         this.masterTitleExitCoordinator = new MasterTitleExitCoordinator(
@@ -502,13 +488,11 @@ public class GameLoop {
         textRenderer.endBatch();
     }
 
-    public void renderTimeAttackHud(PixelFontTextRenderer textRenderer) {
-        if (textRenderer == null) {
-            return;
-        }
-        timeAttackHudOverlay.render(textRenderer);
-        if (multiplayerRaceCoordinator != null) {
-            multiplayerHudRenderer.render(textRenderer, multiplayerRaceCoordinator.hudState());
+    /** Draws the hosted run's screen-space overlay above the level and stock HUD. */
+    public void renderHostedRunOverlay() {
+        if (hostedRuns.isActive() && camera != null) {
+            hostedRuns.drawOverlay(new com.openggf.mods.ui.LevelOverlayCanvas(
+                    GameServices.graphics(), camera.getWidth(), camera.getHeight()));
         }
     }
 
@@ -552,28 +536,6 @@ public class GameLoop {
         this.userRecordingPlaybackStarter =
                 levelIterationAdmission.withAppliedPlaybackFrameReset(userRecordingPlaybackStarter);
         installUserRecordingPlaybackStarter(currentMasterTitleScreen());
-    }
-
-    public void setTimeAttackLaunchHandler(TimeAttackMenu.LaunchStarter timeAttackLaunchHandler) {
-        this.timeAttackLaunchHandler = Objects.requireNonNull(timeAttackLaunchHandler, "timeAttackLaunchHandler");
-        installTimeAttackLaunchHandler(currentMasterTitleScreen());
-    }
-
-    public void setTimeAttackNetworkHandler(TimeAttackMenu.NetworkStarter handler) {
-        this.timeAttackNetworkHandler = Objects.requireNonNull(handler, "handler");
-        MasterTitleScreen screen = currentMasterTitleScreen();
-        if (screen != null) {
-            screen.setTimeAttackNetworkStarter(handler);
-        }
-    }
-
-    /** Exposed so tests/Engine can arm and end a launched Time Attack session. */
-    public TimeAttackRuntime getTimeAttackRuntime() {
-        return timeAttackRuntime;
-    }
-
-    public void setMultiplayerRaceCoordinator(MultiplayerRaceCoordinator coordinator) {
-        this.multiplayerRaceCoordinator = coordinator;
     }
 
     private UserRecordingMenu.PlaybackStarter withPlaybackAppliedFrameReset(
@@ -905,15 +867,6 @@ public class GameLoop {
     }
 
     /**
-     * Time-attack retry key, mirroring how
-     * {@code LiveUserRecordingRuntime.recordKey()} reads
-     * {@link SonicConfiguration#RECORDING_RECORD_KEY}.
-     */
-    private int timeAttackRetryKey() {
-        return configService.getInt(SonicConfiguration.TIME_ATTACK_RETRY_KEY);
-    }
-
-    /**
      * True while the level is mid a special-stage/bonus-stage/ending transition
      * or a pending zone/act transition -- the exact same composite condition
      * the gameplay-tick freeze block below computes (special/bonus/ending/
@@ -1124,31 +1077,14 @@ public class GameLoop {
         }
     }
 
-    private void finishTimeAttackMasterTitleFrame(MasterTitleScreen masterScreen) {
-        if (pendingTimeAttackLaunch != null) {
-            TimeAttackLaunchRequest deferredLaunch = pendingTimeAttackLaunch;
-            pendingTimeAttackLaunch = null;
-            timeAttackLaunchHandler.launch(deferredLaunch);
+    private void finishMasterTitleFrame() {
+        if (pendingTitleEntryOpen != null && !resolveFadeManager().isActive()) {
+            Runnable open = pendingTitleEntryOpen;
+            pendingTitleEntryOpen = null;
+            fadeOutTo(open);
         }
-        if (pendingReopenTimeAttackMenu && masterScreen != null
-                && masterScreen.tryOpenTimeAttackMenu()) {
-            pendingReopenTimeAttackMenu = false;
-        }
-        wasMasterTitleScreenActiveLastFrame = true;
     }
 
-    private void finishTimeAttackMasterTitleExit() {
-        if (wasMasterTitleScreenActiveLastFrame) {
-            pendingReopenTimeAttackMenu = false;
-        }
-        wasMasterTitleScreenActiveLastFrame = false;
-    }
-
-    private void handleTimeAttackRetryInput() {
-        if (timeAttackRuntime.isActive() && inputHandler.isKeyPressed(timeAttackRetryKey())) {
-            timeAttackRuntime.requestRetry();
-        }
-    }
 
     private void requireInputHandler() {
         if (inputHandler == null) {
@@ -1234,7 +1170,7 @@ public class GameLoop {
         }
         if ((currentGameMode == GameMode.LEVEL || isBonusStageRewindable() || isSpecialStageRewindable())
                 && TraceSessionLauncher.active() == null
-                && !timeAttackRuntime.isActive()
+                && runPolicy().liveRewind()
                 && liveRewindManager.handleRealtimeRewindInput(
                         currentGameMode, rewindBlocked, inputHandler)) {
             inputHandler.update();
@@ -1280,13 +1216,12 @@ public class GameLoop {
             if (!resolveFadeManager().isActive()) {
                 com.openggf.game.TitleInputOwnership.routeQuit(masterScreen, () -> fadeOutTo(applicationExitHandler));
             }
-            finishTimeAttackMasterTitleFrame(masterScreen);
+            finishMasterTitleFrame();
             return;
         }
-        finishTimeAttackMasterTitleExit();
 
         if (!isPaused()
-                && !timeAttackRuntime.isActive()
+                && runPolicy().editorEntry()
                 && (currentGameMode == GameMode.EDITOR
                 || (currentGameMode == GameMode.LEVEL
                 && configService.getBoolean(SonicConfiguration.EDITOR_ENABLED)))
@@ -1322,7 +1257,6 @@ public class GameLoop {
         escapeToMasterTitleController.update(currentGameMode, inputHandler);
         if (currentGameMode == GameMode.LEVEL) {
             userRecordingControls.updateLevelControlInput(inputHandler);
-            handleTimeAttackRetryInput();
         }
 
         boolean overlayOwnsPause = GameLoopPauseInput.handleOverlay(currentGameMode, inputHandler);
@@ -1368,9 +1302,9 @@ public class GameLoop {
 
         profiler.beginSection("input");
         boolean debugShortcutsEnabled = debugShortcutsEnabled();
-        if (timeAttackRuntime.isActive() && debugShortcutsEnabled
-                && TimeAttackDebugInput.taintPressed(inputHandler, configService)) {
-            timeAttackRuntime.markTainted();
+        if (hostedRuns.isActive() && debugShortcutsEnabled
+                && DebugAssistInput.pressed(inputHandler, configService)) {
+            hostedRuns.noteDebugAssist();
         }
         debugOverlayManager.updateInput(inputHandler, debugShortcutsEnabled, configService);
         if (debugShortcutsEnabled) {
@@ -1418,6 +1352,7 @@ public class GameLoop {
             return;
         } else if (currentGameMode == GameMode.MOD_SCENE) {
             menuScreenModeController.updateModScene(modSceneHost::update, inputHandler);
+            startPendingHostedRunLaunch();
             profiler.endSection("input");
             return;
         } else if (currentGameMode == GameMode.CREDITS_TEXT
@@ -1485,7 +1420,7 @@ public class GameLoop {
                 !overlayOwnsPause && (inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.START))
                         || playbackDebugManager.isCurrentForcedStartPress()),
                 userRecordingControls,
-                request -> routeTimeAttackSeamlessTransitionBeforeApply(
+                request -> routeHostedRunSeamlessTransitionBeforeApply(
                         request, doFrameStep),
                 this::startPendingInLevelTitleCard,
                 () -> LevelIterationAdmissionController
@@ -1699,13 +1634,9 @@ public class GameLoop {
                 tcp, this::startPendingInLevelTitleCard,
                 this::applyTitleCardControlLock);
 
-        if (multiplayerRaceCoordinator != null) {
-            multiplayerRaceCoordinator.pump();
-            multiplayerRaceCoordinator.pollLocalInput(inputHandler);
-            if (multiplayerRaceCoordinator.holdGameplay()) {
-                updateNonGameplayAudio(doFrameStep);
-                return true;
-            }
+        if (!hostedRuns.admitStep(inputHandler)) {
+            updateNonGameplayAudio(doFrameStep);
+            return true;
         }
 
         // Check if a title card was requested (new level loaded)
@@ -1744,10 +1675,9 @@ public class GameLoop {
             // sites below remain for seamless/next-act/next-zone/credits transitions
             // that are NOT time-attack-gated at their source (debug keys, S1/S2 boss
             // defeat -> credits, and the S3K seamless cross-act reload).
-            if (levelManager.consumeTimeAttackMenuReturnRequest()) {
+            if (levelManager.consumeHostReturnRequest()) {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
-                timeAttackRuntime.deactivate();
-                startTimeAttackReturnToMenuFade();
+                endHostedRun(RunEndReason.ACT_COMPLETED);
                 levelIterationAdmission.finishPlaybackBoundary(
                         false, playbackDebugManager, userRecordingControls);
                 updateNonGameplayAudio(doFrameStep);
@@ -1755,11 +1685,9 @@ public class GameLoop {
             }
             if (levelManager.consumeNextActRequest()) {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
-                // A finished/abandoned time attack returns to the time attack menu
-                // instead of bleeding into the auto-advanced next act.
-                if (TimeAttackLevelEndRouting.returnsToMenuOnLevelEnd(timeAttackRuntime.isActive())) {
-                    timeAttackRuntime.deactivate();
-                    startTimeAttackReturnToMenuFade();
+                // A host-returning run ends instead of bleeding into the next act.
+                if (runPolicy().returnsToHostOnActCompletion()) {
+                    endHostedRun(RunEndReason.ACT_COMPLETED);
                 } else {
                     startNextActFade();
                 }
@@ -1770,11 +1698,9 @@ public class GameLoop {
             }
             if (levelManager.consumeNextZoneRequest()) {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
-                // A finished/abandoned time attack returns to the time attack menu
-                // instead of bleeding into the auto-advanced next zone.
-                if (TimeAttackLevelEndRouting.returnsToMenuOnLevelEnd(timeAttackRuntime.isActive())) {
-                    timeAttackRuntime.deactivate();
-                    startTimeAttackReturnToMenuFade();
+                // A host-returning run ends instead of bleeding into the next zone.
+                if (runPolicy().returnsToHostOnActCompletion()) {
+                    endHostedRun(RunEndReason.ACT_COMPLETED);
                 } else {
                     startNextZoneFade();
                 }
@@ -1794,11 +1720,9 @@ public class GameLoop {
             }
             if (levelManager.consumeCreditsRequest()) {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
-                // A finished/abandoned time attack returns to the time attack menu
-                // instead of bleeding into the auto-advanced credits sequence.
-                if (TimeAttackLevelEndRouting.returnsToMenuOnLevelEnd(timeAttackRuntime.isActive())) {
-                    timeAttackRuntime.deactivate();
-                    startTimeAttackReturnToMenuFade();
+                // A host-returning run ends instead of bleeding into the credits.
+                if (runPolicy().returnsToHostOnActCompletion()) {
+                    endHostedRun(RunEndReason.ACT_COMPLETED);
                 } else if (GameServices.module().getGameId() == GameId.STANDALONE) {
                     masterTitleExitCoordinator.startStandaloneCompletion();
                 } else {
@@ -1809,10 +1733,19 @@ public class GameLoop {
                 updateNonGameplayAudio(doFrameStep);
                 return false;
             }
-            if (timeAttackRuntime.isActive() && timeAttackRuntime.consumeRetryRequested()) {
-                TimeAttackLaunchRequest retryLaunch = timeAttackRuntime.launch();
+            RunEndReason leaveReason = hostedRuns.consumeLeave();
+            if (leaveReason != null) {
+                userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
+                endHostedRun(leaveReason);
+                levelIterationAdmission.finishPlaybackBoundary(
+                        false, playbackDebugManager, userRecordingControls);
+                updateNonGameplayAudio(doFrameStep);
+                return false;
+            }
+            if (hostedRuns.consumeRetry()) {
+                RunSpec retrySpec = hostedRuns.spec();
                 levelManager.getCheckpointState().clear();
-                levelManager.getTransitions().requestZoneAndAct(retryLaunch.zone(), retryLaunch.act());
+                levelManager.getTransitions().requestZoneAndAct(retrySpec.zone(), retrySpec.act());
                 levelIterationAdmission.finishPlaybackBoundary(
                         false, playbackDebugManager, userRecordingControls);
                 updateNonGameplayAudio(doFrameStep);
@@ -1849,8 +1782,8 @@ public class GameLoop {
                 // the PAUSE_KEY-style userPaused toggle below (which does both) --
                 // see the pauseKey handling earlier in this method.
                 userRecordingControls.beforeLevelFrame(inputHandler);
-                if (timeAttackRuntime.isActive()) {
-                    timeAttackRuntime.beforeLevelFrame(inputHandler);
+                if (hostedRuns.isActive()) {
+                    hostedRuns.beforeStep(inputHandler);
                 }
                 int heldVblank = levelManager.getObjectManager() != null
                         ? levelManager.getObjectManager().getVblaCounter()
@@ -1876,12 +1809,7 @@ public class GameLoop {
                     levelManager.getObjectManager().initVblaCounter(heldVblank);
                 }
                 userRecordingControls.afterLevelFrame();
-                if (timeAttackRuntime.isActive()) {
-                    timeAttackRuntime.afterLevelFrame();
-                }
-                if (multiplayerRaceCoordinator != null) {
-                    multiplayerRaceCoordinator.afterLevelFrame();
-                }
+                hostedRuns.afterStep();
             } else if (levelManager.getObjectManager() != null
                     && !holdVblankForPendingLoad) {
                 // ROM v_vbla_byte increments in VBlank even on rows where
@@ -1993,21 +1921,76 @@ public class GameLoop {
     }
 
     /**
-     * Routes a cross-act time-attack request before the admission owner applies
-     * its destination. Mid-act seamless requests remain owned by the ordinary
+     * Ends a host-returning run on a cross-act seamless request before the admission owner
+     * applies its destination. Mid-act seamless requests remain owned by the ordinary
      * transition path.
      */
-    private boolean routeTimeAttackSeamlessTransitionBeforeApply(
+    private boolean routeHostedRunSeamlessTransitionBeforeApply(
             SeamlessLevelTransitionRequest request, boolean doFrameStep) {
-        if (!TimeAttackLevelEndRouting.shouldSuppressSeamlessTransitionForTimeAttack(
-                timeAttackRuntime.isActive(), request.type(), timeAttackRuntime.launch(),
-                request.targetZone(), request.targetAct())) {
+        GameplayModeContext run = resolveGameplayModeContext();
+        if (run == null || !GameplayRunRouting.endsRunOnSeamlessTransition(run.getRunPolicy(),
+                run.getRunZone(), run.getRunAct(), request.type(), request.targetZone(), request.targetAct())) {
             return false;
         }
-        timeAttackRuntime.deactivate();
-        startTimeAttackReturnToMenuFade();
+        endHostedRun(RunEndReason.ACT_COMPLETED);
         updateNonGameplayAudio(doFrameStep);
         return true;
+    }
+
+    /** Ends the session's hosted run and hands control back to its host. */
+    private void endHostedRun(RunEndReason reason) {
+        Consumer<RunEndReason> back = hostedRunReturn;
+        hostedRunReturn = ignored -> { };
+        hostedRuns.end(reason);
+        back.accept(reason);
+    }
+
+    private Runnable pendingHostedRunLaunch;
+    private Runnable pendingTitleEntryOpen;
+
+    /** Opens a mod title entry once the master title's update has returned, behind a fade. */
+    void requestTitleEntryOpen(Runnable open) {
+        pendingTitleEntryOpen = Objects.requireNonNull(open, "open");
+    }
+
+    /** Starts a scene-launched run's session once the scene callback has unwound, behind a fade. */
+    void requestHostedRunLaunch(Runnable launch) {
+        pendingHostedRunLaunch = Objects.requireNonNull(launch, "launch");
+    }
+
+    private void startPendingHostedRunLaunch() {
+        if (pendingHostedRunLaunch != null && !resolveFadeManager().isActive()) {
+            Runnable launch = pendingHostedRunLaunch;
+            pendingHostedRunLaunch = null;
+            fadeOutTo(launch);
+        }
+    }
+
+    /** Ends a hosted run whose session failed to load; optionally hands control back to its host. */
+    void endHostedRunAfterFailedLaunch(boolean returnToHost) {
+        if (returnToHost) {
+            endHostedRun(RunEndReason.LOAD_FAILED);
+        } else {
+            hostedRunReturn = ignored -> { };
+            hostedRuns.end(RunEndReason.LOAD_FAILED);
+        }
+    }
+
+    /** Tells the hosted run its level is ready when a launch bypassed {@code doZoneAct}. */
+    void announceHostedRunLevelReady() {
+        hostedRuns.onLevelReady(debugOverlayManager.isEnabled(DebugOverlayToggle.OVERLAY));
+    }
+
+    /** Hosts {@code host}'s run of {@code spec}; {@code returnToHost} runs once when it ends. */
+    RunHandle beginHostedRun(RunSpec spec, RunHost host, Consumer<RunEndReason> returnToHost) {
+        RunHandle handle = hostedRuns.begin(spec, host);
+        hostedRunReturn = Objects.requireNonNull(returnToHost, "returnToHost");
+        return handle;
+    }
+
+    private GameplayRunPolicy runPolicy() {
+        GameplayModeContext run = resolveGameplayModeContext();
+        return run != null ? run.getRunPolicy() : GameplayRunPolicy.stock();
     }
 
     private void runInputNeutralTitleCardPlayerPrelude() {
@@ -2380,7 +2363,7 @@ public class GameLoop {
             return;
         }
 
-        if (TimeAttackLevelEndRouting.suppressesStageEntry(timeAttackRuntime.isActive())) {
+        if (!runPolicy().specialStageEntry()) {
             return;
         }
 
@@ -2549,7 +2532,7 @@ public class GameLoop {
      * Captures current state, fades to black, loads the bonus zone.
      */
     private void enterBonusStage(BonusStageType type) {
-        if (currentGameMode != GameMode.LEVEL || timeAttackRuntime.isActive()) {
+        if (currentGameMode != GameMode.LEVEL || !runPolicy().bonusStageEntry()) {
             return;
         }
 
@@ -3657,46 +3640,7 @@ public class GameLoop {
         MasterTitleScreen masterScreen = masterTitleScreenSupplier != null
                 ? masterTitleScreenSupplier.get() : null;
         installUserRecordingPlaybackStarter(masterScreen);
-        installTimeAttackLaunchHandler(masterScreen);
-        installTimeAttackNetworkHandler(masterScreen);
         return masterScreen;
-    }
-
-    /**
-     * Time-attack launches are deferred out of MasterTitleScreen.update: the
-     * launch tears the screen down (Engine.launchTimeAttack -> cleanup()) and
-     * must not run re-entrantly while the screen is still updating itself.
-     */
-    private TimeAttackLaunchRequest pendingTimeAttackLaunch;
-
-    /**
-     * A finished/abandoned time attack attempt returns to the master title
-     * screen instead of advancing into the next act/zone/credits (see the
-     * consume sites in {@link #updateLevelMode}). This flag requests that,
-     * once the title screen reaches {@code ACTIVE}, it auto-reopen the time
-     * attack menu so the player lands back where they started rather than on
-     * the bare title screen. Cleared once {@link MasterTitleScreen#tryOpenTimeAttackMenu()}
-     * succeeds, or defensively if the game mode ever leaves
-     * {@code MASTER_TITLE_SCREEN} while still pending.
-     */
-    private boolean pendingReopenTimeAttackMenu;
-
-    /** Tracks the previous frame's mode so the defensive clear above only fires on an
-     * actual MASTER_TITLE_SCREEN -&gt; other-mode transition, not merely "not currently
-     * on the title screen" (which is also true for every frame of the return fade
-     * itself, before the mode has switched). */
-    private boolean wasMasterTitleScreenActiveLastFrame;
-
-    private void installTimeAttackLaunchHandler(MasterTitleScreen masterScreen) {
-        if (masterScreen != null) {
-            masterScreen.setTimeAttackLaunchStarter(request -> pendingTimeAttackLaunch = request);
-        }
-    }
-
-    private void installTimeAttackNetworkHandler(MasterTitleScreen masterScreen) {
-        if (masterScreen != null) {
-            masterScreen.setTimeAttackNetworkStarter(timeAttackNetworkHandler);
-        }
     }
 
     private void installUserRecordingPlaybackStarter(MasterTitleScreen masterScreen) {
@@ -3712,18 +3656,23 @@ public class GameLoop {
      */
     void returnToMasterTitle() {
         modSceneHost.close();
+        tearDownGameplayForReturn();
+        masterTitleLaunchCoordinator.returnToMasterTitle();
+    }
+
+    /** Gameplay teardown shared by the master-title return and a hosted run's scene return. */
+    void tearDownGameplayForReturn() {
         escapeToMasterTitleController.reset();
         levelIterationAdmission.reset();
         userRecordingSessionLauncher.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
         userRecordingSessionLauncher.endPlaybackSession();
         levelIterationAdmission.resetLastAppliedPlaybackFrame();
-        // Every route out of a time-attack session funnels through this method
-        // (escape-to-master-title hold and TraceSessionLauncher teardown), so
-        // this is the single place isActive() must be cleared -- otherwise it
-        // stays sticky and the frame hooks above would keep firing during the
-        // next, unrelated gameplay session.
-        timeAttackRuntime.deactivate();
-        masterTitleLaunchCoordinator.returnToMasterTitle();
+        pendingHostedRunLaunch = null;
+        // Every route out of a hosted run that was not already ended funnels through
+        // here (escape-to-master-title hold and TraceSessionLauncher teardown), so the
+        // run must end or its frame hooks would fire in the next session.
+        hostedRunReturn = ignored -> { };
+        hostedRuns.end(RunEndReason.ABORTED);
     }
 
     /**
@@ -3734,18 +3683,6 @@ public class GameLoop {
         GameLoopMenuTransitions.fadeOutTo(resolveFadeManager(), audioManager, next);
     }
 
-    /**
-     * A finished/abandoned time attack attempt does not auto-advance into the
-     * next act/zone/credits sequence like normal play does (see the consume
-     * sites in {@link #updateLevelMode}). Instead it fades to black and hands
-     * off to the same {@link #returnToMasterTitle()} choreography as the
-     * escape-to-title hold, then arms {@link #pendingReopenTimeAttackMenu} so
-     * the title screen reopens the time attack menu once it becomes active.
-     */
-    private void startTimeAttackReturnToMenuFade() {
-        GameLoopMenuTransitions.fadeOutTo(resolveFadeManager(), audioManager,
-                () -> pendingReopenTimeAttackMenu = multiplayerRaceCoordinator == null, this::returnToMasterTitle);
-    }
 
     /**
      * Exits the master title screen after the user selects a game.
@@ -4542,15 +4479,9 @@ public class GameLoop {
             throw new RuntimeException("Failed to load zone " + zone + " act " + act, e);
         }
 
-        if (timeAttackRuntime.isActive()) {
-            timeAttackRuntime.onLevelReady();
-            // An overlay already visible before spawn is just as much an advantage as
-            // toggling one on mid-run (see the anyDebugOverlayTogglePressed() taint check
-            // below), so taint immediately rather than waiting for the next toggle press.
-            if (debugOverlayManager.isEnabled(DebugOverlayToggle.OVERLAY)) {
-                timeAttackRuntime.markTainted();
-            }
-        }
+        // An overlay already visible before spawn is as much an advantage as toggling
+        // one on mid-run, so the host hears about it with the level start.
+        hostedRuns.onLevelReady(debugOverlayManager.isEnabled(DebugOverlayToggle.OVERLAY));
 
         if (levelManager.hasPendingFreshLevelTransitionBoundary()
                 && getTitleCardProviderLazy() instanceof com.openggf.game.internal.FreshLevelTitleBoundaryPublication boundary

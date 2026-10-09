@@ -47,6 +47,7 @@ import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.rewind.RewindBoundary;
 import com.openggf.game.session.GameplayModeContext;
+import com.openggf.game.session.GameplayRunRouting;
 import com.openggf.game.session.GameplayInputFilterAccess;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.WorldSession;
@@ -3738,6 +3739,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         loadCurrentLevel();
     }
 
+    /** The session's run policy; package-visible so unit tests can supply one without a session. */
+    java.util.function.Supplier<com.openggf.game.session.GameplayRunPolicy> runPolicySource = GameplayRunRouting::currentPolicy;
+
     /**
      * Advance to the next level in progression order.
      * Unlike nextAct() which wraps, this advances to next zone when acts are
@@ -3745,19 +3749,14 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * Called by results screen after tally completes.
      * <p>
      * S1/S2 results-screen objects call this directly (bypassing the
-     * request/consume transition queue GameLoop otherwise drives), so a
-     * finished/abandoned time attack attempt is gated here rather than at a
-     * GameLoop consume site: when {@code GameStateManager.isTimeAttackActive()}
-     * is true, this queues a {@link LevelTransitionCoordinator#requestTimeAttackMenuReturn()}
-     * and returns without touching the zone/act counters or loading anything —
-     * GameLoop consumes that request on the next frame and routes to the time
-     * attack menu instead.
+     * request/consume transition queue GameLoop otherwise drives), so a run
+     * whose {@link com.openggf.game.session.GameplayRunPolicy} returns to its
+     * host is diverted here rather than at a GameLoop consume site: this queues
+     * {@link LevelTransitionCoordinator#requestHostReturn()} and returns without
+     * touching the zone/act counters or loading anything.
      */
     public void advanceToNextLevel() throws IOException {
-        if (gameState.isTimeAttackActive()) {
-            transitions.requestTimeAttackMenuReturn();
-            return;
-        }
+        if (transitions.requestHostReturnIf(runPolicySource.get())) return;
         ZoneProgressionPlan.ZoneTopology topology = activeProgressionTopology();
         ZoneProgressionPlan.ProgressionResult next = zoneProgressionPlan.next(
                 topology, currentZone, currentAct);
@@ -4938,11 +4937,11 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     /** @see LevelTransitionCoordinator#consumeCreditsRequest() */
     public boolean consumeCreditsRequest() { return transitions.consumeCreditsRequest(); }
 
-    /** @see LevelTransitionCoordinator#requestTimeAttackMenuReturn() */
-    public void requestTimeAttackMenuReturn() { transitions.requestTimeAttackMenuReturn(); }
+    /** @see LevelTransitionCoordinator#requestHostReturn() */
+    public void requestHostReturn() { transitions.requestHostReturn(); }
 
-    /** @see LevelTransitionCoordinator#consumeTimeAttackMenuReturnRequest() */
-    public boolean consumeTimeAttackMenuReturnRequest() { return transitions.consumeTimeAttackMenuReturnRequest(); }
+    /** @see LevelTransitionCoordinator#consumeHostReturnRequest() */
+    public boolean consumeHostReturnRequest() { return transitions.consumeHostReturnRequest(); }
     public void requestGameOverExit(GameOverExit exit) { transitions.requestGameOverExit(exit); }
 
     public GameOverExit consumeGameOverExitRequest() { return transitions.consumeGameOverExitRequest(); }

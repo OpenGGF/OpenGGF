@@ -44,6 +44,110 @@ class TestModStorage {
         assertTrue(ModStorageFactory.forOwner(root,"other").read("stock.txt").isEmpty());
     }
 
+    @Test void binaryFilesRoundTripArbitraryBytesAndShareTheTextNamespace() throws Exception {
+        var storage=ModStorageFactory.forOwner(root,"ghosts");
+        byte[] payload=new byte[256];
+        for(int i=0;i<payload.length;i++) payload[i]=(byte)i;
+        assertTrue(storage.writeBytes("best.ggfghost",payload));
+        byte[] read=storage.readBytes("best.ggfghost").orElseThrow();
+        assertArrayEquals(payload,read);
+        read[0]=42;
+        assertArrayEquals(payload,storage.readBytes("best.ggfghost").orElseThrow(),"reads return a fresh copy");
+        payload[1]=99;
+        assertEquals(1,storage.readBytes("best.ggfghost").orElseThrow()[1],"writes do not retain the caller array");
+        assertTrue(storage.read("best.ggfghost").isEmpty(),"non-UTF-8 bytes are not text");
+        assertTrue(storage.write("notes.txt","hi"));
+        assertArrayEquals("hi".getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                storage.readBytes("notes.txt").orElseThrow());
+        assertTrue(storage.writeBytes("empty.bin",new byte[0]));
+        assertArrayEquals(new byte[0],storage.readBytes("empty.bin").orElseThrow());
+        assertEquals(java.util.List.of("best.ggfghost","empty.bin","notes.txt"),storage.list());
+        assertTrue(storage.delete("best.ggfghost"));
+        assertTrue(storage.readBytes("best.ggfghost").isEmpty());
+        assertTrue(ModStorageFactory.forOwner(root,"other").readBytes("notes.txt").isEmpty());
+        assertThrows(NullPointerException.class,()->storage.writeBytes("null.bin",null));
+    }
+
+    @Test void binaryCapIsEnforcedOnWriteAndReadWithoutTouchingTheExistingFile() throws Exception {
+        var storage=ModStorageFactory.forOwner(root,"capped");
+        int cap=com.openggf.mods.ModStorage.MAX_BINARY_BYTES;
+        assertEquals(4<<20,cap);
+        assertEquals(1<<20,com.openggf.mods.ModStorage.MAX_TEXT_BYTES);
+        byte[] full=new byte[cap];
+        full[cap-1]=7;
+        assertTrue(storage.writeBytes("full.bin",full));
+        assertEquals(cap,storage.readBytes("full.bin").orElseThrow().length);
+        assertTrue(storage.writeBytes("keep.bin",new byte[]{1,2,3}));
+        assertFalse(storage.writeBytes("keep.bin",new byte[cap+1]));
+        assertArrayEquals(new byte[]{1,2,3},storage.readBytes("keep.bin").orElseThrow());
+        Path oversize=root.resolve("mods/capped/oversize.bin");
+        Files.write(oversize,new byte[cap+1]);
+        assertTrue(storage.readBytes("oversize.bin").isEmpty(),"a file grown past the cap outside the API is not read");
+        assertTrue(storage.write("text.txt","x".repeat(1<<20)));
+        assertTrue(storage.read("text.txt").isPresent());
+        assertTrue(storage.readBytes("text.txt").isPresent(),"text files under the binary cap read as bytes");
+        assertNoStagingResidue(root.resolve("mods/capped"));
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings={"","../escape.bin","a/b","UPPER.bin",".hidden",
+            "space name","toolong-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"})
+    void binaryNamesFollowTheTextNameRules(String name) {
+        var storage=ModStorageFactory.forOwner(root,"named");
+        assertThrows(IllegalArgumentException.class,()->storage.readBytes(name));
+        assertThrows(IllegalArgumentException.class,()->storage.writeBytes(name,new byte[]{1}));
+        assertThrows(IllegalArgumentException.class,()->storage.read(name));
+        assertThrows(IllegalArgumentException.class,()->storage.write(name,"x"));
+    }
+
+    @Test void binaryWritesRefuseLinksAndLeaveNoStagingFileWhenReplacementFails() throws Exception {
+        Path stock=root.resolve("stock.bin"); Files.write(stock,new byte[]{9});
+        Path own=root.resolve("mods/linked"); Files.createDirectories(own);
+        Files.createSymbolicLink(own.resolve("profile.bin"),stock);
+        var storage=ModStorageFactory.forOwner(root,"linked");
+        assertTrue(storage.readBytes("profile.bin").isEmpty());
+        assertFalse(storage.writeBytes("profile.bin",new byte[]{1}));
+        assertArrayEquals(new byte[]{9},Files.readAllBytes(stock));
+        // A non-empty directory in the target's place makes the final rename fail.
+        Files.createDirectories(own.resolve("blocked.bin/inner"));
+        assertFalse(storage.writeBytes("blocked.bin",new byte[]{1,2}));
+        assertTrue(Files.isDirectory(own.resolve("blocked.bin/inner")));
+        assertNoStagingResidue(own);
+    }
+
+    // POSIX rename replaces the target atomically even while a reader holds it open; Windows
+    // refuses to replace an open file, so the write would report failure rather than tear.
+    @org.junit.jupiter.api.condition.DisabledOnOs(org.junit.jupiter.api.condition.OS.WINDOWS)
+    @Test void concurrentReadersOnlyEverSeeOneWholeBinaryFile() throws Exception {
+        var storage=ModStorageFactory.forOwner(root,"atomic");
+        byte[] first=new byte[64*1024]; java.util.Arrays.fill(first,(byte)'A');
+        byte[] second=new byte[96*1024]; java.util.Arrays.fill(second,(byte)'B');
+        assertTrue(storage.writeBytes("ghost.bin",first));
+        var torn=new java.util.concurrent.atomic.AtomicReference<String>();
+        var stop=new java.util.concurrent.atomic.AtomicBoolean();
+        Thread reader=new Thread(()->{
+            while(!stop.get()&&torn.get()==null){
+                byte[] seen=storage.readBytes("ghost.bin").orElse(null);
+                if(seen==null){torn.set("file missing during replacement");break;}
+                if(!java.util.Arrays.equals(seen,first)&&!java.util.Arrays.equals(seen,second))
+                    torn.set("torn read of "+seen.length+" bytes");
+            }
+        });
+        reader.start();
+        try{
+            for(int i=0;i<200;i++) assertTrue(storage.writeBytes("ghost.bin",(i&1)==0?second:first));
+        }finally{stop.set(true);reader.join(10_000);}
+        assertNull(torn.get());
+        assertNoStagingResidue(root.resolve("mods/atomic"));
+    }
+
+    private static void assertNoStagingResidue(Path directory) throws Exception {
+        try(var files=Files.list(directory)){
+            assertEquals(java.util.List.of(),files.map(p->p.getFileName().toString())
+                    .filter(n->n.endsWith(".tmp")).toList());
+        }
+    }
+
     @ParameterizedTest
     @EnumSource(GameId.class)
     void ownerNamedLikeBuiltInGameCannotAccessItsStockSaveSlots(GameId game) throws Exception {

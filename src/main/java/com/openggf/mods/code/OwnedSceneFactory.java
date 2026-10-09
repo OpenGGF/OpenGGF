@@ -90,8 +90,59 @@ public final class OwnedSceneFactory {
         }
 
         @Override
+        public boolean capturesTextInput() {
+            return boundary.call(ownerModId, scene::capturesTextInput);
+        }
+
+        @Override
+        public void resumed(SceneContext ctx, com.openggf.mods.run.RunEndReason reason) {
+            boundary.run(ownerModId, () -> scene.resumed(ctx, reason));
+        }
+
+        @Override
         public void exit(SceneContext ctx) {
             boundary.run(ownerModId, () -> scene.exit(ctx));
         }
+    }
+
+    /**
+     * {@code host} with every callback routed through this scene owner's fault boundary, for a
+     * run the owner's scene launched. A creator failure disables the owner and surfaces as the
+     * boundary's abort, which the engine treats as an aborted run.
+     */
+    public com.openggf.mods.run.RunHost guard(com.openggf.mods.run.RunHost host) {
+        Objects.requireNonNull(host, "host");
+        return new com.openggf.mods.run.RunHost() {
+            @Override
+            public void onLevelReady(com.openggf.mods.run.RunLevelStart start) {
+                boundary.run(ownerModId, () -> host.onLevelReady(start));
+            }
+
+            @Override
+            public boolean admitStep(com.openggf.mods.run.RunInput input) {
+                return boundary.call(ownerModId, () -> host.admitStep(input));
+            }
+
+            @Override
+            public void afterStep(com.openggf.mods.run.RunStep step) {
+                boundary.run(ownerModId, () -> host.afterStep(step));
+            }
+
+            @Override
+            public java.util.List<com.openggf.mods.run.GhostPose> ghosts() {
+                java.util.List<com.openggf.mods.run.GhostPose> poses = boundary.call(ownerModId, host::ghosts);
+                return poses == null ? java.util.List.of() : java.util.List.copyOf(poses);
+            }
+
+            @Override
+            public void drawOverlay(com.openggf.mods.ui.LevelOverlayCanvas canvas) {
+                boundary.run(ownerModId, () -> host.drawOverlay(canvas));
+            }
+
+            @Override
+            public void onRunEnded(com.openggf.mods.run.RunEndReason reason) {
+                boundary.run(ownerModId, () -> host.onRunEnded(reason));
+            }
+        };
     }
 }

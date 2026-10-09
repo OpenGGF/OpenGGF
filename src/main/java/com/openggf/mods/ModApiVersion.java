@@ -28,9 +28,19 @@ public final class ModApiVersion {
      * Power-up rules expose explicit invincibility-expiry music ownership for modes
      * with continuous music.
      * Broker-pinned direct-room TLS wire fields are part of the race protocol.
+     * A session-scoped gameplay run policy governs special/bonus stage entry, act
+     * completion handing control back to the run's host, live rewind and editor entry.
+     * Scenes launch stock gameplay runs (RunSpec) observed by a RunHost: level-ready,
+     * step admission (hold), immutable executed steps with the player's pose, engine-drawn
+     * ghost poses, a screen overlay, end reasons and queued retry/leave commands; the level
+     * start reports the act's size and a finished act may pan a spectator camera.
+     * Any mod may add one master-title entry opening a scene that launches such runs
+     * and is resumed when each ends, learn a game's run fingerprint before launching, and
+     * claim keyboard text input so global shortcuts stay quiet while the player types.
      * Creator helpers include character specifications and lifecycle hooks, decoded
      * placement transforms, owner storage and service bundles, named single-act and
      * multi-act zone factories, shared UI/input and ROM-qualified scene art.
+     * Owner storage also keeps bounded, atomically replaced binary files beside its text.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

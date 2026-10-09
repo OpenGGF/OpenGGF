@@ -56,7 +56,6 @@ The `config.yaml` is organized into the following top-level sections:
 | `crossGame` | Cross-game feature donation enable and source |
 | `launch` | Per-game master-title launch profiles |
 | `discord` | Discord Rich Presence enable, show timer, show zone |
-| `timeAttack` | Solo time attack menu and retry keys |
 
 **`debug:` block** (developer/debug tooling — safe to ignore for normal play):
 
@@ -339,28 +338,20 @@ discarding unsaved changes. Applied mod changes still require a restart. Trace a
 recording catalogs load in the background with a visible Cancel action.
 
 **Advanced > Trace replays** opens the trace catalog without enabling test mode.
-Time Attack, Recordings, and Mods also have visible action-menu entries;
+Recordings and Mods also have visible action-menu entries, and each enabled mod
+may add one entry of its own (shown under its label, or grouped under **EXTRAS**
+when several mods add one);
 existing function-key shortcuts remain optional accelerators. Global display and
 capture shortcuts remain available in game selection, but yield to the action
 menu and its child pages so typing or rebinding a key cannot change unrelated
 settings. Playback shortcuts do not run on the master title.
 
 Recordings has a separate options page for the target frame, pause-on-desync,
-fast-forward, playback, and full recording details. Time Attack exposes a
-visible **Start Run**, **Create LAN Room**, **Join LAN Room**, or **Browse Rooms** action; LAN invite codes and lobby chat support the same
-keyboard/controller editor. Room creation, refresh, paging, and lobby actions
-are visible choices. Mods exposes **Details**, **Order**, **Notices**, and
+fast-forward, playback, and full recording details. Time Attack is the bundled
+Time Attack mod's entry; see [Time Attack (bundled mod)](#time-attack-bundled-mod). Mods exposes **Details**, **Order**, **Notices**, and
 **Save + Back**, with paginated findings and confirmations. Trace replay lists,
 loading/failure pages, standalone New Game/Continue, and help share the same
 native typography and keyboard/controller navigation.
-
-Creating a LAN room shows **Copy LAN Invite / Chat** in the host lobby. Opening it
-copies a template such as `HOST_IP:27888#<share-code>`; replace `HOST_IP` with the
-host's reachable LAN IP or name before sharing the entire code. Joining requires
-that complete invite, including its certificate and host-identity pins. Plain
-addresses and `ws://` connections are rejected; the code should be shared through
-a trusted channel. The invite editor accepts up to 192 characters for IPv6 and
-long hostnames.
 
 Profiles are persistent defaults for future manual launches, but applying a profile is
 session-only. A launch can temporarily override live rewind, cross-game donation, debug
@@ -652,23 +643,50 @@ Desync-ghost / game-HUD / debug-HUD visibility during capture is governed by the
 
 Audio: headless capture installs `HeadlessSmpsAudioBackend`, a true no-device SMPS backend that synthesizes the music for the recording but **opens no audio device** (no speaker output; works on machines with no audio hardware). Audio is captured at the engine's 48 kHz synthesis rate and muxed as lossless FLAC, synced 1:1 with video.
 
-## Time Attack
+## Time Attack (bundled mod)
 
-| Key | YAML path | Type | Default | Description |
-|-----|-----------|------|---------|-------------|
-| `TIME_ATTACK_RETRY_KEY` | `timeAttack.retryKey` | key | `R` | Instant retry to act start during solo time attack. |
-| `TIME_ATTACK_MENU_KEY` | `timeAttack.menuKey` | key | `F10` | Opens the solo Time Attack menu from the master title screen. |
-| `TIME_ATTACK_NET_HOST_PORT` | `timeAttack.net.hostPort` | int | `27888` | Port for player-hosted rooms using pinned TLS WebSocket for both manual LAN and master-listed direct joins. |
-| `TIME_ATTACK_NET_LAST_JOIN_ADDRESS` | `timeAttack.net.lastJoinAddress` | string | `""` | Most recently joined complete LAN invite (address and share code). |
-| `TIME_ATTACK_NET_DISPLAY_NAME` | `timeAttack.net.displayName` | string | `""` | Multiplayer display name; blank uses the identity prefix. |
-| `TIME_ATTACK_NET_MASTER_URL` | `timeAttack.net.masterUrl` | string | `""` | Master-server WebSocket URL for internet race browsing. |
-| `TIME_ATTACK_NET_MASTER_TRUST_INSECURE` | `timeAttack.net.masterTrustInsecure` | bool | `false` | Development-only trust-all TLS mode for the master server. |
-| `TIME_ATTACK_HUD_MINIMAP` | `timeAttack.hud.minimap` | bool | `true` | Show the multiplayer minimap progress strip. |
+Time Attack and multiplayer racing ship as the bundled, enabled-by-default **Time Attack**
+mod rather than as engine settings; the engine has no `timeAttack.*` keys, and old
+`timeAttack.*` entries in `config.yaml` are ignored with an "Unknown config key" warning.
+Disable or re-enable the mod in **Mods**. During a run, **R** retries the act from its
+start. The mod keeps best ghosts in `ghosts/<game>/` and the player identity in
+`identity/`, the same locations as before the move.
 
-### Master verifier settings
+The menu's **Mode** row offers **Solo**, **Host LAN**, **Join LAN** and **Browse** (rooms on a
+master server). A room admits only players whose engine build and ROM for the room's game
+match the host's, so select the room's game before joining. Each round plays as its own run;
+the lobby returns when the run ends, and leaving the lobby closes the room connection (and,
+for a host, the room).
 
-These keys belong in the standalone master server's YAML (`MasterServerMain
---config`), not the engine's `config.yaml`:
+Hosting a LAN room shows **LAN Invite / Chat** in the lobby. Opening it shows the complete
+invite template, such as `HOST_IP:27888#<share-code>`, which is also written to
+`lan-invite.txt` in the mod's storage folder (`mods/time-attack/` in the save directory) and
+to the log, because mod scenes have no clipboard. Replace `HOST_IP` with the host's reachable
+LAN IP or name before sharing the entire code. Joining requires that complete invite,
+including its certificate and host-identity pins. Plain addresses and `ws://` connections are
+rejected; share the code through a trusted channel. The invite, chat, display-name and URL
+fields are typed on the keyboard (Enter accepts, Escape cancels), and the global display and
+capture shortcuts are held back while one is open; the invite field accepts up to 192
+characters for IPv6 and long hostnames.
+
+### Time Attack settings
+
+The mod keeps its own settings in `settings.txt` (UTF-8 `key=value` lines) in its storage
+folder. Edit them from the **Settings** row of the Time Attack menu; changes save at once.
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `hostPort` | `27888` | Port for player-hosted rooms (manual LAN and master-listed direct rooms), served as a pinned TLS WebSocket. |
+| `lastJoinAddress` | `""` | Most recently joined complete LAN invite; it prefills the invite field. |
+| `displayName` | `""` | Multiplayer display name; blank uses the identity prefix. |
+| `masterUrl` | `""` | Master-server WebSocket URL for browsing rooms; browsing is unavailable while blank. |
+| `masterTrustInsecure` | `false` | Development only: trust any master-server TLS certificate. |
+| `minimap` | `true` | Show the multiplayer minimap progress strip. |
+
+### Racing server: master verifier settings
+
+These keys belong in the racing server's master YAML (`MasterServerMain
+--config`, built from `racing/server`), not the engine's `config.yaml`:
 
 | YAML key | Default | Description |
 |----------|---------|-------------|
@@ -940,14 +958,6 @@ The gamepad Back/Select/View button on the primary connected pad is a hardcoded 
 | `LIVE_REWIND_KEY` | `rewind.liveKey` | `82` | R | Hold during live level play to rewind deterministic gameplay state when `LIVE_REWIND_ENABLED` is true, including reverse audio presentation and restored fade snapshots. The gamepad left bumper (L1/LB) on the primary connected pad also holds rewind, unconditionally (not remappable). |
 | `LIVE_REWIND_HALF_SPEED_KEY` | `rewind.liveHalfSpeedKey` | `341` | Left Ctrl | Modifier held together with the rewind key for half-speed rewind (one engine step every other frame; reverse audio plays slow-motion). The mirrored left/right variant of a modifier key also counts. Holding both speed modifiers cancels back to normal speed. |
 | `LIVE_REWIND_DOUBLE_SPEED_KEY` | `rewind.liveDoubleSpeedKey` | `340` | Left Shift | Modifier held together with the rewind key for double-speed rewind (two engine steps per frame; reverse audio pitches up, and the VHS effect shows a third tear band). The mirrored left/right variant of a modifier key also counts. |
-| `TIME_ATTACK_RETRY_KEY` | `timeAttack.retryKey` | `82` | R | Instantly retry the current solo time attack from the act start. |
-| `TIME_ATTACK_MENU_KEY` | `timeAttack.menuKey` | `299` | F10 | Opens the solo Time Attack menu from the master title screen. |
-| `TIME_ATTACK_NET_HOST_PORT` | `timeAttack.net.hostPort` | `27888` |  | Port for player-hosted rooms using pinned TLS WebSocket for both manual LAN and master-listed direct joins. |
-| `TIME_ATTACK_NET_LAST_JOIN_ADDRESS` | `timeAttack.net.lastJoinAddress` | `""` |  | Most recently joined complete LAN invite (address and share code). |
-| `TIME_ATTACK_NET_DISPLAY_NAME` | `timeAttack.net.displayName` | `""` |  | Multiplayer display name; blank uses the identity prefix. |
-| `TIME_ATTACK_NET_MASTER_URL` | `timeAttack.net.masterUrl` | `""` |  | Master-server WebSocket URL for internet race browsing. |
-| `TIME_ATTACK_NET_MASTER_TRUST_INSECURE` | `timeAttack.net.masterTrustInsecure` | `false` |  | Development-only trust-all TLS mode for the master server. |
-| `TIME_ATTACK_HUD_MINIMAP` | `timeAttack.hud.minimap` | `true` |  | Show the multiplayer minimap progress strip. |
 
 Controlled mods can consume the configured `LIVE_REWIND_KEY` shortcut and primary
 L1/LB bumper independently of `LIVE_REWIND_ENABLED`. Putt Putt Paradise uses them
@@ -990,6 +1000,26 @@ These keys are only active while a Special Stage is running.
 | `SPECIAL_STAGE_FAIL_KEY` | `debug.keys.specialStageFail` | `261` | Delete | Fail the current Special Stage without awarding the emerald. |
 | `SPECIAL_STAGE_SPRITE_DEBUG_KEY` | `debug.keys.specialStageSpriteDebug` | `301` | F12 | Toggle the Special Stage sprite debug viewer. |
 | `SPECIAL_STAGE_PLANE_DEBUG_KEY` | `debug.keys.specialStagePlaneDebug` | `292` | F3 | Cycle Special Stage plane visibility debug modes. |
+
+---
+
+## Install location and bundled mods
+
+These JVM system properties (`-D<name>=<value>` on the `java` command line) are not
+stored in `config.yaml`.
+
+| Property | Default | Purpose |
+| --- | --- | --- |
+| `openggf.installDir` | Directory holding the engine jar (for an exploded class directory such as `target/classes`, its parent) | Application install directory whose `bundled/` folder supplies the jars of mods bundled with this build. The working directory is never used for this. Set it only when the engine jar was moved away from its `bundled/` folder. |
+
+Bundled mods are listed, with their exact SHA-256, in a manifest inside the engine
+artifact; only jars matching it are trusted by default (see
+[trust](docs/modding/concepts/trust.md#first-party-bundled-mods-a-deliberate-narrowing)).
+The universal jar embeds them and extracts them to `bundled-mod-cache/` under the save
+root (`saves/` unless `openggf.saveRoot` is set). The cache is re-verified on every
+normal start, pruned of earlier builds' jars, and safe to delete. Native builds carry
+no bundled mods. A player's enable/disable choice is stored in `mods/modstate.json`
+like any other mod's.
 
 ---
 

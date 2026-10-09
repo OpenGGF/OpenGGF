@@ -56,6 +56,29 @@ final class ModSceneLauncher {
         return true;
     }
 
+    /**
+     * Opens a mod's master-title entry scene. No game is loaded, so the scene has no ROM art;
+     * {@code gameplay} lets it launch stock runs, after which it is resumed. Both exits return
+     * to the master title.
+     */
+    static void openTitleEntryScene(GameLoop gameLoop, long window, GraphicsManager graphics,
+            int logicalWidth, int logicalHeight, com.openggf.mods.code.OwnedTitleEntry entry,
+            com.openggf.mods.scene.SceneGameplay gameplay) {
+        Runnable toMasterTitle = () -> gameLoop.fadeOutTo(gameLoop::returnToMasterTitle);
+        SceneServices services = new SceneServices(
+                GameServices.audio(),
+                null,
+                SavePaths.root(),
+                window == 0 ? null : mouseMapper(window, graphics, logicalWidth, logicalHeight),
+                toMasterTitle,
+                toMasterTitle,
+                null,
+                gameplay);
+        gameLoop.setGameMode(GameMode.MOD_SCENE);
+        gameLoop.modSceneHost.open(entry.scene(), services, logicalWidth, logicalHeight);
+        gameLoop.resolveFadeManager().startFadeFromBlack(null);
+    }
+
     /** Fades out of the mod scene to the base game's title screen. */
     private static void exitToGameTitle(GameLoop gameLoop) {
         gameLoop.resolveFadeManager().startFadeToBlack(() -> {

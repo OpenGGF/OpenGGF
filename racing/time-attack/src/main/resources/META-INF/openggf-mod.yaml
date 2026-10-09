@@ -1,0 +1,14 @@
+formatVersion: 1
+id: time-attack
+name: Time Attack
+version: 1.0.0
+authors:
+  - OpenGGF contributors
+description: Race any curated act against your best ghost, with instant retry, splits and imported ghosts, or race other players over LAN or a master server. Bundled with OpenGGF; adds a Time Attack entry to the master title.
+engineApiRange: ">=0.7.0 <0.8.0"
+type: patch
+baseGame: any
+entrypoint: openggf.timeattack.TimeAttackMod
+dependencies: []
+audioOverrides: {}
+artOverrides: {}

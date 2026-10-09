@@ -121,7 +121,7 @@ class TestMasterTitleSecondaryActions {
         InputHandler keyboard = new InputHandler(InputBindingFactory.supplier(keyboardConfig));
 
         TestMasterTitleHub.press(keyboardScreen, org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
-        for (int i = 0; i < 4; i++) TestMasterTitleHub.press(keyboardScreen, org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
+        for (int i = 0; i < 3; i++) TestMasterTitleHub.press(keyboardScreen, org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
         TestMasterTitleHub.press(keyboardScreen, org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
 
         SonicConfigurationService gamepadConfig = SonicConfigurationService.createStandalone(tempDir.resolve("gamepad"));
@@ -137,7 +137,7 @@ class TestMasterTitleSecondaryActions {
         source.setButtons(GLFW_GAMEPAD_BUTTON_DPAD_DOWN);
         gamepad.refreshLogicalSnapshot();
         gamepadScreen.update(gamepad);
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 3; i++) {
             source.setButtons(); gamepad.refreshLogicalSnapshot(); gamepadScreen.update(gamepad);
             source.setButtons(GLFW_GAMEPAD_BUTTON_DPAD_DOWN); gamepad.refreshLogicalSnapshot(); gamepadScreen.update(gamepad);
         }
@@ -235,7 +235,7 @@ class TestMasterTitleSecondaryActions {
     private static void focusMods(MasterTitleScreen screen, InputHandler input) {
         input.setLogicalOverride(logical(AbstractPlayableSprite.INPUT_DOWN, 0));
         screen.update(input);
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 3; i++) {
             input.setLogicalOverride(LogicalInputSnapshot.neutral()); screen.update(input);
             input.setLogicalOverride(logical(AbstractPlayableSprite.INPUT_DOWN, 0)); screen.update(input);
         }

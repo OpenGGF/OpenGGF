@@ -120,7 +120,6 @@ class TestEngineSettingsDraft {
         assertThrows(IllegalArgumentException.class, () -> draft.set(FPS, "2.5"));
         assertThrows(IllegalArgumentException.class, () -> draft.set(CONTROLLER_DEADZONE, "NaN"));
         assertThrows(IllegalArgumentException.class, () -> draft.set(CONTROLLER_DEADZONE, "1"));
-        assertThrows(IllegalArgumentException.class, () -> draft.set(TIME_ATTACK_NET_HOST_PORT, "65536"));
         assertThrows(IllegalArgumentException.class, () -> draft.set(DISPLAY_ASPECT, "invalid"));
         assertThrows(IllegalArgumentException.class, () -> draft.set(P1_A, "not a key"));
         assertThrows(IllegalArgumentException.class, () -> draft.set(SCREEN_WIDTH_PIXELS, "500"));

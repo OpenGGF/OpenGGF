@@ -71,6 +71,14 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Exact allocation budgets can include the measuring harness (2026-10-09, PR 217):
+the audible-cursor assertion reported 88 bytes in CI while its primitive query path
+passed in isolation. A shared probe's polymorphic `Runnable` call site can add
+class-loading or deoptimization costs to a workload counter. Warm the actual
+measured query loop and read per-thread counters directly around it; retain the
+zero-byte assertion and verify it rejects a deliberate escaping allocation.
+The isolated pass alone does not establish the cause of the CI-only bytes.
+
 Committed fixtures are live validation inputs (2026-10-08, Sitar Hero delivery):
 freeze test sources, BK2 files and scripts alongside runtime code. A fixture merge
 during an ordinary run makes the invocation incomplete even if already compiled

@@ -457,8 +457,9 @@ cue). Fade or stop your music when the scene leaves, so
 none of it plays on into the next screen. See the note above on `ctx.music()`
 replacing this output while a song player exists.
 
-`ctx.storage()` keeps small text files for your mod under the save root
-(`saves/mods/<mod-id>/`): `read`, `write`, `delete`, `list`. Slay the Robotnik saves the
+`ctx.storage()` keeps small files for your mod under the save root
+(`saves/mods/<mod-id>/`): `read`, `write`, `delete`, `list` for text up to 1 MiB, and
+`readBytes`/`writeBytes` for binary data up to 4 MiB. Slay the Robotnik saves the
 run in progress, the player's records and the compendium there.
 
 ## 6. Testing a scene

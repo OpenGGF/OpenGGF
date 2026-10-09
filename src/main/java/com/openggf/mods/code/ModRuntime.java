@@ -29,6 +29,7 @@ public final class ModRuntime implements AutoCloseable {
     private final Map<String, Rejection> rejectedOwners;
     private Map<String, Throwable> registrationFailures = Map.of();
     private Map<String, ModRegistrationPlan> registrationPlans = Map.of();
+    private List<OwnedTitleEntry> titleEntries = List.of();
     private ModContributionReport contributionReport = new ModContributionReport(List.of());
     private Map<String, com.openggf.game.GameModule> standaloneModules = Map.of();
     private final Set<String> runtimeDisabledOwners = new java.util.LinkedHashSet<>();
@@ -71,6 +72,7 @@ public final class ModRuntime implements AutoCloseable {
     public synchronized ModuleResolutionService.PatchPlan newRegistrationPlan() {
         if (closed) throw new IllegalStateException("Mod runtime is closed");
         registrationPlans = Map.of();
+        titleEntries = List.of();
         contributionReport = new ModContributionReport(List.of());
         Map<String, ModRegistrationPlan> currentPlans = new LinkedHashMap<>();
         List<RegisteredPatch> registrations = new ArrayList<>();
@@ -78,6 +80,7 @@ public final class ModRuntime implements AutoCloseable {
         Set<String> failed = new java.util.LinkedHashSet<>();
         Map<String, Throwable> currentFailures = new LinkedHashMap<>();
         Map<String, com.openggf.game.GameModule> currentStandaloneModules = new LinkedHashMap<>();
+        Map<String, OwnedTitleEntry> currentTitleEntries = new LinkedHashMap<>();
         for (String owner : owners) {
             ModDescriptor descriptor = descriptors.get(owner);
             if (descriptor == null) continue;
@@ -115,6 +118,15 @@ public final class ModRuntime implements AutoCloseable {
                         entrypoint.register(context);
                     }
                     plan = context.freeze().prepareObjectArt(assets).prepareZones(assets);
+                    ModTitleEntry entry = context.titleEntry();
+                    if (entry != null) {
+                        if (faultBoundary == null) {
+                            throw new ModRegistrationException(owner,
+                                    "Title entry requires an installed fault boundary");
+                        }
+                        currentTitleEntries.put(owner, new OwnedTitleEntry(owner, entry.label(),
+                                new OwnedSceneFactory(owner, entry.factory(), faultBoundary)));
+                    }
                 }
                 PatchOwner.Mod patchOwner = new PatchOwner.Mod(owner);
                 List<RegisteredPatch> ownerRegistrations;
@@ -202,6 +214,7 @@ public final class ModRuntime implements AutoCloseable {
         rejectedClaims.forEach((owner, reason) -> {
             currentFailures.put(owner, new ModRegistrationException(owner, "MOD_COMPOSITION_REJECTED", reason, null, null));
             runtimeDisabledOwners.add(owner); currentPlans.remove(owner); currentStandaloneModules.remove(owner);
+            currentTitleEntries.remove(owner);
             registrations.removeIf(registration -> registration.owner().equals(new PatchOwner.Mod(owner)));
             dependencies.remove(new PatchOwner.Mod(owner));
         });
@@ -218,6 +231,8 @@ public final class ModRuntime implements AutoCloseable {
         registrationPlans = java.util.Collections.unmodifiableMap(new LinkedHashMap<>(currentPlans));
         registrationFailures = Map.copyOf(currentFailures);
         standaloneModules = Map.copyOf(currentStandaloneModules);
+        currentTitleEntries.keySet().retainAll(currentPlans.keySet());
+        titleEntries = List.copyOf(currentTitleEntries.values());
         return new ModuleResolutionService.PatchPlan(registrations, dependencies, ordering);
     }
 
@@ -255,6 +270,11 @@ public final class ModRuntime implements AutoCloseable {
     /** Successful private transactions published by the latest registration pass; never re-runs creator code. */
     public synchronized ModContributionReport contributionReport() { return contributionReport; }
 
+    /** Master-title entries from the latest registration pass, in owner order. */
+    public synchronized List<OwnedTitleEntry> titleEntries() {
+        return titleEntries;
+    }
+
     public synchronized Map<String, ModRegistrationPlan> registrationPlans() {
         return registrationPlans;
     }
@@ -286,6 +306,8 @@ public final class ModRuntime implements AutoCloseable {
         LinkedHashMap<String, ModRegistrationPlan> retained = new LinkedHashMap<>(registrationPlans);
         runtimeDisabledOwners.forEach(retained::remove);
         registrationPlans = java.util.Collections.unmodifiableMap(retained);
+        titleEntries = titleEntries.stream()
+                .filter(entry -> !runtimeDisabledOwners.contains(entry.ownerModId())).toList();
         contributionReport = ModContributionReport.build(registrationPlans, descriptors);
     }
 
@@ -362,6 +384,7 @@ public final class ModRuntime implements AutoCloseable {
         if (closed) return;
         closed = true;
         registrationPlans = Map.of();
+        titleEntries = List.of();
         contributionReport = new ModContributionReport(List.of());
         IOException failure = null;
         List<ModDependencyClassLoader> reverse = new ArrayList<>(loaders.values());
