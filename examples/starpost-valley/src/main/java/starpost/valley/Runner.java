@@ -6,6 +6,11 @@ package starpost.valley;
  * in pixels per frame rather than 8.8 fixed point. The ground is a height field: a terrace edge
  * is a wall when it rises more than a step, and a ledge to fall from when it drops. Slopes and
  * loops are not modelled here (the look test's terraces are flat).
+ *
+ * <p>Three additions serve the Ruins and are inert in the valley, which never uses them: grounds
+ * may report {@linkplain Ground#ceiling ceilings} (the head stops on them, and a jump needs
+ * headroom); {@link #underwater} switches to Sonic 1's water physics; and {@link #hurt} is the
+ * knock-back after a hit, which ignores the pad until Sonic lands.
  */
 public final class Runner {
     /** Sonic_Move: acceleration $C, deceleration $80, friction $C, top speed $600. */
@@ -25,11 +30,29 @@ public final class Runner {
     public static final float DASH_BASE = 0x800 / 256f;
     public static final float DASH_STEP = 0x200 / 256f;
     public static final float DASH_MAX = 0x800 / 256f;
+    /**
+     * Sonic 1 under water (Sonic_Water halves top speed, acceleration and deceleration; Sonic_Jump
+     * uses son_jumpspeed-$300; Sonic_JumpHeight caps a released jump at $200; Sonic_MdJump takes
+     * gravity-$10 back off ObjectFall's $38).
+     */
+    public static final float WATER_TOP = 0x300 / 256f;
+    public static final float WATER_ACCEL = 0x06 / 256f;
+    public static final float WATER_DECEL = 0x40 / 256f;
+    public static final float WATER_JUMP = 0x380 / 256f;
+    public static final float WATER_JUMP_RELEASE = 0x200 / 256f;
+    public static final float WATER_GRAVITY = 0x10 / 256f;
+    /** Sonic_Hurt: gravity-8 ($30) while knocked back, $10 under water. */
+    public static final float HURT_GRAVITY = 0x30 / 256f;
     /** Ground this far above the feet just ahead is a wall; slopes rise less than that. */
     public static final int WALL = 12;
     /** A floor more than this far below the feet is a ledge to fall from. */
     public static final int DROP = 20;
     public static final int HALF_WIDTH = 9;
+    /** Feet to head: Sonic's y radius is 19 standing and 14 rolling (twice that, tall). */
+    public static final int STAND_HEIGHT = 38;
+    public static final int ROLL_HEIGHT = 28;
+    /** Sonic_Jump refuses to jump with less than 6 pixels of headroom. */
+    public static final int JUMP_HEADROOM = 6;
 
     /** The terrain: per-pixel solidity, scanned for floors and walls. */
     public interface Ground {
@@ -41,6 +64,11 @@ public final class Runner {
         int left();
 
         int right();
+
+        /** Whether a ceiling at this pixel stops a head moving up into it (the valley has none). */
+        default boolean ceiling(int x, int y) {
+            return false;
+        }
     }
 
     public float x;
@@ -56,10 +84,76 @@ public final class Runner {
     public boolean sprung;
     public boolean pushing;
     public int jumpedAt = -1;
+    /** Sonic 1's water physics (the Ruins' flooded chambers); see {@link #setUnderwater}. */
+    public boolean underwater;
+    /** Knocked back by a hit: no control, lighter gravity, until the next landing. */
+    public boolean hurt;
 
     public Runner(float x, float y) {
         this.x = x;
         this.y = y;
+    }
+
+    public float top() {
+        return underwater ? WATER_TOP : TOP;
+    }
+
+    private float accel() {
+        return underwater ? WATER_ACCEL : ACCEL;
+    }
+
+    private float decel() {
+        return underwater ? WATER_DECEL : DECEL;
+    }
+
+    /** Sonic_Move's friction is the acceleration. */
+    private float friction() {
+        return underwater ? WATER_ACCEL : FRICTION;
+    }
+
+    /** Sonic_RollSpeed: half the acceleration as friction, a quarter of the deceleration to brake. */
+    private float rollFriction() {
+        return underwater ? WATER_ACCEL / 2 : ROLL_FRICTION;
+    }
+
+    private float rollBrake() {
+        return underwater ? WATER_DECEL / 4 : ROLL_BRAKE;
+    }
+
+    /** Sonic_JumpDirection: twice the acceleration. */
+    private float airAccel() {
+        return underwater ? WATER_ACCEL * 2 : AIR_ACCEL;
+    }
+
+    private float gravity() {
+        if (hurt) {
+            return underwater ? WATER_GRAVITY : HURT_GRAVITY;
+        }
+        return underwater ? WATER_GRAVITY : GRAVITY;
+    }
+
+    /** Feet to head for the current pose. */
+    public int height() {
+        return rolling || dashing || ducking ? ROLL_HEIGHT : STAND_HEIGHT;
+    }
+
+    /**
+     * Enters or leaves water as Sonic_Water does: entering halves x speed and quarters y speed;
+     * leaving doubles y speed, capped at -$1000. Returns true when Sonic crossed the surface
+     * moving vertically (the splash).
+     */
+    public boolean setUnderwater(boolean value) {
+        if (value == underwater) {
+            return false;
+        }
+        underwater = value;
+        if (value) {
+            speed /= 2;
+            ySpeed /= 4;
+        } else {
+            ySpeed = Math.max(-16, ySpeed * 2);
+        }
+        return ySpeed != 0;
     }
 
     /** One frame. Returns true when a jump started (for the jump sound). */
@@ -67,6 +161,13 @@ public final class Runner {
             boolean jumpHeld, int tick) {
         boolean jumped = false;
         pushing = false;
+        if (hurt) {
+            // Sonic_Hurt: no control until he lands.
+            left = right = down = jumpPressed = jumpHeld = false;
+            if (onGround) {
+                hurt = false;
+            }
+        }
         if (onGround) {
             if (dashing) {
                 if (jumpPressed) {
@@ -80,14 +181,14 @@ public final class Runner {
                 }
             } else if (rolling) {
                 if (left && speed > 0 || right && speed < 0) {
-                    speed -= Math.signum(speed) * ROLL_BRAKE;
+                    speed -= Math.signum(speed) * rollBrake();
                 }
-                speed -= Math.signum(speed) * Math.min(Math.abs(speed), ROLL_FRICTION);
+                speed -= Math.signum(speed) * Math.min(Math.abs(speed), rollFriction());
                 if (Math.abs(speed) < 0.5f) {
                     rolling = false;
                     speed = 0;
                 }
-                if (jumpPressed) {
+                if (jumpPressed && headroom(ground)) {
                     jumped = jump(tick);
                 }
             } else {
@@ -96,7 +197,7 @@ public final class Runner {
                     dashing = true;
                     dashCharge = 0;
                     ducking = false;
-                } else if (jumpPressed) {
+                } else if (jumpPressed && headroom(ground)) {
                     jumped = jump(tick);
                 } else {
                     walk(left && !ducking, right && !ducking);
@@ -109,25 +210,38 @@ public final class Runner {
                 moveAlongGround(ground);
             }
         } else {
-            if (!jumpHeld && ySpeed < -JUMP_RELEASE && jumpedAt >= 0 && !sprung) {
-                ySpeed = -JUMP_RELEASE;
+            float release = underwater ? WATER_JUMP_RELEASE : JUMP_RELEASE;
+            if (!jumpHeld && ySpeed < -release && jumpedAt >= 0 && !sprung) {
+                ySpeed = -release;
             }
+            float top = top();
             if (left) {
-                speed = Math.max(-TOP, speed - AIR_ACCEL);
+                speed = Math.max(-top, speed - airAccel());
                 facingLeft = true;
             } else if (right) {
-                speed = Math.min(TOP, speed + AIR_ACCEL);
+                speed = Math.min(top, speed + airAccel());
                 facingLeft = false;
             }
-            ySpeed = Math.min(16, ySpeed + GRAVITY);
+            ySpeed = Math.min(16, ySpeed + gravity());
             moveInAir(ground);
         }
         return jumped;
     }
 
+    /** Sonic_Jump's headroom check (always passes where the ground has no ceilings). */
+    private boolean headroom(Ground ground) {
+        int head = Math.round(y) - height();
+        for (int dy = 1; dy <= JUMP_HEADROOM; dy++) {
+            if (ground.ceiling(Math.round(x), head - dy)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private boolean jump(int tick) {
         onGround = false;
-        ySpeed = -JUMP;
+        ySpeed = -(underwater ? WATER_JUMP : JUMP);
         rolling = true;
         jumpedAt = tick;
         sprung = false;
@@ -141,32 +255,51 @@ public final class Runner {
         rolling = false;
         dashing = false;
         sprung = true;
+        hurt = false;
         jumpedAt = -1;
     }
 
+    /**
+     * HurtSonic: knocked up and away from what hit him at (-$400, $200), or (-$200, $100) under
+     * water, with no ground speed.
+     */
+    public void knockBack(boolean awayToLeft) {
+        onGround = false;
+        rolling = false;
+        dashing = false;
+        ducking = false;
+        sprung = false;
+        hurt = true;
+        jumpedAt = -1;
+        ySpeed = underwater ? -0x200 / 256f : -0x400 / 256f;
+        float push = underwater ? 0x100 / 256f : 0x200 / 256f;
+        speed = awayToLeft ? -push : push;
+    }
+
     private void walk(boolean left, boolean right) {
+        float top = top(), accel = accel(), decel = decel();
         if (left) {
             if (speed > 0) {
-                speed -= DECEL;
+                speed -= decel;
                 if (speed < 0) {
-                    speed = -DECEL;
+                    speed = -decel;
                 }
             } else {
-                speed = Math.max(-TOP, speed - ACCEL);
+                speed = Math.max(-top, speed - accel);
                 facingLeft = true;
             }
         } else if (right) {
             if (speed < 0) {
-                speed += DECEL;
+                speed += decel;
                 if (speed > 0) {
-                    speed = DECEL;
+                    speed = decel;
                 }
             } else {
-                speed = Math.min(TOP, speed + ACCEL);
+                speed = Math.min(top, speed + accel);
                 facingLeft = false;
             }
         } else {
-            speed -= Math.signum(speed) * Math.min(Math.abs(speed), FRICTION);
+            speed -= Math.signum(speed) * Math.min(Math.abs(speed), friction());
         }
     }
 
@@ -201,6 +334,18 @@ public final class Runner {
         }
         float before = y;
         y += ySpeed;
+        if (ySpeed < 0) {
+            // The head meets a ceiling: align below it and stop rising (Sonic_DoLevelCollision).
+            int head = Math.round(y) - height();
+            if (ground.ceiling(Math.round(x), head)) {
+                int clear = head;
+                while (clear < Math.round(before) - height() && ground.ceiling(Math.round(x), clear)) {
+                    clear++;
+                }
+                y = clear + height();
+                ySpeed = 0;
+            }
+        }
         if (ySpeed >= 0) {
             int floor = ground.floorBelow(Math.round(x), Math.round(before) - 2);
             if (y >= floor) {
@@ -210,6 +355,9 @@ public final class Runner {
                 sprung = false;
                 jumpedAt = -1;
                 rolling = false; // Sonic_ResetOnFloor: landing ends the jump's roll
+                if (hurt) {
+                    speed = 0;   // Sonic_HurtStop: the knock-back ends with no speed
+                }
             }
         }
     }

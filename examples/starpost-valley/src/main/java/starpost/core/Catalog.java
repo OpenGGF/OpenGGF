@@ -22,6 +22,7 @@ public final class Catalog {
         new Content(this).register();
     }
 
+    /** Registers an item; content registrars in other packages call this from {@link Content#register}. */
     public void add(Item item) {
         if (items.putIfAbsent(item.id(), item) != null) {
             throw new IllegalStateException("Duplicate item " + item.id());

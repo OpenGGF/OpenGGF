@@ -58,6 +58,12 @@ final class WorkshopMenu implements Screen {
             out.add(new Offer("CLEAR MORE LAND", "palm_wood", price, inputs("palm_wood", open < 36 ? 20 : 50, "scrap", 0),
                     () -> game.farm.open(next), "TAILS CLEARS 12 MORE COLUMNS OF FIELD (" + open + " TO " + next + ")."));
         }
+        for (String geode : new String[] {"marble_geode", "tide_geode", "scrap_geode"}) {
+            if (shell.catalog.hasItem(geode) && game.inventory.total(geode) > 0) {
+                out.add(new Offer("CRACK " + game.item(geode).name(), geode, 25, inputs(geode, 1, "scrap", 0),
+                        () -> crack(shell, geode), "TAILS CRACKS IT OPEN. WHAT'S INSIDE?"));
+            }
+        }
         tool(out, game, "fire_shield", 300, inputs("scrap", 5, "marble_chip", 0));
         tool(out, game, "lightning_shield", 2500, inputs("scrap", 20, "marble_chip", 20));
         tool(out, game, "fishing_rod", 400, inputs("scrap", 3, "palm_wood", 10));
@@ -68,6 +74,23 @@ final class WorkshopMenu implements Screen {
         }
         out.removeIf(o -> !o.inputs().keySet().stream().allMatch(shell.catalog::hasItem));
         return out;
+    }
+
+    /** What a geode holds: mostly ore, sometimes its band's gem, rarely an Emerald Shard. */
+    private static void crack(Shell shell, String geode) {
+        Game game = shell.game;
+        int roll = game.rng.nextInt(100);
+        String gem = switch (geode) {
+            case "tide_geode" -> "tide_sapphire";
+            case "scrap_geode" -> "spark_topaz";
+            default -> "lava_ruby";
+        };
+        String find = roll < 5 ? "emerald_shard" : roll < 40 ? gem : "marble_ore";
+        int count = find.equals("marble_ore") ? 3 : 1;
+        if (shell.catalog.hasItem(find)) {
+            game.inventory.add(game.item(find), count);
+            shell.toast("INSIDE: " + (count > 1 ? count + " " : "") + game.item(find).name());
+        }
     }
 
     private static void tool(List<Offer> out, Game game, String id, int rings, Map<String, Integer> inputs) {

@@ -18,8 +18,11 @@ import starpost.ui.Text;
 final class InnMenu implements Screen {
     private static final int ROWS = 7;
 
-    /** A jukebox track: which ROM and driver id. */
-    private record Track(String name, String game, int id) {
+    /**
+     * A jukebox track: which ROM and driver id, and what opens it: {@code null} always, a Ruins
+     * Record's found flag, or "slot" (the next one opens each time a Record is slotted in for good).
+     */
+    private record Track(String name, String game, int id, String unlock) {
     }
 
     private final PlayScreen play;
@@ -47,36 +50,60 @@ final class InnMenu implements Screen {
         return out;
     }
 
-    /** Every track in order; the first {@link #unlocked} are playable. */
+    /** Every track in order. */
     private static List<Track> tracks(Shell shell) {
         List<Track> out = new ArrayList<>();
-        out.add(new Track("GREEN HILL", "s1", Music.S1_GHZ));
-        out.add(new Track("SPRING YARD", "s1", Music.S1_SYZ));
-        out.add(new Track("STAR LIGHT", "s1", Music.S1_SLZ));
-        out.add(new Track("MARBLE", "s1", Music.S1_MZ));
-        out.add(new Track("LABYRINTH", "s1", Music.S1_LZ));
-        out.add(new Track("SCRAP BRAIN", "s1", Music.S1_SBZ));
-        out.add(new Track("ANGEL ISLAND", "s3k", 0x01));
-        out.add(new Track("MUSHROOM HILL", "s3k", 0x0F));
-        out.add(new Track("ICECAP", "s3k", 0x0B));
-        out.add(new Track("CARNIVAL NIGHT", "s3k", 0x07));
-        out.add(new Track("KNUCKLES' THEME", "s3k", 0x1F));
-        out.add(new Track("SONIC 1 ENDING", "s1", Music.S1_ENDING));
+        out.add(new Track("GREEN HILL", "s1", Music.S1_GHZ, null));
+        out.add(new Track("SPRING YARD", "s1", Music.S1_SYZ, null));
+        out.add(new Track("STAR LIGHT", "s1", Music.S1_SLZ, null));
+        // Records found in the Ruins open their own Sonic 1 songs (RuinsContent.recordFlag).
+        out.add(new Track("MARBLE", "s1", Music.S1_MZ, "record.s1.83"));
+        out.add(new Track("LABYRINTH", "s1", Music.S1_LZ, "record.s1.82"));
+        out.add(new Track("SCRAP BRAIN", "s1", Music.S1_SBZ, "record.s1.86"));
+        out.add(new Track("INVINCIBILITY", "s1", 0x87, "record.s1.87"));
+        out.add(new Track("BOSS", "s1", 0x8C, "record.s1.8c"));
+        out.add(new Track("FINAL ZONE", "s1", 0x8D, "record.s1.8d"));
+        out.add(new Track("DROWNING", "s1", 0x92, "record.s1.92"));
+        out.add(new Track("SONIC 1 ENDING", "s1", Music.S1_ENDING, "evaluated_y1"));
+        // Slotting a Record in for good opens the next of these.
+        out.add(new Track("ANGEL ISLAND", "s3k", 0x01, "slot"));
+        out.add(new Track("MUSHROOM HILL", "s3k", 0x0F, "slot"));
+        out.add(new Track("ICECAP", "s3k", 0x0B, "slot"));
+        out.add(new Track("CARNIVAL NIGHT", "s3k", 0x07, "slot"));
+        out.add(new Track("KNUCKLES' THEME", "s3k", 0x1F, "slot"));
         if (shell.ctx.art().rom("s2") != null) {
-            out.add(new Track("EMERALD HILL", "s2", 0x81));     // Sonic2Music.EMERALD_HILL
-            out.add(new Track("CASINO NIGHT", "s2", 0x83));     // Sonic2Music.CASINO_NIGHT
+            out.add(new Track("EMERALD HILL", "s2", 0x81, "slot"));     // Sonic2Music.EMERALD_HILL
+            out.add(new Track("CASINO NIGHT", "s2", 0x83, "slot"));     // Sonic2Music.CASINO_NIGHT
         }
         return out;
     }
 
-    private static int unlocked(Game game) {
+    private static int slotted(Game game) {
         int records = 0;
         for (String flag : game.flags) {
             if (flag.startsWith("jukebox_record_")) {
                 records++;
             }
         }
-        return 3 + records;
+        return records;
+    }
+
+    /** Whether a track is playable. */
+    private static boolean open(Game game, List<Track> tracks, int index) {
+        Track track = tracks.get(index);
+        if (track.unlock() == null) {
+            return true;
+        }
+        if (!track.unlock().equals("slot")) {
+            return game.flags.contains(track.unlock());
+        }
+        int order = 0;
+        for (int i = 0; i < index; i++) {
+            if ("slot".equals(tracks.get(i).unlock())) {
+                order++;
+            }
+        }
+        return order < slotted(game);
     }
 
     @Override
@@ -124,7 +151,7 @@ final class InnMenu implements Screen {
         } else {
             List<Track> tracks = tracks(shell);
             Track track = tracks.get(cursor - 1);
-            if (cursor - 1 >= unlocked(game)) {
+            if (!open(game, tracks, cursor - 1)) {
                 shell.sfx(Sfx.ERROR);
                 return;
             }
@@ -140,9 +167,9 @@ final class InnMenu implements Screen {
             String id = inv.id(i);
             if (id != null && id.startsWith("record")) {
                 inv.useOne(i);
-                game.flags.add("jukebox_record_" + game.flags.size());
+                game.flags.add("jukebox_record_" + slotted(game));
                 shell.sfx(Sfx.PERFECT);
-                shell.toast("A NEW TRACK FOR THE JUKEBOX!");
+                shell.toast("A BONUS TRACK FOR THE JUKEBOX!");
                 return;
             }
         }
@@ -174,7 +201,12 @@ final class InnMenu implements Screen {
             return;
         }
         List<Track> tracks = tracks(shell);
-        int open = unlocked(game);
+        int open = 0;
+        for (int i = 0; i < tracks.size(); i++) {
+            if (open(game, tracks, i)) {
+                open++;
+            }
+        }
         for (int i = top; i < Math.min(tracks.size() + 1, top + ROWS); i++) {
             int ry = y + 28 + (i - top) * 20;
             if (i == cursor) {
@@ -185,7 +217,7 @@ final class InnMenu implements Screen {
                 continue;
             }
             Track track = tracks.get(i - 1);
-            boolean have = i - 1 < open;
+            boolean have = open(game, tracks, i - 1);
             String name = have ? track.name() : "? ? ?";
             Text.shadow(canvas, (track.name().equals(playing) ? "> " : "  ") + name, x + 14, ry + 4,
                     have ? (i == cursor ? Text.YELLOW : Text.WHITE) : Text.GREY);
@@ -193,6 +225,7 @@ final class InnMenu implements Screen {
                 CompactFont.shadowed(canvas, track.game().toUpperCase(), x + w - 40, ry + 6, 1, 0xFF92DBFF, 0xFF000000);
             }
         }
-        Text.note(canvas, Math.min(open, tracks.size()) + " OF " + tracks.size() + " TRACKS", x + 10, y + h - 18, w - 20, Text.GREY);
+        Text.note(canvas, open + " OF " + tracks.size() + " TRACKS. RECORDS PLAY THEIR OWN SONG; SLOT ONE FOR A BONUS.",
+                x + 10, y + h - 18, w - 20, Text.GREY);
     }
 }

@@ -73,6 +73,9 @@ final class Debug {
                 }
                 case "sleep" -> shell.go(new DayEndScreen(false));
                 case "music" -> shell.music.setEnabled(p[1].equals("on"));
+                case "ruins" -> {
+                    return starpost.ruins.RuinsSystem.debug(shell, p);
+                }
                 default -> {
                     return false;
                 }

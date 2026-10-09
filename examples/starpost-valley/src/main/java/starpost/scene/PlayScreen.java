@@ -338,7 +338,7 @@ public final class PlayScreen implements Screen {
         drawHotbar(shell, canvas);
     }
 
-    static void drawHotbar(Shell shell, SceneCanvas canvas) {
+    public static void drawHotbar(Shell shell, SceneCanvas canvas) {
         Game game = shell.game;
         Inventory inv = game.inventory;
         int slot = 18, x0 = (canvas.width() - slot * Inventory.HOTBAR) / 2, y = canvas.height() - 18;

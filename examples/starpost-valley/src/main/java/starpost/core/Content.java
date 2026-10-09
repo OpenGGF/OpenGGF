@@ -23,11 +23,13 @@ final class Content {
         springCrops();
         summerCrops();
         fallCrops();
+        rareCrops();
         forage();
         materials();
         food();
         placeables();
         recipes();
+        new starpost.ruins.RuinsContent(catalog).register();
     }
 
     private void placeables() {
@@ -116,6 +118,15 @@ final class Content {
                 "STANDS TALL AS A TOTEM POLE.");
         crop("scrap_amaranth", "SCRAP BRAIN AMARANTH", FALL, 7, 0, 1, false, false, 70, 150,
                 "TOUGH AS SCRAP BRAIN'S FLOORS.");
+    }
+
+    /** Pud's golden seed from the Ruins: it only wakes under the Capsule Garden's glass. */
+    private void rareCrops() {
+        catalog.add(new Item("super_sunflower_seeds", "SUPER SUNFLOWER SEED", Kind.SEED, 0, 0,
+                "super_sunflower_seeds", "PUD'S GOLDEN SEED. PLAIN SOIL WON'T WAKE IT."));
+        catalog.add(new Item("super_sunflower", "SUPER SUNFLOWER", Kind.CROP, 550, 40, "super_sunflower",
+                "GOLD AS A SUPER RING. REGROWS EVERY WEEK."));
+        catalog.add(new CropDef("super_sunflower", "super_sunflower_seeds", "super_sunflower", 0, 14, 7, 1, false, false), 0);
     }
 
     private void forage() {

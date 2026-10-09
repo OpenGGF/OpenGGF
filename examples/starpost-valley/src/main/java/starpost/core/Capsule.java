@@ -39,7 +39,7 @@ public final class Capsule implements SaveSection {
                 bundle("badnik_catch", "BADNIK CATCH", 0, "chopper_shell", 1, "jaws_fin", 1));
         chamber("scrapyard", "SCRAPYARD", "minecart", "THE RUINS MINECART RUNS AGAIN",
                 bundle("scrap_heap", "SCRAP HEAP", 0, "scrap", 30, "marble_chip", 50),
-                bundle("gems", "GEMS", 0, "ruby", 1, "sapphire", 1, "topaz", 1));
+                bundle("gems", "GEMS", 0, "lava_ruby", 1, "tide_sapphire", 1, "spark_topaz", 1));
         chamber("bulletin", "BULLETIN", "flicky_roost", "FLICKY ROOSTS CAN BE BUILT",
                 bundle("forage", "HILL FORAGE", 0, "totem_leek", 1, "hill_daffodil", 1, "loop_berry", 1, "palm_coconut", 1),
                 bundle("winter", "WINTER FINDS", 0, "snow_spud", 1, "frost_ring", 1));

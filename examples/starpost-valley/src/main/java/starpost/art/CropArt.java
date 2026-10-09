@@ -26,9 +26,23 @@ public final class CropArt {
         husk = picture(husk(), 0, 0);
         own("ring_radish", picture(radishRipe(), 0, 0));
         own("sunflower", picture(sunflowerRipe(), 0, 0));
+        own("super_sunflower", gold(picture(sunflowerRipe(), 0, 0)));
         art.get("sunflower")[3] = picture(sunflowerBud(), 0, 0);
         own("emerald_melon", picture(melonRipe(), 0, 0));
         own("eggman_pumpkin", picture(pumpkinRipe(), 0, 0));
+    }
+
+    /** The Super Sunflower: the sunflower in Super Sonic's gold. */
+    private SceneImage gold(SceneImage image) {
+        int[] px = image.pixels();
+        for (int i = 0; i < px.length; i++) {
+            int c = px[i];
+            if (c >>> 24 != 0) {
+                int v = Math.max(c >>> 16 & 255, Math.max(c >>> 8 & 255, c & 255));
+                px[i] = Tone.genesis(0xFF000000 | v << 16 | (v * 7 / 8) << 8 | v / 4);
+            }
+        }
+        return new SceneImage(image.width(), image.height(), px);
     }
 
     private void own(String crop, SceneImage ripe) {
