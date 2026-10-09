@@ -588,6 +588,36 @@ except KeyboardInterrupt:
         self.assertNotIn('Maven slot acquired', output)
         first.with_suffix('.release').touch()
 
+    def test_mod_launcher_build_bypasses_another_worktrees_test_queue(self):
+        holder, first = self.launch('test-holder')
+        self.wait_started(holder, first)
+        args = ['-B', '-q', '-Dmse=off', '-DskipTests', 'compile',
+                'dependency:build-classpath', '-Dmdep.outputFile=target/examples-classpath.txt']
+        build, marker = self.launch_command('mod-build', args=args)
+        self.wait_started(build, marker)
+        self.assertIsNone(holder.poll())
+        self.assertEqual([], list((self.root / '.git/maven-waiters').glob('*.request')))
+        observed = json.loads(marker.with_suffix('.args').read_text())
+        self.assertEqual(args, observed['args'])
+        self.assertEqual(str(self.linked.resolve()), observed['cwd'])
+        marker.with_suffix('.release').touch()
+        output = build.communicate(timeout=5)[0]
+        self.assertEqual(0, build.returncode, output)
+        self.assertNotIn('Maven slot acquired', output)
+        first.with_suffix('.release').touch()
+
+    def test_mod_launcher_build_waits_for_its_own_worktree_test(self):
+        holder, first = self.launch('same-tree-test', self.linked)
+        self.wait_started(holder, first)
+        build, marker = self.launch_command('mod-build', args=[
+            '-DskipTests', 'compile', 'dependency:build-classpath'])
+        time.sleep(.3)
+        self.assertFalse(marker.with_suffix('.started').exists())
+        first.with_suffix('.release').touch()
+        holder.wait(timeout=5)
+        self.wait_started(build, marker)
+        marker.with_suffix('.release').touch()
+
     def test_compile_waits_for_its_own_worktree_test(self):
         holder, first = self.launch('same-tree-test', self.linked)
         self.wait_started(holder, first)
