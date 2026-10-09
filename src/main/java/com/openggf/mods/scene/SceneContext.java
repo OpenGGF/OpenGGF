@@ -64,7 +64,7 @@ public interface SceneContext {
     /** Image decoding: PNGs from the mod's files and art from the player's ROM. */
     SceneArt art();
 
-    /** Music and sound effects (the base game's sound driver and IDs). */
+    /** Base-game driver music/SFX and this mod's declared audio-manifest SFX. */
     SceneAudio audio();
 
     /** Finite ROM music with an audible sample clock, independent of scene update cadence. */

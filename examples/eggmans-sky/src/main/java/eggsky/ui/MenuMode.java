@@ -2,6 +2,7 @@ package eggsky.ui;
 
 import com.openggf.mods.scene.SceneCanvas;
 import eggsky.Game;
+import eggsky.core.VoiceLine;
 import eggsky.Mode;
 import eggsky.core.Controls;
 import eggsky.core.Sound;
@@ -132,7 +133,9 @@ public final class MenuMode implements Mode {
             if (id != 0) {
                 if (g.player.reserves.containsKey(id)) g.player.reserves.remove(id);
                 else g.player.reserves.put(id, g.player.cargo.count(id));
-                g.toast(g.player.reserves.containsKey(id) ? "CARGO RESERVED" : "RESERVE CLEARED", Ui.CYAN);
+                boolean reserved = g.player.reserves.containsKey(id);
+                g.toast(reserved ? VoiceLine.RESERVE_ON : VoiceLine.RESERVE_OFF,
+                        reserved ? "CARGO RESERVED" : "RESERVE CLEARED", Ui.CYAN);
             }
         } else if (in.confirmPressed && age > 2) {
             remember(g);
@@ -149,16 +152,17 @@ public final class MenuMode implements Mode {
             case 3 -> 5;
             case 4 -> Catalog.TECH_COUNT;
             case 5 -> 1;
-            default -> systemOptions().size();
+            default -> systemOptions(g).size();
         };
     }
 
-    private List<String> systemOptions() {
+    private List<String> systemOptions(Game g) {
         List<String> out = new ArrayList<>();
         out.add("RESUME");
         if (inSpace()) {
             out.add("GALAXY MAP");
         }
+        out.add("VOICE: " + (g.voice.enabled() ? "ON" : "OFF"));
         out.add("SAVE");
         out.add("SAVE AND QUIT TO TITLE");
         if (back instanceof eggsky.surface.SurfaceMode) {
@@ -191,11 +195,11 @@ public final class MenuMode implements Mode {
                     return;
                 }
                 if (p.reserves.containsKey(p.cargo.itemAt(slot))) {
-                    g.toast("CLEAR RESERVE WITH C BEFORE DISCARDING", Ui.RED);
+                    g.toast(VoiceLine.RESERVE_LOCKED, "CLEAR RESERVE WITH C BEFORE DISCARDING", Ui.RED);
                     return;
                 }
                 if (confirmDiscard == slot) {
-                    g.toast("DISCARDED " + p.cargo.countAt(slot) + " " + g.catalog.name(p.cargo.itemAt(slot)), 0xFFFF8080);
+                    g.toast(VoiceLine.DISCARDED, "DISCARDED " + p.cargo.countAt(slot) + " " + g.catalog.name(p.cargo.itemAt(slot)), 0xFFFF8080);
                     p.cargo.set(slot, 0, 0);
                     confirmDiscard = -1;
                     g.sound.sfx(Sound.BREAK);
@@ -217,30 +221,34 @@ public final class MenuMode implements Mode {
             }
             case 4 -> {
                 p.pinned = p.pinned == -row - 1 ? 0 : -row - 1;
-                g.toast(p.pinned == 0 ? "OBJECTIVE UNPINNED" : "UPGRADE PINNED", Ui.CYAN);
+                g.toast(p.pinned == 0 ? VoiceLine.OBJECTIVE_UNPINNED : VoiceLine.OBJECTIVE_PINNED, p.pinned == 0 ? "OBJECTIVE UNPINNED" : "UPGRADE PINNED", Ui.CYAN);
             }
             case 5 -> g.setMode(new JournalMode(this));
             case 3 -> {
                 int[] which = {Vitals.LIFE, Vitals.HAZARD, Vitals.LAUNCH, Vitals.HULL, Vitals.SHIP_SHIELD};
                 String msg = Vitals.recharge(p, which[row]);
                 if (msg == null) {
-                    g.toast(Vitals.current(p, which[row]) >= Vitals.max(p, which[row]) - 0.5f ? "ALREADY FULL"
-                            : "NOTHING TO RECHARGE WITH", 0xFFFF8080);
+                    boolean full = Vitals.current(p, which[row]) >= Vitals.max(p, which[row]) - 0.5f;
+                    g.toast(full ? VoiceLine.SYSTEMS_FULL : VoiceLine.RECHARGE_UNAVAILABLE,
+                            full ? "ALREADY FULL" : "NOTHING TO RECHARGE WITH", 0xFFFF8080);
                     g.sound.sfx(Sound.ERROR, 4);
                 } else {
+                    g.voice.recharged(p, which[row]);
                     g.toast(Vitals.name(which[row]).toUpperCase() + " " + msg, 0xFF80FFFF);
                     g.sound.sfx(Sound.SHIELD);
                 }
             }
             case 6 -> {
-                String option = systemOptions().get(row);
+                String option = systemOptions(g).get(row);
                 switch (option) {
                     case "RESUME" -> g.setMode(back);
                     case "GALAXY MAP" -> g.setMode(new eggsky.space.GalaxyMode(back));
+                    case "VOICE: ON", "VOICE: OFF" -> g.toggleVoice();
                     case "SAVE" -> {
-                        g.save();
-                        g.toast("SAVED", 0xFF80FF80);
-                        g.sound.sfx(Sound.STARPOST);
+                        if (g.save()) {
+                            g.toast(VoiceLine.SAVE_COMPLETE, "SAVED", 0xFF80FF80);
+                            g.sound.sfx(Sound.STARPOST);
+                        }
                     }
                     case "SAVE AND QUIT TO TITLE" -> {
                         back.exit(g);
@@ -512,7 +520,7 @@ public final class MenuMode implements Mode {
 
     private void drawSystem(Game g, SceneCanvas c, int x0, int y, int w) {
         Font f = g.font;
-        List<String> options = systemOptions();
+        List<String> options = systemOptions(g);
         y += 10;
         for (int i = 0; i < options.size(); i++) {
             int ry = y + i * 16;

@@ -14,6 +14,9 @@ Examples go with this guide:
 - [Slay the Robotnik](../../../examples/slay-the-robotnik/README.md) is a complete
   deck-building roguelike on Sonic 3 & Knuckles, and shows how a whole game is organised
   around one scene.
+- [Flappy Tails](../../../examples/flappy-tails/README.md) is built step by step by the
+  [Flappy Tails tutorial](flappy-tails/README.md): a scene from an empty class to a polished
+  game, with a checkpoint you can build at each stage.
 - [Sitar Hero](../../../examples/sitar-hero/README.md) combines supplied Sonic 1,
   Sonic 2 and S3K content in a rhythm game, with timestamped physical input, bounded
   ROM-synthesized music, performers standing on real ROM stages and a README that
@@ -482,6 +485,16 @@ replacing this output while a song player exists.
 `ctx.storage()` keeps small text files for your mod under the save root
 (`saves/mods/<mod-id>/`): `read`, `write`, `delete`, `list`. Slay the Robotnik saves the
 run in progress, the player's records and the compendium there.
+
+Patch scenes may also declare bounded WAV/Ogg one-shots in
+[`audio/audio-manifest.yaml`](../formats/audio-manifest.md) and call
+`ctx.audio().playSfx("local-id")`. The host supplies the scene's owner namespace;
+cross-owner keys and invalid path segments are rejected. The boolean result reports
+whether playback was admitted; missing assets, unavailable headless audio and rewind
+suppression return false. Launch preparation validates and decodes the clips through
+the same owner-atomic asset pipeline as standalone audio. No numeric mod IDs or runtime
+file/network access are needed. These clips accompany the existing driver effects;
+they do not replace base-game SFX IDs. Queue/cooldown policy belongs to the scene.
 
 ## 6. Testing a scene
 

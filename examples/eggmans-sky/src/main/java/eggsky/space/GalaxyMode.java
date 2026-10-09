@@ -3,6 +3,7 @@ package eggsky.space;
 import com.openggf.mods.scene.SceneCanvas;
 import com.openggf.mods.scene.SceneKeys;
 import eggsky.Game;
+import eggsky.core.VoiceLine;
 import eggsky.Mode;
 import eggsky.core.Colour;
 import eggsky.core.Controls;
@@ -195,22 +196,27 @@ public final class GalaxyMode implements Mode {
         float d = here.distanceTo(selected);
         if (selected.starClass == StarSystem.CORE) {
             if (p.emeraldCount() < 7) {
+                g.voice.say(VoiceLine.CORE_LOCKED);
                 say(g, "THE CORE REPELS YOU. BRING ALL SEVEN CHAOS EMERALDS.");
                 return;
             }
             if (d > p.warpRange()) {
+                g.voice.say(VoiceLine.WARP_RANGE);
                 say(g, "OUT OF RANGE: UPGRADE THE HYPERDRIVE");
                 return;
             }
         } else if (d > p.warpRange()) {
+            g.voice.say(VoiceLine.WARP_RANGE);
             say(g, "OUT OF RANGE (" + Math.round(d) + " / " + Math.round(p.warpRange()) + " LY)");
             return;
         } else if (!p.canReach(selected.starClass)) {
+            g.voice.say(VoiceLine.WARP_UPGRADE);
             say(g, "THIS STAR NEEDS A " + (selected.starClass == StarSystem.RED ? "CADMIUM"
                     : selected.starClass == StarSystem.GREEN ? "EMERIL" : "INDIUM") + " DRIVE");
             return;
         }
         if (!p.cargo.has(Catalog.WARP_CELL, 1)) {
+            g.voice.say(VoiceLine.WARP_EMPTY);
             say(g, "NO WARP CELL: CRAFT ONE (ANTIMATTER + HOUSING) OR BUY ONE");
             return;
         }

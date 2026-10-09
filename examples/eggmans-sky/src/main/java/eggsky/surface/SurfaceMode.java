@@ -8,6 +8,7 @@ import com.openggf.mods.scene.SceneKeys;
 import com.openggf.mods.scene.SceneSprite;
 import com.openggf.mods.scene.SceneSpriteSet;
 import eggsky.Game;
+import eggsky.core.VoiceLine;
 import eggsky.Mode;
 import eggsky.art.Art;
 import eggsky.art.PixelArt;
@@ -396,6 +397,7 @@ public final class SurfaceMode implements Mode {
     }
 
     private void afterLanding(Game g) {
+        g.voice.say(VoiceLine.LANDED);
         Player p = g.player;
         if (pendingPlanetBanner) {
             pendingPlanetBanner = false;
@@ -406,10 +408,16 @@ public final class SurfaceMode implements Mode {
                 int reward = 150 + 50 * planet.spec.index;
                 p.rings += reward;
                 p.statRingsEarned += reward;
-                g.banner("PLANET DISCOVERED", name + "  +" + reward + " RINGS", 0xFF60FF90);
+                g.banner(VoiceLine.PLANET_DISCOVERED, "PLANET DISCOVERED", name + "  +" + reward + " RINGS", 0xFF60FF90);
                 g.sound.sfx(Sound.SIGNPOST);
             }
             if (planet.spec.biome.hazardous()) {
+                g.voice.say(switch (planet.spec.biome.climate()) {
+                    case eggsky.world.Biome.CLIMATE_HOT -> VoiceLine.HEAT;
+                    case eggsky.world.Biome.CLIMATE_COLD -> VoiceLine.COLD;
+                    case eggsky.world.Biome.CLIMATE_TOXIC -> VoiceLine.TOXIN;
+                    default -> VoiceLine.RADIATION;
+                });
                 g.toast("HAZARD: " + eggsky.world.Biome.hazardName(planet.spec.biome.climate()), 0xFFFF9040);
             }
             if (planet.spec.sentinels >= 2) {
@@ -425,7 +433,7 @@ public final class SurfaceMode implements Mode {
             ship.launchHold++;
             if (p.launchFuel < 25) {
                 if (noFuelToast <= 0) {
-                    g.toast("LAUNCH THRUSTERS NEED FUEL", 0xFFFF6040);
+                    g.toast(VoiceLine.LAUNCH_EMPTY, "LAUNCH THRUSTERS NEED FUEL", 0xFFFF6040);
                     g.toast("Recharge with Di-hydrogen or Egg Fuel", 0xFFFFC080);
                     noFuelToast = 180;
                     g.sound.sfx(Sound.ERROR, 30);
@@ -434,6 +442,7 @@ public final class SurfaceMode implements Mode {
             } else if (ship.launchHold == 1) {
                 g.sound.sfx(Sound.LAUNCH_READY, 20);
             } else if (ship.launchHold >= LAUNCH_HOLD) {
+                g.voice.say(VoiceLine.LAUNCHING);
                 p.launchFuel -= 25;
                 phase = LAUNCH;
                 phaseTicks = 0;
@@ -477,7 +486,7 @@ public final class SurfaceMode implements Mode {
         if (heat >= 100) {
             heat = 100;
             overheated = true;
-            g.toast("LASER OVERHEATED", 0xFFFF5030);
+            g.toast(VoiceLine.LASER_HOT, "LASER OVERHEATED", 0xFFFF5030);
             g.sound.sfx(Sound.FIRE_SHIELD, 30);
             for (int i = 0; i < 10; i++) {
                 particles.add(ship.gunX(), ship.gunY(), rng.range(-1f, 1f), rng.range(-2f, -0.5f), 0.02f, 3,
@@ -689,7 +698,7 @@ public final class SurfaceMode implements Mode {
                 gain(g, Catalog.BADNIK_SCRAP, t.yieldCount, t.x, t.y - 20);
                 gain(g, Catalog.BADNIK_CORE, 1, t.x, t.y - 20);
                 scatterShards(t.x, t.y - 30, 40 + rng.nextInt(40));
-                g.toast("SALVAGED A BADNIK WRECK", 0xFFFFD050);
+                g.toast(VoiceLine.SALVAGE, "SALVAGED A BADNIK WRECK", 0xFFFFD050);
             }
             default -> {
                 g.sound.sfx(t.kind == Planet.P_FLORA || t.kind == Planet.P_OXYGEN || t.kind == Planet.P_SODIUM
@@ -723,7 +732,7 @@ public final class SurfaceMode implements Mode {
             // Animals are never killed: they flee off the screen in a puff of smoke.
             particles.burst(c.x, c.centreY(), 12, 2, 0xFFFFFFFF, 0xFFC0C0C0, 0, 20, Rng.mix(c.id.hashCode()));
             addWanted(g, 0.8f);
-            g.toast("YOU HARMED WILDLIFE!", 0xFFFF5050);
+            g.toast(VoiceLine.WILDLIFE_HARMED, "YOU HARMED WILDLIFE!", 0xFFFF5050);
             g.sound.sfx(Sound.ALARM, 30);
             return;
         }
@@ -792,6 +801,7 @@ public final class SurfaceMode implements Mode {
         } else {
             if (scanHeld > 0 && scanHeld < 14 && pulseCooldown == 0) {
                 pulse = 0;
+                g.voice.say(VoiceLine.SCAN);
                 pulseCooldown = 150 - p.level(Catalog.T_SCANNER) * 25;
                 g.sound.sfx(Sound.ENERGY_ZAP, 10);
             }
@@ -875,7 +885,7 @@ public final class SurfaceMode implements Mode {
         p.shards += shards;
         ship.laughTicks = 60;
         g.sound.sfx(Sound.REGISTER);
-        g.banner("NEW DISCOVERY", s.name + "   +" + reward + " RINGS  +" + shards + " SHARDS", 0xFF60FFB0);
+        g.banner(VoiceLine.DISCOVERY, "NEW DISCOVERY", s.name + "   +" + reward + " RINGS  +" + shards + " SHARDS", 0xFF60FFB0);
         // Every species on the planet: a completion bonus.
         boolean all = true;
         for (Species other : planet.allSpecies()) {
@@ -888,7 +898,7 @@ public final class SurfaceMode implements Mode {
             p.shards += 120;
             p.rings += 1500;
             p.statRingsEarned += 1500;
-            g.banner("PLANET 100% DISCOVERED", "+1500 RINGS  +120 SHARDS", 0xFFFFD040);
+            g.banner(VoiceLine.SURVEY_COMPLETE, "PLANET 100% DISCOVERED", "+1500 RINGS  +120 SHARDS", 0xFFFFD040);
             g.sound.sfx(Sound.PERFECT);
         }
     }
@@ -897,6 +907,7 @@ public final class SurfaceMode implements Mode {
 
     private void updateVitals(Game g) {
         Player p = g.player;
+        boolean wasSheltered = sheltered;
         sheltered = false;
         for (int y = (int) ship.y - 40; y > ship.y - 200; y -= 8) {
             if (terrain.solid((int) ship.x, y)) {
@@ -905,6 +916,7 @@ public final class SurfaceMode implements Mode {
             }
         }
         p.life -= 100f / (60 * 60 * 6);
+        if (sheltered && !wasSheltered && planet.spec.biome.hazardous()) g.voice.say(VoiceLine.SHELTER);
         if (planet.spec.biome.hazardous()) {
             float rate = 100f / (60 * 60 * 3.5f) * (1 + weather.storm * 3.5f) * (1 - 0.2f * p.level(Catalog.T_HAZARD));
             if (sheltered) {
@@ -919,32 +931,32 @@ public final class SurfaceMode implements Mode {
         }
         if (p.level(Catalog.T_AUTO) > 0) {
             if (p.life < p.maxLife() * 0.25f && Vitals.canRecharge(p, Vitals.LIFE)) {
-                g.toast("AUTO: " + Vitals.recharge(p, Vitals.LIFE), 0xFF80FFFF);
+                g.toast(VoiceLine.AUTO_RECHARGE, "AUTO: " + Vitals.recharge(p, Vitals.LIFE), 0xFF80FFFF);
             }
             if (p.hazard < p.maxHazard() * 0.25f && Vitals.canRecharge(p, Vitals.HAZARD)) {
-                g.toast("AUTO: " + Vitals.recharge(p, Vitals.HAZARD), 0xFF80FFFF);
+                g.toast(VoiceLine.AUTO_RECHARGE, "AUTO: " + Vitals.recharge(p, Vitals.HAZARD), 0xFF80FFFF);
             }
         }
         if (p.life <= 0) {
             p.life = 0;
             hurtHull(g, 0.05f);
             if (g.ticks % 120 == 0) {
-                g.toast("LIFE SUPPORT DEPLETED!", 0xFFFF4040);
+                g.toast(VoiceLine.LIFE_EMPTY, "LIFE SUPPORT DEPLETED!", 0xFFFF4040);
                 g.sound.sfx(Sound.AIR_DING);
             }
         } else if (p.life < p.maxLife() * 0.2f && g.ticks % 300 == 0) {
-            g.toast("LIFE SUPPORT LOW - PRESS 1", 0xFFFFA040);
+            g.toast(VoiceLine.LIFE_LOW, "LIFE SUPPORT LOW - PRESS 1", 0xFFFFA040);
             g.sound.sfx(Sound.AIR_DING);
         }
         if (p.hazard <= 0) {
             p.hazard = 0;
             hurtHull(g, 0.06f);
             if (g.ticks % 120 == 0) {
-                g.toast("HAZARD PROTECTION FAILED!", 0xFFFF4040);
+                g.toast(VoiceLine.HAZARD_EMPTY, "HAZARD PROTECTION FAILED!", 0xFFFF4040);
                 g.sound.sfx(Sound.AIR_DING);
             }
         } else if (p.hazard < 25 && hazardDrain > 0 && g.ticks % 300 == 0) {
-            g.toast("HAZARD PROTECTION LOW - PRESS 2", 0xFFFFA040);
+            g.toast(VoiceLine.HAZARD_LOW, "HAZARD PROTECTION LOW - PRESS 2", 0xFFFFA040);
         }
         if (shieldDelay > 0) {
             shieldDelay--;
@@ -1018,6 +1030,7 @@ public final class SurfaceMode implements Mode {
         p.hull = 0;
         phase = DEAD;
         phaseTicks = 0;
+        g.voice.say(VoiceLine.MOBILE_DESTROYED);
         ship.vy = -3;
         p.statDeaths++;
         g.sound.sfx(Sound.EXPLODE);
@@ -1059,7 +1072,7 @@ public final class SurfaceMode implements Mode {
         ship.invulnerable = 120;
         g.sound.resetMusic();
         g.sound.music(planet.spec.biome.music());
-        g.banner("EGG MOBILE REBUILT", "Your cargo waits in the wreck", 0xFFFF8060);
+        g.banner(VoiceLine.MOBILE_REBUILT, "EGG MOBILE REBUILT", "Your cargo waits in the wreck", 0xFFFF8060);
         g.save();
     }
 
@@ -1079,9 +1092,9 @@ public final class SurfaceMode implements Mode {
             wantedFlash = 90;
             unseenTicks = 0;
             g.sound.sfx(Sound.SIREN, 40);
-            g.toast("WANTED LEVEL " + (int) wanted, 0xFFFF4040);
+            g.toast(wantedVoice((int) wanted), "WANTED LEVEL " + (int) wanted, 0xFFFF4040);
             if ((int) wanted >= 3 && before < 3) {
-                g.banner("SONIC IS COMING!", "Repel the heroes or escape", 0xFF4080FF);
+                g.banner(VoiceLine.SONIC_APPROACHING, "SONIC IS COMING!", "Repel the heroes or escape", 0xFF4080FF);
             }
         }
     }
@@ -1106,13 +1119,13 @@ public final class SurfaceMode implements Mode {
             wanted -= 0.008f;
             if ((int) wanted < level) {
                 if ((int) wanted == 0) {
-                    g.toast("WANTED LEVEL CLEARED", 0xFF60FF60);
+                    g.toast(VoiceLine.WANTED_CLEAR, "WANTED LEVEL CLEARED", 0xFF60FF60);
                     for (Hero h : heroes) {
                         h.hp = 0;
                     }
                     g.sound.music(planet.spec.biome.music());
                 } else {
-                    g.toast("WANTED LEVEL " + (int) wanted, 0xFFFFC040);
+                    g.toast(wantedVoice((int) wanted), "WANTED LEVEL " + (int) wanted, 0xFFFFC040);
                 }
             }
         }
@@ -1121,6 +1134,16 @@ public final class SurfaceMode implements Mode {
             heroWave = 60 * 7;
             spawnHeroes(g, level);
         }
+    }
+
+    private static VoiceLine wantedVoice(int level) {
+        return switch (level) {
+            case 1 -> VoiceLine.WANTED_ONE;
+            case 2 -> VoiceLine.WANTED_TWO;
+            case 3 -> VoiceLine.WANTED_THREE;
+            case 4 -> VoiceLine.WANTED_FOUR;
+            default -> VoiceLine.WANTED_FIVE;
+        };
     }
 
     private void spawnHeroes(Game g, int level) {
@@ -1166,6 +1189,13 @@ public final class SurfaceMode implements Mode {
                 }
                 Hero h = new Hero(kind, x, y, Rng.hash(g.ticks, kind, i));
                 heroes.add(h);
+                g.voice.say(switch (kind) {
+                    case Hero.FLICKY -> VoiceLine.FLICKY_APPROACHING;
+                    case Hero.TAILS -> VoiceLine.TAILS_APPROACHING;
+                    case Hero.SONIC -> VoiceLine.SONIC_APPROACHING;
+                    case Hero.KNUCKLES -> VoiceLine.KNUCKLES_APPROACHING;
+                    default -> VoiceLine.SUPER_SONIC_APPROACHING;
+                });
                 if (kind == Hero.SONIC || kind == Hero.SUPER) {
                     g.sound.music(kind == Hero.SUPER ? Sound.M_INVINCIBLE : Sound.M_MINIBOSS);
                 } else if (kind == Hero.KNUCKLES) {
@@ -1180,6 +1210,13 @@ public final class SurfaceMode implements Mode {
         Player p = g.player;
         p.statSonicRepelled++;
         wanted = Math.max(0, wanted - (h.kind == Hero.FLICKY ? 0.15f : 0.55f));
+        g.voice.say(switch (h.kind) {
+            case Hero.FLICKY -> VoiceLine.FLICKY_REPELLED;
+            case Hero.TAILS -> VoiceLine.TAILS_REPELLED;
+            case Hero.SONIC -> VoiceLine.SONIC_REPELLED;
+            case Hero.KNUCKLES -> VoiceLine.KNUCKLES_REPELLED;
+            default -> VoiceLine.SUPER_SONIC_REPELLED;
+        });
         int shards = switch (h.kind) {
             case Hero.FLICKY -> 3;
             case Hero.TAILS -> 15;
@@ -1298,7 +1335,7 @@ public final class SurfaceMode implements Mode {
                 if (left > 0) {
                     pk.amount = left;
                     if (g.ticks % 90 == 0) {
-                        g.toast("CARGO FULL", 0xFFFF5050);
+                        g.toast(VoiceLine.CARGO_FULL, "CARGO FULL", 0xFFFF5050);
                     }
                     pk.vx = -pk.vx;
                     pk.age = 0;
@@ -1429,7 +1466,7 @@ public final class SurfaceMode implements Mode {
                 pl.graveSystem = Long.MIN_VALUE;
                 things.remove(t);
                 graveThing = null;
-                g.toast("CARGO RECOVERED (" + recovered + ")", 0xFF80FF80);
+                g.toast(VoiceLine.CARGO_RECOVERED, "CARGO RECOVERED (" + recovered + ")", 0xFF80FF80);
                 g.sound.sfx(Sound.GRAB);
                 return;
             }
@@ -1463,8 +1500,7 @@ public final class SurfaceMode implements Mode {
                         p.beaconY = t.y;
                         p.life = Math.min(p.maxLife(), p.life + 25);
                         g.sound.sfx(Sound.STARPOST);
-                        g.toast("PROGRESS SAVED", 0xFF60C0FF);
-                        g.save();
+                        if (g.save()) g.toast(VoiceLine.SAVE_COMPLETE, "PROGRESS SAVED", 0xFF60C0FF);
                     }
                 }
                 case Planet.P_CAPSULE -> {
@@ -1507,27 +1543,28 @@ public final class SurfaceMode implements Mode {
                 for (int i = 0; i < 10; i++) {
                     pickups.add(new Pickup(Pickup.RINGS, 0, 10, t.x, t.y - 16, rng.range(-2f, 2f), rng.range(-4f, -1.5f)));
                 }
-                g.toast("SUPER RING!", 0xFFFFE040);
+                g.toast(VoiceLine.RINGS_RECEIVED, "SUPER RING!", 0xFFFFE040);
             }
             case 1, 2 -> {
                 p.shield = Math.max(p.shield, Math.max(p.maxShield(), 40));
                 g.sound.sfx(t.variant == 1 ? Sound.FIRE_SHIELD : Sound.LIGHTNING_SHIELD);
-                g.toast(t.variant == 1 ? "FIRE BARRIER!" : "THUNDER BARRIER!", 0xFF80E0FF);
+                g.toast(t.variant == 1 ? VoiceLine.BARRIER_FIRE : VoiceLine.BARRIER_THUNDER,
+                        t.variant == 1 ? "FIRE BARRIER!" : "THUNDER BARRIER!", 0xFF80E0FF);
             }
             case 3 -> {
                 invincible = 60 * 15;
                 g.sound.music(Sound.M_INVINCIBLE);
-                g.toast("INVINCIBLE!", 0xFFFFFFFF);
+                g.toast(VoiceLine.INVINCIBLE, "INVINCIBLE!", 0xFFFFFFFF);
             }
             case 4 -> {
-                g.toast("IT'S A TRAP!", 0xFF4080FF);
+                g.toast(VoiceLine.TRAP, "IT'S A TRAP!", 0xFF4080FF);
                 addWanted(g, Math.max(0, 3.05f - wanted) / Math.max(0.3f, planet.spec.sentinels == 0 ? 0.35f : 1f));
                 heroWave = 0;
             }
             default -> {
                 scatterShards(t.x, t.y - 16, 30 + rng.nextInt(40));
                 ship.laughTicks = 80;
-                g.toast("EGGMAN MONITOR! CHAOS SHARDS!", 0xFFFF8080);
+                g.toast(VoiceLine.SHARDS_RECEIVED, "EGGMAN MONITOR! CHAOS SHARDS!", 0xFFFF8080);
             }
         }
     }
@@ -1544,15 +1581,16 @@ public final class SurfaceMode implements Mode {
         if (p.bonusSlots < 24) {
             p.bonusSlots++;
             p.cargo.resize(p.slots());
-            g.banner("CARGO POD EXPANDED", "Egg Mobile cargo: " + p.slots() + " slots", 0xFFFFC040);
+            g.banner(VoiceLine.CARGO_EXPANDED, "CARGO POD EXPANDED", "Egg Mobile cargo: " + p.slots() + " slots", 0xFFFFC040);
         } else {
             p.shards += 100;
-            g.banner("CAPSULE SALVAGED", "+100 CHAOS SHARDS", 0xFFFFC040);
+            g.banner(VoiceLine.CAPSULE_SALVAGED, "CAPSULE SALVAGED", "+100 CHAOS SHARDS", 0xFFFFC040);
         }
         ship.laughTicks = 90;
     }
 
     private void readRuins(Game g, Thing t) {
+        g.voice.say(VoiceLine.RUINS);
         Player p = g.player;
         t.spent = true;
         p.looted.add(t.id);
@@ -1563,6 +1601,7 @@ public final class SurfaceMode implements Mode {
         lines.add("");
         if (p.emeraldCount() < 7 && (p.shrineSystem == Long.MIN_VALUE || r.chance(0.0))) {
             StarSystem target = revealShrine(g, r);
+            g.voice.say(VoiceLine.EMERALD_SIGNAL);
             lines.add("THE GLYPHS PULSE GREEN: A CHAOS EMERALD SIGNAL!");
             lines.add("Signal: " + target.name + ", planet " + (p.shrinePlanet + 1));
             g.sound.sfx(Sound.SUPER_EMERALD);
@@ -1651,9 +1690,9 @@ public final class SurfaceMode implements Mode {
         g.flash(0xFFFFFFFF, 12);
         ship.laughTicks = 200;
         if (p.emeraldCount() >= 7) {
-            g.banner("ALL SEVEN CHAOS EMERALDS!", "The galactic core is open to you", emeraldColour(n));
+            g.banner(VoiceLine.EMERALDS_COMPLETE, "ALL SEVEN CHAOS EMERALDS!", "The galactic core is open to you", emeraldColour(n));
         } else {
-            g.banner("CHAOS EMERALD " + (n + 1) + " OF 7", "Find more echidna ruins for the next signal",
+            g.banner(VoiceLine.EMERALD_FOUND, "CHAOS EMERALD " + (n + 1) + " OF 7", "Find more echidna ruins for the next signal",
                     emeraldColour(n));
         }
         g.save();
@@ -1721,9 +1760,10 @@ public final class SurfaceMode implements Mode {
                 String msg = Vitals.recharge(p, which[i]);
                 if (msg != null) {
                     g.toast(Vitals.name(which[i]).toUpperCase() + " " + msg, 0xFF80FFFF);
+                    g.voice.recharged(g.player, which[i]);
                     g.sound.sfx(Sound.SHIELD, 5);
                 } else {
-                    g.toast("NOTHING TO RECHARGE " + Vitals.name(which[i]).toUpperCase(), 0xFFFF8080);
+                    g.toast(VoiceLine.RECHARGE_UNAVAILABLE, "NOTHING TO RECHARGE " + Vitals.name(which[i]).toUpperCase(), 0xFFFF8080);
                     g.sound.sfx(Sound.ERROR, 10);
                 }
             }

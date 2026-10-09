@@ -54,12 +54,20 @@ See the detailed guides for narrower contracts; roadmap entries do not imply imp
 
 ## Follow-along guides
 
+- [Flappy Tails, a tutorial in nine parts](guides/flappy-tails/README.md) — from nothing
+  to a polished S3K game. Part 1 chooses between changing the native game (the
+  `sample-flappy` gallery sample) and replacing the screen with a mod scene; the scene path
+  builds [Flappy Tails](../../examples/flappy-tails/README.md) step by step, with buildable
+  checkpoints: ROM art and backdrops, a port of Tails' flight routine, pillars cut from real
+  levels, rules, a five-zone tour with title cards, screens and polish, tests, an autopilot
+  and filming a promo.
 - [ROM-art remix](guides/rom-art-remix.md) — source-first tour of the
   `sample-rom-art-remix` gallery sample: bounded Sonic 2 art, mapping, and DPLC
   intake, launch-memory materialization, decoded-pattern probes, and rewind.
 - [Native-Tails Flappy](guides/native-tails-flappy.md) — build-along tour of the
   `sample-flappy` gallery sample: an anchorless S3K fresh-game destination, scoped
-  Tails/input/HUD policies, fixed camera, and rewind-stable recycling pipes.
+  Tails/input/HUD policies, fixed camera, and rewind-stable recycling pipes. Path A of the
+  Flappy Tails tutorial.
 - [Standalone platformer](guides/standalone-platformer.md) — build-along tour of the
   `sample-platformer` gallery sample: a no-ROM standalone game with a Tiled-authored
   level, an original character with a double jump, a patrolling badnik, and a spring
@@ -83,6 +91,10 @@ See the detailed guides for narrower contracts; roadmap entries do not imply imp
   explicit live/load scopes and rewind-separated preferences. See the
   [guide](guides/mutators.md) and current verification in the expansion plan.
 
+- [Flappy Tails](../../examples/flappy-tails/README.md) — Tails flaps through five S3K
+  zones on the ROM's own flight routine, with pillars cut from each act's floor, real title
+  cards, medals, records and Super Tails. An S3K mod scene and the finished game of the
+  [tutorial](guides/flappy-tails/README.md); not one of the nine maintained gallery samples.
 - [Starfall Frontier](../../examples/starfall-frontier/README.md) — a Terraria inspired
   solo mining and building adventure with a seeded tile world, three biomes,
   crafting stations, equipment, seven quests, three wardens and persistent saves.

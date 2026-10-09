@@ -395,7 +395,7 @@ public final class ModSubsystem implements AutoCloseable {
             boolean stock = "s1".equals(gameCode) || "s2".equals(gameCode) || "s3k".equals(gameCode);
             boolean selectedTrack = stock ? !registry.tracks().isEmpty() : registry.tracks().stream()
                     .anyMatch(track -> track.key().modId().equals(gameCode));
-            boolean selectedSfx = !stock && sfxRegistry.sfx().stream()
+            boolean selectedSfx = stock ? !sfxRegistry.sfx().isEmpty() : sfxRegistry.sfx().stream()
                     .anyMatch(sfx -> sfx.key().modId().equals(gameCode));
             if (!selectedTrack && !selectedSfx) return SessionExternalContentView.EMPTY;
             PreparedAudioSession audio = preparer.prepare(effective, registry, sfxRegistry, outputRate);

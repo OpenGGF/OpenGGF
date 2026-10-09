@@ -41,6 +41,7 @@ public final class TitleMode implements Mode {
 
     @Override
     public void enter(Game g) {
+        g.voice.reset();
         options.clear();
         if (g.hasSave()) {
             options.add("CONTINUE");

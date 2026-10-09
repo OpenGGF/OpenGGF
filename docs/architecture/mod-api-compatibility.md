@@ -581,3 +581,18 @@ normalized 0.7 candidate pin gains exactly two additive entries, with no removal
 retains unpublished candidate `0.7.0` and its existing schema/publication state.
 See the [creator recipe](../modding/guides/mod-scenes.md) and
 [fumble implementation plan](plans/2026-10-08-sitar-hero-fumble-feedback.md).
+
+## Scene SFX candidate
+
+`SceneAudio.playSfx(String)` plays a declared one-shot using the scene owner's
+trusted namespace. It returns whether playback was admitted; unknown clips,
+suppressed playback, closed contexts and hosts without audio return false.
+The default preserves silent compatibility with existing context implementations
+while still rejecting invalid local names. Patch scenes use the same bounded
+manifest validation and launch decode transaction as standalone games.
+
+This adds one entry to the mutable unpublished `0.7` signature pin.
+`ModApiVersion` records the capability; the release descriptor retains candidate
+`0.7.0` and its existing publication state. See the
+[scene guide](../modding/guides/mod-scenes.md#5-audio-and-storage) and
+[Eggman's Sky voice record](designs/2026-10-07-eggmans-sky.md#original-system-voice-2026-10-08).

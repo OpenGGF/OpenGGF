@@ -30,6 +30,11 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 - [Native Mutator stage probe](../../src/main/java/com/openggf/tools/MutatorStageProbeTool.java): bounded registered-mod interactive native clocks, input admission and offline PCM for all three special stages and S3K bonus stages (2026-10-08 Mutator Lab expansion); [setup and limits](../../tools/media/README.md#native-mutator-stage-observations).
 - [Owned Engine window capture](../../tools/media/engine_window_capture.py): bounded X11 desktop video, Pulse monitor PCM and input-only JSON actions with isolated config, exact PID/title/visibility checks and owned cleanup (2026-10-07 Mutator Lab). See the [capture recipe](../../tools/media/README.md).
 
+- [Eggman's Sky voice generator](../../tools/audio/eggmans_sky_voice.py) synthesizes
+  original directed Alice announcements through OpenRouter, preserves raw takes outside
+  Git, verifies literal words after the approved metallic/vocoder/DAC processing, and
+  derives manifest entries and queue leases from the final PCM (2026-10-08).
+
 - [Creator kit builder](../../tools/modding/build_creator_kit.py) exports matching
   engine/SDK/API-doc/testkit artifacts, pinned portable examples and launchers;
   [catalog probe](../../src/main/java/com/openggf/tools/modsdk/CreatorCatalogProbe.java)
