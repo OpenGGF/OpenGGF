@@ -96,6 +96,9 @@ Nine `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each
   toolchain for the experimental Linux ZIP, preserving the isolated Windows
   feature. Its native gameplay probe uses production loaders, real OpenGL,
   prepared music, scene lifecycle and module-state checks for every packaged mod.
+  The shared `NativeGameplayCheck` also exercises every declared one-shot sample
+  through the production session wrapper into final mixed PCM (`sfx-pcm.csv`),
+  catching prepared-audio delegation gaps (2026-10-09 Eggman's Sky Vorbis refresh).
   Origin: [Linux friends ZIP, 2026-10-09](../../tools/modding/native-linux/README.md).
 
 - `tools/modding/native-windows/build_inputs.py` rebuilds all friends mods with

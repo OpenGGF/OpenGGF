@@ -65,6 +65,10 @@ The executable's `--check-gameplay` command reuses the platform-neutral OpenGL
 probe introduced for Linux, with original user ROM paths. Local Wine gameplay
 checks are separate compatibility evidence; they do not certify every route,
 multiplayer session, physical audio device, GPU or Microsoft Windows version.
+For mods declaring one-shot samples, the probe uses the production prepared
+audio session wrapper and checks every sample's final mixed PCM. It writes
+`sfx-pcm.csv` with decoded frame counts, rate, channels, peak and signal range;
+opening a decoder or private cursor alone cannot pass this check.
 See the source-attributed results in the
 [study](../../../docs/architecture/research/2026-10-08-graalvm-native-mod-feasibility.md).
 

@@ -905,3 +905,67 @@ logs and owned Wine state are temporary; rendered captures, final ZIP and light
 source-attributed evidence are retained outside the task worktree. Main's seven
 unrelated dirty/untracked paths were independently byte/state checked and
 preserved through integration.
+
+
+## Windows Eggman's Sky Vorbis refresh — 2026-10-09
+
+The refreshed input base is `15400390314b06ded17bf14f65f19c3449b9c82c`.
+It includes the compact 122-clip Ogg/Vorbis voice bank (`dd019978f`) and the
+production prepared-audio session delegation fix (`8bb155528`). Updating only
+the mod JAR in the previously delivered `0d3d9c1d6` executable would retain the
+missing `sfxPcm` delegation; this refresh therefore rebuilds the Windows image
+and all 19 maintained mods from the current source. No codec addition is needed:
+the existing STB Vorbis decoder supports the new assets.
+
+The shared experimental `NativeGameplayCheck` now prepares audio through
+`ModSubsystem.preparedAudioFactory` and retains the returned session view until
+presentation is retired. It consumes stop commands before retiring streamed
+cursors and before closing the mod kit. Every declared one-shot must be present through that
+view, play by its namespaced SFX reference, and produce nonzero, varying final
+mixed PCM. `sfx-pcm.csv` records exact decoded frames, rate, channels, peak and
+range. The check applies to every mod declaring SFX, not only Eggman's Sky.
+It replaces the probe's raw-port setup, which could bypass this production
+wrapper defect. The authored change is confined to the shared standalone
+qualification tool and prose; engine, API, POM and normal release inputs are
+unchanged by this task.
+
+A matched local Java 21 control used the current engine/mod/probe with only
+`SessionExternalContentView` and its nested classes replaced by their exact
+`0d3d9c1d6` bytes. It returned ordinary exit 1 at
+`Missing session SFX PCM: SfxRef[owner=eggmans-sky, name=voice-systems-online]`.
+Removing that sole class override returned exit 0, checked all 122 samples and
+completed the representative Eggman's Sky scene/gameplay checks. This proves
+the added check detects the inherited session-wrapper failure; decoder success
+or nonzero music PCM cannot substitute for it. Audio peaks establish produced
+PCM, not subjective quality or physical-device playback.
+
+Validation uses the proportionate exception for this bounded diagnostic helper:
+matched negative/current controls, all-mod gameplay, packaging integrity and
+fresh structural guards, followed by actual Windows compilation/runtime checks
+and rendered Wine checks of the delivered executable. The unchanged runner plan
+against the pinned base selects 3,076 ordinary classes via its unclassified
+shared-tool fallback; that ordinary rerun does not exercise this external probe.
+Java 21 / Lua 5.4 / PowerShell preflight passes with `LUA_BIN=lua5.4`.
+This is focused native qualification, not a whole ordinary-suite pass. The
+Windows workflow and its mandatory independent fresh-guard gate are unchanged.
+
+The final Java 21 helper passes representative rendered gameplay for all 19
+mods. An initial explicit `resetState` teardown failed for the standalone music
+sample after its successful gameplay check because it retired a streamed cursor
+before the presentation voice snapshot. The probe now consumes music/SFX stops
+on a forward presentation tick before port/kit teardown; the final all-mod rerun
+and the matched old-wrapper negative both pass their expected outcomes. No
+production teardown behavior was changed to make the diagnostic pass.
+
+All 122 packaged `.ogg` resources match their provenance SHA-256 and source
+bytes, with no remaining voice WAVs. The JAR is 3,240,732 bytes, SHA-256
+`6eaf6ed5edd4928881df9fbf8abbcb50a5eebe70bab013f7a333d3759618bb22`.
+The complete final-PCM observations match every provenance frame count and
+48,000 Hz mono format. Encoded source audio totals 3,014,069 bytes; compressed
+voice entries in the JAR total 2,909,992 bytes. Windows and Linux portable
+packaging controls each pass their three tests.
+
+At this source checkpoint, the already submitted local voice regression and
+fresh guards are waiting in the shared Maven queue. Windows image compilation and terminal archive
+qualification are pending. Their source-attributed evidence follows after the
+immutable image and all 122 native PCM observations have been checked.
