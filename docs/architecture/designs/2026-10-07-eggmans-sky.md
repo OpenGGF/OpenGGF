@@ -617,3 +617,42 @@ The user's `.env` is preserved with mode 0600 in the external voice-bank task
 directory before removing the fully merged voice worktree; no credential enters
 Git or the package. Push only develop, then remove the accounted-for local voice
 branch/worktree and the two owned merge-backup stashes, preserving unrelated work.
+
+
+### Installed playback follow-up, 2026-10-09
+
+An installed-JAR live OpenAL probe on develop `607e97d54c9e` produced nonzero
+final PCM for ring, mining-laser and scanner ROM effects, but rejected
+`voice-life-low` as missing prepared PCM. The bank was present and its cursor
+checks passed: the actual fault was `SessionExternalContentView.CloseOncePort`
+forwarding `hasSfx`/`openSfx` while inheriting the empty default `sfxPcm` method.
+Presentation requests PCM through that latter method, so the session adapter
+hid otherwise valid prepared voice samples. The probe's initial cleanup also
+closed its manually installed view before retiring presentation; the revised
+probe transfers the view through the normal audio ownership boundary.
+
+The strengthened `TestEggmansSkyVoiceAssets` feeds every one of the 122 prepared
+clips through the wrapped session port, `AudioManager` and final PCM capture.
+It failed on `voice-systems-online` before the forwarding fix, with one failure,
+zero errors and zero skips. The fix delegates the existing PCM method without
+changing signatures, preparation, gain, voice scheduling or rewind algorithms.
+
+The change-based plan against pinned `607e97d54c9e` falls back to all 3076 classes
+because the root adapter is unclassified. Proportionate focused validation is
+used instead: the all-bank mixer regression, startup ROM audio, scene/voice
+routing, prepared audio and decoding, namespaced keys, streamed/sample voice
+mixing and rewind, backend handoff, session ownership and standalone consumers.
+This is focused validation, not another whole-suite qualification. Java 21,
+Lua 5.4 and PowerShell preflight passes with `LUA_BIN=/usr/bin/lua5.4`.
+
+Candidate focused verification on the unchanged worktree inputs based on
+`607e97d54c9e` completed at 2026-10-09T17:46:56Z: 133 cases, zero failures,
+errors or skips (Maven exit 0; 92 seconds). The invocation was (the verified
+original absolute ROM path is shown as `$S3K_ROM`):
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-21-openjdk LUA_BIN=/usr/bin/lua5.4 \
+python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  '-Dtest=TestEggmansSkyStartupAudio,TestModSceneHost,TestEggmansSkyVoice,TestEggmansSkyVoiceAssets,TestExternalContentPolicy,TestAudioManagerStreamedPortOwnership,TestModStreamedMusicPort,TestNamespacedMusicRouting,TestStreamedPresentationSession,TestStreamedAudioVoiceRegistry,TestStreamedBackendIntegration,TestLiveCaptureSurvivesBackendSwap,TestSampleBackedVoice,TestModAudioPreparer,TestBoundedAudioDecode,TestSamplePlatformerIntegration,TestPhase3StandaloneSampleIntegration' \
+  "-Ds3k.rom.path=$S3K_ROM" test
+```
