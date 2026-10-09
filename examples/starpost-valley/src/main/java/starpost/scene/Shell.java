@@ -179,9 +179,10 @@ public final class Shell {
             ((Screen) stack[i]).draw(this, canvas);
         }
         if (ticks - toastAt < 120 && !toast.isEmpty()) {
-            int w = canvas.textWidth(toast) + 16;
-            Text.panel(canvas, (width() - w) / 2, 36, w, 18);
-            Text.centred(canvas, toast, 41, Text.WHITE);
+            // Over a menu the toast takes the top line (the HUD's), clear of the menu's own rows.
+            int w = canvas.textWidth(toast) + 16, y = overlays.isEmpty() ? 36 : 1;
+            Text.panel(canvas, (width() - w) / 2, y, w, 18);
+            Text.centred(canvas, toast, y + 5, Text.WHITE);
         }
         int fade = fadeOut > 0 ? (FADE_TICKS - fadeOut) * 255 / FADE_TICKS : fadeIn * 255 / FADE_TICKS;
         if (fade > 0) {
