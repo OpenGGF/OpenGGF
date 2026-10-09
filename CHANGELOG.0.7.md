@@ -370,6 +370,15 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   bubble and sound cadence use the gameplay clock; a full object pool leaves
   the random-number state unchanged.
 
+- **Frame-counter low-byte gates:** routines that read `(V_int_run_count+3)` or
+  `(Level_frame_counter+1)` take the counter's low byte instead of adding 3 or 1
+  to the count. The Sky Sanctuary EggRobo releases its animals and flashes its
+  laser charge on the native frames and flickers while it launches, Cluckoid
+  breath debris spawns on the native frames, MHZ pollen starts its sway from the
+  current level frame, and the CNZ hover-fan sound and LBZ gate-laser flicker
+  follow the level clock. In Sonic 2 the WFZ/SCZ vertical propeller's helicopter
+  sound, the OOZ sun heat haze and the CPZ water ripple step on the native frames.
+
 - **Boss parts in their own sprite layers:** ICZ miniboss orbs and shards, ICZ end
   boss body parts, LBZ miniboss panels and box pieces, and HCZ end boss children now
   draw in the display list their ROM `priority` word selects instead of their

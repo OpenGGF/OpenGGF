@@ -57,11 +57,12 @@ public class SwScrlCpzTest {
     public void testRipplePhaseDecrementPattern() {
         handler.init(0, 0);
 
-        // Track phase changes over 24 frames
+        // Track phase changes over the 24 frames after frame 0
+        handler.update(horizScrollBuf, 0, 0, 0, 0);
         int lastPhase = handler.getRipplePhase();
         int phaseChanges = 0;
 
-        for (int frame = 0; frame < 24; frame++) {
+        for (int frame = 1; frame <= 24; frame++) {
             handler.update(horizScrollBuf, 0, 0, frame, 0);
             int currentPhase = handler.getRipplePhase();
             if (currentPhase != lastPhase) {
@@ -72,6 +73,29 @@ public class SwScrlCpzTest {
 
         // Should have exactly 3 phase changes in 24 frames (24/8 = 3)
         assertEquals(3, phaseChanges, "Should have 3 phase decrements in 24 frames (one per 8 frames)");
+    }
+
+    @Test
+    public void testRipplePhaseDecrementsWhenVintLowBitsAreZero() {
+        handler.init(0, 0);
+
+        // SwScrl_CPZ: move.b (Vint_runcount+3).w,d1 / andi.w #7,d1 / bne.s + /
+        // subq.w #1,(TempArray_LayerDef).w. The +3 is the longword's low byte, so the
+        // decrement lands on frames whose low three bits are zero.
+        handler.update(horizScrollBuf, 0, 0, 0, 0);
+        int lastPhase = handler.getRipplePhase();
+        java.util.List<Integer> decrementFrames = new java.util.ArrayList<>();
+        for (int frame = 1; frame <= 24; frame++) {
+            handler.update(horizScrollBuf, 0, 0, frame, 0);
+            int currentPhase = handler.getRipplePhase();
+            if (currentPhase != lastPhase) {
+                assertEquals(lastPhase - 1, currentPhase, "the phase only ever steps down by one");
+                decrementFrames.add(frame);
+                lastPhase = currentPhase;
+            }
+        }
+
+        assertEquals(java.util.List.of(8, 16, 24), decrementFrames);
     }
 
     // ==================== Parallax Split Tests ====================

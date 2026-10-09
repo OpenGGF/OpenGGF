@@ -4,7 +4,9 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
+import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnAndCoordinateZeroScalarArgsRewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -56,13 +58,22 @@ public final class LbzGateLaserBeamInstance extends AbstractObjectInstance
         return currentY;
     }
 
+    /** {@code Level_frame_counter}; a fixture without a level manager drives the update clock. */
+    private int levelFrameCounter(int fallback) {
+        ObjectServices svc = tryServices();
+        LevelManager levelManager = svc != null ? svc.levelManager() : null;
+        return levelManager != null ? levelManager.getFrameCounter() : fallback;
+    }
+
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         if (isDestroyed()) {
             return;
         }
 
-        if (((vIntRunCount + 1) & 1) == 0) {
+        // loc_2941C: move.b (Level_frame_counter+1).w,d0 / andi.b #1,d0 / bne.s / bchg #1.
+        // The +1 addresses the word's low byte: the beam flips on even level frames.
+        if ((levelFrameCounter(vIntRunCount) & 1) == 0) {
             renderFlags ^= 0x02;
         }
 
