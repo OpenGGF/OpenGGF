@@ -433,6 +433,40 @@ class TestModContextAndFaultBoundary {
     }
 
     @Test
+    void unrelatedIoAndRuntimeCausesCannotClaimAnEarlierCallbacksOwner() {
+        var findings = new ModRuntimeFindingStore();
+        var disabled = new ArrayList<Set<String>>();
+        var boundary = new ModFaultBoundary(Map.of(), findings,
+                owners -> new ModStateSaveResult.Saved(), disabled::add);
+        var original = assertThrows(ModFaultBoundary.CallbackAborted.class,
+                () -> boundary.run("original", () -> { throw new IllegalStateException("original callback"); }));
+        for (RuntimeException unrelated : List.of(new RuntimeException(original),
+                new RuntimeException(new java.io.IOException("unrelated IO", original)))) {
+            var actual = assertThrows(ModFaultBoundary.CallbackAborted.class,
+                    () -> boundary.run("consumer", () -> { throw unrelated; }));
+            assertNotSame(original, actual);
+            assertEquals("consumer", actual.owner());
+            assertSame(unrelated, actual.getCause());
+        }
+        assertEquals(List.of(Set.of("original"), Set.of("consumer"), Set.of("consumer")), disabled);
+    }
+
+    @Test
+    void fatalCallbackFailureWithADeferredLoadCauseRemainsFatal() {
+        var disabled = new ArrayList<Set<String>>();
+        var boundary = new ModFaultBoundary(Map.of(), new ModRuntimeFindingStore(),
+                owners -> new ModStateSaveResult.Saved(), disabled::add);
+        var checked = com.openggf.level.DecodedLevelTransformAssertions.deferredCallbackLoadFailure(
+                () -> boundary.run("original", () -> { throw new IllegalStateException("callback"); }));
+        var fatal = new OutOfMemoryError("fatal consumer");
+        fatal.initCause(checked);
+        assertSame(fatal, assertThrows(OutOfMemoryError.class,
+                () -> boundary.run("consumer", () -> { throw fatal; })));
+        assertEquals(List.of(Set.of("original")), disabled);
+        assertTrue(boundary.isOwnerAvailable("consumer"));
+    }
+
+    @Test
     void ownerDerivedCharacterAndStandaloneBoundariesPreserveDirectAndAbortSignals() {
         ModRuntimeFindingStore findings = new ModRuntimeFindingStore();
         List<Set<String>> saved = new ArrayList<>();

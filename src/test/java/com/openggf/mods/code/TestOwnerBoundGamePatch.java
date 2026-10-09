@@ -420,6 +420,12 @@ public class TestOwnerBoundGamePatch {
         },fixture);
         var failure=assertThrows(java.io.IOException.class,()->com.openggf.level.DecodedLevelTransformAssertions.executeLoadProfile(module));
         var aborted=assertInstanceOf(ModFaultBoundary.CallbackAborted.class,failure.getCause());
+        assertSame(aborted, assertThrows(ModFaultBoundary.CallbackAborted.class,
+                () -> fixture.boundary().run("load-consumer", () -> { throw new RuntimeException("level load", failure); })));
+        assertSame(aborted, assertThrows(ModFaultBoundary.CallbackAborted.class,
+                () -> fixture.boundary().callCharacterIo(com.openggf.game.CharacterKey.mod("load-consumer", "runner"),
+                        () -> { throw failure; })));
+        assertTrue(fixture.boundary().isOwnerAvailable("load-consumer"), "The load consumer must not steal the callback fault");
         assertEquals("registered-owner",aborted.owner());assertEquals(Set.of("registered-owner","dependent"),fixture.disabled().get());
         for(String action:List.of("teardown","reset","fixup")) {
             Fixture other=fixture();var deferred=mock(com.openggf.game.LevelInitProfile.class);

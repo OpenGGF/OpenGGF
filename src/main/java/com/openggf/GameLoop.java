@@ -2660,6 +2660,7 @@ public class GameLoop {
             // Consume the default title card request — we'll show the bonus card instead
             levelManager.consumeTitleCardRequest();
         } catch (IOException e) {
+            com.openggf.level.DeferredLevelLoadException.rethrowCallbackAbort(e);
             LOGGER.severe("Failed to load bonus stage zone: " + e.getMessage());
             provider.onExit();
             activeBonusStageProvider = null;
@@ -4973,6 +4974,7 @@ public class GameLoop {
             // Consume the title card request since we don't want a title card
             levelManager.consumeTitleCardRequest();
         } catch (IOException e) {
+            com.openggf.level.DeferredLevelLoadException.rethrowCallbackAbort(e);
             LOGGER.severe("Failed to load ending demo zone " + zone + " act " + act + ": " + e.getMessage());
             return;
         }

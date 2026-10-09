@@ -23,6 +23,7 @@ final class LevelLoadAttempt {
     private final LevelLoadContext context;
     private final LevelLoadCause admissionCause;
     private final java.util.function.Consumer<LevelLoadCause> afterAdmission;
+    private ObjectCallbackAbortException deferredProfileAbort;
 
     LevelLoadAttempt(WorldSession world, SpriteManager sprites, LevelLoadMode mode, LevelLoadContext context) {
         this(world, sprites, mode, context, ignored -> { });
@@ -48,6 +49,15 @@ final class LevelLoadAttempt {
         // owner before any assembly recreates or dispatches players.
         WorldSessionPolicyAccess.bindRoster(world, sprites);
         context.resetInitialProcessSpritesRequestForLoadAttempt();
+        try {
+            executeProfile(moduleSource, levelIndex);
+        } catch (ObjectCallbackAbortException aborted) {
+            deferredProfileAbort = aborted;
+            throw aborted;
+        }
+    }
+
+    private void executeProfile(Supplier<GameModule> moduleSource, int levelIndex) {
         GameModule module = moduleSource.get();
         LevelInitProfile profile = module.getLevelInitProfile();
         context.setLevelIndex(levelIndex);
@@ -73,8 +83,12 @@ final class LevelLoadAttempt {
         } catch (ObjectCallbackAbortException quarantined) {
             if (!(failure instanceof ObjectCallbackAbortException)) failure.addSuppressed(quarantined);
         }
-        // Preserve the original subtype and its owner/recovery information.
-        if (failure instanceof ObjectCallbackAbortException aborted) throw aborted;
+        if (failure instanceof ObjectCallbackAbortException aborted) {
+            // Policy/roster admission aborts remain direct. Deferred profile callbacks
+            // keep loadLevel's checked contract, with the exact abort retained for recovery.
+            if (aborted != deferredProfileAbort) throw aborted;
+            return new DeferredLevelLoadException(aborted);
+        }
         Throwable cause = failure.getCause();
         if (cause instanceof IOException ioe) {
             LevelManager.LOGGER.log(SEVERE, "Failed to load level " + levelIndex, ioe);

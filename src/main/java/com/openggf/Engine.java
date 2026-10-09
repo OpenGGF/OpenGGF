@@ -3221,7 +3221,9 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		try {
 			frame.run();
 			return true;
-		} catch (ModFaultBoundary.CallbackAborted aborted) {
+		} catch (RuntimeException frameFailure) {
+			var aborted = ModFaultBoundary.callbackAbortFromLoadFailure(frameFailure);
+			if (aborted == null) throw frameFailure;
 			Throwable fatalCleanup = null;
 			try {
 				discardFailedFrame.run();
