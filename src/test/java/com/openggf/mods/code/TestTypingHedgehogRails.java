@@ -47,12 +47,19 @@ class TestTypingHedgehogRails {
 
     @TempDir static Path temp;
     static ExampleModHarness harness;
+    static Path work;
+    static int generation;
     private SharedLevel bootstrap;
 
     record Spec(String file, String game, int zone, int act, String sidekick, int validated, int boss, int stands) { }
 
     @BeforeAll static void copyProject() throws Exception {
-        Path project = temp.resolve("project");
+        harness = buildHarness(0);
+    }
+
+    /** Packages the example mod afresh (a mod callback fault disables it for the rest of its harness). */
+    private static ExampleModHarness buildHarness(int generation) throws Exception {
+        Path project = temp.resolve("project" + generation);
         try (Stream<Path> files = Files.walk(SOURCE)) {
             for (Path p : files.toList()) {
                 Path target = project.resolve(SOURCE.relativize(p).toString());
@@ -60,7 +67,8 @@ class TestTypingHedgehogRails {
                 else Files.copy(p, target);
             }
         }
-        harness = ExampleModHarness.build(project, temp.resolve("work"));
+        work = temp.resolve("work" + generation);
+        return ExampleModHarness.build(project, work);
     }
 
     @AfterAll static void closeHarness() throws Exception {
@@ -121,14 +129,24 @@ class TestTypingHedgehogRails {
         Assumptions.assumeFalse(specs.isEmpty(), "no shipped " + game + " rails");
         List<String> faults = new ArrayList<>();
         for (Spec spec : specs) {
-            String fault = drive(spec, sonicGame);
+            String fault;
+            try {
+                fault = drive(spec, sonicGame);
+            } catch (Throwable t) {
+                Throwable cause = t;
+                while (cause.getCause() != null) cause = cause.getCause();
+                fault = "aborted: " + cause;
+                dispose();
+                harness.close();
+                harness = buildHarness(++generation);
+            }
             if (fault != null) faults.add(spec.file() + ": " + fault);
             dispose();
         }
         assertTrue(faults.isEmpty(), "rail faults:\n" + String.join("\n", faults));
     }
 
-    private Path storage() { return temp.resolve("work").resolve("storage").resolve("mods").resolve(MOD); }
+    private Path storage() { return work.resolve("storage").resolve("mods").resolve(MOD); }
 
     /** Runs one rail to its boss stand; returns a fault description or null. */
     private String drive(Spec spec, SonicGame sonicGame) throws Exception {
@@ -156,19 +174,17 @@ class TestTypingHedgehogRails {
         }
         var input = new InputHandler();
         int limit = spec.validated() + spec.stands() * 6000 + 20000;
-        int standsSeen = 0;
-        String previousPhase = "";
         for (int i = 0; i < limit; i++) {
             Object view = view();
             String phase = (String) get(view, "phase");
             int railRow = (int) get(view, "railRow");
-            if (!phase.equals(previousPhase) && phase.equals("STAND")) standsSeen++;
-            previousPhase = phase;
             if (phase.equals("BOSS")) {
                 if (railRow != spec.boss()) return "boss stand began on row " + railRow + ", rail says " + spec.boss();
-                if (standsSeen != spec.stands()) return "saw " + standsSeen + " stands, rail lists " + spec.stands();
+                int stands = (int) get(view, "nextStand");
+                if (stands != spec.stands()) return "passed " + stands + " stands, rail lists " + spec.stands();
                 return null;
             }
+            // Typing-layer misses retry a stand (noFail); only native faults fail the rail.
             if (phase.equals("STAND")) typeNext(view, input);
             ControlledFrameRuntime.step(fixture.runtime(), input, LogicalInputSnapshot.neutral());
             input.update();
