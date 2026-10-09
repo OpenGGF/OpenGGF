@@ -69,7 +69,8 @@ class ObjectArtContactSheetProbe {
                 // Games whose object art arrives through queued loads (Sonic 1's PLCs) need frames.
                 fixture.stepIdleFrames(Integer.getInteger("openggf.artsheets.warmup", 0));
                 var level = GameServices.level().getCurrentLevel();
-                var art = GameServices.module().getObjectArtProvider();
+                // The act's loaded provider: Sonic1GameModule.getObjectArtProvider() returns a fresh one.
+                var art = GameServices.level().getObjectRenderManager().getArtProvider();
                 for (String key : art.getRendererKeys()) {
                     if (wanted.length > 0 && java.util.Arrays.stream(wanted).noneMatch(w -> key.contains(w.trim()))) {
                         continue;

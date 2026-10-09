@@ -618,6 +618,12 @@ without first removing that alias.
 `Camera.updatePosition(true)` *after* the level load, and prefer
 `@ExtendWith(SingletonResetExtension.class)` over manual teardown. Set
 `startup.legalDisclaimer=false` in tests that boot the full `Engine`.
+To inspect the object art a loaded act registered, read
+`GameServices.level().getObjectRenderManager().getArtProvider()`.
+`Sonic1GameModule.getObjectArtProvider()` returns a new, empty provider on every call,
+so asking the module reports zero sheets for every Sonic 1 act; the Sonic 2 and S3K
+modules happen to hand back the loaded one (Typing of the Hedgehog art tables,
+2026-10-09).
 
 **Underwater route liveness.** `getDead() == false` does not exclude the drowning
 pre-death phase. `applyDrownDeath()` locks controls and zeroes velocity before the

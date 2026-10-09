@@ -37,10 +37,12 @@
 4  flame     eggman           0  0   *=3:8,9 lunge=1:8,9 defeat=- flee=2:9,8,11,12,11,12,9,8
 4  pipe      boss_weapons     0  0   *=15:3
 
-# Scrap Brain: Robotnik on foot, as he waits at the end of act 2 (Map_SEgg with Ani_SEgg:
-# stand 0, laugh 6:1,2, jump 14:3,4, surprise 5, running 6:7,4,8,4).
+# Scrap Brain: Robotnik on foot, as he waits at the end of act 2 (Map_SEgg with Ani_SEgg: stand 0,
+# laugh 6:1,2, jump1 14:3,4, jump2 15:4,3). Only frames 0-4 draw from Nem_SBZ2Eggman (the sheet
+# loadSbz2EggmanArt registers); surprise, running and the tube frames use Final Zone tiles, so
+# struck he recoils on the jump frame and beaten he leaps away.
 5  hover     -                0  4   grounded
-5  eggman    sbz2_eggman      0  0   idle=126:0 lunge=14:3,4 hit=15:5 laugh=6:1,2 defeat=15:5 flee=6:7,4,8,4
+5  eggman    sbz2_eggman      0  0   idle=126:0 lunge=14:3,4 hit=31:3 laugh=6:1,2 defeat=15:3 flee=15:4,3,3
 
 # Final Zone: the Egg Mobile ringed by plasma balls (Ani_Plasma .short 0:6,5,1,5,7,5,1,5).
 6  plasma    fz_plasma        0  0   *=1:6,5,1,5,7,5,1,5 defeat=- orbit=44,150,4

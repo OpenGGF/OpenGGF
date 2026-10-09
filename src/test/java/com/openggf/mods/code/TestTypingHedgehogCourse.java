@@ -138,7 +138,7 @@ class TestTypingHedgehogCourse {
         var input = new InputHandler();
         stepUntil(fixture, input, "STAND", 900);
         assertEquals(STAND_ROW, get(view(), "railRow"), "the stand starts on its rail row");
-        var art = GameServices.module().getObjectArtProvider();
+        var art = GameServices.level().getObjectRenderManager().getArtProvider();
         for (String key : List.of("motobug", "explosion", "animal", "points")) {
             var sheet = art.getSheet(key);
             assertNotNull(art.getRenderer(key), "puppets draw " + key + " with the zone's loaded ROM art");

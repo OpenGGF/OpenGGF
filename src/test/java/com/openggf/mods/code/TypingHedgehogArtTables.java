@@ -1,6 +1,9 @@
 package com.openggf.mods.code;
 
+import com.openggf.game.GameModule;
+import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
+import com.openggf.game.session.SessionManager;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.SharedLevel;
 import com.openggf.tests.TestEnvironment;
@@ -28,6 +31,8 @@ import static org.junit.jupiter.api.Assertions.fail;
  */
 final class TypingHedgehogArtTables {
     static final Path RESOURCES = Path.of("examples/typing-of-the-hedgehog/src/main/resources");
+    /** Idle frames stepped before the art provider is read. */
+    static final int SETTLE_FRAMES = 240;
 
     private TypingHedgehogArtTables() { }
 
@@ -43,9 +48,19 @@ final class TypingHedgehogArtTables {
             int zone = entry.getValue()[0], act = entry.getValue()[1];
             SharedLevel level = SharedLevel.load(game, zone, act);
             try {
+                // The same bootstrap the course test uses (TestTypingHedgehogCourse.launch), then a few
+                // seconds of play, as the course reads art only after its first rows.
+                GameModule module = GameServices.module();
+                SessionManager.clear();
+                GameModuleRegistry.setCurrent(module);
                 TestEnvironment.activeGameplayMode();
-                HeadlessTestFixture.builder().withZoneAndAct(zone, act).build();
-                var art = GameServices.module().getObjectArtProvider();
+                HeadlessTestFixture.builder().withZoneAndAct(zone, act).build().stepIdleFrames(SETTLE_FRAMES);
+                // The level's render manager holds the provider the act loaded, which is what puppets
+                // draw through; Sonic1GameModule.getObjectArtProvider() returns a fresh, empty provider
+                // on every call, so asking the module would check nothing.
+                var art = GameServices.level().getObjectRenderManager().getArtProvider();
+                System.out.println("[typing-hedgehog] " + entry.getKey() + ": " + art.getRendererKeys().size()
+                        + " art keys registered");
                 for (Use use : uses(code, zone, act)) {
                     checked++;
                     var sheet = art.getSheet(use.artKey());
