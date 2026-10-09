@@ -6,6 +6,10 @@ package starpost.core;
  * water over the next plot too. Knuckles digs instead of tilling, sometimes turning up what is
  * buried, and punches rocks apart without the Fire Shield; he is too heavy for the farm loop's
  * full payoff.
+ *
+ * <p>Sneakers ({@link Sneakers}) widen every farmer's dash the same way: each column the dash
+ * tills becomes as many rows as the sneakers reach. Tails's limit counts columns, so his three
+ * plots become three columns (a 3x3 patch in Speed Shoes); Knuckles's dig stays one plot.
  */
 public final class Farmers {
     public static final String SONIC = "sonic";
@@ -26,7 +30,10 @@ public final class Farmers {
         };
     }
 
-    /** How many plots one spin dash may till (Integer.MAX_VALUE: all it rolls over). */
+    /**
+     * How many columns one spin dash may till (Integer.MAX_VALUE: all it rolls over); each column is
+     * one plot in plain Sneakers and as many rows as better ones reach.
+     */
     public static int dashTills(String farmer) {
         return farmer.equals(TAILS) ? 3 : Integer.MAX_VALUE;
     }

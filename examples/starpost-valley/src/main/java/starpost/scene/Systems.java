@@ -28,6 +28,7 @@ public final class Systems {
         out.add(new starpost.fishing.FishingSection());
         out.add(new starpost.barn.Barn());
         out.add(new starpost.festivals.Festivals());
+        out.add(new starpost.orchard.Orchard());
         return out;
     }
 
@@ -35,6 +36,7 @@ public final class Systems {
     public static List<WorkshopOffer> workshopOffers(Shell shell) {
         List<WorkshopOffer> out = new ArrayList<>();
         out.addAll(starpost.barn.BarnSystem.workshopOffers(shell));
+        out.addAll(starpost.orchard.OrchardSystem.workshopOffers(shell));
         return out;
     }
 
@@ -50,6 +52,7 @@ public final class Systems {
         starpost.fishing.FishingSystem.install(shell, play, actors, places);
         starpost.barn.BarnSystem.install(shell, play, actors);
         starpost.festivals.FestivalSystem.install(shell, play, actors, places);
+        starpost.orchard.OrchardSystem.install(shell, play, actors);
         starpost.festivals.Festivals festivals = shell.game.section(starpost.festivals.Festivals.class);
         if (festivals != null) {
             festivals.fishingContest = starpost.fishing.FishingSystem::contest;   // the Ice Cap Festival's contest

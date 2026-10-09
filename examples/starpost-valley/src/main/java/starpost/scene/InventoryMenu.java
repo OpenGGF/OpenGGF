@@ -135,6 +135,12 @@ public final class InventoryMenu implements Screen {
                 canvas.fill(sx, sy + 9, Math.round(58 * skills.progress(s)), 3, 0xFF24B6FF);
             }
         }
+        // The farmer's sneakers (starpost.core.Sneakers): what the spin dash tills.
+        int tier = starpost.core.Sneakers.tier(game);
+        int dashRows = starpost.core.Sneakers.rows(tier).length;
+        com.openggf.mods.ui.CompactFont.shadowed(canvas, starpost.core.Sneakers.name(tier) + ": THE DASH TILLS " + dashRows
+                + (dashRows == 1 ? " ROW" : " ROWS") + (starpost.core.Sneakers.runsOnWater(tier) ? " AND RUNS ON WATER" : ""),
+                x + 10, ty + 46, 1, 0xFF92DBFF, 0xFF000000);
         com.openggf.mods.ui.CompactFont.shadowed(canvas, "UP/E: NEIGHBOURS    O: OPTIONS    BACK: CLOSE", x + 10, y + h - 12,
                 1, 0xFF92DBFF, 0xFF000000);
     }
