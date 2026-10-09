@@ -90,9 +90,14 @@ class BalanceTest {
             int level = zone == Zone.GREEN_HILL ? 1 : zone.level;
             Progress p = partyFor(zone, seed, level);
             var dungeon = threeislands.field.Dungeon.of(zone);
-            for (int group : new int[] {0, 2, 1}) {
-                assertTrue(play(new Battle(p, dungeon.guards(group), Math.min(zone.level, p.partyLevel() + 1))) > 0,
-                        zone + " dungeon, group " + group + " seed " + seed);
+            var field = new threeislands.field.Field(zone, null, dungeon);
+            var fights = new ArrayList<threeislands.field.Field.Spot>();
+            fights.add(field.spots.stream().filter(it -> it.id.equals("dungeon-guard-0")).findFirst().orElseThrow());
+            fights.addAll(field.spots.stream().filter(it -> it.kind == threeislands.field.Field.Kind.ENCOUNTER).toList());
+            fights.add(field.spots.stream().filter(it -> it.id.equals("dungeon-guard-1")).findFirst().orElseThrow());
+            for (var fight : fights) {
+                assertTrue(play(new Battle(p, fight.group, Math.min(zone.level, p.partyLevel() + 1))) > 0,
+                        zone + " dungeon, " + fight.id + " seed " + seed);
             }
         }
     }

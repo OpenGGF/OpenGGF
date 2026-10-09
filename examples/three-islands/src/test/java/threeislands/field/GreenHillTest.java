@@ -71,16 +71,16 @@ class GreenHillTest {
         assertFalse(restored.bossReady(), "garden puzzles do not substitute for the anchor relay");
         assertEquals(0, restored.discoveries(), "puzzles do not alter chapter discovery catch-up levels");
     }
-    @Test void expansionDoesNotResizeOtherFieldsOrTheShrine() {
+    @Test void coastAndAuthoredExpeditionsRetainReachableLandmarks() {
         Field field = new Field(Zone.GREEN_HILL, null);
         assertTrue(field.width() * field.height() > Field.WIDTH * Field.HEIGHT * 2);
         assertTrue(reachable(field, 272, 864));
         assertTrue(reachable(field, 1440, 160));
         for (Zone zone : Zone.values()) {
             Field shrine = new Field(zone, null, Dungeon.of(zone));
-            assertEquals(Field.WIDTH, shrine.width());
-            assertEquals(Field.HEIGHT, shrine.height());
-            if (zone != Zone.GREEN_HILL) assertEquals(Field.WIDTH, new Field(zone, null).width());
+            assertEquals(shrine.layout.width, shrine.width());
+            assertEquals(shrine.layout.height, shrine.height());
+            if (zone != Zone.GREEN_HILL) assertTrue(new Field(zone, null).width() > Field.WIDTH);
         }
     }
 }

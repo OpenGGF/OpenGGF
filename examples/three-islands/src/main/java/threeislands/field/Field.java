@@ -43,6 +43,8 @@ public final class Field {
     public final Dungeon dungeon;
     /** The stock act route is retained solely for battle scenery. */
     public final FieldPath path;
+    public final AreaLayout layout;
+    public final MechanismPuzzle puzzle;
     public final List<Spot> spots = new ArrayList<>();
     private double x = 88, y = 336;
     private boolean facingLeft, moving, running;
@@ -53,8 +55,8 @@ public final class Field {
     private boolean cleared;
 
     public boolean expanded() { return dungeon == null && zone == Zone.GREEN_HILL; }
-    public int width() { return expanded() ? 1536 : WIDTH; }
-    public int height() { return expanded() ? 1024 : HEIGHT; }
+    public int width() { return layout != null ? layout.width : 1536; }
+    public int height() { return layout != null ? layout.height : 1024; }
     public int exitX() { return width() - 64; }
 
     public Field(Zone zone, FieldPath path) {
@@ -65,22 +67,77 @@ public final class Field {
         this.zone = zone;
         this.path = path;
         this.dungeon = dungeon;
+        layout = dungeon != null ? dungeon.layout() : zone == Zone.GREEN_HILL ? null : AreaLayout.outside(zone);
+        puzzle = MechanismPuzzle.of(zone, dungeon != null);
         if (dungeon == null) place();
         else placeDungeon();
         resetTrail();
     }
 
     private void placeDungeon() {
-        add(Kind.STARPOST, 176, 368, "dungeon-rest", "Refuge Starpost");
+        var route = layout.route;
+        add(Kind.STARPOST, 144, 368, "dungeon-rest", "Refuge Starpost");
         for (int i = 0; i < 2; i++) {
-            spots.add(new Spot(Kind.GUARDIAN, i == 0 ? 352 : 656, i == 0 ? 336 : dungeon.y(272),
-                    dungeon.guards(i), null, 0, "dungeon-guard-" + i, i == 0 ? "Outer sentries" : "Inner sentries"));
+            var at = route.get(i == 0 ? 1 : route.size() - 2);
+            spots.add(new Spot(Kind.GUARDIAN, at.x(), at.y(), dungeon.guards(i), null, 0,
+                    "dungeon-guard-" + i, i == 0 ? "Outer sentries" : "Vault sentries"));
         }
-        spots.add(new Spot(Kind.ENCOUNTER, 520, dungeon.y(208), dungeon.guards(2), null, 0,
+        var patrol = route.get(2);
+        spots.add(new Spot(Kind.ENCOUNTER, patrol.x() + 40, patrol.y() + 32, dungeon.guards(2), null, 0,
                 "dungeon-patrol", "Chamber patrol"));
-        spots.add(new Spot(Kind.MONITOR, 544, dungeon.y(432), List.of(), Item.BLUE_SPHERE, 0,
+        // Later interiors demand more battles along the expedition, with supplies between wings.
+        for (int i = 4; i < route.size() - 2; i += 2) {
+            var at = route.get(i);
+            spots.add(new Spot(Kind.ENCOUNTER, at.x() + 40, at.y() + 32, dungeon.guards(i), null, 0,
+                    "dungeon-patrol-" + i, "Wing patrol"));
+        }
+        var cache = route.get(2);
+        spots.add(new Spot(Kind.MONITOR, cache.x() - 40, cache.y() + 40, List.of(), Item.BLUE_SPHERE, 0,
                 "dungeon-cache", "Sealed supplies"));
-        add(Kind.RELIC, 832, dungeon.y(176), "dungeon-goal", dungeon.goal());
+        var goal = route.getLast();
+        add(Kind.RELIC, goal.x(), goal.y(), "dungeon-goal", dungeon.goal());
+        placePuzzle("dungeon");
+    }
+
+    private void placePuzzle(String prefix) {
+        add(Kind.CLUE, 184, 304, prefix + "-note", dungeon == null ? "Trail maintenance notice" : "Weathered instructions");
+        for (int i = 0; i < puzzle.labels.length; i++) {
+            // A third circuit control in the central chamber complements its two side branches.
+            var at = i < layout.alcoves.size() ? layout.alcoves.get(i) : layout.route.get(3);
+            add(Kind.MECHANISM, at.x(), at.y(), prefix + "-switch-" + i, puzzle.labels[i]);
+        }
+    }
+
+    private void placeExpedition() {
+        var route = layout.route;
+        add(Kind.STARPOST, 144, 336, "camp", "Trail camp");
+        add(Kind.FRIEND, 112, 384, "friend", "Stranded traveller");
+        add(Kind.MERCHANT, 192, 384, "merchant", "Pocky's travelling stall");
+        var entrance = route.get(zone.tier % 2 == 0 ? 3 : route.size() / 2);
+        add(Kind.DUNGEON, entrance.x(), entrance.y() + 48, "memory", Dungeon.of(zone).label());
+        var relay = route.get(route.size() - 2);
+        add(Kind.DISCOVERY, relay.x(), relay.y() - 32, "signal", "Anchor relay");
+        add(Kind.STARPOST, relay.x() - 48, relay.y() + 32, "sanctuary", "Sanctuary");
+        List<EnemyKind> enemies = zone.enemyKinds();
+        for (int i = 1; i < route.size() - 2; i++) {
+            var at = route.get(i);
+            spots.add(new Spot(Kind.ENCOUNTER, at.x() + 48, at.y() + 56,
+                    zone.islandIndex == 0 ? List.of(enemies.get(i % enemies.size()))
+                            : List.of(enemies.get(i % enemies.size()), enemies.get((i + 1) % enemies.size())),
+                    null, 0, "foe-" + (i - 1), "Badnik patrol"));
+        }
+        for (int i = 0; i < 3; i++) {
+            var at = route.get(2 + i * 2);
+            spots.add(new Spot(Kind.MONITOR, at.x() - 48, at.y() + 48, List.of(),
+                    i == 2 ? Item.ONE_UP : i == 1 ? Item.BLUE_SPHERE : Item.SUPER_RING, 0,
+                    "cache-" + (char) ('a' + i), "Expedition supplies"));
+        }
+        var arena = route.getLast();
+        var bosses = zone.bossKinds();
+        for (int i = 0; i < bosses.size() - 1; i++) spots.add(new Spot(Kind.MIDBOSS, arena.x() - 48, arena.y() - 48,
+                List.of(bosses.get(i)), null, 0, "mid-" + i, "Anchor guardian"));
+        spots.add(new Spot(Kind.BOSS, arena.x(), arena.y() - 32, List.of(bosses.getLast()), null, 0, "boss", "Rift anchor"));
+        placePuzzle("route");
     }
 
     public boolean dungeonComplete() {
@@ -96,17 +153,31 @@ public final class Field {
 
     /** Physical portcullises cannot be bypassed by walking around the sentries. */
     public boolean sealed(double px, double py) {
-        if (dungeon == null) return !cleared && zone != Zone.DEATH_EGG && px >= exitX() - 8;
-        return (!guardDefeated(0) && px >= 384 && px < 400 && py >= 304 && py <= 368)
-                || (!guardDefeated(1) && px >= 688 && px < 704
-                    && py >= dungeon.y(272) - 32 && py <= dungeon.y(272) + 32);
+        if (dungeon == null && !cleared && zone != Zone.DEATH_EGG && px >= exitX() - 8) return true;
+        return layout != null && layout.sealed(px, py, lock -> switch (lock) {
+            case "vault" -> relicReady();
+            case "route" -> cleared || done("signal") || puzzleOpen();
+            default -> done(lock);
+        });
     }
+
+    public boolean puzzleOpen() {
+        String prefix = dungeon == null ? "route" : "dungeon";
+        // Completed pre-expansion dungeons keep their reward room accessible.
+        if (dungeon != null && dungeonComplete()) return true;
+        for (int i = 0; i < puzzle.labels.length; i++) if (!done(prefix + "-switch-" + i)) return false;
+        return true;
+    }
+    public boolean relicReady() { return guardDefeated(0) && guardDefeated(1) && puzzleOpen(); }
+    public Spot entrance() { return spots.stream().filter(s -> s.kind == Kind.DUNGEON).findFirst().orElseThrow(); }
+
 
     private void add(Kind kind, int x, int y, String id, String label) {
         spots.add(new Spot(kind, x, y, List.of(), null, 0, id, label));
     }
 
     private void place() {
+        if (layout != null) { placeExpedition(); return; }
         add(Kind.STARPOST, 144, 336, "camp", "Trail camp");
         add(Kind.MERCHANT, 192, 416, "merchant", "Pocky's travelling stall");
         add(Kind.FRIEND, 208, 288, "friend", "Stranded traveller");
@@ -153,7 +224,7 @@ public final class Field {
                 || (dungeon == null && progress.isCleared(zone) && (spot.kind == Kind.BOSS || spot.kind == Kind.MIDBOSS));
     }
     public void complete(Progress progress, Spot spot) {
-        if (spot.kind == Kind.RELIC && (!guardDefeated(0) || !guardDefeated(1))) return;
+        if (spot.kind == Kind.RELIC && !relicReady()) return;
         spot.done = true;
         progress.markSeen(key(spot));
         if (spot.kind == Kind.RELIC) {
@@ -182,7 +253,17 @@ public final class Field {
 
     /** A failed phrase starts afresh; solved mechanisms and each wheel survive saves. */
     public String mechanism(Progress progress, Spot spot) {
-        if (spot.kind != Kind.MECHANISM || !expanded()) return "";
+        if (spot.kind != Kind.MECHANISM) return "";
+        if (spot.id.contains("-switch-")) {
+            if (puzzleOpen()) return "The mechanism is secure. The way stays open.";
+            int index = Integer.parseInt(spot.id.substring(spot.id.lastIndexOf('-') + 1));
+            if (puzzle.rule == MechanismPuzzle.Rule.RESTORE && spot.done) return "This mechanism is already restored.";
+            String response = puzzle.attempt(index);
+            if (puzzle.rule == MechanismPuzzle.Rule.RESTORE) complete(progress, spot);
+            else if (puzzle.solved()) for (Spot control : spots) if (control.id.contains("-switch-")) complete(progress, control);
+            return response + (puzzleOpen() ? " The crossing is now open." : "");
+        }
+        if (!expanded()) return "";
         if (spot.id.startsWith("sluice-")) {
             if (spot.done) return "The wheel rests against its stop. The inlet is closed.";
             complete(progress, spot);
@@ -209,6 +290,7 @@ public final class Field {
         return expanded() && orchardOpen() && px >= 1200 && px <= 1248 && py >= 736 && py <= 816;
     }
     public boolean water(double px, double py) {
+        if (layout != null) return !layout.floor(px, py);
         if (px > 400 && px < 560 && py > 224 && py < 432 && !(py >= 308 && py <= 356)) return true;
         if (!expanded()) return false;
         if (px > 384 && px < 656 && py > 672 && py < 928 && !(py >= 784 && py <= 832)) return true;
@@ -220,12 +302,16 @@ public final class Field {
         return pool && !island && !crossing;
     }
     public int[][] banks() {
+        if (layout != null) return new int[0][];
         return expanded() ? new int[][] {{112,144,64,80},{784,400,96,64},{240,624,112,128},
                 {736,832,112,112},{1008,176,192,112},{1040,352,224,64}}
                 : new int[][] {{112,144,64,80},{784,400,96,64}};
     }
     public boolean walkable(double px, double py) {
         if (dungeon != null) return dungeon.floor(px, py) && !sealed(px, py);
+        Spot door = entrance();
+        if (px > door.homeX - 80 && px < door.homeX + 80 && py > door.homeY - 120 && py < door.homeY - 12) return false;
+        if (layout != null) return layout.floor(px, py) && !sealed(px, py);
         if (px < 48 || px > width() - 48 || py < 88 || py > height() - 48 || water(px, py) || sealed(px, py)) return false;
         for (int[] bank : banks()) if (px > bank[0] && px < bank[0] + bank[2]
                 && py > bank[1] && py < bank[1] + bank[3]) return false;
@@ -312,6 +398,8 @@ public final class Field {
     }
     public void resumeAtCamp(int saved) {
         // New checkpoints use small identifiers; old side-on X coordinates return to the entrance camp.
-        setPosition(saved == 2 ? 784 : 144, saved == 2 ? 264 : 360);
+        if (dungeon != null) { setPosition(144, 360); return; }
+        Spot camp = spots.stream().filter(s -> s.id.equals(saved == 2 ? "sanctuary" : "camp")).findFirst().orElseThrow();
+        setPosition(camp.homeX, camp.homeY + 24);
     }
 }

@@ -42,6 +42,7 @@ class FieldTest {
     void everyLandmarkCanBeReachedWithoutTouchingAnOrdinaryEnemy() {
         for (Zone zone : Zone.values()) {
             Field f = new Field(zone, null);
+            if (f.layout != null) ExpeditionTest.solve(f, new Progress(1));
             // Flood fill all safely walkable eight-pixel cells, allowing for patrol movement.
             boolean[][] seen = new boolean[f.width() / 8][f.height() / 8];
             ArrayDeque<int[]> queue = new ArrayDeque<>();

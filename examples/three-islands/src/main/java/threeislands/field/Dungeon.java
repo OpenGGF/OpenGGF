@@ -5,7 +5,10 @@ import threeislands.core.EnemyKind;
 import threeislands.core.Zone;
 
 /** Authored interiors for the story landmarks; kit indices are the public ROM level-kit order. */
-public record Dungeon(Zone zone, String label, int artZone, int artAct, int music, String goal) {
+public record Dungeon(Zone zone, String label, int artZone, int artAct, int music, String goal, AreaLayout layout) {
+    private Dungeon(Zone zone, String label, int artZone, int artAct, int music, String goal) {
+        this(zone, label, artZone, artAct, music, goal, AreaLayout.inside(zone));
+    }
     public static Dungeon of(Zone zone) {
         return switch (zone) {
             case GREEN_HILL -> new Dungeon(zone, "Seaside Shrine", 1, 0, 0x82, "Missing Flicky");
@@ -21,19 +24,7 @@ public record Dungeon(Zone zone, String label, int artZone, int artAct, int musi
         };
     }
 
-    /** Alternating north/south wings give the landmarks different routes through their rooms. */
-    public int y(int northWingY) { return zone.tier % 2 == 0 ? northWingY : 672 - northWingY; }
-
-    public boolean floor(double x, double y) {
-        double py = zone.tier % 2 == 0 ? y : 672 - y;
-        return rect(x, py, 48, 256, 288, 416) || rect(x, py, 288, 304, 416, 368)
-                || rect(x, py, 416, 128, 624, 464) || rect(x, py, 624, 240, 704, 304)
-                || rect(x, py, 704, 128, 912, 336);
-    }
-
-    private static boolean rect(double x, double y, int left, int top, int right, int bottom) {
-        return x >= left && x < right && y >= top && y < bottom;
-    }
+    public boolean floor(double x, double y) { return layout.floor(x, y); }
 
     public List<EnemyKind> guards(int index) {
         List<EnemyKind> kinds = zone.enemyKinds();

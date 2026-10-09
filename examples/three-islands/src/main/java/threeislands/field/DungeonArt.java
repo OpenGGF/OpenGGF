@@ -61,7 +61,7 @@ public final class DungeonArt {
     }
 
     /** Read art from decoded blocks, independent of the stock act's camera/route bounds. */
-    private static List<SceneImage> textures(SceneLevelKit kit) {
+    static List<SceneImage> textures(SceneLevelKit kit) {
         List<SceneImage> result = new ArrayList<>();
         Set<Integer> hashes = new HashSet<>();
         for (int block = 1; block < kit.blockCount() && result.size() < 12; block++) {
@@ -116,7 +116,8 @@ public final class DungeonArt {
         // The doorway and inner plinth are part of the world, so they scroll with the party.
         int doorX = (int) (48 - cameraX), doorY = (int) (320 - cameraY);
         c.fill(doorX, doorY, 8, 32, 0xFFB5DBFF);
-        int altarX = (int) (816 - cameraX), altarY = (int) (dungeon.y(176) - cameraY);
+        var goal = dungeon.layout().route.getLast();
+        int altarX = (int) (goal.x() - 16 - cameraX), altarY = (int) (goal.y() - cameraY);
         c.draw(wall[0], altarX, altarY);
         c.draw(wall[1], altarX + 16, altarY);
         c.fill(altarX, altarY, 32, 2, light);

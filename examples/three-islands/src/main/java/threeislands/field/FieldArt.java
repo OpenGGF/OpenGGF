@@ -11,7 +11,7 @@ import threeislands.core.Zone;
 
 /** Cached ROM fragments assembled as a freely walkable oblique field, never stock platform physics. */
 public final class FieldArt {
-    private final SceneImage ground, cliff, lip, palm, flowers;
+    private final SceneImage ground, cliff, lip, palm, flowers, doorway;
     private final SceneLevelKit kit;
     private final SceneImage[] waterFrames;
     private final boolean greenHill;
@@ -19,6 +19,9 @@ public final class FieldArt {
 
     public FieldArt(Zone zone, SceneLevelKit kit, SceneRomArt rom) {
         this.kit = kit;
+        int darkest = java.util.Arrays.stream(kit.palette()).boxed().min(java.util.Comparator.comparingInt(
+                colour -> (colour >>> 16 & 255) + (colour >>> 8 & 255) + (colour & 255))).orElse(0);
+        doorway = new SceneImage(1, 1, new int[] {darkest | 0xFF000000});
         greenHill = zone == Zone.GREEN_HILL;
         if (greenHill) {
             // GHZ act-1 decoded chunk atlas: 1 = palm/grass bank, 6 = checker cliff.
@@ -31,10 +34,11 @@ public final class FieldArt {
             palm = crop(kit.blockImage(1), 96, 0, 80, 128);
             flowers = crop(kit.blockImage(1), 0, 80, 32, 48);
         } else {
-            SceneImage tile = floorTile(kit);
-            ground = tile;
-            cliff = tile;
-            lip = tile;
+            var textures = DungeonArt.textures(kit);
+            SceneImage tile = textures.isEmpty() ? floorTile(kit) : textures.get(Math.min(3, textures.size() - 1));
+            ground = zone == Zone.EMERALD_HILL ? floorTile(kit) : tile;
+            cliff = textures.isEmpty() ? tile : textures.get(0);
+            lip = zone == Zone.EMERALD_HILL ? cliff : textures.isEmpty() ? tile : textures.get(Math.min(7, textures.size() - 1));
             SceneImage source = kit.backdrop() == null ? tile : kit.backdrop().image();
             SceneImage water = crop(source, 0, Math.max(0, source.height() - 32), 32, 32);
             waterFrames = new SceneImage[] {water};
@@ -106,7 +110,7 @@ public final class FieldArt {
                 field.width(), 88, 0, cameraX, ticks);
         for (int y = (int) cameraY / 16 * 16; y < cameraY + c.height() + 16; y += 16) {
             for (int x = (int) cameraX / 16 * 16; x < cameraX + c.width() + 16; x += 16) {
-                if (y < 80) continue;
+                if (y < 16) continue;
                 boolean wet = field.water(x + 8, y + 8);
                 boolean edge = ((x < 48 || x >= field.width() - 48) && (y < 304 || y >= 368)) || y >= field.height() - 48;
                 boolean crossing = field.orchardCrossing(x + 8, y + 8);
@@ -120,13 +124,24 @@ public final class FieldArt {
                         c.draw(ground, (float) (x - cameraX), (float) (y - cameraY), SceneDraw.plain().withAlpha(0.25f));
                     }
                 } else c.draw(tile, (float) (x - cameraX), (float) (y - cameraY),
-                        SceneDraw.plain().withScale(16f / tile.width(), 16f / tile.height()));
+                        SceneDraw.plain().withScale(16f / tile.width(), 16f / tile.height()).withAlpha(greenHill ? 1f : wet ? 0.3f : 0.6f));
+            }
+        }
+        if (field.layout != null) {
+            for (var passage : field.layout.passages) {
+                int gx = (passage.from().x() + passage.to().x()) / 2;
+                int gy = (passage.from().y() + passage.to().y()) / 2;
+                if (!field.sealed(gx, gy)) continue;
+                boolean vertical = passage.from().x() == passage.to().x();
+                int w = vertical ? 64 : 16, h = vertical ? 16 : 64;
+                bank(c, gx - w / 2, gy - h / 2, w, h, cameraX, cameraY);
+                c.fill((int) (gx - w / 2 - cameraX), (int) (gy - h / 2 - cameraY), w, h, 0x606ECFFF);
             }
         }
         // Raised banks use the original face and grass fringe. Their rectangles are collision owners.
         for (int[] bank : field.banks()) bank(c, bank[0], bank[1], bank[2], bank[3], cameraX, cameraY);
         // Natural bridge: the same grass and checkerboard bank, not a generated wooden texture.
-        for (int x = 400; x < 560; x += 32) {
+        for (int x = 400; field.layout == null && x < 560; x += 32) {
             c.draw(lip, (float) (x - cameraX), (float) (350 - cameraY));
         }
         if (greenHill) {
@@ -140,6 +155,20 @@ public final class FieldArt {
             // ROM architecture marks the northern skyline without covering the walkable plane.
             int block = kit.block(Math.max(0, kit.columns() / 3), 0);
             if (block != 0) c.draw(kit.blockImage(block), (float) (512 - cameraX), (float) (80 - kit.blockSize() - cameraY));
+        }
+        // A ROM-textured facade has the same solid footprint as Field.walkable.
+        // Towers, buttresses and the recessed door make each entrance part of its landscape.
+        Field.Spot door = field.entrance();
+        int dx = (int) door.homeX, dy = (int) door.homeY;
+        bank(c, dx - 72, dy - 112, 144, 96, cameraX, cameraY);
+        bank(c, dx - 80, dy - 120, 32, 104, cameraX, cameraY);
+        bank(c, dx + 48, dy - 120, 32, 104, cameraX, cameraY);
+        int sx = (int) (dx - cameraX), sy = (int) (dy - cameraY);
+        c.draw(doorway, sx - 24, sy - 56, SceneDraw.plain().withScale(48, 44));
+        for (int px = dx - 32; px < dx + 32; px += 16) c.draw(cliff, (float) (px - cameraX),
+                (float) (dy - 64 - cameraY), SceneDraw.plain().withScale(16f / cliff.width(), 16f / cliff.height()));
+        for (int step = 0; step < 3; step++) {
+            c.draw(lip, sx - 32, sy - 12 + step * 4, SceneDraw.plain().withScale(64f / lip.width(), 4f / lip.height()));
         }
     }
 

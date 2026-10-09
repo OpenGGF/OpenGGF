@@ -370,7 +370,8 @@ public final class Game {
         FieldScreen outside = room.overworld();
         if (outside == null) throw new IllegalStateException("Dungeon lost its entrance");
         outside.field().restore(progress);
-        outside.field().setPosition(240, 176);
+        var entrance = outside.field().entrance();
+        outside.field().setPosition(entrance.homeX, entrance.homeY + 24);
         progress.setResume(outside.zone(), 1);
         save();
         if (outside.zone() == Zone.GREEN_HILL && room.field().dungeonComplete()) {
@@ -381,7 +382,7 @@ public final class Game {
     /** Collecting the inner-room discovery advances its journal entry and grants rewards once. */
     public void completeDungeon(FieldScreen room, Field.Spot relic) {
         Field field = room.field();
-        if (!field.guardDefeated(0) || !field.guardDefeated(1)) return;
+        if (!field.relicReady()) return;
         boolean first = !progress.seen(field.zone.key + "-field-memory");
         field.complete(progress, relic);
         if (first) {

@@ -15,12 +15,35 @@ Sonic starts alone on South Island, meets Tails on West Side Island, clashes wit
 for the final battle, where all seven emeralds let him turn Super. Island crossings use the
 service Warp Rings; the party prepares a safe shutdown and escapes in a pod.
 
-The northwest landmarks in all ten areas are enterable dungeons: shrines, an observatory,
-workshop caverns and archive vaults. Defeat two groups of sentries to open their gates,
-explore a side chamber for supplies, and collect the story discovery inside. Green Hill's
-missing Flicky follows Sonic back to the doorway for her reunion. Entrances stay open after
-completion, and cleared fights and one-time rewards persist. The refuge Starpost restores
-and saves the party; continuing or retrying an indoor save starts inside the entrance room.
+Dungeons occupy different districts of each area, with solid ROM-textured facades,
+buttresses, recessed doors and steps. Their routes grow from six rooms in the seaside
+shrine to sixteen in the Sky Archive. Sentries, side wings and mechanisms protect the
+story discoveries. Green Hill's missing Flicky follows Sonic back out for her reunion.
+Entrances stay usable, and cleared fights, completed mechanisms and rewards persist.
+The refuge Starpost restores and saves the party; continuing or retrying an indoor save
+starts inside the entrance room.
+
+| Area | Outdoor route | Interior task |
+|---|---|---|
+| Green Hill | Coastal groves, bell garden and flooded orchard | Raise the side-crypt floodgate and rescue the Flicky |
+| Star Light | Northern promenade, southern skywalk and feeder spurs | Align the star and moon lenses in the recorded order |
+| Spring Yard | Southern loading yards and northern freight platforms | Route power to the lift's three lamps |
+| Emerald Hill | Hilltop loop and workshop branches | Recover three compass bearings |
+| Chemical Plant | Lower service pipes and upper pump district | Balance the reservoir's linked pressure controls |
+| Mystic Cave | Winding shafts, switchbacks and winch chambers | Read the miner's verse and light the braziers in order |
+| Angel Island | Terraces wrapping around the guardian precinct | Restore the vows in three ancestor alcoves |
+| Hydrocity | Lower aqueduct, return galleries and intake spurs | Balance three tide chambers to reach the mural |
+| Launch Base | Southern moorings, northern gantry and service spurs | Execute the fuel, ignition and release checklist |
+| Death Egg | Long outer circuit with four auxiliary relay wings | Reconstruct the four-part archive chronology |
+
+Outside Green Hill, branch controls restore a blocked crossing into the final district;
+the local dungeon and relay still unlock the anchor shield. Maps show terrain rather
+than hidden objectives. Instructions near each entrance can be reread in the journal.
+Sequence mistakes reset the phrase; circuit handles are reversible. Neither consumes
+items. Individual repairs and fully solved puzzles survive saves; unfinished sequences
+and circuit attempts restart on re-entry. Previously completed dungeons and cleared
+chapters retain their access. Later interiors add rooms, longer deductions and patrols;
+avoiding ordinary enemies remains possible.
 
 Interiors have their own ROM terrain: Marble masonry for the seaside shrine and freight
 catacombs, Mystic Cave for the workshop caverns and lantern shrine, Lava Reef for the
@@ -215,16 +238,15 @@ java -cp target/test-classes:target/classes:$(cat target/test-classpath.txt) \
   available interiors through the actual entrances, both sentry battles, indoor save/continue,
   the story reward, repeat interaction and returning/re-entering, then the relay, shield removal,
   save/continue, every guardian, onward travel and the final ending. Model checks flood-fill the
-  gate geometry, preserve old saves/entrances and simulate dungeon combat, including a
+  gate geometry and reachable puzzle controls, preserve old saves/entrances and simulate dungeon combat, including a
   level-one Sonic in the first shrine. Green Hill checks cover both sluice orders, the
   locked/revealed orchard route, bell mistakes and recovery, one-time rewards, save/continue,
   and the expanded eastern trail through real scene interactions.
 
 ## Known limits
 
-- Outdoor fields other than Green Hill share a compact clearing topology; dungeons use
-  connected rooms with alternating north/south wings and two guarded crossings. Green Hill
-  has curated ROM decorations; other regions currently use simpler ROM texture composition.
+- Green Hill has curated ROM decorations; other regions use simpler ROM texture composition
+  around their authored passages and districts.
   Character sprites retain their original side-facing poses.
 - Marble Zone is not an outdoor chapter: its stock route and background are unsuitable
   for the current route renderer. Its decoded masonry is used directly in dungeon rooms.

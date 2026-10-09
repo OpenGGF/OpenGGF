@@ -269,18 +269,18 @@ class TestThreeIslandsScene {
             harness.input().handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_UP, GLFW_RELEASE);
             assertTrue((double) y.invoke(field) < before - 20, "vertical field movement is real");
             // Jump to landmarks to exercise the host's real interaction/story/save flow.
-            setPosition.invoke(field, 848.0, 148.0);
+            near(field, "BOSS");
             harness.press(GLFW_KEY_ENTER); play(harness, 3);
             assertEquals("STORY", screen(harness), "shield is explained by the party");
             finishDialogue(harness);
-            setPosition.invoke(field, 736.0, 516.0);
+            near(field, "DISCOVERY");
             harness.press(GLFW_KEY_ENTER); play(harness, 3); finishDialogue(harness);
             assertEquals(0, field.getClass().getMethod("discoveries").invoke(field), "locked relay grants no discovery");
             Object progress = game.getClass().getField("progress").get(game);
             progress.getClass().getMethod("markSeen", String.class).invoke(progress, "aiz-field-memory");
             field.getClass().getMethod("restore", progress.getClass()).invoke(field, progress);
             for (double[] position : new double[][] {{736, 516}}) {
-                setPosition.invoke(field, position[0], position[1]);
+                near(field, "DISCOVERY");
                 harness.press(GLFW_KEY_ENTER); play(harness, 3);
                 assertEquals("STORY", screen(harness), "a discovery opens dialogue");
                 harness.press(GLFW_KEY_BACKSPACE); play(harness, 3);
@@ -300,8 +300,10 @@ class TestThreeIslandsScene {
             Object resumedScreen = game.getClass().getMethod("screen").invoke(game);
             Object resumed = resumedScreen.getClass().getMethod("field").invoke(resumedScreen);
             assertEquals(2, resumed.getClass().getMethod("discoveries").invoke(resumed));
-            assertEquals(784.0, resumed.getClass().getMethod("x").invoke(resumed));
-            assertEquals(264.0, resumed.getClass().getMethod("y").invoke(resumed));
+            Object sanctuary = ((List<?>) resumed.getClass().getField("spots").get(resumed)).stream()
+                    .filter(it -> { try { return it.getClass().getField("id").get(it).equals("sanctuary"); } catch (Exception e) { throw new RuntimeException(e); } }).findFirst().orElseThrow();
+            assertEquals(sanctuary.getClass().getField("homeX").get(sanctuary), value(resumed, "x"));
+            assertEquals((double) sanctuary.getClass().getField("homeY").get(sanctuary) + 24, value(resumed, "y"));
             assertEquals(false, resumed.getClass().getMethod("bossReady").invoke(resumed), "Flame Craft still guards the anchor");
             clean(harness);
         }
@@ -374,12 +376,12 @@ class TestThreeIslandsScene {
             Object f = game.getClass().getMethod("screen").invoke(game);
             Object model = f.getClass().getMethod("field").invoke(f);
             var setPosition = model.getClass().getMethod("setPosition", double.class, double.class);
-            setPosition.invoke(model, 878.0, 336.0);
+            position(model, ((Number) value(model, "exitX")).doubleValue() - 18, 336);
             harness.press(GLFW_KEY_RIGHT); play(harness, 3);
             assertEquals("STORY", screen(harness), "story seal blocks the onward trail");
             finishDialogue(harness);
             // Touch the actual first patrol, without constructing a separate battle stage.
-            setPosition.invoke(model, 320.0, 336.0); play(harness, 1);
+            near(model, "ENCOUNTER"); play(harness, 1);
             assertTrue(screen(harness).startsWith("BATTLE"));
             Object battle = game.getClass().getMethod("screen").invoke(game);
             assertEquals(f, battle.getClass().getMethod("battlefield").invoke(battle));
@@ -397,7 +399,7 @@ class TestThreeIslandsScene {
             game.getClass().getMethod("zoneCleared", zone.getClass(), f.getClass().getInterfaces()[0]).invoke(game, zone, f);
             assertEquals("FIELD", screen(harness), "a cleared area is not replaced by a menu");
             play(harness, 100); // let the blocked-exit message/cooldown expire
-            setPosition.invoke(model, 896.0, 336.0);
+            position(model, ((Number) value(model, "exitX")).doubleValue(), 336);
             harness.press(GLFW_KEY_RIGHT);
             assertTrue(until(harness, "LOADING", 60));
             assertTrue(until(harness, "FIELD", 600));
@@ -425,7 +427,7 @@ class TestThreeIslandsScene {
             game.getClass().getMethod("zoneCleared", zone.getClass(), f.getClass().getInterfaces()[0]).invoke(game, zone, f);
             if (screen(harness).equals("STORY")) { harness.press(GLFW_KEY_BACKSPACE); play(harness, 2); }
             Object model = f.getClass().getMethod("field").invoke(f);
-            model.getClass().getMethod("setPosition", double.class, double.class).invoke(model, 896.0, 336.0);
+            position(model, ((Number) value(model, "exitX")).doubleValue(), 336);
             harness.press(GLFW_KEY_RIGHT);
             assertTrue(until(harness, "LOADING", 60));
             assertTrue(until(harness, "FIELD", 600));
@@ -461,6 +463,31 @@ class TestThreeIslandsScene {
         field.getClass().getMethod("setPosition", double.class, double.class).invoke(field, x, y);
     }
 
+    private static void near(Object field, String kind) throws Exception {
+        Object target = spot(field, kind);
+        position(field, (double) target.getClass().getField("homeX").get(target),
+                (double) target.getClass().getField("homeY").get(target) + (kind.equals("ENCOUNTER") ? 0 : 20));
+    }
+
+    private static void solvePuzzle(ExampleModHarness harness, Object game, Object field) throws Exception {
+        Object puzzle = field.getClass().getField("puzzle").get(field);
+        String rule = puzzle.getClass().getField("rule").get(puzzle).toString();
+        int count = ((String[]) puzzle.getClass().getField("labels").get(puzzle)).length;
+        int[] order = rule.equals("CIRCUIT") ? new int[] {0,2} : rule.equals("SEQUENCE")
+                ? count == 4 ? new int[] {2,0,3,1} : count == 3 ? new int[] {2,0,1} : new int[] {1,0}
+                : java.util.stream.IntStream.range(0, count).toArray();
+        for (int index : order) {
+            for (Object target : (List<?>) field.getClass().getField("spots").get(field)) {
+                if (!target.getClass().getField("id").get(target).toString().endsWith("-switch-" + index)) continue;
+                position(field, (double) target.getClass().getField("homeX").get(target),
+                        (double) target.getClass().getField("homeY").get(target) + 20);
+                harness.press(GLFW_KEY_ENTER); play(harness, 2); finishDialogue(harness);
+                assertEquals(field, value(value(game, "screen"), "field"));
+            }
+        }
+        assertEquals(true, value(field, "puzzleOpen"));
+    }
+
     private static Object spot(Object field, String kind) throws Exception {
         for (Object entry : (List<?>) field.getClass().getField("spots").get(field)) {
             if (entry.getClass().getField("kind").get(entry).toString().equals(kind)) return entry;
@@ -487,7 +514,7 @@ class TestThreeIslandsScene {
                 for (String evidence : List.of("-field-signal", "-field-memory", "-rescue")) {
                     progress.getClass().getMethod("markSeen", String.class).invoke(progress, zone + evidence);
                     field.getClass().getMethod("restore", progress.getClass()).invoke(field, progress);
-                    position(field, 208, 310);
+                    near(field, "FRIEND");
                     harness.press(GLFW_KEY_ENTER); play(harness, 2);
                     assertEquals("STORY", screen(harness));
                     Object dialogue = value(game, "screen");
@@ -517,7 +544,7 @@ class TestThreeIslandsScene {
                 played++;
                 Object game = value(harness.scene(), "game");
                 Object outside = value(game, "screen");
-                position(value(outside, "field"), 240, 176);
+                near(value(outside, "field"), "DUNGEON");
                 harness.press(GLFW_KEY_ENTER); play(harness, 2);
                 finishDialogue(harness);
                 assertEquals("DUNGEON", screen(harness), zone + " enters through its actual doorway");
@@ -563,6 +590,7 @@ class TestThreeIslandsScene {
                         assertEquals(false, field.getClass().getMethod("guardDefeated", int.class).invoke(field, 1));
                     }
                 }
+                solvePuzzle(harness, game, field);
                 Object relic = spot(field, "RELIC");
                 position(field, (double) relic.getClass().getField("homeX").get(relic),
                         (double) relic.getClass().getField("homeY").get(relic) + 24);
@@ -577,7 +605,8 @@ class TestThreeIslandsScene {
                 position(field, 56, 336); harness.press(GLFW_KEY_LEFT); play(harness, 2); finishDialogue(harness);
                 assertEquals("FIELD", screen(harness));
                 assertEquals(false, value(progress, "resumeDungeon"));
-                assertEquals(240.0, value(value(value(game, "screen"), "field"), "x"), "return to the actual doorway");
+                assertEquals(spot(value(outside, "field"), "DUNGEON").getClass().getField("homeX").get(spot(value(outside, "field"), "DUNGEON")),
+                        value(value(value(game, "screen"), "field"), "x"), "return to the actual doorway");
                 harness.press(GLFW_KEY_ENTER); play(harness, 2); finishDialogue(harness);
                 assertEquals("DUNGEON", screen(harness), "completed entrances remain usable");
                 assertEquals(true, value(value(value(game, "screen"), "field"), "dungeonComplete"));
@@ -588,7 +617,8 @@ class TestThreeIslandsScene {
                 Object zoneValue = value(outside, "zone");
                 assertEquals(false, game.getClass().getMethod("canTravelForward", zoneValue.getClass()).invoke(game, zoneValue));
                 assertEquals(false, value(outdoor, "anchorExposed"), "dungeon alone doesn't remove the shield");
-                position(outdoor, 736, 516);
+                if (!zone.equals("ghz")) solvePuzzle(harness, game, outdoor);
+                near(outdoor, "DISCOVERY");
                 harness.press(GLFW_KEY_ENTER); play(harness, 2); finishDialogue(harness);
                 assertEquals(true, value(outdoor, "anchorExposed"), "the actual relay interaction removes the shield");
                 var relaySave = (java.util.Optional<?>) value(game, "readSave");

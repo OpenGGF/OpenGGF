@@ -86,7 +86,13 @@ public final class FieldScreen implements Screen {
     }
     private void camera(Game game) {
         cameraX = Math.max(0, Math.min(field.width() - game.width(), field.x() - game.width() / 2.0));
-        cameraY = Math.max(0, Math.min(field.height() - game.height(), field.y() - game.height() / 2.0 - 16));
+        double entranceLook = 0;
+        if (field.dungeon == null) {
+            var door = field.entrance();
+            double distance = Math.hypot(field.x() - door.homeX, field.y() - door.homeY);
+            entranceLook = 56 * Math.max(0, 1 - distance / 192);
+        }
+        cameraY = Math.max(0, Math.min(field.height() - game.height(), field.y() - game.height() / 2.0 - 16 - entranceLook));
     }
     public int sx(double x) { return (int) Math.round(x - cameraX); }
     public int sy(double y) { return (int) Math.round(y - cameraY); }
@@ -102,17 +108,25 @@ public final class FieldScreen implements Screen {
                 game.save();
                 game.swap(new StoryScreen(game, List.of(new Story.Line(null, response)), this, () -> game.swap(this)));
             }
-            case CLUE -> game.replayStory(zone.key + "-" + spot.id, this, () -> {
+            case CLUE -> {
+                if (spot.id.equals("route-note") || spot.id.equals("dungeon-note")) {
+                    field.complete(game.progress, spot);
+                    game.save();
+                    speak(game, null, field.puzzle.instructions());
+                    return;
+                }
+                game.replayStory(zone.key + "-" + spot.id, this, () -> {
                 if (!spot.done && spot.id.equals("orchard-letter")) game.progress.addItem(threeislands.core.Item.ONE_UP, 1);
                 field.complete(game.progress, spot);
                 game.save();
                 game.swap(this);
             });
+            }
             case DUNGEON -> game.enterDungeon(this);
             case GUARDIAN -> game.battle(this, spot, spot.group);
             case RELIC -> {
-                if (!field.guardDefeated(0) || !field.guardDefeated(1)) {
-                    say("The inner chamber is still sealed.");
+                if (!field.relicReady()) {
+                    say("The inner chamber needs its sentries defeated and its mechanisms restored.");
                     return;
                 }
                 game.replayStory(zone.key + "-memory", this, () -> {
@@ -311,18 +325,13 @@ public final class FieldScreen implements Screen {
             }
             case MECHANISM -> {
                 sprite(game, c, "s3k:starpost", spot.done ? 2 : 1, x, y - 16);
-                String mark = spot.id.startsWith("bell-") ? switch (spot.id) {
+                String mark = spot.id.contains("-switch-") ? spot.done ? "Set" : spot.label : spot.id.startsWith("bell-") ? switch (spot.id) {
                     case "bell-dawn" -> "Sunrise"; case "bell-noon" -> "High sun"; default -> "Sunset";
                 } : spot.done ? "Closed" : "Open";
                 game.font.shadowed(c, mark, x - game.font.width(mark) / 2, y - 42, Ui.DIM);
             }
             case DUNGEON -> {
-                // An arch reads as an entrance rather than a collectible story marker.
-                c.fill(x - 16, y - 34, 32, 34, 0xFF151526);
-                c.fill(x - 20, y - 38, 40, 6, 0xFF9996B1);
-                c.fill(x - 20, y - 32, 5, 32, 0xFF66647F);
-                c.fill(x + 15, y - 32, 5, 32, 0xFF66647F);
-                game.font.shadowed(c, spot.label, x - game.font.width(spot.label) / 2, y - 50, Ui.GOLD);
+                game.font.shadowed(c, spot.label, x - game.font.width(spot.label) / 2, y - 124, Ui.GOLD);
             }
             case RELIC -> {
                 if (zone == Zone.GREEN_HILL) {
@@ -388,6 +397,8 @@ public final class FieldScreen implements Screen {
                 lines.addAll(game.story.scene(zone.key + "-" + id));
             }
         }
+        String note = field.dungeon == null ? "route-note" : "dungeon-note";
+        if (game.progress.seen(zone.key + "-field-" + note)) lines.add(new Story.Line(null, field.puzzle.instructions()));
         if (lines.isEmpty()) lines.add(new Story.Line(null, "The pages are still blank."));
         game.swap(new StoryScreen(game, lines, this, () -> game.swap(new MenuScreen(game, this, false))));
     }
