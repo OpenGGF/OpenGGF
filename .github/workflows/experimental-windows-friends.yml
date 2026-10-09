@@ -1,0 +1,80 @@
+name: Experimental Windows friends ZIP
+
+# Separate from the released native engine. Changes to these explicit tools on
+# develop produce a bounded artifact, never a release, tag or task-branch push.
+on:
+  push:
+    branches: [develop]
+    paths:
+      - '.github/workflows/experimental-windows-friends.yml'
+      - 'tools/modding/native-windows/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: experimental-windows-friends
+  cancel-in-progress: false
+
+jobs:
+  guards:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: maven
+      - name: Install Lua 5.4
+        run: sudo apt-get update && sudo apt-get install --yes lua5.4
+      - name: Check packaging controls
+        run: python3 -m unittest discover -s tools/modding/native-windows -p 'test_*.py' -v
+      - name: Run fresh normal structural guards
+        env:
+          LUA_BIN: lua5.4
+        run: mvn -B -Dmse=off -Pguards test
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: maven
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      - name: Build unchanged Java 21 engine and SDK
+        shell: pwsh
+        run: >-
+          mvn -B "-Dmse=off" "-DskipTests" -Puniversal-jar package dependency:build-classpath
+          "-DincludeScope=runtime" "-Dmdep.outputFile=target/native-runtime-classpath.txt"
+      - name: Build all example and sample mods from source
+        shell: pwsh
+        run: |
+          $engine = (Get-ChildItem target/*-jar-with-dependencies.jar).FullName
+          $sdk = (Get-ChildItem target/*-openggf-mod-sdk.jar).FullName
+          python tools/modding/native-windows/build_inputs.py --engine-jar $engine --sdk-jar $sdk --output target/windows-friends-inputs
+      - name: Compile, qualify and ZIP the experimental native image
+        shell: pwsh
+        run: |
+          $engine = (Get-ChildItem target/*-jar-with-dependencies.jar).FullName
+          python tools/modding/native-windows/build_windows.py --engine-jar $engine --inputs target/windows-friends-inputs --runtime-classpath target/native-runtime-classpath.txt --output target/windows-friends-native
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OpenGGF-experimental-windows-x64-with-mods
+          path: |
+            target/windows-friends-native/OpenGGF-*.zip
+            target/windows-friends-native/OpenGGF-*.zip.sha256
+          if-no-files-found: error
+          retention-days: 3

@@ -10,7 +10,7 @@ Usage:
 It compiles the engine once through the Maven queue (unless --skip-engine), compiles the
 example's src/main/java against it with javac, copies src/main/resources beside the classes,
 and packages the jar with `ggfmod package`, which runs the mod validator. Needs Java 21.
-Examples hold only code and text: art and audio come from the player's own ROM at runtime.
+Examples use the player's ROM at runtime; some also ship original creator audio assets.
 
 Origin: Slay the Robotnik's build script (2026-10-05), shared by the examples on 2026-10-06.
 """

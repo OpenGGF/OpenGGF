@@ -25,6 +25,11 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 ## Tools
 
+- [Eggman's Sky voice generator](../../tools/audio/eggmans_sky_voice.py) synthesizes
+  original directed Alice announcements through OpenRouter, preserves raw takes outside
+  Git, verifies literal words after the approved metallic/vocoder/DAC processing, and
+  derives manifest entries and queue leases from the final PCM (2026-10-08).
+
 - [Creator kit builder](../../tools/modding/build_creator_kit.py) exports matching
   engine/SDK/API-doc/testkit artifacts, pinned portable examples and launchers;
   [catalog probe](../../src/main/java/com/openggf/tools/modsdk/CreatorCatalogProbe.java)
@@ -86,6 +91,22 @@ Nine `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each
 | `tools/bizhawk/capture_ddz_route_reference.lua` | Native BizHawk exporter for Doomsday questions: records the DDZ controller/boss/body SST fields, autoscroll words (`_unkFA82..FAB8`), foreground-plane scroll and palette per frame; `plan.slots` logs every SST slot-occupancy change (load and allocation order) and `plan.boss_code` retargets the boss columns. Origin: DDZ bring-up (slot histories found the `Camera_X_pos_coarse_back` latch). | `python3 tools/bizhawk/capture_native_references.py ... --exporter tools/bizhawk/capture_ddz_route_reference.lua --plan plan.lua --fixture-state <state> --require-output observations.csv --require-output done.txt` |
 
 ## Test harness helpers
+
+- `tools/modding/native-windows/build_inputs.py` rebuilds all friends mods with
+  the real converters and package validator; `build_windows.py` compiles a
+  separately labelled Windows native image, audits retained members, qualifies
+  registration and the actual engine boot path, and assembles the ZIP with
+  per-mod shortcuts and retained licences. Origin: [experimental Windows ZIP,
+  2026-10-08](../../tools/modding/native-windows/README.md).
+
+- `tools/modding/native-feasibility/probe.py` builds closed-world, Crema and optional
+  JIT controls around the production mod classloader, then compiles two external
+  fixture JARs after the images exist. `registration_probe.py` derives exact-class
+  preservation from the canonical API and all packaged mod bytecode, audits
+  types/fields/methods before creator execution, and checks real validation and
+  owner transactions on JVM/native. The companion `NativeModMemberContractTest`
+  covers dormant callbacks and missing linkage. Origin: [GraalVM native mod
+  feasibility, 2026-10-08](../architecture/research/2026-10-08-graalvm-native-mod-feasibility.md).
 
 - `SitarHeroCapture` (`src/test/java/com/openggf/tools/`) packages the real
   example and captures ROM-backed performers, stages, finite arcade behavior,

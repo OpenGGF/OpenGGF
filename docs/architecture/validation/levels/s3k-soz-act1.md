@@ -479,3 +479,35 @@ with all 29 full-world replay windows.
 
 Running these checks after a trace prefix in the same JVM used to fail. The
 cause was a leaked playback session, fixed in `d427fdd9ba`.
+
+## Shorter solo Sonic inputs (2026-10-08)
+
+At task base `d740b7a0fadd97b2e7c104d56481a0235bdffb4c`, the nine current cold
+routes pass with zero failures, errors or skips. The solo Sonic movie now retains
+original input ranges `[0,22350)`, `[23896,24207)` and `[25718,31671)`:
+**28,614 inputs rather than 31,671**. The removed 3,057 inputs are an obstructed
+approach pause and repeated stationary hopping. Its committed `.script` is the
+reproducible controller source; `InputLogAuthorTool` checked every emitted pad
+against the production loader. It changes no runtime state or rules.
+
+A cold-prefix whole-registry branch probe reaches the real sand defeat at27006,
+matching the original route's owning input30063 after the removed intervals.
+This probe is authoring evidence. Fresh uninterrupted acceptance then passes
+all nine routes with no skips: solo Sonic reaches playable Act2 at28436 rather
+than31490, retains180 playable destination frames (including three neutral
+inputs after the movie ends), and passes the full-world replay comparisons.
+The other eight routes keep their original ready frames and outcomes.
+
+The more aggressive variant also removed arena-entry inputs and died at27483
+without winning; it was rejected. The existing paired Act1 and Tails Act1/Act2
+movies also died early when tried with solo Sonic, so they were not reused.
+
+The shortened route retains a traversal window at100 and every1000 inputs
+through28000, a destination window, and semantic full-world45-input replays at
+boss entry, actual sand defeat and results start. These are30 traversal/destination
+and three semantic windows. Source observations stop before the replacement world.
+Every frame still draws; real victory, finished results, control release and the
+solo roster remain required. The other eight movies, Knuckles puzzle/bonus checks
+and inherited native/visual parity limits retain their existing scope. Commands,
+timings and final delivery checks are recorded in the
+[memory/throughput research](../../research/2026-10-07-ordinary-suite-memory-cause.md).

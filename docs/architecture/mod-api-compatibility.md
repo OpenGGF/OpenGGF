@@ -517,3 +517,32 @@ exchange bounded queues and state. The scene host closes networking on exit
 requests and every callback fault, rather than depending on a later caller
 cleanup. The [scene handbook](../modding/guides/mod-scenes.md#direct-peer-messaging)
 owns framing, deadlines, clock meaning and direct-connect limitations.
+
+## Bounded ROM-part cue candidate
+
+Sitar Hero's fumble follow-up adds `SceneMusicPlayer.PLAYHEAD` and the default
+`cuePart(long,int,double,double,double,double)` method. It exposes no PCM, synth,
+thread or mod-specific instrument type. The production host mixes at most six
+enveloped, pitch-gliding residual fragments, validates duration/rate/gain/balance,
+smooths audibility over 4 ms, freezes cues on pause and releases them on stop.
+Unsupported legacy hosts decline a cue instead of losing basic playback. The
+normalized 0.7 candidate pin gains exactly two additive entries, with no removals.
+`ModApiVersion` documents the capability; the policy-generated release descriptor
+retains unpublished candidate `0.7.0` and its existing schema/publication state.
+See the [creator recipe](../modding/guides/mod-scenes.md) and
+[fumble implementation plan](plans/2026-10-08-sitar-hero-fumble-feedback.md).
+
+## Scene SFX candidate
+
+`SceneAudio.playSfx(String)` plays a declared one-shot using the scene owner's
+trusted namespace. It returns whether playback was admitted; unknown clips,
+suppressed playback, closed contexts and hosts without audio return false.
+The default preserves silent compatibility with existing context implementations
+while still rejecting invalid local names. Patch scenes use the same bounded
+manifest validation and launch decode transaction as standalone games.
+
+This adds one entry to the mutable unpublished `0.7` signature pin.
+`ModApiVersion` records the capability; the release descriptor retains candidate
+`0.7.0` and its existing publication state. See the
+[scene guide](../modding/guides/mod-scenes.md#5-audio-and-storage) and
+[Eggman's Sky voice record](designs/2026-10-07-eggmans-sky.md#original-system-voice-2026-10-08).

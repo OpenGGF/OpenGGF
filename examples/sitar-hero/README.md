@@ -134,7 +134,18 @@ no strum and no held tails.
 Each gem scores 50, sustains add 25 per beat, and streaks build a multiplier up to 4×.
 Completing bright phrases charges Star Power; whammy their tails for extra charge, and
 activate at half a meter to double the multiplier. A miss or an extra strike lowers ROCK
-and mutes your part until your next hit, while the band plays on.
+and mutes your part until your next hit, while the band plays on. Your first miss
+in a run makes the instrument die away with a small downward bend; a wrong strike
+makes a short plink or dull drum hit using that song's own ROM timbre. Further idle
+misses stay quiet, and releasing a sustain quietly stops the part. Rapid mistakes
+are rate limited rather than producing a wall of sounds.
+
+In local co-op and local duels, both players share one instrumental part: either
+player's success keeps it playing, and each owns their fumble cues with a small
+left/right balance. Online co-op now follows the same shared-part rule. In an online
+duel your own success controls your mix; peer fumbles are quieter. Peer feedback
+is presentation data only: it never judges your notes or changes your score. Old,
+duplicate and delayed cue packets cannot replay a fumble into another round.
 
 **Settings** remaps keyboard and pad controls per player and per instrument (Enter/A
 captures a binding, Tab switches device, Delete clears it). It also has input and display
@@ -154,7 +165,7 @@ and calibration), `profile.txt` (scores), `career.txt` (story progress) and
 ### Direct-connect
 
 Choose Direct-connect, enter `IP:PORT` (default `127.0.0.1:34917`; type `;` for the
-colon), then host co-op or a score duel, or join a host. Both players need matching mod
+colon), then host co-op or a score duel, or join a host. Mod version 0.3.0 uses the SH2 match protocol and requires matching mod
 builds and audio sample rates, and at least one ROM in common. The host picks the song,
 part and difficulty; the guest picks a performer and confirms. Both prepare the music
 before a synchronised count-in.
@@ -230,6 +241,7 @@ which channels each instrument plays, with evidence in the
 | Judgment windows, scoring, Star Power, rock meter | `ctx.physicalInput()`: timestamped key, button and axis events |
 | Which ROM sprites form each performer, and how arms move | `SceneRomArt`: sprites, palettes, characters, zone pictures, title cards |
 | Instrument, riser and light props (original pixel art) | `SceneCanvas`: fills, images, sprites, backdrops, text |
+| Fumble presets, cooldowns and multiplayer mix policy | `ctx.music()`: bounded, pitch-gliding ROM-part cues without exposing PCM |
 | Menu music and cue choices | `ctx.audio()`: the running game's music and SFX by driver ID |
 | Save file contents | `ctx.storage()`: small owner-scoped text files |
 | The peer protocol | `ctx.network()`: one explicit, bounded peer connection |
@@ -336,11 +348,30 @@ PNGs can therefore finish before a song has loaded; give it frames or plenty of 
 Captures use autoplay and offline audio. They show the scene's flow, art and sound, not
 real speaker latency or controller timing.
 
+## Adding performance feedback to your own mod
+
+Read `model/RhythmSession.java` for consumable hit/miss/strike/tail-release events,
+then `audio/PerformanceAudio.java` for the sound choices. Drain events once after
+processing a frame's inputs and advances. Keep a previous audibility state so only
+the first miss in a run makes a sound; wrong strikes can still cue while muted.
+Choose a real attack inside the relevant `SceneMusicPart` section, or use
+`SceneMusicPlayer.PLAYHEAD` for a dying note. `cuePart` envelopes and mixes that
+ROM fragment while leaving the backing and sample clock intact.
+
+`net/OnlineMatch.java` batches presentation packets at most every 50 ms and sends
+cue-free audibility refreshes when idle. Each packet is scoped to a round and an
+independent sequence; cue note indices are checked against the agreed chart. The
+receiver drops transients on pause and filters old cue times. Score `STATE`
+telemetry remains separate. Keep those responsibilities inside your own mod when
+copying this pattern; the engine only owns bounded text transport and PCM mixing.
+
 ## Limitations
 
 - Judgment windows (±100 ms), rock weights and the whammy vibrato are tuning choices
   modelled on Guitar Hero III's rules, not measured from that game.
-- Queued audio delays the mute after a miss and the whammy by the output buffer.
+- A miss is decided after its ±100 ms judgment window. The first part of that
+  attack can therefore be heard before the fumble; muting never predicts a miss.
+  Queued audio adds output-buffer delay to muting, fumbles and whammy.
   Calibration corrects judgment, not that feedback.
 - Stages are still pictures of a real act (animated tiles show their first frame).
   Supported acts are those `hasZonePictures` lists; others use another act from the same

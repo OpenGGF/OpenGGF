@@ -9,6 +9,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
+import com.openggf.audio.AudioManager;
+import com.openggf.audio.StreamedMusicPort;
 
 import com.openggf.control.InputHandler;
 import com.openggf.control.LogicalInputSnapshot;
@@ -108,6 +112,42 @@ class TestModSceneHost {
         InputHandler input = mock(InputHandler.class);
         when(input.logical()).thenReturn(LogicalInputSnapshot.neutral());
         return input;
+    }
+
+    @Test
+    void sceneSfxUsesTheHostOwnerAndCannotOutliveItsContext() {
+        AudioManager audio = mock(AudioManager.class);
+        var ref = new StreamedMusicPort.SfxRef("cards", "voice-alert");
+        when(audio.playNamespacedSfx(ref)).thenReturn(true);
+        SceneContext[] retained = new SceneContext[1];
+        ModSceneHost host = new ModSceneHost();
+        host.open(owned(() -> new ModScene() {
+            @Override public void enter(SceneContext ctx) { retained[0] = ctx; }
+            @Override public void update(SceneContext ctx) { }
+            @Override public void draw(SceneContext ctx, SceneCanvas canvas) { }
+        }), new SceneServices(audio, null, temp, null, () -> { }, () -> { }), 320, 224);
+        assertTrue(retained[0].audio().playSfx("voice-alert"));
+        assertFalse(retained[0].audio().playSfx("missing"));
+        assertThrows(IllegalArgumentException.class,
+                () -> retained[0].audio().playSfx("other-mod:voice-alert"));
+        verify(audio).playNamespacedSfx(ref);
+        host.close();
+        assertFalse(retained[0].audio().playSfx("after-close"));
+        verify(audio, never()).playNamespacedSfx(new StreamedMusicPort.SfxRef("cards", "after-close"));
+    }
+
+    @Test
+    void sceneSfxWithoutAnAudioBackendIsSilentButStillValidatesNames() {
+        SceneContext[] retained = new SceneContext[1];
+        ModSceneHost host = new ModSceneHost();
+        host.open(owned(() -> new ModScene() {
+            @Override public void enter(SceneContext ctx) { retained[0] = ctx; }
+            @Override public void update(SceneContext ctx) { }
+            @Override public void draw(SceneContext ctx, SceneCanvas canvas) { }
+        }), services(new ArrayList<>()), 320, 224);
+        assertFalse(retained[0].audio().playSfx("voice-alert"));
+        assertThrows(IllegalArgumentException.class, () -> retained[0].audio().playSfx("../alert"));
+        host.close();
     }
 
     @Test

@@ -3155,7 +3155,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 setInvincibleFrames(0);
                 setSpringing(0);
                 setSpindash(false);
-                setRolling(false);
+                // KillSonic/KillCharacter reset floor radii and native Y before death velocity.
+                PlayableHurtRadiusTransition.applyDeath(this);
                 setCrouching(false);
                 setPushing(false);
                 setAir(true); setOnObject(onObject || controller.isOnObjectAtFrameStart());

@@ -869,3 +869,159 @@ python3 tools/testing/maven_queue.py --lean -Dmse=off \
   -Dtest=TestSozLowerRockPuzzleCapture,TestSozBackgroundCapture,TestGameplayCaptureFrameRendering \
   "-Ds3k.rom.path=${OPENGGF_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
 ```
+
+
+## SOZ authored-input shortening follow-up (2026-10-08)
+
+Initial task base `d740b7a0fadd97b2e7c104d56481a0235bdffb4c`, worktree
+`feature/ai-soz-shorter-inputs`. Both the original and candidate queued commands
+below pass all **nine fully qualified case identities**, zero failures/errors/skips.
+Both use the lean1GiB JVM configuration without JFR. The temporary opt-in input
+probe was unselected during the baseline and was removed before candidate validation.
+No runtime, renderer, physics, queue, build or selection-policy code changed.
+
+```bash
+python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  -Dtest=TestSozColdRouteCapture \
+  "-Ds3k.rom.path=${OPENGGF_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+| Cold route | Baseline seconds | Candidate seconds |
+|---|---:|---:|
+| Solo Sonic Act1 (changed inputs) |15.547|14.341|
+| Solo Sonic Act2 |15.458|15.399|
+| Solo Tails Act1 |7.283|7.480|
+| Solo Tails Act2 |14.886|14.443|
+| Solo Knuckles Act1 |10.220|10.001|
+| Sonic + Tails Act1 |16.379|16.020|
+| Sonic + Tails Act2 |21.502|19.540|
+| Solo Knuckles Act2,320 |18.043|17.972|
+| Solo Knuckles Act2,800 |20.805|19.989|
+
+Surefire class time was140.5→135.5s; Maven execution including compilation was
+3m34s→2m38s, excluding queue wait. The first arm compiled production and tests;
+the second compiled tests only. **Build times are not a throughput comparison.**
+The changed case saved1.206s (7.8%) in this single pair. Unchanged controls also
+varied, so the aggregate5s difference is not attributed wholly to this change.
+
+The solo Sonic Act1 movie shrank31,671→28,614 inputs (9.7%), retaining original
+ranges `[0,22350)`, `[23896,24207)` and `[25718,31671)`. The cut removes an
+obstructed approach pause and repeated stationary hopping; its source is committed
+as `soz1-cold-sonic.script` and was compiled/reparsed through `InputLogAuthorTool`.
+A whole-registry cold-prefix branch at22350 reached real sand defeat at27006
+(original source input30063). Fresh uninterrupted acceptance then reached playable
+Act2 at28436 instead of31490:3,054 earlier executed inputs. The different global
+level clock can alter native handoff dispatch alignment; the test observes actual
+control release instead of requiring an exact fixed destination frame. It still
+steps and draws180 playable destination frames, including three neutral inputs
+beyond the shorter movie.
+
+The route still replays at100 and each1000-input source interval through28000,
+plus the destination. Three semantic45-input full-world windows cover boss entry,
+actual sand defeat and results start. The new boss-entry/defeat observations replace
+idle-period coverage with explicit lifecycle observations; there are30 periodic/
+destination and three semantic windows. Registry keys and every field still compare
+on capture/restore and forward replay. The other eight movies, their ready frames,
+Knuckles puzzle/bonus checks and Act2 boss hits/capsule/history isolation are unchanged.
+All nine recorded movies now sum259,034 rather than262,091 inputs: **1.2% less**.
+This bounded improvement does not remove the long rendered traversal matrix.
+
+Rejected experiments, all controller-only on the same base:
+
+- Removing another1,016 arena-approach inputs reached the boss but never won,
+  then died atcandidate input27483 (original source31556). Preserve admission/wait inputs.
+- The less aggressive branch retained another432 stalled inputs and won at27438;
+  it offered no advantage over the selected branch.
+- Reusing the paired Act1 movie for solo Sonic died at5727; using Tails Act1
+  died at1432; using Tails Act2 died at2882. No copied shorter route was accepted.
+
+These probes restored only an engine-owned prefix checkpoint and external input
+edge history, stopped before any cross-world restore, and supplied no positions,
+clock, boss health or trace-state writes. Their two JUnit methods completed but
+individual candidate deaths above are rejected authoring outcomes, not green
+acceptance routes. Historical external capture CSVs helped locate stalls;
+they are not a current native oracle or a matched replay result.
+
+The change-based dry-run selects3,056 ordinary classes plus guards because BK2/
+script test resources are unclassified. Under proportionate validation, the direct
+nine-route before/after pair covers the sole changed controller asset and acceptance
+code, including real rendered traversal, full-world rewind, boss/results, incoming
+playability and load/history isolation. It replaces that disproportionate fallback;
+no full-suite/guard pass is claimed. Actual tool preflight passes with Java21,
+Lua5.4 (`LUA_BIN=/usr/bin/lua5.4`) and PowerShell; the initial default-Lua attempt
+failed before running tests.
+
+Develop advanced during merge preparation to
+`eaafa6ee053f5624c00a78652e841d8f78598f5d` (Sitar Hero music feedback).
+The delta changes Mod API/music-host/example paths and their tests/documentation;
+it does not change SOZ, physics, GameLoop, capture rendering or these controller
+assets. Task commit `7679a7793b506ae3dd6dc7eaa397f4f66f00941b` merged that base
+as `c02db40cee71a0d0378f93f59feccc1d54deebf2`, with no conflicts. The measured
+candidate's SOZ test and asset bytes remain identical after reconciliation.
+The actual-base dry-run still selects the full ordinary suite because of the
+unclassified test resources; the same proportionate rationale applies.
+
+A completed updated-base run passes **73 cases, zero failures/errors/skips**, in
+3m35s including compilation. Its nine original cold routes keep the same ready
+frames; the other64 cases cover both level-loading classes, AIZ intro handling,
+bootstrap resolution, decoding and the input author. This establishes the actual
+integration baseline rather than treating the earlier task pin as current.
+
+```bash
+python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  -Dtest=TestSozColdRouteCapture,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestInputLogAuthorTool \
+  "-Ds3k.rom.path=${OPENGGF_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dsonic1.rom.path=${OPENGGF_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${OPENGGF_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" test -B
+```
+
+### Integrated qualification and coordinated publication (2026-10-08)
+
+The queued post-merge focused command above completed at 14:54:23Z on
+`6124a524eef9b42efb800d5bcb95376147507c9e`, exit 0: **73 cases, zero
+failures/errors/skips**. All fully qualified case identities and outcomes match
+the updated-base 73-case run at `eaafa6ee0`. The nine cold routes pass, together
+with 64 loading/bootstrap/decoding/AIZ/input-author cases. Maven execution took
+2m 51s excluding queue wait; the cold-route class took 144.638s. This is integrated
+qualification, not a new matched performance experiment; it does not establish
+an aggregate throughput improvement.
+
+The separately owned [Sitar main qualification evidence](../plans/2026-10-08-sitar-hero-fumble-feedback.md)
+records completed ordinary run `20261008T153213Z-5cd93bac` at 6124:
+3,056 reports / 26,535 cases / 27 exact inherited failures / zero errors / 62 literal
+inherited skips. All nine SOZ cases pass without skips. The ordinary lane finished
+at 16:57:28Z with Maven exit 1. The owning coordinator attributed every failure and
+skip to its baseline; these are its verified results, not another run performed
+by this task. Research-only HEAD drift to `17ae561ad` made the combined category
+invocation incomplete and suppressed its guard lane. A separate fresh normal
+main guard invocation at 17ae then passed **674 cases, zero failures/errors/skips**,
+exit 0, finishing at 17:15:24Z. The complete ordinary lane and fresh guard lane qualify
+unchanged executable inputs separately; the ordinary suite is not all green.
+
+The coordinator published and independently verified develop at
+`378c1d715a2565249b696babab4f7aaed943cc6e`, then released the main hold. Its delta
+from tested 17ae changes only two evidence/measurement Markdown files. This task
+re-read that durable evidence, fast-forward pulled main without a HEAD change,
+and checked that its integrated SOZ test, script and BK2 still match measured
+candidate `7679a7793b506ae3dd6dc7eaa397f4f66f00941b` byte for byte.
+
+The earlier 6124 fixture merge occurred beneath another owner's active ordinary
+run and changed a movie read directly from `src/test/resources`. That interrupted
+invocation was incomplete, not pass evidence. The owning coordinator records this
+in the existing [measurement-hazard catalogue](../../agent-workflow/briefing-trace-rounds.md):
+compilation does not freeze committed fixture inputs. Main's tracked inputs and
+commits were preserved throughout the replacement qualification/publication.
+This follow-up changes evidence prose only; no unchanged engine tests or reviews
+were repeated.
+
+After publication, the task tree was re-inspected: clean tracked status, all
+commits already merged, and no identified process using its directory. Ignored
+contents were accounted for as owned build/probe output, generated configuration
+and symlinks to original ROM/config/disassembly inputs; the generated configuration
+example matched the bundled template. Consumed owned root diagnostics were removed
+under the worktree metadata lease, with XML hashes checked before deletion and
+changed reports preserved. Normal worktree removal succeeded; the fully merged
+`feature/ai-soz-shorter-inputs` branch was deleted and stale metadata pruned.
+Original ROMs, unrelated worktrees, main's three dirty disassemblies and four known
+untracked paths, foreign jobs and the external rendered visualization were preserved.
+No temporary agents were created for this task.

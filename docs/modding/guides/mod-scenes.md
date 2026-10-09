@@ -217,6 +217,32 @@ selected part only: the difference between the full and masked mixes. The backin
 stays on its clock. It is a presentation effect, not an emulated guitar-controller
 DSP contract. Scope it to roles that use it.
 
+`player.cuePart(sourceSample, durationSamples, startRate, endRate, gain, pan)`
+mixes a short fragment of the selected part into the same performance. Use a real
+song sample coordinate, or `SceneMusicPlayer.PLAYHEAD` to continue the part at the
+next render cursor. The host adds a short attack, exponential decay and zero tail,
+with a linear pitch-rate glide. Duration is at most a quarter-second; rates are
+0.5–2, gain is 0–1, and stereo balance is -1–1. All values must be finite. Balance
+attenuates one side and preserves the ROM's stereo; it does not repan a mono copy.
+
+```java
+// Continue and bend the selected ROM part down; no creator-owned PCM or extra asset.
+boolean accepted = player.cuePart(SceneMusicPlayer.PLAYHEAD,
+        prepared.sampleRate() * 90 / 1000, 1.0, 0.90, 0.60, 0.0);
+```
+
+Six cue voices are available. A paused/stopped player, exhausted playhead, PLAYHEAD
+before song start or full cue bus returns false; supporting hosts throw for malformed
+arguments. Unsupported hosts return false without argument validation. Pause freezes accepted voices,
+and stop releases them. Source exhaustion fades rather than wrapping; the finite
+song tail also fades and discards remaining cues. Cues ignore whammy and never advance the song coordinate.
+The current host smooths part-audibility changes over four milliseconds. The
+fragment is the full-minus-masked presentation residual, like whammy, rather than
+a separately exposed emulated channel. `sitarhero.audio.PerformanceAudio` owns
+instrument presets, cooldowns, source selection and co-op mixing; none of those
+rhythm-game decisions belong to the engine. Legacy hosts may decline cues while
+still supporting the original part-muting contract.
+
 **One source is audible at a time.** While a `SceneMusicPlayer` exists (playing,
 paused or waiting in its lead-in), its PCM replaces the base game's sound driver
 output. Music and sound effects started with `ctx.audio()` keep running in the
@@ -404,6 +430,28 @@ games independently of the song or active module. `rom()` retains its original
 active-game meaning. Additional ROM handles belong to the scene and close with
 it; the active session's borrowed ROM remains open. Missing games return null.
 
+### Level kits: build terrain of your own
+
+`rom.levelKit(zone, act)` returns a `SceneLevelKit`: an act's building blocks rather than a
+picture. The foreground layout is a grid of **layout blocks** (128 pixels square, 256 in Sonic 1);
+`block(column, row)` names the block in a cell, `blockImage(id)` draws one block on its own with
+transparent sky (cached), and `blockSolidity(id)` returns its collision as one byte per pixel
+(`EMPTY`, `TOP_SOLID` or `SOLID`, read from the primary path as a floor sensor sees it).
+`playableArea()`, `backdrop()` and `palette()` complete the set. Blocks that sit side by side in
+the stock layout join seamlessly, so a scene can remix an act into new terrain that still looks
+like the zone, and walk or fly over it using the masks. Kits exist for every act of the Sonic 1
+and Sonic 2 zone registries the engine can decode on its own (not Sonic 2's Hill Top or Wing
+Fortress), and for Sonic 3 & Knuckles zones 0-12 and Hidden Palace (`22`, act 1); ask
+`rom.hasLevelKit(zone, act)` first. Building one takes up to a few hundred milliseconds; the
+few most recent are cached.
+
+### Images you render yourself
+
+`SceneImage.streaming(width, height)` makes an image whose pixels you replace every frame with
+`update(int[])` from `update` (never `draw`): software 3D, warp tunnels, a turning planet. The
+renderer refreshes the same GPU texture after each change instead of uploading a new image, so
+keep one streaming image per effect and reuse it.
+
 `rom.titleCard(zone, act)` returns an act's stock title card as four sprites (the red banner,
 the zone's name, "ZONE" and the act number) whose origins are the ROM's object positions; its
 javadoc lists where each slides from and to, at what speed, and when each leaves, so a scene
@@ -437,6 +485,16 @@ replacing this output while a song player exists.
 `ctx.storage()` keeps small text files for your mod under the save root
 (`saves/mods/<mod-id>/`): `read`, `write`, `delete`, `list`. Slay the Robotnik saves the
 run in progress, the player's records and the compendium there.
+
+Patch scenes may also declare bounded WAV/Ogg one-shots in
+[`audio/audio-manifest.yaml`](../formats/audio-manifest.md) and call
+`ctx.audio().playSfx("local-id")`. The host supplies the scene's owner namespace;
+cross-owner keys and invalid path segments are rejected. The boolean result reports
+whether playback was admitted; missing assets, unavailable headless audio and rewind
+suppression return false. Launch preparation validates and decodes the clips through
+the same owner-atomic asset pipeline as standalone audio. No numeric mod IDs or runtime
+file/network access are needed. These clips accompany the existing driver effects;
+they do not replace base-game SFX IDs. Queue/cooldown policy belongs to the scene.
 
 ## 6. Testing a scene
 
