@@ -93,7 +93,7 @@ class TypingHedgehogRailBuilderProbe {
     static final int CHECKPOINT_SPACING = 30;
     static final int CHECKPOINT_RING = 40;
     static final int DRIFT_FAIL_PX = 16;
-    static final int SYNC_PX = 4;
+    static final int SYNC_PX = 10;
     static final int STUCK_FRAMES = 600;
     static final int RESYNC_HORIZON = 600;
     static final int LOOKAHEAD = 300;
@@ -693,7 +693,8 @@ class TypingHedgehogRailBuilderProbe {
                    Set<String> tried) {
         int f = failure.row();
         int d = failure.divergeRow() >= 0 ? Math.min(failure.divergeRow(), f) : f;
-        int from = Math.max(1, Math.max(f - 300, d - 150));
+        // A hurt in sync is usually a recorded hit: search further back for the avoiding edit.
+        int from = Math.max(1, d == f ? f - 240 : Math.max(f - 300, d - 150));
         List<Edit> edits = edits(p, from, f + 5);
         long deadline = System.currentTimeMillis() + FAILURE_TIME_BUDGET_MS;
         int evaluated = 0;
@@ -725,7 +726,7 @@ class TypingHedgehogRailBuilderProbe {
                 for (int sr = Math.max(floor, expected - 600); sr < Math.min(source.length() - 1, expected + 600); sr++) {
                     int dx = Math.abs(st.x() - source.refX[sr]), dy = Math.abs(st.y() - source.refY[sr]);
                     int dxs = Math.abs(st.xs() - source.refXs[sr]), dys = Math.abs(st.ys() - source.refYs[sr]);
-                    if (dx <= 4 && dy <= 4 && dxs <= 0x180 && dys <= 0x180 && st.air() == source.refAir[sr]) {
+                    if (dx <= 8 && dy <= 8 && dxs <= 0x200 && dys <= 0x200 && st.air() == source.refAir[sr]) {
                         proposals.add(new int[] {(dx + dy) * 64 + dxs + dys, m, sr});
                     }
                 }
