@@ -34,6 +34,7 @@ final class Content {
         new starpost.orchard.OrchardContent(catalog).register();   // before the barn: Chaos Cherry jars
         new starpost.barn.BarnContent(catalog).register();
         new starpost.festivals.FestivalContent(catalog).register();
+        new starpost.museum.MuseumContent(catalog).register();
     }
 
     private void placeables() {

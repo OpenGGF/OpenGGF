@@ -141,6 +141,10 @@ public final class Pests {
             animalX = x;
             shell.sfx(Sfx.BREAK);
             game.inventory.add(game.item("scrap"), game.has("scrapper") ? 2 : 1);
+            String part = starpost.museum.Finds.part("motobug", game.rng);   // for the museum's Scrap Collection
+            if (part != null && game.catalog.hasItem(part)) {
+                game.inventory.add(game.item(part), 1);
+            }
             game.xp(starpost.core.Skills.BOPPING, 10);
             if (game.free()) {
                 shell.toast("AN ANIMAL IS FREE! VALLEY: " + game.population);

@@ -29,6 +29,7 @@ public final class Systems {
         out.add(new starpost.barn.Barn());
         out.add(new starpost.festivals.Festivals());
         out.add(new starpost.orchard.Orchard());
+        out.add(new starpost.museum.Museum());
         return out;
     }
 
@@ -53,10 +54,16 @@ public final class Systems {
         starpost.barn.BarnSystem.install(shell, play, actors);
         starpost.festivals.FestivalSystem.install(shell, play, actors, places);
         starpost.orchard.OrchardSystem.install(shell, play, actors);
+        starpost.museum.MuseumSystem.install(shell, play, actors, places);
         starpost.festivals.Festivals festivals = shell.game.section(starpost.festivals.Festivals.class);
         if (festivals != null) {
             festivals.fishingContest = starpost.fishing.FishingSystem::contest;   // the Ice Cap Festival's contest
         }
+    }
+
+    /** The Lamppost Inn's jukebox (the game's Sound Test) on its own, over the current screen. */
+    public static Screen jukebox(PlayScreen play) {
+        return new InnMenu(play, true);
     }
 
     /** A line for the morning card from the systems (today's festival), or null. */

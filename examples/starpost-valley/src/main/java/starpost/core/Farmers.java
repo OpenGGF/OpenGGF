@@ -56,7 +56,8 @@ public final class Farmers {
 
     /**
      * What Knuckles's dig turns up, or null (most digs, and every other farmer's tilling): rings
-     * as {@code "rings:N"}, otherwise an item id from the catalog.
+     * as {@code "rings:N"}, otherwise an item id from the catalog (marble chips, a museum relic of
+     * the season, or the season's forage).
      */
     public static String dig(Game game) {
         if (!game.farmer.equals(KNUCKLES) || game.rng.nextInt(DIG_ODDS) != 0) {
@@ -67,7 +68,9 @@ public final class Farmers {
             return "rings:" + (5 + game.rng.nextInt(16));
         }
         if (roll == 2) {
-            return "marble_chip";
+            // Half the stones he turns up are relics for the museum (the season's: starpost.museum.Finds).
+            String relic = starpost.museum.Finds.buriedRelic(game);
+            return game.rng.nextInt(2) == 0 && game.catalog.hasItem(relic) ? relic : "marble_chip";
         }
         String forage = switch (game.calendar.season()) {
             case Calendar.SPRING -> "totem_leek";

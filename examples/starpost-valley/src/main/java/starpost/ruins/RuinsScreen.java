@@ -622,7 +622,11 @@ public final class RuinsScreen implements Screen {
                 ownedRecords.add(item.id());
             }
         }
-        List<RuinsRules.Drop> drops = RuinsRules.oreYield(chamber.band, number, fire, rng, ownedRecords);
+        List<RuinsRules.Drop> drops = new java.util.ArrayList<>(RuinsRules.oreYield(chamber.band, number, fire, rng, ownedRecords));
+        String relic = starpost.museum.Finds.ruinsRelic(chamber.band, rng);   // the museum's relics, now and then
+        if (relic != null && game.catalog.hasItem(relic)) {
+            drops.add(new RuinsRules.Drop(relic, 1));
+        }
         int n = 0;
         for (RuinsRules.Drop d : drops) {
             float vx = (n - drops.size() / 2f) * 0.8f;
@@ -691,6 +695,7 @@ public final class RuinsScreen implements Screen {
                 // The Bomb went off.
                 puffs.add(new Loose.Puff(Loose.Puff.EXPLOSION, b.x, b.y, null));
                 shell.sfx(SFX_EXPLODE);
+                museumPart(shell, b);                        // its fuse, sometimes
                 continue;
             }
             harm.clear();
@@ -734,6 +739,15 @@ public final class RuinsScreen implements Screen {
         shell.game.restoreBySpeed(RuinsRules.BOP_MOMENTUM);
         if (RuinsRules.dropsScrap(shell.game, rng)) {
             pickups.add(new Loose.Pickup("scrap", 1, b.x, b.y, runner.facingLeft ? 1 : -1, -3f));
+        }
+        museumPart(shell, b);
+    }
+
+    /** Sometimes a badnik leaves its part for the museum's Scrap Collection (starpost.museum.Finds). */
+    private void museumPart(Shell shell, Badnik b) {
+        String part = starpost.museum.Finds.ruinsPart(b.kind, rng);
+        if (part != null && shell.catalog.hasItem(part)) {
+            pickups.add(new Loose.Pickup(part, 1, b.x, b.y - 8, runner.facingLeft ? -1 : 1, -3.4f));
         }
     }
 
