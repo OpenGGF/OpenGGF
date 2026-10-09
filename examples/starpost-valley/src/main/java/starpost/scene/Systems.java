@@ -27,6 +27,7 @@ public final class Systems {
         out.add(new starpost.people.People());
         out.add(new starpost.fishing.FishingSection());
         out.add(new starpost.barn.Barn());
+        out.add(new starpost.festivals.Festivals());
         return out;
     }
 
@@ -48,5 +49,16 @@ public final class Systems {
         starpost.people.PeopleSystem.install(shell, play, actors);
         starpost.fishing.FishingSystem.install(shell, play, actors, places);
         starpost.barn.BarnSystem.install(shell, play, actors);
+        starpost.festivals.FestivalSystem.install(shell, play, actors, places);
+        starpost.festivals.Festivals festivals = shell.game.section(starpost.festivals.Festivals.class);
+        if (festivals != null) {
+            festivals.fishingContest = starpost.fishing.FishingSystem::contest;   // the Ice Cap Festival's contest
+        }
+    }
+
+    /** A line for the morning card from the systems (today's festival), or null. */
+    static String morningNote(Shell shell) {
+        starpost.festivals.Festivals festivals = shell.game.section(starpost.festivals.Festivals.class);
+        return festivals == null ? null : festivals.morningNote(shell.game);
     }
 }

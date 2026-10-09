@@ -67,7 +67,7 @@ final class VillagerActor implements Actor {
 
     @Override
     public float reach() {
-        return visible && !scripted ? 22 : -1;
+        return visible && !scripted && !sys.offstage ? 22 : -1;
     }
 
     // ------------------------------------------------------------------ the day
@@ -231,7 +231,7 @@ final class VillagerActor implements Actor {
 
     @Override
     public void draw(Shell shell, SceneCanvas canvas, int cx, int cy, SceneDraw tint) {
-        if (!visible) {
+        if (!visible || sys.offstage) {
             return;
         }
         float sx = x - cx, sy = feet - cy;

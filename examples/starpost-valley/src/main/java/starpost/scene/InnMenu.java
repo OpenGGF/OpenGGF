@@ -65,6 +65,12 @@ final class InnMenu implements Screen {
         out.add(new Track("FINAL ZONE", "s1", 0x8D, "record.s1.8d"));
         out.add(new Track("DROWNING", "s1", 0x92, "record.s1.92"));
         out.add(new Track("SONIC 1 ENDING", "s1", Music.S1_ENDING, "evaluated_y1"));
+        // Records won at festivals open their own songs (FestivalContent.recordSong).
+        out.add(new Track("SPECIAL STAGE", "s1", 0x89, "record.s1.89"));
+        out.add(new Track("THE MIGRATION", "s3k", 0x32, "record.s3k.32"));
+        out.add(new Track("SLOT BONUS", "s3k", 0x1D, "record.s3k.1d"));
+        out.add(new Track("DEATH EGG", "s3k", 0x16, "record.s3k.16"));
+        out.add(new Track("ICECAP (SONIC 3)", "s3k", 0x10B, "record.s3k.10b"));
         // Slotting a Record in for good opens the next of these.
         out.add(new Track("ANGEL ISLAND", "s3k", 0x01, "slot"));
         out.add(new Track("MUSHROOM HILL", "s3k", 0x0F, "slot"));

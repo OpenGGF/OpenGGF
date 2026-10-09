@@ -1,0 +1,317 @@
+package starpost.festivals;
+
+import com.openggf.mods.scene.SceneCanvas;
+import com.openggf.mods.scene.SceneDraw;
+import com.openggf.mods.scene.SceneImage;
+import java.util.ArrayList;
+import java.util.List;
+import starpost.core.Calendar;
+import starpost.core.Game;
+import starpost.people.People;
+import starpost.people.VillagerDef;
+import starpost.scene.Screen;
+import starpost.scene.Sfx;
+import starpost.scene.Shell;
+import starpost.ui.Text;
+
+/**
+ * The Signpost Board, up close (an overlay; the clock stops): two pages, the requests pinned to
+ * it and the season's calendar. The cursor starts on the page tabs (left and right turn the
+ * page); down goes into the page. Requests are taken on with jump; the calendar shows the
+ * festivals and the neighbours' birthdays, and the bottom line says what the chosen day holds.
+ * Prizes waiting for room in the monitors are handed over on opening.
+ */
+final class BoardScreen implements Screen {
+    private static final int W = 368;
+    private static final int H = 192;
+
+    private final FestivalSystem sys;
+    private boolean calendar;
+    /** -1 on the tabs; otherwise the row (requests) or the day cell (calendar). */
+    private int cursor = -1;
+    private int season;
+    private long opened;
+
+    BoardScreen(FestivalSystem sys) {
+        this.sys = sys;
+    }
+
+    @Override
+    public boolean overlay() {
+        return true;
+    }
+
+    @Override
+    public void enter(Shell shell) {
+        opened = shell.ticks;
+        season = shell.game.calendar.season();
+        List<String> handed = sys.festivals.collect(shell.game);
+        if (!handed.isEmpty()) {
+            shell.toast("COLLECTED " + String.join(", ", handed));
+            shell.sfx(Sfx.PERFECT);
+        }
+    }
+
+    /** Debug: opens on the calendar, today's cell chosen. */
+    void debugCalendar() {
+        calendar = true;
+        cursor = 12;
+    }
+
+    /** The requests page's rows: postings first, then what's been taken on. */
+    private List<Request> rows() {
+        List<Request> out = new ArrayList<>(sys.festivals.board.posted());
+        out.addAll(sys.festivals.board.active());
+        return out;
+    }
+
+    @Override
+    public void update(Shell shell) {
+        var in = shell.in;
+        if (in.back || in.menu && !in.confirm) {
+            shell.pop();
+            return;
+        }
+        if (cursor < 0) {
+            if (in.leftPressed || in.rightPressed) {
+                calendar = !calendar;
+                shell.sfx(Sfx.SWITCH);
+            } else if (in.downPressed || in.confirm) {
+                cursor = calendar ? shell.game.calendar.day() - 1 : 0;
+                if (!calendar && rows().isEmpty()) {
+                    cursor = -1;
+                }
+                if (calendar && season != shell.game.calendar.season()) {
+                    cursor = 0;
+                }
+            }
+            return;
+        }
+        if (calendar) {
+            updateCalendar(shell);
+        } else {
+            updateRequests(shell);
+        }
+    }
+
+    private void updateCalendar(Shell shell) {
+        var in = shell.in;
+        if (in.upPressed) {
+            cursor -= 7;
+            if (cursor < 0) {
+                cursor = -1;
+            }
+        } else if (in.downPressed) {
+            cursor = Math.min(Calendar.DAYS_PER_SEASON - 1, cursor + 7);
+        } else if (in.leftPressed) {
+            if (--cursor < 0) {
+                season = (season + 3) % 4;
+                cursor = Calendar.DAYS_PER_SEASON - 1;
+            }
+        } else if (in.rightPressed) {
+            if (++cursor >= Calendar.DAYS_PER_SEASON) {
+                season = (season + 1) % 4;
+                cursor = 0;
+            }
+        }
+    }
+
+    private void updateRequests(Shell shell) {
+        var in = shell.in;
+        List<Request> rows = rows();
+        if (rows.isEmpty()) {
+            cursor = -1;
+            return;
+        }
+        if (in.upPressed) {
+            cursor--;
+        } else if (in.downPressed) {
+            cursor = Math.min(rows.size() - 1, cursor + 1);
+        }
+        if (cursor < 0 || !in.confirm) {
+            return;
+        }
+        Request r = rows.get(Math.min(cursor, rows.size() - 1));
+        Game game = shell.game;
+        if (r.accepted) {
+            shell.toast(progress(r, game));
+            return;
+        }
+        Board board = sys.festivals.board;
+        if (board.active().size() >= Board.MAX_ACTIVE) {
+            shell.toast("THREE AT A TIME! FINISH ONE FIRST");
+            shell.sfx(Sfx.ERROR);
+            return;
+        }
+        shell.push(new Ask("TAKE THIS ON?", () -> {
+            if (board.accept(r, game)) {
+                shell.sfx(Sfx.REGISTER);
+                shell.toast(r.type == Request.POP ? "POP THEM ANYWHERE: THE FARM OR THE RUINS"
+                        : "BRING THEM TO " + name(r.villager, game) + " AND TALK");
+            }
+        }));
+    }
+
+    private String progress(Request r, Game game) {
+        int done = sys.festivals.board.progress(r, game);
+        return r.type == Request.POP ? "POPPED " + done + " OF " + r.count
+                : "YOU HAVE " + done + " OF " + r.count + ". TALK TO " + name(r.villager, game);
+    }
+
+    static String name(String villager, Game game) {
+        People people = game.section(People.class);
+        VillagerDef v = people == null ? null : people.cast.get(villager);
+        return v == null ? villager.toUpperCase() : v.name;
+    }
+
+    private String body(String villager, Game game) {
+        People people = game.section(People.class);
+        VillagerDef v = people == null ? null : people.cast.get(villager);
+        return v == null ? FestivalScreen.body(villager) : v.body();
+    }
+
+    // ------------------------------------------------------------------ drawing
+
+    @Override
+    public void draw(Shell shell, SceneCanvas canvas) {
+        int x = (canvas.width() - W) / 2, y = 14;
+        Text.panel(canvas, x, y, W, H);
+        Text.shadow(canvas, "SIGNPOST BOARD", x + 10, y + 8, Text.YELLOW);
+        String tab = calendar ? Calendar.seasonName(season) + " CALENDAR" : "REQUESTS";
+        int tabColour = cursor < 0 && (shell.ticks / 16) % 2 == 0 ? Text.YELLOW : Text.WHITE;
+        Text.right(canvas, "< " + tab + " >", x + W - 10, y + 8, cursor < 0 ? tabColour : Text.GREY);
+        canvas.fill(x + 8, y + 21, W - 16, 1, 0xFFB66D24);
+        if (calendar) {
+            drawCalendar(shell, canvas, x, y);
+        } else {
+            drawRequests(shell, canvas, x, y);
+        }
+    }
+
+    private void drawRequests(Shell shell, SceneCanvas canvas, int x, int y) {
+        Game game = shell.game;
+        List<Request> rows = rows();
+        int today = game.calendar.dayNumber();
+        if (rows.isEmpty()) {
+            Text.centred(canvas, "NOTHING PINNED UP TODAY.", y + 70, Text.GREY);
+            Text.centred(canvas, "NEIGHBOURS POST NEW REQUESTS EACH MORNING.", y + 86, Text.GREY);
+        }
+        int postedCount = sys.festivals.board.posted().size();
+        for (int i = 0; i < rows.size(); i++) {
+            Request r = rows.get(i);
+            int ry = y + 28 + i * 21 + (i >= postedCount ? 6 : 0);
+            if (i == postedCount && postedCount > 0) {
+                canvas.fill(x + 8, ry - 5, W - 16, 1, 0x80B66D24);
+            }
+            if (i == cursor) {
+                canvas.fill(x + 6, ry - 2, W - 12, 20, 0x60B66D24);
+            }
+            SceneImage face = sys.peopleArt().head(body(r.villager, game));
+            if (face != null) {
+                int fh = Math.min(16, face.height());
+                canvas.drawRegion(face, 0, 0, face.width(), fh, x + 12, ry, face.width(), fh, SceneDraw.plain());
+            }
+            boolean special = r.type == Request.SPECIAL;
+            String what = special ? Board.specialHeadline(r, game) : Board.describe(r, game);
+            int colour = r.accepted ? Text.GREEN : special ? Text.RED : Text.WHITE;
+            Text.shadow(canvas, Text.fit(canvas, what, 190), x + 44, ry + 1, colour);
+            String sub = (r.accepted ? "TAKEN ON - " : "") + "FOR " + name(r.villager, game) + ", "
+                    + r.daysLeft(today) + (r.daysLeft(today) == 1 ? " DAY" : " DAYS");
+            com.openggf.mods.ui.CompactFont.shadowed(canvas, sub, x + 44, ry + 12, 1, 0xFFB6B6B6, 0xFF000000);
+            Text.right(canvas, r.rings + " RINGS", x + W - 12, ry + 4, Text.YELLOW);
+            if (r.delivery() && game.catalog.hasItem(r.item)) {
+                shell.art.icons.draw(canvas, game.item(r.item), x + W - 120, ry + 1, SceneDraw.plain());
+            }
+        }
+        String note;
+        if (cursor >= 0 && cursor < rows.size()) {
+            Request r = rows.get(cursor);
+            if (r.accepted) {
+                note = progress(r, game);
+            } else if (r.type == Request.SPECIAL) {
+                note = "(" + r.count + " WILL DO. FOR NOW.) PAID PARTLY IN ROBO COLA. DANDEL WON'T LIKE IT.";
+            } else {
+                note = "JUMP: TAKE IT ON (" + sys.festivals.board.active().size() + " OF " + Board.MAX_ACTIVE + " TAKEN)";
+            }
+        } else {
+            note = "DOWN: CHOOSE A REQUEST.  LEFT/RIGHT: TURN THE PAGE";
+        }
+        Text.note(canvas, note, x + 10, y + H - 16, W - 20, Text.GREY);
+    }
+
+    private void drawCalendar(Shell shell, SceneCanvas canvas, int x, int y) {
+        Game game = shell.game;
+        FestivalBook book = sys.festivals.book;
+        People people = game.section(People.class);
+        int cw = 48, ch = 28, gx = x + (W - 7 * cw) / 2, gy = y + 38;
+        for (int d = 0; d < 7; d++) {
+            com.openggf.mods.ui.CompactFont.shadowed(canvas, Calendar.weekdayName(d), gx + d * cw + 2, gy - 8, 1,
+                    0xFFB6B6B6, 0xFF000000);
+        }
+        for (int i = 0; i < Calendar.DAYS_PER_SEASON; i++) {
+            int day = i + 1;
+            int cx = gx + i % 7 * cw, cy = gy + i / 7 * ch;
+            boolean isToday = season == game.calendar.season() && day == game.calendar.day();
+            Festival f = book.on(season, day);
+            int bg = f != null ? 0xFF6D2400 : 0xFF101838;
+            canvas.fill(cx + 1, cy + 1, cw - 2, ch - 2, bg);
+            if (isToday) {
+                canvas.fill(cx, cy, cw, 1, 0xFFFFDB00);
+                canvas.fill(cx, cy + ch - 1, cw, 1, 0xFFFFDB00);
+                canvas.fill(cx, cy, 1, ch, 0xFFFFDB00);
+                canvas.fill(cx + cw - 1, cy, 1, ch, 0xFFFFDB00);
+            }
+            if (i == cursor) {
+                canvas.fill(cx + 1, cy + 1, cw - 2, ch - 2, 0x60FFFFFF);
+            }
+            com.openggf.mods.ui.CompactFont.shadowed(canvas, Integer.toString(day), cx + 3, cy + 3, 1,
+                    isToday ? 0xFFFFDB00 : 0xFFFFFFFF, 0xFF000000);
+            if (f != null) {
+                canvas.draw(shell.art.ring.frame((int) (shell.ticks / 8 % 4)), cx + cw - 12, cy + 9, SceneDraw.plain());
+            }
+            VillagerDef birthday = birthdayOn(people, season, day);
+            if (birthday != null) {
+                SceneImage face = sys.peopleArt().head(birthday.body());
+                int fh = Math.min(ch - 6, face.height());
+                int fw = Math.min(cw / 2, face.width());
+                canvas.drawRegion(face, 0, 0, fw, fh, cx + 3, cy + ch - 2 - fh, fw, fh, SceneDraw.plain());
+            }
+        }
+        String note;
+        if (cursor >= 0) {
+            int day = cursor + 1;
+            Festival f = book.on(season, day);
+            VillagerDef birthday = birthdayOn(people, season, day);
+            String date = Calendar.seasonName(season) + " " + day + ": ";
+            if (f != null) {
+                note = date + f.name + ", " + f.where + ", " + f.hours() + ".";
+            } else if (birthday != null) {
+                note = date + birthday.name + "'S BIRTHDAY.";
+            } else {
+                note = date + "NOTHING ON.";
+            }
+            if (f != null && birthday != null) {
+                note += " " + birthday.name + "'S BIRTHDAY TOO.";
+            }
+            if (f != null) {
+                Text.note(canvas, f.blurb, x + 10, y + H - 28, W - 20, Text.WHITE);
+            }
+        } else {
+            note = "DOWN: CHOOSE A DAY.  RINGS MARK FESTIVALS, FACES BIRTHDAYS";
+        }
+        Text.note(canvas, note, x + 10, y + H - 16, W - 20, Text.YELLOW);
+    }
+
+    /** Whose birthday falls on a date (the neighbours met or not; never a pet's), or null. */
+    private static VillagerDef birthdayOn(People people, int season, int day) {
+        if (people == null) {
+            return null;
+        }
+        for (VillagerDef v : people.cast.all()) {
+            if (!v.isPet() && v.birthdaySeason() == season && v.birthdayDay() == day) {
+                return v;
+            }
+        }
+        return null;
+    }
+}

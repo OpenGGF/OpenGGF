@@ -38,6 +38,8 @@ public final class ValleyView {
     public java.util.function.BooleanSupplier interact = () -> false;
     /** Doorway labels over the farmer's head (cutscenes turn them off). */
     public boolean labels = true;
+    /** Another sky for an evening (the Star Light Feast's), drawn instead of Green Hill's; null for Green Hill's. */
+    public com.openggf.mods.scene.SceneBackdrop sky;
 
     public enum Request {
         NONE,
@@ -170,8 +172,8 @@ public final class ValleyView {
     public void draw(SceneCanvas canvas, Art.Seasonal look, int light, SceneDraw tint) {
         int w = canvas.width(), h = canvas.height();
         int cx = Math.round(camX), cy = Math.round(camY);
-        canvas.drawBackdrop(look.backdrop(light), 0, 0, w, h, Math.max(0, Math.min(32, Math.round(8 + camY * 0.1f))),
-                camX, shell.ticks);
+        canvas.drawBackdrop(sky != null ? sky : look.backdrop(light), 0, 0, w, h,
+                Math.max(0, Math.min(32, Math.round(8 + camY * 0.1f))), camX, shell.ticks);
         for (int column = Math.max(0, cx / Art.BLOCK); column <= Math.min(valley.blocks.length - 1, (cx + w) / Art.BLOCK);
                 column++) {
             SceneImage block = look.block(valley.blocks[column]);

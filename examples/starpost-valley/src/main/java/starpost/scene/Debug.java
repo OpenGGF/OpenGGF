@@ -15,7 +15,8 @@ import starpost.core.Plot;
  *   <li>{@code music on|off};</li>
  *   <li>{@code people ...} — the neighbours (see {@code starpost.people.PeopleDebug});</li>
  *   <li>{@code fish ...} — fishing (see {@code starpost.fishing.FishingSystem#debug});</li>
- *   <li>{@code barn ...} — animals, machines and roosts (see {@code starpost.barn.BarnSystem#debug}).</li>
+ *   <li>{@code barn ...} — animals, machines and roosts (see {@code starpost.barn.BarnSystem#debug});</li>
+ *   <li>{@code festival ...}, {@code board ...} — festivals and the board ({@code starpost.festivals.FestivalDebug}).</li>
  * </ul>
  */
 final class Debug {
@@ -88,6 +89,9 @@ final class Debug {
                 }
                 case "barn" -> {
                     return starpost.barn.BarnSystem.debug(shell, p);
+                }
+                case "festival", "board" -> {
+                    return starpost.festivals.FestivalDebug.apply(shell, p);
                 }
                 default -> {
                     return false;

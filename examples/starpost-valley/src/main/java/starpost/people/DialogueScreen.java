@@ -36,6 +36,15 @@ final class DialogueScreen implements Screen {
     public void enter(Shell shell) {
         opened = shell.ticks;
         Game game = shell.game;
+        // An errand finished (a Signpost Board request delivered) comes before gifts and talk.
+        Line errand = sys.people.errand(actor.def.id, game);
+        if (errand != null) {
+            speech = Speech.of(sys, actor.def.id, errand);
+            actor.heartUp = true;
+            actor.heartAt = shell.ticks + 1_000_000;
+            shell.sfx(Sfx.PERFECT);
+            return;
+        }
         asking = held != null && sys.people.canGift(actor.def.id, held, game) == People.GiftStatus.GIVEN;
         if (!asking) {
             talk(shell);
