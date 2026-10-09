@@ -532,6 +532,22 @@ retains unpublished candidate `0.7.0` and its existing schema/publication state.
 See the [creator recipe](../modding/guides/mod-scenes.md) and
 [fumble implementation plan](plans/2026-10-08-sitar-hero-fumble-feedback.md).
 
+## Scene music from any supplied ROM candidate
+
+Starpost Valley adds the default `SceneAudio.playMusic(String,int)`. The running game's
+songs take the base route. Another supplied game's song takes the existing cross-game
+donor route (`AudioManager.playDonorMusic`), under a donor registration scoped to the
+scene. The scope is the engine-internal `com.openggf.audio.ScopedDonorAudio`, backed by
+package-private `AudioManager` state capture. Closing it restores that key's previous
+route and music and sound bindings, so cross-game donation survives the scene. The method
+exposes no loader, ROM or driver type. Legacy hosts return false. The int-only
+`playMusic`, `stopMusic` and `fadeOutMusic` keep their meaning and act on whichever song
+is current. The normalized 0.7 candidate pin gains exactly one additive entry, with no
+removals. `ModApiVersion` documents the capability, and the policy-generated release
+descriptor keeps unpublished candidate `0.7.0`, as for every additive candidate change.
+See the [creator recipe](../modding/guides/mod-scenes.md#5-audio-and-storage) and the
+[design note](designs/2026-10-09-starpost-valley.md#331-background-music-engine-addition).
+
 ## Scene SFX candidate
 
 `SceneAudio.playSfx(String)` plays a declared one-shot using the scene owner's

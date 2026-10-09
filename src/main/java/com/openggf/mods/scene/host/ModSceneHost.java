@@ -205,6 +205,7 @@ public final class ModSceneHost {
         private SceneMouse mouse = SceneMouse.none();
         private PhysicalInput physical = PhysicalInput.neutral();
         private ManagedSceneMusic music;
+        private SceneDonorMusic donorMusic;
         private final ManagedSceneNetwork network = new ManagedSceneNetwork();
         private final MenuRepeat repeat = new MenuRepeat();
         private int heldButtons;
@@ -246,8 +247,20 @@ public final class ModSceneHost {
                 @Override
                 public void playMusic(int musicId) {
                     if (services != null && services.audio() != null) {
+                        if (donorMusic != null) donorMusic.driverMusicRequested(musicId);
                         services.audio().playMusic(musicId);
                     }
+                }
+
+                @Override
+                public boolean playMusic(String gameId, int musicId) {
+                    SceneDonorMusic.validate(gameId, musicId);
+                    if (context != Context.this || services == null || services.audio() == null
+                            || services.romLibrary() == null) {
+                        return false;
+                    }
+                    if (donorMusic == null) donorMusic = new SceneDonorMusic(services.audio(), services.romLibrary());
+                    return donorMusic.play(gameId, musicId);
                 }
 
                 @Override
@@ -275,6 +288,7 @@ public final class ModSceneHost {
                 @Override
                 public void stopMusic() {
                     if (services != null && services.audio() != null) {
+                        if (donorMusic != null) donorMusic.driverMusicStopped();
                         services.audio().stopMusic();
                     }
                 }
@@ -307,7 +321,12 @@ public final class ModSceneHost {
             try {
                 if (music != null) music.close();
             } finally {
-                if (services != null && services.romLibrary() != null) services.romLibrary().close();
+                try {
+                    // Borrowed donor routes read the library's ROM views, so they go first.
+                    if (donorMusic != null) donorMusic.close();
+                } finally {
+                    if (services != null && services.romLibrary() != null) services.romLibrary().close();
+                }
             }
         }
 
