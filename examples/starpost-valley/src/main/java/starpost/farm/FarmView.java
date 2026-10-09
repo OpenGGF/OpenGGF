@@ -184,8 +184,8 @@ public final class FarmView {
             int now = game.calendar.minutes();
             int bonus = now - lastLapAt >= 60 ? 30 : 5;
             lastLapAt = now;
-            game.restore(bonus);
-            shell.toast("LAP! +" + bonus + " MOMENTUM");
+            game.restoreBySpeed(bonus);
+            shell.toast(game.stamina ? "NICE LAP!" : "LAP! +" + bonus + " MOMENTUM");
             shell.sfx(Sfx.RING);
         }
     }

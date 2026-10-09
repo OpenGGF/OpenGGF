@@ -27,6 +27,7 @@ public final class Shell {
     public final Art art;
     public final Catalog catalog;
     public final Music music;
+    final Settings settings;
     public Game game;
     public long ticks;
     /** When the hotbar selection last changed (its label shows for two seconds). */
@@ -45,6 +46,17 @@ public final class Shell {
         this.art = art;
         this.catalog = catalog;
         this.music = new Music(ctx);
+        this.settings = Settings.load(ctx.storage());
+        apply();
+    }
+
+    /** Applies the options to the music and the current game. */
+    void apply() {
+        music.setEnabled(settings.music);
+        if (game != null) {
+            game.calendar.setDayMinutes(settings.dayMinutes);
+            game.stamina = settings.stamina;
+        }
     }
 
     public int width() {
@@ -111,13 +123,20 @@ public final class Shell {
     }
 
     public Game load() {
-        return ctx.storage().read(SaveCodec.FILE).map(t -> SaveCodec.decode(catalog, t, Systems.sections(this))).orElse(null);
+        Game loaded = ctx.storage().read(SaveCodec.FILE).map(t -> SaveCodec.decode(catalog, t, Systems.sections(this))).orElse(null);
+        if (loaded != null) {
+            loaded.calendar.setDayMinutes(settings.dayMinutes);
+            loaded.stamina = settings.stamina;
+        }
+        return loaded;
     }
 
     /** A brand-new game with every system installed. */
     public Game newGame(long seed, String farmer) {
         Game fresh = Game.fresh(catalog, seed, farmer);
         fresh.sections.addAll(Systems.sections(this));
+        fresh.calendar.setDayMinutes(settings.dayMinutes);
+        fresh.stamina = settings.stamina;
         return fresh;
     }
 

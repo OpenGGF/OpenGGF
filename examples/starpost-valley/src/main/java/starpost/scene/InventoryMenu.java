@@ -34,6 +34,10 @@ final class InventoryMenu implements Screen {
             shell.pop();
             return;
         }
+        if (shell.ctx.keyPressed(com.openggf.mods.scene.SceneKeys.O)) {
+            shell.push(new OptionsMenu(true));
+            return;
+        }
         int size = inv.size();
         if (shell.in.rightPressed) {
             cursor = (cursor + 1) % size;
@@ -112,6 +116,7 @@ final class InventoryMenu implements Screen {
             }
             com.openggf.mods.ui.CompactFont.shadowed(canvas, "VALLEY " + game.population, x + w - 52, sy, 1,
                     0xFF92FF49, 0xFF000000);
+            com.openggf.mods.ui.CompactFont.shadowed(canvas, "O: OPTIONS", x + w - 60, y + 22, 1, 0xFF92DBFF, 0xFF000000);
         }
         if (inv.id(cursor) != null) {
             Item item = game.item(inv.id(cursor));

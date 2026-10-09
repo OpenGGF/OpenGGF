@@ -22,7 +22,7 @@ final class TitleScreen implements Screen {
     }
 
     private String[] options() {
-        return new String[] {"NEW GAME", "CONTINUE", "PLAY SONIC 3 & KNUCKLES"};
+        return new String[] {"NEW GAME", "CONTINUE", "OPTIONS", "PLAY SONIC 3 & KNUCKLES"};
     }
 
     @Override
@@ -53,6 +53,7 @@ final class TitleScreen implements Screen {
                         shell.go(new PlayScreen(shell));
                     }
                 }
+                case 2 -> shell.push(new OptionsMenu(false));
                 default -> shell.ctx.exitToGameTitle();
             }
         }

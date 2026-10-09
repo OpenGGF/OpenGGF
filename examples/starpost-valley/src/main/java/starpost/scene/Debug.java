@@ -57,6 +57,10 @@ final class Debug {
                     play.debugPlace(p[0].equals("farm"), Float.parseFloat(p[1]), p.length > 2 ? Float.parseFloat(p[2]) : 30);
                 }
                 case "demo" -> demo(shell.game);
+                case "yearend" -> {
+                    shell.game.calendar.set(2, 0, 1, starpost.core.Calendar.DAY_START);
+                    shell.goNow(new YearEndScreen(() -> new MorningCard(() -> new PlayScreen(shell))));
+                }
                 case "pest" -> {
                     if (!(shell.screen() instanceof PlayScreen play)) {
                         return false;

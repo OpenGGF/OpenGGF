@@ -57,7 +57,10 @@ final class DayEndScreen implements Screen {
             shell.sfx(paid > 0 ? Sfx.PERFECT : Sfx.SWITCH);
         }
         if (age > done + 60 || skip && age > 20) {
-            shell.go(LevelUpScreen.chain(shell, () -> new MorningCard(() -> new PlayScreen(shell))));
+            java.util.function.Supplier<Screen> morning = () -> new MorningCard(() -> new PlayScreen(shell));
+            java.util.function.Supplier<Screen> afterLevels = YearEndScreen.due(shell.game)
+                    ? () -> new YearEndScreen(morning) : morning;
+            shell.go(LevelUpScreen.chain(shell, afterLevels));
         }
     }
 

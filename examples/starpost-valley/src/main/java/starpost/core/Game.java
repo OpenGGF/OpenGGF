@@ -82,6 +82,16 @@ public final class Game {
     }
 
     /** Spends Momentum on a chore; false (and nothing spent) when there is not enough. */
+    /** Classic stamina instead of Momentum: laps, springs and rings no longer restore it. */
+    public boolean stamina;
+
+    /** Momentum from a Sonic thing (a lap, a ring); nothing in stamina mode. */
+    public void restoreBySpeed(int amount) {
+        if (!stamina) {
+            restore(amount);
+        }
+    }
+
     public boolean spend(int cost) {
         if (momentum < cost) {
             return false;

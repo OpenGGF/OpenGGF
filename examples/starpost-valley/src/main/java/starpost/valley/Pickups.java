@@ -62,7 +62,7 @@ public final class Pickups implements SaveSection {
                 Game game = shell.game;
                 if (item == null) {
                     game.rings++;
-                    game.restore(1);
+                    game.restoreBySpeed(1);
                     shell.sfx(Sfx.RING);
                 } else if (game.inventory.add(game.item(item), 1) == 0) {
                     boolean pair = game.has("gatherer") && game.rng.nextInt(5) == 0;

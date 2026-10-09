@@ -20,6 +20,12 @@ public final class Calendar {
     private int day = 1;
     private int minutes = DAY_START;
     private int tickInTen;
+    /** Ticks per ten game minutes: 420 (a 14-minute day), 600 (20) or 840 (28); a player setting. */
+    private int ticksPerTen = TICKS_PER_TEN_MINUTES;
+
+    public void setDayMinutes(int realMinutes) {
+        ticksPerTen = Math.max(1, realMinutes * 60 * 60 / 120);
+    }
 
     public int year() {
         return year;
@@ -49,7 +55,7 @@ public final class Calendar {
 
     /** One tick of free play. Returns true when the clock moved on ten minutes. */
     public boolean tick() {
-        if (++tickInTen < TICKS_PER_TEN_MINUTES) {
+        if (++tickInTen < ticksPerTen) {
             return false;
         }
         tickInTen = 0;
