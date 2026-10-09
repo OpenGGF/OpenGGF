@@ -114,10 +114,17 @@ final class TypingHedgehogArtTables {
         }
         for (String[] f : rows("props/" + code + ".txt")) uses.add(new Use("prop " + f[0], f[1], Integer.decode(f[2])));
         for (String key : List.of("explosion", "animal", "points")) uses.add(new Use("effects", key, 0));
+        // The rig the course uses for this act: its zone@act lines, else its zone's, else the * lines.
         List<String[]> rig = rows("bosses/" + code + ".txt");
-        boolean own = rig.stream().anyMatch(f -> f[0].equals(Integer.toString(zone)));
+        String key = "*";
+        for (String candidate : List.of(zone + "@" + act, Integer.toString(zone))) {
+            if (rig.stream().anyMatch(f -> f[0].equals(candidate))) {
+                key = candidate;
+                break;
+            }
+        }
         for (String[] f : rig) {
-            if (!f[0].equals(own ? Integer.toString(zone) : "*") || f[1].equals("hover")) continue;
+            if (!f[0].equals(key) || f[1].equals("hover")) continue;
             for (int i = 5; i < f.length; i++) {
                 String token = f[i];
                 if (token.startsWith("links=")) {

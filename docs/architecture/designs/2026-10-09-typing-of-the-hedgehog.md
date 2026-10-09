@@ -349,4 +349,12 @@ Course through every stand.
 
 ## Rejected approaches
 
-(Filled in as work lands.)
+- **HCZ1 stand-restore crash blamed on puppets (rejected 2026-10-09).** The real Course's
+  restore of the HCZ1 stand at rail row 1214 throws `Missing required object reference`
+  (`DefaultSolidExecutionRegistry.restore`) for `HCZCGZFanObjectInstance$FanPlatformChild`
+  (spawnless, `RewindRecreatable`), while the rail builder's chain restores the same stand
+  held 1872 or 1850 rows with both fan children alive (`TypingHedgehogStandRestoreProbe`).
+  Two explanations were killed: the child despawning during a long stand (it is alive on
+  the last held row), and rewindable puppets drawing rewind ids from the act's counter
+  (puppets moved to the non-rewindable auxiliary path; the failure is unchanged, same
+  `dynamicId=92`). The cause is still open; HCZ1 does not ship.

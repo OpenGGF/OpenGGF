@@ -22,7 +22,7 @@ public final class Cast {
     private record Entry(int act, Species species) { }
 
     private final Map<Integer, List<Entry>> zones = new HashMap<>();
-    private Map<Integer, BossRig> bosses = Map.of();
+    private Map<String, BossRig> bosses = Map.of();
 
     public static Cast parse(String text) {
         Cast cast = new Cast();
@@ -48,15 +48,16 @@ public final class Cast {
     }
 
     /** This cast with {@code rigs} (from {@link BossRig#parse}) as its bosses. */
-    public Cast withBosses(Map<Integer, BossRig> rigs) {
+    public Cast withBosses(Map<String, BossRig> rigs) {
         bosses = Map.copyOf(rigs);
         return this;
     }
 
-    /** The zone's boss rig, the game's {@code *} rig, or null. */
-    public BossRig boss(int zone) {
-        BossRig rig = bosses.get(zone);
-        return rig != null ? rig : bosses.get(-1);
+    /** The act's boss rig, else the zone's, else the game's {@code *} rig, or null. */
+    public BossRig boss(int zone, int act) {
+        BossRig rig = bosses.get(zone + "@" + act);
+        if (rig == null) rig = bosses.get(Integer.toString(zone));
+        return rig != null ? rig : bosses.get("*");
     }
 
     /** The act's badniks, or an empty list. */

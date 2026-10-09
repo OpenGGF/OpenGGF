@@ -72,8 +72,8 @@ public final class Boss {
             case 1 -> Style.TALK_BACK;
             default -> Style.QUIZ;
         };
-        BossRig rig = course.assets().cast(intent.game()).boss(intent.zone());
-        if (rig == null) rig = BossRig.parse("* ship eggman 0 0 *=8:0").get(-1);
+        BossRig rig = course.assets().cast(intent.game()).boss(intent.zone(), intent.act());
+        if (rig == null) rig = BossRig.parse("* ship eggman 0 0 *=8:0").get("*");
         return new Boss(style, rig);
     }
 

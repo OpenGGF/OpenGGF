@@ -16,6 +16,10 @@ import java.util.List;
  * collision and no native object slot (it is an auxiliary dynamic object), so its presence never
  * changes the deterministic rail run. It deletes itself when its visual is gone or its
  * generation is stale.
+ *
+ * <p>Puppets stay out of rewind snapshots ({@code addAuxiliaryDynamicObject}): the stagehand,
+ * not the engine, owns what is drawn, and the course respawns every puppet after a checkpoint
+ * restore, so snapshotting them only added recreation work and drew rewind object ids.
  */
 public final class Puppet extends AbstractObjectInstance implements ModRewindRecreatable {
     static final String KEY = "puppet";
@@ -37,12 +41,12 @@ public final class Puppet extends AbstractObjectInstance implements ModRewindRec
         return new ObjectSpawn(x, y, 0, 0, 0, false, y, -1, TypingIds.MOD, TypingIds.MOD + ":" + KEY);
     }
 
-    /** Spawns a puppet for {@code visual} through the auxiliary-object path. */
+    /** Spawns a puppet for {@code visual} through the non-rewindable auxiliary-object path. */
     static Puppet spawn(ObjectServices services, Stagehand.Visual visual, int generation) {
         return ObjectConstructionContext.construct(services, () -> {
             Puppet puppet = new Puppet(spawnAt(visual.x, visual.y), visual.id(), generation);
             if (!ObjectConstructionContext.isProbeConstruction()) {
-                services.objectManager().addRewindableAuxiliaryDynamicObject(puppet);
+                services.objectManager().addAuxiliaryDynamicObject(puppet);
             }
             return puppet;
         });

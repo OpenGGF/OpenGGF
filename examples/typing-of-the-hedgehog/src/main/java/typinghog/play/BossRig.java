@@ -24,8 +24,9 @@ import java.util.Map;
  * part itself; {@code pal=N} draws it on palette line N where the stock object overrides its
  * sheet's line; {@code swing=length,degrees,periodRows} hangs it on a pendulum from its offset,
  * and {@code links=artKey:frame:distances[:palette]} draws chain links along the rope;
- * {@code orbit=radius,periodRows,count} circles {@code count} copies round its offset. Zone
- * {@code *} is the rig for zones without their own.
+ * {@code orbit=radius,periodRows,count} circles {@code count} copies round its offset. The zone
+ * column may name one act ({@code 2@0}, act index from 0) for an act whose boss differs, such
+ * as a Sonic 3 &amp; Knuckles act-1 miniboss; zone {@code *} is the rig for zones without their own.
  *
  * <p>A line whose part is {@code hover} draws nothing and sets the boss's stance instead:
  * {@code 0 hover - 6 72} bobs him 6 pixels while he holds 72 pixels above Sonic, and the
@@ -96,10 +97,13 @@ public final class BossRig {
     /** True for a boss on foot: he runs away level instead of climbing. */
     public boolean grounded() { return grounded; }
 
-    /** Parses a game's rig table; key -1 holds the {@code *} rig. */
-    public static Map<Integer, BossRig> parse(String text) {
-        Map<Integer, List<Part>> zones = new HashMap<>();
-        Map<Integer, int[]> stances = new HashMap<>();
+    /**
+     * Parses a game's rig table, keyed as written: {@code "*"}, a zone ({@code "7"}) or one act of
+     * it ({@code "7@0"}, act index from 0).
+     */
+    public static Map<String, BossRig> parse(String text) {
+        Map<String, List<Part>> zones = new HashMap<>();
+        Map<String, int[]> stances = new HashMap<>();
         int number = 0;
         for (String raw : text.split("\n")) {
             number++;
@@ -107,7 +111,8 @@ public final class BossRig {
             if (line.isEmpty() || line.startsWith("#")) continue;
             String[] f = line.split("\\s+");
             if (f.length < 5) throw new IllegalArgumentException("boss line " + number + " needs at least 5 fields: " + line);
-            int zone = f[0].equals("*") ? -1 : Integer.parseInt(f[0]);
+            String zone = f[0];
+            if (!zone.matches("\\*|\\d+(@\\d+)?")) throw new IllegalArgumentException("boss line " + number + ": bad zone " + zone);
             if (f[1].equals("hover")) {
                 boolean grounded = java.util.Arrays.asList(f).subList(5, f.length).contains("grounded");
                 stances.put(zone, new int[] {Integer.parseInt(f[3]), Integer.parseInt(f[4]), grounded ? 1 : 0});
@@ -154,9 +159,9 @@ public final class BossRig {
             zones.computeIfAbsent(zone, ignored -> new ArrayList<>()).add(new Part(f[1], f[2], Integer.parseInt(f[3]),
                     Integer.parseInt(f[4]), back, flip, palette, Map.copyOf(anims), fallback, swing, links, orbit));
         }
-        Map<Integer, BossRig> rigs = new HashMap<>();
+        Map<String, BossRig> rigs = new HashMap<>();
         zones.forEach((zone, list) -> {
-            int[] stance = stances.getOrDefault(zone, stances.getOrDefault(-1, new int[] {6, 72, 0}));
+            int[] stance = stances.getOrDefault(zone, stances.getOrDefault("*", new int[] {6, 72, 0}));
             rigs.put(zone, new BossRig(list, stance[0], stance[1], stance[2] != 0));
         });
         return Map.copyOf(rigs);
