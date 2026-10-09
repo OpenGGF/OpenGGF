@@ -39,7 +39,6 @@ jobs:
           LUA_BIN: lua5.4
         run: mvn -B -Dmse=off -Pguards test
   windows:
-    needs: guards
     runs-on: windows-latest
     timeout-minutes: 45
     steps:

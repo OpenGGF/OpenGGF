@@ -121,6 +121,9 @@ def assemble(bundle, image, engine, inputs, contract, graal, evidence):
         "OpenGGF experimental native Windows x64 build\n\n"
         "Extract the entire ZIP, then double-click OpenGGF.bat or a Launch *.bat shortcut.\n"
         "Java is not required. Keep OpenGGF.exe, the DLLs and folders together.\n"
+        "Use a current Windows x64 system and compatible OpenGL graphics driver.\n"
+        "If Windows reports a missing VCRUNTIME140/MSVCP140 DLL, install Microsoft's\n"
+        "supported x64 Visual C++ runtime: https://aka.ms/vc14/vc_redist.x64.exe\n"
         "For Sonic games and ROM-dependent samples supply your own s1.gen, s2.gen and s3k.gen\n"
         "beside config.yaml. Authored standalone examples can run without ROMs.\n"
         "Shortcuts select a development mod directory; the normal launcher shows the engine menus.\n"
@@ -194,7 +197,7 @@ def build(args):
         r"-H:IncludeResources=com/openggf/.*\.class", f"-H:ConfigurationFileDirectories={metadata}",
         "-J-Dopenggf.experimental.native.mods=true",
         "-J--add-exports=org.graalvm.nativeimage.builder/com.oracle.svm.core.hub=ALL-UNNAMED",
-        "-J--add-exports=org.graalvm.nativeimage.builder/com.oracle.svm.core.option=ALL-UNNAMED",
+        "-J--add-exports=org.graalvm.nativeimage.shared/com.oracle.svm.shared.option=ALL-UNNAMED",
         "--features=com.openggf.tools.nativewindows.ExperimentalNativeFeature",
         "-cp", native_classpath, MAIN, str(native / "OpenGGF")]
     argfile = work / "native-image.args"

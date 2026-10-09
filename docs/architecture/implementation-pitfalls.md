@@ -5,6 +5,27 @@ headless tests, or audio. S3K-specific routing is in [AGENTS_S3K.md](../../AGENT
 
 The things that cost the most time when missed.
 
+**A background layout needs its presentation art and event palette.** Starfall
+Frontier's background revision (base `68d1e03482`, 2026-10-08) found numbered
+filler inside otherwise valid S3K background chunks. Append both block/chunk
+banks as `LoadLevelLoadBlock2` does, then prime the appropriate AniPLC frame
+and direct `AnimateTiles_*` uploads into a private picture bank. SOZ's dispatch
+names an LRZ list that its custom routine never executes; blindly priming that
+list loads lava over desert art. ICZ1's outdoor plane also needs
+`ICZ1_SetIntroPal` line-4 writes, otherwise its mountains use the indoor cave
+colours. Check the composed picture, not just successful decompression or a
+non-null image. A static creator picture is not a live zone animation timeline.
+
+**A ROM mapping bank is not an animation sequence.** In the Starfall Frontier
+biome revision (base `e6844866ed`, 2026-10-08), Rhinobot's mapping frames 0/1
+face left, frame 2 is its brake pose, and frame 3 faces right. Cycling all four
+therefore reverses the visible direction even with correct xflip. Follow the
+owning object's pose selection (`Obj_Rhinobot` / `sub_86FF8`), or explicitly
+curate the creator's locomotion frames. Check both orientations through every
+animation phase with decoded images; a UV-only test or one screenshot misses
+an intrinsically reversed pose. Facing should follow AI intent, since damage
+recoil reverses velocity without changing the target.
+
 **Coordinates.** ROM `x_pos` / `y_pos` map to `getCentreX()` / `getCentreY()`. `getX()` /
 `getY()` are top-left render bounds — mixing them produces a ~19px vertical offset and
 wrong collision. When porting disassembly that touches `x_pos` / `y_pos`, default to the
@@ -622,6 +643,13 @@ future "support the bug-fixed revisions" effort tractable, since the sites are
 otherwise invisible once ported. `Camera.java:122-124` and
 `Sonic1BatbrainBadnikInstance.java:394` are existing examples of the shape.
 
+**Startup scenes bypass title and level audio setup.** Install the active ROM and
+module audio profile before calling a startup scene's `enter`; an initialized
+speaker backend alone cannot resolve native music/SFX IDs. A scene test that first
+loads `SharedLevel` masks this omission. `TestModSceneLauncherAudio` opens through
+the production launcher without loading a title or level and checks final PCM for
+music and an isolated effect. Origin: Eggman's Sky bug reports, 2026-10-08.
+
 **Audio accuracy:** the FM core is the Nuked-OPN2 port (`audio.synth.nuked`); its only
 reference is the pinned `ym3438.c`, and `Ym2612Chip` is engine glue over it. For the PSG
 reference the libvgm cores, for the sequencer the SMPSPlay source, rather than simplified
@@ -1102,6 +1130,16 @@ so the hub's own ROM range check can signal arm then bar. Verify the cascade sti
 deletes/recreates the graph; do not merely null the reference during capture.
 The cold SSZ route first diverged at input7076 because the restored bar now caught
 Sonic, requiring an ordinary jump to continue along the upper walkway.
+
+HCZ fan bubbles (`HCZCGZFan_Bubble`, `$30834`, 2026-10-08) likewise call
+`MoveSprite2` once and then `Draw_Sprite`; the draw tail supplies neither a
+second move nor camera/age retirement. Native observations show bubbles
+continuing outside the camera margin until their own water check. Preserve
+allocation before RNG: use the existing reserved-slot factory so a saturated
+pool does not consume randomness before discovering allocation failure.
+The fan's sound and bubble gates read `Level_frame_counter`, whereas object
+`update` receives `V_int_run_count`; test the clocks with different residues.
+See the [S3K lane audit](audits/2026-10-07-s3k-parity-gap-verification.md).
 
 ### A dying child can outlive its parent's SST identity
 

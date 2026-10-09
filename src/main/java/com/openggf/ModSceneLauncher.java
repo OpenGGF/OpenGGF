@@ -42,6 +42,7 @@ final class ModSceneLauncher {
         if (factory == null || config.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)) {
             return false;
         }
+        prepareSceneAudio(module);
         SceneServices services = new SceneServices(
                 GameServices.audio(),
                 romArt(module),
@@ -54,6 +55,17 @@ final class ModSceneLauncher {
         gameLoop.modSceneHost.open(factory, services, logicalWidth, logicalHeight);
         gameLoop.resolveFadeManager().startFadeFromBlack(null);
         return true;
+    }
+
+    /** Startup scenes bypass title/level initialization, so attach their base ROM audio here. */
+    static void prepareSceneAudio(GameModule module) {
+        if (GameModuleRouting.isStandalone(module)) return;
+        try {
+            GameServices.audio().setAudioProfile(module.getAudioProfile());
+            GameServices.audio().setRom(GameServices.rom().getRom());
+        } catch (IOException error) {
+            throw new IllegalStateException("Cannot initialize mod scene ROM audio", error);
+        }
     }
 
     /** Fades out of the mod scene to the base game's title screen. */
