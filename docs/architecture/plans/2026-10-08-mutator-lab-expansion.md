@@ -753,3 +753,62 @@ cancellation control and real deferred creator-load/consumer ownership tests pas
 The final compiled API export was rechecked after this compile and remains the
 byte-equal 17739-line pin. No broader repeat was submitted; the root combined
 ordinary/guard gate is still required.
+
+## Verified repair composition at published develop 8668
+
+The private lead intent-merged published
+`8668a901216717d8f3696945a95bbfe8e628b652` as `ea9edfa167c42fd606531a75ec264569adb9a2ce`.
+The two prose conflicts retained both the Mutator methods and incoming creator
+links. The incoming owner-bound scene SFX contract, Eggman's Sky voice bank,
+Flappy Tails example and terminology guard remain intact. No main-workspace
+change or feature publication is implied by this private merge.
+
+The normal 47-selector composed focus at working source `e5300754bc` plus the
+staged 8668 merge completed 47 fresh reports/518 cases: 517 passes, one assertion,
+no errors or skips. Every selector reconciles, including both distinct S3K
+level-loading classes; all 60 mandatory S3K cases pass. The remaining assertion,
+`TestEggmansSkyScene#productionMenusRememberSelectionAndJournalDoesNotChangeExpedition`,
+is `expected: <BatchMode> but was: <SurfaceMode>`. A clean exact-8668 one-method
+normal control reproduces the identity, exception type and entire assertion
+literally. Both sources remain unchanged. This bounded control is separate from
+the recorded whole-suite baseline; it does not add a failure to its totals or
+claim a whole-8668 pass.
+
+Separate normal `-DskipTests=true verify dependency:build-classpath` completes
+binary, SDK, Javadoc and artifact verification; tests are deliberately skipped.
+The actual compiled public export has 17,740 lines/1,840,912 bytes, SHA-256
+`b16ac37ab871df34d5c9db37f282846e8eb50e7c7126190e900a069e34130101`,
+byte-equal to candidate0.7. The sole addition to the earlier composed export is
+the incoming `SceneAudio.playSfx(String)` method; no signature is removed.
+The candidate descriptor is unchanged. Normal full fresh `-Pguards test` then
+completes 88 reports/675 passing cases, zero errors or skips, including all seven
+originally failing guard identities. Guard allowlists and size budgets are unchanged.
+
+Two bounded native S2-special controls use those actual composed classes, the
+unchanged verified creator package and original absolute ROMs. At 25% speed,
+each advances eight journal ticks over 32 outer frames, accepts five input
+samples including the native A tap, and emits exactly 800 stereo frames per
+outer frame. Owner identity and all clock/input CSV columns match between
+audio-follow false/true; their nonconstant PCM differs. The maintained probe
+does not render stage images, and this is not desktop, speaker or pitch-metrology
+evidence. The true control's native JVM exits zero and records complete evidence
+and cleanup, but its wrapper exits one after an agent metadata write appends an
+invalid JSON suffix to the lifecycle registry. That original exit is retained.
+After the narrow registry repair, the lead independently executes all 14 final
+assertions against each saved control and verifies matching clocks/input and
+differing PCM. No capture or source test is rerun to repair bookkeeping, and all
+owned processes/groups are absent.
+
+The stronger recorded destination baseline is the voice owner's actual-main
+`0103b9bdc880c142301073fba9024750ccf4f1c2`, run
+`20261009T044919Z-b2966220`: 3,070 selected/3,068 reports/26,609 ordinary cases,
+26 complete inherited assertions, no errors and 63 literal causal skips;
+87 fresh reports/674 guards pass. Its delivery record states full equivalence
+to the parity audit's negative-case table. Independent Git comparison shows
+that production Java/resources, POM, API descriptor, hooks and category-tool
+inputs are identical through published 8668. Incoming Flappy example/tests and
+the bounded terminology-guard successor have their own recorded focused checks.
+This is source-qualified reuse with explicit limits, not a whole-8668 full-suite
+claim. The final normal candidate plan selects all 3,115 ordinary classes and
+fresh guards against actual base 8668; that combined run remains required before
+implementation handoff, Opus polish, promo and the existing PR215 update.
