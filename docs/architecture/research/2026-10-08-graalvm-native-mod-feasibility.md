@@ -386,18 +386,77 @@ type is `com.oracle.svm.shared.option.HostedOptionKey`, whose public `getValue()
 method is present. The private correction derives the key type from the actual
 option field and exports its actual module package. This avoids reflecting the
 private anonymous subclass and preserves the requirement that class loading is
-really enabled. Windows requalification and publication await coordination with
-the main integration hold; no usable ZIP is claimed at this checkpoint.
+really enabled. Corrections `b2f05d6b9407c6b82506b5a655aa69c8311e9ed9`
+and `889718ce6` were integrated and published at
+`f5de9524a943d55191dbf798d405ca8e8e20ca9e` before the coordinated main freeze.
+Run `37829797174` rebuilt the Java 21 engine/SDK and all 16 mods. Its Windows
+job completed successfully: the compiler's real option check passed, all 14,992
+members/1,097 types audited, deliberate absent fields/methods rejected with
+ordinary exit 1, and all 16 JVM/native registrations agreed. Each of the 14
+code mods also passed the actual Engine external-content boot/registration in
+a separate Windows native process. Native compilation took 15:44, with measured
+5.79 GiB peak RSS and 48.7% of build time in GC at the fixed 5 GiB heap; this is
+a compiler measurement, not gameplay performance.
+
+The final ZIP was produced 19:32:46Z, then downloaded and independently checked:
+95,330,595 bytes, 1,133 entries, SHA-256
+`382e9d183e89c49e11da9f7116c0cb8770d17be97d3f9aa45f9e25228f304d8c`.
+ZIP CRCs and every internal SHA-256 entry passed; the executable and six DLLs
+have AMD64 PE headers. All 16 mod hashes, shortcut/quick-directory pairs,
+`s1.gen`/`s2.gen`/`s3k.gen` configuration, notices and pinned source identity
+matched. No ROM, toolchain archive or probe log entered the distribution.
+These results qualify the experimental Windows packaging and startup controls;
+rendering, full gameplay, rewind/save behavior and frame pacing remain unqualified.
+
+PE inspection found Java-related imports in `management_ext.dll`; the
+[pinned hosted feature](https://github.com/oracle/graal/blob/95ce1499c8c96ab7d5a6697c5b4bf42160f3b68b/substratevm/src/com.oracle.svm.hosted/src/com/oracle/svm/hosted/jdk/JNIRegistrationManagementExt.java)
+statically links its management API implementation into the executable. An
+additional Wine 11.19 control used a newly created prefix with no Windows JDK,
+Java environment variables removed, a Windows-only system search path and a
+runtime folder containing spaces. The unchanged downloaded executable passed
+the full member audit, all 16 registrations and all 14 real engine boots there.
+This supplements the actual Windows qualification and exercises startup without
+an installed Windows Java runtime; it does not extend the gameplay claims.
 `jar --describe-module` additionally identifies the key's owning module as
 `org.graalvm.nativeimage.shared`, rather than `org.graalvm.nativeimage.builder`;
 the export flag follows that shipped module descriptor.
 
+The normal guard jobs at `913c5a351` and `f5de9524a` each completed all 674
+cases with 673 passes, zero assertion failures/skips and the same existing
+`TestObjectUpdateClockTerminologyGuard` child-process deadline/closed-stream
+error. The latter finished 19:21:56Z with 10:58 Maven time. These failed
+invocations are retained as failed infrastructure qualification; they do not
+replace the observed 674-case pass at `ad3d6a996` or establish a fresh pass for
+the Windows successor. No guard source, deadline or selection was changed.
+Run `37829797174` attempt 2 reran only the failed guard job at the identical
+`f5de9524a` inputs, leaving the successful Windows job intact. The unchanged
+normal `-Pguards` profile passed all 674 cases without failures/errors/skips,
+finished 19:45:21Z with 9:40 Maven time. The previously timing-out scanner
+completed in 110.3 seconds. Both required workflow jobs are now successful;
+the unsuccessful first invocations remain part of the evidence above.
+
+After the coordinated hold was released, this evidence-only follow-up was
+integrated onto published `019dd454b0d63b10a1d0585450bb28f34e360c04`.
+That destination differs from qualified actual-main
+`b317e94ebdce60c6f81553113543295c75b1d826` only in the parity audit Markdown;
+its ordinary/guard qualification belongs to normal run
+`20261009T015657Z-e417e53f`, against pinned canonical
+`d4993a7307241bf90f004e0d7cf90936f075cf46`. The
+[complete source-attributed assertion/skip table](../audits/2026-10-07-stock-parity-gap-verification.md#updated-actual-main-full-assertion-and-skip-summary)
+preserves all 26 matching inherited failures and 63 literal causal skips, with
+zero new/worsened/unattributed negatives. This follow-up changes only this
+research note, so it needs documentation/link checks rather than repeated engine
+execution. The Windows image remains pinned to `f5de9524a`; later engine/API
+changes and the Starfall Frontier/Eggman's Sky examples are outside that
+16-mod archive and its native qualification.
+
 The plan at base `d2a501ebc9919e6c43412a2eedf02a372eac5309` selects all 3,058
 ordinary classes plus guards because the new tools/workflow are unclassified.
 The previously completed ordinary engine qualification at frozen `6124a524e`
-is reusable only for the identical ordinary executable inputs: the diff remains
-empty for production/test Java, resources, examples, API, POM, hooks and testing
-tools. Its 26,535 cases retain 27 known failures and 62 literal inherited skips;
+is reusable only for the identical ordinary executable inputs: through the
+Windows build at `f5de9524a`, its diff is empty for production/test Java,
+resources, examples, API, POM, hooks and testing tools. Its 26,535 cases retain
+27 known failures and 62 literal inherited skips;
 it is not a fresh or green suite claim. The new artifact workflow is a guard input
 and the experimental native image is a new executable contract: fresh normal
 guards and direct Windows member/registration/engine-boot qualification remain
