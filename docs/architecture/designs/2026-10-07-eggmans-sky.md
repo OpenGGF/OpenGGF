@@ -573,3 +573,47 @@ Markdown path, with no executable/test/build/API change. Import that evidence
 and use the newer published SHA as the actual destination base; the tested
 `b317e94ebdce` negative-case table and completed private voice qualification
 remain applicable to their unchanged inputs.
+
+### Destination qualification
+
+The conflict-free develop integration is
+`0103b9bdc880c142301073fba9024750ccf4f1c2`, first parent and pinned published
+validation base `efedf9198eef5e717c8827f1aa34dc7728cb92fd`. Its tracked index
+exactly matches private composition `267ab7a478c6`; all seven unrelated main
+paths retain their recorded bytes and submodule state.
+
+Normal command `python3 tools/testing/run_categories.py --base efedf9198eef
+--max-minutes 150 --run` followed the passing Java 21/Lua 5.4/PowerShell
+preflight in retained unit `openggf-eggmans-sky-voice-main-0103b9bdc`.
+It admitted at 2026-10-09T04:49:19Z as `20261009T044919Z-b2966220`, completing
+at 06:15:16Z without timeout. Queue wait was 3864 seconds and excluded from
+the execution cap. Both lanes received the three canonical original absolute
+main ROM paths; the source/input fingerprint stayed
+`43a48821e59f083567cf03f6f85a1c31c87417452ecf88334dabd3ff5ca2563d`
+through terminal inspection.
+
+- All 3070 selected ordinary classes: 3068 reports, 26609 cases, 26 inherited
+  failures, zero errors and 63 skips; 4915.64 seconds, Maven exit 1.
+- Separate fresh guards: 87 reports, 674 passing cases, zero failures/errors/skips;
+  240.45 seconds, exit 0.
+- All 26 identities, kinds/types and complete first assertions match the
+  [published source-attributed baseline](../audits/2026-10-07-stock-parity-gap-verification.md#updated-actual-main-full-assertion-and-skip-summary).
+  Twenty-five are literal matches. The complete SSZ first line is 2952 characters
+  and matches at 2907 after only the documented exception-prefix removal and
+  two verified `RewindObjectStateBlob@hex` normalizations. All 63 skip identities
+  and literal causal reasons match. There are no omitted negative cases,
+  missing-ROM skips or added/worsened/unattributed failures.
+
+This qualifies the unchanged inherited failures; it is not a green whole-suite
+or parity claim. Native/GPU coverage retains the baseline's explicit OpenGL
+skip. Consumed diagnostics were acknowledged and deleted, and the bounded
+supervisor unit was collected. A prose-only delivery successor records these
+results; executable/test/build/API inputs remain those of tested `0103b9bdc`.
+
+The already-validated JAR is installed locally as `mods/eggmans-sky.jar`, with
+all 122 resources verified against the integrated source and the same package
+SHA-256 recorded above. Existing Mod Manager state and other mods are preserved.
+The user's `.env` is preserved with mode 0600 in the external voice-bank task
+directory before removing the fully merged voice worktree; no credential enters
+Git or the package. Push only develop, then remove the accounted-for local voice
+branch/worktree and the two owned merge-backup stashes, preserving unrelated work.
