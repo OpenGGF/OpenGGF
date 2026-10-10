@@ -64,6 +64,8 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
     static final int DEMO_REACTION_ROWS = 20;
 
     static final int START_RINGS = 10;
+    /** Rows of invincibility after a No-Fail knockout. */
+    static final int NO_FAIL_GRACE_ROWS = 120;
     static final int START_LIVES = 3;
     static final int STAND_CLEAR_ROWS = 50;
     static final int DYING_ROWS = 120;
@@ -734,12 +736,22 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
             hud.banner("OUCH!", 0xFFFF6060);
             return;
         }
-        // No-Fail retries the stand without spending a life.
-        if (!intent.noFail()) lives--;
+        if (intent.noFail()) {
+            // No-Fail: Sonic shrugs the knockout off, rings refilled and briefly invincible, and
+            // the fight goes on. Restarting the whole wave on every knockout made fights loop for
+            // minutes (EHZ2 forward capture: one fight ran almost four minutes).
+            rings = START_RINGS;
+            invincibleRows = NO_FAIL_GRACE_ROWS;
+            play(Sounds.Cue.HIT);
+            hud.banner("TOO SLOW!", 0xFFFF4040);
+            say(VoiceLine.ANNOUNCER_OUCH);
+            return;
+        }
+        lives--;
         play(Sounds.Cue.HIT);
         enter(Phase.DYING);
-        hud.banner(lives > 0 || intent.noFail() ? "TOO SLOW!" : "GAME OVER", 0xFFFF4040);
-        say(lives <= 0 && !intent.noFail() ? VoiceLine.ANNOUNCER_GAME_OVER : lives == 1 ? VoiceLine.ANNOUNCER_LAST_LIFE
+        hud.banner(lives > 0 ? "TOO SLOW!" : "GAME OVER", 0xFFFF4040);
+        say(lives <= 0 ? VoiceLine.ANNOUNCER_GAME_OVER : lives == 1 ? VoiceLine.ANNOUNCER_LAST_LIFE
                 : VoiceLine.ANNOUNCER_OUCH);
     }
 
