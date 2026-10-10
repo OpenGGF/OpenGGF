@@ -59,8 +59,6 @@ public final class HubScene implements ModScene, DebuggableScene {
     long screenTick;
     boolean leaving;
     long leaveTick;
-    /** Every story stop is treated as railed (screenshots before the rails land). */
-    boolean demoRails;
     private Handoff.Pending pendingStart;
     private long pendingAt;
     private String injected = "";
@@ -217,7 +215,7 @@ public final class HubScene implements ModScene, DebuggableScene {
 
     /** True when an act has a rail (or the demo pretends every act does). */
     boolean railed(String g, int zone, int act) {
-        return demoRails || assets.rail(g, zone, act) != null;
+        return assets.rail(g, zone, act) != null;
     }
 
     boolean railed(StoryBook.Stop stop) { return railed(stop.game(), stop.zone(), stop.act()); }
@@ -495,11 +493,14 @@ public final class HubScene implements ModScene, DebuggableScene {
         return true;
     }
 
-    /** A sample profile for screenshots: early progress in every chapter, grades and key stats. */
+    /**
+     * A sample profile for screenshots: the shipped forward courses cleared (other stops show as
+     * under construction, as in real play), every drill graded so the Final Exam is open, and key
+     * stats.
+     */
     private void demo() {
-        demoRails = true;
         Profile p = new Profile();
-        String[][] cleared = {{"s1", "0:2", "1:2", "2:2"}, {"s2", "0:1", "1:1"}, {"s3k", "0:1", "1:1", "2:1", "3:1"}};
+        String[][] cleared = {{"s1", "0:2", "6:0"}, {"s2", "0:1", "10:0"}};
         for (String[] row : cleared) {
             for (int i = 1; i < row.length; i++) {
                 String[] za = row[i].split(":");
@@ -519,10 +520,15 @@ public final class HubScene implements ModScene, DebuggableScene {
         p.recordGrade("HOME_ROW", "A");
         p.recordGrade("TOP_ROW", "B");
         p.recordGrade("BOTTOM_ROW", "C");
+        p.recordGrade("NUMBERS", "D");
+        // A C or better in every drill opens the Final Exam (School.examUnlocked).
         p.recordGrade("RING_RUSH", "B");
-        p.recordGrade("SUDDEN_DEATH", "D");
+        p.recordGrade("SUDDEN_DEATH", "C");
         p.recordGrade("REFLEX", "A");
+        p.recordGrade("LONG_WORDS", "B");
         p.recordGrade("PHRASES", "C");
+        p.recordGrade("BOSS_TRAINING", "C");
+        p.recordGrade("WEAK_KEYS", "B");
         p.keyHits().addEncoded("a:420,s:380,d:360,f:400,g:150,h:170,j:390,k:300,l:310,e:600,t:520,o:480,i:450,"
                 + "n:440,r:410,u:220,c:180,m:160,w:140,y:130,p:120,b:90,v:70,k:40,x:20,q:15,z:12,_:900");
         p.keyMisses().addEncoded("q:9,z:7,x:6,p:14,b:8,v:6,y:5,u:3,e:4,t:2,m:7,c:4,w:5");

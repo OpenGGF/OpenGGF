@@ -342,6 +342,31 @@ class TestTypingHedgehogHubScene {
         }
     }
 
+    /** The screenshot profile clears only the shipped forward courses and opens the exam by its grades. */
+    @Test void theDemoProfileClearsOnlyShippedCoursesAndOpensTheExamByItsGrades() throws Exception {
+        Set<String> shipped = Set.of("s1:0:2", "s1:6:0", "s2:0:1", "s2:10:0");
+        Fixture f = new Fixture("s3k", List.of("s1", "s2", "s3k"), new HashMap<>(), shipped);
+        f.debug("demo");
+        var profileField = f.scene.getClass().getDeclaredField("profile");
+        profileField.setAccessible(true);
+        Object profile = profileField.get(f.scene);
+        Method cleared = profile.getClass().getMethod("cleared", String.class);
+        assertEquals(Set.of("0:2", "6:0"), cleared.invoke(profile, "s1"));
+        assertEquals(Set.of("0:1", "10:0"), cleared.invoke(profile, "s2"));
+        assertEquals(Set.of(), cleared.invoke(profile, "s3k"));
+        Method railed = f.scene.getClass().getDeclaredMethod("railed", String.class, int.class, int.class);
+        railed.setAccessible(true);
+        assertFalse((boolean) railed.invoke(f.scene, "s3k", 0, 1), "an unrailed stop stays under construction");
+        assertTrue((boolean) railed.invoke(f.scene, "s1", 0, 2));
+        Class<?> school = f.scene.getClass().getClassLoader().loadClass("typinghog.hub.model.School");
+        assertTrue((boolean) school.getMethod("examUnlocked", profile.getClass()).invoke(null, profile),
+                "the demo's grades open the Final Exam");
+        // The sample results screen shows a railed act even where the running game has none.
+        assertTrue(f.debug("results:sample"));
+        f.step(120); // past the slide-in, as the screen tour does
+        f.drawAll();
+    }
+
     // ---- helpers -----------------------------------------------------------------------------
 
     private static String result(String mode, int zone, int act, boolean cleared, boolean emerald, long score) {
@@ -397,8 +422,11 @@ class TestTypingHedgehogHubScene {
         Map<String, Object> rails = new HashMap<>();
         for (String key : railed) {
             String[] p = key.split(":");
+            // A minimal forward course (the hub reads only which acts have one).
             rails.put(key, railType.getMethod("parse", String.class).invoke(null,
-                    "game " + p[0] + "\nzone " + p[1] + "\nact " + p[2] + "\nprogram 600:8\n"));
+                    "format 2\npolicy forward-v2\ncombat live-restore-v1\ncourse pilot\nlaunch native-run-roll\n"
+                            + "rom-sha1 0000000000000000000000000000000000000000\ngame " + p[0] + "\nzone " + p[1]
+                            + "\nact " + p[2] + "\ncountdown 0\nendpoint boss-arena 600\nvalidated 600\nprogram 180:2,420:8\n"));
         }
         Class<?> assetsType = loader.loadClass("typinghog.play.CourseAssets");
         // CourseAssets(lexicon, plates, casts, sounds, props, rails, pictures): the hub reads only

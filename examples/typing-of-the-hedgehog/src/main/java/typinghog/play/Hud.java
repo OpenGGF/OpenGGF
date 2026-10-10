@@ -109,7 +109,6 @@ public final class Hud {
             if (encounter.bossFight() != null) drawBoss(canvas, course, encounter.bossFight(), width);
         }
         drawBackpack(canvas, course, cameraX, cameraY);
-        if (course.phase() == Course.Phase.RUN) drawRunTags(canvas, course, cameraX, cameraY);
         drawPanel(canvas, course, width);
         if (bannerRows > 0) {
             bannerRows--;
@@ -219,34 +218,6 @@ public final class Hud {
 
     /** A key the player pressed lights on Sonic's keyboard. */
     void keyPressed(int codePoint, boolean hit) { keyboard.press(codePoint, hit); }
-
-
-    private void drawRunTags(PixelCanvas canvas, Course course, int cameraX, int cameraY) {
-        TypingField field = course.field();
-        boolean punctuation = course.intent().punctuation();
-        for (RunTags.Tag tag : course.runTags().tags()) {
-            int sx = tag.x - cameraX, sy = tag.y - cameraY;
-            if (tag.tagged) {
-                int pulse = (presented / 4) % 2;
-                canvas.fill(sx - 1, sy - 26 - pulse, 3, 3, GOLD);
-                canvas.fill(sx - 3, sy - 25 - pulse, 7, 1, GOLD);
-                continue;
-            }
-            var target = field.target(tag.targetId);
-            if (target == null) continue;
-            boolean locked = field.locked() == tag.targetId;
-            plates.draw(canvas, target.prompt(), target.progress(), locked ? Plates.Style.LOCKED : Plates.Style.RESCUE,
-                    sx, sy - 18, punctuation, 0);
-        }
-        for (int[] burst : course.runTags().bursts()) {
-            int r = burst[2], sx = burst[0] - cameraX, sy = burst[1] - cameraY;
-            for (int i = 0; i < 8; i++) {
-                double a = i * Math.PI / 4;
-                canvas.fill(sx + (int) (Math.cos(a) * r), sy + (int) (Math.sin(a) * r), 2, 2, GOLD);
-            }
-            if (r < 24) font.shadowed(canvas, "+" + RunTags.SMASH_BONUS, sx - 9, sy - 20 - r / 2, GOLD, SHADOW);
-        }
-    }
 
     private void drawBoss(PixelCanvas canvas, Course course, Boss boss, int width) {
         TypingField field = course.field();

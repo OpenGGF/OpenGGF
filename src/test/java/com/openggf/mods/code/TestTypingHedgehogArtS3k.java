@@ -4,10 +4,10 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
 
-/** Sonic 3 &amp; Knuckles rail acts can draw every frame Typing of the Hedgehog's tables name: {@link TypingHedgehogArtTables}. */
+/** Sonic 3 &amp; Knuckles rail acts can draw every cast and prop frame Typing of the Hedgehog's tables name: {@link TypingHedgehogArtTables}. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestTypingHedgehogArtS3k {
-    @Test void everyRailActDrawsItsCastPropsAndBoss() throws Exception {
+    @Test void everyRailActDrawsItsCastAndProps() throws Exception {
         TypingHedgehogArtTables.check(SonicGame.SONIC_3K, "s3k");
     }
 }

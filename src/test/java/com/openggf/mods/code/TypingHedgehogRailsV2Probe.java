@@ -91,7 +91,8 @@ import com.openggf.mods.code.ForwardRails.World;
  *
  * Opt-in: {@code -Dtypinghog.v2probe=all} (or a list of {@code ghz3,ehz2,soz1}) with optional
  * {@code -Dtypinghog.v2probe.parts=1,1p,2,4,5,6,7}. Prints {@code V2|} lines. Origin: rails lane,
- * rails v2, 2026-10-10.
+ * rails v2, 2026-10-10. Parts 4 to 7 replay the pilot's rail file; the legacy S3K SOZ1 rail they
+ * used was retired with the forward courses (check out 5dc9c9cd6 to rerun them as first run).
  */
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class TypingHedgehogRailsV2Probe {

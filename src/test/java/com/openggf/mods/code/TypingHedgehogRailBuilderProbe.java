@@ -81,6 +81,10 @@ import java.util.Set;
  *
  * <p><b>Origin.</b> Typing of the Hedgehog rails lane, branch {@code feature/ai-typing-hedgehog-rails},
  * 2026-10-09, after the kill tests in {@code TypingHedgehogRailProbe}.
+ *
+ * <p><b>Retired output.</b> Its format-1 rails were retired with the forward courses (2026-10-10)
+ * and the course no longer plays format 1; {@code TypingHedgehogForwardRailBuilder} authors rails
+ * now and reuses this class's targets, recorded-run loading, RLE and ROM helpers.
  */
 class TypingHedgehogRailBuilderProbe {
     private static final String SPEC = System.getProperty("typinghog.railbuild");

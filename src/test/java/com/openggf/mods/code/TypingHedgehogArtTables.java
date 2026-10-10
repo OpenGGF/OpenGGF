@@ -21,10 +21,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
- * Checks Typing of the Hedgehog's art tables against the ROM: for every shipped rail of a game,
- * loads the rail's act and requires that each badnik frame of the zone's cast, each prop frame
- * and each frame of the zone's boss rig names a sheet the act registered and a frame inside it.
- * A typo or a sheet the act never loads would otherwise draw nothing, silently.
+ * Checks Typing of the Hedgehog's art tables against the ROM: for every shipped (forward) rail of
+ * a game, loads the rail's act and requires that each badnik frame of the zone's cast, each prop
+ * frame and the shared effects name a sheet the act registered and a frame inside it. A typo or a
+ * sheet the act never loads would otherwise draw nothing, silently.
+ *
+ * <p>The zone's boss rig is checked where the boss fights: some zones load boss art only behind
+ * the arena's camera gate (S3K CNZ), so the rail's own authored path (its pad rows, with each
+ * stand's conversion through the mod's {@code CombatHandoff}, the zero-length fight the rail was
+ * built on) is replayed to the endpoint row and every rig frame is checked there.
+ * {@code TestTypingHedgehogRails} asserts the same at the endpoint row of the real Course. A game
+ * that ships no rail passes here with nothing to check, and says so.
  *
  * <p>The tables are read as text (the formats are {@code typinghog.play.Cast}, {@code Props} and
  * {@code BossRig}), independent of the mod's own parsers.
@@ -42,6 +49,10 @@ final class TypingHedgehogArtTables {
     static void check(SonicGame game, String code) throws Exception {
         Map<String, int[]> rails = rails(code);
         assertTrue(!rails.isEmpty() || !code.equals("s1"), "Sonic 1 ships rails");
+        if (rails.isEmpty()) {
+            System.out.println("[typing-hedgehog] " + code + " art tables: no shipped rails, nothing to check");
+            return;
+        }
         List<String> problems = new ArrayList<>();
         int checked = 0;
         for (var entry : rails.entrySet()) {
@@ -62,6 +73,7 @@ final class TypingHedgehogArtTables {
                 System.out.println("[typing-hedgehog] " + entry.getKey() + ": " + art.getRendererKeys().size()
                         + " art keys registered");
                 for (Use use : uses(code, zone, act)) {
+                    if (use.table().startsWith("boss")) continue; // checked at the endpoint by the rails gate
                     checked++;
                     var sheet = art.getSheet(use.artKey());
                     if (art.getRenderer(use.artKey()) == null || sheet == null) {
@@ -75,10 +87,74 @@ final class TypingHedgehogArtTables {
             } finally {
                 level.dispose();
             }
+            checked += bossAtEndpoint(game, code, entry.getKey(), zone, act, problems);
         }
         System.out.println("[typing-hedgehog] " + code + " art tables: " + rails.size() + " rail acts, "
-                + checked + " frame uses checked");
+                + checked + " frame uses checked (boss rigs at each rail's endpoint row)");
         if (!problems.isEmpty()) fail(String.join("\n", problems));
+    }
+
+    /**
+     * Replays the rail's authored path to its endpoint row (pad rows, each stand converted where the
+     * rail says) and checks every boss rig frame against the art registered there; returns the
+     * number of uses checked.
+     */
+    private static int bossAtEndpoint(SonicGame game, String code, String file, int zone, int act, List<String> problems)
+            throws Exception {
+        String text = Files.readString(RESOURCES.resolve("rails/" + file));
+        List<Integer> masks = new ArrayList<>();
+        Set<Integer> standRows = new java.util.HashSet<>();
+        int endpoint = -1;
+        String sidekick = "";
+        for (String raw : text.split("\n")) {
+            String[] f = raw.strip().split("\\s+");
+            switch (f[0]) {
+                case "program" -> {
+                    for (String pair : f[1].split(",")) {
+                        String[] rm = pair.split(":");
+                        for (int i = 0; i < Integer.parseInt(rm[0]); i++) masks.add(Integer.parseInt(rm[1], 16));
+                    }
+                }
+                case "stand" -> standRows.add(Integer.parseInt(f[2]));
+                case "endpoint" -> endpoint = Integer.parseInt(f[2]);
+                case "team" -> sidekick = f[1].contains(",") ? f[1].substring(f[1].indexOf(',') + 1) : "";
+                default -> { }
+            }
+        }
+        Path temp = Files.createTempDirectory("typinghog-art");
+        int checked = 0;
+        try (ExampleModHarness harness = ForwardRails.buildHarness(temp, "art", Map.of());
+             ForwardRails.World w = new ForwardRails.World(
+                     new ForwardRails.Pilot(file, game, code, zone, act, sidekick, file), Map.of())) {
+            var handoff = new ForwardRails.Handoff(harness, code);
+            w.driver.program = row -> row < masks.size() ? masks.get(row) : 0;
+            while (w.driver.row < endpoint) {
+                if (standRows.contains(w.driver.row)) {
+                    List<?> pool = handoff.pool();
+                    w.driver.before = () -> handoff.convert(pool);
+                }
+                w.advance();
+            }
+            var art = GameServices.level().getObjectRenderManager().getArtProvider();
+            for (Use use : uses(code, zone, act)) {
+                if (!use.table().startsWith("boss")) continue;
+                checked++;
+                var sheet = art.getSheet(use.artKey());
+                if (art.getRenderer(use.artKey()) == null || sheet == null) {
+                    problems.add(file + ": at the endpoint row " + endpoint + " " + use.table() + " names "
+                            + use.artKey() + ", which the act does not register there");
+                } else if (use.frame() < 0 || use.frame() >= sheet.getFrameCount()) {
+                    problems.add(file + ": at the endpoint " + use.table() + " " + use.artKey() + " frame "
+                            + use.frame() + " of " + sheet.getFrameCount());
+                }
+            }
+        } finally {
+            GameServices.configuration().clearSessionOverrides();
+            try (var walk = Files.walk(temp)) {
+                walk.sorted(java.util.Comparator.reverseOrder()).forEach(path -> path.toFile().delete());
+            }
+        }
+        return checked;
     }
 
     /** Rail name to {zone, act} for {@code code}'s shipped rails. */
