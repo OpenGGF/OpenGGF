@@ -71,6 +71,13 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A headless palette owner check needs the renderer's resolution boundary
+(2026-10-10, Starpost seasonal acts): HeadlessTestRunner queues palette writes
+but does not draw, so ownerAt still reports none and live RGB remains unchanged.
+Resolve pending frame writes before palette assertions, then independently inspect
+native GameLoop GPU captures. Do not infer an absent runtime callback from an
+unresolved registry; do not replace ownership writes with direct palette mutation.
+
 FFmpeg PCM length can differ from a Vorbis stream's declared length (2026-10-09,
 Eggman's Sky compression): a generated 9,606-frame mono control retained exactly
 9,606 frames in its Ogg granule count, while FFmpeg's native and libvorbis decoders

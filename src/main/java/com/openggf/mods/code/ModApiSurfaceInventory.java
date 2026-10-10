@@ -44,6 +44,9 @@ public final class ModApiSurfaceInventory {
             "com.openggf.level.objects.PatrolMovementHelper",
             "com.openggf.level.objects.PlatformBobHelper",
             "com.openggf.level.objects.SpringBounceHelper",
+            "com.openggf.sprites.NativePositionOps",
+            "com.openggf.level.objects.SolidObjectParams",
+            "com.openggf.level.objects.SolidObjectProvider",
             "com.openggf.level.objects.DestructionEffects",
             // Explicitly required transitive creator contracts.
             "com.openggf.game.GameModule",

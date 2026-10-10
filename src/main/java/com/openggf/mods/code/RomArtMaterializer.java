@@ -73,7 +73,9 @@ final class RomArtMaterializer {
                                 + limits.maxSheetPatterns(), null);
             }
 
-            var mappings = S2SpriteDataLoader.loadMappingFrames(reader, request.mappingAddress());
+            var mappings = request.source() == com.openggf.game.patch.LogicalRom.S1
+                    ? com.openggf.game.sonic1.S1SpriteDataLoader.loadMappingFrames(reader, request.mappingAddress())
+                    : S2SpriteDataLoader.loadMappingFrames(reader, request.mappingAddress());
             if (request.hasDplc()) {
                 var dplcFrames = Sonic2PlayerArt.parseDplcFrames(reader, request.dplcAddress());
                 mappings = DplcStaticFlattener.applyDplcRemap(mappings, dplcFrames);

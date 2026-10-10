@@ -28,9 +28,20 @@ public final class ModApiVersion {
      * Power-up rules expose explicit invincibility-expiry music ownership for modes
      * with continuous music. Owned patch scenes can play their validated audio-manifest
      * SFX by local name without numeric ids or creator-supplied ownership.
+     * Scene audio can play any supplied ROM's song as the base driver's music through
+     * the cross-game donor route, under a donor registration scoped to the scene.
+     * Scene-owned ROM music pacing preserves pitch and SFX and follows retained acts.
+     * Scene visits can suspend into owned registered acts with typed launch/result,
+     * native centre spawn overrides and once-only frame-boundary exit consumption.
+     * Entry/exit isolate rewind timelines while preserving the scene and its ROM library.
      * Creator helpers include character specifications and lifecycle hooks, decoded
      * placement transforms, owner storage and service bundles, named single-act and
-     * multi-act zone factories, shared UI/input and ROM-qualified scene art.
+     * multi-act zone factories, shared UI/input and ROM-qualified scene art, including
+     * the players' S3K dash dust. Object art may name LogicalRom.S1 with S1 mapping
+     * parsing even in an S3K-base mod; the legacy call retains Sonic 2 semantics.
+     * NativePositionOps and the solid-platform provider/params are candidate creator contracts:
+     * act controllers can reset native positions and provide rewindable top-solid decks.
+     * Camera framing can cap the visible right edge independently of native player walls.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

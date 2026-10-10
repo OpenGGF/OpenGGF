@@ -147,6 +147,22 @@ remain synchronous. These are additive changes to the mutable 0.7 candidate;
 the descriptor/runtime version remains unpublished 0.7.0 and the normalized
 signature pin is regenerated in place.
 
+Native act controllers can use `NativePositionOps` for ROM centre/subpixel writes
+and implement `SolidObjectProvider` with `SolidObjectParams` for real platforms.
+`Camera.setViewportMaxX` captures a visible right-edge cap separately from ROM
+movement walls and releases it on reset; CameraSnapshot includes that state.
+The exposed solid routine profile/adapter types are annotated and included in
+the recursive candidate pin. These additions preserve existing runtime behavior
+and the unpublished 0.7.0 version; no published baseline is replaced.
+
+`SceneAudio.setMusicTempoPercent(int)` adds opt-in ROM music pacing (25–100,
+default 100) to the unpublished 0.7 candidate. The recursive inventory gains
+fourteen additive lines, including the validated rewind command. The release
+descriptor and `ModApiVersion` remain on unpublished 0.7.0. Scene disposal
+restores normal pacing; retained native acts keep the active scene's setting.
+SFX, chip pitch, sample clocks and gameplay timing remain on their normal clocks.
+The percentage and fractional phase participate in audio capture/restore.
+
 Before changing the candidate surface:
 
 1. Run `TestModApiSignatureSurface` and inspect every added or changed line.
@@ -532,6 +548,36 @@ retains unpublished candidate `0.7.0` and its existing schema/publication state.
 See the [creator recipe](../modding/guides/mod-scenes.md) and
 [fumble implementation plan](plans/2026-10-08-sitar-hero-fumble-feedback.md).
 
+## Scene music from any supplied ROM candidate
+
+Starpost Valley adds the default `SceneAudio.playMusic(String,int)`. The running game's
+songs take the base route. Another supplied game's song takes the existing cross-game
+donor route (`AudioManager.playDonorMusic`), under a donor registration scoped to the
+scene. The scope is the engine-internal `com.openggf.audio.ScopedDonorAudio`, backed by
+package-private `AudioManager` state capture. Closing it restores that key's previous
+route and music and sound bindings, so cross-game donation survives the scene. The method
+exposes no loader, ROM or driver type. Legacy hosts return false. The int-only
+`playMusic`, `stopMusic` and `fadeOutMusic` keep their meaning and act on whichever song
+is current. The normalized 0.7 candidate pin gains exactly one additive entry, with no
+removals. `ModApiVersion` documents the capability, and the policy-generated release
+descriptor keeps unpublished candidate `0.7.0`, as for every additive candidate change.
+See the [creator recipe](../modding/guides/mod-scenes.md#5-audio-and-storage) and the
+[design note](designs/2026-10-09-starpost-valley.md#331-background-music-engine-addition).
+
+## Stock dash dust recipe candidate
+
+Starpost Valley adds `StockSceneArt.S3K_DASH_DUST`, a named recipe for Obj_DashDust's art
+(`ArtUnc_DashDust`, `Map_DashDust`, `DPLC_DashSplashDrown`, player DPLC layout, palette line 0)
+on the verified S3&K locked-on ROM. Like the other recipes it is ROM-qualified and decodes the
+user's bytes; it adds a private enum constructor for requests that are not compressed art. The
+normalized 0.7 candidate pin gains exactly one additive enum-constant entry, with no removals,
+and the release descriptor keeps unpublished candidate `0.7.0`. Skid children use
+an existing raw uncompressed request for the bank their parent's cue `$15` preloads;
+no additional API surface is needed. The descriptor accepts strict `key=value` lines,
+so candidate notes belong here, rather than in descriptor comments. See the
+[creator recipe](../modding/guides/creator-helpers.md#rom-art-without-repeated-decoding) and the
+[design note](designs/2026-10-09-starpost-valley.md#20-rom-art-polish-lane).
+
 ## Scene SFX candidate
 
 `SceneAudio.playSfx(String)` plays a declared one-shot using the scene owner's
@@ -546,3 +592,33 @@ This adds one entry to the mutable unpublished `0.7` signature pin.
 `0.7.0` and its existing publication state. See the
 [scene guide](../modding/guides/mod-scenes.md#5-audio-and-storage) and
 [Eggman's Sky voice record](designs/2026-10-07-eggmans-sky.md#original-system-voice-2026-10-08).
+
+Scene/act round trips extend the same unpublished 0.7.0 candidate: `ActLaunch` and
+`ActResult` live in `com.openggf.mods.scene`; `ActExit` lives in `com.openggf.game`,
+already shared by scene and level code. `SceneContext.startAct` and `ModScene.resume` are default methods, as is
+`ObjectServices.requestActExit`. The destination must be registered by the scene's
+owner; the engine validates it inside the scene callback's fault boundary. Launch
+records copy team/state collections. A retained scene visit keeps its context and
+ROM library, parks audio playback/borrowed routes and releases GPU textures.
+Pending level exits are rewindable until consumed; entry uses the normal level-load
+boundary and exit reports the non-rewindable mode boundary. The candidate pin is
+regenerated in place; no new published baseline or version promise is introduced.
+
+Compact record constructor validation is implementation, already represented by
+the canonical component signature. The Bash and PowerShell coupling checks
+exclude its body; component and member declaration changes still require the
+candidate pin. The exact compiled signature inventory remains the final check.
+
+### Named ROM object art (Starpost Ruins E2)
+
+The unpublished 0.7 candidate adds
+`ModContext.registerRomObjectArt(String, LogicalRom, RomArtRequest)` and a
+source-qualified `RomArtRequest` constructor/accessor. Its existing constructor
+and registration remain Sonic 2 defaults, using the already-open S2 host without
+an additional resolver. Cross-ROM intake must use its named logical source.
+Named S1 intake uses S1 mapping
+pieces, source-specific address bounds and the production `PatchContext` logical
+ROM resolver; S1 DPLCs and standalone intake are rejected. Missing logical ROMs
+fail the existing creator launch boundary. The mutable 0.7 signature pin and
+`ModApiVersion` description are updated together. The strict key=value policy descriptor is verified unchanged:
+`currentApi=0.7.0`, `currentStatus=candidate`, with no published baseline.

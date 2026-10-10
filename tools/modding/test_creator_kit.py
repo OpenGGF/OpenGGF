@@ -28,6 +28,25 @@ class CreatorKitTest(unittest.TestCase):
         self.campaign()
         self.artifacts()
 
+    def test_project_resource_generator_runs_after_copy_and_propagates_failure(self):
+        project = self.root / "generated-example"
+        resources = project / "src/main/resources"
+        resources.mkdir(parents=True)
+        (resources / "source.txt").write_text("original")
+        generator = project / "generate_resources.py"
+        generator.write_text("from pathlib import Path\nimport sys\n"
+            "out = Path(sys.argv[1])\n"
+            "assert (out / 'source.txt').read_text() == 'original'\n"
+            "(out / 'generated.dat').write_bytes(b'authored')\n")
+        classes = project / "target/classes"
+        build_project.copy_resources(project, classes)
+        self.assertEqual(b"authored", (classes / "generated.dat").read_bytes())
+        generator.write_text("raise SystemExit(17)\n")
+        import subprocess
+        with self.assertRaises(subprocess.CalledProcessError) as failure:
+            build_project.copy_resources(project, classes)
+        self.assertEqual(17, failure.exception.returncode)
+
     def campaign(self):
         project = self.root / kit.CAMPAIGN_SOURCE
         for relative, data in {"README.md": "[guide](../../../../../../docs/modding/guides/two-act-campaign.md)\n",

@@ -311,6 +311,8 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
         com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry restored =
                 consumePendingRestoredEntry(object);
         if (restored != null) {
+            // A shield granted inside a creator callback retains that fault owner after player restore.
+            objectManager.restoreDynamicCallbackOwner(object, restored.ownerModId());
             if (restored.objectId() != null) {
                 objectManager.addRestoredDynamicObjectAtSlot(
                         object, restored.slotIndex(), restored.objectId());

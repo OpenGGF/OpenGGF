@@ -6,6 +6,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 /**
  * Central helpers for ROM native x_pos/y_pos writes on playable sprites.
  */
+@com.openggf.game.ModApi
 public final class NativePositionOps {
     private NativePositionOps() {
     }

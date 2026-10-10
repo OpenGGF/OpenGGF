@@ -55,7 +55,7 @@ def build(name, run=False, skip_engine=False, engine=None, sdk=None, roms=None):
     classpath = os.pathsep.join([str(ROOT / "target/classes"), classpath_file.read_text().strip()])
     call([java_tool("javac"), "--release", "21", "-cp", classpath, "-d", str(classes),
           *map(str, sorted((project / "src/main/java").rglob("*.java")))])
-    shutil.copytree(project / "src/main/resources", classes, dirs_exist_ok=True)
+    portable.copy_resources(project, classes)
     jar = output / f"{Path(name).name}.jar"
     jar.unlink(missing_ok=True)
     cli = [java_tool("java"), "-cp", classpath, "com.openggf.tools.modsdk.GgfModCli"]

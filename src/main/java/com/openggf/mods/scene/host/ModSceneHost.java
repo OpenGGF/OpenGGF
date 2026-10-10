@@ -47,6 +47,41 @@ public final class ModSceneHost {
     private int width = 320;
     private int height = 224;
     private boolean exiting;
+    private boolean suspended;
+    private com.openggf.mods.scene.ActLaunch pendingAct;
+
+    /** Suspends ticking/drawing without closing the scene, context or ROM library. */
+    public void suspend() {
+        if (scene == null || exiting || suspended) throw new IllegalStateException("Scene cannot suspend");
+        suspended = true;
+        context.resetInput();
+        if (context.music != null) context.music.suspendPlayback();
+        if (context.donorMusic != null) context.donorMusic.suspend();
+        releaseGpuResources();
+    }
+
+    /** Retained draw recordings can render during the fade; release again at black before loading. */
+    public void releaseGpuResources() {
+        if (renderer.initialized()) renderer.releaseTextures();
+    }
+
+    public boolean isSuspended() { return suspended; }
+
+    /** Frame-boundary admission; repeated launch requests cannot replace the first one. */
+    public com.openggf.mods.scene.ActLaunch consumeActLaunch() {
+        var launch = pendingAct;
+        pendingAct = null;
+        return launch;
+    }
+
+    /** Audio preparation belongs to the engine caller. Duplicate resume is rejected. */
+    public void resume(com.openggf.mods.scene.ActResult result) {
+        if (!suspended || scene == null) throw new IllegalStateException("No suspended scene");
+        suspended = false;
+        context.resetInput();
+        try { scene.resume(context, java.util.Objects.requireNonNull(result)); }
+        catch (RuntimeException | Error failure) { close(); throw failure; }
+    }
     private List<SceneDrawOp> lastFrame = List.of();
 
     /** True while a scene is open. */
@@ -78,7 +113,7 @@ public final class ModSceneHost {
 
     /** One 60 Hz tick. The input handler's frame edges are advanced by the caller. */
     public void update(InputHandler input) {
-        if (scene == null || exiting) {
+        if (scene == null || exiting || suspended || pendingAct != null) {
             return;
         }
         try {
@@ -97,17 +132,17 @@ public final class ModSceneHost {
      * record without rendering (headless).
      */
     public void draw(float[] projection, int[] viewport) {
-        if (scene == null || context == null) {
-            return;
+        if (scene == null || context == null) return;
+        if (!suspended) {
+            RecordingCanvas canvas = new RecordingCanvas(width, height, font);
+            try {
+                scene.draw(context, canvas);
+            } catch (RuntimeException | Error failure) {
+                close();
+                throw failure;
+            }
+            lastFrame = canvas.ops();
         }
-        RecordingCanvas canvas = new RecordingCanvas(width, height, font);
-        try {
-            scene.draw(context, canvas);
-        } catch (RuntimeException | Error failure) {
-            close();
-            throw failure;
-        }
-        lastFrame = canvas.ops();
         if (projection == null || viewport == null) {
             return;
         }
@@ -115,7 +150,7 @@ public final class ModSceneHost {
             if (!renderer.initialized()) {
                 renderer.init();
             }
-            renderer.render(canvas.ops(), projection, width, height, viewport);
+            renderer.render(lastFrame, projection, width, height, viewport);
         } catch (IOException e) {
             LOG.log(Level.SEVERE, "Scene renderer unavailable", e);
         }
@@ -128,7 +163,7 @@ public final class ModSceneHost {
      */
     public boolean debugJump(String command) {
         try {
-            return scene != null && OwnedSceneFactory.debugJump(scene, command);
+            return scene != null && !suspended && OwnedSceneFactory.debugJump(scene, command);
         } catch (RuntimeException | Error failure) {
             close();
             throw failure;
@@ -156,6 +191,8 @@ public final class ModSceneHost {
         Context ctx = context;
         scene = null;
         context = null;
+        suspended = false;
+        pendingAct = null;
         lastFrame = List.of();
         // Retire networking before creator exit code runs; even an exit callback
         // that faults or retains its context cannot reopen the departing visit.
@@ -205,11 +242,13 @@ public final class ModSceneHost {
         private SceneMouse mouse = SceneMouse.none();
         private PhysicalInput physical = PhysicalInput.neutral();
         private ManagedSceneMusic music;
+        private SceneDonorMusic donorMusic;
         private final ManagedSceneNetwork network = new ManagedSceneNetwork();
-        private final MenuRepeat repeat = new MenuRepeat();
+        private MenuRepeat repeat = new MenuRepeat();
         private int heldButtons;
         private int pressedButtons;
         private int repeatedButtons;
+        private boolean musicTempoOwned;
         private boolean previousLeft;
         private boolean previousRight;
         private int lastX = -1;
@@ -246,7 +285,28 @@ public final class ModSceneHost {
                 @Override
                 public void playMusic(int musicId) {
                     if (services != null && services.audio() != null) {
+                        if (donorMusic != null) donorMusic.driverMusicRequested(musicId);
                         services.audio().playMusic(musicId);
+                    }
+                }
+
+                @Override
+                public boolean playMusic(String gameId, int musicId) {
+                    SceneDonorMusic.validate(gameId, musicId);
+                    if (context != Context.this || services == null || services.audio() == null
+                            || services.romLibrary() == null) {
+                        return false;
+                    }
+                    if (donorMusic == null) donorMusic = new SceneDonorMusic(services.audio(), services.romLibrary());
+                    return donorMusic.play(gameId, musicId);
+                }
+
+                @Override
+                public void setMusicTempoPercent(int percent) {
+                    com.openggf.audio.MusicTempoPercent.requireValid(percent);
+                    if (context == Context.this && services != null && services.audio() != null) {
+                        services.audio().setMusicTempoPercent(percent);
+                        musicTempoOwned = true;
                     }
                 }
 
@@ -275,6 +335,7 @@ public final class ModSceneHost {
                 @Override
                 public void stopMusic() {
                     if (services != null && services.audio() != null) {
+                        if (donorMusic != null) donorMusic.driverMusicStopped();
                         services.audio().stopMusic();
                     }
                 }
@@ -282,6 +343,21 @@ public final class ModSceneHost {
             Path root = services == null || services.storageRoot() == null
                     ? Path.of("saves") : services.storageRoot();
             this.storage = ModStorageFactory.forOwner(root, owner);
+        }
+
+        void resetInput() {
+            input = null; logical = LogicalInputSnapshot.neutral(); physical = PhysicalInput.neutral();
+            heldButtons = pressedButtons = repeatedButtons = 0;
+            repeat = new MenuRepeat(); mouse = SceneMouse.none();
+        }
+
+        @Override public void startAct(com.openggf.mods.scene.ActLaunch launch) {
+            java.util.Objects.requireNonNull(launch, "launch");
+            if (context != this || exiting || suspended) throw new IllegalStateException("Scene visit inactive");
+            if (!owner.equals(launch.destination().ownerModId()))
+                throw new IllegalArgumentException("Scene can launch only its owner's mod zones");
+            if (services != null && services.validateAct() != null) services.validateAct().accept(launch);
+            if (pendingAct == null) pendingAct = launch;
         }
 
         void beginTick(InputHandler handler) {
@@ -303,11 +379,20 @@ public final class ModSceneHost {
         }
 
         void closeResources() {
+            if (musicTempoOwned && services != null && services.audio() != null) {
+                services.audio().setMusicTempoPercent(100);
+                musicTempoOwned = false;
+            }
             network.close();
             try {
                 if (music != null) music.close();
             } finally {
-                if (services != null && services.romLibrary() != null) services.romLibrary().close();
+                try {
+                    // Borrowed donor routes read the library's ROM views, so they go first.
+                    if (donorMusic != null) donorMusic.close();
+                } finally {
+                    if (services != null && services.romLibrary() != null) services.romLibrary().close();
+                }
             }
         }
 

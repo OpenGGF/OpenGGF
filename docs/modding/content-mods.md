@@ -126,7 +126,7 @@ previews use `registerObjectPreview`. The sheet YAML assigns each 8-by-8 tile to
 Genesis palette line and describes bounded pieces. `convert art` rejects images
 whose dimensions, palette use, or piece bounds cannot be represented exactly.
 
-## ROM art intake (Sonic 2 patch mods)
+## ROM art intake (named Sonic 1/2 ROMs)
 
 `ModContext.registerRomObjectArt(key, request)` materializes object art from the
 *player's own ROM* at gameplay launch, instead of shipping baked art in the mod jar.
@@ -135,6 +135,21 @@ flying frames) into a new mod object — the mod jar itself ships zero ROM bytes
 sheet is decoded into memory only after the engine opens the player's `s2.gen`.
 The maintained [ROM-art remix guide](guides/rom-art-remix.md) follows the complete
 source, decoded-pattern probe, rewind, and package-inspection workflow.
+
+For an S3K-base mod drawing Sonic 1 objects, use
+`registerRomObjectArt(key, LogicalRom.S1, request)`. The logical source is
+resolved through the launch `PatchContext`, declared as an art prerequisite,
+and closed after decoding. Sonic 1 uses byte-count, five-byte mapping pieces;
+Sonic 2 uses its own mapping and optional DPLC parser. S1 DPLCs are rejected.
+The seven-argument `RomArtRequest` and two-argument registration retain their
+Sonic 2 defaults. On an S2 host, S2 art uses its already-open base ROM without
+an additional logical-ROM resolver. Cross-ROM intake requires the declared
+source through `PatchContext`; a missing context never falls back to host bytes.
+Named requests are bounded by their source ROM size and
+are unavailable to standalone modules. A sheet's palette line refers to the
+active palette; a mixed-ROM mod must preserve or explicitly remap its source
+colours beside host palette claims. Starpost's Ruins rasterize their named S1
+sheets with their kit palette on the same level canvas as the town's ROM art.
 
 The request names a ROM art address, its compression, an S2 mapping table address, an
 optional DPLC table address, a palette line, and a bank size:

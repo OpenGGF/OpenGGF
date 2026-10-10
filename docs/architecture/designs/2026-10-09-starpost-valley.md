@@ -1,0 +1,2884 @@
+# Starpost Valley — design brainstorm
+
+A farming and life-sim example mod inspired by *Stardew Valley*: a farm, crops, seasons,
+neighbours, fishing, mines, animals, festivals and a long-term restoration goal, rebuilt
+from Sonic's own ROM art, music and movement. Status: **implemented candidate;
+delivery and verification recorded below**.
+Base: `8668a9012` (`develop`). Branch: `feature/ai-starpost-valley` in
+`.worktrees/ai-starpost-valley`.
+
+The quality bar is the rest of the series: Slay the Robotnik (28,770 main lines), Eggman's
+Sky (15,036), Sonic Survivors, Sitar Hero and Starfall Frontier. Only inspiration comes
+from *Stardew Valley*. The mod uses none of its names, characters, text, art or data.
+
+How this was produced: a cited survey of the Mod API and examples, an independent creative
+brainstorm from the Fable model, and the lead's own pass. They were merged here and every
+claim was checked against the engine survey. Section 12 lists what was changed or dropped
+for feasibility.
+
+## Kickoff decisions (2026-10-09)
+
+| Question | Decision |
+|---|---|
+| Foundation | A scene mod with **two views** (§3.4). The **farm is a belt-scroller field** (§3.2 D): plot rows in front of a Green Hill back wall. The **rest of the valley is side view** (§3.2 B): town, lake, plateau, Ruins and festivals, built from Green Hill's own level blocks and collision. The user first chose side view after the §13 look test, then changed it to this hybrid ("belt view for the farm itself is sick"). |
+| ROMs | Base game **S3K**; **S1 required** for Green Hill; **S2 optional** extras, each with a fallback (§3.3). |
+| Scope | The **complete one-year game** (§10). |
+| Concepts | All four accepted: **Momentum** instead of stamina (conventional energy stays behind a switch), **choose your farmer** (Sonic, Tails or Knuckles), **Partners** instead of romance, and animal villagers who **speak in pictures until the translator**. |
+| Name | **Starpost Valley** (the user's rename, replacing "Green Hill Valley"). A Star Post is the checkpoint you always return to, which fits §9.21's home for a hero who never stops, and the name echoes the genre's inspiration. The valley still sits in Green Hill. The Inn becomes the **Lamppost Inn**, Sonic 1's own name for the checkpoint, so the two names don't collide. |
+| Delivery | Assumed from the previous series: one pull request against `develop` when finished, with a lead plus a few subagents. |
+
+## 1. The pitch
+
+> Every Sonic game ends with Sonic running away from the wreckage of his victory.
+> **Starpost Valley** is the part the credits skip.
+
+The Sonic 1 ending plays: Sonic runs through Green Hill with freed animals streaming
+behind him. This time, at the signpost, he stops, and so do the animals. The camera tilts
+up the cliff to show the damage. The checkered soil is churned by Motobug tracks, a rusted
+Buzz Bomber lies in the creek and the animal capsule on the hill is cracked. A Flicky lands
+on his nose and the title card reads `SPRING 1 — STARPOST VALLEY`. Sonic has a note
+from Tails, a shovel and about sixty animals with nowhere to go.
+
+At the valley gate an old Star Post leans in the grass. Sonic taps it, it spins and lights,
+and the checkpoint chime plays: this is where he will keep coming back. It is the valley's
+namesake, where you wake after fainting (§9.20), and the last thing the ending shows.
+
+**Design rule:** speed buys more actions in a day, never a shorter season. Sonic does not
+slow down and crops do not speed up. The game lives in that gap. "Gotta grow slow" stays as
+a loading-screen gag rather than the thesis: a forty-hour argument that Sonic should stop
+being Sonic fights the licence. The genre's real emotional core is restoration, and Sonic
+already has all three ingredients in the ROM: despoiled land, a corporate villain
+(Robotnik) and a community (the animals he freed).
+
+### Pillars
+
+1. **It plays like Sonic between the chores.** The walk to the field is the best part of a
+   Sonic game: momentum, springs, slopes, a loop on the farm.
+2. **Everything you see comes from your ROMs.** Original art is limited to fish, food and
+   item icons, UI and one sleeping pose. Nothing original has a face.
+3. **Every named thing changes a rule.** A *Fire Shield Pepper* that behaves like any other
+   crop is just a reskin. Eating one grants lava immunity in the Ruins.
+4. **Restoration you can see.** Every badnik you pop frees an animal who walks home. The
+   valley's population, palette, music and festivals visibly recover.
+
+## 2. What the engine gives us (survey at `8668a9012`)
+
+The Mod API and existing examples already support or constrain the game in these ways:
+
+- **Mod scene.** `ModContext.registerStartupScene` and a full-screen `ModScene` with a
+  60 Hz `update`, a side-effect-free `draw`, fault boundaries and `requireDisplayWidth`
+  (320/352/400/528/800 × 224). This is the route used by Slay the Robotnik, Eggman's Sky
+  and Starfall Frontier.
+- **Multi-ROM art.** `ctx.art().rom("s1"|"s2"|"s3k")` gives independent views. A missing
+  game returns `null`, and Eggman's Sky probes each one.
+  - `SceneRomArt.levelKit(zone, act)` returns 256-px block images with collision,
+    palette and backdrop. Kits exist for every S1 act, so Green Hill, Marble, Spring Yard,
+    Labyrinth, Star Light and Scrap Brain are all available.
+  - `levelOverview`, `zoneBackdrop`, `levelStages` and `levelForeground` exist for S1 GHZ1.
+  - `sprites(RomSpriteRequest, palette)` decodes Nemesis/Kosinski/KosM art with DPLCs.
+  - `character()` gives Sonic (S1), Sonic/Tails (S2) and Sonic/Tails/Knuckles (S3K).
+- **Recolouring is free.** Every decode takes a caller palette. Terrain can be recoloured
+  through `pixels()` the way Eggman's Sky does it in `core/Recolor`, and `withTint` /
+  `withFlash` work at draw time. Seasons, dusk and weather are therefore palette work,
+  not new art.
+- **Assets already catalogued.**
+  - Animals: S1 and S3K have the rabbit, chicken, penguin, seal, pig, Flicky and squirrel.
+    S2 adds a mouse, monkey, eagle, turtle and bear. `eggsky.art.FaunaCatalog` has 83
+    ready `RomSpriteRequest`s.
+  - S1 objects: purple rock, spikes, bridge, monitor, ring, signpost, lamppost, prison
+    capsule, Eggman and the S1 badniks.
+  - S3K objects: Egg Robo, Robotnik ship, egg capsule, ring, monitors, starpost and springs.
+  - Animated GHZ flowers and water are uncompressed art. Kits only show their first frame,
+    so the mod animates them itself.
+- **Audio.** `ctx.audio()` drives the base game's sound driver, so its music and SFX play
+  together. `ctx.music().prepare("s1", id, frames)` synthesises any supplied ROM's song as
+  PCM, so S1 music can play on S3K.
+  - **Constraint:** while a prepared player exists its PCM replaces all driver output,
+    so SFX go silent. A soundtrack that crosses ROMs needs the engine change in §3.3,
+    now built as `ctx.audio().playMusic(game, id)` (§3.3.1).
+- **Storage.** UTF-8 text files of at most 1 MiB under `saves/mods/<id>/`, replaced
+  atomically. Starfall's gzip+Base64 split-part codec with a backup already handles larger
+  saves.
+- **No scene-to-level handoff.** A scene cannot start a real stock level and get control
+  back. Patch mods can run custom objects inside real levels (Infinite Sonic rewrites GHZ
+  terrain with real physics, and Sonic Survivors runs a whole roguelike UI in real S2
+  acts). That is a different mod kind with its own session.
+- **Packaging.** `ggfmod package` rejects mutable static state (`STATIC_STATE_UNSUPPORTED`).
+  Catalogues must be instance-owned.
+- **Tests and footage.** `ExampleModHarness` gives bridge tests, and `ExampleModCapture`
+  produces scripted PNG, MP4 and WAV.
+
+## 3. The three foundation decisions
+
+### 3.1 Architecture: scene mod (recommended) or patch mod
+
+| | **Scene mod** (own simulation) | **Patch mod** (real S1 levels) |
+|---|---|---|
+| Movement | Creator controller ported from `Sonic_Move`/`Sonic_Roll`/`Sonic_Jump`/slope resistance, on authored height maps. Starfall's flat controller is the starting point. Loops are scripted. | The engine's real physics: slopes, loops, spindash, rolling, rings-as-health. |
+| Art | Kit blocks, ROM sprites and palettes, all drawn by the mod. GHZ flower and water animation reimplemented. | Real GHZ rendering, animated tiles, palette cycles, parallax and objects. |
+| UI (inventory, shops, dialogue, calendar, crafting) | Natural. Slay has a screen stack, focus regions and mouse support. | Overlays over gameplay (`LevelOverlayCanvas`). Every modal screen fights the level loop. |
+| World state (days, schedules, off-screen growth) | Mod-owned; save on sleep. | Rebuild each area from mod state on every load, and give every mod object rewind recreation and captured state. |
+| Cross-game cast (Tails, Knuckles, Egg Robo) | `rom("s3k")` sprites through the API. | Patch ROM-art intake is S2-only. An S1 patch would need new hooks or non-API engine references (Survivors imports `GraphicsManager` and `AbstractPlayableSprite`). |
+| API cleanliness as an example | Clean, like Slay and Eggman's Sky. | Heavy use of non-API engine internals. |
+
+**Recommendation: scene mod.** Every system the genre needs is mod-owned state plus UI,
+and the cast spans three ROMs. Authentic movement is achievable with a ported controller
+on terrain we author ourselves. The patch route buys real physics but would need several
+engine hooks and still fight the UI.
+
+A real engine level inside a scene (for an arcade cabinet that runs the real GHZ1, say)
+would be a large new Mod API capability: a scene-to-gameplay-session bridge. It is noted
+as a stretch, not a dependency.
+
+### 3.2 Perspective: side view, the "cross-section valley" (recommended)
+
+- **(A) Top-down 3/4.** This gives the deepest farm grid, but no ROM has front-facing
+  walk frames for any character. Blue Sphere has back views and everything else is side
+  view, so "walking toward the camera", the most common facing in that view, would be
+  original art for the three heroes and every villager. Green Hill's tiles are side
+  elevations: the checker pattern is a cliff face, not a floor. The result is high cost,
+  weak identity and the biggest risk of looking like a fan sprite sheet.
+- **(B) Side view.** Every kit, character, badnik and animal works unmodified, and the
+  walk between chores becomes Sonic movement. The cost is that each terrace's farm is a
+  one-dimensional row. Verticality, a cellar, width and terrace allocation compensate.
+- **(C) Hybrid** (top-down valley, side-view expeditions). This inherits A's art problem
+  and B's full cost: two half-games.
+- **(D) Belt-scroller depth band** (River City Ransom style). Characters stay in profile
+  and walk up and down inside a shallow ground band, which gives the farm two or three
+  rows of depth. It is worth a look test if B's single row proves thin.
+
+**Recommendation: B** (superseded for the farm by §3.4). The valley is one continuous side-view world, roughly five
+screens wide and three terraces plus a cellar high, about the footprint of GHZ Act 1:
+
+- the farm on the left third;
+- the town in the middle;
+- the waterfall lake on the right;
+- the Marble Ruins under the cliffs;
+- a plateau above.
+
+Plots are 16 px wide, so a 400-px screen holds 25. The farm starts as two terraces of
+about 40 plots and grows to six terraces plus the cellar, about 300 plots. That is within
+what most players of the genre actually cultivate. Prototype a back-row lane (D-lite:
+holding up while standing still steps to a second plot lane 8 px up, drawn one shade
+darker) only if the slice shows that single rows feel thin.
+
+### 3.3 ROMs, base game and audio
+
+- **Base game: S3K.** Sonic, Tails and Knuckles, the Egg Robo, the elemental shields and
+  their sounds, and the richest SFX set are all native, as in Slay and Eggman's Sky.
+- **Required: S1 as well.** Green Hill is Sonic 1. Without it the mod shows a friendly
+  "needs Sonic 1" screen.
+- **Optional: S2.** It adds Emerald Hill (summer), Casino Night (the fair), Sky Chase (the
+  flight to Angel Island), and the bear, monkey, eagle, mouse and turtle villagers and
+  livestock. Each has a fallback.
+- **Engine addition (Mod API): background music from another supplied ROM, played
+  under the base driver's SFX (built; §3.3.1).** The season/hour soundtrack in §8 crosses all three ROMs, and
+  today that silences every tool, spring and ring sound. Any multi-ROM scene benefits,
+  Eggman's Sky included. The fallback is a soundtrack drawn from S3K only, which loses
+  Green Hill's own theme in spring. That loss is unacceptable for this game.
+
+#### 3.3.1 Background music engine addition
+
+**Built:** `SceneAudio.playMusic(game, id)`, a default method next to the existing
+`playMusic(id)`. The running game's songs take the base route. Another supplied game's
+song takes the existing cross-game **donor route** (`AudioManager.playDonorMusic`,
+`MusicRoute.DONOR_SMPS`), the route that plays S3K Super music in an S2 game. The call
+returns false when that ROM was not supplied or has no such song. The creator recipe is
+in [mod-scenes.md](../../modding/guides/mod-scenes.md#5-audio-and-storage).
+
+**How the donor route fits.** The song is a second game's sequencer running inside the
+base driver session, with its own loader, DAC bank, sequencer config and coordination-flag
+handlers. It is the driver's current music, so the stock rules apply unchanged:
+
+- It loops at its own loop jump.
+- Effects take over music channels and hand them back.
+- `stopMusic` and `fadeOutMusic` act on it.
+- A stock jingle saves and restores it.
+- It is recorded in the command timeline like any song.
+
+Evidence (`TestSceneDonorMusic`, an S3K session playing S1 Green Hill over 3,768 frames,
+past its loop jump at 3,168):
+
+- **It is Green Hill as Sonic 1 plays it.** The 100 ms loudness envelope matches Sonic 1's
+  own driver rendering with correlation 0.997, at zero lag. The Marble control scores 0.03.
+- **It loops to the body, not the intro.** The repeat matches the loop body with
+  correlation 0.999; the same window shifted 97 frames scores 0.36.
+- **It never falls silent.** The quietest 100 ms window scores RMS 152.
+- **Effects play over it.** An S3K ring's contribution correlates 0.67 with the ring
+  alone. The music channel the ring takes over should explain the shortfall, but that
+  was not measured separately.
+- **The 1-up hands it back.** The S3K 1-up replaces the song while it plays (relative
+  change 1.36), and the song returns afterwards.
+
+No engine fix was needed to play S1 songs in the S3K driver session.
+
+**The one gap was lifecycle.** The donor registry is global and keyed by the real game
+code, which is also the key presentation coordination handlers resolve by. A scene's
+loaders read `SceneRomLibrary`'s own ROM views, which close with the scene. The registry
+had no per-key unregister, and `clearDonorAudio()` would also wipe the
+`CrossGameFeatureProvider` donor registered at gameplay bootstrap. The fix is
+`com.openggf.audio.ScopedDonorAudio`, an engine-internal helper over package-private
+`AudioManager` state capture, so it adds no creator surface. Opening it captures the
+key's route and its music and sound bindings. Closing it restores them, under a fresh
+generation so no asset cached for the scene can answer for the restored route.
+`TestScopedDonorAudio` registers a stand-in prior donor, borrows the key and checks that
+the prior one is back. Leaving the scene also stops another game's song that is still
+playing; the base game's own music is left as it was.
+
+**Accepted limits.**
+
+- Every profile's `OrdinaryMusicSfxPolicy` is `STOP_ALL`, so starting or changing a song
+  stops effects still ringing, as every stock song change does.
+- There is no music volume. Fades are the base game's own (S3K about four seconds).
+- Effects steal music channels, as on the console.
+- A `ctx.music()` song player still replaces all driver output, donor song included.
+
+**Considered and set aside: a second, additive synthesizer.** This was built first and is
+kept off the branch as a patch. Each song ran in its own `OwnedSmpsAudioStream`, the
+session finite `prepare` uses, and its PCM was added to the base driver's final mix
+through the `ScenePcmSource` hook. It shared `prepare`'s session code and offered volume,
+fades of any length and no global registry. Its tests were written but never run: the
+first queued run failed to compile on an unrelated probe, and the lead chose the donor
+route before a second run. It cost one more emulated chip per frame, its effects never
+shared a channel with the music, and a jingle ended the background instead of pausing it.
+More decisively, it duplicated what cross-game donation already does, and the user asked
+for one shared route.
+
+**Rejected outright.**
+
+1. **Restarting a finite `prepare` song.** It replays the intro instead of the loop body,
+   leaves a seam, is capped at ten minutes, and a started player silences every effect.
+2. **Prepared PCM with a loop region.** SMPS has no song-level loop point: each track
+   jumps on its own (`smpsJump`, `F6`), and local `F7` repeats also jump backwards. A
+   splice also cannot carry chip state across the seam (FM release tails, envelopes, PSG
+   noise and LFO phase).
+3. **The patch-mod `StreamedMusicPort`.** It is a launch-prepared, rewind-snapshotted
+   `@ModApi` port whose `State.sourceFramePosition` restore needs a seekable source,
+   which live SMPS synthesis is not.
+
+### 3.4 Two views: the belt-view farm inside a side-view valley
+
+The look test showed each view's strength. The belt field is the most convincing farm: rows
+of crops with depth and a Stardew-like density. The side view is the most convincing Green
+Hill: springs, slopes and the loop, using the act's own blocks. The game uses each where it
+is strongest.
+
+- **The farm (belt view).**
+  - Plot rows run in front of an upright back wall of Green Hill blocks drawn at 1:1. The
+    farmhouse, coop, barn and Capsule Garden stand along that wall as facades.
+  - Sonic, Tails or Knuckles walks side-on, moving into and out of the screen, with
+    Sonic_Move's acceleration and a jump. Animals, villagers, Flickies and pests share the
+    depth-sorted field.
+  - The field grows by rows and columns as it expands, instead of by terraces.
+  - The spin dash runs along a row, tilling as it goes.
+- **Everything else (side view).** The valley path, the town, the lake and fishing, the
+  plateau, the Ruins, festivals and Angel Island use the ported side-view controller with
+  springs, slopes and loops.
+- **The seam.** The farm gate at the valley's west end is a Star Post. Running past it
+  folds the view: the side-view terrace tilts down into the field over about half a second,
+  and Sonic keeps his speed and facing. Leaving through the gate reverses it.
+  - Each view owns its controller and camera; the day clock, inventory and Momentum carry
+    across.
+  - A visit never changes view mid-screen anywhere except at the gate.
+- **The cost, accepted.** There are two controllers and two renderers, but the look test
+  already has both. Every farm system (plots, buildings, animals, automation) is laid out
+  in belt coordinates (column, row). The valley's systems use side-view world coordinates.
+
+## 4. Who farms
+
+Use the S3K convention: **choose Sonic, Tails or Knuckles**, and the other two become
+villagers. Each plays differently, so the choice is more than a skin:
+
+- **Sonic.** Fastest. Spin dash tills three plots in a line. Needs springs to reach the
+  upper terraces. This is the canonical story and the default.
+- **Tails.** Flies between terraces freely and carries two held items. His spin is weaker
+  (tills one plot).
+- **Knuckles.** Glides and climbs cliff faces. He **digs** instead of tilling, which is
+  instant and can turn up buried items, and he breaks rocks in one punch. He is too slow
+  for the farm loop's full payoff.
+
+Each unchosen pair needs dialogue variants. Budget for that, or ship Sonic first and add
+the other two farmers in the full game (§10).
+
+## 5. The day
+
+- **Time.** A day runs 06:00–02:00 over about 14 real minutes (configurable), in 28-day
+  seasons. Time pauses in menus and cutscenes. At 02:00 you faint.
+- **Energy: Momentum (prototype) or conventional stamina (fallback).** Sonic does not get
+  tired, so a stamina bar is the wrong fiction. **Momentum** is drained 2–4 points per
+  chore (till, plant, water, harvest, chop, mine). It refills only through Sonic things:
+  a lap of the farm loop (+30), springs, rings, popping badniks and food. A full bar is
+  about 60 chores. This is the single most likely mechanic to become annoying, so it sits
+  behind one switch and the slice decides.
+- **Rings are currency and health.** A pest hit scatters rings in the classic burst. Grab
+  them back within three seconds or lose them. A hit at zero rings means fainting: the
+  "you fainted" jingle, a Continue screen, and the rest of the day lost.
+- **The HUD is Sonic 1's.** SCORE shows banked rings, TIME is the day clock and RINGS is
+  rings in hand.
+- **Day start.** The S1 title card reads `SUMMER 12` / `STARPOST VALLEY`.
+- **Day end.** The shipping bin is a signpost. At bedtime it spins, and the act-clear tally
+  counts up `CROP BONUS / ANIMAL BONUS / ARTISAN BONUS / TOTAL` to the clear jingle.
+- **Idle.** Sonic's foot tap tells the time: it quickens as the night gets later.
+- **Saving.** The game saves on sleep, as the genre does.
+
+## 6. Systems, mapped
+
+### 6.1 Farm buildings and placeables
+
+| Genre role | Starpost Valley | Notes |
+|---|---|---|
+| Chest | **Item Monitor** | Punch it open. Its screen shows the icon of what's inside. |
+| Coop, upgraded twice | **Cucky Coop** → Flicky nests → Pecky roost | Eggs, blue feathers, Ice Eggs (winter's only animal income). |
+| Barn, upgraded twice | **Pocky Pen** → Picky sty → S2 bear den (optional) | Fluff (wool), Hill Truffles, honeycomb. |
+| Well | **Waterfall Tap** | Redirects a GHZ waterfall onto one terrace, giving that row unlimited water. |
+| Greenhouse | **Capsule Garden** | The animal capsule, its dome rebuilt in glass. The reward for restoring the Great Capsule. Any crop, any season. |
+| Paths and stable | **Springs and the Farm Loop** | Placed red and yellow springs connect terraces. The loop refills Momentum. |
+| Sprinklers | **Reprogrammed Buzz Bomber** (8 plots) → Mk II (16) → **Caterkiller Crawler** (crawls a whole row) | Tails rebuilds badnik shells you bring back from the Ruins. |
+| Auto-harvest huts | **Flicky Roost** | A flock of 4–6 Flickies harvests one terrace into a basket, then circles Sonic in the S3K-ending formation. |
+| Fish pond | **Rocky's Pool** | A Rocky seal fishes passively. |
+| Tree tapper | **Ricky Roost** | A squirrel gathers nuts and sap. |
+| Bee house | **Buzz Hive** | A docile Buzz Bomber colony. Honey flavour follows the nearest flower. |
+| Monster hutch | **Badnik Garage** | Where your automation badniks sleep. |
+| Warp totems | **Big Ring warps** | Late game. |
+| Scarecrow | **Sonic Scarecrow** (totem wood) | Badniks avoid it. Mistakenly crafting the **Robotnik** scarecrow scares your own animals. |
+| Checkpoint | **Star Post** | You wake here after fainting. |
+
+### 6.2 Tools: moves plus the S3K shields
+
+Sonic's moveset is the tool belt. The three elemental shields are the upgrade tiers: one
+is equipped at a time from a Monitor Rack at home, with one spare carried (rising to
+three). Sonic never holds a hoe.
+
+| Job | Tool | Upgrade ladder (built by Rusty the Egg Robo) |
+|---|---|---|
+| Till | **Spin dash** (innate) | Sneakers (1 plot) → Power Sneakers (2) → Speed Shoes (3) → Chaos Sneakers (3, and you can run on water) |
+| Water | **Water Shield** | 10 → 20 → 40 → 80 plots per fill. Refills instantly from any water. |
+| Chop and mine | **Fire Shield** | Fewer hits per tier. Burns weeds. Lava immunity in the Ruins. |
+| Harvest | **Lightning Shield** | Ripe produce flies to you, and dropped rings with it. The radius grows by tier. |
+| Fish | **Fishing rod** | Tails makes it from a Buzz Bomber stinger. Tiers add bait and tackle. |
+| Inventory | **Monitor slots** | 12 → 24 → 36. |
+
+### 6.3 Crops (original names; each must change a rule)
+
+- **Spring**
+  - Ring Radish: the starter, 4 days, 35 rings.
+  - Green Hill Sunflower: the zone's own sunflower art. Regrows, and its seeds feed Cuckies.
+  - Palm Bean: grows on a trellis and regrows.
+  - Checker Cauliflower: can become a giant crop.
+  - Spring Tulip: the festival flower.
+  - Spin Spud.
+- **Summer**
+  - Emerald Melon: can become a giant crop.
+  - Motobug Tomato: regrows.
+  - Fire Shield Pepper: grants lava immunity for a day.
+  - Bluesphere Berry.
+  - Star Post Corn: summer and fall.
+  - Spring Yard Hops: trellis.
+- **Fall**
+  - Eggman Pumpkin: a three-plot giant crop that grows a Robotnik face, the best
+    screenshot in the game.
+  - Egg-plant: 1% grow a moustache, and Robotnik loves them.
+  - Marble Grape: trellis; Knuckles loves them.
+  - Ruby Berry.
+  - Totem Choke.
+  - Scrap Brain Amaranth.
+- **Winter.** Nothing can be sown. The valley takes on Ice Cap colours. Forage Snow Spuds,
+  Ice Crystals and Frost Rings (rings frozen in ice that the Fire Shield breaks out).
+- **Trees**
+  - The real GHZ palm, which gives coconuts.
+  - **Ring Fruit Tree**: matures in 28 days, then drops 10 rings a day in season. This is
+    the slow investment.
+  - Chaos Cherry.
+- **Rares**
+  - **Super Sunflower**: gold, from the Ruins.
+  - **Emerald Seedlings**: seven, each needing a full season of particular care (watered
+    only at night, planted on the cliff, and so on) to grow a Chaos Emerald. Each Emerald
+    adds +10 maximum Momentum. All seven unlock Super Sonic Harvest Day (§9).
+
+### 6.4 The Great Capsule and EGG (the community-centre and corporate paths)
+
+**The Great Capsule** is the cracked animal capsule on the hill. Restoring Robotnik's
+prison inverts its meaning. Flickies in six **Chambers** accept bundles:
+
+| Chamber | Accepts |
+|---|---|
+| Pantry | Crops |
+| Hatchery | Animal goods |
+| Reef | Fish and caught badniks |
+| Scrapyard | Minerals and badnik parts |
+| Bulletin | Friendship milestones |
+| Vault | 2,500 / 5,000 / 10,000 / 25,000 rings |
+
+Rewards: the Capsule Garden, the lake bridge, the Ruins minecart, the Tornado's parts (the
+route to Angel Island) and the Big Ring warps.
+
+**EGG (Eggman Enterprises General Goods)** opens at the valley gate in Scrap Brain
+storefront tiles, staffed by Egg Robos. It offers cheap seeds, an Egg Membership (5,000
+rings) and a **Valley Development Form**: badniks build each improvement for rings. Finish
+the form and the Capsule becomes a **Badnik Factory**. The cost is not a mechanical
+penalty but the population: animals leave, villagers' dialogue sours, and at the year-two
+evaluation the signpost stops on Robotnik and stays there.
+
+**Renamed (2026-10-09, the user's idea "Joja = Robo"):** the store is **Robomart** (the
+membership, the badnik-built Development Form upgrades and the facade follow), and its own drink is
+**Robo Cola**: cheap, a little Momentum, and the classic junk catch once fishing lands. Robotnik's
+Egg Mobile keeps its name.
+
+### 6.5 The Marble Ruins and Scrap Brain Depths (mines)
+
+- **The Marble Ruins** lie under the cliffs.
+  - 40 chambers, each a one- or two-screen room assembled from Marble Zone kit blocks
+    with Eggman's Sky's seam-repair remixer.
+  - A hand-authored landmark every fifth chamber, plus Star Post elevators.
+  - Hazards: lava, pushable blocks, Caterkillers, Batbrains and Buzz Bombers.
+  - Yields: Scrap (from popped badniks), Marble Ore, Rubies and Emerald Shards.
+  - Combat is the spin jump, and every popped badnik frees an animal who walks home.
+- **Scrap Brain Depths** is the endless dungeon, reached through a flooded Labyrinth
+  passage after chamber 40. It has conveyors, electric beams, Ball Hogs, Bombs, and the
+  real drowning countdown wherever water intrudes.
+
+### 6.6 Fishing
+
+You can catch two kinds of thing:
+
+- **Fish:** 12–16 original fish in the S1 palette. Fish are the lowest-risk original art
+  there is.
+- **Submerged badniks:** Choppers, Jaws, and from S3K Jawz and Blastoid. They are the
+  legendary catches, and each yields an animal and a shell.
+
+The legendary of legendaries is **the Red Chopper**, the giant Chopper under the lake
+bridge that ate Barnaby's hat.
+
+The minigame is the **Bubble Bar**. Hold to rise and release to sink, keeping the catch
+inside a Labyrinth air bubble that shrinks under tension. On legendary catches the
+drowning-countdown digits appear as pure theatre.
+
+Fishing spots: the farm pond, the river, Waterfall Lake, the Labyrinth Cistern (diving,
+with the real air timer) and, later, the Angel Island shore.
+
+### 6.7 Animals and the population counter
+
+Livestock: Cucky (eggs), Pocky (Fluff), Picky (Hill Truffles, dug from the terrace), Pecky
+(Ice Eggs), Rocky (passive fish), Ricky (nuts and sap). With S2: the bear tends the Buzz
+Hive and the monkey picks tree fruit. Flickies are never livestock; they are helpers and
+couriers.
+
+Every freed animal joins the **valley population**, from wherever it was freed: farm
+pests, the Ruins or a fishing line. It starts at 6 and caps at 60. Every 10 unlocks a
+market stall, a festival booth or a new villager. The population takes the place of the
+genre's family: your household is the town.
+
+### 6.8 Town, collections and progression
+
+- **The Lamppost Inn.** Its lamp spins while it's open. Clementine cooks and Rusty tends
+  bar. Friday is Jukebox Night. Its music is Spring Yard Zone, which is already a lounge
+  tune.
+- **Arcade cabinets**, paid in Inn tokens that buy a prize shelf:
+  - **Spin the Signpost**, a timing game;
+  - a **Special Stage**, the S1 rotating maze rebuilt in-scene, whose goal is a rare seed;
+  - a **GHZ Dash** sprint on the valley's own physics. The real stock GHZ1 would need the
+    §3.1 bridge.
+- **Tails's Workshop Museum.**
+  - A Scrap Collection (the badnik bestiary).
+  - Minerals.
+  - Relics: totem fragments, ring moulds and Star Post caps.
+  - The **Sound Test.** "Records" found in the Ruins unlock ROM tracks for the jukebox and
+    your bedside radio. A ROM-music collection is the most Sonic collectible available.
+- **Signpost Board.** Quests are pinned outside the Inn and mail arrives by Flicky.
+  Robotnik posts suspicious special orders ("500 Egg-plants, no questions asked").
+- **Skills.** The level-5 and level-10 choices branch, as in the genre:
+
+  | Skill | Covers | Level-5 choices |
+  |---|---|---|
+  | Farming | Crops and animals | Ringgrower / Rancher |
+  | Ranging | Foraging | Forester / Gatherer |
+  | Fishing | Fishing | Angler / Trapper |
+  | Scrapping | Mining | Scrapper / Geologist |
+  | Bopping | Combat | Insta-Shield / Drop Dash |
+
+  Bopping's late choices include **Ring Keeper** (lose fewer rings).
+- **Crafting and artisan goods.**
+  - Machines: the Scrap Brain Furnace (Scrap → Steel → Chrome → Eggmanium), Monitor Jar,
+    Spring Yard Keg, Fluff Loom, Egg Machine (Robotnik's design), Sunflower Press.
+  - **Chili Dogs**, the one canon Sonic food, are the best Momentum meal in the game.
+
+### 6.9 Angel Island (the later-game island)
+
+The repaired Tornado flies to Angel Island. The flight is a Sky Chase shooter: on S2's Sky
+Chase kit if supplied, otherwise over the S3K AIZ intro sea.
+
+| Island location | Purpose |
+|---|---|
+| Mushroom Hill | Its mushrooms are the island's crops |
+| Lava Reef | Dungeon |
+| Hidden Palace | Knuckles's home and shrine |
+
+## 7. Neighbours
+
+The ROMs contain no humans except Robotnik, so the valley is populated by the animals Sonic
+freed. In canon they only chirp, so **animal villagers speak in icon bubbles until Tails's
+2-heart event, when you receive the Chirp Translator** and their speech becomes text. The
+first fortnight is spent reading pictures, and the moment the valley finds its voice is a
+real beat.
+
+**No romance.** A cast of a teenage hedgehog and rescued rabbits makes romance wrong. At 10
+hearts a villager becomes a **Partner**: they build a cabin on your farm (Knuckles just
+visits) and give a daily effect, and you can have several. Bonds fit a hero whose whole
+mythology is friendship.
+
+| Villager | Art | Home | Personality | Loves | Arc (2/4/6/8/10 hearts) |
+|---|---|---|---|---|---|
+| **Tails** | S3K | Workshop under the wrecked Tornado | Earnest inventor, over-explains, hero-worships you | Scrap, Chili Dogs | Reprograms Moto → Translator → Buzz Bomber sprinkler blueprint → finds the Tornado engine → first flight to Angel Island |
+| **Knuckles** | S3K | Cliff shrine; glides in during Summer Y1 after an Emerald Shard | Blunt, proud, allergic to lies | Marble Grapes, Emerald Shards | Suspects you → tests you in the Ruins → teaches digging → admits he's lonely → Hidden Palace |
+| **Dr. Robotnik** | S1/S3K | Egg Mobile caravan behind EGG | Grandiloquent schemer, occasionally and genuinely helpful | Egg-plants, eggs | Sells to you → tries to buy the farm → the Fair judging scandal → shows the "badniks were meant to be *rides*" blueprint → betrays you anyway, warmly. Never a Partner. |
+| **Rusty** (Egg Robo) | S3K | The Inn's back room | Literal and gentle; left Robotnik after a firmware fault | Oil, batteries | Learns to want things → asks what a day off is → repairs the Star Posts → chooses a name → becomes the valley clockmaker |
+| **Pip** (Flicky) | S1/S3K | Nests in your signpost | Gossip and courier, never lands for long | Sunflower seeds | Postal route → the lost letter → organises Night of the Flickies → leads the migration and comes back |
+| **Dandel** (Pocky) | S1 | Seed stall | Anxious rabbit, undercut by EGG | Ring Radish | Stall failing → you stock it → Robotnik's buyout → refuses → it becomes a co-op |
+| **Clementine** (Cucky) | S1 | Inn kitchen | Warm, bossy, feeds everyone | Star Post Corn, honey | Recipes → cookbook → the Chili Dog recipe → caters the Fair → the Inn is named for her |
+| **Pud** (Picky) | S1 | Shack at the Ruins mouth | Brave about gems, scared of the dark since his capture | Rubies, anything shiny | Won't enter → sells you a lamp → follows you to chamber 10 → finds the Super Sunflower seed → opens the minecart |
+| **Barnaby** (Rocky) | S1 | The lake jetty | Old fisherman with one story | Ice Eggs | Teaches fishing → the hat story → the Red Chopper → you catch it → he gives you the hat |
+| **Frost** (Pecky) | S1 | Ice hut by the river | The only one who loves winter; homesick | Snow Spuds | Hosts the Ice Cap Festival → snowboard → admits homesickness → the Ice Cap Record → stays |
+| **Hazel** (Ricky) | S1 | Treehouse over the museum | Kid squirrel who wants to be fast | Acorns, relics | Museum assistant → the stolen relic → you teach her the spin dash → she takes the loop → she's fine |
+| **Moto** (Motobug) | S1 | Your farm | Pet, beeps | Petting | At game start, choose Moto or a Crabmeat |
+| **The Elder Totem** | GHZ totem | Hilltop | The valley's memory; faces animate by palette; speaks in riddles | Festival offerings | Gives the year-two evaluation. A grandparent figure without inventing a human. |
+| S2 extras | S2 bear, monkey | Arrive at population 30/40 | Beekeeper, carny | Honey, mangoes | Short arcs; they run the Hives and the Fair booth. |
+
+Example Partner effects:
+
+- Tails tops up one automation badnik a day.
+- Knuckles digs up one buried item.
+- Clementine leaves a meal in your monitor.
+- Pip ships your bin for +5%.
+
+## 8. Calendar, festivals, weather and music
+
+| Season | Festivals | Day / night music | Look |
+|---|---|---|---|
+| Spring | 13 **Ring Hunt** (60 s to find rings around town; Tails wins until you beat him). 24 **Sunflower Parade** (every sunflower blooms, palette cycles). | Green Hill (S1) / Star Light (S1) | Stock GHZ |
+| Summer | 11 **Great Valley Race** (a looped GHZ track against Tails, Knuckles and Robotnik in the Egg Mobile). 28 **Night of the Flickies** (the S3K-ending migration over the lake). | Emerald Hill (S2) or Angel Island 1 / Mushroom Hill | Warmer, saturated |
+| Fall | 16 **Valley Fair** (a grange display judged by a biased Robotnik, Casino Night slots, a spring-launch strength test). 27 **Scrap Brain Night** (a haunted maze with a Mecha Sonic silhouette at the end). | Mushroom Hill 2 (its autumn turn) / Angel Island 2 (the burning palette) | MHZ autumn ramps |
+| Winter | 8 **Ice Cap Festival** (a fishing contest and the snowboard run). 25 **Star Light Feast** (secret gifts). | Ice Cap (S3K) / Star Light | Ice Cap palette on GHZ, snow caps |
+
+- **Weather.** Sun, rain, storms, snow and two special days:
+  - Rain is the Labyrinth palette, and the Labyrinth theme plays.
+  - A storm gives a free Lightning Shield charge.
+  - A **Badnik Swarm** day: the TV warns "Robotnik is active" and a Buzz Bomber wave
+    crosses at noon.
+  - On the rare **Emerald Aurora** night, crops planted that day roll for Super quality.
+- **Other music.**
+  - The Ruins play Marble, then Labyrinth, then Scrap Brain.
+  - EGG plays Scrap Brain.
+  - Bosses and legendary catches use the boss theme.
+  - The credits use the S1 ending.
+  - The jukebox overrides everything once you own a Record.
+- **Seasonal palettes.** Every palette is derived from palettes that already exist in the
+  ROMs. Emerald Hill is a Green Hill recolour, Mushroom Hill has an autumn turn, Angel
+  Island 2 has a burnt palette and Ice Cap is winter. Never swap the kit: the valley must
+  always read as Green Hill.
+
+## 9. Signature ideas only a Sonic game can have
+
+1. **Tilled soil is the checkered dirt.** Spin-dash across grass and it becomes the iconic
+   brown-and-tan checker.
+2. **Rings are health,** with a three-second recovery window.
+3. **The farm has a loop on purpose:** take a lap to refill Momentum.
+4. **The HUD is Sonic 1's;** the end-of-day tally is the act-clear screen.
+5. **The day opens with a title card.**
+6. **The foot tap is the clock.**
+7. **Pests are badniks, and popping them grows the town.**
+8. **Monitors are chests** and show their contents.
+9. **The elemental shields are the tools.**
+10. **Reprogrammed badniks are the automation.**
+11. **Flickies are the harvesters.**
+12. **The animal capsule becomes the greenhouse.**
+13. **Deep fishing uses the drowning countdown** honestly. The Water Shield extends it.
+14. **Big Ring bonus.** Bank 50 rings in a day and a Big Ring hangs over the signpost at
+    dusk, leading to a special-stage maze with a rare seed.
+15. **Seven Emerald Seedlings unlock Super Sonic Harvest Day,** once a season. For 60
+    seconds the clock stops, the Super palette cycles and you harvest the entire farm.
+16. **The Signpost Spin is the year-two evaluation.** The post flips through Robotnik and
+    the Elder Totem's faces and, if you did well, stops on yours, as the S1 end-of-act post
+    does. The number of flips (1–4) is the score.
+17. **Weather is palette.**
+18. **The Sound Test is a collectible.**
+19. **The Giant Eggman Pumpkin.**
+20. **Placed springs and Star Posts are your paths and checkpoints.**
+21. **The ending.** Restore the Capsule and grow all seven Emeralds, and the giant
+    Special Stage ring appears at the valley gate at dusk.
+    - Sonic stands at the signpost, tapping his foot and looking at it. The animals wave.
+    - He runs through, and the credits roll over the S1 ending: flowers bloom where he
+      runs.
+    - Then `YEAR 3 — SPRING 1`, and he is back in his hammock. The ring stays as a door.
+    - The valley becomes the place a hero who never stops comes back to.
+
+## 10. Scope tiers
+
+- **Vertical slice (proves the fantasy):**
+  - Spring only, with Sonic as the farmer.
+  - Two terraces and the loop.
+  - Five crops and the Water Shield.
+  - Momentum, and rings-as-health with Motobug and Buzz Bomber pests.
+  - Four villagers (Tails, Robotnik, Pip, Dandel) up to 4 hearts with icon speech.
+  - The Inn and Ruins chambers 1–5.
+  - Pond fishing with four fish and a Chopper.
+  - The Ring Hunt, the signpost tally, day and night, and saving on sleep.
+
+  Success test: a player who knows neither game reference says "this feels like Sonic"
+  unprompted.
+- **Complete one-year game (recommended delivery):**
+  - All four seasons, every crop and the trees.
+  - Three shields and four sneaker tiers.
+  - All villagers up to 8 hearts, the Translator, and at least two Partners.
+  - The Great Capsule and the EGG route with its ending.
+  - Ruins to chamber 40.
+  - 16 fish and the badnik legends.
+  - All the animals and the automation.
+  - Eight festivals.
+  - The museum and the Sound Test.
+  - Population up to 60.
+  - The Signpost Spin evaluation.
+- **Full game:**
+  - Angel Island.
+  - Scrap Brain Depths.
+  - The Emerald Seedlings, Super Harvest Day, and the Big Ring ending into Year 3.
+  - All 10-heart events, including Robotnik's.
+  - Tails and Knuckles as farmers.
+  - Partner cabins and Big Ring warps.
+  - Achievements.
+  - Optional direct-connect co-op, using Putt-Putt Paradise's network precedent.
+
+## 11. Risks of a cheap reskin
+
+| Risk | Cure |
+|---|---|
+| Top-down by reflex | Side view, decided now. |
+| Content only pun-deep | Every named thing changes a rule (§1 pillar 3). |
+| Villagers who are genre archetypes in costume | Cast from canon relationships (Knuckles's distrust, Tails's hero-worship, Robotnik's showmanship). The Translator arc makes the animals' silence a story. |
+| A thin one-dimensional farm | Terraces, cellar, density. A back-row lane only if the slice needs it. |
+| Momentum becomes a chore | A generous bar, food, Emerald growth, and a fallback behind a switch. |
+| Garish seasons | Ramps derived from existing ROM palettes only. |
+| A defanged Robotnik | He escalates: Swarm days, the Fair scandal, the Development Form, and an EGG ending that is a real loss. |
+| Soundtrack loop fatigue | Season and hour rotation, plus the Sound Test as progression. |
+| Scope sprawl toward Angel Island | Nothing beyond the one-year game starts before the Signpost Spin works. |
+| Original art creeping in | A hard rule: original art covers fish, food and icons, UI and one sleeping pose. Nothing with a face. |
+| The arcade steals the show | The farm's movement must feel at least as good as the cabinets. Cabinets cost game time. |
+| Save-state sprawl | Simulation lives in a few mod-owned models with one versioned codec. Save on sleep, plus a recoverable backup. |
+
+## 12. Changes from the raw brainstorm, for feasibility
+
+- **The real GHZ1 in the Inn cabinet** needs a scene-to-gameplay bridge that doesn't exist
+  (§2). It becomes a GHZ Dash on the valley's own physics. The bridge is listed as a
+  stretch engine capability.
+- **"Real CNZ slots"** become CNZ slot art (optional S2) driven by the scene. They can't
+  be the stock object.
+- **Bear and monkey villagers** were described as S2/S3K. The survey shows they are S2
+  only, so they are optional extras with fallbacks.
+- **"Real Sonic physics"** in a scene means a creator controller ported from the ROM's
+  movement routines. Starfall's controller is flat-only, so slopes, rolling and spin dash
+  are new work. Loops are scripted.
+- **Season music across three ROMs** needs the §3.3 mixing addition, because a prepared
+  cross-ROM player silences driver SFX today.
+- **Rewind adapters** were listed as a save risk. They don't apply to a scene mod, whose
+  state is mod-owned. The real risk is save-state size and versioning.
+
+## 13. Proposed next step: a look test before any systems
+
+Spend about a day on a throwaway scene, captured with `ExampleModCapture`, to answer the
+two questions that could overturn this design:
+
+1. A composed farm terrace built from GHZ kit blocks, with tilled checker soil, three crop
+   rows at different growth stages, the four seasonal palettes and dusk, at 400×224.
+   Does it read as Green Hill **and** as a farm?
+2. Sonic on the ported controller running the terrace, springing up a level and taking
+   the loop. Does the walk between chores feel like Sonic?
+
+Kill conditions: if the terrace reads as wallpaper or the single row looks thin, prototype
+the back-row lane (D-lite) before building systems. If the controller doesn't feel right
+on slopes, fix it before any farm system depends on it.
+
+### Look test as built (2026-10-09, uncommitted, base `8668a9012`)
+
+`examples/starpost-valley` with the `starpost.looktest` package (about 1,700 lines,
+throwaway). The jar validates with zero findings. Both views share their art, crops, seasons,
+time of day, farming actions and Green Hill's music. Tab switches between them.
+
+- **Side view.** Green Hill act 1 blocks 13, 45, 60, 3, 60, 45, 53, 38 and 1 (waterfall,
+  palms, field, totem ledge, field, palms, loop, slope, meadow), using the kit's own per-pixel
+  collision. Flat floors are at the ROM's row 192 and the ledge at row 96.
+  - Sonic uses a controller ported from `Sonic_Move`, `Sonic_RollSpeed`, `Sonic_Jump` and
+    `Sonic_SpinDash`.
+  - A tilled plot drops that column's grass lip and shows Green Hill's checker.
+  - The loop is scripted. Block 53's primary-path collision holds only the entry ramp, the
+    right inner wall and the top, so at speed Sonic rolls round it and exits past its right
+    foot.
+- **Belt view.** The same blocks stand upright at 1:1 as a back wall, with their floor line on
+  screen row 136. In front is a field of Green Hill's three grass greens with four rows of
+  plots, a shadow fading toward the viewer, and depth-sorted crops, props and Sonic (side-on,
+  with a shadow).
+- **Seasons** are colour maps over the ROM art, snapped to the engine's Mega Drive levels.
+  **Dusk and night** are palette-mapped skies (sunset orange and pink, or navy) plus a
+  multiply over the land.
+- **Background.** The kit's backdrop is cut into Sonic 1's Green Hill parallax: three
+  drifting cloud strips, mountains, hills, and water strips that move faster toward the
+  viewer.
+- **Footage** (outside the repository): `~/Videos/OGGF/starpost-valley/look-test/`
+  - `side-vs-belt.png`: both views in spring, fall, winter, dusk and night;
+  - `look-test-clip.mp4`: 21 seconds with Green Hill's music, made with `ExampleModCapture`
+    from the stills/clip scripts.
+
+Rejected during the look test:
+
+- **Terrain cut into a tiled grass strip.** Replaced by whole kit blocks, which keep the
+  zone's decoration, slopes and collision exactly.
+- **A belt-view back wall scaled to two thirds.** Non-integer scaling distorts the ROM's
+  pixels; the wall is drawn at 1:1.
+- **Dusk and night as a translucent fill.** Over Green Hill's deep blue sky it read as
+  purple; replaced by mapping the sky's palette.
+- **13-pixel crops.** Unreadable next to Sonic; the ripe crops are now 20–24 pixels tall.
+- **Static arrays for the crop pictures and names.** The validator rejects them
+  (`STATIC_STATE_UNSUPPORTED`); they are now methods and instance fields.
+
+Known look-test limits:
+
+- The keyboard's default pad mapping binds only A (Space), so X farms directly.
+- Prepared cross-ROM music silences sound effects (§3.3), so with music on the farming sounds
+  are inaudible.
+- The controller has no slope physics. Sonic follows slopes but they don't change his speed.
+
+## 14. Build plan and architecture
+
+The look test's throwaway package has been replaced by the game's own packages (base of the
+skeleton: `5ddc5131b`). The source is `examples/starpost-valley/src/main/java/starpost/`.
+The belt-view farm, menus and cutscenes are a mod scene. The valley/town, forty
+Ruins chambers, running festivals and Waterfall Lake are real additive S3K acts
+(§21–§25), re-encoded at load from the supplied Sonic 1 ROM. The engine's native
+player owns movement, collision, abilities and health. SceneContext.startAct and
+ActResult retain the farm/save/screen session across doors, activities and return
+visits; no hand-ported side-view controller remains. The BeltRunner belongs only
+to the farm. Tone now colours terrain claims in the outdoor acts too (§26); the
+Ruins keep Marble/Labyrinth/Scrap Brain palettes.
+
+| Package | Owns |
+|---|---|
+| `core` | Engine-free rules and state. `Calendar`, `Catalog` and `Content` (items, crops), `Inventory`, `Farm` and `Plot` (belt grid: 5 rows × 60 columns, 24 open at the start), `Game` (the save's root), `SaveCodec`, and `SaveSection` (one per further system). Tested without a ROM by `src/test/java/starpost/core`. |
+| `art` | Everything from the ROMs. `Art` loads the Green Hill kit, characters, sprites and solidity. `Tone` does seasons and skies, `CropArt` the original crop pictures (5 stages), `ItemIcons` the icons (monitor screens for the shields), and `Anim` steps character animations. |
+| `scene` | `StarpostScene` (the startup scene), `Shell` (screen stack with overlays, fades, saves, music), `PlayScreen` (farm, stationary town backdrops for menus, clock, HUD, the gate handoff), menus, `DayEndScreen`, `TitleScreen`, `FarmerSelect`, `Debug` (capture commands), `Music`, `Sfx`. Also the extension points `Actor` and `Systems`. |
+| `farm` | `FarmView` (the belt field) and `BeltRunner`. |
+| `valley` | `Valley` (the shared block/door map) and daily `Pickups`; scene menu backdrops have no movement controller. |
+| `realvalley`, `realtown` | ROM terrain intake/encoding, native town objects and retained TownSession; ActSeasons owns outdoor palette writes and shared weather presentation. |
+| `realruins`, `realfest` | Native chamber/course directors, captured activity state, real collisions and scene result hand-back. |
+| `ui` | `Controls` (one read of pad and keyboard per tick) and `Text`. |
+
+Every further system plugs in through three seams, so lanes rarely edit the same files:
+
+1. **Save state.** Implement `SaveSection` (its own key prefix, validated load, overnight
+   work). List it in `Systems.sections`.
+2. **Things in the world.** Farm things implement scene `Actor` and are depth-sorted
+   with the crops through `Systems.install`. Act things are registered native objects,
+   use injected services(), and provide rewind recreation/captured state; ROM-backed
+   object sheets enter through the creator's S1 ROM object-art intake.
+3. **Doorways.** `Valley.places` names them, and `PlayScreen.places` maps ids to scene
+   screens. Native directors return a doorway/event payload to the retained scene;
+   closing a menu resumes that act at the same doorway. The gate returns to the farm.
+
+Content is added through new `Content`-style registrars called from `Content.register`, never
+static tables (the validator rejects them).
+
+### Lead progress (commits `facc4b595`..`7218cfbff`)
+
+Built on the skeleton, each step verified with `ExampleModCapture` stills and the creator rules
+suite (23 engine-free tests at `94c3d883c`):
+
+- **Valley life.** Rings and seasonal forage along the path every morning (each ring is one
+  Momentum). The farm's back wall ends in Green Hill's loop: a lap at speed refills Momentum.
+- **Presentation.**
+  - The Sonic 1 HUD comes from the ROM (Nem_Hud labels, Art_Hud digits).
+  - A title-card font is gathered from the S3K zone names.
+  - The title screen.
+  - The opening cutscene to Sonic 1's ending theme, played by the real game with scripted
+    input.
+  - The morning card, and the night tally in Sonic 1's own "SONIC HAS PASSED".
+  - Buildings are assembled from Green Hill's pixels (`Facades`): sod roofs of the grass lip,
+    checker walls, plank doors from block 6, windows of the lake.
+- **Farm systems.**
+  - Placeable objects: Buzz Bomber waterers, the Caterkiller Crawler, scarecrows, Item Monitor
+    chests and Star Posts. Sprinkler coverage is computed before growth, so covered soil never
+    grasses over.
+  - Tails's workshop: recipes, the Water Shield tank, monitor slots, shields, the rod, land
+    clearing.
+  - The pond refills the Water Shield.
+  - Badnik pests: Motobugs eat crops, and each one popped frees an animal and raises the
+    valley's population.
+- **Progress.**
+  - The Great Capsule's chambers and bundles. Unknown items are left out until their system
+    is installed.
+  - The EGG store and Valley Development Form (renamed Robomart at `93eb0fb10`, after the
+    user's naming: Joja → Robo, JojaMart → Robomart, Joja Cola → Robo Cola).
+  - Five skills with professions at levels 5 and 10.
+  - Weather: storms, snow, badnik swarms and the Emerald Aurora.
+  - The Lamppost Inn's counter and jukebox (Records unlock tracks).
+  - Options: music, a 14/20/28-minute day, and Momentum or stamina.
+  - The year-two Signpost Spin and the credits.
+
+Rejected or corrected along the way:
+
+- **A scaled sprite.** A 0.75× Buzz Bomber smeared the ROM pixels; it is drawn at 1×.
+- **A debug command parser.** `give` split on underscores, breaking item ids with underscores.
+- **Menu layout.** Menus overprinted long names until they gained fit-to-width text.
+- **A title-screen banner.** The S3K card's red banner carries the game's name at its foot;
+  that part is painted over with the banner's red.
+- **The intro's side effects.** It picked up forage and could fold back out through the gate;
+  cutscenes now remove pickups, lock the gate, and hide the HUD and labels.
+
+Lanes (lead plus a few at a time, each in its own worktree, merged into
+`feature/ai-starpost-valley`):
+
+| Lane | Scope |
+|---|---|
+| Lead | Integration, art direction (buildings assembled from Green Hill pieces, the Sonic 1 HUD, the title, the intro and ending), Momentum and the farm loop, crafting and Tails's upgrades, the Capsule and Robomart, the three farmers, weather, balance, captures, README, PR |
+| Audio | The engine's background-music addition (§3.3) |
+| People | `starpost.people`: the villager roster, schedules, picture speech, the translator, gifts, hearts, heart events, mail, Partners |
+| Ruins | `starpost.ruins`: the Marble Ruins chambers from the Marble Zone kit, spin-jump combat, ores and minerals, Star Post elevators, Scrap Brain Depths |
+| Waters and barns | Fishing (Bubble Bar, fish, badnik legends, the lake), animals and buildings on the farm, artisan machines, badnik automation, Flicky roosts |
+| Festivals | `starpost.festivals`: the eight festivals and their games, the Signpost Board's requests, the trophy shelf |
+
+### Integration and the farmers (`afc4d901e`..)
+
+- **The three farmers (§4).** In the valley and the Ruins, `Runner.secondMove` gives Tails
+  flight (`FLY_TIME` 480 frames, then tired) and Knuckles a glide that grabs walls to climb. On
+  the farm, `core.Farmers` holds the differences as engine-free rules (`FarmersTest`). Sonic's
+  spin dash (9) tills its whole roll. Tails's spin (6) tills three plots, but a Water Shield
+  charge also waters the next plot on. Knuckles's spin is 8; his tilling is a dig that turns
+  something up one time in eight (rings 5–20, a marble chip or the season's forage), he punches
+  rocks without the Fire Shield, and he gets half the farm loop's Momentum. The brainstorm's "Tails
+  carries two held items" was dropped: the hotbar has one selection, and a second would change
+  every menu.
+- **Merges.** Ruins `6d315491b`, People `358bd88c1`, audio `29e66cd79`, Waters and Barns
+  `736f2a231`, Festivals `3a5dfeda8`. The shared hooks (`Content.register`, `Systems.sections`
+  and `install`, `Debug`) were the only conflicts, resolved as unions. `Systems.install` hands
+  the Ice Cap Festival the Waters lane's `FishingSystem::contest` through the Festivals lane's
+  `FishingContest` seam. The board test that forbade fish requests was written before fishing
+  existed; it now checks that a requested fish is a priced catch.
+- **The soundtrack.** `Music` now calls `ctx.audio().playMusic(game, id)` (§3.3.1) for every
+  track. Songs loop at their own loop points and sound effects play over them. The prepared-PCM
+  player and its three-minute restart are gone.
+- **A session limit stopped three lanes at once.** Audio and Waters had committed; Festivals
+  had about an hour of uncommitted work. The lead compiled it, ran the creator tests (88/88),
+  committed it as a checkpoint (`ab519c910`) and briefed a fresh agent to do the visual pass.
+  Lesson for lanes: commit at each working milestone, not only at the end.
+- **Scene smoke test.** `TestStarpostValleyScene` (engine suite, S3K plus Sonic 1) plays each
+  farmer on the farm and in the valley, six Ruins chambers across the three zones, a talk, the
+  social page and a heart event, the lake and the Bubble Bar, every festival, the board, a
+  night's tally and the year's end. Everything goes through debug jumps with frames ticked and
+  drawn. The fault boundary must catch nothing.
+- **First-run playtest with real input (no debug jumps)** found four seams that only show when
+  lanes meet:
+  1. A new game's intro ends on the farm, where the Flicky post arrived and froze the cutscene
+     behind a letter. The post now waits while the clock is held.
+  2. The board's morning notice fired during the intro's fade and rode over the black morning
+     card. Notices now wait out transitions.
+  3. Pip standing beside the shipping signpost took the action button, so nothing could be
+     shipped. The signpost answers first.
+  4. Closing a menu with the action button left the key held into the farm, whose tap-on-release
+     acted on the signpost and reopened its menu. A hold that began in a menu is now ignored.
+
+  Also: the title band of the intro, the farmer-select lines, and labels drawn above the field
+  (`Actor.drawOver`). Verified afterwards: title to farmer to intro to morning card to letters, a
+  shipped tally (540 rings) and the next morning, and Continue loading the save. Capture
+  scripts must read letters with confirm: the `close` debug command dismisses a letter unread, so
+  the Flicky brings it again.
+- **Knuckles's climbing** had never been seen: no valley wall stands at glide height, and the
+  probed Ruins chambers had none either. `AbilitiesTest` drives the controller against a synthetic
+  wall: glide, cling, climb, pull up, kick off.
+
+## 15. People (lane)
+
+Branch `feature/ai-starpost-people` (base `facc4b595`), package `starpost.people`. The valley's
+neighbours from §7 with the kickoff decisions: Partners instead of romance, and animal villagers
+who speak in pictures until the Chirp Translator.
+
+### What is built
+
+| Part | Where | Notes |
+|---|---|---|
+| Rules and save | `People` (the `people` `SaveSection`), `Bond`, `VillagerDef`, `Line`, `Situation` | 250 points a heart, ten hearts; villagers without a Partner arc stop at eight. Talking once a day +20; gifts by taste +80/+45/+20/-20/-40 (item entry, else the item's `Kind`, else neutral), one a day and two a week, eight times on a birthday (which does not use up the week). −2 a day without a word, except Partners. Tools are never gifts. |
+| Cast | `cast/*.java`, one builder class per villager, `Cast` lists them | 14 neighbours: Sonic, Tails, Knuckles (two of them, whoever does not farm), Dr. Robotnik, Rusty, Pip, Dandel, Clementine, Pud, Barnaby, Frost, Hazel, the Elder Totem, and Moto the pet. About 25 daily lines each plus gift reactions, second-talk lines and thank-you notes (about 500 lines in all). |
+| Schedules | `Schedule`, `Spot`, `Anchors`, `VillagerActor` | Plans by season, weekday, weather and story flag, most specific first, as timed stops (`at`, `inside`, `farm`). Anchors are `Valley.places` ids at run time (a moved building keeps its regulars), with fallback x positions for tests. Villagers walk along the valley floor, cross the farm gate to visit the belt-view farm, go indoors (not drawn), and come out of the same door. |
+| Talking | `DialogueScreen`, `Speech`, `PeopleArt`, `Pictures`, `Glyphs` | The action button near a villager. The speaker's ROM sprite at 1x in a framed portrait, a name plate and typed, paged text. Holding a giftable item asks "GIVE THE … TO …?" first. Lines are chosen per day: special lines (first meeting, birthday, a date such as a festival eve, the week after a heart event) win; otherwise a weighted draw that favours rain, season, heart and farmer lines and avoids the last six said. |
+| Picture speech | `Pictures`, `Glyphs` | Animals before the translator speak in a bubble of pictures shown one by one: item icons (`art.icons`), faces (head crops of ROM sprites; Sonic and Robotnik are the signpost's frames 3 and 0), the ROM's ring, Motobug and Flicky, and small original glyphs (heart, rain, sun, snow, moon, note, house, gift, clock...). Lines can author their pictures; otherwise they are read from the words (item names, villager names, a word list, then the punctuation's mood). |
+| The translator | `People.TRANSLATOR` story flag in `Game.flags` | Set by Tails's 2-heart event (which also reprograms Moto, flag `moto_reprogrammed`). When Tails farms he is not a villager, so Sonic's 2-heart event (`sonic_2t`) has Tails build it at Sonic's prodding. |
+| Heart events | `HeartEvent`, `Step`, `EventScreen` | Scripts of place/walk/move/face/emote/say/pause/give/flag/music/sfx/pose/hop/leave/fade, positioned relative to where the farmer stood, so a scene plays wherever it triggers. Triggered by standing near an anchor in the valley (or anywhere on the farm) in a time window, with enough hearts and the previous event seen; marked seen when it starts. Letterbox bars hide the HUD; the clock stops. 42 events (table below). |
+| Mail | `Letter`, `cast/Mail.java`, `LetterScreen`, `PeopleSystem` | Each morning a Flicky flies in to the farmer with the day's letters (welcomes, Robotnik's offers and adverts, news, notes the morning after events, thank-you notes for loved gifts, Pip's birthday reminders the day before). Dated letters without `yearOne` come every year. Enclosures are given when read, or wait for room. |
+| Partners | `VillagerDef.partner`, `People.morning` | Tails (10 hearts: +10 Water Shield charges each morning) and Clementine (a Chili Dog in your monitors each morning). |
+| Social page | `SocialPage` | From the monitor slots (UP on the top row, or E): everyone met with hearts (partial fill toward the next), birthday, gifts this week, today's talk, Partner badge, the selected neighbour's line and discovered loved gifts. |
+| Debug | `PeopleDebug` (`jump=people_...`) | `hearts ID|all N`, `partner ID`, `translator on|off`, `talk ID`, `event ID`, `social`, `mail ID`, `hold ID X [DEPTH] [left]`, `release ID`, `pose ID NAME`, `snap`. |
+
+Bodies are ROM sprites only: the S3K heroes (Tails with his tails behind him while standing,
+`Obj_Tails_Tail_AniSelection`'s swish frames $22–$26), the S3K Egg Robo, Sonic 1's on-foot Eggman
+(`ArtNem_SBZ2_Eggman` $5E4CE / `Map_SEgg` $1A1E4 in `Pal_Sonic` $2380 plus `Pal_SBZ2` $2660;
+running is `Ani_SEgg`'s 7, 4, 8, 4), Sonic 1's freed animals at their native 16×24 (`Map_Animal`
+frames 0–1 to hop or flap, 2 to stand), Sonic 1's Motobug and Green Hill's totem pole in the
+season's colours.
+
+### Heart events
+
+| Villager | 2 | 4 | 6 | 8 | 10 |
+|---|---|---|---|---|---|
+| Tails | Chirp Translator, Moto reprogrammed | Buzz Bomber sprinkler blueprint (farm) | The Tornado's engine humming in the Ruins | Under the wing at night: "I'm scared you'll leave" | The engine roars: Partner |
+| Clementine | Second breakfast, radish stew recipe | The Lamppost Cookbook | The Chili Dog recipe (half Fire Shield Pepper) | At the Capsule: the night it opened; she stays | Breakfast at dawn on the farm: Partner |
+| Dr. Robotnik | The salesman: free Egg-plant seeds | Tries to buy the farm (farm) | Appoints himself Fair judge: Eggman Pumpkin seeds | "Badniks were meant to be rides" blueprint | — (out of scope) |
+| Pip | Moves into the signpost (farm) | Her mother's lost letter in the waterfall | Organises the Night of the Flickies | Will lead the migration and come back (farm) | — |
+| Dandel | A slow day: free radish seeds | Sells the farm's crops | Refuses Robotnik's buyout | The stall becomes the co-op | — |
+| Knuckles | Suspects the farmer | A dig test in the meadow | A digging lesson and island grape seeds (farm) | Lonely on the ledge at night | — |
+| Sonic | Translator (Tails farms) / loop dare (Knuckles farms); the valley at speed | Chili dogs on the Inn's porch | | | |
+| Rusty, Pud, Barnaby, Frost, Hazel, Elder Totem | Day off; the lamp; fishing lesson; the cold spot; a race; the meadow's memory | The Star Post chimes; into the Ruins' mouth; the hat story; homesick for Ice Cap; a missing relic; a promise and totem leeks | | | |
+
+Events leave story flags for other systems: `blueprint_buzz_sprinkler`, `blueprint_motobug_ride`,
+`recipe_radish_stew`, `recipe_chili_dog`, `lamppost_cookbook`, `pud_lamp`, `pud_brave`,
+`barnaby_fishing_lesson`, `red_chopper_story`, `knuckles_dig_lesson`, `seed_coop`,
+`starposts_repaired`, `rusty_day_off` (changes his Sundays), `tornado_engine_heard`,
+`museum_relic_missing`, `partner_tails`, `partner_clementine`, `inn_kitchen_garden`.
+
+### Seams touched outside the package
+
+- `Systems.sections` adds `new People()`; `Systems.install` calls `PeopleSystem.install`.
+- `Debug` routes `people ...` to `PeopleDebug`.
+- `InventoryMenu`: UP on the top row (or E) opens the social page, with a hint line.
+
+Notes for the lead: `DayEndScreen` stops the signpost on `Map_Sign` frame 3, which is the
+third spin frame; Sonic's face is frame 4 (`.sonic`). `Debug` splits commands on underscores, so
+ids with underscores need rejoining (`PeopleDebug.merge` does it for people commands; core
+`give_ring_radish_1` cannot reach `ring_radish`).
+
+### Decisions and rejected approaches
+
+- **Hero worship needs a hero.** Lines that only make sense for one farmer are conditioned with
+  `farmer(...)` (`sayIf` in events); a test talks to Tails for forty days with Knuckles farming and
+  checks no Sonic-only line appears.
+- **Pictures read from words, authored where it matters.** Authoring a picture version for every
+  animal line doubles the writing; reading them from item and villager names gives every line
+  pictures (tested), and the key lines (events, gifts, greetings) carry authored ones.
+- **Events triggered by approach, not by doorways.** The doorways' handlers belong to other
+  systems (the Inn, the shop), so events fire when the farmer stands within a radius of an anchor.
+- **No static tables.** Every list (glyph grids, keyword pictures, anchors) is a method returning a
+  new value or a `switch`, for the mod validator.
+- **Picture speech at 2x.** At 1x the 16-pixel icons were hard to read in a 400-pixel bubble
+  (look-test capture of Dandel's greeting); icons and glyphs now draw at 2x, faces and signs
+  (already 22–32 pixels) at 1x. The speakers' portraits stay at 1x as the brief asks.
+- **Names under the feet.** Name labels over villagers' heads collided with the doorway labels
+  ("UP: DANDEL'S SEEDS") and with each other; only the nearest villager is named, on the
+  ground beneath it.
+- **The Egg Robo is three objects.** `Map_EggRobo` frame 0 is empty; Rusty is the body (frame 1)
+  plus the jet flame child (frames 4–6) at `ChildObjDat_919D0`'s offset, without the gun arm.
+- **Not built:** S2's bear and monkey, Partner cabins on the farm, 10-heart events beyond Tails
+  and Clementine (Robotnik's is full-game scope), choices inside events, and gifts or talk with
+  villagers who are indoors.
+
+### Tests
+
+`src/test/java/starpost/people/PeopleRulesTest.java` (engine-free): friendship and caps,
+tastes and kind overrides, the daily and weekly gift limits and birthdays, fading and Partners,
+every schedule resolving every ten minutes of every kind of day to a known spot, heroes absent
+when they farm and Knuckles arriving in Summer, events firing only in their place and time and
+only once, the translator switching speech mode (and every animal line having pictures), the cast
+having its lines, reactions and events, line variety and farmer-specific lines, the morning post
+and Partner perks, the section's round trip through `SaveCodec`, and damaged input rejected or
+clamped.
+
+```
+# fast creator tests through CreatorTestLauncher (a throwaway runner outside the repository)
+java -cp "$R/out:$CP" RunCreatorTests $R/tests $R/main        # 24 tests (9 core, 15 people), all pass
+# captures (ExampleModCapture, scripts use jump=people_...); validation: "Validation passed: 0 findings"
+java -cp "$CP" com.openggf.mods.code.ExampleModCapture --rom "$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  --mod examples/starpost-valley --out <dir> --script-file <script> --every 15 --ticks 430
+python3 tools/testing/maven_queue.py --lean -B -Dmse=off -Dtest=TestStarpostValleyExample test
+```
+
+A mutation check (Partners fading; first-meeting lines always matching) turned two tests red, so
+the rules tests do assert what they claim.
+
+## 16. Ruins (lane)
+
+Branch `feature/ai-starpost-ruins` (base `facc4b595`), package `starpost.ruins`. The valley's
+`ruins` doorway opens the Marble Ruins: forty side-view chambers on the ported Sonic controller,
+bands 1–15 Marble Zone, 16–30 Labyrinth Zone, 31–40 Scrap Brain Zone, with the zones' music
+(S1 `$83`, `$82`, `$86`).
+
+### Chambers
+
+- **Kits.** `RuinsArt` loads S1 public zones 1 (MZ), 3 (LZ) and 5 (SBZ), acts 1–3 (SBZ act 3 is
+  Labyrinth-built and unused). `Kit` abstracts a kit (layout, per-block collision, picture opacity)
+  so generation and its checks run without a ROM; `RomKit` wraps `SceneLevelKit`.
+- **Window.** A chamber is 2–4 blocks wide and 1–2 high (one or two screens), copied from the whole
+  stock layout. Each next column continues the act or, 40% of the time, jumps to a column whose
+  pair with the previous one occurs, row for row, side by side in the stock layout; remaining
+  seam cells are repaired with a block seen next to both neighbours and above/below (Eggman's
+  Sky's remixer at chamber scale). Windows with floor under less than 70% of the width or under
+  8% / over 80% collision are refused.
+- **Traversal check (`Reach`).** Standing spots every 8 pixels; from each reached spot the real
+  `Runner` plus `Chamber.afterStep` (springs, water) plays eleven input programs each way (walk,
+  walk off and drop, held/short/late/straight/reversed jumps, short and long run-up jumps, spin
+  dash, dash jump). Every spot stood on is reached; lava and spikes end a program; falling out of
+  the bottom reaches the shaft down (a pit drops you one chamber deeper). Up to 30 windows are
+  tried with up to three entries each, scored by reached spots, reached width and the farthest
+  flat spot; play hugging the top edge (median reached height under 100) is scored down.
+- **Placement.** The exit hatch goes on the farthest flat reached spot, so every exit is reachable
+  by construction; a yellow spring is added where it opens at least a seventh more of the room
+  (two at most). Then badniks, rocks, a ring monitor (20%), a ring trail that follows the found
+  route's floors and arcs over its jumps, a few extra ring groups, spikes from chamber 4 (kept only
+  if the exit, elevator and every placed thing stay reached), and air-bubble vents under water.
+  Chamber seed = mix(section seed, day number, chamber): the same all day, new each morning.
+- **Landmarks** (every fifth chamber; S1 windows chosen by eye from kit surveys, hand-picked entry
+  and find points, Star Post elevator placed by the check): 5 The Broken Temple (MZ2, Lava Ruby),
+  10 The Battlements (MZ1, Pud's Super Sunflower seed), 15 The Pillared Shrine (MZ3, Record:
+  Marble), 20 The Crystal Gallery (LZ1, water at 300, Tide Sapphire), 25 The Drowned Tunnel (LZ3,
+  flooded, Record: Labyrinth), 30 The Golden Stair (LZ3, Emerald Shard), 35 The Conveyor Hall
+  (SBZ2, Record: Invincibility), 40 The Sealed Depths (SBZ1, Records: Final Zone and Boss; no way
+  down yet — Scrap Brain Depths). A kit without the window falls back to a generated chamber with
+  the same elevator and finds.
+- **Marble lava.** The kit draws animated tiles at their first frame, which leaves MZ's lava blank
+  while its top-solid collision stays (S1 stands Sonic on lava; a Lava Tag hurts him). Runs of
+  floor with no picture at least 16 pixels wide, below row 40, become lava down to the bed beneath
+  and are drawn from `Art_MzLava1` (surface, 3 frames, 20 frames each, palette line 3) over
+  `Art_MzLava2` (magma), as `AniArt_MZ` animates them.
+
+### Rules (s1disasm routines)
+
+- **Rings are health.** Rings collected in the Ruins are *in hand* (banked into the wallet on
+  leaving or when the day runs out). A hit scatters them as `RLoss_Count` does (at most 32,
+  mirrored pairs from spread `$288`: sixteen at boost 2, sixteen at boost 1), bouncing per
+  `RLoss_Bounce` (`$18` gravity, floor check every fourth frame, a quarter lost per bounce) for the
+  shared 255-frame timer (FixBugs=0) — about 4.3 s, the ROM's figure rather than the brief's
+  "about 3". `HurtSonic` knock-back (`-$400`/`$200`, under water `-$200`/`$100`), hurt gravity
+  `$30`, 120 frames of flashing, no ring collection above 90 (`ReactToItem`). A hit with none in
+  hand faints: the S3K death leap, up to three non-tool stacks lose half, then `DayEndScreen(true)`
+  (the night's own 10% wallet loss).
+- **Bopping.** Rolling, jumping, spin-dashing or fire-dashing into a badnik pops it (S3K
+  explosion, `$B4`), with `React_Enemy`'s bounce; it frees one of its zone's two animals
+  (`Anml_VarIndex`: MZ squirrel/seal, LZ penguin/seal, SBZ rabbit/chicken) who hops away left at
+  `Anml_Variables` speeds, gives +3 Momentum and drops Scrap 35% of the time. Badniks: MZ Batbrain,
+  Caterkiller, Buzz Bomber, Yadrin; LZ Jaws, Burrobot, Orbinaut; SBZ Caterkiller, Bomb, Ball Hog,
+  with each object's collision size and speeds. The Bomb cannot be popped (`col_hurt`), the
+  Caterkiller's body and the Orbinaut's spike balls always hurt, and the Yadrin's back hurts from
+  above. Lava (unless lava is no threat) and spikes hurt too.
+- **Water** (Labyrinth: a line at 30–80% of the room, or flooded 25% of the time).
+  `Sonic_Water`: top speed, acceleration and deceleration halved, x speed halved and y speed
+  quartered on entry, y doubled (capped `-$1000`) on exit; jump `$380`, release cap `$200`, gravity
+  `$10`. `Drown_Countdown`: 30 seconds, a ding at 25/20/15, S1's drowning music `$92` from 12,
+  number bubbles (`Map_Bub` frames `$E`–`$12`), large vent bubbles refill air. Below the line
+  blocks are recoloured entry by entry to `Pal_LZWater`.
+- **Shields and finds.** Water Shield held: no air loss (S3K Bubble Shield). Fire Shield held:
+  lava is harmless, a second jump press is S3K's `$800` dash, and rocks burn for double yield;
+  eating a Fire Shield Pepper sets `ruins.lava_immune` until morning. Lightning Shield held: rings
+  within 64 pixels fly in. A carried Tide Sapphire is spent to save you from drowning; a carried
+  Spark Topaz makes every popped badnik drop Scrap.
+- **Rocks** (MZ smashable green block, else the S1 purple rock) break when rolled into at 3 px a
+  frame or more (2 Momentum) or burned with the Fire Shield (3, double yield); yields per band:
+  marble chips or scrap always, then Marble Ore, the band's gem, its geode, Emerald Shards (1–2%)
+  and, once, the band's Record (0.8%).
+- **Items** (`RuinsContent`, called from `Content.register`): Marble Ore, Lava Ruby, Tide Sapphire,
+  Spark Topaz, Emerald Shard, three geodes, seven Records (flag `record.s1.<id>` on pickup;
+  `RuinsContent.recordSong` maps them to S1 songs for the Sound Test) and Pud's
+  `super_sunflower_seeds` (registered as a relic until the farm defines its crop). Icons come from
+  `RuinsIcons` through the new `ItemIcons.Source` hook.
+- **Progress.** `RuinsSection` (`ruins.deepest`, `seed`, `popped`, `freed`, `best`, `seedFound`;
+  validated on load; `freed` is the Ruins' share of the valley population). Touching a landmark's
+  Star Post records it; at the doorway the elevator offers chamber 1 and every reached landmark.
+  Leave by the shaft of light at each entry or by riding an elevator (`shell.go(play)`); when the
+  day runs out Sonic passes out in the Ruins straight to `DayEndScreen(true)`, keeping his rings
+  (going to `play` first would show the valley for a frame before its own overtime check faded out: `Shell` starts the second fade from full brightness).
+
+### Seams outside the package
+
+`Catalog.add` public; `Content.register` calls `RuinsContent`; `ItemIcons.Source`/`addSource`/
+`picture`; `Systems.sections` adds `RuinsSection`, `Systems.install` calls `RuinsSystem.install`
+(which overrides the `ruins` toast handler); `DayEndScreen` and `InventoryMenu` public;
+`PlayScreen.drawHotbar` public; `InventoryMenu` sets the lava flag when a Fire Shield Pepper is
+eaten; `Debug` forwards `ruins …` (`ruins N`, `rings N`, `hit`, `spawn KIND DX`, `goto
+exit|elevator|monitor|rock|entry`, `at X Y`, `state`, `deepest N`, `elevator`). `Runner` gains
+`Ground.ceiling` (default none), S1 water physics, `knockBack`/`hurt` and the jump headroom check;
+with no ceilings and dry, its arithmetic is unchanged for the valley.
+
+### Rejected on the way (evidence from `ChamberProbe` and captures)
+
+- Windows from `playableArea()`: S1 MZ1's area is 688 pixels tall (its opening camera bounds), which
+  cut off the whole underground; the full layout is used.
+- Every floor with air above as a standing spot: S1 gives brick masses collision only at their
+  edges, so spots appeared inside walls and became entries; spots now need visible open air.
+- Lava as a thin band at the surface: MZ3's lake bed lies 46 pixels under the surface, so spots on
+  the bed counted as safe and an entry was placed inside the lava; lava now reaches the bed.
+- Ring trails from the route's parent links: one walk program links entry to exit in a single hop,
+  so trails became arcs through walls; trails now follow the floor column by column.
+- Exit on the farthest reached spot: on LZ slopes it fell back next to the entry (chamber 16: 27 of
+  63 spots, exit beside the entry); exits and scoring now use flat spots only.
+- Scattered rings collected on the hit frame: the collect check was read before the hit, so all
+  rings came straight back; it is read after.
+
+### Tests and captures
+
+- Creator tests (`src/test/java/starpost/ruins`, ROM-free on `TestKit`): chambers 1–40 identical on
+  regeneration and their exit, elevator and every placed thing reached by an independent traversal;
+  most chambers change overnight; a 120-pixel wall stops the check and a spring clears it; lava
+  found where floor has no picture and avoided; ring burst, bounces, hit/faint, faint losses, ore
+  yields, air, shields, content, and the section's round trip and damage clamping. 25/25 with the
+  core tests (RunCreatorTests).
+- ROM probe (scratch `ChamberProbe` over `RomKit`): seeds 12345, 777 and 31337 on days 0 and 5, all
+  240 chambers built, every exit and elevator reached, at most 126 ms per chamber.
+- `TestStarpostValleyExample` and `ExampleModCapture` (validation 0 findings); captures in
+  `~/scratch/sv-ruins/final/`.
+
+Not done: Scrap Brain Depths, pushable blocks and electric beams, solid rocks (rocks are
+non-solid so they never block the route), slope speed, Knuckles's and Tails's own moves in the
+Ruins, and Pud's lamp (People lane).
+
+## 17. Waters and barns (lane)
+
+Branch `feature/ai-starpost-waters` (base `93eb0fb10`), packages `starpost.fishing` and
+`starpost.barn`: fishing (§6.6), animals and their buildings (§6.1, §6.7), the artisan machines
+(§6.8) and the Flicky Roost (§6.1, §9.11).
+
+### Fishing
+
+| Part | Where | Notes |
+|---|---|---|
+| Who bites | `FishDef`, `FishTable` | 16 original fish and 5 submerged badniks by spot (farm pond, Waterfall Lake), season, hour, weather (dry, wet, storm, snow, the morning after a swarm, the Emerald Aurora), cast depth and story flag. Robo Cola is the junk catch (12% at the pond, 7% at the lake, always from empty water). Deep casts scale badnik weights by half plus the depth. The Reef bundles' ids (`bubble_bass`, `loop_pike`, `ring_carp`, `chopper_shell`, `jaws_fin`) are all here. |
+| The legends | `FishTable`, `Fishing.land` | Sonic 1's Chopper (pond and lake) and Jaws (lake, fall and winter), S3K's Jawz (rain) and Blastoid (storms), and the Red Chopper: lake, summer or fall mornings, deep casts, once a game, only after Barnaby has told the hat story (`red_chopper_story`). Landing one pops it: an animal goes free (`game.free()`) and its shell is kept; the Red Chopper also returns Barnaby's hat (he loves it). |
+| Catches that do things | `Fishing.land` | Ring Carp +5 rings, Bubble Bass +5 Water Shield charges, Scrap Sucker +1 scrap, Emerald Koi +30 Momentum; experience by difficulty, half again for a perfect catch. Badnik shells carry a `badnik:` icon key so the Reef Hand profession (+50%) pays for them in `Game.sellPrice`; the Angler's +25% covers every catch. |
+| The Bubble Bar | `BubbleBar` (rules), `BubbleBarScreen` | Hold to rise, release to sink. Inside the bubble the catch reels in; outside, tension builds, the bubble shrinks (up to half) and the catch slips; 45 frames' grace while the hook sets. The bubble is Map_Bub's full bubble with its top and bottom halves at 1x and its middle row repeated, giving way to frames 5 and 4 as it shrinks. Badniks move as their objects do, at the column's scale: `Chop_ChgSpeed` (launch -$700, gravity $18: a leap every 149 frames, scaled so a full leap reaches the top; the Red Chopper varies the height and darts between leaps), `Jaws_Swim` (constant speed, turning every 64 frames per subtype), `Obj_Jawz` ($200, aimed at the bubble and never steered), `AniRaw_BlastoidAttack` (128 frames' wait, three shots 15 frames apart, each kicking it up). On a badnik the drowning countdown's digits (Map_Bub 14-18) count down over the bubble with `sfx_AirDing` as the catch slips, as theatre. Barnaby's two-heart lesson (`barnaby_fishing_lesson`) and Fishing levels make the bubble bigger. |
+| The pond | `PondLine` (actor) | With the rod, the action button at the pond's edge casts (the new `FarmView.pondAction` hook; the Water Shield still refills there). The bobber arcs in and bobs; Labyrinth's splash (Nem_Splash, Map_Splash) marks the landing and the bite; walking off reels in. |
+| Waterfall Lake | `LakeScreen` | The valley's `lake` doorway. Green Hill blocks 1 (the shore), 51 (the log bridge over its pool: Barnaby's jetty) and 52 (a waterfall), with their collision; the water shimmers with `PalCycle_GHZ` (Pal_GHZCyc's four steps into line 3, colours 8-11, every 6 frames). Hold the action button to wind up a cast; the throw sets the depth. Fish shadows drift under the surface; Barnaby (Sonic 1's seal) sits on the jetty when People's own schedule puts him there; falling in sends the farmer back to the shore. Once the Capsule's Reef chamber sets `lake_bridge`, Sonic 1's bridge logs (Map_Bri frame 0) run from the jetty to the falls. The clock runs and the day can end there. |
+| Fishing contest | `FishingSystem.contest`, `LakeScreen` | A festival's timed contest (the Festivals lane's Ice Cap Festival hook has the same shape: `FishingSystem::contest`): the lake with a lent rod, the day's clock still, bites twice as soon, points per catch (5 plus a fifth of its difficulty, 10 more for a badnik, none for junk) on a board over the lake; at the whistle (or on walking off) the score is handed back once and the screen returns to the play screen. |
+| Save | `FishingSection` (`fishing`) | Landed counts per catch; unknown ids and bad numbers are dropped, counts clamped, once-only catches kept at one. |
+
+### Animals and barns
+
+| Part | Where | Notes |
+|---|---|---|
+| Buildings | `BarnSystem.workshopOffers`, `BuildingActor`, `BarnArt` | The Cucky Coop (2,000 rings) and Pocky Pen (4,000) are Tails's workshop offers; the Big Coop and Big Pen need `big_coop` (the Hatchery chamber or Robomart) and Hill Cloth. They stand on the back wall behind columns 25-46, assembled from Green Hill's pixels like the town (checker walls, sod roofs, log stilts, ramps and fence, plank doors), with Sonic 1's Cucky or Pocky standing on a plank sign. Up or the action button at the door opens the house's menu; goods wait by the door. |
+| Animals | `Animals`, `Animal`, `AnimalActor` | Cucky (eggs daily), Pecky (Ice Eggs every other day, winter only), Pocky (fluff every three days, two for a Shepherd), Picky (Hill Truffles dug into open grass on dry days outside winter, picked up as `TruffleActor`s), Rocky (up to two, in the farm pond, a pond fish a day, handed over when petted). Bought at the coop or pen; 4 to a small house, 8 to a big one. They wander before their house on dry days (Peckies in snow too) from 07:00 to 19:30, Sonic 1's sprites at 1x (Map_Animal 0-1 hopping, 2 standing); Rocky swims with only his top half showing. |
+| Rules | `Barn` (`barn` section) | Overnight: animals fed yesterday may give when grown and due, with a chance of 50% plus up to 50% from affection (two at once now and then above four hearts); affection drifts (-4 without a pet, -20 hungry, +3 in a big house); then each eats for the new day by grazing (dry weather outside winter, four plots of open grass each) or from its hopper (a fibre a day; in the coop a sunflower is three days, the sunflower's own rule). Petting once a day: +15, +30 for a Cuddler. |
+| Artisan machines | `Artisan`, core `Machine` | Monitor Jar (a crop or forage, three days, a jar worth twice the input plus 50; drawn as S3K's monitor, its screen static when empty and showing its item when loaded), Spring Yard Keg (fruit fizz in five days at three times the fruit; Spring Yard Hops make Spring Yard Fizz in two; its yellow spring bounces when ready), Fluff Loom (Hill Cloth overnight), Sunflower Press (oil overnight, Truffle Oil in two days). Sunflower oil dabbed on a working machine finishes it a day sooner. Jars and fizzes are generated per crop and forage from the catalogue (Kind ARTISAN). |
+| Flicky Roost | `Barn.harvestRoosts`, `FlickyFlock` | Recipe offered once `flicky_roost` is set. Each morning it picks ripe crops within 6 columns on its row into its 12-slot basket (chest storage, opened with the action button); its four blue Flickies (S3K Map_Animals1) fly each crop home, then circle the roof in `Obj_SuperTailsBirds`' formation (four birds a quarter turn apart, the angle advancing 2 of 256 a frame, aiming at sine/8 across and cosine/16 down from a point $20 above, accelerating $20 a frame and four times that to turn, vertical speed capped at $1000, wings every second frame). At night and in bad weather they perch. |
+
+### Seams outside the packages
+
+- `core`: `Content.register` calls `FishingContent` and `BarnContent`; `Game.sellPrice` applies Reef
+  Hand to `badnik:` icon keys; `PlaceableDef` gains `MACHINE` and `ROOST` and `slots()`; `Farm.machines`
+  holds `Machine` work; `SaveCodec` writes `machine.r.c` lines (kept only on a plot holding a
+  machine, with known items, count and day clamped) and restores chest contents into any object with
+  `slots()` (roost baskets).
+- `farm/FarmView`: `pondAction`, and `objectHooks` (`ObjectHook.use`, `removable`, `draw`); a loaded
+  machine or full basket is not knocked loose ("EMPTY IT FIRST").
+- `scene`: `Systems.sections`, `install` and the new `workshopOffers` with the `WorkshopOffer`
+  record; `WorkshopMenu` lists system offers and now honours `Recipe.unlock`; `PlayScreen.drawHud`
+  public; `Debug` routes `fish ...` and `barn ...`.
+- `people/cast/Barnaby`: loves `barnabys_hat`. `LakeScreen` reads Barnaby's schedule through People's
+  public API.
+
+### Decisions and rejected approaches
+
+- **Peckies and Pickies in the plain coop and pen.** §6.1 puts the Pecky behind the coop's second
+  upgrade, but the Hatchery bundle that grants `big_coop` asks for Ice Eggs and Hill Truffles: gated
+  animals would deadlock the chamber (only Robomart's 20,000-ring form could break it). The upgrade
+  gives room and comfort instead.
+- **The lake's pool from one column.** Block 51's water is see-through stripes over the background;
+  scanning one column for its first pixel ran to row ~240, so the lake showed Green Hill's background
+  hills and block 52's ground through the water (pixel samples alternated water and ground colours).
+  The pool now starts at the first row a quarter drawn, lies on a bed of its darkest water colour,
+  and the waterfall stops at it.
+- **A roost under its own roof.** The grass lip used as a sod roof is 24 pixels tall and hid the
+  16-pixel walls, so the first roost vanished into the field; the walls now sit below the roof.
+- **A held button after the Bubble Bar.** FarmView acts on the release of a short press, so the hold
+  carried over from the bar cast a new line after every escape (a capture showed a bobber in flight
+  after "IT GOT AWAY"); the pond ignores casts for 30 frames after a fight.
+- **The Red Chopper overhead.** Held up at twice the size above the farmer it left the screen on the
+  jetty; it now stands beside him.
+- **The Flickies' formation.** The brief names the S3K ending; the ending's flock was not found in the
+  disassembly, so the flock uses S3K's own Flicky formation, Super Tails's birds, with its numbers.
+- **Fish movement.** Fish seek targets on an original model (no ROM analogue); only the badniks use
+  their objects' motions.
+
+### Tests and captures
+
+`src/test/java/starpost/fishing/FishingRulesTest.java` (19) and
+`src/test/java/starpost/barn/BarnRulesTest.java` (16), engine-free: the table's size and the
+bundles' ids, the Reef and Hatchery chambers now fillable, bites by spot, season, hour, weather,
+aurora and depth, deep casts favouring badniks, the Red Chopper's story, morning and once-only rules,
+junk rates, a careful hand landing easy fish while an idle one loses them, harder fish escaping more,
+tension and the hook's grace, the bubble rising and sinking, the Chopper's 149-frame leap, the Jawz's
+$200 charge, the bubble's skill and lesson growth, the line's flight, bite, window and miss, each
+catch's rule, badniks freeing animals and the hat, Angler and Reef Hand prices, contest points;
+buying and room,
+laying and hunger, grazing, hoppers and sunflowers, fluff timing with the Shepherd, Ice Eggs and
+truffles by season and weather, Rocky's catch, petting, Cuddlers and big houses, collecting, each
+machine's recipes and timing, oil, the roost's reach and basket, and the sections' and machines'
+round trips with damaged values clamped or dropped and malformed numbers rejecting the save. 89/89
+with the other lanes' tests; a mutation check (fluff every four days, Chopper gravity $20, roost
+reach one wider) turned three tests red.
+
+```
+# fast creator tests (RunCreatorTests, a throwaway runner outside the repository)
+java -cp "$R/out:$CP" RunCreatorTests $R/tests $R/main
+# captures (ExampleModCapture; jump=fish_..., jump=barn_...); validation: "Validation passed: 0 findings"
+java -cp "$CP" com.openggf.mods.code.ExampleModCapture --rom "$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  --mod examples/starpost-valley --out <dir> --script-file <script> --every 10 --ticks 540
+python3 tools/testing/maven_queue.py --lean -B -Dmse=off -Dtest=TestStarpostValleyExample test
+```
+
+Captures in `~/scratch/sv-waters/final/` (`contact-sheet.png`).
+
+Not done: Rocky's Pool, crab pots, bait and lures (the Trapper, Pot Master and Lure Maker
+professions do nothing yet), the river, the Labyrinth Cistern and Angel Island's shore, the Egg
+Machine and Scrap Brain Furnace, the Ricky Roost and Buzz Hive, S2's bear and monkey, naming
+animals, a collection page for catches (the section counts them), and talking to Barnaby at the lake
+(he talks in the valley).
+
+## 18. Festivals and the board (lane)
+
+Branch `feature/ai-starpost-festivals`, package `starpost.festivals`: the year's eight festivals
+(§8), the Signpost Board (§6.8), prizes, records and the trophy shelf. The first agent's session
+ended before its visual pass; its work was checkpointed by the lead (`ab519c910`), and a second
+pass played every festival in captures and fixed what looked wrong (`9af6907eb`).
+
+### Festivals
+
+Each festival is a `FestivalScreen` over the day's `PlayScreen`: the clock stops and the HUD hides
+behind letterbox bars, a title card in the S3K lettering opens it, a results panel closes it, and
+leaving moves the clock on by the festival's length (`Festival.after`, never past 1AM) and goes
+back to the same play screen. On the day the valley gathers by the festival's sign from half an
+hour before it opens (`Festivals` is a `People.Gathering`); walking up during the posted hours
+invites the farmer (`Ask`). Every festival is played once a year (`Festivals.joined`).
+
+| Festival | Date, hours, length | What is played | Prizes |
+|---|---|---|---|
+| Ring Hunt (`RingHunt`) | Spring 13, 9AM-2PM, plaza, 2 h | 60 s in the town on the real controller to S1's Special Stage music (`$89`): lines, arcs and high lines along the street (under the name boards), a row on the totem ledge and a column over the spring, laid out per year. The champion, Tails (Sonic when Tails farms), flies to the nearest ring (`Map_Tails` `$A0` with the tail object's `$27`-`$28`) and stops 90 ticks to count each; ties go to him. The festival draws the crowd itself so the champion is not also standing by the sign. | 10 rings a ring; first win the Special Stage Record and a gold ring on the shelf, later wins +500 |
+| Sunflower Parade (`Parade`) | Spring 24, 10AM-3PM, plaza, 3 h | Green Hill's big flower (`Art_GhzFlower1`, the two frames `AniArt_GHZ` swaps every 16) along the street, petals cycling through four colours; the valley marches with flowers to Mushroom Hill 1; Dandel judges the farmer's flower against Clementine (76), Pud (62, painted gold), Hazel (41) and Robotnik's Robomart plastic one (disqualified). | First win Pud's Super Sunflower seed, the shelf's sunflower and Dandel's thanks; later +500; second +200; else 3 sunflower seeds |
+| Great Valley Race (`Race`, `RaceTrack`) | Summer 11, 9AM-1PM, plaza, 2.5 h | Twice round a Green Hill circuit of act 1's own blocks with their collision, on the ported controller, with the scripted loops and the totem ledge's spring, to the Knuckles theme. Tails or Sonic spin dash off the line, Knuckles runs at 0.98 pace, Robotnik flies the Egg Mobile (`Map_RobotnikShip` frames 5 and 2, flame 6) at 5.4 a tick and boosts to 8 once a lap when 300 behind. The signpost spins for the first across. | 1000/400/200/50; first win the Speed Shoes (+20 Momentum for good) and a Star Post on the shelf |
+| Night of the Flickies (`FlickyNight`) | Summer 28, 8PM-12AM, meadow, 2.5 h | Waves of V formations of S1 and S3K Flickies over the lake, as many as the valley's population (at least six), Pip leading; the action button under a passing wave brings one down to circle the farmer. A moon and stars are painted into the night backdrop. S3K's ending music. | No winner: friendship with everyone and more with Pip; the first year the Migration Record |
+| Valley Fair (`Fair`) | Fall 16, 9AM-4PM, plaza, 4 h | Three booths along the town as doorways, to Carnival Night 1. The grange display (nine places; 6 a kind, 3 an item, value up to 35, 5 for a full table, 12 for each Robomart good) judged by Robotnik against his own hamper (78): first only if undeniable (93+). The slot booth on Sonic 2's reel strips and `SlotMachine_ChooseReward` (×5 rings, 25 a spin, three Robotniks take 100), Casino Night's faces with S2, else Sonic 3's. The spring test: stop the meter, the spring launches the farmer under Sonic's gravity, the bell at 400. Calling the judge ends the fair. | 1500 (then 800)/300/100 and a bumper on the shelf; the first triple the Slot Bonus Record; the bell 120 rings and, once, a chili dog |
+| Scrap Brain Night (`Maze`) | Fall 27, 7PM-12AM, plaza, 2 h | A perfect 13×7 maze per year and farm, from above, in Scrap Brain act 1's steel, dark but for a pool of light; Caterkiller shadows give frights (3 rings dropped); dead ends hold rings or scrap; 90 s; Mecha Sonic waits at the exit and lunges (S3K boss music). | 10 rings a ring, 300 for getting out; the first time the Death Egg Record and Mecha Sonic on the shelf |
+| Ice Cap Festival (`Snowboard`, `IceCapScreen`) | Winter 8, 9AM-3PM, meadow, 3 h | A choice: the Waters lane's fishing contest (`FishingSystem.contest`, 120 s at the lake, against Frost's catch record of 40) or the snowboard run down the year's course of open-air winter blocks on Sonic's Ice Cap board (`ArtUnc_SonicSnowboard`; Tails and Knuckles crouch on the empty board), to Ice Cap 1: jump the rocks, spin in the air for tricks, against Frost's 900. The contest comes back to the meadow for Frost's verdict. | Points or rings ×5 rings; beating Frost the first time the S3 Ice Cap Record, a snowboard on the shelf and Frost's +150, later +600 |
+| Star Light Feast (`Feast`) | Winter 25, 5PM-11PM, plaza, 4 h | Star Light Zone's sky (S1's level-kit backdrop) and music over the plaza, Clementine's long table, the secret friend (drawn on Winter 18 and named by letter) stepping up for a gift from the monitors (their taste ×3), another neighbour's present for the farmer, fireworks of ring sparkles. | Momentum full, friendship with everyone, the present |
+
+### The board, prizes and records
+
+- **Requests** (`Board`, `Request`): each morning old notes come down and a neighbour pins a
+  delivery or popping job for what can be had this season; Mondays bring a weekly one and, from
+  Robomart's opening, Robotnik's special order (four times the price, partly in Robo Cola; Dandel
+  loses 150 friendship). Three can be taken on. A delivery is finished by talking to whoever asked
+  (`Festivals` is a `People.Errands`); popping finishes itself.
+- **Board screen** (`BoardScreen`, the `board` doorway by the Lamppost Inn): requests, the season's
+  calendar (festivals and birthdays) and the records page: each festival's date, this year's result,
+  its best in its own terms (rings, points, a time, flocks, the run and the catch apart) and its
+  trophy. The board says what happened on its own bottom line. Prizes owed for want of room are
+  handed over when it opens.
+- **In the valley** (`FestivalSystem`): the board with a note per posting and its little signpost
+  spinning on a new one; the trophy shelf between the Inn and the Workshop (Green Hill's bridge logs,
+  six trophies in standing frames); on a festival day palms, bunting and the festival's banner, S1
+  lampposts, and the fair's stalls or the feast's table.
+- **Prizes** (`Prizes`): items into the monitors or owed at the board; Records set
+  `record.<game>.<id>` and open their songs on the Inn's jukebox (`FestivalContent.recordSong`).
+- **Mail** (`FestivalMail`): the board's opening notice, Robotnik's first order and the secret
+  friend's letter.
+- **Save** (`festivals` section): places by year, bests (`id` or `id:event`), best times, prizes,
+  trophies, owed items, the secret friend and the board; damaged entries reject the save, unknown
+  festivals and items are dropped and numbers clamped.
+
+### Seams touched outside the package
+
+`Content.register` (`FestivalContent`); `Cast` (`FestivalMail`); `People` (`Gathering`, `Errands`,
+`spotFor`, `errand`), `PeopleSystem` (`offstage`, `playScene`, `present`), `VillagerActor` (hidden
+when offstage), `DialogueScreen` (an errand first), `EventScreen` and `HeartEvent.scene` (scenes for
+other systems); `Systems.sections`, `install` and `morningNote` (the lead wired
+`Festivals.fishingContest = FishingSystem::contest`); `Debug` (`festival ...`, `board ...` to
+`FestivalDebug`); `InnMenu` (five Record tracks); `MorningCard` (the note); `PlayScreen.placeInValley`
+and `lightTint`; `ValleyView.sky`.
+
+### Decisions and rejected approaches (evidence from the captures)
+
+- **See-through panels.** `Text.panel` is 88% opaque: the parade's card showed the banner's letters
+  through it, the grange showed through its item list. Festival panels are solid.
+- **Captions lost their ends.** The caption box shows three lines; the fair's welcome lost "THE
+  CARAVAN." and the maze's "OVERDONE IT." Long speeches now turn pages every 170 ticks.
+- **Two Tails.** The Ring Hunt drew the champion flying while the People lane drew Tails as the host
+  by the sign. The hunt takes the neighbours offstage and draws the crowd at their gathering spots.
+- **Rings over the shop signs.** High lines at 70 pixels hid "DANDEL'S SEEDS"; rings now stay
+  within 52. Lower rings let the champion take 38 of 65 (the test wants under half); his count
+  per ring went from 70 to 90 ticks.
+- **A moon over the palms.** Plain shapes drawn after the valley sat in front of the palm leaves;
+  the moon is painted into the backdrop on the sky's own colour, and the drifting cloud rows are held
+  still so it does not drift. A first version painted its glow rings outer to inner, each only on
+  sky, so the disc never painted and the moon came out a dim halo.
+- **The banner in the HUD.** The rope hung from the left palm's ground; at the meadow that palm
+  stood on a checker pillar. Palms now walk in to ground level with the sign, and the rope hangs from
+  the sign's ground. Fireworks over the feast covered the signs and moved to the dark band above.
+- **Cave walls in the sky.** A probe of every Green Hill block with its surface line showed blocks
+  12, 21, 26, 35 and 47 have cave walls or cliffs above the path; the run crossed in front of them.
+- **Fishing skipped its verdict.** The contest's callback toasted the prizes and left for the day,
+  and recorded the catch (tens of points) as the run's best (hundreds). It now returns to the
+  festival's screen (`Shell.go` keeps the first screen asked for, so the lake's own `go(play)` gives
+  way), and the catch's best is `ice_cap:fishing`.
+- **A fair without an end.** The grange refused an empty table and the judging is the only way out:
+  a farmer with nothing to show was stuck. An empty table now asks to end the fair (no place).
+- **Sonic 2 is optional.** `rom("s2")` is null without it; only the slot faces use it and fall back
+  to Sonic 3's slot bonus faces. Every festival was run from a scratch directory whose `config.yaml`
+  names only the S1 and S3K images (no ROM copies or links): no crash, the booth reads "SLOT BONUS".
+
+### Tests and captures
+
+`src/test/java/starpost/festivals/FestivalRulesTest.java` (engine-free): the calendar and gathering,
+hosts, each festival's scoring, places and prizes (first wins once, later purses), the race field
+and Robotnik's boost, the flock's size, Casino Night's rewards, the grange's bias, the spring test,
+the perfect maze, the snowboard's open-air course, the fishing contest against Frost's catch, the
+records page's lines, the shelf's six trophies, ring heights, the morning line's width, the secret
+friend, the board's requests, specials, popping, expiry and the section's round trip and damage.
+130/130 with the other lanes' tests; a mutation check (a cave block in the course, the Flickies with
+a trophy, rings at 70, any best key accepted) turned four tests red.
+
+```
+# fast creator tests (RunCreatorTests, a throwaway runner outside the repository)
+java -cp "$R/out:$CP" RunCreatorTests $R/tests $R/main
+# captures (ExampleModCapture): jump=festival_start_<id>, festival_day_<id>, festival_catch_N,
+# board, board_calendar, board_records, board_post_3, board_accept, festival_trophies
+java -cp "$CP" com.openggf.mods.code.ExampleModCapture --rom "$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  --mod examples/starpost-valley --out <dir> --script-file <script> --every 30 --ticks 4700
+python3 tools/testing/maven_queue.py --lean -B -Dmse=off -Dtest=TestStarpostValleyExample test
+```
+
+Captures in `~/scratch/sv-festivals/final/` (a contact sheet per festival, and the board's). Every
+capture reports "Validation passed: 0 findings".
+
+Not done: the Ice Cap contest's clock stands still during Bubble Bar fights (the Waters lane's
+contest), so it runs longer than two minutes; no waving pose for the farmer at the Flickies; the
+parade's petals are recoloured rather than a ROM palette cycle; the board screen is a menu panel,
+not the board's own planks; festivals are the same each year apart from per-year layouts (hunt,
+maze, course); and the fair's "bribes at the caravan" is only a line.
+
+## 19. Orchard, sneakers and museum (lane)
+
+Branch `feature/ai-starpost-orchard` (base `d84226216`), packages `starpost.orchard` and
+`starpost.museum`, plus `core.Sneakers`. The three gaps the one-year scope (§10) left: the sneaker
+tiers (§6.2), the trees (§6.3) and Tails's Workshop Museum (§6.8). Commits `c2ef44102`
+(sneakers and trees), `0d99ef50f` (museum), `07180d757`, `1414928c3`, `018f67b4b`.
+
+### Sneakers
+
+| Part | Where | Notes |
+|---|---|---|
+| Tiers | `core.Sneakers` | Sneakers till the dash's row; Power Sneakers also the row in front (toward the screen); Speed Shoes both neighbours; Chaos Sneakers as Speed Shoes, and the farm pond holds a farmer moving at 3 px a tick or more (half `Runner.TOP`) along the field. Slower than that for 12 ticks on the water, or landing in it from a jump without them, puts the farmer back on the last dry spot with a splash (this also ends a stuck-in-the-pond case the old edge check had). |
+| Save | `game.flags` | `sneakers_power`, `_speed`, `_chaos`; the tier is the best flag. No save format change. |
+| Shop | `OrchardSystem.workshopOffers` | Tails sells the next pair: 600 rings + 10 scrap, 2,500 + 30 scrap, 6,000 + an Emerald Shard (the tank's ladder is 500, 2,000, 5,000). Icons are the S3K Speed Shoes monitor screen (`Map_Monitor` frame 5), recoloured per tier. |
+| Combination | `Sneakers.Dash`, `Farmers` | A dash tills a column at a time. Tails's three plots are three columns, each as wide as his sneakers (a 3x3 patch in Speed Shoes); Sonic and Knuckles till every column they roll over. A point of Momentum a plot; rocks, stumps and placed objects are rolled past. Knuckles's dig (one plot) is unchanged. |
+| Shown | `InventoryMenu` | One line under the skills: "SPEED SHOES: THE DASH TILLS 3 ROWS". |
+
+### Trees
+
+Saplings are `PlaceableDef` role `TREE`, placed by FarmView's own placement; `Orchard` (section
+`orchard`, keyed "row.column") grows them a night at a time in every season without water and
+reconciles with the field (a tree knocked loose is forgotten). Tails crafts them: palm 400 rings + 15
+palm wood + 10 fibre, Ring Fruit 1,500 + 20 wood + 20 marble chips, Chaos Cherry 3,000 + an Emerald
+Shard + 20 wood once `orchard_chaos_cherry` is set (the museum's minerals). Picked with the action
+button; after its first night a tree's roots refuse the Fire Shield.
+
+| Tree | Grows | Its rule (pillar 3) | Picture |
+|---|---|---|---|
+| Green Hill Palm | 14 nights | A coconut every other day in summer and fall, three at most; a stormy day shakes two more loose in any season it storms (five at most). | Sonic 1 GHZ block 1: crown (x 96-170) over its 8-pixel trunk segment repeated (3 young, 7 grown); sapling is the star-leaved plant at x 64-94. Coconuts are original fruit. |
+| Ring Fruit Tree | 28 nights | Ten rings a day spring to fall, thirty at most. Shaken, they burst out as `RLoss_Count`'s spray at half speed with `RLoss_Bounce` and the shared 255-frame timer; caught by running through them (each also a point of Momentum); a held Lightning Shield pulls them in from 64 px. Uncaught rings are lost. | S3K Mushroom Hill act 1: block 135's leaf clump (its round right half mirrored) on a slice of block 37's bark; the S3K ring sprite hangs in it. |
+| Chaos Cherry | 21 nights | The only tree that bears in winter: each morning a cherry with chance population/60 (four at most), so it gives more as the valley recovers (pillar 4). | The same clump in three puffs, recoloured to a five-step blossom ramp; single cherries cycling the seven emeralds' colours (original fruit). |
+
+### Museum
+
+| Part | Where | Notes |
+|---|---|---|
+| Collections | `Exhibits`, `Museum` (section `museum`) | Built per catalogue. Minerals (8: the Ruins' ores, gems, geodes): 3 → 800 rings, 6 → a Chaos Cherry sapling and the flag that offers its recipe, 8 → Record: Lava Reef. Scrap Collection (14): 4 → a Caterkiller Crawler, 9 → 2,500 rings, 14 → Record: Mini-Boss. Relics (10): 3 → 500 rings, 6 → two Star Posts, 10 → Record: Sandopolis. Confirm donates one of everything carried that a page lacks; a reward that does not fit waits. The three Records set `record.s3k.13/18/11`, new tracks in the Inn's list. |
+| Badnik parts | `Finds`, hooks in `Pests` and `RuinsScreen` | A popped badnik leaves its part one time in five (the farm's Motobugs; each Ruins kind; the Walking Bomb when it goes off); the Labyrinth's Jaws leaves the lake's `jaws_fin`. Plus the fishing lane's five catches. Pictures are each object's first frame in its zone's palette (`Pal_MZ`/`Pal_LZ`/`Pal_SBZ1`; Jawz and Blastoid in `Pal_HCZ1_Water`; the Red Chopper in deeper reds). |
+| Relics | `MuseumContent`, `Finds`, `DigSpot` | Crops of ROM art: Green Hill's totem (chip, wing, face), the S3K ring as a stone mould, Sonic 1's giant ring (`Art_BigRing`), S3K yellow spring and broken monitor, Sonic 1's signpost plate and lamppost globe. Each is in one Ruins band's rocks (one rock in 20) and one season's ground: Knuckles's dig turns one up about one dig in 64, and glinting spots (one a morning on the farm's open grass, two for Knuckles, one along the valley path; 2 Momentum; 45% a relic, else chips, a geode or rings) serve every farmer. |
+| Hazel's cap | `Museum.capBuried`, `MuseumSystem.capReturned`, `cast/Hazel` | After `museum_relic_missing` the Star Post Cap (the S3K Star Post ball) glints under the palms east of town until it is on the shelf or carried (or kept in an Item Monitor). Donating it plays a scene: Hazel works out she buried it with her coconuts, gives a palm sapling and gains a heart; `museum_cap_returned`. Two new Hazel lines: a hint while it is missing, relief after. |
+| Page | `MuseumScreen` | Q/E or the tab row: Minerals, Scrap, Relics, Records. Donated pieces in colour, missing ones as silhouettes (`withFlash`), a carried one lit with "!", where to look, milestone boxes (rewards, GOT IT / WAITS FOR ROOM / AT N). The Records shelf shows every Record found and confirm opens the Inn's own jukebox (`Systems.jukebox`), the Sound Test, rather than duplicating it. |
+| Annex | `MuseumArt`, `MuseumSystem.Annex` | A 100-pixel building between the workshop and Robomart (doorway `museum` at x 1283), from Green Hill's pixels like `Facades`: checker walls, a pediment of stepped bridge logs, totem-pole columns, a plank door. A finished collection shows its prize in a window. |
+
+### Seams outside the packages
+
+`core`: `Content.register` calls `OrchardContent` (before the barn, so Chaos Cherries get a jar)
+and `MuseumContent`; `PlaceableDef.Role.TREE`; `Farmers` documents the combination and its dig
+turns up relics. `farm/FarmView`: the dash delegates to `Sneakers.Dash`; `pond()` replaces the edge
+check; `ObjectHook.lockedText`. `farm/Pests` and `ruins/RuinsScreen`: part and relic drops (three
+calls). `scene`: `Systems` (sections, offers, installs, `jukebox`), `InnMenu` (jukebox-first
+constructor, three tracks), `InventoryMenu` (the tier line), `Debug` (`orchard ...`,
+`museum ...`). `valley/Valley`: the `museum` place. `people/cast/Hazel`: two lines and a
+`without`. `TestStarpostValleyScene`: the orchard and museum steps.
+
+### Decisions and rejected approaches
+
+- **A growth aura for the Chaos Cherry.** Rejected: sections' `nextDay` runs after `Farm.nextDay`
+  has replaced last night's `watered` flags with the morning's, so the tree cannot tell which
+  neighbours grew; hand-watered crops would never get it. Population-driven bearing needs no core
+  change and ties the tree to the valley's recovery.
+- **"Chaos Control" (a cherry stops the clock).** Rejected: a clock freeze in `Calendar` plus an
+  eat hook in `InventoryMenu`, which refuses food at full Momentum, for a move from later games.
+- **Cherries as pairs.** The classic two-cherry icon read as pairs of eyes in the blossom (capture
+  `cap1`); they are single fruit hanging from the lower edge (nothing original has a face).
+- **The palm at full height.** Ten segments reached the HUD from the back rows; seven keep the
+  ROM's proportions (block 33's shorter palm).
+- **Pink by channel arithmetic.** A flat salmon; a five-step ramp keyed to the leaf's brightness
+  keeps the clump's light and shade.
+- **The annex at x 1260, 118 wide.** It overlapped the workshop's facade and sign (`cap5` first
+  pass); 100 wide at x 1283 leaves about 15 px each side.
+- **Silhouettes and milestone text.** `0xFF141C3C` vanished on the panel and `Text.fit` (the menu
+  font's widths) cut CompactFont rewards to "CHAOS"; now `0xFF34407C` and a CompactFont word wrap.
+- **The dash's tilling in FarmView.** Moved to `Sneakers.Dash` so the farmers' combination is a
+  creator test, not a capture.
+- **The ring burst at full speed.** Not tried: a tree drops its rings rather than flinging them,
+  so the spray runs at half speed and loses a quarter along the field at each bounce.
+
+### Tests and captures
+
+`src/test/java/starpost/orchard/OrchardRulesTest.java` (18) and
+`src/test/java/starpost/museum/MuseumRulesTest.java` (12), engine-free: each tier's rows, the
+flag's save round trip, the ladder, sinking; dashes for every farmer and tier (Tails's 3x3, rocks
+and objects, Momentum running out); the saplings and recipes; growth over 28 winter nights; each
+tree's bearing rule and cap; picking with full slots; forgetting a knocked-loose tree; the section's
+round trip and clamping; the burst's bounce, 255-frame end and catching; the collections' sizes and
+sources (every part has a pop or a catch, every relic a band and a season); drop and spot odds;
+donations, milestones, waiting rewards, the cherry flag and Records; Hazel's cap in hand, chest and
+shelf; glint placement; the museum's save. 157/157 with the other lanes'; a mutation check (Tails
+four columns, thirty-ring cap forty, part odds one in four, rewards ignoring room) turned five
+tests red. `TestStarpostValleyScene` with the new steps passes run directly; a misspelt museum step
+fails it.
+
+```
+# fast creator tests (RunCreatorTests, a throwaway runner outside the repository)
+java -cp "$R/out:$CP" RunCreatorTests $R/tests $R/main
+# captures (ExampleModCapture; jump=orchard_..., jump=museum_...); validation: "Validation passed: 0 findings"
+java -cp "$CP" com.openggf.mods.code.ExampleModCapture --rom "$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  --mod examples/starpost-valley --out <dir> --script-file <script> --every 10 --ticks 400
+# the scene smoke test without Maven (JUnit console launcher, S3K and Sonic 1 paths as -D properties)
+java -cp "$CP" org.junit.platform.console.ConsoleLauncher --select-class com.openggf.mods.code.TestStarpostValleyScene
+```
+
+Captures in `~/scratch/sv-orchard/final/` (`orchard-sheet.png`, `sneakers-sheet.png`,
+`museum-sheet.png`). Debug: `orchard plant palm|ring|cherry R C [AGE [FRUIT]]`, `night`, `clear`,
+`shake R C`, `sneakers 0-3`, `stand R C`; `museum open [page]`, `donate ID`, `fill PAGE N`,
+`missing`, `cap`, `returned`, `spot`, `vspot`.
+
+Not done: running on the Waterfall Lake (the fishing lane's screen; only the farm pond holds a
+Chaos Sneakers farmer), the formal `TestStarpostValleyExample` bridge (the lead runs it), a capture
+of a Ruins part or relic drop (random; the drop path is the Ruins' own pickup with the museum's
+icons), more minerals than the Ruins' eight, and tree-specific gifts or recipes (the Chaos Cherry and
+coconut only sell, fill jars and restore Momentum).
+
+## 20. ROM-art polish (lane)
+
+Branch `feature/ai-starpost-polish` (base `6b849cca0`, checkpoint `bdb01073d`). The user's notes on the highlight reel: the
+spin dash had no dust, Tails flew without his tails, the loop did not hide Sonic as the real game's
+priority does, and the fishing rod was missing. Following the lead's course change, everything
+reuses the engine's scene art toolkit (`StockSceneArt`, `SceneArtCache`, `PaletteAssembly`,
+`RomAnimationPlayer`) and plays the ROM's own animation tables, read from the ROM at run time.
+The belt-view farm is the main target: the valley, the lake and the Ruins may move onto the engine's
+real player and levels, so their hooks are kept thin.
+
+### Dust
+
+| Part | Where | Notes |
+|---|---|---|
+| Art | `StockSceneArt.S3K_DASH_DUST` (engine) | `ArtUnc_DashDust` ($18A604, 5,952 bytes) through `DPLC_DashSplashDrown` ($18EE2, player DPLC layout) with `Map_DashDust` ($18DF4). Obj_DashDust's `art_tile` is `make_art_tile(ArtTile_DashDust,0,0)`: palette line 0, the player's own, so each farmer's bank uses `PaletteAssembly().line(0, characterPalette(farmer))`, held in a `SceneArtCache`. |
+| Scripts | `art/Dust` | `Ani_DashSplashDrown` ($18DC0, 52 bytes) read from the ROM and played by `RomAnimationPlayer`. Charging: animation 2 (frames $A-$10, two ticks each) at the player's x_pos/y_pos and facing (loc_18C20), back to the blank animation 0 on release. Skidding: routine 6 (loc_18CB6) allocates a puff every fourth frame of the skid animation $D, starting at once, at x and y+$10, unflipped; each plays animation 3 ($11-$14, four ticks each) where it fell, and the script's $FC ends it. Sonic_MoveLeft/Right first sets the parent dust's mapping frame to $15, whose DPLC loads the shared 16-tile bank. The child frames $11-$14 have empty cues and select four quadrants of that bank. `Art.DustBank` combines the charge recipe with a cached uncompressed request derived from cue $15's ROM bytes, retaining the original mappings; decoding child cues independently produces blank puffs. No puffs under water; nothing while short of air (air_left < 12). The object's priority $80 draws it in front of the player ($100). |
+| Skid | `farm/BeltRunner` | Sonic_MoveLeft/Right (sub_113F6 $113F6, sub_11482 $11482) skid when braking leaves $400 or more. FixBugs off: the angle check overwrites the speed's low byte first, so the compare sees the speed with its low byte cleared: $400 from the right, just over $300 from the left. Braking keeps the farmer facing his slide; turning or leaving the ground ends it. The skid plays AniSonic0D's 16 ticks. Holding into the field boundary now stops movement and plays the push pose (including Tails's matching tail script); releasing or jumping ends it, and the east gate still exits. This correction is `5a2413cde`. |
+| Views | `FarmView` (all farmers); `ValleyView`, `LakeScreen`, `RuinsScreen` (spin dash only) | Drawn right after the farmer at his body origin. |
+
+### Tails's tails
+
+`art/TailsTails` runs Obj_Tails_Tail ($160A6): `Obj_Tails_Tail_AniSelection` ($16164, 50 bytes) picks
+the tails' script when Tails's body animation changes, and `AniTails_Tail` ($16196, 100 bytes) is
+played by `RomAnimationPlayer`; both tables are read from the ROM. Walking and running give the
+blank script (those body frames carry their own tails); waiting and ducking swish; looking up flicks
+once and swishes ($FD); spin dash, skid and push have their own; flying ($20) and tired ($24) flap
+Fly1, rising ($21) Fly2. Roll's script has the delay byte $FC, which Animate_Tails_Part2 hands to
+loc_15A3C ($15A3C) and `RomAnimationPlayer` does not cover: every fourth frame GetArcTan ($1FE4) of
+Tails's velocity picks one of four frame groups and mirrors both ways for the other half circle, so
+rolling and jumping tails trail along his path (round the farm loop, the circle's tangent). The
+tails share his origin, flip and priority band and are drawn before him (behind). The flying body
+animation now follows Tails_Set_Flying_Animation ($148AC): $21 rising, $20 sinking, $24 tired.
+
+### Fishing rod
+
+`fishing/Rod` is an original drawing in Mega Drive colours (no ROM has a rod): a red blank with a
+dark outline tapering to a white tip, a grip at the hand and a grey reel. Its angle follows the
+line: up at rest while the farmer stands holding it, wound back over the shoulder while the lake's
+cast charges, whipped forward by the cast (6 ticks), low while waiting, dipped by a nibble, bent
+and shaking on a bite, lifted as the line comes in while the line winds back to the tip. The
+farmer holds the standing frame while holding the rod (`FarmView.holdStill`, `Anim.hold`), so the
+idle fidgets do not fight it. The cast starts from the rod's tip. Each farmer has a hand position
+in his standing frame.
+
+### Parked (lead's course change)
+
+The valley and the Ruins may move onto the engine's real player and levels, which would make a
+scene-side loop occlusion moot, so these were built and set aside unmerged
+(patches in `~/scratch/sv-polish/parked/`):
+
+- **Loop occlusion by tile priority.** Sonic_Loops (s1disasm `_incObj/01 Sonic.asm`) only toggles
+  `sprite_looping_bit`, which FindNearestTile uses to pick the loop's alternate collision chunk;
+  the visual effect is pure VDP priority: Sonic's art tile (`ArtTile_Sonic`) is low priority, so
+  the plane's high-priority tiles (part of block $35's ring) cover him. The parked change added
+  `SceneLevelKit.blockImage(id, highPriority)` (filtering `DetachedLevelKit.blockPixels` by each
+  8x8 tile's priority bit) and drew the high layer after the farmer in the valley and the farm
+  loop.
+- **The valley controller's skid** (`Runner.skid`, the same rule as the farm's).
+
+### Seams outside the packages
+
+Engine: `StockSceneArt.S3K_DASH_DUST` (one additive pin entry, `ModApiVersion` note, creator-helpers
+guide, compatibility note, CHANGELOG.0.7). Mod: `farm/FarmView` (dust, skid, tails, `holdStill`,
+`charging()`), `farm/BeltRunner` (skid), `valley/ValleyView`, `fishing/LakeScreen` and
+`ruins/RuinsScreen` (dust and tails hooks; the lake also gains the spin dash, flight and glide
+poses its animation lacked), `fishing/PondLine` and `FishingSystem` (the rod).
+
+### Rejected on the way
+
+- **Hand-written tail and dust frame tables.** The first pass transcribed AniTails_Tail and
+  Ani_DashSplashDrown into switch statements; replaced by the ROM's tables played through
+  `RomAnimationPlayer` (the lead's rule: reuse the toolkit).
+- **Dust behind the farmer.** The brief said behind his feet; the ROM gives Obj_DashDust priority $80,
+  in front of the player's $100, with the mapping offset to trail behind him (x -32..0).
+- **The old rod.** A one-pixel brown line from hand to tip, shown only with the line out; it vanished
+  against the grass and the farmer's own outline.
+
+### Verification and evidence
+
+`0a61fa157` added recipe geometry/nonempty-pixel assertions. Their first run failed on
+`TestStockSceneArtRom` frame 17: the captured skid had no puffs, and the ROM's empty child
+DPLC explained why. The final stock-recipe check asserts the seven independently streamed
+charge frames; `TestStarpostValleyScene` checks nonempty child frames $11-$14 through the
+mod's prepared bank for every farmer. A descriptor comment was also rejected by the strict
+policy parser and removed; the descriptor still names unpublished candidate `0.7.0`, matching
+`ModApiVersion` and the single additive `S3K_DASH_DUST` signature-pin entry. No API version
+bump or parked loop-priority change was applied.
+
+Validation scope is this lane's requested creator, API policy, ROM-art and scene paths, plus
+the four required S3K baseline classes; these are focused checks, not a full-suite certification.
+
+
+The skid-bank correction is `150ad6b60`. Final behavioral verification ran in this worktree
+against the same source tree before that commit (documentation is the only subsequent change):
+
+```bash
+# All commands start in .worktrees/ai-starpost-polish; Java 21.0.12.1.
+python3 tools/testing/maven_queue.py -B -q -Dmse=off -DskipTests test-compile dependency:build-classpath -Dmdep.outputFile=target/test-classpath.txt
+# Compile creator sources, tests and the scratch runner per LANE-RULES.md, then:
+CP="target/classes:$(cat target/test-classpath.txt)"
+R=$HOME/scratch/sv-polish/final/creator
+java -cp "$R/out:$CP" RunCreatorTests "$R/tests" "$R/main"
+# 176/176 passed, zero skips (including 8 PolishArtTest tests).
+python3 tools/testing/maven_queue.py -B -Dmse=off \
+  '-Dtest=TestModApiPinPolicy,TestModApiSignatureSurface,TestModApiReleasePolicy,TestStockSceneArtRom,TestStarpostValleyExample,TestStarpostValleyScene,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' \
+  "-Ds3k.rom.path=$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dsonic1.rom.path=$PWD/Sonic The Hedgehog (W) (REV01) [!].gen" test
+# 90/90 passed, zero skips; both bridge/scene packages: Validation passed: 0 findings.
+CP="target/test-classes:target/classes:$(cat target/test-classpath.txt)"
+java -cp "$CP" com.openggf.mods.code.ExampleModCapture \
+  --rom "$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen" --mod examples/starpost-valley \
+  --out $HOME/scratch/sv-polish/final/farm-tails \
+  --script-file $HOME/scratch/sv-polish/final/scripts/farm-tails.txt --every 4 --ticks 1060
+```
+
+ROM identity was checked: S1 CRC32 `AFE05EEE`, SHA-1
+`69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`; S3K CRC32 `63522553`, SHA-1
+`CFBF98C36C776677290A872547AC47C53D2761D6`. Existing root ROM links were used unchanged.
+
+Captures and scripts are under `$HOME/scratch/sv-polish/final/`. The farm command above
+was run for **sonic, tails and knuckles** (1060 ticks); pond/lake scripts for each farmer ran
+580 ticks, with `jump=fish_lake` for Waterfall Lake. An additional `fly-tails` capture ran
+680 ticks. All ten captures reported **Validation passed: 0 findings**. The PNGs were opened
+and inspected; summaries are `farm-sonic-sheet.png`, `farm-tails-sheet.png`,
+`farm-knuckles-sheet.png`, `pond-sheet.png`, `lake-sheet.png`. Original full frames remain in
+`farm-{sonic,tails,knuckles}/`, `pond-{sonic,tails,knuckles}/`, `lake-{sonic,tails,knuckles}/`
+and `fly-tails/`.
+
+- Farm frames 160/200/320: idle, walk and run; 328/336: skid puffs at the feet, remaining
+  where dropped; 416/600: spin-dash charge dust in both facing directions; 624: leftward roll;
+  780/900/944: leftward walk, push and idle; 1008: airborne roll. Tails's accessories align
+  with the body and mirror with it in every requested farm pose; walk/run use embedded tails.
+- Pond frames 160/184/192/208/228/328/360/404 and lake frames
+  180/220/240/252/280/304/468/500: every farmer's rod at rest, winding up, whipping forward,
+  waiting and biting, in both facing directions. The grip sits at the hand; the line starts
+  at the actual bent tip. Flying Tails's rotating tails are visible in `fly-tails/frame-00240.png`.
+
+The first capture rerun rejected an existing output jar; subsequent captures used fresh output
+directories. A direct creator run overlapping the engine rebuild hit missing classfiles; rerunning
+after compilation restored 176/176. These incomplete/failed attempts are not the final results.
+The parked priority API and valley skid remain unapplied. No push, merge, rebase or integration
+was performed by this lane.
+
+
+## 21. The town on real levels (lane)
+
+Town lane: `feature/ai-starpost-town`, base `acb094c763`. Implementation lives in
+`starpost.realtown`; it neither owns Green Hill encoding nor changes the engine API.
+
+### State, objects and ownership
+
+Register one instance-owned `TownSession` through `ModContext.registerServiceBundle`,
+as both a concrete service and a `RewindSnapshottable` adapter. The scene binds its
+live `Game` before launching; objects resolve it with `services().gameService`.
+Retain the same `Game`, `People`, inventory and save-section identities: replacing
+those on rewind would leave suspended scene actors pointing at stale state.
+Capture every field changed by town ticks (clock, rings, Momentum, inventory,
+random state and save-section keys), plus town dialogue, invitations, exits and
+pickup availability. Capture walking positions in recreatable engine objects.
+Do not use `SaveCodec` as a rewind codec: its load resets the clock and clamps saves.
+No trace rows supply state. Act load and scene return remain timeline boundaries.
+
+Register a persistent controller and recreatable villager, doorway and pickup
+objects, placed by a `TownLayout` seam. A layout supplies coordinates and floor
+queries; integration replaces the placeholder with the encoded valley. Schedules,
+arrival gates, body speeds, dialogue pools, gifts, errands and festival gatherings
+reuse `People`/`Bodies`/`Festivals`; they are not new social rules. Villagers walk
+on the act's floor, disappear at indoor destinations and leave via the farm gate.
+
+### Interaction and presentation
+
+The action key talks to the nearest visible villager. Giftable held items ask
+before applying `People.gift`; cancelling gives the day's talk. Animal dialogue
+uses the existing picture tokens until the Chirp Translator. A `LevelInputOverlay`
+owns modal keys before host pause input; the controller freezes the real player
+and the town clock while the overlay is open. Dialogue presentation is bounded to
+the 400×224 viewport and draw never changes rules.
+
+Up at a door records a single hand-back request with its place id and return
+position. Reuse **all** `PlayScreen.places` handlers: seeds, Lamppost Inn, workshop,
+museum, Robomart, Ruins, Great Capsule, Waterfall Lake and Signpost Board. The farm
+gate returns to the farm. Heart events likewise hand back by event id and retain
+the current `PlayScreen`; never make a new play screen mid-day. Festival invitations
+stay in the act; accepting hands back to the existing festival screen.
+
+Buildings remain decorative objects rather than collision or terrain: reuse
+seasonal `Facades`, board/trophy shelf and festival dressing, so relocation need
+not rewrite level data. Rings/forage reuse the daily pickup generation and reward
+rules. Ground queries and the player's centre/radii come from the actual act.
+
+`registerRomObjectArt` currently accepts S2 only (ModContext), so it cannot register
+this S1/S3K cast honestly. Until cross-ROM object-art registration exists, reuse
+ROM-decoded `Art`/`PeopleArt` and immutable image row spans through the engine's
+`LevelOverlayCanvas`, with camera-relative coordinates; no faces or art bytes are
+invented or packaged. Native object-art upload is a future rendering replacement,
+not a reason to duplicate cast content or block rules/rewind testing.
+
+### Precise phase-2 interface proposal
+
+E1 places the launch/result records in `com.openggf.mods.scene` and the shared
+exit enum in `com.openggf.game`, preserving the level/mod dependency boundary:
+
+```java
+record ActLaunch(ZoneKey.Mod destination, int act, CharacterKey main,
+    List<CharacterKey> sidekicks, OptionalInt spawnX, OptionalInt spawnY,
+    int rings, Map<String, String> state) {}
+record ActResult(ZoneKey.Mod destination, ActExit reason, int rings,
+    long frames, Map<String, String> state) {}
+enum ActExit { COMPLETED, LEFT, FAINTED, TIME_UP, ABORTED }
+// SceneContext (default throws UnsupportedOperationException on legacy hosts)
+default void startAct(ActLaunch launch) { throw new UnsupportedOperationException(); }
+// ModScene (same suspended instance and context)
+default void resume(SceneContext context, ActResult result) {}
+// ObjectServices (default; request latched once, consumed at the next frame boundary)
+void requestActExit(ActExit reason, Map<String, String> state);
+```
+
+Town payload: `town.place` (door id, `farm_gate`, `festival` or `heart_event`),
+`town.event` (optional heart-event id), `town.returnX`, `town.returnY` (player
+centre coordinates). Resume applies the existing handler once, and launches again
+at the returned door when its scene menu closes. The same registered `TownSession`
+must survive suspension/resumption; new games explicitly rebind it. A pending exit
+is rewindable until the engine consumes it. Entry/exit releases held modal keys,
+freezes world updates during fades and establishes the normal level/mode boundary.
+
+Rejected: static session state (validator/isolation), copying social rules,
+scene-physics simulation, restoring by decoding a disk save, and remapping S1 art
+to unrelated S3K bodies. A minimal S3K placeholder act tests objects before the
+terrain lane is available. Phase 2 owns the actual scene round trip; this lane
+provides a typed hand-back latch and binder without pretending the API exists.
+
+
+### Town milestone: rules and registration
+
+Design committed first at `8d9143843`. The first implementation adds `TownContent`,
+`TownSession`, a layout/act-ground seam, five registered object types and a
+`LevelInputOverlay`. `TownBridge`/`StarpostScene.prepareTownAct` and
+`resumeTownAct` are callable integration points, not an implementation of E1.
+Existing menus remain scene screens. `Calendar` captures its partial tick exactly;
+`Pickups` shares generation/rewards and captures daily bits; `Speech` accepts the
+live `People`/`Game` without a scene director. `FestivalSystem.drawOnLevel` reuses
+board, trophies and dressing with act ground and animation time.
+
+The initial `ObjectTerrainUtils` floor call produced two NON_API_ENGINE_REFERENCE
+warnings; rejected in favour of public decoded chunk/solid-profile queries.
+`ActGround` handles descriptor flips and signed column heights for NPC placement.
+It is not a physics controller or a native floor-register implementation. Villagers
+stop at cliffs/pits; a terrain author must supply connected walkable town anchors.
+The real S3K player retains its native sensors, loops and abilities. Town rings add
+one to both the saved wallet and the act's native health ring count. E1 must not
+replace the saved wallet with `ActResult.rings` (damage affects native health).
+
+Observed on this lane: queued Java 21 engine test-compile/classpath build passed;
+creator main/tests compiled with `javac --release 21`; SDK packaging reported
+**Validation passed: 0 findings**; the creator launcher ran **178/178**, no skips,
+including eight town rule tests. Running-act and full scene bridge verification
+are the next milestone. No terrain or scene-round-trip claim is implied.
+
+### Town delivery: running objects, hand-back and evidence
+
+Implementation milestones: `bfb7d7e41` (rules/state), `8cd3c2301` (seven running-act
+checks), `c5dd65f5c` (floor reprojection and rendering), `d5ea971f2` (overlay order
+and accepted invitations). The initial qualified registration names were rejected
+at runtime: `registerObject` needs owner-local names, while placements use qualified
+keys. The new `TestStarpostTownAct` packages/validates the external mod and loads a
+real additive `Sonic3kLevel` with test-only flat collision, no stock events or
+objects and the actual S3K player. Sonic, Tails and Knuckles walk the same town.
+This test level supplies no production terrain or asset fallback.
+
+Rejected setup: relying on a baked additive start alone. Native S3K's dynamic ROM
+start provider placed the fixture at AIZ coordinates (observed centre 3224,1036
+after 30 ticks), rather than the declared 440,173. An explicit centre start through
+`HeadlessTestFixture` fixes the test. **E1 must apply `ActLaunch.spawnX/spawnY` after
+native start selection**, then recenter and initialize the destination normally.
+Do not hide this issue with player writes in a town object. E1 also retains the
+native health ring count through `ActResult`, separately from the saved wallet.
+
+`TownContent.placements()` supplies the controller; its first update attaches
+public act collision and creates the registered villagers, doors, decorations and
+pickups. Keep scene/act layout width and anchors identical for daily pickup
+identity; `Pickups.placeOnGround` reprojects floor placements while retaining taken
+bits, rejecting incompatible identities. Schedule movement stops at pits/cliffs;
+this does not certify a connected route in the phase-1 terrain.
+
+Integration registers `TownContent.registerInput(context, destination, town)`
+against the tagged valley `ZoneKey.Mod`, using the session already returned by
+`TownContent.register`. The destination filter removes pad B from the native jump
+union (A/C still jump), and suppresses native movement while modal. The overlay
+reads raw input edges before filtering. `StarpostScene.prepareTownAct()` binds the
+same PlayScreen/Game before suspension; `TownSession.handBack().payload()` carries
+the proposed exit payload; `resumeTownAct()` consumes it exactly once after return.
+A confirmed festival invitation now calls the existing event directly, avoiding a
+second question. Door/menu close and automatic act relaunch are E1's remaining glue.
+
+The first CPU pictures exposed rings and names drawing above dialogue because
+villagers/pickups inherited bucket 0. Explicit buckets 4/3 keep them below the
+controller's bucket 0 HUD/dialogue; a pixel regression checks the opaque dialogue
+region. Buildings remain bucket 6, dressing 7/1. Museum rendering reuses the actual
+Annex actor's restoration/trophy-window renderer, not a duplicate facade rule.
+
+Observed focused validation in this worktree, with both absolute ROM properties.
+Set `TOWN_WORKTREE` to this lane's absolute checkout and `TOWN_CAPTURE_DIR` to an
+absolute external task directory (this run used `~/scratch/sv-town/act-pictures`).
+
+```bash
+cd "$TOWN_WORKTREE"
+S3K="$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen"
+S1="$PWD/Sonic The Hedgehog (W) (REV01) [!].gen"
+python3 tools/testing/maven_queue.py --lean -B -Dmse=off \
+  '-Dtest=TestStarpostTownAct,TestStarpostValleyExample,TestStarpostValleyScene,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' \
+  "-Dstarpost.town.capture.dir=$TOWN_CAPTURE_DIR" \
+  "-Ds3k.rom.path=$S3K" "-Dsonic1.rom.path=$S1" test
+# 71/71, zero failures/errors/skips; creator bridge includes 180/180.
+python3 tools/testing/maven_queue.py --lean -B -Dmse=off \
+  '-Dtest=TestStarpostTownAct,TestStarpostTownSceneBridge,TestStarpostValleyExample,TestStarpostValleyScene' \
+  "-Dstarpost.town.capture.dir=$TOWN_CAPTURE_DIR" \
+  "-Ds3k.rom.path=$S3K" "-Dsonic1.rom.path=$S1" test
+# After presentation/festival fixes: 12/12, zero failures/errors/skips; creator 180/180.
+python3 tools/testing/maven_queue.py --lean -B -Dmse=off \
+  '-Dtest=TestStarpostTownAct,TestStarpostTownSceneBridge' \
+  "-Dstarpost.town.capture.dir=$TOWN_CAPTURE_DIR" \
+  "-Ds3k.rom.path=$S3K" "-Dsonic1.rom.path=$S1" test
+# Final rendering regression/bridge pictures: 9/9, zero failures/errors/skips.
+python3 tools/testing/maven_queue.py --lean -B -Dmse=off \
+  '-Dtest=TestStarpostTownSceneBridge' \
+  "-Dstarpost.town.capture.dir=$TOWN_CAPTURE_DIR" \
+  "-Ds3k.rom.path=$S3K" "-Dsonic1.rom.path=$S1" test
+# Trophy-populated shelf capture: 1/1, zero failures/errors/skips.
+```
+
+Every packaging run reported **Validation passed: 0 findings**. Town checks cover
+scheduled walking/indoor entry, raw pad-B dialogue, modal player/clock holds, gifts,
+latched door exits, bank/Momentum/native-ring collection and full registry town
+restore plus forward replay, including dialogue/control. Creator tests cover
+translator, daily gifting, decline, full bags, invitations, session isolation,
+clock fractions/random state and changed floor placement. Bridge checks dispatch
+all town doors, farm and inventory without replacing Game, and open Ring Hunt
+without another Ask. Existing year-of-scenes smoke and the four S3K obligations
+passed; `TestSonic3kLevelLoading` selects both package variants (36 + 7 cases).
+
+Visual witnesses under the external `TOWN_CAPTURE_DIR` were inspected:
+`stall.png`, `inn.png`, `capsule.png`, `pictures.png`, `museum-restored.png`,
+`board-and-shelf.png`, `festival-dressing.png`. These paint the actual level canvas
+rectangle commands over an explicitly flat test background; they exclude native
+player/terrain drawing and do not establish GPU performance. Board/shelf and
+festival/museum pictures use the real bridge's reused presentation.
+
+Proportionate validation: the change-based plan at base `acb094c763` selects all
+3,080 ordinary classes because example paths have no category mapping. Only
+creator code/tests and the design changed; no engine production, API/build or
+selection policy changed. Direct creator, scene, act, input, pickup, registry and
+S3K consumer checks cover the bounded behaviors instead of that fallback broad
+run. Broad preflight reports missing/wrong **Lua 5.4**; no broad/guard or full-suite
+pass is claimed. The initial compile/setup failures were fixed and the completed
+runs above supersede them. Engine regressions outside this scope were not assessed.
+
+**Town-lane handover (superseded below):** there was no `SceneContext.startAct`,
+`ModScene.resume` or `ObjectServices.requestActExit` at Town tip `490f3de43`. Nothing pretends to perform that
+transition. The existing startup scene remains the active route until E1 and the
+phase-1 controller placement/input registration are integrated. Production title
+→ scene → valley act → door/menu → same act, native rendering/performance and
+walkable terrain anchors remain unverified. Required E1 signatures and payload are
+above; keep the scene/art/session alive across suspension, latch the exit at a
+frame boundary, release modal controls and establish fresh timeline boundaries.
+
+### Phase-2 act bridge implementation
+
+The Act Bridge lane starts at Town tip `490f3de43`. E1 lives in
+`ModSceneActBridge`, with small frame-loop delegates, `ModSceneHost` suspension,
+`GameplayTeamBootstrapContext` launch admission and engine-only
+`LevelSceneActAccess`. Scene suspension retains the original instance/context,
+ROM library, decoded art, prepared music and networking; it releases GPU textures
+and parks audible playback/borrowed donor routes. Resume re-prepares base ROM
+audio before `OwnedSceneFactory` calls the creator under its fault boundary.
+Title/fault teardown retires the retained visit before resetting audio or unloading
+mod owners. A duplicate launch cannot replace the first pending request.
+
+The public records and methods above are the implemented contract. Destination
+ownership and registration are validated synchronously inside the scene callback.
+Spawn overrides are one-shot centre writes after **all** native start selection and
+before reset, team placement and camera/object initialization. `ActLaunch` copies
+its team/state, uses zero-based acts, signed or unsigned native centre words and health rings
+0–999. Scene entry is a normal load boundary. Pending exit payloads participate in
+the existing level transition rewind adapter; the first request wins. Consumption
+occurs before the next LEVEL body, both handoff fades freeze world/scene updates,
+and return marks `MODE_EXIT_TO_NON_REWINDABLE`. Held input edges are retired through
+the fades. Explicit controllers own semantic completion/faint/timeout exits; stock
+progression is not guessed or converted automatically. `ABORTED` is available to a
+controller; hold-Escape and mod faults retire the scene to master title instead of
+calling a disabled scene's resume.
+
+The town registers `starpost-valley:valley` with a generated blank, flat native
+collision placeholder (26×2 S3K blocks; floor 192; no Sega art packaged). The farm
+fold launches at centre 190,173 with the chosen farmer. `TownController` submits
+its immutable hand-back payload through `services().requestActExit`; the retained
+`PlayScreen` opens the existing door/festival/event/menu handler. Closing a menu
+relaunches at the returned centre, retaining native health independently of the
+saved wallet. Gate/time-up/faint return to farm/day-end rather than relaunching.
+`town scene` retains the original scene valley; `town act` restores the default
+and `town enter` launches directly from a live play screen.
+
+Phase 1 replaces this zone's placeholder source with ROM-backed encoded terrain,
+retains the tagged destination and director admission anchors, and supplies correct
+connected ground/door anchors and entry centre for that terrain. Existing town
+width/pickup identities and the registered TownSession must stay consistent. This
+bridge does not certify the future loop, terrain, viewport/character route matrix
+or cross-ROM native object-art work.
+
+The brief's 3,072-line GameLoop ceiling differs from this checkout: the actual
+`TestArchitecturalSourceGuard` pins it at 3,381 and the inherited source is about
+3,349 effective lines. The bridge does not raise that pin; recording restart
+orchestration moves into its existing bootstrap helper and GameLoop shrinks.
+LevelManager's 3,145-line ratchet also stays unchanged; native start-provider
+selection moves into the level helper without changing its fallback semantics.
+
+The hook rejected an explanatory descriptor comment: ordinary candidate signature
+regeneration must not edit `mod-api-release-policy.properties`. It remains the
+unchanged authority (`currentApi=0.7.0`, candidate); the API version Javadoc,
+compatibility guidance and replacement 0.7 pin document this extension. No
+published version/pin or topology is invented to bypass that rule.
+
+A single controller at the gate was rejected by the executable round trip: a
+door return at centre 896 admitted no gate object, so the town stopped ticking.
+`TownContent.placements()` now supplies 256-pixel admission anchors along the
+route. The first admitted director claims the visit in captured `TownSession`
+state; the others neither update nor draw. Bind resets this claim, and rewind
+restores it with the controller objects. Phase 1 must preserve admission coverage
+for every entry/door/menu return centre, not merely place one distant gate object.
+The test checks exactly one town tick per world frame on both visits. Returned
+Y uses the controller's native collision result (172 here), not the initial
+launch Y of 173. The placeholder's start lies within its declared bounds.
+
+Working milestones: engine/API `5a0097933`; town glue and production bootstrap
+round-trip checks follow in this lane. Focused `TestModSceneActBridge` reports
+5/5, zero failures/errors/skips, using both absolute ROM properties. The town,
+example packaging and existing scene classes report 8/8, 2/2 and 1/1 respectively;
+the example invokes 181 creator cases (all pass, zero skips) and SDK validation
+reports zero findings. The four engine bridge cases passed before the relaunch
+fix; the last run passes all five, including farm → act → inn menu → act → gate
+→ the same farm/session. Final broad validation is recorded below when complete.
+
+The tick assertion initially treated a headless step as one object pass. S3K's
+initial `Process_Sprites` pass runs before the first LevelLoop iteration, and
+`HeadlessTestRunner` retries its SETUP_ONLY result. The test now retires that
+native setup pass before measuring one director tick per ordinary world frame;
+it does not alter engine timing or fit a town tick gate to the fixture. The
+scene return's audio preparation, exit-once behavior, rewindable pending payload,
+load/mode boundaries, hold-Escape and creator object fault teardown are exercised
+separately from the complete Starpost route.
+
+The resource-policy hook rejected staging even the nine tiny original `.bin`
+placeholder assets. Instead of changing that policy or renaming binary blobs,
+`examples/starpost-valley/generate_resources.py` now authors them directly into
+the packaging resource root. Checkout and artifact-only launchers share optional
+trusted project resource generation after copying source resources, and the test
+harness follows the same convention. The generator reproduces all nine original
+typed assets exactly; no ROM input is read. A launcher regression checks ordering
+and generator failure propagation. Generated blobs remain disposable output.
+
+Final review rejected a signed-positive-only spawn check. Baked levels accept
+X through 0xFFFF (`ModLevelDefinitionParser`), while `AbstractSprite.getCentreX/Y`
+return signed shorts. `ActLaunch` accepts either signed or unsigned 16-bit word
+representations, and a production bootstrap regression writes upper-half X and
+signed Y without losing their bits. Values outside a native word remain invalid.
+The first broad invocation was deliberately interrupted before completion for
+this correction; it is not a suite pass, and its diagnostics were acknowledged.
+
+The hook initially rejected that validation-only record edit even though the
+normalized signature snapshot remained identical. Its non-class heuristic kept
+compact-constructor bodies as if they were public declarations. Bash and
+PowerShell now exclude those bodies while retaining the canonical declaration,
+record components and other members. `TestModApiHookPolicy` verifies body edits
+pass without fake pin churn, component edits fail without the pin and pass with
+it; all 21 policy cases pass on both hosts. This fixes the actual coupling check
+rather than bypassing hooks, changing descriptor authority or inventing API.
+The corrected bridge/host/signature focused run reports 36/36, zero skips.
+
+
+The first completed guards rejected a new `level -> mods` package-cycle edge.
+The minimal contract correction locates `ActExit` in `com.openggf.game`, already
+shared by the level and mod APIs; `ActLaunch` and `ActResult` remain in
+`com.openggf.mods.scene`. The level helper accepts native spawn optionals and
+returns an engine-only result; the outer bridge constructs the public result.
+This preserves the signatures' semantics without relaxing architecture ratchets.
+The test object callback's clock parameter is named `vIntRunCount`, matching the
+existing V-int terminology guard.
+
+
+### Phase-2 final validation (2026-10-10)
+
+Implementation milestones are `5a0097933` (engine/API), `c6c52b513` (town native
+round trip and generated placeholder), `1730c4cb8` (native word validation and
+signature-hook correction), and `9ef5d8d21` (package boundary and clock name).
+All work remains local on `feature/ai-starpost-actbridge`; no push, merge or
+rebase was performed. Phase 1 still replaces the placeholder terrain and verifies
+its connected anchors, director admission, and per-route/viewport/team obligations.
+
+Run these commands from the Act Bridge worktree. `$PWD` resolves its verified
+S3K and S1 ROMs to the absolute paths used by the tests:
+
+```bash
+actbridge_s3k="$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen"
+actbridge_s1="$PWD/Sonic The Hedgehog (W) (REV01) [!].gen"
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 490f3de43 --category mods --preflight
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 490f3de43 --category mods --workers 2 --max-minutes 80 --run
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestModSceneActBridge,TestModSceneHost,TestModApiSignatureSurface,TestStarpostTownAct,TestStarpostValleyExample,TestStarpostValleyScene' "-Ds3k.rom.path=$actbridge_s3k" "-Dsonic1.rom.path=$actbridge_s1" test
+```
+
+The change-based plan correctly selected all 3,082 ordinary candidate classes for
+this public/shared API change, plus fresh guards. The first one-worker attempt
+on `1730c4cb8` reached its 40-minute invocation limit: 2,705 reports / 23,492
+observed tests, zero failures/errors, 57 skips, **incomplete**; no guard run began.
+Its diagnostics were inspected and acknowledged. The unchanged two-worker retry
+completed the ordinary lane in 1,708.94 seconds: 3,080 reports, 26,677 tests,
+27 failures, zero errors, 63 skips. The 3,082 figure is the selected source-class
+count, not the number of XML suites Maven produces. The initial guards found the
+three package-cycle/clock failures described above; the focused corrections did
+not change native gameplay or relax a guard.
+
+The final `9ef5d8d21` source contents pass all **674 guards**, zero failures,
+errors or skips, in 3:37. The final focused selection passes **47 tests**, zero
+failures/errors/skips, including all six engine bridge cases and the actual
+farm → act → inn menu → act → gate → same farm/session round trip. The example
+suite additionally executes 181 creator cases, all passing with zero skips, and
+SDK validation reports zero findings. Earlier required S3K loading/bootstrap/
+decoding/AIZ-skip consumer checks passed with the same absolute ROM setup.
+`TestModApiHookPolicy` passes all 21 Bash/PowerShell cases, and
+`python3 -m unittest discover -s tools/modding -p test_creator_kit.py` passes 13
+creator-kit checks. The compiled normalized 0.7 pin is regenerated in place;
+`currentApi=0.7.0` remains the unchanged unpublished candidate authority.
+
+The 63 ordinary skips were inspected: opt-in probes/benchmarks/soaks/captures,
+unavailable OpenGL/EGL, Infinite Sonic route assumptions, a CPZ spin-tube
+assumption, and unrequested local timeline/BizHawk diagnostics. They do not
+represent missing ROM paths. Live GPU resource re-upload and audible playback
+remain outside headless coverage; the bridge lifecycle and audio preparation
+are covered directly. This is a completed **red ordinary suite**, not a green
+full-suite claim.
+
+Each ordinary failure was attributed with a bounded, matched two-worker run:
+
+```bash
+actbridge_route_tests='com.openggf.tests.TestS3kMhzAct2AuthoredRoute,com.openggf.tools.TestDezIncomingFinalRouteCapture,com.openggf.tools.TestLrzActTwoColdRouteCapture,com.openggf.tools.TestLrzBossColdRouteCapture,com.openggf.tools.TestLrzKnucklesColdRouteCapture,com.openggf.tools.TestLrzTailsColdRouteCapture,com.openggf.tools.TestLrzWideBossColdRouteCapture,com.openggf.tools.TestMhzPairColdRouteCapture,com.openggf.tools.TestMhzWideColdRouteCapture,com.openggf.tools.TestSszColdRouteCapture,com.openggf.tools.TestSszSoloColdRouteCapture,com.openggf.tools.TestSszTailsColdRouteCapture,com.openggf.tools.audio.timeline.TestS1GameplayAudioTimelineCli'
+python3 tools/testing/maven_queue.py -Dmse=off -Ptest-concurrent "-Dtest=$actbridge_route_tests" "-Ds3k.rom.path=$actbridge_s3k" "-Dsonic1.rom.path=$actbridge_s1" test
+```
+
+The current `9ef5d8d21` source contents and exact `490f3de43` baseline source
+both ran 48 tests: 27 failures, zero errors/skips. The baseline was a temporary
+tracked-source overlay in this same worktree, with HEAD/branch unchanged,
+verified with `git diff 490f3de43 --exit-code -- .`; stale compiled classes were
+removed before each source build. A finally block restored the committed current
+source and removed baseline classes; `git diff --exit-code -- .` then passed.
+Comparison by fully qualified class, parameterized test identity, failure kind,
+and **full XML failure message** found zero differences after normalizing only
+JVM object identity hashes. There were no new, missing or worsened failures.
+The following are inherited failures; long world-diff messages show their prefix:
+
+| Class | Test identity | Failure |
+|---|---|---|
+| `tests.TestS3kMhzAct2AuthoredRoute` | `incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String, int)[2]` | late pulley owns Tails ==> expected: <true> but was: <false> |
+| `tests.TestS3kMhzAct2AuthoredRoute` | `incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String, int)[3]` | late pulley owns Sonic ==> expected: <true> but was: <false> |
+| `tools.TestDezIncomingFinalRouteCapture` | `coldEmeraldTeamClearsBothActsFinalFightAndDoomsday` | death at 53897 ==> expected: <false> but was: <true> |
+| `tools.TestDezIncomingFinalRouteCapture` | `coldOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding` | expected: <96> but was: <0> |
+| `tools.TestDezIncomingFinalRouteCapture` | `coldOrdinarySoloTailsClearsAllFinalPhasesAndLoadsEnding` | expected: <96> but was: <0> |
+| `tools.TestDezIncomingFinalRouteCapture` | `coldOrdinaryTeamClearsHandsCoreAndEscapeShipAndLoadsEnding` | expected: <96> but was: <0> |
+| `tools.TestDezIncomingFinalRouteCapture` | `coldWideOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding` | expected: <96> but was: <0> |
+| `tools.TestDezIncomingFinalRouteCapture` | `incomingFinalFightRestoresAndReplaysEveryPhase(int)[1]` | death at 26706 ==> expected: <false> but was: <true> |
+| `tools.TestDezIncomingFinalRouteCapture` | `incomingFinalFightRestoresAndReplaysEveryPhase(int)[2]` | death at 26750 ==> expected: <false> but was: <true> |
+| `tools.TestLrzActTwoColdRouteCapture` | `coldTeamCompletesActTwoAndReachesBossActWithRepeatableWorldState` | death at input 36526 ==> expected: <false> but was: <true> |
+| `tools.TestLrzBossColdRouteCapture` | `coldTeamCompletesBossActWithEarnedShieldAndRepeatableWorldState` | death at input 36526 ==> expected: <false> but was: <true> |
+| `tools.TestLrzKnucklesColdRouteCapture` | `coldKnucklesCompletesActTwoAndReachesPlayableHiddenPalace` | expected: <1069> but was: <899> |
+| `tools.TestLrzTailsColdRouteCapture` | `coldTailsClearsActOneAndRestoresTraversalFightAndHandoff` | death at input 19460 ==> expected: <false> but was: <true> |
+| `tools.TestLrzTailsColdRouteCapture` | `coldTailsCompletesActTwoAndRestoresTheBoulderHandoff` | death at input 19460 ==> expected: <false> but was: <true> |
+| `tools.TestLrzTailsColdRouteCapture` | `coldTailsCompletesBossActAndReachesPlayableHiddenPalace` | death at input 19460 ==> expected: <false> but was: <true> |
+| `tools.TestLrzTailsColdRouteCapture` | `coldTailsRestoresActTwoTraversalToTheMiddleCorridor` | death at input 19460 ==> expected: <false> but was: <true> |
+| `tools.TestLrzWideBossColdRouteCapture` | `coldWideTeamClearsBossAndReleasesHiddenPalaceWithRepeatableWorld` | expected: <2796> but was: <524> |
+| `tools.TestMhzPairColdRouteCapture` | `pairedColdCompletionIsolatesTheLiveTimelineAtTheActualFbzLoad` | the route must observe the actual history-reset boundary ==> expected: <true> but was: <false> |
+| `tools.TestMhzWideColdRouteCapture` | `wideSonicCompletesBothActsThroughProductionLoopWithWholeWorldReplay` | [wide-route-19500] restore 0 zone-runtime: [zone-runtime.stateBytes[2]: A=46 B=26, zone-runtime.stateBytes[3]: A=-104 B=64, zone-runtime.stateBytes[6]: A=38 B=21, zone-runtime.stateBytes[… |
+| `tools.TestSszColdRouteCapture` | `coldCompleteRouteDefeatsMechaAndLoadsDeathEggWithRewindAtLateEvents` | death at input 7311 ==> expected: <false> but was: <true> |
+| `tools.TestSszColdRouteCapture` | `coldRouteDefeatsBothReplicasAndReplaysTraversalAndTransport` | death at input 7311 ==> expected: <false> but was: <true> |
+| `tools.TestSszSoloColdRouteCapture` | `coldSoloSonicDefeatsBothReplicasAndReplaysTheirApproaches` | death at 7671 ==> expected: <false> but was: <true> |
+| `tools.TestSszSoloColdRouteCapture` | `coldSoloSonicDefeatsMechaAndLoadsDezWithIsolatedHistory` | death at 7671 ==> expected: <false> but was: <true> |
+| `tools.TestSszTailsColdRouteCapture` | `coldSoloTailsDefeatsBothReplicasAndRidesTheirTeleporters(int)[2]` | replay at 4018 object-manager: [object-manager.usedSlotsBits differs, object-manager.usedSlotsBits.onlyA: 24, 29, object-manager.dynamic[6][ObjectRefId[slotIndex=-1, generation=0, spawnId… |
+| `tools.TestSszTailsColdRouteCapture` | `coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory(int)[1]` | expected: <48> but was: <0> |
+| `tools.TestSszTailsColdRouteCapture` | `coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory(int)[2]` | expected: <48> but was: <0> |
+| `tools.audio.timeline.TestS1GameplayAudioTimelineCli` | `shellUsesAbsoluteBootstrapToolsAndRejectsInjectedEnvironmentBeforePathLookup` | expected: <0> but was: <4> |
+
+All category diagnostics were inspected and acknowledged, including the
+interrupted native-word correction run. Raw logs/comparator files are disposable
+worktree output and are not archived. The evidence above records commands,
+source commits, skips and attributed failure identities rather than totals alone.
+
+## 22. The real valley (P1 lane)
+
+Continuation of checkpoint `4b1a7af90` in `.worktrees/ai-starpost-realvalley`,
+base `acb094c76`. Working milestone `13f582554` replaces the scene controller
+for this one act with the real S3K engine player. The startup scene remains the
+existing scene; this lane exposes `ZoneKey.Mod("starpost-valley", "valley")` for
+tests and debug launches with a production logical-ROM PatchContext. Town
+villagers, buildings and doorways belong to the separate Town lane (§21).
+
+`starpost.realvalley` registers an original empty placeholder and wraps its
+backing content patch. At load, the published logical-ROM/game contracts decode
+S1 GHZ1, copy primitive terrain data, and call the S3K `ModZoneAdapter.load` with
+format-v2 `ModZoneLevelData`. The foreground source blocks are
+`13,45,60,60,60,60,45,3,45,53,38,1,16`; each 256px block becomes four 128px
+blocks, with an empty 128px sky row. The GHZ background is also split and
+compacted. No Sega asset bytes are committed or bundled. Without S1, the
+placeholder remains; a debug launcher with a null PatchContext cannot provide
+S1. Creator packaging reports zero validator findings.
+The checkpoint's ignored `.bin` placeholder outputs were not tracked. The final
+source uses typed `.gptn/.gchk/.gblk/.gmap/.gshg/.gswd/.gsan/.gcol` resource
+names plus `examples/starpost-valley/tools/make_placeholder.py`. All nine tiny
+files regenerate byte-for-byte without ROM inputs; they contain only constant
+colour and empty records. No resource-policy exception or hook bypass is used.
+
+### Assumptions and measured evidence
+
+| Assumption | Evidence |
+|---|---|
+| A2: fits host limits | Source 1,345 patterns/439 chunks/83 blocks; reachable foreground and background compact to **522 patterns/279 chunks/60 blocks/38 collision profiles**, below 2048/1024/256/256. |
+| A1: palette claims avoid HUD cells | **28 claims**, 24 remapped pattern uses; **2,129,920** foreground/background pixels match source RGB, transparency and priority after 20 host frames. No art uses line 0, line-1 cells 1/5/12/14/15, or the placeholder's line-3 cell 15. |
+| A3: collision/floor equality | **3,407,872** pixel comparisons cover both paths and both solidity bits; **3,072** production floor probes match source floors. Empty columns have no floor to probe. |
+| A4: traversable loop with occlusion | Sonic/Knuckles apex y=165, Tails y=161; grounded, secondary path observed, exits x=2604/2611/2604 and primary path restored. Native frame 77 covers 578 Sonic pixels with high-priority near-side terrain. |
+
+The loop's secondary collision comes from S1 block 54. Six cells in row 11,
+columns 5–10, require a relative horizontal reflection on simultaneously solid
+paths. The initial rejection proved that copying one path's flip would lose the
+other surface. Profiles are compacted by all 33 bytes, with exact relative
+height/width/angle reflection. Vertical reflection preserves FindFloor's positive
+full-tile `$10` sentinel. Three stock PATH_SWAP objects select the paths; original
+pattern priority is retained. These are intentional S3K object placements, not a
+claim of instruction-for-instruction S1 `Sonic_Loops` parity.
+
+The source's block 3 has a 64px ledge: held-right stalls at x=1785. The route
+uses a native jump onto it, rather than changing collision. A stock yellow Spring
+sits there; a stock Star Post sits at the farm gate. No scene objects or physics
+are used in this act.
+
+### Host corrections and rejected approaches
+
+The no-engine-change assumption failed in two bounded load consumers, fixed in
+`13f582554`: stock dynamic-start lookup read unrelated ROM coordinates for the
+additive zone (Sonic/Tails x=5024, Knuckles x=30), overriding descriptor x=150;
+additive acts now use their descriptor start. Native captures also exposed stale
+GPU pattern indices after the source decoder published S1 art. Additive CPU
+levels now publish their own patterns and palettes before tilemaps are built.
+Stock level loading still follows its original paths. Both changes are private
+host implementation; there is no Mod API surface or signature-pin change.
+
+Rejected: non-API `Sonic1.buildDetachedLevel` inside creator code (four validator
+warnings); published ROM detection/game loading packages cleanly. Rejected:
+trusting CPU pixel comparisons as proof of GPU presentation. The first native
+images had wrong art despite exact CPU data; publication and inspected captures
+were required. The registered placeholder's palette bridge resubmits its own
+claims each frame, so its one claimed cell is explicitly excluded from real art.
+
+### Act/character route matrix and rewind spots
+
+| Act/route | Cold load and traversal | Independent interaction/presentation | Capture/restore and forward replay |
+|---|---|---|---|
+| Valley / solo Sonic | Fresh descriptor start, 320 and 400px; runs to x>=3128 with ledge jump, alive | 400px loop apex/secondary/exit; native loop occlusion and spin-dash dust | Mid-valley capture, 300 input frames, restore/replay; x/y/ground speed and object-manager snapshot match |
+| Valley / solo Tails | Same two widths and route | 400px loop; native flight and tails | Character-specific ability/loop rewind still open |
+| Valley / solo Knuckles | Same two widths and route | 400px loop; native glide pose | Character-specific ability/loop rewind still open |
+
+Short art/palette/floor/ability checks are independent of the long route. The
+current rewind spot is a forward-replay regression, not whole-registry or
+whole-route certification. Stock Spring/Star Post activation, checkpoint respawn,
+loop-boundary rewind, load/history isolation, other supported widths, donors,
+paired teams and reverse traversal remain explicit matrix gaps. There is no
+boss, results handoff, town doorway or scene/act round trip in P1. Those gaps
+must be addressed when those features become supported; this matrix does not
+certify stock GHZ or the complete level-testing standard.
+
+### Validation and captures
+
+Every queued command has prefix `python3 tools/testing/maven_queue.py --lean -B -Dmse=off`
+and suffix `test`. ROM properties are absolute paths to this worktree's
+`Sonic and Knuckles & Sonic 3 (W) [!].gen` and
+`Sonic The Hedgehog (W) (REV01) [!].gen`.
+
+Java 21 and exact ROM identity verified: S1 REV01 CRC32 `AFE05EEE`, S3K
+locked-on `63522553`. All Maven tests use `tools/testing/maven_queue.py`,
+`-Dmse=off`, exact selectors and absolute `sonic1.rom.path`/`s3k.rom.path`.
+
+- `-Dtest=TestStarpostRealValley,TestStarpostValleyExample`: **15 passed**, no
+  failures/errors/skips; creator bridge **175 passed**, zero findings.
+- With the final tracked placeholder assets, the combined RealValley/bridge run
+  again passed **15 engine checks and 176 creator checks**, no failures/errors/skips
+  or validator findings. Independent placeholder regeneration matches all nine files.
+- After adding the vertical-reflection sentinel regression,
+  `-Dtest=TestStarpostValleyExample`: **2 passed**, creator bridge **176 passed**,
+  no skips or validator findings (six pure encoder tests).
+- `-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestS3kModZoneLifecycle`:
+  **62 passed**, no failures/errors/skips.
+- `-Dtest=TestS3kModZoneAdapter,TestModZoneAdapterRouting,TestModZoneLoader,TestModZoneRuntimeProfile,TestModZoneEventLifecycle,TestSonic3kModZoneObjectSet,TestSonic3kLivesHudPaletteOverride`:
+  **82 passed**, no failures/errors/skips.
+- `-Dtest=TestModApiSignatureSurface,TestModApiPinPolicy,TestObjectPriorityBucketGuard,TestPatternSpriteRendererCorruptionGuard`:
+  **16 passed**, no failures/errors/skips. This run waited over six minutes, then
+  completed before an attempted cancellation; final logs establish execution.
+  This is targeted structural coverage, not the entire guards profile.
+- `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base acb094c76 --preflight`:
+  passed Java/Lua/PowerShell prerequisites. The default Lua executable initially
+  failed preflight; Lua 5.4 corrected the prerequisite.
+
+The combined change-based plan selected all **3,080 ordinary classes plus
+guards**, largely through unclassified example sources. Proportionate validation
+uses direct encoder invariants, production mod loading, character physics,
+rewind, native GPU capture and affected S3K/additive consumers. The host edits
+are conditional spawn/publication corrections for additive acts; no shared
+physics algorithm, public contract, timing port or selection policy changes.
+No full ordinary-suite or full structural-guard pass is claimed. Integration and
+broader delivery verification belong to the lead lane; this branch stays local.
+
+Inspected native PNGs and four short 60fps videos are under
+`~/scratch/sv-realvalley/final/`: `loop-apex.png`,
+`loop-occlusion.png`, `tails-flight.png`, `knuckles-glide.png`,
+`spindash-dust.png` and corresponding `sonic-loop.mp4`, `tails-ability.mp4`,
+`knuckles-ability.mp4`, `sonic-dust.mp4`. Per-frame state CSVs and a diagnostic
+unoccluded same-frame reference quantify loop presentation. The scratch
+`RealValleyCapture.java` uses `HeadlessGameBoot` + `GameLoop.step`, not
+`ExampleModCapture`; no simulation step uses the diagnostic rendering override.
+
+## 23. Integration
+
+Integration lane: `feature/ai-starpost-integrate`, base `70d428fd4`, local only.
+Milestone `f30dd2e47` connects the town to the real act. `TownTerrain` is the
+single mapping seam: scene/act share block columns, the act adds its sky-row
+origin, and native admission anchors use `ValleyLevel.floorAt` at load. The merged
+terrain omitted the directors entirely; changing only their heights could not
+repair admission. Doors, schedules and dressing use decoded `ActGround` floors.
+Daily pickup identity and collected bits survive reprojection; floor pickups
+probe each X, while spring/loop arcs translate with the block origin. Using the
+loop's first floor for its arc was rejected: that floor is its upper collision
+surface, not the authored ring centre.
+
+The destination-scoped `registerHudProfile` suppresses stock S3K rows. The town
+renders S1 ROM-art TIME as the day clock and RINGS as the wallet, matching the
+scene; SCORE/LIVES stay hidden. `TownPresentation.updateMusic` uses the retained
+scene context's `audio().playMusic` donor route and existing place/weather/hour
+selection. Return resets the scene music cursor and reselects the farm song.
+Native health rings remain separate from spending the wallet in scene menus.
+No Mod API signatures/pins changed. The first completed guard run at
+`a140d3695` ran 674 tests with one inherited failure: `LevelManager` had 3,160
+effective lines against its 3,145-line budget, identical to base `70d428fd4`.
+Extracting its existing additive graphics publication into
+`LevelGraphicsPublisher` preserves palette/pattern batching and headless gating;
+no load algorithm changes. The follow-up reruns affected loading and routes.
+
+### Integration route matrix
+
+| Main, native solo | 320 | 400 | Obligations |
+| --- | --- | --- | --- |
+| Sonic | pass | pass | farm gate → walked inn → buy soup → same act/door → walked gate → same farm |
+| Tails | pass | pass | same, shorter native standing radius |
+| Knuckles | pass | pass | same, native standing radius |
+
+`TestModSceneActBridge` retains the named admission regression and adds the five
+other matrix rows. Every row checks scene/game/PlayScreen identity, one director
+per world update on both visits, retained day-clock fraction, collected wallet
+and native rings, purchased/carried items, S1 donor music at gate/town/farm,
+and a whole-registry capture/restore plus 30-input forward replay near X=400.
+The first rewind attempt dropped creator dynamics because the harness omitted
+the production class resolver; installing `ModTestKit.rewindClassResolver` before
+bootstrap fixes the fixture without weakening object/state comparisons. The
+separate schedule test checks each visible villager's feet against the decoded
+floor while Sonic walks the meadow/slope, and every building's doorway base.
+Load and return boundaries intentionally reset the engine timeline; scene-owned
+daily state survives. Existing Phase-1 ledge/loop routes and rewind remain covered.
+
+Validation is focused, not a full-suite pass. The change-based plan selects all
+3,083 ordinary classes because example paths and the shared test harness fall
+back to full selection. Proportionate validation applies: executable changes
+are confined to this example plus a behavior-preserving extraction of additive
+load graphics; there is no shared algorithm, public API or build/selection-policy
+change. Actual consumers, six native routes, terrain,
+rewind, HUD/audio, creator packaging and required S3K baselines are checked
+explicitly, followed by fresh structural guards. Java 21/Lua 5.4/PowerShell
+preflight passes. Commands (both ROM properties resolve to absolute paths):
+
+```bash
+python3 tools/testing/maven_queue.py --lean -B -Dmse=off '-Dtest=TestStarpostRealValley,TestStarpostTownAct,TestStarpostTownSceneBridge,TestModSceneActBridge,TestModSceneHost,TestStarpostValleyExample,TestStarpostValleyScene,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' "-Ds3k.rom.path=$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic1.rom.path=$PWD/Sonic The Hedgehog (W) (REV01) [!].gen" test
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -B -Dmse=off -Pguards "-Ds3k.rom.path=$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic1.rom.path=$PWD/Sonic The Hedgehog (W) (REV01) [!].gen" test
+java -cp "$HOME/scratch/sv-integrate/creator/out:target/classes:$(cat target/test-classpath.txt)" RunCreatorTests $HOME/scratch/sv-integrate/creator/tests $HOME/scratch/sv-integrate/creator/main
+```
+
+The lane-rules direct creator runner passes **196/196**, no skips; packaging
+reports **Validation passed: 0 findings**. The final focused engine run passes **118/118**, zero failures/errors/skips;
+the final guard run passes **674/674**, zero failures/errors/skips (3m43s).
+Both focused loading/routes and guards ran on `a140d3695` plus the reviewed
+`LevelGraphicsPublisher` extraction. The final milestone commits that exact
+extraction and these documentation updates; no later executable changes.
+
+Native `HeadlessGameBoot` + `GameLoop.step` capture: `~/scratch/sv-integrate/`,
+`round-trip.mp4` (798 frames, 13.3 seconds, synthesized ROM audio), final
+`final-round-trip/state.csv` and reproducible
+capture driver. Inspected frames include gate 200, stall 300, inn menu 410,
+returned real act 510, and farm 780. Every valley movement/door/gate interaction
+uses pad input; only the initial farm position uses debug placement.
+
+`town scene` remains a debug fallback. This certifies the requested short loop,
+not the whole level-testing standard: wider widths, movement donors, follower/
+maximum/duplicate teams, checkpoint/death/respawn breadth, all menu transactions,
+and festival/day-end routes remain gaps. Villagers do not jump the original
+64px totem ledge or cross pits; schedules spanning that obstacle can stop there.
+The terrain's existing native player jump route remains intact.
+
+
+## 24. The Ruins on real levels (lane)
+
+Lane `feature/ai-starpost-realruins`, base `3da4cd930`; local implementation only.
+The scene still owns the same Game, inventory, day and PlayScreen. `RuinsSession`
+is a captured service beside TownSession; `RuinsPatch` regenerates the selected
+chamber on every load from RuinsSection.seed/day/number. ChamberGen, Reach,
+Landmarks and Placer retain their existing rules. `ValleyEncoder.encodeGrid`
+reuses the real valley encoder for a rectangular kit grid, preserving S1 art,
+flips, collision masks/angles and priority. No ROM bytes enter the mod jar.
+
+The native S3K player owns running, jumping, character abilities, hurt/ring
+scatter, shield absorption and drowning. RuinsController translates generated
+lava tags into native FIRE contact, carries the scene clock, exposes the shafts
+and Star Post elevator, and returns LEFT/COMPLETED/FAINTED/TIME_UP through E1.
+Health is withdrawn once, carried across descent/inventory, banked once on exit,
+and subject to existing RuinsRules.faint losses. Native springs, monitors,
+spikes, Star Posts and bubble makers use the S3K registry; these generated bands
+contain no Green Hill loops requiring path swaps. `RuinsWater` supplies the real
+waterline and Bubble Shield breathing. The retained scene music selects each
+band's Sonic 1 song. ActHud supplies the shared Momentum bar in both acts.
+
+RuinsThing wraps the existing nine S1 badnik ports (S1 objects 78,55,22/23,50,
+2C,2D,60,5F,1E/20) rather than copying behavior. Rocks/monitors spawn captured
+RuinsFind objects with the existing mineral, geode, Record and museum yields.
+Badniks retain harmful body/spike/projectile rules and release band-appropriate
+ROM animals, using Anml_Variables hop speeds. Badnik animation sheets are loaded
+through E2, rendered from their parsed five-byte mappings and original S1
+palette. Draw caches contain presentation only; gameplay survives repeated or
+skipped drawing. The scene implementation remains accessible via `ruins scene`;
+`ruins act` restores native launches.
+
+### Engine seam and rejected approaches
+
+Milestone `14a3bfd69` adds `RomArtRequest.source()` and its source-qualified
+constructor, preserving the seven-argument S2 constructor, plus
+`ModContext.registerRomObjectArt(String, LogicalRom, RomArtRequest)`. S1 and S2
+are explicit logical inputs; S1 bounds/mappings are checked and S1 DPLC requests
+are rejected. Production materialization opens the named supplied ROM through
+PatchContext, independent of the S3K host. Candidate 0.7 signature pins,
+ModApiVersion commentary, compatibility/creator guidance and develop release
+prose change together; the unpublished candidate version remains 0.7.0.
+
+The first whole-registry replay exposed a native BubbleShield owner mismatch:
+`object-manager.dynamic[100].ownerModId` restored as null instead of
+starpost-valley. Milestone `29c3e1755`: DefaultPowerUpSpawner reattaches the captured owner before
+restoring the dynamic slot. The pending player-refresh path has a direct
+regression; no new public signature is needed.
+
+Using generator zone IDs directly in Sonic1.loadLevel was rejected: decoded
+indices are MZ `0x86+act`, LZ `0x83+act`, SBZ `0x8F+act`, unlike public kit IDs.
+Reusing the valley's placeholder claim line3/colour15 was rejected by Scrap
+Brain pattern556, which needs every opaque colour on that line. The separately
+original Ruins placeholder uses line1/colour2; all bands encode without fitted
+palette values. Immediate inventory credit was replaced with captured dropped
+objects so full bags leave finds in the chamber. Same-room reload explicitly
+recreates pending find objects; room snapshots do not undo menu purchases.
+
+### Coverage and limits
+
+The [Ruins route matrix](../validation/levels/starpost-realruins.md) records
+independent band/character obligations and inherited breadth gaps. Native route
+checks use production packaged-mod loading and whole-registry capture/restore;
+scene-only tests explicitly select the preserved fallback. Load/act handoffs
+intentionally sever the gameplay timeline while the live scene state survives.
+
+This is the existing mod's short S1 behavior port, not a frame-parity claim for
+all nine badnik state machines. Labyrinth has native water physics/drowning and
+a draw tint; exact Pal_LZWater remapping for the reallocated host palette remains
+open. Bubble makers use stock S3K art. Wider viewports, movement donors, teams,
+all forty native traversals, checkpoint/restart breadth and complete object-phase
+rewind remain gaps. No engine gameplay is hydrated from reference traces.
+
+Town hand-back may launch a Ruins act directly inside resume. Scheduling the
+usual valley reload afterwards would also rebind TownSession while the queued
+Ruins act owns input. Suppress that reload when RuinsSession is active; the
+three native doorway round trips exercise this boundary.
+
+Stock monitor remembered bits are translated into chamber progress before a
+hand-back, preventing an inventory visit from minting another native ring
+monitor. Object list indices use layoutIndex rather than the byte-wide subtype,
+so captured find identity does not wrap after 255. The last shaft remains sealed
+with an in-act notice; the mod uses only promised API calls.
+
+### Lane validation
+
+At `71f05bec6`, including the handoff/persistence and fixture corrections:
+`TestStarpostRealRuins` passes **37/37**, zero skips. All forty chambers load
+through the shared encoder; chamber1 repeats within a day and changes next
+morning. Nine independent native-input exit routes descend to the next act;
+nine hit/result and full-registry rewind cases and nine faint/item-loss cases
+pass. Flooded room25 supplies the three native drowning/Bubble Shield checks.
+Independent checks cover pending loot/menu reload, TIME_UP/day advance, native
+pad elevator selection, and three valley door/light/same-door round trips.
+
+The shield checks pass **17/17** and scene fallback **1/1**. The required
+RealValley/act bridge/S3K/API art/signature checks pass by test identity; the
+first combined run exposed eight obsolete context-less town fixtures, a strict
+descriptor comment rejection and the scene-only binder assumption. Fixtures now
+supply PatchContext or explicitly select the scene fallback. The elevator test
+uses logical pad input rather than assuming an arrow-key binding. TownAct passes
+**8/8**, API pin policy **4/4**, formal creator bridge **2/2** with **197/197**
+creator cases and **0 validation findings**. TownSceneBridge passes **1/1**,
+zero skips. Combined ordinary/guard evidence follows below.
+
+Commands use `python3 tools/testing/maven_queue.py --lean -B -Dmse=off` with
+absolute S1/S3K ROM properties, followed by `test`, and these exact selectors:
+
+- `-Dtest=TestStarpostRealRuins,TestShieldRewindPendingRestore,TestShieldRewindRestore,TestStarpostValleyScene`
+- `-Dtest=TestStarpostRealValley,TestStarpostTownAct,TestStarpostTownSceneBridge,TestModSceneActBridge,TestStarpostValleyExample,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestModApiSignatureSurface,TestModApiPinPolicy,TestModContextRomArt,TestModBackedGamePatchRomArt`
+- Corrections: `-Dtest=TestStarpostRealRuins,TestStarpostTownAct,TestStarpostTownSceneBridge,TestModApiPinPolicy,TestStarpostValleyExample`
+- Binder only: `-Dtest=TestStarpostTownSceneBridge`
+
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 3da4cd930 --preflight`
+passes Java21/Lua5.4/PowerShell; default Lua5.5 failed first, corrected explicitly.
+The combined plan selects all **3,084 ordinary classes plus fresh guards**;
+the public API and shared callback ownership require normal broad validation.
+
+At `71f05bec6`, the combined invocation completed ordinary **26,736 tests,
+27 failures, 1 error, 63 skips** in 3,509.79 seconds and fresh guards **674/674,
+zero skips** in 233.69 seconds. Run `20261010T024407Z-51ccf5cc` retained complete
+case identities. The S2 sample error is an E2 compatibility regression: adding
+logical S2 as a prerequisite disabled its active-host path with an intentionally
+absent logical resolver. Preserve that legacy host-ROM path; named cross-ROM art
+still requires PatchContext and declares its source. A missing context must never
+interpret an S3K host as S2 bytes. Focused production and prerequisite checks
+verify this correction, followed by final fresh guards. The other27 assertion failures are
+confirmed inherited by bounded base/current attribution below; no green broad-suite claim is made.
+Skips include optional probes/native-display tests and 32 Infinite Sonic cases
+whose selected acts lack the platform/flyer combination; required Starpost
+checks have zero skips.
+
+Bounded base export `target/realruins-baseline` contains the complete tracked tree
+at `3da4cd930`, under this lane only, with its own Maven output and the same
+absolute ROM properties. First check: `-Dtest=TestS3kMhzAct2AuthoredRoute,TestSampleRomArtRemixIntegration`
+(**4 tests, 2 inherited failures, zero errors/skips**; the S2 sample passes).
+Second check selects the twelve remaining failed classes below by their full
+qualified names (**45 tests, 25 inherited failures, zero errors/skips**). Both invoke this lane's `tools/testing/maven_queue.py` by absolute path, with
+`-B -Dmse=off <selector> <ROM properties> test`, from the export. Combined base **49 tests / 27 failures** exactly accounts for
+all ordinary assertion failures by identity and concrete failure fields.
+Twenty-six assertion messages match exactly. The SSZ Tails replica replay's full
+first line matches after normalizing only `RewindObjectStateBlob@hex`: its
+hashCode includes the JVM's Class identity. No other fields were normalized.
+The audio CLI's expected0/actual4 reproduces with inherited `LD_LIBRARY_PATH`;
+its source is unchanged. No unrelated engine route was repaired.
+
+| Inherited class (first is the earlier check) | Failures | Concrete first errors |
+| --- | ---: | --- |
+| `com.openggf.tests.TestS3kMhzAct2AuthoredRoute` | 2 | late pulley owns Tails / Sonic false |
+| `com.openggf.tools.TestDezIncomingFinalRouteCapture` | 7 | final96→0; deaths26706,26750,53897 |
+| `com.openggf.tools.TestLrzActTwoColdRouteCapture` | 1 | death input36526 |
+| `com.openggf.tools.TestLrzBossColdRouteCapture` | 1 | death input36526 |
+| `com.openggf.tools.TestLrzKnucklesColdRouteCapture` | 1 | expected1069 / actual899 |
+| `com.openggf.tools.TestLrzTailsColdRouteCapture` | 4 | death input19460 |
+| `com.openggf.tools.TestLrzWideBossColdRouteCapture` | 1 | expected2796 / actual524 |
+| `com.openggf.tools.TestMhzPairColdRouteCapture` | 1 | actual timeline reset boundary not observed |
+| `com.openggf.tools.TestMhzWideColdRouteCapture` | 1 | wide-route19500 restore0 zone-runtime bytes2,3,6,7,10,11 |
+| `com.openggf.tools.TestSszColdRouteCapture` | 2 | death input7311 |
+| `com.openggf.tools.TestSszSoloColdRouteCapture` | 2 | death7671 |
+| `com.openggf.tools.TestSszTailsColdRouteCapture` | 3 | final48→0; replay4018 dynamic slots/children |
+| `com.openggf.tools.audio.timeline.TestS1GameplayAudioTimelineCli` | 1 | shell environment rejection, expected0 / actual4 |
+
+Correction check: `python3 tools/testing/maven_queue.py --lean -B -Dmse=off`
+with `-Dtest=TestSampleRomArtRemixIntegration,TestModBackedGamePatchRomArt,TestModContextRomArt,TestModApiSignatureSurface,TestModApiPinPolicy,TestStarpostRealRuins`,
+all three absolute ROM properties and `test`: **65/65 pass, zero skips**.
+This includes all37 native Ruins cases, legacy sample production materialization
+and three new host/cross-ROM prerequisite controls. Compatibility milestone
+`87f9eef6f` then passes final fresh guards **674/674**, zero failures/errors/skips,
+in 4:22. Command:
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -B -Dmse=off -Pguards <three absolute ROM properties> test`.
+The ordinary suite is not rerun or called green. Consumed category run
+`20261010T024407Z-51ccf5cc` is acknowledged and deleted; the lane-owned base
+export/build is deleted after comparison. No other worktree is changed.
+The combined command was
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 3da4cd930 --max-minutes 120 --run`.
+
+
+
+Three **240-frame / 4-second**, silent, native GameLoop captures at `71f05bec6`
+(before the S2-only compatibility correction; S3K art/act behavior is unchanged) and
+state CSVs are under `~/scratch/sv-realruins/`: `marble.mp4`,
+`labyrinth.mp4`, `scrap-brain.mp4`, and each band's `frames/` / `state.csv`.
+`RealRuinsCapture.java` drives HeadlessGameBoot + GameLoop.step with native pad
+input, not the scene hand-port. All three packages report zero findings.
+Inspected frames90 show native hurt/health, source art, water and the shared
+Momentum HUD. Nine original placeholder assets reproduce byte-for-byte with
+`tools/make_placeholder.py <output> 1 2`.
+
+
+## 25. Festivals and the lake on real levels (lane)
+
+Phase 4 starts at `435671fd0` in `feature/ai-starpost-realfest`. Race, Ring Hunt,
+snowboard and Waterfall Lake now enter owned S3K acts through the invitation/scene
+bridge, and results return to the same festival scene. Race uses the original Green
+Hill circuit twice, scripted competitors and Egg Mobile cruise/boost rules. Ring
+Hunt uses the real town layout, shared ring claims and its 60-second champion race.
+Snowboard terrain consists of ROM chunk rows shifted in 16-pixel steps, with native
+player sensors/jumps, a minimum board speed, rings and the existing score/prizes.
+Lake uses blocks 1/51/52, native walking and a captured level director for casting,
+bites and Bubble Bar; the Ice Cap choice launches its timed fishing variant.
+Drawing reuses ROM art through LevelPictureCanvas and never advances rules.
+Snowboard rocks are native level objects: grounded contact costs three rings and
+starts the existing 70-tick tumble; airborne native jumps clear them. The lake
+keeps its ROM palette cycle, pool bed/shadows, scheduled Barnaby and the restored
+log bridge as real top-solid objects.
+
+Fair booths and Strength remain scenes: inventory selection, slots and press timing
+do not require platforming. Parade/Feast/Flicky ceremonies have static scene poses.
+The farm pond stays attached to the belt-view farm and its distinct BeltRunner.
+Deleted gameplay Runner, ValleyView, RuinsScreen, LakeScreen and their debug
+fallbacks/obsolete ability tests. TownBackdrop is presentation only. GenerationRunner
+is retained solely for bounded Ruins generation searches; native Ruins route tests
+are the playable oracle. No gameplay object instantiates that approximation. Its unused flight, glide, climb
+and damage code is removed; generation keeps only the Sonic/water/spring search model.
+
+The initial Labyrinth fix subtracted the live viewport from the native right bound;
+six native Ruins routes then stopped 80 pixels before their exits at 400px. That
+approach was rejected: PlayableSpriteMovement uses the same bound plus native
+320px for the movement wall. `Camera.setViewportMaxX` instead captures a separate
+view-only ceiling, resets it on level load, and leaves the native right wall intact.
+The mod supplies chamber/course width minus the live viewport. A camera regression
+checks forced placement, ordinary follow, restore and reset; native exit routes
+check the consumer.
+Scheduled neighbours share a deterministic, slope-limited walking path with real
+top-solid ROM log decks spanning ledges/pits. Native town, Ruins and lake reuse the
+scene HUD, including Momentum. NativePositionOps and solid-provider signatures
+are now annotated candidate API contracts; their transitive types and the mutable
+0.7 signature pin are updated together. Keeping unpinned engine-helper calls was
+rejected after packaging reported five compatibility findings. Published pins and
+API version/status do not change.
+
+### Festival and lake route matrix
+
+| Native destination | Character/viewport routes | Result and rewind spot |
+|---|---|---|
+| Race | Sonic/Tails/Knuckles × 320/400 | Countdown restore/replay, two laps, verdict, return |
+| Ring Hunt | Sonic/Tails/Knuckles × 320/400 | Countdown restore/replay, real ring claim, 60-second verdict, return |
+| Snowboard | Sonic/Tails/Knuckles × 320/400 | Countdown restore/replay, native downhill run, score, return |
+| Lake | Sonic/Tails/Knuckles × 320/400 | Shore restore/replay, jetty/cast/bite/fight, leave |
+| Ice Cap fishing | Sonic/Tails/Knuckles × 320/400 | Shore restore/replay, cast/fight, timer/result, return |
+
+Initial focused verification: 30 native route cases, 9 candidate signature cases
+and 2 packaged-example cases pass without skips; packaging reports zero findings.
+The direct CreatorTestLauncher runs 193 creator cases without skips or failures.
+The expanded focused run passes 235 of 236 cases, with one scene pond test setup
+failure (rod not selected); the corrected scene smoke test passes separately.
+That smoke test now covers scene-only festivals: running festivals suspend its
+host and belong in the native bridge matrix, rather than continued scene ticks. All 30
+native routes, native Ruins exits, required S3K checks, camera and SDK/Javadoc
+checks pass without skips. The direct creator runner subsequently passes 194
+cases after adding the walkable-route regression. Combined ordinary execution and final guards are recorded below. Wider viewports, alternate donors, teams,
+load/respawn and interaction-boundary rewind remain inherited coverage gaps; this
+matrix does not certify the full level standard. Clips and state CSVs live outside
+the repository under `~/scratch/sv-realfest/`.
+
+Visual evidence at the phase-4 candidate: five 25-second silent production
+`HeadlessGameBoot` + `GameLoop.step` clips and frame CSVs are in
+`~/scratch/sv-realfest/{race,hunt,snowboard,lake,contest}/native.mp4`. Inspected
+frames show real loop traversal, ring pickup, board/tricks, casting/Bubble Bar and
+landed lake/contest catches. The first capture was discarded as evidence: mixing
+RecordingFrameDriver setup with the live loop left the test driver's title lock
+on the player. A separate native-only capture setup fixes the measurement, and
+movement CSVs confirm changing positions. Fishing input uses six-frame velocity
+feedback from the existing creator test; the earlier reversed-sign controller
+escaped catches and was rejected. No gameplay difficulty or outcome was tuned.
+
+Focused engine command (absolute ROM paths are supplied for S3K and S1):
+
+```sh
+python3 tools/testing/maven_queue.py -B -q -Dmse=off '-Dtest=TestStarpost*,TestCheckpointStarpostGraphRewind,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestModApiSignatureSurface,TestModApiSdkPackager,TestModSdkArtifactVerifier,TestModApiJavadocTool,TestCamera,TestCameraRewindSnapshot,TestRewindBenchmarkSizeEstimator' -Ds3k.rom.path="$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dsonic1.rom.path="$PWD/Sonic The Hedgehog (W) (REV01) [!].gen" test
+python3 tools/testing/maven_queue.py --lean -B -q -Dmse=off -Dtest=TestStarpostValleyScene -Ds3k.rom.path="$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dsonic1.rom.path="$PWD/Sonic The Hedgehog (W) (REV01) [!].gen" test
+```
+
+The direct runner is `RunCreatorTests` (the retained task-local launcher wrapper)
+with fresh compiled creator test/main directories on the engine classpath; it
+invokes `CreatorTestLauncher.scan` directly, with no Maven or package-test
+indirection. Its final result is 194/194 with no skips.
+
+### Combined delivery verification and inherited negatives
+
+The change-based plan at `62e2cfeb6`, against `435671fd0`, selected all 3,085
+ordinary candidate classes. Preflight passed with Java 21, Lua 5.4 and PowerShell.
+The normal 40-minute invocation timed out during
+`TestS3kLrzActChangeHandoffHeadless`: 2,669 completed class reports, 23,285 tests,
+two failures and 57 skips; guards had not started. Its diagnostics were inspected
+and acknowledged. Source stayed frozen for recovery: the original plan's 437
+candidate classes at or after that alphabetical boundary were submitted through
+Maven's includes file, preserving the ordinary POM exclusions and excluded groups.
+Recovery completed 413 class reports / 3,483 tests, with 27 failures and six skips.
+The combined ordinary execution therefore reports 26,768 tests, 29 failures and
+63 skips. It is an interrupted invocation plus completed remaining checks;
+ordinary validation remains red.
+
+Twenty-eight failures predate this lane. The unchanged `TestModZoneLoader`
+source guard rejects the literal `"s2"` in `ModBackedGamePatch`; the exact guard
+method fails identically against baseline/current source files, which are
+byte-identical. A queued, bounded JUnit comparison runs the other 13 failing
+classes with the baseline Camera/CameraSnapshot overlaid, then with the current
+classes. These are the only stock runtime logic changes in this lane; the other
+engine differences are API annotations/inventory/comments. Both runs discover
+48 tests: 21 pass, 27 fail, none skip or abort. Every failure identity and message
+matches byte-for-byte. The audio CLI negative retains `LD_LIBRARY_PATH` and the
+same exit-code mismatch in both runs. No unrelated stock route or environment
+behavior was changed.
+
+| Failing class (package prefix omitted) | Cases | Observed failure |
+|---|---:|---|
+| `TestS3kMhzAct2AuthoredRoute` | 2 | Late pulley does not own Tails / paired Sonic |
+| `TestDezIncomingFinalRouteCapture` | 7 | Final-state 96 becomes 0; deaths at 26706, 26750 or 53897 |
+| `TestLrzActTwoColdRouteCapture` | 1 | Team death at input 36526 |
+| `TestLrzBossColdRouteCapture` | 1 | Same team death at input 36526 |
+| `TestLrzKnucklesColdRouteCapture` | 1 | Expected 1069, actual 899 |
+| `TestLrzTailsColdRouteCapture` | 4 | Tails death at input 19460 |
+| `TestLrzWideBossColdRouteCapture` | 1 | Expected 2796, actual 524 |
+| `TestMhzPairColdRouteCapture` | 1 | Actual FBZ history-reset boundary absent |
+| `TestMhzWideColdRouteCapture` | 1 | Restore at 19500 differs in zone-runtime bytes |
+| `TestSszColdRouteCapture` | 2 | Death at input 7311 |
+| `TestSszSoloColdRouteCapture` | 2 | Death at input 7671 |
+| `TestSszTailsColdRouteCapture` | 3 | Expected 48, actual 0 (two); object-manager replay at 4018 |
+| `TestS1GameplayAudioTimelineCli` | 1 | Shell bootstrap expected exit 0, actual 4 |
+
+The remaining failure was this lane's old town test oracle: it asserted raw
+terrain under villagers, although the new walkable log route also supports them.
+The assertion now uses `TownSession.walkFloor`; door bases still require the exact
+decoded terrain floor. Final cleanup also removes the unreachable opening
+side-view phase, keeps the farm-gate BeltRunner arrival, and deletes unused
+Ruins scene-art bookkeeping and the dead scene place-entry helper. Fresh direct
+creator compilation/execution after cleanup passes 194/194 with zero skips.
+The final focused bridge, scene-smoke and packaged-example check passes 15/15;
+final guards pass 674/674 across 87 discovered class reports (88 source candidates).
+Both commands complete with zero failures, errors or skips. The leaf cleanup is
+qualified by these checks and the fresh creator run; completed native/S3K checks
+are unchanged. No second ordinary run is claimed.
+
+Skips were inspected: opt-in capture/measurement/soak checks, unavailable graphics
+backends or local native references, conditional Infinite Sonic platform routes,
+and the inherited CPZ spin-tube assumption. No Starpost native route or required
+S3K check skipped.
+
+An additional four-second camera-edge clip is
+`~/scratch/sv-realfest/labyrinth-edge/native-sampled.mp4`, assembled from the
+inspected two-fps native renders of a 240-step production-loop capture. Its
+setup positions the player at the chamber edge; subsequent movement is native.
+The inspected frame `frames/0210.png` fills the viewport through the right edge.
+The five activity clips above retain full 60-fps rendering.
+
+Delivery commands (all ROM arguments resolve to absolute worktree-root files):
+
+```sh
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 435671fd0 --preflight
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 435671fd0 --run
+# Recovery includes are the original plan's suffix from the interrupted class.
+python3 tools/testing/maven_queue.py -B -Dmse=off -Dsurefire.includesFile=target/realfest-unfinished-includes.txt -Ds3k.rom.path="$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dsonic1.rom.path="$PWD/Sonic The Hedgehog (W) (REV01) [!].gen" -Dsonic2.rom.path="$PWD/Sonic The Hedgehog 2 (W) (REV01) [!].gen" test
+# Task-local run-matched.py invokes the exact failing JUnit classes in two JVMs.
+python3 tools/testing/maven_queue.py -B -Dmse=off -Dexec.executable=python3 -Dexec.args="$HOME/scratch/sv-realfest/mhz-baseline/run-matched.py" exec:exec
+python3 tools/testing/maven_queue.py -B -Dmse=off '-Dtest=TestModSceneActBridge,TestStarpostValleyScene,TestStarpostValleyExample' -Ds3k.rom.path="$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dsonic1.rom.path="$PWD/Sonic The Hedgehog (W) (REV01) [!].gen" test
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -B -Dmse=off -Pguards -Ds3k.rom.path="$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dsonic1.rom.path="$PWD/Sonic The Hedgehog (W) (REV01) [!].gen" test
+```
+
+
+## 26. Seasons in acts and the promo (lane)
+
+Lane `feature/ai-starpost-promo`, base `7591fbcc3`; no merge, rebase or push.
+`ActSeasons` retains the encoder's original ROM claims at load, installs a
+paletteAnimation through each outdoor act's ModZoneRuntimeServices, and submits
+only those cells at priority 20. The admitted town/activity director injects its
+palette registry and retained Game. HUD-reserved cells, the character line and
+placeholder line-3 cell 15 stay untouched. Every frame derives the season and
+18:00/20:00 light from the captured calendar; there is no accumulated tint or
+mutable seasonal clock to restore. Rain cools daylight. WorldWeather shares the
+scene's rain, snow and aurora presentation with acts; repeated drawing cannot
+play the storm sound. Ruins have no seasonal runtime.
+
+Rejected: a GameServices palette-registry lookup produced a creator compatibility
+warning; the injected director dependency packages without it. A headless owner
+assertion before rendering falsely reported absent writes: the shared renderer
+resolves pending palette writes, while HeadlessTestRunner only steps logic. The
+regression explicitly resolves the pending frame before checking colours/owners.
+Native GameLoop captures independently show the actual GPU result.
+
+Creator tests exercise all 512 Genesis colours for all four seasons and three
+light states, rain, return-to-spring, unchanged source claims and host cells. The
+ROM-backed bridge regression checks all 28 live claims and calendar rewind.
+Inspected native spring/summer/autumn/winter/aurora images are in
+`~/scratch/sv-promo/final/seasons/`; source inputs and assembly scripts stay
+under `~/scratch/sv-promo/final/`. Final validation and chapter map follow below.
+
+Season milestone validation: Java 21 build-only `mvn -B -q -Dmse=off
+-DskipTests test-compile dependency:build-classpath
+-Dmdep.outputFile=target/test-classpath.txt` passed. Queued focused test:
+`python3 tools/testing/maven_queue.py --lean -B -Dmse=off
+'-Dtest=TestModSceneActBridge#realValleySeasonClaimsFollowCalendarAndRewindWithoutRecolouringHud,TestStarpostValleyExample'
+"-Ds3k.rom.path=$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen"
+"-Dsonic1.rom.path=$PWD/Sonic The Hedgehog (W) (REV01) [!].gen" test`:
+3/3 engine tests, 197/197 creator tests, zero failures/errors/skips;
+packaging **Validation passed: 0 findings**. This is focused validation.
+
+
+Season milestone: `d3d1afbd6`. Combined focused validation on that executable
+source (later edits are documentation and external capture inputs):
+
+```bash
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 7591fbcc3 --preflight
+python3 tools/testing/maven_queue.py --lean -B -Dmse=off '-Dtest=TestStarpostRealValley,TestStarpostTownAct,TestStarpostTownSceneBridge,TestStarpostRealRuins,TestStarpostRealFestivals,TestStarpostValleyExample,TestStarpostValleyScene,TestCheckpointStarpostGraphRewind,TestModSceneActBridge,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' "-Ds3k.rom.path=$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic1.rom.path=$PWD/Sonic The Hedgehog (W) (REV01) [!].gen" test
+```
+
+Preflight passes with explicit Lua 5.4 (the environment's default `lua` failed
+the first preflight). The combined focused run passes **173/173**, zero
+failures/errors/skips, in 3m45s; the bridge runs **197/197** creator tests with
+no skips, and packaging reports **Validation passed: 0 findings**. The plan
+selects 3,085 classes via example/shared-test fallback, which is disproportionate
+for this example-owned presentation change: no engine algorithm, public contract,
+physics, timing or build/selection-policy changes. All Starpost consumers and
+required S3K consumers are checked explicitly; this is not a full-suite pass.
+
+
+### Promo and visual verification
+
+`~/Videos/OGGF/starpost-valley/starpost-valley-promo.mp4` is **119.8 seconds**,
+800×448 at 60 fps, H.264 plus stereo 48 kHz AAC. All music and sound effects are
+captured from the engine's live ROM audio. The source uses the integration lane's
+production HeadlessGameBoot + GameLoop.step round-trip path, packaged through
+ModTestKit; scenes and native acts share the same loop and audio presentation
+clock. Each chapter opens with the game's card. The chapter card's recorded
+0.333-second lead gains a 0.2-second still lead in assembly; source takes retain
+at least half a second around actions. Clips join with 0.35-second crossfades.
+
+| Chapter | Final seconds | Shows |
+| --- | --- | --- |
+| Story | 0.00–17.35 | Title, farmer select, intro, Tails’s note |
+| Grow | 17.35–41.50 | Spin-dash tilling; three crops planted, watered, grown over six nights, harvested and shipped; 435-ring crop tally |
+| Seasons | 41.50–59.35 | Native spring/summer/autumn/winter valley, dusk, snow and winter night aurora |
+| Neighbours | 59.35–73.75 | Tails talk, Pip’s picture speech, Chirp Translator heart-event cutscene |
+| Festivals | 73.75–90.25 | Native Ring Hunt/race/snowboard; Sunflower Parade and Flicky migration |
+| Adventure | 90.25–106.55 | Native Marble/Labyrinth/Scrap Brain chambers and lake cast/Bubble Bar; orchard ring burst and museum |
+| Finale | 106.55–119.80 | Four-check Signpost Spin settles on Sonic; scrolling credits |
+
+Reproducible driver, scripts, packaged example, per-frame CSV/PNG/PCM source takes,
+cuts.txt, assembly and chapters.json are in `~/scratch/sv-promo/final/`. PNGs were
+opened for every season and chapter, including a 4-second filmstrip extracted
+from the final MP4 (`final-filmstrip.png`) and card/body/end images
+(`final-review.png`). Full MP4 decode via `ffmpeg -v error -i <promo> -f null -`
+completes without errors; ffprobe confirms duration, codecs, dimensions and audio.
+Source PCM has nonzero music/SFX in every take, without clipped peaks.
+
+Rehearsal corrections: countdown-owned native festival entry needed longer input
+holds; the Ice Cap menu needed a later down/confirm to choose snowboard; Scrap
+Brain begins after chamber 30, not at 28. The lake take uses a shore cast and
+input-only strike/Bubble Bar tracking, landing a Bubble Bass. Daily Moto placement
+keeps the harvest take free of an accidental conversation; the shipping selection
+sells harvested radishes, tulips and spuds, not remaining seed packs. These are
+capture setups, not gameplay or fixture-specific behavior. Seasonal presentation,
+shared weather drawing, lake light tint and toast exclusion on chapter cards are
+changes in the game itself.
+
+Limits: this is a showcase, not route certification or a complete year played in
+real time. Debug commands prepare seasons, relationships, chamber starts, orchard,
+museum and the year-end evaluation; native movement/fishing and farming actions
+then execute through production rules. Donor/team/viewport/checkpoint/death breadth
+and arbitrary generated Ruins seeds inherit §21–§25's gaps. Water/terrain colours
+shared in CRAM receive the same Tone sky map; this does not allocate separate sky
+palettes or reproduce Sonic 1's original water-cycle timing in every outdoor act.
+
+
+Final structural validation, run once on the same executable source:
+
+```bash
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -B -Dmse=off -Pguards "-Ds3k.rom.path=$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic1.rom.path=$PWD/Sonic The Hedgehog (W) (REV01) [!].gen" test
+```
+
+**674/674 guards pass**, zero failures/errors/skips, in 4m16s. No executable
+changes followed either final run. README, the single develop changelog entry,
+§14 and the lead’s external PR-body draft now describe native acts and retained
+scene↔act state rather than the retired side-view controller. The lane remains
+local for lead integration; it does not merge, rebase or push.
+
+### Trailer polish and precise music pacing (2026-10-10)
+
+The user's trailer feedback replaces the earlier chapter tour with a narrative
+trailer: quiet lake hook, the life after the adventure, farming and neighbours,
+a four-season gallery, returning adventure, festivals and the title. The durable
+edit, scripts, native PNG/CSV/PCM takes and packaged capture mod live at
+`~/Videos/OGGF/starpost-valley/promo-polish/`; `README.md` there records commands,
+source ownership and showcase limitations. The final score uses 65% of the ROM
+song's original tempo, about 7.1% slower than the reviewed 70% edit. Azure Lake
+and Data Select use pitch-preserving Rubber Band processing for the trailer;
+ROM SFX and captured gameplay retain their original clocks. Four vertical masks
+with slightly angled separators show spring/summer/autumn/winter together,
+cycling through farm, town and lake. Restrained ROM cues accompany title and
+location changes. The opening previously wrapped a 65-frame scenic source,
+resetting its camera every 1.08 seconds; a new continuous 1,500-frame native take
+removes that loop. No gameplay time-lapse remains in this edit.
+
+Inside the mod, `SceneAudio.setMusicTempoPercent` expresses the same pacing
+without the coarse division-byte changes or resampling the sound chip. A
+fractional gate holds music note-duration expiry on a proportion of the ROM's
+already-admitted duration services, following the existing TempoWait technique.
+All three driver tempo modes retain their original 100% fast path. Modulation,
+envelopes, fade service, DAC sample clocks and SFX continue on the original
+clock; ROM tempo coordination flags and speed shoes remain independent. Both
+session percentage and sequencer fractional phase capture/restore and live
+mutation rollback. The default is 100%, the validated creator range 25–100%.
+The scene owns the setting, retains it while suspended for a native act and
+restores 100% on final disposal. Creator WAV/OGG and finite prepared PCM are
+outside this ROM sequencer control.
+
+A real scene-to-act regression exposed another lifecycle boundary: native
+level setup replaces the audio ROM/profile, initially resetting the percentage
+to 100%. Publishing the control at its owner boundary and retaining it through
+the source rebuild fixes that observed failure without advancing sound time.
+The test now explicitly exercises `setRom`, `setAudioProfile`, donor song changes,
+scene suspension, final disposal and a stale scene context. Tails' farmer-select
+body now draws the existing ROM idle tail accessory behind it, using the same
+origin and selection tint; the packaged production capture verifies it visibly.
+The candidate pin adds fourteen lines; API commentary and the creator guide
+describe the additive unpublished 0.7.0 capability. The release descriptor is
+unchanged: the policy hook forbids descriptor edits for ordinary candidate-pin
+regeneration without a publication or promotion.
+
+Focused development evidence: the new tempo tests initially failed before the
+setter existed; the actual source-rebuild case then failed at expected70/actual100
+before its lifecycle fix. The final queued regression command on base
+`51fd3aa660c35089184e4320c4de462f2cdf1335` plus this worktree's edits selected
+`TestSceneDonorMusic#sceneMusicPacingFollowsRetainedActsAndEndsWithTheOwner,TestSmpsMusicTempoPercent,TestSmpsDriverSession,TestAudioManagerResetState,TestAudioManagerRuntimeInstallation,TestAudioManagerRewindSuppression`
+with explicit verified S1/S3K absolute ROM paths: **144 tests, zero failures,
+errors or skips**. A subsequent parameter expansion checks 65%, 85% and 100%
+across all three driver modes; final combined validation follows separately.
+This shared audio timing and public-contract change requires the normal broad
+run: `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base
+51fd3aa660c35089184e4320c4de462f2cdf1335 --run --max-minutes 120` selects
+3,087 ordinary candidate classes plus fresh guards. Java 21/Lua 5.4/PowerShell
+preflight passes. Earlier inherited route/CLI negatives listed above are context,
+not a substitute for comparing this completed run's actual failures.
+
+The completed combined run `20261010T093925Z-352c3f4a` reports **26,792 ordinary
+tests: 28 assertion failures, three errors and 63 skips**, followed by **674
+guards: zero failures, errors or skips**. Ordinary execution took 59m53s and
+guards 3m39s. Every Starpost class passed without skips. The ordinary skips are
+opt-in probes/captures/soak measurements, unavailable native GL/EGL checks,
+32 Infinite Sonic act assumptions, and one CPZ spin-tube assumption; this does
+not certify the skipped native graphics or optional diagnostic paths.
+
+The three errors were a new release-descriptor formatting regression, all
+`Line 7 must use exact key=value form`, in `TestModApiPinPolicy`,
+`TestModApiReleasePolicy` and `TestModApiRuntimePolicy`. The descriptor's strict
+parser accepts blank separators but no comment lines. The rejected explanatory
+comment was removed; the capability explanation belongs in the compatibility
+document, not this data-only descriptor. The commit hook also rejected a blank
+separator edit accompanying ordinary candidate regeneration, so the descriptor
+was restored exactly to its unchanged base. The queued correction check
+`python3 tools/testing/maven_queue.py --lean -B -Dmse=off
+'-Dtest=TestModApiPinPolicy,TestModApiReleasePolicy,TestModApiRuntimePolicy,TestModApiSignatureSurface'
+test` then passed **27/27, zero skips**. No production Java changed after the
+combined run; this focused correction is not a second broad pass.
+
+A detached worktree at unchanged base `51fd3aa660c35089184e4320c4de462f2cdf1335`
+re-ran the 14 failing classes through the shared Maven queue with absolute,
+verified S1/S2/S3K ROM paths:
+
+```text
+com.openggf.mods.code.TestModZoneLoader
+com.openggf.tests.TestS3kMhzAct2AuthoredRoute
+com.openggf.tools.TestDezIncomingFinalRouteCapture
+com.openggf.tools.TestLrzActTwoColdRouteCapture
+com.openggf.tools.TestLrzBossColdRouteCapture
+com.openggf.tools.TestLrzKnucklesColdRouteCapture
+com.openggf.tools.TestLrzTailsColdRouteCapture
+com.openggf.tools.TestLrzWideBossColdRouteCapture
+com.openggf.tools.TestMhzPairColdRouteCapture
+com.openggf.tools.TestMhzWideColdRouteCapture
+com.openggf.tools.TestSszColdRouteCapture
+com.openggf.tools.TestSszSoloColdRouteCapture
+com.openggf.tools.TestSszTailsColdRouteCapture
+com.openggf.tools.audio.timeline.TestS1GameplayAudioTimelineCli
+```
+
+That bounded comparison completed all **77 cases with the same 28 assertion
+failures, zero errors/skips**. Test identities, exception types and complete
+assertion messages match. Only the already verified JVM-specific
+`RewindObjectStateBlob@hex` identities were normalized. For the one message
+over the category summary's 2,048-character limit, its retained `detail` contains
+the complete baseline assertion, with every concrete field preserved. This is
+failure attribution, not a claim that unreported world state matches or that the
+full baseline suite passed. The terminal session ended with 143 while its Maven
+child continued; all 14 XML reports and the Maven terminal failure summary were
+observed after both Maven and Surefire exited. No wrapper success is inferred.
+Consumed category diagnostics and the owned detached baseline are removed after
+recording this evidence.
+
+Final SDK/example/tempo coverage used the queued exact selector
+`TestModApiSignatureSurface,TestModApiSdkPackager,TestModApiJavadocTool,TestStarpostValleyExample,TestStarpostValleyScene,TestSmpsMusicTempoPercent`:
+**43/43 pass, zero skips**, including all three ROM tempo modes at 65/85/100%,
+SFX at 25%, and fractional-phase restore. Creator packaging reports zero
+findings. Build-only packaging reached Maven `BUILD SUCCESS`; after its terminal
+session ended with 143, the direct `ModSdkArtifactVerifier` passed independently
+on the thin, fat and SDK jars. A new packaged production capture observes 65%
+in both the scene and native act, with zero creator faults, and visibly confirms
+the farmer-select tail accessory.
+
+The final trailer is **106.42 seconds, 1920×1080 at 60 fps**, with stereo 48 kHz
+AAC. Full `ffmpeg -v error -xerror -i <promo> -f null -` decode passes, every
+source cut is in range and raw PCM has 800 stereo samples per captured frame.
+All three playback copies share SHA-256
+`6f11661d72d58e34f7f7061febae8904d1fa1473d9895a3ad358976a2c02f261`.
+The export measures −16.7 LUFS and −1.8 dBFS true peak. Chapter stills and all
+three seasonal gallery locations were inspected; the opening's continuous
+native camera rows and new Tails capture cover the reported visual defects.

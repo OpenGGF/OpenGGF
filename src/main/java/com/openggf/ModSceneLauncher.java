@@ -50,7 +50,12 @@ final class ModSceneLauncher {
                 window == 0 ? null : mouseMapper(window, graphics, logicalWidth, logicalHeight),
                 () -> exitToGameTitle(gameLoop),
                 () -> gameLoop.fadeOutTo(gameLoop::returnToMasterTitle),
-                romLibrary(module));
+                romLibrary(module), launch -> {
+                    int zone = module.getZoneRegistry().resolveZoneKey(launch.destination()).orElseThrow(
+                            () -> new IllegalArgumentException("Unregistered mod zone: " + launch.destination()));
+                    if (launch.act() >= module.getZoneRegistry().getActCount(zone))
+                        throw new IllegalArgumentException("Unregistered mod act: " + launch.act());
+                });
         gameLoop.setGameMode(GameMode.MOD_SCENE);
         gameLoop.modSceneHost.open(factory, services, logicalWidth, logicalHeight);
         gameLoop.resolveFadeManager().startFadeFromBlack(null);
@@ -71,7 +76,7 @@ final class ModSceneLauncher {
     /** Fades out of the mod scene to the base game's title screen. */
     private static void exitToGameTitle(GameLoop gameLoop) {
         gameLoop.resolveFadeManager().startFadeToBlack(() -> {
-            gameLoop.modSceneHost.close();
+            gameLoop.retireModScene();
             gameLoop.initializeTitleScreenMode();
         });
     }

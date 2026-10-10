@@ -2192,10 +2192,12 @@ public class ObjectManager {
         addDynamicObject(object);
     }
 
-    /**
-     * Restores a captured dynamic SST occupant without minting a throwaway
-     * identity or advancing the next-spawn ordinal.
-     */
+    /** Preserve the captured creator fault boundary when player refresh recreates a native effect. */
+    void restoreDynamicCallbackOwner(ObjectInstance object, String owner) {
+        objectCallbacks.registerOwnerIfAbsent(object, owner);
+    }
+
+    /** Restore a dynamic SST occupant without minting an identity or advancing the spawn ordinal. */
     void addRestoredDynamicObjectAtSlot(
             ObjectInstance object, int slotIndex, ObjectRefId capturedId) {
         dynamicOwnership.restoreIdentity(object, capturedId, rewindObjectIds);

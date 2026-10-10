@@ -482,6 +482,46 @@ cue). Fade or stop your music when the scene leaves, so
 none of it plays on into the next screen. See the note above on `ctx.music()`
 replacing this output while a song player exists.
 
+`ctx.audio().playMusic(game, id)` plays a song from any supplied ROM as the current
+music, so an S3K scene can play Sonic 1's Green Hill and still hear its own rings and
+springs over it:
+
+```java
+// Green Hill when Sonic 1 is installed, otherwise the base game's own Angel Island.
+if (!ctx.audio().playMusic("s1", 0x81)) {
+    ctx.audio().playMusic("s3k", 0x01);
+}
+ctx.audio().playSfx(0x33);   // the S3K ring, heard over Green Hill
+ctx.audio().fadeOutMusic();  // fades whichever song is playing
+```
+
+`ctx.audio().setMusicTempoPercent(65)` gives a quieter game's ROM soundtrack a
+slower pace. The range is 25–100, with 100 restoring the original pace. It holds
+music note-duration ticks while the normal sound-driver walk, envelopes, modulation,
+DAC sample clock and fades continue; SFX and gameplay stay on their own clocks.
+The percentage follows song changes, cross-game donor music and native acts entered
+by the retained scene, including the level-entry audio-source rebuild. The host
+restores normal pacing when the scene finally closes. Creator WAV/OGG playback and
+finite `ctx.music()` preparations keep their original timing. Unsupported hosts
+validate the range but may retain the silent default.
+
+Game ids are `"s1"`, `"s2"` and `"s3k"`, and music ids are that game's own driver IDs.
+The running game's songs take their normal route. Another game's song plays through the
+same sound driver by its own game's rules. This is the cross-game donor route that plays
+S3K Super music in Sonic 2, so the song loops at its own loop point for as long as the
+scene runs and needs no second sound chip. It is simply the current music: `playMusic`,
+`stopMusic` and `fadeOutMusic` replace, stop or fade it. A stock jingle such as the S3K
+1-up interrupts it and then hands it back, as for a stock song. The call returns false,
+changing nothing, when that game's ROM was not supplied or has no such song, so the
+fallback above needs no ROM check. An unknown game id throws.
+
+The driver route has limits. Starting or changing a song stops any sound effect still
+playing, as every stock song change does. There is no music volume control, and fades
+take the base game's own time. While an effect plays it takes over a music channel, as on
+the console. Leaving the scene stops another game's song that is still playing and hands
+the donor route back to cross-game donation; the base game's own music is left as it was.
+A `ctx.music()` song player still replaces all of this output while it exists.
+
 `ctx.storage()` keeps small text files for your mod under the save root
 (`saves/mods/<mod-id>/`): `read`, `write`, `delete`, `list`. Slay the Robotnik saves the
 run in progress, the player's records and the compendium there.
@@ -538,3 +578,61 @@ The class's Javadoc lists every option and script step. To get the classpath fil
 | A ROM sprite has the wrong colours or is scrambled | The palette line, palette address, compression or DPLC layout does not match the object. Check the request with `ggfmod sprites`, which draws every frame with your settings. |
 | Animations stand still in captures, or run fast | State changes in `draw`. The engine may skip or repeat `draw`; advance timers in `update` only. |
 | `zoneBackdrop`, `levelStages` or `titleCard` return null | The game has no such picture for that act yet. Ask `hasZonePictures` and `hasTitleCard` first and draw something of your own otherwise. |
+
+## Visiting a real act from a scene
+
+Register a mod zone normally, then call `ctx.startAct` from `enter`, `update` or a
+fault-bounded debug callback. Acts are zero-based and the `ZoneKey.Mod` must belong
+to the scene's owner. Launching retains the scene instance, its context, storage and
+ROM library. The scene stops ticking during the act and fades; its images are
+uploaded again when it resumes. Gameplay owns native movement, collision, objects,
+HUD and rewind. The launch state map is creator bookkeeping, not engine physics.
+
+```java
+ctx.startAct(new ActLaunch(new ZoneKey.Mod(ctx.ownerModId(), "valley"), 0,
+    CharacterKey.SONIC, List.of(), OptionalInt.of(190), OptionalInt.of(173),
+    5, Map.of("visit", "town")));
+```
+
+Optional positions are **player centre coordinates**, applied after the native
+start-position provider and before normal camera/team/object initialization. Empty
+coordinates preserve that axis's native start; supplied centres accept signed or
+unsigned 16-bit word representations (−32768 through 65535). Rings are native health (0–999),
+separate from any saved mod wallet. The engine retains the selected team only for
+the visit and restores the previous configuration on return or title exit.
+
+A level object imports `com.openggf.game.ActExit` and calls its injected services
+to hand back:
+
+```java
+services().requestActExit(ActExit.LEFT, Map.of("door", "inn"));
+```
+
+The first request wins; its immutable payload participates in rewind until the
+engine consumes it at a frame boundary. Requests outside a scene-launched act do
+nothing. Exit fades freeze gameplay. The engine re-prepares base ROM audio and
+calls `resume` once on the same suspended scene/context, inside its fault boundary:
+
+```java
+@Override public void resume(SceneContext ctx, ActResult result) {
+    // Open the requested menu; when it closes, startAct can visit the same door again.
+    ctx.audio().playMusic(0x81);
+}
+```
+
+Spawn values accept signed or unsigned 16-bit centre words, including values
+returned by native sprite getters.
+
+`ActResult` carries destination, reason, remaining health rings, executed level
+frames and the exit state map. `com.openggf.game.ActExit` values are `COMPLETED`, `LEFT`, `FAINTED`,
+`TIME_UP`, `ABORTED`. Objects/controllers decide when these semantic exits apply;
+ordinary native progression/death is not automatically remapped. Entry is a normal
+level-load boundary; scene return clears the level rewind timeline. Holding Escape
+still closes the retained visit and returns to the master title. A creator fault
+also closes it safely rather than delivering a result to a disabled scene.
+
+Starpost Valley uses a blank, flat native-collision placeholder until its encoded
+terrain is integrated. Its farm gate launches `starpost-valley:valley`; doors open
+existing scene menus and relaunch at the returned centre when they close. The
+`town scene` debug command keeps its earlier scene valley reachable; `town act`
+restores act launches and `town enter` directly exercises the bridge from play.

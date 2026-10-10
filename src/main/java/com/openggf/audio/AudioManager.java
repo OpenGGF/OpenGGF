@@ -1254,6 +1254,7 @@ public class AudioManager implements MusicRestoreSink {
             case AudioCommand.RestoreMusic ignored -> backend.restoreMusic();
             case AudioCommand.SetSpeedShoes speed -> backend.setSpeedShoes(speed.enabled());
             case AudioCommand.SetSpeedMultiplier speed -> backend.setSpeedMultiplier(speed.multiplier());
+            case AudioCommand.SetMusicTempoPercent tempo -> backend.setMusicTempoPercent(tempo.percent());
             case AudioCommand.ChangeMusicTempo tempo -> backend.changeMusicTempo(tempo.dividingTiming());
             case AudioCommand.ResetRingAlternation reset -> ringLeft = reset.ringLeft();
         }
@@ -3097,10 +3098,20 @@ public class AudioManager implements MusicRestoreSink {
         return musicMap.get(music);
     }
 
+    /** Sets creator ROM music pacing; the default 100 preserves shipped-ROM timing. */
+    public void setMusicTempoPercent(int percent) {
+        MusicTempoPercent.requireValid(percent);
+        if (suppressingRewindReplay()) return;
+        recordTimelineCommand(new AudioCommand.SetMusicTempoPercent(percent));
+        // Publish this opt-in scene control before an immediate native-act source
+        // rebuild. Applying pending commands here does not advance the sound clock.
+        if (shadowProducer != null) shadowProducer.applyPendingCommandsAtOwnerBoundary();
+        if (sendLiveBackendCommands()) backend.setMusicTempoPercent(percent);
+    }
+
     /**
      * Change the music dividing timing (tempo).
      * ROM: Change_Music_Tempo. Lower values = faster playback.
-     *
      * @param newDividingTiming the new dividing timing value
      */
     public void changeMusicTempo(int newDividingTiming) {
@@ -3386,6 +3397,78 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     /**
+     * One donor key's route and bindings, captured by {@link ScopedDonorAudio}
+     * before a scoped registration replaces them. Engine-internal and opaque.
+     */
+    static final class DonorKeyState {
+        private final String gameId;
+        private final DonorAudioSource source;
+        private final Map<GameMusic, Integer> music;
+        private final Map<GameSound, DonorSfxBinding> sounds;
+
+        private DonorKeyState(String gameId, DonorAudioSource source,
+                              Map<GameMusic, Integer> music,
+                              Map<GameSound, DonorSfxBinding> sounds) {
+            this.gameId = gameId;
+            this.source = source;
+            this.music = music;
+            this.sounds = sounds;
+        }
+    }
+
+    synchronized DonorKeyState captureDonorKeyState(String gameId) {
+        String key = requireDonorGameId(gameId);
+        Map<GameSound, DonorSfxBinding> sounds = new EnumMap<>(GameSound.class);
+        donorSoundBindings.forEach((sound, binding) -> {
+            if (key.equals(binding.gameId())) {
+                sounds.put(sound, binding);
+            }
+        });
+        return new DonorKeyState(key, donorAudioSources.get(key),
+                donorMusicBindings.get(key), sounds);
+    }
+
+    /**
+     * Puts one key's captured route and bindings back. The route keeps its
+     * loader, DAC, sequencer config and profiles under a fresh generation, so
+     * no asset cached for the scoped registration can answer for it.
+     */
+    synchronized void restoreDonorKeyState(DonorKeyState state) {
+        beginSourceMutation();
+        try {
+            String key = state.gameId;
+            long generation = nextGeneration(
+                    donorGenerationCounters.getOrDefault(key, 0L));
+            if (state.source == null) {
+                removeDonorSource(key, generation);
+            } else {
+                DonorAudioSource previous = state.source;
+                publishDonorSource(key, new DonorAudioSource(
+                        previous.loader(), previous.dac(), previous.config(),
+                        previous.profile(), previous.sfxPolicyProfile(),
+                        generation));
+            }
+            if (state.music == null) {
+                donorMusicBindings.remove(key);
+            } else {
+                donorMusicBindings.put(key, state.music);
+            }
+            donorSoundBindings.values().removeIf(
+                    binding -> key.equals(binding.gameId()));
+            donorSoundBindings.putAll(state.sounds);
+            Throwable failure = restoreDonorBackendConfiguration(state.source);
+            if (failure instanceof RuntimeException runtime) {
+                throw runtime;
+            }
+            if (failure instanceof Error error) {
+                throw error;
+            }
+        } finally {
+            endSourceMutation();
+        }
+    }
+
+    /**
      * Resets mutable state without destroying the singleton instance.
      * Used by TestEnvironment to prevent state leaking between tests
      * (e.g. Sonic 1 SMPS loader contaminating Sonic 2 tests).
@@ -3599,11 +3682,17 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     private void replaceShadowPresentationForBaseMutation() {
+        int musicTempoPercent = shadowSmpsSession == null ? 100
+                : shadowSmpsSession.captureSnapshot().musicTempoPercent();
         clearPreparedReverseRestore();
         detachLiveCaptureAudioHandleForRebuild();
         closeShadowPresentation();
         ensurePresentationSink();
         ensureShadowPresentation();
+        if (musicTempoPercent != 100) {
+            shadowSmpsSession.applyCommand(
+                    new com.openggf.audio.session.SmpsSessionCommand.SetMusicTempoPercent(musicTempoPercent));
+        }
     }
 
     private void restoreShadowMusic() {

@@ -300,6 +300,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         worldSession.setCurrentLevel(level);
     }
     int frameCounter = 0;
+    java.util.OptionalInt sceneSpawnX = java.util.OptionalInt.empty();
+    java.util.OptionalInt sceneSpawnY = java.util.OptionalInt.empty();
     ObjectManager objectManager;
     private RewindClassResolver rewindClassResolver = RewindClassResolver.ENGINE_ONLY;
 
@@ -680,6 +682,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             loaded = game.loadLevel(levelIndex);
         }
         loaded = gameModule == null ? loaded : java.util.Objects.requireNonNull(gameModule.transformDecodedLevel(loaded), "Decoded level transform");
+        if (activeModZoneRuntimeContribution != null) {
+            LevelGraphicsPublisher.publish(loaded, graphicsManager);
+        }
         writeCurrentLevel(loaded);
         installHudProfile();
         rebuildLevelDerivedState();
@@ -3006,25 +3011,12 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             LOGGER.info("Set player position from checkpoint: X=" + ctx.getCheckpointX() +
                     ", Y=" + ctx.getCheckpointY() + " (center coordinates)");
         } else {
-            int spawnX = levelData.startX();
-            spawnY = levelData.startY();
-
-            if (game instanceof DynamicStartPositionProvider dynamicStartProvider) {
-                try {
-                    int[] dynamicStart = dynamicStartProvider.getStartPosition(currentZone, currentAct);
-                    if (dynamicStart != null && dynamicStart.length >= 2) {
-                        spawnX = dynamicStart[0];
-                        spawnY = dynamicStart[1];
-                        LOGGER.info("Set player position from dynamic start provider: X=" + spawnX +
-                                ", Y=" + spawnY + " (zone=" + currentZone + ", act=" + currentAct + ")");
-                    } else {
-                        LOGGER.info("Dynamic start provider unavailable, using levelData fallback for " +
-                                levelData.toString());
-                    }
-                } catch (IOException e) {
-                    LOGGER.warning("DynamicStartPositionProvider failed, using levelData fallback: " + e.getMessage());
-                }
-            }
+            // Additive acts own their descriptor's start. Native ROM tables have no
+            // entry for a mod zone and a readable offset can still contain unrelated bytes.
+            boolean additiveAct = activeGameModule().getZoneRegistry().modZoneRuntimeContribution(ctx.getLevelIndex()) != null;
+            int[] nativeStart = LevelSceneActAccess.nativeStart(game, currentZone, currentAct, levelData, additiveAct);
+            int spawnX = nativeStart[0];
+            spawnY = nativeStart[1];
 
             player.setCentreX((short) spawnX);
             player.setCentreY((short) spawnY);
@@ -3032,6 +3024,15 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                     ", Y=" + spawnY + " (center coordinates)" +
                     ", level: " + levelData);
         }
+        // Scene act overrides win after native dynamic start/checkpoint selection,
+        // before player reset, sidekick placement, camera snap and object admission.
+        if (sceneSpawnX.isPresent())
+            com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel((AbstractPlayableSprite) player, sceneSpawnX.getAsInt());
+        if (sceneSpawnY.isPresent()) {
+            spawnY = sceneSpawnY.getAsInt();
+            com.openggf.sprites.NativePositionOps.writeYPosResetSubpixel((AbstractPlayableSprite) player, spawnY);
+        }
+        sceneSpawnX = java.util.OptionalInt.empty(); sceneSpawnY = java.util.OptionalInt.empty();
         ctx.setSpawnY(spawnY);
     }
 
@@ -4941,6 +4942,12 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     /** @see LevelTransitionCoordinator#consumeTimeAttackMenuReturnRequest() */
     public boolean consumeTimeAttackMenuReturnRequest() { return transitions.consumeTimeAttackMenuReturnRequest(); }
+    /** Requests a return to the suspended scene, inert outside a scene-launched act. */
+    public void requestActExit(com.openggf.game.ActExit reason, java.util.Map<String, String> state) {
+        if (transitions.sceneActActive && transitions.sceneActExit == null)
+            transitions.sceneActExit = new LevelSceneActAccess.Exit(reason, state);
+    }
+
     public void requestGameOverExit(GameOverExit exit) { transitions.requestGameOverExit(exit); }
 
     public GameOverExit consumeGameOverExitRequest() { return transitions.consumeGameOverExitRequest(); }

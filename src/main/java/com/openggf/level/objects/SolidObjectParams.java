@@ -14,6 +14,7 @@ package com.openggf.level.objects;
  * nothing in the engine compares these by identity or keys an
  * {@code IdentityHashMap} on one.
  */
+@com.openggf.game.ModApi
 public record SolidObjectParams(int halfWidth, int airHalfHeight, int groundHalfHeight,
                                 int offsetX, int offsetY) {
 

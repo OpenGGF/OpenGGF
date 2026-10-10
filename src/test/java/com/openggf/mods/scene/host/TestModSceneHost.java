@@ -56,6 +56,67 @@ class TestModSceneHost {
     @TempDir
     Path temp;
 
+    @Test void actSuspensionRetainsVisitAndDeliversResultOnce() {
+        var host = new ModSceneHost();
+        var contexts = new ArrayList<SceneContext>();
+        var calls = new ArrayList<String>();
+        var launch = new com.openggf.mods.scene.ActLaunch(new com.openggf.game.ZoneKey.Mod("cards", "garden"),
+            0, com.openggf.game.CharacterKey.TAILS, List.of(), java.util.OptionalInt.of(440),
+            java.util.OptionalInt.of(173), 7, Map.of("visit", "1"));
+        var result = new com.openggf.mods.scene.ActResult(launch.destination(),
+            com.openggf.game.ActExit.LEFT, 3, 40, Map.of("door", "inn"));
+        host.open(owned(() -> new ModScene() {
+            public void enter(SceneContext ctx) { contexts.add(ctx); calls.add("enter"); }
+            public void update(SceneContext ctx) { calls.add("update"); ctx.startAct(launch); ctx.startAct(launch); }
+            public void draw(SceneContext ctx, SceneCanvas canvas) { calls.add("draw"); }
+            public void resume(SceneContext ctx, com.openggf.mods.scene.ActResult actual) {
+                contexts.add(ctx); assertEquals(result, actual); calls.add("resume");
+                assertEquals(0, ctx.input().player1().heldMask());
+            }
+            public void exit(SceneContext ctx) { calls.add("exit"); }
+        }), services(new ArrayList<>()), 320, 224);
+        host.update(new InputHandler());
+        assertSame(launch, host.consumeActLaunch()); assertNull(host.consumeActLaunch());
+        host.suspend(); host.update(new InputHandler()); host.draw(null, null);
+        assertTrue(host.isOpen()); assertTrue(host.isSuspended());
+        assertEquals(List.of("enter", "update"), calls);
+        host.resume(result);
+        assertSame(contexts.getFirst(), contexts.getLast());
+        assertThrows(IllegalStateException.class, () -> host.resume(result));
+        host.close(); assertEquals(List.of("enter", "update", "resume", "exit"), calls);
+    }
+
+    @Test void resumeFaultIsBoundedAndClosesTheRetainedVisit() {
+        var host = new ModSceneHost(); var findings = new ModRuntimeFindingStore();
+        host.open(ModContextTestAccess.ownedScene("cards", () -> new ModScene() {
+            public void enter(SceneContext ctx) {}
+            public void update(SceneContext ctx) {}
+            public void draw(SceneContext ctx, SceneCanvas canvas) {}
+            public void resume(SceneContext ctx, com.openggf.mods.scene.ActResult result) {
+                throw new IllegalStateException("bad return");
+            }
+        }, boundary(findings)), services(new ArrayList<>()), 320, 224);
+        host.suspend();
+        assertThrows(ModFaultBoundary.CallbackAborted.class, () -> host.resume(new com.openggf.mods.scene.ActResult(
+            new com.openggf.game.ZoneKey.Mod("cards", "garden"), com.openggf.game.ActExit.LEFT, 0, 0, Map.of())));
+        assertFalse(host.isOpen()); assertTrue(findings.snapshot().containsKey("cards"));
+    }
+
+    @Test void sceneCannotForgeAnotherOwnersActLaunch() {
+        var host = new ModSceneHost(); var findings = new ModRuntimeFindingStore();
+        host.open(ModContextTestAccess.ownedScene("cards", () -> new ModScene() {
+            public void enter(SceneContext ctx) {}
+            public void update(SceneContext ctx) {
+                ctx.startAct(new com.openggf.mods.scene.ActLaunch(new com.openggf.game.ZoneKey.Mod("other", "garden"),
+                    0, com.openggf.game.CharacterKey.SONIC, List.of(), java.util.OptionalInt.empty(),
+                    java.util.OptionalInt.empty(), 0, Map.of()));
+            }
+            public void draw(SceneContext ctx, SceneCanvas canvas) {}
+        }, boundary(findings)), services(new ArrayList<>()), 320, 224);
+        assertThrows(ModFaultBoundary.CallbackAborted.class, () -> host.update(null));
+        assertFalse(host.isOpen()); assertTrue(findings.snapshot().containsKey("cards"));
+    }
+
     /** A scene that counts ticks, draws a little, and can be told to fail or leave. */
     static final class ProbeScene implements ModScene {
         final List<String> calls = new ArrayList<>();
