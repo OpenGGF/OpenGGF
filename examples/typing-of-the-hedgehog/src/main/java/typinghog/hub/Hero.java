@@ -47,8 +47,9 @@ final class Hero {
         }
         int originY = floorY - (sprite.height() - sprite.originY());
         if (pack && backpack != null) {
-            int bx = left ? x + 7 : x - 7 - backpack.width();
-            c.draw(backpack, bx, originY - 14 + bob, style);
+            // Strapped along his back, its top at his head (as the course's KeyboardPack placement).
+            int bx = left ? x + 8 : x - 8 - backpack.width();
+            c.draw(backpack, bx, originY - 19 + bob, style);
         }
         c.draw(sprite, x, originY, style);
         SceneImage strap = art.image("strap");

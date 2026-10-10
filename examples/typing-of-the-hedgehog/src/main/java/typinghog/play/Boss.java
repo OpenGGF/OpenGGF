@@ -96,7 +96,7 @@ public final class Boss {
     void advance(Course course, Encounter encounter) {
         row++;
         stateRow++;
-        int px = course.playerX(), py = course.playerY();
+        int px = course.anchorX(), py = course.anchorY();
         var camera = GameServices.camera();
         if (!spawned) spawn(course, camera.getX() + camera.getWidth() + 64, inView(py - rig.height()));
         if (flash > 0) flash--;
@@ -331,6 +331,13 @@ public final class Boss {
             swoop(course);
             return;
         }
+        stateRow = 0;
+        // Sonic homes in on the weak point; the hit lands when he strikes it.
+        course.homing().strike(() -> x, () -> y, () -> land(course, encounter));
+    }
+
+    /** A strike connects: one of the eight hits. */
+    private void land(Course course, Encounter encounter) {
         hits++;
         flash = 24;
         recoil = 12;

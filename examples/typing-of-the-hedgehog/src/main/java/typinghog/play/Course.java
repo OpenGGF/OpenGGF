@@ -39,11 +39,13 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_UP;
  * survives restores), so its rewind adapter captures nothing useful and returns a constant.
  */
 public final class Course implements GameplayFrameController, RewindSnapshottable<Integer> {
-    enum Phase { IDLE, ENTRY, RUN, STAND, STAND_CLEAR, BOSS, DYING, TALLY, LEAVING }
+    enum Phase { IDLE, ENTRY, COUNTDOWN, RUN, STAND, STAND_CLEAR, BOSS, DYING, TALLY, LEAVING }
 
     /** Rows an attract demo plays before handing back to the title (two minutes). */
 
     static final int DEMO_ROWS = 7200;
+    /** Rows each count of the "3, 2, 1" start holds. */
+    static final int COUNTDOWN_BEAT = 40;
     /** Most rows Boss Rush waits for Sonic to land before the boss arrives anyway. */
     static final int BOSS_RUSH_LANDING_ROWS = 600;
     /** Rows a demo word must be on screen before the demo typist starts it. */
@@ -59,6 +61,7 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
     private final ModStorage storage;
     private final CourseAssets assets;
     private final Stagehand stagehand;
+    private final Homing homing = new Homing();
     private final Hud hud;
 
     private Object levelToken;
@@ -146,6 +149,7 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
         }
         advancedThisRow = switch (phase) {
             case ENTRY -> entry(course);
+            case COUNTDOWN -> countdown();
             case RUN -> run(course);
             case STAND, BOSS -> stand(course);
             case STAND_CLEAR -> standClear(course);
@@ -175,6 +179,7 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
 
     @Override public boolean capturesKeyboardText() { return intent != null; }
     @Override public boolean allowsDebugRewind() { return false; }
+    @Override public boolean retainRolling() { return homing.rolling(); }
     @Override public boolean presentationPaused() { return paused; }
 
     @Override public boolean consumeTitleRequest() {
@@ -253,8 +258,21 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
             beginStand(course, true);
             return stand(course);
         }
+        enter(Phase.COUNTDOWN);
+        say(VoiceLine.ANNOUNCER_GET_READY);
+        return false;
+    }
+
+    /**
+     * "3, 2, 1, START!": the world holds still on the act's first row (no native step, so the rail
+     * is untouched) for three beats, and the run starts on START!, which stays up into the run.
+     */
+    private boolean countdown() {
+        if (phaseRows == 1 || phaseRows == COUNTDOWN_BEAT + 1 || phaseRows == 2 * COUNTDOWN_BEAT + 1) play(Sounds.Cue.LOCK);
+        if (phaseRows < 3 * COUNTDOWN_BEAT) return false;
+        play(Sounds.Cue.STAND_START);
+        hud.start();
         enter(Phase.RUN);
-        say(random.nextBoolean() ? VoiceLine.ANNOUNCER_GET_READY : VoiceLine.ANNOUNCER_TYPE_TO_SURVIVE);
         return true;
     }
 
@@ -288,14 +306,21 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
         return progress < text.length() ? new String(Character.toChars(text.codePointAt(progress))) : "";
     }
 
+    /** Types one key into the field and lights it on Sonic's keyboard (gold right, red wrong). */
+    private TypingField.Event typeKey(int codePoint) {
+        TypingField.Event event = field.type(codePoint);
+        hud.keyPressed(codePoint, event.kind() != TypingField.Kind.ERROR);
+        return event;
+    }
+
     /** Applies the row's typing to whatever is on screen: run tags while running, the stand's targets in a stand. */
     private void typeRow(String typed, boolean backspace) {
         if (phase == Phase.RUN) {
             if (backspace) field.release();
-            typed.codePoints().forEach(cp -> runTags.onEvent(this, field.type(cp), cp));
+            typed.codePoints().forEach(cp -> runTags.onEvent(this, typeKey(cp), cp));
         } else if ((phase == Phase.STAND || phase == Phase.BOSS) && encounter != null) {
             if (backspace) encounter.onRelease(this, field.release());
-            typed.codePoints().forEach(cp -> encounter.onEvent(this, field.type(cp), cp));
+            typed.codePoints().forEach(cp -> encounter.onEvent(this, typeKey(cp), cp));
         } else {
             return;
         }
@@ -340,7 +365,12 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
 
     private boolean stand(CourseControl course) {
         holdPlayer();
-        if (encounter.finished()) {
+        homing.anchor(playerX(), playerY());
+        // The view holds still for the stand, so homing strikes don't drag the camera around;
+        // the stand's restore returns the camera to the rail.
+        GameServices.camera().setFrozen(true);
+        homing.advance();
+        if (encounter.finished() && !homing.busy()) {
             encounter.clearPickups(this);
             if (phase == Phase.BOSS) {
                 bossDefeated = true;
@@ -361,6 +391,8 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
         holdPlayer();
         if (phaseRows < STAND_CLEAR_ROWS) return true;
         course.restore(standCheckpoint);
+        homing.release();
+        GameServices.camera().setFrozen(false);
         previousMask = standPreviousMask;
         stagehand.clear();
         stagehand.invalidatePuppets();
@@ -379,6 +411,8 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
             return false;
         }
         course.restore(standCheckpoint);
+        homing.release();
+        GameServices.camera().setFrozen(false);
         previousMask = standPreviousMask;
         stagehand.clear();
         stagehand.invalidatePuppets();
@@ -455,6 +489,7 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
     /** A badnik reached Sonic. */
     void hitSonic() {
         if (invincibleRows > 0) return;
+        homing.cancel();
         if (shield) {
             shield = false;
             play(Sounds.Cue.HIT);
@@ -566,5 +601,9 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
 
     /** Sonic's centre in world pixels. */
     int playerX() { return GameServices.camera().getFocusedSprite() == null ? 0 : GameServices.camera().getFocusedSprite().getCentreX(); }
+    /** Where badniks and the boss aim: Sonic's stand spot while he is away on a homing strike. */
+    int anchorX() { return homing.anchored() ? homing.homeX() : playerX(); }
+    int anchorY() { return homing.anchored() ? homing.homeY() : playerY(); }
+    Homing homing() { return homing; }
     int playerY() { return GameServices.camera().getFocusedSprite() == null ? 0 : GameServices.camera().getFocusedSprite().getCentreY(); }
 }

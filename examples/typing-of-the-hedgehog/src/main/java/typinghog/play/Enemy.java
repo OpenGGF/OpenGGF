@@ -41,6 +41,8 @@ public final class Enemy {
     int tick;
     int stateRows;
     int homeY;
+    /** Rows a converted stock badnik holds still before it advances (time to read its word). */
+    int grace;
 
     Enemy(Species species, boolean elite, boolean airborne, int x, int y, int speed, int direction) {
         this.species = species;

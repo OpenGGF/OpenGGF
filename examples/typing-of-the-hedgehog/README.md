@@ -81,17 +81,17 @@ and it plays a demo, typing by itself; any key returns.
 
 ## Acts
 
-Twenty-four acts have rails (the recorded runs Sonic follows):
+Twenty-five acts have rails (the recorded runs Sonic follows):
 
 | Game | Acts |
 |---|---|
 | Sonic 1 | Green Hill 3, Marble 3, Spring Yard 3, Labyrinth 3, Star Light 3, Scrap Brain 2, Final Zone |
 | Sonic 2 | Emerald Hill 2, Aquatic Ruin 2, Hill Top 2, Mystic Cave 2, Oil Ocean 2, Metropolis 3, Sky Chase, Wing Fortress, Death Egg |
-| Sonic 3 & Knuckles | Marble Garden 1, Carnival Night 1, Flying Battery 1, Mushroom Hill 1, Sandopolis 1 and 2, Lava Reef 1, Death Egg 1 |
+| Sonic 3 & Knuckles | Hydrocity 1, Marble Garden 1, Carnival Night 1, Flying Battery 1, Mushroom Hill 1, Sandopolis 1 and 2, Lava Reef 1, Death Egg 1 |
 
 Story stops without a rail yet show as under construction: Chemical Plant 2 and Casino
-Night 2 replay differently between sessions; Angel Island 1, Hydrocity 1, IceCap 1, Launch
-Base 1, Sky Sanctuary and Doomsday are not yet reproducible or are pending an engine fix.
+Night 2 replay differently between sessions; Angel Island 1, IceCap 1, Launch Base 1, Sky
+Sanctuary and Doomsday are not yet reproducible from a cold start.
 
 ## How it is built
 

@@ -47,6 +47,38 @@ public final class Cast {
         return cast;
     }
 
+    private Map<String, String> natives = Map.of();
+
+    /**
+     * This cast with its game's {@code natives/<game>.txt}: stock badnik class (simple name), the cast
+     * art key that draws it, and {@code yes} when a fight may convert it.
+     */
+    public Cast withNatives(String text) {
+        Map<String, String> map = new HashMap<>();
+        for (String raw : text.split("\n")) {
+            String line = raw.strip();
+            if (line.isEmpty() || line.startsWith("#")) continue;
+            String[] f = line.split("\\s+");
+            if (f.length >= 3 && f[2].equals("yes")) map.put(f[0], f[1]);
+        }
+        natives = Map.copyOf(map);
+        return this;
+    }
+
+    /** True when a fight may convert a stock badnik of this class. */
+    public boolean convertible(String className) { return natives.containsKey(className); }
+
+    /** The species drawing a converted stock badnik, preferring the act's own cast; null if none. */
+    public Species nativeSpecies(String className, int zone, int act) {
+        String key = natives.get(className);
+        if (key == null) return null;
+        for (Species species : zone(zone, act)) if (species.artKey().equals(key)) return species;
+        for (List<Entry> entries : zones.values()) {
+            for (Entry entry : entries) if (entry.species().artKey().equals(key)) return entry.species();
+        }
+        return null;
+    }
+
     /** This cast with {@code rigs} (from {@link BossRig#parse}) as its bosses. */
     public Cast withBosses(Map<String, BossRig> rigs) {
         bosses = Map.copyOf(rigs);

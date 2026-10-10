@@ -18,6 +18,17 @@ public final class Encounter {
     /** A scheduled arrival, in advanced rows since the stand began. */
     record Arrival(int row, Species species, boolean elite, boolean fromLeft, boolean airborne) { }
 
+    /** A converted stock badnik joining at the fight's first row, where it stood. */
+    record LoadedArrival(LoadedBadnik badnik, Species species) { }
+
+    /** Fewest synthetic arrivals a fight keeps when loaded stock badniks join it. */
+    static final int MIN_WAVE = 3;
+    /** Rows a converted stock badnik waits before advancing, so its word can be read. */
+    static final int LOADED_GRACE = 30;
+
+    private final List<LoadedArrival> loaded = new ArrayList<>();
+    private boolean loadedSpawned;
+
     /** A scheduled pickup: a monitor, a decoy or a fleeing animal. */
     record PickupArrival(int row, Pickup.Kind kind, boolean fromLeft) { }
 
@@ -48,12 +59,25 @@ public final class Encounter {
 
     /** A stand's waves: more and tougher badniks with each stand and with the difficulty. */
     static Encounter stand(Course course, int standNumber) {
+        return stand(course, standNumber, List.of());
+    }
+
+    /**
+     * A fight: the stock badniks loaded when it began join first, where they stood, and the wave
+     * that follows is shorter by as many (never below {@link #MIN_WAVE}).
+     */
+    static Encounter stand(Course course, int standNumber, List<LoadedBadnik> loaded) {
         Encounter encounter = new Encounter(false, null);
         var intent = course.intent();
-        List<Species> cast = course.assets().cast(intent.game()).zone(intent.zone(), intent.act());
+        var castTable = course.assets().cast(intent.game());
+        for (LoadedBadnik badnik : loaded) {
+            Species species = castTable.nativeSpecies(badnik.className(), intent.zone(), intent.act());
+            if (species != null) encounter.loaded.add(new LoadedArrival(badnik, species));
+        }
+        List<Species> cast = castTable.zone(intent.zone(), intent.act());
         if (cast.isEmpty()) return encounter;
         var random = course.random();
-        int count = 6 + standNumber * 2 + intent.difficulty().tier;
+        int count = Math.max(MIN_WAVE, 6 + standNumber * 2 + intent.difficulty().tier - encounter.loaded.size());
         int gap = Math.max(26, (int) (80 / intent.difficulty().speed) - standNumber * 4);
         int at = 40;
         for (int i = 0; i < count; i++) {
@@ -158,8 +182,12 @@ public final class Encounter {
     void advance(Course course) {
         row++;
         extendEndless(course);
-        int px = course.playerX();
-        int py = course.playerY();
+        int px = course.anchorX();
+        int py = course.anchorY();
+        if (!loadedSpawned) {
+            loadedSpawned = true;
+            for (LoadedArrival arrival : loaded) spawnLoaded(course, arrival, px);
+        }
         while (nextArrival < arrivals.size() && arrivals.get(nextArrival).row() <= row) {
             spawn(course, arrivals.get(nextArrival++), px, py);
         }
@@ -193,6 +221,24 @@ public final class Encounter {
         body.flipX = species.facesRight() != (enemy.direction > 0);
         Prompt prompt = pickPrompt(course, arrival.elite() ? 4 : course.intent().difficulty().tier, arrival.elite());
         if (arrival.elite()) course.say(typinghog.audio.VoiceLine.ANNOUNCER_ELITE);
+        Enemy.Part part = new Enemy.Part(prompt, body);
+        part.targetId = course.field().add(prompt, enemy.rowsToReach(px));
+        if (course.invincible()) course.field().assist(part.targetId, prompt.typed().length() / 2);
+        enemy.parts.add(part);
+        enemies.add(enemy);
+    }
+
+    /** A converted stock badnik: the same species art, standing where the stock one stood, facing Sonic. */
+    private void spawnLoaded(Course course, LoadedArrival arrival, int px) {
+        Species species = arrival.species();
+        LoadedBadnik badnik = arrival.badnik();
+        boolean airborne = species.archetype() == Species.Archetype.DIVER;
+        int direction = badnik.x() < px ? 1 : -1;
+        Enemy enemy = new Enemy(species, false, airborne, badnik.x(), badnik.y(), airborne ? 0x140 : 0x100, direction);
+        enemy.grace = LOADED_GRACE;
+        var body = course.stagehand().add(species.artKey(), badnik.x(), badnik.y());
+        body.flipX = species.facesRight() != (direction > 0);
+        Prompt prompt = pickPrompt(course, course.intent().difficulty().tier, false);
         Enemy.Part part = new Enemy.Part(prompt, body);
         part.targetId = course.field().add(prompt, enemy.rowsToReach(px));
         if (course.invincible()) course.field().assist(part.targetId, prompt.typed().length() / 2);
@@ -258,24 +304,28 @@ public final class Encounter {
         for (Pickup pickup : List.copyOf(pickups)) {
             if (pickup.targetId != targetId) continue;
             pickups.remove(pickup);
-            course.stagehand().remove(pickup.visual);
+            int x = pickup.px(), y = pickup.y;
             switch (pickup.kind) {
-                case DECOY -> {
+                case DECOY -> course.homing().strike(() -> x, () -> y, () -> {
+                    course.stagehand().remove(pickup.visual);
                     course.hud().banner("IT'S A TRAP!", 0xFFFF4040);
                     course.say(typinghog.audio.VoiceLine.ROBOTNIK_TRAP_TYPED);
                     course.hitSonic();
-                }
+                });
                 case RESCUE -> {
+                    course.stagehand().remove(pickup.visual);
                     int points = course.card().rescue(pickup.prompt);
                     course.play(Sounds.Cue.RING);
                     course.say(typinghog.audio.VoiceLine.ANNOUNCER_ANIMAL_RESCUED);
-                    effects.score(course, pickup.px(), pickup.y, points);
+                    effects.score(course, x, y, points);
                 }
-                default -> {
+                // Sonic breaks a monitor by striking it, as in the games.
+                default -> course.homing().strike(() -> x, () -> y, () -> {
+                    course.stagehand().remove(pickup.visual);
                     course.play(Sounds.Cue.MONITOR);
-                    effects.kill(course, pickup.px(), pickup.y, 100);
+                    effects.kill(course, x, y, 100);
                     course.grant(pickup.kind);
-                }
+                });
             }
             return true;
         }
@@ -306,6 +356,10 @@ public final class Encounter {
         Species species = enemy.species;
         switch (enemy.state) {
             case APPROACH -> {
+                if (enemy.grace > 0) {
+                    enemy.grace--;
+                    break;
+                }
                 int step = (int) (enemy.speed * speedScale);
                 enemy.x += enemy.direction * step;
                 if (enemy.airborne) {
@@ -341,8 +395,6 @@ public final class Encounter {
                 card.keystroke();
                 course.play(event.kind() == TypingField.Kind.LOCK ? Sounds.Cue.LOCK : Sounds.Cue.KEY);
                 course.keyStats().hit(codePoint);
-                Enemy.Part part = partFor(event.target());
-                if (part != null) effects.spark(course, part.visual.x, part.visual.y);
                 if (bossFight != null) bossFight.onKey(course, event);
             }
             case COMPLETE -> {
@@ -375,21 +427,38 @@ public final class Encounter {
         if (event.kind() == TypingField.Kind.RELEASE) course.card().error();
     }
 
+    /**
+     * A finished word sends Sonic on a homing strike: the last word of a badnik dooms it at once
+     * (it stops and can no longer hurt him) and the kill lands when he strikes it; an earlier word
+     * of a multi-word badnik knocks it back on contact.
+     */
     private void complete(Course course, int targetId) {
         for (Enemy enemy : List.copyOf(enemies)) {
             for (Enemy.Part part : enemy.parts) {
                 if (part.targetId != targetId) continue;
                 part.typed = true;
-                if (!enemy.allTyped()) return;
                 Scorecard card = course.card();
+                if (!enemy.allTyped()) {
+                    course.homing().strike(enemy::x, enemy::y, () -> {
+                        course.play(Sounds.Cue.HIT);
+                        if (enemy.state == Enemy.State.APPROACH) {
+                            enemy.state = Enemy.State.RECOIL;
+                            enemy.stateRows = 0;
+                        }
+                    });
+                    return;
+                }
+                enemy.state = Enemy.State.DYING;
                 int chainBefore = card.chain();
                 card.kill(part.prompt);
                 if (row - lastKillRow > 0) lastKillRow = row;
-                effects.kill(course, enemy.x(), enemy.y(), Scorecard.popupValue(chainBefore));
-                course.play(Sounds.Cue.KILL);
                 course.chainMilestone(card.chain());
-                for (Enemy.Part each : enemy.parts) course.stagehand().remove(each.visual);
-                enemies.remove(enemy);
+                course.homing().strike(enemy::x, enemy::y, () -> {
+                    effects.kill(course, enemy.x(), enemy.y(), Scorecard.popupValue(chainBefore));
+                    course.play(Sounds.Cue.KILL);
+                    for (Enemy.Part each : enemy.parts) course.stagehand().remove(each.visual);
+                    enemies.remove(enemy);
+                });
                 return;
             }
         }
