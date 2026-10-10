@@ -63,11 +63,16 @@ final class Homing {
      * its kill must still happen) and Sonic is put back on his spot.
      */
     void cancel() {
-        boolean flying = current != null;
-        if (current != null && leg == Leg.DASH) current.onHit().run();
+        // Take the volley first: a landing strike may itself hit Sonic (a decoy) and cancel again,
+        // which must find nothing left to land rather than re-run the strike in flight.
+        Strike flying = current;
+        boolean dashing = flying != null && leg == Leg.DASH;
         current = null;
-        while (!queue.isEmpty()) queue.poll().onHit().run();
-        if (flying) land();
+        java.util.List<Strike> pending = new java.util.ArrayList<>(queue);
+        queue.clear();
+        if (dashing) flying.onHit().run();
+        for (Strike strike : pending) strike.onHit().run();
+        if (flying != null) land();
     }
 
     /** Forgets the stand spot (after the stand's restore). */

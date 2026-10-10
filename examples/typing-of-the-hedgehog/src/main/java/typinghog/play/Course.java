@@ -15,6 +15,7 @@ import typinghog.audio.Announcer;
 import typinghog.audio.VoiceLine;
 import typinghog.core.Scorecard;
 import typinghog.core.TypingField;
+import typinghog.rails.CombatHandoff;
 import typinghog.rails.Rail;
 import typinghog.save.ActResult;
 import typinghog.save.LaunchIntent;
@@ -39,13 +40,25 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_UP;
  * survives restores), so its rewind adapter captures nothing useful and returns a constant.
  */
 public final class Course implements GameplayFrameController, RewindSnapshottable<Integer> {
-    enum Phase { IDLE, ENTRY, COUNTDOWN, RUN, STAND, STAND_CLEAR, BOSS, DYING, TALLY, LEAVING }
+    enum Phase { IDLE, ENTRY, COUNTDOWN, RUN, STAND, STAND_CLEAR, BOSS, DYING, TALLY, LEAVING, FAULT }
 
     /** Rows an attract demo plays before handing back to the title (two minutes). */
 
     static final int DEMO_ROWS = 7200;
-    /** Rows each count of the "3, 2, 1" start holds. */
+    /** Rows each count of the "3, 2, 1" start holds (a legacy rail's world-held countdown). */
     static final int COUNTDOWN_BEAT = 40;
+    /** Native rows each count of a forward rail's countdown spans (its 180 charge rows in three). */
+    static final int FORWARD_COUNTDOWN_BEAT = Rail.COUNTDOWN_ROWS / 3;
+    /**
+     * Native rows a forward rail's live fight may run before the world holds still: the fight goes
+     * on (combat clock) on held rows until victory. The rail builder proves this many rows safe from
+     * the stand's conversion with Sonic held, so a fight never outlives its validation.
+     */
+    static final int FIGHT_NATIVE_CAP = 3600;
+    /** Held rows a forward rail waits at its countdown row for the act's presentation to finish. */
+    static final int ENTRY_HOLD_LIMIT = 600;
+    /** Rows a rail fault shows before the course hands back to the hub. */
+    static final int FAULT_ROWS = 180;
     /** Most rows Boss Rush waits for Sonic to land before the boss arrives anyway. */
     static final int BOSS_RUSH_LANDING_ROWS = 600;
     /** Rows a demo word must be on screen before the demo typist starts it. */
@@ -80,6 +93,19 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
     private CourseCheckpoint standCheckpoint;
     /** The pad mask of the row before a stand, so press edges resume exactly after its restore. */
     private int standPreviousMask;
+    /** The camera's frozen flag at the stand's capture: the restore puts the captured value back. */
+    private boolean standCameraFrozen;
+    /** A forward stand's converted native bodies, reacquired and converted again after each restore. */
+    private java.util.List<CombatHandoff.Body> standPool = java.util.List.of();
+    private java.util.List<LoadedBadnik> standLoaded = java.util.List.of();
+    /** Native rows the current forward fight has run (the world holds still past the cap). */
+    private int fightNativeRows;
+    /** This row advanced the fight on the combat clock: a native row, or a held one past the cap. */
+    private boolean combatTick;
+    private boolean fightHeld;
+    private int entryHoldRows;
+    /** Why a forward rail stopped (a native fault or a mismatch), or null. */
+    private String fault;
     private boolean paused;
     private boolean titleRequest;
     private boolean advancedThisRow;
@@ -112,6 +138,8 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
 
     @Override public boolean beforeTick(CourseControl course, LogicalInputSnapshot live) {
         rows++;
+        combatTick = false;
+        fightHeld = false;
         detectLevel();
         if (intent == null || rail == null) return true;
         announcer.update(rows, asset -> GameServices.audio().playNamespacedSfx(
@@ -143,33 +171,40 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
             if (slowRows > 0) slowRows--;
             // Slow motion advances the native world (and everything on it) every other row; the
             // run is the same sequence of native steps, so it stays deterministic.
-            if (phase == Phase.RUN || phase == Phase.STAND || phase == Phase.BOSS) {
+            if (phase == Phase.RUN || phase == Phase.STAND || phase == Phase.BOSS
+                    || (phase == Phase.COUNTDOWN && rail.forward())) {
                 if ((++slowPhase & 1) == 0) return false;
             }
         }
         advancedThisRow = switch (phase) {
             case ENTRY -> entry(course);
-            case COUNTDOWN -> countdown();
-            case RUN -> run(course);
+            case COUNTDOWN -> rail.forward() ? forwardCountdown(course) : countdown();
+            case RUN -> rail.forward() ? forwardRun(course) : run(course);
             case STAND, BOSS -> stand(course);
             case STAND_CLEAR -> standClear(course);
             case DYING -> dying(course);
             case TALLY -> tally();
+            case FAULT -> faulted();
             case LEAVING, IDLE -> false;
         };
+        combatTick = advancedThisRow || fightHeld;
         return advancedThisRow;
     }
 
     @Override public void afterTick(CourseControl course, boolean advanced) {
         if (intent == null || rail == null) return;
-        // The wave holds while Sonic is down; the retry's restore replaces it.
-        if (advanced && encounter != null && phase != Phase.DYING) encounter.advance(this);
-        if (advanced && phase == Phase.RUN) runTags.advance(this);
+        // The wave holds while Sonic is down; the retry's restore replaces it. A forward fight runs
+        // on the combat clock, which keeps going on the rows the world holds still past the cap.
+        boolean combat = rail.forward() ? combatTick : advanced;
+        if (combat && encounter != null && phase != Phase.DYING) encounter.advance(this);
+        if (advanced && phase == Phase.RUN && !rail.forward()) runTags.advance(this);
+        if (advanced && rail.forward()) watchNative();
         spawnPuppets();
     }
 
     @Override public LogicalInputSnapshot nativeInput(CourseControl course) {
-        boolean railed = (phase == Phase.RUN || phase == Phase.ENTRY) && intent.mode() != LaunchIntent.Mode.BOSS_RUSH;
+        boolean railed = (phase == Phase.RUN || phase == Phase.ENTRY || (phase == Phase.COUNTDOWN && rail.forward()))
+                && intent.mode() != LaunchIntent.Mode.BOSS_RUSH;
         int mask = railed ? cursor.next() & PAD_BITS : 0;
         int action = (mask & AbstractPlayableSprite.INPUT_JUMP) != 0 ? InputActionMasks.ACTION_A : 0;
         int previousAction = (previousMask & AbstractPlayableSprite.INPUT_JUMP) != 0 ? InputActionMasks.ACTION_A : 0;
@@ -236,6 +271,11 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
         lives = START_LIVES;
         previousMask = 0;
         standCheckpoint = null;
+        standPool = java.util.List.of();
+        standLoaded = java.util.List.of();
+        fightNativeRows = 0;
+        entryHoldRows = 0;
+        fault = null;
         bossDefeated = false;
         shield = false;
         slowRows = 0;
@@ -250,6 +290,9 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
     }
 
     private boolean entry(CourseControl course) {
+        if (rail.forward() && intent.mode() != LaunchIntent.Mode.BOSS_RUSH && !rail.plan().kind().equals("boss-only")) {
+            return forwardEntry(course);
+        }
         if (!course.presentationReady()) return true;
         if (intent.mode() == LaunchIntent.Mode.BOSS_RUSH) {
             // Boss Rush skips the run: the boss arrives where the act begins, once Sonic has landed
@@ -316,7 +359,10 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
 
     /** Applies the row's typing to whatever is on screen: run tags while running, the stand's targets in a stand. */
     private void typeRow(String typed, boolean backspace) {
-        if (phase == Phase.RUN) {
+        if (phase == Phase.RUN && rail.forward()) {
+            // Forward rails have no run tags: Sonic leaves the badniks between fights alone.
+            return;
+        } else if (phase == Phase.RUN) {
             if (backspace) field.release();
             typed.codePoints().forEach(cp -> runTags.onEvent(this, typeKey(cp), cp));
         } else if ((phase == Phase.STAND || phase == Phase.BOSS) && encounter != null) {
@@ -349,9 +395,11 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
         runTags.clear(field);
         standCheckpoint = course.capture();
         standPreviousMask = previousMask;
+        standCameraFrozen = GameServices.camera().getFrozen();
         enter(boss ? Phase.BOSS : Phase.STAND);
         encounter = boss ? Encounter.boss(this)
-                : intent.mode() == LaunchIntent.Mode.ENDLESS ? Encounter.endless(this) : Encounter.stand(this, nextStand);
+                : intent.mode() == LaunchIntent.Mode.ENDLESS ? Encounter.endless(this)
+                : Encounter.stand(this, nextStand, standLoaded);
         field.clear();
         hud.banner(boss ? "WARNING!" : "STAND " + nextStand, boss ? 0xFFFF4040 : 0xFFFFD000);
         play(Sounds.Cue.STAND_START);
@@ -365,6 +413,7 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
     }
 
     private boolean stand(CourseControl course) {
+        if (!guardFightWorld(course)) return false;
         holdPlayer();
         homing.anchor(playerX(), playerY());
         // The view holds still for the stand, so homing strikes don't drag the camera around;
@@ -385,15 +434,34 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
             play(Sounds.Cue.STAND_CLEAR);
             say(VoiceLine.ANNOUNCER_WAVE_CLEAR);
         }
+        return fightAdvances();
+    }
+
+    /**
+     * Whether a fight row steps the native world. Legacy rails always do. A forward fight's world
+     * lives (Sonic held) for {@link #FIGHT_NATIVE_CAP} native rows, then holds still while the
+     * fight goes on; the victory restore undoes all of it either way.
+     */
+    private boolean fightAdvances() {
+        if (!rail.forward()) return true;
+        // A forward rail's boss fight holds the world from its first row: the stock boss must not
+        // attack the held Sonic while the typing boss plays, and nothing after it needs a restore.
+        if (phase == Phase.BOSS || (encounter != null && encounter.isBoss()) || fightNativeRows >= FIGHT_NATIVE_CAP) {
+            fightHeld = true;
+            return false;
+        }
+        fightNativeRows++;
         return true;
     }
 
     private boolean standClear(CourseControl course) {
+        if (!guardFightWorld(course)) return false;
         holdPlayer();
-        if (phaseRows < STAND_CLEAR_ROWS) return true;
+        if (phaseRows < STAND_CLEAR_ROWS) return fightAdvances();
         course.restore(standCheckpoint);
         homing.release();
-        GameServices.camera().setFrozen(false);
+        GameServices.camera().setFrozen(standCameraFrozen);
+        if (rail.forward() && !reconvert("after stand " + nextStand + "'s victory")) return false;
         previousMask = standPreviousMask;
         stagehand.clear();
         stagehand.invalidatePuppets();
@@ -406,14 +474,16 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
     }
 
     private boolean dying(CourseControl course) {
-        if (phaseRows < DYING_ROWS) return true;
+        if (phaseRows < DYING_ROWS) return fightAdvances();
         if (lives <= 0 && !intent.noFail()) {
             finish(false);
             return false;
         }
         course.restore(standCheckpoint);
         homing.release();
-        GameServices.camera().setFrozen(false);
+        GameServices.camera().setFrozen(standCameraFrozen);
+        if (rail.forward() && !reconvert("for stand " + nextStand + "'s retry")) return false;
+        fightNativeRows = 0;
         previousMask = standPreviousMask;
         stagehand.clear();
         stagehand.invalidatePuppets();
@@ -421,9 +491,161 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
         field.clear();
         boolean boss = encounter != null && encounter.isBoss();
         enter(boss ? Phase.BOSS : Phase.STAND);
-        encounter = boss ? Encounter.boss(this) : Encounter.stand(this, nextStand);
+        encounter = boss ? Encounter.boss(this) : Encounter.stand(this, nextStand, standLoaded);
         hud.banner("TRY AGAIN!", 0xFFFFFFFF);
         return true;
+    }
+
+    // ---- forward rails (format 2) ----------------------------------------------------------------
+
+    /**
+     * Plays the rail's authored entry rows; at the countdown row, holds the world (no native step,
+     * so neither the rail nor the native clocks move) until the act's presentation is ready.
+     */
+    private boolean forwardEntry(CourseControl course) {
+        if (cursor.row() == 0 && phaseRows == 1) {
+            String launchFault = launchFault(course);
+            if (launchFault != null) return fault(launchFault);
+        }
+        if (cursor.row() < rail.plan().countdownRow()) return true;
+        if (!course.presentationReady()) {
+            if (++entryHoldRows > ENTRY_HOLD_LIMIT) return fault("the act's presentation was not ready by the countdown row");
+            return false;
+        }
+        enter(Phase.COUNTDOWN);
+        say(VoiceLine.ANNOUNCER_GET_READY);
+        return forwardCountdown(course);
+    }
+
+    /** The rail's launch profile against the running session; a description of the mismatch, or null. */
+    private String launchFault(CourseControl course) {
+        String sha1 = course.romSha1();
+        if (sha1 != null && !sha1.equalsIgnoreCase(rail.plan().romSha1())) return "this rail was made for another ROM";
+        String intros = rail.plan().profile().get("intros");
+        if (intros != null && intent.game().equals("s3k")) {
+            boolean skip = GameServices.configuration().getBoolean(com.openggf.configuration.SonicConfiguration.S3K_SKIP_INTROS);
+            if (skip != intros.equals("skip")) return "this rail needs act intros " + (intros.equals("skip") ? "skipped" : "played");
+        }
+        String width = rail.plan().profile().get("width");
+        if (width != null && course.viewportWidth() != Integer.parseInt(width)) return "this rail needs a " + width + "-pixel view";
+        return null;
+    }
+
+    /**
+     * "3, 2, 1, START!" over the rail's native countdown rows: Sonic crouches (and charges a spindash
+     * where the game has one) on rows the rail authored; START! is the release row.
+     */
+    private boolean forwardCountdown(CourseControl course) {
+        int i = cursor.row() - rail.plan().countdownRow();
+        if (i == 0 || i == FORWARD_COUNTDOWN_BEAT || i == 2 * FORWARD_COUNTDOWN_BEAT) play(Sounds.Cue.LOCK);
+        if (i < Rail.COUNTDOWN_ROWS) return true;
+        play(Sounds.Cue.STAND_START);
+        hud.start();
+        enter(Phase.RUN);
+        return forwardRun(course);
+    }
+
+    private boolean forwardRun(CourseControl course) {
+        var plan = rail.plan();
+        int row = cursor.row();
+        if (row >= plan.endpoint().row()) {
+            standPool = java.util.List.of();
+            standLoaded = java.util.List.of();
+            fightNativeRows = 0;
+            beginStand(course, true);
+            return stand(course);
+        }
+        if (nextStand < plan.stands().size() && row >= plan.stands().get(nextStand).row()) {
+            Rail.Stand spec = plan.stands().get(nextStand);
+            if (row > spec.row()) return fault("passed stand " + spec.id() + "'s row " + spec.row());
+            nextStand++;
+            var pool = CombatHandoff.pool(assets.cast(intent.game())::convertible);
+            String mismatch = poolMismatch(spec.pool(), pool);
+            if (mismatch != null) return fault("stand " + spec.id() + " at row " + row + ": " + mismatch);
+            standPool = pool;
+            standLoaded = pool.stream().map(b -> new LoadedBadnik(b.className(), b.x(), b.y(), b.facingRight())).toList();
+            fightNativeRows = 0;
+            // The checkpoint is the world before the conversion (beginStand captures it); the
+            // conversion then takes effect on this row's native step.
+            beginStand(course, false);
+            CombatHandoff.convert(pool);
+            return stand(course);
+        }
+        if (cursor.finished()) return fault("the rail ended before its endpoint");
+        return true;
+    }
+
+    /** The live pool against the rail's manifest, by class and layout (slots may differ with the clock phase). */
+    static String poolMismatch(java.util.List<Rail.Body> expected, java.util.List<CombatHandoff.Body> live) {
+        java.util.List<String> want = new java.util.ArrayList<>(expected.stream().map(Rail.Body::key).toList());
+        java.util.List<String> got = new java.util.ArrayList<>(live.stream()
+                .map(b -> b.className() + "/L" + b.layoutIndex()).toList());
+        java.util.Collections.sort(want);
+        java.util.Collections.sort(got);
+        return want.equals(got) ? null : "the rail expected loaded badniks " + want + " but found " + got;
+    }
+
+    /**
+     * A forward fight's living world must not touch the held Sonic: the rail builder soaks every
+     * stand for {@link #FIGHT_NATIVE_CAP} held rows, but a homing strike moves him through the
+     * world. Should a native hazard still hurt (or kill) him, the stand's checkpoint goes back at
+     * once, with the same conversion, and the fight carries on; false only when that fails.
+     */
+    private boolean guardFightWorld(CourseControl course) {
+        if (!rail.forward() || standCheckpoint == null) return true;
+        if (!(GameServices.camera().getFocusedSprite() instanceof AbstractPlayableSprite sonic)) return true;
+        if (!sonic.getDead() && !sonic.isHurt()) return true;
+        course.restore(standCheckpoint);
+        GameServices.camera().setFrozen(standCameraFrozen);
+        fightNativeRows = 0;
+        return reconvert("after a native hit in stand " + nextStand);
+    }
+
+    /** After a stand's restore: the same bodies, by identity, converted again. */
+    private boolean reconvert(String when) {
+        try {
+            CombatHandoff.convert(standPool);
+            return true;
+        } catch (CombatHandoff.Mismatch mismatch) {
+            fault("the loaded badniks differ " + when + ": " + mismatch.getMessage());
+            return false;
+        }
+    }
+
+    /** A forward rail's native rows outside fights must be clean: a hurt, death or level change is a rail fault. */
+    private void watchNative() {
+        if (phase != Phase.RUN && phase != Phase.COUNTDOWN && phase != Phase.ENTRY) return;
+        if (!(GameServices.camera().getFocusedSprite() instanceof AbstractPlayableSprite sonic)) return;
+        int row = cursor.row() - 1;
+        if (sonic.getDead()) fault("native death at rail row " + row);
+        else if (sonic.isHurt()) fault("native hurt at rail row " + row);
+        else if (GameServices.level().getCurrentZone() != intent.zone() || GameServices.level().getCurrentAct() != intent.act()) {
+            fault("the level changed at rail row " + row);
+        }
+    }
+
+    /** Stops the rail: shows the fault, then hands back to the hub. */
+    private boolean fault(String reason) {
+        if (fault == null) fault = reason;
+        homing.release();
+        enter(Phase.FAULT);
+        hud.banner("RAIL FAULT", 0xFFFF4040);
+        return false;
+    }
+
+    private boolean faulted() {
+        if (phaseRows >= FAULT_ROWS) finish(false);
+        return false;
+    }
+
+    /** The countdown beat (0 to 2) and rows into it, or null outside the countdown. */
+    int[] countdownBeat() {
+        if (phase != Phase.COUNTDOWN) return null;
+        if (rail.forward()) {
+            int i = Math.max(0, cursor.row() - rail.plan().countdownRow());
+            return new int[] {i / FORWARD_COUNTDOWN_BEAT, i % FORWARD_COUNTDOWN_BEAT};
+        }
+        return new int[] {phaseRows / COUNTDOWN_BEAT, phaseRows % COUNTDOWN_BEAT};
     }
 
     private boolean tally() {
@@ -561,7 +783,7 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
     /** The course at a glance; {@code railRow} is the next program row the rail will play. */
     public record View(String phase, int railRow, int nextStand, int rings, int lives, long score, int chain,
                        int kills, double wpm, java.util.List<TargetView> targets, int visuals, int sprites,
-                       boolean paused) { }
+                       boolean paused, int format, int fightNativeRows, int loaded, String fault) { }
 
     public View view() {
         java.util.List<TargetView> targets = new java.util.ArrayList<>();
@@ -574,7 +796,8 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
         return new View(phase.name(), cursor == null ? -1 : cursor.row(), nextStand, rings, lives,
                 card == null ? 0 : card.score(), card == null ? 0 : card.chain(), card == null ? 0 : card.kills(),
                 card == null ? 0 : card.wpm(), java.util.List.copyOf(targets), stagehand.all().size(),
-                stagehand.all().stream().mapToInt(v -> v.sprites.isEmpty() ? 1 : v.sprites.size()).sum(), paused);
+                stagehand.all().stream().mapToInt(v -> v.sprites.isEmpty() ? 1 : v.sprites.size()).sum(), paused,
+                rail == null ? 0 : rail.format(), fightNativeRows, standLoaded.size(), fault);
     }
 
     // ---- views for the encounter and HUD -------------------------------------------------------

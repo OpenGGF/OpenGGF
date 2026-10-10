@@ -135,7 +135,9 @@ class TestTypingHedgehogRails {
             } catch (Throwable t) {
                 Throwable cause = t;
                 while (cause.getCause() != null) cause = cause.getCause();
-                fault = "aborted: " + cause;
+                StackTraceElement[] stack = cause.getStackTrace();
+                fault = "aborted: " + cause + " at " + java.util.Arrays.stream(stack)
+                        .limit(Math.min(stack.length, 12)).map(String::valueOf).toList();
                 dispose();
                 harness.close();
                 harness = buildHarness(++generation);

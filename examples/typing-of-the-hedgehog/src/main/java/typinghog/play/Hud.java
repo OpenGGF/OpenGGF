@@ -193,9 +193,10 @@ public final class Hud {
 
     /** The "3, 2, 1" start, each count shrinking from large as its beat runs, then START! into the run. */
     private void drawCountdown(PixelCanvas canvas, Course course, int width) {
-        if (course.phase() == Course.Phase.COUNTDOWN) {
-            int beat = course.phaseRows() / Course.COUNTDOWN_BEAT;
-            int into = course.phaseRows() % Course.COUNTDOWN_BEAT;
+        int[] countdown = course.countdownBeat();
+        if (countdown != null) {
+            int beat = countdown[0];
+            int into = countdown[1];
             if (beat > 2) return;
             String count = Integer.toString(3 - beat);
             int scale = into < 6 ? 8 - into / 2 : 6;
