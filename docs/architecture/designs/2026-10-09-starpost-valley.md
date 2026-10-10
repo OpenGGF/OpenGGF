@@ -2388,8 +2388,8 @@ logical S2 as a prerequisite disabled its active-host path with an intentionally
 absent logical resolver. Preserve that legacy host-ROM path; named cross-ROM art
 still requires PatchContext and declares its source. A missing context must never
 interpret an S3K host as S2 bytes. Focused production and prerequisite checks
-verify this correction, followed by final fresh guards. The other failures are
-subject to bounded base/current attribution; no green broad-suite claim is made.
+verify this correction, followed by final fresh guards. The other27 assertion failures are
+confirmed inherited by bounded base/current attribution below; no green broad-suite claim is made.
 Skips include optional probes/native-display tests and 32 Infinite Sonic cases
 whose selected acts lack the platform/flyer combination; required Starpost
 checks have zero skips.
@@ -2399,9 +2399,8 @@ at `3da4cd930`, under this lane only, with its own Maven output and the same
 absolute ROM properties. First check: `-Dtest=TestS3kMhzAct2AuthoredRoute,TestSampleRomArtRemixIntegration`
 (**4 tests, 2 inherited failures, zero errors/skips**; the S2 sample passes).
 Second check selects the twelve remaining failed classes below by their full
-qualified names (**45 tests, 25 inherited failures, zero errors/skips**). Both use
-`python3 tools/testing/maven_queue.py -B -Dmse=off <selector> <ROM properties> test`
-from the export. Combined base **49 tests / 27 failures** exactly accounts for
+qualified names (**45 tests, 25 inherited failures, zero errors/skips**). Both invoke this lane's `tools/testing/maven_queue.py` by absolute path, with
+`-B -Dmse=off <selector> <ROM properties> test`, from the export. Combined base **49 tests / 27 failures** exactly accounts for
 all ordinary assertion failures by identity and concrete failure fields.
 Twenty-six assertion messages match exactly. The SSZ Tails replica replay's full
 first line matches after normalizing only `RewindObjectStateBlob@hex`: its
@@ -2429,14 +2428,20 @@ Correction check: `python3 tools/testing/maven_queue.py --lean -B -Dmse=off`
 with `-Dtest=TestSampleRomArtRemixIntegration,TestModBackedGamePatchRomArt,TestModContextRomArt,TestModApiSignatureSurface,TestModApiPinPolicy,TestStarpostRealRuins`,
 all three absolute ROM properties and `test`: **65/65 pass, zero skips**.
 This includes all37 native Ruins cases, legacy sample production materialization
-and three new host/cross-ROM prerequisite controls. Final fresh guards follow
-the compatibility milestone; the ordinary suite is not rerun or called green.
+and three new host/cross-ROM prerequisite controls. Compatibility milestone
+`87f9eef6f` then passes final fresh guards **674/674**, zero failures/errors/skips,
+in 4:22. Command:
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -B -Dmse=off -Pguards <three absolute ROM properties> test`.
+The ordinary suite is not rerun or called green. Consumed category run
+`20261010T024407Z-51ccf5cc` is acknowledged and deleted; the lane-owned base
+export/build is deleted after comparison. No other worktree is changed.
 The combined command was
 `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 3da4cd930 --max-minutes 120 --run`.
 
 
 
-Three final **240-frame / 4-second**, silent, native GameLoop captures and
+Three **240-frame / 4-second**, silent, native GameLoop captures at `71f05bec6`
+(before the S2-only compatibility correction; S3K art/act behavior is unchanged) and
 state CSVs are under `~/scratch/sv-realruins/`: `marble.mp4`,
 `labyrinth.mp4`, `scrap-brain.mp4`, and each band's `frames/` / `state.csv`.
 `RealRuinsCapture.java` drives HeadlessGameBoot + GameLoop.step with native pad
