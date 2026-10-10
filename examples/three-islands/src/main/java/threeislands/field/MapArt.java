@@ -30,15 +30,18 @@ final class MapArt {
 
     private final boolean greenHill;
     private final SceneLevelKit kit;
+    private final com.openggf.mods.scene.SceneBackground background;
     private final SceneImage[] water;
     private final SceneImage cliff, lip, palm, plant, log, rock;
-    private final SceneImage plate, rail, lattice, lamp, lampShort, cone, barrier, building, city;
+    private final SceneImage plate, rail, lattice, lamp, lampShort, cone, barrier, building;
     private final int grass, plateau, path, pathDark;
     private final List<Prop> props = new ArrayList<>();
 
     MapArt(Zone zone, SceneLevelKit kit, SceneRomArt rom, TileMap map, SceneImage[] water, SceneImage cliff,
-            SceneImage lip, SceneImage palm, SceneImage plant, int grassColour) {
+            SceneImage lip, SceneImage palm, SceneImage plant, int grassColour,
+            com.openggf.mods.scene.SceneBackground background) {
         this.kit = kit;
+        this.background = background;
         greenHill = zone == Zone.GREEN_HILL;
         this.water = water;
         int[] palette = kit.palette();
@@ -50,7 +53,7 @@ final class MapArt {
             // Obj11 bridge logs use palette line 2 (Tile_Pal3); Obj3B rocks line 3 (Tile_Pal4).
             log = rom.tiles(0x2FA2C, Compression.NEMESIS, 0, 2, 2, true, Arrays.copyOfRange(palette, 32, 48));
             rock = rom.tiles(0x300BA, Compression.NEMESIS, 0, 6, 4, true, Arrays.copyOfRange(palette, 48, 64));
-            plate = rail = lattice = lamp = lampShort = cone = barrier = building = city = null;
+            plate = rail = lattice = lamp = lampShort = cone = barrier = building = null;
             // Palette line 0/2 browns for trails; the bright and deep greens for clearings and jungle.
             grass = mix(nearest(palette, 0x49B600), nearest(palette, 0x006D00), 0.55);
             plateau = nearest(palette, 0x004900);
@@ -68,8 +71,6 @@ final class MapArt {
             cone = crop(chunk20, 48, 186, 16, 34);
             barrier = crop(chunk24, 16, 60, 64, 36);
             building = crop(chunk2, 0, 0, 128, 128);
-            // Chunk 17 holds the distant city's lit windows on a transparent band.
-            city = crop(kit.blockImage(17), 0, 112, 256, 144);
             grass = plateau = 0;
             path = 0xFF2E3A2E;
             pathDark = 0xFF1C241C;
@@ -209,15 +210,8 @@ final class MapArt {
 
     private void sky(SceneCanvas c, double cameraX, double cameraY, long ticks) {
         c.clear(0x000008);
-        if (kit.backdrop() != null) {
-            int span = Math.max(0, kit.backdrop().image().height() - c.height());
-            c.drawBackdrop(kit.backdrop(), Math.min(span, (int) (cameraY * 0.15)), cameraX * 0.3, ticks);
-        }
-        // The sleeping city drifts past far below the highways.
-        int top = c.height() - 132 - (int) (cameraY * 0.08) % 24;
-        int offset = (int) Math.floorMod((long) (cameraX * 0.5), (long) city.width());
-        for (int x = -offset; x < c.width(); x += city.width()) c.draw(city, x, top, SceneDraw.plain().withAlpha(0.8f));
-        c.fill(0, top + city.height() - 12, c.width(), c.height(), 0xFF02020C);
+        if (background != null) background.draw(c, (int) cameraX, (int) cameraY, ticks);
+        else if (kit.backdrop() != null) c.drawBackdrop(kit.backdrop(), 0, cameraX, ticks);
     }
 
     /** Street lamps stand on walkway cells whose north edge faces the open sky. */

@@ -13,6 +13,8 @@ import threeislands.core.Zone;
 public final class FieldArt {
     private final SceneImage ground, cliff, lip, palm, flowers, doorway;
     private final SceneLevelKit kit;
+    private final com.openggf.mods.scene.SceneBackground background;
+    private final int backgroundOriginX;
     private final SceneImage[] waterFrames;
     private final boolean greenHill;
     private final int grassColour;
@@ -20,6 +22,9 @@ public final class FieldArt {
 
     public FieldArt(Zone zone, SceneLevelKit kit, SceneRomArt rom) {
         this.kit = kit;
+        background = rom == null ? null : rom.levelBackground(zone.zone, zone.act);
+        // AIZ's main-level scroll routine measures X from the post-intro $1300 origin.
+        backgroundOriginX = zone == Zone.ANGEL_ISLAND ? 0x1300 : 0;
         int darkest = java.util.Arrays.stream(kit.palette()).boxed().min(java.util.Comparator.comparingInt(
                 colour -> (colour >>> 16 & 255) + (colour >>> 8 & 255) + (colour & 255))).orElse(0);
         doorway = new SceneImage(1, 1, new int[] {darkest | 0xFF000000});
@@ -57,7 +62,7 @@ public final class FieldArt {
         }
         grassColour = selected | 0xFF000000;
         TileMap map = TileMap.of(zone);
-        mapArt = map == null ? null : new MapArt(zone, kit, rom, map, waterFrames, cliff, lip, palm, flowers, grassColour);
+        mapArt = map == null ? null : new MapArt(zone, kit, rom, map, waterFrames, cliff, lip, palm, flowers, grassColour, background);
     }
 
     /** Depth-sorted decorations of an authored map (none for room-graph areas). */
@@ -143,13 +148,8 @@ public final class FieldArt {
             return;
         }
         c.clear(kit.palette()[0] & 0xFFFFFF);
-        // Distant scenery belongs behind the viewport, not to a strip at the world's
-        // northern edge. Clamp the slow vertical pan so southern rooms retain the sky.
-        if (kit.backdrop() != null) {
-            int span = Math.max(0, kit.backdrop().image().height() - c.height());
-            int top = Math.max(0, Math.min(span, (int) (cameraY * 0.15)));
-            c.drawBackdrop(kit.backdrop(), top, cameraX, ticks);
-        }
+        if (background != null) background.draw(c, (int) cameraX + backgroundOriginX, (int) cameraY, ticks);
+        else if (kit.backdrop() != null) c.drawBackdrop(kit.backdrop(), 0, cameraX, ticks);
         for (int y = (int) cameraY / 16 * 16; y < cameraY + c.height() + 16; y += 16) {
             for (int x = (int) cameraX / 16 * 16; x < cameraX + c.width() + 16; x += 16) {
                 if (y < 16) continue;

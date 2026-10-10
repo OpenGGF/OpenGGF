@@ -249,9 +249,10 @@ text: the story script (`text/story.txt`), the original mixed-case font (`text/f
 and the manifest. The field geometry is assembled for free exploration from ROM terrain. Green Hill uses
 its decoded grass, checkerboard cliff, palm, plant and water pieces, including full-size water reflections with the original four-step ROM palette cycle, plus the log
 bridge (`Nem_Bridge`) and purple rock (`Nem_PplRock`) objects; its grass and trails take their colours from the ROM palette.
-Star Light draws its starfield backdrop, the city-lights chunk, street lamps, red-lit rails, girder lattice, cones,
-hazard barriers and plated buildings from the decoded level kit. Outdoor backgrounds fill the camera view
-with gentle vertical parallax, keeping distant scenery visible behind the terraces throughout each area.
+Star Light draws its native starfield backdrop, street lamps, red-lit rails, girder lattice, cones,
+hazard barriers and plated buildings from the decoded level kit. Outdoor backgrounds use independent instances of the engine’s original-game scanline scroll handlers,
+including layered parallax and ripples. Emerald Hill retains its fixed vertical framing, Death Egg
+retains its stationary view and native widescreen wall extension, and wrapping fills every screen row.
 Battle and exploration share this renderer. Sonic the Hedgehog is a trademark of SEGA; this is an unofficial fan project.
 
 ## Source tour
@@ -314,6 +315,9 @@ java -cp target/test-classes:target/classes:$(cat target/test-classpath.txt) \
   Character sprites retain their original side-facing poses.
 - Marble Zone is not an outdoor chapter: its stock route and background are unsuitable
   for the current route renderer. Its decoded masonry is used directly in dungeon rooms.
+- Background scrolling requires the matching current JVM engine build (`SceneRomArt.levelBackground`).
+  The background view uses detached initial art and palettes; it does not run gameplay-triggered
+  background events, water palette transitions or tile-animation timelines.
 - Other ROM fragments are the initial level-kit art; stock animated tiles and palette cycles beyond Green Hill field water are not simulated.
 - Sound effects are silent in Sonic 1 and Sonic 2 fields while their ROM theme plays
   (see Audio).

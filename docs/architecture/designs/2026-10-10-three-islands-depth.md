@@ -133,3 +133,80 @@ Green Hill mystery scene test now positions by spot id. Zero validator findings.
 captures covered both maps at a dozen points, a keyboard walk into Green Hill's first blocker
 and its battle, the log bridge, orchard island and switchbacks. Not covered: a timed human
 playthrough, the full engine suite.
+
+## Native background follow-up
+
+Base: `1ede498795f92af831bbd08cae3a50f621f83c49`, current checkout
+`feature/ai-three-islands`. The previous viewport-only fix in `1ede498795` removed the
+88-pixel world strip but preserved the wrong data model: S1/S2 kits expose one quarter-speed
+band; EHZ has unused layout rows below its fixed native view; DEZ1 has blank right-hand
+layout padding; Star Light applied an additional 0.3 multiplier. Clamping a generic 0.15
+vertical pan could not reproduce the native games. That approach is replaced, not tuned.
+
+`SceneRomArt.levelBackground` now delegates to game-owned detached background profiles.
+They instantiate the existing `SwScrlSyz`, `SwScrlSlz`, `SwScrlEhz`, `SwScrlCpz`,
+`SwScrlMcz`, `SwScrlAiz`, `SwScrlHcz`, `SwScrlLbz` and `SwScrlS3kDez` handlers.
+MCZ's shake input is injected; AIZ/LBZ detached constructors suppress ambient event reads.
+Native gameplay retains the existing default behavior. `DetachedBackground` retains native
+scroll words (including EHZ's shipped two unwritten lines) and each view owns its own state.
+The host batches adjacent equal scroll lines into unscaled image regions, wrapping rows and
+columns inside the populated ROM art. AIZ includes the forest rows below the postcard crop.
+DEZ1 shares its extracted native reflected-wall sampler, preserving the central 320 pixels.
+The mod removes its generic vertical pan, secondary Star Light multiplier and synthetic
+city overlay. It still composes its authored terrain and battles above the background.
+
+This reuses native scrolling, not a second mod-side implementation of the ROM routines.
+The disassembly was consulted as supporting provenance, but there is no new copied scroll
+algorithm. Background pictures retain their existing detached initial-art/palette state;
+live zone events, art animation and underwater palette transitions are not simulated.
+
+Verification: ROM-backed `TestRomSceneBackground` checks all nine exposed profiles at 320
+and 400 pixels across five camera positions, comparing every output pixel to the native
+scroll offsets and requiring complete, non-overlapping viewport coverage. It poisons
+`GameServices` during build and draw to enforce isolation, and checks repeated-draw identity.
+The existing mod, API signature, S3K bootstrap/loading and native DEZ widescreen checks
+cover integration.
+
+Validation on the above base plus this uncommitted follow-up:
+
+- Queued focused ROM tests (`TestRomSceneBackground,TestThreeIslandsExample,TestS3kDezWidescreenBackground`)
+  passed 15 outer tests and 83 creator checks, with no skips. An earlier focused selection
+  also passed the S3K bootstrap/loading/decoding and AIZ headless obligations, API signatures,
+  and the all-zones/all-bosses Three Islands route (75 outer tests, no skips).
+  Both commands supplied the three absolute root ROM paths; no ROM aliases were created.
+- An independent temporary probe compared all nine registered profiles with separately
+  instantiated stock scroll handlers over 720 moving-camera frames each: 1,451,520 scanlines
+  matched. The committed renderer tests additionally cover the image wrapping/composition.
+- Actual Three Islands GL captures were reviewed for the eight terrace areas; independent
+  renderer checks cover southern cameras even where a scripted party teleport was blocked.
+  Normal-engine `GameplayCaptureTool` views corroborated CPZ at camera (400,816), EHZ's
+  fixed sky, and the 400-pixel DEZ interior. CPZ's white lower factory is real scenery,
+  not an empty gap. A high-Y EHZ comparison was discarded because foreground hid its sky.
+  These are engine comparisons, not a claim of BizHawk/ROM pixel parity or live art animation.
+- Java/Lua/PowerShell preflight passed. The unmodified change-based selection was 3,079
+  classes plus guards. `run_categories.py --base 1ede498795f92af831bbd08cae3a50f621f83c49 --run`
+  timed out after 40 minutes: 2,390 reports / 19,503 tests, two failures, five errors,
+  151 skips. This is incomplete validation, not a full-suite pass. Skip reasons included
+  hard-coded ROM aliases, absent lock-on data, unsupported graphics contexts, opt-in
+  diagnostics, and route assumptions. The runner diagnostics were inspected and acknowledged.
+- Three errors were caused by an added descriptor comment: `ModApiReleasePolicy` accepts
+  only exact key=value lines. Removing it restores the unchanged candidate descriptor.
+  Queued `TestModApiPinPolicy,TestModApiReleasePolicy,TestModApiRuntimePolicy,TestModApiSignatureSurface`
+  then passed 27 tests with no skips. The additive signature pin is retained; no version
+  or publication status changed.
+- Remaining broad-run failures/errors were S3K data-select GLSL 4.10 unsupported, two
+  sample-character `base64` command failures on macOS, and a network-test connection reset.
+  No matched baseline run was performed: these remain unattributed and were not repaired
+  as part of this rendering task. The full ordinary run was not repeated.
+- `build.py --skip-engine` validated the mod with zero findings; queued
+  `-Dmse=off -DskipTests package` built the matching engine. The installed
+  `mods/three-islands.jar` bytes, enabled/trusted SHA-256, and `SceneBackground` class in
+  the packaged engine were checked. Restart the JVM to load the new engine and mod.
+
+- Separate queued `-Dmse=off -Pguards test -B` completed: 674 tests, one failure,
+  zero errors/skips. The failure is `TestBuildToolingGuard` invoking
+  `test_release_trace_collection.CollectTests.test_failure_messages_and_report_payloads_have_checkout_paths_normalized`.
+  A bounded matched check ran that exact Python test against `tools/testing` archived from
+  the base commit and against the current checkout; both failed identically on macOS
+  `/var/folders` versus resolved checkout-path normalization. This is a confirmed inherited
+  failure; no tooling fix was made. All other 673 guards passed.

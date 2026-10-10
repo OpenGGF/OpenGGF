@@ -21,6 +21,7 @@ public final class ModApiVersion {
      * scenes expose supplied-game art, immutable timestamped physical input and
      * bounded semantic ROM music with consumed-sample playback, section parts,
      * and bounded pitch-gliding ROM-part cues that preserve the song clock.
+     * Detached scene backgrounds reuse stock scanline scroll handlers with independent state.
      * Full-song and selected-part synthesis expose cancellable host jobs with
      * progress, a ten-minute duration cap and a 256 MiB stereo PCM budget.
      * Scene audio also starts supplied-ROM music live, preserving native intros/loops

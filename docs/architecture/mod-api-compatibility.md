@@ -554,3 +554,12 @@ This adds one entry to the mutable unpublished `0.7` signature pin.
 `0.7.0` and its existing publication state. See the
 [scene guide](../modding/guides/mod-scenes.md#5-audio-and-storage) and
 [Eggman's Sky voice record](designs/2026-10-07-eggmans-sky.md#original-system-voice-2026-10-08).
+
+The Three Islands background correction adds `SceneRomArt.levelBackground(zone, act)`
+and `SceneBackground.draw(canvas, cameraX, cameraY, ticks)`. The provider creates a private
+stock scroll handler and ROM-backed presentation plane per view; the host composes native
+scanline offsets with complete wrapping instead of guessing parallax from static postcards.
+The default returns null for providers without a profile. No live level event state is
+consumed, and no engine implementation type enters the creator signature surface. The
+unpublished descriptor remains candidate 0.7.0, with `ModApiVersion` and the mutable `0.7`
+signature pin updated together (five additive lines, no removed signatures).

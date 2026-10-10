@@ -47,6 +47,7 @@ public class SwScrlMcz extends AbstractZoneScrollHandler {
     private static final int MCZ_CYCLE_HEIGHT = 512;
 
     private final ParallaxTables tables;
+    private final java.util.function.BooleanSupplier screenShake;
 
     private short vscrollFactorFG;
     private int bgY; // Raw background Y position (without ripple)
@@ -61,7 +62,13 @@ public class SwScrlMcz extends AbstractZoneScrollHandler {
     private final ScrollEffectComposer composer = new ScrollEffectComposer();
 
     public SwScrlMcz(ParallaxTables tables) {
+        this(tables, () -> GameServices.gameState().isScreenShakeActive());
+    }
+
+    /** Independent presentation copies supply their own shake state. */
+    public SwScrlMcz(ParallaxTables tables, java.util.function.BooleanSupplier screenShake) {
         this.tables = tables;
+        this.screenShake = java.util.Objects.requireNonNull(screenShake);
     }
 
     /**
@@ -103,7 +110,7 @@ public class SwScrlMcz extends AbstractZoneScrollHandler {
         this.shakeOffsetX = 0;
         this.shakeOffsetY = 0;
 
-        if (GameServices.gameState().isScreenShakeActive() && tables != null) {
+        if (screenShake.getAsBoolean() && tables != null) {
             int idx = frameCounter & 0x3F;
             byte[] rippleData = tables.getRippleData();
             if (rippleData != null && rippleData.length >= 66) {

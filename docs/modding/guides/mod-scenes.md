@@ -413,6 +413,23 @@ canvas.draw(rhinobot.frame(0), 200, 120, SceneDraw.plain());
   for its children. Slay the Robotnik's `scene/EnemyVisuals.java` does this for every
   boss it shows, citing the disassembly tables.
 
+For a moving exploration view, retain `rom.levelBackground(zone, act)` and call
+`background.draw(canvas, cameraX, cameraY, ticks)` before your foreground. This creates an
+independent instance of the engine's stock scanline scroll handler, including ROM ripple
+tables and native vertical scrolling. Pass stock camera pixels without additional speed
+multipliers. It draws the complete 224-line canvas at native scale, wraps inside populated
+art, and shares the native Death Egg 1 widescreen wall extension. A repeated draw with the
+same inputs does not advance scroll state. Create a separate view for each independently
+moving scene; no background reads or changes the running level's camera, events or shake.
+
+Supported profiles are Sonic 1 Spring Yard and Star Light (all acts), Sonic 2 Emerald Hill,
+Chemical Plant and Mystic Cave (all acts), and S3K Angel Island, Hydrocity, Launch Base and
+Death Egg act 1. Unsupported acts return `null`; `SceneBackdrop` remains available for
+static postcard/window compositions. These are detached initial-art presentations, not
+live level simulations: gameplay-triggered art/palette changes and background tile
+animation remain outside this view. S3K Hydrocity uses its existing below-waterline art
+profile. AIZ uses its main-level art and its native `$1300` horizontal origin.
+
 For Sonic 3 & Knuckles, `rom.zoneBackdrop(zone, act)` returns a zone's background as a
 `SceneBackdrop`: one picture cut into horizontal bands with the stock parallax speeds, drawn
 with `canvas.drawBackdrop(backdrop, top, scrollX, ticks)` (or into a window with the
