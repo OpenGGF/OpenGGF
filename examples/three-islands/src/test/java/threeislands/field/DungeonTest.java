@@ -10,9 +10,10 @@ import threeislands.core.Zone;
 class DungeonTest {
     @org.junit.jupiter.api.Test
     void dungeonMusicMatchesItsRomTerrainAndAct() {
-        // Sonic1Music.MZ and Sonic3kMusic.LRZ1/LRZ2; no Labyrinth/Sky Sanctuary substitutions.
+        // Sonic1Music.MZ/LZ/SBZ and Sonic3kMusic.LRZ1/LRZ2.
         org.junit.jupiter.api.Assertions.assertEquals(0x83, Dungeon.of(Zone.GREEN_HILL).music());
-        org.junit.jupiter.api.Assertions.assertEquals(0x83, Dungeon.of(Zone.SPRING_YARD).music());
+        org.junit.jupiter.api.Assertions.assertEquals(0x82, Dungeon.of(Zone.STAR_LIGHT).music());
+        org.junit.jupiter.api.Assertions.assertEquals(0x86, Dungeon.of(Zone.SPRING_YARD).music());
         org.junit.jupiter.api.Assertions.assertEquals(0x14, Dungeon.of(Zone.ANGEL_ISLAND).music());
         org.junit.jupiter.api.Assertions.assertEquals(0x13, Dungeon.of(Zone.LAUNCH_BASE).music());
     }

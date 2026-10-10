@@ -55,10 +55,11 @@ In most areas ordinary patrols can be avoided; Green Hill and Star Light are han
 whose single-file trails and catwalks are held by badniks (marked "!") that must be beaten
 to pass. Fleeing steps the party back the way it came, leaving the pass still blocked.
 
-Interiors have their own ROM terrain: Marble masonry for the seaside shrine and freight
-catacombs, Mystic Cave for the workshop caverns and lantern shrine, Lava Reef for the
+Interiors have their own ROM terrain: Marble masonry for the seaside shrine, Labyrinth stonework for the observatory
+vault, Scrap Brain machinery for the freight catacombs, Mystic Cave for the workshop caverns and lantern shrine, Lava Reef for the
 guardian shrine and mooring vault, Hydrocity for the tidal sanctuary, and the corresponding
-machinery kits for the observatory, pump station and Death Egg archive. Walls and gates use
+machinery kits for the pump station and Death Egg archive. South Island therefore uses
+all six main Sonic 1 zone art sets across its outdoor areas and interiors. Walls and gates use
 the same room boundaries as movement. Battles retain the interior and camera.
 
 ## Requirements

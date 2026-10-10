@@ -12,8 +12,8 @@ public record Dungeon(Zone zone, String label, int artZone, int artAct, int musi
     public static Dungeon of(Zone zone) {
         return switch (zone) {
             case GREEN_HILL -> new Dungeon(zone, "Seaside Shrine", 1, 0, 0x83, "Missing Flicky");
-            case STAR_LIGHT -> new Dungeon(zone, "Observatory Vault", 4, 0, 0x84, "Observatory log");
-            case SPRING_YARD -> new Dungeon(zone, "Freight Catacombs", 1, 0, 0x83, "Freight records");
+            case STAR_LIGHT -> new Dungeon(zone, "Observatory Vault", 3, 0, 0x82, "Observatory log");
+            case SPRING_YARD -> new Dungeon(zone, "Freight Catacombs", 5, 0, 0x86, "Freight records");
             case EMERALD_HILL -> new Dungeon(zone, "Workshop Caverns", 5, 0, 0x84, "Compass notes");
             case CHEMICAL_PLANT -> new Dungeon(zone, "Pump Station", 1, 0, 0x8C, "Valve chart");
             case MYSTIC_CAVE -> new Dungeon(zone, "Lantern Shrine", 5, 1, 0x84, "Mine ledger");
