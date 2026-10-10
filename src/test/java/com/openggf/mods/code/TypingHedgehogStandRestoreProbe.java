@@ -47,6 +47,9 @@ import org.junit.jupiter.api.io.TempDir;
  * builder's controller (no typing layer), holds the failing stand for the same number of rows and
  * for the builder's 1850-row soak, and reports whether an object of that class is alive at the
  * restore and whether the restore throws. Opt-in: {@code -Dtypinghog.restoreprobe=s3k-hcz1.rail}.
+ * {@code standAllocationCensus} (add {@code -Dtypinghog.restoreprobe.census=true}) compares the
+ * live-object census of the packaged Course and the rail builder row by row up to the first stand
+ * and prints the first row where they differ.
  * Origin: rails lane, 2026-10-09.
  */
 class TypingHedgehogStandRestoreProbe {
@@ -463,6 +466,89 @@ class TypingHedgehogStandRestoreProbe {
             s.close();
             GameServices.configuration().clearSessionOverrides();
         }
+    }
+
+    /** Every live object at this moment: class, slot and rewind identity (or none). */
+    static List<String> allocationCensus() {
+        List<String> out = new ArrayList<>();
+        var query = GameServices.level().getObjectManager().objectQuery();
+        for (ObjectInstance object : query.activeObjectsOfType(ObjectInstance.class)) {
+            int slot = object instanceof com.openggf.level.objects.AbstractObjectInstance a ? a.getSlotIndex() : -9;
+            var id = query.identityOf(object);
+            out.add(String.format("%3d %s %s", slot, simple(object.getClass().getName()),
+                    id.map(r -> r.kind() + "#" + r.dynamicId() + "/spawn" + r.spawnId()).orElse("no-identity")));
+        }
+        out.sort(null);
+        return out;
+    }
+
+    /**
+     * What the real Course does to native allocation before a rail's first stand: the live-object
+     * census at the first stand capture in the packaged Course and in the rail builder's chain,
+     * printed side by side with the entries only one side has. Opt-in with
+     * {@code -Dtypinghog.restoreprobe=<rail>} and {@code -Dtypinghog.restoreprobe.census=true}.
+     */
+    @Test @RequiresRom(SonicGame.SONIC_3K) void standAllocationCensus() throws Exception {
+        Assumptions.assumeTrue(RAIL != null && Boolean.getBoolean("typinghog.restoreprobe.census"),
+                "opt-in: -Dtypinghog.restoreprobe=<rail> -Dtypinghog.restoreprobe.census=true");
+        String text = Files.readString(SOURCE.resolve("src/main/resources/rails").resolve(RAIL));
+        int zone = intKey(text, "zone"), act = intKey(text, "act");
+        String team = strKey(text, "team");
+        String sidekick = team.contains(",") ? team.substring(team.indexOf(',') + 1) : "";
+        int standRow = stands(text).getFirst();
+        List<String> courseSide = null;
+        int firstDiffRow = -1;
+        java.util.Map<Integer, List<String>> courseTrack = new java.util.HashMap<>();
+        CourseRun a = new CourseRun("census", zone, act, sidekick);
+        try {
+            for (int i = 0; i < 60_000 && courseSide == null; i++) {
+                Object view = a.view();
+                String phase = (String) get(view, "phase");
+                int railRow = (int) get(view, "railRow");
+                if (phase.equals("RUN") || phase.equals("ENTRY")) {
+                    courseTrack.put(railRow, allocationCensus());
+                }
+                if (phase.equals("RUN") && railRow == standRow) courseSide = allocationCensus();
+                else a.step();
+            }
+        } finally {
+            a.close();
+        }
+        var builder = new TypingHedgehogRailBuilderProbe();
+        var target = TypingHedgehogRailBuilderProbe.targets(SonicGame.SONIC_3K).stream()
+                .filter(t -> RAIL.equals(t.file())).findFirst().orElseThrow();
+        int[] masks = programMasks(text);
+        int[] src = new int[masks.length];
+        java.util.Arrays.fill(src, -1);
+        var s = builder.new Session(target, new TypingHedgehogRailBuilderProbe.Program(masks, src));
+        List<String> builderSide;
+        try {
+            while (s.driver.row < standRow) {
+                List<String> here = allocationCensus();
+                List<String> there = courseTrack.get(s.driver.row);
+                if (firstDiffRow < 0 && there != null && !there.equals(here)) {
+                    firstDiffRow = s.driver.row;
+                    printDiff("at row " + firstDiffRow, there, here);
+                }
+                s.step();
+            }
+            builderSide = allocationCensus();
+        } finally {
+            s.close();
+            GameServices.configuration().clearSessionOverrides();
+        }
+        System.out.println("CENSUS|first rail row where the live objects differ: " + firstDiffRow);
+        printDiff("at the stand row " + standRow, courseSide, builderSide);
+    }
+
+    private static void printDiff(String where, List<String> course, List<String> builder) {
+        var onlyCourse = new ArrayList<>(course);
+        builder.forEach(onlyCourse::remove);
+        var onlyBuilder = new ArrayList<>(builder);
+        course.forEach(onlyBuilder::remove);
+        System.out.println("CENSUS|" + where + ": course " + course.size() + " live objects, builder " + builder.size());
+        onlyCourse.forEach(l -> System.out.println("CENSUS|  only in the Course:  " + l));
+        onlyBuilder.forEach(l -> System.out.println("CENSUS|  only in the builder: " + l));
     }
 
     /**
