@@ -64,7 +64,7 @@ class TestModSceneHost {
             0, com.openggf.game.CharacterKey.TAILS, List.of(), java.util.OptionalInt.of(440),
             java.util.OptionalInt.of(173), 7, Map.of("visit", "1"));
         var result = new com.openggf.mods.scene.ActResult(launch.destination(),
-            com.openggf.mods.scene.ActExit.LEFT, 3, 40, Map.of("door", "inn"));
+            com.openggf.game.ActExit.LEFT, 3, 40, Map.of("door", "inn"));
         host.open(owned(() -> new ModScene() {
             public void enter(SceneContext ctx) { contexts.add(ctx); calls.add("enter"); }
             public void update(SceneContext ctx) { calls.add("update"); ctx.startAct(launch); ctx.startAct(launch); }
@@ -98,7 +98,7 @@ class TestModSceneHost {
         }, boundary(findings)), services(new ArrayList<>()), 320, 224);
         host.suspend();
         assertThrows(ModFaultBoundary.CallbackAborted.class, () -> host.resume(new com.openggf.mods.scene.ActResult(
-            new com.openggf.game.ZoneKey.Mod("cards", "garden"), com.openggf.mods.scene.ActExit.LEFT, 0, 0, Map.of())));
+            new com.openggf.game.ZoneKey.Mod("cards", "garden"), com.openggf.game.ActExit.LEFT, 0, 0, Map.of())));
         assertFalse(host.isOpen()); assertTrue(findings.snapshot().containsKey("cards"));
     }
 

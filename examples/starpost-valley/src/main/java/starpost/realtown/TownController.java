@@ -73,9 +73,9 @@ public final class TownController extends AbstractObjectInstance implements ModR
         if (town.handBack() != null) {
             var exit = town.handBack();
             var reason = switch (exit.place()) {
-                case "time_up" -> com.openggf.mods.scene.ActExit.TIME_UP;
-                case "fainted" -> com.openggf.mods.scene.ActExit.FAINTED;
-                default -> com.openggf.mods.scene.ActExit.LEFT;
+                case "time_up" -> com.openggf.game.ActExit.TIME_UP;
+                case "fainted" -> com.openggf.game.ActExit.FAINTED;
+                default -> com.openggf.game.ActExit.LEFT;
             };
             services().requestActExit(reason, exit.payload());
         }

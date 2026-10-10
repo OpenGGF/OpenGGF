@@ -1510,7 +1510,8 @@ not a reason to duplicate cast content or block rules/rewind testing.
 
 ### Precise phase-2 interface proposal
 
-E1 uses `com.openggf.mods.scene`, an API package shared by scene and level code:
+E1 places the launch/result records in `com.openggf.mods.scene` and the shared
+exit enum in `com.openggf.game`, preserving the level/mod dependency boundary:
 
 ```java
 record ActLaunch(ZoneKey.Mod destination, int act, CharacterKey main,
@@ -1786,3 +1787,13 @@ pass without fake pin churn, component edits fail without the pin and pass with
 it; all 21 policy cases pass on both hosts. This fixes the actual coupling check
 rather than bypassing hooks, changing descriptor authority or inventing API.
 The corrected bridge/host/signature focused run reports 36/36, zero skips.
+
+
+The first completed guards rejected a new `level -> mods` package-cycle edge.
+The minimal contract correction locates `ActExit` in `com.openggf.game`, already
+shared by the level and mod APIs; `ActLaunch` and `ActResult` remain in
+`com.openggf.mods.scene`. The level helper accepts native spawn optionals and
+returns an engine-only result; the outer bridge constructs the public result.
+This preserves the signatures' semantics without relaxing architecture ratchets.
+The test object callback's clock parameter is named `vIntRunCount`, matching the
+existing V-int terminology guard.

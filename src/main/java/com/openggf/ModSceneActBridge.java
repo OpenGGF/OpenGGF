@@ -79,8 +79,9 @@ final class ModSceneActBridge {
         if (transitioning) { if (input != null) input.update(); return true; }
         if (active == null || loop.resolveFadeManager().isActive()) return false;
         var level = loop.resolveGameplayModeContext().getLevelManager();
-        ActResult result = LevelSceneActAccess.consume(level, active);
-        if (result == null) return false;
+        var exit = LevelSceneActAccess.consume(level);
+        if (exit == null) return false;
+        ActResult result = new ActResult(active.destination(), exit.reason(), exit.rings(), exit.frames(), exit.state());
         transitioning = true;
         if (input != null) input.update();
         engine.audio().fadeOutMusic();

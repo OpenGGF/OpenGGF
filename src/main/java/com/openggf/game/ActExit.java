@@ -1,4 +1,4 @@
-package com.openggf.mods.scene;
+package com.openggf.game;
 
 /** Why a scene-launched act ended. */
 @com.openggf.game.ModApi

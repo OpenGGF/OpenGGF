@@ -586,11 +586,13 @@ ctx.startAct(new ActLaunch(new ZoneKey.Mod(ctx.ownerModId(), "valley"), 0,
 
 Optional positions are **player centre coordinates**, applied after the native
 start-position provider and before normal camera/team/object initialization. Empty
-coordinates preserve that axis's native start; supplied centres must be 0–32767. Rings are native health (0–999),
+coordinates preserve that axis's native start; supplied centres accept signed or
+unsigned 16-bit word representations (−32768 through 65535). Rings are native health (0–999),
 separate from any saved mod wallet. The engine retains the selected team only for
 the visit and restores the previous configuration on return or title exit.
 
-A level object calls the injected services to hand back:
+A level object imports `com.openggf.game.ActExit` and calls its injected services
+to hand back:
 
 ```java
 services().requestActExit(ActExit.LEFT, Map.of("door", "inn"));
@@ -612,7 +614,7 @@ Spawn values accept signed or unsigned 16-bit centre words, including values
 returned by native sprite getters.
 
 `ActResult` carries destination, reason, remaining health rings, executed level
-frames and the exit state map. `ActExit` values are `COMPLETED`, `LEFT`, `FAINTED`,
+frames and the exit state map. `com.openggf.game.ActExit` values are `COMPLETED`, `LEFT`, `FAINTED`,
 `TIME_UP`, `ABORTED`. Objects/controllers decide when these semantic exits apply;
 ordinary native progression/death is not automatically remapped. Entry is a normal
 level-load boundary; scene return clears the level rewind timeline. Holding Escape

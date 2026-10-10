@@ -1,6 +1,7 @@
 package com.openggf.level;
 
-import com.openggf.mods.scene.*;
+import com.openggf.game.ActExit;
+import java.util.OptionalInt;
 import java.util.Map;
 import java.util.Objects;
 import com.openggf.game.DynamicStartPositionProvider;
@@ -35,17 +36,18 @@ public final class LevelSceneActAccess {
         }
         return new int[] {spawnX, spawnY};
     }
-    public static void prepareSpawn(LevelManager level, ActLaunch launch) {
-        level.sceneSpawnX = launch.spawnX(); level.sceneSpawnY = launch.spawnY();
+    public static void prepareSpawn(LevelManager level, OptionalInt spawnX, OptionalInt spawnY) {
+        level.sceneSpawnX = spawnX; level.sceneSpawnY = spawnY;
     }
     public static void arm(LevelManager level) { level.getTransitions().sceneActActive = true; }
-    public static ActResult consume(LevelManager level, ActLaunch launch) {
+    public record Result(ActExit reason, int rings, long frames, Map<String, String> state) {}
+    public static Result consume(LevelManager level) {
         var transitions = level.getTransitions();
         Exit exit = transitions.sceneActExit;
         if (exit == null) return null;
         transitions.sceneActExit = null;
         transitions.sceneActActive = false;
-        return new ActResult(launch.destination(), exit.reason(), level.getLevelGamestate().getRings(),
+        return new Result(exit.reason(), level.getLevelGamestate().getRings(),
                 Integer.toUnsignedLong(level.getFrameCounter()), exit.state());
     }
 }

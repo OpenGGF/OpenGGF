@@ -1,5 +1,7 @@
 package com.openggf;
 
+import com.openggf.game.ActExit;
+
 import com.openggf.configuration.*;
 import com.openggf.control.InputHandler;
 import com.openggf.game.*;
@@ -113,7 +115,7 @@ class TestModSceneActBridge {
         assertEquals(3, probe.result.rings()); assertEquals(41, probe.result.frames());
         assertNotNull(GameServices.audio().getAudioProfile(), "resume re-prepares ROM audio");
         assertTrue(boundaries.contains(RewindBoundary.MODE_EXIT_TO_NON_REWINDABLE));
-        assertNull(LevelSceneActAccess.consume(runtime.getLevelManager(), launch()));
+        assertNull(LevelSceneActAccess.consume(runtime.getLevelManager()));
         assertFalse(bridge.consumeExitOrHold(input)); assertEquals(1, probe.resumes);
         assertTrue(loop.modSceneHost.isOpen()); assertFalse(loop.modSceneHost.isSuspended());
         bridge.reset();
@@ -138,7 +140,7 @@ class TestModSceneActBridge {
         runtime.getLevelManager().requestActExit(ActExit.LEFT, Map.of("door", "inn"));
         var pending = registry.capture();
         registry.restore(empty);
-        assertNull(LevelSceneActAccess.consume(runtime.getLevelManager(), launch()));
+        assertNull(LevelSceneActAccess.consume(runtime.getLevelManager()));
         registry.restore(pending);
         assertTrue(bridge.consumeExitOrHold(input)); drainFade(); assertEquals(1, probe.resumes);
         bridge.reset();
@@ -165,7 +167,7 @@ class TestModSceneActBridge {
         var findings = new ModRuntimeFindingStore();
         var boundary = new ModFaultBoundary(Map.of(),findings, owners -> new ModStateSaveResult.Saved(), owners -> {});
         var plan = ModContextTestAccess.freezeWithObject("failing", "s3k", "fault", (spawn,registry) -> new AbstractObjectInstance(spawn,"fault") {
-            public void update(int vInt, PlayableEntity player) { throw new IllegalStateException("act fault"); }
+            public void update(int vIntRunCount, PlayableEntity player) { throw new IllegalStateException("act fault"); }
             public void appendRenderCommands(List<com.openggf.graphics.GLCommand> commands) {}
         });
         var module = new ModBackedGamePatch(plan,boundary).apply(effective,(PatchContext)null);

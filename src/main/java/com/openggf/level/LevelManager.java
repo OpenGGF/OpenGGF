@@ -4937,7 +4937,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     /** @see LevelTransitionCoordinator#consumeTimeAttackMenuReturnRequest() */
     public boolean consumeTimeAttackMenuReturnRequest() { return transitions.consumeTimeAttackMenuReturnRequest(); }
     /** Requests a return to the suspended scene, inert outside a scene-launched act. */
-    public void requestActExit(com.openggf.mods.scene.ActExit reason, java.util.Map<String, String> state) {
+    public void requestActExit(com.openggf.game.ActExit reason, java.util.Map<String, String> state) {
         if (transitions.sceneActActive && transitions.sceneActExit == null)
             transitions.sceneActExit = new LevelSceneActAccess.Exit(reason, state);
     }

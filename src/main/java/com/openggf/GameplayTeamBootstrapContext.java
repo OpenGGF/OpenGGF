@@ -73,7 +73,7 @@ final class GameplayTeamBootstrapContext {
                     gameplayMode.getCamera().updatePosition(true);
                 },
                 () -> {
-                    if (launch != null) com.openggf.level.LevelSceneActAccess.prepareSpawn(gameplayMode.getLevelManager(), launch);
+                    if (launch != null) com.openggf.level.LevelSceneActAccess.prepareSpawn(gameplayMode.getLevelManager(), launch.spawnX(), launch.spawnY());
                     gameplayMode.getLevelManager().loadZoneAndAct(zone, act);
                 });
         return gameplayMode;

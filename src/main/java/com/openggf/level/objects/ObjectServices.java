@@ -76,7 +76,7 @@ public interface ObjectServices {
     LevelManager levelManager();
 
     /** Latches the first exit of a scene-launched act; consumed at the next frame boundary. */
-    default void requestActExit(com.openggf.mods.scene.ActExit reason, java.util.Map<String, String> state) {
+    default void requestActExit(com.openggf.game.ActExit reason, java.util.Map<String, String> state) {
         levelManager().requestActExit(reason, state);
     }
     default BackgroundPlaneCollisionProvider backgroundPlaneCollisionProvider() {

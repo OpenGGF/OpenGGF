@@ -563,9 +563,9 @@ This adds one entry to the mutable unpublished `0.7` signature pin.
 [scene guide](../modding/guides/mod-scenes.md#5-audio-and-storage) and
 [Eggman's Sky voice record](designs/2026-10-07-eggmans-sky.md#original-system-voice-2026-10-08).
 
-Scene/act round trips extend the same unpublished 0.7.0 candidate: `ActLaunch`,
-`ActResult` and `ActExit` live in `com.openggf.mods.scene`, shared by scene and level
-code. `SceneContext.startAct` and `ModScene.resume` are default methods, as is
+Scene/act round trips extend the same unpublished 0.7.0 candidate: `ActLaunch` and
+`ActResult` live in `com.openggf.mods.scene`; `ActExit` lives in `com.openggf.game`,
+already shared by scene and level code. `SceneContext.startAct` and `ModScene.resume` are default methods, as is
 `ObjectServices.requestActExit`. The destination must be registered by the scene's
 owner; the engine validates it inside the scene callback's fault boundary. Launch
 records copy team/state collections. A retained scene visit keeps its context and
