@@ -33,6 +33,7 @@ public final class NativeGameplayCheck {
     private static com.openggf.audio.LiveCaptureAudioHandle audioCapture;
     private static int audioPeak;
     private static com.openggf.data.Rom ownedRom;
+    private static com.openggf.SessionExternalContentView audioView;
 
     public static void main(String[] args) throws Exception {
         if (args.length < 5) throw new IllegalArgumentException("slug output s1-rom s2-rom s3k-rom [debug-command ...]");
@@ -67,6 +68,7 @@ public final class NativeGameplayCheck {
             config.setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, false);
             try (ModTestKit kit = ModTestKit.openTrusted(repository, output.resolve("storage"),
                     LogicalRomResolver.fromRomManager(GameServices.rom()), config, List.of())) {
+              try {
                 GameLoop loop;
                 GameModule module;
                 if (manifest.type().name().equals("STANDALONE")) {
@@ -85,7 +87,7 @@ public final class NativeGameplayCheck {
                         var mode = HeadlessGameBoot.openStandaloneSessionForBoot(EngineServices.current(), module, source);
                         GameplaySessionFactory.attachManagers(mode, EngineServices.current());
                         GameModuleRegistry.setCurrent(module);
-                        installAudio(kit,repository,manifest,module.getGameCode());
+                        installAudio(kit,repository,manifest,module.getGameCode(),output);
                         loop = new GameLoop(EngineServices.current());
                         loop.setGameplayMode(mode);
                         loop.setInputHandler(kit.input().handler());
@@ -118,7 +120,7 @@ public final class NativeGameplayCheck {
                             StockGameDataSources.pinned(ownedRom,root),launch);
                     GameplaySessionFactory.attachManagers(mode,EngineServices.current());
                     GameModuleRegistry.setCurrent(module);
-                    installAudio(kit,repository,manifest,game);
+                    installAudio(kit,repository,manifest,game,output);
                     loop=new GameLoop(EngineServices.current());
                     loop.setGameplayMode(mode);
                     loop.setGameMode(GameMode.LEVEL);
@@ -179,6 +181,19 @@ public final class NativeGameplayCheck {
                 Files.writeString(output.resolve("result.txt"), "PASS "+vm+" rendered gameplay: " + manifest.id()
                         + "; no owner findings/disabled owners; module state roundtrip; scene reopen where applicable\n");
                 System.out.println(Files.readString(output.resolve("result.txt")));
+              } finally {
+                if (audioView!=null) {
+                    // Consume stops before retiring streamed cursors or the kit.
+                    var audio=GameServices.audio();
+                    audio.stopMusic();
+                    audio.stopAllSfx();
+                    audio.presentFrame(com.openggf.audio.presentation.PresentationMode.FORWARD);
+                    audio.update();
+                    audio.resetStreamedMusicPort();
+                    audioView.close();
+                    audioView=null;
+                }
+              }
             }
         } finally {if (ownedRom!=null) ownedRom.close();}
     }
@@ -196,7 +211,7 @@ public final class NativeGameplayCheck {
             new SceneRomLibrary(module,GameServices.rom().getRom(),GameServices.rom()));
     }
 
-    private static void installAudio(ModTestKit kit,Path repository,ModManifest manifest,String game) throws Exception {
+    private static void installAudio(ModTestKit kit,Path repository,ModManifest manifest,String game,Path output) throws Exception {
         var audio=GameServices.audio();
         audio.setBackend(new com.openggf.audio.HeadlessSmpsAudioBackend(GameServices.configuration(),EngineServices.current().profiler()));
         try(ZipFile zip=new ZipFile(kit.catalog().effective().orderedEnabled().getFirst().jarPath().toFile())) {
@@ -208,16 +223,55 @@ public final class NativeGameplayCheck {
             var sfx=new ModSfxRegistry(audioManifest.sfx());
             var findings=new ModRuntimeFindingStore();
             var preparer=new ModAudioPreparer(repository,ModInputLimits.production(),findings,owners->new ModStateSaveResult.Saved());
-            var prepared=preparer.prepare(kit.catalog().effective(),tracks,sfx,audio.outputSampleRate());
-            if(!findings.snapshot().isEmpty() || !prepared.failedOwners().isEmpty()) throw new AssertionError("Audio preparation failed: "+findings.snapshot());
-            var music=PreparedModMusic.build(kit.catalog().effective(),tracks,sfx,prepared,audio.outputSampleRate(),
-                    manifest.type()==ModType.STANDALONE ? game : null);
-            var port=new com.openggf.ModStreamedMusicPort(music,new StreamedMusicPlayer(audio.outputSampleRate()),game);
+            audioView=com.openggf.ModSubsystem.preparedAudioFactory(preparer,kit.catalog().effective(),tracks,sfx)
+                    .prepare(audio.outputSampleRate(),game);
+            if(!findings.snapshot().isEmpty()) throw new AssertionError("Audio preparation failed: "+findings.snapshot());
+            var port=audioView.streamedMusicPort();
             audio.installStreamedMusicPort(port);
             for(int id:manifest.audioOverrides().keySet()) {
                 if(!port.hasStockOverride(id)) throw new AssertionError("Missing prepared stock music override "+id);
             }
+            verifySfxPcm(sfx,port,output);
         }
+    }
+
+    /** All declared one-shots must reach final PCM through the production session
+     * wrapper, not merely decode or open a private cursor. Origin: 2026-10-09
+     * Windows Eggman's Sky Vorbis refresh and the inherited missing-sfxPcm bug.
+     */
+    private static void verifySfxPcm(ModSfxRegistry registry,com.openggf.audio.StreamedMusicPort port,Path output)
+            throws Exception {
+        if(registry.sfx().isEmpty()) return;
+        var audio=GameServices.audio();
+        var observations=new StringBuilder("owner,sfx,decoded_frames,sample_rate,channels,peak,range\n");
+        try(var capture=audio.beginLiveCaptureAudio(audio.presentationFrameRate())) {
+            short[] samples=new short[capture.maxStereoFramesPerPacket()*2];
+            for(var declaration:registry.sfx()) {
+                var key=declaration.key();
+                var ref=new com.openggf.audio.StreamedMusicPort.SfxRef(key.modId(),key.localName());
+                var pcm=port.sfxPcm(ref).orElseThrow(()->new AssertionError("Missing session SFX PCM: "+ref));
+                int frames=pcm.samples().length/pcm.channels();
+                audio.stopAllSfx();
+                if(!audio.playNamespacedSfx(ref)) throw new AssertionError("Cannot play prepared SFX: "+ref);
+                int peak=0,min=Short.MAX_VALUE,max=Short.MIN_VALUE;
+                int ticks=(int)Math.ceil(frames*audio.presentationFrameRate()/pcm.sampleRate())+2;
+                for(int tick=0;tick<ticks;tick++) {
+                    audio.presentFrame(com.openggf.audio.presentation.PresentationMode.FORWARD);
+                    audio.update();
+                    int count=capture.drainPresentationFrame(samples);
+                    for(int i=0;i<count*2;i++) {
+                        peak=Math.max(peak,Math.abs((int)samples[i]));
+                        min=Math.min(min,samples[i]);max=Math.max(max,samples[i]);
+                    }
+                }
+                if(peak==0 || max-min<=32) throw new AssertionError("Silent/flat final SFX PCM: "+ref);
+                observations.append(key.modId()).append(',').append(key.localName()).append(',').append(frames)
+                        .append(',').append(pcm.sampleRate()).append(',').append(pcm.channels())
+                        .append(',').append(peak).append(',').append(max-min).append('\n');
+            }
+        } finally {audio.stopAllSfx();}
+        Files.writeString(output.resolve("sfx-pcm.csv"),observations);
+        System.out.println("PASS final session SFX PCM: "+registry.sfx().size()+" samples");
     }
     private static void verifyArtOverrides(ModTestKit kit,GameModule module,ModManifest manifest) throws Exception {
         try(ZipFile zip=new ZipFile(kit.catalog().effective().orderedEnabled().getFirst().jarPath().toFile())) {

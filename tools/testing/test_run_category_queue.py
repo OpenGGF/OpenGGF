@@ -509,7 +509,7 @@ with handle_termination():
             second.with_suffix('.release').touch()
             second_process.wait(timeout=5)
 
-    def launch_command(self, name, category=False, exit_code=0, lean=False):
+    def launch_command(self, name, category=False, exit_code=0, lean=False, args=None, root=None):
         """Run the real CLIs/runner, replacing only the Maven executable with a probe."""
         marker = Path(self.temp.name) / name
         self.addCleanup(marker.with_suffix('.release').touch)
@@ -540,7 +540,7 @@ import maven_resources
 maven_resources.snapshot = lambda: (100 * 1024**3, 128, 0)
 import run_categories as runner
 original = subprocess.Popen
-marker, fake, code, category, lean = sys.argv[2:]
+marker, fake, code, category, lean, supplied_args = sys.argv[2:]
 def probe(command, *args, **kwargs):
     if command[0] == 'mvn':
         command = [sys.executable, '-u', '-c', fake, marker, code, *command[1:]]
@@ -553,7 +553,8 @@ try:
             with patch.object(runner, 'make_plan', return_value=plan), patch.object(runner, 'preflight'):
                 result = runner.main(['--category', 'common', '--run', '--max-minutes', '0.05'])
         else:
-            args = ['-Dmse=off', '-Dprobe=spaces and $literal', 'test']
+            import json
+            args = json.loads(supplied_args) if supplied_args != 'null' else ['-Dmse=off', '-Dprobe=spaces and $literal', 'test']
             if lean == 'yes':
                 args = ['--lean', '-Dtest=TestProbe', *args]
             result = queue.main(args)
@@ -562,11 +563,110 @@ except KeyboardInterrupt:
     sys.exit(130)
 """
         process = subprocess.Popen([sys.executable, '-c', launcher, str(TOOLS), str(marker),
-                                    fake_maven, str(exit_code), 'yes' if category else 'no', 'yes' if lean else 'no'],
-                                   cwd=self.linked, stdout=subprocess.PIPE,
+                                    fake_maven, str(exit_code), 'yes' if category else 'no', 'yes' if lean else 'no',
+                                    json.dumps(args)],
+                                   cwd=root or self.linked, stdout=subprocess.PIPE,
                                    stderr=subprocess.STDOUT, text=True)
         self.processes.append(process)
         return process, marker
+
+    def test_build_cli_bypasses_another_worktrees_serial_test_queue(self):
+        holder, first = self.launch('test-holder')
+        self.wait_started(holder, first)
+        args = ['-Dmse=off', '-Dprobe=spaces and $literal', 'clean', 'package', '-DskipTests']
+        build, marker = self.launch_command('build', args=args, exit_code=7)
+        self.wait_started(build, marker)
+        self.assertIsNone(holder.poll())
+        self.assertEqual([], list((self.root / '.git/maven-waiters').glob('*.request')))
+        observed = json.loads(marker.with_suffix('.args').read_text())
+        self.assertEqual(args, observed['args'])
+        self.assertEqual(str(self.linked.resolve()), observed['cwd'])
+        marker.with_suffix('.release').touch()
+        output = build.communicate(timeout=5)[0]
+        self.assertEqual(7, build.returncode, output)
+        self.assertIn('probe output', output)
+        self.assertNotIn('Maven slot acquired', output)
+        first.with_suffix('.release').touch()
+
+    def test_mod_launcher_build_bypasses_another_worktrees_test_queue(self):
+        holder, first = self.launch('test-holder')
+        self.wait_started(holder, first)
+        args = ['-B', '-q', '-Dmse=off', '-DskipTests', 'compile',
+                'dependency:build-classpath', '-Dmdep.outputFile=target/examples-classpath.txt']
+        build, marker = self.launch_command('mod-build', args=args)
+        self.wait_started(build, marker)
+        self.assertIsNone(holder.poll())
+        self.assertEqual([], list((self.root / '.git/maven-waiters').glob('*.request')))
+        observed = json.loads(marker.with_suffix('.args').read_text())
+        self.assertEqual(args, observed['args'])
+        self.assertEqual(str(self.linked.resolve()), observed['cwd'])
+        marker.with_suffix('.release').touch()
+        output = build.communicate(timeout=5)[0]
+        self.assertEqual(0, build.returncode, output)
+        self.assertNotIn('Maven slot acquired', output)
+        first.with_suffix('.release').touch()
+
+    def test_mod_launcher_build_waits_for_its_own_worktree_test(self):
+        holder, first = self.launch('same-tree-test', self.linked)
+        self.wait_started(holder, first)
+        build, marker = self.launch_command('mod-build', args=[
+            '-DskipTests', 'compile', 'dependency:build-classpath'])
+        time.sleep(.3)
+        self.assertFalse(marker.with_suffix('.started').exists())
+        first.with_suffix('.release').touch()
+        holder.wait(timeout=5)
+        self.wait_started(build, marker)
+        marker.with_suffix('.release').touch()
+
+    def test_compile_waits_for_its_own_worktree_test(self):
+        holder, first = self.launch('same-tree-test', self.linked)
+        self.wait_started(holder, first)
+        build, marker = self.launch_command('compile', args=['compile'])
+        time.sleep(.3)
+        self.assertFalse(marker.with_suffix('.started').exists())
+        first.with_suffix('.release').touch()
+        holder.wait(timeout=5)
+        self.wait_started(build, marker)
+        marker.with_suffix('.release').touch()
+
+    def test_test_waits_for_its_own_worktree_build(self):
+        build, marker = self.launch_command('compile-holder', args=['test-compile'])
+        self.wait_started(build, marker)
+        test, last = self.launch('same-tree-test', self.linked)
+        self.wait_queued(1)
+        self.assertFalse(last.with_suffix('.started').exists())
+        marker.with_suffix('.release').touch()
+        build.wait(timeout=5)
+        self.wait_started(test, last)
+        last.with_suffix('.release').touch()
+
+    def test_two_builds_in_one_worktree_serialize(self):
+        build, first = self.launch_command('first-build', args=['compile'])
+        self.wait_started(build, first)
+        later, last = self.launch_command('second-build', args=['package', '-Dmaven.test.skip=true'])
+        time.sleep(.3)
+        self.assertFalse(last.with_suffix('.started').exists())
+        first.with_suffix('.release').touch()
+        build.wait(timeout=5)
+        self.wait_started(later, last)
+        last.with_suffix('.release').touch()
+
+    @unittest.skipUnless(os.name == 'posix', 'POSIX SIGTERM and inherited descriptor contract')
+    def test_build_cancellation_and_killed_parent_preserve_worktree_safety(self):
+        for killed in (False, True):
+            with self.subTest(killed=killed):
+                build, first = self.launch_command(f'build-{killed}', args=['compile'])
+                self.wait_started(build, first)
+                build.kill() if killed else build.terminate()
+                build.wait(timeout=5)
+                later, last = self.launch_command(f'after-{killed}', args=['compile'])
+                if killed:
+                    time.sleep(.3)
+                    self.assertFalse(last.with_suffix('.started').exists())
+                    first.with_suffix('.release').touch()
+                self.wait_started(later, last)
+                last.with_suffix('.release').touch()
+                later.wait(timeout=5)
 
     def test_lean_cli_passes_bounded_heaps_and_records_its_own_budget(self):
         process, marker = self.launch_command('lean-cli', lean=True)

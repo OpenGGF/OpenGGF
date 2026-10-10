@@ -96,6 +96,9 @@ Nine `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each
   toolchain for the experimental Linux ZIP, preserving the isolated Windows
   feature. Its native gameplay probe uses production loaders, real OpenGL,
   prepared music, scene lifecycle and module-state checks for every packaged mod.
+  The shared `NativeGameplayCheck` also exercises every declared one-shot sample
+  through the production session wrapper into final mixed PCM (`sfx-pcm.csv`),
+  catching prepared-audio delegation gaps (2026-10-09 Eggman's Sky Vorbis refresh).
   Origin: [Linux friends ZIP, 2026-10-09](../../tools/modding/native-linux/README.md).
 
 - `tools/modding/native-windows/build_inputs.py` rebuilds all friends mods with
@@ -248,7 +251,7 @@ Run `AgentWorkflowTool` for a preflight, read the matching runbook, scaffold wit
 [`runbooks/runbook-jvm-benchmark.md`](runbooks/runbook-jvm-benchmark.md) rather
 than the benchmark CLIs directly — the numbers are easy to misread.
 
-Local Maven commands: [`tools/testing/maven_queue.py`](../../tools/testing/maven_queue.py) waits automatically for a shared execution slot across linked worktrees; category runs use it too; `--stats` summarises its wait/hold/memory telemetry.
+Local Maven tests: [`tools/testing/maven_queue.py`](../../tools/testing/maven_queue.py) waits automatically for a shared execution slot across linked worktrees; category runs use it too; `--stats` summarises test wait/hold/memory telemetry. Recognized build-only commands bypass shared admission and hold only their own worktree's build/test lock. Direct Maven builds are allowed when that worktree is otherwise idle; see the [build and test guide](../../tools/testing/README.md#build-only-maven-execution-and-queued-tests).
 
 ## Test harness helpers
 

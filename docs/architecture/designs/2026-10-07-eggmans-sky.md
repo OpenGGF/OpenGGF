@@ -617,3 +617,154 @@ The user's `.env` is preserved with mode 0600 in the external voice-bank task
 directory before removing the fully merged voice worktree; no credential enters
 Git or the package. Push only develop, then remove the accounted-for local voice
 branch/worktree and the two owned merge-backup stashes, preserving unrelated work.
+
+
+### Installed playback follow-up, 2026-10-09
+
+An installed-JAR live OpenAL probe on develop `607e97d54c9e` produced nonzero
+final PCM for ring, mining-laser and scanner ROM effects, but rejected
+`voice-life-low` as missing prepared PCM. The bank was present and its cursor
+checks passed: the actual fault was `SessionExternalContentView.CloseOncePort`
+forwarding `hasSfx`/`openSfx` while inheriting the empty default `sfxPcm` method.
+Presentation requests PCM through that latter method, so the session adapter
+hid otherwise valid prepared voice samples. The probe's initial cleanup also
+closed its manually installed view before retiring presentation; the revised
+probe transfers the view through the normal audio ownership boundary.
+
+The strengthened `TestEggmansSkyVoiceAssets` feeds every one of the 122 prepared
+clips through the wrapped session port, `AudioManager` and final PCM capture.
+It failed on `voice-systems-online` before the forwarding fix, with one failure,
+zero errors and zero skips. The fix delegates the existing PCM method without
+changing signatures, preparation, gain, voice scheduling or rewind algorithms.
+
+The change-based plan against pinned `607e97d54c9e` falls back to all 3076 classes
+because the root adapter is unclassified. Proportionate focused validation is
+used instead: the all-bank mixer regression, startup ROM audio, scene/voice
+routing, prepared audio and decoding, namespaced keys, streamed/sample voice
+mixing and rewind, backend handoff, session ownership and standalone consumers.
+This is focused validation, not another whole-suite qualification. Java 21,
+Lua 5.4 and PowerShell preflight passes with `LUA_BIN=/usr/bin/lua5.4`.
+
+Candidate focused verification on the unchanged worktree inputs based on
+`607e97d54c9e` completed at 2026-10-09T17:46:56Z: 133 cases, zero failures,
+errors or skips (Maven exit 0; 92 seconds). The invocation was (the verified
+original absolute ROM path is shown as `$S3K_ROM`):
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-21-openjdk LUA_BIN=/usr/bin/lua5.4 \
+python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  '-Dtest=TestEggmansSkyStartupAudio,TestModSceneHost,TestEggmansSkyVoice,TestEggmansSkyVoiceAssets,TestExternalContentPolicy,TestAudioManagerStreamedPortOwnership,TestModStreamedMusicPort,TestNamespacedMusicRouting,TestStreamedPresentationSession,TestStreamedAudioVoiceRegistry,TestStreamedBackendIntegration,TestLiveCaptureSurvivesBackendSwap,TestSampleBackedVoice,TestModAudioPreparer,TestBoundedAudioDecode,TestSamplePlatformerIntegration,TestPhase3StandaloneSampleIntegration' \
+  "-Ds3k.rom.path=$S3K_ROM" test
+```
+
+Fix `8bb1555284b42a7843db55ff95d3c7bbc2dc7b85` integrated conflict-free into
+actual develop `50004a4172e0b6e407daad09d511a562602a6377`, against published base
+`209c8b1ad2bf6891ef767bb84d0cc3e54d5b7618`. The intervening base change only
+updates Maven build admission and prose; the adapter, all-bank regression and
+mod inputs exactly match the qualified private tree. The same focused command
+completed on actual main at 2026-10-09T17:58:28Z: 133 cases, zero failures,
+errors or skips, exit 0, 45.551 seconds. Tracked inputs and HEAD remained
+unchanged through this check. The original absolute main S3K ROM independently
+matched CRC32 `63522553` and SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`.
+
+The installed-JAR probe on `8bb1555284b4` completed at 17:57:54Z, exit 0.
+It uses production audio preparation, the transferred session view, the actual
+mod startup scene, its ROM sound wrapper and the bounded `Voice.say` queue,
+with a real LWJGL/OpenAL backend and paced presentation. Ring, mining laser,
+scanner and life-support voice captures contain final 48 kHz stereo PCM:
+
+| Capture | Seconds | Peak sample | RMS |
+| --- | ---: | ---: | ---: |
+| Ring | 2 | 3735 | 533.68 |
+| Mining laser | 2 | 3691 | 764.23 |
+| Scanner | 2 | 3160 | 665.90 |
+| Life support voice | 4 | 21608 | 1819.45 |
+
+The live OpenAL device consumed 581118 stereo frames with zero underruns.
+These observations establish final mixed content and device consumption;
+the automated probe does not measure a listener's perceived latency. The four
+recordings remain in the explicit external audio-check task directory. Temporary
+probe code/logs, isolated copied repository and generated saves are discarded
+once consumed, alongside the clean merged fix worktree and local branch.
+
+At the user's request, the engine was rebuilt on `50004a4172e0` through the
+worktree build lock (bypassing shared test admission), then
+`python3 examples/build_example.py eggmans-sky --skip-engine` validated and
+packaged the mod with zero findings. The installed `mods/eggmans-sky.jar`
+contains all 122 byte-identical voice resources and retains SHA-256
+`75d30e818a41eef5a942bf57028b586154aa4f013e1df9ed6e4e5a5b6600a8cb`.
+The fix is present in freshly compiled engine classes; no audio regeneration,
+paid API request, save change or Mod Manager state change was needed.
+
+This prose-only successor records focused delivery and live playback evidence;
+it does not replace the earlier inherited-failure whole-suite qualification
+with a new full-suite pass.
+
+### Compact voice delivery (2026-10-09)
+
+The compression task starts from `50004a4172e0` on local
+`feature/ai-mod-audio-vorbis`. Incoming `bf699414675c` adds only the preceding
+installed-playback record and is retained unchanged before integration. The
+user approved replacing the voice bank's WAV delivery with Ogg/Vorbis quality 4.
+No engine codec, PCM cache, audio routing, source performance, or queue algorithm
+changes are needed: the production bounded decoder already supports Vorbis SFX.
+
+All 122 processed 48 kHz mono 16-bit WAV masters, original provenance, selected
+source MP3s, edits and verification reports are preserved and hash-verified under
+`$TASK_ARCHIVE/cache/` in the external `eggmans-sky-vorbis-20261009` task archive
+(original provenance is at the task root). The original synthesis cache is preserved too.
+The publisher now renders `processed.wav` into the external cache, verifies the
+master and raw-source identities and existing word check, and encodes a complete
+staged bank with `libvorbis -q:a 4`, stripped metadata and bit-exact flags before
+replacing delivery files. Matching legacy WAVs are removed only after these
+checks. Failure on a later source check leaves the existing bank intact; this
+is not a filesystem-wide transaction claim.
+
+Provenance v2 distinguishes each shipped Ogg hash from its processed-WAV hash
+and names that WAV hash as the blind word check's input. The original source
+hashes, text, edits, transcripts, frame counts and generated `VoiceLine` leases
+are unchanged. Word checks are inherited from the approved processed WAVs;
+no new synthesis, API request, blind Ogg transcription or subjective listening
+qualification is claimed.
+
+ZIP-only compression was rejected as insufficient: the WAV bank occupies
+25.090 MiB in source and 16.180 MiB in the original JAR. Vorbis occupies 2.874 MiB
+in source and 2.775 MiB in the new JAR. The validated package shrinks from
+17,285,297 to 3,240,732 bytes (about 81% for the entire mod, 83% for packaged
+audio); all 77 non-audio file entries remain byte-identical. The new JAR's
+SHA-256 is `6eaf6ed5edd4928881df9fbf8abbcb50a5eebe70bab013f7a333d3759618bb22`.
+Every actual clip also retains its full PCM length under FFmpeg; measured RMS
+ratios range from 0.9864 to 1.0035 and decoded peaks stay below clipping. These
+are signal observations, not a perceptual quality verdict or a RAM reduction.
+
+The generated short control rejects external decoded-byte count as lease
+authority: FFprobe reports the preserved 9,606-frame Vorbis duration while both
+FFmpeg decoders emit 9,478 frames. The publisher checks exact stream duration;
+the Java bank regression independently checks exact production stb PCM length
+for every shipped clip. The measurement hazard is recorded in the existing
+[catalogue](../../agent-workflow/briefing-trace-rounds.md#measurement-hazards--all-produce-plausible-output).
+
+Focused validation replaces the fallback selection of all 3,076 classes under
+the repository's proportionate-validation policy. This bounded asset/publisher
+change exercises its actual packaging, source identity, exact duration, owner,
+queue, decoder limits and final-mixer paths directly; engine/physics/public API
+contracts remain unchanged. It is not a whole-suite qualification.
+
+- Actual-main baseline `bf699414675c`: 22 cases, zero failures/errors/skips,
+  `python3 tools/testing/maven_queue.py --lean -B -q -Dmse=off
+  '-Dtest=TestEggmansSkyVoiceAssets,TestEggmansSkyVoice,TestModAudioPreparer' test`.
+- Candidate: 31 cases, zero failures/errors/skips, the same command with
+  `TestBoundedAudioDecode` added. All 122 clips traverse real packaging,
+  production preparation, exact Vorbis frame checks, queue leases and final
+  stereo PCM mixing.
+- Python: eight cases pass with the task NumPy/SciPy environment,
+  `python -m unittest discover -s tools/audio/tests`. The publisher regressions
+  cover deterministic encoding, master preservation, rejected changed masters,
+  unverified words and preservation of an existing bank after a later failure.
+- Tool preflight passes with `LUA_BIN=/usr/bin/lua5.4`; the default `lua` had
+  the wrong version and no tests ran in that initial failed preflight.
+- `python3 examples/build_example.py eggmans-sky --skip-engine` packages with
+  zero validation findings. The engine/classpath build used the normal worktree
+  lock after inspecting the classpath plugin's no-fork lifecycle descriptor;
+  the earlier queued build was cancelled before execution. Byte checks cover
+  every packaged Ogg, preserved provenance and absence of shipped WAV masters.

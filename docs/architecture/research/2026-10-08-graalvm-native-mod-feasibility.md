@@ -905,3 +905,138 @@ logs and owned Wine state are temporary; rendered captures, final ZIP and light
 source-attributed evidence are retained outside the task worktree. Main's seven
 unrelated dirty/untracked paths were independently byte/state checked and
 preserved through integration.
+
+
+## Windows Eggman's Sky Vorbis refresh — 2026-10-09
+
+The refreshed input base is `15400390314b06ded17bf14f65f19c3449b9c82c`.
+It includes the compact 122-clip Ogg/Vorbis voice bank (`dd019978f`) and the
+production prepared-audio session delegation fix (`8bb155528`). Updating only
+the mod JAR in the previously delivered `0d3d9c1d6` executable would retain the
+missing `sfxPcm` delegation; this refresh therefore rebuilds the Windows image
+and all 19 maintained mods from the current source. No codec addition is needed:
+the existing STB Vorbis decoder supports the new assets.
+
+The shared experimental `NativeGameplayCheck` now prepares audio through
+`ModSubsystem.preparedAudioFactory` and retains the returned session view until
+presentation is retired. It consumes stop commands before retiring streamed
+cursors and before closing the mod kit. Every declared one-shot must be present through that
+view, play by its namespaced SFX reference, and produce nonzero, varying final
+mixed PCM. `sfx-pcm.csv` records exact decoded frames, rate, channels, peak and
+range. The check applies to every mod declaring SFX, not only Eggman's Sky.
+It replaces the probe's raw-port setup, which could bypass this production
+wrapper defect. The authored change is confined to the shared standalone
+qualification tool and prose; engine, API, POM and normal release inputs are
+unchanged by this task.
+
+A matched local Java 21 control used the current engine/mod/probe with only
+`SessionExternalContentView` and its nested classes replaced by their exact
+`0d3d9c1d6` bytes. It returned ordinary exit 1 at
+`Missing session SFX PCM: SfxRef[owner=eggmans-sky, name=voice-systems-online]`.
+Removing that sole class override returned exit 0, checked all 122 samples and
+completed the representative Eggman's Sky scene/gameplay checks. This proves
+the added check detects the inherited session-wrapper failure; decoder success
+or nonzero music PCM cannot substitute for it. Audio peaks establish produced
+PCM, not subjective quality or physical-device playback.
+
+Validation uses the proportionate exception for this bounded diagnostic helper:
+matched negative/current controls, all-mod gameplay, packaging integrity and
+fresh structural guards, followed by actual Windows compilation/runtime checks
+and rendered Wine checks of the delivered executable. The unchanged runner plan
+against the pinned base selects 3,076 ordinary classes via its unclassified
+shared-tool fallback; that ordinary rerun does not exercise this external probe.
+Java 21 / Lua 5.4 / PowerShell preflight passes with `LUA_BIN=lua5.4`.
+This is focused native qualification, not a whole ordinary-suite pass. The
+Windows workflow and its mandatory independent fresh-guard gate are unchanged.
+
+The final Java 21 helper passes representative rendered gameplay for all 19
+mods. An initial explicit `resetState` teardown failed for the standalone music
+sample after its successful gameplay check because it retired a streamed cursor
+before the presentation voice snapshot. The probe now consumes music/SFX stops
+on a forward presentation tick before port/kit teardown; the final all-mod rerun
+and the matched old-wrapper negative both pass their expected outcomes. No
+production teardown behavior was changed to make the diagnostic pass.
+
+All 122 packaged `.ogg` resources match their provenance SHA-256 and source
+bytes, with no remaining voice WAVs. The JAR is 3,240,732 bytes, SHA-256
+`6eaf6ed5edd4928881df9fbf8abbcb50a5eebe70bab013f7a333d3759618bb22`.
+The complete final-PCM observations match every provenance frame count and
+48,000 Hz mono format. Encoded source audio totals 3,014,069 bytes; compressed
+voice entries in the JAR total 2,909,992 bytes. Windows and Linux portable
+packaging controls each pass their three tests.
+
+At this source checkpoint, the already submitted local voice regression and
+fresh guards are waiting in the shared Maven queue. Windows image compilation and terminal archive
+qualification are pending. Their source-attributed evidence follows after the
+immutable image and all 122 native PCM observations have been checked.
+
+
+### Terminal Windows Vorbis image and archive evidence
+
+The helper integrated conflict-free and was pushed as
+`ee0466ef336d326bd2f3ef1d35714e7b8f1c071b`; the destination's Windows and Linux
+portable packaging controls each pass three tests. All eight unrelated main
+paths (including the three dirty submodules) match their original byte/state
+snapshot. Engine/test/API/POM/workflow inputs are unchanged by the task.
+
+[Windows run 37980438420](https://github.com/OpenGGF/OpenGGF/actions/runs/37980438420)
+is terminal success at that exact source. The image compiled in 6m41s, with
+8.61 GiB peak RSS. On Microsoft Windows it passed the 15,844-entry / 1,210-type
+member audit, ordinary exit-1 missing field/method controls, the runtime-loaded
+JDK bootstrap fixture, all 19 exact JVM/native registration comparisons, all
+17 code-mod engine boots, and every mod/normal batch shortcut. The independent
+fresh guard job completed 2026-10-09 19:39:04Z: 674 cases, zero failures/errors/
+skips, Maven exit 0. This is the actual integrated source's mandatory guard gate;
+no whole ordinary-suite pass is claimed.
+
+The immutable Windows-runner ZIP has 1,406 entries / 111,523,442 bytes, SHA-256
+`317a72ed1f2d6cbef58b47293e09895009dfea62c1e52a4c112c2bd57ffe001b`.
+Engine/mod and native-builder source pins both equal `ee0466ef336d326bd2f3ef1d35714e7b8f1c071b`.
+The PE SHA-256 is
+`082a4f606e0de26c0d962fc1fb5cf35b52cbb6cd520ecd891074b3b6578233c2`.
+The Windows-built Eggman's Sky JAR hash is
+`a60c9c3df51c6d3ce2179ed81491948318b93742cc35f3dd75dd9cf63c84d1df`;
+its complete provenance and all 122 encoded Ogg resource bytes independently
+match the current source. Archive/container differences from the local Java 21
+JAR are not treated as resource changes.
+
+`qualify_wine.py` ran every extracted shortcut using that exact PE, original
+rehashed ROM paths, Wine 11.19 and Mesa software OpenGL. All 19 representative
+rendered gameplay checks passed, including state roundtrip and scene reopen
+where applicable. The production prepared-audio session path produced final
+mixed PCM for all 122 Eggman's Sky clips: every exact decoded frame count equals
+the shipped provenance, every clip is 48,000 Hz mono, minimum peak is 17,272 and
+minimum signal range is 26,146. The standalone sample's one SFX and platformer's
+three SFX also passed. These checks establish produced PCM under Wine, not
+physical Windows sound-device playback, subjective quality or every gameplay
+route. The broader representative-route limits of the preceding Windows
+qualification still apply.
+
+The qualifier rebuilt a clean archive from immutable inputs and added labelled
+Wine evidence. Final CRC, complete per-file hashes, all 19 JARs/launchers, native
+PE hash, source pins, licences, short ROM names and both copies of the Ogg bank
+pass. No ROMs, JDK or diagnostic bootstrap fixture are included. Output:
+`$OPENGGF_WINDOWS_VORBIS_CAPTURE_ROOT/OpenGGF-experimental-windows-x64-with-mods.zip`,
+1,406 entries / 113,822,994 bytes, SHA-256
+`bab1d58789f7c2d9f043fb420d0ab259da070608060e729a30a208f67abb0086`.
+It is 28,641,416 bytes smaller than the prior delivered ZIP, which remains
+unchanged. The checksum sidecar, source-attributed qualification JSON, 83 PNGs
+and 23 state/PCM CSVs are retained outside the repository. Generated mod
+repositories/storage/saves were removed from captures; the owned Wine prefix
+has no remaining process.
+
+The additional local Maven voice regression and fresh-guard requests were
+withdrawn before Maven admission after the mandatory actual-source CI guards
+and exhaustive native PCM/gameplay checks completed. Neither request executed
+Maven or produced a test result; neither is counted as a pass. The complete
+proportionate qualification is the matched missing-wrapper negative, all 19 JVM
+and Windows-PE gameplay checks, all 122 provenance/PCM comparisons, portable
+packaging controls and the fresh actual-source 87-suite / 674-case CI guard gate.
+Only these two task-owned unstarted requests were withdrawn; every foreign
+running/waiting job was preserved.
+
+This terminal evidence follow-up changes only the research Markdown. Its
+packaged executable/mod/helper inputs remain identical to the qualified
+`ee0466ef3` source. Consumed local/CI logs and generated probe/runtime outputs
+remain temporary and are removed with the accounted-for task worktree;
+qualified captures, the final ZIP and light evidence are retained outside it.
