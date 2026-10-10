@@ -8,6 +8,11 @@ development JVM build are required; code mods do not load in native builds.
 
 > Three islands, cut off by Eggman's machines.
 
+The title frames all three island vistas together, with their heroes, drifting ROM
+scenery, seven animated Chaos Emeralds and a gold wordmark. New Game and Continue
+sit below the scenery; each backdrop uses a fixed vertical crop to keep sky repeats
+out of the lower screen.
+
 Dr. Eggman's **Convergence Engine** is pulling the islands toward his base through Warp Rings.
 Local anchors block the roads, while shield relays protect their controllers. The Chaos
 Emeralds power those installations; the stolen Master Emerald supplies the central engine.
