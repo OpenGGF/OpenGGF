@@ -1797,3 +1797,109 @@ returns an engine-only result; the outer bridge constructs the public result.
 This preserves the signatures' semantics without relaxing architecture ratchets.
 The test object callback's clock parameter is named `vIntRunCount`, matching the
 existing V-int terminology guard.
+
+
+### Phase-2 final validation (2026-10-10)
+
+Implementation milestones are `5a0097933` (engine/API), `c6c52b513` (town native
+round trip and generated placeholder), `1730c4cb8` (native word validation and
+signature-hook correction), and `9ef5d8d21` (package boundary and clock name).
+All work remains local on `feature/ai-starpost-actbridge`; no push, merge or
+rebase was performed. Phase 1 still replaces the placeholder terrain and verifies
+its connected anchors, director admission, and per-route/viewport/team obligations.
+
+Run these commands from the Act Bridge worktree. `$PWD` resolves its verified
+S3K and S1 ROMs to the absolute paths used by the tests:
+
+```bash
+actbridge_s3k="$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen"
+actbridge_s1="$PWD/Sonic The Hedgehog (W) (REV01) [!].gen"
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 490f3de43 --category mods --preflight
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 490f3de43 --category mods --workers 2 --max-minutes 80 --run
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestModSceneActBridge,TestModSceneHost,TestModApiSignatureSurface,TestStarpostTownAct,TestStarpostValleyExample,TestStarpostValleyScene' "-Ds3k.rom.path=$actbridge_s3k" "-Dsonic1.rom.path=$actbridge_s1" test
+```
+
+The change-based plan correctly selected all 3,082 ordinary candidate classes for
+this public/shared API change, plus fresh guards. The first one-worker attempt
+on `1730c4cb8` reached its 40-minute invocation limit: 2,705 reports / 23,492
+observed tests, zero failures/errors, 57 skips, **incomplete**; no guard run began.
+Its diagnostics were inspected and acknowledged. The unchanged two-worker retry
+completed the ordinary lane in 1,708.94 seconds: 3,080 reports, 26,677 tests,
+27 failures, zero errors, 63 skips. The 3,082 figure is the selected source-class
+count, not the number of XML suites Maven produces. The initial guards found the
+three package-cycle/clock failures described above; the focused corrections did
+not change native gameplay or relax a guard.
+
+The final `9ef5d8d21` source contents pass all **674 guards**, zero failures,
+errors or skips, in 3:37. The final focused selection passes **47 tests**, zero
+failures/errors/skips, including all six engine bridge cases and the actual
+farm → act → inn menu → act → gate → same farm/session round trip. The example
+suite additionally executes 181 creator cases, all passing with zero skips, and
+SDK validation reports zero findings. Earlier required S3K loading/bootstrap/
+decoding/AIZ-skip consumer checks passed with the same absolute ROM setup.
+`TestModApiHookPolicy` passes all 21 Bash/PowerShell cases, and
+`python3 -m unittest discover -s tools/modding -p test_creator_kit.py` passes 13
+creator-kit checks. The compiled normalized 0.7 pin is regenerated in place;
+`currentApi=0.7.0` remains the unchanged unpublished candidate authority.
+
+The 63 ordinary skips were inspected: opt-in probes/benchmarks/soaks/captures,
+unavailable OpenGL/EGL, Infinite Sonic route assumptions, a CPZ spin-tube
+assumption, and unrequested local timeline/BizHawk diagnostics. They do not
+represent missing ROM paths. Live GPU resource re-upload and audible playback
+remain outside headless coverage; the bridge lifecycle and audio preparation
+are covered directly. This is a completed **red ordinary suite**, not a green
+full-suite claim.
+
+Each ordinary failure was attributed with a bounded, matched two-worker run:
+
+```bash
+actbridge_route_tests='com.openggf.tests.TestS3kMhzAct2AuthoredRoute,com.openggf.tools.TestDezIncomingFinalRouteCapture,com.openggf.tools.TestLrzActTwoColdRouteCapture,com.openggf.tools.TestLrzBossColdRouteCapture,com.openggf.tools.TestLrzKnucklesColdRouteCapture,com.openggf.tools.TestLrzTailsColdRouteCapture,com.openggf.tools.TestLrzWideBossColdRouteCapture,com.openggf.tools.TestMhzPairColdRouteCapture,com.openggf.tools.TestMhzWideColdRouteCapture,com.openggf.tools.TestSszColdRouteCapture,com.openggf.tools.TestSszSoloColdRouteCapture,com.openggf.tools.TestSszTailsColdRouteCapture,com.openggf.tools.audio.timeline.TestS1GameplayAudioTimelineCli'
+python3 tools/testing/maven_queue.py -Dmse=off -Ptest-concurrent "-Dtest=$actbridge_route_tests" "-Ds3k.rom.path=$actbridge_s3k" "-Dsonic1.rom.path=$actbridge_s1" test
+```
+
+The current `9ef5d8d21` source contents and exact `490f3de43` baseline source
+both ran 48 tests: 27 failures, zero errors/skips. The baseline was a temporary
+tracked-source overlay in this same worktree, with HEAD/branch unchanged,
+verified with `git diff 490f3de43 --exit-code -- .`; stale compiled classes were
+removed before each source build. A finally block restored the committed current
+source and removed baseline classes; `git diff --exit-code -- .` then passed.
+Comparison by fully qualified class, parameterized test identity, failure kind,
+and **full XML failure message** found zero differences after normalizing only
+JVM object identity hashes. There were no new, missing or worsened failures.
+The following are inherited failures; long world-diff messages show their prefix:
+
+| Class | Test identity | Failure |
+|---|---|---|
+| `tests.TestS3kMhzAct2AuthoredRoute` | `incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String, int)[2]` | late pulley owns Tails ==> expected: <true> but was: <false> |
+| `tests.TestS3kMhzAct2AuthoredRoute` | `incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String, int)[3]` | late pulley owns Sonic ==> expected: <true> but was: <false> |
+| `tools.TestDezIncomingFinalRouteCapture` | `coldEmeraldTeamClearsBothActsFinalFightAndDoomsday` | death at 53897 ==> expected: <false> but was: <true> |
+| `tools.TestDezIncomingFinalRouteCapture` | `coldOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding` | expected: <96> but was: <0> |
+| `tools.TestDezIncomingFinalRouteCapture` | `coldOrdinarySoloTailsClearsAllFinalPhasesAndLoadsEnding` | expected: <96> but was: <0> |
+| `tools.TestDezIncomingFinalRouteCapture` | `coldOrdinaryTeamClearsHandsCoreAndEscapeShipAndLoadsEnding` | expected: <96> but was: <0> |
+| `tools.TestDezIncomingFinalRouteCapture` | `coldWideOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding` | expected: <96> but was: <0> |
+| `tools.TestDezIncomingFinalRouteCapture` | `incomingFinalFightRestoresAndReplaysEveryPhase(int)[1]` | death at 26706 ==> expected: <false> but was: <true> |
+| `tools.TestDezIncomingFinalRouteCapture` | `incomingFinalFightRestoresAndReplaysEveryPhase(int)[2]` | death at 26750 ==> expected: <false> but was: <true> |
+| `tools.TestLrzActTwoColdRouteCapture` | `coldTeamCompletesActTwoAndReachesBossActWithRepeatableWorldState` | death at input 36526 ==> expected: <false> but was: <true> |
+| `tools.TestLrzBossColdRouteCapture` | `coldTeamCompletesBossActWithEarnedShieldAndRepeatableWorldState` | death at input 36526 ==> expected: <false> but was: <true> |
+| `tools.TestLrzKnucklesColdRouteCapture` | `coldKnucklesCompletesActTwoAndReachesPlayableHiddenPalace` | expected: <1069> but was: <899> |
+| `tools.TestLrzTailsColdRouteCapture` | `coldTailsClearsActOneAndRestoresTraversalFightAndHandoff` | death at input 19460 ==> expected: <false> but was: <true> |
+| `tools.TestLrzTailsColdRouteCapture` | `coldTailsCompletesActTwoAndRestoresTheBoulderHandoff` | death at input 19460 ==> expected: <false> but was: <true> |
+| `tools.TestLrzTailsColdRouteCapture` | `coldTailsCompletesBossActAndReachesPlayableHiddenPalace` | death at input 19460 ==> expected: <false> but was: <true> |
+| `tools.TestLrzTailsColdRouteCapture` | `coldTailsRestoresActTwoTraversalToTheMiddleCorridor` | death at input 19460 ==> expected: <false> but was: <true> |
+| `tools.TestLrzWideBossColdRouteCapture` | `coldWideTeamClearsBossAndReleasesHiddenPalaceWithRepeatableWorld` | expected: <2796> but was: <524> |
+| `tools.TestMhzPairColdRouteCapture` | `pairedColdCompletionIsolatesTheLiveTimelineAtTheActualFbzLoad` | the route must observe the actual history-reset boundary ==> expected: <true> but was: <false> |
+| `tools.TestMhzWideColdRouteCapture` | `wideSonicCompletesBothActsThroughProductionLoopWithWholeWorldReplay` | [wide-route-19500] restore 0 zone-runtime: [zone-runtime.stateBytes[2]: A=46 B=26, zone-runtime.stateBytes[3]: A=-104 B=64, zone-runtime.stateBytes[6]: A=38 B=21, zone-runtime.stateBytes[… |
+| `tools.TestSszColdRouteCapture` | `coldCompleteRouteDefeatsMechaAndLoadsDeathEggWithRewindAtLateEvents` | death at input 7311 ==> expected: <false> but was: <true> |
+| `tools.TestSszColdRouteCapture` | `coldRouteDefeatsBothReplicasAndReplaysTraversalAndTransport` | death at input 7311 ==> expected: <false> but was: <true> |
+| `tools.TestSszSoloColdRouteCapture` | `coldSoloSonicDefeatsBothReplicasAndReplaysTheirApproaches` | death at 7671 ==> expected: <false> but was: <true> |
+| `tools.TestSszSoloColdRouteCapture` | `coldSoloSonicDefeatsMechaAndLoadsDezWithIsolatedHistory` | death at 7671 ==> expected: <false> but was: <true> |
+| `tools.TestSszTailsColdRouteCapture` | `coldSoloTailsDefeatsBothReplicasAndRidesTheirTeleporters(int)[2]` | replay at 4018 object-manager: [object-manager.usedSlotsBits differs, object-manager.usedSlotsBits.onlyA: 24, 29, object-manager.dynamic[6][ObjectRefId[slotIndex=-1, generation=0, spawnId… |
+| `tools.TestSszTailsColdRouteCapture` | `coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory(int)[1]` | expected: <48> but was: <0> |
+| `tools.TestSszTailsColdRouteCapture` | `coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory(int)[2]` | expected: <48> but was: <0> |
+| `tools.audio.timeline.TestS1GameplayAudioTimelineCli` | `shellUsesAbsoluteBootstrapToolsAndRejectsInjectedEnvironmentBeforePathLookup` | expected: <0> but was: <4> |
+
+All category diagnostics were inspected and acknowledged, including the
+interrupted native-word correction run. Raw logs/comparator files are disposable
+worktree output and are not archived. The evidence above records commands,
+source commits, skips and attributed failure identities rather than totals alone.
