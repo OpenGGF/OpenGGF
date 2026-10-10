@@ -25,6 +25,7 @@ public final class Stagehand {
         public int x;
         public int y;
         public boolean flipX;
+        public boolean flipY;
         public boolean visible = true;
         /** Palette line override, or -1 for the sheet's own. */
         public int palette = -1;

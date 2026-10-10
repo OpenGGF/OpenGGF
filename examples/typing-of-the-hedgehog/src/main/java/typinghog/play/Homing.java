@@ -23,9 +23,9 @@ final class Homing {
     static final int BOUNCE_HEIGHT = 40;
 
     /** One strike: where the target is now, and what its hit does. */
-    record Strike(IntSupplier x, IntSupplier y, Runnable onHit) { }
+    record Strike(IntSupplier x, IntSupplier y, Runnable onHit, int dodgeRows) { }
 
-    private enum Leg { DASH, BOUNCE }
+    private enum Leg { DASH, BOUNCE, DODGE }
 
     private final ArrayDeque<Strike> queue = new ArrayDeque<>();
     private Strike current;
@@ -71,7 +71,12 @@ final class Homing {
     int homeY() { return homeY; }
 
     void strike(IntSupplier x, IntSupplier y, Runnable onHit) {
-        queue.add(new Strike(x, y, onHit));
+        queue.add(new Strike(x, y, onHit, 0));
+    }
+
+    /** Mod-designed dodge: hop aside, let the sourced hazard pass, then hop back standing. */
+    void dodge(int offsetX, int hazardRows) {
+        queue.add(new Strike(() -> homeX + offsetX, () -> homeY, () -> { }, hazardRows));
     }
 
     /** True while a strike is in flight or queued. */
@@ -106,16 +111,24 @@ final class Homing {
         if (current == null) {
             current = queue.poll();
             if (current == null) return;
-            leg = Leg.DASH;
+            leg = current.dodgeRows() > 0 ? Leg.DODGE : Leg.DASH;
             legRow = 0;
             fromX = homeX;
             fromY = homeY;
             int distance = (int) Math.hypot(current.x().getAsInt() - fromX, current.y().getAsInt() - fromY);
-            legRows = Math.max(DASH_MIN_ROWS, Math.min(DASH_MAX_ROWS, distance / DASH_PIXELS_PER_ROW));
+            legRows = leg == Leg.DODGE ? current.dodgeRows() + BOUNCE_ROWS
+                    : Math.max(DASH_MIN_ROWS, Math.min(DASH_MAX_ROWS, distance / DASH_PIXELS_PER_ROW));
         }
         legRow++;
         double t = Math.min(1, legRow / (double) legRows);
-        if (leg == Leg.DASH) {
+        if (leg == Leg.DODGE) {
+            int offset = current.x().getAsInt() - homeX;
+            double hop = Math.min(1, legRow / (double) BOUNCE_ROWS);
+            if (legRow > current.dodgeRows()) hop = Math.max(0, (legRows - legRow) / (double) BOUNCE_ROWS);
+            place(homeX + (int) Math.round(offset * hop),
+                    homeY - (int) Math.round(Math.sin(Math.PI * hop) * BOUNCE_HEIGHT), homeFacing, false);
+            if (legRow >= legRows) { current = null; land(); }
+        } else if (leg == Leg.DASH) {
             // The target may still be moving; home on where it is now, accelerating in.
             int tx = current.x().getAsInt(), ty = current.y().getAsInt();
             double e = t * t;
@@ -142,7 +155,7 @@ final class Homing {
     }
 
     /** True while Sonic should stay a rolling ball (the frame controller's retainRolling). */
-    boolean rolling() { return current != null; }
+    boolean rolling() { return current != null && leg != Leg.DODGE; }
 
     /** Puts Sonic back on his spot, standing: object control keeps the engine from choosing his pose. */
     private void land() {
@@ -158,7 +171,7 @@ final class Homing {
         // The roll changes his box from the top-left, which moves the centre; set the pose first so
         // the written centre is the one that stays.
         sonic.setRolling(ball);
-        sonic.setAir(ball);
+        sonic.setAir(ball || (current != null && leg == Leg.DODGE));
         NativePositionOps.writeXPosPreserveSubpixel(sonic, x);
         NativePositionOps.writeYPosPreserveSubpixel(sonic, y);
         sonic.setDirection(facing);

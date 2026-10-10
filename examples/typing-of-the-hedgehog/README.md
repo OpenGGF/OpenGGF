@@ -55,10 +55,15 @@ light up on the keyboard Sonic wears as you type: gold for a hit, red for a miss
 - **Monitors.** Some fights bring a monitor with a word: *shield*, *speed shoes* (slow
   motion), *invincible*, *super ring*, *extra life*. The Eggman monitor is a trap.
 - **Rescues.** Freed animals carry a short word; typing it rescues them for points.
-- **Bosses.** Each zone's boss is built from that zone's own boss sprites. It opens a
-  window carrying a phrase, one of Robotnik's taunts to type back, or a trivia question
-  with three answers; close it in time and he takes a hit, miss and he lunges at Sonic.
-  Eight hits win. The fight happens in the stock boss arena, with the stock boss replaced.
+- **Bosses.** ROM-art puppets follow the original attack shapes, with typing time before
+  the hazard moves. Type its short dodge word to hop aside and return standing; miss it and
+  Sonic loses rings. Green Hill patrols with its swinging wrecking ball. Final Zone alternates
+  crushing cylinder pairs and falling plasma: each pillar has a word, and only the one showing
+  Robotnik takes a hit (an empty pillar costs time). Death Egg walks, launches rocket fists,
+  tracks Sonic for a body slam, and drops bombs; strike its exposed head between attacks.
+  Emerald Hill charges with its drill and opens its cockpit afterward. Strike windows keep
+  the phrase, talk-back and trivia styles. Death Egg takes twelve hits, the others eight.
+  Boss Rush uses the same fights at the act's start; native boss AI is retired during typing.
 - **Scoring.** Kills chain into a multiplier; the tally adds speed, accuracy, ring and
   perfect bonuses and grades the act S to E.
 

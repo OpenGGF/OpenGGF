@@ -71,6 +71,15 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A strided capture can alias a one-frame animation (2026-10-10, Typing of the Hedgehog,
+`8c511e1f7`): GHZ `GBall_Ball` toggles mapping frame every row. `EVERY=2` samples only
+one parity and can show a plain brown ball even though the other parity is checkered.
+Judge the two mapping frames or an unstrided capture before blaming the art registration.
+`GameplayCaptureTool` also divides its requested FPS by the stride: `EVERY=2 FPS=30`
+encodes 15fps (verified with ffprobe), twice the duration of a 60Hz gameplay sequence.
+Its native state CSV does not include an example mod's virtual rings/lives/score; the
+Typing course HUD and controller tests, rather than native `rings=0`, own those values.
+
 FFmpeg PCM length can differ from a Vorbis stream's declared length (2026-10-09,
 Eggman's Sky compression): a generated 9,606-frame mono control retained exactly
 9,606 frames in its Ogg granule count, while FFmpeg's native and libvorbis decoders

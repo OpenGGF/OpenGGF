@@ -653,3 +653,129 @@ task directory. The paired old/native animal-sheet renders are
 `polish-animals-s1-ghz.png`, `polish-animals-s2-ehz.png`, and
 `polish-animals-s3k-aiz.png` there. No horizontal clipping or panel/text
 overlap was observed in the inspected hub frames.
+
+
+## Bosses v2 (2026-10-10)
+
+The four shipped course bosses remain mod-scripted puppets built entirely from the loaded
+act's ROM art. Native boss AI cannot wait for a typist; `CombatHandoff` retires it as before.
+`BossMotion` supplies motion and `Boss` runs entry → telegraph → attack → strike window →
+recovery. Correct dodge words schedule a sideways hop and return to the same standing centre;
+misses call `Course.hitSonic`, preserving letter-ring spill and No-Fail behavior. No `Course`
+methods changed. `Hud.drawBoss` alone gains hazard/pillar anchors and a per-boss hit count;
+banner behavior is owned by the polish lane and unchanged. Compound sprites gain vertical
+flip for Final Zone's ceiling cylinders.
+
+ROM sources (all motion happens after the typing hold, not on native AI clocks):
+
+| Boss | Owning routines and values | Choreography |
+| --- | --- | --- |
+| S1 Green Hill | `BGHZ_Done` (8 hits), `BGHZ_ChgDir` / `BGHZ_ShipMove` ($100 X speed, $40 pause/crossing), `BGHZ_ShipUpdate` (4px bob, counter +2); `GBall_Main` ($4080 angle, -$200 speed), `GBall_Move` (±8 acceleration, reversal at ±$200), `GBall_PosData` (0,$10,$20,$30,$40,$60), `GBall_AnchorPos` (+32) | Egg Mobile alternates a 64-row pause and 64px overhead crossing at 1px/row; full 96px ball and five chain positions swing with the native fixed-point angle accumulator. The 256-row swing period emerges from the acceleration, rather than a fitted sine. The ball's dodge word sits on it, then the cockpit opens for a strike. |
+| S1 Final Zone | `BossFinal_Skip` (8 hits), `BossFinal_CylinderPairs` (0/1,1/2,2/3,3/0), `EggmanCylinder_PosData`, `EggmanCylinder_Top/Bottom` (0.5px then 3px after 16px, 160px travel, 2px retraction); `EggmanCylinder_UpdatePos` (frame thresholds 8/39, cockpit -10/+14); `BossPlasma_Drop/Move` ($140 Y speed) | A sourced adjacent pair extends, randomly showing Eggman in either member. Four words have distinct leading letters. The occupied pillar takes damage; an empty pillar costs 64 typing rows and a harmless homing trip. Plasma spreads across four lanes then falls between cylinder rounds. X spacing scales with the camera width while preserving the original floor/ceiling stagger. |
+| S2 Death Egg | `loc_3D5EA` (12 hits), `loc_3D640` / `byte_3D680` (first-increment action order 0,2,4,2); `off_3E40C` → `byte_3E450/468/480/494` and `loc_3E1AA` (one stride, headers 32/16/16/16, signed sixteenth-pixel body/limb deltas); `loc_3DAAC/3DACC/3DB32` (arm drop +$20, $10 rows, ±$800 launch for $20 rows, return $20); `loc_3D720/744/784/7B8` (-$200 ascent for $80 rows, $800 descent for $20); `ObjC7_TargettingSensor` / `TargettingLock`, `ObjC7_EggmanBomb` → `ObjectMoveAndFall` (+$38 gravity), `loc_3DF36` ($40 fuse) | Walking, sensor-locked jump/slam, rocket punch, sensor-locked jump/slam repeat, with bomb telegraphs after landings. The head is the strike target while grounded. Keep twelve hits: the demo completes, and the original durability remains recognizable. |
+| S2 Emerald Hill | `Obj56_Init` (8 hits), `Obj56_VehicleMain_Sub2_2` / `Sub4` (-$200 charge), `loc_2F098` (drill -$36,+$10), `Obj56_VehicleTop` (cockpit), `Ani_obj56_*` | Modest drill charge followed by a cockpit strike window. |
+
+Art is read from `GameServices.level().getObjectRenderManager().getArtProvider()`. The existing
+S1 `loadFZBossArt` already registers `fz_cylinder` (`Nem_FzBoss`, `Map_EggCyl`), `fz_segg`
+(`Nem_FzBoss` plus `Nem_Sbz2Eggman`, `Map_SEgg`), `fz_plasma_launcher` (`Map_PLaunch`) and
+`fz_plasma` (`Map_Plasma`). No engine registration change was necessary. The FZ actor uses
+`Ani_SEgg.intube` frames 5/9, not the Egg Mobile sheet, and sits on display list 4 behind
+the cylinders on list 3 (`BossFinal_ObjData2` / `EggmanCylinder_Main`). The first FZ contact
+sheet exposed the compound list ordering the actor in front; `back` corrects that ownership. Death Egg adds the sensor frames
+16–20 and bomb frame 14 from `ObjC7_MapUnc_3E5F8`.
+
+Typing design values are explicit adaptations: 240/difficulty rows per telegraph,
+480/difficulty for strikes (double for talk-back/trivia), entry 90, recovery 70, empty-pillar
+penalty/laugh 64, a 40px sideways dodge (72 for the slam), 40px hop height with 22-row outbound
+and return legs, and the existing 120-row explosion/80-row departure presentation. Emerald
+Hill charges to the camera-relative arena edge and returns at the sourced 2px speed; bomb
+flight ends at the stand floor under sourced gravity, then waits the native 64-row fuse.
+Death Egg uses one native stride, not every group step
+of the original walk. The controlled stand cannot reproduce native collision improvisation;
+the exposed-window rule is the typing adaptation. The twelve-hit demo takes about four
+minutes at its simulated human typing speed. Training/attract limits should use `demoRows=0`
+when recording a complete fight.
+
+Verification and rejected approaches:
+
+- The generic hover/lunge and FZ orbiting Egg Mobile from base `67d14a5ef` are superseded:
+  they have none of the original piston selection or attack order. Stock AI takeover was
+  rejected by the lead design because native timers cannot wait for typing; it was not tried.
+- A shortened GHZ pendulum was rejected: the rig now uses `GBall_PosData`'s full 96px chain,
+  and the swing comes from `GBall_Move`'s angle/speed accumulator.
+- The first GHZ contact sheet showed the initial 128px travel clipping the craft at the left
+  of the Boss Rush view. Replaced that travel with the owning routines' 64-row wait and 64px
+  pass, alternating direction, and kept the pendulum accumulator across rounds. Camera-relative
+  bounds are an arena adaptation, not native world addresses. This was a visual correction,
+  not a timing fit to make the tests pass.
+- The initial S2 demo checks stopped at the default 7,200-row attract limit, with six/seven
+  hits and no ring/life loss. Setting `demoRows=0` in the harness, rather than changing boss
+  timing/durability, proves both complete. The four 400px demo checks retain all ten rings
+  and three lives. Typed/untyped dodge and wrong/right pillar checks exercise actual input
+  through the packaged mod and production frame controller.
+- A negative art control temporarily changed the new FZ launcher to frame 999. Its real
+  registration assertion failed and the table was restored before the full focused set.
+- The change-based plan against `67d14a5ef` falls back to 3,095 classes because example paths
+  are unclassified. Focused validation is proportionate: this lane changes only the example
+  puppet code/data plus its tests, with no engine/public API/physics/build policy changes.
+  The requested `TestTypingHedgehog*` set covers packaging, rails, prior homing, art tables,
+  and the new Boss Rush behaviors. Java 21/Lua 5.4/PowerShell preflight passes with
+  `LUA_BIN=/usr/bin/lua5.4`; the ambient `lua` is 5.5 and was correctly rejected initially.
+
+Implementation landed in `8c511e1f7` on `feature/ai-typing-hedgehog-bosses`, based on
+`67d14a5ef`. The rejected hover/FZ-orbit source is that base; the shortened/overtravel
+pendulum, foreground FZ actor and 7,200-row test limit were uncommitted iterations of
+this change, with their kill evidence described above. No rejected code is retained.
+
+Final verification of the implementation source (the documentation follow-up changes no code).
+`OPENGGF_ROM_ROOT` is the absolute checkout directory containing the three user-supplied ROMs:
+
+```bash
+mvn -Dmse=off compile
+python3 examples/build_example.py typing-of-the-hedgehog --skip-engine
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestTypingHedgehog*' \
+  "-Dsonic1.rom.path=$OPENGGF_ROM_ROOT/s1.gen" \
+  "-Dsonic2.rom.path=$OPENGGF_ROM_ROOT/s2.gen" \
+  "-Ds3k.rom.path=$OPENGGF_ROM_ROOT/s3k.gen" test
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 67d14a5ef --preflight
+```
+
+Compile and packaging passed; the validator reports twelve engine-internal reference
+warnings and no errors. The final focused run finished 2026-10-10 10:04 BST: **66 tests,
+0 failures, 0 errors, 0 skipped**. The seven new Boss Rush/dodge/pillar checks are included.
+All four demo wins retain three lives and ten rings (GHZ 4,682 fight rows; FZ 6,592;
+EHZ 8,567; DEZ 13,849). S1 art tables check 100 uses across two rail acts; S2 checks 58
+across two. S3K reports no shipped rails, rather than an unexplained JUnit skip. The negative
+control command used `--lean -Dtest=TestTypingHedgehogBosses#onlyRobotniksPillarTakesDamage`
+and the absolute S1 ROM path: one intentional failure, no errors/skips, specifically
+`fz_plasma_launcher frame=999`, then the source was restored. Focused validation is not
+an engine full-suite pass.
+
+Captures are under the external `typing-hedgehog/` task directory
+(`TYPING_HEDGEHOG_CAPTURE_ROOT`), produced by the task-owned
+`bosses-course-capture.sh` (WT points only to this lane), with `EVERY=2 FPS=30`, 400px,
+Boss Rush, NORMAL, seed 11 and `demoRows=0`:
+
+| Boss | Script arguments | Movie and state | Contact sheet |
+| --- | --- | --- | --- |
+| Green Hill | `s1 0 3 0 2 BOSS_RUSH 5400 ghz 11` | `captures/bosses-ghz/{capture.mp4,state.csv}` | `bosses-ghz-contact.png` |
+| Final Zone | `s1 6 1 6 0 BOSS_RUSH 7500 fz 11` | `captures/bosses-fz/{capture.mp4,state.csv}` | `bosses-fz-contact.png` |
+| Death Egg | `s2 10 1 10 0 BOSS_RUSH 14800 dez 11` | `captures/bosses-dez/{capture.mp4,state.csv}` | `bosses-dez-contact.png` |
+| Emerald Hill | `s2 0 2 0 1 BOSS_RUSH 9500 ehz 11` | `captures/bosses-ehz/{capture.mp4,state.csv}` | `bosses-ehz-contact.png` |
+
+Read each state CSV before inspecting images (zero native death rows), generated each
+contact sheet with ffmpeg `tile=6x4`, and inspected all four. Each film reaches the win;
+GHZ was recaptured after the patrol correction and FZ after layer correction. DEZ/EHZ's
+sampled robot/drill motion is unchanged by the S1 layer correction. ffprobe confirms all
+movies are 1200×672 (3× the 400×224 logical view) at the tool's effective 15fps. The stride
+aliases one-frame GHZ ball flicker; the capture hazard is recorded in the existing
+measurement catalogue.
+
+Limits: these are choreographed typing encounters, not native-AI/collision parity. The walk
+uses one sourced stride with reduced limb poses, the punch uses one rocket fist, and the
+existing shared explosion/departure presentation remains. Testing/captures cover Sonic-only
+400px NORMAL Boss Rush, plus the inherited typing/rail suite; this lane does not certify all
+difficulties, donor/character combinations or native level rewind matrices. The launcher
+width requirement and 400px rails remain the rails lane's integration responsibility. No
+engine production code, rail files/builder/gate, `Course` methods, `Encounter`/`Effects`, hub
+screens or HUD banners changed; only `Hud.drawBoss` changed for prompt anchors/hit pips.
