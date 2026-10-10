@@ -1,0 +1,721 @@
+# Original Three Islands dialogue. @name starts a scene; > is a physical observation or written text.
+
+@prologue
+Flicky: Eggman's machines have blocked the road to the city. We can't get anyone through.
+Sonic: Is anybody hurt?
+Flicky: Not here. We don't know about the people on the other side.
+Sonic: I'll go and check.
+
+@south-arrive
+Flicky: Sonic! We tried to leave, but there's a barrier across the Star Light trail.
+Sonic: When did it go up?
+Flicky: Last night, when those machines arrived. There are rings opening over the sea, too.
+Sonic: Stay away from them for now. I'll find out what's happening and get the road open.
+
+@village-south
+Flicky: You can rest here. We've got supplies to share.
+Pocky: If you need more, my stall's open.
+
+@ghz-enter
+Flicky: My sister went into the seaside shrine to collect our things. The machines shut the gate behind her.
+Sonic: Is she still in there?
+Flicky: I heard her calling this morning. I couldn't get past the guards.
+Sonic: I'll bring her out. Wait here where she can find you.
+
+@ghz-boss
+Sonic: The shield's down. Now I can reach the machine running that barrier.
+Sonic: It's revving that engine. When it charges up, I'd better brace myself.
+
+@ghz-clear
+Sonic: That did it. The barrier's off.
+Sonic: The plate on this machine says "Rift Anchor. Star Light installation."
+Sonic: I'd better see what he's built in the city.
+
+@slz-enter
+Rocky: Are you coming from Green Hill? We've had no word since the road closed.
+Sonic: It's open now. What happened here?
+Rocky: Eggman's robots took the observatory's equipment. They've put a lens on the relay and a Chaos Emerald in that Bomb.
+Sonic: An emerald? That explains the power.
+Rocky: I kept the maintenance log in the vault. They drove me out before I could get it.
+
+@slz-boss
+Sonic: Easy with that fuse. I need the emerald in one piece.
+Sonic: And it's rolling out little bombs. Better knock those over before their fuses run down.
+
+@slz-clear
+Sonic: Got the emerald. The anchor's stopped, and the Spring Yard road is clear.
+Sonic: Eggman must be using the city's equipment to control those rings.
+
+@syz-enter
+Pocky: Eggman's taken over the freight yard. We've had to close the stalls.
+Sonic: Is he still here?
+Pocky: Yes. He keeps sending crates through that big ring. Won't let anyone near the controls.
+Sonic: Thanks. You can get back to Green Hill now if you need somewhere safe.
+
+@syz-boss
+Sonic: I've seen your shipping records. You're moving the islands, not just the freight.
+Eggman: Bringing them within reach. Why invade three islands when I can bring all three to my base?
+Sonic: There are people living on them. You're pulling them into each other.
+Eggman: The Convergence Engine is under my control.
+Sonic: Then turn it off.
+Eggman: I haven't built all this to hand it over to you.
+
+@syz-clear
+Sonic: Another emerald. Your anchor's finished, Eggman.
+Eggman: A local controller. The engine is still running, and you haven't reached it.
+Sonic: Running away won't stop me following you.
+Sonic: ...He's gone through the ring. The voice on the relay said the other end was safe. I hope he's right.
+
+@west-arrive
+Tails: You heard my transmission!
+Sonic: Loud enough. Thanks for keeping the ring open. I'm Sonic.
+Tails: I'm Tails. I connected my radio to one of Eggman's relays. I was trying to get help.
+Sonic: He's using something called the Convergence Engine to pull the islands toward his base.
+Tails: That fits what I've measured. The coast is closer than it was yesterday.
+Sonic: I can break his robots. I could use some help with the controls.
+Tails: I know a bit about them now. I'd like to come.
+Sonic: Alright. Show me what you've found.
+
+@village-west
+Tails: We can stop at the workshop. I've got tools and spare parts there.
+Ricky: And somewhere to sit. You both look tired.
+
+@ehz-enter
+Tails: My workshop's under the hill. I had to leave most of my equipment when the robots came.
+Sonic: You built that meter there?
+Tails: Yes. It follows the relays' signals, but I couldn't finish testing it.
+Sonic: Let's see what's left of your work.
+
+@ehz-boss
+Tails: The chief's still got power, even without the shield.
+Sonic: Keep clear of those coconuts. I'll get its attention.
+
+@ehz-clear
+Tails: The barrier's down. This controller was connected to the plant across the bay.
+Sonic: Can you follow the connection?
+Tails: Yes. My meter's working properly now.
+Sonic: Good. Let's go.
+
+@cpz-enter
+Tails: The emergency alarm's on. Those lower tunnels should have drained by now.
+Sonic: I can hear somebody banging on a pipe.
+Tails: The pumps may have stopped. There's a service room in the station.
+Sonic: Hang on down there! We're looking for a way to help!
+
+@cpz-boss
+Tails: The Grabber's carrying the emerald. Watch above you.
+Sonic: I see it. Stay back from the claws.
+Tails: If it catches one of us, hit it hard. It lets go when it's hurt.
+
+@cpz-clear
+Tails: The anchor's off. The pumps should be able to keep up now.
+Sonic: And the road out is open. They'll have somewhere to go.
+Tails: I'm still picking up a signal from the mine.
+Sonic: Let's check it.
+
+@mcz-enter
+Tails: There used to be miners down here. I haven't seen anyone at the entrance.
+Sonic: The robots look new. Eggman's using the place for something.
+Tails: We should be careful. There isn't much room to get out of their way.
+
+@mcz-boss
+Tails: It looks like you.
+Sonic: It moves like me, too. Watch its feet before it charges.
+Tails: Those spikes are sharp. If it curls up, a plain hit will bounce back. Use a shield or my Energy Ball instead.
+
+@mcz-clear
+Tails: The mine's clear. I'm getting a much stronger signal from Angel Island.
+Sonic: Can we reach it through that ring?
+Tails: Yes. The relay lists a landing point in the jungle. I've checked the route.
+Sonic: Then that's where we go next.
+
+@angel-arrive
+Tails: This is Angel Island. It shouldn't be this low.
+Sonic: Is the engine pulling it down?
+Tails: That may be part of it. I don't know enough about what keeps it up.
+Sonic: Then we'd better find someone who does.
+
+@village-angel
+Flicky: Knuckles looks after the shrine. He hasn't been letting anyone near the equipment.
+Pocky: I think he's worried somebody will damage it.
+
+@aiz-enter
+Sonic: Smoke. There's a fire ship in the trees.
+Tails: And the robots are guarding the shrine.
+Sonic: Let's keep away from the flames. There may still be people in there.
+
+@aiz-mid
+Eggman: Step away from the relay!
+Sonic: You've set the jungle on fire. Call off the ship.
+Eggman: You shouldn't have come here.
+
+@aiz-boss
+Knuckles: Don't touch that anchor.
+Sonic: It's blocking the road. We need to get through.
+Knuckles: The doctor said it would keep the island stable until he returned the Master Emerald.
+Tails: We've found a record of where he sent it. He's been using it to power his engine.
+Knuckles: He warned me you'd try to shut this down. Move away from the controls.
+Sonic: Knuckles, he's lying to you.
+Knuckles: I'm not risking the island on your word.
+
+@aiz-clear
+Knuckles: Stop. Let me see that record.
+Tails: Here. His supply station logged the Master Emerald aboard the Death Egg. Then he ordered more power from it.
+Knuckles: He told me it was being repaired. I let him take it.
+Sonic: You didn't know what he was doing.
+Knuckles: I should have checked. This cable doesn't even run back to the altar.
+Tails: Can you switch the anchor off safely?
+Knuckles: Yes. And take this Chaos Emerald out of it. We won't need his barrier anymore.
+Knuckles: I'm coming with you. I need to get the Master Emerald back.
+Sonic: We could use your help.
+
+@hcz-enter
+Knuckles: These waterways run beneath the island. The old spillways keep the lower chambers from flooding.
+Tails: Eggman's attached a turbine to them. He's drawing power for another shield.
+Knuckles: There are channel plans in the sanctuary. I haven't needed them before.
+
+@hcz-boss
+Knuckles: You said you were repairing the Master Emerald.
+Eggman: And you believed me. Now get away from my machinery.
+Sonic: We'll get it back, Knuckles. Watch the drill.
+Tails: And the depth charges. If one lands beside you, guard before it goes off.
+
+@hcz-clear
+Knuckles: The anchor's stopped. Water's getting through the spillways again.
+Eggman: You're wasting your time. The engine is already aboard the Death Egg!
+Tails: The signal runs toward Launch Base. He was heading there anyway.
+Sonic: Then we follow him.
+
+@lbz-enter
+Tails: The Death Egg's still on the tower. That's where the engine signal is coming from.
+Knuckles: Those cables are drawing power through the island's foundations.
+Sonic: Can we get aboard?
+Tails: There's a service ring, but the launch system has locked it.
+
+@lbz-boss
+Eggman: You're not getting aboard my ship.
+Sonic: Then you'll have to stay here and stop us.
+Tails: That orb projects a barrier. One of us alone won't get through it.
+Knuckles: Then we hit it together.
+
+@lbz-clear
+Tails: The Beam Rocket's down. The service ring is open.
+Knuckles: The ship's starting to lift off.
+Tails: The ring stays connected to its dock. We can still get aboard.
+Sonic: Everybody ready?
+Knuckles: Go. I'm right behind you.
+
+@death_egg-arrive
+Tails: We're inside. The service ring can take us back as long as the engine's running.
+Knuckles: So we need another way out before we shut it down.
+Tails: There are escape pods at the dock. I'll check their controls.
+Sonic: Good. Let's make sure we can all get home.
+
+@village-death_egg
+Tails: The dock's clear for now. We can rest here before we go further.
+Knuckles: I'll keep watch.
+
+@dez-enter
+Tails: The engine's controls only show the islands' current positions. We'll need the original survey to send them back.
+Knuckles: And we'll need to reduce the load before I remove the Master Emerald.
+Sonic: Can you two work out the shutdown?
+Tails: The archive should have the operating records. Let's look there.
+
+@dez-mid
+Tails: Another guard. It's blocking the core entrance.
+Sonic: Looks tougher than the one in the mine. Don't let it get between us.
+
+@dez-boss
+Eggman: Stay back! Disconnect that engine and you'll bring the whole ship down!
+Tails: Look at the core's colour. It changes the element it's weak to every round.
+Tails: We've opened the return channel. The islands can separate safely now.
+Knuckles: And I've seen your power readings. You can't keep running it like this.
+Eggman: I can still finish this!
+Sonic: You've had enough chances. We're shutting it down.
+
+@dez-clear
+Knuckles: The core's stopped. I'm taking the Master Emerald out.
+Tails: The return channel's carrying the remaining power. The islands are moving apart.
+Sonic: What about the ship?
+Tails: Losing altitude. We need to leave now.
+Knuckles: I've got the emerald. Let's go.
+
+@ending
+Tails: The pod landed close to the beach. Is everyone alright?
+Sonic: I'm fine. Knuckles?
+Knuckles: Fine. And the Master Emerald's safe. I'll need help getting it back to the altar.
+Tails: I can bring the Tornado over. She's still at my workshop.
+Sonic: We'll help. I want to check on the people in Green Hill first.
+Knuckles: Alright. I'll come with you.
+> THE END. Thank you for playing!
+
+@ghz-friend
+Flicky: We used to store food in the shrine. My sister thought she'd have time to get it before the robots arrived.
+Sonic: Did she know another way out?
+Flicky: There's only the main gate. Please be careful.
+Flicky: And Sonic... the robots took animals from all over to run their engines. Some escaped and got lost.
+Flicky: If you find any hiding, tell them to come here. We'll look after them. One's stuck on the orchard island, past the flooded crossing.
+
+@ghz-memory
+Sister: Sonic! Is my sister alright?
+Sonic: She's waiting outside. Are you hurt?
+Sister: No. They locked me in when I tried to stop them taking our things.
+Sonic: We can get out now. What's this switch handle doing on the altar?
+Sister: A robot brought it in from the machine outside. There's a red socket where it used to fit.
+Sonic: I'll take it with us. Come on.
+
+@ghz-dungeon-enter
+Sister: Hello? Can you hear me?
+Sonic: Yes! Keep away from the gate. I'm coming in.
+
+@ghz-rescue
+Flicky: I was so worried. Are you alright?
+Sister: I'm fine. Sorry I went in on my own.
+Flicky: It doesn't matter. Come and sit down.
+Sonic: Stay here together. I'll deal with the barrier.
+
+@ghz-signal
+Sonic: The handle fits the red socket. It's marked "Shield supply."
+Sonic: Off. That should make the big robot easier to reach.
+Sonic: The road barrier's still on. It must have a separate supply.
+
+@ghz-camp
+Flicky: Do you need anything before you go?
+Sonic: A minute to sit down would be good.
+Flicky: We've got room here.
+
+@slz-friend
+Rocky: I looked after the observatory for thirty years. They took it apart in an afternoon.
+Sonic: We'll get you back in.
+Rocky: I'd like that. There are people here who still need a place to work.
+
+@slz-memory
+Sonic: Here's the maintenance log. The relay uses the observatory's old alignment controls.
+Sonic: Rocky wrote down the release setting. That should let me turn the lens away from the shield receiver.
+
+@slz-signal
+Sonic: Release set. Now the lens will turn.
+Tails: ...can anyone hear me? I'm on West Side Island. We need help.
+Sonic: I can hear you. Where on West Side?
+Sonic: Lost the signal. At least the shield receiver isn't getting power now.
+
+@slz-camp
+Rocky: I keep thinking there's something I should have done before they got in.
+Sonic: There were a lot of them. Getting everyone out was enough.
+Rocky: We did manage that.
+
+@syz-friend
+Pocky: I had to leave most of my stock in the yard. There's medicine in those crates.
+Sonic: Have you got enough here?
+Pocky: Enough for now. I'd rather lose the stock than send somebody in after it.
+
+@syz-memory
+Sonic: These aren't ordinary shipping records. The map shows all three islands being moved toward Eggman's base.
+Sonic: There's a separate order for the Master Emerald, too. "Collection authorised by island guardian."
+Sonic: And a freight terminal access code. I'll keep that.
+
+@syz-signal
+Sonic: The terminal accepts the freight code. Shield supply disconnected.
+Tails: This is Tails, on West Side Island. I've secured the receiving end of the ring. Is anyone there?
+Sonic: Sonic. I can hear you. There's still an anchor blocking this end.
+Tails: I'll keep the connection open. Please be careful.
+
+@syz-camp
+Pocky: I haven't closed this stall in years. Feels strange to leave it.
+Sonic: You don't have to decide now. The road back is open if you need it.
+Pocky: Thanks. I'll check on the others first.
+
+@ehz-friend
+Ricky: Tails kept working on that radio after the rest of us went to bed.
+Tails: I didn't know if it was reaching anyone.
+Ricky: Well, somebody turned up.
+Sonic: I'm glad you kept at it.
+
+@ehz-memory
+Tails: My test notes are still here. I was measuring the relay's shield frequency when the robots arrived.
+Sonic: Does that help?
+Tails: Yes. I can tune the meter to it and disconnect the right circuit. I didn't want to cut the workshop's power by mistake.
+
+@ehz-signal
+Tails: That's the shield circuit. I'm switching it off.
+Sonic: You've got it?
+Tails: Yes. The workshop still has power. The controller on the hill doesn't need its own emerald; it's fed from the plant.
+
+@ehz-camp
+Tails: I'm not used to fighting. I keep looking at the controls and forgetting to watch the robots.
+Sonic: Stay where I can see you. If you need a moment, say so.
+Tails: Okay. Thanks.
+
+@cpz-friend
+Ricky: My friends are still below the south tanks. I got out before the water reached the stairs.
+Tails: How high was it?
+Ricky: Up to the bottom landing. They went to the upper platform to wait.
+Sonic: Then we know where they are. Stay clear of the pipes while we work.
+
+@cpz-memory
+Tails: This chart shows what happened. Eggman diverted power from the drainage pumps to the shield generator.
+Sonic: Can we put it back?
+Tails: Yes. The transfer switch is on the relay. This chart identifies the pump circuit.
+
+@cpz-signal
+Tails: Supply transferred to the pumps. Can you hear them starting?
+Sonic: Yes. And somebody's calling from below.
+Tails: The level gauge is falling. The stairs should be clear soon.
+Sonic: Good. Now we can get rid of the robot guarding their way out.
+
+@cpz-camp
+Tails: I know these machines. I wish I'd noticed what Eggman was changing sooner.
+Sonic: You weren't allowed in here.
+Tails: I know. It still bothers me.
+Sonic: Let's get everyone out first.
+
+@mcz-friend
+Rocky: A silver robot drove us out of the workings. It keeps patrolling the same stretch of track.
+Sonic: Does it come this far?
+Rocky: Not yet. We've been staying near the entrance in case we have to leave.
+
+@mcz-memory
+Tails: The mine ledger includes a delivery to the Death Egg. "Master Emerald received from Angel Island."
+Sonic: So Eggman has it. What's it for?
+Tails: I don't know yet. There's a drawing of it supporting a floating island.
+Tails: The ledger also lists the relay's service frequency. I can use that to reach its shield controls.
+
+@mcz-signal
+Tails: The service channel's responding. Shield supply is off.
+Sonic: Does that shut down the robot too?
+Tails: No. It has its own battery. We'll still have to get past it.
+
+@mcz-camp
+Tails: My radio won't reach the workshop from this far underground.
+Sonic: Want to head back for a bit?
+Tails: No. Just making sure I know what works down here.
+
+@aiz-friend
+Flicky: Knuckles helped us out of the fire. Then he went back toward the shrine.
+Sonic: Is that the guardian?
+Flicky: Yes. He's been trying to keep everyone away from Eggman's equipment.
+Tails: He must think it's helping.
+
+@aiz-memory
+Tails: Someone's left maintenance papers beside the memorial.
+Sonic: Anything about the Master Emerald?
+Tails: A load report from the Death Egg. It proves they're drawing power from it, not repairing it.
+Tails: There's an access code for this relay on the service sheet, too.
+Sonic: Bring the report. The guardian ought to see it.
+
+@aiz-signal
+Tails: Access code accepted. The protection field is down around the ship and the anchor controls.
+Sonic: The fire ship's still running. Keep behind me when we approach it.
+Tails: I've kept the report dry. We can show it to the guardian when it's safe.
+
+@aiz-camp
+Tails: The smoke's getting into everything.
+Sonic: Take a break. The wind's blowing away from this spot.
+Tails: Just for a minute.
+
+@hcz-friend
+Flicky: Knuckles? We didn't know if you could get down here.
+Knuckles: I'm sorry it took so long. Is everyone out of the lower rooms?
+Flicky: Yes. We're waiting here until the water settles.
+
+@hcz-memory
+Knuckles: This mural shows the intake, the storage chambers and the spillways. All within the island.
+Tails: These marks match the valves on the relay. We can route water around Eggman's turbine.
+Knuckles: The old builders left room for repairs. I should have learned more about this place.
+
+@hcz-signal
+Knuckles: This valve's stiff. Give me a hand.
+Sonic: Got it.
+Tails: The bypass is open. The water can drain without turning the shield turbine.
+Knuckles: Good. Leave the spillway open.
+
+@hcz-camp
+Knuckles: I let him take it. That's what I keep coming back to.
+Tails: He had machines and drawings. He made it look convincing.
+Knuckles: I still let him.
+Sonic: And you're helping us get it back. We can talk about the rest later.
+
+@lbz-friend
+Pocky: They made us clear the loading platform. Some of my friends are still working aboard the ship.
+Tails: Is there another way to the dock?
+Pocky: There's a service ring. Workers use it when the lifts are shut down.
+
+@lbz-memory
+Tails: These flight records include the engine's shutdown procedure. It needs a controlled discharge before the core stops.
+Sonic: So we can't just break it.
+Knuckles: Not while it's drawing that much from the Master Emerald. I can disconnect it once the load drops.
+Tails: There's a mooring release code here too. The launch shield and the service-ring lock use the same controller.
+
+@lbz-signal
+Tails: Mooring release accepted. The supply cables are disconnected, and the shield is off.
+Knuckles: That stops it drawing more power from the island.
+Tails: The Beam Rocket still holds the service ring closed. That's a separate lock.
+Sonic: Then we deal with that next.
+
+@lbz-camp
+Knuckles: I've never been off the island before.
+Tails: Really?
+Knuckles: There was always something here that needed doing.
+Sonic: We'll make sure you get back.
+
+@dez-friend
+Ricky: I was unloading supplies when the ship started moving. They never told us it was launching.
+Tails: We've come to shut the engine down. The escape pods are still working.
+Ricky: I know the dock controls. I'll get the other workers ready to leave.
+
+@dez-memory
+Tails: Here's the original survey in the convergence schedule. It records where each island was before the engine started.
+Knuckles: Can you use it?
+Tails: Yes. I've copied the positions and the discharge settings. We can return the islands without guessing.
+
+@dez-signal
+Tails: Original positions loaded. The return channel is ready, but the core is still holding the islands in place.
+Knuckles: When it stops, the load should drop enough for me to remove the Master Emerald.
+Tails: The discharge setting also cuts the core's protection field. We can reach it now.
+Sonic: Alright. Stay close.
+
+@dez-camp
+Tails: I've checked the pod controls. They'll run on their own batteries if the main power goes.
+Knuckles: Enough room for the emerald?
+Tails: It'll be a tight fit. We'll manage.
+
+@slz-dungeon-enter
+Sonic: They've left guards on the vault. Rocky's log must still be in here.
+
+@syz-dungeon-enter
+Sonic: These tunnels run underneath the freight yard. Looks like they're using them for storage.
+
+@ehz-dungeon-enter
+Tails: The back room was my workbench. I used to come down here when I needed somewhere quiet.
+Sonic: Anything we should avoid touching?
+Tails: Most of it, until I check the wiring.
+
+@cpz-dungeon-enter
+Tails: This is the pump station's service room. The guards are new.
+Sonic: Then we'll have to get past them.
+
+@mcz-dungeon-enter
+Tails: The miners built around an older shrine. Eggman's been storing his records in it.
+Sonic: It's dry, at least. Let's see what he left.
+
+@aiz-dungeon-enter
+Tails: He's put guards inside the guardian's own shrine.
+Sonic: We'll clear them out. Watch the corners.
+
+@hcz-dungeon-enter
+Knuckles: The sanctuary. I remember coming here when I was younger.
+Tails: Do you know the layout?
+Knuckles: Some of it. Eggman's added those gates.
+
+@lbz-dungeon-enter
+Tails: The vault's below the launch platform. The control cables run through here.
+Knuckles: Those supports weren't built to carry a ship this size.
+
+@dez-dungeon-enter
+Tails: This is the archive. The records should still be readable if the power holds.
+Sonic: I'll watch for guards while you look.
+
+@ghz-garden-verse
+> Three bells are marked with a setting sun, a rising sun and a sun overhead.
+> An old work schedule reads: "Tools down at sunset. Back at sunrise. Lunch when the sun is overhead."
+Sonic: An old work bell. Looks like somebody added a lock to it.
+
+@ghz-garden-song
+> The bell mechanism opened a compartment holding a Lightning Shield and a faded photograph of the garden crew.
+> A note on the back reads: "Spare equipment. Please put it back when you're finished."
+Sonic: I'll make sure it gets used.
+
+@ghz-orchard-note
+> The gardener's sketch shows two channels feeding the orchard basin and a footbridge beneath the waterline.
+> "West wheel turns again. Still flooded. Must check the other inlet before I try crossing."
+
+@ghz-orchard-letter
+> A sealed tin holds a 1-Up and a letter to the gardener.
+> "We cleared the path by the old tree. I've left supplies here so you don't have to carry them over every morning."
+Sonic: The seal held. These should still be good.
+
+@ghz-horizon
+Sonic: There's land beyond the water that I couldn't see yesterday.
+Sonic: Hard to judge from here. I hope the people over there are alright.
+
+@south-purpose
+Sonic: Eggman's machines have cut off the roads. I need to get them open and find out what he's doing to the island.
+
+@west-purpose
+Tails: The Convergence Engine is pulling the islands toward Eggman's base. We need to reach it before they collide.
+
+@angel-purpose
+Sonic: We need to find the Master Emerald and stop the engine. We also need to understand what keeps this island in the air.
+
+@death_egg-purpose
+Tails: Prepare a safe return for the islands, stop the core, then recover the Master Emerald. The escape pods are our way out.
+
+@ghz-relay-sealed
+Sonic: The switch handle's missing. There's a red socket, but nothing I can turn.
+
+@ghz-friend-after
+Flicky: We're staying together from now on. Neither of us wants to go back in there.
+
+@slz-relay-sealed
+Sonic: The lens is locked in place. I don't want to break it if there's a release.
+
+@slz-friend-after
+Rocky: You got into the vault? Thanks. I was worried we'd lost all the records.
+
+@syz-relay-sealed
+Sonic: It needs a freight terminal code. Nothing else on this panel responds.
+
+@syz-friend-after
+Pocky: Thanks for checking the yard. I'll wait until it's safe before I go back for the stock.
+
+@ehz-relay-sealed
+Tails: I can see several signals here. I need to identify the shield circuit before I switch anything off.
+
+@ehz-friend-after
+Ricky: Tails looks relieved. He thought they'd destroyed everything in the workshop.
+
+@cpz-relay-sealed
+Tails: This is the transfer switch, but the circuit labels are worn off. I need the wiring chart.
+
+@cpz-friend-after
+Ricky: Thanks for looking into the pump controls. I'll stay near the pipe so my friends can hear me.
+
+@mcz-relay-sealed
+Tails: It's locked to a service frequency. There should be a record of it in the mine's equipment log.
+
+@mcz-friend-after
+Rocky: I'm glad the ledger survived. We'll need those records when we can work again.
+
+@aiz-relay-sealed
+Tails: It needs a maintenance code. The control box has the same markings as the equipment in the shrine.
+
+@aiz-friend-after
+Flicky: You got into the shrine? Thank you. Knuckles will want to know it's safe.
+
+@hcz-relay-sealed
+Knuckles: I recognise the valves, but not these settings. I'd rather check the channel plan than flood another room.
+
+@hcz-friend-after
+Flicky: Thank you for checking the sanctuary. We've been afraid to go down there since the machines arrived.
+
+@lbz-relay-sealed
+Tails: The release controls are locked. The launch records should include the service code.
+
+@lbz-friend-after
+Pocky: If you get aboard, tell the workers to head for the escape pods. They were shown how to use them when they arrived.
+
+@dez-relay-sealed
+Tails: The return channel needs the original survey. These are the positions Eggman wants, not where the islands belong.
+
+@dez-friend-after
+Ricky: We're getting the pods ready. I'll leave one at this dock for you.
+
+# Equipment, lost animals and their gifts.
+
+@gear-tutorial
+Sonic: Looks like somebody stored gear in this monitor.
+> Accessories change a hero's strength, speed or element. Each hero can wear one. Choose Menu, then Equip.
+> Elemental charms also protect the wearer from that element's status: burns, soaking or stuns.
+
+@ghz-animal
+> A small pig is hiding among the orchard trees, trembling.
+Sonic: Hey, it's alright. The robots are gone from here.
+Sonic: The Flicky sisters are looking after everyone who got lost. It's not far.
+> The pig trots off toward the village.
+
+@slz-animal
+> A seal has squeezed itself behind a broken street lamp.
+Sonic: Rocky's been worried about you lot. The road to Green Hill's open now.
+> The seal flops away down the promenade, honking happily.
+
+@syz-animal
+> A squirrel peers out of an empty freight crate.
+Sonic: You came off one of those robots, didn't you? Go on, the coast is clear.
+> The squirrel scampers along the freight track toward Green Hill.
+
+@ehz-animal
+> A turtle has wedged itself between two waterfall rocks.
+Tails: It must have dropped out of a Coconuts. They keep animals inside to power them.
+Sonic: Then let's send it somewhere safer. The Flicky sisters will look after it.
+> The turtle paddles off through the stream.
+
+@cpz-animal
+> A rabbit is sitting very still beside a cooling pipe.
+Tails: It's not hurt. Just scared of the pumps.
+Sonic: Head for the Warp Ring, little one. It'll take you home.
+> The rabbit bounds toward the ring.
+
+@mcz-animal
+> A seal pup blinks at the party from the bottom of a mine shaft.
+Tails: How did it even get down here?
+Sonic: Same way as us, probably. Out you come.
+> The seal follows the miners' rope up to the surface.
+
+@aiz-animal
+> A squirrel is perched in a scorched tree, refusing to come down.
+Tails: The fire's out. You can come down now.
+Sonic: Come on. We'll even let you ride the Warp Ring.
+> The squirrel leaps down and darts off through the jungle.
+
+@hcz-animal
+> A Flicky is sheltering under a dry ledge above the water.
+Tails: Its wings are wet. It couldn't fly out.
+Knuckles: Give it a minute. The water's going down now.
+> The Flicky shakes itself dry and flutters toward the surface.
+
+@lbz-animal
+> A rabbit is hiding inside an empty fuel drum.
+Tails: There are dozens of empty animal pods on that cargo list. He loaded them onto the Death Egg.
+Knuckles: Then this one's going home first.
+> The rabbit hops into the service ring's glow and is gone.
+
+@dez-animal
+> A Flicky is beating its wings against a cage in the archive.
+Sonic: Hold still. There. You're out.
+Tails: The escape pods have room for one more passenger.
+> The Flicky darts down the corridor toward the dock.
+
+@animals-3
+> A Flicky lands on Sonic's shoulder carrying a tiny parcel, and a message from the Flicky sisters.
+Flicky: "Three friends are home! They dug this up for you. It always brings us luck."
+
+@animals-6
+> A flock of birds circles overhead and drops a parcel into Tails' hands.
+Flicky: "Six of us are home now! Everyone wanted to give you something. Please keep it close."
+
+@animals-10
+> Every rescued animal turns up at once: pigs, seals, squirrels, rabbits, turtles and a cloud of Flickies.
+> Together they present a gold medal, polished and threaded on a ribbon.
+Flicky: "That's everybody. Every single one. Thank you, all of you."
+Sonic: You didn't have to do this.
+Knuckles: Just take it. They clearly want you to.
+
+# Rift Echoes: optional duels once an island's anchors have fallen.
+
+@syz-echo
+> The Warp Ring hums. Two shapes flicker out of it: the Giga Motobug and the Bomb King, both in violet light.
+Sonic: I already beat you two. Didn't I?
+> Neither machine answers. They step forward together.
+Sonic: Okay. If the ring's leaking old fights, I'll close it the hard way.
+
+@mcz-echo
+> Light spills from the cave mouth. The Coconuts Chief and the Grabber Queen drift out of it, faint and violet.
+Tails: Those are rift echoes! The ring's replaying machines from the islands' recent past.
+Sonic: Do they hit like the real thing?
+Tails: My readings say harder. We don't have to fight them.
+Sonic: Where's the fun in that?
+
+@lbz-echo
+> The service ring flares. The Flame Craft and the Screw Mobile hang in the air together, made of violet light.
+Knuckles: Both of them at once?
+Tails: Echoes. The Death Egg's engine is bending the rings. They'll fade on their own eventually.
+Knuckles: Or we can make them fade faster.
+
+@dez-echo
+> Violet light gathers near the core. Silver Sonic steps out of it beside a second Mecha Sonic.
+Tails: It's copying its own memories! This is the strongest echo yet.
+Sonic: Two of me? I'm flattered. Let's go.
+
+@echo-clear
+> The echo breaks apart like glass. Something solid clatters to the ground where it stood.
+Tails: It left something real behind. Rift energy must have pulled it in from somewhere.

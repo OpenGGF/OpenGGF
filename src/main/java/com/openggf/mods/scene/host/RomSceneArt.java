@@ -237,6 +237,12 @@ final class RomSceneArt implements SceneRomArt {
         return out;
     }
 
+    @Override
+    public com.openggf.mods.scene.SceneBackground levelBackground(int zone, int act) {
+        var background = zones == null ? null : zones.background(zone, act);
+        return background == null ? null : new RomSceneBackground(background);
+    }
+
     // Zone pictures are built on the calling thread: the ROM's reads share one channel position.
     @Override
     public boolean hasZonePictures(int zone, int act) {

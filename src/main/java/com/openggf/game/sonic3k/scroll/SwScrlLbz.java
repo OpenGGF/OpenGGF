@@ -18,6 +18,15 @@ import static com.openggf.level.scroll.M68KMath.negWord;
  * Death Egg deformation table while the LBZ launch runtime state is active.
  */
 public class SwScrlLbz extends AbstractZoneScrollHandler {
+    private boolean detachedPresentation;
+
+    /** Fresh steady-state presentation; never consults or consumes live zone event state. */
+    public static SwScrlLbz detachedPresentation() {
+        var scroll = new SwScrlLbz();
+        scroll.detachedPresentation = true;
+        return scroll;
+    }
+
     private static final int DEFAULT_BG_PERIOD_WIDTH = 512;
     private static final int VISIBLE_SCREEN_WIDTH_PX = 320;
     private static final int MAX_BG_PERIOD_WIDTH = 8192;
@@ -240,7 +249,7 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
     }
 
     private LbzZoneRuntimeState currentRuntimeState() {
-        if (!GameServices.hasRuntime()) {
+        if (detachedPresentation || !GameServices.hasRuntime()) {
             return null;
         }
         return S3kRuntimeStates.currentLbz(GameServices.zoneRuntimeRegistry()).orElse(null);

@@ -62,6 +62,9 @@ public interface ZonePictureSource {
         return null;
     }
 
+    /** Independent native-scrolling presentation, or null when this act has no profile. */
+    default DetachedBackground background(int zone, int act) { return null; }
+
     /** Whether {@link #titleCard} has the act's title card. */
     boolean hasTitleCard(int zone, int act);
 
