@@ -518,6 +518,23 @@ class TestThreeIslandsScene {
         Object puzzle = field.getClass().getField("puzzle").get(field);
         String rule = puzzle.getClass().getField("rule").get(puzzle).toString();
         int count = ((String[]) puzzle.getClass().getField("labels").get(puzzle)).length;
+        if (rule.equals("ROTATE")) {
+            for (int index = 0; index < count; index++) {
+                var facing = puzzle.getClass().getMethod("facing", int.class);
+                var target = puzzle.getClass().getMethod("target", int.class);
+                for (int turn = 0; turn < 4 && !(boolean) value(field, "puzzleOpen")
+                        && !facing.invoke(puzzle, index).equals(target.invoke(puzzle, index)); turn++) {
+                    for (Object spot : (List<?>) field.getClass().getField("spots").get(field)) {
+                        if (!spot.getClass().getField("id").get(spot).toString().endsWith("-switch-" + index)) continue;
+                        position(field, (double) spot.getClass().getField("homeX").get(spot),
+                                (double) spot.getClass().getField("homeY").get(spot) + 20);
+                        harness.press(GLFW_KEY_ENTER); play(harness, 2); finishDialogue(harness);
+                    }
+                }
+            }
+            assertEquals(true, value(field, "puzzleOpen"));
+            return;
+        }
         int[] order = rule.equals("CIRCUIT") ? new int[] {0,2} : rule.equals("SEQUENCE")
                 ? count == 4 ? new int[] {2,0,3,1} : count == 3 ? new int[] {2,0,1} : new int[] {1,0}
                 : java.util.stream.IntStream.range(0, count).toArray();

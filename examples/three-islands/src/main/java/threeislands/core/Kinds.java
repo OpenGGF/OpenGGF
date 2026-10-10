@@ -32,6 +32,24 @@ public final class Kinds {
     public static final int FLURRY = 3;
     public static final int RIVAL = 4;
 
+    // Signature mechanics layered over a foe's pattern (see Battle).
+    public static final int SIG_NONE = 0;
+    public static final int SIG_FUSE = 1;      // explodes over the party after a countdown
+    public static final int SIG_SUMMON = 2;    // calls minions while it has room
+    public static final int SIG_ENRAGE = 3;    // hits harder once below half HP
+    public static final int SIG_GRAB = 4;      // seizes a hero until hurt enough to let go
+    public static final int SIG_COUNTER = 5;   // spiked stance reflects plain blows
+    public static final int SIG_NAPALM = 6;    // fire sweeps that burn readily
+    public static final int SIG_DEPTH = 7;     // plants charges that only guarding contains
+    public static final int SIG_BARRIER = 8;   // a barrier only techs can crack
+    public static final int SIG_SUPER = 9;     // turns gold and acts twice below half HP
+    public static final int SIG_CORE = 10;     // weakness cycles each round; calls guards
+
+    // Status effects (turn counters on Combatant).
+    public static final int BURN = 0;
+    public static final int SOAK = 1;
+    public static final int STUN = 2;
+
     // Enemy movement for presentation.
     public static final int WALK = 0;
     public static final int FLY = 1;

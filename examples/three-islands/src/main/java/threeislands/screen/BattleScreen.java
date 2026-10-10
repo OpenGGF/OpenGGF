@@ -75,7 +75,9 @@ public final class BattleScreen implements Screen {
     public BattleScreen(Game game, FieldScreen field, Field.Spot spot, List<EnemyKind> group) {
         this.field = field;
         this.spot = spot;
-        this.battle = new Battle(game.progress, group, Math.min(field.zone().level, game.progress.partyLevel() + 1));
+        this.battle = spot.kind == Field.Kind.ECHO
+                ? new Battle(game.progress, group, Field.echoLevel(field.zone()), Field.echoHp(game.progress.party().size()))
+                : new Battle(game.progress, group, Math.min(field.zone().level, game.progress.partyLevel() + 1));
         for (Combatant c : battle.party) { looks.put(c, new Look()); place(c); }
         for (Combatant c : battle.foes) { looks.put(c, new Look()); place(c); }
         battle.start();
@@ -93,7 +95,8 @@ public final class BattleScreen implements Screen {
     private void music(Game game) {
         int id = Audio.MUS_MINIBOSS;
         for (Combatant foe : battle.foes) {
-            if (foe.kind == EnemyKind.KNUCKLES_RIVAL) id = Audio.MUS_KNUCKLES;
+            if (spot.kind == Field.Kind.ECHO) id = Audio.MUS_FINAL_BOSS;
+            else if (foe.kind == EnemyKind.KNUCKLES_RIVAL) id = Audio.MUS_KNUCKLES;
             else if (foe.kind == EnemyKind.CONVERGENCE_ENGINE) id = Audio.MUS_FINAL_BOSS;
             else if (foe.kind.boss && id == Audio.MUS_MINIBOSS) id = Audio.MUS_BOSS;
         }
@@ -102,31 +105,67 @@ public final class BattleScreen implements Screen {
 
     // ------------------------------------------------------------------ layout
 
-    /** Assemble the formation on walkable ground in the encounter's unchanged camera. */
+    /**
+     * The party steps from where it stood into a staggered line on the left, the foes onto the
+     * right: a fixed stage in the encounter's unchanged camera, so nobody overlaps a wall label
+     * or another fighter whatever the local terrain looks like.
+     */
     private void place(Combatant c) {
         double startX = c.isHero() ? field.sx(c.slot == 0 ? field.field().x() : field.field().followerX(c.slot))
                 : field.sx(spot.x(0)) + c.slot * 12;
         double startY = c.isHero() ? field.sy(c.slot == 0 ? field.field().y() : field.field().followerY(c.slot))
                 : field.sy(spot.homeY);
-        int desiredX = c.isHero() ? 148 - c.slot * 36 : 250 + c.slot * 44;
-        int desiredY = 130 + (c.slot % 2) * 12;
-        double best = Double.MAX_VALUE;
-        int chosenX = (int) startX, chosenY = (int) startY;
-        for (int y = 88; y <= 148; y += 4) for (int x = 32; x <= 364; x += 4) {
-            if (!field.field().walkable(field.worldX(x - 10), field.worldY(y))
-                    || !field.field().walkable(field.worldX(x + 10), field.worldY(y))) continue;
-            boolean free = true;
-            for (double[] other : formation.values()) if (Math.hypot(x - other[2], y - other[3]) < 30) free = false;
-            if (!free) continue;
-            double score = Math.hypot(x - desiredX, (y - desiredY) * 2);
-            if (score < best) { best = score; chosenX = x; chosenY = y; }
+        int[] at;
+        if (c.isHero()) {
+            at = switch (c.slot) { case 0 -> new int[] {140, 146}; case 1 -> new int[] {104, 118}; default -> new int[] {84, 154}; };
+        } else if (c.summoner != null) {
+            // Helpers take the first stage position that no living foe holds.
+            at = stagePosition(1);
+            for (int slot = 1; slot < 5; slot++) {
+                int[] candidate = stagePosition(slot);
+                boolean taken = false;
+                for (Combatant other : battle.foes) {
+                    double[] p = formation.get(other);
+                    if (other != c && other.alive() && p != null && Math.abs(p[2] - candidate[0]) < 8) taken = true;
+                }
+                if (!taken) { at = candidate; break; }
+            }
+            startX = at[0] + 60;
+            startY = at[1];
+        } else {
+            at = stagePosition(c.slot);
         }
-        formation.put(c, new double[] {startX, startY, chosenX, chosenY});
+        // Fliers hover above their shadow; seat them lower so the stage stays balanced.
+        if (!c.isHero() && c.kind.motion == Kinds.FLY) at = new int[] {at[0], Math.min(158, at[1] + 14)};
+        formation.put(c, new double[] {startX, startY, at[0], at[1], ticks});
+    }
+
+    /** Foe positions: a boss holds centre stage with helpers around it; ordinary foes stagger. */
+    private int[] stagePosition(int slot) {
+        if (battle.bossBattle) {
+            return switch (slot) {
+                case 0 -> new int[] {300, 144};
+                case 1 -> new int[] {236, 152};
+                case 2 -> new int[] {240, 106};
+                default -> new int[] {356, 98};
+            };
+        }
+        return switch (slot) {
+            case 0 -> new int[] {246, 146};
+            case 1 -> new int[] {298, 116};
+            case 2 -> new int[] {338, 156};
+            case 3 -> new int[] {358, 98};
+            default -> new int[] {222, 104};
+        };
+    }
+
+    private double progress(Combatant c) {
+        return Math.min(1, (ticks - formation.get(c)[4]) / 24.0);
     }
 
     private int homeX(Combatant c) {
         double[] p = formation.get(c);
-        double t = Math.min(1, ticks / 24.0);
+        double t = progress(c);
         return (int) Math.round(p[0] + (p[2] - p[0]) * t);
     }
 
@@ -138,7 +177,7 @@ public final class BattleScreen implements Screen {
 
     private int floorY(Combatant c) {
         double[] p = formation.get(c);
-        double t = Math.min(1, ticks / 24.0);
+        double t = progress(c);
         return (int) Math.round(p[1] + (p[3] - p[1]) * t);
     }
 
@@ -280,7 +319,34 @@ public final class BattleScreen implements Screen {
                 });
             }
             case BattleEvent.CHARGE -> {
+                if (target != null) popup(target, "Charge!", Element.WATER.color);
                 game.audio.sfx(Audio.SFX_SPINDASH);
+            }
+            case BattleEvent.SUMMON -> {
+                looks.put(target, new Look());
+                place(target);
+                game.audio.sfx(Audio.SFX_SPRING);
+            }
+            case BattleEvent.STATUS -> {
+                Combatant who = target != null ? target : source;
+                if (who != null && looks.containsKey(who)) {
+                    Look look = looks.get(who);
+                    look.buff = 24;
+                    look.buffColour = e.element() == Element.NONE ? 0xFFFFFFFF : e.element().color;
+                    String tag = switch (e.element()) {
+                        case FIRE -> who.burn > 0 ? "Burn" : null;
+                        case WATER -> who.soak > 0 ? "Soaked" : null;
+                        case ELEC -> who.stunned || e.text().contains("stunned") ? "Stun" : null;
+                        default -> null;
+                    };
+                    if (tag != null) popup(who, tag, e.element().color);
+                }
+                game.audio.sfx(switch (e.element()) {
+                    case FIRE -> Audio.SFX_FIRE;
+                    case WATER -> Audio.SFX_BUBBLE;
+                    case ELEC -> Audio.SFX_LIGHTNING;
+                    default -> Audio.SFX_CURSOR;
+                });
             }
             case BattleEvent.SUPER -> {
                 superFlash = 30;
@@ -484,7 +550,9 @@ public final class BattleScreen implements Screen {
         }
         Combatant foe = foes.get(foeIndex);
         message = foe.name + (foe.scanned ? "  HP " + foe.hp + "/" + foe.maxHp
-                + (foe.kind.weakness() != Element.NONE ? "  Weak: " + foe.kind.weakness().label : "") : "");
+                + (foe.weakness() != Element.NONE ? "  Weak: " + foe.weakness().label : "") : "")
+                + (foe.stance ? foe.kind.signature == Kinds.SIG_COUNTER ? "  (spiked)" : "  (barrier)" : "")
+                + (foe.fuse > 0 ? "  Fuse " + foe.fuse : "");
         if (game.controls.back()) {
             mode = pendingSkill != null ? Mode.SKILL : Mode.COMMAND;
             return;
@@ -539,10 +607,16 @@ public final class BattleScreen implements Screen {
     public void draw(Game game, SceneCanvas c) {
         int w = c.width();
         int h = c.height();
-        field.drawWorld(game, c, spot, false);
-        // Foes, then heroes in front.
-        for (Combatant foe : battle.foes) drawFoe(game, c, foe);
-        for (int i = battle.party.size() - 1; i >= 0; i--) drawHero(game, c, battle.party.get(i));
+        field.drawBattleground(game, c);
+        // Everyone shares one depth order: lower feet are nearer the camera.
+        List<Combatant> order = new ArrayList<>();
+        for (Combatant foe : battle.foes) if (looks.containsKey(foe)) order.add(foe);
+        order.addAll(battle.party);
+        order.sort((a, b) -> Integer.compare(floorY(a), floorY(b)));
+        for (Combatant fighter : order) {
+            if (fighter.isHero()) drawHero(game, c, fighter);
+            else drawFoe(game, c, fighter);
+        }
         for (Popup p : popups) {
             int y = (int) (p.y() - Math.min(16, p.age() * 0.8));
             int alpha = p.age() < 36 ? 255 : Math.max(0, 255 - (p.age() - 36) * 18);
@@ -595,6 +669,13 @@ public final class BattleScreen implements Screen {
         int superEntry = hero.superForm ? 6 + (int) (ticks / 7 % 3) : -1;
         game.heroes.draw(c, g, hero.hero.id, pose, x, feet, false, ticks, style, superEntry);
         if (hero.shield != null && hero.alive()) ring(c, x, feet - 18, 18, hero.shield.color, ticks);
+        statusMarks(game, c, hero, x, feet - 66);
+        if (hero.charge != null && hero.charge.alive() && hero.alive()) {
+            // The planted depth charge sits at the hero's feet, blinking.
+            SceneSpriteSet charge = game.art.sprites("s3k:hcz_end_boss");
+            if (charge != null && charge.frameCount() > 6) c.draw(charge.frame(6), (float) x + 14, feet - 4,
+                    ticks / 6 % 2 == 0 ? SceneDraw.plain() : SceneDraw.plain().withFlash(0xA0FF4040));
+        }
         if (hero.invincible > 0 && hero.alive()) sparkles(c, x, feet - 18, ticks);
         if (look.buff > 0) ring(c, x, feet - 18, 22 + (30 - look.buff) / 2, look.buffColour, ticks);
         if (battle.actor() == hero && (mode != Mode.ANIMATE) && mode != Mode.RESULTS) {
@@ -618,7 +699,9 @@ public final class BattleScreen implements Screen {
         else if (foe.charging) style = style.withFlash(((int) (100 + 80 * Math.sin(ticks / 4.0)) << 24) | 0xFF3030);
         else if (foe.defDown > 0) style = style.withTint(0xFFD0A0FF);
         if (field.zone().tier == 9 && !foe.kind.boss) style = style.withTint(0xFFE0B0FF);
+        if (spot.kind == Field.Kind.ECHO && foe.summoner == null) style = style.withTint(0xFFC8A0FF);
         if (look.dying >= 0) style = style.withAlpha(Math.max(0, 1f - look.dying / 30f));
+        c.fill((int) x - 12, feet - 2, 24, 4, 0x50000000);
         int height = game.enemies.draw(c, foe.kind, x, feet, ticks, style);
         if (look.dying >= 0 && look.dying < 30) {
             SceneSpriteSet boom = game.art.sprites("s3k:explosion");
@@ -628,12 +711,42 @@ public final class BattleScreen implements Screen {
         if (foe.alive()) {
             int bw = Math.max(24, Math.min(60, foe.kind.boss ? 60 : 30));
             game.ui.bar(c, (int) x - bw / 2, feet + 3, bw, 3, foe.hp, foe.maxHp, Ui.BAD);
+            if (foe.stance) {
+                boolean spikes = foe.kind.signature == Kinds.SIG_COUNTER;
+                ring(c, x, feet - height / 2.0, Math.max(20, height / 2 + 6), spikes ? 0xFFC0C0D0 : 0xFF80FFFF, ticks);
+                if (!spikes) c.fill((int) x - height / 2 - 6, feet - height - 6, height + 12, height + 8, 0x3060E0FF);
+            }
+            if (foe.fuse > 0) {
+                String fuse = String.valueOf(foe.fuse);
+                game.font.shadowed(c, fuse, (int) x - game.font.width(fuse) / 2, feet - height - 12,
+                        foe.fuse == 1 ? (ticks / 6 % 2 == 0 ? Ui.BAD : Ui.GOLD) : Ui.GOLD);
+            }
+            statusMarks(game, c, foe, x, feet + 8);
         }
         if (mode == Mode.TARGET_FOE) {
             List<Combatant> foes = battle.livingFoes();
             if (!foes.isEmpty() && foes.get(Math.min(foeIndex, foes.size() - 1)) == foe) {
                 game.ui.pointer(c, (int) x, feet - height - 12, ticks);
             }
+        }
+    }
+
+    /** Small coloured status tags (B burn, S soaked, ! stun, H held) above or below a fighter. */
+    private void statusMarks(Game game, SceneCanvas c, Combatant who, double x, int y) {
+        if (!who.alive()) return;
+        List<String> marks = new ArrayList<>();
+        List<Integer> colours = new ArrayList<>();
+        if (who.burn > 0) { marks.add("Burn"); colours.add(Element.FIRE.color); }
+        if (who.soak > 0) { marks.add("Wet"); colours.add(Element.WATER.color); }
+        if (who.stunned) { marks.add("Stun"); colours.add(Element.ELEC.color); }
+        if (who.heldBy != null) { marks.add("Held"); colours.add(Ui.BAD); }
+        if (who.empowered) { marks.add(who.kind != null && who.kind.signature == Kinds.SIG_SUPER ? "Gold" : "Rage"); colours.add(Ui.GOLD); }
+        int total = 0;
+        for (String mark : marks) total += game.font.width(mark) + 4;
+        int px = (int) x - total / 2;
+        for (int i = 0; i < marks.size(); i++) {
+            game.font.shadowed(c, marks.get(i), px, y, colours.get(i));
+            px += game.font.width(marks.get(i)) + 4;
         }
     }
 

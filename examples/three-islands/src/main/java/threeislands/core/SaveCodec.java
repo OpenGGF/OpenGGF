@@ -26,6 +26,11 @@ public final class SaveCodec {
         out.append("resume=").append(progress.resumeZone()).append(',').append(progress.resumeX()).append('\n');
         out.append("dungeon=").append(progress.resumeDungeon() ? 1 : 0).append('\n');
         out.append("finished=").append(progress.finished() ? 1 : 0).append('\n');
+        out.append("gear=").append(progress.gearMask()).append('\n');
+        for (HeroId id : HeroId.values()) {
+            Gear worn = progress.hero(id).gear();
+            if (worn != null) out.append("equip.").append(id.name()).append('=').append(worn.name()).append('\n');
+        }
         for (HeroId id : HeroId.values()) {
             Hero hero = progress.hero(id);
             out.append("hero.").append(id.name()).append('=').append(hero.level()).append(',').append(hero.xp())
@@ -44,6 +49,7 @@ public final class SaveCodec {
         String[] lines = text.split("\n");
         if (lines.length == 0 || !lines[0].strip().equals(HEADER)) throw new IllegalArgumentException("Not a Three Islands save");
         Map<String, String> values = new HashMap<>();
+        Map<HeroId, String> heroLines = new HashMap<>();
         Progress progress = new Progress(1);
         progress.clearScenes();
         for (Item item : Item.values()) progress.setItemCount(item, 0);
@@ -61,14 +67,22 @@ public final class SaveCodec {
                 Item item = Item.valueOf(key.substring(5));
                 progress.setItemCount(item, Integer.parseInt(value));
             } else if (key.startsWith("hero.")) {
-                HeroId id = HeroId.valueOf(key.substring(5));
-                String[] parts = value.split(",");
-                if (parts.length != 4) throw new IllegalArgumentException("Bad hero line");
-                progress.hero(id).load(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]),
-                        Integer.parseInt(parts[2]), Integer.parseInt(parts[3]));
+                heroLines.put(HeroId.valueOf(key.substring(5)), value);
             } else {
                 values.put(key, value);
             }
+        }
+        // Accessories first: a hero's saved HP may include its accessory's bonus.
+        progress.loadGear(Integer.parseInt(values.getOrDefault("gear", "0")));
+        for (HeroId id : HeroId.values()) {
+            String worn = values.get("equip." + id.name());
+            if (worn != null && progress.owns(Gear.valueOf(worn))) progress.equip(progress.hero(id), Gear.valueOf(worn));
+        }
+        for (Map.Entry<HeroId, String> line : heroLines.entrySet()) {
+            String[] parts = line.getValue().split(",");
+            if (parts.length != 4) throw new IllegalArgumentException("Bad hero line");
+            progress.hero(line.getKey()).load(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]),
+                    Integer.parseInt(parts[2]), Integer.parseInt(parts[3]));
         }
         progress.rng.restore(Long.parseLong(values.getOrDefault("rng", "1")));
         progress.loadState(Integer.parseInt(values.getOrDefault("joined", "1")),

@@ -35,11 +35,20 @@ public final class Battle {
     private int ringReward;
     private final List<Item> drops = new ArrayList<>();
     private final List<String> levelUps = new ArrayList<>();
+    private final int level;
+    /** True while a dual or triple tech's blows land: only techs crack a barrier. */
+    private boolean techStrike;
 
     /** A battle against {@code kinds} balanced for a party at {@code level} (the zone's level). */
     public Battle(Progress progress, List<EnemyKind> kinds, int level) {
+        this(progress, kinds, level, 100);
+    }
+
+    /** As above with foe HP scaled by {@code hpScale} percent (a pair of bosses facing a lone hero). */
+    public Battle(Progress progress, List<EnemyKind> kinds, int level, int hpScale) {
         this.progress = progress;
         this.rng = progress.rng;
+        this.level = level;
         int slot = 0;
         for (Hero hero : progress.party()) party.add(Combatant.hero(hero, slot++));
         boolean boss = false;
@@ -50,7 +59,9 @@ public final class Battle {
             EnemyKind kind = kinds.get(i);
             String name = kind.label;
             if (counts[kind.ordinal()] > 1) name += " " + (char) ('A' + seen[kind.ordinal()]++);
-            foes.add(Combatant.enemy(kind, level, party.size(), i, name));
+            Combatant foe = Combatant.enemy(kind, level, party.size(), i, name, hpScale);
+            if (kind.signature == Kinds.SIG_FUSE) foe.fuse = 3;
+            foes.add(foe);
             boss |= kind.boss;
         }
         bossBattle = boss;
@@ -108,11 +119,18 @@ public final class Battle {
             if (!next.alive()) continue;
             actor = next;
             next.startTurn();
+            if (afflicted(next)) {
+                phase = Phase.RESOLVE;
+                finished();
+                return;
+            }
             if (next.isHero()) {
                 if (next.superForm && !drainSuper(next)) {
                     phase = Phase.RESOLVE;
                     return;
                 }
+                Gear gear = next.hero.gear();
+                if (gear != null && gear.regen > 0) next.ep = Math.min(next.maxEp, next.ep + gear.regen);
                 phase = Phase.CHOOSE;
                 return;
             }
@@ -134,6 +152,48 @@ public final class Battle {
         keyed.sort((a, b) -> Long.compare(b[0], a[0]));
         queue.clear();
         for (long[] k : keyed) queue.addLast(all.get((int) k[1]));
+        for (Combatant foe : livingFoes()) {
+            if (foe.kind.signature != Kinds.SIG_CORE) continue;
+            // The core cycles through the three shield elements, one per round.
+            Element exposed = Element.values()[1 + Math.floorMod(round - 1, 3)];
+            foe.weakOverride = exposed;
+            events.add(new BattleEvent(BattleEvent.STATUS, foe, foe, 0, "The core shifts to a "
+                    + (exposed == Element.FIRE ? "red" : exposed == Element.WATER ? "blue" : "yellow")
+                    + " glow. (Exposed to " + exposed.label + ")", exposed, false));
+        }
+    }
+
+    /**
+     * Burn, stun and a grabbing boss act before the fighter can: returns true when the turn is
+     * spent (or the fighter fell to its burn).
+     */
+    private boolean afflicted(Combatant c) {
+        if (c.burn > 0) {
+            c.burn--;
+            int amount = Math.max(1, c.maxHp * (c.kind != null && c.kind.boss ? 2 : 6) / 100);
+            c.hp = Math.max(0, c.hp - amount);
+            events.add(new BattleEvent(BattleEvent.HIT, null, c, amount, c.name + " is burning! " + amount + " damage.",
+                    Element.FIRE, false));
+            if (!c.alive()) {
+                fall(null, c, Element.FIRE);
+                return true;
+            }
+        }
+        if (c.stunned) {
+            c.stunned = false;
+            events.add(new BattleEvent(BattleEvent.STATUS, c, c, 0, c.name + " is stunned and can't move!",
+                    Element.ELEC, false));
+            return true;
+        }
+        if (c.heldBy != null) {
+            if (c.heldBy.alive()) {
+                events.add(new BattleEvent(BattleEvent.STATUS, c.heldBy, c, 0, c.name + " struggles in "
+                        + c.heldBy.name + "'s grip!", Element.NONE, false));
+                return true;
+            }
+            c.heldBy = null;
+        }
+        return false;
     }
 
     // ------------------------------------------------------------------ hero commands
@@ -160,6 +220,8 @@ public final class Battle {
         for (Combatant member : members(skill)) {
             if (member == null || !member.alive()) return "A partner is down";
             if (member.ep < skill.ep) return member.name + " needs " + skill.ep + " EP";
+            if (member != actor && member.heldBy != null) return member.name + " is held";
+            if (member != actor && member.stunned) return member.name + " is stunned";
             if (member != actor && !queue.contains(member)) return member.name + " has already acted";
         }
         if (skill.target == Kinds.FALLEN_ALLY && fallen().isEmpty()) return "Nobody needs reviving";
@@ -299,6 +361,7 @@ public final class Battle {
                 // A tech hits with the members' combined strength (three fifths of their sum).
                 Combatant striker = hero;
                 if (skill.isTech()) power = power * attack * 3 / 5 / Math.max(1, hero.atk());
+                techStrike = skill.isTech();
                 List<Combatant> targets = skill.target == Kinds.ALL_ENEMIES ? livingFoes() : List.of(target);
                 events.add(new BattleEvent(BattleEvent.LUNGE, hero, skill.target == Kinds.ALL_ENEMIES ? null : target,
                         members.size(), who + (members.size() > 1 ? " use " : " uses ") + skill.label + "!",
@@ -311,6 +374,7 @@ public final class Battle {
                                 Element.NONE, false));
                     }
                 }
+                techStrike = false;
             }
             case Kinds.HEAL -> {
                 events.add(new BattleEvent(BattleEvent.MESSAGE, hero, null, 0, who + " uses " + skill.label + "!",
@@ -330,9 +394,15 @@ public final class Battle {
             }
             case Kinds.SCAN -> {
                 target.scanned = true;
-                Element weak = target.kind.weakness();
+                Element weak = target.weakness();
+                String trait = target.kind.signature == Kinds.SIG_CORE ? " Its weakness shifts every round."
+                        : target.kind.signature == Kinds.SIG_COUNTER ? " Elements break its spiked guard."
+                        : target.kind.signature == Kinds.SIG_BARRIER ? " Only a combined tech cracks its barrier."
+                        : target.kind.signature == Kinds.SIG_FUSE ? " It explodes when its fuse runs out."
+                        : target.kind.signature == Kinds.SIG_GRAB ? " Hurt it to free a captured friend."
+                        : target.kind.signature == Kinds.SIG_DEPTH ? " Guard when a charge is planted beside you." : "";
                 events.add(new BattleEvent(BattleEvent.BUFF, hero, target, 0, target.name + ": HP " + target.hp + "/"
-                        + target.maxHp + ", weak to " + (weak == Element.NONE ? "nothing" : weak.label) + ".",
+                        + target.maxHp + ", weak to " + (weak == Element.NONE ? "nothing" : weak.label) + "." + trait,
                         Element.NONE, false));
             }
             case Kinds.TAUNT -> {
@@ -401,7 +471,8 @@ public final class Battle {
 
     private Element heroElement(Combatant hero, Element skillElement) {
         if (skillElement != Element.NONE) return skillElement;
-        return hero.shield == null ? Element.NONE : hero.shield;
+        if (hero.shield != null) return hero.shield;
+        return hero.ward();
     }
 
     // ------------------------------------------------------------------ enemy turns
@@ -410,6 +481,10 @@ public final class Battle {
         if (livingParty().isEmpty()) return;
         EnemyKind kind = enemy.kind;
         Element element = kind.attackElement();
+        if (enemy.fuse > 0 && --enemy.fuse == 0) {
+            explode(enemy);
+            return;
+        }
         if (enemy.charging) {
             enemy.charging = false;
             events.add(new BattleEvent(BattleEvent.LUNGE, enemy, null, 2, enemy.name + " unleashes its full power!",
@@ -417,7 +492,94 @@ public final class Battle {
             for (Combatant hero : livingParty()) strike(enemy, hero, 20, element, false);
             return;
         }
-        switch (kind.pattern) {
+        if (!enemy.empowered && enemy.hp * 2 <= enemy.maxHp
+                && (kind.signature == Kinds.SIG_ENRAGE || kind.signature == Kinds.SIG_SUPER)) {
+            empower(enemy);
+            return;
+        }
+        // Signature moves come every fourth turn, offset from the charge-up.
+        boolean signatureTurn = enemy.turnsTaken % 4 == 2;
+        switch (kind.signature) {
+            case Kinds.SIG_DEPTH -> {
+                if (detonate(enemy)) return;
+                if (signatureTurn) {
+                    Combatant target = pickTarget();
+                    target.charge = enemy;
+                    events.add(new BattleEvent(BattleEvent.CHARGE, enemy, target, 0, enemy.name
+                            + " drops a depth charge beside " + target.name + "! Guard!", Element.WATER, false));
+                    return;
+                }
+            }
+            case Kinds.SIG_GRAB -> {
+                Combatant held = holding(enemy);
+                if (held != null) {
+                    squeeze(enemy, held);
+                    return;
+                }
+                if (signatureTurn && livingParty().size() > 1) {
+                    Combatant target = pickTarget();
+                    target.heldBy = enemy;
+                    enemy.damageSinceGrab = 0;
+                    enemy.squeezes = 0;
+                    events.add(new BattleEvent(BattleEvent.LUNGE, enemy, target, 0, enemy.name + " seizes "
+                            + target.name + "! Hit it hard to break the grip!", Element.NONE, false));
+                    return;
+                }
+            }
+            case Kinds.SIG_COUNTER -> {
+                if (signatureTurn) {
+                    enemy.stance = true;
+                    events.add(new BattleEvent(BattleEvent.BUFF, enemy, enemy, 0, enemy.name
+                            + " curls into a spiked ball! Plain blows will rebound.", Element.NONE, false));
+                    return;
+                }
+            }
+            case Kinds.SIG_BARRIER -> {
+                if (signatureTurn) {
+                    enemy.stance = true;
+                    events.add(new BattleEvent(BattleEvent.BUFF, enemy, enemy, 0,
+                            "The orb throws up a barrier! Only a combined tech can crack it.", Element.ELEC, false));
+                    return;
+                }
+            }
+            case Kinds.SIG_SUMMON -> {
+                if (signatureTurn && minions(enemy) < Math.min(2, party.size())) {
+                    EnemyKind call = kind == EnemyKind.BOMB_KING ? EnemyKind.BOMB : EnemyKind.COCONUTS;
+                    summon(enemy, call, kind == EnemyKind.BOMB_KING ? enemy.name + " lights a fuse and rolls out a Bomb!"
+                            : enemy.name + " whistles down a Coconuts from the trees!");
+                    return;
+                }
+            }
+            case Kinds.SIG_CORE -> {
+                if (signatureTurn && minions(enemy) < 1) {
+                    summon(enemy, EnemyKind.EGG_ROBO, "A hatch opens. An Egg Robo drops in to defend the core!");
+                    return;
+                }
+            }
+            case Kinds.SIG_NAPALM -> {
+                if (signatureTurn) {
+                    events.add(new BattleEvent(BattleEvent.LUNGE, enemy, null, 1, enemy.name
+                            + " carpets the ground with firebombs!", Element.FIRE, false));
+                    for (Combatant hero : livingParty()) {
+                        strike(enemy, hero, 8, Element.FIRE, false);
+                        if (hero.alive()) inflict(hero, Element.FIRE, 45);
+                    }
+                    return;
+                }
+            }
+            default -> { }
+        }
+        pattern(enemy, element);
+        if (enemy.empowered && kind.signature == Kinds.SIG_SUPER && !livingParty().isEmpty()) {
+            Combatant target = pickTarget();
+            events.add(new BattleEvent(BattleEvent.LUNGE, enemy, target, 0, enemy.name + " blurs and strikes again!",
+                    element, false));
+            strike(enemy, target, 7, element, false);
+        }
+    }
+
+    private void pattern(Combatant enemy, Element element) {
+        switch (enemy.kind.pattern) {
             case Kinds.SWEEP -> {
                 if (rng.chance(35)) sweep(enemy, element, 7);
                 else single(enemy, element, 10);
@@ -432,7 +594,7 @@ public final class Battle {
                 }
             }
             case Kinds.CHARGER -> {
-                if (enemy.turnsTaken % 3 == 0) {
+                if (enemy.turnsTaken % 4 == 0) {
                     enemy.charging = true;
                     events.add(new BattleEvent(BattleEvent.CHARGE, enemy, null, 0,
                             enemy.name + " is charging up! Guard!", element, false));
@@ -445,6 +607,79 @@ public final class Battle {
             case Kinds.RIVAL -> rivalTurn(enemy);
             default -> single(enemy, element, 10);
         }
+    }
+
+    /** Below half HP a signature boss powers up, spending its turn (and saying so). */
+    private void empower(Combatant enemy) {
+        enemy.empowered = true;
+        String line = switch (enemy.kind) {
+            case EGG_MOBILE -> "Eggman: Enough! You've scratched my paintwork for the last time!";
+            case KNUCKLES_RIVAL -> "Knuckles: Not bad... but I'm not holding back anymore!";
+            case MECHA_SONIC -> "Mecha Sonic drains the Master Emerald's power and turns gold! It moves twice as fast!";
+            default -> enemy.name + " flies into a rage!";
+        };
+        events.add(new BattleEvent(BattleEvent.BUFF, enemy, enemy, 0, line,
+                enemy.kind == EnemyKind.MECHA_SONIC ? Element.ELEC : Element.FIRE, false));
+    }
+
+    private Combatant holding(Combatant enemy) {
+        for (Combatant hero : party) if (hero.heldBy == enemy && hero.alive()) return hero;
+        return null;
+    }
+
+    private void squeeze(Combatant enemy, Combatant held) {
+        events.add(new BattleEvent(BattleEvent.LUNGE, enemy, held, 0, enemy.name + " squeezes " + held.name + "!",
+                enemy.kind.attackElement(), false));
+        strike(enemy, held, 9, enemy.kind.attackElement(), false);
+        if (++enemy.squeezes >= 2 && held.heldBy == enemy) release(held, held.name + " wriggles free!");
+    }
+
+    private void release(Combatant held, String text) {
+        held.heldBy = null;
+        events.add(new BattleEvent(BattleEvent.STATUS, held, held, 0, text, Element.NONE, false));
+    }
+
+    /** Detonates this foe's planted charges; returns true when any went off. */
+    private boolean detonate(Combatant enemy) {
+        boolean any = false;
+        for (Combatant hero : party) {
+            if (hero.charge != enemy) continue;
+            hero.charge = null;
+            if (!hero.alive()) continue;
+            any = true;
+            boolean braced = hero.guarding;
+            events.add(new BattleEvent(BattleEvent.LUNGE, enemy, hero, 0, braced
+                    ? hero.name + " braces as the depth charge goes off!" : "The depth charge explodes under " + hero.name + "!",
+                    Element.WATER, false));
+            strike(enemy, hero, braced ? 10 : 26, Element.WATER, false);
+        }
+        return any;
+    }
+
+    private int minions(Combatant boss) {
+        int n = 0;
+        for (Combatant foe : foes) if (foe.summoner == boss && foe.alive()) n++;
+        return n;
+    }
+
+    private void summon(Combatant boss, EnemyKind kind, String text) {
+        int same = 0;
+        for (Combatant foe : foes) if (foe.kind == kind) same++;
+        String name = kind.label + (same == 0 ? "" : " " + (char) ('A' + same));
+        Combatant minion = Combatant.enemy(kind, level, party.size(), foes.size(), name, 40);
+        minion.summoner = boss;
+        if (kind.signature == Kinds.SIG_FUSE) minion.fuse = 3;
+        foes.add(minion);
+        events.add(new BattleEvent(BattleEvent.SUMMON, boss, minion, 0, text, Element.NONE, false));
+    }
+
+    private void explode(Combatant bomb) {
+        events.add(new BattleEvent(BattleEvent.LUNGE, bomb, null, 1, bomb.name + "'s fuse runs out! It explodes!",
+                Element.FIRE, false));
+        for (Combatant hero : livingParty()) strike(bomb, hero, 10, Element.FIRE, false);
+        bomb.fuse = -1;
+        bomb.hp = 0;
+        fall(bomb, bomb, Element.FIRE);
     }
 
     /** Knuckles fights like a hero: he guards, he punches, and when hurt he drills. */
@@ -493,6 +728,7 @@ public final class Battle {
      * Deals {@code power} tenths of the attacker's attack to {@code target}. Shields block a whole
      * hit, guarding and Guardian Stance halve damage, weaknesses multiply by 1.5 and resistances
      * by 0.5. {@code bonusCrit} gives the slower heroes a slightly better critical chance.
+     * Elemental hits may leave a status: Fire burns, Water soaks and Lightning stuns.
      */
     int strike(Combatant attacker, Combatant target, int power, Element element, boolean bonusCrit) {
         if (!target.alive()) return 0;
@@ -511,16 +747,37 @@ public final class Battle {
         double base = attacker.atk() * power / 10.0;
         double damage = Math.max(base * 0.15, base - target.def() * 0.5);
         damage *= 0.9 + rng.nextDouble() * 0.2;
-        boolean critical = attacker.isHero() && rng.chance(bonusCrit ? 10 : 7);
+        int critChance = (bonusCrit ? 10 : 7) + (attacker.isHero() && attacker.hero.gear() != null ? attacker.hero.gear().crit : 0);
+        boolean critical = attacker.isHero() && rng.chance(critChance);
         if (critical) damage *= 1.5;
         String note = "";
         if (!target.isHero() && element != Element.NONE) {
-            if (target.kind.weakness() == element) {
+            if (target.weakness() == element) {
                 damage *= 1.5;
                 note = " It's super effective!";
             } else if (target.kind.resistance() == element) {
                 damage *= 0.5;
                 note = " It resists " + element.label + ".";
+            }
+        }
+        int recoil = 0;
+        if (!target.isHero() && target.stance && attacker.isHero()) {
+            if (target.kind.signature == Kinds.SIG_COUNTER) {
+                if (element == Element.NONE) {
+                    damage *= 0.5;
+                    recoil = (int) Math.max(1, damage * 0.6);
+                } else {
+                    target.stance = false;
+                    note += " The spiked guard breaks!";
+                }
+            } else if (target.kind.signature == Kinds.SIG_BARRIER) {
+                if (techStrike) {
+                    target.stance = false;
+                    note += " The barrier shatters!";
+                } else {
+                    damage *= 0.2;
+                    note += " The barrier soaks up the blow.";
+                }
             }
         }
         if (target.guarding) damage *= 0.5;
@@ -530,19 +787,84 @@ public final class Battle {
         events.add(new BattleEvent(BattleEvent.HIT, attacker, target, amount,
                 (critical ? "Critical! " : "") + target.name + " takes " + amount + " damage." + note, element, critical));
         if (!target.alive()) {
-            target.charging = false;
-            events.add(new BattleEvent(BattleEvent.KO, attacker, target, 0, target.isHero()
-                    ? target.name + " is down!" : target.name + " is destroyed!", element, false));
+            fall(attacker, target, element);
+        } else {
+            if (element != Element.NONE) {
+                int chance = attacker.isHero() ? (target.kind.boss ? 15 : 30)
+                        : element == Element.ELEC ? 12 : 20;
+                inflict(target, element, chance);
+            }
+            if (!target.isHero() && holding(target) != null) {
+                target.damageSinceGrab += amount;
+                if (target.damageSinceGrab * 100 >= target.maxHp * 10) {
+                    Combatant held = holding(target);
+                    release(held, held.name + " breaks free!");
+                }
+            }
+        }
+        if (recoil > 0 && attacker.alive()) {
+            attacker.hp = Math.max(1, attacker.hp - recoil);
+            events.add(new BattleEvent(BattleEvent.HIT, target, attacker, recoil, "The spikes hurt " + attacker.name
+                    + "! " + recoil + " damage.", Element.NONE, false));
         }
         return amount;
+    }
+
+    /** A status lands with {@code percent} chance; guarding halves it and wards prevent it. */
+    private void inflict(Combatant target, Element element, int percent) {
+        if (!target.alive() || target.superForm || target.ward() == element) return;
+        if (element == Element.ELEC && target.kind != null && target.kind.boss) return;
+        if (element == Element.FIRE && target.burn > 0 || element == Element.WATER && target.soak > 0
+                || element == Element.ELEC && target.stunned) return;
+        if (target.guarding) percent /= 2;
+        if (!rng.chance(percent)) return;
+        String text = switch (element) {
+            case FIRE -> {
+                target.burn = 3;
+                yield target.name + " catches fire!";
+            }
+            case WATER -> {
+                target.soak = 3;
+                yield target.name + " is soaked and slowed!";
+            }
+            default -> {
+                target.stunned = true;
+                yield target.name + " is stunned!";
+            }
+        };
+        events.add(new BattleEvent(BattleEvent.STATUS, target, target, 0, text, element, false));
+    }
+
+    /** A knock-out; a boss's summoned helpers leave with it and released captives are freed. */
+    private void fall(Combatant attacker, Combatant target, Element element) {
+        target.charging = false;
+        target.cure();
+        target.heldBy = null;
+        events.add(new BattleEvent(BattleEvent.KO, attacker, target, 0, target.isHero()
+                ? target.name + " is down!" : target.fuse < 0 ? target.name + " is gone!" : target.name + " is destroyed!",
+                element, false));
+        if (target.isHero()) return;
+        for (Combatant hero : party) if (hero.heldBy == target) hero.heldBy = null;
+        if (!target.kind.boss) return;
+        boolean any = false;
+        for (Combatant minion : foes) {
+            if (minion.summoner != target || !minion.alive()) continue;
+            minion.hp = 0;
+            minion.fuse = -1;
+            any = true;
+            events.add(new BattleEvent(BattleEvent.KO, null, minion, 0, minion.name + " flees!", Element.NONE, false));
+        }
+        if (any) events.add(BattleEvent.message("With their leader beaten, the helpers scatter."));
     }
 
     private void heal(Combatant ally, int amount) {
         if (!ally.alive()) return;
         int before = ally.hp;
         ally.hp = Math.min(ally.maxHp, ally.hp + amount);
+        boolean cured = ally.hasStatus();
+        ally.cure();
         events.add(new BattleEvent(BattleEvent.HEAL, null, ally, ally.hp - before,
-                ally.name + " recovers " + (ally.hp - before) + " HP.", Element.NONE, false));
+                ally.name + " recovers " + (ally.hp - before) + " HP." + (cured ? " Status cured." : ""), Element.NONE, false));
     }
 
     private void revive(Combatant ally, int percent) {
@@ -572,9 +894,11 @@ public final class Battle {
     private void win() {
         phase = Phase.VICTORY;
         for (Combatant foe : foes) {
-            xpReward += foe.xp;
-            ringReward += foe.rings;
-            if (!foe.kind.boss && rng.chance(22)) {
+            if (foe.fuse < 0) continue;
+            int share = foe.summoner != null ? 3 : 1;
+            xpReward += foe.xp / share;
+            ringReward += foe.rings / share;
+            if (!foe.kind.boss && foe.summoner == null && rng.chance(22)) {
                 drops.add(rng.chance(70) ? Item.SUPER_RING : Item.BLUE_SPHERE);
             }
         }

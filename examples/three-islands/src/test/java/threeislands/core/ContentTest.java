@@ -48,7 +48,8 @@ class ContentTest {
     @Test
     void theStoryHasEverySceneTheGameAsksFor() throws IOException {
         Story story = new Story(resource("text/story.txt"));
-        List<String> wanted = new ArrayList<>(List.of("prologue", "ending", "ghz-rescue", "ghz-garden-verse", "ghz-garden-song", "ghz-orchard-note", "ghz-orchard-letter", "ghz-horizon"));
+        List<String> wanted = new ArrayList<>(List.of("prologue", "ending", "ghz-rescue", "ghz-garden-verse", "ghz-garden-song", "ghz-orchard-note", "ghz-orchard-letter", "ghz-horizon",
+                "gear-tutorial", "animals-3", "animals-6", "animals-10", "echo-clear"));
         for (Island island : Island.values()) {
             wanted.add(island.key() + "-arrive");
             wanted.add(island.key() + "-purpose");
@@ -60,6 +61,8 @@ class ContentTest {
             wanted.add(zone.key + "-clear");
             for (String suffix : List.of("friend", "friend-after", "relay-sealed", "memory", "signal", "camp", "dungeon-enter")) wanted.add(zone.key + "-" + suffix);
             if (zone.bossKinds().size() > 1) wanted.add(zone.key + "-mid");
+            wanted.add(zone.key + "-animal");
+            if (!threeislands.field.Field.echoGroup(zone).isEmpty()) wanted.add(zone.key + "-echo");
         }
         for (String scene : wanted) assertTrue(story.has(scene), "missing scene " + scene);
         for (String name : story.names()) assertTrue(wanted.contains(name), "unused scene " + name);
@@ -74,6 +77,7 @@ class ContentTest {
         StringBuilder text = new StringBuilder(new String(resource("text/story.txt"), java.nio.charset.StandardCharsets.UTF_8));
         for (Skill skill : Skill.values()) text.append(skill.label).append(skill.description);
         for (Item item : Item.values()) text.append(item.label).append(item.description);
+        for (Gear gear : Gear.values()) text.append(gear.label).append(gear.description);
         for (EnemyKind kind : EnemyKind.values()) text.append(kind.label).append(kind.verb);
         for (Zone zone : Zone.values()) text.append(zone.label);
         for (Island island : Island.values()) text.append(island.label).append(island.village);

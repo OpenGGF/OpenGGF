@@ -44,6 +44,10 @@ class BalanceTest {
         List<Combatant> foes = battle.livingFoes();
         Combatant weakest = foes.get(0);
         for (Combatant foe : foes) if (foe.hp < weakest.hp) weakest = foe;
+        // A lit fuse about to blow is the first thing a sensible player hits.
+        for (Combatant foe : foes) if (foe.fuse == 1) weakest = foe;
+        boolean planted = actor.charge != null;
+        if (planted) return Command.guard();
         Combatant hurt = null;
         for (Combatant ally : battle.livingParty()) if (ally.hp * 100 / ally.maxHp < 40 && (hurt == null || ally.hp < hurt.hp)) hurt = ally;
         if (!battle.fallen().isEmpty()) {
@@ -60,7 +64,7 @@ class BalanceTest {
                 }
             }
         }
-        if (hurt != null && battle.events().isEmpty() && hasRing(battle)) return Command.item(Item.SUPER_RING, hurt);
+        if (hurt != null && (hurt == actor || hurt.hp * 100 / hurt.maxHp < 25) && hasRing(battle)) return Command.item(Item.SUPER_RING, hurt);
         boolean charging = foes.stream().anyMatch(f -> f.charging);
         if (charging && actor.hp * 100 / actor.maxHp < 60) return Command.guard();
         if (battle.canTransform()) return Command.transform();
@@ -218,4 +222,24 @@ class BalanceTest {
         }
     }
 
+
+    @Test
+    void riftEchoesAreHardButWinnableAtTheirLevel() {
+        List<String> report = new ArrayList<>();
+        for (Zone zone : Zone.values()) {
+            List<EnemyKind> echo = threeislands.field.Field.echoGroup(zone);
+            if (echo.isEmpty()) continue;
+            int level = threeislands.field.Field.echoLevel(zone), wins = 0, rounds = 0, games = 40;
+            for (int seed = 1; seed <= games; seed++) {
+                Progress p = partyFor(zone, seed * 17L, level);
+                if (zone == Zone.DEATH_EGG) for (int i = 0; i < 7; i++) p.addEmerald(i);
+                int r = play(new Battle(p, echo, level, threeislands.field.Field.echoHp(p.party().size())));
+                if (r > 0) { wins++; rounds += r; }
+            }
+            report.add(zone.key + " echo wins " + wins + "/" + games + " rounds " + (wins == 0 ? 0 : rounds / wins));
+            assertTrue(wins >= games / 3, "echo unwinnable: " + report);
+            assertTrue(wins < games || rounds / wins >= 5, "echo too easy: " + report);
+        }
+        System.out.println("Echoes: " + report);
+    }
 }

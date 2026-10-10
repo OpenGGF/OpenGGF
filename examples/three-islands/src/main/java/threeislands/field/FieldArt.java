@@ -36,7 +36,7 @@ public final class FieldArt {
         } else {
             var textures = DungeonArt.textures(kit);
             SceneImage tile = textures.isEmpty() ? floorTile(kit) : textures.get(Math.min(3, textures.size() - 1));
-            ground = zone == Zone.EMERALD_HILL ? floorTile(kit) : tile;
+            ground = zone == Zone.EMERALD_HILL ? greenest(kit) : tile;
             cliff = textures.isEmpty() ? tile : textures.get(0);
             lip = zone == Zone.EMERALD_HILL ? cliff : textures.isEmpty() ? tile : textures.get(Math.min(7, textures.size() - 1));
             SceneImage source = kit.backdrop() == null ? tile : kit.backdrop().image();
@@ -84,6 +84,27 @@ public final class FieldArt {
         return new SceneImage(width, height, pixels);
     }
 
+    /** The grassiest opaque 16-pixel tile in the kit's first blocks: Emerald Hill's lawn. */
+    private static SceneImage greenest(SceneLevelKit kit) {
+        SceneImage best = null;
+        long bestScore = Long.MIN_VALUE;
+        for (int id = 1; id < Math.min(128, kit.blockCount()); id++) {
+            SceneImage image = kit.blockImage(id);
+            for (int y = 0; y + 16 <= image.height(); y += 16) for (int x = 0; x + 16 <= image.width(); x += 16) {
+                long score = 0;
+                boolean opaque = true;
+                for (int py = 0; py < 16 && opaque; py++) for (int px = 0; px < 16; px++) {
+                    int colour = image.pixel(x + px, y + py);
+                    if ((colour >>> 24) < 255) { opaque = false; break; }
+                    int r = colour >>> 16 & 255, g = colour >>> 8 & 255, b = colour & 255;
+                    score += g - Math.max(r, b);
+                }
+                if (opaque && score > bestScore) { bestScore = score; best = crop(image, x, y, 16, 16); }
+            }
+        }
+        return best != null ? best : floorTile(kit);
+    }
+
     /** Find an opaque solid ROM tile; each region retains its own terrain palette and texture. */
     private static SceneImage floorTile(SceneLevelKit kit) {
         int size = kit.blockSize();
@@ -123,6 +144,8 @@ public final class FieldArt {
                     if (Math.floorMod(x / 16 * 7 + y / 16 * 11, 13) == 0) {
                         c.draw(ground, (float) (x - cameraX), (float) (y - cameraY), SceneDraw.plain().withAlpha(0.25f));
                     }
+                } else if (field.layout != null) {
+                    terrace(c, field, x, y, (float) (x - cameraX), (float) (y - cameraY), ticks);
                 } else c.draw(tile, (float) (x - cameraX), (float) (y - cameraY),
                         SceneDraw.plain().withScale(16f / tile.width(), 16f / tile.height()).withAlpha(greenHill ? 1f : wet ? 0.3f : 0.6f));
             }
@@ -169,6 +192,39 @@ public final class FieldArt {
                 (float) (dy - 64 - cameraY), SceneDraw.plain().withScale(16f / cliff.width(), 16f / cliff.height()));
         for (int step = 0; step < 3; step++) {
             c.draw(lip, sx - 32, sy - 12 + step * 4, SceneDraw.plain().withScale(64f / lip.width(), 4f / lip.height()));
+        }
+    }
+
+    /**
+     * Authored routes read as raised terraces: ROM cliff faces where ground drops away to the
+     * south, side walls beside it, a shadow under each northern edge, and the zone's distant
+     * scenery dimmed below everything else.
+     */
+    private void terrace(SceneCanvas c, Field field, int x, int y, float sx, float sy, long ticks) {
+        SceneDraw fit = SceneDraw.plain().withScale(16f / ground.width(), 16f / ground.height());
+        if (!field.water(x + 8, y + 8)) {
+            c.draw(ground, sx, sy, fit.withAlpha(0.7f));
+            if (field.water(x + 8, y - 8)) c.fill((int) sx, (int) sy, 16, 5, 0x58000000);
+            if (field.water(x - 8, y + 8)) c.fill((int) sx, (int) sy, 3, 16, 0x30000000);
+            return;
+        }
+        boolean below = !field.water(x + 8, y + 24);
+        boolean beside = !field.water(x - 8, y + 8) || !field.water(x + 24, y + 8);
+        boolean twoBelow = !field.water(x + 8, y + 40);
+        SceneDraw face = SceneDraw.plain().withScale(16f / cliff.width(), 16f / cliff.height());
+        if (below || twoBelow) {
+            // Two tiles of cliff face above every stretch of ground give the terrace height.
+            c.draw(cliff, sx, sy, face);
+            c.fill((int) sx, (int) sy, 16, 16, below ? 0x10000000 : 0x40000000);
+            if (below) c.fill((int) sx, (int) sy + 14, 16, 2, 0x70000000);
+            else c.draw(lip, sx, sy, SceneDraw.plain().withScale(16f / lip.width(), 6f / lip.height()));
+        } else if (beside) {
+            c.draw(cliff, sx, sy, face.withAlpha(0.85f));
+            c.fill((int) sx, (int) sy, 16, 16, 0x38000000);
+        } else {
+            c.draw(waterFrame(ticks), sx, sy, SceneDraw.plain().withScale(16f / waterFrame(ticks).width(),
+                    16f / waterFrame(ticks).height()).withAlpha(0.3f));
+            c.fill((int) sx, (int) sy, 16, 16, 0x30000010);
         }
     }
 

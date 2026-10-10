@@ -60,6 +60,16 @@ public final class AreaLayout {
         }
         return List.copyOf(result);
     }
+    /** The last authored branch ends in a secret room: a lost animal outside, treasure inside. */
+    public Point secret() {
+        return alcoves.getLast();
+    }
+
+    /** Side rooms available for puzzle controls (every alcove except the secret room). */
+    public int controlRooms() {
+        return alcoves.size() - 1;
+    }
+
     public List<Point> rooms() {
         List<Point> rooms = new ArrayList<>(route); rooms.addAll(alcoves); return rooms;
     }
@@ -81,29 +91,29 @@ public final class AreaLayout {
         return switch (zone) {
             // Outdoor routes finish at the eastern crossing, but reach it through different districts.
             case GREEN_HILL -> throw new IllegalArgumentException("Green Hill retains its coastal landscape");
-            case STAR_LIGHT -> new AreaLayout(false, "0,0 0,-1 1,-1 2,-1 2,0 2,1 3,1 4,1 4,0 5,0", "2:1,0;5:1,1;7:4,2");
-            case SPRING_YARD -> new AreaLayout(false, "0,0 0,1 1,1 2,1 2,0 3,0 3,-1 4,-1 5,-1 5,0", "2:1,2;4:1,0;5:3,1");
-            case EMERALD_HILL -> new AreaLayout(false, "0,0 1,0 1,-1 2,-1 3,-1 3,0 3,1 4,1 5,1 5,0", "1:1,1;4:4,-1;6:2,1");
-            case CHEMICAL_PLANT -> new AreaLayout(false, "0,0 0,1 1,1 1,2 2,2 3,2 3,1 3,0 4,0 5,0", "2:2,1;5:4,2;7:3,-1");
-            case MYSTIC_CAVE -> new AreaLayout(false, "0,0 1,0 1,1 0,1 0,2 1,2 2,2 3,2 3,1 4,1 4,0 5,0", "1:1,-1;6:2,1;8:3,0");
-            case ANGEL_ISLAND -> new AreaLayout(false, "0,0 0,-1 1,-1 2,-1 2,0 1,0 1,1 2,1 3,1 4,1 4,0 5,0", "3:3,-1;6:1,2;9:4,2");
-            case HYDROCITY -> new AreaLayout(false, "0,0 1,0 1,1 2,1 2,2 3,2 4,2 4,1 3,1 3,0 4,0 5,0", "1:1,-1;4:1,2;9:3,-1");
-            case LAUNCH_BASE -> new AreaLayout(false, "0,0 0,1 0,2 1,2 2,2 2,1 2,0 2,-1 3,-1 4,-1 4,0 5,0", "4:3,2;6:1,0;8:3,0");
-            case DEATH_EGG -> new AreaLayout(false, "0,0 0,-1 1,-1 1,0 2,0 2,1 1,1 1,2 2,2 3,2 4,2 4,1 4,0 5,0", "4:2,-1;7:0,2;9:3,1;11:5,1");
+            case STAR_LIGHT -> new AreaLayout(false, "0,0 0,-1 1,-1 2,-1 2,0 2,1 3,1 4,1 4,0 5,0", "2:1,0;5:1,1;7:4,2;6:3,2 3,3");
+            case SPRING_YARD -> new AreaLayout(false, "0,0 0,1 1,1 2,1 2,0 3,0 3,-1 4,-1 5,-1 5,0", "2:1,2;4:1,0;5:3,1;1:0,2 0,3");
+            case EMERALD_HILL -> new AreaLayout(false, "0,0 1,0 1,-1 2,-1 3,-1 3,0 3,1 4,1 5,1 5,0", "1:1,1;4:4,-1;6:2,1;6:3,2 2,2");
+            case CHEMICAL_PLANT -> new AreaLayout(false, "0,0 0,1 1,1 1,2 2,2 3,2 3,1 3,0 4,0 5,0", "2:2,1;5:4,2;7:3,-1;4:2,3 1,3");
+            case MYSTIC_CAVE -> new AreaLayout(false, "0,0 1,0 1,1 0,1 0,2 1,2 2,2 3,2 3,1 4,1 4,0 5,0", "1:1,-1;6:2,1;8:3,0;6:2,3 3,3");
+            case ANGEL_ISLAND -> new AreaLayout(false, "0,0 0,-1 1,-1 2,-1 2,0 1,0 1,1 2,1 3,1 4,1 4,0 5,0", "3:3,-1;6:1,2;9:4,2;7:2,2 3,2");
+            case HYDROCITY -> new AreaLayout(false, "0,0 1,0 1,1 2,1 2,2 3,2 4,2 4,1 3,1 3,0 4,0 5,0", "1:1,-1;4:1,2;9:3,-1;5:3,3 4,3");
+            case LAUNCH_BASE -> new AreaLayout(false, "0,0 0,1 0,2 1,2 2,2 2,1 2,0 2,-1 3,-1 4,-1 4,0 5,0", "4:3,2;6:1,0;8:3,0;2:0,3 1,3");
+            case DEATH_EGG -> new AreaLayout(false, "0,0 0,-1 1,-1 1,0 2,0 2,1 1,1 1,2 2,2 3,2 4,2 4,1 4,0 5,0", "4:2,-1;7:0,2;9:3,1;11:5,1;8:2,3 3,3");
         };
     }
     public static AreaLayout inside(Zone zone) {
         return switch (zone) {
-            case GREEN_HILL -> new AreaLayout(true, "0,0 1,0 1,-1 2,-1 3,-1", "2:0,-1");
-            case STAR_LIGHT -> new AreaLayout(true, "0,0 1,0 2,0 2,-1 3,-1 4,-1", "2:2,1;3:1,-1");
-            case SPRING_YARD -> new AreaLayout(true, "0,0 0,1 1,1 2,1 2,0 3,0 3,-1", "2:1,2;4:1,0");
-            case EMERALD_HILL -> new AreaLayout(true, "0,0 1,0 1,-1 2,-1 3,-1 3,0 3,1", "2:0,-1;4:4,-1;5:2,0");
-            case CHEMICAL_PLANT -> new AreaLayout(true, "0,0 0,1 1,1 1,2 2,2 3,2 3,1 4,1", "2:2,1;4:2,3;6:3,0");
-            case MYSTIC_CAVE -> new AreaLayout(true, "0,0 1,0 1,1 0,1 0,2 1,2 2,2 2,1 3,1", "1:1,-1;5:1,3;6:3,2");
-            case ANGEL_ISLAND -> new AreaLayout(true, "0,0 0,-1 1,-1 2,-1 2,0 1,0 1,1 2,1 3,1", "3:3,-1;6:0,1;7:2,2");
-            case HYDROCITY -> new AreaLayout(true, "0,0 0,1 1,1 1,2 2,2 3,2 3,1 2,1 2,0 3,0", "3:0,2;5:4,2;8:2,-1");
-            case LAUNCH_BASE -> new AreaLayout(true, "0,0 1,0 1,-1 2,-1 3,-1 3,0 2,0 2,1 3,1 4,1 4,0", "4:4,-1;7:1,1;8:3,2");
-            case DEATH_EGG -> new AreaLayout(true, "0,0 0,1 0,2 1,2 2,2 2,1 1,1 1,0 1,-1 2,-1 3,-1 3,0", "3:1,3;5:3,1;8:0,-1;10:4,-1");
+            case GREEN_HILL -> new AreaLayout(true, "0,0 1,0 1,-1 2,-1 3,-1", "2:0,-1;3:2,0");
+            case STAR_LIGHT -> new AreaLayout(true, "0,0 1,0 2,0 2,-1 3,-1 4,-1", "2:2,1;3:1,-1;4:3,0");
+            case SPRING_YARD -> new AreaLayout(true, "0,0 0,1 1,1 2,1 2,0 3,0 3,-1", "2:1,2;4:1,0;3:2,2");
+            case EMERALD_HILL -> new AreaLayout(true, "0,0 1,0 1,-1 2,-1 3,-1 3,0 3,1", "2:0,-1;4:4,-1;5:2,0;5:4,0");
+            case CHEMICAL_PLANT -> new AreaLayout(true, "0,0 0,1 1,1 1,2 2,2 3,2 3,1 4,1", "2:2,1;4:2,3;6:3,0;3:0,2");
+            case MYSTIC_CAVE -> new AreaLayout(true, "0,0 1,0 1,1 0,1 0,2 1,2 2,2 2,1 3,1", "1:1,-1;5:1,3;6:3,2;6:2,3");
+            case ANGEL_ISLAND -> new AreaLayout(true, "0,0 0,-1 1,-1 2,-1 2,0 1,0 1,1 2,1 3,1", "3:3,-1;6:0,1;7:2,2;6:1,2");
+            case HYDROCITY -> new AreaLayout(true, "0,0 0,1 1,1 1,2 2,2 3,2 3,1 2,1 2,0 3,0", "3:0,2;5:4,2;8:2,-1;4:2,3");
+            case LAUNCH_BASE -> new AreaLayout(true, "0,0 1,0 1,-1 2,-1 3,-1 3,0 2,0 2,1 3,1 4,1 4,0", "4:4,-1;7:1,1;8:3,2;7:2,2");
+            case DEATH_EGG -> new AreaLayout(true, "0,0 0,1 0,2 1,2 2,2 2,1 1,1 1,0 1,-1 2,-1 3,-1 3,0", "3:1,3;5:3,1;8:0,-1;10:4,-1;4:3,2");
         };
     }
 }

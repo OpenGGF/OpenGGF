@@ -9,6 +9,7 @@ public final class Hero {
     private int xp;
     private int hp;
     private int ep;
+    private Gear gear;
 
     public Hero(HeroId id) {
         this.id = id;
@@ -21,11 +22,21 @@ public final class Hero {
     public int hp() { return hp; }
     public int ep() { return ep; }
 
-    public int maxHp() { return id.baseHp + id.hpGrowth * (level - 1); }
-    public int maxEp() { return id.baseEp + id.epGrowth * (level - 1); }
-    public int atk() { return id.baseAtk + id.atkGrowth * (level - 1); }
-    public int def() { return id.baseDef + id.defGrowth * (level - 1); }
-    public int spd() { return id.baseSpd + id.spdGrowth * (level - 1); }
+    public int maxHp() { return id.baseHp + id.hpGrowth * (level - 1) + (gear == null ? 0 : gear.hp); }
+    public int maxEp() { return id.baseEp + id.epGrowth * (level - 1) + (gear == null ? 0 : gear.ep); }
+    public int atk() { return id.baseAtk + id.atkGrowth * (level - 1) + (gear == null ? 0 : gear.atk); }
+    public int def() { return id.baseDef + id.defGrowth * (level - 1) + (gear == null ? 0 : gear.def); }
+    public int spd() { return id.baseSpd + id.spdGrowth * (level - 1) + (gear == null ? 0 : gear.spd); }
+
+    /** The equipped accessory, or null. */
+    public Gear gear() { return gear; }
+
+    /** Changes the accessory; current HP/EP keep their values within the new maxima. */
+    public void equip(Gear value) {
+        gear = value;
+        setHp(hp);
+        setEp(ep);
+    }
 
     /** Experience needed to go from {@code level} to the next. */
     public static int xpToNext(int level) {

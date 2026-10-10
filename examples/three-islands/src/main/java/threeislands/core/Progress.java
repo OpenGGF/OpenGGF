@@ -29,6 +29,7 @@ public final class Progress {
     private int resumeX;
     private boolean finished;
     private boolean resumeDungeon;
+    private int gear;
 
     public Progress(long seed) {
         for (HeroId id : HeroId.values()) heroes[id.ordinal()] = new Hero(id);
@@ -78,6 +79,32 @@ public final class Progress {
         return true;
     }
 
+    public boolean owns(Gear item) { return (gear & item.bit()) != 0; }
+    public int gearMask() { return gear; }
+
+    /** Adds an accessory to the collection; returns false when it was already owned. */
+    public boolean addGear(Gear item) {
+        if (owns(item)) return false;
+        gear |= item.bit();
+        return true;
+    }
+
+    /** Who wears an accessory, or null. */
+    public Hero wearer(Gear item) {
+        for (Hero hero : heroes) if (hero.gear() == item) return hero;
+        return null;
+    }
+
+    /** Puts an owned accessory on a hero, taking it from whoever wore it; null removes it. */
+    public void equip(Hero hero, Gear item) {
+        if (item != null) {
+            if (!owns(item)) throw new IllegalArgumentException("Not owned");
+            Hero previous = wearer(item);
+            if (previous != null) previous.equip(null);
+        }
+        hero.equip(item);
+    }
+
     public int emeralds() { return emeralds; }
     public int emeraldCount() { return Integer.bitCount(emeralds); }
     public void addEmerald(int index) { if (index >= 0 && index < 7) emeralds |= 1 << index; }
@@ -116,6 +143,23 @@ public final class Progress {
     public boolean seen(String scene) { return scenes.contains(scene); }
     public void markSeen(String scene) { scenes.add(scene); }
     public Set<String> seenScenes() { return Set.copyOf(scenes); }
+
+    /** Lost animals returned home (one per area). */
+    public int rescued() {
+        int n = 0;
+        for (String scene : scenes) if (scene.endsWith("-field-animal")) n++;
+        return n;
+    }
+
+    /** The gift for reaching {@code count} rescued animals, or null between milestones. */
+    public static Gear rescueGift(int count) {
+        return switch (count) {
+            case 3 -> Gear.LUCKY_STAR;
+            case 6 -> Gear.HEART_PENDANT;
+            case 10 -> Gear.GOLD_MEDALLION;
+            default -> null;
+        };
+    }
 
     /** The zone and position of the last Starpost touched, or -1 when resuming on the map. */
     public int resumeZone() { return resumeZone; }
@@ -181,6 +225,10 @@ public final class Progress {
 
     void setItemCount(Item item, int count) {
         items[item.ordinal()] = Math.max(0, Math.min(MAX_ITEMS, count));
+    }
+
+    void loadGear(int mask) {
+        gear = mask & ((1 << Gear.values().length) - 1);
     }
 
     void clearScenes() {

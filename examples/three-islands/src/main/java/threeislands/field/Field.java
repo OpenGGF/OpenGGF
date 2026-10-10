@@ -3,13 +3,14 @@ package threeislands.field;
 import java.util.ArrayList;
 import java.util.List;
 import threeislands.core.EnemyKind;
+import threeislands.core.Gear;
 import threeislands.core.Item;
 import threeislands.core.Progress;
 import threeislands.core.Zone;
 
 /** An explorable two-dimensional area. Terrain, interaction and encounter distance share coordinates. */
 public final class Field {
-    public enum Kind { ENCOUNTER, MONITOR, STARPOST, DISCOVERY, FRIEND, MERCHANT, MIDBOSS, BOSS, DUNGEON, GUARDIAN, RELIC, CLUE, MECHANISM }
+    public enum Kind { ENCOUNTER, MONITOR, STARPOST, DISCOVERY, FRIEND, MERCHANT, MIDBOSS, BOSS, DUNGEON, GUARDIAN, RELIC, CLUE, MECHANISM, CHEST, ANIMAL, ECHO }
     public static final int WIDTH = 960, HEIGHT = 640;
     public static final double WALK = 1.6, RUN = 2.8;
     public static final int TRAIL = 96, FOLLOW_GAP = 12, TOUCH = 18;
@@ -21,9 +22,16 @@ public final class Field {
         public final Item item;
         public final int rings;
         public final String id, label;
+        /** The accessory a treasure monitor holds. */
+        public final Gear gear;
         public boolean done;
 
         Spot(Kind kind, int x, int y, List<EnemyKind> group, Item item, int rings, String id, String label) {
+            this(kind, x, y, group, item, rings, id, label, null);
+        }
+
+        Spot(Kind kind, int x, int y, List<EnemyKind> group, Item item, int rings, String id, String label, Gear gear) {
+            this.gear = gear;
             this.kind = kind;
             homeX = x;
             homeY = y;
@@ -36,7 +44,7 @@ public final class Field {
         public double x(long ticks) {
             return homeX + (kind == Kind.ENCOUNTER ? Math.sin(ticks / 70.0 + homeX) * 12 : 0);
         }
-        public boolean hostile() { return kind == Kind.ENCOUNTER || kind == Kind.MIDBOSS || kind == Kind.BOSS || kind == Kind.GUARDIAN; }
+        public boolean hostile() { return kind == Kind.ENCOUNTER || kind == Kind.MIDBOSS || kind == Kind.BOSS || kind == Kind.GUARDIAN || kind == Kind.ECHO; }
     }
 
     public final Zone zone;
@@ -96,6 +104,9 @@ public final class Field {
                 "dungeon-cache", "Sealed supplies"));
         var goal = route.getLast();
         add(Kind.RELIC, goal.x(), goal.y(), "dungeon-goal", dungeon.goal());
+        var vault = layout.secret();
+        spots.add(new Spot(Kind.CHEST, vault.x(), vault.y(), List.of(), null, 0, "dungeon-chest", "Treasure monitor",
+                dungeon.treasure()));
         placePuzzle("dungeon");
     }
 
@@ -103,7 +114,7 @@ public final class Field {
         add(Kind.CLUE, 184, 304, prefix + "-note", dungeon == null ? "Trail maintenance notice" : "Weathered instructions");
         for (int i = 0; i < puzzle.labels.length; i++) {
             // A third circuit control in the central chamber complements its two side branches.
-            var at = i < layout.alcoves.size() ? layout.alcoves.get(i) : layout.route.get(3);
+            var at = i < layout.controlRooms() ? layout.alcoves.get(i) : layout.route.get(3);
             add(Kind.MECHANISM, at.x(), at.y(), prefix + "-switch-" + i, puzzle.labels[i]);
         }
     }
@@ -137,6 +148,11 @@ public final class Field {
         for (int i = 0; i < bosses.size() - 1; i++) spots.add(new Spot(Kind.MIDBOSS, arena.x() - 48, arena.y() - 48,
                 List.of(bosses.get(i)), null, 0, "mid-" + i, "Anchor guardian"));
         spots.add(new Spot(Kind.BOSS, arena.x(), arena.y() - 32, List.of(bosses.getLast()), null, 0, "boss", "Rift anchor"));
+        List<EnemyKind> echo = echoGroup(zone);
+        if (!echo.isEmpty()) spots.add(new Spot(Kind.ECHO, arena.x() + 64, arena.y() + 48, echo, null, 0, "echo",
+                "Rift echo", echoPrize(zone)));
+        var hideout = layout.secret();
+        add(Kind.ANIMAL, hideout.x(), hideout.y(), "animal", "Lost " + animalName(zone));
         placePuzzle("route");
     }
 
@@ -214,10 +230,72 @@ public final class Field {
             add(Kind.CLUE, 1232, 832, "orchard-letter", "Tin beneath the roots");
             add(Kind.CLUE, 1440, 160, "horizon", "Split reflection");
             spots.add(new Spot(Kind.MONITOR, 272, 864, List.of(), Item.BLUE_SPHERE, 0, "cache-grove", "Overgrown monitor"));
+            add(Kind.ANIMAL, 112, 960, "animal", "Lost " + animalName(zone));
         }
     }
 
     public String key(Spot spot) { return zone.key + "-field-" + spot.id; }
+
+    /**
+     * Optional duels with two remembered bosses, appearing at each island's final anchor once
+     * it is beaten (the Death Egg's once Mecha Sonic is down, before the engine).
+     */
+    public static List<EnemyKind> echoGroup(Zone zone) {
+        return switch (zone) {
+            case SPRING_YARD -> List.of(EnemyKind.GIGA_MOTOBUG, EnemyKind.BOMB_KING);
+            case MYSTIC_CAVE -> List.of(EnemyKind.COCONUTS_CHIEF, EnemyKind.GRABBER_QUEEN);
+            case LAUNCH_BASE -> List.of(EnemyKind.FLAME_CRAFT, EnemyKind.SCREW_MOBILE);
+            case DEATH_EGG -> List.of(EnemyKind.SILVER_SONIC, EnemyKind.MECHA_SONIC);
+            default -> List.of();
+        };
+    }
+
+    public static Gear echoPrize(Zone zone) {
+        return switch (zone) {
+            case SPRING_YARD -> Gear.WARP_SHOES;
+            case MYSTIC_CAVE -> Gear.RIFT_MANTLE;
+            case LAUNCH_BASE -> Gear.HYPER_RING;
+            default -> Gear.MASTER_SHARD;
+        };
+    }
+
+    /** Echoes are fought above the area's level: optional, and meant to be hard. */
+    public static int echoLevel(Zone zone) {
+        return zone.level + 3;
+    }
+
+    /** Echo foes' HP percent: two bosses at once would otherwise drag on for a lone hero. */
+    public static int echoHp(int partySize) {
+        return partySize == 1 ? 55 : 100;
+    }
+
+    /** An echo shows itself once its area's anchor (or, aboard the Death Egg, Mecha Sonic) is beaten. */
+    public boolean echoAwake() {
+        if (zone == Zone.DEATH_EGG) return done("mid-0");
+        return cleared;
+    }
+
+    /** Each area hides one animal carried off to power Eggman's badniks. */
+    public static String animalName(Zone zone) {
+        return switch (zone) {
+            case GREEN_HILL -> "Picky";
+            case STAR_LIGHT, MYSTIC_CAVE -> "Rocky";
+            case SPRING_YARD, ANGEL_ISLAND -> "Ricky";
+            case EMERALD_HILL -> "Tocky";
+            case CHEMICAL_PLANT, LAUNCH_BASE -> "Pocky";
+            default -> "Flicky";
+        };
+    }
+
+    /** The ROM sprite key for a zone's lost animal, from that island's own game. */
+    public static String animalArt(Zone zone) {
+        String name = animalName(zone).toLowerCase(java.util.Locale.ROOT);
+        return switch (zone.game) {
+            case "s1" -> "s1:" + name;
+            case "s2" -> "s2:" + (name.equals("tocky") || name.equals("pocky") ? name : "flicky");
+            default -> "s3k:" + (name.equals("ricky") || name.equals("pocky") ? name : "flicky");
+        };
+    }
     public void restore(Progress progress) {
         cleared = progress.isCleared(zone);
         for (Spot spot : spots) spot.done = progress.seen(key(spot))
@@ -371,7 +449,8 @@ public final class Field {
         Spot best = null;
         double nearest = 38;
         for (Spot spot : spots) {
-            if (spot.kind == Kind.ENCOUNTER || (spot.done && spot.kind != Kind.STARPOST && spot.kind != Kind.FRIEND && spot.kind != Kind.MERCHANT && spot.kind != Kind.DUNGEON && spot.kind != Kind.RELIC && spot.kind != Kind.CLUE && spot.kind != Kind.MECHANISM)) continue;
+            if (spot.kind == Kind.ECHO && !echoAwake()) continue;
+            if (spot.kind == Kind.ENCOUNTER || (spot.done && spot.kind != Kind.STARPOST && spot.kind != Kind.CHEST && spot.kind != Kind.FRIEND && spot.kind != Kind.MERCHANT && spot.kind != Kind.DUNGEON && spot.kind != Kind.RELIC && spot.kind != Kind.CLUE && spot.kind != Kind.MECHANISM)) continue;
             double d = Math.hypot(spot.x(ticks) - x, spot.homeY - y);
             if (d < nearest) { nearest = d; best = spot; }
         }

@@ -139,6 +139,41 @@ public final class FieldScreen implements Screen {
                 });
             }
             case MERCHANT -> game.swap(new ShopScreen(game, this));
+            case CHEST -> {
+                if (spot.done || game.progress.owns(spot.gear)) {
+                    field.complete(game.progress, spot);
+                    say("The monitor is empty.");
+                    return;
+                }
+                field.complete(game.progress, spot);
+                game.progress.addGear(spot.gear);
+                game.audio.sfx(Audio.SFX_BREAK);
+                game.save();
+                game.playStory("gear-tutorial", this, () -> game.swap(this));
+                say("Found the " + spot.gear.label + "! " + spot.gear.description + " Equip it from the menu.");
+            }
+            case ANIMAL -> {
+                if (spot.done) return;
+                field.complete(game.progress, spot);
+                game.progress.addRings(50);
+                game.audio.sfx(Audio.SFX_RING);
+                game.save();
+                int count = game.progress.rescued();
+                Runnable home = () -> {
+                    threeislands.core.Gear gift = threeislands.core.Progress.rescueGift(count);
+                    if (gift != null && game.progress.addGear(gift)) {
+                        game.save();
+                        game.replayStory("animals-" + count, this, () -> {
+                            say("Received the " + gift.label + "! " + gift.description);
+                            game.swap(this);
+                        });
+                    } else {
+                        say(Field.animalName(zone) + " heads for home. Animals rescued: " + count + "/10. +50 rings.");
+                        game.swap(this);
+                    }
+                };
+                game.replayStory(zone.key + "-animal", this, home);
+            }
             case ENCOUNTER -> game.battle(this, spot, spot.group);
             case MONITOR -> {
                 field.complete(game.progress, spot);
@@ -195,6 +230,10 @@ public final class FieldScreen implements Screen {
                     game.swap(this);
                 });
             }
+            case ECHO -> {
+                if (!field.echoAwake() || spot.done) return;
+                game.replayStory(zone.key + "-echo", this, () -> game.battle(this, spot, spot.group));
+            }
             case MIDBOSS -> {
                 if (!field.anchorExposed()) { shielded(game); return; }
                 game.playStory(zone.key + "-mid", this, () -> game.battle(this, spot, spot.group));
@@ -229,6 +268,17 @@ public final class FieldScreen implements Screen {
                 return;
             }
             if (spot.kind == Field.Kind.BOSS) { game.zoneCleared(zone, this); return; }
+            if (spot.kind == Field.Kind.ECHO) {
+                game.progress.addGear(spot.gear);
+                game.progress.addRings(300);
+                game.progress.addItem(threeislands.core.Item.ONE_UP, 1);
+                game.save();
+                game.replayStory("echo-clear", this, () -> {
+                    say("The echo leaves behind the " + spot.gear.label + "! " + spot.gear.description + " +300 rings, 1-Up.");
+                    game.swap(this);
+                });
+                return;
+            }
             say("Caught your breath: recovered HP and EP.");
         } else field.retreat(spot);
         game.swap(this);
@@ -239,10 +289,24 @@ public final class FieldScreen implements Screen {
         if (game.screen() == this) hud(game, c);
     }
 
-    /** The battle and dialogue keep this exact world and camera underneath their actors/UI. */
-    public void drawWorld(Game game, SceneCanvas c, Field.Spot hidden, boolean showParty) {
+    /**
+     * Battles keep this exact world and camera, without its landmarks, labels or walkers, and
+     * slightly dimmed so the fighters read clearly against any terrain.
+     */
+    public void drawBattleground(Game game, SceneCanvas c) {
+        terrain(game, c);
+        c.fill(0, 0, c.width(), c.height(), 0x58000814);
+        c.fill(0, 96, c.width(), 72, 0x18FFFFFF);
+    }
+
+    private void terrain(Game game, SceneCanvas c) {
         if (dungeonArt != null) dungeonArt.draw(c, field, cameraX, cameraY, game.ticks());
         else stage.fieldArt.draw(c, field, cameraX, cameraY, game.ticks());
+    }
+
+    /** The battle and dialogue keep this exact world and camera underneath their actors/UI. */
+    public void drawWorld(Game game, SceneCanvas c, Field.Spot hidden, boolean showParty) {
+        terrain(game, c);
         if (field.dungeon == null && field.sealed(field.exitX(), 336)) {
             int edge = sx(field.exitX() - 8);
             c.fill(edge, sy(88), 24, field.height() - 136, 0x604D60C0);
@@ -289,11 +353,19 @@ public final class FieldScreen implements Screen {
     }
 
     private void drawSpot(Game game, SceneCanvas c, Field.Spot spot) {
-        if (spot.done && spot.hostile()) return;
+        if (spot.done && (spot.hostile() || spot.kind == Field.Kind.ANIMAL)) return;
         int x = sx(spot.x(ticks)), y = sy(spot.homeY);
         if (x < -80 || y < -80 || x > c.width() + 80 || y > c.height() + 80) return;
         c.fill(x - 10, y - 2, 20, 4, 0x50000000);
         switch (spot.kind) {
+            case ECHO -> {
+                if (!field.echoAwake()) break;
+                // A flickering violet afterimage of both remembered machines.
+                SceneDraw ghost = SceneDraw.plain().withTint(0xFFC090FF).withAlpha(ticks / 4 % 6 == 0 ? 0.45f : 0.8f);
+                int tall = game.enemies.draw(c, spot.group.get(1), x + 14, y, ticks, ghost);
+                tall = Math.max(tall, game.enemies.draw(c, spot.group.get(0), x - 14, y + 4, ticks + 20, ghost));
+                game.font.shadowed(c, "Rift echo", x - game.font.width("Rift echo") / 2, y - tall - 12, 0xFFC090FF);
+            }
             case ENCOUNTER, MIDBOSS, BOSS, GUARDIAN -> {
                 if ((spot.kind == Field.Kind.BOSS || spot.kind == Field.Kind.MIDBOSS) && !field.anchorExposed()) {
                     c.fill(x - 28, y - 54, 56, 56, 0x504D60C0);
@@ -305,6 +377,17 @@ public final class FieldScreen implements Screen {
                 if (spot.kind == Field.Kind.ENCOUNTER) game.font.shadowed(c, "x" + spot.group.size(), x + 10, y - 26, Ui.DIM);
             }
             case MONITOR -> sprite(game, c, "s3k:monitor", spot.done ? 11 : Math.max(0, spot.item.icon), x, y - 15);
+            case CHEST -> {
+                // A Super monitor holds an accessory; it stays broken once looted.
+                sprite(game, c, "s3k:monitor", spot.done ? 11 : 9, x, y - 15);
+                if (!spot.done && ticks / 20 % 3 == 0) c.fill(x - 1, y - 38, 3, 3, Ui.GOLD);
+            }
+            case ANIMAL -> {
+                if (spot.done) break;
+                // Lost animals hop about nervously in their hiding place.
+                int hop = (int) Math.abs(Math.sin(ticks / 9.0 + spot.homeX) * 5);
+                sprite(game, c, Field.animalArt(zone), (int) (ticks / 8 % 2), x, y - 8 - hop);
+            }
             case STARPOST -> {
                 sprite(game, c, "s3k:starpost", 0, x, y - 32);
                 sprite(game, c, "s3k:starpost", spot.done ? 2 : 1, x, y - 56);
@@ -329,7 +412,10 @@ public final class FieldScreen implements Screen {
             }
             case MECHANISM -> {
                 sprite(game, c, "s3k:starpost", spot.done ? 2 : 1, x, y - 16);
-                String mark = spot.id.contains("-switch-") ? spot.done ? "Set" : spot.label : spot.id.startsWith("bell-") ? switch (spot.id) {
+                int control = spot.id.contains("-switch-") ? Integer.parseInt(spot.id.substring(spot.id.lastIndexOf('-') + 1)) : -1;
+                String dial = control >= 0 && field.puzzle.rule == threeislands.field.MechanismPuzzle.Rule.ROTATE && !spot.done
+                        ? " (" + threeislands.field.MechanismPuzzle.direction(field.puzzle.facing(control)) + ")" : "";
+                String mark = spot.id.contains("-switch-") ? spot.done ? "Set" : spot.label + dial : spot.id.startsWith("bell-") ? switch (spot.id) {
                     case "bell-dawn" -> "Sunrise"; case "bell-noon" -> "High sun"; default -> "Sunset";
                 } : spot.done ? "Closed" : "Open";
                 game.font.shadowed(c, mark, x - game.font.width(mark) / 2, y - 42, Ui.DIM);
@@ -400,6 +486,12 @@ public final class FieldScreen implements Screen {
             if (game.progress.seen(zone.key + "-field-" + id) || game.progress.seen(zone.key + "-" + id)) {
                 lines.addAll(game.story.scene(zone.key + "-" + id));
             }
+        }
+        int rescued = game.progress.rescued();
+        if (rescued > 0) {
+            String next = rescued >= 10 ? "Every lost animal is home." : rescued < 3 ? "The Flicky sisters promised a reward at 3."
+                    : rescued < 6 ? "The animals hint at another gift at 6." : "One more gift waits for all 10.";
+            lines.add(new Story.Line(null, "Lost animals rescued: " + rescued + " of 10. " + next));
         }
         String note = field.dungeon == null ? "route-note" : "dungeon-note";
         if (game.progress.seen(zone.key + "-field-" + note)) lines.add(new Story.Line(null, field.puzzle.instructions()));

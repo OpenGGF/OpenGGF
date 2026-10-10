@@ -33,5 +33,21 @@ public record Dungeon(Zone zone, String label, int artZone, int artAct, int musi
                 : List.of(kinds.get(index % kinds.size()), kinds.get((index + 1) % kinds.size()));
     }
 
+    /** The accessory sealed in this interior's treasure room. */
+    public threeislands.core.Gear treasure() {
+        return switch (zone) {
+            case GREEN_HILL -> threeislands.core.Gear.FLICKY_FEATHER;
+            case STAR_LIGHT -> threeislands.core.Gear.VOLT_CHARM;
+            case SPRING_YARD -> threeislands.core.Gear.SPRING_BOOTS;
+            case EMERALD_HILL -> threeislands.core.Gear.WORK_GOGGLES;
+            case CHEMICAL_PLANT -> threeislands.core.Gear.AQUA_CHARM;
+            case MYSTIC_CAVE -> threeislands.core.Gear.MINER_LAMP;
+            case ANGEL_ISLAND -> threeislands.core.Gear.FLAME_CHARM;
+            case HYDROCITY -> threeislands.core.Gear.TIDE_AMULET;
+            case LAUNCH_BASE -> threeislands.core.Gear.ROCKET_BOOTS;
+            case DEATH_EGG -> threeislands.core.Gear.CHAOS_RING;
+        };
+    }
+
     public String completionKey() { return zone.key + "-dungeon-complete"; }
 }

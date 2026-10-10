@@ -8,6 +8,7 @@ import threeislands.Game;
 import threeislands.art.Font;
 import threeislands.art.Heroes;
 import threeislands.audio.Audio;
+import threeislands.core.Gear;
 import threeislands.core.Hero;
 import threeislands.core.HeroId;
 import threeislands.core.Item;
@@ -21,7 +22,7 @@ import threeislands.view.Ui;
  * healing skills outside battle, saving (on the map) and returning to the title.
  */
 public final class MenuScreen implements Screen {
-    private enum Mode { ROOT, ITEMS, ITEM_TARGET, SKILL_HERO, SKILLS, SKILL_TARGET, CONFIRM_QUIT }
+    private enum Mode { ROOT, ITEMS, ITEM_TARGET, SKILL_HERO, SKILLS, SKILL_TARGET, EQUIP_HERO, EQUIP, CONFIRM_QUIT }
 
     private final Screen under;
     private final boolean onMap;
@@ -31,6 +32,7 @@ public final class MenuScreen implements Screen {
     private int heroIndex;
     private int skillIndex;
     private int target;
+    private int gearIndex;
     private String message;
     private int messageTicks;
     private long ticks;
@@ -46,7 +48,7 @@ public final class MenuScreen implements Screen {
     }
 
     private List<String> rootLabels() {
-        return List.of("Items", "Skills", onMap ? "Save" : "Save (at Starposts)", "Quit to title", "Journal", "Close");
+        return List.of("Items", "Skills", "Equip", "Journal", onMap ? "Save" : "Save (at Starposts)", "Quit to title", "Close");
     }
 
     private List<Item> items(Game game) {
@@ -93,13 +95,17 @@ public final class MenuScreen implements Screen {
                     return;
                 }
                 if (game.controls.accept()) {
-                    switch (root) {
-                        case 0 -> {
+                    switch (rootLabels().get(root)) {
+                        case "Items" -> {
                             if (items(game).isEmpty()) say(game, "Your bag is empty.");
                             else mode = Mode.ITEMS;
                         }
-                        case 1 -> mode = Mode.SKILL_HERO;
-                        case 2 -> {
+                        case "Skills" -> mode = Mode.SKILL_HERO;
+                        case "Equip" -> {
+                            if (game.progress.gearMask() == 0) say(game, "No accessories yet. Look for treasure or visit Pocky.");
+                            else { mode = Mode.EQUIP_HERO; }
+                        }
+                        case "Save", "Save (at Starposts)" -> {
                             if (onMap) {
                                 game.progress.setResume(null, 0);
                                 game.save();
@@ -109,8 +115,8 @@ public final class MenuScreen implements Screen {
                                 say(game, "Interact with a Starpost to rest and save.");
                             }
                         }
-                        case 3 -> mode = Mode.CONFIRM_QUIT;
-                        case 4 -> {
+                        case "Quit to title" -> mode = Mode.CONFIRM_QUIT;
+                        case "Journal" -> {
                             if (under instanceof FieldScreen field) field.journal(game);
                             else say(game, "Enter a zone to investigate its rift echoes.");
                         }
@@ -179,12 +185,58 @@ public final class MenuScreen implements Screen {
                     useSkill(game, skills(game, caster).get(skillIndex), caster, party.get(target));
                 }
             }
+            case EQUIP_HERO -> {
+                if (game.controls.up() || game.controls.left()) heroIndex = (heroIndex + party.size() - 1) % party.size();
+                if (game.controls.down() || game.controls.right()) heroIndex = (heroIndex + 1) % party.size();
+                if (game.controls.back()) mode = Mode.ROOT;
+                else if (game.controls.accept()) {
+                    mode = Mode.EQUIP;
+                    List<Gear> choices = gearChoices(game);
+                    gearIndex = Math.max(0, choices.indexOf(party.get(heroIndex).gear()));
+                }
+            }
+            case EQUIP -> {
+                List<Gear> choices = gearChoices(game);
+                if (game.controls.up()) gearIndex = (gearIndex + choices.size() - 1) % choices.size();
+                if (game.controls.down()) gearIndex = (gearIndex + 1) % choices.size();
+                if (game.controls.back()) mode = Mode.EQUIP_HERO;
+                else if (game.controls.accept()) {
+                    Hero hero = party.get(heroIndex);
+                    Gear chosen = choices.get(gearIndex);
+                    game.progress.equip(hero, chosen);
+                    game.audio.sfx(Audio.SFX_SHIELD);
+                    message = chosen == null ? hero.id.label + " removed the accessory." : hero.id.label + " equipped the " + chosen.label + ".";
+                    messageTicks = 90;
+                    mode = Mode.EQUIP_HERO;
+                }
+            }
             case CONFIRM_QUIT -> {
                 if (game.controls.back()) mode = Mode.ROOT;
                 else if (game.controls.accept()) game.title();
             }
             default -> mode = Mode.ROOT;
         }
+    }
+
+    /** "None" first, then every owned accessory. */
+    private static List<Gear> gearChoices(Game game) {
+        List<Gear> out = new ArrayList<>();
+        out.add(null);
+        for (Gear gear : Gear.values()) if (game.progress.owns(gear)) out.add(gear);
+        return out;
+    }
+
+    private static String preview(Hero hero, Gear gear) {
+        Gear worn = hero.gear();
+        hero.equip(gear);
+        int hp = hero.maxHp(), ep = hero.maxEp(), atk = hero.atk(), def = hero.def(), spd = hero.spd();
+        hero.equip(worn);
+        return "HP " + arrow(hero.maxHp(), hp) + " EP " + arrow(hero.maxEp(), ep) + " ATK " + arrow(hero.atk(), atk)
+                + " DEF " + arrow(hero.def(), def) + " SPD " + arrow(hero.spd(), spd);
+    }
+
+    private static String arrow(int now, int then) {
+        return now == then ? String.valueOf(now) : now + ">" + then;
     }
 
     private void say(Game game, String text) {
@@ -260,14 +312,14 @@ public final class MenuScreen implements Screen {
         int w = c.width();
         int h = c.height();
         c.fill(0, 0, w, h, 0x80000010);
-        game.ui.window(c, 8, 8, 112, 82);
-        game.ui.list(c, 14, 14, 100, 6, rootLabels(), null, root, null, mode == Mode.ROOT ? ticks : 0);
+        game.ui.window(c, 8, 8, 112, 94);
+        game.ui.list(c, 14, 14, 100, 7, rootLabels(), null, root, null, mode == Mode.ROOT ? ticks : 0);
         Progress progress = game.progress;
-        game.ui.window(c, 8, 94, 112, 52);
-        game.font.draw(c, "~ " + progress.rings() + " rings", 14, 100, Ui.GOLD);
-        game.font.draw(c, "Emeralds " + progress.emeraldCount() + "/7", 14, 112, Ui.TEXT);
+        game.ui.window(c, 8, 106, 112, 52);
+        game.font.draw(c, "~ " + progress.rings() + " rings", 14, 112, Ui.GOLD);
+        game.font.draw(c, "Emeralds " + progress.emeraldCount() + "/7", 14, 124, Ui.TEXT);
         long minutes = progress.playTicks() / 3600;
-        game.font.draw(c, "Time " + minutes / 60 + ":" + String.format("%02d", minutes % 60), 14, 124, Ui.DIM);
+        game.font.draw(c, "Time " + minutes / 60 + ":" + String.format("%02d", minutes % 60), 14, 136, Ui.DIM);
         // Party cards.
         List<Hero> party = progress.party();
         int cardH = 62;
@@ -275,7 +327,8 @@ public final class MenuScreen implements Screen {
             Hero hero = party.get(i);
             int y = 8 + i * (cardH + 4);
             boolean picked = (mode == Mode.ITEM_TARGET || mode == Mode.SKILL_TARGET) && i == target
-                    || (mode == Mode.SKILL_HERO || mode == Mode.SKILLS) && i == heroIndex;
+                    || (mode == Mode.SKILL_HERO || mode == Mode.SKILLS || mode == Mode.EQUIP_HERO || mode == Mode.EQUIP)
+                    && i == heroIndex;
             game.ui.window(c, 126, y, w - 134, cardH, picked ? 0xF02C4C9C : 0xF0182868, 0xF0081030);
             String g = game.heroes.gameFor(progress.island().game, hero.id);
             game.heroes.draw(c, g, hero.id, hero.hp() > 0 ? Heroes.IDLE : Heroes.DOWN, 150, y + 50, false, ticks,
@@ -290,6 +343,8 @@ public final class MenuScreen implements Screen {
             game.ui.bar(c, tx + 16, y + 33, 60, 4, hero.ep(), hero.maxEp(), Ui.EP);
             game.font.draw(c, hero.ep() + "/" + hero.maxEp(), tx + 80, y + 30, Ui.TEXT);
             game.font.draw(c, "ATK " + hero.atk() + "  DEF " + hero.def() + "  SPD " + hero.spd(), tx, y + 42, Ui.DIM);
+            game.font.draw(c, hero.gear() == null ? "No accessory" : hero.gear().label, tx, y + 52,
+                    hero.gear() == null ? Ui.DIM : Ui.GOLD);
             if (hero.level() < Hero.MAX_LEVEL) {
                 String next = "Next " + (Hero.xpToNext(hero.level()) - hero.xp());
                 game.font.draw(c, next, w - 14 - game.font.width(next), y + 5, Ui.DIM);
@@ -326,6 +381,22 @@ public final class MenuScreen implements Screen {
             game.ui.list(c, 26, 46, 158, rows, labels, enabled, skillIndex, costs, mode == Mode.SKILLS ? ticks : 0);
             footer(game, c, skills.get(skillIndex).description);
         }
+        if (mode == Mode.EQUIP) {
+            List<Gear> choices = gearChoices(game);
+            Hero hero = party.get(heroIndex);
+            List<String> labels = new ArrayList<>();
+            List<String> owners = new ArrayList<>();
+            for (Gear gear : choices) {
+                labels.add(gear == null ? "(None)" : gear.label);
+                Hero wearer = gear == null ? null : progress.wearer(gear);
+                owners.add(wearer == null ? null : wearer.id.label);
+            }
+            int rows = Math.min(9, choices.size());
+            game.ui.window(c, 20, 40, 190, rows * Font.LINE + 12);
+            game.ui.list(c, 26, 46, 178, rows, labels, null, Math.min(gearIndex, choices.size() - 1), owners, ticks);
+            Gear chosen = choices.get(Math.min(gearIndex, choices.size() - 1));
+            footer(game, c, (chosen == null ? "Remove the accessory. " : chosen.description + " ") + preview(hero, chosen));
+        }
         if (mode == Mode.CONFIRM_QUIT) {
             game.ui.window(c, w / 2 - 110, h / 2 - 20, 220, 40);
             game.font.centered(c, "Quit to the title? Unsaved progress is lost.", w / 2, h / 2 - 13, Ui.TEXT);
@@ -337,7 +408,9 @@ public final class MenuScreen implements Screen {
     private void footer(Game game, SceneCanvas c, String text) {
         int w = c.width();
         int h = c.height();
-        game.ui.window(c, 8, h - 30, w - 16, 24);
-        game.ui.paragraph(c, text, 14, h - 24, w - 30, Ui.TEXT, 1);
+        int lines = Math.min(2, game.font.wrap(text, w - 30).size());
+        int top = h - 18 - lines * Font.LINE;
+        game.ui.window(c, 8, top, w - 16, 12 + lines * Font.LINE);
+        game.ui.paragraph(c, text, 14, top + 6, w - 30, Ui.TEXT, lines);
     }
 }

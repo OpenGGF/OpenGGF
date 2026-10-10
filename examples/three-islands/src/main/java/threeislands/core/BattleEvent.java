@@ -18,6 +18,10 @@ public record BattleEvent(int type, Combatant source, Combatant target, int amou
     public static final int EP = 9;
     public static final int LUNGE = 10;
     public static final int FLEE = 11;
+    /** {@code target} is a newly summoned foe joining the battle. */
+    public static final int SUMMON = 12;
+    /** {@code target} gained or suffered a status; {@code element} names it. */
+    public static final int STATUS = 13;
 
     public static BattleEvent message(String text) {
         return new BattleEvent(MESSAGE, null, null, 0, text, Element.NONE, false);

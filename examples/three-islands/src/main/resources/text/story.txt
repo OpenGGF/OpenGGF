@@ -24,6 +24,7 @@ Sonic: I'll bring her out. Wait here where she can find you.
 
 @ghz-boss
 Sonic: The shield's down. Now I can reach the machine running that barrier.
+Sonic: It's revving that engine. When it charges up, I'd better brace myself.
 
 @ghz-clear
 Sonic: That did it. The barrier's off.
@@ -39,6 +40,7 @@ Rocky: I kept the maintenance log in the vault. They drove me out before I could
 
 @slz-boss
 Sonic: Easy with that fuse. I need the emerald in one piece.
+Sonic: And it's rolling out little bombs. Better knock those over before their fuses run down.
 
 @slz-clear
 Sonic: Got the emerald. The anchor's stopped, and the Spring Yard road is clear.
@@ -103,6 +105,7 @@ Sonic: Hang on down there! We're looking for a way to help!
 @cpz-boss
 Tails: The Grabber's carrying the emerald. Watch above you.
 Sonic: I see it. Stay back from the claws.
+Tails: If it catches one of us, hit it hard. It lets go when it's hurt.
 
 @cpz-clear
 Tails: The anchor's off. The pumps should be able to keep up now.
@@ -118,6 +121,7 @@ Tails: We should be careful. There isn't much room to get out of their way.
 @mcz-boss
 Tails: It looks like you.
 Sonic: It moves like me, too. Watch its feet before it charges.
+Tails: Those spikes are sharp. If it curls up, a plain hit will bounce back. Use a shield or my Energy Ball instead.
 
 @mcz-clear
 Tails: The mine's clear. I'm getting a much stronger signal from Angel Island.
@@ -174,6 +178,7 @@ Knuckles: There are channel plans in the sanctuary. I haven't needed them before
 Knuckles: You said you were repairing the Master Emerald.
 Eggman: And you believed me. Now get away from my machinery.
 Sonic: We'll get it back, Knuckles. Watch the drill.
+Tails: And the depth charges. If one lands beside you, guard before it goes off.
 
 @hcz-clear
 Knuckles: The anchor's stopped. Water's getting through the spillways again.
@@ -190,6 +195,8 @@ Tails: There's a service ring, but the launch system has locked it.
 @lbz-boss
 Eggman: You're not getting aboard my ship.
 Sonic: Then you'll have to stay here and stop us.
+Tails: That orb projects a barrier. One of us alone won't get through it.
+Knuckles: Then we hit it together.
 
 @lbz-clear
 Tails: The Beam Rocket's down. The service ring is open.
@@ -220,6 +227,7 @@ Sonic: Looks tougher than the one in the mine. Don't let it get between us.
 
 @dez-boss
 Eggman: Stay back! Disconnect that engine and you'll bring the whole ship down!
+Tails: Look at the core's colour. It changes the element it's weak to every round.
 Tails: We've opened the return channel. The islands can separate safely now.
 Knuckles: And I've seen your power readings. You can't keep running it like this.
 Eggman: I can still finish this!
@@ -245,6 +253,8 @@ Knuckles: Alright. I'll come with you.
 Flicky: We used to store food in the shrine. My sister thought she'd have time to get it before the robots arrived.
 Sonic: Did she know another way out?
 Flicky: There's only the main gate. Please be careful.
+Flicky: And Sonic... the robots took animals from all over to run their engines. Some escaped and got lost.
+Flicky: If you find any hiding, tell them to come here. We'll look after them. There's one in our own southern grove.
 
 @ghz-memory
 Sister: Sonic! Is my sister alright?
@@ -599,3 +609,113 @@ Tails: The return channel needs the original survey. These are the positions Egg
 
 @dez-friend-after
 Ricky: We're getting the pods ready. I'll leave one at this dock for you.
+
+# Equipment, lost animals and their gifts.
+
+@gear-tutorial
+Sonic: Looks like somebody stored gear in this monitor.
+> Accessories change a hero's strength, speed or element. Each hero can wear one. Choose Menu, then Equip.
+> Elemental charms also protect the wearer from that element's status: burns, soaking or stuns.
+
+@ghz-animal
+> A small pig is hiding under the roots, trembling.
+Sonic: Hey, it's alright. The robots are gone from here.
+Sonic: The Flicky sisters are looking after everyone who got lost. It's not far.
+> The pig trots off toward the village.
+
+@slz-animal
+> A seal has squeezed itself behind a broken street lamp.
+Sonic: Rocky's been worried about you lot. The road to Green Hill's open now.
+> The seal flops away down the promenade, honking happily.
+
+@syz-animal
+> A squirrel peers out of an empty freight crate.
+Sonic: You came off one of those robots, didn't you? Go on, the coast is clear.
+> The squirrel scampers along the freight track toward Green Hill.
+
+@ehz-animal
+> A turtle has wedged itself between two waterfall rocks.
+Tails: It must have dropped out of a Coconuts. They keep animals inside to power them.
+Sonic: Then let's send it somewhere safer. The Flicky sisters will look after it.
+> The turtle paddles off through the stream.
+
+@cpz-animal
+> A rabbit is sitting very still beside a cooling pipe.
+Tails: It's not hurt. Just scared of the pumps.
+Sonic: Head for the Warp Ring, little one. It'll take you home.
+> The rabbit bounds toward the ring.
+
+@mcz-animal
+> A seal pup blinks at the party from the bottom of a mine shaft.
+Tails: How did it even get down here?
+Sonic: Same way as us, probably. Out you come.
+> The seal follows the miners' rope up to the surface.
+
+@aiz-animal
+> A squirrel is perched in a scorched tree, refusing to come down.
+Tails: The fire's out. You can come down now.
+Sonic: Come on. We'll even let you ride the Warp Ring.
+> The squirrel leaps down and darts off through the jungle.
+
+@hcz-animal
+> A Flicky is sheltering under a dry ledge above the water.
+Tails: Its wings are wet. It couldn't fly out.
+Knuckles: Give it a minute. The water's going down now.
+> The Flicky shakes itself dry and flutters toward the surface.
+
+@lbz-animal
+> A rabbit is hiding inside an empty fuel drum.
+Tails: There are dozens of empty animal pods on that cargo list. He loaded them onto the Death Egg.
+Knuckles: Then this one's going home first.
+> The rabbit hops into the service ring's glow and is gone.
+
+@dez-animal
+> A Flicky is beating its wings against a cage in the archive.
+Sonic: Hold still. There. You're out.
+Tails: The escape pods have room for one more passenger.
+> The Flicky darts down the corridor toward the dock.
+
+@animals-3
+> A Flicky lands on Sonic's shoulder carrying a tiny parcel, and a message from the Flicky sisters.
+Flicky: "Three friends are home! They dug this up for you. It always brings us luck."
+
+@animals-6
+> A flock of birds circles overhead and drops a parcel into Tails' hands.
+Flicky: "Six of us are home now! Everyone wanted to give you something. Please keep it close."
+
+@animals-10
+> Every rescued animal turns up at once: pigs, seals, squirrels, rabbits, turtles and a cloud of Flickies.
+> Together they present a gold medal, polished and threaded on a ribbon.
+Flicky: "That's everybody. Every single one. Thank you, all of you."
+Sonic: You didn't have to do this.
+Knuckles: Just take it. They clearly want you to.
+
+# Rift Echoes: optional duels once an island's anchors have fallen.
+
+@syz-echo
+> The Warp Ring hums. Two shapes flicker out of it: the Giga Motobug and the Bomb King, both in violet light.
+Sonic: I already beat you two. Didn't I?
+> Neither machine answers. They step forward together.
+Sonic: Okay. If the ring's leaking old fights, I'll close it the hard way.
+
+@mcz-echo
+> Light spills from the cave mouth. The Coconuts Chief and the Grabber Queen drift out of it, faint and violet.
+Tails: Those are rift echoes! The ring's replaying machines from the islands' recent past.
+Sonic: Do they hit like the real thing?
+Tails: My readings say harder. We don't have to fight them.
+Sonic: Where's the fun in that?
+
+@lbz-echo
+> The service ring flares. The Flame Craft and the Screw Mobile hang in the air together, made of violet light.
+Knuckles: Both of them at once?
+Tails: Echoes. The Death Egg's engine is bending the rings. They'll fade on their own eventually.
+Knuckles: Or we can make them fade faster.
+
+@dez-echo
+> Violet light gathers near the core. Silver Sonic steps out of it beside a second Mecha Sonic.
+Tails: It's copying its own memories! This is the strongest echo yet.
+Sonic: Two of me? I'm flattered. Let's go.
+
+@echo-clear
+> The echo breaks apart like glass. Something solid clatters to the ground where it stood.
+Tails: It left something real behind. Rift energy must have pulled it in from somewhere.
