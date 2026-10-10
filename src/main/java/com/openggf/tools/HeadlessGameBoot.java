@@ -40,12 +40,15 @@ import java.util.Optional;
 import static org.lwjgl.glfw.GLFW.GLFW_CONTEXT_VERSION_MAJOR;
 import static org.lwjgl.glfw.GLFW.GLFW_CONTEXT_VERSION_MINOR;
 import static org.lwjgl.glfw.GLFW.GLFW_FALSE;
+import static org.lwjgl.glfw.GLFW.GLFW_PLATFORM;
+import static org.lwjgl.glfw.GLFW.GLFW_PLATFORM_NULL;
 import static org.lwjgl.glfw.GLFW.GLFW_RESIZABLE;
 import static org.lwjgl.glfw.GLFW.GLFW_VISIBLE;
 import static org.lwjgl.glfw.GLFW.glfwCreateWindow;
 import static org.lwjgl.glfw.GLFW.glfwDefaultWindowHints;
 import static org.lwjgl.glfw.GLFW.glfwDestroyWindow;
 import static org.lwjgl.glfw.GLFW.glfwInit;
+import static org.lwjgl.glfw.GLFW.glfwInitHint;
 import static org.lwjgl.glfw.GLFW.glfwMakeContextCurrent;
 import static org.lwjgl.glfw.GLFW.glfwTerminate;
 import static org.lwjgl.glfw.GLFW.glfwWindowHint;
@@ -133,6 +136,7 @@ public final class HeadlessGameBoot implements AutoCloseable {
     private final SessionCloser sessionCloser;
 
     private long window = NULL;
+    private SurfacelessEglContext eglContext;
 
     // JOML projection state, mirroring VisualReferenceGenerator.
     private final Matrix4f projectionMatrix = new Matrix4f();
@@ -279,10 +283,25 @@ public final class HeadlessGameBoot implements AutoCloseable {
 
         GLFWErrorCallback.createPrint(System.err).set();
 
+        boolean surfaceless = SurfacelessEglContext.requested();
+        if (surfaceless) {
+            // GLFW keeps its timer/input role on the display-free null platform.
+            glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_NULL);
+        }
         if (!glfwInit()) {
             throw new IllegalStateException("Unable to initialize GLFW");
         }
 
+        if (surfaceless) {
+            eglContext = SurfacelessEglContext.create(width, height, coreProfile);
+        } else {
+            createHiddenWindowContext();
+        }
+        GL.createCapabilities();
+        initGlState();
+    }
+
+    private void createHiddenWindowContext() {
         glfwDefaultWindowHints();
         glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
         glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
@@ -302,8 +321,9 @@ public final class HeadlessGameBoot implements AutoCloseable {
         }
 
         glfwMakeContextCurrent(window);
-        GL.createCapabilities();
+    }
 
+    private void initGlState() {
         GraphicsManager graphicsManager = EngineServices.current().graphics();
         // Test and batch-tool JVMs can reuse this process after a logic-only
         // session called initHeadless(). This boot owns a real GL context, so
@@ -702,6 +722,10 @@ public final class HeadlessGameBoot implements AutoCloseable {
     }
 
     private void closeNativeGl() {
+        if (eglContext != null) {
+            eglContext.close();
+            eglContext = null;
+        }
         if (window != NULL) {
             glfwDestroyWindow(window);
             window = NULL;

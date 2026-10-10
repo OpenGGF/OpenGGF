@@ -2,7 +2,12 @@
 
 Use headless engine tests for behavior and `GameplayCaptureTool` for deterministic
 offscreen GPU/state/audio captures and promo footage. These do not need synthetic
-desktop input or a real-time window walkthrough. See
+desktop input or a real-time window walkthrough. By default the capture boot still
+opens a hidden GLFW window, which needs a display connection. On Linux with Mesa,
+`-Dopenggf.headless.gl=surfaceless-egl` instead renders into a surfaceless EGL
+pbuffer with GLFW on its null platform: unset `DISPLAY`/`WAYLAND_DISPLAY` and the
+capture never touches a desktop session. If surfaceless EGL is unavailable, the
+boot fails rather than falling back to a display. See
 [headless testing](../../docs/guide/contributing/headless-testing.md) and the
 [capture skill](../../.agents/skills/gameplay-capture/SKILL.md).
 

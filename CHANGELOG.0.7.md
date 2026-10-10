@@ -35,7 +35,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   limits are documented separately from desktop footage.
   Routine validation and footage use headless/offscreen paths; window-specific
   diagnostics create an owned virtual display and fail if isolation is unavailable,
-  preventing automated walkthroughs from taking desktop keyboard focus.
+  preventing automated walkthroughs from taking desktop keyboard focus. Linux
+  captures can opt into a surfaceless EGL context that needs no display connection.
 
 - **Sonic 2 title SFX priority:** the flashing star's last twinkle now runs to
   its own stop, as in the ROM, releasing the sound driver's SFX priority. A stop
