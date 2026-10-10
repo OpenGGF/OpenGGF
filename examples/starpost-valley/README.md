@@ -1,7 +1,7 @@
 # Starpost Valley — a farming life in Green Hill, after the credits
 
 A code mod for OpenGGF's JVM build: a complete *Stardew Valley*–style farming and life game played
-as a full-screen **mod scene** over Sonic 3 & Knuckles. Every Sonic game ends with Sonic running away
+through a full-screen farm **mod scene** and a real valley act over Sonic 3 & Knuckles. Every Sonic game ends with Sonic running away
 from the wreckage of his victory. This is the part the credits skip: Green Hill churned up by
 badniks, and dozens of freed animals with nowhere to go. Farm the valley's old fields, rebuild
 Robotnik's cracked animal capsule into the valley's heart (or sell out to his Robomart), pop badnik
@@ -117,17 +117,19 @@ improvements at Robomart. The year ends with the Signpost Spin.
 Built as an example of the scene API at production scale; the design, the decisions and the
 rejected approaches are in `docs/architecture/designs/2026-10-09-starpost-valley.md`.
 
-The farm gate now visits a real S3K act at the registered destination
-`starpost-valley:valley`. Until the terrain lane lands, it is a flat collision
-placeholder with the town objects and ROM-decoded presentation. Door menus return
-to the same act at the door; the gate returns to the same farm/day/session. Health
-rings are separate from the saved wallet. For the earlier scene valley, send the
-scene debug command `town scene` (`town act` restores act visits). `town enter`
-exercises the bridge from a live play screen. Terrain integration replaces the
-placeholder source and validates connected anchors and native routes; this phase
-does not claim Green Hill act parity.
+The farm gate visits a real S3K act at `starpost-valley:valley`, with Green Hill
+terrain decoded from Sonic 1 and played by the native Sonic, Tails or Knuckles.
+Buildings and neighbours use its real floor. Up enters a doorway; closing its
+scene menu returns to that door in the same act. Up at the farm gate returns to
+the same farm/day/session. Native health rings are separate from the saved wallet;
+TIME shows the day clock and RINGS shows the wallet using Sonic 1 HUD art.
+The chosen scene soundtrack follows the act, and the farm song resumes at home.
+The native solo round trip is verified at 320/400 pixels. The earlier scene valley
+remains a debug fallback: `town scene` selects it, `town act` restores act visits,
+and `town enter` launches from the current play screen. See design §23 for the
+route matrix and wider/team/respawn/festival coverage gaps.
 
-The build runs the authored `generate_resources.py` after copying resources. Its
-blank tiles and flat collision assets are generated only into packaging output;
-no ROM bytes or generated binary files are committed. Artifact-only builds use
-the same generator convention.
+The jar contains tiny original typed placeholder resources for registering the
+act; `tools/make_placeholder.py` reproduces them without ROM input. Loading the
+valley replaces them with terrain read from the supplied Sonic 1 ROM. No Sega
+asset bytes are committed or bundled.

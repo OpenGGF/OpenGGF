@@ -2197,7 +2197,12 @@ scene; SCORE/LIVES stay hidden. `TownPresentation.updateMusic` uses the retained
 scene context's `audio().playMusic` donor route and existing place/weather/hour
 selection. Return resets the scene music cursor and reselects the farm song.
 Native health rings remain separate from spending the wallet in scene menus.
-No engine production code or Mod API signatures/pins changed.
+No Mod API signatures/pins changed. The first completed guard run at
+`a140d3695` ran 674 tests with one inherited failure: `LevelManager` had 3,160
+effective lines against its 3,145-line budget, identical to base `70d428fd4`.
+Extracting its existing additive graphics publication into
+`LevelGraphicsPublisher` preserves palette/pattern batching and headless gating;
+no load algorithm changes. The follow-up reruns affected loading and routes.
 
 ### Integration route matrix
 
@@ -2223,20 +2228,25 @@ daily state survives. Existing Phase-1 ledge/loop routes and rewind remain cover
 Validation is focused, not a full-suite pass. The change-based plan selects all
 3,083 ordinary classes because example paths and the shared test harness fall
 back to full selection. Proportionate validation applies: executable changes
-are confined to this example, with no shared runtime algorithm, public API or
-build/selection-policy changes. Actual consumers, six native routes, terrain,
+are confined to this example plus a behavior-preserving extraction of additive
+load graphics; there is no shared algorithm, public API or build/selection-policy
+change. Actual consumers, six native routes, terrain,
 rewind, HUD/audio, creator packaging and required S3K baselines are checked
 explicitly, followed by fresh structural guards. Java 21/Lua 5.4/PowerShell
 preflight passes. Commands (both ROM properties resolve to absolute paths):
 
 ```bash
 python3 tools/testing/maven_queue.py --lean -B -Dmse=off '-Dtest=TestStarpostRealValley,TestStarpostTownAct,TestStarpostTownSceneBridge,TestModSceneActBridge,TestModSceneHost,TestStarpostValleyExample,TestStarpostValleyScene,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' "-Ds3k.rom.path=$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic1.rom.path=$PWD/Sonic The Hedgehog (W) (REV01) [!].gen" test
-LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -B -Dmse=off -Pguards test
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -B -Dmse=off -Pguards "-Ds3k.rom.path=$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic1.rom.path=$PWD/Sonic The Hedgehog (W) (REV01) [!].gen" test
+java -cp "$HOME/scratch/sv-integrate/creator/out:target/classes:$(cat target/test-classpath.txt)" RunCreatorTests $HOME/scratch/sv-integrate/creator/tests $HOME/scratch/sv-integrate/creator/main
 ```
 
 The lane-rules direct creator runner passes **196/196**, no skips; packaging
 reports **Validation passed: 0 findings**. The final focused engine run passes **118/118**, zero failures/errors/skips;
-fresh guards are recorded after their completed run.
+the final guard run passes **674/674**, zero failures/errors/skips (3m43s).
+Both focused loading/routes and guards ran on `a140d3695` plus the reviewed
+`LevelGraphicsPublisher` extraction. The final milestone commits that exact
+extraction and these documentation updates; no later executable changes.
 
 Native `HeadlessGameBoot` + `GameLoop.step` capture: `~/scratch/sv-integrate/`,
 `round-trip.mp4` (798 frames, 13.3 seconds, synthesized ROM audio), final

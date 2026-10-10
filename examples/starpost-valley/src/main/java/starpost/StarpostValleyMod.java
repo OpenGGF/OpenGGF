@@ -7,7 +7,7 @@ import starpost.scene.StarpostScene;
 
 /**
  * Starpost Valley's entry point: one startup scene at 16:9, plus the valley as a real S3K act
- * ({@link RealValley}; not yet reachable from the scene).
+ * ({@link RealValley}; reached through the farm gate).
  */
 public final class StarpostValleyMod implements GgfMod {
     @Override

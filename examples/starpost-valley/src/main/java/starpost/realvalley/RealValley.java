@@ -11,7 +11,7 @@ import com.openggf.mods.code.ModZoneContribution;
  *
  * <p>The jar registers only a one-pattern placeholder act ({@code levels/valley}, generated, no
  * Sega data); {@link RealValleyPatch} replaces it with the re-encoded level whenever the act loads.
- * Nothing in the scene reaches the act yet: tests and debug launches enter it directly.
+ * The scene farm gate starts this act; town doors return to scene menus and back.
  */
 public final class RealValley {
     /** The mod's manifest id, which owns the zone. */
