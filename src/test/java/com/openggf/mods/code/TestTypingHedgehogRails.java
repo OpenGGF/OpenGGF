@@ -240,7 +240,8 @@ class TestTypingHedgehogRails {
         Map<Integer, Object> standsByRow = new HashMap<>();
         for (Object s : stands) standsByRow.put((int) get(s, "row"), s);
         var input = new InputHandler();
-        int countdownRows = 0, cmax = Integer.MIN_VALUE, pmax = Integer.MIN_VALUE, heldRows = 0;
+        int countdownRows = 0, cmax = Integer.MIN_VALUE, pmax = Integer.MIN_VALUE, heldRows = 0, sinceLoop = -1;
+        boolean loopsExempt = "forward-v2".equals(get(plan, "policy"));
         boolean retried = false;
         String lastPhase = "";
         int lastRailRow = -1;
@@ -310,8 +311,19 @@ class TestTypingHedgehogRails {
             if (kill != null) return "native kill of " + kill + " at rail row " + railRow;
             if (railRow > countdownRow + 180 && phase.equals("RUN")) {
                 int camX = GameServices.camera().getX(), x = player.getCentreX();
-                if (cmax != Integer.MIN_VALUE && camX < cmax - 16) return "camera backtracked at rail row " + railRow;
-                if (pmax != Integer.MIN_VALUE && x < pmax - 64) return "Sonic backtracked at rail row " + railRow;
+                // forward-v2: loop traversal (grounded at wall or ceiling angles) is exempt, and the
+                // high water must come back within 60 rows of leaving the loop.
+                int a = player.getAngle() & 0xFF;
+                boolean inLoop = loopsExempt && !player.getAir() && Math.abs(a > 128 ? a - 256 : a) >= 0x20;
+                if (inLoop) {
+                    sinceLoop = 0;
+                } else if (sinceLoop >= 0) {
+                    if (x >= pmax && camX >= cmax - 16) sinceLoop = -1;
+                    else if (++sinceLoop > 60) return "Sonic did not regain his high water after a loop at rail row " + railRow;
+                } else {
+                    if (cmax != Integer.MIN_VALUE && camX < cmax - 16) return "camera backtracked at rail row " + railRow;
+                    if (pmax != Integer.MIN_VALUE && x < pmax - 64) return "Sonic backtracked at rail row " + railRow;
+                }
                 cmax = Math.max(cmax, camX);
                 pmax = Math.max(pmax, x);
             }

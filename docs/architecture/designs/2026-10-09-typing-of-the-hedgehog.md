@@ -344,6 +344,16 @@ relaxed per act.
   ExplosionItem). Limit: a kill by an object that destroys a badnik without that hand-off would not show;
   the builder's search uses a score jump of 100 or more (Sonic or the CPU sidekick) instead.
 
+**Authoring policy `forward-v2` (the user's rule for every act, 2026-10-10).** Sol's site bounds proved too
+tight for most act openings (S3K HCZ1, MGZ1, MHZ1 and SOZ1 had no qualifying early stop at 4 px), so for every
+act: floor range at most 8 px over a 128 px strip (40 px behind Sonic, 88 ahead), angle within 8, first
+fight within 600 rows and 1600 px of the release; water and object support stay excluded and the soak
+rejects a held Sonic who would drown. Loops are not backtracking (the user's complaint was a run that goes
+forward and then back): while Sonic is grounded at wall or ceiling angles the backtracking bounds are not
+measured, and he must regain his furthest x within 60 rows of leaving the loop; leftward travel on ordinary
+floor stays forbidden. Rails name their policy and the gate applies it (EHZ2 was built under the stricter
+`forward-v1`). At sloped sites ground badniks follow the floor through a read-only probe in `Encounter`.
+
 Probe findings that set these rules (`TypingHedgehogRailsV2Probe`, 5dc9c9cd6, S1 GHZ3, S2 EHZ2, S3K
 SOZ1): host load-time simulation, cross-game features and live rewind leave the first 500 native rows
 unchanged; S3K skipped intros change SOZ1 from row 0 (so the mod requires skipped intros, ec15b6093); the

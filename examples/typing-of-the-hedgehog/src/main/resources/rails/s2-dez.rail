@@ -1,10 +1,19 @@
-# s2 dez: built by TypingHedgehogRailBuilderProbe from src/test/resources/traces/s2/dez_ending (0 repairs, ended boss)
+# s2 dez: authored by TypingHedgehogForwardRailBuilder (2113 native rows, 0 s, sites 0 (rejected 0), soaks 0, furthest x 718 with 0 fights, recorded-row children 11 (furthest x 844), furthest fought lineage x -1 with 0 fights, waypoints reached 0/0, flattest rejected early site null, dead ends {reverse excursion=1})
+format 2
+policy forward-v2
+combat live-restore-v1
+course boss-only
+launch native-spindash
+profile width=320
 game s2
 zone 10
 act 0
 team sonic,tails
-validated 166
-engine 0.7.prerelease-26bf29066
 rom 7B905383
-program 166:8
-boss 166
+rom-sha1 8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9
+engine 0.7.prerelease-94804e439-dirty
+countdown 60
+waypoints recorded dez_ending 241-311@0
+endpoint boss-arena 335
+validated 335
+program 60:0,2:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,3:2,72:8,12:4,11:0

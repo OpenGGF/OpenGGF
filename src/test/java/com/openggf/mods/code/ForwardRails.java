@@ -371,16 +371,21 @@ final class ForwardRails {
     }
 
     record Geometry(int samples, int missing, int range, int lowCeilings, String profile) {
-        boolean flat() { return missing == 0 && range <= 4 && lowCeilings == 0; }
+        boolean flat() { return flat(4); }
+
+        boolean flat(int maxRange) { return missing == 0 && range <= maxRange && lowCeilings == 0; }
     }
 
     /** Floor samples every 8 px from 48 px left to 112 px right of Sonic at his feet. */
-    static Geometry geometry() {
+    static Geometry geometry() { return geometry(-48, 112); }
+
+    /** Floor samples every 8 px from {@code left} to {@code right} px of Sonic at his feet. */
+    static Geometry geometry(int left, int right) {
         var s = sonic();
         int feet = s.getCentreY() + s.getYRadius();
         int min = Integer.MAX_VALUE, max = Integer.MIN_VALUE, missing = 0, low = 0, samples = 0;
         StringBuilder profile = new StringBuilder();
-        for (int dx = -48; dx <= 112; dx += 8) {
+        for (int dx = left; dx <= right; dx += 8) {
             int x = s.getCentreX() + dx;
             TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(x, feet - 8);
             samples++;

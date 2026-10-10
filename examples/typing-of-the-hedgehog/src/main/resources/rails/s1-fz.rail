@@ -1,10 +1,19 @@
-# s1 fz: built by TypingHedgehogRailBuilderProbe from src/test/resources/traces/s1/fz_completerun (0 repairs, ended boss)
+# s1 fz: authored by TypingHedgehogForwardRailBuilder (6936 native rows, 0 s, sites 0 (rejected 0), soaks 0, furthest x 9122 with 0 fights, recorded-row children 18 (furthest x 9122), furthest fought lineage x -1 with 0 fights, waypoints reached 0/0, flattest rejected early site null, dead ends {stall=1})
+format 2
+policy forward-v2
+combat live-restore-v1
+course boss-only
+launch native-run-roll
+profile width=320
 game s1
 zone 6
 act 0
 team sonic
-validated 161
-engine 0.7.prerelease-26bf29066
 rom AFE05EEE
-program 41:8,17:18,93:8,10:18
-boss 161
+rom-sha1 69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B
+engine 0.7.prerelease-94804e439-dirty
+countdown 60
+waypoints recorded fz_completerun 241-336@0
+endpoint boss-arena 424
+validated 424
+program 60:0,180:2,42:8,17:18,102:8,12:4,11:0

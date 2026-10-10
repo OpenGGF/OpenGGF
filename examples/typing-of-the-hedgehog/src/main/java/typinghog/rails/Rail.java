@@ -262,7 +262,7 @@ public record Rail(int format, String game, int zone, int act, String team, int 
         }
         if (format != 2) throw new IllegalArgumentException("Unsupported rail format " + format);
         if (!legacyStands.isEmpty() || boss >= 0) throw new IllegalArgumentException("Format 2 rails use stand specs and an endpoint");
-        if (!"forward-v1".equals(policy)) throw new IllegalArgumentException("Unsupported policy " + policy);
+        if (!Set.of("forward-v1", "forward-v2").contains(policy)) throw new IllegalArgumentException("Unsupported policy " + policy);
         if (!"live-restore-v1".equals(combat)) throw new IllegalArgumentException("Unsupported combat mode " + combat);
         if (!Set.of("regular", "boss-only", "pilot").contains(kind)) throw new IllegalArgumentException("Unknown course kind " + kind);
         if (!Set.of("native-spindash", "native-run-roll").contains(launch)) throw new IllegalArgumentException("Unknown launch " + launch);

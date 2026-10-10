@@ -55,13 +55,28 @@ class TypingHedgehogForwardRailBuilder {
      * route is still found by the search and held to every rule and gate.
      */
     private static final String WAYPOINTS = System.getProperty("typinghog.forward.waypoints", "");
-    static final long ROW_BUDGET = 5_000_000L;
+    /**
+     * The authoring policy. {@code forward-v1}: Sol's bounds as proposed (floor range 4 px over a
+     * 160 px strip, angle 4, first fight within 300 rows and 800 px, every row bound by the
+     * backtracking limits). {@code forward-v2}, the user's rule for every act (2026-10-10): floor
+     * range 8 px over a 128 px strip, angle 8, first fight within 600 rows and 1600 px, and loop
+     * traversal (grounded at wall or ceiling angles) exempt from the backtracking limits, with
+     * Sonic's high water regained within 60 rows of leaving the loop.
+     */
+    static final String POLICY = System.getProperty("typinghog.forward.policy", "forward-v2");
+    static final boolean V2 = POLICY.equals("forward-v2");
+    static final int FLAT_RANGE = V2 ? 8 : 4, FLAT_ANGLE = V2 ? 8 : 4;
+    static final int STRIP_LEFT = V2 ? -40 : -48, STRIP_RIGHT = V2 ? 88 : 112;
+    static final int LOOP_REGAIN_ROWS = 60;
+    /** Native rows per act (Sol: 5 million); the 10-minute search cap binds whichever comes first. */
+    static final long ROW_BUDGET = Long.getLong("typinghog.forward.rows", 5_000_000L);
     static final long SEARCH_MS = 600_000L, VALIDATE_MS = 120_000L;
     static final int BEAM = 24, BIN_KEEP = 2, MAX_ROUTE = 18_000, ENTRY_MIN = 60, ENTRY_LIMIT = 1500;
     static final int FIGHT_SOAK = 3600, CLEANUP = 2, BURST_CHARGE = 36, STALL_ROWS = 180, HARD_STALL_ROWS = 600;
     /** Layers without a new best x before the search treats its frontier as collapsed. */
     static final int STAGNANT_LAYERS = 40;
-    static final int FIRST_FIGHT_ROWS = 300, FIRST_FIGHT_PX = 800, FIGHT_SPACING_PX = 256, FIGHT_SPACING_ROWS = 120;
+    static final int FIRST_FIGHT_ROWS = V2 ? 600 : 300, FIRST_FIGHT_PX = V2 ? 1600 : 800;
+    static final int FIGHT_SPACING_PX = 256, FIGHT_SPACING_ROWS = 120;
     static final double[] FIGHT_FRACTIONS = {0.0, 0.25, 0.45, 0.65, 0.82};
     static final int MAX_SOAKS_PER_LAYER = 3, FIGHT_VALUE = 3000, LOADED_VALUE = 300, LANE_KEEP = 4, HISTORY = 96;
     /** How far past where the next fight belonged a lineage may run before it is dropped. */
@@ -192,6 +207,8 @@ class TypingHedgehogForwardRailBuilder {
         int row, previous;
         int[] masks;
         int cmax, pmax, reverse, lastProgressRow, gameScore, x, y, ymin = Integer.MAX_VALUE, ymax = Integer.MIN_VALUE;
+        /** Rows since Sonic left a loop (-1: not leaving one). */
+        int sinceLoop = -1;
         boolean riding;
         /** The row Sonic last set a new rightmost x: a lift may stall it for a while, never for long. */
         int lastPmaxRow;
@@ -468,8 +485,11 @@ class TypingHedgehogForwardRailBuilder {
             java.util.ArrayDeque<List<Node>> history = new java.util.ArrayDeque<>();
             int layer = 0, collapses = 0, frontierX = -1, bestX = -1, bestLayer = 0;
             while (true) {
-                if (best != null && best.pmax > bestX) {
-                    bestX = best.pmax;
+                // Stagnation is the beam's own reach, not the best-valued node's (a waypoint can make
+                // a node best-valued while the beam moves on past it).
+                int beamX = beam.stream().mapToInt(n -> n.pmax).max().orElse(-1);
+                if (beamX > bestX) {
+                    bestX = beamX;
                     bestLayer = layer;
                 }
                 if (!beam.isEmpty() && layer - bestLayer > STAGNANT_LAYERS) {
@@ -654,6 +674,7 @@ class TypingHedgehogForwardRailBuilder {
             c.cmax = node.cmax;
             c.pmax = node.pmax;
             c.reverse = node.reverse;
+            c.sinceLoop = node.sinceLoop;
             c.lastProgressRow = node.lastProgressRow;
             c.lastPmaxRow = node.lastPmaxRow;
             c.ymin = node.ymin;
@@ -690,10 +711,19 @@ class TypingHedgehogForwardRailBuilder {
                 if (death == null) {
                     score = GameServices.gameState().getScore();
                     int camX = GameServices.camera().getX(), x = s.getCentreX();
-                    if (camX < c.cmax - 16) death = "camera backtrack";
-                    else if (x < c.pmax - 64) death = "player backtrack";
-                    c.reverse = x < c.pmax ? c.reverse + 1 : 0;
-                    if (death == null && c.reverse > 30) death = "reverse excursion";
+                    boolean inLoop = V2 && !s.getAir() && Math.abs(signedAngle(s.getAngle())) >= 0x20;
+                    if (inLoop) {
+                        c.sinceLoop = 0;
+                    } else if (c.sinceLoop >= 0) {
+                        // Leaving a loop: the high water must come back within LOOP_REGAIN_ROWS.
+                        if (x >= c.pmax && camX >= c.cmax - 16) c.sinceLoop = -1;
+                        else if (++c.sinceLoop > LOOP_REGAIN_ROWS) death = "loop exit backtrack";
+                    } else {
+                        if (camX < c.cmax - 16) death = "camera backtrack";
+                        else if (x < c.pmax - 64) death = "player backtrack";
+                        c.reverse = x < c.pmax ? c.reverse + 1 : 0;
+                        if (death == null && c.reverse > 30) death = "reverse excursion";
+                    }
                     c.cmax = Math.max(c.cmax, camX);
                     // Progress: further right, a new height (lifts, shafts) by 24 px, or riding an object.
                     int y = s.getCentreY();
@@ -878,12 +908,12 @@ class TypingHedgehogForwardRailBuilder {
         String siteReject(Node stop) {
             var s = sonic();
             if (s.isOnObject() || s.isObjectControlled() || s.getAir()) return "support";
-            if (Math.abs(signedAngle(s.getAngle())) > 4) return "slope";
+            if (Math.abs(signedAngle(s.getAngle())) > FLAT_ANGLE) return "slope";
             if (s.isInWater()) return "water";
             int screenX = s.getCentreX() - GameServices.camera().getX();
             if (screenX < 64 || screenX > WIDTH - 128) return "screen position";
-            Geometry g = geometry();
-            if (!g.flat()) {
+            Geometry g = geometry(STRIP_LEFT, STRIP_RIGHT);
+            if (!g.flat(FLAT_RANGE)) {
                 // Diagnostics: the flattest rejected strip in the first-fight window.
                 if (stop.fights == 0 && (bestRejected == null || g.range() + 8 * g.missing() < bestRejectedScore)) {
                     bestRejected = "row " + stop.row + " x " + stop.x + " y " + stop.y + " range " + g.range() + " missing "
@@ -1118,7 +1148,7 @@ class TypingHedgehogForwardRailBuilder {
             String waypointLine = waypoints.length() == 0 && authored.isEmpty() ? ""
                     : "waypoints" + (waypoints.length() == 0 ? "" : " recorded " + recordedName + waypoints) + authored + "\n";
             String text = "# " + target.pilot().code() + " " + target.pilot().name() + ": authored by TypingHedgehogForwardRailBuilder ("
-                    + summary() + ")\nformat 2\npolicy forward-v1\ncombat live-restore-v1\ncourse "
+                    + summary() + ")\nformat 2\npolicy " + POLICY + "\ncombat live-restore-v1\ncourse "
                     + (target.bossOnly() ? "boss-only" : "regular") + "\nlaunch "
                     + (target.spindash() ? "native-spindash" : "native-run-roll") + "\nprofile " + profile + "\ngame "
                     + target.pilot().code() + "\nzone " + target.pilot().zone() + "\nact " + target.pilot().act()
