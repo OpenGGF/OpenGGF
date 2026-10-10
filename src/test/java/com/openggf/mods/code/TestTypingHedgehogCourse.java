@@ -187,10 +187,33 @@ class TestTypingHedgehogCourse {
         fail("course never reached " + phase + "; view " + view());
     }
 
+    private boolean readyBanner() throws Exception {
+        var field = course().getClass().getDeclaredField("hud");
+        field.setAccessible(true);
+        Object hud = field.get(course());
+        var ready = hud.getClass().getDeclaredField("ready");
+        ready.setAccessible(true);
+        return ready.getBoolean(hud);
+    }
+
+    @Test void getReadyAppearsAsTheCountdownLaunchesTheRun() throws Exception {
+        var fixture = launch(intent(42));
+        var input = new InputHandler();
+        stepUntil(fixture, input, "COUNTDOWN", 900);
+        assertFalse(readyBanner(), "the countdown has its own banner");
+        stepUntil(fixture, input, "RUN", 300);
+        assertTrue(readyBanner(), "the launch shows GET READY immediately");
+        for (int i = 0; i < 20; i++) row(fixture, input);
+        assertTrue(readyBanner(), "GET READY persists while travelling");
+        stepUntil(fixture, input, "STAND", 300);
+        assertFalse(readyBanner(), "the fight replaces GET READY immediately");
+    }
+
     @Test void theRailReachesItsStandAndTypedWordsKillTheWave() throws Exception {
         var fixture = launch(intent(42));
         var input = new InputHandler();
         stepUntil(fixture, input, "STAND", 900);
+        assertFalse(readyBanner(), "GET READY clears at the fight");
         assertEquals(STAND_ROW, get(view(), "railRow"), "the stand starts on its rail row");
         var art = GameServices.level().getObjectRenderManager().getArtProvider();
         for (String key : List.of("motobug", "explosion", "animal", "points")) {
@@ -207,6 +230,7 @@ class TestTypingHedgehogCourse {
         }
         assertTrue(kills >= 6, "typing killed the wave; kills " + kills + " view " + view());
         stepUntil(fixture, input, "RUN", 400);
+        assertTrue(readyBanner(), "GET READY returns between fights");
         assertEquals(STAND_ROW + 1, get(view(), "railRow"),
                 "the restore's row plays the stand's own rail row, so the run resumes where it stopped");
         assertEquals(3, get(view(), "lives"));
@@ -241,6 +265,7 @@ class TestTypingHedgehogCourse {
         var fixture = launch(intent(11).replace("mode=ARCADE", "mode=BOSS_RUSH") + "demo=true\n");
         var input = new InputHandler();
         stepUntil(fixture, input, "BOSS", 900);
+        assertFalse(readyBanner(), "GET READY clears for the boss warning");
         for (int i = 0; i < 120; i++) row(fixture, input);
         // Green Hill's rig: the ball, four chain links, the ship, Robotnik's face and the flame.
         assertTrue((int) get(view(), "sprites") >= 8, "the boss rig draws every part; view " + view());

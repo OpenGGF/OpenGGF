@@ -69,6 +69,7 @@ public final class Effects {
         boom.bucket = 1;
         props.add(new Prop(boom, Kind.EXPLOSION));
         var animal = stagehand.add("animal", x, y);
+        AnimalFrames.select(animal, course.random().nextInt(2));
         Prop hop = new Prop(animal, Kind.ANIMAL);
         hop.vx = course.random().nextBoolean() ? 0x180 : -0x180;
         hop.vy = -0x400;
@@ -158,7 +159,7 @@ public final class Effects {
                     prop.visual.x = prop.x >> 8;
                     prop.visual.y = prop.y >> 8;
                     prop.visual.flipX = prop.vx > 0;
-                    prop.visual.frame = prop.vy < 0 ? 1 : 0;
+                    AnimalFrames.animate(prop.visual, prop.vy < 0 ? 1 : 0);
                     if (prop.age > 120) remove(stagehand, prop);
                 }
                 case POINTS -> {

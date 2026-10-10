@@ -13,7 +13,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
@@ -34,13 +35,14 @@ class TestTypingHedgehogHubRom {
         if (level != null) level.dispose();
     }
 
-    @Test
-    void everyScreenRunsOnTheRomWithoutFaults() throws Exception {
+    @ParameterizedTest
+    @ValueSource(ints = {320, 400})
+    void everyScreenRunsOnTheRomWithoutFaults(int width) throws Exception {
         level = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
         try (ExampleModHarness harness = ExampleModHarness.build(Path.of("examples/typing-of-the-hedgehog"),
                 work.resolve("build"))) {
             GameModule effective = harness.apply(GameServices.module());
-            harness.open(effective, work.resolve("saves"), 320, 224);
+            harness.open(effective, work.resolve("saves"), width, 224);
             play(harness, 60);
             assertEquals("TITLE", screen(harness));
             assertTrue(harness.debugJump("type:start"));

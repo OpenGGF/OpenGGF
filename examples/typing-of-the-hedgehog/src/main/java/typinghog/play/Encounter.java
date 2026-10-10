@@ -287,6 +287,7 @@ public final class Encounter {
         }
         var visual = course.stagehand().add(art == null ? "animal" : art.artKey(), x, y);
         visual.frame = art == null ? 0 : art.frame();
+        if (arrival.kind() == Pickup.Kind.RESCUE) AnimalFrames.select(visual, course.random().nextInt(2));
         visual.visible = art != null || arrival.kind() == Pickup.Kind.RESCUE;
         int id = course.field().add(prompt, arrival.kind().monitor() ? Pickup.MONITOR_ROWS : 90);
         if (arrival.kind() == Pickup.Kind.DECOY) course.say(typinghog.audio.VoiceLine.ANNOUNCER_TRAP);
@@ -302,7 +303,7 @@ public final class Encounter {
             int hop = (pickup.animTick % 24);
             pickup.visual.y = pickup.y - (hop < 12 ? hop : 24 - hop);
             pickup.visual.flipX = pickup.vx > 0;
-            pickup.visual.frame = hop < 12 ? 1 : 0;
+            AnimalFrames.animate(pickup.visual, hop < 12 ? 1 : 0);
             var camera = GameServices.camera();
             if (pickup.px() < camera.getX() - 16 || pickup.px() > camera.getX() + camera.getWidth() + 16) removePickup(course, pickup);
         } else if (pickup.rows > Pickup.MONITOR_ROWS) {

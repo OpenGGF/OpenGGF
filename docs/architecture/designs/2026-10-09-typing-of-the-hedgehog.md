@@ -476,3 +476,65 @@ world-held countdown, run tags and the legacy stand path were removed from the m
   as unmatched. `CourseControl.restore` now runs with no creator owner in scope
   (`EngineOwnerScope`, engine callers only); `TestCourseRestoreCreatorOwnerScope` failed
   before the fix, and HCZ1 ships (ddd1e941e).
+
+## Polish lane (2026-10-10, base 67d14a5ef)
+
+- `Course.enter` toggles the HUD's persistent travel cue only for RUN. GET READY
+  uses the fight banner face and translucent band, at row 48 beneath the score
+  panel. Entering a fight or boss warning clears it immediately. Countdown,
+  launch, run, and boss logic are unchanged.
+- `AnimalFrames` reads `ObjectRenderManager.getAnimalTypeA/B()` and the shared
+  `AnimalType.mappingSet()`. Both kills and rescue targets retain
+  `((mappingSet * 2) + artVariant) * 3` while animating local poses. No engine
+  API members or copied zone tables were needed. Native S1 `resolveFrameIndex`
+  and S2/S3K `getFrameIndex` provide the test oracle for GHZ, EHZ and AIZ.
+- Rejected fixed frames 0/1: ROM-sheet rasterization showed fragmented GHZ
+  rabbit tiles (correct base 24) and mismatched EHZ squirrel tiles (correct
+  base 6). AIZ frame 0 works by coincidence for Flicky; its second species,
+  chicken, uses base 3. Frame-range checks alone had accepted the bad mappings.
+- HUD banners/countdown use canvas dimensions. Plates, score, quiz, tally,
+  menu, story, drill/results, records, arcade, options and Boss Rush already
+  use viewport widths; their 400-pixel layouts were checked visually and in
+  focused tests. Venue drift scales with width and the school speech bubble
+  uses the available left column.
+- Validation and capture evidence are recorded with the polish commit; scratch
+  artifacts use the `polish-` prefix in the external task scratch directory.
+  This is focused mod validation, not an engine full-suite certification, and
+  widescreen rails are owned by the separate rails lane.
+
+The polish worktree (`feature/ai-typing-hedgehog-polish`) passed Java 21 compile,
+`python3 examples/build_example.py typing-of-the-hedgehog --skip-engine` (14
+non-API reference warnings, no validator errors), and the requested focused run (`ROM_ROOT` below denotes the absolute donor
+ROM directory used for the run):
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestTypingHedgehog*' \
+  -Dsonic1.rom.path="$ROM_ROOT/s1.gen" \
+  -Dsonic2.rom.path="$ROM_ROOT/s2.gen" \
+  -Ds3k.rom.path="$ROM_ROOT/s3k.gen" test
+```
+
+Result: 68 tests, zero failures/errors/skips. This includes 5 course tests
+(countdown launch, RUN persistence, STAND/BOSS clearing), 3 animal tests (both
+species and all three poses per game), 4 HUD tests (banner centring, plates,
+quiz wrapping and tally at 320/400), 17 hub model tests, 15 hub scene tests,
+and 2 ROM hub cases (320/400). The first animal test attempt lacked injected
+object services; attaching the session's services before native update fixed
+the test setup. The initial banner regression failed because the cue did not
+exist. All three ROM SHA-1 identities match the repository's expected donors.
+
+The category planner against `67d14a5ef` selected 3,095 classes because example
+sources are unclassified. Proportionate validation was used: no engine or API
+implementation changed, and the mod's production paths are covered directly.
+No full engine-suite claim is made. The inherited S3K art-table test reports
+no shipped rails on this base, so that test is vacuous; AIZ species/frames are
+covered independently by `TestTypingHedgehogAnimals`. Wide course/rail
+integration remains the lead/rails lanes' responsibility.
+
+All three 400x224 hub tours completed (2,600 ticks each); FFmpeg 6x4 contact
+sheets were inspected at `polish-hub-s1-contact.png`,
+`polish-hub-s2-contact.png`, and `polish-hub-s3k-contact.png` in the scratch
+task directory. The paired old/native animal-sheet renders are
+`polish-animals-s1-ghz.png`, `polish-animals-s2-ehz.png`, and
+`polish-animals-s3k-aiz.png` there. No horizontal clipping or panel/text
+overlap was observed in the inspected hub frames.

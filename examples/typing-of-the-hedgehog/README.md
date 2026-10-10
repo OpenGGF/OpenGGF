@@ -5,7 +5,10 @@ Sonic spindashes into a real stock act and runs it on his own, stopping four or 
 on open ground where the zone's badniks (including the ones already there) come for him
 carrying words. Type a word and Sonic homing-attacks its badnik. Type the rings that fly
 when he is hit to win them back, and type Robotnik's weak points, taunts and trivia answers
-to beat each zone's boss.
+to beat each zone's boss. A pulsing **GET READY** banner marks travel between fights
+and clears when the next fight or boss warning begins. The HUD and hub fit both
+320- and 400-pixel viewports. Freed animals use the current zone's own species and
+ROM mapping frames.
 
 Everything you see and hear from the games (zones, Sonic, badniks, bosses, monitors,
 animals, explosions, score sprites, music and sound effects) comes from your own ROMs at

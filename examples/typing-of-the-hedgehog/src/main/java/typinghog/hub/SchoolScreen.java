@@ -292,7 +292,7 @@ final class SchoolScreen implements Screen {
         hub.header(c, w >= 380 ? "TAILS' TYPING SCHOOL" : "TYPING SCHOOL", School.examUnlocked(hub.profile)
                 ? "FINAL EXAM OPEN" : School.drillsBelowC(hub.profile) + " DRILLS TO PASS");
         Hero.instructor(c, hub.art, hub.game, t, 28, 132, t - speechTick < 60);
-        Hero.speech(c, hub.font, speech, 38, 26, Math.min(160, gx - 44), 44, t - speechTick);
+        Hero.speech(c, hub.font, speech, 38, 26, gx - 44, 44, t - speechTick);
         // The lifetime heatmap, and the selected drill beside it.
         int key = heatKey(w);
         hub.font.shadow(c, "YOUR KEYS", 8, 136, Gfx.GOLD, 1);
