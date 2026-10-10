@@ -1,7 +1,8 @@
 # Starpost Valley — a farming life in Green Hill, after the credits
 
 A code mod for OpenGGF's JVM build: a complete *Stardew Valley*–style farming and life game played
-through a full-screen farm **mod scene** and a real valley act over Sonic 3 & Knuckles. Every Sonic game ends with Sonic running away
+through a belt-view farm **mod scene** and real Sonic 3 & Knuckles **acts** for the valley,
+Marble Ruins, running festivals and Waterfall Lake. Every Sonic game ends with Sonic running away
 from the wreckage of his victory. This is the part the credits skip: Green Hill churned up by
 badniks, and dozens of freed animals with nowhere to go. Farm the valley's old fields, rebuild
 Robotnik's cracked animal capsule into the valley's heart (or sell out to his Robomart), pop badnik
@@ -40,7 +41,8 @@ Knuckles* on its title returns to the stock game; holding Escape returns to the 
 | Move (the farm: along the valley and into or out of the field) | Arrows | D-pad |
 | Jump; confirm in menus | Space, Z (Enter in menus) | A, C |
 | Act: till, plant, water, harvest, clear, place, use; back in menus | X | B |
-| Spin dash: hold Act to charge, release to roll along the row, tilling | hold X | hold B |
+| Farm spin dash: charge, release to till along the row | hold X | hold B |
+| Native act spin dash | hold Down + tap Space, release Down | hold Down + tap A/C, release Down |
 | Enter a doorway in the valley | Up | Up |
 | Talk to a neighbour; give the held item | X near them | B |
 | Fish: cast with the rod at the pond's edge or at Waterfall Lake (hold to wind up); in the Bubble Bar hold to rise | X | B |
@@ -74,8 +76,11 @@ If you know *Stardew Valley*, you know the rhythm; the names are Sonic's.
 
 **The farm** is a field in front of Green Hill's cliffs: walk along it and into and out of its
 rows. The Star Post at its east end folds the view into **the valley**, which plays in side view
-with Sonic's own movement: springs, slopes, the loop, and the town (Dandel's seeds, the Lamppost Inn,
-Tails's workshop, Robomart), up to the plateau where the Great Capsule stands.
+with the engine's native S3K player: springs, slopes, the loop, and the town (Dandel's seeds, the Lamppost Inn,
+Tails's workshop, Robomart), up to the plateau where the Great Capsule stands. Doors bring
+up scene menus; closing them returns to the same act doorway. The gate brings you home
+to the same farm and day. Seasons, evening/night and weather follow you outdoors; winter
+frosts Green Hill, and the Emerald Aurora lights its night sky.
 
 **A day** runs from 6:00 to 2:00 (14 real minutes; 20 or 28 in Options). Sleep at the farmhouse door
 to ship, grow, and see the night's tally; stay out past 2:00 and you pass out, losing some rings.
@@ -84,9 +89,9 @@ to ship, grow, and see the night's tally; stay out past 2:00 and you pass out, l
 
 | Farmer | On the farm | In the valley and the Ruins |
 |---|---|---|
-| Sonic | The strongest spin dash: it tills its whole roll | Fastest; springs reach the high ground |
+| Sonic | The strongest spin dash: it tills its whole roll | Native S3K running, slopes, loops and springs |
 | Tails | A weaker spin (three plots), but his tails fan each Water Shield charge over two plots | Flies for a while after a second jump |
-| Knuckles | Digs instead of tilling, turning up buried rings and finds; punches rocks apart | Glides after a second jump and climbs walls; too heavy for the loop's full Momentum |
+| Knuckles | Digs instead of tilling, turning up buried rings and finds; punches rocks apart | Native glide and wall climb |
 
 **Neighbours.** Talk once a day and give gifts to raise hearts; heart events play out around the
 valley, and a Flicky brings the morning's letters. The animals talk in pictures until Tails's
@@ -94,7 +99,9 @@ Chirp Translator. Two neighbours can become Partners.
 
 **The Marble Ruins.** Down from the valley's doorway: forty chambers, new every morning, with rings
 as your health (you carry up to ten of your own down, and bank what you bring back), minerals, geodes and lost Records to find, and a Star Post elevator every fifth
-chamber.
+chamber. These are native S3K acts re-encoded from Sonic 1's Marble, Labyrinth and Scrap
+Brain terrain at load; their zone palettes remain intact. The elevator, inventory and
+results are scenes, with chamber state retained across the round trip.
 
 **Waters and barns.** Fish the farm pond and Waterfall Lake (the legends are badniks). Build a coop
 and a pen at Tails's workshop for the freed animals, and turn produce into goods with Monitor Jars,
@@ -114,7 +121,7 @@ improvements at Robomart. The year ends with the Signpost Spin.
 
 ## Status
 
-Built as an example of the scene API at production scale; the design, the decisions and the
+Built as an example of the scene and additive-act APIs at production scale; the design, the decisions and the
 rejected approaches are in `docs/architecture/designs/2026-10-09-starpost-valley.md`.
 
 The farm gate visits a real S3K act at `starpost-valley:valley`, with Green Hill
@@ -130,6 +137,7 @@ Fair booths and the belt-view farm pond remain scenes. The old `town scene` and
 `ruins scene` debug fallbacks have been removed.
 
 The jar contains tiny original typed placeholder resources for registering the
-act; `tools/make_placeholder.py` reproduces them without ROM input. Loading the
-valley replaces them with terrain read from the supplied Sonic 1 ROM. No Sega
+acts; `tools/make_placeholder.py` reproduces them without ROM input. Loading an
+act replaces them with terrain read from the supplied Sonic 1 ROM; its native
+objects use ROM-backed art intake. No Sega
 asset bytes are committed or bundled.

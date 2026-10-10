@@ -2670,3 +2670,82 @@ Season milestone validation: Java 21 build-only `mvn -B -q -Dmse=off
 "-Dsonic1.rom.path=$PWD/Sonic The Hedgehog (W) (REV01) [!].gen" test`:
 3/3 engine tests, 197/197 creator tests, zero failures/errors/skips;
 packaging **Validation passed: 0 findings**. This is focused validation.
+
+
+Season milestone: `d3d1afbd6`. Combined focused validation on that executable
+source (later edits are documentation and external capture inputs):
+
+```bash
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 7591fbcc3 --preflight
+python3 tools/testing/maven_queue.py --lean -B -Dmse=off '-Dtest=TestStarpostRealValley,TestStarpostTownAct,TestStarpostTownSceneBridge,TestStarpostRealRuins,TestStarpostRealFestivals,TestStarpostValleyExample,TestStarpostValleyScene,TestCheckpointStarpostGraphRewind,TestModSceneActBridge,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' "-Ds3k.rom.path=$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic1.rom.path=$PWD/Sonic The Hedgehog (W) (REV01) [!].gen" test
+```
+
+Preflight passes with explicit Lua 5.4 (the environment's default `lua` failed
+the first preflight). The combined focused run passes **173/173**, zero
+failures/errors/skips, in 3m45s; the bridge runs **197/197** creator tests with
+no skips, and packaging reports **Validation passed: 0 findings**. The plan
+selects 3,085 classes via example/shared-test fallback, which is disproportionate
+for this example-owned presentation change: no engine algorithm, public contract,
+physics, timing or build/selection-policy changes. All Starpost consumers and
+required S3K consumers are checked explicitly; this is not a full-suite pass.
+
+
+### Promo and visual verification
+
+`~/Videos/OGGF/starpost-valley/starpost-valley-promo.mp4` is **119.8 seconds**,
+800×448 at 60 fps, H.264 plus stereo 48 kHz AAC. All music and sound effects are
+captured from the engine's live ROM audio. The source uses the integration lane's
+production HeadlessGameBoot + GameLoop.step round-trip path, packaged through
+ModTestKit; scenes and native acts share the same loop and audio presentation
+clock. Each chapter opens with the game's card. The chapter card's recorded
+0.333-second lead gains a 0.2-second still lead in assembly; source takes retain
+at least half a second around actions. Clips join with 0.35-second crossfades.
+
+| Chapter | Final seconds | Shows |
+| --- | --- | --- |
+| Story | 0.00–17.35 | Title, farmer select, intro, Tails’s note |
+| Grow | 17.35–41.50 | Spin-dash tilling; three crops planted, watered, grown over six nights, harvested and shipped; 435-ring crop tally |
+| Seasons | 41.50–59.35 | Native spring/summer/autumn/winter valley, dusk, snow and winter night aurora |
+| Neighbours | 59.35–73.75 | Tails talk, Pip’s picture speech, Chirp Translator heart-event cutscene |
+| Festivals | 73.75–90.25 | Native Ring Hunt/race/snowboard; Sunflower Parade and Flicky migration |
+| Adventure | 90.25–106.55 | Native Marble/Labyrinth/Scrap Brain chambers and lake cast/Bubble Bar; orchard ring burst and museum |
+| Finale | 106.55–119.80 | Four-check Signpost Spin settles on Sonic; scrolling credits |
+
+Reproducible driver, scripts, packaged example, per-frame CSV/PNG/PCM source takes,
+cuts.txt, assembly and chapters.json are in `~/scratch/sv-promo/final/`. PNGs were
+opened for every season and chapter, including a 4-second filmstrip extracted
+from the final MP4 (`final-filmstrip.png`) and card/body/end images
+(`final-review.png`). Full MP4 decode via `ffmpeg -v error -i <promo> -f null -`
+completes without errors; ffprobe confirms duration, codecs, dimensions and audio.
+Source PCM has nonzero music/SFX in every take, without clipped peaks.
+
+Rehearsal corrections: countdown-owned native festival entry needed longer input
+holds; the Ice Cap menu needed a later down/confirm to choose snowboard; Scrap
+Brain begins after chamber 30, not at 28. The lake take uses a shore cast and
+input-only strike/Bubble Bar tracking, landing a Bubble Bass. Daily Moto placement
+keeps the harvest take free of an accidental conversation; the shipping selection
+sells harvested radishes, tulips and spuds, not remaining seed packs. These are
+capture setups, not gameplay or fixture-specific behavior. Seasonal presentation,
+shared weather drawing, lake light tint and toast exclusion on chapter cards are
+changes in the game itself.
+
+Limits: this is a showcase, not route certification or a complete year played in
+real time. Debug commands prepare seasons, relationships, chamber starts, orchard,
+museum and the year-end evaluation; native movement/fishing and farming actions
+then execute through production rules. Donor/team/viewport/checkpoint/death breadth
+and arbitrary generated Ruins seeds inherit §21–§25's gaps. Water/terrain colours
+shared in CRAM receive the same Tone sky map; this does not allocate separate sky
+palettes or reproduce Sonic 1's original water-cycle timing in every outdoor act.
+
+
+Final structural validation, run once on the same executable source:
+
+```bash
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -B -Dmse=off -Pguards "-Ds3k.rom.path=$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic1.rom.path=$PWD/Sonic The Hedgehog (W) (REV01) [!].gen" test
+```
+
+**674/674 guards pass**, zero failures/errors/skips, in 4m16s. No executable
+changes followed either final run. README, the single develop changelog entry,
+§14 and the lead’s external PR-body draft now describe native acts and retained
+scene↔act state rather than the retired side-view controller. The lane remains
+local for lead integration; it does not merge, rebase or push.

@@ -71,6 +71,13 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A headless palette owner check needs the renderer's resolution boundary
+(2026-10-10, Starpost seasonal acts): HeadlessTestRunner queues palette writes
+but does not draw, so ownerAt still reports none and live RGB remains unchanged.
+Resolve pending frame writes before palette assertions, then independently inspect
+native GameLoop GPU captures. Do not infer an absent runtime callback from an
+unresolved registry; do not replace ownership writes with direct palette mutation.
+
 A replay control must work in full-drawing mode before it can isolate drawing
 policy (2026-10-09, route-test throughput): two MHZ prefix controls restored
 starting snapshots exactly but differed in 20 normal-palette RGB bytes after
