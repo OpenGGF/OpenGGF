@@ -304,6 +304,70 @@ whole stand chain (each stand captured, held for an 1800-row soak and restored) 
 straight run's P1 state on every row, and the shipped-rail regression test drives the real
 Course through every stand.
 
+#### Rails v2: forward courses (2026-10-10)
+
+The user's review of the first captures asked for a different route shape (see the Brief). GPT-6.1-Sol's
+consultation (`sol-rails-design.md` in the task directory) proposed bounded engine-input search instead of
+recording repair; the user's decisions override it where they differ: Sonic 1 stays stock (crouch through
+the countdown, then run), S2/S3K charge a native spindash under 3-2-1; the world stays animated during
+fights (Sol's option (c)); one forward path per act first; misfit acts are dropped and named, never
+relaxed per act.
+
+- **Format 2** (`Rail.java`, engine-free, `RailChecks`): policy, combat mode, course kind (regular,
+  boss-only), launch (native-spindash or native-run-roll), profile (width, S3K intros), ROM SHA-1, an
+  authored countdown row, stand specs (before-row, quiet cleanup rows, the loaded-badnik manifest by class,
+  slot and layout) and a stock endpoint; `validated` is the whole program. `waypoints` names rows that
+  replay the act's recorded run (an authoring aid, validated like any other row).
+- **Runtime** (`Course`): authored entry rows, a hold at the countdown row until presentation is ready
+  (held rows change no native state and do not advance `V_int_run_count`), the native countdown under the
+  3-2-1, then at each stand `CombatHandoff` takes the visible eligible pool (`Cast.convertible`), checks it
+  against the manifest by class and layout, captures the checkpoint and converts it
+  (`ObjectLifetimeOps.deleteNoRespawn`); the fight's world lives with Sonic held for 3600 native rows, then
+  holds still while the fight goes on the combat clock; victory restores the checkpoint, puts the camera's
+  frozen flag back to its captured value, reacquires the same bodies by identity and converts them again,
+  so the boundary row plays exactly as authored. A native hit on the held Sonic mid-fight restores at once.
+  A forward boss stand retires the stock boss family (`CombatHandoff.retireBoss`, arena machinery kept),
+  lets two native rows unload it, then holds the world. Native faults, manifest or profile mismatches hand
+  back to the hub as a RAIL FAULT. No run tags.
+- **Builder** (`TypingHedgehogForwardRailBuilder`): beam search over input macros, every row checked for
+  hurt, death, level change, native kills, camera/player backtracking (camera within 16 px of its high
+  water, Sonic within 64 px, back within 30 rows) and stalls; fights at braked stops with flat floor
+  samples (4 px over the strip), a grounded level 96 px strip walk, no collapsing ground, Sonic not behind
+  high-priority foreground, an open view; each soaked 3600 held rows; four or five fights, the first within
+  300 rows and 800 px of the release. The act's recorded run steers the beam as a comparison-only corridor
+  and offers its own pad rows as waypoint macros; routes are replayed cold and under `V_int_run_count`
+  start offsets `+1..+128`.
+- **Gate** (`TestTypingHedgehogRails`): parses through `Rail.parse`; forward rails must qualify and pass
+  four real-Course runs (typed at once, held 1800 rows, retried, hub-like clock phase 333), clean on every
+  native row outside fights, with the boss rig's art registered at the endpoint. Native kills are seen as
+  a badnik's slot turning into an explosion (the engine's `destroyBadnik` slot hand-off, the ROM's in-place
+  ExplosionItem). Limit: a kill by an object that destroys a badnik without that hand-off would not show;
+  the builder's search uses a score jump of 100 or more (Sonic or the CPU sidekick) instead.
+
+Probe findings that set these rules (`TypingHedgehogRailsV2Probe`, 5dc9c9cd6, S1 GHZ3, S2 EHZ2, S3K
+SOZ1): host load-time simulation, cross-game features and live rewind leave the first 500 native rows
+unchanged; S3K skipped intros change SOZ1 from row 0 (so the mod requires skipped intros, ec15b6093); the
+production boot and hub start match the fixture natively but report presentation ready on row 20 (fixture
+0, 52, 0); the act inherits the session's `V_int_run_count` (hub time) and EHZ2's old rail allocates
+differently from row 523 under an odd phase, so rails are certified phase-robust rather than pinned; S1
+charge pulses jump (DOWN only), S2/S3K pulses charge from the first and release at 0xB80; conversion
+retires S1/S2 bodies and S3K Skorp's tail in one row but leaves S3K Sandworm's segments (Sandworm is not
+convertible); converted S1 placements reload when the camera returns (forward courses never return); a
+600-row live fight with homing writes, 20 search restores and the victory restore plus reconversion match
+a zero-length fight over the next 300 rows in all three games.
+
+Engine fixes found on the way: `ModDecoratedObjectRegistry` dropped the stock game's fixed SST occupants
+under any object-registering mod (0247b568d), so the Course and builder worlds allocated differently from
+row 1 in HCZ and MHZ.
+
+**Acts.** S2 EHZ2 qualifies (cf77473ac: five fights, built in 880k rows, 21 s; a fight site behind the
+waterfall's high-priority tiles is now rejected). S3K SOZ1 is dropped: from the cold start with intros
+skipped, a wall of about 80 px at x 692 (quicksand behind, a spring vine below), and no braked stop in the
+first-fight window passes the 4 px flatness rule on the dunes (1797 of 1844 candidate sites rejected for
+geometry in one 4.1M-row search); the rule is not relaxed per act. S1 GHZ3 needed the recorded run's
+upper route (timed jumps and platform rides between x 1000 and 2750): the lower route drops into a valley
+at x 2684 the forward rules cannot leave.
+
 ### Mod structure
 
 - One `baseGame: any` jar: the hub is its startup scene, and one patch per game
@@ -367,6 +431,15 @@ Course through every stand.
 (Filled in as work lands.)
 
 ## Rejected approaches
+
+- **Recording repair as the rail source (superseded 2026-10-10).** Recorded runs wander, backtrack and
+  smash badniks before the first stand; repairing them kept that shape. Forward courses are searched
+  from the engine's own inputs instead (Rails v2).
+- **Restoring mid-fight at the native cap (rejected 2026-10-10).** A periodic restore snaps platforms and
+  anything moving back to the stand's checkpoint, which the player sees; past the cap the world holds
+  still instead and the fight continues on the combat clock.
+- **A frozen stock boss beside the typing boss (rejected 2026-10-10).** A boss-arena endpoint reached
+  after the stock boss spawns left it on screen; the boss stand retires it (`CombatHandoff.retireBoss`).
 
 - **HCZ1 stand-restore crash blamed on puppets (rejected 2026-10-09).** The real Course's
   restore of the HCZ1 stand at rail row 1214 throws `Missing required object reference`

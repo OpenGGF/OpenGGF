@@ -49,6 +49,12 @@ import static com.openggf.mods.code.ForwardRails.*;
 class TypingHedgehogForwardRailBuilder {
     private static final String SPEC = System.getProperty("typinghog.forward");
     private static final Path OUT = Path.of(System.getProperty("typinghog.forward.out", "target/typinghog-forward"));
+    /**
+     * Authored position waypoints, an authoring aid for a route the beam misses: {@code act:x,y;x,y|act:...}.
+     * The beam is pulled to each in turn (the next one counts once Sonic passes within 32 px); the
+     * route is still found by the search and held to every rule and gate.
+     */
+    private static final String WAYPOINTS = System.getProperty("typinghog.forward.waypoints", "");
     static final long ROW_BUDGET = 5_000_000L;
     static final long SEARCH_MS = 600_000L, VALIDATE_MS = 120_000L;
     static final int BEAM = 24, BIN_KEEP = 2, MAX_ROUTE = 18_000, ENTRY_MIN = 60, ENTRY_LIMIT = 1500;
@@ -64,15 +70,39 @@ class TypingHedgehogForwardRailBuilder {
     static final int OPEN_CAP = 160;
     /** The recorded corridor's pull on the beam, and how near a lane must be to count. */
     static final int CORRIDOR_VALUE = 1500, CORRIDOR_PX = 96;
+    /** Each authored waypoint reached outranks x progress made without it, but not a fight. */
+    static final int TARGET_VALUE = 2_500;
     static final double OPEN_VALUE = 2.0;
 
     /** An act the builder authors: launch kind and output file. */
-    record Target(Pilot pilot, boolean spindash, String file) { }
+    /** An act the builder authors: launch kind, whether it is a boss-only course, and the output file. */
+    record Target(Pilot pilot, boolean spindash, boolean bossOnly, String file) { }
 
-    static final List<Target> TARGETS = List.of(
-            new Target(new Pilot("ghz3", SonicGame.SONIC_1, "s1", 0, 2, "", "s1-ghz3.rail"), false, "s1-ghz3.rail"),
-            new Target(new Pilot("ehz2", SonicGame.SONIC_2, "s2", 0, 1, "tails", "s2-ehz2.rail"), true, "s2-ehz2.rail"),
-            new Target(new Pilot("soz1", SonicGame.SONIC_3K, "s3k", 8, 0, "tails", "s3k-soz1.rail"), true, "s3k-soz1.rail"));
+    /** Boss-only courses: the act is its boss (S1 Final Zone, S2 Death Egg). */
+    static final Set<String> BOSS_ONLY = Set.of("fz", "dez");
+
+    /** The shipped acts (the legacy builder's targets that ship a rail), in its order. */
+    static final List<Target> TARGETS = targets();
+
+    static List<Target> targets() {
+        Set<String> shipped = new HashSet<>();
+        try {
+            for (String line : Files.readAllLines(SOURCE.resolve("src/main/resources/rails/index.txt"))) {
+                if (!line.isBlank() && !line.startsWith("#")) shipped.add(line.strip());
+            }
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
+        List<Target> out = new ArrayList<>();
+        for (SonicGame game : List.of(SonicGame.SONIC_1, SonicGame.SONIC_2, SonicGame.SONIC_3K)) {
+            for (var t : TypingHedgehogRailBuilderProbe.targets(game)) {
+                if (!shipped.contains(t.file())) continue;
+                out.add(new Target(new Pilot(t.name(), game, t.code(), t.zone(), t.act(), t.sidekick(), t.file()),
+                        game != SonicGame.SONIC_1, BOSS_ONLY.contains(t.name()), t.file()));
+            }
+        }
+        return List.copyOf(out);
+    }
 
     @TempDir static Path temp;
     static ExampleModHarness harness;
@@ -118,8 +148,14 @@ class TypingHedgehogForwardRailBuilder {
         String trace = System.getProperty("typinghog.forward.trace");
         if (trace != null) {
             String[] f = trace.split(":");
-            for (Target t : TARGETS) if (t.pilot().game() == game && t.pilot().name().equals(f[0])) traceLegacy(t, Integer.parseInt(f[1]), Integer.parseInt(f[2]));
-            return;
+            boolean traced = false;
+            for (Target t : TARGETS) {
+                if (t.pilot().game() == game && t.pilot().name().equals(f[0])) {
+                    traceLegacy(t, Integer.parseInt(f[1]), Integer.parseInt(f[2]));
+                    traced = true;
+                }
+            }
+            if (traced) return;
         }
         Assumptions.assumeTrue(SPEC != null, "opt-in: -Dtypinghog.forward=<act,...>");
         Set<String> wanted = Set.of(SPEC.split(","));
@@ -174,10 +210,17 @@ class TypingHedgehogForwardRailBuilder {
 
         /** On the recorded run's corridor at this x (a comparison-only steering hint, never gameplay). */
         boolean onCorridor;
+        boolean air;
+        /** Rows that replay the recorded run: {railStart, railEnd, recordedStart}. */
+        List<int[]> waypoints = List.of();
+        /** The next authored position waypoint, and how far from it this node is. */
+        int nextTarget;
+        int targetDistance;
 
         double value() {
             return pmax + fights * (double) FIGHT_VALUE + loaded * (double) LOADED_VALUE + openness * (double) OPEN_VALUE
-                    + (onCorridor ? CORRIDOR_VALUE : 0) + (boss ? 50_000 : 0) - row * 0.05;
+                    + (onCorridor ? CORRIDOR_VALUE : 0) + nextTarget * (double) TARGET_VALUE - targetDistance
+                    + (boss ? 50_000 : 0) - row * 0.05;
         }
 
         long key() {
@@ -264,7 +307,11 @@ class TypingHedgehogForwardRailBuilder {
         final long started = System.nanoTime();
         long rows;
         int goalX, releaseRow, releaseX, countdownRow;
-        int soaks, sites, siteRejects;
+        int soaks, sites, siteRejects, recordedChildren, recordedBestX = -1;
+        /** Diagnostics: the furthest lineage that has fought, and the most waypoints any lineage reached. */
+        int foughtBestX = -1, foughtBestFights, targetsReached;
+        String bestRejected;
+        int bestRejectedScore = Integer.MAX_VALUE;
         final Map<String, Integer> deaths = new HashMap<>();
         final Map<String, Integer> layerDeaths = new java.util.TreeMap<>();
         /** Layers left to search with the wide macro set and a doubled beam after a collapse. */
@@ -273,11 +320,25 @@ class TypingHedgehogForwardRailBuilder {
 
         /** The recorded run's heights by 32 px column (comparison-only: it scores lanes, never drives play). */
         final Map<Integer, List<Integer>> corridor = new HashMap<>();
+        /** This act's authored position waypoints ({x, y}), in order. */
+        final List<int[]> targets = new ArrayList<>();
+
+        /** The recorded run itself (pad rows and states), for recorded-input waypoint macros. */
+        TypingHedgehogRailBuilderProbe.Source recorded;
+        String recordedName = "";
 
         Search(Target target, Handoff handoff) throws IOException {
             this.target = target;
             this.handoff = handoff;
             loadCorridor();
+            for (String act : WAYPOINTS.split("\\|")) {
+                if (!act.startsWith(target.pilot().name() + ":")) continue;
+                for (String xy : act.substring(act.indexOf(':') + 1).split(";")) {
+                    String[] f = xy.split(",");
+                    targets.add(new int[] {Integer.parseInt(f[0].strip()), Integer.parseInt(f[1].strip())});
+                }
+            }
+            if (!targets.isEmpty()) out(target, "authored waypoints " + targets.stream().map(t -> t[0] + "," + t[1]).toList());
             this.w = new World(target.pilot(), Map.of());
         }
 
@@ -291,9 +352,11 @@ class TypingHedgehogForwardRailBuilder {
             try {
                 var legacy = TypingHedgehogRailBuilderProbe.targets(target.pilot().game()).stream()
                         .filter(t -> t.name().equals(target.pilot().name())).findFirst().orElse(null);
-                if (legacy == null || legacy.cold()) return;
+                if (legacy == null) return;
                 var source = TypingHedgehogRailBuilderProbe.load(legacy);
                 if (!source.hasRef) return;
+                recorded = source;
+                recordedName = legacy.source().getFileName().toString();
                 for (int i = 0; i < source.refX.length; i++) {
                     List<Integer> ys = corridor.computeIfAbsent(source.refX[i] >> 5, k -> new ArrayList<>());
                     int y = source.refY[i];
@@ -339,7 +402,11 @@ class TypingHedgehogForwardRailBuilder {
         String summary() {
             return rows + " native rows, " + elapsedMs() / 1000 + " s, sites " + sites + " (rejected " + siteRejects
                     + "), soaks " + soaks + ", furthest x " + (best == null ? -1 : best.pmax) + " with "
-                    + (best == null ? 0 : best.fights) + " fights, dead ends " + deaths;
+                    + (best == null ? 0 : best.fights) + " fights, recorded-row children " + recordedChildren
+                    + " (furthest x " + recordedBestX + "), furthest fought lineage x " + foughtBestX + " with "
+                    + foughtBestFights + " fights, waypoints reached " + targetsReached + "/" + targets.size()
+                    + ", flattest rejected early site " + bestRejected
+                    + ", dead ends " + deaths;
         }
 
         // ---- entry and countdown
@@ -517,15 +584,41 @@ class TypingHedgehogForwardRailBuilder {
             out(target, "  objects near (dx,dy):" + objects + "; right wall distance by height:" + walls);
         }
 
-        List<Map.Entry<String, Macro>> macros(Node node) {
+        /**
+         * Waypoints: the recorded run's own pad rows from where it was in this node's place (within
+         * 12 px, same air state), for 24, 48 or 96 rows. They give the beam the human's timed jumps
+         * and platform rides where a route needs them; the result is validated like any other row,
+         * and the rail names these rows in its {@code waypoints} line.
+         */
+        List<Map.Entry<String, Macro>> recordedMacros(Node node) {
+            if (recorded == null || recorded.refAir == null) return List.of();
+            List<Integer> starts = new ArrayList<>();
+            for (int i = 0; i < recorded.refX.length && starts.size() < 3; i++) {
+                if (Math.abs(recorded.refX[i] - node.x) <= 12 && Math.abs(recorded.refY[i] - node.y) <= 12
+                        && recorded.refAir[i] == node.air && (starts.isEmpty() || i - starts.getLast() > 30)) {
+                    starts.add(i);
+                }
+            }
             List<Map.Entry<String, Macro>> out = new ArrayList<>();
+            int[] masks = recorded.masks;
+            for (int start : starts) {
+                for (int n : new int[] {24, 48, 96}) {
+                    out.add(Map.entry("REC" + start + "+" + n, (j, s) -> j < n && start + j < masks.length ? masks[start + j] : -1));
+                }
+            }
+            return out;
+        }
+
+        List<Map.Entry<String, Macro>> macros(Node node) {
+            List<Map.Entry<String, Macro>> out = new ArrayList<>(recordedMacros(node));
             if (node.boss) {
                 out.add(Map.entry("stop", stop()));
                 out.add(Map.entry("R8", hold(RIGHT, 8)));
                 out.add(Map.entry("C30", hold(0, 30)));
                 return out;
             }
-            if (widened > 0) {
+            // Between authored waypoints (a route the beam alone missed) the wide macro set applies.
+            if (widened > 0 || node.nextTarget < targets.size()) {
                 for (int n : new int[] {4, 8, 12, 16, 24, 32, 48, 64, 96}) out.add(Map.entry("R" + n, hold(RIGHT, n)));
                 for (int n : new int[] {8, 16, 32, 48}) out.add(Map.entry("C" + n, hold(0, n)));
                 for (int p : new int[] {1, 2, 4, 6, 8, 12, 16, 20, 24}) {
@@ -569,6 +662,8 @@ class TypingHedgehogForwardRailBuilder {
             c.lastFightRow = node.lastFightRow;
             c.lastFightX = node.lastFightX;
             c.stands = node.stands;
+            c.waypoints = node.waypoints;
+            c.nextTarget = node.nextTarget;
             c.loaded = node.loaded;
             c.openness = node.openness;
             c.boss = node.boss;
@@ -612,6 +707,10 @@ class TypingHedgehogForwardRailBuilder {
                         c.ymin = c.ymax = y;
                         c.lastPmaxRow = row;
                     }
+                    if (c.nextTarget < targets.size()) {
+                        int[] t = targets.get(c.nextTarget);
+                        if (Math.abs(x - t[0]) <= 32 && Math.abs(y - t[1]) <= 32) c.nextTarget++;
+                    }
                     if (death == null && !c.boss && !s.isObjectControlled() && row - c.lastProgressRow > STALL_ROWS) death = "stall";
                     if (death == null && !c.boss && row - c.lastPmaxRow > HARD_STALL_ROWS) death = "stall (no new x)";
                     if (death == null && !c.boss) death = scheduleMiss(c.fights, row, x);
@@ -625,7 +724,7 @@ class TypingHedgehogForwardRailBuilder {
                 if (!c.boss && GameServices.gameState().isBossFightActive()) {
                     c.boss = true;
                     c.bossRow = row;
-                    if (c.fights < 4) {
+                    if (c.fights < 4 && !target.bossOnly()) {
                         deaths.merge("boss before four fights", 1, Integer::sum);
                         return null;
                     }
@@ -641,7 +740,26 @@ class TypingHedgehogForwardRailBuilder {
             c.x = s.getCentreX();
             c.y = s.getCentreY();
             c.riding = s.isOnObject();
+            c.air = s.getAir();
+            targetsReached = Math.max(targetsReached, c.nextTarget);
+            if (c.fights > 0 && (c.fights > foughtBestFights || (c.fights == foughtBestFights && c.pmax > foughtBestX))) {
+                foughtBestFights = c.fights;
+                foughtBestX = c.pmax;
+            }
+            if (c.nextTarget < targets.size()) {
+                int[] t = targets.get(c.nextTarget);
+                c.targetDistance = Math.min(4000, Math.abs(c.x - t[0]) + 2 * Math.abs(c.y - t[1]));
+            } else {
+                c.targetDistance = 0;
+            }
             c.onCorridor = onCorridor(c.x, c.y);
+            if (how.startsWith("REC")) {
+                recordedChildren++;
+                recordedBestX = Math.max(recordedBestX, c.x);
+                List<int[]> spans = new ArrayList<>(node.waypoints);
+                spans.add(new int[] {node.row, c.row, Integer.parseInt(how.substring(3, how.indexOf('+')))});
+                c.waypoints = List.copyOf(spans);
+            }
             c.stopped = how.equals("stop") && s.getGSpeed() == 0 && s.getXSpeed() == 0 && !s.getAir();
             if (c.boss && c.stopped && !s.isHurt()) c.ended = endpointHolds(c);
             if (c.ended) c.checkpoint = w.course.capture();
@@ -685,6 +803,7 @@ class TypingHedgehogForwardRailBuilder {
          * member: no first fight by its window, or too few fights by where the next one belonged.
          */
         String scheduleMiss(int fights, int row, int x) {
+            if (target.bossOnly()) return null;
             if (fights == 0) {
                 return row - releaseRow > FIRST_FIGHT_ROWS + 120 || x - releaseX > FIRST_FIGHT_PX + 200 ? "missed the first fight" : null;
             }
@@ -694,6 +813,7 @@ class TypingHedgehogForwardRailBuilder {
         }
 
         boolean fightAllowed(Node n) {
+            if (target.bossOnly()) return false;
             if (n.fights >= 5) return false;
             if (n.fights == 0) return n.row - releaseRow <= FIRST_FIGHT_ROWS + 120 && n.x - releaseX <= FIRST_FIGHT_PX;
             if (n.x - n.lastFightX < FIGHT_SPACING_PX || n.row - n.lastFightRow < FIGHT_SPACING_ROWS) return false;
@@ -762,7 +882,16 @@ class TypingHedgehogForwardRailBuilder {
             if (s.isInWater()) return "water";
             int screenX = s.getCentreX() - GameServices.camera().getX();
             if (screenX < 64 || screenX > WIDTH - 128) return "screen position";
-            if (!geometry().flat()) return "geometry";
+            Geometry g = geometry();
+            if (!g.flat()) {
+                // Diagnostics: the flattest rejected strip in the first-fight window.
+                if (stop.fights == 0 && (bestRejected == null || g.range() + 8 * g.missing() < bestRejectedScore)) {
+                    bestRejected = "row " + stop.row + " x " + stop.x + " y " + stop.y + " range " + g.range() + " missing "
+                            + g.missing() + " [" + g.profile() + "]";
+                    bestRejectedScore = g.range() + 8 * g.missing();
+                }
+                return "geometry";
+            }
             // The player must see him fight: not behind high-priority foreground, and room for badniks to approach.
             if (highPriorityCover() > 0.25) return "behind foreground";
             if (openRun(-1) < 48 || openRun(1) < 96) return "walled in";
@@ -980,13 +1109,22 @@ class TypingHedgehogForwardRailBuilder {
             String sha1 = w.course.romSha1();
             String crc = TypingHedgehogRailBuilderProbe.romCrc();
             String profile = "width=" + WIDTH + (target.pilot().code().equals("s3k") ? " intros=skip" : "");
+            StringBuilder waypoints = new StringBuilder();
+            for (int[] span : done.waypoints) {
+                waypoints.append(' ').append(span[0]).append('-').append(span[1] - 1).append('@').append(span[2]);
+            }
+            String authored = targets.isEmpty() ? "" : " authored-targets " + String.join(";",
+                    targets.stream().map(t -> t[0] + "," + t[1]).toList());
+            String waypointLine = waypoints.length() == 0 && authored.isEmpty() ? ""
+                    : "waypoints" + (waypoints.length() == 0 ? "" : " recorded " + recordedName + waypoints) + authored + "\n";
             String text = "# " + target.pilot().code() + " " + target.pilot().name() + ": authored by TypingHedgehogForwardRailBuilder ("
-                    + summary() + ")\nformat 2\npolicy forward-v1\ncombat live-restore-v1\ncourse regular\nlaunch "
+                    + summary() + ")\nformat 2\npolicy forward-v1\ncombat live-restore-v1\ncourse "
+                    + (target.bossOnly() ? "boss-only" : "regular") + "\nlaunch "
                     + (target.spindash() ? "native-spindash" : "native-run-roll") + "\nprofile " + profile + "\ngame "
                     + target.pilot().code() + "\nzone " + target.pilot().zone() + "\nact " + target.pilot().act()
                     + "\nteam " + (target.pilot().sidekick().isEmpty() ? "sonic" : "sonic," + target.pilot().sidekick())
                     + "\nrom " + crc + "\nrom-sha1 " + sha1 + "\nengine " + com.openggf.version.AppVersion.get()
-                    + "\ncountdown " + countdownRow + "\n" + stands + "endpoint boss-arena " + done.row + "\nvalidated "
+                    + "\ncountdown " + countdownRow + "\n" + waypointLine + stands + "endpoint boss-arena " + done.row + "\nvalidated "
                     + done.row + "\nprogram " + TypingHedgehogRailBuilderProbe.rle(done.masks, done.row) + "\n";
             Files.createDirectories(OUT);
             Path file = OUT.resolve(target.file());

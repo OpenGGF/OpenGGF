@@ -59,6 +59,8 @@ import java.util.Set;
  * listed loaded badniks ({@code Class@slot/Llayout}, or {@code -}) convert there, and rows
  * {@code r} to {@code r+cleanup-1} hold no direction or jump. {@code endpoint kind r} starts the
  * act's boss (or finale) before row {@code r}; {@code validated} equals the program length.
+ * {@code waypoints ...} is provenance only: which rows replay inputs from the act's recorded run
+ * (an authoring aid; those rows are validated like any others).
  *
  * <p>{@code program} is run-length {@code frames:hexMask} pairs in {@code AbstractPlayableSprite}
  * input bits (UP 01, DOWN 02, LEFT 04, RIGHT 08, JUMP 10; Start is never part of a rail). Rows past
@@ -72,7 +74,7 @@ public record Rail(int format, String game, int zone, int act, String team, int 
 
     /** Format 2's forward-course semantics. */
     public record Plan(String policy, String combat, String kind, String launch, Map<String, String> profile,
-                       String romSha1, int countdownRow, List<Stand> stands, Endpoint endpoint) {
+                       String romSha1, int countdownRow, List<Stand> stands, Endpoint endpoint, String waypoints) {
         public Plan {
             profile = Map.copyOf(profile);
             stands = List.copyOf(stands);
@@ -182,7 +184,7 @@ public record Rail(int format, String game, int zone, int act, String team, int 
 
     public static Rail parse(String text) {
         String game = null, team = "sonic", engine = "", rom = "";
-        String policy = null, combat = null, kind = null, launch = null, romSha1 = null, endpointKind = null;
+        String policy = null, combat = null, kind = null, launch = null, romSha1 = null, endpointKind = null, waypoints = null;
         int format = 1, zone = -1, act = -1, validated = -1, boss = -1, countdown = -1, endpointRow = -1;
         Map<String, String> profile = new LinkedHashMap<>();
         List<Integer> frames = new ArrayList<>(), masks = new ArrayList<>(), legacyStands = new ArrayList<>();
@@ -214,6 +216,7 @@ public record Rail(int format, String game, int zone, int act, String team, int 
                 case "engine" -> engine = value;
                 case "rom" -> rom = value;
                 case "rom-sha1" -> romSha1 = value;
+                case "waypoints" -> waypoints = value;
                 case "countdown" -> countdown = Integer.parseInt(value);
                 case "stand" -> {
                     String[] f = value.split("\\s+");
@@ -270,8 +273,8 @@ public record Rail(int format, String game, int zone, int act, String team, int 
         if (validated != total) throw new IllegalArgumentException("Format 2 validates the whole program");
         if (endpointRow < 0 || endpointRow > total) throw new IllegalArgumentException("Endpoint outside the program");
         Rail probe = new Rail(2, game, zone, act, team, validated, engine, rom, runFrames, runMasks, List.of(), endpointRow, null);
-        if (!kind.equals("boss-only")) {
-            if (countdown < 0) throw new IllegalArgumentException("A run needs a countdown row");
+        if (!kind.equals("boss-only") && countdown < 0) throw new IllegalArgumentException("A run needs a countdown row");
+        if (countdown >= 0) {
             if (countdown + COUNTDOWN_ROWS >= endpointRow) throw new IllegalArgumentException("Countdown runs past the endpoint");
             for (int i = 0; i < COUNTDOWN_ROWS; i++) {
                 int m = probe.maskAt(countdown + i);
@@ -284,7 +287,7 @@ public record Rail(int format, String game, int zone, int act, String team, int 
             int release = probe.maskAt(countdown + COUNTDOWN_ROWS);
             if ((release & RIGHT) == 0 || (release & DOWN) != 0) throw new IllegalArgumentException("The release row must hold right without down");
         }
-        int previousEnd = kind.equals("boss-only") ? 0 : countdown + COUNTDOWN_ROWS;
+        int previousEnd = countdown < 0 ? 0 : countdown + COUNTDOWN_ROWS;
         Set<Integer> ids = new HashSet<>();
         for (Stand stand : stands) {
             if (!ids.add(stand.id())) throw new IllegalArgumentException("Duplicate stand id " + stand.id());
@@ -300,7 +303,7 @@ public record Rail(int format, String game, int zone, int act, String team, int 
             previousEnd = stand.row() + stand.cleanup();
         }
         Plan plan = new Plan(policy, combat, kind, launch, profile, romSha1, countdown, stands,
-                new Endpoint(endpointKind, endpointRow));
+                new Endpoint(endpointKind, endpointRow), waypoints);
         return new Rail(2, game, zone, act, team, validated, engine, rom, runFrames, runMasks,
                 stands.stream().map(Stand::row).toList(), endpointRow, plan);
     }

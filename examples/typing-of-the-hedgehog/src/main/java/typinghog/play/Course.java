@@ -291,7 +291,7 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
     }
 
     private boolean entry(CourseControl course) {
-        if (rail.forward() && intent.mode() != LaunchIntent.Mode.BOSS_RUSH && !rail.plan().kind().equals("boss-only")) {
+        if (rail.forward() && intent.mode() != LaunchIntent.Mode.BOSS_RUSH && rail.plan().countdownRow() >= 0) {
             return forwardEntry(course);
         }
         if (!course.presentationReady()) return true;

@@ -393,8 +393,15 @@ final class ForwardRails {
             min = Math.min(min, floorY);
             max = Math.max(max, floorY);
             profile.append(' ').append(floorY - feet);
-            TerrainCheckResult ceiling = ObjectTerrainUtils.checkCeilingDist(x, floorY - 1, 0);
-            if (ceiling.foundSurface() && ceiling.distance() < 48) low++;
+            // Upright clearance: no point 16, 32 or 47 px above the floor lies inside solid ground.
+            // (A ceiling probe from just above the floor can report the floor's own tile.)
+            for (int up : new int[] {16, 32, 47}) {
+                TerrainCheckResult inside = ObjectTerrainUtils.checkFloorDist(x, floorY - up);
+                if (inside.foundSurface() && inside.distance() < 0) {
+                    low++;
+                    break;
+                }
+            }
         }
         return new Geometry(samples, missing, missing == samples ? 999 : max - min, low, profile.toString().strip());
     }
