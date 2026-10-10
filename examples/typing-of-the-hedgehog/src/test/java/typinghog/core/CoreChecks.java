@@ -7,13 +7,24 @@ public final class CoreChecks {
     public static void main(String[] args) {
         promptForms(); lockingPrefersTheMostUrgentMatch(); errorsDoNotAdvanceOrSteal(); releaseAndHiddenTargets();
         phrasesNeedSpaces(); scoringChainsAndPopups(); speedCountsActiveRowsOnly(); tallyAndGrades();
-        System.out.println("8 typing core checks passed");
+        assistNeverStopsOnASpace();
+        System.out.println("9 typing core checks passed");
     }
 
     private static void eq(Object expected, Object actual) {
         if (!java.util.Objects.equals(expected, actual)) throw new AssertionError(expected + " != " + actual);
     }
     private static void yes(boolean value, String what) { if (!value) throw new AssertionError(what); }
+
+    /** An assist that would end before a space stops a letter earlier: a space cannot start a lock. */
+    public static void assistNeverStopsOnASpace() {
+        var field = new TypingField(false);
+        int id = field.add(Prompt.of("the keyboard is mightier", false, false), 100);
+        field.assist(id, 12);
+        eq(11, field.target(id).progress());
+        eq(TypingField.Kind.LOCK, field.type('d').kind());
+        eq(id, field.locked());
+    }
 
     public static void promptForms() {
         eq("dont panic", Prompt.of("Don't Panic!", false, false).typed());
