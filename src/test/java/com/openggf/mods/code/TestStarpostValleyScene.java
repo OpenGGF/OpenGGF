@@ -67,6 +67,7 @@ class TestStarpostValleyScene {
                 assertEquals("PlayScreen", screen(harness), farmer + " on the farm");
                 step(harness, "valley 700", 120);
             }
+            assertTrue(harness.debugJump("ruins scene"), "scene-only harness exercises the explicit fallback seam");
             for (String chamber : new String[] {"1", "5", "20", "25", "35", "40"}) {
                 step(harness, "new sonic", 10);
                 step(harness, "ruins " + chamber, 150);

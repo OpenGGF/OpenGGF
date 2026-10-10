@@ -18,6 +18,9 @@ import starpost.ui.Text;
 public final class StarpostScene implements ModScene, DebuggableScene {
     private Shell shell;
     private final starpost.realtown.TownSession town;
+    private final starpost.realruins.RuinsSession ruins;
+    private boolean returnToRuins;
+    private int ruinNumber, ruinRings=-1;
     private PlayScreen actPlay;
     private boolean returnToAct;
     private int returnX, returnY, healthRings;
@@ -39,7 +42,48 @@ public final class StarpostScene implements ModScene, DebuggableScene {
             java.util.OptionalInt.of(returnX), java.util.OptionalInt.of(returnY), healthRings, java.util.Map.of()));
     }
 
+    private void launchRuins(PlayScreen play,int number) {
+        if(ruins==null) throw new IllegalStateException("No real Ruins session");
+        if(town.game()!=shell.game) {
+            starpost.realtown.TownBridge.prepare(town,shell,play);
+            town.consumeHandBack();
+        }
+        boolean retain=returnToRuins && number==ruinNumber;
+        actPlay=play;
+        returnToAct=false; returnToRuins=false; ruinNumber=number;
+        var art=new starpost.ruins.RuinsArt(shell.art);
+        ruins.attachShell(shell);
+        ruins.prepare(shell.game,town,art,number,retain);
+        var chamber=ruins.chamber();
+        if(ruinRings<0) { ruinRings=starpost.ruins.RuinsRules.carried(shell.game.rings); shell.game.rings-=ruinRings; }
+        shell.in.consume(); shell.music.parkForAct();
+        shell.ctx.audio().playMusic("s1",starpost.ruins.RuinsRules.music(chamber.band));
+        int radius=shell.game.farmer.equals("tails") || shell.game.farmer.equals("knuckles")?15:19;
+        shell.ctx.startAct(new com.openggf.mods.scene.ActLaunch(
+            new com.openggf.game.ZoneKey.Mod("starpost-valley","ruins"),0,
+            com.openggf.game.CharacterKey.parsePersisted(shell.game.farmer),java.util.List.of(),
+            java.util.OptionalInt.of(chamber.entryX),java.util.OptionalInt.of(chamber.entryY+starpost.realruins.RuinsLevel.ORIGIN-radius),
+            ruinRings,java.util.Map.of("ruins.chamber",Integer.toString(number))));
+    }
+    private void resumeRuins(com.openggf.mods.scene.ActResult result) {
+        String target=ruins.finish(result.reason(),result.rings());
+        shell.music.parkForAct(); shell.goNow(actPlay);
+        if(result.reason()==com.openggf.game.ActExit.FAINTED || result.reason()==com.openggf.game.ActExit.TIME_UP) {
+            ruinRings=-1; returnToAct=false; shell.endActDay(true); return;
+        }
+        if(target.equals("next") || target.equals("inventory")) {
+            ruinRings=result.rings(); returnToRuins=true;
+            if(target.equals("next")) ruinNumber=Math.min(40,ruinNumber+1);
+            else shell.push(new InventoryMenu());
+        } else {
+            ruinRings=-1; returnToAct=true;
+            if(target.equals("elevator")) actPlay.places.get("ruins").accept(shell);
+        }
+        shell.in.consume();
+    }
+
     @Override public void resume(SceneContext context, com.openggf.mods.scene.ActResult result) {
+        if (result.destination().localName().equals("ruins")) { resumeRuins(result); return; }
         if (town == null || actPlay == null) throw new IllegalStateException("No suspended town act");
         town.consumeHandBack();
         healthRings = result.rings();
@@ -54,7 +98,8 @@ public final class StarpostScene implements ModScene, DebuggableScene {
     }
 
     public StarpostScene() { this(null); }
-    public StarpostScene(starpost.realtown.TownSession town) { this.town = town; }
+    public StarpostScene(starpost.realtown.TownSession town) { this(town,null); }
+    public StarpostScene(starpost.realtown.TownSession town,starpost.realruins.RuinsSession ruins) { this.town=town; this.ruins=ruins; }
 
     /** E1 owner calls this immediately before SceneContext.startAct. */
     public starpost.realtown.TownSession prepareTownAct() {
@@ -93,6 +138,7 @@ public final class StarpostScene implements ModScene, DebuggableScene {
         }
         shell = new Shell(ctx, art, new Catalog());
         shell.townAct = town == null ? null : this::launchTown;
+        shell.ruinsAct = ruins == null ? null : this::launchRuins;
         shell.goNow(new TitleScreen());
     }
 
@@ -103,6 +149,9 @@ public final class StarpostScene implements ModScene, DebuggableScene {
                 ctx.exitToGameTitle();
             }
             return;
+        }
+        if(returnToRuins && shell.screen()==actPlay && !shell.hasOverlay() && !shell.transitioning()) {
+            launchRuins(actPlay,ruinNumber); return;
         }
         if (returnToAct && shell.screen() == actPlay && !shell.hasOverlay() && !shell.transitioning()) {
             launchTown(actPlay);

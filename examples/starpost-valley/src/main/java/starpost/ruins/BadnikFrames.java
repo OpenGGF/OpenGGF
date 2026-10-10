@@ -4,16 +4,16 @@ package starpost.ruins;
  * Which mapping frame a badnik shows, from Sonic 1's animation scripts (s1disasm _anim/*.asm;
  * a script's delay byte holds each frame for delay + 1 frames).
  */
-final class BadnikFrames {
+public final class BadnikFrames {
     /** Map_Orb: the spike ball. */
-    static final int ORBINAUT_BALL = 3;
+    public static final int ORBINAUT_BALL = 3;
     /** Map_Hog: the cannonball. */
-    static final int CANNONBALL = 4;
+    public static final int CANNONBALL = 4;
 
     private BadnikFrames() {
     }
 
-    static int frame(Badnik b, long ticks) {
+    public static int frame(Badnik b, long ticks) {
         return switch (b.kind) {
             // Map_Cat: the head shuts (0) while it crawls and opens (16) between pulls.
             case Badnik.CATERKILLER -> b.state == 1 ? 0 : 16;
@@ -38,7 +38,7 @@ final class BadnikFrames {
     }
 
     /** A Caterkiller body segment's frame. */
-    static int caterkillerBody(Badnik b, int segment) {
+    public static int caterkillerBody(Badnik b, int segment) {
         return 8;
     }
 

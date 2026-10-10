@@ -602,5 +602,5 @@ and registration remain Sonic 2 defaults. Named S1 intake uses S1 mapping
 pieces, source-specific address bounds and the production `PatchContext` logical
 ROM resolver; S1 DPLCs and standalone intake are rejected. Missing logical ROMs
 fail the existing creator launch boundary. The mutable 0.7 signature pin and
-`ModApiVersion` description are updated together. The policy descriptor remains
+`ModApiVersion` description and descriptor commentary are updated together. The policy descriptor remains
 `currentApi=0.7.0`, `currentStatus=candidate`, with no published baseline.

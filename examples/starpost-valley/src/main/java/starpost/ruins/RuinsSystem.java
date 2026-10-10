@@ -49,7 +49,7 @@ public final class RuinsSystem {
         RuinsSection section = section(shell.game);
         List<Integer> starts = RuinsRules.starts(section.deepest);
         if (starts.size() == 1) {
-            shell.go(new RuinsScreen(shell, play, art(shell, holder), 1));
+            if(!shell.startRuinsAct(play,1)) shell.go(new RuinsScreen(shell, play, art(shell, holder), 1));
             return;
         }
         String[] options = new String[starts.size() + 1];
@@ -60,7 +60,7 @@ public final class RuinsSystem {
         options[starts.size()] = "NOT NOW";
         shell.push(new RuinsMenu("MARBLE RUINS ELEVATOR", options, choice -> {
             if (choice >= 0 && choice < starts.size()) {
-                shell.go(new RuinsScreen(shell, play, art(shell, holder), starts.get(choice)));
+                if(!shell.startRuinsAct(play,starts.get(choice))) shell.go(new RuinsScreen(shell, play, art(shell, holder), starts.get(choice)));
             }
         }));
     }
@@ -77,6 +77,8 @@ public final class RuinsSystem {
         }
         Screen screen = shell.screen();
         switch (p[1]) {
+            case "scene" -> { shell.sceneRuins=true; return true; }
+            case "act" -> { shell.sceneRuins=false; return true; }
             case "rings" -> {
                 if (screen instanceof RuinsScreen ruins) {
                     ruins.debugRings(Integer.parseInt(p[2]));
@@ -138,7 +140,7 @@ public final class RuinsSystem {
                     return false;
                 }
                 RuinsArt art = screen instanceof RuinsScreen rs ? rs.art() : new RuinsArt(shell.art);
-                shell.goNow(new RuinsScreen(shell, play, art, chamber));
+                if(!shell.startRuinsAct(play,chamber)) shell.goNow(new RuinsScreen(shell, play, art, chamber));
                 return true;
             }
         }

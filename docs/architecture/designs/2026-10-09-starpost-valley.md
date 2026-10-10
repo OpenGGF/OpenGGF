@@ -2261,3 +2261,78 @@ maximum/duplicate teams, checkpoint/death/respawn breadth, all menu transactions
 and festival/day-end routes remain gaps. Villagers do not jump the original
 64px totem ledge or cross pits; schedules spanning that obstacle can stop there.
 The terrain's existing native player jump route remains intact.
+
+
+## 24. The Ruins on real levels (lane)
+
+Lane `feature/ai-starpost-realruins`, base `3da4cd930`; local implementation only.
+The scene still owns the same Game, inventory, day and PlayScreen. `RuinsSession`
+is a captured service beside TownSession; `RuinsPatch` regenerates the selected
+chamber on every load from RuinsSection.seed/day/number. ChamberGen, Reach,
+Landmarks and Placer retain their existing rules. `ValleyEncoder.encodeGrid`
+reuses the real valley encoder for a rectangular kit grid, preserving S1 art,
+flips, collision masks/angles and priority. No ROM bytes enter the mod jar.
+
+The native S3K player owns running, jumping, character abilities, hurt/ring
+scatter, shield absorption and drowning. RuinsController translates generated
+lava tags into native FIRE contact, carries the scene clock, exposes the shafts
+and Star Post elevator, and returns LEFT/COMPLETED/FAINTED/TIME_UP through E1.
+Health is withdrawn once, carried across descent/inventory, banked once on exit,
+and subject to existing RuinsRules.faint losses. Native springs, monitors,
+spikes, Star Posts and bubble makers use the S3K registry; these generated bands
+contain no Green Hill loops requiring path swaps. `RuinsWater` supplies the real
+waterline and Bubble Shield breathing. The retained scene music selects each
+band's Sonic 1 song. ActHud supplies the shared Momentum bar in both acts.
+
+RuinsThing wraps the existing nine S1 badnik ports (S1 objects 78,55,22/23,50,
+2C,2D,60,5F,1E/20) rather than copying behavior. Rocks/monitors spawn captured
+RuinsFind objects with the existing mineral, geode, Record and museum yields.
+Badniks retain harmful body/spike/projectile rules and release band-appropriate
+ROM animals, using Anml_Variables hop speeds. Badnik animation sheets are loaded
+through E2, rendered from their parsed five-byte mappings and original S1
+palette. Draw caches contain presentation only; gameplay survives repeated or
+skipped drawing. The scene implementation remains accessible via `ruins scene`;
+`ruins act` restores native launches.
+
+### Engine seam and rejected approaches
+
+Milestone `14a3bfd69` adds `RomArtRequest.source()` and its source-qualified
+constructor, preserving the seven-argument S2 constructor, plus
+`ModContext.registerRomObjectArt(String, LogicalRom, RomArtRequest)`. S1 and S2
+are explicit logical inputs; S1 bounds/mappings are checked and S1 DPLC requests
+are rejected. Production materialization opens the named supplied ROM through
+PatchContext, independent of the S3K host. Candidate 0.7 signature pins,
+ModApiVersion commentary, compatibility/creator guidance and develop release
+prose change together; the unpublished candidate version remains 0.7.0.
+
+The first whole-registry replay exposed a native BubbleShield owner mismatch:
+`object-manager.dynamic[100].ownerModId` restored as null instead of
+starpost-valley. Milestone `29c3e1755`: DefaultPowerUpSpawner reattaches the captured owner before
+restoring the dynamic slot. The pending player-refresh path has a direct
+regression; no new public signature is needed.
+
+Using generator zone IDs directly in Sonic1.loadLevel was rejected: decoded
+indices are MZ `0x86+act`, LZ `0x83+act`, SBZ `0x8F+act`, unlike public kit IDs.
+Reusing the valley's placeholder claim line3/colour15 was rejected by Scrap
+Brain pattern556, which needs every opaque colour on that line. The separately
+original Ruins placeholder uses line1/colour2; all bands encode without fitted
+palette values. Immediate inventory credit was replaced with captured dropped
+objects so full bags leave finds in the chamber. Same-room reload explicitly
+recreates pending find objects; room snapshots do not undo menu purchases.
+
+### Coverage and limits
+
+The [Ruins route matrix](../validation/levels/starpost-realruins.md) records
+independent band/character obligations and inherited breadth gaps. Native route
+checks use production packaged-mod loading and whole-registry capture/restore;
+scene-only tests explicitly select the preserved fallback. Load/act handoffs
+intentionally sever the gameplay timeline while the live scene state survives.
+
+This is the existing mod's short S1 behavior port, not a frame-parity claim for
+all nine badnik state machines. Labyrinth has native water physics/drowning and
+a draw tint; exact Pal_LZWater remapping for the reallocated host palette remains
+open. Bubble makers use stock S3K art. Wider viewports, movement donors, teams,
+all forty native traversals, checkpoint/restart breadth and complete object-phase
+rewind remain gaps. No engine gameplay is hydrated from reference traces.
+
+Validation and final capture evidence are recorded below after completion.

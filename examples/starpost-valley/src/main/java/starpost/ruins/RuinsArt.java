@@ -114,7 +114,7 @@ public final class RuinsArt implements ChamberGen.Kits {
     }
 
     /** A band's palette: its first act's four lines (badniks and hazards are coloured with it). */
-    private int[] palette(int band) {
+    public int[] palette(int band) {
         RomKit kit = romKit(RuinsRules.zone(band), 0);
         return kit == null ? art.ghzPalette : kit.kit.palette();
     }

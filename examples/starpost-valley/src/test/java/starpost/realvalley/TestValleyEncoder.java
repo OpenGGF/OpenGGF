@@ -126,6 +126,16 @@ class TestValleyEncoder {
         assertEquals(0x40, encoded.angles()[twin]);
     }
 
+    @Test void rectangularGridPlacesAllRowsAndPreservesBlankCells() {
+        var encoded=ValleyEncoder.encodeGrid(terrain(),new ValleyEncoder.Spec(new int[]{1,0,0,2},1,-1,-1,1,2),2,2);
+        assertEquals(4,encoded.width()); assertEquals(5,encoded.height());
+        // Each S1 cell becomes 2x2 S3K blocks, after one sky row.
+        assertNotEquals(0,encoded.foreground()[4]); assertEquals(0,encoded.foreground()[6]);
+        assertEquals(0,encoded.foreground()[12]); assertNotEquals(0,encoded.foreground()[14]);
+        assertThrows(IllegalArgumentException.class,()->ValleyEncoder.encodeGrid(terrain(),
+            new ValleyEncoder.Spec(new int[]{1},1,-1,-1,1,2),2,2));
+    }
+
     @Test void doesNotAliasCollisionInputAndCompactsRepeatedQuadrants() {
         S1Terrain source = terrain();
         EncodedValley encoded = encode(source, -1, -1);

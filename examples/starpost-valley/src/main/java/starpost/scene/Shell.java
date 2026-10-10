@@ -31,6 +31,12 @@ public final class Shell {
     public Game game;
     java.util.function.Consumer<PlayScreen> townAct;
     boolean sceneValley;
+    public boolean sceneRuins;
+    java.util.function.BiConsumer<PlayScreen,Integer> ruinsAct;
+    public boolean startRuinsAct(PlayScreen play,int number) {
+        if(ruinsAct==null || sceneRuins) return false;
+        ruinsAct.accept(play,number); return true;
+    }
 
     /** Farm fold integration; the scene-only valley remains available through debug. */
     boolean startTownAct(PlayScreen play) {

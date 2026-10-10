@@ -48,6 +48,7 @@ public final class ValleyEncoder {
 
     private final S1Terrain source;
     private final Spec spec;
+    private final int columns, rows;
     private final List<byte[]> patterns = new ArrayList<>();
     private final Map<String, Integer> patternIds = new HashMap<>();
     private final Map<Integer, PatternUse> uses = new HashMap<>();
@@ -61,7 +62,10 @@ public final class ValleyEncoder {
     private final Map<String, Integer> profileIds = new HashMap<>();
     private int remappedUses;
 
-    private ValleyEncoder(S1Terrain source, Spec spec) {
+    private ValleyEncoder(S1Terrain source, Spec spec, int columns, int rows) {
+        if (columns < 1 || rows < 1 || columns * rows != spec.columns().length)
+            throw new IllegalArgumentException("Invalid source block grid");
+        this.columns = columns; this.rows = rows;
         this.source = source;
         this.spec = spec;
         for (int[] line : claims) {
@@ -79,12 +83,17 @@ public final class ValleyEncoder {
     }
 
     public static EncodedValley encode(S1Terrain source, Spec spec) {
-        return new ValleyEncoder(source, spec).run();
+        return encodeGrid(source, spec, spec.columns().length, 1);
+    }
+
+    /** Reuses the same exact art/collision encoder for a row-major generated chamber grid. */
+    public static EncodedValley encodeGrid(S1Terrain source, Spec spec, int columns, int rows) {
+        return new ValleyEncoder(source, spec, columns, rows).run();
     }
 
     private EncodedValley run() {
-        int width = spec.columns().length * 2;
-        int height = spec.skyRows() + 2;
+        int width = columns * 2;
+        int height = spec.skyRows() + rows * 2;
         // Palette first: lines 1-3 keep their own cells, then everything else is packed around them.
         List<int[]> reached = reachedPatternUses();
         claims[2][0] = source.color(2, 0);       // the backdrop (S1's VDP register 7 = $8720)
@@ -109,8 +118,8 @@ public final class ValleyEncoder {
             int block = spec.columns()[column];
             int twin = block == spec.loopBlock() ? spec.loopTwin() : -1;
             for (int q = 0; q < 4; q++) {
-                int x = column * 2 + q % 2;
-                int y = spec.skyRows() + q / 2;
+                int x = column % columns * 2 + q % 2;
+                int y = spec.skyRows() + column / columns * 2 + q / 2;
                 foreground[y * width + x] = (byte) quadrant(block, twin, q % 2, q / 2, true);
             }
         }

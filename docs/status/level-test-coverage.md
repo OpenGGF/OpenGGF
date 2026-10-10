@@ -1050,3 +1050,10 @@ AIZ fire-reload follow-up (2026-10-03): the
 covers the fixed reload lock. The
 [HCZ1 matrix](../architecture/validation/levels/s3k-hcz1-sonic.md) adds the fresh
 live-load ordering obligation.
+
+
+Starpost Valley Real Ruins (2026-10-10): the
+[band/character route matrix](../architecture/validation/levels/starpost-realruins.md)
+tracks generated native Marble/Labyrinth/Scrap Brain chamber routes, scene return,
+health/faint/drowning and rewind. Broader width/donor/team/forty-chamber lifecycle
+obligations remain explicit gaps; creator reachability is not native-route certification.

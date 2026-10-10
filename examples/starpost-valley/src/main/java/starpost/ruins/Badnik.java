@@ -97,6 +97,19 @@ public final class Badnik {
         this.timer = kind == BOMB ? 3 * 60 - 1 : 60;
     }
 
+    /** Complete immutable state for the real-act owner, including patrol and turn pauses. */
+    public record Snapshot(int kind,float x,float y,float vx,float vy,boolean facingLeft,boolean alive,
+            int state,int timer,int age,float angle,float homeY,int pause,float patrolCentre) {}
+    public Snapshot capture() {
+        return new Snapshot(kind,x,y,vx,vy,facingLeft,alive,state,timer,age,angle,homeY,pause,patrolCentre);
+    }
+    public static Badnik restore(Snapshot s) {
+        Badnik b=new Badnik(s.kind(),s.x(),s.y());
+        b.vx=s.vx(); b.vy=s.vy(); b.facingLeft=s.facingLeft(); b.alive=s.alive();
+        b.state=s.state(); b.timer=s.timer(); b.age=s.age(); b.angle=s.angle(); b.homeY=s.homeY();
+        b.pause=s.pause(); b.patrolCentre=s.patrolCentre(); return b;
+    }
+
     /** The badniks of a band (S1's own zones): Marble, Labyrinth, Scrap Brain. */
     public static int[] roster(int band) {
         return switch (band) {

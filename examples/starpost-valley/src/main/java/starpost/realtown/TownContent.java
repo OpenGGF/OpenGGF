@@ -15,11 +15,16 @@ public final class TownContent {
     public static final String DECORATION = "starpost-valley:town-decoration";
     private TownContent() {}
 
-    public static TownSession register(ModContext context) {
+    public static TownSession register(ModContext context) { return register(context,null); }
+    public static TownSession register(ModContext context,LevelInputOverlay other) {
         TownSession session = new TownSession();
+        TownInput townInput = new TownInput(session);
         context.registerServiceBundle("town", () -> GameServiceBundle.builder()
             .capturedService("state", TownSession.class, session)
-            .service(LevelInputOverlay.class, new TownInput(session)).build());
+            .service(LevelInputOverlay.class, input -> {
+                if (other != null && other.handleInput(input)) return true;
+                return townInput.handleInput(input);
+            }).build());
         context.registerObject("town-controller", (spawn, registry) -> new TownController(spawn));
         context.registerObject("town-villager", (spawn, registry) -> new TownVillager(spawn));
         context.registerObject("town-door", (spawn, registry) -> new TownDoor(spawn));

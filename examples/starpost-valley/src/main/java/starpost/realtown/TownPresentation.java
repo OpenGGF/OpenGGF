@@ -101,6 +101,7 @@ public final class TownPresentation {
         String date=starpost.core.Calendar.seasonName(calendar.season())+" "+calendar.day()+" "+
             starpost.core.Calendar.weekdayName(calendar.weekday());
         Text.right(canvas,date,canvas.width()-8,6,Text.WHITE);
+        starpost.ui.ActHud.momentum(canvas,town.game());
         if (!town.notice().isEmpty()) {
             canvas.fill(6,43,canvas.textWidth(town.notice())+8,13,0xE0101848);
             canvas.text(town.notice(),10,46,Text.WHITE);
