@@ -1015,6 +1015,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   A course checkpoint restored from inside a frame controller now rebuilds engine
   objects as engine objects, so a stand restore no longer drops engine children the
   restore re-creates (such as Hydrocity's sliding fan platforms).
+  A mod that registers objects no longer drops the stock game's fixed object slots,
+  so Hydrocity's water-skim record and Mushroom Hill's pollen spawner keep their
+  native slots and later objects allocate as they do in the stock game.
   The API descriptor remains the version/publication authority; this
   branch rollover does not publish or freeze it.
 - **Mod API: multi-game mods, scene hand-offs and typed text:** one `baseGame: any`
