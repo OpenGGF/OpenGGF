@@ -40,6 +40,7 @@ import java.util.Optional;
 import static org.lwjgl.glfw.GLFW.GLFW_CONTEXT_VERSION_MAJOR;
 import static org.lwjgl.glfw.GLFW.GLFW_CONTEXT_VERSION_MINOR;
 import static org.lwjgl.glfw.GLFW.GLFW_FALSE;
+import static org.lwjgl.glfw.GLFW.GLFW_ANY_PLATFORM;
 import static org.lwjgl.glfw.GLFW.GLFW_PLATFORM;
 import static org.lwjgl.glfw.GLFW.GLFW_PLATFORM_NULL;
 import static org.lwjgl.glfw.GLFW.GLFW_RESIZABLE;
@@ -288,8 +289,16 @@ public final class HeadlessGameBoot implements AutoCloseable {
             // GLFW keeps its timer/input role on the display-free null platform.
             glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_NULL);
         }
-        if (!glfwInit()) {
-            throw new IllegalStateException("Unable to initialize GLFW");
+        try {
+            if (!glfwInit()) {
+                throw new IllegalStateException("Unable to initialize GLFW");
+            }
+        } finally {
+            if (surfaceless) {
+                // Init hints survive glfwTerminate. Reset the next owner's selection even
+                // on failure; this does not change the null platform already initialized.
+                glfwInitHint(GLFW_PLATFORM, GLFW_ANY_PLATFORM);
+            }
         }
 
         if (surfaceless) {

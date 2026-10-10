@@ -4,12 +4,17 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL;
+import org.lwjgl.glfw.GLFW;
+import com.openggf.game.session.EngineContext;
+import com.openggf.game.session.EngineServices;
 
 import java.nio.ByteBuffer;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.lwjgl.opengl.GL11.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 
 class TestSurfacelessEglContext {
     @AfterEach
@@ -25,6 +30,21 @@ class TestSurfacelessEglContext {
         assertTrue(SurfacelessEglContext.requested());
         System.setProperty(SurfacelessEglContext.PROPERTY, "x11");
         assertThrows(IllegalArgumentException.class, SurfacelessEglContext::requested);
+    }
+
+    @Test
+    void failedBootReleasesTheNullPlatformHintBeforeAnotherOwnerInitializes() {
+        System.setProperty(SurfacelessEglContext.PROPERTY, SurfacelessEglContext.SURFACELESS);
+        // A failed initialization must not leave later native-window owners on the null platform.
+        // Mock GLFW here: the regression never connects to a display or opens a window.
+        try (var services = mockStatic(EngineServices.class);
+             var glfw = mockStatic(GLFW.class)) {
+            glfw.when(GLFW::glfwInit).thenReturn(false);
+            assertThrows(IllegalStateException.class,
+                    () -> new HeadlessGameBoot(64, 32, mock(EngineContext.class)));
+            glfw.verify(() -> GLFW.glfwInitHint(GLFW.GLFW_PLATFORM, GLFW.GLFW_PLATFORM_NULL));
+            glfw.verify(() -> GLFW.glfwInitHint(GLFW.GLFW_PLATFORM, GLFW.GLFW_ANY_PLATFORM));
+        }
     }
 
     @Test

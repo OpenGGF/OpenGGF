@@ -36,7 +36,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Routine validation and footage use headless/offscreen paths; window-specific
   diagnostics create an owned virtual display and fail if isolation is unavailable,
   preventing automated walkthroughs from taking desktop keyboard focus. Linux
-  captures can opt into a surfaceless EGL context that needs no display connection.
+  captures can opt into a surfaceless EGL context that needs no display connection
+  and releases its platform selection for later engine boots. Native ring/enemy
+  observations and layout CSVs are available through maintained display-free tools.
 
 - **Sonic 2 title SFX priority:** the flashing star's last twinkle now runs to
   its own stop, as in the ROM, releasing the sound driver's SFX priority. A stop

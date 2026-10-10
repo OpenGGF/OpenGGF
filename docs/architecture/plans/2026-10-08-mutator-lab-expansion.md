@@ -1099,3 +1099,44 @@ and latch across restore; its fixture now supplies explicit services instead of 
 on an ambient gameplay runtime left by an earlier class), `TestMutatorExpandedPolicies`,
 `TestModApiSignatureSurface`/`TestModApiPinPolicy`, `TestExampleMutatorsPackage` and the
 existing lost-ring/ring-manager suites.
+
+### Gameplay-first replacement promo and root review
+
+The menu-heavy expansion reel was rejected: listing configurable effects did not
+show why stacking them is fun. The replacement uses actual input-only gameplay:
+a 173-ring spill and head shrink/regrowth during recollection, five native badnik
+stomps with amplified rebounds, live gravity on/off, a No Rings restart, and a
+211-ring stacked finale. Two starting inventories are disclosed on screen; they
+are demonstration setup, not a claim of earning those rings in a cold run. The
+edit uses matched native controls and about seven seconds of menus in a
+52-second movie. A death caption was corrected to say the hit is fatal rather
+than claiming exhausted lives. Game Speed is not demonstrated.
+
+The recurring observation and layout probes are maintained as
+`MutatorGameplayCaptureTool` and `LevelLayoutDumpTool`. They require the opt-in
+surfaceless backend before opening a session, consume ordinary capture inputs,
+and read native owners without changing gameplay during a take. The historical
+source receipts still identify the original scratch drivers. Existing Sonic 1
+zone-alias ordering remains an observed tool limitation; the requested string
+alone does not establish the loaded zone.
+
+Root review found that GLFW initialization hints survive termination. The new
+surfaceless boot selected the null platform without releasing that hint for the
+next native-window owner. A display-free mocked regression reproduced the
+missing reset after initialization failure; the fix restores automatic selection
+in `finally` after initialization, leaving the already initialized null platform
+unchanged. Reference: [GLFW initialization hints](https://www.glfw.org/docs/3.4/intro_guide.html#init_hints).
+The initial validation launch used a nonexistent Debian-style JDK path and ran
+no tests; the corrected environment uses the verified Arch Java 21 installation.
+Root checks also exercise all three games' actual 999-ring allocation limit.
+
+Root verification used the normal queue with Java 21 and the desktop environment
+removed: `-Dtest=TestSurfacelessEglContext,TestMutatorGameplayCaptureTool,TestLevelRingfallIntegration,HeadlessGameBootTest,TestHeadlessGameBootAudioIdentity,TestModApiSignatureSurface,TestModApiPinPolicy verify`.
+All seven classes completed: 43 cases, no failures, errors or skips; the real EGL
+back-buffer readback and all three 999-ring allocations ran. Binary SDK/Javadoc
+artifact verification passed, and compiled reflection matched the candidate pin.
+The promoted capture driver replayed the first 760 frames of the Green Hill
+hero take: all PNGs, state/observation rows, badnik rows and 608,000 stereo PCM
+frames were byte-identical to the original scratch driver. Temporary duplicate
+media were removed after comparison. These are focused checks; the normal
+combined category run and fresh structural guards remain required.

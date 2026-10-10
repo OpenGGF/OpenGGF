@@ -83,7 +83,8 @@ class TestLevelRingfallIntegration {
 
     @ParameterizedTest
     @CsvSource({"SONIC_1,100,0,150,150", "SONIC_2,100,0,150,150", "SONIC_3K,100,0,150,150",
-            "SONIC_2,50,0,150,75", "SONIC_2,100,20,150,20", "SONIC_3K,100,0,20,20"})
+            "SONIC_2,50,0,150,75", "SONIC_2,100,20,150,20", "SONIC_3K,100,0,20,20",
+            "SONIC_1,100,0,999,999", "SONIC_2,100,0,999,999", "SONIC_3K,100,0,999,999"})
     void fullInventorySpillsRecoverableRingsBeyondTheNativeCeilingWithoutClaimingExtraSlots(
             String game, int percent, int cap, int held, int expected) {
         ObjectSlotLayout layout = switch (game) {
