@@ -107,6 +107,7 @@ public final class Boss {
             facingRight = side < 0;
             spawn(course, side > 0 ? camera.getX() + camera.getWidth() + 64 : camera.getX() - 64,
                     inView(py - rig.height()));
+            course.homing().face(side > 0 ? com.openggf.physics.Direction.RIGHT : com.openggf.physics.Direction.LEFT);
         }
         if (flash > 0) flash--;
         if (laughRows > 0) laughRows--;

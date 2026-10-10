@@ -47,6 +47,14 @@ final class Homing {
         if (GameServices.camera().getFocusedSprite() instanceof AbstractPlayableSprite sonic) homeFacing = sonic.getDirection();
     }
 
+    /** Turns Sonic on his spot to face {@code facing} (toward a boss), and keeps that after strikes. */
+    void face(Direction facing) {
+        homeFacing = facing;
+        if (current == null && GameServices.camera().getFocusedSprite() instanceof AbstractPlayableSprite sonic) {
+            sonic.setDirection(facing);
+        }
+    }
+
     boolean anchored() { return anchored; }
     int homeX() { return homeX; }
     int homeY() { return homeY; }
