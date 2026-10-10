@@ -727,4 +727,7 @@ rewindable clock that compounds speed every 30 seconds of active play.
 A module can also pin a display aspect for its session with
 `GameModule.requiredDisplayAspect()` (a `display.aspect` preset name; the master title
 restores the player's setting) and hide the level select with
-`GameModule.suppressesLevelSelect()`. Infinite Sonic uses both.
+`GameModule.suppressesLevelSelect()`. Infinite Sonic uses both. A module whose content
+drives its acts from their first controllable row can require that they start without
+scripted intros (Sonic 3 & Knuckles' act-start cutscenes) with
+`GameModule.requiresSkippedActIntros()`; Typing of the Hedgehog's rails need it.

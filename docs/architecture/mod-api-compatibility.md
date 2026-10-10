@@ -343,9 +343,11 @@ the session requires; interactive launches apply it as a session override after 
 resolution, so the master title restores the player's aspect and trace test mode still
 resolves native 4:3. `GameModule.suppressesLevelSelect()` (default `false`) makes the
 host ignore `LEVEL_SELECT_ON_STARTUP`, route a title level-select exit to one-player
-play, and ignore the in-level level-select key. Both are delegated by
-`DelegatingGameModule` and additive to the unpublished 0.7 candidate; the pin is
-updated in place.
+play, and ignore the in-level level-select key. `GameModule.requiresSkippedActIntros()`
+(default `false`) makes interactive launches pin the skip of scripted act intros (the S3K
+skip-intros setting) as a session override, cleared at the master title like the aspect.
+All three are delegated by `DelegatingGameModule` and additive to the unpublished 0.7
+candidate; the pin is updated in place.
 
 Putt Putt Paradise's course controller and bounded scene values extend this same
 unpublished candidate. Atlas residency lookup and packed `PatternVersion` data

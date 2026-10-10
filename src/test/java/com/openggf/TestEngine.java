@@ -455,6 +455,27 @@ class TestEngine {
     }
 
     @Test
+    void aModuleRequiringSkippedIntrosPinsTheSkipUntilOverridesClear() throws Exception {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
+        config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, false);
+        GraphicsManager graphics = new GraphicsManager();
+        setPrivateField(graphics, "tilemapGpuRenderer", new TilemapGpuRenderer(320));
+        Engine engine = newTestEngine(config, graphics);
+        GameModule railed = new com.openggf.game.patch.DelegatingGameModule(new Sonic1GameModule(), "test:railed") {
+            @Override public boolean requiresSkippedActIntros() { return true; }
+        };
+
+        engine.applyRequiredDisplayAspect(new Sonic1GameModule());
+        assertFalse(config.getBoolean(SonicConfiguration.S3K_SKIP_INTROS), "no requirement keeps the player's setting");
+
+        engine.applyRequiredDisplayAspect(railed);
+        assertTrue(config.getBoolean(SonicConfiguration.S3K_SKIP_INTROS), "the module's acts start without intros");
+
+        config.clearSessionOverrides();
+        assertFalse(config.getBoolean(SonicConfiguration.S3K_SKIP_INTROS), "the master title restores the setting");
+    }
+
+    @Test
     void resolveFramebufferDimensionsAfterWindowResizePrefersActualFramebufferPixels() {
         Engine.FramebufferDimensions dimensions =
                 Engine.resolveFramebufferDimensionsAfterWindowResize(800, 448, 1600, 896);

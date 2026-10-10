@@ -82,6 +82,7 @@ public class DelegatingGameModule implements GameModule {
     }
     @Override public com.openggf.game.rewind.ScriptedRewind scriptedRewind() { return base.scriptedRewind(); }
     @Override public String requiredDisplayAspect() { return base.requiredDisplayAspect(); }
+    @Override public boolean requiresSkippedActIntros() { return base.requiresSkippedActIntros(); }
     @Override public boolean suppressesLevelSelect() { return base.suppressesLevelSelect(); }
     @Override public List<com.openggf.game.rewind.RewindSnapshottable<?>> rewindAdapters() {
         return base.rewindAdapters();

@@ -148,6 +148,14 @@ public interface GameModule {
     default String requiredDisplayAspect() { return null; }
 
     /**
+     * Whether this module's acts must start without their scripted intros (Sonic 3 &amp; Knuckles'
+     * act-start cutscenes; games without intros ignore it), for content that drives the act from
+     * its first controllable row. The host pins the skip as a session override at launch, as
+     * {@link #requiredDisplayAspect()}; returning to the master title restores the player's setting.
+     */
+    default boolean requiresSkippedActIntros() { return false; }
+
+    /**
      * Whether this session hides the level select. When {@code true}, the host ignores
      * {@code LEVEL_SELECT_ON_STARTUP}, a title level-select exit starts a one-player game
      * instead, and the in-level level-select debug key does nothing.

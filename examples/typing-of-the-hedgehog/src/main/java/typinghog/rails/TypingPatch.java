@@ -59,6 +59,9 @@ public final class TypingPatch implements GamePatch {
             @Override public Level transformDecodedLevel(Level source) {
                 return withoutBadniks(super.transformDecodedLevel(source), badnikIds);
             }
+
+            // Rails are authored from each act's first controllable row, without scripted intros.
+            @Override public boolean requiresSkippedActIntros() { return true; }
         };
     }
 

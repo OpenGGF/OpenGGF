@@ -29,7 +29,7 @@ PoindexterBadnikInstance           hcz_pointdexter        yes
 RhinobotBadnikInstance             aiz_rhinobot           yes
 RibotBadnikInstance                lbz_ribot              yes
 RocknBadnikInstance                soz_rockn              yes
-SandwormBadnikInstance             soz_sandworm           yes
+SandwormBadnikInstance             soz_sandworm           no   # head deletion leaves 5 Segments and 8 SandEffects alive (rails v2 probe)
 SkorpBadnikInstance                soz_skorp              yes
 SnaleBlasterBadnikInstance         lbz_snale_blaster      yes
 SparkleBadnikInstance              cnz_sparkle            yes

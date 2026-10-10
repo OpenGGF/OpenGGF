@@ -1006,6 +1006,11 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	 * {@code resolveDisplayAspect} still forces native 4:3 in trace test mode.
 	 */
 	void applyRequiredDisplayAspect(GameModule module) {
+		// A module that drives its acts from their first controllable row skips scripted intros.
+		if (module.requiresSkippedActIntros()
+				&& !configService.getBoolean(SonicConfiguration.S3K_SKIP_INTROS)) {
+			configService.setSessionOverride(SonicConfiguration.S3K_SKIP_INTROS, true);
+		}
 		String required = module.requiredDisplayAspect();
 		if (required == null) {
 			return;
