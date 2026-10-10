@@ -178,6 +178,12 @@ Nine `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each
   local input edits spliced back onto the reference path (recorded states, comparison-only), re-validates every
   repair by a fresh straight run, and picks soak-safe boss and stand rows whose whole stand chain restores
   exactly. Origin: rails lane, 2026-10-09.
+- `TypingHedgehogRailsV2Probe` (test scope, opt-in `-Dmse=off -Dtypinghog.v2probe=all`, optional
+  `typinghog.v2probe.parts=1,1p,2,4,5,6,7`) answers the forward-course prerequisites on S1 GHZ3, S2 EHZ2 and
+  S3K SOZ1: launch-profile and production-boot entry equivalence, act-start `V_int_run_count` phase
+  sensitivity, the native spindash countdown, the mod's `CombatHandoff` conversion (slots, children, render),
+  respawn after a camera excursion, live-fight restore + reconversion against a zero-length fight, and floor
+  geometry against actual traversal. Origin: rails lane, rails v2, 2026-10-10.
 
 ## Docs
 
