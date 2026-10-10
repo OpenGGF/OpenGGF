@@ -1,5 +1,6 @@
 package com.openggf.mods.code;
 
+import com.openggf.level.objects.FixedSstSlotSink;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectFactory;
 import com.openggf.level.objects.ObjectRegistry;
@@ -62,6 +63,10 @@ public final class ModDecoratedObjectRegistry implements ObjectRegistry,
     @Override public String getPrimaryName(int objectId) { return base.getPrimaryName(objectId); }
     @Override public ObjectSlotLayout objectSlotLayout() { return base.objectSlotLayout(); }
     @Override public ObjectWindowingStrategy objectWindowingStrategy() { return base.objectWindowingStrategy(); }
+    /** The stock game's fixed SST occupants (HCZ's water-skim record, MHZ's pollen spawner) still install. */
+    @Override public void installFixedSstObjects(int romZoneId, int act, FixedSstSlotSink slots) {
+        base.installFixedSstObjects(romZoneId, act, slots);
+    }
     @Override public List<String> getAliases(int objectId) { return base.getAliases(objectId); }
     @Override public boolean hasObjectKey(String objectKey) { return modKeys.contains(objectKey); }
     @Override public List<String> browsableObjectKeys() { return modKeys.keys(); }
