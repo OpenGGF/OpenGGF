@@ -10,12 +10,10 @@ import starpost.farm.FarmView;
 import starpost.ui.Text;
 
 /**
- * The opening (design doc §1): Sonic 1's ending, carried on. The farmer runs west through Green
- * Hill to its ending theme with the freed animals streaming behind; this time, at the old gate,
- * the run stops. The view folds down into an overgrown farm, the camera looks the damage over, a
- * Flicky lands on the hero's head, a note explains, and the old Star Post lights: the place to
- * come back to. It is played by the real game with scripted input, so what the player sees is
- * the game itself. Confirm skips it.
+ * The farm-gate arrival after Sonic's ending: freed animals follow the farmer into the
+ * belt-view field, the camera surveys the damage, and a Flicky brings the note.
+ * The obsolete side-view opening run was retired with the hand-port; farm movement
+ * uses the retained BeltRunner. Confirm skips the cutscene.
  */
 final class IntroScreen implements Screen {
     private static final int TRAIL = 160;
@@ -52,7 +50,7 @@ final class IntroScreen implements Screen {
 
         @Override
         public int view() {
-            return play.onFarm() ? FARM : VALLEY;
+            return FARM;
         }
 
         @Override
@@ -95,7 +93,7 @@ final class IntroScreen implements Screen {
         play.debugPlace(true, starpost.people.Anchors.FARM_GATE-24,40);
         phase=1;
 
-        play.valley().pose.facingLeft = true;
+        play.farm().runner.facingLeft = true;
         String[] hoppers = {"pocky", "cucky", "picky", "ricky", "pecky", "rocky"};
         for (int i = 0; i < hoppers.length; i++) {
             companions.add(new Companion(hoppers[i], 14 + i * 13, false));
@@ -107,10 +105,9 @@ final class IntroScreen implements Screen {
         play.actors.removeIf(actor -> actor instanceof starpost.valley.Pickups.Pickup);
         play.actors.addAll(companions);
         play.hudHidden = true;
-        play.valley().labels = false;
         for (int i = 0; i < TRAIL; i++) {
-            trailX[i] = 1760;
-            trailY[i] = 192;
+            trailX[i] = play.farm().runner.x + 18;
+            trailY[i] = play.farm().feetY() + 2;
         }
         shell.music.want("s1", Music.S1_ENDING);
     }
@@ -136,12 +133,6 @@ final class IntroScreen implements Screen {
         in.left = in.right = in.up = in.down = in.jumpHeld = false;
         FarmView farm = play.farm();
         switch (phase) {
-            case 0 -> { // the run west through the valley, until the gate folds into the farm
-                in.left = true;
-                if (play.onFarm() && !play.folding()) {
-                    next(1);
-                }
-            }
             case 1 -> { // walking in past the gate post
                 play.gateLocked = true;
                 in.left = t - phaseAt < 46;
@@ -200,13 +191,8 @@ final class IntroScreen implements Screen {
 
     private void recordTrail() {
         trailHead = (trailHead + 1) % TRAIL;
-        if (play.onFarm()) {
-            trailX[trailHead] = play.farm().runner.x + (play.farm().runner.facingLeft ? 18 : -18);
-            trailY[trailHead] = play.farm().feetY() + 2;
-        } else {
-            trailX[trailHead] = play.valley().pose.x + 22;
-            trailY[trailHead] = play.valley().pose.y;
-        }
+        trailX[trailHead] = play.farm().runner.x + (play.farm().runner.facingLeft ? 18 : -18);
+        trailY[trailHead] = play.farm().feetY() + 2;
     }
 
     private static String noteHeading(Shell shell) {
@@ -242,13 +228,6 @@ final class IntroScreen implements Screen {
             FarmView farm = play.farm();
             SceneSprite f = shell.art.flicky.frame((int) (t / (t - phaseAt > 200 ? 12 : 4) % 2));
             canvas.draw(f, flickyX - farm.camera(), flickyY, SceneDraw.plain());
-        }
-        if (phase == 0 && t < 200) {
-            int alpha = (int) Math.max(0, Math.min(255, (200 - t) * 4));
-            // A dark band behind the title, so the town's signs never show through it.
-            canvas.fill(0, 42, w, 52, (alpha * 13 / 16) << 24);
-            shell.art.cardFont.centred(canvas, "GREEN HILL", 50, SceneDraw.plain().withAlpha(alpha / 255f));
-            Text.centred(canvas, "AFTER THE CREDITS", 80, alpha << 24 | 0xFFDB00);
         }
         if (litAt >= 0) {
             long age = t - litAt;

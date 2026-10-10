@@ -322,8 +322,8 @@ class TestModSceneActBridge {
             runner.stepIdleFrames(1);
             for(var object:GameServices.level().getObjectManager().getActiveObjects()) {
                 if(object.getClass().getName().equals("starpost.realtown.TownVillager")&&(boolean)call(object,"visible"))
-                    assertEquals(townFloor(town,Math.round((float)call(object,"x"))),call(object,"feet"),
-                        call(object,"id")+" follows the decoded slope");
+                    assertEquals(call(town,"walkFloor",Math.round((float)call(object,"x"))),call(object,"feet"),
+                        call(object,"id")+" follows the walkable log route");
             }
             floorHeights.add((int)call(sonic,"feet"));
         }

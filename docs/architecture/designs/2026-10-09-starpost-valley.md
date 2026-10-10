@@ -2512,8 +2512,7 @@ That smoke test now covers scene-only festivals: running festivals suspend its
 host and belong in the native bridge matrix, rather than continued scene ticks. All 30
 native routes, native Ruins exits, required S3K checks, camera and SDK/Javadoc
 checks pass without skips. The direct creator runner subsequently passes 194
-cases after adding the walkable-route regression. Broad validation and final
-guards are recorded below when completed. Wider viewports, alternate donors, teams,
+cases after adding the walkable-route regression. Combined ordinary execution and final guards are recorded below. Wider viewports, alternate donors, teams,
 load/respawn and interaction-boundary rewind remain inherited coverage gaps; this
 matrix does not certify the full level standard. Clips and state CSVs live outside
 the repository under `~/scratch/sv-realfest/`.
@@ -2540,3 +2539,84 @@ The direct runner is `RunCreatorTests` (the retained task-local launcher wrapper
 with fresh compiled creator test/main directories on the engine classpath; it
 invokes `CreatorTestLauncher.scan` directly, with no Maven or package-test
 indirection. Its final result is 194/194 with no skips.
+
+### Combined delivery verification and inherited negatives
+
+The change-based plan at `62e2cfeb6`, against `435671fd0`, selected all 3,085
+ordinary candidate classes. Preflight passed with Java 21, Lua 5.4 and PowerShell.
+The normal 40-minute invocation timed out during
+`TestS3kLrzActChangeHandoffHeadless`: 2,669 completed class reports, 23,285 tests,
+two failures and 57 skips; guards had not started. Its diagnostics were inspected
+and acknowledged. Source stayed frozen for recovery: the original plan's 437
+candidate classes at or after that alphabetical boundary were submitted through
+Maven's includes file, preserving the ordinary POM exclusions and excluded groups.
+Recovery completed 413 class reports / 3,483 tests, with 27 failures and six skips.
+The combined ordinary execution therefore reports 26,768 tests, 29 failures and
+63 skips. It is an interrupted invocation plus completed remaining checks;
+ordinary validation remains red.
+
+Twenty-eight failures predate this lane. The unchanged `TestModZoneLoader`
+source guard rejects the literal `"s2"` in `ModBackedGamePatch`; the exact guard
+method fails identically against baseline/current source files, which are
+byte-identical. A queued, bounded JUnit comparison runs the other 13 failing
+classes with the baseline Camera/CameraSnapshot overlaid, then with the current
+classes. These are the only stock runtime logic changes in this lane; the other
+engine differences are API annotations/inventory/comments. Both runs discover
+48 tests: 21 pass, 27 fail, none skip or abort. Every failure identity and message
+matches byte-for-byte. The audio CLI negative retains `LD_LIBRARY_PATH` and the
+same exit-code mismatch in both runs. No unrelated stock route or environment
+behavior was changed.
+
+| Failing class (package prefix omitted) | Cases | Observed failure |
+|---|---:|---|
+| `TestS3kMhzAct2AuthoredRoute` | 2 | Late pulley does not own Tails / paired Sonic |
+| `TestDezIncomingFinalRouteCapture` | 7 | Final-state 96 becomes 0; deaths at 26706, 26750 or 53897 |
+| `TestLrzActTwoColdRouteCapture` | 1 | Team death at input 36526 |
+| `TestLrzBossColdRouteCapture` | 1 | Same team death at input 36526 |
+| `TestLrzKnucklesColdRouteCapture` | 1 | Expected 1069, actual 899 |
+| `TestLrzTailsColdRouteCapture` | 4 | Tails death at input 19460 |
+| `TestLrzWideBossColdRouteCapture` | 1 | Expected 2796, actual 524 |
+| `TestMhzPairColdRouteCapture` | 1 | Actual FBZ history-reset boundary absent |
+| `TestMhzWideColdRouteCapture` | 1 | Restore at 19500 differs in zone-runtime bytes |
+| `TestSszColdRouteCapture` | 2 | Death at input 7311 |
+| `TestSszSoloColdRouteCapture` | 2 | Death at input 7671 |
+| `TestSszTailsColdRouteCapture` | 3 | Expected 48, actual 0 (two); object-manager replay at 4018 |
+| `TestS1GameplayAudioTimelineCli` | 1 | Shell bootstrap expected exit 0, actual 4 |
+
+The remaining failure was this lane's old town test oracle: it asserted raw
+terrain under villagers, although the new walkable log route also supports them.
+The assertion now uses `TownSession.walkFloor`; door bases still require the exact
+decoded terrain floor. Final cleanup also removes the unreachable opening
+side-view phase, keeps the farm-gate BeltRunner arrival, and deletes unused
+Ruins scene-art bookkeeping and the dead scene place-entry helper. Fresh direct
+creator compilation/execution after cleanup passes 194/194 with zero skips.
+The final focused bridge, scene-smoke and packaged-example check passes 15/15;
+final guards pass 674/674 across 87 discovered class reports (88 source candidates).
+Both commands complete with zero failures, errors or skips. The leaf cleanup is
+qualified by these checks and the fresh creator run; completed native/S3K checks
+are unchanged. No second ordinary run is claimed.
+
+Skips were inspected: opt-in capture/measurement/soak checks, unavailable graphics
+backends or local native references, conditional Infinite Sonic platform routes,
+and the inherited CPZ spin-tube assumption. No Starpost native route or required
+S3K check skipped.
+
+An additional four-second camera-edge clip is
+`~/scratch/sv-realfest/labyrinth-edge/native-sampled.mp4`, assembled from the
+inspected two-fps native renders of a 240-step production-loop capture. Its
+setup positions the player at the chamber edge; subsequent movement is native.
+The inspected frame `frames/0210.png` fills the viewport through the right edge.
+The five activity clips above retain full 60-fps rendering.
+
+Delivery commands (all ROM arguments resolve to absolute worktree-root files):
+
+```sh
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 435671fd0 --preflight
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 435671fd0 --run
+# Recovery includes are the original plan's suffix from the interrupted class.
+python3 tools/testing/maven_queue.py -B -Dmse=off -Dsurefire.includesFile=target/realfest-unfinished-includes.txt -Ds3k.rom.path="$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dsonic1.rom.path="$PWD/Sonic The Hedgehog (W) (REV01) [!].gen" -Dsonic2.rom.path="$PWD/Sonic The Hedgehog 2 (W) (REV01) [!].gen" test
+# Task-local run-matched.py invokes the exact failing JUnit classes in two JVMs.
+python3 tools/testing/maven_queue.py -B -Dmse=off -Dexec.executable=python3 -Dexec.args="$HOME/scratch/sv-realfest/mhz-baseline/run-matched.py" exec:exec
+python3 tools/testing/maven_queue.py -B -Dmse=off '-Dtest=TestModSceneActBridge,TestStarpostValleyScene,TestStarpostValleyExample' -Ds3k.rom.path="$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dsonic1.rom.path="$PWD/Sonic The Hedgehog (W) (REV01) [!].gen" test
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -B -Dmse=off -Pguards -Ds3k.rom.path="$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dsonic1.rom.path="$PWD/Sonic The Hedgehog (W) (REV01) [!].gen" test
+```

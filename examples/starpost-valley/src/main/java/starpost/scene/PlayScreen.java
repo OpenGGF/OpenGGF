@@ -214,14 +214,6 @@ public final class PlayScreen implements Screen {
         shell.sfx(Sfx.STARPOST);
     }
 
-    private void enterPlace(Shell shell, String id) {
-        Consumer<Shell> handler = places.get(id);
-        if (handler != null) {
-            shell.sfx(Sfx.DOOR_OPEN);
-            handler.accept(shell);
-        }
-    }
-
     private void hotbar(Shell shell) {
         Inventory inv = shell.game.inventory;
         int before = inv.selected();

@@ -20,8 +20,7 @@ public final class RuinsSystem {
     /** Called from {@code Systems.install} for every new play screen. */
     public static void install(Shell shell, PlayScreen play, Map<String, Consumer<Shell>> places) {
         shell.art.icons.addSource("ruins", new RuinsIcons());
-        RuinsArt[] art = new RuinsArt[1];
-        places.put("ruins", s -> enter(s, play, art));
+        places.put("ruins", s -> enter(s, play));
     }
 
     /** The section, created (with a fresh seed) if a save predates the Ruins. */
@@ -38,7 +37,7 @@ public final class RuinsSystem {
     }
 
     /** At the doorway: the elevator's floors once one is reached, otherwise straight in. */
-    private static void enter(Shell shell, PlayScreen play, RuinsArt[] holder) {
+    private static void enter(Shell shell, PlayScreen play) {
         RuinsSection section = section(shell.game);
         List<Integer> starts = RuinsRules.starts(section.deepest);
         if (starts.size() == 1) {
@@ -59,10 +58,8 @@ public final class RuinsSystem {
     }
 
     /**
-     * Debug ({@code ruins N}): straight into chamber N. {@code ruins rings N} sets the rings in
-     * hand, {@code ruins hit} hurts Sonic, {@code ruins deepest N} sets the elevator, {@code ruins
-     * elevator} opens the doorway's elevator menu, {@code ruins at X Y} moves Sonic, {@code ruins
-     * spawn KIND DX} puts a badnik ahead of him, {@code ruins state} shows the controller's state.
+     * Debug: {@code ruins N} enters a native chamber; {@code ruins deepest N}
+     * updates elevator progress and {@code ruins elevator} opens the doorway menu.
      */
     public static boolean debug(Shell shell, String[] p) {
         if (shell.game == null || p.length < 2) {
