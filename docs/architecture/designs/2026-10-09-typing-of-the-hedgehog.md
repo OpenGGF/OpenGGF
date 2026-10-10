@@ -988,3 +988,7 @@ never requests retry, No-Fail never enters virtual DYING, and all four native CS
 zero hurt and death rows. The new restore paths are qualified by the added regressions;
 repeating the unchanged filmed paths is unnecessary. Film paths and twelve inspected
 sheets above remain the final capture evidence.
+
+Restore-boundary implementation/test diff: **`85f0d8d7e`**. The final 90-test run and
+rebuilt jar used its identical production/test sources before commit. Capture provenance
+remains `aaff75147` as explicitly qualified above; this follow-up adds no executable change.
