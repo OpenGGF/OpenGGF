@@ -169,7 +169,9 @@ public final class CluckoidBadnikInstance extends AbstractS3kBadnikInstance impl
             applyWindPressure(playerEntity);
             PlayableEntity sidekick = tryServices() != null ? tryServices().playerQuery().nativeP2OrNull() : null;
             applyWindPressure(sidekick);
-            if (((vIntRunCount + 3) & 0x07) == 0) {
+            // sub_8E2D4: move.b (V_int_run_count+3).w,d0 / andi.b #7,d0. The +3 addresses the
+            // longword's low byte, so debris spawns whenever the count is a multiple of 8.
+            if ((vIntRunCount & 0x07) == 0) {
                 spawnBreathDebris();
                 breathProjectileCount++;
             }

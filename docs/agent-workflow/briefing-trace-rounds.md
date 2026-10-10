@@ -71,6 +71,14 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+FFmpeg PCM length can differ from a Vorbis stream's declared length (2026-10-09,
+Eggman's Sky compression): a generated 9,606-frame mono control retained exactly
+9,606 frames in its Ogg granule count, while FFmpeg's native and libvorbis decoders
+each emitted 9,478 frames. Do not derive a game queue lease from this external
+decoder's byte count or compensate with a fitted offset. Verify stream duration
+and check exact frame counts through the game's production decoder; use external
+PCM separately for signal and clipping checks.
+
 A replay control must work in full-drawing mode before it can isolate drawing
 policy (2026-10-09, route-test throughput): two MHZ prefix controls restored
 starting snapshots exactly but differed in 20 normal-palette RGB bytes after

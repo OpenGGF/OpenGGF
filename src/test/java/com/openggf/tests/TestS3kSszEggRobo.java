@@ -162,13 +162,17 @@ class TestS3kSszEggRobo {
     void theAnimalReleaserLetsFourAnimalsGoBeforeItFliesAway() {
         // $A0:$04 at ($1720,$E20).
         HeadlessTestFixture fixture = bootAtCheckpoint(320, 0x1720, 0x0DF0);
+        // Look before stepping. This fixture's count starts at 0 and loc_915F6 reads
+        // (V_int_run_count+3).w, the counter's low byte, so the first step is a release tick.
         EggRoboBadnikInstance releaser = null;
         for (int frame = 0; frame < 240 && releaser == null; frame++) {
-            fixture.stepIdleFrames(1);
             for (EggRoboBadnikInstance robo : allActive(EggRoboBadnikInstance.class)) {
                 if (robo.mode() == EggRoboBadnikInstance.Mode.ANIMAL_RELEASER) {
                     releaser = robo;
                 }
+            }
+            if (releaser == null) {
+                fixture.stepIdleFrames(1);
             }
         }
         assertNotNull(releaser, "$A0:$04 at ($1720,$E20)");

@@ -4,7 +4,10 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.ModSubsystem;
+import com.openggf.audio.AudioManager;
+import com.openggf.audio.NullAudioBackend;
 import com.openggf.audio.StreamedMusicPort;
+import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.io.ModInputLimits;
 import com.openggf.mods.DefaultModRepositoryScanner;
 import com.openggf.mods.EffectiveModCatalog;
@@ -13,6 +16,7 @@ import com.openggf.mods.ModCatalogValidator;
 import com.openggf.mods.ModDescriptor;
 import com.openggf.mods.ModRuntimeFindingStore;
 import com.openggf.mods.ModStateSaveResult;
+import com.openggf.mods.PcmDecoder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
@@ -20,8 +24,10 @@ import java.util.HexFormat;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.parallel.Isolated;
 
 /** The entire packaged bank traverses production validation, decode, ownership and PCM playback. */
+@Isolated
 class TestEggmansSkyVoiceAssets {
     @TempDir Path work;
 
@@ -41,6 +47,8 @@ class TestEggmansSkyVoiceAssets {
             var preparer = new ModAudioPreparer(root, ModInputLimits.production(), new ModRuntimeFindingStore(),
                     owners -> { fail("Valid voice bank must not disable its owner: "+owners); return new ModStateSaveResult.Saved(); });
             var provenance = new ObjectMapper().readTree(project.resolve("src/main/resources/audio/voice/provenance.json").toFile());
+            assertEquals(2, provenance.get("format_version").asInt());
+            assertEquals("vorbis", provenance.get("output").get("codec").asText());
             assertEquals(lines.length, provenance.get("entries").size());
             // Use the real launch factory: an SFX-only patch must not be mistaken for no external audio.
             try (var view = ModSubsystem.preparedAudioFactory(preparer, effective, validation.registry(),
@@ -54,9 +62,18 @@ class TestEggmansSkyVoiceAssets {
                     var record = java.util.stream.StreamSupport.stream(provenance.get("entries").spliterator(), false)
                             .filter(row -> row.get("id").asText().equals(id)).findFirst().orElseThrow();
                     assertTrue(record.get("blind_word_check").asBoolean(), id);
-                    byte[] bytes = Files.readAllBytes(project.resolve("src/main/resources/audio/voice/"+id+".wav"));
+                    assertEquals(record.get("processed_wav_sha256").asText(),
+                            record.get("blind_word_check_sha256").asText(), id+" word check names its WAV input");
+                    String assetPath = "audio/voice/"+id+".ogg";
+                    assertFalse(Files.exists(project.resolve("src/main/resources/audio/voice/"+id+".wav")),
+                            id+" must not ship its WAV master");
+                    byte[] bytes = Files.readAllBytes(project.resolve("src/main/resources/"+assetPath));
                     assertEquals(record.get("sha256").asText(), HexFormat.of().formatHex(
                             MessageDigest.getInstance("SHA-256").digest(bytes)), id);
+                    var decoded = new PcmDecoder().decodeSfx(assetPath, bytes, ModInputLimits.production());
+                    assertEquals(48_000, decoded.sampleRate(), id);
+                    assertEquals(1, decoded.channels(), id);
+                    assertEquals(record.get("frames").asInt(), decoded.sampleCount(), id+" exact Vorbis duration");
                     var ref = new StreamedMusicPort.SfxRef("eggmans-sky", asset);
                     assertTrue(port.hasSfx(ref), id);
                     assertFalse(port.hasSfx(new StreamedMusicPort.SfxRef("other-owner", asset)), id);
@@ -83,7 +100,46 @@ class TestEggmansSkyVoiceAssets {
                     assertEquals(duration, chunks, id);
                     assertTrue(energy > 1000, id+" silent playback");
                 }
+                assertEveryClipReachesFinalPcm(port, lines);
             }
+        }
+    }
+
+    private static void assertEveryClipReachesFinalPcm(StreamedMusicPort port, Object[] lines)
+            throws Exception {
+        AudioManager audio = AudioManager.getInstance();
+        audio.resetState();
+        audio.setBackend(new NullAudioBackend());
+        try {
+            audio.installStreamedMusicPort(port);
+            try (var capture = audio.beginLiveCaptureAudio(audio.presentationFrameRate())) {
+                short[] samples = new short[capture.maxStereoFramesPerPacket() * 2];
+                for (Object line : lines) {
+                    String asset = (String) line.getClass().getField("asset").get(line);
+                    int duration = line.getClass().getField("durationTicks").getInt(line);
+                    audio.stopAllSfx();
+                    assertTrue(audio.playNamespacedSfx(new StreamedMusicPort.SfxRef("eggmans-sky", asset)), asset);
+                    boolean audible = false;
+                    for (int tick = 0; tick < duration + 2; tick++) {
+                        audio.presentFrame(PresentationMode.FORWARD);
+                        audio.update();
+                        int count = capture.drainPresentationFrame(samples);
+                        for (int channel = 0; channel < 2; channel++) {
+                            int min = Short.MAX_VALUE;
+                            int max = Short.MIN_VALUE;
+                            for (int i = channel; i < count * 2; i += 2) {
+                                min = Math.min(min, samples[i]);
+                                max = Math.max(max, samples[i]);
+                            }
+                            audible |= count > 0 && max - min > 32;
+                        }
+                    }
+                    assertTrue(audible, asset + " must reach final mixed PCM through the session view");
+                }
+            }
+        } finally {
+            // Retire presentation before the enclosing prepared view releases its lease.
+            audio.resetState();
         }
     }
 }
