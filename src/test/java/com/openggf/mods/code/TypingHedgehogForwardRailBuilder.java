@@ -57,7 +57,14 @@ class TypingHedgehogForwardRailBuilder {
     static final int STAGNANT_LAYERS = 40;
     static final int FIRST_FIGHT_ROWS = 300, FIRST_FIGHT_PX = 800, FIGHT_SPACING_PX = 256, FIGHT_SPACING_ROWS = 120;
     static final double[] FIGHT_FRACTIONS = {0.0, 0.25, 0.45, 0.65, 0.82};
-    static final int MAX_SOAKS_PER_LAYER = 3, FIGHT_VALUE = 1200, LOADED_VALUE = 300, LANE_KEEP = 4, HISTORY = 96;
+    static final int MAX_SOAKS_PER_LAYER = 3, FIGHT_VALUE = 3000, LOADED_VALUE = 300, LANE_KEEP = 4, HISTORY = 96;
+    /** How far past where the next fight belonged a lineage may run before it is dropped. */
+    static final int SCHEDULE_SLACK_PX = 2000;
+    /** Open view counted per side (px), and its weight in a node's value. */
+    static final int OPEN_CAP = 160;
+    /** The recorded corridor's pull on the beam, and how near a lane must be to count. */
+    static final int CORRIDOR_VALUE = 1500, CORRIDOR_PX = 96;
+    static final double OPEN_VALUE = 2.0;
 
     /** An act the builder authors: launch kind and output file. */
     record Target(Pilot pilot, boolean spindash, String file) { }
@@ -162,9 +169,15 @@ class TypingHedgehogForwardRailBuilder {
 
         /** Loaded badniks the fights so far took (fights with stock badniks on screen are preferred). */
         int loaded;
+        /** Open view the fights so far had (pixels each side, capped): open sites rank ahead of tunnels. */
+        int openness;
+
+        /** On the recorded run's corridor at this x (a comparison-only steering hint, never gameplay). */
+        boolean onCorridor;
 
         double value() {
-            return pmax + fights * (double) FIGHT_VALUE + loaded * (double) LOADED_VALUE + (boss ? 50_000 : 0) - row * 0.05;
+            return pmax + fights * (double) FIGHT_VALUE + loaded * (double) LOADED_VALUE + openness * (double) OPEN_VALUE
+                    + (onCorridor ? CORRIDOR_VALUE : 0) + (boss ? 50_000 : 0) - row * 0.05;
         }
 
         long key() {
@@ -179,6 +192,9 @@ class TypingHedgehogForwardRailBuilder {
     }
 
     static Macro hold(int mask, int rows) { return (i, s) -> i < rows ? mask : -1; }
+
+    /** Runs right for {@code run} rows, then rolls (DOWN, the native roll at speed) for {@code roll} rows. */
+    static Macro runRoll(int run, int roll) { return (i, s) -> i < run ? RIGHT : i < run + roll ? DOWN : -1; }
 
     static Macro jump(int press, int land) {
         return (i, s) -> i < press ? RIGHT | JUMP : i < press + 1 ? RIGHT : i < press + 1 + land ? RIGHT : -1;
@@ -220,15 +236,26 @@ class TypingHedgehogForwardRailBuilder {
     }
 
     /** After a fight: quiet cleanup rows, then a short spindash charge and release (S2/S3K), or a run (S1). */
-    static Macro burst(boolean spindash) {
+    static Macro burst(boolean spindash) { return burst(spindash, BURST_CHARGE, 0); }
+
+    /**
+     * After a fight: the quiet cleanup rows, {@code wait} more still rows, then a spindash of
+     * {@code charge} rows released holding right (S2/S3K; {@code charge} 0 walks off instead), or a
+     * run (S1). Several are tried after each fight: the right strength (or a pause) clears what
+     * the strongest dash would slam into.
+     */
+    static Macro burst(boolean spindash, int charge, int wait) {
         return (i, s) -> {
-            if (i < CLEANUP) return 0;
-            int j = i - CLEANUP;
-            if (!spindash) return j < 24 ? RIGHT : -1;
-            if (j < BURST_CHARGE) return j >= 2 && (j - 2) % 6 == 0 ? DOWN | JUMP : DOWN;
-            return j < BURST_CHARGE + 8 ? RIGHT : -1;
+            if (i < CLEANUP + wait) return 0;
+            int j = i - CLEANUP - wait;
+            if (!spindash || charge == 0) return j < 24 ? RIGHT : -1;
+            if (j < charge) return j >= 2 && (j - 2) % 6 == 0 ? DOWN | JUMP : DOWN;
+            return j < charge + 8 ? RIGHT : -1;
         };
     }
+
+    /** The post-fight continuations tried from each fight: {charge, wait}. */
+    static final int[][] BURSTS = {{BURST_CHARGE, 0}, {20, 0}, {50, 0}, {BURST_CHARGE, 40}, {0, 0}};
 
     final class Search {
         final Target target;
@@ -244,10 +271,46 @@ class TypingHedgehogForwardRailBuilder {
         int widened;
         Node best;
 
+        /** The recorded run's heights by 32 px column (comparison-only: it scores lanes, never drives play). */
+        final Map<Integer, List<Integer>> corridor = new HashMap<>();
+
         Search(Target target, Handoff handoff) throws IOException {
             this.target = target;
             this.handoff = handoff;
+            loadCorridor();
             this.w = new World(target.pilot(), Map.of());
+        }
+
+        /**
+         * GPT-6.1-Sol's design lets recordings suggest rough corridors: the act's recorded run (the
+         * legacy rail builder's trace source) gives the heights it took at each x. A lane on that
+         * corridor scores higher, so the beam keeps the upper route a human chose where a faster
+         * lower one dead-ends. The search plays only its own pad rows.
+         */
+        void loadCorridor() {
+            try {
+                var legacy = TypingHedgehogRailBuilderProbe.targets(target.pilot().game()).stream()
+                        .filter(t -> t.name().equals(target.pilot().name())).findFirst().orElse(null);
+                if (legacy == null || legacy.cold()) return;
+                var source = TypingHedgehogRailBuilderProbe.load(legacy);
+                if (!source.hasRef) return;
+                for (int i = 0; i < source.refX.length; i++) {
+                    List<Integer> ys = corridor.computeIfAbsent(source.refX[i] >> 5, k -> new ArrayList<>());
+                    int y = source.refY[i];
+                    if (ys.stream().noneMatch(v -> Math.abs(v - y) < 16)) ys.add(y);
+                }
+                out(target, "corridor from the recorded run: " + corridor.size() + " columns");
+            } catch (Exception unavailable) {
+                out(target, "no corridor: " + unavailable);
+            }
+        }
+
+        boolean onCorridor(int x, int y) {
+            if (corridor.isEmpty()) return false;
+            for (int b = (x >> 5) - 1; b <= (x >> 5) + 1; b++) {
+                for (int v : corridor.getOrDefault(b, List.of())) if (Math.abs(v - y) <= CORRIDOR_PX) return true;
+            }
+            return false;
         }
 
         long elapsedMs() { return (System.nanoTime() - started) / 1_000_000; }
@@ -392,10 +455,10 @@ class TypingHedgehogForwardRailBuilder {
                 for (Node stop : stopCandidates) {
                     if (soaksThisLayer >= MAX_SOAKS_PER_LAYER) break;
                     materialise(stop);
-                    Node fight = fight(stop);
-                    if (fight == null) continue;
+                    List<Node> fights = fight(stop);
+                    if (fights.isEmpty()) continue;
                     soaksThisLayer++;
-                    children.add(fight);
+                    children.addAll(fights);
                 }
                 beam = select(children);
                 if (widened > 0) widened--;
@@ -430,6 +493,28 @@ class TypingHedgehogForwardRailBuilder {
                 if (s.isHurt() || s.getDead()) { t.append(" HURT"); break; }
             }
             out(target, "frontier node row " + far.row + " x " + far.x + " y " + far.y + " via " + far.how + "; RIGHT from it:" + t);
+            // What stands in the way: nearby objects, and the terrain wall distance ahead by height.
+            restore(far);
+            StringBuilder objects = new StringBuilder();
+            for (ObjectInstance o : GameServices.level().getObjectManager().getActiveObjects()) {
+                int ox, oy;
+                try {
+                    ox = o.getX();
+                    oy = o.getY();
+                } catch (RuntimeException spawnless) {
+                    continue;
+                }
+                if (Math.abs(ox - far.x) < 256 && Math.abs(oy - far.y) < 160) {
+                    objects.append(' ').append(o.getClass().getSimpleName()).append('@').append(ox - far.x)
+                            .append(',').append(oy - far.y);
+                }
+            }
+            StringBuilder walls = new StringBuilder();
+            for (int dy = -160; dy <= 32; dy += 16) {
+                var wall = com.openggf.physics.ObjectTerrainUtils.checkRightWallDist(far.x, far.y + dy);
+                walls.append(String.format(" [dy%d %s]", dy, wall.foundSurface() ? Integer.toString(wall.distance()) : "-"));
+            }
+            out(target, "  objects near (dx,dy):" + objects + "; right wall distance by height:" + walls);
         }
 
         List<Map.Entry<String, Macro>> macros(Node node) {
@@ -450,6 +535,7 @@ class TypingHedgehogForwardRailBuilder {
                 for (int n : new int[] {4, 8, 16}) out.add(Map.entry("B" + n, (i, s) -> i < n ? (s.getXSpeed() > 0 ? LEFT : 0) : -1));
                 for (int n : new int[] {15, 60, 120}) out.add(Map.entry("W" + n, hold(0, n)));
                 out.add(Map.entry("stop", stop()));
+                for (int r : new int[] {16, 32, 64}) out.add(Map.entry("RR" + r, runRoll(r, 24)));
                 if (target.spindash()) for (int c : new int[] {14, 26, 38}) out.add(Map.entry("SD" + c, stopAndDash(c)));
                 return out;
             }
@@ -458,6 +544,7 @@ class TypingHedgehogForwardRailBuilder {
             for (int p : new int[] {4, 12, 20}) out.add(Map.entry("J" + p, jump(p, 12)));
             out.add(Map.entry("stop", stop()));
             out.add(Map.entry("W30", hold(0, 30)));
+            out.add(Map.entry("RR32", runRoll(32, 24)));
             if (target.spindash()) out.add(Map.entry("SD26", stopAndDash(26)));
             return out;
         }
@@ -483,6 +570,7 @@ class TypingHedgehogForwardRailBuilder {
             c.lastFightX = node.lastFightX;
             c.stands = node.stands;
             c.loaded = node.loaded;
+            c.openness = node.openness;
             c.boss = node.boss;
             c.bossRow = node.bossRow;
             int score = node.gameScore;
@@ -526,6 +614,7 @@ class TypingHedgehogForwardRailBuilder {
                     }
                     if (death == null && !c.boss && !s.isObjectControlled() && row - c.lastProgressRow > STALL_ROWS) death = "stall";
                     if (death == null && !c.boss && row - c.lastPmaxRow > HARD_STALL_ROWS) death = "stall (no new x)";
+                    if (death == null && !c.boss) death = scheduleMiss(c.fights, row, x);
                 }
                 if (death != null) {
                     deaths.merge(death, 1, Integer::sum);
@@ -552,6 +641,7 @@ class TypingHedgehogForwardRailBuilder {
             c.x = s.getCentreX();
             c.y = s.getCentreY();
             c.riding = s.isOnObject();
+            c.onCorridor = onCorridor(c.x, c.y);
             c.stopped = how.equals("stop") && s.getGSpeed() == 0 && s.getXSpeed() == 0 && !s.getAir();
             if (c.boss && c.stopped && !s.isHurt()) c.ended = endpointHolds(c);
             if (c.ended) c.checkpoint = w.course.capture();
@@ -590,6 +680,19 @@ class TypingHedgehogForwardRailBuilder {
 
         // ---- fights
 
+        /**
+         * A lineage that can no longer meet the fight schedule is a dead end, not a long-lived beam
+         * member: no first fight by its window, or too few fights by where the next one belonged.
+         */
+        String scheduleMiss(int fights, int row, int x) {
+            if (fights == 0) {
+                return row - releaseRow > FIRST_FIGHT_ROWS + 120 || x - releaseX > FIRST_FIGHT_PX + 200 ? "missed the first fight" : null;
+            }
+            if (fights >= 4) return null;
+            double due = releaseX + (goalX - releaseX) * FIGHT_FRACTIONS[fights];
+            return x > due + SCHEDULE_SLACK_PX ? "fight " + (fights + 1) + " overdue" : null;
+        }
+
         boolean fightAllowed(Node n) {
             if (n.fights >= 5) return false;
             if (n.fights == 0) return n.row - releaseRow <= FIRST_FIGHT_ROWS + 120 && n.x - releaseX <= FIRST_FIGHT_PX;
@@ -598,18 +701,19 @@ class TypingHedgehogForwardRailBuilder {
             return n.x >= releaseX + (goalX - releaseX) * fraction - 600;
         }
 
-        /** The stop as a fight site: checks, the held soak, then the fight child (conversion, cleanup, burst). */
-        Node fight(Node stop) {
+        /** The stop as a fight site: checks, the held soak, then the fight children (conversion, cleanup, a burst each). */
+        List<Node> fight(Node stop) {
             sites++;
             restore(stop);
             String reject = siteReject(stop);
             if (reject != null) {
                 siteRejects++;
                 deaths.merge("site: " + reject, 1, Integer::sum);
-                return null;
+                return List.of();
             }
             List<?> pool = handoff.pool();
             Row at = Row.observe(w.course);
+            int open = Math.min(OPEN_CAP, openRun(-1)) + Math.min(OPEN_CAP, openRun(1));
             // The held soak: the fight's living world for the course's native cap, from the conversion.
             restore(stop);
             w.driver.before = () -> handoff.convert(pool);
@@ -623,21 +727,31 @@ class TypingHedgehogForwardRailBuilder {
                 if (sonic().getDead() || sonic().isHurt() || GameServices.level().getCurrentAct() != target.pilot().act()) {
                     w.driver.hold = false;
                     deaths.merge("soak", 1, Integer::sum);
-                    return null;
+                    return List.of();
                 }
             }
             w.driver.hold = false;
-            Node fight = run(stop, burst(target.spindash()), "fight", pool);
-            if (fight == null) return null;
             List<Stand> stands = new ArrayList<>(stop.stands);
             stands.add(new Stand(stop.row, pool, at, stop.x));
-            fight.stands = List.copyOf(stands);
-            fight.fights = stop.fights + 1;
-            fight.loaded = stop.loaded + pool.size();
-            fight.lastFightRow = stop.row;
-            fight.lastFightX = stop.x;
-            fight.checkpoint = w.course.capture();
-            return fight;
+            List<Node> out = new ArrayList<>();
+            for (int[] b : BURSTS) {
+                if (!target.spindash() && b[0] != BURST_CHARGE) continue;
+                Node fight = run(stop, burst(target.spindash(), b[0], b[1]), "fight", pool);
+                if (fight == null) continue;
+                fight.stands = List.copyOf(stands);
+                fight.fights = stop.fights + 1;
+                fight.loaded = stop.loaded + pool.size();
+                fight.openness = stop.openness + open;
+                fight.lastFightRow = stop.row;
+                fight.lastFightX = stop.x;
+                fight.checkpoint = w.course.capture();
+                out.add(fight);
+            }
+            if (!out.isEmpty()) {
+                out(target, String.format("fight %d accepted at row %d x %d y %d: %d loaded, open %d px, %d continuations",
+                        stop.fights + 1, stop.row, stop.x, stop.y, pool.size(), open, out.size()));
+            }
+            return out;
         }
 
         /** Why a stop cannot hold a fight, or null. */
@@ -649,10 +763,17 @@ class TypingHedgehogForwardRailBuilder {
             int screenX = s.getCentreX() - GameServices.camera().getX();
             if (screenX < 64 || screenX > WIDTH - 128) return "screen position";
             if (!geometry().flat()) return "geometry";
+            // The player must see him fight: not behind high-priority foreground, and room for badniks to approach.
+            if (highPriorityCover() > 0.25) return "behind foreground";
+            if (openRun(-1) < 48 || openRun(1) < 96) return "walled in";
             for (ObjectInstance o : GameServices.level().getObjectManager().getActiveObjects()) {
                 String name = o.getClass().getSimpleName();
                 if (!(name.contains("Collaps") || name.contains("Crumbl") || name.contains("Breakaway"))) continue;
-                if (Math.abs(o.getX() - s.getCentreX()) < 160 && Math.abs(o.getY() - s.getCentreY()) < 96) return "collapsing ground";
+                try {
+                    if (Math.abs(o.getX() - s.getCentreX()) < 160 && Math.abs(o.getY() - s.getCentreY()) < 96) return "collapsing ground";
+                } catch (RuntimeException spawnless) {
+                    return "collapsing ground";
+                }
             }
             // Walk the strip: 96 px right, grounded and level, with no wall or drag.
             int x0 = s.getCentreX();
@@ -676,6 +797,61 @@ class TypingHedgehogForwardRailBuilder {
             if (maxA - minA > 8) return "strip not level";
             restore(stop);
             return null;
+        }
+
+        /**
+         * The share of Sonic's sprite box (centre +-8 x, +-16 y) drawn over by high-priority plane-A
+         * pixels, which hide him: sampled every 4 px through the chunk, pattern and pixel.
+         */
+        double highPriorityCover() {
+            var lm = GameServices.level();
+            var level = lm.getCurrentLevel();
+            var s = sonic();
+            int covered = 0, total = 0;
+            for (int y = s.getCentreY() - 16; y < s.getCentreY() + 16; y += 4) {
+                for (int x = s.getCentreX() - 8; x < s.getCentreX() + 8; x += 4) {
+                    total++;
+                    var cd = lm.getChunkDescAt((byte) 0, x, y);
+                    if (cd == null) continue;
+                    int index = cd.getChunkIndex();
+                    if (index < 0 || index >= level.getChunkCount()) continue;
+                    var chunk = level.getChunk(index);
+                    if (chunk == null) continue;
+                    int cx = x & 15, cy = y & 15;
+                    if (cd.getHFlip()) cx = 15 - cx;
+                    if (cd.getVFlip()) cy = 15 - cy;
+                    var desc = chunk.getPatternDesc(cx >> 3, cy >> 3);
+                    if (desc == null || desc == com.openggf.level.PatternDesc.EMPTY || !desc.getPriority()) continue;
+                    int px = cx & 7, py = cy & 7;
+                    if (desc.getHFlip()) px = 7 - px;
+                    if (desc.getVFlip()) py = 7 - py;
+                    int pattern = desc.getPatternIndex();
+                    if (pattern < 0 || pattern >= level.getPatternCount()) continue;
+                    if (level.getPattern(pattern).getPixel(px, py) != 0) covered++;
+                }
+            }
+            return total == 0 ? 0 : covered / (double) total;
+        }
+
+        /**
+         * How far the view is open beside Sonic ({@code direction} -1 left, 1 right): 8 px steps at
+         * his centre and head height that are not inside solid ground, up to the camera edge.
+         */
+        int openRun(int direction) {
+            var s = sonic();
+            int x = s.getCentreX(), cam = GameServices.camera().getX();
+            int edge = direction < 0 ? cam : cam + WIDTH;
+            int run = 0;
+            for (int at = x + direction * 8; direction < 0 ? at >= edge : at <= edge; at += direction * 8) {
+                boolean solid = false;
+                for (int y : new int[] {s.getCentreY(), s.getCentreY() - 16}) {
+                    var floor = com.openggf.physics.ObjectTerrainUtils.checkFloorDist(at, y);
+                    if (floor.foundSurface() && floor.distance() < 0) solid = true;
+                }
+                if (solid) break;
+                run += 8;
+            }
+            return run;
         }
 
         /** At the endpoint: the stock boss retired and two held rows, as the course plays it, with Sonic untouched. */
