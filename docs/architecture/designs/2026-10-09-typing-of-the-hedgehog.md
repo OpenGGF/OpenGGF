@@ -370,13 +370,22 @@ Engine fixes found on the way: `ModDecoratedObjectRegistry` dropped the stock ga
 under any object-registering mod (0247b568d), so the Course and builder worlds allocated differently from
 row 1 in HCZ and MHZ.
 
-**Acts.** S2 EHZ2 qualifies (cf77473ac: five fights, built in 880k rows, 21 s; a fight site behind the
-waterfall's high-priority tiles is now rejected). S3K SOZ1 is dropped: from the cold start with intros
-skipped, a wall of about 80 px at x 692 (quicksand behind, a spring vine below), and no braked stop in the
-first-fight window passes the 4 px flatness rule on the dunes (1797 of 1844 candidate sites rejected for
-geometry in one 4.1M-row search); the rule is not relaxed per act. S1 GHZ3 needed the recorded run's
-upper route (timed jumps and platform rides between x 1000 and 2750): the lower route drops into a valley
-at x 2684 the forward rules cannot leave.
+**Acts (forward-v2 sweep, 2026-10-10, one bounded search per act; rows and seconds of search).**
+
+| Act | Result | Notes |
+|---|---|---|
+| S2 EHZ2 | qualified (forward-v1) | 3549 rows, five fights (one loaded Buzzer); 880k rows, 21 s; a site behind the waterfall's high-priority tiles is rejected |
+| S1 GHZ3 | qualified | 3302 rows, five fights (two loaded Newtrons); the upper route needed waypoints: recorded-row macros and authored targets at the two spring landings and the upper path; 3.7M rows, 81 s |
+| S1 FZ, S2 DEZ | qualified, boss-only | 424 and 335 rows: the countdown, then a stop at the boss |
+| S3K SOZ1 | dropped: no early site | dunes; under forward-v1, 1797 of 1844 early stops failed geometry; a wall of about 80 px at x 692 |
+| S3K HCZ1 | dropped: no early site | every early stop in water (1159) or on an object (745) |
+| S3K MHZ1 | dropped: no early site | flattest early stop 10 px over the strip; stall at x 905 |
+| S1 MZ3, S3K SOZ2, LRZ1 | dropped: no early site | flattest early stops 10, 12 and 7 px with 3 samples missing |
+| S3K MGZ1 | dropped: route goes back | one fight, then a 112 px wall at x 2165; the recording turns back left to a shaft at x 1700 |
+| S2 SCZ, WFZ | dropped: no standing start | Sonic starts on the Tornado; never still on the ground |
+| S1 SYZ3, LZ3, SLZ3, SBZ2; S2 ARZ2, HTZ2, MCZ2, OOZ2, MTZ3; S3K CNZ1, FBZ1, DEZ1 | dropped at a frontier | one or two fights, then every lineage dies at a wall, steep ramp or loop exit (furthest x 1141 to 7468); HTZ2, MCZ2, CNZ1, DEZ1 and SOZ2 hit the 10-minute cap; candidates for waypoints where a recording shows a forward route |
+
+Dropped acts keep their legacy (format 1) rails until a decision on them.
 
 ### Mod structure
 
