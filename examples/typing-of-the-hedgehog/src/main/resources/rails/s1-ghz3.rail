@@ -1,24 +1,24 @@
-# s1 ghz3: authored by TypingHedgehogForwardRailBuilder (3708269 native rows, 81 s, sites 146 (rejected 126), soaks 20, furthest x 10756 with 5 fights, recorded-row children 2680 (furthest x 10888), furthest fought lineage x 10888 with 5 fights, waypoints reached 2/6, flattest rejected early site row 678 x 787 y 508 range 7 missing 3 [x x x 0 0 2 3 4 5 6 7 7 6 7 6 5 4], dead ends {site: behind foreground=5, native kill=19233, death=414, loop exit backtrack=31, stall=217, site: strip walk blocked=3, site: geometry=43, site: support=73, site: strip not level=1, camera backtrack=178, reverse excursion=26550, hurt=817, site: slope=1})
+# s1 ghz3: authored by TypingHedgehogForwardRailBuilder (1563469 native rows, 53 s, sites 266 (rejected 233), soaks 33, furthest x 10797 with 4 fights, recorded-row children 844 (furthest x 10881), furthest fought lineage x 10293 with 5 fights, waypoints reached 4/6, flattest rejected early site row 514 x 1251 y 620 range 0 missing 1 [x 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0], dead ends {site: collapsing ground=4, site: behind foreground=11, native kill=2790, death=427, site: strip walk leaves the ground=2, loop exit backtrack=716, site: strip walk blocked=1, site: geometry=106, site: support=108, camera backtrack=883, stationary pace=5221, reverse excursion=4157, missed the first fight=331, slow roll pace=130, site: slope=1, hurt=2836})
 format 2
 policy forward-v2
 combat live-restore-v1
 course regular
-launch native-run-roll
-profile width=320
+launch held-run
+burst 0x600
+profile width=400
 game s1
 zone 0
 act 2
 team sonic
 rom AFE05EEE
 rom-sha1 69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B
-engine 0.7.prerelease-94804e439-dirty
+engine 0.7.prerelease-67d14a5ef-dirty
 countdown 60
-waypoints recorded ghz3_completerun 1375-1470@1405 1668-1763@1643 1871-1966@4630 2795-2890@6542 authored-targets 600,740;750,514;1040,621;1705,508;1918,639;2589,524
-stand 1 329 2 -
-stand 2 1349 2 -
-stand 3 1845 2 -
-stand 4 2164 2 Sonic1NewtronBadnikInstance@48/L209 Sonic1NewtronBadnikInstance@56/L211
-stand 5 3040 2 -
-endpoint boss-arena 3302
-validated 3302
-program 60:0,180:2,1:8,24:18,9:8,39:0,3:4,1:8,1:4,13:0,24:8,8:18,37:8,24:2,32:8,24:2,12:8,20:18,33:8,4:4,68:8,8:18,9:8,4:4,36:8,18:4,18:0,8:8,2:4,6:0,4:8,1:4,11:0,8:8,2:4,18:0,8:8,2:4,26:0,4:8,1:4,23:0,8:8,2:4,6:0,4:8,1:4,11:0,8:8,2:4,18:0,8:8,2:4,22:0,4:8,1:4,19:0,8:8,2:4,2:0,8:18,25:8,4:4,4:8,8:4,11:0,6:4,1:8,1:4,11:0,16:18,29:8,1:18,21:8,6:18,9:8,10:0,8:4,1:8,1:4,11:0,8:18,117:8,24:18,21:8,12:4,1:8,1:4,13:0,41:8,57:18,22:8,12:18,41:8,24:2,120:0,96:8,24:18,21:8,38:0,38:8,18:0,9:8,3:0,8:8,5:0,7:8,5:0,6:8,5:0,5:8,5:0,6:8,4:18,117:8,12:18,21:8,19:0,11:4,1:8,1:4,13:0,88:8,24:2,1:18,117:8,24:18,53:8,24:2,120:0,24:18,21:8,24:18,85:8,24:2,160:8,24:2,41:4,5:8,4:4,13:0,237:8,12:4,11:0
+waypoints recorded ghz3_completerun 629-676@2249 783-830@2022 1171-1266@1533 2681-2776@6862 authored-targets 600,740;750,514;1040,621;1705,508;1918,639;2589,524
+stand 1 603 2 Sonic1BuzzBomberBadnikInstance@71/L37
+stand 2 1081 2 Sonic1NewtronBadnikInstance@51/L79 Sonic1NewtronBadnikInstance@56/L80
+stand 3 1637 2 -
+stand 4 1898 2 Sonic1NewtronBadnikInstance@32/L209 Sonic1NewtronBadnikInstance@47/L211
+endpoint boss-arena 2947
+validated 2947
+program 240:0,1:8,4:18,73:8,24:2,60:0,16:18,21:8,32:0,32:8,1:18,21:8,55:0,10:4,1:8,1:4,13:0,72:8,8:18,21:8,8:18,9:8,108:0,16:18,45:8,4:18,117:8,12:18,21:8,12:0,12:4,13:0,216:8,24:2,20:18,21:8,14:4,18:0,4:8,1:18,9:8,2:18,117:8,12:18,73:8,12:4,13:0,24:8,6:18,69:8,20:18,117:8,12:4,13:0,24:8,16:18,117:8,24:18,21:8,20:18,21:8,24:18,85:8,24:2,48:0,8:4,120:0,24:18,85:8,24:2,339:8,12:4,11:0

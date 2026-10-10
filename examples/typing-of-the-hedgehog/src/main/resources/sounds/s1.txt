@@ -2,6 +2,8 @@
 KEY 0xCD
 ERROR 0xA4
 LOCK 0xBE
+# S1 _Constants.asm sfx_Roll (ptr_sndBE); Sonic_Roll plays this ROM effect.
+REV 0xBE
 KILL 0xC1
 HIT 0xA3
 RING 0xB5

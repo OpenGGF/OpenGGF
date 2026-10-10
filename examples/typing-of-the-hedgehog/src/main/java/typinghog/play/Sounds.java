@@ -10,7 +10,7 @@ import java.util.Map;
 public final class Sounds {
     /** The course's sound cues; each game maps them to its own ROM effects and jingles. */
     public enum Cue {
-        KEY, ERROR, LOCK, KILL, HIT, RING, RING_SPILL, MONITOR, SHIELD, JUMP, SPRING, BOSS_HIT, BOSS_DEFEATED,
+        KEY, ERROR, LOCK, REV, KILL, HIT, RING, RING_SPILL, MONITOR, SHIELD, JUMP, SPRING, BOSS_HIT, BOSS_DEFEATED,
         STAND_START, STAND_CLEAR, GAME_OVER_MUSIC, ACT_CLEAR_MUSIC, BOSS_MUSIC, INVINCIBLE_MUSIC, EXTRA_LIFE_MUSIC,
         TALLY, TALLY_END
     }

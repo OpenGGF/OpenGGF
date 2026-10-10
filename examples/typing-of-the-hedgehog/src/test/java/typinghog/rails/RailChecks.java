@@ -48,7 +48,7 @@ public final class RailChecks {
         program.append(",100:8");
         row += 100;
         return "format 2\npolicy forward-v1\ncombat live-restore-v1\ncourse regular\nlaunch " + launch
-                + "\nprofile intros=skip width=320\ngame s2\nzone 0\nact 1\nteam sonic,tails\nrom 7B905383\nrom-sha1 " + SHA1
+                + "\nprofile intros=skip width=400\ngame s2\nzone 0\nact 1\nteam sonic,tails\nrom 7B905383\nrom-sha1 " + SHA1
                 + "\nengine test\ncountdown 60\n" + events + "endpoint boss-arena " + row + "\nvalidated " + row
                 + "\n" + extra + "program " + program + "\n";
     }
@@ -76,8 +76,16 @@ public final class RailChecks {
         eq(0x12, rail.maskAt(62));
         eq(0x02, rail.maskAt(63));
         eq(0x08, rail.maskAt(240));
-        // Sonic 1 crouches through its countdown.
+        // The older native-run-roll format stays readable for research pilots.
         eq("native-run-roll", Rail.parse(forward("native-run-roll", "180:2", "", 4)).plan().launch());
+        String held = forward("held-run", "180:0", "burst 0x600\n", 4).replace("game s2", "game s1");
+        eq(0x600, Rail.parse(held).plan().burst());
+        eq(0, Rail.parse(held).maskAt(60));
+        rejects(held.replace("burst 0x600\n", ""), "a held-run launch without a burst");
+        rejects(held.replace("burst 0x600", "burst 0x601"), "a burst above S1 top speed");
+        rejects(held.replace("180:0", "180:2"), "a held-run countdown crouching");
+        rejects(held.replace("game s1", "game s2"), "a held-run launch in another game");
+        rejects(held.replace("launch held-run", "launch native-run-roll"), "a burst under a native launch");
     }
 
     public static void forwardRejects() {

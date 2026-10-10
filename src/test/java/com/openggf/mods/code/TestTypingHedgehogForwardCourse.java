@@ -113,7 +113,7 @@ class TestTypingHedgehogForwardCourse {
                 StringBuilder pools = new StringBuilder();
                 for (Object b : pool) pools.append(' ').append(token(b));
                 String text = "format 2\npolicy forward-v1\ncombat live-restore-v1\ncourse pilot\nlaunch native-spindash\n"
-                        + "profile width=320\ngame s2\nzone 0\nact 1\nteam sonic,tails\nrom 7B905383\nrom-sha1 "
+                        + "profile width=400\ngame s2\nzone 0\nact 1\nteam sonic,tails\nrom 7B905383\nrom-sha1 "
                         + w.course.romSha1() + "\nengine test\ncountdown " + ENTRY + "\nstand 1 " + standRow + " " + CLEANUP
                         + pools + "\nendpoint boss-arena " + endpoint + "\nvalidated " + endpoint + "\nprogram "
                         + TypingHedgehogRailBuilderProbe.rle(masks, endpoint) + "\n";

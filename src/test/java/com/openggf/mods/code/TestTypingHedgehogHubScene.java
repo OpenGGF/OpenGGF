@@ -474,7 +474,7 @@ class TestTypingHedgehogHubScene {
         long tick;
 
         Fixture(String game, List<String> games, Map<String, String> saves, Set<String> railed) throws Exception {
-            this(game, games, saves, railed, 320);
+            this(game, games, saves, railed, 400);
         }
 
         Fixture(String game, List<String> games, Map<String, String> saves, Set<String> railed, int width)

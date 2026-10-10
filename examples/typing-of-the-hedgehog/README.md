@@ -30,8 +30,8 @@ python3 examples/typing-of-the-hedgehog/build.py    # just compile and package t
 
 To install it normally, copy the jar into `mods/` and enable it in the Mod Manager. The
 mod's title opens from the master title; holding Escape returns there. The mod plays at
-the native 320×224 (it requires that width, and the window refits); the routes Sonic runs
-were validated at 320 pixels, where the stock acts' objects activate exactly as authored.
+400×224 (`WIDE_16_9`; the window refits). The routes are rebuilt and validated at that
+width, including stock object activation and the boss arenas.
 
 ## How to play
 
@@ -102,10 +102,12 @@ note lists each act and why.
 ## How it is built
 
 - **Forward routes.** Each act's route (`rails/*.rail`) is a validated controller program
-  (pad masks per row) that drives the stock act from a cold start: the spindash countdown,
+  (pad masks per row) that drives the stock act from a cold start: the spindash countdown
+  (Sonic 1 runs in place to the ROM roll sound, then releases at top speed),
   the run, four or five fights and the boss arena. A bounded search over the headless engine
   builds it (`TypingHedgehogForwardRailBuilder`), checking every row for hurt, death,
-  backtracking and native kills, and each fight site for open, near-flat ground. At a fight
+  backtracking, native kills and long stationary/slow-roll stretches, and each fight site for
+  open, near-flat ground. At a fight
   the course captures a checkpoint, converts the stock badniks on screen into typing targets
   and lets the world live on; when the wave is cleared it restores the checkpoint and removes
   the same badniks again, so the run continues exactly as authored however long the fight

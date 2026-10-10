@@ -40,7 +40,7 @@ class TestTypingHedgehogHubRom {
         try (ExampleModHarness harness = ExampleModHarness.build(Path.of("examples/typing-of-the-hedgehog"),
                 work.resolve("build"))) {
             GameModule effective = harness.apply(GameServices.module());
-            harness.open(effective, work.resolve("saves"), 320, 224);
+            harness.open(effective, work.resolve("saves"), 400, 224);
             play(harness, 60);
             assertEquals("TITLE", screen(harness));
             assertTrue(harness.debugJump("type:start"));

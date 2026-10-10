@@ -50,7 +50,7 @@ final class ForwardRails {
     private ForwardRails() { }
 
     static final Path SOURCE = Path.of("examples/typing-of-the-hedgehog");
-    static final int WIDTH = 320;
+    static final int WIDTH = 400;
     static final int PAD_BITS = 0x1F;
     static final int UP = 0x01, DOWN = 0x02, LEFT = 0x04, RIGHT = 0x08, JUMP = AbstractPlayableSprite.INPUT_JUMP;
 
@@ -157,6 +157,8 @@ final class ForwardRails {
         int previousMask;
         boolean hold;
         boolean freeze;
+        int countdown = -1, burst;
+        Runnable heldRun, release;
         Runnable before;
         int nativeSteps;
 
@@ -171,6 +173,8 @@ final class ForwardRails {
                 hook.run();
             }
             if (hold) holdPlayer();
+            else if (countdown >= 0 && row >= countdown && row < countdown + COUNTDOWN_ROWS) heldRun.run();
+            else if (countdown >= 0 && row == countdown + COUNTDOWN_ROWS) release.run();
             return !freeze;
         }
 
@@ -202,6 +206,21 @@ final class ForwardRails {
         @Override public boolean allowsDebugRewind() { return false; }
     }
 
+    /** The exact production held-run launch, including animation state, on native authoring rows. */
+    static void heldLaunch(ExampleModHarness harness, Driver driver, int countdown, int burst) throws Exception {
+        Class<?> launch = harness.loader().loadClass("typinghog.rails.Launch");
+        Method hold = launch.getMethod("holdRun", int.class), release = launch.getMethod("release", int.class);
+        driver.countdown = countdown;
+        driver.burst = burst;
+        driver.heldRun = () -> invokeLaunch(hold, burst);
+        driver.release = () -> invokeLaunch(release, burst);
+    }
+
+    private static void invokeLaunch(Method method, int burst) {
+        try { method.invoke(null, burst); }
+        catch (ReflectiveOperationException e) { throw new IllegalStateException(e); }
+    }
+
     static void holdPlayer() {
         if (!(GameServices.camera().getFocusedSprite() instanceof AbstractPlayableSprite player)) return;
         player.setObjectControlled(true);
@@ -231,13 +250,17 @@ final class ForwardRails {
             var config = GameServices.configuration();
             config.clearSessionOverrides();
             applyProfile(config, pilot, overrides);
-            GameServices.graphics().setProjectionWidth(WIDTH);
+            GameServices.graphics().setProjectionWidth(config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
+            displayWidth(config, config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
             GameModule effective = patch(GameServices.module(), driver);
             SessionManager.clear();
             GameModuleRegistry.setCurrent(effective);
             com.openggf.tests.TestEnvironment.activeGameplayMode();
             fixture = HeadlessTestFixture.builder().withZoneAndAct(pilot.zone(), pilot.act()).build();
             course = CourseControlProbeAccess.open(SessionManager.getCurrentGameplayMode());
+            if (course.viewportWidth() != config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS)) {
+                throw new IllegalStateException("authoring viewport differs from launch profile");
+            }
             GameServices.level().getObjectManager().initVblaCounter(vbla);
             for (int i = 0; i < 8 && driver.row == 0 && ControlledFrameRuntime.prepareSetup(fixture.runtime()); i++) { }
         }
@@ -262,9 +285,16 @@ final class ForwardRails {
         }
     }
 
+    static void displayWidth(com.openggf.configuration.SonicConfigurationService config, int width) {
+        WidescreenAspect aspect = java.util.Arrays.stream(WidescreenAspect.values())
+                .filter(a -> a.pixelWidth() == width).findFirst().orElseThrow();
+        config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, aspect.name());
+        config.resolveDisplayAspect();
+    }
+
     static void applyProfile(com.openggf.configuration.SonicConfigurationService config, Pilot pilot,
                              Map<SonicConfiguration, Object> overrides) {
-        config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, WidescreenAspect.NATIVE_4_3.name());
+        config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, WidescreenAspect.WIDE_16_9.name());
         config.resolveDisplayAspect();
         config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS, WIDTH);
         config.setSessionOverride(SonicConfiguration.LOAD_TIME_SIMULATION, "FAST");
@@ -326,7 +356,7 @@ final class ForwardRails {
             if (frame != o.frame) d.add("frame counter " + frame + " vs " + o.frame);
             if (withClock && vbla != o.vbla) d.add("vbla " + vbla + " vs " + o.vbla);
             if (rings != o.rings) d.add("rings " + rings + " vs " + o.rings);
-            if (!slots.equals(o.slots)) d.add("slots");
+            if (!slots.equals(o.slots)) d.add("slots " + slots + " vs " + o.slots);
             if (hurt != o.hurt || dead != o.dead) d.add("hurt/dead");
             return d;
         }
@@ -409,6 +439,70 @@ final class ForwardRails {
             }
         }
         return new Geometry(samples, missing, missing == samples ? 999 : max - min, low, profile.toString().strip());
+    }
+
+    /**
+     * The route's pace on native rows outside fights, for the builder's scoring and the gate:
+     * the longest <em>stationary</em> stretch (Sonic moved under {@link #STILL_PX} px over the last
+     * {@link #STILL_WINDOW} rows, so a lift ride counts as moving) and the longest <em>slow roll</em>
+     * (rolling on the ground under {@link #SLOW_ROLL} subpixels a frame). Excluded rows (countdown,
+     * a fight's quiet rows and native spindash charge) end a stretch.
+     */
+    static final class Pace {
+        static final int STILL_WINDOW = 8, STILL_PX = 8, SLOW_ROLL = 0x300;
+        static final int STILL_LIMIT = 30, SLOW_ROLL_LIMIT = 45;
+        private final int[] xs = new int[STILL_WINDOW], ys = new int[STILL_WINDOW];
+        private int seen, stillRun, rollRun;
+        int maxStill, maxStillRow = -1, maxRoll, maxRollRow = -1;
+
+        Pace copy() {
+            Pace p = new Pace();
+            System.arraycopy(xs, 0, p.xs, 0, xs.length);
+            System.arraycopy(ys, 0, p.ys, 0, ys.length);
+            p.seen = seen;
+            p.stillRun = stillRun;
+            p.rollRun = rollRun;
+            p.maxStill = maxStill;
+            p.maxStillRow = maxStillRow;
+            p.maxRoll = maxRoll;
+            p.maxRollRow = maxRollRow;
+            return p;
+        }
+
+        /** One native row's state; {@code excluded} rows end any stretch. */
+        void row(AbstractPlayableSprite s, int row, boolean excluded) {
+            row(s.getCentreX(), s.getCentreY(), s.getRolling() && !s.getAir(), s.getGSpeed(), row, excluded);
+        }
+
+        void row(int x, int y, boolean groundedRoll, int speed, int row, boolean excluded) {
+            int i = seen++ % STILL_WINDOW;
+            int oldX = xs[i], oldY = ys[i];
+            xs[i] = x;
+            ys[i] = y;
+            if (excluded) {
+                stillRun = 0;
+                rollRun = 0;
+                return;
+            }
+            boolean still = seen > STILL_WINDOW && Math.abs(x - oldX) < STILL_PX
+                    && Math.abs(y - oldY) < STILL_PX;
+            stillRun = still ? stillRun + 1 : 0;
+            if (stillRun > maxStill) {
+                maxStill = stillRun;
+                maxStillRow = row;
+            }
+            boolean slowRoll = groundedRoll && Math.abs(speed) < SLOW_ROLL;
+            rollRun = slowRoll ? rollRun + 1 : 0;
+            if (rollRun > maxRoll) {
+                maxRoll = rollRun;
+                maxRollRow = row;
+            }
+        }
+
+        @Override public String toString() {
+            return "longest stationary " + maxStill + " rows (to row " + maxStillRow + "), longest slow roll " + maxRoll
+                    + " rows (to row " + maxRollRow + ")";
+        }
     }
 
     static int signedAngle(int angle) {

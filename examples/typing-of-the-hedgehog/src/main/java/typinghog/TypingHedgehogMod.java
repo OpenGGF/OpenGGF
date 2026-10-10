@@ -66,9 +66,8 @@ public final class TypingHedgehogMod implements GgfMod {
                 Map.copyOf(props), Map.copyOf(rails),
                 Map.copyOf(typinghog.hub.model.TextArt.parse(text(context, "hub/art.txt", ""))));
         var storage = context.storage();
-        // Rails are validated at the native 320-pixel view: a wider view activates objects earlier and the
-        // recorded runs diverge (rails kill test, 2026-10-09).
-        context.requireDisplayWidth(320);
+        // WIDE_16_9: rails and object activation are validated at this 400-pixel view.
+        context.requireDisplayWidth(400);
         context.registerObject("puppet", (spawn, registry) -> new typinghog.play.Puppet(spawn));
         context.registerServiceBundle("course", () -> {
             Stagehand stagehand = new Stagehand();

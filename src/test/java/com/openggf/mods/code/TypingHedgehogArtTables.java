@@ -56,7 +56,9 @@ final class TypingHedgehogArtTables {
         List<String> problems = new ArrayList<>();
         int checked = 0;
         for (var entry : rails.entrySet()) {
-            int zone = entry.getValue()[0], act = entry.getValue()[1];
+            int zone = entry.getValue()[0], act = entry.getValue()[1], width = entry.getValue()[2];
+            ForwardRails.displayWidth(GameServices.configuration(), width);
+            GameServices.graphics().setProjectionWidth(width);
             SharedLevel level = SharedLevel.load(game, zone, act);
             try {
                 // The same bootstrap the course test uses (TestTypingHedgehogCourse.launch), then a few
@@ -65,7 +67,9 @@ final class TypingHedgehogArtTables {
                 SessionManager.clear();
                 GameModuleRegistry.setCurrent(module);
                 TestEnvironment.activeGameplayMode();
-                HeadlessTestFixture.builder().withZoneAndAct(zone, act).build().stepIdleFrames(SETTLE_FRAMES);
+                var fixture = HeadlessTestFixture.builder().withZoneAndAct(zone, act).build();
+                assertTrue(fixture.camera().getWidth() == width, "art table must use the rail profile width");
+                fixture.stepIdleFrames(SETTLE_FRAMES);
                 // The level's render manager holds the provider the act loaded, which is what puppets
                 // draw through; Sonic1GameModule.getObjectArtProvider() returns a fresh, empty provider
                 // on every call, so asking the module would check nothing.
@@ -106,9 +110,17 @@ final class TypingHedgehogArtTables {
         Set<Integer> standRows = new java.util.HashSet<>();
         int endpoint = -1;
         String sidekick = "";
+        int width = -1, countdown = -1, burst = 0;
+        String launch = "";
         for (String raw : text.split("\n")) {
             String[] f = raw.strip().split("\\s+");
             switch (f[0]) {
+                case "profile" -> {
+                    for (String pair : f) if (pair.startsWith("width=")) width = Integer.parseInt(pair.substring(6));
+                }
+                case "launch" -> launch = f[1];
+                case "countdown" -> countdown = Integer.parseInt(f[1]);
+                case "burst" -> burst = Integer.decode(f[1]);
                 case "program" -> {
                     for (String pair : f[1].split(",")) {
                         String[] rm = pair.split(":");
@@ -125,7 +137,9 @@ final class TypingHedgehogArtTables {
         int checked = 0;
         try (ExampleModHarness harness = ForwardRails.buildHarness(temp, "art", Map.of());
              ForwardRails.World w = new ForwardRails.World(
-                     new ForwardRails.Pilot(file, game, code, zone, act, sidekick, file), Map.of())) {
+                     new ForwardRails.Pilot(file, game, code, zone, act, sidekick, file), Map.of(com.openggf.configuration.SonicConfiguration.SCREEN_WIDTH_PIXELS, width))) {
+            assertTrue(w.course.viewportWidth() == width, "art replay must use the rail profile width");
+            if (launch.equals("held-run")) ForwardRails.heldLaunch(harness, w.driver, countdown, burst);
             var handoff = new ForwardRails.Handoff(harness, code);
             w.driver.program = row -> row < masks.size() ? masks.get(row) : 0;
             while (w.driver.row < endpoint) {
@@ -164,7 +178,7 @@ final class TypingHedgehogArtTables {
             String name = line.strip();
             if (name.isEmpty() || name.startsWith("#")) continue;
             String game = null;
-            int zone = -1, act = -1;
+            int zone = -1, act = -1, width = -1;
             for (String raw : Files.readString(RESOURCES.resolve("rails/" + name)).split("\n")) {
                 String[] f = raw.strip().split("\\s+");
                 if (f.length < 2) continue;
@@ -172,10 +186,13 @@ final class TypingHedgehogArtTables {
                     case "game" -> game = f[1];
                     case "zone" -> zone = Integer.parseInt(f[1]);
                     case "act" -> act = Integer.parseInt(f[1]);
+                    case "profile" -> {
+                        for (String pair : f) if (pair.startsWith("width=")) width = Integer.parseInt(pair.substring(6));
+                    }
                     default -> { }
                 }
             }
-            if (code.equals(game)) out.put(name, new int[] {zone, act});
+            if (code.equals(game)) out.put(name, new int[] {zone, act, width});
         }
         return out;
     }
