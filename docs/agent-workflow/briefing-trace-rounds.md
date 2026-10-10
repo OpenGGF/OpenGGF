@@ -780,6 +780,15 @@ Missing or failed isolation must stop before Engine/audio/input admission; never
 fall back to the desktop. Reap the owned server after clients. Virtual-window
 observations do not certify the user's window manager or hardware input.
 
+Surfaceless capture still owns process-global GLFW initialization hints
+(2026-10-10 Mutator Lab gameplay promo). The Mesa EGL pbuffer uses the null
+GLFW platform only for timer/input services. Initialization hints survive
+termination, so restore automatic platform selection in `finally` after
+initialization, including failure, without changing the current null platform.
+A display-free mocked failure reproduced the missing reset before `e091d3b20`;
+real EGL readback and a byte-identical 760-frame capture qualified the repair.
+Successful offscreen rendering alone does not prove cleanup for the next owner.
+
 Desktop visibility and input need separate proof (2026-10-07 Mutator Lab): an
 X11 window may exist but remain unmapped while `glfwShowWindow` waits. Recheck
 its exact child PID, title, `IsViewable` state and positive geometry immediately

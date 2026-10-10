@@ -1140,3 +1140,50 @@ hero take: all PNGs, state/observation rows, badnik rows and 608,000 stereo PCM
 frames were byte-identical to the original scratch driver. Temporary duplicate
 media were removed after comparison. These are focused checks; the normal
 combined category run and fresh structural guards remain required.
+
+
+### Replacement-promo final qualification
+
+Frozen `8108d8d472ceed63acd0659cfa10c2c13b1d17e9` was composed with published
+`3418a15ffbdbe513d5622b735c7ba413b818707c`; the incoming six paths only changed
+mirrored skills. With Java 21, Lua 5.4, the original three absolute ROM filenames
+and the desktop environment removed, the normal command was
+`python3 tools/testing/run_categories.py --base 3418a15ffbdbe513d5622b735c7ba413b818707c --max-minutes 150 --run`.
+Run `20261010T014034Z-761a7ff4` completed all 3,121 selected classes: 3,119
+ordinary reports, 26,991 cases, 26 inherited assertions, zero errors and 63
+identical causal skips (3,552.78 seconds, ordinary exit 1). Separate fresh guards
+completed 88 reports and 675 passing cases without skips (235.82 seconds, exit 0).
+Every remaining full assertion and skip cause matched the qualified reference;
+only exception-prefix removal and the verified named SSZ blob hashes normalized.
+Class omissions were accounted for. The five concrete required S3K classes
+completed all 60 cases without skips. Source fingerprint and original ROM hashes
+remained unchanged; the exact category run was consumed and acknowledged.
+
+One historical Eggman menu negative disappeared. Bounded fresh-JVM checks of
+`TestEggmansSkyScene#productionMenusRememberSelectionAndJournalDoesNotChangeExpedition`
+showed its complete old assertion on clean actual `3418a15`, while both the
+already-published pre-promo PR commit `3d0a47b` and new candidate `8108d8d` passed
+(one case each, no skips). This passing behavior predates the promo changes;
+no new donor fix is claimed. The deeper cause of the historical `345ec13` to
+`3d0a47b` difference was not investigated in this bounded comparison.
+
+One normal `-Ptrace-replay` request covered GHZ1, both EHZ segments, and the
+AIZ/AIZ-slice/HCZ-slice `replayMatchesTrace` methods: six cases, three passed,
+three inherited S3K assertions, zero errors or skips. All three complete
+assertions and complete divergence-report values matched a bounded control
+on clean actual `3418a15` literally. The first differences remain AIZ 57 errors
+at 20302/player_animation_id, AIZ slice 99 at 25589/player_animation_id,
+and HCZ slice 4,699 at 9482/air. The candidate reports cover 86,798 frames;
+this qualifies those reported fields and rows, not an entire trace profile.
+Missing advertised auxiliary schemas remain explicit in the light summary.
+Both owned control worktrees and consumed raw reports were removed. This is
+inherited-failure qualification, not an all-green suite or a whole-base pass.
+
+The accepted replacement is 52.22 seconds, 3,133 frames at 1920×1080/60, native
+captured stereo 48 kHz PCM encoded to AAC, and eight chapters. The corrected
+fatal-hit caption does not alter gameplay/source ranges. Root checked a full
+error-free decode and actual encoded scenes against native observations.
+SHA-256: `4a6eef10d51dd6e0412c9e2bc2c2f470dde4b05b7b02e33db45dd94082a17a97`.
+The video, original seven source takes, exact chapter map, reproducible edit
+recipe and compact comparisons stay in the explicit external task directory
+`mutator-lab-gameplay-promo-e0603654-55a0-4717-897c-3d93d1137ff3`.
