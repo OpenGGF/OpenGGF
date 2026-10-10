@@ -36,6 +36,7 @@ class TestModSceneActBridge {
     GameModule effective;
     InputHandler input;
     boolean oldTest;
+    RewindClassResolver oldResolver;
     final List<RewindBoundary> boundaries = new ArrayList<>();
     static final ZoneKey.Mod DEST = new ZoneKey.Mod("starpost-valley", "valley");
 
@@ -46,6 +47,8 @@ class TestModSceneActBridge {
         config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
         harness = ExampleModHarness.build(Path.of("examples/starpost-valley"), temp.resolve("build"));
         effective = harness.apply(GameServices.module());
+        oldResolver = ModSubsystem.current().rewindClassResolver();
+        ModSubsystem.current().installRewindClassResolver(harness.rewindClassResolver());
         TestEnvironment.configureGameModuleFixture(effective);
         SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.TEST_MODE_ENABLED,false);
         GameServices.graphics().initHeadless();
@@ -55,6 +58,7 @@ class TestModSceneActBridge {
     @AfterEach void close() throws Exception {
         if (loop != null) { loop.setGameMode(GameMode.MASTER_TITLE_SCREEN); loop.modSceneHost.cleanup(); }
         if (harness != null) harness.close();
+        if (oldResolver != null) ModSubsystem.current().installRewindClassResolver(oldResolver);
         SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, oldTest);
         if (source != null) source.dispose();
     }
@@ -185,9 +189,24 @@ class TestModSceneActBridge {
     }
 
     @Test void starpostFarmActDoorMenuActGateFarmUsesSameSession() throws Exception {
+        runStarpostRoute("sonic",400);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest(name="{0} at {1}px real town round trip")
+    @org.junit.jupiter.params.provider.CsvSource({"sonic,320","tails,320","knuckles,320","tails,400","knuckles,400"})
+    void realTerrainRoundTripWalksAndRewinds(String farmer,int width) throws Exception {
+        runStarpostRoute(farmer,width);
+    }
+
+    void runStarpostRoute(String farmer,int width) throws Exception {
+        var config=SonicConfigurationService.getInstance();
+        config.setConfigValue(SonicConfiguration.DISPLAY_ASPECT,
+            width==320 ? "NATIVE_4_3" : "WIDE_16_9");
+        config.resolveDisplayAspect();
+        GameServices.audio().setBackend(new com.openggf.audio.HeadlessSmpsAudioBackend(config,GameServices.profiler()));
         assertTrue(ModSceneLauncher.openStartupScene(loop, SonicConfigurationService.getInstance(), 0,
-                GraphicsManager.getInstance(),400,224)); drainFade();
-        assertTrue(loop.modSceneHost.debugJump("new sonic"), "Sonic 1 must be supplied for this round trip");
+                GraphicsManager.getInstance(),width,224)); drainFade();
+        assertTrue(loop.modSceneHost.debugJump("new "+farmer), "Sonic 1 must be supplied for this round trip");
         assertTrue(loop.modSceneHost.debugJump("close"));
         Object scene = SceneHostTestAccess.scene(loop.modSceneHost), shell = field(scene,"shell");
         Object game = field(shell,"game"), play = call(shell,"screen");
@@ -206,16 +225,53 @@ class TestModSceneActBridge {
         runner.stepIdleFrames(1); // Retire S3K initial Process_Sprites before measuring world frames.
         long firstTick = (long)call(town,"ticks"); runner.stepIdleFrames(1);
         assertEquals(firstTick+1,call(town,"ticks"),"nearby admission anchors must elect one director");
-        NativePositionOps.writeXPosResetSubpixel(player(),896); NativePositionOps.writeYPosResetSubpixel(player(),173);
-        player().setAir(false); player().setXSpeed((short)0); player().setGSpeed((short)0);
+        assertEquals(width,GameServices.camera().getWidth());
+        assertEquals(farmer,player().getCode());
+        int initialWallet=(int)field(game,"rings");
+        Object inventory=field(game,"inventory");
+        call(inventory,"set",0,"ring_radish",2);
+        assertTrue(effective.getGameplayPolicyProvider().hudProfile(DEST).orElseThrow().rows().isEmpty(),
+            "stock S3K rows give way to the mod's S1 TIME and RINGS art");
+        walkTo(runner,400);
+        assertTownMusic(0x81);
+        var registry=loop.resolveGameplayModeContext().getRewindRegistry();
+        var checkpoint=registry.capture();
+        Object townBefore=call(town,"capture");
+        for(int i=0;i<30;i++) runner.stepFrame(false,false,false,true,false);
+        var expected=registry.capture();
+        registry.restore(checkpoint);
+        assertEquals(townBefore,call(town,"capture"),"real terrain rewind preserves mod clock/items");
+        for(int i=0;i<30;i++) runner.stepFrame(false,false,false,true,false);
+        var replay=registry.capture();
+        assertEquals(expected.entries().keySet(),replay.entries().keySet());
+        for(String key:expected.entries().keySet()) {
+            var diff=com.openggf.game.rewind.RewindSnapshotDiff.diffKey(key,expected.entries().get(key),replay.entries().get(key));
+            assertTrue(diff.isEmpty(),key+": "+diff.stream().map(d -> d.substring(0,Math.min(400,d.length()))).toList());
+        }
+        walkTo(runner,896);
+        assertTownMusic(0x85);
         call(town,"input",false,true,false,false,false,-1); runner.stepIdleFrames(1);
         assertEquals("inn",call(call(town,"handBack"),"place"));
         int doorY = (int)call(call(town,"handBack"),"returnY");
-        int wallet = (int)field(game,"rings"); GameServices.level().getLevelGamestate().setRings(2);
+        int wallet = (int)field(game,"rings");
+        int health=GameServices.level().getLevelGamestate().getRings();
+        assertTrue(wallet>initialWallet,"walking the real floor collects wallet rings");
+        assertEquals(wallet-initialWallet,health,"native rings and wallet receive the same pickups");
+        Object calendar=field(game,"calendar");
+        Object time=call(calendar,"capture");
+        assertEquals(2,call(inventory,"total","ring_radish"));
         assertTrue(loop.modSceneActBridge.consumeExitOrHold(input)); drainFade();
         assertEquals(GameMode.MOD_SCENE,loop.getCurrentGameMode()); assertTrue((boolean)call(shell,"hasOverlay"));
         assertSame(scene,SceneHostTestAccess.scene(loop.modSceneHost)); assertSame(game,field(shell,"game"));
         assertSame(play,call(shell,"screen")); assertEquals(wallet,field(game,"rings"));
+        // Buy the inn's first food through the real scene menu; native health stays separate.
+        input.setLogicalOverride(com.openggf.control.LogicalInputSnapshot.ofPlayers(
+            com.openggf.control.PlayerInputState.of(0,0,com.openggf.control.InputActionMasks.ACTION_A,
+                com.openggf.control.InputActionMasks.ACTION_A,false,false), com.openggf.control.PlayerInputState.neutral()));
+        loop.modSceneActBridge.updateScene(input); input.update();
+        assertEquals(1,call(inventory,"total","radish_soup"));
+        int spent=2*(int)call(call(game,"item","radish_soup"),"price");
+        assertEquals(wallet-spent,field(game,"rings"));
         // Close the actual inn menu through the scene controls.
         input.setLogicalOverride(com.openggf.control.LogicalInputSnapshot.ofPlayers(
             com.openggf.control.PlayerInputState.of(0,0,com.openggf.control.InputActionMasks.ACTION_B,
@@ -225,19 +281,94 @@ class TestModSceneActBridge {
         assertFalse((boolean)call(shell,"hasOverlay"), "pad B closes the inn menu");
         loop.modSceneActBridge.updateScene(input); drainFade();
         assertEquals(GameMode.LEVEL,loop.getCurrentGameMode());
-        assertEquals(896,player().getCentreX()); assertEquals(doorY,player().getCentreY());
-        assertEquals(2,GameServices.level().getLevelGamestate().getRings());
+        assertTrue(Math.abs(896-player().getCentreX())<=16); assertEquals(doorY,player().getCentreY());
+        assertEquals(time,call(calendar,"capture"),"menu/relaunch preserves day clock fraction");
+        assertEquals(wallet-spent,field(game,"rings")); assertEquals(2,call(inventory,"total","ring_radish"));
+        assertEquals(1,call(inventory,"total","radish_soup"));
+        assertEquals(health,GameServices.level().getLevelGamestate().getRings());
         runner = new HeadlessTestRunner(player()); runner.stepIdleFrames(1);
         long beforeTick = (long)call(town,"ticks"); runner.stepIdleFrames(1);
         assertEquals(beforeTick+1,call(town,"ticks"),"door spawn admits exactly one director");
-        NativePositionOps.writeXPosResetSubpixel(player(),150); NativePositionOps.writeYPosResetSubpixel(player(),173);
-        player().setAir(false); player().setXSpeed((short)0); player().setGSpeed((short)0);
+        walkTo(runner,150);
         call(town,"input",false,true,false,false,false,-1); runner.stepIdleFrames(1);
         assertEquals("farm_gate",call(call(town,"handBack"),"place"));
         assertTrue(loop.modSceneActBridge.consumeExitOrHold(input)); drainFade();
         assertEquals(GameMode.MOD_SCENE,loop.getCurrentGameMode()); assertSame(play,call(shell,"screen"));
         assertTrue((boolean)call(play,"onFarm")); assertSame(game,field(shell,"game"));
-        assertFalse((boolean)call(town,"active")); assertTrue(harness.findings().isEmpty(),harness.findings().toString());
+        assertFalse((boolean)call(town,"active"));
+        assertTrue((int)field(game,"rings")>=wallet-spent); assertEquals(2,call(inventory,"total","ring_radish"));
+        assertEquals(1,call(inventory,"total","radish_soup")); assertTownMusic(0x81);
+        assertTrue(harness.findings().isEmpty(),harness.findings().toString());
+    }
+    @Test void realTownSchedulesWalkSlopesAndAllDoorsUseDecodedFloor() throws Exception {
+        assertTrue(ModSceneLauncher.openStartupScene(loop,SonicConfigurationService.getInstance(),0,
+            GraphicsManager.getInstance(),400,224)); drainFade();
+        assertTrue(loop.modSceneHost.debugJump("new tails"));
+        assertTrue(loop.modSceneHost.debugJump("close"));
+        assertTrue(loop.modSceneHost.debugJump("day 2"));
+        assertTrue(loop.modSceneHost.debugJump("time 759"));
+        Object scene=SceneHostTestAccess.scene(loop.modSceneHost),shell=field(scene,"shell");
+        Object game=field(shell,"game");
+        call(field(game,"calendar"),"setDayMinutes",120); // Hold the schedule hour during this short check.
+        assertTrue(loop.modSceneHost.debugJump("town enter"));
+        loop.modSceneActBridge.admitLaunch(); drainFade();
+        var runner=new HeadlessTestRunner(player()); runner.stepIdleFrames(2);
+        Object town=effective.getGameService(scene.getClass().getClassLoader().loadClass("starpost.realtown.TownSession"));
+        Object sonic=townVillager("sonic");
+        int before=Math.round((float)call(sonic,"x"));
+        call(field(game,"calendar"),"set",1,0,2,8*60);
+        Set<Integer> floorHeights=new HashSet<>();
+        for(int i=0;i<180;i++) {
+            runner.stepIdleFrames(1);
+            for(var object:GameServices.level().getObjectManager().getActiveObjects()) {
+                if(object.getClass().getName().equals("starpost.realtown.TownVillager")&&(boolean)call(object,"visible"))
+                    assertEquals(townFloor(town,Math.round((float)call(object,"x"))),call(object,"feet"),
+                        call(object,"id")+" follows the decoded slope");
+            }
+            floorHeights.add((int)call(sonic,"feet"));
+        }
+        assertTrue(Math.round((float)call(sonic,"x"))<before-60,"Sonic follows the meadow to slope schedule");
+        assertTrue(floorHeights.size()>1,"walk crosses real slope heights: "+floorHeights);
+        int doors=0;
+        for(var object:GameServices.level().getObjectManager().getActiveObjects()) {
+            if(!object.getClass().getName().equals("starpost.realtown.TownDoor"))continue;
+            Object place=call(object,"place"); int x=(int)call(place,"x");
+            assertEquals(townFloor(town,x),object.getY(),"building/door base uses the real floor");
+            doors++;
+        }
+        assertTrue(doors>=9);
+        assertTrue(harness.findings().isEmpty(),harness.findings().toString());
+    }
+    Object townVillager(String id) throws Exception {
+        for(var object:GameServices.level().getObjectManager().getActiveObjects())
+            if(object.getClass().getName().equals("starpost.realtown.TownVillager")&&id.equals(call(object,"id")))return object;
+        throw new AssertionError("missing villager "+id);
+    }
+
+    void assertTownMusic(int id) {
+        GameServices.audio().presentFrame(com.openggf.audio.presentation.PresentationMode.FORWARD);
+        var music=GameServices.audio().captureLogicalSnapshot().presentation().activeMusic();
+        assertNotNull(music,"town soundtrack reaches the production audio route");
+        assertEquals(id,music.musicId());
+        assertEquals(com.openggf.audio.rewind.AudioSourceDescriptor.Route.DONOR_MUSIC_ID,music.sourceDescriptor().route());
+        assertEquals("s1",music.sourceDescriptor().donorGameId());
+    }
+    void walkTo(HeadlessTestRunner runner,int target) {
+        for(int i=0;i<1600;i++) {
+            int distance=target-player().getCentreX();
+            double speed=player().getGSpeed()/256.0;
+            if(Math.abs(distance)<=5 && Math.abs(speed)<0.6 && !player().getAir()) return;
+            double stopping=speed*speed;
+            int direction=Integer.signum(distance);
+            if(Math.signum(speed)==direction && stopping>Math.abs(distance)-3) direction=-direction;
+            runner.stepFrame(false,false,direction<0,direction>0,false);
+            assertFalse(player().getDead(),"route died at "+player().getCentreX()+","+player().getCentreY());
+        }
+        fail("could not walk to "+target+"; centre="+player().getCentreX()+","+player().getCentreY()+" air="+player().getAir()+" speed="+player().getGSpeed()+" held="+player().isObjectControlled());
+    }
+    static int townFloor(Object town, int x) throws Exception {
+        Object layout = call(town,"layout");
+        return (int) call(field(layout,"ground"),"floorBelow",x,0);
     }
     static Object field(Object object,String name) throws Exception {
         var field=object.getClass().getDeclaredField(name); field.setAccessible(true); return field.get(object);

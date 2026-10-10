@@ -7,7 +7,11 @@ import starpost.valley.Runner;
 public final class ActGround implements Runner.Ground {
     private final ObjectServices services;
     private final int width;
-    public ActGround(ObjectServices services, int width) { this.services=services; this.width=width; }
+    private final int originY;
+    public ActGround(ObjectServices services, int width, int originY) {
+        this.services=services; this.width=width; this.originY=originY;
+    }
+    public int originY() { return originY; }
     public int left() { return 0; }
     public int right() { return width; }
     public boolean solid(int x,int y) {

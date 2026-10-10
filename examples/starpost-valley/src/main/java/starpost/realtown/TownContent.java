@@ -4,7 +4,6 @@ import com.openggf.game.GameServiceBundle;
 import com.openggf.game.LevelInputOverlay;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.mods.code.ModContext;
-import java.util.List;
 
 /** Registration is inert in stock acts. Terrain integration places director admission anchors across the route. */
 public final class TownContent {
@@ -36,10 +35,5 @@ public final class TownContent {
 
     public static ObjectSpawn spawn(String key, int index, int x, int y) {
         return new ObjectSpawn(x,y,0,index,0,false,y,-1,OWNER,key);
-    }
-    public static List<ObjectSpawn> placements() {
-        // Native object admission is camera-local; each possible return spawn needs a nearby anchor.
-        return java.util.stream.IntStream.range(0, 13)
-            .mapToObj(i -> spawn(CONTROLLER,i,150 + 256*i,192)).toList();
     }
 }

@@ -143,12 +143,12 @@ public final class Pickups implements SaveSection {
         for (int i = 0; i < 7; i++) {
             double a = Math.PI * i / 6;
             pickups.add(new Pickup(this, n++, springX + 24 + (float) Math.cos(Math.PI - a) * 40,
-                    ground.floorBelow(springX, 0) - 116 - (float) Math.sin(a) * 60, null));
+                    ground.originY() + 96 - 20 - (float) Math.sin(a) * 60, null));
         }
         for (int i = 0; i < 10; i++) {
             double a = Math.PI * 2 * i / 10;
             pickups.add(new Pickup(this, n++, loopX + 126 + (float) Math.sin(a) * 58,
-                    ground.floorBelow(loopX + 126, 0) - 81 + (float) Math.cos(a) * 58, null));
+                    ground.originY() + 111 + (float) Math.cos(a) * 58, null));
         }
         // Forage: a few seasonal finds at spots that change each day.
         String[] forage = switch (game.calendar.season()) {

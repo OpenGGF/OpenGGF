@@ -2177,3 +2177,77 @@ Inspected native PNGs and four short 60fps videos are under
 unoccluded same-frame reference quantify loop presentation. The scratch
 `RealValleyCapture.java` uses `HeadlessGameBoot` + `GameLoop.step`, not
 `ExampleModCapture`; no simulation step uses the diagnostic rendering override.
+
+## 23. Integration
+
+Integration lane: `feature/ai-starpost-integrate`, base `70d428fd4`, local only.
+Milestone `f30dd2e47` connects the town to the real act. `TownTerrain` is the
+single mapping seam: scene/act share block columns, the act adds its sky-row
+origin, and native admission anchors use `ValleyLevel.floorAt` at load. The merged
+terrain omitted the directors entirely; changing only their heights could not
+repair admission. Doors, schedules and dressing use decoded `ActGround` floors.
+Daily pickup identity and collected bits survive reprojection; floor pickups
+probe each X, while spring/loop arcs translate with the block origin. Using the
+loop's first floor for its arc was rejected: that floor is its upper collision
+surface, not the authored ring centre.
+
+The destination-scoped `registerHudProfile` suppresses stock S3K rows. The town
+renders S1 ROM-art TIME as the day clock and RINGS as the wallet, matching the
+scene; SCORE/LIVES stay hidden. `TownPresentation.updateMusic` uses the retained
+scene context's `audio().playMusic` donor route and existing place/weather/hour
+selection. Return resets the scene music cursor and reselects the farm song.
+Native health rings remain separate from spending the wallet in scene menus.
+No engine production code or Mod API signatures/pins changed.
+
+### Integration route matrix
+
+| Main, native solo | 320 | 400 | Obligations |
+| --- | --- | --- | --- |
+| Sonic | pass | pass | farm gate → walked inn → buy soup → same act/door → walked gate → same farm |
+| Tails | pass | pass | same, shorter native standing radius |
+| Knuckles | pass | pass | same, native standing radius |
+
+`TestModSceneActBridge` retains the named admission regression and adds the five
+other matrix rows. Every row checks scene/game/PlayScreen identity, one director
+per world update on both visits, retained day-clock fraction, collected wallet
+and native rings, purchased/carried items, S1 donor music at gate/town/farm,
+and a whole-registry capture/restore plus 30-input forward replay near X=400.
+The first rewind attempt dropped creator dynamics because the harness omitted
+the production class resolver; installing `ModTestKit.rewindClassResolver` before
+bootstrap fixes the fixture without weakening object/state comparisons. The
+separate schedule test checks each visible villager's feet against the decoded
+floor while Sonic walks the meadow/slope, and every building's doorway base.
+Load and return boundaries intentionally reset the engine timeline; scene-owned
+daily state survives. Existing Phase-1 ledge/loop routes and rewind remain covered.
+
+Validation is focused, not a full-suite pass. The change-based plan selects all
+3,083 ordinary classes because example paths and the shared test harness fall
+back to full selection. Proportionate validation applies: executable changes
+are confined to this example, with no shared runtime algorithm, public API or
+build/selection-policy changes. Actual consumers, six native routes, terrain,
+rewind, HUD/audio, creator packaging and required S3K baselines are checked
+explicitly, followed by fresh structural guards. Java 21/Lua 5.4/PowerShell
+preflight passes. Commands (both ROM properties resolve to absolute paths):
+
+```bash
+python3 tools/testing/maven_queue.py --lean -B -Dmse=off '-Dtest=TestStarpostRealValley,TestStarpostTownAct,TestStarpostTownSceneBridge,TestModSceneActBridge,TestModSceneHost,TestStarpostValleyExample,TestStarpostValleyScene,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' "-Ds3k.rom.path=$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic1.rom.path=$PWD/Sonic The Hedgehog (W) (REV01) [!].gen" test
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -B -Dmse=off -Pguards test
+```
+
+The lane-rules direct creator runner passes **196/196**, no skips; packaging
+reports **Validation passed: 0 findings**. The final focused engine run passes **118/118**, zero failures/errors/skips;
+fresh guards are recorded after their completed run.
+
+Native `HeadlessGameBoot` + `GameLoop.step` capture: `~/scratch/sv-integrate/`,
+`round-trip.mp4` (798 frames, 13.3 seconds, synthesized ROM audio), final
+`final-round-trip/state.csv` and reproducible
+capture driver. Inspected frames include gate 200, stall 300, inn menu 410,
+returned real act 510, and farm 780. Every valley movement/door/gate interaction
+uses pad input; only the initial farm position uses debug placement.
+
+`town scene` remains a debug fallback. This certifies the requested short loop,
+not the whole level-testing standard: wider widths, movement donors, follower/
+maximum/duplicate teams, checkpoint/death/respawn breadth, all menu transactions,
+and festival/day-end routes remain gaps. Villagers do not jump the original
+64px totem ledge or cross pits; schedules spanning that obstacle can stop there.
+The terrain's existing native player jump route remains intact.

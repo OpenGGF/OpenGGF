@@ -109,6 +109,10 @@ public final class ExampleModHarness implements AutoCloseable {
         return kit.findings();
     }
 
+    public com.openggf.level.objects.RewindClassResolver rewindClassResolver() {
+        return kit.rewindClassResolver();
+    }
+
     public ModRegistrationPlan plan() {
         return kit.plan(manifest.id());
     }

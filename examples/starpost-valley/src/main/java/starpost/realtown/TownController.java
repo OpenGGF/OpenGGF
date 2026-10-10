@@ -23,7 +23,7 @@ public final class TownController extends AbstractObjectInstance implements ModR
         if (!placed) {
             placed = true;
             int width = town.layout().ground.right();
-            town.attachGround(new ActGround(services(), width));
+            town.attachGround(new ActGround(services(), width, town.layout().ground.originY()));
             services().objectManager().addDynamicObject(new TownDecoration(TownContent.spawn(TownContent.DECORATION,0,spawn.x(),spawn.y())));
             services().objectManager().addDynamicObject(new TownDecoration(TownContent.spawn(TownContent.DECORATION,1,spawn.x(),spawn.y())));
             int i=0;

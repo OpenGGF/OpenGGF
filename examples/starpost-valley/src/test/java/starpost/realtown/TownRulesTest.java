@@ -94,6 +94,27 @@ class TownRulesTest {
         town.bind(town.game(),town.layout(),town.presentation());
         assertTrue(town.claimController(8)); assertFalse(town.claimController(3));
     }
+    @Test void skyRowsTranslateArcsAndFloorPickupsWithoutChangingDailyIdentity() {
+        TownSession town=town(); var layout=town.layout();
+        var before=java.util.List.copyOf(town.pickups().today(town.game(),layout.ground,layout.springX,layout.loopX));
+        town.pickups().collect(0,null,town.game());
+        var bits=town.pickups().capture();
+        var shifted=new starpost.valley.Runner.Ground() {
+            public int left() {return layout.ground.left();}
+            public int right() {return layout.ground.right();}
+            public int originY() {return 128;}
+            public boolean solid(int x,int y) {return layout.ground.solid(x,y-128);}
+            public int floorBelow(int x,int y) {return layout.ground.floorBelow(x,Math.max(0,y-128))+128;}
+        };
+        town.pickups().placeOnGround(town.game(),shifted,layout.springX,layout.loopX);
+        var after=town.pickups().today(town.game(),shifted,layout.springX,layout.loopX);
+        assertEquals(bits,town.pickups().capture()); assertEquals(before.size(),after.size());
+        for(int i=0;i<before.size();i++) {
+            assertEquals(before.get(i).x(),after.get(i).x());
+            assertEquals(before.get(i).y()+128,after.get(i).y(),0.0001f);
+            assertEquals(before.get(i).item(),after.get(i).item());
+        }
+    }
     @Test void handBackIsLatchedAndConsumedOnce() {
         TownSession town=town(); var before=town.capture();
         town.request("inn",null,896,173); town.request("ruins",null,3000,173);

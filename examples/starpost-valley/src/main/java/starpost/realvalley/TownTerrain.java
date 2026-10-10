@@ -16,6 +16,7 @@ public final class TownTerrain {
     public static TownLayout layout(Valley valley) {
         Runner.Ground ground = new Runner.Ground() {
             public int left() { return valley.left(); }
+            public int originY() { return RealValley.terrainTop(); }
             public int right() { return RealValley.blocks().length * RealValley.S1_BLOCK; }
             public boolean solid(int x, int y) { return valley.solid(x, y - RealValley.terrainTop()); }
             public int floorBelow(int x, int fromY) {

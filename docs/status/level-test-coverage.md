@@ -1,5 +1,7 @@
 # Level test coverage backlog
 
+Starpost Valley integration (2026-10-10): the [integration route matrix](../architecture/designs/2026-10-09-starpost-valley.md#integration-route-matrix) covers native solo Sonic/Tails/Knuckles at 320/400px through the real farm → inn → farm loop, purchases and donor music, with whole-registry rewind/replay. The separate schedule check exercises real slope floors and doorway bases. Wider widths, donors, follower/team and respawn/festival/day-end breadth remain open; the scene valley is retained as a debug fallback.
+
 Starpost Valley P1 (2026-10-09): the [real valley matrix](../architecture/designs/2026-10-09-starpost-valley.md#actcharacter-route-matrix-and-rewind-spots) records real S3K solo Sonic/Tails/Knuckles routes at 320/400px, both loop paths, source collision/colour equality, native ability/occlusion visuals and a mid-valley restore/replay spot. Checkpoint respawn, interaction and loop-boundary rewind, load/history isolation, broader viewport/donor/team and scene/act handoff obligations remain open. This prototype does not certify stock GHZ or the complete level standard.
 
 Tide Circuit creator fixture (2026-10-07): the [two-act matrix](../architecture/validation/levels/tide-circuit.md) records actual runtime consumers, original floor traversal, tagged saves, event and world rewind, fresh loads and results-driven handoff. Execution and viewport/donor/character/team breadth remain explicit; the fixture does not certify stock receiving acts.

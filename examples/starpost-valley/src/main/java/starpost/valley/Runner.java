@@ -65,6 +65,9 @@ public final class Runner {
 
         int right();
 
+        /** World-space origin of the authored block geometry (the act may add sky rows). */
+        default int originY() { return 0; }
+
         /** Whether a ceiling at this pixel stops a head moving up into it (the valley has none). */
         default boolean ceiling(int x, int y) {
             return false;
