@@ -155,6 +155,14 @@ The exposed solid routine profile/adapter types are annotated and included in
 the recursive candidate pin. These additions preserve existing runtime behavior
 and the unpublished 0.7.0 version; no published baseline is replaced.
 
+`SceneAudio.setMusicTempoPercent(int)` adds opt-in ROM music pacing (25–100,
+default 100) to the unpublished 0.7 candidate. The recursive inventory gains
+fourteen additive lines, including the validated rewind command. The release
+descriptor and `ModApiVersion` remain on unpublished 0.7.0. Scene disposal
+restores normal pacing; retained native acts keep the active scene's setting.
+SFX, chip pitch, sample clocks and gameplay timing remain on their normal clocks.
+The percentage and fractional phase participate in audio capture/restore.
+
 Before changing the candidate surface:
 
 1. Run `TestModApiSignatureSurface` and inspect every added or changed line.

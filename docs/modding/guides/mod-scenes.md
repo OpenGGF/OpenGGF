@@ -495,6 +495,16 @@ ctx.audio().playSfx(0x33);   // the S3K ring, heard over Green Hill
 ctx.audio().fadeOutMusic();  // fades whichever song is playing
 ```
 
+`ctx.audio().setMusicTempoPercent(65)` gives a quieter game's ROM soundtrack a
+slower pace. The range is 25–100, with 100 restoring the original pace. It holds
+music note-duration ticks while the normal sound-driver walk, envelopes, modulation,
+DAC sample clock and fades continue; SFX and gameplay stay on their own clocks.
+The percentage follows song changes, cross-game donor music and native acts entered
+by the retained scene, including the level-entry audio-source rebuild. The host
+restores normal pacing when the scene finally closes. Creator WAV/OGG playback and
+finite `ctx.music()` preparations keep their original timing. Unsupported hosts
+validate the range but may retain the silent default.
+
 Game ids are `"s1"`, `"s2"` and `"s3k"`, and music ids are that game's own driver IDs.
 The running game's songs take their normal route. Another game's song plays through the
 same sound driver by its own game's rules. This is the cross-game donor route that plays

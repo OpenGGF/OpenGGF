@@ -2,7 +2,8 @@
 
 A farming and life-sim example mod inspired by *Stardew Valley*: a farm, crops, seasons,
 neighbours, fishing, mines, animals, festivals and a long-term restoration goal, rebuilt
-from Sonic's own ROM art, music and movement. Status: **brainstorm, nothing built**.
+from Sonic's own ROM art, music and movement. Status: **implemented candidate;
+delivery and verification recorded below**.
 Base: `8668a9012` (`develop`). Branch: `feature/ai-starpost-valley` in
 `.worktrees/ai-starpost-valley`.
 
@@ -2749,3 +2750,135 @@ changes followed either final run. README, the single develop changelog entry,
 §14 and the lead’s external PR-body draft now describe native acts and retained
 scene↔act state rather than the retired side-view controller. The lane remains
 local for lead integration; it does not merge, rebase or push.
+
+### Trailer polish and precise music pacing (2026-10-10)
+
+The user's trailer feedback replaces the earlier chapter tour with a narrative
+trailer: quiet lake hook, the life after the adventure, farming and neighbours,
+a four-season gallery, returning adventure, festivals and the title. The durable
+edit, scripts, native PNG/CSV/PCM takes and packaged capture mod live at
+`~/Videos/OGGF/starpost-valley/promo-polish/`; `README.md` there records commands,
+source ownership and showcase limitations. The final score uses 65% of the ROM
+song's original tempo, about 7.1% slower than the reviewed 70% edit. Azure Lake
+and Data Select use pitch-preserving Rubber Band processing for the trailer;
+ROM SFX and captured gameplay retain their original clocks. Four vertical masks
+with slightly angled separators show spring/summer/autumn/winter together,
+cycling through farm, town and lake. Restrained ROM cues accompany title and
+location changes. The opening previously wrapped a 65-frame scenic source,
+resetting its camera every 1.08 seconds; a new continuous 1,500-frame native take
+removes that loop. No gameplay time-lapse remains in this edit.
+
+Inside the mod, `SceneAudio.setMusicTempoPercent` expresses the same pacing
+without the coarse division-byte changes or resampling the sound chip. A
+fractional gate holds music note-duration expiry on a proportion of the ROM's
+already-admitted duration services, following the existing TempoWait technique.
+All three driver tempo modes retain their original 100% fast path. Modulation,
+envelopes, fade service, DAC sample clocks and SFX continue on the original
+clock; ROM tempo coordination flags and speed shoes remain independent. Both
+session percentage and sequencer fractional phase capture/restore and live
+mutation rollback. The default is 100%, the validated creator range 25–100%.
+The scene owns the setting, retains it while suspended for a native act and
+restores 100% on final disposal. Creator WAV/OGG and finite prepared PCM are
+outside this ROM sequencer control.
+
+A real scene-to-act regression exposed another lifecycle boundary: native
+level setup replaces the audio ROM/profile, initially resetting the percentage
+to 100%. Publishing the control at its owner boundary and retaining it through
+the source rebuild fixes that observed failure without advancing sound time.
+The test now explicitly exercises `setRom`, `setAudioProfile`, donor song changes,
+scene suspension, final disposal and a stale scene context. Tails' farmer-select
+body now draws the existing ROM idle tail accessory behind it, using the same
+origin and selection tint; the packaged production capture verifies it visibly.
+The candidate pin adds fourteen lines; API commentary and the creator guide
+describe the additive unpublished 0.7.0 capability. The release descriptor is
+unchanged: the policy hook forbids descriptor edits for ordinary candidate-pin
+regeneration without a publication or promotion.
+
+Focused development evidence: the new tempo tests initially failed before the
+setter existed; the actual source-rebuild case then failed at expected70/actual100
+before its lifecycle fix. The final queued regression command on base
+`51fd3aa660c35089184e4320c4de462f2cdf1335` plus this worktree's edits selected
+`TestSceneDonorMusic#sceneMusicPacingFollowsRetainedActsAndEndsWithTheOwner,TestSmpsMusicTempoPercent,TestSmpsDriverSession,TestAudioManagerResetState,TestAudioManagerRuntimeInstallation,TestAudioManagerRewindSuppression`
+with explicit verified S1/S3K absolute ROM paths: **144 tests, zero failures,
+errors or skips**. A subsequent parameter expansion checks 65%, 85% and 100%
+across all three driver modes; final combined validation follows separately.
+This shared audio timing and public-contract change requires the normal broad
+run: `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base
+51fd3aa660c35089184e4320c4de462f2cdf1335 --run --max-minutes 120` selects
+3,087 ordinary candidate classes plus fresh guards. Java 21/Lua 5.4/PowerShell
+preflight passes. Earlier inherited route/CLI negatives listed above are context,
+not a substitute for comparing this completed run's actual failures.
+
+The completed combined run `20261010T093925Z-352c3f4a` reports **26,792 ordinary
+tests: 28 assertion failures, three errors and 63 skips**, followed by **674
+guards: zero failures, errors or skips**. Ordinary execution took 59m53s and
+guards 3m39s. Every Starpost class passed without skips. The ordinary skips are
+opt-in probes/captures/soak measurements, unavailable native GL/EGL checks,
+32 Infinite Sonic act assumptions, and one CPZ spin-tube assumption; this does
+not certify the skipped native graphics or optional diagnostic paths.
+
+The three errors were a new release-descriptor formatting regression, all
+`Line 7 must use exact key=value form`, in `TestModApiPinPolicy`,
+`TestModApiReleasePolicy` and `TestModApiRuntimePolicy`. The descriptor's strict
+parser accepts blank separators but no comment lines. The rejected explanatory
+comment was removed; the capability explanation belongs in the compatibility
+document, not this data-only descriptor. The commit hook also rejected a blank
+separator edit accompanying ordinary candidate regeneration, so the descriptor
+was restored exactly to its unchanged base. The queued correction check
+`python3 tools/testing/maven_queue.py --lean -B -Dmse=off
+'-Dtest=TestModApiPinPolicy,TestModApiReleasePolicy,TestModApiRuntimePolicy,TestModApiSignatureSurface'
+test` then passed **27/27, zero skips**. No production Java changed after the
+combined run; this focused correction is not a second broad pass.
+
+A detached worktree at unchanged base `51fd3aa660c35089184e4320c4de462f2cdf1335`
+re-ran the 14 failing classes through the shared Maven queue with absolute,
+verified S1/S2/S3K ROM paths:
+
+```text
+com.openggf.mods.code.TestModZoneLoader
+com.openggf.tests.TestS3kMhzAct2AuthoredRoute
+com.openggf.tools.TestDezIncomingFinalRouteCapture
+com.openggf.tools.TestLrzActTwoColdRouteCapture
+com.openggf.tools.TestLrzBossColdRouteCapture
+com.openggf.tools.TestLrzKnucklesColdRouteCapture
+com.openggf.tools.TestLrzTailsColdRouteCapture
+com.openggf.tools.TestLrzWideBossColdRouteCapture
+com.openggf.tools.TestMhzPairColdRouteCapture
+com.openggf.tools.TestMhzWideColdRouteCapture
+com.openggf.tools.TestSszColdRouteCapture
+com.openggf.tools.TestSszSoloColdRouteCapture
+com.openggf.tools.TestSszTailsColdRouteCapture
+com.openggf.tools.audio.timeline.TestS1GameplayAudioTimelineCli
+```
+
+That bounded comparison completed all **77 cases with the same 28 assertion
+failures, zero errors/skips**. Test identities, exception types and complete
+assertion messages match. Only the already verified JVM-specific
+`RewindObjectStateBlob@hex` identities were normalized. For the one message
+over the category summary's 2,048-character limit, its retained `detail` contains
+the complete baseline assertion, with every concrete field preserved. This is
+failure attribution, not a claim that unreported world state matches or that the
+full baseline suite passed. The terminal session ended with 143 while its Maven
+child continued; all 14 XML reports and the Maven terminal failure summary were
+observed after both Maven and Surefire exited. No wrapper success is inferred.
+Consumed category diagnostics and the owned detached baseline are removed after
+recording this evidence.
+
+Final SDK/example/tempo coverage used the queued exact selector
+`TestModApiSignatureSurface,TestModApiSdkPackager,TestModApiJavadocTool,TestStarpostValleyExample,TestStarpostValleyScene,TestSmpsMusicTempoPercent`:
+**43/43 pass, zero skips**, including all three ROM tempo modes at 65/85/100%,
+SFX at 25%, and fractional-phase restore. Creator packaging reports zero
+findings. Build-only packaging reached Maven `BUILD SUCCESS`; after its terminal
+session ended with 143, the direct `ModSdkArtifactVerifier` passed independently
+on the thin, fat and SDK jars. A new packaged production capture observes 65%
+in both the scene and native act, with zero creator faults, and visibly confirms
+the farmer-select tail accessory.
+
+The final trailer is **106.42 seconds, 1920×1080 at 60 fps**, with stereo 48 kHz
+AAC. Full `ffmpeg -v error -xerror -i <promo> -f null -` decode passes, every
+source cut is in range and raw PCM has 800 stereo samples per captured frame.
+All three playback copies share SHA-256
+`6f11661d72d58e34f7f7061febae8904d1fa1473d9895a3ad358976a2c02f261`.
+The export measures −16.7 LUFS and −1.8 dBFS true peak. Chapter stills and all
+three seasonal gallery locations were inspected; the opening's continuous
+native camera rows and new Tails capture cover the reported visual defects.

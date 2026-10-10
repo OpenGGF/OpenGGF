@@ -150,6 +150,13 @@ public sealed interface AudioCommand {
     record SetSpeedMultiplier(int multiplier) implements AudioCommand {}
 
     @com.openggf.game.ModApi
+    record SetMusicTempoPercent(int percent) implements AudioCommand {
+        public SetMusicTempoPercent {
+            com.openggf.audio.MusicTempoPercent.requireValid(percent);
+        }
+    }
+
+    @com.openggf.game.ModApi
     record ChangeMusicTempo(int dividingTiming) implements AudioCommand {}
 
     @com.openggf.game.ModApi

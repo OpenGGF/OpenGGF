@@ -30,6 +30,7 @@ public final class ModApiVersion {
      * SFX by local name without numeric ids or creator-supplied ownership.
      * Scene audio can play any supplied ROM's song as the base driver's music through
      * the cross-game donor route, under a donor registration scoped to the scene.
+     * Scene-owned ROM music pacing preserves pitch and SFX and follows retained acts.
      * Scene visits can suspend into owned registered acts with typed launch/result,
      * native centre spawn overrides and once-only frame-boundary exit consumption.
      * Entry/exit isolate rewind timelines while preserving the scene and its ROM library.

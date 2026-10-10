@@ -60,6 +60,32 @@ class TestSceneDonorMusic {
     private static final int GHZ_FIRST_PASS = 3_168;
 
     @TempDir Path temp;
+    @Test
+    void sceneMusicPacingFollowsRetainedActsAndEndsWithTheOwner() throws Exception {
+        freshS3k();
+        try (var capture = audio.beginLiveCaptureAudio(60)) {
+            SceneContext ctx = openScene();
+            ctx.audio().setMusicTempoPercent(70);
+            assertTrue(ctx.audio().playMusic("s1", GREEN_HILL));
+            present(capture, 30);
+            assertEquals(70, audio.captureLogicalSnapshot().presentation().smpsSession().musicTempoPercent());
+            host.suspend();
+            audio.setRom(GameServices.rom().getRom());
+            audio.setAudioProfile(new Sonic3kAudioProfile()); // Real level entry rebuilds the base source.
+            audio.playMusic(0x20); // Native retained act owns the S3K base track.
+            present(capture, 30);
+            var nativeState = audio.captureLogicalSnapshot().presentation();
+            assertEquals(70, nativeState.smpsSession().musicTempoPercent());
+            assertEquals(70, nativeState.smpsLogical().sequencers().stream()
+                    .filter(e -> !e.sfx()).findFirst().orElseThrow().snapshot().musicTempoPercent());
+            closeScene();
+            present(capture, 2);
+            assertEquals(100, audio.captureLogicalSnapshot().presentation().smpsSession().musicTempoPercent());
+            ctx.audio().setMusicTempoPercent(25); // Retired contexts cannot reclaim the music clock.
+            present(capture, 2);
+            assertEquals(100, audio.captureLogicalSnapshot().presentation().smpsSession().musicTempoPercent());
+        }
+    }
     private AudioManager audio;
     private ModSceneHost host;
 

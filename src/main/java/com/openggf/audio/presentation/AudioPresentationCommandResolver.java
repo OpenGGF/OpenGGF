@@ -474,6 +474,8 @@ public final class AudioPresentationCommandResolver {
                     enqueue(new SetSpeedShoes(speed.enabled()));
             case AudioCommand.SetSpeedMultiplier speed ->
                     enqueue(new SetSpeedMultiplier(speed.multiplier()));
+            case AudioCommand.SetMusicTempoPercent tempo ->
+                    enqueue(new AudioPresentationCommand.SetMusicTempoPercent(tempo.percent()));
             case AudioCommand.ChangeMusicTempo tempo ->
                     enqueue(new ChangeMusicTempo(tempo.dividingTiming()));
             case AudioCommand.ResetRingAlternation ring ->

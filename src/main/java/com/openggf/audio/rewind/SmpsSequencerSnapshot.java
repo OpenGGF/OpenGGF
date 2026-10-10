@@ -20,6 +20,8 @@ public record SmpsSequencerSnapshot(
         int psgLatchChannel,
         int speedMultiplier,
         int speedupTimeout,
+        int musicTempoPercent,
+        int musicTempoPhase,
         FadeSnapshot fade,
         double sampleRate,
         double samplesPerFrame,
@@ -31,6 +33,9 @@ public record SmpsSequencerSnapshot(
         List<SmpsTrackSnapshot> tracks) {
 
     public SmpsSequencerSnapshot {
+        com.openggf.audio.MusicTempoPercent.requireValid(musicTempoPercent);
+        if (musicTempoPhase < 0 || musicTempoPhase >= 100)
+            throw new IllegalArgumentException("music tempo phase must be between 0 and 99");
         Objects.requireNonNull(region, "region");
         fade = Objects.requireNonNull(fade, "fade");
         tracks = List.copyOf(Objects.requireNonNull(tracks, "tracks"));

@@ -248,6 +248,7 @@ public final class ModSceneHost {
         private int heldButtons;
         private int pressedButtons;
         private int repeatedButtons;
+        private boolean musicTempoOwned;
         private boolean previousLeft;
         private boolean previousRight;
         private int lastX = -1;
@@ -298,6 +299,15 @@ public final class ModSceneHost {
                     }
                     if (donorMusic == null) donorMusic = new SceneDonorMusic(services.audio(), services.romLibrary());
                     return donorMusic.play(gameId, musicId);
+                }
+
+                @Override
+                public void setMusicTempoPercent(int percent) {
+                    com.openggf.audio.MusicTempoPercent.requireValid(percent);
+                    if (context == Context.this && services != null && services.audio() != null) {
+                        services.audio().setMusicTempoPercent(percent);
+                        musicTempoOwned = true;
+                    }
                 }
 
                 @Override
@@ -369,6 +379,10 @@ public final class ModSceneHost {
         }
 
         void closeResources() {
+            if (musicTempoOwned && services != null && services.audio() != null) {
+                services.audio().setMusicTempoPercent(100);
+                musicTempoOwned = false;
+            }
             network.close();
             try {
                 if (music != null) music.close();

@@ -57,6 +57,31 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSmpsDriverSession {
     @Test
+    void creatorPacingFollowsSongChangesAndRewindWithoutChangingSfx() {
+        var session = SmpsSessionTestFixtures.session(new SmpsSessionTestFixtures.RecordingObserver());
+        session.install();
+        session.applyCommand(new SmpsSessionCommand.SetMusicTempoPercent(70));
+        session.queueActivation(activationWithFmTrack(1));
+        session.applyCommand(new SmpsSessionCommand.AdmitSfx(continuousSfx(0x65, 4)));
+        var logical = session.captureLogicalSnapshot();
+        assertEquals(70, logical.sequencers().stream().filter(e -> !e.sfx()).findFirst()
+                .orElseThrow().snapshot().musicTempoPercent());
+        assertEquals(100, logical.sequencers().stream().filter(e -> e.sfx()).findFirst()
+                .orElseThrow().snapshot().musicTempoPercent());
+        var savedSession = session.captureSnapshot();
+        session.applyCommand(new SmpsSessionCommand.SetMusicTempoPercent(100));
+        session.commitRestore(session.prepareRestore(savedSession, logical,
+                ignored -> SmpsSessionTestFixtures.dac()));
+        session.queueActivation(activationWithFmTrack(2));
+        assertEquals(70, session.captureSnapshot().musicTempoPercent());
+        assertEquals(70, session.captureLogicalSnapshot().sequencers().getFirst()
+                .snapshot().musicTempoPercent());
+        session.applyCommand(new SmpsSessionCommand.HardReset());
+        assertEquals(100, session.captureSnapshot().musicTempoPercent());
+        session.close();
+    }
+
+    @Test
     void resettingTempoDoesNotChangeTheSourcesSfxPreservationPolicy() {
         var session = SmpsSessionTestFixtures.session(new SmpsSessionTestFixtures.RecordingObserver());
         session.install();

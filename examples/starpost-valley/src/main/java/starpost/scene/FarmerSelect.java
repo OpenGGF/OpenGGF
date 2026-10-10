@@ -57,7 +57,9 @@ final class FarmerSelect implements Screen {
             int cx = w / 2 + (i - 1) * 100;
             SceneSprite pose = wait.pose(shell.art.farmer(code(i)));
             SceneDraw style = i == cursor ? SceneDraw.plain() : SceneDraw.plain().withTint(0xFF808080);
-            canvas.draw(pose, cx, 120 - (pose.height() - pose.originY()), style);
+            float originY = 120 - (pose.height() - pose.originY());
+            if (i == 1) Anim.drawTails(canvas, shell.art.tailsTails, wait.id(), shell.ticks, cx, originY, style);
+            canvas.draw(pose, cx, originY, style);
             String name = code(i).toUpperCase();
             Text.shadow(canvas, name, cx - canvas.textWidth(name) / 2, 128, i == cursor ? Text.YELLOW : Text.GREY);
         }

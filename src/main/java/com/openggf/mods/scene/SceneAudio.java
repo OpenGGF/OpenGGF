@@ -27,6 +27,19 @@ public interface SceneAudio {
         return false;
     }
 
+    /**
+     * Sets ROM music to 25–100 percent of its original pace (100 is normal).
+     * Applies to current and subsequent songs, including native acts entered by
+     * a retained scene. Note pitch, DAC sample pitch, SFX and gameplay clocks
+     * are unchanged. The production host restores normal pacing on final exit.
+     * Creator WAV/OGG playback is unaffected. Hosts without this capability
+     * may retain the validated silent default.
+     */
+    default void setMusicTempoPercent(int percent) {
+        if (percent < 25 || percent > 100)
+            throw new IllegalArgumentException("music tempo must be between 25 and 100 percent");
+    }
+
     void playSfx(int sfxId);
 
     /**

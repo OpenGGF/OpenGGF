@@ -29,6 +29,7 @@ public final class Music {
 
     public Music(SceneContext ctx) {
         this.ctx = ctx;
+        ctx.audio().setMusicTempoPercent(65);
     }
 
     /** Asks for a track; nothing happens if it is already playing (or its ROM was not supplied). */

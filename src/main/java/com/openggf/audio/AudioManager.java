@@ -1254,6 +1254,7 @@ public class AudioManager implements MusicRestoreSink {
             case AudioCommand.RestoreMusic ignored -> backend.restoreMusic();
             case AudioCommand.SetSpeedShoes speed -> backend.setSpeedShoes(speed.enabled());
             case AudioCommand.SetSpeedMultiplier speed -> backend.setSpeedMultiplier(speed.multiplier());
+            case AudioCommand.SetMusicTempoPercent tempo -> backend.setMusicTempoPercent(tempo.percent());
             case AudioCommand.ChangeMusicTempo tempo -> backend.changeMusicTempo(tempo.dividingTiming());
             case AudioCommand.ResetRingAlternation reset -> ringLeft = reset.ringLeft();
         }
@@ -3097,10 +3098,20 @@ public class AudioManager implements MusicRestoreSink {
         return musicMap.get(music);
     }
 
+    /** Sets creator ROM music pacing; the default 100 preserves shipped-ROM timing. */
+    public void setMusicTempoPercent(int percent) {
+        MusicTempoPercent.requireValid(percent);
+        if (suppressingRewindReplay()) return;
+        recordTimelineCommand(new AudioCommand.SetMusicTempoPercent(percent));
+        // Publish this opt-in scene control before an immediate native-act source
+        // rebuild. Applying pending commands here does not advance the sound clock.
+        if (shadowProducer != null) shadowProducer.applyPendingCommandsAtOwnerBoundary();
+        if (sendLiveBackendCommands()) backend.setMusicTempoPercent(percent);
+    }
+
     /**
      * Change the music dividing timing (tempo).
      * ROM: Change_Music_Tempo. Lower values = faster playback.
-     *
      * @param newDividingTiming the new dividing timing value
      */
     public void changeMusicTempo(int newDividingTiming) {
@@ -3671,11 +3682,17 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     private void replaceShadowPresentationForBaseMutation() {
+        int musicTempoPercent = shadowSmpsSession == null ? 100
+                : shadowSmpsSession.captureSnapshot().musicTempoPercent();
         clearPreparedReverseRestore();
         detachLiveCaptureAudioHandleForRebuild();
         closeShadowPresentation();
         ensurePresentationSink();
         ensureShadowPresentation();
+        if (musicTempoPercent != 100) {
+            shadowSmpsSession.applyCommand(
+                    new com.openggf.audio.session.SmpsSessionCommand.SetMusicTempoPercent(musicTempoPercent));
+        }
     }
 
     private void restoreShadowMusic() {

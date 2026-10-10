@@ -1523,7 +1523,7 @@ class TestAudioDiagnosticObservers {
                 state.normalTempo(), state.commData(), state.fm6DacOff(),
                 maxTicks, state.pitch(), state.sfxPriority(),
                 state.specialSfx(), state.sfx(), state.psgLatchChannel(),
-                speedMultiplier, speedupTimeout, fade,
+                speedMultiplier, speedupTimeout, state.musicTempoPercent(), state.musicTempoPhase(), fade,
                 state.sampleRate(), state.samplesPerFrame(), 0.0,
                 tempoWeight, tempoAccumulator, state.dividingTiming(),
                 state.primed(), state.tracks()));

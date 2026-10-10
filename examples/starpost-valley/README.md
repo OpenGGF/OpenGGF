@@ -12,7 +12,9 @@ Everything you see and hear comes from your own ROMs at runtime: Green Hill is S
 blocks, collision, background and palette, and the town is built from its pixels; Sonic, Tails,
 Knuckles, the Egg Robo, the shields and the title-card lettering come from Sonic 3 & Knuckles; the
 Marble Ruins are Marble, Labyrinth and Scrap Brain Zones. The soundtrack is the games' own songs,
-played by the sound driver with the sound effects over them. The jar holds code plus a few original
+played by the sound driver at 65% of their original pace, with their pitch preserved and sound
+effects at normal speed. The calmer pace follows the valley's native acts and returns to normal
+when you leave the mod. The jar holds code plus a few original
 pictures of crops, fish, seed packets and food.
 
 ## Requirements

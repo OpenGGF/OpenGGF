@@ -55,6 +55,7 @@ CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommand$ResetRingAlternation vi
 CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommand$RestoreCause visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommand$RestoreMusic visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommand$RetainGlobalStop visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommand$SetMusicTempoPercent visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommand$SetSpeedMultiplier visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommand$SetSpeedShoes visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommand$SfxRoute visible @com.openggf.game.ModApi
@@ -968,6 +969,7 @@ CONSTRUCTOR com.openggf.audio.rewind.AudioCommand$ReferenceLimitation public  <i
 CONSTRUCTOR com.openggf.audio.rewind.AudioCommand$ResetRingAlternation public  <init>(boolean)
 CONSTRUCTOR com.openggf.audio.rewind.AudioCommand$RestoreMusic public  <init>(com.openggf.audio.rewind.AudioCommand$RestoreCause)
 CONSTRUCTOR com.openggf.audio.rewind.AudioCommand$RetainGlobalStop public  <init>(int)
+CONSTRUCTOR com.openggf.audio.rewind.AudioCommand$SetMusicTempoPercent public  <init>(int)
 CONSTRUCTOR com.openggf.audio.rewind.AudioCommand$SetSpeedMultiplier public  <init>(int)
 CONSTRUCTOR com.openggf.audio.rewind.AudioCommand$SetSpeedShoes public  <init>(boolean)
 CONSTRUCTOR com.openggf.audio.rewind.AudioCommand$SilencePsg public  <init>(int)
@@ -2919,6 +2921,7 @@ INTERFACE com.openggf.audio.rewind.AudioCommand$ReferenceLimitation com.openggf.
 INTERFACE com.openggf.audio.rewind.AudioCommand$ResetRingAlternation com.openggf.audio.rewind.AudioCommand
 INTERFACE com.openggf.audio.rewind.AudioCommand$RestoreMusic com.openggf.audio.rewind.AudioCommand
 INTERFACE com.openggf.audio.rewind.AudioCommand$RetainGlobalStop com.openggf.audio.rewind.AudioCommand
+INTERFACE com.openggf.audio.rewind.AudioCommand$SetMusicTempoPercent com.openggf.audio.rewind.AudioCommand
 INTERFACE com.openggf.audio.rewind.AudioCommand$SetSpeedMultiplier com.openggf.audio.rewind.AudioCommand
 INTERFACE com.openggf.audio.rewind.AudioCommand$SetSpeedShoes com.openggf.audio.rewind.AudioCommand
 INTERFACE com.openggf.audio.rewind.AudioCommand$SilencePsg com.openggf.audio.rewind.AudioCommand
@@ -3132,6 +3135,7 @@ METHOD com.openggf.audio.AudioManager public  void resume()
 METHOD com.openggf.audio.AudioManager public  void retainGlobalStop(int)
 METHOD com.openggf.audio.AudioManager public  void setBackendForLaunch(com.openggf.audio.AudioBackend)
 METHOD com.openggf.audio.AudioManager public  void setForwardPlaybackRate(double)
+METHOD com.openggf.audio.AudioManager public  void setMusicTempoPercent(int)
 METHOD com.openggf.audio.AudioManager public  void setReversePlaybackRate(double)
 METHOD com.openggf.audio.AudioManager public  void setRewindHistoryArmed(boolean)
 METHOD com.openggf.audio.AudioManager public  void setScenePcmSource(com.openggf.audio.presentation.ScenePcmSource)
@@ -3387,6 +3391,10 @@ METHOD com.openggf.audio.rewind.AudioCommand$RetainGlobalStop public  int source
 METHOD com.openggf.audio.rewind.AudioCommand$RetainGlobalStop public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.audio.rewind.AudioCommand$RetainGlobalStop public,final  int hashCode()
 METHOD com.openggf.audio.rewind.AudioCommand$RetainGlobalStop public,final  java.lang.String toString()
+METHOD com.openggf.audio.rewind.AudioCommand$SetMusicTempoPercent public  int percent()
+METHOD com.openggf.audio.rewind.AudioCommand$SetMusicTempoPercent public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.audio.rewind.AudioCommand$SetMusicTempoPercent public,final  int hashCode()
+METHOD com.openggf.audio.rewind.AudioCommand$SetMusicTempoPercent public,final  java.lang.String toString()
 METHOD com.openggf.audio.rewind.AudioCommand$SetSpeedMultiplier public  int multiplier()
 METHOD com.openggf.audio.rewind.AudioCommand$SetSpeedMultiplier public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.audio.rewind.AudioCommand$SetSpeedMultiplier public,final  int hashCode()
@@ -10901,6 +10909,7 @@ METHOD com.openggf.mods.scene.SceneArt public,abstract  com.openggf.mods.scene.S
 METHOD com.openggf.mods.scene.SceneArt public,abstract  com.openggf.mods.scene.SceneRomArt rom()
 METHOD com.openggf.mods.scene.SceneAudio public  boolean playMusic(java.lang.String,int)
 METHOD com.openggf.mods.scene.SceneAudio public  boolean playSfx(java.lang.String)
+METHOD com.openggf.mods.scene.SceneAudio public  void setMusicTempoPercent(int)
 METHOD com.openggf.mods.scene.SceneAudio public,abstract  void fadeOutMusic()
 METHOD com.openggf.mods.scene.SceneAudio public,abstract  void playMusic(int)
 METHOD com.openggf.mods.scene.SceneAudio public,abstract  void playSfx(int)
@@ -13087,6 +13096,7 @@ NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioComma
 NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$RestoreCause
 NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$RestoreMusic
 NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$RetainGlobalStop
+NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$SetMusicTempoPercent
 NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$SetSpeedMultiplier
 NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$SetSpeedShoes
 NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$SfxRoute
@@ -13398,6 +13408,7 @@ PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioComm
 PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$ResetRingAlternation
 PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$RestoreMusic
 PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$RetainGlobalStop
+PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$SetMusicTempoPercent
 PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$SetSpeedMultiplier
 PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$SetSpeedShoes
 PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$SilencePsg
@@ -13528,6 +13539,7 @@ RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$ReferenceLimitation sourc
 RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$ResetRingAlternation ringLeft boolean
 RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$RestoreMusic cause com.openggf.audio.rewind.AudioCommand$RestoreCause
 RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$RetainGlobalStop sourceCommandId int
+RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$SetMusicTempoPercent percent int
 RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$SetSpeedMultiplier multiplier int
 RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$SetSpeedShoes enabled boolean
 RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$SilencePsg sourceCommandId int
@@ -16544,6 +16556,7 @@ TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$ReferenceL
 TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$ResetRingAlternation SUPER java.lang.Record
 TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$RestoreMusic SUPER java.lang.Record
 TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$RetainGlobalStop SUPER java.lang.Record
+TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$SetMusicTempoPercent SUPER java.lang.Record
 TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$SetSpeedMultiplier SUPER java.lang.Record
 TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$SetSpeedShoes SUPER java.lang.Record
 TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$SilencePsg SUPER java.lang.Record
@@ -16765,6 +16778,7 @@ TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommand$ResetRingAlternation @com.
 TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommand$RestoreCause @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommand$RestoreMusic @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommand$RetainGlobalStop @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommand$SetMusicTempoPercent @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommand$SetSpeedMultiplier @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommand$SetSpeedShoes @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommand$SfxRoute @com.openggf.game.ModApi

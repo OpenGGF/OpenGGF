@@ -33,6 +33,7 @@ public sealed interface AudioPresentationCommand
         AudioPresentationCommand.SetVoicePitch,
         AudioPresentationCommand.SetSpeedShoes,
         AudioPresentationCommand.SetSpeedMultiplier,
+        AudioPresentationCommand.SetMusicTempoPercent,
         AudioPresentationCommand.ChangeMusicTempo,
         AudioPresentationCommand.ResetRingAlternation,
         AudioPresentationCommand.ToggleMute,
@@ -351,6 +352,12 @@ public sealed interface AudioPresentationCommand
     }
 
     record SetSpeedMultiplier(int multiplier) implements AudioPresentationCommand {
+    }
+
+    record SetMusicTempoPercent(int percent) implements AudioPresentationCommand {
+        public SetMusicTempoPercent {
+            com.openggf.audio.MusicTempoPercent.requireValid(percent);
+        }
     }
 
     record ChangeMusicTempo(int dividingTiming) implements AudioPresentationCommand {
