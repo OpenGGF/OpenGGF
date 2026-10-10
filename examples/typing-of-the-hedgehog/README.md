@@ -1,10 +1,11 @@
 # Typing of the Hedgehog — type to save South Island
 
-A code mod for OpenGGF's JVM build, after *The Typing of the Dead*: Sonic runs the real
-Sonic 1, Sonic 2 and Sonic 3 & Knuckles acts on his own, and at each stand the badniks of
-that zone come for him carrying words. Type a word to destroy its badnik. Type the rings
-that fly when he is hit to win them back, tag the badniks he smashes on the run for a
-bonus, and type Robotnik's weak points, taunts and trivia answers to beat each zone's boss.
+A code mod for OpenGGF's JVM build, after *The Typing of the Dead*: on "3, 2, 1, START!"
+Sonic spindashes into a real stock act and runs it on his own, stopping four or five times
+on open ground where the zone's badniks (including the ones already there) come for him
+carrying words. Type a word and Sonic homing-attacks its badnik. Type the rings that fly
+when he is hit to win them back, and type Robotnik's weak points, taunts and trivia answers
+to beat each zone's boss.
 
 Everything you see and hear from the games (zones, Sonic, badniks, bosses, monitors,
 animals, explosions, score sprites, music and sound effects) comes from your own ROMs at
@@ -29,31 +30,32 @@ python3 examples/typing-of-the-hedgehog/build.py    # just compile and package t
 
 To install it normally, copy the jar into `mods/` and enable it in the Mod Manager. The
 mod's title opens from the master title; holding Escape returns there. The mod plays at
-the native 320×224 (it requires that width, and the window refits); the rails Sonic runs
-were validated at 320 pixels, where the stock acts' objects activate exactly as recorded.
+the native 320×224 (it requires that width, and the window refits); the routes Sonic runs
+were validated at 320 pixels, where the stock acts' objects activate exactly as authored.
 
 ## How to play
 
 Type the word on a badnik's plate. The first letter you type locks on to the most urgent
 plate starting with it; the rest must follow. A wrong key is a miss and breaks your chain;
-Backspace lets go of a locked word. Escape pauses (Resume, Retry the stand, Quit).
+Backspace lets go of a locked word. Escape pauses (Resume, Retry the fight, Quit). The keys
+light up on the keyboard Sonic wears as you type: gold for a hit, red for a miss.
 
-- **Stands.** The run stops and the zone's badniks come in, each with its own move: rushers
-  charge, divers swoop, shooters fire, segmented badniks bring a chain of words, orbiters
-  shield a word behind smaller ones, surfacers pop up, armoured ones take two words.
-  Clear the wave and Sonic runs on.
+- **Fights.** Sonic stops on open ground and the zone's badniks come in, the stock ones
+  already there first, each with its own move: rushers charge, divers swoop, shooters fire,
+  segmented badniks bring a chain of words, orbiters shield a word behind smaller ones,
+  surfacers pop up, armoured ones take two words. Each finished word sends Sonic on a homing
+  attack: he curls up, strikes the badnik and bounces back to his spot. Clear the wave, and
+  after a short celebration he spindashes on.
 - **Rings.** Sonic carries rings as a buffer: a badnik that reaches him spills them as
-  letter-rings you can type back before they fade. Hit with none, he loses a life (or, with
-  No-Fail, retries the stand).
-- **Monitors.** Some stands bring a monitor with a word: *shield*, *speed shoes* (slow
+  letter-rings you can type back before they fade. Hit with none, he loses a life and the
+  fight starts again (with No-Fail he shrugs it off, rings refilled).
+- **Monitors.** Some fights bring a monitor with a word: *shield*, *speed shoes* (slow
   motion), *invincible*, *super ring*, *extra life*. The Eggman monitor is a trap.
 - **Rescues.** Freed animals carry a short word; typing it rescues them for points.
-- **Run tags.** While Sonic runs, the badniks he is about to smash wear words; tag one
-  before he reaches it for a bonus.
 - **Bosses.** Each zone's boss is built from that zone's own boss sprites. It opens a
   window carrying a phrase, one of Robotnik's taunts to type back, or a trivia question
   with three answers; close it in time and he takes a hit, miss and he lunges at Sonic.
-  Eight hits win. In Sonic 3 & Knuckles act 1 the boss is the act's miniboss.
+  Eight hits win. The fight happens in the stock boss arena, with the stock boss replaced.
 - **Scoring.** Kills chain into a multiplier; the tally adds speed, accuracy, ring and
   perfect bonuses and grades the act S to E.
 
@@ -67,7 +69,7 @@ and it plays a demo, typing by itself; any key returns.
   play order across a chapter map. Clearing an act opens it for Arcade and Boss Rush.
 - **Arcade**: any cleared act, with a local top 10 per act and difficulty.
 - **Boss Rush**: cleared bosses back to back; each win raises that boss's star level.
-- **Endless**: one stand in a cleared zone with escalating waves.
+- **Endless**: one fight in a cleared zone with escalating waves.
 - **Tails' Typing School**: home row, top row, bottom row, numbers, capitals and
   punctuation lessons; Ring Rush, Sudden Death, Reflex, Long Words, Phrases and Boss
   Training drills graded A to E; a Final Exam once every drill is at C or better; and a
@@ -81,26 +83,34 @@ and it plays a demo, typing by itself; any key returns.
 
 ## Acts
 
-Twenty-five acts have rails (the recorded runs Sonic follows):
+Four acts have forward routes so far:
 
 | Game | Acts |
 |---|---|
-| Sonic 1 | Green Hill 3, Marble 3, Spring Yard 3, Labyrinth 3, Star Light 3, Scrap Brain 2, Final Zone |
-| Sonic 2 | Emerald Hill 2, Aquatic Ruin 2, Hill Top 2, Mystic Cave 2, Oil Ocean 2, Metropolis 3, Sky Chase, Wing Fortress, Death Egg |
-| Sonic 3 & Knuckles | Hydrocity 1, Marble Garden 1, Carnival Night 1, Flying Battery 1, Mushroom Hill 1, Sandopolis 1 and 2, Lava Reef 1, Death Egg 1 |
+| Sonic 1 | Green Hill 3 (five fights and the wrecking-ball boss); Final Zone (boss only) |
+| Sonic 2 | Emerald Hill 2 (five fights and the drill-car boss); Death Egg (boss only) |
+| Sonic 3 & Knuckles | none yet |
 
-Story stops without a rail yet show as under construction: Chemical Plant 2 and Casino
-Night 2 replay differently between sessions; Angel Island 1, IceCap 1, Launch Base 1, Sky
-Sanctuary and Doomsday are not yet reproducible from a cold start.
+Every other story stop shows as under construction. A route must spindash off a standing
+start, never run back the way it came, stop four or five times on open, near-flat ground
+(the first within about ten seconds), and reach the stock boss arena without Sonic being
+hurt or smashing a badnik himself; a search builds it from the act's own physics. The other
+acts did not yet yield such a route: their early ground is sloped, sandy or underwater, they
+start on the Tornado, or the search could not get past a wall, ramp or loop exit. The design
+note lists each act and why.
 
 ## How it is built
 
-- **Rails.** Each act's rail is a validated controller program (pad masks per row) that
-  drives the stock act from a cold start, with stand and boss rows. A stand captures a
-  course checkpoint, holds Sonic while the world keeps living, and restores the checkpoint
-  when the wave is cleared, so the run continues exactly as recorded however long the
-  stand took. Stock badniks stay in the level: removing them would change the run.
-  `TestTypingHedgehogRails` plays every shipped rail through the real course.
+- **Forward routes.** Each act's route (`rails/*.rail`) is a validated controller program
+  (pad masks per row) that drives the stock act from a cold start: the spindash countdown,
+  the run, four or five fights and the boss arena. A bounded search over the headless engine
+  builds it (`TypingHedgehogForwardRailBuilder`), checking every row for hurt, death,
+  backtracking and native kills, and each fight site for open, near-flat ground. At a fight
+  the course captures a checkpoint, converts the stock badniks on screen into typing targets
+  and lets the world live on; when the wave is cleared it restores the checkpoint and removes
+  the same badniks again, so the run continues exactly as authored however long the fight
+  took. `TestTypingHedgehogRails` plays every shipped route through the real course, typed at
+  once, held, retried and from another clock phase, and compares the native state.
 - **Puppets.** Typing badniks, effects and bosses are records in the course's stagehand,
   drawn by slotless auxiliary objects with the zone's ROM art; they never touch native
   object slots and stay out of rewind snapshots.
@@ -108,8 +118,8 @@ Sanctuary and Doomsday are not yet reproducible from a cold start.
   art keys and ROM animation frames; `bosses/<game>.txt` builds each boss from ROM sprite
   parts per mood (idle, window open, lunge, hit, laugh, defeat, flee), with pendulums
   (Green Hill's wrecking ball), orbits (Metropolis's orb shield) and per-act minibosses.
-  `TestTypingHedgehogArt{Sonic1,Sonic2,S3k}` load every rail act and fail on any frame the
-  act cannot draw.
+  `TestTypingHedgehogArt{Sonic1,Sonic2,S3k}` load every route's act and fail on any frame
+  the act cannot draw.
 - **Frame controller.** The course is a Mod API `GameplayFrameController`: it supplies the
   native pad input from the rail, captures keyboard text, and draws the HUD and plates as
   screen-space fills in an original 5×9 font.
