@@ -14,6 +14,7 @@ public final class ActGround implements Runner.Ground {
         if (x<0||x>=width||y<0||y>=4096) return false;
         var level=services.levelManager();
         var desc=level.getChunkDescAt((byte)0,x,y);
+        if (desc == null || !desc.isSolidityBitSet(12)) return false;
         var tile=level.getSolidTileForChunkDesc(desc,0x0C,false);
         if (tile==null) return false;
         int column=x&15, row=y&15;

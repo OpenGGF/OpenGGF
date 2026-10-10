@@ -19,6 +19,9 @@ public final class StarpostValleyMod implements GgfMod {
         RealValley.register(context);
         var destination = new com.openggf.game.ZoneKey.Mod("starpost-valley", RealValley.ZONE);
         starpost.realtown.TownContent.registerInput(context, destination, town);
+        // S1 ROM-art TIME/day clock and wallet RINGS are drawn by the town HUD.
+        context.registerHudProfile(new com.openggf.mods.code.ModHudProfileContribution(destination,
+            new com.openggf.level.objects.HudProfile(java.util.List.of())));
         context.registerStartupScene(() -> new StarpostScene(town));
     }
 }

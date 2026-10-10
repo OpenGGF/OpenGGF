@@ -20,11 +20,16 @@ public final class StarpostScene implements ModScene, DebuggableScene {
     private final starpost.realtown.TownSession town;
     private PlayScreen actPlay;
     private boolean returnToAct;
-    private int returnX = 190, returnY = 173, healthRings;
+    private int returnX, returnY, healthRings;
 
     private void launchTown(PlayScreen play) {
-        if (!returnToAct || actPlay != play) { returnX = 190; returnY = 173; healthRings = 0; }
+        boolean fresh = !returnToAct || actPlay != play;
         prepareTownAct();
+        if (fresh) {
+            returnX = starpost.realvalley.TownTerrain.entryX();
+            returnY = starpost.realvalley.TownTerrain.entryY(town.layout(), shell.game.farmer);
+            healthRings = 0;
+        }
         returnToAct = false;
         shell.in.consume();
         shell.music.parkForAct();
@@ -40,8 +45,8 @@ public final class StarpostScene implements ModScene, DebuggableScene {
         healthRings = result.rings();
         var state = result.state();
         String place = state.getOrDefault("town.place", "farm_gate");
-        returnX = Integer.parseInt(state.getOrDefault("town.returnX", "190"));
-        returnY = Integer.parseInt(state.getOrDefault("town.returnY", "173"));
+        returnX = Integer.parseInt(state.getOrDefault("town.returnX", Integer.toString(returnX)));
+        returnY = Integer.parseInt(state.getOrDefault("town.returnY", Integer.toString(returnY)));
         starpost.realtown.TownBridge.resume(shell, actPlay,
             new starpost.realtown.TownSession.HandBack(place, state.get("town.event"), returnX, returnY));
         returnToAct = !place.equals("farm_gate") && !place.equals("time_up") && !place.equals("fainted");

@@ -57,6 +57,7 @@ public final class ValleyLevel {
         int springX = RealValley.columnOf(RealValley.SPRING_BLOCK) * RealValley.S1_BLOCK + 20;
         objects.add(spawn(objects.size(), springX, floorAt(terrain, springX) - 8, SPRING, SPRING_YELLOW_UP));
         objects.addAll(loopSwappers(objects.size()));
+        objects.addAll(TownTerrain.admission(terrain));
         objects.sort(Comparator.comparingInt(ObjectSpawn::x));
         return objects;
     }

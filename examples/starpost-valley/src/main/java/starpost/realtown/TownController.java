@@ -24,16 +24,16 @@ public final class TownController extends AbstractObjectInstance implements ModR
             placed = true;
             int width = town.layout().ground.right();
             town.attachGround(new ActGround(services(), width));
-            services().objectManager().addDynamicObject(new TownDecoration(TownContent.spawn(TownContent.DECORATION,0,150,192)));
-            services().objectManager().addDynamicObject(new TownDecoration(TownContent.spawn(TownContent.DECORATION,1,150,192)));
+            services().objectManager().addDynamicObject(new TownDecoration(TownContent.spawn(TownContent.DECORATION,0,spawn.x(),spawn.y())));
+            services().objectManager().addDynamicObject(new TownDecoration(TownContent.spawn(TownContent.DECORATION,1,spawn.x(),spawn.y())));
             int i=0;
             for (var def : town.people().cast.all()) {
-                var spawn = TownContent.spawn(TownContent.VILLAGER,i++,town.layout().anchor("farm_gate"),192);
+                var spawn = TownContent.spawn(TownContent.VILLAGER,i++,town.layout().anchor("farm_gate"),town.layout().ground.floorBelow(town.layout().anchor("farm_gate"),0));
                 services().objectManager().addDynamicObject(new TownVillager(spawn));
             }
             for (i=0; i<town.layout().doors.size(); i++) {
                 var door = town.layout().doors.get(i);
-                services().objectManager().addDynamicObject(new TownDoor(TownContent.spawn(TownContent.DOOR,i,door.x(),192)));
+                services().objectManager().addDynamicObject(new TownDoor(TownContent.spawn(TownContent.DOOR,i,door.x(),town.layout().ground.floorBelow(door.x(),0))));
             }
             for (var pickup : town.pickups().today(town.game(),town.layout().ground,town.layout().springX,town.layout().loopX))
                 services().objectManager().addDynamicObject(new TownPickup(TownContent.spawn(TownContent.PICKUP,
@@ -43,6 +43,7 @@ public final class TownController extends AbstractObjectInstance implements ModR
         if (entity.getDead()) town.request("fainted",null,x,y);
         boolean held=town.modal();
         town.tick(x,y,!entity.getAir());
+        if (town.presentation()!=null) town.presentation().updateMusic(x);
         if (!held && !town.modal() && !entity.getAir() && !entity.isObjectControlled()) {
             if (town.doorAction()) {
                 for (var object : services().objectManager().getActiveObjects()) {

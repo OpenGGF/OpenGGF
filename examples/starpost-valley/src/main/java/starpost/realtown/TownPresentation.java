@@ -19,12 +19,22 @@ public final class TownPresentation {
     private final PeopleArt peopleArt;
     private final FestivalSystem festivals;
     private final starpost.scene.PlayScreen play;
+    private final starpost.scene.Shell shell;
     private final Map<SceneImage,List<LevelPictureCanvas.Span>> images=LevelPictureCanvas.cache();
     public TownPresentation(Art art,FestivalSystem festivals) {
         this(art,festivals,null);
     }
     public TownPresentation(Art art,FestivalSystem festivals,starpost.scene.PlayScreen play) {
-        this.art=art; peopleArt=new PeopleArt(art); this.festivals=festivals; this.play=play;
+        this(art,festivals,play,null);
+    }
+    public TownPresentation(Art art,FestivalSystem festivals,starpost.scene.PlayScreen play,starpost.scene.Shell shell) {
+        this.art=art; peopleArt=new PeopleArt(art); this.festivals=festivals; this.play=play; this.shell=shell;
+    }
+    /** The retained context uses the same scoped donor route as the farm's soundtrack. */
+    public void updateMusic(int x) {
+        if (shell == null || play == null) return;
+        play.chooseValleyMusic(shell,x);
+        shell.music.update();
     }
     private SceneCanvas canvas(ObjectServices services) {
         return new LevelPictureCanvas(new LevelOverlayCanvas(services.graphicsManager(),
@@ -83,12 +93,17 @@ public final class TownPresentation {
     }
     public void draw(ObjectServices services,TownSession town) {
         SceneCanvas canvas=canvas(services);
-        canvas.fill(0,0,canvas.width(),17,0xE0101848);
-        String hud=town.game().calendar.clock()+"   RINGS "+town.game().rings+"   MOMENTUM "+town.game().momentum;
-        canvas.text(hud,6,5,Text.YELLOW);
+        var calendar=town.game().calendar;
+        boolean flash=town.ticks()/8%2==0;
+        art.hud.timeRow(canvas,calendar.minutes()>=24*60&&flash,
+            calendar.minutes()/60%24,calendar.minutes()%60,8);
+        art.hud.ringsRow(canvas,town.game().rings==0&&flash,town.game().rings,24);
+        String date=starpost.core.Calendar.seasonName(calendar.season())+" "+calendar.day()+" "+
+            starpost.core.Calendar.weekdayName(calendar.weekday());
+        Text.right(canvas,date,canvas.width()-8,6,Text.WHITE);
         if (!town.notice().isEmpty()) {
-            canvas.fill(6,21,canvas.textWidth(town.notice())+8,13,0xE0101848);
-            canvas.text(town.notice(),10,24,Text.WHITE);
+            canvas.fill(6,43,canvas.textWidth(town.notice())+8,13,0xE0101848);
+            canvas.text(town.notice(),10,46,Text.WHITE);
         }
         if (town.speech()!=null) town.speech().draw(peopleArt,town.people(),town.game(),canvas,town.ticks());
         else if (town.askingGift()||town.invited()) {

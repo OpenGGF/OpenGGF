@@ -138,7 +138,15 @@ public final class PlayScreen implements Screen {
     }
 
     /** The soundtrack for the place and hour (design doc §8). */
-    void chooseMusic(Shell shell) {
+    public void chooseMusic(Shell shell) {
+        chooseMusic(shell, onFarm, valley.runner.x);
+    }
+
+    public void chooseValleyMusic(Shell shell, int x) {
+        chooseMusic(shell, false, x);
+    }
+
+    private void chooseMusic(Shell shell, boolean onFarm, float x) {
         Game game = shell.game;
         int light = game.calendar.light();
         if (game.weather == Game.SWARM && light == 0) {
@@ -147,7 +155,7 @@ public final class PlayScreen implements Screen {
             shell.music.want("s1", Music.S1_LZ);
         } else if (light == 2) {
             shell.music.want("s1", Music.S1_SLZ);
-        } else if (!onFarm && valley.runner.x > 2 * Art.BLOCK && valley.runner.x < 6 * Art.BLOCK) {
+        } else if (!onFarm && x > 2 * Art.BLOCK && x < 6 * Art.BLOCK) {
             shell.music.want("s1", Music.S1_SYZ);
         } else {
             shell.music.want("s1", Music.S1_GHZ);
