@@ -789,6 +789,19 @@ A display-free mocked failure reproduced the missing reset before `e091d3b20`;
 real EGL readback and a byte-identical 760-frame capture qualified the repair.
 Successful offscreen rendering alone does not prove cleanup for the next owner.
 
+Canonical one-tick movies can hide interactive Game Speed completely
+(2026-10-10 complete Mutator Lab showcase). Compare equal presentation
+intervals with identical controller input, actual native counter deltas and
+fractional phase; use the production presentation owner and one offline PCM
+drain per outer frame. Accelerated editing or a configured percentage alone
+proves neither native speed nor audio-follow behavior. A special-stage
+provider can own gameplay while a level-only capture renderer still draws
+ordinary planes; wait for its native entry/shared reveal fades and reproduce
+Engine's stage viewport/draw order. Stage denial can suppress bonus stars
+before an entry request exists, so use native eligibility and a matched touch
+control rather than requiring a denied-request log. Menu checked state is a
+request, not proof of admission: show its Resume or reload/death consequence.
+
 Desktop visibility and input need separate proof (2026-10-07 Mutator Lab): an
 X11 window may exist but remain unmapped while `glfwShowWindow` waits. Recheck
 its exact child PID, title, `IsViewable` state and positive geometry immediately

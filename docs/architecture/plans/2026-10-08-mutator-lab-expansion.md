@@ -1187,3 +1187,135 @@ SHA-256: `4a6eef10d51dd6e0412c9e2bc2c2f470dde4b05b7b02e33db45dd94082a17a97`.
 The video, original seven source takes, exact chapter map, reproducible edit
 recipe and compact comparisons stay in the explicit external task directory
 `mutator-lab-gameplay-promo-e0603654-55a0-4717-897c-3d93d1137ff3`.
+
+## 2026-10-10 — Complete eleven-mutator gameplay showcase
+
+The user's subset feedback broadened the Opus film to every original effect,
+with visible consequences, real Lab edits and native stock controls across
+Sonic 1, Sonic 2 and Sonic 3 & Knuckles. The accepted 52.22-second cut and its
+seven source takes remain unchanged. New captures used clean PR source
+`379b6641323853f61851943fb7aadd5e7a389e01`; the current published development
+base remains `3418a15ffbdbe513d5622b735c7ba413b818707c`.
+
+The new final cut is 90.883 seconds, 5,453 frames at 1920×1080/60, H.264/AAC
+with native stereo 48 kHz PCM and fourteen chapters. Menus occupy 13.283
+seconds (14.6%). SHA-256:
+`df18fbbbb3685885c9bea0e44c55e9b15345589c7b1c4770ec426f7ea46c87e1`.
+Root kept twenty extra source frames in each stage-denial menu excerpt so
+its checked On state is readable; no gameplay or audio was retimed. The
+original Opus edit and evidence are retained separately.
+
+Alongside the earlier ring-scaled head/full-inventory Ringfall recovery,
+five-badnik Violent Explosions chain, live Gravity, No Rings and four-effect
+stack, the added scenes show:
+
+- Native 50/100/200% speed over identical input and equal presentation time,
+  plus a live 200%/audio-follow admission. The input SHA-256 is
+  `aab4a79f911f61f87d3ef76317d5e3473d01978eacb346bfaa3d5e7338c3832c`;
+  442 presentations advance the native level counter by 220, 441 and 882
+  respectively, with the initial one-tick phase documented.
+- Stealth over a fixed 200% head: actual rings and Masher defeat while the
+  body is hidden, then restoration. The admitted body suppression lasts
+  source frames 269–861; restoration is frame 862.
+- No Powerups with only Invincibility selected: actual full reload removes
+  that monitor while keeping the ten-ring monitor on the same terrain.
+- No Checkpoints: native checkpoint two, death and checkpoint respawn;
+  after the LOAD edit, the next death admits it and returns to act start.
+- S1 giant-ring touch entering the native special stage versus continuing
+  into the next act, and S3K bonus-star entry into Slots versus continued
+  main-level movement. Bonus denial is explicitly S3K-only.
+
+Positions and carried inventories for the goal/starpost footage are
+labelled on screen. Both stage entries come from controller-driven touches,
+not direct entry requests. No already-issued stage permit is claimed.
+The speed footage calls the production presentation pacing owner; canonical
+movie/trace stepping is not evidence of interactive speed. All captures use
+explicit surfaceless EGL, isolated configuration/preferences and offline
+PCM, with no display connection, user input automation or audio device.
+
+Root reviewed the native CSV before the encoded images, including the two
+stage-denial On states, native respawn/mode transitions and matching speed
+input logs. The final video decodes completely without error, all 243
+sampled game-area crops match their exact native source ranges, and all 76
+pre-normalization audio segments match their source PCM outside declared
+cut fades (4,289,288 compared stereo frames). Twelve AAC/PCM windows have
+zero measured lag, correlation at least 0.99818. These measurements qualify
+the selected edit, not universal route/art/character parity. Audio-follow
+policy is observed, but the rough pitch proxy is not a calibrated pitch
+measurement; small bonus stars are supported by their native entry
+consequence. S1's existing zero-bonus results behavior was cut past rather
+than repaired for the film.
+
+The explicit external task directory `mutator-complete-showcase-20261010`
+retains the video, source PNG/CSV/PCM/input/preference/ROM identity, chapter
+ranges, edit recipe, eleven-row coverage table and original scratch adapter.
+All 75 original capture JVMs exited zero and were reaped. The existing PR is
+updated; this work creates no second PR and does not change the main tree.
+
+### Maintained method and bounded validation
+
+The reusable capture method now lives in `MutatorGameplayCaptureTool`, with
+`--showcase` for native special-stage drawing and extended session/monitor
+observations, and `--interactive-pacing` for configured P1 events through
+`GameLoop.stepPresentationFrame` and the Engine outer audio boundary.
+The default one-tick capture, CSV columns, level rendering and PCM contract
+remain canonical. The new modes require surfaceless EGL, bounded frames,
+exclusive native input ownership and explicit held-key release on failure.
+Interactive mode rejects unsupported title-first/team/donor/debug setups.
+No physics, pacing algorithm, global capture contract or creator API changes.
+
+Matched compiled-tool/source controls prove exact PNG, state/observation/
+badnik rows and PCM for 32 canonical frames; 180 native 200% presentations
+(179 consecutive +2 tick deltas); and 1,480 frames through natural S1 giant
+ring entry, with native stage frames 1364–1479. Original 27 extended observer
+columns and monitor rows also match where applicable. This comparison does
+not use observer data to drive the game.
+
+The change-based plan falls back to all 3,122 ordinary classes. Focused
+validation replaces that local broad repeat under the proportionate policy:
+all runtime edits are confined to an opt-in tool adapter and observer/render
+path; the actual consumers, native input cleanup/rejection, pacing/fade/audio
+owners and real stage pixels are exercised directly and source-compared.
+Complete fresh structural guards still run. The previous whole ordinary,
+trace and startup qualification remains attributed above to source `8108d8d`
+and its tested base; it is not relabelled as a new whole-suite pass.
+
+Final focused controls: 42 distinct cases, no failures/errors/skips, including
+actual level/stage pixels, offline packets, pacing/fade ownership, invalid
+input rejection and held-key cleanup. Initial controls caught unsupported
+unbound B/C handling and an assertion during the native white reveal; the
+adapter permits unbound controls until requested, and the rendering fixture
+waits the observed native reveal owner rather than a fitted frame delay.
+Before delivery, root also found that the new rendering fixture depended on
+a caller-supplied EGL property. Its test-only setup now selects/restores the
+backend itself and explicitly skips only unavailable EGL; default-invocation
+verification is recorded below. These repairs do not alter the retained film.
+
+Complete normal `-Pguards` verification passed: 88 executable reports,
+675 cases, zero failures/errors/skips, 265 seconds Maven execution after
+308 seconds queue wait. All reports were fresh; 89 source selectors include
+one deprecated non-test compatibility facade. Source fingerprints remained
+unchanged throughout. No guard, allowlist or structural budget was weakened.
+
+The corrected renderer fixture passed both tests in a normal queued invocation
+without a caller backend property: two cases, zero failures/errors/skips,
+28.956 seconds execution after 164 seconds queue wait. Fresh report properties
+confirm the caller property was absent. The final test-only setup change does
+not require repeating unchanged production captures or structural guards.
+The actual compiled `ModApiSignatureSurface --snapshot` remains byte-equivalent
+to the normalized 0.7 pin (17,746 lines); policy/version/pin files are unchanged.
+
+Focused and guard commands used the ordinary queue, original absolute ROM
+properties, JDK 21 and Lua 5.4; the guard run included all three ROMs and the
+final renderer-only run needed only S1/S2. Graphics commands unset
+display/session variables and require surfaceless EGL. The focused selections were
+`TestMutatorGameplayCaptureTool,TestMutatorShowcaseRendering,TestGameplayCaptureFrameRendering,TestGameLoopNativeStageMutatorPacing,TestGameLoopMutatorPacing,TestGameplayCaptureSmoke,TestHeadlessGameBootAudioIdentity`,
+then only the changed capture-tool/renderer classes, and finally only
+`TestMutatorShowcaseRendering` without the caller GL property. Complete guards
+used the unmodified `-Pguards test -B` profile. Initial fixture failures are
+recorded above rather than discarded as green. Consumed direct-run reports
+were removed under the owned worktree metadata lease; useful light summaries
+and comparison inputs remain outside Git. All owned JVMs are absent, and the
+finished worktree is removed only after every source/document change is
+accounted for in the retained PR branch. No unchanged whole-engine run is
+claimed or repeated for this bounded tool/fixture follow-up.

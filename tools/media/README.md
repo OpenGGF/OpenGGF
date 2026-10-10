@@ -94,6 +94,75 @@ adds only that existing library to this child's preload. All options are recorde
 Never apply these changes to global display/audio settings or another window.
 See the [measurement hazards](../../docs/agent-workflow/briefing-trace-rounds.md#measurement-hazards--all-produce-plausible-output).
 
+## Mutator gameplay showcase captures
+
+`com.openggf.tools.MutatorGameplayCaptureTool` extends the normal gameplay capture
+with `observe.csv` and `badniks.csv`, read from the native owners. Its default
+stepping, input, PNG, state and offline audio route remains canonical: one native
+tick per input-log frame. This does not exercise interactive Game Speed.
+
+Two explicit options preserve the all-eleven Lab film's capture method
+(2026-10-10, source `379b6641323853f61851943fb7aadd5e7a389e01`):
+
+- `--showcase` adds `observe2.csv` and `monitors.csv`, and draws native special
+  stages after their entry fade-to-white. During that fade the level remains
+  visible; once the stage owns the frame, rendering uses Engine's screen-space
+  camera, viewport, provider, flush and fade order. Canonical stepping continues.
+- `--interactive-pacing` includes `--showcase` and delivers P1 held keys through
+  the production `InputHandler` with the configured bindings, without a logical
+  override or device polling. Each input-log row is one presentation frame:
+  `GameLoop.stepPresentationFrame()` owns the native tick budget and
+  `Engine.presentOuterAudioFrame()` services one outer audio boundary. With
+  `--audio`, drain once and write 800 stereo PCM frames per presentation, even
+  when speed admits zero or multiple native ticks. Media is not retimed.
+
+Example after compiling the checkout and building the packaged Lab:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY -u XDG_SESSION_TYPE \
+  ALSOFT_DRIVERS=null timeout 180s java -Xmx3g -Djava.awt.headless=true \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  -Duser.dir=/absolute/task/fresh-take/user \
+  -Dopenggf.saveRoot=/absolute/task/fresh-take/saves \
+  -cp /absolute/compiled/classpath com.openggf.tools.MutatorGameplayCaptureTool \
+  --game s3k --rom /absolute/original/Sonic3K.gen --zone aiz --act 1 \
+  --mod /absolute/checkout/target/example-mutators/example-mutators.jar \
+  --input /absolute/task/input.txt --interactive-pacing --audio --frames 180 \
+  --no-video --out-dir /absolute/task/fresh-take/capture
+```
+
+Use a fresh external directory, isolated configuration/save root, original
+absolute ROM paths and a bounded JVM for each take. Surfaceless EGL is required
+before input loading or session creation; a missing backend fails with no
+display fallback. The maintained boot installs offline SMPS audio without
+opening a device. The tool writes PNGs/CSV and optional `audio.wav`; it does not
+encode video. `--no-video` is accepted for compatibility. `--stills`, `--scale`
+and `--donor-rom` are rejected because this observer driver does not implement
+them. Frame counts, including counts inferred from input plus settling, are
+bounded to 1–36,000; offsets must be nonnegative and output cadence is 60 fps.
+
+Interactive pacing requires solo native direct-level capture, capture-from 0
+and every 1. It rejects title-first boot, sidekicks, donors, debug completion,
+P2/debug movie channels, invalid or duplicate assigned P1 keys, logical
+overrides and external input/frame ownership. Held keys are explicitly released
+on completion and failure; audio capture and the session close independently
+through their resource scopes. Supported canonical setup flags retain their
+normal `GameplayCaptureSession` meaning, including declared positions and rings.
+The default unbound B/C controls are permitted; requesting any unbound control
+fails explicitly. No stage entry is fabricated: natural entry footage must reach the giant ring
+or bonus stars through its controller input.
+
+Read the CSV before the PNGs. `observe2.csv` records lives, actual level/V-int
+counters, admitted player/level/speed policies, checkpoint index, monitor count,
+active stage provider, PCM frames, logical/external ownership and the incoming
+world's pacing remainder after each presentation. `monitors.csv` retains each
+live monitor's class and native position. Together with the input, ROM/JAR/source
+identity and any declared preference seed, these observations make LIVE menu
+edits and LOAD restart/death effects reproducible. A configured speed is not a
+measured tick count; compare counter deltas and the observed fractional phase.
+These are offscreen gameplay observations, not normal Engine.loop, desktop input,
+physical speaker, ROM parity, stage-completion or full-route certification.
+
 ## Native Mutator stage observations
 
 `com.openggf.tools.MutatorStageProbeTool` observes the production interactive

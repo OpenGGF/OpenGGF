@@ -39,6 +39,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   captures can opt into a surfaceless EGL context that needs no display connection
   and releases its platform selection for later engine boots. Native ring/enemy
   observations and layout CSVs are available through maintained display-free tools.
+  The gameplay observer can explicitly capture native special-stage drawing and
+  interactive speed with production input/pacing and offline audio, preserving
+  canonical movie stepping by default.
 
 - **Sonic 2 title SFX priority:** the flashing star's last twinkle now runs to
   its own stop, as in the ROM, releasing the sound driver's SFX priority. A stop

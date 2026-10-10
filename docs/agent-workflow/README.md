@@ -298,3 +298,8 @@ Local Maven tests: [`tools/testing/maven_queue.py`](../../tools/testing/maven_qu
   captured outer frame. InputLogAuthorTool compiles the maintained example script;
   synchronized CSV adds host pause and effective mutator revision. Captures belong
   outside Git, and the silent video may be muxed with the generated `audio.wav`.
+
+- `MutatorGameplayCaptureTool --showcase` / `--interactive-pacing` preserves the
+  all-eleven Mutator Lab film's native stage drawing, production presentation
+  input/tick pump, offline PCM and policy/checkpoint/monitor observations
+  (2026-10-10, source `379b66413`); see [capture contract](../../tools/media/README.md#mutator-gameplay-showcase-captures).
