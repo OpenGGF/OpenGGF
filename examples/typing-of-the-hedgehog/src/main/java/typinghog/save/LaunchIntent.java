@@ -11,11 +11,15 @@ import java.util.Objects;
  *
  * <p>Stored as {@code key=value} lines in {@code intent.txt}. Keys missing from older files take
  * their defaults ({@code voice} is {@link Voice#MEGADRIVE}). {@code demo} makes the course type
- * for the player, for attract demos and captures.
+ * for the player, for attract demos and captures; {@code demoRows} limits a demo's length (0 for
+ * none, as a capture of a whole act needs).
  */
 public record LaunchIntent(Mode mode, String game, int zone, int act, Difficulty difficulty,
                            boolean capitals, boolean punctuation, String dictionaries, long seed,
-                           int bossStars, boolean noFail, boolean slowMotion, Voice voice, boolean demo) {
+                           int bossStars, boolean noFail, boolean slowMotion, Voice voice, boolean demo,
+                           int demoRows) {
+    /** Rows an attract demo plays before handing back to the title (two minutes). */
+    public static final int DEFAULT_DEMO_ROWS = 7200;
     public static final String FILE = "intent.txt";
 
     public enum Mode { STORY, ARCADE, BOSS_RUSH, ENDLESS }
@@ -51,6 +55,14 @@ public record LaunchIntent(Mode mode, String game, int zone, int act, Difficulty
         Objects.requireNonNull(voice, "voice");
     }
 
+    /** A demo (or played) intent with the attract demo's two-minute limit. */
+    public LaunchIntent(Mode mode, String game, int zone, int act, Difficulty difficulty, boolean capitals,
+                        boolean punctuation, String dictionaries, long seed, int bossStars, boolean noFail,
+                        boolean slowMotion, Voice voice, boolean demo) {
+        this(mode, game, zone, act, difficulty, capitals, punctuation, dictionaries, seed, bossStars, noFail,
+                slowMotion, voice, demo, DEFAULT_DEMO_ROWS);
+    }
+
     /** A played (not demo) intent. */
     public LaunchIntent(Mode mode, String game, int zone, int act, Difficulty difficulty, boolean capitals,
                         boolean punctuation, String dictionaries, long seed, int bossStars, boolean noFail,
@@ -83,6 +95,7 @@ public record LaunchIntent(Mode mode, String game, int zone, int act, Difficulty
         values.put("slowMotion", Boolean.toString(slowMotion));
         values.put("voice", voice.name());
         if (demo) values.put("demo", "true");
+        if (demoRows != DEFAULT_DEMO_ROWS) values.put("demoRows", Integer.toString(demoRows));
         var out = new StringBuilder();
         values.forEach((k, v) -> out.append(k).append('=').append(v).append('\n'));
         return out.toString();
@@ -107,6 +120,7 @@ public record LaunchIntent(Mode mode, String game, int zone, int act, Difficulty
                 Boolean.parseBoolean(values.getOrDefault("noFail", "false")),
                 Boolean.parseBoolean(values.getOrDefault("slowMotion", "false")),
                 Voice.parse(values.get("voice")),
-                Boolean.parseBoolean(values.getOrDefault("demo", "false")));
+                Boolean.parseBoolean(values.getOrDefault("demo", "false")),
+                Integer.parseInt(values.getOrDefault("demoRows", Integer.toString(DEFAULT_DEMO_ROWS))));
     }
 }

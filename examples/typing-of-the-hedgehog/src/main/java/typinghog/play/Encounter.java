@@ -77,7 +77,8 @@ public final class Encounter {
         List<Species> cast = castTable.zone(intent.zone(), intent.act());
         if (cast.isEmpty()) return encounter;
         var random = course.random();
-        int count = Math.max(MIN_WAVE, 6 + standNumber * 2 + intent.difficulty().tier - encounter.loaded.size());
+        // Four or five fights an act: waves grow by one a fight (Normal: 7 to 11 badniks).
+        int count = Math.max(MIN_WAVE, 4 + standNumber + intent.difficulty().tier - encounter.loaded.size());
         int gap = Math.max(26, (int) (80 / intent.difficulty().speed) - standNumber * 4);
         int at = 40;
         for (int i = 0; i < count; i++) {

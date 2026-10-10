@@ -42,9 +42,6 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_UP;
 public final class Course implements GameplayFrameController, RewindSnapshottable<Integer> {
     enum Phase { IDLE, ENTRY, COUNTDOWN, RUN, STAND, STAND_CLEAR, BOSS, DYING, TALLY, LEAVING, FAULT }
 
-    /** Rows an attract demo plays before handing back to the title (two minutes). */
-
-    static final int DEMO_ROWS = 7200;
     /** Rows each count of the "3, 2, 1" start holds (a legacy rail's world-held countdown). */
     static final int COUNTDOWN_BEAT = 40;
     /** Native rows each count of a forward rail's countdown spans (its 180 charge rows in three). */
@@ -67,6 +64,8 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
     static final int DEMO_REACTION_ROWS = 20;
 
     static final int START_RINGS = 10;
+    /** Rows of invincibility after a No-Fail knockout. */
+    static final int NO_FAIL_GRACE_ROWS = 120;
     static final int START_LIVES = 3;
     static final int STAND_CLEAR_ROWS = 50;
     static final int DYING_ROWS = 120;
@@ -150,10 +149,10 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
         String typed = course.typedText();
         boolean backspace = course.keyPressed(GLFW_KEY_BACKSPACE);
         if (intent.demo()) {
-            // An attract demo ends on any key (or after DEMO_ROWS) and records nothing.
+            // An attract demo ends on any key (or after its demoRows, 0 for none) and records nothing.
             if (phase == Phase.LEAVING) return false;
             if (!typed.isEmpty() || backspace || course.keyPressed(GLFW_KEY_ENTER) || course.keyPressed(GLFW_KEY_ESCAPE)
-                    || rows - demoStartRow > DEMO_ROWS) {
+                    || (intent.demoRows() > 0 && rows - demoStartRow > intent.demoRows())) {
                 enter(Phase.LEAVING);
                 titleRequest = true;
                 return false;
@@ -737,12 +736,22 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
             hud.banner("OUCH!", 0xFFFF6060);
             return;
         }
-        // No-Fail retries the stand without spending a life.
-        if (!intent.noFail()) lives--;
+        if (intent.noFail()) {
+            // No-Fail: Sonic shrugs the knockout off, rings refilled and briefly invincible, and
+            // the fight goes on. Restarting the whole wave on every knockout made fights loop for
+            // minutes (EHZ2 forward capture: one fight ran almost four minutes).
+            rings = START_RINGS;
+            invincibleRows = NO_FAIL_GRACE_ROWS;
+            play(Sounds.Cue.HIT);
+            hud.banner("TOO SLOW!", 0xFFFF4040);
+            say(VoiceLine.ANNOUNCER_OUCH);
+            return;
+        }
+        lives--;
         play(Sounds.Cue.HIT);
         enter(Phase.DYING);
-        hud.banner(lives > 0 || intent.noFail() ? "TOO SLOW!" : "GAME OVER", 0xFFFF4040);
-        say(lives <= 0 && !intent.noFail() ? VoiceLine.ANNOUNCER_GAME_OVER : lives == 1 ? VoiceLine.ANNOUNCER_LAST_LIFE
+        hud.banner(lives > 0 ? "TOO SLOW!" : "GAME OVER", 0xFFFF4040);
+        say(lives <= 0 ? VoiceLine.ANNOUNCER_GAME_OVER : lives == 1 ? VoiceLine.ANNOUNCER_LAST_LIFE
                 : VoiceLine.ANNOUNCER_OUCH);
     }
 
