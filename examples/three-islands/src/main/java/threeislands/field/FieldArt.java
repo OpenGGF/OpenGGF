@@ -143,9 +143,13 @@ public final class FieldArt {
             return;
         }
         c.clear(kit.palette()[0] & 0xFFFFFF);
-        // The strip of distant scenery above the traversable area is the ROM backdrop.
-        if (kit.backdrop() != null) c.drawBackdrop(kit.backdrop(), 0, -(int) cameraY,
-                field.width(), 88, 0, cameraX, ticks);
+        // Distant scenery belongs behind the viewport, not to a strip at the world's
+        // northern edge. Clamp the slow vertical pan so southern rooms retain the sky.
+        if (kit.backdrop() != null) {
+            int span = Math.max(0, kit.backdrop().image().height() - c.height());
+            int top = Math.max(0, Math.min(span, (int) (cameraY * 0.15)));
+            c.drawBackdrop(kit.backdrop(), top, cameraX, ticks);
+        }
         for (int y = (int) cameraY / 16 * 16; y < cameraY + c.height() + 16; y += 16) {
             for (int x = (int) cameraX / 16 * 16; x < cameraX + c.width() + 16; x += 16) {
                 if (y < 16) continue;

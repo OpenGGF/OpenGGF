@@ -250,7 +250,9 @@ and the manifest. The field geometry is assembled for free exploration from ROM 
 its decoded grass, checkerboard cliff, palm, plant and water pieces, including full-size water reflections with the original four-step ROM palette cycle, plus the log
 bridge (`Nem_Bridge`) and purple rock (`Nem_PplRock`) objects; its grass and trails take their colours from the ROM palette.
 Star Light draws its starfield backdrop, the city-lights chunk, street lamps, red-lit rails, girder lattice, cones,
-hazard barriers and plated buildings from the decoded level kit. Battle and exploration share this renderer. Sonic the Hedgehog is a trademark of SEGA; this is an unofficial fan project.
+hazard barriers and plated buildings from the decoded level kit. Outdoor backgrounds fill the camera view
+with gentle vertical parallax, keeping distant scenery visible behind the terraces throughout each area.
+Battle and exploration share this renderer. Sonic the Hedgehog is a trademark of SEGA; this is an unofficial fan project.
 
 ## Source tour
 
