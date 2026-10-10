@@ -37,6 +37,8 @@ public final class Boss {
     private Stagehand.Visual behind;
     private boolean spawned;
     private boolean facingRight;
+    /** +1 when the boss holds the screen's right side (Sonic on the left), -1 for the left. */
+    private int side = 1;
     private BossRig.Mood mood = BossRig.Mood.IDLE;
     private int moodRow;
     private int hits;
@@ -98,11 +100,18 @@ public final class Boss {
         stateRow++;
         int px = course.anchorX(), py = course.anchorY();
         var camera = GameServices.camera();
-        if (!spawned) spawn(course, camera.getX() + camera.getWidth() + 64, inView(py - rig.height()));
+        if (!spawned) {
+            // The boss takes the side of the screen away from Sonic: an arena can stop him at
+            // its right edge (EHZ2), where a boss from the right would face away from him.
+            side = px - camera.getX() > camera.getWidth() / 2 ? -1 : 1;
+            facingRight = side < 0;
+            spawn(course, side > 0 ? camera.getX() + camera.getWidth() + 64 : camera.getX() - 64,
+                    inView(py - rig.height()));
+        }
         if (flash > 0) flash--;
         if (laughRows > 0) laughRows--;
         if (recoil > 0) recoil--;
-        int homeX = camera.getX() + camera.getWidth() * 3 / 4;
+        int homeX = homeX();
         int bob = (int) Math.round(Math.sin(row / 20.0) * rig.bob());
         if (defeated) {
             defeatRows++;
@@ -114,8 +123,9 @@ public final class Boss {
                     if (defeatRows % 12 == 1) course.play(Sounds.Cue.BOSS_DEFEATED);
                 }
             } else {
-                facingRight = true;
-                x += 4;
+                // Away from Sonic.
+                facingRight = side > 0;
+                x += 4 * side;
                 if (!rig.grounded()) y -= defeatRows % 2;
             }
         } else if (lungeRow >= 0) {
@@ -171,14 +181,14 @@ public final class Boss {
     /** Wind up (back and up), dash at Sonic, hit him on arrival, then drift home laughing. */
     private void lunge(Course course, int px, int py) {
         lungeRow++;
-        int targetX = px + 28, targetY = rig.grounded() ? py - rig.height() : py - 20;
+        int targetX = px + 28 * side, targetY = rig.grounded() ? py - rig.height() : py - 20;
         if (lungeRow <= WIND_UP_ROWS) {
             double t = ease(lungeRow / (double) WIND_UP_ROWS);
-            x = lungeFromX + (int) Math.round(18 * t);
+            x = lungeFromX + (int) Math.round(18 * t) * side;
             y = lungeFromY - (int) Math.round(10 * t);
         } else if (lungeRow <= WIND_UP_ROWS + DASH_ROWS) {
             double t = (lungeRow - WIND_UP_ROWS) / (double) DASH_ROWS;
-            int fromX = lungeFromX + 18, fromY = lungeFromY - 10;
+            int fromX = lungeFromX + 18 * side, fromY = lungeFromY - 10;
             x = fromX + (int) Math.round((targetX - fromX) * t * t);
             y = fromY + (int) Math.round((targetY - fromY) * t * t);
             if (lungeRow == WIND_UP_ROWS + DASH_ROWS && !lungeLanded) {
@@ -187,8 +197,7 @@ public final class Boss {
                 laughRows = LAUGH_ROWS;
             }
         } else if (lungeRow <= WIND_UP_ROWS + DASH_ROWS + RETURN_ROWS) {
-            var camera = GameServices.camera();
-            int homeX = camera.getX() + camera.getWidth() * 3 / 4;
+            int homeX = homeX();
             double t = ease((lungeRow - WIND_UP_ROWS - DASH_ROWS) / (double) RETURN_ROWS);
             x = targetX + (int) Math.round((homeX - targetX) * t);
             y = targetY + (int) Math.round((inView(py - rig.height()) - targetY) * t);
@@ -199,6 +208,12 @@ public final class Boss {
     }
 
     private static double ease(double t) { return t * t * (3 - 2 * t); }
+
+    /** Where the boss hovers: three quarters across the screen on his side. */
+    private int homeX() {
+        var camera = GameServices.camera();
+        return camera.getX() + (side > 0 ? camera.getWidth() * 3 / 4 : camera.getWidth() / 4);
+    }
 
     /** Keeps a hovering boss inside the view, below the HUD and its hit pips. */
     private static int inView(int wantY) {
