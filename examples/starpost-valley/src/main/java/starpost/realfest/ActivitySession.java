@@ -18,6 +18,7 @@ public final class ActivitySession implements RewindSnapshottable<ActivitySessio
     private boolean active, action, held, menu, jump;
     private int hotbar=-1, ticks, laps, farmer, tricks, trick=-1;
     private boolean wasAir;
+    private int crash;
     private int controller=-1;
     private ActExit exit;
     private final List<Race.Rival> rivals=new ArrayList<>();
@@ -29,7 +30,7 @@ public final class ActivitySession implements RewindSnapshottable<ActivitySessio
         this.shell=shell; this.game=shell.game; this.town=town; this.kind=kind;
         TownBridge.prepare(town,shell,play); town.consumeHandBack();
         active=true; ticks=laps=farmer=tricks=0; trick=-1; controller=-1; wasAir=false; exit=null;
-        clearInput(); rivals.clear(); champion=null; rings=List.of(); taken=new boolean[0]; lake=null;
+        crash=0; clearInput(); rivals.clear(); champion=null; rings=List.of(); taken=new boolean[0]; lake=null;
         if(kind.equals("race")) for(String who:Race.rivals(game)) rivals.add(new Race.Rival(who,CourseLevel.START,320));
         if(kind.equals("lake")) { lake=new LakeState(game,seconds); lake.poolY(starpost.fishing.LakeOverlay.poolY(shell.art)); }
     }
@@ -41,6 +42,11 @@ public final class ActivitySession implements RewindSnapshottable<ActivitySessio
     public int ticks() { return ticks; }
     public int laps() { return laps; }
     public int farmer() { return farmer; }
+    public int crash() { return crash; }
+    public void tumble(AbstractPlayableSprite p) {
+        if(crash>0) return; crash=Snowboard.CRASH_TICKS; trick=-1; p.setGSpeed((short)(2*256));
+        p.setRingCount(Math.max(0,p.getRingCount()-3)); shell.sfx(starpost.scene.Sfx.RING_LOSS);
+    }
     public int tricks() { return tricks; }
     public List<Race.Rival> rivals() { return rivals; }
     public RingHunt.Champion champion() { return champion; }
@@ -68,7 +74,7 @@ public final class ActivitySession implements RewindSnapshottable<ActivitySessio
     }
     public void tick(AbstractPlayableSprite player,java.util.function.IntUnaryOperator floor) {
         if(exit!=null) return;
-        ticks++;
+        ticks++; if(crash>0) crash--;
         if(player.getDead()) { request(ActExit.FAINTED); return; }
         if(hotbar>=0 && (lake==null || !lake.holding())) game.inventory.select(hotbar);
         if(kind.equals("lake")) {
@@ -102,9 +108,9 @@ public final class ActivitySession implements RewindSnapshottable<ActivitySessio
             if(run>=60*120) request(ActExit.TIME_UP);
         } else {
             // Tricks are native airborne rolls; there is no second movement integrator.
-            if(player.getAir() && jump && trick<0) trick=0;
+            if(player.getAir() && jump && trick<0 && crash==0) trick=0;
             if(player.getAir() && trick>=0) trick++;
-            if(wasAir && !player.getAir()) { if(trick>=30) tricks++; trick=-1; }
+            if(wasAir && !player.getAir()) { if(trick>=30) tricks++; else if(trick>=0) tumble(player); trick=-1; }
             wasAir=player.getAir();
             if(player.getCentreX()>=CourseLevel.finish(kind,game.calendar.year())) request(ActExit.COMPLETED);
             if(run>=60*120) request(ActExit.TIME_UP);
@@ -123,13 +129,13 @@ public final class ActivitySession implements RewindSnapshottable<ActivitySessio
     public record Snapshot(TownSession.Snapshot game,String kind,boolean active,int ticks,int laps,int farmer,int tricks,
         int trick,boolean wasAir,int controller,ActExit exit,List<Race.Rival.Snapshot> rivals,List<RingHunt.Spot> rings,
         List<Boolean> taken,RingHunt.Champion.Snapshot champion,LakeState.Snapshot lake,
-        boolean action,boolean held,boolean menu,boolean jump,int hotbar) {}
+        boolean action,boolean held,boolean menu,boolean jump,int hotbar,int crash) {}
     public String key() { return "activities"; }
     public Snapshot capture() {
         List<Boolean> bits=new ArrayList<>(); for(boolean t:taken) bits.add(t);
         return new Snapshot(town==null?null:town.capture(),kind,active,ticks,laps,farmer,tricks,trick,wasAir,controller,exit,
             rivals.stream().map(Race.Rival::capture).toList(),rings,List.copyOf(bits),champion==null?null:champion.capture(),
-            lake==null?null:lake.capture(),action,held,menu,jump,hotbar);
+            lake==null?null:lake.capture(),action,held,menu,jump,hotbar,crash);
     }
     public void restore(Snapshot s) {
         if(s.game()!=null) town.restore(s.game()); kind=s.kind(); active=s.active(); ticks=s.ticks(); laps=s.laps();
@@ -138,7 +144,7 @@ public final class ActivitySession implements RewindSnapshottable<ActivitySessio
         for(int i=0;i<taken.length;i++) taken[i]=s.taken().get(i);
         champion=s.champion()==null?null:RingHunt.Champion.restore(s.champion());
         if(s.lake()!=null) { if(lake==null) lake=new LakeState(game,0); lake.restore(s.lake()); } else lake=null;
-        action=s.action(); held=s.held(); menu=s.menu(); jump=s.jump(); hotbar=s.hotbar();
+        action=s.action(); held=s.held(); menu=s.menu(); jump=s.jump(); hotbar=s.hotbar(); crash=s.crash();
     }
     public void resetForMissingSnapshot() { active=false; controller=-1; clearInput(); }
 }

@@ -1152,7 +1152,7 @@ CONSTRUCTOR com.openggf.game.rewind.snapshot.AdvancedRenderModeSnapshot public  
 CONSTRUCTOR com.openggf.game.rewind.snapshot.AdvancedRenderModeSnapshot public  <init>(java.util.List<com.openggf.game.render.AdvancedRenderMode>,java.util.List<com.openggf.game.rewind.snapshot.AdvancedRenderModeSnapshot$ModeState>)
 CONSTRUCTOR com.openggf.game.rewind.snapshot.AdvancedRenderModeSnapshot$ModeState public  <init>(int,java.lang.String,java.lang.Object)
 CONSTRUCTOR com.openggf.game.rewind.snapshot.AnimatedTileChannelSnapshot public  <init>(java.util.Map<java.lang.String,java.lang.Integer>)
-CONSTRUCTOR com.openggf.game.rewind.snapshot.CameraSnapshot public  <init>(short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,boolean,int,boolean,boolean,boolean,boolean,int,int,boolean,short,short,short,boolean)
+CONSTRUCTOR com.openggf.game.rewind.snapshot.CameraSnapshot public  <init>(short,short,short,short,short,short,short,short,short,short,short,short,short,short,short,boolean,int,boolean,boolean,boolean,boolean,int,int,boolean,short,short,short,boolean,short)
 CONSTRUCTOR com.openggf.game.rewind.snapshot.CollisionSystemSnapshot public  <init>(int,int)
 CONSTRUCTOR com.openggf.game.rewind.snapshot.GameRngSnapshot public  <init>(long,com.openggf.game.GameRng$Flavour)
 CONSTRUCTOR com.openggf.game.rewind.snapshot.GameStateSnapshot public  <init>(int,int,int,int,int,boolean[],boolean[],boolean,int,boolean,boolean,boolean,boolean,boolean,int,boolean,int,boolean,boolean,boolean)
@@ -3818,6 +3818,7 @@ METHOD com.openggf.camera.Camera public  void setUncappedLeftwardScroll(boolean)
 METHOD com.openggf.camera.Camera public  void setUpdateObserver(com.openggf.camera.Camera$UpdateObserver)
 METHOD com.openggf.camera.Camera public  void setVerticalWrapEnabled(boolean)
 METHOD com.openggf.camera.Camera public  void setVerticalWrapEnabled(boolean,int)
+METHOD com.openggf.camera.Camera public  void setViewportMaxX(short)
 METHOD com.openggf.camera.Camera public  void setX(short)
 METHOD com.openggf.camera.Camera public  void setXAfterRenderCopy(short)
 METHOD com.openggf.camera.Camera public  void setXCopy(short)
@@ -6566,6 +6567,7 @@ METHOD com.openggf.game.rewind.snapshot.CameraSnapshot public  short renderCopyX
 METHOD com.openggf.game.rewind.snapshot.CameraSnapshot public  short renderCopyY()
 METHOD com.openggf.game.rewind.snapshot.CameraSnapshot public  short shakeOffsetX()
 METHOD com.openggf.game.rewind.snapshot.CameraSnapshot public  short shakeOffsetY()
+METHOD com.openggf.game.rewind.snapshot.CameraSnapshot public  short viewportMaxX()
 METHOD com.openggf.game.rewind.snapshot.CameraSnapshot public  short wrapDeltaY()
 METHOD com.openggf.game.rewind.snapshot.CameraSnapshot public  short x()
 METHOD com.openggf.game.rewind.snapshot.CameraSnapshot public  short y()
@@ -14031,6 +14033,7 @@ RECORD-COMPONENT com.openggf.game.rewind.snapshot.CameraSnapshot shakeOffsetY sh
 RECORD-COMPONENT com.openggf.game.rewind.snapshot.CameraSnapshot verticalWrapEnabled boolean
 RECORD-COMPONENT com.openggf.game.rewind.snapshot.CameraSnapshot verticalWrapMask int
 RECORD-COMPONENT com.openggf.game.rewind.snapshot.CameraSnapshot verticalWrapRange int
+RECORD-COMPONENT com.openggf.game.rewind.snapshot.CameraSnapshot viewportMaxX short
 RECORD-COMPONENT com.openggf.game.rewind.snapshot.CameraSnapshot wrapDeltaY short
 RECORD-COMPONENT com.openggf.game.rewind.snapshot.CameraSnapshot x short
 RECORD-COMPONENT com.openggf.game.rewind.snapshot.CameraSnapshot y short

@@ -13,6 +13,8 @@ public final class ActivityContent {
         context.registerServiceBundle("activities",()->GameServiceBundle.builder()
             .capturedService("state",ActivitySession.class,session).build());
         context.registerObject("activity-controller",(spawn,registry)->new ActivityController(spawn));
+        context.registerObject("activity-rock",(spawn,registry)->new ActivityRock(spawn));
+        context.registerObject("activity-deck",(spawn,registry)->new ActivityDeck(spawn));
         context.registerObject("activity-ring",(spawn,registry)->new ActivityRing(spawn));
         for(String name:List.of("race","hunt","snowboard","lake")) {
             context.registerZone(ModZoneContribution.singleAct(name,new BakedLevelRef("levels/valley/level.json"),null,null,false));

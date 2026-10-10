@@ -326,12 +326,13 @@ public final class PlayScreen implements Screen {
         }
     }
 
-    public static void drawHud(Shell shell, SceneCanvas canvas) {
+    public static void drawHud(Shell shell, SceneCanvas canvas) { drawHud(shell,canvas,shell.ticks); }
+    public static void drawHud(Shell shell,SceneCanvas canvas,long ticks) {
         Game game = shell.game;
         Calendar cal = game.calendar;
         // Sonic 1's HUD: TIME turns red after midnight, RINGS when there are none (flashing, as in the ROM).
         var hud = shell.art.hud;
-        boolean flash = shell.ticks / 8 % 2 == 0;
+        boolean flash = ticks / 8 % 2 == 0;
         boolean late = cal.minutes() >= 24 * 60;
         hud.timeRow(canvas, late && flash, cal.minutes() / 60 % 24, cal.minutes() % 60, 8);
         hud.ringsRow(canvas, game.rings == 0 && flash, game.rings, 24);
@@ -345,10 +346,11 @@ public final class PlayScreen implements Screen {
         canvas.fill(bx, by, fillW, 6, colour);
         canvas.fill(bx, by, fillW, 2, 0x60FFFFFF);
         Text.right(canvas, "MOMENTUM", bx - 4, 18, Text.YELLOW);
-        drawHotbar(shell, canvas);
+        drawHotbar(shell, canvas,ticks);
     }
 
-    public static void drawHotbar(Shell shell, SceneCanvas canvas) {
+    public static void drawHotbar(Shell shell,SceneCanvas canvas) { drawHotbar(shell,canvas,shell.ticks); }
+    private static void drawHotbar(Shell shell,SceneCanvas canvas,long ticks) {
         Game game = shell.game;
         Inventory inv = game.inventory;
         int slot = 18, x0 = (canvas.width() - slot * Inventory.HOTBAR) / 2, y = canvas.height() - 18;
@@ -370,7 +372,7 @@ public final class PlayScreen implements Screen {
             }
         }
         String id = inv.selectedId();
-        if (id != null && shell.ticks - shell.hotbarChangedAt < 120) {
+        if (id != null && ticks - shell.hotbarChangedAt < 120) {
             Item item = game.item(id);
             String label = item.name() + (id.equals("water_shield") ? "  " + game.waterCharges + "/" + game.waterCapacity : "");
             Text.centred(canvas, label, y - 14, Text.WHITE);

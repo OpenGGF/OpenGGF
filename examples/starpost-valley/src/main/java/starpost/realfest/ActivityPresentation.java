@@ -16,9 +16,10 @@ public final class ActivityPresentation {
     private final FestivalArt festivalArt;
     private final PeopleArt peopleArt;
     private final starpost.fishing.LakeOverlay lake;
+    private final starpost.fishing.LakeView lakeView;
     public ActivityPresentation(ActivitySession s) {
         festivalArt=new FestivalArt(s.shell().art,s.shell().ctx.art().rom("s2"));
-        peopleArt=new PeopleArt(s.shell().art); lake=new starpost.fishing.LakeOverlay(s.shell().art);
+        peopleArt=new PeopleArt(s.shell().art); lake=new starpost.fishing.LakeOverlay(s.shell().art); lakeView=new starpost.fishing.LakeView(s.shell().art);
     }
     private SceneCanvas canvas(ObjectServices services) {
         return new LevelPictureCanvas(new LevelOverlayCanvas(services.graphicsManager(),services.camera().getWidth(),services.camera().getHeight()),images);
@@ -26,11 +27,20 @@ public final class ActivityPresentation {
     public void ring(ObjectServices services,ActivitySession s,int x,int y) {
         canvas(services).draw(s.shell().art.ring.frame(s.ticks()/8%4),x-services.camera().getX(),y-services.camera().getY(),SceneDraw.plain());
     }
+    public void rock(ObjectServices services,ActivitySession s,int x,int feet) {
+        var rock=s.shell().art.purpleRock.frame(0);
+        canvas(services).draw(rock,x-services.camera().getX(),feet-services.camera().getY()-(rock.height()-rock.originY()),SceneDraw.plain());
+    }
+    public void log(ObjectServices services,ActivitySession s,int x,int feet) {
+        var log=s.shell().art.bridge.frame(0);
+        canvas(services).draw(log,x-services.camera().getX(),feet-services.camera().getY()+log.originY(),SceneDraw.plain());
+    }
     public void draw(ObjectServices services,ActivitySession s) {
         var canvas=canvas(services); int cx=services.camera().getX(),cy=services.camera().getY();
         var player=services.camera().getFocusedSprite(); if(player==null) return;
         if(s.kind().equals("lake")) {
-            starpost.scene.PlayScreen.drawHud(s.shell(),canvas);
+            lakeView.draw(s.shell(),canvas,cx,cy,s.ticks(),x->new starpost.realtown.ActGround(services,768,128).floorBelow(x,128));
+            starpost.scene.PlayScreen.drawHud(s.shell(),canvas,s.shell().ticks+s.ticks());
             lake.draw(s.shell(),canvas,s.lake(),player.getCentreX()-cx,player.getCentreY()+player.getYRadius()-cy,cx,cy,s.ticks());
             return;
         }

@@ -67,12 +67,6 @@ public final class FestivalDebug {
                     sys.start(f);
                 }
             }
-            case "catch" -> {
-                if (festivals.contestAway == null) {
-                    return false;
-                }
-                festivals.contestAway.accept(Integer.parseInt(p[2]));
-            }
             case "population" -> game.population = Math.max(6, Math.min(Game.MAX_POPULATION, Integer.parseInt(p[2])));
             case "exit" -> {
                 if (!(shell.screen() instanceof MazeScreen maze)) {

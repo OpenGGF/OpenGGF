@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import starpost.core.*;
 import starpost.people.*;
 import starpost.valley.Pickups;
+import starpost.valley.Ground;
 import starpost.festivals.Festivals;
 
 class TownRulesTest {
@@ -20,6 +21,24 @@ class TownRulesTest {
     private void step(TownSession town,boolean act,boolean confirm,boolean choice) {
         town.input(act,false,confirm,choice,false,-1); town.tick(440,173,true); town.clearInput();
     }
+    @Test
+    void scheduledRouteBridgesPitsAndStepsOverTotemLedges() {
+        Ground ground=new Ground() {
+            public int left() { return 0; }
+            public int right() { return 512; }
+            public boolean solid(int x,int y) { return y>=floorBelow(x,0); }
+            public int floorBelow(int x,int y) { return x>=192&&x<256?512:x>=320?96:192; }
+        };
+        var route=new TownWalkRoute(ground);
+        boolean bridge=false;
+        for(int i=0;i<route.size();i++) {
+            assertTrue(route.floor(route.x(i))<=ground.floorBelow(route.x(i),0));
+            if(i>0) assertTrue(Math.abs(route.floor(route.x(i))-route.floor(route.x(i-1)))<=8);
+            bridge|=route.deck(i);
+        }
+        assertTrue(bridge); assertTrue(route.deck(13),"pit has a real log deck");
+    }
+
     @Test void dialogueReusesPictureSpeechAndTranslator() {
         TownSession town=town(); town.game().inventory.select(11);
         town.talk("dandel");

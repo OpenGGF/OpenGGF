@@ -124,9 +124,17 @@ class TestStarpostRealFestivals {
         assertTrue(loop.modSceneActBridge.consumeExitOrHold(input)); drainFade();
         assertEquals(GameMode.MOD_SCENE,loop.getCurrentGameMode()); assertSame(game,field(shell,"game"));
         assertFalse((Boolean)call(activity,"active"));
+        Object festivals=call(game,"section",scene.getClass().getClassLoader().loadClass("starpost.festivals.Festivals"));
+        Map<String,String> recorded=new TreeMap<>(); call(festivals,"save",recorded);
+        if(!kind.equals("lake")) {
+            String id=kind.equals("race")?"valley_race":kind.equals("hunt")?"ring_hunt":"ice_cap";
+            assertTrue((Boolean)call(festivals,"joined",id,call(field(game,"calendar"),"year")),"festival record applied");
+        }
         int wallet=(Integer)field(game,"rings");
         for(int i=0;i<5;i++) loop.modSceneActBridge.consumeExitOrHold(input);
         assertEquals(wallet,field(game,"rings"),"result applies once");
+        Map<String,String> repeated=new TreeMap<>(); call(festivals,"save",repeated);
+        assertEquals(recorded,repeated,"records/prizes apply once");
         if(!kind.equals("lake")) {
             for(int i=0;i<45;i++) loop.modSceneActBridge.updateScene(input);
             input.setLogicalOverride(com.openggf.control.LogicalInputSnapshot.ofPlayers(
@@ -134,6 +142,7 @@ class TestStarpostRealFestivals {
             loop.modSceneActBridge.updateScene(input); input.clearLogicalOverride();
             for(int i=0;i<40;i++) loop.modSceneActBridge.updateScene(input);
             drainFade();
+            assertEquals(GameMode.LEVEL,loop.getCurrentGameMode(),"results return to the native town");
         }
         assertTrue(harness.findings().isEmpty(),harness.findings().toString());
     }
@@ -148,13 +157,16 @@ class TestStarpostRealFestivals {
         assertTrue((Boolean)call(line,"out"),"casting in the act");
         for(int f=0;f<400 && (Integer)field(line,"state")!=3;f++) runner.stepIdleFrames(1);
         assertEquals(3,field(line,"state")); call(activity,"input",true,false,false,false,-1); runner.stepIdleFrames(1);
+        Object fishing=call(game,"section",scene.getClass().getClassLoader().loadClass("starpost.fishing.FishingSection"));
+        Map<String,String> catchesBefore=new TreeMap<>(); call(fishing,"save",catchesBefore);
         for(int f=0;f<1500 && call(lake,"bar")!=null;f++) {
             Object bar=call(lake,"bar");
-            boolean hold=(Float)field(bar,"bubble")>(Float)field(bar,"fish")+2*(Float)field(bar,"bubbleSpeed");
+            boolean hold=(Float)field(bar,"bubble")+6*(Float)field(bar,"bubbleSpeed")>(Float)field(bar,"fish");
             call(activity,"input",false,hold,false,false,-1); runner.stepIdleFrames(1);
         }
         assertNull(call(lake,"bar"));
-        assertTrue((Integer)call(lake,"score")>=0);
+        Map<String,String> catchesAfter=new TreeMap<>(); call(fishing,"save",catchesAfter);
+        assertNotEquals(catchesBefore,catchesAfter,"a native Bubble Bar catch is landed");
         if(kind.equals("contest")) for(int f=0;f<7300 && call(activity,"exit")==null;f++) runner.stepIdleFrames(1);
         else { call(activity,"input",false,false,true,false,-1); runner.stepIdleFrames(1); }
         assertNotNull(call(activity,"exit"));

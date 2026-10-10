@@ -55,9 +55,6 @@ public final class Festivals implements SaveSection, People.Gathering, People.Er
      * saved). Without it the festival's contest is the snowboard run.
      */
     public FishingContest fishingContest;
-    /** While the Ice Cap Festival's contest is out on the lake, where its points go (not saved; debug captures end it early). */
-    java.util.function.IntConsumer contestAway;
-
     @Override
     public String prefix() {
         return PREFIX;

@@ -96,7 +96,7 @@ public final class TownPresentation {
     }
     public void draw(ObjectServices services,TownSession town) {
         SceneCanvas canvas=canvas(services);
-        if(shell!=null) starpost.scene.PlayScreen.drawHud(shell,canvas);
+        if(shell!=null) starpost.scene.PlayScreen.drawHud(shell,canvas,shell.ticks+town.ticks());
         if (!town.notice().isEmpty()) {
             canvas.fill(6,43,canvas.textWidth(town.notice())+8,13,0xE0101848);
             canvas.text(town.notice(),10,46,Text.WHITE);

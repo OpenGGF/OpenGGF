@@ -308,7 +308,6 @@ public final class Reach {
         r.dashing = false;
         r.dashCharge = 0;
         r.sprung = false;
-        r.hurt = false;
         r.jumpedAt = -1;
         r.underwater = false;
         r.facingLeft = false;

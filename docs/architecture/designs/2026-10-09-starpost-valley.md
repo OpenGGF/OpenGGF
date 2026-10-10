@@ -2463,6 +2463,10 @@ player sensors/jumps, a minimum board speed, rings and the existing score/prizes
 Lake uses blocks 1/51/52, native walking and a captured level director for casting,
 bites and Bubble Bar; the Ice Cap choice launches its timed fishing variant.
 Drawing reuses ROM art through LevelPictureCanvas and never advances rules.
+Snowboard rocks are native level objects: grounded contact costs three rings and
+starts the existing 70-tick tumble; airborne native jumps clear them. The lake
+keeps its ROM palette cycle, pool bed/shadows, scheduled Barnaby and the restored
+log bridge as real top-solid objects.
 
 Fair booths and Strength remain scenes: inventory selection, slots and press timing
 do not require platforming. Parade/Feast/Flicky ceremonies have static scene poses.
@@ -2470,9 +2474,17 @@ The farm pond stays attached to the belt-view farm and its distinct BeltRunner.
 Deleted gameplay Runner, ValleyView, RuinsScreen, LakeScreen and their debug
 fallbacks/obsolete ability tests. TownBackdrop is presentation only. GenerationRunner
 is retained solely for bounded Ruins generation searches; native Ruins route tests
-are the playable oracle. No gameplay object instantiates that approximation.
+are the playable oracle. No gameplay object instantiates that approximation. Its unused flight, glide, climb
+and damage code is removed; generation keeps only the Sonic/water/spring search model.
 
-The Labyrinth camera bounds subtract the live viewport from chamber dimensions.
+The initial Labyrinth fix subtracted the live viewport from the native right bound;
+six native Ruins routes then stopped 80 pixels before their exits at 400px. That
+approach was rejected: PlayableSpriteMovement uses the same bound plus native
+320px for the movement wall. `Camera.setViewportMaxX` instead captures a separate
+view-only ceiling, resets it on level load, and leaves the native right wall intact.
+The mod supplies chamber/course width minus the live viewport. A camera regression
+checks forced placement, ordinary follow, restore and reset; native exit routes
+check the consumer.
 Scheduled neighbours share a deterministic, slope-limited walking path with real
 top-solid ROM log decks spanning ledges/pits. Native town, Ruins and lake reuse the
 scene HUD, including Momentum. NativePositionOps and solid-provider signatures
@@ -2494,8 +2506,37 @@ API version/status do not change.
 Initial focused verification: 30 native route cases, 9 candidate signature cases
 and 2 packaged-example cases pass without skips; packaging reports zero findings.
 The direct CreatorTestLauncher runs 193 creator cases without skips or failures.
-Combined Starpost/S3K, broad contract validation, final guards and remaining visual
-checks are recorded below when completed. Wider viewports, alternate donors, teams,
+The expanded focused run passes 235 of 236 cases, with one scene pond test setup
+failure (rod not selected); the corrected scene smoke test passes separately.
+That smoke test now covers scene-only festivals: running festivals suspend its
+host and belong in the native bridge matrix, rather than continued scene ticks. All 30
+native routes, native Ruins exits, required S3K checks, camera and SDK/Javadoc
+checks pass without skips. The direct creator runner subsequently passes 194
+cases after adding the walkable-route regression. Broad validation and final
+guards are recorded below when completed. Wider viewports, alternate donors, teams,
 load/respawn and interaction-boundary rewind remain inherited coverage gaps; this
 matrix does not certify the full level standard. Clips and state CSVs live outside
 the repository under `~/scratch/sv-realfest/`.
+
+Visual evidence at the phase-4 candidate: five 25-second silent production
+`HeadlessGameBoot` + `GameLoop.step` clips and frame CSVs are in
+`~/scratch/sv-realfest/{race,hunt,snowboard,lake,contest}/native.mp4`. Inspected
+frames show real loop traversal, ring pickup, board/tricks, casting/Bubble Bar and
+landed lake/contest catches. The first capture was discarded as evidence: mixing
+RecordingFrameDriver setup with the live loop left the test driver's title lock
+on the player. A separate native-only capture setup fixes the measurement, and
+movement CSVs confirm changing positions. Fishing input uses six-frame velocity
+feedback from the existing creator test; the earlier reversed-sign controller
+escaped catches and was rejected. No gameplay difficulty or outcome was tuned.
+
+Focused engine command (absolute ROM paths are supplied for S3K and S1):
+
+```sh
+python3 tools/testing/maven_queue.py -B -q -Dmse=off '-Dtest=TestStarpost*,TestCheckpointStarpostGraphRewind,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestModApiSignatureSurface,TestModApiSdkPackager,TestModSdkArtifactVerifier,TestModApiJavadocTool,TestCamera,TestCameraRewindSnapshot,TestRewindBenchmarkSizeEstimator' -Ds3k.rom.path="$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dsonic1.rom.path="$PWD/Sonic The Hedgehog (W) (REV01) [!].gen" test
+python3 tools/testing/maven_queue.py --lean -B -q -Dmse=off -Dtest=TestStarpostValleyScene -Ds3k.rom.path="$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dsonic1.rom.path="$PWD/Sonic The Hedgehog (W) (REV01) [!].gen" test
+```
+
+The direct runner is `RunCreatorTests` (the retained task-local launcher wrapper)
+with fresh compiled creator test/main directories on the engine classpath; it
+invokes `CreatorTestLauncher.scan` directly, with no Maven or package-test
+indirection. Its final result is 194/194 with no skips.

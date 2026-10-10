@@ -22,7 +22,8 @@ public final class RuinsController extends AbstractObjectInstance implements Mod
         var session=services().gameService(RuinsSession.class);
         if(session==null || !session.active() || !(entity instanceof AbstractPlayableSprite player)) return;
         var chamber=session.chamber();
-        services().camera().setMaxX((short)Math.max(0,chamber.width-services().camera().getWidth()));
+        services().camera().setMaxX((short)Math.max(0,chamber.width-320));
+        services().camera().setViewportMaxX((short)Math.max(0,chamber.width-services().camera().getWidth()));
         services().camera().setMaxY((short)Math.max(0,RuinsLevel.ORIGIN+chamber.height-services().camera().getHeight()));
         if(!arrived) { arrived=true; player.setInvulnerableFrames(RuinsRules.ARRIVAL_FLASH); session.arrived(player.getRingCount()); }
         String held=session.game().inventory.selectedId();

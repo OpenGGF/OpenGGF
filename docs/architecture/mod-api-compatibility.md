@@ -149,7 +149,9 @@ signature pin is regenerated in place.
 
 Native act controllers can use `NativePositionOps` for ROM centre/subpixel writes
 and implement `SolidObjectProvider` with `SolidObjectParams` for real platforms.
-Their exposed solid routine profile/adapter types are annotated and included in
+`Camera.setViewportMaxX` captures a visible right-edge cap separately from ROM
+movement walls and releases it on reset; CameraSnapshot includes that state.
+The exposed solid routine profile/adapter types are annotated and included in
 the recursive candidate pin. These additions preserve existing runtime behavior
 and the unpublished 0.7.0 version; no published baseline is replaced.
 

@@ -47,6 +47,25 @@ public class TestCamera {
         camera.setMaxY((short) 1000);
     }
 
+    @Test
+    void viewportClampPreservesNativeWallsAndRewinds() {
+        camera.setViewportMaxX((short)5920);
+        when(mockSprite.getCentreX()).thenReturn((short)6300);
+        camera.updatePosition(true);
+        assertEquals(5920,camera.getX());
+        assertEquals(6000,camera.getMaxX(),"native movement wall is unchanged");
+        var snapshot=camera.capture();
+        camera.setViewportMaxX((short)5800);
+        camera.updatePosition(true);
+        assertEquals(5800,camera.getX());
+        camera.restore(snapshot);
+        camera.setX((short)5900);
+        for(int i=0;i<20;i++) camera.updatePosition(false);
+        assertEquals(5920,camera.getX(),"ordinary follow uses the captured framing limit");
+        camera.resetState();
+        assertEquals(Short.MAX_VALUE,camera.capture().viewportMaxX(),"a new level releases the view clamp");
+    }
+
     // ==================== Basic Position Tests ====================
 
     @Test

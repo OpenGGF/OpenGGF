@@ -78,7 +78,7 @@ public final class RuinsPresentation {
         }
         for(var puff:session.puffs()) canvas.draw(art.explosion.frame(Math.min(art.explosion.frameCount()-1,puff.age()/4)),puff.x()-cx,puff.y()-cy,SceneDraw.plain());
         for(var animal:session.animals()) stand(canvas,art.art.animal(animal.name()),!animal.hopping()?2:animal.vy()<0?1:0,animal.x()-cx,animal.feet()-cy);
-        if(session.shell()!=null) starpost.scene.PlayScreen.drawHud(session.shell(),canvas);
+        if(session.shell()!=null) starpost.scene.PlayScreen.drawHud(session.shell(),canvas,session.shell().ticks+session.ticks());
         int rings=services.camera().getFocusedSprite()==null?0:services.camera().getFocusedSprite().getRingCount();
         Text.shadow(canvas,"HEALTH RINGS "+rings,16,40,Text.GREY);
         Text.right(canvas,"CHAMBER "+chamber.number,canvas.width()-8,40,Text.YELLOW);

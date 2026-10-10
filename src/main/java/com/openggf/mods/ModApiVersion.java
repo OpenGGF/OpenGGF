@@ -40,6 +40,7 @@ public final class ModApiVersion {
      * parsing even in an S3K-base mod; the legacy call retains Sonic 2 semantics.
      * NativePositionOps and the solid-platform provider/params are candidate creator contracts:
      * act controllers can reset native positions and provide rewindable top-solid decks.
+     * Camera framing can cap the visible right edge independently of native player walls.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

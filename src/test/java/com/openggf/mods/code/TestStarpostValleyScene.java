@@ -20,8 +20,8 @@ import org.junit.jupiter.api.io.TempDir;
 
 /**
  * Smoke test for Starpost Valley against a real S3K session with Sonic 1 supplied: it plays each
- * farmer on the belt farm and in the valley, then visits the Marble Ruins' three zones, a
- * neighbour's talk and heart event, Waterfall Lake and the Bubble Bar, every festival, the orchard's
+ * farmer on the belt farm, then visits a
+ * neighbour's talk and heart event, the farm pond Bubble Bar, festival scenes, the orchard's
  * trees and a ring burst, the museum and Hazel's scene, the board,
  * a night's tally and the year's end through the scene's debug jumps, playing and drawing frames
  * (recording only, no GL). The engine's fault boundary must catch nothing and the scene must
@@ -30,7 +30,8 @@ import org.junit.jupiter.api.io.TempDir;
 @RequiresRom(SonicGame.SONIC_3K)
 class TestStarpostValleyScene {
     private static final Path PROJECT = Path.of("examples/starpost-valley");
-    private static final String[] FESTIVALS = {"ring_hunt", "sunflower_parade", "valley_race", "flickies",
+    // Native competitions suspend this scene host and are covered by TestStarpostRealFestivals.
+    private static final String[] FESTIVALS = {"sunflower_parade", "flickies",
         "valley_fair", "scrap_brain_night", "ice_cap", "star_light_feast"};
 
     @TempDir
@@ -79,6 +80,10 @@ class TestStarpostValleyScene {
             step(harness, "time 1200", 1);
             step(harness, "people event tails_2", 240);
             step(harness, "new sonic", 10);
+            step(harness, "close", 5);
+            step(harness, "farm 400 30", 5);
+            step(harness, "give fishing_rod 1", 1);
+            step(harness, "select 2", 1);
             step(harness, "fish bar bubble_bass", 150);
             for (String festival : FESTIVALS) {
                 step(harness, "new sonic", 10);
