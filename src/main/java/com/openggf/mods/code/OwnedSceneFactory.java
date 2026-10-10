@@ -90,6 +90,11 @@ public final class OwnedSceneFactory {
         }
 
         @Override
+        public void resume(SceneContext ctx, com.openggf.mods.scene.ActResult result) {
+            boundary.run(ownerModId, () -> scene.resume(ctx, result));
+        }
+
+        @Override
         public void exit(SceneContext ctx) {
             boundary.run(ownerModId, () -> scene.exit(ctx));
         }

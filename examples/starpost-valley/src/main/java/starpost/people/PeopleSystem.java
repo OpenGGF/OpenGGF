@@ -234,6 +234,13 @@ public final class PeopleSystem implements Actor {
         return play.valley().runner.onGround && Math.abs(play.valley().runner.speed) < 7;
     }
 
+    /** Scene hand-back from a real-level event trigger; begin still belongs to the scene director. */
+    public void startHeartEvent(String id) {
+        HeartEvent event = people.cast.event(id);
+        if (event == null) throw new IllegalArgumentException("Unknown heart event: " + id);
+        startEvent(event);
+    }
+
     void startEvent(HeartEvent event) {
         people.begin(event, shell.game);
         if (play.onFarm()) {

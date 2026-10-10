@@ -155,9 +155,12 @@ public final class MuseumSystem {
 
         @Override
         public void draw(Shell shell, SceneCanvas canvas, int cx, int cy, SceneDraw tint) {
+            drawAt(canvas, x() - cx, y() - cy, tint);
+        }
+
+        void drawAt(SceneCanvas canvas, float x, float y, SceneDraw tint) {
             Game game = shell.game;
             SceneImage building = art.annex(game.calendar.season());
-            float x = x() - cx, y = y() - cy;
             canvas.draw(building, x - building.width() / 2f, y - building.height() + 2, tint);
             // A finished collection shows its prize in a window: restoration you can see.
             for (int i = 0; i < exhibits.size(); i++) {
@@ -183,6 +186,16 @@ public final class MuseumSystem {
             canvas.fill(Math.round(x) - sw / 2, sy, sw, 12, 0xFF240000);
             canvas.fill(Math.round(x) - sw / 2 + 1, sy + 1, sw - 2, 10, 0xFF6D2400);
             canvas.text(label, Math.round(x) - sw / 2 + 4, sy + 2, Text.YELLOW);
+        }
+    }
+
+    /** Reuses the annex and visible restoration windows at an engine act's floor. */
+    public static void drawTownAnnex(PlayScreen play, SceneCanvas canvas, int x, int floor) {
+        for (Actor actor : play.actors) {
+            if (actor instanceof Annex annex) {
+                annex.drawAt(canvas, x, floor, SceneDraw.plain());
+                return;
+            }
         }
     }
 

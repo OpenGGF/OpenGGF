@@ -1598,6 +1598,455 @@ The parked priority API and valley skid remain unapplied. No push, merge, rebase
 was performed by this lane.
 
 
+## 21. The town on real levels (lane)
+
+Town lane: `feature/ai-starpost-town`, base `acb094c763`. Implementation lives in
+`starpost.realtown`; it neither owns Green Hill encoding nor changes the engine API.
+
+### State, objects and ownership
+
+Register one instance-owned `TownSession` through `ModContext.registerServiceBundle`,
+as both a concrete service and a `RewindSnapshottable` adapter. The scene binds its
+live `Game` before launching; objects resolve it with `services().gameService`.
+Retain the same `Game`, `People`, inventory and save-section identities: replacing
+those on rewind would leave suspended scene actors pointing at stale state.
+Capture every field changed by town ticks (clock, rings, Momentum, inventory,
+random state and save-section keys), plus town dialogue, invitations, exits and
+pickup availability. Capture walking positions in recreatable engine objects.
+Do not use `SaveCodec` as a rewind codec: its load resets the clock and clamps saves.
+No trace rows supply state. Act load and scene return remain timeline boundaries.
+
+Register a persistent controller and recreatable villager, doorway and pickup
+objects, placed by a `TownLayout` seam. A layout supplies coordinates and floor
+queries; integration replaces the placeholder with the encoded valley. Schedules,
+arrival gates, body speeds, dialogue pools, gifts, errands and festival gatherings
+reuse `People`/`Bodies`/`Festivals`; they are not new social rules. Villagers walk
+on the act's floor, disappear at indoor destinations and leave via the farm gate.
+
+### Interaction and presentation
+
+The action key talks to the nearest visible villager. Giftable held items ask
+before applying `People.gift`; cancelling gives the day's talk. Animal dialogue
+uses the existing picture tokens until the Chirp Translator. A `LevelInputOverlay`
+owns modal keys before host pause input; the controller freezes the real player
+and the town clock while the overlay is open. Dialogue presentation is bounded to
+the 400×224 viewport and draw never changes rules.
+
+Up at a door records a single hand-back request with its place id and return
+position. Reuse **all** `PlayScreen.places` handlers: seeds, Lamppost Inn, workshop,
+museum, Robomart, Ruins, Great Capsule, Waterfall Lake and Signpost Board. The farm
+gate returns to the farm. Heart events likewise hand back by event id and retain
+the current `PlayScreen`; never make a new play screen mid-day. Festival invitations
+stay in the act; accepting hands back to the existing festival screen.
+
+Buildings remain decorative objects rather than collision or terrain: reuse
+seasonal `Facades`, board/trophy shelf and festival dressing, so relocation need
+not rewrite level data. Rings/forage reuse the daily pickup generation and reward
+rules. Ground queries and the player's centre/radii come from the actual act.
+
+`registerRomObjectArt` currently accepts S2 only (ModContext), so it cannot register
+this S1/S3K cast honestly. Until cross-ROM object-art registration exists, reuse
+ROM-decoded `Art`/`PeopleArt` and immutable image row spans through the engine's
+`LevelOverlayCanvas`, with camera-relative coordinates; no faces or art bytes are
+invented or packaged. Native object-art upload is a future rendering replacement,
+not a reason to duplicate cast content or block rules/rewind testing.
+
+### Precise phase-2 interface proposal
+
+E1 places the launch/result records in `com.openggf.mods.scene` and the shared
+exit enum in `com.openggf.game`, preserving the level/mod dependency boundary:
+
+```java
+record ActLaunch(ZoneKey.Mod destination, int act, CharacterKey main,
+    List<CharacterKey> sidekicks, OptionalInt spawnX, OptionalInt spawnY,
+    int rings, Map<String, String> state) {}
+record ActResult(ZoneKey.Mod destination, ActExit reason, int rings,
+    long frames, Map<String, String> state) {}
+enum ActExit { COMPLETED, LEFT, FAINTED, TIME_UP, ABORTED }
+// SceneContext (default throws UnsupportedOperationException on legacy hosts)
+default void startAct(ActLaunch launch) { throw new UnsupportedOperationException(); }
+// ModScene (same suspended instance and context)
+default void resume(SceneContext context, ActResult result) {}
+// ObjectServices (default; request latched once, consumed at the next frame boundary)
+void requestActExit(ActExit reason, Map<String, String> state);
+```
+
+Town payload: `town.place` (door id, `farm_gate`, `festival` or `heart_event`),
+`town.event` (optional heart-event id), `town.returnX`, `town.returnY` (player
+centre coordinates). Resume applies the existing handler once, and launches again
+at the returned door when its scene menu closes. The same registered `TownSession`
+must survive suspension/resumption; new games explicitly rebind it. A pending exit
+is rewindable until the engine consumes it. Entry/exit releases held modal keys,
+freezes world updates during fades and establishes the normal level/mode boundary.
+
+Rejected: static session state (validator/isolation), copying social rules,
+scene-physics simulation, restoring by decoding a disk save, and remapping S1 art
+to unrelated S3K bodies. A minimal S3K placeholder act tests objects before the
+terrain lane is available. Phase 2 owns the actual scene round trip; this lane
+provides a typed hand-back latch and binder without pretending the API exists.
+
+
+### Town milestone: rules and registration
+
+Design committed first at `8d9143843`. The first implementation adds `TownContent`,
+`TownSession`, a layout/act-ground seam, five registered object types and a
+`LevelInputOverlay`. `TownBridge`/`StarpostScene.prepareTownAct` and
+`resumeTownAct` are callable integration points, not an implementation of E1.
+Existing menus remain scene screens. `Calendar` captures its partial tick exactly;
+`Pickups` shares generation/rewards and captures daily bits; `Speech` accepts the
+live `People`/`Game` without a scene director. `FestivalSystem.drawOnLevel` reuses
+board, trophies and dressing with act ground and animation time.
+
+The initial `ObjectTerrainUtils` floor call produced two NON_API_ENGINE_REFERENCE
+warnings; rejected in favour of public decoded chunk/solid-profile queries.
+`ActGround` handles descriptor flips and signed column heights for NPC placement.
+It is not a physics controller or a native floor-register implementation. Villagers
+stop at cliffs/pits; a terrain author must supply connected walkable town anchors.
+The real S3K player retains its native sensors, loops and abilities. Town rings add
+one to both the saved wallet and the act's native health ring count. E1 must not
+replace the saved wallet with `ActResult.rings` (damage affects native health).
+
+Observed on this lane: queued Java 21 engine test-compile/classpath build passed;
+creator main/tests compiled with `javac --release 21`; SDK packaging reported
+**Validation passed: 0 findings**; the creator launcher ran **178/178**, no skips,
+including eight town rule tests. Running-act and full scene bridge verification
+are the next milestone. No terrain or scene-round-trip claim is implied.
+
+### Town delivery: running objects, hand-back and evidence
+
+Implementation milestones: `bfb7d7e41` (rules/state), `8cd3c2301` (seven running-act
+checks), `c5dd65f5c` (floor reprojection and rendering), `d5ea971f2` (overlay order
+and accepted invitations). The initial qualified registration names were rejected
+at runtime: `registerObject` needs owner-local names, while placements use qualified
+keys. The new `TestStarpostTownAct` packages/validates the external mod and loads a
+real additive `Sonic3kLevel` with test-only flat collision, no stock events or
+objects and the actual S3K player. Sonic, Tails and Knuckles walk the same town.
+This test level supplies no production terrain or asset fallback.
+
+Rejected setup: relying on a baked additive start alone. Native S3K's dynamic ROM
+start provider placed the fixture at AIZ coordinates (observed centre 3224,1036
+after 30 ticks), rather than the declared 440,173. An explicit centre start through
+`HeadlessTestFixture` fixes the test. **E1 must apply `ActLaunch.spawnX/spawnY` after
+native start selection**, then recenter and initialize the destination normally.
+Do not hide this issue with player writes in a town object. E1 also retains the
+native health ring count through `ActResult`, separately from the saved wallet.
+
+`TownContent.placements()` supplies the controller; its first update attaches
+public act collision and creates the registered villagers, doors, decorations and
+pickups. Keep scene/act layout width and anchors identical for daily pickup
+identity; `Pickups.placeOnGround` reprojects floor placements while retaining taken
+bits, rejecting incompatible identities. Schedule movement stops at pits/cliffs;
+this does not certify a connected route in the phase-1 terrain.
+
+Integration registers `TownContent.registerInput(context, destination, town)`
+against the tagged valley `ZoneKey.Mod`, using the session already returned by
+`TownContent.register`. The destination filter removes pad B from the native jump
+union (A/C still jump), and suppresses native movement while modal. The overlay
+reads raw input edges before filtering. `StarpostScene.prepareTownAct()` binds the
+same PlayScreen/Game before suspension; `TownSession.handBack().payload()` carries
+the proposed exit payload; `resumeTownAct()` consumes it exactly once after return.
+A confirmed festival invitation now calls the existing event directly, avoiding a
+second question. Door/menu close and automatic act relaunch are E1's remaining glue.
+
+The first CPU pictures exposed rings and names drawing above dialogue because
+villagers/pickups inherited bucket 0. Explicit buckets 4/3 keep them below the
+controller's bucket 0 HUD/dialogue; a pixel regression checks the opaque dialogue
+region. Buildings remain bucket 6, dressing 7/1. Museum rendering reuses the actual
+Annex actor's restoration/trophy-window renderer, not a duplicate facade rule.
+
+Observed focused validation in this worktree, with both absolute ROM properties.
+Set `TOWN_WORKTREE` to this lane's absolute checkout and `TOWN_CAPTURE_DIR` to an
+absolute external task directory (this run used `~/scratch/sv-town/act-pictures`).
+
+```bash
+cd "$TOWN_WORKTREE"
+S3K="$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen"
+S1="$PWD/Sonic The Hedgehog (W) (REV01) [!].gen"
+python3 tools/testing/maven_queue.py --lean -B -Dmse=off \
+  '-Dtest=TestStarpostTownAct,TestStarpostValleyExample,TestStarpostValleyScene,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' \
+  "-Dstarpost.town.capture.dir=$TOWN_CAPTURE_DIR" \
+  "-Ds3k.rom.path=$S3K" "-Dsonic1.rom.path=$S1" test
+# 71/71, zero failures/errors/skips; creator bridge includes 180/180.
+python3 tools/testing/maven_queue.py --lean -B -Dmse=off \
+  '-Dtest=TestStarpostTownAct,TestStarpostTownSceneBridge,TestStarpostValleyExample,TestStarpostValleyScene' \
+  "-Dstarpost.town.capture.dir=$TOWN_CAPTURE_DIR" \
+  "-Ds3k.rom.path=$S3K" "-Dsonic1.rom.path=$S1" test
+# After presentation/festival fixes: 12/12, zero failures/errors/skips; creator 180/180.
+python3 tools/testing/maven_queue.py --lean -B -Dmse=off \
+  '-Dtest=TestStarpostTownAct,TestStarpostTownSceneBridge' \
+  "-Dstarpost.town.capture.dir=$TOWN_CAPTURE_DIR" \
+  "-Ds3k.rom.path=$S3K" "-Dsonic1.rom.path=$S1" test
+# Final rendering regression/bridge pictures: 9/9, zero failures/errors/skips.
+python3 tools/testing/maven_queue.py --lean -B -Dmse=off \
+  '-Dtest=TestStarpostTownSceneBridge' \
+  "-Dstarpost.town.capture.dir=$TOWN_CAPTURE_DIR" \
+  "-Ds3k.rom.path=$S3K" "-Dsonic1.rom.path=$S1" test
+# Trophy-populated shelf capture: 1/1, zero failures/errors/skips.
+```
+
+Every packaging run reported **Validation passed: 0 findings**. Town checks cover
+scheduled walking/indoor entry, raw pad-B dialogue, modal player/clock holds, gifts,
+latched door exits, bank/Momentum/native-ring collection and full registry town
+restore plus forward replay, including dialogue/control. Creator tests cover
+translator, daily gifting, decline, full bags, invitations, session isolation,
+clock fractions/random state and changed floor placement. Bridge checks dispatch
+all town doors, farm and inventory without replacing Game, and open Ring Hunt
+without another Ask. Existing year-of-scenes smoke and the four S3K obligations
+passed; `TestSonic3kLevelLoading` selects both package variants (36 + 7 cases).
+
+Visual witnesses under the external `TOWN_CAPTURE_DIR` were inspected:
+`stall.png`, `inn.png`, `capsule.png`, `pictures.png`, `museum-restored.png`,
+`board-and-shelf.png`, `festival-dressing.png`. These paint the actual level canvas
+rectangle commands over an explicitly flat test background; they exclude native
+player/terrain drawing and do not establish GPU performance. Board/shelf and
+festival/museum pictures use the real bridge's reused presentation.
+
+Proportionate validation: the change-based plan at base `acb094c763` selects all
+3,080 ordinary classes because example paths have no category mapping. Only
+creator code/tests and the design changed; no engine production, API/build or
+selection policy changed. Direct creator, scene, act, input, pickup, registry and
+S3K consumer checks cover the bounded behaviors instead of that fallback broad
+run. Broad preflight reports missing/wrong **Lua 5.4**; no broad/guard or full-suite
+pass is claimed. The initial compile/setup failures were fixed and the completed
+runs above supersede them. Engine regressions outside this scope were not assessed.
+
+**Town-lane handover (superseded below):** there was no `SceneContext.startAct`,
+`ModScene.resume` or `ObjectServices.requestActExit` at Town tip `490f3de43`. Nothing pretends to perform that
+transition. The existing startup scene remains the active route until E1 and the
+phase-1 controller placement/input registration are integrated. Production title
+→ scene → valley act → door/menu → same act, native rendering/performance and
+walkable terrain anchors remain unverified. Required E1 signatures and payload are
+above; keep the scene/art/session alive across suspension, latch the exit at a
+frame boundary, release modal controls and establish fresh timeline boundaries.
+
+### Phase-2 act bridge implementation
+
+The Act Bridge lane starts at Town tip `490f3de43`. E1 lives in
+`ModSceneActBridge`, with small frame-loop delegates, `ModSceneHost` suspension,
+`GameplayTeamBootstrapContext` launch admission and engine-only
+`LevelSceneActAccess`. Scene suspension retains the original instance/context,
+ROM library, decoded art, prepared music and networking; it releases GPU textures
+and parks audible playback/borrowed donor routes. Resume re-prepares base ROM
+audio before `OwnedSceneFactory` calls the creator under its fault boundary.
+Title/fault teardown retires the retained visit before resetting audio or unloading
+mod owners. A duplicate launch cannot replace the first pending request.
+
+The public records and methods above are the implemented contract. Destination
+ownership and registration are validated synchronously inside the scene callback.
+Spawn overrides are one-shot centre writes after **all** native start selection and
+before reset, team placement and camera/object initialization. `ActLaunch` copies
+its team/state, uses zero-based acts, signed or unsigned native centre words and health rings
+0–999. Scene entry is a normal load boundary. Pending exit payloads participate in
+the existing level transition rewind adapter; the first request wins. Consumption
+occurs before the next LEVEL body, both handoff fades freeze world/scene updates,
+and return marks `MODE_EXIT_TO_NON_REWINDABLE`. Held input edges are retired through
+the fades. Explicit controllers own semantic completion/faint/timeout exits; stock
+progression is not guessed or converted automatically. `ABORTED` is available to a
+controller; hold-Escape and mod faults retire the scene to master title instead of
+calling a disabled scene's resume.
+
+The town registers `starpost-valley:valley` with a generated blank, flat native
+collision placeholder (26×2 S3K blocks; floor 192; no Sega art packaged). The farm
+fold launches at centre 190,173 with the chosen farmer. `TownController` submits
+its immutable hand-back payload through `services().requestActExit`; the retained
+`PlayScreen` opens the existing door/festival/event/menu handler. Closing a menu
+relaunches at the returned centre, retaining native health independently of the
+saved wallet. Gate/time-up/faint return to farm/day-end rather than relaunching.
+`town scene` retains the original scene valley; `town act` restores the default
+and `town enter` launches directly from a live play screen.
+
+Phase 1 replaces this zone's placeholder source with ROM-backed encoded terrain,
+retains the tagged destination and director admission anchors, and supplies correct
+connected ground/door anchors and entry centre for that terrain. Existing town
+width/pickup identities and the registered TownSession must stay consistent. This
+bridge does not certify the future loop, terrain, viewport/character route matrix
+or cross-ROM native object-art work.
+
+The brief's 3,072-line GameLoop ceiling differs from this checkout: the actual
+`TestArchitecturalSourceGuard` pins it at 3,381 and the inherited source is about
+3,349 effective lines. The bridge does not raise that pin; recording restart
+orchestration moves into its existing bootstrap helper and GameLoop shrinks.
+LevelManager's 3,145-line ratchet also stays unchanged; native start-provider
+selection moves into the level helper without changing its fallback semantics.
+
+The hook rejected an explanatory descriptor comment: ordinary candidate signature
+regeneration must not edit `mod-api-release-policy.properties`. It remains the
+unchanged authority (`currentApi=0.7.0`, candidate); the API version Javadoc,
+compatibility guidance and replacement 0.7 pin document this extension. No
+published version/pin or topology is invented to bypass that rule.
+
+A single controller at the gate was rejected by the executable round trip: a
+door return at centre 896 admitted no gate object, so the town stopped ticking.
+`TownContent.placements()` now supplies 256-pixel admission anchors along the
+route. The first admitted director claims the visit in captured `TownSession`
+state; the others neither update nor draw. Bind resets this claim, and rewind
+restores it with the controller objects. Phase 1 must preserve admission coverage
+for every entry/door/menu return centre, not merely place one distant gate object.
+The test checks exactly one town tick per world frame on both visits. Returned
+Y uses the controller's native collision result (172 here), not the initial
+launch Y of 173. The placeholder's start lies within its declared bounds.
+
+Working milestones: engine/API `5a0097933`; town glue and production bootstrap
+round-trip checks follow in this lane. Focused `TestModSceneActBridge` reports
+5/5, zero failures/errors/skips, using both absolute ROM properties. The town,
+example packaging and existing scene classes report 8/8, 2/2 and 1/1 respectively;
+the example invokes 181 creator cases (all pass, zero skips) and SDK validation
+reports zero findings. The four engine bridge cases passed before the relaunch
+fix; the last run passes all five, including farm → act → inn menu → act → gate
+→ the same farm/session. Final broad validation is recorded below when complete.
+
+The tick assertion initially treated a headless step as one object pass. S3K's
+initial `Process_Sprites` pass runs before the first LevelLoop iteration, and
+`HeadlessTestRunner` retries its SETUP_ONLY result. The test now retires that
+native setup pass before measuring one director tick per ordinary world frame;
+it does not alter engine timing or fit a town tick gate to the fixture. The
+scene return's audio preparation, exit-once behavior, rewindable pending payload,
+load/mode boundaries, hold-Escape and creator object fault teardown are exercised
+separately from the complete Starpost route.
+
+The resource-policy hook rejected staging even the nine tiny original `.bin`
+placeholder assets. Instead of changing that policy or renaming binary blobs,
+`examples/starpost-valley/generate_resources.py` now authors them directly into
+the packaging resource root. Checkout and artifact-only launchers share optional
+trusted project resource generation after copying source resources, and the test
+harness follows the same convention. The generator reproduces all nine original
+typed assets exactly; no ROM input is read. A launcher regression checks ordering
+and generator failure propagation. Generated blobs remain disposable output.
+
+Final review rejected a signed-positive-only spawn check. Baked levels accept
+X through 0xFFFF (`ModLevelDefinitionParser`), while `AbstractSprite.getCentreX/Y`
+return signed shorts. `ActLaunch` accepts either signed or unsigned 16-bit word
+representations, and a production bootstrap regression writes upper-half X and
+signed Y without losing their bits. Values outside a native word remain invalid.
+The first broad invocation was deliberately interrupted before completion for
+this correction; it is not a suite pass, and its diagnostics were acknowledged.
+
+The hook initially rejected that validation-only record edit even though the
+normalized signature snapshot remained identical. Its non-class heuristic kept
+compact-constructor bodies as if they were public declarations. Bash and
+PowerShell now exclude those bodies while retaining the canonical declaration,
+record components and other members. `TestModApiHookPolicy` verifies body edits
+pass without fake pin churn, component edits fail without the pin and pass with
+it; all 21 policy cases pass on both hosts. This fixes the actual coupling check
+rather than bypassing hooks, changing descriptor authority or inventing API.
+The corrected bridge/host/signature focused run reports 36/36, zero skips.
+
+
+The first completed guards rejected a new `level -> mods` package-cycle edge.
+The minimal contract correction locates `ActExit` in `com.openggf.game`, already
+shared by the level and mod APIs; `ActLaunch` and `ActResult` remain in
+`com.openggf.mods.scene`. The level helper accepts native spawn optionals and
+returns an engine-only result; the outer bridge constructs the public result.
+This preserves the signatures' semantics without relaxing architecture ratchets.
+The test object callback's clock parameter is named `vIntRunCount`, matching the
+existing V-int terminology guard.
+
+
+### Phase-2 final validation (2026-10-10)
+
+Implementation milestones are `5a0097933` (engine/API), `c6c52b513` (town native
+round trip and generated placeholder), `1730c4cb8` (native word validation and
+signature-hook correction), and `9ef5d8d21` (package boundary and clock name).
+All work remains local on `feature/ai-starpost-actbridge`; no push, merge or
+rebase was performed. Phase 1 still replaces the placeholder terrain and verifies
+its connected anchors, director admission, and per-route/viewport/team obligations.
+
+Run these commands from the Act Bridge worktree. `$PWD` resolves its verified
+S3K and S1 ROMs to the absolute paths used by the tests:
+
+```bash
+actbridge_s3k="$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen"
+actbridge_s1="$PWD/Sonic The Hedgehog (W) (REV01) [!].gen"
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 490f3de43 --category mods --preflight
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 490f3de43 --category mods --workers 2 --max-minutes 80 --run
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestModSceneActBridge,TestModSceneHost,TestModApiSignatureSurface,TestStarpostTownAct,TestStarpostValleyExample,TestStarpostValleyScene' "-Ds3k.rom.path=$actbridge_s3k" "-Dsonic1.rom.path=$actbridge_s1" test
+```
+
+The change-based plan correctly selected all 3,082 ordinary candidate classes for
+this public/shared API change, plus fresh guards. The first one-worker attempt
+on `1730c4cb8` reached its 40-minute invocation limit: 2,705 reports / 23,492
+observed tests, zero failures/errors, 57 skips, **incomplete**; no guard run began.
+Its diagnostics were inspected and acknowledged. The unchanged two-worker retry
+completed the ordinary lane in 1,708.94 seconds: 3,080 reports, 26,677 tests,
+27 failures, zero errors, 63 skips. The 3,082 figure is the selected source-class
+count, not the number of XML suites Maven produces. The initial guards found the
+three package-cycle/clock failures described above; the focused corrections did
+not change native gameplay or relax a guard.
+
+The final `9ef5d8d21` source contents pass all **674 guards**, zero failures,
+errors or skips, in 3:37. The final focused selection passes **47 tests**, zero
+failures/errors/skips, including all six engine bridge cases and the actual
+farm → act → inn menu → act → gate → same farm/session round trip. The example
+suite additionally executes 181 creator cases, all passing with zero skips, and
+SDK validation reports zero findings. Earlier required S3K loading/bootstrap/
+decoding/AIZ-skip consumer checks passed with the same absolute ROM setup.
+`TestModApiHookPolicy` passes all 21 Bash/PowerShell cases, and
+`python3 -m unittest discover -s tools/modding -p test_creator_kit.py` passes 13
+creator-kit checks. The compiled normalized 0.7 pin is regenerated in place;
+`currentApi=0.7.0` remains the unchanged unpublished candidate authority.
+
+The 63 ordinary skips were inspected: opt-in probes/benchmarks/soaks/captures,
+unavailable OpenGL/EGL, Infinite Sonic route assumptions, a CPZ spin-tube
+assumption, and unrequested local timeline/BizHawk diagnostics. They do not
+represent missing ROM paths. Live GPU resource re-upload and audible playback
+remain outside headless coverage; the bridge lifecycle and audio preparation
+are covered directly. This is a completed **red ordinary suite**, not a green
+full-suite claim.
+
+Each ordinary failure was attributed with a bounded, matched two-worker run:
+
+```bash
+actbridge_route_tests='com.openggf.tests.TestS3kMhzAct2AuthoredRoute,com.openggf.tools.TestDezIncomingFinalRouteCapture,com.openggf.tools.TestLrzActTwoColdRouteCapture,com.openggf.tools.TestLrzBossColdRouteCapture,com.openggf.tools.TestLrzKnucklesColdRouteCapture,com.openggf.tools.TestLrzTailsColdRouteCapture,com.openggf.tools.TestLrzWideBossColdRouteCapture,com.openggf.tools.TestMhzPairColdRouteCapture,com.openggf.tools.TestMhzWideColdRouteCapture,com.openggf.tools.TestSszColdRouteCapture,com.openggf.tools.TestSszSoloColdRouteCapture,com.openggf.tools.TestSszTailsColdRouteCapture,com.openggf.tools.audio.timeline.TestS1GameplayAudioTimelineCli'
+python3 tools/testing/maven_queue.py -Dmse=off -Ptest-concurrent "-Dtest=$actbridge_route_tests" "-Ds3k.rom.path=$actbridge_s3k" "-Dsonic1.rom.path=$actbridge_s1" test
+```
+
+The current `9ef5d8d21` source contents and exact `490f3de43` baseline source
+both ran 48 tests: 27 failures, zero errors/skips. The baseline was a temporary
+tracked-source overlay in this same worktree, with HEAD/branch unchanged,
+verified with `git diff 490f3de43 --exit-code -- .`; stale compiled classes were
+removed before each source build. A finally block restored the committed current
+source and removed baseline classes; `git diff --exit-code -- .` then passed.
+Comparison by fully qualified class, parameterized test identity, failure kind,
+and **full XML failure message** found zero differences after normalizing only
+JVM object identity hashes. There were no new, missing or worsened failures.
+The following are inherited failures; long world-diff messages show their prefix:
+
+| Class | Test identity | Failure |
+|---|---|---|
+| `tests.TestS3kMhzAct2AuthoredRoute` | `incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String, int)[2]` | late pulley owns Tails ==> expected: <true> but was: <false> |
+| `tests.TestS3kMhzAct2AuthoredRoute` | `incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String, int)[3]` | late pulley owns Sonic ==> expected: <true> but was: <false> |
+| `tools.TestDezIncomingFinalRouteCapture` | `coldEmeraldTeamClearsBothActsFinalFightAndDoomsday` | death at 53897 ==> expected: <false> but was: <true> |
+| `tools.TestDezIncomingFinalRouteCapture` | `coldOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding` | expected: <96> but was: <0> |
+| `tools.TestDezIncomingFinalRouteCapture` | `coldOrdinarySoloTailsClearsAllFinalPhasesAndLoadsEnding` | expected: <96> but was: <0> |
+| `tools.TestDezIncomingFinalRouteCapture` | `coldOrdinaryTeamClearsHandsCoreAndEscapeShipAndLoadsEnding` | expected: <96> but was: <0> |
+| `tools.TestDezIncomingFinalRouteCapture` | `coldWideOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding` | expected: <96> but was: <0> |
+| `tools.TestDezIncomingFinalRouteCapture` | `incomingFinalFightRestoresAndReplaysEveryPhase(int)[1]` | death at 26706 ==> expected: <false> but was: <true> |
+| `tools.TestDezIncomingFinalRouteCapture` | `incomingFinalFightRestoresAndReplaysEveryPhase(int)[2]` | death at 26750 ==> expected: <false> but was: <true> |
+| `tools.TestLrzActTwoColdRouteCapture` | `coldTeamCompletesActTwoAndReachesBossActWithRepeatableWorldState` | death at input 36526 ==> expected: <false> but was: <true> |
+| `tools.TestLrzBossColdRouteCapture` | `coldTeamCompletesBossActWithEarnedShieldAndRepeatableWorldState` | death at input 36526 ==> expected: <false> but was: <true> |
+| `tools.TestLrzKnucklesColdRouteCapture` | `coldKnucklesCompletesActTwoAndReachesPlayableHiddenPalace` | expected: <1069> but was: <899> |
+| `tools.TestLrzTailsColdRouteCapture` | `coldTailsClearsActOneAndRestoresTraversalFightAndHandoff` | death at input 19460 ==> expected: <false> but was: <true> |
+| `tools.TestLrzTailsColdRouteCapture` | `coldTailsCompletesActTwoAndRestoresTheBoulderHandoff` | death at input 19460 ==> expected: <false> but was: <true> |
+| `tools.TestLrzTailsColdRouteCapture` | `coldTailsCompletesBossActAndReachesPlayableHiddenPalace` | death at input 19460 ==> expected: <false> but was: <true> |
+| `tools.TestLrzTailsColdRouteCapture` | `coldTailsRestoresActTwoTraversalToTheMiddleCorridor` | death at input 19460 ==> expected: <false> but was: <true> |
+| `tools.TestLrzWideBossColdRouteCapture` | `coldWideTeamClearsBossAndReleasesHiddenPalaceWithRepeatableWorld` | expected: <2796> but was: <524> |
+| `tools.TestMhzPairColdRouteCapture` | `pairedColdCompletionIsolatesTheLiveTimelineAtTheActualFbzLoad` | the route must observe the actual history-reset boundary ==> expected: <true> but was: <false> |
+| `tools.TestMhzWideColdRouteCapture` | `wideSonicCompletesBothActsThroughProductionLoopWithWholeWorldReplay` | [wide-route-19500] restore 0 zone-runtime: [zone-runtime.stateBytes[2]: A=46 B=26, zone-runtime.stateBytes[3]: A=-104 B=64, zone-runtime.stateBytes[6]: A=38 B=21, zone-runtime.stateBytes[… |
+| `tools.TestSszColdRouteCapture` | `coldCompleteRouteDefeatsMechaAndLoadsDeathEggWithRewindAtLateEvents` | death at input 7311 ==> expected: <false> but was: <true> |
+| `tools.TestSszColdRouteCapture` | `coldRouteDefeatsBothReplicasAndReplaysTraversalAndTransport` | death at input 7311 ==> expected: <false> but was: <true> |
+| `tools.TestSszSoloColdRouteCapture` | `coldSoloSonicDefeatsBothReplicasAndReplaysTheirApproaches` | death at 7671 ==> expected: <false> but was: <true> |
+| `tools.TestSszSoloColdRouteCapture` | `coldSoloSonicDefeatsMechaAndLoadsDezWithIsolatedHistory` | death at 7671 ==> expected: <false> but was: <true> |
+| `tools.TestSszTailsColdRouteCapture` | `coldSoloTailsDefeatsBothReplicasAndRidesTheirTeleporters(int)[2]` | replay at 4018 object-manager: [object-manager.usedSlotsBits differs, object-manager.usedSlotsBits.onlyA: 24, 29, object-manager.dynamic[6][ObjectRefId[slotIndex=-1, generation=0, spawnId… |
+| `tools.TestSszTailsColdRouteCapture` | `coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory(int)[1]` | expected: <48> but was: <0> |
+| `tools.TestSszTailsColdRouteCapture` | `coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory(int)[2]` | expected: <48> but was: <0> |
+| `tools.audio.timeline.TestS1GameplayAudioTimelineCli` | `shellUsesAbsoluteBootstrapToolsAndRejectsInjectedEnvironmentBeforePathLookup` | expected: <0> but was: <4> |
+
+All category diagnostics were inspected and acknowledged, including the
+interrupted native-word correction run. Raw logs/comparator files are disposable
+worktree output and are not archived. The evidence above records commands,
+source commits, skips and attributed failure identities rather than totals alone.
+
 ## 22. The real valley (P1 lane)
 
 Continuation of checkpoint `4b1a7af90` in `.worktrees/ai-starpost-realvalley`,

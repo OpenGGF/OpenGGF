@@ -105,7 +105,24 @@ public final class FestivalSystem {
         return play.valley().cameraX() + shell.width() / 2f;
     }
 
+    private java.util.function.IntUnaryOperator levelFloor;
+    private long levelTicks;
+
+    /** Existing presentation reused in an engine act; no director ticks or scene-player reads. */
+    public void drawOnLevel(SceneCanvas canvas, int cx, int cy, boolean front,
+                            java.util.function.IntUnaryOperator floor, long ticks) {
+        levelFloor = floor;
+        levelTicks = ticks;
+        try {
+            if (front) drawFront(canvas, cx, cy, SceneDraw.plain());
+            else drawBehind(canvas, cx, cy, SceneDraw.plain());
+        } finally { levelFloor = null; }
+    }
+
+    public static FestivalSystem forPlay(PlayScreen play) { return of(play); }
+
     int floor(int x) {
+        if (levelFloor != null) return levelFloor.applyAsInt(x);
         int y = play.valley().valley.floorBelow(x, 0);
         return y >= Art.BLOCK ? Art.FLOOR : y;
     }
@@ -129,6 +146,13 @@ public final class FestivalSystem {
         } else {
             shell.push(new Ask("JOIN THE " + f.name + "?", () -> start(f)));
         }
+    }
+
+    /** The level already asked and accepted; reuse the event without asking twice. */
+    public void startAcceptedInvitation() {
+        if (today != null && today.openAt(shell.game.calendar)
+                && !festivals.joined(today.id, shell.game.calendar.year())) start(today);
+        else ask();
     }
 
     /** Starts a festival's event as its own screen. */
@@ -188,6 +212,8 @@ public final class FestivalSystem {
     // ------------------------------------------------------------------ drawing
 
     /** Is the valley showing a festival's dressing now (from the morning of the day). */
+    private long renderTicks() { return levelFloor == null ? shell.ticks : levelTicks; }
+
     private boolean decorated() {
         return today != null;
     }
@@ -214,7 +240,7 @@ public final class FestivalSystem {
         }
         SceneSpriteSet sign = shell.art.signpost;
         if (sign != null && sign.frameCount() > 4) {
-            long age = shell.ticks - signSpinAt;
+            long age = renderTicks() - signSpinAt;
             boolean special = hasSpecial();
             int frame = age < 48 ? 1 + (int) (age / 4 % 3) : special ? 0 : 4;   // Map_Sign: 0 Robotnik, 4 Sonic
             SceneSprite s = sign.frame(frame);
@@ -257,9 +283,9 @@ public final class FestivalSystem {
     /** A trophy standing on (x, top). */
     private void drawTrophy(SceneCanvas canvas, String festival, float x, float top, SceneDraw tint) {
         switch (festival) {
-            case FestivalBook.RING_HUNT -> standSprite(canvas, shell.art.ring, (int) (shell.ticks / 8 % 4), x, top - 2, tint);
+            case FestivalBook.RING_HUNT -> standSprite(canvas, shell.art.ring, (int) (renderTicks() / 8 % 4), x, top - 2, tint);
             case FestivalBook.PARADE -> {
-                SceneImage f = art.flower((int) (shell.ticks / 16 % 2), 0);
+                SceneImage f = art.flower((int) (renderTicks() / 16 % 2), 0);
                 if (f != null) {
                     canvas.draw(f, x - 16, top - 32, tint);
                 }
@@ -326,7 +352,7 @@ public final class FestivalSystem {
             canvas.fill(bx - 24 - cx, floor - 16 - cy, 48, 2, 0xFFDB9249);
             String label = FairScreen.boothName(i);
             canvas.text(label, bx - canvas.textWidth(label) / 2 - cx, floor - 12 - cy, Text.WHITE);
-            standSprite(canvas, bumper, (shell.ticks / 12 + i) % 4 == 0 ? 1 : 0, bx - cx, top - cy, tint);
+            standSprite(canvas, bumper, (renderTicks() / 12 + i) % 4 == 0 ? 1 : 0, bx - cx, top - cy, tint);
         }
     }
 
@@ -344,7 +370,7 @@ public final class FestivalSystem {
         boolean night = shell.game.calendar.light() == 2;
         boolean haunted = today.id.equals(FestivalBook.SCRAP_BRAIN);
         for (int lx : new int[] {ax - 50, ax + 36}) {
-            int frame = haunted ? (shell.ticks / 6 % 7 == 0 ? 3 : 1) : night ? 3 : 0;
+            int frame = haunted ? (renderTicks() / 6 % 7 == 0 ? 3 : 1) : night ? 3 : 0;
             standSprite(canvas, shell.art.lamppost, frame, lx - cx, floor(lx) - cy, tint);
         }
         if (today.id.equals(FestivalBook.FLICKIES)) {
@@ -379,7 +405,7 @@ public final class FestivalSystem {
             }
             if ((x - left) % 14 == 0 && x > left && x < right && Math.abs(f - 0.5f) > 0.12f) {
                 int c = colours[(x - left) / 14 % colours.length];
-                float sway = (float) Math.sin((shell.ticks + x) / 18.0) * 1.5f;
+                float sway = (float) Math.sin((renderTicks() + x) / 18.0) * 1.5f;
                 for (int r = 0; r < 7; r++) {
                     int half = Math.max(0, 3 - r / 2);
                     canvas.fill(Math.round(x - half + sway * r / 7f) - cx, y + 1 + r - cy, half * 2 + 1, 1, c);
@@ -414,7 +440,7 @@ public final class FestivalSystem {
      */
     void drawSunflowers(SceneCanvas canvas, int cx, int cy, SceneDraw tint) {
         int ax = anchorX();
-        int frame = (int) (shell.ticks / 16 % 2);
+        int frame = (int) (renderTicks() / 16 % 2);
         for (int x = ax - 290; x <= ax + 290; x += 58) {
             if (Math.abs(x - ax) < 40) {
                 continue;
@@ -422,13 +448,13 @@ public final class FestivalSystem {
             int floor = floor(x);
             canvas.fill(x - cx, floor - 30 - cy, 2, 30, 0xFF006D00);
             canvas.fill(x - 4 - cx, floor - 14 - cy, 4, 2, 0xFF49B600);
-            SceneImage f = art.flower(frame, (int) ((shell.ticks / 8 + x / 58) % FestivalArt.PETAL_CYCLE_LENGTH));
+            SceneImage f = art.flower(frame, (int) ((renderTicks() / 8 + x / 58) % FestivalArt.PETAL_CYCLE_LENGTH));
             if (f != null) {
                 canvas.draw(f, x - 15 - cx, floor - 58 - cy, tint);
             }
         }
         for (int[] spot : romFlowerSpots()) {
-            SceneImage f = art.flower(frame, (int) ((shell.ticks / 8 + spot[0] / 58) % FestivalArt.PETAL_CYCLE_LENGTH));
+            SceneImage f = art.flower(frame, (int) ((renderTicks() / 8 + spot[0] / 58) % FestivalArt.PETAL_CYCLE_LENGTH));
             if (f != null) {
                 canvas.draw(f, spot[0] - cx, spot[1] - cy, tint);
             }

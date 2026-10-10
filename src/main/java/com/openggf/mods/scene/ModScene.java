@@ -38,6 +38,10 @@ public interface ModScene {
     /** Draws the current state. Must not change game state; it may be skipped or repeated. */
     void draw(SceneContext ctx, SceneCanvas canvas);
 
+    /** An act has ended. The original scene/context and ROM library are retained.
+     * Audio is re-prepared before this fault-bounded callback; restart desired music here. */
+    default void resume(SceneContext context, ActResult result) {}
+
     /** The scene is closing; save anything worth keeping. Images are released afterwards. */
     default void exit(SceneContext ctx) {
     }

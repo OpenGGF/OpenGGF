@@ -93,6 +93,18 @@ public final class Calendar {
         tickInTen = 0;
     }
 
+    /** Exact in-memory clock state, including the partial ten-minute tick and day setting. */
+    public record Snapshot(int year, int season, int day, int minutes, int tickInTen, int ticksPerTen) {}
+
+    public Snapshot capture() {
+        return new Snapshot(year, season, day, minutes, tickInTen, ticksPerTen);
+    }
+
+    public void restore(Snapshot state) {
+        year = state.year(); season = state.season(); day = state.day(); minutes = state.minutes();
+        tickInTen = state.tickInTen(); ticksPerTen = state.ticksPerTen();
+    }
+
     /** "6:40AM", the S1 HUD's TIME. */
     public String clock() {
         int h = minutes / 60 % 24, m = minutes % 60;

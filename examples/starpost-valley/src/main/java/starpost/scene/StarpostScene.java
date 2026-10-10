@@ -17,6 +17,54 @@ import starpost.ui.Text;
  */
 public final class StarpostScene implements ModScene, DebuggableScene {
     private Shell shell;
+    private final starpost.realtown.TownSession town;
+    private PlayScreen actPlay;
+    private boolean returnToAct;
+    private int returnX = 190, returnY = 173, healthRings;
+
+    private void launchTown(PlayScreen play) {
+        if (!returnToAct || actPlay != play) { returnX = 190; returnY = 173; healthRings = 0; }
+        prepareTownAct();
+        returnToAct = false;
+        shell.in.consume();
+        shell.music.parkForAct();
+        shell.ctx.startAct(new com.openggf.mods.scene.ActLaunch(
+            new com.openggf.game.ZoneKey.Mod("starpost-valley", "valley"), 0,
+            com.openggf.game.CharacterKey.parsePersisted(shell.game.farmer), java.util.List.of(),
+            java.util.OptionalInt.of(returnX), java.util.OptionalInt.of(returnY), healthRings, java.util.Map.of()));
+    }
+
+    @Override public void resume(SceneContext context, com.openggf.mods.scene.ActResult result) {
+        if (town == null || actPlay == null) throw new IllegalStateException("No suspended town act");
+        town.consumeHandBack();
+        healthRings = result.rings();
+        var state = result.state();
+        String place = state.getOrDefault("town.place", "farm_gate");
+        returnX = Integer.parseInt(state.getOrDefault("town.returnX", "190"));
+        returnY = Integer.parseInt(state.getOrDefault("town.returnY", "173"));
+        starpost.realtown.TownBridge.resume(shell, actPlay,
+            new starpost.realtown.TownSession.HandBack(place, state.get("town.event"), returnX, returnY));
+        returnToAct = !place.equals("farm_gate") && !place.equals("time_up") && !place.equals("fainted");
+        shell.in.consume();
+    }
+
+    public StarpostScene() { this(null); }
+    public StarpostScene(starpost.realtown.TownSession town) { this.town = town; }
+
+    /** E1 owner calls this immediately before SceneContext.startAct. */
+    public starpost.realtown.TownSession prepareTownAct() {
+        if (town == null || !(shell.screen() instanceof PlayScreen play))
+            throw new IllegalStateException("Town launch requires the live play screen");
+        actPlay = play;
+        starpost.realtown.TownBridge.prepare(town, shell, play);
+        return town;
+    }
+
+    /** E1 owner calls this after returning to the suspended scene, once per exit. */
+    public void resumeTownAct() {
+        if (town == null || actPlay == null) throw new IllegalStateException("No suspended town act");
+        starpost.realtown.TownBridge.resume(shell, actPlay, town.consumeHandBack());
+    }
     private String failure;
 
     @Override
@@ -39,6 +87,7 @@ public final class StarpostScene implements ModScene, DebuggableScene {
             return;
         }
         shell = new Shell(ctx, art, new Catalog());
+        shell.townAct = town == null ? null : this::launchTown;
         shell.goNow(new TitleScreen());
     }
 
@@ -48,6 +97,10 @@ public final class StarpostScene implements ModScene, DebuggableScene {
             if (ctx.buttonPressed(SceneButtons.START)) {
                 ctx.exitToGameTitle();
             }
+            return;
+        }
+        if (returnToAct && shell.screen() == actPlay && !shell.hasOverlay() && !shell.transitioning()) {
+            launchTown(actPlay);
             return;
         }
         shell.update();
@@ -74,6 +127,13 @@ public final class StarpostScene implements ModScene, DebuggableScene {
 
     @Override
     public boolean debugJump(String command) {
-        return shell != null && Debug.apply(shell, command);
+        if (shell == null) return false;
+        if (command.equals("town scene")) { shell.sceneValley = true; return true; }
+        if (command.equals("town act")) { shell.sceneValley = false; return true; }
+        if (command.equals("town enter")) {
+            if (!(shell.screen() instanceof PlayScreen play)) return false;
+            launchTown(play); return true;
+        }
+        return Debug.apply(shell, command);
     }
 }

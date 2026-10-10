@@ -94,6 +94,15 @@ final class SceneDonorMusic implements AutoCloseable {
         donorPlaying = false;
     }
 
+    /** Park borrowed routes without retiring this retained scene's decoded audio. */
+    void suspend() {
+        if (donorPlaying) audio.stopMusic();
+        donorPlaying = false;
+        List<ScopedDonorAudio> opened = new ArrayList<>(scopes.values());
+        scopes.clear();
+        for (int index = opened.size() - 1; index >= 0; index--) opened.get(index).close();
+    }
+
     /** Stops another game's song still playing, then restores every borrowed donor route. */
     @Override public void close() {
         if (closed) return;

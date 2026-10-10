@@ -29,6 +29,15 @@ public final class Shell {
     public final Music music;
     final Settings settings;
     public Game game;
+    java.util.function.Consumer<PlayScreen> townAct;
+    boolean sceneValley;
+
+    /** Farm fold integration; the scene-only valley remains available through debug. */
+    boolean startTownAct(PlayScreen play) {
+        if (townAct == null || sceneValley) return false;
+        townAct.accept(play);
+        return true;
+    }
     public long ticks;
     /** When the hotbar selection last changed (its label shows for two seconds). */
     public long hotbarChangedAt = -1000;
@@ -121,6 +130,9 @@ public final class Shell {
         toast = text;
         toastAt = ticks;
     }
+
+    /** The act exit uses the same day-end screen as scene free play. */
+    public void endActDay(boolean fainted) { go(new DayEndScreen(fainted)); }
 
     public void save() {
         if (game != null) {

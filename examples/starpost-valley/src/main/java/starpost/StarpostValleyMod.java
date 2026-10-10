@@ -13,7 +13,12 @@ public final class StarpostValleyMod implements GgfMod {
     @Override
     public void register(ModContext context) {
         context.requireDisplayWidth(400);
-        context.registerStartupScene(StarpostScene::new);
+        // The valley is a real S3K act: Sonic 1 Green Hill re-encoded at load (RealValley), hosting
+        // the town's objects and input (realtown); the scene starts it at the farm gate.
+        var town = starpost.realtown.TownContent.register(context);
         RealValley.register(context);
+        var destination = new com.openggf.game.ZoneKey.Mod("starpost-valley", RealValley.ZONE);
+        starpost.realtown.TownContent.registerInput(context, destination, town);
+        context.registerStartupScene(() -> new StarpostScene(town));
     }
 }

@@ -15,7 +15,7 @@ import starpost.ui.Text;
  * Translator, a speech bubble of pictures shown one by one. Confirm (or the action button)
  * finishes the page, then turns it.
  */
-final class Speech {
+public final class Speech {
     static final int BOX_H = 68;
     static final int TEXT_CHARS = 30;
     static final int LINES_PER_PAGE = 3;
@@ -35,30 +35,56 @@ final class Speech {
      * @param pictures the picture version, used instead of the text when non-null
      */
     Speech(PeopleSystem sys, String speaker, String text, String[] pictures) {
+        this(sys.people, sys.shell.game, speaker, text, pictures);
+    }
+
+    public Speech(People people, starpost.core.Game game, String speaker, String text, String[] pictures) {
         this.speaker = speaker;
-        VillagerDef v = sys.people.cast.get(speaker);
+        VillagerDef v = people.cast.get(speaker);
         if (v != null) {
             name = v.name;
             body = v.body();
         } else if (speaker.equals("farmer")) {
-            name = People.words("{FARMER}", sys.shell.game);
-            body = "hero:" + sys.shell.game.farmer;
+            name = People.words("{FARMER}", game);
+            body = "hero:" + game.farmer;
         } else {
             name = "";
             body = null;
         }
         this.pictures = pictures;
         if (pictures == null) {
-            paginate(People.words(text, sys.shell.game), body == null ? TEXT_CHARS + 7 : TEXT_CHARS);
+            paginate(People.words(text, game), body == null ? TEXT_CHARS + 7 : TEXT_CHARS);
         }
     }
 
     /** A villager's line, in pictures when they speak in pictures. */
     static Speech of(PeopleSystem sys, String speaker, Line line) {
-        VillagerDef v = sys.people.cast.get(speaker);
-        boolean pictures = v != null && sys.people.speaksInPictures(v, sys.shell.game);
-        return new Speech(sys, speaker, line.text(), pictures ? Pictures.of(line, sys.shell.catalog, sys.people.cast) : null);
+        return of(sys.people, sys.shell.game, speaker, line);
     }
+
+    public static Speech of(People people, starpost.core.Game game, String speaker, Line line) {
+        VillagerDef v = people.cast.get(speaker);
+        boolean pictures = v != null && people.speaksInPictures(v, game);
+        return new Speech(people, game, speaker, line.text(), pictures ? Pictures.of(line, game.catalog, people.cast) : null);
+    }
+
+    public record Snapshot(String speaker, String name, String body, List<String> pages,
+                           List<String> pictures, int page, int shown) {
+        public Snapshot { pages = List.copyOf(pages); pictures = pictures == null ? null : List.copyOf(pictures); }
+    }
+
+    public Snapshot capture() {
+        return new Snapshot(speaker, name, body, pages, pictures == null ? null : List.of(pictures), page, shown);
+    }
+
+    private Speech(Snapshot state) {
+        speaker = state.speaker(); name = state.name(); body = state.body(); pages.addAll(state.pages());
+        pictures = state.pictures() == null ? null : state.pictures().toArray(String[]::new);
+        page = state.page(); shown = state.shown();
+    }
+
+    public static Speech restore(Snapshot state) { return new Speech(state); }
+    public boolean inPictures() { return pictures != null; }
 
     private void paginate(String text, int width) {
         for (String chunk : text.split("\\|")) {
@@ -97,7 +123,7 @@ final class Speech {
     }
 
     /** One tick; true when the speaker has finished. */
-    boolean update(Controls in) {
+    public boolean update(Controls in) {
         if (shown < length()) {
             shown = Math.min(length(), shown + (pictures != null ? 1 : CHARS_PER_TICK));
         }
@@ -121,13 +147,17 @@ final class Speech {
     // ------------------------------------------------------------------ drawing
 
     void draw(PeopleSystem sys, SceneCanvas canvas, long ticks) {
+        draw(sys.art, sys.people, sys.shell.game, canvas, ticks);
+    }
+
+    public void draw(PeopleArt art, People people, starpost.core.Game game, SceneCanvas canvas, long ticks) {
         int w = canvas.width(), h = canvas.height();
         int x = 8, y = h - BOX_H - 6, bw = w - 16;
         canvas.fill(x, y, bw, BOX_H, 0xFF101848);     // opaque: the hotbar must not show through
         Text.panel(canvas, x, y, bw, BOX_H);
         int textX = x + 12;
         if (body != null) {
-            drawPortrait(sys, canvas, x + 6, y + 5, ticks);
+            drawPortrait(art, canvas, x + 6, y + 5, ticks);
             textX = x + 72;
         }
         if (!name.isEmpty()) {
@@ -136,7 +166,7 @@ final class Speech {
             Text.shadow(canvas, name, x + 12, y - 10, Text.YELLOW);
         }
         if (pictures != null) {
-            drawPictures(sys, canvas, textX, y + 12, x + bw - 10 - textX);
+            drawPictures(art, people, game, canvas, textX, y + 12, x + bw - 10 - textX);
         } else {
             String text = pages.get(page).substring(0, Math.min(shown, pages.get(page).length()));
             int ly = y + 12;
@@ -155,13 +185,13 @@ final class Speech {
     }
 
     /** The speaker at 1x in a frame of Green Hill sky, feet on the frame's floor. */
-    private void drawPortrait(PeopleSystem sys, SceneCanvas canvas, int x, int y, long ticks) {
+    private void drawPortrait(PeopleArt art, SceneCanvas canvas, int x, int y, long ticks) {
         int size = 58;
         canvas.fill(x, y, size, size, 0xFF000000);
         canvas.fill(x + 1, y + 1, size - 2, size - 2, 0xFF2449B6);
         canvas.fill(x + 1, y + size - 12, size - 2, 11, 0xFF246D00);
         canvas.fill(x + 1, y + size - 12, size - 2, 2, 0xFF49B600);
-        SceneSprite sprite = sys.art.portrait(body, ticks);
+        SceneSprite sprite = art.portrait(body, ticks);
         if (sprite == null) {
             return;
         }
@@ -178,21 +208,21 @@ final class Speech {
         SceneDraw style = SceneDraw.plain().withFlipX(flip);
         float originY = feet - (sprite.height() - sprite.originY());
         if (body.equals("hero:tails")) {
-            sys.art.tails(canvas, x + size / 2f, originY, ticks, style);
+            art.tails(canvas, x + size / 2f, originY, ticks, style);
         }
         canvas.draw(sprite, x + size / 2f, originY, style);
     }
 
     /** A white speech bubble; pictures appear one at a time. */
-    private void drawPictures(PeopleSystem sys, SceneCanvas canvas, int x, int y, int maxW) {
+    private void drawPictures(PeopleArt art, People people, starpost.core.Game game, SceneCanvas canvas, int x, int y, int maxW) {
         int count = Math.min(pictures.length, shown / TICKS_PER_PICTURE + 1);
         int gap = 6, total = 0, tall = 16;
         for (String token : pictures) {
-            total += sys.art.tokenWidth(canvas, token, sys.shell.catalog, sys.people.cast, sys.shell.game.farmer, true)
+            total += art.tokenWidth(canvas, token, game.catalog, people.cast, game.farmer, true)
                     + gap;
-            String farmer = sys.shell.game.farmer;
-            tall = Math.max(tall, sys.art.tokenHeight(token, sys.people.cast, farmer)
-                    * sys.art.scale(token, sys.people.cast, farmer));
+            String farmer = game.farmer;
+            tall = Math.max(tall, art.tokenHeight(token, people.cast, farmer)
+                    * art.scale(token, people.cast, farmer));
         }
         int bw = Math.min(maxW, total + 14), bh = Math.min(46, tall + 8);
         canvas.fill(x + 1, y, bw - 2, bh, 0xFF000000);
@@ -202,8 +232,8 @@ final class Speech {
         canvas.fill(x - 3, y + bh / 2 - 1, 5, 3, 0xFFFFFFFF);
         int px = x + 8;
         for (int i = 0; i < count; i++) {
-            px += sys.art.drawToken(canvas, pictures[i], px, y + 4, bh - 8, sys.shell.catalog, sys.people.cast,
-                    sys.shell.game.farmer, SceneDraw.plain(), true) + gap;
+            px += art.drawToken(canvas, pictures[i], px, y + 4, bh - 8, game.catalog, people.cast,
+                    game.farmer, SceneDraw.plain(), true) + gap;
         }
     }
 }
