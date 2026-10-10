@@ -40,7 +40,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Gate for the shipped Typing of the Hedgehog rails, driven through the packaged mod's real
- * {@code Course} from a cold act start (320 px, FAST load time, the rail's team and profile, stock
+ * {@code Course} from a cold act start (its profile width, FAST load time, the rail's team and profile, stock
  * badniks present), every fight cleared by typing as a player does. Each packaged rail is read by
  * the mod's own {@code Rail.parse}.
  *
@@ -61,6 +61,13 @@ class TestTypingHedgehogRails {
     static final String MOD = "typing-of-the-hedgehog";
     static final Path SOURCE = Path.of("examples/typing-of-the-hedgehog");
     static final int HOLD_ROWS = 1800, RETRY_AFTER = 120, HUB_PHASE = 333;
+    /**
+     * The route's pace outside fights (rails v2 polish, 2026-10-10): the longest stationary stretch
+     * and the longest slow roll a shipped rail may have on its run rows ({@link ForwardRails.Pace};
+     * the countdown, a fight's quiet rows and native spindash charge do not count). {@code -Dtypinghog.pace.report=true} reports without asserting.
+     */
+    static final int STILL_LIMIT = ForwardRails.Pace.STILL_LIMIT, SLOW_ROLL_LIMIT = ForwardRails.Pace.SLOW_ROLL_LIMIT;
+    static final boolean PACE_REPORT_ONLY = Boolean.getBoolean("typinghog.pace.report");
 
     @TempDir static Path temp;
     static ExampleModHarness harness;
@@ -123,6 +130,33 @@ class TestTypingHedgehogRails {
         check("s1", SonicGame.SONIC_1);
     }
 
+    /** Inspect the actual Course's release before native physics can alter its authored velocity. */
+    @Test @RequiresRom(SonicGame.SONIC_1) void heldS1StartReleasesAtTheHeaderBurstBeforeStockPhysics() throws Exception {
+        Spec spec = shipped("s1").stream().filter(s -> s.file().equals("s1-ghz3.rail")).findFirst().orElseThrow();
+        Object plan = get(spec.rail(), "plan");
+        Map<?, ?> profile = (Map<?, ?>) get(plan, "profile");
+        var fixture = launch(spec, SonicGame.SONIC_1, false, Integer.parseInt((String) profile.get("width")));
+        CourseControl control = CourseControlProbeAccess.open(SessionManager.getCurrentGameplayMode());
+        var input = new InputHandler();
+        int release = (int) get(plan, "releaseRow");
+        for (int i = 0; i < release + 600; i++) {
+            Object current = view();
+            if (get(current, "phase").equals("COUNTDOWN") && (int) get(current, "railRow") == release) {
+                var course = (com.openggf.game.mode.GameplayFrameController) courseObject();
+                assertTrue(course.beforeTick(control, LogicalInputSnapshot.neutral()));
+                var player = ForwardRails.sonic();
+                assertFalse(player.isObjectControlled());
+                assertEquals((int) get(plan, "burst"), player.getGSpeed());
+                assertEquals((int) get(plan, "burst"), player.getXSpeed());
+                assertEquals(0x600, (int) get(plan, "burst"));
+                return;
+            }
+            ControlledFrameRuntime.step(fixture.runtime(), input, LogicalInputSnapshot.neutral());
+            input.update();
+        }
+        fail("the held-run course never reached START");
+    }
+
     @Test @RequiresRom(SonicGame.SONIC_2) void s2RailsRunCleanThroughTheRealCourse() throws Exception {
         check("s2", SonicGame.SONIC_2);
     }
@@ -162,13 +196,16 @@ class TestTypingHedgehogRails {
 
     private Path storage() { return work.resolve("storage").resolve("mods").resolve(MOD); }
 
-    /** One cold course of {@code spec}: returns its fixture after writing the launch intent. */
-    private HeadlessTestFixture launch(Spec spec, SonicGame sonicGame, boolean skipIntros) throws Exception {
+    /** One cold course of {@code spec} at {@code width} px: returns its fixture after writing the launch intent. */
+    private HeadlessTestFixture launch(Spec spec, SonicGame sonicGame, boolean skipIntros, int width) throws Exception {
         bootstrap = SharedLevel.load(sonicGame, spec.zone(), spec.act());
         var config = SonicConfigurationService.getInstance();
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
         config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, spec.sidekick());
-        config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
+        String aspect = java.util.Arrays.stream(com.openggf.configuration.WidescreenAspect.values())
+                .filter(a -> a.pixelWidth() == width).map(Enum::name).findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("no display preset is " + width + " px wide"));
+        config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, aspect);
         config.resolveDisplayAspect();
         config.setSessionOverride(SonicConfiguration.LOAD_TIME_SIMULATION, "FAST");
         config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
@@ -225,9 +262,24 @@ class TestTypingHedgehogRails {
     private String forwardRun(Spec spec, SonicGame sonicGame, Object plan, Mode mode, Map<String, ForwardRails.Row> boundaries)
             throws Exception {
         Map<String, String> profile = (Map<String, String>) get(plan, "profile");
-        var fixture = launch(spec, sonicGame, "skip".equals(profile.get("intros")));
+        if (profile.get("width") == null) return "the rail names no profile width";
+        int width = Integer.parseInt(profile.get("width"));
+        String aspect = harness.plan().requiredDisplayAspect();
+        if (aspect == null || com.openggf.configuration.WidescreenAspect.valueOf(aspect).pixelWidth() != width) {
+            return "rail profile width " + width + " differs from mod display requirement " + aspect;
+        }
+        var fixture = launch(spec, sonicGame, "skip".equals(profile.get("intros")), width);
         GameServices.level().getObjectManager().initVblaCounter(mode == Mode.PHASE ? HUB_PHASE : 0);
         CourseControl course = CourseControlProbeAccess.open(SessionManager.getCurrentGameplayMode());
+        if (course.viewportWidth() != width) {
+            return "the course runs " + course.viewportWidth() + " px wide; the rail was built at " + width;
+        }
+        java.util.Set<Integer> quietRows = new java.util.HashSet<>();
+        for (Object s : (List<Object>) get(plan, "stands")) {
+            int row = (int) get(s, "row");
+            for (int c = 0; c < (int) get(s, "cleanup"); c++) quietRows.add(row + c);
+        }
+        ForwardRails.Pace pace = new ForwardRails.Pace();
         String sha1 = (String) get(plan, "romSha1");
         if (!sha1.equalsIgnoreCase(course.romSha1())) return "made for ROM " + sha1 + ", running " + course.romSha1();
         int countdownRow = (int) get(plan, "countdownRow");
@@ -237,6 +289,9 @@ class TestTypingHedgehogRails {
         Map<Integer, Object> standsByRow = new HashMap<>();
         for (Object s : stands) standsByRow.put((int) get(s, "row"), s);
         var input = new InputHandler();
+        boolean heldRun = get(plan, "launch").equals("held-run");
+        int countdownX = -1;
+        java.util.Set<Integer> runFrames = new java.util.HashSet<>();
         int countdownRows = 0, cmax = Integer.MIN_VALUE, pmax = Integer.MIN_VALUE, heldRows = 0, sinceLoop = -1;
         boolean loopsExempt = "forward-v2".equals(get(plan, "policy"));
         boolean retried = false;
@@ -267,6 +322,10 @@ class TestTypingHedgehogRails {
             }
             if (phase.equals("BOSS") && !lastPhase.equals("BOSS")) {
                 if (railRow != endpointRow) return "the boss began on row " + railRow + ", the endpoint is " + endpointRow;
+                // S1 _anim/Sonic.asm: SonAni_Run uses fr_Run11..14 ($1E..$21).
+                if (heldRun && !runFrames.equals(java.util.Set.of(0x1E, 0x1F, 0x20, 0x21))) {
+                    return "held countdown did not play the fast run frames: " + runFrames;
+                }
                 if (countdownRows < 180) return "the countdown played " + countdownRows + " native rows";
                 if (get(endpoint, "kind").equals("boss-arena") && !GameServices.gameState().isBossFightActive()) {
                     return "no stock boss arena at the endpoint";
@@ -274,6 +333,15 @@ class TestTypingHedgehogRails {
                 String art = bossArtProblem(spec);
                 if (art != null) return art;
                 boundaries.put("endpoint", ForwardRails.Row.observe(course));
+                if (mode == Mode.QUICK) System.out.println("[typing-hedgehog] " + spec.file() + " pace: " + pace);
+                if (!PACE_REPORT_ONLY && pace.maxStill > STILL_LIMIT) {
+                    return "Sonic stands still on the route for " + pace.maxStill + " rows (to row " + pace.maxStillRow
+                            + "; limit " + STILL_LIMIT + ")";
+                }
+                if (!PACE_REPORT_ONLY && pace.maxRoll > SLOW_ROLL_LIMIT) {
+                    return "Sonic rolls slowly for " + pace.maxRoll + " rows (to row " + pace.maxRollRow + "; limit "
+                            + SLOW_ROLL_LIMIT + ")";
+                }
                 return null;
             }
             if (phase.equals("STAND")) {
@@ -299,6 +367,23 @@ class TestTypingHedgehogRails {
             input.update();
             if (!nativeRow) continue;
             var player = (AbstractPlayableSprite) GameServices.camera().getFocusedSprite();
+            if (heldRun && phase.equals("COUNTDOWN") && railRow < countdownRow + 180) {
+                if (countdownX < 0) countdownX = player.getCentreX();
+                if (!player.isObjectControlled() || player.getCentreX() != countdownX || player.getXSpeed() != 0
+                        || player.getGSpeed() != (int) get(plan, "burst")) return "held-run countdown moved or lost its run speed";
+                runFrames.add(player.getMappingFrame());
+            }
+            if (heldRun && railRow == countdownRow + 180 && phase.equals("COUNTDOWN")) {
+                // This observes AFTER stock slope/velocity physics, which may change the launch speed.
+                if (player.isObjectControlled() || player.getGSpeed() <= 0 || player.getCentreX() <= countdownX) {
+                    return "START did not release running forward";
+                }
+            }
+            if (phase.equals("RUN")) {
+                int played = railRow;
+                boolean excluded = player.getSpindash() || quietRows.contains(played);
+                pace.row(player, played, excluded);
+            }
             if (player.getDead()) return "native death in " + phase + " at rail row " + railRow;
             if (player.isHurt()) return "native hurt in " + phase + " at rail row " + railRow;
             if (GameServices.level().getCurrentZone() != spec.zone() || GameServices.level().getCurrentAct() != spec.act()) {

@@ -19,7 +19,7 @@ import java.util.Set;
  * combat live-restore-v1
  * course regular
  * launch native-spindash
- * profile intros=skip width=320
+ * profile intros=skip width=400
  * game s2
  * zone 0
  * act 1
@@ -38,7 +38,8 @@ import java.util.Set;
  * All rows are <em>before-row</em> boundaries: after the course has played row {@code r-1}, the
  * next row is {@code r}. {@code countdown r} plays the native countdown on rows {@code r} to
  * {@code r+179} (DOWN, with spindash charge pulses under {@code native-spindash}) and releases
- * on row {@code r+180}. {@code stand id r cleanup pool} starts a fight before row {@code r}: the
+ * on row {@code r+180}. {@code launch held-run} uses neutral countdown rows under object control
+ * and a {@code burst 0x600} header for Sonic 1's running release. {@code stand id r cleanup pool} starts a fight before row {@code r}: the
  * listed loaded badniks ({@code Class@slot/Llayout}, or {@code -}) convert there, and rows
  * {@code r} to {@code r+cleanup-1} hold no direction or jump. {@code endpoint kind r} starts the
  * act's boss (or finale) before row {@code r}; {@code validated} equals the program length.
@@ -57,7 +58,7 @@ public record Rail(String game, int zone, int act, String team, int validated, S
     public static final int COUNTDOWN_ROWS = 180;
 
     /** The forward course's semantics. */
-    public record Plan(String policy, String combat, String kind, String launch, Map<String, String> profile,
+    public record Plan(String policy, String combat, String kind, String launch, int burst, Map<String, String> profile,
                        String romSha1, int countdownRow, List<Stand> stands, Endpoint endpoint, String waypoints) {
         public Plan {
             profile = Map.copyOf(profile);
@@ -159,7 +160,7 @@ public record Rail(String game, int zone, int act, String team, int validated, S
     public static Rail parse(String text) {
         String game = null, team = "sonic", engine = "", rom = "";
         String policy = null, combat = null, kind = null, launch = null, romSha1 = null, endpointKind = null, waypoints = null;
-        int format = -1, zone = -1, act = -1, validated = -1, countdown = -1, endpointRow = -1;
+        int format = -1, zone = -1, act = -1, validated = -1, countdown = -1, endpointRow = -1, burst = 0;
         Map<String, String> profile = new LinkedHashMap<>();
         List<Integer> frames = new ArrayList<>(), masks = new ArrayList<>();
         List<Stand> stands = new ArrayList<>();
@@ -175,6 +176,7 @@ public record Rail(String game, int zone, int act, String team, int validated, S
                 case "combat" -> combat = value;
                 case "course" -> kind = value;
                 case "launch" -> launch = value;
+                case "burst" -> burst = Integer.decode(value);
                 case "profile" -> {
                     for (String pair : value.split("\\s+")) {
                         int eq = pair.indexOf('=');
@@ -226,7 +228,11 @@ public record Rail(String game, int zone, int act, String team, int validated, S
         if (!Set.of("forward-v1", "forward-v2").contains(policy)) throw new IllegalArgumentException("Unsupported policy " + policy);
         if (!"live-restore-v1".equals(combat)) throw new IllegalArgumentException("Unsupported combat mode " + combat);
         if (!Set.of("regular", "boss-only", "pilot").contains(kind)) throw new IllegalArgumentException("Unknown course kind " + kind);
-        if (!Set.of("native-spindash", "native-run-roll").contains(launch)) throw new IllegalArgumentException("Unknown launch " + launch);
+        if (!Set.of("native-spindash", "native-run-roll", "held-run").contains(launch)) throw new IllegalArgumentException("Unknown launch " + launch);
+        // S1 _incObj/01 Sonic.asm: son_maxspeed = $600; held-run launches cannot exceed it.
+        if (launch.equals("held-run") ? !game.equals("s1") || burst <= 0 || burst > 0x600 : burst != 0) {
+            throw new IllegalArgumentException("Invalid launch burst " + burst);
+        }
         if (romSha1 == null || romSha1.length() != 40) throw new IllegalArgumentException("A rail needs rom-sha1");
         if (endpointKind == null || !Set.of("boss-arena", "act-end", "pre-handover").contains(endpointKind)) {
             throw new IllegalArgumentException("A rail needs a boss-arena, act-end or pre-handover endpoint");
@@ -238,10 +244,10 @@ public record Rail(String game, int zone, int act, String team, int validated, S
         if (countdown + COUNTDOWN_ROWS >= endpointRow) throw new IllegalArgumentException("Countdown runs past the endpoint");
         for (int i = 0; i < COUNTDOWN_ROWS; i++) {
             int m = probe.maskAt(countdown + i);
-            int allowed = launch.equals("native-spindash") ? DOWN | JUMP : DOWN;
-            if ((m & DOWN) == 0 || (m & ~allowed) != 0) {
+            int allowed = launch.equals("held-run") ? 0 : launch.equals("native-spindash") ? DOWN | JUMP : DOWN;
+            if ((launch.equals("held-run") ? m != 0 : (m & DOWN) == 0) || (m & ~allowed) != 0) {
                 throw new IllegalArgumentException("Countdown row " + (countdown + i) + " is " + Integer.toHexString(m)
-                        + ", not crouch" + (launch.equals("native-spindash") ? " or charge" : ""));
+                        + ", not held-run neutral/crouch" + (launch.equals("native-spindash") ? " or charge" : ""));
             }
         }
         int release = probe.maskAt(countdown + COUNTDOWN_ROWS);
@@ -261,7 +267,7 @@ public record Rail(String game, int zone, int act, String team, int validated, S
             }
             previousEnd = stand.row() + stand.cleanup();
         }
-        Plan plan = new Plan(policy, combat, kind, launch, profile, romSha1, countdown, stands,
+        Plan plan = new Plan(policy, combat, kind, launch, burst, profile, romSha1, countdown, stands,
                 new Endpoint(endpointKind, endpointRow), waypoints);
         return new Rail(game, zone, act, team, validated, engine, rom, runFrames, runMasks, plan);
     }

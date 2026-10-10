@@ -94,7 +94,7 @@ class TestTypingHedgehogCourse {
         int[] masks = new int[LENGTH];
         for (int i = 0; i < LENGTH; i++) masks[i] = mask(i);
         return String.join("\n", "format 2", "policy forward-v2", "combat live-restore-v1", "course pilot",
-                "launch native-run-roll", "profile width=320", "game s1", "zone 0", "act 0", "team sonic",
+                "launch native-run-roll", "profile width=400", "game s1", "zone 0", "act 0", "team sonic",
                 "rom-sha1 " + sha1, "countdown " + ENTRY, "stand 1 " + STAND_ROW + " " + CLEANUP + pool,
                 "endpoint boss-arena " + BOSS_ROW, "validated " + LENGTH,
                 "program " + TypingHedgehogRailBuilderProbe.rle(masks, LENGTH), "");
@@ -116,7 +116,7 @@ class TestTypingHedgehogCourse {
         var config = SonicConfigurationService.getInstance();
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
         config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
-        config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
+        config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, "WIDE_16_9");
         config.resolveDisplayAspect();
         GameServices.graphics().setProjectionWidth(config.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
         GameModule effective = harness.apply(GameServices.module());

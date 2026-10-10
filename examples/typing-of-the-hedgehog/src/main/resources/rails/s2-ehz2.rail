@@ -1,23 +1,23 @@
-# s2 ehz2: authored by TypingHedgehogForwardRailBuilder (879839 native rows, 22 s, sites 178 (rejected 160), soaks 18, furthest x 10645 with 5 fights, dead ends {site: behind foreground=2, native kill=589, death=115, stall=260, site: geometry=92, site: support=48, site: strip not level=3, camera backtrack=2294, player backtrack=1, reverse excursion=1013, stall (no new x)=2, missed the first fight=290, site: slope=15, hurt=754})
+# s2 ehz2: authored by TypingHedgehogForwardRailBuilder (492061 native rows, 13 s, sites 232 (rejected 207), soaks 25, furthest x 10682 with 5 fights, recorded-row children 0 (furthest x -1), furthest fought lineage x 10724 with 5 fights, waypoints reached 0/0, flattest rejected early site row 451 x 1223 y 752 range 0 missing 1 [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 x], dead ends {native kill=947, death=126, site: strip walk leaves the ground=1, loop exit backtrack=112, stall=84, site: strip walk blocked=9, site: geometry=117, site: support=67, site: strip not level=12, camera backtrack=137, player backtrack=9, stationary pace=724, reverse excursion=136, missed the first fight=110, slow roll pace=51, site: slope=1, hurt=577})
 format 2
-policy forward-v1
+policy forward-v2
 combat live-restore-v1
 course regular
 launch native-spindash
-profile width=320
+profile width=400
 game s2
 zone 0
 act 1
 team sonic,tails
 rom 7B905383
 rom-sha1 8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9
-engine 0.7.prerelease-1e0e45344-dirty
+engine 0.7.prerelease-67d14a5ef-dirty
 countdown 60
-stand 1 562 2 -
-stand 2 1082 2 -
-stand 3 1726 2 -
-stand 4 2774 2 BuzzerBadnikInstance@36/L114
-stand 5 3250 2 -
-endpoint boss-arena 3549
-validated 3549
-program 60:0,2:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,3:2,1:8,93:4,4:8,4:4,4:8,4:4,4:8,4:4,4:8,4:4,4:8,4:4,4:8,4:4,4:8,4:4,4:8,4:4,4:8,4:4,4:8,4:4,4:8,4:4,4:8,4:4,4:8,4:4,4:8,4:4,4:8,4:4,4:8,4:4,4:8,4:4,4:8,4:4,67:8,4:4,1:8,1:4,13:0,2:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,8:8,32:0,20:18,77:8,20:18,173:8,24:2,32:8,24:2,35:0,10:4,1:8,1:4,13:0,24:8,20:18,13:8,20:18,13:8,240:0,224:8,24:2,5:4,34:0,12:4,1:8,1:4,13:0,2:2,1:12,5:2,1:12,5:2,1:12,5:2,16:8,20:18,13:8,4:4,1:8,1:4,11:0,8:8,16:0,8:8,258:0,16:8,30:0,81:8,1:4,1:8,1:4,11:0,2:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,136:8,24:2,128:8,20:18,45:8,24:2,64:8,32:0,1:4,31:0,2:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,360:8,2:4,38:0,11:4,1:8,1:4,13:0,2:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,3:2,40:8,24:2,24:4,10:0,32:4,1:8,1:4,11:0,2:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,55:8,26:4,11:0
+stand 1 457 2 -
+stand 2 823 2 -
+stand 3 1359 2 -
+stand 4 1730 2 -
+stand 5 1922 2 -
+endpoint boss-arena 2292
+validated 2292
+program 60:0,2:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,3:2,9:8,20:18,45:8,24:2,64:8,32:0,12:4,13:0,2:2,1:12,5:2,1:12,5:2,1:12,5:2,8:8,20:18,109:8,24:2,96:8,24:2,4:4,35:0,11:4,1:8,1:4,13:0,2:2,1:12,5:2,1:12,5:2,1:12,5:2,8:8,32:0,4:18,77:8,11:4,1:8,1:4,11:0,2:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,104:8,24:2,128:8,24:2,12:18,13:8,23:0,4:4,13:0,2:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,3:2,40:8,20:18,13:8,23:0,12:4,1:8,1:4,11:0,20:18,45:8,24:2,20:18,77:8,13:4,1:8,1:4,13:0,2:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,3:2,136:8,5:4,1:8,1:4,13:0,2:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,5:2,1:12,3:2,305:8,14:4,1:8,1:4,11:0

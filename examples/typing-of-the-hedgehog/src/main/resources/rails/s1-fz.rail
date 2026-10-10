@@ -1,19 +1,20 @@
-# s1 fz: authored by TypingHedgehogForwardRailBuilder (6936 native rows, 0 s, sites 0 (rejected 0), soaks 0, furthest x 9122 with 0 fights, recorded-row children 18 (furthest x 9122), furthest fought lineage x -1 with 0 fights, waypoints reached 0/0, flattest rejected early site null, dead ends {stall=1})
+# s1 fz: authored by TypingHedgehogForwardRailBuilder (8312 native rows, 0 s, sites 0 (rejected 0), soaks 0, furthest x 9165 with 0 fights, recorded-row children 18 (furthest x 9334), furthest fought lineage x -1 with 0 fights, waypoints reached 0/0, flattest rejected early site null, dead ends {stationary pace=5, slow roll pace=1})
 format 2
 policy forward-v2
 combat live-restore-v1
 course boss-only
-launch native-run-roll
-profile width=320
+launch held-run
+burst 0x600
+profile width=400
 game s1
 zone 6
 act 0
 team sonic
 rom AFE05EEE
 rom-sha1 69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B
-engine 0.7.prerelease-94804e439-dirty
+engine 0.7.prerelease-67d14a5ef-dirty
 countdown 60
-waypoints recorded fz_completerun 241-336@0
-endpoint boss-arena 424
-validated 424
-program 60:0,180:2,42:8,17:18,102:8,12:4,11:0
+waypoints recorded fz_completerun 305-349@121
+endpoint boss-arena 408
+validated 408
+program 240:0,95:8,15:18,58:0

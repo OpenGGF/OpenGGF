@@ -485,13 +485,19 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
     }
 
     /**
-     * "3, 2, 1, START!" over the rail's native countdown rows: Sonic crouches (and charges a spindash
-     * where the game has one) on rows the rail authored; START! is the release row.
+     * "3, 2, 1, START!": S1 runs in place under object control; S2 charges its native spindash.
      */
     private boolean forwardCountdown(CourseControl course) {
         int i = cursor.row() - rail.plan().countdownRow();
-        if (i == 0 || i == FORWARD_COUNTDOWN_BEAT || i == 2 * FORWARD_COUNTDOWN_BEAT) play(Sounds.Cue.LOCK);
-        if (i < Rail.COUNTDOWN_ROWS) return true;
+        boolean heldRun = rail.plan().launch().equals("held-run");
+        if (i == 0 || i == FORWARD_COUNTDOWN_BEAT || i == 2 * FORWARD_COUNTDOWN_BEAT) {
+            play(heldRun ? Sounds.Cue.REV : Sounds.Cue.LOCK);
+        }
+        if (i < Rail.COUNTDOWN_ROWS) {
+            if (heldRun) typinghog.rails.Launch.holdRun(rail.plan().burst());
+            return true;
+        }
+        if (heldRun) typinghog.rails.Launch.release(rail.plan().burst());
         play(Sounds.Cue.STAND_START);
         hud.start();
         enter(Phase.RUN);

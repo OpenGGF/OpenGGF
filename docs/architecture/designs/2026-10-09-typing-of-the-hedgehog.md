@@ -308,13 +308,13 @@ Course through every stand.
 
 The user's review of the first captures asked for a different route shape (see the Brief). GPT-6.1-Sol's
 consultation (`sol-rails-design.md` in the task directory) proposed bounded engine-input search instead of
-recording repair; the user's decisions override it where they differ: Sonic 1 stays stock (crouch through
-the countdown, then run), S2/S3K charge a native spindash under 3-2-1; the world stays animated during
+recording repair; the user's initial decisions were a stock Sonic 1 crouch/run launch (superseded by
+the held-run polish below), while S2/S3K charge a native spindash under 3-2-1; the world stays animated during
 fights (Sol's option (c)); one forward path per act first; misfit acts are dropped and named, never
 relaxed per act.
 
 - **Format 2** (`Rail.java`, engine-free, `RailChecks`): policy, combat mode, course kind (regular,
-  boss-only), launch (native-spindash or native-run-roll), profile (width, S3K intros), ROM SHA-1, an
+  boss-only), launch (native-spindash, native-run-roll or held-run with a burst), profile (width, S3K intros), ROM SHA-1, an
   authored countdown row, stand specs (before-row, quiet cleanup rows, the loaded-badnik manifest by class,
   slot and layout) and a stock endpoint; `validated` is the whole program. `waypoints` names rows that
   replay the act's recorded run (an authoring aid, validated like any other row).
@@ -352,7 +352,7 @@ rejects a held Sonic who would drown. Loops are not backtracking (the user's com
 forward and then back): while Sonic is grounded at wall or ceiling angles the backtracking bounds are not
 measured, and he must regain his furthest x within 60 rows of leaving the loop; leftward travel on ordinary
 floor stays forbidden. Rails name their policy and the gate applies it (EHZ2 was built under the stricter
-`forward-v1`). At sloped sites ground badniks follow the floor through a read-only probe in `Encounter`.
+`forward-v1`; its 400 px rebuild uses the uniform `forward-v2` rules). At sloped sites ground badniks follow the floor through a read-only probe in `Encounter`.
 
 Probe findings that set these rules (`TypingHedgehogRailsV2Probe`, 5dc9c9cd6, S1 GHZ3, S2 EHZ2, S3K
 SOZ1): host load-time simulation, cross-game features and live rewind leave the first 500 native rows
@@ -370,13 +370,13 @@ Engine fixes found on the way: `ModDecoratedObjectRegistry` dropped the stock ga
 under any object-registering mod (0247b568d), so the Course and builder worlds allocated differently from
 row 1 in HCZ and MHZ.
 
-**Acts (forward-v2 sweep, 2026-10-10, one bounded search per act; rows and seconds of search).**
+**Acts (forward-v2 sweep, 2026-10-10; shipped courses refreshed at 400 px below; each attempt bounded).**
 
 | Act | Result | Notes |
 |---|---|---|
-| S2 EHZ2 | qualified (forward-v1) | 3549 rows, five fights (one loaded Buzzer); 880k rows, 21 s; a site behind the waterfall's high-priority tiles is rejected |
-| S1 GHZ3 | qualified | 3302 rows, five fights (two loaded Newtrons); the upper route needed waypoints: recorded-row macros and authored targets at the two spring landings and the upper path; 3.7M rows, 81 s |
-| S1 FZ, S2 DEZ | qualified, boss-only | 424 and 335 rows: the countdown, then a stop at the boss |
+| S2 EHZ2 | qualified at 400 px (forward-v2) | 2292 rows, five fights; 492k search rows, 14 s; no recorded-input macros; five empty native pools (the zone's authored waves still fight); prior 320 px rail: 3549 rows, five fights, one loaded Buzzer |
+| S1 GHZ3 | qualified at 400 px (forward-v2) | 2947 rows, four fights (one loaded Buzz Bomber and four Newtrons); held-run $600 release, recorded-input macro suggestions and the existing authored targets; 1.56M search rows, 54 s; prior 320 px rail: 3302 rows, five fights |
+| S1 FZ, S2 DEZ | qualified at 400 px, boss-only | 408 and 341 rows (formerly 424 and 335); FZ uses held-run $600; DEZ uses native spindash; both have zero regular fights |
 | S3K SOZ1 | dropped: no early site | dunes; under forward-v1, 1797 of 1844 early stops failed geometry; a wall of about 80 px at x 692 |
 | S3K HCZ1 | dropped: no early site | every early stop in water (1159) or on an object (745) |
 | S3K MHZ1 | dropped: no early site | flattest early stop 10 px over the strip; stall at x 905 |
@@ -388,6 +388,121 @@ row 1 in HCZ and MHZ.
 Forward courses only (the user's decision, 2026-10-10): the dropped acts ship no rail, their story stops
 show as under construction (the S3K chapter has none railed yet), and the recording-derived format 1, the
 world-held countdown, run tags and the legacy stand path were removed from the mod.
+
+#### Rails v2 polish: widescreen and pace (2026-10-10)
+
+Implementation `f258d5075`, on the rails lane after fast-forwarding the lead to `67d14a5ef`.
+The user's next capture review asked for 400 px widescreen, continuous progress between fight
+sites, and a Sonic 1 running-in-place countdown instead of crouching. All four courses remain
+shipped. `TypingHedgehogMod` requires `WIDE_16_9`; every rail names `profile width=400`.
+The gate checks that the profile matches the mod's declared aspect and actual course viewport;
+art tables use and assert that profile width both at the act start and during endpoint replay.
+Course and hub harnesses now use 400 px for the shipped behavior.
+
+Sonic 1 now names `launch held-run` and `burst 0x600`. `Launch.holdRun` uses object control,
+zero horizontal/vertical velocity, and ground speed $600 to drive the stock fast running
+animation without moving. Each countdown beat plays the ROM roll effect through `Sounds.REV`
+and the existing course sound path. Sources: `_incObj/01 Sonic.asm` defines `son_maxspeed=$600`
+and `Sonic_Animate` selects `SonAni_Run` at $600; `_anim/Sonic.asm` uses frames $1E..$21;
+`_Constants.asm` defines `sfx_Roll` from `ptr_sndBE` ($BE), played by `Sonic_Roll`'s `.roll`.
+On START, `Launch.release` drops object control and sets horizontal and ground speed to the
+header burst before the RIGHT row. The builder and art endpoint replay invoke those same
+production methods. Both S1 routes qualify at $600; no lower burst was needed.
+Only `Course.forwardCountdown` changed; ENTRY, RUN, stand and BOSS behavior remain as before.
+
+`ForwardRails.Pace` measures native RUN rows. Stationary means less than 8 px displacement in
+both axes over the preceding eight rows (rocking 640↔641 counts; a moving lift does not).
+Slow roll means grounded rolling below $300 ground speed. Both measurements count braking
+and settling; only countdown, a stand's declared cleanup rows and actual native spindash
+charge are excluded. The inherited attempt excluded every DOWN row and the final 60 rows
+before each stop; that masked precisely the slow rolling and long approaches being polished
+and was replaced before the baseline below. Limits are 30 stationary and 45 slow-roll rows:
+these allow short acceleration/braking/settling (the native stop macro asks for 12 still rows)
+while rejecting the observed 150-row rocking ball and the longer measured stalls. Both maxima
+penalize the beam score by 20 points per row, and exceeding either rejects a search child or
+any of the gate's four modes. Metric controls cover the rocking ball, motion on a lift, the
+$300 boundary, exclusions and independent copied search histories.
+
+| Rail | Rows, before → after | Fights, before → after | Longest stationary, before → after | Longest slow roll, before → after |
+|---|---|---|---|---|
+| S1 GHZ3 | 3302 → 2947 | 5 → 4 | 273 → 24 | 32 → 0 |
+| S1 FZ | 424 → 408 | 0 → 0 | 14 → 9 | 0 → 0 |
+| S2 EHZ2 | 3549 → 2292 | 5 → 5 | 308 → 14 | 189 → 0 |
+| S2 DEZ | 335 → 341 | 0 → 0 | 10 → 10 | 0 → 0 |
+
+Before: `67d14a5ef` plus the unfinished lane metric, tightened as described above, at each
+original 320 px profile. After: the implementation tree committed as `f258d5075`, at 400 px.
+These are QUICK-mode gate measurements, not RLE neutral-input lengths: a neutral row can
+still carry Sonic quickly or move him on a spring/platform. The same limits pass in HOLD,
+RETRY and clock-phase 333 modes. Both boss-only courses intentionally have no regular fights.
+
+Tried and rejected in that worktree before `f258d5075`:
+
+- Keeping the inherited DOWN/last-60-rows exclusions would hide slow rolls and approaches;
+  the tightened original rail reports above demonstrate both checks fail the old regular routes.
+- EHZ2 with the default recorded-input macros found 2504 rows and five fights, with maxima
+  18 stationary / 11 slow roll, but cold replay differed in occupied native slots at fight
+  row 1849 (for example search slots 31/32 held ids 75/6; cold replay held 8/8). It was not
+  written or shipped. The slot comparison stayed intact; this lane did not repair an unrelated
+  snapshot/slot owner. This is evidence of a rejected candidate, not a diagnosis of its cause.
+- Trying to continue the same Search immediately after its cold validation was also discarded:
+  validation opens a new World/global session, so the old search cannot simply resume afterwards
+  (its old level service was null). The existing one-search-then-replay lifecycle remains.
+- EHZ2 at 400 px under `forward-v1` found no early site: all 124 attempted sites failed
+  geometry/support/slope/strip checks; no soak or fight was accepted, and the bounded search
+  stopped at x 1096 after 1.04M rows / 41 s. The shipped replacement uses the uniform
+  `forward-v2` policy, not an EHZ-specific exemption, with `typinghog.forward.recorded=false`.
+- An initial new START assertion inspected speed after native physics and wrongly expected
+  exact $600 on GHZ3's start terrain. The corrected separate test invokes the actual Course's
+  release boundary before physics and requires $600; the ordinary gate requires release and
+  immediate forward movement after physics. It still requires all four fast running frames
+  and no displacement throughout the countdown.
+
+Reproduction: set `OPENGGF_ROM_ROOT` to the absolute directory containing the original
+`s1.gen`, `s2.gen` and `s3k.gen` files, to avoid silent ROM skips. The actual runs used those
+verified files in the main checkout; no ROMs were copied or linked into this worktree.
+
+```bash
+: "${OPENGGF_ROM_ROOT:?Set the absolute directory containing the three ROMs}"
+# GHZ3/FZ/DEZ: default recorded suggestions; GHZ3's established authored targets.
+python3 tools/testing/maven_queue.py -Dmse=off -Dmaven.compiler.fork=true \
+  -Dtest=TypingHedgehogForwardRailBuilder -Dtypinghog.forward=ghz3,fz,dez \
+  '-Dtypinghog.forward.waypoints=ghz3:600,740;750,514;1040,621;1705,508;1918,639;2589,524' \
+  -Dtypinghog.forward.out=target/typinghog-wide \
+  -Dsonic1.rom.path="$OPENGGF_ROM_ROOT/s1.gen" \
+  -Dsonic2.rom.path="$OPENGGF_ROM_ROOT/s2.gen" \
+  -Ds3k.rom.path="$OPENGGF_ROM_ROOT/s3k.gen" test
+# EHZ2: native search without recorded-input macros. Both commands cold/phase-validate.
+python3 tools/testing/maven_queue.py -Dmse=off -Dmaven.compiler.fork=true \
+  -Dtest=TypingHedgehogForwardRailBuilder -Dtypinghog.forward=ehz2 \
+  -Dtypinghog.forward.recorded=false -Dtypinghog.forward.out=target/typinghog-wide \
+  -Dsonic1.rom.path="$OPENGGF_ROM_ROOT/s1.gen" \
+  -Dsonic2.rom.path="$OPENGGF_ROM_ROOT/s2.gen" \
+  -Ds3k.rom.path="$OPENGGF_ROM_ROOT/s3k.gen" test
+python3 tools/testing/maven_queue.py -Dmse=off -Dmaven.compiler.fork=true \
+  '-Dtest=TestTypingHedgehog*' \
+  -Dsonic1.rom.path="$OPENGGF_ROM_ROOT/s1.gen" \
+  -Dsonic2.rom.path="$OPENGGF_ROM_ROOT/s2.gen" \
+  -Ds3k.rom.path="$OPENGGF_ROM_ROOT/s3k.gen" test
+mvn -Dmse=off compile
+python3 examples/build_example.py typing-of-the-hedgehog --skip-engine
+```
+
+Final focused result on the tree committed as `f258d5075`: 64 tests in 14 classes, zero
+failures/errors/skips; rail gate four tests, all four courses × four modes; art tables 62 S1
+and 52 S2 frame uses. S3K has no shipped route and reports nothing to check, rather than
+skipping for a missing ROM. The three ROM SHA-1s match the repository's pinned identities.
+Packaging passes validation (12 engine-internal-reference warnings, no errors).
+An in-process javac invocation twice failed generic inference in unchanged
+`TestModApiSignatureSurface:99`; a fresh forked Java 21 compiler succeeded, so the final
+commands above explicitly use `maven.compiler.fork=true`. No unrelated test was edited.
+
+Validation scope: the change-based plan against `67d14a5ef` selected 3094 classes and guards
+because example paths are unclassified. Proportionate validation used the complete requested
+mod set and ROM-backed route/art checks instead: no engine production code or public engine
+contract changed. This is a focused pass, not a full ordinary/guard suite pass. Existing
+native-kill detection limits and unqualified S3K/other acts remain; the new EHZ2 sites have
+empty native conversion pools. No lead-branch integration or push belongs to this lane.
 
 ### Mod structure
 

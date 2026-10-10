@@ -27,9 +27,9 @@ import static com.openggf.mods.code.ForwardRails.*;
 /**
  * Authors forward (format 2) Typing of the Hedgehog rails by bounded native-input search, the
  * rails v2 builder (GPT-6.1-Sol's rails design, section 2, with the user's 2026-10-10 decisions):
- * a cold stock act at 320 px under the mod's launch profile (S3K intros skipped), an authored
- * entry to a still, right-facing Sonic, the native countdown (spindash charge in S2/S3K, a crouch
- * in S1), then a beam search over small input macros (run, coast, jump with a held press, brake
+ * a cold stock act at 400 px under the mod's launch profile (S3K intros skipped), an authored
+ * entry to a still, right-facing Sonic, the countdown (spindash charge in S2/S3K, held run
+ * in S1 with a $600 release), then a beam search over small input macros (run, coast, jump with a held press, brake
  * to a stop, wait) checked on every native row: no hurt, death, level change or native badnik
  * kill (a score jump of 100 or more, by Sonic or the CPU sidekick), no backtracking (camera at
  * most 16 px behind its high water, Sonic at most 64 px behind his and back within 30 rows), no
@@ -64,6 +64,8 @@ class TypingHedgehogForwardRailBuilder {
      * Sonic's high water regained within 60 rows of leaving the loop.
      */
     static final String POLICY = System.getProperty("typinghog.forward.policy", "forward-v2");
+    /** Disable recorded-input macro suggestions while retaining native input search and corridor scoring. */
+    static final boolean RECORDED_MACROS = Boolean.parseBoolean(System.getProperty("typinghog.forward.recorded", "true"));
     static final boolean V2 = POLICY.equals("forward-v2");
     static final int FLAT_RANGE = V2 ? 8 : 4, FLAT_ANGLE = V2 ? 8 : 4;
     static final int STRIP_LEFT = V2 ? -40 : -48, STRIP_RIGHT = V2 ? 88 : 112;
@@ -75,6 +77,8 @@ class TypingHedgehogForwardRailBuilder {
     static final int FIGHT_SOAK = 3600, CLEANUP = 2, BURST_CHARGE = 36, STALL_ROWS = 180, HARD_STALL_ROWS = 600;
     /** Layers without a new best x before the search treats its frontier as collapsed. */
     static final int STAGNANT_LAYERS = 40;
+    static final int STILL_LIMIT = Pace.STILL_LIMIT, SLOW_ROLL_LIMIT = Pace.SLOW_ROLL_LIMIT;
+    static final int S1_BURST = Integer.getInteger("typinghog.forward.burst", 0x600);
     static final int FIRST_FIGHT_ROWS = V2 ? 600 : 300, FIRST_FIGHT_PX = V2 ? 1600 : 800;
     static final int FIGHT_SPACING_PX = 256, FIGHT_SPACING_ROWS = 120;
     static final double[] FIGHT_FRACTIONS = {0.0, 0.25, 0.45, 0.65, 0.82};
@@ -207,6 +211,7 @@ class TypingHedgehogForwardRailBuilder {
         boolean stopped, boss, ended;
         int bossRow = -1;
         String how = "";
+        Pace pace = new Pace();
         /** Converts on this node's first row (a fight child): the pool to convert there. */
         List<?> convertAtStart;
 
@@ -227,7 +232,7 @@ class TypingHedgehogForwardRailBuilder {
         double value() {
             return pmax + fights * (double) FIGHT_VALUE + loaded * (double) LOADED_VALUE + openness * (double) OPEN_VALUE
                     + (onCorridor ? CORRIDOR_VALUE : 0) + nextTarget * (double) TARGET_VALUE - targetDistance
-                    + (boss ? 50_000 : 0) - row * 0.05;
+                    + (boss ? 50_000 : 0) - row * 0.05 - pace.maxStill * 20 - pace.maxRoll * 20;
         }
 
         long key() {
@@ -396,7 +401,7 @@ class TypingHedgehogForwardRailBuilder {
                 if (done == null) return "FAILED search: " + summary();
                 out(target, "route found: " + done.row + " rows, " + done.fights + " fights at "
                         + done.stands.stream().map(s -> s.row() + "@x" + s.x() + "(" + s.pool().size() + ")").toList()
-                        + ", " + summary());
+                        + ", " + done.pace + ", " + summary());
                 String validation = validate(done);
                 if (validation != null) return "FAILED validation: " + validation;
                 Path file = write(done);
@@ -445,7 +450,11 @@ class TypingHedgehogForwardRailBuilder {
             if (w.driver.row >= ENTRY_LIMIT) return null;
             countdownRow = w.driver.row;
             int start = countdownRow;
-            w.driver.program = row -> countdownMask(row - start, target.spindash());
+            if (!target.spindash()) {
+                try { heldLaunch(harness, w.driver, start, S1_BURST); }
+                catch (Exception e) { throw new IllegalStateException(e); }
+            }
+            w.driver.program = row -> !target.spindash() && row < start + COUNTDOWN_ROWS ? 0 : countdownMask(row - start, target.spindash());
             for (int i = 0; i <= COUNTDOWN_ROWS; i++) {
                 w.advance();
                 rows++;
@@ -620,7 +629,7 @@ class TypingHedgehogForwardRailBuilder {
         }
 
         List<Map.Entry<String, Macro>> macros(Node node) {
-            List<Map.Entry<String, Macro>> out = new ArrayList<>(recordedMacros(node));
+            List<Map.Entry<String, Macro>> out = new ArrayList<>(RECORDED_MACROS ? recordedMacros(node) : List.of());
             if (node.boss) {
                 out.add(Map.entry("stop", stop()));
                 out.add(Map.entry("R8", hold(RIGHT, 8)));
@@ -660,6 +669,7 @@ class TypingHedgehogForwardRailBuilder {
             Node c = new Node();
             c.parent = node;
             c.how = how;
+            c.pace = node.pace.copy();
             c.convertAtStart = convert;
             c.cmax = node.cmax;
             c.pmax = node.pmax;
@@ -691,7 +701,10 @@ class TypingHedgehogForwardRailBuilder {
                 rows++;
                 s = sonic();
                 int row = w.driver.row;
+                c.pace.row(s, row - 1, s.getSpindash() || (convert != null && i < CLEANUP));
                 String death = null;
+                if (c.pace.maxStill > STILL_LIMIT) death = "stationary pace";
+                else if (c.pace.maxRoll > SLOW_ROLL_LIMIT) death = "slow roll pace";
                 if (s.getDead()) death = "death";
                 else if (s.isHurt() || s.getHurtAtFrameStart()) death = "hurt";
                 else if (GameServices.level().getCurrentZone() != target.pilot().zone()
@@ -1086,6 +1099,10 @@ class TypingHedgehogForwardRailBuilder {
             Map<Integer, Stand> standsByRow = new HashMap<>();
             for (Stand s : done.stands) standsByRow.put(s.row(), s);
             try (World v = new World(target.pilot(), Map.of(), vbla)) {
+                if (!target.spindash()) {
+                    try { heldLaunch(harness, v.driver, countdownRow, S1_BURST); }
+                    catch (Exception e) { throw new IllegalStateException(e); }
+                }
                 v.driver.program = row -> masks[row];
                 int score = GameServices.gameState().getScore();
                 while (v.driver.row < done.row) {
@@ -1140,7 +1157,7 @@ class TypingHedgehogForwardRailBuilder {
             String text = "# " + target.pilot().code() + " " + target.pilot().name() + ": authored by TypingHedgehogForwardRailBuilder ("
                     + summary() + ")\nformat 2\npolicy " + POLICY + "\ncombat live-restore-v1\ncourse "
                     + (target.bossOnly() ? "boss-only" : "regular") + "\nlaunch "
-                    + (target.spindash() ? "native-spindash" : "native-run-roll") + "\nprofile " + profile + "\ngame "
+                    + (target.spindash() ? "native-spindash" : "held-run\nburst 0x" + Integer.toHexString(S1_BURST)) + "\nprofile " + profile + "\ngame "
                     + target.pilot().code() + "\nzone " + target.pilot().zone() + "\nact " + target.pilot().act()
                     + "\nteam " + (target.pilot().sidekick().isEmpty() ? "sonic" : "sonic," + target.pilot().sidekick())
                     + "\nrom " + crc + "\nrom-sha1 " + sha1 + "\nengine " + com.openggf.version.AppVersion.get()
