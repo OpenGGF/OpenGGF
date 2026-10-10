@@ -1,0 +1,42 @@
+# Sonic 3 & Knuckles stock badnik bodies that may join a typing fight: class simple name, the cast art key
+# that draws them, and whether a fight may convert them (yes) or must leave them to the stock game
+# (no). Read by the course (loaded fight targets) and the rail builder (the same conversion), so
+# both agree. Classes without a cast species stay out until the cast covers them.
+BatbotBadnikInstance               cnz_batbot             yes
+BlasterBadnikInstance              fbz_blaster            yes
+BlastoidBadnikInstance             hcz_blastoid           yes
+BloominatorBadnikInstance          aiz_bloominator        yes
+BubblesBadnikInstance              mgz_bubbles_badnik     yes
+BuggernautBadnikInstance           hcz_buggernaut         yes
+ButterdroidBadnikInstance          mhz_butterdroid        yes
+ChainspikeBadnikInstance           dez_chainspike         yes
+CluckoidBadnikInstance             mhz_cluckoid           yes
+CorkeyBadnikInstance               lbz_corkey             yes
+DragonflyBadnikInstance            mhz_dragonfly          yes
+EggRoboBadnikInstance              ssz_egg_robo           yes
+FirewormBadnikInstance             lrz_fireworm           yes
+Flybot767BadnikInstance            lbz_flybot_767         yes
+IwamodokiBadnikInstance            lrz_iwamodoki          yes
+JawzBadnikInstance                 hcz_jawz               yes
+MadmoleBadnikInstance              mhz_madmole            yes
+MantisBadnikInstance               mgz_mantis             yes
+MegaChopperBadnikInstance          hcz_mega_chopper       yes
+MonkeyDudeBadnikInstance           aiz_monkey_dude        yes
+MushmeanieBadnikInstance           mhz_mushmeanie         yes
+OrbinautBadnikInstance             lbz_orbinaut           yes
+PenguinatorBadnikInstance          icz_penguinator        yes
+PoindexterBadnikInstance           hcz_pointdexter        yes
+RhinobotBadnikInstance             aiz_rhinobot           yes
+RibotBadnikInstance                lbz_ribot              yes
+RocknBadnikInstance                soz_rockn              yes
+SandwormBadnikInstance             soz_sandworm           yes
+SkorpBadnikInstance                soz_skorp              yes
+SnaleBlasterBadnikInstance         lbz_snale_blaster      yes
+SparkleBadnikInstance              cnz_sparkle            yes
+SpikebonkerBadnikInstance          dez_spikebonker        yes
+SpikerBadnikInstance               mgz_spiker             yes
+StarPointerBadnikInstance          icz_star_pointer       yes
+TechnoSqueekBadnikInstance         fbz_technosqueek       yes
+ToxomisterBadnikInstance           lrz_toxomister         yes
+TunnelbotBadnikInstance            -                      no   # stock event owner: drills terrain, shakes the screen and sets Level_trigger_array+8
+TurboSpikerBadnikInstance          hcz_turbo_spiker       yes

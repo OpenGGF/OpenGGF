@@ -53,8 +53,13 @@ public final class DevelopmentPatchLoader {
             throw new IOException("Could not load entrypoint " + manifest.entrypoint(), e);
         }
         ModRegistrationPlan frozen = plan;
+        // As an enabled, trusted mod runs: under a fault boundary, which startup scenes, zone events,
+        // characters and gameplay policies require. A failing callback disables the jar's owner.
+        ModFaultBoundary boundary = new ModFaultBoundary(java.util.Map.of(),
+                new com.openggf.mods.ModRuntimeFindingStore(),
+                owners -> new com.openggf.mods.ModStateSaveResult.Saved(), owners -> { });
         return base -> {
-            GameModule effective = new ModBackedGamePatch(frozen).apply(base, null);
+            GameModule effective = new ModBackedGamePatch(frozen, boundary).apply(base, null);
             for (GamePatch patch : frozen.explicitPatches()) effective = patch.apply(effective, null);
             return effective;
         };

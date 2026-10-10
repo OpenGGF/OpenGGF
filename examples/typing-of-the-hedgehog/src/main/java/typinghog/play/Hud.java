@@ -3,6 +3,7 @@ package typinghog.play;
 import com.openggf.game.GameServices;
 import com.openggf.mods.ui.LevelOverlayCanvas;
 import com.openggf.mods.ui.PixelCanvas;
+import typinghog.art.KeyboardPack;
 import typinghog.art.PlateFont;
 import typinghog.art.Plates;
 import typinghog.core.Scorecard;
@@ -25,6 +26,7 @@ public final class Hud {
 
     private final CourseAssets assets;
     private final Plates plates;
+    private final KeyboardPack keyboard = new KeyboardPack();
     private final PlateFont font;
     private String banner = "";
     private int bannerColour;
@@ -118,6 +120,7 @@ public final class Hud {
             drawBig(canvas, banner, x, y, bannerColour);
         }
         if (course.phase() == Course.Phase.TALLY && tally != null) drawTally(canvas, course, width, course.phaseRows());
+        drawCountdown(canvas, course, width);
         if (course.paused()) drawPause(canvas, width, height);
         if (course.intent().demo() && (presented / 32) % 2 == 0) {
             String demo = "DEMO - PRESS ANY KEY";
@@ -171,28 +174,51 @@ public final class Hud {
      * hidden while he is a spinning ball. Drawn as runs of fills from the shipped pixel art.
      */
     private void drawBackpack(PixelCanvas canvas, Course course, int cameraX, int cameraY) {
+        keyboard.tick();
         if (!(GameServices.camera().getFocusedSprite() instanceof com.openggf.sprites.playable.AbstractPlayableSprite sonic)) return;
         if (sonic.getRolling() || sonic.getAir() || sonic.isHidden()) return;
-        var picture = assets.pictures().get("backpack");
-        if (picture == null) return;
         boolean left = sonic.getDirection() == com.openggf.physics.Direction.LEFT;
-        // The hub's placement (Hero.java): behind Sonic, 7 px from his origin, 14 px above it.
-        int x = sonic.getCentreX() - cameraX + (left ? 7 : -7 - picture.width());
-        int y = sonic.getCentreY() - cameraY - 14;
-        for (int row = 0; row < picture.height(); row++) {
-            int start = 0;
-            while (start < picture.width()) {
-                int argb = picture.argb()[row * picture.width() + start];
-                int end = start + 1;
-                while (end < picture.width() && picture.argb()[row * picture.width() + end] == argb) end++;
-                if ((argb >>> 24) != 0) {
-                    int sx = left ? x + picture.width() - end : x + start;
-                    canvas.fill(sx, y + row, end - start, 1, argb);
-                }
-                start = end;
+        // Strapped along his back, its top at his head, its bottom near his knees, with a strap
+        // across his chest.
+        int cx = sonic.getCentreX() - cameraX, cy = sonic.getCentreY() - cameraY;
+        int x = cx + (left ? 10 : -10 - KeyboardPack.WIDTH);
+        int y = cy - 20;
+        keyboard.draw(canvas, x, y, left);
+        int strapTop = left ? x : x + KeyboardPack.WIDTH - 1;
+        for (int i = 0; i < 12; i++) {
+            int sx = strapTop + (left ? -i : i);
+            canvas.fill(sx, y + 3 + i, 1, 1, 0xFF201810);
+        }
+    }
+
+    /** The "3, 2, 1" start, each count shrinking from large as its beat runs, then START! into the run. */
+    private void drawCountdown(PixelCanvas canvas, Course course, int width) {
+        if (course.phase() == Course.Phase.COUNTDOWN) {
+            int beat = course.phaseRows() / Course.COUNTDOWN_BEAT;
+            int into = course.phaseRows() % Course.COUNTDOWN_BEAT;
+            if (beat > 2) return;
+            String count = Integer.toString(3 - beat);
+            int scale = into < 6 ? 8 - into / 2 : 6;
+            int w = font.width(count) * scale, h = PlateFont.HEIGHT * scale;
+            drawScaled(canvas, count, (width - w) / 2, (224 - h) / 2 - 16, scale, into < 6 ? WHITE : GOLD);
+        } else if (startRows > 0) {
+            startRows--;
+            int scale = 4;
+            int w = font.width("START!") * scale, h = PlateFont.HEIGHT * scale;
+            if ((startRows / 4) % 2 == 0 || startRows > 24) {
+                drawScaled(canvas, "START!", (width - w) / 2, (224 - h) / 2 - 16, scale, GOLD);
             }
         }
     }
+
+    /** Shows START! as the run begins. */
+    void start() { startRows = 50; }
+
+    private int startRows;
+
+    /** A key the player pressed lights on Sonic's keyboard. */
+    void keyPressed(int codePoint, boolean hit) { keyboard.press(codePoint, hit); }
+
 
     private void drawRunTags(PixelCanvas canvas, Course course, int cameraX, int cameraY) {
         TypingField field = course.field();
@@ -226,9 +252,15 @@ public final class Hud {
         boolean punctuation = course.intent().punctuation();
         int[] targets = boss.openTargets();
         if (!boss.question().isEmpty()) {
-            int w = font.width(boss.question());
-            canvas.fill((width - w) / 2 - 6, 30, w + 12, PlateFont.HEIGHT + 8, 0xC0201040);
-            font.shadowed(canvas, boss.question(), (width - w) / 2, 34, WHITE, SHADOW);
+            // Below the score panel, wrapped to the screen: trivia runs longer than 320 pixels.
+            java.util.List<String> lines = wrap(boss.question(), width - 32);
+            int lineHeight = PlateFont.HEIGHT + 3;
+            int top = 46;
+            canvas.fill(10, top - 4, width - 20, lines.size() * lineHeight + 6, 0xC0201040);
+            for (int i = 0; i < lines.size(); i++) {
+                String line = lines.get(i);
+                font.shadowed(canvas, line, (width - font.width(line)) / 2, top + i * lineHeight, WHITE, SHADOW);
+            }
         }
         for (int i = 0; i < targets.length; i++) {
             var target = field.target(targets[i]);
@@ -247,6 +279,23 @@ public final class Hud {
         for (int i = 0; i < Boss.HITS; i++) {
             canvas.fill(width - 12 - i * 8, 20, 6, 6, i < Boss.HITS - boss.hits() ? 0xFFFF4060 : 0x60FFFFFF);
         }
+    }
+
+    /** Greedy word wrap of {@code text} to lines no wider than {@code max} pixels. */
+    private java.util.List<String> wrap(String text, int max) {
+        java.util.List<String> lines = new java.util.ArrayList<>();
+        StringBuilder line = new StringBuilder();
+        for (String word : text.split(" ")) {
+            String candidate = line.isEmpty() ? word : line + " " + word;
+            if (!line.isEmpty() && font.width(candidate) > max) {
+                lines.add(line.toString());
+                line = new StringBuilder(word);
+            } else {
+                line = new StringBuilder(candidate);
+            }
+        }
+        if (!line.isEmpty()) lines.add(line.toString());
+        return lines;
     }
 
     private void drawSparks(PixelCanvas canvas, Effects effects, int cameraX, int cameraY) {
@@ -303,12 +352,17 @@ public final class Hud {
 
     /** Text at double scale for banners and the tally title. */
     private void drawBig(PixelCanvas canvas, String text, int x, int y, int colour) {
+        drawScaled(canvas, text, x, y, 2, colour);
+    }
+
+    /** {@code text} at {@code scale} times the plate font, top-left at {@code x, y}, with a drop shadow. */
+    private void drawScaled(PixelCanvas canvas, String text, int x, int y, int scale, int colour) {
         var big = new PixelCanvas() {
             int ink;
             @Override public int width() { return canvas.width(); }
             @Override public int height() { return canvas.height(); }
             @Override public void fill(int fx, int fy, int w, int h, int argb) {
-                canvas.fill(x + (fx - x) * 2, y + (fy - y) * 2, w * 2, h * 2, ink);
+                canvas.fill(x + (fx - x) * scale, y + (fy - y) * scale, w * scale, h * scale, ink);
             }
         };
         big.ink = SHADOW;

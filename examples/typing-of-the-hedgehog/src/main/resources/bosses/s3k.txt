@@ -132,3 +132,71 @@
 
 # Lava Reef acts 1-2 (zone 9) and Doomsday (zone 12) have no rig: zone 9 registers no Robotnik art
 # (his boss is the $1600 act above), and Doomsday's ship is plane art with only loose sprite parts.
+
+# ---- Act-1 minibosses (zone@act). Most S3K rails are act 1 (cold act-2 starts drift), so their boss
+# stand is the act's miniboss, drawn from art the act registers at level load: AIZ/HCZ/CNZ PLCs
+# $5A/$5B/CNZ miniboss decompressed at load by Sonic3kObjectArtProvider; MGZ1/FBZ1/MHZ1/SOZ1 act-1
+# standalone sheets. LRZ1 and DEZ1 upload their miniboss tiles only when the stock object spawns
+# (loc_78592; ArtKosM_DEZMinibossMisc), so their rigs are stand-ins built from the act's own badniks.
+# None of these minibosses carries Robotnik.
+
+# Angel Island 1: Fire Breath (Obj_AIZMiniboss: barrels 3, open 4/5, at (0,-$20), (9,-$1C), ($12,-$18)
+# word_68ECE order; arm 6 at (-$24,8) and jets 1/2 at (0,$20), ChildObjDat_6905C).
+0@0  barrel    aiz_miniboss       0   -32  *=15:3 open=15:5 defeat=-
+0@0  barrel2   aiz_miniboss       9   -28  *=15:3 open=15:5 defeat=-
+0@0  barrel3   aiz_miniboss       18  -24  *=15:3 open=15:5 defeat=-
+0@0  body      aiz_miniboss       0   0    *=15:0
+0@0  arm       aiz_miniboss       -36 8    *=15:6
+0@0  jets      aiz_miniboss       0   32   *=1:1,2 defeat=- pal=0
+
+# Hydrocity 1: Big Shaker (Obj_HCZMiniboss: body 0, engine $15 at (0,$24), four rockets on the
+# HCZMiniboss_RocketTwistLookup path, radius $18, phase step 4 a frame; drawn here as a plain circle).
+1@0  rockets   hcz_miniboss       0   0    *=15:5 orbit=24,64,4 defeat=-
+1@0  body      hcz_miniboss       0   0    *=15:0
+1@0  engine    hcz_miniboss       0   36   *=1:21 defeat=- pal=0
+
+# Marble Garden 1: the drill (Obj_MGZMiniboss: Map_MGZMiniboss 0-2, Animate_RawGetFaster from 5).
+2@0  drill     mgz_miniboss       0   0    idle=5:0,1,2 lunge=1:0,1,2 defeat=15:0
+
+# Carnival Night 1: the top (Obj_CNZMiniboss: base 0, AniRaw_CNZMinibossOpening to 6; top at (0,$2C),
+# AniRaw_CNZMinibossTop 7:8,7,8,9, AniRaw_CNZMinibossTop2 0:7,8,9).
+3@0  base      cnz_miniboss       0   0    *=15:0 open=15:6
+3@0  top       cnz_miniboss       0   44   *=7:8,7,8,9 lunge=1:7,8,9 defeat=-
+
+# Flying Battery 1: the capsule (Obj_FBZMiniboss: body 0, plunger 5 at (0,-$24), covers 1-3 at
+# (-$10,-8), ($10,-8), (0,-8)); it stands on the floor.
+4@0  hover     -                  0   12   grounded
+4@0  plunger   fbz_miniboss       0   -36  *=15:5
+4@0  body      fbz_miniboss       0   0    *=15:0
+4@0  cover     fbz_miniboss       -16 -8   *=15:1 open=-
+4@0  cover2    fbz_miniboss       16  -8   *=15:2 open=-
+4@0  cover3    fbz_miniboss       0   -8   *=15:3 open=-
+
+# Mushroom Hill 1: Hey Ho (Obj_MHZMiniboss: chopping 4,7,9,$C,$D,$B,9,7; stuck $11/$12; escape $13-$15).
+7@0  hover     -                  0   4
+7@0  heyho     mhz_miniboss       0   0    idle=39:4 lunge=2:7,9,12,13,11,9,7 hit=15:10 laugh=2:7,9,12,13 defeat=7:17,18 flee=4:19,20,21
+
+# Sandopolis 1: the Egg Golem (Obj_SOZMiniboss: body 0/1, eight parts from byte_7717E pose 0).
+8@0  hover     -                  0   40   grounded
+8@0  part7     soz_miniboss       0   20   *=15:3
+8@0  part6     soz_miniboss       -4  52   *=15:16
+8@0  part5     soz_miniboss       -8  28   *=15:23
+8@0  part4     soz_miniboss       0   20   *=15:12
+8@0  part3     soz_miniboss       0   40   *=15:12 flip
+8@0  part2     soz_miniboss       0   4    *=15:23
+8@0  part1     soz_miniboss       -12 20   *=15:6
+8@0  part0     soz_miniboss       0   -8   *=15:21
+8@0  body      soz_miniboss       0   0    *=15:0 open=15:1 hit=15:2
+
+# Lava Reef 1, STAND-IN: a Fireworm (cast art) for the drill: head 1-3 (byte_8FA40), body segments
+# frame 1 in 12-pixel steps (spacing chosen here, not the ROM's).
+9@0  seg4      lrz_fireworm_segments 48 16 *=15:1 defeat=-
+9@0  seg3      lrz_fireworm_segments 36 12 *=15:1 defeat=-
+9@0  seg2      lrz_fireworm_segments 24 8  *=15:1 defeat=-
+9@0  seg1      lrz_fireworm_segments 12 4  *=15:1 defeat=-
+9@0  head      lrz_fireworm       0   0    idle=6:1,2,3 lunge=2:1,2,3 defeat=15:1
+
+# Death Egg 1, STAND-IN: a Spikebonker (cast art) with its spiked ball 1 (word_91C26) orbiting
+# (three balls at radius 32, chosen here).
+11@0 balls     dez_spikebonker    0   0    *=15:1 orbit=32,96,3 defeat=-
+11@0 body      dez_spikebonker    0   0    *=15:0

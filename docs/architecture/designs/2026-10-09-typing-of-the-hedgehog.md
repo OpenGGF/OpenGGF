@@ -20,6 +20,25 @@ examples, inspired by The Typing of the Dead; type words to defeat badniks. Kick
 | Voice | Offline-generated voice lines shipped in the jar (user's OpenRouter credit authorised); no runtime network. |
 | Delivery | One PR against `develop`; lead plus a few subagents (the Slay the Robotnik arrangement). |
 
+User review of the first captures (2026-10-10), and what it changed:
+
+- **Keyboard.** The backpack picture did not read as a keyboard. Sonic now wears a QWERTY board
+  about his height, sideways along his back (`art/KeyboardPack`, shared by the hub and the
+  course), and its keys light gold for a right key and red for a wrong one as the player types.
+- **Attacks.** Typed words no longer fire ring sparks at badniks. A completed word sends Sonic on
+  a homing attack (`play/Homing`): he curls up, dashes to the badnik, monitor or boss, the kill
+  lands on contact, and he bounces back over an arc to his stand spot before the next strike.
+  The badnik is doomed (stopped, harmless) the moment its word completes.
+- **Projectile plates.** Run tags labelled badnik projectiles (the badniks packages also hold
+  missiles, shrapnel and child parts); only classes named `*BadnikInstance` carry words now.
+- **Start.** Acts open with "3, 2, 1, START!".
+- **Route.** The recorded runs wander, backtrack and smash badniks before the first stand. The
+  wanted shape: a spindash countdown start, release on START while holding right, a plateau and
+  the first fight at once, the level's loaded badniks joining the attackers, a short celebration,
+  spindash bursts between fights, no backtracking, four or five fights an act besides the boss,
+  and ideally branching paths. Rail authoring is being redesigned for this (consulting
+  GPT-6.1-Sol on forward-only authoring, stock badniks in the pool, the countdown and branches).
+
 ## Reference rules
 
 From The Typing of the Dead (TotD, 1999/2000) and Overkill (2013), as documented by
@@ -357,4 +376,9 @@ Course through every stand.
   Two explanations were killed: the child despawning during a long stand (it is alive on
   the last held row), and rewindable puppets drawing rewind ids from the act's counter
   (puppets moved to the non-rewindable auxiliary path; the failure is unchanged, same
-  `dynamicId=92`). The cause is still open; HCZ1 does not ship.
+  `dynamicId=92`). Cause (rails lane, 04ad7e361): the Course restores inside its
+  `beforeTick`, under the creator owner scope, so engine children rebuilt during the
+  restore inherited the mod as owner and `adoptRewindReconstructionChild` dropped them
+  as unmatched. `CourseControl.restore` now runs with no creator owner in scope
+  (`EngineOwnerScope`, engine callers only); `TestCourseRestoreCreatorOwnerScope` failed
+  before the fix, and HCZ1 ships (ddd1e941e).

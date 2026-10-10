@@ -1,7 +1,6 @@
 package typinghog.play;
 
 import com.openggf.game.GameServices;
-import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.level.objects.ObjectInstance;
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
@@ -115,6 +114,9 @@ final class RunTags {
     }
 
     static boolean isBadnik(ObjectInstance object) {
-        return object instanceof AbstractBadnikInstance || object.getClass().getName().contains(".badniks.");
+        // Badnik bodies only. The badniks packages also hold their projectiles, shrapnel, jets and
+        // child parts (BuzzBomberMissile, BadnikProjectile, EggRoboShot...), which must not carry words;
+        // every game names its badnik bodies *BadnikInstance.
+        return object.getClass().getSimpleName().endsWith("BadnikInstance");
     }
 }

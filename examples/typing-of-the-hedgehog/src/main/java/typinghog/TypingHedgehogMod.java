@@ -50,7 +50,8 @@ public final class TypingHedgehogMod implements GgfMod {
         Map<String, String> badniks = new HashMap<>();
         for (String game : games) {
             casts.put(game, Cast.parse(text(context, "cast/" + game + ".txt", ""))
-                    .withBosses(BossRig.parse(text(context, "bosses/" + game + ".txt", ""))));
+                    .withBosses(BossRig.parse(text(context, "bosses/" + game + ".txt", "")))
+                    .withNatives(text(context, "natives/" + game + ".txt", "")));
             sounds.put(game, Sounds.parse(text(context, "sounds/" + game + ".txt", "")));
             props.put(game, Props.parse(text(context, "props/" + game + ".txt", "")));
             badniks.put(game, text(context, "badniks/" + game + ".txt", ""));

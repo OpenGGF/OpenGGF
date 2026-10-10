@@ -38,6 +38,8 @@ final class HubArt {
         this.ctx = ctx;
         pictures.putAll(TextArt.parse(files.art()));
         pictures.putAll(TextArt.parse(files.logo()));
+        // Sonic's keyboard is drawn from the same layout the course lights up as you type.
+        pictures.put("backpack", typinghog.art.KeyboardPack.picture());
     }
 
     /** A shipped text-art picture, or null. */
