@@ -162,7 +162,8 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
 
     @Override public void afterTick(CourseControl course, boolean advanced) {
         if (intent == null || rail == null) return;
-        if (advanced && encounter != null) encounter.advance(this);
+        // The wave holds while Sonic is down; the retry's restore replaces it.
+        if (advanced && encounter != null && phase != Phase.DYING) encounter.advance(this);
         if (advanced && phase == Phase.RUN) runTags.advance(this);
         spawnPuppets();
     }
@@ -488,7 +489,9 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
 
     /** A badnik reached Sonic. */
     void hitSonic() {
-        if (invincibleRows > 0) return;
+        // Only a fighting Sonic can be hit: a hit while he is already down restarted DYING's
+        // countdown, so a crowd that kept reaching him held him down for good.
+        if (invincibleRows > 0 || (phase != Phase.STAND && phase != Phase.BOSS && phase != Phase.RUN)) return;
         homing.cancel();
         if (shield) {
             shield = false;
@@ -553,7 +556,7 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
     // ---- a read-only view for tests, captures and debugging ----------------------------------------
 
     /** One target on screen: its typed form, progress and whether it is locked. */
-    public record TargetView(int id, String typed, int progress, boolean locked) { }
+    public record TargetView(int id, String typed, int progress, boolean locked, boolean typeable) { }
 
     /** The course at a glance; {@code railRow} is the next program row the rail will play. */
     public record View(String phase, int railRow, int nextStand, int rings, int lives, long score, int chain,
@@ -565,7 +568,7 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
         if (field != null) {
             for (var target : field.targets()) {
                 targets.add(new TargetView(target.id(), target.prompt().typed(), target.progress(),
-                        field.locked() == target.id()));
+                        field.locked() == target.id(), target.typeable()));
             }
         }
         return new View(phase.name(), cursor == null ? -1 : cursor.row(), nextStand, rings, lives,

@@ -119,6 +119,30 @@ class TestTypingHedgehogCourse {
         return method.invoke(record);
     }
 
+    /**
+     * Types the next key as a player would: the locked word's next letter, else the first letter of
+     * the first word that can be typed (a surfacer's word is hidden until it surfaces, and a lead
+     * letter locks the most urgent word starting with it).
+     */
+    private void typeNextKey(InputHandler input) throws Exception {
+        @SuppressWarnings("unchecked")
+        List<Object> targets = (List<Object>) get(view(), "targets");
+        Object pick = null;
+        for (Object target : targets) if ((boolean) get(target, "locked")) pick = target;
+        if (pick == null) {
+            for (Object target : targets) {
+                if ((boolean) get(target, "typeable")) {
+                    pick = target;
+                    break;
+                }
+            }
+        }
+        if (pick == null) return;
+        String typed = (String) get(pick, "typed");
+        int progress = (int) get(pick, "progress");
+        if (progress < typed.length()) MenuInput.handleCharEvent(input, typed.codePointAt(progress));
+    }
+
     private static void row(HeadlessTestFixture fixture, InputHandler input) {
         ControlledFrameRuntime.step(fixture.runtime(), input, LogicalInputSnapshot.neutral());
         input.update();
@@ -147,13 +171,7 @@ class TestTypingHedgehogCourse {
         }
         int kills = 0;
         for (int i = 0; i < 6000 && "STAND".equals(get(view(), "phase")); i++) {
-            @SuppressWarnings("unchecked")
-            List<Object> targets = (List<Object>) get(view(), "targets");
-            if (!targets.isEmpty()) {
-                String typed = (String) get(targets.getFirst(), "typed");
-                int progress = (int) get(targets.getFirst(), "progress");
-                if (progress < typed.length()) MenuInput.handleCharEvent(input, typed.codePointAt(progress));
-            }
+            typeNextKey(input);
             row(fixture, input);
             kills = (int) get(view(), "kills");
         }
@@ -190,13 +208,7 @@ class TestTypingHedgehogCourse {
         for (int i = 0; i < idleRows; i++) row(fixture, input);
         // Type whatever is on screen until the run resumes; hits and No-Fail retries may intervene.
         for (int i = 0; i < 12000 && !"RUN".equals(get(view(), "phase")); i++) {
-            @SuppressWarnings("unchecked")
-            List<Object> targets = (List<Object>) get(view(), "targets");
-            if (!targets.isEmpty()) {
-                String typed = (String) get(targets.getFirst(), "typed");
-                int progress = (int) get(targets.getFirst(), "progress");
-                if (progress < typed.length()) MenuInput.handleCharEvent(input, typed.codePointAt(progress));
-            }
+            typeNextKey(input);
             row(fixture, input);
         }
         stepUntil(fixture, input, "RUN", 400);
