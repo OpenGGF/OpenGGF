@@ -87,7 +87,7 @@ import java.util.function.Predicate;
  * use SK Set 1 as the canonical source; S3-only remappings share the
  * same underlying object names in most cases.
  */
-public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
+public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com.openggf.level.objects.MutatorPlacementClassifier {
     private final Map<Integer, FactoryEntry> factoryEntries = new HashMap<>();
     private final Map<Integer, List<FactoryEntry>> stockRomZoneFactoryEntries = new HashMap<>();
     private final Set<Integer> stockZoneBoundFactoryIds = new HashSet<>();
@@ -2305,5 +2305,28 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
             case 0xB8 -> "DDZMissile";
             default -> String.format("S3K_Obj_%02X", objectId & 0xFF);
         };
+    }
+
+    @Override
+    public com.openggf.game.mutators.MonitorContent monitorContent(ObjectSpawn spawn) {
+        if (spawn.objectId() != Sonic3kObjectIds.MONITOR && spawn.objectId() != Sonic3kObjectIds.HIDDEN_MONITOR) return null;
+        return switch (spawn.subtype() & 0xF) {
+            case 0 -> com.openggf.game.mutators.MonitorContent.EGGMAN;
+            case 1 -> com.openggf.game.mutators.MonitorContent.LIFE;
+            case 2 -> com.openggf.game.mutators.MonitorContent.EGGMAN;
+            case 3 -> com.openggf.game.mutators.MonitorContent.RINGS;
+            case 4 -> com.openggf.game.mutators.MonitorContent.SPEED_SHOES;
+            case 5 -> com.openggf.game.mutators.MonitorContent.FIRE_SHIELD;
+            case 6 -> com.openggf.game.mutators.MonitorContent.LIGHTNING_SHIELD;
+            case 7 -> com.openggf.game.mutators.MonitorContent.BUBBLE_SHIELD;
+            case 8 -> com.openggf.game.mutators.MonitorContent.INVINCIBILITY;
+            case 9 -> com.openggf.game.mutators.MonitorContent.SUPER;
+            default -> com.openggf.game.mutators.MonitorContent.EGGMAN;
+        };
+    }
+
+    @Override
+    public boolean isRingPlacement(ObjectSpawn spawn) {
+        return spawn.objectId() == Sonic3kObjectIds.RING;
     }
 }

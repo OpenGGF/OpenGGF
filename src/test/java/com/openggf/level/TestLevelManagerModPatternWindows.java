@@ -37,7 +37,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class TestLevelManagerModPatternWindows {
-    private static final int MOD_BASE = PatternAtlasRange.CONTINUE_SCREEN.endExclusive();
+    private static final int MOD_BASE = java.util.Arrays.stream(PatternAtlasRange.values())
+                .mapToInt(PatternAtlasRange::endExclusive).max().orElseThrow();
 
     @Test
     void everyLoadAndEditorRebuildRegistersModWindowsBeforeStockArtCaching() throws Exception {

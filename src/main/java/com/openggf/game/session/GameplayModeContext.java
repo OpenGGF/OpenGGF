@@ -359,6 +359,8 @@ public final class GameplayModeContext implements ModeContext {
         this.rewindRegistry.register(fadeManager);
         this.rewindRegistry.register(new OscillationStaticAdapter());
         this.rewindRegistry.register(kosinskiModuleQueue);
+        // Policies restore before roster/object recreation; saved preferences remain outside history.
+        WorldSessionPolicyAccess.registerRewind(worldSession, this.rewindRegistry);
         registerGameModuleRewindAdapters();
         // Register solid-execution adapter (no-op if not DefaultSolidExecutionRegistry)
         if (solidExecutionRegistry instanceof DefaultSolidExecutionRegistry dser) {
@@ -384,6 +386,7 @@ public final class GameplayModeContext implements ModeContext {
         this.terrainCollisionManager = Objects.requireNonNull(terrainCollisionManager, "terrainCollisionManager");
         this.collisionSystem = Objects.requireNonNull(collisionSystem, "collisionSystem");
         this.spriteManager = Objects.requireNonNull(spriteManager, "spriteManager");
+        WorldSessionPolicyAccess.bindRoster(worldSession, spriteManager);
         this.levelManager = Objects.requireNonNull(levelManager, "levelManager");
         maybeCreateBackgroundPlaneCollisionProvider();
         // ROM V_int_run_count keeps counting through this session: the level's
@@ -1200,10 +1203,22 @@ public final class GameplayModeContext implements ModeContext {
         EngineServices.current().vIntRunCounter().unbindObjectClock();
         installGameplayInputFilter(GameplayInputFilter.IDENTITY);
         RuntimeException replayCloseFailure = null;
-        var frameController = worldSession.getGameModule().gameplayFrameController();
-        if (frameController != null) {
-            try { frameController.close(); }
-            catch (RuntimeException failure) { replayCloseFailure = failure; }
+        // Host resources are released directly even when creator callbacks are quarantined.
+        WorldSessionPolicyAccess.closeScreens(worldSession);
+        try {
+            var overlay = worldSession.getGameModule().getGameService(com.openggf.game.LevelInputOverlay.class);
+            if (overlay != null) overlay.close();
+        } catch (com.openggf.level.objects.ObjectCallbackAbortException quarantined) {
+            java.util.logging.Logger.getLogger(getClass().getName()).warning("Overlay owner unavailable during cleanup; host resources released");
+        } catch (RuntimeException failure) { replayCloseFailure = failure; }
+        try {
+            var frameController = worldSession.getGameModule().gameplayFrameController();
+            if (frameController != null) frameController.close();
+        } catch (com.openggf.level.objects.ObjectCallbackAbortException quarantined) {
+            java.util.logging.Logger.getLogger(getClass().getName()).warning("Frame controller owner unavailable during cleanup");
+        } catch (RuntimeException failure) {
+            if (replayCloseFailure == null) replayCloseFailure = failure;
+            else replayCloseFailure.addSuppressed(failure);
         }
         // Creator cleanup may fail or omit a resource. The host still releases every PCM lease
         // before tearing down its audio/session owners.

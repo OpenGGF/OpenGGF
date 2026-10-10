@@ -6,6 +6,49 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Gameplay and presentation
 
+- **Mutator Lab catalogue:** one JVM boot-prepared package exposes eleven effects
+  in Sonic 1, Sonic 2 and Sonic 3 & Knuckles, with native game labels, monitor-type
+  availability, scrolling settings and explicit unavailable-feature reasons. Effects use
+  typed scoped options, atomic admission, owner fault isolation and session rewind
+  separate from saved preferences. The title/configuration/play/restart/hub flow
+  keeps native movement and sprite admission, with declared character/art support
+  and maintained package source/build-along guide. Modal title Back
+  preserves the save boundary and host prompt ownership; title cues use ROM SFX.
+  World-held policy services keep core lifecycle independent of creator schemas;
+  title-first capture preserves existing direct-level fade and input-last CSV contracts.
+  Its title card sits below the native emblem, How to play names the live key
+  bindings, play-hold configuration dims the held frame, and option help wraps to
+  two lines with plain-language boundary feedback. Backing out keeps the focused
+  effect, rows name the choice that applies each edit or why a row is unavailable,
+  and a chosen restart or hub return holds native play behind its fade. Big Head
+  can optionally scale with rings: normal at zero, the chosen size at 100 rings.
+  Ringfall can optionally drop the full inventory past the native 32-ring ceiling
+  as real recoverable rings that never take level object slots.
+  Typed catalogue contributions also declare scatter, head-presentation, semantic
+  monitor removal, checkpoint/ring suppression, independent stage-entry gates,
+  defeat knockback and whole-step speed across ordinary play and native special/bonus
+  gameplay. Native setup, stage results and canonical movie/trace ticks retain their
+  existing owners; live rewind preserves admitted taps and fractional pacing.
+
+  Native special/bonus-stage clock, input and offline PCM observations are
+  reproducible with `MutatorStageProbeTool`; its direct-entry and hidden-GL
+  limits are documented separately from desktop footage.
+  Routine validation and footage use headless/offscreen paths; window-specific
+  diagnostics create an owned virtual display and fail if isolation is unavailable,
+  preventing automated walkthroughs from taking desktop keyboard focus. Linux
+  captures can opt into a surfaceless EGL context that needs no display connection
+  and releases its platform selection for later engine boots. Native ring/enemy
+  observations and layout CSVs are available through maintained display-free tools.
+  The gameplay observer can explicitly capture native special-stage drawing and
+  interactive speed with production input/pacing and offline audio, preserving
+  canonical movie stepping by default.
+
+- **Sonic 2 title SFX priority:** the flashing star's last twinkle now runs to
+  its own stop, as in the ROM, releasing the sound driver's SFX priority. A stop
+  at star deletion had left the latch set, so lower-priority sounds that mods play
+  over the stock title, such as Mutator Lab's `SndID_Blip`, stayed silent until
+  another sound of equal or higher priority finished.
+
 - **Sonic 1 background scrolling:** Scrap Brain Act 1 uses the REV01 cloud
   interpolation and three building bands, with separate fractional cameras,
   rewind restoration and tile-cache window coverage at wider viewports. Scrap
@@ -1210,6 +1253,14 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   No task registration, validation receipts,
   cumulative budgets or retry gates are needed. Per-invocation category timeouts exclude
   queue waiting. Full CI and release validation remain unchanged.
+  A separate bounded-result comparator checks full failure identities/assertions
+  and causal skip reasons against an explicit source/run baseline, rejecting
+  incomplete evidence and preserving the existing runner selection and cleanup.
+  Isolated runs can discover original ROMs in an explicit directory without
+  Java environment injection or ROM aliases; affected fixtures honor supplied
+  absolute paths. JUnit abort stacks are validated before summary bounds are
+  applied, retaining their complete first causal line for strict negative-case
+  comparison without accepting chained or malformed tails.
 
 - **CI trigger policy:** `develop` and `next` run the smoke suite once a branch has had
   no push for 30 minutes, so bursts of pushes cost one run; non-draft

@@ -86,6 +86,11 @@ See the detailed guides for narrower contracts; roadmap entries do not imply imp
 
 ## Experimental projects
 
+- [Mutator Lab](../../examples/example-mutators/README.md) — an eleven-effect
+  catalogue for Sonic 1, Sonic 2 and Sonic 3 & Knuckles, with common widgets,
+  explicit live/load scopes and rewind-separated preferences. See the
+  [guide](guides/mutators.md) and current verification in the expansion plan.
+
 - [Flappy Tails](../../examples/flappy-tails/README.md) — Tails flaps through five S3K
   zones on the ROM's own flight routine, with pillars cut from each act's floor, real title
   cards, medals, records and Super Tails. An S3K mod scene and the finished game of the

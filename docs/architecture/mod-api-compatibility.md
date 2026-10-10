@@ -75,6 +75,23 @@ UI owns Start/Enter for that frame; the UI remains responsible for freezing its 
 Modules without the service retain normal pause behavior. This replaces no input bindings
 and changes only the mutable `0.7` pin; the descriptor and `ModApiVersion` remain at `0.7.0`.
 
+The Mutator Lab prototype extends that overlay with host-owned configuration
+holds, rendering and explicit Resume/full-restart/game-hub commands. Commands
+wait visibly across an active native fade. Typed mutator definitions declare
+independent enable/disable and option scopes; atomic session publication, safe
+capabilities and requested preferences are separate from effective rewind state.
+`LevelLoadCause` identifies a qualifying full assembly; a cause alone cannot
+promote preview, decode-only or restoration work. The common configuration UI
+and support profile are candidate API roots. The normalized `0.7` pin and
+`ModApiVersion` description change together; the descriptor retains unpublished
+candidate `0.7.0` and no published baseline is edited.
+
+Title providers may own Escape/back through the additive, stock-false
+`ownsEscapeInput()` default. Owned modal titles route their saved exit command
+through the same overlay service; the host clears its global prompt and treats
+a null overlay command as `NONE`. Existing title implementations retain their
+host Escape shortcut.
+
 The controlled-level additions expose `GameplayFrameController`, `CourseControl`,
 opaque session/hole/layout-tagged `CourseCheckpoint`, `MenuInput`, title act
 selection, and typed ROM-backed scene values/presenters. The default controller
@@ -479,9 +496,12 @@ does not depend on `mods`; the scene host consumes those values through the
 existing `mods -> control` boundary, without introducing a parallel device model
 or expanding the frozen package-cycle baseline.
 
-`baseGame: any` is restricted to startup-scene/display registration and expands
-into separately indexed stock-game decorators. It cannot introduce game-specific
-patches, objects, zones, characters or override declarations. Extra ROMs are
+`baseGame: any` expands shared startup scenes or typed mutator catalogues into
+separately indexed stock-game plans. A mutator catalogue may register concrete
+stock-game decorators; each expanded plan receives only its own game's decorators.
+Objects, zones, characters, art overrides and zone-specific gameplay policies
+remain forbidden in an `any` transaction. Scene-only registration cannot add
+ordinary game patches. Extra ROMs are
 scene-owned catalog views; active session ROMs are borrowed, and disassembly
 assets are never runtime fallbacks. S1/S2 detached stock pictures use explicit
 ROM inputs, including first-frame animated tiles, without graphics/session
@@ -517,6 +537,52 @@ exchange bounded queues and state. The scene host closes networking on exit
 requests and every callback fault, rather than depending on a later caller
 cleanup. The [scene handbook](../modding/guides/mod-scenes.md#direct-peer-messaging)
 owns framing, deadlines, clock meaning and direct-connect limitations.
+
+### Mutator Lab catalogue expansion (unpublished candidate)
+
+The expansion adds typed scatter, head-presentation, semantic monitor removal,
+checkpoint/ring suppression, independent stage-entry gates, defeat knockback and
+whole-step speed contributions. Existing `DrySonicGravity` and `PlayerStealth`
+constructors remain available. Capability-specific character eligibility and
+module-owned native location/option support metadata extend the common settings
+contract through backward-compatible default methods. All effects still declare
+independent enable, disable and option scopes; placement/death-bank filters require
+LOAD. Engine consumers use world-owned semantic ports rather than concrete mod
+state. The mutable `0.7` signature pin is regenerated from compiled source;
+`0.7.0` remains unpublished and no published baseline changes. Consumer behavior
+and the three-game example are tracked in the dated expansion plan.
+
+The unpublished 0.7 native head presentation reserves `PatternAtlasRange.PLAYER_PRESENTATION`
+for ROM-derived body/head fragment tiles. Dynamic mod windows continue to start above the
+maximum declared native range. `GraphicsManager.playerHeadFragmentBase(int)` assigns a
+companion fragment bank to an existing native player bank; it does not change the mod
+window budget or authority. `PlayerSpriteRenderer.headProfileId()` identifies reviewed
+normal Sonic source art, and `headPresentationReason(int)` exposes an explicit stock-pose
+fallback reason (empty for reviewed/empty poses). Anatomical polygons, frame kinds and
+neck anchors remain engine internals. The candidate remains 0.7.0, and its normalized
+signatures must come from the actual compiled composition.
+
+The unpublished mutator candidate adds a current-world common-screen factory
+with four bounded native ROM SFX IDs. It returns the host-owned settings screen
+without exposing global engine services. This is an ordinary candidate surface
+regeneration; `0.7` remains unpublished, and the final pin is generated from
+compiled classes.
+
+`MutatorPolicy.BigHead` gains a `scaleWithRings` record component for a head that
+grows from native size at zero rings to its `percent` at 100 native rings. The
+original `(int, Target)` constructor remains and declares a fixed size. The host
+reads each eligible target's live native ring count at presentation, so rewind and
+reloads need no extra state. This regenerates the mutable `0.7` pin with three
+additive entries and no removals; `0.7.0` stays unpublished. Saved preferences for
+a same-schema mutator that later adds an option take that option's declared
+default; unknown options and changed schema versions are still rejected.
+
+`MutatorPolicy.Ringfall` gains a `fullInventory` record component that lifts the
+native 32-ring scatter ceiling. The original `(int, int)` constructor remains and
+keeps the ceiling. The engine-only spill seams are reached through the
+unannotated `RingManagerInternalAccess`, so `RingManager`'s creator surface is
+unchanged. This regenerates the mutable `0.7` pin with three additive entries
+(constructor, accessor, record component) and no removals; `0.7.0` stays unpublished.
 
 ## Bounded ROM-part cue candidate
 

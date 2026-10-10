@@ -14,6 +14,7 @@ import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.HudStaticArt;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
@@ -23,8 +24,6 @@ import org.mockito.MockedStatic;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -40,8 +39,6 @@ import static org.mockito.Mockito.when;
 
 @RequiresRom(SonicGame.SONIC_1)
 class TestSonic1LivesHudDonation {
-    private static final Path S2_ROM = Path.of("s2.gen");
-
     @BeforeEach
     void setUp() {
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
@@ -56,7 +53,8 @@ class TestSonic1LivesHudDonation {
 
     @Test
     void loadArtForZone_exposesNativeHudStaticArtWithPalette0LivesFrame() throws Exception {
-        assumeTrue(Files.exists(S2_ROM), "S2 donor ROM is not available in this environment");
+        assumeTrue(RomTestUtils.ensureSonic2RomAvailable() != null,
+                "S2 donor ROM is not available in this environment");
         SessionManager.openGameplaySession(new Sonic1GameModule(),
                 SaveSessionContext.noSave("s1", new SelectedTeam("sonic", List.of()), 0, 0));
 
@@ -87,7 +85,8 @@ class TestSonic1LivesHudDonation {
 
     @Test
     void loadArtForZone_rebuildsDonorHudStaticArtThroughProviderPath() throws Exception {
-        assumeTrue(Files.exists(S2_ROM), "S2 donor ROM is not available in this environment");
+        assumeTrue(RomTestUtils.ensureSonic2RomAvailable() != null,
+                "S2 donor ROM is not available in this environment");
         SessionManager.openGameplaySession(new Sonic1GameModule(),
                 SaveSessionContext.noSave("s1", new SelectedTeam("knuckles", List.of()), 0, 0));
 

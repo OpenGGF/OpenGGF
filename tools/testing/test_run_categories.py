@@ -6,13 +6,76 @@ import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
+import xml.etree.ElementTree as ET
 
+import compare_category_outcomes as comparison
 import run_categories as runner
 
 
 class CategoryPolicyTests(unittest.TestCase):
     def setUp(self):
         self.policy = runner.policy()
+
+    def test_rom_discovery_accepts_original_files_in_an_explicit_directory(self):
+        import hashlib
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / 'worktree'
+            originals = Path(tmp) / 'original ROMs'
+            root.mkdir()
+            originals.mkdir()
+            path = originals / 'Original game (REV01) [!].gen'
+            path.write_bytes(b'original test image')
+            digest = hashlib.sha1(path.read_bytes()).hexdigest()
+            with patch.dict(runner.ROM_PROPERTIES, {digest: 'sonic2.rom.path'}, clear=True):
+                self.assertEqual([f'-Dsonic2.rom.path={path.resolve()}'],
+                                 runner.rom_args(root, originals))
+            self.assertEqual([], list(root.iterdir()))
+
+    def test_explicit_rom_directory_must_exist_and_be_a_directory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            file = root / 'not-a-directory'
+            file.write_text('data')
+            for path in (root / 'missing', file):
+                with self.subTest(path=path), self.assertRaises(ValueError):
+                    runner.rom_args(root, path)
+
+    def test_explicit_rom_discovery_keeps_root_priority_and_ignores_unknown_images(self):
+        import hashlib
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / 'worktree'
+            originals = Path(tmp) / 'originals'
+            root.mkdir()
+            originals.mkdir()
+            local = root / 'local.gen'
+            local.write_bytes(b'known image')
+            (originals / 'same.gen').write_bytes(local.read_bytes())
+            (originals / 'unrecognized.gen').write_bytes(b'other image')
+            digest = hashlib.sha1(local.read_bytes()).hexdigest()
+            with patch.dict(runner.ROM_PROPERTIES, {digest: 'sonic1.rom.path'}, clear=True):
+                self.assertEqual([f'-Dsonic1.rom.path={local.resolve()}'],
+                                 runner.rom_args(root, originals))
+
+    def test_explicit_rom_directory_is_passed_to_both_fresh_lanes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            originals = root / 'original ROMs'
+            originals.mkdir()
+            plan = {'tests': ['com/openggf/TestExample.java'], 'full': False,
+                    'guards': True, 'categories': ['common'], 'inventory_count': 1}
+            summary = {'reports': 1, 'tests': 1, 'skipped': 0, 'errors': 0, 'failures': 0}
+            argument = '-Dsonic2.rom.path=/original ROMs/Original [!].gen'
+            with patch.object(runner, 'tree_state', return_value='state'), \
+                    patch.object(runner, 'rom_args', return_value=[argument]) as discover, \
+                    patch.object(runner, 'summarize', side_effect=lambda _: dict(summary)), \
+                    patch.object(runner, 'run_logged', return_value=0) as process:
+                self.assertEqual(0, runner.run_plan(root, plan, rom_directory=originals))
+            self.assertEqual(2, discover.call_count)
+            for call in discover.call_args_list:
+                self.assertEqual((root, originals), call.args)
+            for call in process.call_args_list:
+                self.assertIn(argument, call.args[0])
+            self.assertEqual([], list(originals.iterdir()))
 
     def test_physics_changes_keep_dependent_categories_but_not_audio_oracles(self):
         categories, full, _ = runner.select_changes([
@@ -200,6 +263,56 @@ class RunnerTests(unittest.TestCase):
             summary = runner.summarize(reports)
             self.assertEqual(1, summary['skipped'])
             self.assertEqual('Missing ROM', summary['skipped_cases'][0]['reason'])
+
+    def summarize_skip(self, reason, use_text=False):
+        with tempfile.TemporaryDirectory() as tmp:
+            reports = Path(tmp)
+            suite = ET.Element('testsuite', tests='1', skipped='1', failures='0', errors='0')
+            case = ET.SubElement(suite, 'testcase', classname='Example', name='needsRom')
+            skipped = ET.SubElement(case, 'skipped')
+            if use_text:
+                skipped.text = reason
+            else:
+                skipped.set('message', reason)
+            ET.ElementTree(suite).write(reports / 'TEST-example.xml', encoding='unicode')
+            return runner.summarize(reports)['skipped_cases'][0]
+
+    def test_long_complete_abort_stack_preserves_full_cause_before_transport_cap(self):
+        cause = 'org.opentest4j.TestAbortedException: Assumption failed: act places no platforms'
+        frames = ['\tat org.junit.jupiter.engine.Probe.invoke(Probe.java:1544)'] * 100
+        reason = cause + '\n' + '\n'.join(frames) + '\n'
+        self.assertGreater(len(reason), 4096)
+        for use_text in (False, True):
+            with self.subTest(use_text=use_text):
+                case = self.summarize_skip(reason, use_text)
+                self.assertEqual(cause, case['reason'])
+                self.assertEqual('validated-junit-abort-cause', case['reason_projection'])
+                self.assertEqual(len(reason), case['reason_source_chars'])
+                self.assertEqual(100, case['reason_stack_frames'])
+                self.assertEqual(cause, comparison.skip_cause(case['reason'], 'skip cause'))
+
+    def test_projection_does_not_hide_unrecognized_tail_beyond_transport_cap(self):
+        cause = 'org.opentest4j.TestAbortedException: Assumption failed: act places no platforms'
+        stack = cause + '\n' + '\n'.join(['\tat pkg.Probe.invoke(Probe.java:1544)'] * 150)
+        for tail in ('Caused by: java.io.IOException: different failure',
+                     'another causal assertion', '\tat pkg.Probe.invoke(Probe.java:'):
+            with self.subTest(tail=tail):
+                case = self.summarize_skip(stack + '\n' + tail)
+                self.assertEqual(4096, len(case['reason']))
+                self.assertNotIn('reason_projection', case)
+                with self.assertRaises(comparison.EvidenceError):
+                    comparison.skip_cause(case['reason'], 'skip cause')
+
+    def test_projection_requires_junit_abort_and_a_bounded_complete_causal_line(self):
+        for cause in ('java.io.IOException: different failure',
+                      'org.opentest4j.TestAbortedException: ' + 'x' * 4096):
+            with self.subTest(cause=cause[:60]):
+                reason = cause + '\n' + '\n'.join(['\tat pkg.Probe.invoke(Probe.java:1544)'] * 150)
+                case = self.summarize_skip(reason)
+                self.assertEqual(4096, len(case['reason']))
+                self.assertNotIn('reason_projection', case)
+                with self.assertRaises(comparison.EvidenceError):
+                    comparison.skip_cause(case['reason'], 'skip cause')
 
     def test_failed_tests_still_collect_guard_results_but_never_report_success(self):
         with tempfile.TemporaryDirectory() as tmp:

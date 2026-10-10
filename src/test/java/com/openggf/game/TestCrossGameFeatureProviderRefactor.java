@@ -16,6 +16,8 @@ import com.openggf.sprites.animation.SpriteAnimationEndAction;
 import com.openggf.sprites.animation.SpriteAnimationScript;
 import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.RomTestUtils;
+import com.openggf.configuration.SonicConfiguration;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
@@ -52,19 +54,31 @@ class TestCrossGameFeatureProviderRefactor {
         private void assertS3kTailsScriptsSurviveTranslation(GameModule host) throws Exception {
             GameModuleRegistry.setCurrent(host);
             SessionManager.openGameplaySession(host);
-            CrossGameFeatureProvider provider = new CrossGameFeatureProvider(
-                    RomManager.getInstance(), EngineServices.current().configuration());
-            provider.initialize("s3k");
+            var configuration = GameServices.configuration();
+            String previousDonor = configuration.getString(SonicConfiguration.SONIC_3K_ROM);
+            // @RequiresRom installs the primary ROM. The provider independently opens
+            // its secondary ROM through the runtime catalogue, which needs this path too.
+            var donorRom = RomTestUtils.ensureSonic3kRomAvailable();
+            assertNotNull(donorRom);
+            configuration.setConfigValue(SonicConfiguration.SONIC_3K_ROM,
+                    donorRom.getAbsolutePath());
+            try {
+                CrossGameFeatureProvider provider = new CrossGameFeatureProvider(
+                        RomManager.getInstance(), configuration);
+                provider.initialize("s3k");
 
-            SpriteArtSet donated = provider.loadPlayerSpriteArt("tails");
+                SpriteArtSet donated = provider.loadPlayerSpriteArt("tails");
 
-            assertNotNull(donated);
-            assertInstanceOf(ScriptedVelocityAnimationProfile.class, donated.animationProfile());
-            assertNotNull(donated.animationSet());
-            for (int animationId = 0x20; animationId <= 0x28; animationId++) {
-                assertNotNull(donated.animationSet().getScript(animationId),
-                        "host " + host.getGameId() + " lost donated Tails script 0x"
-                                + Integer.toHexString(animationId));
+                assertNotNull(donated);
+                assertInstanceOf(ScriptedVelocityAnimationProfile.class, donated.animationProfile());
+                assertNotNull(donated.animationSet());
+                for (int animationId = 0x20; animationId <= 0x28; animationId++) {
+                    assertNotNull(donated.animationSet().getScript(animationId),
+                            "host " + host.getGameId() + " lost donated Tails script 0x"
+                                    + Integer.toHexString(animationId));
+                }
+            } finally {
+                configuration.setConfigValue(SonicConfiguration.SONIC_3K_ROM, previousDonor);
             }
         }
     }

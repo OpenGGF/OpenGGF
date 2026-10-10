@@ -42,3 +42,7 @@ They contain only original/generated test assets; built jars are not checked in.
 
 Use the linked source rather than a copied jar. Gallery CI exercises the real
 `ggfmod package` validation boundary so manifest/container/API drift fails visibly.
+
+The separate [Mutator Lab prototype](../../../examples/example-mutators/README.md)
+maintains executable package source outside this eight-sample gallery; its
+[guide](../guides/mutators.md) covers scoped options and native policy ownership.

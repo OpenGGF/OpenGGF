@@ -4,6 +4,7 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.GameModuleRegistry;
+import com.openggf.game.GameServices;
 import com.openggf.game.save.SaveSessionContext;
 import com.openggf.game.save.SelectedTeam;
 import com.openggf.game.session.SessionManager;
@@ -24,18 +25,26 @@ import static org.mockito.Mockito.mockStatic;
 
 @RequiresRom(SonicGame.SONIC_2)
 class TestSonic2LivesHudDonation {
+    private String previousDonorRom;
+
 
     @AfterEach
     void tearDown() {
+        if (previousDonorRom != null) {
+            GameServices.configuration().setConfigValue(SonicConfiguration.SONIC_3K_ROM, previousDonorRom);
+        }
         SessionManager.clear();
     }
 
     @Test
     void loadArtForZone_rebuildsAndExposesDonorLivesFrameThroughHudStaticArt() throws Exception {
-        Assumptions.assumeTrue(RomTestUtils.ensureSonic3kRomAvailable() != null,
+        var donorRom = RomTestUtils.ensureSonic3kRomAvailable();
+        Assumptions.assumeTrue(donorRom != null,
                 "S3K donor ROM required for Sonic 2 donor HUD mapping test");
 
-        SonicConfigurationService config = SonicConfigurationService.getInstance();
+        SonicConfigurationService config = GameServices.configuration();
+        previousDonorRom = config.getString(SonicConfiguration.SONIC_3K_ROM);
+        config.setConfigValue(SonicConfiguration.SONIC_3K_ROM, donorRom.getAbsolutePath());
         config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
         SessionManager.openGameplaySession(GameModuleRegistry.getCurrent(),
                 SaveSessionContext.noSave("s2", new SelectedTeam("knuckles", List.of()), 0, 0));

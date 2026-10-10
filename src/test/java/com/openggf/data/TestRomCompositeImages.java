@@ -109,9 +109,20 @@ class TestRomCompositeImages {
     }
 
     @Test
-    void knucklesInSonic2ResolvesOnlyFromAUserSuppliedLockOnDump() {
-        SonicConfigurationService configuration = SonicConfigurationService.getInstance();
-        RomImageCatalogue catalogue = RomImageCatalogue.build(configuration, RomLocationResolver.currentWorkingDirectory());
+    void knucklesInSonic2ResolvesOnlyFromAUserSuppliedLockOnDump() throws IOException {
+        String explicit = System.getProperty("kis2.rom.path");
+        RomImageCatalogue catalogue;
+        if (explicit != null && !explicit.isBlank()) {
+            // The runner supplies the user's original lock-on image without a cwd alias.
+            // An explicit malformed/unreadable dump must fail, not become a missing-ROM skip.
+            catalogue = new RomImageCatalogue(List.of(PhysicalImage.probe(Path.of(explicit))),
+                    Map.of(), false);
+            assertTrue(catalogue.isAvailable(RomIdentity.KIS2),
+                    "kis2.rom.path is not a KiS2 lock-on image: " + explicit);
+        } else {
+            SonicConfigurationService configuration = SonicConfigurationService.getInstance();
+            catalogue = RomImageCatalogue.build(configuration, RomLocationResolver.currentWorkingDirectory());
+        }
         Assumptions.assumeTrue(catalogue.isAvailable(RomIdentity.KIS2),
                 "no Sonic & Knuckles + Sonic 2 lock-on dump is available; skipping");
         Resolution kis2 = catalogue.resolve(RomIdentity.KIS2).orElseThrow();

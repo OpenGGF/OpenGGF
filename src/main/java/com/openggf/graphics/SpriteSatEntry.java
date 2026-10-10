@@ -26,13 +26,15 @@ public record SpriteSatEntry(
         int rowCountTiles,
         String debugSource,
         int visibleTopY,
-        int visibleBottomY
+        int visibleBottomY,
+        SpritePresentation.Subject presentationSubject
 ) {
     /** Visible-scanline bound meaning "no sprite-mask clip on this side". */
     public static final int UNCLIPPED_TOP = Integer.MIN_VALUE;
     public static final int UNCLIPPED_BOTTOM = Integer.MAX_VALUE;
 
     public SpriteSatEntry {
+        java.util.Objects.requireNonNull(presentationSubject, "presentation subject");
         if (priorityBucket < RenderPriority.MIN || priorityBucket > RenderPriority.MAX) {
             throw new IllegalArgumentException("Priority bucket out of range");
         }
@@ -48,6 +50,24 @@ public record SpriteSatEntry(
         if (visibleTopY > visibleBottomY) {
             throw new IllegalArgumentException("Visible scanlines must not be inverted");
         }
+    }
+
+    /** Compatibility shape for native producers with no presentation overlay. */
+    public SpriteSatEntry(int priorityBucket, int x, int y, int widthTiles, int heightTiles,
+            int firstPatternIndex, int rawTileWordLow11, int paletteIndex, boolean hFlip, boolean vFlip,
+            boolean piecePriority, boolean globalHighPriority, SpriteMaskReplayRole maskReplayRole,
+            int startColTile, int colCountTiles, int startRowTile, int rowCountTiles, String debugSource,
+            int visibleTopY, int visibleBottomY) {
+        this(priorityBucket, x, y, widthTiles, heightTiles, firstPatternIndex, rawTileWordLow11, paletteIndex,
+                hFlip, vFlip, piecePriority, globalHighPriority, maskReplayRole, startColTile, colCountTiles,
+                startRowTile, rowCountTiles, debugSource, visibleTopY, visibleBottomY, SpritePresentation.Subject.WORLD);
+    }
+
+    public SpriteSatEntry withPresentationSubject(SpritePresentation.Subject subject) {
+        return new SpriteSatEntry(priorityBucket, x, y, widthTiles, heightTiles, firstPatternIndex,
+                rawTileWordLow11, paletteIndex, hFlip, vFlip, piecePriority, globalHighPriority,
+                maskReplayRole, startColTile, colCountTiles, startRowTile, rowCountTiles, debugSource,
+                visibleTopY, visibleBottomY, subject);
     }
 
     /** Pre-scanline-clip shape, kept for producers that never clip. */
@@ -195,7 +215,8 @@ public record SpriteSatEntry(
                 clippedRowCountTiles,
                 debugSource,
                 visibleTopY,
-                visibleBottomY);
+                visibleBottomY,
+                presentationSubject);
     }
 
     public SpriteSatEntry clipRows(int clippedStartRowTile, int clippedRowCountTiles) {
@@ -223,7 +244,8 @@ public record SpriteSatEntry(
                 rowCountTiles,
                 debugSource,
                 visibleTopY,
-                visibleBottomY);
+                visibleBottomY,
+                presentationSubject);
     }
 
     /** Copy restricted to screen scanlines {@code [top, bottom)}; tile rows are left whole. */
@@ -231,7 +253,7 @@ public record SpriteSatEntry(
         return new SpriteSatEntry(priorityBucket, x, y, widthTiles, heightTiles, firstPatternIndex,
                 rawTileWordLow11, paletteIndex, hFlip, vFlip, piecePriority, globalHighPriority,
                 maskReplayRole, startColTile, colCountTiles, startRowTile, rowCountTiles, debugSource,
-                top, bottom);
+                top, bottom, presentationSubject);
     }
 
     /**

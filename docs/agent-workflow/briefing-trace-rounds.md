@@ -71,6 +71,47 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Native stage measurements have multiple caller boundaries (2026-10-09, Mutator
+Lab expansion): `GameLoop.step()` and the movie renderer do not certify
+interactive speed or native stage drawing. The configured Engine headless seam
+also performs presentation backend replacement and omits the ordinary boot-time
+external registration call. Use the maintained `HeadlessGameBoot` with the real
+packaged module registered before world creation, actual configured input and
+one Engine outer audio boundary; declare direct-level/entry setup. Keep its
+clock/PCM observations separate from normal Engine.loop/window footage. A
+successful hidden GL context is not proof that a stage's pixels were rendered.
+
+Capture drain length is not producer publication count (2026-10-09, Mutator Lab
+audio guard repair): the presentation capture handle advances its own capture
+clock on every drain and returns that clock-sized frame, zero-filling when no
+fresh producer packet exists. A native bootstrap fixture expected an empty
+second drain and received 800 silent stereo frames. Drain once per outer audio
+boundary; use the producer sink's accept count to verify publication cadence,
+and inspect capture clock and PCM alongside native state. Extra drains cannot
+prove extra synthesis or gameplay steps.
+
+Fractional stage entry can preserve a nonzero scheduling phase (2026-10-09,
+Mutator Lab expansion): a late denial comparison initially assumed remainder
+zero before counting 150% outer frames. Compare the actual incoming remainder
+and the native positive control. Do not fit a reset into the engine to make a
+zero-based expectation pass. An already-admitted stage retains its native owner.
+
+Desktop action names are intentions (2026-10-09, Mutator Lab expansion): a
+recipe labelled an image “stage entry” while its keys during the automatic
+development intro selected Gravity settings. Inspect native title/level/stage
+pixels and the resulting saved profile, retain focus ownership, and reject
+mislabelled screenshots. Do not infer menu, stage or configuration success from
+a helper exit, action caption or nonzero device PCM alone.
+
+Development launch is not a fresh game-selection hub (2026-10-08, Mutator Lab
+expansion): a shared package declares Sonic 2 as its development base, and the
+Engine opens that title automatically. Two recipes labelled Sonic 1 sent Left
+before returning to the hub; their actual screenshots remained Sonic 2. Reject
+the game label, finish the native intro, return with Escape, and inspect the
+master hub and selected native title before certifying the route. The corrected
+recipe reaches the Sonic 1 title and Green Hill menu without changing Engine
+startup, native input or gameplay readiness.
+
 FFmpeg PCM length can differ from a Vorbis stream's declared length (2026-10-09,
 Eggman's Sky compression): a generated 9,606-frame mono control retained exactly
 9,606 frames in its Ogg granule count, while FFmpeg's native and libvorbis decoders
@@ -317,6 +358,17 @@ characters; stripping its exception prefix and normalizing only the verified
 baseline assertion independently retained by its owner. Preserve every concrete
 field during comparison, and distinguish a full assertion match from equality
 of unreported world state.
+
+Abort stack caps can hide valid causal evidence (2026-10-09, Mutator Lab expansion):
+32 expected Infinite Sonic skips had complete, matching first causal lines, but
+the category summary cut their JUnit stack envelopes at 4,096 characters. The
+strict comparator correctly rejected those envelopes because it could not verify
+the missing tail. Validate the entire uncapped XML stack before projecting its
+causal line; only complete Java `at ...(...)` frames may follow a JUnit abort.
+Record the original length and validated frame count. Chained causes, malformed
+tails and capped causal lines still require review. Keep the old comparison
+invalid and qualify any narrow supplemental check against its exact source and
+skip identities; do not relabel it as another full-suite execution.
 
 
 Pitch is not note tempo (2026-10-02): accelerated sample-voice tests passed at
@@ -705,6 +757,120 @@ repair an unsupported debug combination by changing shared combat rules.
 | 50 | A failing-set diff that drops nested `$` class names | Two different failures collapsing into one row |
 | 43 | Too many concurrent rounds | OOMs, GLFW init failures and contended arms that report *fewer* red |
 | 44 | An axis count across arms of different depth | A count comparison that was never like-for-like |
+
+#### Mutator captures and validation
+
+Promo correctness does not establish promo pacing (2026-10-10 Mutator Lab):
+76 source-correct shots still produced sixteen cuts in the last twenty seconds
+and 68 discontinuous music intervals. Compare actual prior reels, count cuts,
+and retain complete native actions rather than cutting on every cue or widget.
+For an editorial soundtrack, record selected ownership, gain/filter envelopes,
+handoff sample intervals and featured native audio windows separately from raw
+capture evidence. Measure the delivered AAC's true peak as well as pre-encode
+PCM; normalization settings alone did not prevent a +0.41 dB decoded true peak.
+Check `paused` and encoded pixels alongside `mode`: a held Lab menu still
+reported `LEVEL` and made a respawn comparison display settings instead.
+
+Capture boot modes own different driver contracts (2026-10-08 Mutator Lab repair):
+title-first capture follows the normal loop fade owner and rebinds its player after
+launch. Applying those choices globally to the existing direct-level driver changed
+cold route handoffs and fade snapshot assertions. Preserve the default driver until
+its consumers are migrated and validated together. Its CSV keeps input last;
+appending host observation columns silently broke a prefix comparator that strips
+the final field. Extended host columns are explicit in the title-first mode.
+
+Exact window ownership does not isolate desktop input (2026-10-09 Mutator Lab
+polish): the helper validated its own Engine PID but repeatedly focused that
+window and injected keys on shared `DISPLAY=:0` for 181–321 seconds, taking input
+away from the user. Default to existing headless tests and offscreen captures;
+real-time desktop walkthroughs do not add evidence for routine gameplay/UI checks.
+For a question specifically about window focus or close, the maintained helper now
+creates its own Xvfb server with `-displayfd`, explicitly connects to that display
+and gives Engine/recorders only that display, without inherited Wayland routing.
+Missing or failed isolation must stop before Engine/audio/input admission; never
+fall back to the desktop. Reap the owned server after clients. Virtual-window
+observations do not certify the user's window manager or hardware input.
+
+Surfaceless capture still owns process-global GLFW initialization hints
+(2026-10-10 Mutator Lab gameplay promo). The Mesa EGL pbuffer uses the null
+GLFW platform only for timer/input services. Initialization hints survive
+termination, so restore automatic platform selection in `finally` after
+initialization, including failure, without changing the current null platform.
+A display-free mocked failure reproduced the missing reset before `e091d3b20`;
+real EGL readback and a byte-identical 760-frame capture qualified the repair.
+Successful offscreen rendering alone does not prove cleanup for the next owner.
+
+Canonical one-tick movies can hide interactive Game Speed completely
+(2026-10-10 complete Mutator Lab showcase). Compare equal presentation
+intervals with identical controller input, actual native counter deltas and
+fractional phase; use the production presentation owner and one offline PCM
+drain per outer frame. Accelerated editing or a configured percentage alone
+proves neither native speed nor audio-follow behavior. A special-stage
+provider can own gameplay while a level-only capture renderer still draws
+ordinary planes; wait for its native entry/shared reveal fades and reproduce
+Engine's stage viewport/draw order. Stage denial can suppress bonus stars
+before an entry request exists, so use native eligibility and a matched touch
+control rather than requiring a denied-request log. Menu checked state is a
+request, not proof of admission: show its Resume or reload/death consequence.
+
+Desktop visibility and input need separate proof (2026-10-07 Mutator Lab): an
+X11 window may exist but remain unmapped while `glfwShowWindow` waits. Recheck
+its exact child PID, title, `IsViewable` state and positive geometry immediately
+before recording. Default-visible creation and explicit ShowWindow are distinct
+paths; one successful path does not certify the other. A bounded workaround may
+map only the owned window with `override_redirect`; record that frameless path
+and any child-only driver/audio environment rather than claiming default WM
+support. Never change global display/audio settings or another process's window. Early
+shared-display captures are historical evidence only, not permission to repeat
+that automation. Recheck focus/readiness within the isolated server before
+treating an unchanged page as a routing defect.
+
+Synthetic X11 releases must use `protocol.event.KeyRelease`: constructing a
+`KeyPress` object with a `type=KeyRelease` argument still serializes a press in
+python-xlib. A first working Enter followed by ignored Enter can be a latched
+helper key, not a menu bug. Explicitly release each key, focus the owned surface,
+and inspect the second action's visible result. A viewable screenshot or Pulse
+sink-input alone proves neither responsive input nor authored SFX. Frameless
+swap waits may also starve animation; if child-only vblank overrides are needed,
+record them and retain the engine's tick limiter. Inspect changing frames and
+AC PCM windows around actions, including title-to-level producer rebuilds.
+
+An unfocused Engine discards synthetic keys (2026-10-08 Mutator Lab polish):
+`Engine.applyWindowActivation` pauses the loop and clears key state when GLFW
+reports focus loss. A key sent while a shared-DISPLAY peer or the compositor owns
+X focus reaches the window, is discarded, and no new frame is presented, so the
+next screenshot repeats the previous page. `tools/media/engine_window_capture.py`
+records `XGetInputFocus` per key (`focus.owned`) and `require_focus` fails closed.
+An unchanged page with `owned: false` is absent input, not a routing defect.
+On the owned frameless path, x11grab screenshots and video also trailed input by
+about 1.7 seconds: a screenshot one second after a key can show the previous
+page while a later page proves the key arrived. Settle about three seconds
+before each screenshot and read the next page before calling input lost.
+
+Restoring sources with preserved timestamps hides them from the compiler
+(2026-10-08 Mutator Lab polish). A matched base control that checked out base
+files, compiled them, and then restored the candidate with `cp -p` left the
+candidate older than its base classes; Maven skipped recompiling it and the
+next run tested base classes against candidate tests. Touch restored files, or
+clean, before the next build, and check the compiled class for a new member.
+
+A submitted menu cue can lose native arbitration (2026-10-08 Mutator Lab polish):
+Sonic 2 `SndID_Blip` (`$CD`) has `zSFXPriority` `$6F`, below the title's
+`SndID_Sparkle` (`$70`), which `Obj0E_FlashingStar_Move` re-triggers every 19
+frames. The driver rejects the blip while a twinkle plays: no `PlaySfx` enters the
+command timeline and PCM equals a neutral control. Sample the request latch
+(`Sonic2SoundRequestService.Snapshot.pipeline().sfxPriorityValue()`) and compare
+PCM against a matched control before calling a cue silent or the mixer broken.
+
+Queue-holder inventory needs descriptor corroboration (2026-10-07 Mutator Lab
+recovery): this Btrfs checkout reported device `00:23` from `stat`, while
+`/proc/locks` listed the same file as `00:21`. Matching only device and inode
+falsely reported no holder. Confirm the inode together with the exact holder's
+`/proc/<pid>/fd` target and `fdinfo`, plus its live lease and command/CWD. Identify
+Java through `/proc/<pid>/exe` or the Surefire command marker: a `/usr/bin/java`
+substring scan missed a live `/usr/lib/jvm/java-21-openjdk/bin/java` fork.
+These observations establish ownership, not progress, a pass or a stall; never
+delete locks or stop another owner's process to force admission.
 
 ### Operational
 
@@ -4093,3 +4259,10 @@ What changed answers, every time, was the constraint that said **how to measure*
 **Offering branches is cheap and rarely wrong; it is also rarely useful.** Spend the brief on the
 instrument and the discipline, and let the measurement name the branch. A lane that is told what to
 expect will find it; a lane that is told how to look will find what is there.
+
+A development capture jar can contribute decorators for several stock games.
+Applying every explicit decorator nests replacement titles: an outer ACTIVE
+screen can overlay a still-running native intro and falsely suggest a UI readiness
+bug. Select the frozen concrete stock plan and the actual launch predicate, as
+the runtime resolver does. Inspect native backdrop identity as well as PNGs.
+Origin: Mutator Lab all-game expansion, first `02f194c2` title captures.

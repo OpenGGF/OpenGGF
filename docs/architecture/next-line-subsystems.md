@@ -58,3 +58,20 @@ java -cp target/OpenGGF-0.7.prerelease-jar-with-dependencies.jar com.openggf.too
 
 The CI scale gate runs 32 in-JVM bots through `TestGhostLoadTest`; the 128/256-player gate
 above measures hub aggregation CPU, not deployed socket throughput.
+
+## Scoped mutators prototype
+
+The unpublished 0.7 candidate accepts boot-prepared `MutatorDefinition` contributions
+through owner-derived `ModContext` transactions. Each ENABLE, DISABLE and option
+has its own scope. WorldSession owns requested/admitted/effective settings and
+bounded historical publications; saved requested preferences are independent.
+`LevelLoadCause` marks qualifying full assemblies, while the shared configuration
+overlay owns explicit LIVE Resume and retained fade-time commands. Factory output
+is immutable and capability-bounded; host quarantine cannot be rewound.
+
+The [Mutator Lab guide](../modding/guides/mutators.md) explains the real dry-air
+movement and post-native-admission presentation hooks, UI and exact support cell.
+It uses the ordinary native level loop, preserving golf's controlled-frame input
+contract. Modified user-recording support, placement filters and the later
+portfolio/MVP/product gates remain unimplemented. No API version bump or published
+baseline edit occurs: policy descriptor and runtime remain 0.7.0 candidate.

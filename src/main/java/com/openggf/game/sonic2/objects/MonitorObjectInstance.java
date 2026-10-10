@@ -637,6 +637,7 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (MonitorType.fromSubtype(subtype)) {
             case RINGS -> {
+                if (!com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(services)) return;
                 player.addRings(RING_MONITOR_REWARD);
                 // ROM super_ring reaches the driver through the music mailbox,
                 // not the SFX queue: it ends `move.w #SndID_Ring,d0 /

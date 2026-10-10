@@ -25,6 +25,11 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 ## Tools
 
+- [Category negative-case comparison](../../tools/testing/compare_category_outcomes.py): compares completed bounded runner failures and causal skips with an explicit source/run baseline, rejecting incomplete evidence and requiring opt-in for verified SSZ blob hashes (2026-10-08 Mutator Lab expansion); [limits and usage](../../tools/testing/README.md#bounded-category-result-comparison).
+
+- [Native Mutator stage probe](../../src/main/java/com/openggf/tools/MutatorStageProbeTool.java): bounded registered-mod interactive native clocks, input admission and offline PCM for all three special stages and S3K bonus stages (2026-10-08 Mutator Lab expansion); [setup and limits](../../tools/media/README.md#native-mutator-stage-observations).
+- [Owned Engine window capture](../../tools/media/engine_window_capture.py): bounded X11 desktop video, Pulse monitor PCM and input-only JSON actions with isolated config, exact PID/title/visibility checks and owned cleanup (2026-10-07 Mutator Lab). See the [capture recipe](../../tools/media/README.md).
+
 - [Eggman's Sky voice generator](../../tools/audio/eggmans_sky_voice.py) synthesizes
   original directed Alice announcements through OpenRouter, preserves raw takes outside
   Git, verifies literal words after the approved metallic/vocoder/DAC processing, and
@@ -49,8 +54,10 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 - `GameplayAllocationTool`: ordinary BK2-driven loop/render bytes per frame, excluding PNG/readback and CSV allocation. Use `--rom <absolute-path> --input <bk2> --zone <numeric-id> --act <one-based> --out-dir target/alloc`; optional `--frames 6000 --warmup 600 --width 400 --main sonic --sidekick tails --rewind true --jfr true`. `--sidekick none` selects solo play; the console reports the live roster count. Loop allocation includes input-row decoding. Compare route state before interpreting allocation deltas; JFR includes other threads, whereas reported counters measure the gameplay thread. Keep raw diagnostics temporary.
 
-- [Sprite sheet dump](../../src/main/java/com/openggf/tools/modsdk/SpriteSheetDump.java) (`ggfmod sprites`): renders every mapping frame of a ROM sprite (art, mappings, optional DPLC, palettes) or a playable character (`char=sonic`, with its animation scripts) into one numbered PNG grid, for choosing frames without booting a level (2026-10-05 Slay the Robotnik; a ggfmod subcommand since 2026-10-06).
+- [Sprite sheet dump](../../src/main/java/com/openggf/tools/modsdk/SpriteSheetDump.java) (`ggfmod sprites`): renders every mapping frame of a ROM sprite (art, mappings, optional DPLC, palettes) or a playable character (`char=sonic`, with its animation scripts) into one numbered PNG grid; `char=sonic heads=true first=0 count=32 scale=150` adds production Big Head stock/head/body/composite review panels and explicit pose classifications, for choosing frames without booting a level (2026-10-05 Slay the Robotnik; a ggfmod subcommand since 2026-10-06).
 - [Example mod capture](../../src/test/java/com/openggf/mods/code/ExampleModCapture.java) (test scope) with [ExampleModHarness](../../src/test/java/com/openggf/mods/code/ExampleModHarness.java): builds any `examples/` mod with a startup scene from source and records its scene headless with GL to PNGs, an MP4 (ffmpeg) and a WAV of its music and sound effects, from an input script whose `jump=` steps use the scene's `DebuggableScene` entry (2026-10-05 Slay the Robotnik capture, generalised 2026-10-06 for the example's highlight reel).
+- [Mutator gameplay observation](../../src/main/java/com/openggf/tools/MutatorGameplayCaptureTool.java): runs the production input-only capture loop and adds admitted policies, head scale, live/slotless spill objects and badnik observations to CSV. Uses the ordinary capture CLI and requires `-Dopenggf.headless.gl=surfaceless-egl`; no display fallback. Origin: gameplay-first Mutator Lab promo, 2026-10-10.
+- [Level layout dump](../../src/main/java/com/openggf/tools/LevelLayoutDumpTool.java): reads real ring/object placements and the resolved start position for planning controller routes. Arguments: game, original ROM, zone, one-based act, new output directory; requires the same display-free backend. Origin: Mutator Lab enemy-chain/ring-recovery shots, 2026-10-10. Inspect actual loaded identity; a requested zone alias alone is not proof.
 - [Maven resource profiler](../../tools/testing/profile_maven.py): sample queued ordinary/guard runs for process-tree memory and CPU admission estimates (2026-09-15 Maven resource task).
 - [Per-test memory profiler](../../tools/testing/profile_test_memory.py): explicit capture/rewind/ROM tests in a repeated diagnostic JVM, with executing-thread allocation, sampled peaks and post-GC pass floors; see [measurement limits](../../tools/testing/README.md#per-test-memory-diagnostics) (2026-10-07 throughput task).
 - [Ordinary-suite memory observer](../../tools/testing/profile_ordinary_memory.py): actual Surefire class/test peaks and post-teardown GC floors, with separate Maven RSS/swap/heap probes and bounded GC/native evidence (2026-10-07 memory-cause investigation).
@@ -285,3 +292,14 @@ Local Maven tests: [`tools/testing/maven_queue.py`](../../tools/testing/maven_qu
 - [SSZ arena-static presentation demo](../../tools/visuals/ssz_arena_static_demo.py): composites deterministic side-only noise over verified widescreen boss footage and emits a local comparison page; originating [2026-09-24 design study](../architecture/designs/2026-09-24-widescreen-boss-arena-static.md), not an engine feature.
 
 - `tools/bizhawk/capture_mhz_pillar_reference.lua` samples native MHZ2 pillar scroll words and their collision helpers from ordinary movie playback; use the common native capture host and an explicit movie-state plan.
+
+- `GameplayCaptureTool --title-screen --audio` (Mutator Lab, 2026-10-07) observes
+  production title-to-play initialization and exactly one final SMPS PCM packet per
+  captured outer frame. InputLogAuthorTool compiles the maintained example script;
+  synchronized CSV adds host pause and effective mutator revision. Captures belong
+  outside Git, and the silent video may be muxed with the generated `audio.wav`.
+
+- `MutatorGameplayCaptureTool --showcase` / `--interactive-pacing` preserves the
+  all-eleven Mutator Lab film's native stage drawing, production presentation
+  input/tick pump, offline PCM and policy/checkpoint/monitor observations
+  (2026-10-10, source `379b66413`); see [capture contract](../../tools/media/README.md#mutator-gameplay-showcase-captures).

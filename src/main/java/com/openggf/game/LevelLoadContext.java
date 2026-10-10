@@ -21,6 +21,7 @@ public class LevelLoadContext {
     private int zone = -1;
     private int act = -1;
     private LevelLoadMode loadMode = LevelLoadMode.FULL;
+    private LevelLoadCause loadCause = LevelLoadCause.DECODE_ONLY;
     private Level level;
     private GameModule gameModule;
 
@@ -69,6 +70,8 @@ public class LevelLoadContext {
     public void setAct(int act) { this.act = act; }
 
     public LevelLoadMode getLoadMode() { return loadMode; }
+    public LevelLoadCause getLoadCause() { return loadCause; }
+    public void setLoadCause(LevelLoadCause cause) { loadCause = java.util.Objects.requireNonNull(cause); }
     public void setLoadMode(LevelLoadMode loadMode) {
         this.loadMode = loadMode == null ? LevelLoadMode.FULL : loadMode;
     }
@@ -82,6 +85,7 @@ public class LevelLoadContext {
     // Checkpoint snapshot accessors
 
     public boolean hasCheckpoint() { return hasCheckpoint; }
+    void denyCheckpointRingRestore() { checkpointRings = checkpointRingExtraLifeFlags = 0; }
     public int getCheckpointX() { return checkpointX; }
     public int getCheckpointY() { return checkpointY; }
     public int getCheckpointCameraX() { return checkpointCameraX; }

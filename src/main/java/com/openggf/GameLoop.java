@@ -128,6 +128,7 @@ public class GameLoop {
     final SonicConfigurationService configService;
     private final AudioManager audioManager;
     private boolean gameplayAudioRateOwned;
+    private final GameLoopSpecialStageInput specialStagePacingInput = new GameLoopSpecialStageInput();
     private final OuterFramePresentation outerFramePresentation;
     private final RomManager romManager;
     private final DebugOverlayManager debugOverlayManager;
@@ -313,6 +314,7 @@ public class GameLoop {
 
     private volatile boolean paused = false;      // Window focus pause
     private volatile boolean userPaused = false;  // Keyboard toggle pause
+    private final GameLoopConfigurationCommands configurationCommands = new GameLoopConfigurationCommands();
     private PlcLifecycleFrame activePlcLifecycleFrame;
 
     public GameLoop() {
@@ -340,6 +342,8 @@ public class GameLoop {
                 new LiveUserRecordingRuntime(configService, userRecordingSessionLauncher, playbackDebugManager,
                         () -> currentGameMode,
                         () -> TraceSessionLauncher.active() != null
+                                || com.openggf.game.session.WorldSessionPolicyAccess.hasPolicies(
+                                        com.openggf.game.session.SessionManager.getCurrentWorldSession())
                                 || configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)
                                 || debugShortcutsEnabled() && debugOverlayManager.isEnabled(DebugOverlayToggle.OBJECT_ART_VIEWER),
                         () -> { userPaused = true; updateAudioPauseState(); },
@@ -384,6 +388,7 @@ public class GameLoop {
     }
 
     public void setGameplayMode(GameplayModeContext gameplayMode) {
+        if (this.gameplayMode != gameplayMode) { configurationCommands.clear(); }
         this.gameplayMode = gameplayMode;
         refreshRuntimeBindings();
         installLiveRewindBoundaryReporter();
@@ -399,6 +404,7 @@ public class GameLoop {
             // a destroyed gameplay FadeManager that the UI pipeline no longer
             // ticks — which would otherwise leave fade callbacks orphaned.
             this.gameplayMode = null;
+            configurationCommands.clear();
             this.spriteManager = null;
             this.camera = null;
             this.timerManager = null;
@@ -409,6 +415,9 @@ public class GameLoop {
             this.liveRewindBoundaryReporterContext = null;
             engineServices.graphics().clearRuntimeManagedReferences();
             return;
+        }
+        if (this.gameplayMode != currentGameplayMode) {
+            configurationCommands.clear();
         }
         this.gameplayMode = currentGameplayMode;
         this.spriteManager = currentGameplayMode.getSpriteManager();
@@ -791,14 +800,16 @@ public class GameLoop {
     private boolean isPresentationPaused() {
         var controller = currentGameMode == GameMode.LEVEL
                 ? com.openggf.game.mode.ControlledFrameRuntime.controller(resolveGameplayModeContext()) : null;
-        return isPaused() || controller != null && controller.presentationPaused();
+        // Configuration holds retain their ROM-backed menu soundtrack and feedback.
+        // Window/user pause still silences the complete presentation as before.
+        return paused || userPaused || controller != null && controller.presentationPaused();
     }
 
     /**
      * @return true if the game loop is currently paused (either by window or user)
      */
     public synchronized boolean isPaused() {
-        return paused || userPaused;
+        return paused || userPaused || GameLoopPauseInput.configurationPaused(currentGameMode);
     }
 
     public boolean externalFrameOrInputOwnerActive() {
@@ -852,32 +863,21 @@ public class GameLoop {
 
     /** Interactive 60/50 Hz presentation entry; canonical {@link #step()} remains one tick. */
     public void stepPresentationFrame() {
-        var modeAtStart = resolveGameplayModeContext();
-        var levelAtStart = levelManager == null ? null : levelManager.getCurrentLevel();
-        boolean paced = canUseGameplayPacing() && GameServices.module() != null;
-        if (paced) {
-            double rate = GameServices.module().gameplayAudioPlaybackRate();
-            rate = Double.isFinite(rate) ? Math.clamp(rate, 1.0, 32.0) : 1.0;
-            if (rate != 1.0 || gameplayAudioRateOwned) {
-                audioManager.setForwardPlaybackRate(rate);
-            }
-            gameplayAudioRateOwned = rate != 1.0;
-        } else {
-            releaseGameplayAudioRate();
-        }
-        int steps = paced
-                ? Math.clamp(GameServices.module().gameplayStepsPerFrame(), 1, 32) : 1;
-        step();
-        for (int i = 1; i < steps && resolveGameplayModeContext() == modeAtStart
-                && (levelManager == null ? null : levelManager.getCurrentLevel()) == levelAtStart
-                && canUseGameplayPacing(); i++) {
-            step();
-        }
-        if (gameplayAudioRateOwned && (!canUseGameplayPacing()
-                || resolveGameplayModeContext() != modeAtStart
-                || (levelManager == null ? null : levelManager.getCurrentLevel()) != levelAtStart)) {
-            releaseGameplayAudioRate();
-        }
+        gameplayAudioRateOwned = GameLoopGameplayPacing.step(this, resolveGameplayModeContext(),
+                () -> levelManager == null ? null : levelManager.getCurrentLevel(),
+                inputHandler, audioManager, this::canUseGameplayPacing, this::canUseGameplayPacingOutsideRewind,
+                liveRewindManager::isRewindingOrReleasing, pacing -> {
+                    try {
+                        GameLoopZeroStepPresentation.run(currentGameMode, inputHandler, configService,
+                                playbackDebugManager, userPaused, escapeToMasterTitleController,
+                                this::handleConfigurationCommand, userRecordingControls::handlePlaybackTakeoverRequest,
+                                paused -> { userPaused = paused; updateAudioPauseState(); },
+                                () -> { userRecordingControls.updateLevelControlInput(inputHandler); handleTimeAttackRetryInput(); },
+                                this::canUseGameplayPacing, pacing);
+                    } finally {
+                        runAfterStepMasterTitleLaunchCallbackIfPresent(); presenceManager.tick();
+                    }
+                }, specialStagePacingInput, gameplayAudioRateOwned);
     }
 
     private void releaseGameplayAudioRate() {
@@ -888,15 +888,18 @@ public class GameLoop {
     }
 
     private boolean canUseGameplayPacing() {
-        return currentGameMode == GameMode.LEVEL
+        return canUseGameplayPacingOutsideRewind()
+                && GameLoopPacingInterruption.allows(liveRewindManager, configService, inputHandler);
+    }
+
+    private boolean canUseGameplayPacingOutsideRewind() {
+        return GameLoopPacingActivity.allows(currentGameMode,
+                currentGameMode == GameMode.SPECIAL_STAGE ? getActiveSpecialStageProvider() : null,
+                activeBonusStageProvider, titleCardProvider, camera, levelManager, specialStageRewindBoundaryThisFrame)
                 && !isPaused() && !isNonRewindableTransitionPending()
                 && !ExternalFrameOrInputOwnership.active(engineServices)
-                && !userRecordingControls.shouldPumpFastForward()
-                && !liveRewindManager.isRewindingOrReleasing()
-                && !(configService.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED)
-                    && inputHandler != null
-                    && inputHandler.isKeyDown(configService.getInt(SonicConfiguration.LIVE_REWIND_KEY)))
-                && (camera == null || camera.getFocusedSprite() == null || !camera.getFocusedSprite().getDead());
+                && (inputHandler == null || !inputHandler.hasLogicalOverride())
+                && !userRecordingControls.shouldPumpFastForward();
     }
 
     public void closePresence() {
@@ -1079,7 +1082,8 @@ public class GameLoop {
     private boolean isRewindBlocked() {
         // fadeManager can be null in non-gameplay modes (e.g.
         // MASTER_TITLE_SCREEN with no active session).
-        return isNonRewindableTransitionPending()
+        return GameLoopPauseInput.configurationPaused(currentGameMode)
+                || isNonRewindableTransitionPending()
                 || (fadeManager != null && fadeManager.hasPendingCompletion())
                 || (levelManager != null && levelManager.hasPendingFreshLevelTransitionBoundary());
     }
@@ -1319,13 +1323,28 @@ public class GameLoop {
             return;
         }
 
-        escapeToMasterTitleController.update(currentGameMode, inputHandler);
-        if (currentGameMode == GameMode.LEVEL) {
+        if (configurationCommands.holdsTransition(currentGameMode, () -> resolveFadeManager().isActive())) {
+            inputHandler.update();
+            return;
+        }
+        boolean overlayOwnsPause = GameLoopPauseInput.handleOverlay(currentGameMode, inputHandler);
+        var overlay = GameLoopPauseInput.overlay(currentGameMode);
+        var titleInputOwner = currentGameMode == GameMode.TITLE_SCREEN ? getTitleScreenProviderLazy() : null;
+        boolean titleOwnsEscape = titleInputOwner != null && titleInputOwner.ownsEscapeInput();
+        if (overlay == null && titleOwnsEscape) {
+            overlay = GameServices.module().getGameService(LevelInputOverlay.class);
+        }
+        if (overlayOwnsPause || titleOwnsEscape) escapeToMasterTitleController.reset();
+        if (overlay != null && handleConfigurationCommand(overlay)) {
+            inputHandler.update();
+            return;
+        }
+        if (!overlayOwnsPause && !titleOwnsEscape) escapeToMasterTitleController.update(currentGameMode, inputHandler);
+        if (currentGameMode == GameMode.LEVEL && !overlayOwnsPause) {
             userRecordingControls.updateLevelControlInput(inputHandler);
             handleTimeAttackRetryInput();
         }
 
-        boolean overlayOwnsPause = GameLoopPauseInput.handleOverlay(currentGameMode, inputHandler);
         boolean nextUserPaused = GameLoopPauseInput.nextUserPaused(currentGameMode, inputHandler,
                 configService, userPaused, overlayOwnsPause, playbackTakeoverConsumedPausePress,
                 playbackDebugManager, userRecordingControls::handlePlaybackTakeoverRequest);
@@ -1334,7 +1353,8 @@ public class GameLoop {
             updateAudioPauseState();
         }
 
-        boolean doFrameStep = GameLoopPauseInput.frameStep(inputHandler, configService, isPaused());
+        boolean doFrameStep = !GameLoopPauseInput.configurationPaused(currentGameMode)
+                && GameLoopPauseInput.frameStep(inputHandler, configService, isPaused());
 
         if (isPaused() && !doFrameStep) {
             inputHandler.update();
@@ -1475,6 +1495,21 @@ public class GameLoop {
     public boolean ownsGameplayFadeLifecycle() {
         GameplayModeContext context = resolveGameplayModeContext();
         return context != null && context.isGameplayRuntimeReady();
+    }
+
+    /** Configuration commands use the production fade and assembly owners. */
+    private boolean handleConfigurationCommand(LevelInputOverlay overlay) {
+        return configurationCommands.handle(overlay, this::resolveFadeManager,
+                () -> { userPaused = false; updateAudioPauseState(); },
+                () -> fadeOutTo(this::returnToMasterTitle),
+                () -> {
+                    audioManager.fadeOutMusic();
+                    GameLoopPlcLifecycle.startToBlack(resolveGameplayModeContext(), resolveFadeManager(), () -> {
+                        levelManager.restartCurrentLevelFromConfiguration();
+                        configurationCommands.releaseTransition();
+                        GameLoopPlcLifecycle.startFromBlack(resolveGameplayModeContext(), resolveFadeManager(), null);
+                    });
+                });
     }
 
     private boolean prepareAdmittedIteration(boolean doFrameStep, boolean overlayOwnsPause) {
@@ -2630,6 +2665,7 @@ public class GameLoop {
             // Consume the default title card request — we'll show the bonus card instead
             levelManager.consumeTitleCardRequest();
         } catch (IOException e) {
+            com.openggf.level.DeferredLevelLoadException.rethrowCallbackAbort(e);
             LOGGER.severe("Failed to load bonus stage zone: " + e.getMessage());
             provider.onExit();
             activeBonusStageProvider = null;
@@ -4698,11 +4734,7 @@ public class GameLoop {
             return;
         }
 
-        SpecialStageInputMapper.MappedInput mapped =
-                SpecialStageInputMapper.map(inputHandler.logical());
-        ssProvider.handleInput(mapped.p1Held(), mapped.p1Pressed(),
-                inputHandler.isShiftDown(), inputHandler.isControlDown());
-        ssProvider.handlePlayer2Input(mapped.p2Held(), mapped.p2Logical());
+        specialStagePacingInput.apply(ssProvider, inputHandler, resolveGameplayModeContext().getWorldSession());
     }
 
     // ==================== Ending / Credits Sequence Methods ====================
@@ -4947,6 +4979,7 @@ public class GameLoop {
             // Consume the title card request since we don't want a title card
             levelManager.consumeTitleCardRequest();
         } catch (IOException e) {
+            com.openggf.level.DeferredLevelLoadException.rethrowCallbackAbort(e);
             LOGGER.severe("Failed to load ending demo zone " + zone + " act " + act + ": " + e.getMessage());
             return;
         }

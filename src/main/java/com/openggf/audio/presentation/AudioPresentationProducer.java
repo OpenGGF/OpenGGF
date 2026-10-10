@@ -563,8 +563,9 @@ public final class AudioPresentationProducer {
     }
 
     /**
-     * Forward playback rate, 1.0 being real time. A higher rate renders that
-     * many frames of source audio into the one outer-frame packet, the mirror
+     * Forward playback rate in the bounded 0.25–32 range, 1.0 being real time.
+     * Fractional source-frame phase survives presentation, rollback and rewind.
+     * The rate renders that many frames of source audio into one outer-frame packet, the mirror
      * of {@code PcmHistoryRing.ReverseCursor}'s rate in reverse, so a caller
      * running the simulation faster than real time hears it speed up and pitch
      * up together instead of drifting out of sync with the picture. NaN and
@@ -574,7 +575,7 @@ public final class AudioPresentationProducer {
         assertOwnerBoundary();
         forwardRate = Double.isNaN(rate) || rate <= 0.0
                 ? 1.0
-                : Math.min(MAX_FORWARD_RATE, rate);
+                : Math.clamp(rate, 0.25, MAX_FORWARD_RATE);
     }
 
     public void endReverse() {
@@ -1130,6 +1131,7 @@ public final class AudioPresentationProducer {
         registry.beginRendering();
         try {
             registry.serviceOuterFrame();
+            if (forwardRate < 1.0) return mixSessionForwardAtRate(stereoFrames);
             return forwardRate > 1.0
                     ? mixForwardResampled(stereoFrames)
                     : mixer.mix(registry, stereoFrames);
@@ -1403,17 +1405,19 @@ public final class AudioPresentationProducer {
      * at the same rate without bursting all note updates before synthesis.
      */
     private short[] mixSessionForwardAtRate(int stereoFrames) {
-        double remaining = Math.max(1.0, forwardRate);
+        double remaining = forwardRate;
         int sourceFrames = 0;
         while (remaining > 1e-10) {
             if (sourceFramePhase == 0) {
                 int numerator = sampleRate + sourceSampleRemainder;
                 sourceFrameSamples = numerator / frameRate;
                 sourceSampleRemainder = numerator % frameRate;
-                SmpsServiceOutcome outcome = smpsSession.serviceForward();
-                forwardSfxTrackStopped |= smpsSession.sfxTrackStoppedDuringService();
-                if (outcome == SmpsServiceOutcome.GLOBAL_STOP_CONSUMED) {
-                    registry.clearForGlobalStopWithoutWrites();
+                if (smpsSession != null) {
+                    SmpsServiceOutcome outcome = smpsSession.serviceForward();
+                    forwardSfxTrackStopped |= smpsSession.sfxTrackStoppedDuringService();
+                    if (outcome == SmpsServiceOutcome.GLOBAL_STOP_CONSUMED) {
+                        registry.clearForGlobalStopWithoutWrites();
+                    }
                 }
             }
             double span = Math.min(remaining, 1.0 - sourceFramePhase);
@@ -1422,9 +1426,16 @@ public final class AudioPresentationProducer {
             int endSample = boundary ? sourceFrameSamples : (int) (end * sourceFrameSamples);
             int frames = endSample - (int) (sourceFramePhase * sourceFrameSamples);
             if (frames > 0) {
-                smpsSession.renderFrames(smpsSourcePcm, sourceFrames * CHANNELS, frames);
-                short[] chunk = mixer.mixPcmVoices(registry, frames,
-                        smpsSourcePcm, sourceFrames * CHANNELS);
+                if (smpsSession != null) {
+                    smpsSession.renderFrames(smpsSourcePcm, sourceFrames * CHANNELS, frames);
+                } else {
+                    // Sample-only fractional presentation starts with silence;
+                    // driverless SMPS handles never become synthesis carriers.
+                    Arrays.fill(smpsSourcePcm, sourceFrames * CHANNELS,
+                            (sourceFrames + frames) * CHANNELS, (short) 0);
+                }
+                short[] chunk = mixer.mixPcmVoices(
+                        registry, frames, smpsSourcePcm, sourceFrames * CHANNELS);
                 System.arraycopy(chunk, 0, smpsSourcePcm, sourceFrames * CHANNELS, frames * CHANNELS);
                 sourceFrames += frames;
             }

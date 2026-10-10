@@ -39,7 +39,7 @@ import java.util.Optional;
  * when the player has 50 or more rings. Each stage awards one of seven
  * Chaos Emeralds upon successful completion.
  */
-public class Sonic2SpecialStageProvider implements SpecialStageProvider {
+public class Sonic2SpecialStageProvider implements SpecialStageProvider, com.openggf.game.internal.NativeSpecialStagePacing {
     private final Sonic2SpecialStageManager manager;
     private SpecialStageViewport viewport = SpecialStageViewport.nativeViewport();
     private boolean resultsPlcSubmitted;
@@ -125,6 +125,9 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
         return true;
     }
 
+    @Override public com.openggf.game.internal.NativeSpecialStagePacing.State pacingState() { return manager.pacingState(); }
+    @Override public com.openggf.game.internal.NativeSpecialStagePacingOwner pacingOwner() { return manager.pacingOwner(); }
+
     @Override
     public boolean supportsRewind() {
         return true;
@@ -132,8 +135,9 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
 
     @Override
     public Optional<RewindSnapshottable<?>> rewindAdapter() {
-        return Optional.of(new Sonic2SpecialStageRewindAdapter(manager,
-                () -> resultsPlcSubmitted, submitted -> resultsPlcSubmitted = submitted));
+        return Optional.of(com.openggf.game.internal.NativeSpecialStagePacingRewind.wrap(
+                new Sonic2SpecialStageRewindAdapter(manager,
+                        () -> resultsPlcSubmitted, submitted -> resultsPlcSubmitted = submitted), manager.pacingOwner()));
     }
 
     @Override

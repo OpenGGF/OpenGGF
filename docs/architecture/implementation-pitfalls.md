@@ -53,6 +53,27 @@ and restore the exact saved durations on release. The Survivors regression
 `feverProtectionDoesNotExpireBehindLevelUpCards` checks the player clock as well as the HUD;
 menu-owned saved fields must participate in rewind too.
 
+**Menu fills do not blend on their own.** `MenuPixelFont.fillRect` and
+`TexturedQuadRenderer` submit tinted quads without touching GL blend state. With
+blending disabled, the usual state after level rendering, a 0.66-alpha dim writes
+its own colour and replaces the held frame; panels drawn at 0.94 look opaque only
+by accident. Menus with translucent layers enable `GL_BLEND` around their pass, as
+`MasterTitleScreen` and `SceneRenderer` do. `MutatorConfigurationScreen` restores
+the caller's blend state and keeps destination alpha (`GL_ZERO, GL_ONE`), so
+`GameplayCaptureTool` PNGs match the window; a capture PNG whose alpha is below 1
+shows the same mistake (Mutator Lab polish, 2026-10-08).
+
+**A forced SFX stop skips the driver's priority release.** Sonic 2 clears
+`SFXPriorityVal` when an SFX track reaches its own stop (`cfStopTrack` /
+`zStoppedChannel`, `s2.sounddriver.asm:3514-3535`). `AudioManager.stopAllSfx()`
+kills SFX tracks without passing through that request model. The stock title
+called it when its flashing star was deleted; the ROM does not
+(`s2.asm:26748-26750`, `:27068-27162`). The latch stayed at Sparkle's `$70`, so
+every later `$6F` `SndID_Blip` from a mod menu over the stock title was rejected
+until some `$70`-or-higher SFX finished naturally. No production caller of
+`AudioManager.stopAllSfx()` remains. `TestTitleScreenAudioRegression` checks the
+latch and an admitted blip after the intro.
+
 **Silent invincibility still has a native music-expiry request.** `giveInvincibility()`
 does not itself start music, but the playable timer reissues the level song on expiry.
 A mode keeping its own arena/boss soundtrack continuous must opt out through
@@ -71,6 +92,22 @@ also hide its `Supplier` callback-boundary capability. Verify a real placed
 object's owner scope through the production loader before and after forced
 rewind recreation; dynamic-object containment alone misses this boundary.
 
+**An installed stage provider is not an active stage.** Main-level services can
+contain `NoOpBonusStageProvider`, or a native provider whose active type is
+`NONE`. Testing provider presence grants main-level rings the bonus-puzzle
+exemption. Query the actual active type; restoration back to the main level
+must explicitly use the main-level award domain even before provider teardown.
+The Mutator Lab expansion's native award and return controls exercise this
+distinction (2026-10-08).
+
+**Registry decorators must retain native semantic classification.** An
+object-registering co-mod introduces `ModDecoratedObjectRegistry` even when the
+Mutator Lab registers no objects. Factory forwarding alone hides the backing
+registry's monitor/ring classification and silently disables placement filters.
+Forward the engine-internal classifier for native placements; a namespaced,
+creator-owned override remains outside that native classification. Preserve
+placement indices and allocation order. Do not extend the creator API merely
+to carry this internal capability (Mutator Lab expansion, 2026-10-08).
 **Native mod registration does not establish API retention.** Experimental
 runtime-loaded callbacks can resolve members that normal image reachability
 trimmed, even after other mods registered successfully. Exact package retention
@@ -1434,6 +1471,46 @@ A seamless reload's current-bound and target-bound overrides are separate. AIZ's
 only max Y. Pin the engine's X targets too, or the loaded defaults move the lock
 on the next tick (S3K trace campaign, 2026-10-03).
 
+**Head-only presentation follows native admission and indexed art identity.** A Sonic head
+crosses mapping-piece and tile boundaries, and slope, crouch and balance poses put it below
+or beside the body. Use reviewed per-frame anatomy metadata, the original mapping-piece
+index and source pixel centres; retain explicit stock ball/special-pose classifications.
+Scale only admitted ROM head pixels about an unflipped neck anchor after the native SAT
+mask pass. Flip pixel indices with `-coordinate-1`, and geometric anchors with
+`-coordinate`. Freeze the indexed DPLC generation before later draws reuse its slots.
+Each native virtual player bank also needs a separate companion fragment bank: resetting
+fragment IDs for every local S1/S2 preparation lets a second Sonic slot overwrite the
+first slot's queued pixels. The production `ggfmod sprites ... char=sonic heads=true`
+review panels and `TestPlayerHeadPresentation` cover the three native inventories,
+source identity, flips, admission and simultaneous duplicate banks. Native-image packaging
+explicitly includes the text metadata. Review panels use 112px cells and reject opaque-pixel
+cropping through the maximum 200% scale; a smaller plausible-looking sheet clipped pushing
+Sonic at the edge (Mutator Lab, 2026-10-08).
+
+The graphics boundary owns immutable mask geometry and a producer-supplied replay
+interface. Pose classification and the native head renderer stay above that boundary;
+graphics must not name a player profile or call a level renderer directly. Carry the
+shared replay adapter with the draw metadata so native SAT admission and ordering run
+before the same head composition, without a global runtime-renderer registration.
+Engine-only sprite graphics access uses the session bootstrap's immutable caller walker,
+including hidden frames, and checks the actual caller's class loader. A lambda or nested
+creator class must not inherit engine access from its host invocation (Mutator Lab guard
+repair, 2026-10-09).
+
+**ROM palette constants can describe another revision.** Sonic 1 REV01 moves the Sonic
+palette relative to REV00. A raw sheet read through the old absolute palette constant
+can still look plausible while turning Sonic green/yellow. Character contact sheets use
+`loadCharacterPalette`, which resolves the native `PalPointers` entry, and retain the
+original ROM identity; reference-tree art and guessed palette addresses are not runtime
+fallbacks (Mutator Lab native mask research, 2026-10-08).
+
+Raised hands can share a native mapping piece with Sonic's head. A broad right edge
+on S3K balance frame A1 selected part of its raised glove; the actual ROM detail and
+production head/body panels exposed it. Trace the explicit eye/muzzle boundary instead
+of selecting the whole piece, and verify an opaque glove pixel remains at its stock
+body coordinate. Distinct geometry is required even when piece IDs appear convenient
+(Mutator Lab mask refinement, 2026-10-08).
+
 ### Native service recreation needs verified publication authority
 
 `LevelManager.initGameModule` calls `createGame` on every full load. Sonic 2 and
@@ -1461,3 +1538,20 @@ boundary; also fade a cue that exhausts its selected source window. Sitar Hero's
 2026-10-08 fumble regression measured 439 nonzero post-taper frames before this
 ordering repair and zero afterward. Keep calibrated judgment coordinates separate
 from the audible song clock when testing cue freshness or sending peer timestamps.
+
+**Physical input cannot reconstruct admitted fractional-speed input.** A tap can
+be retained across a zero-tick presentation or a native S2 special-stage lag, then
+consumed after the physical key is released. Live rewind must retain the actual
+admitted P1/P2 sample and post-tick fractional/pending state in an aligned internal
+history ring; replaying held-only BK2 rows loses the tap and can reset a nonzero
+remainder. Preserve ordinary driver/debug fields and reject metadata from a
+different world, level, provider or entry lifetime. Never obtain these values from
+trace comparison rows. Mutator Lab reproduced the loss at 75% and 150% and verified
+the repaired native acceptance/jump (stage commit `7cca6aef3`, 2026-10-08).
+
+**A bound context can outlive its current world.** The native hub can retain a
+retired gameplay context during title/session handoff. Check that the context is
+runtime-ready before resolving its world/module/policies; an eager global module
+lookup crashes startup even when no gameplay body is due. Bonus mode also does not
+imply interactive readiness: let its pending initial ProcessSprites setup finish
+at canonical cadence before spending a modified speed budget.

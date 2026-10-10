@@ -43,11 +43,13 @@ public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
     private S3kEmeraldProgression progression;
     private S3kSanctuaryRuntimeState runtime;
     private boolean requestPublished;
+    private long stageEntryPermit = -1;
     private int lastFrameCounter;
 
     private record RewindExtra(
             S3kSanctuaryRuntimeState.Snapshot runtime,
             boolean requestPublished,
+            long stageEntryPermit,
             int lastFrameCounter,
             int subtype,
             ObjectRefId parentId)
@@ -119,7 +121,10 @@ public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
 
     boolean beginSelection(AbstractPlayableSprite sprite) {
         ensureState();
+        stageEntryPermit = com.openggf.game.mutators.LevelMutatorPolicyAccess.admit(tryServices(), com.openggf.game.mutators.StageEntryKind.SPECIAL);
+        if (stageEntryPermit == 0) return false;
         if (!runtime.beginPedestalSelection(subtype)) {
+            com.openggf.game.mutators.LevelMutatorPolicyAccess.discard(tryServices(), stageEntryPermit);
             return false;
         }
         if (sprite != null) {
@@ -133,8 +138,10 @@ public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
         ensureState();
         if (!requestPublished && runtime.updatePedestalSelection()) {
             requestPublished = true;
-            services().requestSpecialStageEntry(
-                    new SpecialStageEntryRequest(subtype, EmeraldRewardKind.SUPER_EMERALD));
+            com.openggf.game.mutators.LevelMutatorPolicyAccess.publish(services(),
+                    com.openggf.game.mutators.StageEntryKind.SPECIAL, stageEntryPermit,
+                    () -> services().requestSpecialStageEntry(
+                            new SpecialStageEntryRequest(subtype, EmeraldRewardKind.SUPER_EMERALD)));
         }
     }
 
@@ -233,7 +240,7 @@ public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
         ObjectRefId parentId = context.identityTable()
                 .map(table -> table.encodeObject(parentRef)).orElse(null);
         return super.captureRewindState(context).withObjectSubclassExtra(
-                new RewindExtra(runtime.capture(), requestPublished, lastFrameCounter,
+                new RewindExtra(runtime.capture(), requestPublished, stageEntryPermit, lastFrameCounter,
                         subtype, parentId));
     }
 
@@ -249,6 +256,7 @@ public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
             ensureState();
             runtime.restore(extra.runtime());
             requestPublished = extra.requestPublished();
+            stageEntryPermit = extra.stageEntryPermit();
             lastFrameCounter = extra.lastFrameCounter();
             subtype = extra.subtype();
         }

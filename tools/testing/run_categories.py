@@ -30,6 +30,8 @@ ROM_PROPERTIES = {
     '69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b': 'sonic1.rom.path',
     '8bca5dcef1af3e00098666fd892dc1c2a76333f9': 'sonic2.rom.path',
     'cfbf98c36c776677290a872547ac47c53d2761d6': 's3k.rom.path',
+    # User-supplied lock-on dump documented in the KiS2 fidelity-tier design.
+    '6cd0537a3aee0e012bb86d5837ddff9342595004': 'kis2.rom.path',
 }
 
 
@@ -158,14 +160,38 @@ def make_plan(root, data, base, requested, guards=False, workers=1):
             'scope': 'ordinary suite and guards; explicit trace/native profiles are separate'}
 
 
-def rom_args(root):
+def rom_args(root, rom_directory=None):
+    directories = [root]
+    if rom_directory is not None:
+        rom_directory = rom_directory.resolve()
+        if not rom_directory.is_dir():
+            raise ValueError(f'ROM directory does not exist or is not a directory: {rom_directory}')
+        if rom_directory != root.resolve():
+            directories.append(rom_directory)
     found = {}
-    for path in sorted(root.glob('*.gen')):
-        with path.open('rb') as stream:
-            digest = hashlib.file_digest(stream, 'sha1').hexdigest()
-        if digest in ROM_PROPERTIES:
-            found.setdefault(ROM_PROPERTIES[digest], str(path.resolve()))
+    for directory in directories:
+        for path in sorted(directory.glob('*.gen')):
+            if not path.is_file():
+                continue
+            with path.open('rb') as stream:
+                digest = hashlib.file_digest(stream, 'sha1').hexdigest()
+            if digest in ROM_PROPERTIES:
+                found.setdefault(ROM_PROPERTIES[digest], str(path.resolve()))
     return [f'-D{key}={value}' for key, value in sorted(found.items())]
+
+
+def summarize_skip_reason(reason):
+    """Validate an uncapped JUnit abort stack before retaining its causal line."""
+    lines = reason.rstrip('\r\n').splitlines()
+    if (len(lines) > 1 and len(lines[0]) < 4096
+            and lines[0].startswith('org.opentest4j.TestAbortedException: ')
+            and all(re.fullmatch(r'\s+at [^\r\n]+\([^\r\n]+\)', frame)
+                    for frame in lines[1:])):
+        return {'reason': lines[0], 'reason_projection': 'validated-junit-abort-cause',
+                'reason_source_chars': len(reason), 'reason_stack_frames': len(lines) - 1}
+    # Unknown or chained tails remain bounded excerpts and cannot become proof
+    # of a complete cause merely because their first line looks familiar.
+    return {'reason': reason[:4096]}
 
 
 def summarize(reports):
@@ -185,7 +211,7 @@ def summarize(reports):
                 if len(skipped) < 1000:
                     skipped.append({'class': (case.get('classname') or '')[:512],
                                     'test': (case.get('name') or '')[:512],
-                                    'reason': skip.get('message', skip.text or '')[:4096]})
+                                    **summarize_skip_reason(skip.get('message', skip.text or ''))})
             for kind in ('failure', 'error'):
                 failure = case.find(kind)
                 if failure is not None:
@@ -212,7 +238,8 @@ def tree_state(root):
     return digest.hexdigest()
 
 
-def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, queue_fd=None):
+def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, queue_fd=None,
+             rom_directory=None):
     """Execute a plan while the CLI holds the shared Maven slot."""
     workers = plan.get('workers', 1)
     if workers not in (1, 2):
@@ -256,7 +283,7 @@ def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, qu
                     command.append('-Ptest-concurrent')
                 if not plan['full']:
                     command.append(f'-Dsurefire.includesFile={includes}')
-            command.extend(rom_args(root))
+            command.extend(rom_args(root, rom_directory))
             (run / f'{lane}-command.json').write_text(json.dumps(command, indent=2) + '\n')
             print(f'Running {lane}; rolling output: {run / (lane + ".log")}', flush=True)
             try:
@@ -315,18 +342,24 @@ def main(argv=None):
     parser.add_argument('--acknowledge', metavar='RUN_ID', help='delete inspected results without running tests')
     parser.add_argument('--keep-diagnostics', action='store_true', help='explicitly retain bounded diagnostics across runs until acknowledged')
     parser.add_argument('--json', action='store_true', help='print the complete dry-run plan, including every class')
+    parser.add_argument('--rom-directory', type=Path,
+                        help='also discover verified original ROMs in this directory; pass absolute paths without creating links')
     args = parser.parse_args(argv)
     try:
         if not math.isfinite(args.max_minutes) or args.max_minutes <= 0:
             parser.error('--max-minutes must be a positive finite number')
         if args.acknowledge:
-            if args.run or args.preflight or args.base or args.category or args.guards or args.list or args.json or args.keep_diagnostics or args.workers != 1:
+            if args.run or args.preflight or args.base or args.category or args.guards or args.list or args.json or args.keep_diagnostics or args.workers != 1 or args.rom_directory:
                 parser.error('--acknowledge must be used alone')
             acknowledge_run(ROOT, args.acknowledge)
             print('Diagnostics deleted.')
             return 0
         if args.keep_diagnostics and not args.run:
             parser.error('--keep-diagnostics requires --run')
+        if args.rom_directory is not None:
+            args.rom_directory = args.rom_directory.resolve()
+            if not args.rom_directory.is_dir():
+                parser.error('--rom-directory must name an existing directory')
         data = policy()
         if args.list:
             tests = inventory(ROOT, data)
@@ -338,6 +371,8 @@ def main(argv=None):
         if set(args.category) - (set(data['categories']) | {'all'}):
             parser.error('unknown category; use --list')
         plan = make_plan(ROOT, data, args.base, args.category, args.guards, args.workers)
+        if args.rom_directory is not None:
+            plan['rom_directory'] = str(args.rom_directory)
         if args.run or args.preflight:
             if is_broad(plan):
                 print('BROAD selection: allow tens of minutes; the September normalization run '
@@ -357,8 +392,11 @@ def main(argv=None):
                             estimate=plan_estimate(plan),
                             kind='category-full' if plan['full'] else 'category') as fd:
                 plan = make_plan(ROOT, data, args.base, args.category, args.guards, args.workers)
+                if args.rom_directory is not None:
+                    plan['rom_directory'] = str(args.rom_directory)
                 preflight(ROOT, plan)
-                return run_plan(ROOT, plan, args.max_minutes, args.keep_diagnostics, queue_fd=fd)
+                return run_plan(ROOT, plan, args.max_minutes, args.keep_diagnostics, queue_fd=fd,
+                                rom_directory=args.rom_directory)
         display = plan if args.json else {
             **{k: v for k, v in plan.items() if k not in ('tests', 'reasons')},
             'selected_classes': len(plan['tests']), 'reasons': plan['reasons'][:50],
