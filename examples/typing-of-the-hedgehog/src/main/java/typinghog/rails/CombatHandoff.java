@@ -85,6 +85,33 @@ public final class CombatHandoff {
         for (AbstractObjectInstance object : found) ObjectLifetimeOps.deleteNoRespawn(object);
     }
 
+    /** Stock boss machinery that keeps an arena working (camera, bounds, capsule): never retired. */
+    private static final String ARENA_MACHINERY =
+            "(?i).*(capsule|scrollcontrol|boundary|extender|arenahelper|cutscene|controller|falsefloor|block).*";
+    private static final String BOSS_NAME = "(?i).*(boss|eggman|robotnik).*";
+
+    /**
+     * Retires the stock boss family at a forward rail's endpoint (the boss object, its parts and
+     * shots), so the typing boss does not share the arena with a frozen stock one. Nothing native
+     * is validated after the endpoint; the course lets two native rows run for the unload, then
+     * holds the world. Returns what it retired ({@code Class@slot}).
+     */
+    public static List<String> retireBoss() {
+        List<String> retired = new ArrayList<>();
+        for (ObjectInstance object : List.copyOf(GameServices.level().getObjectManager().getActiveObjects())) {
+            if (!(object instanceof AbstractObjectInstance body) || body.isDestroyed()) continue;
+            Class<?> type = object.getClass();
+            String name = type.getName();
+            String simple = type.getSimpleName();
+            if (!name.startsWith("com.openggf.game.")) continue;
+            boolean boss = name.contains(".bosses.") || simple.matches(BOSS_NAME);
+            if (!boss || simple.matches(ARENA_MACHINERY)) continue;
+            ObjectLifetimeOps.deleteNoRespawn(body);
+            retired.add(simple + "@" + body.getSlotIndex());
+        }
+        return retired;
+    }
+
     /** Live, undestroyed, layout-placed badnik bodies the predicate accepts, by native slot. */
     private static Map<Integer, AbstractObjectInstance> bodies(Predicate<String> eligible) {
         Map<Integer, AbstractObjectInstance> out = new HashMap<>();

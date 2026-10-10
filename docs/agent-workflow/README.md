@@ -184,6 +184,12 @@ Nine `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each
   sensitivity, the native spindash countdown, the mod's `CombatHandoff` conversion (slots, children, render),
   respawn after a camera excursion, live-fight restore + reconversion against a zero-length fight, and floor
   geometry against actual traversal. Origin: rails lane, rails v2, 2026-10-10.
+- `TypingHedgehogForwardRailBuilder` (test scope, opt-in `-Dmse=off -Dtypinghog.forward=<act,...>`,
+  `typinghog.forward.out=<rails dir>`, diagnostic `typinghog.forward.trace=<act>:<x0>:<x1>`) authors forward
+  (format 2) Typing of the Hedgehog rails by bounded beam search over native input macros under the mod's launch
+  profile: entry, native countdown, fights at braked flat stops soaked through the mod's `CombatHandoff`, a stock
+  boss endpoint; rejects hurt, native kills, backtracking and stalls; replays the route cold and under
+  `V_int_run_count` phase offsets before writing it. Origin: rails lane, rails v2 step 4, 2026-10-10.
 
 ## Docs
 

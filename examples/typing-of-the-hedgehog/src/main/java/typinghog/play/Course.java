@@ -57,6 +57,8 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
     static final int FIGHT_NATIVE_CAP = 3600;
     /** Held rows a forward rail waits at its countdown row for the act's presentation to finish. */
     static final int ENTRY_HOLD_LIMIT = 600;
+    /** Native rows a forward boss stand lets run after retiring the stock boss (its unload), before the world holds. */
+    static final int BOSS_RETIRE_ROWS = 2;
     /** Rows a rail fault shows before the course hands back to the hub. */
     static final int FAULT_ROWS = 180;
     /** Most rows Boss Rush waits for Sonic to land before the boss arrives anyway. */
@@ -446,7 +448,8 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
         if (!rail.forward()) return true;
         // A forward rail's boss fight holds the world from its first row: the stock boss must not
         // attack the held Sonic while the typing boss plays, and nothing after it needs a restore.
-        if (phase == Phase.BOSS || (encounter != null && encounter.isBoss()) || fightNativeRows >= FIGHT_NATIVE_CAP) {
+        boolean boss = phase == Phase.BOSS || (encounter != null && encounter.isBoss());
+        if ((boss && fightNativeRows >= BOSS_RETIRE_ROWS) || fightNativeRows >= FIGHT_NATIVE_CAP) {
             fightHeld = true;
             return false;
         }
@@ -483,6 +486,7 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
         homing.release();
         GameServices.camera().setFrozen(standCameraFrozen);
         if (rail.forward() && !reconvert("for stand " + nextStand + "'s retry")) return false;
+        if (rail.forward() && encounter != null && encounter.isBoss()) CombatHandoff.retireBoss();
         fightNativeRows = 0;
         previousMask = standPreviousMask;
         stagehand.clear();
@@ -553,6 +557,8 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
             standLoaded = java.util.List.of();
             fightNativeRows = 0;
             beginStand(course, true);
+            // The typing boss takes the arena alone: the stock boss family retires (after the checkpoint).
+            CombatHandoff.retireBoss();
             return stand(course);
         }
         if (nextStand < plan.stands().size() && row >= plan.stands().get(nextStand).row()) {
