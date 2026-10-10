@@ -1,5 +1,6 @@
 package typinghog.play;
 
+import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.GameServices;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.NativePositionOps;
@@ -38,13 +39,23 @@ final class Homing {
     private boolean anchored;
     private Direction homeFacing = Direction.RIGHT;
 
-    /** Records Sonic's stand spot; strikes return him there. */
+    /**
+     * Records Sonic's stand spot; strikes return him there. A fight can open with him still curled
+     * from the run: he stands up for it, and the spot is his standing centre (a roll's centre sits
+     * lower by the difference of the two Y radii).
+     */
     void anchor(int x, int y) {
         if (anchored) return;
         anchored = true;
         homeX = x;
         homeY = y;
-        if (GameServices.camera().getFocusedSprite() instanceof AbstractPlayableSprite sonic) homeFacing = sonic.getDirection();
+        if (GameServices.camera().getFocusedSprite() instanceof AbstractPlayableSprite sonic) {
+            homeFacing = sonic.getDirection();
+            if (sonic.getRolling()) {
+                homeY -= sonic.getStandYRadius() - sonic.getRollYRadius();
+                land();
+            }
+        }
     }
 
     /** Turns Sonic on his spot to face {@code facing} (toward a boss), and keeps that after strikes. */
@@ -133,16 +144,23 @@ final class Homing {
     /** True while Sonic should stay a rolling ball (the frame controller's retainRolling). */
     boolean rolling() { return current != null; }
 
+    /** Puts Sonic back on his spot, standing: object control keeps the engine from choosing his pose. */
     private void land() {
         place(homeX, homeY, homeFacing, false);
+        if (!(GameServices.camera().getFocusedSprite() instanceof AbstractPlayableSprite sonic)) return;
+        sonic.setAnimationId(sonic.resolveAnimationId(CanonicalAnimation.WAIT));
+        sonic.setAnimationFrameIndex(0);
+        sonic.setAnimationTick(0);
     }
 
     private void place(int x, int y, Direction facing, boolean ball) {
         if (!(GameServices.camera().getFocusedSprite() instanceof AbstractPlayableSprite sonic)) return;
+        // The roll changes his box from the top-left, which moves the centre; set the pose first so
+        // the written centre is the one that stays.
+        sonic.setRolling(ball);
+        sonic.setAir(ball);
         NativePositionOps.writeXPosPreserveSubpixel(sonic, x);
         NativePositionOps.writeYPosPreserveSubpixel(sonic, y);
         sonic.setDirection(facing);
-        sonic.setRolling(ball);
-        sonic.setAir(ball);
     }
 }

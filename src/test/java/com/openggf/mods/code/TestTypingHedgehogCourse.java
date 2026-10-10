@@ -212,6 +212,31 @@ class TestTypingHedgehogCourse {
         assertEquals(3, get(view(), "lives"));
     }
 
+    @Test void sonicLandsStandingOnHisSpotAfterAHomingStrike() throws Exception {
+        var fixture = launch(intent(42));
+        var input = new InputHandler();
+        stepUntil(fixture, input, "STAND", 900);
+        row(fixture, input);
+        var player = fixture.sprite();
+        int spotX = player.getCentreX(), spotY = player.getCentreY();
+        boolean struck = false;
+        for (int i = 0; i < 3000 && "STAND".equals(get(view(), "phase")); i++) {
+            boolean wasRolling = player.getRolling();
+            typeNextKey(input);
+            row(fixture, input);
+            struck |= player.getRolling();
+            if (wasRolling && !player.getRolling()) {
+                assertEquals(spotX, player.getCentreX(), "he lands back on his spot");
+                assertEquals(spotY, player.getCentreY(), "he lands standing, not a roll's height lower");
+                assertFalse(player.getAir(), "he lands on the ground");
+                assertEquals(player.resolveAnimationId(com.openggf.game.CanonicalAnimation.WAIT), player.getAnimationId(),
+                        "he stands up after the strike instead of staying a ball");
+                return;
+            }
+        }
+        fail("no homing strike landed; struck " + struck + " view " + view());
+    }
+
     @Test void theDemoTypistBeatsTheWreckingBallInBossRush() throws Exception {
         var fixture = launch(intent(11).replace("mode=ARCADE", "mode=BOSS_RUSH") + "demo=true\n");
         var input = new InputHandler();
