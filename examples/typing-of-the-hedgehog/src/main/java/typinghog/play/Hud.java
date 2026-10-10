@@ -237,9 +237,8 @@ public final class Hud {
         for (int i = 0; i < targets.length; i++) {
             var target = field.target(targets[i]);
             if (target == null) continue;
-            int cx = targets.length == 1 ? boss.x() - GameServices.camera().getX()
-                    : width * (i + 1) / (targets.length + 1);
-            int bottom = targets.length == 1 ? boss.y() - GameServices.camera().getY() - 28 : 120;
+            int cx = boss.targetX(targets[i], i, targets.length) - GameServices.camera().getX();
+            int bottom = boss.targetBottom(targets[i], i, targets.length) - GameServices.camera().getY();
             boolean locked = field.locked() == targets[i];
             plates.draw(canvas, target.prompt(), target.progress(), locked ? Plates.Style.LOCKED : Plates.Style.BOSS,
                     cx, bottom, punctuation, 0);
@@ -248,8 +247,8 @@ public final class Hud {
             int bar = Math.min(width - 40, boss.windowRows() / 2);
             canvas.fill(20, 214, bar, 3, boss.windowRows() < 90 ? 0xFFFF4040 : GOLD);
         }
-        for (int i = 0; i < Boss.HITS; i++) {
-            canvas.fill(width - 12 - i * 8, 20, 6, 6, i < Boss.HITS - boss.hits() ? 0xFFFF4060 : 0x60FFFFFF);
+        for (int i = 0; i < boss.hitCount(); i++) {
+            canvas.fill(width - 12 - i * 8, 20, 6, 6, i < boss.hitCount() - boss.hits() ? 0xFFFF4060 : 0x60FFFFFF);
         }
     }
 

@@ -92,7 +92,7 @@ public final class Puppet extends AbstractObjectInstance implements ModRewindRec
                 if (!sprite.visible) continue;
                 var renderer = getRenderer(sprite.artKey);
                 if (renderer != null) {
-                    renderer.drawFrameIndex(sprite.frame, sprite.x, sprite.y, sprite.flipX, false, sprite.palette);
+                    renderer.drawFrameIndex(sprite.frame, sprite.x, sprite.y, sprite.flipX, sprite.flipY, sprite.palette);
                 }
             }
             return;

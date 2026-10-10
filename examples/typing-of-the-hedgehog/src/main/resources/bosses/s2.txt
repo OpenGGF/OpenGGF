@@ -132,3 +132,7 @@
 10 shoulder  dez_boss        12 -20  *=15:4
 10 forearm   dez_boss       -12  8   *=15:6 lunge=-
 10 punch     dez_boss       -60  8   lunge=15:6
+
+# ObjC7_TargettingSensor/Ani_objC7_c and ObjC7_EggmanBomb (frame $E).
+10 sensor    dez_boss          0  0 *=3:16,17,18,19,20 defeat=-
+10 bombs     dez_boss          0  0 *=15:14 orbit=0,1,2 defeat=-
