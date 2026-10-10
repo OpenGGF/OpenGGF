@@ -52,11 +52,13 @@ class TestDezIncomingFinalRouteCapture {
         // Held-button history belongs to this external input driver, not gameplay.
         var previousInput = GameplayCaptureSession.class.getDeclaredField("previousInput");
         previousInput.setAccessible(true);
+        var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 11, startAct, settings);
             assertEquals(startAct == 0 ? 1 : 0, GameServices.sprites().getRegisteredSidekicks().size());
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
-                step(session, movie.getFrame(frame));
+                session.step(movie.getFrame(frame));
+                drawing.afterStep(session);
                 assertFalse(session.player().getDead(), "death at " + frame);
                 String spot = null;
                 int zone = GameServices.level().getCurrentZone();
@@ -90,6 +92,7 @@ class TestDezIncomingFinalRouteCapture {
                 }
                 if (spot == null || !checked.add(spot)) continue;
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                drawing.checkpoint(session);
                 var saved = registry.capture();
                 int horizon = Math.min(45, movie.getFrameCount() - frame - 1);
                 assertEquals(45, horizon, "input tail must cover the complete replay window");
@@ -103,6 +106,7 @@ class TestDezIncomingFinalRouteCapture {
                 registry.restore(saved);
                 previousInput.set(session, movie.getFrame(frame));
             }
+            drawing.checkpoint(session);
             assertEquals(12, GameServices.level().getCurrentZone());
             assertEquals(13, GameServices.level().getRequestedZone());
             assertEquals(1, GameServices.level().getRequestedAct());
@@ -127,10 +131,12 @@ class TestDezIncomingFinalRouteCapture {
         boolean handsSeen = false, handsDefeated = false;
         boolean coreSeen = false, coreDefeated = false, shipSeen = false, shipDefeated = false;
         int previousCore = 8, previousShip = 8, coreHits = 0, shipHits = 0;
+        var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 11, 0, settings);
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
-                step(session, movie.getFrame(frame));
+                session.step(movie.getFrame(frame));
+                drawing.afterStep(session);
                 assertFalse(session.player().getDead(), "death at " + frame);
                 assertFalse(session.player().isSuperSonic(), "ordinary cold route at " + frame);
                 if (GameServices.level().getCurrentZone() == 23) {
@@ -159,6 +165,7 @@ class TestDezIncomingFinalRouteCapture {
                 if (!spots.contains(frame)) continue;
                 checked.add(frame);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                drawing.checkpoint(session);
                 var saved = registry.capture();
                 for (int n = 1; n <= 45; n++) step(session, movie.getFrame(frame + n));
                 var expected = registry.capture();
@@ -170,6 +177,7 @@ class TestDezIncomingFinalRouteCapture {
                 registry.restore(saved);
                 previousInput.set(session, movie.getFrame(frame));
             }
+            drawing.checkpoint(session);
             assertEquals(spots, checked);
             assertTrue(handsSeen && handsDefeated, "all six fingers must be cleared");
             assertTrue(coreSeen && coreDefeated);
@@ -201,10 +209,12 @@ class TestDezIncomingFinalRouteCapture {
         boolean handsSeen = false, handsDefeated = false;
         boolean coreSeen = false, coreDefeated = false, shipSeen = false, shipDefeated = false;
         int previousCore = 8, previousShip = 8, coreHits = 0, shipHits = 0;
+        var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 11, 0, settings);
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
-                step(session, movie.getFrame(frame));
+                session.step(movie.getFrame(frame));
+                drawing.afterStep(session);
                 assertFalse(session.player().getDead(), "death at " + frame);
                 assertFalse(session.player().isSuperSonic(), "ordinary cold route at " + frame);
                 assertInstanceOf(com.openggf.sprites.playable.Sonic.class, session.player());
@@ -235,6 +245,7 @@ class TestDezIncomingFinalRouteCapture {
                 if (!spots.contains(frame)) continue;
                 checked.add(frame);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                drawing.checkpoint(session);
                 var saved = registry.capture();
                 for (int n = 1; n <= 45; n++) step(session, movie.getFrame(frame + n));
                 var expected = registry.capture();
@@ -246,6 +257,7 @@ class TestDezIncomingFinalRouteCapture {
                 registry.restore(saved);
                 previousInput.set(session, movie.getFrame(frame));
             }
+            drawing.checkpoint(session);
             assertEquals(spots, checked);
             assertTrue(handsSeen && handsDefeated, "all six fingers must be cleared");
             assertTrue(coreSeen && coreDefeated);
@@ -300,12 +312,14 @@ class TestDezIncomingFinalRouteCapture {
         var rewindBlocked = com.openggf.GameLoop.class.getDeclaredMethod("isRewindBlocked");
         rewindBlocked.setAccessible(true);
         long outgoingFinalHistory = 0, outgoingActTwoHistory = 0;
+        var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 11, 0, settings);
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
                 if (frame == 50200 || frame == 60050) GameServices.configuration().setSessionOverride(
                         com.openggf.configuration.SonicConfiguration.LIVE_REWIND_ENABLED, true);
-                step(session, movie.getFrame(frame));
+                session.step(movie.getFrame(frame));
+                drawing.afterStep(session);
                 assertEquals(800, GameServices.camera().getWidth());
                 if (frame == 50372) {
                     // Incoming callback-bearing fades intentionally reject rewind:
@@ -368,6 +382,7 @@ class TestDezIncomingFinalRouteCapture {
                 if (!spots.contains(frame)) continue;
                 checked.add(frame);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                drawing.checkpoint(session);
                 var saved = registry.capture();
                 for (int n = 1; n <= 45; n++) step(session, movie.getFrame(frame + n));
                 var expected = registry.capture();
@@ -381,6 +396,7 @@ class TestDezIncomingFinalRouteCapture {
                 registry.restore(saved);
                 session.restoreInputHistory(movie.getFrame(frame));
             }
+            drawing.checkpoint(session);
             assertEquals(spots, checked);
             assertTrue(checkedPendingFade);
             assertEquals(50371, finalLoad);
@@ -427,10 +443,12 @@ class TestDezIncomingFinalRouteCapture {
         boolean handsSeen = false, handsDefeated = false;
         boolean coreSeen = false, coreDefeated = false, shipSeen = false, shipDefeated = false;
         int previousCore = 8, previousShip = 8, coreHits = 0, shipHits = 0;
+        var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 11, 0, settings);
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
-                step(session, movie.getFrame(frame));
+                session.step(movie.getFrame(frame));
+                drawing.afterStep(session);
                 assertFalse(session.player().getDead(), "death at " + frame);
                 assertFalse(session.player().isSuperSonic(), "ordinary cold route at " + frame);
                 assertInstanceOf(com.openggf.sprites.playable.Tails.class, session.player());
@@ -461,6 +479,7 @@ class TestDezIncomingFinalRouteCapture {
                 if (!spots.contains(frame)) continue;
                 checked.add(frame);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                drawing.checkpoint(session);
                 var saved = registry.capture();
                 for (int n = 1; n <= 45; n++) step(session, movie.getFrame(frame + n));
                 var expected = registry.capture();
@@ -472,6 +491,7 @@ class TestDezIncomingFinalRouteCapture {
                 registry.restore(saved);
                 previousInput.set(session, movie.getFrame(frame));
             }
+            drawing.checkpoint(session);
             assertEquals(spots, checked);
             assertTrue(handsSeen && handsDefeated, "all six fingers must be cleared");
             assertTrue(coreSeen && coreDefeated);
@@ -497,7 +517,7 @@ class TestDezIncomingFinalRouteCapture {
 
     private static void step(GameplayCaptureSession session, Bk2FrameInput input) {
         session.step(input);
-        session.render();
+        session.renderFrame();
     }
 
     private static void same(CompositeSnapshot expected, CompositeSnapshot actual, String label) {

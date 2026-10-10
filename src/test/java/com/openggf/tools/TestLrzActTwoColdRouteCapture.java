@@ -51,11 +51,12 @@ class TestLrzActTwoColdRouteCapture {
                 "src/test/resources/routes/s3k/lrz2-sonic-tails-cold-" + route + "-320.bk2"));
         var checked = new HashSet<Integer>();
         assertEquals(frameCount, movie.getFrameCount());
+        var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 9, 0, settings);
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
                 session.step(movie.getFrame(frame));
-                session.render();
+                drawing.afterStep(session);
                 assertFalse(session.player().getDead(), "death at input " + frame);
                 if (frame == 35980) {
                     assertTrue(GameServices.level().getObjectManager()
@@ -87,15 +88,16 @@ class TestLrzActTwoColdRouteCapture {
                 assertEquals(frame < 43570 ? 1 : 0, GameServices.level().getCurrentAct());
                 checked.add(frame);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                drawing.checkpoint(session);
                 var saved = registry.capture();
                 for (int n = 1; n <= 45; n++) {
-                    session.step(movie.getFrame(frame + n)); session.render();
+                    session.step(movie.getFrame(frame + n)); drawing.draw(session);
                 }
                 var forward = registry.capture();
                 registry.restore(saved);
                 session.restoreInputHistory(movie.getFrame(frame));
                 for (int n = 1; n <= 45; n++) {
-                    session.step(movie.getFrame(frame + n)); session.render();
+                    session.step(movie.getFrame(frame + n)); drawing.draw(session);
                 }
                 var replay = registry.capture();
                 assertEquals(forward.entries().keySet(), replay.entries().keySet());
@@ -106,6 +108,7 @@ class TestLrzActTwoColdRouteCapture {
                 registry.restore(saved);
                 session.restoreInputHistory(movie.getFrame(frame));
             }
+            drawing.checkpoint(session);
             assertEquals(spots, checked);
             assertEquals(zone, GameServices.level().getCurrentZone());
             assertEquals(act, GameServices.level().getCurrentAct());

@@ -6,6 +6,7 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
+import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
@@ -160,13 +161,22 @@ public final class CnzHoverFanInstance extends AbstractObjectInstance implements
             }
         }
 
-        if (captured && ((vIntRunCount + 1) & 0x1F) == 0) {
+        // loc_31E36/loc_31E68: move.b (Level_frame_counter+1).w,d0 / andi.b #$1F,d0. The +1
+        // addresses the word's low byte; the gate reads the level clock, not V_int_run_count.
+        if (captured && (levelFrameCounter(vIntRunCount) & 0x1F) == 0) {
             try {
                 services().playSfx(Sonic3kSfx.HOVERPAD.id);
             } catch (Exception ignored) {
                 // Audio is unavailable in some test setups.
             }
         }
+    }
+
+    /** {@code Level_frame_counter}; a fixture without a level manager drives the update clock. */
+    private int levelFrameCounter(int fallback) {
+        ObjectServices svc = tryServices();
+        LevelManager levelManager = svc != null ? svc.levelManager() : null;
+        return levelManager != null ? levelManager.getFrameCounter() : fallback;
     }
 
     private int resolveCurrentX() {

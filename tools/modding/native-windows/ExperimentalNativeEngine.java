@@ -22,6 +22,11 @@ public final class ExperimentalNativeEngine {
         System.setProperty("org.lwjgl.librarypath", root.toString());
         NativeModMemberAudit.verify(root.resolve("native-mod-members.tsv"));
         if (args.length == 1 && args[0].equals("--audit")) return;
+        if (args.length >= 1 && args[0].equals("--check-gameplay")) {
+            com.openggf.tools.nativelinux.NativeGameplayCheck.main(
+                    java.util.Arrays.copyOfRange(args, 1, args.length));
+            return;
+        }
         if (args.length == 2 && args[0].equals("--check-engine")) {
             com.openggf.ExperimentalEngineBootCheck.verify(args[1]);
             return;
@@ -33,7 +38,8 @@ public final class ExperimentalNativeEngine {
             NativeModRegistrationProbe.main(registration);
             return;
         }
-        if (args.length != 0) throw new IllegalArgumentException("Expected: [--audit | --check-mods [owner-id]]");
+        if (args.length != 0) throw new IllegalArgumentException(
+                "Expected: [--audit | --check-mods [owner-id] | --check-engine owner-id | --check-gameplay ...]");
         Engine.main(args);
     }
 }

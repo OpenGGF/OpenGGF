@@ -1025,3 +1025,356 @@ changed reports preserved. Normal worktree removal succeeded; the fully merged
 Original ROMs, unrelated worktrees, main's three dirty disassemblies and four known
 untracked paths, foreign jobs and the external rendered visualization were preserved.
 No temporary agents were created for this task.
+
+## SOZ drawing-gap follow-up (2026-10-08)
+
+Task base `d2a501ebc9919e6c43412a2eedf02a372eac5309`, isolated branch
+`feature/ai-soz-skip-frame-drawing`. The user explicitly authorized trying skipped
+frame drawing. No production Java, movie input, physics, build or selection policy
+changed. The SOZ-only test policy services queued render-thread work after every
+simulation tick, omits traversal drawing, draws every snapshot checkpoint, draws
+both complete 45-frame replay branches, and draws the final playable destination.
+Prepared loads can depend on the render-thread queue even when no scene is drawn.
+
+The first queued command remained in every-frame mode while the drawing policy was
+introduced before admission, under the worktree metadata lease. Its default was
+initially true. The matched skipped command changes only
+`-Dopenggf.soz.drawEveryFrame=false`; all three Java test-source hashes were identical
+through both runs. Both completed **14 cases, zero failures/errors/skips**, with
+identical fully qualified case identities/outcomes. The five unchanged capture
+rendering controls took 2.661 / 2.664 seconds. The nine SOZ cases took
+**138.309 → 45.423 seconds: 67.2% less, 3.04× faster** in this one matched pair.
+
+| Route | Every-frame drawing (s) | Checkpoint/replay drawing (s) |
+|---|---:|---:|
+| Solo Sonic Act 1 | 15.058 | 4.592 |
+| Solo Sonic Act 2 | 16.113 | 5.787 |
+| Solo Tails Act 1 | 8.409 | 2.141 |
+| Solo Tails Act 2 | 14.916 | 5.125 |
+| Solo Knuckles Act 1 | 9.943 | 2.903 |
+| Sonic + Tails Act 1 | 15.337 | 3.582 |
+| Sonic + Tails Act 2 | 20.121 | 6.341 |
+| Solo Knuckles Act 2, 320 | 17.252 | 6.680 |
+| Solo Knuckles Act 2, 800 | 21.142 | 8.256 |
+
+All nine printed destination-ready frames, traversal/destination replay counts and
+semantic event sets match exactly. Drawing falls from **295,065 to 36,227 calls**,
+while 259,245 traversal drawing calls are omitted. Both modes still execute
+295,065 simulation steps: the skipped mode's drawings include 407 additional
+checkpoint/final draws without simulation ticks, plus 35,820 replay-step draws.
+Every world key/field restore and forward-replay comparison, real boss/results,
+bonus/puzzle/capsule checks, roster/width/death checks and 180 playable destination
+frames remain. This does not compare every intermediate world state or pixel
+between modes, and the default no longer establishes every-frame presentation.
+
+Four independent short controls pass in 4.326 seconds with zero skips: native
+Sonic Act 1 and Knuckles Act 2 at 320/800 widths. Each compares fully drawn and
+skipped 420-frame branches from an engine-owned prefix checkpoint after 600 real
+movie inputs. Every snapshot key/field and all final pixels match. The old
+framebuffer is first cleared to one magenta colour and checked as uniform, so
+stale pixels from the fully drawn branch cannot fake success. These are bounded
+engine-path controls, not new full-route/wider/donor or native-ROM visual certification.
+
+```bash
+# Fully drawn control: the prototype still defaulted to every-frame drawing.
+python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  -Dtest=TestSozColdRouteCapture,TestGameplayCaptureFrameRendering \
+  "-Ds3k.rom.path=${OPENGGF_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+# Same sources and selection; only the SOZ drawing mode changes.
+python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  -Dtest=TestSozColdRouteCapture,TestGameplayCaptureFrameRendering \
+  -Dopenggf.soz.drawEveryFrame=false \
+  "-Ds3k.rom.path=${OPENGGF_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+# Strict checkpoint reconstruction controls, independently executed.
+python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  -Dtest=TestSozColdRouteFrameDrawing \
+  "-Ds3k.rom.path=${OPENGGF_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+The actual commands used the original absolute main ROM path. Java 21, lean 1 GiB
+heaps and no JFR were matched. Class time excludes queue wait and compilation;
+Maven totals of 3m45s / 1m11s include different cold compilation costs and are not
+an end-to-end throughput benchmark. The baseline waited roughly 44 minutes for
+admission. No foreign job was cancelled, and no queue priority or reservation changed.
+
+After those controls passed, the normal default became checkpoint/replay drawing;
+`-Dopenggf.soz.drawEveryFrame=true` retains every-frame traversal drawing. Capture
+tools, screenshot tests and other routes keep their existing drawing behavior.
+The [headless guide](../../guide/contributing/headless-testing.md) and both SOZ
+act matrices record the presentation coverage limit and fully drawn invocation.
+
+The change-based plan selects **3,059 ordinary classes plus guards** because the
+new non-test-named helper is unclassified. Its only consumers are the two SOZ
+JUnit classes; its methods delegate to existing drawing/render-task APIs and own
+only per-invocation counters and a boolean. Under proportionate validation, the
+14-case matched route/render pair, four strict state/pixel controls and the required
+60 S3K loading/bootstrap/decoding/AIZ cases directly cover the bounded change.
+No runner selection was edited or narrowed, and no new full-suite/guard pass is
+claimed by this task. Actual tool preflight passed Java 21, Lua 5.4 and PowerShell.
+
+The actual destination advanced to `ad3d6a9965952a38b6a0ac2e9eb0285f721ee895`.
+Its delta from the task pin adds standalone experimental Windows packaging,
+workflow/probe files and prose, with no engine/POM/test-input changes. Task code
+commit `b5cbc5b9c` merged that base as
+`4efa6f59316fa42e9de8e31a0af6fd027f0a5ee7`, without conflicts. The final default-mode
+command passes **78 cases, zero failures/errors/skips**, exit 0, in 1m15s including
+compilation, finishing at18:58:52Z. All original14 case identities/outcomes remain
+passing; default route milestones and draw/skip counts exactly match the measured
+explicit-false mode. The SOZ class took46.407s; that validation time is separate
+from the matched138.309/45.423s benchmark.
+
+```bash
+python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  -Dtest=TestSozColdRouteCapture,TestSozColdRouteFrameDrawing,TestGameplayCaptureFrameRendering,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils \
+  "-Ds3k.rom.path=${OPENGGF_CHECKOUT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dsonic1.rom.path=${OPENGGF_CHECKOUT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${OPENGGF_CHECKOUT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" test -B
+```
+
+
+### Published-base drawing qualification and renewed main coordination (2026-10-09)
+
+The parity owner released main/publication holds at published
+`019dd454b0d63b10a1d0585450bb28f34e360c04`. Its complete ordinary/guard evidence
+is attributed to tested `b317e94ebdce60c6f81553113543295c75b1d826`, with an
+independently verified audit-only publication successor, in the
+[updated parity negative-case table](../audits/2026-10-07-stock-parity-gap-verification.md#updated-actual-main-full-assertion-and-skip-summary).
+Those are the parity owner's full results, not a new full run by this task.
+
+Private merge `5b44c0ccb6c6c12052829ed7d2a5ce9df9f05499` reconciles that published
+base without conflicts. All three drawing-test source hashes remain unchanged;
+production/build inputs exactly inherit the base. The same focused command above
+completed at 2026-10-09T03:41:33Z: **78 cases, zero failures/errors/skips**, Maven
+exit0, 2m06s including compilation. Every fully qualified case identity/outcome
+and all nine printed route result lines match the earlier terminal78-case check.
+The SOZ class took45.740s; this is qualification, not another matched benchmark.
+The selected eight report identities retain5 capture controls,9 routes,4 strict
+state/pixel controls and60 required S3K loading/bootstrap/decoding/AIZ cases.
+Actual tool preflight again passed Java21, Lua5.4 and PowerShell. The current
+change-based fallback selects3069 ordinary classes plus guards; the previously
+explained bounded proportionate validation remains the chosen scope.
+
+Before main integration, published develop advanced to
+`efedf9198eef5e717c8827f1aa34dc7728cb92fd`. Its complete delta is one Windows
+research Markdown path, with no executable/test/build/API change. Private
+prose-only merge `c05940fb1da72cf2915a41840e403d9c5cc4aa0c` preserves that update;
+the completed qualification remains attributed to5b44. Both destination checks
+stopped before writing any main input or commit. Main then acquired the unrelated
+voice integration `0103b9bdc880c142301073fba9024750ccf4f1c2`, whose owner had already
+submitted its normal full destination command against efedf. Its
+[delivery plan](../designs/2026-10-07-eggmans-sky.md) freezes main inputs and HEAD
+through ordinary and fresh guards. This task preserves that invocation and
+all foreign jobs; SOZ has not reached main. Updated private composition,
+actual-main focused qualification, publication and owned cleanup remain pending
+that owner's completed delivery. No post-merge result is claimed.
+
+
+## Other route drawing policy follow-up (2026-10-09)
+
+The authorized extension uses a second isolated worktree,
+`.worktrees/ai-route-skip-frame-drawing`, based on published
+`cf0ad0de351800e2e2ae5cf3da5af7ed4bfe9d02`. The immutable comparison source
+`0d550d3b5be98651d8b9f4b4c8fc8aff7b24a3b9` includes the already-qualified private
+SOZ change and this published base. The remaining 23 route classes initially kept
+their original per-tick drawing/readback. No production Java, build, selection,
+ROM, movie, input sequence or existing assertion was changed by the extension.
+
+The first candidate control invocation used a working patch at
+`7baa588d2467903dfeacd613b36e0174d2a7a492`, fingerprint
+`4c56b6934b437eb6895ff799da93c18211d0afd114530dc99d57bad974832594`; the fingerprint
+was unchanged through completion at 2026-10-09T09:07:52Z. The queued
+`maven_queue.py --lean -Dmse=off` command selected `TestRouteFrameDrawing` plus
+`TestSozColdRouteFrameDrawing,TestGameplayCaptureFrameRendering,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`
+and all three verified original absolute ROM paths. Both JVM heaps were 1 GiB.
+It completed **8 reports / 90 cases / 88 passing / 2 failures / 0 errors / 0 skips**,
+Maven exit1; summed class time28.692s. These are completed focused controls, not
+a green candidate or a full-suite pass.
+
+The two failures were MHZ: `mhz2-team-incoming-320` with native Sonic+Tails and
+`mhz2-sonic-incoming-800` with native solo Sonic. Both restored their frame600
+starting snapshots exactly. After 420 skipped draws, the first failing key was
+`palette-colors`: 20 `normalRgb` bytes differed at indices
+55–62,66–67,69–71,73,75–76,78–81 (for example index55: fully drawn109 versus
+skipped73). The pixel comparison was not reached in those two cases. The other
+19 new prefixes matched every registered world key/field and exact reconstructed
+framebuffer pixels after the same poisoned-framebuffer protocol; the previous
+4 SOZ controls,5 capture controls and60 required S3K cases also passed.
+
+The initial hypothesis was the renderer's pending-palette commit, so both MHZ
+controls were rerun with full drawing. This completed 26-case invocation at
+2026-10-09T09:40:26Z:24 passing,2 failures,0 errors/skips,exit1,52.101s Maven.
+Its fingerprint `5d306d27b6a2a4158e5f9ece7b007608f9cf12d40fac3121cbc30a9fb7ac2cb8`
+was unchanged. Both complete 892-character palette failures were identical to
+the initial skipped-drawing failures. **Rejected attribution:** that mismatch
+cannot be assigned to drawing gaps; the fully drawn replay control also fails.
+No runtime palette or rewind owner was changed. The next diagnostic attempted two independent fully drawn cold sessions before
+comparing a third session with the same drawing gap. The other
+19 prefixes keep their successful restore/replay comparison. This control hazard
+is recorded in the existing
+[workflow catalogue](../../agent-workflow/briefing-trace-rounds.md#measurement-hazards--all-produce-plausible-output).
+
+The independent cold experiment completed at2026-10-09T09:58:27Z on the same
+HEAD with unchanged working fingerprint
+`d66a66dbb8dabdfc86c6d0c8991d0c03db69eef385cac697b667c5539aad51b8`:21 cases,
+19 passing,2 failures,zero errors/skips,exit1,25.477s summed test time. Both failures
+were between the first two **fully drawn** cold snapshots, before the skipped run:
+spawn references and dynamic `playerOwner` references belong to separate sessions;
+the first case also has an identity-keyed `childSpawns` entry. The existing
+`RewindSnapshotDiff` is intentionally a same-session replay comparator.
+
+Rejected: normalizing those references to force the cold comparison through that
+API. The two MHZ drawing gaps remain unqualified; their route classes keep every
+scene draw and remove only discarded readback. The final new control class retains
+19 validated restore/gap prefixes for FBZ,LRZ,SSZ,DEZ and supported SSZ donors.
+The failed diagnostic MHZ protocols are removed from the shippable control class;
+no existing test or assertion is removed or weakened. All existing MHZ route
+assertions, including inherited replay/history negatives, remain in the matched
+route qualification. Together with the unchanged4 SOZ,5 rendering and60 S3K
+controls, the final control scope is88 cases.
+
+
+The final 19-case control source completed at2026-10-09T10:08:19Z, Maven exit0,
+zero failures/errors/skips,45.063s Maven including recompilation. The working
+fingerprint remained `2720539bdb9b0a2f02459f1c15bec2a4b62f804285071b48c131b50fba64ef42`.
+The command was `python3 tools/testing/maven_queue.py --lean -Dmse=off
+-Dtest=TestRouteFrameDrawing <three original absolute ROM properties> test -B`.
+Every retained prefix compares all registered fields and all RGBA pixels after
+600 fully drawn inputs, a snapshot restore and a420-input drawing gap.
+
+The immutable matched baseline at0d550 completed at2026-10-09T09:30:40Z:
+29 ordinary reports/189 cases/24 inherited failures/zero errors/skips,
+1,500.313s summed test time,26:18 Maven,exit1. The queued request waited6,245s;
+queue wait is excluded from test timings. The separate normal `-Pfbz-routes`
+invocation passed2 reports/2 cases without skips,112.559s summed test time,exit0.
+The baseline already contains the private SOZ optimization; its nine SOZ cases
+are excluded from the additional23-class extension speedup. All24 complete
+primary assertions match the published
+[actual-main failure table](../audits/2026-10-07-stock-parity-gap-verification.md#updated-actual-main-full-assertion-and-skip-summary),
+removing only its exception prefix and normalizing the two specifically verified
+SSZ `RewindObjectStateBlob` hashes. The entire2,907-character normalized SSZ
+payload was compared, including all fields. No other assertion was normalized.
+These focused results preserve inherited negatives; they are not a whole-suite
+or parity pass.
+
+
+### Completed matched extension and updated destination
+
+Candidate `bf067973517e79e634a0c92046375a8e1a2bdabd` completed the normal
+ordinary request at2026-10-09T10:26:53Z:29 reports/189 cases/24 matching inherited
+failures/zero errors/skips,402.710s summed test time,7:06 Maven,exit1. Initial and
+terminal fingerprints were identical:
+`bd8b277fbc939bc26fc97f4e23e244c3d3c0309d59d40f742594f2fc70a649b7`.
+Its separate FBZ request completed at2026-10-09T10:11:57Z with2 reports/2 passing
+cases,zero failures/errors/skips,73.904s summed test time,exit0,at the same source
+and fingerprint. Both invocations use normal queue/JVM settings, matching the
+baseline; no profiling, parallel test forks or heap changes were introduced.
+
+All191 baseline case identities/outcomes match;23 failing primary messages match
+literally. The remaining SSZ-Tails assertion matches all2,907 normalized characters
+with only the two previously verified `RewindObjectStateBlob` hashes replaced.
+The baseline hashes were `3f35b2e1` and `262a384e`; candidate hashes were `526e3ae0`
+and `698d9127`, for the same JetFlame/GunArm missing entries. Blob `hashCode()`
+includes `Class<?>`, whose identity varies between JVMs; the owning audit already
+verifies this normalization. All reported spawn, scalar, extra, slot and object-ID
+fields match. This is complete assertion equality after that normalization, not
+equality of unreported blob payloads or world state beyond the failing assertion.
+All13 recorded SOZ/LRZ/SSZ witness lines and both FBZ replay-window lines match.
+
+The additional23 route classes/113 cases dropped from1,558.150s to425.207s:
+**72.7% less summed test time,3.66× faster,18m53s saved** in this one matched pair.
+The original SOZ nine-case class and69 unchanged controls are excluded from that
+extension gain; the original SOZ optimization was already active in both trees.
+These are single-pair class timings on a shared host, excluding queue/compile time;
+concurrent host load and JVM warmup remain sources of variation. Whole ordinary
+suite throughput and memory/OOM effects were not measured by this extension.
+
+| Route family | Additional classes/cases | Before (s) | After (s) | Speedup | Drawing policy |
+|---|---:|---:|---:|---:|---|
+| DEZ | 4/25 | 664.526 | 137.115 | 4.85× | Checkpoint and complete replay drawing |
+| LRZ | 9/32 | 556.457 | 127.597 | 4.36× | Checkpoint and complete replay drawing |
+| SSZ | 5/42 | 157.505 | 39.069 | 4.03× | Checkpoint and complete replay drawing |
+| FBZ | 2/2 | 112.559 | 73.904 | 1.52× | Checkpoint and complete replay drawing |
+| MHZ | 2/2 | 43.591 | 33.019 | 1.32× | Every tick drawn; discarded readback removed |
+| SOZ | 1/10 | 23.512 | 14.503 | 1.62× | Lower-rock class only; checkpoint/replay drawing |
+
+The existing assertions and counts of movie-input, snapshot capture/restore and
+input-history calls were compared statically in all24 route classes and are
+unchanged. No discarded `session.render()` call remains in these classes.
+Capture/pixel/native presentation checks keep their image readbacks. The package
+helper is used only by these24 consumers and the two bounded control classes.
+
+Exact ordinary selector used in both timed invocations (plus the three original
+absolute ROM properties):
+
+```text
+TestDezColdRouteCapture,TestDezIncomingFinalRouteCapture,TestDezSoloActTwoColdRouteCapture,TestDezSoloColdRouteCapture,TestLrzActTwoColdRouteCapture,TestLrzBossColdRouteCapture,TestLrzColdRouteCapture,TestLrzKnucklesColdRouteCapture,TestLrzPostBossPaletteRouteCapture,TestLrzTailsColdRouteCapture,TestLrzWideActTwoColdRouteCapture,TestLrzWideBossColdRouteCapture,TestLrzWideColdRouteCapture,TestMhzPairColdRouteCapture,TestMhzWideColdRouteCapture,TestSozColdRouteCapture,TestSozLowerRockPuzzleCapture,TestSszBridgeCheckpointCapture,TestSszColdRouteCapture,TestSszSoloColdRouteCapture,TestSszTailsColdRouteCapture,TestSszWidePairedColdRouteCapture,TestSozColdRouteFrameDrawing,TestGameplayCaptureFrameRendering,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+```
+
+Command shape: `python3 tools/testing/maven_queue.py -Dmse=off
+-Dtest=<selector-above> <original-absolute-ROM-properties> test -B`.
+Separate tagged command: `python3 tools/testing/maven_queue.py -Dmse=off
+-Pfbz-routes -Dtest=TestFbzKnucklesColdRouteCapture,TestFbzTailsColdRouteCapture
+<original-absolute-ROM-properties> test -B`.
+
+The inspected change-based plan againstcf0ad selects3,072 ordinary classes plus
+fresh guards because `RouteFrameDrawing.java` is unclassified. Proportionate
+focused validation covers every helper consumer, all existing replay assertions,
+explicit new state/pixel gaps,5 rendering controls and60 required S3K
+loading/bootstrap/decoding/AIZ cases, plus the separate tagged FBZ lane. The change
+has no production, fixture, build, queue, public API or selection-policy delta.
+This bounded test-harness change does not warrant repeating unrelated ordinary
+categories; runner selection and CI/release gates are unchanged. This is focused
+qualification with inherited failures, not a whole-suite green claim.
+
+The destination subsequently published Flappy Tails at
+`8668a901216717d8f3696945a95bbfe8e628b652`. Private merge
+`bbc7952ed` is conflict-free and preserves all qualified consumer/helper hashes,
+production Java, POM, fixtures and queue inputs from bf067. The upstream delta
+adds examples/prose and three unrelated mod tests, plus a terminology-guard
+comment. Actual-main integration, normal focused verification and publication
+remain pending at this checkpoint.
+
+
+### Actual-main focused qualification (2026-10-09)
+
+Main integration `bd35fff33aaf01d9c630c6a3a0ffff3d540469ea` has first parent
+`8668a901216717d8f3696945a95bbfe8e628b652`; its index exactly matches qualified
+private evidence successor `e30bb9852037a1543c75563db90ad1db92714701`. The merge
+is conflict-free. The three dirty disassembly trees and four unrelated untracked
+main paths were byte-preserved during integration. No main branch switch occurred.
+
+The actual-main change plan against8668 selected3,075 ordinary classes plus
+fresh guards through the same unclassified-helper fallback. The bounded focused
+scope justified above was retained. Default Lua lookup failed preflight before
+tests; `LUA_BIN=/usr/bin/lua5.4` then passed Java21, Lua5.4 and PowerShell preflight.
+All three original absolute main ROM files independently matched their canonical
+SHA-1/CRC32 identities before launch; no ROM prerequisite was skipped.
+
+Two normal queued commands ran at frozen bd35. Ordinary used the exact timed
+selector above plus `TestRouteFrameDrawing`; FBZ used the unchanged separate
+`-Pfbz-routes` selector. Both launch environments explicitly set Lua5.4. Initial
+and final source fingerprints were identical in both invocations:
+`78898dceb99482b691065cf337e4d0ede8ede81864ba43b601d3e0fb9a063fb4`.
+
+| Actual-main command | Finished (UTC) | Reports/cases | Failures/errors/skips | Summed class time | Maven status/time |
+|---|---|---:|---:|---:|---|
+| Ordinary routes and controls | 2026-10-09T11:34:41Z | 30/208 | 24/0/0 | 581.267s | exit1;10:10 |
+| Separate frozen FBZ routes | 2026-10-09T11:38:11Z | 2/2 | 0/0/0 | 72.909s | exit0;1:40 |
+
+Together: **32 reports/210 cases/186 passing/24 matching inherited failures/zero
+errors or skips**. Every191 baseline identity/outcome matches; the19 added
+world/pixel controls pass. The23 other complete primary failure messages match
+literally; the entire SSZ assertion matches after only the two documented blob
+hashes are normalized,2,907 characters with no omitted fields. All13 recorded
+ordinary witness lines and both FBZ replay-window lines match. All88 controls
+(19 new,4 existing SOZ,5 image rendering,60 required S3K) pass without skips.
+The latest waiting notices were2,953s ordinary and3,676s FBZ; waiting is excluded
+from execution/class times. These timings qualify actual main and are not another
+matched benchmark. No foreign request was cancelled, reprioritized or bypassed.
+
+This remains **focused inherited-failure qualification**, not a green whole-suite
+or full-route presentation claim. The verified executable/test/build/API inputs
+remain those of bd35; this subsequent evidence update changes only this research
+Markdown. The delivery flow pushes only integrated develop, then removes the
+accounted task worktrees/branches and consumed raw diagnostics while preserving
+unrelated main paths, foreign jobs and durable user artifacts.

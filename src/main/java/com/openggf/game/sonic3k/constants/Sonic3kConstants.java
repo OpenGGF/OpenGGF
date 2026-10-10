@@ -2919,7 +2919,7 @@ public class Sonic3kConstants {
     public static final int CARRY_DESCEND_OFFSET_Y = 0x1C;
 
     /** Level_frame_counter mask that gates synthetic right-press injection.
-     *  Every 32 frames: (Level_frame_counter + 1) & 0x1F == 0. ROM: loc_13FFA. */
+     *  Every 32 frames: the low byte at (Level_frame_counter+1) & $1F == 0. ROM: loc_13FFA. */
     public static final int CARRY_INPUT_INJECT_MASK = 0x1F;
 
     /** Cooldown frames after A/B/C jump release. ROM: Tails_Carry_Sonic line 27241. */

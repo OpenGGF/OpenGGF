@@ -5,6 +5,9 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameId;
 import com.openggf.game.ObjectArtProvider;
+import com.openggf.game.RuntimeArtAdmissionLease;
+import com.openggf.game.RuntimeArtAdmissionOwnerKind;
+import com.openggf.game.RuntimeArtAdmissionPolicy;
 import com.openggf.game.patch.GamePatch;
 import com.openggf.game.patch.GameplayLaunchRequest;
 import com.openggf.game.patch.LogicalRom;
@@ -227,6 +230,50 @@ class TestModArtOverrides {
         IOException thrown = assertThrows(IOException.class, () -> overlay.loadArtForZone(0));
         assertSame(expected, thrown);
         assertEquals(2, overlay.getSheet("shared").getPatterns()[0].getPixel(0, 0));
+    }
+
+    @Test
+    void nestedArtOverlaysPreserveAdmissionOwnershipAndExactLeases() {
+        var kind = RuntimeArtAdmissionOwnerKind.TITLE_OWNER;
+        var lease = new RuntimeArtAdmissionLease(0x100000001L, 7, 99, kind);
+        Map<String, List<Object>> calls = new LinkedHashMap<>();
+        ObjectArtProvider base = (ObjectArtProvider) Proxy.newProxyInstance(getClass().getClassLoader(),
+                new Class<?>[] {ObjectArtProvider.class}, (proxy, method, args) -> {
+                    calls.put(method.getName(), args == null ? List.of() : List.of(args));
+                    return method.getReturnType() == RuntimeArtAdmissionLease.class ? lease : null;
+                });
+        ObjectArtProvider first = ModArtOverlayProvider.decorate(base, Map.of("first", baked(2)));
+        ObjectArtProvider overlay = ModArtOverlayProvider.decorate(first, Map.of("second", baked(3)));
+        overlay.onTitleCardArtRetired();
+        overlay.onTitleCardPresentationSkipped();
+        overlay.onInLevelTitleCardCompleted(lease);
+        assertSame(lease, overlay.prepareRuntimeArtForActTransition(4, RuntimeArtAdmissionPolicy.TITLE_OWNER));
+        overlay.prepareRuntimeArtForInLevelTitleCard();
+        assertSame(lease, overlay.bindPendingRuntimeArtAdmission(kind));
+        assertSame(lease, overlay.bindRuntimeArtAdmission(lease.id(), kind));
+        assertSame(lease, overlay.rebindRuntimeArtAdmission(lease.id(), kind));
+        overlay.consumeRuntimeArtAdmission(lease, kind);
+        assertEquals(Map.of(
+                "onTitleCardArtRetired", List.of(),
+                "onTitleCardPresentationSkipped", List.of(),
+                "onInLevelTitleCardCompleted", List.of(lease),
+                "prepareRuntimeArtForActTransition", List.of(4, RuntimeArtAdmissionPolicy.TITLE_OWNER),
+                "prepareRuntimeArtForInLevelTitleCard", List.of(),
+                "bindPendingRuntimeArtAdmission", List.of(kind),
+                "bindRuntimeArtAdmission", List.of(lease.id(), kind),
+                "rebindRuntimeArtAdmission", List.of(lease.id(), kind),
+                "consumeRuntimeArtAdmission", List.of(lease, kind)), calls);
+    }
+
+    @Test
+    void artOverlayPreservesAdmissionRejectionFromItsBase() {
+        IllegalStateException expected = new IllegalStateException("stale lease");
+        ObjectArtProvider base = (ObjectArtProvider) Proxy.newProxyInstance(getClass().getClassLoader(),
+                new Class<?>[] {ObjectArtProvider.class}, (proxy, method, args) -> { throw expected; });
+        ObjectArtProvider overlay = ModArtOverlayProvider.decorate(base, Map.of("shared", baked(2)));
+        assertSame(expected, assertThrows(IllegalStateException.class, () -> overlay.consumeRuntimeArtAdmission(
+                new RuntimeArtAdmissionLease(3, 1, 9, RuntimeArtAdmissionOwnerKind.TITLE_OWNER),
+                RuntimeArtAdmissionOwnerKind.TITLE_OWNER)));
     }
 
     private static ModBackedGamePatch artPatch(String owner, String key,

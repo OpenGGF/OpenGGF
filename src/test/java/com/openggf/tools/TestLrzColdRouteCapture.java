@@ -112,10 +112,11 @@ class TestLrzColdRouteCapture {
         var checked = new java.util.HashSet<Integer>();
         var previousInput = GameplayCaptureSession.class.getDeclaredField("previousInput");
         previousInput.setAccessible(true);
+        var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 9, 0, settings);
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
-                session.step(movie.getFrame(frame)); session.render();
+                session.step(movie.getFrame(frame)); drawing.afterStep(session);
                 assertFalse(session.player().getDead(), "death at " + frame);
                 if (frame == 2000) {
                     // Camera is beyond $D00. Sprite_OnScreen_Test must release
@@ -241,15 +242,16 @@ class TestLrzColdRouteCapture {
                 if (!spots.contains(frame)) continue;
                 checked.add(frame);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                drawing.checkpoint(session);
                 var saved = registry.capture();
                 for (int n = 1; n <= 45; n++) {
-                    session.step(movie.getFrame(frame + n)); session.render();
+                    session.step(movie.getFrame(frame + n)); drawing.draw(session);
                 }
                 var forward = registry.capture();
                 registry.restore(saved);
                 previousInput.set(session, movie.getFrame(frame));
                 for (int n = 1; n <= 45; n++) {
-                    session.step(movie.getFrame(frame + n)); session.render();
+                    session.step(movie.getFrame(frame + n)); drawing.draw(session);
                 }
                 var replay = registry.capture();
                 assertEquals(forward.entries().keySet(), replay.entries().keySet());
@@ -260,6 +262,7 @@ class TestLrzColdRouteCapture {
                 registry.restore(saved);
                 previousInput.set(session, movie.getFrame(frame));
             }
+            drawing.checkpoint(session);
             assertEquals(spots, checked);
             assertEquals(9, GameServices.level().getCurrentZone());
             assertEquals(minibossClearRoute ? 1 : 0, GameServices.level().getCurrentAct());

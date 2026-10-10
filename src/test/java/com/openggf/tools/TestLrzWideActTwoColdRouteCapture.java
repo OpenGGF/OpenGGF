@@ -44,13 +44,14 @@ class TestLrzWideActTwoColdRouteCapture {
         var checked = new HashSet<Integer>();
         long outgoingHistory = 0;
         int loadFrame = -1;
+        var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 9, 0, settings);
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
                 if (frame == 40700) GameServices.configuration().setSessionOverride(
                         SonicConfiguration.LIVE_REWIND_ENABLED, true);
                 session.step(movie.getFrame(frame));
-                session.render();
+                drawing.afterStep(session);
                 assertFalse(session.player().getDead(), "death at input " + frame);
                 assertFalse(session.player().isSuperSonic());
                 assertInstanceOf(Sonic.class, session.player());
@@ -82,13 +83,14 @@ class TestLrzWideActTwoColdRouteCapture {
                 if (!spots.contains(frame)) continue;
                 checked.add(frame);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                drawing.checkpoint(session);
                 var saved = registry.capture();
-                for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); session.render(); }
+                for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); drawing.draw(session); }
                 var forward = registry.capture();
                 for (int cycle = 0; cycle < 2; cycle++) {
                     registry.restore(saved);
                     session.restoreInputHistory(movie.getFrame(frame));
-                    for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); session.render(); }
+                    for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); drawing.draw(session); }
                     var replay = registry.capture();
                     assertEquals(forward.entries().keySet(), replay.entries().keySet());
                     for (String key : forward.entries().keySet()) {
@@ -99,6 +101,7 @@ class TestLrzWideActTwoColdRouteCapture {
                 registry.restore(saved);
                 session.restoreInputHistory(movie.getFrame(frame));
             }
+            drawing.checkpoint(session);
             assertEquals(spots, checked);
             assertEquals(41127, loadFrame);
             assertEquals(0, GameServices.level().getCurrentAct());

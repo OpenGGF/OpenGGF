@@ -294,8 +294,9 @@ class TestMhzPollenObjects {
         particle.update(0x80, null);
         particle.update(0x81, null);
 
-        assertEquals(TrigLookupTable.sinHex(0x35), particle.getVelocityX(),
-                "Obj_MHZ_Pollen reads (Level_frame_counter+1).w, not V_int_run_count");
+        assertEquals(TrigLookupTable.sinHex(0x34), particle.getVelocityX(),
+                "Obj_MHZ_Pollen copies move.b (Level_frame_counter+1).w -- the counter's low byte, "
+                        + "not counter + 1 and not V_int_run_count -- into angle");
     }
 
     @Test

@@ -97,6 +97,7 @@ public final class SessionExternalContentView implements AutoCloseable {
         @Override public boolean hasTrack(TrackRef track) { return delegate.hasTrack(track); }
         @Override public void playTrack(TrackRef track) { delegate.playTrack(track); }
         @Override public boolean hasSfx(SfxRef sfx) { return delegate.hasSfx(sfx); }
+        @Override public Optional<SfxPcm> sfxPcm(SfxRef sfx) { return delegate.sfxPcm(sfx); }
         @Override public OneShot openSfx(SfxRef sfx) { return delegate.openSfx(sfx); }
         @Override public boolean hasSource() { return delegate.hasSource(); }
         @Override public int mixInto(short[] output, int frames) { return delegate.mixInto(output, frames); }

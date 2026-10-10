@@ -31,10 +31,11 @@ class TestLrzPostBossPaletteRouteCapture {
         List<Integer> writes = new ArrayList<>();
         int prior = 0;
         boolean checked = false;
+        var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 9, 0, settings);
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
-                session.step(movie.getFrame(frame)); session.render();
+                session.step(movie.getFrame(frame)); drawing.afterStep(session);
                 assertFalse(session.player().getDead(), "death at " + frame);
                 var waiter = GameServices.level().getObjectManager()
                         .activeObjectsOfType(LrzPostDefeatCameraReleaseInstance.class).stream()
@@ -47,9 +48,10 @@ class TestLrzPostBossPaletteRouteCapture {
                 checked = true;
                 assertTrue(session.player().isHighPriority(), "approach crosses the placed switch");
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                drawing.checkpoint(session);
                 var before = registry.capture();
                 for (int n = 1; n <= 45; n++) {
-                    session.step(movie.getFrame(frame + n)); session.render();
+                    session.step(movie.getFrame(frame + n)); drawing.draw(session);
                 }
                 var expected = registry.capture();
                 registry.restore(before);
@@ -57,12 +59,13 @@ class TestLrzPostBossPaletteRouteCapture {
                 // External input driver history is separate from captured gameplay state.
                 previousInput.set(session, movie.getFrame(frame));
                 for (int n = 1; n <= 45; n++) {
-                    session.step(movie.getFrame(frame + n)); session.render();
+                    session.step(movie.getFrame(frame + n)); drawing.draw(session);
                 }
                 same(expected, registry.capture());
                 registry.restore(before);
                 previousInput.set(session, movie.getFrame(frame));
             }
+            drawing.checkpoint(session);
             assertTrue(checked);
             assertEquals(List.of(0, 4, 8, 12, 16, 32, 36, 40, 44, 48, 52, 56, 60),
                     writes.stream().map(frame -> frame - writes.getFirst()).toList());

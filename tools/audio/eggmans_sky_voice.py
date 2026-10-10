@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate Eggman's Sky's approved Alice bank offline through OpenRouter.
 Inputs: voice-bank.json, private environment/key, FFmpeg, NumPy and SciPy.
-Outputs: shipped WAVs and source/verification cache OUTSIDE the repository.
+Outputs: shipped Ogg/Vorbis and WAV masters/verification cache OUTSIDE the repository.
 Origin: Eggman's Sky voice-bank task, 2026-10-08. Paid requests are resumable;
 uncertain requests are never repeated automatically. This is an artistic DAC
 approximation, not YM2612 emulation. No network or credentials at game runtime.
@@ -15,6 +15,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import tempfile
 import urllib.error
 import urllib.request
 import wave
@@ -23,6 +24,7 @@ from scipy import signal
 
 RATE=24000
 FINAL_RATE=48000
+VORBIS_QUALITY=4
 SEED=20261008
 APPROVED_PROCESSING_SHA256='f3ac35e8719b484fde4174c826446f81ef3f31d3ec3e0c5033484cf16e98a7d5'
 
@@ -144,32 +146,23 @@ def publish(bank, cache, output, enum_path):
     metadata = {k: bank[k] for k in ('format_version', 'model', 'voice', 'delivery_tag',
                                    'processing', 'seed', 'room_reverb_mix')}
     metadata['origin'] = 'Original Alice performance directed through OpenRouter; no game voice cloning.'
-    metadata['output'] = {'sample_rate': FINAL_RATE, 'channels': 1, 'container_bits': 16}
+    metadata['format_version'] = 2
+    metadata['output'] = {'sample_rate': FINAL_RATE, 'channels': 1, 'decoded_bits': 16,
+                          'container': 'ogg', 'codec': 'vorbis', 'vorbis_quality': VORBIS_QUALITY,
+                          'encoder': subprocess.check_output(['ffmpeg', '-version'], text=True).splitlines()[0]}
     metadata['entries'] = []
     rows = []
     manifest = 'formatVersion: 1\ntracks: []\nsfx:\n'
-    for entry in bank['entries']:
-        ident = entry['id']
-        folder = cache/(ident+('-take-'+str(entry['take']) if 'take' in entry else ''))
-        report = json.loads((folder/'verification.json').read_text())
-        path = output/(ident+'.wav')
-        assert report.get('matches_words'), f'{ident}: word check not passed'
-        assert words(report['transcript']) == words(entry['text']), f'{ident}: stale text check'
-        assert hashlib.sha256(path.read_bytes()).hexdigest() == report['sha256'], f'{ident}: asset changed'
-        assert hashlib.sha256((folder/'raw.mp3').read_bytes()).hexdigest() == report['source_sha256'], f'{ident}: raw source changed'
-        with wave.open(str(path)) as handle:
-            assert (handle.getframerate(), handle.getnchannels(), handle.getsampwidth()) == (FINAL_RATE, 1, 2)
-            assert handle.getnframes() == report['frames']
-            pcm = np.frombuffer(handle.readframes(handle.getnframes()), '<i2').astype(np.int32)
-            assert np.max(np.abs(pcm)) < 32767 and np.any(pcm)
-        asset = 'voice-'+ident.replace('_', '-')
-        duration = (report['frames']+799)//800
-        rows.append(f'    {ident.upper()}("{asset}", {duration}, {entry["priority"]}, {entry["cooldown_ticks"]})')
-        manifest += f'  - id: {asset}\n    assetPath: audio/voice/{ident}.wav\n    gain: 1.0\n'
-        metadata['entries'].append({'id': ident, 'text': entry['text'], 'asset': asset,
-            'frames': report['frames'], 'sha256': report['sha256'], 'source_sha256': report['source_sha256'],
-            'peak_dbfs': report['peak_dbfs'], 'transcript': report['transcript'],
-            'blind_word_check': True, 'source_edit': json.loads((folder/'edit.json').read_text())})
+    # Stage the complete bank before replacing shipped files: a failed source check
+    # must not publish a mixture of old and newly encoded announcements.
+    with tempfile.TemporaryDirectory(prefix='.voice-publish-', dir=output.parent) as staging:
+        _publish_entries(bank, cache, output, Path(staging), metadata, rows)
+        for entry in bank['entries']:
+            ident = entry['id']
+            (Path(staging)/(ident+'.ogg')).replace(output/(ident+'.ogg'))
+            (output/(ident+'.wav')).unlink(missing_ok=True)
+    for entry in metadata['entries']:
+        manifest += f'  - id: {entry["asset"]}\n    assetPath: audio/voice/{entry["id"]}.ogg\n    gain: 1.0\n'
     write_json(output/'provenance.json', metadata)
     (output.parent/'audio-manifest.yaml').write_text(manifest)
     enum_path.write_text('''package eggsky.core;
@@ -192,6 +185,54 @@ public enum VoiceLine {
 }
 ''')
     print(f'Published {len(rows)} verified clips ({sum(e["frames"] for e in metadata["entries"])/FINAL_RATE:.1f}s).')
+
+
+def _publish_entries(bank, cache, output, staging, metadata, rows):
+    for entry in bank['entries']:
+        ident = entry['id']
+        folder = cache/(ident+('-take-'+str(entry['take']) if 'take' in entry else ''))
+        report = json.loads((folder/'verification.json').read_text())
+        path = folder/'processed.wav'
+        assert report.get('matches_words'), f'{ident}: word check not passed'
+        assert words(report['transcript']) == words(entry['text']), f'{ident}: stale text check'
+        assert hashlib.sha256(path.read_bytes()).hexdigest() == report['sha256'], f'{ident}: asset changed'
+        assert hashlib.sha256((folder/'raw.mp3').read_bytes()).hexdigest() == report['source_sha256'], f'{ident}: raw source changed'
+        with wave.open(str(path)) as handle:
+            assert (handle.getframerate(), handle.getnchannels(), handle.getsampwidth()) == (FINAL_RATE, 1, 2)
+            assert handle.getnframes() == report['frames']
+            pcm = np.frombuffer(handle.readframes(handle.getnframes()), '<i2').astype(np.int32)
+            assert np.max(np.abs(pcm)) < 32767 and np.any(pcm)
+        legacy = output/(ident+'.wav')
+        if legacy.exists():
+            assert legacy.read_bytes() == path.read_bytes(), f'{ident}: legacy WAV differs from preserved master'
+        encoded = staging/(ident+'.ogg')
+        subprocess.run(['ffmpeg', '-nostdin', '-hide_banner', '-loglevel', 'error',
+            '-i', str(path), '-map_metadata', '-1', '-fflags', '+bitexact', '-flags:a', '+bitexact',
+            '-c:a', 'libvorbis', '-q:a', str(VORBIS_QUALITY), str(encoded)], check=True)
+        streams = json.loads(subprocess.check_output(['ffprobe', '-v', 'error',
+            '-show_entries', 'stream=codec_name,sample_rate,channels,duration_ts,time_base',
+            '-of', 'json', str(encoded)]))['streams']
+        assert len(streams) == 1, f'{ident}: unexpected encoded streams'
+        stream = streams[0]
+        assert (stream['codec_name'], int(stream['sample_rate']), stream['channels'], stream['time_base']) == (
+            'vorbis', FINAL_RATE, 1, f'1/{FINAL_RATE}'), f'{ident}: encoded format changed'
+        assert stream['duration_ts'] == report['frames'], f'{ident}: Vorbis changed PCM duration'
+        decoded = np.frombuffer(subprocess.check_output(['ffmpeg', '-nostdin', '-v', 'error',
+            '-i', str(encoded), '-f', 's16le', 'pipe:1']), '<i2').astype(np.int32)
+        # FFmpeg can trim an initial overlap block on short clips. The Vorbis
+        # granule count owns the lease; the Java bank test verifies stb's exact PCM.
+        peak = int(np.max(np.abs(decoded)))
+        assert 0 < peak < 32767, f'{ident}: silent or clipped Vorbis decode'
+        asset = 'voice-'+ident.replace('_', '-')
+        duration = (report['frames']+799)//800
+        rows.append(f'    {ident.upper()}("{asset}", {duration}, {entry["priority"]}, {entry["cooldown_ticks"]})')
+        metadata['entries'].append({'id': ident, 'text': entry['text'], 'asset': asset,
+            'frames': stream['duration_ts'], 'sha256': hashlib.sha256(encoded.read_bytes()).hexdigest(),
+            'processed_wav_sha256': report['sha256'], 'source_sha256': report['source_sha256'],
+            'peak_dbfs': float(20*np.log10(peak/32768)), 'processed_wav_peak_dbfs': report['peak_dbfs'],
+            'transcript': report['transcript'], 'blind_word_check': True,
+            'blind_word_check_sha256': report['sha256'],
+            'source_edit': json.loads((folder/'edit.json').read_text())})
 
 
 def main():
@@ -278,7 +319,7 @@ def main():
             raw.write_bytes(blob)
             state.update(state='complete', source_sha256=hashlib.sha256(blob).hexdigest(), generation_id=generation)
             write_json(receipt, state)
-        target = args.output/(ident+'.wav')
+        target = folder/'processed.wav'
         if args.clean_takes and not (folder/'edit.json').exists():
             times_path = folder/'raw-transcription.json'
             if times_path.exists():

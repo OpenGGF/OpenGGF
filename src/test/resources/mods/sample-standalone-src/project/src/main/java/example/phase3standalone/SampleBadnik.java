@@ -1,6 +1,7 @@
 package example.phase3standalone;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.audio.GameSound;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -28,7 +29,12 @@ public final class SampleBadnik extends AbstractBadnikInstance implements Rewind
 
     @Override protected int getCollisionSizeIndex() { return 1; }
     @Override protected DestructionConfig getDestructionConfig() {
-        return new DestructionConfig(0, null, false, null, null, false);
+        // Resolve the active game's semantic sound, rather than submitting an
+        // empty native mailbox byte with an explosion payload.
+        var module = services().gameModule();
+        int sound = module == null ? 0 : module.getAudioProfile().getSoundMap()
+                .getOrDefault(GameSound.BADNIK_HIT, 0);
+        return new DestructionConfig(sound, null, false, null, null, false);
     }
     @Override public void appendRenderCommands(List<GLCommand> commands) { }
     @Override public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {

@@ -33,11 +33,12 @@ class TestLrzWideColdRouteCapture {
         var checked = new HashSet<Integer>();
         boolean sawRumble = false, sawDrop = false, sawRelease = false;
         int previousPhase = -2;
+        var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 9, 0, settings);
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
                 session.step(movie.getFrame(frame));
-                session.render();
+                drawing.afterStep(session);
                 assertFalse(session.player().getDead(), "death at input " + frame);
                 assertEquals(800, GameServices.camera().getWidth());
                 assertEquals(1, GameServices.sprites().getRegisteredSidekicks().size());
@@ -55,16 +56,17 @@ class TestLrzWideColdRouteCapture {
                 if ((!spots.contains(frame) && !phaseEdge) || frame + 45 >= movie.getFrameCount()) continue;
                 checked.add(frame);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                drawing.checkpoint(session);
                 var saved = registry.capture();
                 for (int n = 1; n <= 45; n++) {
-                    session.step(movie.getFrame(frame + n)); session.render();
+                    session.step(movie.getFrame(frame + n)); drawing.draw(session);
                 }
                 var forward = registry.capture();
                 for (int cycle = 0; cycle < 2; cycle++) {
                     registry.restore(saved);
                     session.restoreInputHistory(movie.getFrame(frame));
                     for (int n = 1; n <= 45; n++) {
-                        session.step(movie.getFrame(frame + n)); session.render();
+                        session.step(movie.getFrame(frame + n)); drawing.draw(session);
                     }
                     var replay = registry.capture();
                     assertEquals(forward.entries().keySet(), replay.entries().keySet());
@@ -78,6 +80,7 @@ class TestLrzWideColdRouteCapture {
                 registry.restore(saved);
                 session.restoreInputHistory(movie.getFrame(frame));
             }
+            drawing.checkpoint(session);
             assertTrue(checked.containsAll(spots));
             assertTrue(sawRumble && sawDrop && sawRelease, "actual rumble, collapse and bounds release");
             assertTrue(session.player().getCentreX() > 0xFC8, "past the previously impassable wall");
@@ -107,13 +110,14 @@ class TestLrzWideColdRouteCapture {
         int lastHealth = 6, hits = 0, defeatFrame = -1, loadFrame = -1;
         boolean bossSeen = false;
         long outgoingHistory = 0;
+        var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 9, 0, settings);
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
                 if (frame == 24150) GameServices.configuration().setSessionOverride(
                         com.openggf.configuration.SonicConfiguration.LIVE_REWIND_ENABLED, true);
                 session.step(movie.getFrame(frame));
-                session.render();
+                drawing.afterStep(session);
                 assertFalse(session.player().getDead(), "death at input " + frame);
                 assertFalse(session.player().isSuperSonic());
                 assertEquals(800, GameServices.camera().getWidth());
@@ -141,13 +145,14 @@ class TestLrzWideColdRouteCapture {
                 if (!spots.contains(frame)) continue;
                 checked.add(frame);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                drawing.checkpoint(session);
                 var saved = registry.capture();
-                for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); session.render(); }
+                for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); drawing.draw(session); }
                 var forward = registry.capture();
                 for (int cycle = 0; cycle < 2; cycle++) {
                     registry.restore(saved);
                     session.restoreInputHistory(movie.getFrame(frame));
-                    for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); session.render(); }
+                    for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); drawing.draw(session); }
                     var replay = registry.capture();
                     assertEquals(forward.entries().keySet(), replay.entries().keySet());
                     for (String key : forward.entries().keySet()) {
@@ -159,6 +164,7 @@ class TestLrzWideColdRouteCapture {
                 registry.restore(saved);
                 session.restoreInputHistory(movie.getFrame(frame));
             }
+            drawing.checkpoint(session);
             assertEquals(spots, checked);
             assertTrue(bossSeen);
             assertEquals(6, hits, "all six drill hits must come from the ordinary cold encounter");

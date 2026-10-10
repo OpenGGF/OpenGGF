@@ -145,12 +145,14 @@ public class SwScrlCpz extends AbstractZoneScrollHandler {
         // Note: BG2 Y is same as BG1 Y (bgY_16_16), no separate tracking needed
 
         // ==================== Step 3: Update Ripple Phase ====================
-        // Ripple phase advances (decrements) once every 8 frames. Derived from
-        // the frame counter (= -floor((frameCounter+1)/8)) instead of a running
-        // per-call decrement, so held-rewind re-derivation reproduces the exact
-        // phase for any frame instead of drifting off the update-call count. The
-        // +1 keeps the historical cadence (decrements at frames 7, 15, 23, ...).
-        ripplePhase = -((frameCounter + 1) / 8);
+        // Ripple phase advances (decrements) once every 8 frames. SwScrl_CPZ:
+        // move.b (Vint_runcount+3).w,d1 / andi.w #7,d1 / bne.s + /
+        // subq.w #1,(TempArray_LayerDef).w reads the counter's low byte, so the
+        // decrement lands on frames 8, 16, 24, ... as in EHZ. Derived from the
+        // frame counter instead of a running per-call decrement, so held-rewind
+        // re-derivation reproduces the exact phase for any frame instead of
+        // drifting off the update-call count.
+        ripplePhase = -Math.floorDiv(frameCounter, 8);
 
         // ==================== Step 4: Extract Integer Pixel Values
         // ====================

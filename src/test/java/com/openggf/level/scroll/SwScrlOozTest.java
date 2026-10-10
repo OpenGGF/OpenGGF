@@ -247,9 +247,9 @@ public class SwScrlOozTest {
 
         int[] hScroll = new int[VISIBLE_LINES];
 
-        // Frame 5: (5 + 3) & 7 = 0 -> should decrement
-        handler.update(hScroll, 0, 0, 5, 0);
-        assertEquals(initialPhase - 1, handler.getHeatHazePhaseCounter(), "Phase should decrement at frame 5");
+        // Frame 8: move.b (Vint_runcount+3).w,d1 / andi.w #7,d1 leaves 0 -> should decrement
+        handler.update(hScroll, 0, 0, 8, 0);
+        assertEquals(initialPhase - 1, handler.getHeatHazePhaseCounter(), "Phase should decrement at frame 8");
     }
 
     @Test
@@ -259,29 +259,16 @@ public class SwScrlOozTest {
 
         int[] hScroll = new int[VISIBLE_LINES];
 
-        // Frame 0: (0 + 3) & 7 = 3 -> no update
-        handler.update(hScroll, 0, 0, 0, 0);
-        assertEquals(10, handler.getHeatHazePhaseCounter(), "Phase should not change at frame 0");
+        // SwScrl_OOZ reads (Vint_runcount+3): the counter's low byte, not the count plus 3.
+        // Frames 1-7 leave a non-zero low three bits -> no update.
+        for (int frame = 1; frame <= 7; frame++) {
+            handler.update(hScroll, 0, 0, frame, 0);
+            assertEquals(10, handler.getHeatHazePhaseCounter(), "Phase should not change at frame " + frame);
+        }
 
-        // Frame 1: (1 + 3) & 7 = 4 -> no update
-        handler.update(hScroll, 0, 0, 1, 0);
-        assertEquals(10, handler.getHeatHazePhaseCounter(), "Phase should not change at frame 1");
-
-        // Frame 2: (2 + 3) & 7 = 5 -> no update
-        handler.update(hScroll, 0, 0, 2, 0);
-        assertEquals(10, handler.getHeatHazePhaseCounter(), "Phase should not change at frame 2");
-
-        // Frame 3: (3 + 3) & 7 = 6 -> no update
-        handler.update(hScroll, 0, 0, 3, 0);
-        assertEquals(10, handler.getHeatHazePhaseCounter(), "Phase should not change at frame 3");
-
-        // Frame 4: (4 + 3) & 7 = 7 -> no update
-        handler.update(hScroll, 0, 0, 4, 0);
-        assertEquals(10, handler.getHeatHazePhaseCounter(), "Phase should not change at frame 4");
-
-        // Frame 5: (5 + 3) & 7 = 0 -> UPDATE
-        handler.update(hScroll, 0, 0, 5, 0);
-        assertEquals(9, handler.getHeatHazePhaseCounter(), "Phase should decrement at frame 5");
+        // Frame 8: low three bits are zero -> UPDATE
+        handler.update(hScroll, 0, 0, 8, 0);
+        assertEquals(9, handler.getHeatHazePhaseCounter(), "Phase should decrement at frame 8");
     }
 
     @Test
@@ -291,12 +278,12 @@ public class SwScrlOozTest {
 
         int[] hScroll = new int[VISIBLE_LINES];
 
-        // Process 24 frames (should see 3 decrements at frames 5, 13, 21)
+        // Process 24 frames (should see 3 decrements at frames 0, 8, 16)
         for (int frame = 0; frame < 24; frame++) {
             handler.update(hScroll, 0, 0, frame, 0);
         }
 
-        // Expected: 100 - 3 = 97 (updates at frames 5, 13, 21)
+        // Expected: 100 - 3 = 97 (updates at frames 0, 8, 16)
         assertEquals(97, handler.getHeatHazePhaseCounter(), "Phase should decrement 3 times in 24 frames");
     }
 

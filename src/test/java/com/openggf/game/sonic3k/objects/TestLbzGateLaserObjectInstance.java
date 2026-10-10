@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
@@ -24,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class TestLbzGateLaserObjectInstance {
 
@@ -120,23 +122,30 @@ class TestLbzGateLaserObjectInstance {
         assertEquals(0x0100, beam.getY());
         assertEquals(0x0110, beam.targetYForTesting());
         assertEquals(4, beam.renderFlagsForTesting());
+        beam.setServices(services);
 
-        beam.update(0, null);
+        // loc_2941C: move.b (Level_frame_counter+1).w,d0 / andi.b #1,d0 / bne.s / bchg #1.
+        // The +1 is the word's low byte, so only Level_frame_counter's own parity matters;
+        // the V_int_run_count passed to update() is deliberately out of phase with it.
+        when(services.levelManager.getFrameCounter()).thenReturn(0x0211);
+        beam.update(1, null);
         assertEquals(0x0104, beam.getY());
         assertEquals(4, beam.renderFlagsForTesting(),
-                "ROM toggles render_flags bit 1 only when (Level_frame_counter+1)&1 == 0");
+                "an odd Level_frame_counter low byte leaves render_flags alone");
 
-        beam.update(1, null);
-        assertEquals(0x0108, beam.getY());
-        assertEquals(6, beam.renderFlagsForTesting());
-
+        when(services.levelManager.getFrameCounter()).thenReturn(0x0212);
         beam.update(2, null);
+        assertEquals(0x0108, beam.getY());
+        assertEquals(6, beam.renderFlagsForTesting(),
+                "an even Level_frame_counter low byte flips render_flags bit 1");
+
         beam.update(3, null);
+        beam.update(4, null);
         assertEquals(0x0110, beam.getY());
         assertEquals(0x0200, beam.getX(),
                 "cmp.w compares the old y_pos, so reaching target y does not warp until the next update");
 
-        beam.update(4, null);
+        beam.update(5, null);
         assertEquals(0x7FF0, beam.getX());
         assertEquals(0, beam.getCollisionFlags());
     }
@@ -150,6 +159,7 @@ class TestLbzGateLaserObjectInstance {
 
     private static final class RecordingServices extends StubObjectServices {
         private final ObjectManager objectManager;
+        private final LevelManager levelManager = mock(LevelManager.class);
         private final List<AbstractObjectInstance> children = new ArrayList<>();
         private final List<Integer> playedSfx = new ArrayList<>();
 
@@ -164,6 +174,11 @@ class TestLbzGateLaserObjectInstance {
         @Override
         public ObjectManager objectManager() {
             return objectManager;
+        }
+
+        @Override
+        public LevelManager levelManager() {
+            return levelManager;
         }
 
         @Override

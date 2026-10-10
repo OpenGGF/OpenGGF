@@ -30,12 +30,14 @@ class TestMhzWideColdRouteCapture {
                 17000, 18000, 18900, 19500, 20000, 21000, 21450, 22000, 22350);
         var checked = new HashSet<String>();
         int reload = -1;
+        // Preserve full drawing: MHZ replay controls cannot isolate a drawing gap.
+        var drawing = new RouteFrameDrawing(true);
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 7, 0, settings);
             assertEquals(800, GameServices.camera().getWidth());
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
                 session.step(movie.getFrame(frame));
-                session.render();
+                drawing.afterStep(session);
                 assertFalse(session.player().getDead(), "cold wide death at " + frame);
                 assertRoster("sonic", false);
                 var level = GameServices.level();
@@ -74,10 +76,11 @@ class TestMhzWideColdRouteCapture {
                 if (frame < 25397) horizon = Math.min(horizon, 25396 - frame);
                 assertTrue(horizon > 0, "independent replay interval for " + pending);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                drawing.checkpoint(session);
                 var saved = registry.capture();
                 for (int n = 1; n <= horizon; n++) {
                     session.step(movie.getFrame(frame + n));
-                    session.render();
+                    drawing.draw(session);
                 }
                 var expected = registry.capture();
                 for (int cycle = 0; cycle < 2; cycle++) {
@@ -86,7 +89,7 @@ class TestMhzWideColdRouteCapture {
                     session.restoreInputHistory(movie.getFrame(frame));
                     for (int n = 1; n <= horizon; n++) {
                         session.step(movie.getFrame(frame + n));
-                        session.render();
+                        drawing.draw(session);
                     }
                     same(expected, registry.capture(), pending + " replay " + cycle);
                 }
@@ -94,6 +97,7 @@ class TestMhzWideColdRouteCapture {
                 session.restoreInputHistory(movie.getFrame(frame));
                 checked.addAll(pending);
             }
+            drawing.checkpoint(session);
             var required = new HashSet<>(Set.of("admission", "chase-hit", "last-hit", "defeat",
                     "capsule-results", "ship", "ship-carry", "fbz-loaded", "weather-fade"));
             spots.forEach(frame -> required.add("wide-route-" + frame));

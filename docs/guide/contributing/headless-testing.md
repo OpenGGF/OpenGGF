@@ -65,8 +65,36 @@ frame-driving stubs once rather than restubbing identical values on each tick.
 Rendered route checks that discard pixels can use
 `GameplayCaptureSession.renderFrame()`. It performs the same drawing, overlays,
 effects and GPU completion as `render()` without framebuffer readback. Keep
-`render()` for screenshots and pixel comparisons. Omitting drawing altogether
-would miss render-state progression and is not equivalent validation.
+`render()` for screenshots and pixel comparisons.
+
+Cold-route and checkpoint checks for SOZ, LRZ, SSZ, DEZ and the frozen
+FBZ routes can omit scene drawing during traversal between checkpoints. Every
+gameplay tick still executes; queued render-thread work is serviced every tick
+so prepared loads can complete. Snapshot checkpoints, complete forward/replay
+branches and final playable destinations draw normally. The SSZ bridge checks
+also draw their arrival, death/reload and playable checkpoint boundaries.
+
+The two MHZ cold-route classes retain per-tick drawing and omit discarded pixel
+readback. Their restored prefixes differ in palette state even with full drawing;
+independent cold snapshots also contain references scoped to each session. These
+controls cannot isolate a drawing gap, so MHZ drawing remains unchanged.
+
+`TestRouteFrameDrawing` and `TestSozColdRouteFrameDrawing` compare every registered
+world key/field and exact checkpoint pixels after drawing gaps. The previous
+framebuffer is first cleared and checked as uniform to reject stale-image success.
+Their bounded prefixes cover supported characters, teams, 320/800 widths and S1/S2
+donors; they do not certify every full route, viewport/donor combination, load,
+late event or intermediate rendered frame. Existing route assertions and inherited
+coverage gaps remain. Drawing gaps reduce every-frame presentation coverage.
+
+Add `-Dopenggf.tests.drawEveryFrame=true` to the focused Maven command for full
+traversal drawing in the adopted tests. The existing
+`-Dopenggf.soz.drawEveryFrame=true` remains an SOZ-only alias. Fully drawn mode
+omits discarded image readback; keep `render()` for screenshots and pixel
+comparisons. Capture tools and pixel tests retain their drawing/readback behavior.
+Use full drawing for investigations that require every-frame rendering evidence.
+The two frozen FBZ capture classes retain the separate `-Pfbz-routes` lane;
+ordinary selection still excludes their `fbz-route` tag.
 
 ## Manual setup (legacy)
 

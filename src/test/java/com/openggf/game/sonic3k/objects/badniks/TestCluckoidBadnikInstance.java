@@ -451,7 +451,7 @@ class TestCluckoidBadnikInstance {
     }
 
     @Test
-    void breathDebrisCadenceUsesRomVintRunCountPlusThreePhase() {
+    void breathDebrisCadenceReadsVintRunCountLowByte() {
         putCluckoidOnScreen();
         List<Integer> spawnFrames = new ArrayList<>();
         int[] currentFrame = {0};
@@ -479,9 +479,9 @@ class TestCluckoidBadnikInstance {
             cluckoid.update(frame, player);
         }
 
-        assertEquals(List.of(0x55), spawnFrames,
-                "sub_8E2D4 gates CreateChild6_Simple on ((V_int_run_count+3)&7)==0, "
-                        + "so the first active breath particle appears at frame $55 rather than frame $58");
+        assertEquals(List.of(0x58), spawnFrames,
+                "sub_8E2D4 reads move.b (V_int_run_count+3).w, the counter's low byte, and spawns when "
+                        + "andi.b #7 leaves zero, so the first active breath particle appears at frame $58");
     }
 
     @Test
