@@ -42,9 +42,6 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_UP;
 public final class Course implements GameplayFrameController, RewindSnapshottable<Integer> {
     enum Phase { IDLE, ENTRY, COUNTDOWN, RUN, STAND, STAND_CLEAR, BOSS, DYING, TALLY, LEAVING, FAULT }
 
-    /** Rows an attract demo plays before handing back to the title (two minutes). */
-
-    static final int DEMO_ROWS = 7200;
     /** Rows each count of the "3, 2, 1" start holds (a legacy rail's world-held countdown). */
     static final int COUNTDOWN_BEAT = 40;
     /** Native rows each count of a forward rail's countdown spans (its 180 charge rows in three). */
@@ -150,10 +147,10 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
         String typed = course.typedText();
         boolean backspace = course.keyPressed(GLFW_KEY_BACKSPACE);
         if (intent.demo()) {
-            // An attract demo ends on any key (or after DEMO_ROWS) and records nothing.
+            // An attract demo ends on any key (or after its demoRows, 0 for none) and records nothing.
             if (phase == Phase.LEAVING) return false;
             if (!typed.isEmpty() || backspace || course.keyPressed(GLFW_KEY_ENTER) || course.keyPressed(GLFW_KEY_ESCAPE)
-                    || rows - demoStartRow > DEMO_ROWS) {
+                    || (intent.demoRows() > 0 && rows - demoStartRow > intent.demoRows())) {
                 enter(Phase.LEAVING);
                 titleRequest = true;
                 return false;
