@@ -281,6 +281,7 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
     private void enter(Phase next) {
         phase = next;
         phaseRows = 0;
+        hud.ready(next == Phase.RUN);
     }
 
     private boolean entry(CourseControl course) {

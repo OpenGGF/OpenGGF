@@ -17,7 +17,6 @@ final class Stage {
     static final int FLOOR_ROW = 196;
     private static final int HEADROOM = 120;
     private static final int MAX_RISE = 24;
-    private static final int SLACK = 160;
     private static final int CANDIDATES = 5;
 
     private final SceneBackdrop backdrop;
@@ -43,7 +42,7 @@ final class Stage {
         try {
             if (rom == null || !rom.hasZonePictures(zone, act)) return new Stage(null, null, null, 0, 0, width, 0);
             SceneBackdrop backdrop = rom.zoneBackdrop(zone, act);
-            int slack = SLACK;
+            int slack = width / 2;
             var stages = rom.levelStages(zone, act, width + slack, HEADROOM, MAX_RISE);
             if (stages.isEmpty()) {
                 slack = 0;

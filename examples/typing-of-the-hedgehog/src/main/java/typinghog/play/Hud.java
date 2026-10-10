@@ -29,6 +29,7 @@ public final class Hud {
     private final KeyboardPack keyboard = new KeyboardPack();
     private final PlateFont font;
     private String banner = "";
+    private boolean ready;
     private int bannerColour;
     private int bannerRows;
     private int flashColour;
@@ -49,6 +50,9 @@ public final class Hud {
         bannerColour = colour;
         bannerRows = 90;
     }
+
+    /** Travel cue lasts for the RUN phase; fights and warnings clear it immediately. */
+    void ready(boolean visible) { ready = visible; }
 
     void flash(int colour, int rows) {
         flashColour = colour;
@@ -98,7 +102,7 @@ public final class Hud {
         presented++;
         var camera = GameServices.camera();
         int width = camera.getWidth();
-        int height = 224;
+        int height = camera.getHeight();
         PixelCanvas canvas = new LevelOverlayCanvas(GameServices.graphics(), width, height);
         int cameraX = camera.getX(), cameraY = camera.getY();
         Encounter encounter = course.encounter();
@@ -112,11 +116,11 @@ public final class Hud {
         drawPanel(canvas, course, width);
         if (bannerRows > 0) {
             bannerRows--;
-            int w = font.width(banner) * 2;
-            int x = (width - w) / 2;
             int y = 72 - Math.max(0, bannerRows - 80) * 3;
-            canvas.fill(0, y - 4, width, PlateFont.HEIGHT * 2 + 8, 0x90000000);
-            drawBig(canvas, banner, x, y, bannerColour);
+            drawBanner(canvas, banner, y, bannerColour);
+        }
+        if (ready) {
+            drawBanner(canvas, "GET READY", 48, (presented / 24) % 2 == 0 ? GOLD : WHITE);
         }
         if (course.phase() == Course.Phase.TALLY && tally != null) drawTally(canvas, course, width, course.phaseRows());
         drawCountdown(canvas, course, width);
@@ -130,6 +134,14 @@ public final class Hud {
             canvas.fill(0, 0, width, height, (flashColour & 0x00FFFFFF) | ((flashRows * 18) << 24));
         }
         if (shakeRows > 0) shakeRows--;
+    }
+
+    private void drawBanner(PixelCanvas canvas, String text, int y, int colour) {
+        int scale = font.width(text) * 2 <= canvas.width() - 16 ? 2 : 1;
+        int width = font.width(text) * scale;
+        // The travel cue sits beneath the score panel, above Sonic and the terrain.
+        canvas.fill(0, y - 4, canvas.width(), PlateFont.HEIGHT * scale + 8, 0x90000000);
+        drawScaled(canvas, text, (canvas.width() - width) / 2, y, scale, colour);
     }
 
     private void drawPlates(PixelCanvas canvas, Course course, Encounter encounter, int cameraX, int cameraY) {
@@ -200,13 +212,13 @@ public final class Hud {
             String count = Integer.toString(3 - beat);
             int scale = into < 6 ? 8 - into / 2 : 6;
             int w = font.width(count) * scale, h = PlateFont.HEIGHT * scale;
-            drawScaled(canvas, count, (width - w) / 2, (224 - h) / 2 - 16, scale, into < 6 ? WHITE : GOLD);
+            drawScaled(canvas, count, (width - w) / 2, (canvas.height() - h) / 2 - 16, scale, into < 6 ? WHITE : GOLD);
         } else if (startRows > 0) {
             startRows--;
             int scale = 4;
             int w = font.width("START!") * scale, h = PlateFont.HEIGHT * scale;
             if ((startRows / 4) % 2 == 0 || startRows > 24) {
-                drawScaled(canvas, "START!", (width - w) / 2, (224 - h) / 2 - 16, scale, GOLD);
+                drawScaled(canvas, "START!", (width - w) / 2, (canvas.height() - h) / 2 - 16, scale, GOLD);
             }
         }
     }
@@ -224,7 +236,7 @@ public final class Hud {
         boolean punctuation = course.intent().punctuation();
         int[] targets = boss.openTargets();
         if (!boss.question().isEmpty()) {
-            // Below the score panel, wrapped to the screen: trivia runs longer than 320 pixels.
+            // Below the score panel, wrapped to the screen: trivia can run longer than the viewport.
             java.util.List<String> lines = wrap(boss.question(), width - 32);
             int lineHeight = PlateFont.HEIGHT + 3;
             int top = 46;
