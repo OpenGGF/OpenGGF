@@ -5,6 +5,10 @@ description: Turn a broad OpenGGF feature blueprint into coordinated delivery wh
 
 # Blueprint feature delivery
 
+Use T3 Orchestration when available, following its live instructions for
+provider/model discovery, delegation, child-task lifecycle, and result delivery.
+This skill supplies the project planning, ownership, and integration guidance.
+
 Identify the requested outcome, acceptance criteria, existing owners, and the
 few decisions that block implementation. Reuse an adequate supplied design or
 plan. For a small change, work directly; this skill does not require a team or
