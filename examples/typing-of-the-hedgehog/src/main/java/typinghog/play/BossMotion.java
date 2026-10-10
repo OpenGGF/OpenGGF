@@ -90,7 +90,6 @@ final class BossMotion {
         } else {
             x = homeX;
         }
-        if (attack == Attack.WALK) x = course.anchorX() + side * 24;
         walkX = x << 8;
         walkY = homeY << 8;
         y = homeY;
@@ -98,9 +97,11 @@ final class BossMotion {
         sensorY = course.anchorY();
         punchX = x - 12 * side;
         punchY = y + 8;
-        // loc_2F484 reverses the drill car at arena bounds. Use the visible arena's
-        // edges (32px sprite margin) in Boss Rush instead of the stock world addresses.
-        chargeEndX = GameServices.camera().getX() + (side > 0 ? 32 : GameServices.camera().getWidth() - 32);
+        // loc_2F484 reverses the drill car at arena bounds. The controlled stage's
+        // turn is relative to Sonic, instead of the stock world addresses.
+        // Typing-stage spacing: the car turns before its body reaches the stand. The
+        // loc_2F098 drill remains 54px ahead; its hazard reaches across the remaining gap.
+        chargeEndX = course.anchorX() + side * 80;
     }
 
     /** Advance just the ROM motion, after the player has had time to type. */
@@ -166,7 +167,9 @@ final class BossMotion {
                 // relocates to the sensor lock then drops at $800 for $20 rows.
                 if (tick <= 128) y = homeY - tick * 2;
                 else {
-                    x = sensorX;
+                    // The sensor/hazard locks onto Sonic, while the body lands on its own
+                    // side of the typing stage. Keep loc_3D784/7B8's rise/drop velocities.
+                    x = homeX;
                     y = homeY - 256 + (tick - 128) * 8;
                 }
                 if (tick >= 160) { impact = true; return true; }
@@ -184,7 +187,7 @@ final class BossMotion {
             case DRILL -> {
                 // Obj56_VehicleMain_Sub2_2 / Sub4: x_vel=-$200, reversing at arena edge.
                 x -= side * 2;
-                if (!impact && (x - 54 * side - course.anchorX()) * side <= 0) impact = true;
+                if (!impact && (x - 54 * side - course.anchorX()) * side <= 28) impact = true;
                 return (x - chargeEndX) * side <= 0;
             }
         }

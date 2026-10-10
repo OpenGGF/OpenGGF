@@ -20,7 +20,7 @@ public final class Boss {
     private int dodgeId = -1;
     private int penalty;
     static final int ENTRY_ROWS = 90;
-    static final int RECOVER_ROWS = 70;
+    static final int RECOVER_ROWS = 12;
     /** Rows he explodes in place once beaten before fleeing. */
     static final int EXPLODE_ROWS = 120;
     static final int FLEE_ROWS = 80;
@@ -159,6 +159,9 @@ public final class Boss {
                     y = motion.y;
                     if (motion.impact && !attackHit) {
                         attackHit = true;
+                        if (motion.attack == BossMotion.Attack.SENSOR_SLAM || motion.attack == BossMotion.Attack.WALK) {
+                            encounter.effects().blast(course, motion.sensorX, motion.sensorY);
+                        }
                         if (!dodged) { course.hitSonic(); laughRows = LAUGH_ROWS; }
                     }
                     if (done) {
@@ -182,7 +185,7 @@ public final class Boss {
                         // EggmanCylinder_Top/Bottom retract at $20000 (2px per row).
                         motion.cylinderTravel = Math.max(0, motion.cylinderTravel - (2 << 8));
                     }
-                    boolean positioned = true;
+                    boolean positioned = motion.kind != BossMotion.Kind.FINAL_ZONE || motion.cylinderTravel == 0;
                     if (motion.kind == BossMotion.Kind.EMERALD_HILL) {
                         facingRight = side > 0;
                         x += Integer.signum(motion.homeX - x) * Math.min(2, Math.abs(motion.homeX - x));
@@ -495,8 +498,11 @@ public final class Boss {
                 String text = pool.isEmpty() ? "You will never win, hedgehog!"
                         : pool.get(course.random().nextInt(pool.size())).text();
                 course.say(VoiceLine.taunt(text));
-                targetId = field.add(Prompt.of(text, intent.capitals(), intent.punctuation()), baseRows * 2);
-                windowRows = baseRows * 2;
+                // Speak/show the entire taunt, echo a short clause. A 45–60 WPM typist
+                // should spend the fight attacking, rather than retyping twelve speeches.
+                question = text;
+                targetId = field.add(Prompt.of(echo(text), intent.capitals(), intent.punctuation()), baseRows);
+                windowRows = baseRows;
             }
             case QUIZ -> {
                 var questions = lexicon.trivia().stream()
@@ -524,10 +530,25 @@ public final class Boss {
 
     void onKey(Course course, TypingField.Event event) { }
 
+    /** Prefer a complete short clause; otherwise quote at most 20 characters at a word boundary. */
+    private static String echo(String taunt) {
+        for (String clause : taunt.split("[!,?.]")) {
+            String text = clause.strip();
+            if (text.length() >= 8 && text.length() <= 20) return text;
+        }
+        String text = taunt.substring(0, Math.min(20, taunt.length()));
+        if (text.length() < taunt.length() && taunt.charAt(text.length()) != ' ') {
+            int space = text.lastIndexOf(' ');
+            if (space > 0) text = text.substring(0, space);
+        }
+        return text.strip();
+    }
+
     void onComplete(Course course, Encounter encounter, int target) {
         if (target == dodgeId) {
             dodgeId = -1;
             dodged = true;
+            windowRows = 0; // Successful typing releases the telegraph on the next combat row.
             return;
         }
         if (phase != Phase.OPEN || penalty > 0) return;

@@ -114,14 +114,7 @@ public final class Hud {
         }
         drawBackpack(canvas, course, cameraX, cameraY);
         drawPanel(canvas, course, width);
-        if (bannerRows > 0) {
-            bannerRows--;
-            int y = 72 - Math.max(0, bannerRows - 80) * 3;
-            drawBanner(canvas, banner, y, bannerColour);
-        }
-        if (ready) {
-            drawBanner(canvas, "GET READY", 48, (presented / 24) % 2 == 0 ? GOLD : WHITE);
-        }
+        drawCues(canvas, course.countdownBeat() != null);
         if (course.phase() == Course.Phase.TALLY && tally != null) drawTally(canvas, course, width, course.phaseRows());
         drawCountdown(canvas, course, width);
         if (course.paused()) drawPause(canvas, width, height);
@@ -134,6 +127,18 @@ public final class Hud {
             canvas.fill(0, 0, width, height, (flashColour & 0x00FFFFFF) | ((flashRows * 18) << 24));
         }
         if (shakeRows > 0) shakeRows--;
+    }
+
+    /** Countdown/start, transient banner, then travel cue: one owner per presented row. */
+    private void drawCues(PixelCanvas canvas, boolean countdown) {
+        if (countdown || startRows > 0) return;
+        if (bannerRows > 0) {
+            bannerRows--;
+            int y = 72 - Math.max(0, bannerRows - 80) * 3;
+            drawBanner(canvas, banner, y, bannerColour);
+        } else if (ready) {
+            drawBanner(canvas, "GET READY", 48, (presented / 24) % 2 == 0 ? GOLD : WHITE);
+        }
     }
 
     private void drawBanner(PixelCanvas canvas, String text, int y, int colour) {

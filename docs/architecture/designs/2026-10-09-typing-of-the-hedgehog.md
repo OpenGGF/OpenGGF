@@ -779,3 +779,182 @@ difficulties, donor/character combinations or native level rewind matrices. The 
 width requirement and 400px rails remain the rails lane's integration responsibility. No
 engine production code, rail files/builder/gate, `Course` methods, `Encounter`/`Effects`, hub
 screens or HUD banners changed; only `Hud.drawBoss` changed for prompt anchors/hit pips.
+
+
+## 400-pixel course fixes (2026-10-10)
+
+Fixes lane: `feature/ai-typing-hedgehog-fixes`, based on `c550aebf4` after the rails,
+bosses and polish lanes. The requested scope is the four shipped courses, their typing
+bosses, and in-level banners. Engine runtime, native stock play, rail programs, demo
+keystroke speed, ROM motion velocities and hit counts remain unchanged.
+
+### Causes and changes
+
+- **Arena strip.** The dark noise wing is `ArenaMaskState.fromBounds`, deliberately hiding
+  space beyond `Camera_Max_X + 320` in stock widescreen play. The course froze the native
+  arena camera and its walls, leaving 44–80 pixels masked. This is not missing level art
+  or a broken stock widescreen clamp. A typing boss now owns a viewport-wide interval:
+  clamp the camera's right edge to both the decoded level right edge and the pre-existing
+  arena right edge, then widen the mod's left wall. At 400px, GHZ moves from 10592 to 10512,
+  EHZ from 10524 to 10480, and DEZ from 548 to 468. FZ stays at 9005. The right boundary is
+  a native camera-origin word plus 320, not a decoded map width or a player coordinate.
+  Boss entry, combat, explosion, departure and tally retain that framing; course restores
+  retain the captured native camera/walls. Boss Rush retires native boss families too, and holds the native world immediately.
+  It stages at act start: running its newly narrowed walls through native events would
+  prematurely preload end-of-act PLCs while startup decoding is active. Forward arenas
+  retain the two native unload rows. The synthetic GHZ1 Boss Rush regression caught this.
+  FZ's black instrument panels are present in its ROM scenery; they are not a void strip.
+- **Banner collision.** `Hud.draw` drew its transient banner, the persistent RUN ready cue,
+  and countdown/start independently. `drawCues` now gives each presented row one owner:
+  countdown/START!, then the current transient banner, then GET READY. The last banner
+  row still belongs to that banner; GET READY starts on the following row.
+- **Body spacing.** DEZ WALK began just 24px from Sonic, consumed the sourced 24px stride,
+  and left the robot over the stand through the strike window. SENSOR_SLAM also relocated
+  the body to the stand and left it there. Walking now starts at the separated home pose;
+  the landing sensor and impact blast reach Sonic while the body lands on its own side.
+  The native stride headers/deltas, rise/drop velocities, punch flight and bomb gravity/fuse
+  are unchanged. EHZ formerly crossed Sonic's stand, then paused there during its return;
+  it now reverses with its body 80px from the stand, with the drill 54px ahead and a 28px
+  hazard reach. These distances/reach are explicit typing-stage design values. Its sourced
+  2px motion and drill offset remain. Actual visible ROM mapping-piece bounds are checked
+  against Sonic's standing box with another 10px horizontal clearance in all four fights.
+- **Fight time.** A typed dodge now releases its telegraph on the next combat row rather
+  than waiting all 240 rows. The 240/difficulty allowance remains for a player who has not
+  completed it. Recovery's minimum is 12 rows instead of 70; Sonic must still finish his
+  return and EHZ must return at 2px/row. FZ must finish its entire cylinder retraction at the
+  sourced 2px/row before the next telegraph. Talk-back still speaks and captions the whole
+  original line; the typed echo is a complete short clause when available, otherwise a
+  whole-word quotation of at most 20 characters. Its strike allowance is 480/difficulty,
+  without forcing the typist to retype twelve long speeches. Phrase/trivia prompts, eight
+  hits (GHZ/FZ/EHZ), twelve hits (DEZ), and the 120+80-row defeat sequence are preserved.
+
+### Measurements and rejected approaches
+
+Boss duration means production controller rows from the first BOSS entry row to TALLY,
+including typing, strikes, recovery and the 200-row defeat sequence. It excludes the rail,
+regular fights, the tally and hub transition. Match the lead captures with ARCADE, seed 5,
+NORMAL, no capitals/punctuation, standard dictionary, No-Fail, demoRows=0 and the unchanged
+9–15-row keystroke interval. Measure executed rows at 60Hz; do not use a strided movie's
+wall-clock length as a proxy.
+
+Before at `c550aebf4`: GHZ 4,784 rows (79.73s), FZ 6,576 (109.60s), EHZ 8,753 (145.88s),
+DEZ 14,238 (237.30s). DEZ spends 6,472 rows in OPEN, 4,080 in TELEGRAPH and 1,120 in
+RECOVER; shortening idle alone cannot satisfy 120s while retaining twelve full speeches.
+A separate unchanged BOSS_RUSH seed-11 control gives GHZ 4,755, FZ 6,580, EHZ 8,685 and
+DEZ 13,992 rows (seven original boss checks passed, zero skips).
+
+After: GHZ 2,784 rows (46.40s), FZ 3,569 (59.48s), EHZ 2,850 (47.50s), DEZ 6,007
+(100.12s). Each eight-hit fight is below 5,400 rows; DEZ is below 7,200. The FZ measurement
+includes full native-speed cylinder retraction. The separate seed-11 BOSS_RUSH control
+gives GHZ 2,748, FZ 3,522, EHZ 3,337 and DEZ 5,780 rows. All measured ARCADE boss rows
+have zero outside-arena, visible-mask or standing-body-clearance violations.
+
+Rejected:
+
+- Changing the engine's stock arena masking or enlarging native stock player walls. The
+  mask is deliberate stock presentation, and the mod owns the retired boss's new stage.
+- Merely enlarging the mod's right boundary. A first trial removed the settled strip but
+  frame 342 of DEZ still showed the old faded wing. Letting 24 native rows run to settle
+  the 23-row fade was also rejected: it unnecessarily changes the held-world contract and
+  still exposes the strip during entry. Moving left inside the old right edge projects the
+  old wing out of the view immediately; the two forward-arena unload rows remain sufficient.
+- Shortening hit counts, speeding the demo typist, accelerating sourced motion, replacing
+  the GHZ pendulum radius or skipping FZ cylinder retraction. These change the wrong owner.
+- Detached EHZ drill flight each round. `Obj56_Spike` / `loc_2F88A` does supply 3px/row
+  detached motion, but `loc_2F8AA` gates detachment on one remaining hit. Using it every
+  typing round is unnecessary: the corrected linked drill already reaches the stand.
+  Direct ROM mapping reads (`Map_SEgg` at S1 $1A1E4, frames 5/9; `Obj56_MapUnc_2FA58`
+  at S2 $2FA58, car/wheel frames 0/4/6) show 11px of space after the 80px car turn, and
+  11px at FZ's native 40px pillar/stand separation. The initial extra 12px test margin
+  exceeded that by one pixel on 1,584 EHZ and 24 FZ rows; the final 10px margin checks
+  visible breathing room while preserving those native mapping offsets.
+- Keeping a robot/cockpit over Sonic except at a hit moment. The standing box stays clear;
+  explicit hazards own incoming damage, and Sonic's homing contact remains intentional.
+
+`TestTypingHedgehogBosses` now measures all four complete seed-5 ARCADE fights, checks the
+camera right edge against decoded art and current arena bounds on every boss/tally row,
+checks the renderer's actual mask (including first entry and tally), and checks actual
+visible body mapping pieces. `TestTypingHedgehogHud` checks cue exclusivity through the
+countdown, all 50 START! rows and all 90 rows of GO!, FIGHT, WARNING!, WAVE CLEAR! and
+TOO SLOW!. The original untyped-dodge and wrong-pillar checks remain. Baseline negative
+controls fail on arena/body/duration; the HUD control lacks the corrected single-owner draw
+path. Echo tests cover every original taunt and require whole-word quotations.
+
+The change-based plan against `c550aebf4` selects 3,098 ordinary classes and guards because
+example paths are unclassified. Proportionate validation applies: all production edits are
+inside this example mod, with no engine/public API/physics/build-policy changes; the requested
+`TestTypingHedgehog*` set, packaged-course runs and actual rendering cover its consumers.
+Tool preflight passes with `LUA_BIN=/usr/bin/lua5.4`; the default `lua` is a different version.
+No full ordinary-suite pass is claimed.
+
+The first complete mod run executed 86 tests with zero skips: the new boss/HUD checks
+passed, but two rail validators counted the intentional RUN→BOSS camera hand-off as rail
+backtracking, and the synthetic GHZ1 Boss Rush check hit active-decoder PLC replacement.
+Forward-run pace/high-water checks now apply to rows that remain RUN; endpoint, native
+death/hurt/kill, stock-arena, art and all three long-stand/retry comparisons remain intact.
+Boss Rush now holds immediately as described above, without changing ARCADE timing.
+
+### Final verification and films
+
+Completed in the fixes worktree on `c550aebf4` plus the implementation diff. In the
+portable commands below, `REPO_ROOT` is the absolute main checkout containing the existing
+ROMs and `TYPING_CAPTURE_ROOT` is the external task capture directory:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestTypingHedgehog*' \
+  -Dsonic1.rom.path=$REPO_ROOT/s1.gen \
+  -Dsonic2.rom.path=$REPO_ROOT/s2.gen \
+  -Ds3k.rom.path=$REPO_ROOT/s3k.gen test
+python3 tools/testing/maven_queue.py -Dmse=off compile
+python3 examples/build_example.py typing-of-the-hedgehog --skip-engine
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base c550aebf4 --preflight
+```
+
+The final complete mod run: **86 tests, zero failures, errors or skips**, Maven exit 0,
+45.382s execution (queue waiting excluded). This includes the four complete ARCADE fights,
+the original BOSS_RUSH and synthetic-course checks, and QUICK/HOLD/RETRY rails. The matched
+FZ/EHZ clearance diagnostic also passed two tests, zero skips. Java 21 compilation and jar
+packaging pass; the validator retains its 16 existing NON_API_ENGINE_REFERENCE warnings,
+zero errors. No engine production files changed. Documentation syntax/links and
+`git diff --check` pass. No engine full-suite or guard result is claimed for this lane.
+
+Copied the capture script to `$TYPING_CAPTURE_ROOT/fixes-course-capture.sh`
+with WT set to this fixes worktree. Final movies use the rebuilt final jar, `EVERY=2 FPS=60`
+(effective **30fps**), 400×224 logical / 1200×672 encoded, ARCADE seed 5:
+
+```text
+s1 ghz 3 0 2 ARCADE 16000 fixes-s1-ghz3 5
+s1 6 1 6 0 ARCADE 4800 fixes-s1-fz 5
+s2 ehz 2 0 1 ARCADE 16000 fixes-s2-ehz2 5
+s2 dez 1 10 0 ARCADE 7200 fixes-s2-dez 5
+```
+
+Read every state CSV before image review. LEVEL→TITLE_SCREEN hand-back frames are GHZ
+11,138, FZ 4,397, EHZ 12,782 and DEZ 6,768. Native death rows before each hand-back: zero.
+Boss entry frames are GHZ 7,934, FZ 408, EHZ 9,512 and DEZ 341. Derive the boss-sheet onset
+from the matched headless duration plus 420 tally rows, then select captured frames at or
+after that onset: rounding an odd onset down incorrectly includes the last stock RUN frame.
+`ffprobe` verifies every movie at 30/1 fps. Movies, native PNGs and `state.csv` are under:
+
+- `$TYPING_CAPTURE_ROOT/captures/fixes-s1-ghz3/`
+- `$TYPING_CAPTURE_ROOT/captures/fixes-s1-fz/`
+- `$TYPING_CAPTURE_ROOT/captures/fixes-s2-ehz2/`
+- `$TYPING_CAPTURE_ROOT/captures/fixes-s2-dez/`
+
+Generated FFmpeg `tile=6x4` sheets under `$TYPING_CAPTURE_ROOT/sheets/`:
+`fixes-s1-ghz3.png`, `fixes-s1-fz.png`, `fixes-s2-ehz2.png`, `fixes-s2-dez.png`, plus
+`-launch.png` and `-boss.png` for each. Inspected **all twelve** sheets and raw DEZ entry
+frames 342, 352 and 368. The typing-boss entry/combat/tally fills the view, the robot stays
+on its own side, and START!/travel/fight/result cues are exclusive. FZ's dark instrument
+panels are recognizable ROM scenery. The stock widescreen mask remains during the native
+RUN approach (e.g. DEZ 336), before the typing boss takes the camera at 341; it is absent
+from that boss's first captured ENTRY frame, 342, and the entire fight/tally. This lane
+preserves that stock approach policy rather than claiming to remove all native masking.
+
+Limits: timing/visual certification is Sonic-only, NORMAL, seed-5 ARCADE with No-Fail and
+the standard dictionary; seed-11 BOSS_RUSH supplies another controller control. Other seeds,
+difficulties, characters/teams and donor combinations are not certified. These are adapted
+ROM-art typing stages, not native boss AI/collision parity. The four shipped forward courses
+remain S1/S2; S3K has no shipped forward course. Rendering checks supplement, rather than
+replace, the per-row standing-box/right-edge checks. No promotion, merge or push is performed
+by this implementation lane.

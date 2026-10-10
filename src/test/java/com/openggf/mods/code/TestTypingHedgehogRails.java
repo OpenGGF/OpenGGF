@@ -365,6 +365,9 @@ class TestTypingHedgehogRails {
             if (nativeRow) badnikSlots = badnikSlots();
             ControlledFrameRuntime.step(fixture.runtime(), input, LogicalInputSnapshot.neutral());
             input.update();
+            // The endpoint hands the camera to the typing arena. Forward-run pace and
+            // high-water checks apply only while this row remains a rail RUN.
+            boolean stillRunning = phase.equals("RUN") && get(view(), "phase").equals("RUN");
             if (!nativeRow) continue;
             var player = (AbstractPlayableSprite) GameServices.camera().getFocusedSprite();
             if (heldRun && phase.equals("COUNTDOWN") && railRow < countdownRow + 180) {
@@ -379,7 +382,7 @@ class TestTypingHedgehogRails {
                     return "START did not release running forward";
                 }
             }
-            if (phase.equals("RUN")) {
+            if (stillRunning) {
                 int played = railRow;
                 boolean excluded = player.getSpindash() || quietRows.contains(played);
                 pace.row(player, played, excluded);
@@ -391,7 +394,7 @@ class TestTypingHedgehogRails {
             }
             String kill = nativeKill(badnikSlots);
             if (kill != null) return "native kill of " + kill + " at rail row " + railRow;
-            if (railRow > countdownRow + 180 && phase.equals("RUN")) {
+            if (railRow > countdownRow + 180 && stillRunning) {
                 int camX = GameServices.camera().getX(), x = player.getCentreX();
                 // forward-v2: loop traversal (grounded at wall or ceiling angles) is exempt, and the
                 // high water must come back within 60 rows of leaving the loop.

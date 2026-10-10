@@ -38,6 +38,7 @@ class TestTypingHedgehogBosses {
     InputHandler input;
     Object course;
     Object boss;
+    String overlapDetail;
 
     @BeforeAll static void build() throws Exception {
         harness = ExampleModHarness.build(Path.of("examples/typing-of-the-hedgehog"), temp.resolve("work"));
@@ -49,6 +50,10 @@ class TestTypingHedgehogBosses {
     }
 
     void launch(SonicGame game, String code, int zone, int act, boolean demo) throws Exception {
+        launch(game, code, zone, act, demo, "BOSS_RUSH", 11);
+    }
+
+    void launch(SonicGame game, String code, int zone, int act, boolean demo, String mode, int seed) throws Exception {
         bootstrap = SharedLevel.load(game, zone, act);
         var config = GameServices.configuration();
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
@@ -56,9 +61,9 @@ class TestTypingHedgehogBosses {
         var effective = harness.apply(GameServices.module());
         Path storage = temp.resolve("work/storage/mods/typing-of-the-hedgehog");
         Files.createDirectories(storage);
-        Files.writeString(storage.resolve("intent.txt"), "mode=BOSS_RUSH\ngame=" + code + "\nzone=" + zone
-                + "\nact=" + act + "\ndifficulty=NORMAL\ncapitals=false\npunctuation=false\nseed=11\n"
-                + "dictionaries=standard\nnoFail=false\nvoice=OFF\ndemoRows=0\ndemo=" + demo + "\n");
+        Files.writeString(storage.resolve("intent.txt"), "mode=" + mode + "\ngame=" + code + "\nzone=" + zone
+                + "\nact=" + act + "\ndifficulty=NORMAL\ncapitals=false\npunctuation=false\nseed=" + seed + "\n"
+                + "dictionaries=standard\nnoFail=" + mode.equals("ARCADE") + "\nvoice=OFF\ndemoRows=0\ndemo=" + demo + "\n");
         SessionManager.clear();
         GameModuleRegistry.setCurrent(effective);
         TestEnvironment.activeGameplayMode();
@@ -72,7 +77,7 @@ class TestTypingHedgehogBosses {
         assertEquals(400, GameServices.camera().getWidth());
         course = effective.getGameService(harness.loader().loadClass("typinghog.play.Course"));
         input = new InputHandler();
-        untilCourse("BOSS", 1000);
+        untilCourse("BOSS", 30000);
         boss = call(field(course, "encounter"), "bossFight");
         // Check all declared rig animations, including hidden phases and compound copies.
         var art = GameServices.level().getObjectRenderManager().getArtProvider();
@@ -148,6 +153,111 @@ class TestTypingHedgehogBosses {
         assertEquals(10, call(view(), "rings"), "demo typed every dodge, without ring loss");
         assertTrue(harness.findings().isEmpty(), harness.findings().toString());
         System.out.println("[bosses-v2] " + code + ":" + zone + " won in " + rows + " rows; attacks " + attacks);
+    }
+
+    /** Match the lead's four ARCADE seed-5 captures, including entry, strikes and tally. */
+    void arcadeFight(SonicGame game, String code, int zone, int act, int hits) throws Exception {
+        launch(game, code, zone, act, true, "ARCADE", 5);
+        var camera = GameServices.camera();
+        int levelRight = GameServices.level().getCurrentLevel().getMaxX() + 320;
+        var phases = new java.util.TreeMap<String, Integer>();
+        Object renderer = call(GameServices.level(), "spritePresentationRenderer");
+        Object boundsMask = field(renderer, "boundsMask");
+        int rows = 0, outside = 0, overlaps = 0, masked = 0;
+        while (!"TALLY".equals(call(view(), "phase")) && rows++ < 30000) {
+            phases.merge((String) call(boss, "phase"), 1, Integer::sum);
+            if (camera.getX() + camera.getWidth() > Math.min(levelRight, camera.getMaxX() + 320)) outside++;
+            if (bodyOverlapsStand()) {
+                if (overlaps++ == 0) System.out.println("[fixes-body] " + code + ":" + zone + " " + overlapDetail);
+            }
+            var mask = (com.openggf.graphics.ArenaMaskState) call(boundsMask, "sample");
+            if (mask != null && mask.visible(camera.getWidth())) masked++;
+            row();
+        }
+        System.out.println("[fixes-arcade] " + code + ":" + zone + " rows=" + rows + " phases=" + phases
+                + " outside=" + outside + " overlaps=" + overlaps + " masked=" + masked + " camera=" + camera.getX()
+                + " bounds=" + camera.getMinX() + ".." + camera.getMaxX() + " levelRight=" + levelRight);
+        assertEquals("TALLY", call(view(), "phase"));
+        assertEquals(hits, call(boss, "hits"));
+        int measuredRows = rows, outsideRows = outside, overlapRows = overlaps, maskedRows = masked;
+        assertAll(() -> assertEquals(0, outsideRows, "camera inside drawn arena"),
+                () -> assertEquals(0, maskedRows, "entry never retains a faded native wing"),
+                () -> assertEquals(0, overlapRows, "body clear of standing box"),
+                () -> assertTrue(measuredRows <= (hits == 12 ? 7200 : 5400), "demo duration " + measuredRows));
+        for (int i = 0; i < 420; i++) {
+            assertTrue(camera.getX() + camera.getWidth() <= Math.min(levelRight, camera.getMaxX() + 320));
+            var mask = (com.openggf.graphics.ArenaMaskState) call(boundsMask, "sample");
+            assertTrue(mask == null || !mask.visible(camera.getWidth()), "tally keeps the full arena");
+            row();
+        }
+    }
+
+    /** Actual ROM mapping-piece boxes, excluding attack hazards and intended homing contact. */
+    boolean bodyOverlapsStand() throws Exception {
+        if (!(boolean) field(boss, "spawned") || (boolean) field(boss, "defeated")) return false;
+        Object motion = field(boss, "motion");
+        if ("ATTACK".equals(call(boss, "phase")) && (boolean) field(motion, "impact")) return false;
+        int px = (int) call(course, "anchorX"), py = (int) call(course, "anchorY");
+        var art = GameServices.level().getObjectRenderManager().getArtProvider();
+        @SuppressWarnings("unchecked") List<List<Object>> sprites = (List<List<Object>>) field(boss, "sprites");
+        @SuppressWarnings("unchecked") List<Object> parts = (List<Object>) call(field(boss, "rig"), "parts");
+        Set<String> hazards = Set.of("ball", "pillar0", "pillar1", "pillar2", "pillar3", "plasma", "launcher",
+                "panel", "punch", "sensor", "bombs", "jet", "drill", "flame");
+        for (int i = 0; i < parts.size(); i++) {
+            if (hazards.contains((String) call(parts.get(i), "name"))) continue;
+            for (Object sprite : sprites.get(i)) {
+                if (!(boolean) field(sprite, "visible")) continue;
+                var mapping = art.getSheet((String) field(sprite, "artKey")).getFrame((int) field(sprite, "frame"));
+                int sx = (int) field(sprite, "x"), sy = (int) field(sprite, "y");
+                for (var piece : mapping.pieces()) {
+                    int x = sx + ((boolean) field(sprite, "flipX") ? -piece.xOffset() - piece.widthTiles() * 8 : piece.xOffset());
+                    int y = sy + ((boolean) field(sprite, "flipY") ? -piece.yOffset() - piece.heightTiles() * 8 : piece.yOffset());
+                    // Sonic's standing X radius is 9px; retain another 10px of breathing room.
+                    if (x < px + 19 && x + piece.widthTiles() * 8 > px - 19
+                            && y < py + 19 && y + piece.heightTiles() * 8 > py - 19) {
+                        overlapDetail = call(parts.get(i), "name") + " box " + x + "," + y + ","
+                                + piece.widthTiles() * 8 + "," + piece.heightTiles() * 8
+                                + " stand " + px + "," + py + " phase " + call(boss, "phase");
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    @Test void talkBackEchoesAreShortWholeWordsAndKeepReadableClauses() throws Exception {
+        Class<?> type = harness.loader().loadClass("typinghog.play.Boss");
+        Method echo = type.getDeclaredMethod("echo", String.class);
+        echo.setAccessible(true);
+        assertEquals("Another typo", echo.invoke(null, "Ha! Another typo! I am counting every one!"));
+        for (String line : Files.readAllLines(Path.of("examples/typing-of-the-hedgehog/src/main/resources/words/taunts.txt"))) {
+            if (!line.contains("|") || line.startsWith("#")) continue;
+            String taunt = line.substring(line.indexOf('|') + 1);
+            String reply = (String) echo.invoke(null, taunt);
+            assertFalse(reply.isBlank());
+            assertTrue(reply.length() <= 20, reply);
+            assertTrue(taunt.contains(reply), "echo comes from the spoken line");
+            int end = taunt.indexOf(reply) + reply.length();
+            assertTrue(end == taunt.length() || !Character.isLetterOrDigit(taunt.charAt(end)), "whole words: " + reply);
+        }
+    }
+
+    @Test @RequiresRom(SonicGame.SONIC_1)
+    void greenHillArcadeHasFullArenaClearBodyAndShortFight() throws Exception {
+        arcadeFight(SonicGame.SONIC_1, "s1", 0, 2, 8);
+    }
+    @Test @RequiresRom(SonicGame.SONIC_1)
+    void finalZoneArcadeHasFullArenaClearBodyAndShortFight() throws Exception {
+        arcadeFight(SonicGame.SONIC_1, "s1", 6, 0, 8);
+    }
+    @Test @RequiresRom(SonicGame.SONIC_2)
+    void emeraldHillArcadeHasFullArenaClearBodyAndShortFight() throws Exception {
+        arcadeFight(SonicGame.SONIC_2, "s2", 0, 1, 8);
+    }
+    @Test @RequiresRom(SonicGame.SONIC_2)
+    void deathEggArcadeHasFullArenaClearBodyAndShortFight() throws Exception {
+        arcadeFight(SonicGame.SONIC_2, "s2", 10, 0, 12);
     }
 
     @Test @RequiresRom(SonicGame.SONIC_1)

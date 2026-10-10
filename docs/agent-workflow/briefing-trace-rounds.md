@@ -79,6 +79,9 @@ Judge the two mapping frames or an unstrided capture before blaming the art regi
 encodes 15fps (verified with ffprobe), twice the duration of a 60Hz gameplay sequence.
 Its native state CSV does not include an example mod's virtual rings/lives/score; the
 Typing course HUD and controller tests, rather than native `rings=0`, own those values.
+Draw-timed HUD effects also advance only on presented captures: this mod's 50-draw START!
+banner lasts 100 executed rows at `EVERY=2`. Judge cue exclusivity on presented rows and
+measure fight duration from controller phase rows; do not infer either clock from the other.
 
 FFmpeg PCM length can differ from a Vorbis stream's declared length (2026-10-09,
 Eggman's Sky compression): a generated 9,606-frame mono control retained exactly

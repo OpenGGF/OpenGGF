@@ -110,6 +110,48 @@ class TestTypingHedgehogHud {
         }
     }
 
+    @Test void readyWaitsForCountdownAndEveryTransientBanner() throws Exception {
+        var cue = hud.getClass().getDeclaredMethod("drawCues", PixelCanvas.class, boolean.class);
+        cue.setAccessible(true);
+        var ready = hud.getClass().getDeclaredMethod("ready", boolean.class);
+        ready.setAccessible(true);
+        var start = hud.getClass().getDeclaredMethod("start");
+        start.setAccessible(true);
+        var banner = hud.getClass().getDeclaredMethod("banner", String.class, int.class);
+        banner.setAccessible(true);
+        var bannerRows = hud.getClass().getDeclaredField("bannerRows");
+        bannerRows.setAccessible(true);
+        var startRows = hud.getClass().getDeclaredField("startRows");
+        startRows.setAccessible(true);
+        ready.invoke(hud, true);
+        bannerRows.setInt(hud, 0);
+        startRows.setInt(hud, 0);
+        var canvas = new Canvas(400);
+        cue.invoke(hud, canvas, true);
+        assertTrue(canvas.fills.isEmpty(), "only the countdown owns the start screen");
+        start.invoke(hud);
+        for (int remaining = 50; remaining > 0; remaining--) {
+            startRows.setInt(hud, remaining);
+            canvas.fills.clear();
+            cue.invoke(hud, canvas, false);
+            assertTrue(canvas.fills.isEmpty(), "START! clears before GET READY");
+        }
+        startRows.setInt(hud, 0);
+        canvas.fills.clear();
+        cue.invoke(hud, canvas, false);
+        assertEquals(1, canvas.fills.stream().filter(f -> f.w == 400).count());
+        for (String text : List.of("GO!", "FIGHT 1", "WARNING!", "WAVE CLEAR!", "TOO SLOW!")) {
+            banner.invoke(hud, text, 0xFFFFFFFF);
+            for (int i = 0; i < 90; i++) {
+                canvas.fills.clear();
+                cue.invoke(hud, canvas, false);
+                assertEquals(1, canvas.fills.stream().filter(f -> f.w == 400).count(), text + " owns its row");
+                int y = 72 - Math.max(0, 89 - i - 80) * 3;
+                assertEquals(new Fill(0, y - 4, 400, 26), canvas.fills.getFirst(), text + " is the displayed band");
+            }
+        }
+    }
+
     private record Fill(int x, int y, int w, int h) { }
 
     private static final class Canvas implements PixelCanvas {

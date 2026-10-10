@@ -5,8 +5,9 @@ Sonic spindashes into a real stock act and runs it on his own, stopping four or 
 on open ground where the zone's badniks (including the ones already there) come for him
 carrying words. Type a word and Sonic homing-attacks its badnik. Type the rings that fly
 when he is hit to win them back, and type Robotnik's weak points, taunts and trivia answers
-to beat each zone's boss. A pulsing **GET READY** banner marks travel between fights
-and clears when the next fight or boss warning begins. The HUD and hub fit both
+to beat each zone's boss. A pulsing **GET READY** banner marks travel between fights.
+It waits for the countdown and launch banner to clear, and yields to every fight, warning
+and result banner. The HUD and hub fit both
 320- and 400-pixel viewports. Freed animals use the current zone's own species and
 ROM mapping frames.
 
@@ -60,9 +61,13 @@ light up on the keyboard Sonic wears as you type: gold for a hit, red for a miss
   Sonic loses rings. Green Hill patrols with its swinging wrecking ball. Final Zone alternates
   crushing cylinder pairs and falling plasma: each pillar has a word, and only the one showing
   Robotnik takes a hit (an empty pillar costs time). Death Egg walks, launches rocket fists,
-  tracks Sonic for a body slam, and drops bombs; strike its exposed head between attacks.
+  tracks Sonic with its landing sensor and impact hazard, and drops bombs; its body keeps a
+  clear gap from his stand. Strike its exposed head between attacks.
   Emerald Hill charges with its drill and opens its cockpit afterward. Strike windows keep
-  the phrase, talk-back and trivia styles. Death Egg takes twelve hits, the others eight.
+  the phrase, talk-back and trivia styles. Talk-back speaks and displays the whole taunt
+  while you echo a short clause or quotation. A completed dodge releases its attack immediately.
+  Death Egg takes twelve hits, the others eight. The four shipped arenas fill the 400-pixel
+  view through entry and tally.
   Boss Rush uses the same fights at the act's start; native boss AI is retired during typing.
 - **Scoring.** Kills chain into a multiplier; the tally adds speed, accuracy, ring and
   perfect bonuses and grades the act S to E.
