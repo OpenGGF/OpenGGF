@@ -902,9 +902,9 @@ ROMs and `TYPING_CAPTURE_ROOT` is the external task capture directory:
 
 ```bash
 python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestTypingHedgehog*' \
-  -Dsonic1.rom.path=$REPO_ROOT/s1.gen \
-  -Dsonic2.rom.path=$REPO_ROOT/s2.gen \
-  -Ds3k.rom.path=$REPO_ROOT/s3k.gen test
+  "-Dsonic1.rom.path=$REPO_ROOT/s1.gen" \
+  "-Dsonic2.rom.path=$REPO_ROOT/s2.gen" \
+  "-Ds3k.rom.path=$REPO_ROOT/s3k.gen" test
 python3 tools/testing/maven_queue.py -Dmse=off compile
 python3 examples/build_example.py typing-of-the-hedgehog --skip-engine
 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base c550aebf4 --preflight
@@ -958,3 +958,7 @@ ROM-art typing stages, not native boss AI/collision parity. The four shipped for
 remain S1/S2; S3K has no shipped forward course. Rendering checks supplement, rather than
 replace, the per-row standing-box/right-edge checks. No promotion, merge or push is performed
 by this implementation lane.
+
+Implementation/test diff: **`aaff75147`** (parent `c550aebf4`). The completed full mod
+run and final films used the identical production/test sources before that commit; this
+documentation follow-up records the landed identity and portable command quoting only.
