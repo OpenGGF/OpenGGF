@@ -760,6 +760,17 @@ repair an unsupported debug combination by changing shared combat rules.
 
 #### Mutator captures and validation
 
+Promo correctness does not establish promo pacing (2026-10-10 Mutator Lab):
+76 source-correct shots still produced sixteen cuts in the last twenty seconds
+and 68 discontinuous music intervals. Compare actual prior reels, count cuts,
+and retain complete native actions rather than cutting on every cue or widget.
+For an editorial soundtrack, record selected ownership, gain/filter envelopes,
+handoff sample intervals and featured native audio windows separately from raw
+capture evidence. Measure the delivered AAC's true peak as well as pre-encode
+PCM; normalization settings alone did not prevent a +0.41 dB decoded true peak.
+Check `paused` and encoded pixels alongside `mode`: a held Lab menu still
+reported `LEVEL` and made a respawn comparison display settings instead.
+
 Capture boot modes own different driver contracts (2026-10-08 Mutator Lab repair):
 title-first capture follows the normal loop fade owner and rebinds its player after
 launch. Applying those choices globally to the existing direct-level driver changed

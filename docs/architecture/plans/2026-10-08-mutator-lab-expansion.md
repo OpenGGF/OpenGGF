@@ -1319,3 +1319,62 @@ and comparison inputs remain outside Git. All owned JVMs are absent, and the
 finished worktree is removed only after every source/document change is
 accounted for in the retained PR branch. No unchanged whole-engine run is
 claimed or repeated for this bounded tool/fixture follow-up.
+
+### Promo pacing and sound revision (2026-10-10)
+
+The user rejected the complete showcase's cluttered soundtrack and frequent
+cuts, especially its ending. Source-frame and PCM correctness did not make
+that edit a successful promo: 76 shots averaged 1.20 seconds, its last twenty
+seconds contained sixteen cuts, and 68 boundaries jumped to a discontinuous
+native audio interval. The original film and source archive remain intact.
+
+Root stopped the new Opus audio task at the user's request to conserve Opus
+usage, retained its useful recipe/level measurements, and completed the
+revision directly. The Sitar Hero promo supplied the longer musical passages
+and equal-power handoff reference; the Multigame reel supplied single selected
+audio ownership; Hardened supplied purposeful native cues and a silent close.
+An audio-only draft was superseded when the user also identified visual pacing.
+
+The revised film is **116.5 seconds, 6,990 frames, 1920×1080/60**, with 29
+shots and fourteen chapters. Only three cuts remain in its last twenty
+seconds. Ring collection/hurt/regrowth is one continuous shot, the five-enemy
+Violent Explosions chain runs continuously for 12.33 seconds, and the finale
+holds one 9.4-second native stacked-mutator run. Longer comparisons cover
+monitor removal, checkpoint consequences, special-stage denial and bonus
+denial. All eleven mutators remain visibly demonstrated. Native frames run
+one-to-one at their recorded presentation rate; no freeze, interpolation,
+editorial speed change, new capture or engine change is used.
+
+SHA-256: `bcd6b1eada7cf462c975d3aa472cd0bf636980b553a700d268ae087c5a264136`.
+The explicit external directory `mutator-lab-audio-revision-20261010/edit-r2`
+holds the playable film, resolved shot/chapter/source ranges, audio manifest,
+layout/mix recipe, technical verifier and final inspection frames. Its inputs
+are the already-qualified captures described above. Their ROM/source/setup
+attribution and S3K-only bonus-stage limitation remain unchanged.
+
+Sound is an **editorial mix of captured native music plus SFX**, with one
+selected panel's continuous PCM per shot, brief equal-power handoffs, and
+configuration windows lowered by 7 dB and low-passed at 1.6 kHz. No isolated
+SFX stems, external score or hardware output are claimed. Static level trims
+and final peak headroom replace cut-by-cut music restarts and dynamic gain
+riding. The original clip-exact soundtrack verification is historical; it is
+not relabelled as a verification of this mix.
+
+The entire native 200% music-follow passage remains unfiltered and aligned:
+115,200 stereo PCM frames match their source after only declared static gain
+and quantization, with zero sample error. Full film decoding succeeds; all
+108 sampled game panels match the declared source ranges; all 27 sampled
+AAC/WAV windows have zero measured lag (minimum correlation 0.998412).
+Decoded AAC measures −17.70 LUFS integrated and −2.00 dB true peak. The mix
+contains no clipped PCM samples. These are technical media checks, not a
+subjective listening, physical-speaker or universal gameplay-parity claim.
+
+Review rejected two checkpoint source ranges because they included the Lab
+menu even though `mode` still read `LEVEL`. The final death comparison uses
+native frames 74–219 against 554–699, with both fatal hits at local frame 99;
+the outcome compares 553–642 against 812–901. Every selected row is unpaused,
+and inspected encoded pixels show the post versus act start. Loading and
+intervening settings are explicitly cut and labelled. All filming remains
+offline files-only; no JVM, display, input automation or audio device ran for
+this revision. Documentation/link/policy checks replace unchanged engine
+tests for this media-and-prose-only follow-up.
