@@ -11,7 +11,9 @@ import starpost.realvalley.*;
 /** Re-encode Green Hill at load; the jar contains no donor asset bytes. */
 public final class ActivityPatch implements GamePatch {
     private final ActivitySession session;
-    public ActivityPatch(ActivitySession session) { this.session=session; }
+    private final ActSeasons seasons;
+    public ActivityPatch(ActivitySession session) { this(session,new ActSeasons()); }
+    public ActivityPatch(ActivitySession session,ActSeasons seasons) { this.session=session; this.seasons=seasons; }
     public String id() { return "real-festivals"; }
     public String displayName() { return "Starpost Valley: festivals and lake"; }
     public String baseGameId() { return "s3k"; }
@@ -30,7 +32,9 @@ public final class ActivityPatch implements GamePatch {
                     var module=RomDetectionService.getInstance().detectAndCreateModule(rom).orElseThrow();
                     terrain=S1TerrainReader.read(module.createGame(rom).loadLevel(0x80));
                 }
-                return base().getModZoneAdapter().load("starpost-valley",CourseLevel.build(contribution.levelData(),terrain,session));
+                var data=CourseLevel.build(contribution.levelData(),terrain,session);
+                seasons.remember(contribution.localKey(),data.paletteClaims());
+                return base().getModZoneAdapter().load("starpost-valley",data);
             }
         };
     }

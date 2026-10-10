@@ -748,25 +748,37 @@ Known look-test limits:
 
 The look test's throwaway package has been replaced by the game's own packages (base of the
 skeleton: `5ddc5131b`). The source is `examples/starpost-valley/src/main/java/starpost/`.
+The belt-view farm, menus and cutscenes are a mod scene. The valley/town, forty
+Ruins chambers, running festivals and Waterfall Lake are real additive S3K acts
+(§21–§25), re-encoded at load from the supplied Sonic 1 ROM. The engine's native
+player owns movement, collision, abilities and health. SceneContext.startAct and
+ActResult retain the farm/save/screen session across doors, activities and return
+visits; no hand-ported side-view controller remains. The BeltRunner belongs only
+to the farm. Tone now colours terrain claims in the outdoor acts too (§26); the
+Ruins keep Marble/Labyrinth/Scrap Brain palettes.
 
 | Package | Owns |
 |---|---|
 | `core` | Engine-free rules and state. `Calendar`, `Catalog` and `Content` (items, crops), `Inventory`, `Farm` and `Plot` (belt grid: 5 rows × 60 columns, 24 open at the start), `Game` (the save's root), `SaveCodec`, and `SaveSection` (one per further system). Tested without a ROM by `src/test/java/starpost/core`. |
 | `art` | Everything from the ROMs. `Art` loads the Green Hill kit, characters, sprites and solidity. `Tone` does seasons and skies, `CropArt` the original crop pictures (5 stages), `ItemIcons` the icons (monitor screens for the shields), and `Anim` steps character animations. |
-| `scene` | `StarpostScene` (the startup scene), `Shell` (screen stack with overlays, fades, saves, music), `PlayScreen` (both views, clock, HUD, the fold at the gate), menus, `DayEndScreen`, `TitleScreen`, `FarmerSelect`, `Debug` (capture commands), `Music`, `Sfx`. Also the extension points `Actor` and `Systems`. |
+| `scene` | `StarpostScene` (the startup scene), `Shell` (screen stack with overlays, fades, saves, music), `PlayScreen` (farm, stationary town backdrops for menus, clock, HUD, the gate handoff), menus, `DayEndScreen`, `TitleScreen`, `FarmerSelect`, `Debug` (capture commands), `Music`, `Sfx`. Also the extension points `Actor` and `Systems`. |
 | `farm` | `FarmView` (the belt field) and `BeltRunner`. |
-| `valley` | `Valley` (the side map, Green Hill blocks 13, 45, 60×4, 45, 3, 45, 53, 38, 1, 16, and its places), `ValleyView`, and `Runner` (the ported controller). |
+| `valley` | `Valley` (the shared block/door map) and daily `Pickups`; scene menu backdrops have no movement controller. |
+| `realvalley`, `realtown` | ROM terrain intake/encoding, native town objects and retained TownSession; ActSeasons owns outdoor palette writes and shared weather presentation. |
+| `realruins`, `realfest` | Native chamber/course directors, captured activity state, real collisions and scene result hand-back. |
 | `ui` | `Controls` (one read of pad and keyboard per tick) and `Text`. |
 
 Every further system plugs in through three seams, so lanes rarely edit the same files:
 
 1. **Save state.** Implement `SaveSection` (its own key prefix, validated load, overnight
    work). List it in `Systems.sections`.
-2. **Things in the world.** Implement `Actor` (a view, a position, update, draw, and
-   interact on the action button). `Systems.install` adds actors to the play screen. Farm
-   actors are depth-sorted with the crops.
-3. **Doorways.** `Valley.places` names them, and `PlayScreen.places` maps an id to a
-   handler, usually pushing a full-screen or overlay `Screen`.
+2. **Things in the world.** Farm things implement scene `Actor` and are depth-sorted
+   with the crops through `Systems.install`. Act things are registered native objects,
+   use injected services(), and provide rewind recreation/captured state; ROM-backed
+   object sheets enter through the creator's S1 ROM object-art intake.
+3. **Doorways.** `Valley.places` names them, and `PlayScreen.places` maps ids to scene
+   screens. Native directors return a doorway/event payload to the retained scene;
+   closing a menu resumes that act at the same doorway. The gate returns to the farm.
 
 Content is added through new `Content`-style registrars called from `Content.register`, never
 static tables (the validator rejects them).
@@ -2620,3 +2632,41 @@ python3 tools/testing/maven_queue.py -B -Dmse=off -Dexec.executable=python3 -Dex
 python3 tools/testing/maven_queue.py -B -Dmse=off '-Dtest=TestModSceneActBridge,TestStarpostValleyScene,TestStarpostValleyExample' -Ds3k.rom.path="$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dsonic1.rom.path="$PWD/Sonic The Hedgehog (W) (REV01) [!].gen" test
 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -B -Dmse=off -Pguards -Ds3k.rom.path="$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dsonic1.rom.path="$PWD/Sonic The Hedgehog (W) (REV01) [!].gen" test
 ```
+
+
+## 26. Seasons in acts and the promo (lane)
+
+Lane `feature/ai-starpost-promo`, base `7591fbcc3`; no merge, rebase or push.
+`ActSeasons` retains the encoder's original ROM claims at load, installs a
+paletteAnimation through each outdoor act's ModZoneRuntimeServices, and submits
+only those cells at priority 20. The admitted town/activity director injects its
+palette registry and retained Game. HUD-reserved cells, the character line and
+placeholder line-3 cell 15 stay untouched. Every frame derives the season and
+18:00/20:00 light from the captured calendar; there is no accumulated tint or
+mutable seasonal clock to restore. Rain cools daylight. WorldWeather shares the
+scene's rain, snow and aurora presentation with acts; repeated drawing cannot
+play the storm sound. Ruins have no seasonal runtime.
+
+Rejected: a GameServices palette-registry lookup produced a creator compatibility
+warning; the injected director dependency packages without it. A headless owner
+assertion before rendering falsely reported absent writes: the shared renderer
+resolves pending palette writes, while HeadlessTestRunner only steps logic. The
+regression explicitly resolves the pending frame before checking colours/owners.
+Native GameLoop captures independently show the actual GPU result.
+
+Creator tests exercise all 512 Genesis colours for all four seasons and three
+light states, rain, return-to-spring, unchanged source claims and host cells. The
+ROM-backed bridge regression checks all 28 live claims and calendar rewind.
+Inspected native spring/summer/autumn/winter/aurora images are in
+`~/scratch/sv-promo/final/seasons/`; source inputs and assembly scripts stay
+under `~/scratch/sv-promo/final/`. Final validation and chapter map follow below.
+
+Season milestone validation: Java 21 build-only `mvn -B -q -Dmse=off
+-DskipTests test-compile dependency:build-classpath
+-Dmdep.outputFile=target/test-classpath.txt` passed. Queued focused test:
+`python3 tools/testing/maven_queue.py --lean -B -Dmse=off
+'-Dtest=TestModSceneActBridge#realValleySeasonClaimsFollowCalendarAndRewindWithoutRecolouringHud,TestStarpostValleyExample'
+"-Ds3k.rom.path=$PWD/Sonic and Knuckles & Sonic 3 (W) [!].gen"
+"-Dsonic1.rom.path=$PWD/Sonic The Hedgehog (W) (REV01) [!].gen" test`:
+3/3 engine tests, 197/197 creator tests, zero failures/errors/skips;
+packaging **Validation passed: 0 findings**. This is focused validation.

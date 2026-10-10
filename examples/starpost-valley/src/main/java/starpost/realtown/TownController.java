@@ -20,6 +20,8 @@ public final class TownController extends AbstractObjectInstance implements ModR
     public void update(int vIntRunCount, PlayableEntity entity) {
         TownSession town = town();
         if (town == null || !town.active() || entity == null || !town.claimController(spawn.subtype())) return;
+        var seasons=services().gameService(starpost.realvalley.ActSeasons.class);
+        if(seasons!=null) seasons.bind(services().paletteOwnershipRegistryOrNull(),town.game());
         if (!placed) {
             placed = true;
             int width = town.layout().ground.right();

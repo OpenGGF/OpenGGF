@@ -339,6 +339,53 @@ class TestModSceneActBridge {
         assertTrue(doors>=9);
         assertTrue(harness.findings().isEmpty(),harness.findings().toString());
     }
+    @Test void realValleySeasonClaimsFollowCalendarAndRewindWithoutRecolouringHud() throws Exception {
+        assertTrue(ModSceneLauncher.openStartupScene(loop,SonicConfigurationService.getInstance(),0,
+            GraphicsManager.getInstance(),400,224)); drainFade();
+        assertTrue(loop.modSceneHost.debugJump("new sonic"));
+        assertTrue(loop.modSceneHost.debugJump("close"));
+        Object scene=SceneHostTestAccess.scene(loop.modSceneHost),shell=field(scene,"shell");
+        Object game=field(shell,"game"),calendar=field(game,"calendar");
+        assertTrue(loop.modSceneHost.debugJump("town enter"));
+        loop.modSceneActBridge.admitLaunch(); drainFade();
+        GameServices.level().skipPendingInitialTitleCardPresentation();
+        var runner=new HeadlessTestRunner(player()); runner.stepIdleFrames(2);
+        var level=GameServices.level().getCurrentLevel();
+        var registry=GameServices.paletteOwnershipRegistry();
+        com.openggf.game.palette.PaletteWriteSupport.resolvePendingFrameWrites(registry,level,null,null);
+        assertNotNull(GameServices.level().getAnimatedPaletteManager(),"contributed palette animation survives load");
+        assertTrue(harness.findings().isEmpty(),harness.findings().toString());
+        List<int[]> originals=new ArrayList<>();
+        for(int line=0;line<4;line++) for(int color=0;color<16;color++)
+            if("starpost-valley:seasons".equals(registry.ownerAt(com.openggf.game.palette.PaletteSurface.NORMAL,line,color))) {
+                assertTrue(line>0 && !(line==1 && List.of(1,5,12,14,15).contains(color)) && !(line==3 && color==15));
+                originals.add(new int[]{line,color,sega(level.getPalette(line).getColor(color))});
+            }
+        assertFalse(originals.isEmpty(),"runtime must receive the re-encoded ROM claims, not the placeholder");
+        var loader=scene.getClass().getClassLoader();
+        var tone=loader.loadClass("starpost.art.Tone");
+        var colour=loader.loadClass("starpost.realvalley.ActSeasons").getMethod("colour",int.class,tone,int.class,boolean.class);
+        var hud=level.getPalette(1).getColor(5); int host=sega(hud);
+        var snapshot=loop.resolveGameplayModeContext().getRewindRegistry().capture();
+        for(int season=0;season<4;season++) for(int light=0;light<3;light++) {
+            call(calendar,"set",1,season,10,light==0?720:light==1?1080:1200);
+            runner.stepIdleFrames(1);
+            com.openggf.game.palette.PaletteWriteSupport.resolvePendingFrameWrites(registry,level,null,null);
+            Object map=tone.getConstructor(int.class).newInstance(season);
+            for(int[] c:originals) assertEquals((int)colour.invoke(null,c[2],map,light,false),
+                sega(level.getPalette(c[0]).getColor(c[1])),"season="+season+" light="+light+" cell="+c[0]+":"+c[1]);
+            assertEquals(host,sega(hud),"HUD cells remain host-owned");
+        }
+        loop.resolveGameplayModeContext().getRewindRegistry().restore(snapshot);
+        runner.stepIdleFrames(1);
+        com.openggf.game.palette.PaletteWriteSupport.resolvePendingFrameWrites(registry,level,null,null);
+        for(int[] c:originals) assertEquals(c[2],sega(level.getPalette(c[0]).getColor(c[1])));
+        assertTrue(harness.findings().isEmpty(),harness.findings().toString());
+    }
+    private static int sega(com.openggf.level.Palette.Color c) {
+        return Math.round((c.r&255)*7/255f)<<1 | Math.round((c.g&255)*7/255f)<<5 | Math.round((c.b&255)*7/255f)<<9;
+    }
+
     Object townVillager(String id) throws Exception {
         for(var object:GameServices.level().getObjectManager().getActiveObjects())
             if(object.getClass().getName().equals("starpost.realtown.TownVillager")&&id.equals(call(object,"id")))return object;

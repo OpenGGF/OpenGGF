@@ -20,6 +20,8 @@ public final class ActivityController extends AbstractObjectInstance implements 
     public void update(int vIntRunCount,PlayableEntity entity) {
         var session=services().gameService(ActivitySession.class);
         if(session==null || !session.active() || !(entity instanceof AbstractPlayableSprite player) || !session.claim(spawn.subtype())) return;
+        var seasons=services().gameService(starpost.realvalley.ActSeasons.class);
+        if(seasons!=null) seasons.bind(services().paletteOwnershipRegistryOrNull(),session.game());
         int width=CourseLevel.blocks(session.kind(),session.game().calendar.year()).length*256;
         var ground=new ActGround(services(),width,128);
         services().camera().setMaxX((short)Math.max(0,width-320));

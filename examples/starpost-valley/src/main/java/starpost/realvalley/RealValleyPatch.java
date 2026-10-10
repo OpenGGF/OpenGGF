@@ -24,6 +24,9 @@ import java.util.logging.Logger;
  * Without Sonic 1 the placeholder loads unchanged.
  */
 public final class RealValleyPatch implements GamePatch {
+    private final ActSeasons seasons;
+    public RealValleyPatch() { this(new ActSeasons()); }
+    public RealValleyPatch(ActSeasons seasons) { this.seasons = seasons; }
     @Override
     public String id() {
         return "real-valley";
@@ -61,17 +64,19 @@ public final class RealValleyPatch implements GamePatch {
 
     @Override
     public GameModule apply(GameModule base, PatchContext context) {
-        return new Module(base, context);
+        return new Module(base, context, seasons);
     }
 
     /** The decorated module; see {@link RealValleyPatch}. */
     public static final class Module extends DelegatingGameModule {
         private final PatchContext context;
         private S1Terrain terrain;
+        private final ActSeasons seasons;
 
-        Module(GameModule base, PatchContext context) {
+        Module(GameModule base, PatchContext context, ActSeasons seasons) {
             super(base, RealValley.OWNER + ":real-valley");
             this.context = context;
+            this.seasons = seasons;
         }
 
         @Override
@@ -85,7 +90,9 @@ public final class RealValleyPatch implements GamePatch {
             if (source == null) {
                 return super.loadLevelOverride(levelIndex);
             }
-            return base().getModZoneAdapter().load(RealValley.OWNER, ValleyLevel.build(valley.levelData(), source));
+            var data = ValleyLevel.build(valley.levelData(), source);
+            seasons.remember(RealValley.ZONE, data.paletteClaims());
+            return base().getModZoneAdapter().load(RealValley.OWNER, data);
         }
 
         /** Green Hill act 1, read once from Sonic 1; null when Sonic 1 is not supplied. */

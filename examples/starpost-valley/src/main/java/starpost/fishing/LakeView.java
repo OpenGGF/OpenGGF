@@ -12,9 +12,9 @@ public final class LakeView {
  private int cycledSeason=-1,poolBed;
  public LakeView(Art source) { this.source=source; fishArt=new FishArt(source); surface=LakeOverlay.poolY(source)-128; }
  public void draw(Shell shell,SceneCanvas canvas,int cx,int cy,long ticks,java.util.function.IntUnaryOperator floor) {
-  cycle(shell.game.calendar.season()); int step=(int)(ticks/6%4); var tint=SceneDraw.plain();
+  cycle(shell.game.calendar.season()); int step=(int)(ticks/6%4); var tint=starpost.scene.PlayScreen.lightTint(shell.game.calendar.light());
   canvas.drawRegion(fall[step],0,0,256,surface,512-cx,128-cy,256,surface,tint);
-  canvas.fill(256-cx,surface+128-cy,512,256-surface,poolBed);
+  canvas.fill(256-cx,surface+128-cy,512,256-surface,multiply(poolBed,(shell.game.calendar.light()==0?0xFFFFFFFF:shell.game.calendar.light()==1?0xFFFFC8A0:0xFF6D80C8)));
   canvas.draw(pool[step],256-cx,surface+128-cy,tint);
   drawShadows(canvas,cx,cy,ticks);
   canvas.fill(256-cx,surface+128-cy,512,1,0x60FFFFFF);

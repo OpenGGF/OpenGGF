@@ -15,11 +15,13 @@ public final class StarpostValleyMod implements GgfMod {
         context.requireDisplayWidth(400);
         // The valley is a real S3K act: Sonic 1 Green Hill re-encoded at load (RealValley), hosting
         // the town's objects and input (realtown); the scene starts it at the farm gate.
-        var activities=starpost.realfest.ActivityContent.register(context);
+        var seasons=new starpost.realvalley.ActSeasons();
+        context.registerService("seasons",starpost.realvalley.ActSeasons.class,seasons);
+        var activities=starpost.realfest.ActivityContent.register(context,seasons);
         var activityInput=new starpost.realfest.ActivityInput(activities);
         var ruins = starpost.realruins.RuinsContent.register(context);
         var town = starpost.realtown.TownContent.register(context,input->activityInput.handleInput(input) || new starpost.realruins.RuinsInput(ruins).handleInput(input));
-        RealValley.register(context);
+        RealValley.register(context, seasons);
         var destination = new com.openggf.game.ZoneKey.Mod("starpost-valley", RealValley.ZONE);
         starpost.realtown.TownContent.registerInput(context, destination, town);
         // S1 ROM-art TIME/day clock and wallet RINGS are drawn by the town HUD.

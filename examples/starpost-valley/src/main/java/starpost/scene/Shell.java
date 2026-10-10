@@ -202,7 +202,7 @@ public final class Shell {
         for (int i = stack.length - 1; i >= 0; i--) {
             ((Screen) stack[i]).draw(this, canvas);
         }
-        if (ticks - toastAt < 120 && !toast.isEmpty()) {
+        if (ticks - toastAt < 120 && !toast.isEmpty() && !(overlays.peek() instanceof PromoCard)) {
             // Over a menu the toast takes the top line (the HUD's), clear of the menu's own rows.
             int w = canvas.textWidth(toast) + 16, y = overlays.isEmpty() ? 36 : 1;
             Text.panel(canvas, (width() - w) / 2, y, w, 18);

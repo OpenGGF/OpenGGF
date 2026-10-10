@@ -64,8 +64,12 @@ public final class RealValley {
 
     /** Registers the placeholder act and the patch that fills it from the Sonic 1 ROM. */
     public static void register(ModContext context) {
+        register(context, new ActSeasons());
+    }
+
+    public static void register(ModContext context, ActSeasons seasons) {
         context.registerZone(ModZoneContribution.singleAct(ZONE,
-                new BakedLevelRef("levels/valley/level.json"), null, null, false));
-        context.registerGamePatch(new RealValleyPatch());
+                new BakedLevelRef("levels/valley/level.json"), null, null, false).withRuntime(seasons::create));
+        context.registerGamePatch(new RealValleyPatch(seasons));
     }
 }
