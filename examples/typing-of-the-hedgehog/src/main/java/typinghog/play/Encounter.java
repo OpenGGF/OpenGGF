@@ -229,6 +229,23 @@ public final class Encounter {
         enemies.add(enemy);
     }
 
+    /**
+     * Keeps a ground badnik's feet on the act's floor as it walks: fights can stand on gentle
+     * slopes, so a fixed height would float or sink it. A read-only terrain query on a mod-drawn
+     * badnik; the stock world is untouched.
+     */
+    private static void followFloor(Enemy enemy, Species species) {
+        int feet = enemy.y() + species.halfHeight();
+        var floor = com.openggf.physics.ObjectTerrainUtils.checkFloorDist(enemy.x(), feet);
+        if (!floor.foundSurface() || Math.abs(floor.distance()) > FLOOR_SEARCH) return;
+        int step = Math.max(-FLOOR_STEP, Math.min(FLOOR_STEP, floor.distance()));
+        enemy.y += step << 8;
+    }
+
+    /** Farthest floor a walking badnik snaps to, and how far it moves toward it a row. */
+    static final int FLOOR_SEARCH = 24;
+    static final int FLOOR_STEP = 3;
+
     /** A converted stock badnik: the same species art, standing where the stock one stood, facing Sonic. */
     private void spawnLoaded(Course course, LoadedArrival arrival, int px) {
         Species species = arrival.species();
@@ -380,6 +397,8 @@ public final class Encounter {
             }
             case DYING, GONE -> { }
         }
+        if (!enemy.airborne && species.archetype() != Species.Archetype.SURFACER
+                && enemy.state != Enemy.State.DYING) followFloor(enemy, species);
         body.visual.x = enemy.x();
         body.visual.y = enemy.y();
         body.visual.frame = species.frameAt(enemy.tick);
