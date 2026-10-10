@@ -96,22 +96,13 @@ class TypingHedgehogForwardRailBuilder {
     /** Boss-only courses: the act is its boss (S1 Final Zone, S2 Death Egg). */
     static final Set<String> BOSS_ONLY = Set.of("fz", "dez");
 
-    /** The shipped acts (the legacy builder's targets that ship a rail), in its order. */
+    /** Every act with a recorded run (the legacy builder's targets), in its order. */
     static final List<Target> TARGETS = targets();
 
     static List<Target> targets() {
-        Set<String> shipped = new HashSet<>();
-        try {
-            for (String line : Files.readAllLines(SOURCE.resolve("src/main/resources/rails/index.txt"))) {
-                if (!line.isBlank() && !line.startsWith("#")) shipped.add(line.strip());
-            }
-        } catch (IOException e) {
-            throw new IllegalStateException(e);
-        }
         List<Target> out = new ArrayList<>();
         for (SonicGame game : List.of(SonicGame.SONIC_1, SonicGame.SONIC_2, SonicGame.SONIC_3K)) {
             for (var t : TypingHedgehogRailBuilderProbe.targets(game)) {
-                if (!shipped.contains(t.file())) continue;
                 out.add(new Target(new Pilot(t.name(), game, t.code(), t.zone(), t.act(), t.sidekick(), t.file()),
                         game != SonicGame.SONIC_1, BOSS_ONLY.contains(t.name()), t.file()));
             }
@@ -131,17 +122,16 @@ class TypingHedgehogForwardRailBuilder {
     @Test @RequiresRom(SonicGame.SONIC_2) void s2() throws Exception { drive(SonicGame.SONIC_2); }
     @Test @RequiresRom(SonicGame.SONIC_3K) void s3k() throws Exception { drive(SonicGame.SONIC_3K); }
 
-    /** Diagnostic: the act's legacy rail between two x positions ({@code -Dtypinghog.forward.trace=x0:x1}). */
+    /**
+     * Diagnostic: the act's recorded run's pad rows replayed from the cold start, between two x
+     * positions ({@code -Dtypinghog.forward.trace=act:x0:x1}). The replay drifts from the recording
+     * where the cold start differs; it shows the route's shape.
+     */
     static void traceLegacy(Target t, int x0, int x1) throws Exception {
-        String text = Files.readString(SOURCE.resolve("src/main/resources/rails").resolve(t.pilot().rail()));
+        var legacy = TypingHedgehogRailBuilderProbe.targets(t.pilot().game()).stream()
+                .filter(l -> l.name().equals(t.pilot().name())).findFirst().orElseThrow();
         List<Integer> masks = new ArrayList<>();
-        for (String line : text.split("\n")) {
-            if (!line.startsWith("program ")) continue;
-            for (String pair : line.substring(8).split(",")) {
-                String[] f = pair.strip().split(":");
-                for (int i = 0; i < Integer.parseInt(f[0]); i++) masks.add(Integer.parseInt(f[1], 16));
-            }
-        }
+        for (int m : TypingHedgehogRailBuilderProbe.load(legacy).masks) masks.add(m);
         try (World w = new World(t.pilot(), Map.of())) {
             w.driver.program = row -> row < masks.size() ? masks.get(row) : 0;
             StringBuilder out = new StringBuilder();
@@ -155,7 +145,7 @@ class TypingHedgehogForwardRailBuilder {
                 }
                 if (s.getCentreX() > x1 + 200) break;
             }
-            out(t, "legacy rail through x " + x0 + ".." + x1 + ":" + out);
+            out(t, "recorded run through x " + x0 + ".." + x1 + ":" + out);
         }
     }
 

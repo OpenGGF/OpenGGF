@@ -9,30 +9,13 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * One act's rail: the pad program that drives Sonic from the act's cold start, how far it has
- * been validated, and where the course stops him to fight. Read from {@code rails/*.rail} text.
- *
- * <p><b>Format 1</b> (legacy): recording-derived programs with stand rows and a boss row.
- *
- * <pre>
- * game s1
- * zone 0
- * act 2
- * team sonic
- * validated 5412
- * engine 0.7.prerelease+8668a9012
- * rom AFE05EEE
- * program 120:0,34:8,12:48,...
- * stand 1400
- * boss 5300
- * </pre>
- *
- * <p><b>Format 2</b> (forward courses): an authored forward run with a native countdown start, fights
- * at measured plateaus whose loaded badniks join the fight, and a genuine stock endpoint:
+ * One act's rail: a forward course (format 2). An authored forward run from the act's cold start,
+ * with a native countdown start, fights at measured stops whose loaded badniks join them, and a
+ * genuine stock endpoint. Read from {@code rails/*.rail} text:
  *
  * <pre>
  * format 2
- * policy forward-v1
+ * policy forward-v2
  * combat live-restore-v1
  * course regular
  * launch native-spindash
@@ -63,16 +46,17 @@ import java.util.Set;
  * (an authoring aid; those rows are validated like any others).
  *
  * <p>{@code program} is run-length {@code frames:hexMask} pairs in {@code AbstractPlayableSprite}
- * input bits (UP 01, DOWN 02, LEFT 04, RIGHT 08, JUMP 10; Start is never part of a rail). Rows past
- * {@code validated} are never played. {@code engine}/{@code rom} name what it was validated against.
+ * input bits (UP 01, DOWN 02, LEFT 04, RIGHT 08, JUMP 10; Start is never part of a rail).
+ * {@code engine}/{@code rom}/{@code rom-sha1} name what the program was validated against. The
+ * recording-derived format 1 rails were retired with the forward courses (2026-10-10).
  */
-public record Rail(int format, String game, int zone, int act, String team, int validated, String engine, String rom,
-                   int[] runFrames, int[] runMasks, List<Integer> stands, int bossRow, Plan plan) {
+public record Rail(String game, int zone, int act, String team, int validated, String engine, String rom,
+                   int[] runFrames, int[] runMasks, Plan plan) {
     public static final int UP = 0x01, DOWN = 0x02, LEFT = 0x04, RIGHT = 0x08, JUMP = 0x10, PAD_BITS = 0x1F;
     /** Native countdown rows before the release row. */
     public static final int COUNTDOWN_ROWS = 180;
 
-    /** Format 2's forward-course semantics. */
+    /** The forward course's semantics. */
     public record Plan(String policy, String combat, String kind, String launch, Map<String, String> profile,
                        String romSha1, int countdownRow, List<Stand> stands, Endpoint endpoint, String waypoints) {
         public Plan {
@@ -118,7 +102,6 @@ public record Rail(int format, String game, int zone, int act, String team, int 
         Objects.requireNonNull(game, "game");
         Objects.requireNonNull(team, "team");
         if (runFrames.length != runMasks.length) throw new IllegalArgumentException("Unpaired program runs");
-        stands = List.copyOf(stands);
         int length = 0;
         for (int i = 0; i < runFrames.length; i++) {
             if (runFrames[i] <= 0) throw new IllegalArgumentException("Program run must be positive");
@@ -127,16 +110,7 @@ public record Rail(int format, String game, int zone, int act, String team, int 
             length = Math.addExact(length, runFrames[i]);
         }
         if (validated < 0 || validated > length) throw new IllegalArgumentException("Validated past the program");
-        if (bossRow < 0 || bossRow > validated) throw new IllegalArgumentException("Boss stand past validation");
-        int previous = -1;
-        for (int stand : stands) {
-            if (stand <= previous || stand >= bossRow) throw new IllegalArgumentException("Stands must ascend before the boss");
-            previous = stand;
-        }
     }
-
-    /** True for a format-2 forward course. */
-    public boolean forward() { return plan != null; }
 
     /** Pad mask for program row {@code row}; neutral past the validated end. */
     public int maskAt(int row) {
@@ -185,9 +159,9 @@ public record Rail(int format, String game, int zone, int act, String team, int 
     public static Rail parse(String text) {
         String game = null, team = "sonic", engine = "", rom = "";
         String policy = null, combat = null, kind = null, launch = null, romSha1 = null, endpointKind = null, waypoints = null;
-        int format = 1, zone = -1, act = -1, validated = -1, boss = -1, countdown = -1, endpointRow = -1;
+        int format = -1, zone = -1, act = -1, validated = -1, countdown = -1, endpointRow = -1;
         Map<String, String> profile = new LinkedHashMap<>();
-        List<Integer> frames = new ArrayList<>(), masks = new ArrayList<>(), legacyStands = new ArrayList<>();
+        List<Integer> frames = new ArrayList<>(), masks = new ArrayList<>();
         List<Stand> stands = new ArrayList<>();
         for (String raw : text.split("\n")) {
             String line = raw.strip();
@@ -220,14 +194,10 @@ public record Rail(int format, String game, int zone, int act, String team, int 
                 case "countdown" -> countdown = Integer.parseInt(value);
                 case "stand" -> {
                     String[] f = value.split("\\s+");
-                    if (f.length == 1) {
-                        legacyStands.add(Integer.parseInt(f[0]));
-                    } else {
-                        if (f.length < 4) throw new IllegalArgumentException("stand needs id, row, cleanup and pool: " + value);
-                        List<Body> pool = new ArrayList<>();
-                        for (int i = 3; i < f.length; i++) if (!f[i].equals("-")) pool.add(Body.parse(f[i]));
-                        stands.add(new Stand(Integer.parseInt(f[0]), Integer.parseInt(f[1]), Integer.parseInt(f[2]), pool));
-                    }
+                    if (f.length < 4) throw new IllegalArgumentException("stand needs id, row, cleanup and pool: " + value);
+                    List<Body> pool = new ArrayList<>();
+                    for (int i = 3; i < f.length; i++) if (!f[i].equals("-")) pool.add(Body.parse(f[i]));
+                    stands.add(new Stand(Integer.parseInt(f[0]), Integer.parseInt(f[1]), Integer.parseInt(f[2]), pool));
                 }
                 case "endpoint" -> {
                     String[] f = value.split("\\s+");
@@ -235,7 +205,6 @@ public record Rail(int format, String game, int zone, int act, String team, int 
                     endpointKind = f[0];
                     endpointRow = Integer.parseInt(f[1]);
                 }
-                case "boss" -> boss = Integer.parseInt(value);
                 case "program" -> {
                     for (String pair : value.split(",")) {
                         String[] parts = pair.strip().split(":");
@@ -247,47 +216,37 @@ public record Rail(int format, String game, int zone, int act, String team, int 
                 default -> throw new IllegalArgumentException("Unknown rail key: " + key);
             }
         }
+        if (format != 2) throw new IllegalArgumentException("Unsupported rail format " + (format < 0 ? "(none)" : format)
+                + ": only forward courses (format 2) are played");
         if (game == null || zone < 0 || act < 0) throw new IllegalArgumentException("Rail needs game, zone and act");
         int[] runFrames = frames.stream().mapToInt(Integer::intValue).toArray();
         int[] runMasks = masks.stream().mapToInt(Integer::intValue).toArray();
         int total = 0;
         for (int f : runFrames) total = Math.addExact(total, f);
-        if (format == 1) {
-            if (!stands.isEmpty() || policy != null || endpointKind != null) {
-                throw new IllegalArgumentException("Format 1 rails take plain stand rows and a boss row");
-            }
-            if (validated < 0) validated = total;
-            if (boss < 0) boss = validated;
-            return new Rail(1, game, zone, act, team, validated, engine, rom, runFrames, runMasks, legacyStands, boss, null);
-        }
-        if (format != 2) throw new IllegalArgumentException("Unsupported rail format " + format);
-        if (!legacyStands.isEmpty() || boss >= 0) throw new IllegalArgumentException("Format 2 rails use stand specs and an endpoint");
         if (!Set.of("forward-v1", "forward-v2").contains(policy)) throw new IllegalArgumentException("Unsupported policy " + policy);
         if (!"live-restore-v1".equals(combat)) throw new IllegalArgumentException("Unsupported combat mode " + combat);
         if (!Set.of("regular", "boss-only", "pilot").contains(kind)) throw new IllegalArgumentException("Unknown course kind " + kind);
         if (!Set.of("native-spindash", "native-run-roll").contains(launch)) throw new IllegalArgumentException("Unknown launch " + launch);
-        if (romSha1 == null || romSha1.length() != 40) throw new IllegalArgumentException("Format 2 rails need rom-sha1");
+        if (romSha1 == null || romSha1.length() != 40) throw new IllegalArgumentException("A rail needs rom-sha1");
         if (endpointKind == null || !Set.of("boss-arena", "act-end", "pre-handover").contains(endpointKind)) {
-            throw new IllegalArgumentException("Format 2 rails need a boss-arena, act-end or pre-handover endpoint");
+            throw new IllegalArgumentException("A rail needs a boss-arena, act-end or pre-handover endpoint");
         }
-        if (validated != total) throw new IllegalArgumentException("Format 2 validates the whole program");
+        if (validated != total) throw new IllegalArgumentException("A rail validates its whole program");
         if (endpointRow < 0 || endpointRow > total) throw new IllegalArgumentException("Endpoint outside the program");
-        Rail probe = new Rail(2, game, zone, act, team, validated, engine, rom, runFrames, runMasks, List.of(), endpointRow, null);
-        if (!kind.equals("boss-only") && countdown < 0) throw new IllegalArgumentException("A run needs a countdown row");
-        if (countdown >= 0) {
-            if (countdown + COUNTDOWN_ROWS >= endpointRow) throw new IllegalArgumentException("Countdown runs past the endpoint");
-            for (int i = 0; i < COUNTDOWN_ROWS; i++) {
-                int m = probe.maskAt(countdown + i);
-                int allowed = launch.equals("native-spindash") ? DOWN | JUMP : DOWN;
-                if ((m & DOWN) == 0 || (m & ~allowed) != 0) {
-                    throw new IllegalArgumentException("Countdown row " + (countdown + i) + " is " + Integer.toHexString(m)
-                            + ", not crouch" + (launch.equals("native-spindash") ? " or charge" : ""));
-                }
+        Rail probe = new Rail(game, zone, act, team, validated, engine, rom, runFrames, runMasks, null);
+        if (countdown < 0) throw new IllegalArgumentException("A rail needs a countdown row");
+        if (countdown + COUNTDOWN_ROWS >= endpointRow) throw new IllegalArgumentException("Countdown runs past the endpoint");
+        for (int i = 0; i < COUNTDOWN_ROWS; i++) {
+            int m = probe.maskAt(countdown + i);
+            int allowed = launch.equals("native-spindash") ? DOWN | JUMP : DOWN;
+            if ((m & DOWN) == 0 || (m & ~allowed) != 0) {
+                throw new IllegalArgumentException("Countdown row " + (countdown + i) + " is " + Integer.toHexString(m)
+                        + ", not crouch" + (launch.equals("native-spindash") ? " or charge" : ""));
             }
-            int release = probe.maskAt(countdown + COUNTDOWN_ROWS);
-            if ((release & RIGHT) == 0 || (release & DOWN) != 0) throw new IllegalArgumentException("The release row must hold right without down");
         }
-        int previousEnd = countdown < 0 ? 0 : countdown + COUNTDOWN_ROWS;
+        int release = probe.maskAt(countdown + COUNTDOWN_ROWS);
+        if ((release & RIGHT) == 0 || (release & DOWN) != 0) throw new IllegalArgumentException("The release row must hold right without down");
+        int previousEnd = countdown + COUNTDOWN_ROWS;
         Set<Integer> ids = new HashSet<>();
         for (Stand stand : stands) {
             if (!ids.add(stand.id())) throw new IllegalArgumentException("Duplicate stand id " + stand.id());
@@ -304,7 +263,6 @@ public record Rail(int format, String game, int zone, int act, String team, int 
         }
         Plan plan = new Plan(policy, combat, kind, launch, profile, romSha1, countdown, stands,
                 new Endpoint(endpointKind, endpointRow), waypoints);
-        return new Rail(2, game, zone, act, team, validated, engine, rom, runFrames, runMasks,
-                stands.stream().map(Stand::row).toList(), endpointRow, plan);
+        return new Rail(game, zone, act, team, validated, engine, rom, runFrames, runMasks, plan);
     }
 }

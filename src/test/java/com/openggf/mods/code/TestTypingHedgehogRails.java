@@ -31,7 +31,6 @@ import java.util.Map;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -45,7 +44,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * badniks present), every fight cleared by typing as a player does. Each packaged rail is read by
  * the mod's own {@code Rail.parse}.
  *
- * <p><b>Forward rails</b> (format 2) must qualify: four or five regular fights (none for a boss-only
+ * <p>Every shipped rail is a forward course (format 2) and must qualify: four or five regular fights (none for a boss-only
  * course), the ROM SHA-1 they name, and a run of the real course that, on every native row outside
  * fights, has no hurt, death, level change, rail fault, native badnik kill (a badnik's slot turning
  * into an explosion, the ROM's in-place {@code ExplosionItem}), camera more than 16 px behind its
@@ -54,10 +53,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * row with the stock boss flag up and the act's boss rig art registered. The course is run four
  * ways: typed at once, held 1800 rows before typing, retried once mid-fight, and from a hub-like
  * V_int_run_count phase (333); the first three must reach every fight, the first row after it and
- * the endpoint in the same native state (equal native rows, whatever the fights took).
- *
- * <p><b>Legacy rails</b> (format 1) keep the older check: the boss stand on its row, no native hurt
- * or death on any row. They are not forward-qualified.
+ * the endpoint in the same native state (equal native rows, whatever the fights took). A game
+ * that ships no rail passes with nothing to check, and says so.
  */
 @Tag("slow-suite")
 class TestTypingHedgehogRails {
@@ -136,16 +133,15 @@ class TestTypingHedgehogRails {
 
     private void check(String game, SonicGame sonicGame) throws Exception {
         List<Spec> specs = shipped(game);
-        Assumptions.assumeFalse(specs.isEmpty(), "no shipped " + game + " rails");
+        if (specs.isEmpty()) {
+            System.out.println("[typing-hedgehog] " + game + " rails: none shipped, nothing to check");
+            return;
+        }
         List<String> faults = new ArrayList<>();
-        int forward = 0, legacy = 0;
         for (Spec spec : specs) {
-            boolean isForward = (boolean) spec.rail().getClass().getMethod("forward").invoke(spec.rail());
-            if (isForward) forward++;
-            else legacy++;
             String fault;
             try {
-                fault = isForward ? forward(spec, sonicGame) : legacy(spec, sonicGame);
+                fault = forward(spec, sonicGame);
             } catch (Throwable t) {
                 Throwable cause = t;
                 while (cause.getCause() != null) cause = cause.getCause();
@@ -159,7 +155,8 @@ class TestTypingHedgehogRails {
             if (fault != null) faults.add(spec.file() + ": " + fault);
             dispose();
         }
-        System.out.println("[typing-hedgehog] " + game + " rails: " + forward + " forward, " + legacy + " legacy");
+        System.out.println("[typing-hedgehog] " + game + " rails: " + specs.size() + " forward courses "
+                + specs.stream().map(Spec::file).toList());
         assertTrue(faults.isEmpty(), "rail faults:\n" + String.join("\n", faults));
     }
 
@@ -370,41 +367,6 @@ class TestTypingHedgehogRails {
                     + " has no frame " + use.frame();
         }
         return null;
-    }
-
-    // ------------------------------------------------------------------ legacy rails
-
-    /** Runs a format-1 rail to its boss stand; returns a fault description or null. */
-    private String legacy(Spec spec, SonicGame sonicGame) throws Exception {
-        var fixture = launch(spec, sonicGame, false);
-        int boss = (int) get(spec.rail(), "bossRow");
-        int stands = ((List<?>) get(spec.rail(), "stands")).size();
-        int validated = (int) get(spec.rail(), "validated");
-        var input = new InputHandler();
-        int limit = validated + stands * 6000 + 20000;
-        for (int i = 0; i < limit; i++) {
-            Object view = view();
-            String phase = (String) get(view, "phase");
-            int railRow = (int) get(view, "railRow");
-            if (phase.equals("BOSS")) {
-                if (railRow != boss) return "boss stand began on row " + railRow + ", rail says " + boss;
-                int passed = (int) get(view, "nextStand");
-                if (passed != stands) return "passed " + passed + " stands, rail lists " + stands;
-                return null;
-            }
-            // Typing-layer misses retry a stand (noFail); only native faults fail the rail.
-            if (phase.equals("STAND")) typeNext(view, input);
-            ControlledFrameRuntime.step(fixture.runtime(), input, LogicalInputSnapshot.neutral());
-            input.update();
-            var player = (AbstractPlayableSprite) GameServices.camera().getFocusedSprite();
-            if (player.getDead()) return "native death in " + phase + " at rail row " + railRow;
-            if (player.isHurt()) return "native hurt in " + phase + " at rail row " + railRow
-                    + " (" + player.getCentreX() + "," + player.getCentreY() + ")";
-            if (GameServices.level().getCurrentZone() != spec.zone() || GameServices.level().getCurrentAct() != spec.act()) {
-                return "level changed at rail row " + railRow;
-            }
-        }
-        return "boss stand not reached within " + limit + " rows; view " + view();
     }
 
     // ------------------------------------------------------------------ typing and views

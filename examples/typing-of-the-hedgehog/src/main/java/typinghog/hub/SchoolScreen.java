@@ -153,7 +153,7 @@ final class SchoolScreen implements Screen {
     /** Starts a drill (also the {@code drill:NAME} debug command). */
     void start(HubScene hub, Drill drill) {
         pointAt(all().indexOf(drill));
-        if (drill == Drill.FINAL_EXAM && !School.examUnlocked(hub.profile) && !hub.demoRails) {
+        if (drill == Drill.FINAL_EXAM && !School.examUnlocked(hub.profile)) {
             hub.refuse("GET A C IN EVERY DRILL FIRST");
             say(hub, hub.material.tails("exam.locked", 0));
             return;

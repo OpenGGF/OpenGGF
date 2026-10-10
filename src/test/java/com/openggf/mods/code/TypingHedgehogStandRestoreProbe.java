@@ -50,7 +50,8 @@ import org.junit.jupiter.api.io.TempDir;
  * {@code standAllocationCensus} (add {@code -Dtypinghog.restoreprobe.census=true}) compares the
  * live-object census of the packaged Course and the rail builder row by row up to the first stand
  * and prints the first row where they differ.
- * Origin: rails lane, 2026-10-09.
+ * Origin: rails lane, 2026-10-09. It drives a format-1 (legacy) rail; those rails and the course's
+ * legacy stand path were retired with the forward courses, so rerun it from 3c85d3fab or earlier.
  */
 class TypingHedgehogStandRestoreProbe {
     private static final String RAIL = System.getProperty("typinghog.restoreprobe");

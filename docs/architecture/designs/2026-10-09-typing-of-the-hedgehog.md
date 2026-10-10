@@ -385,7 +385,9 @@ row 1 in HCZ and MHZ.
 | S2 SCZ, WFZ | dropped: no standing start | Sonic starts on the Tornado; never still on the ground |
 | S1 SYZ3, LZ3, SLZ3, SBZ2; S2 ARZ2, HTZ2, MCZ2, OOZ2, MTZ3; S3K CNZ1, FBZ1, DEZ1 | dropped at a frontier | one or two fights, then every lineage dies at a wall, steep ramp or loop exit (furthest x 1141 to 7468); HTZ2, MCZ2, CNZ1, DEZ1 and SOZ2 hit the 10-minute cap; candidates for waypoints where a recording shows a forward route |
 
-Dropped acts keep their legacy (format 1) rails until a decision on them.
+Forward courses only (the user's decision, 2026-10-10): the dropped acts ship no rail, their story stops
+show as under construction (the S3K chapter has none railed yet), and the recording-derived format 1, the
+world-held countdown, run tags and the legacy stand path were removed from the mod.
 
 ### Mod structure
 

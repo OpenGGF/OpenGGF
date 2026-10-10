@@ -5,7 +5,7 @@ import java.util.List;
 /** Behaviour checks for the engine-free rail format; run by the engine's TestTypingHedgehogRailFormat. */
 public final class RailChecks {
     public static void main(String[] args) {
-        legacyRails(); forwardRails(); forwardRejects(); qualification();
+        retiredFormatRejected(); forwardRails(); forwardRejects(); qualification();
         System.out.println("4 rail format checks passed");
     }
 
@@ -53,19 +53,15 @@ public final class RailChecks {
                 + "\n" + extra + "program " + program + "\n";
     }
 
-    public static void legacyRails() {
-        Rail rail = Rail.parse("game s1\nzone 0\nact 2\nvalidated 50\nprogram 20:8,30:18\nstand 10\nstand 30\nboss 50\n");
-        eq(1, rail.format());
-        yes(!rail.forward(), "a format-1 rail is not a forward course");
-        eq(List.of(10, 30), rail.stands());
-        eq(50, rail.bossRow());
-        eq(0x18, rail.maskAt(25));
+    /** The recording-derived format 1 rails are retired: only forward courses play. */
+    public static void retiredFormatRejected() {
+        rejects("game s1\nzone 0\nact 2\nvalidated 50\nprogram 20:8,30:18\nstand 10\nstand 30\nboss 50\n",
+                "the retired format 1 (no format line)");
+        rejects("format 1\ngame s1\nzone 0\nact 2\nprogram 50:8\n", "format 1");
     }
 
     public static void forwardRails() {
         Rail rail = Rail.parse(forward("native-spindash", spindashCountdown(), "", 4));
-        eq(2, rail.format());
-        yes(rail.forward(), "a format-2 rail is a forward course");
         var plan = rail.plan();
         eq(60, plan.countdownRow());
         eq(240, plan.releaseRow());
@@ -75,8 +71,8 @@ public final class RailChecks {
                 plan.stands().get(0).pool().stream().map(Rail.Body::key).toList());
         eq(18, plan.stands().get(0).pool().get(0).slot());
         eq("skip", plan.profile().get("intros"));
-        eq(List.of(540, 842, 1144, 1446), rail.stands());
-        eq(rail.validated(), rail.bossRow());
+        eq(List.of(540, 842, 1144, 1446), plan.stands().stream().map(Rail.Stand::row).toList());
+        eq(rail.validated(), plan.endpoint().row());
         eq(0x12, rail.maskAt(62));
         eq(0x02, rail.maskAt(63));
         eq(0x08, rail.maskAt(240));
@@ -96,7 +92,8 @@ public final class RailChecks {
         rejects(good.replace("stand 2 842", "stand 1 842"), "a duplicate stand id");
         rejects(good.replace("stand 2 842 2", "stand 2 841 2"), "a cleanup row that moves");
         rejects(good.replace("stand 1 540", "stand 1 200"), "a stand inside the countdown");
-        rejects(good.replace("validated", "boss 9999\nvalidated"), "a format-1 boss row");
+        rejects(good.replace("validated", "boss 9999\nvalidated"), "a retired format-1 boss row");
+        rejects(good.replace("countdown 60\n", ""), "no countdown");
         rejects(good.replace("program 60:0", "program 60:20"), "a mask outside the pad bits");
         String length = good.substring(good.indexOf("validated ") + 10, good.indexOf('\n', good.indexOf("validated ")));
         rejects(good.replace("validated " + length, "validated " + (Integer.parseInt(length) - 1)),

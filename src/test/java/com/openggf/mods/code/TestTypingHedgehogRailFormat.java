@@ -48,7 +48,7 @@ class TestTypingHedgehogRailFormat {
         }
     }
 
-    @Test void legacyRailsParseAsBefore() throws Exception { check("legacyRails"); }
+    @Test void theRetiredRecordingFormatIsRejected() throws Exception { check("retiredFormatRejected"); }
     @Test void forwardRailsCarryTheirCountdownStandsAndEndpoint() throws Exception { check("forwardRails"); }
     @Test void forwardRailsRejectBrokenSchedulesAndMissingIdentity() throws Exception { check("forwardRejects"); }
     @Test void onlyFourOrFiveFightsQualifyARegularCourse() throws Exception { check("qualification"); }

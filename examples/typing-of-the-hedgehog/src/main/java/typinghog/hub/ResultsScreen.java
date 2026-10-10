@@ -72,10 +72,14 @@ final class ResultsScreen implements Screen {
 
     /** A made-up result for screenshots and tests ({@code sample}, {@code fail} or {@code emerald}). */
     void sample(HubScene hub, String kind) {
-        StoryBook.Stop stop = hub.story.chapter(hub.game).isEmpty() ? null : hub.story.chapter(hub.game).getFirst();
+        // A railed stop: the running game's first, else the first of any game (S3K ships none yet).
+        StoryBook.Stop stop = null;
+        for (StoryBook.Stop s : hub.story.chapter(hub.game)) if (stop == null && hub.railed(s)) stop = s;
+        for (StoryBook.Stop s : hub.story.stops()) if (stop == null && hub.railed(s)) stop = s;
+        String game = stop == null ? hub.game : stop.game();
         int zone = stop == null ? 0 : stop.zone(), act = stop == null ? 0 : stop.act();
         boolean fail = kind.equals("fail");
-        ActResult r = new ActResult(LaunchIntent.Mode.STORY, hub.game, zone, act, !fail, fail ? 8150 : 48620,
+        ActResult r = new ActResult(LaunchIntent.Mode.STORY, game, zone, act, !fail, fail ? 8150 : 48620,
                 fail ? 31.4 : 58.7, fail ? 0.88 : 0.973, fail ? 6 : 23, fail ? 21 : 64, fail ? 4 : 1, 3, fail ? 0 : 27,
                 fail ? "D" : "A", fail ? 0 : 21700, !fail, "", "");
         outcome = new ResultMerge.Outcome(r, hub.profile.difficulty(), "sample", fail ? 0 : 1, 41200, !fail,

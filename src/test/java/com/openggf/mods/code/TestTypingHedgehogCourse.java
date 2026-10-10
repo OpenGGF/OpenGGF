@@ -28,16 +28,17 @@ import org.junit.jupiter.api.io.TempDir;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Drives the packaged Typing of the Hedgehog course on real Green Hill 1 with a synthetic test
- * rail (stand still, then hold right; one stand, then the boss): the rail reaches its stand,
- * badniks arrive with words, typing them kills them, the wave clears, and the stand's checkpoint
- * restore resumes the deterministic run exactly where it stopped.
+ * Drives the packaged Typing of the Hedgehog course on real Green Hill 1 with a synthetic forward
+ * rail (entry rows, the crouched countdown, a short run right, one stand, then on to the boss):
+ * the rail reaches its stand, badniks arrive with words, typing them kills them, the wave clears,
+ * and the stand's checkpoint restore resumes the deterministic run exactly where it stopped. The
+ * stand's loaded-badnik manifest is read from the act itself before the course is packaged.
  */
 @RequiresRom(SonicGame.SONIC_1)
 class TestTypingHedgehogCourse {
     static final String MOD = "typing-of-the-hedgehog";
-    static final int STAND_ROW = 240;
-    static final int BOSS_ROW = 600;
+    static final int ENTRY = 60, RELEASE = ENTRY + 180, STAND_ROW = 300, CLEANUP = 2, BOSS_ROW = 600, LENGTH = 640;
+    static final ForwardRails.Pilot GHZ1 = new ForwardRails.Pilot("ghz1", SonicGame.SONIC_1, "s1", 0, 0, "", "");
 
     @TempDir static Path temp;
     static Path project;
@@ -56,9 +57,7 @@ class TestTypingHedgehogCourse {
         }
         Path rails = project.resolve("src/main/resources/rails");
         Files.createDirectories(rails);
-        Files.writeString(rails.resolve("test-ghz1.rail"), String.join("\n",
-                "game s1", "zone 0", "act 0", "team sonic", "validated 640",
-                "program 120:0,520:8", "stand " + STAND_ROW, "boss " + BOSS_ROW, ""));
+        Files.writeString(rails.resolve("test-ghz1.rail"), testRail());
         Path index = rails.resolve("index.txt");
         String existing = Files.exists(index) ? Files.readString(index) : "";
         Files.writeString(index, existing + "\ntest-ghz1.rail\n");
@@ -68,6 +67,37 @@ class TestTypingHedgehogCourse {
             Files.writeString(cast, "0 Motobug motobug RUSHER false 20 14 8 0,1\n");
         }
         harness = ExampleModHarness.build(project, temp.resolve("work"));
+    }
+
+    /** Program rows: entry, the crouched countdown, the release and a short run, the stand's quiet rows, then right. */
+    static int mask(int row) {
+        if (row < ENTRY) return 0;
+        if (row < RELEASE) return ForwardRails.DOWN;
+        if (row >= STAND_ROW && row < STAND_ROW + CLEANUP) return 0;
+        return ForwardRails.RIGHT;
+    }
+
+    /** The synthetic forward rail, its stand manifest taken from the act's own badniks at the stand row. */
+    static String testRail() throws Exception {
+        String pool, sha1;
+        try (ExampleModHarness author = ForwardRails.buildHarness(temp, "author", java.util.Map.of());
+             ForwardRails.World w = new ForwardRails.World(GHZ1, java.util.Map.of())) {
+            var handoff = new ForwardRails.Handoff(author, "s1");
+            w.driver.program = TestTypingHedgehogCourse::mask;
+            while (w.driver.row < STAND_ROW) w.advance();
+            StringBuilder tokens = new StringBuilder();
+            for (Object body : handoff.pool()) tokens.append(' ').append(ForwardRails.token(body));
+            pool = tokens.length() == 0 ? " -" : tokens.toString();
+            sha1 = w.course.romSha1();
+        }
+        GameServices.configuration().clearSessionOverrides();
+        int[] masks = new int[LENGTH];
+        for (int i = 0; i < LENGTH; i++) masks[i] = mask(i);
+        return String.join("\n", "format 2", "policy forward-v2", "combat live-restore-v1", "course pilot",
+                "launch native-run-roll", "profile width=320", "game s1", "zone 0", "act 0", "team sonic",
+                "rom-sha1 " + sha1, "countdown " + ENTRY, "stand 1 " + STAND_ROW + " " + CLEANUP + pool,
+                "endpoint boss-arena " + BOSS_ROW, "validated " + LENGTH,
+                "program " + TypingHedgehogRailBuilderProbe.rle(masks, LENGTH), "");
     }
 
     @org.junit.jupiter.api.AfterAll static void closeHarness() throws Exception {

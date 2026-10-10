@@ -177,7 +177,8 @@ Nine `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each
   or authored route through the mod's controlled rail semantics at 320 px, repairs hurts and drift with bounded
   local input edits spliced back onto the reference path (recorded states, comparison-only), re-validates every
   repair by a fresh straight run, and picks soak-safe boss and stand rows whose whole stand chain restores
-  exactly. Origin: rails lane, 2026-10-09.
+  exactly. Its format-1 rails are retired (forward courses only since 2026-10-10); the forward builder below
+  reuses its targets and recorded-run loading. Origin: rails lane, 2026-10-09.
 - `TypingHedgehogRailsV2Probe` (test scope, opt-in `-Dmse=off -Dtypinghog.v2probe=all`, optional
   `typinghog.v2probe.parts=1,1p,2,4,5,6,7`) answers the forward-course prerequisites on S1 GHZ3, S2 EHZ2 and
   S3K SOZ1: launch-profile and production-boot entry equivalence, act-start `V_int_run_count` phase
