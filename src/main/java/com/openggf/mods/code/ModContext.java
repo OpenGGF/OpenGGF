@@ -201,19 +201,30 @@ public final class ModContext {
      * through the same overlay as {@link #registerObjectArt}.
      */
     public void registerRomObjectArt(String key, RomArtRequest request) {
+        if (!"s2".equals(baseGame)) {
+            mutate(() -> { throw failure("ROM art intake is supported only for Sonic 2 patch mods"); });
+            return;
+        }
+        registerRomObjectArt(key, com.openggf.game.patch.LogicalRom.S2, request);
+    }
+
+    /** Stages art from a named S1/S2 logical ROM; S1 uses byte-count, five-byte mappings. */
+    public void registerRomObjectArt(String key, com.openggf.game.patch.LogicalRom source,
+            RomArtRequest request) {
         mutate(() -> {
             if (standalone) throw failure("ROM art intake is not available to standalone modules");
-            if (!"s2".equals(baseGame)) {
-                throw failure("ROM art intake is supported only for Sonic 2 patch mods");
-            }
             Objects.requireNonNull(request, "request");
-            if (request.artAddress() >= SONIC2_ROM_LENGTH
-                    || request.mappingAddress() >= SONIC2_ROM_LENGTH
-                    || request.dplcAddress() >= SONIC2_ROM_LENGTH) {
-                throw failure("ROM art request address beyond Sonic 2 ROM bounds: " + key);
+            RomArtRequest sourced = new RomArtRequest(request.artAddress(), request.compression(),
+                    request.uncompressedByteSize(), request.mappingAddress(), request.dplcAddress(),
+                    request.paletteLine(), request.bankSize(), source);
+            int length = source == com.openggf.game.patch.LogicalRom.S1 ? 0x80000 : SONIC2_ROM_LENGTH;
+            if (request.artAddress() >= length || request.mappingAddress() >= length
+                    || request.dplcAddress() >= length
+                    || (long) request.artAddress() + request.uncompressedByteSize() > length) {
+                throw failure("ROM art request address beyond " + source + " ROM bounds: " + key);
             }
             String owned = ModKeySyntax.requireOwnedKey(owner, key);
-            if (art.containsKey(owned) || romArt.putIfAbsent(owned, request) != null) {
+            if (art.containsKey(owned) || romArt.putIfAbsent(owned, sourced) != null) {
                 throw failure("Duplicate object art key: " + owned);
             }
         });

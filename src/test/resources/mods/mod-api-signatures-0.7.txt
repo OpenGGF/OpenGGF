@@ -1440,6 +1440,7 @@ CONSTRUCTOR com.openggf.mods.code.ModLevelDefinition$StockObjectSpawn public  <i
 CONSTRUCTOR com.openggf.mods.code.ModLevelDefinition$TrackMusic public  <init>(com.openggf.mods.TrackKey)
 CONSTRUCTOR com.openggf.mods.code.ModZoneContribution public  <init>(java.lang.String,com.openggf.mods.code.BakedLevelRef,java.lang.String,com.openggf.mods.code.ZoneEventFactory,boolean,java.util.List<com.openggf.mods.code.BakedLevelRef>,com.openggf.game.modzone.ModZoneRuntimeFactory)
 CONSTRUCTOR com.openggf.mods.code.RomArtRequest public  <init>(int,com.openggf.mods.code.RomArtCompression,int,int,int,int,int)
+CONSTRUCTOR com.openggf.mods.code.RomArtRequest public  <init>(int,com.openggf.mods.code.RomArtCompression,int,int,int,int,int,com.openggf.game.patch.LogicalRom)
 CONSTRUCTOR com.openggf.mods.scene.ActLaunch public  <init>(com.openggf.game.ZoneKey$Mod,int,com.openggf.game.CharacterKey,java.util.List<com.openggf.game.CharacterKey>,java.util.OptionalInt,java.util.OptionalInt,int,java.util.Map<java.lang.String,java.lang.String>)
 CONSTRUCTOR com.openggf.mods.scene.ActResult public  <init>(com.openggf.game.ZoneKey$Mod,com.openggf.game.ActExit,int,long,java.util.Map<java.lang.String,java.lang.String>)
 CONSTRUCTOR com.openggf.mods.scene.RomSpriteRequest public  <init>(int,com.openggf.mods.scene.RomSpriteRequest$Compression,int,int,int,com.openggf.mods.scene.RomSpriteRequest$DplcLayout,int,int)
@@ -10471,6 +10472,7 @@ METHOD com.openggf.mods.code.ModContext public  void registerObject(java.lang.St
 METHOD com.openggf.mods.code.ModContext public  void registerObjectArt(java.lang.String,com.openggf.mods.code.BakedSheetRef)
 METHOD com.openggf.mods.code.ModContext public  void registerObjectPreview(java.lang.String,java.lang.String)
 METHOD com.openggf.mods.code.ModContext public  void registerRewindAdapter(java.lang.String,com.openggf.game.rewind.RewindSnapshottable<?>)
+METHOD com.openggf.mods.code.ModContext public  void registerRomObjectArt(java.lang.String,com.openggf.game.patch.LogicalRom,com.openggf.mods.code.RomArtRequest)
 METHOD com.openggf.mods.code.ModContext public  void registerRomObjectArt(java.lang.String,com.openggf.mods.code.RomArtRequest)
 METHOD com.openggf.mods.code.ModContext public  void registerServiceBundle(java.lang.String,java.util.function.Supplier<com.openggf.game.GameServiceBundle>)
 METHOD com.openggf.mods.code.ModContext public  void registerStartupScene(com.openggf.mods.scene.ModSceneFactory)
@@ -10599,6 +10601,7 @@ METHOD com.openggf.mods.code.RewindableZoneEvents public,abstract  void resetFor
 METHOD com.openggf.mods.code.RomArtCompression public,static  com.openggf.mods.code.RomArtCompression valueOf(java.lang.String)
 METHOD com.openggf.mods.code.RomArtCompression public,static  com.openggf.mods.code.RomArtCompression[] values()
 METHOD com.openggf.mods.code.RomArtRequest public  boolean hasDplc()
+METHOD com.openggf.mods.code.RomArtRequest public  com.openggf.game.patch.LogicalRom source()
 METHOD com.openggf.mods.code.RomArtRequest public  com.openggf.mods.code.RomArtCompression compression()
 METHOD com.openggf.mods.code.RomArtRequest public  int artAddress()
 METHOD com.openggf.mods.code.RomArtRequest public  int bankSize()
@@ -14854,6 +14857,7 @@ RECORD-COMPONENT com.openggf.mods.code.RomArtRequest compression com.openggf.mod
 RECORD-COMPONENT com.openggf.mods.code.RomArtRequest dplcAddress int
 RECORD-COMPONENT com.openggf.mods.code.RomArtRequest mappingAddress int
 RECORD-COMPONENT com.openggf.mods.code.RomArtRequest paletteLine int
+RECORD-COMPONENT com.openggf.mods.code.RomArtRequest source com.openggf.game.patch.LogicalRom
 RECORD-COMPONENT com.openggf.mods.code.RomArtRequest uncompressedByteSize int
 RECORD-COMPONENT com.openggf.mods.scene.ActLaunch act int
 RECORD-COMPONENT com.openggf.mods.scene.ActLaunch destination com.openggf.game.ZoneKey$Mod

@@ -36,16 +36,39 @@ public final class ModBackedGamePatch implements GamePatch {
      */
     interface RomArtSheetSource {
         Map<String, ObjectSpriteSheet> materialize(String owner, Map<String, RomArtRequest> requests);
+        default Map<String, ObjectSpriteSheet> materialize(String owner, Map<String, RomArtRequest> requests,
+                PatchContext context) { return materialize(owner, requests); }
     }
 
     static RomArtSheetSource productionRomArtSource() {
-        return (owner, requests) -> {
-            try {
-                return RomArtMaterializer.materialize(owner, requests,
-                        GameServices.rom().getRom(), ModInputLimits.production());
-            } catch (IOException e) {
-                throw new ModRegistrationException(owner, "MOD_ROM_ART_INVALID",
-                        "ROM unavailable during art materialization", null, e);
+        return new RomArtSheetSource() {
+            public Map<String, ObjectSpriteSheet> materialize(String owner, Map<String, RomArtRequest> requests) {
+                try {
+                    return RomArtMaterializer.materialize(owner, requests,
+                            GameServices.rom().getRom(), ModInputLimits.production());
+                } catch (IOException e) {
+                    throw new ModRegistrationException(owner, "MOD_ROM_ART_INVALID", "ROM unavailable", null, e);
+                }
+            }
+            public Map<String, ObjectSpriteSheet> materialize(String owner, Map<String, RomArtRequest> requests,
+                    PatchContext context) {
+                if (context == null) {
+                    if (requests.values().stream().anyMatch(r -> r.source() != LogicalRom.S2))
+                        throw new ModRegistrationException(owner, "MOD_ROM_ART_INVALID", "Named art requires PatchContext", null, null);
+                    return materialize(owner, requests);
+                }
+                Map<String, ObjectSpriteSheet> sheets = new java.util.LinkedHashMap<>();
+                for (LogicalRom source : Set.of(LogicalRom.S1, LogicalRom.S2)) {
+                    Map<String, RomArtRequest> selected = new java.util.LinkedHashMap<>();
+                    requests.forEach((key, request) -> { if (request.source() == source) selected.put(key, request); });
+                    if (selected.isEmpty()) continue;
+                    try (var rom = com.openggf.data.Rom.fromReader(context.openLogicalRom(source), source.name())) {
+                        sheets.putAll(RomArtMaterializer.materialize(owner, selected, rom, ModInputLimits.production()));
+                    } catch (IOException e) {
+                        throw new ModRegistrationException(owner, "MOD_ROM_ART_INVALID", "Logical ROM unavailable: " + source, null, e);
+                    }
+                }
+                return sheets;
             }
         };
     }
@@ -119,7 +142,10 @@ public final class ModBackedGamePatch implements GamePatch {
     @Override public boolean activatesFor(GameplayLaunchRequest request) {
         return plan.baseGameId().equals(request.gameId());
     }
-    @Override public Set<LogicalRom> romPrerequisites() { return Set.of(); }
+    @Override public Set<LogicalRom> romPrerequisites() {
+        return plan.romObjectArt().values().stream().map(RomArtRequest::source)
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+    }
     @Override public List<String> providedMainCharacters() {
         return plan.characters().keySet().stream()
                 .map(com.openggf.game.CharacterKey::persisted).toList();
@@ -164,7 +190,7 @@ public final class ModBackedGamePatch implements GamePatch {
         ModObjectKeyRegistry objectKeys = new ModObjectKeyRegistry(registrations);
         Map<String, ObjectSpriteSheet> romSheets = plan.romObjectArt().isEmpty()
                 ? Map.of()
-                : romArtSource.materialize(plan.ownerModId(), plan.romObjectArt());
+                : romArtSource.materialize(plan.ownerModId(), plan.romObjectArt(), context);
         GameModule decorated = new DelegatingGameModule(base, id()) {
             private com.openggf.game.PlayableCharacterRegistry playableCharacters;
             private com.openggf.game.ObjectArtProvider objectArtProvider;
