@@ -39,7 +39,7 @@ public final class RuinsPatch implements GamePatch {
                         terrain.put(sourceIndex,source);
                     }
                 }
-                return base().getModZoneAdapter().load("starpost-valley",RuinsLevel.build(contribution.levelData(),source,chamber));
+                return base().getModZoneAdapter().load("starpost-valley",RuinsLevel.build(contribution.levelData(),source,chamber,session));
             }
         };
     }

@@ -93,7 +93,8 @@ public final class StarpostScene implements ModScene, DebuggableScene {
         returnY = Integer.parseInt(state.getOrDefault("town.returnY", Integer.toString(returnY)));
         starpost.realtown.TownBridge.resume(shell, actPlay,
             new starpost.realtown.TownSession.HandBack(place, state.get("town.event"), returnX, returnY));
-        returnToAct = !place.equals("farm_gate") && !place.equals("time_up") && !place.equals("fainted");
+        returnToAct = !place.equals("farm_gate") && !place.equals("time_up") && !place.equals("fainted")
+            && (ruins == null || !ruins.active()); // A door handler may already have queued the Ruins act.
         shell.in.consume();
     }
 

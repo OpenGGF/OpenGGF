@@ -91,7 +91,8 @@ class TestStarpostTownAct {
                 plan.serviceBundles(),plan.decodedLevelPatches(),plan.contributionLimit());
             var boundary=new ModFaultBoundary(Map.of(),findings,ignored->new com.openggf.mods.ModStateSaveResult.Saved(),
                 ignored->{ });
-            effective=new ModBackedGamePatch(combined,boundary).apply(base,null);
+            effective=new ModBackedGamePatch(combined,boundary).apply(base,
+                new PatchContext(LogicalRomResolver.fromRomManager(GameServices.rom())::openOrThrow,config));
         }
         Class<?> catalogType=loader.loadClass("starpost.core.Catalog");
         Object catalog=catalogType.getConstructor().newInstance();

@@ -233,10 +233,16 @@ class TestStarpostRealRuins {
         assertEquals(ActExit.LEFT,call(ruins,"exit"));
         assertTrue(loop.modSceneActBridge.consumeExitOrHold(input)); drainFade();
         assertTrue((Boolean)call(shell,"hasOverlay"));
-        input.handleKeyEvent(GLFW_KEY_DOWN,GLFW_PRESS); loop.modSceneActBridge.updateScene(input);
-        input.handleKeyEvent(GLFW_KEY_DOWN,GLFW_RELEASE); input.update(); loop.modSceneActBridge.updateScene(input);
-        input.handleKeyEvent(GLFW_KEY_ENTER,GLFW_PRESS); loop.modSceneActBridge.updateScene(input); drainFade();
-        input.handleKeyEvent(GLFW_KEY_ENTER,GLFW_RELEASE); input.update();
+        // Drive the logical Genesis pad, independent of the host's configured keyboard bindings.
+        input.setLogicalOverride(com.openggf.control.LogicalInputSnapshot.ofPlayers(
+            com.openggf.control.PlayerInputState.of(2,2,0,0,false,false),com.openggf.control.PlayerInputState.neutral()));
+        loop.modSceneActBridge.updateScene(input);
+        Object menu=((Deque<?>)field(shell,"overlays")).peek(); assertEquals(1,field(menu,"cursor"));
+        input.setLogicalOverride(com.openggf.control.LogicalInputSnapshot.neutral()); loop.modSceneActBridge.updateScene(input);
+        input.setLogicalOverride(com.openggf.control.LogicalInputSnapshot.ofPlayers(
+            com.openggf.control.PlayerInputState.of(0,0,1,1,false,false),com.openggf.control.PlayerInputState.neutral()));
+        loop.modSceneActBridge.updateScene(input); drainFade();
+        input.setLogicalOverride(com.openggf.control.LogicalInputSnapshot.neutral());
         assertEquals(GameMode.LEVEL,loop.getCurrentGameMode()); assertEquals(5,field(call(ruins,"chamber"),"number"));
         assertSame(game,field(shell,"game")); assertTrue(harness.findings().isEmpty(),harness.findings().toString());
     }

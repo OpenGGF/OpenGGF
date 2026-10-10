@@ -18,6 +18,9 @@ public final class RuinsLevel {
                 1, 2), chamber.cols, chamber.rows);
     }
     public static ModZoneLevelData build(ModZoneLevelData placeholder, S1Terrain source, Chamber chamber) {
+        return build(placeholder,source,chamber,null);
+    }
+    public static ModZoneLevelData build(ModZoneLevelData placeholder, S1Terrain source, Chamber chamber,RuinsSession session) {
         var data = encode(source, chamber);
         List<ModPaletteClaim> claims = new ArrayList<>();
         for (int[] c : data.claims()) claims.add(new ModPaletteClaim(c[0], c[1], c[2]));
@@ -25,14 +28,16 @@ public final class RuinsLevel {
                 0, Math.max(0,chamber.width-320), 0, Math.max(0,data.height()*128-224),
                 data.patterns(),data.chunks(),data.blocks(),data.foreground(),data.background(),
                 data.heights(),data.widths(),data.angles(),data.primary(),data.secondary(),
-                placeholder.paletteLines(),placeholder.hostMetadata(),claims,objects(chamber),List.of(),
+                placeholder.paletteLines(),placeholder.hostMetadata(),claims,objects(chamber,session),List.of(),
                 data.patternCount(),data.chunkCount(),data.blockCount());
     }
-    public static List<ObjectSpawn> objects(Chamber chamber) {
+    public static List<ObjectSpawn> objects(Chamber chamber) { return objects(chamber,null); }
+    private static List<ObjectSpawn> objects(Chamber chamber,RuinsSession session) {
         List<ObjectSpawn> spawns = new ArrayList<>();
         spawns.add(RuinsContent.spawn("ruins-controller", 0, chamber.entryX, ORIGIN+chamber.entryY));
         int i=0;
         for (var thing : chamber.things) {
+            if(session!=null && session.taken(i)) { i++; continue; }
             int stock = switch (thing.type()) {
                 case Chamber.SPRING -> 7; case Chamber.SPIKES -> 8;
                 case Chamber.MONITOR -> thing.param()<0?1:0;

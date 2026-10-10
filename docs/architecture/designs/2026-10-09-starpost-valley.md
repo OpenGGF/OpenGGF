@@ -2335,4 +2335,57 @@ open. Bubble makers use stock S3K art. Wider viewports, movement donors, teams,
 all forty native traversals, checkpoint/restart breadth and complete object-phase
 rewind remain gaps. No engine gameplay is hydrated from reference traces.
 
-Validation and final capture evidence are recorded below after completion.
+Town hand-back may launch a Ruins act directly inside resume. Scheduling the
+usual valley reload afterwards would also rebind TownSession while the queued
+Ruins act owns input. Suppress that reload when RuinsSession is active; the
+three native doorway round trips exercise this boundary.
+
+Stock monitor remembered bits are translated into chamber progress before a
+hand-back, preventing an inventory visit from minting another native ring
+monitor. Object list indices use layoutIndex rather than the byte-wide subtype,
+so captured find identity does not wrap after 255. The last shaft remains sealed
+with an in-act notice; the mod uses only promised API calls.
+
+### Lane validation
+
+At `a1ce93e75` plus the reviewed handoff/persistence and fixture corrections:
+`TestStarpostRealRuins` passes **37/37**, zero skips. All forty chambers load
+through the shared encoder; chamber1 repeats within a day and changes next
+morning. Nine independent native-input exit routes descend to the next act;
+nine hit/result and full-registry rewind cases and nine faint/item-loss cases
+pass. Flooded room25 supplies the three native drowning/Bubble Shield checks.
+Independent checks cover pending loot/menu reload, TIME_UP/day advance, native
+pad elevator selection, and three valley door/light/same-door round trips.
+
+The shield checks pass **17/17** and scene fallback **1/1**. The required
+RealValley/act bridge/S3K/API art/signature checks pass by test identity; the
+first combined run exposed eight obsolete context-less town fixtures, a strict
+descriptor comment rejection and the scene-only binder assumption. Fixtures now
+supply PatchContext or explicitly select the scene fallback. The elevator test
+uses logical pad input rather than assuming an arrow-key binding. TownAct passes
+**8/8**, API pin policy **4/4**, formal creator bridge **2/2** with **197/197**
+creator cases and **0 validation findings**. The remaining binder rerun and
+combined broad/guard evidence are recorded after completion.
+
+Commands use `python3 tools/testing/maven_queue.py --lean -B -Dmse=off` with
+absolute S1/S3K ROM properties, followed by `test`, and these exact selectors:
+
+- `-Dtest=TestStarpostRealRuins,TestShieldRewindPendingRestore,TestShieldRewindRestore,TestStarpostValleyScene`
+- `-Dtest=TestStarpostRealValley,TestStarpostTownAct,TestStarpostTownSceneBridge,TestModSceneActBridge,TestStarpostValleyExample,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestModApiSignatureSurface,TestModApiPinPolicy,TestModContextRomArt,TestModBackedGamePatchRomArt`
+- Corrections: `-Dtest=TestStarpostRealRuins,TestStarpostTownAct,TestStarpostTownSceneBridge,TestModApiPinPolicy,TestStarpostValleyExample`
+- Binder only: `-Dtest=TestStarpostTownSceneBridge`
+
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 3da4cd930 --preflight`
+passes Java21/Lua5.4/PowerShell; default Lua5.5 failed first, corrected explicitly.
+The combined plan selects all **3,084 ordinary classes plus fresh guards**;
+the public API and shared callback ownership require normal broad validation.
+
+Three final **240-frame / 4-second**, silent, native GameLoop captures and
+state CSVs are under `~/scratch/sv-realruins/`: `marble.mp4`,
+`labyrinth.mp4`, `scrap-brain.mp4`, and each band's `frames/` / `state.csv`.
+`RealRuinsCapture.java` drives HeadlessGameBoot + GameLoop.step with native pad
+input, not the scene hand-port. All three packages report zero findings.
+Inspected frames90 show native hurt/health, source art, water and the shared
+Momentum HUD. Nine original placeholder assets reproduce byte-for-byte with
+`tools/make_placeholder.py <output> 1 2`.
+

@@ -96,6 +96,7 @@ public final class RuinsSession implements RewindSnapshottable<RuinsSession.Snap
         if(game.calendar.overtime()) request(ActExit.TIME_UP,"time_up");
         else if(menu) request(ActExit.LEFT,"inventory");
     }
+    public void sealed() { notice="THE WAY DOWN IS SEALED... FOR NOW"; noticeTicks=120; }
     public void request(ActExit exit,String target) { if(this.exit==null) { this.exit=exit; this.target=target; } }
     public Map<String,String> payload() { return Map.of("ruins.target",target,"ruins.chamber",Integer.toString(number)); }
     public void arrived(int rings) { lastRings=rings; }

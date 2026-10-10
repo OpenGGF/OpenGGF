@@ -26,7 +26,8 @@ Short independent checks cover generated find lifetime/rewind/inventory reload,
 day-end TIME_UP and the town's actual Ruins doorway → shaft of light → same
 door for all three farmers. Door checks place the native player at the decoded
 door floor then use the production town interaction; they are not a walked
-farm-to-door route. Existing creator tests cover deterministic/reachable chamber
+farm-to-door route. All forty generated chambers also load through the production additive decoder,
+with a same-day/different-morning generation check. Existing creator tests cover deterministic/reachable chamber
 generation and landmark/yield rules; they do not substitute for forty native
 traversals. No bosses are authored in these chamber bands.
 

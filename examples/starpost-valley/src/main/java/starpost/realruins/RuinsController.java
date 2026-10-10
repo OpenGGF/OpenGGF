@@ -48,11 +48,7 @@ public final class RuinsController extends AbstractObjectInstance implements Mod
             }
             if(session.down() && chamber.exitX>=0 && near(x,feet,chamber.exitX,chamber.exitY)) {
                 if(chamber.number<RuinsRules.CHAMBERS) session.request(ActExit.COMPLETED,"next");
-                else {
-                    com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(player,chamber.entryX);
-                    com.openggf.sprites.NativePositionOps.writeYPosResetSubpixel(player,chamber.entryY+RuinsLevel.ORIGIN-player.getYRadius());
-                    player.setGSpeed((short)0); player.setXSpeed((short)0); player.setYSpeed((short)0);
-                }
+                else session.sealed();
             }
         }
         if(feet>chamber.height+32 && chamber.number<RuinsRules.CHAMBERS) session.request(ActExit.COMPLETED,"next");
@@ -94,6 +90,15 @@ public final class RuinsController extends AbstractObjectInstance implements Mod
         for(int i=session.nextFindToSpawn();i>=0;i=session.nextFindToSpawn()) {
             var find=session.finds().get(i);
             services().objectManager().addDynamicObject(new RuinsFind(RuinsContent.spawn("ruins-find",i,Math.round(find.x()),Math.round(find.y())+RuinsLevel.ORIGIN)));
+        }
+        // Native ring monitors mark their placement remembered; carry that progress across scene menus.
+        for(int i=0;i<chamber.things.size();i++) {
+            var thing=chamber.things.get(i);
+            if(thing.type()==Chamber.MONITOR && thing.param()<0) {
+                int y=thing.y()+RuinsLevel.ORIGIN-16;
+                var monitor=new ObjectSpawn(thing.x(),y,1,1,0,false,y,i+1);
+                if(services().objectManager().isRemembered(monitor)) session.take(i);
+            }
         }
         if(session.exit()!=null) services().requestActExit(session.exit(),session.payload());
         session.clearInput(); services().levelGamestate().pauseTimer();

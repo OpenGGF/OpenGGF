@@ -36,7 +36,8 @@ public final class RuinsContent {
         context.registerGamePatch(new RuinsPatch(session));
         return session;
     }
+    public static int index(ObjectSpawn spawn) { return spawn.layoutIndex()>0?spawn.layoutIndex()-1:spawn.subtype(); }
     public static ObjectSpawn spawn(String key,int index,int x,int y) {
-        return new ObjectSpawn(x,y,0,index,0,false,y,-1,"starpost-valley","starpost-valley:"+key);
+        return new ObjectSpawn(x,y,0,index,0,false,y,key.equals("ruins-controller")?0:index+1,"starpost-valley","starpost-valley:"+key);
     }
 }

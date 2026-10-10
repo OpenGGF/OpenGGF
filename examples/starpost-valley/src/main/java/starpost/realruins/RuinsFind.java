@@ -15,7 +15,7 @@ public final class RuinsFind extends AbstractObjectInstance implements ModRewind
     public void update(int vIntRunCount,PlayableEntity player) {
         var session=services().gameService(RuinsSession.class);
         if(session==null || !session.active() || player==null) return;
-        int i=spawn.subtype(); var find=session.finds().get(i);
+        int i=RuinsContent.index(spawn); var find=session.finds().get(i);
         if(find.count()<=0 || session.owned(find.id())) { setDestroyed(true); return; }
         float x=find.x()+find.vx(),y=find.y()+find.vy(),vy=find.vy()+0x18/256f;
         int floor=session.chamber().floorBelow(Math.round(x),Math.round(y)-8);
@@ -33,6 +33,6 @@ public final class RuinsFind extends AbstractObjectInstance implements ModRewind
         var session=services().gameService(RuinsSession.class);
         if(session==null || !session.active()) return;
         if(presentation==null) presentation=new RuinsPresentation(session);
-        presentation.find(services(),session,spawn.subtype());
+        presentation.find(services(),session,RuinsContent.index(spawn));
     }
 }

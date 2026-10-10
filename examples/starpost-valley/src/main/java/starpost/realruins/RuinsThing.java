@@ -17,24 +17,24 @@ public final class RuinsThing extends AbstractObjectInstance implements ModRewin
     public AbstractObjectInstance recreateForRewind(ObjectReconstructionContext context) { return new RuinsThing(context.spawn()); }
     public void update(int vIntRunCount,PlayableEntity entity) {
         var session=services().gameService(RuinsSession.class);
-        if(session==null || !session.active() || session.taken(spawn.subtype()) || !(entity instanceof AbstractPlayableSprite player)) return;
-        var thing=session.chamber().things.get(spawn.subtype());
+        if(session==null || !session.active() || session.taken(RuinsContent.index(spawn)) || !(entity instanceof AbstractPlayableSprite player)) return;
+        var thing=session.chamber().things.get(RuinsContent.index(spawn));
         int x=player.getCentreX(), y=player.getCentreY()-RuinsLevel.ORIGIN;
         boolean attacking=player.getRolling() || player.getSpindash() || player.getInvincibleFrames()>0;
         if(thing.type()==Chamber.BADNIK) {
-            var b=session.badnik(spawn.subtype()); if(b==null || !b.alive) return;
+            var b=session.badnik(RuinsContent.index(spawn)); if(b==null || !b.alive) return;
             // Existing mod's S1 ports: Cat_Undulate/Cat_Floor, Bas_Action_DropDown/Fly,
             // Buzz_Action_Move/Fire, Yad_Action_Move, Jaws_Swim, Burro_Action_Move/Jump,
             // Orb_CheckSonic/CircleSpikeball, Bom_Action_Walking/WaitAndExplode, Hog_Action.
             // Source: s1disasm/_incObj objects 78,55,22/23,50,2C,2D,60,5F,1E/20 (FixBugs=0).
             b.update(session.chamber(),x,y,session.shots());
-            if(!b.alive) { session.take(spawn.subtype()); session.puff(b.x,b.y); return; }
+            if(!b.alive) { session.take(RuinsContent.index(spawn)); session.puff(b.x,b.y); return; }
             List<float[]> harms=new ArrayList<>(); b.harm(harms);
             for(float[] h:harms) if(overlap(player,x,y,h[0],h[1],h[2],h[3]))
                 RuinsController.hurt(services(),player,Math.round(h[0]),DamageCause.NORMAL,vIntRunCount);
             if(overlap(player,x,y,b.x,b.y,Badnik.halfWidth(b.kind),Badnik.halfHeight(b.kind))) {
                 if(attacking && b.bopable() && !(b.spikyTop() && y<b.y-8)) {
-                    session.pop(spawn.subtype());
+                    session.pop(RuinsContent.index(spawn));
                     player.setYSpeed((short)RuinsRules.bopBounce(player.getYSpeed(),y<b.y));
 
                 } else RuinsController.hurt(services(),player,Math.round(b.x),DamageCause.NORMAL,vIntRunCount);
@@ -46,16 +46,16 @@ public final class RuinsThing extends AbstractObjectInstance implements ModRewin
             case Chamber.RING -> {
                 int reach=player.getShieldType()==ShieldType.LIGHTNING?64:18;
                 if(Math.abs(thing.x()-x)<reach && Math.abs(thing.y()-y)<reach && player.getInvulnerableFrames()<=90) {
-                    session.take(spawn.subtype()); player.addRings(1);
+                    session.take(RuinsContent.index(spawn)); player.addRings(1);
                 }
             }
             case Chamber.ROCK -> {
                 boolean fire=player.getShieldType()==ShieldType.FIRE && session.action();
-                if(near && (fire || attacking && Math.abs(player.getGSpeed())>=3*256)) session.breakRock(spawn.subtype(),fire);
+                if(near && (fire || attacking && Math.abs(player.getGSpeed())>=3*256)) session.breakRock(RuinsContent.index(spawn),fire);
             }
             case Chamber.MONITOR -> {
                 if(near && attacking) {
-                    session.take(spawn.subtype());
+                    session.take(RuinsContent.index(spawn));
                     if(thing.param()>=0 && thing.param()<session.chamber().prizes.size()) session.drop(session.chamber().prizes.get(thing.param()),1,thing.x(),thing.y());
                     else player.addRings(10);
                     if(player.getYSpeed()>0) player.setYSpeed((short)-player.getYSpeed());
@@ -69,8 +69,8 @@ public final class RuinsThing extends AbstractObjectInstance implements ModRewin
     }
     public void appendRenderCommands(List<GLCommand> commands) {
         var session=services().gameService(RuinsSession.class);
-        if(session==null || !session.active() || session.taken(spawn.subtype())) return;
+        if(session==null || !session.active() || session.taken(RuinsContent.index(spawn))) return;
         if(presentation==null) presentation=new RuinsPresentation(session);
-        presentation.thing(services(),session,spawn.subtype());
+        presentation.thing(services(),session,RuinsContent.index(spawn));
     }
 }

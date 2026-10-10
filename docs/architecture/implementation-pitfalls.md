@@ -26,6 +26,23 @@ animation phase with decoded images; a UV-only test or one screenshot misses
 an intrinsically reversed pose. Facing should follow AI intent, since damage
 recoil reverses velocity without changing the target.
 
+**A scene kit's zone number is not its decoder level index.** When re-encoding
+S1 kit blocks into an additive act, use the decoder's level table, not the public
+SceneLevelKit zone ordering. Starpost Real Ruins (base `3da4cd930`, 2026-10-10)
+needs MZ `0x86+act`, LZ `0x83+act`, SBZ `0x8F+act`. Also reserve the original
+placeholder palette claim explicitly: reusing Green Hill's line3/colour15
+claim failed for Scrap Brain pattern556, whose opaque colours fill that line.
+A separate original line1/colour2 placeholder permits the existing encoder to
+allocate the whole source palette; validate every source act rather than one band sample.
+
+**Deferred native effects retain their creator owner.** A native shield spawned
+inside a creator callback is still owned by that callback's fault boundary.
+During player-refresh rewind, restore its captured owner as well as the dynamic
+slot and ObjectRefId. Real Ruins exposed null versus starpost-valley owner in a
+full registry replay; `29c3e1755` fixes the pending power-up path. A native class
+name does not imply a null owner. Fixtures also need the production mod class
+resolver when restoring creator and creator-owned native objects.
+
 **Coordinates.** ROM `x_pos` / `y_pos` map to `getCentreX()` / `getCentreY()`. `getX()` /
 `getY()` are top-left render bounds — mixing them produces a ~19px vertical offset and
 wrong collision. When porting disassembly that touches `x_pos` / `y_pos`, default to the
