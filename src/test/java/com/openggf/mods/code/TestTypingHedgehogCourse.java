@@ -269,6 +269,13 @@ class TestTypingHedgehogCourse {
         for (int i = 0; i < 120; i++) row(fixture, input);
         // Green Hill's rig: the ball, four chain links, the ship, Robotnik's face and the flame.
         assertTrue((int) get(view(), "sprites") >= 8, "the boss rig draws every part; view " + view());
+        // Startup PLC decoding is still active in the held Boss Rush world. Retry must
+        // reframe and keep holding, rather than step native end-of-act PLC events.
+        var retry = course().getClass().getDeclaredMethod("retryStand");
+        retry.setAccessible(true);
+        retry.invoke(course());
+        row(fixture, input);
+        for (int i = 0; i < 120; i++) row(fixture, input);
         stepUntil(fixture, input, "TALLY", 8000);
         assertEquals(3, get(view(), "lives"), "the demo typist beat the boss without losing a life");
     }

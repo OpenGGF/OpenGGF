@@ -408,6 +408,7 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
         camera.setX((short) bossArenaX);
         camera.setMinX((short) bossArenaX);
         camera.setMaxX((short) (bossArenaX + camera.getWidth() - 320));
+        camera.setFrozen(true);
     }
 
     /**
@@ -467,9 +468,13 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
         field.clear();
         boolean boss = encounter != null && encounter.isBoss();
         enter(boss ? Phase.BOSS : Phase.STAND);
+        if (boss) {
+            frameBossArena(); // Restore the stage before choosing body side/home or presenting a row.
+            holdPlayer();
+        }
         encounter = boss ? Encounter.boss(this) : Encounter.stand(this, nextStand, standLoaded);
         hud.banner("TRY AGAIN!", 0xFFFFFFFF);
-        return true;
+        return boss ? fightAdvances() : true;
     }
 
     // ---- forward rails (format 2) ----------------------------------------------------------------
@@ -579,6 +584,7 @@ public final class Course implements GameplayFrameController, RewindSnapshottabl
         if (!sonic.getDead() && !sonic.isHurt()) return true;
         course.restore(standCheckpoint);
         GameServices.camera().setFrozen(standCameraFrozen);
+        if (encounter != null && encounter.isBoss()) CombatHandoff.retireBoss();
         fightNativeRows = 0;
         return reconvert("after a native hit in stand " + nextStand);
     }

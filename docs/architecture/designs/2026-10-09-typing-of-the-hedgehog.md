@@ -910,7 +910,7 @@ python3 examples/build_example.py typing-of-the-hedgehog --skip-engine
 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base c550aebf4 --preflight
 ```
 
-The final complete mod run: **86 tests, zero failures, errors or skips**, Maven exit 0,
+The first passing complete mod run: **86 tests, zero failures, errors or skips**, Maven exit 0,
 45.382s execution (queue waiting excluded). This includes the four complete ARCADE fights,
 the original BOSS_RUSH and synthetic-course checks, and QUICK/HOLD/RETRY rails. The matched
 FZ/EHZ clearance diagnostic also passed two tests, zero skips. Java 21 compilation and jar
@@ -962,3 +962,29 @@ by this implementation lane.
 Implementation/test diff: **`aaff75147`** (parent `c550aebf4`). The completed full mod
 run and final films used the identical production/test sources before that commit; this
 documentation follow-up records the landed identity and portable command quoting only.
+
+### Restore-boundary follow-up
+
+Final restore review found that DYING/retry restored the original native camera/walls,
+created the new body from that old view, then executed one native row before normal stand
+framing resumed. Four negative controls failed: GHZ restored 10592 rather than 10512,
+EHZ 10524 rather than 10480, DEZ 548 rather than 468, and FZ restored maxX 9312 rather
+than its stage bound 9085. Merely calling the framing helper before body creation still
+failed three tests: the restored unfrozen camera advanced 16px on that native row.
+
+The helper now freezes its full stage too. Retry holds Sonic, reframes before choosing
+body side/home, and uses the same native-step allowance as normal boss entry (zero in
+Boss Rush, two unload rows at a forward endpoint). The native-hurt checkpoint guard
+retires any restored native boss family again. Four new per-arena tests check the first
+retry row, 120 entry/telegraph rows, body home/clearance and an injected native-hurt
+restore. The synthetic GHZ1 Boss Rush check now also retries while its startup decoder
+is active. No engine code changes are needed.
+
+The final complete `TestTypingHedgehog*` command above passes **90 tests, zero failures,
+errors or skips**, exit 0, 46.033s execution. The four ARCADE timings and all per-row
+arena/body/mask counts are unchanged. The final jar was rebuilt with this follow-up.
+The existing final films use `aaff75147`'s unchanged No-Fail ARCADE paths: neutral input
+never requests retry, No-Fail never enters virtual DYING, and all four native CSVs have
+zero hurt and death rows. The new restore paths are qualified by the added regressions;
+repeating the unchanged filmed paths is unnecessary. Film paths and twelve inspected
+sheets above remain the final capture evidence.

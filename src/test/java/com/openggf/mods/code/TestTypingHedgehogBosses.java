@@ -226,6 +226,51 @@ class TestTypingHedgehogBosses {
         return false;
     }
 
+    void retryFight(SonicGame game, String code, int zone, int act) throws Exception {
+        launch(game, code, zone, act, true, "ARCADE", 5);
+        for (int i = 0; i < 120; i++) row();
+        var camera = GameServices.camera();
+        int x = camera.getX(), min = camera.getMinX(), max = camera.getMaxX();
+        int home = (int) field(field(boss, "motion"), "homeX");
+        call(course, "retryStand");
+        row();
+        boss = call(field(course, "encounter"), "bossFight");
+        assertEquals("BOSS", call(view(), "phase"));
+        assertAll(() -> assertEquals(x, camera.getX(), "retry frames before its first native row"),
+                () -> assertEquals(min, camera.getMinX()), () -> assertEquals(max, camera.getMaxX()));
+        for (int i = 0; i < 120; i++) {
+            assertEquals(x, camera.getX());
+            assertEquals(max, camera.getMaxX());
+            assertFalse(bodyOverlapsStand(), overlapDetail);
+            row();
+        }
+        assertEquals(home, field(field(boss, "motion"), "homeX"), "body recreated in the framed arena");
+        var sonic = (com.openggf.sprites.playable.AbstractPlayableSprite) camera.getFocusedSprite();
+        sonic.setHurt(true); // The course's native-hazard checkpoint guard is another restore boundary.
+        row();
+        assertFalse(((com.openggf.sprites.playable.AbstractPlayableSprite) camera.getFocusedSprite()).isHurt());
+        assertEquals(x, camera.getX());
+        assertEquals(min, camera.getMinX());
+        assertEquals(max, camera.getMaxX());
+    }
+
+    @Test @RequiresRom(SonicGame.SONIC_1)
+    void greenHillRetryKeepsWideArenaAndBodyHome() throws Exception {
+        retryFight(SonicGame.SONIC_1, "s1", 0, 2);
+    }
+    @Test @RequiresRom(SonicGame.SONIC_1)
+    void finalZoneRetryKeepsWideArenaAndBodyHome() throws Exception {
+        retryFight(SonicGame.SONIC_1, "s1", 6, 0);
+    }
+    @Test @RequiresRom(SonicGame.SONIC_2)
+    void emeraldHillRetryKeepsWideArenaAndBodyHome() throws Exception {
+        retryFight(SonicGame.SONIC_2, "s2", 0, 1);
+    }
+    @Test @RequiresRom(SonicGame.SONIC_2)
+    void deathEggRetryKeepsWideArenaAndBodyHome() throws Exception {
+        retryFight(SonicGame.SONIC_2, "s2", 10, 0);
+    }
+
     @Test void talkBackEchoesAreShortWholeWordsAndKeepReadableClauses() throws Exception {
         Class<?> type = harness.loader().loadClass("typinghog.play.Boss");
         Method echo = type.getDeclaredMethod("echo", String.class);
