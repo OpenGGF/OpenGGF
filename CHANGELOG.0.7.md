@@ -967,7 +967,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 - **Named ROM object art:** compiled mods can request Sonic 1 object sheets from
   `LogicalRom.S1` while running on an S3K base. The host resolves the supplied ROM,
   parses Sonic 1 mappings and retains registration bounds and creator fault ownership;
-  the existing Sonic 2 intake remains compatible. Runtime art stays in memory.
+  the existing Sonic 2 intake keeps its already-open host ROM and needs no
+  additional resolver. Cross-ROM intake requires the named source. Runtime art stays in memory.
 - **Scene-to-act round trips:** the unpublished Mod API lets a scene suspend into an
   owned registered act with native character, centre-position and health-ring
   overrides, then receive one typed result on the same retained scene/context.

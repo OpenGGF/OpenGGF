@@ -40,7 +40,7 @@ public final class ModBackedGamePatch implements GamePatch {
                 PatchContext context) { return materialize(owner, requests); }
     }
 
-    static RomArtSheetSource productionRomArtSource() {
+    static RomArtSheetSource productionRomArtSource(String baseGameId) {
         return new RomArtSheetSource() {
             public Map<String, ObjectSpriteSheet> materialize(String owner, Map<String, RomArtRequest> requests) {
                 try {
@@ -53,7 +53,7 @@ public final class ModBackedGamePatch implements GamePatch {
             public Map<String, ObjectSpriteSheet> materialize(String owner, Map<String, RomArtRequest> requests,
                     PatchContext context) {
                 if (context == null) {
-                    if (requests.values().stream().anyMatch(r -> r.source() != LogicalRom.S2))
+                    if (requests.values().stream().anyMatch(r -> !usesHostS2Rom(r.source(), baseGameId)))
                         throw new ModRegistrationException(owner, "MOD_ROM_ART_INVALID", "Named art requires PatchContext", null, null);
                     return materialize(owner, requests);
                 }
@@ -62,6 +62,11 @@ public final class ModBackedGamePatch implements GamePatch {
                     Map<String, RomArtRequest> selected = new java.util.LinkedHashMap<>();
                     requests.forEach((key, request) -> { if (request.source() == source) selected.put(key, request); });
                     if (selected.isEmpty()) continue;
+                    // Preserve legacy S2 intake: its already-open base ROM needs no extra resolver.
+                    if (usesHostS2Rom(source, baseGameId)) {
+                        sheets.putAll(materialize(owner, selected));
+                        continue;
+                    }
                     try (var rom = com.openggf.data.Rom.fromReader(context.openLogicalRom(source), source.name())) {
                         sheets.putAll(RomArtMaterializer.materialize(owner, selected, rom, ModInputLimits.production()));
                     } catch (IOException e) {
@@ -71,6 +76,10 @@ public final class ModBackedGamePatch implements GamePatch {
                 return sheets;
             }
         };
+    }
+
+    private static boolean usesHostS2Rom(LogicalRom source, String baseGameId) {
+        return source == LogicalRom.S2 && "s2".equals(baseGameId);
     }
 
     public ModBackedGamePatch(ModRegistrationPlan plan) {
@@ -84,7 +93,7 @@ public final class ModBackedGamePatch implements GamePatch {
     public ModBackedGamePatch(ModRegistrationPlan plan, ModFaultBoundary faultBoundary,
                               java.util.function.BiConsumer<String,
                                       com.openggf.game.sonic2.dataselect.S2SaveFinding> saveFindingSink) {
-        this(plan, faultBoundary, saveFindingSink, productionRomArtSource());
+        this(plan, faultBoundary, saveFindingSink, productionRomArtSource(plan.baseGameId()));
     }
 
     ModBackedGamePatch(ModRegistrationPlan plan, ModFaultBoundary faultBoundary,
@@ -98,7 +107,7 @@ public final class ModBackedGamePatch implements GamePatch {
                        java.util.function.BiConsumer<String,
                                com.openggf.game.sonic2.dataselect.S2SaveFinding> saveFindingSink,
                        String contentId) {
-        this(plan, faultBoundary, saveFindingSink, productionRomArtSource(), contentId);
+        this(plan, faultBoundary, saveFindingSink, productionRomArtSource(plan.baseGameId()), contentId);
     }
 
     private ModBackedGamePatch(ModRegistrationPlan plan, ModFaultBoundary faultBoundary,
@@ -144,6 +153,7 @@ public final class ModBackedGamePatch implements GamePatch {
     }
     @Override public Set<LogicalRom> romPrerequisites() {
         return plan.romObjectArt().values().stream().map(RomArtRequest::source)
+                .filter(source -> !usesHostS2Rom(source, plan.baseGameId()))
                 .collect(java.util.stream.Collectors.toUnmodifiableSet());
     }
     @Override public List<String> providedMainCharacters() {

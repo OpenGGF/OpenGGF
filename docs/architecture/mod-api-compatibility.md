@@ -598,7 +598,9 @@ candidate pin. The exact compiled signature inventory remains the final check.
 The unpublished 0.7 candidate adds
 `ModContext.registerRomObjectArt(String, LogicalRom, RomArtRequest)` and a
 source-qualified `RomArtRequest` constructor/accessor. Its existing constructor
-and registration remain Sonic 2 defaults. Named S1 intake uses S1 mapping
+and registration remain Sonic 2 defaults, using the already-open S2 host without
+an additional resolver. Cross-ROM intake must use its named logical source.
+Named S1 intake uses S1 mapping
 pieces, source-specific address bounds and the production `PatchContext` logical
 ROM resolver; S1 DPLCs and standalone intake are rejected. Missing logical ROMs
 fail the existing creator launch boundary. The mutable 0.7 signature pin and

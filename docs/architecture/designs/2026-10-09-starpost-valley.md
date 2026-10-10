@@ -2348,7 +2348,7 @@ with an in-act notice; the mod uses only promised API calls.
 
 ### Lane validation
 
-At `a1ce93e75` plus the reviewed handoff/persistence and fixture corrections:
+At `71f05bec6`, including the handoff/persistence and fixture corrections:
 `TestStarpostRealRuins` passes **37/37**, zero skips. All forty chambers load
 through the shared encoder; chamber1 repeats within a day and changes next
 morning. Nine independent native-input exit routes descend to the next act;
@@ -2364,8 +2364,8 @@ descriptor comment rejection and the scene-only binder assumption. Fixtures now
 supply PatchContext or explicitly select the scene fallback. The elevator test
 uses logical pad input rather than assuming an arrow-key binding. TownAct passes
 **8/8**, API pin policy **4/4**, formal creator bridge **2/2** with **197/197**
-creator cases and **0 validation findings**. The remaining binder rerun and
-combined broad/guard evidence are recorded after completion.
+creator cases and **0 validation findings**. TownSceneBridge passes **1/1**,
+zero skips. Combined ordinary/guard evidence follows below.
 
 Commands use `python3 tools/testing/maven_queue.py --lean -B -Dmse=off` with
 absolute S1/S3K ROM properties, followed by `test`, and these exact selectors:
@@ -2379,6 +2379,62 @@ absolute S1/S3K ROM properties, followed by `test`, and these exact selectors:
 passes Java21/Lua5.4/PowerShell; default Lua5.5 failed first, corrected explicitly.
 The combined plan selects all **3,084 ordinary classes plus fresh guards**;
 the public API and shared callback ownership require normal broad validation.
+
+At `71f05bec6`, the combined invocation completed ordinary **26,736 tests,
+27 failures, 1 error, 63 skips** in 3,509.79 seconds and fresh guards **674/674,
+zero skips** in 233.69 seconds. Run `20261010T024407Z-51ccf5cc` retained complete
+case identities. The S2 sample error is an E2 compatibility regression: adding
+logical S2 as a prerequisite disabled its active-host path with an intentionally
+absent logical resolver. Preserve that legacy host-ROM path; named cross-ROM art
+still requires PatchContext and declares its source. A missing context must never
+interpret an S3K host as S2 bytes. Focused production and prerequisite checks
+verify this correction, followed by final fresh guards. The other failures are
+subject to bounded base/current attribution; no green broad-suite claim is made.
+Skips include optional probes/native-display tests and 32 Infinite Sonic cases
+whose selected acts lack the platform/flyer combination; required Starpost
+checks have zero skips.
+
+Bounded base export `target/realruins-baseline` contains the complete tracked tree
+at `3da4cd930`, under this lane only, with its own Maven output and the same
+absolute ROM properties. First check: `-Dtest=TestS3kMhzAct2AuthoredRoute,TestSampleRomArtRemixIntegration`
+(**4 tests, 2 inherited failures, zero errors/skips**; the S2 sample passes).
+Second check selects the twelve remaining failed classes below by their full
+qualified names (**45 tests, 25 inherited failures, zero errors/skips**). Both use
+`python3 tools/testing/maven_queue.py -B -Dmse=off <selector> <ROM properties> test`
+from the export. Combined base **49 tests / 27 failures** exactly accounts for
+all ordinary assertion failures by identity and concrete failure fields.
+Twenty-six assertion messages match exactly. The SSZ Tails replica replay's full
+first line matches after normalizing only `RewindObjectStateBlob@hex`: its
+hashCode includes the JVM's Class identity. No other fields were normalized.
+The audio CLI's expected0/actual4 reproduces with inherited `LD_LIBRARY_PATH`;
+its source is unchanged. No unrelated engine route was repaired.
+
+| Inherited class (first is the earlier check) | Failures | Concrete first errors |
+| --- | ---: | --- |
+| `com.openggf.tests.TestS3kMhzAct2AuthoredRoute` | 2 | late pulley owns Tails / Sonic false |
+| `com.openggf.tools.TestDezIncomingFinalRouteCapture` | 7 | final96→0; deaths26706,26750,53897 |
+| `com.openggf.tools.TestLrzActTwoColdRouteCapture` | 1 | death input36526 |
+| `com.openggf.tools.TestLrzBossColdRouteCapture` | 1 | death input36526 |
+| `com.openggf.tools.TestLrzKnucklesColdRouteCapture` | 1 | expected1069 / actual899 |
+| `com.openggf.tools.TestLrzTailsColdRouteCapture` | 4 | death input19460 |
+| `com.openggf.tools.TestLrzWideBossColdRouteCapture` | 1 | expected2796 / actual524 |
+| `com.openggf.tools.TestMhzPairColdRouteCapture` | 1 | actual timeline reset boundary not observed |
+| `com.openggf.tools.TestMhzWideColdRouteCapture` | 1 | wide-route19500 restore0 zone-runtime bytes2,3,6,7,10,11 |
+| `com.openggf.tools.TestSszColdRouteCapture` | 2 | death input7311 |
+| `com.openggf.tools.TestSszSoloColdRouteCapture` | 2 | death7671 |
+| `com.openggf.tools.TestSszTailsColdRouteCapture` | 3 | final48→0; replay4018 dynamic slots/children |
+| `com.openggf.tools.audio.timeline.TestS1GameplayAudioTimelineCli` | 1 | shell environment rejection, expected0 / actual4 |
+
+Correction check: `python3 tools/testing/maven_queue.py --lean -B -Dmse=off`
+with `-Dtest=TestSampleRomArtRemixIntegration,TestModBackedGamePatchRomArt,TestModContextRomArt,TestModApiSignatureSurface,TestModApiPinPolicy,TestStarpostRealRuins`,
+all three absolute ROM properties and `test`: **65/65 pass, zero skips**.
+This includes all37 native Ruins cases, legacy sample production materialization
+and three new host/cross-ROM prerequisite controls. Final fresh guards follow
+the compatibility milestone; the ordinary suite is not rerun or called green.
+The combined command was
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 3da4cd930 --max-minutes 120 --run`.
+
+
 
 Three final **240-frame / 4-second**, silent, native GameLoop captures and
 state CSVs are under `~/scratch/sv-realruins/`: `marble.mp4`,
