@@ -239,7 +239,7 @@ final class EventScreen implements Screen {
         if (sys.play.onFarm()) {
             sys.play.farm().runner.facingLeft = left;
         } else {
-            sys.play.valley().runner.facingLeft = left;
+            sys.play.valley().pose.facingLeft = left;
         }
     }
 

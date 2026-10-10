@@ -7,7 +7,6 @@ import java.util.Set;
 import starpost.core.Game;
 import starpost.core.Item;
 import starpost.core.Kind;
-import starpost.valley.Runner;
 
 /**
  * The Valley Fair's rules (Fall 16): the grange display Robotnik judges, the slot booth and the
@@ -26,6 +25,8 @@ import starpost.valley.Runner;
  * column with Sonic's own gravity; the bell is at the top.
  */
 public final class Fair {
+    /** The booth animation/scoring constant, not a platform controller: Sonic gravity $38. */
+    public static final float GRAVITY=0x38/256f;
     public static final int DISPLAY_SLOTS = 9;
     public static final int ROBOTNIK = 78;
     public static final int UNDENIABLE = 15;
@@ -231,7 +232,7 @@ public final class Fair {
     /** How high a launch carries the farmer, under Sonic's gravity ($38 a frame). */
     public static int height(int power) {
         float v = launch(power);
-        return Math.round(v * v / (2 * Runner.GRAVITY));
+        return Math.round(v * v / (2 * Fair.GRAVITY));
     }
 
     /** Rings for a height: the bell pays most. */

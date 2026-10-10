@@ -40,7 +40,7 @@ public final class TownVillager extends AbstractObjectInstance implements ModRew
         if (goal==null) { visible=false; return; }
         int target=goal.farm()?town.layout().anchor("farm_gate"):town.layout().anchor(goal.anchor())+goal.dx();
         if (!initialized) {
-            initialized=true; x=target; feet=town.layout().ground.floorBelow(target,0);
+            initialized=true; x=target; feet=town.walkFloor(target);
             visible=!goal.inside()&&!goal.farm(); insideAt=goal.inside()?goal.anchor():goal.farm()?"farm_gate":null;
             return;
         }
@@ -53,8 +53,8 @@ public final class TownVillager extends AbstractObjectInstance implements ModRew
         float dx=target-x;
         if (Math.abs(dx)>0.5f) {
             float next=x+Math.signum(dx)*Math.min(Math.abs(dx),Bodies.speed(def.body()));
-            int floor=town.layout().ground.floorBelow(Math.round(next),Math.max(0,feet-32));
-            // Do not walk across a pit or teleport up a cliff: integration supplies walkable anchors.
+            int floor=town.walkFloor(Math.round(next));
+            // Neighbours and native solid decks share one continuous, bounded-step footpath.
             if (floor<4096 && Math.abs(floor-feet)<=32) { x=next; feet=floor; walking=true; facingLeft=dx<0; }
         } else {
             x=target;

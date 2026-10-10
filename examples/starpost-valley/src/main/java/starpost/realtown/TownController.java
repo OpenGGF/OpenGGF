@@ -26,6 +26,9 @@ public final class TownController extends AbstractObjectInstance implements ModR
             town.attachGround(new ActGround(services(), width, town.layout().ground.originY()));
             services().objectManager().addDynamicObject(new TownDecoration(TownContent.spawn(TownContent.DECORATION,0,spawn.x(),spawn.y())));
             services().objectManager().addDynamicObject(new TownDecoration(TownContent.spawn(TownContent.DECORATION,1,spawn.x(),spawn.y())));
+            var route=town.walkRoute();
+            for(int n=0;n<route.size();n++) if(route.deck(n)) services().objectManager().addDynamicObject(
+                new TownWalkway(TownContent.spawn("starpost-valley:town-walkway",n,route.x(n),route.floor(route.x(n))+4)));
             int i=0;
             for (var def : town.people().cast.all()) {
                 var spawn = TownContent.spawn(TownContent.VILLAGER,i++,town.layout().anchor("farm_gate"),town.layout().ground.floorBelow(town.layout().anchor("farm_gate"),0));

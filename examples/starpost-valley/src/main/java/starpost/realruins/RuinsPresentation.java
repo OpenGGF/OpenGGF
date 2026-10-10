@@ -78,13 +78,10 @@ public final class RuinsPresentation {
         }
         for(var puff:session.puffs()) canvas.draw(art.explosion.frame(Math.min(art.explosion.frameCount()-1,puff.age()/4)),puff.x()-cx,puff.y()-cy,SceneDraw.plain());
         for(var animal:session.animals()) stand(canvas,art.art.animal(animal.name()),!animal.hopping()?2:animal.vy()<0?1:0,animal.x()-cx,animal.feet()-cy);
-        var game=session.game(); boolean flash=session.ticks()/8%2==0;
-        art.art.hud.timeRow(canvas,game.calendar.minutes()>=24*60&&flash,game.calendar.minutes()/60%24,game.calendar.minutes()%60,8);
+        if(session.shell()!=null) starpost.scene.PlayScreen.drawHud(session.shell(),canvas);
         int rings=services.camera().getFocusedSprite()==null?0:services.camera().getFocusedSprite().getRingCount();
-        art.art.hud.ringsRow(canvas,rings==0&&flash,rings,24);
-        Text.shadow(canvas,"BANK "+game.rings,16,40,Text.GREY);
-        Text.right(canvas,"CHAMBER "+chamber.number,canvas.width()-8,6,Text.WHITE);
-        starpost.ui.ActHud.momentum(canvas,game);
+        Text.shadow(canvas,"HEALTH RINGS "+rings,16,40,Text.GREY);
+        Text.right(canvas,"CHAMBER "+chamber.number,canvas.width()-8,40,Text.YELLOW);
         if(!session.notice().isEmpty()) Text.centred(canvas,session.notice(),56,Text.YELLOW);
         var player=services.camera().getFocusedSprite();
         if(player!=null && !player.getAir()) {

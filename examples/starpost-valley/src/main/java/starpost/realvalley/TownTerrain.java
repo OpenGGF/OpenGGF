@@ -5,7 +5,7 @@ import java.util.stream.IntStream;
 import com.openggf.level.objects.ObjectSpawn;
 import starpost.realtown.TownContent;
 import starpost.realtown.TownLayout;
-import starpost.valley.Runner;
+import starpost.valley.Ground;
 import starpost.valley.Valley;
 
 /** The single mapping seam between town destinations and the real valley's geometry. */
@@ -14,7 +14,7 @@ public final class TownTerrain {
 
     /** Scene coordinates share the block columns; the act adds its empty sky rows. */
     public static TownLayout layout(Valley valley) {
-        Runner.Ground ground = new Runner.Ground() {
+        Ground ground = new Ground() {
             public int left() { return valley.left(); }
             public int originY() { return RealValley.terrainTop(); }
             public int right() { return RealValley.blocks().length * RealValley.S1_BLOCK; }

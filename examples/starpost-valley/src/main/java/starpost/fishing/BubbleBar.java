@@ -284,4 +284,18 @@ public final class BubbleBar {
         fishSpeed *= motion == FishDef.DART ? 0.8f : 0.88f;
         fish += fishSpeed;
     }
+    public record Snapshot(int difficulty,int motion,float baseHalf,float bubble,float bubbleSpeed,float fish,
+        float fishSpeed,float target,float progress,float tension,int ticks,boolean perfect,int firing,
+        boolean facingLeft,float romY,float romSpeed,int timer,int turnDelay,boolean darting) {}
+    public Snapshot capture() {
+        return new Snapshot(difficulty,motion,baseHalf,bubble,bubbleSpeed,fish,fishSpeed,target,progress,tension,
+            ticks,perfect,firing,facingLeft,romY,romSpeed,timer,turnDelay,darting);
+    }
+    public static BubbleBar restore(Snapshot s) {
+        var b=new BubbleBar(s.difficulty(),s.motion(),s.baseHalf(),new SnapshotRandom(1));
+        b.bubble=s.bubble(); b.bubbleSpeed=s.bubbleSpeed(); b.fish=s.fish(); b.fishSpeed=s.fishSpeed();
+        b.target=s.target(); b.progress=s.progress(); b.tension=s.tension(); b.ticks=s.ticks(); b.perfect=s.perfect();
+        b.firing=s.firing(); b.facingLeft=s.facingLeft(); b.romY=s.romY(); b.romSpeed=s.romSpeed();
+        b.timer=s.timer(); b.turnDelay=s.turnDelay(); b.darting=s.darting(); return b;
+    }
 }

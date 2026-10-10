@@ -37,19 +37,12 @@ public final class RuinsSystem {
         return section;
     }
 
-    private static RuinsArt art(Shell shell, RuinsArt[] holder) {
-        if (holder[0] == null) {
-            holder[0] = new RuinsArt(shell.art);
-        }
-        return holder[0];
-    }
-
     /** At the doorway: the elevator's floors once one is reached, otherwise straight in. */
     private static void enter(Shell shell, PlayScreen play, RuinsArt[] holder) {
         RuinsSection section = section(shell.game);
         List<Integer> starts = RuinsRules.starts(section.deepest);
         if (starts.size() == 1) {
-            if(!shell.startRuinsAct(play,1)) shell.go(new RuinsScreen(shell, play, art(shell, holder), 1));
+            shell.startRuinsAct(play,1);
             return;
         }
         String[] options = new String[starts.size() + 1];
@@ -60,7 +53,7 @@ public final class RuinsSystem {
         options[starts.size()] = "NOT NOW";
         shell.push(new RuinsMenu("MARBLE RUINS ELEVATOR", options, choice -> {
             if (choice >= 0 && choice < starts.size()) {
-                if(!shell.startRuinsAct(play,starts.get(choice))) shell.go(new RuinsScreen(shell, play, art(shell, holder), starts.get(choice)));
+                shell.startRuinsAct(play,starts.get(choice));
             }
         }));
     }
@@ -77,50 +70,6 @@ public final class RuinsSystem {
         }
         Screen screen = shell.screen();
         switch (p[1]) {
-            case "scene" -> { shell.sceneRuins=true; return true; }
-            case "act" -> { shell.sceneRuins=false; return true; }
-            case "rings" -> {
-                if (screen instanceof RuinsScreen ruins) {
-                    ruins.debugRings(Integer.parseInt(p[2]));
-                    return true;
-                }
-                return false;
-            }
-            case "hit" -> {
-                if (screen instanceof RuinsScreen ruins) {
-                    ruins.debugHit();
-                    return true;
-                }
-                return false;
-            }
-            case "at" -> {
-                if (screen instanceof RuinsScreen ruins) {
-                    ruins.debugAt(Float.parseFloat(p[2]), Float.parseFloat(p[3]));
-                    return true;
-                }
-                return false;
-            }
-            case "spawn" -> {
-                if (screen instanceof RuinsScreen ruins) {
-                    ruins.debugSpawn(Integer.parseInt(p[2]), p.length > 3 ? Integer.parseInt(p[3]) : 64);
-                    return true;
-                }
-                return false;
-            }
-            case "goto" -> {
-                if (screen instanceof RuinsScreen ruins) {
-                    ruins.debugGoto(p[2]);
-                    return true;
-                }
-                return false;
-            }
-            case "state" -> {
-                if (screen instanceof RuinsScreen ruins) {
-                    ruins.debugState();
-                    return true;
-                }
-                return false;
-            }
             case "deepest" -> {
                 section(shell.game).deepest = Integer.parseInt(p[2]);
                 return true;
@@ -134,13 +83,8 @@ public final class RuinsSystem {
             }
             default -> {
                 int chamber = Math.max(1, Math.min(RuinsRules.CHAMBERS, Integer.parseInt(p[1])));
-                PlayScreen play = screen instanceof PlayScreen ps ? ps
-                        : screen instanceof RuinsScreen rs ? rs.play() : null;
-                if (play == null) {
-                    return false;
-                }
-                RuinsArt art = screen instanceof RuinsScreen rs ? rs.art() : new RuinsArt(shell.art);
-                if(!shell.startRuinsAct(play,chamber)) shell.goNow(new RuinsScreen(shell, play, art, chamber));
+                if(!(screen instanceof PlayScreen play)) return false;
+                shell.startRuinsAct(play,chamber);
                 return true;
             }
         }

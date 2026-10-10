@@ -18,9 +18,9 @@ import starpost.ui.Text;
  * its smaller frames as the line pulls taut), the hooked catch, and the reel meter. On a badnik the
  * drowning countdown's digits rise over the bubble as the catch slips away: pure theatre.
  */
-final class BubbleBarScreen implements Screen {
+public final class BubbleBarScreen implements Screen {
     /** What happens after: landed (and whether perfectly), or lost. */
-    interface Done {
+    public interface Done {
         void finish(boolean landed, boolean perfect);
     }
 
@@ -43,7 +43,7 @@ final class BubbleBarScreen implements Screen {
     private boolean wasInside = true;
     private boolean taut;
 
-    BubbleBarScreen(FishArt art, FishDef def, BubbleBar bar, long seed, Done done) {
+    public BubbleBarScreen(FishArt art, FishDef def, BubbleBar bar, long seed, Done done) {
         this.art = art;
         this.def = def;
         this.bar = bar;
@@ -107,8 +107,13 @@ final class BubbleBarScreen implements Screen {
         return Math.max(1, Math.min(5, (int) Math.ceil(bar.progress * 10)));
     }
 
+    public void drawLevel(Shell shell,SceneCanvas canvas,int result,long ticks) {
+        this.result=result; this.digit=countdown(); drawAt(shell,canvas,ticks);
+    }
+
     @Override
-    public void draw(Shell shell, SceneCanvas canvas) {
+    public void draw(Shell shell, SceneCanvas canvas) { drawAt(shell,canvas,shell.ticks); }
+    private void drawAt(Shell shell,SceneCanvas canvas,long ticks) {
         int h = (int) BubbleBar.HEIGHT;
         int pw = COLUMN_W + 46, ph = h + 46;
         int px = canvas.width() - pw - 22, py = 30;
@@ -117,15 +122,15 @@ final class BubbleBarScreen implements Screen {
         int tw = canvas.textWidth(title);
         Text.shadow(canvas, title, px + (pw - tw) / 2, py + 5, def.isBadnik() ? Text.RED : Text.YELLOW);
         int cx = px + 10, top = py + 18;
-        drawWater(shell, canvas, cx, top, h);
+        drawWater(ticks, canvas, cx, top, h);
         canvas.clip(cx, top, COLUMN_W, h);
         drawBubble(canvas, cx + COLUMN_W / 2f, top + bar.bubble, bar.half(), !bar.inside());
-        drawCatch(shell, canvas, cx + COLUMN_W / 2f, top + bar.fish);
+        drawCatch(ticks, canvas, cx + COLUMN_W / 2f, top + bar.fish);
         canvas.unclip();
         if (def.isBadnik() && digit <= 5) {
             SceneSprite number = art.bubble(FishArt.DIGIT_FIVE + 5 - digit);
             if (number != null) {
-                float bob = (float) Math.sin(shell.ticks / 5.0) * 2;
+                float bob = (float) Math.sin(ticks / 5.0) * 2;
                 canvas.draw(number, cx + COLUMN_W / 2f, top + bar.bubble - bar.half() - 14 + bob, SceneDraw.plain());
             }
         }
@@ -137,7 +142,7 @@ final class BubbleBarScreen implements Screen {
     }
 
     /** Labyrinth-blue water darkening with depth, with the ROM's small bubbles drifting up. */
-    private void drawWater(Shell shell, SceneCanvas canvas, int x, int top, int h) {
+    private void drawWater(long ticks, SceneCanvas canvas, int x, int top, int h) {
         canvas.fill(x - 2, top - 2, COLUMN_W + 4, h + 4, 0xFF240000);
         for (int y = 0; y < h; y += 8) {
             int band = y * 6 / h;
@@ -153,7 +158,7 @@ final class BubbleBarScreen implements Screen {
         }
         canvas.fill(x, top, COLUMN_W, 1, 0xFFB6DBFF);
         for (int i = 0; i < 6; i++) {
-            long t = shell.ticks + i * 53L;
+            long t = ticks + i * 53L;
             int y = h - (int) (t * (1 + i % 3) / 2 % (h + 8));
             int bx = x + 4 + (i * 13) % (COLUMN_W - 8) + (int) (Math.sin(t / 9.0) * 2);
             SceneSprite small = art.bubble(i % 3);
@@ -188,15 +193,15 @@ final class BubbleBarScreen implements Screen {
                 style);
     }
 
-    private void drawCatch(Shell shell, SceneCanvas canvas, float x, float y) {
+    private void drawCatch(long ticks, SceneCanvas canvas, float x, float y) {
         SceneImage picture = def.isBadnik()
-                ? art.badnikFrame(def.badnik(), FishArt.frameAt(def.badnik(), shell.ticks, bar.firing))
+                ? art.badnikFrame(def.badnik(), FishArt.frameAt(def.badnik(), ticks, bar.firing))
                 : art.picture(def.id());
         if (picture == null) {
             canvas.fill(Math.round(x) - 6, Math.round(y) - 3, 12, 6, 0xFFFFDB00);
             return;
         }
-        float wiggle = bar.inside() ? 0 : (float) Math.sin(shell.ticks / 2.0);
+        float wiggle = bar.inside() ? 0 : (float) Math.sin(ticks / 2.0);
         // Only Jaws turns round (Jaws_Swim flips it on its timer); the rest face the line.
         SceneDraw style = SceneDraw.plain().withFlipX(def.motion() == FishDef.JAWS && !bar.facingLeft);
         canvas.draw(picture, x - picture.width() / 2f + wiggle, y - picture.height() / 2f, style);

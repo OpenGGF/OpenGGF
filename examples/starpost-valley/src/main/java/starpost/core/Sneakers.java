@@ -19,7 +19,7 @@ public final class Sneakers {
     public static final int POWER = 1;
     public static final int SPEED = 2;
     public static final int CHAOS = 3;
-    /** Running on water needs at least this speed along the field (pixels a tick): half of {@code Runner.TOP}. */
+    /** Running on water needs at least this speed along the field (pixels a tick): half of the belt controller’s top speed. */
     public static final float WATER_RUN_SPEED = 3;
     /** Ticks a farmer may dawdle on the water before sinking back to the bank. */
     public static final int SINK_GRACE = 12;

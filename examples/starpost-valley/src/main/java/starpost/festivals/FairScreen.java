@@ -8,10 +8,9 @@ import starpost.ui.Text;
 import starpost.valley.Valley;
 
 /**
- * The Valley Fair across the town, walked on the real controller: the grange display at the
+ * The Valley Fair is a menu of stationary booths: the grange display at the
  * plaza where Robotnik judges, the slot booth by Robomart (Casino Night's faces when Sonic 2 is
- * supplied), and the spring test at the west end. Each booth is a doorway (up) for the fair's
- * length; Carnival Night plays. Calling the judge at the grange ends the fair with the judging.
+ * supplied), and the spring test at the west end. The fair does not need platforming; Carnival Night plays. Calling the judge at the grange ends the fair with the judging.
  */
 final class FairScreen extends FestivalScreen {
     private static final int CNZ1 = 0x07;            // Sonic3kMusic CNZ1
@@ -20,7 +19,7 @@ final class FairScreen extends FestivalScreen {
     private boolean judging;
     private int judgedAt;
     private int score;
-    private final List<Valley.Place> booths = new ArrayList<>();
+    private boolean choosing;
 
     FairScreen(FestivalSystem sys, Festival festival) {
         super(sys, festival);
@@ -55,17 +54,6 @@ final class FairScreen extends FestivalScreen {
     @Override
     void begin() {
         holdTown(boothX(0) - 50);
-        play.valley().labels = true;
-        Valley valley = play.valley().valley;
-        String[] labels = {"GRANGE DISPLAY", "SLOT BOOTH", "SPRING TEST"};
-        for (int i = 0; i < 3; i++) {
-            Valley.Place place = new Valley.Place(id(i), boothX(i), 20, labels[i]);
-            booths.add(place);
-            valley.places.add(0, place);       // ahead of the festival's own doorway at the plaza
-        }
-        play.places.put(id(0), s -> booth(new GrangeScreen(this)));
-        play.places.put(id(1), s -> booth(new SlotsScreen(this)));
-        play.places.put(id(2), s -> booth(new StrengthScreen(this)));
         shell.music.want("s3k", CNZ1);
     }
 
@@ -95,7 +83,14 @@ final class FairScreen extends FestivalScreen {
             }
             return;
         }
-        stepTown();
+        if(!choosing) {
+            choosing=true;
+            shell.push(new Choose("VALLEY FAIR",List.of("GRANGE DISPLAY","SLOT BOOTH","SPRING TEST","CALL THE JUDGE"),null,
+                choice->{ choosing=false; if(choice<0) return; switch(choice) {
+                    case 0->booth(new GrangeScreen(this)); case 1->booth(new SlotsScreen(this));
+                    case 2->booth(new StrengthScreen(this)); default->callJudge();
+                }}));
+        }
     }
 
     /** Opens a booth's screen; the welcome speech has done its job by then. */
@@ -138,15 +133,6 @@ final class FairScreen extends FestivalScreen {
     }
 
     @Override
-    void restore() {
-        super.restore();
-        play.valley().valley.places.removeAll(booths);
-        for (int i = 0; i < 3; i++) {
-            play.places.remove(id(i));
-        }
-    }
-
-    @Override
     void paint(SceneCanvas canvas) {
         play.draw(shell, canvas);
     }
@@ -156,7 +142,7 @@ final class FairScreen extends FestivalScreen {
         var hud = shell.art.hud;
         hud.row(canvas, hud.rings, Integer.toString(shell.game.rings), 16, 6, 0x30, 3);
         long shown = display.stream().filter(java.util.Objects::nonNull).count();
-        String note = shown == 0 ? "UP AT A BOOTH TO PLAY" : "DISPLAY: " + shown + " OF " + Fair.DISPLAY_SLOTS
+        String note = shown == 0 ? "CHOOSE A BOOTH TO PLAY" : "DISPLAY: " + shown + " OF " + Fair.DISPLAY_SLOTS
                 + ". THE JUDGE WAITS AT THE GRANGE";
         if (!judging && !shell.hasOverlay()) {
             Text.centred(canvas, note, canvas.height() - 16, Text.YELLOW);

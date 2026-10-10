@@ -9,7 +9,7 @@ import starpost.art.Art;
  * collision (floors at the ROM's row 192): the farm gate by the waterfall, the town on four flat
  * blocks, the totem ledge, the loop, and the slope up to the meadow plateau.
  */
-public final class Valley implements Runner.Ground {
+public final class Valley implements Ground {
     /** A doorway or spot the player can use by pressing up (or walking past, for gates). */
     public record Place(String id, int x, int halfWidth, String label) {
     }

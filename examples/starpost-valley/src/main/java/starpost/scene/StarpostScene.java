@@ -19,6 +19,27 @@ public final class StarpostScene implements ModScene, DebuggableScene {
     private Shell shell;
     private final starpost.realtown.TownSession town;
     private final starpost.realruins.RuinsSession ruins;
+    private final starpost.realfest.ActivitySession activities;
+    private Shell.ActivityLaunch activityLaunch;
+    private Screen activityScreen;
+    private void launchActivity(Shell.ActivityLaunch launch) {
+        activityLaunch=launch; activityScreen=shell.screen(); actPlay=launch.play();
+        returnToAct=false; returnToRuins=false;
+        activities.prepare(shell,actPlay,town,launch.kind(),launch.seconds());
+        shell.in.consume(); shell.music.parkForAct();
+        int x=starpost.realfest.CourseLevel.start(launch.kind());
+        shell.ctx.startAct(new com.openggf.mods.scene.ActLaunch(
+            new com.openggf.game.ZoneKey.Mod("starpost-valley",launch.kind()),0,
+            com.openggf.game.CharacterKey.parsePersisted(shell.game.farmer),java.util.List.of(),
+            java.util.OptionalInt.of(x),java.util.OptionalInt.of(128),0,java.util.Map.of()));
+    }
+    private void resumeActivity(com.openggf.mods.scene.ActResult result) {
+        if(activityLaunch==null) throw new IllegalStateException("No suspended activity");
+        activities.finish(); var launch=activityLaunch; activityLaunch=null;
+        shell.music.parkForAct(); shell.goNow(activityScreen);
+        launch.done().accept(result);
+        returnToAct=true; shell.in.consume();
+    }
     private boolean returnToRuins;
     private int ruinNumber, ruinRings=-1;
     private PlayScreen actPlay;
@@ -83,6 +104,7 @@ public final class StarpostScene implements ModScene, DebuggableScene {
     }
 
     @Override public void resume(SceneContext context, com.openggf.mods.scene.ActResult result) {
+        if (activities!=null && java.util.List.of("race","hunt","snowboard","lake").contains(result.destination().localName())) { resumeActivity(result); return; }
         if (result.destination().localName().equals("ruins")) { resumeRuins(result); return; }
         if (town == null || actPlay == null) throw new IllegalStateException("No suspended town act");
         town.consumeHandBack();
@@ -100,7 +122,10 @@ public final class StarpostScene implements ModScene, DebuggableScene {
 
     public StarpostScene() { this(null); }
     public StarpostScene(starpost.realtown.TownSession town) { this(town,null); }
-    public StarpostScene(starpost.realtown.TownSession town,starpost.realruins.RuinsSession ruins) { this.town=town; this.ruins=ruins; }
+    public StarpostScene(starpost.realtown.TownSession town,starpost.realruins.RuinsSession ruins) { this(town,ruins,null); }
+    public StarpostScene(starpost.realtown.TownSession town,starpost.realruins.RuinsSession ruins,starpost.realfest.ActivitySession activities) {
+        this.town=town; this.ruins=ruins; this.activities=activities;
+    }
 
     /** E1 owner calls this immediately before SceneContext.startAct. */
     public starpost.realtown.TownSession prepareTownAct() {
@@ -138,6 +163,7 @@ public final class StarpostScene implements ModScene, DebuggableScene {
             return;
         }
         shell = new Shell(ctx, art, new Catalog());
+        shell.activityAct = activities==null?null:this::launchActivity;
         shell.townAct = town == null ? null : this::launchTown;
         shell.ruinsAct = ruins == null ? null : this::launchRuins;
         shell.goNow(new TitleScreen());
@@ -183,8 +209,6 @@ public final class StarpostScene implements ModScene, DebuggableScene {
     @Override
     public boolean debugJump(String command) {
         if (shell == null) return false;
-        if (command.equals("town scene")) { shell.sceneValley = true; return true; }
-        if (command.equals("town act")) { shell.sceneValley = false; return true; }
         if (command.equals("town enter")) {
             if (!(shell.screen() instanceof PlayScreen play)) return false;
             launchTown(play); return true;

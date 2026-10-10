@@ -9,7 +9,7 @@ import starpost.core.Item;
 import starpost.people.Bodies;
 import starpost.people.People;
 import starpost.ui.Text;
-import starpost.valley.ValleyView;
+import starpost.scene.TownBackdrop;
 
 /**
  * The Star Light Feast in the plaza at evening: Star Light Zone's night city over the valley (its
@@ -202,11 +202,11 @@ final class FeastScreen extends FestivalScreen {
     @Override
     void paint(SceneCanvas canvas) {
         play.draw(shell, canvas);
-        ValleyView view = play.valley();
+        TownBackdrop view = play.valley();
         int cx = Math.round(view.cameraX()), cy = Math.round(view.cameraY());
         int ax = ax();
         // Guests along the plaza and behind Clementine's long table (drawn again over them).
-        float farmerX = view.runner.x;
+        float farmerX = view.pose.x;
         for (int i = 0; i < guests.size(); i++) {
             String id = guests.get(i);
             float seat = seat(i, ax, farmerX);

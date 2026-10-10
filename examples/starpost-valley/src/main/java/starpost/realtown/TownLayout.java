@@ -3,17 +3,17 @@ package starpost.realtown;
 import java.util.ArrayList;
 import java.util.List;
 import starpost.people.Anchors;
-import starpost.valley.Runner;
+import starpost.valley.Ground;
 import starpost.valley.Valley;
 
 /** Placement seam: the town knows destinations, not how Green Hill is encoded. */
 public final class TownLayout {
-    public final Runner.Ground ground;
+    public final Ground ground;
     public final int springX;
     public final int loopX;
     public final List<Valley.Place> doors;
 
-    public TownLayout(Runner.Ground ground, int springX, int loopX, List<Valley.Place> doors) {
+    public TownLayout(Ground ground, int springX, int loopX, List<Valley.Place> doors) {
         this.ground = ground; this.springX = springX; this.loopX = loopX;
         this.doors = List.copyOf(doors);
     }
@@ -22,7 +22,7 @@ public final class TownLayout {
         return new TownLayout(valley, valley.springX, valley.loopX, valley.places);
     }
 
-    public TownLayout withGround(Runner.Ground next) {
+    public TownLayout withGround(Ground next) {
         return new TownLayout(next, springX, loopX, doors);
     }
 
@@ -42,7 +42,7 @@ public final class TownLayout {
             int x = ids[i].equals("museum") ? 1283 : ids[i].equals("board") ? 794 : Anchors.valleyX(ids[i]);
             doors.add(new Valley.Place(ids[i], x, 20, labels[i]));
         }
-        return new TownLayout(new Runner.Ground() {
+        return new TownLayout(new Ground() {
             public boolean solid(int x, int y) { return x >= 0 && x < right() && y >= 192; }
             public int floorBelow(int x, int fromY) { return x >= 0 && x < right() ? 192 : 512; }
             public int left() { return 0; }

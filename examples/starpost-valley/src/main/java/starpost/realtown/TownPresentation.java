@@ -78,6 +78,9 @@ public final class TownPresentation {
                 && Math.abs(player.getCentreY()+player.getYRadius()-v.feet())<=40)
             canvas.text(v.definition().name,x-canvas.textWidth(v.definition().name)/2,y+3,Text.YELLOW);
     }
+    public void walkway(ObjectServices services,int x,int feet) {
+        var canvas=canvas(services); stand(canvas,art.bridge.frame(0),x-services.camera().getX(),feet-services.camera().getY());
+    }
     public void pickup(ObjectServices services,TownSession town,Pickups.Pickup pickup) {
         SceneCanvas canvas=canvas(services);
         float x=pickup.x()-services.camera().getX(), y=pickup.y()-services.camera().getY();
@@ -93,15 +96,7 @@ public final class TownPresentation {
     }
     public void draw(ObjectServices services,TownSession town) {
         SceneCanvas canvas=canvas(services);
-        var calendar=town.game().calendar;
-        boolean flash=town.ticks()/8%2==0;
-        art.hud.timeRow(canvas,calendar.minutes()>=24*60&&flash,
-            calendar.minutes()/60%24,calendar.minutes()%60,8);
-        art.hud.ringsRow(canvas,town.game().rings==0&&flash,town.game().rings,24);
-        String date=starpost.core.Calendar.seasonName(calendar.season())+" "+calendar.day()+" "+
-            starpost.core.Calendar.weekdayName(calendar.weekday());
-        Text.right(canvas,date,canvas.width()-8,6,Text.WHITE);
-        starpost.ui.ActHud.momentum(canvas,town.game());
+        if(shell!=null) starpost.scene.PlayScreen.drawHud(shell,canvas);
         if (!town.notice().isEmpty()) {
             canvas.fill(6,43,canvas.textWidth(town.notice())+8,13,0xE0101848);
             canvas.text(town.notice(),10,46,Text.WHITE);

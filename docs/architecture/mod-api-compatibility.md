@@ -147,6 +147,12 @@ remain synchronous. These are additive changes to the mutable 0.7 candidate;
 the descriptor/runtime version remains unpublished 0.7.0 and the normalized
 signature pin is regenerated in place.
 
+Native act controllers can use `NativePositionOps` for ROM centre/subpixel writes
+and implement `SolidObjectProvider` with `SolidObjectParams` for real platforms.
+Their exposed solid routine profile/adapter types are annotated and included in
+the recursive candidate pin. These additions preserve existing runtime behavior
+and the unpublished 0.7.0 version; no published baseline is replaced.
+
 Before changing the candidate surface:
 
 1. Run `TestModApiSignatureSurface` and inspect every added or changed line.

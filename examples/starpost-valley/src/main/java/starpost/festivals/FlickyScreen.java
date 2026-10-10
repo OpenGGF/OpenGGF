@@ -9,7 +9,7 @@ import java.util.List;
 import starpost.core.Game;
 import starpost.people.Bodies;
 import starpost.ui.Text;
-import starpost.valley.ValleyView;
+import starpost.scene.TownBackdrop;
 
 /**
  * The Night of the Flickies, after Sonic 3 &amp; Knuckles' ending: the valley at night on the
@@ -141,8 +141,8 @@ final class FlickyScreen extends FestivalScreen {
         if (index == visitor) {
             // Down to the farmer, round once, and back up to its place.
             int v = t - visitAt;
-            ValleyView view = play.valley();
-            float fx = view.runner.x - view.cameraX(), fy = view.runner.y - view.cameraY() - 46;
+            TownBackdrop view = play.valley();
+            float fx = view.pose.x - view.cameraX(), fy = view.pose.y - view.cameraY() - 46;
             float a = v / (float) CIRCLE * (float) Math.PI * 2;
             float pull = (float) Math.sin(Math.min(1f, v / (float) CIRCLE) * Math.PI);
             x += (fx + (float) Math.cos(a * 2) * 22 - x) * pull;
@@ -155,7 +155,7 @@ final class FlickyScreen extends FestivalScreen {
     void paint(SceneCanvas canvas) {
         play.draw(shell, canvas);
         int w = canvas.width();
-        ValleyView view = play.valley();
+        TownBackdrop view = play.valley();
         int cx = Math.round(view.cameraX()), cy = Math.round(view.cameraY());
         // The watchers along the meadow, looking up.
         int ax = ax();
@@ -187,7 +187,7 @@ final class FlickyScreen extends FestivalScreen {
         if (visitor >= 0 && t - visitAt > 60 && t - visitAt < CIRCLE - 20) {
             SceneImage heart = sys.peopleArt().glyph("heart");
             if (heart != null) {
-                canvas.draw(heart, view.runner.x - cx - heart.width() / 2f, view.runner.y - cy - 62, SceneDraw.plain());
+                canvas.draw(heart, view.pose.x - cx - heart.width() / 2f, view.pose.y - cy - 62, SceneDraw.plain());
             }
         }
     }
@@ -195,11 +195,11 @@ final class FlickyScreen extends FestivalScreen {
     /**
      * The moon rises over the lake: the night backdrop with the moon painted where it shows just
      * under the letterbox, a little right of centre, from where the camera stands for the night
-     * (the backdrop's top row on screen is ValleyView's {@code 8 + camY / 10}, and its slowest
+     * (the backdrop's top row on screen is TownBackdrop's {@code 8 + camY / 10}, and its slowest
      * rows scroll at 0.03 of the camera).
      */
     private void moonSky() {
-        ValleyView view = play.valley();
+        TownBackdrop view = play.valley();
         var night = shell.art.season(shell.game.calendar.season()).backdrop(2);
         int top = Math.max(0, Math.min(32, Math.round(8 + view.cameraY() * 0.1f)));
         int w = night.image().width();

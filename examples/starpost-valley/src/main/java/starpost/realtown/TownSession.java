@@ -21,6 +21,7 @@ import starpost.valley.Pickups;
 public final class TownSession implements RewindSnapshottable<TownSession.Snapshot> {
     private Game game;
     private TownLayout layout;
+    private transient TownWalkRoute walkRoute;
     private TownPresentation presentation;
     private boolean active;
     private Speech speech;
@@ -56,6 +57,7 @@ public final class TownSession implements RewindSnapshottable<TownSession.Snapsh
         this.layout = java.util.Objects.requireNonNull(layout); this.presentation = presentation;
         if (game.section(People.class) == null || game.section(Pickups.class) == null)
             throw new IllegalArgumentException("Town needs the existing People and Pickups sections");
+        walkRoute=new TownWalkRoute(layout.ground);
         controller = -1;
         active = true; speech = null; gift = null; speaker = null; handBack = null;
         asking = invitation = false; clearInput();
@@ -64,7 +66,7 @@ public final class TownSession implements RewindSnapshottable<TownSession.Snapsh
 
     public void attachGround(ActGround ground) {
         pickups().placeOnGround(game,ground,layout.springX,layout.loopX);
-        layout = layout.withGround(ground);
+        layout = layout.withGround(ground); walkRoute=new TownWalkRoute(ground);
     }
     /** Admission anchors elect one persistent director per visit, including door return loads. */
     public boolean claimController(int id) {
@@ -75,6 +77,8 @@ public final class TownSession implements RewindSnapshottable<TownSession.Snapsh
     public Game game() { return game; }
     public People people() { return game.section(People.class); }
     public Pickups pickups() { return game.section(Pickups.class); }
+    public TownWalkRoute walkRoute() { return walkRoute; }
+    public int walkFloor(int x) { return walkRoute.floor(x); }
     public TownLayout layout() { return layout; }
     public TownPresentation presentation() { return presentation; }
     public boolean active() { return active && game != null; }

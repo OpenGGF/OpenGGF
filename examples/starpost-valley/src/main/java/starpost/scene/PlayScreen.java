@@ -13,7 +13,7 @@ import starpost.core.Game;
 import starpost.core.Inventory;
 import starpost.core.Item;
 import starpost.farm.FarmView;
-import starpost.valley.ValleyView;
+import starpost.scene.TownBackdrop;
 import starpost.ui.Text;
 
 /**
@@ -25,7 +25,7 @@ public final class PlayScreen implements Screen {
     private static final int FOLD_TICKS = 28;
 
     private final FarmView farm;
-    private final ValleyView valley;
+    private final TownBackdrop valley;
     private boolean onFarm = true;
     /** The fold between views: counts down; the view switches half way. */
     private int fold;
@@ -40,12 +40,11 @@ public final class PlayScreen implements Screen {
 
     public PlayScreen(Shell shell) {
         farm = new FarmView(shell);
-        valley = new ValleyView(shell);
+        valley = new TownBackdrop(shell);
         farm.arrive(false);
         farm.actors = this::actorsIn;
         valley.actors = this::actorsIn;
         farm.interact = () -> interact(shell, Actor.FARM, farm.runner.x, farm.feetY());
-        valley.interact = () -> interact(shell, Actor.VALLEY, valley.runner.x, valley.runner.y);
         places.put("seed_stall", s -> s.push(new ShopMenu()));
         places.put("inn", s -> s.push(new InnMenu(this)));
         places.put("workshop", s -> s.push(new WorkshopMenu()));
@@ -102,7 +101,7 @@ public final class PlayScreen implements Screen {
         return farm;
     }
 
-    public ValleyView valley() {
+    public TownBackdrop valley() {
         return valley;
     }
 
@@ -130,16 +129,15 @@ public final class PlayScreen implements Screen {
             farm.snapCamera();
         } else {
             valley.arriveFromFarm();
-            valley.runner.x = x;
-            valley.runner.y = valley.valley.floorBelow(Math.round(x), 0);
-            valley.runner.speed = 0;
+            valley.pose.x = x;
+            valley.pose.y = valley.valley.floorBelow(Math.round(x), 0);
             valley.snapCamera();
         }
     }
 
     /** The soundtrack for the place and hour (design doc §8). */
     public void chooseMusic(Shell shell) {
-        chooseMusic(shell, onFarm, valley.runner.x);
+        chooseMusic(shell, onFarm, valley.pose.x);
     }
 
     public void chooseValleyMusic(Shell shell, int x) {
@@ -172,7 +170,7 @@ public final class PlayScreen implements Screen {
                     farm.arrive(true);
                 } else {
                     valley.arriveFromFarm();
-                    if (shell.startTownAct(this)) { fold = 0; return; }
+                    shell.startTownAct(this); fold=0; return;
                 }
                 chooseMusic(shell);
             }
@@ -204,13 +202,6 @@ public final class PlayScreen implements Screen {
                         startFold(shell, true);
                     }
                 }
-                default -> {
-                }
-            }
-        } else {
-            switch (valley.update(shell.in)) {
-                case TO_FARM -> startFold(shell, false);
-                case ENTER -> enterPlace(shell, valley.entered.id());
                 default -> {
                 }
             }

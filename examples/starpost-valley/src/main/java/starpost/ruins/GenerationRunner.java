@@ -1,18 +1,11 @@
-package starpost.valley;
+package starpost.ruins;
 
-/**
- * Sonic's movement on a side-view terrace world, ported from the ROM's movement routines
- * (Sonic_Move, Sonic_RollSpeed, Sonic_Jump, Sonic_JumpHeight and Sonic_SpinDash in sonic3k.asm),
- * in pixels per frame rather than 8.8 fixed point. The ground is a height field: a terrace edge
- * is a wall when it rises more than a step, and a ledge to fall from when it drops. Slopes and
- * loops are not modelled here (the look test's terraces are flat).
- *
- * <p>Three additions serve the Ruins and are inert in the valley, which never uses them: grounds
- * may report {@linkplain Ground#ceiling ceilings} (the head stops on them, and a jump needs
- * headroom); {@link #underwater} switches to Sonic 1's water physics; and {@link #hurt} is the
- * knock-back after a hit, which ignores the pad until Sonic lands.
- */
-public final class Runner {
+import starpost.valley.Ground;
+
+/** Offline reachability approximation for ChamberGen/Reach only. Not a gameplay controller.
+ * Retained because daily generation explores thousands of short programs without loading an act;
+ * native route tests, rather than this model, establish real playable reachability. */
+public final class GenerationRunner {
     /** Sonic_Move: acceleration $C, deceleration $80, friction $C, top speed $600. */
     public static final float ACCEL = 0x0C / 256f;
     public static final float DECEL = 0x80 / 256f;
@@ -55,24 +48,6 @@ public final class Runner {
     public static final int JUMP_HEADROOM = 6;
 
     /** The terrain: per-pixel solidity, scanned for floors and walls. */
-    public interface Ground {
-        boolean solid(int x, int y);
-
-        /** The first solid row at or below {@code fromY}, or a large value when there is none. */
-        int floorBelow(int x, int fromY);
-
-        int left();
-
-        int right();
-
-        /** World-space origin of the authored block geometry (the act may add sky rows). */
-        default int originY() { return 0; }
-
-        /** Whether a ceiling at this pixel stops a head moving up into it (the valley has none). */
-        default boolean ceiling(int x, int y) {
-            return false;
-        }
-    }
 
     public float x;
     public float y;            // feet
@@ -106,7 +81,7 @@ public final class Runner {
     public static final float GLIDE_SPEED = 0x400 / 256f;
     public static final float GLIDE_SINK = 0x80 / 256f;
 
-    public Runner(float x, float y) {
+    public GenerationRunner(float x, float y) {
         this.x = x;
         this.y = y;
     }

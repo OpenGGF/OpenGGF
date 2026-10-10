@@ -1,10 +1,10 @@
 package starpost.realtown;
 
 import com.openggf.level.objects.ObjectServices;
-import starpost.valley.Runner;
+import starpost.valley.Ground;
 
 /** Reads the act's decoded collision profiles through the public level API, never scene art. */
-public final class ActGround implements Runner.Ground {
+public final class ActGround implements Ground {
     private final ObjectServices services;
     private final int width;
     private final int originY;

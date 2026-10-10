@@ -22,7 +22,6 @@ import starpost.core.Skills;
 import starpost.people.People;
 import starpost.people.Spot;
 import starpost.people.VillagerDef;
-import starpost.valley.Runner;
 
 /**
  * Festivals and the Signpost Board without a ROM: the calendar and its gathering of the valley,
@@ -280,97 +279,21 @@ class FestivalRulesTest {
         assertEquals(List.of("tails", "robotnik"), Race.rivals(early));
     }
 
-    /** A flat, endless track for racing without a ROM. */
-    private static final class Flat implements Runner.Ground {
-        @Override
-        public boolean solid(int x, int y) {
-            return y >= 192;
-        }
-
-        @Override
-        public int floorBelow(int x, int fromY) {
-            return Math.max(192, fromY);
-        }
-
-        @Override
-        public int left() {
-            return -1_000_000;
-        }
-
-        @Override
-        public int right() {
-            return 1_000_000;
-        }
-    }
-
-    /** Races a farmer (holding right, with or without spin dashes) against the field; returns the place. */
-    private static int race(boolean spinDashes) {
-        Game game = Game.fresh(new Catalog(), 1, "sonic");
-        Flat ground = new Flat();
-        int distance = Race.LAPS * 18 * 256;
-        List<Race.Rival> rivals = new ArrayList<>();
-        for (String who : new String[] {"tails", "knuckles", "robotnik"}) {
-            rivals.add(new Race.Rival(who, 0, 192));
-        }
-        Runner farmer = new Runner(0, 192);
-        int finish = -1;
-        int dashTimer = 0;
-        for (int tick = -Race.COUNTDOWN; tick < 60 * 120 && (finish < 0 || rivals.stream().anyMatch(r -> r.finish < 0));
-                tick++) {
-            float leader = farmer.x;
-            for (Race.Rival r : rivals) {
-                leader = Math.max(leader, r.x());
-            }
-            for (Race.Rival r : rivals) {
-                r.step(ground, tick, leader, 18 * 256);
-                if (r.finish < 0 && r.x() >= distance) {
-                    r.finish = tick;
-                }
-            }
-            boolean down = false, jump = false, left = false, right = tick >= 0;
-            if (spinDashes) {
-                // A practised racer: rev a spin dash, roll while it beats running, hop out, brake
-                // on landing, and rev again (the cycle averages about a fifth faster than running).
-                if (tick < 0) {
-                    down = tick > -60;
-                    jump = tick > -60 && tick % 10 == 0;
-                    right = false;
-                } else if (farmer.dashing) {
-                    down = ++dashTimer < 30;
-                    jump = dashTimer % 8 == 0;
-                    right = false;
-                } else if (farmer.rolling && farmer.onGround) {
-                    jump = farmer.speed < Runner.TOP + 0.5f;
-                    right = false;
-                } else if (farmer.onGround && farmer.speed >= 1) {
-                    left = true;
-                    right = false;
-                } else if (farmer.onGround) {
-                    down = true;
-                    jump = true;
-                    right = false;
-                    dashTimer = 0;
-                }
-            }
-            farmer.step(ground, left, right, down, jump, jump, tick);
-            if (finish < 0 && farmer.x >= distance) {
-                finish = tick;
-            }
-        }
-        game.rings = 0;
-        return Race.place(finish, rivals);
-    }
-
     @Test
-    void holdingRightFinishesWithThePackButSpinDashingWins() {
-        assertTrue(race(false) > 1, "running alone does not beat Tails's start and Robotnik's booster");
-        assertEquals(1, race(true), "a farmer who spin dashes and keeps the roll wins");
+    void scriptedRivalsKeepTheirPacesWithoutASecondPlayerController() {
+        var tails=new Race.Rival("tails",0,192);
+        var knuckles=new Race.Rival("knuckles",0,192);
+        tails.step(x->192,-1,0,4608); assertEquals(0,tails.x());
+        for(int t=0;t<60;t++) { tails.step(x->192,t,0,4608); knuckles.step(x->192,t,0,4608); }
+        assertEquals(480,tails.x(),1e-3); assertEquals(60*6*.98,knuckles.x(),1e-3);
+        var snapshot=tails.capture(); tails.step(x->192,61,0,4608);
+        assertEquals(snapshot,Race.Rival.restore(snapshot).capture());
     }
 
     @Test
     void robotnikBoostsOnceALapWhenBehind() {
         Race.Rival egg = new Race.Rival("robotnik", 0, 192);
-        Flat ground = new Flat();
+        java.util.function.IntUnaryOperator ground=x->192;
         for (int tick = 0; tick < 10; tick++) {
             egg.step(ground, tick, 0, 4608);
         }

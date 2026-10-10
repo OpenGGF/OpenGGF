@@ -2,19 +2,19 @@ package starpost.ruins;
 
 import java.util.ArrayList;
 import java.util.List;
-import starpost.valley.Runner;
+import starpost.valley.Ground;
 
 /**
  * One room of the Ruins: a small grid of a zone's level blocks with their own collision, a water
  * line in the Labyrinth, and what is placed in it (rings, rocks, badniks, springs, spikes, air
- * bubbles, monitors). Engine-free: it is the {@link Runner.Ground} both for play and for the
+ * bubbles, monitors). Engine-free: it is the {@link Ground} for the
  * traversal check that places the exit ({@link Reach}).
  *
  * <p>Coordinates are chamber pixels from the top-left corner. Above the top is a ceiling; left
  * and right the runner is held inside; below the bottom is a shaft down to the next chamber.
  * Top-solid floors (platforms) hold from above only: walls and ceilings are fully solid pixels.
  */
-public final class Chamber implements Runner.Ground {
+public final class Chamber implements Ground {
     public static final int NO_WATER = Integer.MAX_VALUE;
     public static final byte EMPTY = 0;
     public static final byte TOP_SOLID = 1;
@@ -238,7 +238,7 @@ public final class Chamber implements Runner.Ground {
      * underfoot. Returns 1 when a spring fired, 2 when Sonic splashed through the surface, else 0.
      * Play and the traversal check share it, so the check sees what the player will.
      */
-    public int afterStep(Runner r) {
+    public int afterStep(GenerationRunner r) {
         int event = 0;
         if (waterY != NO_WATER && r.setUnderwater(underwater(r.x, r.y, r.height()))) {
             event = 2;

@@ -134,4 +134,11 @@ public final class Line {
         }
         return false;
     }
+    public record Snapshot(int state,int timer,int age,float fromX,float fromY,float toX,float toY,
+            int depth,int nibble,int level) {}
+    public Snapshot capture() { return new Snapshot(state,timer,age,fromX,fromY,toX,toY,depth,nibble,level); }
+    public void restore(Snapshot s) {
+        state=s.state(); timer=s.timer(); age=s.age(); fromX=s.fromX(); fromY=s.fromY();
+        toX=s.toX(); toY=s.toY(); depth=s.depth(); nibble=s.nibble(); level=s.level();
+    }
 }

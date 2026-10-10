@@ -59,6 +59,7 @@ public final class RuinsSession implements RewindSnapshottable<RuinsSession.Snap
         if(retained!=null) { restoreRoom(retained); spawnedFinds=0; }
         return chamber;
     }
+    public starpost.scene.Shell shell() { return shell; }
     public Game game() { return game; }
     public RuinsArt art() { return art; }
     public Chamber chamber() { return chamber; }

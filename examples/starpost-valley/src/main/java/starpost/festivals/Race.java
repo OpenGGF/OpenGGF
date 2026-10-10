@@ -4,17 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 import starpost.core.Game;
 import starpost.people.People;
-import starpost.valley.Runner;
+import java.util.function.IntUnaryOperator;
 
-/**
- * The Great Valley Race's rules (Summer 11): twice round a Green Hill track with springs and
- * loops, on the ported Sonic controller. The heroes race on the same physics as the farmer with
- * scripted pads: Tails (or Sonic) charges a spin dash on the line, Knuckles just runs, and both
- * jump whatever stops them. Robotnik flies the Egg Mobile over everything at his own pace and,
- * once a lap, fires its booster when he falls behind. A farmer who only holds right finishes
- * with the pack; spin dashing and keeping the roll wins. Engine-free: the rivals step over any
- * {@link Runner.Ground}.
- */
+/** Great Valley Race rules and scripted competitors; the farmer uses the native S3K player.
+ * Rivals follow the ROM-backed course surface; they do not implement a second player controller. */
 public final class Race {
     public static final int LAPS = 2;
     /** The countdown before GO, in ticks (three, two, one). */
@@ -66,85 +59,38 @@ public final class Race {
         return !who.equals("knuckles");
     }
 
-    /** One racer besides the farmer. */
+    /** One scripted competitor. Distances are cumulative across the circuit's laps. */
     public static final class Rival {
         public final String who;
-        public final Runner runner;
-        /** Where the rival started (laps are counted from here). */
         public final float startX;
-        /** The tick (from GO) the rival crossed the line, or -1. */
         public int finish = -1;
-        /** Robotnik's Egg Mobile: no runner, it flies. */
-        public float eggX;
-        public float eggY;
-        int boostLeft;
-        int boostLap = -1;
-        private boolean dashReleased;
-
+        public float eggX, eggY;
+        private int boostLeft, boostLap = -1;
         public Rival(String who, float x, float y) {
-            this.who = who;
-            this.runner = new Runner(x, y);
-            this.startX = x;
-            this.eggX = x;
-            this.eggY = y - EGG_HEIGHT;
+            this.who=who; startX=x; eggX=x; eggY=y-(flies()?EGG_HEIGHT:0);
         }
-
-        public boolean flies() {
-            return who.equals("robotnik");
-        }
-
-        public float x() {
-            return flies() ? eggX : runner.x;
-        }
-
-        public boolean boosting() {
-            return boostLeft > 0;
-        }
-
-        /**
-         * One tick. {@code tick} counts from GO (negative during the countdown), {@code leader}
-         * is the furthest x of the field, {@code lapLength} the track's length.
-         */
-        public boolean step(Runner.Ground ground, int tick, float leader, int lapLength) {
-            if (flies()) {
-                if (tick < 0) {
-                    return false;
-                }
-                int lap = (int) Math.floor((eggX - startX) / lapLength);
-                if (boostLeft == 0 && boostLap != lap && leader - eggX > EGG_BEHIND) {
-                    boostLeft = EGG_BOOST_TICKS;
-                    boostLap = lap;
-                }
-                float speed = boostLeft > 0 ? EGG_BOOST : EGG_CRUISE;
-                if (boostLeft > 0) {
-                    boostLeft--;
-                }
-                eggX += speed;
-                int floor = ground.floorBelow(Math.round(eggX), 0);
-                float target = Math.min(floor, 260) - EGG_HEIGHT + (float) Math.sin(tick / 20.0) * 4;
-                eggY += (target - eggY) * 0.08f;
-                return false;
+        public boolean flies() { return who.equals("robotnik"); }
+        public float x() { return eggX; }
+        public boolean boosting() { return boostLeft>0; }
+        public void step(IntUnaryOperator floor, int tick, float leader, int lapLength) {
+            if(tick<0 || finish>=0) return;
+            int lap=(int)((eggX-startX)/lapLength);
+            if(flies() && boostLeft==0 && boostLap!=lap && leader-eggX>EGG_BEHIND) {
+                boostLeft=EGG_BOOST_TICKS; boostLap=lap;
             }
-            Runner r = runner;
-            boolean down = false, right = false, jump = false;
-            if (tick < 0) {
-                // On the line: crouch and rev the spin dash on the last second (or just wait).
-                if (dashesOffTheLine(who) && tick > -60) {
-                    down = true;
-                    jump = tick % 14 == 0;
-                }
-            } else {
-                if (dashesOffTheLine(who) && !dashReleased) {
-                    dashReleased = true;     // GO: let the dash go
-                } else if (r.rolling && r.onGround) {
-                    // Keep the roll while it is faster than running; hop out of it after.
-                    jump = Math.abs(r.speed) < pace(who) * Runner.TOP;
-                } else {
-                    right = r.speed < pace(who) * Runner.TOP;
-                    jump = r.pushing && r.onGround;
-                }
-            }
-            return r.step(ground, false, right, down, jump, jump || !r.onGround, tick);
+            float speed=flies()?(boostLeft>0?EGG_BOOST:EGG_CRUISE):6*pace(who);
+            // The dash off the line is the competitor's authored advantage, not player physics.
+            if(!flies() && dashesOffTheLine(who) && tick<60) speed=8;
+            if(boostLeft>0) boostLeft--;
+            eggX+=speed;
+            int surface=floor.applyAsInt(Math.round(eggX));
+            eggY=surface-(flies()?EGG_HEIGHT:0);
+        }
+        public record Snapshot(String who,float startX,int finish,float x,float y,int boostLeft,int boostLap) {}
+        public Snapshot capture() { return new Snapshot(who,startX,finish,eggX,eggY,boostLeft,boostLap); }
+        public static Rival restore(Snapshot s) {
+            var r=new Rival(s.who(),s.startX(),s.y()); r.finish=s.finish(); r.eggX=s.x(); r.eggY=s.y();
+            r.boostLeft=s.boostLeft(); r.boostLap=s.boostLap(); return r;
         }
     }
 

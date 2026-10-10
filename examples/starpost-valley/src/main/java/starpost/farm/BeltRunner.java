@@ -40,13 +40,13 @@ public final class BeltRunner {
         }
         boolean braking = !airborne && (left && speed > 0 || right && speed < 0);
         if (left) {
-            speed = speed > 0 ? speed - starpost.valley.Runner.DECEL : Math.max(-starpost.valley.Runner.TOP, speed - (airborne ? starpost.valley.Runner.AIR_ACCEL : starpost.valley.Runner.ACCEL));
+            speed = speed > 0 ? speed - (0x80 / 256f) : Math.max(-(0x600 / 256f), speed - (airborne ? (0x18 / 256f) : (0x0C / 256f)));
             facingLeft |= !braking;          // braking, he still faces the way he slides (Sonic_Move)
         } else if (right) {
-            speed = speed < 0 ? speed + starpost.valley.Runner.DECEL : Math.min(starpost.valley.Runner.TOP, speed + (airborne ? starpost.valley.Runner.AIR_ACCEL : starpost.valley.Runner.ACCEL));
+            speed = speed < 0 ? speed + (0x80 / 256f) : Math.min((0x600 / 256f), speed + (airborne ? (0x18 / 256f) : (0x0C / 256f)));
             facingLeft &= braking;
         } else if (!airborne) {
-            speed -= Math.signum(speed) * Math.min(Math.abs(speed), starpost.valley.Runner.FRICTION * 4);
+            speed -= Math.signum(speed) * Math.min(Math.abs(speed), (0x0C / 256f) * 4);
         }
         if (up) {
             depthSpeed = Math.max(-DEPTH_TOP, depthSpeed - DEPTH_ACCEL);
@@ -65,15 +65,15 @@ public final class BeltRunner {
         boolean jumped = false;
         if (!airborne && jumpPressed) {
             skid = 0;
-            ySpeed = -starpost.valley.Runner.JUMP;
+            ySpeed = -(0x680 / 256f);
             rolling = true;
             jumped = true;
         }
         if (height > 0 || ySpeed < 0) {
-            if (!jumpHeld && ySpeed < -starpost.valley.Runner.JUMP_RELEASE) {
-                ySpeed = -starpost.valley.Runner.JUMP_RELEASE;
+            if (!jumpHeld && ySpeed < -(0x400 / 256f)) {
+                ySpeed = -(0x400 / 256f);
             }
-            ySpeed += starpost.valley.Runner.GRAVITY;
+            ySpeed += (0x38 / 256f);
             height -= ySpeed;
             if (height <= 0) {
                 height = 0;

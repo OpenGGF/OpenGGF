@@ -92,9 +92,10 @@ final class IntroScreen implements Screen {
     public void enter(Shell shell) {
         play = new PlayScreen(shell);
         play.clockStopped = true;
-        play.debugPlace(false, 1720, 0);
-        play.valley().runner.speed = -6;
-        play.valley().runner.facingLeft = true;
+        play.debugPlace(true, starpost.people.Anchors.FARM_GATE-24,40);
+        phase=1;
+
+        play.valley().pose.facingLeft = true;
         String[] hoppers = {"pocky", "cucky", "picky", "ricky", "pecky", "rocky"};
         for (int i = 0; i < hoppers.length; i++) {
             companions.add(new Companion(hoppers[i], 14 + i * 13, false));
@@ -203,8 +204,8 @@ final class IntroScreen implements Screen {
             trailX[trailHead] = play.farm().runner.x + (play.farm().runner.facingLeft ? 18 : -18);
             trailY[trailHead] = play.farm().feetY() + 2;
         } else {
-            trailX[trailHead] = play.valley().runner.x + 22;
-            trailY[trailHead] = play.valley().runner.y;
+            trailX[trailHead] = play.valley().pose.x + 22;
+            trailY[trailHead] = play.valley().pose.y;
         }
     }
 

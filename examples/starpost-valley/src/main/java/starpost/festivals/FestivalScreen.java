@@ -211,7 +211,7 @@ abstract class FestivalScreen implements Screen {
             return;
         }
         int ax = sys.anchorX(festival);
-        float farmerX = play.valley().runner.x;
+        float farmerX = play.valley().pose.x;
         int i = 0;
         for (VillagerDef v : people.cast.all()) {
             starpost.people.Spot spot = v.id.equals(except) ? null : festivals.spot(v, shell.game);
@@ -256,56 +256,10 @@ abstract class FestivalScreen implements Screen {
         shell.go(play);
     }
 
-    /** Puts the play screen back as it was (called on leaving; subclasses add their own). */
-    void restore() {
-        play.clockStopped = false;
-        play.hudHidden = false;
-        if (heldTown) {
-            heldTown = false;
-            play.places.putAll(heldPlaces);
-            play.valley().interact = heldInteract;
-            play.valley().labels = true;
-            play.actors.addAll(heldPickups);
-        }
-    }
-
-    private boolean heldTown;
-    private final java.util.Map<String, java.util.function.Consumer<Shell>> heldPlaces = new java.util.LinkedHashMap<>();
-    private java.util.function.BooleanSupplier heldInteract;
-    private final List<starpost.scene.Actor> heldPickups = new ArrayList<>();
-
-    /**
-     * For events played in the valley itself: doorways and talking are off, doorway labels hidden,
-     * and the day's rings and forage put aside (an event must not change the save by the way),
-     * all restored on leaving. The farmer stands at {@code x}.
-     */
-    void holdTown(float x) {
-        heldTown = true;
-        heldPlaces.putAll(play.places);
-        play.places.clear();
-        heldInteract = play.valley().interact;
-        play.valley().interact = () -> false;
-        play.valley().labels = false;
-        for (starpost.scene.Actor a : play.actors) {
-            if (a instanceof starpost.valley.Pickups.Pickup) {
-                heldPickups.add(a);
-            }
-        }
-        play.actors.removeAll(heldPickups);
-        if (play.onFarm() || Math.abs(play.valley().runner.x - x) > 1) {
-            play.placeInValley(x);
-        }
-    }
-
-    /** The valley's update with the farmer kept east of the farm gate (no folding away mid-event). */
-    void stepTown() {
-        var runner = play.valley().runner;
-        if (runner.x < 200) {
-            runner.x = 200;
-            runner.speed = Math.max(0, runner.speed);
-        }
-        play.update(shell);
-    }
+    /** Ceremonies use a stationary ROM stage; menus and timed gestures need no platforming. */
+    void restore() { play.clockStopped=false; play.hudHidden=false; }
+    void holdTown(float x) { play.placeInValley(x); }
+    void stepTown() { }
 
     /** Scripted stillness: no buttons this tick (a countdown, a speech). */
     void freezeInput() {

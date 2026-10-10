@@ -3,7 +3,7 @@ package starpost.ruins;
 import com.openggf.mods.state.SnapshotRandom;
 import java.util.ArrayList;
 import java.util.List;
-import starpost.valley.Runner;
+import starpost.valley.Ground;
 
 /**
  * Puts the exit and the contents into a chamber whose reachable spots are known: the exit on the
@@ -106,7 +106,7 @@ final class Placer {
     }
 
     private boolean dry(int s) {
-        return chamber.waterY == Chamber.NO_WATER || reach.y(s) - Runner.STAND_HEIGHT < chamber.waterY;
+        return chamber.waterY == Chamber.NO_WATER || reach.y(s) - GenerationRunner.STAND_HEIGHT < chamber.waterY;
     }
 
     private boolean springNear(int s) {

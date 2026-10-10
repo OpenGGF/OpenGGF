@@ -3,7 +3,7 @@ package starpost.ruins;
 import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.Test;
-import starpost.valley.Runner;
+import starpost.valley.Ground;
 
 /**
  * Chamber generation without a ROM, on {@link TestKit}: every chamber 1-40 is built the same way
@@ -165,27 +165,27 @@ class ChamberGenTest {
     }
 
     @Test
-    void theRunnerKeepsTheValleysBehaviourWithoutCeilingsOrWater() {
-        Runner r = new Runner(100, 192);
-        Runner.Ground flat = new Runner.Ground() {
+    void theGenerationRunnerKeepsTheValleysBehaviourWithoutCeilingsOrWater() {
+        GenerationRunner r = new GenerationRunner(100, 192);
+        Ground flat = new Ground() {
             public boolean solid(int x, int y) { return y >= 192; }
             public int floorBelow(int x, int fromY) { return Math.max(192, fromY) == fromY && fromY > 192 ? fromY : 192; }
             public int left() { return 0; }
             public int right() { return 10_000; }
         };
         assertTrue(r.step(flat, false, false, false, true, true, 0), "a jump with no ceiling to check");
-        assertEquals(-Runner.JUMP, r.ySpeed, 1e-6, "Sonic_Jump's $680");
+        assertEquals(-GenerationRunner.JUMP, r.ySpeed, 1e-6, "Sonic_Jump's $680");
         r.step(flat, false, false, false, false, true, 1);
-        assertEquals(-Runner.JUMP + Runner.GRAVITY, r.ySpeed, 1e-6, "then dry gravity");
+        assertEquals(-GenerationRunner.JUMP + GenerationRunner.GRAVITY, r.ySpeed, 1e-6, "then dry gravity");
         int frames = 0;
         while (!r.onGround && frames++ < 200) {
             r.step(flat, false, false, false, false, true, frames);
         }
         assertTrue(frames < 70, "lands in about a second");
-        Runner wet = new Runner(100, 192);
+        GenerationRunner wet = new GenerationRunner(100, 192);
         wet.setUnderwater(true);
         wet.step(flat, false, false, false, true, true, 0);
         wet.step(flat, false, false, false, false, true, 1);
-        assertEquals(-Runner.WATER_JUMP + Runner.WATER_GRAVITY, wet.ySpeed, 1e-6, "Sonic 1's water jump and gravity");
+        assertEquals(-GenerationRunner.WATER_JUMP + GenerationRunner.WATER_GRAVITY, wet.ySpeed, 1e-6, "Sonic 1's water jump and gravity");
     }
 }

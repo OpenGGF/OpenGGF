@@ -2450,3 +2450,52 @@ Inspected frames90 show native hurt/health, source art, water and the shared
 Momentum HUD. Nine original placeholder assets reproduce byte-for-byte with
 `tools/make_placeholder.py <output> 1 2`.
 
+
+## 25. Festivals and the lake on real levels (lane)
+
+Phase 4 starts at `435671fd0` in `feature/ai-starpost-realfest`. Race, Ring Hunt,
+snowboard and Waterfall Lake now enter owned S3K acts through the invitation/scene
+bridge, and results return to the same festival scene. Race uses the original Green
+Hill circuit twice, scripted competitors and Egg Mobile cruise/boost rules. Ring
+Hunt uses the real town layout, shared ring claims and its 60-second champion race.
+Snowboard terrain consists of ROM chunk rows shifted in 16-pixel steps, with native
+player sensors/jumps, a minimum board speed, rings and the existing score/prizes.
+Lake uses blocks 1/51/52, native walking and a captured level director for casting,
+bites and Bubble Bar; the Ice Cap choice launches its timed fishing variant.
+Drawing reuses ROM art through LevelPictureCanvas and never advances rules.
+
+Fair booths and Strength remain scenes: inventory selection, slots and press timing
+do not require platforming. Parade/Feast/Flicky ceremonies have static scene poses.
+The farm pond stays attached to the belt-view farm and its distinct BeltRunner.
+Deleted gameplay Runner, ValleyView, RuinsScreen, LakeScreen and their debug
+fallbacks/obsolete ability tests. TownBackdrop is presentation only. GenerationRunner
+is retained solely for bounded Ruins generation searches; native Ruins route tests
+are the playable oracle. No gameplay object instantiates that approximation.
+
+The Labyrinth camera bounds subtract the live viewport from chamber dimensions.
+Scheduled neighbours share a deterministic, slope-limited walking path with real
+top-solid ROM log decks spanning ledges/pits. Native town, Ruins and lake reuse the
+scene HUD, including Momentum. NativePositionOps and solid-provider signatures
+are now annotated candidate API contracts; their transitive types and the mutable
+0.7 signature pin are updated together. Keeping unpinned engine-helper calls was
+rejected after packaging reported five compatibility findings. Published pins and
+API version/status do not change.
+
+### Festival and lake route matrix
+
+| Native destination | Character/viewport routes | Result and rewind spot |
+|---|---|---|
+| Race | Sonic/Tails/Knuckles × 320/400 | Countdown restore/replay, two laps, verdict, return |
+| Ring Hunt | Sonic/Tails/Knuckles × 320/400 | Countdown restore/replay, real ring claim, 60-second verdict, return |
+| Snowboard | Sonic/Tails/Knuckles × 320/400 | Countdown restore/replay, native downhill run, score, return |
+| Lake | Sonic/Tails/Knuckles × 320/400 | Shore restore/replay, jetty/cast/bite/fight, leave |
+| Ice Cap fishing | Sonic/Tails/Knuckles × 320/400 | Shore restore/replay, cast/fight, timer/result, return |
+
+Initial focused verification: 30 native route cases, 9 candidate signature cases
+and 2 packaged-example cases pass without skips; packaging reports zero findings.
+The direct CreatorTestLauncher runs 193 creator cases without skips or failures.
+Combined Starpost/S3K, broad contract validation, final guards and remaining visual
+checks are recorded below when completed. Wider viewports, alternate donors, teams,
+load/respawn and interaction-boundary rewind remain inherited coverage gaps; this
+matrix does not certify the full level standard. Clips and state CSVs live outside
+the repository under `~/scratch/sv-realfest/`.

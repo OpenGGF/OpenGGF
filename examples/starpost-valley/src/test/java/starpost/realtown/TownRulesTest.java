@@ -99,7 +99,7 @@ class TownRulesTest {
         var before=java.util.List.copyOf(town.pickups().today(town.game(),layout.ground,layout.springX,layout.loopX));
         town.pickups().collect(0,null,town.game());
         var bits=town.pickups().capture();
-        var shifted=new starpost.valley.Runner.Ground() {
+        var shifted=new starpost.valley.Ground() {
             public int left() {return layout.ground.left();}
             public int right() {return layout.ground.right();}
             public int originY() {return 128;}
@@ -161,7 +161,7 @@ class TownRulesTest {
 
     @Test void realGroundReprojectsPickupsWithoutRespawningCollectedItems() {
         TownSession town=town(); town.pickups().collect(0,null,town.game());
-        var ground=new starpost.valley.Runner.Ground() {
+        var ground=new starpost.valley.Ground() {
             public boolean solid(int x,int y) { return y>=208; }
             public int floorBelow(int x,int from) { return 208; }
             public int left() { return 0; }

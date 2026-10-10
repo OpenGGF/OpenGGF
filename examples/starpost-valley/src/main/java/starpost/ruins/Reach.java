@@ -3,11 +3,11 @@ package starpost.ruins;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
-import starpost.valley.Runner;
+import starpost.valley.Ground;
 
 /**
  * Where a player can get to in a chamber, found by playing it: from every standing spot reached
- * so far, the real controller ({@link Runner}, with the chamber's springs and water through
+ * so far, the offline model ({@link GenerationRunner}, with the chamber's springs and water through
  * {@link Chamber#afterStep}) runs a set of short input programs (walks, drops, standing and
  * running jumps, short hops, steered and reversed jumps, spin dashes and dash jumps), and every
  * spot it stands on is reached. Spikes and lava end a program (a route through a hazard does not
@@ -69,12 +69,12 @@ public final class Reach {
         if (!chamber.floor(x, y) || chamber.floor(x, y - 1)) {
             return false;
         }
-        for (int k = 2; k <= Runner.WALL; k++) {
+        for (int k = 2; k <= GenerationRunner.WALL; k++) {
             if (chamber.floor(x, y - k)) {
                 return false;
             }
         }
-        for (int k = Runner.WALL + 1; k <= Runner.STAND_HEIGHT; k++) {
+        for (int k = GenerationRunner.WALL + 1; k <= GenerationRunner.STAND_HEIGHT; k++) {
             if (chamber.ceiling(x, y - k)) {
                 return false;
             }
@@ -138,7 +138,7 @@ public final class Reach {
         return n;
     }
 
-    /** Runner steps simulated so far (the check's cost). */
+    /** GenerationRunner steps simulated so far (the check's cost). */
     public int steps() {
         return steps;
     }
@@ -233,7 +233,7 @@ public final class Reach {
         reached[start] = true;
         queue.add(start);
         int expanded = 0;
-        Runner runner = new Runner(0, 0);
+        GenerationRunner runner = new GenerationRunner(0, 0);
         List<Integer> found = new ArrayList<>();
         while (!queue.isEmpty() && expanded < MAX_SPOTS) {
             int from = queue.poll();
@@ -258,7 +258,7 @@ public final class Reach {
     }
 
     /** Plays one input program from a spot, collecting the spots stood on. */
-    private void run(Runner r, int from, int program, int dir, List<Integer> found) {
+    private void run(GenerationRunner r, int from, int program, int dir, List<Integer> found) {
         int[] s = spots.get(from);
         reset(r, s[0], s[1]);
         boolean wasAirborne = false;
@@ -297,7 +297,7 @@ public final class Reach {
         }
     }
 
-    private static void reset(Runner r, int x, int y) {
+    private static void reset(GenerationRunner r, int x, int y) {
         r.x = x;
         r.y = y;
         r.speed = 0;
@@ -324,7 +324,7 @@ public final class Reach {
      * 6 short run-up jump, 7 long run-up jump, 8 spin dash, 9 spin dash then jump, 10 jump and
      * turn back. Returns -1 when the program is over.
      */
-    private static int input(int program, int dir, int frame, Runner r, boolean airborne) {
+    private static int input(int program, int dir, int frame, GenerationRunner r, boolean airborne) {
         int d = dir < 0 ? L : R;
         int back = dir < 0 ? R : L;
         return switch (program) {

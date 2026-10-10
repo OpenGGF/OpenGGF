@@ -10,7 +10,7 @@ import starpost.core.Game;
 import starpost.core.Item;
 import starpost.people.Bodies;
 import starpost.ui.Text;
-import starpost.valley.ValleyView;
+import starpost.scene.TownBackdrop;
 
 /**
  * The Sunflower Parade in the town: Green Hill's sunflowers bloom along the street (the ROM's big
@@ -44,7 +44,7 @@ final class ParadeScreen extends FestivalScreen {
     void begin() {
         int ax = sys.anchorX(festival);
         holdTown(ax - 40);
-        play.valley().runner.facingLeft = false;
+        play.valley().pose.facingLeft = false;
         offstage(true);
         host = Festivals.host(festival, shell.game);
         for (String id : crowd()) {
@@ -199,7 +199,7 @@ final class ParadeScreen extends FestivalScreen {
     @Override
     void paint(SceneCanvas canvas) {
         play.draw(shell, canvas);
-        ValleyView view = play.valley();
+        TownBackdrop view = play.valley();
         int cx = Math.round(view.cameraX()), cy = Math.round(view.cameraY());
         int ax = sys.anchorX(festival);
         // The host's judging stand by the plaza: a plank table, Dandel behind it.

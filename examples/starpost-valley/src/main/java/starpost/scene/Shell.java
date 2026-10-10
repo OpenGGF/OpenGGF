@@ -30,19 +30,25 @@ public final class Shell {
     final Settings settings;
     public Game game;
     java.util.function.Consumer<PlayScreen> townAct;
-    boolean sceneValley;
-    public boolean sceneRuins;
     java.util.function.BiConsumer<PlayScreen,Integer> ruinsAct;
     public boolean startRuinsAct(PlayScreen play,int number) {
-        if(ruinsAct==null || sceneRuins) return false;
+        if(ruinsAct==null) throw new IllegalStateException("Real Ruins act is unavailable");
         ruinsAct.accept(play,number); return true;
     }
 
     /** Farm fold integration; the scene-only valley remains available through debug. */
     boolean startTownAct(PlayScreen play) {
-        if (townAct == null || sceneValley) return false;
+        if (townAct == null) throw new IllegalStateException("Real town act is unavailable");
         townAct.accept(play);
         return true;
+    }
+    public record ActivityLaunch(PlayScreen play,String kind,int seconds,
+            java.util.function.Consumer<com.openggf.mods.scene.ActResult> done) {}
+    java.util.function.Consumer<ActivityLaunch> activityAct;
+    public void startActivity(PlayScreen play,String kind,int seconds,
+            java.util.function.Consumer<com.openggf.mods.scene.ActResult> done) {
+        if(activityAct==null) throw new IllegalStateException("Real activity act is unavailable");
+        activityAct.accept(new ActivityLaunch(play,kind,seconds,done));
     }
     public long ticks;
     /** When the hotbar selection last changed (its label shows for two seconds). */

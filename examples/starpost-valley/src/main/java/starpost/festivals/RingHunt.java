@@ -160,6 +160,13 @@ public final class RingHunt {
             return -1;
         }
 
+        public record Snapshot(float x,float y,int score,boolean facingLeft,int target,int pause) {}
+        public Snapshot capture() { return new Snapshot(x,y,score,facingLeft,target,pause); }
+        public static Champion restore(Snapshot s) {
+            var c=new Champion(s.x(),s.y()); c.score=s.score(); c.facingLeft=s.facingLeft();
+            c.target=s.target(); c.pause=s.pause(); return c;
+        }
+
         private int nearest(List<Spot> rings, boolean[] taken) {
             int best = -1;
             float bestD = Float.MAX_VALUE;

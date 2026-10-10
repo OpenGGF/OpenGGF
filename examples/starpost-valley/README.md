@@ -124,10 +124,10 @@ scene menu returns to that door in the same act. Up at the farm gate returns to
 the same farm/day/session. Native health rings are separate from the saved wallet;
 TIME shows the day clock and RINGS shows the wallet using Sonic 1 HUD art.
 The chosen scene soundtrack follows the act, and the farm song resumes at home.
-The native solo round trip is verified at 320/400 pixels. The earlier scene valley
-remains a debug fallback: `town scene` selects it, `town act` restores act visits,
-and `town enter` launches from the current play screen. See design §23 for the
-route matrix and wider/team/respawn/festival coverage gaps.
+The native solo round trip is verified at 320/400 pixels. Race, Ring Hunt, snowboard
+and Waterfall Lake also use native acts; title/choice/verdict screens, stationary
+Fair booths and the belt-view farm pond remain scenes. The old `town scene` and
+`ruins scene` debug fallbacks have been removed.
 
 The jar contains tiny original typed placeholder resources for registering the
 act; `tools/make_placeholder.py` reproduces them without ROM input. Loading the

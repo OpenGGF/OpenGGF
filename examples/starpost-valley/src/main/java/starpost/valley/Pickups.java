@@ -55,20 +55,7 @@ public final class Pickups implements SaveSection {
         }
 
         @Override
-        public void update(Shell shell, PlayScreen play) {
-            if (owner.taken(index) || play.onFarm()) {
-                return;
-            }
-            Runner r = play.valley().runner;
-            if (Math.abs(r.x - x) < 12 && Math.abs(r.y - 16 - y) < 22) {
-                int before = item == null ? 0 : shell.game.inventory.total(item);
-                if (owner.collect(index, item, shell.game)) {
-                    shell.sfx(item == null ? Sfx.RING : Sfx.GRAB);
-                    if (item != null) shell.toast("FOUND " + (shell.game.inventory.total(item) - before > 1 ? "TWO " : "")
-                            + shell.game.item(item).name());
-                }
-            }
-        }
+        public void update(Shell shell, PlayScreen play) { }
 
         @Override
         public void draw(Shell shell, SceneCanvas canvas, int cx, int cy, SceneDraw tint) {
@@ -100,7 +87,7 @@ public final class Pickups implements SaveSection {
     }
 
     /** Shared daily placement for a real-level ground seam as well as the scene valley. */
-    public List<Pickup> today(Game game, Runner.Ground ground, int springX, int loopX) {
+    public List<Pickup> today(Game game, Ground ground, int springX, int loopX) {
         int day = game.calendar.dayNumber();
         if (day != builtForDay) {
             build(game, ground, springX, loopX);
@@ -111,7 +98,7 @@ public final class Pickups implements SaveSection {
 
     /** Reproject daily floor placements after an act load without respawning collected items.
      * Scene and act layouts must preserve the daily identity/order and width. */
-    public void placeOnGround(Game game, Runner.Ground ground, int springX, int loopX) {
+    public void placeOnGround(Game game, Ground ground, int springX, int loopX) {
         today(game, ground, springX, loopX);
         List<Pickup> previous = List.copyOf(pickups);
         Snapshot before = capture();
@@ -128,7 +115,7 @@ public final class Pickups implements SaveSection {
         restore(before);
     }
 
-    private void build(Game game, Runner.Ground ground, int springX, int loopX) {
+    private void build(Game game, Ground ground, int springX, int loopX) {
         pickups.clear();
         int n = 0;
         // Ring lines along the path, an arc over the spring and a ring round the loop.

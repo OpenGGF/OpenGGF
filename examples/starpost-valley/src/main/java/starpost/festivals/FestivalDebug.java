@@ -84,8 +84,7 @@ public final class FestivalDebug {
                 if (!(shell.screen() instanceof FestivalScreen screen)) {
                     return false;
                 }
-                screen.play.valley().runner.x = Float.parseFloat(p[2]);
-                screen.play.valley().runner.speed = 0;
+                screen.play.valley().pose.x = Float.parseFloat(p[2]);
             }
             case "trophies" -> {
                 for (Festival f : festivals.book.all()) {

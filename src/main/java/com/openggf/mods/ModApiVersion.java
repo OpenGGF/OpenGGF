@@ -38,6 +38,8 @@ public final class ModApiVersion {
      * multi-act zone factories, shared UI/input and ROM-qualified scene art, including
      * the players' S3K dash dust. Object art may name LogicalRom.S1 with S1 mapping
      * parsing even in an S3K-base mod; the legacy call retains Sonic 2 semantics.
+     * NativePositionOps and the solid-platform provider/params are candidate creator contracts:
+     * act controllers can reset native positions and provide rewindable top-solid decks.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

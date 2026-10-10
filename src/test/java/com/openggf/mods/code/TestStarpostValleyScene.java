@@ -1,6 +1,7 @@
 package com.openggf.mods.code;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -67,12 +68,8 @@ class TestStarpostValleyScene {
                 assertEquals("PlayScreen", screen(harness), farmer + " on the farm");
                 step(harness, "valley 700", 120);
             }
-            assertTrue(harness.debugJump("ruins scene"), "scene-only harness exercises the explicit fallback seam");
-            for (String chamber : new String[] {"1", "5", "20", "25", "35", "40"}) {
-                step(harness, "new sonic", 10);
-                step(harness, "ruins " + chamber, 150);
-                assertEquals("RuinsScreen", screen(harness), "chamber " + chamber);
-            }
+            assertFalse(harness.debugJump("town scene"));
+            assertFalse(harness.debugJump("ruins scene"));
             step(harness, "new sonic", 10);
             step(harness, "people talk tails", 90);
             step(harness, "close", 5);
@@ -82,8 +79,6 @@ class TestStarpostValleyScene {
             step(harness, "time 1200", 1);
             step(harness, "people event tails_2", 240);
             step(harness, "new sonic", 10);
-            step(harness, "fish lake", 90);
-            assertEquals("LakeScreen", screen(harness));
             step(harness, "fish bar bubble_bass", 150);
             for (String festival : FESTIVALS) {
                 step(harness, "new sonic", 10);
@@ -114,7 +109,7 @@ class TestStarpostValleyScene {
         }
     }
 
-    /** The simple class name of the scene's current screen ("PlayScreen", "RuinsScreen"...). */
+    /** The simple class name of the scene's current screen ("PlayScreen", "RaceScreen"...). */
     private static String screen(ExampleModHarness harness) throws Exception {
         Object shell = shell(harness);
         return shell.getClass().getMethod("screen").invoke(shell).getClass().getSimpleName();

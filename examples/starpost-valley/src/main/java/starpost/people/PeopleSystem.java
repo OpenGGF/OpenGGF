@@ -127,11 +127,11 @@ public final class PeopleSystem implements Actor {
     }
 
     float farmerX() {
-        return play.onFarm() ? play.farm().runner.x : play.valley().runner.x;
+        return play.onFarm() ? play.farm().runner.x : play.valley().pose.x;
     }
 
     float farmerFeet() {
-        return play.onFarm() ? play.farm().feetY() : play.valley().runner.y;
+        return play.onFarm() ? play.farm().feetY() : play.valley().pose.y;
     }
 
     int farmerView() {
@@ -231,7 +231,7 @@ public final class PeopleSystem implements Actor {
         if (play.onFarm()) {
             return play.farm().runner.height == 0 && Math.abs(play.farm().runner.speed) < 7;
         }
-        return play.valley().runner.onGround && Math.abs(play.valley().runner.speed) < 7;
+        return true;
     }
 
     /** Scene hand-back from a real-level event trigger; begin still belongs to the scene director. */
@@ -246,8 +246,6 @@ public final class PeopleSystem implements Actor {
         if (play.onFarm()) {
             play.farm().runner.speed = 0;
             play.farm().runner.depthSpeed = 0;
-        } else {
-            play.valley().runner.speed = 0;
         }
         shell.push(new EventScreen(this, event));
     }

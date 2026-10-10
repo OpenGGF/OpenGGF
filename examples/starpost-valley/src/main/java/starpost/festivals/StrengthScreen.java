@@ -9,7 +9,6 @@ import starpost.scene.Screen;
 import starpost.scene.Sfx;
 import starpost.scene.Shell;
 import starpost.ui.Text;
-import starpost.valley.Runner;
 import java.util.List;
 
 /**
@@ -51,7 +50,7 @@ final class StrengthScreen implements Screen {
         var game = shell.game;
         if (flying) {
             height += speed;
-            speed -= Runner.GRAVITY;
+            speed -= Fair.GRAVITY;
             peak = Math.max(peak, Math.round(height));
             if (!rang && height >= Fair.BELL) {
                 rang = true;

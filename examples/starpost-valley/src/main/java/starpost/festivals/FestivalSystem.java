@@ -197,16 +197,7 @@ public final class FestivalSystem {
             shell.toast(notices.poll());
             noticeAt = shell.ticks;
         }
-        // Walking into the plaza during the posted hours is an invitation (once per arrival).
-        if (today != null && !play.onFarm() && !play.folding() && !play.clockStopped) {
-            boolean near = Math.abs(play.valley().runner.x - anchorX()) < ARRIVE;
-            if (near && !inZone && today.openAt(game.calendar) && !festivals.joined(today.id, game.calendar.year())
-                    && !shell.hasOverlay() && !shell.transitioning() && play.valley().runner.onGround) {
-                play.valley().runner.speed = 0;
-                shell.push(new Ask("THE " + today.name + " IS ON!\nJOIN IN?", () -> start(today)));
-            }
-            inZone = near;
-        }
+        // Native TownSession owns arrival invitations; scene actors only handle morning notices.
     }
 
     // ------------------------------------------------------------------ drawing

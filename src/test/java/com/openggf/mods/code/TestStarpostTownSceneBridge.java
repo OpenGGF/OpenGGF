@@ -25,10 +25,8 @@ class TestStarpostTownSceneBridge {
             var effective=harness.apply(GameServices.module());
             harness.open(effective,work.resolve("saves"),400,224);
             // This fixture exercises the scene binder; native doorway round trips have their own routes.
-            assertTrue(harness.debugJump("town scene"));
-            for (String door:List.of("seed_stall","inn","workshop","museum","robomart","ruins","capsule","lake","board","farm_gate","inventory")) {
+            for (String door:List.of("seed_stall","inn","workshop","museum","robomart","capsule","board","farm_gate","inventory")) {
                 assertTrue(harness.debugJump("new sonic"),"Sonic 1 must be supplied");
-                assertTrue(harness.debugJump("ruins scene"));
                 assertTrue(harness.debugJump("valley 896"));
                 Object scene=harness.scene();
                 Object town=TestStarpostTownAct.call(scene,"prepareTownAct");

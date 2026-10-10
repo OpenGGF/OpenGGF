@@ -31,7 +31,9 @@ public final class FishingSystem {
         actors.add(sys.pond);
         play.farm().pondAction = () -> sys.pond.cast(shell);
         play.farm().holdStill = () -> Fishing.holdingRod(shell.game) || sys.pond.holding(shell);
-        places.put("lake", s -> s.go(new LakeScreen(s, play, sys)));
+        places.put("lake", s -> s.startActivity(play,"lake",0,result->{
+            if(result.reason()==com.openggf.game.ActExit.TIME_UP) s.endActDay(true);
+        }));
     }
 
     /**
@@ -66,11 +68,7 @@ public final class FishingSystem {
      * {@code FishingSystem::contest}.
      */
     public static void contest(Shell shell, PlayScreen play, int seconds, java.util.function.IntConsumer done) {
-        FishingSystem sys = of(play);
-        if (sys == null) {
-            sys = new FishingSystem(shell, play);
-        }
-        shell.go(new LakeScreen(shell, play, sys, seconds, done));
+        shell.startActivity(play,"lake",seconds,result->done.accept(Integer.parseInt(result.state().getOrDefault("activity.points","0"))));
     }
 
     /** The fishing system of a play screen (through its pond actor), or null. */
@@ -93,60 +91,18 @@ public final class FishingSystem {
         if (shell.game == null || p.length < 2) {
             return false;
         }
-        Screen screen = shell.screen();
-        PlayScreen play = screen instanceof PlayScreen ps ? ps : screen instanceof LakeScreen lake ? lake.play() : null;
-        FishingSystem sys = play == null ? null : of(play);
-        if (sys == null) {
-            return false;
-        }
-        String id = p.length > 2 ? String.join("_", java.util.Arrays.copyOfRange(p, 2, p.length)) : null;
-        switch (p[1]) {
-            case "lake" -> {
-                shell.goNow(new LakeScreen(shell, play, sys));
-                return true;
-            }
-            case "at" -> {
-                if (screen instanceof LakeScreen lake) {
-                    lake.debugAt(Float.parseFloat(p[2]));
-                    return true;
-                }
-                return false;
-            }
-            case "bite" -> {
-                if (screen instanceof LakeScreen lake) {
-                    return lake.debugBite(id);
-                }
-                return sys.pond.debugBite(id);
-            }
-            case "bar" -> {
-                if (sys.table.get(id) == null) {
-                    return false;
-                }
-                if (screen instanceof LakeScreen lake) {
-                    return lake.debugFight(id);
-                }
-                return sys.pond.debugFight(shell, id);
-            }
-            case "contest" -> {
-                contest(shell, play, p.length > 2 ? Integer.parseInt(p[2]) : 60,
-                        points -> shell.toast("CONTEST OVER: " + points + " POINTS"));
-                return true;
-            }
-            case "flag" -> {
-                shell.game.flags.add(id);
-                return true;
-            }
-            case "land" -> {
-                if (screen instanceof LakeScreen lake) {
-                    lake.debugLand(id);
-                } else {
-                    sys.pond.debugLand(shell, id);
-                }
-                return true;
-            }
-            default -> {
-                return false;
-            }
-        }
+        PlayScreen play=shell.screen() instanceof PlayScreen ps?ps:null;
+        FishingSystem sys=play==null?null:of(play);
+        if(sys==null) return false;
+        String id=p.length>2?String.join("_",java.util.Arrays.copyOfRange(p,2,p.length)):null;
+        return switch(p[1]) {
+            case "lake" -> { shell.startActivity(play,"lake",0,result->{}); yield true; }
+            case "bite" -> sys.pond.debugBite(id);
+            case "bar" -> sys.table.get(id)!=null && sys.pond.debugFight(shell,id);
+            case "flag" -> { shell.game.flags.add(id); yield true; }
+            case "land" -> { sys.pond.debugLand(shell,id); yield true; }
+            case "contest" -> { contest(shell,play,p.length>2?Integer.parseInt(p[2]):60,points->shell.toast("CONTEST OVER: "+points+" POINTS")); yield true; }
+            default -> false;
+        };
     }
 }

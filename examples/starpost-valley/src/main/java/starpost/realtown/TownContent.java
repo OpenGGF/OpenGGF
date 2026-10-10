@@ -29,6 +29,7 @@ public final class TownContent {
         context.registerObject("town-villager", (spawn, registry) -> new TownVillager(spawn));
         context.registerObject("town-door", (spawn, registry) -> new TownDoor(spawn));
         context.registerObject("town-pickup", (spawn, registry) -> new TownPickup(spawn));
+        context.registerObject("town-walkway",(spawn,registry)->new TownWalkway(spawn));
         context.registerObject("town-decoration", (spawn, registry) -> new TownDecoration(spawn));
         return session;
     }
