@@ -1487,6 +1487,7 @@ CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$NoRings public  <init>()
 CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$NoSpecialStages public  <init>()
 CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$PlayerStealth public  <init>(boolean,boolean,com.openggf.mods.mutators.MutatorPolicy$Target,boolean)
 CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$Ringfall public  <init>(int,int)
+CONSTRUCTOR com.openggf.mods.mutators.MutatorPolicy$Ringfall public  <init>(int,int,boolean)
 CONSTRUCTOR com.openggf.mods.scene.RomSpriteRequest public  <init>(int,com.openggf.mods.scene.RomSpriteRequest$Compression,int,int,int,com.openggf.mods.scene.RomSpriteRequest$DplcLayout,int,int)
 CONSTRUCTOR com.openggf.mods.scene.RomSpriteRequest public  <init>(int,com.openggf.mods.scene.RomSpriteRequest$Compression,int,int,int,com.openggf.mods.scene.RomSpriteRequest$DplcLayout,int,int,int)
 CONSTRUCTOR com.openggf.mods.scene.SceneBackdrop public  <init>(com.openggf.mods.scene.SceneImage,java.util.List<com.openggf.mods.scene.SceneBackdrop$Band>)
@@ -10880,6 +10881,7 @@ METHOD com.openggf.mods.mutators.MutatorPolicy$PlayerStealth public  com.openggf
 METHOD com.openggf.mods.mutators.MutatorPolicy$PlayerStealth public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.mods.mutators.MutatorPolicy$PlayerStealth public,final  int hashCode()
 METHOD com.openggf.mods.mutators.MutatorPolicy$PlayerStealth public,final  java.lang.String toString()
+METHOD com.openggf.mods.mutators.MutatorPolicy$Ringfall public  boolean fullInventory()
 METHOD com.openggf.mods.mutators.MutatorPolicy$Ringfall public  com.openggf.mods.mutators.MutatorCapability capability()
 METHOD com.openggf.mods.mutators.MutatorPolicy$Ringfall public  int hardCap()
 METHOD com.openggf.mods.mutators.MutatorPolicy$Ringfall public  int percent()
@@ -15203,6 +15205,7 @@ RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$PlayerStealth hideAppen
 RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$PlayerStealth hideAttachedEffects boolean
 RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$PlayerStealth hideBody boolean
 RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$PlayerStealth target com.openggf.mods.mutators.MutatorPolicy$Target
+RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$Ringfall fullInventory boolean
 RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$Ringfall hardCap int
 RECORD-COMPONENT com.openggf.mods.mutators.MutatorPolicy$Ringfall percent int
 RECORD-COMPONENT com.openggf.mods.scene.RomSpriteRequest artAddress int

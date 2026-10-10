@@ -91,6 +91,22 @@ class TestMutatorExpandedPolicies {
     }
 
     @Test
+    void fullInventoryRequiresEveryRingfallContributionAndTheOriginalConstructorKeepsTheCeiling() {
+        var legacy = new MutatorPolicy.Ringfall(80, 0);
+        assertFalse(legacy.fullInventory(), "the original constructor keeps the native 32-ring ceiling");
+        assertEquals(legacy, new MutatorPolicy.Ringfall(80, 0, false));
+        var full = new MutatorSessionState.Effective(1, Map.of("a:rings",
+                List.<MutatorPolicy>of(new MutatorPolicy.Ringfall(100, 0, true))));
+        assertEquals(new GameplayMutatorPolicy(100, 0, true, 100, 0xC00, 100, false), full.gameplayPolicy(ALL));
+        var mixed = new MutatorSessionState.Effective(1, Map.of("a:rings",
+                List.<MutatorPolicy>of(new MutatorPolicy.Ringfall(100, 0, true)),
+                "b:rings", List.<MutatorPolicy>of(new MutatorPolicy.Ringfall(100, 0))));
+        assertFalse(mixed.gameplayPolicy(ALL).ringfallFullInventory());
+        assertFalse(full.gameplayPolicy(EnumSet.complementOf(EnumSet.of(MutatorCapability.RINGFALL)))
+                .ringfallFullInventory(), "an unavailable capability composes as stock");
+    }
+
+    @Test
     void ringScaledHeadsInterpolateFromNativeSizeAndFixedHeadsKeepTheirContract() {
         var fixed = new MutatorPolicy.BigHead(160, MutatorPolicy.Target.LEADER);
         assertFalse(fixed.scaleWithRings(), "the original constructor stays a fixed size");

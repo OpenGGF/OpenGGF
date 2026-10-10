@@ -577,6 +577,13 @@ additive entries and no removals; `0.7.0` stays unpublished. Saved preferences f
 a same-schema mutator that later adds an option take that option's declared
 default; unknown options and changed schema versions are still rejected.
 
+`MutatorPolicy.Ringfall` gains a `fullInventory` record component that lifts the
+native 32-ring scatter ceiling. The original `(int, int)` constructor remains and
+keeps the ceiling. The engine-only spill seams are reached through the
+unannotated `RingManagerInternalAccess`, so `RingManager`'s creator surface is
+unchanged. This regenerates the mutable `0.7` pin with three additive entries
+(constructor, accessor, record component) and no removals; `0.7.0` stays unpublished.
+
 ## Bounded ROM-part cue candidate
 
 Sitar Hero's fumble follow-up adds `SceneMusicPlayer.PLAYHEAD` and the default

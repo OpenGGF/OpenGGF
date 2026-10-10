@@ -23,7 +23,7 @@ Earlier prototype evidence remains attributed to its original source.
 | Mutator | Toggle / option scope | Required behavior |
 |---|---|---|
 | Gravity | LIVE / LIVE | Bounded native fall acceleration; preserve jump impulse, native sequencing and excluded motion owners. |
-| Ringfall Manipulator | LIVE / LIVE | 10–100% of the native recoverable scatter, optional hard cap; losing inventory remains independent from spawning. |
+| Ringfall Manipulator | LIVE / LIVE | 10–100% of the native recoverable scatter, optional hard cap; optional full-inventory spill past the native 32; losing inventory remains independent from spawning. |
 | Big Head Mode | LIVE / LIVE | Enlarge reviewed head pixels about a neck anchor after native sprite admission; preserve body, feet, collision and camera. |
 | Stealth | LIVE / LIVE | Hide native player art and optional tagged attached effects; retain gameplay, world effects, HUD and audio. |
 | No Powerups | LOAD / LOAD | Remove selected semantic monitor placements before object creation; preserve placement identity and restore on later qualifying reload. |
@@ -1069,3 +1069,33 @@ known peer copies, including the pre-retirement runtime superseded by the
 accepted admission owner. Config copies and an ignored rewind note are preserved
 before cleanup, with no unknown source discarded. Actual feature publication
 and cleanup completion are recorded in the final task result, not inferred here.
+
+## Full-inventory Ringfall (gameplay promo correction, 2026-10-10)
+
+The corrective gameplay promo needed spills larger than the native 32-ring
+scatter. Ringfall gains an explicit **Drop full inventory** checkbox (default off,
+LIVE) backed by `MutatorPolicy.Ringfall.fullInventory`; composed policies keep the
+native ceiling unless every Ringfall contribution asks to lift it. The coordinator
+latches `(count, beyondNativeLimit)` before allocation, including the deferred S3K
+queue and its rewind snapshot, so a later LIVE edit cannot shrink a queued spill.
+Only the native first 32 rings reserve or allocate Obj37 SST slots; the remainder
+are slotless `LostRingObjectInstance` continuations (the existing S3K logical
+overflow path, now reachable in all three games) bounded by the 999 ring counter.
+The legacy 32-entry mirror stays native-sized. Rings 0–47 follow the native fan
+generator with its ceiling removed; later 48-ring cycles rotate by the 4-bit
+bit-reversal of the $10 angle step so extra rings do not stack on earlier paths.
+
+Rejected: public `RingManager` overloads (they widened the `@ModApi` surface; the
+seams are package-private behind the unannotated `RingManagerInternalAccess`), and
+letting extras claim free dynamic slots (that would starve native object loading
+for the spill's lifetime). Known limits: touch collection remains one ring per frame,
+and Sonic 3 & Knuckles' 63-entry collision-response list still bounds the spilled
+objects each frame can touch.
+
+Focused validation: `TestLevelRingfallIntegration` (production RingManager/ObjectManager
+spills of 150/75/20 in S1/S2/S3K, 32 native slots, slotless remainder, rotated fan),
+`TestLevelLostRingSpawnCoordinator` (resolution table, deferred 32-slot reservation
+and latch across restore; its fixture now supplies explicit services instead of relying
+on an ambient gameplay runtime left by an earlier class), `TestMutatorExpandedPolicies`,
+`TestModApiSignatureSurface`/`TestModApiPinPolicy`, `TestExampleMutatorsPackage` and the
+existing lost-ring/ring-manager suites.

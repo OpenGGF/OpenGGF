@@ -41,7 +41,7 @@ Compiled creator code is unavailable in the engine's standard native image; see 
 | Mutator | Options | Applies on |
 | --- | --- | --- |
 | Gravity | Ordinary dry Sonic fall acceleration, 25–200%, 5% steps | Resume |
-| Ringfall Manipulator | 10–100% of the native spill; optional 1–32 ring ceiling | Resume |
+| Ringfall Manipulator | 10–100% of the native spill or, with Drop full inventory, of every held ring; optional 1–32 ring ceiling | Resume |
 | Big Head | 100–200% head size, optionally scaled by rings; leader or supported team | Resume |
 | Stealth | Leader/all supported team; hide attached effects checkbox | Resume |
 | No Powerups | Separate checkbox for every semantic monitor type | Full load/restart |
@@ -64,7 +64,16 @@ edit is pending. Native placement order, stable layout indices and object slots
 remain owners. Removing a monitor is decided before creation, rather than deleting
 it while someone stands on it. Ringfall changes only how many lost rings are
 created: hurt still loses the entire carried inventory, and the native ceiling is
-32. No Rings dominates spills and main-level monitor/checkpoint/stage-return grants.
+32. **Drop full inventory** (default off, so saved choices keep the ceiling) lifts
+that ceiling: the percentage applies to every held ring, bounded by the native
+999-ring counter, and the hard cap still limits each spill when it is on. The
+first 32 rings keep native Obj37 slots and allocation order; the rest are real
+recoverable rings that run as slotless continuations, so they never take object
+slots from the level. Rings past the native 48-ring fan rotate between earlier
+directions instead of stacking. Touch still collects one ring per frame, and
+Sonic 3 & Knuckles' native 63-entry collision-response list still limits how
+many spilled objects each frame can touch.
+No Rings dominates spills and main-level monitor/checkpoint/stage-return grants.
 Special and bonus interiors retain their native puzzle ring rules; a No Rings
 main-level return restores zero rings.
 

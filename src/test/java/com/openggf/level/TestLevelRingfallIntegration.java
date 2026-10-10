@@ -81,6 +81,83 @@ class TestLevelRingfallIntegration {
         verify(audio, times(2)).playSfx(GameSound.RING_SPILL);
     }
 
+    @ParameterizedTest
+    @CsvSource({"SONIC_1,100,0,150,150", "SONIC_2,100,0,150,150", "SONIC_3K,100,0,150,150",
+            "SONIC_2,50,0,150,75", "SONIC_2,100,20,150,20", "SONIC_3K,100,0,20,20"})
+    void fullInventorySpillsRecoverableRingsBeyondTheNativeCeilingWithoutClaimingExtraSlots(
+            String game, int percent, int cap, int held, int expected) {
+        ObjectSlotLayout layout = switch (game) {
+            case "SONIC_1" -> ObjectSlotLayout.SONIC_1; case "SONIC_3K" -> ObjectSlotLayout.SONIC_3K; default -> ObjectSlotLayout.SONIC_2;
+        };
+        TestEnvironment.configureGameModuleFixture(switch (game) {
+            case "SONIC_1" -> new Sonic1GameModule(); case "SONIC_3K" -> new Sonic3kGameModule(); default -> new Sonic2GameModule();
+        });
+        GameplayMutatorPolicy policy = new GameplayMutatorPolicy(percent, cap, true, 100, 0xC00, 100, false);
+        var services = new StubObjectServices() {
+            @Override public com.openggf.game.session.WorldSession worldSession() { return world; }
+            private final com.openggf.game.session.WorldSession world = MutatorPhysicsWorld.create(() -> policy);
+        };
+        var registry = mock(ObjectRegistry.class);
+        when(registry.objectSlotLayout()).thenReturn(layout);
+        ObjectManager objects = new ObjectManager(List.of(), registry, 0, null, null, null, null, services);
+        LevelManager levels = mock(LevelManager.class);
+        levels.objectManager = objects; when(levels.getObjectManager()).thenReturn(objects);
+        var liveLevels = com.openggf.game.GameServices.level();
+        liveLevels.resetLevelGamestate(com.openggf.game.GameServices.currentOrBootstrapGameModule().createLevelState());
+        when(levels.getLevelGamestate()).thenReturn(liveLevels.getLevelGamestate());
+        RingFrame frame = new RingFrame(List.of(new RingFramePiece(0, 0, 1, 1, 0, false, false, 0)));
+        RingSpriteSheet sheet = new RingSpriteSheet(new Pattern[] {new Pattern()}, List.of(frame, frame, frame), 1, 1, 1, 2);
+        AudioManager audio = mock(AudioManager.class);
+        RingManager rings = new RingManager(List.of(), sheet, levels, null, audio);
+        levels.ringManager = rings;
+        Player player = new Player(); player.setRingCount(held); player.setCentreX((short) 0x120); player.setCentreY((short) 0x90);
+        player.rules(switch (game) { case "SONIC_1" -> GameRules.SONIC_1; case "SONIC_3K" -> GameRules.SONIC_3K; default -> GameRules.SONIC_2; });
+
+        new LevelLostRingSpawnCoordinator(levels).spawnImmediately(player, 50);
+
+        var spill = objects.activeObjectsOfType(LostRingObjectInstance.class);
+        assertEquals(expected, spill.size());
+        int nativePortion = Math.min(expected, 32);
+        assertEquals(nativePortion, objects.getAllocatedSlotCount(), "extras never claim native SST slots");
+        assertEquals(expected - nativePortion, spill.stream().filter(ring -> ring.getSlotIndex() < 0).count());
+        assertTrue(spill.stream().allMatch(LostRingObjectInstance::isLostRingCollectible));
+        assertEquals(nativePortion, rings.getActiveLostRings().size(), "the retired mirror stays native-sized");
+        assertEquals(0, player.getRingCount());
+        verify(audio).playSfx(GameSound.RING_SPILL);
+        if (expected > 48) {
+            // Later fan cycles rotate between earlier directions instead of stacking on them.
+            var velocities = spill.stream().map(ring -> List.of(ring.getXVelForTest(), ring.getYVelForTest())).toList();
+            for (int i = 48; i < velocities.size(); i++) assertNotEquals(velocities.get(i - 48), velocities.get(i));
+        }
+    }
+
+    @org.junit.jupiter.api.Test
+    void nativeCeilingStillAppliesWithoutFullInventory() {
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
+        GameplayMutatorPolicy policy = new GameplayMutatorPolicy(100, 0, false, 100, 0xC00, 100, false);
+        var services = new StubObjectServices() {
+            @Override public com.openggf.game.session.WorldSession worldSession() { return world; }
+            private final com.openggf.game.session.WorldSession world = MutatorPhysicsWorld.create(() -> policy);
+        };
+        var registry = mock(ObjectRegistry.class);
+        when(registry.objectSlotLayout()).thenReturn(ObjectSlotLayout.SONIC_2);
+        ObjectManager objects = new ObjectManager(List.of(), registry, 0, null, null, null, null, services);
+        LevelManager levels = mock(LevelManager.class);
+        levels.objectManager = objects; when(levels.getObjectManager()).thenReturn(objects);
+        var liveLevels = com.openggf.game.GameServices.level();
+        liveLevels.resetLevelGamestate(com.openggf.game.GameServices.currentOrBootstrapGameModule().createLevelState());
+        when(levels.getLevelGamestate()).thenReturn(liveLevels.getLevelGamestate());
+        RingFrame frame = new RingFrame(List.of(new RingFramePiece(0, 0, 1, 1, 0, false, false, 0)));
+        RingSpriteSheet sheet = new RingSpriteSheet(new Pattern[] {new Pattern()}, List.of(frame, frame, frame), 1, 1, 1, 2);
+        RingManager rings = new RingManager(List.of(), sheet, levels, null, mock(AudioManager.class));
+        levels.ringManager = rings;
+        Player player = new Player(); player.setRingCount(150); player.setCentreX((short) 0x120); player.setCentreY((short) 0x90);
+        player.rules(GameRules.SONIC_2);
+        new LevelLostRingSpawnCoordinator(levels).spawnImmediately(player, 50);
+        assertEquals(32, objects.activeObjectsOfType(LostRingObjectInstance.class).size());
+        assertEquals(0, player.getRingCount());
+    }
+
     private static class Player extends TestablePlayableSprite {
         Player() { super("sonic", (short) 0, (short) 0); }
         void rules(GameRules rules) { setGameRulesForTest(rules); }

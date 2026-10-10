@@ -28,13 +28,19 @@ public sealed interface MutatorPolicy permits MutatorPolicy.DrySonicGravity,
         @Override public MutatorCapability capability() { return MutatorCapability.PLAYER_STEALTH; }
     }
 
-    /** Percentage of the native recoverable scatter, with zero meaning no optional cap. */
+    /**
+     * Percentage of the native recoverable scatter, with zero meaning no optional cap.
+     * {@code fullInventory} removes the native 32-ring scatter ceiling: the percentage then
+     * applies to every ring held, and the extra rings are real recoverable rings.
+     */
     @com.openggf.game.ModApi
-    record Ringfall(int percent, int hardCap) implements MutatorPolicy {
+    record Ringfall(int percent, int hardCap, boolean fullInventory) implements MutatorPolicy {
         public Ringfall {
             if (percent < 10 || percent > 100 || hardCap < 0 || hardCap > 32)
                 throw new IllegalArgumentException("Ringfall requires 10..100 percent and cap 0..32");
         }
+        /** Native 32-ring ceiling, as before the full-inventory choice existed. */
+        public Ringfall(int percent, int hardCap) { this(percent, hardCap, false); }
         @Override public MutatorCapability capability() { return MutatorCapability.RINGFALL; }
     }
 

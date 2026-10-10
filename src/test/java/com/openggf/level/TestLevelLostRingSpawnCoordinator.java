@@ -58,6 +58,57 @@ class TestLevelLostRingSpawnCoordinator {
     }
 
     @ParameterizedTest
+    @CsvSource({"100,100,0,100,true", "100,50,0,50,true", "100,100,20,20,false", "20,100,0,20,false",
+            "999,100,0,999,true", "33,10,0,3,false"})
+    void fullInventoryAppliesThePercentageToEveryHeldRing(int held, int percent, int cap, int expected,
+                                                          boolean beyondNative) {
+        var policy = bindPolicy(percent, cap, ObjectSlotLayout.SONIC_2);
+        policy.set(new GameplayMutatorPolicy(percent, cap, true, 100, 0xC00, 100, false));
+        when(player.getRingCount()).thenReturn(held);
+        coordinator.spawnImmediately(player, 50);
+        if (beyondNative) {
+            assertEquals(List.of(player, expected, 50), invocation("spawnLostRingsBeyondNativeLimit"));
+            verify(rings, never()).spawnLostRings(any(), anyInt(), anyInt());
+        } else {
+            verify(rings).spawnLostRings(player, expected, 50);
+            assertEquals(List.of(), invocation("spawnLostRingsBeyondNativeLimit"));
+        }
+        verify(player, never()).setRingCount(anyInt());
+    }
+
+    /** The full-inventory seams are package-private; read their recorded mock arguments. */
+    private List<Object> invocation(String method) {
+        return org.mockito.Mockito.mockingDetails(rings).getInvocations().stream()
+                .filter(call -> call.getMethod().getName().equals(method))
+                .map(call -> List.<Object>of(call.getArguments())).findFirst().orElse(List.of());
+    }
+
+    @Test
+    void deferredFullInventoryReservesOnlyTheNativePortionAndLatchesAcrossRewind() {
+        var policy = bindPolicy(100, 0, ObjectSlotLayout.SONIC_3K);
+        policy.set(new GameplayMutatorPolicy(100, 0, true, 100, 0xC00, 100, false));
+        when(player.getRingCount()).thenReturn(150);
+        coordinator.queue(player, 40, true);
+        assertEquals(32, objects.getAllocatedSlotCount());
+        var saved = coordinator.capture();
+        // A later LIVE edit back to the native ceiling cannot shrink an already latched spill.
+        policy.set(GameplayMutatorPolicy.STOCK);
+        var recreated = mock(AbstractPlayableSprite.class);
+        when(recreated.getCode()).thenReturn("p1");
+        when(recreated.getRingCount()).thenReturn(150);
+        manager.spriteManager.addSprite(recreated);
+        coordinator.restore(saved);
+        manager.frameCounter = 41;
+        coordinator.processPending();
+        List<Object> call = invocation("spawnLostRingsBeyondNativeLimitWithInitialObjectStep");
+        assertEquals(List.of(recreated, 150, 41, 0x120, 0x90), call.subList(0, 5));
+        assertEquals(32, ((int[]) call.get(5)).length);
+        assertEquals(List.of(true, true), call.subList(6, 8));
+        verify(rings, never()).spawnLostRingsWithInitialObjectStep(
+                any(), anyInt(), anyInt(), anyInt(), anyInt(), any(), anyBoolean(), anyBoolean());
+    }
+
+    @ParameterizedTest
     @CsvSource({"SONIC_1", "SONIC_2", "SONIC_3K"})
     void pendingCountSurvivesEditsAndRecreatedOwnerRestoreAcrossNativeAllocators(String game) {
         ObjectSlotLayout layout = switch (game) {
@@ -113,7 +164,11 @@ class TestLevelLostRingSpawnCoordinator {
         rings = mock(RingManager.class);
         ObjectRegistry registry = mock(ObjectRegistry.class);
         when(registry.objectSlotLayout()).thenReturn(ObjectSlotLayout.SONIC_3K);
-        objects = new ObjectManager(List.of(), registry, 0, null, null);
+        // Explicit services keep this fixture independent of an ambient gameplay runtime
+        // left behind by an earlier class in the same fork.
+        var services = mock(ObjectServices.class);
+        when(services.bonusStageProviderOrNull()).thenReturn(com.openggf.game.NoOpBonusStageProvider.INSTANCE);
+        objects = new ObjectManager(List.of(), registry, 0, null, null, null, null, services);
         manager.ringManager = rings;
         manager.objectManager = objects;
         player = mock(AbstractPlayableSprite.class);

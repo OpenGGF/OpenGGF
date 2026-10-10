@@ -514,9 +514,11 @@ public final class MutatorSessionState implements AutoCloseable {
             var speeds = available.contains(MutatorCapability.GAMEPLAY_SPEED)
                     ? contributions(MutatorPolicy.GameplaySpeed.class) : List.<MutatorPolicy.GameplaySpeed>of();
             int cap = spills.stream().mapToInt(MutatorPolicy.Ringfall::hardCap).filter(value -> value > 0).min().orElse(0);
+            // Any contribution that keeps the native ceiling keeps it for the composed policy.
+            boolean fullInventory = !spills.isEmpty() && spills.stream().allMatch(MutatorPolicy.Ringfall::fullInventory);
             int verticalCap = rebounds.stream().mapToInt(MutatorPolicy.DefeatKnockback::verticalSpeedCap).min().orElse(0xC00);
             return new com.openggf.game.mutators.GameplayMutatorPolicy(
-                    multiplyPercent(spills.stream().map(MutatorPolicy.Ringfall::percent).toList(), 10, 100), cap,
+                    multiplyPercent(spills.stream().map(MutatorPolicy.Ringfall::percent).toList(), 10, 100), cap, fullInventory,
                     multiplyPercent(rebounds.stream().map(MutatorPolicy.DefeatKnockback::percent).toList(), 100, 300), verticalCap,
                     multiplyPercent(speeds.stream().map(MutatorPolicy.GameplaySpeed::percent).toList(), 25, 400),
                     speeds.stream().anyMatch(MutatorPolicy.GameplaySpeed::audioFollowsSpeed));

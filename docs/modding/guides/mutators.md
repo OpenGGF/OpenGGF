@@ -112,7 +112,9 @@ The roster injection and structural source binding are outside sprite snapshot
 values; admitted/effective state is registered before sprite recreation.
 
 The remaining policies use their native owners: Ringfall latches a bounded scatter
-plan before slot allocation; the monitor/ring/checkpoint filters decide admission
+plan before slot allocation (`Ringfall(percent, hardCap, true)` lifts the native
+32-ring ceiling; the original two-argument constructor keeps it, and extra rings
+are slotless Obj37 continuations rather than claimed SST slots); the monitor/ring/checkpoint filters decide admission
 without reindexing native placements; stage-entry permits retain an already
 captured transition; Game Speed schedules complete presentation-loop ticks; and
 Violent Explosions amplifies only the resolved native badnik rebound. Big Head
