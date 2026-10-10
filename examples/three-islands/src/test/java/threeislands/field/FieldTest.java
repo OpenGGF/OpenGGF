@@ -28,20 +28,26 @@ class FieldTest {
     }
 
     @Test
-    void waterBlocksWalkingButTheBridgeAllowsCrossing() {
+    void waterBlocksWalkingButTheBridgeAllowsCrossingOnceItsGuardIsBeaten() {
         Field field = field();
-        field.setPosition(390, 270);
-        for (int i = 0; i < 100; i++) field.step(1, 0, true, i);
-        assertTrue(field.x() <= 400);
-        field.setPosition(390, 332);
-        for (int i = 0; i < 70; i++) field.step(1, 0, true, i);
-        assertTrue(field.x() > 560);
+        // Green Hill's river runs down columns 31-33; its log bridge is on row 30.
+        assertTrue(field.water(32 * 32 + 16, 10 * 32 + 16));
+        assertFalse(field.walkable(32 * 32 + 16, 10 * 32 + 16));
+        field.setPosition(29 * 32 + 16, 30 * 32 + 16);
+        for (int i = 0; i < 90; i++) field.step(1, 0, true, i);
+        assertTrue(field.x() < 32 * 32, "the Crabmeat on the bridge bars the way");
+        Progress progress = new Progress(1);
+        field.complete(progress, field.spots.stream().filter(s -> s.id.equals("foe-1")).findFirst().orElseThrow());
+        for (int i = 0; i < 90; i++) field.step(1, 0, true, i);
+        assertTrue(field.x() > 34 * 32, "the bridge crosses the river");
     }
 
     @Test
     void everyLandmarkCanBeReachedWithoutTouchingAnOrdinaryEnemy() {
         for (Zone zone : Zone.values()) {
             Field f = new Field(zone, null);
+            // Authored maps deliberately put badniks in narrow passes; MapTest covers them.
+            if (f.map != null) continue;
             if (f.layout != null) ExpeditionTest.solve(f, new Progress(1));
             // Flood fill all safely walkable eight-pixel cells, allowing for patrol movement.
             boolean[][] seen = new boolean[f.width() / 8][f.height() / 8];
@@ -67,7 +73,7 @@ class FieldTest {
 
     @Test
     void passingAtADifferentDepthAvoidsBattleAndInteractionsNeedConfirmation() {
-        Field field = field();
+        Field field = new Field(Zone.ANGEL_ISLAND, null);
         Field.Spot enemy = field.spots.stream().filter(s -> s.kind == Field.Kind.ENCOUNTER).findFirst().orElseThrow();
         field.setPosition(enemy.homeX, enemy.homeY + 60);
         assertNull(field.step(0, 0, false, 0));
@@ -105,7 +111,8 @@ class FieldTest {
         resumed.resumeAtCamp(1);
         assertEquals(Field.Kind.STARPOST, resumed.nearby(0).kind);
         resumed.resumeAtCamp(2);
-        assertEquals(784, resumed.x()); assertEquals(264, resumed.y());
+        Field.Spot sanctuary = resumed.spots.stream().filter(s -> s.id.equals("sanctuary")).findFirst().orElseThrow();
+        assertEquals(sanctuary.homeX, resumed.x()); assertEquals(sanctuary.homeY + 24, resumed.y());
         resumed.resumeAtCamp(5280);
         assertEquals(144, resumed.x(), "old side-scrolling checkpoints migrate to camp");
         assertEquals(2, resumed.discoveries());
@@ -113,7 +120,7 @@ class FieldTest {
 
     @Test
     void escapeDoesNotRetriggerABattleAndKeepsThePartyOnLand() {
-        Field field = field();
+        Field field = new Field(Zone.ANGEL_ISLAND, null);
         Field.Spot enemy = field.spots.stream().filter(s -> s.kind == Field.Kind.ENCOUNTER).findFirst().orElseThrow();
         field.setPosition(enemy.homeX, enemy.homeY);
         field.retreat(enemy);
@@ -157,4 +164,18 @@ class FieldTest {
         }
     }
 
+
+    @Test
+    void fleeingFromABlockerLeavesThePassBarred() {
+        Field field = field();
+        Field.Spot blocker = field.spots.stream().filter(s -> s.blocking).findFirst().orElseThrow();
+        field.setPosition(blocker.homeX - 64, blocker.homeY);
+        Field.Spot touched = null;
+        for (int i = 0; i < 80 && touched == null; i++) touched = field.step(1, 0, false, i);
+        assertSame(blocker, touched, "walking down the pass meets the badnik");
+        field.retreat(blocker);
+        assertTrue(field.x() < blocker.homeX - Field.TOUCH, "the party steps back the way it came");
+        for (int i = 0; i < 200; i++) field.step(1, 0, true, i);
+        assertTrue(field.x() < blocker.homeX, "the grace period cannot be used to slip past");
+    }
 }

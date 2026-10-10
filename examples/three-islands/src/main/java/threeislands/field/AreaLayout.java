@@ -90,8 +90,7 @@ public final class AreaLayout {
     public static AreaLayout outside(Zone zone) {
         return switch (zone) {
             // Outdoor routes finish at the eastern crossing, but reach it through different districts.
-            case GREEN_HILL -> throw new IllegalArgumentException("Green Hill retains its coastal landscape");
-            case STAR_LIGHT -> new AreaLayout(false, "0,0 0,-1 1,-1 2,-1 2,0 2,1 3,1 4,1 4,0 5,0", "2:1,0;5:1,1;7:4,2;6:3,2 3,3");
+            case GREEN_HILL, STAR_LIGHT -> throw new IllegalArgumentException(zone + " uses its authored tile map");
             case SPRING_YARD -> new AreaLayout(false, "0,0 0,1 1,1 2,1 2,0 3,0 3,-1 4,-1 5,-1 5,0", "2:1,2;4:1,0;5:3,1;1:0,2 0,3");
             case EMERALD_HILL -> new AreaLayout(false, "0,0 1,0 1,-1 2,-1 3,-1 3,0 3,1 4,1 5,1 5,0", "1:1,1;4:4,-1;6:2,1;6:3,2 2,2");
             case CHEMICAL_PLANT -> new AreaLayout(false, "0,0 0,1 1,1 1,2 2,2 3,2 3,1 3,0 4,0 5,0", "2:2,1;5:4,2;7:3,-1;4:2,3 1,3");

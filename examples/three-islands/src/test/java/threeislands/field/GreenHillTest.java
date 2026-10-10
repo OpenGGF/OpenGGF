@@ -28,27 +28,35 @@ class GreenHillTest {
         }
         return false;
     }
+    private void beatBlockers(Field field, Progress progress) {
+        for (var spot : field.spots) if (spot.blocking) field.complete(progress, spot);
+    }
+    private boolean reachable(Field field, Field.Spot spot) {
+        return reachable(field, (int) spot.homeX, (int) spot.homeY);
+    }
     @Test void bothSluicesAreNeededAndEitherOrderSurvivesReload() {
         for (boolean reverse : new boolean[] {false, true}) {
             Field field = new Field(Zone.GREEN_HILL, null);
             Progress progress = new Progress(7);
-            assertFalse(reachable(field, 1232, 832));
+            beatBlockers(field, progress);
+            var letter = spot(field, "orchard-letter");
+            assertFalse(reachable(field, letter));
             assertFalse(reachable(field, field.exitX(), 336), "the anchor seals onward travel");
-            assertTrue(reachable(field, 880, 768));
-            assertTrue(reachable(field, 1456, 864));
+            assertTrue(reachable(field, spot(field, "sluice-west")));
+            assertTrue(reachable(field, spot(field, "sluice-east")));
             turn(field, progress, reverse ? "sluice-east" : "sluice-west");
-            assertFalse(reachable(field, 1232, 832));
+            assertFalse(reachable(field, letter));
             progress = SaveCodec.decode(SaveCodec.encode(progress));
             field = new Field(Zone.GREEN_HILL, null); field.restore(progress);
             turn(field, progress, reverse ? "sluice-west" : "sluice-east");
-            assertTrue(reachable(field, 1232, 832));
-            field.setPosition(1232, 832);
+            assertTrue(reachable(field, letter));
+            field.setPosition(letter.homeX, letter.homeY);
             assertEquals("orchard-letter", field.nearby(0).id);
             assertTrue(reachable(field, 144, 360), "crossing is reversible");
             Field restored = new Field(Zone.GREEN_HILL, null);
             restored.restore(SaveCodec.decode(SaveCodec.encode(progress)));
             assertTrue(restored.orchardOpen());
-            assertFalse(restored.water(1224, 776), "rendered crossing agrees with collision");
+            assertFalse(restored.water(51 * 32 + 16, 29 * 32 + 16), "rendered crossing agrees with collision");
         }
     }
     @Test void wrongBellPhraseCanBeRetriedAndTheRewardIsOnlyGivenOnce() {
@@ -74,8 +82,10 @@ class GreenHillTest {
     @Test void coastAndAuthoredExpeditionsRetainReachableLandmarks() {
         Field field = new Field(Zone.GREEN_HILL, null);
         assertTrue(field.width() * field.height() > Field.WIDTH * Field.HEIGHT * 2);
-        assertTrue(reachable(field, 272, 864));
-        assertTrue(reachable(field, 1440, 160));
+        beatBlockers(field, new Progress(1));
+        assertTrue(reachable(field, spot(field, "horizon")));
+        assertTrue(reachable(field, spot(field, "bell-noon")));
+        assertTrue(reachable(field, spot(field, "cache-c")));
         for (Zone zone : Zone.values()) {
             Field shrine = new Field(zone, null, Dungeon.of(zone));
             assertEquals(shrine.layout.width, shrine.width());

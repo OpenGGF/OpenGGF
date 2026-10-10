@@ -103,7 +103,7 @@ class ExpeditionTest {
 
     @Test void authoredLinksAreAxisAlignedAndRoomsNeverOverlap() {
         for (Zone z : Zone.values()) for (boolean inside : new boolean[] {false,true}) {
-            if (!inside && z == Zone.GREEN_HILL) continue;
+            if (!inside && TileMap.of(z) != null) continue;
             AreaLayout a = inside ? Dungeon.of(z).layout() : AreaLayout.outside(z);
             assertEquals(a.rooms().size(), new HashSet<>(a.rooms()).size(), z + ": duplicate rooms");
             for (var link : a.passages) assertTrue(link.from().x() == link.to().x() || link.from().y() == link.to().y(), z + ": diagonal passage");
@@ -118,7 +118,7 @@ class ExpeditionTest {
             var animal = outside.spots.stream().filter(s -> s.kind == Field.Kind.ANIMAL).toList();
             assertEquals(1, animal.size(), zone.toString());
             Progress p = new Progress(1);
-            if (outside.layout != null) solve(outside, p);
+            MapTest.openEverything(outside, p);
             Set<String> open = reach(outside);
             int ax = (int) animal.get(0).homeX / 8 * 8, ay = (int) animal.get(0).homeY / 8 * 8;
             assertTrue(outside.walkable(animal.get(0).homeX, animal.get(0).homeY), zone + " animal stands on ground");

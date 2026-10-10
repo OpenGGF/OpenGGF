@@ -303,7 +303,7 @@ public final class Game {
         field.restore(progress);
         if (checkpoint > 0) field.resumeAtCamp(checkpoint);
         else if (checkpoint == -1) field.setPosition(field.exitX() - 32, 336);
-        progress.setResume(zone, checkpoint == -1 || checkpoint == 2 ? 2 : checkpoint > 0 ? 1 : 0);
+        progress.setResume(zone, checkpoint == -1 ? 2 : checkpoint == 2 || checkpoint == 3 ? checkpoint : checkpoint > 0 ? 1 : 0);
         FieldScreen outside = new FieldScreen(this, stage, field);
         swap(outside);
         if (inside) enterDungeon(outside);

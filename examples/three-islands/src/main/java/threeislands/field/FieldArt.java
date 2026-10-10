@@ -16,6 +16,7 @@ public final class FieldArt {
     private final SceneImage[] waterFrames;
     private final boolean greenHill;
     private final int grassColour;
+    private final MapArt mapArt;
 
     public FieldArt(Zone zone, SceneLevelKit kit, SceneRomArt rom) {
         this.kit = kit;
@@ -55,6 +56,16 @@ public final class FieldArt {
             }
         }
         grassColour = selected | 0xFF000000;
+        TileMap map = TileMap.of(zone);
+        mapArt = map == null ? null : new MapArt(zone, kit, rom, map, waterFrames, cliff, lip, palm, flowers, grassColour);
+    }
+
+    /** Depth-sorted decorations of an authored map (none for room-graph areas). */
+    public int propCount() { return mapArt == null ? 0 : mapArt.props().size(); }
+    public int propX(int index) { return mapArt.props().get(index).x(); }
+    public int propY(int index) { return mapArt.props().get(index).y(); }
+    public void drawProp(SceneCanvas c, int index, double cameraX, double cameraY, long ticks) {
+        mapArt.drawProp(c, mapArt.props().get(index), cameraX, cameraY, ticks);
     }
 
     /** GHZ Blk16 $61: $40F6,$40F7,$40F8,$40F9 (line 2, row-major, no flips).
@@ -125,6 +136,12 @@ public final class FieldArt {
     }
 
     public void draw(SceneCanvas c, Field field, double cameraX, double cameraY, long ticks) {
+        if (field.map != null && mapArt != null) {
+            mapArt.draw(c, field, cameraX, cameraY, ticks);
+            SceneImage wall = mapArt.facade();
+            facade(c, field, wall, wall, cameraX, cameraY);
+            return;
+        }
         c.clear(kit.palette()[0] & 0xFFFFFF);
         // The strip of distant scenery above the traversable area is the ROM backdrop.
         if (kit.backdrop() != null) c.drawBackdrop(kit.backdrop(), 0, -(int) cameraY,
@@ -179,13 +196,20 @@ public final class FieldArt {
             int block = kit.block(Math.max(0, kit.columns() / 3), 0);
             if (block != 0) c.draw(kit.blockImage(block), (float) (512 - cameraX), (float) (80 - kit.blockSize() - cameraY));
         }
-        // A ROM-textured facade has the same solid footprint as Field.walkable.
-        // Towers, buttresses and the recessed door make each entrance part of its landscape.
+        facade(c, field, cliff, lip, cameraX, cameraY);
+    }
+
+    /**
+     * A ROM-textured facade with the same solid footprint as Field.walkable (or the map's
+     * {@code H} cells). Towers, buttresses and the recessed door make the entrance part of the
+     * landscape.
+     */
+    private void facade(SceneCanvas c, Field field, SceneImage cliff, SceneImage lip, double cameraX, double cameraY) {
         Field.Spot door = field.entrance();
         int dx = (int) door.homeX, dy = (int) door.homeY;
-        bank(c, dx - 72, dy - 112, 144, 96, cameraX, cameraY);
-        bank(c, dx - 80, dy - 120, 32, 104, cameraX, cameraY);
-        bank(c, dx + 48, dy - 120, 32, 104, cameraX, cameraY);
+        bank(c, cliff, lip, dx - 72, dy - 112, 144, 96, cameraX, cameraY);
+        bank(c, cliff, lip, dx - 80, dy - 120, 32, 104, cameraX, cameraY);
+        bank(c, cliff, lip, dx + 48, dy - 120, 32, 104, cameraX, cameraY);
         int sx = (int) (dx - cameraX), sy = (int) (dy - cameraY);
         c.draw(doorway, sx - 24, sy - 56, SceneDraw.plain().withScale(48, 44));
         for (int px = dx - 32; px < dx + 32; px += 16) c.draw(cliff, (float) (px - cameraX),
@@ -229,6 +253,11 @@ public final class FieldArt {
     }
 
     private void bank(SceneCanvas c, int x, int y, int width, int height, double cameraX, double cameraY) {
+        bank(c, cliff, lip, x, y, width, height, cameraX, cameraY);
+    }
+
+    private static void bank(SceneCanvas c, SceneImage cliff, SceneImage lip, int x, int y, int width, int height,
+            double cameraX, double cameraY) {
         for (int py = y; py < y + height; py += 16) for (int px = x; px < x + width; px += 16) {
             c.draw(cliff, (float) (px - cameraX), (float) (py - cameraY), SceneDraw.plain().withScale(16f / cliff.width(), 16f / cliff.height()));
         }

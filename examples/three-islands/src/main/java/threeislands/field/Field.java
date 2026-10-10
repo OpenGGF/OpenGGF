@@ -14,6 +14,8 @@ public final class Field {
     public static final int WIDTH = 960, HEIGHT = 640;
     public static final double WALK = 1.6, RUN = 2.8;
     public static final int TRAIL = 96, FOLLOW_GAP = 12, TOUCH = 18;
+    /** Half the solid box of a badnik standing in a pass: it fills a whole 32-pixel cell. */
+    public static final int BLOCK = 17;
 
     public static final class Spot {
         public final Kind kind;
@@ -24,6 +26,8 @@ public final class Field {
         public final String id, label;
         /** The accessory a treasure monitor holds. */
         public final Gear gear;
+        /** A badnik planted in a narrow pass: it stands still and must be fought to get by. */
+        public boolean blocking;
         public boolean done;
 
         Spot(Kind kind, int x, int y, List<EnemyKind> group, Item item, int rings, String id, String label) {
@@ -42,7 +46,7 @@ public final class Field {
             this.label = label;
         }
         public double x(long ticks) {
-            return homeX + (kind == Kind.ENCOUNTER ? Math.sin(ticks / 70.0 + homeX) * 12 : 0);
+            return homeX + (kind == Kind.ENCOUNTER && !blocking ? Math.sin(ticks / 70.0 + homeX) * 12 : 0);
         }
         public boolean hostile() { return kind == Kind.ENCOUNTER || kind == Kind.MIDBOSS || kind == Kind.BOSS || kind == Kind.GUARDIAN || kind == Kind.ECHO; }
     }
@@ -52,6 +56,8 @@ public final class Field {
     /** The stock act route is retained solely for battle scenery. */
     public final FieldPath path;
     public final AreaLayout layout;
+    /** The hand-authored map of an outdoor area, or null for room-graph areas and interiors. */
+    public final TileMap map;
     public final MechanismPuzzle puzzle;
     public final List<Spot> spots = new ArrayList<>();
     private double x = 88, y = 336;
@@ -63,8 +69,8 @@ public final class Field {
     private boolean cleared;
 
     public boolean expanded() { return dungeon == null && zone == Zone.GREEN_HILL; }
-    public int width() { return layout != null ? layout.width : 1536; }
-    public int height() { return layout != null ? layout.height : 1024; }
+    public int width() { return map != null ? map.width() : layout != null ? layout.width : 1536; }
+    public int height() { return map != null ? map.height() : layout != null ? layout.height : 1024; }
     public int exitX() { return width() - 64; }
 
     public Field(Zone zone, FieldPath path) {
@@ -75,7 +81,8 @@ public final class Field {
         this.zone = zone;
         this.path = path;
         this.dungeon = dungeon;
-        layout = dungeon != null ? dungeon.layout() : zone == Zone.GREEN_HILL ? null : AreaLayout.outside(zone);
+        map = dungeon == null ? TileMap.of(zone) : null;
+        layout = dungeon != null ? dungeon.layout() : map != null ? null : AreaLayout.outside(zone);
         puzzle = MechanismPuzzle.of(zone, dungeon != null);
         if (dungeon == null) place();
         else placeDungeon();
@@ -192,7 +199,54 @@ public final class Field {
         spots.add(new Spot(kind, x, y, List.of(), null, 0, id, label));
     }
 
+    /** Spots from the map's legend; blockers stand in passes the party has to cross. */
+    private void placeMap() {
+        List<EnemyKind> bosses = zone.bossKinds();
+        for (String[] entry : map.legend()) {
+            char marker = entry[0].charAt(0);
+            String kind = entry[1];
+            String id = entry.length > 2 ? entry[2] : "";
+            String rest = entry.length > 3 ? entry[3] : "";
+            for (int[] at : map.find(marker)) {
+                int x = at[0], y = at[1];
+                switch (kind) {
+                    case "BLOCK", "PATROL" -> {
+                        List<EnemyKind> group = new ArrayList<>();
+                        for (String name : rest.split(",")) group.add(EnemyKind.valueOf(name.trim()));
+                        Spot foe = new Spot(Kind.ENCOUNTER, x, y, List.copyOf(group), null, 0, id,
+                                kind.equals("BLOCK") ? "Badnik in the way" : "Badnik patrol");
+                        foe.blocking = kind.equals("BLOCK");
+                        spots.add(foe);
+                    }
+                    case "MONITOR" -> {
+                        String[] words = rest.split(" ", 2);
+                        spots.add(new Spot(Kind.MONITOR, x, y, List.of(), Item.valueOf(words[0]), 0, id, words[1]));
+                    }
+                    case "DUNGEON" -> add(Kind.DUNGEON, x, y, "memory", Dungeon.of(zone).label());
+                    case "BOSS" -> spots.add(new Spot(Kind.BOSS, x, y, List.of(bosses.getLast()), null, 0, "boss", "Rift anchor"));
+                    case "MIDBOSS" -> {
+                        for (int i = 0; i < bosses.size() - 1; i++) spots.add(new Spot(Kind.MIDBOSS, x - 40 * i, y, List.of(bosses.get(i)),
+                                null, 0, "mid-" + i, "Anchor guardian"));
+                    }
+                    case "SWITCH" -> {
+                        int index = Integer.parseInt(id);
+                        add(Kind.MECHANISM, x, y, "route-switch-" + index, puzzle.labels[index]);
+                    }
+                    case "NOTE" -> add(Kind.CLUE, x, y, "route-note", "Trail maintenance notice");
+                    case "ANIMAL" -> add(Kind.ANIMAL, x, y, "animal", "Lost " + animalName(zone));
+                    default -> add(Kind.valueOf(kind), x, y, id, rest);
+                }
+            }
+        }
+    }
+
+    /** The skywalk-style gate in an authored area opens with its controls or the relay. */
+    public boolean routeOpen() {
+        return cleared || done("signal") || puzzleOpen();
+    }
+
     private void place() {
+        if (map != null) { placeMap(); return; }
         if (layout != null) { placeExpedition(); return; }
         add(Kind.STARPOST, 144, 336, "camp", "Trail camp");
         add(Kind.MERCHANT, 192, 416, "merchant", "Pocky's travelling stall");
@@ -365,9 +419,14 @@ public final class Field {
 
     /** Water and raised banks are shared with the renderer, including the revealed causeway. */
     public boolean orchardCrossing(double px, double py) {
+        if (map != null) return map.cell(px, py) == 'O' && orchardOpen();
         return expanded() && orchardOpen() && px >= 1200 && px <= 1248 && py >= 736 && py <= 816;
     }
     public boolean water(double px, double py) {
+        if (map != null) {
+            char c = map.cell(px, py);
+            return c == '~' || c == 'O' && !orchardOpen();
+        }
         if (layout != null) return !layout.floor(px, py);
         if (px > 400 && px < 560 && py > 224 && py < 432 && !(py >= 308 && py <= 356)) return true;
         if (!expanded()) return false;
@@ -380,13 +439,23 @@ public final class Field {
         return pool && !island && !crossing;
     }
     public int[][] banks() {
-        if (layout != null) return new int[0][];
+        if (layout != null || map != null) return new int[0][];
         return expanded() ? new int[][] {{112,144,64,80},{784,400,96,64},{240,624,112,128},
                 {736,832,112,112},{1008,176,192,112},{1040,352,224,64}}
                 : new int[][] {{112,144,64,80},{784,400,96,64}};
     }
     public boolean walkable(double px, double py) {
         if (dungeon != null) return dungeon.floor(px, py) && !sealed(px, py);
+        if (map != null) {
+            if (px < 4 || py < 4 || px > width() - 4 || py > height() - 4) return false;
+            char c = map.cell(px, py);
+            if (TileMap.solid(c) || c == 'O' && !orchardOpen() || c == 'R' && !routeOpen() || sealed(px, py)) return false;
+            for (Spot spot : spots) {
+                // A blocker is solid: the party can only get past by beating it.
+                if (spot.blocking && !spot.done && Math.abs(spot.homeX - px) < BLOCK && Math.abs(spot.homeY - py) < BLOCK) return false;
+            }
+            return true;
+        }
         Spot door = entrance();
         if (px > door.homeX - 80 && px < door.homeX + 80 && py > door.homeY - 120 && py < door.homeY - 12) return false;
         if (layout != null) return layout.floor(px, py) && !sealed(px, py);
@@ -427,8 +496,10 @@ public final class Field {
         if (dx != 0) facingLeft = dx < 0;
         double nx = x + Math.signum(dx) * speed / norm;
         if (walkable(nx, y)) x = nx;
+        else if (dy == 0) y = slide(y, speed, offset -> walkable(nx, y + offset) && walkable(x, y + offset));
         double ny = y + Math.signum(dy) * speed / norm;
         if (walkable(x, ny)) y = ny;
+        else if (dx == 0) x = slide(x, speed, offset -> walkable(x + offset, ny) && walkable(x + offset, y));
         moving = oldX != x || oldY != y;
         running = moving && run;
         if (moving) {
@@ -441,10 +512,22 @@ public final class Field {
             if (spot.done || !spot.hostile() || grace > 0) continue;
             // Bosses are deliberate interactions so players can prepare first.
             if (spot.kind != Kind.ENCOUNTER) continue;
-            if (Math.hypot(spot.x(ticks) - x, spot.homeY - y) <= TOUCH) return spot;
+            if (Math.hypot(spot.x(ticks) - x, spot.homeY - y) <= (spot.blocking ? BLOCK + 9 : TOUCH)) return spot;
         }
         return null;
     }
+    /**
+     * Corner assist: pressing into a wall beside an opening nudges the party toward it, so
+     * single-cell trails can be entered without pixel-perfect alignment.
+     */
+    private static double slide(double value, double speed, java.util.function.DoublePredicate opening) {
+        for (int offset = 1; offset <= 14; offset++) {
+            if (opening.test(offset)) return value + Math.min(speed, offset);
+            if (opening.test(-offset)) return value - Math.min(speed, offset);
+        }
+        return value;
+    }
+
     public Spot nearby(long ticks) {
         Spot best = null;
         double nearest = 38;
@@ -457,7 +540,16 @@ public final class Field {
         return best;
     }
     public void retreat(Spot from) {
-        // Stay on valid ground, even when the encounter was on a bridge.
+        // Step back the way the party came, so a blocker still bars the pass after fleeing.
+        for (int back = 40; back >= 8; back -= 4) {
+            int index = Math.floorMod(trailHead - back, TRAIL);
+            double px = trail[index], py = trailY[index];
+            if (Math.hypot(px - from.homeX, py - from.homeY) > (from.blocking ? BLOCK + 18 : TOUCH + 6) && walkable(px, py)) {
+                setPosition(px, py);
+                grace = 150;
+                return;
+            }
+        }
         for (int direction : new int[] {-1, 1}) {
             double nx = x + direction * 48;
             if (walkable(nx, y)) { setPosition(nx, y); break; }
@@ -476,9 +568,13 @@ public final class Field {
         throw new IllegalStateException("Missing anchor");
     }
     public void resumeAtCamp(int saved) {
-        // New checkpoints use small identifiers; old side-on X coordinates return to the entrance camp.
+        // New checkpoints use small identifiers (1 camp, 2 sanctuary, 3 a mid-route waypoint);
+        // old side-on X coordinates return to the entrance camp.
         if (dungeon != null) { setPosition(144, 360); return; }
-        Spot camp = spots.stream().filter(s -> s.id.equals(saved == 2 ? "sanctuary" : "camp")).findFirst().orElseThrow();
+        String id = saved == 2 ? "sanctuary" : saved == 3 ? "waypoint" : "camp";
+        Spot camp = spots.stream().filter(s -> s.id.equals(id)).findFirst()
+                .orElseGet(() -> spots.stream().filter(s -> s.id.equals("camp")).findFirst().orElseThrow());
         setPosition(camp.homeX, camp.homeY + 24);
     }
+
 }

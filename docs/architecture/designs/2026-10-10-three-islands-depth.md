@@ -79,3 +79,57 @@ zero validator findings. Native captures were inspected for boss, ordinary and B
 battles (summon, fuse and burn), the shrine treasure room, a lost animal, the shop's accessory
 tab, the Equip preview, Emerald Hill and Chemical Plant terraces and a Launch Base echo. Not
 covered: the full engine suite, a human playthrough at real speed and real-device audio.
+
+## Follow-up: authored Green Hill and Star Light maps
+
+User feedback on the above: Green Hill was one large square with landmarks dotted around and
+every patrol avoidable; Star Light looked poor and had invisible collisions that made it
+impossible to finish; Green Hill to Star Light should take at least five to ten minutes.
+
+**Cause of the Star Light walls.** Its dungeon entrance sat on route room (2,1). The facade's
+solid footprint (door x ±80, y -120..-12) covered the corridor from the north and the exit to
+the east, leaving 8-pixel slivers at the room's edges. Nothing was drawn there, so the party
+appeared to hit invisible walls. Room-graph placement could not account for the facade.
+
+**Replacement.** Both areas are now `TileMap`s: 80 x 44 (Green Hill) and 80 x 42 (Star Light)
+32-pixel cells, authored with drawing primitives in `examples/three-islands/tools/generate_maps.py`.
+The script checks markers sit on ground and that the exit cannot be reached without fighting,
+then emits `Maps.java` text-block constants (static `String` constants pass the validator).
+The facade has explicit `H` cells, so drawing and collision agree. `Field` builds spots from
+the map legend and keeps every existing spot id, so saves, puzzles, journal entries and story
+triggers carry over; Star Light's `route` lock became the map's `R` gate.
+
+- **Forced encounters.** `BLOCK` legend entries are stationary encounters in one-cell passes,
+  solid within `Field.BLOCK` (17 px, a full cell) with a contact range of 26 px. A first 14-px
+  box let the 8-px flood fill slip along the cell edge; the cell-wide box fixed it. Fleeing
+  retreats along the party's own trail beyond contact range, so the grace period cannot be
+  used to walk past. Avoidable `PATROL`s remain in clearings.
+- **Length.** A first Green Hill draft needed 143 cells to reach the exit. Moving the river
+  crossing downstream with a far-bank switchback, and adding a switchback to the relay,
+  raised the measured required route (village, shrine, relay, anchor) to 172 cells. Star
+  Light's (both feeders, observatory, relay, anchor) is 212. With six forced fights per area,
+  their dungeons and scenes, each area should take several minutes; that is an estimate from
+  route length and battle counts, not a timed human playthrough.
+- **Navigation.** Single-cell trails need corner assist: pressing into a wall slides up to
+  14 px toward an opening. A waypoint Starpost (checkpoint value 3) sits mid-route in each
+  map; values 1 and 2 keep their meaning for older saves.
+- **Art.** `MapArt` draws Green Hill clearings, dirt trails (palette browns `$B66D49`/`$924900`
+  after the first nearest-colour pick came out pink), a jungle plateau with south-facing
+  checker cliffs, animated water, `Nem_Bridge` logs (palette line 2) and `Nem_PplRock`
+  (line 3), with palms only where their crowns stay over plateau (an earlier rule let canopies
+  cover walkable ground). Star Light draws its starfield backdrop, chunk 17's city lights at
+  half parallax, plating, rails (chunk 1 y 224), lamps (chunk 1), lattice and cones (chunk 20),
+  barriers (chunk 24) and rooftops (chunk 2), with lamplight pools. Props (palms, rocks, lamps)
+  are depth-sorted with walkers. Crop coordinates came from temporary native block views,
+  removed after use; markers draw the trail, bridge or grass they interrupt.
+
+Verification: 82 creator tests (new `MapTest`: blockers bar the relay, each blocker cuts a
+real pass, every other landmark is reachable once they fall, the Star Light gate needs both
+feeders, markers and Starposts stand on ground, waypoint resume, corner sliding, required
+route lengths; rewritten Green Hill and field tests now use spot ids rather than old
+coordinates). The same queued `TestThreeIslandsExample,TestThreeIslandsScene` command with the
+three root ROMs passed 14 tests with no skips, 10 of 10 zones and interiors exercised; the
+Green Hill mystery scene test now positions by spot id. Zero validator findings. Native
+captures covered both maps at a dozen points, a keyboard walk into Green Hill's first blocker
+and its battle, the log bridge, orchard island and switchbacks. Not covered: a timed human
+playthrough, the full engine suite.

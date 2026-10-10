@@ -184,7 +184,7 @@ public final class FieldScreen implements Screen {
             case STARPOST -> {
                 field.complete(game.progress, spot);
                 game.progress.restAll();
-                game.progress.setResume(zone, spot.id.equals("sanctuary") ? 2 : 1);
+                game.progress.setResume(zone, spot.id.equals("sanctuary") ? 2 : spot.id.equals("waypoint") ? 3 : 1);
                 game.progress.setResumeDungeon(field.dungeon != null);
                 game.save();
                 game.audio.sfx(Audio.SFX_STARPOST);
@@ -295,6 +295,11 @@ public final class FieldScreen implements Screen {
      */
     public void drawBattleground(Game game, SceneCanvas c) {
         terrain(game, c);
+        if (dungeonArt == null) {
+            for (int i = 0; i < stage.fieldArt.propCount(); i++) {
+                if (visible(c, stage.fieldArt.propX(i), stage.fieldArt.propY(i))) stage.fieldArt.drawProp(c, i, cameraX, cameraY, game.ticks());
+            }
+        }
         c.fill(0, 0, c.width(), c.height(), 0x58000814);
         c.fill(0, 96, c.width(), 72, 0x18FFFFFF);
     }
@@ -335,10 +340,17 @@ public final class FieldScreen implements Screen {
         for (int i = 0; i < field.spots.size(); i++) if (field.spots.get(i) != hidden) order.add(new double[] {field.spots.get(i).homeY, i});
         List<Hero> party = game.progress.party();
         for (int i = 0; showParty && i < party.size(); i++) order.add(new double[] {i == 0 ? field.y() : field.followerY(i), -1 - i});
+        // Palms, rocks and lamps stand at their bases: walkers pass in front of or behind them.
+        if (dungeonArt == null) {
+            for (int i = 0; i < stage.fieldArt.propCount(); i++) {
+                if (visible(c, stage.fieldArt.propX(i), stage.fieldArt.propY(i))) order.add(new double[] {stage.fieldArt.propY(i), -100 - i});
+            }
+        }
         order.sort((a, b) -> Double.compare(a[0], b[0]));
         for (double[] entry : order) {
             int i = (int) entry[1];
-            if (i >= 0) drawSpot(game, c, field.spots.get(i));
+            if (i <= -100) stage.fieldArt.drawProp(c, -100 - i, cameraX, cameraY, game.ticks());
+            else if (i >= 0) drawSpot(game, c, field.spots.get(i));
             else {
                 int n = -i - 1;
                 Hero hero = party.get(n);
@@ -350,6 +362,11 @@ public final class FieldScreen implements Screen {
                         SceneDraw.plain(), -1);
             }
         }
+    }
+
+    private boolean visible(SceneCanvas c, int x, int y) {
+        int px = sx(x), py = sy(y);
+        return px > -64 && px < c.width() + 64 && py > -16 && py < c.height() + 160;
     }
 
     private void drawSpot(Game game, SceneCanvas c, Field.Spot spot) {
@@ -374,7 +391,8 @@ public final class FieldScreen implements Screen {
                     c.fill(x - 29, y - 55, 58, 2, 0xC0ACCFFF);
                 }
                 game.enemies.draw(c, spot.group.get(0), x, y, ticks, SceneDraw.plain());
-                if (spot.kind == Field.Kind.ENCOUNTER) game.font.shadowed(c, "x" + spot.group.size(), x + 10, y - 26, Ui.DIM);
+                if (spot.kind == Field.Kind.ENCOUNTER) game.font.shadowed(c, (spot.blocking ? "! " : "") + "x" + spot.group.size(),
+                        x + 10, y - 26, spot.blocking ? Ui.BAD : Ui.DIM);
             }
             case MONITOR -> sprite(game, c, "s3k:monitor", spot.done ? 11 : Math.max(0, spot.item.icon), x, y - 15);
             case CHEST -> {

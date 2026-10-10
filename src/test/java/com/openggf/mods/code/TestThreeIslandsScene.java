@@ -368,8 +368,11 @@ class TestThreeIslandsScene {
             assertEquals(false, progress.getClass().getMethod("seen", String.class).invoke(progress, "ghz-field-garden-verse"));
             harness.press(GLFW_KEY_BACKSPACE); play(harness, 2);
             game.getClass().getMethod("swap", fieldScreen.getClass().getInterfaces()[0]).invoke(game, fieldScreen);
-            for (int[] point : new int[][] {{1152,672},{1344,576},{1088,576},{1216,512},{880,768},{1456,864},{1232,832}}) {
-                field.getClass().getMethod("setPosition", double.class, double.class).invoke(field, (double) point[0], (double) point[1]);
+            for (String id : List.of("garden-verse", "bell-dusk", "bell-dawn", "bell-noon", "sluice-west", "sluice-east", "orchard-letter")) {
+                Object target = ((List<?>) field.getClass().getField("spots").get(field)).stream().filter(it -> {
+                    try { return it.getClass().getField("id").get(it).equals(id); } catch (Exception e) { throw new RuntimeException(e); }
+                }).findFirst().orElseThrow();
+                position(field, (double) target.getClass().getField("homeX").get(target), (double) target.getClass().getField("homeY").get(target));
                 play(harness, 1);
                 harness.press(GLFW_KEY_ENTER); play(harness, 2);
                 assertEquals("STORY", screen(harness));

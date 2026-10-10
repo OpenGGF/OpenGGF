@@ -254,7 +254,7 @@ Flicky: We used to store food in the shrine. My sister thought she'd have time t
 Sonic: Did she know another way out?
 Flicky: There's only the main gate. Please be careful.
 Flicky: And Sonic... the robots took animals from all over to run their engines. Some escaped and got lost.
-Flicky: If you find any hiding, tell them to come here. We'll look after them. There's one in our own southern grove.
+Flicky: If you find any hiding, tell them to come here. We'll look after them. One's stuck on the orchard island, past the flooded crossing.
 
 @ghz-memory
 Sister: Sonic! Is my sister alright?
@@ -618,7 +618,7 @@ Sonic: Looks like somebody stored gear in this monitor.
 > Elemental charms also protect the wearer from that element's status: burns, soaking or stuns.
 
 @ghz-animal
-> A small pig is hiding under the roots, trembling.
+> A small pig is hiding among the orchard trees, trembling.
 Sonic: Hey, it's alright. The robots are gone from here.
 Sonic: The Flicky sisters are looking after everyone who got lost. It's not far.
 > The pig trots off toward the village.
