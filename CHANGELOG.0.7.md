@@ -972,7 +972,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   owned registered act with native character, centre-position and health-ring
   overrides, then receive one typed result on the same retained scene/context.
   Scene audio is re-prepared on return; frame-boundary exits and normal load/mode
-  boundaries isolate rewind. Starpost Valley connects its farm gate and existing
+  boundaries isolate rewind. Native shield effects recreated during player refresh retain
+  their captured creator callback owner and rewind identity. Starpost Valley connects its farm gate and existing
   town menus through a native-collision placeholder act, with its scene valley
   retained as a debug path until encoded terrain integration.
 - **Mod scene music from any supplied ROM:** `SceneAudio.playMusic(game, id)` plays a song from any supplied ROM as the scene's current music, so an S3K scene can play Sonic 1's Green Hill and still hear its own sound effects over it. Another game's song uses the cross-game donor route (the one that plays S3K Super music in Sonic 2), so it loops at its own loop point and needs no second sound chip. The existing `stopMusic`, `fadeOutMusic` and stock jingles treat it like any song. The scene borrows the donor route only while it is open, and leaving restores whatever cross-game donation had registered. The call returns false when that ROM was not supplied or has no such song.
