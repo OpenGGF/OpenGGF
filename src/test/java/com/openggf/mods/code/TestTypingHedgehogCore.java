@@ -57,4 +57,5 @@ class TestTypingHedgehogCore {
     @Test void chainsMultiplyAndPickTheRomScoreSprite() throws Exception { check("scoringChainsAndPopups"); }
     @Test void wordsPerMinuteCountsOnlyActiveRows() throws Exception { check("speedCountsActiveRowsOnly"); }
     @Test void tallyBonusesAndGrades() throws Exception { check("tallyAndGrades"); }
+    @Test void anAssistNeverLeavesAPhraseOnASpace() throws Exception { check("assistNeverStopsOnASpace"); }
 }

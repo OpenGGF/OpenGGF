@@ -79,7 +79,11 @@ public final class TypingField {
     public void assist(int id, int characters) {
         Target target = targets.get(id);
         if (target == null || target.progress != 0) return;
-        target.progress = Math.max(0, Math.min(characters, target.prompt.typed().length() - 1));
+        String typed = target.prompt.typed();
+        int progress = Math.max(0, Math.min(characters, typed.length() - 1));
+        // Never stop on a space: a space cannot start a lock, so the phrase would be untypeable.
+        while (progress > 0 && typed.codePointAt(progress) == ' ') progress--;
+        target.progress = progress;
     }
 
     /** Removes a target that left without being typed (it struck, fled or was destroyed). */
