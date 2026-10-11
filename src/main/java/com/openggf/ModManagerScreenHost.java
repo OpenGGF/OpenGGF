@@ -29,6 +29,8 @@ public final class ModManagerScreenHost implements MasterTitleScreen.ModManagerV
     @Override public void render() { screen.render(); }
     @Override public boolean consumeCloseRequested() { return screen.consumeCloseRequested(); }
     @Override public void suppressInputUntilNeutral() { screen.suppressInputUntilNeutral(); }
+    @Override public boolean consumeActivationRequested() { return screen.consumeActivationRequested(); }
+    @Override public void activationFailed(String message) { screen.activationFailed(message); }
 
     static ModManagerScreen.MenuInput menuInput(InputHandler input) {
         var logical = input.logical();

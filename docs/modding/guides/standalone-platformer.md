@@ -666,7 +666,7 @@ which is a new grant as far as the trust store is concerned. Don't be surprised 
 re-enabling a mod you've already trusted once asks again after a rebuild.
 
 **Playing it.** Drop the packaged jar into your engine's `mods/` directory, start the
-engine, open the Mod Manager, enable `Sample Platformer`, and restart. From the
+engine, open the Mod Manager, enable `Sample Platformer`, and choose Apply. From the
 master title, `sample-platformer` appears as its own entry after the three stock
 games — no ROM required to see or select it. **New Game** starts Bolt Plains fresh
 in namespaced slot 1 (`saves/sample-platformer/slot1.json`); **Continue** appears

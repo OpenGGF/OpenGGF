@@ -231,6 +231,8 @@ public class MasterTitleScreen {
     private Runnable modManagerOpenHandler =
             () -> LOGGER.info("Mod manager open callback not configured.");
     private ModManagerScreenFactory modManagerScreenFactory;
+    private Runnable modManagerApplyHandler = () -> { };
+    private boolean modApplyPending;
     private ModManagerView modManagerScreen;
 
     /**
@@ -422,6 +424,10 @@ public class MasterTitleScreen {
         if (modManagerScreen != null) {
             ModManagerView menu = modManagerScreen;
             menu.update(inputHandler);
+            if (menu.consumeActivationRequested()) {
+                modApplyPending = true;
+                return;
+            }
             if (modManagerScreen == menu && menu.consumeCloseRequested()) {
                 modManagerScreen = null;
                 if (entrySource != null) replaceEntries(entrySource.get());
@@ -1524,6 +1530,23 @@ public class MasterTitleScreen {
         modManagerScreenFactory = Objects.requireNonNull(factory, "factory");
     }
 
+    public void setModManagerApplyHandler(Runnable handler) {
+        modManagerApplyHandler = Objects.requireNonNull(handler, "handler");
+    }
+
+    /** Called after GameLoop finishes using this title instance for the frame. */
+    public void finishPendingModApply() {
+        if (!modApplyPending) return;
+        modApplyPending = false;
+        try {
+            modManagerApplyHandler.run();
+        } catch (RuntimeException failure) {
+            if (modManagerScreen != null) modManagerScreen.activationFailed(
+                    failure.getMessage() == null
+                            ? failure.getClass().getSimpleName() : failure.getMessage());
+        }
+    }
+
     private void openModManager() {
         if (modManagerScreenFactory != null) {
             modManagerScreen = Objects.requireNonNull(
@@ -1801,5 +1824,7 @@ public class MasterTitleScreen {
         void render();
         boolean consumeCloseRequested();
         void suppressInputUntilNeutral();
+        default boolean consumeActivationRequested() { return false; }
+        default void activationFailed(String message) { }
     }
 }

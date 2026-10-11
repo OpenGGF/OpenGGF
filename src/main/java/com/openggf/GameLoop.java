@@ -1281,6 +1281,7 @@ public class GameLoop {
                 com.openggf.game.TitleInputOwnership.routeQuit(masterScreen, () -> fadeOutTo(applicationExitHandler));
             }
             finishTimeAttackMasterTitleFrame(masterScreen);
+            if (masterScreen != null) masterScreen.finishPendingModApply();
             return;
         }
         finishTimeAttackMasterTitleExit();

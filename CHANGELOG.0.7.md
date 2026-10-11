@@ -987,6 +987,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   standalone games, and custom-zone work are now available on the development
   line. Explicit development-directory launches show their active mod, details,
   and notices in a read-only Mod Manager without changing installed-mod settings.
+  The installed-mod manager applies saved enablement, order, and code trust at the
+  master title by rescanning jars and rebuilding the mod runtime and launch choices;
+  restarting the engine is no longer required to change loaded mods.
   The creator handbook now starts with a Java 21 setup path, seven purpose-specific
   starters, a capability matrix and the complete recipient install/update/trust/
   rollback journey. Creator kits pair the engine, SDK, API documentation and

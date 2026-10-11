@@ -5,7 +5,7 @@ Start with [setup and your first project](getting-started.md). Recipients use
 mutable, unpublished 0.7.0 candidate; use matching artifacts from one commit.
 
 OpenGGF's mod workflow is source-first and reproducible: author files, convert them
-with `ggfmod`, validate/package a jar, then enable it in the Mod Manager and restart.
+with `ggfmod`, validate/package a jar, then enable it in the Mod Manager and choose Apply.
 Choose the smallest quickstart that matches your goal; they are ordered by typical
 effort. Mod API 0.7 includes exclusive fresh-game insertion plus destination-scoped,
 launch-only teams, deterministic input filters, and row-only HUD profiles; the

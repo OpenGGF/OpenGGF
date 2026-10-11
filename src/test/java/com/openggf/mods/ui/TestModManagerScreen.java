@@ -387,6 +387,8 @@ class TestModManagerScreen {
 
         applyFromList(screen);
         assertFalse(screen.closeRequested());
+        assertTrue(screen.consumeActivationRequested());
+        assertFalse(screen.consumeActivationRequested());
         ModState persisted = new ModStateStore(temp.resolve("trust").toAbsolutePath().normalize())
                 .load().state();
         assertTrue(persisted.entries().getFirst().trustsSha256(code.sha256()));

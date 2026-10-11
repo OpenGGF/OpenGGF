@@ -13,6 +13,8 @@ import com.openggf.mods.ModStateStore;
 import com.openggf.mods.ModStateSaveResult;
 import com.openggf.mods.ModTrackRegistry;
 import com.openggf.mods.PendingModStateEditor;
+import com.openggf.mods.code.ModClassLoaderFactory;
+import com.openggf.mods.code.ModRuntime;
 import com.openggf.mods.DefaultModRepositoryScanner;
 import com.openggf.mods.ModDescriptor;
 import com.openggf.mods.code.GgfMod;
@@ -442,6 +444,53 @@ class TestExternalContentPolicy {
         assertFalse(persisted.trusted());
         assertTrue(persisted.trustedJarSha256() == null);
         revoked.close();
+    }
+
+    @Test
+    void titleReloadReplacesEnabledCatalogAndCodeRuntimeWithoutProcessRestart() throws Exception {
+        Path root = Files.createDirectories(temp.resolve("reload-mods")).toAbsolutePath().normalize();
+        writeCodeModJar(root.resolve("code.jar"), "reload-payload");
+        ModDescriptor descriptor = (ModDescriptor) new DefaultModRepositoryScanner(
+                ModInputLimits.production()).scan(root).getFirst();
+        ModStateStore store = new ModStateStore(root);
+        store.save(new ModState(1, List.of(new ModState.Entry(
+                "boot-code", false, 0, true, descriptor.sha256()))));
+        var loader = ModSubsystem.normalBootLoader(() -> root, ModInputLimits.production(),
+                (game, id) -> true, noOpBoundary());
+
+        ModSubsystem initial = loader.get();
+        ModSubsystem.installProcess(initial);
+        ModRuntime runtime = ModRuntime.empty();
+        try {
+            assertTrue(ModSubsystem.current().processCatalog().effective().orderedEnabled().isEmpty());
+            store.save(new ModState(1, List.of(new ModState.Entry(
+                    "boot-code", true, 0, true, descriptor.sha256()))));
+            ModSubsystem enabled = loader.get();
+            ModRuntime enabledRuntime = new ModClassLoaderFactory(Engine.class.getClassLoader())
+                    .create(enabled.processCatalog().effective(), enabled.trustedCodeOwners(), true);
+            ModSubsystem.installProcess(enabled);
+            runtime = Engine.replaceModRuntime(runtime, enabledRuntime);
+            assertSame(enabled, ModSubsystem.current());
+            assertEquals("boot-code", enabled.processCatalog().effective().orderedEnabled()
+                    .getFirst().manifest().id());
+
+            assertThrows(IllegalArgumentException.class,
+                    () -> ModSubsystem.normalBootLoader(() -> Path.of("relative"),
+                            ModInputLimits.production(), (game, id) -> true, noOpBoundary()).get());
+            assertSame(enabled, ModSubsystem.current(), "failed preparation retains the live catalog");
+
+            store.save(new ModState(1, List.of(new ModState.Entry(
+                    "boot-code", false, 0, true, descriptor.sha256()))));
+            ModSubsystem disabled = loader.get();
+            ModSubsystem.installProcess(disabled);
+            ModRuntime previous = runtime;
+            runtime = Engine.replaceModRuntime(runtime, ModRuntime.empty());
+            assertTrue(previous.isClosed());
+            assertTrue(ModSubsystem.current().processCatalog().effective().orderedEnabled().isEmpty());
+        } finally {
+            Engine.closeModRuntime(runtime);
+            ModSubsystem.clearProcess();
+        }
     }
 
     @Test

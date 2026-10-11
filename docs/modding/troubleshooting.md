@@ -27,8 +27,8 @@ repository preflight rather than the single-jar CLI.
 | `MANIFEST_MISSING` / `MANIFEST_INVALID` | Add strict `META-INF/openggf-mod.yaml`; remove unknown/duplicate/alternate fields. |
 | `DUPLICATE_MOD_ID` | Give each discovered jar a unique manifest id. |
 | `ENGINE_API_INCOMPATIBLE` | Compile against a supported API and correct `engineApiRange`. |
-| `DISABLED` | Enable the mod in the manager and restart. |
-| `CODE_TRUST_REQUIRED` | Review the source/findings, grant trust for this exact jar hash, and restart. |
+| `DISABLED` | Enable the mod in the manager and choose Apply. |
+| `CODE_TRUST_REQUIRED` | Review the source/findings, grant trust for this exact jar hash, and choose Apply. |
 | `DEPENDENCY_MISSING` / `DEPENDENCY_DISABLED` / `DEPENDENCY_BLOCKED` | Install/enable/fix the named dependency first. |
 | `DEPENDENCY_VERSION_INCOMPATIBLE` / `DEPENDENCY_BASE_GAME_MISMATCH` | Align dependency version range and patch base game. |
 | `DEPENDENCY_CYCLE` | Remove a cycle from manifest dependencies. |

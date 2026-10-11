@@ -32,8 +32,8 @@ import java.util.PriorityQueue;
 import java.util.Set;
 
 /**
- * Pending-state editor for the immutable process catalog. The screen deliberately
- * owns no activation seam: all changes are persisted for the next process start.
+ * Pending-state editor for the current catalog. The host activates saved changes
+ * at the title screen, where no gameplay session owns mod resources.
  */
 public final class ModManagerScreen {
     public enum Feedback { NAVIGATE, CONFIRM, CANCEL, ERROR }
@@ -68,7 +68,9 @@ public final class ModManagerScreen {
     private ArmedTrust armedTrust;
     private String statusMessage = "";
     private String saveFailure;
+    private String reloadFailure;
     private boolean closeRequested;
+    private boolean activationRequested;
     private boolean actionFocus;
     private boolean discardPrompt;
     private boolean discardSelected;
@@ -202,7 +204,7 @@ public final class ModManagerScreen {
                 if (up || down || left || right) pageOffset = Math.clamp(pageOffset
                         + (down ? 1 : up ? -1 : right ? MAX_VISIBLE_DETAILS : -MAX_VISIBLE_DETAILS),
                         0, Math.max(0, noticeLines().size() - MAX_VISIBLE_DETAILS));
-                if (accept && saveFailure != null) applyDraft();
+                if (accept && (saveFailure != null || reloadFailure != null)) applyDraft();
             }
             return;
         }
@@ -293,14 +295,14 @@ public final class ModManagerScreen {
             if (noticesPage) {
                 renderReadingPage("MOD NOTICES", noticeLines(), pageOffset,
                         directionLabel + " Read  " + backLabel + " Back",
-                        saveFailure != null ? confirmLabel + " Retry save and return"
-                                : editor.editable() ? "Changes apply after restart" : "Mods are fixed for this launch");
+                        saveFailure != null || reloadFailure != null ? confirmLabel + " Retry Apply"
+                                : editor.editable() ? "Apply reloads mods at title" : "Mods are fixed for this launch");
                 return;
             }
             text.page("MOD MANAGER", patternBudgetLine());
             text.panel(6, 48, 308, 88);
             int y = 52;
-            if (rows.isEmpty()) drawPrimary("No mods discovered.", 12, y, 1f, 1f, 1f);
+            if (rows.isEmpty()) drawPrimary("No mods. Apply to rescan jars.", 12, y, 1f, 1f, 1f);
             for (RowView row : visibleRows()) {
                 boolean selected = rows.get(selectedIndex).identity().equals(row.identity());
                 if (selected && !actionFocus) text.focus(8, y - 2, 304, 14);
@@ -314,9 +316,10 @@ public final class ModManagerScreen {
             draw((rows.isEmpty() ? "0" : Integer.toString(selectedIndex + 1)) + " / " + rows.size()
                     + " mods; choose Details for full information", 9, 141, .7f, .8f, .95f);
             List<String> banners = bannerLines();
-            String banner = saveFailure != null ? "Save failed: " + saveFailure
+            String banner = reloadFailure != null ? "Reload failed: " + reloadFailure
+                    : saveFailure != null ? "Save failed: " + saveFailure
                     : editor.dirty() ? "DRAFT: choose Apply to save"
-                    : banners.isEmpty() ? "SAVED: changes apply after restart" : banners.getFirst();
+                    : banners.isEmpty() ? "SAVED: choose Apply to reload" : banners.getFirst();
             draw(banner, 9, 153, 1f, .65f, .3f);
             if (!statusMessage.isBlank()) draw(statusMessage, 9, 165, 1f, .75f, .25f);
             String[] actions = editor.editable() ? new String[]{"Details", "Order", "Notices", "Apply"}
@@ -352,7 +355,7 @@ public final class ModManagerScreen {
         List<String> lines = new ArrayList<>();
         if (!statusMessage.isBlank()) lines.add(statusMessage);
         lines.addAll(bannerLines());
-        if (lines.isEmpty()) lines.add(editor.editable() ? "No notices. Changes apply after restart."
+        if (lines.isEmpty()) lines.add(editor.editable() ? "No notices. Apply reloads mods at title."
                 : "No notices. Mods are fixed for this launch.");
         return wrapped(lines);
     }
@@ -423,8 +426,9 @@ public final class ModManagerScreen {
                         + " [" + owner + "] " + finding.code() + ": " + finding.message());
             }
         });
-        if (editor.restartRequired()) banners.add("Restart required");
+        if (editor.restartRequired()) banners.add("Changes await Apply");
         if (saveFailure != null) banners.add("Save failed: " + saveFailure);
+        if (reloadFailure != null) banners.add("Reload failed: " + reloadFailure);
         return List.copyOf(banners);
     }
 
@@ -443,6 +447,17 @@ public final class ModManagerScreen {
     public ModState pendingState() { return editor.pendingState(); }
 
     public String statusMessage() { return statusMessage; }
+
+    public boolean consumeActivationRequested() {
+        boolean requested = activationRequested;
+        activationRequested = false;
+        return requested;
+    }
+
+    public void activationFailed(String message) {
+        reloadFailure = message;
+        statusMessage = "Saved, but reload failed: " + message;
+    }
 
     public String patternBudgetLine() {
         return "Current pattern windows: " + patternWindows.totalWindows()
@@ -751,7 +766,9 @@ public final class ModManagerScreen {
         ModStateSaveResult result = editor.save();
         if (result instanceof ModStateSaveResult.Saved) {
             saveFailure = null;
-            statusMessage = "Saved. Restart to apply mod changes";
+            reloadFailure = null;
+            statusMessage = "Saved. Reloading mods";
+            activationRequested = true;
             closeRequested = false;
         } else if (result instanceof ModStateSaveResult.Failed failed) {
             saveFailure = failed.message();

@@ -1739,34 +1739,57 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				ModInputLimits.production(), StockMusicDomains::containsSupported,
 				ModSubsystem.SessionAudioBoundary.audioManager(audioManager)),
 				compiledModsSupported);
-		modRuntime = replaceModRuntime(modRuntime, ModRuntime.empty());
-		ModSubsystem.current().installRewindClassResolver(
-				com.openggf.level.objects.RewindClassResolver.ENGINE_ONLY);
 		try {
 			var effectiveMods = ModSubsystem.current().processCatalog().effective();
 			ModSubsystem.current().transferDevelopmentSourceOwnership();
-			modRuntime = replaceModRuntime(modRuntime,
-					new ModClassLoaderFactory(Engine.class.getClassLoader())
-							.create(effectiveMods, ModSubsystem.current().trustedCodeOwners(),
-									compiledModsSupported));
-			modRuntime.installFaultBoundary(ModSubsystem.current().createFaultBoundary(modRuntime));
-			modRuntime.installSaveFindingSink((owner, finding) ->
-					ModSubsystem.current().runtimeFindings().upsertOwnerFinding(owner,
-							new com.openggf.mods.ModFinding(
-									com.openggf.mods.ModFindingSeverity.WARNING,
-									finding.code(), finding.detail(), null)));
-			ModSubsystem.current().installRewindClassResolver(
-					new ModClassResolver(modRuntime, Engine.class.getClassLoader()));
-			moduleResolutionService.installModPlanSource(
-					new EffectiveCatalogPatchEnablement(effectiveMods), enablement -> {
-						var plan = modRuntime.newRegistrationPlan();
-						ModSubsystem.current().recordRegistrationFailures(
-								modRuntime.registrationFailures());
-						return plan;
-					});
+			installModRuntime(ModSubsystem.current(), new ModClassLoaderFactory(Engine.class.getClassLoader())
+					.create(effectiveMods, ModSubsystem.current().trustedCodeOwners(), compiledModsSupported));
 		} catch (IOException error) {
 			LOGGER.log(java.util.logging.Level.WARNING, "Compiled-mod runtime initialization failed", error);
 		}
+	}
+
+	/** Rebuilds the catalog and code owners while the title owns no gameplay session. */
+	private void reloadExternalContentAtTitle() {
+		ModSubsystem candidate = ModSubsystem.normalBootLoader(
+				() -> Path.of("mods").toAbsolutePath().normalize(),
+				ModInputLimits.production(), StockMusicDomains::containsSupported,
+				ModSubsystem.SessionAudioBoundary.audioManager(audioManager)).get();
+		candidate.setCompiledModsSupported(compiledModsSupported);
+		ModRuntime replacement;
+		try {
+			replacement = new ModClassLoaderFactory(Engine.class.getClassLoader())
+					.create(candidate.processCatalog().effective(), candidate.trustedCodeOwners(),
+							compiledModsSupported);
+		} catch (IOException | RuntimeException failure) {
+			candidate.close();
+			throw new IllegalStateException("Unable to prepare mods", failure);
+		}
+		ModSubsystem.installProcess(candidate);
+		installModRuntime(candidate, replacement);
+		MasterTitleScreen previous = masterTitleScreen;
+		MasterTitleScreen refreshed = createMasterTitleScreen();
+		refreshed.initialize();
+		masterTitleScreen = refreshed;
+		if (previous != null) previous.cleanup();
+	}
+
+	private void installModRuntime(ModSubsystem subsystem, ModRuntime replacement) {
+		modRuntime = replaceModRuntime(modRuntime, replacement);
+		replacement.installFaultBoundary(subsystem.createFaultBoundary(replacement));
+		replacement.installSaveFindingSink((owner, finding) ->
+				subsystem.runtimeFindings().upsertOwnerFinding(owner,
+						new com.openggf.mods.ModFinding(com.openggf.mods.ModFindingSeverity.WARNING,
+								finding.code(), finding.detail(), null)));
+		subsystem.installRewindClassResolver(
+				new ModClassResolver(replacement, Engine.class.getClassLoader()));
+		var effectiveMods = subsystem.processCatalog().effective();
+		moduleResolutionService.installModPlanSource(
+				new EffectiveCatalogPatchEnablement(effectiveMods), enablement -> {
+					var plan = replacement.newRegistrationPlan();
+					subsystem.recordRegistrationFailures(replacement.registrationFailures());
+					return plan;
+				});
 	}
 
 	static ExternalContentMode externalContentBootMode(boolean testMode){
@@ -1790,6 +1813,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		com.openggf.game.MasterTitleCatalog.bind(screen, this::masterTitleEntries);
 		if (ModSubsystem.current().policy().mayScanAtBoot()) {
 			screen.setModManagerScreenFactory(font -> ModSubsystem.current().createManager(font));
+			screen.setModManagerApplyHandler(this::reloadExternalContentAtTitle);
 		}
 		return screen;
 	}

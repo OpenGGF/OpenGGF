@@ -53,6 +53,36 @@ class TestMasterTitleSecondaryActions {
     Path tempDir;
 
     @Test
+    void savedManagerApplyInvokesTitleReloadOnce() {
+        MasterTitleScreen title = activeScreen(SonicConfigurationService.createStandalone(tempDir));
+        AtomicInteger reloads = new AtomicInteger();
+        title.setModManagerApplyHandler(reloads::incrementAndGet);
+        title.setModManagerScreenFactory(font -> new MasterTitleScreen.ModManagerView() {
+            private boolean pending = true;
+            @Override public void update(InputHandler input) { }
+            @Override public void render() { }
+            @Override public boolean consumeCloseRequested() { return false; }
+            @Override public void suppressInputUntilNeutral() { }
+            @Override public boolean consumeActivationRequested() {
+                boolean result = pending;
+                pending = false;
+                return result;
+            }
+        });
+        InputHandler input = new InputHandler();
+        focusMods(title, input);
+        input.setLogicalOverride(logical(0, InputActionMasks.ACTION_A));
+        title.update(input);
+        input.setLogicalOverride(LogicalInputSnapshot.neutral());
+        title.update(input);
+        title.update(input);
+        assertEquals(0, reloads.get(), "title reload waits until GameLoop finishes the frame");
+        title.finishPendingModApply();
+        title.finishPendingModApply();
+        assertEquals(1, reloads.get());
+    }
+
+    @Test
     void masterTitleConsumesFocusTransitionAndOpensThroughHandlerExactlyOnce() {
         MasterTitleScreen screen = activeScreen(SonicConfigurationService.createStandalone(tempDir));
         AtomicInteger opened = new AtomicInteger();
