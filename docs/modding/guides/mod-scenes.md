@@ -164,6 +164,23 @@ window polls during its frame wait, but rendering/OS scheduling can still delay
 observations. Choose one menu convention: ordinary raw pad A/B must not also be
 interpreted through their mapped Genesis aliases in the same update.
 
+## Continuous ROM music
+
+For exploration or other scenes that need the song's native intro, loops and ending,
+use `ctx.audio().playMusic("s1", 0x84)`. It starts Star Light directly from the supplied
+Sonic 1 ROM, without synthesizing a finite performance first. The boolean result is
+false on hosts without this capability or without that ROM; malformed IDs or ROM
+loading errors can throw. Request a track once per music-context change, not every
+update: the host deliberately allows an explicit repeat request to restart a song.
+
+The host routes the song through the shared ROM driver and scopes borrowed donor
+registrations to the scene. The ROM sequencer owns note timing and loop commands,
+while base-game sound effects remain audible. `stopMusic()`, `fadeOutMusic()` and
+a subsequent song request operate on that driver; final scene close restores its
+borrowed registrations. Retained native-act visits keep the scene's tempo setting.
+Finite `ctx.music()` playback has its own PCM clock and masks the driver while active;
+stop that player before returning to ordinary driver music.
+
 ## Timing-sensitive ROM music
 
 `ctx.music()` prepares finite ROM-synthesized playback with semantic note attacks:
@@ -396,6 +413,23 @@ canvas.draw(rhinobot.frame(0), 200, 120, SceneDraw.plain());
 - Bigger enemies are built from several frames at the offsets the original object uses
   for its children. Slay the Robotnik's `scene/EnemyVisuals.java` does this for every
   boss it shows, citing the disassembly tables.
+
+For a moving exploration view, retain `rom.levelBackground(zone, act)` and call
+`background.draw(canvas, cameraX, cameraY, ticks)` before your foreground. This creates an
+independent instance of the engine's stock scanline scroll handler, including ROM ripple
+tables and native vertical scrolling. Pass stock camera pixels without additional speed
+multipliers. It draws the complete 224-line canvas at native scale, wraps inside populated
+art, and shares the native Death Egg 1 widescreen wall extension. A repeated draw with the
+same inputs does not advance scroll state. Create a separate view for each independently
+moving scene; no background reads or changes the running level's camera, events or shake.
+
+Supported profiles are Sonic 1 Spring Yard and Star Light (all acts), Sonic 2 Emerald Hill,
+Chemical Plant and Mystic Cave (all acts), and S3K Angel Island, Hydrocity, Launch Base and
+Death Egg act 1. Unsupported acts return `null`; `SceneBackdrop` remains available for
+static postcard/window compositions. These are detached initial-art presentations, not
+live level simulations: gameplay-triggered art/palette changes and background tile
+animation remain outside this view. S3K Hydrocity uses its existing below-waterline art
+profile. AIZ uses its main-level art and its native `$1300` horizontal origin.
 
 For Sonic 3 & Knuckles, `rom.zoneBackdrop(zone, act)` returns a zone's background as a
 `SceneBackdrop`: one picture cut into horizontal bands with the stock parallax speeds, drawn

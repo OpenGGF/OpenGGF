@@ -28,6 +28,15 @@ import static com.openggf.level.scroll.M68KMath.*;
  * - Writes negated BG values into the per-scanline hscroll buffer
  */
 public class SwScrlAiz extends AbstractZoneScrollHandler {
+    private boolean detachedPresentation;
+
+    /** Fresh steady-state presentation; never consults or consumes live zone event state. */
+    public static SwScrlAiz detachedPresentation() {
+        var scroll = new SwScrlAiz();
+        scroll.detachedPresentation = true;
+        return scroll;
+    }
+
 
     private static final Logger LOG = Logger.getLogger(SwScrlAiz.class.getName());
 
@@ -161,7 +170,7 @@ public class SwScrlAiz extends AbstractZoneScrollHandler {
         // during its title card, but AIZ2_BackgroundInit dispatches AIZ2_Deform.
         boolean introMode = false;
         try {
-            introMode = actId == 0
+            introMode = !detachedPresentation && actId == 0
                     && !GameServices.camera().isLevelStarted()
                     && !AizPlaneIntroInstance.isMainLevelPhaseActive();
         } catch (Exception e) {
@@ -493,6 +502,7 @@ public class SwScrlAiz extends AbstractZoneScrollHandler {
      * Returns a value &ge; VISIBLE_LINES when there is no water on screen.
      */
     private int resolveWaterScreenY(int actId, int cameraY) {
+        if (detachedPresentation) return VISIBLE_LINES;
         try {
             WaterSystem ws = GameServices.water();
             if (ws != null && ws.hasWater(Sonic3kZoneIds.ZONE_AIZ, actId)) {
@@ -506,6 +516,7 @@ public class SwScrlAiz extends AbstractZoneScrollHandler {
     }
 
     private AizZoneRuntimeState resolveAizState() {
+        if (detachedPresentation) return null;
         try {
             return GameServices.hasRuntime()
                     ? S3kRuntimeStates.currentAiz(GameServices.zoneRuntimeRegistry()).orElse(null)

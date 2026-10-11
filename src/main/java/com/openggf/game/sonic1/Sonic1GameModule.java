@@ -330,6 +330,14 @@ public class Sonic1GameModule implements GameModule {
                         if (act < 0 || act >= acts.size()) return null;
                         int levelIndex = acts.get(act).levelIndex();
                         return () -> new Sonic1(rom).buildDetachedLevel(levelIndex);
+                    }).withBackgrounds((zone, act, kit) -> {
+                        com.openggf.level.scroll.ZoneScrollHandler scroll = switch (zone) {
+                            case 2 -> new com.openggf.game.sonic1.scroll.SwScrlSyz();
+                            case 4 -> new com.openggf.game.sonic1.scroll.SwScrlSlz();
+                            default -> null;
+                        };
+                        return scroll == null ? null : new com.openggf.level.render.DetachedBackground(
+                                kit.backdrop().picture(), scroll, act, 512, 512);
                     });
         }
         if (type == S1DataSelectImageCacheManager.class) return (T) getDataSelectImageCacheManager();
