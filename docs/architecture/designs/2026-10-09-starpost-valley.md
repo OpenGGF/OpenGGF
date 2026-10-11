@@ -2965,3 +2965,27 @@ share SHA-256
 (frames 528–887), showing the hand prop, its bar icon and movement between plots.
 Capture inputs, driver and final export verification are recorded with the
 capture provenance.
+
+
+### PR #220 source-guard correction (2026-10-11)
+
+CI run `38155304613`, at PR head `87f73c31d`, failed only
+`TestModZoneLoader.sharedModZoneSelectionContainsNoRawGameNameBranch`:
+`ModBackedGamePatch.usesHostS2Rom` introduced the raw `"s2"` literal while
+preserving the legacy open-host ROM-art path. Use `GameId.S2.code()` for that
+existing match. Its value remains `"s2"`; the comparison retains its exact
+case-sensitive and null-safe behavior. No zone selection, ROM prerequisites,
+art decoding, gameplay behavior or public API changes.
+
+The exact four source-presence assertions from the existing regression pass
+for both production files after the replacement. Java 21 build validation,
+`python3 tools/testing/maven_queue.py -Dmse=off compile`, completes successfully.
+The queued lean reproduction and ROM-art JUnit requests were canceled before
+admission; they establish no local JUnit pass. PR CI supplies the subsequent
+ordinary/guard regression run.
+
+The unchanged change-based plan against `87f73c31d` selects 3,091 classes,
+including the independent local farming edits. Proportionate local validation
+covers this canonical-identifier substitution with the actual source guard
+and compilation; broader local engine execution is not claimed. The farming
+edits stay outside this PR-review commit.

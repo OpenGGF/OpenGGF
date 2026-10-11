@@ -1,5 +1,6 @@
 package com.openggf.mods.code;
 
+import com.openggf.game.GameId;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
 import com.openggf.game.patch.GamePatch;
@@ -79,7 +80,7 @@ public final class ModBackedGamePatch implements GamePatch {
     }
 
     private static boolean usesHostS2Rom(LogicalRom source, String baseGameId) {
-        return source == LogicalRom.S2 && "s2".equals(baseGameId);
+        return source == LogicalRom.S2 && GameId.S2.code().equals(baseGameId);
     }
 
     public ModBackedGamePatch(ModRegistrationPlan plan) {
