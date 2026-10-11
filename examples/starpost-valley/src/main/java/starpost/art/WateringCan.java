@@ -35,7 +35,7 @@ public final class WateringCan {
 
     /** A short lift, tip, pour and recovery, anchored to the ROM standing frame's front hand. */
     public void draw(SceneCanvas canvas, String farmer, int age, float x, float feet,
-            boolean left, SceneDraw tint) {
+            boolean left, float targetX, float targetY, SceneDraw tint) {
         if (age < 0 || age >= TICKS) return;
         int direction = left ? -1 : 1;
         float handForward = farmer.equals("knuckles") ? 8 : 6;
@@ -45,12 +45,13 @@ public final class WateringCan {
         SceneDraw style = tint.withFlipX(left);
         if (age >= 29) style = style.withAlpha((TICKS - age) / 3f);
         canvas.draw(poses[pose], handX, handY, style);
-        // The tipped spout is twelve pixels forward and two below the grip.
+        // Fall from the tipped spout onto the actual facing plot, even near a tile edge.
         if (age >= 8 && age < 27) {
             for (int i = 0; i < 5; i++) {
-                int fall = Math.floorMod(age - 8 + i * 3, 14);
-                float dropX = handX + direction * (12 + fall * 0.15f + i % 3 - 1);
-                float dropY = handY + 2 + fall;
+                float fall = Math.floorMod(age - 8 + i * 3, 14) / 13f;
+                float spoutX = handX + direction * 12, spoutY = handY + 2;
+                float dropX = spoutX + (targetX - spoutX) * fall + i % 3 - 1;
+                float dropY = spoutY + (targetY - spoutY) * fall;
                 canvas.draw(drop, Math.round(dropX), Math.round(dropY), tint);
             }
         }

@@ -2,6 +2,7 @@ package com.openggf.mods.code;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -44,6 +45,125 @@ class TestStarpostValleyScene {
         if (level != null) {
             level.dispose();
         }
+    }
+
+    @Test
+    void wateringCanWatersTheFacingTileInsteadOfHarvestingUnderfoot() throws Exception {
+        level = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+        try (ExampleModHarness harness = ExampleModHarness.build(PROJECT, work.resolve("build"))) {
+            harness.open(harness.apply(GameServices.module()), work.resolve("saves"), 400, 224);
+            assumeTrue(harness.debugJump("new sonic"), "Sonic 1 was not supplied");
+            for (String farmer : new String[] {"sonic", "tails", "knuckles"}) {
+                for (boolean left : new boolean[] {false, true}) {
+                    for (int withinTile : new int[] {1, 8, 15}) {
+                        Object game = prepareFarm(harness, farmer, 208 + withinTile, left);
+                        Object farm = member(game, "farm");
+                        Object underfoot = plot(farm, 1, 2);
+                        Object ahead = plot(farm, 1, left ? 1 : 3);
+                        for (Object crop : new Object[] {underfoot, ahead}) {
+                            crop.getClass().getField("crop").set(crop, "ring_radish");
+                            crop.getClass().getField("age").setInt(crop, 99);
+                        }
+                        harness.press(org.lwjgl.glfw.GLFW.GLFW_KEY_X);
+                        assertTrue((boolean) member(ahead, "watered"), farmer + " facing " + (left ? "left" : "right"));
+                        assertFalse((boolean) member(underfoot, "watered"), "the tile underfoot stays dry");
+                        assertEquals("ring_radish", member(underfoot, "crop"), "no harvest underfoot");
+                        assertEquals("ring_radish", member(ahead, "crop"), "the can waters even a ripe crop");
+                        assertEquals(9, member(game, "waterCharges"), "one charge per pour");
+                        Object further = plot(farm, 1, left ? 0 : 4);
+                        assertEquals(farmer.equals("tails"), member(further, "watered"), "Tails fans forward from the target");
+                        play(harness, 32);
+                        assertEquals(Map.of(), harness.findings());
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    void wateringAtFieldEdgesOrInvalidTargetsNeverFallsBackUnderfoot() throws Exception {
+        level = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+        try (ExampleModHarness harness = ExampleModHarness.build(PROJECT, work.resolve("build"))) {
+            harness.open(harness.apply(GameServices.module()), work.resolve("saves"), 400, 224);
+            assumeTrue(harness.debugJump("new sonic"), "Sonic 1 was not supplied");
+            Object game = prepareFarm(harness, "sonic", 168, false);
+            Object farm = member(game, "farm");
+            harness.press(org.lwjgl.glfw.GLFW.GLFW_KEY_X);
+            assertTrue((boolean) member(plot(farm, 1, 0), "watered"), "first tile is reachable from beside the field");
+            assertEquals(9, member(game, "waterCharges"));
+
+            for (int x : new int[] {184, 552, 1128}) {
+                game = prepareFarm(harness, "sonic", x, x == 184);
+                farm = member(game, "farm");
+                int column = (x - 176) / 16;
+                Object standing = farm.getClass().getMethod("raw", int.class, int.class).invoke(farm, 1, column);
+                standing.getClass().getField("tilled").setBoolean(standing, true);
+                standing.getClass().getField("cover").setInt(standing, 0); // GRASS: a fallback really could water it.
+                harness.press(org.lwjgl.glfw.GLFW.GLFW_KEY_X);
+                assertEquals(10, member(game, "waterCharges"), "outside/locked targets spend nothing");
+                assertFalse((boolean) member(standing, "watered"), "no underfoot fallback at " + x);
+            }
+            for (String refusal : new String[] {"untilled", "wet", "empty", "object"}) {
+                game = prepareFarm(harness, "sonic", 216, false);
+                farm = member(game, "farm");
+                Object target = plot(farm, 1, 3);
+                if (refusal.equals("untilled")) target.getClass().getField("tilled").setBoolean(target, false);
+                if (refusal.equals("wet")) target.getClass().getField("watered").setBoolean(target, true);
+                if (refusal.equals("empty")) game.getClass().getField("waterCharges").setInt(game, 0);
+                if (refusal.equals("object")) target.getClass().getField("object").set(target, "item_monitor");
+                harness.press(org.lwjgl.glfw.GLFW.GLFW_KEY_X);
+                assertEquals(refusal.equals("empty") ? 0 : 10, member(game, "waterCharges"), refusal);
+                assertEquals(refusal.equals("wet"), member(target, "watered"), refusal);
+                assertFalse((boolean) member(plot(farm, 1, 2), "watered"), "no underfoot fallback");
+                play(harness, 2);
+                assertEquals(Map.of(), harness.findings());
+            }
+        }
+    }
+
+    @Test
+    void plantingStillUsesTheTileUnderfootAndThePondStillRefillsTheCan() throws Exception {
+        level = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+        try (ExampleModHarness harness = ExampleModHarness.build(PROJECT, work.resolve("build"))) {
+            harness.open(harness.apply(GameServices.module()), work.resolve("saves"), 400, 224);
+            assumeTrue(harness.debugJump("new sonic"), "Sonic 1 was not supplied");
+            Object game = prepareFarm(harness, "sonic", 216, false);
+            step(harness, "select 1", 1);
+            harness.press(org.lwjgl.glfw.GLFW.GLFW_KEY_X);
+            Object farm = member(game, "farm");
+            assertEquals("ring_radish", member(plot(farm, 1, 2), "crop"));
+            assertNull(member(plot(farm, 1, 3), "crop"));
+            step(harness, "select 0", 1);
+            game.getClass().getField("waterCharges").setInt(game, 0);
+            step(harness, "farm 100 38", 1);
+            harness.press(org.lwjgl.glfw.GLFW.GLFW_KEY_X);
+            assertEquals(member(game, "waterCapacity"), member(game, "waterCharges"));
+            assertEquals(Map.of(), harness.findings());
+        }
+    }
+
+    private static Object prepareFarm(ExampleModHarness harness, String farmer, int x, boolean left) throws Exception {
+        step(harness, "new " + farmer, 1);
+        step(harness, "close", 1);
+        step(harness, "farm " + x + " 22", 1);
+        Object shell = shell(harness);
+        Object screen = shell.getClass().getMethod("screen").invoke(shell);
+        Object runner = member(screen.getClass().getMethod("farm").invoke(screen), "runner");
+        runner.getClass().getField("facingLeft").setBoolean(runner, left);
+        Object game = member(shell, "game");
+        for (int column = 0; column < 6; column++) {
+            Object plot = plot(member(game, "farm"), 1, column);
+            plot.getClass().getField("tilled").setBoolean(plot, true);
+        }
+        return game;
+    }
+
+    private static Object member(Object object, String name) throws Exception {
+        return object.getClass().getField(name).get(object);
+    }
+
+    private static Object plot(Object farm, int row, int column) throws Exception {
+        return farm.getClass().getMethod("plot", int.class, int.class).invoke(farm, row, column);
     }
 
     @Test

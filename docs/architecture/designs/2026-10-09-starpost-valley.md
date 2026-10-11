@@ -2966,6 +2966,76 @@ share SHA-256
 Capture inputs, driver and final export verification are recorded with the
 capture provenance.
 
+### Facing-tile watering correction (2026-10-11)
+
+The user observed that the can should water the tile in front of the farmer.
+The first prop implementation still dispatched the action to `plotUnderfoot()`;
+its spout already pointed ahead, so the wet soil and picture disagreed. The can
+now selects the adjacent column in the facing direction, in the same field row.
+The target marker uses that same selection. It can reach the first tile while
+standing beside the field, but never falls back underfoot at the field boundary,
+on unopened land or when the facing tile cannot be watered.
+
+Watering dispatch precedes harvesting/object use when the can is selected, so a
+ripe crop stays planted and a placed chest is not opened by the watering action.
+Planting and the other abilities keep their underfoot selection; pond refill and
+existing charge costs stay the same. Tails's second tile follows onward from the
+facing target. The pour remembers its actual row/column/direction; droplets land
+inside that plot even when standing near a tile edge. Turning away ends the prop
+instead of retargeting an already completed action.
+
+A production scene regression was first run against `87f73c31d` and failed with
+`sonic facing right: expected true but was false` for the ahead plot. After the
+fix, queued lean `TestStarpostValleyScene,TestStarpostValleyExample` passes
+**6 engine-facing JUnit tests, zero failures/errors/skips**, in 35.132 seconds,
+plus **197 creator tests**, all successful. The three added scene checks exercise
+actual X press/release input, all three farmers in both directions at three
+within-tile offsets, dry/ripe target crops, Tails reach, outside/locked edges,
+wet/empty/untilled/occupied targets, planting and pond refill. The existing
+year-of-screens smoke still passes. `build_example.py starpost-valley
+--skip-engine` packages the final mod with **zero creator findings**.
+
+The unchanged runner plan against `87f73c31dbd5763eb62e2bbba3ae24a98a4b8ce7`
+selects 3,091 ordinary classes through its example fallback. Proportionate
+validation replaces that broad rerun: only the example's farm targeting/drawing
+and its regression tests change, with no shared engine timing, physics or public
+API change. The affected input/action, field bounds, character breadth and
+packaging paths are covered directly. Earlier broad/guard results remain dated
+evidence above, not new passes on this correction.
+
+New production captures are at `watering-can/front-tile/` and
+`promo-polish/grow-can-forward/`. The observer CSV includes the actual action
+target and wet plots, without using those observations to supply gameplay state.
+Input-only serpentine steering waters exactly rows 1–3/columns 0–2 at frames
+533, 629, 725, 821, 917, 1013, 1109, 1205 and 1301, spending one charge each.
+The corrected isolated check records a right-facing dry→wet transition at 57
+and a left-facing one at 172, a wet retry without another spent charge, and an
+empty-can refusal. All takes finish with zero creator faults. The first isolated
+demo setup targeted already-wet cells and established no pour; its corrected
+dry-column-2 setup, not that initial take, supplies the evidence. Inputs, driver,
+native PNG/CSV/PCM and the preceding edit/video are retained in the task directory.
+The trailer uses the new farming picture and SFX while keeping the same edit
+timing, 65% music and seasonal/transition effects. Final media verification and
+artifact hashes are recorded in its capture README.
+
+The final boundary fixture explicitly clears underfoot cover, making a bad
+fallback capable of watering it. Production code remained frozen after the
+six-test/197-creator pass. The final scene test class compiles, and a separate
+220-frame production take (`front-tile/bounds/`, input `bounds.txt`) exercises
+those stronger preconditions: facing outside the first column and beyond opened
+land leaves clear tilled underfoot soil dry with all ten charges (frames 55/115);
+watering the first tile from beside the field spends one charge and wets only
+that tile (frame 184). It finishes without creator faults.
+
+Two additional queued Maven requests were cancelled before admission; an
+unrelated serial baseline occupied the repository queue. The temporary detached
+cowtree at `87f73c31d` excluded an unrelated `ModBackedGamePatch` enum refactor
+but could not bypass the global serial lease. The strengthened fixture's direct
+compilation and production-capture checks replace that redundant rerun; no extra
+JUnit pass is inferred. The unrelated engine edit is preserved and excluded from
+this task's commit. The isolated checkout contains only accounted task copies
+and generated outputs and is removed after recording this evidence.
+
 
 ### PR #220 source-guard correction (2026-10-11)
 

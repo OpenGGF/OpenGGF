@@ -17,6 +17,9 @@ effects at normal speed. The calmer pace follows the valley's native acts and re
 when you leave the mod. The jar holds code plus a few original
 pictures of crops, fish, seed packets, food and the watering can. The can appears only
 when watering succeeds: it tips at the farmer's hand and pours falling droplets.
+It waters the adjacent tile in the direction the farmer faces; the target marker
+and droplets point to that tile. Planting, harvesting and other abilities work
+underfoot. Tails fans a charge onward from the tile in front of him.
 Its sprite also appears on the hotbar; Fire and Lightning keep the ROM's shield
 icons, and tilling stays the farmer's spin dash.
 

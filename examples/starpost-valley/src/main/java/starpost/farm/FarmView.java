@@ -77,6 +77,8 @@ public final class FarmView {
     private int lastActionColumn = -1;
     private long wateredAt = -100;
     private float wateredX, wateredFeet;
+    private int wateredRow, wateredColumn;
+    private boolean wateredLeft;
     private final Anim anim = new Anim();
     private final starpost.art.Dust dust;
     private final starpost.art.TailsTails tails;
@@ -272,7 +274,7 @@ public final class FarmView {
         return LOOP_CY + (float) Math.cos(loopAngle) * LOOP_R;
     }
 
-    /** The action button: work the plot underfoot, or use the signpost. */
+    /** The action button: water ahead, work underfoot with other abilities, or use the signpost. */
     private Request act(Game game) {
         // The signpost first: a neighbour standing beside it must not stop the shipping.
         if (Math.abs(runner.x - SIGNPOST_X) < 18 && runner.depth < 22) {
@@ -292,7 +294,7 @@ public final class FarmView {
             }
             return Request.NONE;
         }
-        int[] rc = plotUnderfoot();
+        int[] rc = actionPlot();
         if (rc == null) {
             return Request.NONE;
         }
@@ -302,11 +304,43 @@ public final class FarmView {
             shell.sfx(Sfx.ERROR);
             return Request.NONE;
         }
+        if (holdingCan()) {
+            water(game, plot, rc[0], rc[1]);
+            return Request.NONE;
+        }
         if (plot.object != null) {
             return useObject(game, plot, rc[0], rc[1]);
         }
         work(game, plot, rc[0], rc[1]);
         return Request.NONE;
+    }
+
+    /** A can only waters its facing plot; ripe crops and placed objects are not other actions. */
+    private void water(Game game, Plot plot, int row, int column) {
+        if (!plot.tilled || plot.cover != Plot.GRASS || plot.object != null) {
+            shell.sfx(Sfx.ERROR);
+        } else if (game.waterCharges <= 0) {
+            shell.toast("THE WATERING CAN IS EMPTY. REFILL AT WATER.");
+            shell.sfx(Sfx.ERROR);
+        } else if (!plot.watered && spend(game, 1)) {
+            plot.watered = true;
+            game.waterCharges--;
+            // Tails's two tails fan the same charge onward from the plot in front of him.
+            for (int i = 1; i < Farmers.waterReach(game.farmer); i++) {
+                Plot next = game.farm.plot(row, column + (runner.facingLeft ? -i : i));
+                if (next != null && next.tilled && next.object == null) {
+                    next.watered = true;
+                }
+            }
+            shell.sfx(Sfx.SPLASH);
+            marked(row, column);
+            wateredAt = shell.ticks;
+            wateredX = runner.x;
+            wateredFeet = feetY();
+            wateredRow = row;
+            wateredColumn = column;
+            wateredLeft = runner.facingLeft;
+        }
     }
 
     /** A placed object underfoot: the Fire Shield knocks it loose; otherwise it is used (chests open). */
@@ -414,30 +448,6 @@ public final class FarmView {
                 game.inventory.useOne(game.inventory.selected());
                 shell.sfx(Sfx.SWITCH);
                 marked(row, column);
-            }
-            return;
-        }
-        if (held != null && held.id().equals("water_shield")) {
-            if (!plot.tilled) {
-                shell.sfx(Sfx.ERROR);
-            } else if (game.waterCharges <= 0) {
-                shell.toast("THE WATERING CAN IS EMPTY. REFILL AT WATER.");
-                shell.sfx(Sfx.ERROR);
-            } else if (!plot.watered && spend(game, 1)) {
-                plot.watered = true;
-                game.waterCharges--;
-                // Tails's two tails fan the same charge over the next plot on.
-                for (int i = 1; i < Farmers.waterReach(game.farmer); i++) {
-                    Plot next = game.farm.plot(row, column + (runner.facingLeft ? -i : i));
-                    if (next != null && next.tilled && next.object == null) {
-                        next.watered = true;
-                    }
-                }
-                shell.sfx(Sfx.SPLASH);
-                marked(row, column);
-                wateredAt = shell.ticks;
-                wateredX = runner.x;
-                wateredFeet = feetY();
             }
             return;
         }
@@ -585,7 +595,20 @@ public final class FarmView {
 
     /** {row, column} of the plot under the farmer's feet, or null outside the field. */
     public int[] plotUnderfoot() {
-        int column = (int) Math.floor((runner.x - FIELD_X) / 16f);
+        return plotAt(runner.x);
+    }
+
+    private boolean holdingCan() {
+        return "water_shield".equals(shell.game.inventory.selectedId());
+    }
+
+    /** Use the same plot for the action and its visible target marker. */
+    private int[] actionPlot() {
+        return plotAt(runner.x + (holdingCan() ? (runner.facingLeft ? -16 : 16) : 0));
+    }
+
+    private int[] plotAt(float x) {
+        int column = (int) Math.floor((x - FIELD_X) / 16f);
         int row = Math.round((feetY() - ROW_Y) / (float) ROW_STEP);
         if (column < 0 || column >= Farm.COLUMNS || row < 0 || row >= Farm.ROWS) {
             return null;
@@ -629,6 +652,7 @@ public final class FarmView {
         long age = shell.ticks - wateredAt;
         return age >= 0 && age < starpost.art.WateringCan.TICKS && chargeTicks == 0
                 && !looping && !dashing && !runner.rolling && runner.height == 0
+                && runner.facingLeft == wateredLeft
                 && Math.abs(runner.x - wateredX) < 2 && Math.abs(feetY() - wateredFeet) < 2;
     }
 
@@ -753,7 +777,7 @@ public final class FarmView {
     }
 
     private void drawCursor(SceneCanvas canvas, int cx) {
-        int[] rc = plotUnderfoot();
+        int[] rc = actionPlot();
         if (rc == null || shell.game.farm.plot(rc[0], rc[1]) == null) {
             return;
         }
@@ -849,7 +873,8 @@ public final class FarmView {
         canvas.draw(pose, x, originY, style);
         if (pouring()) {
             shell.art.wateringCan.draw(canvas, shell.game.farmer, (int) (shell.ticks - wateredAt),
-                    x, ground, runner.facingLeft, tint);
+                    x, ground, wateredLeft, FIELD_X + wateredColumn * 16 + 8 - cx,
+                    ROW_Y + wateredRow * ROW_STEP - 3, tint);
         }
         SceneSpriteSet puffs = shell.art.dust(shell.game.farmer);
         dust.drawDash(canvas, puffs, x, originY, runner.facingLeft, tint);
