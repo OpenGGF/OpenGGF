@@ -4278,3 +4278,15 @@ or enlargement can cover native foreground gloves. Keep per-draw body/head/limb
 ordering, terrain-priority partitions and repeated-enemy fragment banks distinct.
 A glove-shaped hole in source art is real occlusion, not missing mask pixels;
 never invent hidden art to make a contact sheet look complete.
+
+### Clearing display variables does not isolate desktop services
+
+The 2026-10-11 Big Head round found that the canonical baseline's legacy GLFW
+harness ignores the feature's explicit EGL property. Clearing DISPLAY and
+WAYLAND_DISPLAY left XDG_RUNTIME_DIR pointing at the desktop, and the owned
+Surefire JVM still connected to PipeWire. The run was stopped and acknowledged
+as incomplete. For unattended validation, deny desktop sockets with a task-owned
+runtime directory and audio backend; verify the actual backend rather than the
+property name. Legacy baseline graphics may require a separate authenticated
+virtual framebuffer, never the user's display. Keep that server's ownership and
+cleanup bounded. The feature's explicit EGL captures do not need it.

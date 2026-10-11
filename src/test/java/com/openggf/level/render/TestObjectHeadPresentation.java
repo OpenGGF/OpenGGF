@@ -84,6 +84,58 @@ class TestObjectHeadPresentation {
                 new SpritePresentation.Subject("enemy",SpritePresentation.Part.OBJECT_BODY,false,scale),
                 ()->renderer.drawFrameIndex(frame,x,100,flip,false)));
     }
+
+    @Test @RequiresRom(SonicGame.SONIC_3K)
+    void rotatedMouseHeadsKeepTheirNativeBaseAndSeparateAppendagesStayStock() throws Exception {
+        var graphics=GraphicsManager.getInstance(); graphics.initHeadless(); graphics.discardQueuedCommands();
+        var art=new com.openggf.game.sonic3k.Sonic3kObjectArt(null,RomByteReader.fromRom(TestEnvironment.currentRom()));
+        for (String key:new String[]{"mgz_mantis","fbz_technosqueek"}) {
+            int zone=key.equals("mgz_mantis")?2:4,act=key.equals("mgz_mantis")?1:0;
+            var entry=com.openggf.game.sonic3k.Sonic3kPlcArtRegistry.getPlan(zone,act).standaloneArt().stream()
+                    .filter(e->e.key().equals(key)).findFirst().orElseThrow();
+            var sheet=art.loadStandaloneSheet(TestEnvironment.currentRom(),entry);
+            var renderer=new PatternSpriteRenderer(sheet,graphics);
+            renderer.ensurePatternsCached(graphics,0x10000);
+            int[] appendages=key.equals("mgz_mantis")?new int[]{4,5}:new int[]{2,3,4,7,8,9};
+            for(int i:appendages) {
+                var stock=frame(graphics,renderer,i,100,false,100);
+                var selected=frame(graphics,renderer,i,100,false,200);
+                assertTrue(headIds(selected).isEmpty(),key+" native appendage "+i);
+                assertEquals(nativeGeometry(stock),nativeGeometry(selected),
+                        "no head transform on an appendage-only mapping");
+            }
+            if(key.equals("fbz_technosqueek")) for(int i:new int[]{0,1,5,6}) {
+                var stock=frame(graphics,renderer,i,100,false,100);
+                var selected=frame(graphics,renderer,i,100,false,200);
+                assertFalse(headIds(selected).isEmpty(),"horizontal and vertical parent heads "+i);
+                for(int offset=-12;offset<12;offset++) {
+                    int x=i<5?100+offset:92,y=i<5?107:100+offset;
+                    assertEquals(indexedAt(sheet,stock,x,y),indexedAt(sheet,selected,x,y),
+                            "native base remains fixed for orientation "+i);
+                }
+            }
+        }
+        graphics.discardQueuedCommands();
+    }
+
+    private int indexedAt(com.openggf.level.objects.ObjectSpriteSheet sheet,SpritePresentation.Frame frame,int x,int y) {
+        int value=0;
+        for(var tile:frame.tiles()) {
+            if(x<tile.x()||x>=tile.x()+tile.width()||y<tile.y()||y>=tile.y()+tile.height())continue;
+            var version=frame.patternVersions().get(tile.patternId());
+            var pattern=version==null?sheet.getPatterns()[tile.patternId()-0x10000]:SpritePresentationRenderer.pattern(version);
+            int px=Math.min(7,(int)((x-tile.x())*8/tile.width()));
+            int py=Math.min(7,(int)((y-tile.y())*8/tile.height()));
+            int sample=pattern.getPixel(tile.hFlip()?7-px:px,tile.vFlip()?7-py:py)&15;
+            if(sample!=0)value=sample;
+        }
+        return value;
+    }
+
+    private java.util.List<java.util.List<Object>> nativeGeometry(SpritePresentation.Frame frame) {
+        return frame.tiles().stream().map(t->java.util.List.<Object>of(t.patternId(),t.x(),t.y(),
+                t.width(),t.height(),t.hFlip(),t.vFlip(),t.priority())).toList();
+    }
     private Set<Integer> headIds(SpritePresentation.Frame frame) {
         return frame.tiles().stream().filter(t->t.width()!=8).map(SpritePresentation.Tile::patternId).collect(Collectors.toSet());
     }

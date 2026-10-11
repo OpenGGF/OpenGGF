@@ -1410,11 +1410,70 @@ cut off the muzzle. Interleaved body/head tiles also erased enlarged head edges;
 composition now completes each draw's body, head, then foreground limbs without
 crossing actors, priority partitions or intervening native primitives. The initial
 112px review cells cropped valid 200% poses and were enlarged to 160px. Mapping
-index order also exposed stale no-upload DPLC banks, so maintained CPU tooling
+index order can expose stale no-upload DPLC banks, so maintained CPU tooling
 exports native animation sequences from fresh banks separately from diagnostic
-mapping inventories. Super Sonic shape review uses its actual art bank; the CPU
+mapping inventories. All 249 reviewed native scripts matched the stock pixels
+of their mapping inventories; that hazard was not observed in these sequences. Super Sonic shape review uses its actual art bank; the CPU
 inventory's ordinary Sonic colours do not certify powered palette cycling.
 
-Verification and final destination composition: pending completion of this round.
-All visual authoring is CPU-only or explicit surfaceless EGL. No shared display,
-keyboard focus, input device or audio device is used.
+### Visual and composition evidence prepared for final validation
+
+The private candidate preserves original feature ancestry and intent-merges actual
+published develop `765ec853360432fefb41e105a1ea2cc7b539e4d2` at
+`554f5b1721f5d397ac115dece429135372d1862f`. Incoming detached scene background/live
+ROM music contracts and the Big Head contracts are both retained. Fresh compiled
+API export has 17,798 normalized lines and equals the composed candidate pin.
+This is compiled-surface evidence; subsequent SDK/broad outcomes are recorded
+separately, without turning a build-only result into test coverage.
+
+The seven native player banks contain 1,445 mappings: 1,327 masked, 71 curled-ball
+stock, 29 headless/appendage-only, seven glove-occluded stock, four unsupported
+Super Sonic mappings and seven empty. The four Super Sonic mappings (BC/BF/C2/C7)
+produce malformed art through the native loader in the CPU review, including
+fresh animation-sequence review; their cause is not attributed to the shipped
+ROM. They remain unscaled. No powered palette-cycling certification is claimed.
+All 249 native script sequences produced stock pixels identical to their
+corresponding mapping inventory; the mapping-order hazard was investigated,
+not established as the cause of those four malformed frames.
+
+Fifty-five native object banks classify 490 mappings: 241 masks, 243 unsupported
+machinery/appendage/unreviewed mappings and six empty. CPU stock/composite review
+uses diagnostic indexed colours. A final inspection identified Mantis child
+appendages and TechnoSqueek motion trails incorrectly selected as heads; those
+stay native. TechnoSqueek's actual horizontal and vertical parent heads now use
+orientation-specific contours/anchors. Tests compare native base pixels and
+appendage geometry, rather than checking metadata counts alone.
+
+Explicit surfaceless EGL capture at 320x224 (DISPLAY/WAYLAND_DISPLAY unset) shows
+all four Afflicts checkboxes together and Sonic/Tails enlarged in native play.
+A separate S2 EHZ2 encounter compares Bosses off/on with Player, Sidekicks and
+Badniks off: 480 gameplay rows are identical, while 11 sampled render frames
+differ over Robotnik's head. Actual frame 320 retains the native vehicle, wheels
+and Sonic. The rejected first entry was below the floor and died before boss
+admission; it provides no encounter proof. No desktop window, input/focus or
+physical audio device was used. These checks do not certify every boss encounter.
+
+Task-local commands, inputs, JSON inventories, contact pages and captures are
+outside Git in `${TASK_CAPTURE_ROOT}/big-head-polish-20261011`.
+The maintained CPU inventory commands are `ggfmod head-inventory` and
+`ggfmod object-head-inventory`, using original absolute ROM filenames.
+
+Focused composed verification uses the normal queue, original absolute ROM
+properties and a private runtime directory with desktop sockets denied, explicit
+EGL and the null OpenAL backend. Fourteen fresh suites selected by thirteen simple
+class names passed 131 cases with zero failures, errors or skips; both native
+`TestSonic3kLevelLoading` suites ran. This includes the four mandatory S3K checks,
+player/object anatomy, migration/menu/world targeting and API/Javadoc/SDK tests.
+The `verify` phase built and validated the current SDK/Javadoc artifacts. Fresh
+compiled export is exactly the 17,798-line pin (SHA-256
+`a8438513d0f9923e6ce0a5041498de53dce6771ab834318923fb63844aff7c72`).
+Normal compiled CPU inventories regenerate every player mapping/animation and
+all 55 reviewed object-bank sheets without clipping.
+
+The first full baseline invocation was intentionally interrupted and acknowledged
+as incomplete: its older harness ignores the EGL property and reached PipeWire
+despite DISPLAY/WAYLAND_DISPLAY being unset. The replacement denies desktop/audio
+sockets and uses an authenticated task-owned Xvfb server for legacy GLFW captures;
+a native two-frame baseline capture passed before restart. It does not use the
+user's display, input or audio devices. The feature's authored visual captures
+remain explicit surfaceless EGL. Full baseline/candidate comparison is pending.

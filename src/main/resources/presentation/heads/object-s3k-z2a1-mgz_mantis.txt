@@ -5,5 +5,6 @@ fingerprint=865b85bbf8dcb49468acc6efcb43285ec185ee7e59de2f49007eabd5b18fcfcf
 01 MASKED 0 -6 0,1,2 -13,-27;10,-27;10,-6;-13,-6
 02 MASKED 0 -6 0,1,2,3,4,5,6 -13,-27;10,-27;10,-6;-13,-6
 03 MASKED 0 -6 0,1,2 -13,-27;10,-27;10,-6;-13,-6
-04 MASKED 0 -6 0 -13,-27;10,-27;10,-6;-13,-6
-05 MASKED 0 -6 0 -13,-27;10,-27;10,-6;-13,-6
+# Child mapping frames contain only the separate appendage, not another head.
+04 UNSUPPORTED
+05 UNSUPPORTED
