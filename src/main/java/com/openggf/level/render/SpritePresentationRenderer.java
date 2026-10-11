@@ -68,7 +68,9 @@ public final class SpritePresentationRenderer {
             for (int bucket = com.openggf.graphics.RenderPriority.MAX; bucket >= com.openggf.graphics.RenderPriority.MIN; bucket--) {
                 for (int i = entries.size() - 1; i >= 0; i--) {
                     var entry = entries.get(i); if (entry.priorityBucket() != bucket) continue;
-                    SpritePresentation.layer(graphics, entry.presentationSubject().part() == SpritePresentation.Part.WORLD ? Layer.OBJECT : Layer.PLAYER);
+                    var part=entry.presentationSubject().part();
+                    SpritePresentation.layer(graphics, part == SpritePresentation.Part.WORLD
+                            || part == SpritePresentation.Part.OBJECT_BODY ? Layer.OBJECT : Layer.PLAYER);
                     if (entry.presentationSubject().head() != null)
                         SpritePresentation.bindPatternVersions(graphics, entry.presentationSubject().head().patterns());
                     graphics.setCurrentSpriteHighPriority(entry.globalHighPriority());

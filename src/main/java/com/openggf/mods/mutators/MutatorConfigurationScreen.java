@@ -188,9 +188,9 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         if (MenuInput.accept(input)) activate(selected);
         // Pointer uses the same native grid and the same actions as keyboard/controller controls.
         var pointer = MenuInput.pointer(input, width(), 224);
-        int top = rowsTop(), height = rowHeight(), first = firstVisibleRow(), count = Math.min(capacity(), choices.size()-first);
+        int top = rowsTop(), height = rowHeight(), first = firstVisibleRow(), count = visibleCount(choices,first);
         if (pointer.leftPressed()) for (int i=0;i<count;i++) {
-            if (pointer.over(rowLeft(),top+i*height,rowWidth(),height)) {
+            if (pointer.over(rowLeft(),rowY(choices, first, first+i, top),rowWidth(),height)) {
                 row=first+i; activate(choices.get(row)); break;
             }
         }
@@ -316,9 +316,40 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
     private int rowLeft() { return homeCard() ? (width()-cardWidth())/2+6 : left()+5; }
     private int rowWidth() { return homeCard() ? cardWidth()-12 : panelWidth()-10; }
     private int rowsTop() { return homeCard() ? HOME_TOP+26 : page==Page.HELP ? 176 : 58; }
-    private int rowHeight() { return homeCard() ? HOME_ROW : page==Page.HELP ? 15 : 24; }
-    private int capacity() { return page==Page.HOME?3:5; }
-    private int firstVisibleRow() { return Math.max(0,row-capacity()+1); }
+    private boolean groupedOptions() {
+        return page==Page.OPTIONS && definition(selectedKey).definition().options().stream()
+                .anyMatch(option -> option instanceof MutatorOption.Checkbox check && !check.group().isBlank());
+    }
+    private int rowHeight() { return homeCard() ? HOME_ROW : page==Page.HELP || groupedOptions() ? 15 : 24; }
+    private int capacity() { return page==Page.HOME?3:groupedOptions()?7:5; }
+    private int firstVisibleRow() {
+        int first=Math.max(0,row-capacity()+1);
+        if (groupedOptions()) {
+            var visible=rows();
+            while (first<row && rowY(visible,first,row,rowsTop())+rowHeight()>DETAIL_TOP-3) first++;
+        }
+        return first;
+    }
+    private int visibleCount(List<Row> visible,int first) {
+        int count=Math.min(capacity(),visible.size()-first);
+        if (groupedOptions()) while (count>1
+                && rowY(visible,first,first+count-1,rowsTop())+rowHeight()>DETAIL_TOP-3) count--;
+        return count;
+    }
+    private String group(Row item) {
+        if (item.option()==null) return "";
+        var option=definition(item.key()).definition().option(item.option());
+        return option instanceof MutatorOption.Checkbox check ? check.group() : "";
+    }
+    private boolean groupStarts(List<Row> visible,int first,int index) {
+        String label=group(visible.get(index));
+        return !label.isBlank() && (index==first || !label.equals(group(visible.get(index-1))));
+    }
+    private int rowY(List<Row> visible,int first,int index,int top) {
+        int y=top+(index-first)*rowHeight();
+        for(int i=first;i<=index;i++) if(groupStarts(visible,first,i)) y+=12;
+        return y;
+    }
     private static float ease(int frames, int length) {
         float t=Math.clamp(frames/(float)length,0f,1f); float inverse=1-t;
         return 1-inverse*inverse*inverse;
@@ -409,13 +440,21 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
     private void renderRows(List<Row> visible, int x, int top, int width, int rh, boolean values) {
         // Schema bounds can exceed one page; keep the focused row and its neighbors visible.
         int capacity=capacity(), first=firstVisibleRow();
-        int count=Math.min(capacity,visible.size()-first);
+        int count=visibleCount(visible,first);
         // Backgrounds, then the moving focus, then every label: the sliding focus never hides text.
-        for(int i=0;i<count;i++) MenuStyle.fill(font,x+stagger(i),top+i*rh,width-stagger(i),rh-1,.025f,.1f,.19f,.94f);
-        int focusShift=stagger(row-first);
-        MenuStyle.focus(font,x+focusShift,top+Math.round((Math.clamp(highlight,(float)first,(float)(first+count-1))-first)*rh),width-focusShift,rh-1);
         for(int i=0;i<count;i++) {
-            Row item=visible.get(first+i); int y=top+i*rh, lx=x+7+stagger(i);
+            int index=first+i,y=rowY(visible,first,index,top);
+            if(groupStarts(visible,first,index))
+                MenuStyle.text(font,group(visible.get(index)),x+7,y-10,width-14,1,.78f,.23f);
+            MenuStyle.fill(font,x+stagger(i),y,width-stagger(i),rh-1,.025f,.1f,.19f,.94f);
+        }
+        int focusShift=stagger(row-first);
+        float focus=Math.clamp(highlight,(float)first,(float)(first+count-1));
+        int low=(int)Math.floor(focus),high=Math.min(first+count-1,low+1);
+        float focusY=rowY(visible,first,low,top)+(focus-low)*(rowY(visible,first,high,top)-rowY(visible,first,low,top));
+        MenuStyle.focus(font,x+focusShift,Math.round(focusY),width-focusShift,rh-1);
+        for(int i=0;i<count;i++) {
+            Row item=visible.get(first+i); int y=rowY(visible,first,first+i,top), lx=x+7+stagger(i);
             boolean focused=first+i==row;
             int textY=MenuStyle.textY(y,values?13:rh-1,MenuStyle.COMPACT);
             boolean available=unavailable(item).isBlank();
@@ -428,18 +467,18 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
             MenuStyle.text(font,val,x+width-6-MenuPixelFont.glyphAdvance(MenuStyle.COMPACT)*val.length(),textY,92,
                     on?.45f:.8f,on?1:.86f,on?.6f:.95f);
             var option=item.option()==null?null:definition(item.key()).definition().option(item.option());
-            String scope=scope(item); if(!scope.isEmpty()) MenuStyle.text(font,scope,lx,y+13,
+            String scope=scope(item); if(rh>=24 && !scope.isEmpty()) MenuStyle.text(font,scope,lx,y+13,
                     option instanceof MutatorOption.IntegerSlider?width-100:width-14,.74f,.83f,.96f);
             if(option instanceof MutatorOption.IntegerSlider slider) {
                 int number=(Integer)settings.requested().get(item.key()).options().get(item.option());
-                int track=72, tx=x+width-track-8, ty=y+16;
+                int track=72, tx=x+width-track-8, ty=y+(rh>=24?16:11);
                 long span=Math.max(1L,(long)slider.maximum()-slider.minimum());
                 int fill=(int)(((long)number-slider.minimum())*track/span);
                 int native_=(int)(((long)slider.defaultValue()-slider.minimum())*track/span);
                 MenuStyle.fill(font,tx,ty,track,3,.15f,.25f,.36f,1);
                 MenuStyle.fill(font,tx,ty,Math.max(1,fill),3,.4f,1,.8f,1);
-                MenuStyle.fill(font,tx+native_,ty-2,1,7,1,.78f,.23f,1);
-                MenuStyle.fill(font,tx+Math.min(track-2,fill)-1,ty-2,3,7,focused?1:.75f,1,focused?1:.9f,1);
+                MenuStyle.fill(font,tx+native_,ty-1,1,rh>=24?7:4,1,.78f,.23f,1);
+                MenuStyle.fill(font,tx+Math.min(track-2,fill)-1,ty-1,3,rh>=24?7:4,focused?1:.75f,1,focused?1:.9f,1);
             }
         }
     }
@@ -459,8 +498,10 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
             if (d.capabilities().contains(MutatorCapability.BIG_HEAD)
                     && settings.effective().stealthPolicies().stream().anyMatch(MutatorPolicy.PlayerStealth::hideBody))
                 return "Stealth hides selected bodies. Their head size returns when Stealth is disabled.";
-            if (d.capabilities().contains(MutatorCapability.BIG_HEAD)) {
-                String reason=leaderHeadPresentationReason();
+            if (d.capabilities().contains(MutatorCapability.BIG_HEAD) && current.option()==null) {
+                String reason=settings.effective().policies().values().stream().flatMap(List::stream)
+                        .anyMatch(p->p instanceof MutatorPolicy.BigHead h && h.afflicts().contains(MutatorPolicy.HeadTarget.PLAYER))
+                        ? leaderHeadPresentationReason() : "";
                 if (!reason.isBlank()) return reason;
                 if (current.option()==null) { String rings=ringScaledHeadReadout(); if (!rings.isBlank()) return rings; }
             }
@@ -479,8 +520,7 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
         var player=sprites==null?null:sprites.getMainPlayable();
         if (player==null) return "";
         if (!support.supportsPlayer(MutatorCapability.BIG_HEAD,player.characterKey().persisted(),true))
-            return "The leader uses native head size. Reviewed Sonic art can be enlarged.";
-        if (player.isSuperSonic()) return "Powered leader art keeps native head size. Ordinary Sonic uses the chosen scale.";
+            return "The leader's current ROM art keeps native head size.";
         var renderer=player.getSpriteRenderer();
         if (renderer==null) return "";
         if (renderer.headProfileId().isBlank())
@@ -496,8 +536,10 @@ public final class MutatorConfigurationScreen implements TitleScreenProvider, Le
                 .anyMatch(policy -> policy instanceof MutatorPolicy.BigHead head && head.scaleWithRings());
         if (!inGameplay || player==null || !scaled) return "";
         int rings=player.getRingCount();
-        return "Head grows with rings: "+settings.effective().headScalePercent(true,rings)+"% at "+rings
-                +" rings, full size at "+MutatorSessionState.Effective.RING_SCALE_FULL+".";
+        boolean playerSelected=settings.effective().policies().values().stream().flatMap(List::stream)
+                .anyMatch(p->p instanceof MutatorPolicy.BigHead h && h.afflicts().contains(MutatorPolicy.HeadTarget.PLAYER));
+        return playerSelected ? "Player head: "+settings.effective().headScalePercent(true,rings)+"% at "+rings+" rings."
+                : "Sidekicks use their own rings; enemies use Player's "+rings+" rings.";
     }
 
     /** Word wrap on the compact grid; an overlong final line keeps the shared ellipsis. */

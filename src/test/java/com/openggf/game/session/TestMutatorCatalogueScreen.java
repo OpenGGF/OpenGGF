@@ -148,14 +148,14 @@ class TestMutatorCatalogueScreen {
         var sonic=new com.openggf.sprites.playable.Sonic("leader",(short)32,(short)48);
         sprites.addSprite(sonic);
         sonic.setSuperSonic(true);
-        assertTrue(((String)reason.invoke(screen)).contains("Powered leader art"));
+        assertEquals("",reason.invoke(screen),"a powered flag alone does not reject reviewed art");
         sonic.setSuperSonic(false);
         var art=new com.openggf.sprites.art.SpriteArtSet(new com.openggf.level.Pattern[0],List.of(),List.of(),
                 0,com.openggf.graphics.PatternAtlasRange.SIDEKICK_BANKS.base(),0,1,null,null);
         sonic.setSpriteRenderer(new com.openggf.sprites.render.PlayerSpriteRenderer(art,GameServices.graphics()));
         assertTrue(((String)reason.invoke(screen)).contains("no reviewed head mask"));
         sprites.addSprite(new com.openggf.sprites.playable.Tails("leader",(short)32,(short)48));
-        assertTrue(((String)reason.invoke(screen)).contains("Reviewed Sonic art"));
+        assertTrue(((String)reason.invoke(screen)).contains("keeps native head size"));
         assertEquals(draft,MutatorWorldAccess.state(world).requested());
         assertTrue(world.resolvedGameModule().getGameService(MutatorSupportProfile.class)
                 .capabilities(0,0).contains(MutatorCapability.BIG_HEAD));
@@ -169,6 +169,63 @@ class TestMutatorCatalogueScreen {
         assertEquals("",reason.invoke(screen));
     }
 
+    @Test void allAfflictsCheckboxesFitAndCanBeChangedIndependently() throws Exception {
+        var options = new ArrayList<MutatorOption>();
+        options.add(new MutatorOption.IntegerSlider("percent", "Head size", "", MutatorScope.LIVE, 150, 100, 200, 1, "%"));
+        options.add(new MutatorOption.Checkbox("rings", "Scale with rings", "", MutatorScope.LIVE, false));
+        for (String target : List.of("player", "sidekicks", "badniks", "bosses"))
+            options.add(new MutatorOption.Checkbox(target, Character.toUpperCase(target.charAt(0))+target.substring(1),
+                    "Choose the affected characters.", MutatorScope.LIVE, target.equals("player"), "Afflicts:"));
+        var definition = new MutatorDefinition("head", "Big Head Mode", "", MutatorScope.LIVE, MutatorScope.LIVE,
+                options, Set.of(MutatorCapability.BIG_HEAD), values -> List.of(new MutatorPolicy.BigHead(150, Set.of())));
+        var world = open("s2", new Sonic2GameModule(), List.of(new OwnedMutator("catalogue", definition)));
+        var screen = new MutatorConfigurationScreen(world, "Catalogue", null, cue -> {}); screen.initialize();
+        var input = new InputHandler();
+        press(screen, input, GLFW_KEY_DOWN, false); press(screen, input, GLFW_KEY_ENTER, false);
+        press(screen, input, GLFW_KEY_ENTER, false);
+        var rows = MutatorConfigurationScreen.class.getDeclaredMethod("rows"); rows.setAccessible(true);
+        var list = (List<?>) rows.invoke(screen);
+        assertEquals(8, list.size());
+        var capacity = MutatorConfigurationScreen.class.getDeclaredMethod("capacity"); capacity.setAccessible(true);
+        assertEquals(7, capacity.invoke(screen), "enable, two settings and all four target checkboxes fit together");
+        var rowY = MutatorConfigurationScreen.class.getDeclaredMethod("rowY", List.class, int.class, int.class, int.class);
+        rowY.setAccessible(true);
+        assertTrue((Integer) rowY.invoke(screen, list, 0, 6, 58) + 15 < 179, "Bosses stays above the details panel");
+        for (int i=0;i<3;i++) press(screen, input, GLFW_KEY_DOWN, false);
+        press(screen, input, GLFW_KEY_ENTER, false); // Player off.
+        for (int i=0;i<3;i++) { press(screen, input, GLFW_KEY_DOWN, false); press(screen, input, GLFW_KEY_ENTER, false); }
+        assertEquals(Map.of("percent",150,"rings",false,"player",false,"sidekicks",true,"badniks",true,"bosses",true),
+                MutatorWorldAccess.state(world).requested().get("catalogue:head").options());
+        press(screen,input,GLFW_KEY_DOWN,false);press(screen,input,GLFW_KEY_ENTER,false);
+        assertEquals(TitleScreenProvider.State.ACTIVE,screen.getState(),"Back returns to the catalogue");
+    }
+
+    @Test void multipleCheckboxGroupsKeepFocusAndPointerRowsAboveDetails() throws Exception {
+        var options=new ArrayList<MutatorOption>();
+        for(int i=0;i<9;i++) options.add(new MutatorOption.Checkbox("target-"+i,"Target "+i,"Help",
+                MutatorScope.LIVE,false,"Group "+i/2));
+        var definition=new MutatorDefinition("head","Grouped targets","",MutatorScope.LIVE,MutatorScope.LIVE,
+                options,Set.of(MutatorCapability.BIG_HEAD),values->List.of(new MutatorPolicy.BigHead(150,Set.of())));
+        var world=open("s2",new Sonic2GameModule(),List.of(new OwnedMutator("catalogue",definition)));
+        var screen=new MutatorConfigurationScreen(world,"Catalogue",null,cue->{});screen.initialize();
+        var input=new InputHandler();
+        press(screen,input,GLFW_KEY_DOWN,false);press(screen,input,GLFW_KEY_ENTER,false);
+        press(screen,input,GLFW_KEY_ENTER,false);
+        var rows=MutatorConfigurationScreen.class.getDeclaredMethod("rows");rows.setAccessible(true);
+        var first=MutatorConfigurationScreen.class.getDeclaredMethod("firstVisibleRow");first.setAccessible(true);
+        var count=MutatorConfigurationScreen.class.getDeclaredMethod("visibleCount",List.class,int.class);count.setAccessible(true);
+        var rowY=MutatorConfigurationScreen.class.getDeclaredMethod("rowY",List.class,int.class,int.class,int.class);rowY.setAccessible(true);
+        var row=MutatorConfigurationScreen.class.getDeclaredField("row");row.setAccessible(true);
+        for(int index=0;index<11;index++) {
+            var visible=(List<?>)rows.invoke(screen);int from=(Integer)first.invoke(screen),size=(Integer)count.invoke(screen,visible,from);
+            int focused=(Integer)row.get(screen);
+            assertTrue(focused>=from&&focused<from+size,"selected row must be visible");
+            assertTrue((Integer)rowY.invoke(screen,visible,from,from+size-1,58)+15<=176,
+                    "group labels cannot push rows into the details panel");
+            press(screen,input,GLFW_KEY_DOWN,false);
+        }
+    }
+
     private WorldSession open(String game) {
         GameModule root=switch(game){case "s1"->new Sonic1GameModule();case "s2"->new Sonic2GameModule();default->new Sonic3kGameModule();};
         var definitions=new ArrayList<OwnedMutator>();
@@ -178,6 +235,9 @@ class TestMutatorCatalogueScreen {
                 List.of(),Set.of(MutatorCapability.DRY_SONIC_GRAVITY),o->List.of(new MutatorPolicy.DrySonicGravity(100)))));
         definitions.add(new OwnedMutator("catalogue",new MutatorDefinition("bonus","No Bonus Stages","",MutatorScope.LIVE,MutatorScope.LIVE,
                 List.of(),Set.of(MutatorCapability.NO_BONUS_STAGES),o->List.of(new MutatorPolicy.NoBonusStages()))));
+        return open(game, root, definitions);
+    }
+    private WorldSession open(String game, GameModule root, List<OwnedMutator> definitions) {
         var faults=new ModFaultBoundary(Map.of(),new ModRuntimeFindingStore(),owners->new ModStateSaveResult.Saved(),owners->{});
         var catalogue=new MutatorCatalog(definitions,faults);
         var resolved=new DelegatingGameModule(root,"catalogue:lab") {

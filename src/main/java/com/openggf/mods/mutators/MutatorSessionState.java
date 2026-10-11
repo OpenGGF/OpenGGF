@@ -485,9 +485,14 @@ public final class MutatorSessionState implements AutoCloseable {
          * linearly from 100% at zero to their percent at 100 rings, truncated, then clamped.
          */
         public int headScalePercent(boolean leader, int rings) {
+            return headScalePercent(leader ? MutatorPolicy.HeadTarget.PLAYER : MutatorPolicy.HeadTarget.SIDEKICKS, rings);
+        }
+
+        /** Each contribution affects only its independently selected presentation owners. */
+        public int headScalePercent(MutatorPolicy.HeadTarget target, int rings) {
             int held = Math.clamp(rings, 0, RING_SCALE_FULL);
             return multiplyPercent(contributions(MutatorPolicy.BigHead.class).stream()
-                    .filter(value -> leader || value.target() == MutatorPolicy.Target.ALL_TEAM)
+                    .filter(value -> value.afflicts().contains(target))
                     .map(value -> value.scaleWithRings() ? 100 + (value.percent() - 100) * held / RING_SCALE_FULL
                             : value.percent()).toList(), 100, 200);
         }

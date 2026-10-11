@@ -1378,3 +1378,43 @@ intervening settings are explicitly cut and labelled. All filming remains
 offline files-only; no JVM, display, input automation or audio device ran for
 this revision. Documentation/link/policy checks replace unchanged engine
 tests for this media-and-prose-only follow-up.
+
+## Big Head anatomy and target polish (2026-10-11)
+
+The requested Afflicts group replaces the exclusive team choice with independent
+Player (default on), Sidekicks, Badniks and Bosses checkboxes. Legacy leader/all-team
+preferences migrate declaratively; explicit new values win. Compact grouped rows
+keep all four targets visible and preserve keyboard/controller/pointer row geometry.
+The candidate API retains old constructors and adds typed head targets, grouped
+checkboxes, retired-choice conversion and native object presentation roles.
+
+CPU inventories review seven resolved player art banks: Sonic in S1/S2/S3K,
+Tails in S2/S3K, Knuckles and separate Super Sonic art in S3K. Each mapping has
+explicit anatomy/fallback metadata. Irregular per-pose contours scale around a
+neck anchor, with native foreground limbs replayed after the head. Real ROM
+pixels, per-piece flips, native row/SAT admission and terrain priority remain
+owners. Object identity follows mapped ROM pixels; 55 object banks have reviewed
+head masks. Unreviewed machinery/projectile/custom frames remain native. Repeated
+enemies receive distinct draw-occurrence fragment banks, retired after queued
+commands rather than object lifetime.
+
+Astra was consulted for individually traced Tails/Knuckles tumble and stretched
+poses where gloves, soles and tails share mapping pieces. Those source contours
+were checked with the runtime's even/odd pixel-centre evaluator before parent
+production review. Source occlusion cannot supply hidden skull pixels; fully
+obscured poses retain stock art. Anchors are reviewed visual attachments, not a
+new ROM skeleton or collision transform. No colour segmentation runs at runtime.
+
+The rejected whole-piece and rotated-family selections enlarged gloves/soles or
+cut off the muzzle. Interleaved body/head tiles also erased enlarged head edges;
+composition now completes each draw's body, head, then foreground limbs without
+crossing actors, priority partitions or intervening native primitives. The initial
+112px review cells cropped valid 200% poses and were enlarged to 160px. Mapping
+index order also exposed stale no-upload DPLC banks, so maintained CPU tooling
+exports native animation sequences from fresh banks separately from diagnostic
+mapping inventories. Super Sonic shape review uses its actual art bank; the CPU
+inventory's ordinary Sonic colours do not certify powered palette cycling.
+
+Verification and final destination composition: pending completion of this round.
+All visual authoring is CPU-only or explicit surfaceless EGL. No shared display,
+keyboard focus, input device or audio device is used.

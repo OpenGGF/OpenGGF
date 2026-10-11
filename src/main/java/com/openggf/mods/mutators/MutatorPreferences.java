@@ -28,10 +28,20 @@ public record MutatorPreferences(String profile, Map<String, Entry> entries) {
                 throw new IllegalArgumentException("Saved schema changed for " + owned.key() + "; reset its preferences");
             }
             Map<String, Object> options = new LinkedHashMap<>(owned.definition().defaults());
-            if (!options.keySet().containsAll(entry.options().keySet())) {
+            Map<String, Object> saved = new LinkedHashMap<>(entry.options());
+            for (var option : owned.definition().options()) {
+                if (option instanceof MutatorOption.Checkbox checkbox && checkbox.legacyChoice() != null) {
+                    var legacy = checkbox.legacyChoice();
+                    if (saved.containsKey(legacy.id())) {
+                        boolean checked = legacy.checked(saved.remove(legacy.id()));
+                        saved.putIfAbsent(checkbox.id(), checked);
+                    }
+                }
+            }
+            if (!options.keySet().containsAll(saved.keySet())) {
                 throw new IllegalArgumentException("Unknown saved options for " + owned.key());
             }
-            options.putAll(entry.options());
+            options.putAll(saved);
             owned.definition().options().forEach(option -> option.validate(options.get(option.id())));
             result.put(owned.key(), new MutatorSessionState.Configuration(entry.enabled(), options));
         }

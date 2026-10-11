@@ -10,6 +10,9 @@ import java.util.List;
 
 @com.openggf.game.ModApi
 public interface ObjectInstance {
+    default com.openggf.game.mutators.ObjectHeadRole headPresentationRole() {
+        return com.openggf.game.mutators.ObjectHeadRole.NONE;
+    }
     ObjectSpawn getSpawn();
 
     default int getX() {

@@ -303,3 +303,9 @@ Local Maven tests: [`tools/testing/maven_queue.py`](../../tools/testing/maven_qu
   all-eleven Mutator Lab film's native stage drawing, production presentation
   input/tick pump, offline PCM and policy/checkpoint/monitor observations
   (2026-10-10, source `379b66413`); see [capture contract](../../tools/media/README.md#mutator-gameplay-showcase-captures).
+
+- `ggfmod head-inventory` and `object-head-inventory` (Big Head polish,
+  2026-10-11) export original-ROM indexed pixels, mapping coordinates and CPU
+  production mask panels without GL, windows, input or audio. Player output also
+  reviews ROM animation-frame sequences in fresh DPLC banks; standalone mapping
+  order is diagnostic and can contain stale art in no-upload frames.

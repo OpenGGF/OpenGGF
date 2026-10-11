@@ -9,16 +9,31 @@ public final class BigHead {
     private BigHead() { }
     public static MutatorDefinition definition() {
         return new MutatorDefinition("big-head", "Big Head Mode",
-                "Enlarge Sonic's head; body and hitbox stay native. Curled/unreviewed art stays normal.",
+                "Enlarge selected heads; body and hitbox stay native. Mix targets independently.",
                 MutatorScope.LIVE, MutatorScope.LIVE,
                 List.of(new MutatorOption.IntegerSlider("percent", "Head size", "100 to 200 percent about the neck. With Scale with rings, this is the size at 100 rings.",
                                 MutatorScope.LIVE, 150, 100, 200, 10, "%"),
                         new MutatorOption.Checkbox("rings", "Scale with rings", "Normal size at 0 rings, growing to Head size at 100 rings. Losing rings shrinks it.",
                                 MutatorScope.LIVE, false),
-                        new MutatorOption.Choice("target", "Target", "Leader or all team members with supported Sonic art. Stealth also hides the head.",
-                                MutatorScope.LIVE, "leader", List.of("leader", "all_team"))),
+                        new MutatorOption.Checkbox("player", "Player", "Affect the character you control. Stealth also hides its head.",
+                                MutatorScope.LIVE, true, "Afflicts:"),
+                        new MutatorOption.Checkbox("sidekicks", "Sidekicks", "Affect team companions, independently of the player.",
+                                MutatorScope.LIVE, false, "Afflicts:",
+                                new MutatorOption.LegacyChoice("target", "all_team", Set.of("leader", "all_team"))),
+                        new MutatorOption.Checkbox("badniks", "Badniks", "Affect robot enemy heads; projectiles and collision stay native.",
+                                MutatorScope.LIVE, false, "Afflicts:"),
+                        new MutatorOption.Checkbox("bosses", "Bosses", "Affect boss heads; vehicles, weapons and collision stay native.",
+                                MutatorScope.LIVE, false, "Afflicts:")),
                 Set.of(MutatorCapability.BIG_HEAD), values -> List.of(new MutatorPolicy.BigHead(values.integer("percent"),
-                        values.choice("target").equals("leader") ? MutatorPolicy.Target.LEADER : MutatorPolicy.Target.ALL_TEAM,
+                        targets(values),
                         values.checkbox("rings"))));
+    }
+    private static Set<MutatorPolicy.HeadTarget> targets(MutatorOptions values) {
+        var selected = java.util.EnumSet.noneOf(MutatorPolicy.HeadTarget.class);
+        if (values.checkbox("player")) selected.add(MutatorPolicy.HeadTarget.PLAYER);
+        if (values.checkbox("sidekicks")) selected.add(MutatorPolicy.HeadTarget.SIDEKICKS);
+        if (values.checkbox("badniks")) selected.add(MutatorPolicy.HeadTarget.BADNIKS);
+        if (values.checkbox("bosses")) selected.add(MutatorPolicy.HeadTarget.BOSSES);
+        return Set.copyOf(selected);
     }
 }

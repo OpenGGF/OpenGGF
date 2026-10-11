@@ -1532,7 +1532,7 @@ public class ObjectManager {
                     callback.beforeDraw(entry.instance(), entry.high());
                 }
                 objectCallbacks.run(entry.instance(),
-                        () -> ObjectRenderParts.appendRenderCommands(entry, renderCommands, bucket));
+                        () -> ObjectRenderParts.appendRenderCommands(entry, renderCommands, bucket, objectServices));
             }
 
             if (!renderCommands.isEmpty()) {
@@ -1602,7 +1602,7 @@ public class ObjectManager {
                         gfx.setCurrentSpriteTileOcclusionPaletteMask(mask);
                         gfx.beginPatternBatch();
                     }
-                    ObjectRenderParts.appendRenderCommands(entry, renderCommands, bucket);
+                    ObjectRenderParts.appendRenderCommands(entry, renderCommands, bucket, objectServices);
                 });
             }
 

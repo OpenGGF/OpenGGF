@@ -40,8 +40,10 @@ import java.util.logging.Logger;
 @com.openggf.game.ModApi
 public class GraphicsManager {
     private final PlayerHeadFragmentBanks playerHeadFragmentBanks = new PlayerHeadFragmentBanks();
+    private final ObjectHeadFragmentBanks objectHeadFragmentBanks = new ObjectHeadFragmentBanks();
     /** Companion art namespace follows the original virtual player bank, independently of pose or game. */
     public int playerHeadFragmentBase(int sourceBank) { return playerHeadFragmentBanks.baseFor(sourceBank); }
+    public int objectHeadFragmentBase() { return objectHeadFragmentBanks.allocate(); }
 
 	private static final Logger LOGGER = Logger.getLogger(GraphicsManager.class.getName());
 
@@ -552,6 +554,7 @@ public class GraphicsManager {
 	public void discardQueuedCommands() {
 		discardCommands(commands, 0);
 		commands.clear();
+        if (!spriteSatCollectionActive && spriteSatEntries.isEmpty()) objectHeadFragmentBanks.reset();
 	}
 
 	/**
@@ -559,9 +562,12 @@ public class GraphicsManager {
 	 * Use this for screen-space rendering by passing (0, 0) for camera position.
 	 */
 	public void flushWithCamera(short cameraX, short cameraY, short cameraWidth, short cameraHeight) {
+        // Never recycle companions still referenced by native SAT entries awaiting admission.
+        boolean retireHeadBanks=!spriteSatCollectionActive && spriteSatEntries.isEmpty();
 		if (headlessMode || commands.isEmpty() || !glInitialized) {
 			discardCommands(commands, 0);
 			commands.clear();
+            if(retireHeadBanks) objectHeadFragmentBanks.reset();
 			return;
 		}
 
@@ -583,6 +589,7 @@ public class GraphicsManager {
 			PatternRenderCommand.cleanupFrameState(this);
 			discardCommands(commands, nextUnexecuted);
 			commands.clear();
+            if(retireHeadBanks) objectHeadFragmentBanks.reset();
 		}
 	}
 
@@ -1937,6 +1944,7 @@ public class GraphicsManager {
 		spriteSatEntries.clear();
 		currentSpriteSatDebugSource = null;
 		spritePresentationSubject = SpritePresentation.Subject.WORLD;
+        objectHeadFragmentBanks.reset();
 		waterlineScreenY = 0;
 		windowHeight = 224;
 		screenHeight = 224;

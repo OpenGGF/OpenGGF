@@ -104,8 +104,16 @@ class TestExampleMutatorsPackage {
 
                 config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE,"tails");
                 var declined=DevelopmentPatchLoader.fromJar(temp.resolve("example-mutators.jar")).apply(nativeModule);
-                assertSame(nativeModule.getTitleScreenProvider(),declined.getTitleScreenProvider(),
-                        "The package's Sonic-only launch predicate is respected by capture");
+                if (nativeModule.getGameId().code().equals("s1")) {
+                    assertSame(nativeModule.getTitleScreenProvider(),declined.getTitleScreenProvider(),
+                            "S1 has no native Tails art");
+                } else {
+                    GameModuleRegistry.setCurrent(declined);
+                    SessionManager.openGameplaySession(nativeModule,declined,null);
+                    assertInstanceOf(MutatorConfigurationScreen.class,unwrapOwned(declined.getTitleScreenProvider()),
+                            "Native Tails can enter the Lab");
+                    SessionManager.clear();
+                }
                 config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE,"sonic");
             }
             for (String game : List.of("s1","s2","s3k")) {
@@ -119,7 +127,8 @@ class TestExampleMutatorsPackage {
                     case "s1" -> "Green Hill"; case "s2" -> "Emerald Hill"; default -> "Angel Island";
                 }),"Later acts must not keep the opening-zone caption");
                 assertTrue(profile.supportsPlayer(MutatorCapability.PLAYER_STEALTH,"tails",false));
-                assertFalse(profile.supportsPlayer(MutatorCapability.BIG_HEAD,"tails",false),"Unreviewed art retains its native pose");
+                assertEquals(!game.equals("s1"),profile.supportsPlayer(MutatorCapability.BIG_HEAD,"tails",false));
+                assertEquals(game.equals("s3k"),profile.supportsPlayer(MutatorCapability.BIG_HEAD,"knuckles",true));
                 assertTrue(profile.optionUnavailableReason("no-powerups","rings").isBlank());
                 assertEquals(game.equals("s3k"),profile.optionUnavailableReason("no-powerups","bubble_shield").isBlank());
             }

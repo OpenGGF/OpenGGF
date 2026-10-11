@@ -4266,3 +4266,15 @@ screen can overlay a still-running native intro and falsely suggest a UI readine
 bug. Select the frozen concrete stock plan and the actual launch predicate, as
 the runtime resolver does. Inspect native backdrop identity as well as PNGs.
 Origin: Mutator Lab all-game expansion, first `02f194c2` title captures.
+
+### Anatomy review: mapping order is not animation order (2026-10-11)
+
+A standalone sprite atlas can show plausible stale pixels: a frame with no DPLC
+upload inherits the preceding bank, and iterating mapping indices supplies a
+predecessor the ROM animation never chose. Review source geometry/piece masks,
+then production composition in the native animation's frame order. A source-mask
+match alone does not verify the enlarged result: later body tiles can cut it off,
+or enlargement can cover native foreground gloves. Keep per-draw body/head/limb
+ordering, terrain-priority partitions and repeated-enemy fragment banks distinct.
+A glove-shaped hole in source art is real occlusion, not missing mask pixels;
+never invent hidden art to make a contact sheet look complete.

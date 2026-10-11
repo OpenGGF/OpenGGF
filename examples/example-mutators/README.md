@@ -42,7 +42,7 @@ Compiled creator code is unavailable in the engine's standard native image; see 
 | --- | --- | --- |
 | Gravity | Ordinary dry Sonic fall acceleration, 25–200%, 5% steps | Resume |
 | Ringfall Manipulator | 10–100% of the native spill or, with Drop full inventory, of every held ring; optional 1–32 ring ceiling | Resume |
-| Big Head | 100–200% head size, optionally scaled by rings; leader or supported team | Resume |
+| Big Head | 100–200% head size, optional ring scaling; independent Player, Sidekicks, Badniks and Bosses | Resume |
 | Stealth | Leader/all supported team; hide attached effects checkbox | Resume |
 | No Powerups | Separate checkbox for every semantic monitor type | Full load/restart |
 | No Checkpoints | Death ignores the checkpoint bank and restarts from the native act start | Full load/restart |
@@ -111,12 +111,25 @@ With **Scale with rings** on (default off), the head is normal size at zero ring
 and grows linearly to the Head size setting at 100 rings, shrinking again as rings
 are lost. No Rings therefore keeps a normal head, and Stealth still hides it.
 
-Big Head enlarges reviewed anatomical head masks from the actual admitted ROM
-sprite pieces. Feet, torso, collision bounds and camera stay native. Mask identity
-is tied to the actual art, mappings and DPLC structure. Curled ball poses,
-unreviewed poses, powered forms, donor/custom art and unreviewed characters retain
-their native presentation. A checkbox never implies every pose or character has
-been reviewed. Stealth takes precedence over a hidden head.
+Big Head's **Afflicts:** group has four independent checkboxes: **Player** is
+checked by default; **Sidekicks**, **Badniks** and **Bosses** are off. All four
+fit on the same options view. Turn off Player for an enemy-only effect, or stack
+any combination. Older saved “All team” settings migrate to Player + Sidekicks;
+explicit new checkbox choices take precedence. Settings apply on Resume.
+
+The head is an irregular, pose-specific lasso of actual admitted ROM pixels,
+scaled about a reviewed neck anchor. Foreground gloves and shoes remain native
+size. Feet, torso, collision and camera stay native. Native Sonic is supported
+in all three games, Tails in Sonic 2/3&K, Knuckles in 3&K, and the separate 3&K
+Super Sonic bank. Badniks and bosses use explicit object ownership and reviewed
+ROM-bank masks; vehicles, weapons and projectiles retain native size. Their
+ring-scaled size follows the main player's rings; sidekicks use their own count.
+
+Curled ball poses, heavily obscured heads and unknown/custom art retain native
+presentation. Source pixels do not reveal a head hidden behind a glove; masks
+do not reconstruct it. Some boss/badnik art remains unreviewed and stays native.
+A checkbox does not certify every object or transformed bank. Stealth still
+hides the selected player's head without hiding enemies.
 
 Stealth filters body, appendage and optional attached effects after native sprite
 admission. It preserves targeting, collision, rings, audio and the world/HUD.

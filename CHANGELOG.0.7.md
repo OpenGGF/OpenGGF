@@ -22,6 +22,12 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   effect, rows name the choice that applies each edit or why a row is unavailable,
   and a chosen restart or hub return holds native play behind its fade. Big Head
   can optionally scale with rings: normal at zero, the chosen size at 100 rings.
+  Its Afflicts group independently selects Player (default), Sidekicks, Badniks
+  and Bosses; legacy team preferences migrate without losing explicit choices.
+  Pose-specific ROM lassos cover native Sonic/Tails/Knuckles and the separate
+  S3K Super Sonic bank, preserving foreground limbs and native sprite admission.
+  Reviewed enemy heads enlarge independently of vehicles and projectiles;
+  ball, obscured and unknown art keeps its native presentation.
   Ringfall can optionally drop the full inventory past the native 32-ring ceiling
   as real recoverable rings that never take level object slots.
   Typed catalogue contributions also declare scatter, head-presentation, semantic

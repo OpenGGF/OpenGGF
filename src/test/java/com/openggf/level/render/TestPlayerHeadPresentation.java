@@ -22,6 +22,80 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(SingletonResetExtension.class) @FullReset @Isolated
 class TestPlayerHeadPresentation {
+    @Test void foregroundLimbsStayNativeAndLaterBodyCannotEraseTheFinalHeadPixels() {
+        Pattern scalp=new Pattern(), limb=new Pattern();
+        for(int y=0;y<8;y++) for(int x=0;x<8;x++) {
+            scalp.setPixel(x,y,(byte)5);
+            limb.setPixel(x,y,(byte)(x<3&&y>=2&&y<5?7:9));
+        }
+        var points=List.of(new SpritePresentation.MaskPoint(0,0),new SpritePresentation.MaskPoint(8,0),
+                new SpritePresentation.MaskPoint(8,8),new SpritePresentation.MaskPoint(0,8));
+        var fore=new SpritePresentation.MaskRegion(Set.of(1),List.of(
+                new SpritePresentation.MaskPoint(8,2),new SpritePresentation.MaskPoint(11,2),
+                new SpritePresentation.MaskPoint(11,5),new SpritePresentation.MaskPoint(8,5)));
+        var mask=new SpritePresentation.HeadMask(0,8,Set.of(0),points,List.of(fore));
+        var versions=Map.of(1,SpritePresentationRenderer.version(scalp),2,SpritePresentationRenderer.version(limb));
+        for(int percent:new int[]{101,137,150,200}) for(boolean flip:new boolean[]{false,true}) {
+            var tiles=new java.util.ArrayList<SpritePresentation.Tile>();
+            for(int piece=0;piece<2;piece++) {
+                int x=flip?100-(piece+1)*8:100+piece*8;
+                var transform=new SpritePresentation.HeadTransform(mask,piece,100,100,flip,false,percent,
+                        PatternAtlasRange.PLAYER_PRESENTATION.base(),versions,SpritePresentationRenderer.headSatReplay());
+                tiles.add(new SpritePresentation.Tile(SpritePresentation.Layer.PLAYER,piece+1,0,flip,false,false,
+                        x-10,80,8,8,false,0,false,1,0,8,
+                        new SpritePresentation.Subject("knuckles",SpritePresentation.Part.BODY,false,percent,transform)));
+            }
+            var result=PlayerHeadPresentation.compose(new SpritePresentation.Frame(tiles,List.of(),versions),10,20);
+            assertEquals(7,rasterAt(result,flip?79:100,83),"foreground glove remains at native coordinates");
+            if(percent==200) assertEquals(5,rasterAt(result,flip?77:102,81),
+                    "expanded scalp survives the later opaque body tile");
+            assertEquals(result,PlayerHeadPresentation.compose(result,10,20));
+        }
+    }
+
+    /** Pixel-centre nearest sampling of final painter order, including fractional scales. */
+    private static int rasterAt(SpritePresentation.Frame frame,int x,int y) {
+        int result=0;
+        for(var tile:frame.tiles()) {
+            if(x+.5<tile.x()||x+.5>=tile.x()+tile.width()||y+.5<tile.y()||y+.5>=tile.y()+tile.height()) continue;
+            int px=(int)((x+.5-tile.x())*8/tile.width()),py=(int)((y+.5-tile.y())*8/tile.height());
+            if(py<tile.rowStart()||py>=tile.rowEnd()) continue;
+            var pattern=SpritePresentationRenderer.pattern(frame.patternVersions().get(tile.patternId()));
+            int value=pattern.getPixel(tile.hFlip()?7-px:px,tile.vFlip()?7-py:py)&15;
+            if(value!=0) result=value;
+        }
+        return result;
+    }
+    @Test void laterBodyTileCannotCutOffAnEnlargedHeadAcrossTheNativeTileBoundary() {
+        Pattern pixels = new Pattern();
+        for (int y=0;y<8;y++) for(int x=0;x<8;x++) pixels.setPixel(x,y,(byte)5);
+        var mask = new SpritePresentation.HeadMask(0,8,Set.of(0),List.of(
+                new SpritePresentation.MaskPoint(0,0),new SpritePresentation.MaskPoint(8,0),
+                new SpritePresentation.MaskPoint(8,8),new SpritePresentation.MaskPoint(0,8)));
+        var version=SpritePresentationRenderer.version(pixels);
+        var head=new SpritePresentation.HeadTransform(mask,0,0,0,false,false,200,
+                PatternAtlasRange.PLAYER_PRESENTATION.base(),Map.of(1,version),SpritePresentationRenderer.headSatReplay());
+        var body=new SpritePresentation.HeadTransform(mask,1,0,0,false,false,200,
+                PatternAtlasRange.PLAYER_PRESENTATION.base(),Map.of(1,version),SpritePresentationRenderer.headSatReplay());
+        var nativeHead=new SpritePresentation.Tile(SpritePresentation.Layer.PLAYER,1,0,false,false,false,
+                0,0,8,8,false,0,false,1,0,8,new SpritePresentation.Subject("sonic",SpritePresentation.Part.BODY,false,200,head));
+        var nativeBody=new SpritePresentation.Tile(SpritePresentation.Layer.PLAYER,1,0,false,false,false,
+                8,0,8,8,false,0,false,1,0,8,new SpritePresentation.Subject("sonic",SpritePresentation.Part.BODY,false,200,body));
+        var nextActor=new SpritePresentation.Tile(SpritePresentation.Layer.OBJECT,1,0,false,false,false,
+                30,0,8,8,false,0,false,1);
+        var out=PlayerHeadPresentation.compose(new SpritePresentation.Frame(
+                List.of(nativeHead,nativeBody,nextActor),List.of(),Map.of(1,version)),0,0);
+        assertEquals(4,out.tiles().size());
+        assertEquals(8,out.tiles().get(1).width(),"native body finishes first");
+        assertEquals(16,out.tiles().get(2).width(),"the complete head covers its expanded boundary");
+        assertEquals(nextActor,out.tiles().get(3),"another actor keeps its native ordering");
+        var primitive=new SpritePresentation.Primitive(1,SpritePresentation.Layer.PLAYER,(x,y)->null);
+        var separated=PlayerHeadPresentation.compose(new SpritePresentation.Frame(
+                List.of(nativeHead,nativeBody,nextActor),List.of(primitive),Map.of(1,version)),0,0);
+        assertEquals(2,separated.primitives().getFirst().beforeTile(),
+                "an intervening native primitive stays after the completed head draw");
+        assertEquals(16,separated.tiles().get(1).width());
+    }
     @Test void clippedIndexedHeadMovesAroundNeckWhileBodyPalettePriorityAndFeetStayNative() {
         Pattern pixels = new Pattern();
         for (int y=0;y<8;y++) for(int x=0;x<8;x++) pixels.setPixel(x,y,(byte)(y<4?5:9));
@@ -62,14 +136,15 @@ class TestPlayerHeadPresentation {
     }
 
     @Test @RequiresRom(SonicGame.SONIC_1) void sonic1NativeInventoryAndRendering() throws Exception {
-        check(new com.openggf.game.sonic1.Sonic1(TestEnvironment.currentRom()).loadPlayerSpriteArt("sonic"),"s1",88,55,9);
+        check(new com.openggf.game.sonic1.Sonic1(TestEnvironment.currentRom()).loadPlayerSpriteArt("sonic"),"s1",88,78,9);
     }
     @Test @RequiresRom(SonicGame.SONIC_2) void sonic2NativeInventoryAndRendering() throws Exception {
-        check(new com.openggf.game.sonic2.Sonic2(TestEnvironment.currentRom()).loadPlayerSpriteArt("sonic"),"s2",214,81,12);
+        check(new com.openggf.game.sonic2.Sonic2(TestEnvironment.currentRom()).loadPlayerSpriteArt("sonic"),"s2",214,202,11);
+        check(new com.openggf.game.sonic2.Sonic2(TestEnvironment.currentRom()).loadPlayerSpriteArt("tails"),"s2-tails",139,102,7);
     }
     @Test @RequiresRom(SonicGame.SONIC_3K) void sonic3kNativeInventoryAndRendering() throws Exception {
         var game=new com.openggf.game.sonic3k.Sonic3k(TestEnvironment.currentRom());
-        check(game.loadPlayerSpriteArt("sonic"),"s3k",251,87,11);
+        check(game.loadPlayerSpriteArt("sonic"),"s3k",251,239,11);
         var art=game.loadPlayerSpriteArt("sonic");var profile=PlayerHeadProfile.resolve(art);
         assertFalse(profile.frame(0xA1).contains(0,9,-16),"raised balance glove is body, not head");
         GraphicsManager graphics=GraphicsManager.getInstance();
@@ -81,8 +156,11 @@ class TestPlayerHeadPresentation {
         int glove=indexedAt(stock,109,84);
         assertNotEquals(0,glove,"real native glove coordinate is opaque");
         assertEquals(glove,indexedAt(head,109,84),"glove stays at its stock body coordinate and palette index");
-        assertNull(PlayerHeadProfile.resolve(game.loadPlayerSpriteArt("tails")));
-        assertNull(PlayerHeadProfile.resolve(game.loadPlayerSpriteArt("knuckles")));
+        check(game.loadPlayerSpriteArt("tails"),"s3k-tails",251,235,11);
+        check(game.loadPlayerSpriteArt("knuckles"),"s3k-knuckles",251,236,11);
+        check(new com.openggf.game.sonic3k.Sonic3kPlayerArt(
+                com.openggf.data.RomByteReader.fromRom(TestEnvironment.currentRom())).loadSuperSonicArtSet(),
+                "s3k-super-sonic",251,235,11);
     }
     private int indexedAt(SpritePresentation.Frame frame,int x,int y) {
         for(var tile:frame.tiles()) {
@@ -166,7 +244,7 @@ class TestPlayerHeadPresentation {
             var headAdmission=admitted(graphics,renderer,nativeFrame,new SpritePresentation.Subject("sonic",SpritePresentation.Part.BODY,false,200));
             assertEquals(nativeAdmission,headAdmission,"Big Head cannot resize/reorder/retime native SAT or its mask post-pass");
         }
-        // Normal source art must not receive a normal mask during a powered transition.
+        // A powered flag does not disable an otherwise reviewed resolved ROM art bank.
         var sonic=new com.openggf.sprites.playable.Sonic("sonic",(short)100,(short)100);
         sonic.setSpriteRenderer(renderer);sonic.setMappingFrame(firstMasked);
         com.openggf.sprites.playable.PlayableSpriteInternalAccess.bindMutatorPolicies(sonic,
@@ -174,7 +252,7 @@ class TestPlayerHeadPresentation {
         sonic.setSuperSonic(true);
         var powered=SpritePresentationRenderer.prepare(graphics,0,0,sonic::draw);
         assertFalse(powered.tiles().isEmpty());
-        assertTrue(powered.tiles().stream().allMatch(t->t.width()==8&&t.subject().head()==null),"powered art uses stock geometry");
+        assertTrue(powered.tiles().stream().anyMatch(t->t.width()==16),"reviewed resolved art remains eligible when powered");
         com.openggf.sprites.playable.PlayableSpriteInternalAccess.bindMutatorPolicies(sonic,null);
         // Exercise the actual live SAT branch without a surrounding CPU builder.
         graphics.setUseSpritePriorityShader(true);graphics.setCurrentSpriteHighPriority(true);

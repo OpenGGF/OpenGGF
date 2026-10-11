@@ -83,6 +83,31 @@ class TestMutatorPreferenceStore {
     }
 
     @Test
+    void oldTeamChoiceMigratesWithoutOverridingExplicitIndependentCheckboxes() {
+        var sidekicks = new MutatorOption.Checkbox("sidekicks", "Sidekicks", "", MutatorScope.LIVE, false,
+                "Afflicts:", new MutatorOption.LegacyChoice("target", "all_team", Set.of("leader", "all_team")));
+        var definition = new MutatorDefinition("head", "Big Head", "", MutatorScope.LIVE, MutatorScope.LIVE,
+                List.of(new MutatorOption.Checkbox("player", "Player", "", MutatorScope.LIVE, true), sidekicks),
+                Set.of(MutatorCapability.BIG_HEAD), options -> List.of(new MutatorPolicy.BigHead(150,
+                        options.checkbox("sidekicks") ? MutatorPolicy.Target.ALL_TEAM : MutatorPolicy.Target.LEADER)));
+        var catalogue = List.of(new OwnedMutator("owner", definition));
+        for (String target : List.of("leader", "all_team")) {
+            var saved = new MutatorPreferences("s2", Map.of("owner:head",
+                    new MutatorPreferences.Entry(1, true, Map.of("target", target)))).forSession(catalogue);
+            assertEquals(Map.of("player", true, "sidekicks", target.equals("all_team")), saved.get("owner:head").options());
+        }
+        var explicit = new MutatorPreferences("s2", Map.of("owner:head",
+                new MutatorPreferences.Entry(1, true, Map.of("target", "all_team", "sidekicks", false)))).forSession(catalogue);
+        assertEquals(false, explicit.get("owner:head").options().get("sidekicks"));
+        assertThrows(IllegalArgumentException.class, () -> new MutatorPreferences("s2", Map.of("owner:head",
+                new MutatorPreferences.Entry(1, true, Map.of("target", "bosses")))).forSession(catalogue));
+        assertThrows(IllegalArgumentException.class, () -> new MutatorDefinition("head", "Head", "",
+                MutatorScope.LIVE, MutatorScope.LIVE, List.of(sidekicks,
+                new MutatorOption.Checkbox("target", "Target", "", MutatorScope.LIVE, false)),
+                Set.of(MutatorCapability.BIG_HEAD), options -> List.of()));
+    }
+
+    @Test
     void symlinkRootAndDestinationAreRejectedWithoutTouchingTargets() throws Exception {
         Path other = Files.createDirectory(temporary.resolve("other"));
         Files.createSymbolicLink(temporary.resolve("linked"), other);

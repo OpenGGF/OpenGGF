@@ -32,7 +32,19 @@ class TestPlayerHeadMaskReview {
     }
     private void review(PlayerSpriteArtProvider provider,String game) throws Exception {
         GraphicsManager.getInstance().initHeadless();
-        var art=provider.loadPlayerSpriteArt("sonic");var nativePalette=provider.loadCharacterPalette("sonic");
+        for(String character:java.util.List.of("sonic","tails","knuckles","super-sonic")) {
+            boolean powered=character.equals("super-sonic");
+            if(powered&&!game.equals("s3k")) continue;
+            var nativePalette=provider.loadCharacterPalette(powered?"sonic":character);
+            if(nativePalette==null) continue;
+            var art=powered?new com.openggf.game.sonic3k.Sonic3kPlayerArt(
+                    com.openggf.data.RomByteReader.fromRom(TestEnvironment.currentRom())).loadSuperSonicArtSet()
+                    :provider.loadPlayerSpriteArt(character);
+            if(art!=null) reviewArt(art,nativePalette,game+"-"+character);
+        }
+    }
+    private void reviewArt(com.openggf.sprites.art.SpriteArtSet art,com.openggf.level.Palette nativePalette,
+                           String game) throws Exception {
         int[] palette=new int[64];
         for(int i=0;i<16;i++) {var c=nativePalette.getColor(i);palette[i]=0xFF000000|(c.r&255)<<16|(c.g&255)<<8|c.b&255;}
         Path output=System.getProperty("head.review.dir")==null?temp:Path.of(System.getProperty("head.review.dir"));
@@ -47,7 +59,7 @@ class TestPlayerHeadMaskReview {
             int cell=PlayerHeadMaskReview.CELL_SIZE, origin=cell/2, block=4*cell;
             assertTrue(image.getWidth()<=4*block);assertTrue(image.getHeight()<=4*(cell+12));
             assertTrue(java.util.Arrays.stream(image.pixels()).distinct().count()>8,"native coloured panels must be nonblank");
-            if(game.equals("s1")&&first==0) {
+            if(game.equals("s1-sonic")&&first==0) {
                 // Frame1 standing sole at unflipped mapping (0,18), with a 12px row label.
                 // Frame1 is the second block on the first row.
                 int shoe=image.getRGB(block+origin,12+origin+18);
@@ -56,7 +68,7 @@ class TestPlayerHeadMaskReview {
                 assertEquals(0xFF303040,image.getRGB(block+cell+origin,12+origin+18),"enlarged head cannot contain a shoe pixel");
             }
         }
-        assertTrue(log.toString().contains("BALL_STOCK"));assertTrue(log.toString().contains("UNSUPPORTED"));
+        assertTrue(log.toString().contains("BALL_STOCK"));assertTrue(log.toString().contains("MASKED"));
         if(System.getProperty("head.review.dir")!=null) Files.writeString(output.resolve("production-"+game+"-inventory.csv"),log.toString());
         assertThrows(IllegalArgumentException.class,()->PlayerHeadMaskReview.write(art,palette,temp.resolve("bad.png"),0,1,100,System.out));
     }

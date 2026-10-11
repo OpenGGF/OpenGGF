@@ -62,6 +62,32 @@ class TestMutatorWorldServices {
     }
 
     @ParameterizedTest @ValueSource(strings={"s1", "s2", "s3k"})
+    void enemyAfflictionsUseAdmittedWorldPolicyAndRetireWithTheirWorld(String game) {
+        var fixture=fixture(game);
+        var owner=fixture.owner();
+        owner.beforeAssembly(LevelLoadCause.FULL_LEVEL_ASSEMBLY);
+        var heads=service(fixture.world(),com.openggf.game.mutators.ObjectHeadScaleSource.class);
+        var badnik=com.openggf.game.mutators.ObjectHeadRole.BADNIK;
+        var boss=com.openggf.game.mutators.ObjectHeadRole.BOSS;
+        assertEquals(100,heads.percent(badnik,100));
+        owner.state.requestEnabled("fixture:heads",true);
+        owner.state.boundary(LIVE);
+        assertEquals(200,heads.percent(badnik,100));
+        assertEquals(100,heads.percent(boss,100));
+        owner.state.onForwardTick();
+        var captured=owner.capture();
+        owner.state.requestOption("fixture:heads","bosses",true);
+        owner.state.boundary(LIVE);
+        assertEquals(200,heads.percent(boss,100));
+        owner.restore(captured);
+        assertEquals(200,heads.percent(badnik,100));
+        assertEquals(100,heads.percent(boss,100),"rewind restores admitted choices, not the present-day draft");
+        assertEquals(100,heads.percent(com.openggf.game.mutators.ObjectHeadRole.NONE,100));
+        owner.retire();
+        assertEquals(100,heads.percent(badnik,100));
+    }
+
+    @ParameterizedTest @ValueSource(strings={"s1", "s2", "s3k"})
     void restoredUpcomingSpeedSetsPresentationBudgetWithoutEarlyPublicationOrCreatorReplay(String game) {
         var fixture = fixture(game);
         var owner = fixture.owner();
@@ -190,7 +216,13 @@ class TestMutatorWorldServices {
                 Set.of(MutatorCapability.NO_SPECIAL_STAGES),options->List.of(new MutatorPolicy.NoSpecialStages()));
         var faults=new ModFaultBoundary(Map.of(),new ModRuntimeFindingStore(),
                 owners->new ModStateSaveResult.Saved(),owners->{});
-        var catalog=new MutatorCatalog(List.of(new OwnedMutator("fixture",speed),new OwnedMutator("fixture",special)),faults);
+        var heads=new MutatorDefinition("heads","Heads","",LIVE,LIVE,
+                List.of(new MutatorOption.Checkbox("bosses","Bosses","",LIVE,false)),
+                Set.of(MutatorCapability.BIG_HEAD),options->List.of(new MutatorPolicy.BigHead(200,
+                    options.checkbox("bosses")?Set.of(MutatorPolicy.HeadTarget.BADNIKS,MutatorPolicy.HeadTarget.BOSSES)
+                            :Set.of(MutatorPolicy.HeadTarget.BADNIKS))));
+        var catalog=new MutatorCatalog(List.of(new OwnedMutator("fixture",speed),new OwnedMutator("fixture",special),
+                new OwnedMutator("fixture",heads)),faults);
         var provider=new MutatorWorldProvider(catalog);
         var profile=new MutatorSupportProfile() {
             @Override public Set<MutatorCapability> capabilities(int zone,int act) { return EnumSet.allOf(MutatorCapability.class); }

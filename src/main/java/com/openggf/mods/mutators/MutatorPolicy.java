@@ -50,13 +50,23 @@ public sealed interface MutatorPolicy permits MutatorPolicy.DrySonicGravity,
      * the host grows linearly from 100% at zero rings and clamps above 100 rings.
      */
     @com.openggf.game.ModApi
-    record BigHead(int percent, Target target, boolean scaleWithRings) implements MutatorPolicy {
+    record BigHead(int percent, java.util.Set<HeadTarget> afflicts, boolean scaleWithRings) implements MutatorPolicy {
         public BigHead {
             if (percent < 100 || percent > 200) throw new IllegalArgumentException("Head scale must be 100..200 percent");
-            Objects.requireNonNull(target, "target");
+            afflicts = java.util.Set.copyOf(afflicts);
+        }
+        /** Independent presentation targets; choosing none is a valid inert configuration. */
+        public BigHead(int percent, java.util.Set<HeadTarget> afflicts) { this(percent, afflicts, false); }
+        /** Compatibility with the original leader/team choice. */
+        public BigHead(int percent, Target target, boolean scaleWithRings) {
+            this(percent, Objects.requireNonNull(target) == Target.ALL_TEAM
+                    ? java.util.Set.of(HeadTarget.PLAYER, HeadTarget.SIDEKICKS)
+                    : java.util.Set.of(HeadTarget.PLAYER), scaleWithRings);
         }
         /** A fixed head size, independent of rings. */
         public BigHead(int percent, Target target) { this(percent, target, false); }
+        /** Legacy team projection; use {@link #afflicts()} for independent targeting. */
+        public Target target() { return afflicts.contains(HeadTarget.SIDEKICKS) ? Target.ALL_TEAM : Target.LEADER; }
         @Override public MutatorCapability capability() { return MutatorCapability.BIG_HEAD; }
     }
 
@@ -112,4 +122,7 @@ public sealed interface MutatorPolicy permits MutatorPolicy.DrySonicGravity,
 
     @com.openggf.game.ModApi
     enum Target { LEADER, ALL_TEAM }
+
+    @com.openggf.game.ModApi
+    enum HeadTarget { PLAYER, SIDEKICKS, BADNIKS, BOSSES }
 }

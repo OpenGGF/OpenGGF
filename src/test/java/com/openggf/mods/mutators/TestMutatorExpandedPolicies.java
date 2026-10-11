@@ -20,6 +20,19 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** Exercises admission/composition/history rather than creator-reported configuration alone. */
 class TestMutatorExpandedPolicies {
+    @Test void headTargetsAreIndependentAndEmptySelectionIsInert() {
+        var selected=java.util.EnumSet.of(MutatorPolicy.HeadTarget.SIDEKICKS,MutatorPolicy.HeadTarget.BADNIKS);
+        var head=new MutatorPolicy.BigHead(200,selected,true);
+        selected.clear();
+        var effective=new MutatorSessionState.Effective(1,Map.of("a:head",List.of(head)));
+        assertEquals(100,effective.headScalePercent(true,100));
+        assertEquals(150,effective.headScalePercent(false,50));
+        assertEquals(150,effective.headScalePercent(MutatorPolicy.HeadTarget.BADNIKS,50));
+        assertEquals(100,effective.headScalePercent(MutatorPolicy.HeadTarget.BOSSES,100));
+        assertTrue(new MutatorPolicy.BigHead(200,Set.of()).afflicts().isEmpty());
+        assertEquals(Set.of(MutatorPolicy.HeadTarget.PLAYER,MutatorPolicy.HeadTarget.SIDEKICKS),
+                new MutatorPolicy.BigHead(150,MutatorPolicy.Target.ALL_TEAM).afflicts());
+    }
     private static final Set<MutatorCapability> ALL = EnumSet.allOf(MutatorCapability.class);
 
     @Test

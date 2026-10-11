@@ -126,8 +126,8 @@ public final class SpriteSheetDump {
             set = romArt.sprites(request, palette);
         }
         if (headReview) {
-            if (!"sonic".equals(character) || characterProvider == null)
-                throw new IllegalArgumentException("heads=true requires char=sonic");
+            if (character == null || characterProvider == null)
+                throw new IllegalArgumentException("heads=true requires a native character");
             var nativePalette = characterProvider.loadCharacterPalette(character);
             int[] colours = new int[64];
             for (int index=0;index<16;index++) {

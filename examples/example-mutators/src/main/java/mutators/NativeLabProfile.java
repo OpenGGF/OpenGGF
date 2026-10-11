@@ -35,12 +35,21 @@ public final class NativeLabProfile implements MutatorSupportProfile {
         if (!game.equals("s3k")) available.remove(MutatorCapability.NO_BONUS_STAGES);
         return Set.copyOf(available);
     }
+    /** The native games expose six ROM-backed character/game combinations. */
+    public boolean supportsNativeCharacter(String key) {
+        return switch (game) {
+            case "s1" -> key.equals("sonic");
+            case "s2" -> key.equals("sonic") || key.equals("tails");
+            default -> Set.of("sonic", "tails", "knuckles").contains(key);
+        };
+    }
     @Override public boolean supportsPlayer(String key, boolean leader) {
         return Set.of("sonic", "tails", "knuckles").contains(key);
     }
     @Override public boolean supportsPlayer(MutatorCapability capability, String key, boolean leader) {
         return switch (capability) {
-            case BIG_HEAD, DRY_SONIC_GRAVITY -> key.equals("sonic");
+            case DRY_SONIC_GRAVITY -> key.equals("sonic");
+            case BIG_HEAD -> supportsNativeCharacter(key);
             case PLAYER_STEALTH -> supportsPlayer(key, leader);
             default -> false;
         };

@@ -31,7 +31,7 @@ public final class MutatorsMod implements GgfMod {
         @Override public String displayName() { return "Mutator Lab / " + profile.gameTitle(); }
         @Override public String baseGameId() { return profile.game(); }
         @Override public boolean activatesFor(GameplayLaunchRequest request) {
-            return request.gameId().equals(profile.game()) && request.mainCharacter().equals("sonic");
+            return request.gameId().equals(profile.game()) && profile.supportsNativeCharacter(request.mainCharacter());
         }
         @Override public Set<LogicalRom> romPrerequisites() { return Set.of(profile.rom()); }
         @Override public List<String> providedMainCharacters() { return List.of(); }

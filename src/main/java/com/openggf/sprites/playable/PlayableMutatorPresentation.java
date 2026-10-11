@@ -40,7 +40,7 @@ public final class PlayableMutatorPresentation {
             return;
         }
         var policy = PlayableSpriteInternalAccess.mutatorPolicy(sprite);
-        int headScale = part == SpritePresentation.Part.BODY && !sprite.isSuperSonic()
+        int headScale = part == SpritePresentation.Part.BODY
                 ? policy.headScalePercent() : 100;
         if (!policy.suppressBody() && !policy.suppressAppendage() && !policy.suppressAttachedEffects()
                 && headScale == 100) {
@@ -51,7 +51,7 @@ public final class PlayableMutatorPresentation {
             case BODY -> policy.suppressBody();
             case APPENDAGE -> policy.suppressAppendage();
             case ATTACHED_EFFECT -> policy.suppressAttachedEffects();
-            case WORLD -> false;
+            case WORLD, OBJECT_BODY -> false;
         };
         var graphics = SpriteGraphicsAccess.graphics(sprite);
         var subject = new SpritePresentation.Subject(sprite.getCode(), part, suppressed, headScale);

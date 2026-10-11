@@ -612,3 +612,11 @@ This adds one entry to the mutable unpublished `0.7` signature pin.
 `0.7.0` and its existing publication state. See the
 [scene guide](../modding/guides/mod-scenes.md#5-audio-and-storage) and
 [Eggman's Sky voice record](designs/2026-10-07-eggmans-sky.md#original-system-voice-2026-10-08).
+
+The Big Head polish keeps the candidate at 0.7.0 and retains the old `BigHead`
+`Target` constructors/accessor and five-argument checkbox constructor. Its record
+component becomes immutable `afflicts: Set<HeadTarget>`; source deconstruction
+patterns must rebuild against the candidate. Additions include independent target
+roles, grouped checkboxes and a declarative retired-choice migration. The actual
+compiled signature export and normalized candidate pin are updated together;
+no published baseline is changed.

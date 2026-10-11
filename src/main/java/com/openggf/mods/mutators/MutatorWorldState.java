@@ -159,6 +159,13 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
         };
     }
     @Override public <T> T getService(Class<T> type) {
+        if (type == com.openggf.game.mutators.ObjectHeadScaleSource.class) {
+            return type.cast((com.openggf.game.mutators.ObjectHeadScaleSource) (role, rings) ->
+                    state.isClosed() || !availableCapabilities().contains(MutatorCapability.BIG_HEAD)
+                            || role == com.openggf.game.mutators.ObjectHeadRole.NONE ? 100
+                            : state.effective().headScalePercent(role == com.openggf.game.mutators.ObjectHeadRole.BADNIK
+                                    ? MutatorPolicy.HeadTarget.BADNIKS : MutatorPolicy.HeadTarget.BOSSES, rings));
+        }
         if (type == MutatorWorldState.class) return type.cast(this);
         if (type == com.openggf.game.mutators.LevelMutatorRuntime.class) return type.cast(entryRuntime);
         if (type == com.openggf.game.mutators.GameplayMutatorPacing.class) return type.cast(pacing);

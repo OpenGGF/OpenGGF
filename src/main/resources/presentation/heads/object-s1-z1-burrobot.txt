@@ -1,0 +1,10 @@
+# Native ROM head anatomy. Big Head polish, 2026-10-11.
+# Explicit source regions; native projectiles/appendages/machinery remain unchanged.
+fingerprint=8829b9848cb679aa4a6534826c8af785aa6afdd1d261d807bd8a8eb28e436690
+00 MASKED 1 -2 0,1 -15,-23;7,-23;7,-1;-15,-1
+01 MASKED 1 -2 0,1 -15,-23;7,-23;7,-1;-15,-1
+02 MASKED 0 -4 0,1 -10,-26;10,-26;10,-3;-10,-3
+03 MASKED 0 -4 0,1 -10,-26;10,-26;10,-3;-10,-3
+04 MASKED 1 -2 0,1 -15,-23;7,-23;7,-1;-15,-1
+05 MASKED -1 3 0,1 -26,-7;-1,-7;-1,13;-26,13
+06 MASKED 1 -2 0,1 -15,-23;7,-23;7,-1;-15,-1

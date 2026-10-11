@@ -38,13 +38,39 @@ public sealed interface MutatorOption permits MutatorOption.IntegerSlider,
 
     @com.openggf.game.ModApi
     record Checkbox(String id, String label, String help, MutatorScope editScope,
-                    Boolean defaultValue) implements MutatorOption {
+                    Boolean defaultValue, String group, LegacyChoice legacyChoice) implements MutatorOption {
         public Checkbox {
             metadata(id, label, help, editScope);
             Objects.requireNonNull(defaultValue, "defaultValue");
+            if (Objects.requireNonNull(group, "group").length() > 28)
+                throw new IllegalArgumentException("Checkbox group label is too long");
+        }
+        public Checkbox(String id, String label, String help, MutatorScope editScope, Boolean defaultValue) {
+            this(id, label, help, editScope, defaultValue, "", null);
+        }
+        public Checkbox(String id, String label, String help, MutatorScope editScope,
+                        Boolean defaultValue, String group) {
+            this(id, label, help, editScope, defaultValue, group, null);
         }
         @Override public void validate(Object value) {
             if (!(value instanceof Boolean)) throw new IllegalArgumentException("Expected a checkbox value");
+        }
+    }
+
+    /** Declarative conversion of a retired choice to a checkbox, without executing creator code. */
+    @com.openggf.game.ModApi
+    record LegacyChoice(String id, String checkedToken, java.util.Set<String> tokens) {
+        public LegacyChoice {
+            ModKeySyntax.requireLocalName(id);
+            tokens = java.util.Set.copyOf(tokens);
+            if (tokens.isEmpty() || tokens.size() > 16 || !tokens.contains(checkedToken))
+                throw new IllegalArgumentException("Invalid legacy choice tokens");
+            tokens.forEach(ModKeySyntax::requireLocalName);
+        }
+        public boolean checked(Object saved) {
+            if (!(saved instanceof String token) || !tokens.contains(token))
+                throw new IllegalArgumentException("Unknown legacy choice token");
+            return checkedToken.equals(token);
         }
     }
 

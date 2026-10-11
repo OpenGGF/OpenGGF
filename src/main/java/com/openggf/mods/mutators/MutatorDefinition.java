@@ -51,6 +51,14 @@ public record MutatorDefinition(String localId, String title, String description
         }
         validateScope(enableScope, capabilities);
         validateScope(disableScope, capabilities);
+        Set<String> retiredOptions = new java.util.HashSet<>();
+        for (var option : options) {
+            if (option instanceof MutatorOption.Checkbox checkbox && checkbox.legacyChoice() != null) {
+                String retired=checkbox.legacyChoice().id();
+                if (byId.containsKey(retired) || !retiredOptions.add(retired))
+                    throw new IllegalArgumentException("Legacy choice overlaps an active or retired option");
+            }
+        }
         Set<String> grouped = new java.util.HashSet<>();
         Set<String> groupIds = new java.util.HashSet<>();
         for (AtomicGroup group : atomicGroups) {

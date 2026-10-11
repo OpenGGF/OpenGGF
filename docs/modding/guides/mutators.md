@@ -119,9 +119,16 @@ without reindexing native placements; stage-entry permits retain an already
 captured transition; Game Speed schedules complete presentation-loop ticks; and
 Violent Explosions amplifies only the resolved native badnik rebound. Big Head
 composes reviewed anatomical masks after native SAT admission, with native
-fallbacks for ball, powered, donor/custom and unreviewed poses. Do not scale the
+fallbacks for ball, fully obscured, donor/custom and unreviewed poses. Do not scale the
 entire player quad or use `setHidden` to fake an appearance-only effect.
-`BigHead(percent, target, true)` scales with the target's live native ring count:
+`BigHead(percent, Set<HeadTarget>, true)` independently selects `PLAYER`,
+`SIDEKICKS`, `BADNIKS` and `BOSSES`. The original `Target` constructors remain
+available: `LEADER` maps to Player, `ALL_TEAM` maps to Player + Sidekicks.
+Player/sidekick scaling uses each character's live native ring count; enemy
+scaling uses the main player's count. Native objects declare `ObjectHeadRole`,
+and their render callbacks consume a world-owned scale source. Renderer names
+never infer allegiance, so shared art and projectiles remain independent.
+Ring-scaled heads are
 normal size at zero rings, `percent` at 100 rings and above. The host reads the
 count at presentation, so pickup, hurt, reloads and rewind need no copied state.
 A saved entry that predates a newly added option takes its declared default, so
@@ -141,8 +148,10 @@ streams, directory/file identity checks and atomic replacement protect byte
 publication. Empty host directory provisioning is path-based and is not claimed
 to resist a concurrent ancestor substitution; the store subsequently rejects
 unsafe identity/path changes and never publishes preference bytes through them.
-Changed schemas require an explicit future migration recipe; this prototype
-rejects incompatible entries with a visible default/error outcome.
+A checkbox can carry a bounded `group` label and a declarative `LegacyChoice`
+conversion. The host consumes the retired token, preserves explicit new values,
+and rejects unknown tokens; creator callbacks never run during migration.
+Other incompatible schema changes retain the visible default/error outcome.
 Before Start or Resume publishes any settings, the host must successfully save
 the requested draft. Restart and Return also wait for successful persistence
 before queueing a command. A failure keeps the previous admitted/effective

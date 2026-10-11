@@ -14,22 +14,43 @@ public final class SpritePresentation {
     }
 
     /** Semantic display ownership, independent of native sprite admission and gameplay flags. */
-    public enum Part { WORLD, BODY, APPENDAGE, ATTACHED_EFFECT }
+    public enum Part { WORLD, BODY, APPENDAGE, ATTACHED_EFFECT, OBJECT_BODY }
     /** Immutable source-pixel geometry; pose/art eligibility belongs to the producer. */
     public record MaskPoint(int x, int y) { }
-    public record HeadMask(int anchorX, int anchorY, java.util.Set<Integer> pieces, List<MaskPoint> polygon) {
-        public HeadMask { pieces = java.util.Set.copyOf(pieces); polygon = List.copyOf(polygon); }
+    /** A source region can retain disjoint islands and holes through an even/odd contour. */
+    public record MaskRegion(java.util.Set<Integer> pieces, List<MaskPoint> polygon) {
+        public MaskRegion { pieces = java.util.Set.copyOf(pieces); polygon = List.copyOf(polygon); }
         public boolean contains(int piece, int x, int y) {
             if (!pieces.contains(piece)) return false;
-            double px = x + .5, py = y + .5;
-            boolean inside = false;
-            for (int i = 0, j = polygon.size() - 1; i < polygon.size(); j = i++) {
-                MaskPoint a = polygon.get(i), b = polygon.get(j);
-                if ((a.y() > py) != (b.y() > py)
-                        && px < (b.x() - a.x()) * (py - a.y()) / (b.y() - a.y()) + a.x()) inside = !inside;
-            }
-            return inside;
+            return polygonContains(polygon, x, y);
         }
+    }
+    public record HeadMask(int anchorX, int anchorY, java.util.Set<Integer> pieces, List<MaskPoint> polygon,
+                           List<MaskRegion> foreground) {
+        public HeadMask {
+            pieces = java.util.Set.copyOf(pieces); polygon = List.copyOf(polygon);
+            foreground = List.copyOf(foreground);
+        }
+        public HeadMask(int anchorX, int anchorY, java.util.Set<Integer> pieces, List<MaskPoint> polygon) {
+            this(anchorX, anchorY, pieces, polygon, List.of());
+        }
+        public boolean contains(int piece, int x, int y) {
+            return pieces.contains(piece) && polygonContains(polygon, x, y);
+        }
+        /** Foreground gloves/soles stay native; only opaque non-head pixels are replayed. */
+        public boolean foregroundContains(int piece, int x, int y) {
+            return foreground.stream().anyMatch(region -> region.contains(piece, x, y));
+        }
+    }
+    private static boolean polygonContains(List<MaskPoint> polygon, int x, int y) {
+        double px = x + .5, py = y + .5;
+        boolean inside = false;
+        for (int i = 0, j = polygon.size() - 1; i < polygon.size(); j = i++) {
+            MaskPoint a = polygon.get(i), b = polygon.get(j);
+            if ((a.y() > py) != (b.y() > py)
+                    && px < (b.x() - a.x()) * (py - a.y()) / (b.y() - a.y()) + a.x()) inside = !inside;
+        }
+        return inside;
     }
     /** Producer-supplied replay after native admission; graphics does not choose a runtime renderer. */
     @FunctionalInterface
