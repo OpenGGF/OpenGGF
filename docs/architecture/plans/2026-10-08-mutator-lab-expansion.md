@@ -1476,4 +1476,57 @@ despite DISPLAY/WAYLAND_DISPLAY being unset. The replacement denies desktop/audi
 sockets and uses an authenticated task-owned Xvfb server for legacy GLFW captures;
 a native two-frame baseline capture passed before restart. It does not use the
 user's display, input or audio devices. The feature's authored visual captures
-remain explicit surfaceless EGL. Full baseline/candidate comparison is pending.
+remain explicit surfaceless EGL.
+
+Final baseline is exact published develop `765ec853360432fefb41e105a1ea2cc7b539e4d2`,
+normal full run `20261011T171203Z-10c8efb4`: 3,080 selected / 3,078 ordinary
+reports / 26,675 cases / 28 failures / zero errors / 63 skips in 3,783.18 seconds.
+Its fresh guards pass 674 cases in 87 reports, zero skips, in 238.86 seconds.
+The baseline source fingerprint is unchanged. Its older summary capped the abort
+stacks for 32 Infinite Sonic skips. One bounded baseline-class recovery executes
+238 cases (206 pass / 32 skip / no failures or errors); every uncapped abort tail
+is validated before retaining its complete causal line. This recovers measurement
+evidence, without repeating the whole baseline or altering test source.
+
+Candidate run `20261011T181906Z-9fcfa991`, initially at
+`3f2f859c1366aaf569a99d06200d6a2b68e866d4` against that exact base, completes all
+3,127 selected ordinary classes: 3,125 reports / 27,034 cases / 27 failures /
+zero errors / 63 skips in 3,851.51 seconds. The original **combined invocation
+is incomplete**: a separate user-authorized PR-fix task committed and pushed
+`b7fd7ce48c13a97a3d21505a639cad26d50594a1` while ordinary tests ran, so the runner
+correctly stops before its guard lane on changed HEAD. The entire delta is one
+native-image resource include for `presentation/heads/profiles.list`. Java,
+tests, POM, hooks, selection policy and all other resources are byte-identical;
+the ordinary run's compiled native metadata still matches the initial commit.
+Only the native-resource guard reads that configuration in the test sources.
+The corrected native include is preserved. Its bounded packaging impact does
+not justify another whole ordinary run.
+
+A separate normal, fresh `maven_queue.py -Dmse=off -Pguards verify -B` on the
+clean `b7fd7ce48` successor passes **675 cases / 88 reports**, zero failures,
+errors or skips, with unchanged source fingerprint (255.27 seconds including
+queue/packaging). SDK/Javadoc artifact verification passes; compiled native
+resource metadata matches source, and the fresh 17,798-line API export remains
+byte-exact to the same pin. This is a complete ordinary lane plus separately
+completed successor guards/package, not a terminal combined-run or green
+whole-suite claim. Native-image binary execution is not claimed.
+
+All 27 candidate failures match complete baseline assertions: 26 literally after
+exception-prefix removal, and the entire 2,915-character SSZ assertion after only
+verified `RewindObjectStateBlob@hex` identity normalization. All 63 skip identities
+and causal lines match. The one absent baseline failure is the existing PR's
+CLI-fixture sanitation: its positive help arm clears inherited producer controls,
+then explicitly adds each negative injection. The production shell is byte-identical.
+A bounded baseline help control returns 4 with the inherited `JAVA_TOOL_OPTIONS`
+and 0 in the trusted environment; no engine or Maven is launched by that control.
+This attributes the absence to fixture environment handling, not a production
+fix. There are no new, worsened or unattributed negatives, omitted negative cases,
+changed skips or ROM-related skips. Both category runs are consumed and acknowledged.
+
+Light complete assertions/causes and source/command evidence are retained outside
+Git beside the captures in `baseline-summary.json`, `baseline-skip-recovery.json`,
+`candidate-composed-summary.json`, `source-equivalence-native-include.json`,
+`cli-absence-attribution.json` and `candidate-fresh-guards-summary.json`.
+Owned private servers and Maven/Java helpers terminate normally; the feature
+worktree remains for PR #215, and the clean baseline checkout is removed after
+its evidence is consumed. Main develop and unrelated work remain untouched.
