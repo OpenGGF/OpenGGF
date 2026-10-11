@@ -2882,3 +2882,86 @@ All three playback copies share SHA-256
 The export measures −16.7 LUFS and −1.8 dBFS true peak. Chapter stills and all
 three seasonal gallery locations were inspected; the opening's continuous
 native camera rows and new Tails capture cover the reported visual defects.
+
+
+### Watering-can presentation (2026-10-11)
+
+The user requested a physical watering can while Sonic waters, with other chores
+remaining the farmer's own abilities. The farm now draws a small original blue
+pixel-art can on a successful watering action, with three pre-baked poses for
+lift/tip/recovery and falling droplets. Its grip follows the existing fishing
+rod's verified ROM standing-frame hand offsets, mirrored about that origin.
+Sonic, Tails and Knuckles were inspected in production captures. The effect lasts
+32 scene ticks, holds the idle body when standing, and stops showing when moving
+away from the watering spot, jumping, charging or arriving at the farm. It does
+not delay input, change watering costs, reach or upgrades, or create a prop for
+failed/duplicate watering attempts.
+
+The bar uses the same can picture. The visible item, intro letter, workshop tank
+and refill/empty notices say WATERING CAN; the saved `water_shield` key stays
+unchanged, including its native bubble-shield use. Fire and Lightning retain
+their ROM monitor icons; tilling remains spin dash. The original prop follows the
+same code-native pixel-art approach as the existing item pictures and fishing
+rod. A first packaging attempt rejected static image/pose caches with
+`STATIC_STATE_UNSUPPORTED`; the cache now belongs to each scene's `Art` instance,
+and creator validation reports zero findings. No global creator state was added.
+
+The main workspace fast-forwarded from `3418a15ff` to `765ec8533`. Merge
+`cc494b520c9c05a17560aeffb036de1d4508e74e` incorporates that updated base into the
+existing PR branch. Changelog and compatibility prose keep both mods' additions.
+The overlapping `SceneAudio`/host implementation keeps Starpost's existing shared
+ROM driver and scoped donor route: the isolated PCM alternative masks base SFX
+and bypasses the scene-owned percentage control. Upstream Three Islands content,
+native background support and standalone `LiveSceneMusic` implementation/tests
+remain included. Its actual scene consumers and continuous donor playback/loops
+were checked together; this is a common semantic music route, without mod-name
+selection. Creator audio documentation describes the integrated driver route.
+
+Verification on that merge plus this example-owned presentation change:
+
+```text
+maven_queue.py --lean -B -Dmse=off -Dtest=TestModApiSignatureSurface,TestSceneDonorMusic test
+maven_queue.py --lean -B -Dmse=off -Dtest=TestStarpostValleyExample,TestStarpostValleyScene,TestThreeIslandsExample,TestThreeIslandsScene,TestLiveSceneMusicRom,TestRomSceneBackground test
+maven_queue.py --lean -B -Dmse=off -Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestModApiPinPolicy,TestModApiReleasePolicy,TestModApiRuntimePolicy,TestSmpsMusicTempoPercent test
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -B -Dmse=off -Pguards test
+```
+
+The three focused runs used explicit verified absolute S1/S2/S3K ROM paths and
+completed **12 + 23 + 92 = 127 tests**, all without failures/errors/skips. The
+example bridges also run **197 Starpost and 83 Three Islands creator tests**,
+all successful; both packages validate with zero findings. Guards complete
+**674 tests, zero failures/errors/skips**, in 3m57s. Java 21/Lua 5.4/PowerShell
+preflight passes. The unchanged runner plan selects 3,091 ordinary classes through
+the updated-base/example fallback. Proportionate validation replaces another
+ordinary broad run here: the new behavior is example-owned drawing and labels,
+not a new engine timing algorithm, public API or physics contract; affected
+music/background/API consumers and required S3K consumers are covered explicitly.
+The preceding section's red ordinary run remains historical evidence, not a new
+full-suite pass. Only the pond-hint wording was reconciled afterward; final creator
+packaging/validation passed on that wording, without repeating unchanged engine checks.
+
+Fresh `HeadlessGameBoot`/`GameLoop.step` takes and authored input are retained at
+`~/Videos/OGGF/starpost-valley/watering-can/` and the trailer's
+`promo-polish/grow-can-walk/`. `farm.csv` records actual farm position, facing,
+charges, action age and prop visibility. The trailer take spends exactly nine
+charges, and input-only steering walks Sonic between plots; the first two pours
+have at most 1.079 pixels of movement per frame. Seeded season/calendar/field
+setups remain showcase preparation. A separate left-facing take verifies a
+successful pour, an already-watered retry without another spent charge, and an
+empty-can refusal with no new prop. The first attempted left-facing take still
+had an empty bar slot selected after harvesting; its corrected setup, not that
+initial take, supplies the evidence. All captures finish with zero creator faults.
+
+The trailer's farming picture and SFX now come from the fresh music-disabled
+take. Its edit keeps 106.42 seconds, native gameplay speed, 65% pitch-preserved
+music, seasonal slices and transition cues. Harvest source moves from frame 890
+to 1730 to account for the walking/watering setup; all cuts and PCM/frame counts
+are checked. The previous trailer and edit are preserved in the watering-can task
+directory. Full MP4 decode passes; the export remains 1920×1080/60 fps with stereo
+48 kHz AAC, −16.7 LUFS integrated and −1.8 dBFS true peak. All three playback copies
+share SHA-256
+`911817a4a09fd3ba5363e116b56c24a2e82a2354f1f799b4714e1b242afebef2`.
+`watering-can/watering-preview.mp4` is a six-second continuous native excerpt
+(frames 528–887), showing the hand prop, its bar icon and movement between plots.
+Capture inputs, driver and final export verification are recorded with the
+capture provenance.

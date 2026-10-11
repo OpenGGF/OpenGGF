@@ -13,7 +13,7 @@ import com.openggf.mods.ui.CompactFont;
 import starpost.ui.Text;
 
 /**
- * Tails's workshop: upgrades (the Water Shield's tank, more monitor slots, the Fire and Lightning
+ * Tails's workshop: upgrades (the watering can's tank, more monitor slots, the Fire and Lightning
  * Shields, a fishing rod) and things to build from scrap, wood and marble. Rows whose ingredients
  * the game does not know yet (an uninstalled system) are left out.
  */
@@ -39,7 +39,7 @@ final class WorkshopMenu implements Screen {
         int cap = game.waterCapacity;
         if (cap < 80) {
             int next = cap * 2;
-            out.add(new Offer("WATER SHIELD TANK " + next, "water_shield", cap == 10 ? 500 : cap == 20 ? 2000 : 5000,
+            out.add(new Offer("WATERING CAN TANK " + next, "water_shield", cap == 10 ? 500 : cap == 20 ? 2000 : 5000,
                     inputs("marble_chip", cap == 10 ? 10 : 0, "scrap", cap == 10 ? 0 : cap == 20 ? 25 : 50),
                     () -> {
                         game.waterCapacity = next;

@@ -75,6 +75,8 @@ public final class FarmView {
     private long lastActionAt = -100;
     private int lastActionRow = -1;
     private int lastActionColumn = -1;
+    private long wateredAt = -100;
+    private float wateredX, wateredFeet;
     private final Anim anim = new Anim();
     private final starpost.art.Dust dust;
     private final starpost.art.TailsTails tails;
@@ -135,6 +137,7 @@ public final class FarmView {
 
     /** Puts the farmer at the house door (morning) or at the gate (coming home). */
     public void arrive(boolean atGate) {
+        wateredAt = -100;
         runner.x = atGate ? GATE_X - 30 : DOOR_X + 6;
         runner.depth = atGate ? 40 : 4;
         runner.facingLeft = atGate;
@@ -283,9 +286,9 @@ public final class FarmView {
             if (held != null && held.id().equals("water_shield")) {
                 game.waterCharges = game.waterCapacity;
                 shell.sfx(Sfx.BUBBLE_SHIELD);
-                shell.toast("WATER SHIELD FULL: " + game.waterCapacity);
+                shell.toast("WATERING CAN FULL: " + game.waterCapacity);
             } else if (!pondAction.getAsBoolean()) {
-                shell.toast("THE FARM POND. HOLD THE WATER SHIELD OR A ROD.");
+                shell.toast("THE FARM POND. HOLD THE WATERING CAN OR A ROD.");
             }
             return Request.NONE;
         }
@@ -418,7 +421,7 @@ public final class FarmView {
             if (!plot.tilled) {
                 shell.sfx(Sfx.ERROR);
             } else if (game.waterCharges <= 0) {
-                shell.toast("THE WATER SHIELD IS EMPTY. REFILL AT WATER.");
+                shell.toast("THE WATERING CAN IS EMPTY. REFILL AT WATER.");
                 shell.sfx(Sfx.ERROR);
             } else if (!plot.watered && spend(game, 1)) {
                 plot.watered = true;
@@ -432,6 +435,9 @@ public final class FarmView {
                 }
                 shell.sfx(Sfx.SPLASH);
                 marked(row, column);
+                wateredAt = shell.ticks;
+                wateredX = runner.x;
+                wateredFeet = feetY();
             }
             return;
         }
@@ -608,7 +614,7 @@ public final class FarmView {
             anim.set(Anim.PUSH, 9);                       // AniTails04 / AniSonic04
         } else if (speed > 0.05f) {
             anim.set(speed >= 6 ? Anim.RUN : Anim.WALK, Math.max(0, 8 - (int) speed));
-        } else if (holdStill.getAsBoolean() && runner.height == 0) {
+        } else if ((holdStill.getAsBoolean() || pouring()) && runner.height == 0) {
             anim.hold(Anim.WAIT);
         } else {
             anim.set(Anim.WAIT, 6);
@@ -617,6 +623,14 @@ public final class FarmView {
     }
 
     // ------------------------------------------------------------------ drawing
+
+    /** The prop belongs only to a successful watering action, never to a carried inventory slot. */
+    private boolean pouring() {
+        long age = shell.ticks - wateredAt;
+        return age >= 0 && age < starpost.art.WateringCan.TICKS && chargeTicks == 0
+                && !looping && !dashing && !runner.rolling && runner.height == 0
+                && Math.abs(runner.x - wateredX) < 2 && Math.abs(feetY() - wateredFeet) < 2;
+    }
 
     public void draw(SceneCanvas canvas, Art.Seasonal look, int light, SceneDraw tint) {
         Game game = shell.game;
@@ -833,6 +847,10 @@ public final class FarmView {
             tails.draw(canvas, shell.art.tailsTails, x, originY, style);
         }
         canvas.draw(pose, x, originY, style);
+        if (pouring()) {
+            shell.art.wateringCan.draw(canvas, shell.game.farmer, (int) (shell.ticks - wateredAt),
+                    x, ground, runner.facingLeft, tint);
+        }
         SceneSpriteSet puffs = shell.art.dust(shell.game.farmer);
         dust.drawDash(canvas, puffs, x, originY, runner.facingLeft, tint);
         dust.drawPuffs(canvas, puffs, cx, 0, tint);

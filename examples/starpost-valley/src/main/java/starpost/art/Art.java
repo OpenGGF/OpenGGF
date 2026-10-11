@@ -16,7 +16,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Everything drawn from the player's ROMs. Green Hill comes from Sonic 1's level kit: its 256-pixel
+ * Stock world and character art from the player's ROMs. Small farming/item pictures, including
+ * the watering can, are original creator art. Green Hill comes from Sonic 1's level kit: its 256-pixel
  * blocks with their per-pixel collision, background, palette and decorations cut from the blocks.
  * Characters, springs, Star Posts, monitors, rings, Flickies and the Egg Robo come from Sonic 3 &amp;
  * Knuckles; the signpost, animals and badniks from Sonic 1, in Green Hill's palette. Terrain is
@@ -77,6 +78,7 @@ public final class Art {
     private final SceneImage totem;
     private final SceneImage plant;
     private final Seasonal[] seasons = new Seasonal[4];
+    public final WateringCan wateringCan = new WateringCan();
     public final ItemIcons icons;
     public final HudArt hud;
     /** Sonic 3 &amp; Knuckles title-card lettering and the card's red banner (null if unavailable). */

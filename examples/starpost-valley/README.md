@@ -8,14 +8,17 @@ badniks, and dozens of freed animals with nowhere to go. Farm the valley's old f
 Robotnik's cracked animal capsule into the valley's heart (or sell out to his Robomart), pop badnik
 pests, run the loop when you're out of Momentum, make friends, and get through a year in the valley.
 
-Everything you see and hear comes from your own ROMs at runtime: Green Hill is Sonic 1's own level
+The world, characters and soundtrack come from your own ROMs at runtime: Green Hill is Sonic 1's own level
 blocks, collision, background and palette, and the town is built from its pixels; Sonic, Tails,
 Knuckles, the Egg Robo, the shields and the title-card lettering come from Sonic 3 & Knuckles; the
 Marble Ruins are Marble, Labyrinth and Scrap Brain Zones. The soundtrack is the games' own songs,
 played by the sound driver at 65% of their original pace, with their pitch preserved and sound
 effects at normal speed. The calmer pace follows the valley's native acts and returns to normal
 when you leave the mod. The jar holds code plus a few original
-pictures of crops, fish, seed packets and food.
+pictures of crops, fish, seed packets, food and the watering can. The can appears only
+when watering succeeds: it tips at the farmer's hand and pours falling droplets.
+Its sprite also appears on the hotbar; Fire and Lightning keep the ROM's shield
+icons, and tilling stays the farmer's spin dash.
 
 ## Requirements
 
@@ -60,7 +63,7 @@ If you know *Stardew Valley*, you know the rhythm; the names are Sonic's.
 |---|---|
 | Gold | Rings (also your health in the Ruins) |
 | Energy | **Momentum**: chores drain it; laps of the farm loop, rings and springs refill it (or classic stamina in Options) |
-| Hoe / watering can / axe & pickaxe | Spin dash / Water Shield / Fire Shield (S3K's own monitor icons) |
+| Hoe / watering can / axe & pickaxe | Spin dash / shield-fed watering can / Fire Shield |
 | Shipping bin | The shipping signpost (it spins at night, like the end of an act) |
 | Community Center | The Great Capsule: six chambers of bundles |
 | JojaMart / Joja Cola | Robomart / Robo Cola |
@@ -92,7 +95,7 @@ to ship, grow, and see the night's tally; stay out past 2:00 and you pass out, l
 | Farmer | On the farm | In the valley and the Ruins |
 |---|---|---|
 | Sonic | The strongest spin dash: it tills its whole roll | Native S3K running, slopes, loops and springs |
-| Tails | A weaker spin (three plots), but his tails fan each Water Shield charge over two plots | Flies for a while after a second jump |
+| Tails | A weaker spin (three plots), but his tails fan each watering-can charge over two plots | Flies for a while after a second jump |
 | Knuckles | Digs instead of tilling, turning up buried rings and finds; punches rocks apart | Native glide and wall climb |
 
 **Neighbours.** Talk once a day and give gifts to raise hearts; heart events play out around the

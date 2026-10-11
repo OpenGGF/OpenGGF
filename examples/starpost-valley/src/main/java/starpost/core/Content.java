@@ -74,7 +74,7 @@ final class Content {
     }
 
     private void tools() {
-        tool("water_shield", "WATER SHIELD", "WATERS PLOTS. REFILL AT ANY WATER.");
+        tool("water_shield", "WATERING CAN", "SHIELD-FED WATER. REFILL AT ANY WATER.");
         tool("fire_shield", "FIRE SHIELD", "BREAKS ROCKS AND STUMPS, BURNS WEEDS.");
         tool("lightning_shield", "LIGHTNING SHIELD", "PULLS RIPE CROPS AND RINGS TO YOU.");
         tool("fishing_rod", "FISHING ROD", "TAILS MADE IT FROM A BUZZ BOMBER'S STINGER.");

@@ -11,15 +11,14 @@ import starpost.core.Item;
 import starpost.core.Kind;
 
 /**
- * 16-pixel item icons. The shields are the ROM's own monitor screens (Map_Monitor icon frames);
- * crops use their ripe picture; seed packets and other goods are small original pictures in
- * Mega Drive colours.
+ * 16-pixel item icons. Fire and Lightning use the ROM's monitor screens (Map_Monitor icon frames);
+ * watering uses the can held on the farm. Crops use their ripe picture; seed packets and other
+ * goods are small original pictures in Mega Drive colours.
  */
 public final class ItemIcons {
     /** Map_Monitor frames: the icon shown on a monitor's screen. */
     private static final int MONITOR_FIRE = 6;
     private static final int MONITOR_LIGHTNING = 7;
-    private static final int MONITOR_BUBBLE = 8;
 
     private final Art art;
     private final Map<String, SceneImage> cache = new HashMap<>();
@@ -38,8 +37,12 @@ public final class ItemIcons {
 
     /** Draws an item's icon centred in the 16x16 box at (x, y). */
     public void draw(SceneCanvas canvas, Item item, float x, float y, SceneDraw style) {
+        if (item.id().equals("water_shield")) {
+            SceneImage can = art.wateringCan.icon();
+            canvas.draw(can, x, y + (16 - can.height()) / 2f, style);
+            return;
+        }
         int monitorFrame = switch (item.id()) {
-            case "water_shield" -> MONITOR_BUBBLE;
             case "fire_shield" -> MONITOR_FIRE;
             case "lightning_shield" -> MONITOR_LIGHTNING;
             default -> -1;
