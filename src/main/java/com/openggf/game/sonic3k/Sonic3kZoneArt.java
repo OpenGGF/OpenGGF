@@ -223,6 +223,45 @@ public final class Sonic3kZoneArt implements ZonePictureSource {
     }
 
     @Override
+    public com.openggf.level.render.DetachedBackground background(int zone, int act) {
+        // These are the detached initial-art profiles, not live boss/act-event simulations.
+        if (act != 0) return null;
+        var kit = kit(zone, act);
+        if (kit == null) return null;
+        com.openggf.level.scroll.ZoneScrollHandler scroll;
+        try {
+            scroll = switch (zone) {
+                case Sonic3kZoneIds.ZONE_AIZ -> com.openggf.game.sonic3k.scroll.SwScrlAiz.detachedPresentation();
+                case Sonic3kZoneIds.ZONE_HCZ -> new com.openggf.game.sonic3k.scroll.SwScrlHcz(rom.readBytes(
+                        Sonic3kConstants.HCZ_WATERLINE_SCROLL_DATA_ADDR, Sonic3kConstants.HCZ_WATERLINE_SCROLL_DATA_SIZE));
+                case Sonic3kZoneIds.ZONE_LBZ -> com.openggf.game.sonic3k.scroll.SwScrlLbz.detachedPresentation();
+                case Sonic3kZoneIds.ZONE_DEZ -> new com.openggf.game.sonic3k.scroll.SwScrlS3kDez();
+                default -> null;
+            };
+        } catch (IOException failure) {
+            throw new IllegalStateException("Background scroll data unavailable", failure);
+        }
+        if (scroll == null) return null;
+        var picture = kit.backdrop().picture();
+        if (zone == Sonic3kZoneIds.ZONE_AIZ) {
+            // The static sky postcard stops at $220; native vertical scrolling can expose
+            // the forest below it. Use the same detached tiles and full populated BG rows.
+            Profile profile = profile(zone, act);
+            Built built = build(profile);
+            picture = new Picture(PLANE_WIDTH, profile.backgroundRows(), PlaneRasterizer.rasterize(
+                    built.level(), built, PlaneRasterizer.BACKGROUND, 0, 0, PLANE_WIDTH,
+                    profile.backgroundRows(), backdropColour(built)));
+        }
+        // DEZ1 is a fixed H40 picture: its last layout column contains 64 padding pixels.
+        // Share the live renderer's reflected wall extension, retaining the native centre.
+        int width = zone == Sonic3kZoneIds.ZONE_DEZ ? 320 : picture.width();
+        int height = zone == Sonic3kZoneIds.ZONE_DEZ ? 224 : picture.height();
+        var result = new com.openggf.level.render.DetachedBackground(picture, scroll, act, width, height);
+        return zone == Sonic3kZoneIds.ZONE_DEZ
+                ? result.withHorizontalExtension(com.openggf.game.sonic3k.render.DezInteriorBackground::pixel) : result;
+    }
+
+    @Override
     public Backdrop backdrop(int zone, int act) {
         Profile profile = profile(zone, act);
         if (profile == null) {

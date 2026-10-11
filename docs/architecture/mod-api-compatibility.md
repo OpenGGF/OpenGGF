@@ -164,6 +164,14 @@ remain synchronous. These are additive changes to the mutable 0.7 candidate;
 the descriptor/runtime version remains unpublished 0.7.0 and the normalized
 signature pin is regenerated in place.
 
+Continuous scene music adds the default `SceneAudio.playMusic(String, int)` overload.
+It returns false on host implementations without the capability; the current host starts an isolated ROM sequencer
+immediately, preserving native intro/loop commands without a finite PCM render. Its
+lifetime follows scene audio stop/fade/close; finite and live scene playback are
+exclusive. This is an additive change to candidate 0.7.0, with the normalized 0.7
+pin regenerated. The release descriptor's version/status remain unchanged, as required
+for ordinary candidate regeneration.
+
 Before changing the candidate surface:
 
 1. Run `TestModApiSignatureSurface` and inspect every added or changed line.
@@ -620,3 +628,12 @@ patterns must rebuild against the candidate. Additions include independent targe
 roles, grouped checkboxes and a declarative retired-choice migration. The actual
 compiled signature export and normalized candidate pin are updated together;
 no published baseline is changed.
+
+The Three Islands background correction adds `SceneRomArt.levelBackground(zone, act)`
+and `SceneBackground.draw(canvas, cameraX, cameraY, ticks)`. The provider creates a private
+stock scroll handler and ROM-backed presentation plane per view; the host composes native
+scanline offsets with complete wrapping instead of guessing parallax from static postcards.
+The default returns null for providers without a profile. No live level event state is
+consumed, and no engine implementation type enters the creator signature surface. The
+unpublished descriptor remains candidate 0.7.0, with `ModApiVersion` and the mutable `0.7`
+signature pin updated together (five additive lines, no removed signatures).

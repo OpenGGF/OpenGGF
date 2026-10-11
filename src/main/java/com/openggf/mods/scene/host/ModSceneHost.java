@@ -24,6 +24,9 @@ import com.openggf.mods.scene.SceneRomArt;
 import com.openggf.mods.scene.SceneStorage;
 import com.openggf.mods.scene.host.music.ManagedSceneMusic;
 import com.openggf.mods.scene.host.music.SceneMusicFactory;
+import com.openggf.mods.scene.host.music.LiveSceneMusic;
+import com.openggf.game.GameId;
+import com.openggf.game.BuiltInRomDetectors;
 import com.openggf.mods.scene.host.network.ManagedSceneNetwork;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -205,6 +208,7 @@ public final class ModSceneHost {
         private SceneMouse mouse = SceneMouse.none();
         private PhysicalInput physical = PhysicalInput.neutral();
         private ManagedSceneMusic music;
+        private LiveSceneMusic liveMusic;
         private final ManagedSceneNetwork network = new ManagedSceneNetwork();
         private final MenuRepeat repeat = new MenuRepeat();
         private int heldButtons;
@@ -245,9 +249,27 @@ public final class ModSceneHost {
             this.audio = new SceneAudio() {
                 @Override
                 public void playMusic(int musicId) {
+                    stopLiveMusic();
                     if (services != null && services.audio() != null) {
                         services.audio().playMusic(musicId);
                     }
+                }
+
+                @Override
+                public boolean playMusic(String gameId, int musicId) {
+                    if (services == null || services.audio() == null || services.romLibrary() == null) return false;
+                    var game = GameId.fromCode(gameId);
+                    var rom = services.romLibrary().sourceRom(game.code());
+                    if (rom == null) return false;
+                    var profile = BuiltInRomDetectors.forGame(game).createModule().getAudioProfile();
+                    var next = new LiveSceneMusic(game.code(), musicId,
+                            profile, rom, services.audio().outputSampleRate());
+                    stopLiveMusic();
+                    if (music != null) { music.close(); music = null; }
+                    services.audio().stopMusic();
+                    liveMusic = next;
+                    services.audio().setScenePcmSource(next);
+                    return true;
                 }
 
                 @Override
@@ -267,6 +289,7 @@ public final class ModSceneHost {
 
                 @Override
                 public void fadeOutMusic() {
+                    if (liveMusic != null) liveMusic.fadeOut();
                     if (services != null && services.audio() != null) {
                         services.audio().fadeOutMusic();
                     }
@@ -274,6 +297,7 @@ public final class ModSceneHost {
 
                 @Override
                 public void stopMusic() {
+                    stopLiveMusic();
                     if (services != null && services.audio() != null) {
                         services.audio().stopMusic();
                     }
@@ -302,7 +326,16 @@ public final class ModSceneHost {
             mouse = readMouse(handler);
         }
 
+        private void stopLiveMusic() {
+            if (liveMusic != null) {
+                liveMusic.close();
+                liveMusic = null;
+                services.audio().setScenePcmSource(null);
+            }
+        }
+
         void closeResources() {
+            stopLiveMusic();
             network.close();
             try {
                 if (music != null) music.close();
@@ -316,6 +349,7 @@ public final class ModSceneHost {
         @Override public SceneNetwork network() { return network; }
 
         @Override public SceneMusic music() {
+            stopLiveMusic();
             if (music == null) {
                 if (services == null || services.audio() == null || services.romLibrary() == null)
                     throw new UnsupportedOperationException("Finite scene music unavailable");

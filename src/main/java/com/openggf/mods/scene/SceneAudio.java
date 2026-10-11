@@ -8,6 +8,14 @@ package com.openggf.mods.scene;
 public interface SceneAudio {
     void playMusic(int musicId);
 
+    /**
+     * Starts live music from a supplied game's ROM, using that game's driver rules and
+     * native loops. Replaces scene music; stopMusic, fadeOutMusic and scene close own its
+     * lifetime. It masks base-game SFX while active. Returns false when unavailable on
+     * this host or the requested ROM is missing; malformed game/track IDs may throw.
+     */
+    default boolean playMusic(String gameId, int musicId) { return false; }
+
     void playSfx(int sfxId);
 
     /**

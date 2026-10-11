@@ -16,6 +16,13 @@ list loads lava over desert art. ICZ1's outdoor plane also needs
 colours. Check the composed picture, not just successful decompression or a
 non-null image. A static creator picture is not a live zone animation timeline.
 
+**A static background picture is not the stock scroll plane.** Three Islands' viewport-only
+fix (`1ede498795`, corrected in the 2026-10-10 follow-up) drew every pixel but still exposed
+empty layout rows and flattened S1/S2 parallax. Coverage assertions alone missed both.
+Use the engine-owned `SceneBackground` for supported moving views; verify scanline offsets,
+populated source periods, lower camera positions and the native fixed-view cases (EHZ Y,
+DEZ X/Y). Additional speed multipliers on an already-deformed background distort its layers.
+
 **A ROM mapping bank is not an animation sequence.** In the Starfall Frontier
 biome revision (base `e6844866ed`, 2026-10-08), Rhinobot's mapping frames 0/1
 face left, frame 2 is its brake pose, and frame 3 faces right. Cycling all four

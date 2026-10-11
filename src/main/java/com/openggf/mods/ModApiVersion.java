@@ -28,8 +28,11 @@ public final class ModApiVersion {
      * checkpoint, ring-award, stage-entry, defeat-knockback and pacing policies;
      * explicit assembly causes and common
      * modal configuration presentation. The unpublished candidate remains 0.7.0.
+     * Detached scene backgrounds reuse stock scanline scroll handlers with independent state.
      * Full-song and selected-part synthesis expose cancellable host jobs with
      * progress, a ten-minute duration cap and a 256 MiB stereo PCM budget.
+     * Scene audio also starts supplied-ROM music live, preserving native intros/loops
+     * with bounded packet buffering and scene-owned stop/fade/close lifetime.
      * Scene-owned direct peer text messaging is asynchronous and bounded, with
      * socket/thread ownership and lifetime kept in the engine.
      * Power-up rules expose explicit invincibility-expiry music ownership for modes

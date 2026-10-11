@@ -26,6 +26,27 @@ public final class DetachedLevelPictures implements ZonePictureSource {
     /** Kits keep the few most recent acts; older ones are rebuilt when asked again. */
     private static final int KIT_CACHE = 3;
 
+    @FunctionalInterface
+    public interface BackgroundFactory {
+        DetachedBackground create(int zone, int act, DetachedLevelKit kit) throws IOException;
+    }
+
+    private BackgroundFactory backgrounds;
+
+    public DetachedLevelPictures withBackgrounds(BackgroundFactory backgrounds) {
+        this.backgrounds = Objects.requireNonNull(backgrounds);
+        return this;
+    }
+
+    @Override
+    public DetachedBackground background(int zone, int act) {
+        if (backgrounds == null) return null;
+        DetachedLevelKit kit = kit(zone, act);
+        if (kit == null) return null;
+        try { return backgrounds.create(zone, act, kit); }
+        catch (IOException failure) { throw new IllegalStateException("Background ROM data unavailable", failure); }
+    }
+
     private final int zone;
     private final int act;
     private final Loader loader;

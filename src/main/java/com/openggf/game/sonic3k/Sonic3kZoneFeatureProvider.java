@@ -441,19 +441,10 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
             // Presentation extension only: retain the native 320px centre and
             // reflect 32px strips of the ROM wall art across the extra width.
             // Reflect descriptors as well as tile order so the joins are continuous.
-            int x = sourceX - ((GameServices.camera().getWidth() - 320) / 16) * 8;
-            boolean flip = false;
-            if (x < 0) {
-                int tile = Math.floorMod(Math.floorDiv(x, 8), 8);
-                flip = tile >= 4;
-                x = (flip ? 7 - tile : tile) * 8;
-            } else if (x >= 320) {
-                int tile = Math.floorMod(Math.floorDiv(x - 320, 8), 8);
-                flip = tile < 4;
-                x = (flip ? 39 - tile : 32 + tile) * 8;
-            }
-            return GameServices.level().getBackgroundTileDescriptorAtWorld(x, sourceY)
-                    ^ (flip ? 0x800 : 0);
+            var tile = com.openggf.game.sonic3k.render.DezInteriorBackground.tile(
+                    sourceX, GameServices.camera().getWidth());
+            return GameServices.level().getBackgroundTileDescriptorAtWorld(tile.x(), sourceY)
+                    ^ (tile.flip() ? 0x800 : 0);
         }
         var state = S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry()).orElse(null);
         if (state != null && extendedSozPyramid(state)) {

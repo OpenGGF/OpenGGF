@@ -12,6 +12,13 @@ package com.openggf.mods.scene;
  */
 @com.openggf.game.ModApi
 public interface SceneRomArt {
+    /**
+     * A fresh independent stock-scrolling background for a supported steady-state act,
+     * or null if the provider has no such profile. Public zone indices, zero-based acts.
+     * Keep the returned view rather than creating one every frame.
+     */
+    default SceneBackground levelBackground(int zone, int act) { return null; }
+
     /** "s1", "s2" or "s3k". */
     String gameId();
 
