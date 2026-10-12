@@ -1,6 +1,7 @@
 package starfall;
 
 import com.openggf.mods.scene.*;
+import com.openggf.mods.scene.art.StockSceneArt;
 import static com.openggf.mods.scene.RomSpriteRequest.Compression.KOSINSKI_MODULED;
 
 /** Verified locked-on Art/Map labels, with each source zone's own ROM palette. */
@@ -17,8 +18,8 @@ public final class EnemyArt {
         load(rom,EnemyType.RIBOT,Biome.LAUNCH_BASE,0x377BE8,0x3604B8,1); // ArtKosM_Ribot / Map_Ribot
         load(rom,EnemyType.JAWZ,Biome.HYDROCITY,0x36A552,0x361364,1); // ArtKosM_Jawz / Map_Jawz
         load(rom,EnemyType.TOXOMISTER,Biome.LAVA_REEF,0x16F7E6,0x09008E,1); // ArtKosM_Toxomister / Map_Toxomister
-        load(rom,EnemyType.ORBINAUT,Biome.HIDDEN_PALACE,0x377D1A,0x3604A4,1); // ArtKosM_Orbinaut / Map_Orbinaut
-        load(rom,EnemyType.EGG_ROBO,Biome.SKY_SANCTUARY,0x17B17E,0x184F34,0); // ArtKosM_EggRoboBadnik / Map_EggRobo
+        sprites[EnemyType.ORBINAUT.ordinal()]=rom.sprites(StockSceneArt.S3K_ORBINAUT.request(rom),palette(rom,Biome.HIDDEN_PALACE)); // ArtKosM_Orbinaut / Map_Orbinaut
+        sprites[EnemyType.EGG_ROBO.ordinal()]=rom.sprites(StockSceneArt.S3K_EGG_ROBO.request(rom),palette(rom,Biome.SKY_SANCTUARY)); // ArtKosM_EggRoboBadnik / Map_EggRobo
     }
     private void load(SceneRomArt rom,EnemyType type,Biome biome,int art,int map,int line) {
         sprites[type.ordinal()]=rom.sprites(RomSpriteRequest.of(art,KOSINSKI_MODULED,map,line),palette(rom,biome));

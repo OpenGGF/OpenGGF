@@ -7,6 +7,9 @@ import static com.openggf.mods.scene.RomSpriteRequest.Compression.*;
 /** Named recipes for the verified S3&K locked-on ROM, from sonic3k.lst Art/Map labels. */
 @com.openggf.game.ModApi
 public enum StockSceneArt {
+    S3K_MONITOR(0x190F4A, NEMESIS, 0x01DBA2, 0, "ArtNem_Monitors / Map_Monitor"),
+    S3K_AIZ_ROCK(0x38DC90, NEMESIS, 0x21DCDC, 1, "ArtNem_AIZMisc1 / Map_AIZRock"),
+    S3K_BLOOMINATOR(0x367DCA, KOSINSKI_MODULED, 0x3616C0, 1, "ArtKosM_Bloominator / Map_Bloominator"),
     S3K_RING(0x192AEE, NEMESIS, 0x01A99A, 1, "ArtNem_RingHUDText / Map_Ring"),
     S3K_ROBOTNIK_SHIP(0x0D771E, NEMESIS, 0x06820C, 0, "ArtNem_RobotnikShip / Map_RobotnikShip"),
     S3K_EGG_CAPSULE(0x0DD990, NEMESIS, 0x086BFC, 0, "ArtNem_EggCapsule / Map_EggCapsule"),

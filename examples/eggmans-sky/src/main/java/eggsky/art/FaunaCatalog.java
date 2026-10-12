@@ -1,6 +1,7 @@
 package eggsky.art;
 
 import com.openggf.mods.scene.RomSpriteRequest;
+import com.openggf.mods.scene.art.StockSceneArt;
 import com.openggf.mods.scene.RomSpriteRequest.Compression;
 import com.openggf.mods.scene.RomSpriteRequest.DplcLayout;
 import java.util.ArrayList;
@@ -67,12 +68,12 @@ public final class FaunaCatalog {
 
         // ---- Sonic 3 & Knuckles ----
         s3u("rhinobot", "Rhinobot", z(0), 0x36732A, 0xAA0, 0x3615A8, 0x36156E, FaunaDef.WALK, f(0, 1, 2, 3), 4);
-        s3("bloominator", "Bloominator", z(0), 0x367DCA, 0x3616C0, FaunaDef.WALK, f(0, 1), 12);
-        s3("monkeydude", "Monkey Dude", z(0), 0x36800C, 0x361776, FaunaDef.HOP, f(0, 1, 2), 8);
+        all.add(new FaunaDef("bloominator", "Bloominator", z(0), StockSceneArt.S3K_BLOOMINATOR, FaunaDef.WALK, f(0, 1), 12));
+        all.add(new FaunaDef("monkeydude", "Monkey Dude", z(0), StockSceneArt.S3K_MONKEY_DUDE, FaunaDef.HOP, f(0, 1, 2), 8));
         s3("jawz", "Jawz", z(1), 0x36A552, 0x361364, FaunaDef.FLY, f(0, 1), 4);
         s3("blastoid", "Blastoid", z(1), 0x36A7C6, 0x360DD0, FaunaDef.WALK, f(0), 8);
-        s3n("buggernaut", "Buggernaut", z(1), 0x36A3E0, 0x360EB4, FaunaDef.FLY, f(0, 1), 2);
-        s3("turbospiker", "Turbo Spiker", z(1), 0x36A968, 0x361212, FaunaDef.WALK, f(0, 1), 8);
+        all.add(new FaunaDef("buggernaut", "Buggernaut", z(1), StockSceneArt.S3K_BUGGERNAUT, FaunaDef.FLY, f(0, 1), 2));
+        all.add(new FaunaDef("turbospiker", "Turbo Spiker", z(1), StockSceneArt.S3K_TURBO_SPIKER, FaunaDef.WALK, f(0, 1), 8));
         s3("megachopper", "Mega Chopper", z(1), 0x36A6C4, 0x360F26, FaunaDef.HOP, f(0, 1), 6);
         s3("pointdexter", "Pointdexter", z(1), 0x36AD8A, 0x360E72, FaunaDef.FLY, f(0, 1), 10);
         s3("spiker3", "Spiker", z(2), 0x36E0C4, 0x361CB8, FaunaDef.WALK, f(1, 2), 10);
@@ -85,8 +86,8 @@ public final class FaunaCatalog {
         s3("technosqueek", "Technosqueek", z(4), 0x0DC9C4, 0x089B78, FaunaDef.WALK, f(0, 1), 4);
         s3("starpointer", "Star Pointer", z(5), 0x3751C6, 0x361FAE, FaunaDef.FLY, f(0), 8);
         s3u("penguinator", "Penguinator", z(5), 0x374154, 0x1000, 0x361E90, 0x361E4E, FaunaDef.WALK, f(0, 1, 2), 8);
-        s3("snaleblaster", "Snale Blaster", z(6), 0x377996, 0x360400, FaunaDef.WALK, f(0, 1), 12);
-        s3("orbinaut3", "Orbinaut", z(6), 0x377D1A, 0x3604A4, FaunaDef.FLY, f(0), 8);
+        all.add(new FaunaDef("snaleblaster", "Snale Blaster", z(6), StockSceneArt.S3K_SNALE_BLASTER, FaunaDef.WALK, f(0, 1), 12));
+        all.add(new FaunaDef("orbinaut3", "Orbinaut", z(6), StockSceneArt.S3K_ORBINAUT, FaunaDef.FLY, f(0), 8));
         s3("ribot", "Ribot", z(6), 0x377BE8, 0x3604B8, FaunaDef.FLY, f(0, 1), 8);
         s3u("flybot", "Flybot767", z(6), 0x377EBE, 0x1320, 0x36065A, 0x3607EC, FaunaDef.FLY, f(0, 1, 2), 4);
         s3("madmole", "Madmole", z(7), 0x165F02, 0x08D9F2, FaunaDef.WALK, f(0, 1, 2), 10);
