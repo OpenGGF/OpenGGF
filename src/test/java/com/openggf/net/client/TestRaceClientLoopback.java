@@ -1,22 +1,42 @@
 package com.openggf.net.client;
 
-import com.openggf.ghost.GhostFrame;
-import com.openggf.ghost.GhostFrameCodec;
-import com.openggf.net.host.RaceHostServer;
+import openggf.racing.server.host.RaceHostImpl;
+
+import com.openggf.net.ghost.GhostFrame;
+import com.openggf.net.ghost.GhostFrameCodec;
+import com.openggf.net.host.ControlledRaceHost;
+import com.openggf.net.host.RaceRoomHost;
+import com.openggf.net.hub.HostRoundEngine;
 import com.openggf.net.hub.RoomHostConfig;
 import com.openggf.net.hub.TrackValidationProfileSource;
 import com.openggf.net.identity.PlayerIdentity;
 import com.openggf.net.protocol.ControlMessage;
+import openggf.racing.protocol.ControlCodec;
 import com.openggf.net.protocol.GhostPackets;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -24,7 +44,8 @@ import static org.junit.jupiter.api.Assertions.*;
 @Timeout(60)
 class TestRaceClientLoopback {
     private static final String FP = "0.6:cafe1234";
-    private RaceHostServer server;
+    private RaceRoomHost server;
+    private ControlledRaceHost controlled;
 
     @AfterEach
     void tearDown() {
@@ -33,8 +54,10 @@ class TestRaceClientLoopback {
         }
     }
 
-    private RaceHostServer startServer(Path dir, String policy) throws Exception {
-        return RaceHostServer.start(0,
+    private RaceRoomHost startServer(RaceHostImpl impl, Path dir, String policy)
+            throws Exception {
+        controlled = new ControlledRaceHost(impl);
+        return controlled.start(0,
                 new RoomHostConfig("LAN", "s3k", 0, 0, policy, null, 8, FP),
                 PlayerIdentity.loadOrCreate(dir.resolve("host")),
                 TrackValidationProfileSource.none());
@@ -59,9 +82,11 @@ class TestRaceClientLoopback {
         throw new AssertionError("timed out");
     }
 
-    @Test
-    void connectsChatsAndStreamsGhostFrames(@TempDir Path dir) throws Exception {
-        server = startServer(dir, "OPEN");
+    @ParameterizedTest
+    @EnumSource(RaceHostImpl.class)
+    void connectsChatsAndStreamsGhostFrames(RaceHostImpl impl, @TempDir Path dir)
+            throws Exception {
+        server = startServer(impl, dir, "OPEN");
         RaceClient a = connect(dir.resolve("a"), "A");
         RaceClient b = connect(dir.resolve("b"), "B");
         assertEquals(0, a.playerSlot());
@@ -73,6 +98,12 @@ class TestRaceClientLoopback {
                 && c.message() instanceof ControlMessage.ChatBroadcast);
         assertEquals("hello lan",
                 ((ControlMessage.ChatBroadcast) ((RaceClient.Control) chat).message()).text());
+
+        controlled.startRound(new ControlMessage.RoundConfig(
+                "s3k", 0, 0, 10, "OPEN", null));
+        await(a, e -> e instanceof RaceClient.Control c
+                && c.message() instanceof ControlMessage.RoundStart);
+        controlled.advance(HostRoundEngine.COUNTDOWN_MILLIS);
 
         byte[] frame = new byte[GhostFrameCodec.BYTES];
         GhostFrameCodec.encode(new GhostFrame(100, 200, 1,
@@ -90,9 +121,11 @@ class TestRaceClientLoopback {
         b.close();
     }
 
-    @Test
-    void fingerprintMismatchSurfacesJoinRejected(@TempDir Path dir) throws Exception {
-        server = startServer(dir, "OPEN");
+    @ParameterizedTest
+    @EnumSource(RaceHostImpl.class)
+    void fingerprintMismatchSurfacesJoinRejected(RaceHostImpl impl, @TempDir Path dir)
+            throws Exception {
+        server = startServer(impl, dir, "OPEN");
         ExecutionException failure = assertThrows(ExecutionException.class,
                 () -> RaceClient.connect(
                                 URI.create("ws://127.0.0.1:" + server.port() + "/race"),
@@ -125,6 +158,52 @@ class TestRaceClientLoopback {
             long elapsed = System.currentTimeMillis() - start;
             assertTrue(elapsed < 10_000, "failed in " + elapsed + "ms — join timeout did not fire");
             assertNotNull(failure.getCause());
+        }
+    }
+
+    @Test
+    void malformedFinalJoinClosesDirectConnection(@TempDir Path dir) throws Exception {
+        NioEventLoopGroup group = new NioEventLoopGroup(1);
+        AtomicReference<Channel> peer = new AtomicReference<>();
+        Channel listening = null;
+        try {
+            String invalidJoin = ControlCodec.encode(null,
+                    new ControlMessage.JoinAccepted("room-token", -1, null, null));
+            listening = new ServerBootstrap().group(group)
+                    .channel(NioServerSocketChannel.class)
+                    .childHandler(new ChannelInitializer<SocketChannel>() {
+                        @Override protected void initChannel(SocketChannel channel) {
+                            channel.pipeline().addLast(new HttpServerCodec());
+                            channel.pipeline().addLast(new HttpObjectAggregator(8192));
+                            channel.pipeline().addLast(
+                                    new WebSocketServerProtocolHandler("/race"));
+                            channel.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                                @Override public void userEventTriggered(
+                                        ChannelHandlerContext context, Object event)
+                                        throws Exception {
+                                    if (event instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
+                                        peer.set(context.channel());
+                                        context.writeAndFlush(new TextWebSocketFrame(invalidJoin));
+                                    }
+                                    super.userEventTriggered(context, event);
+                                }
+                            });
+                        }
+                    }).bind(0).sync().channel();
+            int port = ((java.net.InetSocketAddress) listening.localAddress()).getPort();
+            ExecutionException rejected = assertThrows(ExecutionException.class,
+                    () -> RaceClient.connect(URI.create("ws://127.0.0.1:" + port + "/race"),
+                                    PlayerIdentity.loadOrCreate(dir.resolve("guest")), "Guest", FP)
+                            .get(5, TimeUnit.SECONDS));
+            assertInstanceOf(com.openggf.net.protocol.ProtocolViolationException.class,
+                    rejected.getCause());
+            Channel connection = peer.get();
+            assertNotNull(connection);
+            assertTrue(connection.closeFuture().await(5, TimeUnit.SECONDS),
+                    "malformed room admission must close the direct socket");
+        } finally {
+            if (listening != null) listening.close().sync();
+            group.shutdownGracefully().sync();
         }
     }
 }

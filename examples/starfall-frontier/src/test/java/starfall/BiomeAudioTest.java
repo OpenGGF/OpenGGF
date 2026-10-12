@@ -15,6 +15,8 @@ class BiomeAudioTest {
             public void fadeOutMusic(){}public void stopMusic(){}
         };
         SceneStorage storage=new SceneStorage() {
+        public Optional<byte[]> readBytes(String name) { return Optional.empty(); }
+        public boolean writeBytes(String name, byte[] data) { return false; }
             public Optional<String> read(String name){return Optional.ofNullable(files.get(name));}
             public boolean write(String name,String text){files.put(name,text);return true;}
             public boolean delete(String name){return files.remove(name)!=null;}public List<String> list(){return List.copyOf(files.keySet());}

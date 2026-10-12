@@ -32,8 +32,10 @@ writes an isolated configuration and runtime state under
 The ROM is referenced by absolute path, never copied or linked into the build.
 Use Sonic 2 World REV01 (SHA-1
 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`). For normal installation, place the
-validated jar in the matching engine's `mods` directory, enable it, and explicitly
-trust its Java code in Mod Manager. Restart the JVM after replacing a code mod.
+validated jar in the matching engine's `mods` directory and choose Apply in the
+master title's Mod Manager to rescan. Enable it, explicitly trust its Java code,
+and choose Apply again. After replacing the jar, rescan with Apply, review trust
+for its new hash, and choose Apply again to load the update.
 
 ## Play
 

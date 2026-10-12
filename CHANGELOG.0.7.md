@@ -55,6 +55,15 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   over the stock title, such as Mutator Lab's `SndID_Blip`, stayed silent until
   another sound of equal or higher priority finished.
 
+- **Time Attack bundled mod:** solo ghosts, retries and LAN/master-server racing now
+  ship together in an enabled-by-default mod, launched through **Extras > Time Attack**.
+  Disable it in Mods. Existing ghosts and identities keep their locations; the mod
+  imports legacy retry and network preferences once and owns its settings thereafter.
+  Reusable networking remains in the engine for mods to use; dedicated/master servers
+  and verification tools build separately from `racing/server`. Normal native builds
+  do not load the bundled code mod.
+
+
 - **Sonic 1 background scrolling:** Scrap Brain Act 1 uses the REV01 cloud
   interpolation and three building bands, with separate fractional cameras,
   rewind restoration and tile-cache window coverage at wider viewports. Scrap
@@ -1032,10 +1041,23 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   existing behavior. Public API and ROM behavior
   remain unchanged.
 
+- **Hosted gameplay and bundled mods:** scenes can launch stock, non-saving runs
+  through a bounded run API, observe steps, hold gameplay, draw ghosts and overlays,
+  and request retry or return. Scene capabilities expire on exit and creator faults
+  retire the run before returning to the title. Build-pinned bundled jars use the
+  ordinary mod validation and trust flow; private binary storage supports ghost data.
+  Shared client, room and protocol contracts are available to other mods.
+
 - **Unpublished Mod API candidate:** mod loading, creator tooling, characters,
   standalone games, and custom-zone work are now available on the development
   line. Explicit development-directory launches show their active mod, details,
   and notices in a read-only Mod Manager without changing installed-mod settings.
+  The installed-mod manager applies saved enablement, order, and code trust at the
+  master title by rescanning jars and rebuilding the mod runtime and launch choices;
+  restarting the engine is no longer required to change loaded mods.
+  Its list identifies each mod's target game (S1, S2, S3K, all three, or standalone).
+  The master title's game pane shows enabled mod names below the launch profile,
+  cycling through names when several apply to the selected game.
   The creator handbook now starts with a Java 21 setup path, seven purpose-specific
   starters, a capability matrix and the complete recipient install/update/trust/
   rollback journey. Creator kits pair the engine, SDK, API documentation and

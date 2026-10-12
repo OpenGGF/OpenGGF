@@ -4,11 +4,12 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Text files private to one mod, kept under the engine's save directory in
+ * Files private to one mod, kept under the engine's save directory in
  * {@code mods/<mod id>/}. Names are 1-64 characters of {@code a-z 0-9 . _ -} and may not start
- * with {@code .}; every method throws {@link IllegalArgumentException} for any other name. Each
- * file holds at most 1 MiB of UTF-8. Writes replace the whole file atomically, so a crash never
- * leaves half a save.
+ * with {@code .}; every method throws {@link IllegalArgumentException} for any other name. A text
+ * file holds at most 1 MiB of UTF-8; {@link #readBytes} and {@link #writeBytes}, inherited from
+ * {@link com.openggf.mods.ModStorage}, store binary files of up to 4 MiB in the same namespace.
+ * Writes replace the whole file atomically, so a crash never leaves half a save.
  */
 @com.openggf.game.ModApi
 public interface SceneStorage extends com.openggf.mods.ModStorage {

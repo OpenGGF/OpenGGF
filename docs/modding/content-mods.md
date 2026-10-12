@@ -4,10 +4,10 @@ This page is the detailed additive-content reference. New creators should start 
 the [handbook index](index.md), which orders the six quickstarts by effort and links
 the format, trust, identity, troubleshooting, and sample references.
 
-OpenGGF Mod API 0.7 supports restart-loaded music packs, code-backed objects,
+OpenGGF Mod API 0.7 supports title-loaded music packs, code-backed objects,
 baked art, complete Sonic 2 and Sonic 3&K zones, playable characters, and no-ROM
 standalone games. Mods are discovered from the
-process `mods/` directory at restart; executable mods must be enabled and granted
+process `mods/` directory at boot and when Apply is chosen at the title; executable mods must be enabled and granted
 trust in the Mod Manager before they run.
 
 The current Mod API is the unpublished, mutable `0.7.0` candidate on `develop`; no
@@ -73,7 +73,7 @@ Manual `convert` and `package` commands are an expert alternative. Choose fresh
 output paths: converters and the packager intentionally refuse to overwrite an
 existing destination. The generated project does that cleanup in its Maven lifecycle.
 Copy the validated `*-mod.jar` into `mods/`, start the engine, enable it in the Mod
-Manager, confirm the code-trust warning, and restart.
+Manager, confirm the code-trust warning, and choose Apply.
 
 Code-bearing mods require the JVM jar because GraalVM native-image builds cannot
 load new classes under closed-world AOT. On native builds they remain disabled for

@@ -125,12 +125,13 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
                 }
             }
         }
-        if ("any".equals(baseGameId) && ((startupScene == null && mutators.isEmpty()) || !objectFactories.isEmpty()
+        // Shared title entries live in ModContext and do not require a startup scene here.
+        if ("any".equals(baseGameId) && (!objectFactories.isEmpty()
                 || !objectArt.isEmpty() || (!explicitPatches.isEmpty() && mutators.isEmpty()) || !zones.isEmpty()
                 || !objectPreviewArtKeys.isEmpty() || !characters.isEmpty() || !romObjectArt.isEmpty()
                 || !launchTeams.isEmpty() || !inputFilters.isEmpty() || !hudProfiles.isEmpty() || !serviceBundles.isEmpty() || !decodedLevelPatches.isEmpty())) {
             throw new IllegalArgumentException(
-                    "baseGame any permits a shared startup scene or typed mutator catalogue with stock-game decorators; game-specific content is forbidden");
+                    "baseGame any permits a shared startup scene, title entry or typed mutator catalogue with stock-game decorators; game-specific content is forbidden");
         }
         if ("any".equals(baseGameId) && explicitPatches.stream()
                 .anyMatch(patch -> !List.of("s1", "s2", "s3k").contains(patch.baseGameId())))

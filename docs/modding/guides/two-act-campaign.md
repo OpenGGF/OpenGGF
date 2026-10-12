@@ -18,7 +18,7 @@ Inside an unpacked kit, follow `examples/tide-circuit/README.md` and use its
 Python build launcher; the Maven command above uses checkout project paths.
 
 The normal SDK package step validates the jar. Enable the result in the JVM Mod
-Manager, restart, and complete EHZ Act 2 to enter Tide Circuit. The two acts follow
+Manager, choose Apply, and complete EHZ Act 2 to enter Tide Circuit. The two acts follow
 one tagged destination `sample-tide-circuit:tide-circuit`; their `64`/`1024` export
 numbers can be reused by another mod and are never saved as global identity.
 

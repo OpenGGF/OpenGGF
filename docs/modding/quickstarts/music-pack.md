@@ -10,7 +10,7 @@ Music packs are the smallest mod: no Java and no trust grant.
    that directory's `audio-manifest.yaml`.
 4. Map stock music ids to local track ids in `audioOverrides`.
 5. Repeat the Maven package command and validate `target/my-music-mod.jar`.
-6. Copy that jar to `mods/`, enable it, Apply the pending state, and restart.
+6. Copy that jar to `mods/`, enable it, Apply the pending state at the title.
 
 The [music sample](../samples/phase4-gallery-music-pack/README.md) is an alternative
 checkout reference; follow its asset-generator instructions before manual packaging.

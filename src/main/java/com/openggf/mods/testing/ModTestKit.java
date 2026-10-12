@@ -156,6 +156,12 @@ public final class ModTestKit implements AutoCloseable {
     public ModCatalog catalog() { return catalog; }
     public Map<String, List<ModFinding>> findings() { return findings.snapshot(); }
     public Set<String> disabledOwners() { return runtime.runtimeDisabledOwners(); }
+    /** The master-title entry {@code verifiedOwnerId} registered, owner-bound and fault-bounded. */
+    public com.openggf.mods.code.OwnedTitleEntry titleEntry(String verifiedOwnerId) {
+        return runtime.titleEntries().stream().filter(entry -> entry.ownerModId().equals(verifiedOwnerId))
+                .findFirst().orElseThrow(() -> new IllegalArgumentException("No title entry for " + verifiedOwnerId));
+    }
+
     public ModRegistrationPlan plan(String verifiedOwnerId) {
         ModRegistrationPlan plan = runtime.registrationPlans().get(verifiedOwnerId);
         if (plan == null) throw new IllegalArgumentException("No successful plan for " + verifiedOwnerId);

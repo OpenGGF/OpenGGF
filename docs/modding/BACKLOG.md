@@ -11,6 +11,25 @@ case-insensitively for `defer`, `out-of-scope`, `parked`, `follow-on`, `future`,
 `revisit`, `when-demanded`, `later`, `optional`, `narrowing`, `non-goal`,
 `unsupported`, and `TODO`.
 
+## Author-workflow audit (2026-10-12)
+
+The [source-wide mod audit](../architecture/audits/2026-10-12-mod-author-framework-audit.md)
+reviews all eleven example projects, tutorial checkpoints, fixture mods and SDK
+starters at `f9d4e0474`. Its findings are proposed work, not implementation promises
+or a change to the candidate API policy.
+
+The [remediation plan](../architecture/plans/2026-10-12-mod-audit-remediation.md)
+provides the per-finding execution sequence and checks; it does not mark these
+proposed capabilities as delivered.
+
+The first priorities are save-format preservation, checked save recovery/results,
+render-independent targeting, and ordinary-input frame holds. Shared candidates
+include a validated save-slot coordinator, extension of the existing frame controller,
+narrow terrain/contact/effect services, pure sprite compositions and canvas transforms,
+and test/tool-preserving creator exports. Recipe, input, storage and provider helpers
+already exist; the audit distinguishes their adoption from new API work and records
+consumer evidence, rejected shortcuts and acceptance criteria.
+
 ## Current release disposition (2026-09-08)
 
 The [0.7 roadmap](../project/v0.7-roadmap.md) closes stock campaigns while
@@ -107,7 +126,7 @@ reclassified as optional.
 | Dependency-resource `ClassLoader.findResource` delegation | Phase 4 §C (attributed there to Phase 2) | Mod class loading | All checked-in code samples package their own resources and have no dependency-resource consumer. Delegation changes isolation and collision semantics. | **Keep parked** until a reproducible dependency-resource use case exists. |
 | Mod objects injected into stock zone layouts | Phase 2 §B/out-of-scope | Layout mutation/object registry | Golf now uses immutable `LevelPatch` operations registered through `ModContext.decodedLevelPatch`, including binding stock placements to owned factories. The production decoded-load pipeline retains placement identity and ownership and applies the transform on each load. This is a bounded placement contract, not live editor application or arbitrary persistent terrain mutation. | **Delivered** in the mutable candidate (2026-10-07); see [creator helpers](guides/creator-helpers.md#gameplay-assembly-and-immutable-edits) and the [readiness record](../architecture/plans/2026-10-07-mod-framework-product-readiness.md). |
 | Custom mod static rewind adapters | Phase 2 §B and shared contract §6 | Rewind/mod validator | Samples keep gameplay state on instances or session-owned services. Static adapters would expand trust, loader lifetime, and schema compatibility. | **Keep parked**; retain the compile-time-constant-only rule. |
-| Hot reload | Phase 1 Non-goals; Phase 2 §A | Mod class loading/runtime lifecycle | Every sample builds a deterministic jar and activation is restart-bound. Safe loader replacement must close jars and invalidate dependency/class identity without leaving registrations or instances alive. | **Keep parked** until restart-bound code iteration is measured as the dominant adopter problem. |
+| Hot reload | Phase 1 Non-goals; Phase 2 §A | Mod class loading/runtime lifecycle | Title-screen Apply now rebuilds the catalog, classloaders, registrations, audio preparation, and launch choices with no active gameplay session. Running gameplay and development-directory snapshots still keep their current ownership. | **Delivered** for installed mods at the title in the mutable candidate; live session mutation remains parked below. |
 | Live apply without reload | Phase 1 Non-goals; Phase 2 §A | Session ownership/mod registration | No maintained sample needs mutation of a running mod registration graph. Applying code/data in place must reconcile active audio, saves, objects, providers, and gameplay references atomically. | **Keep parked** until a concrete sample defines which state may survive apply. |
 | Standalone-game patch stacking and launch-request choke-point amendment | Phase 3 §B3; Phase 4 §C | Module resolution/manifest | One global `GameId.STANDALONE` cannot safely match patches; the sample needs no stacking. Requires code-string identity plus new manifest vocabulary. | **Keep parked** pending two real standalone mods that need composition. |
 | Deterministic streamed-PCM capture/replay | Root design §4; Phase 1 non-goals | Audio recording/replay | Current policy deliberately keeps streams out of the SMPS command timeline and suppresses one-shots during rewind. No sample requests deterministic audio capture. | **Keep parked**; any proposal must preserve comparison-only traces. |

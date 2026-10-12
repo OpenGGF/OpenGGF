@@ -15,25 +15,39 @@ public final class PendingModStateEditor {
     private final Set<String> editableIds;
     private final Map<String, ModDescriptor> descriptorsById;
     private final ModStateStore store;
+    private final Map<String, String> derivedTrust;
     private ModState pending;
     private ModState saved;
 
     public PendingModStateEditor(ModState startup, List<? extends ModCatalogEntry> scanned,
                                  ModStateStore store) {
-        this(startup, scanned, store, false);
+        this(startup, scanned, store, false, Map.of());
+    }
+
+    /**
+     * Editor whose startup state carries trust derived at boot rather than granted by the
+     * player: {@code derivedTrust} maps a bundled mod id to the hash its build manifest trusts.
+     * That trust stays visible while editing but is stripped from every save, so
+     * {@code modstate.json} only ever records the player's own trust grants.
+     */
+    public PendingModStateEditor(ModState startup, List<? extends ModCatalogEntry> scanned,
+                                 ModStateStore store, Map<String, String> derivedTrust) {
+        this(startup, scanned, store, false, derivedTrust);
     }
 
     /** Frozen launch state for development runs that deliberately have no persisted settings. */
     public static PendingModStateEditor readOnly(ModState startup,
                                                  List<? extends ModCatalogEntry> scanned) {
-        return new PendingModStateEditor(startup, scanned, null, true);
+        return new PendingModStateEditor(startup, scanned, null, true, Map.of());
     }
 
     private PendingModStateEditor(ModState startup, List<? extends ModCatalogEntry> scanned,
-                                  ModStateStore store, boolean readOnly) {
+                                  ModStateStore store, boolean readOnly,
+                                  Map<String, String> derivedTrust) {
         Objects.requireNonNull(startup, "startup");
         Objects.requireNonNull(scanned, "scanned");
         this.store = readOnly ? null : Objects.requireNonNull(store, "store");
+        this.derivedTrust = Map.copyOf(Objects.requireNonNull(derivedTrust, "derivedTrust"));
         this.startup = startup.normalize(scanned);
         this.pending = this.startup;
         this.saved = this.startup;
@@ -117,9 +131,21 @@ public final class PendingModStateEditor {
 
     public ModStateSaveResult save() {
         requireWritable();
-        ModStateSaveResult result = store.save(pending);
+        ModStateSaveResult result = store.save(persistable(pending));
         if (result instanceof ModStateSaveResult.Saved) saved = pending;
         return result;
+    }
+
+    /** The pending state without boot-derived trust, as written to {@code modstate.json}. */
+    public ModState persistable(ModState state) {
+        Objects.requireNonNull(state, "state");
+        if (derivedTrust.isEmpty()) return state;
+        List<ModState.Entry> entries = new ArrayList<>(state.entries().size());
+        for (ModState.Entry entry : state.entries()) {
+            String derived = derivedTrust.get(entry.id());
+            entries.add(derived != null && entry.trustsSha256(derived) ? entry.withoutTrust() : entry);
+        }
+        return new ModState(ModState.CURRENT_FORMAT_VERSION, entries);
     }
 
     private void replaceEnabled(Set<String> ids, boolean enabled) {

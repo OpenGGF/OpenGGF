@@ -55,6 +55,7 @@ public final class ModContext {
     private ModRegistrationException poison;
     private com.openggf.game.GameModule gameModule;
     private com.openggf.mods.scene.ModSceneFactory startupScene;
+    private ModTitleEntry titleEntry;
     private String requiredDisplayAspect;
     private final Map<String, com.openggf.mods.mutators.OwnedMutator> mutators = new LinkedHashMap<>();
 
@@ -293,6 +294,30 @@ public final class ModContext {
     }
 
     /**
+     * Adds an entry to the OpenGGF master title's action menu that opens a full-screen
+     * {@link com.openggf.mods.scene.ModScene}. Unlike a startup scene it never replaces a game's
+     * title: the player chooses it. The scene may launch stock gameplay runs through
+     * {@link com.openggf.mods.scene.SceneContext#gameplay()} and is resumed when each run ends.
+     * Available to patch mods of any base game, including {@code any}. One entry per mod; the
+     * label is shown upper-case and truncated to 24 characters.
+     */
+    public void registerTitleEntry(String label, com.openggf.mods.scene.ModSceneFactory factory) {
+        mutate(() -> {
+            if (standalone) throw failure("Standalone manifests cannot register a title entry");
+            Objects.requireNonNull(factory, "factory");
+            String text = Objects.requireNonNull(label, "label").strip();
+            if (text.isEmpty()) throw failure("Title entry label must not be blank");
+            if (titleEntry != null) throw failure("Title entry is already registered");
+            titleEntry = new ModTitleEntry(text.length() > 24 ? text.substring(0, 24) : text, factory);
+        });
+    }
+
+    /** The title entry registered by this context, or null. */
+    ModTitleEntry titleEntry() {
+        return titleEntry;
+    }
+
+    /**
      * Runs this patch mod's sessions at a fixed logical display width instead of the player's
      * {@code display.aspect} setting: 320 (4:3), 352, 400 (16:9), 528 or 800 pixels, always
      * 224 tall. The engine applies the matching preset as a session override when the mod's
@@ -375,12 +400,12 @@ public final class ModContext {
             if (standalone && gameModule == null) {
                 throw failure("Standalone manifest must register exactly one game module");
             }
-            if ("any".equals(baseGame) && ((startupScene == null && mutators.isEmpty())
+            if ("any".equals(baseGame) && ((startupScene == null && titleEntry == null && mutators.isEmpty())
                     || !objects.isEmpty() || !art.isEmpty() || (!patches.isEmpty() && mutators.isEmpty())
                     || !zones.isEmpty() || !objectPreviewArtKeys.isEmpty()
                     || !characters.isEmpty() || !romArt.isEmpty() || !launchTeams.isEmpty()
                     || !inputFilters.isEmpty() || !hudProfiles.isEmpty() || !serviceBundles.isEmpty() || !decodedLevelPatches.isEmpty())) {
-                throw failure("baseGame any permits a shared startup scene or typed mutator catalogue with stock-game decorators; game-specific content is forbidden");
+                throw failure("baseGame any permits a shared startup scene, title entry or typed mutator catalogue with stock-game decorators; game-specific content is forbidden");
             }
             objectPreviewArtKeys.forEach((objectKey,artKey)-> {
                 if(!objects.containsKey(objectKey))throw failure("Preview maps unknown object key: "+objectKey);

@@ -89,6 +89,8 @@ class RunTest {
     void recordsKeepBestsAndRejectAFutureFormat() {
         Map<String, String> files = new HashMap<>();
         SceneStorage storage = new SceneStorage() {
+        public Optional<byte[]> readBytes(String name) { return Optional.empty(); }
+        public boolean writeBytes(String name, byte[] data) { return false; }
             public Optional<String> read(String n) { return Optional.ofNullable(files.get(n)); }
             public boolean write(String n, String t) { files.put(n, t); return true; }
             public boolean delete(String n) { return files.remove(n) != null; }

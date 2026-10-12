@@ -79,8 +79,8 @@ python3 examples/three-islands/build.py --install    # build, then install, enab
 ```
 
 Installing copies the validated jar to the checkout's `mods/` folder and enables and trusts
-that exact jar in `mods/modstate.json`, leaving other mods' entries alone. Restart the JVM
-engine and choose Sonic 3 & Knuckles on the master title.
+that exact jar in `mods/modstate.json`, leaving other mods' entries alone. At the master
+title, open Mod Manager and choose Apply, then choose Sonic 3 & Knuckles.
 
 ## Controls
 

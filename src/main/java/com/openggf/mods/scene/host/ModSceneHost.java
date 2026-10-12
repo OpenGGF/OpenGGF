@@ -125,6 +125,43 @@ public final class ModSceneHost {
     }
 
     /**
+     * True while the open scene claims keyboard text input. Polled from the presentation frame,
+     * so a failing scene is closed and sent back to the master title instead of rethrowing.
+     */
+    public boolean capturesTextInput() {
+        if (scene == null || exiting) {
+            return false;
+        }
+        try {
+            return scene.capturesTextInput();
+        } catch (RuntimeException failure) {
+            Runnable back = context != null ? context.services.toMasterTitle() : null;
+            LOG.log(Level.WARNING, "Mod scene failed while reporting text input; closing it", failure);
+            close();
+            if (back != null) {
+                back.run();
+            }
+            return false;
+        }
+    }
+
+    /**
+     * Shows the scene again after a run it launched has ended. The scene was suspended (neither
+     * updated nor drawn) while the run played; a creator failure closes it.
+     */
+    public void resume(com.openggf.mods.run.RunEndReason reason) {
+        if (scene == null || exiting) {
+            return;
+        }
+        try {
+            scene.resumed(context, reason);
+        } catch (RuntimeException | Error failure) {
+            close();
+            throw failure;
+        }
+    }
+
+    /**
      * Sends a debug command to the open scene if it implements {@link DebuggableScene} (tools
      * and tests); false when no scene is open, it has no debug entry point, or it did not
      * understand the command.
@@ -162,7 +199,7 @@ public final class ModSceneHost {
         lastFrame = List.of();
         // Retire networking before creator exit code runs; even an exit callback
         // that faults or retains its context cannot reopen the departing visit.
-        if (ctx != null) ctx.network.close();
+        if (ctx != null) ctx.retireCapabilities();
         try {
             if (closing != null) {
                 closing.exit(ctx);
@@ -191,7 +228,7 @@ public final class ModSceneHost {
             return;
         }
         exiting = true;
-        if (context != null) context.network.close();
+        if (context != null) context.retireCapabilities();
         if (action != null) action.run();
     }
 
@@ -202,6 +239,9 @@ public final class ModSceneHost {
         private final SceneArt art;
         private final SceneAudio audio;
         private final SceneStorage storage;
+        private final com.openggf.mods.scene.SceneGameplay gameplay;
+        private final Thread sceneThread = Thread.currentThread();
+        private boolean capabilitiesRetired;
         private long ticks;
         private InputHandler input;
         private LogicalInputSnapshot logical = LogicalInputSnapshot.neutral();
@@ -223,6 +263,30 @@ public final class ModSceneHost {
         Context(String owner, SceneServices services) {
             this.owner = owner;
             this.services = services;
+            this.gameplay = services == null || services.gameplay() == null ? null
+                    : new com.openggf.mods.scene.SceneGameplay() {
+                private void requireLiveVisit() {
+                    if (capabilitiesRetired || context != Context.this || exiting) {
+                        throw new IllegalStateException("The scene visit has ended");
+                    }
+                    if (Thread.currentThread() != sceneThread) {
+                        throw new IllegalStateException("Scene gameplay commands require the engine thread");
+                    }
+                }
+                @Override public List<String> availableGames() {
+                    requireLiveVisit();
+                    return services.gameplay().availableGames();
+                }
+                @Override public java.util.Optional<String> determinismFingerprint(String gameId) {
+                    requireLiveVisit();
+                    return services.gameplay().determinismFingerprint(gameId);
+                }
+                @Override public com.openggf.mods.run.RunHandle launch(
+                        com.openggf.mods.run.RunSpec spec, com.openggf.mods.run.RunHost host) {
+                    requireLiveVisit();
+                    return services.gameplay().launch(spec, host);
+                }
+            };
             this.art = new SceneArt() {
                 @Override
                 public SceneImage png(byte[] pngBytes) {
@@ -334,7 +398,13 @@ public final class ModSceneHost {
             }
         }
 
+        void retireCapabilities() {
+            capabilitiesRetired = true;
+            network.close();
+        }
+
         void closeResources() {
+            retireCapabilities();
             stopLiveMusic();
             network.close();
             try {
@@ -467,6 +537,14 @@ public final class ModSceneHost {
         @Override
         public SceneAudio audio() {
             return audio;
+        }
+
+        @Override
+        public com.openggf.mods.scene.SceneGameplay gameplay() {
+            if (gameplay == null) {
+                throw new UnsupportedOperationException("This scene cannot launch gameplay runs");
+            }
+            return gameplay;
         }
 
         @Override
