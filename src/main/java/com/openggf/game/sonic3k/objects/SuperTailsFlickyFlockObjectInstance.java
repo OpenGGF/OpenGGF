@@ -323,6 +323,11 @@ public final class SuperTailsFlickyFlockObjectInstance extends AbstractObjectIns
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        com.openggf.sprites.playable.PlayableMutatorPresentation.drawCommands(owner,
+                com.openggf.graphics.SpritePresentation.Part.ATTACHED_EFFECT, commands, this::appendNativeRenderCommands);
+    }
+
+    private void appendNativeRenderCommands(List<GLCommand> commands) {
         if (!visible) return;
         ensureRomArtLoaded();
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.SUPER_TAILS_BIRDS);

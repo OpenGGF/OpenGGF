@@ -84,6 +84,7 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
     private int animIndex = 0;
     private int waitTimer = 0;
     private boolean ringDeleteTriggered = false;
+    private long stageEntryPermit = -1;
 
     /**
      * @param parentRing  the parent ring object to mark for deletion
@@ -113,6 +114,7 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
         super(new ObjectSpawn(x, y, 0, transitionIntent.rawSubtype(),
                 0, false, 0), "SSEntryFlash");
         this.parentRing = parentRing;
+        this.stageEntryPermit = parentRing == null ? -1 : parentRing.stageEntryPermit();
         this.transitionIntent = transitionIntent;
     }
 
@@ -183,44 +185,49 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
         // on the 33rd invocation -- when the counter passes below zero -- not on
         // the 32nd, when it reaches zero.
         if (waitTimer < 0) {
-            state = State.DONE;
-            // ROM SSEntryFlash_GoSS (sonic3k.asm:128387-128392) plays
-            // sfx_EnterSS, clears sprite/ring memory, then runs Save_Level_Data2
-            // BEFORE the destination branch, so both the ordinary special
-            // stage and the Super Emerald arena restart go through them.
-            services().playSfx(Sonic3kSfx.ENTER_SS.id);
-            saveLevelData2(player);
-            services().gameState().markSpecialRingCollected(transitionIntent.ringBit());
-            if (routesToSuperEmeraldArena()) {
-                // ROM loc_618AC (skdisasm/sonic3k.asm:128411-128417):
-                //   move.b #2,(Special_bonus_entry_flag).w
-                //   move.w #$1701,(Current_zone_and_act).w
-                //   move.w #$1701,(Apparent_zone_and_act).w
-                //   move.b #0,(Last_star_post_hit).w
-                //   move.b #1,(Restart_level_flag).w
-                //   move.b #1,(Respawn_table_keep).w
-                // Zone $17 act 1 is the Super Emerald special-stage arena
-                // (Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA); it is reached by a
-                // level restart, not the Game_mode $34 special-stage entry.
-                // move.b #0,(Last_star_post_hit).w (sonic3k.asm:128414) — the
-                // arena load must place the player from Sonic_Start_Locations,
-                // not from the Saved2_ block Save_Level_Data2 just wrote.
-                services().clearLastStarPostHit();
-                LOGGER.fine("SSEntryFlash: restarting into the Super Emerald arena");
-                services().requestZoneAndAct(
-                        Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA, 1, true);
-            } else {
-                // ROM loc_61892 (sonic3k.asm:128405-128410): Game_mode $34, the
-                // ordinary special-stage entry. SSEntryFlash_GoSS already
-                // played sfx_EnterSS above; the provider returns -1 so
-                // GameLoop does not play it a second time.
-                services().requestSpecialStageEntry();
-                LOGGER.fine("SSEntryFlash: triggering special stage entry");
-            }
-            setDestroyed(true);
+            com.openggf.game.mutators.LevelMutatorPolicyAccess.publish(services(),
+                    com.openggf.game.mutators.StageEntryKind.SPECIAL, stageEntryPermit,
+                    () -> completeEntry(player));
         }
     }
 
+    private void completeEntry(AbstractPlayableSprite player) {
+        state = State.DONE;
+        // ROM SSEntryFlash_GoSS (sonic3k.asm:128387-128392) plays
+        // sfx_EnterSS, clears sprite/ring memory, then runs Save_Level_Data2
+        // BEFORE the destination branch, so both the ordinary special
+        // stage and the Super Emerald arena restart go through them.
+        services().playSfx(Sonic3kSfx.ENTER_SS.id);
+        saveLevelData2(player);
+        services().gameState().markSpecialRingCollected(transitionIntent.ringBit());
+        if (routesToSuperEmeraldArena()) {
+            // ROM loc_618AC (skdisasm/sonic3k.asm:128411-128417):
+            //   move.b #2,(Special_bonus_entry_flag).w
+            //   move.w #$1701,(Current_zone_and_act).w
+            //   move.w #$1701,(Apparent_zone_and_act).w
+            //   move.b #0,(Last_star_post_hit).w
+            //   move.b #1,(Restart_level_flag).w
+            //   move.b #1,(Respawn_table_keep).w
+            // Zone $17 act 1 is the Super Emerald special-stage arena
+            // (Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA); it is reached by a
+            // level restart, not the Game_mode $34 special-stage entry.
+            // move.b #0,(Last_star_post_hit).w (sonic3k.asm:128414) — the
+            // arena load must place the player from Sonic_Start_Locations,
+            // not from the Saved2_ block Save_Level_Data2 just wrote.
+            services().clearLastStarPostHit();
+            LOGGER.fine("SSEntryFlash: restarting into the Super Emerald arena");
+            services().requestZoneAndAct(
+                    Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA, 1, true);
+        } else {
+            // ROM loc_61892 (sonic3k.asm:128405-128410): Game_mode $34, the
+            // ordinary special-stage entry. SSEntryFlash_GoSS already
+            // played sfx_EnterSS above; the provider returns -1 so
+            // GameLoop does not play it a second time.
+            services().requestSpecialStageEntry();
+            LOGGER.fine("SSEntryFlash: triggering special stage entry");
+        }
+        setDestroyed(true);
+    }
     /**
      * ROM {@code Save_Level_Data2} (skdisasm/sonic3k.asm:61735-61753), called by
      * {@code SSEntryFlash_GoSS} at sonic3k.asm:128392.

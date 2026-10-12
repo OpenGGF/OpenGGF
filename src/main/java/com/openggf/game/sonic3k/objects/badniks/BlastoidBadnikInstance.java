@@ -323,15 +323,7 @@ public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance
     }
 
     private void applyEnemyDefeatedBounce(AbstractPlayableSprite player, int enemyY) {
-        // EnemyDefeated adjusts only y_vel; it does not set the air flag.
-        int ySpeed = player.getYSpeed();
-        if (ySpeed < 0) {
-            player.setYSpeed((short) (ySpeed + 0x100));
-        } else if (player.getCentreY() >= enemyY) {
-            player.setYSpeed((short) (ySpeed - 0x100));
-        } else {
-            player.setYSpeed((short) -ySpeed);
-        }
+        com.openggf.level.objects.EnemyDefeatBounce.apply(player, enemyY, services().worldSession());
     }
 
     // ── Routine 2: Detect ────────────────────────────────────────────────

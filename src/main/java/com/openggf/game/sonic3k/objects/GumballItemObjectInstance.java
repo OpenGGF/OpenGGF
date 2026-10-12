@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.audio.GameMusic;
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.mutators.LevelMutatorPolicyAccess;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
@@ -343,7 +344,7 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
      * dispatches the reward exactly like a standard touch.
      */
     private void pollPlayerInRange(PlayableEntity playerEntity, int vIntRunCount) {
-        if (!(playerEntity instanceof AbstractPlayableSprite sprite)) {
+        if (!ringRewardAllowed() || !(playerEntity instanceof AbstractPlayableSprite sprite)) {
             return;
         }
         int dx = sprite.getCentreX() - motionState.x;
@@ -374,9 +375,19 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
 
     // --- TouchResponseProvider ---
 
+    private boolean ringRewardAllowed() {
+        boolean ringReward = rewardMode == RewardMode.PACHINKO ? subtype == 3 : subtype == 2;
+        return !ringReward || LevelMutatorPolicyAccess.ringsAllowed(tryServices());
+    }
+
+    @Override
+    public boolean publishesTouchResponseListEntryThisFrame() {
+        return ringRewardAllowed();
+    }
+
     @Override
     public int getCollisionFlags() {
-        if (collected) {
+        if (collected || !ringRewardAllowed()) {
             return 0; // No collision after collection
         }
         if (motionMode == MotionMode.GUMBALL_EJECT) {
@@ -407,7 +418,7 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
 
     @Override
     public void onTouchResponse(PlayableEntity player, TouchResponseResult result, int frameCounter) {
-        if (collected || pushedPlayer) {
+        if (collected || pushedPlayer || !ringRewardAllowed()) {
             return;
         }
 
@@ -428,6 +439,7 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
     }
 
     private void handleGumballReward(PlayableEntity player, int frameCounter, int rewardSubtype) {
+        if (rewardSubtype == 2 && !LevelMutatorPolicyAccess.ringsAllowed(tryServices())) return;
         // ROM: Machine-ejected balls use sub_610E0 → loc_61100 dispatch with
         // d1 = subtype DIRECTLY (NOT subtype-1 like sub_4A384 does for Pachinko orbs).
         // Deletion: loc_60F28 deletes the ball UNLESS the handler set d2=0.
@@ -480,6 +492,7 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
     }
 
     private void handlePachinkoReward(PlayableEntity player, int frameCounter) {
+        if (!ringRewardAllowed()) return;
         // ROM sub_4A384 (sonic3k.asm:96888): move.l #Delete_Current_Sprite,(a0) runs
         // UNCONDITIONALLY, ahead of the subtype dispatch. This is where the Pachinko orb
         // path differs from the gumball-machine path (loc_60F28), whose delete is skipped

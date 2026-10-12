@@ -189,7 +189,8 @@ public class Sonic3kSuperStateController extends SuperStateController {
                 // life thresholds or Update_HUD_ring_count. UpdateHUD retains
                 // its digits until another producer requests a redraw.
                 var levelState = player.currentLevelState();
-                if (levelState != null) {
+                if (levelState != null && com.openggf.game.mutators.LevelMutatorPolicyAccess.mainLevelRingRestore(
+                        player.currentLevelManagerIfAvailable(), 1) != 0) {
                     com.openggf.game.LevelRingDisplay.writeWithoutRefresh(levelState,
                             (levelState.getRings() + 50) & 0xFFFF);
                 }

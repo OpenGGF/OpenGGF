@@ -44,6 +44,11 @@ public class CPZBossRobotnik extends AbstractObjectInstance implements RewindRec
     }
 
     @Override
+    public com.openggf.game.mutators.ObjectHeadRole headPresentationRole() {
+        return com.openggf.game.mutators.ObjectHeadRole.BOSS;
+    }
+
+    @Override
     public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         Sonic2CPZBossInstance boss = CpzBossRewindLinks.nearestBoss(ctx);
         return boss == null ? null : new CPZBossRobotnik(ctx.spawn(), boss);

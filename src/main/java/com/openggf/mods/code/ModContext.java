@@ -57,6 +57,7 @@ public final class ModContext {
     private com.openggf.mods.scene.ModSceneFactory startupScene;
     private ModTitleEntry titleEntry;
     private String requiredDisplayAspect;
+    private final Map<String, com.openggf.mods.mutators.OwnedMutator> mutators = new LinkedHashMap<>();
 
     ModContext(String owner, String baseGame, ModAssetRoot assets) {
         this(owner, baseGame, assets, null);
@@ -86,7 +87,7 @@ public final class ModContext {
 
     /** Returns the manifest id that namespaces every local registration. */
     public String ownerModId() { return owner; }
-    /** Returns the stock game id (or {@code any} for a shared startup scene), or null for standalone. */
+    /** Returns the stock game id (or {@code any} for a shared scene/mutator catalogue), or null for standalone. */
     public String baseGameId() { return baseGame; }
     /** Returns the immutable bounded asset snapshot while registration is open. */
     public ModAssetRoot modAssets() { requireOpen(); return assets; }
@@ -148,7 +149,8 @@ public final class ModContext {
         mutate(() -> {
             if (standalone) throw failure("Standalone manifests cannot register game patches");
             Objects.requireNonNull(patch, "patch");
-            if (!baseGame.equals(patch.baseGameId())) {
+            if ("any".equals(baseGame) ? !List.of("s1", "s2", "s3k").contains(patch.baseGameId())
+                    : !baseGame.equals(patch.baseGameId())) {
                 throw failure("Patch targets " + patch.baseGameId() + " instead of " + baseGame);
             }
             String id = ownedPatchId(patch.id());
@@ -340,6 +342,20 @@ public final class ModContext {
         });
     }
 
+    /** Stages a dormant mutator; ownership comes only from this registration transaction. */
+    public void registerMutator(com.openggf.mods.mutators.MutatorDefinition definition) {
+        mutate(() -> {
+            if (standalone) {
+                throw failure("Mutators require a stock-game patch owner");
+            }
+            com.openggf.mods.mutators.OwnedMutator owned =
+                    new com.openggf.mods.mutators.OwnedMutator(owner, definition);
+            if (mutators.size() >= 32 || mutators.putIfAbsent(owned.key(), owned) != null) {
+                throw failure("Too many mutators or duplicate mutator key: " + owned.key());
+            }
+        });
+    }
+
     public void registerHudProfile(ModHudProfileContribution contribution) {
         mutate(() -> {
             Objects.requireNonNull(contribution, "contribution");
@@ -384,11 +400,12 @@ public final class ModContext {
             if (standalone && gameModule == null) {
                 throw failure("Standalone manifest must register exactly one game module");
             }
-            if ("any".equals(baseGame) && (startupScene == null && titleEntry == null || !objects.isEmpty() || !art.isEmpty()
-                    || !patches.isEmpty() || !zones.isEmpty() || !objectPreviewArtKeys.isEmpty()
+            if ("any".equals(baseGame) && ((startupScene == null && titleEntry == null && mutators.isEmpty())
+                    || !objects.isEmpty() || !art.isEmpty() || (!patches.isEmpty() && mutators.isEmpty())
+                    || !zones.isEmpty() || !objectPreviewArtKeys.isEmpty()
                     || !characters.isEmpty() || !romArt.isEmpty() || !launchTeams.isEmpty()
                     || !inputFilters.isEmpty() || !hudProfiles.isEmpty() || !serviceBundles.isEmpty() || !decodedLevelPatches.isEmpty())) {
-                throw failure("baseGame any may register only a startup scene, its display requirement and a title entry");
+                throw failure("baseGame any permits a shared startup scene, title entry or typed mutator catalogue with stock-game decorators; game-specific content is forbidden");
             }
             objectPreviewArtKeys.forEach((objectKey,artKey)-> {
                 if(!objects.containsKey(objectKey))throw failure("Preview maps unknown object key: "+objectKey);
@@ -404,10 +421,16 @@ public final class ModContext {
                     prepared.add(PreparedModZone.prepared(owner, zone, definition, act));
                 }
             }
+            try {
+                com.openggf.mods.mutators.MutatorSessionState.validateCatalog(mutators);
+            } catch (IllegalArgumentException invalid) {
+                throw failure("Invalid mutator graph: " + safeMessage(invalid));
+            }
             frozen = true;
             return new ModRegistrationPlan(owner, baseGame, objects, art, Map.of(), patches,
                     zones, prepared,objectPreviewArtKeys,characters,gameModule,romArt,
-                    launchTeams, inputFilters, hudProfiles, startupScene, requiredDisplayAspect, serviceBundles, decodedLevelPatches, assets.limits().maxCollectionEntries());
+                    launchTeams, inputFilters, hudProfiles, startupScene, requiredDisplayAspect,
+                    serviceBundles, decodedLevelPatches, assets.limits().maxCollectionEntries(), mutators);
         } catch (java.io.IOException | RuntimeException rejected) {
             if (rejected instanceof ModRegistrationException registration) poison = registration;
             else poison = new ModRegistrationException(owner, "MOD_LEVEL_ASSET_INVALID",

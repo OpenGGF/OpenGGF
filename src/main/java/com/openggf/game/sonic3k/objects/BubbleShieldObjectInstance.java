@@ -48,6 +48,11 @@ public class BubbleShieldObjectInstance extends ShieldObjectInstance {
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        com.openggf.sprites.playable.PlayableMutatorPresentation.drawCommands(getPlayer(),
+                com.openggf.graphics.SpritePresentation.Part.ATTACHED_EFFECT, commands, this::appendNativeRenderCommands);
+    }
+
+    private void appendNativeRenderCommands(List<GLCommand> commands) {
         if (isShieldDestroyed() || !isShieldVisible()) {
             return;
         }

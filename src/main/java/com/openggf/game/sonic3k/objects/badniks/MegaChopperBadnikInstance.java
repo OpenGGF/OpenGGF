@@ -352,7 +352,7 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
             // the badnik, so the pre-destroy centre Y is the ROM's value.
             int enemyY = currentY;
             defeat(player);
-            EnemyDefeatBounce.apply(player, enemyY);
+            EnemyDefeatBounce.apply(player, enemyY, services().worldSession());
             return;
         }
 

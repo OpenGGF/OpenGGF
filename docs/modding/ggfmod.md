@@ -101,7 +101,17 @@ scripts. See the [mod scene guide](guides/mod-scenes.md#4-art-from-the-players-r
 
 ```text
 ggfmod sprites s3k.gen s3k ring.png art=0x192AEE comp=NEMESIS map=0x01A99A line=1 pal=0x0A8A3C:16:0 pal=0x0A8B7C:48:1
+ggfmod sprites s3k.gen s3k sonic-heads.png char=sonic heads=true first=0 count=32 scale=150
 ```
+
+With `char=sonic heads=true`, `first`/`count` select native mapping frames and `scale`
+accepts 101–200 percent. Each 112px review cell shows stock, enlarged head, unchanged body
+and composite panels, with the neck anchor in magenta; stdout lists every pose's mask or
+explicit stock fallback. Metadata recognizes the reviewed normal Sonic art in S1 REV01,
+S2 REV01 and locked-on S3&K. Balls remain stock; unreviewed special poses, powered forms,
+donor and custom art do not receive guessed head masks. All displayed pixels come from
+the supplied ROM. The tool rejects opaque-pixel cropping rather than silently producing
+an incomplete authoring reference.
 
 For complete Mod API 0.7 examples, see [Content mods](content-mods.md),
 [Playable characters](characters.md), and [Standalone games](standalone-games.md).

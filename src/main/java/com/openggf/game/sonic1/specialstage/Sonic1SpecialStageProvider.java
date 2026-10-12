@@ -28,7 +28,7 @@ import java.util.Optional;
  * game-mode pipeline as Sonic 2. The underlying stage gameplay is scaffolded
  * and expanded in follow-up parity passes.
  */
-public final class Sonic1SpecialStageProvider implements SpecialStageProvider {
+public final class Sonic1SpecialStageProvider implements SpecialStageProvider, com.openggf.game.internal.NativeSpecialStagePacing {
     private final Sonic1SpecialStageManager manager = new Sonic1SpecialStageManager();
     private SpecialStageViewport viewport = SpecialStageViewport.nativeViewport();
     private boolean resultsPlcSubmitted;
@@ -84,6 +84,9 @@ public final class Sonic1SpecialStageProvider implements SpecialStageProvider {
         return true;
     }
 
+    @Override public com.openggf.game.internal.NativeSpecialStagePacing.State pacingState() { return manager.pacingState(); }
+    @Override public com.openggf.game.internal.NativeSpecialStagePacingOwner pacingOwner() { return manager.pacingOwner(); }
+
     @Override
     public boolean supportsRewind() {
         return true;
@@ -91,8 +94,9 @@ public final class Sonic1SpecialStageProvider implements SpecialStageProvider {
 
     @Override
     public Optional<RewindSnapshottable<?>> rewindAdapter() {
-        return Optional.of(new Sonic1SpecialStageRewindAdapter(manager,
-                () -> resultsPlcSubmitted, submitted -> resultsPlcSubmitted = submitted));
+        return Optional.of(com.openggf.game.internal.NativeSpecialStagePacingRewind.wrap(
+                new Sonic1SpecialStageRewindAdapter(manager,
+                        () -> resultsPlcSubmitted, submitted -> resultsPlcSubmitted = submitted), manager.pacingOwner()));
     }
 
     @Override

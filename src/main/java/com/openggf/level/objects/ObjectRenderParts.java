@@ -80,4 +80,7 @@ final class ObjectRenderParts {
             entry.instance().appendRenderCommands(commands);
         }
     }
+    static void appendRenderCommands(RenderEntry entry, List<GLCommand> commands, int bucket, ObjectServices services) {
+        ObjectHeadPresentation.draw(entry.instance(),services,()->appendRenderCommands(entry,commands,bucket));
+    }
 }

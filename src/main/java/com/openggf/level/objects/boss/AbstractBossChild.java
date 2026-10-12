@@ -12,6 +12,9 @@ import com.openggf.debug.DebugColor;
  * Child components are full object instances so they can participate in collision and rendering buckets.
  */
 public abstract class AbstractBossChild extends AbstractObjectInstance implements BossChildComponent {
+    @Override public com.openggf.game.mutators.ObjectHeadRole headPresentationRole() {
+        return com.openggf.game.mutators.ObjectHeadRole.BOSS;
+    }
     protected final AbstractBossInstance parent;
     protected int currentX;
     protected int currentY;

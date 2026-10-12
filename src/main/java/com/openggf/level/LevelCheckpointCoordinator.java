@@ -21,6 +21,14 @@ final class LevelCheckpointCoordinator {
         this.levelManager = levelManager;
     }
 
+    void admitLoadPolicies(com.openggf.game.session.WorldSession world, com.openggf.game.LevelLoadCause cause,
+                           LevelLoadContext context, LevelTransitionCoordinator transitions) {
+        if (com.openggf.game.LevelLoadMutatorAdmission.normalize(world, cause, context)) {
+            transitions.clearLastStarPostHit();
+            clearPendingPersistentRespawn();
+        }
+    }
+
     void prepareForLevelStart() {
         if (checkpointState == null) {
             checkpointState = levelManager.gameModule.createRespawnState();

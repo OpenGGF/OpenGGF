@@ -45,6 +45,11 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B        # separat
   copy build trees. The per-Surefire-fork LWJGL extraction uses
   `target/test-tmp`. Only test-running or uncertain Maven commands use the shared queue below. Keep
   diagnostic output bounded with targeted searches and reads.
+- Use headless engine tests for behavior and offscreen captures for routine visual
+  validation and promo footage. Never automate focus or keyboard input on the user's
+  shared desktop. Window/focus/close diagnostics must use an owned isolated display
+  and fail before Engine launch if isolation is unavailable; never fall back to the
+  ambient X11/Wayland session. Keep such diagnostics separate from routine tests.
 - Use JUnit 5/Jupiter. `-Dmse=off` exposes full Maven logs. PowerShell quotes
   `-D...` arguments and uses `tools/testing/install-hooks.ps1`.
 - During implementation, run focused tests or `run_categories.py --category NAME --run`.

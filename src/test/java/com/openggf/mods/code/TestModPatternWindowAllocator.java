@@ -14,7 +14,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TestModPatternWindowAllocator {
     private static final int FIRST_FREE = 0x108000;
-    private static final int PRODUCTION_FIRST_FREE = PatternAtlasRange.CONTINUE_SCREEN.endExclusive();
+    private static final int PRODUCTION_FIRST_FREE = java.util.Arrays.stream(PatternAtlasRange.values())
+                .mapToInt(PatternAtlasRange::endExclusive).max().orElseThrow();
 
     @Test
     void acceptsOneAndSixteenWindowOwnersInEffectiveOrder() {

@@ -52,6 +52,11 @@ public final class DdzSuperStarsObjectInstance extends AbstractDdzObjectInstance
     @Override public boolean isHighPriority() { return true; } // ObjDat3_8321A art bit15
     @Override public int getPriorityBucket() { return RenderPriority.fromS3kWord(0x80); }
     @Override public void appendRenderCommands(List<GLCommand> commands) {
+        com.openggf.sprites.playable.PlayableMutatorPresentation.drawCommands(
+                services().playerQuery().mainPlayerOrNull(),
+                com.openggf.graphics.SpritePresentation.Part.ATTACHED_EFFECT, commands, this::appendNative);
+    }
+    private void appendNative(List<GLCommand> commands) {
         if (!drawing || !drawable()) return;
         var renderer = getRenderer(Sonic3kObjectArtKeys.DDZ_SUPER_STARS);
         if (renderer != null) renderer.drawFrameIndex(frame, x, y, false, false);

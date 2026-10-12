@@ -8,10 +8,12 @@ import java.util.logging.Logger;
  * Subclasses provide game-specific zone/music mapping.
  * Methods are non-final to allow overrides (e.g., Slots player sprite swap).
  */
-public abstract class AbstractBonusStageCoordinator implements BonusStageProvider {
+public abstract class AbstractBonusStageCoordinator implements BonusStageProvider, com.openggf.game.internal.NativeBonusStagePacing {
 
     private static final Logger LOGGER = Logger.getLogger(AbstractBonusStageCoordinator.class.getName());
 
+    private long pacingEntryEpoch;
+    @Override public long pacingEntryEpoch() { return pacingEntryEpoch; }
     private BonusStageState savedState;
     private BonusStageType activeType = BonusStageType.NONE;
     private boolean exitRequested;
@@ -30,6 +32,7 @@ public abstract class AbstractBonusStageCoordinator implements BonusStageProvide
 
     @Override
     public void onEnter(BonusStageType type, BonusStageState savedState) {
+        pacingEntryEpoch++;
         this.savedState = savedState;
         this.activeType = type;
         this.exitRequested = false;
@@ -42,6 +45,7 @@ public abstract class AbstractBonusStageCoordinator implements BonusStageProvide
 
     @Override
     public void onExit() {
+        pacingEntryEpoch++;
         LOGGER.info("Exiting bonus stage: " + activeType
                 + " (rings collected: " + ringsCollected + ")");
         activeType = BonusStageType.NONE;

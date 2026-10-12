@@ -155,30 +155,49 @@ class TestS1GameplayAudioTimelineCli {
         fakeBin.resolve("mvn").toFile().setExecutable(true);
         fakeBin.resolve("java").toFile().setExecutable(true);
         ProcessBuilder safe = new ProcessBuilder("/usr/bin/bash", "tools/audio/run_s1_ghz1_gameplay_audio_timeline.sh", "--help");
+        // Model the script's documented trusted launch environment for the positive arm.
+        // The harness may itself inherit loader paths; negative arms add each injection
+        // explicitly after clearing inherited controls so no other variable masks it.
+        clearProducerControls(safe);
         safe.environment().put("PATH", fakeBin.toString());
         assertEquals(0, safe.start().waitFor());
         assertFalse(Files.exists(marker));
         ProcessBuilder injected = new ProcessBuilder("/usr/bin/bash", "tools/audio/run_s1_ghz1_gameplay_audio_timeline.sh", "--help");
+        clearProducerControls(injected);
         injected.environment().put("JAVA_TOOL_OPTIONS", "-Dunsafe=true");
         assertEquals(4, injected.start().waitFor());
         Path bashEnv = temp.resolve("bash-env");
         Files.writeString(bashEnv, "touch '" + marker + "'\n");
         ProcessBuilder inherited = new ProcessBuilder(Path.of("tools/audio/run_s1_ghz1_gameplay_audio_timeline.sh").toAbsolutePath().toString(), "--help");
+        clearProducerControls(inherited);
         inherited.environment().put("BASH_ENV", bashEnv.toString());
         assertEquals(4, inherited.start().waitFor());
         assertFalse(Files.exists(marker));
 
-        for (String loaderVariable : List.of("LD_PRELOAD", "LD_AUDIT", "LD_OPENGGF_TEST")) {
+        for (String loaderVariable : List.of("LD_PRELOAD", "LD_AUDIT", "LD_LIBRARY_PATH", "LD_OPENGGF_TEST")) {
             Path error = temp.resolve(loaderVariable + ".stderr");
             ProcessBuilder loaderInjected = new ProcessBuilder(
                     Path.of("tools/audio/run_s1_ghz1_gameplay_audio_timeline.sh").toAbsolutePath().toString(),
                     "--help");
+            clearProducerControls(loaderInjected);
             loaderInjected.environment().put(loaderVariable, "/inexistent/openggf-audio-test.so");
             loaderInjected.redirectError(error.toFile());
 
             assertEquals(4, loaderInjected.start().waitFor(), loaderVariable + " must fail before help or tool work");
             String stderr = Files.readString(error);
             assertTrue(stderr.contains("unsupported loader environment variable: " + loaderVariable), stderr);
+        }
+    }
+
+    private static void clearProducerControls(ProcessBuilder child) {
+        child.environment().keySet().removeIf(key -> key.startsWith("LD_"));
+        for (String key : List.of("OGGF_AUDIO_TIMELINE_JAVA_BIN", "OGGF_AUDIO_TIMELINE_MONO_BIN",
+                "OGGF_AUDIO_PARITY_JAVA_BIN", "MONO_BIN", "BIZHAWK_EXTRA_ARGS",
+                "OGGF_BIZHAWK_PROBE_RUNTIME", "OGGF_BIZHAWK_LIB", "OGGF_WORKDIR", "OGGF_TRACE_OUTPUT_DIR",
+                "OGGF_NO_LUACONSOLE", "OGGF_BIZHAWK_SOFTGL", "BIZHAWK_ALLOW_SLOW_LUA",
+                "JAVA_TOOL_OPTIONS", "JDK_JAVA_OPTIONS", "_JAVA_OPTIONS", "MAVEN_OPTS", "MAVEN_ARGS",
+                "BASH_ENV", "ENV", "MONO_ENV_OPTIONS", "MONO_PATH", "CLASSWORLDS_CONF")) {
+            child.environment().remove(key);
         }
     }
 

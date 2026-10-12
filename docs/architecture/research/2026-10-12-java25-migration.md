@@ -523,3 +523,48 @@ The unmerged feature worktree/branch, native outputs and owned Temurin/GraalVM
 toolchains are intentionally retained for user testing. Consumed raw logs and
 runner diagnostics are not archived. The parent owns PR creation and watching
 its mandatory checks; this record does not claim the PR has already passed.
+
+## PR 221 develop update
+
+After PR 221 passed its checks at `746936694`, develop advanced to
+`a0e2b79cc3a47cedd11a0f9daf6a32ea4ced19cb` with the Mutator Lab implementation.
+The update uses the repository's merge convention. The sole textual conflict was
+an insertion in the measurement-hazard catalogue: both the Java 25 full-assertion
+lesson and every upstream native-stage/capture lesson are retained. Automatic
+merges retain the new head-inventory CLI commands, original-ROM test setup,
+isolated-display policy and API signature pins alongside the selected-JVM and
+native-access migration changes.
+
+The new Mutator Lab builder and creator/graphics probes now compile for release
+25. Its builder and the isolated window diagnostic select JAVA_HOME when set and
+declare native access; current guide commands require Java 25. Historical Java 21
+qualification records remain unchanged. No mutator, timing or gameplay algorithm
+was rewritten as part of this resolution.
+
+Validation used distro OpenJDK 25.0.4.1 on the resolved merge candidate
+(`746936694` plus `a0e2b79cc` and the adaptations above):
+
+- Reset only Maven's generated compiler directories, preserving the retained
+  native packages and extracted user-test configuration. Then
+  `python3 tools/testing/maven_queue.py -Dmse=off -DskipTests -Puniversal-jar verify`
+  passed in 1m24s, compiling 3,824 production and 3,794 test sources for release
+  25 and passing bundled-mod, SDK and artifact preparation/verification.
+- With `LUA_BIN=/usr/bin/lua5.4`, queued lean
+  `-Dtest=TestExampleMutatorsPackage,TestSpriteGraphicsAccess,TestGgfModCliCommands,TestBuildToolingGuard test`
+  passed 130 cases, zero failures/errors/skips. This is focused validation.
+- `python3 examples/example-mutators/build.py` passed package validation with
+  zero findings; all 14 generated classfiles are major 69. No Engine window was
+  launched.
+- Python suites `test_engine_window_capture.py` (11),
+  `test_compare_category_outcomes.py` (19), and `test_run_categories.py` (35)
+  passed. Syntax, mirrored guidance and whitespace checks passed. Preflight
+  passed after selecting Lua 5.4 explicitly; the ambient Lua failed its version
+  prerequisite before tests.
+
+The change plan against the prior PR head selected 3,144 ordinary classes because
+it includes the complete upstream feature intake. This maintenance update follows
+the requested build-before-push flow and tests the resolved toolchain/packaging
+boundaries directly; it does not claim another local full engine, trace, graphics
+or native run. Earlier broad/native evidence above refers to its named source,
+not this newer merge. Fresh PR ordinary, guard, policy and creator-kit gates must
+pass on the pushed update before handoff.

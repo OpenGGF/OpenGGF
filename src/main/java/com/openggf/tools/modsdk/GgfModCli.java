@@ -39,6 +39,8 @@ public final class GgfModCli {
                 case "run" -> runEngine(args, output);
                 case "art-keys" -> artKeys(args, output);
                 case "sprites" -> SpriteSheetDump.run(java.util.Arrays.copyOfRange(args, 1, args.length), output);
+                case "head-inventory" -> HeadAnatomyInventory.run(java.util.Arrays.copyOfRange(args, 1, args.length), output);
+                case "object-head-inventory" -> ObjectHeadAnatomyInventory.run(java.util.Arrays.copyOfRange(args, 1, args.length), output);
                 default -> usage(output);
             };
         } catch (InvalidPathException error) {
@@ -283,6 +285,8 @@ public final class GgfModCli {
         output.println("       ggfmod package --input <classes/resources> --out <jar> [--format text|json] [--warnings allow|error] | run <build-output>");
         output.println("       ggfmod sprites <rom> <s1|s2|s3k> <out.png> art=<addr> map=<addr> [comp= dplc= layout="
                 + " size= line= offset= pal=<addr>:<colours>:<line>] | char=<sonic|tails|knuckles>");
+        output.println("       ggfmod head-inventory <rom> <s1|s2|s3k> <out-directory> (CPU-only players/animations)");
+        output.println("       ggfmod object-head-inventory <rom> <s1|s2|s3k> <out-directory> (CPU-only native object art)");
         output.println("       ggfmod art-keys [--game s1|s2|s3k|any]");
         return 1;
     }
