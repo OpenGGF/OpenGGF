@@ -285,3 +285,11 @@ write retains the in-memory table and shows a notice; bounded retries publish wi
 resubmitting a run. Oversized/unreadable records remain untouched. The level and zone
 wrappers use `DelegatingLevel` and `DelegatingZoneRegistry`. Badnik traits are prepared
 per object/recreation, and callers receive defensive copies of animation frame arrays.
+
+The current residual ledger records 24 `NON_API_ENGINE_REFERENCE` warnings from
+the clean `175531f6d` package checkpoint. Native object/contact, title and rendering
+bridges remain outside the compatibility promise. Prefer public framework helpers
+where they cover the operation; review each retained bridge's owner and reopening
+conditions in the
+[residual reference ledger](../../docs/architecture/validation/2026-10-12-mod-audit-remediation.md#final-residual-findings-actual-class-call-and-purpose)
+when rebuilding against matching engine/SDK artifacts.

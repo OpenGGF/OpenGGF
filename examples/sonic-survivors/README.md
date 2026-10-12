@@ -445,3 +445,11 @@ python3 examples/build_example.py sonic-survivors --engine /absolute/engine.jar 
 ```
 
 Use `--s1`, `--s2`, or `--s3k` for the games this example consumes. Explicit paths create isolated development configuration and saves; no ROM is copied or linked. The creator kit exports this example with a portable POM and `tools/build_project.py`; it needs no engine source checkout. Only production sources/resources enter the validated mod jar. Read [recipient installation](../../docs/modding/installing-mods.md) before sharing.
+
+The current residual ledger records 13 `NON_API_ENGINE_REFERENCE` warnings from
+the clean `175531f6d` package checkpoint. Native object priority/touch callbacks and
+soundtrack bridges remain outside the compatibility promise. Prefer public
+framework helpers where they cover the operation; review each retained bridge's
+owner and reopening conditions in the
+[residual reference ledger](../../docs/architecture/validation/2026-10-12-mod-audit-remediation.md#final-residual-findings-actual-class-call-and-purpose)
+when rebuilding against matching engine/SDK artifacts.
