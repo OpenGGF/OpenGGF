@@ -133,6 +133,8 @@ See the detailed guides for narrower contracts; roadmap entries do not imply imp
 - [Catalog scalability probe and acceptance](tools/scalability.md)
 - [Maintained sample gallery](samples/index.md)
 - [Deferred-backlog decisions](BACKLOG.md)
+- [Mod author and framework audit](../architecture/audits/2026-10-12-mod-author-framework-audit.md)
+  — source-wide findings and proposed rewrite/API focal points, with verification limits.
 - [GUI tooling evaluation](GUI_TOOLING_EVALUATION.md)
 
 The nine sample sources are built by the default test suite. Treat them as
