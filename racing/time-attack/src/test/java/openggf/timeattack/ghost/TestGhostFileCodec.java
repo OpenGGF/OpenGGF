@@ -12,6 +12,48 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestGhostFileCodec {
+    @Test
+    void invalidHeaderBoundsAreRejectedBeforeReplacingAnExistingFile(@TempDir Path dir) throws IOException {
+        Path path=dir.resolve("best.ggfghost");GhostFileCodec.write(sample(),path);
+        byte[] before=Files.readAllBytes(path);
+        int[][] clocks={{-1,100},{100,99},{Integer.MIN_VALUE,Integer.MAX_VALUE},{0,GhostFileCodec.MAX_FRAMES+1}};
+        for (int[] clock:clocks) {
+            var invalid=new GhostRecording(new GhostHeader(1,"s3k",0,0,"sonic","x",clock[0],clock[1],
+                    new int[0],new byte[32]),new byte[7]);
+            assertThrows(IOException.class,()->GhostFileCodec.write(invalid,path));
+            assertArrayEquals(before,Files.readAllBytes(path));
+        }
+        for (int[] splits:new int[][]{new int[256],{-1},{101},{50,40}}) {
+            var invalid=new GhostRecording(new GhostHeader(1,"s3k",0,0,"sonic","x",0,100,
+                    splits,new byte[32]),new byte[7]);
+            assertThrows(IOException.class,()->GhostFileCodec.write(invalid,path));
+            assertArrayEquals(before,Files.readAllBytes(path));
+        }
+        for (GhostHeader header:java.util.List.of(
+                new GhostHeader(99,"s3k",0,0,"sonic","x",0,100,new int[0],new byte[32]),
+                new GhostHeader(1,"../outside",0,0,"sonic","x",0,100,new int[0],new byte[32]),
+                new GhostHeader(1,"s3k",256,-1,"sonic","x",0,100,new int[0],new byte[32]),
+                new GhostHeader(1,"s3k",0,0,"../outside","x",0,100,new int[0],new byte[32]),
+                new GhostHeader(1,"s3k",0,0,"sonic","x",0,100,new int[0],new byte[31]))) {
+            assertThrows(IOException.class,()->GhostFileCodec.write(new GhostRecording(header,new byte[7]),path));
+            assertArrayEquals(before,Files.readAllBytes(path));
+        }
+    }
+
+    @Test
+    void decodedInvalidClockAndTrailingDataAreRejected(@TempDir Path dir) throws IOException {
+        Path path=dir.resolve("invalid.ggfghost");GhostFileCodec.write(sample(),path);
+        byte[] bytes=Files.readAllBytes(path);
+        var in=new java.io.DataInputStream(new java.io.ByteArrayInputStream(bytes));
+        in.skipNBytes(10);in.readUTF();in.skipNBytes(2);in.readUTF();in.readUTF();
+        int clockOffset=bytes.length-in.available();
+        java.nio.ByteBuffer.wrap(bytes).putInt(clockOffset,-1);
+        Files.write(path,bytes);
+        assertThrows(IOException.class,()->GhostFileCodec.read(path));
+        GhostFileCodec.write(sample(),path);
+        Files.write(path,new byte[]{1},java.nio.file.StandardOpenOption.APPEND);
+        assertThrows(IOException.class,()->GhostFileCodec.read(path));
+    }
     private static GhostRecording sample() {
         byte[] hash = new byte[32];
         for (int i = 0; i < 32; i++) hash[i] = (byte) i;

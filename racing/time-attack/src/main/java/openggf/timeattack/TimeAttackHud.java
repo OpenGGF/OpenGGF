@@ -39,7 +39,10 @@ public final class TimeAttackHud {
         }
         if (state.finished() && state.newBest()) {
             drawRight(canvas, "NEW RECORD", y, YELLOW);
+            y += LINE_HEIGHT;
         }
+        if(state.finished() && !state.saveNotice().isEmpty())drawRight(canvas,state.saveNotice(),y,
+                state.newBest() ? YELLOW : RED);
     }
 
     private static void drawRight(LevelOverlayCanvas canvas, String line, int y, int argb) {

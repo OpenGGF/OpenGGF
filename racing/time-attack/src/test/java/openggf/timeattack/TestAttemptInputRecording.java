@@ -5,6 +5,28 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestAttemptInputRecording {
+    @Test
+    void checkedDecoderRejectsTrailingBytesInvalidMasksAndOversizedPayloads() throws Exception {
+        AttemptInputRecording recording=new AttemptInputRecording(start());recording.appendFrame(0x08,false);
+        byte[] encoded=recording.encode();
+        assertThrows(java.io.IOException.class,()->AttemptInputRecording.decodeChecked(java.util.Arrays.copyOf(encoded,encoded.length+1)));
+        encoded[encoded.length-1]=(byte)0x80;
+        assertThrows(java.io.IOException.class,()->AttemptInputRecording.decodeChecked(encoded));
+        assertThrows(java.io.IOException.class,()->AttemptInputRecording.decodeChecked(new byte[AttemptInputRecording.MAX_ENCODED_BYTES+1]));
+    }
+
+    @Test
+    void checkedDecoderRejectsNoncanonicalUtfBeforeHashingCanThrowUncheckedIo() throws Exception {
+        var bytes=new java.io.ByteArrayOutputStream();
+        try(var output=new java.io.DataOutputStream(bytes)) {
+            output.writeUTF("s3k");output.writeByte(0);output.writeByte(0);output.writeUTF("sonic");
+            // DataInputStream accepts raw NUL bytes, but canonical modified UTF needs twice the bytes.
+            // Re-encoding this decoded value would exceed writeUTF's unsigned-short limit.
+            output.writeShort(40000);output.write(new byte[40000]);output.writeInt(0);
+        }
+        assertTrue(bytes.size()<AttemptInputRecording.MAX_ENCODED_BYTES);
+        assertThrows(java.io.IOException.class,()->AttemptInputRecording.decodeChecked(bytes.toByteArray()));
+    }
     private static AttemptStartDescriptor start() {
         return new AttemptStartDescriptor("s3k", 0, 0, "sonic", "0.6:cafe1234");
     }

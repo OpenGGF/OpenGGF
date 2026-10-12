@@ -29,6 +29,23 @@ Open **Extras > Time Attack**. The same mod provides Solo, Host LAN, Join LAN an
 **R** retries an act by default; **Settings > Retry key** captures another keyboard key.
 Best and imported ghosts remain in `ghosts/`, and player identity remains in `identity/`.
 
+A best save validates the ghost and its input recording before publication. The
+atomic `.ggfghost` file selects an immutable input sidecar by its recorded hash;
+the familiar `.ggfinputs` filename remains a legacy copy. The HUD distinguishes
+an unconfirmed save, a preserved rejected primary, and a saved record whose legacy
+copy still needs maintenance. This is one atomic publication authority, not a
+two-file crash-atomic rename. Existing primary/history pairs remain available
+while a new record is staged, and previous valid ghosts can be used for playback
+without permitting an overwrite of a corrupt or future primary.
+
+Per-route hash sidecars retain the best and two previous records. Legacy sidecar
+lookup visits paths lazily, skips corrupt/oversized files, and limits depth to six,
+entries to 4096, legacy sidecars to 512 plus one hash-matching sidecar, and each
+input recording to 36,000 frames plus
+4096 bytes of metadata. A checked search failure means a requested upload is
+unavailable; it does not fault the scene. Ghost clocks and splits must be ordered
+within the 36,000-frame recording budget; partial pose streams remain valid.
+
 On first opening, if the mod has no settings file, it imports the old engine's retry,
 network and minimap preferences from `config.yaml` or `config.json` and their `.bak` or
 numbered backups. Live configuration values take precedence over backup values. It writes
