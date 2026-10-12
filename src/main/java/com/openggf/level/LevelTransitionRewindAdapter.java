@@ -24,15 +24,16 @@ final class LevelTransitionRewindAdapter
     @Override
     public Snapshot capture() {
         return new Snapshot(transitions.captureSanctuaryRewindState(),
-                freshBoundary.captureForRewind());
+                freshBoundary.captureForRewind(), transitions.sceneActExit);
     }
 
     @Override
     public void restore(Snapshot snapshot) {
         transitions.restoreSanctuaryRewindState(snapshot.sanctuary());
         freshBoundary.restoreForRewind(snapshot.freshBoundary());
+        transitions.sceneActExit = snapshot.actExit();
     }
 
     record Snapshot(LevelTransitionCoordinator.SanctuaryRewindState sanctuary,
-                    FreshLevelTransitionBoundaryController.RewindState freshBoundary) {}
+                    FreshLevelTransitionBoundaryController.RewindState freshBoundary, LevelSceneActAccess.Exit actExit) {}
 }

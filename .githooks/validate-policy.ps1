@@ -201,6 +201,7 @@ function Test-ContainsModApiAnnotation([string]$Text) {
 function Get-ModApiSurfaceText([string]$Text) {
     $inBlock = $false
     $kind = ""
+    $typeName = ""
     $stripped = New-Object System.Collections.Generic.List[string]
     foreach ($raw in ($Text -split "\r?\n")) {
         $line = $raw
@@ -218,14 +219,39 @@ function Get-ModApiSurfaceText([string]$Text) {
             $out += $line.Substring(0, $s); $line = $line.Substring($s + 2); $inBlock = $true
         }
         $stripped.Add($out)
-        if ($kind -eq "" -and $out -cmatch '(?:^|[ \t])(class|interface|record|enum|@interface)[ \t]+[A-Za-z_]') {
-            $kind = $Matches[1]
+        if ($kind -eq "" -and $out -cmatch '(?:^|[ \t])(class|interface|record|enum|@interface)[ \t]+([A-Za-z_][A-Za-z0-9_]*)') {
+            $kind = $Matches[1]; $typeName = $Matches[2]
         }
     }
     $whole = $kind -ne "class"
     $depth = 0
     $kept = New-Object System.Collections.Generic.List[string]
-    foreach ($l in $stripped) {
+    $compactDepth = 0; $quote = [char]0; $escaped = $false
+    foreach ($line in $stripped) {
+        $l = $line; $start = 0
+        # A compact constructor adds no signature beyond the record components.
+        if ($compactDepth -eq 0 -and $kind -eq "record" -and
+                $l -cmatch ("^[ \t]*(?:public[ \t]+|protected[ \t]+|private[ \t]+)?" + [regex]::Escape($typeName) + "[ \t]*\{")) {
+            $start = $l.IndexOf("{") + 1; $compactDepth = 1
+            $kept.Add($l.Substring(0, $start))
+        }
+        if ($compactDepth -gt 0) {
+            for ($j = $start; $j -lt $l.Length; $j++) {
+                $c = $l[$j]
+                if ($quote -ne [char]0) {
+                    if ($escaped) { $escaped = $false }
+                    elseif ($c -eq '\') { $escaped = $true }
+                    elseif ($c -eq $quote) { $quote = [char]0 }
+                } elseif ($c -eq '"' -or $c -eq [char]39) { $quote = $c }
+                elseif ($c -eq '{') { $compactDepth++ }
+                elseif ($c -eq '}') {
+                    $compactDepth--
+                    if ($compactDepth -eq 0) { $kept.Add("}"); break }
+                }
+            }
+            if ($compactDepth -gt 0) { continue }
+            $l = $l.Substring($j + 1)
+        }
         if ($l -notmatch '[^ \t]') { continue }
         if ($whole) { $kept.Add($l); continue }
         if ($depth -gt 0 -or $l -cmatch '(?:^|[^A-Za-z0-9_])(?:public|protected)[ \t]' -or $l -match '^[ \t]*@' -or

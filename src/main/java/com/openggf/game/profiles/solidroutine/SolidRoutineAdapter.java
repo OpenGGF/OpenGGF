@@ -5,6 +5,7 @@ import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 
+@com.openggf.game.ModApi
 public record SolidRoutineAdapter(SolidObjectProvider provider, SolidRoutineProfile profile) {
     public SolidObjectParams getSolidParams() {
         return SolidRoutineProviderForwarding.getSolidParams(provider);

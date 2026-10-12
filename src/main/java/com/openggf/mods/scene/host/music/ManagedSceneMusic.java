@@ -45,6 +45,9 @@ public final class ManagedSceneMusic implements SceneMusic, AutoCloseable {
         this.nanoTime = Objects.requireNonNull(nanoTime, "nanoTime");
     }
 
+    /** Park audible playback while a retained scene visits an act; keep preparations and jobs. */
+    public void suspendPlayback() { if (player != null) player.stop(); }
+
     @Override public ScenePreparedMusic prepare(String gameId, int musicId, int durationFrames) {
         requireOpen();
         String game = checkedGame(gameId, durationFrames);

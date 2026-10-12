@@ -182,6 +182,7 @@ public final class SmpsDriverSession implements AutoCloseable {
         private final int overrideCount;
         private final boolean speedShoesEnabled;
         private final int speedMultiplier;
+        private final int musicTempoPercent;
         private final boolean ringLeft;
         private final int musicFmDacTrackCount;
         private final SegaPcmTransport segaPcmTransport;
@@ -211,6 +212,7 @@ public final class SmpsDriverSession implements AutoCloseable {
             speedShoesEnabled =
                     SmpsDriverSession.this.speedShoesEnabled;
             speedMultiplier = SmpsDriverSession.this.speedMultiplier;
+            musicTempoPercent = SmpsDriverSession.this.musicTempoPercent;
             ringLeft = SmpsDriverSession.this.ringLeft;
             musicFmDacTrackCount = SmpsDriverSession.this.musicFmDacTrackCount;
             segaPcmTransport =
@@ -534,6 +536,7 @@ public final class SmpsDriverSession implements AutoCloseable {
     private int overrideCount;
     private boolean speedShoesEnabled;
     private int speedMultiplier = 1;
+    private int musicTempoPercent = 100;
     private boolean ringLeft = true;
     // Retain the loaded header's DAC disposition after its sequencer ends.
     // S2 DACEnabled is driver RAM, not the existence of active music tracks.
@@ -1042,7 +1045,8 @@ public final class SmpsDriverSession implements AutoCloseable {
         requireInstalled();
         Objects.requireNonNull(command, "command");
         if (!(command instanceof SmpsSessionCommand.ResetRingAlternation)
-                && !(command instanceof SmpsSessionCommand.SetSpeedMultiplier)) {
+                && !(command instanceof SmpsSessionCommand.SetSpeedMultiplier)
+                && !(command instanceof SmpsSessionCommand.SetMusicTempoPercent)) {
             interruptSegaPcmForRequest();
         }
         switch (command) {
@@ -1075,6 +1079,10 @@ public final class SmpsDriverSession implements AutoCloseable {
             }
             case SmpsSessionCommand.SetSpeedShoes speed -> {
                 speedShoesEnabled = speed.enabled();
+                applyCurrentLogicalControls();
+            }
+            case SmpsSessionCommand.SetMusicTempoPercent tempo -> {
+                musicTempoPercent = tempo.percent();
                 applyCurrentLogicalControls();
             }
             case SmpsSessionCommand.ChangeMusicTempo tempo -> {
@@ -1181,6 +1189,7 @@ public final class SmpsDriverSession implements AutoCloseable {
                 selectedDacSource,
                 speedShoesEnabled,
                 speedMultiplier,
+                musicTempoPercent,
                 ringLeft,
                 musicFmDacTrackCount,
                 segaPcmTransport == null ? null
@@ -1274,6 +1283,7 @@ public final class SmpsDriverSession implements AutoCloseable {
         selectedDacSource = resolved.session().selectedDacSource();
         speedShoesEnabled = resolved.session().speedShoesEnabled();
         speedMultiplier = resolved.session().speedMultiplier();
+        musicTempoPercent = resolved.session().musicTempoPercent();
         ringLeft = resolved.session().ringLeft();
         musicFmDacTrackCount = resolved.session().musicFmDacTrackCount();
         segaPcmTransport = materializeSegaPcmTransport(
@@ -1387,6 +1397,7 @@ public final class SmpsDriverSession implements AutoCloseable {
         overrideCount = state.overrideCount;
         speedShoesEnabled = state.speedShoesEnabled;
         speedMultiplier = state.speedMultiplier;
+        musicTempoPercent = state.musicTempoPercent;
         ringLeft = state.ringLeft;
         musicFmDacTrackCount = state.musicFmDacTrackCount;
         segaPcmTransport = state.segaPcmTransport;
@@ -1855,6 +1866,7 @@ public final class SmpsDriverSession implements AutoCloseable {
     }
 
     private void hardReset() {
+        musicTempoPercent = 100;
         pendingService = null;
         pendingGlobalCommand = SmpsPendingGlobalCommand.NONE;
         clearOverrides();
@@ -1883,6 +1895,7 @@ public final class SmpsDriverSession implements AutoCloseable {
         if (music != null) {
             music.setSpeedShoes(speedShoesEnabled);
             music.setSpeedMultiplier(speedMultiplier);
+            music.setMusicTempoPercent(musicTempoPercent);
         }
     }
 

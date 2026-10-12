@@ -5,6 +5,13 @@ import com.openggf.mods.scene.ModSceneFactory;
 
 /** Lets tests outside this package drive the package-private registration transaction. */
 public final class ModContextTestAccess {
+    public static ModRegistrationPlan freezeWithObject(String owner, String baseGame, String name,
+            com.openggf.level.objects.ObjectFactory factory) {
+        ModContext context = new ModContext(owner, baseGame, ModAssetRoot.forTests(owner));
+        context.registerObject(name, factory);
+        return context.freeze();
+    }
+
     private ModContextTestAccess() {
     }
 

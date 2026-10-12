@@ -61,6 +61,7 @@ public final class ExampleModHarness implements AutoCloseable {
             throw new IllegalStateException(manifest.id() + " failed to compile");
         }
         copyTree(project.resolve("src/main/resources"), classes);
+        generateResources(project, classes);
         Path jar = work.resolve(manifest.id() + ".jar");
         if (GgfModCli.run(new String[] {"package", "--input", classes.toString(), "--out", jar.toString()},
                 System.out) != 0) {
@@ -70,6 +71,16 @@ public final class ExampleModHarness implements AutoCloseable {
                 LogicalRomResolver.fromRomManager(GameServices.rom()),
                 SonicConfigurationService.createStandalone(), List.of());
         return new ExampleModHarness(manifest, kit);
+    }
+
+    /** Same optional trusted generator convention as both example build launchers. */
+    static void generateResources(Path project, Path classes) throws Exception {
+        Path generator = project.resolve("generate_resources.py").toAbsolutePath();
+        if (!Files.isRegularFile(generator)) return;
+        Process process = new ProcessBuilder(System.getenv().getOrDefault("PYTHON_BIN", "python3"),
+                generator.toString(), classes.toAbsolutePath().toString())
+                .directory(project.toAbsolutePath().toFile()).inheritIO().start();
+        if (process.waitFor() != 0) throw new IllegalStateException("Resource generation failed: " + project);
     }
 
     private static void copyTree(Path from, Path to) throws IOException {
@@ -96,6 +107,10 @@ public final class ExampleModHarness implements AutoCloseable {
     /** Faults the engine's fault boundary caught from the mod, by owner (empty when it ran cleanly). */
     public Map<String, List<com.openggf.mods.ModFinding>> findings() {
         return kit.findings();
+    }
+
+    public com.openggf.level.objects.RewindClassResolver rewindClassResolver() {
+        return kit.rewindClassResolver();
     }
 
     public ModRegistrationPlan plan() {

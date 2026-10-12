@@ -71,6 +71,13 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A headless palette owner check needs the renderer's resolution boundary
+(2026-10-10, Starpost seasonal acts): HeadlessTestRunner queues palette writes
+but does not draw, so ownerAt still reports none and live RGB remains unchanged.
+Resolve pending frame writes before palette assertions, then independently inspect
+native GameLoop GPU captures. Do not infer an absent runtime callback from an
+unresolved registry; do not replace ownership writes with direct palette mutation.
+
 Compare the full assertion, not its bounded summary (2026-10-12, Java 25
 migration): a 2,915-character rewind assertion was truncated at 2,048 in the
 runner's `message`; its complete assertion remained in `detail`. Across JVMs,
