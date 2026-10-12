@@ -871,6 +871,8 @@ CF-ANNOTATION TYPE com.openggf.mods.scene.art.SpriteComposition$DrawPart visible
 CF-ANNOTATION TYPE com.openggf.mods.scene.art.SpriteComposition$Part visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.art.SpriteComposition$Placement visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.scene.art.StockSceneArt visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.art.TitleCardPresentation visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.scene.art.TitleCardPresentation$Position visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.state.CapturedPool visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.state.ModSaveCodec visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.state.ModSaveLoadResult visible @com.openggf.game.ModApi
@@ -880,6 +882,7 @@ CF-ANNOTATION TYPE com.openggf.mods.state.ModSaveWriteResult visible @com.opengg
 CF-ANNOTATION TYPE com.openggf.mods.state.SnapshotRandom visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.state.VersionedSettings visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.ui.AtlasFont visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.ui.AtlasFont$GlyphCase visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.ui.BitmapFont visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.ui.CompactFont visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.ui.CompactFont$RunSink visible @com.openggf.game.ModApi
@@ -1691,6 +1694,7 @@ CONSTRUCTOR com.openggf.mods.scene.art.SpriteComposition$Bounds public  <init>(f
 CONSTRUCTOR com.openggf.mods.scene.art.SpriteComposition$DrawPart public  <init>(com.openggf.mods.scene.SceneSprite,float,float,com.openggf.mods.scene.SceneDraw)
 CONSTRUCTOR com.openggf.mods.scene.art.SpriteComposition$Part public  <init>(com.openggf.mods.scene.SceneSprite,float,float,boolean)
 CONSTRUCTOR com.openggf.mods.scene.art.SpriteComposition$Placement public  <init>(java.util.List<com.openggf.mods.scene.art.SpriteComposition$DrawPart>,com.openggf.mods.scene.art.SpriteComposition$Bounds)
+CONSTRUCTOR com.openggf.mods.scene.art.TitleCardPresentation$Position public  <init>(float,float)
 CONSTRUCTOR com.openggf.mods.state.CapturedPool public  <init>(int,java.util.function.Function<T,T>)
 CONSTRUCTOR com.openggf.mods.state.ModSaveLoadResult public  <init>(com.openggf.mods.state.ModSaveLoadResult$Status,java.util.Optional<T>)
 CONSTRUCTOR com.openggf.mods.state.ModSaveSlot public  <init>(com.openggf.mods.ModStorage,java.lang.String,com.openggf.mods.state.ModSaveCodec<T>)
@@ -3061,6 +3065,8 @@ FIELD com.openggf.mods.state.ModSaveWriteResult public,static,final com.openggf.
 FIELD com.openggf.mods.state.ModSaveWriteResult public,static,final com.openggf.mods.state.ModSaveWriteResult SAVED
 FIELD com.openggf.mods.state.ModSaveWriteResult public,static,final com.openggf.mods.state.ModSaveWriteResult TOO_LARGE
 FIELD com.openggf.mods.state.VersionedSettings public,static,final java.lang.String VERSION_KEY
+FIELD com.openggf.mods.ui.AtlasFont$GlyphCase public,static,final com.openggf.mods.ui.AtlasFont$GlyphCase EXACT_FIRST
+FIELD com.openggf.mods.ui.AtlasFont$GlyphCase public,static,final com.openggf.mods.ui.AtlasFont$GlyphCase UPPERCASE
 FIELD com.openggf.mods.ui.FocusRegions$Direction public,static,final com.openggf.mods.ui.FocusRegions$Direction DOWN
 FIELD com.openggf.mods.ui.FocusRegions$Direction public,static,final com.openggf.mods.ui.FocusRegions$Direction LEFT
 FIELD com.openggf.mods.ui.FocusRegions$Direction public,static,final com.openggf.mods.ui.FocusRegions$Direction NEXT
@@ -12053,6 +12059,16 @@ METHOD com.openggf.mods.scene.art.StockSceneArt public  java.lang.String referen
 METHOD com.openggf.mods.scene.art.StockSceneArt public  java.lang.String romSha1()
 METHOD com.openggf.mods.scene.art.StockSceneArt public,static  com.openggf.mods.scene.art.StockSceneArt valueOf(java.lang.String)
 METHOD com.openggf.mods.scene.art.StockSceneArt public,static  com.openggf.mods.scene.art.StockSceneArt[] values()
+METHOD com.openggf.mods.scene.art.TitleCardPresentation public,static  com.openggf.mods.scene.art.TitleCardPresentation$Position position(int,long,long)
+METHOD com.openggf.mods.scene.art.TitleCardPresentation public,static  int arrivalFrames()
+METHOD com.openggf.mods.scene.art.TitleCardPresentation public,static  int durationFrames(int)
+METHOD com.openggf.mods.scene.art.TitleCardPresentation public,static  int holdFrames()
+METHOD com.openggf.mods.scene.art.TitleCardPresentation public,static  long automaticExitElapsed(long)
+METHOD com.openggf.mods.scene.art.TitleCardPresentation$Position public  float x()
+METHOD com.openggf.mods.scene.art.TitleCardPresentation$Position public  float y()
+METHOD com.openggf.mods.scene.art.TitleCardPresentation$Position public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.scene.art.TitleCardPresentation$Position public,final  int hashCode()
+METHOD com.openggf.mods.scene.art.TitleCardPresentation$Position public,final  java.lang.String toString()
 METHOD com.openggf.mods.state.CapturedPool public  T get(int)
 METHOD com.openggf.mods.state.CapturedPool public  int capacity()
 METHOD com.openggf.mods.state.CapturedPool public  int size()
@@ -12096,6 +12112,9 @@ METHOD com.openggf.mods.ui.AtlasFont public  int height()
 METHOD com.openggf.mods.ui.AtlasFont public  int width(java.lang.String)
 METHOD com.openggf.mods.ui.AtlasFont public  void draw(com.openggf.mods.scene.SceneCanvas,java.lang.String,int,int,int,int)
 METHOD com.openggf.mods.ui.AtlasFont public,static  com.openggf.mods.ui.AtlasFont parse(byte[],int)
+METHOD com.openggf.mods.ui.AtlasFont public,static  com.openggf.mods.ui.AtlasFont parse(byte[],int,com.openggf.mods.ui.AtlasFont$GlyphCase,char)
+METHOD com.openggf.mods.ui.AtlasFont$GlyphCase public,static  com.openggf.mods.ui.AtlasFont$GlyphCase valueOf(java.lang.String)
+METHOD com.openggf.mods.ui.AtlasFont$GlyphCase public,static  com.openggf.mods.ui.AtlasFont$GlyphCase[] values()
 METHOD com.openggf.mods.ui.BitmapFont public  int advance()
 METHOD com.openggf.mods.ui.BitmapFont public  int glyphHeight()
 METHOD com.openggf.mods.ui.BitmapFont public  int glyphWidth()
@@ -14905,7 +14924,9 @@ NESTED com.openggf.mods.scene.art.SpriteComposition com.openggf.mods.scene.art.S
 NESTED com.openggf.mods.scene.art.SpriteComposition com.openggf.mods.scene.art.SpriteComposition$DrawPart
 NESTED com.openggf.mods.scene.art.SpriteComposition com.openggf.mods.scene.art.SpriteComposition$Part
 NESTED com.openggf.mods.scene.art.SpriteComposition com.openggf.mods.scene.art.SpriteComposition$Placement
+NESTED com.openggf.mods.scene.art.TitleCardPresentation com.openggf.mods.scene.art.TitleCardPresentation$Position
 NESTED com.openggf.mods.state.ModSaveLoadResult com.openggf.mods.state.ModSaveLoadResult$Status
+NESTED com.openggf.mods.ui.AtlasFont com.openggf.mods.ui.AtlasFont$GlyphCase
 NESTED com.openggf.mods.ui.CompactFont com.openggf.mods.ui.CompactFont$RunSink
 NESTED com.openggf.mods.ui.FocusRegions com.openggf.mods.ui.FocusRegions$Direction
 NESTED com.openggf.mods.ui.FocusRegions com.openggf.mods.ui.FocusRegions$Region
@@ -17043,6 +17064,8 @@ RECORD-COMPONENT com.openggf.mods.scene.art.SpriteComposition$Part x float
 RECORD-COMPONENT com.openggf.mods.scene.art.SpriteComposition$Part y float
 RECORD-COMPONENT com.openggf.mods.scene.art.SpriteComposition$Placement bounds com.openggf.mods.scene.art.SpriteComposition$Bounds
 RECORD-COMPONENT com.openggf.mods.scene.art.SpriteComposition$Placement parts java.util.List<com.openggf.mods.scene.art.SpriteComposition$DrawPart>
+RECORD-COMPONENT com.openggf.mods.scene.art.TitleCardPresentation$Position x float
+RECORD-COMPONENT com.openggf.mods.scene.art.TitleCardPresentation$Position y float
 RECORD-COMPONENT com.openggf.mods.state.ModSaveLoadResult status com.openggf.mods.state.ModSaveLoadResult$Status
 RECORD-COMPONENT com.openggf.mods.state.ModSaveLoadResult value java.util.Optional<T>
 RECORD-COMPONENT com.openggf.mods.ui.FocusRegions$Region enabled boolean
@@ -18087,6 +18110,7 @@ TYPE class public,final com.openggf.mods.scene.art.RomAnimationPlayer SUPER java
 TYPE class public,final com.openggf.mods.scene.art.SceneArtCache SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.scene.art.SpriteAnchors SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.scene.art.SpriteComposition SUPER java.lang.Object
+TYPE class public,final com.openggf.mods.scene.art.TitleCardPresentation SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.state.CapturedPool<T> SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.state.ModSaveSlot<T> SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.state.SnapshotRandom SUPER java.lang.Object
@@ -18301,6 +18325,7 @@ TYPE enum public,static,final com.openggf.mods.scene.SceneMusicPreparation$State
 TYPE enum public,static,final com.openggf.mods.scene.SceneNoteEvent$Kind SUPER java.lang.Enum<com.openggf.mods.scene.SceneNoteEvent$Kind>
 TYPE enum public,static,final com.openggf.mods.scene.ScenePeer$State SUPER java.lang.Enum<com.openggf.mods.scene.ScenePeer$State>
 TYPE enum public,static,final com.openggf.mods.state.ModSaveLoadResult$Status SUPER java.lang.Enum<com.openggf.mods.state.ModSaveLoadResult$Status>
+TYPE enum public,static,final com.openggf.mods.ui.AtlasFont$GlyphCase SUPER java.lang.Enum<com.openggf.mods.ui.AtlasFont$GlyphCase>
 TYPE enum public,static,final com.openggf.mods.ui.FocusRegions$Direction SUPER java.lang.Enum<com.openggf.mods.ui.FocusRegions$Direction>
 TYPE enum public,static,final com.openggf.mods.ui.TextLayout$Alignment SUPER java.lang.Enum<com.openggf.mods.ui.TextLayout$Alignment>
 TYPE enum public,static,final com.openggf.net.client.ClientRaceSession$Phase SUPER java.lang.Enum<com.openggf.net.client.ClientRaceSession$Phase>
@@ -18835,6 +18860,7 @@ TYPE record public,static,final com.openggf.mods.scene.art.SpriteComposition$Bou
 TYPE record public,static,final com.openggf.mods.scene.art.SpriteComposition$DrawPart SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.scene.art.SpriteComposition$Part SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.scene.art.SpriteComposition$Placement SUPER java.lang.Record
+TYPE record public,static,final com.openggf.mods.scene.art.TitleCardPresentation$Position SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.ui.FocusRegions$Region SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.client.RaceClient$Control SUPER java.lang.Record
 TYPE record public,static,final com.openggf.net.client.RaceClient$Disconnected SUPER java.lang.Record
@@ -19821,6 +19847,8 @@ TYPE-ANNOTATION com.openggf.mods.scene.art.SpriteComposition$DrawPart @com.openg
 TYPE-ANNOTATION com.openggf.mods.scene.art.SpriteComposition$Part @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.art.SpriteComposition$Placement @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.scene.art.StockSceneArt @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.art.TitleCardPresentation @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.scene.art.TitleCardPresentation$Position @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.state.CapturedPool @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.state.ModSaveCodec @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.state.ModSaveLoadResult @com.openggf.game.ModApi
@@ -19830,6 +19858,7 @@ TYPE-ANNOTATION com.openggf.mods.state.ModSaveWriteResult @com.openggf.game.ModA
 TYPE-ANNOTATION com.openggf.mods.state.SnapshotRandom @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.state.VersionedSettings @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.ui.AtlasFont @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.ui.AtlasFont$GlyphCase @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.ui.BitmapFont @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.ui.CompactFont @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.ui.CompactFont$RunSink @com.openggf.game.ModApi

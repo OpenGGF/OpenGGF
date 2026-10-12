@@ -5,6 +5,7 @@ import com.openggf.mods.ui.SceneCanvasTransform;
 import com.openggf.mods.scene.SceneDraw;
 import com.openggf.mods.scene.SceneRomArt;
 import com.openggf.mods.scene.SceneSpriteSet;
+import com.openggf.mods.scene.art.TitleCardPresentation;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -362,23 +363,15 @@ final class SitarScreens {
         long arriving = (leaving ? s.screenTick : now) - s.loadingTick;
         long exit = leaving ? now - s.screenTick + 1 : 0;
         if (leaving && exit > 40) return false;
-        int[][] path = {{96, -112, 96, 64, 1}, {480, 96, 160, 96, 3}, {636, 128, 252, 128, 5}, {708, 160, 260, 160, 7}};
-        // The ROM omits the act piece for Sky Sanctuary and Doomsday.
-        int pieces = song.zone() == 10 || song.zone() == 12 ? 3 : 4;
         int offset = (c.width() - 320) / 2;
-        for (int i = 0; i < pieces; i++) {
-            int[] p = path[i];
-            int x = approach(p[0], p[2], arriving * 16), y = approach(p[1], p[3], arriving * 16);
-            long away = Math.max(0, exit - p[4] + 1) * 32;
-            if (i == 0) y -= (int) away; else x += (int) away;
-            c.draw(card.frame(i), x + offset, y, SceneDraw.plain());
+        for (int i = 0; i < Math.min(4, card.frameCount()); i++) {
+            var sprite = card.frame(i);
+            if (sprite == null) continue;
+            var position = TitleCardPresentation.position(i, Math.max(0, arriving), exit);
+            c.draw(sprite, position.x() + offset, position.y(), SceneDraw.plain());
         }
         return true;
     }
-    private static int approach(int from, int to, long travelled) {
-        return from + (int) Math.signum(to - from) * (int) Math.min(Math.abs(to - from), travelled);
-    }
-
     private void drawPerformance(SceneCanvas c, long now) {
         RhythmSession session = s.session;
         long position = s.player != null ? s.player.samplePosition() : session.position();
