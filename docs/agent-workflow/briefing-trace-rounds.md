@@ -71,6 +71,18 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A released port is a global resource, not a socket-close oracle (2026-10-12,
+mod audit delivery): Golf's audio-fault teardown test received `BindException`
+while trying to bind the former host port. Both unchanged baseline/current cases
+passed in matched focused runs. A deterministic owned contender acquired the
+released port after the original socket closed and reproduced that exception.
+Capture the actual socket before fault injection, verify its live binding, then
+assert that same handle is closed. Keep separate transport rebind/worker tests.
+Do not infer a leak or TIME_WAIT cause from port availability: the tested Java 25
+constructor's observed default reuse was true on this host, and the controlled
+TIME_WAIT check permitted the original rebind.
+The actual full-run contender remained unobserved.
+
 A headless palette owner check needs the renderer's resolution boundary
 (2026-10-10, Starpost seasonal acts): HeadlessTestRunner queues palette writes
 but does not draw, so ownerAt still reports none and live RGB remains unchanged.
