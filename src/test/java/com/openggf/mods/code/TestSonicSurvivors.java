@@ -453,6 +453,55 @@ class TestSonicSurvivors {
                 Arguments.of(args.get()[0], args.get()[1], main)));
     }
 
+    @ParameterizedTest(name = "zone {0} act {1} native floor equivalence")
+    @MethodSource("routeActs")
+    void arenaFloorQueryPreservesNativeProbesResultsAndRandomStream(int zone, int act) throws Exception {
+        launch(zone, act);
+        Object arena = arena(), stage = stage();
+        ObjectServices services = (ObjectServices) call(stage, "services");
+        int top = arenaValue("floorTop"), bottom = arenaValue("floorBottom");
+        int left = arenaValue("left"), right = arenaValue("right");
+        Object randomBefore = call(call(run(), "capture"), "rng");
+        for (int x = left; x <= right; x += 8) {
+            int expected = top;
+            boolean accepted = false;
+            for (int y = top - 16; y <= bottom + 48; y += 16) {
+                var nativeFloor = com.openggf.physics.ObjectTerrainUtils.checkFloorDist(services.levelManager(), x, y);
+                var semanticFloor = services.floorSurface(x, y, TerrainSurface.Layer.FOREGROUND, TerrainSurface.Path.PRIMARY);
+                assertEquals(nativeFloor.foundSurface(), semanticFloor.foundSurface(), "surface at " + x + "," + y);
+                if (nativeFloor.foundSurface())
+                    assertEquals(nativeFloor.distance(), semanticFloor.distance(), "distance at " + x + "," + y);
+                if (!accepted && nativeFloor.foundSurface() && nativeFloor.distance() >= 0 && nativeFloor.distance() < 16) {
+                    expected = y + nativeFloor.distance(); accepted = true;
+                }
+            }
+            assertEquals(expected, call(stage, "floorBelow", x, arena), "first nonnegative floor at " + x);
+        }
+        assertEquals(randomBefore, call(call(run(), "capture"), "rng"), "terrain lookup cannot consume the run RNG");
+    }
+
+    @Test void arenaFloorKeepsSixteenPixelCadenceAndRejectsNegativeAndSixteenDistances() throws Exception {
+        launch(0, 0);
+        int top = arenaValue("floorTop");
+        var origins = new ArrayList<Integer>();
+        ObjectServices services = new StubObjectServices() {
+            @Override public TerrainSurface floorSurface(int x, int y, TerrainSurface.Layer layer, TerrainSurface.Path path) {
+                assertEquals(TerrainSurface.Layer.FOREGROUND, layer); assertEquals(TerrainSurface.Path.PRIMARY, path);
+                origins.add(y);
+                int distance = switch (origins.size()) { case 1 -> -1; case 2 -> 16; default -> 15; };
+                return new TerrainSurface(true, y + distance, distance, 0);
+            }
+        };
+        Object controller = ObjectConstructionContext.construct(services, () -> {
+            try { return loader.loadClass("survivors.Stage").getConstructor(ObjectSpawn.class)
+                    .newInstance(new ObjectSpawn(0, 0, 0, 0, 0, false, 0)); }
+            catch (ReflectiveOperationException failure) { throw new AssertionError(failure); }
+        });
+        ((AbstractObjectInstance) controller).setServices(services);
+        assertEquals(top + 31, call(controller, "floorBelow", 320, arena()));
+        assertEquals(List.of(top - 16, top, top + 16), origins);
+    }
+
     @ParameterizedTest(name = "zone {0} act {1} as {2}")
     @MethodSource("routeTeams")
     void everyRouteActIsAWalledArenaSonicCanCross(int zone, int act, String main) throws Exception {
@@ -2162,6 +2211,12 @@ class TestSonicSurvivors {
         startRun(fixture);
         boolean tails = main.equals("tails");
         assertEquals(tails, get(run(), "tails"));
+        assertEquals(main, fixture.sprite().characterKey().persisted());
+        var registry = fixture.runtime().getRewindRegistry();
+        var checkpoint = registry.capture();
+        set(run(), "tails", !tails);
+        registry.restore(checkpoint);
+        assertEquals(tails, get(run(), "tails"), "semantic leader perks survive restore");
         assertEquals(tails ? 12 : 10, call(run(), "feverCharge"));
         assertEquals(tails ? 52 : 28, call(run(), "magnetRadius"));
         set(run(), "combo", 5);
