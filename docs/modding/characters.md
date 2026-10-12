@@ -35,8 +35,9 @@ artOverrides: {}
 
 `CharacterKey.mod(owner, localName)` turns the manifest owner and local name into
 the canonical persisted key `<mod-id>:<local-name>`. Pass that same key in the
-`CharacterDefinition`, return it from the sprite's `characterKey()`, and register
-the definition with the same local name:
+`CharacterDefinition` and register the definition with the same local name. The
+host binds that key during factory construction; the default `characterKey()`
+returns it without parsing the sprite's runtime name:
 
 ```java
 CharacterKey key = CharacterKey.mod(context.ownerModId(), "runner");
@@ -94,16 +95,15 @@ present.
 ## Sprite and physics
 
 Extend `AbstractPlayableSprite`. The factory constructor receives the persisted code
-and centre coordinates. Override `characterKey()` with the same owner-tagged key used
-at registration, and declare the secondary ability consistently:
+and centre coordinates. Keep the default `characterKey()` and declare the
+secondary ability consistently. An expert identity override is still supported,
+but the host rejects a null, unstable, or mismatched declaration before publishing
+the sprite:
 
 ```java
 public final class MyRunner extends AbstractPlayableSprite {
-    private final CharacterKey key;
-
     public MyRunner(String code, int x, int y) {
         super(code, (short) x, (short) y, physicsSpec());
-        key = CharacterKey.parsePersisted(code.replaceFirst("_p\\d+$", ""));
     }
 
     private static CharacterPhysicsSpec physicsSpec() {
@@ -112,18 +112,20 @@ public final class MyRunner extends AbstractPlayableSprite {
                 .rolling(0x20, 0x80, 0x80, 0xE00).build());
     }
 
-    @Override public CharacterKey characterKey() { return key; }
     @Override public SecondaryAbility getSecondaryAbility() {
         return SecondaryAbility.NONE;
     }
     @Override public void draw() {
-        if (!isHidden() && getSpriteRenderer() != null) {
-            getSpriteRenderer().drawFrame(getMappingFrame(), getRenderCentreX(), getRenderCentreY(),
-                    getRenderHFlip(), getRenderVFlip());
-        }
+        drawStandardArt();
     }
 }
 ```
+
+`drawStandardArt()` submits the installed current pose when visible. The host
+continues to own the renderer and its pattern bank; drawing changes no simulation
+state. Runtime main/sidekick suffixes have no effect on the factory-bound key, and
+the same sprite class can serve several distinct registered definitions. Outside
+a registered factory, the base retains its safe native identity fallback.
 
 `CharacterPhysicsSpec` owns this instance's active speeds, standing/rolling shape
 and sensors. It creates paired terrain probes with `PlayableSensorSpec.standard()`

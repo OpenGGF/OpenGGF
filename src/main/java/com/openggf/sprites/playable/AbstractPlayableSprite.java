@@ -1770,6 +1770,18 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.spriteRenderer = spriteRenderer;
         }
 
+        /**
+         * Submits the current standard art pose when visible and installed. The host retains
+         * renderer/bank ownership; this helper changes no movement, sensors, or animation state.
+         * Native playable draws may keep their additional ROM-specific presentation rules.
+         */
+        protected final void drawStandardArt() {
+                if (!isHidden() && getSpriteRenderer() != null) {
+                        getSpriteRenderer().drawFrame(getMappingFrame(), getRenderCentreX(), getRenderCentreY(),
+                                getRenderHFlip(), getRenderVFlip());
+                }
+        }
+
         public int getMappingFrame() {
                 return mappingFrame;
         }
@@ -4023,11 +4035,12 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         /**
          * Returns the stable identity persisted in launch profiles, saves, and rewind
-         * state. Registered mod subclasses must return the same owner-scoped key as
-         * their {@code CharacterDefinition}; the construction boundary validates it.
+         * state. A registered factory binds its definition's key independently of runtime
+         * sprite names. Expert overrides must declare that same key; the boundary validates it.
+         * Unregistered construction retains the native class's built-in fallback.
          */
         public CharacterKey characterKey() {
-                return PlayableCharacterIdentity.defaultFor(this);
+                return boundCharacterKey;
         }
 
         /**

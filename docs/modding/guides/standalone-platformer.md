@@ -313,7 +313,8 @@ public PlatformerModule(String owner, Level level) {
             .physics(PhysicsProvider.fixed(BoltCharacter.physicsSpec().profile(),
                     PhysicsModifiers.STANDARD, GameRules.SONIC_2))
             .touchResponses((byte) 0, (byte) 0, (byte) 8, (byte) 8)
-            .objects(PlatformerRegistry::new).build());
+            .object(owner + ":zapbug", (spawn, registry) -> new ZapBug(spawn))
+            .object(owner + ":springpad", (spawn, registry) -> new SpringPad(spawn)).build());
 }
 ```
 
@@ -338,11 +339,12 @@ Its constructor passes that spec to the playable base:
 ```java
 public BoltCharacter(String code, int x, int y) {
     super(code, (short) x, (short) y, physicsSpec());
-    key = CharacterKey.parsePersisted(code.replaceFirst("_p\\d+$", ""));
 }
 ```
 
-The instance spec owns the active speeds, dimensions and terrain sensors. The
+The host binds `characterKey()` from the registered definition; Bolt does not
+parse a runtime sprite name. The instance spec owns the active speeds, dimensions
+and terrain sensors. The
 module uses the same authored tuning for profile queries and supplies game-wide
 rules and modifiers. Bolt needs no duplicated `defineSpeeds()`, sensor creation or
 width/height overrides. `CharacterPhysicsSpec` defaults to `PlayableSensorSpec.standard()`;
@@ -404,10 +406,7 @@ Drawing only submits the current pose:
 
 ```java
 @Override public void draw() {
-    if (!isHidden() && getSpriteRenderer() != null) {
-        getSpriteRenderer().drawFrame(getMappingFrame(), getRenderCentreX(), getRenderCentreY(),
-                getRenderHFlip(), getRenderVFlip());
-    }
+    drawStandardArt();
 }
 ```
 

@@ -41,8 +41,13 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 @Isolated
 class TestModCharacterConstructionIdentity {
@@ -232,6 +237,71 @@ class TestModCharacterConstructionIdentity {
                 "construction callback boundary must be removed after success and failure");
     }
 
+    @Test
+    void defaultIdentityUsesFactoryBindingForReusedClassAndRuntimeSuffixes() {
+        CharacterKey friend = CharacterKey.mod("owner-a", "friend");
+        for (CharacterKey key : List.of(EXPECTED, friend)) {
+            for (String code : List.of(key.persisted(), key.persisted() + "_p1", key.persisted() + "_p27")) {
+                AbstractPlayableSprite sprite = CharacterConstructionScope.call(key,
+                        () -> new DefaultKeySprite(code, 32, 64));
+                assertSame(key, sprite.characterKey(), "runtime names must not supply registry identity");
+                CharacterConstructionScope.validateFactoryResult(key, sprite);
+            }
+        }
+        AbstractPlayableSprite outside = new DefaultKeySprite(SPOOFED.persisted() + "_p1", 0, 0);
+        assertSame(CharacterKey.SONIC, outside.characterKey(), "unbound arbitrary codes retain native fallback");
+        assertSame(CharacterKey.TAILS, new com.openggf.sprites.playable.Tails("tails_p1", (short) 0, (short) 0).characterKey());
+        assertSame(CharacterKey.KNUCKLES, new com.openggf.sprites.playable.Knuckles("knuckles_p2", (short) 0, (short) 0).characterKey());
+    }
+
+    @Test
+    void defaultIdentityPassesOwnerFactoryValidationAndFactoriesReturnFreshSprites() {
+        Fixture fixture = fixture(() -> new DefaultKeySprite("untrusted-runtime-name_p2", 0, 0));
+        AbstractPlayableSprite first = fixture.definition().spriteFactory().create(EXPECTED.persisted(), 0, 0);
+        AbstractPlayableSprite second = fixture.definition().spriteFactory().create(EXPECTED.persisted() + "_p1", 0, 0);
+        assertNotSame(first, second);
+        assertSame(EXPECTED, first.characterKey());
+        assertSame(EXPECTED, second.characterKey());
+        assertEquals(Set.of(), fixture.disabled());
+    }
+
+    @Test
+    void standardArtForwardingPreservesPoseVisibilitySensorsAndRendererLifetime() throws Exception {
+        var sprite = new ArtForwardingSprite("render-name_p1", 32, 64);
+        sprite.setMappingFrame(7);
+        sprite.setRenderFlips(true, false);
+        var renderer = mock(com.openggf.sprites.render.PlayerSpriteRenderer.class);
+        var sensors = sprite.getAllSensors();
+        int x = sprite.getRenderCentreX(), y = sprite.getRenderCentreY();
+        var snapshot = sprite.captureRewindState();
+
+        sprite.draw(); // Missing art is permitted before the host installs its renderer.
+        sprite.setSpriteRenderer(renderer);
+        sprite.setHidden(true);
+        sprite.draw();
+        verifyNoInteractions(renderer);
+        sprite.setHidden(false);
+        sprite.draw();
+        verify(renderer).drawFrame(7, x, y, true, false);
+        verifyNoMoreInteractions(renderer);
+        assertSame(renderer, sprite.getSpriteRenderer());
+        assertArrayEquals(sensors, sprite.getAllSensors());
+        assertUnchangedState(snapshot, sprite.captureRewindState());
+    }
+
+    private static void assertUnchangedState(Object before, Object after) throws Exception {
+        if (before != null && before.getClass().isRecord()) {
+            assertEquals(before.getClass(), after.getClass());
+            for (var component : before.getClass().getRecordComponents()) {
+                var accessor=component.getAccessor();
+                assertUnchangedState(accessor.invoke(before),accessor.invoke(after));
+            }
+        } else {
+            org.junit.jupiter.api.Assertions.assertTrue(java.util.Objects.deepEquals(before,after),
+                    "drawing must not mutate captured simulation state");
+        }
+    }
+
     private static Fixture fixture(Supplier<? extends AbstractPlayableSprite> spriteFactory) {
         return fixture(spriteFactory, code -> SpriteArtSet.EMPTY);
     }
@@ -298,6 +368,7 @@ class TestModCharacterConstructionIdentity {
 
     private abstract static class TestSprite extends AbstractPlayableSprite {
         private TestSprite() { super("runtime", (short) 0, (short) 0); }
+        private TestSprite(String code, int x, int y) { super(code, (short) x, (short) y); }
         @Override public void draw() { }
         @Override public void defineSpeeds() {
             runAccel = 12; runDecel = 128; friction = 12; max = 1536; jump = 1664;
@@ -306,6 +377,20 @@ class TestModCharacterConstructionIdentity {
             maxRoll = 4096; rollHeight = 28; runHeight = 38;
         }
         @Override protected void createSensorLines() { }
+    }
+
+    private static final class DefaultKeySprite extends TestSprite {
+        private DefaultKeySprite(String code, int x, int y) { super(code, x, y); }
+    }
+
+    private static final class ArtForwardingSprite extends AbstractPlayableSprite {
+        private ArtForwardingSprite(String code, int x, int y) {
+            super(code, (short) x, (short) y,
+                    new com.openggf.sprites.playable.CharacterPhysicsSpec(PhysicsProfile.SONIC_2_SONIC));
+        }
+        @Override public void draw() {
+            drawStandardArt();
+        }
     }
 
     private static final class SpoofedKeySprite extends TestSprite {

@@ -83,6 +83,23 @@ final class OwnerAwareStandaloneModule {
         }
 
         private Object validateOwnedReturn(Method method, Object value) {
+            if (method.getName().equals("createObjectRegistry")) {
+                if (!(value instanceof com.openggf.level.objects.ObjectRegistry registry))
+                    throw new IllegalArgumentException("Standalone object registry returned null");
+                // Compare the complete declaration with the host's verified owner, never a creator prefix.
+                var keys=Objects.requireNonNull(registry.browsableObjectKeys(),"Standalone object catalogue returned null");
+                if (keys.size()>com.openggf.io.ModInputLimits.production().maxCollectionEntries())
+                    throw new IllegalArgumentException("Too many standalone object keys");
+                var seen=new java.util.HashSet<String>();
+                for (String key:keys) {
+                    if (seen.size()>=com.openggf.io.ModInputLimits.production().maxCollectionEntries())
+                        throw new IllegalArgumentException("Too many standalone object keys");
+                    String canonical=com.openggf.game.ModKeySyntax.requireDisplayKey(key);
+                    if (!canonical.startsWith(owner+":"))
+                        throw new IllegalArgumentException("Standalone object key belongs to another mod owner");
+                    if (!seen.add(canonical)) throw new IllegalArgumentException("Duplicate standalone object key");
+                }
+            }
             if (method.getName().equals("getLevelMusicReference")) {
                 boolean silent = value instanceof com.openggf.game.MusicReference.Stock stock
                         && stock.musicId() == -1;

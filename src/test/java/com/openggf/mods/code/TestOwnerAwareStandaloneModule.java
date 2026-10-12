@@ -22,6 +22,77 @@ import static org.mockito.Mockito.*;
 
 class TestOwnerAwareStandaloneModule {
     @Test
+    void foreignObjectCatalogueIsRejectedAgainstVerifiedOwnerBeforeRegistryPublication() {
+        ModRuntimeFindingStore findings=new ModRuntimeFindingStore();
+        AtomicReference<Set<String>> disabled=new AtomicReference<>();
+        ModFaultBoundary boundary=new ModFaultBoundary(Map.of(),findings,
+                owners->new ModStateSaveResult.Saved(),disabled::set);
+        GameModule delegate=mock(GameModule.class);
+        ObjectRegistry registry=mock(ObjectRegistry.class);
+        when(delegate.createObjectRegistry()).thenReturn(registry);
+        // Every key has one consistent foreign prefix: agreement among declarations grants no authority.
+        when(registry.browsableObjectKeys()).thenReturn(List.of("foreign:walker","foreign:spring"));
+        GameModule wrapped=OwnerAwareStandaloneModule.wrap("owner",delegate,boundary,Map.of());
+
+        ModFaultBoundary.CallbackAborted aborted=assertThrows(ModFaultBoundary.CallbackAborted.class,
+                wrapped::createObjectRegistry);
+        assertEquals("owner",aborted.owner());
+        assertEquals(Set.of("owner"),disabled.get());
+        verify(registry,never()).create(any());
+    }
+
+    @Test
+    void malformedAndThrowingObjectCatalogueRemainInsideVerifiedOwnerBoundary() {
+        for (List<String> keys : List.of(List.of("owner:walker","owner:walker"),List.of("walker"))) {
+            ModFaultBoundary boundary=new ModFaultBoundary(Map.of(),new ModRuntimeFindingStore(),
+                    owners->new ModStateSaveResult.Saved(),owners->{});
+            GameModule delegate=mock(GameModule.class);
+            ObjectRegistry registry=mock(ObjectRegistry.class);
+            when(delegate.createObjectRegistry()).thenReturn(registry);
+            when(registry.browsableObjectKeys()).thenReturn(keys);
+            GameModule wrapped=OwnerAwareStandaloneModule.wrap("owner",delegate,boundary,Map.of());
+            assertThrows(ModFaultBoundary.CallbackAborted.class,wrapped::createObjectRegistry);
+        }
+        ModFaultBoundary boundary=new ModFaultBoundary(Map.of(),new ModRuntimeFindingStore(),
+                owners->new ModStateSaveResult.Saved(),owners->{});
+        GameModule delegate=mock(GameModule.class);
+        ObjectRegistry registry=mock(ObjectRegistry.class);
+        when(delegate.createObjectRegistry()).thenReturn(registry);
+        when(registry.browsableObjectKeys()).thenThrow(new IllegalStateException("catalogue"));
+        GameModule wrapped=OwnerAwareStandaloneModule.wrap("owner",delegate,boundary,Map.of());
+        assertEquals("catalogue",assertThrows(ModFaultBoundary.CallbackAborted.class,
+                wrapped::createObjectRegistry).getCause().getMessage());
+    }
+
+    @Test
+    void declarativeRegistryOwnerCannotBeForgedByModuleIdentifierAndFactoryFaultsStayAttributed() {
+        var level=mock(com.openggf.level.Level.class);
+        var calls=new java.util.concurrent.atomic.AtomicInteger();
+        var foreign=com.openggf.game.StandaloneGameSpec.builder("foreign")
+                .zone("FIRST",new com.openggf.game.StandaloneGameSpec.Act(0x400,level,0,0,
+                        com.openggf.game.MusicReference.stock(-1)))
+                .object("foreign:walker",(spawn,registry)-> { calls.incrementAndGet(); return mock(ObjectInstance.class); }).build();
+        GameModule forged=new com.openggf.game.AbstractStandaloneGameModule(foreign) {
+            @Override public String getIdentifier() { return "owner"; }
+        };
+        ModFaultBoundary boundary=new ModFaultBoundary(Map.of(),new ModRuntimeFindingStore(),
+                owners->new ModStateSaveResult.Saved(),owners->{});
+        assertThrows(ModFaultBoundary.CallbackAborted.class,
+                ()->OwnerAwareStandaloneModule.wrap("owner",forged,boundary,Map.of()).createObjectRegistry());
+        assertEquals(0,calls.get(),"reject the complete foreign declaration before invoking a factory");
+
+        var own=com.openggf.game.StandaloneGameSpec.builder("owner")
+                .zone("FIRST",new com.openggf.game.StandaloneGameSpec.Act(0x400,level,0,0,
+                        com.openggf.game.MusicReference.stock(-1)))
+                .object("owner:walker",(spawn,registry)-> { throw new IllegalStateException("declared factory"); }).build().module();
+        ModFaultBoundary ownBoundary=new ModFaultBoundary(Map.of(),new ModRuntimeFindingStore(),
+                owners->new ModStateSaveResult.Saved(),owners->{});
+        var registry=OwnerAwareStandaloneModule.wrap("owner",own,ownBoundary,Map.of()).createObjectRegistry();
+        var failure=assertThrows(ModFaultBoundary.CallbackAborted.class,()->registry.create(new ObjectSpawn(0,0,0,0,0,false,0,-1,"owner","owner:walker")));
+        assertEquals("owner",failure.owner());
+        assertEquals("declared factory",failure.getCause().getMessage());
+    }
+    @Test
     void characterContributionsPreserveRegistrationOrder() {
         ModFaultBoundary boundary = new ModFaultBoundary(Map.of(), new ModRuntimeFindingStore(),
                 owners -> new ModStateSaveResult.Saved(), owners -> { });
