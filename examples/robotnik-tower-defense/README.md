@@ -11,6 +11,8 @@ background, music and sounds come from your **locked-on Sonic 3 & Knuckles ROM**
 at runtime. The packaged jar contains code and the original text font only.
 Native builds cannot load code mods.
 
+Each scene prepares the campaign waves and defense definitions once, sharing them with simulation and previews. Another scene owns its own immutable tables; drawing does not regenerate lineups.
+
 ## Build and play
 
 With Java 21 and the ROM configured in OpenGGF:
@@ -77,6 +79,8 @@ returns to the grid. The pause menu offers resume, restart and title. Help and
 pause freeze every gameplay timer. The title's help has two pages; left/right
 or the mouse wheel changes page. Scores, furthest wave and wins are saved
 under the mod's owner-scoped `records.txt`; campaign state is not saved.
+Rejected records remain untouched. Failed writes retain dirty records and show a notice; results and
+exit retry publication without awarding another win.
 
 ## Implementation and verification
 

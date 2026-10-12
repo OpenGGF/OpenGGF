@@ -2,13 +2,17 @@ package towerdefense.core;
 
 /** A constructed defense; total investment is retained for an honest refund. */
 public final class Tower {
+    private final Catalog.Defense definition;
     final int site, kind;
     int level = 1, cooldown, jamTicks, invested;
 
-    Tower(int site, int kind) {
+    Tower(int site, int kind) { this(site, kind, Catalog.defense(kind)); }
+
+    Tower(int site, int kind, Catalog.Defense definition) {
+        this.definition = java.util.Objects.requireNonNull(definition);
         this.site = site;
         this.kind = kind;
-        invested = Catalog.defense(kind).cost();
+        invested = definition.cost();
     }
 
     public int site() { return site; }
@@ -17,7 +21,7 @@ public final class Tower {
     public int jamTicks() { return jamTicks; }
     public double x() { return Battlefield.siteX(site); }
     public double y() { return Battlefield.siteY(site) - 12; }
-    public int range() { return Catalog.defense(kind).range() + (level - 1) * 9; }
-    public double damage() { return Catalog.defense(kind).damage() * (1 + (level - 1) * 0.55); }
-    public int reload() { return Catalog.defense(kind).cooldown() * (100 - (level - 1) * 12) / 100; }
+    public int range() { return definition.range() + (level - 1) * 9; }
+    public double damage() { return definition.damage() * (1 + (level - 1) * 0.55); }
+    public int reload() { return definition.cooldown() * (100 - (level - 1) * 12) / 100; }
 }

@@ -48,6 +48,7 @@ public final class SitarScene implements ModScene, DebuggableScene {
     List<String> games = List.of();
     List<Roster> roster = List.of();
     List<SongSpec> songs = List.of();
+    private final SongCatalog.Prepared catalogue = new SongCatalog.Prepared();
     final Map<String, PerformerArt> actors = new HashMap<>();
     final ControlSettings settings = new ControlSettings();
     final MappedControls controls = new MappedControls(settings);
@@ -74,6 +75,11 @@ public final class SitarScene implements ModScene, DebuggableScene {
     PerformanceResult result, result2;
     boolean saved, newRecord;
     boolean saveFailed;
+    boolean saveBlocked;
+    private final Map<String, String> pendingSaves = new java.util.LinkedHashMap<>();
+    private final Map<String, String> publishedSaves = new HashMap<>();
+    private final java.util.Set<String> publishedFiles = new java.util.HashSet<>();
+    private final Map<String, Boolean> legacyWritable = new HashMap<>();
     OnlineMatch online;
     String onlineAddress = "127.0.0.1:34917";
     boolean editingAddress;
@@ -133,12 +139,14 @@ public final class SitarScene implements ModScene, DebuggableScene {
         context = ctx;
         games = ctx.art().availableGames();
         roster = Roster.availablePerformers(games);
-        songs = SongCatalog.available(games);
+        songs = catalogue.available(games);
         tours = CareerTours.available(songs);
-        settings.read(ctx.storage().read("settings.txt").orElse(""));
-        settings2.read(ctx.storage().read("settings-p2.txt").orElse(""));
-        profile.read(ctx.storage().read("profile.txt").orElse(""));
-        career.read(ctx.storage().read("career.txt").orElse(""));
+        loadFile("settings.txt", settings::read, settings::encode);
+        loadFile("settings-p2.txt", settings2::read, settings2::encode);
+        loadFile("profile.txt", profile::read, profile::encode);
+        loadFile("career.txt", career::read, career::encode);
+        saveBlocked = !settings.saveEligible() || !settings2.saveEligible() || !profile.saveEligible() || !career.saveEligible();
+        if (saveBlocked) notice = "Existing unsupported/corrupt save preserved; this visit only";
         onlineAddress = ctx.storage().read("online-address.txt").filter(t -> t.length() <= 128).orElse(onlineAddress);
         // House cues use the running game's driver, whichever ROM supplies a song or scenery.
         SceneRomArt running = ctx.art().rom();
@@ -158,7 +166,7 @@ public final class SitarScene implements ModScene, DebuggableScene {
     private void stage(SongSpec source) {
         SceneRomArt rom = context.art().rom(source.game());
         SongSpec scenery = rom.hasZonePictures(source.zone(), source.act()) ? source
-                : SongCatalog.available(List.of(source.game())).stream()
+                : catalogue.available(List.of(source.game())).stream()
                 .filter(candidate -> rom.hasZonePictures(candidate.zone(), candidate.act()))
                 .findFirst().orElse(source);
         venue = ConcertStage.build(rom, scenery.zone(), scenery.act(), context.width(), context.height(), 0);
@@ -204,12 +212,12 @@ public final class SitarScene implements ModScene, DebuggableScene {
             player = context.music().start(prepared, selectedParts, prepared.sampleRate() * 3);
             if (!calibratePending) performanceAudio = new sitarhero.audio.PerformanceAudio(player,prepared,chart,selectedParts,role,
                     local(),mode==Mode.LOCAL_COOP || mode==Mode.ONLINE_COOP);
-            controls.reset(context.physicalInput(), role.drums());
-            controls2.reset(context.physicalInput(), role.drums());
+            controls.reset(context.physicalInput(), calibratePending || role.drums());
+            controls2.reset(context.physicalInput(), calibratePending || role.drums());
             underruns = player.underrunCount();
             if (!calibratePending) {
             best = profile.best(song.id(), role.name(), difficulty.name()).map(PerformanceResult::score).orElse(0L);
-            if (difficulty == Difficulty.MEDIUM) best = Math.max(best, parseLong(context.storage().read(recordName()).orElse("0")));
+            if (difficulty == Difficulty.MEDIUM) best = Math.max(best, readLegacyScore(recordName()));
             }
             calibration.clear(); lastCalibrationNote = -1;
             eofNanos = Long.MIN_VALUE;
@@ -231,6 +239,7 @@ public final class SitarScene implements ModScene, DebuggableScene {
     }
 
     @Override public void update(SceneContext ctx) {
+        if (ctx.ticks() % 60 == 0 && !pendingSaves.isEmpty()) flushSaves();
         Screen before = screen;
         int beforeSelected = selected, beforeLine = storyLine;
         boolean beforeSecond = choosingSecond, backInput = back();
@@ -302,7 +311,7 @@ public final class SitarScene implements ModScene, DebuggableScene {
             if (!online.error().isEmpty()) {
                 error = online.error(); stop(); online.close(); online = null; screen = Screen.ERROR; return;
             }
-            if (online.connected()) songs = SongCatalog.available(online.commonGames());
+            if (online.connected()) songs = catalogue.available(online.commonGames());
             if (!online.host() && online.round() > preparedRound && screen != Screen.CHARACTERS) {
                 stop(); screen = Screen.LOBBY;
             }
@@ -452,7 +461,7 @@ public final class SitarScene implements ModScene, DebuggableScene {
     }
     boolean local() { return mode == Mode.LOCAL_COOP || mode == Mode.LOCAL_VERSUS; }
     private void home() {
-        stop(); if (online != null) online.close(); online = null; songs = SongCatalog.available(games);
+        stop(); if (online != null) online.close(); online = null; songs = catalogue.available(games);
         screen = Screen.TITLE; selected = 0; autoplay = false; choosingSecond = false; notice = "";
         careerRoleReturn = false;
         // Each return to the title stages the band on the next installed venue.
@@ -501,9 +510,78 @@ public final class SitarScene implements ModScene, DebuggableScene {
         else selected = Math.max(0, careerTour.worlds().indexOf(careerWorld));
     }
     private void saveCareer() {
-        if (!context.storage().write("career.txt", career.encode())) {
-            saveFailed = true; notice = "Tour progress remains in memory; storage could not save";
+        queueSave("career.txt", career.encode());
+        flushSaves();
+    }
+
+    private java.util.Optional<String> readFile(String name) {
+        try {
+            var input = context.storage().read(name);
+            return input.isEmpty() && context.storage().list().contains(name) ? java.util.Optional.of("") : input;
+        } catch (RuntimeException unreadable) { return java.util.Optional.of(""); }
+    }
+    private void loadFile(String name, java.util.function.Consumer<String> reader, java.util.function.Supplier<String> encoder) {
+        var input = readFile(name);
+        input.ifPresent(reader);
+        if (input.isPresent() && writable(name)) publishedFiles.add(name);
+        else publishedFiles.remove(name);
+        publishedSaves.put(name, encoder.get()); // canonical comparison avoids rewriting unchanged metadata
+    }
+    private boolean writable(String name) {
+        return switch (name) {
+            case "settings.txt" -> settings.saveEligible();
+            case "settings-p2.txt" -> settings2.saveEligible();
+            case "profile.txt" -> profile.saveEligible();
+            case "career.txt" -> career.saveEligible();
+            default -> {
+                if (!legacyWritable.containsKey(name)) readLegacyScore(name);
+                yield legacyWritable.getOrDefault(name, false);
+            }
+        };
+    }
+    private boolean queueSave(String name, String text) {
+        if (!writable(name)) {
+            saveBlocked = true;
+            notice = "Existing unsupported/corrupt save preserved; this visit only";
+            return false;
         }
+        if (text.equals(publishedSaves.get(name))) pendingSaves.remove(name);
+        else pendingSaves.put(name, text);
+        return true;
+    }
+    private void flushSaves() {
+        var pending = pendingSaves.entrySet().iterator();
+        while (pending.hasNext()) {
+            var entry = pending.next();
+            if (!writable(entry.getKey())) continue;
+            boolean written;
+            try { written = context.storage().write(entry.getKey(), entry.getValue()); }
+            catch (RuntimeException unavailable) { written = false; }
+            if (written) {
+                publishedSaves.put(entry.getKey(), entry.getValue()); publishedFiles.add(entry.getKey());
+                pending.remove();
+            }
+        }
+        saveFailed = !pendingSaves.isEmpty();
+        if (saveFailed) notice = "Progress remains in memory; storage could not save";
+        else if (notice.equals("Progress remains in memory; storage could not save")) notice = "";
+        if (result != null && !autoplay && result.cleared() && (mode == Mode.CAREER || mode == Mode.QUICK_PLAY))
+            saved = profile.saveEligible() && !pendingSaves.containsKey("profile.txt");
+    }
+    private long readLegacyScore(String name) {
+        var input = readFile(name);
+        long score = 0;
+        boolean valid = input.isEmpty();
+        if (input.isPresent()) {
+            try { score = Long.parseLong(input.get().trim()); valid = score >= 0; }
+            catch (NumberFormatException malformed) { valid = false; }
+        }
+        legacyWritable.put(name, valid);
+        if (valid) {
+            publishedSaves.putIfAbsent(name, Long.toString(score));
+            if (input.isPresent()) publishedFiles.add(name);
+        }
+        return valid ? score : 0;
     }
     private void careerMenu() {
         if (screen == Screen.STORY) {
@@ -748,9 +826,10 @@ public final class SitarScene implements ModScene, DebuggableScene {
         if (!autoplay && !session.failed() && (mode == Mode.CAREER || mode == Mode.QUICK_PLAY)) {
             newRecord = session.score() > best;
             profile.record(result);
-            saved = context.storage().write("profile.txt", profile.encode()); saveFailed = !saved;
+            saved = queueSave("profile.txt", profile.encode());
             best = Math.max(best, session.score());
-            if (difficulty == Difficulty.MEDIUM) saveFailed |= !context.storage().write(recordName(), Long.toString(best));
+            if (difficulty == Difficulty.MEDIUM) queueSave(recordName(), Long.toString(best));
+            flushSaves();
         }
         if (career.record(result, mode == Mode.CAREER && !autoplay && session.finished())) saveCareer();
         screen = Screen.RESULTS; selected = 0;
@@ -777,9 +856,16 @@ public final class SitarScene implements ModScene, DebuggableScene {
     }
 
     private void calibrate() {
-        for (PhysicalInputEvent event : context.physicalInput().events()) {
-            if (!event.pressed() || !calibrationTap(event)) continue;
-            long at = player.samplePositionAt(event.timestampNanos());
+        MappedControls calibrationControls = settingsSecond ? controls2 : controls;
+        if (context.physicalInput().droppedEvents() > 0) {
+            calibrationControls.reset(context.physicalInput(), true);
+            calibration.clear(); lastCalibrationNote = -1;
+            notice = "Input interrupted; calibrate again";
+            return;
+        }
+        for (MappedControls.Frame frame : calibrationControls.accept(context.physicalInput())) {
+            if ((frame.directPressed() & 16) == 0) continue;
+            long at = player.samplePositionAt(frame.timestamp());
             SceneNoteEvent nearest = null;
             for (SceneNoteEvent note : prepared.notes()) {
                 if (note.kind() != SceneNoteEvent.Kind.DAC) continue;
@@ -795,18 +881,10 @@ public final class SitarScene implements ModScene, DebuggableScene {
             List<Long> sorted = calibration.stream().sorted().toList();
             long median = sorted.get(sorted.size() / 2);
             activeSettings().inputOffsetMs((int) (median * 1000 / prepared.sampleRate()));
-            saveSettings();
-            stop(); screen = Screen.SETTINGS; selected = 10; notice = "Calibration saved";
+            boolean written = saveSettings();
+            stop(); screen = Screen.SETTINGS; selected = 10;
+            notice = written ? "Calibration saved" : "Calibration applied in memory; settings could not be saved";
         } else if (back() || player.finished()) { stop(); screen = Screen.SETTINGS; selected = 13; }
-    }
-
-    private boolean calibrationTap(PhysicalInputEvent event) {
-        ControlSettings setting = activeSettings();
-        var keyboard = setting.binding(true, false, 4);
-        var pad = setting.binding(true, true, 4);
-        return event.kind() == PhysicalInputEvent.Kind.KEY && event.code() == keyboard.code()
-                || event.kind() == PhysicalInputEvent.Kind.BUTTON && event.deviceId() == pad.device()
-                && event.code() == PhysicalGamepad.BUTTON_A;
     }
 
     private void settings() {
@@ -868,9 +946,14 @@ public final class SitarScene implements ModScene, DebuggableScene {
         return rows;
     }
     ControlSettings activeSettings() { return settingsSecond ? settings2 : settings; }
-    private void saveSettings() {
-        if (!context.storage().write(settingsSecond ? "settings-p2.txt" : "settings.txt", activeSettings().encode()))
-            notice = "Settings could not be saved; check storage";
+    private boolean saveSettings() {
+        String name = settingsSecond ? "settings-p2.txt" : "settings.txt";
+        String snapshot = activeSettings().encode();
+        boolean allowed = queueSave(name, snapshot);
+        // An explicit save/calibration publishes even default values when no settings file exists.
+        if (allowed && !publishedFiles.contains(name)) pendingSaves.put(name, snapshot);
+        flushSaves();
+        return allowed && !pendingSaves.containsKey(name);
     }
 
     private boolean padPressed(int button) {
@@ -911,7 +994,9 @@ public final class SitarScene implements ModScene, DebuggableScene {
     @Override public void exit(SceneContext ctx) {
         stop(); if (online != null) online.close();
         if (house != null) house.dispose();
-        ctx.storage().write("settings.txt", settings.encode()); ctx.storage().write("settings-p2.txt", settings2.encode()); ctx.storage().write("career.txt", career.encode());
+        queueSave("settings.txt", settings.encode()); queueSave("settings-p2.txt", settings2.encode());
+        queueSave("career.txt", career.encode()); queueSave("profile.txt", profile.encode());
+        flushSaves();
     }
     public String screen() { return screen.name(); }
     public String mode() { return mode.name(); }

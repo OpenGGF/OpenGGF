@@ -33,6 +33,16 @@ class TestRobotnikTowerDefenseScene {
         play(2);
     }
 
+    @Test void rejectedPrimarySurvivesOpenCampaignAndExit() throws Exception {
+        Path records = work.resolve("saves/mods/robotnik-tower-defense/records.txt");
+        String rejected = "version=999\nbestScore=8000\nwins=4\n";
+        Files.createDirectories(records.getParent()); Files.writeString(records, rejected);
+        open();
+        harness.press(GLFW_KEY_ENTER);
+        harness.close(); harness = null;
+        assertEquals(rejected, Files.readString(records), "a normal campaign cannot replace rejected records");
+    }
+
     @Test void keyboardBuildsAndPauseAndHelpFreezeEveryGameplayTimer() throws Exception {
         open();
         harness.press(GLFW_KEY_ENTER); // title -> preparation

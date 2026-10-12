@@ -10,6 +10,7 @@ import java.util.List;
 
 /** Input and scene lifecycle; the rules core remains engine-independent. */
 public final class TowerDefenseScene implements ModScene, DebuggableScene {
+    private final Catalog.Prepared definitions = new Catalog.Prepared();
     private final byte[] fontBytes;
     private BattleView view;
     private Battlefield battle;
@@ -17,6 +18,11 @@ public final class TowerDefenseScene implements ModScene, DebuggableScene {
     private String screen = "TITLE", returnScreen = "TITLE", focus = "GRID", message = "";
     private int ticks, site, kind, action, cursor, helpPage, messageTicks;
     private boolean paused, recorded, debugRun;
+    private boolean recordsDirty, recordsWritable = true;
+    private String saveNotice = "";
+    private int nextSaveTick;
+    private enum LoadDisposition { ABSENT, VALID, INCOMPATIBLE, CORRUPT }
+    private LoadDisposition recordsLoad = LoadDisposition.ABSENT;
     private final FocusRegions titleRegions = new FocusRegions();
 
     public TowerDefenseScene(byte[] fontBytes) { this.fontBytes = fontBytes.clone(); }
@@ -25,13 +31,14 @@ public final class TowerDefenseScene implements ModScene, DebuggableScene {
     public boolean paused() { return paused; }
 
     @Override public void enter(SceneContext ctx) {
-        view = new BattleView(new PixelFont(fontBytes), new RomArt(ctx.art().rom()));
-        records = Records.parse(ctx.storage().read("records.txt").orElse("0,0,0"));
+        loadRecords(ctx);
+        view = new BattleView(new PixelFont(fontBytes), new RomArt(ctx.art().rom()), definitions);
         ctx.audio().playMusic(0x2F); // S3K Data Select
     }
 
     @Override public void update(SceneContext ctx) {
         if (!paused && !screen.equals("HELP")) ticks++;
+        if (recordsDirty && ticks >= nextSaveTick) saveRecords(ctx);
         if (messageTicks > 0 && --messageTicks == 0) message = "";
         switch (screen) {
             case "TITLE" -> titleInput(ctx);
@@ -71,7 +78,8 @@ public final class TowerDefenseScene implements ModScene, DebuggableScene {
     }
 
     private void newGame(SceneContext ctx) {
-        battle = new Battlefield();
+        saveRecords(ctx);
+        battle = new Battlefield(definitions);
         site = kind = action = cursor = 0;
         focus = "GRID";
         screen = "BATTLE";
@@ -145,7 +153,7 @@ public final class TowerDefenseScene implements ModScene, DebuggableScene {
             switch (focus) {
                 case "SHOP" -> {
                     boolean ok = battle.build(site, kind);
-                    outcome(ctx, ok, "BUILT " + Catalog.defense(kind).name(),
+                    outcome(ctx, ok, "BUILT " + definitions.defense(kind).name(),
                             battle.tower(site) != null ? "SITE OCCUPIED. SELECT AN EMPTY SITE." : "NOT ENOUGH SCRAP.");
                     if (ok) focus = "GRID";
                 }
@@ -167,7 +175,8 @@ public final class TowerDefenseScene implements ModScene, DebuggableScene {
             if (battle.phase().equals(Battlefield.PREP)) {
                 if (!debugRun) {
                     records = records.completed(battle.score(), battle.wave(), false);
-                    ctx.storage().write("records.txt", records.encode());
+                    recordsDirty = true;
+                    saveRecords(ctx);
                 }
                 outcome(ctx, true, "WAVE CLEAR! REPAIR, UPGRADE, THEN SEND THE NEXT.", "");
             } else if (battle.finished()) {
@@ -210,7 +219,7 @@ public final class TowerDefenseScene implements ModScene, DebuggableScene {
                 site = i;
                 if (focus.equals("SHOP") && battle.tower(site) == null) {
                     boolean ok = battle.build(site, kind);
-                    outcome(ctx, ok, "BUILT " + Catalog.defense(kind).name(), "NOT ENOUGH SCRAP.");
+                    outcome(ctx, ok, "BUILT " + definitions.defense(kind).name(), "NOT ENOUGH SCRAP.");
                     if (!ok) return;
                 } else if (battle.tower(site) == null) {
                     focus = "SHOP";
@@ -262,11 +271,37 @@ public final class TowerDefenseScene implements ModScene, DebuggableScene {
         ctx.audio().playSfx(ok ? 0x5B : 0xB2); // switch / error
     }
 
+    private void loadRecords(SceneContext ctx) {
+        try {
+            var input = ctx.storage().read("records.txt");
+            if (input.isEmpty() && !ctx.storage().list().contains("records.txt")) return;
+            var decoded = Records.decode(input.orElse(""));
+            recordsWritable = decoded.isPresent();
+            records = decoded.orElse(new Records(0, 0, 0));
+            recordsLoad = recordsWritable ? LoadDisposition.VALID
+                    : input.orElse("").startsWith("version=") ? LoadDisposition.INCOMPATIBLE : LoadDisposition.CORRUPT;
+        } catch (RuntimeException unreadable) { recordsWritable = false; recordsLoad = LoadDisposition.CORRUPT; }
+        if (!recordsWritable) saveNotice = "EXISTING RECORDS PRESERVED / THIS VISIT ONLY";
+    }
+
     private void record(SceneContext ctx) {
-        if (recorded || battle == null || debugRun) return;
-        records = records.completed(battle.score(), battle.wave(), battle.phase().equals(Battlefield.WON));
-        ctx.storage().write("records.txt", records.encode());
-        recorded = true;
+        if (!recorded && battle != null && !debugRun) {
+            records = records.completed(battle.score(), battle.wave(), battle.phase().equals(Battlefield.WON));
+            recorded = true; // Count the campaign once, independently of publication.
+            recordsDirty = true;
+            saveRecords(ctx);
+        }
+    }
+
+    private void saveRecords(SceneContext ctx) {
+        if (!recordsDirty || !recordsWritable) return;
+        boolean written;
+        try { written = ctx.storage().write("records.txt", records.encode()); }
+        catch (RuntimeException unavailable) { written = false; }
+        recordsDirty = !written;
+        nextSaveTick = ticks + 60;
+        saveNotice = written ? "" : "RECORDS NOT SAVED - RETRYING";
+        if (!written) { message = saveNotice; messageTicks = 120; }
     }
 
     @Override public void draw(SceneContext ctx, SceneCanvas canvas) {
@@ -280,23 +315,24 @@ public final class TowerDefenseScene implements ModScene, DebuggableScene {
             case "RESULT" -> view.result(canvas, battle, ticks);
             default -> { }
         }
+        if (!saveNotice.isEmpty()) canvas.text(saveNotice, 8, 210, 0xFFFFDA24);
     }
 
-    @Override public void exit(SceneContext ctx) { record(ctx); }
+    @Override public void exit(SceneContext ctx) { record(ctx); saveRecords(ctx); }
 
     /** Debug/capture jumps replay normal rules; demonstration runs never update saved records. */
     @Override public boolean debugJump(String command) {
         try {
             if (command.equals("title")) { screen = "TITLE"; cursor = 0; paused = false; return true; }
             if (command.equals("help")) { help(screen); return true; }
-            if (command.equals("win")) battle = CampaignDemo.toWave(16);
+            if (command.equals("win")) battle = CampaignDemo.toWave(16, definitions);
             else if (command.equals("lose")) {
-                battle = new Battlefield(); battle.startWave();
+                battle = new Battlefield(definitions); battle.startWave();
                 for (int i = 0; i < 20000 && !battle.finished(); i++) battle.update();
             } else if (command.startsWith("wave:")) {
                 int number = Integer.parseInt(command.substring(5));
                 if (number < 1 || number > Catalog.WAVES) return false;
-                battle = CampaignDemo.toWave(number);
+                battle = CampaignDemo.toWave(number, definitions);
             } else return false;
             screen = "BATTLE";
             focus = "GRID";

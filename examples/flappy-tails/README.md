@@ -21,6 +21,8 @@ or replace the whole screen; this is where the second road leads.
 
 ## Play
 
+The scene prepares its immutable tour and capped lap variants once. Flights and courses share those definitions; seeded gate choices and RNG draw order remain unchanged.
+
 From the repository root, with Java 21, Maven and your S3K ROM set up for OpenGGF:
 
 ```bash
@@ -90,7 +92,12 @@ Each zone cleared earns a medal, a ring the colour of its tier: **bronze** (10),
 (20), **gold** (30), **platinum** (40) and the rainbow **SUPER** ring (50). The results screen
 counts up your score, stamps the medal and marks a **NEW BEST!** with the 1-up jingle.
 RECORDS shows each mode's best and medal, the furthest zone reached and lifetime flights,
-gates and rings. Records live in `saves/mods/flappy-tails/records.txt`.
+gates and rings. Practice at Angel Island follows the same no-best/no-medal policy as later zones.
+Records live in `saves/mods/flappy-tails/records.txt`.
+
+Rejected or future records remain untouched. A failed write keeps the new totals in memory, shows an
+unsaved notice and retries during the scene and on exit; retrying storage never counts the flight
+again.
 
 ## What comes from the ROM
 

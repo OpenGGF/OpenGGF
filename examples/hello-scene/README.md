@@ -17,6 +17,9 @@ src/main/java/hello/HelloScene.java            the scene: enter, update, draw
 and a ROM sprite by address, the controller and the mouse, music and sound effects, saved data
 (the best ring count), text and plain fills, and leaving for the stock game.
 
+A rejected `best.txt` remains untouched. New bests stay in memory after a failed write; the scene
+displays a save notice and retries periodically and on exit, even without another collected ring.
+
 ## Build and run
 
 You need Java 21 and Maven as for the engine, and your Sonic 3 & Knuckles ROM set up for

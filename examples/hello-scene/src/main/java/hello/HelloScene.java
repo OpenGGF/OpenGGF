@@ -59,6 +59,8 @@ public final class HelloScene implements ModScene {
     private final int[] collectedAt = new int[RING_COUNT]; // tick each ring was taken, or -1
     private int rings;
     private int best;
+    private boolean bestDirty, saveEligible = true;
+    private String saveNotice = "";
     private int ticks;
 
     @Override
@@ -75,7 +77,7 @@ public final class HelloScene implements ModScene {
             spriteCache = new SceneArtCache(rom, 4);
             ring = spriteCache.sprites(StockSceneArt.S3K_RING, palette);
         }
-        best = ctx.storage().read(SAVE_FILE).map(HelloScene::parse).orElse(0);
+        loadBest(ctx);
         placeRings(ctx.width());
         ctx.audio().playMusic(MUSIC_AIZ1);
     }
@@ -91,6 +93,7 @@ public final class HelloScene implements ModScene {
     @Override
     public void update(SceneContext ctx) {
         ticks++;
+        if (bestDirty && saveEligible && ticks % 60 == 0) saveBest(ctx);
         // Start returns to the stock game's title screen (holding Escape always leaves for the master title).
         if (ctx.buttonPressed(SceneButtons.START)) {
             ctx.exitToGameTitle();
@@ -146,7 +149,8 @@ public final class HelloScene implements ModScene {
                 ctx.audio().playSfx(SFX_RING);
                 if (rings > best) {
                     best = rings;
-                    ctx.storage().write(SAVE_FILE, Integer.toString(best));
+                    bestDirty = true;
+                    saveBest(ctx);
                 }
             } else {
                 anyLeft = true;
@@ -185,6 +189,7 @@ public final class HelloScene implements ModScene {
 
         canvas.text("RINGS " + rings, 8, 8, 0xFFFFDA24);
         canvas.text("BEST " + best, width - 8 - canvas.textWidth("BEST " + best), 8, 0xFFFFFFFF);
+        if (!saveNotice.isEmpty()) centred(canvas, saveNotice, width, ctx.height() - 44);
         centred(canvas, "ARROWS OR CLICK: RUN   A: JUMP", width, ctx.height() - 30);
         centred(canvas, "START: THE STOCK TITLE SCREEN", width, ctx.height() - 16);
     }
@@ -233,14 +238,37 @@ public final class HelloScene implements ModScene {
     }
 
     @Override public void exit(SceneContext ctx) {
+        saveBest(ctx);
         if (spriteCache != null) spriteCache.close();
+    }
+
+    private void loadBest(SceneContext ctx) {
+        bestDirty = false;
+        try {
+            var input = ctx.storage().read(SAVE_FILE);
+            boolean present = input.isPresent() || ctx.storage().list().contains(SAVE_FILE);
+            int parsed = input.map(HelloScene::parse).orElse(-1);
+            saveEligible = !present || parsed >= 0;
+            best = Math.max(0, parsed);
+        } catch (RuntimeException unreadable) { best = 0; saveEligible = false; }
+        saveNotice = saveEligible ? "" : "EXISTING BEST PRESERVED";
+    }
+
+    private void saveBest(SceneContext ctx) {
+        if (!bestDirty || !saveEligible) return;
+        boolean written;
+        try { written = ctx.storage().write(SAVE_FILE, Integer.toString(best)); }
+        catch (RuntimeException unavailable) { written = false; }
+        bestDirty = !written;
+        saveNotice = written ? "" : "BEST NOT SAVED - RETRYING";
     }
 
     private static int parse(String text) {
         try {
-            return Integer.parseInt(text.trim());
+            int value = Integer.parseInt(text.trim());
+            return value >= 0 ? value : -1;
         } catch (NumberFormatException e) {
-            return 0;
+            return -1;
         }
     }
 }

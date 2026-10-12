@@ -19,6 +19,7 @@ public final class PlayerProfile {
     private static final String HEADER = "sitar-profile=1";
     private final Map<Key, Record> records = new TreeMap<>(Comparator.comparing(Key::songId)
             .thenComparing(Key::role).thenComparing(Key::difficulty));
+    private LoadDisposition disposition = LoadDisposition.ABSENT;
     private long attempts;
     private long totalScore;
 
@@ -107,10 +108,11 @@ public final class PlayerProfile {
      * ignored within 4,096 total lines, 512 characters/line and 524,288 characters of text. Known
      * fields are strict; duplicate keys/records and invalid champion pairs reject the save.
      */
-    public void read(String text) {
-        if (text == null || text.length() > MAX_TEXT) return;
+    public boolean read(String text) {
+        disposition = LoadDisposition.rejected(text, "sitar-profile", HEADER);
+        if (text == null || text.length() > MAX_TEXT) return false;
         var lines = text.lines().limit(MAX_LINES + 1L).toList();
-        if (lines.isEmpty() || lines.size() > MAX_LINES || !lines.getFirst().equals(HEADER)) return;
+        if (lines.isEmpty() || lines.size() > MAX_LINES || !lines.getFirst().equals(HEADER)) return false;
         var parsed = new PlayerProfile();
         boolean seenAttempts = false, seenTotal = false;
         try {
@@ -134,11 +136,17 @@ public final class PlayerProfile {
                     default -> { /* bounded extras allow additive metadata without discarding progress */ }
                 }
             }
-            if (!seenAttempts || !seenTotal || parsed.attempts < parsed.clears()) return;
-        } catch (IllegalArgumentException ignored) { return; }
+            if (!seenAttempts || !seenTotal || parsed.attempts < parsed.clears()) return false;
+        } catch (IllegalArgumentException ignored) { return false; }
         records.clear(); records.putAll(parsed.records);
         attempts = parsed.attempts; totalScore = parsed.totalScore;
+        disposition = LoadDisposition.VALID;
+        return true;
     }
+
+
+    public boolean saveEligible() { return disposition.saveEligible(); }
+    public LoadDisposition loadDisposition() { return disposition; }
 
     private void readRecord(String value) {
         String[] parts = value.split("\\|", -1);
