@@ -561,3 +561,27 @@ ordinary suite and separate trace/native profiles are not certified by this merg
   hosted-run/scene/act lifecycle, mod registration/reload, mutator policies, API
   pins/hooks, bundled packaging, next's HUD/clipboard settings and the four
   required S3K loading/bootstrap checks. Maven completed in 3m48s.
+- Merge commit: `1d24eef76b` (parents `e82efe28be`, `f02bdbfd57`). The full
+  `ci-push e82efe28be 1d24eef76b next` policy audit passed, including the release
+  tree audit and incoming commit/API documentation coupling.
+- Fresh queued `-Dmse=off -Pguards test -B`: **679 tests, 678 passed, one
+  failure, zero errors/skips**, 9m46s. The sole failure remains
+  `TestBuildToolingGuard.releaseGateToolsShouldRejectCorruptAndChangedEvidence`:
+  the Python checkout-path normalization assertion sees `/var` instead of
+  `/private/var`. The collector and its test are unchanged from `e82efe28be`;
+  the matched baseline/current attribution recorded above still applies. No
+  unrelated release-tool changes were made. This is not a green local guard run.
+- Queued `-Dmse=off -DskipTests package`: passed in 38s, including bundled mod
+  validation with zero findings. The engine contains shared network classes but
+  no Time Attack/server classes or Netty/SQLite/Bouncy Castle payloads. The bundled
+  Time Attack jar contains no copied networking; catalog size and SHA-256 match.
+- Full Linux CI was manually dispatched for `1d24eef76b` (ordinary suite and guards,
+  trace replay disabled): https://github.com/OpenGGF/OpenGGF/actions/runs/38284185849.
+- Full Linux CI **passed** at merge `1d24eef76b`: ordinary Maven summary
+  **23,983 tests, zero failures/errors, 4,370 skips** (19,613 passed), with the
+  default-coverage assertion passing; the job took 8m57s. Skipped cases include
+  ROM-dependent/native setup checks absent on the hosted runner; this does not
+  certify every ROM route or the separate trace profile. The fresh Linux guards
+  passed **679 tests, zero failures/errors/skips**, with the job taking 14m13s.
+  This independently passes the guard that fails on macOS. The final follow-up
+  changes this validation record only; no engine retest is required for prose.
