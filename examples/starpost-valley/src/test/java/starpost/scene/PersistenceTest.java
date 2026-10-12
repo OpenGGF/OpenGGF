@@ -257,6 +257,22 @@ class PersistenceTest {
     }
 
     @Test
+    void lateCorruptionRemainsPreservedAfterAnEarlierValidPublication() throws Exception {
+        Store store = new Store(); Shell shell = shell(store);
+        shell.game = shell.newGame(101, "sonic"); assertTrue(shell.save());
+        store.files.put(SaveCodec.FILE, "late corruption");
+        shell.save();
+        assertTrue("late corruption".equals(store.files.get(SaveCodec.FILE)),
+                "later corrupt primary bytes require explicit replacement when there is no recovery generation");
+        scene(shell).exit(shell.ctx);
+        assertTrue("late corruption".equals(store.files.get(SaveCodec.FILE)));
+        shell = shell(store);
+        shell.beginNewGame(102, "tails");
+        assertTrue(shell.save(), "the explicit player replacement command grants the new checkpoint authority");
+        assertNotNull(shell.load());
+    }
+
+    @Test
     void exitClosesPreparationFailureOwnerEvenWhenNoShellWasPublished() throws Exception {
         StarpostScene scene = new StarpostScene();
         var failures = new starpost.art.AssetFailures("starpost-valley", () -> 0L);
