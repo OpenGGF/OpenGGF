@@ -1779,10 +1779,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * Native playable draws may keep their additional ROM-specific presentation rules.
          */
         protected final void drawStandardArt() {
-                if (!isHidden() && getSpriteRenderer() != null) {
-                        getSpriteRenderer().drawFrame(getMappingFrame(), getRenderCentreX(), getRenderCentreY(),
-                                getRenderHFlip(), getRenderVFlip());
-                }
+                PlayableSpriteArtPresentation.drawStandardArt(this);
         }
 
         public int getMappingFrame() {
@@ -1813,12 +1810,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 if (isHidden()) {
                         return false;
                 }
-                int displayTimer = invulnerableFrames
-                        + (invulnerabilityDisplayTimerDecrementedThisFrame ? 1 : 0);
-                return isHurt()
-                        || hurtRoutineOwnedDisplayThisFrame
-                        || displayTimer <= 0
-                        || (displayTimer & 0x04) != 0;
+                return PlayableSpriteArtPresentation.nativeBodyVisible(
+                        invulnerableFrames, invulnerabilityDisplayTimerDecrementedThisFrame,
+                        isHurt(), hurtRoutineOwnedDisplayThisFrame);
         }
 
         /** Clears HurtStop's one-frame direct-display ownership after BuildSprites. */
