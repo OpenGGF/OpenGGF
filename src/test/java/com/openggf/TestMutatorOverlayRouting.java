@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static org.lwjgl.glfw.GLFW.*;
 
-/** Production loop routing: configuration has input/pause ownership, no custom frame controller. */
+/** Production loop routing: configuration owns input/pause across native and controlled modules. */
 @Isolated
 class TestMutatorOverlayRouting {
     private final Overlay overlay = new Overlay();
@@ -49,6 +49,78 @@ class TestMutatorOverlayRouting {
     }
     @AfterEach void cleanup() { GameServices.playbackDebug().endSession(); SessionManager.clear(); GameModuleRegistry.setCurrent(new Sonic2GameModule()); }
     void field(String name,Object value) throws Exception { var f=GameLoop.class.getDeclaredField(name);f.setAccessible(true);f.set(loop,value); }
+    private int[] installControlledHold() throws Exception {
+        int[] decisions = {0};
+        var world = gameplay.getWorldSession();
+        var base = world.getGameModule();
+        var frameController = new com.openggf.game.mode.GameplayFrameController() {
+            public boolean beforeTick(com.openggf.game.mode.CourseControl c, LogicalInputSnapshot i) { decisions[0]++; return false; }
+            public void afterTick(com.openggf.game.mode.CourseControl c, boolean advanced) { assertFalse(advanced); }
+        };
+        var module = new DelegatingGameModule(base, "test:controlled-overlay") {
+            @Override public com.openggf.game.mode.GameplayFrameController gameplayFrameController() { return frameController; }
+        };
+        var moduleField = world.getClass().getDeclaredField("gameModule"); moduleField.setAccessible(true); moduleField.set(world, module);
+        return decisions;
+    }
+    @Test void controlledConfigurationHoldRejectsFrameStepAndOwnsEscape() throws Exception {
+        int[] decisions = installControlledHold();
+        var config = GameServices.configuration();
+        when(input.isKeyPressed(config.getInt(SonicConfiguration.FRAME_STEP_KEY))).thenReturn(true);
+        when(input.isKeyPressed(GLFW_KEY_ESCAPE)).thenReturn(true);
+        when(input.isKeyDown(GLFW_KEY_ESCAPE)).thenReturn(true);
+        loop.step();
+        assertEquals(0, decisions[0], "configuration holds cannot enter a controller row through frame-step");
+        assertFalse(loop.getEscapeToMasterTitleController().visible(), "modal Escape belongs to its overlay");
+        assertEquals(1, overlay.handled);
+    }
+    @Test void controlledConfigurationResumeUsesTheExistingCommandAdmission() throws Exception {
+        installControlledHold();
+        loop.toggleUserPause(); overlay.command = LevelInputOverlay.Command.RESUME;
+        loop.step();
+        assertEquals(1, overlay.accepted);
+        assertFalse(overlay.held); assertFalse(loop.isUserPaused());
+        assertEquals(LevelInputOverlay.Command.NONE, overlay.command);
+    }
+    @Test void controlledConfigurationRetainsCommandsAcrossNativeFadeWithoutEnteringControllerRows() throws Exception {
+        int[] decisions = installControlledHold();
+        loop.toggleUserPause(); overlay.command = LevelInputOverlay.Command.RESUME;
+        fade.startFadeFromBlack(null);
+        int nativeFrame = gameplay.getSpriteManager().getFrameCounter();
+        for (int i = 0; fade.isActive() && i < 30; i++) loop.step();
+        assertFalse(fade.isActive(), "configuration holds retain native fade presentation");
+        assertEquals(1, overlay.accepted); assertFalse(loop.isUserPaused()); assertFalse(overlay.held);
+        assertEquals(0, decisions[0]); assertEquals(nativeFrame, gameplay.getSpriteManager().getFrameCounter());
+        overlay.held = true; loop.step(); assertEquals(1, overlay.accepted);
+    }
+    @Test void controlledFinishingFadeCannotReenterTheRetiredLevelController() throws Exception {
+        int[] decisions = installControlledHold();
+        fade.startFadeFromBlack(() -> {
+            overlay.held = false;
+            loop.setGameMode(GameMode.MASTER_TITLE_SCREEN);
+        });
+        for (int i = 0; fade.isActive() && i < 30; i++) loop.step();
+        assertFalse(fade.isActive()); assertEquals(GameMode.MASTER_TITLE_SCREEN, loop.getCurrentGameMode());
+        assertEquals(0, decisions[0], "the finishing presentation row belongs to the destination mode");
+    }
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void sceneActHoldRetainsHostPauseBeforeWorldAdmission(boolean controlled) throws Exception {
+        int[] decisions = controlled ? installControlledHold() : new int[1];
+        overlay.held = false;
+        var held = ModSceneActBridge.class.getDeclaredField("transitioning");
+        held.setAccessible(true); held.setBoolean(loop.modSceneActBridge, true);
+        when(input.isKeyPressed(GameServices.configuration().getInt(SonicConfiguration.PAUSE_KEY))).thenReturn(true);
+        int frame = gameplay.getSpriteManager().getFrameCounter();
+        clearInvocations(input); loop.step();
+        assertTrue(loop.isUserPaused(), "a native handoff retains the host's pause input");
+        verify(input, times(1)).update();
+        clearInvocations(input); loop.step();
+        assertFalse(loop.isUserPaused(), "the same host input resumes before handoff admission");
+        verify(input, times(1)).update();
+        assertEquals(frame, gameplay.getSpriteManager().getFrameCounter());
+        assertEquals(0, decisions[0], "host pause cannot admit a controller/world row through the bridge hold");
+    }
     @Test void holdOwnsSimultaneousEscapePauseAndFrameStepWithoutAdvancingNativePlay() {
         var config=GameServices.configuration();
         when(input.isKeyPressed(config.getInt(SonicConfiguration.PAUSE_KEY))).thenReturn(true);

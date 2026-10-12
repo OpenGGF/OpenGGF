@@ -1115,6 +1115,13 @@ public class GameLoop {
                     new ControlledLevelIteration.HostPause(configService.getInt(SonicConfiguration.PAUSE_KEY),
                             configService.getInt(SonicConfiguration.FRAME_STEP_KEY), this::isPaused,
                             () -> handlePlaybackTakeoverBeforePlaybackInputBridge(inputHandler), this::toggleUserPause),
+                    new ControlledLevelIteration.ConfigurationCommands(
+                            () -> currentGameMode == GameMode.LEVEL && resolveGameplayModeContext() == lifecycleContext,
+                            () -> configurationCommands.holdsTransition(currentGameMode, () -> resolveFadeManager().isActive()),
+                            this::handleConfigurationCommand),
+                    new ControlledLevelIteration.SceneActAdmission(
+                            () -> modSceneActBridge.consumeExitOrHold(inputHandler),
+                            () -> updateNonGameplayAudio(false)),
                     this::syncPlaybackInputBridge, this::beginGameplayAudioFrameForTick,
                     () -> advanceGameplayAudioFrameForTick(false),
                     () -> { audioManager.resume(); initializeTitleScreenMode(); });
@@ -1298,6 +1305,13 @@ public class GameLoop {
 
         if (isPaused() && !doFrameStep) {
             inputHandler.update();
+            return;
+        }
+
+        // A fade completion may have installed a scene-launched LEVEL in this
+        // native outer row. Its bridge hold precedes setup and all world owners.
+        if (currentGameMode == GameMode.LEVEL && modSceneActBridge.consumeExitOrHold(inputHandler)) {
+            updateNonGameplayAudio(doFrameStep);
             return;
         }
 
@@ -1666,7 +1680,6 @@ public class GameLoop {
      *         transition/fade consumed the frame and the caller must return.
      */
     private boolean updateLevelMode(boolean doFrameStep) {
-        if (modSceneActBridge.consumeExitOrHold(inputHandler)) { updateNonGameplayAudio(doFrameStep); return false; }
         // Continue updating title card overlay if still active
         // (TEXT_WAIT and TEXT_EXIT phases where player can move but text is still
         // visible)

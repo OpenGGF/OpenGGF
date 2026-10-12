@@ -36,6 +36,7 @@ class TestModSceneActBridge {
     GameModule effective;
     InputHandler input;
     boolean oldTest;
+    int[] controlledCalls;
     RewindClassResolver oldResolver;
     final List<RewindBoundary> boundaries = new ArrayList<>();
     static final ZoneKey.Mod DEST = new ZoneKey.Mod("starpost-valley", "valley");
@@ -63,7 +64,30 @@ class TestModSceneActBridge {
         if (source != null) source.dispose();
     }
     void drainFade() {
-        for (int i = 0; i < 400 && loop.resolveFadeManager().isActive(); i++) loop.resolveFadeManager().update();
+        for (int i = 0; i < 400 && loop.resolveFadeManager().isActive(); i++) {
+            if (controlledCalls == null) loop.resolveFadeManager().update();
+            else {
+                int decisions = controlledCalls[0];
+                var before = loop.resolveGameplayModeContext();
+                boolean inLevel = loop.getCurrentGameMode() == GameMode.LEVEL;
+                if (inLevel) assertNotNull(com.openggf.game.mode.ControlledFrameRuntime.controller(before),
+                        "the owned controller survives the real scene-act bootstrap");
+                int frames = before.getSpriteManager().getFrameCounter();
+                var timers = before.getTimerManager().capture();
+                long audioFrame = GameServices.audio().commandTimeline().currentFrame();
+                org.mockito.Mockito.clearInvocations(input);
+                loop.step();
+                org.mockito.Mockito.verify(input, org.mockito.Mockito.times(1)).update();
+                assertEquals(decisions, controlledCalls[0], "scene/act fades own the presented row");
+                if (inLevel && before == loop.resolveGameplayModeContext()) {
+                    assertEquals(frames, before.getSpriteManager().getFrameCounter());
+                    assertEquals(timers, before.getTimerManager().capture(), "held handoffs run no world timers");
+                    if (loop.getCurrentGameMode() == GameMode.LEVEL)
+                        assertEquals(audioFrame + 1, GameServices.audio().commandTimeline().currentFrame(),
+                                "held native handoffs retain one gameplay audio boundary");
+                }
+            }
+        }
         assertFalse(loop.resolveFadeManager().isActive(), "handoff fade must complete");
     }
     AbstractPlayableSprite player() { return (AbstractPlayableSprite) GameServices.camera().getFocusedSprite(); }
@@ -192,6 +216,34 @@ class TestModSceneActBridge {
         runStarpostRoute("sonic",400);
     }
 
+    @Test void controlledNativeTownRoundTripHoldsFadesWithoutReenteringController() throws Exception {
+        controlledCalls = new int[2];
+        var boundary = new ModFaultBoundary(Map.of(), new ModRuntimeFindingStore(),
+                owners -> new ModStateSaveResult.Saved(), owners -> { });
+        var controller = new com.openggf.mods.runtime.OwnerBoundCallbacks("controller-probe", boundary, 8, Map.of())
+                .bind(com.openggf.game.mode.GameplayFrameController.class, new com.openggf.game.mode.GameplayFrameController() {
+                    public boolean beforeTick(com.openggf.game.mode.CourseControl course, com.openggf.control.LogicalInputSnapshot row) {
+                        fail("native disposition owns the single decision"); return false;
+                    }
+                    public com.openggf.game.mode.GameplayFrameDisposition beforeFrame(com.openggf.game.mode.CourseControl course,
+                            com.openggf.control.LogicalInputSnapshot row) {
+                        controlledCalls[0]++; return com.openggf.game.mode.GameplayFrameDisposition.ADVANCE_NATIVE_INPUT;
+                    }
+                    public void afterTick(com.openggf.game.mode.CourseControl course, boolean advanced) {
+                        assertTrue(advanced); controlledCalls[1]++;
+                    }
+                });
+        effective = new com.openggf.game.patch.DelegatingGameModule(effective, "test:controlled-starpost") {
+            @Override public com.openggf.game.mode.GameplayFrameController gameplayFrameController() { return controller; }
+        };
+        TestEnvironment.configureGameModuleFixture(effective);
+        input = org.mockito.Mockito.spy(new InputHandler()); loop = new GameLoop(input);
+        loop.setGameMode(GameMode.MOD_SCENE);
+        runStarpostRoute("sonic", 400);
+        assertTrue(controlledCalls[0] > 0, "the real native town rows reached the owned controller");
+        assertEquals(controlledCalls[0], controlledCalls[1]);
+    }
+
     @org.junit.jupiter.params.ParameterizedTest(name="{0} at {1}px real town round trip")
     @org.junit.jupiter.params.provider.CsvSource({"sonic,320","tails,320","knuckles,320","tails,400","knuckles,400"})
     void realTerrainRoundTripWalksAndRewinds(String farmer,int width) throws Exception {
@@ -260,7 +312,7 @@ class TestModSceneActBridge {
         Object calendar=field(game,"calendar");
         Object time=call(calendar,"capture");
         assertEquals(2,call(inventory,"total","ring_radish"));
-        assertTrue(loop.modSceneActBridge.consumeExitOrHold(input)); drainFade();
+        consumeActExit();
         assertEquals(GameMode.MOD_SCENE,loop.getCurrentGameMode()); assertTrue((boolean)call(shell,"hasOverlay"));
         assertSame(scene,SceneHostTestAccess.scene(loop.modSceneHost)); assertSame(game,field(shell,"game"));
         assertSame(play,call(shell,"screen")); assertEquals(wallet,field(game,"rings"));
@@ -292,13 +344,27 @@ class TestModSceneActBridge {
         walkTo(runner,150);
         call(town,"input",false,true,false,false,false,-1); runner.stepIdleFrames(1);
         assertEquals("farm_gate",call(call(town,"handBack"),"place"));
-        assertTrue(loop.modSceneActBridge.consumeExitOrHold(input)); drainFade();
+        consumeActExit();
         assertEquals(GameMode.MOD_SCENE,loop.getCurrentGameMode()); assertSame(play,call(shell,"screen"));
         assertTrue((boolean)call(play,"onFarm")); assertSame(game,field(shell,"game"));
         assertFalse((boolean)call(town,"active"));
         assertTrue((int)field(game,"rings")>=wallet-spent); assertEquals(2,call(inventory,"total","ring_radish"));
         assertEquals(1,call(inventory,"total","radish_soup")); assertTownMusic(0x81);
         assertTrue(harness.findings().isEmpty(),harness.findings().toString());
+    }
+    private void consumeActExit() {
+        if (controlledCalls == null) assertTrue(loop.modSceneActBridge.consumeExitOrHold(input));
+        else {
+            int decisions = controlledCalls[0];
+            long audioFrame = GameServices.audio().commandTimeline().currentFrame();
+            org.mockito.Mockito.clearInvocations(input); loop.step();
+            org.mockito.Mockito.verify(input, org.mockito.Mockito.times(1)).update();
+            assertTrue(loop.resolveFadeManager().isActive(), "the host admits the real town's pending exit");
+            assertEquals(0, loop.resolveFadeManager().getFrameCount(), "exit admission does not spend a second fade tick");
+            assertEquals(audioFrame + 1, GameServices.audio().commandTimeline().currentFrame());
+            assertEquals(decisions, controlledCalls[0], "exit admission precedes the controller");
+        }
+        drainFade();
     }
     @Test void realTownSchedulesWalkSlopesAndAllDoorsUseDecodedFloor() throws Exception {
         assertTrue(ModSceneLauncher.openStartupScene(loop,SonicConfigurationService.getInstance(),0,
