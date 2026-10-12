@@ -10,8 +10,11 @@ import java.util.Objects;
 /** Editable preferences. Cancel discards this object; only apply writes to the service. */
 public final class EngineSettingsDraft {
     public enum Category {
-        DISPLAY("Display"), AUDIO("Audio"), INPUT("Input"), GAMEPLAY("Gameplay"),
-        FILES("Files"), RECORDING("Recording"), LAUNCH("Launch"), ADVANCED("Advanced");
+        DISPLAY("Display"), AUDIO("Sound"), INPUT("Controls"), GAMEPLAY("Gameplay"),
+        FILES("Files"), RECORDING("Capture"),
+        /** Per-game launch profiles; edited in Game Setup, not on a Settings tab. */
+        LAUNCH("Launch"),
+        ADVANCED("Advanced");
         private final String label;
         Category(String label) { this.label = label; }
         public String label() { return label; }
@@ -20,7 +23,10 @@ public final class EngineSettingsDraft {
     private static final Map<Category, List<SonicConfiguration>> CATEGORY_KEYS = new EnumMap<>(Category.class);
     static {
         for (Category category : Category.values()) {
-            CATEGORY_KEYS.put(category, ConfigCatalog.emitOrder().stream().filter(k -> category(k) == category).toList());
+            // Stable sort: within Controls, player bindings come before engine shortcuts.
+            CATEGORY_KEYS.put(category, ConfigCatalog.emitOrder().stream().filter(k -> category(k) == category)
+                    .sorted(java.util.Comparator.comparingInt(k -> ConfigCatalog.meta(k).section().startsWith("input") ? 0 : 1))
+                    .toList());
         }
     }
     private final Map<SonicConfiguration, String> textCache = new EnumMap<>(SonicConfiguration.class);
@@ -47,15 +53,19 @@ public final class EngineSettingsDraft {
         ConfigKeyMeta meta = ConfigCatalog.meta(key);
         if (!meta.persisted()) throw new IllegalArgumentException("Derived setting");
         String section = meta.section();
-        if (section.startsWith("display") || section.equals("debug.window")) return Category.DISPLAY;
+        if (section.startsWith("launch")) return Category.LAUNCH;
+        // Every non-debug hotkey lives with the other controls, wherever its section is.
+        if (meta.type() == ConfigType.KEY && !section.startsWith("debug")) return Category.INPUT;
+        if (key == SonicConfiguration.DEBUG_VIEW_ENABLED) return Category.GAMEPLAY;
+        if (section.startsWith("display")) return Category.DISPLAY;
         if (section.startsWith("audio")) return Category.AUDIO;
         if (section.startsWith("input")) return Category.INPUT;
         if (section.startsWith("roms")) return Category.FILES;
         if (section.startsWith("capture")) return Category.RECORDING;
-        if (section.startsWith("launch")) return Category.LAUNCH;
+        // Global characters and cross-game donation only apply to direct launches: the
+        // hub's Game Setup owns them per game.
         if (section.startsWith("gameplay") || section.startsWith("startup")
-                || section.startsWith("characters") || section.startsWith("rewind")
-                || section.startsWith("crossGame")) return Category.GAMEPLAY;
+                || section.startsWith("rewind")) return Category.GAMEPLAY;
         return Category.ADVANCED;
     }
 
@@ -77,6 +87,7 @@ public final class EngineSettingsDraft {
         return changedCache.getOrDefault(key, false);
     }
     public boolean dirty() { return changedCount > 0; }
+    public int changedCount() { return changedCount; }
     public void reset(SonicConfiguration key) { put(key, config.getDefaultValue(key)); }
     private void put(SonicConfiguration key, Object next) {
         if (Objects.equals(values.get(key), next)) return;

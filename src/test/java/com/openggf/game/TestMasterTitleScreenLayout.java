@@ -166,7 +166,8 @@ class TestMasterTitleScreenLayout {
 
         pressFrame(screen, input, GLFW_KEY_RIGHT);
         assertEquals("s2", screen.getSelectedGameId(), "game-select right input should be ignored while panel is open");
-        assertTrue(screen.currentLaunchProfileForTest().rewind(), "right input should cycle the panel row instead");
+        assertEquals("tails", screen.currentLaunchProfileForTest().mainCharacter(),
+                "right input should cycle the focused Game Setup row instead");
 
         pressFrame(screen, input, GLFW_KEY_ENTER);
         assertFalse(screen.isGameSelected(), "confirm input should be ignored while panel is open");
@@ -188,9 +189,10 @@ class TestMasterTitleScreenLayout {
         assertEquals(0, store.saved.size());
 
         pressFrame(screen, input, org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
-        assertFalse(screen.isGameSelected());
+        pressFrame(screen, input, org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN);
+        assertFalse(screen.isGameSelected(), "down moves through the setup chips to the action bar");
         pressFrame(screen, input, GLFW_KEY_ENTER);
-        assertTrue(screen.isGameSelected());
+        assertTrue(screen.isGameSelected(), "Start is the first action");
         assertFalse(screen.isProgrammaticSelection());
     }
 
@@ -220,14 +222,10 @@ class TestMasterTitleScreenLayout {
         assertFalse(screen.isGameSelected());
         input.setLogicalOverride(LogicalInputSnapshot.neutral());
         screen.update(input);
-        input.setLogicalOverride(logicalPress(AbstractPlayableSprite.INPUT_DOWN, 0, false));
-        screen.update(input);
-        assertFalse(screen.isGameSelected(), "down enters actions after returning from Quit");
-        input.setLogicalOverride(LogicalInputSnapshot.neutral());
-        screen.update(input);
+        assertFalse(screen.isGameSelected(), "returning from Quit does not launch");
         input.setLogicalOverride(logicalPress(0, InputActionMasks.ACTION_A, false));
         screen.update(input);
-        assertTrue(screen.isGameSelected());
+        assertTrue(screen.isGameSelected(), "accept on the game card starts it");
         assertFalse(screen.isProgrammaticSelection());
     }
 

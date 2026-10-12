@@ -267,58 +267,100 @@ playability is tracked by the KiS2 patch design, not by this table.
 ## Launch Profiles
 
 The master title stores per-game launch defaults under `launch.s1`, `launch.s2`,
-and `launch.s3k`. Left/right changes games from either hub pane. Up/down enters
-the action list from the game pane, then chooses an action within it.
-`Enter` opens **Browse Games** from game selection and opens the selected action
-from the action pane. Browse Games is a full-width, paginated catalog with availability
-labels; confirming selects a game without launching it. `Esc` (controller B) backs out. Opening a menu screen plays
-the confirmation cue; backing out plays a distinct cancel cue. These cues also apply inside nested menus,
-with errors reserved for rejected actions and failed operations. The game carousel wraps at either end, shows its position in the effective catalog,
-and preserves game identity when catalog entries change. Pending mod changes still
-follow the existing restart rules. Choose **Launch Options** to edit the selected game's profile.
-The original ROM-backed animated game logos remain, proportionally scaled into
-the left pane. Their original textures are drawn directly into the window
-viewport, so a larger window recovers source detail instead of enlarging a
-pre-reduced thumbnail. The default logical resolution remains 320x224.
-Primary text keeps the original 9x10 pixel font; supplementary details use a
-native small font in 6x8 cells, including lowercase descenders. Neither is
-fractionally resampled. The game pane shows the sky and the game carousel;
-missing ROMs are dimmed. Checkerboards and cyan focus frames connect menu pages.
-**Quit** opens a confirmation with **Return to menu** selected by default;
-`Esc`/B from the game pane also opens it. Error pages wait for `Enter`/A or
-`Esc`/B rather than dismissing on a timer.
+and `launch.s3k`, edited from **Game Setup** on the hub.
 
-In the launch panel, arrows/D-pad choose a row and change its value. `Enter`/A
-saves, `Esc`/B cancels draft edits, and the optional `Tab` or controller
-Back/Select shortcut closes and saves. The visible **Stock**, **Save**, and
-**Cancel** buttons are reached with up/down; left/right moves between those
-buttons. **Stock** restores the stock draft (`Backspace` remains a shortcut).
-Stock values are white, non-default/non-stock values amber, and experimental
-values red; a separate cyan cursor marks selection. Prompts follow the last
-intentional keyboard/controller input rather than the presence of a controller.
+### The hub
+
+The hub is a shelf of game cards. The selected game's card is in the centre with
+its original ROM-backed animated title logo; neighbouring games recede to the
+sides, and the shelf slides when the selection changes. Logo textures are drawn
+directly into the window viewport, so a larger window recovers source detail. The
+default logical resolution remains 320x224; wider viewports show more of the shelf.
+Games without a ROM stay on the shelf with a **ROM MISSING** card that names the
+expected file.
+
+Focus moves between four rows with Up/Down:
+
+1. **Header tabs**, engine-wide: **Mods** (with the enabled-mod count),
+   **Settings**, **Extras** (only when mods add title entries), **Advanced**, **Quit**.
+2. **The game card**. Left/Right changes game (wrapping), `Enter`/A starts it.
+3. **Setup chips**: what Start will launch, such as `SONIC & TAILS`, `4:3`,
+   `REWIND ON` or `2 MODS`. Amber chips are values set for this game only, and a
+   key under the buttons says so. `Enter` on a chip opens Game Setup on that row;
+   the mods chip opens the mod manager.
+4. **Actions** for the selected game: **Start**, **Game Setup**, **Recordings**.
+   Standalone mod games offer Start only.
+
+`Esc`/B returns to the card from any other row; on the card it opens the quit
+confirmation (**Return to menu** is selected by default). A line under the
+buttons describes the focused item, for example "Start Sonic 2 as Sonic & Tails,
+4:3, rewind on". The footer lists only the controls that work on the current row,
+as key caps (or controller buttons) with what each does; it never lists Up/Down.
+`Tab` (controller Back/Select) opens Game Setup and `M` opens Mods as optional
+shortcuts. Clicking the page dots under the chips opens **Browse Games**, a
+paginated list for large catalogs. Error pages wait for `Enter`/A or `Esc`/B.
+
+The mouse works throughout the hub: hovering focuses a tab, chip or button and
+clicking runs it, clicking a side card selects that game, clicking the centre card
+starts it, the wheel changes game and the right button goes back.
+
+### Game Setup
+
+Game Setup edits one game's launch profile. Its header reads **THIS GAME ONLY**.
+Rows are grouped as **Players** (Character, Sidekick), **Screen** (Aspect ratio),
+and **Extras** (Rewind, Borrow from, Debug tools, Mods). Up/Down moves between
+rows; Left/Right or `Enter` changes the value; `Backspace` (controller north
+button) returns the focused row to its default. The description box explains the
+focused row and, for switches, shows both the all-games value and this game's
+value.
+
+Rewind, Debug tools and Aspect ratio follow the all-games Settings value until a
+game overrides them. Those rows show **Default (Off)**, with the current all-games
+value in brackets; choosing On or Off overrides it for this game only and marks
+the row amber. **Borrow from** (cross-game donation) and the Players rows are
+per-game only. When Borrow from is Sonic 3&K, the donated save screen picks the
+team, so the Players rows show **Chosen on save screen**. The Mods row lists the
+enabled mods that change this game; `Enter` opens the mod manager, and Game Setup
+resumes when it closes.
+
+Edits form a draft. The footer shows how many are unsaved. `Esc`/B with unsaved
+changes asks **Save**, **Discard** or **Keep editing**; without changes it simply
+returns. `Tab` (controller Back/Select) saves and closes. Failed saves keep the
+draft open for another try. 21:9 and 32:9 aspect ratios are marked EXPERIMENTAL.
 
 ### Engine settings from the title
 
-Choose **Settings** for persisted engine preferences. The category rail stays
-visible; confirm enters the selected category, Back returns to the rail, and
-up/down moves through paginated fields. Left/right changes booleans, enums and
-numbers; confirm opens a value picker or text editor. Text editing supports
-ordinary keyboard typing and an onscreen keyboard with all printable ASCII,
-case/symbol pages, cursor movement, deletion, and default restoration. Down moves
-from the text field onto the keypad; Up from its top row returns to the field.
-Arrows and D-pad move the same focus. Enter/A chooses the highlighted key on the
-keypad or accepts the value in the text field; the keypad also has an **OK** key.
-Typing directly returns focus to the field. Switching input devices changes
-prompts without moving focus. This editor is shared with recording target frames,
-join addresses, and lobby chat. Key
-bindings also offer physical key/chord capture. Values and categories with non-default settings remain
-amber, including after saving. **Apply** writes the draft atomically; save errors
-retain the draft for retry. **Cancel** asks before discarding unsaved edits.
+**Settings** holds persisted engine preferences for every game; its header reads
+**ALL GAMES**. Categories are tabs across the top: **Display**, **Sound**,
+**Controls**, **Gameplay**, **Files** and **Capture**. Up from the first row
+focuses the tab strip, where Left/Right switches tabs; Down returns to the rows.
+On a row, Left/Right changes booleans, enums and numbers, and `Enter`/A opens a
+value picker, text editor or key-binding menu. Eight rows show at a time, with a
+scrollbar for longer pages. Values that differ from the engine default are amber,
+and a dot marks tabs that contain them. **Controls** holds the player bindings and
+every non-debug shortcut key (display, rewind and capture shortcuts included).
+**Gameplay** holds Rewind and Debug tools, which games follow unless their Game
+Setup overrides them. Debug, playback, Discord, direct-launch characters and
+cross-game keys live in **Advanced > Advanced settings**.
+
+Text editing supports ordinary keyboard typing and an onscreen keyboard with all
+printable ASCII, case/symbol pages, cursor movement, deletion, and default
+restoration. Down moves from the text field onto the keypad; Up from its top row
+returns to the field. Arrows and D-pad move the same focus. Enter/A chooses the
+highlighted key on the keypad or accepts the value in the text field; the keypad
+also has an **OK** key. Typing directly returns focus to the field. Switching input
+devices changes prompts without moving focus. This editor is shared with recording
+target frames, join addresses, and lobby chat. Key bindings also offer physical
+key/chord capture.
+
+Edits form a draft, counted in the footer. `Esc`/B with unsaved changes asks
+**Save**, **Discard** or **Keep editing**, the same prompt as Game Setup. Save
+writes the draft atomically; save errors retain the draft for retry.
 
 **Details** (`F1` or the controller's north button) opens manually scrollable help,
 the complete value/error, and when the setting takes effect. Input bindings take
-effect after Apply; other settings describe their next-use or restart boundary.
-Unchanged ROM previews are retained after Apply. Current launch/session overrides
+effect after saving; other settings describe their next-use or restart boundary.
+Unchanged ROM previews are retained after saving. Current launch/session overrides
 remain authoritative until the next launch. YAML remains an optional editing route.
 
 Number fields use a numeric keypad; join addresses prioritize address punctuation.
@@ -336,18 +378,18 @@ Mods also keeps a draft: **Apply** saves without leaving, while Back asks before
 discarding unsaved changes. Applied mod changes still require a restart. Trace and
 recording catalogs load in the background with a visible Cancel action.
 
-**Advanced > Trace replays** opens the trace catalog without enabling test mode.
-Recordings and Mods also have visible action-menu entries, and each enabled mod
-may add one entry of its own under **EXTRAS**, including when only one mod contributes an entry;
-existing function-key shortcuts remain optional accelerators. Global display and
-capture shortcuts remain available in game selection, but yield to the action
-menu and its child pages so typing or rebinding a key cannot change unrelated
-settings. Playback shortcuts do not run on the master title.
+**Advanced** offers **Trace replays** (the trace catalog, without enabling test
+mode), **Advanced settings** and **Controls / help**. Each enabled mod may add one
+entry of its own under the **Extras** tab, including when only one mod contributes
+an entry; existing function-key shortcuts remain optional accelerators. Global
+display and capture shortcuts remain available while the game card is focused,
+but yield to the other hub rows and child pages so typing or rebinding a key
+cannot change unrelated settings. Playback shortcuts do not run on the master title.
 
 Recordings has a separate options page for the target frame, pause-on-desync,
 fast-forward, playback, and full recording details. Time Attack is the bundled
 Time Attack mod's entry; see [Time Attack (bundled mod)](#time-attack-bundled-mod). Mods exposes **Details**, **Order**, **Notices**, and
-**Save + Back**, with paginated findings and confirmations. Trace replay lists,
+**Apply**, with paginated findings and confirmations. Trace replay lists,
 loading/failure pages, standalone New Game/Continue, and help share the same
 native typography and keyboard/controller navigation.
 
@@ -355,49 +397,54 @@ Profiles are persistent defaults for future manual launches, but applying a prof
 session-only. A launch can temporarily override live rewind, cross-game donation, debug
 tools, display aspect, main character, and sidekick without writing those values into the
 global gameplay keys (`rewind.liveEnabled`, `crossGame.*`, `debug.flags.debugView`,
-`display.aspect`, or `characters.*`). Programmatic trace launches clear any stale launch
+`display.aspect`, or `characters.*`). `rewind`, `debugTools` and `aspect` set to
+`"global"` apply no override, so the game follows the all-games value; `"on"`/`"off"`
+(or a pinned aspect) override it for that game. Configs written before these
+switches had a Default value are migrated on load: `true` becomes `"on"` and the old
+stock `false` becomes `"global"`. Programmatic trace launches clear any stale launch
 profile overrides and skip profile application.
 
 `crossGameSource: "off"` disables donation for that game launch and restores the built-in
 `crossGame.source` default in the session overlay so the donor choice cannot leak from a
-previous launch. When `crossGameSource` is `"s3k"`, the launch panel hides
-`mainCharacter` and `sidekick` because the donated S3K Data Select screen owns team
-selection. When character rows are shown, their options follow the active donor:
+previous launch. Game Setup labels this key **Borrow from**. When `crossGameSource`
+is `"s3k"`, Game Setup shows the team as chosen on the save screen instead of the
+`mainCharacter` and `sidekick` rows, because the donated S3K Data Select screen owns
+team selection. When character rows are shown, their options follow the active donor:
 Sonic is always available, Tails requires Sonic 2 or Sonic 3&K data, and Knuckles
 requires Sonic 3&K data; hand-edited saved values outside that donor set are clamped
 before launch. `aspect: "global"` inherits the normal `display.aspect` setting; pinned
 aspect values such as `"WIDE_16_9"` apply only for that game session. They change the
 logical projection within the existing window, restoring the global projection
-when returning to the master title. In the launch panel, pinned
-16:10 and 16:9 aspects are amber non-standard choices. The 21:9 preset remains a
-best-effort smoke tier, while 32:9 is exploratory; both remain red choices so the panel
-does not imply the same support level as 16:10/16:9.
+when returning to the master title. In Game Setup, pinned aspects are amber
+overrides. The 21:9 preset remains a best-effort smoke tier, while 32:9 is
+exploratory; both are red and marked EXPERIMENTAL so Game Setup does not imply the
+same support level as 16:10/16:9.
 
 Stock defaults:
 
 | Game | `rewind` | `crossGameSource` | `debugTools` | `aspect` | `mainCharacter` | `sidekick` |
 |------|----------|-------------------|--------------|----------|-----------------|------------|
-| Sonic 1 | `false` | `"off"` | `false` | `"global"` | `"sonic"` | `"none"` |
-| Sonic 2 | `false` | `"off"` | `false` | `"global"` | `"sonic"` | `"tails"` |
-| Sonic 3&K | `false` | `"off"` | `false` | `"global"` | `"sonic"` | `"tails"` |
+| Sonic 1 | `"global"` | `"off"` | `"global"` | `"global"` | `"sonic"` | `"none"` |
+| Sonic 2 | `"global"` | `"off"` | `"global"` | `"global"` | `"sonic"` | `"tails"` |
+| Sonic 3&K | `"global"` | `"off"` | `"global"` | `"global"` | `"sonic"` | `"tails"` |
 
 | Key | YAML path | Type | Default | Description |
 |-----|-----------|------|---------|-------------|
-| `LAUNCH_S1_REWIND` | `launch.s1.rewind` | bool | `false` | Enable live rewind for manual Sonic 1 launches. |
+| `LAUNCH_S1_REWIND` | `launch.s1.rewind` | enum | `"global"` | Live rewind for manual Sonic 1 launches: `"global"` follows `rewind.liveEnabled`; `"on"`/`"off"` override it. |
 | `LAUNCH_S1_CROSS_GAME_SOURCE` | `launch.s1.crossGameSource` | enum | `"off"` | Cross-game donor for manual Sonic 1 launches: `"off"`, `"s2"`, or `"s3k"`. |
-| `LAUNCH_S1_DEBUG_TOOLS` | `launch.s1.debugTools` | bool | `false` | Enable debug tools for manual Sonic 1 launches. |
+| `LAUNCH_S1_DEBUG_TOOLS` | `launch.s1.debugTools` | enum | `"global"` | Debug tools for manual Sonic 1 launches: `"global"` follows `debug.flags.debugView`; `"on"`/`"off"` override it. |
 | `LAUNCH_S1_ASPECT` | `launch.s1.aspect` | enum | `"global"` | Display aspect for manual Sonic 1 launches: `"global"` or a `display.aspect` preset. |
 | `LAUNCH_S1_MAIN_CHARACTER` | `launch.s1.mainCharacter` | enum | `"sonic"` | Main character for manual Sonic 1 launches. |
 | `LAUNCH_S1_SIDEKICK` | `launch.s1.sidekick` | enum | `"none"` | Sidekick for manual Sonic 1 launches; `"none"` disables sidekick spawning. |
-| `LAUNCH_S2_REWIND` | `launch.s2.rewind` | bool | `false` | Enable live rewind for manual Sonic 2 launches. |
+| `LAUNCH_S2_REWIND` | `launch.s2.rewind` | enum | `"global"` | Live rewind for manual Sonic 2 launches: `"global"` follows `rewind.liveEnabled`; `"on"`/`"off"` override it. |
 | `LAUNCH_S2_CROSS_GAME_SOURCE` | `launch.s2.crossGameSource` | enum | `"off"` | Cross-game donor for manual Sonic 2 launches: `"off"`, `"s1"`, or `"s3k"`. |
-| `LAUNCH_S2_DEBUG_TOOLS` | `launch.s2.debugTools` | bool | `false` | Enable debug tools for manual Sonic 2 launches. |
+| `LAUNCH_S2_DEBUG_TOOLS` | `launch.s2.debugTools` | enum | `"global"` | Debug tools for manual Sonic 2 launches: `"global"` follows `debug.flags.debugView`; `"on"`/`"off"` override it. |
 | `LAUNCH_S2_ASPECT` | `launch.s2.aspect` | enum | `"global"` | Display aspect for manual Sonic 2 launches: `"global"` or a `display.aspect` preset. |
 | `LAUNCH_S2_MAIN_CHARACTER` | `launch.s2.mainCharacter` | enum | `"sonic"` | Main character for manual Sonic 2 launches. |
 | `LAUNCH_S2_SIDEKICK` | `launch.s2.sidekick` | enum | `"tails"` | Sidekick for manual Sonic 2 launches; `"none"` disables sidekick spawning. |
-| `LAUNCH_S3K_REWIND` | `launch.s3k.rewind` | bool | `false` | Enable live rewind for manual Sonic 3&K launches. |
+| `LAUNCH_S3K_REWIND` | `launch.s3k.rewind` | enum | `"global"` | Live rewind for manual Sonic 3&K launches: `"global"` follows `rewind.liveEnabled`; `"on"`/`"off"` override it. |
 | `LAUNCH_S3K_CROSS_GAME_SOURCE` | `launch.s3k.crossGameSource` | enum | `"off"` | Cross-game donor for manual Sonic 3&K launches: `"off"`, `"s1"`, or `"s2"`. |
-| `LAUNCH_S3K_DEBUG_TOOLS` | `launch.s3k.debugTools` | bool | `false` | Enable debug tools for manual Sonic 3&K launches. |
+| `LAUNCH_S3K_DEBUG_TOOLS` | `launch.s3k.debugTools` | enum | `"global"` | Debug tools for manual Sonic 3&K launches: `"global"` follows `debug.flags.debugView`; `"on"`/`"off"` override it. |
 | `LAUNCH_S3K_ASPECT` | `launch.s3k.aspect` | enum | `"global"` | Display aspect for manual Sonic 3&K launches: `"global"` or a `display.aspect` preset. |
 | `LAUNCH_S3K_MAIN_CHARACTER` | `launch.s3k.mainCharacter` | enum | `"sonic"` | Main character for manual Sonic 3&K launches. |
 | `LAUNCH_S3K_SIDEKICK` | `launch.s3k.sidekick` | enum | `"tails"` | Sidekick for manual Sonic 3&K launches; `"none"` disables sidekick spawning. |

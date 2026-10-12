@@ -74,7 +74,10 @@ public final class ModManagerScreen {
     private boolean activationRequested;
     private boolean actionFocus;
     private boolean discardPrompt;
-    private boolean discardSelected;
+    /** Leave prompt choice, shared with Settings and Game Setup: 0 Save, 1 Discard, 2 Keep editing. */
+    private int promptChoice;
+    /** Save from the leave prompt closes once the reload has had a frame to report failure. */
+    private boolean closeAfterApply;
     private int selectedAction;
     private boolean detailsPage;
     private boolean noticesPage;
@@ -160,7 +163,7 @@ public final class ModManagerScreen {
 
     private List<Object> feedbackState() {
         return List.of(selectedIndex, detailScrollOffset, actionFocus, selectedAction, detailsPage,
-                noticesPage, orderPage, pageOffset, closeRequested, discardPrompt, discardSelected, statusMessage, editor.pendingState(),
+                noticesPage, orderPage, pageOffset, closeRequested, discardPrompt, promptChoice, statusMessage, editor.pendingState(),
                 java.util.Optional.ofNullable(armedTrust), java.util.Optional.ofNullable(armedCascade));
     }
 
@@ -184,12 +187,24 @@ public final class ModManagerScreen {
         boolean back = input.menuBack() && !previousInput.menuBack();
         previousInput = input;
 
+        if (closeAfterApply && !activationRequested) {
+            closeAfterApply = false;
+            if (reloadFailure == null && saveFailure == null) { closeRequested = true; return; }
+        }
         if (discardPrompt) {
-            if (left || right) discardSelected = !discardSelected;
+            if (left) promptChoice = Math.floorMod(promptChoice - 1, 3);
+            if (right) promptChoice = (promptChoice + 1) % 3;
             if (escapeEdge || back) discardPrompt = false;
             else if (accept) {
                 discardPrompt = false;
-                if (discardSelected) { editor.discardDraft(); closeRequested = true; }
+                switch (promptChoice) {
+                    case 0 -> {
+                        applyDraft();
+                        closeAfterApply = activationRequested;
+                    }
+                    case 1 -> { editor.discardDraft(); closeRequested = true; }
+                    default -> { }
+                }
             }
             return;
         }
@@ -274,11 +289,15 @@ public final class ModManagerScreen {
         try {
             if (discardPrompt) {
                 text.page("MOD MANAGER", "UNSAVED CHANGES");
-                drawPrimary("Discard unsaved changes?", 24, 80, 1, 1, 1);
-                text.focus(discardSelected ? 178 : 20, 112, 122, 22);
-                drawPrimary("Keep editing", 25, 118, 1, 1, 1);
-                drawPrimary("Discard", 183, 118, 1, .73f, .25f);
-                text.footer("Left/Right Choose", confirmLabel + " Select  " + backLabel + " Back");
+                drawPrimary("Save mod changes?", 24, 80, 1, 1, 1);
+                // Same three choices, order and default as Settings and Game Setup.
+                int[] xs = {33, 87, 168};
+                int[] widths = {46, 73, 118};
+                text.focus(xs[promptChoice], 112, widths[promptChoice], 22);
+                drawPrimary("Save", xs[0] + 5, 118, 1, 1, 1);
+                drawPrimary("Discard", xs[1] + 5, 118, 1, .73f, .25f);
+                drawPrimary("Keep editing", xs[2] + 5, 118, 1, 1, 1);
+                text.footer("Left/Right Choose", confirmLabel + " Select  " + backLabel + " Keep editing");
                 return;
             }
             if (armedTrust != null || armedCascade != null) {
@@ -777,7 +796,7 @@ public final class ModManagerScreen {
 
     private void handleBack() {
         if (armedTrust != null || armedCascade != null) cancelArmedConfirmation();
-        else if (editor.dirty()) { discardPrompt = true; discardSelected = false; }
+        else if (editor.dirty()) { discardPrompt = true; promptChoice = 0; }
         else closeRequested = true;
     }
 

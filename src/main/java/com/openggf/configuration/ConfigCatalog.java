@@ -30,6 +30,8 @@ public final class ConfigCatalog {
     private static final Map<String, String> SECTION_TITLES = new LinkedHashMap<>();
     private static final Set<String> LAUNCH_ASPECT_VALUES = Set.of(
             "global", "NATIVE_4_3", "WIDE_16_10", "WIDE_16_9", "ULTRA_21_9", "SUPER_32_9");
+    /** Per-game switches: {@code global} follows the all-games setting; on/off override it. */
+    private static final Set<String> LAUNCH_TOGGLE_VALUES = Set.of("global", "on", "off");
     private static final Set<String> LAUNCH_CROSS_GAME_VALUES = Set.of("off", "s1", "s2", "s3k");
     private static final Set<String> LAUNCH_MAIN_CHARACTER_VALUES = Set.of("sonic", "tails", "knuckles");
     private static final Set<String> LAUNCH_SIDEKICK_VALUES = Set.of("none", "sonic", "tails", "knuckles");
@@ -196,12 +198,12 @@ public final class ConfigCatalog {
                 "Donor game for cross-game features", Set.of("s2", "s3k")));
 
         // launch (per-game master-title profile defaults)
-        put(LAUNCH_S1_REWIND, of("launch.s1", "rewind", BOOL,
-                "Default Sonic 1 launch profile: enable live rewind"));
+        put(LAUNCH_S1_REWIND, ofEnum("launch.s1", "rewind",
+                "Sonic 1 live rewind: global follows rewind.liveEnabled, or on/off", LAUNCH_TOGGLE_VALUES));
         put(LAUNCH_S1_CROSS_GAME_SOURCE, ofEnum("launch.s1", "crossGameSource",
                 "Default Sonic 1 launch profile: cross-game donor", LAUNCH_CROSS_GAME_VALUES));
-        put(LAUNCH_S1_DEBUG_TOOLS, of("launch.s1", "debugTools", BOOL,
-                "Default Sonic 1 launch profile: enable debug tools"));
+        put(LAUNCH_S1_DEBUG_TOOLS, ofEnum("launch.s1", "debugTools",
+                "Sonic 1 debug tools: global follows debug.flags.debugView, or on/off", LAUNCH_TOGGLE_VALUES));
         put(LAUNCH_S1_ASPECT, ofEnum("launch.s1", "aspect",
                 "Default Sonic 1 launch profile: display aspect override", LAUNCH_ASPECT_VALUES));
         put(LAUNCH_S1_MAIN_CHARACTER, ofEnum("launch.s1", "mainCharacter",
@@ -209,12 +211,12 @@ public final class ConfigCatalog {
         put(LAUNCH_S1_SIDEKICK, ofEnum("launch.s1", "sidekick",
                 "Default Sonic 1 launch profile: sidekick character", LAUNCH_SIDEKICK_VALUES));
 
-        put(LAUNCH_S2_REWIND, of("launch.s2", "rewind", BOOL,
-                "Default Sonic 2 launch profile: enable live rewind"));
+        put(LAUNCH_S2_REWIND, ofEnum("launch.s2", "rewind",
+                "Sonic 2 live rewind: global follows rewind.liveEnabled, or on/off", LAUNCH_TOGGLE_VALUES));
         put(LAUNCH_S2_CROSS_GAME_SOURCE, ofEnum("launch.s2", "crossGameSource",
                 "Default Sonic 2 launch profile: cross-game donor", LAUNCH_CROSS_GAME_VALUES));
-        put(LAUNCH_S2_DEBUG_TOOLS, of("launch.s2", "debugTools", BOOL,
-                "Default Sonic 2 launch profile: enable debug tools"));
+        put(LAUNCH_S2_DEBUG_TOOLS, ofEnum("launch.s2", "debugTools",
+                "Sonic 2 debug tools: global follows debug.flags.debugView, or on/off", LAUNCH_TOGGLE_VALUES));
         put(LAUNCH_S2_ASPECT, ofEnum("launch.s2", "aspect",
                 "Default Sonic 2 launch profile: display aspect override", LAUNCH_ASPECT_VALUES));
         put(LAUNCH_S2_MAIN_CHARACTER, ofEnum("launch.s2", "mainCharacter",
@@ -222,12 +224,12 @@ public final class ConfigCatalog {
         put(LAUNCH_S2_SIDEKICK, ofEnum("launch.s2", "sidekick",
                 "Default Sonic 2 launch profile: sidekick character", LAUNCH_SIDEKICK_VALUES));
 
-        put(LAUNCH_S3K_REWIND, of("launch.s3k", "rewind", BOOL,
-                "Default Sonic 3&K launch profile: enable live rewind"));
+        put(LAUNCH_S3K_REWIND, ofEnum("launch.s3k", "rewind",
+                "Sonic 3&K live rewind: global follows rewind.liveEnabled, or on/off", LAUNCH_TOGGLE_VALUES));
         put(LAUNCH_S3K_CROSS_GAME_SOURCE, ofEnum("launch.s3k", "crossGameSource",
                 "Default Sonic 3&K launch profile: cross-game donor", LAUNCH_CROSS_GAME_VALUES));
-        put(LAUNCH_S3K_DEBUG_TOOLS, of("launch.s3k", "debugTools", BOOL,
-                "Default Sonic 3&K launch profile: enable debug tools"));
+        put(LAUNCH_S3K_DEBUG_TOOLS, ofEnum("launch.s3k", "debugTools",
+                "Sonic 3&K debug tools: global follows debug.flags.debugView, or on/off", LAUNCH_TOGGLE_VALUES));
         put(LAUNCH_S3K_ASPECT, ofEnum("launch.s3k", "aspect",
                 "Default Sonic 3&K launch profile: display aspect override", LAUNCH_ASPECT_VALUES));
         put(LAUNCH_S3K_MAIN_CHARACTER, ofEnum("launch.s3k", "mainCharacter",

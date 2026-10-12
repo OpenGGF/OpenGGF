@@ -103,12 +103,20 @@ class TestOrdinaryTitleScreenCommandEvidence {
             drawForRecording.invoke(title);
 
             assertEquals(new Quad(1, 0, 0, width, 224), renderer.quads().get(0));
-            assertTrue(renderer.quads().contains(new Quad(3, 10, 212, 31, 6)),
+            // 100x20 logo at the header's 17-pixel height, 8 pixels in, 3 below the top.
+            assertTrue(renderer.quads().contains(new Quad(3, 8, 224 - 3 - 17, 85, 17)),
                     "OpenGGF logo stays in the title header");
-            assertTrue(font.texts().stream().anyMatch(text -> text.text().equals("L/R Game  U/D Actions  Enter Browse")
-                            && text.x() == 9), "game-selection keyboard prompts at " + width);
-            assertTrue(font.texts().stream().anyMatch(text -> text.text().equals("LAUNCH OPTIONS")
-                            && text.x() == width / 2 + 5), "visible launch entry at " + width);
+            for (String hint : new String[] {"GAME", "START", "QUIT"}) {
+                // Footer hints are right-aligned on the bottom bar (labels at y 211).
+                assertTrue(font.texts().stream().anyMatch(text -> text.text().equals(hint) && text.y() == 211
+                        && text.x() > 0 && text.x() + hint.length() * 6 <= width - 8),
+                        "card-row footer hint " + hint + " at " + width);
+            }
+            var setup = font.texts().stream().filter(text -> text.text().equals("GAME SETUP")).findFirst();
+            assertTrue(setup.isPresent(), "visible Game Setup action at " + width);
+            // Start (61) + Game Setup (72) + Recordings (72) + two 4-pixel gaps, centred.
+            assertEquals((width - 213) / 2 + 61 + 4 + 6, setup.get().x(),
+                    "the action bar stays centred at " + width);
         }
     }
 

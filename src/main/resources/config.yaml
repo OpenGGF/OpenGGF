@@ -114,23 +114,23 @@ crossGame:
 # Per-game launch defaults edited from the master title screen.
 launch:
   s1:
-    rewind: false   # Default Sonic 1 launch profile: enable live rewind
+    rewind: "global"   # Sonic 1 live rewind: global follows rewind.liveEnabled, or on/off
     crossGameSource: "off"   # Default Sonic 1 launch profile: cross-game donor
-    debugTools: false   # Default Sonic 1 launch profile: enable debug tools
+    debugTools: "global"   # Sonic 1 debug tools: global follows debug.flags.debugView, or on/off
     aspect: "global"   # Default Sonic 1 launch profile: display aspect override
     mainCharacter: "sonic"   # Default Sonic 1 launch profile: main character
     sidekick: "none"   # Default Sonic 1 launch profile: sidekick character
   s2:
-    rewind: false   # Default Sonic 2 launch profile: enable live rewind
+    rewind: "global"   # Sonic 2 live rewind: global follows rewind.liveEnabled, or on/off
     crossGameSource: "off"   # Default Sonic 2 launch profile: cross-game donor
-    debugTools: false   # Default Sonic 2 launch profile: enable debug tools
+    debugTools: "global"   # Sonic 2 debug tools: global follows debug.flags.debugView, or on/off
     aspect: "global"   # Default Sonic 2 launch profile: display aspect override
     mainCharacter: "sonic"   # Default Sonic 2 launch profile: main character
     sidekick: "tails"   # Default Sonic 2 launch profile: sidekick character
   s3k:
-    rewind: false   # Default Sonic 3&K launch profile: enable live rewind
+    rewind: "global"   # Sonic 3&K live rewind: global follows rewind.liveEnabled, or on/off
     crossGameSource: "off"   # Default Sonic 3&K launch profile: cross-game donor
-    debugTools: false   # Default Sonic 3&K launch profile: enable debug tools
+    debugTools: "global"   # Sonic 3&K debug tools: global follows debug.flags.debugView, or on/off
     aspect: "global"   # Default Sonic 3&K launch profile: display aspect override
     mainCharacter: "sonic"   # Default Sonic 3&K launch profile: main character
     sidekick: "tails"   # Default Sonic 3&K launch profile: sidekick character

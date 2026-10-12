@@ -87,25 +87,20 @@ Linux terminal example:
 
 When the engine starts, you will see:
 
-1. **Master title screen** -- Choose a game with left/right from either pane.
-   Up/down enters its action list, then selects Start Game, Launch Options, Recordings,
-   Mods, Settings, Advanced, Quit, or **Extras** (which includes the bundled **Time Attack** mod). Confirm from the game pane opens
-   **Browse Games**, a full-width list with availability and page navigation.
-   The Mods list labels each installed mod with its target game: S1, S2, S3K,
-   S1/S2/S3K for all three, or Standalone.
-   The selected game's pane shows its enabled mods below the launch profile;
-   when several apply, it cycles through their names and shows the current number.
-   Confirm from the action pane opens the selected action; Back returns
-   one level. Quit (or Esc/B from game selection) opens an exit confirmation.
-   Missing ROM entries remain visible but dimmed. Prompts follow the last
-   keyboard/controller input. The original animated
-   game logos remain, scaled proportionally into the game pane.
-   When audio is enabled, navigation, confirmation, and missing-ROM errors use short
-   host-owned cues that do not depend on the selected game's ROM. Opening menu screens
-   plays confirmation; backing out plays a distinct cancel sound. Navigation, edits,
-   confirmations and errors also have feedback inside the nested menus. Game selection
-   uses a wrapping carousel with neighboring names and a position count, so added
-   standalone games do not need extra slots or smaller primary labels.
+1. **Master title screen** -- A shelf of game cards with each game's original
+   animated title logo. Left/right changes game and Enter (A) starts it. Down shows
+   **setup chips** for the selected game, such as `SONIC & TAILS`, `4:3` or
+   `REWIND ON`; amber chips are set for that game only, and choosing a chip opens
+   its row in **Game Setup**. Below them are **Start**, **Game Setup** and
+   **Recordings**. Up reaches the engine-wide tabs: **Mods**, **Settings**,
+   **Extras** (mod-added modes such as the bundled **Time Attack** mod), **Advanced**
+   and **Quit**. The footer shows only the keys that work on the focused row, as key
+   caps or your controller's buttons. Back returns to the game card; on the card it
+   asks whether to quit. Games without a ROM stay on the shelf and name the file to
+   add. The Mods list labels each installed mod with its target game: S1, S2, S3K,
+   S1/S2/S3K for all three, or Standalone. When audio is enabled, navigation,
+   confirmation and errors use short host-owned cues that do not depend on the
+   selected game's ROM.
 2. **Game title screen** -- The selected game's original title screen (e.g., the Sonic 2
    "PRESS START BUTTON" screen).
 3. **Gameplay** -- The first zone of the selected game.
@@ -114,18 +109,26 @@ If a ROM file is missing for the game you selected, the engine will show an erro
 
 ## Quick Configuration
 
-Choose **Settings** on the master title for a controller-accessible editor with
-visible categories, onscreen text/key editing, and draft Apply/Cancel. Non-default
-settings are amber. In text editors, Down enters the keypad and Up from its top
-row returns to the text field. Enter/A chooses a key or accepts the focused field;
-you can also type normally. Number fields use a numeric keypad, and Up in path
-fields opens a controller file browser. **Details** (`F1` or controller north button)
-shows complete help, values and errors with manual scrolling, including when a
-setting takes effect. Hold directions for repeated navigation. Mods uses the same
-explicit Apply and Back/discard behavior; applied mod changes require restart.
-Controller prompts follow Xbox/PlayStation labels or physical button positions.
-See [configuration](../../../CONFIGURATION.md#engine-settings-from-the-title) for
-navigation and current prototype limits.
+**Game Setup** (on the hub, or `Tab`) sets up one game: players, aspect ratio,
+rewind, **Borrow from** (another game's sprites, spindash and sounds) and debug
+tools. Rewind, debug tools and aspect ratio show **Default** and follow Settings
+until you choose a value for that game.
+
+**Settings** applies to every game. Categories are tabs across the top (Display,
+Sound, Controls, Gameplay, Files, Capture); press Up from the first row to switch
+tabs. Values that differ from the default are amber. In text editors, Down enters
+the keypad and Up from its top row returns to the text field. Enter/A chooses a key
+or accepts the focused field; you can also type normally. Number fields use a
+numeric keypad, and Up in path fields opens a controller file browser. **Details**
+(`F1` or controller north button) shows complete help, values and errors with manual
+scrolling, including when a setting takes effect. Hold directions for repeated
+navigation.
+
+Settings, Game Setup and Mods all keep a draft: the footer counts unsaved changes,
+and Back asks **Save**, **Discard** or **Keep editing**. Applied mod changes reload
+the mods at the title. Controller prompts follow Xbox/PlayStation labels or physical
+button positions. See [configuration](../../../CONFIGURATION.md#engine-settings-from-the-title)
+for details.
 
 The engine reads settings from `config.yaml` in the working directory. If the file
 does not exist, defaults are used. A few settings you might want to change immediately:

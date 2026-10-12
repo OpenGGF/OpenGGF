@@ -100,9 +100,9 @@ public class LaunchProfileStore {
             crossGameSource = "off";
         }
         return new LaunchProfile(
-                configService.getBoolean(keys.rewind()),
+                LaunchToggle.parse(configService.getString(keys.rewind())),
                 crossGameSource,
-                configService.getBoolean(keys.debugTools()),
+                LaunchToggle.parse(configService.getString(keys.debugTools())),
                 configService.getString(keys.aspect()),
                 configService.getString(keys.mainCharacter()),
                 configService.getString(keys.sidekick()))
@@ -119,9 +119,9 @@ public class LaunchProfileStore {
         LaunchProfile sanitized = sanitize(profile, entry);
         // Keep sanitization with the launch-profile owner; publish all six values together.
         Map<SonicConfiguration, Object> values = Map.of(
-                keys.rewind(), sanitized.rewind(),
+                keys.rewind(), sanitized.rewind().persisted(),
                 keys.crossGameSource(), sanitized.crossGameSource(),
-                keys.debugTools(), sanitized.debugTools(),
+                keys.debugTools(), sanitized.debugTools().persisted(),
                 keys.aspect(), sanitized.aspect(),
                 keys.mainCharacter(), sanitized.mainCharacter(),
                 keys.sidekick(), sanitized.sidekick());

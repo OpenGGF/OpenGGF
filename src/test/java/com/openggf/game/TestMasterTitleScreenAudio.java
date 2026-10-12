@@ -38,16 +38,17 @@ class TestMasterTitleScreenAudio {
         MasterTitleScreen screen = activeScreen(true);
         InputHandler input = new InputHandler();
 
-        pressFrame(screen, input, GLFW_KEY_DOWN);
+        pressFrame(screen, input, GLFW_KEY_DOWN); // chips
+        pressFrame(screen, input, GLFW_KEY_DOWN); // actions, on Start
         pressFrame(screen, input, GLFW_KEY_ENTER);
         // CONFIRMING consumes another press without replaying the cue.
         pressFrame(screen, input, GLFW_KEY_ENTER);
 
         MasterTitleScreen missingRomScreen = activeScreen(false);
-        pressFrame(missingRomScreen, input, GLFW_KEY_DOWN);
+        pressFrame(missingRomScreen, input, GLFW_KEY_DOWN); // no chips without a ROM
         pressFrame(missingRomScreen, input, GLFW_KEY_ENTER);
 
-        assertEquals(List.of("UI_NAVIGATE", "UI_CONFIRM", "UI_NAVIGATE", "UI_ERROR"),
+        assertEquals(List.of("UI_NAVIGATE", "UI_NAVIGATE", "UI_CONFIRM", "UI_NAVIGATE", "UI_ERROR"),
                 emittedSfxNames());
     }
 
@@ -79,10 +80,11 @@ class TestMasterTitleScreenAudio {
         InputHandler input = new InputHandler();
         pressFrame(screen, input, GLFW_KEY_DOWN);
         pressFrame(screen, input, GLFW_KEY_DOWN);
+        pressFrame(screen, input, GLFW_KEY_RIGHT);
         pressFrame(screen, input, GLFW_KEY_ENTER);
-        pressFrame(screen, input, GLFW_KEY_ESCAPE);
-        pressFrame(screen, input, GLFW_KEY_ESCAPE);
-        assertEquals(List.of("UI_NAVIGATE", "UI_NAVIGATE", "UI_CONFIRM", "UI_CANCEL", "UI_CANCEL"),
+        pressFrame(screen, input, GLFW_KEY_ESCAPE); // leave an unchanged Game Setup
+        pressFrame(screen, input, GLFW_KEY_ESCAPE); // back from the actions to the card
+        assertEquals(List.of("UI_NAVIGATE", "UI_NAVIGATE", "UI_NAVIGATE", "UI_CONFIRM", "UI_CANCEL", "UI_CANCEL"),
                 emittedSfxNames());
     }
 
@@ -90,19 +92,19 @@ class TestMasterTitleScreenAudio {
     void settingsAndToolsEnterWithConfirmationAndBackWithCancel() {
         MasterTitleScreen screen = activeScreen(true);
         InputHandler input = new InputHandler();
-        pressFrame(screen, input, GLFW_KEY_DOWN);
-        for (int i = 0; i < 4; i++) pressFrame(screen, input, GLFW_KEY_DOWN);
+        pressFrame(screen, input, GLFW_KEY_UP);    // tabs, on Mods
+        pressFrame(screen, input, GLFW_KEY_RIGHT); // Settings
         audio.resetState();
         pressFrame(screen, input, GLFW_KEY_ENTER);
         pressFrame(screen, input, GLFW_KEY_ESCAPE);
-        pressFrame(screen, input, GLFW_KEY_DOWN);
+        pressFrame(screen, input, GLFW_KEY_RIGHT); // Advanced
         pressFrame(screen, input, GLFW_KEY_ENTER);
         pressFrame(screen, input, GLFW_KEY_DOWN);
-        pressFrame(screen, input, GLFW_KEY_DOWN);
+        pressFrame(screen, input, GLFW_KEY_DOWN);  // Controls / help
         pressFrame(screen, input, GLFW_KEY_ENTER);
         pressFrame(screen, input, GLFW_KEY_ESCAPE);
         assertEquals(List.of("UI_CONFIRM", "UI_CANCEL", "UI_NAVIGATE", "UI_CONFIRM",
-                "UI_NAVIGATE", "UI_CONFIRM", "UI_CANCEL"), emittedSfxNames());
+                "UI_NAVIGATE", "UI_NAVIGATE", "UI_CONFIRM", "UI_CANCEL"), emittedSfxNames());
     }
 
     @Test

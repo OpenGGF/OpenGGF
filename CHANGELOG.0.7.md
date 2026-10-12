@@ -636,40 +636,40 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   ring appearance in EHZ1 after the 0.7 branch rollover. Ring placement also
   sorts editor reloads correctly.
 
-- **Master title hub:** controller-first navigation uses left/right to change games
-  from either pane and up/down to enter and move through actions, with confirmation
-  on menu entry, distinct cancel feedback on back, and consistent sounds within
-  nested menu pages. Shared row geometry centers focus frames around their text. It keeps the existing
-  animated ROM logos, adds visible launch, time-attack, recordings, mods, settings,
-  advanced, and quit entries, and follows intentional input with keyboard/controller prompts.
-  Catalog-backed engine settings offer visible categories, onscreen value/path/key
-  editing, atomic Apply/Cancel, and amber non-default values. Shared text editors let
-  keyboard and controller users move focus between the field and onscreen keypad.
-  Launch options retain
-  white stock, amber changed, and red experimental status at native resolution.
-  Checkerboard pages retain full-size primary lettering and use an authored native
-  small font with lowercase descenders for metadata instead of fractional downscaling.
-  A wrapping game carousel shows the selected game, neighbors and catalog position,
-  supports arbitrary catalog sizes, and dims missing ROMs. Confirm from game selection
-  opens a full-width Browse Games list with availability and paging. The sky remains visible beside the action list,
-  unavailable games hide profile status, and missing-ROM hints have a dark backing.
-  Error pages retain accurate diagnostics until dismissed. Settings help shows
-  two lines at once; launch rows use the shared left-aligned focus style. Recordings, traces,
-  mods, time attack, room browsing, and lobbies have bounded pages and visible
-  actions; text entry works with keyboards or controllers without triggering global
-  shortcuts, and failed trace launches can be acknowledged and retried. Game logos render from
-  their original textures at window resolution, preserving detail as the window grows.
-  Held directions repeat consistently; controller prompts identify Xbox, PlayStation,
-  or physical button positions. Settings, chat and input errors have manual full-text
-  details. Numeric/address keypads and an asynchronous controller file browser share
-  the text editor; unsupported glyphs retain their Unicode identity without changing
-  stored values. Mods uses explicit Apply and draft discard, matching Settings.
-  Startup notices use crisp native fonts and controller navigation; native-mod notices
-  paginate all names. Room refreshes retain room identity and publish on the UI thread.
-  Checkerboard geometry is batched and cached, catalog scans run in cancellable
-  background tasks, unchanged ROM previews survive Apply, and settings presentation
-  caches follow draft revisions. The experimental editor exposes a controller command
-  palette for editing, saving, exporting and playtesting.
+- **Master title hub:** a cartridge shelf of game cards shows each game's original
+  animated ROM logo, sliding between games, with missing ROMs named on their card.
+  Setup chips under the selected game say what Start will launch (players, aspect,
+  rewind, borrowed features, debug, mods); amber chips are set for that game only and
+  open Game Setup on their row. Start, Game Setup and Recordings follow; Mods,
+  Settings, Extras, Advanced and Quit are engine-wide header tabs. Footers show only
+  the keys that work on the focused row as key caps or controller buttons, with
+  status kept apart; a line under the buttons describes the focused item. Back
+  returns to the card before offering Quit. Mouse hover, click and wheel work across
+  the shelf, chips, buttons and tabs. Confirmation, cancel and error cues stay
+  host-owned, and Time Attack arrives through Extras as a bundled mod.
+- **Game Setup:** replaces Launch Options with grouped Players, Screen and Extras
+  rows labelled THIS GAME ONLY. Rewind, debug tools and aspect ratio follow the
+  all-games Settings value ("Default (Off)") until a game overrides them, so turning
+  Rewind on in Settings now reaches every game that has not chosen otherwise;
+  existing boolean profiles migrate (`true` to on, the old stock `false` to default).
+  Cross-game donation is labelled **Borrow from**, and the S3K save screen's team is
+  shown rather than hidden. Backspace resets the focused row, and the description
+  box explains it.
+- **Settings:** categories become tabs (Display, Sound, Controls, Gameplay, Files,
+  Capture) labelled ALL GAMES, with eight full-width rows, a scrollbar, one type size
+  per page and a description box carrying the row's keys and default. Every non-debug
+  shortcut moves to Controls; debug, Discord, direct-launch characters and cross-game
+  keys move to Advanced > Advanced settings; launch profiles leave Settings for Game
+  Setup. Settings, Game Setup and Mods share one draft flow: the footer counts unsaved
+  changes and Back asks Save, Discard or Keep editing. Shared text editors keep
+  onscreen value/path/key editing, numeric/address keypads, an asynchronous
+  controller file browser and full-text details; unsupported glyphs retain their
+  Unicode identity without changing stored values. Recordings, traces, mods, room
+  browsing and lobbies keep bounded pages and visible actions. Startup notices use
+  crisp native fonts and controller navigation; catalog scans run in cancellable
+  background tasks and unchanged ROM previews survive saving. The experimental
+  editor exposes a controller command palette for editing, saving, exporting and
+  playtesting. `MasterTitleCaptureTool` renders these menus offscreen for review.
 
 - **Widescreen presentation:** ordinary UI/HUD surfaces, titles, results, endings,
   diagnostics, all three special stages, scene effects, and trace-video capture.

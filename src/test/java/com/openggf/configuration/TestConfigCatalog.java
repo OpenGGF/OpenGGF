@@ -98,21 +98,21 @@ class TestConfigCatalog {
         }
 
         SonicConfigurationService cfg = SonicConfigurationService.createStandalone(tempDir);
-        assertLaunchDefault(cfg, SonicConfiguration.LAUNCH_S1_REWIND, false);
+        assertLaunchDefault(cfg, SonicConfiguration.LAUNCH_S1_REWIND, "global");
         assertLaunchDefault(cfg, SonicConfiguration.LAUNCH_S1_CROSS_GAME_SOURCE, "off");
-        assertLaunchDefault(cfg, SonicConfiguration.LAUNCH_S1_DEBUG_TOOLS, false);
+        assertLaunchDefault(cfg, SonicConfiguration.LAUNCH_S1_DEBUG_TOOLS, "global");
         assertLaunchDefault(cfg, SonicConfiguration.LAUNCH_S1_ASPECT, "global");
         assertLaunchDefault(cfg, SonicConfiguration.LAUNCH_S1_MAIN_CHARACTER, "sonic");
         assertLaunchDefault(cfg, SonicConfiguration.LAUNCH_S1_SIDEKICK, "none");
-        assertLaunchDefault(cfg, SonicConfiguration.LAUNCH_S2_REWIND, false);
+        assertLaunchDefault(cfg, SonicConfiguration.LAUNCH_S2_REWIND, "global");
         assertLaunchDefault(cfg, SonicConfiguration.LAUNCH_S2_CROSS_GAME_SOURCE, "off");
-        assertLaunchDefault(cfg, SonicConfiguration.LAUNCH_S2_DEBUG_TOOLS, false);
+        assertLaunchDefault(cfg, SonicConfiguration.LAUNCH_S2_DEBUG_TOOLS, "global");
         assertLaunchDefault(cfg, SonicConfiguration.LAUNCH_S2_ASPECT, "global");
         assertLaunchDefault(cfg, SonicConfiguration.LAUNCH_S2_MAIN_CHARACTER, "sonic");
         assertLaunchDefault(cfg, SonicConfiguration.LAUNCH_S2_SIDEKICK, "tails");
-        assertLaunchDefault(cfg, SonicConfiguration.LAUNCH_S3K_REWIND, false);
+        assertLaunchDefault(cfg, SonicConfiguration.LAUNCH_S3K_REWIND, "global");
         assertLaunchDefault(cfg, SonicConfiguration.LAUNCH_S3K_CROSS_GAME_SOURCE, "off");
-        assertLaunchDefault(cfg, SonicConfiguration.LAUNCH_S3K_DEBUG_TOOLS, false);
+        assertLaunchDefault(cfg, SonicConfiguration.LAUNCH_S3K_DEBUG_TOOLS, "global");
         assertLaunchDefault(cfg, SonicConfiguration.LAUNCH_S3K_ASPECT, "global");
         assertLaunchDefault(cfg, SonicConfiguration.LAUNCH_S3K_MAIN_CHARACTER, "sonic");
         assertLaunchDefault(cfg, SonicConfiguration.LAUNCH_S3K_SIDEKICK, "tails");

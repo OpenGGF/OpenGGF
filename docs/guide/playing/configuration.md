@@ -92,7 +92,8 @@ debug movement only.
 ## How do I enable cross-game features?
 
 Cross-game feature donation lets a donor game provide player sprites, spindash, and
-SFX while you play a different base game. For example, playing Sonic 1 with Sonic 2's
+SFX while you play a different base game. On the master title this is **Borrow from**
+in each game's **Game Setup**; the YAML below sets it for direct launches. For example, playing Sonic 1 with Sonic 2's
 sprites and spindash:
 
 ```yaml

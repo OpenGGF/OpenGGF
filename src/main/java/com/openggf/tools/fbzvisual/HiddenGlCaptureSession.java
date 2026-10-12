@@ -280,8 +280,9 @@ public final class HiddenGlCaptureSession implements AutoCloseable {
         config.setSessionOverride(SonicConfiguration.DISPLAY_COLOR_PROFILE, "RAW_RGB");
         config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
         config.setSessionOverride(SonicConfiguration.LAUNCH_S3K_CROSS_GAME_SOURCE, "off");
-        config.setSessionOverride(SonicConfiguration.LAUNCH_S3K_REWIND, false);
-        config.setSessionOverride(SonicConfiguration.LAUNCH_S3K_DEBUG_TOOLS, false);
+        // Explicit "off": a "global" (or legacy false) switch would follow the user's config.
+        config.setSessionOverride(SonicConfiguration.LAUNCH_S3K_REWIND, "off");
+        config.setSessionOverride(SonicConfiguration.LAUNCH_S3K_DEBUG_TOOLS, "off");
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
         config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
         config.resolveDisplayAspect();

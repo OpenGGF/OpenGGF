@@ -181,6 +181,35 @@ public class ConfigMigrationService {
         };
     }
 
+    private static final java.util.List<SonicConfiguration> LAUNCH_PROFILE_TOGGLES = java.util.List.of(
+            SonicConfiguration.LAUNCH_S1_REWIND, SonicConfiguration.LAUNCH_S1_DEBUG_TOOLS,
+            SonicConfiguration.LAUNCH_S2_REWIND, SonicConfiguration.LAUNCH_S2_DEBUG_TOOLS,
+            SonicConfiguration.LAUNCH_S3K_REWIND, SonicConfiguration.LAUNCH_S3K_DEBUG_TOOLS);
+
+    /**
+     * Per-game rewind and debug-tools switches were booleans whose stock {@code false}
+     * always overrode the all-games setting. {@code true} becomes {@code on}; {@code false}
+     * becomes {@code global}, which follows {@code rewind.liveEnabled} / {@code debug.flags.debugView}.
+     */
+    public boolean migrateLaunchProfileToggles(Map<String, Object> config) {
+        if (config == null) {
+            return false;
+        }
+        boolean changed = false;
+        for (SonicConfiguration key : LAUNCH_PROFILE_TOGGLES) {
+            Object value = config.get(key.name());
+            String text = value == null ? null : value.toString().trim().toLowerCase(java.util.Locale.ROOT);
+            if (!"true".equals(text) && !"false".equals(text)) {
+                continue;
+            }
+            config.put(key.name(), "true".equals(text) ? "on" : "global");
+            LOGGER.info("[ConfigMigration] Migrated " + ConfigCatalog.meta(key).path() + ": " + text
+                    + " -> " + config.get(key.name()));
+            changed = true;
+        }
+        return changed;
+    }
+
     public boolean migrateDeprecatedJumpBindings(Map<String, Object> config) {
         if (config == null) {
             return false;

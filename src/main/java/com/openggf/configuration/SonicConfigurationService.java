@@ -139,6 +139,9 @@ public class SonicConfigurationService {
 		if (normalizeDisplayShaderSelection(config)) {
 			configChanged = true;
 		}
+		if (migrationService.migrateLaunchProfileToggles(config)) {
+			configChanged = true;
+		}
 
 		boolean renamedKeys = applyDefaults();
 		validateEnumeratedValues();
@@ -849,21 +852,21 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.CROSS_GAME_S2_DATA_SELECT_IMAGE_GEN_OVERRIDE, false);
 		putDefaultKey(SonicConfiguration.CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY, GLFW_KEY_APOSTROPHE);
 		putDefault(SonicConfiguration.CROSS_GAME_SOURCE, "s2");
-		putDefault(SonicConfiguration.LAUNCH_S1_REWIND, false);
+		putDefault(SonicConfiguration.LAUNCH_S1_REWIND, "global");
 		putDefault(SonicConfiguration.LAUNCH_S1_CROSS_GAME_SOURCE, "off");
-		putDefault(SonicConfiguration.LAUNCH_S1_DEBUG_TOOLS, false);
+		putDefault(SonicConfiguration.LAUNCH_S1_DEBUG_TOOLS, "global");
 		putDefault(SonicConfiguration.LAUNCH_S1_ASPECT, "global");
 		putDefault(SonicConfiguration.LAUNCH_S1_MAIN_CHARACTER, "sonic");
 		putDefault(SonicConfiguration.LAUNCH_S1_SIDEKICK, "none");
-		putDefault(SonicConfiguration.LAUNCH_S2_REWIND, false);
+		putDefault(SonicConfiguration.LAUNCH_S2_REWIND, "global");
 		putDefault(SonicConfiguration.LAUNCH_S2_CROSS_GAME_SOURCE, "off");
-		putDefault(SonicConfiguration.LAUNCH_S2_DEBUG_TOOLS, false);
+		putDefault(SonicConfiguration.LAUNCH_S2_DEBUG_TOOLS, "global");
 		putDefault(SonicConfiguration.LAUNCH_S2_ASPECT, "global");
 		putDefault(SonicConfiguration.LAUNCH_S2_MAIN_CHARACTER, "sonic");
 		putDefault(SonicConfiguration.LAUNCH_S2_SIDEKICK, "tails");
-		putDefault(SonicConfiguration.LAUNCH_S3K_REWIND, false);
+		putDefault(SonicConfiguration.LAUNCH_S3K_REWIND, "global");
 		putDefault(SonicConfiguration.LAUNCH_S3K_CROSS_GAME_SOURCE, "off");
-		putDefault(SonicConfiguration.LAUNCH_S3K_DEBUG_TOOLS, false);
+		putDefault(SonicConfiguration.LAUNCH_S3K_DEBUG_TOOLS, "global");
 		putDefault(SonicConfiguration.LAUNCH_S3K_ASPECT, "global");
 		putDefault(SonicConfiguration.LAUNCH_S3K_MAIN_CHARACTER, "sonic");
 		putDefault(SonicConfiguration.LAUNCH_S3K_SIDEKICK, "tails");

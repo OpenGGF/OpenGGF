@@ -1019,13 +1019,13 @@ class TestModManagerScreen {
     }
 
     @Test
-    void dirtyBackDefaultsToKeepAndExplicitDiscardRestoresLastSavedDraft() {
+    void dirtyBackOffersSaveDiscardOrKeepEditingAndDiscardRestoresLastSavedDraft() {
         var root = temp.resolve("discard");
         var screen = screen(catalog(List.of(descriptor("pack-one", "One", List.of(), List.of()))),
                 state(false, "pack-one"), new ModRuntimeFindingStore(), null, root);
         press(screen, Action.ACCEPT); // Enable draft.
         press(screen, Action.BACK);
-        press(screen, Action.ACCEPT); // Default Keep editing.
+        press(screen, Action.BACK); // Back from the prompt keeps editing.
         assertFalse(screen.closeRequested());
         assertTrue(enabled(screen, "pack-one"));
         assertFalse(Files.exists(root.resolve("modstate.json")));
@@ -1034,11 +1034,41 @@ class TestModManagerScreen {
         press(screen, Action.ACCEPT); // Disable a new unsaved draft.
         assertFalse(enabled(screen, "pack-one"));
         press(screen, Action.BACK);
-        press(screen, Action.RIGHT);
+        press(screen, Action.RIGHT); // Save -> Discard
         press(screen, Action.ACCEPT); // Explicit Discard.
         assertTrue(screen.closeRequested());
         assertTrue(enabled(screen, "pack-one"), "Discard restores saved enabled state, not startup");
         assertTrue(new ModStateStore(root.toAbsolutePath().normalize()).load().state().entries().getFirst().enabled());
+    }
+
+    @Test
+    void saveFromTheLeavePromptAppliesThenClosesAfterTheReload() {
+        var root = temp.resolve("prompt-save");
+        var screen = screen(catalog(List.of(descriptor("pack-one", "One", List.of(), List.of()))),
+                state(false, "pack-one"), new ModRuntimeFindingStore(), null, root);
+        press(screen, Action.ACCEPT); // Enable draft.
+        press(screen, Action.BACK);
+        press(screen, Action.ACCEPT); // Save is the default choice.
+        assertTrue(screen.consumeActivationRequested(), "Save applies like the Apply action");
+        assertFalse(screen.closeRequested(), "the reload reports failure before the screen closes");
+        assertTrue(new ModStateStore(root.toAbsolutePath().normalize()).load().state().entries().getFirst().enabled());
+        press(screen, Action.DOWN);
+        assertTrue(screen.closeRequested());
+    }
+
+    @Test
+    void saveFromTheLeavePromptStaysOpenWhenTheReloadFails() {
+        var root = temp.resolve("prompt-save-fail");
+        var screen = screen(catalog(List.of(descriptor("pack-one", "One", List.of(), List.of()))),
+                state(false, "pack-one"), new ModRuntimeFindingStore(), null, root);
+        press(screen, Action.ACCEPT);
+        press(screen, Action.BACK);
+        press(screen, Action.ACCEPT);
+        assertTrue(screen.consumeActivationRequested());
+        screen.activationFailed("broken jar");
+        press(screen, Action.DOWN);
+        assertFalse(screen.closeRequested(), "a failed reload keeps the manager open with its message");
+        assertTrue(screen.statusMessage().contains("broken jar"));
     }
 
     private static void applyFromList(ModManagerScreen screen) {

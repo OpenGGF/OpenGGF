@@ -13,7 +13,7 @@ final class EngineSettingLabels {
 
     static String label(SonicConfiguration key) {
         return switch (key) {
-            case DISPLAY_ASPECT -> "Screen shape";
+            case DISPLAY_ASPECT -> "Aspect ratio";
             case DISPLAY_WINDOW_AUTOSIZE -> "Automatic window size";
             case SCREEN_WIDTH -> "Window width";
             case SCREEN_HEIGHT -> "Window height";
@@ -45,14 +45,15 @@ final class EngineSettingLabels {
             case ROMS_DIRECTORY -> "ROM folder";
             case ROMS_PREFER_COMPOSITE -> "Prefer separate S3 + S&K images";
             case DEFAULT_ROM -> "Default game";
-            case MAIN_CHARACTER_CODE -> "Main character";
-            case SIDEKICK_CHARACTER_CODE -> "Companion character";
+            case MAIN_CHARACTER_CODE -> "Direct-launch character";
+            case SIDEKICK_CHARACTER_CODE -> "Direct-launch sidekick";
             case DATA_SELECT_EXTRA_PLAYER_COMBOS -> "Extra character teams";
             case MASTER_TITLE_SCREEN_ON_STARTUP -> "Start at the OpenGGF hub";
             case TITLE_SCREEN_ON_STARTUP -> "Show the original title screen";
             case SHOW_LEGAL_DISCLAIMER_ON_STARTUP -> "Show the startup disclaimer";
             case LEVEL_SELECT_ON_STARTUP -> "Start at level select";
-            case LIVE_REWIND_ENABLED -> "Enable live rewind";
+            case LIVE_REWIND_ENABLED -> "Rewind";
+            case DEBUG_VIEW_ENABLED -> "Debug tools";
             case LOAD_TIME_SIMULATION -> "ROM loading timing";
             case CONFIG_PRESERVE_EXPLICIT_DEFAULTS -> "Keep explicit default settings";
             case TEST_MODE_ENABLED -> "Start in trace replay mode";
@@ -80,7 +81,9 @@ final class EngineSettingLabels {
         else if (section.startsWith("debug.trace")) prefix = "Trace: ";
         else if (section.startsWith("debug.crossGame")) prefix = "Cross-game: ";
         String words = words(meta.leaf());
-        if (meta.type() == ConfigType.KEY && !words.toLowerCase(Locale.ROOT).contains("key")) words += " shortcut";
+        // Player buttons read as "Player 1 Up"; engine hotkeys get "shortcut".
+        if (meta.type() == ConfigType.KEY && !section.startsWith("input.player")
+                && !words.toLowerCase(Locale.ROOT).contains("key")) words += " shortcut";
         return prefix + words;
     }
 
