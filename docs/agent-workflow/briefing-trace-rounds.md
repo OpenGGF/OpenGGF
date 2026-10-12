@@ -71,6 +71,15 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Compare the full assertion, not its bounded summary (2026-10-12, Java 25
+migration): a 2,915-character rewind assertion was truncated at 2,048 in the
+runner's `message`; its complete assertion remained in `detail`. Across JVMs,
+incidental `RewindObjectStateBlob@...` identity strings differed while frame,
+slots, object kinds and serialized-state differences matched. Normalize only
+those exact nonsemantic tokens when justified; never strip arbitrary hexadecimal
+values, addresses or gameplay fields to manufacture equality. Retain the
+normalization rule and compare failure identities and exception types as well.
+
 FFmpeg PCM length can differ from a Vorbis stream's declared length (2026-10-09,
 Eggman's Sky compression): a generated 9,606-frame mono control retained exactly
 9,606 frames in its Ogg granule count, while FFmpeg's native and libvorbis decoders

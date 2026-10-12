@@ -62,7 +62,10 @@ orchestrator owns tooling, documentation, integration and validation.
 
 The main cost is verification across test instrumentation, SDK compilation,
 JNI/graphics/audio and platform packaging. The ordinary suite and guards historically
-cost about 24 plus 10 minutes per tree; baseline and candidate both need coverage.
+cost about 24 plus 10 minutes per tree. This task's complete ROM-backed ordinary
+runs actually took 65.2 minutes on Java 21 and 57.4 minutes on Java 25, with
+5.3 and 4.7 minutes for guards. These single runs had different test counts and
+shared-host load; they are verification costs, not a Java 25 performance benchmark.
 Local Linux evidence cannot certify Windows/macOS native packages. The parent will
 open the PR and run the release workflow's nonpublishing manual dispatch on the
 candidate branch (`validate_roms=false`) alongside PR checks; hosted packaging
@@ -83,8 +86,9 @@ is separate from local ROM/trace evidence. User gameplay acceptance remains pend
 
 ## Validation evidence
 
-The initial implementation is committed as `84fe179b4`; verification and the
-compatibility fixes discovered by hosted execution remain in progress.
+The initial implementation is committed as `84fe179b4`; subsequent compatibility
+fixes and completed verification are recorded below. Local ordinary/trace failures
+remain explicitly attributed to the unchanged baseline, not described as passes.
 
 Completed focused evidence on the task worktree with Temurin 25.0.4.1+1:
 
@@ -345,3 +349,177 @@ is unchanged. A new deterministic case holds the outbound mailbox monitor during
 a real 257-packet overflow, proves closure is visible before event publication,
 then releases the monitor and checks one overflow event, an empty queue and
 retired workers. No production source changes are involved.
+
+## Completed destination comparison
+
+The actual unchanged production baseline is `e76a380c3d0c8e3769fcdb745f27ef3d8889c8fe`.
+The frozen candidate tested locally and in the successful hosted workflow is
+`80f3d7c28aa7b0255521b8af130a7c4c3ed9a550`. The later develop
+`15f3cf371a49e9755568588b00b1f515225aaa4d` changes only the mod audit,
+remediation plan and backlog; merge `555c0ce71` preserves them and changes the
+plan's active toolchain requirement to Java 25. Its historical Java 21 audit
+measurements remain intact. The executable baseline is therefore unchanged;
+documentation reconciliation does not require repeating these engine checks.
+
+All local Maven invocations unset inherited `LD_LIBRARY_PATH`. The baseline uses
+system OpenJDK 21.0.12.1; the candidate uses task-owned Temurin 25.0.4.1+1 via
+`JAVA_HOME` and `PATH`. Both actual runner preflights passed Java, Lua 5.4 and
+PowerShell. The candidate plan selected all 3,097 ordinary classes and all ten
+categories, followed by all guards in a fresh JVM, without manually narrowing
+the selection. Queue statistics had risen to about 64 minutes median and
+91 minutes p95 for ordinary work, so both final runs used a 120-minute limit
+per invocation and the existing 10-minute no-output limit; queue waiting does
+not count. The original f9 results above are historical, not the final baseline.
+
+```bash
+# Unchanged e76 baseline, in its own detached cow worktree, Java 21:
+env -u LD_LIBRARY_PATH LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/run_categories.py --category all --max-minutes 120 --run
+# Frozen 80f candidate, JAVA_HOME/PATH selecting the owned JDK 25:
+env -u LD_LIBRARY_PATH LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/run_categories.py \
+  --base e76a380c3d0c8e3769fcdb745f27ef3d8889c8fe --max-minutes 120 --run
+```
+
+Both recorded ordinary commands supplied the original absolute ROM inputs below.
+`OPENGGF_MAIN` denotes the original main checkout's absolute path; the executed
+commands contained resolved paths, not this documentation placeholder:
+
+```text
+-Dsonic1.rom.path=${OPENGGF_MAIN}/Sonic The Hedgehog (W) (REV01) [!].gen
+-Dsonic2.rom.path=${OPENGGF_MAIN}/Sonic The Hedgehog 2 (W) (REV01) [!].gen
+-Ds3k.rom.path=${OPENGGF_MAIN}/Sonic and Knuckles & Sonic 3 (W) [!].gen
+```
+
+| Completed lane | Reports | Case executions | Failures | Errors | Skips | Seconds |
+|---|---:|---:|---:|---:|---:|---:|
+| e76 Java 21 ordinary | 3,095 | 26,927 | 26 | 0 | 63 | 3,913.84 |
+| e76 Java 21 guards | 87 | 674 | 0 | 0 | 0 | 317.95 |
+| 80f Java 25 ordinary | 3,095 | 26,932 | 26 | 0 | 63 | 3,446.22 |
+| 80f Java 25 guards | 87 | 676 | 0 | 0 | 0 | 283.72 |
+
+These are case executions, including parameterized/repeated invocations, not
+unique test classes. All 26 ordinary failure identities and exception types
+match the historical route rows above, excluding the historical stale UI and
+inherited-loader-environment failures. Twenty-five full assertions match byte
+for byte. The remaining `TestSszTailsColdRouteCapture.
+coldSoloTailsDefeatsBothReplicasAndRidesTheirTeleporters(int)[2]` assertion is
+2,915 baseline / 2,914 candidate characters; the short runner message is truncated
+at 2,048, so comparison used the full assertion in `detail`. Only incidental
+`RewindObjectStateBlob@[0-9a-f]+` identity tokens differ. Normalizing exactly those
+tokens gives identical SHA-256
+`a6ba1eedc5b76ccb078dc97b50f53b9a320c61e41fb1a6d40cad3021fd43a026`.
+Frame 4018, slot bits 24/29, EggRobo child kinds, counts, coordinates and every
+serialized-state difference remain unchanged; no general hexadecimal/address
+normalization was used. There are no new or worsened observed failures.
+
+All 63 skip identities and semantic reasons match (JDK stack-frame line numbers
+differ). They comprise 32 inapplicable Infinite Sonic platform/flyer routes,
+five graphics prerequisites, one CPZ spin-tube assumption and 25 opt-in
+capture/diagnostic/native/local-fixture cases. None is a missing-ROM skip.
+The required AIZ skip-headless, both level-loading classes, bootstrap resolver
+and decoding checks passed all 60 cases without skips on both runtimes.
+The five added ordinary executions are the cross-JDK benchmark comparator,
+SFX overflow, transport publication, Java 25 bytecode validator and fixed-audio-
+runtime rejection regressions. The two added guards cover Java-version formats
+and Maven-selected packaging JVMs. The separate final focused command
+`maven_queue.py --lean -Dmse=off -Dtest=TestGolfTransport,TestModTestKitDistributionGuard test`
+passed all 16 transport and two distribution cases, with zero skips.
+
+Run IDs `20261012T113340Z-476f1bc8` and `20261012T124612Z-c10a5587` were inspected,
+compared and acknowledged through the runner; both diagnostic directories were
+deleted. The clean detached baseline worktree was removed after accounting for
+generated outputs and links. No original ROM or shared configuration was removed.
+
+## Trace, graphics and native packaging evidence
+
+Both runtimes ran the same queued, single-fork command with the three absolute
+ROM properties above:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay \
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+  -Dtest=TestS1Ghz1TraceReplay,TestS2Ehz1TraceReplay,TestS3kAizTraceReplay \
+  <the three quoted absolute ROM properties> test
+```
+
+Each completed 18 cases with one failure, zero errors and zero skips. S1 GHZ1
+and S2 EHZ1 passed; 15 of 16 AIZ cases passed. The failing AIZ `replayMatchesTrace`
+assertion is identical: 57 errors, zero warnings, first error frame 20302,
+`player_animation_id`, expected `0x0000`, actual `0x0005`. This compares the
+reported assertion and observed frontier, not an unexamined per-row trace diff.
+No gameplay change or trace-frontier movement was made.
+
+The first five-class graphics attempt with `EGL_PLATFORM=surfaceless` skipped
+all five because no suitable EGLConfig existed; build success was not graphics
+coverage. Existing display `:0` reported accelerated AMD Radeon RX 9070 XT,
+Mesa 26.2.4, OpenGL 4.6. Repeating only those checks through their supported
+native-display mode passed all five, zero skips, in 23.465 seconds:
+
+```bash
+env -u LD_LIBRARY_PATH -u EGL_PLATFORM \
+  python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.test.gl.native=true \
+  -Dtest=TestForegroundWindowRendering,TestSceneRenderer,TestBackgroundScrollWrapPixels,TestShaderPixelCentreSampling,TestArenaMaskRenderer test
+```
+
+After consuming test evidence, a clean target was built with task-owned GraalVM
+Community 25.0.2+10.1, without changing system alternatives. `JAVA_HOME`,
+`GRAALVM_HOME` and `PATH` selected that toolchain:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off clean
+MAVEN_OPTS=-Xmx2g python3 tools/testing/maven_queue.py -Dmse=off \
+  -Pnative -DskipTests '-DjvmArgs=-Xmx6g,-XX:ActiveProcessorCount=4' package
+```
+
+Package completed in 2m22s; native-image generation took 1m8s and reported
+4.58 GB peak RSS. The actual command contained `-J-Xmx6g` and
+`-J-XX:ActiveProcessorCount=4`, retaining the configured compatibility architecture
+and runtime initialization. The Linux x64 ELF's dynamic dependencies resolved.
+The Linux archive assembled from this clean output passed the exact release
+workflow package-smoke script, including executable, configuration, native
+libraries, notices and absence of bundled code mods. Retained user-test outputs:
+`target/OpenGGF`, `target/OpenGGF-linux.tar.gz` and the extracted
+`target/linux-package/OpenGGF/` directory. No interactive native launch was
+claimed; launching the engine can write configuration, and the task worktree's
+config is shared. The extracted package has its own copied config and requires
+the user's ROM paths.
+
+LWJGL 3.3.3 still emits the JDK's terminal-deprecation warning for
+`Unsafe.objectFieldOffset`; GraalVM also warns that its bundled
+`JNIConfigurationResources` / `ReflectionConfigurationResources` metadata options
+will require explicit unlocking in a future version. Current compilation,
+native loading and graphics passed without experimental Byte Buddy flags or
+warning suppression. These future dependency-maintenance costs remain visible.
+
+## Hosted acceptance and handoff boundary
+
+The nonpublishing [Release run 38249906448](https://github.com/OpenGGF/OpenGGF/actions/runs/38249906448)
+completed successfully at exact `80f3d7c28`, with `validate_roms=false`:
+
+- Ordinary: 23,552 executions, zero failures/errors, 4,288 skips, 12m00s.
+- Fresh structural guards: 676 executions, zero failures/errors/skips, 10m25s.
+- SFX 3, OwnedMocks 2 and transport 16 cases all passed without skips.
+- Windows x64, Linux x64 and macOS 15 ARM native compilation, archive packaging
+  and package smoke checks passed; universal JVM JAR packaging/smoke passed.
+- All four artifacts were uploaded. Release and notification jobs were skipped;
+  nothing was published.
+
+Hosted skips cover the cloud's missing ROM/display/media and opt-in prerequisites;
+they do not replace the local ROM/trace evidence above. Cross-platform package
+success does not certify interactive gameplay on those operating systems, macOS
+x64 JVM execution, experimental native-mod execution, every trace fixture or
+every opt-in benchmark. The hermetic audio wrapper's fixed `/usr/bin/java` remains
+Java 21 on this host; its Java 25 rejection contract was tested, but a full
+fixed-runtime Java 25 audio capture was not performed. No performance gain is
+claimed. User gameplay testing and merge remain pending.
+
+The team workers and single combined read-only reviewer are complete. Source
+commits are `84fe179b4`, `a6103d57e`, reconciled merge `eb874411a`, guard expectation
+`efe80a0da`, transport regression `80f3d7c28`, and documentation merge `555c0ce71`.
+The parent verified the actual PR policy range through 80f successfully (12,367
+tree entries); final documentation policy is checked again before PR delivery.
+The unmerged feature worktree/branch, native outputs and owned Temurin/GraalVM
+toolchains are intentionally retained for user testing. Consumed raw logs and
+runner diagnostics are not archived. The parent owns PR creation and watching
+its mandatory checks; this record does not claim the PR has already passed.
