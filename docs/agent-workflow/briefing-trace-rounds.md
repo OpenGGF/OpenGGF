@@ -71,6 +71,15 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Ordinary headless properties can unintentionally request exclusive admission
+(2026-10-12, Hardened PR #214 merge): the queue treats `JAVA_TOOL_OPTIONS` as an
+unmeasured JVM override, even when it contains only backend/headless properties.
+Pass those test properties as Maven `-D` arguments with `-Dmse=off`, retaining the
+isolated runtime directory and desktop/audio socket denial. The corrected run
+used resource-aware admission and completed the same focused selection. Heap,
+fork and profiling overrides still require their measured or exclusive lane;
+this does not authorize moving such overrides to evade queue safeguards.
+
 A headless palette owner check needs the renderer's resolution boundary
 (2026-10-10, Starpost seasonal acts): HeadlessTestRunner queues palette writes
 but does not draw, so ownerAt still reports none and live RGB remains unchanged.
@@ -564,6 +573,16 @@ with `ThreadMXBean` around loop and rendering separately, excluding screenshot
 readback/encoding and CSV writes, after a fixed warmup. Match controller route,
 rewind setting, viewport and sampled state before comparing. Bytes/frame is not
 a frame-time or GC-pause improvement. `GameplayAllocationTool` preserves this probe.
+
+Retained custom-module fixture clock (Post Two Ambush, 2026-10-07): opening a
+`GameplayModeContext` before `HeadlessTestFixture.build()` leaves that mode attached
+to its original engine context, while the fixture's `resetPerTest()` replaces the
+process engine root. An apparently reasonable `EngineTiming.vIntRunCounter()`
+comparison can therefore inspect a different, unbound clock from the snapshot's
+object owner. Retain/rebind the owning engine context across the fixture reset,
+assert that the native object clock is bound, and compare the whole registry over
+two restore/forward cycles. This is a fixture ownership hazard, not evidence that
+production rewind or its polling cadence is wrong.
 
 SOZ JFR follow-up (2026-10-08): sampling events identify their observed thread in
 `sampledThread`, while allocation events use `eventThread`. A generic thread scrub

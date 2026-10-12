@@ -2,6 +2,9 @@ package com.openggf.mods.code;
 
 import com.openggf.game.GameModule;
 import com.openggf.game.patch.GamePatch;
+import com.openggf.mods.ModRuntimeFindingStore;
+import com.openggf.mods.ModStateSaveResult;
+import com.openggf.mods.runtime.OwnerBoundGamePatch;
 import com.openggf.game.GameServices;
 import com.openggf.game.patch.GameplayLaunchRequest;
 import com.openggf.game.patch.LogicalRomResolver;
@@ -57,10 +60,13 @@ public final class DevelopmentPatchLoader {
             throw new IOException("Could not load entrypoint " + manifest.entrypoint(), e);
         }
         ModRegistrationPlan frozen = plan;
-        // An explicitly supplied development jar remains owner-attributed in capture tools.
-        var boundary = new ModFaultBoundary(java.util.Map.of(), new com.openggf.mods.ModRuntimeFindingStore(),
-                disabled -> new com.openggf.mods.ModStateSaveResult.Saved(), disabled -> { });
+        var disabled = new java.util.concurrent.atomic.AtomicBoolean();
+        // A trusted one-process developer run has no installed catalogue state.
+        // Callback faults still terminate capture and prevent this owner reapplying.
+        var boundary = new ModFaultBoundary(java.util.Map.of(), new ModRuntimeFindingStore(),
+                owners -> new ModStateSaveResult.Saved(), owners -> disabled.set(true));
         return base -> {
+            if (disabled.get()) throw new IllegalStateException("Development mod is pending-disabled: " + frozen.ownerModId());
             String game = base.getGameId().code();
             ModRegistrationPlan nativePlan = frozen.stockScenePlans().stream()
                     .filter(candidate -> game.equals(candidate.baseGameId()))

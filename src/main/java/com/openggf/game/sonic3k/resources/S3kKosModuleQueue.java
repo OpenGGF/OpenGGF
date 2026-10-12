@@ -524,6 +524,11 @@ public final class S3kKosModuleQueue {
         }
     }
 
+    /** A ready result is still entry work until the fresh-level owner consumes it. */
+    boolean hasFreshLevelHandoffs() {
+        return !freshLevelHandoffHandles.isEmpty();
+    }
+
     List<HardwareWorkHandle> captureFreshLevelHandoffHandles() {
         return freshLevelHandoffHandles.stream()
                 .sorted(java.util.Comparator.comparingLong(HardwareWorkHandle::ordinal))

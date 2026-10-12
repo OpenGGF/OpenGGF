@@ -90,6 +90,13 @@ See the detailed guides for narrower contracts; roadmap entries do not imply imp
 
 ## Experimental projects
 
+- [Post Two Ambush](../../examples/hardened-s3k/README.md) — a bounded native
+  Mushroom Hill encounter with a telegraphed ROM-art sentry, one safe recovery
+  ring, the physical checkpoint, retry and title flow. The
+  [authoring walkthrough](quickstarts/hardened-s3k.md) explains transactional
+  placement, session launch and rewind. Supports solo Sonic, donor off, 320px
+  and no-save; later Hardened stages remain future work.
+
 - [Mutator Lab](../../examples/example-mutators/README.md) — an eleven-effect
   catalogue for Sonic 1, Sonic 2 and Sonic 3 & Knuckles, with common widgets,
   explicit live/load scopes and rewind-separated preferences. See the

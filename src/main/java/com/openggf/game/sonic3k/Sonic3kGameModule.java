@@ -201,7 +201,10 @@ public class Sonic3kGameModule implements GameModule {
     @Override
     public RuntimeArtCoordinator createRuntimeArtCoordinator(
             HardwareTimingService timing) {
-        return new S3kRuntimeArtCoordinator(timing);
+        // Resolve the module-owned provider only when a controlled entry queries
+        // readiness; stock coordinator construction keeps its initialization order.
+        return new S3kRuntimeArtCoordinator(timing,
+                () -> ((Sonic3kObjectArtProvider) getObjectArtProvider()).levelEntryArtReady());
     }
 
     /** Generator-owned measured manifest; never hand-edited. */

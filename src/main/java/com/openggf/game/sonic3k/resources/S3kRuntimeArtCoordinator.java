@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.logging.Logger;
+import java.util.function.BooleanSupplier;
 
 /** S3K-owned facade for the direct Kosinski FIFO and KosM parent queue. */
 public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
@@ -26,6 +27,7 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
 
     private final S3kKosDecompressionQueue directQueue;
     private final S3kKosModuleQueue moduleQueue;
+    private final BooleanSupplier objectEntryArtReady;
     private FreshLevelRuntimeArtRequest deferredFreshLevelRuntimeArt;
     private boolean deferredFreshLevelPublicationBlockedReported;
 
@@ -44,9 +46,27 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
     }
 
     public S3kRuntimeArtCoordinator(HardwareTimingService timing) {
+        this(timing, () -> true);
+    }
+
+    public S3kRuntimeArtCoordinator(HardwareTimingService timing,
+                                    BooleanSupplier objectEntryArtReady) {
+        this.objectEntryArtReady = Objects.requireNonNull(objectEntryArtReady, "objectEntryArtReady");
         directQueue = new S3kKosDecompressionQueue(
                 Objects.requireNonNull(timing, "timing"));
         moduleQueue = new S3kKosModuleQueue(timing, directQueue);
+    }
+
+    @Override
+    public boolean levelEntryArtReady() {
+        // Physical FIFO capacity alone excludes prepared-but-unadmitted parents.
+        // A ready fresh-level result also needs its native consumer's handoff.
+        return deferredFreshLevelRuntimeArt == null
+                && !moduleQueue.hasPendingPhysicalModules()
+                && !moduleQueue.modulesLeft()
+                && !directQueue.decompressionsPending()
+                && !moduleQueue.hasFreshLevelHandoffs()
+                && objectEntryArtReady.getAsBoolean();
     }
 
     public static S3kRuntimeArtCoordinator from(

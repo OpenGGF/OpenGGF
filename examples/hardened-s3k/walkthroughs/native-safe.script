@@ -1,0 +1,45 @@
+# Native keyboard walkthrough: extra neutral entry margin before movement.
+# This is input waiting, never an engine readiness/physics gate.
+# Post Two Ambush: title -> lesson -> real post -> committed aim
+# -> safe retreat/two volleys -> exit -> native checkpoint retry
+# -> title -> separate fresh attempt -> title. Native solo Sonic,320,donor off.
+# Authored controller input only; final chapter frames come from observed CSV.
+# Title -> lesson -> native local entrance.
+60 -
+1 D
+1 -
+1 A
+120 -
+1 A
+150 -
+# Touch the native post and trigger the warning; brake before the lock.
+57 R
+6 L
+30 -
+# Retreat after the aim commits, wait for both volleys/recovery, then exit.
+35 L
+200 -
+100 R
+120 -
+# Native physical-checkpoint retry; return through the ambush menu.
+1 A
+90 -
+1 S
+15 -
+1 D
+1 -
+1 D
+1 -
+1 A
+90 -
+# A second full fresh launch is distinct from post retry.
+1 A
+180 -
+1 S
+15 -
+1 D
+1 -
+1 D
+1 -
+1 A
+90 -

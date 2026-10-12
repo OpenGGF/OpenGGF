@@ -29,6 +29,12 @@ public final class ModApiVersion {
      * explicit assembly causes and common
      * modal configuration presentation. The unpublished candidate remains 0.7.0.
      * Detached scene backgrounds reuse stock scanline scroll handlers with independent state.
+     * Owner-derived bounded native S2/S3K placement plans retain explicit native
+     * rings and add local registered objects and bounded native recovery rings without
+     * replacing native level owners.
+     * Native encounters can opt into controlled player input, bounded fresh-entry
+     * centre coordinates and launch-boundary no-save isolation. A query-only
+     * native entry-art gate includes deferred submissions and owner consumption.
      * Full-song and selected-part synthesis expose cancellable host jobs with
      * progress, a ten-minute duration cap and a 256 MiB stereo PCM budget.
      * Scene audio also starts supplied-ROM music live, preserving native intros/loops

@@ -46,6 +46,89 @@ class TestS3kKosModuleQueue {
     Path tempDir;
 
     @Test
+    void levelEntryReadinessIncludesDeferredAndUnclaimedFreshWork() throws Exception {
+        Path romPath = tempDir.resolve("entry-empty-kosm.gen");
+        Files.write(romPath, EMPTY_KOSM);
+        try (Rom rom = new Rom()) {
+            assertTrue(rom.open(romPath.toString()));
+            HardwareTimingService timing = new HardwareTimingService();
+            S3kRuntimeArtCoordinator coordinator = new S3kRuntimeArtCoordinator(timing);
+            assertTrue(coordinator.levelEntryArtReady());
+            coordinator.deferFreshLevelRuntimeArt(rom, 0, 0);
+            assertEquals(List.of(), timing.pendingHandles());
+            assertFalse(coordinator.levelEntryArtReady(),
+                    "a producer can own work before any hardware handle exists");
+            var timingBefore = timing.capture();
+            var before = coordinator.capture();
+            for (int cycle = 0; cycle < 2; cycle++) {
+                timing.restore(timingBefore);
+                coordinator.restore(before);
+                assertFalse(coordinator.levelEntryArtReady());
+                coordinator.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
+                assertFalse(coordinator.levelEntryArtReady());
+                for (int row = 0; row < 16 && coordinator.moduleQueue().modulesLeft(); row++) {
+                    romFrameModuleStep(coordinator.moduleQueue());
+                }
+                assertFalse(coordinator.moduleQueue().modulesLeft());
+                assertFalse(coordinator.moduleQueue().hasPendingPhysicalModules());
+                assertFalse(coordinator.levelEntryArtReady(),
+                        "prepared terrain must still pass its marked native handoff");
+                coordinator.moduleQueue().claimReadyFreshLevelHandoffs();
+                assertTrue(coordinator.levelEntryArtReady());
+                assertEquals(List.of(), timing.pendingHandles());
+            }
+        }
+    }
+
+    @Test
+    void levelEntryReadinessIncludesPreparedParentsAndDirectWork() throws Exception {
+        Path romPath = tempDir.resolve("entry-prepared-kosm.gen");
+        Files.write(romPath, ABC_KOSM);
+        try (Rom rom = new Rom()) {
+            assertTrue(rom.open(romPath.toString()));
+            HardwareTimingService timing = new HardwareTimingService();
+            // Pure queue unit stimulus: defer admission of a real prepared job.
+            // This policy supplies no production gameplay or creator readiness.
+            timing.beginRecordedAdmission();
+            S3kRuntimeArtCoordinator coordinator = new S3kRuntimeArtCoordinator(timing);
+            var parent = coordinator.moduleQueue().queue(rom, 0, 0x500);
+            assertFalse(coordinator.levelEntryArtReady());
+            // An empty parent makes the physical/prepared distinction explicit.
+            Path emptyPath = tempDir.resolve("entry-empty-prepared.gen");
+            Files.write(emptyPath, EMPTY_KOSM);
+            try (Rom empty = new Rom()) {
+                assertTrue(empty.open(emptyPath.toString()));
+                HardwareTimingService held = new HardwareTimingService();
+                held.beginRecordedAdmission();
+                S3kRuntimeArtCoordinator prepared = new S3kRuntimeArtCoordinator(held);
+                var handle = prepared.moduleQueue().queue(empty, 0, 0x500);
+                romFrameModuleStep(prepared.moduleQueue());
+                assertFalse(prepared.moduleQueue().hasPendingPhysicalModules());
+                assertFalse(prepared.moduleQueue().isReady(handle));
+                assertFalse(prepared.levelEntryArtReady());
+            }
+            HardwareTimingService directTiming = new HardwareTimingService();
+            S3kRuntimeArtCoordinator direct = new S3kRuntimeArtCoordinator(directTiming);
+            direct.directQueue().queueStandardKos(rom, 2, 0);
+            assertFalse(direct.levelEntryArtReady(), "ordinary direct work is part of entry loading");
+            assertFalse(coordinator.moduleQueue().isReady(parent));
+        }
+    }
+
+    @Test
+    void levelEntryReadinessQueriesTheNativeProducerWithoutServicingIt() {
+        assertTrue(com.openggf.game.RuntimeArtCoordinator.NONE.levelEntryArtReady());
+        var producerReady = new java.util.concurrent.atomic.AtomicBoolean();
+        HardwareTimingService timing = new HardwareTimingService();
+        S3kRuntimeArtCoordinator coordinator = new S3kRuntimeArtCoordinator(timing, producerReady::get);
+        assertFalse(coordinator.levelEntryArtReady());
+        assertEquals(List.of(), timing.pendingHandles());
+        producerReady.set(true);
+        assertTrue(coordinator.levelEntryArtReady());
+        assertEquals(List.of(), timing.pendingHandles());
+    }
+
+    @Test
     void sequentialBatchPreflightsEveryArchiveBeforeSubmitting() throws Exception {
         byte[] fixture = new byte[ABC_KOSM.length + 2];
         System.arraycopy(ABC_KOSM, 0, fixture, 0, ABC_KOSM.length);

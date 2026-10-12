@@ -5,6 +5,7 @@ import com.openggf.game.EmeraldRewardKind;
 import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.LevelLoadMode;
 import com.openggf.game.SpecialStageEntryRequest;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.level.BigRingReturnState;
@@ -73,7 +74,7 @@ final class SpecialStageTransitionSupport {
             levelManager.markSanctuaryReentry(stageIndex, false);
         }
         levelManager.consumeSpecialStageReturnLevelReloadRequest();
-        levelManager.loadCurrentLevel();
+        levelManager.loadCurrentLevel(LevelLoadMode.FULL, true);
         return enteredFromSanctuary(rewardKind);
     }
 

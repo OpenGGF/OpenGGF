@@ -35,7 +35,8 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
                                   Map<String, java.util.function.Supplier<com.openggf.game.GameServiceBundle>> serviceBundles,
                                   Map<String, com.openggf.level.LevelPatch> decodedLevelPatches,
                                   int contributionLimit,
-                                  Map<String, com.openggf.mods.mutators.OwnedMutator> mutators) {
+                                  Map<String, com.openggf.mods.mutators.OwnedMutator> mutators,
+                                  Map<Integer, com.openggf.level.LevelPlacementPlan> levelPlacements) {
     public ModRegistrationPlan {
         if (contributionLimit < 1 || contributionLimit > com.openggf.io.ModInputLimits.production().maxCollectionEntries())
             throw new IllegalArgumentException("Invalid contribution limit");
@@ -50,6 +51,21 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
         }
         if (startupScene != null && baseGameId == null) {
             throw new IllegalArgumentException("Startup scenes are available to patch mods only");
+        }
+        levelPlacements = Map.copyOf(Objects.requireNonNull(levelPlacements, "levelPlacements"));
+        if (levelPlacements.size() > 8 || !levelPlacements.isEmpty()
+                && !("s2".equals(baseGameId) || "s3k".equals(baseGameId))) {
+            throw new IllegalArgumentException("At most eight stock S2/S3K level placement plans are supported");
+        }
+        for (var entry : levelPlacements.entrySet()) {
+            if (entry.getKey() < 0 || entry.getKey() > 255) {
+                throw new IllegalArgumentException("Invalid stock level placement index");
+            }
+            for (var addition : entry.getValue().additions()) {
+                if (!objectFactories.containsKey(com.openggf.game.ModKeySyntax.requireOwnedKey(ownerModId, addition.localKey()))) {
+                    throw new IllegalArgumentException("Placement names an unregistered owner-local object");
+                }
+            }
         }
         Objects.requireNonNull(ownerModId, "ownerModId");
         if ((standaloneModule == null) == (baseGameId == null)) {
@@ -129,7 +145,7 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
         if ("any".equals(baseGameId) && (!objectFactories.isEmpty()
                 || !objectArt.isEmpty() || (!explicitPatches.isEmpty() && mutators.isEmpty()) || !zones.isEmpty()
                 || !objectPreviewArtKeys.isEmpty() || !characters.isEmpty() || !romObjectArt.isEmpty()
-                || !launchTeams.isEmpty() || !inputFilters.isEmpty() || !hudProfiles.isEmpty() || !serviceBundles.isEmpty() || !decodedLevelPatches.isEmpty())) {
+                || !launchTeams.isEmpty() || !inputFilters.isEmpty() || !hudProfiles.isEmpty() || !serviceBundles.isEmpty() || !decodedLevelPatches.isEmpty() || !levelPlacements.isEmpty())) {
             throw new IllegalArgumentException(
                     "baseGame any permits a shared startup scene, title entry or typed mutator catalogue with stock-game decorators; game-specific content is forbidden");
         }
@@ -146,7 +162,7 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
                 explicitPatches.stream().filter(patch -> game.equals(patch.baseGameId())).toList(),
                 zones, preparedZones, objectPreviewArtKeys, characters, null, romObjectArt,
                 launchTeams, inputFilters, hudProfiles, startupScene, requiredDisplayAspect,
-                serviceBundles, decodedLevelPatches, contributionLimit, mutators)).toList();
+                serviceBundles, decodedLevelPatches, contributionLimit, mutators, levelPlacements)).toList();
     }
 
     private static void validatePolicies(String ownerModId,
@@ -161,6 +177,34 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
                 throw new IllegalArgumentException("Null " + policyName + " policy");
             }
         }
+    }
+
+    /** Compatibility constructor for the canonical shape before native placement plans. */
+    public ModRegistrationPlan(String ownerModId,
+            String baseGameId,
+            Map<String, ObjectFactory> objectFactories,
+            Map<String, BakedSheetRef> objectArt,
+            Map<String, BakedSheetReader.BakedSheet> preparedObjectArt,
+            List<GamePatch> explicitPatches,
+            List<ModZoneContribution> zones,
+            List<PreparedModZone> preparedZones,
+            Map<String, String> objectPreviewArtKeys,
+            Map<CharacterKey, CharacterDefinition> characters,
+            com.openggf.game.GameModule standaloneModule,
+            Map<String, RomArtRequest> romObjectArt,
+            Map<com.openggf.game.ZoneKey.Mod,
+                                          com.openggf.game.GameplayLaunchTeam> launchTeams,
+            Map<com.openggf.game.ZoneKey.Mod,
+                                          com.openggf.game.GameplayInputFilter> inputFilters,
+            Map<com.openggf.game.ZoneKey.Mod,
+                                          com.openggf.level.objects.HudProfile> hudProfiles,
+            com.openggf.mods.scene.ModSceneFactory startupScene,
+            String requiredDisplayAspect,
+            Map<String, java.util.function.Supplier<com.openggf.game.GameServiceBundle>> serviceBundles,
+            Map<String, com.openggf.level.LevelPatch> decodedLevelPatches,
+            int contributionLimit,
+            Map<String, com.openggf.mods.mutators.OwnedMutator> mutators) {
+        this(ownerModId, baseGameId, objectFactories, objectArt, preparedObjectArt, explicitPatches, zones, preparedZones, objectPreviewArtKeys, characters, standaloneModule, romObjectArt, launchTeams, inputFilters, hudProfiles, startupScene, requiredDisplayAspect, serviceBundles, decodedLevelPatches, contributionLimit, mutators, Map.of());
     }
 
     /** Compatibility constructor for the pre-mutator canonical shape. */
@@ -358,7 +402,7 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
                 || !characters.isEmpty() || !romObjectArt.isEmpty()
                 || !launchTeams.isEmpty() || !inputFilters.isEmpty() || !hudProfiles.isEmpty()
                 || startupScene != null || requiredDisplayAspect != null || !mutators.isEmpty()
-                || !serviceBundles.isEmpty() || !decodedLevelPatches.isEmpty();
+                || !serviceBundles.isEmpty() || !decodedLevelPatches.isEmpty() || !levelPlacements.isEmpty();
     }
 
     /** Resolves and validates all declared sheets before the contribution is published. */
@@ -379,7 +423,7 @@ public record ModRegistrationPlan(String ownerModId, String baseGameId,
         return new ModRegistrationPlan(ownerModId, baseGameId, objectFactories, objectArt,
                 prepared, explicitPatches, zones, preparedZones,objectPreviewArtKeys,characters,
                 standaloneModule, romObjectArt, launchTeams, inputFilters, hudProfiles, startupScene,
-                requiredDisplayAspect, serviceBundles, decodedLevelPatches, contributionLimit, mutators);
+                requiredDisplayAspect, serviceBundles, decodedLevelPatches, contributionLimit, mutators, levelPlacements);
     }
 
     /** Resolves all level exports while the bounded creator view is still alive. */

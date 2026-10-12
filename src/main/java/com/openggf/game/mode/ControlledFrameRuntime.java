@@ -49,14 +49,19 @@ public final class ControlledFrameRuntime {
                         var frameContext = LevelFrameContext.from(context);
                         LevelFrameStep.updateTimers(frameContext);
                         boolean overrideOwned = input.hasLogicalOverride();
-                        input.setLogicalOverride(LogicalInputSnapshot.neutral());
+                        LogicalInputSnapshot previousOverride = overrideOwned ? input.logical() : null;
+                        input.setLogicalOverride(controller.nativePlayerInput()
+                                ? snapshot : LogicalInputSnapshot.neutral());
                         try {
                             return LevelFrameStep.execute(frameContext, frame, PlcLifecyclePhase.ORDINARY_LEVEL,
                                     context.getLevelManager(), context.getCamera(),
                                     () -> context.getSpriteManager().update(input), LevelFrameStep.DIRECT_WRAPPER);
                         } finally {
-                            input.setLogicalOverride(snapshot);
-                            if (!overrideOwned) input.clearLogicalOverride();
+                            if (overrideOwned) input.setLogicalOverride(previousOverride);
+                            else {
+                                input.setLogicalOverride(snapshot);
+                                input.clearLogicalOverride();
+                            }
                         }
                     });
         }

@@ -9,10 +9,11 @@ final class Sonic3kLevelStartCamera {
     private Sonic3kLevelStartCamera() { }
 
     static void initialize(Camera camera, int playerX, int playerY, boolean knuckles,
-                           int zone, int act, boolean checkpoint) {
+                           int zone, int act, boolean retainedPlayerStart) {
         int focusX = playerX;
         // loc_1BE46: restored starpost/Saved2 positions bypass every intro override.
-        if (!checkpoint) {
+        // An admitted module entry retains its centre through this same camera handoff.
+        if (!retainedPlayerStart) {
             // loc_1BF1E: locked-on MHZ1 changes d1, not the player's x_pos.
             if (zone == Sonic3kZoneIds.ZONE_MHZ && act == 0 && !knuckles) {
                 focusX = 0x160;

@@ -17,7 +17,6 @@ import com.openggf.data.AnimatedPatternProvider;
 import com.openggf.data.Rom;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.resources.DynamicArtDecisionOwner;
-import com.openggf.game.DynamicStartPositionProvider;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.ZoneFeatureProvider;
 import com.openggf.debug.DebugObjectArtViewer;
@@ -277,6 +276,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     private boolean sidekickRomVisibleReloadFrameCounterBridgeActive;
     private boolean sidekickRomVisibleReloadFrameCounterBridgePrimed;
     private boolean resetCounterPlacementAfterCameraSnap;
+    private final ModuleLevelLoadController moduleLevelLoads = new ModuleLevelLoadController();
     private long completedProductionLoadGeneration;
 
     private final FreshLevelTransitionBoundaryController freshLevelTransitionBoundary = new FreshLevelTransitionBoundaryController();
@@ -504,6 +504,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      */
     public void loadLevel(int levelIndex, LevelLoadMode loadMode, LevelLoadContext ctx) throws IOException {
         discardInitialProcessSpritesLifecycle();
+        moduleLevelLoads.resetFreshEntryCamera();
         var attempt = new LevelLoadAttempt(worldSession, spriteManager, loadMode, ctx,
                 cause -> checkpointCoordinator.admitLoadPolicies(worldSession, cause, ctx, transitions));
         try {
@@ -526,6 +527,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         } catch (Exception e) {
             throw attempt.failure(e, this::activeGameModule, this::discardInitialProcessSpritesLifecycle, levelIndex);
         } finally {
+            moduleLevelLoads.resetFreshEntryCamera();
             // The suppress flag belongs to this load only. A load that fails before
             // ScheduleLevelMusic — or a preview capture, which has no music step — must not
             // leave it latched for the next level, which would start that level silent.
@@ -654,6 +656,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 ? activeModZoneRuntimeContribution.runtimeProfile() : null;
         activeCustomZonePaletteBridge = null;
         Level loaded = gameModule != null ? gameModule.loadLevelOverride(levelIndex) : null;
+        boolean stockDecoded = loaded == null;
         discardPreparedLevelLoad();
         if (loaded == null) {
             loaded = game.loadLevel(levelIndex);
@@ -662,6 +665,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         if (activeModZoneRuntimeContribution != null) {
             LevelGraphicsPublisher.publish(loaded, graphicsManager);
         }
+        moduleLevelLoads.installPlacements(gameModule, levelIndex, loaded, stockDecoded);
         writeCurrentLevel(loaded);
         installHudProfile();
         rebuildLevelDerivedState();
@@ -754,6 +758,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         DeferredLevelResourceTracker activeDeferredResources = deferredResources != null
                 ? deferredResources : DeferredLevelResourceTracker.none();
         Level loaded = gameModule != null ? gameModule.loadLevelOverride(levelIndex) : null;
+        boolean stockDecoded = loaded == null;
         PreparedLevelBuild prepared = null;
         if (loaded != null || activeDeferredResources.hasExplicitPolicy()) {
             discardPreparedLevelLoad();
@@ -774,6 +779,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             }
         }
         loaded = gameModule == null ? loaded : java.util.Objects.requireNonNull(gameModule.transformDecodedLevel(loaded), "Decoded level transform");
+        moduleLevelLoads.installPlacements(gameModule, levelIndex, loaded, stockDecoded);
         writeCurrentLevel(loaded);
         installHudProfile();
         rebuildLevelDerivedState();
@@ -2949,6 +2955,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * ROM: S1/S2 StartLocations / Obj79_LoadData, S3K Get_PlayerStart.
      */
     public void spawnPlayerAtStartPosition(LevelLoadContext ctx) {
+        moduleLevelLoads.resetFreshEntryCamera();
         String mainCode = resolveMainCharacterCode();
         Sprite player = spriteManager.getSprite(mainCode);
         if (player == null) {
@@ -2988,18 +2995,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             LOGGER.info("Set player position from checkpoint: X=" + ctx.getCheckpointX() +
                     ", Y=" + ctx.getCheckpointY() + " (center coordinates)");
         } else {
-            // Additive acts own their descriptor's start. Native ROM tables have no
-            // entry for a mod zone and a readable offset can still contain unrelated bytes.
-            boolean additiveAct = activeGameModule().getZoneRegistry().modZoneRuntimeContribution(ctx.getLevelIndex()) != null;
-            int[] nativeStart = LevelSceneActAccess.nativeStart(game, currentZone, currentAct, levelData, additiveAct);
-            int spawnX = nativeStart[0];
-            spawnY = nativeStart[1];
-
-            player.setCentreX((short) spawnX);
-            player.setCentreY((short) spawnY);
-            LOGGER.info("Set player position from level start: X=" + spawnX +
-                    ", Y=" + spawnY + " (center coordinates)" +
-                    ", level: " + levelData);
+            var start = moduleLevelLoads.placeLevelStart(activeGameModule(), game, ctx, transitions,
+                    currentZone, currentAct, player, levelData, LOGGER);
+            spawnY = start.centreY();
         }
         // Scene act overrides win after native dynamic start/checkpoint selection,
         // before player reset, sidekick placement, camera snap and object admission.
@@ -3070,6 +3068,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     // Package-private entry used by LevelCameraInitialization for explicit
     // positioned captures/tests. Such a resnap is not Get_LevelSizeStart.
     void initCameraForLevel(boolean initializeLoadRegisters) {
+        boolean retainedFreshEntry = moduleLevelLoads.consumeFreshEntryCamera();
         Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
         if (!(player instanceof AbstractPlayableSprite playable)) {
             checkpointCoordinator.consumePersistentRespawnForCameraSnap();
@@ -3130,7 +3129,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                     com.openggf.game.internal.LevelStartCameraPosition initialCamera) {
                 initialCamera.initializeLevelStartCamera(camera, playable, getFeatureZoneId(),
                         getFeatureActId(), bigRingReturn != null
-                                || (checkpoint instanceof CheckpointState state && state.isActive()));
+                                || (checkpoint instanceof CheckpointState state && state.isActive())
+                                || retainedFreshEntry);
             }
             if (objectManager != null
                     && (objectManager.usesTwoAxisCursorPlacement()
@@ -3560,8 +3560,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * Loads the current level for death respawn (no title card).
      */
     public void respawnPlayer() {
-        loadCurrentLevel(false, LevelLoadMode.FULL, true, false, false,
-                com.openggf.game.LevelLoadCause.FULL_DEATH_RELOAD);
+        moduleLevelLoads.reloadCurrentNativeState(() ->
+                loadCurrentLevel(false, LevelLoadMode.FULL, true, false, false,
+                        com.openggf.game.LevelLoadCause.FULL_DEATH_RELOAD));
     }
 
     /** Explicit full restart from configuration: clears checkpoint banking before assembly. */
@@ -3571,8 +3572,12 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 com.openggf.game.LevelLoadCause.FULL_RESTART);
     }
 
+    /**
+     * Rebuilds the current native state, including special-stage results/returns.
+     * Unlike a deliberate fresh load, this never applies a module's fresh-entry position.
+     */
     public void loadCurrentLevel(LevelLoadMode loadMode, boolean showTitleCard) {
-        loadCurrentLevel(showTitleCard, loadMode, true);
+        moduleLevelLoads.reloadCurrentNativeState(() -> loadCurrentLevel(showTitleCard, loadMode, true));
     }
 
     /**

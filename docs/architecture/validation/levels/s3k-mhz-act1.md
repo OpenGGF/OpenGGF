@@ -5,6 +5,47 @@ Incoming normal level entry; outgoing seamless MHZ2 (`$701`) with coordinate
 rebase, carried objects/resources and in-level title ownership. Status: integrated
 implementation reviewed historically; current campaign act certification pending.
 
+## Post Two Ambush local prototype — 2026-10-07
+
+This separate [maintained mod](../../../../examples/hardened-s3k/README.md) uses
+the native second post, not a cold whole-act route. Its supported cell is
+locked-on World S3K, solo native Sonic, donor off, 320px and no-save. Other
+characters, teams, widths, donors, bosses and stage detours remain outside this
+prototype. It adds no certification to the stock campaign cells below.
+
+The production sensor survey found floor at `0x1BF..0x1C6` across
+`0x1D00..0x1DB0`, with clear headroom to `0x80`; the shelf drops beyond
+`0x1DC0`. The room is bounded by `(0x1D10,0x100)..(0x1DB8,0x1D0)`. Native post
+`(0x1D60,0x1A8)`, subtype 2, and the spring/mushroom platform beyond the room
+are untouched. No original ring lies on this shelf; the plan adds one native
+ring at `(0x1D70,0x1A8)` with engine-assigned identity. The fresh entrance is
+`(0x1D30,0x1A8)`, the sentry `(0x1DA0,0x1AD)`, and exit `(0x1DB0,0x1AC)`.
+This survey establishes authoring geometry; it does not itself prove combat.
+
+| Obligation | Maintained check / current evidence |
+| --- | --- |
+| Native decode, geometry and preserved protected inventory | Both ROM-backed checks passed with zero skips. Concrete native objects, ring inventory, terrain and PLC are preserved. |
+| Physical post contact and two real death reloads | Passed: real native collision activates index 2, followed by two production death reloads. No checkpoint fixture is counted as combat evidence. |
+| Safe/failure paths, ordinary ring/shield/hurt dispatch | Passed: real safe/fatal paths, native ring loss and all three elemental shields use stock hurt dispatch. |
+| Projectile recreation and two restore/forward replay cycles | Passed: native safe-ring/danger volleys, ring loss, all three elemental shields, projectile recreation and two whole-registry 60-tick restore/forward cycles. |
+| Packaged title, entry holds, pause, real checkpoint menu retry and owner abort | `TestHardenedPrototype`: eight packaged/native cases pass with zero skips after neutral entry and mandatory native-card consumption. Includes two real checkpoint menu retries, pre-contact fresh attempts, entry restore/forward cycles, owner-fault return and (2026-10-08 polish) the fatal native death arc ending before S3K's restart row with two restore/forward cycles and a post retry. |
+| Fresh entry/checkpoint/death/stage-return precedence and no-save attachment | 55 focused cases passed with zero skips; the corrected native fresh-camera/checkpoint method also passes. Stock death camera remains `0x1CC0`. |
+| Actual GPU title/tells/transitions and final ROM PCM | Final composition including 33d: safe 1316/fatal 715 GPU frames with stereo 48k PCM, plus source-attributed c732 native1376-row safe walkthrough and 337-row missing-ROM recovery inspected. First PLAY includes Sonic/foreground; both volleys, clear/fatal, post retry and separate fresh entry are observed. Native device capture uses an explicitly owned frameless workaround; caller/HID/speaker limits are in the implementation plan. Polish recaptures (2026-10-08, `d31b9c197`): safe 1316/fatal 715 GPU frames, native safe 1376/fatal 715 rows with genuine key edges, and a matched SFX-muted PCM control; safe-path player/camera/checkpoint state is byte-identical to the 33d capture. |
+
+The [implementation plan](../../plans/2026-10-07-hardened-s3k-prototype.md) and
+[blueprint](../../designs/2026-10-07-hardened-s3k-blueprint.md) preserve the
+original base, contract decisions and later-stage limits. The outside-repository ledger records exact commands and corrected fixture failures.
+The completed 3032-class combined run has 28 qualified inherited ordinary failures,
+zero errors and 62 exact matched skips. Its one owned facade-size guard failure
+was resolved by unchanged-algorithm extraction, 158 focused passes and678 fresh
+guard passes, all without skips. Actual33d composition adds 74 focused capture/
+API/SDK/prototype passes, with no errors/skips and byte-identical final CSV/PCM.
+These are source-attributed checks, not a green whole suite, trace pass or stock
+full-act certification. The 2026-10-08 Opus polish changes presentation, cues and
+the fatal-hit hold only; its focused 56 passes and 678 fresh guard passes are in
+the implementation plan. Separate promo precedes PR delivery; later campaign cells
+remain unchanged.
+
 ## Claims
 
 | Claim | Evidence / state |

@@ -122,6 +122,23 @@ public interface GameModule {
     default com.openggf.game.mode.GameplayFrameController gameplayFrameController() { return null; }
 
     /**
+     * Optional session-owned fresh-entry position, applied after the native dynamic start.
+     * Checkpoints and special/bonus-stage return positions always retain their native authority.
+     * An explicit full restart without a checkpoint qualifies. Death reloads, stage returns,
+     * preview capture and snapshot restores do not call this hook.
+     */
+    default Optional<LevelStartPosition> freshLevelStartPosition(int zone, int act) {
+        return Optional.empty();
+    }
+
+    /**
+     * Requires an explicit no-save gameplay context. The session boundary supplies one for
+     * a fresh launch with no context and rejects a slot-bound launch before replacing a world.
+     * This policy does not modify the player's save files or default launch preferences.
+     */
+    default boolean requiresNoSaveSession() { return false; }
+
+    /**
      * Continuous audio playback rate accompanying custom interactive pacing.
      * Unlike the alternating integer step budget, this stays steady at fractional
      * speeds. The host bounds it to 1..32, restores normal playback outside paced
