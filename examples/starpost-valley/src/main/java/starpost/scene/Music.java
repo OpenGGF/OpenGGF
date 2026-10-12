@@ -8,7 +8,11 @@ import com.openggf.mods.scene.SceneContext;
  * Knuckles's own songs take the base route and Sonic 1's or Sonic 2's take the cross-game donor
  * route, so a song loops at its own loop point and the sound effects stay audible over it.
  */
-public final class Music {
+public final class Music implements AutoCloseable {
+    private final starpost.art.AssetFailures failures;
+    private boolean closed;
+    public java.util.List<starpost.art.AssetFailures.Failure> failures() { return failures.failures(); }
+    private void requireOpen() { if (closed) throw new IllegalStateException("Music owner is closed"); }
     // Sonic 1 driver IDs (Sonic1Music).
     public static final int S1_GHZ = 0x81;
     public static final int S1_LZ = 0x82;
@@ -29,11 +33,13 @@ public final class Music {
 
     public Music(SceneContext ctx) {
         this.ctx = ctx;
+        failures = new starpost.art.AssetFailures(ctx.ownerModId(), ctx::ticks);
         ctx.audio().setMusicTempoPercent(65);
     }
 
     /** Asks for a track; nothing happens if it is already playing (or its ROM was not supplied). */
     public void want(String game, int id) {
+        requireOpen();
         wantedGame = game;
         wantedId = id;
     }
@@ -42,11 +48,13 @@ public final class Music {
     public void parkForAct() { release(); }
 
     public void stop() {
+        requireOpen();
         wantedId = -1;
         release();
     }
 
     public void setEnabled(boolean value) {
+        requireOpen();
         enabled = value;
         if (!enabled) {
             release();
@@ -59,25 +67,33 @@ public final class Music {
 
     /** One tick: starts or switches to the wanted track. */
     public void update() {
+        requireOpen();
         if (!enabled || wantedId < 0 || wantedId == playingId && wantedGame.equals(playingGame)) {
             return;
         }
-        playingGame = wantedGame;
-        playingId = wantedId;
-        try {
-            if (!ctx.audio().playMusic(wantedGame, wantedId)) {
-                ctx.audio().stopMusic();   // that game's ROM was not supplied: silence, not the last song
+        var audio = ctx.audio(); // Context/owner failures are not decoder failures.
+        Boolean played = failures.load("music:" + wantedGame + ":" + wantedId, () -> {
+            if (!audio.playMusic(wantedGame, wantedId)) {
+                audio.stopMusic(); // Unavailable donor/domain: silence, not the preceding song.
+                starpost.art.AssetFailures.unavailable("Music ROM or song is unavailable");
             }
-        } catch (RuntimeException e) {
-            wantedId = -1;
-        }
+            return true;
+        });
+        playingGame = played == null ? null : wantedGame;
+        playingId = played == null ? -1 : wantedId;
     }
 
     private void release() {
+        requireOpen();
         if (playingId >= 0) {
             ctx.audio().stopMusic();
         }
         playingId = -1;
         playingGame = null;
+    }
+
+    @Override public void close() {
+        if (closed) return;
+        try { stop(); } finally { closed = true; failures.close(); }
     }
 }
