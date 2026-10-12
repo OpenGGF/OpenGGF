@@ -28,8 +28,8 @@ class TestMutatorOverlayRouting {
     private com.openggf.audio.AudioManager audio;
     private final TitleScreenProvider title = mock(TitleScreenProvider.class);
     static final class Overlay implements LevelInputOverlay {
-        boolean held = true, waiting; int handled, consumed, accepted; Command command=Command.NONE;
-        @Override public boolean handleInput(InputHandler input) { handled++; return held; }
+        boolean held = true, waiting, closeDirectly; int handled, consumed, accepted; Command command=Command.NONE;
+        @Override public boolean handleInput(InputHandler input) { handled++; if (closeDirectly) held=false; return held; }
         @Override public boolean pausesGameplay() { return held; }
         @Override public Command consumeCommand() { consumed++; var next=command; command=Command.NONE; return next; }
         @Override public void commandQueued(boolean value) { waiting=value; held=value; if(!value) accepted++; }
@@ -50,18 +50,52 @@ class TestMutatorOverlayRouting {
     @AfterEach void cleanup() { GameServices.playbackDebug().endSession(); SessionManager.clear(); GameModuleRegistry.setCurrent(new Sonic2GameModule()); }
     void field(String name,Object value) throws Exception { var f=GameLoop.class.getDeclaredField(name);f.setAccessible(true);f.set(loop,value); }
     private int[] installControlledHold() throws Exception {
+        return installControlled(false);
+    }
+    private int[] installControlled(boolean advance) throws Exception {
         int[] decisions = {0};
+        if (advance) gameplay.getCamera().setFocusedSprite(
+                new com.openggf.sprites.playable.Sonic("sonic", (short) 0, (short) 0));
         var world = gameplay.getWorldSession();
         var base = world.getGameModule();
         var frameController = new com.openggf.game.mode.GameplayFrameController() {
-            public boolean beforeTick(com.openggf.game.mode.CourseControl c, LogicalInputSnapshot i) { decisions[0]++; return false; }
-            public void afterTick(com.openggf.game.mode.CourseControl c, boolean advanced) { assertFalse(advanced); }
+            public boolean beforeTick(com.openggf.game.mode.CourseControl c, LogicalInputSnapshot i) { decisions[0]++; return advance; }
+            public void afterTick(com.openggf.game.mode.CourseControl c, boolean advanced) { assertEquals(advance, advanced); }
         };
         var module = new DelegatingGameModule(base, "test:controlled-overlay") {
             @Override public com.openggf.game.mode.GameplayFrameController gameplayFrameController() { return frameController; }
         };
         var moduleField = world.getClass().getDeclaredField("gameModule"); moduleField.setAccessible(true); moduleField.set(world, module);
         return decisions;
+    }
+    @Test void directOverlayCloseCannotServiceOneFadeTwiceInTheControlledRow() throws Exception {
+        int[] decisions = installControlled(true);
+        overlay.closeDirectly = true;
+        fade.startFadeFromBlack(null);
+        int nativeFrame = gameplay.getSpriteManager().getFrameCounter();
+        loop.step();
+        assertFalse(overlay.held);
+        assertEquals(LevelInputOverlay.Command.NONE, overlay.command, "direct closure uses no host command");
+        assertEquals(1, fade.getFrameCount(), "the modal presentation already serviced this row's fade");
+        assertEquals(0, decisions[0], "the presented fade row cannot admit another controller/world row");
+        assertEquals(nativeFrame, gameplay.getSpriteManager().getFrameCounter());
+        verify(input, times(1)).update();
+        clearInvocations(input);
+        loop.step();
+        assertEquals(2, fade.getFrameCount(), "the released next row services the fade once");
+        assertEquals(1, decisions[0]);
+        assertEquals(nativeFrame + 1, gameplay.getSpriteManager().getFrameCounter());
+        verify(input, times(1)).update();
+    }
+    @Test void directOverlayCloseWithoutAnActiveFadeAdmitsTheControlledRow() throws Exception {
+        int[] decisions = installControlled(true);
+        overlay.closeDirectly = true;
+        int nativeFrame = gameplay.getSpriteManager().getFrameCounter();
+        loop.step();
+        assertFalse(overlay.held);
+        assertEquals(1, decisions[0], "a released overlay with no presentation work admits gameplay immediately");
+        assertEquals(nativeFrame + 1, gameplay.getSpriteManager().getFrameCounter());
+        verify(input, times(1)).update();
     }
     @Test void controlledConfigurationHoldRejectsFrameStepAndOwnsEscape() throws Exception {
         int[] decisions = installControlledHold();
