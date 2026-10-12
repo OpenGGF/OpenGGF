@@ -609,6 +609,8 @@ CF-ANNOTATION TYPE com.openggf.level.objects.DestructionEffects$ExplosionFactory
 CF-ANNOTATION TYPE com.openggf.level.objects.DestructionEffects$ExplosionFactory visible @java.lang.FunctionalInterface
 CF-ANNOTATION TYPE com.openggf.level.objects.DestructionEffects$PointsFactory visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.DestructionEffects$PointsFactory visible @java.lang.FunctionalInterface
+CF-ANNOTATION TYPE com.openggf.level.objects.DestructionEffects$SoundCue visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.objects.DestructionEffects$SoundOrder visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.HudLabel visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.HudMetric visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.HudProfile visible @com.openggf.game.ModApi
@@ -680,6 +682,9 @@ CF-ANNOTATION TYPE com.openggf.level.objects.SolidContact visible @com.openggf.g
 CF-ANNOTATION TYPE com.openggf.level.objects.SpringBounceHelper visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.SubpixelMotion visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.SubpixelMotion$State visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.objects.TerrainSurface visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.objects.TerrainSurface$Layer visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.objects.TerrainSurface$Path visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.TouchActorContextPolicy visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.TouchAttackBouncePolicy visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.TouchCategory visible @com.openggf.game.ModApi
@@ -1450,6 +1455,8 @@ CONSTRUCTOR com.openggf.level.objects.BakedSheetReader$Frame public  <init>(int,
 CONSTRUCTOR com.openggf.level.objects.BakedSheetReader$Limits public  <init>(long,int,int,int)
 CONSTRUCTOR com.openggf.level.objects.BakedSheetReader$Palette public  <init>(int,int[])
 CONSTRUCTOR com.openggf.level.objects.DestructionEffects$DestructionConfig public  <init>(int,com.openggf.level.objects.DestructionEffects$AnimalFactory,boolean,com.openggf.level.objects.DestructionEffects$PointsFactory,com.openggf.level.objects.DestructionEffects$ExplosionFactory,boolean)
+CONSTRUCTOR com.openggf.level.objects.DestructionEffects$DestructionConfig public  <init>(int,com.openggf.level.objects.DestructionEffects$AnimalFactory,boolean,com.openggf.level.objects.DestructionEffects$PointsFactory,com.openggf.level.objects.DestructionEffects$ExplosionFactory,boolean,com.openggf.level.objects.DestructionEffects$SoundCue)
+CONSTRUCTOR com.openggf.level.objects.DestructionEffects$SoundCue public  <init>(com.openggf.audio.StreamedMusicPort$SfxRef,com.openggf.audio.GameSound,com.openggf.level.objects.DestructionEffects$SoundOrder)
 CONSTRUCTOR com.openggf.level.objects.HudProfile public  <init>(java.util.List<com.openggf.level.objects.HudRow>)
 CONSTRUCTOR com.openggf.level.objects.HudRenderManager public  <init>(com.openggf.graphics.GraphicsManager,com.openggf.camera.Camera,com.openggf.game.GameStateManager)
 CONSTRUCTOR com.openggf.level.objects.HudRow public  <init>(boolean,com.openggf.level.objects.HudLabel,com.openggf.level.objects.HudMetric,int,int,int,int,int,com.openggf.level.objects.HudWarningPolicy)
@@ -1502,6 +1509,7 @@ CONSTRUCTOR com.openggf.level.objects.ShieldObjectInstance public  <init>(com.op
 CONSTRUCTOR com.openggf.level.objects.SolidContact public  <init>(boolean,boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.level.objects.SolidContact public  <init>(boolean,boolean,boolean,boolean,boolean,int,boolean)
 CONSTRUCTOR com.openggf.level.objects.SubpixelMotion$State public  <init>(int,int,int,int,int,int)
+CONSTRUCTOR com.openggf.level.objects.TerrainSurface public  <init>(boolean,int,int,int)
 CONSTRUCTOR com.openggf.level.objects.TouchResponseDebugHit public  <init>(int,com.openggf.level.objects.ObjectSpawn,int,int,int,int,int,int,com.openggf.level.objects.TouchCategory,boolean,java.lang.String)
 CONSTRUCTOR com.openggf.level.objects.TouchResponseDebugState public  <init>()
 CONSTRUCTOR com.openggf.level.objects.TouchResponseProfile public  <init>(com.openggf.level.objects.TouchCategoryDecodeMode,boolean,boolean,boolean,com.openggf.level.objects.TouchShieldDeflectCapability,int,boolean,com.openggf.level.objects.TouchAttackBouncePolicy,com.openggf.level.objects.TouchActorContextPolicy,com.openggf.level.objects.TouchOverlapStopPolicy)
@@ -2643,6 +2651,8 @@ FIELD com.openggf.level.objects.AbstractBadnikInstance protected int xVelocity
 FIELD com.openggf.level.objects.AbstractBadnikInstance protected int yVelocity
 FIELD com.openggf.level.objects.AbstractObjectInstance protected,final com.openggf.level.objects.ObjectSpawn spawn
 FIELD com.openggf.level.objects.AbstractObjectInstance protected,final java.lang.String name
+FIELD com.openggf.level.objects.DestructionEffects$SoundOrder public,static,final com.openggf.level.objects.DestructionEffects$SoundOrder AFTER_EFFECTS
+FIELD com.openggf.level.objects.DestructionEffects$SoundOrder public,static,final com.openggf.level.objects.DestructionEffects$SoundOrder BEFORE_LATCH
 FIELD com.openggf.level.objects.HudLabel public,static,final com.openggf.level.objects.HudLabel LIVES
 FIELD com.openggf.level.objects.HudLabel public,static,final com.openggf.level.objects.HudLabel RINGS
 FIELD com.openggf.level.objects.HudLabel public,static,final com.openggf.level.objects.HudLabel SCORE
@@ -2683,6 +2693,10 @@ FIELD com.openggf.level.objects.SubpixelMotion$State public int xVel
 FIELD com.openggf.level.objects.SubpixelMotion$State public int y
 FIELD com.openggf.level.objects.SubpixelMotion$State public int ySub
 FIELD com.openggf.level.objects.SubpixelMotion$State public int yVel
+FIELD com.openggf.level.objects.TerrainSurface$Layer public,static,final com.openggf.level.objects.TerrainSurface$Layer BACKGROUND
+FIELD com.openggf.level.objects.TerrainSurface$Layer public,static,final com.openggf.level.objects.TerrainSurface$Layer FOREGROUND
+FIELD com.openggf.level.objects.TerrainSurface$Path public,static,final com.openggf.level.objects.TerrainSurface$Path PRIMARY
+FIELD com.openggf.level.objects.TerrainSurface$Path public,static,final com.openggf.level.objects.TerrainSurface$Path SECONDARY
 FIELD com.openggf.level.objects.TouchActorContextPolicy public,static,final com.openggf.level.objects.TouchActorContextPolicy MAIN_FULL_SIDEKICK_HURT_ONLY
 FIELD com.openggf.level.objects.TouchActorContextPolicy public,static,final com.openggf.level.objects.TouchActorContextPolicy MAIN_ONLY
 FIELD com.openggf.level.objects.TouchAttackBouncePolicy public,static,final com.openggf.level.objects.TouchAttackBouncePolicy BOSS_REFLECT
@@ -9275,6 +9289,7 @@ METHOD com.openggf.level.objects.BakedSheetReader$Palette public  int hashCode()
 METHOD com.openggf.level.objects.BakedSheetReader$Palette public  int line()
 METHOD com.openggf.level.objects.BakedSheetReader$Palette public  int[] colors()
 METHOD com.openggf.level.objects.BakedSheetReader$Palette public,final  java.lang.String toString()
+METHOD com.openggf.level.objects.DestructionEffects public,static  com.openggf.level.objects.DestructionEffects$DestructionConfig deferredAnimalWithoutPopup(int,boolean)
 METHOD com.openggf.level.objects.DestructionEffects public,static  void destroyBadnik(int,int,com.openggf.level.objects.ObjectSpawn,com.openggf.game.PlayableEntity,com.openggf.level.objects.ObjectServices,com.openggf.level.objects.DestructionEffects$DestructionConfig)
 METHOD com.openggf.level.objects.DestructionEffects public,static  void destroyBadnik(int,int,com.openggf.level.objects.ObjectSpawn,int,com.openggf.game.PlayableEntity,com.openggf.level.objects.ObjectServices,com.openggf.level.objects.DestructionEffects$DestructionConfig)
 METHOD com.openggf.level.objects.DestructionEffects public,static  void destroyBadnikPowered(int,int,com.openggf.level.objects.ObjectSpawn,int,com.openggf.game.PlayableEntity,com.openggf.level.objects.ObjectServices,com.openggf.level.objects.DestructionEffects$DestructionConfig)
@@ -9282,14 +9297,26 @@ METHOD com.openggf.level.objects.DestructionEffects$AnimalFactory public,abstrac
 METHOD com.openggf.level.objects.DestructionEffects$DestructionConfig public  boolean pointsAllocatedBeforeAnimal()
 METHOD com.openggf.level.objects.DestructionEffects$DestructionConfig public  boolean useRespawnTracking()
 METHOD com.openggf.level.objects.DestructionEffects$DestructionConfig public  com.openggf.level.objects.DestructionEffects$AnimalFactory animalFactory()
+METHOD com.openggf.level.objects.DestructionEffects$DestructionConfig public  com.openggf.level.objects.DestructionEffects$DestructionConfig withSound(com.openggf.level.objects.DestructionEffects$SoundCue)
 METHOD com.openggf.level.objects.DestructionEffects$DestructionConfig public  com.openggf.level.objects.DestructionEffects$ExplosionFactory explosionFactory()
 METHOD com.openggf.level.objects.DestructionEffects$DestructionConfig public  com.openggf.level.objects.DestructionEffects$PointsFactory pointsFactory()
+METHOD com.openggf.level.objects.DestructionEffects$DestructionConfig public  com.openggf.level.objects.DestructionEffects$SoundCue sound()
 METHOD com.openggf.level.objects.DestructionEffects$DestructionConfig public  int sfxId()
 METHOD com.openggf.level.objects.DestructionEffects$DestructionConfig public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.level.objects.DestructionEffects$DestructionConfig public,final  int hashCode()
 METHOD com.openggf.level.objects.DestructionEffects$DestructionConfig public,final  java.lang.String toString()
 METHOD com.openggf.level.objects.DestructionEffects$ExplosionFactory public,abstract  com.openggf.level.objects.ObjectInstance create(int,int,com.openggf.level.objects.ObjectServices,int)
 METHOD com.openggf.level.objects.DestructionEffects$PointsFactory public,abstract  com.openggf.level.objects.ObjectInstance create(com.openggf.level.objects.ObjectSpawn,com.openggf.level.objects.ObjectServices,int)
+METHOD com.openggf.level.objects.DestructionEffects$SoundCue public  com.openggf.audio.GameSound semantic()
+METHOD com.openggf.level.objects.DestructionEffects$SoundCue public  com.openggf.audio.StreamedMusicPort$SfxRef namespaced()
+METHOD com.openggf.level.objects.DestructionEffects$SoundCue public  com.openggf.level.objects.DestructionEffects$SoundOrder order()
+METHOD com.openggf.level.objects.DestructionEffects$SoundCue public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.level.objects.DestructionEffects$SoundCue public,final  int hashCode()
+METHOD com.openggf.level.objects.DestructionEffects$SoundCue public,final  java.lang.String toString()
+METHOD com.openggf.level.objects.DestructionEffects$SoundCue public,static  com.openggf.level.objects.DestructionEffects$SoundCue namespaced(com.openggf.audio.StreamedMusicPort$SfxRef,com.openggf.level.objects.DestructionEffects$SoundOrder)
+METHOD com.openggf.level.objects.DestructionEffects$SoundCue public,static  com.openggf.level.objects.DestructionEffects$SoundCue semantic(com.openggf.audio.GameSound,com.openggf.level.objects.DestructionEffects$SoundOrder)
+METHOD com.openggf.level.objects.DestructionEffects$SoundOrder public,static  com.openggf.level.objects.DestructionEffects$SoundOrder valueOf(java.lang.String)
+METHOD com.openggf.level.objects.DestructionEffects$SoundOrder public,static  com.openggf.level.objects.DestructionEffects$SoundOrder[] values()
 METHOD com.openggf.level.objects.HudLabel public,static  com.openggf.level.objects.HudLabel valueOf(java.lang.String)
 METHOD com.openggf.level.objects.HudLabel public,static  com.openggf.level.objects.HudLabel[] values()
 METHOD com.openggf.level.objects.HudMetric public,static  com.openggf.level.objects.HudMetric valueOf(java.lang.String)
@@ -9688,6 +9715,7 @@ METHOD com.openggf.level.objects.ObjectRenderManager$SpringVariant public,static
 METHOD com.openggf.level.objects.ObjectRenderManager$SpringVariant public,static  com.openggf.level.objects.ObjectRenderManager$SpringVariant[] values()
 METHOD com.openggf.level.objects.ObjectRewindDynamicCodecs$ExactAdoptionSurface public  void rollback(com.openggf.level.objects.AbstractObjectInstance)
 METHOD com.openggf.level.objects.ObjectRewindDynamicCodecs$ExactAdoptionSurface public <T extends com.openggf.level.objects.AbstractObjectInstance> T adopt(com.openggf.game.rewind.identity.ObjectRefId,java.util.function.Supplier<T>)
+METHOD com.openggf.level.objects.ObjectServices public  boolean detachCurrentSolidContact(com.openggf.game.PlayableEntity)
 METHOD com.openggf.level.objects.ObjectServices public  boolean playMusic(com.openggf.audio.GameMusic)
 METHOD com.openggf.level.objects.ObjectServices public  boolean playSfx(com.openggf.audio.StreamedMusicPort$SfxRef)
 METHOD com.openggf.level.objects.ObjectServices public  boolean useSecondaryTerrainCollisionPath()
@@ -9701,6 +9729,8 @@ METHOD com.openggf.level.objects.ObjectServices public  com.openggf.game.solid.O
 METHOD com.openggf.level.objects.ObjectServices public  com.openggf.game.timing.HardwareTimingService hardwareTiming()
 METHOD com.openggf.level.objects.ObjectServices public  com.openggf.level.objects.ObjectPlayerQuery playerQuery()
 METHOD com.openggf.level.objects.ObjectServices public  com.openggf.level.objects.ObjectQuery objectQuery()
+METHOD com.openggf.level.objects.ObjectServices public  com.openggf.level.objects.TerrainSurface findFloorSurface(int,int,int,int,com.openggf.level.objects.TerrainSurface$Layer,com.openggf.level.objects.TerrainSurface$Path)
+METHOD com.openggf.level.objects.ObjectServices public  com.openggf.level.objects.TerrainSurface floorSurface(int,int,com.openggf.level.objects.TerrainSurface$Layer,com.openggf.level.objects.TerrainSurface$Path)
 METHOD com.openggf.level.objects.ObjectServices public  com.openggf.level.resources.KosinskiModuleQueue kosinskiModuleQueue()
 METHOD com.openggf.level.objects.ObjectServices public  com.openggf.physics.BackgroundPlaneCollisionProvider backgroundPlaneCollisionProvider()
 METHOD com.openggf.level.objects.ObjectServices public  int apparentAct()
@@ -10316,8 +10346,10 @@ METHOD com.openggf.level.objects.SolidContact public  int sideDistX()
 METHOD com.openggf.level.objects.SolidContact public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.level.objects.SolidContact public,final  int hashCode()
 METHOD com.openggf.level.objects.SolidContact public,final  java.lang.String toString()
+METHOD com.openggf.level.objects.SpringBounceHelper public,static  boolean tryLaunchUp(com.openggf.game.PlayableEntity,int,int,int,int,int,int)
 METHOD com.openggf.level.objects.SpringBounceHelper public,static  int strength(boolean)
 METHOD com.openggf.level.objects.SpringBounceHelper public,static  int strengthFromSubtype(int)
+METHOD com.openggf.level.objects.SpringBounceHelper public,static  void launchUp(com.openggf.game.PlayableEntity,int,int)
 METHOD com.openggf.level.objects.SubpixelMotion public,static  void moveSprite(com.openggf.level.objects.SubpixelMotion$State,int)
 METHOD com.openggf.level.objects.SubpixelMotion public,static  void moveSprite2(com.openggf.level.objects.SubpixelMotion$State)
 METHOD com.openggf.level.objects.SubpixelMotion public,static  void moveX(com.openggf.level.objects.SubpixelMotion$State)
@@ -10325,6 +10357,17 @@ METHOD com.openggf.level.objects.SubpixelMotion public,static  void objectFall(c
 METHOD com.openggf.level.objects.SubpixelMotion public,static  void objectFallXY(com.openggf.level.objects.SubpixelMotion$State,int)
 METHOD com.openggf.level.objects.SubpixelMotion public,static  void speedToPos(com.openggf.level.objects.SubpixelMotion$State)
 METHOD com.openggf.level.objects.SubpixelMotion public,static  void speedToPosY(com.openggf.level.objects.SubpixelMotion$State)
+METHOD com.openggf.level.objects.TerrainSurface public  boolean foundSurface()
+METHOD com.openggf.level.objects.TerrainSurface public  int angle()
+METHOD com.openggf.level.objects.TerrainSurface public  int distance()
+METHOD com.openggf.level.objects.TerrainSurface public  int surfaceY()
+METHOD com.openggf.level.objects.TerrainSurface public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.level.objects.TerrainSurface public,final  int hashCode()
+METHOD com.openggf.level.objects.TerrainSurface public,final  java.lang.String toString()
+METHOD com.openggf.level.objects.TerrainSurface$Layer public,static  com.openggf.level.objects.TerrainSurface$Layer valueOf(java.lang.String)
+METHOD com.openggf.level.objects.TerrainSurface$Layer public,static  com.openggf.level.objects.TerrainSurface$Layer[] values()
+METHOD com.openggf.level.objects.TerrainSurface$Path public,static  com.openggf.level.objects.TerrainSurface$Path valueOf(java.lang.String)
+METHOD com.openggf.level.objects.TerrainSurface$Path public,static  com.openggf.level.objects.TerrainSurface$Path[] values()
 METHOD com.openggf.level.objects.TouchActorContextPolicy public  com.openggf.game.profiles.touchresponse.TouchActorContextPolicy toCanonical()
 METHOD com.openggf.level.objects.TouchActorContextPolicy public,static  com.openggf.level.objects.TouchActorContextPolicy fromCanonical(com.openggf.game.profiles.touchresponse.TouchActorContextPolicy)
 METHOD com.openggf.level.objects.TouchActorContextPolicy public,static  com.openggf.level.objects.TouchActorContextPolicy valueOf(java.lang.String)
@@ -14031,6 +14074,8 @@ NESTED com.openggf.level.objects.DestructionEffects com.openggf.level.objects.De
 NESTED com.openggf.level.objects.DestructionEffects com.openggf.level.objects.DestructionEffects$DestructionConfig
 NESTED com.openggf.level.objects.DestructionEffects com.openggf.level.objects.DestructionEffects$ExplosionFactory
 NESTED com.openggf.level.objects.DestructionEffects com.openggf.level.objects.DestructionEffects$PointsFactory
+NESTED com.openggf.level.objects.DestructionEffects com.openggf.level.objects.DestructionEffects$SoundCue
+NESTED com.openggf.level.objects.DestructionEffects com.openggf.level.objects.DestructionEffects$SoundOrder
 NESTED com.openggf.level.objects.ObjectManager com.openggf.level.objects.ObjectManager$ObjectDrawCallback
 NESTED com.openggf.level.objects.ObjectPlayerQuery com.openggf.level.objects.ObjectPlayerQuery$NearestPlayerX
 NESTED com.openggf.level.objects.ObjectPlayerQuery com.openggf.level.objects.ObjectPlayerQuery$PlayerVisitor
@@ -14057,6 +14102,8 @@ NESTED com.openggf.level.objects.PlayableSheetReader com.openggf.level.objects.P
 NESTED com.openggf.level.objects.PlayableSheetReader com.openggf.level.objects.PlayableSheetReader$Meta
 NESTED com.openggf.level.objects.PlayableSheetReader com.openggf.level.objects.PlayableSheetReader$PlayableSheet
 NESTED com.openggf.level.objects.SubpixelMotion com.openggf.level.objects.SubpixelMotion$State
+NESTED com.openggf.level.objects.TerrainSurface com.openggf.level.objects.TerrainSurface$Layer
+NESTED com.openggf.level.objects.TerrainSurface com.openggf.level.objects.TerrainSurface$Path
 NESTED com.openggf.level.objects.TouchResponseProvider com.openggf.level.objects.TouchResponseProvider$TouchRegion
 NESTED com.openggf.level.objects.art.ObjectArtBundle com.openggf.level.objects.art.ObjectArtBundle$Builder
 NESTED com.openggf.level.render.PatternSpriteRenderer com.openggf.level.render.PatternSpriteRenderer$FrameBounds
@@ -15441,7 +15488,11 @@ RECORD-COMPONENT com.openggf.level.objects.DestructionEffects$DestructionConfig 
 RECORD-COMPONENT com.openggf.level.objects.DestructionEffects$DestructionConfig pointsAllocatedBeforeAnimal boolean
 RECORD-COMPONENT com.openggf.level.objects.DestructionEffects$DestructionConfig pointsFactory com.openggf.level.objects.DestructionEffects$PointsFactory
 RECORD-COMPONENT com.openggf.level.objects.DestructionEffects$DestructionConfig sfxId int
+RECORD-COMPONENT com.openggf.level.objects.DestructionEffects$DestructionConfig sound com.openggf.level.objects.DestructionEffects$SoundCue
 RECORD-COMPONENT com.openggf.level.objects.DestructionEffects$DestructionConfig useRespawnTracking boolean
+RECORD-COMPONENT com.openggf.level.objects.DestructionEffects$SoundCue namespaced com.openggf.audio.StreamedMusicPort$SfxRef
+RECORD-COMPONENT com.openggf.level.objects.DestructionEffects$SoundCue order com.openggf.level.objects.DestructionEffects$SoundOrder
+RECORD-COMPONENT com.openggf.level.objects.DestructionEffects$SoundCue semantic com.openggf.audio.GameSound
 RECORD-COMPONENT com.openggf.level.objects.HudProfile rows java.util.List<com.openggf.level.objects.HudRow>
 RECORD-COMPONENT com.openggf.level.objects.HudRow label com.openggf.level.objects.HudLabel
 RECORD-COMPONENT com.openggf.level.objects.HudRow labelX int
@@ -15836,6 +15887,10 @@ RECORD-COMPONENT com.openggf.level.objects.SolidContact standing boolean
 RECORD-COMPONENT com.openggf.level.objects.SolidContact touchBottom boolean
 RECORD-COMPONENT com.openggf.level.objects.SolidContact touchSide boolean
 RECORD-COMPONENT com.openggf.level.objects.SolidContact touchTop boolean
+RECORD-COMPONENT com.openggf.level.objects.TerrainSurface angle int
+RECORD-COMPONENT com.openggf.level.objects.TerrainSurface distance int
+RECORD-COMPONENT com.openggf.level.objects.TerrainSurface foundSurface boolean
+RECORD-COMPONENT com.openggf.level.objects.TerrainSurface surfaceY int
 RECORD-COMPONENT com.openggf.level.objects.TouchResponseDebugHit category com.openggf.level.objects.TouchCategory
 RECORD-COMPONENT com.openggf.level.objects.TouchResponseDebugHit debugDetails java.lang.String
 RECORD-COMPONENT com.openggf.level.objects.TouchResponseDebugHit flags int
@@ -17295,7 +17350,10 @@ TYPE enum public,static,final com.openggf.graphics.TilemapGpuRenderer$Layer SUPE
 TYPE enum public,static,final com.openggf.level.SeamlessLevelTransitionRequest$ObjectOffsetPolicy SUPER java.lang.Enum<com.openggf.level.SeamlessLevelTransitionRequest$ObjectOffsetPolicy>
 TYPE enum public,static,final com.openggf.level.SeamlessLevelTransitionRequest$ObjectSurvivalPolicy SUPER java.lang.Enum<com.openggf.level.SeamlessLevelTransitionRequest$ObjectSurvivalPolicy>
 TYPE enum public,static,final com.openggf.level.SeamlessLevelTransitionRequest$TransitionType SUPER java.lang.Enum<com.openggf.level.SeamlessLevelTransitionRequest$TransitionType>
+TYPE enum public,static,final com.openggf.level.objects.DestructionEffects$SoundOrder SUPER java.lang.Enum<com.openggf.level.objects.DestructionEffects$SoundOrder>
 TYPE enum public,static,final com.openggf.level.objects.ObjectRenderManager$SpringVariant SUPER java.lang.Enum<com.openggf.level.objects.ObjectRenderManager$SpringVariant>
+TYPE enum public,static,final com.openggf.level.objects.TerrainSurface$Layer SUPER java.lang.Enum<com.openggf.level.objects.TerrainSurface$Layer>
+TYPE enum public,static,final com.openggf.level.objects.TerrainSurface$Path SUPER java.lang.Enum<com.openggf.level.objects.TerrainSurface$Path>
 TYPE enum public,static,final com.openggf.level.resources.DeferredLevelResourceDescriptor$Kind SUPER java.lang.Enum<com.openggf.level.resources.DeferredLevelResourceDescriptor$Kind>
 TYPE enum public,static,final com.openggf.level.resources.KosinskiModuleQueue$Phase SUPER java.lang.Enum<com.openggf.level.resources.KosinskiModuleQueue$Phase>
 TYPE enum public,static,final com.openggf.mods.scene.RomSpriteRequest$Compression SUPER java.lang.Enum<com.openggf.mods.scene.RomSpriteRequest$Compression>
@@ -17618,6 +17676,7 @@ TYPE record public,final com.openggf.level.objects.PerObjectRewindSnapshot SUPER
 TYPE record public,final com.openggf.level.objects.PersistentRespawnState SUPER java.lang.Record
 TYPE record public,final com.openggf.level.objects.RewindRecreateContext SUPER java.lang.Record
 TYPE record public,final com.openggf.level.objects.SolidContact SUPER java.lang.Record
+TYPE record public,final com.openggf.level.objects.TerrainSurface SUPER java.lang.Record
 TYPE record public,final com.openggf.level.objects.TouchResponseDebugHit SUPER java.lang.Record
 TYPE record public,final com.openggf.level.objects.TouchResponseProfile SUPER java.lang.Record
 TYPE record public,final com.openggf.level.objects.TouchResponseResult SUPER java.lang.Record
@@ -17759,6 +17818,7 @@ TYPE record public,static,final com.openggf.level.objects.BakedSheetReader$Frame
 TYPE record public,static,final com.openggf.level.objects.BakedSheetReader$Limits SUPER java.lang.Record
 TYPE record public,static,final com.openggf.level.objects.BakedSheetReader$Palette SUPER java.lang.Record
 TYPE record public,static,final com.openggf.level.objects.DestructionEffects$DestructionConfig SUPER java.lang.Record
+TYPE record public,static,final com.openggf.level.objects.DestructionEffects$SoundCue SUPER java.lang.Record
 TYPE record public,static,final com.openggf.level.objects.ObjectPlayerQuery$NearestPlayerX SUPER java.lang.Record
 TYPE record public,static,final com.openggf.level.objects.PatrolMovementHelper$PatrolResult SUPER java.lang.Record
 TYPE record public,static,final com.openggf.level.objects.PerObjectRewindSnapshot$ArzPlatformRewindExtra SUPER java.lang.Record
@@ -18521,6 +18581,8 @@ TYPE-ANNOTATION com.openggf.level.objects.DestructionEffects$ExplosionFactory @c
 TYPE-ANNOTATION com.openggf.level.objects.DestructionEffects$ExplosionFactory @java.lang.FunctionalInterface
 TYPE-ANNOTATION com.openggf.level.objects.DestructionEffects$PointsFactory @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.DestructionEffects$PointsFactory @java.lang.FunctionalInterface
+TYPE-ANNOTATION com.openggf.level.objects.DestructionEffects$SoundCue @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.objects.DestructionEffects$SoundOrder @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.HudLabel @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.HudMetric @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.HudProfile @com.openggf.game.ModApi
@@ -18592,6 +18654,9 @@ TYPE-ANNOTATION com.openggf.level.objects.SolidContact @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.SpringBounceHelper @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.SubpixelMotion @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.SubpixelMotion$State @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.objects.TerrainSurface @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.objects.TerrainSurface$Layer @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.objects.TerrainSurface$Path @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.TouchActorContextPolicy @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.TouchAttackBouncePolicy @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.TouchCategory @com.openggf.game.ModApi

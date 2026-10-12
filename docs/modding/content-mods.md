@@ -108,6 +108,26 @@ The generated badnik demonstrates the minimum runtime contracts:
   (the older `RewindRecreatable` expert contract remains available); and
 - keep mutable gameplay state in instance fields that the rewind schema can capture.
 
+For live terrain, `services().floorSurface(x, y, layer, path)` delegates to the native
+floor sensor on an explicit foreground/background collision layer and primary/secondary
+path. Coordinates belong to the selected layer; this query does not apply a combined
+background-plane transform. `findFloorSurface` accepts bounded probe-origin ranges
+(0–256 pixels above, 0–512 below), checking at most 49 origins at the native 16-pixel
+cadence. Test `foundSurface()` before using the immutable result's surface Y, signed
+distance or flip-adjusted angle. It retains no live level/query authority.
+
+`DestructionConfig` keeps its legacy six-argument constructor. `withSound(SoundCue)`
+selects a namespaced or semantic cue and explicit `BEFORE_LATCH`/`AFTER_EFFECTS` order.
+`deferredAnimalWithoutPopup` uses the existing shared animal owner with no deferred
+points factory; S1's separate ExplosionItem recipe retains its own animal semantics.
+The common sequence still owns score, respawn policy and replacement-slot transfer.
+
+`SpringBounceHelper` handles bounded authored proximity and native launch state.
+A custom native object can call `services().detachCurrentSolidContact(player)` to
+release this callback's admitted object/player checkpoint before a launch. Foreign,
+missing or inactive participants are rejected; the object comes from the engine
+execution context. Stock spring subclasses keep their own ROM geometry and choreography.
+
 Do not add mutable static gameplay state, uncaptured object references, or immutable
 `final` scalar state whose runtime value changes. `ggfmod validate` checks compiled
 classes for these object, service, and rewind rules before the engine creates an
