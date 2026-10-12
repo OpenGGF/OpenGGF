@@ -11,7 +11,7 @@ expects `s1.gen`, `s2.gen` and `s3k.gen`; ROMs are never packaged. Java is unnec
 on recipients' machines. The runtime requires Linux x86_64, glibc 2.35 or newer,
 an X11/XWayland display and OpenGL drivers. This is an experiment, not a release.
 
-Build with Java 21, Python 3.12+ and bubblewrap on Linux. Output directories must
+Build with Java 25, Python 3.12+ and bubblewrap on Linux. Output directories must
 be new. The rootless builder changes only its owned output directory; the Ubuntu
 rootfs avoids imposing a rolling host's newer glibc on friends. Both archives are
 verified against upstream SHA-256 values. Ubuntu build packages come from its

@@ -90,13 +90,23 @@ public class Sonic1SfxData extends AbstractSmpsData
 
     @Override
     public byte[] getZeroAddressFmVoice(int voiceId) {
-        int offset = voiceId * 25;
-        if (zeroAddressVoiceBank == null || offset < 0
-                || offset + 25 > zeroAddressVoiceBank.length) {
+        long offset = (long) voiceId * 25;
+        long end = offset + 25;
+        if (zeroAddressVoiceBank == null || offset < 0) {
+            return null;
+        }
+        // Preserve the historical invalid-range exception when the start fits
+        // an int but its exclusive end does not. Check explicitly: JDK versions
+        // differ in how copyOfRange handles an overflowed end. Long arithmetic
+        // also prevents oversized voice IDs from wrapping into valid bank data.
+        if (offset <= Integer.MAX_VALUE && end > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("FM voice range exceeds integer bounds: " + voiceId);
+        }
+        if (end > zeroAddressVoiceBank.length) {
             return null;
         }
         byte[] voice = Arrays.copyOfRange(
-                zeroAddressVoiceBank, offset, offset + 25);
+                zeroAddressVoiceBank, (int) offset, (int) end);
         FmVoiceOperatorOrder.swapMiddleOperatorsInPlace(voice);
         return voice;
     }

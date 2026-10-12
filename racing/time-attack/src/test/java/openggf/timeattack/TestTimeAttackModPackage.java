@@ -30,7 +30,7 @@ class TestTimeAttackModPackage {
     void modPackagesThroughGgfmodWithWarningsAsErrors() throws Exception {
         Path project = Path.of("racing/time-attack");
         Path classes = Files.createDirectory(temp.resolve("classes"));
-        List<String> args = new ArrayList<>(List.of("--release", "21", "-nowarn",
+        List<String> args = new ArrayList<>(List.of("--release", "25", "-nowarn",
                 "-cp", System.getProperty("java.class.path"), "-d", classes.toString()));
         try (Stream<Path> files = Files.walk(project.resolve("src/main/java"))) {
             files.filter(p -> p.toString().endsWith(".java")).sorted().forEach(p -> args.add(p.toString()));

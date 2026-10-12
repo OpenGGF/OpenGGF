@@ -58,6 +58,19 @@ class TestSmpsRepeatedPlaybackBenchmarkComparator {
     }
 
     @Test
+    void acceptsMatchedJava25MeasurementsAndRejectsCrossJdkPairs() throws IOException {
+        Path baseline = passingBaseline();
+        Path feature = write("feature25.txt", passingFeatureText().replace("21.0.11+10", "25.0.4+1"));
+        assertThrows(IllegalArgumentException.class,
+                () -> SmpsRepeatedPlaybackBenchmarkComparator.compare(
+                        baseline, feature, baselineManifest, featureManifest));
+        Files.writeString(baseline, Files.readString(baseline).replace("21.0.11+10", "25.0.4+1"));
+        assertTrue(SmpsRepeatedPlaybackBenchmarkComparator.compare(
+                baseline, feature, baselineManifest, featureManifest).render()
+                .contains("SMPS_COMPARATOR_RESULT PASS"));
+    }
+
+    @Test
     void rejectsEnvironmentIdentityMismatch() throws IOException {
         Path baseline = passingBaseline();
         String mismatched = passingFeatureText().replace(

@@ -30,7 +30,7 @@ import java.util.stream.Stream;
  * engine build and writes the build-pinned {@link BundledModManifest}.
  *
  * <p>Each project uses the example layout ({@code src/main/java}, {@code src/main/resources}
- * with {@code META-INF/openggf-mod.yaml}). Sources compile with {@code javac --release 21}
+ * with {@code META-INF/openggf-mod.yaml}). Sources compile with {@code javac --release 25}
  * against the engine build classpath; the result is packaged by {@code ggfmod package
  * --warnings error}, so the mod validator runs and any warning fails the build. Jars are
  * written as {@code <id>-<version>.jar}; the manifest records id, version, file, SHA-256 and
@@ -124,7 +124,7 @@ public final class BundledModPackager {
         if (files.isEmpty()) return;
         JavaCompiler javac = ToolProvider.getSystemJavaCompiler();
         if (javac == null) throw new IllegalStateException("Bundled mod packaging requires a JDK compiler");
-        List<String> arguments = new ArrayList<>(List.of("--release", "21", "-encoding", "UTF-8",
+        List<String> arguments = new ArrayList<>(List.of("--release", "25", "-encoding", "UTF-8",
                 "-cp", classpath, "-d", classes.toString()));
         arguments.addAll(files);
         if (javac.run(null, null, null, arguments.toArray(String[]::new)) != 0) {

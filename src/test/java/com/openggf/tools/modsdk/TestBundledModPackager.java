@@ -10,15 +10,18 @@ import com.openggf.mods.code.ModRuntime;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
+import java.util.zip.ZipInputStream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -46,6 +49,19 @@ class TestBundledModPackager {
         byte[] jar = Files.readAllBytes(install.resolve("bundled").resolve(entry.file()));
         assertEquals(entry.size(), jar.length);
         assertEquals(entry.sha256(), BundledModPackager.sha256(jar));
+        try (ZipInputStream archive = new ZipInputStream(new ByteArrayInputStream(jar))) {
+            int classCount = 0;
+            for (var payload = archive.getNextEntry(); payload != null; payload = archive.getNextEntry()) {
+                if (!payload.getName().endsWith(".class")) continue;
+                byte[] header = archive.readNBytes(8);
+                assertEquals(8, header.length, payload.getName());
+                assertEquals(69, Short.toUnsignedInt(ByteBuffer.wrap(header).getShort(6)),
+                        "bundled classes must target Java 25: " + payload.getName());
+                classCount++;
+            }
+            assertTrue(classCount > 0, "the packaged example must contain compiled classes");
+        }
+
         assertFalse(Files.exists(install.resolve("bundled-work")), "compile scratch is removed");
 
         BundledModManifest again = packageProjects(temp.resolve("rebuild"), temp.resolve("rebuild.json"),

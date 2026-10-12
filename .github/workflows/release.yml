@@ -40,10 +40,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Java 21
+      - name: Set up Java 25
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
+          java-version: '25'
           distribution: 'temurin'
           cache: maven
 
@@ -113,10 +113,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Java 21
+      - name: Set up Java 25
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
+          java-version: '25'
           distribution: 'temurin'
           cache: maven
 
@@ -249,7 +249,8 @@ jobs:
         include:
           - os: windows-latest
             platform: windows
-          - os: macos-latest
+          # GraalVM 25 supports macOS only on Apple Silicon; setup-graalvm detects the host architecture.
+          - os: macos-15
             platform: macos
           - os: ubuntu-latest
             platform: linux
@@ -263,7 +264,7 @@ jobs:
       - name: Set up GraalVM
         uses: graalvm/setup-graalvm@v1
         with:
-          java-version: '21'
+          java-version: '25'
           distribution: 'graalvm'
           cache: maven
 
@@ -471,10 +472,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Java 21
+      - name: Set up Java 25
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
+          java-version: '25'
           distribution: 'temurin'
           cache: maven
 

@@ -17,7 +17,7 @@ on a fresh, owned Xvfb server, records that window and a unique Pulse null-sink
 monitor, and sends input only within that virtual display. It never connects to
 the user's desktop, inherits its Wayland display or falls back to a shared X11
 display. Missing Xvfb fails before Engine/audio launch or input/focus operations.
-Requirements: Linux, `Xvfb`, Python `Xlib`, `ffmpeg`, `pactl`, Java 21, a compiled
+Requirements: Linux, `Xvfb`, Python `Xlib`, `ffmpeg`, `pactl`, Java 25, a compiled
 checkout and supplied ROMs. It does not build or copy ROMs.
 
 ```bash
@@ -120,7 +120,7 @@ Example after compiling the checkout and building the packaged Lab:
 
 ```bash
 env -u DISPLAY -u WAYLAND_DISPLAY -u XAUTHORITY -u XDG_SESSION_TYPE \
-  ALSOFT_DRIVERS=null timeout 180s java -Xmx3g -Djava.awt.headless=true \
+  ALSOFT_DRIVERS=null timeout 180s java --enable-native-access=ALL-UNNAMED -Xmx3g -Djava.awt.headless=true \
   -Dopenggf.headless.gl=surfaceless-egl \
   -Duser.dir=/absolute/task/fresh-take/user \
   -Dopenggf.saveRoot=/absolute/task/fresh-take/saves \
@@ -191,7 +191,7 @@ the output directory with `-Duser.dir` set to that same path. A typical command
 is:
 
 ```bash
-timeout 90s java -Xmx1g -Duser.dir=/absolute/task/fresh-stage \
+timeout 90s java --enable-native-access=ALL-UNNAMED -Xmx1g -Duser.dir=/absolute/task/fresh-stage \
   -Dopenggf.saveRoot=/absolute/task/fresh-stage/player-settings \
   -cp /absolute/compiled/classpath \
   com.openggf.tools.MutatorStageProbeTool \

@@ -47,7 +47,7 @@ assert result["double_close_safe"] is True
 assert result["relocated_absolute_load"] is True
 assert result["native_snapshot_portability"] == "same-library-build-only"
 assert result["native_compiler_flags"] == ["-O2", "-fPIC", "-shared", "-Wl,-z,defs"]
-assert result["java_major"] == 21
+assert result["java_major"] == 25
 assert len(result["git_head"]) == 40
 assert isinstance(result["git_dirty"], bool)
 assert set(result["compiled_input_sha256"]) == {
@@ -94,7 +94,7 @@ for control in invalid_capacity invalid_snapshot use_after_close; do
     }
   javac -cp "$test_root/classes" -d "$mutant_root/classes" \
     "$mutant_root/source/JniNukedProof.java"
-  if java -cp "$mutant_root/classes:$test_root/classes" \
+  if java --enable-native-access=ALL-UNNAMED -cp "$mutant_root/classes:$test_root/classes" \
       com.openggf.tools.audio.benchmark.JniNukedProof \
       "$test_root/relocated/libopenggf-fm-jni-proof.so" \
       > "$mutant_root/result.json" 2> "$mutant_root/error.log"; then

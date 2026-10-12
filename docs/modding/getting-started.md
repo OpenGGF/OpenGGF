@@ -7,8 +7,8 @@ No Maven repository publication or stable creator baseline is implied.
 
 ## Tools and artifacts
 
-Install a Java **21 JDK** and Maven **3.8 or newer**. Check `java -version`,
-`javac -version` and `mvn -v`; Maven must run on Java 21. The starters pin their
+Install a Java **25 JDK** and Maven **3.8 or newer**. Check `java -version`,
+`javac -version` and `mvn -v`; Maven must run on Java 25. The starters pin their
 compiler plugin instead of depending on a Maven installation's default.
 Music/reskin projects need no Java authoring. Tiled is optional for map editing;
 Python 3 is used by the checkout's example launcher and creator-kit builder.
@@ -22,7 +22,7 @@ hashes those distributed copies. Rebuild from committed sources; `--allow-dirty`
 explicitly labels a local development kit and is not used by candidate artifact CI.
 
 To browse the API reference, unzip `api-docs.jar` into its own directory and open
-that directory's `index.html` in a browser. The Java 21 JDK's `jar` tool can extract it:
+that directory's `index.html` in a browser. The Java 25 JDK's `jar` tool can extract it:
 
 ```sh
 mkdir /absolute/path/creator-kit/api-docs

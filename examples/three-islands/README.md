@@ -3,7 +3,7 @@
 A story-driven JRPG with **fully turn-based ("full wait") combat** for OpenGGF's
 unpublished **Mod API 0.7 candidate**. It runs as a Sonic 3 & Knuckles startup scene and
 borrows from all three of your Sonic ROMs: Sonic 1 for South Island, Sonic 2 for West Side
-Island and Sonic 3 & Knuckles for Angel Island and the Death Egg. Java 21 and the matching
+Island and Sonic 3 & Knuckles for Angel Island and the Death Egg. Java 25 and the matching
 development JVM build are required; code mods do not load in native builds.
 
 > Three islands, cut off by Eggman's machines.
@@ -280,7 +280,7 @@ on the stock Sonic physics or the act's original horizontal route.
 (zones: `ghz slz syz ehz cpz mcz aiz hcz lbz dez`). For example:
 
 ```bash
-java -cp target/test-classes:target/classes:$(cat target/test-classpath.txt) \
+java --enable-native-access=ALL-UNNAMED -cp target/test-classes:target/classes:$(cat target/test-classpath.txt) \
   com.openggf.mods.code.ExampleModCapture --rom s3k.gen --mod examples/three-islands \
   --out /tmp/cap --jump "boss:hcz" --script "120:enter +10:enter" --every 30
 ```

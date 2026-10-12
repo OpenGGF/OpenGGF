@@ -23,7 +23,7 @@ class TestSitarHeroWorldTour {
     @BeforeAll static void compileChecks() throws Exception {
         Path checks = Files.createDirectory(temp.resolve("checks"));
         Path empty = Files.createDirectory(temp.resolve("empty"));
-        var args = new ArrayList<>(List.of("--release", "21", "-classpath", empty.toString(), "-d", checks.toString()));
+        var args = new ArrayList<>(List.of("--release", "25", "-classpath", empty.toString(), "-d", checks.toString()));
         for (String tree : List.of("src/main/java/sitarhero/model", "src/main/java/sitarhero/catalogue", "src/test/java/sitarhero/model")) {
             try (var files = Files.walk(Path.of("examples/sitar-hero").resolve(tree))) {
                 files.filter(p -> p.toString().endsWith(".java")).sorted().forEach(p -> args.add(p.toString()));

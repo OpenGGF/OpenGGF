@@ -24,6 +24,16 @@ while IFS='=' read -r name _; do
   case "$name" in LD_*|GIT_*|OPENGGF_*_COMMAND|OPENGGF_*_TOOL) /usr/bin/printf 'rejected ambient variable: %s\n' "$name" >&2; exit 2;; esac
 done < <(/usr/bin/env)
 
+# Preserve the fixed executable boundary: Maven's JAVA_HOME does not select
+# this hermetic producer's runtime.
+java_spec=$(/usr/bin/env -i PATH=/usr/bin:/bin LC_ALL=C LANG=C "$java_bin" \
+  -XshowSettings:properties -version 2>&1 | /usr/bin/sed -n 's/^[[:space:]]*java.specification.version = //p') || {
+  /usr/bin/printf '%s\n' 'unable to inspect fixed /usr/bin/java; install JDK 25 at that system path' >&2; exit 2;
+}
+[[ $java_spec == 25 ]] || {
+  /usr/bin/printf 'fixed /usr/bin/java must use Java 25 (found %s); JAVA_HOME does not select this hermetic runtime\n' "$java_spec" >&2; exit 2;
+}
+
 run_root= profile= rom= bk2= run_manifest= reference_home=
 while (( $# )); do
   (( $# >= 2 )) || { usage >&2; exit 2; }
@@ -119,7 +129,7 @@ run_engine_producer() {
   local output=$1
   run_tool produce OPENGGF "$profile" "$rom" "$bk2" "$run_manifest" - "$output"
 }
-run_tool() { /usr/bin/env -i PATH=/usr/bin:/bin LC_ALL=C LANG=C HOME="$empty_home" "$java_bin" -cp "$jar" "$tool_class" "$@"; }
+run_tool() { /usr/bin/env -i PATH=/usr/bin:/bin LC_ALL=C LANG=C HOME="$empty_home" "$java_bin" --enable-native-access=ALL-UNNAMED -cp "$jar" "$tool_class" "$@"; }
 run_capture() { local status=0; "$@" || status=$?; (( status == 0 )) && return 0; (( status == 2 )) && exit 2; exit 4; }
 validate_capture() { local status=0; run_tool validate "$1" "$2" "$profile" || status=$?; (( status == 0 )) && return 0; (( status == 2 )) && exit 2; exit 4; }
 tree_identity() {

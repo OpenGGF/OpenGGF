@@ -12,7 +12,7 @@ builder-only marker; it rejects a changed engine capability field. It redirects
 only `Engine.compiledModsSupported`, retaining native detection, ownership,
 trust, snapshots, fault boundaries and transactions.
 
-On Windows with Java 21, Python and an MSVC/Windows SDK developer environment:
+On Windows with Java 25, Python and an MSVC/Windows SDK developer environment:
 
 ```powershell
 python tools/testing/maven_queue.py -B "-Dmse=off" "-DskipTests" -Puniversal-jar package dependency:build-classpath "-DincludeScope=runtime" "-Dmdep.outputFile=target/native-runtime-classpath.txt"

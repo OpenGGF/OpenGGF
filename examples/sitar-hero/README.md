@@ -16,7 +16,7 @@ the ROMs you supply, at runtime. It uses the unpublished Mod API 0.7 candidate.
 
 ## Play it
 
-You need Java 21, Maven and Python 3 in this checkout, and at least one of these ROM
+You need Java 25, Maven and Python 3 in this checkout, and at least one of these ROM
 dumps (any subset works):
 
 | Game | Image | CRC32 |
@@ -331,14 +331,14 @@ one installed subset, using the `s1.gen`, `s2.gen` and `s3k.gen` files in a ROM 
 It records source and ROM hashes beside its pictures:
 
 ```bash
-java -cp "$CP" com.openggf.tools.SitarHeroCapture --rom-root /abs/rom/folder --out /abs/out --subset all
+java --enable-native-access=ALL-UNNAMED -cp "$CP" com.openggf.tools.SitarHeroCapture --rom-root /abs/rom/folder --out /abs/out --subset all
 ```
 
 `ExampleModCapture` plays a script of inputs or debug jumps and records PNGs, an MP4 and a
 WAV of the scene's music and sound. `SitarScene.debugJump` documents the commands:
 
 ```bash
-java -cp "$CP" com.openggf.mods.code.ExampleModCapture --rom s3k.gen --mod examples/sitar-hero \
+java --enable-native-access=ALL-UNNAMED -cp "$CP" com.openggf.mods.code.ExampleModCapture --rom s3k.gen --mod examples/sitar-hero \
   --out /abs/out --script "120:down 150:enter" --audio /abs/out/menu.wav --video /abs/out/menu.mp4
 ```
 
@@ -390,7 +390,7 @@ do not certify physical speaker or controller timing.
 
 ## Use matching creator artifacts
 
-The mutable 0.7 Mod API is unpublished. See [candidate setup](../../docs/modding/getting-started.md) for Java 21 and matching engine/SDK jar paths. From this checkout the shared launcher supports artifact-only builds and explicit ROM paths:
+The mutable 0.7 Mod API is unpublished. See [candidate setup](../../docs/modding/getting-started.md) for Java 25 and matching engine/SDK jar paths. From this checkout the shared launcher supports artifact-only builds and explicit ROM paths:
 
 ```sh
 python3 examples/build_example.py sitar-hero --engine /absolute/engine.jar --sdk /absolute/sdk.jar --run --s3k /absolute/own-s3k.gen

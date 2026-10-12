@@ -22,21 +22,23 @@ class ControlTests(unittest.TestCase):
             with self.assertRaises(ValueError) as failure:
                 control.preflight(Path('.'), self.plan())
         self.assertEqual(3, process.call_count)
-        for name in ('Java 21', 'Lua 5.4', 'PowerShell'):
+        for name in ('Java 25', 'Lua 5.4', 'PowerShell'):
             self.assertIn(name, str(failure.exception))
 
     def test_versions_and_guard_environment_are_checked(self):
-        outputs = ['Java version: 21.0.10, vendor: test', 'Lua 5.4.8', '']
+        outputs = ['Java version: 25.0.10, vendor: test', 'Lua 5.4.8', '']
         with patch.dict(control.os.environ, {'LUA_BIN': '/configured/lua'}), patch.object(
                 control.subprocess, 'run', side_effect=[subprocess.CompletedProcess([], 0, o) for o in outputs]) as process:
             control.preflight(Path('.'), self.plan())
         self.assertEqual('/configured/lua', process.call_args_list[1].args[0][0])
-        with patch.object(control.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, 'Java version: 17.0.1')):
-            with self.assertRaisesRegex(ValueError, 'Java 21'):
-                control.preflight(Path('.'), dict(guards=False))
+        for version in ('17.0.1', '21.0.12', '24.0.2', '26', '250'):
+            with self.subTest(version=version), patch.object(control.subprocess, 'run',
+                    return_value=subprocess.CompletedProcess([], 0, 'Java version: ' + version)):
+                with self.assertRaisesRegex(ValueError, 'Java 25'):
+                    control.preflight(Path('.'), dict(guards=False))
 
     def test_focused_preflight_does_not_require_guard_only_tools(self):
-        with patch.object(control.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, 'Java version: 21')) as process:
+        with patch.object(control.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, 'Java version: 25')) as process:
             control.preflight(Path('.'), dict(guards=False))
         self.assertEqual(1, process.call_count)
 

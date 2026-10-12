@@ -33,7 +33,7 @@ class TestPuttPuttParadise {
         Path project = Path.of("examples/putt-putt-paradise");
         assertTrue(Files.isDirectory(project.resolve("src/main/java")), "missing golf code mod");
         Path classes = Files.createDirectory(temp.resolve("classes"));
-        var args = new ArrayList<>(List.of("--release", "21", "-cp", System.getProperty("java.class.path"),
+        var args = new ArrayList<>(List.of("--release", "25", "-cp", System.getProperty("java.class.path"),
                 "-d", classes.toString()));
         try (var sources = Files.walk(project.resolve("src/main/java"))) {
             sources.filter(p -> p.toString().endsWith(".java")).sorted().forEach(p -> args.add(p.toString()));

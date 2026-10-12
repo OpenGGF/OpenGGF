@@ -232,7 +232,7 @@ routines are fed the logical camera X (window origin plus local camera X), so ev
 parallax band keeps its stock speed straight through a shift with no jump; only the
 foreground scroll is put back on the local camera.
 
-From the repository root, with Java 21 and Maven on PATH:
+From the repository root, with Java 25 and Maven on PATH:
 
 ```sh
 python3 examples/infinite-sonic/build.py
@@ -272,7 +272,7 @@ in [the project design](../../docs/architecture/designs/2026-10-01-infinite-soni
 
 ## Use matching creator artifacts
 
-The mutable 0.7 Mod API is unpublished. See [candidate setup](../../docs/modding/getting-started.md) for Java 21 and matching engine/SDK jar paths. From this checkout the shared launcher supports artifact-only builds and explicit ROM paths:
+The mutable 0.7 Mod API is unpublished. See [candidate setup](../../docs/modding/getting-started.md) for Java 25 and matching engine/SDK jar paths. From this checkout the shared launcher supports artifact-only builds and explicit ROM paths:
 
 ```sh
 python3 examples/build_example.py infinite-sonic --engine /absolute/engine.jar --sdk /absolute/sdk.jar --run --s1 /absolute/own-s1.gen

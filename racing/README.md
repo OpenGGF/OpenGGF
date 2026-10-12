@@ -37,6 +37,10 @@ existing mod settings. Configuration files are limited to 1 MiB for this import.
 
 ## Build and test
 
+Use a Java 25 JDK for the engine, mod and server. Set `JAVA_HOME` to that JDK
+when another Java version is on `PATH`. The generated server launcher uses the
+selected JVM and declares native access for SQLite and engine verification.
+
 Both projects compile and run their tests with the engine's test classpath, so the ordinary
 suite covers them along with the shared networking tests:
 

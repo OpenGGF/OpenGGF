@@ -68,6 +68,7 @@ class MemoryProfileTests(unittest.TestCase):
             self.assertEqual(launcher, resolved)
             self.assertIn('-Xmx3g', command)
             self.assertIn('-Xshare:off', command)
+            self.assertIn('--enable-native-access=ALL-UNNAMED', command)
             self.assertIn('-javaagent:' + str(mockito), command)
             self.assertIn('-Djava.io.tmpdir=' + str(diagnostic), command)
             cp = command[command.index('-cp') + 1].split(os.pathsep)
@@ -122,7 +123,7 @@ public class MemoryFixture {
     @Disabled("control skip") @Test void skipped() {}
 }
 ''')
-            compiled = subprocess.run(['javac', '--release', '21', '-cp', str(jar), '-d', str(root),
+            compiled = subprocess.run(['javac', '--release', '25', '-cp', str(jar), '-d', str(root),
                                        str(source), str(fixture)], text=True, capture_output=True)
             self.assertEqual(0, compiled.returncode, compiled.stderr)
             output = root / 'events.jsonl'

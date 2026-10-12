@@ -207,7 +207,8 @@ def main():
             env.update(vblank_mode='0',__GL_SYNC_TO_VBLANK='0')
         if args.keyutils_preload:
             env['LD_PRELOAD']=str(args.keyutils_preload.resolve())+(':'+env['LD_PRELOAD'] if env.get('LD_PRELOAD') else '')
-        command=['java','-Duser.dir='+str(config),'-Dopenggf.saveRoot='+str(out/'player-settings')]
+        java = str(Path(env['JAVA_HOME']) / 'bin' / 'java') if env.get('JAVA_HOME') else 'java'
+        command=[java,'--enable-native-access=ALL-UNNAMED','-Duser.dir='+str(config),'-Dopenggf.saveRoot='+str(out/'player-settings')]
         if args.mod_dir:command.append('-Dggfmod.dev.modDir='+str(args.mod_dir.resolve()))
         command+=['-cp',classpath,'com.openggf.Engine']
         receipt['command']=command

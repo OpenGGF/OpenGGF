@@ -77,7 +77,7 @@ class CThird { byte[] fixture = new byte[20 * 1024 * 1024];
     @Test void transientAllocation() { byte[] a = new byte[1024 * 1024]; Assertions.assertEquals(0, a[0]); }
 }
 ''')
-            compile = subprocess.run(['javac','--release','21','-cp',str(jar),'-d',str(root),str(source),
+            compile = subprocess.run(['javac','--release','25','-cp',str(jar),'-d',str(root),str(source),
                                       str(source.with_name('MemoryProfileLauncher.java')),str(fixture)],capture_output=True,text=True)
             self.assertEqual(0,compile.returncode,compile.stderr)
             service = root / 'META-INF/services/org.junit.platform.launcher.TestExecutionListener'

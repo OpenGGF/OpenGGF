@@ -64,6 +64,8 @@ class CreatorKitTest(unittest.TestCase):
         (project / "README.md").write_text("[handbook](../../docs/modding/index.md)")
         (self.root / "docs/modding/index.md").write_text("[example](../../examples/demo/README.md) [source](../../src/Example.java)")
         entries = kit.collect(self.root, "abcdef123456")
+        self.assertIn(b"${JAVA_HOME:+$JAVA_HOME/bin/}java", entries["ggfmod"])
+        self.assertIn(b"$env:JAVA_HOME", entries["ggfmod.ps1"])
         manifest = json.loads(entries["creator-kit.json"])
         self.assertEqual("candidate", manifest["apiStatus"])
         self.assertFalse(manifest["sourceDirty"])
@@ -150,6 +152,7 @@ class CreatorKitTest(unittest.TestCase):
         self.assertIn(json.dumps(str(rom)), config)
         self.assertEqual(project / "target/play", run.call_args.kwargs["cwd"])
         self.assertEqual(["run", str(project / "target/classes")], run.call_args.args[0][-2:])
+        self.assertIn("--enable-native-access=ALL-UNNAMED", run.call_args.args[0])
         self.assertEqual(b"own asset", rom.read_bytes())
 
     def test_exported_hello_tests_use_opt_in_jupiter_profile_and_never_enter_production_inputs(self):
@@ -163,6 +166,9 @@ class CreatorKitTest(unittest.TestCase):
         entries = kit.export_examples(self.root)
         self.assertEqual(specimen.read_bytes(), entries["examples/hello-scene/src/test/java/hello/HelloSceneIntegrationTest.java"])
         pom = entries["examples/hello-scene/pom.xml"]
+        self.assertIn(b"<maven.compiler.release>25</maven.compiler.release>", pom)
+        self.assertIn(b"<executable>${java.home}/bin/java</executable>", pom)
+        self.assertIn(b"<argLine>--enable-native-access=ALL-UNNAMED</argLine>", pom)
         self.assertIn(b"src/creator-tests-disabled", pom)
         self.assertIn(b"<skipTests>true</skipTests>", pom)
         self.assertIn(b"<skipTests>false</skipTests>", pom)
@@ -179,7 +185,7 @@ class CreatorKitTest(unittest.TestCase):
         readme = kit.export_examples(self.root)["examples/hello-scene/README.md"].decode()
         self.assertTrue(readme.startswith("# Build hello-scene from the creator kit"))
         self.assertLess(readme.index("python3 ../../tools/build_project.py ."), readme.index("python3 play.py"))
-        for instruction in ("21 JDK", "-Dopenggf.engine.jar=/absolute/kit/engine.jar",
+        for instruction in ("25 JDK", "-Dopenggf.engine.jar=/absolute/kit/engine.jar",
                             "-Dopenggf.sdk.jar=/absolute/kit/sdk.jar", "target/hello-scene-mod.jar",
                             "--run --s3k /absolute/own-s3k.gen", "target/play"):
             self.assertIn(instruction, readme)

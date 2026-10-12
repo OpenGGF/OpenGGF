@@ -15,7 +15,7 @@ rg --files src/test | rg 'TestS1.*TraceReplay|traces/s1/.*/metadata.json'
 
 ## Run an existing fixture
 
-Use JDK 21 and the discovered absolute Sonic 1 REV01 ROM path:
+Use JDK 25 and the discovered absolute Sonic 1 REV01 ROM path:
 
 ```bash
 mvn "-Dsonic1.rom.path=$S1_ROM_PATH" "-Dtest=<TestClass>" test

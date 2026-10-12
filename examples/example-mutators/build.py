@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build/package the Mutator Lab mod against this checkout (Java 21 + Maven).
+"""Build/package the Mutator Lab mod against this checkout (Java 25 + Maven).
 
 Origin: Mutator Lab project, 2026-10-07. No ROM data is included in the jar.
 """
@@ -35,12 +35,13 @@ def main():
     classes.mkdir(parents=True)
     classpath = os.pathsep.join([str(ROOT / "target/classes"),
                                 (ROOT / "target/mutators-classpath.txt").read_text().strip()])
-    run([java_tool("javac"), "--release", "21", "-cp", classpath, "-d", str(classes),
+    run([java_tool("javac"), "--release", "25", "-cp", classpath, "-d", str(classes),
          *map(str, sorted((PROJECT / "src/main/java").rglob("*.java")))])
     shutil.copytree(PROJECT / "src/main/resources", classes, dirs_exist_ok=True)
     jar = OUTPUT / "example-mutators.jar"
     jar.unlink(missing_ok=True)
-    cli = [java_tool("java"), "-cp", classpath, "com.openggf.tools.modsdk.GgfModCli"]
+    cli = [java_tool("java"), "--enable-native-access=ALL-UNNAMED", "-cp", classpath,
+           "com.openggf.tools.modsdk.GgfModCli"]
     run([*cli, "package", "--input", str(classes), "--out", str(jar)])
     print(f"Built {jar}", flush=True)
     if args.run:
@@ -49,7 +50,8 @@ def main():
         if save_root.is_symlink() or mutator_root.is_symlink():
             raise SystemExit("Settings roots must be owned directories, not symlinks")
         mutator_root.mkdir(parents=True, exist_ok=True)
-        run([java_tool("java"), "-Dggfmod.dev.modDir=" + str(classes),
+        run([java_tool("java"), "--enable-native-access=ALL-UNNAMED",
+             "-Dggfmod.dev.modDir=" + str(classes),
              "-Dopenggf.saveRoot=" + str(save_root), "-cp", classpath, "com.openggf.Engine"])
 
 

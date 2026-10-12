@@ -18,7 +18,9 @@ if not defined FINAL_NAME goto :metadata_missing
 set "JAR=%CD%\target\%FINAL_NAME%-jar-with-dependencies.jar"
 if not exist "%JAR%" goto :jar_missing
 
-java --add-exports java.base/java.lang=ALL-UNNAMED --add-exports java.desktop/sun.awt=ALL-UNNAMED --add-exports java.desktop/sun.java2d=ALL-UNNAMED -XX:+UseG1GC -XX:MaxGCPauseMillis=5 -jar "%JAR%"
+set "OPENGGF_JAVA=java"
+if defined JAVA_HOME set "OPENGGF_JAVA=%JAVA_HOME%\bin\java.exe"
+"%OPENGGF_JAVA%" --enable-native-access=ALL-UNNAMED --add-exports java.base/java.lang=ALL-UNNAMED --add-exports java.desktop/sun.awt=ALL-UNNAMED --add-exports java.desktop/sun.java2d=ALL-UNNAMED -XX:+UseG1GC -XX:MaxGCPauseMillis=5 -jar "%JAR%"
 set "STATUS=%ERRORLEVEL%"
 popd
 exit /b %STATUS%

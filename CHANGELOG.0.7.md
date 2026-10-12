@@ -1058,7 +1058,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Its list identifies each mod's target game (S1, S2, S3K, all three, or standalone).
   The master title's game pane shows enabled mod names below the launch profile,
   cycling through names when several apply to the selected game.
-  The creator handbook now starts with a Java 21 setup path, seven purpose-specific
+  The creator handbook now starts with a Java 25 setup path, seven purpose-specific
   starters, a capability matrix and the complete recipient install/update/trust/
   rollback journey. Creator kits pair the engine, SDK, API documentation and
   production-backed Jupiter test support from one source commit, with its
@@ -1216,6 +1216,11 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   timing authority in their existing owners.
 
 ## Build and release
+
+- **Java 25 baseline:** source builds, the JVM engine, creator SDK and examples now
+  target Java 25, with compatible test instrumentation and explicit native access.
+  Audio voice bounds retain their exception contract without relying on integer overflow.
+  Release builds use GraalVM 25; Intel macOS continues through the JVM distribution.
 
 - **`ggfmod package` works on macOS.** Packaging a mod from a directory failed with
   "Directory entry escapes root" because the snapshot's temporary root sat under the

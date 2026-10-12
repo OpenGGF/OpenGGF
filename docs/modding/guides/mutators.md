@@ -162,7 +162,7 @@ unavailable.
 ## Human and agent walkthrough
 
 1. Read the example README, one class per effect, `NativeLabProfile.java`,
-   `MutatorsMod.java` and the format-1 manifest. Verify Java 21 and the original
+   `MutatorsMod.java` and the format-1 manifest. Verify Java 25 and the original
    ROMs for the games you will launch. Keep commercial bytes outside Git.
 2. Run `python3 examples/example-mutators/build.py` from this checkout. It queues
    the actual Maven build and `ggfmod package`; inspect the result and jar contents.
@@ -192,11 +192,11 @@ and an outside-repository task directory:
 
 ```bash
 OPENGGF_MUTATORS_ROOT="$(pwd)"
-java -cp "$OPENGGF_MUTATORS_ROOT/target/classes:$(cat target/mutators-classpath.txt)" \
+java --enable-native-access=ALL-UNNAMED -cp "$OPENGGF_MUTATORS_ROOT/target/classes:$(cat target/mutators-classpath.txt)" \
   com.openggf.tools.InputLogAuthorTool --script examples/example-mutators/capture.script \
   --out /absolute/task/captures/lab.txt --game s2
 mkdir -p /absolute/task/captures/config
-java -Duser.dir=/absolute/task/captures/config \
+java --enable-native-access=ALL-UNNAMED -Duser.dir=/absolute/task/captures/config \
   -Dopenggf.saveRoot=/absolute/task/captures/player-settings \
   -cp "$OPENGGF_MUTATORS_ROOT/target/classes:$(cat target/mutators-classpath.txt)" \
   com.openggf.tools.GameplayCaptureTool --game s2 --rom /absolute/user/s2-rev01.gen \

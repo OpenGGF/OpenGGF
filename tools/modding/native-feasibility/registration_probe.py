@@ -2,7 +2,7 @@
 """Linux native API-retention experiment; origin: 2026-10-08 mod follow-up.
 
 Inputs: an explicit CE GraalVM home, the unmodified universal engine JAR,
-trusted packaged mods, and Java 21 on PATH. Generates retention from the
+trusted packaged mods, and Java 25 on PATH. Generates retention from the
 canonical API and every mod's static engine references, audits member metadata
 before loading code, and checks each package separately on JVM and native.
 No Maven, downloads, production policy edits, ROM access or gameplay claim.
@@ -12,6 +12,7 @@ All generated files/logs and initialized configuration are removed on exit.
 import argparse
 import os
 from pathlib import Path
+import re
 import resource
 import subprocess
 import sys
@@ -32,8 +33,8 @@ def main():
     if sys.platform != "linux":
         parser.error("This experiment has only been qualified on Linux x86_64")
     version = subprocess.check_output(["javac", "-version"], text=True).strip()
-    if not version.startswith("javac 21."):
-        parser.error(f"Use Java 21 javac on PATH, found {version}")
+    if not re.fullmatch(r"javac 25(?:[.+-]\S+)?", version):
+        parser.error(f"Use Java 25 javac on PATH, found {version}")
     native_image = args.graalvm_home.resolve() / "bin/native-image"
     engine = args.engine_jar.resolve(strict=True)
     mods = args.mods.resolve(strict=True)
@@ -49,16 +50,16 @@ def main():
         os.chdir(work)
         try:
             classes = work / "classes"
-            run("compile", ["javac", "--release", "21", "-cp", engine, "-d", classes,
+            run("compile", ["javac", "--release", "25", "-cp", engine, "-d", classes,
                 sources / "NativeModMemberContract.java", sources / "NativeModMemberAudit.java",
                 sources / "NativeModRegistrationProbe.java", sources / "NativeModMemberContractTest.java"], work)
             classpath = f"{classes}:{engine}"
-            print(run("contract-tests", ["java", "-cp", classpath,
+            print(run("contract-tests", ["java", "--enable-native-access=ALL-UNNAMED", "-cp", classpath,
                 "com.openggf.tools.NativeModMemberContractTest", work / "contract-tests"], work).strip(), flush=True)
             contract = work / "contract"
-            run("contract", ["java", "-cp", classpath, "com.openggf.tools.NativeModMemberContract",
+            run("contract", ["java", "--enable-native-access=ALL-UNNAMED", "-cp", classpath, "com.openggf.tools.NativeModMemberContract",
                 engine, mods, contract], work)
-            print(run("jvm-audit", ["java", "-cp", classpath,
+            print(run("jvm-audit", ["java", "--enable-native-access=ALL-UNNAMED", "-cp", classpath,
                 "com.openggf.tools.NativeModMemberAudit", contract / "members.tsv"], work).strip(), flush=True)
             metadata = work / "metadata"
             metadata.mkdir()
@@ -74,7 +75,7 @@ def main():
                 raise ValueError("Universal JAR contains no Linux x64 LWJGL libraries")
             image = work / "registration"
             print("Building native contract (600s timeout, 5 GiB heap, 4 threads)", flush=True)
-            run("native-build", [native_image, "-march=compatibility", "-J-Xmx5g", "--parallelism=4",
+            run("native-build", [native_image, "--enable-native-access=ALL-UNNAMED", "-march=compatibility", "-J-Xmx5g", "--parallelism=4",
                 "--exclude-config", ".*", "META-INF/native-image/org.xerial/sqlite-jdbc/.*",
                 r"-H:IncludeResources=com/openggf/.*\.class", "-H:+UnlockExperimentalVMOptions",
                 "-H:+RuntimeClassLoading", f"-H:Preserve=path={contract / 'preserved-engine.jar'},"
@@ -89,14 +90,14 @@ def main():
                 invalid.write_text(f"{kind}\tcom.openggf.game.rules.GameRules\t__absent_control\t{desc}\n")
                 run(f"reject-{kind}", [image, "--audit", invalid], work,
                     expected_failure="MISSING native member: " + kind)
-            listing = run("list", ["java", "-cp", classpath,
+            listing = run("list", ["java", "--enable-native-access=ALL-UNNAMED", "-cp", classpath,
                 "com.openggf.tools.NativeModRegistrationProbe", "--list", mods], work)
             owners = [line.split("\t", 1)[1] for line in listing.splitlines() if line.startswith("OWNER\t")]
             if not owners or len(set(owners)) != len(owners):
                 raise ValueError("Expected nonempty unique mod IDs")
             for index, owner in enumerate(owners):
                 for label, command in (
-                    ("jvm", ["java", f"-Dorg.lwjgl.librarypath={libs}", "-cp", classpath,
+                    ("jvm", ["java", "--enable-native-access=ALL-UNNAMED", f"-Dorg.lwjgl.librarypath={libs}", "-cp", classpath,
                              "com.openggf.tools.NativeModRegistrationProbe"]),
                     ("native", [image, f"-Dorg.lwjgl.librarypath={libs}"]),
                 ):
@@ -109,7 +110,7 @@ def main():
                 # Exact original package selection: no game.rules and no generated retention path.
                 pruned = work / "pruned"
                 print("Building historical pruning control (600s timeout, 5 GiB heap, 4 threads)", flush=True)
-                run("pruned-build", [native_image, "-march=compatibility", "-J-Xmx5g", "--parallelism=4",
+                run("pruned-build", [native_image, "--enable-native-access=ALL-UNNAMED", "-march=compatibility", "-J-Xmx5g", "--parallelism=4",
                     "--exclude-config", ".*", "META-INF/native-image/org.xerial/sqlite-jdbc/.*",
                     r"-H:IncludeResources=com/openggf/.*\.class", "-H:+UnlockExperimentalVMOptions",
                     "-H:+RuntimeClassLoading", "-H:Preserve=package=com.openggf.mods.code,"

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build/package the Slay the Robotnik example mod against this checkout (Java 21 + Maven).
+"""Build/package the Slay the Robotnik example mod against this checkout (Java 25 + Maven).
 
 Usage:
   python3 examples/slay-the-robotnik/build.py          # compile and package target/examples/slay-the-robotnik/slay-the-robotnik.jar

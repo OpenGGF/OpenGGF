@@ -392,7 +392,9 @@ def lean_command(args):
         allowed = {'-Djava.io.tmpdir=target/maven-tmp'} if name == 'jvm.config' else {'-Dmse=relaxed'}
         if path.exists() and set(shlex.split(path.read_text(), comments=True)) - allowed:
             raise ValueError('--lean cannot bound custom .mvn/' + name + '; use the normal lane')
-    line = '${test.cds.argLine} ${mockito.agent.argLine} -Xmx1g'
+    # A literal flag also works when this wrapper serves an older worktree
+    # whose POM predates native.access.argLine (Java 21 accepts the flag).
+    line = '--enable-native-access=ALL-UNNAMED ${test.cds.argLine} ${mockito.agent.argLine} -Xmx1g'
     if sys.platform == 'darwin':
         line = '-XstartOnFirstThread ' + line
     return [*args, '-Dsurefire.argLine=' + line, '-Dsurefire.forkCount=1',

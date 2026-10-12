@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Linux external-JAR control; origin: 2026-10-08 GraalVM mod feasibility.
 
-Inputs: an explicitly supplied GraalVM home and Java 21 commands on PATH.
+Inputs: an explicitly supplied GraalVM home and Java 25 commands on PATH.
 Uses the unchanged production classloader. No downloads, Maven invocation,
 production policy edits, ROM access or gameplay certification. Build outputs
 and logs live in an owned target temporary directory and are removed on exit.
@@ -11,6 +11,7 @@ import argparse
 import hashlib
 import os
 from pathlib import Path
+import re
 import resource
 import signal
 import subprocess
@@ -67,8 +68,8 @@ def main():
     if sys.platform != "linux":
         parser.error("This bounded reproducer has only been qualified on Linux")
     version = subprocess.check_output(["javac", "-version"], text=True).strip()
-    if not version.startswith("javac 21."):
-        parser.error(f"Use Java 21 javac on PATH, found {version}")
+    if not re.fullmatch(r"javac 25(?:[.+-]\S+)?", version):
+        parser.error(f"Use Java 25 javac on PATH, found {version}")
     native_image = args.graalvm_home.resolve() / "bin/native-image"
     print(subprocess.check_output([native_image, "--version"], text=True).strip(), flush=True)
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
@@ -79,14 +80,14 @@ def main():
         work = Path(temporary)
         host = work / "host"
         host.mkdir()
-        run("compile-host", ["javac", "--release", "21", "-d", host,
+        run("compile-host", ["javac", "--release", "25", "-d", host,
             sources / "NativeModLoadingProbe.java",
             root / "src/main/java/com/openggf/mods/code/ModDependencyClassLoader.java"], work)
         metadata = work / "metadata"
         metadata.mkdir()
         (metadata / "reflect-config.json").write_text(
             '[{"name":"sun.net.www.protocol.jar.Handler","allDeclaredConstructors":true}]\n')
-        common = [native_image, "-march=compatibility", "-J-Xmx3g", "--parallelism=4",
+        common = [native_image, "--enable-native-access=ALL-UNNAMED", "-march=compatibility", "-J-Xmx3g", "--parallelism=4",
                   "-H:+UnlockExperimentalVMOptions",
                   "-H:Preserve=package=com.openggf.tools,package=java.lang,"
                   "package=java.lang.invoke,package=java.util.function",
@@ -108,11 +109,11 @@ def main():
             java = fixture / "Plugin.java"
             java.write_text((sources / "Plugin.java").read_text().replace("version-one", marker))
             classes = fixture / "classes"
-            run(f"compile-{marker}", ["javac", "--release", "21", "-cp", host,
+            run(f"compile-{marker}", ["javac", "--release", "25", "-cp", host,
                 "-d", classes, java], work)
             jar = fixture / "plugin.jar"
             run(f"package-{marker}", ["jar", "--create", "--file", jar, "-C", classes, "."], work)
-            run(f"jvm-{marker}", ["java", "-cp", host, "com.openggf.tools.NativeModLoadingProbe",
+            run(f"jvm-{marker}", ["java", "--enable-native-access=ALL-UNNAMED", "-cp", host, "com.openggf.tools.NativeModLoadingProbe",
                 jar, f"{marker}:23"], work)
             for name, _ in modes:
                 output = run(f"{name}-{marker}", [work / name, jar, f"{marker}:23"], work,

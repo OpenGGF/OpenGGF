@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build Three Islands against this checkout; optionally install or launch it.
 
-Origin: Three Islands creator mod, 2026-10-08 (adapted from Starfall Frontier's build script). Requires Java 21 and Maven.
+Origin: Three Islands creator mod, 2026-10-08 (adapted from Starfall Frontier's build script). Requires Java 25 and Maven.
 Uses the ordinary creator packaging validator. Installation explicitly enables
 and trusts only the resulting local jar; existing mod entries are preserved.
 """

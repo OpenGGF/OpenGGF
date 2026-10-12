@@ -5,7 +5,7 @@ Keep this file and `CLAUDE.md` identical. Skills are mirrored between
 
 ## Project and scope
 
-OpenGGF is an alpha Java 21 reimplementation of Sonic 1, 2, and 3&K for
+OpenGGF is an alpha Java 25 reimplementation of Sonic 1, 2, and 3&K for
 research and preservation. Runtime assets come from user-supplied ROMs; this
 is an independent fan project with no Sega affiliation. The editor is
 experimental. The unpublished Mod API candidate is implemented on the development branches;
@@ -26,7 +26,7 @@ workflow defaults.
 ## Build and verification
 
 ```bash
-mvn -v                              # must report Java 21
+mvn -v                              # must report Java 25
 mvn -Dmse=off compile               # build only; no test queue
 mvn -Dmse=off -DskipTests package    # package without running tests; no test queue
 tools/testing/install-hooks.sh     # once per worktree
@@ -39,7 +39,7 @@ python3 tools/testing/maven_queue.py -Dmse=off -Psmoke test -B         # basic C
 python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B        # separate fresh JVM for structural guards
 ```
 
-- Surefire inherits Maven's JVM. Set `JAVA_HOME` to JDK 21 if needed.
+- Surefire inherits Maven's JVM. Set `JAVA_HOME` to JDK 25 if needed.
 - Use Lua 5.4 for the TraceChaser forwarder guard; set `LUA_BIN` if needed.
 - Maven output belongs in the current worktree's `target/` directory. Do not share or
   copy build trees. The per-Surefire-fork LWJGL extraction uses
@@ -82,7 +82,7 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B        # separat
 - Before a broad run, state the selected class count, expected cost and stopping rule.
   Broad normalization measured about 24 minutes ordinary plus 10 minutes guards; do not
   present this as a short check. Finish focused fixes and documentation first. Run
-  `run_categories.py --base <integration-base> --preflight` to check Java 21, Lua 5.4 and
+  `run_categories.py --base <integration-base> --preflight` to check Java 25, Lua 5.4 and
   PowerShell in the actual launch environment. On macOS, use the known working native
   display/service permissions from the first graphics run; tool preflight does not prove
   GLFW access. Do not rediscover a documented sandbox failure with another full run.

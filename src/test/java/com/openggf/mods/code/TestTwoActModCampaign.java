@@ -53,7 +53,7 @@ class TestTwoActModCampaign {
                 if (Files.isDirectory(source)) Files.createDirectories(target); else Files.copy(source,target);
             }
         }
-        var arguments = new ArrayList<>(List.of("--release","21","-classpath",TestSessionOutputPaths.compiledClasses().toAbsolutePath().toString(),"-d",output.toString()));
+        var arguments = new ArrayList<>(List.of("--release","25","-classpath",TestSessionOutputPaths.compiledClasses().toAbsolutePath().toString(),"-d",output.toString()));
         try (var paths=Files.walk(PROJECT.resolve("src/main/java"))) { paths.filter(path -> path.toString().endsWith(".java")).sorted().map(Path::toString).forEach(arguments::add); }
         assertEquals(0,ToolProvider.getSystemJavaCompiler().run(null,null,null,arguments.toArray(String[]::new)),"External creator source must compile");
         Path repo=Files.createDirectory(temp.resolve("mods")); Path jar=repo.resolve("tide.jar");

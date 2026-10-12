@@ -21,7 +21,7 @@ public final class NewIdentityCache {
         this.clock = clock;
         entries = new LinkedHashMap<>(64, 0.75f, true) {
             @Override
-            protected boolean removeEldestEntry(Map.Entry<String, Entry> eldest) {
+            protected boolean removeEldestEntry(Map.Entry<String, NewIdentityCache.Entry> eldest) {
                 return size() > maxSize;
             }
         };

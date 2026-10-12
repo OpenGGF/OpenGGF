@@ -53,7 +53,7 @@ NON-NEGOTIABLE PROJECT RULES
     .claude/skills/<name>/ AND .agents/skills/<name>/. Prefer standalone docs under
     docs/agent-workflow/ over mutating skills.
 11. Do NOT run `git add -A` / git commit. The working tree is shared; edit only your
-    assigned files. Source files end with a trailing newline. Java 21.
+    assigned files. Source files end with a trailing newline. Java 25.
 ```
 
 ---
