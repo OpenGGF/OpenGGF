@@ -40,6 +40,8 @@ final class Species {
     record Traits(int id, String name, String artKey, int[] frames, int ticksPerFrame, boolean artFacesRight,
                   int collision, int hp, int speed, int archetype, int halfWidth, int depth, boolean spiked,
                   String shotKey, int shotFrame, int shotPeriod) {
+        Traits { frames = frames.clone(); }
+        @Override public int[] frames() { return frames.clone(); }
         int frame(int ticks) { return frames[(ticks / ticksPerFrame) % frames.length]; }
         boolean flying() { return archetype == FLYER || archetype == DIVER || archetype == EXPLODER; }
         boolean shoots() { return shotKey != null && archetype != EXPLODER; }

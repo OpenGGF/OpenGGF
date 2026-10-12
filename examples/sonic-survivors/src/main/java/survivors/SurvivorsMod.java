@@ -33,7 +33,8 @@ public final class SurvivorsMod implements GgfMod {
             var profile = new Profile(storage).load();
             return GameServiceBundle.builder()
                     .capturedService("state", RunState.class, new RunState(profile))
-                    .service(Profile.class, profile).build();
+                    .service(Profile.class, profile)
+                    .service(Definitions.class, new Definitions()).build();
         });
         context.registerGamePatch(new Patch());
     }

@@ -1634,7 +1634,7 @@ class TestSonicSurvivors {
         int whisp = field(loader.loadClass("survivors.Species"), "WHISP").getInt(null);
         var manager = GameServices.level().getObjectManager();
         int freeSlot = manager.firstFreeDynamicSlot();
-        for (int i = 0; i < 100; i++) call(stage(), "spawnEnemy", new int[0], new int[]{whisp}, 2, false);
+        for (int i = 0; i < 100; i++) call(stage(), "spawnEnemy", List.of(), List.of(whisp), 2, false);
         assertEquals(300, objects("Enemy").size());
         assertEquals(freeSlot, manager.firstFreeDynamicSlot(), "hordes cannot starve native power-up visuals");
         set(stage(), "eliteTimer", 1);
@@ -2102,7 +2102,7 @@ class TestSonicSurvivors {
         var fixture = launch(0, 0);
         startRun(fixture);
         fixture.sprite().setInvulnerableFrames(100000);
-        for (int i = 0; i < 160; i++) call(stage(), "spawnEnemy", new int[0], new int[]{0}, 0, false);
+        for (int i = 0; i < 160; i++) call(stage(), "spawnEnemy", List.of(), List.of(0), 0, false);
         int count = objects("Enemy").size();
         set(stage(), "eliteTimer", 100000);
         boolean elite = false;
