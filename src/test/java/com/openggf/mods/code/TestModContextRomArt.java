@@ -53,6 +53,24 @@ class TestModContextRomArt {
     }
 
     @Test
+    void namedSonic1ArtOnS3kStagesSourceAndUsesS1Bounds() {
+        ModContext context = new ModContext("owner", "s3k", ModAssetRoot.forTests("owner"));
+        context.registerRomObjectArt("bird", com.openggf.game.patch.LogicalRom.S1, request());
+        assertEquals(com.openggf.game.patch.LogicalRom.S1, context.freeze().romObjectArt().get("owner:bird").source());
+        ModContext bad = new ModContext("owner", "s3k", ModAssetRoot.forTests("owner"));
+        assertThrows(ModRegistrationException.class, () -> bad.registerRomObjectArt("bad", com.openggf.game.patch.LogicalRom.S1,
+                new RomArtRequest(0x80000, RomArtCompression.NEMESIS, 0, 0x100, 0, 0, 1)));
+    }
+
+    @Test
+    void namedArtStillRejectsStandaloneAndS1Dplc() {
+        ModContext standalone = new ModContext("owner", null, ModAssetRoot.forTests("owner"), null, true);
+        assertThrows(ModRegistrationException.class, () -> standalone.registerRomObjectArt("bird", com.openggf.game.patch.LogicalRom.S1, request()));
+        assertThrows(IllegalArgumentException.class, () -> new RomArtRequest(0, RomArtCompression.NEMESIS, 0, 1, 2, 0, 1,
+                com.openggf.game.patch.LogicalRom.S1));
+    }
+
+    @Test
     void planWithoutRomArtHasEmptyMap() {
         ModContext context = new ModContext("owner", "s2", ModAssetRoot.forTests("owner"));
         ModRegistrationPlan plan = context.freeze();

@@ -11,11 +11,13 @@ public record SmpsDriverSessionSnapshot(
         SmpsSourceDescriptor selectedDacSource,
         boolean speedShoesEnabled,
         int speedMultiplier,
+        int musicTempoPercent,
         boolean ringLeft,
         int musicFmDacTrackCount,
         SmpsSegaPcmTransportSnapshot segaPcmTransport,
         SmpsPhysicalDevice.Snapshot physical) {
     public SmpsDriverSessionSnapshot {
+        com.openggf.audio.MusicTempoPercent.requireValid(musicTempoPercent);
         Objects.requireNonNull(pendingGlobalCommand,
                 "pendingGlobalCommand");
         Objects.requireNonNull(profile, "profile");

@@ -1,5 +1,11 @@
 # Level test coverage backlog
 
+Starpost Valley phase 4 (2026-10-10): the [festival and lake matrix](../architecture/designs/2026-10-09-starpost-valley.md#festival-and-lake-route-matrix) adds native solo Sonic/Tails/Knuckles at 320/400 through Race, Ring Hunt, snowboard, lake and Ice Cap fishing with result consumption and whole-registry restore/replay. Wider viewport/donor/team, load/respawn and interaction-boundary obligations remain open.
+
+Starpost Valley integration (2026-10-10): the [integration route matrix](../architecture/designs/2026-10-09-starpost-valley.md#integration-route-matrix) covers native solo Sonic/Tails/Knuckles at 320/400px through the real farm → inn → farm loop, purchases and donor music, with whole-registry rewind/replay. The separate schedule check exercises real slope floors and doorway bases. Wider widths, donors, follower/team and respawn/festival/day-end breadth remain open; the scene valley fallback was subsequently removed by phase 4.
+
+Starpost Valley P1 (2026-10-09): the [real valley matrix](../architecture/designs/2026-10-09-starpost-valley.md#actcharacter-route-matrix-and-rewind-spots) records real S3K solo Sonic/Tails/Knuckles routes at 320/400px, both loop paths, source collision/colour equality, native ability/occlusion visuals and a mid-valley restore/replay spot. Checkpoint respawn, interaction and loop-boundary rewind, load/history isolation, broader viewport/donor/team and scene/act handoff obligations remain open. This prototype does not certify stock GHZ or the complete level standard.
+
 Mutator Lab expansion (2026-10-08): the [all-game affected-mechanic matrix](../architecture/validation/levels/mutator-lab-native-games.md) records native S1/S2/S3K focused cells and remaining composed capture/domain/broad obligations. Complete act, team, donor and viewport breadth remains unqualified.
 
 Mutator Lab (2026-10-07): the [S2 EHZ1 prototype matrix](../architecture/validation/levels/mutator-lab-s2-ehz1.md)
@@ -1053,3 +1059,10 @@ AIZ fire-reload follow-up (2026-10-03): the
 covers the fixed reload lock. The
 [HCZ1 matrix](../architecture/validation/levels/s3k-hcz1-sonic.md) adds the fresh
 live-load ordering obligation.
+
+
+Starpost Valley Real Ruins (2026-10-10): the
+[band/character route matrix](../architecture/validation/levels/starpost-realruins.md)
+tracks generated native Marble/Labyrinth/Scrap Brain chamber routes, scene return,
+health/faint/drowning and rewind. Broader width/donor/team/forty-chamber lifecycle
+obligations remain explicit gaps; creator reachability is not native-route certification.

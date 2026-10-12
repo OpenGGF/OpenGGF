@@ -2,6 +2,7 @@ package com.openggf.level.objects;
 
 import com.openggf.game.PlayableEntity;
 
+@com.openggf.game.ModApi
 public interface SolidObjectProvider {
     SolidObjectParams getSolidParams();
 

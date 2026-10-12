@@ -1475,6 +1475,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void resetForGameplayFromMasterTitle() {
+		gameLoop.retireModScene();
 		var worldSession = SessionManager.getCurrentWorldSession();
 		if (worldSession != null) {
 			worldSession.getGameModule().resetModuleScopedState();

@@ -293,6 +293,9 @@ Local Maven tests: [`tools/testing/maven_queue.py`](../../tools/testing/maven_qu
 
 - `tools/bizhawk/capture_mhz_pillar_reference.lua` samples native MHZ2 pillar scroll words and their collision helpers from ordinary movie playback; use the common native capture host and an explicit movie-state plan.
 
+- [Starpost placeholder generator](../../examples/starpost-valley/generate_resources.py): authors the flat town placeholder
+  into packaging output, without ROM bytes (Starpost Act Bridge, 2026-10-09).
+
 - `GameplayCaptureTool --title-screen --audio` (Mutator Lab, 2026-10-07) observes
   production title-to-play initialization and exactly one final SMPS PCM packet per
   captured outer frame. InputLogAuthorTool compiles the maintained example script;
