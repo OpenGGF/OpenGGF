@@ -122,6 +122,7 @@ public final class ModApiSurfaceInventory {
             "com.openggf.mods.scene.art.StockSceneArt",
             "com.openggf.mods.scene.art.PaletteAssembly",
             "com.openggf.mods.scene.art.SceneArtCache",
+            "com.openggf.mods.scene.art.TitleCardPresentation",
             "com.openggf.mods.scene.art.SpriteAnchors",
             "com.openggf.mods.scene.art.AnimationSampling",
             "com.openggf.mods.scene.art.RomAnimationPlayer");
