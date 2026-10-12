@@ -54,6 +54,22 @@ class TestStandaloneGameSpec {
         assertThrows(IllegalStateException.class,()->expert.object("sample:walker",factory));
     }
 
+    @Test void declarativeObjectLimitAcceptsTenThousandWithoutPublishingRejectedEntry() {
+        ObjectFactory factory=(spawn,registry)->new StubObject(spawn);
+        var builder=StandaloneGameSpec.builder("sample")
+                .zone("FIRST",new StandaloneGameSpec.Act(0x400,level(),0,0,MusicReference.stock(-1)));
+        for (int i=0;i<10_000;i++) builder.object("sample:object"+i,factory);
+        assertThrows(IllegalArgumentException.class,()->builder.object("sample:overflow",factory));
+
+        var registry=builder.build().createObjectRegistry();
+        assertEquals(10_000,registry.browsableObjectKeys().size());
+        assertTrue(registry.hasObjectKey("sample:object0"));
+        assertTrue(registry.hasObjectKey("sample:object9999"));
+        assertFalse(registry.hasObjectKey("sample:overflow"));
+        var spawn=new ObjectSpawn(32,64,0,0,0,false,64,-1,"sample","sample:object9999");
+        assertSame(spawn,registry.create(spawn).getSpawn());
+    }
+
     private static final class StubObject extends AbstractObjectInstance {
         private StubObject(ObjectSpawn spawn) { super(spawn,"stub"); }
         @Override public void update(int vIntRunCount,com.openggf.game.PlayableEntity player) { }
