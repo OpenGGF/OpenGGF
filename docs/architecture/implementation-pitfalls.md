@@ -5,6 +5,51 @@ headless tests, or audio. S3K-specific routing is in [AGENTS_S3K.md](../../AGENT
 
 The things that cost the most time when missed.
 
+**A background layout needs its presentation art and event palette.** Starfall
+Frontier's background revision (base `68d1e03482`, 2026-10-08) found numbered
+filler inside otherwise valid S3K background chunks. Append both block/chunk
+banks as `LoadLevelLoadBlock2` does, then prime the appropriate AniPLC frame
+and direct `AnimateTiles_*` uploads into a private picture bank. SOZ's dispatch
+names an LRZ list that its custom routine never executes; blindly priming that
+list loads lava over desert art. ICZ1's outdoor plane also needs
+`ICZ1_SetIntroPal` line-4 writes, otherwise its mountains use the indoor cave
+colours. Check the composed picture, not just successful decompression or a
+non-null image. A static creator picture is not a live zone animation timeline.
+
+**A static background picture is not the stock scroll plane.** Three Islands' viewport-only
+fix (`1ede498795`, corrected in the 2026-10-10 follow-up) drew every pixel but still exposed
+empty layout rows and flattened S1/S2 parallax. Coverage assertions alone missed both.
+Use the engine-owned `SceneBackground` for supported moving views; verify scanline offsets,
+populated source periods, lower camera positions and the native fixed-view cases (EHZ Y,
+DEZ X/Y). Additional speed multipliers on an already-deformed background distort its layers.
+
+**A ROM mapping bank is not an animation sequence.** In the Starfall Frontier
+biome revision (base `e6844866ed`, 2026-10-08), Rhinobot's mapping frames 0/1
+face left, frame 2 is its brake pose, and frame 3 faces right. Cycling all four
+therefore reverses the visible direction even with correct xflip. Follow the
+owning object's pose selection (`Obj_Rhinobot` / `sub_86FF8`), or explicitly
+curate the creator's locomotion frames. Check both orientations through every
+animation phase with decoded images; a UV-only test or one screenshot misses
+an intrinsically reversed pose. Facing should follow AI intent, since damage
+recoil reverses velocity without changing the target.
+
+**A scene kit's zone number is not its decoder level index.** When re-encoding
+S1 kit blocks into an additive act, use the decoder's level table, not the public
+SceneLevelKit zone ordering. Starpost Real Ruins (base `3da4cd930`, 2026-10-10)
+needs MZ `0x86+act`, LZ `0x83+act`, SBZ `0x8F+act`. Also reserve the original
+placeholder palette claim explicitly: reusing Green Hill's line3/colour15
+claim failed for Scrap Brain pattern556, whose opaque colours fill that line.
+A separate original line1/colour2 placeholder permits the existing encoder to
+allocate the whole source palette; validate every source act rather than one band sample.
+
+**Deferred native effects retain their creator owner.** A native shield spawned
+inside a creator callback is still owned by that callback's fault boundary.
+During player-refresh rewind, restore its captured owner as well as the dynamic
+slot and ObjectRefId. Real Ruins exposed null versus starpost-valley owner in a
+full registry replay; `29c3e1755` fixes the pending power-up path. A native class
+name does not imply a null owner. Fixtures also need the production mod class
+resolver when restoring creator and creator-owned native objects.
+
 **Coordinates.** ROM `x_pos` / `y_pos` map to `getCentreX()` / `getCentreY()`. `getX()` /
 `getY()` are top-left render bounds — mixing them produces a ~19px vertical offset and
 wrong collision. When porting disassembly that touches `x_pos` / `y_pos`, default to the
@@ -32,6 +77,27 @@ and restore the exact saved durations on release. The Survivors regression
 `feverProtectionDoesNotExpireBehindLevelUpCards` checks the player clock as well as the HUD;
 menu-owned saved fields must participate in rewind too.
 
+**Menu fills do not blend on their own.** `MenuPixelFont.fillRect` and
+`TexturedQuadRenderer` submit tinted quads without touching GL blend state. With
+blending disabled, the usual state after level rendering, a 0.66-alpha dim writes
+its own colour and replaces the held frame; panels drawn at 0.94 look opaque only
+by accident. Menus with translucent layers enable `GL_BLEND` around their pass, as
+`MasterTitleScreen` and `SceneRenderer` do. `MutatorConfigurationScreen` restores
+the caller's blend state and keeps destination alpha (`GL_ZERO, GL_ONE`), so
+`GameplayCaptureTool` PNGs match the window; a capture PNG whose alpha is below 1
+shows the same mistake (Mutator Lab polish, 2026-10-08).
+
+**A forced SFX stop skips the driver's priority release.** Sonic 2 clears
+`SFXPriorityVal` when an SFX track reaches its own stop (`cfStopTrack` /
+`zStoppedChannel`, `s2.sounddriver.asm:3514-3535`). `AudioManager.stopAllSfx()`
+kills SFX tracks without passing through that request model. The stock title
+called it when its flashing star was deleted; the ROM does not
+(`s2.asm:26748-26750`, `:27068-27162`). The latch stayed at Sparkle's `$70`, so
+every later `$6F` `SndID_Blip` from a mod menu over the stock title was rejected
+until some `$70`-or-higher SFX finished naturally. No production caller of
+`AudioManager.stopAllSfx()` remains. `TestTitleScreenAudioRegression` checks the
+latch and an admitted blip after the intro.
+
 **Silent invincibility still has a native music-expiry request.** `giveInvincibility()`
 does not itself start music, but the playable timer reissues the level song on expiry.
 A mode keeping its own arena/boss soundtrack continuous must opt out through
@@ -50,6 +116,102 @@ also hide its `Supplier` callback-boundary capability. Verify a real placed
 object's owner scope through the production loader before and after forced
 rewind recreation; dynamic-object containment alone misses this boundary.
 
+**An installed stage provider is not an active stage.** Main-level services can
+contain `NoOpBonusStageProvider`, or a native provider whose active type is
+`NONE`. Testing provider presence grants main-level rings the bonus-puzzle
+exemption. Query the actual active type; restoration back to the main level
+must explicitly use the main-level award domain even before provider teardown.
+The Mutator Lab expansion's native award and return controls exercise this
+distinction (2026-10-08).
+
+**Registry decorators must retain native semantic classification.** An
+object-registering co-mod introduces `ModDecoratedObjectRegistry` even when the
+Mutator Lab registers no objects. Factory forwarding alone hides the backing
+registry's monitor/ring classification and silently disables placement filters.
+Forward the engine-internal classifier for native placements; a namespaced,
+creator-owned override remains outside that native classification. Preserve
+placement indices and allocation order. Do not extend the creator API merely
+to carry this internal capability (Mutator Lab expansion, 2026-10-08).
+**Native mod registration does not establish API retention.** Experimental
+runtime-loaded callbacks can resolve members that normal image reachability
+trimmed, even after other mods registered successfully. Exact package retention
+does not include subpackages: `com.openggf.game` omitted `GameRules.SONIC_2` and
+both standalone modules aborted. Derive exact-class preservation from the
+canonical API plus all static mod references, retain original `.class` resources
+for validators, and run a metadata audit before creator execution. Prove the audit
+rejects a deliberately pruned image; metadata presence still does not qualify
+every invocation, gameplay callback or VM fault boundary.
+Origin: [October 8 native mod follow-up](research/2026-10-08-graalvm-native-mod-feasibility.md#follow-up-both-standalone-mods-and-automatic-member-coverage).
+
+**An engine-invoked method reference retains its creator's authority.** A direct
+`StackWalker.getCallerClass()` check can hide a child-loaded lambda/method-reference
+frame and see only the engine callback host. A creator returning
+`ModStorageFactory::forOwner` reproduced that admission gap. Authority bridges
+must inspect hidden frames and the first external, non-bootstrap defining loader;
+matching a reported owner or binary class name is insufficient. Keep regressions
+for direct calls, engine-invoked creator method references and legitimate engine
+method references such as `List.forEach(registry::register)`. Preserve inherited
+owned adapters while validating fresh publication against its verified owner.
+Use the internal `EngineCallerAccess` inspection bridge for new admission gates;
+its immutable JDK walker comes from the `EngineContext` bootstrap factory, without
+locating a live gameplay session. Keep lower-level consumers on the utility bridge
+and inspect a module-lineage provider's actual defining loader before calling it.
+Origin: [October 7 mod framework readiness](plans/2026-10-07-mod-framework-product-readiness.md).
+
+**Returned concrete values can contain deferred creator callbacks.** An owned
+interface proxy does not automatically bind callbacks inside a returned record
+or concrete registry. The `InitStep`/`StaticFixup` records returned by
+`LevelInitProfile` run actions later in level loading/reset, and
+`PlayableCharacterRegistry` definitions contain
+factory, art and respawn callbacks. Project these contracts explicitly through
+bounded immutable values, preserve metadata and earlier-owned callback identity,
+and test the later production consumer. Concrete captured services also need
+provenance on their underlying state, not just their published rewind proxy.
+Origin: [October 7 mod framework readiness](plans/2026-10-07-mod-framework-product-readiness.md).
+
+**Published creator controllers can be interface proxies.** Keep frame, draw,
+rewind and close operations on the published controller. A headless fixture
+needing creator-specific configuration or diagnostics obtains the separately
+published concrete service and invokes its callbacks through the same retained
+fault boundary; reflecting on the proxy's implementation class does not expose
+creator methods or fields. The Golf peer fixture's missing `configure` method
+was hidden by a second missing-field exception during shutdown. Preserve the
+primary exception and suppress cleanup failures before attributing a dead peer
+to networking. Assert registered owner identity and rewind participation instead
+of assuming the concrete service and interface proxy are the same object.
+Origin: [October 7 mod framework readiness](plans/2026-10-07-mod-framework-product-readiness.md#development-full-run-fixture-repairs).
+
+**Mockito defaults differ from production interface defaults.** A bare
+`GameModule` mock returns null for `transformDecodedLevel`, although the real
+default returns the supplied level unchanged. Fixtures exercising a real load
+must invoke that default or provide the intended valid transformation, preserving
+loaded-level identity and publication assertions. Conversely, `when` invokes a
+real method on a `CALLS_REAL_METHODS` mock before installing the stub: use
+`doReturn` to install an expert standalone identifier override when the fixture
+deliberately has no declarative specification. Keep the real identity consumers
+under test. These gaps stopped HUD publication and standalone routing fixtures
+before their existing assertions could run.
+Origin: [October 7 mod framework readiness](plans/2026-10-07-mod-framework-product-readiness.md#development-full-run-fixture-repairs).
+
+**Embedded Java snippets are executable API consumers.** Constructor and method
+migrations include compiler text blocks, maintained samples and SDK templates.
+A failed compiler-exit assertion can look like a runtime warning-count mismatch;
+inspect captured compiler diagnostics before changing the later assertion.
+`TestModTestKit` still called the retired five-argument zone constructor inside
+a text block. Migrating it to `singleAct` retained the same declaration and
+allowed the original missing-owner warning/recovery checks to execute.
+Origin: [October 7 mod framework readiness](plans/2026-10-07-mod-framework-product-readiness.md#development-full-run-fixture-repairs).
+
+**An isolated packed-mod test needs its own rewind class resolver.**
+`GameplaySessionFactory` normally reads the process-wide `ModSubsystem`. A test
+that scans, validates and launches through a private `ModRuntime` must attach
+that runtime's `ModClassResolver` to the session's `LevelManager` before loading.
+Otherwise a correctly owned object can fail capture or recreation because the
+session cannot resolve its private loader. The distributed testkit exposes this
+as `rewindClassResolver()`. Check identical binary names from two different
+owners against the actual loaded classes; never infer ownership from a name.
+Origin: [October 7 mod framework readiness](plans/2026-10-07-mod-framework-product-readiness.md).
+
 **Camera limits are not terrain extents.** Sonic 2's decoded `maxY` limits the
 camera origin; `Sonic_Boundary_CheckBottom` compares the player centre with
 `maxY + $E0`. A custom lost-ball rule based on `maxY` alone rejects valid low
@@ -57,6 +219,17 @@ floors. Boss-free courses also need the native outgoing camera extent: EHZ2's
 egg-prison placement lies beyond the closed boss arena, and `loc_2F460` opens
 the camera toward `$2AB0`. Derive the custom finish from ROM placements and
 release its view bound explicitly, rather than simulating a boss to open it.
+
+**Overlay text also passes through CPU sprite preparation.** An opaque
+`GLCommandable` is rejected by the preparation guard even when its eventual GPU
+operation is a rectangle. Use typed screen primitives whose immutable geometry
+retains logical coordinates and fallback height; replay them through the supplied
+render host. Keep the guard and existing world-relative primitives unchanged.
+Exercise clipping, translucent pixels, nonzero cameras and replay through a
+different manager/projection. Admit a deferred host by its actual defining loader
+before virtual calls, preserving trusted host subclasses while rejecting creator
+overrides. The Survivors font adoption exposed this boundary in focused session
+`38496`; see [framework readiness](plans/2026-10-07-mod-framework-product-readiness.md).
 
 **A title can select a different viewport after manager construction.** Refresh
 the camera dimensions before level load, and rebuild render geometry from the
@@ -66,6 +239,15 @@ sizing breaks the native-camera/wide-presentation split. A scene-only width fix
 still leaves the native framebuffer or
 background period using the manager's old cache. Putt Putt Paradise's normal
 title-to-level and 320→800 scene tests cover both boundaries.
+
+**A persisted pixel-width write does not replace the resolved aspect overlay.**
+`SCREEN_WIDTH_PIXELS` is derived from `DISPLAY_ASPECT`; in a synthetic test,
+use `setSessionOverride` for an explicit width and assert the camera's resolved
+dimensions before interpreting missing pixels. Survivors' full-font check requested
+974 pixels with `setConfigValue`, but retained the native 320-pixel camera: local
+pixel 312 at origin nine was correctly clipped at absolute X321. A session override
+restored every pixel at scales one through three with unchanged projection,
+translucency and 276 cached primitives. Keep production clipping intact.
 
 **Touch listeners are not the ROM's special-touch branch.** The shared controller
 notifies listeners for harmful contacts too. An object whose collision byte changes
@@ -533,6 +715,13 @@ branch would do. That costs a line now and is the only thing that will make a
 future "support the bug-fixed revisions" effort tractable, since the sites are
 otherwise invisible once ported. `Camera.java:122-124` and
 `Sonic1BatbrainBadnikInstance.java:394` are existing examples of the shape.
+
+**Startup scenes bypass title and level audio setup.** Install the active ROM and
+module audio profile before calling a startup scene's `enter`; an initialized
+speaker backend alone cannot resolve native music/SFX IDs. A scene test that first
+loads `SharedLevel` masks this omission. `TestModSceneLauncherAudio` opens through
+the production launcher without loading a title or level and checks final PCM for
+music and an isolated effect. Origin: Eggman's Sky bug reports, 2026-10-08.
 
 **Audio accuracy:** the FM core is the Nuked-OPN2 port (`audio.synth.nuked`); its only
 reference is the pinned `ym3438.c`, and `Ym2612Chip` is engine glue over it. For the PSG
@@ -1015,6 +1204,16 @@ deletes/recreates the graph; do not merely null the reference during capture.
 The cold SSZ route first diverged at input7076 because the restored bar now caught
 Sonic, requiring an ordinary jump to continue along the upper walkway.
 
+HCZ fan bubbles (`HCZCGZFan_Bubble`, `$30834`, 2026-10-08) likewise call
+`MoveSprite2` once and then `Draw_Sprite`; the draw tail supplies neither a
+second move nor camera/age retirement. Native observations show bubbles
+continuing outside the camera margin until their own water check. Preserve
+allocation before RNG: use the existing reserved-slot factory so a saturated
+pool does not consume randomness before discovering allocation failure.
+The fan's sound and bubble gates read `Level_frame_counter`, whereas object
+`update` receives `V_int_run_count`; test the clocks with different residues.
+See the [S3K lane audit](audits/2026-10-07-s3k-parity-gap-verification.md).
+
 ### A dying child can outlive its parent's SST identity
 
 FBZ's cold Tails results replay (2026-09-27) found the same ownership error in
@@ -1307,3 +1506,88 @@ A seamless reload's current-bound and target-bound overrides are separate. AIZ's
 `AIZ1BGE_Finish` writes a fixed X lock of `$10/$10`, and `Do_ResizeEvents` eases
 only max Y. Pin the engine's X targets too, or the loaded defaults move the lock
 on the next tick (S3K trace campaign, 2026-10-03).
+
+**Head-only presentation follows native admission and indexed art identity.** A Sonic head
+crosses mapping-piece and tile boundaries, and slope, crouch and balance poses put it below
+or beside the body. Use reviewed per-frame anatomy metadata, the original mapping-piece
+index and source pixel centres; retain explicit stock ball/special-pose classifications.
+Scale only admitted ROM head pixels about an unflipped neck anchor after the native SAT
+mask pass. Flip pixel indices with `-coordinate-1`, and geometric anchors with
+`-coordinate`. Freeze the indexed DPLC generation before later draws reuse its slots.
+Each native virtual player bank also needs a separate companion fragment bank: resetting
+fragment IDs for every local S1/S2 preparation lets a second Sonic slot overwrite the
+first slot's queued pixels. The production `ggfmod sprites ... char=sonic heads=true`
+review panels and `TestPlayerHeadPresentation` cover the three native inventories,
+source identity, flips, admission and simultaneous duplicate banks. Native-image packaging
+explicitly includes the text metadata. Review panels use 112px cells and reject opaque-pixel
+cropping through the maximum 200% scale; a smaller plausible-looking sheet clipped pushing
+Sonic at the edge (Mutator Lab, 2026-10-08).
+
+The graphics boundary owns immutable mask geometry and a producer-supplied replay
+interface. Pose classification and the native head renderer stay above that boundary;
+graphics must not name a player profile or call a level renderer directly. Carry the
+shared replay adapter with the draw metadata so native SAT admission and ordering run
+before the same head composition, without a global runtime-renderer registration.
+Engine-only sprite graphics access uses the session bootstrap's immutable caller walker,
+including hidden frames, and checks the actual caller's class loader. A lambda or nested
+creator class must not inherit engine access from its host invocation (Mutator Lab guard
+repair, 2026-10-09).
+
+**ROM palette constants can describe another revision.** Sonic 1 REV01 moves the Sonic
+palette relative to REV00. A raw sheet read through the old absolute palette constant
+can still look plausible while turning Sonic green/yellow. Character contact sheets use
+`loadCharacterPalette`, which resolves the native `PalPointers` entry, and retain the
+original ROM identity; reference-tree art and guessed palette addresses are not runtime
+fallbacks (Mutator Lab native mask research, 2026-10-08).
+
+Raised hands can share a native mapping piece with Sonic's head. A broad right edge
+on S3K balance frame A1 selected part of its raised glove; the actual ROM detail and
+production head/body panels exposed it. Trace the explicit eye/muzzle boundary instead
+of selecting the whole piece, and verify an opaque glove pixel remains at its stock
+body coordinate. Distinct geometry is required even when piece IDs appear convenient
+(Mutator Lab mask refinement, 2026-10-08).
+
+### Native service recreation needs verified publication authority
+
+`LevelManager.initGameModule` calls `createGame` on every full load. Sonic 2 and
+S3&K consequently publish a new PLC service, even when their root module object
+is unchanged. Strict generic `registerOrRefresh` correctly rejects a different
+unowned adapter reporting the old key; relaxing that rule would also admit
+creator collisions and host-state theft. The 2026-10-07 composed focus exposed
+this distinction in 107 Golf cases and one S3K lifecycle case.
+
+Use `NativeRewindAdapterPublication` for the exact current adapter published by
+the session's verified native root. Preserve that raw service's identity and all
+queue state, refresh its incarnation under the same root authority, and advance
+the course registry generation so retained checkpoints cannot silently cross
+loads. Do not retain/reset a PLC queue merely to avoid adapter replacement.
+Private fixtures must likewise retain the same root for module resolution,
+world-session construction and pinned data: two separate `new Sonic2GameModule`
+objects describe different lifetimes even when their names match. The native
+publication regression covers direct and hidden creator method references,
+foreign roots, bundle retagging, and both real ROM-backed PLC lifecycles.
+
+**Finite audio tails own the complete presentation.** A cue mixed after a song's
+end taper can remain audible beyond finite EOF even though the song clock has
+stopped. Fade the combined output and retire remaining cue voices at the finite
+boundary; also fade a cue that exhausts its selected source window. Sitar Hero's
+2026-10-08 fumble regression measured 439 nonzero post-taper frames before this
+ordering repair and zero afterward. Keep calibrated judgment coordinates separate
+from the audible song clock when testing cue freshness or sending peer timestamps.
+
+**Physical input cannot reconstruct admitted fractional-speed input.** A tap can
+be retained across a zero-tick presentation or a native S2 special-stage lag, then
+consumed after the physical key is released. Live rewind must retain the actual
+admitted P1/P2 sample and post-tick fractional/pending state in an aligned internal
+history ring; replaying held-only BK2 rows loses the tap and can reset a nonzero
+remainder. Preserve ordinary driver/debug fields and reject metadata from a
+different world, level, provider or entry lifetime. Never obtain these values from
+trace comparison rows. Mutator Lab reproduced the loss at 75% and 150% and verified
+the repaired native acceptance/jump (stage commit `7cca6aef3`, 2026-10-08).
+
+**A bound context can outlive its current world.** The native hub can retain a
+retired gameplay context during title/session handoff. Check that the context is
+runtime-ready before resolving its world/module/policies; an eager global module
+lookup crashes startup even when no gameplay body is due. Bonus mode also does not
+imply interactive readiness: let its pending initial ProcessSprites setup finish
+at canonical cadence before spending a modified speed budget.

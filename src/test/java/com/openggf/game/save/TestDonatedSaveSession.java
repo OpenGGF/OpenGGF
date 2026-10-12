@@ -32,7 +32,7 @@ class TestDonatedSaveSession {
         SaveSessionContext session = SaveSessionContext.forSlot("s1", 1, team, 0, 0);
 
         S1SaveSnapshotProvider snapshot = new S1SaveSnapshotProvider();
-        RuntimeSaveContext ctx = RuntimeSaveContext.forGameplayMode(null, session);
+        RuntimeSaveContext ctx = com.openggf.game.save.RuntimeSaveCapture.capture(null, session);
         session.requestSave(SaveReason.NEW_SLOT_START, ctx, snapshot, manager);
 
         assertTrue(Files.exists(root.resolve("s1").resolve("slot1.json")),
@@ -50,7 +50,7 @@ class TestDonatedSaveSession {
         SaveSessionContext session = SaveSessionContext.forSlot("s2", 3, team, 0, 0);
 
         S2SaveSnapshotProvider snapshot = new S2SaveSnapshotProvider();
-        RuntimeSaveContext ctx = RuntimeSaveContext.forGameplayMode(null, session);
+        RuntimeSaveContext ctx = com.openggf.game.save.RuntimeSaveCapture.capture(null, session);
         session.requestSave(SaveReason.NEW_SLOT_START, ctx, snapshot, manager);
 
         assertTrue(Files.exists(root.resolve("s2").resolve("slot3.json")),
@@ -69,7 +69,7 @@ class TestDonatedSaveSession {
         SaveSessionContext session = SaveSessionContext.noSave("s1", team, 0, 0);
 
         S1SaveSnapshotProvider snapshot = new S1SaveSnapshotProvider();
-        RuntimeSaveContext ctx = RuntimeSaveContext.forGameplayMode(null, session);
+        RuntimeSaveContext ctx = com.openggf.game.save.RuntimeSaveCapture.capture(null, session);
         session.requestSave(SaveReason.NEW_SLOT_START, ctx, snapshot, manager);
 
         assertFalse(Files.exists(root.resolve("s1")),
@@ -83,7 +83,7 @@ class TestDonatedSaveSession {
         SaveSessionContext session = SaveSessionContext.noSave("s2", team, 0, 0);
 
         S2SaveSnapshotProvider snapshot = new S2SaveSnapshotProvider();
-        RuntimeSaveContext ctx = RuntimeSaveContext.forGameplayMode(null, session);
+        RuntimeSaveContext ctx = com.openggf.game.save.RuntimeSaveCapture.capture(null, session);
         session.requestSave(SaveReason.NEW_SLOT_START, ctx, snapshot, manager);
 
         assertFalse(Files.exists(root.resolve("s2")),
@@ -134,7 +134,7 @@ class TestDonatedSaveSession {
     void s1SnapshotProvider_capturesExpectedFields() {
         SelectedTeam team = new SelectedTeam("knuckles", List.of());
         SaveSessionContext session = SaveSessionContext.forSlot("s1", 1, team, 2, 0);
-        RuntimeSaveContext ctx = RuntimeSaveContext.forGameplayMode(null, session);
+        RuntimeSaveContext ctx = com.openggf.game.save.RuntimeSaveCapture.capture(null, session);
 
         Map<String, Object> payload = new S1SaveSnapshotProvider().capture(
                 SaveReason.NEW_SLOT_START, ctx);
@@ -153,7 +153,7 @@ class TestDonatedSaveSession {
     void s2SnapshotProvider_capturesExpectedFields() {
         SelectedTeam team = new SelectedTeam("sonic", List.of("tails"));
         SaveSessionContext session = SaveSessionContext.forSlot("s2", 5, team, 4, 1);
-        RuntimeSaveContext ctx = RuntimeSaveContext.forGameplayMode(null, session);
+        RuntimeSaveContext ctx = com.openggf.game.save.RuntimeSaveCapture.capture(null, session);
 
         Map<String, Object> payload = new S2SaveSnapshotProvider().capture(
                 SaveReason.NEW_SLOT_START, ctx);

@@ -36,11 +36,16 @@ public abstract class AbstractSprite implements Sprite {
 	protected byte layer = 0;
 
 	protected AbstractSprite(String code, short xPixel, short yPixel) {
+		this(code, xPixel, yPixel, true);
+	}
+
+	/** Lets a playable specification install sensors after its fields are initialized. */
+	protected AbstractSprite(String code, short xPixel, short yPixel, boolean initializeSensors) {
 		this.code = code;
 		this.xPixel = xPixel;
 		this.yPixel = yPixel;
 		direction = Direction.RIGHT;
-		createSensorLines();
+		if (initializeSensors) createSensorLines();
 	}
 
 	protected AbstractSprite(String code, short xPixel, short yPixel,

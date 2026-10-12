@@ -75,6 +75,23 @@ UI owns Start/Enter for that frame; the UI remains responsible for freezing its 
 Modules without the service retain normal pause behavior. This replaces no input bindings
 and changes only the mutable `0.7` pin; the descriptor and `ModApiVersion` remain at `0.7.0`.
 
+The Mutator Lab prototype extends that overlay with host-owned configuration
+holds, rendering and explicit Resume/full-restart/game-hub commands. Commands
+wait visibly across an active native fade. Typed mutator definitions declare
+independent enable/disable and option scopes; atomic session publication, safe
+capabilities and requested preferences are separate from effective rewind state.
+`LevelLoadCause` identifies a qualifying full assembly; a cause alone cannot
+promote preview, decode-only or restoration work. The common configuration UI
+and support profile are candidate API roots. The normalized `0.7` pin and
+`ModApiVersion` description change together; the descriptor retains unpublished
+candidate `0.7.0` and no published baseline is edited.
+
+Title providers may own Escape/back through the additive, stock-false
+`ownsEscapeInput()` default. Owned modal titles route their saved exit command
+through the same overlay service; the host clears its global prompt and treats
+a null overlay command as `NONE`. Existing title implementations retain their
+host Escape shortcut.
+
 The controlled-level additions expose `GameplayFrameController`, `CourseControl`,
 opaque session/hole/layout-tagged `CourseCheckpoint`, `MenuInput`, title act
 selection, and typed ROM-backed scene values/presenters. The default controller
@@ -96,6 +113,14 @@ still occurs normally. The canonical record constructor gains this boolean, so
 rebuild compiled mods using that constructor. Candidate `0.7.0` remains unpublished;
 the runtime candidate description and normalized pin are updated together. The
 release descriptor retains its existing candidate version and publication state.
+
+The bundled-mod lane adds bounded binary owner storage: `ModStorage.readBytes`,
+`ModStorage.writeBytes`, and the `MAX_TEXT_BYTES` (1 MiB) and `MAX_BINARY_BYTES` (4 MiB)
+caps. Binary files share the text namespace and name rules, are staged and renamed
+into place like text, and reads return a fresh copy. `SceneStorage` inherits both
+methods, so creator test doubles implementing it must add them. These are additions
+to the unpublished `0.7.0` candidate; the runtime description and normalized pin are
+updated together and the descriptor is unchanged.
 
 ## What the 0.7 candidate includes
 
@@ -146,6 +171,29 @@ and 200,000 completed note-event limits apply before playback. Legacy defaults
 remain synchronous. These are additive changes to the mutable 0.7 candidate;
 the descriptor/runtime version remains unpublished 0.7.0 and the normalized
 signature pin is regenerated in place.
+
+Native act controllers can use `NativePositionOps` for ROM centre/subpixel writes
+and implement `SolidObjectProvider` with `SolidObjectParams` for real platforms.
+`Camera.setViewportMaxX` captures a visible right-edge cap separately from ROM
+movement walls and releases it on reset; CameraSnapshot includes that state.
+The exposed solid routine profile/adapter types are annotated and included in
+the recursive candidate pin. These additions preserve existing runtime behavior
+and the unpublished 0.7.0 version; no published baseline is replaced.
+
+`SceneAudio.setMusicTempoPercent(int)` adds opt-in ROM music pacing (25–100,
+default 100) to the unpublished 0.7 candidate. The recursive inventory gains
+fourteen additive lines, including the validated rewind command. The release
+descriptor and `ModApiVersion` remain on unpublished 0.7.0. Scene disposal
+restores normal pacing; retained native acts keep the active scene's setting.
+SFX, chip pitch, sample clocks and gameplay timing remain on their normal clocks.
+The percentage and fractional phase participate in audio capture/restore.
+Continuous scene music adds the default `SceneAudio.playMusic(String, int)` overload.
+It returns false on host implementations without the capability. The integrated host
+uses the shared ROM driver and scoped cross-game donor routes, preserving native
+intros/loops without a finite PCM render and retaining audible base-game SFX.
+Its lifetime follows scene audio stop/fade/close. This is an additive change to candidate 0.7.0, with the normalized 0.7
+pin regenerated. The release descriptor's version/status remain unchanged, as required
+for ordinary candidate regeneration.
 
 Before changing the candidate surface:
 
@@ -235,6 +283,8 @@ members remain absent.
 
 The underlying current behaviors remain available through their canonical 0.7
 owners; this inventory records deleted shims, not removed product capabilities.
+Zone declarations use named `ModZoneContribution.singleAct(...)` and
+`multiAct(...)` factories; the record retains only its canonical constructor.
 
 ## Historical development corpus
 
@@ -477,9 +527,12 @@ does not depend on `mods`; the scene host consumes those values through the
 existing `mods -> control` boundary, without introducing a parallel device model
 or expanding the frozen package-cycle baseline.
 
-`baseGame: any` is restricted to startup-scene/display registration and expands
-into separately indexed stock-game decorators. It cannot introduce game-specific
-patches, objects, zones, characters or override declarations. Extra ROMs are
+`baseGame: any` expands shared startup scenes or typed mutator catalogues into
+separately indexed stock-game plans. A mutator catalogue may register concrete
+stock-game decorators; each expanded plan receives only its own game's decorators.
+Objects, zones, characters, art overrides and zone-specific gameplay policies
+remain forbidden in an `any` transaction. Scene-only registration cannot add
+ordinary game patches. Extra ROMs are
 scene-owned catalog views; active session ROMs are borrowed, and disassembly
 assets are never runtime fallbacks. S1/S2 detached stock pictures use explicit
 ROM inputs, including first-frame animated tiles, without graphics/session
@@ -543,3 +596,176 @@ exchange bounded queues and state. The scene host closes networking on exit
 requests and every callback fault, rather than depending on a later caller
 cleanup. The [scene handbook](../modding/guides/mod-scenes.md#direct-peer-messaging)
 owns framing, deadlines, clock meaning and direct-connect limitations.
+
+### Mutator Lab catalogue expansion (unpublished candidate)
+
+The expansion adds typed scatter, head-presentation, semantic monitor removal,
+checkpoint/ring suppression, independent stage-entry gates, defeat knockback and
+whole-step speed contributions. Existing `DrySonicGravity` and `PlayerStealth`
+constructors remain available. Capability-specific character eligibility and
+module-owned native location/option support metadata extend the common settings
+contract through backward-compatible default methods. All effects still declare
+independent enable, disable and option scopes; placement/death-bank filters require
+LOAD. Engine consumers use world-owned semantic ports rather than concrete mod
+state. The mutable `0.7` signature pin is regenerated from compiled source;
+`0.7.0` remains unpublished and no published baseline changes. Consumer behavior
+and the three-game example are tracked in the dated expansion plan.
+
+The unpublished 0.7 native head presentation reserves `PatternAtlasRange.PLAYER_PRESENTATION`
+for ROM-derived body/head fragment tiles. Dynamic mod windows continue to start above the
+maximum declared native range. `GraphicsManager.playerHeadFragmentBase(int)` assigns a
+companion fragment bank to an existing native player bank; it does not change the mod
+window budget or authority. `PlayerSpriteRenderer.headProfileId()` identifies reviewed
+normal Sonic source art, and `headPresentationReason(int)` exposes an explicit stock-pose
+fallback reason (empty for reviewed/empty poses). Anatomical polygons, frame kinds and
+neck anchors remain engine internals. The candidate remains 0.7.0, and its normalized
+signatures must come from the actual compiled composition.
+
+The unpublished mutator candidate adds a current-world common-screen factory
+with four bounded native ROM SFX IDs. It returns the host-owned settings screen
+without exposing global engine services. This is an ordinary candidate surface
+regeneration; `0.7` remains unpublished, and the final pin is generated from
+compiled classes.
+
+`MutatorPolicy.BigHead` gains a `scaleWithRings` record component for a head that
+grows from native size at zero rings to its `percent` at 100 native rings. The
+original `(int, Target)` constructor remains and declares a fixed size. The host
+reads each eligible target's live native ring count at presentation, so rewind and
+reloads need no extra state. This regenerates the mutable `0.7` pin with three
+additive entries and no removals; `0.7.0` stays unpublished. Saved preferences for
+a same-schema mutator that later adds an option take that option's declared
+default; unknown options and changed schema versions are still rejected.
+
+`MutatorPolicy.Ringfall` gains a `fullInventory` record component that lifts the
+native 32-ring scatter ceiling. The original `(int, int)` constructor remains and
+keeps the ceiling. The engine-only spill seams are reached through the
+unannotated `RingManagerInternalAccess`, so `RingManager`'s creator surface is
+unchanged. This regenerates the mutable `0.7` pin with three additive entries
+(constructor, accessor, record component) and no removals; `0.7.0` stays unpublished.
+
+## Bounded ROM-part cue candidate
+
+Sitar Hero's fumble follow-up adds `SceneMusicPlayer.PLAYHEAD` and the default
+`cuePart(long,int,double,double,double,double)` method. It exposes no PCM, synth,
+thread or mod-specific instrument type. The production host mixes at most six
+enveloped, pitch-gliding residual fragments, validates duration/rate/gain/balance,
+smooths audibility over 4 ms, freezes cues on pause and releases them on stop.
+Unsupported legacy hosts decline a cue instead of losing basic playback. The
+normalized 0.7 candidate pin gains exactly two additive entries, with no removals.
+`ModApiVersion` documents the capability; the policy-generated release descriptor
+retains unpublished candidate `0.7.0` and its existing schema/publication state.
+See the [creator recipe](../modding/guides/mod-scenes.md) and
+[fumble implementation plan](plans/2026-10-08-sitar-hero-fumble-feedback.md).
+
+## Scene music from any supplied ROM candidate
+
+Starpost Valley adds the default `SceneAudio.playMusic(String,int)`. The running game's
+songs take the base route. Another supplied game's song takes the existing cross-game
+donor route (`AudioManager.playDonorMusic`), under a donor registration scoped to the
+scene. The scope is the engine-internal `com.openggf.audio.ScopedDonorAudio`, backed by
+package-private `AudioManager` state capture. Closing it restores that key's previous
+route and music and sound bindings, so cross-game donation survives the scene. The method
+exposes no loader, ROM or driver type. Legacy hosts return false. The int-only
+`playMusic`, `stopMusic` and `fadeOutMusic` keep their meaning and act on whichever song
+is current. The normalized 0.7 candidate pin gains exactly one additive entry, with no
+removals. `ModApiVersion` documents the capability, and the policy-generated release
+descriptor keeps unpublished candidate `0.7.0`, as for every additive candidate change.
+See the [creator recipe](../modding/guides/mod-scenes.md#5-audio-and-storage) and the
+[design note](designs/2026-10-09-starpost-valley.md#331-background-music-engine-addition).
+
+## Stock dash dust recipe candidate
+
+Starpost Valley adds `StockSceneArt.S3K_DASH_DUST`, a named recipe for Obj_DashDust's art
+(`ArtUnc_DashDust`, `Map_DashDust`, `DPLC_DashSplashDrown`, player DPLC layout, palette line 0)
+on the verified S3&K locked-on ROM. Like the other recipes it is ROM-qualified and decodes the
+user's bytes; it adds a private enum constructor for requests that are not compressed art. The
+normalized 0.7 candidate pin gains exactly one additive enum-constant entry, with no removals,
+and the release descriptor keeps unpublished candidate `0.7.0`. Skid children use
+an existing raw uncompressed request for the bank their parent's cue `$15` preloads;
+no additional API surface is needed. The descriptor accepts strict `key=value` lines,
+so candidate notes belong here, rather than in descriptor comments. See the
+[creator recipe](../modding/guides/creator-helpers.md#rom-art-without-repeated-decoding) and the
+[design note](designs/2026-10-09-starpost-valley.md#20-rom-art-polish-lane).
+
+## Scene SFX candidate
+
+`SceneAudio.playSfx(String)` plays a declared one-shot using the scene owner's
+trusted namespace. It returns whether playback was admitted; unknown clips,
+suppressed playback, closed contexts and hosts without audio return false.
+The default preserves silent compatibility with existing context implementations
+while still rejecting invalid local names. Patch scenes use the same bounded
+manifest validation and launch decode transaction as standalone games.
+
+This adds one entry to the mutable unpublished `0.7` signature pin.
+`ModApiVersion` records the capability; the release descriptor retains candidate
+`0.7.0` and its existing publication state. See the
+[scene guide](../modding/guides/mod-scenes.md#5-audio-and-storage) and
+[Eggman's Sky voice record](designs/2026-10-07-eggmans-sky.md#original-system-voice-2026-10-08).
+
+Scene/act round trips extend the same unpublished 0.7.0 candidate: `ActLaunch` and
+`ActResult` live in `com.openggf.mods.scene`; `ActExit` lives in `com.openggf.game`,
+already shared by scene and level code. `SceneContext.startAct` and `ModScene.resume` are default methods, as is
+`ObjectServices.requestActExit`. The destination must be registered by the scene's
+owner; the engine validates it inside the scene callback's fault boundary. Launch
+records copy team/state collections. A retained scene visit keeps its context and
+ROM library, parks audio playback/borrowed routes and releases GPU textures.
+Pending level exits are rewindable until consumed; entry uses the normal level-load
+boundary and exit reports the non-rewindable mode boundary. The candidate pin is
+regenerated in place; no new published baseline or version promise is introduced.
+
+Compact record constructor validation is implementation, already represented by
+the canonical component signature. The Bash and PowerShell coupling checks
+exclude its body; component and member declaration changes still require the
+candidate pin. The exact compiled signature inventory remains the final check.
+
+### Named ROM object art (Starpost Ruins E2)
+
+The unpublished 0.7 candidate adds
+`ModContext.registerRomObjectArt(String, LogicalRom, RomArtRequest)` and a
+source-qualified `RomArtRequest` constructor/accessor. Its existing constructor
+and registration remain Sonic 2 defaults, using the already-open S2 host without
+an additional resolver. Cross-ROM intake must use its named logical source.
+Named S1 intake uses S1 mapping
+pieces, source-specific address bounds and the production `PatchContext` logical
+ROM resolver; S1 DPLCs and standalone intake are rejected. Missing logical ROMs
+fail the existing creator launch boundary. The mutable 0.7 signature pin and
+`ModApiVersion` description are updated together. The strict key=value policy descriptor is verified unchanged:
+`currentApi=0.7.0`, `currentStatus=candidate`, with no published baseline.
+
+The Big Head polish keeps the candidate at 0.7.0 and retains the old `BigHead`
+`Target` constructors/accessor and five-argument checkbox constructor. Its record
+component becomes immutable `afflicts: Set<HeadTarget>`; source deconstruction
+patterns must rebuild against the candidate. Additions include independent target
+roles, grouped checkboxes and a declarative retired-choice migration. The actual
+compiled signature export and normalized candidate pin are updated together;
+no published baseline is changed.
+
+The Three Islands background correction adds `SceneRomArt.levelBackground(zone, act)`
+and `SceneBackground.draw(canvas, cameraX, cameraY, ticks)`. The provider creates a private
+stock scroll handler and ROM-backed presentation plane per view; the host composes native
+scanline offsets with complete wrapping instead of guessing parallax from static postcards.
+The default returns null for providers without a profile. No live level event state is
+consumed, and no engine implementation type enters the creator signature surface. The
+unpublished descriptor remains candidate 0.7.0, with `ModApiVersion` and the mutable `0.7`
+signature pin updated together (five additive lines, no removed signatures).
+
+
+## Hosted stock runs and shared network contracts
+
+The unpublished 0.7 candidate exposes `SceneGameplay` and the immutable `mods.run`
+contracts for scene-owned stock runs. A scene visit retains its run host across fresh
+stock sessions; creator callbacks and ghost-list validation run inside that owner's
+fault boundary. Closing or exiting the scene revokes its launch capability, and commands
+are restricted to the engine thread. An owner failure ends the run and returns to the
+master title instead of resuming the disabled scene.
+
+Reusable `com.openggf.net` client, room-host, identity, protocol and ghost-transport
+contracts are explicit annotated API roots. Netty/SQLite operator servers and verifier
+tools are outside that surface. `RuntimeException` (typed connection/protocol rejection)
+and `IntSupplier` (room capacity callbacks) are individually audited JDK signature types;
+no third-party signature or package-prefix exemption is added.
+
+The mutable `mod-api-signatures-0.7.txt` pin is regenerated against develop's complete
+surface, including its existing scene art/audio capabilities. `ModApiVersion` describes
+the additions; the policy descriptor remains unpublished candidate `0.7.0` and published
+baselines remain untouched.

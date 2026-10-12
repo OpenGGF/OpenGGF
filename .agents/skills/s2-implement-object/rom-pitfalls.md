@@ -3553,6 +3553,36 @@ with `cmpi.w #5` / `blo` / `clr.w`, and submits `SndID_HurtBySpikes` through
 **Regression.** `TestPointPokeyObjectInstance` covers payout updates without
 spawns, terminal impacts, secondary requests, wrapping, and rewind.
 
+## P87 -- Tube waypoint duration is a word whose high byte may be zero
+
+**Symptom.** A tube traversal matches until a short curve segment, then moves
+one pixel past its waypoint and keeps the previous cross-axis velocity.
+
+**Cause.** Obj1E `loc_22902` / `loc_22952` performs two sequential `DIVS.W`
+operations. The first quotient is a signed 8.8 duration word, used as the
+second division's divisor; `ABS.W` is stored at `2(a4)`. `loc_2271A` /
+`loc_227FE` decrements its high byte with `SUBQ.B` and tests `BPL`. Clamping
+that byte to one invents a movement step for a legal subframe segment.
+
+**Correct pattern.** Preserve the signed word deltas, both divisions and
+byte decrement. A zero high-byte duration advances the waypoint on the next
+dispatch without movement. Keep duration in the existing captured per-player
+state. Do not collapse the two divisions for arbitrary speeds: their first
+quotient is quantized. At CPZ's production speed `$800`, the first division
+is exact for ordinary waypoint distances, so the zero-duration clamp, rather
+than cross-axis quantization, caused the measured replay frontier. No
+out-of-path Motorola division-overflow emulation is implied.
+
+**ROM citation.** `docs/s2disasm/s2.asm`: `loc_22902`, `loc_22952`,
+`loc_2271A`, `loc_227FE` (48820-48874, 48636-48640, 48714-48718).
+`misc/obj1E_a.asm:131-138` (`word_22B40`) has `$D4/$6C -> $DB/$68`:
+at speed `$800`, the seven-pixel dominant distance yields duration `$00E0`,
+whose high byte is zero.
+
+**Regression and origin.** `TestCPZSpinTubeObjectInstance` and the CPZ1/CPZ2
+complete-emerald slices; 2026-10-07 S2 parity follow-up from `8dba700f3`,
+recorded in `docs/architecture/audits/2026-10-07-s2-parity-gap-verification.md`.
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

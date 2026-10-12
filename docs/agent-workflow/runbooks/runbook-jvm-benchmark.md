@@ -48,9 +48,9 @@ Useful flags:
 
 ```bash
 scripts/bench-jvms.sh --trace aiz1 \
-    --jvm 'temurin21-g1|/usr/lib/jvm/temurin-21|-XX:+UseG1GC' \
-    --jvm 'temurin21-zgc|/usr/lib/jvm/temurin-21|-XX:+UseZGC -XX:+ZGenerational' \
-    --jvm 'graal21|/usr/lib/jvm/graalvm-21|'
+    --jvm 'temurin25-g1|/usr/lib/jvm/temurin-25|-XX:+UseG1GC' \
+    --jvm 'temurin25-zgc|/usr/lib/jvm/temurin-25|-XX:+UseZGC' \
+    --jvm 'graal25|/usr/lib/jvm/graalvm-25|'
 ```
 
 Builds one jar and runs it under every runtime (identical bytecode), interleaves

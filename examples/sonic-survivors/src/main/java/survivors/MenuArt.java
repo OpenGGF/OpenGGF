@@ -3,9 +3,10 @@ package survivors;
 /** Bounded, derived presentation data owned by one module, never gameplay or rewind state.
  * No static arrays: mod reloads and separate sessions must not share mutable storage. */
 final class MenuArt {
-    // Immutable font geometry, built once per module. Cover each lit pixel exactly once:
-    // overlapping rectangles would darken translucent text and its shadow.
-    final int[][] font = fontRectangles(Draw.GLYPHS, 5, 7);
+    // Immutable faces and rectangle geometry are built once per module. Every lit
+    // pixel is covered once, retaining translucent text and shadow appearance.
+    final com.openggf.mods.ui.BitmapFont font = Draw.createFont();
+    final com.openggf.mods.ui.BitmapFont smallFont = Draw.createSmallFont();
 
     final int[][] ringShapes = ringShapes();
 

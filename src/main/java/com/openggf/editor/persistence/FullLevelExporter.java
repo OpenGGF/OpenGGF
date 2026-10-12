@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.openggf.game.ModKeySyntax;
-import com.openggf.game.ModApi;
 import com.openggf.level.*;
 import com.openggf.level.objects.ObjectSpawn;
 
@@ -19,7 +18,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.logging.Logger;
 
 /** Deterministic complete MutableLevel export using the canonical ModLevelDefinition v1 directory. */
-@ModApi
 public final class FullLevelExporter {
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final Logger LOG = Logger.getLogger(FullLevelExporter.class.getName());
@@ -226,14 +224,11 @@ public final class FullLevelExporter {
         return failure;
     }
 
-    @ModApi
     public record ExportRequest(Path outputDirectory,String zoneName,int zoneIndex,int levelIndex,int startX,int startY,ExportMusic music){public ExportRequest{Objects.requireNonNull(outputDirectory);Objects.requireNonNull(zoneName);Objects.requireNonNull(music);if(zoneName.isBlank()||zoneIndex<0x40||levelIndex<0x400)throw new IllegalArgumentException("nonblank name and reserved mod ids required");}}
-    @ModApi
     public sealed interface ExportMusic permits ExportMusic.Stock,ExportMusic.Track{
-        @ModApi record Stock(int id)implements ExportMusic{public Stock{if(id<0||id>0xFFFF)throw new IllegalArgumentException("stock music id must be unsigned 16-bit");}}
-        @ModApi record Track(String owner,String localName)implements ExportMusic{public Track{ModKeySyntax.requireOwnedKey(owner,localName);}}
+        record Stock(int id)implements ExportMusic{public Stock{if(id<0||id>0xFFFF)throw new IllegalArgumentException("stock music id must be unsigned 16-bit");}}
+        record Track(String owner,String localName)implements ExportMusic{public Track{ModKeySyntax.requireOwnedKey(owner,localName);}}
     }
-    @ModApi
     public record ExportResult(Path directory,int objectCount,int ringCount){}
     @FunctionalInterface private interface IoWriter{void write(DataOutputStream out)throws IOException;}
 }

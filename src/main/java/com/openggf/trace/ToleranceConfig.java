@@ -5,7 +5,6 @@ package com.openggf.trace;
  * Warn and error thresholds define the boundaries between MATCH, WARNING, and ERROR.
  * Boolean/enum fields (air, rolling, ground_mode) always ERROR on any mismatch.
  */
-@com.openggf.game.ModApi
 public record ToleranceConfig(
     int positionWarn,
     int positionError,
@@ -18,7 +17,6 @@ public record ToleranceConfig(
     int cameraError,
     RingCountMode ringCountMode
 ) {
-    @com.openggf.game.ModApi
     public enum RingCountMode {
         DISABLED,
         WARN_ONLY,

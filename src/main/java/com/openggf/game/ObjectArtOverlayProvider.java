@@ -30,6 +30,31 @@ public class ObjectArtOverlayProvider implements ObjectArtProvider {
                 Objects.requireNonNull(overlays, "overlays")));
     }
 
+    @Override public void onTitleCardArtRetired() { base.onTitleCardArtRetired(); }
+    @Override public void onTitleCardPresentationSkipped() { base.onTitleCardPresentationSkipped(); }
+    @Override public void onInLevelTitleCardCompleted(RuntimeArtAdmissionLease lease) {
+        base.onInLevelTitleCardCompleted(lease);
+    }
+    @Override public RuntimeArtAdmissionLease prepareRuntimeArtForActTransition(
+            int zoneIndex, RuntimeArtAdmissionPolicy policy) {
+        return base.prepareRuntimeArtForActTransition(zoneIndex, policy);
+    }
+    @Override public void prepareRuntimeArtForInLevelTitleCard() {
+        base.prepareRuntimeArtForInLevelTitleCard();
+    }
+    @Override public RuntimeArtAdmissionLease bindPendingRuntimeArtAdmission(RuntimeArtAdmissionOwnerKind kind) {
+        return base.bindPendingRuntimeArtAdmission(kind);
+    }
+    @Override public RuntimeArtAdmissionLease bindRuntimeArtAdmission(long id, RuntimeArtAdmissionOwnerKind kind) {
+        return base.bindRuntimeArtAdmission(id, kind);
+    }
+    @Override public RuntimeArtAdmissionLease rebindRuntimeArtAdmission(long id, RuntimeArtAdmissionOwnerKind kind) {
+        return base.rebindRuntimeArtAdmission(id, kind);
+    }
+    @Override public void consumeRuntimeArtAdmission(RuntimeArtAdmissionLease lease, RuntimeArtAdmissionOwnerKind kind) {
+        base.consumeRuntimeArtAdmission(lease, kind);
+    }
+
     @Override public void loadArtForZone(int zoneIndex) throws IOException {
         base.loadArtForZone(zoneIndex);
     }

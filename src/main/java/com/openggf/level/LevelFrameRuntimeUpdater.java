@@ -39,6 +39,7 @@ final class LevelFrameRuntimeUpdater {
         if (levelManager.animatedPatternManager != null) {
             levelManager.animatedPatternManager.update();
         }
+        levelManager.updateContributedAnimatedTiles();
         if (levelManager.animatedPaletteManager != null
                 && levelManager.animatedPaletteManager != levelManager.animatedPatternManager) {
             levelManager.animatedPaletteManager.update();

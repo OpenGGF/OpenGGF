@@ -4,8 +4,8 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.ObjectReconstructionContext;
+import com.openggf.level.objects.ModRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -19,7 +19,7 @@ import java.util.List;
  * <p>Centre X, subpixel remainder, gap variant, and gate state are deliberately non-final
  * scalars so the compact rewind schema restores a recycled entry exactly.
  */
-public final class FlappyPipe extends AbstractObjectInstance implements RewindRecreatable {
+public final class FlappyPipe extends AbstractObjectInstance implements ModRewindRecreatable {
     private int centreX;
     private int xSubpixelRemainder;
     private int gapVariant;
@@ -120,7 +120,7 @@ public final class FlappyPipe extends AbstractObjectInstance implements RewindRe
     }
 
     @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
-        return new FlappyPipe(context.dynamicEntry().spawn());
+    public AbstractObjectInstance recreateForRewind(ObjectReconstructionContext context) {
+        return new FlappyPipe(context.spawn());
     }
 }

@@ -1,0 +1,928 @@
+{
+  "format_version": 1,
+  "model": "elevenlabs/eleven-v4",
+  "voice": "alice",
+  "delivery_tag": "[matter-of-fact, emotionally neutral feminine system announcer, measured even pacing, clear diction, restrained natural intonation]",
+  "processing": [
+    {
+      "effect": "metallic",
+      "ring_frequency_hz": 73,
+      "ring_mix": 0.24,
+      "direct_voice_mix": 0.76,
+      "reflections_ms_gain": [
+        [
+          7.6,
+          0.14
+        ],
+        [
+          11.3,
+          0.1
+        ],
+        [
+          17.9,
+          0.06
+        ]
+      ]
+    },
+    {
+      "effect": "vocoder_blend",
+      "metallic_mix": 0.94,
+      "wet_mix": 0.06,
+      "wet_rms_matched_to": "metallic",
+      "carrier_frequency_hz": 185,
+      "bands": 24,
+      "band_edges_hz": [
+        100,
+        6800
+      ],
+      "envelope_lowpass_hz": 65,
+      "carrier_harmonics": 37,
+      "carrier_noise_gain": 0.075
+    },
+    {
+      "effect": "dac_input_loudness",
+      "integrated_target_lufs": -18,
+      "true_peak_target_db": -2.5,
+      "lra_target": 5
+    },
+    {
+      "effect": "dac_approximation",
+      "lowpass_hz": 3400,
+      "sample_rate_hz": 8000,
+      "bits": 7,
+      "quantization": "signed linear, rounding, no dither",
+      "reconstruction": "zero order hold at 48000 Hz"
+    },
+    {
+      "effect": "consonant_recovery",
+      "dac_mix": 0.9,
+      "upper_band_mix": 0.1,
+      "upper_band_highpass_hz": 2400,
+      "source": "protected normalized Alice master"
+    },
+    {
+      "effect": "edge_fades",
+      "milliseconds": 5
+    }
+  ],
+  "seed": 20261008,
+  "room_reverb_mix": 0,
+  "entries": [
+    {
+      "id": "systems_online",
+      "group": "systems",
+      "text": "Egg Mobile systems online.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "save_complete",
+      "group": "systems",
+      "text": "Expedition record saved.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "save_failed",
+      "group": "systems",
+      "text": "Expedition record could not be saved.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "crash_landing",
+      "group": "systems",
+      "text": "Emergency landing. Launch thrusters require fuel.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "mobile_destroyed",
+      "group": "systems",
+      "text": "Egg Mobile destroyed. Recovery systems engaged.",
+      "priority": 3,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "cargo_recovered",
+      "group": "systems",
+      "text": "Lost cargo recovered.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "life_low",
+      "group": "vitals",
+      "text": "Life support reserves low.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "life_empty",
+      "group": "vitals",
+      "text": "Life support depleted.",
+      "priority": 3,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "life_restored",
+      "group": "vitals",
+      "text": "Life support restored.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "hazard_low",
+      "group": "vitals",
+      "text": "Hazard protection reserves low.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "hazard_empty",
+      "group": "vitals",
+      "text": "Hazard protection failing.",
+      "priority": 3,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "hazard_restored",
+      "group": "vitals",
+      "text": "Hazard protection restored.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "launch_empty",
+      "group": "vitals",
+      "text": "Launch thrusters require fuel.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "launch_restored",
+      "group": "vitals",
+      "text": "Launch fuel restored.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "hull_repaired",
+      "group": "vitals",
+      "text": "Hull integrity restored.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "deflector_restored",
+      "group": "vitals",
+      "text": "Deflector shields restored.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "systems_full",
+      "group": "vitals",
+      "text": "System fully charged.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "recharge_unavailable",
+      "group": "vitals",
+      "text": "Recharge materials unavailable.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "auto_recharge",
+      "group": "vitals",
+      "text": "Automatic recharge engaged.",
+      "priority": 2,
+      "cooldown_ticks": 1800,
+      "take": 2
+    },
+    {
+      "id": "hull_critical",
+      "group": "vitals",
+      "text": "Hull integrity critical.",
+      "priority": 3,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "shield_empty",
+      "group": "vitals",
+      "text": "Shields depleted.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "pulse_low",
+      "group": "vitals",
+      "text": "Pulse drive energy low.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "heat",
+      "group": "environment",
+      "text": "Extreme heat detected.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "cold",
+      "group": "environment",
+      "text": "Extreme cold detected.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "toxin",
+      "group": "environment",
+      "text": "Toxic atmosphere detected.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "radiation",
+      "group": "environment",
+      "text": "Radiation hazard detected.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "storm_approaching",
+      "group": "environment",
+      "text": "Severe storm approaching.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "storm_passed",
+      "group": "environment",
+      "text": "Storm conditions cleared.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "rainstorm",
+      "group": "environment",
+      "text": "Heavy rain detected.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "blizzard",
+      "group": "environment",
+      "text": "Blizzard conditions detected.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "firestorm",
+      "group": "environment",
+      "text": "Firestorm detected.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "sandstorm",
+      "group": "environment",
+      "text": "Sandstorm detected.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "spores",
+      "group": "environment",
+      "text": "Hazardous spore cloud detected.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "acid_rain",
+      "group": "environment",
+      "text": "Acid rain detected.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "ash_storm",
+      "group": "environment",
+      "text": "Ash storm detected.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "electrical_storm",
+      "group": "environment",
+      "text": "Electrical storm detected.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "shelter",
+      "group": "environment",
+      "text": "Shelter detected. Hazard protection recovering.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "launching",
+      "group": "travel",
+      "text": "Launch sequence engaged.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "orbit",
+      "group": "travel",
+      "text": "Orbital flight established.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "landing",
+      "group": "travel",
+      "text": "Landing sequence engaged.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "landed",
+      "group": "travel",
+      "text": "Landing complete.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "docking",
+      "group": "travel",
+      "text": "Docking sequence engaged.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "docked",
+      "group": "travel",
+      "text": "Egg Station docking complete.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "undocked",
+      "group": "travel",
+      "text": "Docking clamps released.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "pulse_on",
+      "group": "travel",
+      "text": "Pulse drive engaged.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "pulse_blocked_hostiles",
+      "group": "travel",
+      "text": "Pulse drive blocked. Hostiles nearby.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "pulse_blocked_proximity",
+      "group": "travel",
+      "text": "Pulse drive blocked. Obstacle nearby.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "warp_engaged",
+      "group": "travel",
+      "text": "Hyperdrive engaged.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "warp_complete",
+      "group": "travel",
+      "text": "Hyperspace transit complete.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "warp_empty",
+      "group": "travel",
+      "text": "Hyperdrive fuel unavailable.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "warp_range",
+      "group": "travel",
+      "text": "Destination exceeds hyperdrive range.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "warp_upgrade",
+      "group": "travel",
+      "text": "Hyperdrive upgrade required.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "black_hole",
+      "group": "travel",
+      "text": "Black hole transit engaged.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "laser_hot",
+      "group": "combat",
+      "text": "Mining laser overheated.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "wildlife_harmed",
+      "group": "combat",
+      "text": "Wildlife damage detected. Security response increasing.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "wanted_one",
+      "group": "combat",
+      "text": "Security alert level one.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "wanted_two",
+      "group": "combat",
+      "text": "Security alert level two.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "wanted_three",
+      "group": "combat",
+      "text": "Security alert level three.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "wanted_four",
+      "group": "combat",
+      "text": "Security alert level four.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "wanted_five",
+      "group": "combat",
+      "text": "Security alert level five.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "wanted_clear",
+      "group": "combat",
+      "text": "Security alert cleared.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "flicky_repelled",
+      "group": "combat",
+      "text": "Flicky drones repelled.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "tails_repelled",
+      "group": "combat",
+      "text": "Tails repelled.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "sonic_repelled",
+      "group": "combat",
+      "text": "Sonic repelled.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "knuckles_repelled",
+      "group": "combat",
+      "text": "Knuckles repelled.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "super_sonic_repelled",
+      "group": "combat",
+      "text": "Super Sonic repelled.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "pirates",
+      "group": "combat",
+      "text": "Pirate vessels approaching.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "tornado",
+      "group": "combat",
+      "text": "The Tornado is approaching.",
+      "priority": 2,
+      "cooldown_ticks": 1800,
+      "source_text": "Warning. The Tornado is approaching."
+    },
+    {
+      "id": "tornado_downed",
+      "group": "combat",
+      "text": "The Tornado has been disabled.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "scan",
+      "group": "discovery",
+      "text": "Scanner pulse activated.",
+      "priority": 0,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "discovery",
+      "group": "discovery",
+      "text": "New species catalogued.",
+      "priority": 0,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "planet_discovered",
+      "group": "discovery",
+      "text": "Uncharted planet registered.",
+      "priority": 0,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "system_discovered",
+      "group": "discovery",
+      "text": "Uncharted star system registered.",
+      "priority": 0,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "planet_named",
+      "group": "discovery",
+      "text": "Planet designation updated.",
+      "priority": 0,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "survey_complete",
+      "group": "discovery",
+      "text": "Planetary survey complete.",
+      "priority": 0,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "ruins",
+      "group": "discovery",
+      "text": "Echidna ruins located.",
+      "priority": 0,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "emerald_signal",
+      "group": "discovery",
+      "text": "Chaos Emerald signal located.",
+      "priority": 0,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "emerald_found",
+      "group": "discovery",
+      "text": "Chaos Emerald acquired.",
+      "priority": 0,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "emeralds_complete",
+      "group": "discovery",
+      "text": "All seven Chaos Emeralds acquired.",
+      "priority": 0,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "giant_ring",
+      "group": "discovery",
+      "text": "Giant Ring transit engaged.",
+      "priority": 0,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "cargo_full",
+      "group": "cargo_and_industry",
+      "text": "Cargo hold full.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "materials_missing",
+      "group": "cargo_and_industry",
+      "text": "Required materials unavailable.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "refined",
+      "group": "cargo_and_industry",
+      "text": "Refining complete.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "crafted",
+      "group": "cargo_and_industry",
+      "text": "Fabrication complete.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "discarded",
+      "group": "cargo_and_industry",
+      "text": "Cargo discarded.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "salvage",
+      "group": "cargo_and_industry",
+      "text": "Badnik wreck salvaged.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "rings_received",
+      "group": "cargo_and_industry",
+      "text": "Rings received.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "shards_received",
+      "group": "cargo_and_industry",
+      "text": "Chaos Shards received.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "barrier_fire",
+      "group": "cargo_and_industry",
+      "text": "Fire barrier activated.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "barrier_thunder",
+      "group": "cargo_and_industry",
+      "text": "Thunder barrier activated.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "invincible",
+      "group": "cargo_and_industry",
+      "text": "Invincibility systems activated.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "trap",
+      "group": "cargo_and_industry",
+      "text": "Warning. Hostile trap detected.",
+      "priority": 3,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "sold",
+      "group": "station_and_missions",
+      "text": "Cargo sale complete.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "bought",
+      "group": "station_and_missions",
+      "text": "Cargo purchase complete.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "rings_missing",
+      "group": "station_and_missions",
+      "text": "Insufficient rings.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "upgrade_installed",
+      "group": "station_and_missions",
+      "text": "Technology upgrade installed.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "upgrade_max",
+      "group": "station_and_missions",
+      "text": "Technology fully upgraded.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "upgrade_missing",
+      "group": "station_and_missions",
+      "text": "Upgrade materials unavailable.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "mission_accepted",
+      "group": "station_and_missions",
+      "text": "Mission accepted.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "mission_complete",
+      "group": "station_and_missions",
+      "text": "Mission complete.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "mission_incomplete",
+      "group": "station_and_missions",
+      "text": "Mission objectives incomplete.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "mission_active",
+      "group": "station_and_missions",
+      "text": "A mission is already active.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "no_valuables",
+      "group": "station_and_missions",
+      "text": "No valuable cargo available.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "station_recharged",
+      "group": "station_and_missions",
+      "text": "Shields and life support restored.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "core_locked",
+      "group": "progression",
+      "text": "Galactic core access requires seven Chaos Emeralds.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "core_arrival",
+      "group": "progression",
+      "text": "Galactic core reached.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "expedition_complete",
+      "group": "progression",
+      "text": "Expedition complete. The Eggman Empire expands.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "next_galaxy",
+      "group": "progression",
+      "text": "New galaxy charted. Expedition systems ready.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "sonic_approaching",
+      "group": "combat",
+      "text": "Sonic is approaching.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "flicky_approaching",
+      "group": "combat",
+      "text": "Flicky drones approaching.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "tails_approaching",
+      "group": "combat",
+      "text": "Tails is approaching.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "knuckles_approaching",
+      "group": "combat",
+      "text": "Knuckles is approaching.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "super_sonic_approaching",
+      "group": "combat",
+      "text": "Super Sonic is approaching.",
+      "priority": 2,
+      "cooldown_ticks": 1800
+    },
+    {
+      "id": "cargo_expanded",
+      "group": "cargo_and_industry",
+      "text": "Cargo capacity expanded.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "reserve_on",
+      "group": "cargo_and_industry",
+      "text": "Cargo reserve set.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "reserve_off",
+      "group": "cargo_and_industry",
+      "text": "Cargo reserve cleared.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "reserve_locked",
+      "group": "cargo_and_industry",
+      "text": "Cargo reserved. Clear the reserve first.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "objective_pinned",
+      "group": "cargo_and_industry",
+      "text": "Objective pinned.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "objective_unpinned",
+      "group": "cargo_and_industry",
+      "text": "Objective unpinned.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "capsule_salvaged",
+      "group": "cargo_and_industry",
+      "text": "Egg Capsule salvaged.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "mobile_rebuilt",
+      "group": "systems",
+      "text": "Egg Mobile rebuilt.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    },
+    {
+      "id": "system_recharged",
+      "group": "vitals",
+      "text": "System recharged.",
+      "priority": 1,
+      "cooldown_ticks": 300
+    }
+  ]
+}

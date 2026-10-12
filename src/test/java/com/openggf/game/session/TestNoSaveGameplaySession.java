@@ -4,7 +4,7 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.GameDataSource;
 import com.openggf.game.GameModule;
 import com.openggf.game.patch.DelegatingGameModule;
-import com.openggf.game.save.RuntimeSaveContext;
+import com.openggf.game.save.RuntimeSaveCapture;
 import com.openggf.game.save.SaveManager;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.save.SaveSessionContext;
@@ -112,7 +112,9 @@ class TestNoSaveGameplaySession {
         for (int launch = 0; launch < 3; launch++) {
             var runtime = open(challenge(), null);
             var save = runtime.getWorldSession().getSaveSessionContext();
-            var context = RuntimeSaveContext.forGameplayMode(runtime, save);
+            GameplaySessionFactory.attachManagers(runtime, EngineServices.current());
+            var context = RuntimeSaveCapture.capture(runtime, save);
+            assertTrue(context.hasLiveGameplayState());
             for (var reason : SaveReason.values()) {
                 save.requestSave(reason, context, snapshots, manager);
                 save.requestSaveAsync(reason, context, snapshots, manager);

@@ -40,6 +40,7 @@ class TestLrzKnucklesColdRouteCapture {
                 16138, 16644, 16705, 16765, 16876, 17452, 18028, 18545,
                 19221, 19588, 20108, 20200, 20300, 20349);
         var checked = new HashSet<Integer>();
+        var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 9, 0, settings);
             assertInstanceOf(Knuckles.class, session.player());
@@ -47,7 +48,7 @@ class TestLrzKnucklesColdRouteCapture {
             assertEquals(320, GameServices.camera().getWidth());
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
                 session.step(movie.getFrame(frame));
-                session.render();
+                drawing.afterStep(session);
                 assertFalse(session.player().getDead(), "death at input " + frame);
                 if (frame == 9937) {
                     assertTrue(GameServices.level().getObjectManager()
@@ -66,10 +67,11 @@ class TestLrzKnucklesColdRouteCapture {
                 if (!spots.contains(frame)) continue;
                 checked.add(frame);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                drawing.checkpoint(session);
                 var saved = registry.capture();
                 for (int n = 1; n <= 45; n++) {
                     session.step(movie.getFrame(frame + n));
-                    session.render();
+                    drawing.draw(session);
                 }
                 var forward = registry.capture();
                 registry.restore(saved);
@@ -77,12 +79,13 @@ class TestLrzKnucklesColdRouteCapture {
                 session.restoreInputHistory(movie.getFrame(frame));
                 for (int n = 1; n <= 45; n++) {
                     session.step(movie.getFrame(frame + n));
-                    session.render();
+                    drawing.draw(session);
                 }
                 same(forward, registry.capture(), "replay at " + frame);
                 registry.restore(saved);
                 session.restoreInputHistory(movie.getFrame(frame));
             }
+            drawing.checkpoint(session);
             assertEquals(spots, checked);
             assertEquals(9, GameServices.level().getCurrentZone());
             assertEquals(0, GameServices.level().getCurrentAct());
@@ -114,13 +117,14 @@ class TestLrzKnucklesColdRouteCapture {
         var checked = new HashSet<Integer>();
         var healthSeen = new HashSet<Integer>();
         boolean defeated = false;
+        var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 9, 0, settings);
             assertInstanceOf(Knuckles.class, session.player());
             assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
                 session.step(movie.getFrame(frame));
-                session.render();
+                drawing.afterStep(session);
                 assertFalse(session.player().getDead(), "death at input " + frame);
                 for (var boss : GameServices.level().getObjectManager()
                         .activeObjectsOfType(LrzMinibossInstance.class)) {
@@ -135,10 +139,11 @@ class TestLrzKnucklesColdRouteCapture {
                 if (!spots.contains(frame)) continue;
                 checked.add(frame);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                drawing.checkpoint(session);
                 var saved = registry.capture();
                 for (int n = 1; n <= 45; n++) {
                     session.step(movie.getFrame(frame + n));
-                    session.render();
+                    drawing.draw(session);
                 }
                 var forward = registry.capture();
                 registry.restore(saved);
@@ -146,12 +151,13 @@ class TestLrzKnucklesColdRouteCapture {
                 session.restoreInputHistory(movie.getFrame(frame));
                 for (int n = 1; n <= 45; n++) {
                     session.step(movie.getFrame(frame + n));
-                    session.render();
+                    drawing.draw(session);
                 }
                 same(forward, registry.capture(), "fight replay at " + frame);
                 registry.restore(saved);
                 session.restoreInputHistory(movie.getFrame(frame));
             }
+            drawing.checkpoint(session);
             assertEquals(spots, checked);
             assertEquals(Set.of(0, 1, 2, 3, 4, 5, 6), healthSeen);
             assertTrue(defeated);
@@ -183,6 +189,7 @@ class TestLrzKnucklesColdRouteCapture {
                 32900, 33000, 33310, 33371, 33462, 33555, 33610, 33670,
                 33705, 33717);
         var checked = new HashSet<Integer>();
+        var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 9, 0, settings);
             assertInstanceOf(Knuckles.class, session.player());
@@ -190,17 +197,18 @@ class TestLrzKnucklesColdRouteCapture {
             assertEquals(320, GameServices.camera().getWidth());
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
                 session.step(movie.getFrame(frame));
-                session.render();
+                drawing.afterStep(session);
                 assertFalse(session.player().getDead(), "death at input " + frame);
                 if (!spots.contains(frame)) continue;
                 assertEquals(9, GameServices.level().getCurrentZone());
                 assertEquals(1, GameServices.level().getCurrentAct());
                 checked.add(frame);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                drawing.checkpoint(session);
                 var saved = registry.capture();
                 for (int n = 1; n <= 45; n++) {
                     session.step(movie.getFrame(frame + n));
-                    session.render();
+                    drawing.draw(session);
                 }
                 var forward = registry.capture();
                 registry.restore(saved);
@@ -208,12 +216,13 @@ class TestLrzKnucklesColdRouteCapture {
                 session.restoreInputHistory(movie.getFrame(frame));
                 for (int n = 1; n <= 45; n++) {
                     session.step(movie.getFrame(frame + n));
-                    session.render();
+                    drawing.draw(session);
                 }
                 same(forward, registry.capture(), "Act2 replay at " + frame);
                 registry.restore(saved);
                 session.restoreInputHistory(movie.getFrame(frame));
             }
+            drawing.checkpoint(session);
             assertEquals(spots, checked);
             assertInstanceOf(Knuckles.class, session.player());
             assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
@@ -241,6 +250,7 @@ class TestLrzKnucklesColdRouteCapture {
                 38614, 38640, 38645, 38675, 38855, 38916, 39036, 39064,
                 39082, 39120, 39160, 39250, 39500, 39990);
         var checked = new HashSet<Integer>();
+        var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 9, 0, settings);
             assertInstanceOf(Knuckles.class, session.player());
@@ -248,17 +258,18 @@ class TestLrzKnucklesColdRouteCapture {
             assertEquals(320, GameServices.camera().getWidth());
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
                 session.step(movie.getFrame(frame));
-                session.render();
+                drawing.afterStep(session);
                 assertFalse(session.player().getDead(), "death at input " + frame);
                 if (!spots.contains(frame)) continue;
                 assertEquals(9, GameServices.level().getCurrentZone());
                 assertEquals(1, GameServices.level().getCurrentAct());
                 checked.add(frame);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                drawing.checkpoint(session);
                 var saved = registry.capture();
                 for (int n = 1; n <= 45; n++) {
                     session.step(movie.getFrame(frame + n));
-                    session.render();
+                    drawing.draw(session);
                 }
                 var forward = registry.capture();
                 registry.restore(saved);
@@ -266,12 +277,13 @@ class TestLrzKnucklesColdRouteCapture {
                 session.restoreInputHistory(movie.getFrame(frame));
                 for (int n = 1; n <= 45; n++) {
                     session.step(movie.getFrame(frame + n));
-                    session.render();
+                    drawing.draw(session);
                 }
                 same(forward, registry.capture(), "Act2 replay at " + frame);
                 registry.restore(saved);
                 session.restoreInputHistory(movie.getFrame(frame));
             }
+            drawing.checkpoint(session);
             assertEquals(spots, checked);
             assertInstanceOf(Knuckles.class, session.player());
             assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
@@ -306,6 +318,7 @@ class TestLrzKnucklesColdRouteCapture {
                 48907, 48987, 49047, 49077, 49127, 49167, 49307, 49407,
                 49467);
         var checked = new HashSet<Integer>();
+        var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 9, 0, settings);
             assertInstanceOf(Knuckles.class, session.player());
@@ -315,7 +328,7 @@ class TestLrzKnucklesColdRouteCapture {
             boolean sawHiddenPalace = false;
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
                 session.step(movie.getFrame(frame));
-                session.render();
+                drawing.afterStep(session);
                 assertFalse(session.player().getDead(), "death at input " + frame);
                 if (frame >= 40046) {
                     int zone = GameServices.level().getCurrentZone();
@@ -333,10 +346,11 @@ class TestLrzKnucklesColdRouteCapture {
                 assertEquals(1, GameServices.level().getCurrentAct());
                 checked.add(frame);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                drawing.checkpoint(session);
                 var saved = registry.capture();
                 for (int n = 1; n <= 45; n++) {
                     session.step(movie.getFrame(frame + n));
-                    session.render();
+                    drawing.draw(session);
                 }
                 var forward = registry.capture();
                 registry.restore(saved);
@@ -344,12 +358,13 @@ class TestLrzKnucklesColdRouteCapture {
                 session.restoreInputHistory(movie.getFrame(frame));
                 for (int n = 1; n <= 45; n++) {
                     session.step(movie.getFrame(frame + n));
-                    session.render();
+                    drawing.draw(session);
                 }
                 same(forward, registry.capture(), "Act2 replay at " + frame);
                 registry.restore(saved);
                 session.restoreInputHistory(movie.getFrame(frame));
             }
+            drawing.checkpoint(session);
             assertTrue(sawHiddenPalace, "real direct HPZ load");
             assertEquals(22, GameServices.level().getCurrentZone());
             assertEquals(1, GameServices.level().getCurrentAct());

@@ -7,7 +7,6 @@ import com.openggf.LevelFrameResult;
  * the visualiser / engine glue, passed into RewindController.
  */
 @FunctionalInterface
-@com.openggf.game.ModApi
 public interface EngineStepper {
     LevelFrameResult step(com.openggf.debug.playback.Bk2FrameInput inputs);
 }

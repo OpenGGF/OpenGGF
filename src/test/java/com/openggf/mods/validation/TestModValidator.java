@@ -34,6 +34,8 @@ class TestModValidator {
     private static final String OBJECT_INSTANCE = "com/openggf/level/objects/ObjectInstance";
     private static final String OBJECT_REF_ID = "com/openggf/game/rewind/identity/ObjectRefId";
     private static final String RECREATE_CONTEXT = "com/openggf/level/objects/RewindRecreateContext";
+    private static final String MOD_RECREATABLE = "com/openggf/level/objects/ModRewindRecreatable";
+    private static final String MOD_RECREATE_CONTEXT = "com/openggf/level/objects/ObjectReconstructionContext";
     private static final String BADNIK_BASE = "com/openggf/level/objects/AbstractBadnikInstance";
     private static final String DELEGATING_GAME_MODULE =
             "com/openggf/game/patch/DelegatingGameModule";
@@ -58,6 +60,21 @@ class TestModValidator {
         Path jar = jar(classes);
 
         ModValidationReport report = new ModValidator(Set.of()).validate(jar, "example.Entry");
+
+        assertTrue(report.eligible(), report.findings().toString());
+    }
+
+    @Test
+    void acceptsJava25EntrypointBytecode() throws Exception {
+        // Existing generated fixtures remain V21 to preserve older-bytecode coverage.
+        ClassWriter writer = new ClassWriter(0);
+        writer.visit(Opcodes.V25, Opcodes.ACC_PUBLIC, ENTRY, null, "java/lang/Object",
+                new String[] {GGF_MOD});
+        constructor(writer, Opcodes.ACC_PUBLIC, false);
+        writer.visitEnd();
+
+        ModValidationReport report = new ModValidator(Set.of()).validate(
+                jar(Map.of(ENTRY, writer.toByteArray())), "example.Entry");
 
         assertTrue(report.eligible(), report.findings().toString());
     }
@@ -112,6 +129,52 @@ class TestModValidator {
                 ENTRY, entrypoint(true, true), "example/Unsupported", unsupported.toByteArray())),
                 "example.Entry");
         assertCode(wrongBase, "OBJECT_BASE_CONTRACT", ModValidationFinding.Severity.ERROR);
+    }
+
+    @Test
+    void acceptsProjectedReconstructionDirectlyAndThroughAnAuthoredSuperclass() throws Exception {
+        byte[] projected = projectedObject(OBJECT, MOD_RECREATABLE, Opcodes.ACC_PUBLIC);
+        var direct = new ModValidator().validate(jar(Map.of(
+                ENTRY, entrypoint(true, true), OBJECT, projected)), "example.Entry");
+        assertTrue(direct.eligible(), direct.findings().toString());
+
+        String parent = "example/ProjectedParent";
+        var inherited = new ModValidator().validate(jar(Map.of(
+                ENTRY, entrypoint(true, true), parent, projectedObject(parent, MOD_RECREATABLE, Opcodes.ACC_PUBLIC),
+                OBJECT, objectClassNamed(OBJECT, parent, false, ignored -> {}, false, false, null))),
+                "example.Entry");
+        assertTrue(inherited.eligible(), inherited.findings().toString());
+    }
+
+    @Test
+    void rejectsMissingProjectedBridgeAndNonPublicStaticOrAbstractTargets() throws Exception {
+        for (int access : new int[]{Opcodes.ACC_PRIVATE, Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC,
+                Opcodes.ACC_PUBLIC | Opcodes.ACC_ABSTRACT}) {
+            var report = new ModValidator().validate(jar(Map.of(
+                    ENTRY, entrypoint(true, true), OBJECT, projectedObject(OBJECT, MOD_RECREATABLE, access))),
+                    "example.Entry");
+            assertCode(report, "OBJECT_RECREATE_PATH_MISSING", ModValidationFinding.Severity.ERROR);
+        }
+        // A similarly named overload does not implement the native-context contract
+        // unless the supported interface actually supplies its default bridge.
+        var noBridge = new ModValidator().validate(jar(Map.of(
+                ENTRY, entrypoint(true, true), OBJECT, projectedObject(OBJECT, RECREATABLE, Opcodes.ACC_PUBLIC))),
+                "example.Entry");
+        assertCode(noBridge, "OBJECT_RECREATE_PATH_MISSING", ModValidationFinding.Severity.ERROR);
+    }
+
+    private static byte[] projectedObject(String owner, String contract, int access) {
+        ClassWriter writer = new ClassWriter(0);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, owner, null, OBJECT_BASE, new String[]{contract});
+        constructor(writer, Opcodes.ACC_PUBLIC, false, owner);
+        MethodVisitor method = writer.visitMethod(access, "recreateForRewind",
+                "(L" + MOD_RECREATE_CONTEXT + ";)L" + OBJECT_BASE + ";", null, null);
+        if ((access & Opcodes.ACC_ABSTRACT) == 0) {
+            method.visitCode(); method.visitInsn(Opcodes.ACONST_NULL); method.visitInsn(Opcodes.ARETURN);
+            method.visitMaxs(1, (access & Opcodes.ACC_STATIC) == 0 ? 2 : 1);
+        }
+        method.visitEnd(); writer.visitEnd();
+        return writer.toByteArray();
     }
 
     @Test
@@ -176,7 +239,7 @@ class TestModValidator {
         String engine = Path.of(com.openggf.mods.code.GgfMod.class.getProtectionDomain().getCodeSource().getLocation()
                 .toURI()).toString();
         ByteArrayOutputStream errors = new ByteArrayOutputStream();
-        int result = javax.tools.ToolProvider.getSystemJavaCompiler().run(null, null, errors, "--release", "21",
+        int result = javax.tools.ToolProvider.getSystemJavaCompiler().run(null, null, errors, "--release", "25",
                 "-cp", engine + java.io.File.pathSeparator + System.getProperty("java.class.path"),
                 "-d", out.toString(), src.resolve("Entry.java").toString());
         assertEquals(0, result, () -> "javac: " + errors);
@@ -573,7 +636,7 @@ class TestModValidator {
         Path directory = Files.createTempDirectory(temp, "java-constants-");
         Path source = directory.resolve("Entry.java");
         Files.writeString(source, "package example; public class Entry implements com.openggf.mods.code.GgfMod { public void register(com.openggf.mods.code.ModContext context) { } } " + declarations);
-        assertEquals(0, ToolProvider.getSystemJavaCompiler().run(null, null, null, "--release", "21", "-classpath",
+        assertEquals(0, ToolProvider.getSystemJavaCompiler().run(null, null, null, "--release", "25", "-classpath",
                 System.getProperty("java.class.path"), "-d", directory.toString(), source.toString()));
         var result = new LinkedHashMap<String, byte[]>();
         try (var files = Files.walk(directory)) {

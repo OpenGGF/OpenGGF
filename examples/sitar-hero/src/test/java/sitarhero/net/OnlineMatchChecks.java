@@ -1,6 +1,7 @@
 package sitarhero.net;
 
-import com.openggf.mods.scene.ScenePeer;
+import com.openggf.mods.scene.*;
+import sitarhero.audio.PerformanceAudio;
 import com.openggf.mods.scene.host.network.ManagedSceneNetwork;
 import sitarhero.model.*;
 
@@ -49,7 +50,7 @@ public final class OnlineMatchChecks {
         @Override public boolean send(String text) {
             if (blocked || state != State.CONNECTED) return false;
             sent.add(text);
-            if (!text.startsWith("SH1 " + drop + " ") || drop.isEmpty())
+            if (!text.startsWith("SH2 " + drop + " ") || drop.isEmpty())
                 other.incoming.add(new Message(text, clock - skew + other.skew + transit));
             return true;
         }
@@ -58,7 +59,7 @@ public final class OnlineMatchChecks {
         @Override public void close() { state = State.CLOSED; incoming.clear(); }
         void inject(String text) { incoming.add(new Message(text, clock)); }
         String last(String command) {
-            return sent.stream().filter(s -> s.startsWith("SH1 " + command + " ")).reduce((a, b) -> b).orElseThrow();
+            return sent.stream().filter(s -> s.startsWith("SH2 " + command + " ")).reduce((a, b) -> b).orElseThrow();
         }
     }
 
@@ -75,18 +76,92 @@ public final class OnlineMatchChecks {
         void clocks() { a.clock = time; b.clock = time + offset; }
         void step(long elapsed) { time += elapsed; clocks(); host.tick(a.clock); guest.tick(b.clock); }
         void healthy() { require(host.error().isEmpty(), host.error()); require(guest.error().isEmpty(), guest.error()); }
-        void prepare(Chart chart) {
-            host.offer(SONG, Role.SITAR, Difficulty.MEDIUM, false); step(20_000_000L);
+        void prepare(Chart chart) { prepare(chart,false); }
+        void prepare(Chart chart, boolean coop) {
+            host.offer(SONG, Role.SITAR, Difficulty.MEDIUM, coop); step(20_000_000L);
             host.ready(chart, RATE); guest.ready(chart, RATE);
         }
-        void start(Chart chart) {
-            prepare(chart);
+        void start(Chart chart) { start(chart,false); }
+        void start(Chart chart, boolean coop) {
+            prepare(chart,coop);
             for (int i = 0; i < 100 && !(host.startDue() && guest.startDue()); i++) step(20_000_000L);
             healthy(); require(host.startDue() && guest.startDue(), "both players reached count-in deadline");
             host.started(); guest.started();
         }
         void settle() { for (int i = 0; i < 40; i++) step(20_000_000L); healthy(); }
         @Override public void close() { host.close(); guest.close(); }
+    }
+
+    private record Sound(long source, double gain, double pan) { }
+    private static final class MixPlayer implements SceneMusicPlayer {
+        boolean audible = true;
+        final List<Sound> sounds = new ArrayList<>();
+        public long samplePosition() { return 0; }
+        public long samplePositionAt(long nanos) { return 0; }
+        public void pause() { }
+        public void resume() { }
+        public void setPartAudible(boolean value) { audible = value; }
+        public void setWhammy(double value) { }
+        public boolean cuePart(long source, int duration, double from, double to, double gain, double pan) {
+            sounds.add(new Sound(source,gain,pan)); return true;
+        }
+        public boolean finished() { return false; }
+        public boolean paused() { return false; }
+        public long underrunCount() { return 0; }
+        public void stop() { }
+    }
+    private static PerformanceAudio mix(MixPlayer player, Chart chart, boolean coop) {
+        ScenePreparedMusic music = new ScenePreparedMusic() {
+            public int sampleRate() { return RATE; }
+            public long lengthSamples() { return chart.length(); }
+            public List<SceneNoteEvent> notes() {
+                return List.of(new SceneNoteEvent(0,SceneNoteEvent.Kind.FM,0,128,0,0,RATE));
+            }
+        };
+        return new PerformanceAudio(player,music,chart,List.of(new SceneMusicPart(0,1,0,false)),Role.SITAR,false,coop);
+    }
+    public static void presentationMixPolicy() {
+        for (boolean coop : List.of(false,true)) try (Pair p = new Pair()) {
+            Chart chart = chart(2); p.start(chart,coop);
+            RhythmSession missed=session(chart), good=session(chart);
+            MixPlayer own=new MixPlayer(), partner=new MixPlayer();
+            var ownAudio=mix(own,chart,coop); var partnerAudio=mix(partner,chart,coop);
+            good.input(0,1,0,true,false,false); good.advance(6000); missed.advance(6000);
+            ownAudio.update(missed,null,p.host,6000);
+            partnerAudio.update(good,null,p.guest,6000); p.step(60_000_000L);
+            ownAudio.update(missed,null,p.host,6000); partnerAudio.update(good,null,p.guest,6000);
+            require(own.audible==coop,"only co-op lets a successful peer preserve the shared part");
+            require(partner.audible,"remote miss cannot mute a successful local duel player");
+            require(partner.sounds.size()==1 && partner.sounds.getFirst().pan()==.4
+                    && partner.sounds.getFirst().gain()<own.sounds.getFirst().gain(),"remote mistake is distinct and quieter");
+            equal(0,missed.hits(),"presentation cannot award local hits"); equal(1,good.hits(),"presentation cannot alter peer hits");
+        }
+        for (long offset : new long[]{-RATE/4,RATE/4}) try (Pair p = new Pair()) {
+            Chart chart=chart(2);p.start(chart,false);
+            RhythmSession missed=session(chart),good=session(chart);missed.advance(30000);good.input(0,1,0,true,false,false);
+            // An overstrike at the current calibrated judgment coordinate, not the stale first miss.
+            missed.input(30000,1,0,true,false,false);
+            MixPlayer sender=new MixPlayer(),receiver=new MixPlayer();
+            mix(sender,chart,false).update(missed,null,p.host,30000+offset);p.step(60_000_000L);
+            mix(receiver,chart,false).update(good,null,p.guest,30000+offset);p.healthy();
+            require(receiver.sounds.size()==1,"calibrated current strike is fresh on the peer song clock");
+        }
+        try (Pair p = new Pair()) {
+            Chart chart=chart(2);p.start(chart,true);
+            RhythmSession first=session(chart),second=session(chart);first.advance(6000);second.advance(6000);
+            MixPlayer a=new MixPlayer(),b=new MixPlayer();var aa=mix(a,chart,true);var bb=mix(b,chart,true);
+            aa.update(first,null,p.host,6000);bb.update(second,null,p.guest,6000);p.step(60_000_000L);p.step(20_000_000L);
+            aa.update(first,null,p.host,6000);bb.update(second,null,p.guest,6000);
+            require(!a.audible && !b.audible,"both co-op misses suppress both shared parts");
+            require(a.sounds.size()==2 && b.sounds.size()==2,"each co-op player owns one audible mistake");
+        }
+        try (Pair p = new Pair()) {
+            Chart chart=chart(2);p.start(chart,false);
+            RhythmSession missed=session(chart),good=session(chart);missed.advance(6000);good.input(0,1,0,true,false,false);
+            p.host.feedback(missed.position(),false,missed.drainFeedback());p.step(60_000_000L);
+            MixPlayer player=new MixPlayer();mix(player,chart,false).update(good,null,p.guest,20000);
+            require(player.audible && player.sounds.isEmpty(),"late peer cue is silent without altering local judgment");
+        }
     }
 
     public static void pairedJudgments() {
@@ -115,12 +190,12 @@ public final class OnlineMatchChecks {
             p.host.progress(song, song.position(), true); p.step(20_000_000L); p.healthy();
             require(p.guest.remoteFinished(), "natural finish reaches peer");
             equal(2, p.guest.remoteHits(), "final late-window hit retained");
-            p.b.inject("SH1 STATE 1 999 0 0 0 0 0.5 0 2"); p.step(20_000_000L); p.healthy();
+            p.b.inject("SH2 STATE 1 999 0 0 0 0 0.5 0 2"); p.step(20_000_000L); p.healthy();
             require(p.guest.remoteFinished(), "finished result remains terminal");
         }
         try (Pair p = new Pair()) {
             Chart chart = chart(600); p.start(chart);
-            p.b.inject("SH1 STATE 1 1 " + (chart.length() + RATE * 11L) + " 0 0 0 0.5 0 2");
+            p.b.inject("SH2 STATE 1 1 " + (chart.length() + RATE * 11L) + " 0 0 0 0.5 0 2");
             p.step(20_000_000L); require(!p.guest.error().isEmpty(), "tail is bounded by prepared chart");
         }
     }
@@ -137,15 +212,15 @@ public final class OnlineMatchChecks {
             equal(2, p.guest.round(), "host owns rematch generation"); require(p.guest.choice().coop(), "new mode received");
             equal(0, p.guest.remoteScore(), "rematch clears old scores"); equal(0, p.guest.remotePosition(), "rematch clears old sample clock");
             p.b.inject(ping); p.a.inject(pong); p.b.inject(start); p.a.inject(pause); p.a.inject(resume); p.b.inject(hold); p.a.inject(holdAck); p.a.inject(startAck);
-            p.b.inject("SH1 READY 1 48000 " + OnlineMatch.fingerprint(chart));
-            p.b.inject("SH1 STATE 1 100 0 0 0 0 0.5 1 2");
+            p.b.inject("SH2 READY 1 48000 " + OnlineMatch.fingerprint(chart));
+            p.b.inject("SH2 STATE 1 100 0 0 0 0 0.5 1 2");
             p.step(20_000_000L); p.healthy(); require(!p.guest.ready() && !p.guest.paused(), "old round cannot prepare or pause rematch");
             p.host.ready(chart, RATE); p.guest.ready(chart, RATE);
             for (int i = 0; i < 100 && !(p.host.startDue() && p.guest.startDue()); i++) p.step(20_000_000L);
             p.healthy(); require(p.host.startDue() && p.guest.startDue(), "rematch starts afresh");
         }
         try (Pair p = new Pair()) {
-            p.a.inject("SH1 OFFER 1 green-hill SITAR MEDIUM versus"); p.step(20_000_000L);
+            p.a.inject("SH2 OFFER 1 green-hill SITAR MEDIUM versus"); p.step(20_000_000L);
             require(!p.host.error().isEmpty(), "guest cannot offer a round over wire");
         }
     }
@@ -157,7 +232,7 @@ public final class OnlineMatchChecks {
             illegal(() -> p.host.offer(absent, Role.SITAR, Difficulty.MEDIUM, false));
             illegal(() -> p.host.offer(noSynth, Role.SYNTH, Difficulty.MEDIUM, false));
             equal(0, p.host.round(), "failed offers do not advance round");
-            p.b.inject("SH1 OFFER 1 marble-garden-1 SYNTH MEDIUM coop"); p.step(20_000_000L);
+            p.b.inject("SH2 OFFER 1 marble-garden-1 SYNTH MEDIUM coop"); p.step(20_000_000L);
             require(!p.guest.error().isEmpty(), "unsupported offered part is rejected before audio preparation");
         }
         try (Pair p = new Pair(10 * SECOND, 0, List.of("s1"), List.of("s2"))) {
@@ -182,11 +257,11 @@ public final class OnlineMatchChecks {
     }
 
     public static void malformed() {
-        for (String packet : List.of("", "SH2 HELLO s1", "SH1 WHAT", "SH1 HEARTBEAT extra", "SH1 HELLO s1,s1",
-                "SH1 HELLO s4", "SH1 HELLO s1\nSTATE", "SH1\tHEARTBEAT", "SH1 OFFER 2 green-hill SITAR BAD versus",
-                "SH1 OFFER 2 unknown SITAR MEDIUM versus", "SH1 READY 1 48000 NaN", "SH1 PING 1 9223372036854775808",
-                "SH1 READY 2 48000 abc", "SH1 PONG 1 0 4 3", "SH1 START 1 9223372036854775807 1",
-                "SH1 PING 01 0", "SH1 READY 1 7999 abc", "SH1 OFFER 3 green-hill SITAR MEDIUM coop")) {
+        for (String packet : List.of("", "SH2 HELLO s1", "SH2 WHAT", "SH2 HEARTBEAT extra", "SH2 HELLO s1,s1",
+                "SH2 HELLO s4", "SH2 HELLO s1\nSTATE", "SH2\tHEARTBEAT", "SH2 OFFER 2 green-hill SITAR BAD versus",
+                "SH2 OFFER 2 unknown SITAR MEDIUM versus", "SH2 READY 1 48000 NaN", "SH2 PING 1 9223372036854775808",
+                "SH2 READY 2 48000 abc", "SH2 PONG 1 0 4 3", "SH2 START 1 9223372036854775807 1",
+                "SH2 PING 01 0", "SH2 READY 1 7999 abc", "SH2 OFFER 3 green-hill SITAR MEDIUM coop")) {
             try (Pair p = new Pair()) {
                 p.prepare(chart(60)); p.b.inject(packet); p.step(20_000_000L);
                 require(!p.guest.error().isEmpty(), "malformed packet accepted: " + packet);
@@ -195,7 +270,7 @@ public final class OnlineMatchChecks {
         for (String state : List.of("1 0 0 0 0 NaN 0 2", "1 0 0 2 2 0.5 0 2", "1 0 -1 0 0 0.5 0 2",
                 "1 0 0 0 0 1.1 0 2", "1 0 0 0 0 0.5 2 2", "1 0 0 0 0 0.5 0 3")) {
             try (Pair p = new Pair()) {
-                p.start(chart(60)); p.b.inject("SH1 STATE 1 " + state); p.step(20_000_000L);
+                p.start(chart(60)); p.b.inject("SH2 STATE 1 " + state); p.step(20_000_000L);
                 require(!p.guest.error().isEmpty(), "invalid state accepted: " + state);
             }
         }
@@ -228,7 +303,7 @@ public final class OnlineMatchChecks {
                 long t1 = Long.parseLong(p.a.last("PING").split(" ")[3]);
                 long t2 = t1 + p.offset + delay[0], t3 = t2 + 200_000_000L;
                 long t4 = t1 + delay[0] + 200_000_000L + delay[1];
-                p.a.incoming.add(new ScenePeer.Message("SH1 PONG 1 " + t1 + " " + t2 + " " + t3, t4));
+                p.a.incoming.add(new ScenePeer.Message("SH2 PONG 1 " + t1 + " " + t2 + " " + t3, t4));
                 p.time = t4 + 500_000_000L; p.clocks(); p.host.tick(p.a.clock);
             }
             p.healthy(); equal(p.offset, Long.parseLong(p.a.last("START").split(" ")[4]), "minimum RTT wins despite asymmetric later sample and slow polling");
@@ -249,9 +324,9 @@ public final class OnlineMatchChecks {
             Chart chart = chart(60); p.start(chart);
             RhythmSession good = session(chart); good.input(0, 1, 0, true, false, false);
             p.host.progress(good, 0, false); p.step(20_000_000L);
-            p.b.inject("SH1 STATE 1 0 0 0 0 0 0.5 0 2"); p.step(20_000_000L); p.healthy();
+            p.b.inject("SH2 STATE 1 0 0 0 0 0 0.5 0 2"); p.step(20_000_000L); p.healthy();
             equal(good.score(), p.guest.remoteScore(), "duplicate sequence cannot roll score back");
-            p.b.inject("SH1 STATE 1 1 0 0 0 0 0.5 0 2"); p.step(20_000_000L);
+            p.b.inject("SH2 STATE 1 1 0 0 0 0 0.5 0 2"); p.step(20_000_000L);
             require(!p.guest.error().isEmpty(), "newer telemetry cannot roll judgments back");
         }
     }
@@ -262,7 +337,7 @@ public final class OnlineMatchChecks {
             // estimated start. The path then clears before the first host control.
             p.a.transit = 500_000_000L; p.b.transit = 2_000_000L;
             p.prepare(chart(60));
-            for (int i = 0; i < 8 && p.a.sent.stream().noneMatch(s -> s.startsWith("SH1 START ")); i++) p.step(700_000_000L);
+            for (int i = 0; i < 8 && p.a.sent.stream().noneMatch(s -> s.startsWith("SH2 START ")); i++) p.step(700_000_000L);
             p.healthy();
             long deadline = Long.parseLong(p.a.last("START").split(" ")[3]);
             p.a.transit = p.b.transit = 2_000_000L;
@@ -281,7 +356,7 @@ public final class OnlineMatchChecks {
             // and final short-session report can reach the host before host due.
             p.a.transit = 2_000_000L; p.b.transit = 500_000_000L;
             p.prepare(chart(60));
-            for (int i = 0; i < 8 && p.a.sent.stream().noneMatch(s -> s.startsWith("SH1 START ")); i++) p.step(700_000_000L);
+            for (int i = 0; i < 8 && p.a.sent.stream().noneMatch(s -> s.startsWith("SH2 START ")); i++) p.step(700_000_000L);
             p.healthy(); String[] start = p.a.last("START").split(" ");
             p.time = Long.parseLong(start[3]) + Long.parseLong(start[4]);
             p.a.transit = p.b.transit = 2_000_000L; p.clocks(); p.host.tick(p.a.clock); p.guest.tick(p.b.clock); p.healthy();
@@ -298,7 +373,7 @@ public final class OnlineMatchChecks {
     public static void signedClocks() {
         for (long clock : new long[] {-10 * SECOND, 0, -100_000_000L}) try (Pair p = new Pair(clock, -3 * SECOND, List.of("s1"), List.of("s1"))) {
             p.start(chart(60));
-            if (clock == -100_000_000L) require(p.a.sent.contains("SH1 PING 1 0"), "zero probe timestamp is not a sentinel");
+            if (clock == -100_000_000L) require(p.a.sent.contains("SH2 PING 1 0"), "zero probe timestamp is not a sentinel");
             p.guest.requestPause(); p.settle(); require(p.host.paused() && p.guest.paused(), "signed clock control");
         }
     }
@@ -377,9 +452,9 @@ public final class OnlineMatchChecks {
             String old = p.a.last("HOLD"); p.guest.requestResume(); p.settle();
             p.b.inject(old); p.step(20_000_000L); p.healthy(); require(!p.guest.paused(), "obsolete HOLD cannot restore old pause");
             p.b.drop = "HOLDACK"; p.host.requestPause();
-            long sentBefore = p.a.sent.stream().filter(s -> s.startsWith("SH1 HOLD ")).count();
+            long sentBefore = p.a.sent.stream().filter(s -> s.startsWith("SH2 HOLD ")).count();
             for (int i = 0; i < 20; i++) p.step(20_000_000L);
-            require(p.a.sent.stream().filter(s -> s.startsWith("SH1 HOLD ")).count() > sentBefore, "unacknowledged HOLD retries");
+            require(p.a.sent.stream().filter(s -> s.startsWith("SH2 HOLD ")).count() > sentBefore, "unacknowledged HOLD retries");
             p.b.drop = ""; p.settle();
             require(p.host.paused() && p.guest.paused(), "HOLD and acknowledgment retry idempotently");
         }
@@ -407,7 +482,7 @@ public final class OnlineMatchChecks {
         try (Pair p = new Pair()) {
             p.b.drop = "PONG"; Chart chart = chart(60); p.prepare(chart);
             for (int i = 0; i < 20 && p.host.error().isEmpty(); i++) {
-                p.a.inject("SH1 READY 1 48000 " + OnlineMatch.fingerprint(chart)); p.step(SECOND);
+                p.a.inject("SH2 READY 1 48000 " + OnlineMatch.fingerprint(chart)); p.step(SECOND);
             }
             require(!p.host.error().isEmpty(), "duplicate READY cannot renew clock-sync deadline");
         }
@@ -472,4 +547,56 @@ public final class OnlineMatchChecks {
             }
         }
     }
+    public static void presentationFeedback() throws Exception {
+        try (Pair p = new Pair()) {
+            p.start(chart(60));
+            java.lang.reflect.Method method;
+            try { method = OnlineMatch.class.getMethod("feedback", long.class, boolean.class, List.class); }
+            catch (NoSuchMethodException missing) { throw new AssertionError("Peer performance feedback is missing", missing); }
+            method.invoke(p.host, 1000L, false, List.of());
+            p.step(60_000_000L);
+            var audible = OnlineMatch.class.getMethod("remoteAudible");
+            require(!(boolean) audible.invoke(p.guest), "peer must hear the latest shared-part mute");
+            equal(0, p.guest.remoteScore(), "presentation does not award score");
+            String wire = p.a.last("FEEDBACK"); p.b.inject(wire); p.step(60_000_000L);
+            require(!(boolean) audible.invoke(p.guest), "duplicate cannot recover the part");
+        }
+    }
+
+    public static void oldFeedbackAndPause() {
+        try(Pair p=new Pair()) {
+            Chart c=chart(60);p.start(c);
+            RhythmSession missed=session(c);missed.advance(RATE/5);
+            p.host.feedback(missed.position(),false,missed.drainFeedback());p.step(60_000_000L);
+            require(!p.guest.remoteAudible(),"partner mute received");
+            String old=p.a.last("FEEDBACK");
+            p.guest.requestPause();p.settle();require(p.guest.drainCues().isEmpty(),"pause drops pending peer transients");
+            p.guest.requestResume();p.settle();require(!p.guest.remoteAudible(),"resume cannot invent a successful hit");
+            p.host.offer(SONG,Role.SITAR,Difficulty.MEDIUM,true);p.step(20_000_000L);
+            p.b.inject(old);p.step(60_000_000L);p.healthy();
+            require(p.guest.remoteAudible() && p.guest.drainCues().isEmpty(),"old cue cannot affect an unprepared rematch");
+        }
+    }
+    public static void feedbackBurstsAndDuplicates() {
+        try(Pair p=new Pair()) {
+            p.start(chart(60));
+            for(int i=0;i<100;i++)p.host.feedback(i,false,List.of(new RhythmSession.Feedback(i,i,0,1,RhythmSession.FeedbackKind.STRIKE,false)));
+            p.step(60_000_000L);
+            equal(1,p.a.sent.stream().filter(v->v.startsWith("SH2 FEEDBACK ")).count(),"burst coalesces to one packet");
+            equal(6,p.guest.drainCues().size(),"cue batch bounded");
+            p.b.inject(p.a.last("FEEDBACK"));p.step(60_000_000L);equal(0,p.guest.drainCues().size(),"duplicate packet cannot replay cues");
+            p.host.feedback(200,false,List.of(new RhythmSession.Feedback(199,190,0,1,RhythmSession.FeedbackKind.HIT,true),
+                    new RhythmSession.Feedback(200,200,0,1,RhythmSession.FeedbackKind.MISS,false)));
+            p.step(60_000_000L);equal(1,p.guest.drainCues().size(),"first miss reaches the peer once");
+            p.b.inject("SH2 FEEDBACK 1 999 300 0 250:M:0:1");p.step(60_000_000L);p.healthy();
+            equal(0,p.guest.drainCues().size(),"same missed note cannot replay under another sequence");
+            equal(0,p.guest.remoteScore(),"feedback never awards score");
+        }
+    }
+    public static void feedbackValidation() {
+        for(String payload:List.of("0 0 1 0:S:999:1","0 0 0 0:M:0:2","0 0 0 0:S:0:32","0 0 2 -")) {
+            try(Pair p=new Pair()){p.start(chart(60));p.b.inject("SH2 FEEDBACK 1 "+payload);p.step(60_000_000L);require(!p.guest.error().isEmpty(),"invalid peer feedback rejected");}
+        }
+    }
+
 }

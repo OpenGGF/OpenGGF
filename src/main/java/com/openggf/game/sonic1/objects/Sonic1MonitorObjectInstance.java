@@ -268,6 +268,7 @@ public class Sonic1MonitorObjectInstance extends AbstractMonitorObjectInstance
         switch (subtype & 0xF) {
             // Pow_ChkRings: v_rings += 10, play sfx_Ring
             case 6 -> {
+                if (!com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(services)) return;
                 player.addRings(RING_MONITOR_REWARD);
                 services.playSfx(GameSound.RING);
             }

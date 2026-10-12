@@ -1,12 +1,13 @@
 package infinite;
 
-import com.openggf.graphics.GLCommand;
+import com.openggf.mods.ui.BitmapFont;
+import com.openggf.mods.ui.LevelOverlayCanvas;
 import com.openggf.level.objects.ObjectServices;
 import java.util.Locale;
 
 /** Tiny code-drawn HUD glyphs; no external art or GPU-owned state to restore. */
 public final class CourseHud {
-    private CourseHud() { }
+    CourseHud() { }
     private static final String ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ.-:>!";
     private static final String GLYPHS =
             "111101101101111"
@@ -50,6 +51,7 @@ public final class CourseHud {
             + "000010000010000"
             + "100010001010100"
             + "010010010000010";
+    private final BitmapFont font = BitmapFont.binary(ALPHABET, GLYPHS, 3, 5, 4);
     public static String speedText(CourseController course) {
         return String.format(Locale.ROOT, "SPEED %.2fX", course.speedMultiplier());
     }
@@ -72,7 +74,7 @@ public final class CourseHud {
         return entry == null ? String.format(Locale.ROOT, "%2d %7s", place, "-")
                 : String.format(Locale.ROOT, "%2d %7d %5.2fX", place, entry.score(), entry.speed());
     }
-    public static void draw(ObjectServices services, CourseController course) {
+    public void draw(ObjectServices services, CourseController course) {
         float board = course.openingBoardAlpha();
         if (board > 0) drawBoard(services, course, board);
         text(services, topText(course), 16, 8, true);
@@ -148,21 +150,18 @@ public final class CourseHud {
         String selected = course.menuSelection();
         return course.menuOptions().stream().map(option -> (option.equals(selected) ? "> " : "  ") + option).toList();
     }
-    private static void centred(ObjectServices services, String text, int y) {
+    private void centred(ObjectServices services, String text, int y) {
         text(services, text, (services.camera().getWidth() - text.length() * 8) / 2, y, true);
     }
-    private static void text(ObjectServices services, String text, int x, int y, boolean shadow) {
+    private void text(ObjectServices services, String text, int x, int y, boolean shadow) {
         text(services, text, x, y, shadow, 2);
     }
     /** The zone's top 10, top right, over a translucent panel that fades as the run gets going. */
-    private static void drawBoard(ObjectServices services, CourseController course, float alpha) {
+    private void drawBoard(ObjectServices services, CourseController course, float alpha) {
         var top = services.gameService(Leaderboard.class).top(course.zone());
         int width = 168, left = services.camera().getWidth() - width - 8, y = 56;
         int height = 26 + Leaderboard.SIZE * 12;
-        int cameraX = services.camera().getX(), cameraY = services.camera().getY();
-        services.graphicsManager().registerCommand(new GLCommand(GLCommand.CommandType.RECTI, 0,
-                GLCommand.BlendType.ONE_MINUS_SRC_ALPHA, 0.04f, 0.06f, 0.2f, 0.7f * alpha,
-                cameraX + left, cameraY + y, cameraX + left + width, cameraY + y + height));
+        canvas(services).fill(left, y, width, height, colour(0.04f, 0.06f, 0.2f, 0.7f * alpha));
         glyphs(services, "TOP 10 SCORES", left + 8, y + 6, 2, 1f, 0.82f, 0.19f, alpha);
         for (int i = 0; i < Leaderboard.SIZE; i++) {
             String line = boardLine(i + 1, i < top.size() ? top.get(i) : null);
@@ -170,30 +169,25 @@ public final class CourseHud {
         }
     }
 
-    private static void text(ObjectServices services, String text, int x, int y, boolean shadow, int scale) {
+    private void text(ObjectServices services, String text, int x, int y, boolean shadow, int scale) {
         if (shadow) text(services, text, x + 1, y + 1, false, scale);
         if (shadow) glyphs(services, text, x, y, scale, 1f, 1f, 0.5f, 1f);
         else glyphs(services, text, x, y, scale, 0f, 0f, 0f, 1f);
     }
 
     /** Draws {@code text} in one colour; below full opacity it blends over the scene. */
-    private static void glyphs(ObjectServices services, String text, int x, int y, int scale,
+    private void glyphs(ObjectServices services, String text, int x, int y, int scale,
                                float r, float g, float b, float alpha) {
-        int cameraX = services.camera().getX();
-        int cameraY = services.camera().getY();
-        for (int letter = 0; letter < text.length(); letter++) {
-            int index = ALPHABET.indexOf(text.charAt(letter));
-            if (index < 0) continue;
-            String glyph = GLYPHS.substring(index * 15, index * 15 + 15);
-            for (int pixel = 0; pixel < 15; pixel++) {
-                if (glyph.charAt(pixel) != '1') continue;
-                int px = cameraX + x + letter * 4 * scale + pixel % 3 * scale;
-                int py = cameraY + y + pixel / 3 * scale;
-                services.graphicsManager().registerCommand(alpha >= 1f
-                        ? new GLCommand(GLCommand.CommandType.RECTI, 0, r, g, b, px, py, px + scale, py + scale)
-                        : new GLCommand(GLCommand.CommandType.RECTI, 0, GLCommand.BlendType.ONE_MINUS_SRC_ALPHA,
-                                r, g, b, alpha, px, py, px + scale, py + scale));
-            }
-        }
+        font.draw(canvas(services), text, x, y, scale, colour(r, g, b, alpha));
+    }
+
+    private LevelOverlayCanvas canvas(ObjectServices services) {
+        return new LevelOverlayCanvas(services.graphicsManager(), services.camera().getWidth(), services.camera().getHeight());
+    }
+    private static int colour(float r, float g, float b, float alpha) {
+        return Math.round(Math.clamp(alpha, 0f, 1f) * 255) << 24
+                | Math.round(Math.clamp(r, 0f, 1f) * 255) << 16
+                | Math.round(Math.clamp(g, 0f, 1f) * 255) << 8
+                | Math.round(Math.clamp(b, 0f, 1f) * 255);
     }
 }

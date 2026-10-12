@@ -1,6 +1,11 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.identity.PlayerRefId;
+import com.openggf.game.rewind.identity.RewindIdentityTable;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
@@ -250,6 +255,58 @@ class TestHCZBreakableBarObjectInstance {
         bar.onUnload();
 
         assertNoObjectControl(extension);
+    }
+
+    @Test
+    void verticalHeldMovementReadsRawControllerAndReplaysAfterRestore() {
+        checkRawHeldMovement(false);
+    }
+
+    @Test
+    void horizontalHeldMovementReadsRawControllerAndReplaysAfterRestore() {
+        checkRawHeldMovement(true);
+    }
+
+    private void checkRawHeldMovement(boolean horizontal) {
+        TestablePlayableSprite main = positionedPlayer("sonic");
+        TestablePlayableSprite tails = positionedPlayer("tails");
+        if (horizontal) {
+            main.setCentreX((short) 0x0200);
+            tails.setCentreX((short) 0x0200);
+            main.setCentreY((short) 0x01ED);
+            tails.setCentreY((short) 0x01ED);
+        }
+        tails.setCpuControlled(true);
+        var cpu = new SidekickCpuController(tails, main);
+        var bar = horizontal ? horizontalBar(0xC0) : verticalBar(0x40);
+        bar.setServices(new TestObjectServices().withSidekicks(List.of(tails)));
+        bar.update(0, main);
+        int initial = horizontal ? tails.getCentreX() : tails.getCentreY();
+        int mainInitial = horizontal ? main.getCentreX() : main.getCentreY();
+        // The object sees raw Ctrl_2, not the CPU's logical Down/Right.
+        tails.setDirectionalInputPressed(false, !horizontal, false, horizontal);
+        main.setDirectionalInputPressed(false, !horizontal, false, horizontal);
+        cpu.setController2Input(0, 0);
+        bar.update(1, main);
+        assertEquals(initial, horizontal ? tails.getCentreX() : tails.getCentreY());
+        assertEquals(mainInitial + 1, horizontal ? main.getCentreX() : main.getCentreY());
+
+        var identities = new RewindIdentityTable();
+        identities.registerPlayer(main, PlayerRefId.mainPlayer());
+        identities.registerPlayer(tails, PlayerRefId.sidekick(0));
+        var context = RewindCaptureContext.withIdentityTable(identities);
+        var snapshot = bar.captureRewindState(context);
+        cpu.setController2Input(horizontal ? AbstractPlayableSprite.INPUT_RIGHT
+                : AbstractPlayableSprite.INPUT_DOWN, 0); // held, no pressed edge
+        bar.update(2, main);
+        assertEquals(initial + 1, horizontal ? tails.getCentreX() : tails.getCentreY());
+        assertNativeBitZeroControl(tails);
+        bar.restoreRewindState(snapshot, context);
+        if (horizontal) tails.setCentreX((short) initial);
+        else tails.setCentreY((short) initial);
+        bar.update(2, main);
+        assertEquals(initial + 1, horizontal ? tails.getCentreX() : tails.getCentreY());
+        assertNativeBitZeroControl(tails);
     }
 
     private static HCZBreakableBarObjectInstance verticalBar(int subtype) {

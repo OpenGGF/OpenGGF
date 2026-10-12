@@ -10,7 +10,7 @@ BROAD_CLASSES = 500
 
 def preflight(root, plan):
     """Check the actual launch environment before starting any test lane."""
-    checks = [('Maven with Java 21', ['mvn', '-v'], r'Java version:\s*21(?:\D|$)')]
+    checks = [('Maven with Java 25', ['mvn', '-v'], r'Java version:\s*25(?:\D|$)')]
     if plan['guards']:
         checks += [
             ('Lua 5.4 (set LUA_BIN)', [os.environ.get('LUA_BIN', 'lua'), '-v'], r'Lua 5\.4(?:\D|$)'),

@@ -20,6 +20,7 @@ public final class PreparedModMusic implements AutoCloseable {
     private Map<TrackKey, Integer> trackIndices;
     private Map<SfxKey, Integer> sfxIndices;
     private Map<String, Map<Integer, TrackKey>> overrides;
+    private List<OverrideTarget> overrideReport;
     private final boolean permanentEmpty;
     private boolean closed;
 
@@ -27,17 +28,19 @@ public final class PreparedModMusic implements AutoCloseable {
                              Map<TrackKey, Integer> trackIndices,
                              Map<SfxKey, Integer> sfxIndices,
                              Map<String, Map<Integer, TrackKey>> overrides,
+                             List<OverrideTarget> overrideReport,
                              boolean permanentEmpty) {
         this.outputRate = outputRate;
         this.session = session;
         this.trackIndices = trackIndices;
         this.sfxIndices = sfxIndices;
         this.overrides = overrides;
+        this.overrideReport = List.copyOf(overrideReport);
         this.permanentEmpty = permanentEmpty;
     }
 
     static PreparedModMusic permanentEmpty() {
-        return new PreparedModMusic(0, null, Map.of(), Map.of(), Map.of(), true);
+        return new PreparedModMusic(0, null, Map.of(), Map.of(), Map.of(), List.of(), true);
     }
 
     /**
@@ -128,6 +131,7 @@ public final class PreparedModMusic implements AutoCloseable {
             }
 
             LinkedHashMap<String, LinkedHashMap<Integer, TrackKey>> mutableOverrides = new LinkedHashMap<>();
+            Map<String, List<TrackKey>> successfulSources = new java.util.TreeMap<>();
             for (String game : List.of("s1", "s2", "s3k")) mutableOverrides.put(game, new LinkedHashMap<>());
             for (ModDescriptor descriptor : descriptors) {
                 String owner = descriptor.manifest().id();
@@ -153,6 +157,8 @@ public final class PreparedModMusic implements AutoCloseable {
                         throw new IllegalArgumentException("Override target was not prepared: " + target);
                     }
                     mutableOverrides.get(baseGame).put(musicId, target);
+                    successfulSources.computeIfAbsent(baseGame + "/" + musicId,
+                            ignored -> new ArrayList<>()).add(target);
                 }
             }
 
@@ -160,15 +166,34 @@ public final class PreparedModMusic implements AutoCloseable {
             LinkedHashMap<String, Map<Integer, TrackKey>> frozenOverrides = new LinkedHashMap<>();
             mutableOverrides.forEach((game, values) -> frozenOverrides.put(game, immutableLinkedMap(values)));
             if (session.isClosed()) throw new IllegalStateException("Prepared audio session closed during build");
+            List<OverrideTarget> report = successfulSources.entrySet().stream().map(entry -> {
+                int slash = entry.getKey().indexOf('/');
+                List<TrackKey> sources = entry.getValue();
+                return new OverrideTarget(entry.getKey().substring(0, slash),
+                        Integer.parseInt(entry.getKey().substring(slash + 1)), sources.getLast(),
+                        sources.subList(0, sources.size() - 1), "later effective prepared owner wins",
+                        "failed preparation excludes the owner's tracks; previous healthy override remains");
+            }).toList();
             return new PreparedModMusic(outputRate, session, frozenIndices,
                     immutableLinkedMap(localSfxIndices),
-                    immutableLinkedMap(frozenOverrides), false);
+                    immutableLinkedMap(frozenOverrides), report, false);
         }
     }
 
     public synchronized int outputRate() {
         requireOpen();
         return outputRate;
+    }
+
+    /** Actual successful publication, distinct from declared or registered metadata. */
+    public synchronized List<OverrideTarget> overrideReport() {
+        requireOpen();
+        return overrideReport;
+    }
+
+    public record OverrideTarget(String gameId, int musicId, TrackKey winner,
+                                 List<TrackKey> shadowed, String policy, String failurePolicy) {
+        public OverrideTarget { shadowed = List.copyOf(shadowed); }
     }
 
     synchronized PreparedTrack resolve(TrackKey key) {
@@ -222,6 +247,7 @@ public final class PreparedModMusic implements AutoCloseable {
         trackIndices = Map.of();
         sfxIndices = Map.of();
         overrides = Map.of();
+        overrideReport = List.of();
         PreparedAudioSession owned = session;
         session = null;
         owned.close();

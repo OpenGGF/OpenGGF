@@ -12,8 +12,18 @@ package com.openggf.mods.scene;
  */
 @com.openggf.game.ModApi
 public interface SceneRomArt {
+    /**
+     * A fresh independent stock-scrolling background for a supported steady-state act,
+     * or null if the provider has no such profile. Public zone indices, zero-based acts.
+     * Keep the returned view rather than creating one every frame.
+     */
+    default SceneBackground levelBackground(int zone, int act) { return null; }
+
     /** "s1", "s2" or "s3k". */
     String gameId();
+
+    /** SHA-1 of the exact supplied ROM bytes, lowercase; empty when identity is unavailable. */
+    default String romSha1() { return ""; }
 
     /**
      * Raw ROM bytes, for reading tables a mod understands itself.
@@ -209,6 +219,29 @@ public interface SceneRomArt {
      * @throws IllegalArgumentException when a side is outside 1-4096
      */
     SceneImage levelForeground(int zone, int act, int x, int y, int width, int height);
+
+    /**
+     * Whether {@link #levelKit} has this act. Sonic 1 and Sonic 2 offer every act of their zone
+     * registries that the engine can decode on its own (Sonic 2's Hill Top and Wing Fortress,
+     * which compose their art at load, have none); Sonic 3 &amp; Knuckles offers zones 0-12 and
+     * Hidden Palace ({@code 22}, act 1). Answering may build the kit, which is then cached.
+     */
+    default boolean hasLevelKit(int zone, int act) {
+        return levelKit(zone, act) != null;
+    }
+
+    /**
+     * An act's building blocks: its layout, every layout block's picture and collision, its
+     * background and palette (see {@link SceneLevelKit}), for scenes that assemble terrain of
+     * their own. Zone ids follow the game's public zone registry; acts are zero-based. Built from
+     * the ROM on the first request (up to about a second) and cached for the few most recent
+     * acts; it never touches a running level.
+     *
+     * @return the kit, or null when this game has no kit for the act
+     */
+    default SceneLevelKit levelKit(int zone, int act) {
+        return null;
+    }
 
     /**
      * Whether {@link #titleCard} has this act's card. Sonic 3 &amp; Knuckles has one for zones

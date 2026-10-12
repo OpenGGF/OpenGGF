@@ -255,7 +255,7 @@ class TestModuleResolutionService {
     void unsupportedZoneHostDisablesOwnerAndDependentsWithoutPublishingZone() {
         PatchOwner.Mod owner = new PatchOwner.Mod("zone-owner");
         PatchOwner dependent = new PatchOwner.Mod("dependent");
-        ModZoneContribution declaration = new ModZoneContribution(
+        ModZoneContribution declaration = ModZoneContribution.singleAct(
                 "sky", new BakedLevelRef("sky/level.json"), null, null, false);
         PreparedModZone prepared = new PreparedModZone(
                 "zone-owner", "sky", null, null, null,

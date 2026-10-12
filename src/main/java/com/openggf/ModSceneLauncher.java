@@ -42,6 +42,7 @@ final class ModSceneLauncher {
         if (factory == null || config.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)) {
             return false;
         }
+        prepareSceneAudio(module);
         SceneServices services = new SceneServices(
                 GameServices.audio(),
                 romArt(module),
@@ -49,17 +50,56 @@ final class ModSceneLauncher {
                 window == 0 ? null : mouseMapper(window, graphics, logicalWidth, logicalHeight),
                 () -> exitToGameTitle(gameLoop),
                 () -> gameLoop.fadeOutTo(gameLoop::returnToMasterTitle),
-                romLibrary(module));
+                romLibrary(module), launch -> {
+                    int zone = module.getZoneRegistry().resolveZoneKey(launch.destination()).orElseThrow(
+                            () -> new IllegalArgumentException("Unregistered mod zone: " + launch.destination()));
+                    if (launch.act() >= module.getZoneRegistry().getActCount(zone))
+                        throw new IllegalArgumentException("Unregistered mod act: " + launch.act());
+                });
         gameLoop.setGameMode(GameMode.MOD_SCENE);
         gameLoop.modSceneHost.open(factory, services, logicalWidth, logicalHeight);
         gameLoop.resolveFadeManager().startFadeFromBlack(null);
         return true;
     }
 
+    /** Startup scenes bypass title/level initialization, so attach their base ROM audio here. */
+    static void prepareSceneAudio(GameModule module) {
+        if (GameModuleRouting.isStandalone(module)) return;
+        try {
+            GameServices.audio().setAudioProfile(module.getAudioProfile());
+            GameServices.audio().setRom(GameServices.rom().getRom());
+        } catch (IOException error) {
+            throw new IllegalStateException("Cannot initialize mod scene ROM audio", error);
+        }
+    }
+
+    /**
+     * Opens a mod's master-title entry scene. No game is loaded, so the scene has no ROM art;
+     * {@code gameplay} lets it launch stock runs, after which it is resumed. Both exits return
+     * to the master title.
+     */
+    static void openTitleEntryScene(GameLoop gameLoop, long window, GraphicsManager graphics,
+            int logicalWidth, int logicalHeight, com.openggf.mods.code.OwnedTitleEntry entry,
+            com.openggf.mods.scene.SceneGameplay gameplay) {
+        Runnable toMasterTitle = () -> gameLoop.fadeOutTo(gameLoop::returnToMasterTitle);
+        SceneServices services = new SceneServices(
+                GameServices.audio(),
+                null,
+                SavePaths.root(),
+                window == 0 ? null : mouseMapper(window, graphics, logicalWidth, logicalHeight),
+                toMasterTitle,
+                toMasterTitle,
+                null,
+                gameplay);
+        gameLoop.setGameMode(GameMode.MOD_SCENE);
+        gameLoop.modSceneHost.open(entry.scene(), services, logicalWidth, logicalHeight);
+        gameLoop.resolveFadeManager().startFadeFromBlack(null);
+    }
+
     /** Fades out of the mod scene to the base game's title screen. */
     private static void exitToGameTitle(GameLoop gameLoop) {
         gameLoop.resolveFadeManager().startFadeToBlack(() -> {
-            gameLoop.modSceneHost.close();
+            gameLoop.retireModScene();
             gameLoop.initializeTitleScreenMode();
         });
     }

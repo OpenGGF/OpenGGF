@@ -22,6 +22,7 @@ class TestGgfModCliCommands {
 
     @Test void runCommandUsesExplicitAbsoluteDevPropertyAndCurrentClasspath() {
         var command = GgfModCli.engineCommand(temp);
+        assertTrue(command.contains("--enable-native-access=ALL-UNNAMED"));
         assertTrue(command.stream().anyMatch(s -> s.equals("-Dggfmod.dev.modDir=" + temp.toAbsolutePath().normalize())));
         assertTrue(command.contains(System.getProperty("java.class.path")));
         assertEquals("com.openggf.Engine", command.get(command.size()-1));
@@ -43,9 +44,26 @@ class TestGgfModCliCommands {
                 bytes.toString());
     }
 
+    @Test void artKeyDiscoveryDistinguishesTheSelectedStockGame() {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        assertEquals(0, GgfModCli.run(new String[]{"art-keys", "--game", "s2"}, new PrintStream(bytes)));
+        assertTrue(bytes.toString().lines().anyMatch("signpost"::equals));
+        assertFalse(bytes.toString().lines().anyMatch("EndSign"::equals));
+        bytes.reset();
+        assertEquals(0, GgfModCli.run(new String[]{"art-keys", "--game", "s3k"}, new PrintStream(bytes)));
+        assertTrue(bytes.toString().lines().anyMatch("EndSign"::equals));
+        assertEquals(1, GgfModCli.run(new String[]{"art-keys", "--game", "bogus"}, new PrintStream(bytes)));
+    }
+
     @Test void engineExitCodesAreNormalizedToCliSuccessOrFailure() {
         assertEquals(0,GgfModCli.normalizeProcessExit(0));
         assertEquals(1,GgfModCli.normalizeProcessExit(2));
         assertEquals(1,GgfModCli.normalizeProcessExit(-1));
+    }
+
+    @Test void developmentLauncherRequestsMacFirstThreadWithoutAddingThatFlagOnOtherHosts() {
+        assertTrue(GgfModCli.engineCommand(temp, "Mac OS X").contains("-XstartOnFirstThread"));
+        assertFalse(GgfModCli.engineCommand(temp, "Linux").contains("-XstartOnFirstThread"));
+        assertFalse(GgfModCli.engineCommand(temp, "Windows 11").contains("-XstartOnFirstThread"));
     }
 }

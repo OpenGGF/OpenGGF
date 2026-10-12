@@ -21,8 +21,19 @@ public final class TitleInputOwnership {
     public static boolean routeDisplay(GameMode mode, MasterTitleScreen title, boolean pickerAlreadyOpen,
                                        BooleanSupplier updatePicker, Runnable updateColor,
                                        Runnable updateShaders) {
+        return routeDisplay(mode, title, false, pickerAlreadyOpen, updatePicker, updateColor, updateShaders);
+    }
+
+    /**
+     * As {@link #routeDisplay(GameMode, MasterTitleScreen, boolean, BooleanSupplier, Runnable, Runnable)},
+     * where {@code sceneCapturesText} is true while an open mod scene claims keyboard text input:
+     * the scene then owns the keys exactly as a blocking title page does.
+     */
+    public static boolean routeDisplay(GameMode mode, MasterTitleScreen title, boolean sceneCapturesText,
+                                       boolean pickerAlreadyOpen, BooleanSupplier updatePicker,
+                                       Runnable updateColor, Runnable updateShaders) {
         if (pickerAlreadyOpen) return updatePicker.getAsBoolean();
-        if (!allowsGlobalShortcuts(mode, title)) return false;
+        if (!allowsGlobalShortcuts(mode, title, sceneCapturesText)) return false;
         boolean consumed = updatePicker.getAsBoolean();
         if (!consumed) {
             updateColor.run();
@@ -33,11 +44,18 @@ public final class TitleInputOwnership {
 
     /** Keep physical chord history current even when a menu suppresses its effect. */
     public static boolean routeCapture(GameMode mode, MasterTitleScreen title, BooleanSupplier updateChord) {
-        boolean pressed = updateChord.getAsBoolean();
-        return pressed && allowsGlobalShortcuts(mode, title);
+        return routeCapture(mode, title, false, updateChord);
     }
 
-    private static boolean allowsGlobalShortcuts(GameMode mode, MasterTitleScreen title) {
+    /** As {@link #routeCapture(GameMode, MasterTitleScreen, BooleanSupplier)} with a scene text claim. */
+    public static boolean routeCapture(GameMode mode, MasterTitleScreen title, boolean sceneCapturesText,
+                                       BooleanSupplier updateChord) {
+        boolean pressed = updateChord.getAsBoolean();
+        return pressed && allowsGlobalShortcuts(mode, title, sceneCapturesText);
+    }
+
+    private static boolean allowsGlobalShortcuts(GameMode mode, MasterTitleScreen title, boolean sceneCapturesText) {
+        if (mode == GameMode.MOD_SCENE) return !sceneCapturesText;
         return mode != GameMode.MASTER_TITLE_SCREEN || (title != null && !title.blocksGlobalShortcuts());
     }
 

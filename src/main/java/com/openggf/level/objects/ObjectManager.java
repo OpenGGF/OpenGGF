@@ -68,6 +68,7 @@ public class ObjectManager {
     static final int ANIM_ROLL = 0x02;
     static final int ANIM_SPINDASH = 0x09;
     private final ObjectPlacementController placement;
+    private final ObjectPlacementAdmission placementAdmission;
     private final ObjectRegistry registry;
     private final GraphicsManager graphicsManager;
     private final Camera camera;
@@ -253,6 +254,7 @@ public class ObjectManager {
         this.graphicsManager = graphicsManager;
         this.camera = camera;
         this.objectServices = objectServices;
+        this.placementAdmission = new ObjectPlacementAdmission(registry, objectServices);
         this.objectCallbacks = new ObjectCallbackRouter(registry);
         this.slotLayout = registry != null ? registry.objectSlotLayout() : ObjectSlotLayout.SONIC_1;
         this.windowingStrategy = registry != null
@@ -1354,8 +1356,8 @@ public class ObjectManager {
      * arriving 1px behind, s2.asm:58759-58799).
      */
     private boolean inlineCreateObject(ObjectSpawn spawn, int counterValue) {
-        if (activeObjects.containsKey(spawn)) {
-            return true; // Already exists
+        if (activeObjects.containsKey(spawn) || !placementAdmission.allows(spawn)) {
+            return true; // Already exists or intentionally excluded from this load
         }
         if (!isSpawnVerticallyEligibleForLoad(spawn, true)) {
             return false;
@@ -1530,7 +1532,7 @@ public class ObjectManager {
                     callback.beforeDraw(entry.instance(), entry.high());
                 }
                 objectCallbacks.run(entry.instance(),
-                        () -> ObjectRenderParts.appendRenderCommands(entry, renderCommands, bucket));
+                        () -> ObjectRenderParts.appendRenderCommands(entry, renderCommands, bucket, objectServices));
             }
 
             if (!renderCommands.isEmpty()) {
@@ -1600,7 +1602,7 @@ public class ObjectManager {
                         gfx.setCurrentSpriteTileOcclusionPaletteMask(mask);
                         gfx.beginPatternBatch();
                     }
-                    ObjectRenderParts.appendRenderCommands(entry, renderCommands, bucket);
+                    ObjectRenderParts.appendRenderCommands(entry, renderCommands, bucket, objectServices);
                 });
             }
 
@@ -1640,18 +1642,8 @@ public class ObjectManager {
      * and matches the snapshot, deferring to the off-screen respawn timer.
      */
     public int objectIdInSlot(int slot) {
-        if (slot < 0) {
-            return -1;
-        }
-        for (ObjectInstance instance : getActiveObjects()) {
-            if (instance instanceof AbstractObjectInstance aoi
-                    && objectCallbacks.call(instance, aoi::getSlotIndex) == slot
-                    && !objectCallbacks.call(instance, instance::isDestroyed)) {
-                ObjectSpawn spawn = objectCallbacks.call(instance, instance::getSpawn);
-                if (spawn != null) return spawn.objectId() & 0xFF;
-            }
-        }
-        return -1;
+        return slot < 0 ? -1 : ObjectInstanceQueries.objectIdInSlot(
+                getActiveObjects(), objectCallbacks, slot);
     }
 
     /**
@@ -2202,10 +2194,12 @@ public class ObjectManager {
         addDynamicObject(object);
     }
 
-    /**
-     * Restores a captured dynamic SST occupant without minting a throwaway
-     * identity or advancing the next-spawn ordinal.
-     */
+    /** Preserve the captured creator fault boundary when player refresh recreates a native effect. */
+    void restoreDynamicCallbackOwner(ObjectInstance object, String owner) {
+        objectCallbacks.registerOwnerIfAbsent(object, owner);
+    }
+
+    /** Restore a dynamic SST occupant without minting an identity or advancing the spawn ordinal. */
     void addRestoredDynamicObjectAtSlot(
             ObjectInstance object, int slotIndex, ObjectRefId capturedId) {
         dynamicOwnership.restoreIdentity(object, capturedId, rewindObjectIds);
@@ -2258,17 +2252,7 @@ public class ObjectManager {
 
     /** Read-only retirement probe for the ring manager's legacy mirror. */
     public boolean hasLiveLostRingAtSlot(int slotIndex) {
-        if (slotIndex < 0) {
-            return false;
-        }
-        for (ObjectInstance inst : dynamicObjects) {
-            if (inst instanceof com.openggf.level.rings.LostRingObjectInstance ring
-                    && !ring.isDestroyed()
-                    && ring.getSlotIndex() == slotIndex) {
-                return true;
-            }
-        }
-        return false;
+        return ObjectInstanceQueries.hasLiveLostRingAtSlot(dynamicObjects, slotIndex);
     }
 
     /**
@@ -2374,6 +2358,21 @@ public class ObjectManager {
     public <T extends ObjectInstance> List<T> activeObjectsOfType(Class<T> type) {
         return ObjectInstanceQueries.activeObjectsOfType(activeObjects, dynamicObjects, type);
     }
+
+    private final ObjectQuery liveObjectQuery = ObjectInstanceQueries.liveQuery(this, rewindObjectIds);
+    private final ObjectQuery objectQuery = new ObjectQuery() {
+        @Override public <T extends ObjectInstance> List<T> activeObjectsOfType(Class<T> type) {
+            return liveObjectQuery.activeObjectsOfType(type);
+        }
+        @Override public java.util.Optional<ObjectRefId> identityOf(ObjectInstance object) {
+            return liveObjectQuery.identityOf(object);
+        }
+        @Override public java.util.Optional<ObjectInstance> resolve(ObjectRefId identity) {
+            return liveObjectQuery.resolve(identity);
+        }
+    };
+
+    public ObjectQuery objectQuery() { return objectQuery; }
 
     /**
      * Test helper: reserve dynamic slots (from the front of the pool) until exactly
@@ -3502,9 +3501,7 @@ public class ObjectManager {
         List<ObjectSpawn> sortedNewSpawns = newSpawnsScratch;
         sortedNewSpawns.clear();
         for (ObjectSpawn spawn : activeSpawns) {
-            if (!activeObjects.containsKey(spawn)
-                    && !(placement.isRemembered(spawn) && !placement.isStayActive(spawn))
-                    && !placement.isDormant(spawn)) {
+            if (placementAdmission.allowsNewSpawn(spawn, activeObjects, placement)) {
                 sortedNewSpawns.add(spawn);
             }
         }
@@ -3586,10 +3583,7 @@ public class ObjectManager {
     }
 
     private boolean tryLoadPlacementSpawn(ObjectSpawn spawn, boolean allowVerticalLoadBypassForS2) {
-        if (spawn == null
-                || activeObjects.containsKey(spawn)
-                || (placement.isRemembered(spawn) && !placement.isStayActive(spawn))
-                || placement.isDormant(spawn)) {
+        if (!placementAdmission.allowsNewSpawn(spawn, activeObjects, placement)) {
             placement.completePendingCursorLoad(spawn);
             return false;
         }
@@ -3637,10 +3631,7 @@ public class ObjectManager {
     }
 
     private boolean tryLoadPlacementSpawnForTwoAxisYPass(ObjectSpawn spawn, int previousYCoarse, int currentYCoarse) {
-        if (spawn == null
-                || activeObjects.containsKey(spawn)
-                || (placement.isRemembered(spawn) && !placement.isStayActive(spawn))
-                || placement.isDormant(spawn)) {
+        if (!placementAdmission.allowsNewSpawn(spawn, activeObjects, placement)) {
             return false;
         }
         if (!isSpawnVerticallyEligibleForTwoAxisYPass(spawn, previousYCoarse, currentYCoarse)) {

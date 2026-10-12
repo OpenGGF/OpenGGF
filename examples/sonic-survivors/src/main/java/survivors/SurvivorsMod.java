@@ -28,6 +28,10 @@ public final class SurvivorsMod implements GgfMod {
         context.registerObject("boss", (spawn, registry) -> new Boss(spawn));
         context.registerObject("shot", (spawn, registry) -> new Shot(spawn));
         context.registerObject("pickup", (spawn, registry) -> new Pickup(spawn));
+        var storage = context.storage();
+        context.registerServiceBundle("run", () -> GameServiceBundle.builder()
+                .capturedService("state", RunState.class, new RunState())
+                .service(Profile.class, new Profile(storage).load()).build());
         context.registerGamePatch(new Patch());
     }
 
@@ -73,18 +77,14 @@ public final class SurvivorsMod implements GgfMod {
         private Game game;
         private boolean active;
         private Arena arena;
-        private final RunState run = new RunState();
+        private final RunState run;
         private final MenuArt menuArt = new MenuArt();
         private final RingClusters ringClusters = new RingClusters();
-        private Profile profile;
         private ArenaZones zones;
         private SurvivorsTitle title;
         private InitOnlyEvents events;
         private com.openggf.control.InputHandler liveInput;
-        private final LevelInputOverlay overlayInput = input -> {
-            liveInput = input;
-            return active && (!run.active || run.paused || run.pendingLevels > 0);
-        };
+        private final LevelInputOverlay overlayInput;
 
         @Override public boolean supportsSidekick() { return false; }
         @Override public boolean isSidekickSuppressedForZone(int zoneId) { return true; }
@@ -96,6 +96,11 @@ public final class SurvivorsMod implements GgfMod {
 
         public Module(GameModule base) {
             super(base, ID + ":arenas");
+            run = java.util.Objects.requireNonNull(base.getGameService(RunState.class), "registered Survivors run");
+            overlayInput = input -> {
+                liveInput = input;
+                return active && (!run.active || run.paused || run.pendingLevels > 0);
+            };
             var rules = base.getRules();
             var power = rules.powerUp();
             var quietExpiry = new com.openggf.game.rules.PowerUpRules(
@@ -118,12 +123,7 @@ public final class SurvivorsMod implements GgfMod {
             return null;
         }
 
-        private Profile profile() {
-            if (profile == null) {
-                profile = new Profile(com.openggf.game.save.SavePaths.root().resolve(ID).resolve("profile.txt")).load();
-            }
-            return profile;
-        }
+        private Profile profile() { return base().getGameService(Profile.class); }
 
         @Override public Game createGame(Rom rom) { return game = super.createGame(rom); }
         @Override public Game createGame(com.openggf.game.GameDataSource source) { return game = super.createGame(source); }
@@ -186,18 +186,10 @@ public final class SurvivorsMod implements GgfMod {
         /** The title's zone picker is the only way in; the stock level select would skip the route. */
         @Override public boolean suppressesLevelSelect() { return true; }
 
-        @Override public List<com.openggf.game.rewind.RewindSnapshottable<?>> rewindAdapters() {
-            var adapters = new java.util.ArrayList<com.openggf.game.rewind.RewindSnapshottable<?>>(super.rewindAdapters());
-            adapters.add(run);
-            return List.copyOf(adapters);
-        }
-
         @Override public <T> T getGameService(Class<T> type) {
             if (type == LevelInputOverlay.class) return type.cast(overlayInput);
             if (type == RingClusters.class) return type.cast(ringClusters);
             if (type == MenuArt.class) return type.cast(menuArt);
-            if (type == RunState.class) return type.cast(run);
-            if (type == Profile.class) return type.cast(profile());
             if (type == Arena.class) return active ? type.cast(arena) : null;
             // Prefer the host-dispatched level input; the title reference covers early handoff.
             if (type == com.openggf.control.InputHandler.class) return type.cast(liveInput != null ? liveInput : title == null ? null : title.input());

@@ -14,13 +14,16 @@ Examples go with this guide:
 - [Slay the Robotnik](../../../examples/slay-the-robotnik/README.md) is a complete
   deck-building roguelike on Sonic 3 & Knuckles, and shows how a whole game is organised
   around one scene.
+- [Flappy Tails](../../../examples/flappy-tails/README.md) is built step by step by the
+  [Flappy Tails tutorial](flappy-tails/README.md): a scene from an empty class to a polished
+  game, with a checkpoint you can build at each stage.
 - [Sitar Hero](../../../examples/sitar-hero/README.md) combines supplied Sonic 1,
   Sonic 2 and S3K content in a rhythm game, with timestamped physical input, bounded
   ROM-synthesized music, performers standing on real ROM stages and a README that
   walks through its source in reading order.
 
 When this guide and their source differ, the source is authoritative. Build and run either
-from a checkout with `python3 examples/build_example.py <name> --run` (Java 21 and Maven, and
+from a checkout with `python3 examples/build_example.py <name> --run` (Java 25 and Maven, and
 your ROM set up as for the engine).
 
 Scenes are part of the Mod API 0.7 candidate and need the JVM build. Their types live in two
@@ -161,6 +164,23 @@ window polls during its frame wait, but rendering/OS scheduling can still delay
 observations. Choose one menu convention: ordinary raw pad A/B must not also be
 interpreted through their mapped Genesis aliases in the same update.
 
+## Continuous ROM music
+
+For exploration or other scenes that need the song's native intro, loops and ending,
+use `ctx.audio().playMusic("s1", 0x84)`. It starts Star Light directly from the supplied
+Sonic 1 ROM, without synthesizing a finite performance first. The boolean result is
+false on hosts without this capability or without that ROM; malformed IDs or ROM
+loading errors can throw. Request a track once per music-context change, not every
+update: the host deliberately allows an explicit repeat request to restart a song.
+
+The host routes the song through the shared ROM driver and scopes borrowed donor
+registrations to the scene. The ROM sequencer owns note timing and loop commands,
+while base-game sound effects remain audible. `stopMusic()`, `fadeOutMusic()` and
+a subsequent song request operate on that driver; final scene close restores its
+borrowed registrations. Retained native-act visits keep the scene's tempo setting.
+Finite `ctx.music()` playback has its own PCM clock and masks the driver while active;
+stop that player before returning to ordinary driver music.
+
 ## Timing-sensitive ROM music
 
 `ctx.music()` prepares finite ROM-synthesized playback with semantic note attacks:
@@ -213,6 +233,32 @@ mixes separately to preserve chip interactions and backing progression.
 selected part only: the difference between the full and masked mixes. The backing
 stays on its clock. It is a presentation effect, not an emulated guitar-controller
 DSP contract. Scope it to roles that use it.
+
+`player.cuePart(sourceSample, durationSamples, startRate, endRate, gain, pan)`
+mixes a short fragment of the selected part into the same performance. Use a real
+song sample coordinate, or `SceneMusicPlayer.PLAYHEAD` to continue the part at the
+next render cursor. The host adds a short attack, exponential decay and zero tail,
+with a linear pitch-rate glide. Duration is at most a quarter-second; rates are
+0.5–2, gain is 0–1, and stereo balance is -1–1. All values must be finite. Balance
+attenuates one side and preserves the ROM's stereo; it does not repan a mono copy.
+
+```java
+// Continue and bend the selected ROM part down; no creator-owned PCM or extra asset.
+boolean accepted = player.cuePart(SceneMusicPlayer.PLAYHEAD,
+        prepared.sampleRate() * 90 / 1000, 1.0, 0.90, 0.60, 0.0);
+```
+
+Six cue voices are available. A paused/stopped player, exhausted playhead, PLAYHEAD
+before song start or full cue bus returns false; supporting hosts throw for malformed
+arguments. Unsupported hosts return false without argument validation. Pause freezes accepted voices,
+and stop releases them. Source exhaustion fades rather than wrapping; the finite
+song tail also fades and discards remaining cues. Cues ignore whammy and never advance the song coordinate.
+The current host smooths part-audibility changes over four milliseconds. The
+fragment is the full-minus-masked presentation residual, like whammy, rather than
+a separately exposed emulated channel. `sitarhero.audio.PerformanceAudio` owns
+instrument presets, cooldowns, source selection and co-op mixing; none of those
+rhythm-game decisions belong to the engine. Legacy hosts may decline cues while
+still supporting the original part-muting contract.
 
 **One source is audible at a time.** While a `SceneMusicPlayer` exists (playing,
 paused or waiting in its lead-in), its PCM replaces the base game's sound driver
@@ -368,6 +414,23 @@ canvas.draw(rhinobot.frame(0), 200, 120, SceneDraw.plain());
   for its children. Slay the Robotnik's `scene/EnemyVisuals.java` does this for every
   boss it shows, citing the disassembly tables.
 
+For a moving exploration view, retain `rom.levelBackground(zone, act)` and call
+`background.draw(canvas, cameraX, cameraY, ticks)` before your foreground. This creates an
+independent instance of the engine's stock scanline scroll handler, including ROM ripple
+tables and native vertical scrolling. Pass stock camera pixels without additional speed
+multipliers. It draws the complete 224-line canvas at native scale, wraps inside populated
+art, and shares the native Death Egg 1 widescreen wall extension. A repeated draw with the
+same inputs does not advance scroll state. Create a separate view for each independently
+moving scene; no background reads or changes the running level's camera, events or shake.
+
+Supported profiles are Sonic 1 Spring Yard and Star Light (all acts), Sonic 2 Emerald Hill,
+Chemical Plant and Mystic Cave (all acts), and S3K Angel Island, Hydrocity, Launch Base and
+Death Egg act 1. Unsupported acts return `null`; `SceneBackdrop` remains available for
+static postcard/window compositions. These are detached initial-art presentations, not
+live level simulations: gameplay-triggered art/palette changes and background tile
+animation remain outside this view. S3K Hydrocity uses its existing below-waterline art
+profile. AIZ uses its main-level art and its native `$1300` horizontal origin.
+
 For Sonic 3 & Knuckles, `rom.zoneBackdrop(zone, act)` returns a zone's background as a
 `SceneBackdrop`: one picture cut into horizontal bands with the stock parallax speeds, drawn
 with `canvas.drawBackdrop(backdrop, top, scrollX, ticks)` (or into a window with the
@@ -401,6 +464,28 @@ games independently of the song or active module. `rom()` retains its original
 active-game meaning. Additional ROM handles belong to the scene and close with
 it; the active session's borrowed ROM remains open. Missing games return null.
 
+### Level kits: build terrain of your own
+
+`rom.levelKit(zone, act)` returns a `SceneLevelKit`: an act's building blocks rather than a
+picture. The foreground layout is a grid of **layout blocks** (128 pixels square, 256 in Sonic 1);
+`block(column, row)` names the block in a cell, `blockImage(id)` draws one block on its own with
+transparent sky (cached), and `blockSolidity(id)` returns its collision as one byte per pixel
+(`EMPTY`, `TOP_SOLID` or `SOLID`, read from the primary path as a floor sensor sees it).
+`playableArea()`, `backdrop()` and `palette()` complete the set. Blocks that sit side by side in
+the stock layout join seamlessly, so a scene can remix an act into new terrain that still looks
+like the zone, and walk or fly over it using the masks. Kits exist for every act of the Sonic 1
+and Sonic 2 zone registries the engine can decode on its own (not Sonic 2's Hill Top or Wing
+Fortress), and for Sonic 3 & Knuckles zones 0-12 and Hidden Palace (`22`, act 1); ask
+`rom.hasLevelKit(zone, act)` first. Building one takes up to a few hundred milliseconds; the
+few most recent are cached.
+
+### Images you render yourself
+
+`SceneImage.streaming(width, height)` makes an image whose pixels you replace every frame with
+`update(int[])` from `update` (never `draw`): software 3D, warp tunnels, a turning planet. The
+renderer refreshes the same GPU texture after each change instead of uploading a new image, so
+keep one streaming image per effect and reuse it.
+
 `rom.titleCard(zone, act)` returns an act's stock title card as four sprites (the red banner,
 the zone's name, "ZONE" and the act number) whose origins are the ROM's object positions; its
 javadoc lists where each slides from and to, at what speed, and when each leaves, so a scene
@@ -431,9 +516,60 @@ cue). Fade or stop your music when the scene leaves, so
 none of it plays on into the next screen. See the note above on `ctx.music()`
 replacing this output while a song player exists.
 
-`ctx.storage()` keeps small text files for your mod under the save root
-(`saves/mods/<mod-id>/`): `read`, `write`, `delete`, `list`. Slay the Robotnik saves the
+`ctx.audio().playMusic(game, id)` plays a song from any supplied ROM as the current
+music, so an S3K scene can play Sonic 1's Green Hill and still hear its own rings and
+springs over it:
+
+```java
+// Green Hill when Sonic 1 is installed, otherwise the base game's own Angel Island.
+if (!ctx.audio().playMusic("s1", 0x81)) {
+    ctx.audio().playMusic("s3k", 0x01);
+}
+ctx.audio().playSfx(0x33);   // the S3K ring, heard over Green Hill
+ctx.audio().fadeOutMusic();  // fades whichever song is playing
+```
+
+`ctx.audio().setMusicTempoPercent(65)` gives a quieter game's ROM soundtrack a
+slower pace. The range is 25–100, with 100 restoring the original pace. It holds
+music note-duration ticks while the normal sound-driver walk, envelopes, modulation,
+DAC sample clock and fades continue; SFX and gameplay stay on their own clocks.
+The percentage follows song changes, cross-game donor music and native acts entered
+by the retained scene, including the level-entry audio-source rebuild. The host
+restores normal pacing when the scene finally closes. Creator WAV/OGG playback and
+finite `ctx.music()` preparations keep their original timing. Unsupported hosts
+validate the range but may retain the silent default.
+
+Game ids are `"s1"`, `"s2"` and `"s3k"`, and music ids are that game's own driver IDs.
+The running game's songs take their normal route. Another game's song plays through the
+same sound driver by its own game's rules. This is the cross-game donor route that plays
+S3K Super music in Sonic 2, so the song loops at its own loop point for as long as the
+scene runs and needs no second sound chip. It is simply the current music: `playMusic`,
+`stopMusic` and `fadeOutMusic` replace, stop or fade it. A stock jingle such as the S3K
+1-up interrupts it and then hands it back, as for a stock song. The call returns false,
+changing nothing, when that game's ROM was not supplied or has no such song, so the
+fallback above needs no ROM check. An unknown game id throws.
+
+The driver route has limits. Starting or changing a song stops any sound effect still
+playing, as every stock song change does. There is no music volume control, and fades
+take the base game's own time. While an effect plays it takes over a music channel, as on
+the console. Leaving the scene stops another game's song that is still playing and hands
+the donor route back to cross-game donation; the base game's own music is left as it was.
+A `ctx.music()` song player still replaces all of this output while it exists.
+
+`ctx.storage()` keeps small files for your mod under the save root
+(`saves/mods/<mod-id>/`): `read`, `write`, `delete`, `list` for text up to 1 MiB, and
+`readBytes`/`writeBytes` for binary data up to 4 MiB. Slay the Robotnik saves the
 run in progress, the player's records and the compendium there.
+
+Patch scenes may also declare bounded WAV/Ogg one-shots in
+[`audio/audio-manifest.yaml`](../formats/audio-manifest.md) and call
+`ctx.audio().playSfx("local-id")`. The host supplies the scene's owner namespace;
+cross-owner keys and invalid path segments are rejected. The boolean result reports
+whether playback was admitted; missing assets, unavailable headless audio and rewind
+suppression return false. Launch preparation validates and decodes the clips through
+the same owner-atomic asset pipeline as standalone audio. No numeric mod IDs or runtime
+file/network access are needed. These clips accompany the existing driver effects;
+they do not replace base-game SFX IDs. Queue/cooldown policy belongs to the scene.
 
 ## 6. Testing a scene
 
@@ -457,7 +593,7 @@ game headless with GL and plays a script of inputs (`tick:key`, `+ticks:click=x,
 music and sound effects to a WAV and encode an MP4 with ffmpeg:
 
 ```bash
-java -cp target/test-classes:target/classes:$(cat target/test-classpath.txt) \
+java --enable-native-access=ALL-UNNAMED -cp target/test-classes:target/classes:$(cat target/test-classpath.txt) \
   com.openggf.mods.code.ExampleModCapture --rom s3k.gen --mod examples/slay-the-robotnik \
   --out /tmp/cap --jump "sonic:42:fight:hcz:big_shaker" --script "150:enter +30:enter" \
   --every 30 --video /tmp/cap/fight.mp4 --audio /tmp/cap/fight.wav
@@ -471,9 +607,67 @@ The class's Javadoc lists every option and script step. To get the classpath fil
 | What you see | Why, and what to do |
 |---|---|
 | The stock title screen opens instead of your scene | The mod is not enabled (or not trusted) in the Mod Manager; another enabled mod later in load order also registers a startup scene; you are running a native build, which loads no code mods; or test mode is on (`debug.testMode.enabled`), which skips startup scenes. |
-| `ggfmod package` fails with `STATIC_STATE_UNSUPPORTED` | A mod class has an enum, a static collection or array, or a static initialiser. Move the state onto your scene or an object it owns; use `static final` numbers and strings for kinds. |
+| `ggfmod package` fails with `STATIC_STATE_UNSUPPORTED` | A mod class has mutable static state, an unsupported enum payload, a static collection or array, or arbitrary initialization. Move the state onto your scene or an object it owns; use `static final` numbers and strings for kinds. |
 | The mod is disabled and the Mod Manager shows a finding | One of your scene calls threw an exception. The finding and the engine log say which. |
 | Reading a mod file from the scene fails | Mod files can only be read during `register`. Read them there and pass the bytes to the scene. |
 | A ROM sprite has the wrong colours or is scrambled | The palette line, palette address, compression or DPLC layout does not match the object. Check the request with `ggfmod sprites`, which draws every frame with your settings. |
 | Animations stand still in captures, or run fast | State changes in `draw`. The engine may skip or repeat `draw`; advance timers in `update` only. |
 | `zoneBackdrop`, `levelStages` or `titleCard` return null | The game has no such picture for that act yet. Ask `hasZonePictures` and `hasTitleCard` first and draw something of your own otherwise. |
+
+## Visiting a real act from a scene
+
+Register a mod zone normally, then call `ctx.startAct` from `enter`, `update` or a
+fault-bounded debug callback. Acts are zero-based and the `ZoneKey.Mod` must belong
+to the scene's owner. Launching retains the scene instance, its context, storage and
+ROM library. The scene stops ticking during the act and fades; its images are
+uploaded again when it resumes. Gameplay owns native movement, collision, objects,
+HUD and rewind. The launch state map is creator bookkeeping, not engine physics.
+
+```java
+ctx.startAct(new ActLaunch(new ZoneKey.Mod(ctx.ownerModId(), "valley"), 0,
+    CharacterKey.SONIC, List.of(), OptionalInt.of(190), OptionalInt.of(173),
+    5, Map.of("visit", "town")));
+```
+
+Optional positions are **player centre coordinates**, applied after the native
+start-position provider and before normal camera/team/object initialization. Empty
+coordinates preserve that axis's native start; supplied centres accept signed or
+unsigned 16-bit word representations (−32768 through 65535). Rings are native health (0–999),
+separate from any saved mod wallet. The engine retains the selected team only for
+the visit and restores the previous configuration on return or title exit.
+
+A level object imports `com.openggf.game.ActExit` and calls its injected services
+to hand back:
+
+```java
+services().requestActExit(ActExit.LEFT, Map.of("door", "inn"));
+```
+
+The first request wins; its immutable payload participates in rewind until the
+engine consumes it at a frame boundary. Requests outside a scene-launched act do
+nothing. Exit fades freeze gameplay. The engine re-prepares base ROM audio and
+calls `resume` once on the same suspended scene/context, inside its fault boundary:
+
+```java
+@Override public void resume(SceneContext ctx, ActResult result) {
+    // Open the requested menu; when it closes, startAct can visit the same door again.
+    ctx.audio().playMusic(0x81);
+}
+```
+
+Spawn values accept signed or unsigned 16-bit centre words, including values
+returned by native sprite getters.
+
+`ActResult` carries destination, reason, remaining health rings, executed level
+frames and the exit state map. `com.openggf.game.ActExit` values are `COMPLETED`, `LEFT`, `FAINTED`,
+`TIME_UP`, `ABORTED`. Objects/controllers decide when these semantic exits apply;
+ordinary native progression/death is not automatically remapped. Entry is a normal
+level-load boundary; scene return clears the level rewind timeline. Holding Escape
+still closes the retained visit and returns to the master title. A creator fault
+also closes it safely rather than delivering a result to a disabled scene.
+
+Starpost Valley uses a blank, flat native-collision placeholder until its encoded
+terrain is integrated. Its farm gate launches `starpost-valley:valley`; doors open
+existing scene menus and relaunch at the returned centre when they close. The
+`town scene` debug command keeps its earlier scene valley reachable; `town act`
+restores act launches and `town enter` directly exercises the bridge from play.

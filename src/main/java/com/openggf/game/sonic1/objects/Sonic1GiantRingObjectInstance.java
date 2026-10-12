@@ -76,6 +76,9 @@ public class Sonic1GiantRingObjectInstance extends AbstractObjectInstance
     private int animTimer = ANIM_FRAME_DURATION - 1;
     private int animFrame = 0;
 
+    private long stageEntryPermit = -1;
+    long stageEntryPermit() { return stageEntryPermit; }
+
     public Sonic1GiantRingObjectInstance(ObjectSpawn spawn) {
         super(spawn, "GiantRing");
     }
@@ -170,15 +173,13 @@ public class Sonic1GiantRingObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // Special stage entry is fully disabled during a time attack (see
-        // GameLoop.enterSpecialStage()). Unlike the checkpoint-star/star-post
-        // paths, collecting the giant ring hides and control-locks the player
-        // and eventually advances the zone/act before the GameLoop chokepoint
-        // is ever reached — swallowing the request there alone would leave the
-        // run stuck. Check here, before any state change, so the ring stays
-        // inert and the player simply passes through.
-        var timeAttackGate = services().gameState();
-        if (timeAttackGate != null && timeAttackGate.isTimeAttackActive()) {
+        // Not a ROM branch: a run whose GameplayRunPolicy forbids special stages
+        // (an isolated timed act) leaves the ring inert. Unlike the checkpoint-star
+        // paths, collecting the giant ring hides and control-locks the player and
+        // eventually advances the zone/act before GameLoop's entry chokepoint is
+        // reached, so the policy must be consulted here, before any state change.
+        // The stock policy always reaches the ROM collection path below.
+        if (!services().runPolicy().specialStageEntry()) {
             return;
         }
 
@@ -191,6 +192,8 @@ public class Sonic1GiantRingObjectInstance extends AbstractObjectInstance
         // when ExecuteObjects reaches the giant ring's own SST slot. Deferring
         // the body preserves FindFreeObj ordering: a flash allocated into an
         // already-visited lower slot begins on the following frame.
+        stageEntryPermit = com.openggf.game.mutators.LevelMutatorPolicyAccess.admit(services(), com.openggf.game.mutators.StageEntryKind.SPECIAL);
+        if (stageEntryPermit == 0) return;
         state = State.COLLECT_PENDING;
     }
 

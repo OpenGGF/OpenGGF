@@ -10,6 +10,10 @@ import re
 import subprocess
 import sys
 
+# The hook tree is LF-only; invoking the audit must not create binary caches.
+sys.dont_write_bytecode = True
+from authored_fixture_policy import approved_fixture_blob
+
 
 def git(*args):
     return subprocess.check_output(['git', *args], stderr=subprocess.PIPE)
@@ -34,7 +38,9 @@ def audit(tip):
             errors.append(f'{path!r}: unsupported tree entry {mode}:{kind}')
             continue
         lower = path.lower()
-        if lower.endswith(('.gen', '.smd', '.bin', '.sms', '.gg', '.32x')):
+        if (lower.endswith(('.gen', '.smd', '.bin', '.sms', '.gg', '.32x'))
+                and not approved_fixture_blob(path, mode, int(size) if kind == 'blob' else -1,
+                                              lambda: git('cat-file', 'blob', oid))):
             errors.append(f'{path!r}: ROM/binary asset must remain untracked')
         if '/' not in path and (fnmatch.fnmatchcase(path, 'MERGE-STATUS*.md')
                                 or fnmatch.fnmatchcase(path, 'HANDOVER*.md')):

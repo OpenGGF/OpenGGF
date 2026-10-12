@@ -22,16 +22,21 @@ final class SceneTextureCache {
     interface Gpu {
         int upload(SceneImage image);
 
+        /** Replaces a streaming image's texture contents (same size). */
+        void reupload(int texture, SceneImage image);
+
         void delete(int texture);
     }
 
     private static final class Entry {
         private final int texture;
         private long lastFrame;
+        private long revision;
 
-        private Entry(int texture, long lastFrame) {
+        private Entry(int texture, long lastFrame, long revision) {
             this.texture = texture;
             this.lastFrame = lastFrame;
+            this.revision = revision;
         }
     }
 
@@ -43,14 +48,22 @@ final class SceneTextureCache {
         this.gpu = gpu;
     }
 
-    /** The image's texture, uploading it if this cache has none; marks it drawn this frame. */
+    /**
+     * The image's texture, uploading it if this cache has none (or re-uploading a streaming
+     * image updated since); marks it drawn this frame.
+     */
     int texture(SceneImage image) {
         Entry entry = textures.get(image);
         if (entry == null) {
-            entry = new Entry(gpu.upload(image), frame);
+            entry = new Entry(gpu.upload(image), frame, image.revision());
             textures.put(image, entry);
         } else {
             entry.lastFrame = frame;
+            if (entry.revision != image.revision()) {
+                // A streaming image changed since its upload: refresh the same texture.
+                gpu.reupload(entry.texture, image);
+                entry.revision = image.revision();
+            }
         }
         return entry.texture;
     }

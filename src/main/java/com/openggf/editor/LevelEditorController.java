@@ -28,8 +28,6 @@ import com.openggf.game.ObjectArtProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.Objects;
-
-@com.openggf.game.ModApi
 public final class LevelEditorController {
     private final EditorCommandPalette commandPalette = new EditorCommandPalette(this::toggleLibraryFilterInput);
 

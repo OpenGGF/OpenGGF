@@ -1352,3 +1352,33 @@ for precise evidence, rejected trials and current verification status. The prior
 Integrated`8cebbd847`: the complete destination route passes all177 two-cycle
 windows, phase-hit and full-load history checks. See the final-arena matrix for
 candidate/destination commands and remaining certification limits.
+
+## Full SaveGame consumer boundary — 2026-10-08
+
+The existing final escape full SaveGame boundary at `loc_803D6` (sonic3k.asm:171521) now dispatches through the semantic helper; escape/ending gates and live-cache state are unchanged.
+
+`828bc94d8` clears the native32-bit collected-ring mask at exactly seven existing
+full-SaveGame gates; existing game-state rewind owns the mask. Focused138 cases
+pass without failures/errors/skips, including direct Results tally/helper and
+mask-restoration checks. The other six non-tally live routes, successful disk
+persistence, live SK-alone, and this matrix's remaining route/rewind/breadth
+products are not newly certified. Generic persistence and special-stage/lives/
+death/reload/seamless semantics remain distinct. See the [lane audit](../../audits/2026-10-07-s3k-parity-gap-verification.md)
+for native ordering and scope, and [combined qualification](../../audits/2026-10-07-stock-parity-gap-verification.md#final-composed-canonical-replay-2026-10-08)
+for exact commands/frontiers. [Actual-main qualification](../../audits/2026-10-07-stock-parity-gap-verification.md#actual-main-delivery-qualification)
+retains 27 concrete inherited ordinary failures and 62 literal skips with zero
+errors; all 672 fresh guards pass. This preserves the route/breadth limits above.
+
+
+### Route drawing policy follow-up (2026-10-09)
+
+The affected cold-route/checkpoint JUnit checks now simulate every input and
+service queued render work every tick, with drawing at snapshot/replay and
+playable/load checkpoints. Complete forward/replay branches stay fully drawn;
+discarded screenshot readback is omitted. Their normal result establishes route
+behavior and these drawn checkpoints, not presentation on every intervening frame.
+For every-frame drawing use `-Dopenggf.tests.drawEveryFrame=true`. The bounded
+state/pixel controls and their limits are described in the
+[headless testing guide](../../../guide/contributing/headless-testing.md).
+This performance change supplies no new native reference, full-route visual
+certification or missing viewport/donor/character coverage; inherited gaps remain.

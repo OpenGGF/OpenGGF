@@ -1,6 +1,8 @@
 package com.openggf.game.sonic2.objects;
 
 import com.openggf.game.ResultsScreen;
+import com.openggf.game.PlayerCharacter;
+import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.resources.Sonic2PlcService;
@@ -103,10 +105,16 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
     private static final int CHANGE_INTO_Y = 34;
     private static final int SUPER_SONIC_Y = 52;
 
-    // States for Super Sonic message sequence
-    // All three messages display simultaneously, then wait before ending
-    private static final int STATE_SUPER_SONIC_DISPLAY = 10;  // Show all 3 messages
+    // Obj6F routines $30/$34/$20/$22: leave, replace, return, hold, display only.
+    private static final int STATE_SUPER_SONIC_DISPLAY = 10;
     private static final int STATE_SUPER_DONE = 11;
+
+    private static final int SUPER_LEAVE = 0;
+    private static final int SUPER_RETURN = 1;
+    private static final int SUPER_HOLD = 2;
+    private static final int SUPER_DISPLAY_ONLY = 3;
+    private static final int SUPER_SOURCE_X = 448;
+    private static final int SUPER_CHILD_SOURCE_X = -128;
 
     private static final int SUPER_MSG_DURATION = 180;  // $B4 = 180 frames (~3 seconds) for all messages
 
@@ -180,6 +188,11 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
 
     // Super Sonic sequence tracking
     private int superMsgTimer = 0;
+    private int stockSuperPhase = SUPER_LEAVE;
+    private int stockSuperMainX = SCREEN_CENTER_X;
+    private int stockSuperHeadingX = SCREEN_CENTER_X;
+    private int stockSuperLineX = SUPER_CHILD_SOURCE_X;
+    private boolean stockSuperMainVisible = true;
 
     // Number rendering tracking - cache last values to avoid re-rendering
     private int lastDisplayedRingCount = Integer.MIN_VALUE;
@@ -789,23 +802,28 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
             playTallyEndSound();
             state = STATE_WAIT;
             stateTimer = 0;
-            if (messagePresentation != null && gotEmerald && totalEmeraldCount >= 7) {
+            if (shouldStartSuperSequence()) {
                 // Obj6F_TallyScore sets routine $30 on this pass, without the $78 wait.
-                messagePresentation.startSuper();
+                if (messagePresentation != null) messagePresentation.startSuper();
                 state = STATE_SUPER_SONIC_DISPLAY;
             }
         }
     }
 
+    private boolean shouldStartSuperSequence() {
+        if (!gotEmerald) return false;
+        // KiS2 owns its split-name presentation and character branches.
+        if (messagePresentation != null) return totalEmeraldCount >= 7;
+        // Stock Obj6F_TallyScore ($14580): cmpi.w #2,Player_mode / cmpi.b #7,Emerald_count.
+        return totalEmeraldCount == 7
+                && ActiveGameplayTeamResolver.resolvePlayerCharacter(services().configuration())
+                != PlayerCharacter.TAILS_ALONE;
+    }
+
     private void updateWait() {
         if (stateTimer >= Sonic2SpecialStageConstants.RESULTS_WAIT_DURATION) {
             state = STATE_EXIT;
-            // If all 7 emeralds collected, start Super Sonic message sequence
-            if (totalEmeraldCount >= 7 && gotEmerald) {
-                state = STATE_SUPER_SONIC_DISPLAY;
-                stateTimer = 0;
-                superMsgTimer = 0;
-            } else if (messagePresentation == null) {
+            if (messagePresentation == null) {
                 complete = true;
             }
             // The ROM advances TimedDisplay to DisplayOnly; the next object pass
@@ -851,20 +869,53 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
         }
     }
 
-    /**
-     * Updates the Super Sonic message display timer.
-     * All three messages display simultaneously for SUPER_MSG_DURATION frames.
-     */
+    /** Stock Obj6F_InitAndMoveSuperMsg ($146A6) and Obj6F_MoveAndDisplay ($14736). */
     private void updateSuperSonicMessages() {
         if (messagePresentation != null) {
             complete = messagePresentation.complete();
             if (complete) state = STATE_SUPER_DONE;
             return;
         }
-        superMsgTimer++;
-        if (superMsgTimer >= SUPER_MSG_DURATION) {
-            state = STATE_SUPER_DONE;
-            complete = true;
+        switch (stockSuperPhase) {
+            case SUPER_LEAVE -> {
+                if (stockSuperMainX != SUPER_SOURCE_X) {
+                    // Obj6F_MoveTowardsSourcePosition ($14714), speed $20.
+                    stockSuperMainX += 32;
+                    stockSuperHeadingX -= 32;
+                    // $14714 suppresses DisplaySprite above hardware x=$200.
+                    stockSuperMainVisible = stockSuperMainX + 128 <= 0x200;
+                } else {
+                    stockSuperPhase = SUPER_RETURN;
+                    // The init routine deliberately bra DisplaySprite at source x.
+                    stockSuperMainVisible = true;
+                    // The later heading and newly allocated results slot execute
+                    // their $14 movement on this same pass; the main $34 waits.
+                    stockSuperHeadingX += SLIDE_SPEED_PIXELS_PER_FRAME;
+                    stockSuperLineX += SLIDE_SPEED_PIXELS_PER_FRAME;
+                }
+            }
+            case SUPER_RETURN -> {
+                if (stockSuperMainX != SCREEN_CENTER_X) {
+                    stockSuperMainX -= SLIDE_SPEED_PIXELS_PER_FRAME;
+                    stockSuperMainVisible = stockSuperMainX + 128 <= 0x200;
+                    stockSuperHeadingX = Math.min(SCREEN_CENTER_X,
+                            stockSuperHeadingX + SLIDE_SPEED_PIXELS_PER_FRAME);
+                    stockSuperLineX = Math.min(SCREEN_CENTER_X,
+                            stockSuperLineX + SLIDE_SPEED_PIXELS_PER_FRAME);
+                } else {
+                    // Arrival is tested before moving: latch $B4 on the next pass.
+                    superMsgTimer = SUPER_MSG_DURATION;
+                    stockSuperPhase = SUPER_HOLD;
+                }
+            }
+            case SUPER_HOLD -> {
+                // Obj6F_TimedDisplay ($14572) predecrements; $22 runs next pass.
+                if (--superMsgTimer == 0) stockSuperPhase = SUPER_DISPLAY_ONLY;
+            }
+            case SUPER_DISPLAY_ONLY -> {
+                state = STATE_SUPER_DONE;
+                complete = true;
+            }
         }
     }
 
@@ -950,17 +1001,14 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
             }
         }
 
-        // Render collected emeralds
-        // Hide during Super Sonic message sequence
+        // Emerald child routines continue displaying during the Super Sonic sequence.
         if (messagePresentation != null && useRomArt) {
             for (var line : messagePresentation.lines()) renderMappingFrame(line.frame(), xOff + line.x(), line.y());
         }
-        if (state < STATE_SUPER_SONIC_DISPLAY || messagePresentation != null) {
-            if (useRomArt) {
-                renderEmeralds(xOff, 0, slideAlpha);
-            } else {
-                renderEmeraldsPlaceholder(commands, xOff, 0, slideAlpha);
-            }
+        if (useRomArt) {
+            renderEmeralds(xOff, 0, slideAlpha);
+        } else {
+            renderEmeraldsPlaceholder(commands, xOff, 0, slideAlpha);
         }
 
         // Bonus displays - all start sliding at frame 0 along with title elements
@@ -1041,23 +1089,25 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
             }
         }
 
-        // Super Sonic message sequence - all three messages display simultaneously
-        if (state == STATE_SUPER_SONIC_DISPLAY && messagePresentation == null) {
+        if (state >= STATE_SUPER_SONIC_DISPLAY && messagePresentation == null) {
+            boolean leaving = stockSuperPhase == SUPER_LEAVE;
             if (useRomArt) {
-                // Render all three messages at their respective Y positions
-                renderMappingFrame(Sonic2SpecialStageResultsMappings.FRAME_NOW_SONIC_CAN,
-                        xOff + SCREEN_CENTER_X, NOW_SONIC_CAN_Y);
-                renderMappingFrame(Sonic2SpecialStageResultsMappings.FRAME_CHANGE_INTO,
-                        xOff + SCREEN_CENTER_X, CHANGE_INTO_Y);
-                renderMappingFrame(Sonic2SpecialStageResultsMappings.FRAME_SUPER_SONIC,
-                        xOff + SCREEN_CENTER_X, SUPER_SONIC_Y);
+                renderMappingFrame(leaving ? Sonic2SpecialStageResultsMappings.FRAME_SONIC_HAS_ALL
+                                : Sonic2SpecialStageResultsMappings.FRAME_NOW_SONIC_CAN,
+                        xOff + stockSuperHeadingX, leaving ? GOT_TEXT_Y : NOW_SONIC_CAN_Y);
+                if (stockSuperMainVisible) renderMappingFrame(leaving ? Sonic2SpecialStageResultsMappings.FRAME_CHAOS_EMERALDS
+                                : Sonic2SpecialStageResultsMappings.FRAME_CHANGE_INTO,
+                        xOff + stockSuperMainX, leaving ? EMERALD_TEXT_Y : CHANGE_INTO_Y);
+                if (!leaving) renderMappingFrame(Sonic2SpecialStageResultsMappings.FRAME_SUPER_SONIC,
+                        xOff + stockSuperLineX, SUPER_SONIC_Y);
             } else {
-                // Placeholder text for all three messages
-                renderPlaceholderText(commands, xOff + SCREEN_CENTER_X, NOW_SONIC_CAN_Y,
-                        "NOW SONIC CAN", 1.0f, 0.8f, 0.0f);
-                renderPlaceholderText(commands, xOff + SCREEN_CENTER_X, CHANGE_INTO_Y,
-                        "CHANGE INTO", 1.0f, 0.8f, 0.0f);
-                renderPlaceholderText(commands, xOff + SCREEN_CENTER_X, SUPER_SONIC_Y,
+                renderPlaceholderText(commands, xOff + stockSuperHeadingX,
+                        leaving ? GOT_TEXT_Y : NOW_SONIC_CAN_Y,
+                        leaving ? "SONIC HAS ALL THE" : "NOW SONIC CAN", 1.0f, 0.8f, 0.0f);
+                if (stockSuperMainVisible) renderPlaceholderText(commands, xOff + stockSuperMainX,
+                        leaving ? EMERALD_TEXT_Y : CHANGE_INTO_Y,
+                        leaving ? "CHAOS EMERALDS" : "CHANGE INTO", 1.0f, 0.8f, 0.0f);
+                if (!leaving) renderPlaceholderText(commands, xOff + stockSuperLineX, SUPER_SONIC_Y,
                         "SUPER SONIC", 1.0f, 0.8f, 0.0f);
             }
         }

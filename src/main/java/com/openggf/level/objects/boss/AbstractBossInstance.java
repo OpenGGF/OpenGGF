@@ -23,6 +23,9 @@ import java.util.Map;
  */
 public abstract class AbstractBossInstance extends AbstractObjectInstance
         implements TouchResponseProvider, TouchResponseAttackable {
+    @Override public com.openggf.game.mutators.ObjectHeadRole headPresentationRole() {
+        return com.openggf.game.mutators.ObjectHeadRole.BOSS;
+    }
 
     // Common boss constants (ROM values)
     /** ROM: s2.asm:63155 - move.w #$B3,objoff_3C(a0) ($B3 = 179 decimal) */

@@ -3,19 +3,18 @@ package com.openggf.mods.code;
 import com.openggf.control.InputHandler;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
-import com.openggf.io.ModAssetRoot;
-import com.openggf.io.ModInputLimits;
 import com.openggf.mods.ModManifest;
 import com.openggf.mods.ModManifestParser;
-import com.openggf.mods.ModRuntimeFindingStore;
-import com.openggf.mods.ModStateSaveResult;
 import com.openggf.mods.scene.host.ModSceneHost;
 import com.openggf.mods.scene.host.SceneRomArtFactory;
 import com.openggf.mods.scene.host.SceneServices;
 import com.openggf.tools.modsdk.GgfModCli;
+import com.openggf.mods.testing.ModTestKit;
+import com.openggf.game.patch.GameplayLaunchRequest;
+import com.openggf.game.patch.LogicalRomResolver;
+import com.openggf.configuration.SonicConfigurationService;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -35,17 +34,14 @@ import javax.tools.ToolProvider;
  */
 public final class ExampleModHarness implements AutoCloseable {
     private final ModManifest manifest;
-    private final URLClassLoader loader;
-    private final ModRegistrationPlan plan;
+    private final ModTestKit kit;
     private final ModSceneHost host = new ModSceneHost();
     private final InputHandler input = new InputHandler();
     private final List<String> exits = new ArrayList<>();
-    private final ModRuntimeFindingStore findings = new ModRuntimeFindingStore();
 
-    private ExampleModHarness(ModManifest manifest, URLClassLoader loader, ModRegistrationPlan plan) {
+    private ExampleModHarness(ModManifest manifest, ModTestKit kit) {
         this.manifest = manifest;
-        this.loader = loader;
-        this.plan = plan;
+        this.kit = kit;
     }
 
     /**
@@ -56,7 +52,7 @@ public final class ExampleModHarness implements AutoCloseable {
         ModManifest manifest = new ModManifestParser().parse(
                 Files.readAllBytes(project.resolve("src/main/resources/META-INF/openggf-mod.yaml")));
         Path classes = Files.createDirectories(work.resolve("classes"));
-        List<String> args = new ArrayList<>(List.of("--release", "21", "-cp", System.getProperty("java.class.path"),
+        List<String> args = new ArrayList<>(List.of("--release", "25", "-cp", System.getProperty("java.class.path"),
                 "-d", classes.toString()));
         try (Stream<Path> files = Files.walk(project.resolve("src/main/java"))) {
             files.filter(p -> p.toString().endsWith(".java")).sorted().forEach(p -> args.add(p.toString()));
@@ -65,20 +61,26 @@ public final class ExampleModHarness implements AutoCloseable {
             throw new IllegalStateException(manifest.id() + " failed to compile");
         }
         copyTree(project.resolve("src/main/resources"), classes);
+        generateResources(project, classes);
         Path jar = work.resolve(manifest.id() + ".jar");
         if (GgfModCli.run(new String[] {"package", "--input", classes.toString(), "--out", jar.toString()},
                 System.out) != 0) {
             throw new IllegalStateException(manifest.id() + " failed to package");
         }
-        URLClassLoader loader = new URLClassLoader(new java.net.URL[] {jar.toUri().toURL()},
-                ExampleModHarness.class.getClassLoader());
-        ModRegistrationPlan plan;
-        try (var assets = ModAssetRoot.jar(work, jar, ModInputLimits.production())) {
-            ModContext context = new ModContext(manifest.id(), manifest.baseGame(), assets);
-            ((GgfMod) loader.loadClass(manifest.entrypoint()).getConstructor().newInstance()).register(context);
-            plan = context.freeze();
-        }
-        return new ExampleModHarness(manifest, loader, plan);
+        ModTestKit kit = ModTestKit.openTrusted(work, work.resolve("storage"),
+                LogicalRomResolver.fromRomManager(GameServices.rom()),
+                SonicConfigurationService.createStandalone(), List.of());
+        return new ExampleModHarness(manifest, kit);
+    }
+
+    /** Same optional trusted generator convention as both example build launchers. */
+    static void generateResources(Path project, Path classes) throws Exception {
+        Path generator = project.resolve("generate_resources.py").toAbsolutePath();
+        if (!Files.isRegularFile(generator)) return;
+        Process process = new ProcessBuilder(System.getenv().getOrDefault("PYTHON_BIN", "python3"),
+                generator.toString(), classes.toAbsolutePath().toString())
+                .directory(project.toAbsolutePath().toFile()).inheritIO().start();
+        if (process.waitFor() != 0) throw new IllegalStateException("Resource generation failed: " + project);
     }
 
     private static void copyTree(Path from, Path to) throws IOException {
@@ -104,22 +106,25 @@ public final class ExampleModHarness implements AutoCloseable {
 
     /** Faults the engine's fault boundary caught from the mod, by owner (empty when it ran cleanly). */
     public Map<String, List<com.openggf.mods.ModFinding>> findings() {
-        return findings.snapshot();
+        return kit.findings();
+    }
+
+    public com.openggf.level.objects.RewindClassResolver rewindClassResolver() {
+        return kit.rewindClassResolver();
     }
 
     public ModRegistrationPlan plan() {
-        return plan;
+        return kit.plan(manifest.id());
+    }
+
+    /** The example's master-title entry, as the engine would show and open it. */
+    public OwnedTitleEntry titleEntry() {
+        return kit.titleEntry(manifest.id());
     }
 
     /** The module the engine would run with the mod applied on top of {@code base}. */
     public GameModule apply(GameModule base) {
-        ModFaultBoundary boundary = new ModFaultBoundary(Map.of(), findings,
-                owners -> new ModStateSaveResult.Saved(), owners -> { });
-        GameModule effective = new ModBackedGamePatch(plan, boundary).apply(base, null);
-        for (var patch : plan.explicitPatches()) {
-            effective = patch.apply(effective, null);
-        }
-        return effective;
+        return kit.launch(base, new GameplayLaunchRequest(base.getGameCode(), "sonic", List.of()));
     }
 
     /** Opens the startup scene with ROM art from the current session and storage under {@code saves}, silently. */
@@ -194,12 +199,19 @@ public final class ExampleModHarness implements AutoCloseable {
     }
 
     public ClassLoader loader() {
-        return loader;
+        try {
+            return kit.loader(manifest.id());
+        } catch (ClassNotFoundException failure) {
+            throw new IllegalStateException("Example entry point was not loaded", failure);
+        }
     }
 
     @Override
     public void close() throws IOException {
-        host.close();
-        loader.close();
+        try {
+            host.close();
+        } finally {
+            kit.close();
+        }
     }
 }

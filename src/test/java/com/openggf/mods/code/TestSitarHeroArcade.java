@@ -25,6 +25,37 @@ class TestSitarHeroArcade {
     }
     @AfterAll static void close() throws Exception { if (harness != null) harness.close(); }
 
+    @Test void audibleCountInDrawsTheAuthoredFiveScaleDigitWithoutChangingItsClock() throws Exception {
+        Fixture f = new Fixture(List.of("s1"));
+        try {
+            assertTrue(f.debug("perform:green-hill:SITAR:sonic"));
+            for (int i = 0; i < 15; i++) f.step();
+            assertEquals("PLAY", f.screen());
+            f.music.player.position = -3L * f.music.rate;
+            int[][] visits = new int[35][25];
+            var canvas = mock(SceneCanvas.class);
+            when(canvas.width()).thenReturn(400); when(canvas.height()).thenReturn(224);
+            doAnswer(call -> {
+                int x = call.getArgument(0), y = call.getArgument(1);
+                int w = call.getArgument(2), h = call.getArgument(3), argb = call.getArgument(4);
+                if (argb == 0xFFFFD45B)
+                    for (int py = Math.max(92, y); py < Math.min(127, y + h); py++)
+                        for (int px = Math.max(188, x); px < Math.min(213, x + w); px++)
+                            visits[py - 92][px - 188]++;
+                return null;
+            }).when(canvas).fill(anyInt(), anyInt(), anyInt(), anyInt(), anyInt());
+            assertDoesNotThrow(() -> f.scene.draw(f, canvas));
+            String[] digit = {"11110", "00001", "00001", "01110", "00001", "00001", "11110"};
+            for (int y = 0; y < 35; y++)
+                for (int x = 0; x < 25; x++)
+                    assertEquals(digit[y / 5].charAt(x / 5) - '0', visits[y][x],
+                            "the audible three-second count-in must draw the complete scale-5 digit at " + x + "," + y);
+            assertEquals(-3L * f.music.rate, f.music.player.samplePosition(), "drawing cannot advance the audible clock");
+        } finally {
+            f.scene.exit(f);
+        }
+    }
+
     @Test
     void judgedHitsAnimateIndependentNativePerformersAndPauseClearsGestures() throws Exception {
         var f = new Fixture(List.of("s1"));
@@ -51,6 +82,40 @@ class TestSitarHeroArcade {
         f.scene.draw(f, canvas);
         assertEquals(18, gestureAge(first, f.tick));
         assertEquals(18, gestureAge(other, f.tick));
+    }
+
+    @Test void soloMistakesMuteAndCueOnceWithoutAnIdleMissChorus() throws Exception {
+        Fixture f = new Fixture(List.of("s1"));
+        assertTrue(f.debug("practice:green-hill:BONGOS:sonic:MEDIUM"));
+        f.step();f.step();f.step();
+        f.music.player.position=150;f.step();
+        assertFalse(f.music.player.audible);
+        assertEquals(1,f.music.player.cues.size(),"first missed chord creates one ROM-part fumble");
+        f.music.player.position=1000;f.step();
+        assertEquals(1,f.music.player.cues.size(),"remaining idle misses stay quiet");
+        f.scene.exit(f);
+    }
+
+    @Test void wrongStrikeAndPauseInOneBatchRetainMutingOnResume() throws Exception {
+        for (boolean deferredPeer : List.of(false,true)) {
+            Fixture f=new Fixture(List.of("s1"));
+            assertTrue(f.debug("practice:green-hill:SITAR:sonic:MEDIUM"));
+            f.step();f.step();f.step();f.music.player.position=-50;
+            if (deferredPeer) {
+                // Isolate the scene's deferred-control branch; full handshake/pause ownership is tested by OnlineMatchChecks.
+                ScenePeer peer=mock(ScenePeer.class);when(peer.state()).thenReturn(ScenePeer.State.CONNECTING);
+                Class<?> peerType=harness.loader().loadClass("sitarhero.net.OnlineMatch");
+                Object match=peerType.getConstructor(ScenePeer.class,boolean.class,List.class).newInstance(peer,true,List.of("s1"));
+                var field=type.getDeclaredField("online");field.setAccessible(true);field.set(f.scene,match);
+            }
+            f.physical=new PhysicalInput(f.tick*50_000_000L,List.of(SceneKeys.UP,SceneKeys.ESCAPE),List.of(),List.of(
+                    new PhysicalInputEvent(f.sequence++,f.tick*50_000_000L,PhysicalInputEvent.Kind.KEY,-1,SceneKeys.UP,1),
+                    new PhysicalInputEvent(f.sequence++,f.tick*50_000_000L+1,PhysicalInputEvent.Kind.KEY,-1,SceneKeys.ESCAPE,1)),0);
+            f.step();assertEquals(deferredPeer?"PLAY":"PAUSED",f.screen());
+            assertFalse(f.music.player.audible,"wrong strike is applied before immediate or deferred pause");
+            if (!deferredPeer) {f.key(SceneKeys.ENTER);assertEquals("PLAY",f.screen());assertFalse(f.music.player.audible);}
+            f.scene.exit(f);
+        }
     }
 
     private static int gestureAge(Object artist, long tick) throws Exception {
@@ -119,13 +184,17 @@ class TestSitarHeroArcade {
     }
     private static final class Player implements SceneMusicPlayer {
         long position;
-        boolean paused, stopped, speakerUnavailable;
+        boolean paused, stopped, speakerUnavailable, audible = true;
+        final List<String> cues = new ArrayList<>();
         Player(long position) { this.position = position; }
         public long samplePosition() { return position; }
         public long samplePositionAt(long nanos) { return position; }
         public void pause() { paused = true; }
         public void resume() { if (!speakerUnavailable) paused = false; }
-        public void setPartAudible(boolean value) { }
+        public void setPartAudible(boolean value) { audible = value; }
+        public boolean cuePart(long source, int duration, double from, double to, double gain, double pan) {
+            if(paused || stopped)return false; cues.add(source+":"+duration+":"+from+":"+to+":"+gain+":"+pan);return true;
+        }
         public void setWhammy(double value) { }
         public boolean finished() { return stopped || position >= 20_000; }
         public boolean paused() { return paused; }
@@ -214,6 +283,8 @@ class TestSitarHeroArcade {
             return new SceneStorage() {
                 public Optional<String> read(String name) { return Optional.ofNullable(saves.get(name)); }
                 public boolean write(String name, String text) { saves.put(name, text); return true; }
+                public Optional<byte[]> readBytes(String name) { return Optional.empty(); }
+                public boolean writeBytes(String name, byte[] bytes) { return false; }
                 public boolean delete(String name) { return saves.remove(name) != null; }
                 public List<String> list() { return saves.keySet().stream().sorted().toList(); }
             };
@@ -493,8 +564,8 @@ class TestSitarHeroArcade {
         Fixture f = new Fixture(List.of("s1")); f.music.rate = 8_000;
         ScenePeer peer = mock(ScenePeer.class); when(peer.state()).thenReturn(ScenePeer.State.CONNECTED);
         when(peer.send(anyString())).thenReturn(true);
-        when(peer.poll()).thenReturn(List.of(new ScenePeer.Message("SH1 HELLO s1", 0),
-                new ScenePeer.Message("SH1 OFFER 1 green-hill BONGOS MEDIUM coop", 0))).thenReturn(List.of());
+        when(peer.poll()).thenReturn(List.of(new ScenePeer.Message("SH2 HELLO s1", 0),
+                new ScenePeer.Message("SH2 OFFER 1 green-hill BONGOS MEDIUM coop", 0))).thenReturn(List.of());
         Class<?> onlineType = harness.loader().loadClass("sitarhero.net.OnlineMatch");
         Object match = onlineType.getConstructor(ScenePeer.class, boolean.class, List.class).newInstance(peer, false, List.of("s1"));
         var field = type.getDeclaredField("online"); field.setAccessible(true); field.set(f.scene, match);
@@ -503,7 +574,7 @@ class TestSitarHeroArcade {
         f.key(SceneKeys.ESCAPE); assertEquals("LOBBY", f.screen());
         f.key(SceneKeys.ENTER); f.step(); f.step();
         assertEquals("LOBBY", f.screen()); assertEquals(true, onlineType.getMethod("ready").invoke(match));
-        verify(peer).send(matches("SH1 READY 1 8000 [0-9a-f]+")); f.scene.exit(f);
+        verify(peer).send(matches("SH2 READY 1 8000 [0-9a-f]+")); f.scene.exit(f);
     }
 
     @Test void mouseActivatesVisibleRowsAndIgnoresOutsideClicks() throws Exception {

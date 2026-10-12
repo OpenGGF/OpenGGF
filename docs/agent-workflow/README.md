@@ -25,6 +25,23 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 ## Tools
 
+- [Category negative-case comparison](../../tools/testing/compare_category_outcomes.py): compares completed bounded runner failures and causal skips with an explicit source/run baseline, rejecting incomplete evidence and requiring opt-in for verified SSZ blob hashes (2026-10-08 Mutator Lab expansion); [limits and usage](../../tools/testing/README.md#bounded-category-result-comparison).
+
+- [Native Mutator stage probe](../../src/main/java/com/openggf/tools/MutatorStageProbeTool.java): bounded registered-mod interactive native clocks, input admission and offline PCM for all three special stages and S3K bonus stages (2026-10-08 Mutator Lab expansion); [setup and limits](../../tools/media/README.md#native-mutator-stage-observations).
+- [Owned Engine window capture](../../tools/media/engine_window_capture.py): bounded X11 desktop video, Pulse monitor PCM and input-only JSON actions with isolated config, exact PID/title/visibility checks and owned cleanup (2026-10-07 Mutator Lab). See the [capture recipe](../../tools/media/README.md).
+
+- [Eggman's Sky voice generator](../../tools/audio/eggmans_sky_voice.py) synthesizes
+  original directed Alice announcements through OpenRouter, preserves raw takes outside
+  Git, verifies literal words after the approved metallic/vocoder/DAC processing, and
+  derives manifest entries and queue leases from the final PCM (2026-10-08).
+
+- [Creator kit builder](../../tools/modding/build_creator_kit.py) exports matching
+  engine/SDK/API-doc/testkit artifacts, pinned portable examples and launchers;
+  [catalog probe](../../src/main/java/com/openggf/tools/modsdk/CreatorCatalogProbe.java)
+  measures production discovery, validation and registration at explicit bounded
+  catalog/asset shapes. Origin: mod framework readiness, 2026-10-07; see
+  [probe limits and acceptance](../modding/tools/scalability.md).
+
 - [Sitar Hero S2 native reference](../../src/test/java/com/openggf/mods/code/SitarHeroS2NativeProgram.java) (test scope): independently interprets supplied S2 ROM control flow, saved duration/frequency and service cadence; `TestSitarHeroS2SongCatalogue` compares complete requested attack streams and natural ends (2026-10-07 full-song catalogue).
 
 - [Sitar Hero S3K song probe](../../src/main/java/com/openggf/tools/SitarHeroS3kSongProbe.java): executes both locked-on ROM music tables through the production S3K driver and reports complete jump candidates, tempo boundaries, real channel/sample attacks and natural stops; input is an absolute ROM path and optional hex music IDs (2026-10-07 full song catalogue).
@@ -37,11 +54,14 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 - `GameplayAllocationTool`: ordinary BK2-driven loop/render bytes per frame, excluding PNG/readback and CSV allocation. Use `--rom <absolute-path> --input <bk2> --zone <numeric-id> --act <one-based> --out-dir target/alloc`; optional `--frames 6000 --warmup 600 --width 400 --main sonic --sidekick tails --rewind true --jfr true`. `--sidekick none` selects solo play; the console reports the live roster count. Loop allocation includes input-row decoding. Compare route state before interpreting allocation deltas; JFR includes other threads, whereas reported counters measure the gameplay thread. Keep raw diagnostics temporary.
 
-- [Sprite sheet dump](../../src/main/java/com/openggf/tools/modsdk/SpriteSheetDump.java) (`ggfmod sprites`): renders every mapping frame of a ROM sprite (art, mappings, optional DPLC, palettes) or a playable character (`char=sonic`, with its animation scripts) into one numbered PNG grid, for choosing frames without booting a level (2026-10-05 Slay the Robotnik; a ggfmod subcommand since 2026-10-06).
+- [Sprite sheet dump](../../src/main/java/com/openggf/tools/modsdk/SpriteSheetDump.java) (`ggfmod sprites`): renders every mapping frame of a ROM sprite (art, mappings, optional DPLC, palettes) or a playable character (`char=sonic`, with its animation scripts) into one numbered PNG grid; `char=sonic heads=true first=0 count=32 scale=150` adds production Big Head stock/head/body/composite review panels and explicit pose classifications, for choosing frames without booting a level (2026-10-05 Slay the Robotnik; a ggfmod subcommand since 2026-10-06).
 - [Example mod capture](../../src/test/java/com/openggf/mods/code/ExampleModCapture.java) (test scope) with [ExampleModHarness](../../src/test/java/com/openggf/mods/code/ExampleModHarness.java): builds any `examples/` mod with a startup scene from source and records its scene headless with GL to PNGs, an MP4 (ffmpeg) and a WAV of its music and sound effects, from an input script whose `jump=` steps use the scene's `DebuggableScene` entry (2026-10-05 Slay the Robotnik capture, generalised 2026-10-06 for the example's highlight reel).
+- [Mutator gameplay observation](../../src/main/java/com/openggf/tools/MutatorGameplayCaptureTool.java): runs the production input-only capture loop and adds admitted policies, head scale, live/slotless spill objects and badnik observations to CSV. Uses the ordinary capture CLI and requires `-Dopenggf.headless.gl=surfaceless-egl`; no display fallback. Origin: gameplay-first Mutator Lab promo, 2026-10-10.
+- [Level layout dump](../../src/main/java/com/openggf/tools/LevelLayoutDumpTool.java): reads real ring/object placements and the resolved start position for planning controller routes. Arguments: game, original ROM, zone, one-based act, new output directory; requires the same display-free backend. Origin: Mutator Lab enemy-chain/ring-recovery shots, 2026-10-10. Inspect actual loaded identity; a requested zone alias alone is not proof.
 - [Maven resource profiler](../../tools/testing/profile_maven.py): sample queued ordinary/guard runs for process-tree memory and CPU admission estimates (2026-09-15 Maven resource task).
 - [Per-test memory profiler](../../tools/testing/profile_test_memory.py): explicit capture/rewind/ROM tests in a repeated diagnostic JVM, with executing-thread allocation, sampled peaks and post-GC pass floors; see [measurement limits](../../tools/testing/README.md#per-test-memory-diagnostics) (2026-10-07 throughput task).
 - [Ordinary-suite memory observer](../../tools/testing/profile_ordinary_memory.py): actual Surefire class/test peaks and post-teardown GC floors, with separate Maven RSS/swap/heap probes and bounded GC/native evidence (2026-10-07 memory-cause investigation).
+- [Streaming JFR test summary](../../tools/testing/java/com/openggf/tools/JfrTestSummary.java): `java -Xmx128m --source 21 tools/testing/java/com/openggf/tools/JfrTestSummary.java target/recording.jfr [test-class-prefix ...]` separates sampled threads, test owners and capture phases without expanding event JSON; weights estimate churn, native samples include waiting (2026-10-08 SOZ test-throughput follow-up).
 
 - [FBZ boundary comparator](../../tools/bizhawk/compare_fbz_boundary_fixture.py) supports `--sprite-publication` to compare the complete native CPU sprite table with the following consecutive frame’s VDP table; duplicate samples and gaps are explicit. The boundary exporter supplies the read-only CPU snapshots.
 
@@ -79,6 +99,35 @@ Nine `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each
 | `tools/bizhawk/capture_ddz_route_reference.lua` | Native BizHawk exporter for Doomsday questions: records the DDZ controller/boss/body SST fields, autoscroll words (`_unkFA82..FAB8`), foreground-plane scroll and palette per frame; `plan.slots` logs every SST slot-occupancy change (load and allocation order) and `plan.boss_code` retargets the boss columns. Origin: DDZ bring-up (slot histories found the `Camera_X_pos_coarse_back` latch). | `python3 tools/bizhawk/capture_native_references.py ... --exporter tools/bizhawk/capture_ddz_route_reference.lua --plan plan.lua --fixture-state <state> --require-output observations.csv --require-output done.txt` |
 
 ## Test harness helpers
+
+- `tools/modding/native-linux/build_linux.py` uses a pinned rootless Ubuntu/CE
+  toolchain for the experimental Linux ZIP, preserving the isolated Windows
+  feature. Its native gameplay probe uses production loaders, real OpenGL,
+  prepared music, scene lifecycle and module-state checks for every packaged mod.
+  The shared `NativeGameplayCheck` also exercises every declared one-shot sample
+  through the production session wrapper into final mixed PCM (`sfx-pcm.csv`),
+  catching prepared-audio delegation gaps (2026-10-09 Eggman's Sky Vorbis refresh).
+  Origin: [Linux friends ZIP, 2026-10-09](../../tools/modding/native-linux/README.md).
+
+- `tools/modding/native-windows/build_inputs.py` rebuilds all friends mods with
+  the real converters and package validator; `build_windows.py` compiles a
+  separately labelled Windows native image, audits retained members, qualifies
+  exact JVM/native registration, runtime-loaded JDK bootstrap controls and the
+  actual engine boot path through `.bat` shortcuts, and assembles the ZIP with
+  per-mod shortcuts and retained licences. Origin: [experimental Windows ZIP,
+  2026-10-08](../../tools/modding/native-windows/README.md).
+  `qualify_wine.py` consumes that immutable Windows ZIP, checks every extracted
+  shortcut through representative OpenGL gameplay using original local ROMs,
+  and adds explicitly labelled Wine compatibility evidence to a clean archive.
+
+- `tools/modding/native-feasibility/probe.py` builds closed-world, Crema and optional
+  JIT controls around the production mod classloader, then compiles two external
+  fixture JARs after the images exist. `registration_probe.py` derives exact-class
+  preservation from the canonical API and all packaged mod bytecode, audits
+  types/fields/methods before creator execution, and checks real validation and
+  owner transactions on JVM/native. The companion `NativeModMemberContractTest`
+  covers dormant callbacks and missing linkage. Origin: [GraalVM native mod
+  feasibility, 2026-10-08](../architecture/research/2026-10-08-graalvm-native-mod-feasibility.md).
 
 - `SitarHeroCapture` (`src/test/java/com/openggf/tools/`) packages the real
   example and captures ROM-backed performers, stages, finite arcade behavior,
@@ -161,8 +210,18 @@ Do not stage generated-resource entries. The policy rejects symlinks at
 `config.yaml`, any path ending in `.gen`, and `docs/s1disasm`,
 `docs/s2disasm`, `docs/kis2disasm`, `docs/scddisasm`, or `docs/skdisasm`.
 Separately, the repository-wide ROM-like asset rule rejects added or modified
-paths ending in `.gen`, `.smd`, `.bin`, `.sms`, `.gg`, or `.32x`. It also
-rejects absolute symlink targets anywhere in the repository. If a broad
+paths ending in `.gen`, `.smd`, `.bin`, `.sms`, `.gg`, or `.32x`. The sole
+reviewed authored-content exception is the two-act Tide fixture's 22 original
+assets, pinned by exact canonical path, mode `100644`, byte length and SHA-256 in
+[the authored-fixture manifest](../../.githooks/authored-fixtures.json).
+[The shared verifier](../../.githooks/authored_fixture_policy.py) checks Git blobs
+in staged, historical-commit and delivered-snapshot admission; it never runs a
+candidate generator. Changed bytes, moved/case-varied paths, other binaries,
+executable files and symlinks receive no exception. Prefer the existing
+`binary-assets.properties` text-source convention for future authored fixtures;
+this manifest is not a directory or filename-pattern exemption.
+
+The policy also rejects absolute symlink targets anywhere in the repository. If a broad
 `git add` includes one, unstage it, keep or recreate the local link only in the
 filesystem, and inspect `git diff --cached` before committing. The ignore rules
 cover both a real reference directory and a hook-created link; use `git add -f`
@@ -200,7 +259,7 @@ Run `AgentWorkflowTool` for a preflight, read the matching runbook, scaffold wit
 [`runbooks/runbook-jvm-benchmark.md`](runbooks/runbook-jvm-benchmark.md) rather
 than the benchmark CLIs directly — the numbers are easy to misread.
 
-Local Maven commands: [`tools/testing/maven_queue.py`](../../tools/testing/maven_queue.py) waits automatically for a shared execution slot across linked worktrees; category runs use it too; `--stats` summarises its wait/hold/memory telemetry.
+Local Maven tests: [`tools/testing/maven_queue.py`](../../tools/testing/maven_queue.py) waits automatically for a shared execution slot across linked worktrees; category runs use it too; `--stats` summarises test wait/hold/memory telemetry. Recognized build-only commands bypass shared admission and hold only their own worktree's build/test lock. Direct Maven builds are allowed when that worktree is otherwise idle; see the [build and test guide](../../tools/testing/README.md#build-only-maven-execution-and-queued-tests).
 
 ## Test harness helpers
 
@@ -234,3 +293,23 @@ Local Maven commands: [`tools/testing/maven_queue.py`](../../tools/testing/maven
 - [SSZ arena-static presentation demo](../../tools/visuals/ssz_arena_static_demo.py): composites deterministic side-only noise over verified widescreen boss footage and emits a local comparison page; originating [2026-09-24 design study](../architecture/designs/2026-09-24-widescreen-boss-arena-static.md), not an engine feature.
 
 - `tools/bizhawk/capture_mhz_pillar_reference.lua` samples native MHZ2 pillar scroll words and their collision helpers from ordinary movie playback; use the common native capture host and an explicit movie-state plan.
+
+- [Starpost placeholder generator](../../examples/starpost-valley/generate_resources.py): authors the flat town placeholder
+  into packaging output, without ROM bytes (Starpost Act Bridge, 2026-10-09).
+
+- `GameplayCaptureTool --title-screen --audio` (Mutator Lab, 2026-10-07) observes
+  production title-to-play initialization and exactly one final SMPS PCM packet per
+  captured outer frame. InputLogAuthorTool compiles the maintained example script;
+  synchronized CSV adds host pause and effective mutator revision. Captures belong
+  outside Git, and the silent video may be muxed with the generated `audio.wav`.
+
+- `MutatorGameplayCaptureTool --showcase` / `--interactive-pacing` preserves the
+  all-eleven Mutator Lab film's native stage drawing, production presentation
+  input/tick pump, offline PCM and policy/checkpoint/monitor observations
+  (2026-10-10, source `379b66413`); see [capture contract](../../tools/media/README.md#mutator-gameplay-showcase-captures).
+
+- `ggfmod head-inventory` and `object-head-inventory` (Big Head polish,
+  2026-10-11) export original-ROM indexed pixels, mapping coordinates and CPU
+  production mask panels without GL, windows, input or audio. Player output also
+  reviews ROM animation-frame sequences in fresh DPLC banks; standalone mapping
+  order is diagnostic and can contain stale art in no-upload frames.

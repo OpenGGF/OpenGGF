@@ -56,7 +56,6 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
-import com.openggf.game.timeattack.TimeAttackLaunchRequest;
 import com.openggf.game.patch.DeterministicPatchLaunches;
 
 class TestEngineDataSelectPatchResolution {
@@ -134,7 +133,7 @@ class TestEngineDataSelectPatchResolution {
 
         SaveManager saves = new SaveManager(saveRoot);
         launch.requestSave(SaveReason.NEW_SLOT_START,
-                RuntimeSaveContext.forGameplayMode(null, launch),
+                com.openggf.game.save.RuntimeSaveCapture.capture(null, launch),
                 gameplay.getWorldSession().getGameModule().getSaveSnapshotProvider(), saves);
         var payload = saves.readSlotSummary("s2", 2).payload();
         assertEquals("sonic", payload.get("mainCharacter"));
@@ -246,11 +245,12 @@ class TestEngineDataSelectPatchResolution {
                 new RecordingLaunchContext("s2", 0, 0, "knuckles", List.of("tails"),
                         false, "test"));
         assertEquals(List.of("one"), ((PatchTrail) recordingModule).ids());
-        GameModule timeAttackModule = engine.resolveTimeAttackModuleForLaunch(root,
-                new TimeAttackLaunchRequest("s2", 0, 0, "knuckles", List.of()));
-        assertEquals(List.of("one"), ((PatchTrail) timeAttackModule).ids());
+        GameModule hostedRunModule = engine.resolveHostedRunModule(root,
+                new com.openggf.mods.run.RunSpec("s2", 0, 0, "knuckles",
+                        com.openggf.game.session.GameplayRunPolicy.isolatedAct()));
+        assertEquals(List.of("one"), ((PatchTrail) hostedRunModule).ids());
         assertEquals(0, scans.get(),
-                "deterministic Engine/recording/time-attack seams must not scan mod plans");
+                "deterministic Engine/recording/hosted-run seams must not scan mod plans");
     }
 
     @Test

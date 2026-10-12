@@ -1,0 +1,15 @@
+formatVersion: 1
+id: flappy-tails-part4
+name: Flappy Tails tutorial, part 4
+version: 0.4.0
+authors:
+  - OpenGGF contributors
+description: >-
+  Checkpoint 4 of the Flappy Tails tutorial: the ROM's flight routine, one button.
+engineApiRange: ">=0.7.0 <0.8.0"
+type: patch
+baseGame: s3k
+entrypoint: flappytails.FlappyTailsMod
+dependencies: []
+audioOverrides: {}
+artOverrides: {}

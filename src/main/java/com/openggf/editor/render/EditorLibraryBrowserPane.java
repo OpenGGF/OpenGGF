@@ -9,12 +9,9 @@ import java.util.Locale;
 import java.util.Objects;
 
 /** Pure browse/filter/select model shared by keyboard input and the editor library renderer. */
-@com.openggf.game.ModApi
 public final class EditorLibraryBrowserPane {
-    @com.openggf.game.ModApi
     public enum Kind { BLOCK, CHUNK, OBJECT }
 
-    @com.openggf.game.ModApi
     public record Entry(Kind kind, int index, Integer stockObjectId, String objectKey, String label,
                         String previewArtKey) {
         public Entry { Objects.requireNonNull(kind); Objects.requireNonNull(label); }

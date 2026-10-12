@@ -170,12 +170,14 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
 
     /** When true, transition to special stage after tally instead of next level. */
     private boolean specialStageAfter = false;
+    private long stageEntryPermit = -1;
 
     /** Tracks whether SBZ2 slide-out elements have reached their exit positions. */
     private final boolean[] elemExited = new boolean[ELEMENT_COUNT];
 
     public void setSpecialStageAfter(boolean specialStageAfter) {
         this.specialStageAfter = specialStageAfter;
+        if (specialStageAfter) stageEntryPermit = com.openggf.game.mutators.LevelMutatorPolicyAccess.resultsPermit(tryServices());
     }
 
     public Sonic1ResultsScreenObjectInstance(int elapsedTimeSeconds, int ringCount, int actNumber) {
@@ -378,18 +380,17 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
 
     @Override
     protected void onExitReady() {
-        // A finished/abandoned time attack attempt returns to the time attack
-        // menu instead of any of the below. This matters most for the SBZ2
-        // branch: that special transition to Final Zone never calls
-        // services().advanceToNextLevel() at all (it just unlocks controls,
-        // plays FZ music, and scrolls the camera boundary), so the
+        // Not a ROM branch: a run whose GameplayRunPolicy returns to its host on
+        // act completion ends here instead of any of the below. This matters most
+        // for the SBZ2 branch: that special transition to Final Zone never calls
+        // services().advanceToNextLevel() at all (it just unlocks controls, plays
+        // FZ music, and scrolls the camera boundary), so the
         // LevelManager.advanceToNextLevel() gate cannot catch it -- it must be
-        // gated here. (The specialStageAfter branch is already unreachable
-        // during time attack because Sonic1GiantRingObjectInstance's own touch
-        // reaction is fully skipped when isTimeAttackActive(); this check is
-        // defense in depth, not the primary gate for that path.)
-        if (services().gameState().isTimeAttackActive()) {
-            services().requestTimeAttackMenuReturn();
+        // gated here. (The specialStageAfter branch is already unreachable for such
+        // a run because Sonic1GiantRingObjectInstance consults the same policy;
+        // this check is defense in depth.) The stock policy continues below.
+        if (services().runPolicy().returnsToHostOnActCompletion()) {
+            services().requestHostReturn();
             ObjectLifetimeOps.deleteNoRespawn(this);
             return;
         }
@@ -425,7 +426,9 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
     private void advanceToSpecialStage() {
         LOGGER.info("S1 Results screen complete, entering special stage");
         setDestroyed(true);
-        services().advanceToSpecialStageEntryRoutine();
+        com.openggf.game.mutators.LevelMutatorPolicyAccess.publish(services(),
+                com.openggf.game.mutators.StageEntryKind.SPECIAL, stageEntryPermit,
+                () -> services().advanceToSpecialStageEntryRoutine());
     }
 
     private void triggerFadeToBlack() {

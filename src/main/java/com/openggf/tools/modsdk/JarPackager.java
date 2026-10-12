@@ -33,13 +33,25 @@ public final class JarPackager {
     public static void packageDirectory(Path inputDirectory, Path outputJar) throws IOException {
         packageDirectory(inputDirectory,outputJar,ModInputLimits.production(),ignored->{});
     }
-    static void packageDirectory(Path inputDirectory,Path outputJar,ModInputLimits limits,
+    static ModJarValidator.Report packageDirectory(Path inputDirectory,Path outputJar,ModInputLimits limits,
                                  java.util.function.Consumer<Path> afterSnapshot)throws IOException{
-        packageDirectory(inputDirectory,outputJar,limits,afterSnapshot,()->{});
+        return packageDirectory(inputDirectory,outputJar,limits,afterSnapshot,()->{});
     }
-    static void packageDirectory(Path inputDirectory,Path outputJar,ModInputLimits limits,
+    static ModJarValidator.Report packageDirectory(Path inputDirectory,Path outputJar,ModInputLimits limits,
                                  java.util.function.Consumer<Path> afterSnapshot,
                                  Runnable beforePublish)throws IOException{
+        return packageDirectory(inputDirectory, outputJar, limits, afterSnapshot, beforePublish, false);
+    }
+
+    public static ModJarValidator.Report packageDirectoryWithReport(Path inputDirectory, Path outputJar,
+                                                                     boolean failOnWarnings) throws IOException {
+        return packageDirectory(inputDirectory, outputJar, ModInputLimits.production(), ignored -> { },
+                () -> { }, failOnWarnings);
+    }
+
+    private static ModJarValidator.Report packageDirectory(Path inputDirectory, Path outputJar,
+            ModInputLimits limits, java.util.function.Consumer<Path> afterSnapshot,
+            Runnable beforePublish, boolean failOnWarnings) throws IOException {
         Path input = Objects.requireNonNull(inputDirectory, "inputDirectory")
                 .toAbsolutePath().normalize();
         Path output = Objects.requireNonNull(outputJar, "outputJar").toAbsolutePath().normalize();
@@ -69,18 +81,27 @@ public final class JarPackager {
           try {
             writeJar(files,names,staging);
             ModJarValidator.Report report = new ModJarValidator().validate(staging);
-            if (!report.valid()) {
-                throw new IllegalArgumentException("Mod validation failed:\n"
-                        + String.join("\n", report.numberedLines()));
+            if (!report.valid() || (failOnWarnings && !report.findings().isEmpty())) {
+                throw new ValidationFailure(report);
             }
             NoClobberPublisher.publish(staging,output,beforePublish);
             published = true;
+            return report;
           } finally {
             if (!published) {
                 Files.deleteIfExists(staging);
             }
           }
         }
+    }
+
+    static final class ValidationFailure extends IllegalArgumentException {
+        private final ModJarValidator.Report report;
+        ValidationFailure(ModJarValidator.Report report) {
+            super("Mod validation failed:\n" + String.join("\n", report.numberedLines()));
+            this.report = report;
+        }
+        ModJarValidator.Report report() { return report; }
     }
 
     static void validateEntryNames(List<String> names) {

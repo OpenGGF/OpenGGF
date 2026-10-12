@@ -1,7 +1,7 @@
 package com.openggf.net.client;
 
-import com.openggf.ghost.GhostFrame;
-import com.openggf.ghost.GhostFrameCodec;
+import com.openggf.net.ghost.GhostFrame;
+import com.openggf.net.ghost.GhostFrameCodec;
 import com.openggf.net.protocol.GhostPackets;
 import org.junit.jupiter.api.Test;
 

@@ -3,10 +3,12 @@ package com.openggf;
 import com.openggf.camera.Camera;
 import com.openggf.control.InputHandler;
 import com.openggf.game.TitleCardProvider;
+import com.openggf.game.LevelInitProfile;
 import com.openggf.game.titlecard.TitleCardLoopTail;
 import com.openggf.game.OscillationManager;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame;
 import com.openggf.game.resources.PlcLifecyclePhase;
+import com.openggf.game.resources.DynamicArtLifecycleService;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.level.LevelManager;
 import com.openggf.sprites.managers.SpriteManager;
@@ -67,6 +69,7 @@ final class GameLoopTitleCardLifecycle {
 
         if (titleCard == null || titleCard.shouldCompleteFreshLevelTransitionBoundary()) {
             int preludePasses = 0;
+            boolean ranPlayerPrelude = false;
             if (titleCard != null) {
                 // Level/loc_64DC hands the surviving title owner to LevelLoop
                 // with a rewritten wait timer after the title and terrain queues drain.
@@ -76,8 +79,23 @@ final class GameLoopTitleCardLifecycle {
                     OscillationManager.suppressNextFrames(1);
                     if (titleCard.shouldRunPlayerPreludeAtRelease()) {
                         playerPrelude.run();
+                        ranPlayerPrelude = true;
                     }
                     levelManager.updateObjectPositionsWithoutTouches();
+                }
+            }
+            if (ranPlayerPrelude) {
+                LevelInitProfile initProfile = frameContext.gameModule().getLevelInitProfile();
+                DynamicArtLifecycleService artLifecycle = gameplayMode.dynamicArtLifecycle();
+                int tailRows = initProfile != null
+                        ? initProfile.preLevelMainLoopDelayFrames() : 0;
+                if (tailRows > 0 && artLifecycle != null && artLifecycle.isRunActive()) {
+                    // S1 Level_LoadObj stages Sonic's DPLC only after the title
+                    // wait drains. Its next V-int belongs to Level_Delay / the
+                    // palette fade, before Level_MainLoop (sonic.asm:2895-2966).
+                    // Hold the real release preparation for that counted tail;
+                    // ordinary zero-tail owners keep their next VBlank service.
+                    artLifecycle.holdPendingPlayerPreparationForPreMainLoopTail(tailRows);
                 }
             }
             if (!preparedByFrameStep) {

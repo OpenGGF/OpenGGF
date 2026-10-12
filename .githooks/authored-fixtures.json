@@ -1,0 +1,143 @@
+{
+  "schema": 1,
+  "description": "Exact original Tide Circuit art/geometry authored from constants; no ROM or disassembly input. Future binary fixtures use text-source materialization unless separately reviewed.",
+  "originCommit": "294a6ac0993ffa680388dda8efb4d11544b5afe2",
+  "generator": {
+    "path": "src/test/resources/mods/sample-two-act-campaign-src/project/tools/generate_assets.py",
+    "sha256": "38544aeb7c2773f36838aed43bde8203a420e130a4612ef14567934df22c3786"
+  },
+  "fixtures": [
+    {
+      "path": "src/test/resources/mods/sample-two-act-campaign-src/project/src/main/resources/levels/tide/act1/bg-map.bin",
+      "mode": "100644",
+      "size": 52,
+      "sha256": "e1cce1d2e19efa6c0a2f22bd67040cedc4f8ba1020bc21d6e11991a008a29171"
+    },
+    {
+      "path": "src/test/resources/mods/sample-two-act-campaign-src/project/src/main/resources/levels/tide/act1/blocks.bin",
+      "mode": "100644",
+      "size": 396,
+      "sha256": "0299e3f7d85912a70ce9dfa39c10f828f9ce1efc356292c27079e8096028386d"
+    },
+    {
+      "path": "src/test/resources/mods/sample-two-act-campaign-src/project/src/main/resources/levels/tide/act1/chunks.bin",
+      "mode": "100644",
+      "size": 36,
+      "sha256": "c163fc6124ae99a1db61ede21719bef3e0b4805238d8b3af2ccc13ae17a267bf"
+    },
+    {
+      "path": "src/test/resources/mods/sample-two-act-campaign-src/project/src/main/resources/levels/tide/act1/collision-primary.bin",
+      "mode": "100644",
+      "size": 18,
+      "sha256": "775e9f1e3dc2140a62c39ea56780bd25aa5546c1b4fd290da21f7138758f07cb"
+    },
+    {
+      "path": "src/test/resources/mods/sample-two-act-campaign-src/project/src/main/resources/levels/tide/act1/collision-secondary.bin",
+      "mode": "100644",
+      "size": 18,
+      "sha256": "c964c8c4862946bf78f0ffbf365a42843116c6ccfd89538bbc6ada1f77ba3a39"
+    },
+    {
+      "path": "src/test/resources/mods/sample-two-act-campaign-src/project/src/main/resources/levels/tide/act1/fg-map.bin",
+      "mode": "100644",
+      "size": 52,
+      "sha256": "af53775dc507605d6be32588a8e40baae7158e5ceaa7ed7049b124e60af77859"
+    },
+    {
+      "path": "src/test/resources/mods/sample-two-act-campaign-src/project/src/main/resources/levels/tide/act1/palettes.bin",
+      "mode": "100644",
+      "size": 140,
+      "sha256": "d21d873645ba01db37a9f707a96171b9048241e2581577628a45f8a126693f39"
+    },
+    {
+      "path": "src/test/resources/mods/sample-two-act-campaign-src/project/src/main/resources/levels/tide/act1/patterns.bin",
+      "mode": "100644",
+      "size": 108,
+      "sha256": "2c866d8bd326b520621ac5c82d53218bd8bee7dcb0ef1d349a0802f5385263a4"
+    },
+    {
+      "path": "src/test/resources/mods/sample-two-act-campaign-src/project/src/main/resources/levels/tide/act1/solid-angles.bin",
+      "mode": "100644",
+      "size": 14,
+      "sha256": "a09432f68039dda0f434c6bb5bf699830a6cac74067c0034fcb26ac471b7c66e"
+    },
+    {
+      "path": "src/test/resources/mods/sample-two-act-campaign-src/project/src/main/resources/levels/tide/act1/solid-heights.bin",
+      "mode": "100644",
+      "size": 44,
+      "sha256": "28c47ae09ecf5730134d6347b895e865ad1cc04d1a06528817b739d63b598aea"
+    },
+    {
+      "path": "src/test/resources/mods/sample-two-act-campaign-src/project/src/main/resources/levels/tide/act1/solid-widths.bin",
+      "mode": "100644",
+      "size": 44,
+      "sha256": "982473bc001cffaade181e7e276dfa899b6972fbb2bddbe34ad339c93ad2e08b"
+    },
+    {
+      "path": "src/test/resources/mods/sample-two-act-campaign-src/project/src/main/resources/levels/tide/act2/bg-map.bin",
+      "mode": "100644",
+      "size": 52,
+      "sha256": "e1cce1d2e19efa6c0a2f22bd67040cedc4f8ba1020bc21d6e11991a008a29171"
+    },
+    {
+      "path": "src/test/resources/mods/sample-two-act-campaign-src/project/src/main/resources/levels/tide/act2/blocks.bin",
+      "mode": "100644",
+      "size": 396,
+      "sha256": "0299e3f7d85912a70ce9dfa39c10f828f9ce1efc356292c27079e8096028386d"
+    },
+    {
+      "path": "src/test/resources/mods/sample-two-act-campaign-src/project/src/main/resources/levels/tide/act2/chunks.bin",
+      "mode": "100644",
+      "size": 36,
+      "sha256": "c163fc6124ae99a1db61ede21719bef3e0b4805238d8b3af2ccc13ae17a267bf"
+    },
+    {
+      "path": "src/test/resources/mods/sample-two-act-campaign-src/project/src/main/resources/levels/tide/act2/collision-primary.bin",
+      "mode": "100644",
+      "size": 18,
+      "sha256": "775e9f1e3dc2140a62c39ea56780bd25aa5546c1b4fd290da21f7138758f07cb"
+    },
+    {
+      "path": "src/test/resources/mods/sample-two-act-campaign-src/project/src/main/resources/levels/tide/act2/collision-secondary.bin",
+      "mode": "100644",
+      "size": 18,
+      "sha256": "c964c8c4862946bf78f0ffbf365a42843116c6ccfd89538bbc6ada1f77ba3a39"
+    },
+    {
+      "path": "src/test/resources/mods/sample-two-act-campaign-src/project/src/main/resources/levels/tide/act2/fg-map.bin",
+      "mode": "100644",
+      "size": 52,
+      "sha256": "af53775dc507605d6be32588a8e40baae7158e5ceaa7ed7049b124e60af77859"
+    },
+    {
+      "path": "src/test/resources/mods/sample-two-act-campaign-src/project/src/main/resources/levels/tide/act2/palettes.bin",
+      "mode": "100644",
+      "size": 140,
+      "sha256": "d21d873645ba01db37a9f707a96171b9048241e2581577628a45f8a126693f39"
+    },
+    {
+      "path": "src/test/resources/mods/sample-two-act-campaign-src/project/src/main/resources/levels/tide/act2/patterns.bin",
+      "mode": "100644",
+      "size": 108,
+      "sha256": "2c866d8bd326b520621ac5c82d53218bd8bee7dcb0ef1d349a0802f5385263a4"
+    },
+    {
+      "path": "src/test/resources/mods/sample-two-act-campaign-src/project/src/main/resources/levels/tide/act2/solid-angles.bin",
+      "mode": "100644",
+      "size": 14,
+      "sha256": "a09432f68039dda0f434c6bb5bf699830a6cac74067c0034fcb26ac471b7c66e"
+    },
+    {
+      "path": "src/test/resources/mods/sample-two-act-campaign-src/project/src/main/resources/levels/tide/act2/solid-heights.bin",
+      "mode": "100644",
+      "size": 44,
+      "sha256": "28c47ae09ecf5730134d6347b895e865ad1cc04d1a06528817b739d63b598aea"
+    },
+    {
+      "path": "src/test/resources/mods/sample-two-act-campaign-src/project/src/main/resources/levels/tide/act2/solid-widths.bin",
+      "mode": "100644",
+      "size": 44,
+      "sha256": "982473bc001cffaade181e7e276dfa899b6972fbb2bddbe34ad339c93ad2e08b"
+    }
+  ]
+}

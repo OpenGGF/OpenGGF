@@ -34,6 +34,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	private short minX;
 	private short minY;
 	private short maxX;
+	private short viewportMaxX = Short.MAX_VALUE;
 	private short maxY;
 	private short maxXBeforeBoundaryEasing;
 
@@ -201,6 +202,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 					(short) (maxX - nativeArenaInset()));
 			var horizontalLock = widescreenHorizontalArenaLock();
 			if (horizontalLock.isPresent()) x = (short) horizontalLock.getAsInt();
+			x = (short) Math.min(x, viewportMaxX);
 			y = clampAxisWithWrap(y, minY, maxY);
 			fastVerticalScrollRequested = false;
 			forcedScrollRequested = false;
@@ -603,7 +605,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * normalize the pair first.
 	 */
 	private short clampRightBoundary(short value) {
-		short visibleMax = (short) (maxX - nativeArenaInset());
+		short visibleMax = (short) Math.min(maxX - nativeArenaInset(), viewportMaxX);
 		return value > visibleMax ? visibleMax : value;
 	}
 
@@ -1213,6 +1215,11 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		return minYTarget;
 	}
 
+	/** Clamp visible framing without changing ROM player movement walls. Reset with level state. */
+	public void setViewportMaxX(short viewportMaxX) {
+		this.viewportMaxX = viewportMaxX;
+	}
+
 	public short getMaxX() {
 		return maxX;
 	}
@@ -1474,6 +1481,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * Preserves width/height (configuration), clears all runtime state.
 	 */
 	public void resetState() {
+		viewportMaxX = Short.MAX_VALUE;
 		boundaryDestination.resetForMissingSnapshot();
 		x = 0;
 		y = 0;
@@ -1579,11 +1587,12 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 				levelStarted,
 				verticalWrapEnabled, verticalWrapRange, verticalWrapMask,
 				lastFrameWrapped, wrapDeltaY, yPosBias, fastScrollCap,
-				customMaxXBoundaryEasingClaimed);
+				customMaxXBoundaryEasingClaimed, viewportMaxX);
 	}
 
 	@Override
 	public void restore(CameraSnapshot snapshot) {
+		viewportMaxX = snapshot.viewportMaxX();
 		x = snapshot.x();
 		y = snapshot.y();
 		renderCopyX = snapshot.renderCopyX();

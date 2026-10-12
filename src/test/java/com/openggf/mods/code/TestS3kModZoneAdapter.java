@@ -29,7 +29,7 @@ class TestS3kModZoneAdapter {
         ModContext context = new ModContext("alpha", "s3k",
                 com.openggf.io.ModAssetRoot.forTests("s3k-zone"), null);
 
-        assertDoesNotThrow(() -> context.registerZone(new ModZoneContribution(
+        assertDoesNotThrow(() -> context.registerZone(ModZoneContribution.singleAct(
                 "sky", new BakedLevelRef("level.json"), null, null, false)));
     }
 
@@ -39,7 +39,7 @@ class TestS3kModZoneAdapter {
                 com.openggf.io.ModAssetRoot.forTests("s3k-zone"), null);
 
         assertThrows(ModRegistrationException.class, () -> context.registerZone(
-                new ModZoneContribution("sky", new BakedLevelRef("level.json"),
+                ModZoneContribution.singleAct("sky", new BakedLevelRef("level.json"),
                         "aiz1", null, false)));
     }
 

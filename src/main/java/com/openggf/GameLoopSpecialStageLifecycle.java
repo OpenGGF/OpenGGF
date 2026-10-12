@@ -86,7 +86,8 @@ final class GameLoopSpecialStageLifecycle {
                     LevelFrameContext.from(gameplayMode), plcFrame,
                     PlcLifecyclePhase.orElse(provider.specialStagePlcLifecyclePhase(),
                             PlcLifecyclePhase.SPECIAL_STAGE),
-                    () -> updateProvider(provider, resolvedPacing, updateInput));
+                    () -> com.openggf.game.internal.NativeSpecialStageFrame.step(provider,
+                            gameplayMode.getWorldSession(), () -> updateProvider(provider, resolvedPacing, updateInput)));
         } else if (session.skippedSpecialStagePlcPhase().isPresent()) {
             LevelFrameStep.serviceVBlankOnly(LevelFrameContext.from(gameplayMode), plcFrame,
                     session.skippedSpecialStagePlcPhase().orElseThrow());

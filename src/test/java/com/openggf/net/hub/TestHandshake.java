@@ -63,6 +63,23 @@ class TestHandshake {
     }
 
     @Test
+    void brokerExpectedHostIdentityRejectsRelayedWelcomeBeforeSigning(
+            @TempDir Path clientDir, @TempDir Path legitimateHostDir,
+            @TempDir Path advertisedHostDir) throws Exception {
+        PlayerIdentity client = PlayerIdentity.loadOrCreate(clientDir);
+        PlayerIdentity legitimate = PlayerIdentity.loadOrCreate(legitimateHostDir);
+        PlayerIdentity advertised = PlayerIdentity.loadOrCreate(advertisedHostDir);
+        ClientHandshake victim = new ClientHandshake(client, "x", FP,
+                advertised.fingerprint());
+        HostHandshake legitimateHandshake = new HostHandshake(legitimate.fingerprint(), FP);
+        ControlMessage.Welcome relayedWelcome = ((HostHandshake.SendWelcome)
+                legitimateHandshake.onHello(victim.hello())).welcome();
+
+        assertThrows(java.security.GeneralSecurityException.class,
+                () -> victim.onWelcome(relayedWelcome));
+    }
+
+    @Test
     void outOfOrderMessagesReject(@TempDir Path hostDir) throws Exception {
         PlayerIdentity host = PlayerIdentity.loadOrCreate(hostDir);
         HostHandshake hostSide = new HostHandshake(host.fingerprint(), FP);

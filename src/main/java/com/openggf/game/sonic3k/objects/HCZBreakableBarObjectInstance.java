@@ -381,10 +381,10 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implem
         } else {
             // Player captured — ROM: allow up/down movement, clamp to extent
             int hangX = x + PLAYER_HANG_OFFSET;
-            if (player.isUpPressed()) {
+            if (isRawDirectionHeld(player, AbstractPlayableSprite.INPUT_UP)) {
                 player.setY((short) (player.getY() - 1));
             }
-            if (player.isDownPressed()) {
+            if (isRawDirectionHeld(player, AbstractPlayableSprite.INPUT_DOWN)) {
                 player.setY((short) (player.getY() + 1));
             }
             NativePositionOps.writeXPosPreserveSubpixel(player, hangX);
@@ -434,10 +434,10 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implem
             NativePositionOps.writeYPosPreserveSubpixel(player, y - PLAYER_HANG_OFFSET);
         } else {
             int hangY = y - PLAYER_HANG_OFFSET;
-            if (player.isLeftPressed()) {
+            if (isRawDirectionHeld(player, AbstractPlayableSprite.INPUT_LEFT)) {
                 NativePositionOps.addXPosPreserveSubpixel(player, -1);
             }
-            if (player.isRightPressed()) {
+            if (isRawDirectionHeld(player, AbstractPlayableSprite.INPUT_RIGHT)) {
                 NativePositionOps.addXPosPreserveSubpixel(player, 1);
             }
             NativePositionOps.writeYPosPreserveSubpixel(player, hangY);
@@ -456,6 +456,24 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance implem
                 }
             }
         }
+    }
+
+    /**
+     * Both native bar loops pass the raw Ctrl_1/Ctrl_2 word to the grab routine
+     * (sonic3k.asm:42783/42788 and 42947/42952). Direction tests read its held
+     * high byte, not the CPU-written Ctrl_2_logical or the pressed low byte.
+     */
+    private static boolean isRawDirectionHeld(AbstractPlayableSprite player, int direction) {
+        if (player.isCpuControlled() && player.getCpuController() != null) {
+            return player.getCpuController().isRawController2InputHeld(direction);
+        }
+        return switch (direction) {
+            case AbstractPlayableSprite.INPUT_UP -> player.isUpPressed();
+            case AbstractPlayableSprite.INPUT_DOWN -> player.isDownPressed();
+            case AbstractPlayableSprite.INPUT_LEFT -> player.isLeftPressed();
+            case AbstractPlayableSprite.INPUT_RIGHT -> player.isRightPressed();
+            default -> throw new IllegalArgumentException("not a held direction: " + direction);
+        };
     }
 
     // ===== Capture / Release helpers =====

@@ -19,6 +19,11 @@ public final class CharacterConstructionScope {
     /** Runs a character factory and binds its later runtime callbacks to the same owner boundary. */
     public static <T> T call(CharacterKey expectedKey, CallbackInvoker callbackInvoker,
                              Supplier<T> factory) {
+        ClassLoader caller = com.openggf.util.EngineCallerAccess
+                .callerOutside(CharacterConstructionScope.class).getClassLoader();
+        if (caller != CharacterConstructionScope.class.getClassLoader()) {
+            throw new SecurityException("Character construction ownership belongs to engine factories");
+        }
         CharacterKey expected = Objects.requireNonNull(expectedKey, "expectedKey");
         CallbackInvoker invoker = Objects.requireNonNull(callbackInvoker, "callbackInvoker");
         Supplier<T> callback = Objects.requireNonNull(factory, "factory");
@@ -81,6 +86,7 @@ public final class CharacterConstructionScope {
         // A stable declaration must survive repeated observation after construction.
         validateDeclared(expectedKey, sprite.characterKey());
         validateDeclared(expectedKey, sprite.characterKey());
+        com.openggf.sprites.playable.CharacterRuntimeHooks.requireConstructionBoundary(sprite,captureCallbackInvoker());
         return result;
     }
 

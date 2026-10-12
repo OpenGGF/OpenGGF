@@ -24,7 +24,7 @@ class TestStandaloneGameCodeRouting {
     void standaloneBaseOwnsStandaloneIdentityAndUsesIdentifierAsGameCode() {
         AbstractStandaloneGameModule module = mock(
                 AbstractStandaloneGameModule.class, CALLS_REAL_METHODS);
-        when(module.getIdentifier()).thenReturn("owner-game");
+        doReturn("owner-game").when(module).getIdentifier();
 
         assertEquals(GameId.STANDALONE, module.getGameId());
         assertEquals("owner-game", module.getGameCode());

@@ -1,6 +1,4 @@
 package com.openggf.editor;
-
-@com.openggf.game.ModApi
 public record EditorSelectionState(
         Integer selectedBlock,
         Integer selectedChunk

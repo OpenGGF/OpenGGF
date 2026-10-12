@@ -262,6 +262,7 @@ public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
 
         if (!provider.hasWater(zoneId, actId, character, seamlessTransition)) {
             waterConfigs.put(key, new WaterConfig(false, 0, null));
+            dynamicWaterStates.remove(key);
             LOGGER.info(String.format("Zone %d Act %d: No water (provider)", zoneId, actId));
             return;
         }

@@ -160,7 +160,7 @@ class TestS3kSubmissionIsolationGuard {
                 }
                 """);
         int result = ToolProvider.getSystemJavaCompiler().run(null, null, null,
-                "--release", "21", "-d", classes.toString(),
+                "--release", "25", "-d", classes.toString(),
                 adapter.toString(), projector.toString());
         assertEquals(0, result, "could not compile production-shape v2 mutation");
         return new Mutation(sourceRoot, adapter,

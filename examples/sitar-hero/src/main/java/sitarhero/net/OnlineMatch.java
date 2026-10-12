@@ -15,9 +15,18 @@ import java.util.Objects;
 /**
  * Direct peer match protocol. Calls belong to the scene thread; tick uses its local
  * monotonic input clock. Remote progress is display data, never judgment or record authority.
- * SH1 is an application protocol over the ordered, bounded ScenePeer transport.
+ * SH2 is an application protocol over the ordered, bounded ScenePeer transport.
  */
 public final class OnlineMatch implements AutoCloseable {
+    /** Peer cues are presentation-only, in the agreed song sample coordinate. */
+    public record Cue(long sample, int noteIndex, int lanes, boolean strike) { }
+    private final java.util.ArrayDeque<Cue> remoteCues = new java.util.ArrayDeque<>();
+    private final java.util.ArrayDeque<Cue> outgoingCues = new java.util.ArrayDeque<>();
+    private boolean remoteAudible = true, localAudible = true, lastEventAudible = true, feedbackDirty;
+    private long feedbackPosition, feedbackSentAt = Long.MIN_VALUE, feedbackSequence, remoteFeedbackSequence = -1;
+    private long remoteFeedbackPosition = Long.MIN_VALUE;
+    private int lastRemoteMiss = -1;
+
     public record Choice(String song, Role role, Difficulty difficulty, boolean coop) { }
 
     private static final long SECOND = 1_000_000_000L;
@@ -122,6 +131,9 @@ public final class OnlineMatch implements AutoCloseable {
             appliedControl = controlSequence;
             controlScheduled = false;
         }
+        if (paused) { outgoingCues.clear(); remoteCues.clear(); }
+        if (started && !paused && !localFinished && feedbackDirty
+                && (feedbackSentAt == Long.MIN_VALUE || now - feedbackSentAt >= SECOND / 20)) sendFeedback();
     }
 
     private void receive(ScenePeer.Message message) {
@@ -130,7 +142,8 @@ public final class OnlineMatch implements AutoCloseable {
         for (int i = 0; i < text.length(); i++)
             if (text.charAt(i) < ' ' || text.charAt(i) > '~') throw new IllegalArgumentException();
         String[] f = text.split(" ", -1);
-        if (f.length < 2 || !f[0].equals("SH1")) throw new IllegalArgumentException();
+        if (f.length < 2) throw new IllegalArgumentException();
+        if (!f[0].equals("SH2")) { fail("Protocol mismatch. Use matching Sitar Hero mod versions."); return; }
         for (String field : f) if (field.isEmpty()) throw new IllegalArgumentException();
         switch (f[1]) {
             case "HELLO" -> {
@@ -267,9 +280,84 @@ public final class OnlineMatch implements AutoCloseable {
                 if (sequence == controlSequence) controlAck = true;
             }
             case "STATE" -> receiveState(f);
+            case "FEEDBACK" -> receiveFeedback(f);
             default -> throw new IllegalArgumentException();
         }
     }
+
+    private void receiveFeedback(String[] f) {
+        length(f, 7);
+        long sequence = boundedLong(f[3], 0, MAX_SEQUENCE);
+        long position = number(f[4]);
+        boolean audible = switch (f[5]) { case "0" -> false; case "1" -> true; default -> throw new IllegalArgumentException(); };
+        var cues = new java.util.ArrayList<Cue>();
+        if (!f[6].equals("-")) {
+            String[] entries = f[6].split(",", -1);
+            if (entries.length > 6) throw new IllegalArgumentException();
+            for (String entry : entries) {
+                String[] item = entry.split(":", -1);
+                if (item.length != 4) throw new IllegalArgumentException();
+                long sample = number(item[0]);
+                boolean strike = switch (item[1]) { case "S" -> true; case "M" -> false; default -> throw new IllegalArgumentException(); };
+                int note = integer(item[2], 0, MAX_NOTES - 1), lanes = integer(item[3], 0, 31);
+                cues.add(new Cue(sample,note,lanes,strike));
+            }
+        }
+        if (!currentRound(f[2])) return;
+        if (!localReady || !remoteReady || !startScheduled || !startAck
+                || position < -localRate * 10L || position > chartLength + localRate * 10L)
+            throw new IllegalArgumentException();
+        for (Cue cue : cues) {
+            if (cue.sample() > position || cue.sample() < -localRate * 10L || cue.sample() > chartLength + localRate * 10L
+                    || cue.noteIndex() >= noteCount || !cue.strike() && cue.lanes() != localChart.notes().get(cue.noteIndex()).lanes())
+                throw new IllegalArgumentException();
+        }
+        if (sequence <= remoteFeedbackSequence || remoteFinished) return;
+        remoteFeedbackSequence = sequence;
+        if (position < remoteFeedbackPosition) return;
+        remoteFeedbackPosition = position; remoteAudible = audible;
+        if (paused) return;
+        for (Cue cue : cues) {
+            if (!cue.strike()) {
+                if (cue.noteIndex() <= lastRemoteMiss) continue;
+                lastRemoteMiss = cue.noteIndex();
+            }
+            if (remoteCues.size() == 32) remoteCues.removeFirst();
+            remoteCues.addLast(cue);
+        }
+    }
+
+    /** Coalesced at <=20 packets/second; scoring STATE has a separate sequence and authority. */
+    public void feedback(long position, boolean audible, List<RhythmSession.Feedback> events) {
+        if (!connected() || !started || localFinished) return;
+        if (position < -localRate * 10L || position > chartLength + localRate * 10L) throw new IllegalArgumentException();
+        feedbackDirty |= localAudible != audible || !events.isEmpty()
+                || feedbackSentAt == Long.MIN_VALUE || now - feedbackSentAt >= SECOND / 4;
+        feedbackPosition = position; localAudible = audible;
+        for (RhythmSession.Feedback event : events) {
+            boolean cue = event.kind() == RhythmSession.FeedbackKind.STRIKE
+                    || event.kind() == RhythmSession.FeedbackKind.MISS && lastEventAudible;
+            lastEventAudible = event.audible();
+            if (!cue || paused || event.noteIndex() < 0 || event.noteIndex() >= noteCount) continue;
+            if (outgoingCues.size() == 6) outgoingCues.removeFirst();
+            outgoingCues.addLast(new Cue(event.sample(),event.noteIndex(),event.lanes(),event.kind()==RhythmSession.FeedbackKind.STRIKE));
+        }
+    }
+    private void sendFeedback() {
+        StringBuilder entries = new StringBuilder();
+        for (Cue cue : outgoingCues) {
+            if (!entries.isEmpty()) entries.append(',');
+            entries.append(cue.sample()).append(':').append(cue.strike()?'S':'M').append(':')
+                    .append(cue.noteIndex()).append(':').append(cue.lanes());
+        }
+        send("FEEDBACK " + round + " " + feedbackSequence + " " + feedbackPosition + " " + (localAudible?"1":"0")
+                + " " + (entries.isEmpty()?"-":entries));
+        feedbackSequence = nextSequence(feedbackSequence); feedbackSentAt = now;
+        outgoingCues.clear(); feedbackDirty = false;
+    }
+    public boolean remoteAudible() { return remoteAudible && !remoteFinished; }
+    public List<Cue> drainCues() { var result=List.copyOf(remoteCues);remoteCues.clear();return result; }
+    public void discardCues() { remoteCues.clear();outgoingCues.clear(); }
 
     private void receiveState(String[] f) {
         length(f, 11);
@@ -319,6 +407,10 @@ public final class OnlineMatch implements AutoCloseable {
 
     private void resetRound(int next, Choice nextChoice) {
         round = next; choice = nextChoice; offeredAt = now;
+        remoteCues.clear(); outgoingCues.clear();
+        remoteAudible = localAudible = lastEventAudible = true; feedbackDirty = false;
+        feedbackSentAt = remoteFeedbackPosition = Long.MIN_VALUE;
+        feedbackPosition = feedbackSequence = 0; remoteFeedbackSequence = -1; lastRemoteMiss = -1;
         localReady = remoteReady = localFinished = remoteFinished = false;
         localHash = remoteHash = ""; localRate = remoteRate = noteCount = 0; chartLength = 0; localChart = null;
         startScheduled = startAck = started = paused = pingPending = syncStarted = false;
@@ -439,7 +531,7 @@ public final class OnlineMatch implements AutoCloseable {
         if (remaining < -lateness || remaining > lead) throw new IllegalArgumentException();
     }
     private void send(String text) {
-        if (!closed && error.isEmpty() && !peer.send("SH1 " + text)) fail("Peer send queue unavailable; match stopped");
+        if (!closed && error.isEmpty() && !peer.send("SH2 " + text)) fail("Peer send queue unavailable; match stopped");
     }
     private void fail(String text) { if (error.isEmpty()) error = text; peer.close(); }
     private static void validateGames(List<String> ids) {

@@ -1,5 +1,7 @@
 package com.openggf.net.protocol;
 
+import openggf.racing.protocol.ControlCodec;
+
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

@@ -25,6 +25,7 @@ public final class ModContext {
     private final String baseGame;
     private final boolean standalone;
     private final ModAssetRoot assets;
+    private final java.nio.file.Path storageRoot;
     /** Static Sonic 2 World REV01 ROM length; registration-time bound (no ROM open here). */
     private static final int SONIC2_ROM_LENGTH = 0x100000;
 
@@ -33,6 +34,9 @@ public final class ModContext {
     private final Map<String, RomArtRequest> romArt = new LinkedHashMap<>();
     private final Map<String, String> objectPreviewArtKeys = new LinkedHashMap<>();
     private final List<GamePatch> patches = new ArrayList<>();
+    private final Map<String, java.util.function.Supplier<com.openggf.game.GameServiceBundle>> serviceBundles = new LinkedHashMap<>();
+    private final Map<String, com.openggf.level.LevelPatch> decodedLevelPatches = new LinkedHashMap<>();
+    private com.openggf.mods.ModStorage storage;
     private final List<ModZoneContribution> zones = new ArrayList<>();
     private final java.util.Set<String> zoneKeys = new java.util.HashSet<>();
     private final Map<com.openggf.game.ZoneKey.Mod, com.openggf.game.GameplayLaunchTeam> launchTeams
@@ -47,10 +51,14 @@ public final class ModContext {
             = new LinkedHashMap<>();
     private final Map<Integer, com.openggf.level.LevelPlacementPlan> levelPlacements = new LinkedHashMap<>();
     private boolean frozen;
+    private int successfulRegistrations;
+    private int declaredActs;
     private ModRegistrationException poison;
     private com.openggf.game.GameModule gameModule;
     private com.openggf.mods.scene.ModSceneFactory startupScene;
+    private ModTitleEntry titleEntry;
     private String requiredDisplayAspect;
+    private final Map<String, com.openggf.mods.mutators.OwnedMutator> mutators = new LinkedHashMap<>();
 
     ModContext(String owner, String baseGame, ModAssetRoot assets) {
         this(owner, baseGame, assets, null);
@@ -62,6 +70,12 @@ public final class ModContext {
 
     ModContext(String owner, String baseGame, ModAssetRoot assets, String defaultInsertAfter,
             boolean standalone) {
+        this(owner, baseGame, assets, defaultInsertAfter, standalone, com.openggf.game.save.SavePaths.root());
+    }
+
+    ModContext(String owner, String baseGame, ModAssetRoot assets, String defaultInsertAfter,
+            boolean standalone, java.nio.file.Path storageRoot) {
+        this.storageRoot = Objects.requireNonNull(storageRoot, "storageRoot").toAbsolutePath().normalize();
         this.owner = ModKeySyntax.requireManifestId(owner);
         this.standalone = standalone;
         this.baseGame = standalone ? baseGame : Objects.requireNonNull(baseGame, "baseGame");
@@ -74,10 +88,44 @@ public final class ModContext {
 
     /** Returns the manifest id that namespaces every local registration. */
     public String ownerModId() { return owner; }
-    /** Returns the stock game id (or {@code any} for a shared startup scene), or null for standalone. */
+    /** Returns the stock game id (or {@code any} for a shared scene/mutator catalogue), or null for standalone. */
     public String baseGameId() { return baseGame; }
     /** Returns the immutable bounded asset snapshot while registration is open. */
     public ModAssetRoot modAssets() { requireOpen(); return assets; }
+
+    /** Owner-derived storage, rooted by the host before registration. The handle may be retained. */
+    public synchronized com.openggf.mods.ModStorage storage() {
+        if (storage == null) storage = com.openggf.mods.scene.host.ModStorageFactory.forOwner(storageRoot, owner);
+        return storage;
+    }
+
+    /** Creates one shared service/rewind graph for each module application, inside this owner's fault boundary. */
+    public void registerServiceBundle(String localKey, java.util.function.Supplier<com.openggf.game.GameServiceBundle> factory) {
+        mutate(() -> {
+            String key = ModKeySyntax.requireLocalName(localKey);
+            if (serviceBundles.putIfAbsent(key, Objects.requireNonNull(factory, "factory")) != null)
+                throw failure("Duplicate service bundle: " + key);
+        });
+    }
+
+    /** Registers a fixed instance; use a bundle factory for state recreated on each application. */
+    public <T> void registerService(String localKey, Class<T> contract, T service) {
+        registerServiceBundle(localKey, () -> com.openggf.game.GameServiceBundle.builder().service(contract, service).build());
+    }
+
+    /** The local key supplies identity; the adapter's reported key never grants authority. */
+    public void registerRewindAdapter(String localKey, com.openggf.game.rewind.RewindSnapshottable<?> adapter) {
+        registerServiceBundle(localKey, () -> com.openggf.game.GameServiceBundle.builder().rewindAdapter("state", adapter).build());
+    }
+
+    /** Applies an owner-bound immutable placement template exactly once to each final decoded level. */
+    public void decodedLevelPatch(String localKey, com.openggf.level.LevelPatch patch) {
+        mutate(() -> {
+            String key = ModKeySyntax.requireLocalName(localKey);
+            if (decodedLevelPatches.putIfAbsent(key, Objects.requireNonNull(patch, "patch")) != null)
+                throw failure("Duplicate decoded level patch: " + key);
+        });
+    }
 
     /**
      * Stages the single no-ROM module owned by a standalone manifest.
@@ -102,7 +150,8 @@ public final class ModContext {
         mutate(() -> {
             if (standalone) throw failure("Standalone manifests cannot register game patches");
             Objects.requireNonNull(patch, "patch");
-            if (!baseGame.equals(patch.baseGameId())) {
+            if ("any".equals(baseGame) ? !List.of("s1", "s2", "s3k").contains(patch.baseGameId())
+                    : !baseGame.equals(patch.baseGameId())) {
                 throw failure("Patch targets " + patch.baseGameId() + " instead of " + baseGame);
             }
             String id = ownedPatchId(patch.id());
@@ -175,19 +224,30 @@ public final class ModContext {
      * through the same overlay as {@link #registerObjectArt}.
      */
     public void registerRomObjectArt(String key, RomArtRequest request) {
+        if (!"s2".equals(baseGame)) {
+            mutate(() -> { throw failure("ROM art intake is supported only for Sonic 2 patch mods"); });
+            return;
+        }
+        registerRomObjectArt(key, com.openggf.game.patch.LogicalRom.S2, request);
+    }
+
+    /** Stages art from a named S1/S2 logical ROM; S1 uses byte-count, five-byte mappings. */
+    public void registerRomObjectArt(String key, com.openggf.game.patch.LogicalRom source,
+            RomArtRequest request) {
         mutate(() -> {
             if (standalone) throw failure("ROM art intake is not available to standalone modules");
-            if (!"s2".equals(baseGame)) {
-                throw failure("ROM art intake is supported only for Sonic 2 patch mods");
-            }
             Objects.requireNonNull(request, "request");
-            if (request.artAddress() >= SONIC2_ROM_LENGTH
-                    || request.mappingAddress() >= SONIC2_ROM_LENGTH
-                    || request.dplcAddress() >= SONIC2_ROM_LENGTH) {
-                throw failure("ROM art request address beyond Sonic 2 ROM bounds: " + key);
+            RomArtRequest sourced = new RomArtRequest(request.artAddress(), request.compression(),
+                    request.uncompressedByteSize(), request.mappingAddress(), request.dplcAddress(),
+                    request.paletteLine(), request.bankSize(), source);
+            int length = source == com.openggf.game.patch.LogicalRom.S1 ? 0x80000 : SONIC2_ROM_LENGTH;
+            if (request.artAddress() >= length || request.mappingAddress() >= length
+                    || request.dplcAddress() >= length
+                    || (long) request.artAddress() + request.uncompressedByteSize() > length) {
+                throw failure("ROM art request address beyond " + source + " ROM bounds: " + key);
             }
             String owned = ModKeySyntax.requireOwnedKey(owner, key);
-            if (art.containsKey(owned) || romArt.putIfAbsent(owned, request) != null) {
+            if (art.containsKey(owned) || romArt.putIfAbsent(owned, sourced) != null) {
                 throw failure("Duplicate object art key: " + owned);
             }
         });
@@ -207,6 +267,9 @@ public final class ModContext {
         mutate(() -> {
             if (standalone) throw failure("Standalone manifests cannot register additive zones");
             Objects.requireNonNull(contribution, "contribution");
+            long totalActs = 1L + contribution.additionalActs().size() + declaredActs;
+            if (totalActs > assets.limits().maxCollectionEntries())
+                throw failure("Owner authored-act limit exceeded: " + assets.limits().maxCollectionEntries());
             String anchor = resolveZoneAnchor(contribution);
             ModZoneContribution frozen = anchor == null
                     ? contribution : contribution.withDefaultAnchor(anchor);
@@ -218,6 +281,7 @@ public final class ModContext {
                 throw failure("Duplicate zone key: " + owner + ":" + frozen.localKey());
             }
             zones.add(frozen);
+            declaredActs = Math.toIntExact(totalActs);
         });
     }
 
@@ -261,6 +325,30 @@ public final class ModContext {
     }
 
     /**
+     * Adds an entry to the OpenGGF master title's action menu that opens a full-screen
+     * {@link com.openggf.mods.scene.ModScene}. Unlike a startup scene it never replaces a game's
+     * title: the player chooses it. The scene may launch stock gameplay runs through
+     * {@link com.openggf.mods.scene.SceneContext#gameplay()} and is resumed when each run ends.
+     * Available to patch mods of any base game, including {@code any}. One entry per mod; the
+     * label is shown upper-case and truncated to 24 characters.
+     */
+    public void registerTitleEntry(String label, com.openggf.mods.scene.ModSceneFactory factory) {
+        mutate(() -> {
+            if (standalone) throw failure("Standalone manifests cannot register a title entry");
+            Objects.requireNonNull(factory, "factory");
+            String text = Objects.requireNonNull(label, "label").strip();
+            if (text.isEmpty()) throw failure("Title entry label must not be blank");
+            if (titleEntry != null) throw failure("Title entry is already registered");
+            titleEntry = new ModTitleEntry(text.length() > 24 ? text.substring(0, 24) : text, factory);
+        });
+    }
+
+    /** The title entry registered by this context, or null. */
+    ModTitleEntry titleEntry() {
+        return titleEntry;
+    }
+
+    /**
      * Runs this patch mod's sessions at a fixed logical display width instead of the player's
      * {@code display.aspect} setting: 320 (4:3), 352, 400 (16:9), 528 or 800 pixels, always
      * 224 tall. The engine applies the matching preset as a session override when the mod's
@@ -282,6 +370,20 @@ public final class ModContext {
                 throw failure("Display width " + width + " is not a preset (320, 352, 400, 528 or 800)");
             }
             requiredDisplayAspect = preset;
+        });
+    }
+
+    /** Stages a dormant mutator; ownership comes only from this registration transaction. */
+    public void registerMutator(com.openggf.mods.mutators.MutatorDefinition definition) {
+        mutate(() -> {
+            if (standalone) {
+                throw failure("Mutators require a stock-game patch owner");
+            }
+            com.openggf.mods.mutators.OwnedMutator owned =
+                    new com.openggf.mods.mutators.OwnedMutator(owner, definition);
+            if (mutators.size() >= 32 || mutators.putIfAbsent(owned.key(), owned) != null) {
+                throw failure("Too many mutators or duplicate mutator key: " + owned.key());
+            }
         });
     }
 
@@ -329,11 +431,12 @@ public final class ModContext {
             if (standalone && gameModule == null) {
                 throw failure("Standalone manifest must register exactly one game module");
             }
-            if ("any".equals(baseGame) && (startupScene == null || !objects.isEmpty() || !art.isEmpty()
-                    || !patches.isEmpty() || !zones.isEmpty() || !objectPreviewArtKeys.isEmpty()
+            if ("any".equals(baseGame) && ((startupScene == null && titleEntry == null && mutators.isEmpty())
+                    || !objects.isEmpty() || !art.isEmpty() || (!patches.isEmpty() && mutators.isEmpty())
+                    || !zones.isEmpty() || !objectPreviewArtKeys.isEmpty()
                     || !characters.isEmpty() || !romArt.isEmpty() || !launchTeams.isEmpty()
-                    || !inputFilters.isEmpty() || !hudProfiles.isEmpty())) {
-                throw failure("baseGame any may register only a startup scene and its display requirement");
+                    || !inputFilters.isEmpty() || !hudProfiles.isEmpty() || !serviceBundles.isEmpty() || !decodedLevelPatches.isEmpty())) {
+                throw failure("baseGame any permits a shared startup scene, title entry or typed mutator catalogue with stock-game decorators; game-specific content is forbidden");
             }
             levelPlacements.values().forEach(placement -> {
                 for (var addition : placement.additions()) {
@@ -346,19 +449,25 @@ public final class ModContext {
                 if(!art.containsKey(artKey))throw failure("Preview maps unknown art key: "+artKey);
             });
             java.util.ArrayList<PreparedModZone> prepared = new java.util.ArrayList<>();
-            java.util.HashSet<Integer> levelIds = new java.util.HashSet<>();
-            java.util.HashSet<Integer> zoneIds = new java.util.HashSet<>();
             for (ModZoneContribution zone : zones) {
-                ModLevelDefinition definition = ModLevelDefinitionParser.read(assets, zone.level());
-                if (!levelIds.add(definition.levelIndex()) || !zoneIds.add(definition.zoneIndex())) {
-                    throw new IllegalArgumentException("Duplicate authored level or zone index");
+                List<BakedLevelRef> acts = zone.acts();
+                if (prepared.size() + acts.size() > assets.limits().maxCollectionEntries())
+                    throw failure("Owner prepared act limit exceeded");
+                for (int act = 0; act < acts.size(); act++) {
+                    ModLevelDefinition definition = ModLevelDefinitionParser.read(assets, acts.get(act));
+                    prepared.add(PreparedModZone.prepared(owner, zone, definition, act));
                 }
-                prepared.add(PreparedModZone.prepared(owner, zone, definition));
+            }
+            try {
+                com.openggf.mods.mutators.MutatorSessionState.validateCatalog(mutators);
+            } catch (IllegalArgumentException invalid) {
+                throw failure("Invalid mutator graph: " + safeMessage(invalid));
             }
             frozen = true;
             return new ModRegistrationPlan(owner, baseGame, objects, art, Map.of(), patches,
                     zones, prepared,objectPreviewArtKeys,characters,gameModule,romArt,
-                    launchTeams, inputFilters, hudProfiles, startupScene, requiredDisplayAspect, levelPlacements);
+                    launchTeams, inputFilters, hudProfiles, startupScene, requiredDisplayAspect,
+                    serviceBundles, decodedLevelPatches, assets.limits().maxCollectionEntries(), mutators, levelPlacements);
         } catch (java.io.IOException | RuntimeException rejected) {
             if (rejected instanceof ModRegistrationException registration) poison = registration;
             else poison = new ModRegistrationException(owner, "MOD_LEVEL_ASSET_INVALID",
@@ -385,7 +494,11 @@ public final class ModContext {
     private void mutate(Runnable mutation) {
         requireOpen();
         try {
+            if (successfulRegistrations >= assets.limits().maxCollectionEntries()) {
+                throw failure("Owner registration limit exceeded: " + assets.limits().maxCollectionEntries());
+            }
             mutation.run();
+            successfulRegistrations++;
         } catch (RuntimeException rejected) {
             if (poison == null) {
                 poison = rejected instanceof ModRegistrationException structured
@@ -416,8 +529,15 @@ public final class ModContext {
         @Override public java.util.Set<com.openggf.game.patch.LogicalRom> romPrerequisites() {
             return delegate.romPrerequisites();
         }
+        @Override public java.util.Set<com.openggf.game.patch.LogicalRom> optionalRomPrerequisites() {
+            return delegate.optionalRomPrerequisites();
+        }
         @Override public java.util.List<String> providedMainCharacters() {
             return delegate.providedMainCharacters();
+        }
+        @Override public java.util.Map<com.openggf.game.CharacterKey, com.openggf.game.CharacterDefinition>
+                providedCharacterDefinitions() {
+            return delegate.providedCharacterDefinitions();
         }
         @Override public com.openggf.game.GameModule apply(com.openggf.game.GameModule base,
                 com.openggf.game.patch.PatchContext context) {

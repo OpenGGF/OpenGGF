@@ -127,6 +127,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
 
     private boolean speedShoesEnabled = false;
     private int speedMultiplier = 1;
+    private int musicTempoPercent = 100;
     private GameAudioProfile audioProfile;
     private SmpsSequencerConfig smpsConfig;
     private final Object streamedPortTransitionLock = new Object();
@@ -1209,6 +1210,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         sequencer.setSampleRate(stream.outputSampleRate());
         sequencer.setSpeedShoes(speedShoesEnabled);
         sequencer.setSpeedMultiplier(speedMultiplier);
+        sequencer.setMusicTempoPercent(musicTempoPercent);
         sequencer.setFm6DacOff(configService.getBoolean(
                 SonicConfiguration.FM6_DAC_OFF));
         sequencer.setFallbackVoiceData(data);
@@ -1349,6 +1351,15 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
             }
         }
         enqueueStreamedTransition(new SetStreamedSpeed(multiplier));
+    }
+
+    @Override
+    public void setMusicTempoPercent(int percent) {
+        MusicTempoPercent.requireValid(percent);
+        synchronized (streamLock) {
+            musicTempoPercent = percent;
+            if (currentSmps != null) currentSmps.setMusicTempoPercent(percent);
+        }
     }
 
     @Override

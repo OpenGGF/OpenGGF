@@ -1,6 +1,7 @@
 package paradise.ui;
 
 import java.util.ArrayList;
+import com.openggf.mods.state.CapturedPool;
 import java.util.List;
 import java.util.Objects;
 
@@ -47,18 +48,18 @@ public final class GolfFeedback {
     private int hudFrom;
     private long lockStart = -LOCK_FLASH, pop0 = -100, pop1 = -100, resultsStart = -1;
     private boolean celebrate, tallyDone;
-    private final ArrayList<Integer> trail = new ArrayList<>();
+    private final CapturedPool<Integer> trail = new CapturedPool<>(TRAIL_POINTS * 2, value -> value);
     private final ArrayList<Cue> pending = new ArrayList<>();
 
     public State snapshot() {
         return new State(clock, card, cardStart, cardExit, toast, toastStart, toastValue, toastOwner, hud, hudChange,
-                hudFrom, lockStart, pop0, pop1, trail, resultsStart, celebrate, tallyDone);
+                hudFrom, lockStart, pop0, pop1, trail.snapshot(), resultsStart, celebrate, tallyDone);
     }
     public void restore(State s) {
         clock = s.clock(); card = s.card(); cardStart = s.cardStart(); cardExit = s.cardExit(); toast = s.toast();
         toastStart = s.toastStart(); toastValue = s.toastValue(); toastOwner = s.toastOwner(); hud = s.hud();
         hudChange = s.hudChange(); hudFrom = s.hudFrom(); lockStart = s.lockStart(); pop0 = s.pop0(); pop1 = s.pop1();
-        trail.clear(); trail.addAll(s.trail()); resultsStart = s.resultsStart(); celebrate = s.celebrate();
+        trail.restore(s.trail()); resultsStart = s.resultsStart(); celebrate = s.celebrate();
         tallyDone = s.tallyDone(); pending.clear();
     }
     public long clock() { return clock; }
@@ -95,7 +96,6 @@ public final class GolfFeedback {
     public void trail(int x, int y) {
         if (clock % TRAIL_STRIDE != 0) return;
         trail.add(x); trail.add(y);
-        while (trail.size() > TRAIL_POINTS * 2) { trail.removeFirst(); trail.removeFirst(); }
     }
     public void clearTrail() { trail.clear(); }
 
@@ -146,7 +146,7 @@ public final class GolfFeedback {
     public int toastOwner() { return toastOwner; }
     public float lockFlash() { return 1 - GolfMotion.progress(clock - lockStart, LOCK_FLASH); }
     public float pop(int player) { return 1 - GolfMotion.progress(clock - (player == 0 ? pop0 : pop1), 18); }
-    public List<Integer> trailPoints() { return List.copyOf(trail); }
+    public List<Integer> trailPoints() { return trail.snapshot(); }
     public boolean resultsShown() { return resultsStart >= 0; }
     public long resultsAge() { return resultsStart < 0 ? 0 : clock - resultsStart; }
     /** Ticks since the scorecard began to drop; negative while a celebration plays first. */

@@ -1,13 +1,9 @@
 package slaytherobotnik.ui;
 
 import com.openggf.mods.scene.SceneCanvas;
-import com.openggf.mods.scene.SceneDraw;
-import com.openggf.mods.scene.SceneImage;
-import java.nio.charset.StandardCharsets;
+import com.openggf.mods.ui.AtlasFont;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * The game's small all-caps pixel font, read from {@code art/font.txt} (see that file for the
@@ -21,69 +17,16 @@ import java.util.Map;
 public final class SmallFont {
     public static final int HEIGHT = 5;
     public static final int LINE = 7;
-    private static final int SPACE = 3;
 
-    private final SceneImage atlas;
-    private final Map<Character, int[]> glyphs = new HashMap<>();
+    private final AtlasFont font;
 
     public SmallFont(byte[] fontText) {
-        Map<Character, List<String>> parsed = new HashMap<>();
-        Character current = null;
-        for (String raw : new String(fontText, StandardCharsets.UTF_8).split("\n")) {
-            String line = raw.strip();
-            if (line.startsWith("#") && current == null) {
-                continue;
-            }
-            if (line.startsWith("= ") && line.length() >= 3) {
-                current = line.charAt(2);
-                parsed.put(current, new ArrayList<>());
-            } else if (current != null && !line.isEmpty()) {
-                parsed.get(current).add(line);
-            } else if (line.isEmpty()) {
-                current = null;
-            }
-        }
-        int totalWidth = 0;
-        for (List<String> rows : parsed.values()) {
-            totalWidth += rows.get(0).length() + 1;
-        }
-        int[] pixels = new int[Math.max(1, totalWidth) * HEIGHT];
-        int x = 0;
-        for (Map.Entry<Character, List<String>> e : parsed.entrySet()) {
-            List<String> rows = e.getValue();
-            int w = rows.get(0).length();
-            for (int r = 0; r < HEIGHT && r < rows.size(); r++) {
-                for (int col = 0; col < w; col++) {
-                    if (rows.get(r).charAt(col) == '#') {
-                        pixels[r * totalWidth + x + col] = 0xFFFFFFFF;
-                    }
-                }
-            }
-            glyphs.put(e.getKey(), new int[] {x, w});
-            x += w + 1;
-        }
-        atlas = new SceneImage(Math.max(1, totalWidth), HEIGHT, pixels);
-    }
-
-    private int[] glyph(char c) {
-        int[] g = glyphs.get(Character.toUpperCase(c));
-        return g;
+        font = AtlasFont.parse(fontText, HEIGHT);
     }
 
     /** Width in pixels of plain text (markup tags are ignored). */
     public int width(String text) {
-        String plain = strip(text);
-        int w = 0;
-        for (int i = 0; i < plain.length(); i++) {
-            char c = plain.charAt(i);
-            if (c == ' ') {
-                w += SPACE + 1;
-                continue;
-            }
-            int[] g = glyph(c);
-            w += (g == null ? SPACE : g[1]) + 1;
-        }
-        return Math.max(0, w - 1);
+        return font.width(strip(text));
     }
 
     /** Draws plain text. */
@@ -93,22 +36,7 @@ public final class SmallFont {
 
     /** Draws plain text at an integer scale. */
     public void draw(SceneCanvas canvas, String text, int x, int y, int argb, int scale) {
-        int cx = x;
-        SceneDraw style = SceneDraw.plain().withTint(argb);
-        for (int i = 0; i < text.length(); i++) {
-            char c = text.charAt(i);
-            if (c == ' ') {
-                cx += (SPACE + 1) * scale;
-                continue;
-            }
-            int[] g = glyph(c);
-            if (g == null) {
-                cx += (SPACE + 1) * scale;
-                continue;
-            }
-            canvas.drawRegion(atlas, g[0], 0, g[1], HEIGHT, cx, y, g[1] * scale, HEIGHT * scale, style);
-            cx += (g[1] + 1) * scale;
-        }
+        font.draw(canvas, text, x, y, argb, scale);
     }
 
     /** Text with a 1-pixel drop shadow, readable over any background. */

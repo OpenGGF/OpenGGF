@@ -122,7 +122,7 @@ class TestRewindBenchmarkSizeEstimator {
                         true, 16,
                         false, false, true, false,
                         17, 18, false,
-                        (short) 19, (short) 20, (short) 21, false)));
+                        (short) 19, (short) 20, (short) 21, false, Short.MAX_VALUE)));
 
         long bytes = RewindBenchmark.estimateStructuralSize(snapshot);
 

@@ -18,6 +18,29 @@ import static org.mockito.Mockito.*;
 @RequiresRom(SonicGame.SONIC_3K)
 class TestGameplayCaptureFrameRendering {
     @Test
+    @RequiresRom(SonicGame.SONIC_2)
+    void titleDrawingWithoutReadbackPreservesTheNativeTitlePixels() throws Exception {
+        var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off",
+                null, null, null, null, false, false);
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.startAtTitle();
+            session.boot(RomTestUtils.ensureSonic2RomAvailable().toPath(), 0, 0, settings);
+            try (var readback = mockStatic(ScreenshotCapture.class, CALLS_REAL_METHODS)) {
+                for (int frame = 0; frame < 600; frame++) {
+                    session.step(null);
+                    session.renderFrame();
+                }
+                readback.verifyNoInteractions();
+            }
+            assertEquals(GameMode.TITLE_SCREEN, session.loop().getCurrentGameMode());
+            RgbaImage drawn = ScreenshotCapture.captureFramebuffer(320, GameplayCaptureSession.HEIGHT);
+            RgbaImage captured = session.render();
+            assertArrayEquals(captured.pixels(), drawn.pixels());
+            assertVisiblePixels(drawn);
+        }
+    }
+
+    @Test
     void resultsDrawingWithoutReadbackPreservesTheNativeResultsPixels() throws Exception {
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off",
                 null, null, null, null, false, true);

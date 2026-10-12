@@ -47,7 +47,7 @@ final class FreshLevelTransitionBoundaryController {
         level.camera.setX(previousCameraX);
         level.camera.setY(previousCameraY);
         if (level.levelGamestate != null) {
-            level.levelGamestate.setRings(previousRings);
+            level.levelGamestate.setRings(com.openggf.game.mutators.LevelMutatorPolicyAccess.mainLevelRingRestore(level, previousRings));
         }
         AbstractPlayableSprite player = mainPlayable(level);
         if (player != null) {
@@ -135,6 +135,19 @@ final class FreshLevelTransitionBoundaryController {
     boolean isPending() {
         return pending != null;
     }
+
+    RewindState captureForRewind() {
+        return new RewindState(pending, initialPublished);
+    }
+
+    void restoreForRewind(RewindState state) {
+        java.util.Objects.requireNonNull(state, "state");
+        pending = state.pending();
+        initialPublished = state.initialPublished();
+    }
+
+    /** Retain the deferred native player assembly and its publication boundary. */
+    record RewindState(Boundary pending, boolean initialPublished) {}
 
     private void restorePlayables(LevelManager level) {
         for (PlayableState playableState : pending.playableStates()) {

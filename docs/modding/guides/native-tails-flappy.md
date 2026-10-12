@@ -1,5 +1,10 @@
 # Build-along: native Tails Flappy in Sonic 3 & Knuckles
 
+*This is the native road of the [Flappy Tails tutorial](flappy-tails/README.md). Its
+[Path A page](flappy-tails/native.md) shows this sample running, suggests changes and explains
+where the native road ends; the tutorial's scene road builds the polished
+[Flappy Tails](../../../examples/flappy-tails/README.md).*
+
 This guide tours the maintained `sample-flappy` source: a Mod API 0.7 Sonic 3 &
 Knuckles patch that starts a fresh game in a short custom sky level, launches native
 Tails, and turns his normal flight into a fixed-position obstacle game. The mod does
@@ -126,12 +131,15 @@ or reinterpret its tiles row-first.
 The layout contains no pipe placements. On first update the controller calls
 `spawnFreeChild` six times, creating independent dynamic entries beyond the right
 edge of the widest supported viewport. Each `FlappyPipe` is persistent and implements
-`RewindRecreatable`; `recreateForRewind` uses `context.dynamicEntry().spawn()`.
+`ModRewindRecreatable`; `recreateForRewind(ObjectReconstructionContext)` uses
+`context.spawn()`.
 The controller reconstructs only itself and does not respawn pipes during rewind
 recreation, so the object manager restores each mod-owned dynamic entry with its
 stable identity.
 
-Every frame the controller sorts the live pipes by rewind identity, advances their
+Every frame `services().objectQuery().activeObjectsOfType(FlappyPipe.class)` returns
+an immutable membership snapshot in stable captured-identity order. The controller
+advances their
 X position by a fixed `0x200` subpixels, and recycles any pipe whose right edge has
 left the viewport. Recycling repositions the existing instance after the current
 rightmost pipe rather than destroying and respawning it. Identity therefore remains
@@ -173,6 +181,6 @@ pool idea without introducing a scroll framework or changing the level bounds.
 The maintained tests cover the strict level source, S3K/API registration, raw versus
 effective input, native Tails launch and flight refill, HUD rows, sparse palette
 composition, six-pipe fresh and rewind sessions, deterministic recycling/scoring,
-fatal bounds/contact, mod-classloader dynamic recreation, and packaging of all eight
+fatal bounds/contact, mod-classloader dynamic recreation, and packaging of the maintained
 gallery sources. The two ROM-gated integrations use assumptions when a ROM is absent;
 the release gate supplies both ROM paths and requires zero skips.

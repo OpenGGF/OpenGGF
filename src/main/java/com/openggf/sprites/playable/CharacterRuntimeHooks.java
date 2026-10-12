@@ -6,6 +6,13 @@ import java.util.Objects;
 public final class CharacterRuntimeHooks {
     private CharacterRuntimeHooks() { }
 
+    /** Rejects a factory returning an instance captured from another construction/owner lifetime. */
+    public static void requireConstructionBoundary(AbstractPlayableSprite sprite,
+            com.openggf.game.CharacterConstructionScope.CallbackInvoker invoker) {
+        if (!Objects.requireNonNull(sprite,"sprite").hasConstructionCallbackInvoker(invoker))
+            throw new IllegalArgumentException("Character factory must construct its result in the current owner scope");
+    }
+
     public static boolean activateAbility(AbstractPlayableSprite sprite) {
         return activateAbility(sprite, false, false, false, false);
     }

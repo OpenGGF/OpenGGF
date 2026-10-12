@@ -88,6 +88,7 @@ class TestDezSoloColdRouteCapture {
         int phases = 0, loadFrame = -1;
         boolean eightHits = false;
         long outgoingFrame = 0;
+        var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 11, 0, settings);
             assertInstanceOf(playerType, session.player());
@@ -96,7 +97,7 @@ class TestDezSoloColdRouteCapture {
                 if (frame == historyStart) GameServices.configuration().setSessionOverride(
                         com.openggf.configuration.SonicConfiguration.LIVE_REWIND_ENABLED, true);
                 session.step(movie.getFrame(frame));
-                session.render();
+                drawing.afterStep(session);
                 assertFalse(session.player().getDead(), "death at input " + frame);
                 assertEquals(width, GameServices.camera().getWidth());
                 assertFalse(session.player().isSuperSonic());
@@ -113,19 +114,21 @@ class TestDezSoloColdRouteCapture {
                 if (!spots.contains(frame)) continue;
                 checked.add(frame);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                drawing.checkpoint(session);
                 var saved = registry.capture();
-                for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); session.render(); }
+                for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); drawing.draw(session); }
                 var forward = registry.capture();
                 for (int cycle = 0; cycle < replayCycles; cycle++) {
                     registry.restore(saved);
                     same(saved, registry.capture(), "restore at " + frame + " cycle " + cycle);
                     session.restoreInputHistory(movie.getFrame(frame));
-                    for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); session.render(); }
+                    for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); drawing.draw(session); }
                     same(forward, registry.capture(), "replay at " + frame + " cycle " + cycle);
                 }
                 registry.restore(saved);
                 session.restoreInputHistory(movie.getFrame(frame));
             }
+            drawing.checkpoint(session);
             assertEquals(spots, checked);
             assertEquals(2, phases, "both eight-hit phases must be defeated through player contact");
             assertEquals(expectedLoadFrame, loadFrame);

@@ -1,6 +1,5 @@
 package com.openggf.graphics;
 
-import com.openggf.Engine;
 import org.lwjgl.system.MemoryUtil;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -113,9 +112,9 @@ public class InstancedPatternRenderer {
      * Otherwise returns the normal screen height.
      */
     private int resolveDisplayHeight() {
-        Engine engine = graphicsManager.getEngine();
-        if (engine != null && engine.isFBOProjectionActive()) {
-            return engine.getCurrentDisplayHeight();
+        RenderProjection projection = graphicsManager.getProjectionSource();
+        if (projection != null && projection.isFBOProjectionActive()) {
+            return projection.getCurrentDisplayHeight();
         }
         return screenHeight;
     }

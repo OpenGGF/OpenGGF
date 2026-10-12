@@ -115,7 +115,8 @@ class TestHardenedPrototype {
     }
     private Object flowSnapshot() {
         for (var adapter : effective.rewindAdapters()) {
-            if (adapter.key().equals("hardened-s3k:flow")) return adapter.capture();
+            if (com.openggf.game.rewind.RewindAdapterOwnership.hasIdentity(
+                    adapter, "hardened-s3k", "hardened-s3k:flow")) return adapter.capture();
         }
         throw new AssertionError("Missing session-owned flow adapter");
     }

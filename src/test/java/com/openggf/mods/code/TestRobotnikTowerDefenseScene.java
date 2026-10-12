@@ -132,6 +132,46 @@ class TestRobotnikTowerDefenseScene {
         assertEquals("0,0,0", Files.readString(records));
     }
 
+    @Test void flickyRecipeUsesOnlyVerifiedMappingsAndPreservesDrawnPixels() throws Exception {
+        open();
+        Object value = harness.scene();
+        for (String name : new String[]{"view", "art", "flicky"}) {
+            var field = value.getClass().getDeclaredField(name);
+            field.setAccessible(true);
+            value = field.get(value);
+        }
+        var flicky = (com.openggf.mods.scene.SceneSpriteSet) value;
+        assertEquals(3, flicky.frameCount(), "Map_Animals1 has three pointers, not the first pointer / 2");
+        assertEquals(24, flicky.frame(2).height(), "the released pose precedes the flap poses in ROM data");
+
+        var rom = com.openggf.mods.scene.host.SceneRomArtFactory.create(
+                GameServices.rom().getRom(), com.openggf.game.GameId.S3K, () -> null, null);
+        var previousRequest = com.openggf.mods.scene.RomSpriteRequest.of(0x1931D6,
+                com.openggf.mods.scene.RomSpriteRequest.Compression.NEMESIS, 0x02CEBA, 0);
+        assertEquals(previousRequest.withMappingFrameCount(3),
+                com.openggf.mods.scene.art.StockSceneArt.S3K_BLUE_FLICKY.request(rom),
+                "only the verified mapping-pointer count changes");
+        int[] palette = new int[64];
+        System.arraycopy(rom.palette(0x0A8A3C, 16), 0, palette, 0, 16);
+        System.arraycopy(rom.palette(0x0A8B7C, 48), 0, palette, 16, 48);
+        var previous = rom.sprites(previousRequest, palette);
+        for (int index = 0; index < 2; index++) {
+            var expected = previous.frame(index);
+            var actual = flicky.frame(index);
+            assertEquals(expected.originX(), actual.originX());
+            assertEquals(expected.originY(), actual.originY());
+            assertEquals(expected.width(), actual.width());
+            assertEquals(expected.height(), actual.height());
+            for (int y = 0; y < actual.height(); y++) {
+                for (int x = 0; x < actual.width(); x++) {
+                    assertEquals(expected.image().pixel(x, y), actual.image().pixel(x, y),
+                            "Flicky frame " + index + " pixel " + x + "," + y);
+                }
+            }
+        }
+        assertEquals(Map.of(), harness.findings());
+    }
+
     private Object scene(String method) throws Exception {
         return harness.scene().getClass().getMethod(method).invoke(harness.scene());
     }

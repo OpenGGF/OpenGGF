@@ -329,7 +329,7 @@ public class TestSonic3kSSEntryRingFormation {
 
     /**
      * Regression for the time-attack giant-ring softlock: touching the ring
-     * while {@code GameStateManager.isTimeAttackActive()} must leave the ring
+     * while {@code ObjectServices.runPolicy()} forbidding special stages must leave the ring
      * fully inert (no SFX/state change, ring not destroyed, MAIN state kept)
      * instead of hiding/locking the player before GameLoop's chokepoint gate
      * is ever reached.
@@ -342,7 +342,7 @@ public class TestSonic3kSSEntryRingFormation {
         for (int i = 0; i < 7; i++) {
             gameState.markEmeraldCollected(i);
         }
-        gameState.setTimeAttackActive(true);
+        services.withRunPolicy(com.openggf.game.session.GameplayRunPolicy.isolatedAct());
 
         Sonic3kSSEntryRingObjectInstance ring = createRing(0);
         AbstractPlayableSprite player = createMockPlayerAt(RING_X, RING_Y);

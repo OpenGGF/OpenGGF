@@ -1,7 +1,7 @@
 formatVersion: 1
 id: sitar-hero
 name: Sitar Hero
-version: 0.2.0
+version: 0.3.0
 authors:
   - OpenGGF contributors
 description: A rhythm game with up to 79 full songs from your Sonic 1, Sonic 2 and Sonic 3 & Knuckles ROMs. Tour every world in a career, practise, or play local and direct-connect co-op and duels on sitar, bongos, synth or harp, with seven native ROM performers on real ROM stages.

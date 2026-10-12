@@ -10,7 +10,9 @@ import java.util.Map;
 import java.util.Optional;
 
 /** Per-slot remote playback routing with room roster metadata. */
+@com.openggf.game.ModApi
 public final class RemoteGhostRegistry {
+    @com.openggf.game.ModApi
     public record RemoteGhost(int slot, String displayName, String character,
                               RemoteGhostPlayback.RenderState state) {
     }
@@ -29,6 +31,9 @@ public final class RemoteGhostRegistry {
 
     public void onAggregate(GhostPackets.Aggregate aggregate) {
         for (GhostPackets.AggregateEntry entry : aggregate.entries()) {
+            if (!roster.containsKey(entry.playerSlot())) {
+                continue;
+            }
             playbacks.computeIfAbsent(entry.playerSlot(), ignored -> new RemoteGhostPlayback())
                     .onEntry(entry);
         }

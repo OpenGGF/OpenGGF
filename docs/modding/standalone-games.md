@@ -51,21 +51,36 @@ character, object, asset, or module declaration fails.
 
 ## Module and game bases
 
-Extend `AbstractStandaloneGameModule`. It fixes `GameId.STANDALONE`, derives the save
-game code from `getIdentifier()`, rejects ROM-shaped creation calls, and supplies
-no-ROM-safe defaults for optional providers. Implement at least:
+For a declarative game, pass a `StandaloneGameSpec` to
+`AbstractStandaloneGameModule`:
 
-- `getIdentifier()`;
-- `createGame(GameDataSource)`;
-- `createTouchResponseTable(GameDataSource)`;
-- `createObjectRegistry()` and `getObjectPlacementEncoding()`;
-- `getAudioProfile()`;
-- `getZoneRegistry()`; and
-- `getPhysicsProvider()`.
+```java
+public MyStandaloneModule(String owner, Level loadedLevel) {
+    super(StandaloneGameSpec.builder(owner)
+            .zone("FIRST ZONE", new StandaloneGameSpec.Act(0x400, loadedLevel, 64, 160,
+                    MusicReference.namespaced(owner, "zone-theme")))
+            .physics(PhysicsProvider.fixed(PhysicsProfile.builder().build(),
+                    PhysicsModifiers.STANDARD, GameRules.SONIC_2))
+            .objects(MyObjectRegistry::new).build());
+}
+```
 
-Also provide the level-init profile and other capabilities your game actually uses.
-Use literal `GameRules` and `PhysicsProfile` values appropriate to your game; do not
-pretend to be a stock `GameId` to inherit ROM behavior.
+The typed spec supplies the identifier/game code, no-ROM game loader, zone/act
+registry, initialization, common progression saves and `GameAudioProfile.silentNative()`.
+Audio profiles can inherit the optional `createSmpsLoader(Rom)` default when they
+use only authored audio. Native and expert profiles retain their loader overrides.
+Add ordered acts through `.zone(name, acts...)` and
+configure touch responses, sidekick support, audio or saves when needed. A declared
+act includes its level index, decoded level, start position and owned streamed
+music reference, or `MusicReference.stock(-1)` for an act with no music. Duplicate
+level indices and empty zone declarations are rejected.
+
+Module overrides remain available. An expert module can use the no-argument base
+constructor and implement `getIdentifier()`, `createGame(GameDataSource)`, its
+registry, physics, touch responses and initialization directly. `ModGame` remains
+the expert base for a custom loader. Use literal `GameRules` and `PhysicsProfile`
+values appropriate to your game; do not pretend to be a stock `GameId` to inherit
+ROM behavior.
 
 `GameDataSource` is the durable session capability. For standalone sessions,
 `rom()` is empty, `openAsset(path)` reads a bounded normalized path from the owning
@@ -145,6 +160,8 @@ sfx:
 Return `MusicReference.namespaced(owner, "zone-theme")` from the module or zone
 registry. Standalone music enters the streamed route even when the native SMPS
 loader is `null`; it never allocates or steals a numeric stock music id.
+Use `MusicReference.stock(-1)` for explicit silence; other stock music references
+are rejected for standalone games.
 
 Standalone SFX use namespaced keys from the same manifest and play as decoded PCM
 through a bounded 16-voice one-shot pool. They are presentation-only, do not enter
@@ -172,6 +189,15 @@ or now-invalid locations hide Continue. Launch validates the payload again so a
 catalog or topology change cannot slip through between title rendering and boot.
 Completing the terminal credits flow saves and returns to the title; selecting
 Continue restores the namespaced main and sidekick identities.
+
+`StandaloneGameSpec`'s default saves preserve that common team/location flow. Use
+`.saveSnapshotProvider(SaveSnapshotProvider)` for additional quest flags, inventories or progression.
+The provider receives an immutable `RuntimeSaveContext` with captured zone/act,
+team and common progress. Its optional `captureSaveFields(ZoneRuntimeState)` can
+capture additional runtime inputs once; maps/lists and supported JSON scalar values
+are defensively frozen inside the provider's owner boundary before publication.
+Invalid returned data faults that owner and required dependents. The payload returned
+by `capture(reason, context)` remains the game's schema.
 
 ## Current boundaries
 

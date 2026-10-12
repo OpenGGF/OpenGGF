@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build Sitar Hero and launch it with the ROMs configured in config.yaml.
-# Requires Java 21, Maven, Python 3, and at least one supported Sonic ROM.
+# Requires Java 25, Maven, Python 3, and at least one supported Sonic ROM.
 # Usage: ./launch-sitar-hero.sh [--skip-engine]
 set -euo pipefail
 

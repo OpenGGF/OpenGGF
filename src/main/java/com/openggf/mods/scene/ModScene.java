@@ -38,6 +38,23 @@ public interface ModScene {
     /** Draws the current state. Must not change game state; it may be skipped or repeated. */
     void draw(SceneContext ctx, SceneCanvas canvas);
 
+    /** An act has ended. The original scene/context and ROM library are retained.
+     * Audio is re-prepared before this fault-bounded callback; restart desired music here. */
+    default void resume(SceneContext context, ActResult result) {}
+
+    /**
+     * True while the scene takes keyboard text (a name, an address, chat). The engine then holds
+     * back its global keyboard shortcuts (display profile, shaders, capture) so typing cannot
+     * trigger them. Polled once per frame; keep it cheap.
+     */
+    default boolean capturesTextInput() {
+        return false;
+    }
+
+    /** A run launched through {@link SceneContext#gameplay()} has ended and the scene is shown again. */
+    default void resumed(SceneContext ctx, com.openggf.mods.run.RunEndReason reason) {
+    }
+
     /** The scene is closing; save anything worth keeping. Images are released afterwards. */
     default void exit(SceneContext ctx) {
     }

@@ -343,8 +343,10 @@ convert once to the same totals on this scale, so nothing already bought is lost
 longest unlimited survival; every upgrade with its unlock milestone; the twelve evolutions
 (discovered ones named, every recipe shown); and a bestiary of badniks defeated per species.
 
-Progress is saved in `saves/sonic-survivors/profile.txt` under the engine's save root. The file
-is plain `key=value` lines; new records are added keys, so older saves load unchanged.
+Progress is saved in `saves/mods/sonic-survivors/profile.txt` under the engine's save root.
+The file is plain `key=value` lines; new records are added keys, so older saves load unchanged.
+When the canonical file is absent, the owner-storage service can read the legacy
+`saves/sonic-survivors/profile.txt`; subsequent writes use the canonical path.
 
 ## Build and run
 
@@ -361,7 +363,7 @@ profile saves remain compatible.
 Film it headlessly with the gameplay capture tool's `--mod` option, for example:
 
 ```bash
-java -XstartOnFirstThread -cp "target/classes:$(cat target/survivors-classpath.txt)" \
+java --enable-native-access=ALL-UNNAMED -XstartOnFirstThread -cp "target/classes:$(cat target/survivors-classpath.txt)" \
   com.openggf.tools.GameplayCaptureTool --game s2 --zone 0 --act 1 --width 400 \
   --mod target/sonic-survivors/sonic-survivors.jar --input run.txt --out-dir /tmp/survivors
 ```
@@ -385,7 +387,10 @@ seconds and `sonic-survivors.bossHp=N` sets every boss's hitpoints.
 - `Enemy` (one class, seven AI archetypes over `Species`), `Boss`, `Shot` and `Pickup` are mod
   objects drawn with the ROM art the zone already loads; frames were picked with the
   `ObjectArtContactSheetProbe`. `Guard` turns hits into ring tolls.
-- `RunState` (the run, captured for rewind) and `Profile` (the save) live in the module.
+- `SurvivorsMod` registers a `GameServiceBundle` factory: each patch application receives its own
+  `RunState` (captured for rewind) and loaded `Profile`. The profile reads and writes owner-scoped
+  `ModStorage`; it persists between runs and stays outside world rollback. `Module` reads these
+  services from its backing bundle.
 - `Difficulty` is the single pressure curve; `Upgrades` holds the catalogue, evolution pairs and
   unlock milestones; `Rules` holds Eggman's Rules.
 
@@ -403,3 +408,14 @@ the pressure curve every 30 seconds. Pass `-Dsonic-survivors.balance=<csv>[,fres
 without it the case is skipped. Add `-Dsonic-survivors.balance.hits=true` for a line per hit taken. The bot neither dodges nor plans evolutions, so compare its
 results across changes rather than reading them as a human's difficulty. Design notes and rejected approaches are in
 [the design record](../../docs/architecture/designs/2026-10-06-sonic-survivors.md).
+
+
+## Use matching creator artifacts
+
+The mutable 0.7 Mod API is unpublished. See [candidate setup](../../docs/modding/getting-started.md) for Java 25 and matching engine/SDK jar paths. From this checkout the shared launcher supports artifact-only builds and explicit ROM paths:
+
+```sh
+python3 examples/build_example.py sonic-survivors --engine /absolute/engine.jar --sdk /absolute/sdk.jar --run --s2 /absolute/own-s2.gen
+```
+
+Use `--s1`, `--s2`, or `--s3k` for the games this example consumes. Explicit paths create isolated development configuration and saves; no ROM is copied or linked. The creator kit exports this example with a portable POM and `tools/build_project.py`; it needs no engine source checkout. Only production sources/resources enter the validated mod jar. Read [recipient installation](../../docs/modding/installing-mods.md) before sharing.

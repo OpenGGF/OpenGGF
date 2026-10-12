@@ -10,7 +10,7 @@ campaign, other characters and Kaizo/Stage Trials remain later blueprint stages.
 
 ## Build and play
 
-Use Java 21, Maven and Python 3 from this checkout:
+Use Java 25, Maven and Python 3 from this checkout:
 
 ```sh
 python3 examples/hardened-s3k/build.py

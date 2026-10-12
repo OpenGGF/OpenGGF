@@ -41,7 +41,7 @@ public final class ModManifestParser {
     private static final Set<String> ROOT_FIELDS = Set.of(
             "formatVersion", "id", "name", "version", "authors", "description",
             "engineApiRange", "type", "baseGame", "entrypoint", "dependencies",
-            "audioOverrides", "artOverrides", "insertAfter", "patternWindows");
+            "audioOverrides", "artOverrides", "insertAfter", "patternWindows", "composition");
     private static final Set<String> DEPENDENCY_FIELDS = Set.of("id", "versionRange");
     private static final Pattern CANONICAL_NONNEGATIVE_INT = Pattern.compile("0|[1-9][0-9]*");
     private static final Pattern NUMERIC_TOKEN = Pattern.compile(
@@ -126,7 +126,24 @@ public final class ModManifestParser {
         OptionalInt patternWindows = parsePatternWindows(root);
         return new ModManifest(formatVersion, id, name, version, authors, description,
                 engineApiRange, type, baseGame, entrypoint, dependencies, audioOverrides,
-                artOverrides, insertAfter, patternWindows);
+                artOverrides, insertAfter, patternWindows, parseComposition(root.get("composition")));
+    }
+
+    private ModCompositionMetadata parseComposition(JsonNode node) throws ModManifestException {
+        if (node == null) return ModCompositionMetadata.EMPTY;
+        if (!node.isObject()) throw new ModManifestException("composition must be a mapping");
+        requireOnlyFields(node, Set.of("before", "after", "conflictsWith", "exclusiveContributions"), "composition");
+        return new ModCompositionMetadata(compositionList(node, "before"), compositionList(node, "after"),
+                compositionList(node, "conflictsWith"), new java.util.LinkedHashSet<>(compositionList(node, "exclusiveContributions")));
+    }
+    private List<String> compositionList(JsonNode node, String field) throws ModManifestException {
+        JsonNode values = node.get(field);
+        if (values == null) return List.of();
+        if (!values.isArray()) throw new ModManifestException("composition." + field + " must be a sequence");
+        List<String> result = new ArrayList<>();
+        for (JsonNode value : values) result.add(nonblankText(value, field));
+        if (new HashSet<>(result).size() != result.size()) throw new ModManifestException("Duplicate composition." + field + " entry");
+        return List.copyOf(result);
     }
 
     private List<String> parseAuthors(JsonNode node) throws ModManifestException {

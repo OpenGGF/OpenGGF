@@ -5,6 +5,10 @@ import com.openggf.game.patch.GamePatch;
 import com.openggf.mods.ModRuntimeFindingStore;
 import com.openggf.mods.ModStateSaveResult;
 import com.openggf.mods.runtime.OwnerBoundGamePatch;
+import com.openggf.game.GameServices;
+import com.openggf.game.patch.GameplayLaunchRequest;
+import com.openggf.game.patch.LogicalRomResolver;
+import com.openggf.game.patch.PatchContext;
 import com.openggf.io.ModAssetRoot;
 import com.openggf.io.ModInputLimits;
 import com.openggf.mods.ModManifest;
@@ -57,16 +61,29 @@ public final class DevelopmentPatchLoader {
         }
         ModRegistrationPlan frozen = plan;
         var disabled = new java.util.concurrent.atomic.AtomicBoolean();
-        // A trusted one-process developer run has no installed catalogue state
-        // to persist. It still owns callback attribution and pending-disable;
-        // failure terminates the capture and cannot silently reapply this jar.
+        // A trusted one-process developer run has no installed catalogue state.
+        // Callback faults still terminate capture and prevent this owner reapplying.
         var boundary = new ModFaultBoundary(java.util.Map.of(), new ModRuntimeFindingStore(),
                 owners -> new ModStateSaveResult.Saved(), owners -> disabled.set(true));
         return base -> {
             if (disabled.get()) throw new IllegalStateException("Development mod is pending-disabled: " + frozen.ownerModId());
-            GameModule effective = new ModBackedGamePatch(frozen, boundary).apply(base, null);
-            for (GamePatch patch : frozen.explicitPatches()) {
-                effective = OwnerBoundGamePatch.wrap(frozen.ownerModId(), patch, boundary).apply(effective, null);
+            String game = base.getGameId().code();
+            ModRegistrationPlan nativePlan = frozen.stockScenePlans().stream()
+                    .filter(candidate -> game.equals(candidate.baseGameId()))
+                    .findFirst().orElseThrow(() -> new IllegalArgumentException(
+                            "Development mod " + manifest.id() + " does not support " + game));
+            var config = GameServices.configuration();
+            var request = GameplayLaunchRequest.fromConfig(config, game);
+            var logicalRoms = LogicalRomResolver.fromRomManager(GameServices.rom());
+            var patchContext = new PatchContext(logicalRoms::openOrThrow, config);
+            GameModule effective = new ModBackedGamePatch(nativePlan, boundary).apply(base, patchContext);
+            for (GamePatch patch : nativePlan.explicitPatches()) {
+                var owned = com.openggf.mods.runtime.OwnerBoundGamePatch.wrap(manifest.id(), patch, boundary);
+                // Match the launch resolver: another game's decorator or a declined
+                // team must not wrap this title. Stacking shared Lab decorators used
+                // to expose an outer ACTIVE menu while the native intro still ran.
+                if (game.equals(owned.baseGameId()) && owned.activatesFor(request))
+                    effective = owned.apply(effective, patchContext);
             }
             return effective;
         };

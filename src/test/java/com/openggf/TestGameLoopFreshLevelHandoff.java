@@ -118,8 +118,11 @@ class TestGameLoopFreshLevelHandoff {
                 "loc_6468's no-VInt initial pass precedes this same iteration's LevelLoop pass");
         assertTrue(observer.playerPositions.stream().allMatch(y -> y != 0),
                 "both passes see the destination player, not the held zeroed slot");
+        assertHczInitialAndFirstOrdinaryPasses(observer);
         driver.stepFrame(false, false, false, false, false);
         assertEquals(3, observer.playerPositions.size(), "initial setup is consumed exactly once");
+        assertEquals(new PlayerPass(0x0020, 0x3800, 0x0070), observer.playerPasses.get(2),
+                "the second ordinary pass integrates the preceding $38 velocity");
     }
 
     @Test
@@ -149,8 +152,15 @@ class TestGameLoopFreshLevelHandoff {
             assertFalse(level.hasPendingFreshLevelTransitionBoundary());
             assertEquals(false, invoke("isRewindBlocked", new Class<?>[]{}));
             assertEquals(2, observer.playerPositions.size(), "restoration precedes initial and ordinary dispatch");
+            if (destination == 0) {
+                assertHczInitialAndFirstOrdinaryPasses(observer);
+            }
             loop.step();
             assertEquals(3, observer.playerPositions.size());
+            if (destination == 0) {
+                assertEquals(new PlayerPass(0x0020, 0x3800, 0x0070), observer.playerPasses.get(2),
+                        "pause and publication must not add a hidden physics pass");
+            }
         }
     }
 
@@ -185,14 +195,28 @@ class TestGameLoopFreshLevelHandoff {
         }
     }
 
+    private static void assertHczInitialAndFirstOrdinaryPasses(Observer observer) {
+        // SpawnLevelMainSprites loc_6834 sets airborne; Sonic_Init returns.
+        // The following LevelLoop MoveSprite adds $38 but integrates old y_vel.
+        assertEquals(List.of(new PlayerPass(0x0020, 0x0000, 0x0000),
+                        new PlayerPass(0x0020, 0x0000, 0x0038)), observer.playerPasses,
+                "initial Process_Sprites is inert; the first ordinary pass applies gravity once");
+    }
+
+    private record PlayerPass(int centreY, int fractionY, int speedY) { }
+
     private static final class Observer extends AbstractObjectInstance {
         private final List<Integer> playerPositions = new ArrayList<>();
+        private final List<PlayerPass> playerPasses = new ArrayList<>();
         Observer() {
             super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "FreshBoundaryObserver");
             setRomWorldPositioned(false);
         }
         @Override public void update(int vIntRunCount, PlayableEntity player) {
-            playerPositions.add((int) ((AbstractPlayableSprite) player).getCentreY());
+            var playable = (AbstractPlayableSprite) player;
+            playerPositions.add((int) playable.getCentreY());
+            playerPasses.add(new PlayerPass(playable.getCentreY(),
+                    playable.getYSubpixelRaw(), playable.getYSpeed() & 0xffff));
         }
         @Override public boolean isPersistent() { return true; }
         @Override public void appendRenderCommands(List<GLCommand> commands) {}

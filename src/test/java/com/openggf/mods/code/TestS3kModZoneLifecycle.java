@@ -85,7 +85,7 @@ class TestS3kModZoneLifecycle {
                     "s3k", 1, new SelectedTeam("tails", List.of()), modZoneIndex, 0);
             Map<String, Object> payload = new S3kSaveSnapshotProvider().capture(
                     SaveReason.PROGRESSION_SAVE,
-                    RuntimeSaveContext.forGameplayMode(initial, saveSession));
+                    com.openggf.game.save.RuntimeSaveCapture.capture(initial, saveSession));
             assertFalse(payload.containsKey("zone"));
             assertEquals(MOD_ZONE, S3kSavedZone.read(payload).zoneKey());
 
@@ -158,7 +158,7 @@ class TestS3kModZoneLifecycle {
     }
 
     private static GameModule decoratedModule(Sonic3kGameModule root) {
-        ModZoneContribution declared = new ModZoneContribution(
+        ModZoneContribution declared = ModZoneContribution.singleAct(
                 MOD_ZONE.localName(), new BakedLevelRef("sky/level.json"), null, null, false);
         PreparedModZone prepared = PreparedModZone.prepared(
                 MOD_ZONE.ownerModId(), declared,

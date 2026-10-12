@@ -47,7 +47,7 @@ public final class Sonic3kPlacedRingObjectInstance extends AbstractObjectInstanc
 
     @Override
     public int getCollisionFlags() {
-        return state == State.ACTIVE ? COLLISION_FLAGS : 0;
+        return state == State.ACTIVE && com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(tryServices()) ? COLLISION_FLAGS : 0;
     }
 
     @Override
@@ -57,7 +57,8 @@ public final class Sonic3kPlacedRingObjectInstance extends AbstractObjectInstanc
 
     @Override
     public void onTouchResponse(PlayableEntity playerEntity, TouchResponseResult result, int frameCounter) {
-        if (state != State.ACTIVE || result.category() != TouchCategory.SPECIAL
+        if (!com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(services())
+                || state != State.ACTIVE || result.category() != TouchCategory.SPECIAL
                 || !(playerEntity instanceof AbstractPlayableSprite player)
                 || player.getDead() || player.isTouchResponseSuppressedByObjectControl()) {
             return;
@@ -74,7 +75,7 @@ public final class Sonic3kPlacedRingObjectInstance extends AbstractObjectInstanc
 
     @Override
     public boolean publishesTouchResponseListEntryThisFrame() {
-        return state == State.ACTIVE;
+        return state == State.ACTIVE && com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(tryServices());
     }
 
     @Override

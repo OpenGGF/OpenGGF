@@ -46,8 +46,18 @@ public final class ModApiSdkPackager {
         resetDirectory(docsOutput);
         copyTree(classes, sdkOutput, Path.of("com/openggf/tools/modsdk"));
         copyTree(classes, sdkOutput, Path.of("META-INF/openggf-mod-sdk/templates"));
+        copyStarters(classes, sdkOutput);
+        Path identity = classes.resolve("version.properties");
+        if (Files.isRegularFile(identity)) {
+            Files.createDirectories(sdkOutput.resolve("META-INF"));
+            Files.copy(identity, sdkOutput.resolve("META-INF/openggf-build.properties"));
+        }
         copySdkServices(classes, sdkOutput);
         ModApiJavadocTool.generate(sources, docsOutput, exact);
+        if (Files.isRegularFile(identity)) {
+            Files.createDirectories(docsOutput.resolve("META-INF"));
+            Files.copy(identity, docsOutput.resolve("META-INF/openggf-build.properties"));
+        }
     }
 
     public static void main(String[] args) throws Exception {
@@ -106,6 +116,25 @@ public final class ModApiSdkPackager {
                 Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING,
                         StandardCopyOption.COPY_ATTRIBUTES);
             }
+        }
+    }
+
+    private static void copyStarters(Path classes, Path output) throws IOException {
+        Path relativeRoot = Path.of("META-INF/openggf-mod-sdk/starters");
+        Path sourceRoot = classes.resolve(relativeRoot);
+        Path index = sourceRoot.resolve("index.txt");
+        Files.createDirectories(output.resolve(relativeRoot));
+        Files.copy(index, output.resolve(relativeRoot).resolve("index.txt"));
+        for (String name : Files.readAllLines(index)) {
+            Path relative = relativeRoot.resolve(name).normalize();
+            if (!relative.startsWith(relativeRoot) || relative.equals(relativeRoot)
+                    || name.contains("/target/")) {
+                throw new IllegalArgumentException("Unsafe or generated SDK starter entry: " + name);
+            }
+            Path source = classes.resolve(relative);
+            Path destination = output.resolve(relative);
+            Files.createDirectories(destination.getParent());
+            Files.copy(source, destination, StandardCopyOption.COPY_ATTRIBUTES);
         }
     }
 

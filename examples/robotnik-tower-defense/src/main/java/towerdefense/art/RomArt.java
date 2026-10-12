@@ -1,6 +1,7 @@
 package towerdefense.art;
 
 import com.openggf.mods.scene.*;
+import com.openggf.mods.scene.art.StockSceneArt;
 import towerdefense.core.Catalog;
 
 /**
@@ -32,8 +33,7 @@ public final class RomArt {
                 RomSpriteRequest.Compression.KOSINSKI_MODULED, 0x3604A4, 1), lbz); // Orbinaut
         defenses[Catalog.EGG_ROBO] = rom.sprites(RomSpriteRequest.of(0x17B17E,
                 RomSpriteRequest.Compression.KOSINSKI_MODULED, 0x184F34, 0), rom.palette(0x05CBCA, 64)); // EggRobo / Continue
-        flicky = rom.sprites(RomSpriteRequest.of(0x1931D6,
-                RomSpriteRequest.Compression.NEMESIS, 0x02CEBA, 0), aiz); // BlueFlicky / Animals1
+        flicky = rom.sprites(StockSceneArt.S3K_BLUE_FLICKY.request(rom), aiz); // Map_Animals1: three reordered frames
         robotnik = rom.sprites(RomSpriteRequest.of(0x0D771E,
                 RomSpriteRequest.Compression.NEMESIS, 0x06820C, 0), lbz); // RobotnikShip: head 0-3, body 5
         capsule = rom.sprites(RomSpriteRequest.of(0x0DD990,

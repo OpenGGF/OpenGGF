@@ -1,6 +1,8 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.OscillationManager;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
@@ -8,9 +10,12 @@ import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class TestCnzHoverFanObjectInstance {
 
@@ -120,6 +125,34 @@ class TestCnzHoverFanObjectInstance {
                 "Obj_CNZHoverFan writes anim=0 when it seeds flip motion");
         assertEquals(null, profile.resolveAnimationId(player, 0, 3),
                 "The post-capture airborne external-force state must let fan anim=0 persist");
+    }
+
+    @Test
+    void hoverpadSoundGatesOnTheLevelFrameCounterLowByte() {
+        // loc_31E36/loc_31E68: move.b (Level_frame_counter+1).w,d0 / andi.b #$1F,d0. The +1
+        // addresses the word's low byte; the gate does not read V_int_run_count at all.
+        LevelManager levelManager = mock(LevelManager.class);
+        List<Integer> sounds = new ArrayList<>();
+        TestObjectServices services = new TestObjectServices() {
+            @Override
+            public void playSfx(int soundId) {
+                sounds.add(soundId);
+            }
+        }.withLevelManager(levelManager);
+
+        CnzHoverFanInstance fan = new CnzHoverFanInstance(
+                new ObjectSpawn(0x100, 0x100, 0x46, 0x00, 0, false, 0));
+        fan.setServices(services);
+        when(levelManager.getFrameCounter()).thenReturn(0x0240);
+        fan.update(0x05, playerAt("sonic", 0x100, 0x100));
+        assertEquals(List.of(Sonic3kSfx.HOVERPAD.id), sounds,
+                "low byte $40 & $1F is zero, whatever V_int_run_count holds");
+
+        sounds.clear();
+        when(levelManager.getFrameCounter()).thenReturn(0x0241);
+        fan.update(0x1F, playerAt("sonic", 0x100, 0x100));
+        assertEquals(List.of(), sounds,
+                "low byte $41 & $1F is not zero; neither V_int_run_count nor counter + 1 is read");
     }
 
     private static TestablePlayableSprite playerAt(String code, int centreX, int centreY) {

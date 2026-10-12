@@ -3,7 +3,6 @@ package com.openggf.game;
 import com.openggf.level.LevelManager;
 import com.openggf.sprites.Sprite;
 import com.openggf.sprites.managers.SpriteManager;
-import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -31,14 +30,7 @@ public final class InLevelTitleCardCoordinator {
                                                 Supplier<GameModule> moduleSupplier,
                                                 SpriteManager spriteManager,
                                                 LevelManager levelManager) {
-        controlLock.accept(true);
-        if (sprite instanceof AbstractPlayableSprite playable) {
-            int freshPlayerPreludeFrames = moduleSupplier.get()
-                    .getLevelInitProfile()
-                    .freshMainPlayablePreludeFrames();
-            spriteManager.warmUpFreshMainPlayableOnly(
-                    freshPlayerPreludeFrames, levelManager, playable);
-        }
+        prepareResultsTransition(controlLock);
     }
 
     public static boolean startIfRequested(LevelManager levelManager,

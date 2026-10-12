@@ -33,7 +33,7 @@ class TestPuttPuttParadise {
         Path project = Path.of("examples/putt-putt-paradise");
         assertTrue(Files.isDirectory(project.resolve("src/main/java")), "missing golf code mod");
         Path classes = Files.createDirectory(temp.resolve("classes"));
-        var args = new ArrayList<>(List.of("--release", "21", "-cp", System.getProperty("java.class.path"),
+        var args = new ArrayList<>(List.of("--release", "25", "-cp", System.getProperty("java.class.path"),
                 "-d", classes.toString()));
         try (var sources = Files.walk(project.resolve("src/main/java"))) {
             sources.filter(p -> p.toString().endsWith(".java")).sorted().forEach(p -> args.add(p.toString()));
@@ -201,6 +201,23 @@ class TestPuttPuttParadise {
         }
     }
 
+    @Test void eachPatchApplicationPublishesOneFreshSharedControllerAndRewindGraph() throws Exception {
+        var plan = registrations();
+        var boundary = new ModFaultBoundary(Map.of(), new com.openggf.mods.ModRuntimeFindingStore(),
+                owners -> new com.openggf.mods.ModStateSaveResult.Saved(), owners -> { });
+        var backing = new ModBackedGamePatch(plan, boundary);
+        var stock = new com.openggf.game.sonic2.Sonic2GameModule();
+        var first = backing.apply(stock, null); var second = backing.apply(stock, null);
+        var controller = first.gameplayFrameController();
+        assertSame(controller, first.getGameService(com.openggf.game.mode.GameplayFrameController.class));
+        assertTrue(first.rewindAdapters().stream().anyMatch(adapter -> adapter == controller));
+        assertNotSame(controller, second.gameplayFrameController());
+        var concrete = loader.loadClass("paradise.GolfMode");
+        assertNotSame(first.getGameService(concrete), second.getGameService(concrete));
+        assertEquals(((com.openggf.game.rewind.RewindSnapshottable<?>)first.getGameService(concrete)).capture(),
+                ((com.openggf.game.rewind.RewindSnapshottable<?>)controller).capture());
+    }
+
     @Test void packagedPatchUsesOnlySonicAndTailsWithoutBundlingRomAssets() throws Exception {
         var patches = registrations().explicitPatches();
         assertEquals(1, patches.size());
@@ -244,6 +261,16 @@ class TestPuttPuttParadise {
             } else assertEquals(nativeSpawn, golfSpawn, "other native objects remain untagged");
         }
         assertTrue(tagged > 0, "each EHZ act includes upward ROM springs");
+        var module = GameServices.module();
+        var controller = module.gameplayFrameController();
+        assertSame(controller, module.getGameService(com.openggf.game.mode.GameplayFrameController.class));
+        assertTrue(module.rewindAdapters().stream().anyMatch(adapter -> adapter == controller));
+        String controllerKey = ((com.openggf.game.rewind.RewindSnapshottable<?>)controller).key();
+        var registry = fixture.runtime().getRewindRegistry();
+        assertTrue(registry.capture().entries().containsKey(controllerKey), "timeline captures the live mode");
+        var course = registry.captureCourse();
+        assertFalse(course.entries().containsKey(controllerKey), "a lie restores the course without replacing live turn state");
+        assertTrue(course.entries().containsKey("gamerng"), "stock RNG remains part of each restored lie");
     }
 
     private HeadlessTestFixture launch(String character, int act) throws Exception {
@@ -313,13 +340,13 @@ class TestPuttPuttParadise {
         fixture.stepIdleFrames(60);
         var after = registry.capture();
         for (var entry : before.entries().entrySet()) {
-            if (!entry.getKey().startsWith("mode:"))
+            if (!entry.getKey().equals(((com.openggf.game.rewind.RewindSnapshottable<?>) GameServices.module().gameplayFrameController()).key()))
                 assertEquals(List.of(), com.openggf.game.rewind.RewindSnapshotDiff.diffKey(
                         entry.getKey(), entry.getValue(), after.entries().get(entry.getKey())), entry.getKey());
         }
     }
 
-    private Object mode() { return GameServices.module().gameplayFrameController(); }
+    private Object mode() throws Exception { return GameServices.module().getGameService(loader.loadClass("paradise.GolfMode")); }
     private Object value(Object record, String accessor) throws Exception {
         return record.getClass().getMethod(accessor).invoke(record);
     }
@@ -368,7 +395,7 @@ class TestPuttPuttParadise {
         try (var services = org.mockito.Mockito.mockStatic(GameServices.class,
                 org.mockito.Mockito.CALLS_REAL_METHODS)) {
             services.when(GameServices::graphics).thenReturn(graphics);
-            ((com.openggf.game.mode.GameplayFrameController) mode()).drawOverlay();
+            GameServices.module().gameplayFrameController().drawOverlay();
         }
         return graphics.commands.stream().filter(command -> {
             try { return (int) value(command, "width") == 2 && (int) value(command, "height") == 2
@@ -713,18 +740,34 @@ class TestPuttPuttParadise {
                 };
             }
         });
-        var replay = checkpointCourse(f).recordAudioReplay(1);
-        replay.beginReverse(1);
-        var slot = mode().getClass().getDeclaredField("shotAudio"); slot.setAccessible(true); slot.set(mode(), replay);
-        fail.set(true);
-        assertThrows(IllegalStateException.class, () -> GameServices.module().gameplayFrameController().close());
-        assertTrue(replay.isClosed()); assertFalse(audio.isReverseAudioOutputActive());
-        assertNull(value(mode(), "roomState"));
-        try (var port = new java.net.ServerSocket(number)) {
-            assertEquals(number, port.getLocalPort(), "audio failure cannot leak the host listener");
+        com.openggf.audio.AudioReplay replay = null;
+        try {
+            replay = checkpointCourse(f).recordAudioReplay(1);
+            replay.beginReverse(1);
+            var slot = mode().getClass().getDeclaredField("shotAudio"); slot.setAccessible(true); slot.set(mode(), replay);
+            fail.set(true);
+            var aborted = assertThrows(ModFaultBoundary.CallbackAborted.class,
+                    () -> GameServices.module().gameplayFrameController().close());
+            assertEquals("putt-putt-paradise", aborted.owner());
+            assertTrue(aborted.disabledOwners().contains("putt-putt-paradise"));
+            var sinkFailure = assertInstanceOf(IllegalStateException.class, aborted.getCause());
+            assertEquals("failed replay sink flush", sinkFailure.getMessage());
+            assertTrue(replay.isClosed()); assertFalse(audio.isReverseAudioOutputActive());
+            assertNull(value(mode(), "roomState"));
+            try (var port = new java.net.ServerSocket(number)) {
+                assertEquals(number, port.getLocalPort(), "audio failure cannot leak the host listener");
+            }
+            assertDoesNotThrow(() -> GameServices.module().gameplayFrameController().close());
+        } finally {
+            // The audio manager survives headless sessions; never leave a test-local
+            // failing sink installed, including when an assertion above aborts.
+            fail.set(false);
+            try {
+                if (replay != null) replay.close();
+            } finally {
+                audio.setBackend(new com.openggf.audio.NullAudioBackend());
+            }
         }
-        assertDoesNotThrow(() -> GameServices.module().gameplayFrameController().close());
-        fail.set(false);
     }
 
     @Test void reverseViewsStayBoundedAndAdvanceThroughOldFramesWithFreshRevisions() throws Exception {
@@ -1045,6 +1088,11 @@ class TestPuttPuttParadise {
         String previousDev = System.getProperty(com.openggf.mods.DevelopmentModSource.PROPERTY);
         int previousWidth = previousServices.graphics().getProjectionWidth();
         var config = SonicConfigurationService.createStandalone(temp.resolve("boot-config-" + act));
+        // This fresh configuration also feeds the real logical-ROM resolver; the
+        // @RequiresRom primary fixture does not populate its independent catalogue.
+        var sonicTwoRom = RomTestUtils.ensureSonic2RomAvailable();
+        assertNotNull(sonicTwoRom);
+        config.setConfigValue(SonicConfiguration.SONIC_2_ROM, sonicTwoRom.getAbsolutePath());
         var entry = MasterTitleScreen.GameEntry.SONIC_2;
         new com.openggf.game.launch.LaunchProfileApplier(config).apply(
                 com.openggf.game.launch.LaunchProfile.stockFor(entry), entry);
@@ -1145,7 +1193,7 @@ class TestPuttPuttParadise {
             assertFalse(session.getFadeManager().isActive(), "entry fade must not remain behind held aiming");
             assertFalse(module.getTitleCardProvider().isOverlayActive(), "native title text must finish while the controller holds AIM");
             Object state = module.rewindAdapters().stream()
-                    .filter(adapter -> adapter.key().startsWith("mode:"))
+                    .filter(adapter -> adapter == module.gameplayFrameController())
                     .findFirst().orElseThrow().capture();
             Object meter = value(state, "meter");
             assertEquals("AIM", value(meter, "stage").toString());

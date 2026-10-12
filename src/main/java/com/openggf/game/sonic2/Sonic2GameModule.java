@@ -332,7 +332,25 @@ public class Sonic2GameModule implements GameModule {
             return (T) (com.openggf.level.render.ZonePictureSource.Factory) rom ->
                     new com.openggf.level.render.DetachedLevelPictures(1, 0,
                             () -> new Sonic2(rom).buildDetachedLevel(
-                                    com.openggf.level.LevelData.CHEMICAL_PLANT_1.levelIndex()), 512, 512);
+                                    com.openggf.level.LevelData.CHEMICAL_PLANT_1.levelIndex()), 512, 512,
+                    (zone, act) -> {
+                        // Any act of the public zone registry, for SceneRomArt.levelKit.
+                        if (zone < 0 || zone >= zoneRegistry.getZoneCount()) return null;
+                        var acts = zoneRegistry.getLevelDataForZone(zone);
+                        if (act < 0 || act >= acts.size()) return null;
+                        int levelIndex = acts.get(act).levelIndex();
+                        return () -> new Sonic2(rom).buildDetachedLevel(levelIndex);
+                    }).withBackgrounds((zone, act, kit) -> {
+                        var tables = new com.openggf.game.sonic2.scroll.ParallaxTables(rom);
+                        com.openggf.level.scroll.ZoneScrollHandler scroll = switch (zone) {
+                            case 0 -> new com.openggf.game.sonic2.scroll.SwScrlEhz(tables);
+                            case 1 -> new com.openggf.game.sonic2.scroll.SwScrlCpz(tables);
+                            case 5 -> new com.openggf.game.sonic2.scroll.SwScrlMcz(tables, () -> false);
+                            default -> null;
+                        };
+                        return scroll == null ? null : new com.openggf.level.render.DetachedBackground(
+                                kit.backdrop().picture(), scroll, act, 512, 512);
+                    });
         }
         if (type == CNZPrizeSoundState.class) return (T) cnzPrizeSoundState;
         if (type == S2DataSelectImageCacheManager.class) return (T) getDataSelectImageCacheManager();

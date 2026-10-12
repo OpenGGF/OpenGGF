@@ -54,7 +54,6 @@ public class VPropellerObjectInstance extends AbstractObjectInstance
 
     // Sound plays every 32 frames: andi.b #$1F,d0 / bne.s +
     private static final int SOUND_INTERVAL_MASK = 0x1F;
-    private static final int VINT_RUNCOUNT_OFFSET = 3;
 
     private int currentX;
     private int currentY;
@@ -135,10 +134,11 @@ public class VPropellerObjectInstance extends AbstractObjectInstance
         // 2. Play helicopter sound every 32 frames
         // ROM: move.b (Vint_runcount+3).w,d0 / andi.b #$1F,d0 / bne.s +
         //      moveq #signextendB(SndID_Helicopter),d0 / jsrto JmpTo_PlaySoundLocal
+        // The +3 addresses the longword's low byte; it is not added to the count.
         // PlaySoundLocal (s2.asm:1555) only queues the SFX when render_flags.on_screen
         // is set; without this gate the propeller keeps sounding across its whole
         // off-screen placement window. isOnScreen() is that on-screen bit.
-        if (((vIntRunCount + VINT_RUNCOUNT_OFFSET) & SOUND_INTERVAL_MASK) == 0 && isOnScreen()) {
+        if ((vIntRunCount & SOUND_INTERVAL_MASK) == 0 && isOnScreen()) {
             services().playSfx(Sonic2AudioConstants.SFX_HELICOPTER);
         }
 

@@ -14,7 +14,7 @@ import java.util.List;
  * gravity flag are fields set at creation, which rewind restores with the rest.
  */
 public final class Shot extends AbstractObjectInstance
-        implements RewindRecreatable, TouchResponseProvider, TouchResponseListener {
+        implements ModRewindRecreatable, TouchResponseProvider, TouchResponseListener {
     /** Projectile art keys, by {@link #art} index. Only append. */
     static final String ART_KEYS = "super_sonic_stars,buzzer,coconuts,spiny,sol,aquis,octus,slicer,asteron,clucker,"
             + "ehz_boss,cnz_boss,mcz_falling_rocks,ooz_boss,mtz_boss,wfz_boss,dez_silver_sonic,cpz_boss_parts,"
@@ -57,7 +57,7 @@ public final class Shot extends AbstractObjectInstance
     @Override public int getX() { return x; }
     @Override public int getY() { return y; }
     @Override public boolean isPersistent() { return !isDestroyed(); }
-    @Override public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
+    @Override public AbstractObjectInstance recreateForRewind(ObjectReconstructionContext context) {
         return new Shot(context.spawn());
     }
 

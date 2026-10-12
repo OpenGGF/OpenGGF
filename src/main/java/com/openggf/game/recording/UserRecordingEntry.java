@@ -3,7 +3,6 @@ package com.openggf.game.recording;
 import java.nio.file.Path;
 import java.time.Instant;
 
-@com.openggf.game.ModApi
 public record UserRecordingEntry(
         Path path,
         String displayName,

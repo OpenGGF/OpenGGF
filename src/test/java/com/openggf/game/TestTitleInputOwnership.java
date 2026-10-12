@@ -77,7 +77,7 @@ class TestTitleInputOwnership {
     void programmaticallyOpenedChildOwnsInputWithoutActionPaneFocus() {
         Fixture f = new Fixture();
         f.title.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_2, true);
-        assertTrue(f.title.tryOpenTimeAttackMenu());
+        assertTrue(f.title.tryOpenUserRecordingMenuForSelectedGame());
         f.input.handleKeyEvent(GLFW_KEY_V, GLFW_PRESS);
         assertFalse(f.routeDisplay());
         assertNull(f.persisted.get());
@@ -144,5 +144,21 @@ class TestTitleInputOwnership {
             input.handleKeyEvent(key, GLFW_RELEASE);
             input.update();
         }
+    }
+
+    @Test
+    void modSceneTextInputHoldsBackGlobalDisplayAndCaptureShortcuts() {
+        java.util.concurrent.atomic.AtomicInteger colour = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.concurrent.atomic.AtomicInteger shaders = new java.util.concurrent.atomic.AtomicInteger();
+        assertFalse(TitleInputOwnership.routeDisplay(GameMode.MOD_SCENE, null, true, false,
+                () -> false, colour::incrementAndGet, shaders::incrementAndGet));
+        assertEquals(0, colour.get(), "typing V in a scene text field must not change the colour profile");
+        assertEquals(0, shaders.get(), "typing brackets must not cycle shaders");
+        assertFalse(TitleInputOwnership.routeCapture(GameMode.MOD_SCENE, null, true, () -> true));
+
+        TitleInputOwnership.routeDisplay(GameMode.MOD_SCENE, null, false, false,
+                () -> false, colour::incrementAndGet, shaders::incrementAndGet);
+        assertEquals(1, colour.get(), "without a text claim the scene keeps global shortcuts");
+        assertTrue(TitleInputOwnership.routeCapture(GameMode.MOD_SCENE, null, false, () -> true));
     }
 }

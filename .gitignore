@@ -2,6 +2,7 @@
 .DS_Store
 *.gen
 /target/*
+/examples/*/target/
 .classpath
 .project
 .settings/
@@ -44,6 +45,7 @@ stable-retro-*.zip
 
 # Debug tools (uncompiled standalone scripts)
 tools/*
+!tools/media/
 !tools/tracechaser-bootstrap.sh
 !tools/tracechaser-forward.lua
 !tools/tracechaser.ps1
@@ -53,6 +55,8 @@ tools/*
 !tools/audio/lib/
 !tools/testing/
 !tools/testing/**
+!tools/modding/
+!tools/modding/*.py
 /tools/testing/__pycache__/
 /.openggf/test-runs/
 !tools/audio/lib/s1_audio_parity_protocol.sh

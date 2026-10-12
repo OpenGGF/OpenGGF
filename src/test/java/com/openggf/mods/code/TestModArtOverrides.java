@@ -5,6 +5,9 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameId;
 import com.openggf.game.ObjectArtProvider;
+import com.openggf.game.RuntimeArtAdmissionLease;
+import com.openggf.game.RuntimeArtAdmissionOwnerKind;
+import com.openggf.game.RuntimeArtAdmissionPolicy;
 import com.openggf.game.patch.GamePatch;
 import com.openggf.game.patch.GameplayLaunchRequest;
 import com.openggf.game.patch.LogicalRom;
@@ -66,12 +69,12 @@ class TestModArtOverrides {
 
     @Test
     void effectiveCatalogBuildsManifestOnlyBackingPatchesAndResolvesInOwnerOrder() throws Exception {
-        ModDescriptor first = dataDescriptor("first-data", Map.of("EndSign", "art/first.ggfsheet"),
+        ModDescriptor first = dataDescriptor("first-data", Map.of("signpost", "art/first.ggfsheet"),
                 Map.of("art/first.ggfsheet", BakedSheetWriter.write(baked(2))));
         ModDescriptor code = codeDescriptor("code-owner", ExplicitPatchEntrypoint.class,
-                Map.of("EndSign", "art/code.ggfsheet"),
+                Map.of("signpost", "art/code.ggfsheet"),
                 Map.of("art/code.ggfsheet", BakedSheetWriter.write(baked(4))));
-        ModDescriptor last = dataDescriptor("last-data", Map.of("EndSign", "art/last.ggfsheet"),
+        ModDescriptor last = dataDescriptor("last-data", Map.of("signpost", "art/last.ggfsheet"),
                 Map.of("art/last.ggfsheet", BakedSheetWriter.write(baked(3))));
         EffectiveModCatalog effective = new EffectiveModCatalog(List.of(first, code, last));
 
@@ -88,11 +91,11 @@ class TestModArtOverrides {
                     new LogicalRomResolver(() -> null), SonicConfigurationService.createStandalone(),
                     ignored -> plan);
             GameModule resolved = resolver.resolveForLaunch(module(provider(
-                            Map.of("EndSign", sheet(1)), null)),
+                            Map.of("signpost", sheet(1)), null)),
                     new GameplayLaunchRequest("s2", "sonic", List.of()),
                     ModuleResolutionService.LaunchPolicy.STANDARD);
 
-            assertEquals(3, resolved.getObjectArtProvider().getSheet("EndSign")
+            assertEquals(3, resolved.getObjectArtProvider().getSheet("signpost")
                     .getPatterns()[0].getPixel(0, 0), "later effective data owner wins");
             assertNull(resolved.getObjectArtProvider().getSheet("endsign"),
                     "stock art keys remain case-exact");
@@ -104,7 +107,7 @@ class TestModArtOverrides {
     @Test
     void untrustedCodeOwnerCannotActivateManifestArtWhileDataOnlyOwnerCan() throws Exception {
         ModDescriptor hostile = codeDescriptor("hostile", ExplicitPatchEntrypoint.class,
-                Map.of("EndSign", "art/hostile.ggfsheet"),
+                Map.of("signpost", "art/hostile.ggfsheet"),
                 Map.of("art/hostile.ggfsheet", BakedSheetWriter.write(baked(7))));
         EffectiveModCatalog effective = new EffectiveModCatalog(List.of(hostile));
         ModClassLoaderFactory factory = new ModClassLoaderFactory(getClass().getClassLoader(),
@@ -122,7 +125,7 @@ class TestModArtOverrides {
     void artOwnerIsRejectedWhenItsCodeDependencyIsUntrusted() throws Exception {
         ModDescriptor dependency = codeDescriptor("code-dependency", ExplicitPatchEntrypoint.class,
                 Map.of(), Map.of("placeholder.bin", new byte[] {1}));
-        ModDescriptor dependent = dataDescriptor("dependent", Map.of("EndSign", "art/end.ggfsheet"),
+        ModDescriptor dependent = dataDescriptor("dependent", Map.of("signpost", "art/end.ggfsheet"),
                 Map.of("art/end.ggfsheet", BakedSheetWriter.write(baked(5))),
                 List.of(new ModDependency("code-dependency", VersionRange.parse("*"))));
         EffectiveModCatalog effective = new EffectiveModCatalog(List.of(dependency, dependent));
@@ -140,11 +143,11 @@ class TestModArtOverrides {
     @Test
     void artOwnerIsRejectedWhenItsDataDependencyFailsSnapshotIdentity() throws Exception {
         ModDescriptor validDependency = dataDescriptor("data-dependency",
-                Map.of("EndSign", "art/base.ggfsheet"),
+                Map.of("signpost", "art/base.ggfsheet"),
                 Map.of("art/base.ggfsheet", BakedSheetWriter.write(baked(2))));
         ModDescriptor changedDependency = new ModDescriptor(validDependency.jarPath(),
                 validDependency.manifest(), "0".repeat(64), false, List.of());
-        ModDescriptor dependent = dataDescriptor("dependent", Map.of("EndSign", "art/end.ggfsheet"),
+        ModDescriptor dependent = dataDescriptor("dependent", Map.of("signpost", "art/end.ggfsheet"),
                 Map.of("art/end.ggfsheet", BakedSheetWriter.write(baked(5))),
                 List.of(new ModDependency("data-dependency", VersionRange.parse("*"))));
         EffectiveModCatalog effective = new EffectiveModCatalog(List.of(changedDependency, dependent));
@@ -227,6 +230,50 @@ class TestModArtOverrides {
         IOException thrown = assertThrows(IOException.class, () -> overlay.loadArtForZone(0));
         assertSame(expected, thrown);
         assertEquals(2, overlay.getSheet("shared").getPatterns()[0].getPixel(0, 0));
+    }
+
+    @Test
+    void nestedArtOverlaysPreserveAdmissionOwnershipAndExactLeases() {
+        var kind = RuntimeArtAdmissionOwnerKind.TITLE_OWNER;
+        var lease = new RuntimeArtAdmissionLease(0x100000001L, 7, 99, kind);
+        Map<String, List<Object>> calls = new LinkedHashMap<>();
+        ObjectArtProvider base = (ObjectArtProvider) Proxy.newProxyInstance(getClass().getClassLoader(),
+                new Class<?>[] {ObjectArtProvider.class}, (proxy, method, args) -> {
+                    calls.put(method.getName(), args == null ? List.of() : List.of(args));
+                    return method.getReturnType() == RuntimeArtAdmissionLease.class ? lease : null;
+                });
+        ObjectArtProvider first = ModArtOverlayProvider.decorate(base, Map.of("first", baked(2)));
+        ObjectArtProvider overlay = ModArtOverlayProvider.decorate(first, Map.of("second", baked(3)));
+        overlay.onTitleCardArtRetired();
+        overlay.onTitleCardPresentationSkipped();
+        overlay.onInLevelTitleCardCompleted(lease);
+        assertSame(lease, overlay.prepareRuntimeArtForActTransition(4, RuntimeArtAdmissionPolicy.TITLE_OWNER));
+        overlay.prepareRuntimeArtForInLevelTitleCard();
+        assertSame(lease, overlay.bindPendingRuntimeArtAdmission(kind));
+        assertSame(lease, overlay.bindRuntimeArtAdmission(lease.id(), kind));
+        assertSame(lease, overlay.rebindRuntimeArtAdmission(lease.id(), kind));
+        overlay.consumeRuntimeArtAdmission(lease, kind);
+        assertEquals(Map.of(
+                "onTitleCardArtRetired", List.of(),
+                "onTitleCardPresentationSkipped", List.of(),
+                "onInLevelTitleCardCompleted", List.of(lease),
+                "prepareRuntimeArtForActTransition", List.of(4, RuntimeArtAdmissionPolicy.TITLE_OWNER),
+                "prepareRuntimeArtForInLevelTitleCard", List.of(),
+                "bindPendingRuntimeArtAdmission", List.of(kind),
+                "bindRuntimeArtAdmission", List.of(lease.id(), kind),
+                "rebindRuntimeArtAdmission", List.of(lease.id(), kind),
+                "consumeRuntimeArtAdmission", List.of(lease, kind)), calls);
+    }
+
+    @Test
+    void artOverlayPreservesAdmissionRejectionFromItsBase() {
+        IllegalStateException expected = new IllegalStateException("stale lease");
+        ObjectArtProvider base = (ObjectArtProvider) Proxy.newProxyInstance(getClass().getClassLoader(),
+                new Class<?>[] {ObjectArtProvider.class}, (proxy, method, args) -> { throw expected; });
+        ObjectArtProvider overlay = ModArtOverlayProvider.decorate(base, Map.of("shared", baked(2)));
+        assertSame(expected, assertThrows(IllegalStateException.class, () -> overlay.consumeRuntimeArtAdmission(
+                new RuntimeArtAdmissionLease(3, 1, 9, RuntimeArtAdmissionOwnerKind.TITLE_OWNER),
+                RuntimeArtAdmissionOwnerKind.TITLE_OWNER)));
     }
 
     private static ModBackedGamePatch artPatch(String owner, String key,

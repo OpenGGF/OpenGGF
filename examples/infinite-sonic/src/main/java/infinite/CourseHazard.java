@@ -16,7 +16,7 @@ import java.util.List;
  * nybble) and a seeded timing phase.
  */
 public final class CourseHazard extends AbstractObjectInstance
-        implements RewindRecreatable, TouchResponseProvider, TouchResponseListener {
+        implements ModRewindRecreatable, TouchResponseProvider, TouchResponseListener {
     // Touch flags: col_hurt ($80) with React_Sizes entries.
     private static final int HURT_40X32 = 0x8c;  // spike bed (the stock 3-spike mapping is 40x32)
     private static final int HURT_16X16 = 0x8b;  // Obj14 fireball, LZ chain spikeball
@@ -104,7 +104,7 @@ public final class CourseHazard extends AbstractObjectInstance
         ballY += dy * 256;
         updateDynamicSpawn(x, floor);
     }
-    @Override public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
+    @Override public AbstractObjectInstance recreateForRewind(ObjectReconstructionContext context) {
         return new CourseHazard(context.spawn(), 0);
     }
 

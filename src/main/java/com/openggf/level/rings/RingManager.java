@@ -58,6 +58,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     private final RingRenderer renderer;
     private final LostRingPool lostRings;
     private final LevelManager levelManager;
+    private final com.openggf.game.session.WorldSession mutatorWorld;
+    private final com.openggf.game.mutators.RingAcquisitionDomain acquisitionDomain;
     private final BackgroundPlaneCollisionProvider backgroundPlaneCollisionProvider;
     private final AudioManager audioManager;
     private final boolean stageRingsUseObjectTouchCollection;
@@ -87,6 +89,10 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 ? new RingRenderer(spriteSheet)
                 : null;
         this.levelManager = levelManager;
+        var objectServices = levelManager != null && levelManager.getObjectManager() != null
+                ? levelManager.getObjectManager().getObjectServices() : null;
+        this.mutatorWorld = objectServices != null ? objectServices.worldSession() : null;
+        this.acquisitionDomain = com.openggf.game.mutators.LevelMutatorPolicyAccess.domain(objectServices);
         BackgroundPlaneCollisionProvider collisionProvider = GameServices.backgroundPlaneCollisionOrNull();
         this.backgroundPlaneCollisionProvider = collisionProvider != null
                 ? collisionProvider : BackgroundPlaneCollisionProvider.FOREGROUND_ONLY;
@@ -99,6 +105,10 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         for (int i = 0; i < MAX_ATTRACTED_RINGS; i++) {
             attractedRings[i] = new AttractedRing();
         }
+    }
+
+    private boolean ringsAllowed() {
+        return com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(mutatorWorld, acquisitionDomain);
     }
 
     public void reset(int cameraX) {
@@ -167,6 +177,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     }
 
     private void attractStageRings(AbstractPlayableSprite player, int frameCounter) {
+        if (!ringsAllowed()) return;
         if (player != null && !player.isCpuControlled()) {
             // Obj_Attracted_Ring can execute before later platform slots carry
             // Player 1. Capture the post-physics player-slot coordinates here
@@ -231,7 +242,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
      * receive at most one attracted ring per object tick.
      */
     public void collectAttractedRing(AbstractPlayableSprite player, int frameCounter) {
-        if (player == null || player.getDead() || cannotCollectRings(player)) {
+        if (!ringsAllowed() || player == null || player.getDead() || cannotCollectRings(player)) {
             return;
         }
         for (AttractedRing ring : activeAttractedRingsInSlotOrder()) {
@@ -386,7 +397,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     }
 
     public boolean collectPlacedRing(RingSpawn ring, AbstractPlayableSprite player, int frameCounter) {
-        if (ring == null || cannotCollectRings(player)) {
+        if (!ringsAllowed() || ring == null || cannotCollectRings(player)) {
             return false;
         }
         if (player.getInvulnerableFrames() >= RING_INVULNERABLE_BLOCK_THRESHOLD) {
@@ -405,6 +416,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     }
 
     private void collectPlacedRingAtIndex(int index, AbstractPlayableSprite player, int frameCounter) {
+        if (!ringsAllowed()) return;
         placement.markCollected(index);
         if (renderer != null && renderer.getSparkleFrameCount() > 0) {
             placement.setSparkleStartFrame(index, frameCounter);
@@ -519,7 +531,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     }
 
     public void draw(int frameCounter) {
-        if (renderer == null) {
+        if (!ringsAllowed() || renderer == null) {
             return;
         }
 
@@ -588,7 +600,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
      * @param frameCounter Current frame counter for animation
      */
     public void drawRingAt(int x, int y, int frameCounter) {
-        if (renderer == null) {
+        if (!ringsAllowed() || renderer == null) {
             return;
         }
         int spinFrameIndex = stageRingFrame(frameCounter);
@@ -601,7 +613,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
      * decelerating Ring_spill_anim_* state rather than a constant frame timer.
      */
     public void drawRingFrameAt(int x, int y, int spinFrameIndex) {
-        if (renderer == null) {
+        if (!ringsAllowed() || renderer == null) {
             return;
         }
         int spinCount = renderer.getSpinFrameCount();
@@ -638,6 +650,16 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     public void spawnLostRings(AbstractPlayableSprite player, int ringCount, int frameCounter) {
         lostRings.spawnLostRings(player, ringCount, frameCounter,
                 player.getCentreX(), player.getCentreY(), -1);
+    }
+
+    /**
+     * Ringfall full-inventory seam, reached through {@link RingManagerInternalAccess} rather
+     * than the creator-facing API. It lifts Obj37_Init's $20 ceiling; rings past it are
+     * slotless continuations of the native spill (see LostRingPool).
+     */
+    void spawnLostRingsBeyondNativeLimit(AbstractPlayableSprite player, int ringCount, int frameCounter) {
+        lostRings.spawnLostRings(player, ringCount, frameCounter, player.getCentreX(), player.getCentreY(),
+                new int[0], false, false, false, true);
     }
 
     public void spawnLostRings(AbstractPlayableSprite player, int ringCount, int frameCounter, int x, int y) {
@@ -682,6 +704,16 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                                                     boolean forceDeferredOwnerRingClear) {
         lostRings.spawnLostRings(player, ringCount, frameCounter, x, y,
                 preallocatedSlots, slotsFullyReserved, true, forceDeferredOwnerRingClear);
+    }
+
+    /** Deferred-spill form of the Ringfall full-inventory seam. */
+    void spawnLostRingsBeyondNativeLimitWithInitialObjectStep(AbstractPlayableSprite player, int ringCount,
+                                                              int frameCounter, int x, int y,
+                                                              int[] preallocatedSlots,
+                                                              boolean slotsFullyReserved,
+                                                              boolean forceDeferredOwnerRingClear) {
+        lostRings.spawnLostRings(player, ringCount, frameCounter, x, y,
+                preallocatedSlots, slotsFullyReserved, true, forceDeferredOwnerRingClear, true);
     }
 
     /** Shared spilled-ring spin owner feeding the LostRingObjectInstance object path. */
@@ -843,7 +875,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     }
 
     public Collection<RingSpawn> getActiveSpawns() {
-        return placement.getActiveSpawns();
+        return ringsAllowed() ? placement.getActiveSpawns() : List.of();
     }
 
     /**
@@ -1692,6 +1724,10 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
 
     private static final class LostRingPool {
         private static final int MAX_LOST_RINGS = 0x20;
+        /** Ringfall full inventory: the native ring counter's 999 ceiling bounds the spill. */
+        private static final int MAX_FULL_INVENTORY_RINGS = 999;
+        /** One full pass of the native scatter fan: 16 rings at each of the three speed scales. */
+        private static final int SCATTER_FAN_CYCLE = 48;
         private static final int GRAVITY = 0x18;
         private static final int LIFETIME_FRAMES = 0xFF;
         private static final int RING_TOUCH_SIZE_INDEX = 0x07;
@@ -1787,6 +1823,16 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                                     boolean slotsFullyReserved,
                                     boolean applyInitialObjectStep,
                                     boolean forceDeferredOwnerRingClear) {
+            spawnLostRings(player, ringCount, frameCounter, x, y, preallocatedSlots,
+                    slotsFullyReserved, applyInitialObjectStep, forceDeferredOwnerRingClear, false);
+        }
+
+        private void spawnLostRings(AbstractPlayableSprite player, int ringCount, int frameCounter,
+                                    int x, int y, int[] preallocatedSlots,
+                                    boolean slotsFullyReserved,
+                                    boolean applyInitialObjectStep,
+                                    boolean forceDeferredOwnerRingClear,
+                                    boolean beyondNativeLimit) {
             if (player == null || renderer == null) {
                 return;
             }
@@ -1794,7 +1840,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 return;
             }
             // ROM Obj37_Init (s2.asm:25127-25130): cap spilled rings at $20 (32).
-            int toSpawn = Math.min(ringCount, MAX_LOST_RINGS);
+            // Ringfall's full-inventory choice (beyondNativeLimit) is the only path past it.
+            int toSpawn = Math.min(ringCount, beyondNativeLimit ? MAX_FULL_INVENTORY_RINGS : MAX_LOST_RINGS);
             int angle = 0x288;
             int xVel = 0;
             int yVel = 0;
@@ -1827,8 +1874,12 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             int spawned = 0;
             for (int i = 0; i < toSpawn; i++) {
                 if (angle >= 0) {
-                    int sin = calcSine(angle & 0xFF);
-                    int cos = calcCosine(angle & 0xFF);
+                    // Rings 0-47 are the native fan (the stock 32 plus the scale-0 tier the ROM
+                    // generator would reach without its ceiling). Each later 48-ring cycle is
+                    // rotated between earlier directions so full-inventory rings do not stack.
+                    int fanOffset = fanCycleAngleOffset(i / SCATTER_FAN_CYCLE);
+                    int sin = calcSine((angle + fanOffset) & 0xFF);
+                    int cos = calcCosine((angle + fanOffset) & 0xFF);
                     int scale = (angle >> 8) & 0xFF;
                     xVel = sin << scale;
                     yVel = cos << scale;
@@ -1846,8 +1897,13 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                     }
                 }
 
+                // Rings past the native ceiling never claim an SST slot: the native table
+                // has no room for them, and taking one would starve ObjPosLoad.
+                boolean beyondNativeEntry = i >= MAX_LOST_RINGS;
                 int slotIndex = -1;
-                if (i < preallocatedSlots.length) {
+                if (beyondNativeEntry) {
+                    slotIndex = -1;
+                } else if (i < preallocatedSlots.length) {
                     slotIndex = preallocatedSlots[i];
                 } else if (slotsFullyReserved) {
                     break;
@@ -1862,7 +1918,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 // remaining logical entries when the engine's consolidated object
                 // model exhausts its physical slot projection; S1/S2 retain native
                 // stop-on-allocation-failure behavior.
-                boolean logicalOverflow = slotIndex < 0 && allocateRemainderAfterOwner;
+                boolean logicalOverflow = slotIndex < 0 && (allocateRemainderAfterOwner || beyondNativeEntry);
                 if (slotIndex < 0 && !logicalOverflow) {
                     // ROM: no free slot → stop spilling (truncate the remainder).
                     int truncated = toSpawn - spawned;
@@ -1876,10 +1932,13 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 // using -1 would collapse every overflow ring onto the same phase.
                 int phaseSlotIndex = logicalOverflow ? previousSlot + 1 : slotIndex;
                 int phase = phaseOffsetForSlot(objectManager, phaseSlotIndex);
-                LostRing ring = ringPool[activeRingCount];
-                ring.reset(phase, x, y,
-                        xVel, yVel, LIFETIME_FRAMES);
-                ring.setSlotIndex(slotIndex);
+                // The retired mirror covers only the native entries; extras are object-only.
+                if (!beyondNativeEntry) {
+                    LostRing ring = ringPool[activeRingCount];
+                    ring.reset(phase, x, y,
+                            xVel, yVel, LIFETIME_FRAMES);
+                    ring.setSlotIndex(slotIndex);
+                }
                 // Parallel object path: register a LostRingObjectInstance twin onto the
                 // SAME reserved slot (no second allocation). The legacy LostRing remains
                 // the OWNER of collection/rewind during this stage; the object is exec-only.
@@ -1935,7 +1994,9 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                         ringObject.markTouchStateAlreadyPostMovement();
                     }
                 }
-                activeRingCount++;
+                if (!beyondNativeEntry) {
+                    activeRingCount++;
+                }
                 previousSlot = phaseSlotIndex;
                 spawned++;
                 xVel = -xVel;
@@ -1953,6 +2014,14 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 }
             }
             audioManager.playSfx(GameSound.RING_SPILL);
+        }
+
+        /**
+         * Angle rotation for full-inventory fan cycles: cycle 0 is native, later cycles step
+         * through the 4-bit bit-reversal of the native $10 angle step (8, 4, 12, 2, ...).
+         */
+        private static int fanCycleAngleOffset(int cycle) {
+            return Integer.reverse(cycle & 0xF) >>> 28;
         }
 
         private static boolean appliesInitialObj37Step(int slotIndex, int ownerSlot) {

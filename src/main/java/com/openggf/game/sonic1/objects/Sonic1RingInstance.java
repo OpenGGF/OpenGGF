@@ -302,7 +302,9 @@ public class Sonic1RingInstance extends AbstractObjectInstance
 
     @Override
     public int getCollisionFlags() {
-        return state == State.ANIMATE ? RING_COLLISION_FLAGS : 0;
+        return state == State.ANIMATE
+                && com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(tryServices())
+                ? RING_COLLISION_FLAGS : 0;
     }
 
     @Override

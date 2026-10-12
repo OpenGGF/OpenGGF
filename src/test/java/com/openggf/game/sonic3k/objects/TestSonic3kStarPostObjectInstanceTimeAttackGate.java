@@ -40,6 +40,7 @@ class TestSonic3kStarPostObjectInstanceTimeAttackGate {
             new ObjectSpawn(0x0140, 0x0180, Sonic3kObjectIds.STAR_POST, 0, 0, false, 0);
     private static final int BONUS_STAR_RING_THRESHOLD = 20;
 
+    private com.openggf.tests.LevelMutatorTestWorld policies;
     private GameStateManager gameState;
     private RecordingCheckpointState checkpointState;
     private ObjectManager objectManager;
@@ -47,6 +48,7 @@ class TestSonic3kStarPostObjectInstanceTimeAttackGate {
     @BeforeEach
     void setUp() {
         GraphicsManager.getInstance().initHeadless();
+        policies = new com.openggf.tests.LevelMutatorTestWorld(new com.openggf.game.sonic3k.Sonic3kGameModule());
         gameState = new GameStateManager();
         gameState.resetSession();
         checkpointState = new RecordingCheckpointState();
@@ -54,6 +56,7 @@ class TestSonic3kStarPostObjectInstanceTimeAttackGate {
         Camera camera = mockCameraAtOrigin();
         ObjectManager[] holder = new ObjectManager[1];
         ObjectServices services = new StubObjectServices() {
+            @Override public com.openggf.game.session.WorldSession worldSession() { return policies.worldSession(); }
             @Override public ObjectManager objectManager() { return holder[0]; }
             @Override public Camera camera() { return camera; }
             @Override public GameStateManager gameState() { return gameState; }
@@ -77,7 +80,7 @@ class TestSonic3kStarPostObjectInstanceTimeAttackGate {
 
     @Test
     void bonusStarsSuppressedButCheckpointStillRecordedDuringTimeAttack() {
-        gameState.setTimeAttackActive(true);
+        runPolicy = com.openggf.game.session.GameplayRunPolicy.isolatedAct();
 
         Sonic3kStarPostObjectInstance starPost = new Sonic3kStarPostObjectInstance(STAR_POST_SPAWN);
         starPost.setServices(newServices());
@@ -110,13 +113,28 @@ class TestSonic3kStarPostObjectInstanceTimeAttackGate {
                 "precondition: normal touch (no time attack) still spawns the 4 bonus stars");
     }
 
+    @Test
+    void mutatorDeniesBonusStarsButKeepsCheckpointBankAndNativeAnimation() {
+        policies.policy(new com.openggf.game.mutators.LevelMutatorPolicy(java.util.Set.of(), false, true, false, true));
+        Sonic3kStarPostObjectInstance checkpoint = new Sonic3kStarPostObjectInstance(STAR_POST_SPAWN);
+        checkpoint.setServices(newServices());
+        checkpoint.update(1, mockPlayerAt(STAR_POST_SPAWN.x(), STAR_POST_SPAWN.y(), 20));
+        assertTrue(checkpointState.saveCalled);
+        assertEquals(0, liveObjects(Sonic3kStarPostBonusStarChild.class).size());
+    }
+
     private ObjectServices newServices() {
         return new StubObjectServices() {
+            @Override public com.openggf.game.session.WorldSession worldSession() { return policies.worldSession(); }
             @Override public ObjectManager objectManager() { return objectManager; }
             @Override public GameStateManager gameState() { return gameState; }
             @Override public RespawnState checkpointState() { return checkpointState; }
+            @Override public com.openggf.game.session.GameplayRunPolicy runPolicy() { return runPolicy; }
         };
     }
+
+    private com.openggf.game.session.GameplayRunPolicy runPolicy =
+            com.openggf.game.session.GameplayRunPolicy.stock();
 
     private <T extends ObjectInstance> List<T> liveObjects(Class<T> type) {
         return objectManager.getActiveObjects().stream()

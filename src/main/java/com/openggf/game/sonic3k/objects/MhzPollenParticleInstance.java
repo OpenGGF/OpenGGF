@@ -105,7 +105,9 @@ public class MhzPollenParticleInstance extends AbstractObjectInstance implements
             if (motion.yVel >= 0) {
                 routine = Routine.FLOATING;
                 if (!preserveInitialAngleOnFloat) {
-                    angle = (resolveLevelFrameCounter(vIntRunCount) + 1) & 0xFF;
+                    // Obj_MHZ_Pollen: move.b (Level_frame_counter+1).w,angle(a0) copies the
+                    // counter's low byte. LevelFrameStep has already advanced the counter.
+                    angle = resolveLevelFrameCounter(vIntRunCount) & 0xFF;
                 }
             }
         } else {

@@ -33,8 +33,8 @@ context.registerObject("tails-flight-art",
 context.registerRomObjectArt("tails-flight", new RomArtRequest(
         0x64320, RomArtCompression.UNCOMPRESSED, 0xB8C0,
         0x739E2, 0x7446C, 0, 1));
-context.registerZone(new ModZoneContribution("rom-art-gallery",
-        new BakedLevelRef("levels/rom-art-gallery/level.json"), "ehz2", null));
+context.registerZone(ModZoneContribution.singleAct("rom-art-gallery",
+        new BakedLevelRef("levels/rom-art-gallery/level.json"), "ehz2", null, false));
 ```
 
 Registration remains inside `ModContext`; the engine assigns the owner and

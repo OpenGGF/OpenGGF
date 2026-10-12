@@ -12,6 +12,15 @@ public final class PuttPuttParadiseMod implements GgfMod {
     @Override public void register(ModContext context) {
         context.registerObject("up-spring", (spawn, registry) ->
                 new paradise.objects.GolfUpSpring(spawn, registry.getPrimaryName(spawn.objectId())));
+        context.registerServiceBundle("golf", () -> {
+            var mode = new paradise.GolfMode();
+            return com.openggf.game.GameServiceBundle.builder().service(paradise.GolfMode.class, mode)
+                    .frameController("mode", mode).build();
+        });
+        context.decodedLevelPatch("course", com.openggf.level.LevelPatch.empty()
+                .select(spawn -> spawn.objectId() == 0x0D || spawn.objectId() == 0x3E).remove()
+                .select(spawn -> spawn.objectKey() == null && spawn.objectId() == 0x41
+                        && ((spawn.subtype() >> 3) & 0xE) == 0).bind("up-spring"));
         context.registerGamePatch(new Patch());
     }
 

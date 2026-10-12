@@ -16,19 +16,15 @@ public final class S1SaveSnapshotProvider implements SaveSnapshotProvider {
             throw new IllegalStateException("Save reason " + reason + " requires a live runtime/gameplay mode");
         }
         Map<String, Object> payload = new LinkedHashMap<>();
-        var save = context.saveSessionContext();
-        int zone = !hasLiveState ? save.startZone()
-                : context.levelManager().getCurrentZone();
-        int act = !hasLiveState ? save.startAct()
-                : context.levelManager().getCurrentAct();
-        int lives = !hasLiveState ? 3 : context.gameState().getLives();
-        List<Integer> chaosEmeralds = !hasLiveState ? List.of()
-                : context.gameState().getCollectedChaosEmeraldIndices();
-        boolean clear = save.isClear();
+        int zone = context.currentZone();
+        int act = context.currentAct();
+        int lives = context.lives();
+        List<Integer> chaosEmeralds = context.chaosEmeralds();
+        boolean clear = context.isClear();
         payload.put("zone", zone);
         payload.put("act", act);
-        payload.put("mainCharacter", save.selectedTeam().mainCharacter());
-        payload.put("sidekicks", save.selectedTeam().sidekicks());
+        payload.put("mainCharacter", context.selectedTeam().mainCharacter());
+        payload.put("sidekicks", context.selectedTeam().sidekicks());
         payload.put("lives", lives);
         payload.put("chaosEmeralds", chaosEmeralds);
         payload.put("clear", clear);

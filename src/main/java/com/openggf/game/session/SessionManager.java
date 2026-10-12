@@ -96,6 +96,7 @@ public final class SessionManager {
             SaveSessionContext saveSessionContext, HardwareReadinessAdmissionPolicy admissionPolicy) {
         nextGameplayAdmissionPolicy = HardwareReadinessAdmissionPolicy.LIVE;
         destroyCurrentMode();
+        WorldSessionPolicyAccess.retire(currentWorldSession);
         currentWorldSession = dataSource == null
                 ? new WorldSession(rootModule, resolvedModule, saveSessionContext)
                 : new WorldSession(rootModule, resolvedModule, dataSource, saveSessionContext);
@@ -192,6 +193,7 @@ public final class SessionManager {
         try {
             destroyCurrentMode();
         } finally {
+            WorldSessionPolicyAccess.retire(currentWorldSession);
             currentWorldSession = null;
             clearNextGameplayAdmissionPolicy();
         }
@@ -239,6 +241,7 @@ public final class SessionManager {
         if (failure != null) {
             // A rejected replay close still disposes the mode. Do not publish its
             // world or let a failed mode switch carry admission into the next run.
+            WorldSessionPolicyAccess.retire(currentWorldSession);
             currentWorldSession = null;
             clearNextGameplayAdmissionPolicy();
             if (failure instanceof RuntimeException runtimeFailure) {

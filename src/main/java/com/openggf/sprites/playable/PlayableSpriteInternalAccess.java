@@ -7,6 +7,16 @@ public final class PlayableSpriteInternalAccess {
     private PlayableSpriteInternalAccess() {
     }
 
+    public static void bindMutatorPolicies(AbstractPlayableSprite sprite, PlayableMutatorPolicySource source) {
+        sprite.mutatorPolicySource = source;
+    }
+
+    public static PlayableMutatorPolicy mutatorPolicy(AbstractPlayableSprite sprite) {
+        PlayableMutatorPolicySource source = sprite.mutatorPolicySource;
+        return source == null ? PlayableMutatorPolicy.STOCK
+                : java.util.Objects.requireNonNull(source.policyFor(sprite), "effective playable policy");
+    }
+
     public static boolean activateScriptedSuperForm(SuperStateController controller) {
         return controller.activateFromScript();
     }

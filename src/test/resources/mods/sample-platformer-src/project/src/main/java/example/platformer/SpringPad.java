@@ -5,8 +5,8 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.ObjectReconstructionContext;
+import com.openggf.level.objects.ModRewindRecreatable;
 import com.openggf.level.objects.SpringBounceHelper;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -27,7 +27,7 @@ import java.util.List;
  * surface, so this gimmick does not lock player input after launch (a known, documented gap
  * versus a ROM-accurate spring).
  */
-public final class SpringPad extends AbstractObjectInstance implements RewindRecreatable {
+public final class SpringPad extends AbstractObjectInstance implements ModRewindRecreatable {
     private static final String OWNER = "sample-platformer";
 
     /** Half-extents of the pad's 32x16 contact rect (matches springpad-sheet.yaml's piece size). */
@@ -72,7 +72,7 @@ public final class SpringPad extends AbstractObjectInstance implements RewindRec
         }
     }
 
-    @Override public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+    @Override public AbstractObjectInstance recreateForRewind(ObjectReconstructionContext ctx) {
         return new SpringPad(ctx.spawn());
     }
 }

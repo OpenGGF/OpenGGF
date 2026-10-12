@@ -7,8 +7,6 @@ import java.util.Objects;
 import java.util.function.BooleanSupplier;
 
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE;
-
-@com.openggf.game.ModApi
 public final class EscapeToMasterTitleController {
     public static final String MESSAGE = "hold ESC 2sec to return to title";
     public static final String RETURN_MESSAGE = MESSAGE;

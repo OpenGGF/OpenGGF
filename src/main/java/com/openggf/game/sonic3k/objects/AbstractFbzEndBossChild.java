@@ -32,6 +32,11 @@ abstract class AbstractFbzEndBossChild extends AbstractObjectInstance
         this.y = spawn.y();
     }
 
+    @Override
+    public com.openggf.game.mutators.ObjectHeadRole headPresentationRole() {
+        return com.openggf.game.mutators.ObjectHeadRole.BOSS;
+    }
+
     @Override public String rewindRole() { return role; }
     @Override public FbzEndBossInstance boss() { return boss; }
     @Override public int getX() { return x; }

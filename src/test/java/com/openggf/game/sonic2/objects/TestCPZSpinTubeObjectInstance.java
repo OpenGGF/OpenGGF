@@ -16,6 +16,47 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestCPZSpinTubeObjectInstance {
 
     @Test
+    void velocityUsesQuantizedDurationAndAllowsSubFrameSegments() throws Exception {
+        var tube = new CPZSpinTubeObjectInstance(
+                new ObjectSpawn(0, 0, 0x1E, 0, 0, false, 0), "CPZSpinTube");
+        var player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        var stateType = Class.forName(CPZSpinTubeObjectInstance.class.getName() + "$CharacterState");
+        var constructor = stateType.getDeclaredConstructor();
+        constructor.setAccessible(true);
+        var state = constructor.newInstance();
+        var calculate = CPZSpinTubeObjectInstance.class.getDeclaredMethod(
+                "calculateVelocity", AbstractPlayableSprite.class, stateType, int.class, int.class, int.class);
+        calculate.setAccessible(true);
+        var duration = stateType.getDeclaredField("duration");
+        duration.setAccessible(true);
+
+        // loc_22902: (9<<16)/$700=$149, then (-8<<16)/$149=-$639.
+        calculate.invoke(tube, player, state, player.getCentreX() + 9, player.getCentreY() - 8, 0x700);
+        assertEquals(0x700, player.getXSpeed());
+        assertEquals(-0x639, player.getYSpeed());
+        assertEquals(1, duration.getInt(state));
+
+        // A two-pixel segment at $800 stores $0040: its high-byte duration is zero.
+        calculate.invoke(tube, player, state, player.getCentreX() + 2, player.getCentreY() + 1, 0x800);
+        assertEquals(0x400, player.getYSpeed());
+        assertEquals(0, duration.getInt(state));
+
+        var statesField = CPZSpinTubeObjectInstance.class.getDeclaredField("characterStates");
+        statesField.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        var states = (java.util.Map<AbstractPlayableSprite, Object>) statesField.get(tube);
+        states.put(player, state);
+        var identities = new com.openggf.game.rewind.identity.RewindIdentityTable();
+        identities.registerPlayer(player, com.openggf.game.rewind.identity.PlayerRefId.mainPlayer());
+        var context = com.openggf.game.rewind.schema.RewindCaptureContext.withIdentityTable(identities);
+        var snapshot = tube.captureRewindState(context);
+        duration.setInt(state, 9);
+        tube.restoreRewindState(snapshot, context);
+        assertEquals(0, duration.getInt(states.get(player)),
+                "A rewind restores the legal zero counter rather than inventing a movement frame.");
+    }
+
+    @Test
     void captureUsesObjectControlWithoutGlobalControlLockedLatch() {
         ObjectSpawn spawn = new ObjectSpawn(0x0780, 0x0380, 0x1E, 0x02, 0, false, 0);
         TestablePlayableSprite player = new TestablePlayableSprite(

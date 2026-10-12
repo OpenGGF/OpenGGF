@@ -154,7 +154,7 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
     /**
      * S3K Special Stage Entry Ring collected bitfield (ROM: Collected_special_ring_array).
      * 32-bit bitfield where each ring's subtype (0-31) is a bit index.
-     * Reset per level load.
+     * Preserved across same-zone loads; cleared by the native full SaveGame boundary.
      */
     private int collectedSpecialRings;
 
@@ -181,27 +181,11 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
      * ROM flag ({@code Level_end_flag}) that shared physics reads (e.g. the strict
      * right-boundary clamp), so S1/S2 must not set it — their ROMs keep the player
      * running past the signpost with no such clamp. This separate signal lets
-     * game-agnostic consumers such as time attack observe act completion across all
+     * game-agnostic consumers such as a run host observe act completion across all
      * three games without perturbing physics. Cleared on level load via
      * {@link #resetForLevel()}.
      */
     private boolean actCompletionSignalActive;
-
-    /**
-     * Set while a solo time-attack session is active (armed through retry/
-     * deactivate), so that objects whose behavior must be suppressed during a
-     * timed run — special/bonus stage entry portals (giant rings) — can check
-     * it directly rather than needing a plumbed reference to the time-attack
-     * runtime. Set by {@link com.openggf.game.timeattack.TimeAttackRuntime#onLevelReady()}
-     * and cleared by {@code TimeAttackRuntime.deactivate()}.
-     * <p>
-     * This is NOT a ROM flag and is deliberately NOT read by physics, camera,
-     * or collision code — it exists solely for the giant-ring gate. Unlike
-     * {@link #actCompletionSignalActive}, this must survive a time-attack
-     * retry's level reload, so it is intentionally NOT cleared by
-     * {@link #resetForLevel()} — only {@link #resetSession()} clears it.
-     */
-    private boolean timeAttackActive;
 
     /**
      * In-game pause flag (ROM: Game_paused at $FFFFF63A for S3K, $FFFFFE5C for
@@ -263,7 +247,6 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
         this.endOfLevelActive = false;
         this.endOfLevelFlag = false;
         this.actCompletionSignalActive = false;
-        this.timeAttackActive = false;
         this.gamePaused = false;
     }
 
@@ -653,6 +636,11 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
         collectedSpecialRings |= (1 << (bitIndex & 0x1F));
     }
 
+    // Engine-only write; full S3K SaveGame clears this at loc_C4CC, not level load.
+    void clearSpecialRingCollection() {
+        collectedSpecialRings = 0;
+    }
+
     /**
      * Gets the current boss ID.
      * ROM: Current_Boss_ID - 0 means no boss active.
@@ -869,24 +857,6 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
      * (or capsule) when the end-of-act sequence begins.
      */
     public void setActCompletionSignalActive(boolean active) { this.actCompletionSignalActive = active; }
-
-    /**
-     * Whether a solo time-attack session is currently active (see
-     * {@link #timeAttackActive}). Checked by giant-ring / special-stage-portal
-     * objects to skip their touch reaction entirely, and by the act-advance
-     * gates in {@code LevelManager.advanceToNextLevel()} and
-     * {@code S3kResultsScreenObjectInstance.onExitReady()} (which divert a
-     * finished/abandoned attempt to the time attack menu instead of the next
-     * act/zone); never read by physics.
-     */
-    public boolean isTimeAttackActive() { return timeAttackActive; }
-
-    /**
-     * Sets the time-attack-active flag. Set by {@code TimeAttackRuntime.onLevelReady()},
-     * cleared by {@code TimeAttackRuntime.deactivate()}. Survives {@link #resetForLevel()}
-     * (a time-attack retry reload must not un-suppress giant rings mid-session).
-     */
-    public void setTimeAttackActive(boolean active) { this.timeAttackActive = active; }
 
     /**
      * Gets the end-of-level completed flag.

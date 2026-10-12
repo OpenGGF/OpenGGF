@@ -21,6 +21,59 @@ public final class TransportProbe {
         await(() -> { all.addAll(peer.drain()); return all.size() >= count; }, 3000, "messages received");
         return all;
     }
+    static List<GolfConnection.Event> disconnectEvents(GolfConnection peer, String reason) throws Exception {
+        var all = disconnectEvents(peer);
+        check(all.stream().anyMatch(e -> e instanceof GolfConnection.Disconnected d
+                && d.reason().equals(reason)), "terminal disconnect reason: " + reason);
+        return all;
+    }
+    static List<GolfConnection.Event> disconnectEvents(GolfConnection peer) throws Exception {
+        var all = new ArrayList<GolfConnection.Event>();
+        // closed is published before the terminal event: its atomic read cannot
+        // establish happens-before for the later write under the incoming lock.
+        await(() -> {
+            all.addAll(peer.drain());
+            return all.stream().anyMatch(e -> e instanceof GolfConnection.Disconnected);
+        }, 3000, "terminal disconnect event received");
+        check(all.stream().filter(e -> e instanceof GolfConnection.Disconnected).count() == 1,
+                "exactly one terminal disconnect event");
+        return all;
+    }
+
+    public static void incomingOverflowPublishesEventAfterClosed() throws Exception {
+        var connections = new ArrayList<GolfConnection>();
+        GolfListener listener;
+        try (var host = GolfListener.listen(0); var raw = new Socket("localhost", host.boundPort())) {
+            listener = host;
+            await(() -> { connections.addAll(host.drain()); return !connections.isEmpty(); },
+                    3000, "controlled overflow accept");
+            try (var peer = connections.getFirst()) {
+                var field = GolfConnection.class.getDeclaredField("outbound");
+                field.setAccessible(true);
+                // Freeze disconnect between its closed publication and terminal
+                // event publication without changing production synchronization.
+                // Release this monitor before try-with-resources can close peer:
+                // disconnect owns the peer monitor while waiting for outbound.
+                synchronized (field.get(peer)) {
+                    for (int i = 0; i < 257; i++) GolfCodec.write(raw.getOutputStream(), new Resume(MATCH, i));
+                    await(peer::isClosed, 3000, "controlled overflow closes");
+                    var beforePublication = peer.drain();
+                    check(beforePublication.size() == GolfConnection.MAX_INCOMING_COMMANDS,
+                            "overflow retains exactly the bounded commands before terminal publication");
+                    check(beforePublication.stream().noneMatch(e -> e instanceof GolfConnection.Disconnected),
+                            "closed alone does not publish the terminal event");
+                }
+                disconnectEvents(peer, "incoming queue overflow");
+                check(peer.stats().incomingCommands() == 0, "overflow clears incoming queue");
+                await(() -> peer.activeWorkers() == 0, 3000, "controlled overflow workers retire");
+                check(peer.drain().isEmpty(), "terminal event is delivered only once");
+            }
+        }
+        await(() -> listener.activeWorkers() == 0
+                && connections.stream().allMatch(c -> c.activeWorkers() == 0),
+                3000, "controlled overflow listener and workers retire");
+    }
+
     public static void undrainedAcceptedWorkersRemainOwned() throws Exception {
         int port;
         try (var listener = GolfListener.listen(0); var raw = new Socket("localhost", listener.boundPort())) {
@@ -206,7 +259,7 @@ public final class TransportProbe {
                 check(((GolfConnection.Received)events(firstClient, 1).getFirst()).packet().equals(originalAck), "first acknowledgment delivered");
             }
             await(firstServer::isClosed, 3000, "disconnect holds room after acceptance");
-            check(firstServer.drain().stream().anyMatch(e -> e instanceof GolfConnection.Disconnected), "host disconnect notification");
+            disconnectEvents(firstServer); // Preserve acceptance of any remote-disconnect reason.
             sessions.disconnected(1, 100);
             try (var nextClient = GolfConnection.connect("localhost", host.boundPort())) {
                 connections.add(nextClient);
@@ -251,9 +304,9 @@ public final class TransportProbe {
                 connections.add(peer);
                 for (int i = 0; i < 257; i++) GolfCodec.write(raw.getOutputStream(), new Resume(MATCH, i));
                 await(peer::isClosed, 3000, "incoming overflow disconnects");
-                check(peer.drain().stream().anyMatch(e -> e instanceof GolfConnection.Disconnected d
-                        && d.reason().equals("incoming queue overflow")), "room gets overflow hold event");
-                check(peer.stats().incomingCommands() <= 256, "incoming queue bounded");
+                disconnectEvents(peer, "incoming queue overflow");
+                check(peer.stats().incomingCommands() == 0, "overflow clears incoming queue");
+                check(peer.drain().isEmpty(), "overflow hold event delivered only once");
             }
         }
         // The remote endpoint never reads; a blocked write must close within its own deadline.
@@ -273,8 +326,7 @@ public final class TransportProbe {
                     Thread.sleep(10);
                 }
                 check(peer.isClosed(), "slow-reader write deadline reached");
-                check(peer.drain().stream().anyMatch(e -> e instanceof GolfConnection.Disconnected d
-                        && d.reason().equals("write deadline exceeded")), "deadline reported to host");
+                disconnectEvents(peer, "write deadline exceeded");
             }
         }
         await(() -> connections.stream().allMatch(c -> c.activeWorkers() == 0)

@@ -91,7 +91,7 @@ class TestMasterTitleScreenAudio {
         MasterTitleScreen screen = activeScreen(true);
         InputHandler input = new InputHandler();
         pressFrame(screen, input, GLFW_KEY_DOWN);
-        for (int i = 0; i < 5; i++) pressFrame(screen, input, GLFW_KEY_DOWN);
+        for (int i = 0; i < 4; i++) pressFrame(screen, input, GLFW_KEY_DOWN);
         audio.resetState();
         pressFrame(screen, input, GLFW_KEY_ENTER);
         pressFrame(screen, input, GLFW_KEY_ESCAPE);

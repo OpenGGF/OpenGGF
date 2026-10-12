@@ -6,7 +6,7 @@ This page gets you from zero to playing in under five minutes.
 
 - **For downloaded releases:** no separate Java install is required; release packages include a
   native OpenGGF executable for your platform.
-- **For source builds:** Java 21 or later. Download from [Adoptium](https://adoptium.net/) or
+- **For source builds:** JDK 25. The executable JAR requires Java 25 or later. Download from [Adoptium](https://adoptium.net/) or
   your preferred distribution. Run `java -version` to check.
 - **A GPU that supports OpenGL 4.1.** Any discrete GPU from the last decade will work.
   Integrated graphics (Intel HD 4000+, Apple Silicon) are fine.
@@ -88,9 +88,13 @@ Linux terminal example:
 When the engine starts, you will see:
 
 1. **Master title screen** -- Choose a game with left/right from either pane.
-   Up/down enters its action list, then selects Start Game, Launch Options, Time Attack,
-   Recordings, Mods, Settings, Advanced, or Quit. Confirm from the game pane opens
+   Up/down enters its action list, then selects Start Game, Launch Options, Recordings,
+   Mods, Settings, Advanced, Quit, or **Extras** (which includes the bundled **Time Attack** mod). Confirm from the game pane opens
    **Browse Games**, a full-width list with availability and page navigation.
+   The Mods list labels each installed mod with its target game: S1, S2, S3K,
+   S1/S2/S3K for all three, or Standalone.
+   The selected game's pane shows its enabled mods below the launch profile;
+   when several apply, it cycles through their names and shows the current number.
    Confirm from the action pane opens the selected action; Back returns
    one level. Quit (or Esc/B from game selection) opens an exit confirmation.
    Missing ROM entries remain visible but dimmed. Prompts follow the last

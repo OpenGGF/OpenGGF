@@ -71,6 +71,8 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
     // Game-agnostic scroll handler provider (from current GameModule)
     private ScrollHandlerProvider scrollProvider;
     private boolean providerLoaded = false;
+    private int contributedZone = -1;
+    private ZoneScrollHandler contributedHandler;
 
     private int currentZone = -1;
     private int currentAct = -1;
@@ -104,6 +106,8 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
         resetZoneState();
         scrollProvider = null;
         providerLoaded = false;
+        contributedZone = -1;
+        contributedHandler = null;
         vscrollFactorFG = 0;
         vscrollFactorBG = 0;
         currentShakeOffsetX = 0;
@@ -164,7 +168,9 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
         if (zoneId != currentZone || actId != currentAct) {
             currentZone = zoneId;
             currentAct = actId;
-            if (scrollProvider != null) {
+            if (zoneId == contributedZone) {
+                if (contributedHandler != null) contributedHandler.init(actId, cameraX, cameraY);
+            } else if (scrollProvider != null) {
                 scrollProvider.initForZone(zoneId, actId, cameraX, cameraY);
             }
         }
@@ -205,7 +211,8 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
      * their zone's scroll handler (e.g., HCZ2 wall-chase driving SwScrlHcz).
      */
     public ZoneScrollHandler getHandler(int zoneId) {
-        return scrollProvider != null ? scrollProvider.getHandler(zoneId) : null;
+        return zoneId == contributedZone ? contributedHandler
+                : scrollProvider != null ? scrollProvider.getHandler(zoneId) : null;
     }
 
     /**
@@ -340,11 +347,11 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
         int cameraY = cam.getY();
         vscrollFactorFG = (short) cameraY;
 
-        // Unified provider-based dispatch for all games
-        if (scrollProvider != null) {
+        // Native providers and contributed handlers use the same update path.
+        if (scrollProvider != null || zoneId == contributedZone) {
             initZone(zoneId, actId, cameraX, cameraY);
 
-            ZoneScrollHandler handler = scrollProvider.getHandler(zoneId);
+            ZoneScrollHandler handler = getHandler(zoneId);
             if (handler != null) {
                 handler.update(hScroll, cameraX, cameraY, frameCounter, actId);
                 minScroll = handler.getMinScrollOffset();
@@ -396,11 +403,11 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
                 }
             }
         }
-        if (scrollProvider == null || cam == null) {
+        if (scrollProvider == null && zoneId != contributedZone || cam == null) {
             return false;
         }
         initZone(zoneId, actId, cam.getX(), cam.getY());
-        ZoneScrollHandler handler = scrollProvider.getHandler(zoneId);
+        ZoneScrollHandler handler = getHandler(zoneId);
         if (handler instanceof CameraDrivenScrollHandler cameraDriven) {
             return cameraDriven.advanceCameraForFrame(cam, actId);
         }
@@ -422,7 +429,7 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
         update(zoneId, actId, cam, frameCounter);
 
         // Update zone-specific dynamic art via the provider
-        if (scrollProvider != null && level != null) {
+        if (scrollProvider != null && zoneId != contributedZone && level != null) {
             scrollProvider.updateDynamicArt(level, cam.getX());
         }
     }
@@ -456,7 +463,7 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
         if (scrollProvider != null) {
             if (scrollProvider.updateForEnding(hScroll, zoneId, actId, frameCounter, vscrollFactorBG)) {
                 // Provider handled the ending - extract results from the handler
-                ZoneScrollHandler handler = scrollProvider.getHandler(zoneId);
+                ZoneScrollHandler handler = getHandler(zoneId);
                 if (handler != null) {
                     minScroll = handler.getMinScrollOffset();
                     maxScroll = handler.getMaxScrollOffset();
@@ -565,7 +572,17 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
         return handler != null ? handler.captureRewindState() : null;
     }
 
+    /** Engine load lifecycle: a null contributed handler explicitly retains flat hosted scrolling. */
+    void installContributedHandler(int logicalZone, ZoneScrollHandler handler) {
+        if (contributedZone >= 0 || logicalZone >= 0) {
+            currentZone = -1;
+            currentAct = -1;
+        }
+        contributedZone = logicalZone;
+        contributedHandler = handler;
+    }
+
     private ZoneScrollHandler activeHandler() {
-        return scrollProvider != null ? scrollProvider.getHandler(currentZone) : null;
+        return getHandler(currentZone);
     }
 }

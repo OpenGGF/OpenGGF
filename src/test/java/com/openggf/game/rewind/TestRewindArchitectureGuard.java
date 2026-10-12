@@ -390,6 +390,14 @@ class TestRewindArchitectureGuard {
             if (REWIND_REGISTRY_PRODUCTION_ALLOWLIST.contains(normalized)) {
                 continue;
             }
+            // This exact support composition root is shipped only in the testkit classifier.
+            // TestModTestKitDistributionGuard verifies the effective engine exclusions and
+            // real classifier staging; gameplay's production allowlist remains unchanged.
+            if (normalized.equals("src/main/java/com/openggf/mods/testing/ModTestKit.java")
+                    && com.openggf.mods.testing.ModTestKit.class.isAnnotationPresent(
+                            com.openggf.architecture.CompositionRoot.class)) {
+                continue;
+            }
             List<String> lines = Files.readAllLines(source);
             for (int i = 0; i < lines.size(); i++) {
                 if (lines.get(i).contains("new RewindRegistry(")) {

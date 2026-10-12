@@ -9,6 +9,10 @@ import java.util.Map;
  * and rock-meter weights are explicit tuning constants, not verified executable parity.
  */
 public final class RhythmSession {
+    public enum FeedbackKind { HIT, MISS, STRIKE, TAIL_DROP }
+    public record Feedback(long sequence, long sample, int noteIndex, int lanes, FeedbackKind kind, boolean audible) { }
+    private final java.util.ArrayDeque<Feedback> feedback = new java.util.ArrayDeque<>();
+    private long feedbackSequence;
     private final Chart chart;
     private final boolean drums;
     private final boolean noFail;
@@ -118,8 +122,10 @@ public final class RhythmSession {
         held = frets & 31;
         whammy = bend;
         if (sustain >= 0 && !matches(chart.notes().get(sustain).lanes(), held)) {
+            int dropped = sustain;
             sustain = -1;
             audible = false; // dropping a tail stops the part but preserves the streak
+            emit(FeedbackKind.TAIL_DROP, dropped, held);
         }
         if (power && !starActive && starSamples >= chart.samplesPerBeat() * 16) starActive = true;
         if (drums) {
@@ -129,7 +135,7 @@ public final class RhythmSession {
             else if (hopoStrumGrace && lastHit >= 0
                     && position <= chart.notes().get(lastHit).onset() + window
                     && matches(chart.notes().get(lastHit).lanes(), held)) hopoStrumGrace = false;
-            else overstrike();
+            else overstrike(held);
         }
         // The fresh held state may start a valid HOPO within its window.
         if (!drums) advance(sample);
@@ -139,9 +145,9 @@ public final class RhythmSession {
         return next < status.length && Math.abs(position - chart.notes().get(next).onset()) <= window;
     }
     private void strikePad(int lane) {
-        if (!withinNext()) { overstrike(); return; }
+        if (!withinNext()) { overstrike(lane); return; }
         int required = chart.notes().get(next).lanes();
-        if ((required & lane) == 0 || (partial & lane) != 0) { overstrike(); return; }
+        if ((required & lane) == 0 || (partial & lane) != 0) { overstrike(lane); return; }
         partial |= lane;
         if (partial == required) hit();
     }
@@ -163,6 +169,7 @@ public final class RhythmSession {
         hopoStrumGrace = note.hopo();
         sustain = note.end() > note.onset() && !drums ? next : -1;
         sustainEarned = 0;
+        emit(FeedbackKind.HIT, next, note.lanes());
         resolvePhrase(note, false);
         next++; partial = 0;
     }
@@ -170,13 +177,15 @@ public final class RhythmSession {
         ChartNote note = chart.notes().get(next);
         status[next] = 2;
         misses++; breakChain(); resolvePhrase(note, true);
+        emit(FeedbackKind.MISS, next, note.lanes());
         next++; partial = 0;
     }
-    private void overstrike() {
+    private void overstrike(int lanes) {
         // A phrase requires an uninterrupted run, even when every head is later hit.
         breakUnfinishedPhrase(lastHit);
         if (withinNext()) breakUnfinishedPhrase(next);
         breakChain();
+        emit(FeedbackKind.STRIKE, next < status.length ? next : status.length - 1, lanes);
     }
     private void breakUnfinishedPhrase(int index) {
         if (index < 0 || index >= status.length) return;
@@ -196,6 +205,23 @@ public final class RhythmSession {
         int remaining = phraseRemaining.merge(phrase, -1, Integer::sum);
         if (remaining == 0 && !phraseBroken.getOrDefault(phrase, false) && !starActive)
             starSamples = Math.min(chart.samplesPerBeat() * 32, starSamples + chart.samplesPerBeat() * 8);
+    }
+
+    private void emit(FeedbackKind kind, int noteIndex, int lanes) {
+        // Multiple bad pads in one physical strike retain existing rock penalties,
+        // but produce one sound event, with the struck lanes grouped together.
+        Feedback last = feedback.peekLast();
+        if (kind == FeedbackKind.STRIKE && last != null && last.kind() == kind && last.sample() == position) {
+            feedback.removeLast();
+            feedback.addLast(new Feedback(last.sequence(), position, noteIndex, last.lanes() | lanes, kind, audible));
+            return;
+        }
+        if (feedback.size() == 64) feedback.removeFirst();
+        feedback.addLast(new Feedback(++feedbackSequence, position, noteIndex, lanes, kind, audible));
+    }
+    /** Consumable presentation events; never an alternative source of scoring authority. */
+    public java.util.List<Feedback> drainFeedback() {
+        var result = java.util.List.copyOf(feedback); feedback.clear(); return result;
     }
 
     public Chart chart() { return chart; }

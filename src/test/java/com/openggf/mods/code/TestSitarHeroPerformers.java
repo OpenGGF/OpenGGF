@@ -15,7 +15,7 @@ class TestSitarHeroPerformers {
         try (var harness = ExampleModHarness.build(Path.of("examples/sitar-hero"), temp.resolve("package"))) {
             Path tests = java.nio.file.Files.createDirectories(temp.resolve("checks"));
             String cp = temp.resolve("package/classes") + java.io.File.pathSeparator + System.getProperty("java.class.path");
-            assertEquals(0, ToolProvider.getSystemJavaCompiler().run(null, null, null, "--release", "21", "-cp", cp,
+            assertEquals(0, ToolProvider.getSystemJavaCompiler().run(null, null, null, "--release", "25", "-cp", cp,
                     "-d", tests.toString(), "examples/sitar-hero/src/test/java/sitarhero/stage/PerformerChecks.java"));
             // A single loader defines the example and its package-private tests together.
             try (var loader = new URLClassLoader(new java.net.URL[] {tests.toUri().toURL(),

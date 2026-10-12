@@ -46,9 +46,13 @@ public final class ModZoneLoader {
 
     /** Converts a private parsed definition into the neutral game-owned host seam. */
     public static ModZoneLevelData prepareHostData(ModLevelDefinition definition) throws IOException {
+        return prepareHostData(definition, definition.zoneIndex());
+    }
+
+    static ModZoneLevelData prepareHostData(ModLevelDefinition definition, int runtimeZoneIndex) throws IOException {
         Objects.requireNonNull(definition, "definition");
         return new ModZoneLevelData(
-                definition.formatVersion(), definition.zoneIndex(), definition.blockGridSide(),
+                definition.formatVersion(), runtimeZoneIndex, definition.blockGridSide(),
                 definition.width(), definition.height(), definition.bounds().minX(),
                 definition.bounds().maxX(), definition.bounds().minY(), definition.bounds().maxY(),
                 definition.patternBytes(), definition.chunkBytes(), definition.blockBytes(),

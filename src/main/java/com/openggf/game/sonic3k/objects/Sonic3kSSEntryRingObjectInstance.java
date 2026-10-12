@@ -400,6 +400,9 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
      *   <li>Subtype bit 7 set → the {@code $1701} Super Emerald arena after the flash sequence</li>
      * </ul>
      */
+    private long stageEntryPermit = -1;
+    long stageEntryPermit() { return stageEntryPermit; }
+
     private void onTouched(AbstractPlayableSprite player) {
         LOGGER.fine(() -> String.format(
                 "SSEntryRing #%d TOUCHED at (%d,%d) — mappingFrame=%d, inIdleAnim=%b, player(%d,%d)",
@@ -407,21 +410,28 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
                 player.getCentreX(), player.getCentreY()));
         var gameState = services().gameState();
 
-        // Special stage entry is fully disabled during a time attack (see
-        // GameLoop.enterSpecialStage()). Unlike the star-post-bonus-star path,
-        // the special-stage-entry branch below hides/control-locks the player
-        // and freezes the camera well before the GameLoop chokepoint is ever
-        // reached — swallowing the request there alone would leave the run
-        // stuck. Check here, before any state change, so the ring stays inert
-        // and the player simply passes through.
-        if (gameState != null && gameState.isTimeAttackActive()) {
+        // Not a ROM branch: a run whose GameplayRunPolicy forbids special stages
+        // leaves the ring inert. Unlike the star-post-bonus-star path, the
+        // special-stage-entry branch below hides/control-locks the player and
+        // freezes the camera well before GameLoop's entry chokepoint is reached, so
+        // the policy must be consulted here, before any state change. The stock
+        // policy always reaches the ROM touch path below.
+        if (!services().runPolicy().specialStageEntry()) {
             return;
+        }
+
+        boolean awardRings = awardsFiftyRingsInsteadOfCapture(gameState);
+        if (awardRings) {
+            if (!com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(services())) return;
+        } else {
+            stageEntryPermit = com.openggf.game.mutators.LevelMutatorPolicyAccess.admit(services(), com.openggf.game.mutators.StageEntryKind.SPECIAL);
+            if (stageEntryPermit == 0) return;
         }
 
         // Play sfx_BigRing ($B3) — always plays on touch
         services().playSfx(Sonic3kSfx.BIG_RING.id);
 
-        if (awardsFiftyRingsInsteadOfCapture(gameState)) {
+        if (awardRings) {
             // Path B: ROM loc_61794 (sonic3k.asm:128325-128333) marks the ring
             // collected, sets the retirement bit and awards 50 rings. It does
             // not delete here — the following display pass sees

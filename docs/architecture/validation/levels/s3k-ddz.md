@@ -503,3 +503,33 @@ On `ae21cd421` plus this test-only addition,
 zero failures/errors/skips. The inspected plan selects1959 gameplay classes;
 focused validation is proportionate for this bounded test-only extension. No
 production change or broad-suite rerun is claimed.
+
+## Full SaveGame consumer boundary — 2026-10-08
+
+The existing ending timer full SaveGame boundary at `loc_81CA4` (sonic3k.asm:173818) now dispatches through the semantic helper; timer and ending gates are unchanged. Existing real-services `TestS3kDdzLifecycleProduction#endingRequestSavesProgressAndStartsAnIsolatedTimeline` remains a seeded endpoint consumer for combined ordinary validation, not a new live route result.
+
+`828bc94d8` clears the native32-bit collected-ring mask at exactly seven existing
+full-SaveGame gates; existing game-state rewind owns the mask. Focused138 cases
+pass without failures/errors/skips, including direct Results tally/helper and
+mask-restoration checks. The other six non-tally live routes, successful disk
+persistence, live SK-alone, and this matrix's remaining route/rewind/breadth
+products are not newly certified. Generic persistence and special-stage/lives/
+death/reload/seamless semantics remain distinct. See the [lane audit](../../audits/2026-10-07-s3k-parity-gap-verification.md)
+for native ordering and scope, and [combined qualification](../../audits/2026-10-07-stock-parity-gap-verification.md#final-composed-canonical-replay-2026-10-08)
+for exact commands/frontiers. [Actual-main qualification](../../audits/2026-10-07-stock-parity-gap-verification.md#actual-main-delivery-qualification)
+retains 27 concrete inherited ordinary failures and 62 literal skips with zero
+errors; all 672 fresh guards pass. This preserves the route/breadth limits above.
+
+
+### Route drawing policy follow-up (2026-10-09)
+
+The affected cold-route/checkpoint JUnit checks now simulate every input and
+service queued render work every tick, with drawing at snapshot/replay and
+playable/load checkpoints. Complete forward/replay branches stay fully drawn;
+discarded screenshot readback is omitted. Their normal result establishes route
+behavior and these drawn checkpoints, not presentation on every intervening frame.
+For every-frame drawing use `-Dopenggf.tests.drawEveryFrame=true`. The bounded
+state/pixel controls and their limits are described in the
+[headless testing guide](../../../guide/contributing/headless-testing.md).
+This performance change supplies no new native reference, full-route visual
+certification or missing viewport/donor/character coverage; inherited gaps remain.

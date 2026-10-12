@@ -17,6 +17,12 @@ import java.util.Objects;
 
 @com.openggf.game.ModApi
 public final class EngineContext {
+    /** Creates the immutable JDK inspection service at the engine bootstrap boundary. */
+    static StackWalker createCallerInspection() {
+        return StackWalker.getInstance(java.util.Set.of(StackWalker.Option.RETAIN_CLASS_REFERENCE,
+                StackWalker.Option.SHOW_HIDDEN_FRAMES));
+    }
+
     private final SonicConfigurationService configuration;
     private final GraphicsManager graphics;
     private final AudioManager audio;

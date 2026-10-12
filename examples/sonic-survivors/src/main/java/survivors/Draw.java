@@ -1,12 +1,15 @@
 package survivors;
 
 import com.openggf.graphics.GLCommand;
+import com.openggf.mods.ui.BitmapFont;
+import com.openggf.mods.ui.LevelOverlayCanvas;
+import com.openggf.mods.ui.UiPrimitives;
 import com.openggf.level.objects.ObjectServices;
 
 /**
  * Code-drawn screen-space text and panels: a 5x7 font (plus a 3x5 one for damage numbers),
- * filled rectangles, outlines and circles. Every call takes screen coordinates and converts
- * them to world space with the camera, so it can be issued from any object's render pass.
+ * filled rectangles, outlines and circles. Screen overlays use a camera-independent canvas;
+ * world-space weapon effects keep their native coordinates.
  */
 final class Draw {
     private Draw() { }
@@ -79,26 +82,27 @@ final class Draw {
             CYAN = 0x60E8FF, GREEN = 0x60FF60, NAVY = 0x101848, GREY = 0xA0A0B0, ORANGE = 0xFF9020,
             PINK = 0xFF70D0, BLUE = 0x4070FF, BLACK = 0x000000, PURPLE = 0xB070FF;
 
+    static BitmapFont createFont() { return BitmapFont.binary(CHARS, GLYPHS, 5, 7, 6); }
+    static BitmapFont createSmallFont() { return BitmapFont.binary(SMALL_CHARS, SMALL_GLYPHS, 3, 5, 4); }
+    private static LevelOverlayCanvas canvas(ObjectServices services) {
+        return new LevelOverlayCanvas(services.graphicsManager(), services.camera().getWidth(), services.camera().getHeight());
+    }
+    private static int colour(int rgb, float alpha) {
+        return Math.round(Math.clamp(alpha, 0f, 1f) * 255) << 24 | rgb & 0xFFFFFF;
+    }
+
     /** Width in pixels of {@code text} at {@code scale} (6px advance per glyph at scale 1). */
     static int width(String text, int scale) {
         return text.isEmpty() ? 0 : text.length() * 6 * scale - scale;
     }
 
     static void text(ObjectServices s, String text, int x, int y, int scale, int rgb, float alpha) {
-        int cx = s.camera().getX(), cy = s.camera().getY();
-        int[][] font = s.gameService(MenuArt.class).font;
         String upper = text.toUpperCase(java.util.Locale.ROOT);
-        for (int i = 0; i < upper.length(); i++) {
-            char c = upper.charAt(i);
-            int index = c == 'X' && i < text.length() && text.charAt(i) == 'x' ? CHARS.indexOf('x') : CHARS.indexOf(c);
-            if (index < 0) continue;
-            int left = x + i * 6 * scale;
-            int[] rectangles = font[index];
-            for (int p = 0; p < rectangles.length; p += 4) {
-                rectWorld(s, cx + left + rectangles[p] * scale, cy + y + rectangles[p + 1] * scale,
-                        rectangles[p + 2] * scale, rectangles[p + 3] * scale, rgb, alpha);
-            }
+        var glyphText = new StringBuilder(upper);
+        for (int i = 0; i < upper.length() && i < text.length(); i++) {
+            if (upper.charAt(i) == 'X' && text.charAt(i) == 'x') glyphText.setCharAt(i, 'x');
         }
+        s.gameService(MenuArt.class).font.draw(canvas(s), glyphText.toString(), x, y, scale, colour(rgb, alpha));
     }
 
     /** Text with a one-pixel dark drop shadow. */
@@ -118,20 +122,14 @@ final class Draw {
 
     /** 3x5 digits in world coordinates, for floating damage numbers. */
     static void smallWorld(ObjectServices s, String text, int x, int y, int scale, int rgb, float alpha) {
-        for (int i = 0; i < text.length(); i++) {
-            int index = SMALL_CHARS.indexOf(text.charAt(i));
-            if (index < 0) continue;
-            for (int p = 0; p < 15; p++) {
-                if (SMALL_GLYPHS.charAt(index * 15 + p) != '1') continue;
-                int px = x + (i * 4 + p % 3) * scale, py = y + p / 3 * scale;
-                rectWorld(s, px + scale, py + scale, scale, scale, NAVY, alpha);
-                rectWorld(s, px, py, scale, scale, rgb, alpha);
-            }
-        }
+        s.gameService(MenuArt.class).smallFont.glyphs(text, x, y, scale, (px, py, w, h) -> {
+            rectWorld(s, px + scale, py + scale, w, h, NAVY, alpha);
+            rectWorld(s, px, py, w, h, rgb, alpha);
+        });
     }
 
     static void rect(ObjectServices s, int x, int y, int w, int h, int rgb, float alpha) {
-        rectWorld(s, s.camera().getX() + x, s.camera().getY() + y, w, h, rgb, alpha);
+        canvas(s).fill(x, y, w, h, colour(rgb, alpha));
     }
 
     static void rectWorld(ObjectServices s, int x, int y, int w, int h, int rgb, float alpha) {
@@ -152,10 +150,7 @@ final class Draw {
     }
 
     static void outline(ObjectServices s, int x, int y, int w, int h, int rgb, float alpha) {
-        rect(s, x, y, w, 1, rgb, alpha);
-        rect(s, x, y + h - 1, w, 1, rgb, alpha);
-        rect(s, x, y, 1, h, rgb, alpha);
-        rect(s, x + w - 1, y, 1, h, rgb, alpha);
+        UiPrimitives.frame(canvas(s), x, y, w, h, colour(rgb, alpha));
     }
 
     /** A filled bar: frame, background and a {@code fraction} fill. */

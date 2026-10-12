@@ -5,7 +5,7 @@ Keep this file and `CLAUDE.md` identical. Skills are mirrored between
 
 ## Project and scope
 
-OpenGGF is an alpha Java 21 reimplementation of Sonic 1, 2, and 3&K for
+OpenGGF is an alpha Java 25 reimplementation of Sonic 1, 2, and 3&K for
 research and preservation. Runtime assets come from user-supplied ROMs; this
 is an independent fan project with no Sega affiliation. The editor is
 experimental. The unpublished Mod API candidate is implemented on the development branches;
@@ -26,7 +26,9 @@ workflow defaults.
 ## Build and verification
 
 ```bash
-mvn -v                              # must report Java 21
+mvn -v                              # must report Java 25
+mvn -Dmse=off compile               # build only; no test queue
+mvn -Dmse=off -DskipTests package    # package without running tests; no test queue
 tools/testing/install-hooks.sh     # once per worktree
 python3 tools/testing/run_categories.py --list
 python3 tools/testing/run_categories.py --base <pre-task-commit> --run  # combined delivery selection unless proportionate validation applies
@@ -37,12 +39,17 @@ python3 tools/testing/maven_queue.py -Dmse=off -Psmoke test -B         # basic C
 python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B        # separate fresh JVM for structural guards
 ```
 
-- Surefire inherits Maven's JVM. Set `JAVA_HOME` to JDK 21 if needed.
+- Surefire inherits Maven's JVM. Set `JAVA_HOME` to JDK 25 if needed.
 - Use Lua 5.4 for the TraceChaser forwarder guard; set `LUA_BIN` if needed.
 - Maven output belongs in the current worktree's `target/` directory. Do not share or
   copy build trees. The per-Surefire-fork LWJGL extraction uses
-  `target/test-tmp`. Local Maven commands use the shared queue described below. Keep
+  `target/test-tmp`. Only test-running or uncertain Maven commands use the shared queue below. Keep
   diagnostic output bounded with targeted searches and reads.
+- Use headless engine tests for behavior and offscreen captures for routine visual
+  validation and promo footage. Never automate focus or keyboard input on the user's
+  shared desktop. Window/focus/close diagnostics must use an owned isolated display
+  and fail before Engine launch if isolation is unavailable; never fall back to the
+  ambient X11/Wayland session. Keep such diagnostics separate from routine tests.
 - Use JUnit 5/Jupiter. `-Dmse=off` exposes full Maven logs. PowerShell quotes
   `-D...` arguments and uses `tools/testing/install-hooks.ps1`.
 - During implementation, run focused tests or `run_categories.py --category NAME --run`.
@@ -75,7 +82,7 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B        # separat
 - Before a broad run, state the selected class count, expected cost and stopping rule.
   Broad normalization measured about 24 minutes ordinary plus 10 minutes guards; do not
   present this as a short check. Finish focused fixes and documentation first. Run
-  `run_categories.py --base <integration-base> --preflight` to check Java 21, Lua 5.4 and
+  `run_categories.py --base <integration-base> --preflight` to check Java 25, Lua 5.4 and
   PowerShell in the actual launch environment. On macOS, use the known working native
   display/service permissions from the first graphics run; tool preflight does not prove
   GLFW access. Do not rediscover a documented sandbox failure with another full run.
@@ -84,9 +91,18 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B        # separat
   Finish focused fixes first; repeat completed checks only for changed code, repaired
   prerequisites, failures or an unresolved risk. There is no task registration,
   cumulative time budget, receipt, or one-attempt gate.
-- **Queue local Maven work.** Category `--run` commands queue automatically across
-  linked worktrees. For focused tests, packaging and other Maven commands, use
+- **Queue local Maven tests.** Category `--run` commands queue automatically across
+  linked worktrees. For focused tests and lifecycle commands that execute tests (including
+  `package` without a skip), use
   `python3 tools/testing/maven_queue.py <maven arguments>` from the intended worktree.
+  Build-only commands such as `compile`, `test-compile` and `package -DskipTests` bypass
+  shared admission automatically; they hold only the current worktree's build/test lock.
+  Direct `mvn` builds are also allowed, provided nothing else is writing that worktree's
+  `target/`. Prefer the wrapper when builds and tests may share a worktree. Unknown plugin
+  goals, alternate POMs/profiles and custom Maven launch arguments remain queued conservatively;
+  inspect their behavior before running them directly as builds. The serial override applies
+  to queued tests, not build-only commands. Native builds also bypass admission when tests
+  are skipped, but their resource needs are separate from ordinary Java compilation.
   Submit the command even if another agent is testing: it waits, reports status and
   starts automatically. Waiting requires no permission or manual lock cleanup.
   For small focused tests with known bounded memory needs, prefer `--lean`: it caps
@@ -94,7 +110,7 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B        # separat
   can overlap where normal 7 GiB / 8-core budgets cannot. It requires exact `-Dtest`
   selectors without profiles or custom JVM/build overrides. A lean OOM is a failed
   run; report it and rerun in the normal lane. Keep full suites and memory-heavy,
-  trace/native or required domain checks in their existing lanes. Older worktrees
+  trace/native test or required domain checks in their existing lanes. Older worktrees
   can invoke the updated main-workspace wrapper by absolute path while keeping
   their own cwd and `target/`; update their tooling for the new scheduling rules.
   Linux admission allows different worktrees to overlap when conservative memory/CPU

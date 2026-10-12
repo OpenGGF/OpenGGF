@@ -11,9 +11,7 @@ public final class Phase2SampleMod implements GgfMod {
         context.registerObject("sample-badnik", (spawn, registry) -> new SampleBadnik(spawn));
         context.registerObjectArt("sample-badnik", new BakedSheetRef("art/sample.ggfs"));
         context.registerObjectPreview("sample-badnik", "sample-badnik");
-        context.registerCharacter("sample-character",
-                SampleCharacter.definition(context.ownerModId()));
-        context.registerZone(new ModZoneContribution("sample-zone",
+        context.registerZone(ModZoneContribution.singleAct("sample-zone",
                 new BakedLevelRef("levels/sample/level.json"), "mtz3", null, false));
     }
 }

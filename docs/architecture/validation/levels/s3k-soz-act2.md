@@ -780,3 +780,35 @@ at31392 with zero deaths; all31492 baseline/candidate state rows match. The
 initial default-tool failure was an intro-configuration mismatch, not a failure
 of this native-start route. Video:
 `$HOME/Videos/OGGF/seamless-presentation/campaign-20260927-soz-handoff-320/capture.mp4`.
+
+## Cold-route drawing checkpoints (2026-10-08)
+
+`TestSozColdRouteCapture` now simulates every movie input and services queued
+render work every tick, while drawing traversal checkpoints and both complete
+45-frame rewind replay branches. It also draws the final playable destination.
+The matched nine-case comparison retains every ready frame, replay-window count
+and semantic event set, passing without skips; class time falls from 138.309 to
+45.423 seconds. Real completion and full-world restore/replay obligations remain.
+
+Four bounded state/pixel controls compare fully drawn and skipped SOZ traversal
+at 320/800 widths for Sonic Act 1 and Knuckles Act 2, with a poisoned framebuffer
+that rejects stale-image success. These controls add checkpoint reconstruction
+evidence and do not close broader character/team/donor or native visual gaps.
+Default traversal no longer certifies presentation on every intermediate frame.
+Use `-Dopenggf.soz.drawEveryFrame=true` with the same focused command for every-frame
+drawing; screenshot/capture tools keep their own rendering behavior. Exact methods,
+commands and coverage limits are in the [memory/throughput research](../../research/2026-10-07-ordinary-suite-memory-cause.md#soz-drawing-gap-follow-up-2026-10-08).
+
+
+### Route drawing policy follow-up (2026-10-09)
+
+The affected cold-route/checkpoint JUnit checks now simulate every input and
+service queued render work every tick, with drawing at snapshot/replay and
+playable/load checkpoints. Complete forward/replay branches stay fully drawn;
+discarded screenshot readback is omitted. Their normal result establishes route
+behavior and these drawn checkpoints, not presentation on every intervening frame.
+For every-frame drawing use `-Dopenggf.tests.drawEveryFrame=true`. The bounded
+state/pixel controls and their limits are described in the
+[headless testing guide](../../../guide/contributing/headless-testing.md).
+This performance change supplies no new native reference, full-route visual
+certification or missing viewport/donor/character coverage; inherited gaps remain.

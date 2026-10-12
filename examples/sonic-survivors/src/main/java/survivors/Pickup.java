@@ -16,7 +16,7 @@ import java.util.List;
  * inside his magnet radius. Collection is a simple overlap test rather than a touch response, so
  * a pile of rings never competes with badniks for the touch pass.
  */
-public final class Pickup extends AbstractObjectInstance implements RewindRecreatable {
+public final class Pickup extends AbstractObjectInstance implements ModRewindRecreatable {
     static final int REWARD_LIFETIME = 60 * 60;
     static final int LOST_RING_LIFETIME = 45;
     static final int RING = 0, MONITOR = 1, EMERALD = 2, CHEST = 3;
@@ -104,7 +104,7 @@ public final class Pickup extends AbstractObjectInstance implements RewindRecrea
     @Override public int getX() { return x; }
     @Override public int getY() { return y; }
     @Override public boolean isPersistent() { return !isDestroyed(); }
-    @Override public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
+    @Override public AbstractObjectInstance recreateForRewind(ObjectReconstructionContext context) {
         return new Pickup(context.spawn());
     }
 

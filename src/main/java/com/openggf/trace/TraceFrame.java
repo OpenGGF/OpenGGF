@@ -8,7 +8,6 @@ package com.openggf.trace;
  * <p>V5 rows use the fixed 42-column symmetric primary/sidekick layout. All
  * primary and sidekick animation and subpixel fields are always present.
  */
-@com.openggf.game.ModApi
 public record TraceFrame(
     int frame,
     int input,

@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 
-@com.openggf.game.ModApi
 public record LaunchProfile(
         boolean rewind,
         String crossGameSource,
@@ -40,7 +39,6 @@ public record LaunchProfile(
         sidekick = normalizeLower(sidekick, NONE);
     }
 
-    @com.openggf.game.ModApi
     public enum Row {
         REWIND,
         CROSS_GAME,

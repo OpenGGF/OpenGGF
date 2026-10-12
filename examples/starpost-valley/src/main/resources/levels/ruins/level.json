@@ -1,0 +1,47 @@
+{
+  "formatVersion": 2,
+  "zoneName": "MARBLE RUINS",
+  "zoneIndex": 64,
+  "levelIndex": 1024,
+  "blockGridSide": 8,
+  "width": 1,
+  "height": 1,
+  "bounds": {
+    "minX": 0,
+    "maxX": 3008,
+    "minY": 0,
+    "maxY": 384
+  },
+  "start": {
+    "x": 150,
+    "y": 300
+  },
+  "music": {
+    "stockId": 32
+  },
+  "assets": {
+    "patterns": "patterns.gptn",
+    "chunks": "chunks.gchk",
+    "blocks": "blocks.gblk",
+    "foregroundMap": "fg-map.gmap",
+    "solidHeights": "solid-heights.gshg",
+    "solidWidths": "solid-widths.gswd",
+    "solidAngles": "solid-angles.gsan",
+    "collisionPrimary": "collision-primary.gcol",
+    "collisionSecondary": "collision-secondary.gcol"
+  },
+  "objects": [],
+  "rings": [],
+  "hostMetadata": {
+    "s3k": {
+      "objectZoneSet": "S3KL"
+    }
+  },
+  "paletteClaims": [
+    {
+      "line": 1,
+      "color": 2,
+      "sega": 0
+    }
+  ]
+}

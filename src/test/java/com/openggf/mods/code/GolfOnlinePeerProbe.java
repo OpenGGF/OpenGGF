@@ -14,6 +14,8 @@ import com.openggf.game.mode.GameplayFrameController;
 import com.openggf.game.presentation.SceneFrameCodec;
 import com.openggf.game.presentation.SceneImage;
 import com.openggf.game.presentation.SceneViewPresenter;
+import com.openggf.game.rewind.RewindAdapterOwnership;
+import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.game.session.SessionManager;
 import com.openggf.io.ModAssetRoot;
@@ -26,6 +28,8 @@ import com.openggf.tests.rules.SonicGame;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.URLClassLoader;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
@@ -43,18 +47,38 @@ import java.util.StringJoiner;
  * and reads wire/presenter diagnostics; it never writes physics or restores course state.
  */
 public final class GolfOnlinePeerProbe {
+    private static final String OWNER = "putt-putt-paradise";
     private final boolean host;
     private final HeadlessTestFixture fixture;
     private final GameplayFrameController controller;
+    private final Object creatorState;
+    private final ModFaultBoundary boundary;
     private final InputHandler input = new InputHandler();
     private int previousHeld, previousActions;
     private boolean previousStart;
     private long rows, heldRows, gameplayRows, setupRows;
 
-    private GolfOnlinePeerProbe(boolean host, HeadlessTestFixture fixture) {
+    private GolfOnlinePeerProbe(boolean host, HeadlessTestFixture fixture,
+                                URLClassLoader loader, ModFaultBoundary boundary) throws Exception {
         this.host = host; this.fixture = fixture;
-        this.controller = GameServices.module().gameplayFrameController();
+        this.boundary = boundary;
+        var module = GameServices.module();
+        this.controller = module.gameplayFrameController();
+        this.creatorState = module.getGameService(loader.loadClass("paradise.GolfMode"));
         require(controller != null, "actual creator controller missing");
+        require(creatorState != null, "published concrete creator state missing");
+        require(module.getGameService(GameplayFrameController.class) == controller,
+                "typed controller service must retain the published controller");
+        require(module.rewindAdapters().stream().anyMatch(adapter -> adapter == controller),
+                "rewind graph must capture the published controller");
+        require(RewindAdapterOwnership.hasIdentity(controller, OWNER, "services/golf/mode")
+                        && RewindAdapterOwnership.hasIdentity(creatorState, OWNER, "services/golf/mode"),
+                "controller and concrete state must share their registered owner identity");
+        String key = ((RewindSnapshottable<?>)controller).key();
+        require(fixture.gameplayMode().getRewindRegistry().capture().entries().containsKey(key),
+                "timeline must capture the published controller");
+        require(!fixture.gameplayMode().getRewindRegistry().captureCourse().entries().containsKey(key),
+                "course rollback must preserve the live controller ledger");
     }
 
     public static void main(String[] args) throws Exception {
@@ -65,6 +89,7 @@ public final class GolfOnlinePeerProbe {
         SharedLevel bootstrap = null;
         GolfOnlinePeerProbe peer = null;
         try (var loader = new URLClassLoader(new java.net.URL[]{jar.toUri().toURL()}, GolfOnlinePeerProbe.class.getClassLoader())) {
+            Throwable initialFailure = null;
             try {
                 bootstrap = SharedLevel.load(SonicGame.SONIC_2, 0, 0);
                 var configuration = SonicConfigurationService.getInstance();
@@ -72,18 +97,18 @@ public final class GolfOnlinePeerProbe {
                 configuration.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
                 configuration.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
                 GameModule effective = GameServices.module();
+                var boundary = new ModFaultBoundary(Map.of(), new com.openggf.mods.ModRuntimeFindingStore(),
+                        owners -> new com.openggf.mods.ModStateSaveResult.Saved(), owners -> { });
                 try (var assets = ModAssetRoot.jar(jar.getParent(), jar, ModInputLimits.production())) {
-                    var context = new ModContext("putt-putt-paradise", "s2", assets);
+                    var context = new ModContext(OWNER, "s2", assets);
                     ((GgfMod)loader.loadClass("paradise.PuttPuttParadiseMod").getConstructor().newInstance()).register(context);
                     var plan = context.freeze();
-                    var boundary = new ModFaultBoundary(Map.of(), new com.openggf.mods.ModRuntimeFindingStore(),
-                            owners -> new com.openggf.mods.ModStateSaveResult.Saved(), owners -> { });
                     effective = new ModBackedGamePatch(plan, boundary).apply(effective, null);
                     for (var patch : plan.explicitPatches()) effective = patch.apply(effective, null);
                 }
                 SessionManager.clear(); GameModuleRegistry.setCurrent(effective); TestEnvironment.activeGameplayMode();
                 var fixture = HeadlessTestFixture.builder().withZoneAndAct(0, 0).build();
-                peer = new GolfOnlinePeerProbe(host, fixture);
+                peer = new GolfOnlinePeerProbe(host, fixture, loader, boundary);
                 peer.configure(loader, Integer.parseInt(args[1]), args.length == 4 && args[3].equals("rewinds")); peer.report();
                 try (var commands = new BufferedReader(new InputStreamReader(System.in))) {
                     for (String line; (line = commands.readLine()) != null;) {
@@ -99,9 +124,16 @@ public final class GolfOnlinePeerProbe {
                         peer.report();
                     }
                 }
+            } catch (Exception | Error failure) {
+                initialFailure = failure;
+                throw failure;
             } finally {
-                if (peer != null) peer.shutdown();
-                if (bootstrap != null) bootstrap.dispose();
+                try (AutoCloseable bootstrapCleanup = bootstrap == null ? () -> { } : bootstrap::dispose) {
+                    if (peer != null) peer.shutdown();
+                } catch (Exception | Error cleanupFailure) {
+                    if (initialFailure == null) throw cleanupFailure;
+                    initialFailure.addSuppressed(cleanupFailure);
+                }
             }
         }
     }
@@ -116,7 +148,7 @@ public final class GolfOnlinePeerProbe {
         Object choice = selection.getConstructor(mode, character, character, int.class, String.class, int.class, viewport, rules)
                 .newInstance(Enum.valueOf(mode, host ? "HOST" : "JOIN"), Enum.valueOf(character, host ? "SONIC" : "TAILS"),
                         Enum.valueOf(character, host ? "TAILS" : "SONIC"), 0, "127.0.0.1", port, Enum.valueOf(viewport, "NATIVE_4_3"), rules.getMethod(rewinds ? "defaults" : "off").invoke(null));
-        controller.getClass().getMethod("configure", selection).invoke(controller, choice);
+        creatorCallback(creatorState, creatorState.getClass().getMethod("configure", selection), choice);
     }
 
     /**
@@ -136,7 +168,7 @@ public final class GolfOnlinePeerProbe {
         Object control = loader.loadClass("paradise.net.GolfPacket$ShotControl").getConstructor(shotId, action)
                 .newInstance(id, Enum.valueOf(action, "READY"));
         var send = room.getClass().getDeclaredMethod("send", loader.loadClass("paradise.net.GolfPacket"));
-        send.setAccessible(true); send.invoke(room, control);
+        send.setAccessible(true); creatorCallback(room, send, control);
     }
 
     private void step(int held, int actions, boolean start) throws Exception {
@@ -145,10 +177,10 @@ public final class GolfOnlinePeerProbe {
         boolean entryTitleActive = GameServices.module().getTitleCardProvider().isOverlayActive();
         String entryArtKey = GameServices.module().getObjectArtProvider()
                 instanceof com.openggf.game.rewind.RewindSnapshottable<?> art ? art.key() : null;
-        Object beforeMatch = value(controller, "matchState");
+        Object beforeMatch = creatorValue("matchState");
         Object beforePending = beforeMatch == null ? null : value(beforeMatch, "pending");
         Object beforeId = beforePending == null ? null : value(beforePending, "id");
-        Object beforeOnline = field(controller, "online");
+        Object beforeOnline = field(creatorState, "online");
         Object beforeStatus = beforeOnline == null ? null : declaredValue(beforeOnline, "shotStatus");
         String beforePhase = beforeStatus == null ? "AIM" : value(beforeStatus, "phase").toString();
         var controls = PlayerInputState.of(held, held & ~previousHeld, actions, actions & ~previousActions, start, start && !previousStart);
@@ -160,7 +192,7 @@ public final class GolfOnlinePeerProbe {
         else if (result == LevelFrameResult.SETUP_ONLY) setupRows++;
         else if (result == LevelFrameResult.HELD && opened()) {
             heldRows++;
-            Object afterMatch = value(controller, "matchState");
+            Object afterMatch = creatorValue("matchState");
             // A short WATCH can finish its reverse playback in this very row.
             // Authoritative pending identity, not the guest-only room turn view,
             // identifies the deliberate whole-course restore/refund boundary.
@@ -184,16 +216,16 @@ public final class GolfOnlinePeerProbe {
     }
 
     private boolean opened() throws Exception {
-        Object state = value(controller, "roomState");
+        Object state = creatorValue("roomState");
         return state != null && value(state, "remoteTurnOpened") != null;
     }
-    private Object room() throws Exception { Object online = field(controller, "online"); return online == null ? null : field(online, "room"); }
+    private Object room() throws Exception { Object online = field(creatorState, "online"); return online == null ? null : field(online, "room"); }
 
     private void report() throws Exception {
         Map<String, Object> values = new LinkedHashMap<>();
         values.put("pid", ProcessHandle.current().pid()); values.put("host", host);
         values.put("rows", rows); values.put("heldRows", heldRows); values.put("gameplayRows", gameplayRows); values.put("setupRows", setupRows);
-        Object state = value(controller, "roomState");
+        Object state = creatorValue("roomState");
         values.put("ready", state != null && (boolean)value(state, "ready")); values.put("held", state == null || (boolean)value(state, "held"));
         values.put("ended", state != null && (boolean)value(state, "ended")); values.put("owner", state == null ? -1 : value(state, "owner"));
         values.put("hostCharacter", state == null ? "none" : value(state, "hostCharacter")); values.put("guestCharacter", state == null ? "none" : value(state, "guestCharacter"));
@@ -201,36 +233,37 @@ public final class GolfOnlinePeerProbe {
         values.put("turn", turn == null ? -1 : value(value(turn, "id"), "turn"));
         values.put("shot", turn == null ? -1 : value(value(turn, "id"), "shot"));
         values.put("wire0", state == null ? "none" : score(value(state, "player0"))); values.put("wire1", state == null ? "none" : score(value(state, "player1")));
-        Object match = value(controller, "matchState"), pending = match == null ? null : value(match, "pending");
+        Object match = creatorValue("matchState"), pending = match == null ? null : value(match, "pending");
         values.put("matchStatus", match == null ? "none" : value(match, "status"));
         values.put("pending", pending == null ? -1 : value(value(pending, "id"), "shotSequence"));
-        Object hud = value(controller, "hudShotView");
+        Object hud = creatorValue("hudShotView");
         values.put("hudStage", value(hud, "stage"));
         values.put("hudControls", value(hud, "showShotControls"));
         values.put("hudHint", value(hud, "hint"));
         values.put("rewindEffect", controller.rewindPresentation().intensity());
         values.put("reverseAudio", GameServices.audio().isReverseAudioOutputActive());
         values.put("logicalReverseAudio", GameServices.audio().isReverseAudioPresentationActive());
-        var shown = (List<?>) declaredValue(controller, "scores");
+        var scores = creatorState.getClass().getDeclaredMethod("scores"); scores.setAccessible(true);
+        var shown = (List<?>) creatorCallback(creatorState, scores);
         values.put("shownStrokes0", shown.isEmpty() ? -1 : value(shown.get(0), "strokes"));
         values.put("musicPending", GameServices.module().getLevelInitProfile().isLevelMusicPublicationPending());
-        values.put("poseKind", value(value(value(controller, "capture"), "poseClock"), "kind"));
-        values.put("stage", value(value(controller, "shotState"), "stage"));
-        Object readiness = value(controller, "readinessState");
+        values.put("poseKind", value(value(((RewindSnapshottable<?>)controller).capture(), "poseClock"), "kind"));
+        values.put("stage", value(creatorValue("shotState"), "stage"));
+        Object readiness = creatorValue("readinessState");
         values.put("readiness", value(readiness, "phase")); values.put("readinessOwner", value(readiness, "owner"));
-        values.put("elevation", value(value(controller, "shotState"), "elevationDegrees"));
+        values.put("elevation", value(creatorValue("shotState"), "elevationDegrees"));
         for (int owner = 0; owner < 2; owner++) {
             Object golfer = match == null ? null : ((List<?>)value(match, "golfers")).get(owner);
             values.put("strokes" + owner, golfer == null ? -1 : ((List<?>)value(golfer, "holes")).stream().mapToInt(s -> integer(s, "strokes")).sum());
             values.put("dnf" + owner, golfer != null && (boolean)value(golfer, "dnf"));
         }
-        Object online = field(controller, "online");
+        Object online = field(creatorState, "online");
         Object status = online == null ? null : declaredValue(online, "shotStatus");
         values.put("phase", status == null ? "AIM" : value(status, "phase"));
         values.put("holeRewinds", status == null ? -2 : value(status, "holeRemaining"));
         values.put("turnRewinds", status == null ? -2 : value(status, "turnRemaining"));
         values.put("replaySpeed", status == null ? 1 : value(status, "replaySpeed"));
-        Object meter=value(controller,"shotState");
+        Object meter=creatorValue("shotState");
         values.put("spin",value(meter,"spin")); values.put("targetSpin",value(meter,"targetSpin"));
         values.put("power",value(meter,"power"));
         if(!host && online!=null) {
@@ -280,18 +313,36 @@ public final class GolfOnlinePeerProbe {
         require(ownedRoom == null || integer(ownedRoom, "activeWorkers") == 0, "room workers survived teardown");
         System.out.println("GOLF|closed=true|workers=0|heldRows=" + heldRows + "|gameplayRows=" + gameplayRows); System.out.flush();
     }
-    private static String score(Object score) throws Exception { return value(score, "strokes") + "," + value(score, "penalties") + "," + value(score, "finished"); }
+    private String score(Object score) throws Exception { return value(score, "strokes") + "," + value(score, "penalties") + "," + value(score, "finished"); }
     private static String imageHash(SceneImage image) throws Exception {
         var digest = MessageDigest.getInstance("SHA-256"); var word = ByteBuffer.allocate(4);
         for (int pixel : image.argb()) { word.clear(); word.putInt(pixel); digest.update(word.array()); }
         return java.util.HexFormat.of().formatHex(digest.digest());
     }
-    private static int integer(Object object, String accessor) {
+    private int integer(Object object, String accessor) {
         try { return ((Number)value(object, accessor)).intValue(); } catch (Exception failure) { throw new IllegalStateException(failure); }
     }
-    private static Object value(Object object, String accessor) throws Exception { return object.getClass().getMethod(accessor).invoke(object); }
-    private static Object declaredValue(Object object, String accessor) throws Exception {
-        var method = object.getClass().getDeclaredMethod(accessor); method.setAccessible(true); return method.invoke(object);
+    /** Fixture configuration and creator diagnostics use the same boundary as the published graph. */
+    private Object creatorValue(String accessor) throws Exception {
+        return value(creatorState, accessor);
+    }
+    private Object creatorCallback(Object target, Method method, Object... arguments) {
+        return boundary.call(OWNER, () -> {
+            try { return method.invoke(target, arguments); }
+            catch (InvocationTargetException failure) {
+                Throwable cause = failure.getCause();
+                if (cause instanceof RuntimeException runtime) throw runtime;
+                if (cause instanceof Error error) throw error;
+                throw new IllegalStateException("Checked creator fixture callback failure", cause);
+            } catch (IllegalAccessException failure) { throw new IllegalStateException(failure); }
+        });
+    }
+    private Object value(Object object, String accessor) throws Exception {
+        return creatorCallback(object, object.getClass().getMethod(accessor));
+    }
+    private Object declaredValue(Object object, String accessor) throws Exception {
+        var method = object.getClass().getDeclaredMethod(accessor); method.setAccessible(true);
+        return creatorCallback(object, method);
     }
     private static Object field(Object object, String name) throws Exception {
         Field field = object.getClass().getDeclaredField(name); field.setAccessible(true); return field.get(object);

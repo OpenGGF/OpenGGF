@@ -162,6 +162,11 @@ public class Sonic2DEZEggmanInstance extends AbstractObjectInstance implements R
     }
 
     @Override
+    public com.openggf.game.mutators.ObjectHeadRole headPresentationRole() {
+        return com.openggf.game.mutators.ObjectHeadRole.BOSS;
+    }
+
+    @Override
     public Sonic2DEZEggmanInstance recreateForRewind(RewindRecreateContext ctx) {
         return ObjectConstructionContext.construct(ctx.objectServices(),
                 () -> new Sonic2DEZEggmanInstance(ctx.spawn()));

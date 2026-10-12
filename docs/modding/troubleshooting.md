@@ -18,7 +18,8 @@ findings below. `DUPLICATE_MOD_ID`, `DISABLED`, `CODE_TRUST_REQUIRED`,
 `DESCRIPTOR_INVALID`, and the `DEPENDENCY_*` findings are effective-catalog findings:
 they arise when the engine compares multiple discovered mods, not from validating one
 jar in isolation. The `REPOSITORY_*` findings likewise come from bounded multi-jar
-repository preflight rather than the single-jar CLI.
+repository preflight rather than the single-jar CLI, and the `BUNDLED_*` findings come
+from boot-time checks of the mods shipped with the engine build.
 
 | Code | What to fix |
 |---|---|
@@ -27,8 +28,8 @@ repository preflight rather than the single-jar CLI.
 | `MANIFEST_MISSING` / `MANIFEST_INVALID` | Add strict `META-INF/openggf-mod.yaml`; remove unknown/duplicate/alternate fields. |
 | `DUPLICATE_MOD_ID` | Give each discovered jar a unique manifest id. |
 | `ENGINE_API_INCOMPATIBLE` | Compile against a supported API and correct `engineApiRange`. |
-| `DISABLED` | Enable the mod in the manager and restart. |
-| `CODE_TRUST_REQUIRED` | Review the source/findings, grant trust for this exact jar hash, and restart. |
+| `DISABLED` | Enable the mod in the manager and choose Apply. |
+| `CODE_TRUST_REQUIRED` | Review the source/findings, grant trust for this exact jar hash, and choose Apply. |
 | `DEPENDENCY_MISSING` / `DEPENDENCY_DISABLED` / `DEPENDENCY_BLOCKED` | Install/enable/fix the named dependency first. |
 | `DEPENDENCY_VERSION_INCOMPATIBLE` / `DEPENDENCY_BASE_GAME_MISMATCH` | Align dependency version range and patch base game. |
 | `DEPENDENCY_CYCLE` | Remove a cycle from manifest dependencies. |
@@ -37,6 +38,10 @@ repository preflight rather than the single-jar CLI.
 | `PATTERN_WINDOW_BUDGET_EXCEEDED` | Lower `patternWindows` or reduce the effective enabled-mod window total. |
 | `REPOSITORY_JAR_LIMIT_EXCEEDED` / `REPOSITORY_VALIDATION_BYTES_EXCEEDED` / `REPOSITORY_PREFLIGHT_FAILED` | Reduce/fix the `mods/` repository before retrying. |
 | `MOD_JAR_CHANGED` | Stop mutating the jar during validation; rebuild and validate an immutable artifact. |
+| `BUNDLED_MANIFEST_INVALID` | The engine artifact's bundled-mod manifest is unreadable; reinstall OpenGGF. |
+| `BUNDLED_MOD_MISSING` / `BUNDLED_MOD_INVALID` | A mod bundled with OpenGGF is absent or unreadable; reinstall OpenGGF with its `bundled/` folder. |
+| `BUNDLED_MOD_HASH_MISMATCH` / `BUNDLED_MOD_IDENTITY_MISMATCH` | A bundled jar differs from the build manifest and was not loaded; reinstall OpenGGF rather than editing it. |
+| `BUNDLED_MOD_ID_RESERVED` | Remove the `mods/` copy; the id belongs to a mod bundled with OpenGGF. |
 
 ## Asset, level, and audio findings
 
@@ -45,6 +50,7 @@ the remaining rows can be produced while validating one packed jar.
 
 | Code | What to fix |
 |---|---|
+| `UNKNOWN_ART_OVERRIDE_KEY` | Check the exact case-sensitive stock key with `ggfmod art-keys --game <baseGame>`; an unrequested key has no visible effect. |
 | `ASSET_MISSING` / `ASSET_FORMAT_INVALID` | Include the declared baked asset and regenerate it with the matching converter. |
 | `LEVEL_FORMAT_INVALID` | Re-export/reconvert the exact `ModLevelDefinition` v1 inventory and remove trailing/mismatched bytes. |
 | `LEVEL_OWNER_MISMATCH` | Use object/track keys owned by the declaring manifest id. |
@@ -53,7 +59,7 @@ the remaining rows can be produced while validating one packed jar.
 | `AUDIO_LOOP_INVALID` | Express loop points in decoded source frames and keep start/end within the asset. |
 | `AUDIO_OVERRIDE_ID_INVALID` / `AUDIO_OVERRIDE_TRACK_MISSING` | Use a valid stock music id and an existing owned track. |
 | `AUDIO_OVERRIDE_CONFLICT` | Resolve the intentional later-wins conflict or accept the reported effective owner. |
-| `SFX_UNSUPPORTED_PHASE1` | Remove SFX from a data-only/base-game path; standalone Mod API 0.7 content may declare namespaced SFX. |
+| `SFX_UNSUPPORTED_PHASE1` (older engines) | Use a current 0.7 candidate build for patch-scene namespaced SFX; both patch scenes and standalone games can declare bounded one-shots. Base-game SFX override mapping remains unavailable. |
 | `STANDALONE_AUDIO_OVERRIDE` | Remove base-game numeric music overrides from a standalone manifest. |
 
 ## Compiled-code and rewind findings
@@ -88,6 +94,10 @@ single-jar `ggfmod validate` command:
 | `MOD_REGISTRATION_DISABLE_SAVE_FAILED` / `TRUST_REVOCATION_SAVE_FAILED` | Check mod-state storage after a failed registration or trust revocation; the requested persisted disable/revocation did not save. |
 | `MOD_PATCH_METADATA_FAILED` / `MOD_PATCH_APPLY_FAILED` | Fix the patch owner's metadata/callback failure; the engine leaves that patch unapplied. |
 | `MOD_CHARACTER_DISABLED_FALLBACK` / `MOD_CHARACTER_UNKNOWN_FALLBACK` | Re-enable/install the saved character owner or select an available character; launch used a stock fallback. |
+
+Successful packaging prints warnings too. `--format json` emits versioned structured
+findings. `--warnings allow` is the default; `--warnings error` makes warnings fail
+CI and prevents publication when used with `package`. Errors always fail.
 
 Run validation again after every change. A zero-finding result prints
 `Validation passed: 0 findings`; packaging invokes the same validator automatically.

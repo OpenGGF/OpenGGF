@@ -2,19 +2,17 @@ package example.flappysample;
 
 import com.openggf.audio.GameSound;
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.identity.ObjectRefId;
-import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.ObjectReconstructionContext;
+import com.openggf.level.objects.ModRewindRecreatable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
 
 /** Holds visible native Tails at a fixed X while preserving the engine's flight mechanics. */
-public final class FlappyController extends AbstractObjectInstance implements RewindRecreatable {
+public final class FlappyController extends AbstractObjectInstance implements ModRewindRecreatable {
     private static final int WAITING = 0;
     private static final int RUNNING = 1;
     private static final int PLAYER_SCREEN_X = 96;
@@ -76,16 +74,11 @@ public final class FlappyController extends AbstractObjectInstance implements Re
     }
 
     private void advanceScoreAndRecyclePipes(AbstractPlayableSprite tails) {
-        List<FlappyPipe> pipes = services().objectManager()
+        List<FlappyPipe> pipes = services().objectQuery()
                 .activeObjectsOfType(FlappyPipe.class);
         if (pipes.isEmpty()) {
             return;
         }
-        RewindIdentityTable identities = services().objectManager()
-                .captureIdentityContext().requireIdentityTable();
-        pipes.sort((left, right) -> compareStableIds(
-                identities.idFor(left), identities.idFor(right)));
-
         int rightmostX = Integer.MIN_VALUE;
         for (FlappyPipe pipe : pipes) {
             pipe.advance(PIPE_SPEED);
@@ -131,27 +124,6 @@ public final class FlappyController extends AbstractObjectInstance implements Re
         };
     }
 
-    private static int compareStableIds(ObjectRefId left, ObjectRefId right) {
-        if (left == right) {
-            return 0;
-        }
-        if (left == null) {
-            return 1;
-        }
-        if (right == null) {
-            return -1;
-        }
-        int dynamic = Integer.compare(left.dynamicId(), right.dynamicId());
-        if (dynamic != 0) {
-            return dynamic;
-        }
-        int spawn = Integer.compare(left.spawnId(), right.spawnId());
-        if (spawn != 0) {
-            return spawn;
-        }
-        return Integer.compare(left.generation(), right.generation());
-    }
-
     public int generationCounter() {
         return generationCounter;
     }
@@ -173,7 +145,7 @@ public final class FlappyController extends AbstractObjectInstance implements Re
     }
 
     @Override
-    public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
+    public AbstractObjectInstance recreateForRewind(ObjectReconstructionContext context) {
         return new FlappyController(context.spawn());
     }
 }

@@ -5,9 +5,10 @@ import com.openggf.level.objects.PlayableSheetMaterializer;
 import com.openggf.sprites.playable.*;
 
 public final class SampleCharacter extends AbstractPlayableSprite {
+    private final CharacterKey key;
     public SampleCharacter(String code, int x, int y) {
-        super(code, (short) x, (short) y);
-        setWidth(18); setHeight(38);
+        super(code, (short) x, (short) y, physicsSpec());
+        key = CharacterKey.parsePersisted(code.replaceFirst("_p\\d+$", ""));
     }
 
     static CharacterDefinition definition(String owner,
@@ -18,14 +19,17 @@ public final class SampleCharacter extends AbstractPlayableSprite {
                 ignored -> materialized.art(), ignored -> materialized.palette());
     }
 
-    @Override protected void defineSpeeds() {
-        max = 0x500; runAccel = 0x10; runDecel = 0x80; friction = 0x10;
-        jump = 0x640; slopeRunning = 0x20; slopeRollingUp = 0x14; slopeRollingDown = 0x50;
+    static CharacterPhysicsSpec physicsSpec() {
+        return new CharacterPhysicsSpec(PhysicsProfile.builder()
+                .movement(0x10, 0x80, 0x10, 0x500, 0x640)
+                .rolling(0x20, 0x80, 0x80, 0xE00).build());
     }
-    @Override protected void createSensorLines() { }
-    @Override public CharacterKey characterKey() {
-        return CharacterKey.mod("phase3-character", "runner");
-    }
+    @Override public CharacterKey characterKey() { return key; }
     @Override public SecondaryAbility getSecondaryAbility() { return SecondaryAbility.NONE; }
-    @Override public void draw() { }
+    @Override public void draw() {
+        if (!isHidden() && getSpriteRenderer() != null) {
+            getSpriteRenderer().drawFrame(getMappingFrame(), getRenderCentreX(), getRenderCentreY(),
+                    getRenderHFlip(), getRenderVFlip());
+        }
+    }
 }

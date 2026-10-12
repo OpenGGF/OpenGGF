@@ -1,17 +1,23 @@
 package com.openggf.net.hub;
 
-import com.openggf.ghost.GhostFrame;
-import com.openggf.ghost.GhostFrameCodec;
+import com.openggf.net.ghost.GhostFrame;
+import com.openggf.net.ghost.GhostFrameCodec;
 import com.openggf.net.client.ClientHandshake;
+import com.openggf.net.client.GhostStreamPublisher;
 import com.openggf.net.identity.PlayerIdentity;
-import com.openggf.net.protocol.ControlCodec;
+import openggf.racing.protocol.ControlCodec;
 import com.openggf.net.protocol.ControlMessage;
+import com.openggf.net.protocol.Protocol;
 import com.openggf.net.protocol.GhostPackets;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.HexFormat;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -61,6 +67,53 @@ class TestRoomHost {
         assertEquals("LOBBY", joinA.round().phase());
         assertEquals(2, ((ControlMessage.RoomState) lastMessage(a)).players().size());
         assertEquals(2, room.playerCount());
+    }
+
+    @Test
+    void rejectsOversizeDisplayNameAndIgnoresOversizeCharacter() throws Exception {
+        FakeHubConnection rejected = new FakeHubConnection();
+        PlayerIdentity identity = PlayerIdentity.loadOrCreate(dir.resolve("oversize"));
+        ClientHandshake handshake = new ClientHandshake(identity, "x".repeat(65), FP);
+        room.onConnected(rejected);
+        room.onText(rejected, ControlCodec.encode(null, handshake.hello()));
+        room.onText(rejected, ControlCodec.encode(null,
+                handshake.onWelcome((ControlMessage.Welcome) lastMessage(rejected))));
+        assertInstanceOf(ControlMessage.JoinRejected.class, lastMessage(rejected));
+        assertEquals(0, room.playerCount());
+
+        FakeHubConnection accepted = new FakeHubConnection();
+        String token = admit(accepted, "Player", dir.resolve("accepted")).sessionToken();
+        room.onText(accepted, ControlCodec.encode(token,
+                new ControlMessage.SelectCharacter("x".repeat(33))));
+        assertEquals("sonic", room.players().getFirst().character());
+        room.onText(accepted, ControlCodec.encode(token,
+                new ControlMessage.SelectCharacter("tails")));
+        assertEquals("tails", room.players().getFirst().character());
+        assertTrue(accepted.text.stream().filter(text -> ControlCodec.decode(text).message()
+                        instanceof ControlMessage.RoomState)
+                .allMatch(text -> text.getBytes(StandardCharsets.UTF_8).length
+                        <= Protocol.MAX_CONTROL_BYTES));
+    }
+
+    @Test
+    void maximalTwoHundredFiftySixPlayerRosterFitsClientFrame() {
+        List<ControlMessage.PlayerInfo> players = new ArrayList<>();
+        for (int slot = 0; slot < Protocol.MAX_PLAYERS_RELAY; slot++) {
+            players.add(new ControlMessage.PlayerInfo(slot, "f".repeat(64),
+                    "n".repeat(64), "c".repeat(32), false));
+        }
+        String wire = ControlCodec.encode(null, new ControlMessage.RoomState(players));
+        assertTrue(wire.getBytes(StandardCharsets.UTF_8).length
+                <= Protocol.MAX_CONTROL_BYTES);
+        String tunneled = ControlCodec.encode("t".repeat(32),
+                new ControlMessage.RelayGuestText(255, wire));
+        assertTrue(tunneled.getBytes(StandardCharsets.UTF_8).length
+                <= Protocol.MAX_MASTER_FRAME_BYTES);
+        assertEquals(wire, ((ControlMessage.RelayGuestText) ControlCodec.decode(
+                tunneled, Protocol.MAX_MASTER_FRAME_BYTES).message()).text());
+        assertEquals(Protocol.MAX_PLAYERS_RELAY,
+                ((ControlMessage.RoomState) ControlCodec.decode(wire).message())
+                        .players().size());
     }
 
     @Test
@@ -162,6 +215,10 @@ class TestRoomHost {
         FakeHubConnection b = new FakeHubConnection();
         String token = admit(a, "A", dir.resolve("a")).sessionToken();
         admit(b, "B", dir.resolve("b"));
+        room.requestStartRound(new ControlMessage.RoundConfig(
+                "s3k", 0, 0, 300, "OPEN", null));
+        now += HostRoundEngine.COUNTDOWN_MILLIS;
+        room.tick();
         room.onText(a, ControlCodec.encode(token, new ControlMessage.AttemptStart(1)));
         byte[] frame = new byte[GhostFrameCodec.BYTES];
         GhostFrameCodec.encode(new GhostFrame(100, 200, 1,
@@ -171,6 +228,110 @@ class TestRoomHost {
         assertEquals(1, b.binary.size());
         assertEquals(0,
                 GhostPackets.decodeAggregate(b.binary.get(0)).entries().get(0).playerSlot());
+    }
+
+    @Test
+    void repeatedBadFinishHashesCloseGhostConnectionAtStrikeThreshold() throws Exception {
+        FakeHubConnection sender = new FakeHubConnection();
+        String token = admit(sender, "A", dir.resolve("a")).sessionToken();
+        room.requestStartRound(new ControlMessage.RoundConfig(
+                "s3k", 0, 0, 300, "OPEN", null));
+        now += HostRoundEngine.COUNTDOWN_MILLIS;
+        room.tick();
+
+        byte[] frames = new byte[GhostFrameCodec.BYTES * 2];
+        GhostFrameCodec.encode(new GhostFrame(100, 200, 1,
+                false, false, false, 2, false), frames, 0);
+        GhostFrameCodec.encode(new GhostFrame(101, 200, 1,
+                false, false, false, 2, true), frames, GhostFrameCodec.BYTES);
+        for (int attemptId = 1; attemptId <= GhostStreamValidator.KICK_THRESHOLD; attemptId++) {
+            room.onText(sender, ControlCodec.encode(token,
+                    new ControlMessage.AttemptStart(attemptId)));
+            room.onBinary(sender, GhostPackets.encodeFrames(attemptId, 0, frames));
+            room.onText(sender, ControlCodec.encode(token,
+                    new ControlMessage.AttemptFinish(attemptId, 1, 0, 1,
+                            "ab".repeat(32), "00".repeat(32), null)));
+            if (attemptId < GhostStreamValidator.KICK_THRESHOLD) {
+                assertNull(sender.closedReason);
+            }
+        }
+        assertEquals("ghost stream violations", sender.closedReason);
+        room.onDisconnected(sender);
+        assertEquals(0, room.playerCount());
+    }
+
+    @Test
+    void activeAttemptCanFinishAfterDeadlineTickWithinTransitGrace() throws Exception {
+        FakeHubConnection player = new FakeHubConnection();
+        String token = admit(player, "A", dir.resolve("a")).sessionToken();
+        assertTrue(room.requestStartRound(new ControlMessage.RoundConfig(
+                "s3k", 0, 0, 1, "OPEN", null)));
+        now += HostRoundEngine.COUNTDOWN_MILLIS;
+        room.tick();
+        room.onText(player, ControlCodec.encode(token, new ControlMessage.AttemptStart(1)));
+
+        GhostStreamPublisher publisher = new GhostStreamPublisher(
+                packet -> room.onBinary(player, packet));
+        publisher.beginAttempt(1);
+        publisher.onFrame(new GhostFrame(100, 200, 1,
+                false, false, false, 2, false));
+        publisher.onFrame(new GhostFrame(101, 200, 1,
+                false, false, false, 2, false));
+        publisher.finishAttempt();
+
+        now += 1001;
+        room.tick();
+        room.onText(player, ControlCodec.encode(token,
+                new ControlMessage.AttemptFinish(1, 1, 0, 1,
+                        "ab".repeat(32), HexFormat.of().formatHex(
+                        publisher.streamHashSha256()), null)));
+        assertEquals(HostRoundEngine.Phase.RUNNING, room.round().phase());
+        assertEquals(1, room.round().standings().size());
+    }
+
+    @Test
+    void attemptCannotStartAfterDeadlineEvenWhileFinishesHaveGrace() throws Exception {
+        FakeHubConnection player = new FakeHubConnection();
+        String token = admit(player, "A", dir.resolve("a")).sessionToken();
+        assertTrue(room.requestStartRound(new ControlMessage.RoundConfig(
+                "s3k", 0, 0, 1, "OPEN", null)));
+        now += HostRoundEngine.COUNTDOWN_MILLIS + 1001;
+        room.tick();
+        assertEquals(HostRoundEngine.Phase.RUNNING, room.round().phase());
+
+        room.onText(player, ControlCodec.encode(token, new ControlMessage.AttemptStart(1)));
+        GhostStreamPublisher publisher = new GhostStreamPublisher(
+                packet -> room.onBinary(player, packet));
+        publisher.beginAttempt(1);
+        publisher.onFrame(new GhostFrame(100, 200, 1,
+                false, false, false, 2, false));
+        publisher.onFrame(new GhostFrame(101, 200, 1,
+                false, false, false, 2, false));
+        publisher.finishAttempt();
+        room.onText(player, ControlCodec.encode(token,
+                new ControlMessage.AttemptFinish(1, 1, 0, 1,
+                        "ab".repeat(32), HexFormat.of().formatHex(
+                        publisher.streamHashSha256()), null)));
+
+        assertTrue(room.round().standings().isEmpty());
+    }
+
+    @Test
+    void attemptTrafficOutsideRunningRoundIsNotRelayed() throws Exception {
+        FakeHubConnection sender = new FakeHubConnection();
+        FakeHubConnection recipient = new FakeHubConnection();
+        String token = admit(sender, "A", dir.resolve("a")).sessionToken();
+        admit(recipient, "B", dir.resolve("b"));
+
+        room.onText(sender,
+                ControlCodec.encode(token, new ControlMessage.AttemptStart(1)));
+        byte[] frame = new byte[GhostFrameCodec.BYTES];
+        GhostFrameCodec.encode(new GhostFrame(100, 200, 1,
+                false, false, false, 2, false), frame, 0);
+        room.onBinary(sender, GhostPackets.encodeFrames(1, 0, frame));
+        room.tick();
+
+        assertTrue(recipient.binary.isEmpty());
     }
 
     @Test

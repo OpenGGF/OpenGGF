@@ -90,10 +90,18 @@ replace either. The bridge submits only those used HUD cells, so every other lin
 palette override when present and otherwise use the character palette. This
 ownership composition is also applied after editor resume and rewind restore.
 
-The v2 runtime profile is intentionally empty: flat scroll, with no stock animation
-channels, PLC loads, special render effects, advanced render modes, stock zone
-features, or stock level events. Unsupported nonempty profiles fail before the zone
-is published; custom behavior belongs in namespaced mod objects.
+The host runtime profile defaults to flat scroll with no inherited stock-zone
+animation channels, PLC loads, features or events. Unsupported nonempty host
+profiles fail before publication. Creator code may explicitly attach a verified
+owner runtime factory with `ModZoneContribution.withRuntime`: water, custom
+scroll, runtime state, tile and palette animation, staged render effects, render
+modes and rewind adapters execute through their ordinary consumers and fault
+boundaries. `ZoneEventFactory` separately supplies fresh owned event handlers;
+`RewindableZoneEvents` adds capture, restore, missing reset and final reconciliation.
+Namespaced objects remain available for interactions and authored finish behavior.
+See [content runtime and composition](../content-mods.md) and the executable
+[two-act campaign](../guides/two-act-campaign.md); these contracts do not inherit
+arbitrary stock-zone scripts or PLC programs.
 
 S3K saves persist a mod zone as the tagged identity
 `savedZone.mod.{owner,local}`, never its synthetic runtime index. Reopening the slot,

@@ -181,9 +181,11 @@ intellectual property.
 
 ### What platforms does it run on?
 
-Anywhere Java 21 and LWJGL run: Windows, macOS, and Linux. The engine uses OpenGL 4.1 core profile
+Anywhere Java 25 and LWJGL run: Windows, macOS, and Linux. The engine uses OpenGL 4.1 core profile
 (chosen for macOS compatibility). A GraalVM native image build is also supported for ahead-of-time compiled
-binaries. Third-party libraries (LWJGL, and Jackson for `config.yaml` and save files) are kept on
+binaries for Windows x64, Linux x64, and macOS Apple Silicon. Intel macOS uses the JVM
+build; GraalVM 25 does not supply a macOS x64 native-image toolchain. Source builds use
+JDK 25 exactly. Third-party libraries (LWJGL, and Jackson for `config.yaml` and save files) are kept on
 advisory-free versions: a Dependabot advisory against `master` is replicated onto `develop` and
 `next` as an aligned bump rather than merged into the released line.
 
@@ -483,8 +485,8 @@ remaining S3K gates. Existing modding, racing, editor and widescreen work stays
 under regression coverage while those campaign owners settle.
 
 The [0.8 roadmap](docs/project/v0.8-roadmap.md) then graduates those additions:
-final policy/API design, Time Attack and multiplayer extraction into a bundled
-mod, measured extensions to the already-delivered background loading, live FM
+final policy/API design, qualification of the bundled Time Attack mod and shared
+multiplayer services, measured extensions to the already-delivered background loading, live FM
 switching, and feature/platform qualification. API publication follows those
 consumers; the current Mod API remains an unpublished candidate. Native builds
 currently reject code mods, so bundled racing's native availability needs an

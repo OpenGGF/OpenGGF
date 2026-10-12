@@ -11,7 +11,7 @@ ggfmod validate ../openggf-gallery-music-sample.jar
 ```
 
 Copy the resulting JAR into OpenGGF's `mods/` directory, enable it in the Mod
-Manager, save, and restart. It replaces Sonic 2 Emerald Hill (`0x81`, decimal
+Manager, and choose Apply. It replaces Sonic 2 Emerald Hill (`0x81`, decimal
 `129`) with a quiet two-second looping tone.
 
 ## Provenance and license

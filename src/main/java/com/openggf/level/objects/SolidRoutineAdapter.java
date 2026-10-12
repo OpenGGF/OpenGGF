@@ -3,6 +3,7 @@ package com.openggf.level.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.profiles.solidroutine.SolidRoutineProviderForwarding;
 
+@com.openggf.game.ModApi
 public record SolidRoutineAdapter(SolidObjectProvider provider, SolidRoutineProfile profile) {
     public SolidObjectParams getSolidParams() {
         return SolidRoutineProviderForwarding.getSolidParams(provider);

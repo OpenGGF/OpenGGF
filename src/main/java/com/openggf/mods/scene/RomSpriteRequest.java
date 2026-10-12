@@ -13,6 +13,11 @@ package com.openggf.mods.scene;
  * object's {@code art_tile} (it may be negative). Pieces whose tiles fall outside the art are
  * skipped. {@code artSize} is only needed for uncompressed art.
  *
+ * <p>{@code mappingFrameCount} defaults to 0 (infer from the first pointer). For tables
+ * whose frame data is reordered or shared, use {@link #withMappingFrameCount(int)} with
+ * the number of pointers verified in the disassembly; the first pointer need not mark
+ * the end of the table. Explicit counts are bounded to 1-512.
+ *
  * <p>Sonic 3 &amp; Knuckles has two DPLC layouts: objects (Rhinobot, the signpost) use
  * {@link DplcLayout#OBJECT}, while the players, Tails' tails and the shields use
  * {@link DplcLayout#PLAYER}. Sonic 1 and 2 have one layout each; the field is ignored there.
@@ -31,7 +36,15 @@ public record RomSpriteRequest(
         int dplcAddress,
         DplcLayout dplcLayout,
         int paletteLine,
-        int tileOffset) {
+        int tileOffset,
+        int mappingFrameCount) {
+
+    /** Retains the original constructor, with automatic mapping frame-count inference. */
+    public RomSpriteRequest(int artAddress, Compression compression, int artSize, int mappingAddress,
+            int dplcAddress, DplcLayout dplcLayout, int paletteLine, int tileOffset) {
+        this(artAddress, compression, artSize, mappingAddress, dplcAddress, dplcLayout,
+                paletteLine, tileOffset, 0);
+    }
 
     /** Which dynamic pattern load cue layout {@code dplcAddress} uses (S3K only). */
     @com.openggf.game.ModApi
@@ -78,6 +91,9 @@ public record RomSpriteRequest(
         if (compression != Compression.UNCOMPRESSED && artSize != 0) {
             throw new IllegalArgumentException("Compressed art carries its own size; pass 0");
         }
+        if (mappingFrameCount < 0 || mappingFrameCount > 512) {
+            throw new IllegalArgumentException("mappingFrameCount must be 0 (infer) or 1-512");
+        }
         if (paletteLine < 0 || paletteLine > 3) {
             throw new IllegalArgumentException("paletteLine must be 0-3");
         }
@@ -110,7 +126,13 @@ public record RomSpriteRequest(
     /** The same request with {@code tileOffset} replaced. */
     public RomSpriteRequest withTileOffset(int offset) {
         return new RomSpriteRequest(artAddress, compression, artSize, mappingAddress, dplcAddress, dplcLayout,
-                paletteLine, offset);
+                paletteLine, offset, mappingFrameCount);
+    }
+
+    /** The same request with an explicit number of mapping pointers, or 0 to infer it. */
+    public RomSpriteRequest withMappingFrameCount(int count) {
+        return new RomSpriteRequest(artAddress, compression, artSize, mappingAddress, dplcAddress, dplcLayout,
+                paletteLine, tileOffset, count);
     }
 
     /** True when {@code dplcAddress} names a DPLC table (it is not {@code -1}). */

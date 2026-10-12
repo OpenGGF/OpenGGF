@@ -232,7 +232,7 @@ routines are fed the logical camera X (window origin plus local camera X), so ev
 parallax band keeps its stock speed straight through a shift with no jump; only the
 foreground scroll is put back on the local camera.
 
-From the repository root, with Java 21 and Maven on PATH:
+From the repository root, with Java 25 and Maven on PATH:
 
 ```sh
 python3 examples/infinite-sonic/build.py
@@ -241,8 +241,9 @@ python3 examples/infinite-sonic/build.py --run
 
 `--run` uses the SDK's explicit development-mod launch. Select/configure your Sonic 1
 ROM in the engine as usual. For normal launches, copy
-`target/infinite-sonic/infinite-sonic.jar` into the root `mods/` directory, enable
-**Infinite Sonic** in Mod Manager, grant code trust, and restart the JVM engine.
+`target/infinite-sonic/infinite-sonic.jar` into the root `mods/` directory and choose
+Apply in the master title's Mod Manager to rescan. Enable **Infinite Sonic**, grant
+code trust, and choose Apply again.
 Native-image builds cannot load code mods.
 
 The project is source-first and builds against this checkout's unpublished Mod API
@@ -267,3 +268,14 @@ local X=12,288 if necessary). There are no loops, moving platforms (other than t
 the stock routine interpolates towards the camera, drift into a busier pattern, as they would
 in an extremely long stock level. The coverage matrix and current evidence are
 in [the project design](../../docs/architecture/designs/2026-10-01-infinite-sonic.md).
+
+
+## Use matching creator artifacts
+
+The mutable 0.7 Mod API is unpublished. See [candidate setup](../../docs/modding/getting-started.md) for Java 25 and matching engine/SDK jar paths. From this checkout the shared launcher supports artifact-only builds and explicit ROM paths:
+
+```sh
+python3 examples/build_example.py infinite-sonic --engine /absolute/engine.jar --sdk /absolute/sdk.jar --run --s1 /absolute/own-s1.gen
+```
+
+Use `--s1`, `--s2`, or `--s3k` for the games this example consumes. Explicit paths create isolated development configuration and saves; no ROM is copied or linked. The creator kit exports this example with a portable POM and `tools/build_project.py`; it needs no engine source checkout. Only production sources/resources enter the validated mod jar. Read [recipient installation](../../docs/modding/installing-mods.md) before sharing.

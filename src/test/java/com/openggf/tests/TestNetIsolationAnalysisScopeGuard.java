@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestNetIsolationAnalysisScopeGuard {
 
     private static final Set<String> NETWORK_BOUNDARY_ROOTS = Set.of(
-            "com.openggf.net", "com.openggf.tools.net");
+            "com.openggf.net");
     private static final String CLASS_FILE_SUFFIX = ".class";
 
     @Test

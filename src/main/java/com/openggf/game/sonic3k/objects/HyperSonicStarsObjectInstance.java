@@ -200,6 +200,11 @@ public final class HyperSonicStarsObjectInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        com.openggf.sprites.playable.PlayableMutatorPresentation.drawCommands(owner,
+                com.openggf.graphics.SpritePresentation.Part.ATTACHED_EFFECT, commands, this::appendNativeRenderCommands);
+    }
+
+    private void appendNativeRenderCommands(List<GLCommand> commands) {
         if (owner.getSuperStateController() == null
                 || !owner.getSuperStateController().isHyperFormActive()) return;
         PatternSpriteRenderer renderer = renderer(true);

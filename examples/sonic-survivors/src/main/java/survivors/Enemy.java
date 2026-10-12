@@ -17,7 +17,7 @@ import java.util.List;
  * {@link #hurt}. Defeat uses the stock Sonic 2 destruction (explosion and freed animal)
  * and drops rings. Movement is one of the species' AI archetypes, all held to the arena.
  */
-public final class Enemy extends AbstractBadnikInstance implements RewindRecreatable, TouchResponseListener {
+public final class Enemy extends AbstractBadnikInstance implements ModRewindRecreatable, TouchResponseListener {
     static final int ELITE = 0x20;
     static final int GRAVITY = 0x38;
     // Frames an enemy ignores further weapon hits after one lands.
@@ -74,7 +74,7 @@ public final class Enemy extends AbstractBadnikInstance implements RewindRecreat
     /** Weapon hits land only outside the brief i-frames after the last one. */
     boolean vulnerable() { return alive() && iframes == 0; }
 
-    @Override public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
+    @Override public AbstractObjectInstance recreateForRewind(ObjectReconstructionContext context) {
         return new Enemy(context.spawn());
     }
     @Override public boolean isPersistent() { return !isDestroyed(); }

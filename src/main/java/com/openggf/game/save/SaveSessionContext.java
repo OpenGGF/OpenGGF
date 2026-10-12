@@ -99,8 +99,7 @@ public final class SaveSessionContext {
         }
         // Every provider receives the same persistence projection, so game-specific snapshot
         // implementations cannot accidentally serialize a destination-forced launch team.
-        RuntimeSaveContext durableContext = RuntimeSaveContext.forGameplayMode(
-                context.gameplayMode(), durableProjection());
+        RuntimeSaveContext durableContext = context.withSaveSession(durableProjection());
         saveManager.writeSlot(gameCode, activeSlot,
                 snapshotProvider.capture(reason, durableContext));
     }
@@ -124,8 +123,7 @@ public final class SaveSessionContext {
         if (activeSlot == null) {
             return;
         }
-        RuntimeSaveContext durableContext = RuntimeSaveContext.forGameplayMode(
-                context.gameplayMode(), durableProjection());
+        RuntimeSaveContext durableContext = context.withSaveSession(durableProjection());
         saveManager.writeSlotAsync(gameCode, activeSlot,
                 snapshotProvider.capture(reason, durableContext));
     }

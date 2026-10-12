@@ -86,9 +86,9 @@ class TestModGameStartResolver {
 
     @Test
     void nonGameStartContributionAndS2DefaultRetainMarker() {
-        ModZoneContribution compatible = new ModZoneContribution(
+        ModZoneContribution compatible = ModZoneContribution.singleAct(
                 "sky", new BakedLevelRef("sky/level.json"), null, null, false);
-        ModZoneContribution start = new ModZoneContribution(
+        ModZoneContribution start = ModZoneContribution.singleAct(
                 "sky", new BakedLevelRef("sky/level.json"), null, null, true);
 
         assertFalse(compatible.gameStart());
@@ -98,7 +98,7 @@ class TestModGameStartResolver {
 
     @Test
     void declaredAndPreparedGameStartMismatchIsRejected() {
-        ModZoneContribution declared = new ModZoneContribution(
+        ModZoneContribution declared = ModZoneContribution.singleAct(
                 "sky", new BakedLevelRef("sky/level.json"), null, null, true);
         PreparedModZone mismatched = PreparedModZone.metadata(
                 "alpha", "sky", null, "SKY", 0x400, 0x40, 0x20, 0x20);
@@ -137,7 +137,7 @@ class TestModGameStartResolver {
     }
 
     private static ModRegistrationPlan startPlan(String owner, String local, int ordinal) {
-        ModZoneContribution declared = new ModZoneContribution(
+        ModZoneContribution declared = ModZoneContribution.singleAct(
                 local, new BakedLevelRef(local + "/level.json"), null, null, true);
         PreparedModZone prepared = PreparedModZone.prepared(owner, declared, definition(ordinal));
         return new ModRegistrationPlan(owner, "s3k", Map.of(), Map.of(), Map.of(), List.of(),

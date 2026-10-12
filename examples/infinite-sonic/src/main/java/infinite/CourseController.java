@@ -7,7 +7,7 @@ import com.openggf.level.objects.*;
 import java.util.List;
 
 /** Scalar origin is captured by the ordinary mod-object rewind codec. */
-public final class CourseController extends AbstractObjectInstance implements RewindRecreatable {
+public final class CourseController extends AbstractObjectInstance implements ModRewindRecreatable {
     // Mod design: Sonic's top running speed on the course, 7/8 of the stock S1 0x600.
     public static final int COURSE_MAX_SPEED = 0x540;
     // Mod design: Sonic_Animate shows the full-speed Run (and fast Roll2) from inertia $600, which the
@@ -52,6 +52,8 @@ public final class CourseController extends AbstractObjectInstance implements Re
     static final int SPEED_UP_FRAMES = 60, SPEED_UP_FLASH = 12, SPEED_LINES = 16;
     /** CONTINUE phases: none, or waiting at the rewound spot for the player to go. */
     static final int RESUME_NONE = 0, RESUME_READY = 1;
+    @com.openggf.game.rewind.RewindTransient(reason = "Immutable presentation glyphs; no gameplay state")
+    private final CourseHud hud = new CourseHud();
     private int scrollFraction;
     private int scoreFraction;
     private boolean started;
@@ -175,14 +177,14 @@ public final class CourseController extends AbstractObjectInstance implements Re
     @Override public void appendRenderCommands(List<GLCommand> commands) {
         drawSweat();
         drawSpeedUp();
-        CourseHud.draw(services(), this);
+        hud.draw(services(), this);
     }
     private ChallengeClock clock() { return services().gameService(ChallengeClock.class); }
     private CourseSession session() { return services().gameService(CourseSession.class); }
     private CourseRewind rewind() { return services().gameService(CourseRewind.class); }
     /** CONTINUE's rewind is winding the run back; the death menu is not drawn over it. */
     public boolean rewinding() { return rewind().rewinding(); }
-    @Override public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
+    @Override public AbstractObjectInstance recreateForRewind(ObjectReconstructionContext context) {
         return new CourseController(context.spawn());
     }
     @Override public void update(int vIntRunCount, PlayableEntity player) {

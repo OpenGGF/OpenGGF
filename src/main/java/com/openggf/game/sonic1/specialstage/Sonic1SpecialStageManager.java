@@ -42,7 +42,7 @@ import static org.lwjgl.opengl.GL11.*;
  * 16-bit for velocity and inertia. ssAngle is 16-bit where the top byte
  * is used as a 256-step hex angle for trig lookups.
  */
-public final class Sonic1SpecialStageManager {
+public final class Sonic1SpecialStageManager implements com.openggf.game.internal.NativeSpecialStagePacing {
     private static final Logger LOGGER = Logger.getLogger(Sonic1SpecialStageManager.class.getName());
 
     // Pattern atlas base for SS art (above normal level art range)
@@ -137,6 +137,12 @@ public final class Sonic1SpecialStageManager {
     private static final int SS_WHITEOUT_TICKS = 22;
 
     private boolean initialized;
+    private final com.openggf.game.internal.NativeSpecialStagePacingOwner pacingOwner =
+            new com.openggf.game.internal.NativeSpecialStagePacingOwner();
+    @Override public com.openggf.game.internal.NativeSpecialStagePacingOwner pacingOwner() { return pacingOwner; }
+    @Override public com.openggf.game.internal.NativeSpecialStagePacing.State pacingState() {
+        return pacingOwner.state(initialized && startupHoldTicksRemaining == 0 && !finished && !exitTriggered, heldButtons, 0, false);
+    }
     private boolean finished;
     private boolean emeraldCollected;
     private boolean debugMode;
@@ -248,6 +254,7 @@ public final class Sonic1SpecialStageManager {
     private byte[] ssPaletteCycle2;
 
     public void initialize(int stageIndex) throws IOException {
+        pacingOwner.beginEntry();
         this.currentStage = Math.max(0, Math.min(stageIndex, SS_STAGE_COUNT - 1));
         this.ringsCollected = 0;
         this.emeraldCollected = false;
@@ -402,6 +409,7 @@ public final class Sonic1SpecialStageManager {
             return;
         }
 
+        pacingOwner.acceptedSample();
         if (objInitPending) {
             objInitPending = false;
             // SonicSS_Main (09 Sonic in Special Stage.asm:52-53): the object's
@@ -2776,6 +2784,7 @@ public final class Sonic1SpecialStageManager {
     }
 
     public void reset() {
+        pacingOwner.beginEntry();
         GraphicsManager gm = graphicsManager;
         Sonic1SpecialStageBackgroundRenderer background = bgRenderer;
         Sonic1SpecialStageBackgroundRenderer foreground = fgRenderer;

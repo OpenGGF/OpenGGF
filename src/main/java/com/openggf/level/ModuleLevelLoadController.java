@@ -1,7 +1,6 @@
 package com.openggf.level;
 
 import com.openggf.data.Game;
-import com.openggf.game.DynamicStartPositionProvider;
 import com.openggf.game.GameModule;
 import com.openggf.game.LevelLoadContext;
 import com.openggf.game.LevelLoadMode;
@@ -9,7 +8,6 @@ import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.Sprite;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
-import java.io.IOException;
 import java.util.Objects;
 import java.util.logging.Logger;
 
@@ -39,26 +37,18 @@ final class ModuleLevelLoadController {
         if (placements != null) placements.install(module.getGameCode(), levelIndex, loaded, stockDecoded);
     }
 
-    StartPosition nativeStartPosition(Game game, LevelDescriptor levelData, int zone, int act, Logger logger) {
-        int spawnX = levelData.startX();
-        int spawnY = levelData.startY();
-        if (game instanceof DynamicStartPositionProvider dynamicStartProvider) {
-            try {
-                int[] dynamicStart = dynamicStartProvider.getStartPosition(zone, act);
-                if (dynamicStart != null && dynamicStart.length >= 2) {
-                    spawnX = dynamicStart[0];
-                    spawnY = dynamicStart[1];
-                    logger.info("Set player position from dynamic start provider: X=" + spawnX +
-                            ", Y=" + spawnY + " (zone=" + zone + ", act=" + act + ")");
-                } else {
-                    logger.info("Dynamic start provider unavailable, using levelData fallback for " +
-                            levelData.toString());
-                }
-            } catch (IOException e) {
-                logger.warning("DynamicStartPositionProvider failed, using levelData fallback: " + e.getMessage());
-            }
-        }
-        return new StartPosition(spawnX, spawnY);
+    /** Selects the native/additive start before applying an optional fresh-entry position. */
+    StartPosition placeLevelStart(GameModule module, Game game, LevelLoadContext ctx,
+            LevelTransitionCoordinator transitions, int zone, int act, Sprite player,
+            LevelDescriptor descriptor, Logger logger) {
+        boolean additiveAct = module.getZoneRegistry()
+                .modZoneRuntimeContribution(ctx.getLevelIndex()) != null;
+        int[] nativeStart = LevelSceneActAccess.nativeStart(game, zone, act, descriptor, additiveAct);
+        StartPosition start = placeStartPosition(module, ctx, transitions, zone, act, player,
+                nativeStart[0], nativeStart[1]);
+        logger.info("Set player position from level start: X=" + start.centreX() +
+                ", Y=" + start.centreY() + " (center coordinates), level: " + descriptor);
+        return start;
     }
 
     /** Called only after native checkpoint and saved-origin positions have been ruled out. */

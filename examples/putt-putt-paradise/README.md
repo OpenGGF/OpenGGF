@@ -13,7 +13,7 @@ Building or loading the mod alone does not certify that every route passes.
 
 ## Build and launch
 
-Install Java 21, Maven, and Python 3, then run from this checkout:
+Install Java 25, Maven, and Python 3, then run from this checkout:
 
 ```sh
 python3 examples/putt-putt-paradise/build.py
@@ -21,7 +21,7 @@ python3 examples/putt-putt-paradise/build.py --run --rom /absolute/path/to/sonic
 ```
 
 The script queues the engine compile, compiles the external creator sources
-separately with `javac --release 21`, and runs the ordinary `ggfmod package`
+separately with `javac --release 25`, and runs the ordinary `ggfmod package`
 validation boundary. The output is `target/putt-putt-paradise/putt-putt-paradise.jar`.
 It skips engine tests; packaging validation is not gameplay verification.
 `--dry-run` prints these steps without changing files or starting Maven/Java.
@@ -32,8 +32,10 @@ writes an isolated configuration and runtime state under
 The ROM is referenced by absolute path, never copied or linked into the build.
 Use Sonic 2 World REV01 (SHA-1
 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`). For normal installation, place the
-validated jar in the matching engine's `mods` directory, enable it, and explicitly
-trust its Java code in Mod Manager. Restart the JVM after replacing a code mod.
+validated jar in the matching engine's `mods` directory and choose Apply in the
+master title's Mod Manager to rescan. Enable it, explicitly trust its Java code,
+and choose Apply again. After replacing the jar, rescan with Apply, review trust
+for its new hash, and choose Apply again to load the update.
 
 ## Play
 
@@ -181,7 +183,7 @@ streaming are optional layers; a first mod does not need them.
 
 | Read in this order | Responsibility | Useful pattern to copy |
 | --- | --- | --- |
-| [Manifest](src/main/resources/META-INF/openggf-mod.yaml) and [entry point](src/main/java/paradise/PuttPuttParadiseMod.java) | Declare the candidate API and register one patch and one namespaced object | Register through `ModContext`; let the engine assign ownership |
+| [Manifest](src/main/resources/META-INF/openggf-mod.yaml) and [entry point](src/main/java/paradise/PuttPuttParadiseMod.java) | Declare the candidate API; register the object, a per-application service/rewind bundle factory, a decoded placement patch and the game patch | Share the controller through `GameServiceBundle`; register immutable placement edits with `ModContext.decodedLevelPatch` so the engine binds ownership |
 | [GolfModule](src/main/java/paradise/GolfModule.java) | Wrap the S2 module, keep ROM geometry/art, replace selected object placements, supply the title and controller | Delegate stock behavior and override only what your rules need |
 | [GolfMenu](src/main/java/paradise/ui/GolfMenu.java) | Turn menu choices into one validated `Selection` before gameplay starts | Keep setup separate from frame simulation |
 | [ShotMeter](src/main/java/paradise/model/ShotMeter.java) and [GolfRules](src/main/java/paradise/model/GolfRules.java) | A-only shot state machine and deterministic power/spin math | Test rules without a ROM, renderer or socket |
@@ -299,3 +301,14 @@ and guest JVMs and verifies real shots, scene images, scores, pause ownership,
 concession and teardown. The dated delivery plan records completed verification
 and its limits. Scene parity is a presentation check; it does not certify stock
 ROM timing or every possible shot through every object.
+
+
+## Use matching creator artifacts
+
+The mutable 0.7 Mod API is unpublished. See [candidate setup](../../docs/modding/getting-started.md) for Java 25 and matching engine/SDK jar paths. From this checkout the shared launcher supports artifact-only builds and explicit ROM paths:
+
+```sh
+python3 examples/build_example.py putt-putt-paradise --engine /absolute/engine.jar --sdk /absolute/sdk.jar --run --s2 /absolute/own-s2.gen
+```
+
+Use `--s1`, `--s2`, or `--s3k` for the games this example consumes. Explicit paths create isolated development configuration and saves; no ROM is copied or linked. The creator kit exports this example with a portable POM and `tools/build_project.py`; it needs no engine source checkout. Only production sources/resources enter the validated mod jar. Read [recipient installation](../../docs/modding/installing-mods.md) before sharing.

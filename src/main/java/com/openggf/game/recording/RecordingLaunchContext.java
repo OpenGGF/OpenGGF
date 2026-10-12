@@ -2,7 +2,6 @@ package com.openggf.game.recording;
 
 import java.util.List;
 
-@com.openggf.game.ModApi
 public record RecordingLaunchContext(
         String gameId,
         int zone,

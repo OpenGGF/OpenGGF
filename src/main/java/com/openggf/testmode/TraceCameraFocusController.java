@@ -30,10 +30,8 @@ import java.util.function.Supplier;
  * pause early-return in {@link com.openggf.GameLoop} keeps every other system
  * frozen, so simply writing {@code x}/{@code y} is sufficient and safe.
  */
-@com.openggf.game.ModApi
 public final class TraceCameraFocusController {
 
-    @com.openggf.game.ModApi
     public enum FocusMode {
         DEFAULT("Default"),
         SIDEKICK_ENGINE("Sidekick (Eng)"),

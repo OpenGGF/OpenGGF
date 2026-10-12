@@ -19,6 +19,12 @@ import java.util.OptionalInt;
 @com.openggf.game.ModApi
 public class LevelTransitionCoordinator {
 
+    private final LevelStageEntryAdmission stageAdmission;
+    public LevelTransitionCoordinator() { this(null); }
+    LevelTransitionCoordinator(com.openggf.game.session.WorldSession world) {
+        stageAdmission = new LevelStageEntryAdmission(world);
+    }
+
     // ── Special stage ──────────────────────────────────────────────────
     private SpecialStageEntryRequest specialStageEntryRequest;
     private boolean specialStageEntryRoutineArmed;
@@ -94,9 +100,11 @@ public class LevelTransitionCoordinator {
     // ── Credits ────────────────────────────────────────────────────────
     private boolean creditsRequested;
     private GameOverExit gameOverExitRequested;
+    boolean sceneActActive;
+    LevelSceneActAccess.Exit sceneActExit;
 
     // ── Time attack menu return ─────────────────────────────────────────
-    private boolean timeAttackMenuReturnRequested;
+    private boolean hostReturnRequested;
 
     // ── HUD / music suppression ────────────────────────────────────────
     private boolean forceHudSuppressed;
@@ -125,7 +133,7 @@ public class LevelTransitionCoordinator {
     }
 
     public void requestSpecialStageEntry(SpecialStageEntryRequest request) {
-        this.specialStageEntryRequest = java.util.Objects.requireNonNull(request, "request");
+        if (stageAdmission.special()) this.specialStageEntryRequest = java.util.Objects.requireNonNull(request, "request");
     }
 
     public SpecialStageEntryRequest consumeSpecialStageEntryRequest() {
@@ -140,7 +148,7 @@ public class LevelTransitionCoordinator {
     }
 
     public void advanceToSpecialStageEntryRoutine() {
-        specialStageEntryRoutineArmed = true;
+        if (stageAdmission.special()) specialStageEntryRoutineArmed = true;
     }
 
     public void setLevelRoutineReentry(boolean reentry) {
@@ -417,7 +425,7 @@ public class LevelTransitionCoordinator {
      * Called by Sonic3kStarPostBonusStarChild on player touch.
      */
     public void requestBonusStageEntry(BonusStageType type) {
-        this.bonusStageRequested = type;
+        if (stageAdmission.bonus()) this.bonusStageRequested = type;
     }
 
     /**
@@ -644,7 +652,7 @@ public class LevelTransitionCoordinator {
 
     /** True once any engine-owned level-exit request has ended the main loop. */
     public boolean hasPendingLevelExit() {
-        return titleCardRequested
+        return sceneActExit != null || titleCardRequested
                 || respawnRequested
                 || nextActRequested
                 || nextZoneRequested
@@ -852,26 +860,33 @@ public class LevelTransitionCoordinator {
     // ================================================================
 
     /**
-     * Request a return to the time attack menu instead of the normal act/zone
-     * advance. Called by {@code LevelManager.advanceToNextLevel()} and
-     * {@code S3kResultsScreenObjectInstance.onExitReady()} (and its
-     * subclasses) when {@code GameStateManager.isTimeAttackActive()} is true
-     * at the point where a results tally would otherwise advance to the next
-     * act/zone. GameLoop consumes this the same way as the other transition
-     * requests and routes through the time-attack return-to-menu fade instead.
+     * Request the end of the current run and a return to its host instead of the normal
+     * act/zone advance. Called by {@code LevelManager.advanceToNextLevel()} and results-screen
+     * completion code when the session's {@link com.openggf.game.session.GameplayRunPolicy}
+     * returns to the host on act completion. GameLoop consumes this the same way as the other
+     * transition requests and hands control back to the run's host.
      */
-    public void requestTimeAttackMenuReturn() {
-        this.timeAttackMenuReturnRequested = true;
+    public void requestHostReturn() {
+        this.hostReturnRequested = true;
+    }
+
+    /** Requests a host return when {@code policy} hands act completion back to the run's host. */
+    public boolean requestHostReturnIf(com.openggf.game.session.GameplayRunPolicy policy) {
+        if (policy == null || !policy.returnsToHostOnActCompletion()) {
+            return false;
+        }
+        requestHostReturn();
+        return true;
     }
 
     /**
-     * Check and consume the time attack menu return request.
+     * Check and consume the host return request.
      *
-     * @return true if a return to the time attack menu was requested
+     * @return true if the run asked to return to its host
      */
-    public boolean consumeTimeAttackMenuReturnRequest() {
-        boolean requested = timeAttackMenuReturnRequested;
-        timeAttackMenuReturnRequested = false;
+    public boolean consumeHostReturnRequest() {
+        boolean requested = hostReturnRequested;
+        hostReturnRequested = false;
         return requested;
     }
 
@@ -1007,6 +1022,8 @@ public class LevelTransitionCoordinator {
      * Called from {@code LevelManager.resetState()}.
      */
     public void resetState() {
+        sceneActActive = false;
+        sceneActExit = null;
         continuationCarry = null;
         specialStageEntryRequest = null;
         specialStageEntryRoutineArmed = false;
@@ -1040,7 +1057,7 @@ public class LevelTransitionCoordinator {
         specificZoneActRequested = false;
         seamlessTransitionRequested = false;
         creditsRequested = false;
-        timeAttackMenuReturnRequested = false;
+        hostReturnRequested = false;
         forceHudSuppressed = false;
         suppressNextMusicChange = false;
         levelInactiveForTransition = false;

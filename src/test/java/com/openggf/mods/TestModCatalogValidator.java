@@ -54,7 +54,7 @@ class TestModCatalogValidator {
                 "audio/audio-manifest.yaml", bytes(audio("music", "audio/missing.ogg", false))));
         ModDescriptor withSfx = descriptor("with-sfx", "s1", Map.of(), Map.of(
                 "audio/audio-manifest.yaml", bytes(audio("music", "audio/music.ogg", true)),
-                "audio/music.ogg", new byte[] {1}, "audio/hit.wav", new byte[] {2}));
+                "audio/music.ogg", new byte[] {1}));
         ModDescriptor valid = descriptor("following", "s1", Map.of(0x81, "music"), Map.of(
                 "audio/audio-manifest.yaml", bytes(audio("music", "audio/music.ogg", false)),
                 "audio/music.ogg", new byte[] {1}));
@@ -64,13 +64,14 @@ class TestModCatalogValidator {
 
         assertTrue(codes(result, "missing-manifest").contains("AUDIO_MANIFEST_MISSING"));
         assertTrue(codes(result, "missing-asset").contains("AUDIO_ASSET_MISSING"));
-        assertTrue(codes(result, "with-sfx").contains("SFX_UNSUPPORTED_PHASE1"));
+        assertTrue(codes(result, "with-sfx").contains("AUDIO_ASSET_MISSING"));
+        assertTrue(result.sfxRegistry().find(new SfxKey("with-sfx", "hit")).isEmpty());
         assertTrue(result.registry().find(new TrackKey("following", "music")).isPresent());
         assertTrue(result.registry().find(new TrackKey("missing-asset", "music")).isEmpty());
     }
 
     @Test
-    void standaloneSfxIsEligibleWhilePatchSfxRemainsDeferred() throws Exception {
+    void standaloneAndOwnedPatchSceneSfxAreEligible() throws Exception {
         Map<String, byte[]> entries = Map.of(
                 "audio/audio-manifest.yaml", bytes(audio("music", "audio/music.ogg", true)),
                 "audio/music.ogg", new byte[] {1}, "audio/hit.wav", new byte[] {2});
@@ -82,8 +83,15 @@ class TestModCatalogValidator {
 
         assertFalse(descriptor(result, "standalone-sfx").hasErrors());
         assertTrue(result.sfxRegistry().find(new SfxKey("standalone-sfx", "hit")).isPresent());
-        assertTrue(codes(result, "patch-sfx").contains("SFX_UNSUPPORTED_PHASE1"));
-        assertTrue(result.sfxRegistry().find(new SfxKey("patch-sfx", "hit")).isEmpty());
+        assertFalse(descriptor(result, "patch-sfx").hasErrors());
+        assertTrue(result.sfxRegistry().find(new SfxKey("patch-sfx", "hit")).isPresent());
+        for (ModDescriptor descriptor : List.of(standalone, patch)) {
+            try (var assets = ModAssetRoot.jar(temp, descriptor.jarPath(), ModInputLimits.production())) {
+                var packed = validator().validatePacked(descriptor, assets);
+                assertTrue(packed.eligibility().sfxRegistry()
+                        .find(new SfxKey(descriptor.manifest().id(), "hit")).isPresent());
+            }
+        }
     }
 
     @Test

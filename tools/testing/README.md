@@ -13,7 +13,7 @@ PowerShell uses `tools/testing/install-hooks.ps1`.
 
 ## Test categories
 
-Use Python 3.11+ and Java 21. The runner uses the existing Maven defaults and exclusions;
+Use Python 3.11+ and Java 25. The runner uses the existing Maven defaults and exclusions;
 it does not move tests, alter CI/release coverage, or remove slow tests from a selected category.
 
 ```bash
@@ -56,6 +56,13 @@ oracles into gameplay. Categories overlap. New ordinary
 classes without a narrower owner fall into `common`, so naming changes cannot silently drop
 them. Candidate counts include Maven-discovered helper/abstract classes, not just executed tests.
 The union covers the ordinary source inventory; Maven's existing tags and exclusions still apply.
+The inventory reads the POM's ordinary test source directory and static
+`build-helper-maven-plugin` `add-test-source` executions, including the separate
+Time Attack and racing-server projects. Identical resolved roots are deduplicated;
+missing/dynamic/escaping roots, overlapping roots, symlinked source children and
+duplicate Java class paths fail planning instead of silently losing tests. Profile-only
+source executions are outside the ordinary inventory. Unclassified external-project
+changes retain the full ordinary-suite fallback; this discovery does not narrow selection.
 
 Change rules are deliberately narrower than test ownership. Physics changes also select
 related gameplay, rendering and rewind tests. Audio changes also select rewind and tooling.
@@ -89,7 +96,10 @@ Run that additional lane for FBZ traversal changes and exhaustive ROM validation
 The category runner's ordinary/guard result does not include this lane.
 
 The runner discovers existing root `.gen` files by the documented SHA-1 identities and passes
-absolute ROM paths. It never creates ROM links or copies. Missing ROMs still require inspecting
+absolute ROM paths. In an isolated worktree, use `--rom-directory /absolute/original/ROM/directory`
+to discover the originals there as well, including the documented KiS2 lock-on dump when present.
+Each path is one Maven argument, including filenames with spaces. This avoids Java environment
+injection and creates no ROM links or copies. Missing ROMs still require inspecting
 skips; a successful exit alone does not establish ROM-backed coverage.
 
 Each run starts in `target/category-tests/<run-id>/`. The plan retains the tested head,
@@ -105,7 +115,7 @@ passes for Git hooks, or claim that every candidate source produced a report.
 
 Run `python3 tools/testing/run_categories.py --base <pinned-base> --preflight` in the
 same environment as the intended test command. Every `--run` also performs these checks:
-Maven must use Java 21; selections with guards require executable Lua 5.4 (`LUA_BIN`,
+Maven must use Java 25; selections with guards require executable Lua 5.4 (`LUA_BIN`,
 default `lua`) and `pwsh` on PATH. Failures are collected before any test lane starts.
 This checks tool launches, not ROM completeness, native display access or every fixture
 prerequisite. On macOS use the known working native display/service permissions from the
@@ -125,16 +135,66 @@ receipts, cumulative budget, retry authorization or manual timing records are re
 Repeated checks should have a reason, such as changed code or repaired prerequisites;
 there is no hard attempt limit. Partial or interrupted coverage never certifies a pass.
 
-### Queued Maven execution
+<a id="queued-maven-execution"></a>
+
+### Build-only Maven execution and queued tests
 
 Category `--run` commands automatically wait for a shared Maven slot across all linked
-worktrees. For focused tests or any other Maven invocation, run this from the intended
+worktrees. For focused tests or lifecycle commands that run tests, run this from the intended
 worktree (PowerShell accepts the same Python command):
 
 ```bash
 python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestCollisionLogic" test
 python3 tools/testing/maven_queue.py -Dmse=off package
 ```
+
+Build-only commands bypass the shared test scheduler automatically, including its
+resource reservations, priority and serial override:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off compile
+python3 tools/testing/maven_queue.py -Dmse=off test-compile
+python3 tools/testing/maven_queue.py -Dmse=off -DskipTests package
+python3 tools/testing/maven_queue.py -Dmse=off -DskipTests compile dependency:build-classpath -Dmdep.outputFile=target/examples-classpath.txt
+```
+
+They hold only the current worktree's `maven-worktree.lock`, preventing concurrent
+writes to its `target/` by another wrapped build or test. A test in another worktree
+cannot delay them. They publish no shared waiting/running records or queue telemetry.
+Direct `mvn compile` and `mvn -DskipTests package` are also allowed when nothing else
+is writing this worktree's `target/`; use the wrapper when that exclusion matters.
+
+Recognition covers this POM's lifecycle phases before `test`, later phases with
+explicit `-DskipTests` or `-Dmaven.test.skip=true`, and `dependency:build-classpath`.
+That dependency goal only resolves dependencies and writes a classpath; it does
+not execute or fork tests. Mod launch shortcuts combine it with `compile`, so
+their engine build bypasses the shared test queue. They can still wait for a
+build or test using the same worktree's `target/`. The last definition of each
+property wins; `false` does not skip tests. Split `-D`/`--define` forms are supported.
+Arbitrary plugin goals (including direct Surefire/Failsafe goals), alternate POMs,
+unknown profiles, non-default `.mvn/maven.config` and `MAVEN_ARGS` stay queued because
+their test behavior is uncertain. A skip flag does not certify an arbitrary plugin
+goal as build-only. Custom settings or Maven extensions may also change lifecycle
+bindings; inspect those before relying on automatic recognition. A native-image build
+with tests skipped bypasses admission too; its CPU/memory cost is not the Java-build
+estimate. Build CPU/RAM is visible as ordinary host load when later tests seek admission.
+
+On this Linux host (32 logical CPUs, Java 21.0.12.1, Maven 3.9.16), clean builds
+of `607e97d54` measured on 2026-10-09 with the existing local dependency cache were:
+
+- `clean compile`: 58.48 seconds, 1.524 GiB peak process-tree RSS, 1.891 average
+  CPU cores, 53.3 MiB allocated under `target/`.
+- `clean package -DskipTests`: 96.57 seconds, 3.427 GiB peak process-tree RSS,
+  2.088 average CPU cores, 893.4 MiB allocated under `target/`. This still compiles
+  test sources; `-Dmaven.test.skip=true` also skips test compilation.
+
+Both used `python3 tools/testing/maven_queue.py -Dmse=off -B` with no custom
+heap/thread limits and exited successfully. These are build measurements, not
+suite validation or guaranteed resource limits. The existing `UsageSampler`
+sampled the wrapper/Maven descendants every 100 ms; RSS sums shared pages and
+short-lived peaks/CPU can be missed. Disk figures exclude the checkout and Maven's
+dependency cache. Native-image compilation was not measured. The 7 GiB / 8-core
+test reservation below includes a separate test JVM and is not a build requirement.
 
 For small focused tests with known bounded memory needs, use the **lean lane**:
 
@@ -247,7 +307,7 @@ single-worker default suite and the profiles that keep it: `smoke`, `guards`, `c
 `trace-replay`, `trace-segments`, `trace-replay-r7`, `trace-diagnostics`, `fbz-routes`,
 `audio-reference` and `audio-local-wave`. A Python test pins that shape against `pom.xml`.
 `benchmarks` (wall-clock sensitive), `test-concurrent` (two forks), `audio-stress`,
-`tracechaser-integration`, packaging and other profiles, category `--workers 2`,
+`tracechaser-integration`, packaging with tests and other profiles, category `--workers 2`,
 Maven thread/fork/heap overrides, and nonempty `MAVEN_OPTS`,
 `JAVA_TOOL_OPTIONS` or `JDK_JAVA_OPTIONS` retain exclusive execution. Implicit profiles
 or heap settings in custom project/user Maven configuration are not detected; use the
@@ -286,7 +346,7 @@ kill, especially on Windows, check for surviving Maven/JVM processes before furt
 This is local coordination, not a sandbox against arbitrary commands.
 
 Direct `mvn` and runners predating the single-lock queue do not participate. Use the
-wrapper for local Maven builds/tests. Previous single-lock and resource-admission wrappers remain lock-compatible, but
+wrapper for local tests and for builds that need worktree exclusion. Previous single-lock and resource-admission wrappers remain lock-compatible, but
 they do not publish priority requests and can bypass waiting order. Update participating
 worktrees to this scheduler for its priority/aging policy to apply throughout the queue. Existing `openggf-validation/task.json`, `task.lock` and
 `target/category-tests-last-broad.json` files are ignored, not migrated or deleted;
@@ -452,6 +512,51 @@ certification. Inspect Surefire outcomes/skips as well as memory. Raw event file
 rotating GC/Maven logs, temporary helper classes and test artifacts are removed after
 extracting the report, including handled interruption. Record durable conclusions
 in the research artifact and remove consumed target reports.
+
+## Bounded category-result comparison
+
+`compare_category_outcomes.py` compares the ordinary failures and skips in a
+completed category runner's `results.json` with an explicitly supplied light
+baseline. The baseline names its tested `source` (or `tested_sha`) and `run`,
+and supplies `failures` entries with `identity`, `kind`, `type`, `message` plus
+`skips` entries with `identity`, `message`. Failure identity is `class#test`;
+messages contain the complete assertion or causal line, not a capped excerpt.
+
+```bash
+python3 tools/testing/compare_category_outcomes.py \
+  --baseline /absolute/task/baseline-summary.json \
+  --results target/category-tests/<run-id>/results.json \
+  --output /absolute/task/comparison.json
+python3 -m unittest discover -s tools/testing -p 'test_compare_category_outcomes.py'
+```
+
+The tool requires both ordinary and guard lanes, reconciles negative-case
+inventories with their counters, and rejects incomplete exits, omitted or
+duplicate identities, and unavailable full assertions. It recovers a capped
+2 KiB assertion only from matching complete runner detail. A Surefire JUnit abort message
+may contain a stack: the tool compares its complete first causal line only when every
+remaining line is a stack frame. Chained causes, arbitrary multiline tails and capped
+messages remain invalid evidence. The runner checks the entire uncapped XML abort
+stack before projecting its complete causal line, recording the projection kind,
+original character count and validated frame count. This keeps long framework stacks
+from exhausting the 4 KiB message bound. Unrecognized tails and causal lines that
+reach that bound remain capped excerpts; the comparator still rejects them.
+Changed or absent failures, changed skip causes,
+and any guard failure/skip require review. Exit
+0 means unchanged negative cases; 1 means differences; 2 means invalid evidence.
+A failed comparison writes an invalid verdict rather than leaving a prior
+successful output at the requested path.
+
+`--normalize-known-ssz-blobs` is an explicit, narrow exception for independently
+verified Java object hashes in the named SSZ Tails cold-route testcase. It also
+recognizes that owner's `@HASH` light-summary projection; other test identities,
+numbers and values remain literal. Record why this normalization is valid.
+
+This is negative-case post-processing, not a complete outcome inventory or suite
+certification. Independently verify selection, source fingerprint, terminal run
+status, and baseline reuse authority. It neither runs tests nor changes runner
+selection or diagnostic cleanup. Inspect the comparison, then acknowledge the
+category run normally. The complete inventory tools below cover all outcomes.
 
 ## Complete Surefire outcome inventories
 

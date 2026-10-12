@@ -15,11 +15,23 @@ public record PreparedModZone(String ownerModId, String localKey, String insertA
                               ModLevelDefinition definition, ZoneEventFactory eventFactory,
                               String zoneName, int levelIndex, int authoredZoneIndex,
                               int startX, int startY, ModZoneRuntimeProfile runtimeProfile,
-                              ModZoneLevelData hostData, boolean gameStart) {
+                              ModZoneLevelData hostData, boolean gameStart, int actIndex,
+                              com.openggf.game.modzone.ModZoneRuntimeFactory runtimeFactory) {
     public PreparedModZone {
         ownerModId = ModKeySyntax.requireManifestId(ownerModId);
         localKey = ModKeySyntax.requireLocalName(localKey);
         Objects.requireNonNull(zoneName, "zoneName");
+        if (actIndex < 0) throw new IllegalArgumentException("Act index must be nonnegative");
+    }
+
+    /** Compatibility constructor for the single-act canonical shape. */
+    public PreparedModZone(String ownerModId, String localKey, String insertAfter,
+                           ModLevelDefinition definition, ZoneEventFactory eventFactory,
+                           String zoneName, int levelIndex, int authoredZoneIndex,
+                           int startX, int startY, ModZoneRuntimeProfile runtimeProfile,
+                           ModZoneLevelData hostData, boolean gameStart) {
+        this(ownerModId, localKey, insertAfter, definition, eventFactory, zoneName,
+                levelIndex, authoredZoneIndex, startX, startY, runtimeProfile, hostData, gameStart, 0, null);
     }
 
     public PreparedModZone(String ownerModId, String localKey, String insertAfter,
@@ -51,10 +63,15 @@ public record PreparedModZone(String ownerModId, String localKey, String insertA
 
     static PreparedModZone prepared(String owner, ModZoneContribution contribution,
                                     ModLevelDefinition definition) {
+        return prepared(owner, contribution, definition, 0);
+    }
+
+    static PreparedModZone prepared(String owner, ModZoneContribution contribution,
+                                    ModLevelDefinition definition, int actIndex) {
         return new PreparedModZone(owner, contribution.localKey(), contribution.insertAfter(), definition,
                 contribution.eventFactory(), definition.zoneName(), definition.levelIndex(),
                 definition.zoneIndex(), definition.start().x(), definition.start().y(), null, null,
-                contribution.gameStart());
+                contribution.gameStart() && actIndex == 0, actIndex, contribution.runtimeFactory());
     }
 
     static PreparedModZone metadata(String owner, String local, String anchor, String name,
@@ -68,12 +85,33 @@ public record PreparedModZone(String ownerModId, String localKey, String insertA
         return new PreparedModZone(ownerModId, localKey, insertAfter, definition, eventFactory,
                 zoneName, levelIndex, authoredZoneIndex, startX, startY,
                 Objects.requireNonNull(profile, "profile"),
-                Objects.requireNonNull(hostData, "hostData"), gameStart);
+                Objects.requireNonNull(hostData, "hostData"), gameStart, actIndex, runtimeFactory);
+    }
+
+    PreparedModZone withRuntimeFactory(com.openggf.game.modzone.ModZoneRuntimeFactory factory) {
+        return new PreparedModZone(ownerModId, localKey, insertAfter, definition, eventFactory,
+                zoneName, levelIndex, authoredZoneIndex, startX, startY, runtimeProfile, hostData,
+                gameStart, actIndex, factory);
+    }
+
+    /** Authored IDs stay in the definition; only the effective host routing IDs are allocated by the engine. */
+    PreparedModZone withRuntimeIndices(int runtimeLevelIndex, int runtimeZoneIndex) {
+        ModZoneLevelData remapped = hostData;
+        if (hostData != null) {
+            try {
+                remapped = ModZoneLoader.prepareHostData(Objects.requireNonNull(definition), runtimeZoneIndex);
+            } catch (java.io.IOException failure) {
+                throw new IllegalArgumentException("Unable to remap prepared level", failure);
+            }
+        }
+        return new PreparedModZone(ownerModId, localKey, insertAfter, definition, eventFactory,
+                zoneName, runtimeLevelIndex, authoredZoneIndex, startX, startY,
+                runtimeProfile, remapped, gameStart, actIndex, runtimeFactory);
     }
 
     public ModZoneRuntimeContribution runtimeContribution() {
         return runtimeProfile == null || hostData == null ? null
-                : new ModZoneRuntimeContribution(ownerModId, localKey, hostData, runtimeProfile);
+                : new ModZoneRuntimeContribution(ownerModId, localKey, hostData, runtimeProfile, runtimeFactory);
     }
 
     public LevelDescriptor descriptor() {

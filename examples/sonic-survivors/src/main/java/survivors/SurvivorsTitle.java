@@ -15,6 +15,7 @@ import java.util.function.Supplier;
  */
 final class SurvivorsTitle implements TitleScreenProvider {
     static final int REVEAL_DELAY = 100;
+    private final com.openggf.mods.ui.BitmapFont font = Draw.createFont();
     private final TitleScreenProvider base;
     private final Supplier<Profile> profile;
     private int selected;
@@ -111,25 +112,19 @@ final class SurvivorsTitle implements TitleScreenProvider {
     }
 
     // ---- Screen-space drawing straight to the graphics manager (no camera at the title). ----
-    private static void text(GraphicsManager graphics, String text, int x, int y, int scale, int rgb, float alpha) {
-        for (int row = 0; row < 7; row++) textRow(graphics, text, x, y, scale, row, rgb, alpha);
+    private void text(GraphicsManager graphics, String text, int x, int y, int scale, int rgb, float alpha) {
+        font.glyphs(text.toUpperCase(java.util.Locale.ROOT), x, y, scale,
+                (px, py, w, h) -> rectH(graphics, px, py, w, h, rgb, alpha));
     }
 
-    private static void textRow(GraphicsManager graphics, String text, int x, int y, int scale, int row, int rgb,
+    private void textRow(GraphicsManager graphics, String text, int x, int y, int scale, int row, int rgb,
                                 float alpha) {
-        String upper = text.toUpperCase(java.util.Locale.ROOT);
-        for (int i = 0; i < upper.length(); i++) {
-            int index = Draw.CHARS.indexOf(upper.charAt(i));
-            if (index < 0) continue;
-            int base = index * 35 + row * 5;
-            for (int col = 0; col < 5; col++) {
-                if (Draw.GLYPHS.charAt(base + col) != '1') continue;
-                int end = col;
-                while (end < 5 && Draw.GLYPHS.charAt(base + end) == '1') end++;
-                rectH(graphics, x + i * 6 * scale + col * scale, y + row * scale, (end - col) * scale, scale, rgb, alpha);
-                col = end;
-            }
-        }
+        int rowTop = y + row * scale;
+        font.glyphs(text.toUpperCase(java.util.Locale.ROOT), x, y, scale, (px, py, w, h) -> {
+            // Cached stems may span several differently coloured wordmark rows.
+            int top = Math.max(py, rowTop), bottom = Math.min(py + h, rowTop + scale);
+            if (bottom > top) rectH(graphics, px, top, w, bottom - top, rgb, alpha);
+        });
     }
 
     private static void rect(GraphicsManager graphics, int x, int y, int w, int h, int rgb, float alpha) {

@@ -5,16 +5,24 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.PowerUpObject;
 import com.openggf.game.PowerUpSpawner;
 import com.openggf.game.ShieldType;
+import com.openggf.game.rules.GameRules;
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.game.sonic3k.objects.InstaShieldObjectInstance;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.DefaultPowerUpSpawner;
+import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.TestObjectServices;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.lang.reflect.Field;
 import java.util.ArrayDeque;
@@ -24,6 +32,7 @@ import java.util.Queue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -37,6 +46,139 @@ class TestShieldRewindRestore {
     @AfterEach
     void tearDown() {
         TestEnvironment.resetAll();
+    }
+
+    @Test
+    void restoreBeforeFirstStatusTickKeepsInstaShieldRegistrationPending() {
+        TestablePlayableSprite sprite = instaShieldSprite();
+        RecordingInstaShield instaShield = new RecordingInstaShield();
+        RecordingPowerUpSpawner spawner = new RecordingPowerUpSpawner();
+        spawner.instaShields.add(instaShield);
+        sprite.setPowerUpSpawner(spawner);
+        var pending = sprite.captureRewindState();
+        assertFalse(pending.playerExtra().instaShieldRegistered());
+
+        sprite.tickStatus();
+        assertTrue(sprite.captureRewindState().playerExtra().instaShieldRegistered());
+        assertEquals(1, spawner.registerObjectCalls);
+
+        sprite.restoreRewindState(pending);
+        sprite.refreshPowerUpObjectsAfterRewindRestore();
+
+        assertFalse(sprite.captureRewindState().playerExtra().instaShieldRegistered(),
+                "Restoring the load floor must leave registration to the first status tick");
+        assertEquals(1, spawner.registerObjectCalls,
+                "Post-restore visual refresh must not register an uncaptured object");
+        sprite.tickStatus();
+        assertTrue(sprite.captureRewindState().playerExtra().instaShieldRegistered());
+        assertEquals(2, spawner.registerObjectCalls);
+    }
+
+    @Test
+    void pendingInstaShieldRestoreReplacesDestroyedHandleWithoutRegisteringEarly() {
+        TestablePlayableSprite sprite = instaShieldSprite();
+        RecordingInstaShield original = new RecordingInstaShield();
+        RecordingInstaShield replacement = new RecordingInstaShield();
+        RecordingPowerUpSpawner spawner = new RecordingPowerUpSpawner();
+        spawner.instaShields.add(original);
+        spawner.instaShields.add(replacement);
+        sprite.setPowerUpSpawner(spawner);
+        var pending = sprite.captureRewindState();
+        original.destroy();
+
+        sprite.restoreRewindState(pending);
+        sprite.refreshPowerUpObjectsAfterRewindRestore();
+
+        assertSame(replacement, sprite.getInstaShieldObject());
+        assertFalse(sprite.captureRewindState().playerExtra().instaShieldRegistered());
+        assertEquals(0, spawner.registerObjectCalls);
+        sprite.tickStatus();
+        assertEquals(1, spawner.registerObjectCalls);
+    }
+
+    @Test
+    void registeredInstaShieldRestoreStillRebindsAndInvalidatesItsArt() {
+        TestablePlayableSprite sprite = instaShieldSprite();
+        RecordingInstaShield instaShield = new RecordingInstaShield();
+        RecordingPowerUpSpawner spawner = new RecordingPowerUpSpawner();
+        spawner.instaShields.add(instaShield);
+        sprite.setPowerUpSpawner(spawner);
+        sprite.tickStatus();
+        var registered = sprite.captureRewindState();
+        sprite.markInstaShieldForReregistration();
+
+        sprite.restoreRewindState(registered);
+        sprite.refreshPowerUpObjectsAfterRewindRestore();
+
+        assertTrue(sprite.captureRewindState().playerExtra().instaShieldRegistered());
+        assertEquals(2, spawner.registerObjectCalls);
+        assertEquals(1, instaShield.dplcInvalidations);
+    }
+
+    private static TestablePlayableSprite instaShieldSprite() {
+        TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
+        var sprite = new TestablePlayableSprite("sonic", (short) 100, (short) 200) {
+            @Override
+            public SecondaryAbility getSecondaryAbility() {
+                return SecondaryAbility.INSTA_SHIELD;
+            }
+        };
+        sprite.setGameRulesForTest(GameRules.SONIC_3K);
+        return sprite;
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void pendingRealInstaShieldRestoreDiscardsAbandonedAttackAndSlotState(boolean destroyFuture)
+            throws Exception {
+        TestablePlayableSprite sprite = instaShieldSprite();
+        ObjectManager objectManager = installObjectManager();
+        TestObjectServices services = new TestObjectServices().withDirectObjectManager(objectManager);
+        DefaultPowerUpSpawner spawner = new DefaultPowerUpSpawner(objectManager) {
+            @Override
+            public InstaShieldHandle createInstaShield(PlayableEntity player) {
+                assertSame(sprite, player);
+                return ObjectConstructionContext.construct(services,
+                        () -> new InstaShieldObjectInstance(sprite));
+            }
+        };
+        sprite.setPowerUpSpawner(spawner);
+        InstaShieldObjectInstance shield = (InstaShieldObjectInstance) sprite.getInstaShieldObject();
+        var pendingPlayer = sprite.captureRewindState();
+        var pendingObjects = objectManager.rewindSnapshottable().capture();
+        var pendingShield = shield.captureRewindState();
+        assertTrue(objectManager.getActiveObjects().isEmpty());
+
+        sprite.tickStatus();
+        shield.triggerAttack();
+        shield.update(1, sprite);
+        assertNotEquals(pendingShield, shield.captureRewindState(),
+                "The real handle must accumulate a future attack and registered slot");
+        if (destroyFuture) {
+            shield.destroy();
+        }
+
+        // Match registry ordering: sprites restore, then objects, then visual refresh.
+        sprite.restoreRewindState(pendingPlayer);
+        objectManager.rewindSnapshottable().restore(pendingObjects);
+        sprite.refreshPowerUpObjectsAfterRewindRestore();
+
+        var restoredShield = (InstaShieldObjectInstance) sprite.getInstaShieldObject();
+        if (destroyFuture) {
+            assertNotSame(shield, restoredShield, "A destroyed future handle must be recreated");
+        } else {
+            assertSame(shield, restoredShield, "ObjectManager drops future handles without destroying them");
+        }
+        assertFalse(restoredShield.isDestroyed());
+        assertEquals(pendingShield, restoredShield.captureRewindState(),
+                "The pending owner must restore its uncaptured attack cursor and slot state");
+        assertFalse(sprite.captureRewindState().playerExtra().instaShieldRegistered());
+        assertTrue(objectManager.getActiveObjects().isEmpty(),
+                "The restored load floor contains no registered shield");
+
+        sprite.tickStatus();
+        assertTrue(objectManager.getActiveObjects().contains(restoredShield));
+        assertTrue(sprite.captureRewindState().playerExtra().instaShieldRegistered());
     }
 
     @Test
@@ -185,7 +327,9 @@ class TestShieldRewindRestore {
 
     private static final class RecordingPowerUpSpawner implements PowerUpSpawner {
         private final Queue<PowerUpObject> shields = new ArrayDeque<>();
+        private final Queue<InstaShieldHandle> instaShields = new ArrayDeque<>();
         private int spawnShieldCalls;
+        private int registerObjectCalls;
 
         private RecordingPowerUpSpawner(PowerUpObject... shields) {
             this.shields.addAll(java.util.List.of(shields));
@@ -204,16 +348,40 @@ class TestShieldRewindRestore {
 
         @Override
         public InstaShieldHandle createInstaShield(PlayableEntity player) {
-            return null;
+            return instaShields.poll();
         }
 
         @Override
         public void registerObject(PowerUpObject obj) {
+            registerObjectCalls++;
         }
 
         @Override
         public void spawnSplash(PlayableEntity player) {
         }
+    }
+
+    private static final class RecordingInstaShield implements InstaShieldHandle {
+        private boolean destroyed;
+        private int dplcInvalidations;
+
+        @Override
+        public void destroy() { destroyed = true; }
+
+        @Override
+        public boolean isDestroyed() { return destroyed; }
+
+        @Override
+        public void setVisible(boolean visible) { }
+
+        @Override
+        public void triggerAttack() { }
+
+        @Override
+        public void invalidateDplcCache() { dplcInvalidations++; }
+
+        @Override
+        public void update(int vIntRunCount, PlayableEntity player) { }
     }
 
     private static final class RecordingShield implements PowerUpObject {

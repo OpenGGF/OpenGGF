@@ -21,6 +21,24 @@ class TestMasterTitleHub {
         return screen;
     }
 
+    @Test void evenOneModLaunchesThroughTheExtrasChooser() {
+        var screen = screen();
+        var opened = new java.util.concurrent.atomic.AtomicInteger();
+        screen.setTitleEntries(java.util.List.of("Time Attack"), (games, index) -> {
+            assertEquals(0, index);
+            assertTrue(games.contains("s2"));
+            opened.incrementAndGet();
+        });
+        press(screen, GLFW_KEY_DOWN);
+        for (int i = 0; i < TitleHubNavigation.Action.EXTRAS.ordinal(); i++) {
+            press(screen, GLFW_KEY_DOWN);
+        }
+        press(screen, GLFW_KEY_ENTER);
+        assertEquals(0, opened.get(), "Extras opens the chooser instead of launching a specific mod");
+        press(screen, GLFW_KEY_ENTER);
+        assertEquals(1, opened.get());
+    }
+
     @Test void horizontalInputChangesGamesAndVerticalInputEntersAndNavigatesActions() {
         var screen = screen();
         press(screen, GLFW_KEY_LEFT);

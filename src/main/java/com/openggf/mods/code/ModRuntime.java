@@ -28,10 +28,14 @@ public final class ModRuntime implements AutoCloseable {
     private final Set<String> availableOwners;
     private final Map<String, Rejection> rejectedOwners;
     private Map<String, Throwable> registrationFailures = Map.of();
+    private Map<String, ModRegistrationPlan> registrationPlans = Map.of();
+    private List<OwnedTitleEntry> titleEntries = List.of();
+    private ModContributionReport contributionReport = new ModContributionReport(List.of());
     private Map<String, com.openggf.game.GameModule> standaloneModules = Map.of();
     private final Set<String> runtimeDisabledOwners = new java.util.LinkedHashSet<>();
     private boolean closed;
     private ModFaultBoundary faultBoundary;
+    private java.nio.file.Path storageRoot = com.openggf.game.save.SavePaths.root();
     private java.util.function.BiConsumer<String,
             com.openggf.game.sonic2.dataselect.S2SaveFinding> saveFindingSink = (owner, finding) -> {};
 
@@ -67,13 +71,16 @@ public final class ModRuntime implements AutoCloseable {
     /** Builds fresh entrypoint instances and private transactions for one launch preparation. */
     public synchronized ModuleResolutionService.PatchPlan newRegistrationPlan() {
         if (closed) throw new IllegalStateException("Mod runtime is closed");
+        registrationPlans = Map.of();
+        titleEntries = List.of();
+        contributionReport = new ModContributionReport(List.of());
+        Map<String, ModRegistrationPlan> currentPlans = new LinkedHashMap<>();
         List<RegisteredPatch> registrations = new ArrayList<>();
         Map<PatchOwner, Set<PatchOwner>> dependencies = new LinkedHashMap<>();
         Set<String> failed = new java.util.LinkedHashSet<>();
         Map<String, Throwable> currentFailures = new LinkedHashMap<>();
-        Set<Integer> aggregateZoneIds = new java.util.HashSet<>();
-        Set<Integer> aggregateLevelIds = new java.util.HashSet<>();
         Map<String, com.openggf.game.GameModule> currentStandaloneModules = new LinkedHashMap<>();
+        Map<String, OwnedTitleEntry> currentTitleEntries = new LinkedHashMap<>();
         for (String owner : owners) {
             ModDescriptor descriptor = descriptors.get(owner);
             if (descriptor == null) continue;
@@ -98,7 +105,7 @@ public final class ModRuntime implements AutoCloseable {
                         snapshots.get(owner), "owner assets"))) {
                     ModContext context = new ModContext(owner, descriptor.manifest().baseGame(), assets,
                             descriptor.manifest().insertAfter(),
-                            descriptor.manifest().type() == com.openggf.mods.ModType.STANDALONE);
+                            descriptor.manifest().type() == com.openggf.mods.ModType.STANDALONE, storageRoot);
                     descriptor.manifest().artOverrides().forEach((key, path) ->
                             context.registerManifestArtOverride(key, new BakedSheetRef(path)));
                     if (descriptor.manifest().entrypoint() != null && loaders.containsKey(owner)) {
@@ -111,22 +118,17 @@ public final class ModRuntime implements AutoCloseable {
                         entrypoint.register(context);
                     }
                     plan = context.freeze().prepareObjectArt(assets).prepareZones(assets);
+                    ModTitleEntry entry = context.titleEntry();
+                    if (entry != null) {
+                        if (faultBoundary == null) {
+                            throw new ModRegistrationException(owner,
+                                    "Title entry requires an installed fault boundary");
+                        }
+                        currentTitleEntries.put(owner, new OwnedTitleEntry(owner, entry.label(),
+                                new OwnedSceneFactory(owner, entry.factory(), faultBoundary)));
+                    }
                 }
                 PatchOwner.Mod patchOwner = new PatchOwner.Mod(owner);
-                Set<Integer> ownerZoneIds = new java.util.HashSet<>();
-                Set<Integer> ownerLevelIds = new java.util.HashSet<>();
-                for (PreparedModZone zone : plan.preparedZones()) {
-                    if (aggregateZoneIds.contains(zone.authoredZoneIndex())
-                            || !ownerZoneIds.add(zone.authoredZoneIndex())) {
-                        throw new ModRegistrationException(owner,
-                                "Duplicate authored zoneIndex across enabled owners: " + zone.authoredZoneIndex());
-                    }
-                    if (aggregateLevelIds.contains(zone.levelIndex())
-                            || !ownerLevelIds.add(zone.levelIndex())) {
-                        throw new ModRegistrationException(owner,
-                                "Duplicate authored levelIndex across enabled owners: " + zone.levelIndex());
-                    }
-                }
                 List<RegisteredPatch> ownerRegistrations;
                 com.openggf.game.GameModule standalone = null;
                 if (plan.standaloneModule() != null) {
@@ -137,6 +139,7 @@ public final class ModRuntime implements AutoCloseable {
                     standalone = OwnerBoundGamePatch.wrapStandaloneRewinds(owner,
                             OwnerAwareStandaloneModule.wrap(owner, plan.standaloneModule(), faultBoundary,
                                     plan.characters(), plan.preparedObjectArt()), faultBoundary);
+                    standalone = OwnedModServices.decorate(standalone, plan, faultBoundary);
                     standalone.getPlayableCharacterRegistry();
                     ownerRegistrations = List.of();
                 } else if (plan.hasContent()) {
@@ -170,8 +173,7 @@ public final class ModRuntime implements AutoCloseable {
                     }
                     required.add(new PatchOwner.Mod(dependency.id()));
                 }
-                aggregateZoneIds.addAll(ownerZoneIds);
-                aggregateLevelIds.addAll(ownerLevelIds);
+                currentPlans.put(owner, plan);
                 registrations.addAll(ownerRegistrations);
                 dependencies.put(patchOwner, Set.copyOf(required));
                 if (standalone != null) currentStandaloneModules.put(owner, standalone);
@@ -182,9 +184,56 @@ public final class ModRuntime implements AutoCloseable {
                 currentFailures.put(owner, failure);
             }
         }
+        Map<String, String> rejectedClaims = new java.util.TreeMap<>();
+        currentPlans.forEach((owner, plan) -> {
+            Set<String> published = ModContributionReport.contributions(plan, descriptors.get(owner));
+            for (String claim : new java.util.TreeSet<>(descriptors.get(owner).manifest().composition().exclusiveContributions()))
+                if (!published.contains(claim) || claim.startsWith("art:")
+                        && !com.openggf.mods.StockArtOverrideCatalog.contains(plan.baseGameId(), claim.substring(4)))
+                    rejectedClaims.put(owner, "Unused exclusive contribution claim or unknown target: " + claim);
+        });
+        ModContributionReport.sources(currentPlans, descriptors).forEach((target, claimants) -> {
+            String claim = target.substring(target.indexOf('/')+1);
+            if (claimants.size() > 1 && claimants.stream().anyMatch(owner ->
+                    descriptors.get(owner).manifest().composition().exclusiveContributions().contains(claim))) {
+                List<String> sorted = claimants.stream().sorted().toList();
+                for (String owner : sorted) rejectedClaims.put(owner,
+                        "Exclusive contribution conflict at " + target + ": " + String.join(", ", sorted));
+            }
+        });
+        boolean changed;
+        do {
+            changed = false;
+            for (String owner : currentPlans.keySet()) {
+                if (rejectedClaims.containsKey(owner)) continue;
+                String failedDependency = descriptors.get(owner).manifest().dependencies().stream().map(ModDependency::id)
+                        .filter(rejectedClaims::containsKey).sorted().findFirst().orElse(null);
+                if (failedDependency != null) { rejectedClaims.put(owner, "Dependency contribution rejected: " + failedDependency); changed = true; }
+            }
+        } while (changed);
+        rejectedClaims.forEach((owner, reason) -> {
+            currentFailures.put(owner, new ModRegistrationException(owner, "MOD_COMPOSITION_REJECTED", reason, null, null));
+            runtimeDisabledOwners.add(owner); currentPlans.remove(owner); currentStandaloneModules.remove(owner);
+            currentTitleEntries.remove(owner);
+            registrations.removeIf(registration -> registration.owner().equals(new PatchOwner.Mod(owner)));
+            dependencies.remove(new PatchOwner.Mod(owner));
+        });
+        Map<PatchOwner,Set<PatchOwner>> ordering = new LinkedHashMap<>();
+        currentPlans.forEach((owner, plan) -> {
+            PatchOwner key = new PatchOwner.Mod(owner);
+            var metadata = descriptors.get(owner).manifest().composition();
+            for (String predecessor : metadata.after()) if (currentPlans.containsKey(predecessor))
+                ordering.computeIfAbsent(key, ignored -> new java.util.LinkedHashSet<>()).add(new PatchOwner.Mod(predecessor));
+            for (String successor : metadata.before()) if (currentPlans.containsKey(successor))
+                ordering.computeIfAbsent(new PatchOwner.Mod(successor), ignored -> new java.util.LinkedHashSet<>()).add(key);
+        });
+        contributionReport = ModContributionReport.build(currentPlans, descriptors);
+        registrationPlans = java.util.Collections.unmodifiableMap(new LinkedHashMap<>(currentPlans));
         registrationFailures = Map.copyOf(currentFailures);
         standaloneModules = Map.copyOf(currentStandaloneModules);
-        return new ModuleResolutionService.PatchPlan(registrations, dependencies);
+        currentTitleEntries.keySet().retainAll(currentPlans.keySet());
+        titleEntries = List.copyOf(currentTitleEntries.values());
+        return new ModuleResolutionService.PatchPlan(registrations, dependencies, ordering);
     }
 
     /** Runs one fresh registration pass and returns the atomically published standalone module. */
@@ -218,8 +267,26 @@ public final class ModRuntime implements AutoCloseable {
         return standaloneModules;
     }
 
+    /** Successful private transactions published by the latest registration pass; never re-runs creator code. */
+    public synchronized ModContributionReport contributionReport() { return contributionReport; }
+
+    /** Master-title entries from the latest registration pass, in owner order. */
+    public synchronized List<OwnedTitleEntry> titleEntries() {
+        return titleEntries;
+    }
+
+    public synchronized Map<String, ModRegistrationPlan> registrationPlans() {
+        return registrationPlans;
+    }
+
     public synchronized Map<String, Throwable> registrationFailures() {
         return registrationFailures;
+    }
+
+    /** Sets the engine/test-owned storage root for subsequently created owner transactions. */
+    public synchronized void installStorageRoot(java.nio.file.Path root) {
+        if (closed) throw new IllegalStateException("Mod runtime is closed");
+        storageRoot = Objects.requireNonNull(root, "root").toAbsolutePath().normalize();
     }
 
     /** Installs the engine-owned runtime callback boundary before launch plans are built. */
@@ -236,6 +303,12 @@ public final class ModRuntime implements AutoCloseable {
 
     public synchronized void disableOwnersForProcess(Set<String> owners) {
         runtimeDisabledOwners.addAll(Set.copyOf(Objects.requireNonNull(owners, "owners")));
+        LinkedHashMap<String, ModRegistrationPlan> retained = new LinkedHashMap<>(registrationPlans);
+        runtimeDisabledOwners.forEach(retained::remove);
+        registrationPlans = java.util.Collections.unmodifiableMap(retained);
+        titleEntries = titleEntries.stream()
+                .filter(entry -> !runtimeDisabledOwners.contains(entry.ownerModId())).toList();
+        contributionReport = ModContributionReport.build(registrationPlans, descriptors);
     }
 
     public synchronized Set<String> runtimeDisabledOwners() {
@@ -310,6 +383,9 @@ public final class ModRuntime implements AutoCloseable {
     public synchronized void close() throws IOException {
         if (closed) return;
         closed = true;
+        registrationPlans = Map.of();
+        titleEntries = List.of();
+        contributionReport = new ModContributionReport(List.of());
         IOException failure = null;
         List<ModDependencyClassLoader> reverse = new ArrayList<>(loaders.values());
         for (int index = reverse.size() - 1; index >= 0; index--) {

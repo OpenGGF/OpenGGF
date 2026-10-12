@@ -29,6 +29,10 @@ pressure workers to fit a green fixture.
 
 ## Ownership and parallel work
 
+Use T3 Orchestration when available, following its live instructions for
+provider/model discovery, delegation, child-task lifecycle, and result delivery.
+This skill supplies frontier ownership, verification, and integration guidance.
+
 Parallel agents are useful for independent frontiers or a bounded independent
 review. Use available capacity and inherit the session's model preferences;
 there is no fixed slot count, model ladder, or mandatory paired investigation.

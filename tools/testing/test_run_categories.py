@@ -6,13 +6,76 @@ import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
+import xml.etree.ElementTree as ET
 
+import compare_category_outcomes as comparison
 import run_categories as runner
 
 
 class CategoryPolicyTests(unittest.TestCase):
     def setUp(self):
         self.policy = runner.policy()
+
+    def test_rom_discovery_accepts_original_files_in_an_explicit_directory(self):
+        import hashlib
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / 'worktree'
+            originals = Path(tmp) / 'original ROMs'
+            root.mkdir()
+            originals.mkdir()
+            path = originals / 'Original game (REV01) [!].gen'
+            path.write_bytes(b'original test image')
+            digest = hashlib.sha1(path.read_bytes()).hexdigest()
+            with patch.dict(runner.ROM_PROPERTIES, {digest: 'sonic2.rom.path'}, clear=True):
+                self.assertEqual([f'-Dsonic2.rom.path={path.resolve()}'],
+                                 runner.rom_args(root, originals))
+            self.assertEqual([], list(root.iterdir()))
+
+    def test_explicit_rom_directory_must_exist_and_be_a_directory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            file = root / 'not-a-directory'
+            file.write_text('data')
+            for path in (root / 'missing', file):
+                with self.subTest(path=path), self.assertRaises(ValueError):
+                    runner.rom_args(root, path)
+
+    def test_explicit_rom_discovery_keeps_root_priority_and_ignores_unknown_images(self):
+        import hashlib
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / 'worktree'
+            originals = Path(tmp) / 'originals'
+            root.mkdir()
+            originals.mkdir()
+            local = root / 'local.gen'
+            local.write_bytes(b'known image')
+            (originals / 'same.gen').write_bytes(local.read_bytes())
+            (originals / 'unrecognized.gen').write_bytes(b'other image')
+            digest = hashlib.sha1(local.read_bytes()).hexdigest()
+            with patch.dict(runner.ROM_PROPERTIES, {digest: 'sonic1.rom.path'}, clear=True):
+                self.assertEqual([f'-Dsonic1.rom.path={local.resolve()}'],
+                                 runner.rom_args(root, originals))
+
+    def test_explicit_rom_directory_is_passed_to_both_fresh_lanes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            originals = root / 'original ROMs'
+            originals.mkdir()
+            plan = {'tests': ['com/openggf/TestExample.java'], 'full': False,
+                    'guards': True, 'categories': ['common'], 'inventory_count': 1}
+            summary = {'reports': 1, 'tests': 1, 'skipped': 0, 'errors': 0, 'failures': 0}
+            argument = '-Dsonic2.rom.path=/original ROMs/Original [!].gen'
+            with patch.object(runner, 'tree_state', return_value='state'), \
+                    patch.object(runner, 'rom_args', return_value=[argument]) as discover, \
+                    patch.object(runner, 'summarize', side_effect=lambda _: dict(summary)), \
+                    patch.object(runner, 'run_logged', return_value=0) as process:
+                self.assertEqual(0, runner.run_plan(root, plan, rom_directory=originals))
+            self.assertEqual(2, discover.call_count)
+            for call in discover.call_args_list:
+                self.assertEqual((root, originals), call.args)
+            for call in process.call_args_list:
+                self.assertIn(argument, call.args[0])
+            self.assertEqual([], list(originals.iterdir()))
 
     def test_physics_changes_keep_dependent_categories_but_not_audio_oracles(self):
         categories, full, _ = runner.select_changes([
@@ -146,6 +209,97 @@ class CategoryPolicyTests(unittest.TestCase):
             self.assertEqual({'committed', 'staged', 'unstaged', 'deleted', 'renamed', 'new-name', 'untracked space'}, set(paths))
 
 
+class InventorySourceRootsTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.data = runner.policy()
+        self.source('src/test/java', 'com/openggf/TestCore.java')
+
+    def source(self, root, name):
+        path = self.root / root / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text('// inventory fixture')
+        return path
+
+    def pom(self, roots=(), extra='', plugin_config='', executions=None):
+        from xml.sax.saxutils import escape
+        sources = ''.join(f'<source>{escape(root)}</source>' for root in roots)
+        if executions is None:
+            executions = ('<execution><goals><goal>add-test-source</goal></goals>'
+                          f'<configuration><sources>{sources}</sources></configuration></execution>') if roots else ''
+        helper = ('<plugin><groupId>org.codehaus.mojo</groupId>'
+                  '<artifactId>build-helper-maven-plugin</artifactId>' + plugin_config
+                  + f'<executions>{executions}</executions></plugin>')
+        (self.root / 'pom.xml').write_text(
+            '<project xmlns="http://maven.apache.org/POM/4.0.0"><build><plugins>'
+            '<plugin><artifactId>maven-surefire-plugin</artifactId><configuration>'
+            '<excludes><exclude>**/Test*Guard.java</exclude></excludes>'
+            '</configuration></plugin>' + helper + '</plugins></build>' + extra + '</project>')
+
+    def test_external_sources_are_included_and_keep_surefire_exclusions(self):
+        self.source('racing/mod/src/test/java', 'openggf/timeattack/TestRun.java')
+        self.source('racing/mod/src/test/java', 'openggf/timeattack/TestRunGuard.java')
+        self.source('racing/mod/src/main/java', 'openggf/timeattack/Runtime.java')
+        self.pom(['racing/mod/src/main/java', 'racing/mod/src/test/java'])
+        self.assertEqual({'com/openggf/TestCore.java', 'openggf/timeattack/TestRun.java'},
+                         set(runner.inventory(self.root, self.data)))
+
+    def test_duplicate_normalized_roots_are_deduplicated(self):
+        self.pom(['src/test/java', '${project.basedir}/src/test/java', '${basedir}/src/test/java'])
+        self.assertEqual(1, len(runner.inventory(self.root, self.data)))
+
+    def test_duplicate_class_paths_in_distinct_roots_fail(self):
+        self.source('racing/tests', 'com/openggf/TestCore.java')
+        self.pom(['racing/tests'])
+        with self.assertRaisesRegex(ValueError, 'Duplicate Java class path'):
+            runner.inventory(self.root, self.data)
+
+    def test_overlapping_roots_fail_instead_of_creating_wrong_selectors(self):
+        self.pom(['src/test'])
+        with self.assertRaisesRegex(ValueError, 'Overlapping test source roots'):
+            runner.inventory(self.root, self.data)
+
+    def test_dynamic_missing_or_escaping_roots_fail_closed(self):
+        for root in ['${unresolved}/java', '../outside', '/outside', 'missing/java', '.', r'src\test\java']:
+            with self.subTest(root=root):
+                self.pom([root])
+                with self.assertRaises(ValueError):
+                    runner.inventory(self.root, self.data)
+
+    def test_symlinked_source_children_are_not_silently_omitted(self):
+        self.source('extra', 'TestLinked.java')
+        (self.root / 'src/test/java/linked').symlink_to(self.root / 'extra', target_is_directory=True)
+        self.pom()
+        with self.assertRaisesRegex(ValueError, 'Symlink inside test source root'):
+            runner.inventory(self.root, self.data)
+
+    def test_plugin_defaults_apply_but_inactive_profile_roots_do_not(self):
+        self.source('racing/tests', 'openggf/timeattack/TestRun.java')
+        config = '<configuration><sources><source>racing/tests</source></sources></configuration>'
+        execution = '<execution><goals><goal>add-test-source</goal></goals></execution>'
+        profile = ('<profiles><profile><build><plugins><plugin>'
+                   '<groupId>org.codehaus.mojo</groupId><artifactId>build-helper-maven-plugin</artifactId>'
+                   '<executions><execution><goals><goal>add-test-source</goal></goals>'
+                   '<configuration><sources><source>absent/profile-only</source></sources></configuration>'
+                   '</execution></executions></plugin></plugins></build></profile></profiles>')
+        self.pom(extra=profile, plugin_config=config, executions=execution)
+        self.assertIn('openggf/timeattack/TestRun.java', runner.inventory(self.root, self.data))
+
+    def test_execution_sources_override_plugin_defaults(self):
+        self.source('racing/tests', 'openggf/timeattack/TestRun.java')
+        config = '<configuration><sources><source>absent/plugin-default</source></sources></configuration>'
+        self.pom(['racing/tests'], plugin_config=config)
+        self.assertIn('openggf/timeattack/TestRun.java', runner.inventory(self.root, self.data))
+
+    def test_real_racing_projects_are_present_in_full_inventory(self):
+        inventory = runner.inventory(runner.ROOT, self.data)
+        self.assertIn('openggf/timeattack/TestTimeAttackModPackage.java', inventory)
+        self.assertIn('openggf/racing/server/master/TestMasterServer.java', inventory)
+        self.assertIn('com/openggf/net/identity/TestPlayerIdentity.java', inventory)
+
+
 class RunnerTests(unittest.TestCase):
     def test_failed_or_empty_run_stops_before_guards(self):
         for code in (0, 1):
@@ -200,6 +354,56 @@ class RunnerTests(unittest.TestCase):
             summary = runner.summarize(reports)
             self.assertEqual(1, summary['skipped'])
             self.assertEqual('Missing ROM', summary['skipped_cases'][0]['reason'])
+
+    def summarize_skip(self, reason, use_text=False):
+        with tempfile.TemporaryDirectory() as tmp:
+            reports = Path(tmp)
+            suite = ET.Element('testsuite', tests='1', skipped='1', failures='0', errors='0')
+            case = ET.SubElement(suite, 'testcase', classname='Example', name='needsRom')
+            skipped = ET.SubElement(case, 'skipped')
+            if use_text:
+                skipped.text = reason
+            else:
+                skipped.set('message', reason)
+            ET.ElementTree(suite).write(reports / 'TEST-example.xml', encoding='unicode')
+            return runner.summarize(reports)['skipped_cases'][0]
+
+    def test_long_complete_abort_stack_preserves_full_cause_before_transport_cap(self):
+        cause = 'org.opentest4j.TestAbortedException: Assumption failed: act places no platforms'
+        frames = ['\tat org.junit.jupiter.engine.Probe.invoke(Probe.java:1544)'] * 100
+        reason = cause + '\n' + '\n'.join(frames) + '\n'
+        self.assertGreater(len(reason), 4096)
+        for use_text in (False, True):
+            with self.subTest(use_text=use_text):
+                case = self.summarize_skip(reason, use_text)
+                self.assertEqual(cause, case['reason'])
+                self.assertEqual('validated-junit-abort-cause', case['reason_projection'])
+                self.assertEqual(len(reason), case['reason_source_chars'])
+                self.assertEqual(100, case['reason_stack_frames'])
+                self.assertEqual(cause, comparison.skip_cause(case['reason'], 'skip cause'))
+
+    def test_projection_does_not_hide_unrecognized_tail_beyond_transport_cap(self):
+        cause = 'org.opentest4j.TestAbortedException: Assumption failed: act places no platforms'
+        stack = cause + '\n' + '\n'.join(['\tat pkg.Probe.invoke(Probe.java:1544)'] * 150)
+        for tail in ('Caused by: java.io.IOException: different failure',
+                     'another causal assertion', '\tat pkg.Probe.invoke(Probe.java:'):
+            with self.subTest(tail=tail):
+                case = self.summarize_skip(stack + '\n' + tail)
+                self.assertEqual(4096, len(case['reason']))
+                self.assertNotIn('reason_projection', case)
+                with self.assertRaises(comparison.EvidenceError):
+                    comparison.skip_cause(case['reason'], 'skip cause')
+
+    def test_projection_requires_junit_abort_and_a_bounded_complete_causal_line(self):
+        for cause in ('java.io.IOException: different failure',
+                      'org.opentest4j.TestAbortedException: ' + 'x' * 4096):
+            with self.subTest(cause=cause[:60]):
+                reason = cause + '\n' + '\n'.join(['\tat pkg.Probe.invoke(Probe.java:1544)'] * 150)
+                case = self.summarize_skip(reason)
+                self.assertEqual(4096, len(case['reason']))
+                self.assertNotIn('reason_projection', case)
+                with self.assertRaises(comparison.EvidenceError):
+                    comparison.skip_cause(case['reason'], 'skip cause')
 
     def test_failed_tests_still_collect_guard_results_but_never_report_success(self):
         with tempfile.TemporaryDirectory() as tmp:

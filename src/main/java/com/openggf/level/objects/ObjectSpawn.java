@@ -66,4 +66,12 @@ public record ObjectSpawn(
     public int rawFlags() {
         return rawYWord & 0xF000;
     }
+
+    /** Moves one placement while retaining its slot, factory ownership, and native Y flags. */
+    public ObjectSpawn withPosition(int newX, int newY) {
+        if (newX < 0 || newX > 0xFFFF || newY < 0 || newY > 0x0FFF)
+            throw new IllegalArgumentException("Placement position exceeds native coordinate range");
+        return new ObjectSpawn(newX,newY,objectId,subtype,renderFlags,respawnTracked,
+                rawFlags() | newY,layoutIndex,ownerModId,objectKey);
+    }
 }

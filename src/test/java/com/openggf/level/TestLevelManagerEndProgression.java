@@ -58,27 +58,27 @@ class TestLevelManagerEndProgression {
     }
 
     @Test
-    void advanceToNextLevelDuringTimeAttackRequestsMenuReturnWithoutAdvancing() {
+    void advanceToNextLevelInHostReturningRunRequestsHostReturnWithoutAdvancing() {
         GameModule module = mock(GameModule.class);
         WorldSession worldSession = new WorldSession(module);
         GameStateManager gameState = new GameStateManager();
-        gameState.setTimeAttackActive(true);
         LevelManager levelManager = new LevelManager(mock(Camera.class), mock(SpriteManager.class),
                 mock(ParallaxManager.class), mock(CollisionSystem.class), mock(WaterSystem.class),
                 gameState, engineContext(), worldSession);
         levelManager.levels.add(List.of(LevelData.DEATH_EGG, LevelData.DEATH_EGG));
         levelManager.currentZone = 0;
         levelManager.currentAct = 0;
+        levelManager.runPolicySource = com.openggf.game.session.GameplayRunPolicy::isolatedAct;
 
         assertDoesNotThrow(levelManager::advanceToNextLevel);
 
-        assertTrue(levelManager.consumeTimeAttackMenuReturnRequest(),
-                "A finished/abandoned time attack attempt must request a return to the time attack menu");
+        assertTrue(levelManager.consumeHostReturnRequest(),
+                "A host-returning run must request a return to its host");
         assertEquals(0, worldSession.getCurrentZone(),
-                "advanceToNextLevel() must not touch zone/act counters while time attack is active");
+                "advanceToNextLevel() must not touch zone/act counters in a host-returning run");
         assertEquals(0, worldSession.getCurrentAct());
         assertFalse(levelManager.consumeCreditsRequest(),
-                "The time-attack gate must return before any of the normal advance/credits requests fire");
+                "The host-return gate must return before any of the normal advance/credits requests fire");
     }
 
     @Test

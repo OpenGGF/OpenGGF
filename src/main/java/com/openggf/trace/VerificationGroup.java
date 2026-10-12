@@ -7,7 +7,6 @@ package com.openggf.trace;
  * CPU comparisons. Animation is kept separate so animation parity work can
  * advance without hiding or moving the established physics frontier.
  */
-@com.openggf.game.ModApi
 public enum VerificationGroup {
     PHYSICS("physics"),
     ANIMATION("animation");

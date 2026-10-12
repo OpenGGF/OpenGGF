@@ -76,9 +76,7 @@ public final class ModCatalogValidator {
             if (entries.get(index) instanceof ModDescriptor descriptor
                     && !descriptor.hasErrors() && parsed.get(index) != null) {
                 tracks.addAll(parsed.get(index).tracks());
-                if (descriptor.manifest().type() == ModType.STANDALONE) {
-                    sfx.addAll(parsed.get(index).sfx());
-                }
+                sfx.addAll(parsed.get(index).sfx());
             }
         }
         return new ValidationResult(entries, tracks.isEmpty()
@@ -104,8 +102,7 @@ public final class ModCatalogValidator {
         }
         ModDescriptor validated = copy(descriptor, findings);
         List<ModAudioTrack> tracks = !validated.hasErrors() && audio != null ? audio.tracks() : List.of();
-        List<ModAudioSfx> sfx = !validated.hasErrors() && audio != null
-                && descriptor.manifest().type() == ModType.STANDALONE ? audio.sfx() : List.of();
+        List<ModAudioSfx> sfx = !validated.hasErrors() && audio != null ? audio.sfx() : List.of();
         ValidationResult eligible = new ValidationResult(List.of(validated), tracks.isEmpty()
                 ? ModTrackRegistry.EMPTY : new ModTrackRegistry(tracks), sfx.isEmpty()
                 ? ModSfxRegistry.EMPTY : new ModSfxRegistry(sfx));
@@ -157,6 +154,13 @@ public final class ModCatalogValidator {
             findings.add(error("MOD_JAR_CHANGED", "Packed mod digest changed after discovery", null));
             return null;
         }
+        String artGame = descriptor.manifest().baseGame() == null ? "any" : descriptor.manifest().baseGame();
+        descriptor.manifest().artOverrides().keySet().stream().sorted()
+                .filter(key -> !StockArtOverrideCatalog.contains(artGame, key)).forEach(key -> findings.add(
+                        new ModFinding(ModFindingSeverity.WARNING, "UNKNOWN_ART_OVERRIDE_KEY",
+                                "Unknown stock art key '" + key + "' for " + artGame
+                                        + "; override may never be requested. Use ggfmod art-keys --game " + artGame + ".",
+                                "META-INF/openggf-mod.yaml")));
         List<String> names = assets.validatedEntryNames();
         if (!names.contains(AUDIO_MANIFEST_PATH)) {
             if (!descriptor.manifest().audioOverrides().isEmpty()) {
@@ -180,10 +184,6 @@ public final class ModCatalogValidator {
                 findings.add(error("AUDIO_ASSET_MISSING",
                         "Missing audio asset: " + sfx.assetPath(), sfx.assetPath()));
             }
-        }
-        if (!audio.sfx().isEmpty() && descriptor.manifest().type() != ModType.STANDALONE) {
-            findings.add(error("SFX_UNSUPPORTED_PHASE1",
-                    "Streamed SFX are parsed but unsupported in Phase 1", AUDIO_MANIFEST_PATH));
         }
         validateOverrides(descriptor, audio, findings);
         return audio;

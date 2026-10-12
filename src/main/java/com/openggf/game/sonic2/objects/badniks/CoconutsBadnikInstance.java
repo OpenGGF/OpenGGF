@@ -9,6 +9,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectSnapshot;
@@ -142,10 +143,22 @@ public class CoconutsBadnikInstance extends AbstractBadnikInstance implements Re
     }
 
     private void updateIdle(AbstractPlayableSprite player) {
+        // S2 Obj9D_Idle calls Obj_GetOrientationToPlayer: nearest native
+        // P1/P2 by absolute signed-word X distance, retaining P1 on a tie.
+        var objectServices = tryServices();
+        if (objectServices != null) {
+            var nearest = objectServices.playerQuery().nearestByRomX(
+                    ObjectPlayerParticipationPolicy.NATIVE_P1_P2, currentX);
+            if (nearest.player() instanceof AbstractPlayableSprite target) {
+                player = target;
+            }
+        }
         if (player != null) {
-            facingLeft = player.getCentreX() < currentX;
-            int distance = Math.abs(player.getCentreX() - currentX);
-            if (distance < THROW_RANGE) {
+            int dx = (short) (currentX - player.getCentreX());
+            // d0 stays zero on equality; ThrowData then selects the leftward shot.
+            facingLeft = dx >= 0;
+            // Obj9D_Idle: addi.w #$60,d2; cmpi.w #$C0,d2; bcc skips attack.
+            if (((dx + THROW_RANGE) & 0xFFFF) < 2 * THROW_RANGE) {
                 if (attackTimer == 0) {
                     startThrowing();
                     return;

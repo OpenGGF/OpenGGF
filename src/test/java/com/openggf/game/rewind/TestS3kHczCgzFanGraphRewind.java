@@ -66,7 +66,7 @@ class TestS3kHczCgzFanGraphRewind {
         writeIntField(sourcePlatform, "slideOffset", 0x18);
         writeIntField(sourceBubble, "x", 0x0594);
         writeIntField(sourceBubble, "y", 0x04c8);
-        writeIntField(sourceBubble, "lifetime", 7);
+        writeIntField(sourceBubble, "yVelocity", -0x400);
         RewindRegistry rewindRegistry = registryFor(objectManager);
         CompositeSnapshot snapshot = rewindRegistry.capture();
 
@@ -109,8 +109,11 @@ class TestS3kHczCgzFanGraphRewind {
                 "restored bubble must keep captured x state");
         assertEquals(0x04c8, readIntField(restoredBubble, "y"),
                 "restored bubble must keep captured y state");
-        assertEquals(7, readIntField(restoredBubble, "lifetime"),
-                "restored bubble must keep captured lifetime state");
+        assertEquals(-0x400, readIntField(restoredBubble, "yVelocity"),
+                "restored bubble must keep the captured native velocity word");
+        restoredBubble.update(1, null);
+        assertEquals(0x04c4, readIntField(restoredBubble, "y"),
+                "fresh recreation must resume one native movement from captured state");
         assertSame(restoredFan, readObjectField(restoredPlatform, "fanParent"),
                 "fan platform parent must resolve to the restored fan");
         assertSame(restoredPlatform, readObjectField(restoredFan, "platformChild"),
@@ -133,9 +136,12 @@ class TestS3kHczCgzFanGraphRewind {
         static Harness create() {
             ObjectManager[] holder = new ObjectManager[1];
             Camera camera = mockCameraAtFan();
+            var levelManager = org.mockito.Mockito.mock(com.openggf.level.LevelManager.class);
+            org.mockito.Mockito.when(levelManager.getFrameCounter()).thenReturn(0);
             ObjectPlayerQuery playerQuery = new ObjectPlayerQuery(() -> null, List::of);
             ObjectServices services = new StubObjectServices() {
                 @Override public ObjectManager objectManager() { return holder[0]; }
+                @Override public com.openggf.level.LevelManager levelManager() { return levelManager; }
                 @Override public Camera camera() { return camera; }
                 @Override public GraphicsManager graphicsManager() { return GraphicsManager.getInstance(); }
                 @Override public ObjectPlayerQuery playerQuery() { return playerQuery; }

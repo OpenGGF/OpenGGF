@@ -46,6 +46,7 @@ import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.rewind.RewindBoundary;
 import com.openggf.game.session.GameplayModeContext;
+import com.openggf.game.session.GameplayRunRouting;
 import com.openggf.game.session.GameplayInputFilterAccess;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.WorldSession;
@@ -300,6 +301,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         worldSession.setCurrentLevel(level);
     }
     int frameCounter = 0;
+    java.util.OptionalInt sceneSpawnX = java.util.OptionalInt.empty();
+    java.util.OptionalInt sceneSpawnY = java.util.OptionalInt.empty();
     ObjectManager objectManager;
     private RewindClassResolver rewindClassResolver = RewindClassResolver.ENGINE_ONLY;
 
@@ -318,6 +321,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     AnimatedPatternManager animatedPatternManager;
     AnimatedPaletteManager animatedPaletteManager;
     private ModZoneRuntimeProfile activeModZoneRuntimeProfile;
+    final LevelContributedZoneRuntime contributedZoneRuntime;
     private ModZoneRuntimeContribution activeModZoneRuntimeContribution;
     private CustomZonePaletteBridge activeCustomZonePaletteBridge;
     LevelState levelGamestate;
@@ -326,7 +330,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     LevelTilemapManager tilemapManager;
 
     // All transition request/consume state lives in the coordinator
-    private final LevelTransitionCoordinator transitions = new LevelTransitionCoordinator();
+    private final LevelTransitionCoordinator transitions;
     private boolean initialPresentationPlcsCompleted;
     /**
      * Whether the current load's initial title-card presentation is omitted
@@ -383,6 +387,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         this.waterSystem = waterSystem;
         this.gameState = gameState;
         this.worldSession = worldSession;
+        this.transitions = new LevelTransitionCoordinator(worldSession);
+        this.contributedZoneRuntime = new LevelContributedZoneRuntime(this, worldSession);
         this.graphicsManager = engineServices.graphics();
         this.audioManager = engineServices.audio();
         this.configService = engineServices.configuration();
@@ -499,26 +505,10 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     public void loadLevel(int levelIndex, LevelLoadMode loadMode, LevelLoadContext ctx) throws IOException {
         discardInitialProcessSpritesLifecycle();
         moduleLevelLoads.resetFreshEntryCamera();
+        var attempt = new LevelLoadAttempt(worldSession, spriteManager, loadMode, ctx,
+                cause -> checkpointCoordinator.admitLoadPolicies(worldSession, cause, ctx, transitions));
         try {
-            ctx.resetInitialProcessSpritesRequestForLoadAttempt();
-            GameModule module = activeGameModule();
-            LevelInitProfile profile = module.getLevelInitProfile();
-            ctx.setLevelIndex(levelIndex);
-            ctx.setLoadMode(loadMode);
-
-            List<InitStep> steps = profile.levelLoadSteps(ctx);
-            if (steps.isEmpty()) {
-                throw new IllegalStateException(
-                    "No level load steps defined for " +
-                    module.getClass().getSimpleName() +
-                    ". All game modules must implement levelLoadSteps().");
-            }
-            for (InitStep step : steps) {
-                long start = System.nanoTime();
-                step.execute();
-                long elapsed = (System.nanoTime() - start) / 1_000_000;
-                LOGGER.fine(() -> String.format("  [%s] %dms — %s", step.name(), elapsed, step.romRoutine()));
-            }
+            attempt.execute(this::activeGameModule, levelIndex);
             // The LoadLevelData step stores the result in ctx
             if (ctx.getLevel() != null) {
                 writeCurrentLevel(ctx.getLevel());
@@ -535,16 +525,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                         completedProductionLoadGeneration);
             }
         } catch (Exception e) {
-            discardInitialProcessSpritesLifecycle();
-            activeGameModule().getLevelInitProfile().cancelPendingLevelLoadWork();
-            // Profile steps wrap checked exceptions in RuntimeException; unwrap if cause is IOException
-            Throwable cause = e.getCause();
-            if (cause instanceof IOException ioe) {
-                LOGGER.log(SEVERE, "Failed to load level " + levelIndex, ioe);
-                throw ioe;
-            }
-            LOGGER.log(SEVERE, "Unexpected error while loading level " + levelIndex, e);
-            throw new IOException("Failed to load level due to unexpected error.", e);
+            throw attempt.failure(e, this::activeGameModule, this::discardInitialProcessSpritesLifecycle, levelIndex);
         } finally {
             moduleLevelLoads.resetFreshEntryCamera();
             // The suppress flag belongs to this load only. A load that fails before
@@ -668,6 +649,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      */
     public Level loadLevelData(int levelIndex) throws IOException {
         installGameplayInputFilter();
+        contributedZoneRuntime.clear();
         activeModZoneRuntimeContribution = gameModule == null ? null
                 : gameModule.getZoneRegistry().modZoneRuntimeContribution(levelIndex);
         activeModZoneRuntimeProfile = activeModZoneRuntimeContribution != null
@@ -678,6 +660,10 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         discardPreparedLevelLoad();
         if (loaded == null) {
             loaded = game.loadLevel(levelIndex);
+        }
+        loaded = gameModule == null ? loaded : java.util.Objects.requireNonNull(gameModule.transformDecodedLevel(loaded), "Decoded level transform");
+        if (activeModZoneRuntimeContribution != null) {
+            LevelGraphicsPublisher.publish(loaded, graphicsManager);
         }
         moduleLevelLoads.installPlacements(gameModule, levelIndex, loaded, stockDecoded);
         writeCurrentLevel(loaded);
@@ -763,6 +749,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             DeferredLevelResourceTracker deferredResources,
             String mutationKey) throws IOException {
         installGameplayInputFilter();
+        contributedZoneRuntime.clear();
         activeModZoneRuntimeContribution = gameModule == null ? null
                 : gameModule.getZoneRegistry().modZoneRuntimeContribution(levelIndex);
         activeModZoneRuntimeProfile = activeModZoneRuntimeContribution != null
@@ -791,6 +778,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                         : game.loadLevel(levelIndex);
             }
         }
+        loaded = gameModule == null ? loaded : java.util.Objects.requireNonNull(gameModule.transformDecodedLevel(loaded), "Decoded level transform");
         moduleLevelLoads.installPlacements(gameModule, levelIndex, loaded, stockDecoded);
         writeCurrentLevel(loaded);
         installHudProfile();
@@ -1072,24 +1060,26 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * Phase H: Initialize zone-specific features (CNZ bumpers, CPZ pylon, water surface, etc.).
      */
     public void initZoneFeatures() throws IOException {
-        zoneFeatureProvider = activeModZoneRuntimeProfile == null
-                ? gameModule.getZoneFeatureProvider() : null;
         resetZoneScopedRegistriesForLevelLoad();
         if (activeModZoneRuntimeProfile != null) {
-            var zoneRuntime = GameServices.zoneRuntimeRegistryOrNull();
-            var animatedTiles = GameServices.animatedTileChannelGraphOrNull();
-            if (zoneRuntime != null) {
-                zoneRuntime.clear();
-            }
-            if (animatedTiles != null) {
-                animatedTiles.clear();
-            }
+            contributedZoneRuntime.initialize(activeModZoneRuntimeContribution);
+        } else {
+            zoneFeatureProvider = gameModule.getZoneFeatureProvider();
         }
         applyLevelLoadPaletteOverrides();
         initializeZoneFeatureProvider(zoneFeatureProvider);
     }
 
+    boolean hasContributedZoneRuntime() { return activeModZoneRuntimeProfile != null; }
+    void updateContributedAnimatedTiles() {
+        contributedZoneRuntime.updateAnimatedTiles();
+    }
+
     void reinitializeZoneFeaturesForActTransition() throws IOException {
+        if (activeModZoneRuntimeProfile != null) {
+            initZoneFeatures();
+            return;
+        }
         if (zoneFeatureProvider == null && activeModZoneRuntimeProfile == null) {
             zoneFeatureProvider = gameModule.getZoneFeatureProvider();
         }
@@ -3005,14 +2995,19 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             LOGGER.info("Set player position from checkpoint: X=" + ctx.getCheckpointX() +
                     ", Y=" + ctx.getCheckpointY() + " (center coordinates)");
         } else {
-            var nativeStart = moduleLevelLoads.nativeStartPosition(game, levelData, currentZone, currentAct, LOGGER);
-            var start = moduleLevelLoads.placeStartPosition(activeGameModule(), ctx, transitions,
-                    currentZone, currentAct, player, nativeStart.centreX(), nativeStart.centreY());
+            var start = moduleLevelLoads.placeLevelStart(activeGameModule(), game, ctx, transitions,
+                    currentZone, currentAct, player, levelData, LOGGER);
             spawnY = start.centreY();
-            LOGGER.info("Set player position from level start: X=" + start.centreX() +
-                    ", Y=" + spawnY + " (center coordinates)" +
-                    ", level: " + levelData);
         }
+        // Scene act overrides win after native dynamic start/checkpoint selection,
+        // before player reset, sidekick placement, camera snap and object admission.
+        if (sceneSpawnX.isPresent())
+            com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel((AbstractPlayableSprite) player, sceneSpawnX.getAsInt());
+        if (sceneSpawnY.isPresent()) {
+            spawnY = sceneSpawnY.getAsInt();
+            com.openggf.sprites.NativePositionOps.writeYPosResetSubpixel((AbstractPlayableSprite) player, spawnY);
+        }
+        sceneSpawnX = java.util.OptionalInt.empty(); sceneSpawnY = java.util.OptionalInt.empty();
         ctx.setSpawnY(spawnY);
     }
 
@@ -3554,7 +3549,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     public void restartCurrentLevelAfterDeath() {
         transitions.setLevelRoutineReentry(true);
         try {
-            loadCurrentLevel(true);
+            loadCurrentLevel(true, LevelLoadMode.FULL, true, false, false,
+                    com.openggf.game.LevelLoadCause.FULL_DEATH_RELOAD);
         } finally {
             transitions.setLevelRoutineReentry(false);
         }
@@ -3564,7 +3560,16 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * Loads the current level for death respawn (no title card).
      */
     public void respawnPlayer() {
-        loadCurrentLevel(LevelLoadMode.FULL, false);
+        moduleLevelLoads.reloadCurrentNativeState(() ->
+                loadCurrentLevel(false, LevelLoadMode.FULL, true, false, false,
+                        com.openggf.game.LevelLoadCause.FULL_DEATH_RELOAD));
+    }
+
+    /** Explicit full restart from configuration: clears checkpoint banking before assembly. */
+    public void restartCurrentLevelFromConfiguration() {
+        checkpointCoordinator.clear();
+        loadCurrentLevel(true, LevelLoadMode.FULL, true, false, false,
+                com.openggf.game.LevelLoadCause.FULL_RESTART);
     }
 
     /**
@@ -3601,6 +3606,16 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             boolean showTitleCard, LevelLoadMode loadMode, boolean runtimeReload,
             boolean titleCardRequiredInHeadlessMode,
             boolean queueFreshLevelRuntimeArt) {
+        loadCurrentLevel(showTitleCard, loadMode, runtimeReload, titleCardRequiredInHeadlessMode,
+                queueFreshLevelRuntimeArt, transitions.isBonusStageReturn() || transitions.hasBigRingReturn()
+                        ? com.openggf.game.LevelLoadCause.STAGE_RETURN_FULL_ASSEMBLY
+                        : com.openggf.game.LevelLoadCause.FULL_LEVEL_ASSEMBLY);
+    }
+
+    private void loadCurrentLevel(
+            boolean showTitleCard, LevelLoadMode loadMode, boolean runtimeReload,
+            boolean titleCardRequiredInHeadlessMode, boolean queueFreshLevelRuntimeArt,
+            com.openggf.game.LevelLoadCause loadCause) {
         discardPreparedLevelLoad();
         try {
             // V_int_run_count is global work RAM, outside Dynamic_object_RAM.
@@ -3642,6 +3657,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             LevelDescriptor levelData = levels.get(currentZone).get(currentAct);
 
             LevelLoadContext ctx = new LevelLoadContext();
+            ctx.setLoadCause(loadMode == LevelLoadMode.PREVIEW_CAPTURE
+                    ? com.openggf.game.LevelLoadCause.PREVIEW : loadCause);
             ctx.setShowTitleCard(showTitleCard);
             ctx.setTitleCardRequiredInHeadlessMode(titleCardRequiredInHeadlessMode);
             // A results return re-enters Level: too: loc_6310 queues terrain
@@ -3692,11 +3709,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             return;
         }
         spriteManager.setPlaybackInputSuppressed(true);
-        Sprite main = spriteManager.getSprite(resolveMainCharacterCode());
-        if (main instanceof AbstractPlayableSprite playable) {
-            playable.setForcedInputMask(playback.getCurrentForcedInputMask());
-            playable.setForcedJumpPress(playback.isCurrentForcedJumpPress());
-        }
     }
 
     private void applyPersistedEditorEdits() {
@@ -3728,6 +3740,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         loadCurrentLevel();
     }
 
+    /** The session's run policy; package-visible so unit tests can supply one without a session. */
+    java.util.function.Supplier<com.openggf.game.session.GameplayRunPolicy> runPolicySource = GameplayRunRouting::currentPolicy;
+
     /**
      * Advance to the next level in progression order.
      * Unlike nextAct() which wraps, this advances to next zone when acts are
@@ -3735,19 +3750,14 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * Called by results screen after tally completes.
      * <p>
      * S1/S2 results-screen objects call this directly (bypassing the
-     * request/consume transition queue GameLoop otherwise drives), so a
-     * finished/abandoned time attack attempt is gated here rather than at a
-     * GameLoop consume site: when {@code GameStateManager.isTimeAttackActive()}
-     * is true, this queues a {@link LevelTransitionCoordinator#requestTimeAttackMenuReturn()}
-     * and returns without touching the zone/act counters or loading anything —
-     * GameLoop consumes that request on the next frame and routes to the time
-     * attack menu instead.
+     * request/consume transition queue GameLoop otherwise drives), so a run
+     * whose {@link com.openggf.game.session.GameplayRunPolicy} returns to its
+     * host is diverted here rather than at a GameLoop consume site: this queues
+     * {@link LevelTransitionCoordinator#requestHostReturn()} and returns without
+     * touching the zone/act counters or loading anything.
      */
     public void advanceToNextLevel() throws IOException {
-        if (gameState.isTimeAttackActive()) {
-            transitions.requestTimeAttackMenuReturn();
-            return;
-        }
+        if (transitions.requestHostReturnIf(runPolicySource.get())) return;
         ZoneProgressionPlan.ZoneTopology topology = activeProgressionTopology();
         ZoneProgressionPlan.ProgressionResult next = zoneProgressionPlan.next(
                 topology, currentZone, currentAct);
@@ -4592,6 +4602,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         activeHudProfile = HudProfile.stock();
         activeModZoneRuntimeContribution = null;
         activeModZoneRuntimeProfile = null;
+        contributedZoneRuntime.clear();
         activeCustomZonePaletteBridge = null;
         animatedPatternManager = null;
         animatedPaletteManager = null;
@@ -4615,6 +4626,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         cacheLevelDimensions();
         levels.clear();
         activeModZoneRuntimeProfile = null;
+        contributedZoneRuntime.clear();
     }
 
     /**
@@ -4926,11 +4938,17 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     /** @see LevelTransitionCoordinator#consumeCreditsRequest() */
     public boolean consumeCreditsRequest() { return transitions.consumeCreditsRequest(); }
 
-    /** @see LevelTransitionCoordinator#requestTimeAttackMenuReturn() */
-    public void requestTimeAttackMenuReturn() { transitions.requestTimeAttackMenuReturn(); }
+    /** @see LevelTransitionCoordinator#requestHostReturn() */
+    public void requestHostReturn() { transitions.requestHostReturn(); }
 
-    /** @see LevelTransitionCoordinator#consumeTimeAttackMenuReturnRequest() */
-    public boolean consumeTimeAttackMenuReturnRequest() { return transitions.consumeTimeAttackMenuReturnRequest(); }
+    /** @see LevelTransitionCoordinator#consumeHostReturnRequest() */
+    public boolean consumeHostReturnRequest() { return transitions.consumeHostReturnRequest(); }
+    /** Requests a return to the suspended scene, inert outside a scene-launched act. */
+    public void requestActExit(com.openggf.game.ActExit reason, java.util.Map<String, String> state) {
+        if (transitions.sceneActActive && transitions.sceneActExit == null)
+            transitions.sceneActExit = new LevelSceneActAccess.Exit(reason, state);
+    }
+
     public void requestGameOverExit(GameOverExit exit) { transitions.requestGameOverExit(exit); }
 
     public GameOverExit consumeGameOverExitRequest() { return transitions.consumeGameOverExitRequest(); }
@@ -4986,7 +5004,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     public RewindSnapshottable<?> levelTransitionRewindSnapshottable() {
-        return new LevelTransitionRewindAdapter(transitions);
+        return new LevelTransitionRewindAdapter(transitions, freshLevelTransitionBoundary);
     }
 
     /** Returns the rewind adapter for the history-dependent persistent Plane B nametable. */

@@ -20,6 +20,7 @@ import com.openggf.game.resources.DynamicArtDiagnosticsSnapshot;
 import com.openggf.game.resources.DynamicArtLifecycleService;
 import com.openggf.game.session.GameplayTeamBootstrap;
 import com.openggf.game.session.GameplayModeContext;
+import com.openggf.game.session.ScheduledPlaybackInputOps;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.game.rewind.InputSource;
@@ -2623,7 +2624,14 @@ public final class TraceSessionLauncher {
     public static boolean activateScheduledPlaybackForLoadedLevel(
             PlaybackDebugManager playback) {
         beforeRunLevelLoadPlaybackActivationIfActive();
-        return playback.activateScheduledLevelLoadSession();
+        if (!playback.activateScheduledLevelLoadSession()) {
+            return false;
+        }
+        GameplayModeContext context = SessionManager.getCurrentGameplayMode();
+        if (context != null) {
+            ScheduledPlaybackInputOps.publish(context);
+        }
+        return true;
     }
 
     void installDynamicArtSegments(GameplayModeContext gameplayMode) {

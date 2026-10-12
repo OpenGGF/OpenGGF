@@ -91,6 +91,7 @@ class TestHpzSanctuaryObjects {
         verify(services).requestSpecialStageEntry(
                 new SpecialStageEntryRequest(4, EmeraldRewardKind.SUPER_EMERALD));
         pedestal.updateSelection();
+        verify(services, times(3)).worldSession();
         verifyNoMoreInteractions(services);
     }
 

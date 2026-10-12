@@ -17,7 +17,7 @@ import java.util.Map;
  * from the player's Sonic 3 &amp; Knuckles ROM (characters, badniks, bosses, items). ROM sprites
  * are loaded on first use and kept for the scene's lifetime.
  */
-public final class Art {
+public final class Art implements AutoCloseable {
     private final SceneContext ctx;
     private final Map<String, SceneImage> icons;
     private final Map<String, SceneSpriteSet> characterSets = new HashMap<>();
@@ -28,6 +28,7 @@ public final class Art {
     /** The last few stage foregrounds (each a screen of pixels), most recent last. */
     private final Map<String, SceneImage> foregrounds = new java.util.LinkedHashMap<>();
     private SceneImage blank;
+    private com.openggf.mods.scene.art.SceneArtCache spriteCache;
 
     private final CardRecipes cards;
     private final CardRecipes relics;
@@ -92,7 +93,8 @@ public final class Art {
         }
         SceneSpriteSet set = null;
         try {
-            set = RomSprites.load(rom(), key);
+            if (spriteCache == null) spriteCache = new com.openggf.mods.scene.art.SceneArtCache(rom(), 32);
+            set = RomSprites.load(rom(), spriteCache, key);
         } catch (RuntimeException e) {
             failed("the ROM sprite " + key, e);
             set = null;
@@ -282,4 +284,10 @@ public final class Art {
         java.util.logging.Logger.getLogger(Art.class.getName()).log(java.util.logging.Level.WARNING,
                 "Slay the Robotnik could not build " + what + "; drawing without it", e);
     }
+    @Override public void close() {
+        if (spriteCache != null) spriteCache.close();
+        romSets.clear(); characterSets.clear(); overviews.clear(); backdrops.clear();
+        stages.clear(); foregrounds.clear();
+    }
+
 }

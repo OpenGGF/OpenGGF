@@ -258,3 +258,33 @@ Native limits are unchanged: GLFW show stalled again, so only the exact owned wi
 was mapped frameless; `Engine.display` ran at a diagnostic 60 Hz; no normal WM,
 `Engine.loop`, physical controller or speaker certification is claimed. All owned
 GPU/native/recorder processes exited and both private sinks unloaded.
+
+## Develop conflict reconciliation (2026-10-12, PR #214)
+
+Merge feature head `d3b97f950ae6deaf08befee864c0d913f38e9516` with published
+develop `f02bdbfd570276f7377d7055d236f63e34691484`, without rebasing. Preserve
+Hardened placements, fresh-entry and no-save admission alongside incoming world
+policy retirement, decoded-level transforms, service/mutator registration and
+callback ownership. Apply decoded transforms before registered placements;
+additive acts keep their descriptor-owned starts. Native death/restart load
+causes survive, and start selection/logging resides in the existing
+`ModuleLevelLoadController` to retain LevelManager's structural budget.
+
+Java 25 `-Dmse=off -DskipTests package -B` passed. The initial 18-selector
+`verify` run executed 224 cases: 216 passed, seven failed on an obsolete raw
+rewind-adapter key and one errored because immutable save capture now requires
+attached session managers. Fixtures now use trusted `RewindAdapterOwnership`
+identity and the engine's `RuntimeSaveCapture` facade; no production API was
+widened to retain the old package-private factory.
+
+The final normal queued command was `maven_queue.py -Dmse=off
+-Dtest=TestHardenedPrototype,TestNoSaveGameplaySession,TestFreshLevelStartPosition,TestArchitecturalSourceGuard
+verify -B -Dopenggf.headless.gl=surfaceless-egl -Djava.awt.headless=true`, with all
+three original absolute ROM properties, Java 25 and Lua 5.4. It passed all
+**93 cases / four fresh reports / zero failures, errors or skips**, including
+all repaired fixtures and 72 source-guard cases; packaging and SDK/Javadoc
+artifact verification completed successfully. The fresh compiled candidate
+snapshot is byte-identical to the 19,915-line pin: 81 Hardened additions and no
+removals relative to develop. These are focused checks, not a full-suite or
+trace-profile qualification. Tests used a private runtime directory, unset
+desktop display variables and null audio; no shared-desktop input was automated.

@@ -26,7 +26,7 @@ class TestSitarHeroStory {
         Path project = Path.of("examples/sitar-hero");
         Path output = Files.createDirectory(temp.resolve("classes"));
         Path empty = Files.createDirectory(temp.resolve("empty"));
-        var args = new ArrayList<>(List.of("--release", "21", "-classpath", empty.toString(), "-d", output.toString(),
+        var args = new ArrayList<>(List.of("--release", "25", "-classpath", empty.toString(), "-d", output.toString(),
                 project.resolve("src/main/java/sitarhero/model/Roster.java").toString()));
         for (String tree : List.of("src/main/java/sitarhero/story", "src/test/java/sitarhero/story")) {
             try (var files = Files.walk(project.resolve(tree))) {

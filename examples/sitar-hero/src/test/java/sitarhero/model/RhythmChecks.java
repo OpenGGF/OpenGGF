@@ -136,4 +136,36 @@ public final class RhythmChecks {
         late.advance(10_000);
         late.input(10_050, 1, 0, true, false, false); eq(1, late.hits()); yes(late.finished());
     }
+    public static void feedbackEvents() throws Exception {
+        var s = session(false, note(1000, 1, false), note(2000, 2, false));
+        java.lang.reflect.Method method;
+        try { method = RhythmSession.class.getMethod("drainFeedback"); }
+        catch (NoSuchMethodException missing) { throw new AssertionError("Model does not emit consumable feedback events", missing); }
+        s.input(1000, 1, 0, true, false, false);
+        var hit = (java.util.List<?>) method.invoke(s);
+        eq(1, hit.size());
+        var kind = hit.getFirst().getClass().getMethod("kind");
+        yes(kind.invoke(hit.getFirst()).toString().equals("HIT"));
+        s.input(1200, 1, 0, true, false, false);
+        var wrong = (java.util.List<?>) method.invoke(s);
+        eq(1, wrong.size()); yes(kind.invoke(wrong.getFirst()).toString().equals("STRIKE"));
+        s.advance(2200);
+        var miss = (java.util.List<?>) method.invoke(s);
+        eq(1, miss.size()); yes(kind.invoke(miss.getFirst()).toString().equals("MISS"));
+        eq(0, ((java.util.List<?>) method.invoke(s)).size());
+        yes(!s.partAudible()); eq(1, s.hits()); eq(1, s.misses());
+    }
+
+    public static void feedbackChordsAndTails() {
+        var pads=session(true,note(1000,1,false));
+        pads.input(1000,0,6,false,false,false);
+        var strikes=pads.drainFeedback();eq(1,strikes.size());eq(6,strikes.getFirst().lanes());
+        yes(strikes.getFirst().kind()==RhythmSession.FeedbackKind.STRIKE);
+        var tail=session(false,new ChartNote(1000,2000,1,false,-1,8));
+        tail.input(1000,1,0,true,false,false);tail.drainFeedback();
+        tail.input(1100,0,0,false,false,false);
+        var released=tail.drainFeedback();eq(1,released.size());yes(released.getFirst().kind()==RhythmSession.FeedbackKind.TAIL_DROP);
+        eq(1,tail.streak());eq(1,tail.hits());eq(0,tail.misses());yes(!tail.partAudible());
+    }
+
 }

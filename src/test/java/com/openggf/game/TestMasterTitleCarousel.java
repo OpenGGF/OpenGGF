@@ -83,7 +83,7 @@ class TestMasterTitleCarousel {
             public boolean consumeCloseRequested() { return close; }
         });
         press(screen, GLFW_KEY_DOWN);
-        for (int i = 0; i < 4; i++) press(screen, GLFW_KEY_DOWN);
+        for (int i = 0; i < 3; i++) press(screen, GLFW_KEY_DOWN);
         press(screen, GLFW_KEY_ENTER);
         screen.update(new com.openggf.control.InputHandler());
         assertEquals(2, screen.entriesForTest().size());

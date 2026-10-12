@@ -167,7 +167,8 @@ public sealed interface ControlMessage {
 
     @com.openggf.game.ModApi
     record RoomCreate(RoomDescriptor room, String routing, int directPort,
-                      String determinismFingerprint, List<String> voteTrackKeys)
+                      String determinismFingerprint, List<String> voteTrackKeys,
+                      String certificateSha256)
             implements ControlMessage {
         public RoomCreate {
             voteTrackKeys = validatedTrackKeys(voteTrackKeys, 32);
@@ -175,7 +176,12 @@ public sealed interface ControlMessage {
 
         public RoomCreate(RoomDescriptor room, String routing, int directPort,
                           String determinismFingerprint) {
-            this(room, routing, directPort, determinismFingerprint, List.of());
+            this(room, routing, directPort, determinismFingerprint, List.of(), null);
+        }
+
+        public RoomCreate(RoomDescriptor room, String routing, int directPort,
+                          String determinismFingerprint, List<String> voteTrackKeys) {
+            this(room, routing, directPort, determinismFingerprint, voteTrackKeys, null);
         }
     }
 
@@ -206,7 +212,14 @@ public sealed interface ControlMessage {
     @com.openggf.game.ModApi
     record RoomJoinResult(String roomId, String routing, String directHost,
                           int directPort, String hostServerId,
-                          String determinismFingerprint) implements ControlMessage {
+                          String determinismFingerprint, String certificateSha256)
+            implements ControlMessage {
+        public RoomJoinResult(String roomId, String routing, String directHost,
+                              int directPort, String hostServerId,
+                              String determinismFingerprint) {
+            this(roomId, routing, directHost, directPort, hostServerId,
+                    determinismFingerprint, null);
+        }
     }
 
     @com.openggf.game.ModApi

@@ -76,7 +76,7 @@ class TestModManagerScreen {
         press(screen, Action.ACCEPT);
         screen.render();
         assertTrue(screen.rows().getFirst().enabled());
-        assertTrue(font.drawn.stream().anyMatch(line -> line.startsWith("[ON] Development Mod")));
+        assertTrue(font.drawn.stream().anyMatch(line -> line.startsWith("[ON] [S2] Development Mod")));
         assertTrue(font.drawn.contains("Back"));
         assertFalse(font.drawn.contains("Order"));
         assertFalse(font.drawn.contains("Apply"));
@@ -154,6 +154,38 @@ class TestModManagerScreen {
         press(screen, Action.ACCEPT); // Details
         screen.render();
         assertTrue(font.drawn.stream().anyMatch(line -> line.contains("OGG decode failed")));
+    }
+
+    @Test
+    void modListIdentifiesEachPatchGameAndStandaloneMods() {
+        List<ModDescriptor> mods = new ArrayList<>();
+        String[] games = {"s1", "s2", "s3k", "any", null};
+        String[] labels = {"[S1] ", "[S2] ", "[S3K] ", "[S1/S2/S3K] ", "[Standalone] "};
+        for (int index = 0; index < games.length; index++) {
+            String id = "pack-game" + index;
+            ModManifest manifest = new ModManifest(1, id, "Game " + index,
+                    SemanticVersion.parse("1.2.3"), List.of("Alice"), "Game coverage",
+                    VersionRange.parse(">=0.7.0 <0.8.0"),
+                    games[index] == null ? ModType.STANDALONE : ModType.PATCH,
+                    games[index], "any".equals(games[index]) ? "example.Scene" : null,
+                    List.of(), Map.of(), Map.of(), null, OptionalInt.empty());
+            mods.add(new ModDescriptor(Path.of(id + ".jar"), manifest, "a".repeat(64),
+                    "any".equals(games[index]), List.of()));
+        }
+        RecordingFont font = new RecordingFont();
+        ModManagerScreen screen = screen(catalog(mods),
+                state(new boolean[games.length], mods.stream().map(mod -> mod.manifest().id()).toArray(String[]::new)),
+                new ModRuntimeFindingStore(), font, temp.resolve("game-labels"));
+
+        screen.render();
+        for (int index = 0; index < games.length; index++) {
+            int row = index;
+            assertEquals(labels[index], screen.rows().get(index).gameLabel());
+            assertTrue(font.drawn.stream().anyMatch(line -> line.startsWith("[OFF] " + labels[row] + "Game " + row)));
+            screen.select(index);
+            assertTrue(screen.detailLines().stream().anyMatch(line -> line.contains("Applies to: "
+                    + labels[row].substring(1, labels[row].length() - 2))));
+        }
     }
 
     @Test
@@ -323,6 +355,44 @@ class TestModManagerScreen {
     }
 
     @Test
+    void replacingAnEnabledCodeJarCanRenewTrustWithoutDisablingIt() {
+        ModDescriptor code = codeDescriptor("code-update", "Updated Mod", "b".repeat(64));
+        ModState startup = new ModState(1, List.of(new ModState.Entry(
+                "code-update", true, 0, true, "a".repeat(64))));
+        ModCatalog catalog = new EffectiveCatalogBuilder().build(List.of(code), startup);
+        ModManagerScreen screen = screen(catalog, startup, new ModRuntimeFindingStore(), null,
+                temp.resolve("update"));
+        press(screen, Action.ACCEPT);
+        assertTrue(enabled(screen, "code-update"));
+        assertTrue(screen.trustArmed());
+        assertFalse(screen.pendingState().entries().getFirst().trusted());
+        press(screen, Action.ACCEPT);
+        assertTrue(enabled(screen, "code-update"));
+        assertTrue(screen.pendingState().entries().getFirst().trustsSha256(code.sha256()));
+        applyFromList(screen);
+        assertTrue(new ModStateStore(temp.resolve("update").toAbsolutePath().normalize())
+                .load().state().entries().getFirst().trustsSha256(code.sha256()));
+    }
+
+    @Test
+    void updatedUntrustedCodeCanBeDisabledWithoutGrantingTrust() {
+        ModDescriptor code = codeDescriptor("code-update", "Updated Mod", "b".repeat(64));
+        ModState startup = new ModState(1, List.of(new ModState.Entry("code-update", true, 0, true, "a".repeat(64))));
+        ModManagerScreen screen = screen(new EffectiveCatalogBuilder().build(List.of(code), startup),
+                startup, new ModRuntimeFindingStore(), null, temp.resolve("decline-update"));
+        press(screen, Action.RIGHT); press(screen, Action.ACCEPT); // Details
+        press(screen, Action.ACCEPT); // explicit disable without trust
+        assertFalse(enabled(screen, "code-update"));
+        assertFalse(screen.pendingState().entries().getFirst().trusted());
+        assertFalse(screen.trustArmed());
+
+        ModManagerScreen nativeScreen = nativeGuardScreen(temp.resolve("native-update"), List.of(code), startup, false);
+        press(nativeScreen, Action.ACCEPT);
+        assertFalse(enabled(nativeScreen, "code-update"));
+        assertFalse(nativeScreen.trustArmed());
+    }
+
+    @Test
     void codeTrustRequiresTwoAcceptsAndOnlyChangesPendingState() {
         ModDescriptor code = codeDescriptor("code-mod", "Code Mod", "c".repeat(64));
         ModCatalog catalog = new ModCatalog(List.of(code), EffectiveModCatalog.EMPTY, Map.of(
@@ -349,6 +419,8 @@ class TestModManagerScreen {
 
         applyFromList(screen);
         assertFalse(screen.closeRequested());
+        assertTrue(screen.consumeActivationRequested());
+        assertFalse(screen.consumeActivationRequested());
         ModState persisted = new ModStateStore(temp.resolve("trust").toAbsolutePath().normalize())
                 .load().state();
         assertTrue(persisted.entries().getFirst().trustsSha256(code.sha256()));

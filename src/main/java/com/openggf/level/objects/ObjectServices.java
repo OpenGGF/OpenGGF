@@ -63,12 +63,22 @@ import java.util.List;
 public interface ObjectServices {
     // Object management
     ObjectManager objectManager();
+    /** Stable typed object lookup without exposing rewind identity-table mutation. */
+    default ObjectQuery objectQuery() {
+        ObjectManager manager=objectManager();
+        return manager == null ? ObjectQuery.EMPTY : manager.objectQuery();
+    }
     ObjectRenderManager renderManager();
 
     // Level state
     LevelState levelGamestate();
     RespawnState checkpointState();
     LevelManager levelManager();
+
+    /** Latches the first exit of a scene-launched act; consumed at the next frame boundary. */
+    default void requestActExit(com.openggf.game.ActExit reason, java.util.Map<String, String> state) {
+        levelManager().requestActExit(reason, state);
+    }
     default BackgroundPlaneCollisionProvider backgroundPlaneCollisionProvider() {
         return BackgroundPlaneCollisionProvider.FOREGROUND_ONLY;
     }
@@ -273,12 +283,20 @@ public interface ObjectServices {
     void requestCreditsTransition();
 
     /**
-     * Requests a return to the time attack menu instead of the normal act/zone
-     * advance. Called by results-screen completion code when
-     * {@code GameStateManager.isTimeAttackActive()} is true at the point the
-     * act would otherwise advance.
+     * The policy of the run being played: whether special/bonus stages may be entered and
+     * whether completing the act continues the campaign or returns to the run's host.
+     * Ordinary campaign sessions report {@link com.openggf.game.session.GameplayRunPolicy#stock()}.
      */
-    void requestTimeAttackMenuReturn();
+    default com.openggf.game.session.GameplayRunPolicy runPolicy() {
+        return com.openggf.game.session.GameplayRunPolicy.stock();
+    }
+
+    /**
+     * Ends the run and hands control back to the host that launched it, instead of the act,
+     * zone or ending advance the shipped game would perform next. Results-screen completion
+     * code calls this when {@link #runPolicy()} returns to the host on act completion.
+     */
+    void requestHostReturn();
 
     /** Requests entry into a special stage. */
     void requestSpecialStageEntry();

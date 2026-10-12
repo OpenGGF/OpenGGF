@@ -68,6 +68,8 @@ public class TestProductionSingletonClosureGuard {
             "java.security.KeyFactory",
             "java.security.KeyPairGenerator",
             "java.security.Signature",
+            // Parses the JDK room host's self-signed certificate (net.host.jdk).
+            "java.security.cert.CertificateFactory",
             "javax.net.ssl.SSLContext"
     );
     private static final Pattern RAW_GET_INSTANCE_PATTERN =
