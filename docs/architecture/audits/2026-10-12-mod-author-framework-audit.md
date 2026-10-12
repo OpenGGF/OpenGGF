@@ -5,6 +5,10 @@ and an ordinary-gameplay hold contract. Several examples already have useful sha
 helpers; the remaining work combines adoption of those helpers with a few narrow API
 additions. A generic game framework or a wholesale rewrite of the mods is not justified.
 
+The [remediation plan](../plans/2026-10-12-mod-audit-remediation.md) maps every finding
+and API candidate to implementation steps, dependencies, acceptance tests and delivery
+checks. Its runtime work is planned, not implemented by the audit or plan delivery.
+
 ## Basis, scope and interpretation
 
 Reviewed `develop` at **`f9d4e04747a6474c81cc9c9424951fecf3de191b`**, after fetching
