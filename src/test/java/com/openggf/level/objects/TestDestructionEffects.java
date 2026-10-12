@@ -62,7 +62,7 @@ class TestDestructionEffects {
                 new com.openggf.audio.StreamedMusicPort.SfxRef("sample-platformer","hit"),
                 DestructionEffects.SoundOrder.BEFORE_LATCH));
         badnik[0]=new AbstractBadnikInstance(new ObjectSpawn(100,100,1,0,0,false,0),"Cue",config) {
-            @Override protected void updateMovement(int frame,com.openggf.game.PlayableEntity player) { }
+            @Override protected void updateMovement(int vIntRunCount,com.openggf.game.PlayableEntity player) { }
             @Override protected int getCollisionSizeIndex(){return 0;}
             @Override public void appendRenderCommands(List<com.openggf.graphics.GLCommand> commands) { }
         };

@@ -56,7 +56,7 @@ class TestStandaloneGameSpec {
 
     private static final class StubObject extends AbstractObjectInstance {
         private StubObject(ObjectSpawn spawn) { super(spawn,"stub"); }
-        @Override public void update(int frame,com.openggf.game.PlayableEntity player) { }
+        @Override public void update(int vIntRunCount,com.openggf.game.PlayableEntity player) { }
         @Override public void appendRenderCommands(java.util.List<com.openggf.graphics.GLCommand> commands) { }
     }
     @Test void typedMultiActAssemblyRetainsMusicDescriptorsAndNoRomBoundary() throws Exception {

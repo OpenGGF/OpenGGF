@@ -848,3 +848,84 @@ primary. The queued Java25 lean `TestModSaveSlot,TestModStorage` run43231 passed
 36/36, zero skips,1m09 at dirty `0c5524060` with these exact two source changes;
 completion was 2026-10-12 19:23:25 +0100. This covers the following checkpoint and
 required backup-write failure, not a multi-file atomicity guarantee.
+
+
+## Completed candidate broad run and bounded attribution
+
+Clean producer `175531f6dc4a0d0005c4593022393182d1f5e58c` completed combined
+change-based run `20261012T183411Z-d39c898d` against destination
+`f02bdbfd570276f7377d7055d236f63e34691484`. Java 25/Lua 5.4 preflight passed.
+All 3,170 ordinary classes were selected, plus fresh structural guards; ordinary
+reported 3,168 classes and 27,627 checks: 31 failures, 0 errors, 64 skips, 3627.69s.
+Guards reported 88 classes/677 checks: 3 failures, 0 errors/skips, 262.77s. The
+120-minute invocation and 10-minute no-output stopping rules were unchanged.
+This completed red run blocks integration until all introduced failures are repaired.
+
+The 26 baseline identities recur. Twenty-five full raw assertions match exactly.
+The SSZ Tails width 400 replay failure at 4018 differs only in two compact blob hash
+suffixes; these contain class identity **and** semantic state, so the difference
+was initially unattributed. Five ordinary failures are new: the Flappy tutorial
+shared-copy assertion; three Phase2 checked-starter inventory assertions; and
+`TestPurposeStarters.everyPurposeHasCompleteCompilableSourcesAndRepeatedBuildConfiguration`
+(music main-only compilation inadvertently includes generated Jupiter tests).
+The fresh guards found two test-hook parameters named `frame`, a new runtime
+`game -> io` edge from the standalone registration bound, and playable sprite
+size 3264 against 3258. Their focused repairs are recorded separately.
+
+Skips were inspected individually: 32 existing Infinite fixture/terrain assumptions,
+6 GL availability checks, 1 CPZ interaction assumption,1 missing local BizHawk audio
+reference and 24 opt-in diagnostic/capture checks. The additional GL skip is
+`TestSlayCompositePixels.sharedCompositionPreservesBossPixelsOriginsFlipsAndOrder`; CPU
+composition evidence does not certify that unavailable GPU path. Completed run
+results were consumed and acknowledged; its entire diagnostic directory was deleted.
+
+Exact candidate command, from the task tree with `OPENGGF_ROM_ROOT` expanding to
+the existing original-ROM checkout:
+
+```sh
+env JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base f02bdbfd570276f7377d7055d236f63e34691484 --rom-directory "$OPENGGF_ROM_ROOT" --max-minutes 120 --run
+```
+
+### Compact SSZ state attribution, with no engine behavior change
+
+The matched exact-method requests 39158 (destination f02b) and 93438 (candidate 175531)
+each ran 2 checks: 1 pass/1 same 4018 failure, 0 errors/skips, 29.722s and 32.757s.
+Raw hash suffixes still differed, so this comparison alone was insufficient.
+An isolated baseline worktree then ran 89996; candidate request 7522 ran the identical
+comparison-only test diagnostic. Each again ran 2 checks/1 same failure/0 skips,
+1m10 and 33.850s respectively. Their source/test attribution is explicitly dirty:
+both used the exact same temporary diagnostic on the unchanged original test
+(SHA-256 `db4583214f4430c81cf25b7260a716358be575ff2d7772a6067be01367c2af1e`;
+probe SHA-256 `1f8488866d9b050177638942a7de4abf1154bdaa41072be440557b0bc8df86fb`).
+The candidate also had the two clock-parameter spelling repairs; production engine
+code remained 175531. No comparison values were supplied to gameplay.
+
+All six blob rows match by side, complete object identity, schema, native type,
+scalar bytes and opaque values. Opaque arrays are empty in every row. The complete
+non-blob assertion fields also match: frame 4018, slot bits 24/29, missing children
+125/126 and relocated children 128/129. This bounds the difference to the Class
+identity component of the documented `Objects.hash(schemaId,type,scalarHash,opaqueHash)`
+implementation, rather than assuming the suffix has no semantics.
+
+| Dynamic ID / side | Schema / native type | Complete scalar bytes (hex) | Opaque values |
+|---|---|---|---|
+|106 / A and B|15 / EggRoboJetFlameChildInstance|`00050000007f070000f4090000`|`[]`|
+|107 / A and B|16 / EggRoboGunArmChildInstance|`ffffffff006f070000d4090000`|`[]`|
+|125 / A only|15 / EggRoboJetFlameChildInstance|`01050000000b0500001c090000`|`[]`|
+|126 / A only|16 / EggRoboGunArmChildInstance|`ffffffff011b050000fc080000`|`[]`|
+
+The temporary diagnostic source was restored byte-for-byte in both trees; its
+original-copy files and the accounted baseline worktree/branch were removed. No
+production formatter, assertion weakening, snapshot hydration or unrelated SSZ
+behavior repair was introduced. These are 26 attributed inherited failures, not a
+passing ordinary suite. Integration and its full combined comparison remain open.
+
+## Object V-int terminology repair
+
+The new standalone stub's `update` and destruction test hook's `updateMovement`
+parameters now say `vIntRunCount`, preserving both signatures and bodies. At dirty
+175531 plus these exact two changes (and the inactive comparison-only diagnostic),
+lean request 79295 passed 13/13 with 0 errors/skips, 1m20 execution after 1s admission:
+`TestObjectUpdateClockTerminologyGuard,TestStandaloneGameSpec,TestDestructionEffects`.
+Completion: 2026-10-12 20:52:33 +0100. The actual clock guard subprocess passed; no
+ratchet, clock semantics, production callback or API signature changed.
