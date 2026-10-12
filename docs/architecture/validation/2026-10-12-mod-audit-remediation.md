@@ -789,3 +789,38 @@ The policy errors rejected comments added to the strict descriptor format; those
 comments were removed, preserving its existing authority values. Only the three
 affected policy classes reran: 18/18 passed, zero skips, 28.058s. No policy parser or
 selection rule was loosened. Final broad delivery and matching clean kit remain open.
+
+## Final native admission and existing-helper adoption
+
+Survivor `266c8be0c` uses canonical character keys and the injected live floor query
+while preserving the existing 16-pixel scan and strict distance range 0..15. All 29
+selected terrain/perk behaviors were qualified across a 28-pass run plus the corrected
+synthetic service-binding case; that fixture now binds services as ObjectManager does.
+Its actual portable package/tests passed 5/5 without skips and retained 13 advisory
+engine references, down from the historical 18 (including upstream NativePositionOps
+becoming public). The final ledger must still classify every current warning.
+
+Frame source `0aae9cefd` is integrated after meaningful native route reproductions:
+duplicate scene input, missed bridge admission on the fade-completion setup row, and
+controlled bridge consumption before host pause. Native and controlled paths now
+service bridge exit/holds after host admission and before setup/world work; held rows
+retain the existing audio boundary and prior-fade timing, and retired contexts cannot
+reenter the controller. The duplicate scene input update is removed.
+
+Normal Java25/Lua5.4 canonical three-ROM batch `10073` passed 201/201, zero skips,
+2m12 execution after 16s queue wait. It ran from the Survivor worktree at dirty
+`266c8be0c3a7aee42ed15722ffa52003004d2f9c`; the five changed frame/test sources were
+committed without further edits as `0aae9cefdf5edc175a8a84953f22fe42ba9d543d`
+(tree `b0ece704908aa979875abf66a7094ee7bd67f025`). Its generated metadata reported
+`app.commit=266c8be0c`, `app.dirty=true`; the execution is not described as a clean
+run at the later commit. It includes `3b52e43c4`, P17 and Survivor floor adoption,
+and excludes the root's later save-slot repair. Exact command, with
+`OPENGGF_ROM_ROOT` denoting the existing canonical main checkout:
+
+```sh
+env JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestModSceneActBridge,TestMutatorOverlayRouting,TestGameLoopConfigurationCommands,TestGameLoopMutatorPacing,TestGameLoopNativeStageMutatorPacing,TestControlledFrameRuntime,TestHostedRunController,TestSceneRunLauncher,TestLevelFrameHardwareTimingBoundaries,TestModSceneHostGameplay,TestActPracticeExample,TestPuttPuttParadise' "-Dsonic1.rom.path=$OPENGGF_ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=$OPENGGF_ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=$OPENGGF_ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test
+```
+
+Normal lane; no profile/custom JVM arguments. Actual XML outcomes and skips were
+inspected; no raw logs were retained. Completion: 2026-10-12 19:01:01 +0100.
+Final clean artifacts and broad candidate/integrated comparisons remain open.
