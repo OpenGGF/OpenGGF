@@ -106,6 +106,8 @@ public final class AudioPresentationSessionCommandApplier {
                 instanceof AudioPresentationCommand.SetSpeedShoes speed) {
             session.applyCommand(
                     new SmpsSessionCommand.SetSpeedShoes(speed.enabled()));
+        } else if (command instanceof AudioPresentationCommand.SetMusicTempoPercent tempo) {
+            session.applyCommand(new SmpsSessionCommand.SetMusicTempoPercent(tempo.percent()));
         } else if (command
                 instanceof AudioPresentationCommand.ChangeMusicTempo tempo) {
             session.applyCommand(

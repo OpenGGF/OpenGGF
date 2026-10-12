@@ -4,6 +4,7 @@ import com.openggf.level.objects.SolidObjectProvider;
 
 import java.util.Objects;
 
+@com.openggf.game.ModApi
 public record SolidRoutineProfile(
         SolidRoutineKind kind,
         boolean topSolidOnly,

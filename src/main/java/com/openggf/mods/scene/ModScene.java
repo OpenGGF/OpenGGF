@@ -38,6 +38,10 @@ public interface ModScene {
     /** Draws the current state. Must not change game state; it may be skipped or repeated. */
     void draw(SceneContext ctx, SceneCanvas canvas);
 
+    /** An act has ended. The original scene/context and ROM library are retained.
+     * Audio is re-prepared before this fault-bounded callback; restart desired music here. */
+    default void resume(SceneContext context, ActResult result) {}
+
     /**
      * True while the scene takes keyboard text (a name, an address, chat). The engine then holds
      * back its global keyboard shortcuts (display profile, shaders, capture) so typing cannot

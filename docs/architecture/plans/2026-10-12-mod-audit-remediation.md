@@ -1,17 +1,44 @@
-# Mod audit remediation plan — 2026-10-12
+# Mod audit remediation plan and execution status — 2026-10-12
 
 **Goal:** remediate every concrete finding in the [mod author/framework audit](../audits/2026-10-12-mod-author-framework-audit.md),
 then reduce repeated author work through proven existing helpers and narrow shared APIs.
 
-**Plan base:** reconciled `develop` at `e76a380c3d0c8e3769fcdb745f27ef3d8889c8fe`.
+**Initial plan base:** reconciled `develop` at `e76a380c3d0c8e3769fcdb745f27ef3d8889c8fe`.
 The plan started at audit delivery `5a1f9b0fe`; upstream `dfa79f3b9` and `e76a380c3`
 landed during preparation and were incorporated before integration. Initial audit
 runtime evidence remains the historical `f9d4e0474` snapshot. This document is an
-execution plan, not an assertion that its runtime repairs or proposed APIs are implemented.
+execution plan; the checkpoint below distinguishes implemented work from remaining delivery gates.
+
+**Completed artifact checkpoint:** clean producer `175531f6dc4a0d0005c4593022393182d1f5e58c`
+qualified the repaired consumers and accepted shared contracts at that historical source.
+**Qualified creator producer:** clean `54e771314` also contains the later fixture/template,
+presentation and standalone-bound repairs; matching kit and external qualifications
+are complete at that explicitly recorded source.
+The current inventory is **29 maintained manifests**, including Act Practice, bundled Time Attack,
+example-mutators and Starpost Valley. Initial 25/28-manifest counts remain historical.
+P01–P09, P11–P16, P18 and P20 have implemented repairs and focused qualification;
+P09's actual warning ledger and README consolidation are complete. P10's export/test
+contracts, seven fresh starter profiles and external controls are qualified.
+P17 ends in the explicit implement/defer dispositions below. P19's matching binary
+passed 11/11 and replaced only the obsolete installed jar with a preserved rollback.
+Main integration and the post-integration comparison are complete at `f9d192a18`.
+All 677 guards pass; the ordinary run retains 26 inherited failures, 64 skips and
+one historical socket-test error. Test-only correction `232771401`, integrated as
+`4a07baff6`, passes the actual native close case plus 16 transport checks on develop.
+This is a completed red full run with a focused follow-up, not a full-green claim.
+The coordinator pushes only integrated develop and accounts for task cleanup after
+committing the final evidence; frozen creator artifacts retain their original identity.
+
+Checked boxes record achieved implementation and the stated focused evidence, not a
+full-suite or delivery pass. The updated destination baseline completed with **26
+known failures**, not a green ordinary suite; current candidate/integrated outcomes
+must be compared by test identity and full assertion. See the
+[execution record](../validation/2026-10-12-mod-audit-remediation.md) and the
+[current audit dispositions](../audits/2026-10-12-mod-author-framework-audit.md#remediation-execution-and-current-scope-2026-10-12).
 
 **Approach:** correct behavior in the actual consumers first, preserving their game
 rules and regression evidence. Extract common mechanics after those consumers prove
-the contract. Java 21, Jupiter, the existing SDK/testkit and queued Maven remain the
+the contract. Java 25, Jupiter, the existing SDK/testkit and queued Maven remain the
 toolchain. Use the repository's delivery flow for each integrated batch, without a
 mandatory approval/review ceremony between routine steps.
 
@@ -71,26 +98,26 @@ the remaining dependency inventory, which P13/P15/P16/P17 subsequently reduce.
 
 ## Coverage map
 
-| Audit item | Owning task(s) | Completion condition |
+| Audit item | Owning task(s) | Recorded disposition / remaining qualification |
 |---|---|---|
-| R1 — rejected/malformed/future saves | P01, P02, P12 | Rejected originals survive lifecycle/retry; validated candidates publish without unchecked allocation. |
-| R2 — recovery and save outcomes | P01, P12 | A valid generation survives failed rotation; UI and retry state reflect the actual write result. |
-| R3 — Starfall camp | P03 | Visible generated camp finishes once at every supported world size and after restore. |
-| R4 — Slay draw-dependent targeting | P04, P14 | Targeting and gameplay results are independent of draw cadence. |
-| R5 — Survivors payout across rewind | P05 | Production regression establishes the boundary; settlement cannot duplicate durable awards. |
-| R6 — menu/world hold semantics | P11 | Ordinary native input is preserved; world holds freeze the intended owners and clocks. |
-| R7 — galaxy/cache identity | P07 | Same coordinate in different generation identities cannot reuse stale planet/art; caches are bounded. |
-| R8 — practice/calibration | P06 | Practice eligibility is explicit; calibration uses configured timestamped input edges. |
-| R9 — internals and raw storage | P09, P13, P15, P16, P17 | Migrate existing alternatives, replace proven missing seams, and explicitly account for remaining warnings. |
-| R10 — omitted creator tests/tools | P10 | Exported forks retain runnable tests and required generators; shipped mod jars remain clean. |
-| R11 — repeated hot-path definitions | P08 | Prepared immutable definitions/indexes are reused without changing seeded behavior or session isolation. |
-| U1 — save-slot orchestration | P12 | At least two repaired consumers use one owner-safe checked load/save/recovery contract. |
-| U2 — ordinary/controlled/HOLD rows | P11 | One production stepping path serves native-input mods and retains Golf's neutral-step policy. |
-| U3 — terrain/contact/effects | P13 | Real consumers replace specific internal bridges with bounded semantic services. |
-| U4 — composite geometry/canvas transforms | P14 | Shared helpers preserve geometry, clipping, tint and draw independence in migrated consumers. |
-| U5 — stock art and level-kit adoption | P09, P15 | Repeated requests use verified existing/new recipes; remaining raw intake has recorded missing capabilities. |
-| U6 — test-ready forks/starters/launchers | P10 | Both an exported fork and a generated starter test successfully without the source checkout. |
-| U7 — character and registry convenience | P16 | Samples stop parsing runtime identity suffixes/duplicating dispatch while ownership and recreation remain enforced. |
+| R1 — rejected/malformed/future saves | P01, P02, P12 | Implemented: rejected bytes survive entry/exit/retry; candidate decode validates before allocation/publication. Includes Starpost explicit replacement and exact Capsule targets. |
+| R2 — recovery and save outcomes | P01, P12 | Implemented: checked dirty snapshots, validated recovery and required-backup failure gates; explicit reset retains a usable following generation. Per-file atomicity only. |
+| R3 — Starfall camp | P03 | Implemented and focused-qualified: generated camp interaction, all supported world sizes and restore. |
+| R4 — Slay draw-dependent targeting | P04, P14 | Implemented: prepared layout is authoritative; zero/sparse/duplicate draws preserve outcomes. ROM CPU composite pixels pass; GPU availability remains a recorded skip. |
+| R5 — Survivors payout across rewind | P05 | Reproduced and repaired: persistent once-per-run settlements and milestone accounting survive production restore and failed-write retry. |
+| R6 — menu/world hold semantics | P11 | Implemented: native/controlled/HOLD admission, host pause before callbacks, once-only input/audio/fade and native-act retirement; focused runtime/ROM checks passed. Final broad comparison remains open. |
+| R7 — galaxy/cache identity | P07 | Implemented and focused-qualified: generation identity, bounded caches, re-entry/new expedition/Continue isolation. |
+| R8 — practice/calibration | P06 | Implemented: explicit practice capability and configured timestamped rising edges, with remapping/device/retry regressions. |
+| R9 — internals and raw storage | P09, P13, P15, P16, P17 | Existing alternatives and proven narrow services migrated. Actual 29-manifest/45-reference ledger and README consolidation complete; retained expert bridges have purpose/owner/reopening dispositions. |
+| R10 — omitted creator tests/tools | P10 | Export/test/generator repairs implemented; real external forks and starters qualified at recorded identities. Final starter/failure/empty/mismatch matrix remains open. |
+| R11 — repeated hot-path definitions | P08 | Implemented: immutable owner preparation, protected arrays, seeded/RNG equality and concurrent/reload isolation; measured lookups changed 1,000→1 identities. |
+| U1 — save-slot orchestration | P12 | Implemented: Three Islands and Slay profiles, plus Starpost progress/settings, use checked owner-local slots. Specialized Starfall/ghost protocols remain separate. |
+| U2 — ordinary/controlled/HOLD rows | P11 | Implemented in one production path; Golf neutral stepping and intentional Infinite partial native phases remain preserved. |
+| U3 — terrain/contact/effects | P13 | Implemented bounded semantic floor/contact/spring/destruction seams with real consumers; full stock spring/title/auxiliary internals remain explicitly retained where equivalence is unproved. |
+| U4 — composite geometry/canvas transforms | P14 | Implemented and migrated: pure placement, scoped clipping/alpha, nested retirement and draw independence; CPU pixel evidence does not certify the GPU renderer. |
+| U5 — stock art and level-kit adoption | P09, P15 | Implemented verified recipes and Starfall material crops; ten backdrop variants, Blue Flicky frame semantics and native title/GPU bridges retain explicit raw intake dispositions. |
+| U6 — test-ready forks/starters/launchers | P10 | Implemented source/testkit/export contracts; final clean-kit starter and negative discovery/identity checks remain separate gates. |
+| U7 — character and registry convenience | P16 | Implemented: factory-bound canonical identity and declarative verified-owner dispatch, with fresh/reused-class/foreign-key/recreation and SDK-only checks. |
 
 Further audit observations map to P17 (art preparation, transport, auxiliary spawning,
 title cards, font/focus), P18 (orchestration and diagnostic status), and P19 (stale
@@ -161,23 +188,23 @@ save notices in `screen/FieldScreen.java`/`MenuScreen.java`; Slay `scene/Shell.j
 `Profile.java`; Hello `HelloScene.java`; Tower `TowerDefenseScene.java`; new Act
 Practice `PracticeHost.java` and engine `TestActPracticeExample.java`.
 
-- [ ] Add `futureFileSurvivesOpenExitAndFinishedRun`,
+- [x] Add `futureFileSurvivesOpenExitAndFinishedRun`,
   `corruptPrimaryRecoverySurvivesFailedPrimaryWrite`, and
   `failedRecordWriteRetriesWithoutCountingTheCampaignTwice` regressions in the
   corresponding source/scene tests. Inject successful, false-once, false-always and
   throwing storage outcomes; test primary failure, backup failure and delete failure.
-- [ ] Return explicit local load disposition (absent, valid, recovered, incompatible,
+- [x] Return explicit local load disposition (absent, valid, recovered, incompatible,
   corrupt) and save eligibility. Preserve the original bytes after rejected input;
   record format headers before accepting settings. A deliberate New Game replacement
   must follow the mod's existing overwrite interaction, not occur during entry/exit.
-- [ ] In Three Islands retain the last validated generation and never rotate arbitrary
+- [x] In Three Islands retain the last validated generation and never rotate arbitrary
   corrupt primary bytes over it. In each scene separate in-memory progress, counted
   outcomes and dirty persistence state; propagate boolean results and retry without
   duplicate rewards. Show success only after publication; use one bounded failure notice.
   Apply the same checked best-time/dirty-write treatment to Act Practice; a failed write
   must not be hidden behind an updated in-memory best. Storage fakes implement the
   current text and binary methods even where these consumer cases use only text.
-- [ ] Extend the actual scene lifecycle checks, including future file → entry → exit
+- [x] Extend the actual scene lifecycle checks, including future file → entry → exit
   with no play, finish/retry, current/legacy data, and unknown fields. Update Hello and
   tutorial save examples so authors learn checked outcomes. Preserve room-entry saves,
   profile durability and Starfall's existing defensive generation behavior.
@@ -197,17 +224,17 @@ this repair.
 `src/test/java/com/openggf/mods/code/TestEggmansSkyQualityOfLife.java` and
 `TestEggmansSkyScene.java`. Sequence after the Eggman's Sky portion of P01.
 
-- [ ] Convert the audit's prose/future/unchecked-capacity probes into Jupiter regressions:
+- [x] Convert the audit's prose/future/unchecked-capacity probes into Jupiter regressions:
   reject `version=999`, reject arbitrary prose, and reject `bonusSlots=1000000` before
   calling `cargo.resize`; assert active Player and original stored bytes stay unchanged.
-- [ ] Decode into a candidate with a checked result; validate supported headers, required
+- [x] Decode into a candidate with a checked result; validate supported headers, required
   identity fields, duplicates, finite coordinates and integer arithmetic before allocation.
   Derive technology limits from actual catalogue definitions and earned slot mechanics;
   cite those owners rather than inventing a fitted capacity threshold.
-- [ ] Publish the candidate only after complete validation. Offer Continue only for a
+- [x] Publish the candidate only after complete validation. Offer Continue only for a
   usable/recoverable save; preserve incompatible input during scene exit. Keep explicitly
   supported legacy omissions and test them as named fixtures.
-- [ ] Add negative/extreme counts, capacity overflow, invalid technology, partial input,
+- [x] Add negative/extreme counts, capacity overflow, invalid technology, partial input,
   oversized storage, valid inventory and current encode/decode round trips; update save
   compatibility notes and the P01 failure notice.
 
@@ -221,15 +248,15 @@ source; valid and supported legacy expeditions retain their inventory/progress.
 consumers; `examples/starfall-frontier/src/test/java/starfall/WorldTest.java`,
 `WorldSizeTest.java`, `WorldSavesTest.java`; engine `TestStarfallFrontierScene.java`.
 
-- [ ] Add generated-world regression `beaconCompletesAtGeneratedCamp` for SMALL/MEDIUM/LARGE
+- [x] Add generated-world regression `beaconCompletesAtGeneratedCamp` for SMALL/MEDIUM/LARGE
   and supported legacy geometry: establish completed wardens/core inventory, then use
   actual camp interaction. Assert legacy row 27 cannot finish a new expanded world.
-- [ ] Add world-owned `campTileX()`/`campTileY()` accessors and use them in generation,
+- [x] Add world-owned `campTileX()`/`campTileY()` accessors and use them in generation,
   rendering/map markers, recall and interaction. Derive Y from each world's surface;
   retain the existing interaction tolerance and consumed-item/one-shot victory policy.
-- [ ] Update the old progression test to generate current geometry, then test save/load
+- [x] Update the old progression test to generate current geometry, then test save/load
   and capture/restore/forward replay through the final interaction.
-- [ ] Exercise one real scene input interaction at the visible camp; update coverage
+- [x] Exercise one real scene input interaction at the visible camp; update coverage
   obligations. Keep this location a Starfall rule rather than adding an engine landmark API.
 
 **Verify:** queued `-Dmse=off "-Dtest=TestStarfallFrontierExample,TestStarfallFrontierScene" test`.
@@ -242,16 +269,16 @@ after restoration.
 `EnemyVisuals.java`, `LevelStages.java`; create mod-local `scene/CombatLayout.java`;
 engine `TestSlayTheRobotnikScene.java` and source scene tests.
 
-- [ ] Add `targetedActionsAreIndependentOfDrawCadence`: identical card and targeted-
+- [x] Add `targetedActionsAreIndependentOfDrawCadence`: identical card and targeted-
   monitor inputs with zero draws, every-tick draws, every-fifth-tick draws and duplicate
   draws. Compare enemy HP, energy, chosen target, pending choices, run/save state and faults.
-- [ ] Split stage selection/placement from `LevelStages.draw`; split EnemyVisuals pose/
+- [x] Split stage selection/placement from `LevelStages.draw`; split EnemyVisuals pose/
   part preparation and bounds from canvas emission. Store one immutable CombatLayout
   per relevant logic update containing stage placement and each active target's bounds.
-- [ ] Make hotspot/target/effect placement consume that layout; make drawing consume
+- [x] Make hotspot/target/effect placement consume that layout; make drawing consume
   prepared poses without clearing/populating interaction state. Define missing-art
   placeholder bounds before drawing and recompute after spawn/death/size changes.
-- [ ] Verify origin/flip/scale/shake conventions and representative composite-boss pixels.
+- [x] Verify origin/flip/scale/shake conventions and representative composite-boss pixels.
   Update Slay's tour to describe the corrected behavior; keep card rules and native
   choreography local. Do not replace boss tables or introduce U4 before this regression passes.
 
@@ -264,21 +291,21 @@ has equivalent outcomes.
 **Owns:** R5. **Files:** Survivors `Stage.java`, `RunState.java`, `Profile.java`,
 `SurvivorsMod.java`; `src/test/java/com/openggf/mods/code/TestSonicSurvivors.java`.
 
-- [ ] Extend the real death-banking regression: capture active gameplay before death,
+- [x] Extend the real death-banking regression: capture active gameplay before death,
   earn a known reward, bank, restore through the production session registry, die/bank
   again, and compare bank, kills, elites, species totals and wins. Add retire/victory,
   restored run-start, failed persistence and distinct-new-run variants.
-- [ ] If it reproduces, introduce a semantic captured run identity and non-rewound
+- [x] If it reproduces, introduce a semantic captured run identity and non-rewound
   settlement record in the existing service bundle. Credit **once per run**; replay of
   the same settled run cannot add awards or run counts. A deliberate fresh-run command
   creates a new identity; restoration/replay/level reload does not. Retain prior records
   needed by seeks within the current history epoch, and bound/reset them only at a real
   history/session boundary that makes old settlements unreachable.
-- [ ] Apply the award and its settlement status together in the profile's persisted
+- [x] Apply the award and its settlement status together in the profile's persisted
   representation. Retry failed writes without applying the award twice. Keep profile
   outside rollback and run simulation captured; do not solve it by disabling rewind or
   rolling back all lifetime records. Preserve old profile loading with an explicit migration.
-- [ ] Verify complete registry restoration, Continue/load and session disposal, including
+- [x] Verify complete registry restoration, Continue/load and session disposal, including
   repeated failure and new runs. If the initial test disproves the risk, document the
   existing boundary and retain the regression instead of adding an unnecessary ledger.
 
@@ -294,17 +321,17 @@ Sitar `SitarScene.java`, `controls/MappedControls.java`, `ControlSettings.java`;
 `src/main/java/com/openggf/control/ActionReducer.java` as an existing reference, not
 an automatic edit. Coordinate with P01's source owners.
 
-- [ ] Add Flappy menu tests for practice at zone zero and every unlocked zone, retry,
+- [x] Add Flappy menu tests for practice at zone zero and every unlocked zone, retry,
   and normal Play at zero. Practice increases totals but never best scores or medals.
   Pass `practice=true` from the Practice command independently of its starting offset.
-- [ ] Add Sitar calibration tests for a remapped key, alternate pad button, alternate
+- [x] Add Sitar calibration tests for a remapped key, alternate pad button, alternate
   device and supported signed-axis/trigger binding. Feed timestamped physical events,
   including rest/repeat/held/release, and assert one calibration tap per configured rising edge.
-- [ ] Evaluate calibration through the same configured binding/reducer semantics as the
+- [x] Evaluate calibration through the same configured binding/reducer semantics as the
   kick action, retaining original physical timestamps and sample-clock conversion.
   Reset edge state on calibration entry/rebind/disconnect; remove the BUTTON_A special case.
   Do not replace timestamped judgement with tick-time sampling.
-- [ ] Verify menu transitions with held buttons, unsupported calibration bindings with
+- [x] Verify menu transitions with held buttons, unsupported calibration bindings with
   a visible restriction if any remains, and both profiles/devices. Update practice/
   calibration wording to match the exercised contract.
 
@@ -320,16 +347,16 @@ determine eligibility and calibration.
 `art/Art.java`, surface recolour keys; `TestEggmansSkyScene.java`/
 `TestEggmansSkyQualityOfLife.java`. Depends on P02's validated load identity.
 
-- [ ] Reproduce new expedition/galaxy and Continue in one retained scene at the same
+- [x] Reproduce new expedition/galaxy and Continue in one retained scene at the same
   system/planet coordinate with different seeds; compare planet specs and derived
   texture/recolour data to fresh-scene results.
-- [ ] Introduce immutable generation keys including seed, galaxy identity and any
+- [x] Introduce immutable generation keys including seed, galaxy identity and any
   algorithm schema that changes output. Clear or replace generation-scoped planet,
   orbital texture and transformed-image caches on validated load/new expedition.
-- [ ] Bound procedural/recolour caches by owning planet/surface lifetime or an explicit
+- [x] Bound procedural/recolour caches by owning planet/surface lifetime or an explicit
   capacity; remove lookup references without invalidating currently displayed images.
   Keep host-owned texture disposal separate from mod-owned CPU image references.
-- [ ] Test long exploration/re-entry, correct per-generation data, retained entry count,
+- [x] Test long exploration/re-entry, correct per-generation data, retained entry count,
   active-image validity and failed-load non-mutation. Report memory measurements only
   when actually collected; keep the cache repair mod-local.
 
@@ -342,16 +369,16 @@ Survivors `Species.java`/`Enemy.java`/`Stages.java`/`Stage.java`; Tower `core/Ca
 `core/Battlefield.java`/`ui/BattleView.java`; Flappy `Zone.java`/`Run.java`; Sitar
 `model/SongCatalog.java`/`SongSpec.java`/`SitarScreens.java`.
 
-- [ ] Pin seeded encounter/content results and array ownership, then measure warmed
+- [x] Pin seeded encounter/content results and array ownership, then measure warmed
   repeated trait/lineup/wave/tour/song lookups. Use construction/lookup counts or a
   bounded allocation diagnostic; avoid brittle wall-clock assertions.
-- [ ] Build immutable tables/indexes in per-module or per-scene services and pass them
+- [x] Build immutable tables/indexes in per-module or per-scene services and pass them
   to consumers. Prepare Tower previews and act lineups once; cache species traits for
   an entity identity. Preserve bounded lifecycle and no mutable static authority.
-- [ ] Keep derived caches recreation-safe and separate from captured gameplay state;
+- [x] Keep derived caches recreation-safe and separate from captured gameplay state;
   protect frame arrays from consumer mutation. Verify seeded RNG draw counts/order,
   reload isolation and two concurrent module instances.
-- [ ] Remove only measured repeated filtering/traversal allocations. Design an engine
+- [x] Remove only measured repeated filtering/traversal allocations. Design an engine
   visitor/index only if an existing query cannot meet measured demand; do not introduce
   a generic catalogue API for ordinary Java instance tables.
 
@@ -366,21 +393,29 @@ are unchanged. Any performance claim has matched before/after evidence.
 `Leaderboard.java`, `InfiniteLevel.java`, `CourseZones.java`; Infinite/Survivors
 `build.py` plus `examples/build_example.py`; per-mod art/control/UI wrappers and READMEs.
 
-- [ ] Package each example and collect **actual** validator warning identities by mod,
+- [x] Package each example and collect **actual** validator warning identities by mod,
   referenced class and call purpose. Categorize each as an existing alternative,
   narrow missing semantic service, or temporarily retained expert bridge. Record this
   ledger in the dated audit; do not treat the 31 import sites as a warning count.
-- [ ] Change Leaderboard to retain `ModContext.storage()` and use bounded read/checked
+- [x] Change Leaderboard to retain `ModContext.storage()` and use bounded read/checked
   writes. Preserve top-ten order/ties/run-ID replacement and eligible legacy reads;
   test malformed/oversized data, false writes and concurrent module instances.
-- [ ] Replace redundant Infinite forwarding with `DelegatingLevel`/
+- [x] Replace redundant Infinite forwarding with `DelegatingLevel`/
   `DelegatingZoneRegistry`; migrate exact existing art recipes, anchors, palette,
   settings/action and text helpers where equivalent. Explicitly retain RNG streams,
   raw animation dialects, inspectable disabled controls and authored visual styling.
-- [ ] Consolidate duplicate Infinite/Survivors builders on the shared launcher while
+- [x] Consolidate duplicate Infinite/Survivors builders on the shared launcher while
   preserving their documented jar output paths and run behavior. Avoid direct player
-  modstate manipulation in new launch flows. Update READMEs with the current residual
+  modstate manipulation in new launch flows.
+- [x] Update READMEs with the final current residual
   warning inventory and matching-build guidance.
+
+**Execution:** shared builders, bounded owned leaderboard and equivalent helper
+adoptions are implemented. Completed clean `175531f6d` compiled/packaged all 29 sources;
+26 are strict-clean, while Infinite/Golf/Survivors retain 24/8/13 advisory references
+(45 total). The actual call/purpose/owner/reopening ledger and README consolidation
+are complete; README commit `54e771314` retains the checkpoint attribution and
+matching-build guidance. The historical 28-package ledger is preserved as dated evidence.
 
 **Verify:** queued `-Dmse=off "-Dtest=TestInfiniteSonic,TestSonicSurvivors,TestModStorage,TestModValidator" test`,
 portable launcher tests, and SDK packaging/validation of each changed example.
@@ -394,22 +429,34 @@ or weaken validation just to erase warnings.
 `test_creator_kit.py`; SDK `ProjectScaffolder.java`/`StarterProjects.java` and templates;
 `docs/modding/testing.md` and exported/generated project instructions.
 
-- [ ] Add Python/export assertions for every authored test tree and required source
+- [x] Add Python/export assertions for every authored test tree and required source
   generator, including Three Islands maps. Classify the 60 source test Java files:
   export portable source/tests/helpers; adapt checkout-only tests to the distributed
   testkit or clearly retain them as repository-only with a portable replacement.
-- [ ] Emit a test profile for each portable fork and starter with pinned existing
+- [x] Emit a test profile for each portable fork and starter with pinned existing
   Jupiter/Surefire and matching engine/SDK/testkit identity. Include a minimal packed-
   mod integration test in generated projects; authors should not copy the profile manually.
-- [ ] Verify the actual unpacked kit in an external task directory with no checkout:
+- [x] Verify the actual unpacked kit in an external task directory with no checkout:
   run Hello, a pure-model fork (Tower or Flappy), Three Islands generator, and an
   appropriate ROM-backed fork with explicit user ROM paths. Regeneration must reproduce
   authored inputs; no source checkout paths, ROM files or player state enter the kit.
-- [ ] Test green, deliberate failure and zero discovery via Jupiter; mismatched artifact
+- [x] Test green, deliberate failure and zero discovery via Jupiter; mismatched artifact
   identities must reject before launch. Inspect mod jars for absence of testkit/JUnit/
   test classes and inspect source ZIPs for absence of targets, saves and generated caches.
-- [ ] Preserve launcher output/argument compatibility and update testing/setup guidance.
+- [x] Preserve launcher output/argument compatibility and update testing/setup guidance.
   Packaging verifies structure, not gameplay; record the actual fork tests/ROM skips.
+
+**Execution:** portable authored tests/resources/generators, seven starter profiles,
+matching-identity checks and launcher contracts are implemented. Actual provisional
+external fork/starter/generator checks are recorded; Starpost at clean `175531f6d`
+passes 231/231 and strict packaging. That producer's music creator-profile failure
+exposed an absent-plan template bug: `545d045f6` repairs it with 23/23 focused passes,
+zero skips. Fresh seven-starter plus Hello Maven profiles at clean `54e771314` pass
+10/10, zero skips, with main/test artifact separation checked. Portable failure,
+empty-discovery, identity and generator controls retain their recorded `175531f6d`
+identity; the unchanged launcher/testkit classes and all 83 unchanged scaffold files
+are explicitly compared rather than relabelled as new executions. Source generators,
+portable model forks and canonical-ROM Starpost checks remain producer-attributed.
 
 **Verify:** `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tools/modding -p test_creator_kit.py`,
 queued `-Dmse=off "-Dtest=TestCreatorTestLauncher,TestModTestKit,TestModSdkArtifactVerifier,TestModApiSdkPackager" test`,
@@ -426,30 +473,30 @@ Infinite controller phases. Depends on P05 for Survivors settlement policy. Also
 `HostedRunController.java`/`SceneRunLauncher.java` and the current GameLoop host-admission
 path: hosted stock runs already hold native-input rows, but exclude these gameplay mods.
 
-- [ ] Reproduce Speed Shoes consumption during a long Survivors menu through the
+- [x] Reproduce Speed Shoes consumption during a long Survivors menu through the
   real loop. Pin Golf's current neutral-step physics/input and ordinary stock movement
   before introducing the extension; retain current input/movie/P2/filter ownership.
-- [ ] Add proposed `@ModApi GameplayFrameDisposition` values
+- [x] Add proposed `@ModApi GameplayFrameDisposition` values
   `ADVANCE_NATIVE_INPUT`, `ADVANCE_CONTROLLED`, `HOLD`. Add
   `GameplayFrameController.beforeFrame(CourseControl, LogicalInputSnapshot)` with a
   default mapping of existing `beforeTick()==true` to `ADVANCE_CONTROLLED`, false to
   `HOLD`. Runtime invokes exactly one decision per row; `afterTick(..., advanced)`
   retains its existing meaning. Existing controllers therefore keep neutral stepping.
-- [ ] In the one production runtime, preserve supplied native logical input for native
+- [x] In the one production runtime, preserve supplied native logical input for native
   advance, retain current neutralization for controlled advance, and gate world work
   for HOLD. Bind the new callback to its verified owner. Retain documented title-entry
   and music-publication work; represent audio/presentation policy separately from physics.
-- [ ] Introduce a captured Survivors mode-state/coordinator shared through its service
+- [x] Introduce a captured Survivors mode-state/coordinator shared through its service
   bundle. Move menu entry/release/confirmation ahead of world stepping, then remove
   per-clock restoration patches after the regression covers all clock owners. Objects
   read the same pause state; do not add another simulation loop or stale Stage reference.
-- [ ] Give Infinite an explicit phase disposition table: partial ready/continue holds
+- [x] Give Infinite an explicit phase disposition table: partial ready/continue holds
   that intentionally leave enemies/animation live stay advancing. Migrate only true
   world freezes. Confirm Golf's existing neutral policy and stock unmodified path remain intact.
   Reuse the hosted-run admission implementation where equivalent; test that a row decision
   is made once, stock-run content remains mod-free, scene visits/handles are revoked on exit,
   and new module dispositions do not bypass existing run policy or callback attribution.
-- [ ] Cover shoes/invincibility/protection/RNG/object lifetime/touch/physics, airborne/
+- [x] Cover shoes/invincibility/protection/RNG/object lifetime/touch/physics, airborne/
   hurt/rolling/platform state, menu edges, held-button release, entry transitions,
   rewind/capture/forward replay and supported characters/viewports. Update runtime
   contract, signature pins and affected route matrices.
@@ -479,7 +526,7 @@ not replace broader delivery, owner-callback tests or route/ROM qualification.
 `ModSaveWriteResult.java`. **Tests:** create `mods/state/TestModSaveSlot.java`;
 reuse `TestModStorage` and migrated mod scenes.
 
-- [ ] Extract the repaired local behavior from Three Islands plus Flappy or Sitar,
+- [x] Extract the repaired local behavior from Three Islands and Slay profiles,
   defining typed read outcomes and checked writes over an injected `ModStorage` handle.
   Existing binary owner storage is retained for recording/ghost consumers; the first
   slot coordinator operates over the current text contract and does not alter its caps.
@@ -487,16 +534,16 @@ reuse `TestModStorage` and migrated mod scenes.
   derive creator ownership. Corrupt and incompatible are distinct. Unexpected codec
   programming failures propagate through the owner boundary rather than becoming
   silent "invalid save" results.
-- [ ] Provide `ModSaveSlot<T>.load()` and `save(T)` with primary/optional backup local
+- [x] Provide `ModSaveSlot<T>.load()` and `save(T)` with primary/optional backup local
   names, creator `ModSaveCodec<T>` and explicit replacement eligibility. Expose recovered
   status and failed publication. Preserve original incompatible bytes; validate a backup
   before promotion. An incompatible primary does not silently fall back to an older
   writable backup; a failed required backup write aborts publication, retaining the
   previous valid generation. Never label an interrupted multi-file sequence crash-atomic.
-- [ ] Test the full false/exception/partial-rotation matrix, future schemas, bounds and
+- [x] Test the full false/exception/partial-rotation matrix, future schemas, bounds and
   foreign names through production storage. Keep a successfully decoded generation
   available after failed primary/backup writes. Model retries without duplicate updates.
-- [ ] Migrate at least two independent repaired consumers and delete their duplicate
+- [x] Migrate at least two independent repaired consumers and delete their duplicate
   slot bookkeeping. Keep Starfall's chunked generation protocol specialized until
   quota/transaction needs prove a separate extension. Preserve format/save boundaries.
 
@@ -511,17 +558,17 @@ terrain/destruction/spring owners; new small semantic result/options types adjac
 to their owners; Survivors `Enemy.java`/`Boss.java`/`Pickup.java`/`Shot.java`, Infinite
 destruction, standalone `SpringPad.java`/`ZapBug.java`, Golf `objects/GolfUpSpring.java`.
 
-- [ ] Pin consumers' actual ROM/game-rule behavior before extraction: live bounded
+- [x] Pin consumers' actual ROM/game-rule behavior before extraction: live bounded
   floor probes, stock destruction order/animals/points, namespaced hit sound and spring
   launch/contact. Cite owning routines for ROM constants and shipped FixBugs branches.
-- [ ] Add an injected bounded live-terrain query with explicit collision path/layer,
+- [x] Add an injected bounded live-terrain query with explicit collision path/layer,
   distance and surface result. Reuse the native collision owner. Keep Infinite's detached
   terrain survey separate; do not export `ObjectTerrainUtils` wholesale.
-- [ ] Extend existing `DestructionEffects` with immutable semantic recipe/options access
+- [x] Extend existing `DestructionEffects` with immutable semantic recipe/options access
   and namespaced/semantic sound handling, preserving one-shot/order/slot semantics.
   Add a creator contact/bounce operation against the existing spring/player owner;
   do not duplicate the already-public `setSpringing` method or port the stock spring class.
-- [ ] Migrate the real consumers and remove their specific internal dependencies.
+- [x] Migrate the real consumers and remove their specific internal dependencies.
   Exercise slopes/flips/top solidity/no floor/search bounds, main+sidekick, overlap/
   velocity/shape edges, foreign owner/faults and restoration/recreation.
 
@@ -538,20 +585,20 @@ shipped behavior and provenance retained.
 small immutable geometry values; tests in `mods/scene/art/TestSceneArtHelpers.java`,
 `mods/ui/TestCreatorUi.java`, `mods/scene/host/TestRecordingCanvas.java`.
 
-- [ ] Extract P04's pure composition preparation into ordered sprite parts with explicit
+- [x] Extract P04's pure composition preparation into ordered sprite parts with explicit
   origins/offsets/scale/flip and measurable bounds. Share geometry/draw emission only;
   Slay and Three Islands retain their boss recipes, phases and native choreography.
-- [ ] Provide a per-draw translated/faded canvas view. Specify clear behavior, viewport,
+- [x] Provide a per-draw translated/faded canvas view. Specify clear behavior, viewport,
   nested translation, multiplicative alpha/tint, clip scope, image regions, sprites,
   text and default backdrop rendering. Width/height retain the target viewport; clear
   retains full-viewport semantics independent of translation, using a viewport fill
   when faded. Offset ordinary draw/clip coordinates; restore the prior clip scope;
   multiply existing image/color opacity rather than replacing it. Reject invalid/overflowing geometry before partial
   emission; never retain a live canvas beyond its draw callback.
-- [ ] Compare recorded operations and representative pixels with Slay/Three Islands
+- [x] Compare recorded operations and representative pixels with Slay/Three Islands
   composites and Sitar `Motion.ShiftedCanvas`, Flappy shake offsets and Golf canvas
   offsets. Migrate independent consumers and remove equivalent forwarding arithmetic.
-- [ ] Run P04 cadence regressions again after the extraction. Check optional missing
+- [x] Run P04 cadence regressions again after the extraction. Check optional missing
   pieces, nonzero origins, mirror axes, scale extremes, clipping and nested alpha.
 
 **Verify:** queued `-Dmse=off "-Dtest=TestSceneArtHelpers,TestCreatorUi,TestRecordingCanvas" test`,
@@ -564,17 +611,17 @@ share pure placement values; layer styling and game rules remain local.
 `SceneArtCache.java`; `mods/scene/SceneLevelKit.java`, `SceneRomArt.java` and
 host `RomSceneArt.java` only where a proven capability is missing; per-mod art tables.
 
-- [ ] Inventory exact repeated raw requests by game/revision/art/mapping/DPLC/frame
+- [x] Inventory exact repeated raw requests by game/revision/art/mapping/DPLC/frame
   count/palette line. Migrate identities already in StockSceneArt first; cache only
   repeated decoding, not every one-time bank. Preserve mod palette and animation choices.
-- [ ] Add named S1/S2/S3K recipes only for independently reused verified banks. Compare
+- [x] Add named S1/S2/S3K recipes only for independently reused verified banks. Compare
   every frame/origin/palette to the current raw request on the exact supported ROM SHA-1;
   wrong revision/game must reject clearly. Runtime bytes always come from the supplied ROM.
-- [ ] Compare Starfall's 16-pixel samples, backdrop variants and first-frame animation
+- [x] Compare Starfall's 16-pixel samples, backdrop variants and first-frame animation
   preparation with `SceneRomArt.levelKit` output. Use equivalent cropping/existing
   capabilities; add bounded block identity/presentation-variant access only for proven gaps.
   Delete the local decoder only after pixel/identity equivalence is established.
-- [ ] Address Golf/Infinite title-art warnings through detached ROM-art values/resource-
+- [x] Address Golf/Infinite title-art warnings through detached ROM-art values/resource-
   owner adapters where possible. Keep GPU atlas lifetime host-owned, test title re-entry/
   level transitions/viewport widths, and retain an explicit expert bridge for any capability
   this task does not actually implement.
@@ -591,18 +638,18 @@ are explicit. No raw decoder is deleted on resemblance alone.
 `mods/code/OwnerAwareCharacterDefinition.java`/`OwnerAwareStandaloneModule.java`,
 `game/StandaloneGameSpec.java`; character/standalone/platformer fixtures and SDK templates.
 
-- [ ] Add tests exposing canonical identity from the engine's existing factory-bound
+- [x] Add tests exposing canonical identity from the engine's existing factory-bound
   key, including reused sprite classes for distinct owned characters and main/sidekick
   runtime suffixes. Verify native fallbacks and forged/mismatched factory declarations.
-- [ ] Make the default creator identity read the authoritative bound key, while
+- [x] Make the default creator identity read the authoritative bound key, while
   retaining validated expert overrides. Remove `_p\d+` parsing from the three samples.
   Add a protected standard art-render helper only if the repeated forwarding can use it
   without changing native playable draws/sensors or renderer ownership.
-- [ ] Build a declarative owner-key-to-factory registry from the validated registration
+- [x] Build a declarative owner-key-to-factory registry from the validated registration
   transaction or a narrow registry builder integrated with StandaloneGameSpec. One
   definition must supply create/known/browse dispatch; preserve custom expert registries
   and callback boundaries, rejecting unknown/foreign keys before publication.
-- [ ] Migrate maintained samples/starter resources; verify fresh factories, gameplay
+- [x] Migrate maintained samples/starter resources; verify fresh factories, gameplay
   save/respawn/recreation, subclass state, object art and portable generated projects.
   Defer a baked-ring helper until another real consumer demonstrates the same assembly need.
 
@@ -632,22 +679,34 @@ API gate for accepted additions, actual cancellation/network/renderer/rewind pro
 specified. Record evidence and explicit limitations; do not call a prototype a shipped
 capability. These investigations may proceed separately from the core defect repairs.
 
+**Execution verdict:** title choreography and exact-case atlas lookup are implemented
+with real consumer migrations (`505d52bfd`, integrated as `87d990bab`). Presentation
+and common API checks passed; the provisional external consumer matrix passed 313
+tests without skips. Cancellable art, protocol-neutral Golf transport, auxiliary
+spawn convenience and inspectable disabled focus are deferred with measured/source
+evidence and explicit reopening conditions in the audit/validation record. The
+repeated art-failure ledgers have an explicit deferred pure-status uplift disposition
+in the validation record, including an owner and clock/fault/resource-lifetime
+reopening requirements. Their local bounded repairs are implemented under P18;
+no public preparation/status capability is claimed.
+Final clean-kit consumer and combined delivery qualification remain separate gates.
+
 ### P18. Improve orchestration and diagnostic clarity where it serves the fixes
 
 **Owns:** remaining code-quality observations. **Files:** Eggman's Sky SurfaceMode/Game/
 art facade, Slay CombatView/art facade, Three Islands art facade, Starfall scene flow.
 
-- [ ] Extract the responsibilities already made explicit by P02/P04/P07/P11 into
+- [x] Extract the responsibilities already made explicit by P02/P04/P07/P11 into
   focused layout, generation/cache, menu/phase and settlement owners. Preserve captured
   state/recreation boundaries and externally tested flow; avoid a wholesale rewrite
   based on file length or a shared combat/mining engine.
-- [ ] Replace swallowed-and-permanently-cached art failures with bounded status/diagnostic
+- [x] Replace swallowed-and-permanently-cached art failures with bounded status/diagnostic
   entries naming the request/recipe and cause. Missing optional ROM, unsupported art
   and invalid/corrupt request are distinct; real callback faults retain owner attribution.
-- [ ] Adopt existing named actions/text layout in the scene wrappers where edge/repeat/
+- [x] Adopt existing named actions/text layout in the scene wrappers where edge/repeat/
   focus/markup behavior matches. Keep intentional custom font/focus/native animation
   behavior until P17 provides an equivalent path.
-- [ ] Clarify terrain-edit lifetime in Eggman's Sky: either document current scene/planet-
+- [x] Clarify terrain-edit lifetime in Eggman's Sky: either document current scene/planet-
   lifetime carving or implement explicitly requested durable carving as a separate
   save-schema task. The audit found no existing promise justifying an automatic new
   terrain persistence subsystem. Update guides and source comments to the chosen contract.
@@ -656,24 +715,46 @@ art facade, Slay CombatView/art facade, Three Islands art facade, Starfall scene
 restore paths for moved state. **Done:** fixes have focused owners and useful failure
 status; accepted behavior, algorithms and saved streams remain unchanged.
 
+**Scope limit:** these repairs qualify the named scene facades, including Starpost
+Fish/Tree/Museum followups and terminal close. Infinite's retained native-title
+`Module.titleLevel` still broadly catches runtime failures and caches absence in a
+long-lived title owner. Ledger G records the bounded native-title recovery,
+ROM/session-generation and owner-fault reopening requirements. Removing this cache
+alone would repeat decode through update/draw/backdrop. No complete native-title
+recovery or public asynchronous art capability is claimed.
+
 ### P19. Verify rebuilt installed artifacts without disturbing player state
 
 **Owns:** obsolete installed `sample-flappy-mod.jar`; final source/artifact qualification.
 Reinventory at execution time: new Act Practice and bundled Time Attack artifacts have
 independent source identities and installation/bundling rules.
 
-- [ ] Build the maintained Native Flappy source using matching final candidate engine/
+- [x] Build the maintained Native Flappy source using matching final candidate engine/
   SDK artifacts into a dedicated task output; inspect range, identity and validator findings.
   Never patch the old binary manifest to pretend code compatibility.
-- [ ] Verify a clean isolated runtime with explicit S3K ROM and the normal code-trust/
+- [x] Verify a clean isolated runtime with explicit S3K ROM and the normal code-trust/
   title Apply flow. Keep jars, ROMs, saves and modstate from the player's current runtime
   out of generated test directories and creator exports.
-- [ ] Inventory actual installed hashes/source identities at execution time. Replace
+- [x] Inventory actual installed hashes/source identities at execution time. Replace
   only the specifically requested obsolete artifact after preserving its rollback copy
-  outside `mods/`; unknown installed jars remain untouched. Renew trust for the new hash,
-  rescan/apply and verify startup. Building alone does not establish player installation.
-- [ ] Record final candidate source/artifact identities, residual warnings, exercised
+  outside `mods/`; unknown installed jars remain untouched. Qualify new-hash trust,
+  rescan/Apply and startup in the isolated runtime; preserve player enablement/trust.
+- [x] Record final candidate source/artifact identities, residual warnings, exercised
   routes, skips and any pending replacement in the existing audit/validation record.
+
+**Execution:** the maintained SDK build produced a matching historical `175531f6d`
+Native Flappy jar, strict validator-clean, with `sample-flappy` version 1.0.0,
+range `>=0.7.0 <0.8.0`, base `s3k`. Its SHA-256 is
+`03c311c6701058eb69721a9540f2ab327af0573f10e00b6c73203ad92b9e0bfd`.
+Actual maintained-binary request 43929 passed 11/11, zero failures/errors/skips,
+through isolated canonical-ROM trust/Apply/runtime checks at clean `175531f6d`.
+This completes that checkpoint's runtime obligation. A fresh maintained build against
+clean `54e771314` produces the identical jar; its actual binary runtime repeat 1077
+passes 11/11, zero skips. Only the obsolete installed jar was replaced atomically
+after a hash-checked rollback copy outside `mods/`; all 38 other inventoried files
+remain byte-identical. Player enablement/trust remains disabled/untrusted. Normal
+new-hash trust/rescan/Apply was qualified in the isolated runtime, preserving that
+player choice. Installed replacement is observed separately from the build/test.
 
 **Done:** maintained sources build against one candidate identity, generated artifacts
 are qualified, and any requested local replacement has an explicit observed outcome.
@@ -687,22 +768,22 @@ their manifests/tests, shared run/storage/network adapters and the linked upstre
 Time Attack extraction plan. The standalone operator server is a separate subsystem;
 inspect boundary usage without turning this mod-remediation task into a server rewrite.
 
-- [ ] Inventory new production areas, manifests, docs, source tests and actual validator
+- [x] Inventory new production areas, manifests, docs, source tests and actual validator
   findings. Record them as a dated scope extension in the existing audit. Distinguish
   strict bundled package validation from live run/network/timing qualification.
-- [ ] Examine stock-run launch/admission/retry/end, suspended scene resumption, revoked
+- [x] Examine stock-run launch/admission/retry/end, suspended scene resumption, revoked
   visit handles, callback faults, no-mod gameplay isolation, ghost pose comparison-only
   authority and attempts/recordings. Include restored/rewound Act Practice attempts and
   timer/best-score persistence; P01 owns the already-observed ignored write result.
-- [ ] Examine Time Attack settings/legacy import and binary recording/ghost bounds,
+- [x] Examine Time Attack settings/legacy import and binary recording/ghost bounds,
   corrupt/future-file preservation, peer queue/disconnect/teardown, shared-client/host
   usage and mutable-static/asset ownership. Treat existing typed network rejection and
   owner-private binary storage as implemented capabilities, not new uplift proposals.
-- [ ] Add real regressions only for established failures or missing important boundaries;
+- [x] Add real regressions only for established failures or missing important boundaries;
   map each new finding to P01/P05/P09/P10/P11/P12/P17 or a separate bounded repair.
   Compare newly repeated author patterns with both these mods and the original consumers
   before changing public APIs. Record explicit evidence-based disposition when no fix is needed.
-- [ ] Preserve upstream's exact inherited failures/incomplete suite coverage in the
+- [x] Preserve upstream's exact inherited failures/incomplete suite coverage in the
   batch baseline. Run the new targeted boundary checks through the root queue/Jupiter
   configuration, which includes the bundled mod's test sources, and record actual skips.
 
@@ -731,3 +812,74 @@ each U1–U7 has a delivered consumer-backed contract or a documented evidence-b
 disposition, exploratory candidates have explicit verdicts, and residual internal
 dependencies/coverage gaps remain visible. A package pass, model probe, or plan checkbox
 alone does not certify full gameplay, graphics, audio, timing or API publication.
+
+## Execution scope update — published Starpost Valley
+
+Published develop `f02bdbfd570276f7377d7055d236f63e34691484` adds the29th
+maintained manifest, Starpost Valley, plus scene-to-native-act ownership and music
+pacing capabilities. The updated destination supersedes b6d0ff76f for combined
+qualification. Preserve the historical audit/28-package ledger as dated evidence.
+
+- [x] P01/P12: reproduce and repair Starpost progress/settings false-write outcomes,
+  rejected/future-file preservation and explicit New Game replacement. Retain the
+  exact bedtime checkpoint for retry without repeating calendar/RNG/progress.
+- [x] P09/P10: record the source/docs/framework inventory and actual package warnings,
+  preserve creator generators/tests and qualify the Java25 creator fixture.
+- [x] P11: compose controller admission with native-act exit/hold before any world
+  decision; test both fades, once-only input/audio/presentation service, exact return
+  result/team restoration and gameplay-context retirement.
+- [x] P20: preserve fresh Game/save-section construction, same-identity town/activity/
+  Ruins restore boundaries and once-only outcome guards; record native-route coverage
+  limits rather than reimplementing this newly delivered subsystem.
+
+- [x] P02/P05: reject Capsule counts above each declared bundle target, preserve
+  rejected save bytes, make completed delivery a no-op and retain exact-once rewards;
+  exercise over-target files and actual menu delivery.
+
+**Observed qualification:** queued Java25 Starpost Example passed its two wrapper
+tests and all 231 authored cases; six canonical native classes passed 94/94 with
+zero skips. The final external exported project from clean `175531f6d` independently
+passes 231/231, zero skips, with strict package zero findings. This does not extend
+the native route matrix or certify missing GPU/audio/end-to-end network coverage.
+
+The updated-base full3155-class ordinary/guard run completed: 27,431 ordinary tests,
+26 failures, zero errors and 63 skips; fresh guards passed 677/677, zero skips.
+Exact baseline assertions and skip reasons are retained in the validation record.
+Clean `175531f6d` completed the candidate union: 27,627 ordinary checks, 31 failures,
+zero errors and 64 skips; guards ran 677 with three failures and zero errors/skips.
+The 26 baseline identities recur; the SSZ blob-hash difference has bounded semantic
+attribution. Five new ordinary and three guard failures received recorded repairs
+and focused qualification. The 120-minute execution and 10-minute idle limits were
+unchanged. The fresh `54e771314` artifact/starter/binary gates and observed local
+replacement are complete. Main integration and its required repaired-source comparison
+are recorded below; the final operational handoff is the develop push and accounted
+cleanup. No full-green claim follows from the focused results.
+
+## Final remediation and verification disposition
+
+All P01–P20 implementation/investigation obligations have a recorded result. R1–R11
+have actual consumer repairs or disproved-risk regression evidence; U1–U7 have
+consumer-backed delivery or explicit bounded dispositions. P17's deferred candidates,
+45 acknowledged internal references and route/GPU/network coverage limits remain
+visible. These are follow-up criteria, not omitted remediation steps.
+
+The final develop ordinary run selected all 3,170 ordinary classes and completed
+27,631 checks: 26 inherited failures, one new test error and 64 skips. Twenty-five
+baseline failures match their complete raw assertion SHA-256 and exception type.
+The remaining SSZ failure has complete six-row semantic attribution at unchanged
+production source; no hash-token stripping or SSZ gameplay change was used.
+Fresh guards completed 677/677 without skips.
+
+The new error came from the Golf audio-fault test attempting to acquire a released
+port. Matched unchanged baseline/current cases both pass; an owned contender proves
+that rebinding can fail even after the original host socket closes. The actual
+full-run contender was not observed. The test-only correction captures the same
+physical socket before the fault and checks its closure afterward, retaining owner,
+fault, replay, room and idempotent teardown assertions. Worker and integrated-main
+focused checks each pass 17/17 without skips. No production network change or
+TIME_WAIT attribution is claimed. The existing transport rebind checks remain.
+
+The [final execution record](../validation/2026-10-12-mod-audit-remediation.md#integrated-develop-comparison-and-final-follow-up)
+contains the commands, exact tested commits, historical red results, bounded
+follow-ups and artifact identities. No second engine full run is required for the
+final test-only oracle correction and prose; production behavior is unchanged.

@@ -7,7 +7,9 @@ additions. A generic game framework or a wholesale rewrite of the mods is not ju
 
 The [remediation plan](../plans/2026-10-12-mod-audit-remediation.md) maps every finding
 and API candidate to implementation steps, dependencies, acceptance tests and delivery
-checks. Its runtime work is planned, not implemented by the audit or plan delivery.
+checks. The original audit and plan preceded implementation; the
+[current dispositions](#remediation-execution-and-current-scope-2026-10-12) below
+record the implemented remediation and its verification limits.
 
 The plan was reconciled with upstream `e76a380c3`: hosted stock runs, shared public
 networking, binary owner storage, Act Practice and bundled Time Attack have since
@@ -496,3 +498,190 @@ Suggested delivery order:
 Each executable slice uses the actual integration-base change plan and relevant mod,
 owner-fault, API-signature, rewind/session, ROM-identity and route checks. A passed model
 probe or packaged jar alone cannot certify gameplay, graphics, audio or API publication.
+
+## Remediation execution and current scope (2026-10-12)
+
+The findings above describe the historical audit snapshot, not the current repaired
+runtime. Execution is recorded in the [validation artifact](../validation/2026-10-12-mod-audit-remediation.md)
+and [remediation plan](../plans/2026-10-12-mod-audit-remediation.md). Initial implementation
+base was `15f3cf371`; the integration tree subsequently reconciled published `develop`
+`b6d0ff76f` (Java 25 and expanded example-mutators), then `f02bdbfd5` (Starpost Valley).
+The current inventory is **29 maintained manifests**. Earlier Java 21 and 25/28-source
+counts remain historical evidence. Clean producer
+`175531f6dc4a0d0005c4593022393182d1f5e58c` is a completed historical artifact checkpoint.
+Current composed source `54e771314` includes later fixture/template, presentation
+and standalone-bound repairs. Its fresh matching kit, seven starter profiles and
+native binary qualification are complete. Main integration at `f9d192a18` completed
+the ordinary/guard comparison against `f02bdbfd5`: 26 inherited failures, one
+port-availability test error and 64 skips; all 677 guards passed. The bounded test-only
+socket ownership correction `232771401` was integrated as `4a07baff6` and passed
+17/17 focused checks on develop, zero skips. The full run remains historically red;
+the focused correction does not relabel it as green. Push and accounted cleanup
+follow the repository delivery flow after the final evidence commit.
+
+| Finding/uplift | Implemented consumer/contract | Current qualification boundary |
+|---|---|---|
+| R1/R2, U1 | Checked save preservation/retries across the affected scenes; shared `ModSaveSlot` adopted by Three Islands, Slay profiles and Starpost progress/settings | Future primary never silently selects an older writable backup; required backup failure blocks primary. No-backup late corruption requires explicit replacement; reset of rejected generations leaves the next checkpoint writable. Final production storage gate passed 36/36, zero skips. Per-file atomicity only; Starfall chunk generations and ghost pairing remain specialized. |
+| R3/R7 | Generated camp uses the current centre; expedition parsing publishes a validated candidate; generation-keyed/cache owners | Canonical ROM and portable lifecycle/regeneration checks passed. Durable terrain carving remains a separate schema decision. |
+| R4, U4 | `CombatLayout` plus ordered pure `SpriteComposition`; scoped canvas translation/opacity adopted by Sitar | Targeted cards/monitors compare damage, energy, choices and saved state under zero/sparse/duplicate drawing. Native recipes/choreography remain local. |
+| R5 | Semantic run identity and non-rewound settlement intervals persisted with awards; dirty retry | Production restore reproduced 55→110 duplicate bank and repeated 200-kill milestone accounting. Once-per-run repair preserves rewind and rejects foreign graph snapshots. |
+| R6, U2 | One before-frame disposition: native input, controlled neutral, HOLD; owner/row/visit services; captured Survivors modal coordinator | Real first-row Shoes decrement reproduced and repaired. Golf neutral stepping and native input/filter/P2/timing tested. Native-act host pause/admission/retirement and released-overlay fade ownership are repaired. Final ordinary comparison retains the attributed stock-route failures; all guards and the post-integration 17-case socket/transport gate pass. |
+| R8 | Practice command carries practice independently of zone; configured timestamped calibration edges | Remapped keyboard/pad/axis/device checks and practice/retry/normal eligibility passed. |
+| R9, U3 | Owned Infinite leaderboard, existing forwarding helpers; injected bounded floor/contact/spring/destruction capabilities | Actual ROM consumer checks passed. Completed clean 29-package collection reports 45 advisory references: Infinite 24, Golf 8, Survivors 13. The actual call/purpose/owner/reopening ledger and README consolidation are complete; retained expert bridges remain explicit. |
+| R10, U6 | Authored tests/resources/generators exported; real Jupiter launcher; test-ready seven-kind starters; shared builders | Exported Starpost at clean `175531f6d` passes 231/231 with strict package zero findings. Music's profile failure was reproduced and repaired with 23 focused passes. Fresh seven-starter plus Hello Maven profiles at clean `54e771314` pass 10/10, zero skips; main/test separation and all 90 scaffold paths checked. Portable failure/empty/mismatch/generator controls retain their explicitly recorded prior producer identity. |
+| R11 | Immutable per-scene/per-module definitions and per-recreation traits | Warmed 1,000 lookups changed 1,000→1 identities with pinned content/RNG hashes unchanged; no unmeasured FPS/GC/bytes claim. |
+| U5 | Existing ROM-qualified recipes plus three independently reused banks; Starfall level-kit material crops | 39 material samples matched after local palette quantization conversion. Ten distinct backdrop variants and unproved Blue Flicky frame semantics retain explicit local decoding. |
+| U7 | Factory-bound default identity, protected standard art emission, declarative owned standalone object dispatch | Fresh construction, foreign-key publication, respawn/save/rewind and actual SDK-only generated projects qualified. Expert overrides remain validated. |
+
+### Completed 175531f6d creator checkpoint and remaining gates
+
+The completed package collection compiled/packaged all 29 sources against the clean
+`175531f6d` producer. Twenty-six packages are strict validator-clean; the remaining
+three retain the 45 actual warnings above. Those warning purposes, owning services
+and reopening conditions are recorded in the completed ledger in the execution record.
+README consolidation at `54e771314` preserves these counts and matching-build guidance.
+Package validation is not native gameplay, pixel, audio or network qualification.
+
+Starpost's exported project was copied to an owned task directory outside the
+checkout with only its committed inputs, exported launcher and the three producer
+jars. Engine, SDK and testkit embedded identities all matched `app.commit=175531f6d`,
+`app.dirty=false`, version `0.7.prerelease`. The actual exported launcher ran with
+Java 25 and the canonical absolute S1/S2/S3K ROM properties:
+
+```sh
+env JAVA_HOME=/usr/lib/jvm/java-25-openjdk PATH=/usr/lib/jvm/java-25-openjdk/bin:$PATH LUA_BIN=/usr/bin/lua5.4 python3 tools/build_project.py examples/starpost-valley --test --testkit mod-testkit.jar --s1 "$OPENGGF_ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" --s2 "$OPENGGF_ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" --s3k "$OPENGGF_ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen"
+```
+
+`OPENGGF_ROM_ROOT` denotes the existing canonical checkout's supplied ROM directory;
+no ROM entered the export or consumer inputs. Jupiter discovered and passed **231
+tests in 25 containers**, zero failures/skips/aborts, in 4.246s. The 303 authored
+input files were hash-identical to the export. Both ordinary packaging and an
+explicit SDK `package --warnings error` passed with zero findings. The 392-entry
+strict jar contained no JUnit, testkit or authored test classes; its SHA-256 was
+`0025e7bee08c5f8b69e2cfa9aa5443a7de953742345a23c53a395563d31a1cc8`.
+The owned current and historical consumer directories, classes, jars and pointer
+files were removed after inspection; producer kit and player state were untouched.
+
+This final portable check supplements the already completed normal Starpost
+Example's two wrappers/231 authored cases and six canonical native classes' 94/94
+passes, zero skips. It does not repeat or broaden their route coverage. Production
+false/throwing writes, future/rejected entry/exit, explicit New Game, immutable
+bedtime retry, settings retry and actual refused-storage host exit are covered.
+Capsule over-target file rejection and actual menu/completed delivery regressions
+prevent the demonstrated 97,500-ring mint and preserve exact-once reward behavior.
+The fresh Game/section decoder, same-identity town/activity/Ruins restoration and
+once-only outcome boundaries were preserved; no unproved live partial-decode or
+foreign-history rewrite was introduced.
+
+The updated destination `f02bdbfd5` baseline completed 27,431 ordinary tests with
+**26 known failures**, zero errors and 63 inspected skips; fresh guards passed
+677/677, zero skips. Exact failure identities/full-assertion digests and skip reasons
+are in the execution record. The clean `175531f6d` candidate completed 27,627 ordinary checks:
+31 failures, zero errors and 64 skips; fresh guards ran 677 with three failures and
+zero errors/skips. All 26 baseline identities recur; the SSZ blob-hash difference
+received bounded semantic attribution. Five new ordinary and three guard failures
+have recorded repairs/focused qualification. Fresh creator profiles, compatibility
+rows and new-source Native Flappy runtime are qualified; installed replacement is
+observed with player state preserved. Main integration, its required ordinary/guard
+comparison, push and accounted cleanup remain open. Neither this baseline nor the
+focused results support a full-green delivery claim.
+
+Native Flappy's maintained SDK build also produced a matching historical `175531f6d`
+artifact: `sample-flappy` version 1.0.0, range `>=0.7.0 <0.8.0`, base `s3k`, strict
+validator zero findings; SHA-256
+`03c311c6701058eb69721a9540f2ab327af0573f10e00b6c73203ad92b9e0bfd`.
+Actual maintained-binary request 43929 passed 11/11, zero failures/errors/skips,
+through the isolated canonical trust/Apply/runtime flow at clean `175531f6d`.
+The fresh `54e771314` maintained build produces the identical jar; its actual binary
+repeat 1077 passes 11/11, zero skips. Only the obsolete local jar was replaced after
+a hash-checked rollback copy outside `mods/`; all 38 other inventoried files remain
+byte-identical. Player enablement/trust stays disabled/untrusted; normal new-hash
+trust/rescan/Apply is qualified in the isolated runtime.
+
+### Newly landed consumers
+
+The preliminary checkpoint contained 28 maintained manifest sources: the original examples,
+fixture/data samples and tutorial checkpoints, Act Practice and bundled Time Attack.
+The third added manifest is `examples/example-mutators`, delivered with the new
+Mutator Lab upstream. Its expanded version retains one manifest identity. Time Attack now uses one atomically published ghost as its
+pairing authority, retained hash-addressed sidecars, checked bounded lazy lookup,
+validated clock/route/split/encoding metadata and explicit save notices. Original
+corrupt/future primary bytes remain preserved; previous playback is read-only.
+Settings retry and upload/vault boundedness were repaired and qualified in subsequent
+bounded checks recorded in the validation artifact. The updated destination then
+added Starpost Valley as the 29th manifest; its saves, art recovery and scene/native
+boundaries are included in the current remediation.
+
+Mutator Lab is ten authored Java files with eleven typed definitions and three native
+patches. It uses injected configuration and engine-owned title/overlay/policy state;
+no mod-source filesystem/singleton/world-write workaround was found in this bounded
+scope extension. Its held overlay, preference admission and native pacing/rewind remain
+part of the integration qualification, not evidence supplied by package validation.
+
+### Cancellable art preparation — defer with measured evidence
+
+The owned Egg preparation probe sampled three fresh seeded 55-biome visits: enters
+277.060/122.462/112.977ms and maximum LoadingMode callbacks 104.967/45.908/31.336ms.
+These are warmed-JVM, headless measurements without GPU/end-user latency evidence.
+The thirteen Starfall current-bank samples were 3.498–31.198ms after a different-work
+raw-material oracle, so they do not establish a speedup or cold-loading benchmark.
+
+Threading the current facade is rejected: LoadingMode's Supplier closes over mutable
+Game/player/generation state, GeneratedAssets and ROM/art/kit caches mutate on that
+callback, and SceneRomArt explicitly lacks worker-thread ownership. No safe independent
+work-unit/cancel/stale-result publication capability is delivered. Reopen this uplift
+when a host-owned immutable ROM input/decoder, bounded work/results, visit+generation
+identity, cancellation/replacement discard and owner fault handling can be proved
+before publication. The retained `TestEggmansSkyArtPreparation` gives a repeatable
+measurement method; it does not certify responsiveness.
+
+### Other author-friction decisions
+
+Title-card choreography is implemented at the shared pure position/clock seam used
+by Flappy, Slay and Sitar (`505d52bfd`, integrated as `87d990bab`); callers retain
+completion, hurry and loading release policy. Atlas case lookup is implemented as
+opt-in, with Three Islands retaining wrapping, centering and shadow styling.
+Presentation/API and four actual provisional external consumers passed 313 tests,
+zero skips; recorded CPU pixels cover 320/400/528/800 and hold/release/omission cases.
+The exact producer identities and qualification limits remain in the execution record.
+
+Infinite's current phases retain native admission: active play and opening/GO advance
+the native world; game-over keeps corpse/enemy behavior live; RESUME_READY pins the
+player/camera/protection while advancing the rest of the world; LANDED continues a
+partial native simulation. Rewind occurs before row admission. A new controller that
+holds these rows would strand the existing respawn/game-over transitions, so no
+unnecessary controller migration is made.
+
+Inspectable disabled focus is deferred. Tower's three always-enabled title regions
+are the only current FocusRegions consumer; Slay inspection and battlefield-shop
+navigation have different policies. Reopen with a second compatible consumer and
+navigation/disabled-description equivalence.
+
+Golf's gameplay transport remains an expert bridge. RaceConnection owns race-specific
+handshake/control/ghost protocols; SceneNetwork owns a visit-bound text endpoint.
+Neither reproduces Golf's TCP binary reliable FIFO, latest-view coalescing, deadline,
+terminal flush and classloader-owned close lifecycle. Reopen a protocol-neutral,
+owner-bound bounded binary seam only when the unchanged TransportProbe qualifies it.
+
+Auxiliary spawning remains an explicit expert bridge: Survivor ArenaObjects already
+uses injected ObjectConstructionContext.construct and the existing auxiliary admission
+operation. DynamicObjectOwnership retains verified callback ownership, deferred
+admission and slotless rewind identity. Reopen the four-line convenience uplift only
+with a second real consumer and probe/factory-fault/owner/recreation equivalence.
+
+P18's bounded art-failure repairs cover the named Egg, Slay, Three Islands and
+Starpost scene facades, including remaining Fish/Tree/Museum paths, provider faults
+and terminal host-close plumbing. A shared public preparation/status ledger is
+deferred until typed expected-host failures, scene/native clocks, rewind and owner
+retirement are qualified; its narrow reopening contract is in the execution record.
+No asynchronous art API or host-resource ownership transfer is claimed.
+
+The retained Infinite native-title bridge has a concrete additional limitation:
+`InfiniteSonicMod.Module.titleLevel` catches `IOException | RuntimeException` and
+memoizes `Optional.empty` in a long-lived title-game/cache owner. The four scene-facade
+repairs do not fix or qualify it. Removing that cache alone would repeat loading
+through update/draw/backdrop calls. Reopen ledger disposition G with bounded native
+title admission/recovery, success-only caching, supplied-ROM/session generation
+replacement and owned programming-fault propagation tests, preserving native title
+resource lifetime. This source-supported limitation remains visible despite zero
+SDK errors; it is not an implemented native-title recovery capability.

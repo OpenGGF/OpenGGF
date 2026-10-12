@@ -79,6 +79,35 @@ process-owned output stream. A task-owned private output can retain the mixer
 without audible desktop playback; verify its destination and leave the user's
 fallback device unchanged. Pin it before acceptance measurements.
 
+A released port is a global resource, not a socket-close oracle (2026-10-12,
+mod audit delivery): Golf's audio-fault teardown test received `BindException`
+while trying to bind the former host port. Both unchanged baseline/current cases
+passed in matched focused runs. A deterministic owned contender acquired the
+released port after the original socket closed and reproduced that exception.
+Capture the actual socket before fault injection, verify its live binding, then
+assert that same handle is closed. Keep separate transport rebind/worker tests.
+Do not infer a leak or TIME_WAIT cause from port availability: the tested Java 25
+constructor's observed default reuse was true on this host, and the controlled
+TIME_WAIT check permitted the original rebind.
+The actual full-run contender remained unobserved.
+
+A headless palette owner check needs the renderer's resolution boundary
+(2026-10-10, Starpost seasonal acts): HeadlessTestRunner queues palette writes
+but does not draw, so ownerAt still reports none and live RGB remains unchanged.
+Resolve pending frame writes before palette assertions, then independently inspect
+native GameLoop GPU captures. Do not infer an absent runtime callback from an
+unresolved registry; do not replace ownership writes with direct palette mutation.
+
+Compare the full assertion, not its bounded summary (2026-10-12, Java 25
+migration): a 2,915-character rewind assertion was truncated at 2,048 in the
+runner's `message`; its complete assertion remained in `detail`. Check the owning
+`hashCode()` before treating a `ClassName@...` suffix as incidental identity:
+`RewindObjectStateBlob` mixes class identity with schema and serialized-state hashes.
+A differing suffix requires a bounded semantic snapshot comparison before failure
+attribution. Never strip such tokens, arbitrary hexadecimal values, addresses or
+gameplay fields merely to manufacture equality. Compare failure identities and
+exception types as well, and retain the actual comparison rule and evidence.
+
 Native stage measurements have multiple caller boundaries (2026-10-09, Mutator
 Lab expansion): `GameLoop.step()` and the movie renderer do not certify
 interactive speed or native stage drawing. The configured Engine headless seam

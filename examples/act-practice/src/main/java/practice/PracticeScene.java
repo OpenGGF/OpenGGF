@@ -52,6 +52,7 @@ public final class PracticeScene implements ModScene {
 
     @Override
     public void resumed(SceneContext ctx, RunEndReason reason) {
+        host.retrySave();
         status = switch (reason) {
             case ACT_COMPLETED -> "Act complete: " + PracticeHost.format(host.lastTimeFrames());
             case LOAD_FAILED -> "That act could not be loaded";
@@ -69,10 +70,13 @@ public final class PracticeScene implements ModScene {
         }
         canvas.text("< " + games.get(selected).toUpperCase() + " FIRST ACT >", 10, 60, 0xFFFFFFFF);
         canvas.text("Start: practise   R in game: retry   B: back", 10, 200, 0xFF90A890);
+        if (!host.persistenceNotice().isEmpty()) canvas.text(host.persistenceNotice(), 10, 112, 0xFFFFE070);
         if (!status.isEmpty()) {
             canvas.text(status, 10, 90, 0xFFFFE070);
         }
     }
+
+    @Override public void exit(SceneContext ctx) { host.retrySave(); }
 
     PracticeHost hostForTest() {
         return host;

@@ -119,7 +119,7 @@ class TestModOwnedDynamicObjectRewind {
     }
 
     private static void compileJava(Path source, Path output) {
-        List<String> arguments = new ArrayList<>(List.of("--release", "21", "-classpath",
+        List<String> arguments = new ArrayList<>(List.of("--release", "25", "-classpath",
                 TestSessionOutputPaths.compiledClasses().toAbsolutePath().toString(),
                 "-d", output.toString(),
                 source.toString()));

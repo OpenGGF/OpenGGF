@@ -17,6 +17,9 @@ final class RunState implements RewindSnapshottable<RunState.Snapshot> {
     /** Every run starts with these rings (six base tolls) plus the shop's Ring Start. */
     static final int START_RINGS = 50;
 
+    /** This graph's snapshots cannot be transplanted onto a replacement durable profile. */
+    private final String sessionIdentity = java.util.UUID.randomUUID().toString();
+    long id;
     boolean active;
     int startStage, stage, act;
     int mode;
@@ -51,8 +54,20 @@ final class RunState implements RewindSnapshottable<RunState.Snapshot> {
     int shopPower, shopRings, shopReroll, shopMagnet, shopGrowth, shopRevival, shopTalent, relics;
     int shopArmor, shopTreasure, shopHeadStart;
 
+    RunState() { }
+
+    /** Reserve the first command identity before the service graph can be captured. */
+    RunState(Profile profile) { id = profile.reserveRun(); }
+
+    void prepareNext(Profile profile) {
+        id = profile.successor(id);
+        active = paused = false;
+    }
+
     /** Starts a new run at {@code stage}, act 0, with the profile's permanent bonuses. */
     void begin(int stage, Profile profile, long seed) {
+        if (id == 0) id = profile.reserveRun();
+        profile.startRun(id);
         active = true;
         mode = profile.selectedMode();
         ringSoundRings = 0;
@@ -254,7 +269,7 @@ final class RunState implements RewindSnapshottable<RunState.Snapshot> {
     @Override public String key() { return "sonic-survivors:run"; }
 
     @Override public Snapshot capture() {
-        return new Snapshot(active, startStage, stage, act, levels.clone(), xp, level, pendingLevels, rerolls, revives,
+        return new Snapshot(sessionIdentity, id, active, startStage, stage, act, levels.clone(), xp, level, pendingLevels, rerolls, revives,
                 kills, ringsCollected, bestCombo, frames, stagesCleared, emeraldsWon, carriedRings, combo, paused, random.snapshot(), mode, ringSoundRings, ringSoundFrame,
                 new int[]{shopPower, shopRings, shopReroll, shopMagnet, shopGrowth, shopRevival, shopTalent, relics},
                 new int[]{evolved, rules, pool, tails ? 1 : 0, freeRings, elitesDefeated, chestsOpened, pressure, overdrive, shopArmor, shopTreasure, shopHeadStart},
@@ -262,6 +277,9 @@ final class RunState implements RewindSnapshottable<RunState.Snapshot> {
     }
 
     @Override public void restore(Snapshot s) {
+        if (!sessionIdentity.equals(s.sessionIdentity()))
+            throw new IllegalArgumentException("Survivors capture belongs to another service graph");
+        id = s.id();
         active = s.active();
         startStage = s.startStage();
         stage = s.stage();
@@ -314,7 +332,7 @@ final class RunState implements RewindSnapshottable<RunState.Snapshot> {
         // A rewind to before the module saw any run keeps whatever run is live.
     }
 
-    record Snapshot(boolean active, int startStage, int stage, int act, int[] levels, int xp, int level,
+    record Snapshot(String sessionIdentity, long id, boolean active, int startStage, int stage, int act, int[] levels, int xp, int level,
                     int pendingLevels, int rerolls, int revives, int kills, int ringsCollected, int bestCombo,
                     int frames, int stagesCleared, int emeraldsWon, int carriedRings, int combo, boolean paused,
                     long rng, int mode, int ringSoundRings, int ringSoundFrame, int[] shop, int[] extra, int[] speciesKills) { }

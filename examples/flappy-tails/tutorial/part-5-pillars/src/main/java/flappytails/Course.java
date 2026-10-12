@@ -21,6 +21,9 @@ import java.util.List;
  * rises.
  */
 final class Course {
+    private final Zone.Tour tour;
+    Course() { this(new Zone.Tour()); }
+    Course(Zone.Tour tour) { this.tour = java.util.Objects.requireNonNull(tour); }
     /** Pixels between one pillar's left edge and the next. */
     static final int SPACING = 176;
     /** Extra open sky between zones. */
@@ -154,7 +157,7 @@ final class Course {
     }
 
     private void addGate(int n) {
-        Zone zone = Zone.at(n).forLap(Zone.lap(n));
+        Zone zone = tour.at(n);
         int x = gateX(n);
         int gap = zone.gap();
         int lowest = TOP_MARGIN + gap / 2;

@@ -13,7 +13,7 @@ Building or loading the mod alone does not certify that every route passes.
 
 ## Build and launch
 
-Install Java 21, Maven, and Python 3, then run from this checkout:
+Install Java 25, Maven, and Python 3, then run from this checkout:
 
 ```sh
 python3 examples/putt-putt-paradise/build.py
@@ -21,7 +21,7 @@ python3 examples/putt-putt-paradise/build.py --run --rom /absolute/path/to/sonic
 ```
 
 The script queues the engine compile, compiles the external creator sources
-separately with `javac --release 21`, and runs the ordinary `ggfmod package`
+separately with `javac --release 25`, and runs the ordinary `ggfmod package`
 validation boundary. The output is `target/putt-putt-paradise/putt-putt-paradise.jar`.
 It skips engine tests; packaging validation is not gameplay verification.
 `--dry-run` prints these steps without changing files or starting Maven/Java.
@@ -269,14 +269,17 @@ Use instance-owned state. Capture every field that affects subsequent frames
 in the controller's `State`; dispose owned presenters and sockets in `close`.
 The SDK rejects mutable static creator state and validates the same jar that
 users install. Do not package ROM bytes or use disassembly assets at runtime.
-The current package also reports ten `NON_API_ENGINE_REFERENCE` warnings.
-Those come from the session service facade, the ROM spring/contact helpers and
-the native Sonic 2 title decoder/mappings. They have no compatibility promise;
-this source-first example must be rebuilt against its matching checkout.
+The current residual ledger records eight `NON_API_ENGINE_REFERENCE` warnings
+from the clean `175531f6d` package checkpoint. These cover native service,
+presentation/audio bridges, the Sonic 2 spring subclass and title decoder/mappings.
+They have no compatibility promise; rebuild against matching engine/SDK artifacts.
 Use the model, UI timeline, transport and `CourseControl` reading paths as the
 reusable starting points. Keep a native object or title-art bridge isolated when
 your mod needs one, and review these warnings when upgrading the engine rather
-than treating an internal class as a supported API. The
+than treating an internal class as a supported API. Prefer public framework helpers
+where they cover the operation, and use the
+[residual reference ledger](../../docs/architecture/validation/2026-10-12-mod-audit-remediation.md#final-residual-findings-actual-class-call-and-purpose)
+to review each native bridge's owner and reopening conditions. The
 [SDK troubleshooting guide](../../docs/modding/troubleshooting.md) explains the distinction.
 For a smaller starting point, follow the examples in the
 [creator handbook](../../docs/modding/index.md).
@@ -305,7 +308,7 @@ ROM timing or every possible shot through every object.
 
 ## Use matching creator artifacts
 
-The mutable 0.7 Mod API is unpublished. See [candidate setup](../../docs/modding/getting-started.md) for Java 21 and matching engine/SDK jar paths. From this checkout the shared launcher supports artifact-only builds and explicit ROM paths:
+The mutable 0.7 Mod API is unpublished. See [candidate setup](../../docs/modding/getting-started.md) for Java 25 and matching engine/SDK jar paths. From this checkout the shared launcher supports artifact-only builds and explicit ROM paths:
 
 ```sh
 python3 examples/build_example.py putt-putt-paradise --engine /absolute/engine.jar --sdk /absolute/sdk.jar --run --s2 /absolute/own-s2.gen

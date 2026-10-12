@@ -87,10 +87,9 @@ final class CharacterSelectScreen implements Screen {
         } else if (embark == LEAVE) {
             CharacterDef def = shell.catalog.characters().get(selected);
             long seed = System.nanoTime() ^ (shell.ticks * 0x9E3779B97F4A7C15L);
-            shell.deleteRun();
-            shell.attach(Run.start(shell.catalog, def.id(), seed));
+            shell.beginRun(Run.start(shell.catalog, def.id(), seed));
             shell.profile.add("runs." + def.id(), 1);
-            shell.profile.save(shell.ctx.storage());
+            shell.saveProfile();
             shell.go(new RunScreen());
         }
     }

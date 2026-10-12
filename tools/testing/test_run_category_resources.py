@@ -47,6 +47,7 @@ class ResourceTests(unittest.TestCase):
             self.assertIn('-Xmx1g', env['MAVEN_OPTS'])
             self.assertIn('-Dsurefire.argLine=', ' '.join(args))
             self.assertIn('${mockito.agent.argLine}', ' '.join(args))
+            self.assertIn('--enable-native-access=ALL-UNNAMED', ' '.join(args))
             self.assertIn('-Xmx1g', ' '.join(args))
             self.assertIn('-Dsurefire.forkCount=1', args)
             self.assertIn('-Dsurefire.reuseForks=true', args)

@@ -82,7 +82,7 @@ class TestSpriteGraphicsAccess {
                 }
                 """);
         assertEquals(0, ToolProvider.getSystemJavaCompiler().run(null, null, null,
-                "--release", "21", "-classpath", System.getProperty("java.class.path"),
+                "--release", "25", "-classpath", System.getProperty("java.class.path"),
                 "-d", temp.toString(), source.toString()));
         var sprite = new Sonic("sonic", (short) 32, (short) 48);
         try (var loader = new URLClassLoader(new java.net.URL[]{temp.toUri().toURL()}, getClass().getClassLoader())) {

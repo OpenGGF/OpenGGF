@@ -2,7 +2,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0">
   <modelVersion>4.0.0</modelVersion>
   <groupId>example.tide</groupId><artifactId>sample-tide-circuit</artifactId><version>1.0.0</version>
-  <properties><maven.compiler.release>21</maven.compiler.release></properties>
+  <properties><maven.compiler.release>25</maven.compiler.release></properties>
   <profiles>
     <profile><id>local-openggf</id><activation><property><name>openggf.engine.jar</name></property></activation><dependencies>
       <dependency><groupId>com.openggf</groupId><artifactId>OpenGGF-local</artifactId><version>0</version><scope>system</scope><systemPath>${openggf.engine.jar}</systemPath></dependency>
@@ -21,7 +21,7 @@
     </executions></plugin>
     <plugin><groupId>org.codehaus.mojo</groupId><artifactId>exec-maven-plugin</artifactId><version>3.1.0</version><executions>
       <execution><id>package-validated-mod</id><phase>prepare-package</phase><goals><goal>exec</goal></goals><configuration>
-        <executable>java</executable><classpathScope>compile</classpathScope><arguments><argument>-cp</argument><classpath/><argument>com.openggf.tools.modsdk.GgfModCli</argument>
+        <executable>${java.home}/bin/java</executable><classpathScope>compile</classpathScope><arguments><argument>--enable-native-access=ALL-UNNAMED</argument><argument>-cp</argument><classpath/><argument>com.openggf.tools.modsdk.GgfModCli</argument>
           <argument>package</argument><argument>--input</argument><argument>${project.build.outputDirectory}</argument>
           <argument>--out</argument><argument>${project.build.directory}/sample-tide-circuit-mod.jar</argument>
         </arguments></configuration></execution>

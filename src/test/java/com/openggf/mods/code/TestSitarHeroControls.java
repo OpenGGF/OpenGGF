@@ -98,8 +98,8 @@ class TestSitarHeroControls {
     @Test
     void malformedPersistedBindingsRetainDefaultsWithoutFaultingScene() throws Exception {
         Object settings = settingsType.getConstructor().newInstance();
-        assertDoesNotThrow(() -> settingsType.getMethod("read", String.class).invoke(settings,
-                "k0.0=,0,1,1\np0.5=,0,11,1\nk0.1=KK,-1,65,1\nk0.2=K,-1,86,1\n"));
+        assertEquals(false, settingsType.getMethod("read", String.class).invoke(settings,
+                "sitar-settings=1\nk0.0=,0,1,1\np0.5=,0,11,1\nk0.1=KK,-1,65,1\nk0.2=K,-1,86,1\n"));
         Object first = settingsType.getMethod("binding", boolean.class, boolean.class, int.class)
                 .invoke(settings, false, false, 0);
         assertEquals(65, number(first, "code"));
@@ -108,7 +108,7 @@ class TestSitarHeroControls {
         assertEquals(11, number(strum, "code"));
         Object valid = settingsType.getMethod("binding", boolean.class, boolean.class, int.class)
                 .invoke(settings, false, false, 2);
-        assertEquals(86, number(valid, "code"));
+        assertEquals(68, number(valid, "code"), "a corrupt file does not partially publish its valid fields");
         InvocationTargetException failure = assertThrows(InvocationTargetException.class,
                 () -> bindingType.getMethod("decode", String.class).invoke(null, ",0,1,1"));
         assertInstanceOf(IllegalArgumentException.class, failure.getCause());

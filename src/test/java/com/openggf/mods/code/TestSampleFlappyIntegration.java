@@ -58,6 +58,9 @@ import com.openggf.mods.ModRepositoryScanner;
 import com.openggf.mods.ModRuntimeFindingStore;
 import com.openggf.mods.ModState;
 import com.openggf.mods.ModStateSaveResult;
+import com.openggf.mods.ModStateStore;
+import com.openggf.mods.PendingModStateEditor;
+import com.openggf.mods.ui.ModManagerScreen;
 import com.openggf.physics.GroundSensor;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestRunner;
@@ -839,6 +842,15 @@ class TestSampleFlappyIntegration {
     }
 
     private Path buildFlappyMod() throws Exception {
+        // Qualify a real SDK-built/installed candidate without recompiling its
+        // source in this JVM. The ordinary suite still builds the maintained sample.
+        String candidate = System.getProperty("sample.flappy.jar.path");
+        if (candidate != null) {
+            Path jar = Path.of(candidate).toAbsolutePath().normalize();
+            assertTrue(Files.isRegularFile(jar), "Configured sample Flappy jar is missing: " + jar);
+            assertCli("validate", jar.toString());
+            return jar;
+        }
         int buildId = buildSequence++;
         Path output = temp.resolve("flappy-exploded-" + buildId);
         Files.createDirectories(output);
@@ -874,7 +886,7 @@ class TestSampleFlappyIntegration {
     }
 
     private static void compileJava(Path source, Path output) throws Exception {
-        List<String> arguments = new ArrayList<>(List.of("--release", "21", "-classpath",
+        List<String> arguments = new ArrayList<>(List.of("--release", "25", "-classpath",
                 TestSessionOutputPaths.compiledClasses().toAbsolutePath().toString(),
                 "-d", output.toString()));
         try (var files = Files.walk(source)) {
@@ -917,9 +929,29 @@ class TestSampleFlappyIntegration {
                 ModInputLimits.production(), (game, id) -> true).validate(scanned);
         ModDescriptor descriptor = (ModDescriptor) validated.entries().getFirst();
         assertFalse(descriptor.hasErrors(), descriptor.findings()::toString);
-        ModState state = new ModState(1, List.of(
-                new ModState.Entry(descriptor.manifest().id(), true, 0, true,
-                        descriptor.sha256())));
+        // Exercise the normal title editor's two-confirm trust and Apply flow.
+        // Keep all state in this isolated repository, including when qualifying
+        // a candidate supplied through sample.flappy.jar.path.
+        ModStateStore stateStore = new ModStateStore(repo.toAbsolutePath().normalize());
+        ModCatalog startup = new EffectiveCatalogBuilder().build(validated.entries(), ModState.EMPTY);
+        PendingModStateEditor editor = new PendingModStateEditor(
+                ModState.EMPTY, startup.scanned(), stateStore);
+        ModManagerScreen screen = new ModManagerScreen(startup, editor,
+                new ModRuntimeFindingStore(), null);
+        menuPress(screen, "accept");
+        assertTrue(screen.trustArmed());
+        assertFalse(Files.exists(repo.resolve("modstate.json")));
+        menuPress(screen, "accept");
+        assertTrue(screen.pendingState().entries().getFirst().trustsSha256(descriptor.sha256()));
+        menuPress(screen, "right"); // Actions, Details.
+        menuPress(screen, "left"); // Wrap to Apply.
+        menuPress(screen, "accept");
+        assertTrue(screen.consumeActivationRequested(), screen.statusMessage());
+        ModState state = stateStore.load().state();
+        assertTrue(state.entries().getFirst().enabled());
+        assertTrue(state.entries().getFirst().trustsSha256(descriptor.sha256()));
+        validated = new ModCatalogValidator(repo.toAbsolutePath().normalize(),
+                ModInputLimits.production(), (game, id) -> true).validate(scanner.scan(repo));
         ModCatalog catalog = new EffectiveCatalogBuilder().build(validated.entries(), state);
         assertEquals(1, catalog.effective().orderedEnabled().size());
         ModRuntime runtime = new ModClassLoaderFactory(getClass().getClassLoader())
@@ -930,6 +962,20 @@ class TestSampleFlappyIntegration {
         ModSubsystem.current().installRewindClassResolver(
                 new ModClassResolver(runtime, getClass().getClassLoader()));
         return new CatalogFixture(runtime, catalog.effective(), runtime.newRegistrationPlan());
+    }
+
+    private static void menuPress(ModManagerScreen screen, String action) {
+        screen.update(new ModManagerScreen.MenuInput() {
+            @Override public boolean menuUp() { return false; }
+            @Override public boolean menuDown() { return false; }
+            @Override public boolean menuLeft() { return action.equals("left"); }
+            @Override public boolean menuRight() { return action.equals("right"); }
+            @Override public boolean menuAccept() { return action.equals("accept"); }
+            @Override public boolean menuBack() { return false; }
+            @Override public boolean startHeld() { return false; }
+            @Override public boolean escape() { return false; }
+        });
+        screen.update(ModManagerScreen.MenuInput.NEUTRAL);
     }
 
     private ModuleResolutionService resolver(CatalogFixture fixture) {

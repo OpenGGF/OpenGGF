@@ -100,6 +100,8 @@ public class LevelTransitionCoordinator {
     // ── Credits ────────────────────────────────────────────────────────
     private boolean creditsRequested;
     private GameOverExit gameOverExitRequested;
+    boolean sceneActActive;
+    LevelSceneActAccess.Exit sceneActExit;
 
     // ── Time attack menu return ─────────────────────────────────────────
     private boolean hostReturnRequested;
@@ -650,7 +652,7 @@ public class LevelTransitionCoordinator {
 
     /** True once any engine-owned level-exit request has ended the main loop. */
     public boolean hasPendingLevelExit() {
-        return titleCardRequested
+        return sceneActExit != null || titleCardRequested
                 || respawnRequested
                 || nextActRequested
                 || nextZoneRequested
@@ -1020,6 +1022,8 @@ public class LevelTransitionCoordinator {
      * Called from {@code LevelManager.resetState()}.
      */
     public void resetState() {
+        sceneActActive = false;
+        sceneActExit = null;
         continuationCarry = null;
         specialStageEntryRequest = null;
         specialStageEntryRoutineArmed = false;

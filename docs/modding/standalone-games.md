@@ -61,7 +61,7 @@ public MyStandaloneModule(String owner, Level loadedLevel) {
                     MusicReference.namespaced(owner, "zone-theme")))
             .physics(PhysicsProvider.fixed(PhysicsProfile.builder().build(),
                     PhysicsModifiers.STANDARD, GameRules.SONIC_2))
-            .objects(MyObjectRegistry::new).build());
+            .object(owner + ":walker", (spawn, registry) -> new MyWalker(spawn)).build());
 }
 ```
 
@@ -75,8 +75,17 @@ act includes its level index, decoded level, start position and owned streamed
 music reference, or `MusicReference.stock(-1)` for an act with no music. Duplicate
 level indices and empty zone declarations are rejected.
 
-Module overrides remain available. An expert module can use the no-argument base
-constructor and implement `getIdentifier()`, `createGame(GameDataSource)`, its
+Each `.object(namespacedKey, factory)` contributes one owner-scoped definition to
+an immutable registry snapshot. Creation, `hasObjectKey` and sorted
+`browsableObjectKeys` use that same definition. Duplicate, malformed and foreign
+keys are rejected; unknown or foreign spawns fail before a factory runs. Each
+factory must return a fresh object and receives the registry for related dispatch.
+The host checks the complete catalogue against the verified manifest owner and
+retains callback and returned-object attribution.
+
+Module overrides remain available. Use `.objects(MyObjectRegistry::new)` for a
+custom expert registry; it cannot be mixed with declarative `.object(...)` calls.
+An expert module can use the no-argument base constructor and implement `getIdentifier()`, `createGame(GameDataSource)`, its
 registry, physics, touch responses and initialization directly. `ModGame` remains
 the expert base for a custom loader. Use literal `GameRules` and `PhysicsProfile`
 values appropriate to your game; do not pretend to be a stock `GameId` to inherit

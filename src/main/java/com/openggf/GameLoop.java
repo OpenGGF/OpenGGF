@@ -67,7 +67,6 @@ import com.openggf.integration.presence.discord.DiscordIpcPresenceClient;
 import com.openggf.integration.presence.discord.DiscordIpcTransports;
 import com.openggf.game.recording.RecordingLaunchContext;
 import com.openggf.game.patch.ModuleResolutionService;
-import com.openggf.game.patch.DeterministicPatchLaunches;
 import com.openggf.game.recording.UserRecordingHudState;
 import com.openggf.game.recording.UserRecordingRuntimeControls;
 import com.openggf.game.recording.UserRecordingSessionLauncher;
@@ -150,6 +149,7 @@ public class GameLoop {
 
     private final MenuScreenModeController menuScreenModeController = new MenuScreenModeController();
     /** The open mod scene, if any; {@link ModSceneLauncher} opens, draws and leaves it. */
+    final ModSceneActBridge modSceneActBridge;
     final com.openggf.mods.scene.host.ModSceneHost modSceneHost = new com.openggf.mods.scene.host.ModSceneHost();
     private final BonusStageTransitionCoordinator bonusStageTransitionCoordinator =
             new BonusStageTransitionCoordinator();
@@ -316,6 +316,10 @@ public class GameLoop {
     public GameLoop(EngineContext engineServices) {
         this.engineServices = Objects.requireNonNull(engineServices, "engineServices");
         EngineServices.configure(this.engineServices);
+        this.modSceneActBridge = new ModSceneActBridge(this, engineServices,
+                (root, effective, zone, launch) -> gameplayTeamBootstrapContext.openAndLoad(
+                        root, effective, engineServices, engineServices.configuration(), zone, launch.act(),
+                        this::setGameplayMode, launch));
         this.configService = this.engineServices.configuration();
         this.audioManager = this.engineServices.audio();
         this.outerFramePresentation = new OuterFramePresentation(this.audioManager);
@@ -623,6 +627,7 @@ public class GameLoop {
      * Sets the game mode directly. Used for master title screen initialization.
      */
     public void setGameMode(GameMode mode) {
+        if (mode == GameMode.MASTER_TITLE_SCREEN) retireModScene();
         GameMode oldMode = changeGameModeForBoundary(mode);
         if (gameModeChangeListener != null) {
             gameModeChangeListener.onGameModeChanged(oldMode, mode);
@@ -882,7 +887,7 @@ public class GameLoop {
      * <p>
      * <strong>This predicate freezes ordinary gameplay ticks</strong> (via the
      * freeze block below) whenever it is true -- it must stay scoped to
-     * exactly the four flags that legitimately warrant that freeze (this was
+     * the scene/act handoff and the four native flags that legitimately warrant that freeze (this was
      * pre-existing behavior). Do NOT fold {@link FadeManager#hasPendingCompletion()}
      * in here: unlike a special/bonus/ending/zone-act transition, an ordinary
      * callback-bearing fade (e.g. death respawn, act-complete) does not freeze
@@ -894,7 +899,7 @@ public class GameLoop {
         // Called unconditionally near the top of stepInternal(), before any
         // currentGameMode-specific dispatch -- levelManager can be null in
         // non-gameplay modes (e.g. MASTER_TITLE_SCREEN with no active session).
-        return specialStageTransitionPending
+        return modSceneActBridge.isTransitioning() || specialStageTransitionPending
                 || bonusStageTransitionPending
                 || endingTransitionPending
                 || (levelManager != null && levelManager.isLevelInactiveForTransition());
@@ -1110,6 +1115,13 @@ public class GameLoop {
                     new ControlledLevelIteration.HostPause(configService.getInt(SonicConfiguration.PAUSE_KEY),
                             configService.getInt(SonicConfiguration.FRAME_STEP_KEY), this::isPaused,
                             () -> handlePlaybackTakeoverBeforePlaybackInputBridge(inputHandler), this::toggleUserPause),
+                    new ControlledLevelIteration.ConfigurationCommands(
+                            () -> currentGameMode == GameMode.LEVEL && resolveGameplayModeContext() == lifecycleContext,
+                            () -> configurationCommands.holdsTransition(currentGameMode, () -> resolveFadeManager().isActive()),
+                            this::handleConfigurationCommand),
+                    new ControlledLevelIteration.SceneActAdmission(
+                            () -> modSceneActBridge.consumeExitOrHold(inputHandler),
+                            () -> updateNonGameplayAudio(false)),
                     this::syncPlaybackInputBridge, this::beginGameplayAudioFrameForTick,
                     () -> advanceGameplayAudioFrameForTick(false),
                     () -> { audioManager.resume(); initializeTitleScreenMode(); });
@@ -1296,6 +1308,13 @@ public class GameLoop {
             return;
         }
 
+        // A fade completion may have installed a scene-launched LEVEL in this
+        // native outer row. Its bridge hold precedes setup and all world owners.
+        if (currentGameMode == GameMode.LEVEL && modSceneActBridge.consumeExitOrHold(inputHandler)) {
+            updateNonGameplayAudio(doFrameStep);
+            return;
+        }
+
         titleCardReleasedIntoLevelThisIteration = false;
         if (!prepareAdmittedIteration(doFrameStep, overlayOwnsPause)) {
             return;
@@ -1372,7 +1391,7 @@ public class GameLoop {
             profiler.endSection("input");
             return;
         } else if (currentGameMode == GameMode.MOD_SCENE) {
-            menuScreenModeController.updateModScene(modSceneHost::update, inputHandler);
+            menuScreenModeController.updateModScene(modSceneActBridge::updateScene, inputHandler);
             startPendingHostedRunLaunch();
             profiler.endSection("input");
             return;
@@ -3692,8 +3711,10 @@ public class GameLoop {
      * Engine so it can recreate the master title screen and reset
      * gameplay state. Called by {@link TraceSessionLauncher#teardown()}.
      */
+    void retireModScene() { modSceneActBridge.retire(); }
+
     void returnToMasterTitle() {
-        modSceneHost.close();
+        retireModScene();
         tearDownGameplayForReturn();
         masterTitleLaunchCoordinator.returnToMasterTitle();
     }
@@ -3747,45 +3768,7 @@ public class GameLoop {
     }
 
     public void restartFromRecordingLaunchContext(RecordingLaunchContext context) {
-        Objects.requireNonNull(context, "context");
-
-        configService.clearSessionOverrides();
-        configService.setSessionOverride(SonicConfiguration.DEFAULT_ROM, context.gameId());
-        configService.setSessionOverride(SonicConfiguration.DEBUG_VIEW_ENABLED, context.debugToolsEnabled());
-        configService.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, context.mainCharacter());
-        configService.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE,
-                String.join(",", context.sidekickCharacters()));
-        configService.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
-        configService.resolveDisplayAspect();
-
-        try {
-            romManager.close();
-            Rom rom = romManager.getRom();
-            GameModule rootModule = engineServices.romDetection()
-                    .detectAndCreateModule(rom)
-                    .orElseThrow(() -> new IOException(
-                            "ROM not recognized for recording launch context: " + context.gameId()));
-
-            GameModule module = DeterministicPatchLaunches.forRecording(
-                    moduleResolutionService, rootModule, context);
-            audioManager.setAudioProfile(module.getAudioProfile());
-            audioManager.setRom(rom);
-            resetModuleScopedProviders();
-
-            GameplayModeContext freshGameplayMode = gameplayTeamBootstrapContext.openAndLoad(
-                    rootModule, module, engineServices, configService, context.zone(), context.act(),
-                    this::setGameplayMode);
-
-            GameMode oldMode = changeGameModeForBoundary(GameMode.LEVEL);
-            if (gameModeChangeListener != null) {
-                gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
-            }
-            LOGGER.info("Restarted recording launch context: " + context.gameId()
-                    + " zone " + context.zone() + " act " + context.act()
-                    + " team " + context.mainCharacter());
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to restart from recording launch context", e);
-        }
+        gameplayTeamBootstrapContext.restartRecording(this, engineServices, context);
     }
 
     FadeManager resolveFadeManager() {

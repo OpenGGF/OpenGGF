@@ -182,6 +182,11 @@ public interface AudioBackend {
         // Default no-op; backends that support S3K override this.
     }
 
+    /** Sets ROM music pacing without changing sample rate, pitch or SFX. */
+    default void setMusicTempoPercent(int percent) {
+        MusicTempoPercent.requireValid(percent);
+    }
+
     /**
      * Change the music dividing timing (tempo).
      * ROM: Change_Music_Tempo. Lower values = faster music.

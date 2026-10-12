@@ -38,6 +38,20 @@ public final class ModApiVersion {
      * Power-up rules expose explicit invincibility-expiry music ownership for modes
      * with continuous music. Owned patch scenes can play their validated audio-manifest
      * SFX by local name without numeric ids or creator-supplied ownership.
+     * Scene audio can play any supplied ROM's song as the base driver's music through
+     * the cross-game donor route, under a donor registration scoped to the scene.
+     * Scene-owned ROM music pacing preserves pitch and SFX and follows retained acts.
+     * Scene visits can suspend into owned registered acts with typed launch/result,
+     * native centre spawn overrides and once-only frame-boundary exit consumption.
+     * Entry/exit isolate rewind timelines while preserving the scene and its ROM library.
+     * Creator helpers include character specifications and lifecycle hooks, decoded
+     * placement transforms, owner storage and service bundles, named single-act and
+     * multi-act zone factories, shared UI/input and ROM-qualified scene art, including
+     * the players' S3K dash dust. Object art may name LogicalRom.S1 with S1 mapping
+     * parsing even in an S3K-base mod; the legacy call retains Sonic 2 semantics.
+     * NativePositionOps and the solid-platform provider/params are candidate creator contracts:
+     * act controllers can reset native positions and provide rewindable top-solid decks.
+     * Camera framing can cap the visible right edge independently of native player walls.
      * Shared network contracts include direct/relay room clients, JDK room hosting,
      * identity, bounded ghost transport and protocol messages/codecs. Operator servers
      * and verifier tools remain separate and outside the creator API.
@@ -51,10 +65,13 @@ public final class ModApiVersion {
      * Any mod may add one master-title entry opening a scene that launches such runs
      * and is resumed when each ends, learn a game's run fingerprint before launching, and
      * claim keyboard text input so global shortcuts stay quiet while the player types.
-     * Creator helpers include character specifications and lifecycle hooks, decoded
-     * placement transforms, owner storage and service bundles, named single-act and
-     * multi-act zone factories, shared UI/input and ROM-qualified scene art.
      * Owner storage also keeps bounded, atomically replaced binary files beside its text.
+     * Typed text save slots preserve incompatible/corrupt generations, validate recovery
+     * and report failed primary/backup publication with exact-checkpoint retries.
+     * Pure sprite compositions share bounds/emission, and scoped canvas transforms
+     * preserve nested opacity, full-viewport clears and the previous clip.
+     * Provider title-card positions share choreography while callers retain clocks
+     * and release policy. Atlas fonts can opt into exact-case glyphs and explicit fallback.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

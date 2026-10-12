@@ -333,7 +333,10 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
         publisher.finishAttempt();
         publisherActive = false;
         String recordingHash = HexFormat.of().formatHex(inputRecordingSha256);
-        recordingVault.put(recordingHash, recording.encode());
+        AttemptRecordingVault.PutResult custody = recordingVault.put(recordingHash, recording.encode());
+        if (custody != AttemptRecordingVault.PutResult.STORED && custody != AttemptRecordingVault.PutResult.DUPLICATE) {
+            LOGGER.warning("Attempt recording custody refused: " + custody);
+        }
         transport.sendControl(new ControlMessage.AttemptFinish(
                 attemptOrdinal, timeFrames, firstInputFrame, finishFrame,
                 recordingHash,
@@ -395,12 +398,15 @@ public final class MultiplayerRaceCoordinator implements TimeAttackRuntime.Attem
         try {
             String url = RecordingUploader.resolveUploadUrl(
                     request.uploadUrl(), configuredMasterUrl);
-            recordingUploader.upload(url, recording, success -> {
+            RecordingUploader.Admission admission = recordingUploader.upload(url, recording, success -> {
                 if (!success) {
                     LOGGER.warning("Attempt recording upload failed: "
                             + request.expectedHashHex());
                 }
             });
+            if (admission != RecordingUploader.Admission.ACCEPTED && admission != RecordingUploader.Admission.DUPLICATE) {
+                LOGGER.warning("Attempt recording upload refused: " + admission);
+            }
         } catch (IllegalArgumentException invalidUrl) {
             LOGGER.log(Level.WARNING, "Invalid recording upload URL", invalidUrl);
         }

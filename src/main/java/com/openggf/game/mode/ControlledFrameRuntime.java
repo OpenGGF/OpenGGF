@@ -39,30 +39,72 @@ public final class ControlledFrameRuntime {
             audio.beginGameplayAudioFrame(audio.commandTimeline().currentFrame() + 1);
         }
         var course = new CourseControl(context, input);
-        boolean advance = controller.beforeTick(course, snapshot);
-        serviceTitleCardOverlay(context);
-        if (advance) {
-            beforeGameplay.run();
-            EngineTiming.vIntRunCounter(EngineServices.current()).serviceRepresentedVBlank();
-            context.plcFrameLifecycle().runLogicalIteration(frame -> { }, context.getFadeManager()::update,
-                    frame -> {
-                        var frameContext = LevelFrameContext.from(context);
-                        LevelFrameStep.updateTimers(frameContext);
-                        boolean overrideOwned = input.hasLogicalOverride();
-                        input.setLogicalOverride(LogicalInputSnapshot.neutral());
-                        try {
-                            return LevelFrameStep.execute(frameContext, frame, PlcLifecyclePhase.ORDINARY_LEVEL,
-                                    context.getLevelManager(), context.getCamera(),
-                                    () -> context.getSpriteManager().update(input), LevelFrameStep.DIRECT_WRAPPER);
-                        } finally {
-                            input.setLogicalOverride(snapshot);
-                            if (!overrideOwned) input.clearLogicalOverride();
-                        }
-                    });
+        try {
+            var disposition = java.util.Objects.requireNonNull(controller.beforeFrame(course, snapshot), "gameplay frame disposition");
+            boolean advance = disposition != GameplayFrameDisposition.HOLD;
+            serviceTitleCardOverlay(context);
+            boolean transition = serviceLevelTransition(context);
+            if (transition) advance = false;
+            if (advance) {
+                beforeGameplay.run();
+                EngineTiming.vIntRunCounter(EngineServices.current()).serviceRepresentedVBlank();
+                context.plcFrameLifecycle().runLogicalIteration(frame -> { }, context.getFadeManager()::update,
+                        frame -> {
+                            var frameContext = LevelFrameContext.from(context);
+                            LevelFrameStep.updateTimers(frameContext);
+                            boolean overrideOwned = input.hasLogicalOverride();
+                            var previousOverride = input.logical();
+                            input.setLogicalOverride(disposition == GameplayFrameDisposition.ADVANCE_NATIVE_INPUT
+                                    ? snapshot : LogicalInputSnapshot.neutral());
+                            try {
+                                context.getSpriteManager().publishHeldInputForLevelEvents(input);
+                                return LevelFrameStep.execute(frameContext, frame, PlcLifecyclePhase.ORDINARY_LEVEL,
+                                        context.getLevelManager(), context.getCamera(),
+                                        () -> context.getSpriteManager().update(input), LevelFrameStep.DIRECT_WRAPPER);
+                            } finally {
+                                input.setLogicalOverride(previousOverride);
+                                if (!overrideOwned) input.clearLogicalOverride();
+                            }
+                        });
+            }
+            if (!advance && !transition) serviceHeldLevelEntry(context);
+            controller.afterTick(course, advance);
+            return advance ? LevelFrameResult.GAMEPLAY_FRAME : LevelFrameResult.HELD;
+        } finally { course.closeFrame(); }
+    }
+
+    /** Native destination requests remain presentation work while a creator holds the source world. */
+    private static boolean serviceLevelTransition(GameplayModeContext context) {
+        var level = context.getLevelManager();
+        var fade = context.getFadeManager();
+        if (!fade.isActive() && level.consumeZoneActRequest()) {
+            int zone = level.getRequestedZone(), act = level.getRequestedAct();
+            int music = level.getRequestedMusicId();
+            level.setLevelInactiveForTransition(true);
+            var blocking = context.plcFrameLifecycle().beginNativeBlockingFade();
+            fade.startFadeToBlack(blocking.wrapCompletion(() -> {
+                try {
+                    if (music >= 0) level.setSuppressNextMusicChange(true);
+                    if (context.getWorldSession().getGameModule().getTitleCardProvider()
+                            instanceof com.openggf.game.internal.FreshLevelTitleBoundaryPublication)
+                        level.loadZoneAndActAtFreshTitleCardBoundary(zone, act);
+                    else level.loadZoneAndActWithTitleCard(zone, act);
+                    if (music >= 0) GameServices.audio().playMusic(music);
+                    var title = context.getWorldSession().getGameModule().getTitleCardProvider();
+                    if (level.hasPendingFreshLevelTransitionBoundary()
+                            && title instanceof com.openggf.game.internal.FreshLevelTitleBoundaryPublication boundary
+                            && boundary.installsImmediateFreshLevelPalette()) fade.clearOverlayForImmediatePaletteLoad();
+                    else fade.startFadeFromBlack(null);
+                }
+                catch (java.io.IOException failure) { throw new IllegalStateException("Cannot load controlled destination", failure); }
+            }));
         }
-        if (!advance) serviceHeldLevelEntry(context);
-        controller.afterTick(course, advance);
-        return advance ? LevelFrameResult.GAMEPLAY_FRAME : LevelFrameResult.HELD;
+        if (!level.isLevelInactiveForTransition()) return false;
+        context.plcFrameLifecycle().runLogicalIteration(frame -> {
+            if (frame.isOwnedBy(PlcLifecyclePhase.PALETTE_FADE))
+                LevelFrameStep.dispatchGameVBlank(LevelFrameContext.from(context), frame);
+        }, fade::update, frame -> null);
+        return true;
     }
 
     /** A creator HOLD freezes world physics, but the released native title still owns its exit tail. */

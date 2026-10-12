@@ -29,9 +29,15 @@ public final class SurvivorsMod implements GgfMod {
         context.registerObject("shot", (spawn, registry) -> new Shot(spawn));
         context.registerObject("pickup", (spawn, registry) -> new Pickup(spawn));
         var storage = context.storage();
-        context.registerServiceBundle("run", () -> GameServiceBundle.builder()
-                .capturedService("state", RunState.class, new RunState())
-                .service(Profile.class, new Profile(storage).load()).build());
+        context.registerServiceBundle("run", () -> {
+            var profile = new Profile(storage).load();
+            var frames = new FrameControl();
+            return GameServiceBundle.builder()
+                    .capturedService("state", RunState.class, new RunState(profile))
+                    .service(Profile.class, profile)
+                    .service(Definitions.class, new Definitions())
+                    .service(FrameControl.class, frames).frameController("frames", frames).build();
+        });
         context.registerGamePatch(new Patch());
     }
 
@@ -116,6 +122,9 @@ public final class SurvivorsMod implements GgfMod {
         }
 
         @Override public com.openggf.game.rules.GameRules getRules() { return arenaRules; }
+        @Override public com.openggf.game.mode.GameplayFrameController gameplayFrameController() {
+            return active ? base().getGameService(com.openggf.game.mode.GameplayFrameController.class) : null;
+        }
 
         // Super forms are deferred until they have a Survivors-specific design.
         // Omit the controller so native jump, monitor and debug activation stay disabled.
@@ -147,7 +156,10 @@ public final class SurvivorsMod implements GgfMod {
             active = arena != null;
             if (!active) return super.loadLevelOverride(index);
             // A run that reaches this level from somewhere off its route (a debug jump) restarts in camp.
-            if (run.active && (run.stage != arena.stage() || run.act != arena.act())) run.end();
+            if (run.active && (run.stage != arena.stage() || run.act != arena.act())) {
+                run.end();
+                run.prepareNext(profile());
+            }
             Level original = game.loadLevel(index);
             return com.openggf.level.MutableLevel.snapshot(new ArenaLevel(original, arena));
         }

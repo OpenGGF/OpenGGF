@@ -75,11 +75,12 @@ public final class TimeAttackScene implements ModScene {
     public void enter(SceneContext ctx) {
         storage = ctx.storage();
         try {
-            LegacyTimeAttackSettings.importOnce(storage, legacyConfigDirectory);
+            settings = LegacyTimeAttackSettings.loadOrImport(storage, legacyConfigDirectory);
+            if (settings.pendingPublication()) status = "Previous settings active - save pending";
         } catch (java.io.IOException failure) {
             status = "Previous settings could not be imported";
+            settings = TimeAttackSettings.load(storage);
         }
-        settings = TimeAttackSettings.load(storage);
         joinInvite = settings.lastJoinAddress();
         session = new RaceSession(identityDir, ghostStore, settings, storage,
                 (spec, host) -> ctx.gameplay().launch(spec, host), this::newRuntime, System::currentTimeMillis);
@@ -257,9 +258,8 @@ public final class TimeAttackScene implements ModScene {
     }
 
     private void settingsChanged() {
-        if (!settings.save(storage)) {
-            status = "Settings could not be saved";
-        }
+        settings.save(storage);
+        status = settings.publicationNotice();
         session.settingsChanged();
     }
 
@@ -288,6 +288,7 @@ public final class TimeAttackScene implements ModScene {
 
     @Override
     public void resumed(SceneContext ctx, RunEndReason reason) {
+        session.flushPendingPublications();
         if (session.state() == RaceSession.State.RACING) {
             session.runEnded();
             if (reason == RunEndReason.LOAD_FAILED && lobby != null) {

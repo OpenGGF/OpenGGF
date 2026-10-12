@@ -45,7 +45,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * feature-only API.</p>
  *
  * <p>Enable with {@code -Dopenggf.audio.repeatedPlaybackBenchmark=true}. An
- * enabled run is evidence, not an ordinary budget test: JDK 21 and enabled
+ * enabled run is evidence, not an ordinary budget test: JDK 25 and enabled
  * {@link ThreadMXBean} allocation accounting are mandatory. Timing is emitted
  * for description only; paired allocation acceptance is evaluated from the
  * archived raw lines after both commits run this exact manifest.</p>
@@ -80,8 +80,8 @@ class TestSmpsRepeatedPlaybackBenchmark {
 
     @Test
     void repeatedPublicMusicAndSfxPlaybackEmitsStableRawSamples() {
-        assertEquals("21", System.getProperty("java.specification.version"),
-                "historical allocation comparison requires JDK 21");
+        assertEquals("25", System.getProperty("java.specification.version"),
+                "allocation measurements require the Java 25 build baseline");
         ThreadMXBean allocation = requireAllocationBean();
         Scenario[] scenarios = Scenario.values();
         Sample[][][] samples =

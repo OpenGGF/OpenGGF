@@ -27,18 +27,65 @@ public final class TimeAttackSettings {
     private String masterUrl = "";
     private boolean masterTrustInsecure;
     private boolean minimap = true;
+    private static final int RETRY_TICKS = 60;
+    private String publishedEncoding = encode();
+    private boolean publicationConfirmed;
+    private boolean pendingPublication;
+    private int retryTicks;
+    private String publicationNotice = "";
 
     /** Reads the stored settings, or the defaults when none are stored or the store is null. */
     public static TimeAttackSettings load(ModStorage storage) {
         if (storage == null) {
             return new TimeAttackSettings();
         }
-        return parse(storage.read(FILE_NAME).orElse(""));
+        return storage.read(FILE_NAME).map(TimeAttackSettings::parse).orElseGet(TimeAttackSettings::new);
     }
 
-    /** Writes these settings; false when the store refused the write. */
+    /** Checked publication: refusals and nonfatal storage faults retain the current accepted values. */
     public boolean save(ModStorage storage) {
-        return storage != null && storage.write(FILE_NAME, encode());
+        String candidate = encode();
+        boolean saved;
+        try {
+            saved = storage != null && storage.write(FILE_NAME, candidate);
+        } catch (RuntimeException failure) {
+            saved = false;
+        }
+        if (saved) {
+            publishedEncoding = candidate;
+            publicationConfirmed = true;
+            pendingPublication = false;
+            publicationNotice = "Saved";
+        } else {
+            pendingPublication = !publicationConfirmed || !candidate.equals(publishedEncoding);
+            retryTicks = RETRY_TICKS;
+            publicationNotice = pendingPublication ? "Changes active - save pending" : "Save not confirmed";
+        }
+        return saved;
+    }
+
+    /** Pumped by the owning session even while a settings/browser/lobby page is open. */
+    public boolean retryPending(ModStorage storage) {
+        return pendingPublication() && --retryTicks <= 0 && save(storage);
+    }
+
+    /** An owner exit/resume flush bypasses the retry delay, retaining failure state on refusal. */
+    public boolean flushPending(ModStorage storage) {
+        return !pendingPublication() || save(storage);
+    }
+
+    public boolean pendingPublication() {
+        // Reverting to the confirmed values cancels an obsolete failed snapshot.
+        if (pendingPublication && publicationConfirmed && encode().equals(publishedEncoding)) {
+            pendingPublication = false;
+            publicationNotice = "";
+        }
+        return pendingPublication;
+    }
+
+    public String publicationNotice() {
+        pendingPublication();
+        return publicationNotice;
     }
 
     /** Parses {@link #encode()} output; malformed lines and values keep their defaults. */
@@ -75,6 +122,8 @@ public final class TimeAttackSettings {
                 default -> { }
             }
         }
+        settings.publishedEncoding = settings.encode();
+        settings.publicationConfirmed = true;
         return settings;
     }
 

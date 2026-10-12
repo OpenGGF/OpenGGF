@@ -11,11 +11,19 @@ import java.util.concurrent.ConcurrentHashMap;
 /** In-memory {@link ModStorage} for Time Attack tests. */
 public final class MemoryModStorage implements ModStorage {
     public final Map<String, String> texts = new ConcurrentHashMap<>();
+    public int failures;
+    public int writes;
+    public boolean throwWrites;
     private final Map<String, byte[]> bytes = new ConcurrentHashMap<>();
 
     @Override public Optional<String> read(String name) { return Optional.ofNullable(texts.get(name)); }
 
     @Override public boolean write(String name, String text) {
+        writes++;
+        if (failures-- > 0) {
+            if (throwWrites) throw new IllegalStateException("storage unavailable");
+            return false;
+        }
         texts.put(name, text);
         return true;
     }

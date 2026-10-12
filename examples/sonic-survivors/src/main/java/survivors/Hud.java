@@ -1,6 +1,8 @@
 package survivors;
 
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.game.CharacterKey;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import java.util.Locale;
 
 /**
@@ -545,7 +547,8 @@ final class Hud {
         Draw.centred(s, "CAMP - " + Stages.name(stage.arena().stage()), top + 30, 1, Draw.CYAN, 1f);
         Draw.shadow(s, "RING BANK " + profile.bank, left + 10, top + 44, 1, Draw.YELLOW, 1f);
         drawEmeralds(s, profile, left + panelW - 10 - 7 * 12, top + 42);
-        boolean tails = s.camera().getFocusedSprite() instanceof com.openggf.sprites.playable.Tails;
+        boolean tails = s.camera().getFocusedSprite() instanceof AbstractPlayableSprite player
+                && player.characterKey().equals(CharacterKey.TAILS);
         int y = top + 62;
         for (int row = 0; row < Stage.CAMP_ROWS; row++) {
             boolean selected = stage.menuIndex == row;
@@ -739,7 +742,7 @@ final class Hud {
                 for (int id = 0; id < Species.COUNT; id++) {
                     int kills = profile.speciesKills[id];
                     int column = id % 3, row = id / 3;
-                    String line = kills > 0 ? Species.of(id).name() + " " + kills : "???";
+                    String line = kills > 0 ? s.gameService(Definitions.class).species(id).name() + " " + kills : "???";
                     Draw.shadow(s, line, left + 12 + column * 122, y + row * 13, 1, kills > 0 ? Draw.WHITE : Draw.GREY, 1f);
                 }
             }

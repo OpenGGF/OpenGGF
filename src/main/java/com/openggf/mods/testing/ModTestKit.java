@@ -200,6 +200,21 @@ public final class ModTestKit implements AutoCloseable {
         scene.open(factory, isolated, width, height);
     }
     public ModSceneHost sceneHost() { return scene; }
+    /**
+     * The open creator scene, unwrapped for assertions about its own state, or null when closed.
+     * This inspection is distributed only in the testkit; use {@link #tick()} and {@link #draw()}
+     * for lifecycle callbacks so they still run through the real owner fault boundary.
+     */
+    public Object scene() {
+        try {
+            var field = ModSceneHost.class.getDeclaredField("scene");
+            field.setAccessible(true);
+            var value = (com.openggf.mods.scene.ModScene) field.get(scene);
+            return value == null ? null : OwnedSceneFactory.unwrap(value);
+        } catch (ReflectiveOperationException changedHost) {
+            throw new IllegalStateException("Testkit scene inspection does not match this engine", changedHost);
+        }
+    }
     public DeterministicInput input() { return input; }
     public List<String> exits() { return List.copyOf(exits); }
     public void tick() {

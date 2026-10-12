@@ -265,7 +265,7 @@ class TestGolfOnlineIntegration {
     private Path compileAndPackage() throws Exception {
         Path project = Path.of(System.getProperty("golf.integration.project", "examples/putt-putt-paradise")).toAbsolutePath();
         Path classes = Files.createDirectory(temp.resolve("creator-classes"));
-        var arguments = new ArrayList<>(java.util.List.of("--release", "21", "-classpath", System.getProperty("java.class.path"), "-d", classes.toString()));
+        var arguments = new ArrayList<>(java.util.List.of("--release", "25", "-classpath", System.getProperty("java.class.path"), "-d", classes.toString()));
         try (var files = Files.walk(project.resolve("src/main/java"))) {
             files.filter(path -> path.toString().endsWith(".java")).sorted().forEach(path -> arguments.add(path.toString()));
         }

@@ -108,6 +108,26 @@ The generated badnik demonstrates the minimum runtime contracts:
   (the older `RewindRecreatable` expert contract remains available); and
 - keep mutable gameplay state in instance fields that the rewind schema can capture.
 
+For live terrain, `services().floorSurface(x, y, layer, path)` delegates to the native
+floor sensor on an explicit foreground/background collision layer and primary/secondary
+path. Coordinates belong to the selected layer; this query does not apply a combined
+background-plane transform. `findFloorSurface` accepts bounded probe-origin ranges
+(0–256 pixels above, 0–512 below), checking at most 49 origins at the native 16-pixel
+cadence. Test `foundSurface()` before using the immutable result's surface Y, signed
+distance or flip-adjusted angle. It retains no live level/query authority.
+
+`DestructionConfig` keeps its legacy six-argument constructor. `withSound(SoundCue)`
+selects a namespaced or semantic cue and explicit `BEFORE_LATCH`/`AFTER_EFFECTS` order.
+`deferredAnimalWithoutPopup` uses the existing shared animal owner with no deferred
+points factory; S1's separate ExplosionItem recipe retains its own animal semantics.
+The common sequence still owns score, respawn policy and replacement-slot transfer.
+
+`SpringBounceHelper` handles bounded authored proximity and native launch state.
+A custom native object can call `services().detachCurrentSolidContact(player)` to
+release this callback's admitted object/player checkpoint before a launch. Foreign,
+missing or inactive participants are rejected; the object comes from the engine
+execution context. Stock spring subclasses keep their own ROM geometry and choreography.
+
 Do not add mutable static gameplay state, uncaptured object references, or immutable
 `final` scalar state whose runtime value changes. `ggfmod validate` checks compiled
 classes for these object, service, and rewind rules before the engine creates an
@@ -126,7 +146,7 @@ previews use `registerObjectPreview`. The sheet YAML assigns each 8-by-8 tile to
 Genesis palette line and describes bounded pieces. `convert art` rejects images
 whose dimensions, palette use, or piece bounds cannot be represented exactly.
 
-## ROM art intake (Sonic 2 patch mods)
+## ROM art intake (named Sonic 1/2 ROMs)
 
 `ModContext.registerRomObjectArt(key, request)` materializes object art from the
 *player's own ROM* at gameplay launch, instead of shipping baked art in the mod jar.
@@ -135,6 +155,21 @@ flying frames) into a new mod object — the mod jar itself ships zero ROM bytes
 sheet is decoded into memory only after the engine opens the player's `s2.gen`.
 The maintained [ROM-art remix guide](guides/rom-art-remix.md) follows the complete
 source, decoded-pattern probe, rewind, and package-inspection workflow.
+
+For an S3K-base mod drawing Sonic 1 objects, use
+`registerRomObjectArt(key, LogicalRom.S1, request)`. The logical source is
+resolved through the launch `PatchContext`, declared as an art prerequisite,
+and closed after decoding. Sonic 1 uses byte-count, five-byte mapping pieces;
+Sonic 2 uses its own mapping and optional DPLC parser. S1 DPLCs are rejected.
+The seven-argument `RomArtRequest` and two-argument registration retain their
+Sonic 2 defaults. On an S2 host, S2 art uses its already-open base ROM without
+an additional logical-ROM resolver. Cross-ROM intake requires the declared
+source through `PatchContext`; a missing context never falls back to host bytes.
+Named requests are bounded by their source ROM size and
+are unavailable to standalone modules. A sheet's palette line refers to the
+active palette; a mixed-ROM mod must preserve or explicitly remap its source
+colours beside host palette claims. Starpost's Ruins rasterize their named S1
+sheets with their kit palette on the same level canvas as the town's ROM art.
 
 The request names a ROM art address, its compression, an S2 mapping table address, an
 optional DPLC table address, a palette line, and a bank size:
@@ -406,15 +441,21 @@ For streamed stock-music replacement metadata, see [Music packs](music-packs.md)
 
 Return a stable `GameplayFrameController` from a patch's module and register that
 same controller through `rewindAdapters()` if its mode state is rewindable.
-The host invokes `beforeTick(CourseControl, LogicalInputSnapshot)` once per mode
-row: `false` holds course physics, objects, clocks, animation and PLC work; `true`
-admits one native step with neutral player input. `afterTick` receives whether
-that step ran. Keep aim, menus and feedback in the controller; keep physics in
+The host invokes `beforeFrame(CourseControl, LogicalInputSnapshot)` once per mode
+row. Return `ADVANCE_NATIVE_INPUT` for the ordinary native step with supplied P1/P2
+logical input and the existing gameplay policy filters, `ADVANCE_CONTROLLED` for a
+native step with neutral input, or `HOLD` to freeze world physics, objects, clocks,
+animation and ordinary PLC work. The result must be non-null. The default maps the
+existing `beforeTick` result (`true`/`false`) to controlled advance/hold, so existing
+controllers, including Golf, keep their neutral-input behavior. `afterTick` receives
+whether a world step ran. Keep aim, menus and feedback in the controller; keep physics in
 native gameplay. Stock modules return no controller and retain their normal path.
 Initial setup rows are excluded from movie/history input; subsequent HOLD rows
 are included. Released native title-card text continues its presentation exit,
 including its normal control-lock ownership, on controlled rows. Pending entry
-music also retains its native presentation countdown. `presentationReady()`
+music also retains its native presentation countdown. Native destination fades remain
+host-owned presentation work while the source world is held. Modal `LevelInputOverlay`
+input is dispatched before configured host pause. `presentationReady()`
 waits for the entry fade and title overlay to finish; capture the first reusable
 course checkpoint after that boundary so rollback cannot bring an entry card back.
 `advanceEntryPresentation()` returns whether it serviced an active fade on this
@@ -512,6 +553,12 @@ so a shot's ledger can survive course rollback; creator key prefixes do not gran
 exemption. Full debug rewind restores the controller too. Course replacement
 invalidates speculative future history and preserves past; actual act loads reset
 history. Checkpoints are in-process handles, not a network format.
+
+`CourseControl.objectServices()` supplies the current level's injected services during
+this callback row. Resolve current objects through it on each row rather than retaining
+an object across rewind recreation. Its handle is revoked after `afterTick`, callback
+failure, level replacement or session teardown. Creator object creation retains the
+verified callback owner; creator-supplied identifiers never establish authority.
 
 `CourseControl.playerState()` returns centre coordinates, native 8.8 speeds,
 registered character identity and support/camera observations. `launchRolling`

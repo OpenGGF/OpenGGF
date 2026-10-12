@@ -36,6 +36,9 @@ public final class ModApiSurfaceInventory {
             "com.openggf.mods.state.SnapshotRandom",
             "com.openggf.mods.state.CapturedPool",
             "com.openggf.mods.state.VersionedSettings",
+            "com.openggf.mods.state.ModSaveSlot",
+            "com.openggf.mods.scene.art.SpriteComposition",
+            "com.openggf.mods.ui.SceneCanvasTransform",
             "com.openggf.game.DelegatingZoneRegistry",
             "com.openggf.game.presentation.SceneFrameCodec",
             "com.openggf.game.presentation.SceneReplay",
@@ -46,6 +49,9 @@ public final class ModApiSurfaceInventory {
             "com.openggf.level.objects.PatrolMovementHelper",
             "com.openggf.level.objects.PlatformBobHelper",
             "com.openggf.level.objects.SpringBounceHelper",
+            "com.openggf.sprites.NativePositionOps",
+            "com.openggf.level.objects.SolidObjectParams",
+            "com.openggf.level.objects.SolidObjectProvider",
             "com.openggf.level.objects.DestructionEffects",
             // Explicitly required transitive creator contracts.
             "com.openggf.game.GameModule",
@@ -116,6 +122,7 @@ public final class ModApiSurfaceInventory {
             "com.openggf.mods.scene.art.StockSceneArt",
             "com.openggf.mods.scene.art.PaletteAssembly",
             "com.openggf.mods.scene.art.SceneArtCache",
+            "com.openggf.mods.scene.art.TitleCardPresentation",
             "com.openggf.mods.scene.art.SpriteAnchors",
             "com.openggf.mods.scene.art.AnimationSampling",
             "com.openggf.mods.scene.art.RomAnimationPlayer");

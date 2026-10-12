@@ -10,6 +10,9 @@ class TestGolfTransport {
     @Test void localhostOrderingBoundsDeadlineAndCleanup() throws Exception {
         TestGolfProtocol.runProbe(temp, "TransportProbe", "run");
     }
+    @Test void incomingOverflowEventPublicationFollowsClosedState() throws Exception {
+        TestGolfProtocol.runProbe(temp, "TransportProbe", "incomingOverflowPublishesEventAfterClosed");
+    }
     @Test void undrainedAcceptedWorkersRemainListenerOwned() throws Exception {
         TestGolfProtocol.runProbe(temp, "TransportProbe", "undrainedAcceptedWorkersRemainOwned");
     }

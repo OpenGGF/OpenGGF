@@ -114,7 +114,7 @@ public final class FrontierView {
             tile(c,w,tx,ty,sx,sy,t,tick);
         }
         // The camp's beacon is independent of breakable terrain.
-        int bx=(int)(40*T+6-cameraX),by=(int)(w.surface(40)*T-cameraY);
+        int bx=(int)(w.campTileX()*T+6-cameraX),by=(int)(w.campTileY()*T-cameraY);
         if(art!=null)art.sprite(c,art.starpost,w.won?2:0,bx,by,.75f,false);
         else {
         c.fill(bx-9,by-3,18,3,0xFF6C7C87);c.fill(bx-6,by-6,12,3,0xFF9AA7A4);
@@ -375,8 +375,8 @@ public final class FrontierView {
                 &&w.shrineY[i]>=startY&&w.shrineY[i]<startY+rows
                 &&w.seen[(w.shrineY[i]-1)*w.width+w.shrineX[i]]>0)
             diamond(c,left+(int)((w.shrineX[i]-startX)*scale),top+(int)((w.shrineY[i]-startY)*scale),3,(w.wardens&(1<<i))!=0?MINT:GOLD);
-        if(40>=startX&&40<startX+columns&&w.surface(40)>=startY&&w.surface(40)<startY+rows)
-            diamond(c,left+(int)((40-startX)*scale),top+(int)((w.surface(40)-startY)*scale),3,MINT);
+        if(w.campTileX()>=startX&&w.campTileX()<startX+columns&&w.campTileY()>=startY&&w.campTileY()<startY+rows)
+            diamond(c,left+(int)((w.campTileX()-startX)*scale),top+(int)((w.campTileY()-startY)*scale),3,MINT);
         if(w.x/T>=startX&&w.x/T<startX+columns&&w.y/T>=startY&&w.y/T<startY+rows)
             c.fill(left+(int)((w.x/T-startX)*scale)-1,top+(int)((w.y/T-startY)*scale)-2,3,5,TEXT);
         center(c,"ARROWS: PAN   WHITE: YOU   GREEN: CAMP   GOLD: SHRINE",c.width()/2,211,MUTED,1);

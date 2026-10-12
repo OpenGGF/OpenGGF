@@ -32,10 +32,12 @@ class TestModTestKit {
                 """);
         Path storage = work.resolve("storage");
         try (ModTestKit kit = ModTestKit.openTrusted(repository, storage)) {
+            assertNull(kit.scene());
             assertEquals("owner", kit.plan("owner").ownerModId());
             assertNotSame(getClass().getClassLoader(), kit.loader("owner"));
             var module = kit.launch(new Sonic3kGameModule(), new GameplayLaunchRequest("s3k","sonic",List.of()));
             kit.openScene(module, 320,224);
+            assertSame(kit.loader("owner"), kit.scene().getClass().getClassLoader());
             kit.input().key(org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE,true);
             kit.tick(); kit.tick();
             var frame = kit.draw();
@@ -332,7 +334,7 @@ class TestModTestKit {
         Files.createDirectories(source.getParent());
         Files.writeString(source,"package fixture; public final class Entry implements com.openggf.mods.code.GgfMod { "
                 +"public void register(com.openggf.mods.code.ModContext context) { "+registration+" } }");
-        List<String> args=new ArrayList<>(List.of("--release","21","-cp",System.getProperty("java.class.path"),
+        List<String> args=new ArrayList<>(List.of("--release","25","-cp",System.getProperty("java.class.path"),
                 "-d",classes.toString(),source.toString()));
         assertEquals(0,ToolProvider.getSystemJavaCompiler().run(null,null,null,args.toArray(String[]::new)));
         Path manifest=classes.resolve("META-INF/openggf-mod.yaml"); Files.createDirectories(manifest.getParent());

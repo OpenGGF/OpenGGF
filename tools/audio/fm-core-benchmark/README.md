@@ -17,7 +17,7 @@ a quiet, documented host.
 
 ## Requirements
 
-- JDK 21 (`java` and `javac`)
+- JDK 25 (`java` and `javac`)
 - Python 3
 - a C compiler and a C++14 compiler (`CC` / `CXX` may override `cc` / `c++`)
 - Git and network access only when fetching sources

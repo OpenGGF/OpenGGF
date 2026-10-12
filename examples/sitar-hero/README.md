@@ -16,7 +16,9 @@ the ROMs you supply, at runtime. It uses the unpublished Mod API 0.7 candidate.
 
 ## Play it
 
-You need Java 21, Maven and Python 3 in this checkout, and at least one of these ROM
+The scene prepares an immutable song index and installed-ROM selections once. Each song retains its immutable supported roles, so menu rows reuse metadata without rebuilding the native catalogues.
+
+You need Java 25, Maven and Python 3 in this checkout, and at least one of these ROM
 dumps (any subset works):
 
 | Game | Image | CRC32 |
@@ -151,7 +153,9 @@ duplicate and delayed cue packets cannot replay a fumble into another round.
 captures a binding, Tab switches device, Delete clears it). It also has input and display
 offsets, lefty flip, reduced flashes (stage lights hold still, hit bursts stay dim and the
 highway never flashes) and highway speed. Tap calibration plays the ROM's
-own drums: tap the kick on the beat at least eight times, then Enter saves the median as
+own drums: tap the selected player's configured drum kick binding on the beat at least eight times.
+Keyboard, pad buttons and signed axes use the same rising-edge reducer as play, preserving the
+original event timestamps. Held and repeated input does not add taps. Enter applies the median as
 your input offset.
 
 Pausing freezes the song and score. If audio or input is interrupted, the game pauses
@@ -161,6 +165,11 @@ start again.
 Saves live in the mod's own save folder: `settings.txt` and `settings-p2.txt` (controls
 and calibration), `profile.txt` (scores), `career.txt` (story progress) and
 `online-address.txt`.
+
+Unsupported or corrupt versioned files are preserved through entry, performance and exit. Unsaved
+settings, career progress and eligible results stay dirty after false or throwing writes; periodic
+and exit retries publish them without counting the performance again. Calibration says it is saved
+only after a successful settings write.
 
 ### Direct-connect
 
@@ -265,7 +274,7 @@ static state except literal constants, and reads every asset byte from the playe
   starts (otherwise it would resurface mid-phrase afterwards), drops cues while a player
   exists, and asks for the theme again on every menu.
 - **Clean up on every path.** `stop()` cancels a preparation and stops a player on retry,
-  back, failure and exit. `exit()` silences the driver and saves settings and career.
+  back, failure and exit. `exit()` silences the driver and retries dirty settings, profile and career writes.
   The engine then closes the scene's music, network connection and extra ROMs.
 
 ## Recipes
@@ -331,14 +340,14 @@ one installed subset, using the `s1.gen`, `s2.gen` and `s3k.gen` files in a ROM 
 It records source and ROM hashes beside its pictures:
 
 ```bash
-java -cp "$CP" com.openggf.tools.SitarHeroCapture --rom-root /abs/rom/folder --out /abs/out --subset all
+java --enable-native-access=ALL-UNNAMED -cp "$CP" com.openggf.tools.SitarHeroCapture --rom-root /abs/rom/folder --out /abs/out --subset all
 ```
 
 `ExampleModCapture` plays a script of inputs or debug jumps and records PNGs, an MP4 and a
 WAV of the scene's music and sound. `SitarScene.debugJump` documents the commands:
 
 ```bash
-java -cp "$CP" com.openggf.mods.code.ExampleModCapture --rom s3k.gen --mod examples/sitar-hero \
+java --enable-native-access=ALL-UNNAMED -cp "$CP" com.openggf.mods.code.ExampleModCapture --rom s3k.gen --mod examples/sitar-hero \
   --out /abs/out --script "120:down 150:enter" --audio /abs/out/menu.wav --video /abs/out/menu.mp4
 ```
 
@@ -390,7 +399,7 @@ do not certify physical speaker or controller timing.
 
 ## Use matching creator artifacts
 
-The mutable 0.7 Mod API is unpublished. See [candidate setup](../../docs/modding/getting-started.md) for Java 21 and matching engine/SDK jar paths. From this checkout the shared launcher supports artifact-only builds and explicit ROM paths:
+The mutable 0.7 Mod API is unpublished. See [candidate setup](../../docs/modding/getting-started.md) for Java 25 and matching engine/SDK jar paths. From this checkout the shared launcher supports artifact-only builds and explicit ROM paths:
 
 ```sh
 python3 examples/build_example.py sitar-hero --engine /absolute/engine.jar --sdk /absolute/sdk.jar --run --s3k /absolute/own-s3k.gen

@@ -46,7 +46,7 @@ class TestExampleMutatorsPackage {
     }
     @Test void sourceBuildsPackagesAndRegistersRomOnlyBoundedPolicies() throws Exception {
         var project=Path.of("examples/example-mutators");var classes=temp.resolve("classes");Files.createDirectories(classes);
-        var args=new ArrayList<String>(List.of("--release","21","-classpath",System.getProperty("java.class.path"),"-d",classes.toString()));
+        var args=new ArrayList<String>(List.of("--release","25","-classpath",System.getProperty("java.class.path"),"-d",classes.toString()));
         try(var sources=Files.walk(project.resolve("src/main/java"))) { sources.filter(p->p.toString().endsWith(".java")).sorted().map(Path::toString).forEach(args::add); }
         assertEquals(0,ToolProvider.getSystemJavaCompiler().run(null,null,null,args.toArray(String[]::new)));
         var manifest=classes.resolve("META-INF/openggf-mod.yaml");Files.createDirectories(manifest.getParent());

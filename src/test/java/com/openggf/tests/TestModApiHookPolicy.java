@@ -50,6 +50,27 @@ class TestModApiHookPolicy {
         assertStagedPasses(repo);
     }
 
+    @Test void recordCompactConstructorBodyEditsNeedNoSignaturePinChange() throws Exception {
+        Path repo = fixtureWithAnnotatedRecord();
+        write(repo, CLASS_API, "@ModApi\npublic record ExampleClass(int value) {\n"
+                + "    public ExampleClass {\n"
+                + "        if (value < -32768) { throw new IllegalArgumentException(\"bad { word }\"); }\n"
+                + "    }\n}\n");
+        git(repo,"add",CLASS_API);
+        assertStagedPasses(repo);
+    }
+
+    @Test void recordComponentChangesStillRequireTheSignaturePin() throws Exception {
+        Path repo = fixtureWithAnnotatedRecord();
+        write(repo, CLASS_API, "@ModApi\npublic record ExampleClass(long value) {\n"
+                + "    public ExampleClass {\n"
+                + "        if (value < 0) throw new IllegalArgumentException();\n"
+                + "    }\n}\n");
+        git(repo,"add",CLASS_API); assertStagedFails(repo);
+        write(repo,PIN,"updated component signature\n");
+        git(repo,"add",PIN); assertStagedPasses(repo);
+    }
+
     @Test void annotatedClassPublicSignatureEditsStillRequireThePin() throws Exception {
         Path repo = fixtureWithAnnotatedClass();
         write(repo, CLASS_API, "import com.openggf.game.ModApi;\n/** Example. */\n@ModApi\npublic class ExampleClass {\n    public int value(int input,\n    int extra) {\n        return input;\n    }\n}\n");
@@ -242,6 +263,15 @@ class TestModApiHookPolicy {
         write(repo, tooling, "/** Changed tooling mention of @ModApi. */\nclass ModApiSignatureSurface { String text = \"scan @ModApi\"; }\n");
         git(repo, "add", tooling);
         assertStagedPasses(repo);
+    }
+
+    private Path fixtureWithAnnotatedRecord() throws Exception {
+        Path repo = fixture();
+        write(repo,CLASS_API,"@ModApi\npublic record ExampleClass(int value) {\n"
+                + "    public ExampleClass {\n"
+                + "        if (value < 0) throw new IllegalArgumentException();\n"
+                + "    }\n}\n");
+        write(repo,PIN,"baseline with record\n"); git(repo,"add","."); commit(repo); return repo;
     }
 
     private Path fixtureWithAnnotatedClass() throws Exception {

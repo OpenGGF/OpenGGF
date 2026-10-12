@@ -13,7 +13,7 @@ does not certify every route, pose or character.
 
 ## Build and play
 
-Use Java 21 and configure your original ROM images in the game hub:
+Use Java 25 and configure your original ROM images in the game hub:
 
 ```bash
 python3 examples/example-mutators/build.py --run

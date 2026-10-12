@@ -52,13 +52,17 @@ public final class ProjectScaffolder {
             } else {
                 writeSimpleProject(staging, kind, modId, javaPackage);
             }
+            writeTestSupport(staging, modId, javaPackage);
             writeText(staging.resolve("README.md"), "# " + displayName(modId) + "\n\n"
                     + "Complete " + kind + " starter for the unpublished Mod API 0.7 candidate.\n\n"
-                    + "Use Java 21 and matching engine/SDK jars from the same commit. Build twice after an edit:\n\n"
+                    + "Use Java 25 and matching engine/SDK jars from the same commit. Build twice after an edit:\n\n"
                     + "```sh\nmvn package -Dopenggf.engine.jar=/absolute/path/engine.jar "
                     + "-Dopenggf.sdk.jar=/absolute/path/sdk.jar\n```\n\n"
                     + "The validated distributable is target/" + modId + "-mod.jar. "
                     + "Run target/classes with ggfmod run, then validate the jar before sharing it.\n"
+                    + "The included src/test/java integration test uses the opt-in creator-tests profile. "
+                    + "Follow handbook/testing.md to verify and install the matching separate mod-testkit, "
+                    + "then run mvn test -Pcreator-tests -Dopenggf.testkit.version=<kit-version> with the same jar properties.\n"
                     + "See the creator kit handbook's getting-started.md and installing-mods.md.\n");
             Files.move(staging, output);
             return output;
@@ -100,6 +104,7 @@ public final class ProjectScaffolder {
             });
             writeSamplePng(staging.resolve("src/main/mod/sample.png"));
             writeMinimalLevel(staging.resolve("src/main/mod/level-source"), modId);
+            writeTestSupport(staging, modId, javaPackage);
             Files.move(staging, output);
             return output;
         } catch (ScaffoldFailure failure) {
@@ -123,7 +128,7 @@ public final class ProjectScaffolder {
             for (int frame = 0; frame < 6; frame++) frames.append("  - delay: 2\n    pieces:\n      - { sourceX: ")
                     .append(frame * 8).append(", sourceY: 0, widthPixels: 8, heightPixels: 8, xOffset: -4, yOffset: -4, hFlip: false, vFlip: false, paletteIndex: 0, priority: false }\n");
             writeText(root.resolve("src/main/mod/sample-sheet.yaml"), "formatVersion: 1\npaletteLine: 0\npalette: [" + palette + "]\nframes:\n" + frames);
-            conversion = "<execution><id>art</id><phase>generate-resources</phase><goals><goal>exec</goal></goals><configuration><executable>java</executable><classpathScope>compile</classpathScope><arguments><argument>-cp</argument><classpath/><argument>com.openggf.tools.modsdk.GgfModCli</argument><argument>convert</argument><argument>art</argument><argument>--image</argument><argument>${project.basedir}/src/main/mod/sample.png</argument><argument>--sheet</argument><argument>${project.basedir}/src/main/mod/sample-sheet.yaml</argument><argument>--out</argument><argument>${project.build.outputDirectory}/art/sample.ggfs</argument></arguments></configuration></execution>";
+            conversion = "<execution><id>art</id><phase>generate-resources</phase><goals><goal>exec</goal></goals><configuration><executable>${java.home}/bin/java</executable><classpathScope>compile</classpathScope><arguments><argument>--enable-native-access=ALL-UNNAMED</argument><argument>-cp</argument><classpath/><argument>com.openggf.tools.modsdk.GgfModCli</argument><argument>convert</argument><argument>art</argument><argument>--image</argument><argument>${project.basedir}/src/main/mod/sample.png</argument><argument>--sheet</argument><argument>${project.basedir}/src/main/mod/sample-sheet.yaml</argument><argument>--out</argument><argument>${project.build.outputDirectory}/art/sample.ggfs</argument></arguments></configuration></execution>";
             manifestExtras = "artOverrides:\n  signpost: art/sample.ggfs\n";
         } else if (kind.equals("music")) {
             writeTone(root.resolve("src/main/resources/audio/theme.wav"));
@@ -138,6 +143,22 @@ public final class ProjectScaffolder {
         writeText(root.resolve("src/main/resources/META-INF/openggf-mod.yaml"), "formatVersion: 1\nid: " + id + "\nname: " + displayName(id) + "\nversion: 1.0.0\nauthors: [Mod Author]\ndescription: Original " + kind + " starter.\nengineApiRange: \">=0.7.0 <0.8.0\"\ntype: patch\nbaseGame: s2\ndependencies: []\naudioOverrides: " + (kind.equals("music") ? "{129: theme}" : "{}") + "\n" + manifestExtras);
         String pom = render("simple-pom.xml.template", Map.of("{{MOD_ID}}", id, "{{PACKAGE}}", pkg, "{{CONVERSION}}", conversion));
         writeText(root.resolve("pom.xml"), pom);
+    }
+
+    private static void writeTestSupport(Path root, String id, String pkg) throws IOException {
+        Path pomPath = root.resolve("pom.xml");
+        String pom = Files.readString(pomPath, StandardCharsets.UTF_8);
+        if (!pom.contains("<id>creator-tests</id>")) {
+            pom = pom.replaceFirst("</properties>", "<openggf.creator.testSources>src/creator-tests-disabled</openggf.creator.testSources><skipTests>true</skipTests></properties>");
+            pom = pom.replaceFirst("<build>", java.util.regex.Matcher.quoteReplacement(
+                    "<build><testSourceDirectory>${openggf.creator.testSources}</testSourceDirectory>"));
+            String profile = render("creator-tests-profile.xml.template", Map.of());
+            if (pom.contains("</profiles>")) pom = pom.replace("</profiles>", profile + "</profiles>");
+            else pom = pom.replace("</project>", "<profiles>" + profile + "</profiles></project>");
+            writeText(pomPath, pom);
+        }
+        writeText(root.resolve("src/test/java/" + pkg.replace('.', '/') + "/StarterIntegrationTest.java"),
+                render("StarterIntegrationTest.java.template", Map.of("{{MOD_ID}}", id, "{{PACKAGE}}", pkg)));
     }
 
     private static void writeTone(Path path) throws IOException {

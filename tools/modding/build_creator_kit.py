@@ -28,10 +28,11 @@ def version(root):
     return ET.parse(root / "pom.xml").findtext("{http://maven.apache.org/POM/4.0.0}version")
 
 
-def project_pom(name):
+def project_pom(name, has_resource_generator=False):
+    generator = '''<execution><id>generate-authored-resources</id><phase>process-resources</phase><goals><goal>exec</goal></goals><configuration><executable>${openggf.python}</executable><arguments><argument>${project.basedir}/generate_resources.py</argument><argument>${project.build.outputDirectory}</argument></arguments></configuration></execution>''' if has_resource_generator else ""
     return f'''<project xmlns="http://maven.apache.org/POM/4.0.0"><modelVersion>4.0.0</modelVersion>
 <groupId>example.mods</groupId><artifactId>{name}</artifactId><version>1.0.0</version>
-<properties><maven.compiler.release>21</maven.compiler.release><openggf.creator.testSources>src/creator-tests-disabled</openggf.creator.testSources><skipTests>true</skipTests></properties>
+<properties><maven.compiler.release>25</maven.compiler.release><openggf.creator.testSources>src/creator-tests-disabled</openggf.creator.testSources><skipTests>true</skipTests><openggf.python>python3</openggf.python></properties>
 <dependencies>
 <dependency><groupId>com.openggf</groupId><artifactId>engine-local</artifactId><version>0</version><scope>system</scope><systemPath>${{openggf.engine.jar}}</systemPath></dependency>
 <dependency><groupId>com.openggf</groupId><artifactId>sdk-local</artifactId><version>0</version><scope>system</scope><systemPath>${{openggf.sdk.jar}}</systemPath></dependency>
@@ -42,9 +43,9 @@ def project_pom(name):
 <dependency><groupId>com.openggf</groupId><artifactId>OpenGGF</artifactId><version>${{openggf.testkit.version}}</version><classifier>mod-testkit</classifier><scope>test</scope></dependency>
 </dependencies></profile></profiles><build><testSourceDirectory>${{openggf.creator.testSources}}</testSourceDirectory><plugins>
 <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><version>3.14.0</version></plugin>
-<plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId><version>3.2.5</version></plugin>
+<plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId><version>3.2.5</version><configuration><argLine>--enable-native-access=ALL-UNNAMED</argLine><failIfNoTests>true</failIfNoTests></configuration></plugin>
 <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-antrun-plugin</artifactId><version>3.1.0</version><executions><execution><id>clean-package-output</id><phase>initialize</phase><goals><goal>run</goal></goals><configuration><target><delete file="${{project.build.directory}}/{name}-mod.jar" quiet="true"/></target></configuration></execution></executions></plugin>
-<plugin><groupId>org.codehaus.mojo</groupId><artifactId>exec-maven-plugin</artifactId><version>3.1.0</version><executions><execution><id>validated-mod</id><phase>prepare-package</phase><goals><goal>exec</goal></goals><configuration><executable>java</executable><classpathScope>compile</classpathScope><arguments><argument>-cp</argument><classpath/><argument>com.openggf.tools.modsdk.GgfModCli</argument><argument>package</argument><argument>--input</argument><argument>${{project.build.outputDirectory}}</argument><argument>--out</argument><argument>${{project.build.directory}}/{name}-mod.jar</argument></arguments></configuration></execution></executions></plugin>
+<plugin><groupId>org.codehaus.mojo</groupId><artifactId>exec-maven-plugin</artifactId><version>3.1.0</version><executions>{generator}<execution><id>validated-mod</id><phase>prepare-package</phase><goals><goal>exec</goal></goals><configuration><executable>${{java.home}}/bin/java</executable><classpathScope>compile</classpathScope><arguments><argument>--enable-native-access=ALL-UNNAMED</argument><argument>-cp</argument><classpath/><argument>com.openggf.tools.modsdk.GgfModCli</argument><argument>package</argument><argument>--input</argument><argument>${{project.build.outputDirectory}}</argument><argument>--out</argument><argument>${{project.build.directory}}/{name}-mod.jar</argument></arguments></configuration></execution></executions></plugin>
 </plugins></build></project>'''.encode()
 
 
@@ -78,22 +79,32 @@ def exported_projects(root):
 def export_examples(root):
     entries = {}
     for name, project in exported_projects(root).items():
-        for file in sorted((project / "src/main").rglob("*")):
-            if file.is_file():
-                entries["examples/" + name + "/" + file.relative_to(project).as_posix()] = file.read_bytes()
-        if name == "tide-circuit":
-            entries["examples/tide-circuit/tools/generate_assets.py"] = (project / "tools/generate_assets.py").read_bytes()
-        if name == "hello-scene":
-            specimen = project / "src/test/java/hello/HelloSceneIntegrationTest.java"
-            if specimen.is_file():
-                entries["examples/hello-scene/src/test/java/hello/HelloSceneIntegrationTest.java"] = specimen.read_bytes()
+        generator = project / "generate_resources.py"
+        if generator.is_file():
+            entries["examples/" + name + "/generate_resources.py"] = generator.read_bytes()
+        for tree in ("src/main", "src/test", "tools"):
+            for file in sorted((project / tree).rglob("*")):
+                relative = file.relative_to(project)
+                if file.is_file() and "__pycache__" not in relative.parts and file.suffix != ".pyc":
+                    entries["examples/" + name + "/" + relative.as_posix()] = file.read_bytes()
+        adapter = legacy_check_adapter(project)
+        if adapter:
+            entries[f"examples/{name}/src/test/java/creator/exported/CreatorChecksTest.java"] = adapter
+        elif not any((project / "src/test/java").rglob("*.java")):
+            mod_id = re.search(r"(?m)^id:\s*([a-z0-9][a-z0-9._-]*)\s*$",
+                               (project / "src/main/resources/META-INF/openggf-mod.yaml").read_text()).group(1)
+            template = (root / "src/main/resources/META-INF/openggf-mod-sdk/templates/StarterIntegrationTest.java.template")
+            # Tiny fixture roots used by export tests may omit SDK templates.
+            if template.is_file():
+                entries[f"examples/{name}/src/test/java/creator/exported/StarterIntegrationTest.java"] = (
+                    template.read_text().replace("{{PACKAGE}}", "creator.exported").replace("{{MOD_ID}}", mod_id).encode())
         readme = project / "README.md"
         manifest = (project / "src/main/resources/META-INF/openggf-mod.yaml").read_text()
         base_game = re.search(r"(?m)^baseGame:\s*(s1|s2|s3k)\s*$", manifest)
         game = base_game.group(1) if base_game else "s2"
         instructions = f'''# Build {name} from the creator kit
 
-Use a Java **21 JDK** and Python 3, or Maven **3.8 or newer**. Keep `engine.jar`
+Use a Java **25 JDK** and Python 3, or Maven **3.8 or newer**. Keep `engine.jar`
 and `sdk.jar` from the same creator kit/source commit; this is a mutable candidate.
 
 From this project directory, build with the portable launcher:
@@ -101,6 +112,18 @@ From this project directory, build with the portable launcher:
 ```sh
 python3 ../../tools/build_project.py .
 ```
+
+Run all authored Jupiter tests (including the exported adapters for older check
+programs) with the matching kit's separate testkit:
+
+```sh
+python3 ../../tools/build_project.py . --test --testkit ../../mod-testkit.jar
+```
+
+The test launcher resolves pinned JUnit Platform Console 1.10.3 through Maven,
+compiles only `src/test` into `target/test-classes`, and fails on test failure or
+empty discovery. No test dependencies or classes enter the mod jar. Source
+generators are in `tools/`; run them from this project directory.
 
 The distributable is **`target/{name}-mod.jar`**. Only `src/main` classes
 and resources enter that jar. Alternatively, build with Maven and matching absolute
@@ -127,8 +150,36 @@ there refer to the pinned source tree; use the creator-kit commands above here.
 
 '''
         entries[f"examples/{name}/README.md"] = instructions.encode() + (readme.read_bytes() if readme.exists() else b"")
-        entries[f"examples/{name}/pom.xml"] = project_pom(name)
+        entries[f"examples/{name}/pom.xml"] = project_pom(name, generator.is_file())
     return entries
+
+
+def legacy_check_adapter(project):
+    """Keep the authored check programs, and discover their entry points through Jupiter.
+
+    These are deliberately named *Checks/*Probe test-only classes. Ordinary
+    helpers and main sources are never treated as tests. Calls are compiled Java,
+    so changed signatures fail compilation instead of disappearing from discovery.
+    """
+    calls = []
+    for source in sorted((project / "src/test/java").rglob("*.java")):
+        text = source.read_text()
+        package = re.search(r"(?m)^package\s+([\w.]+)\s*;", text)
+        if not package or not source.stem.endswith(("Checks", "Probe")):
+            continue
+        owner = package.group(1) + "." + source.stem
+        methods = re.findall(r"public\s+static\s+void\s+(\w+)\s*\(\s*\)", text)
+        if re.search(r"public\s+static\s+void\s+main\s*\(\s*String\s*\[\s*\]\s+\w+\s*\)", text):
+            # The authored program may also invoke private checks: preserve its full entry point.
+            calls.append((owner, "main", "new String[0]"))
+        elif methods:
+            calls.extend((owner, method, "") for method in methods if method != "run" or len(methods) == 1)
+    if not calls:
+        return None
+    tests = "\n".join(f"    @org.junit.jupiter.api.Test void check{i}() throws Exception {{ {owner}.{method}({args}); }}"
+                      for i, (owner, method, args) in enumerate(calls))
+    return ("package creator.exported;\n\n/** Generated Jupiter adapters for the authored legacy check entry points. */\n"
+            + "class CreatorChecksTest {\n" + tests + "\n}\n").encode()
 
 
 def build_identity(data, path):
@@ -229,9 +280,9 @@ def collect(root, commit, allow_dirty=False, source_dirty=False):
         entries["tools/" + file] = (root / "tools/modding" / file).read_bytes()
     entries.update(export_examples(root))
     relocate_markdown_links(root, entries, commit)
-    entries["ggfmod"] = b'#!/bin/sh\nset -eu\nkit=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)\nexec java -cp "$kit/engine.jar:$kit/sdk.jar" com.openggf.tools.modsdk.GgfModCli "$@"\n'
-    entries["ggfmod.ps1"] = b'param([Parameter(ValueFromRemainingArguments=$true)][string[]]$CommandArgs)\n& java -cp "$PSScriptRoot/engine.jar$([IO.Path]::PathSeparator)$PSScriptRoot/sdk.jar" com.openggf.tools.modsdk.GgfModCli @CommandArgs\nexit $LASTEXITCODE\n'
-    entries["README.md"] = f'# OpenGGF {release} creator kit\n\nMutable unpublished Mod API {policy["currentApi"]} {policy["currentStatus"]}, built at {commit}. Read handbook/getting-started.md. Java 21 and Maven 3.8+; Python 3 for portable examples. No ROMs are included. This kit does not publish or freeze an API baseline.\n\nUse `sh ggfmod init /absolute/project --id my-mod --kind scene --package example.mymod`. Build generated starters with matching absolute engine.jar and sdk.jar properties. Use tools/build_project.py for exported examples. API docs are in api-docs.jar (unzip to browse); testkit support is in mod-testkit.jar.\n'.encode()
+    entries["ggfmod"] = b'#!/bin/sh\nset -eu\nkit=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)\nexec "${JAVA_HOME:+$JAVA_HOME/bin/}java" --enable-native-access=ALL-UNNAMED -cp "$kit/engine.jar:$kit/sdk.jar" com.openggf.tools.modsdk.GgfModCli "$@"\n'
+    entries["ggfmod.ps1"] = b'param([Parameter(ValueFromRemainingArguments=$true)][string[]]$CommandArgs)\n$javaExe = if ($env:JAVA_HOME) { Join-Path $env:JAVA_HOME "bin/java" } else { "java" }\n& $javaExe --enable-native-access=ALL-UNNAMED -cp "$PSScriptRoot/engine.jar$([IO.Path]::PathSeparator)$PSScriptRoot/sdk.jar" com.openggf.tools.modsdk.GgfModCli @CommandArgs\nexit $LASTEXITCODE\n'
+    entries["README.md"] = f'# OpenGGF {release} creator kit\n\nMutable unpublished Mod API {policy["currentApi"]} {policy["currentStatus"]}, built at {commit}. Read handbook/getting-started.md. Java 25 and Maven 3.8+; Python 3 for portable examples. No ROMs are included. This kit does not publish or freeze an API baseline.\n\nUse `sh ggfmod init /absolute/project --id my-mod --kind scene --package example.mymod`. Build generated starters with matching absolute engine.jar and sdk.jar properties. Use tools/build_project.py for exported examples. API docs are in api-docs.jar (unzip to browse); testkit support is in mod-testkit.jar.\n'.encode()
     entries["creator-kit.json"] = json.dumps({"formatVersion": 1, "engineVersion": release, "apiVersion": policy["currentApi"], "apiStatus": policy["currentStatus"], "sourceCommit": commit, "sourceDirty": dirty, "sha256": {name: hashlib.sha256(data).hexdigest() for name, data in sorted(entries.items())}}, indent=2, sort_keys=True).encode() + b"\n"
     return entries
 

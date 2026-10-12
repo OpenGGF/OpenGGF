@@ -1,6 +1,6 @@
 # Sample Flappy
 
-Use a Java 21 JDK and matching engine/SDK artifacts from one commit of the mutable,
+Use a Java 25 JDK and matching engine/SDK artifacts from one commit of the mutable,
 unpublished candidate. The default Maven profile uses local jars; it does not
 resolve an unpublished API from a Maven repository:
 
@@ -33,3 +33,10 @@ for the complete architecture, palette, rewind, build, and presentation trade-of
 See `docs/modding/content-mods.md` and `docs/architecture/mod-api-compatibility.md`
 in the OpenGGF source tree for the complete creator contracts and checked-in
 acceptance samples.
+
+To qualify an SDK-built binary in the source tree, pass its absolute path as
+`-Dsample.flappy.jar.path=` to the queued `TestSampleFlappyIntegration` selector,
+along with the verified `-Ds3k.rom.path=`. It exercises isolated title trust/Apply,
+native Tails startup, viewport/flight and rewind using that jar. Without the jar
+property, the same checks build the maintained source. Neither path changes player
+modstate or installs/trusts a jar in the player's runtime.

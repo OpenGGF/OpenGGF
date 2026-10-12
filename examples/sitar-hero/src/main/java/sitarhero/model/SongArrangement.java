@@ -25,7 +25,10 @@ public record SongArrangement(String id, String label, String game, int musicId,
         if (duration > 36_000) throw new IllegalArgumentException("Song exceeds bounded ten-minute preparation");
     }
     public int durationFrames() { return loopFrames == 0 ? endFrames : Math.max(7_200, Math.addExact(introFrames, Math.multiplyExact(loopFrames, 2))); }
-    public SongSpec song() { return new SongSpec(id, label, game, musicId, durationFrames(), zone, act); }
+    public SongSpec song() {
+        return new SongSpec(id, label, game, musicId, durationFrames(), zone, act,
+                java.util.Arrays.stream(Role.values()).filter(this::supports).toList(), false);
+    }
     public boolean supports(Role role) { return switch (role) { case SITAR -> !lead.isEmpty(); case HARP -> !rhythm.isEmpty(); case SYNTH -> !synth.isEmpty(); case BONGOS -> drums; }; }
     public List<Section> sections(Role role) { return switch (role) { case SITAR -> lead; case HARP -> rhythm; case SYNTH -> synth; case BONGOS -> List.of(); }; }
 }

@@ -1,5 +1,6 @@
 """Creator kit contracts: reproducibility, identity and authored-source boundaries."""
 import hashlib
+import importlib.util
 import io
 import json
 from pathlib import Path
@@ -14,6 +15,80 @@ import build_project
 
 
 class CreatorKitTest(unittest.TestCase):
+    def test_starter_templates_have_separate_pinned_test_profile_and_nonempty_discovery(self):
+        templates = Path(__file__).resolve().parents[2] / "src/main/resources/META-INF/openggf-mod-sdk/templates"
+        namespace = {"m": "http://maven.apache.org/POM/4.0.0"}
+        for name in ("pom.xml.template", "simple-pom.xml.template"):
+            with self.subTest(template=name):
+                text = (templates / name).read_text().replace("{{CONVERSION}}", "")
+                document = ET.fromstring(text)
+                profiles = {p.findtext("m:id", namespaces=namespace): p
+                            for p in document.findall("m:profiles/m:profile", namespace)}
+                self.assertIn("creator-tests", profiles)
+                profile = profiles["creator-tests"]
+                self.assertEqual("false", profile.findtext("m:properties/m:skipTests", namespaces=namespace))
+                dependencies = profile.findall("m:dependencies/m:dependency", namespace)
+                self.assertTrue(all(d.findtext("m:scope", namespaces=namespace) == "test" for d in dependencies))
+                self.assertIn("<failIfNoTests>true</failIfNoTests>", text)
+
+    def test_shared_example_builder_preserves_legacy_output_and_run_arguments(self):
+        script = Path(__file__).resolve().parents[2] / "examples/build_example.py"
+        spec = importlib.util.spec_from_file_location("example_builder", script)
+        builder = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(builder)
+        project = self.root / "examples/infinite-sonic"
+        manifest = project / "src/main/resources/META-INF/openggf-mod.yaml"
+        manifest.parent.mkdir(parents=True)
+        manifest.write_text("id: infinite-sonic\n")
+        (project / "src/main/java").mkdir(parents=True)
+        (self.root / "target/examples-classpath.txt").write_text("dependencies")
+        legacy = self.root / "target/infinite-sonic"
+        with patch.object(builder, "ROOT", self.root), patch.object(builder.subprocess, "run") as run:
+            jar = builder.build("infinite-sonic", run=True, skip_engine=True, output=legacy)
+        self.assertEqual(legacy / "infinite-sonic.jar", jar)
+        package, launch = run.call_args_list[-2:]
+        self.assertEqual(["package", "--input", str(legacy / "classes"), "--out", str(jar)],
+                         package.args[0][-5:])
+        self.assertEqual(["run", str(legacy / "classes")], launch.args[0][-2:])
+
+    def test_exports_every_authored_test_resource_and_source_generator(self):
+        project = self.root / "examples/model-demo"
+        inputs = {
+            "src/main/resources/META-INF/openggf-mod.yaml": "id: model-demo\n",
+            "src/test/java/demo/ModelTest.java": "// portable Jupiter test\n",
+            "src/test/resources/fixture.txt": "authored fixture\n",
+            "tools/generate_maps.py": "# reproducible source generator\n",
+            "generate_resources.py": "# shared launcher's authored resource generator\n",
+            "tools/__pycache__/stale.pyc": "not an authored input\n",
+            "target/test-classes/demo/ModelTest.class": "not an authored input\n",
+        }
+        for relative, text in inputs.items():
+            path = project / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text)
+        entries = kit.export_examples(self.root)
+        for relative in ("src/test/java/demo/ModelTest.java", "src/test/resources/fixture.txt",
+                         "tools/generate_maps.py", "generate_resources.py"):
+            self.assertEqual((project / relative).read_bytes(), entries["examples/model-demo/" + relative])
+        self.assertFalse(any("__pycache__" in name or "target/test-classes" in name for name in entries))
+        readme = entries["examples/model-demo/README.md"].decode()
+        self.assertIn("--test", readme)
+        pom = ET.fromstring(entries["examples/model-demo/pom.xml"])
+        ns = {"m": "http://maven.apache.org/POM/4.0.0"}
+        execution = next(e for e in pom.findall("m:build/m:plugins/m:plugin/m:executions/m:execution", ns)
+                         if e.findtext("m:id", namespaces=ns) == "generate-authored-resources")
+        self.assertEqual("process-resources", execution.findtext("m:phase", namespaces=ns))
+        self.assertEqual("${openggf.python}", execution.findtext("m:configuration/m:executable", namespaces=ns))
+
+    def test_actual_export_includes_every_portable_example_test_and_three_islands_generator(self):
+        root = Path(__file__).resolve().parents[2]
+        entries = kit.export_examples(root)
+        for name, project in kit.exported_projects(root).items():
+            for file in (project / "src/test").rglob("*"):
+                if file.is_file():
+                    self.assertEqual(file.read_bytes(), entries["examples/" + name + "/" + file.relative_to(project).as_posix()])
+        self.assertIn("examples/three-islands/tools/generate_maps.py", entries)
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
@@ -27,6 +102,25 @@ class CreatorKitTest(unittest.TestCase):
         (self.root / "mod-api-release-policy.properties").write_text("currentApi=0.7.0\ncurrentStatus=candidate\n")
         self.campaign()
         self.artifacts()
+
+    def test_project_resource_generator_runs_after_copy_and_propagates_failure(self):
+        project = self.root / "generated-example"
+        resources = project / "src/main/resources"
+        resources.mkdir(parents=True)
+        (resources / "source.txt").write_text("original")
+        generator = project / "generate_resources.py"
+        generator.write_text("from pathlib import Path\nimport sys\n"
+            "out = Path(sys.argv[1])\n"
+            "assert (out / 'source.txt').read_text() == 'original'\n"
+            "(out / 'generated.dat').write_bytes(b'authored')\n")
+        classes = project / "target/classes"
+        build_project.copy_resources(project, classes)
+        self.assertEqual(b"authored", (classes / "generated.dat").read_bytes())
+        generator.write_text("raise SystemExit(17)\n")
+        import subprocess
+        with self.assertRaises(subprocess.CalledProcessError) as failure:
+            build_project.copy_resources(project, classes)
+        self.assertEqual(17, failure.exception.returncode)
 
     def campaign(self):
         project = self.root / kit.CAMPAIGN_SOURCE
@@ -64,6 +158,8 @@ class CreatorKitTest(unittest.TestCase):
         (project / "README.md").write_text("[handbook](../../docs/modding/index.md)")
         (self.root / "docs/modding/index.md").write_text("[example](../../examples/demo/README.md) [source](../../src/Example.java)")
         entries = kit.collect(self.root, "abcdef123456")
+        self.assertIn(b"${JAVA_HOME:+$JAVA_HOME/bin/}java", entries["ggfmod"])
+        self.assertIn(b"$env:JAVA_HOME", entries["ggfmod.ps1"])
         manifest = json.loads(entries["creator-kit.json"])
         self.assertEqual("candidate", manifest["apiStatus"])
         self.assertFalse(manifest["sourceDirty"])
@@ -150,6 +246,7 @@ class CreatorKitTest(unittest.TestCase):
         self.assertIn(json.dumps(str(rom)), config)
         self.assertEqual(project / "target/play", run.call_args.kwargs["cwd"])
         self.assertEqual(["run", str(project / "target/classes")], run.call_args.args[0][-2:])
+        self.assertIn("--enable-native-access=ALL-UNNAMED", run.call_args.args[0])
         self.assertEqual(b"own asset", rom.read_bytes())
 
     def test_exported_hello_tests_use_opt_in_jupiter_profile_and_never_enter_production_inputs(self):
@@ -163,6 +260,9 @@ class CreatorKitTest(unittest.TestCase):
         entries = kit.export_examples(self.root)
         self.assertEqual(specimen.read_bytes(), entries["examples/hello-scene/src/test/java/hello/HelloSceneIntegrationTest.java"])
         pom = entries["examples/hello-scene/pom.xml"]
+        self.assertIn(b"<maven.compiler.release>25</maven.compiler.release>", pom)
+        self.assertIn(b"<executable>${java.home}/bin/java</executable>", pom)
+        self.assertIn(b"<argLine>--enable-native-access=ALL-UNNAMED</argLine>", pom)
         self.assertIn(b"src/creator-tests-disabled", pom)
         self.assertIn(b"<skipTests>true</skipTests>", pom)
         self.assertIn(b"<skipTests>false</skipTests>", pom)
@@ -179,7 +279,7 @@ class CreatorKitTest(unittest.TestCase):
         readme = kit.export_examples(self.root)["examples/hello-scene/README.md"].decode()
         self.assertTrue(readme.startswith("# Build hello-scene from the creator kit"))
         self.assertLess(readme.index("python3 ../../tools/build_project.py ."), readme.index("python3 play.py"))
-        for instruction in ("21 JDK", "-Dopenggf.engine.jar=/absolute/kit/engine.jar",
+        for instruction in ("25 JDK", "-Dopenggf.engine.jar=/absolute/kit/engine.jar",
                             "-Dopenggf.sdk.jar=/absolute/kit/sdk.jar", "target/hello-scene-mod.jar",
                             "--run --s3k /absolute/own-s3k.gen", "target/play"):
             self.assertIn(instruction, readme)

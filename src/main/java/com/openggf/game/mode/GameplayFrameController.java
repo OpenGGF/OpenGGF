@@ -8,6 +8,11 @@ import com.openggf.game.ModApi;
 public interface GameplayFrameController {
     /** Runs before any course clock, fade, PLC, physics or object service. */
     boolean beforeTick(CourseControl course, LogicalInputSnapshot input);
+    /** Selects the row's world admission once. Existing controllers retain their neutral-input policy.
+     * The result must be non-null; implementations that use this method need not call beforeTick. */
+    default GameplayFrameDisposition beforeFrame(CourseControl course, LogicalInputSnapshot input) {
+        return beforeTick(course, input) ? GameplayFrameDisposition.ADVANCE_CONTROLLED : GameplayFrameDisposition.HOLD;
+    }
     /** Observes the completed native step, or a held row, at a stable boundary. */
     void afterTick(CourseControl course, boolean advanced);
     /** Retains a rolling ball through native landing/zero-speed/object transitions. */

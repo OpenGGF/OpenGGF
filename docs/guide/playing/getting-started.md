@@ -6,7 +6,7 @@ This page gets you from zero to playing in under five minutes.
 
 - **For downloaded releases:** no separate Java install is required; release packages include a
   native OpenGGF executable for your platform.
-- **For source builds:** Java 21 or later. Download from [Adoptium](https://adoptium.net/) or
+- **For source builds:** JDK 25. The executable JAR requires Java 25 or later. Download from [Adoptium](https://adoptium.net/) or
   your preferred distribution. Run `java -version` to check.
 - **A GPU that supports OpenGL 4.1.** Any discrete GPU from the last decade will work.
   Integrated graphics (Intel HD 4000+, Apple Silicon) are fine.

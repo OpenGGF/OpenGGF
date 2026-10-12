@@ -90,6 +90,11 @@ public final class OwnedSceneFactory {
         }
 
         @Override
+        public void resume(SceneContext ctx, com.openggf.mods.scene.ActResult result) {
+            boundary.run(ownerModId, () -> scene.resume(ctx, result));
+        }
+
+        @Override
         public boolean capturesTextInput() {
             return boundary.call(ownerModId, scene::capturesTextInput);
         }

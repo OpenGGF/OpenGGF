@@ -161,7 +161,7 @@ record = {
     },
     "build": {
         "inputs": build_inputs,
-        "java_flags": "javac defaults for JDK 21",
+        "java_flags": "javac defaults for JDK 25",
         "native_c_flags": args.native_c_flags,
         "native_cxx_flags": args.native_cxx_flags,
     },
