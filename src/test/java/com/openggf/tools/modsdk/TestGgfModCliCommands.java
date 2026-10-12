@@ -22,6 +22,7 @@ class TestGgfModCliCommands {
 
     @Test void runCommandUsesExplicitAbsoluteDevPropertyAndCurrentClasspath() {
         var command = GgfModCli.engineCommand(temp);
+        assertTrue(command.contains("--enable-native-access=ALL-UNNAMED"));
         assertTrue(command.stream().anyMatch(s -> s.equals("-Dggfmod.dev.modDir=" + temp.toAbsolutePath().normalize())));
         assertTrue(command.contains(System.getProperty("java.class.path")));
         assertEquals("com.openggf.Engine", command.get(command.size()-1));

@@ -26,14 +26,14 @@ class TestGolfProtocol {
         Path sources = project.resolve("src/main/java/paradise/net");
         assertTrue(Files.isDirectory(sources), "the external golf transport has not been implemented");
         Path classes = Files.createDirectories(temp.resolve("classes"));
-        var args = new ArrayList<>(List.of("--release", "21", "-classpath", classes.toString(), "-d", classes.toString()));
+        var args = new ArrayList<>(List.of("--release", "25", "-classpath", classes.toString(), "-d", classes.toString()));
         for (Path directory : List.of(sources, project.resolve("src/main/java/paradise/model"), project.resolve("src/test/java/paradise/net"))) {
             try (var files = Files.walk(directory)) {
                 files.filter(p -> p.toString().endsWith(".java")).sorted().forEach(p -> args.add(p.toString()));
             }
         }
         assertEquals(0, ToolProvider.getSystemJavaCompiler().run(null, null, null, args.toArray(String[]::new)),
-                "external engine-free networking sources must compile on Java 21");
+                "external engine-free networking sources must compile on Java 25");
         try (var loader = new URLClassLoader(new java.net.URL[]{classes.toUri().toURL()}, null)) {
             try {
                 loader.loadClass("paradise.net." + probe).getMethod(method).invoke(null);

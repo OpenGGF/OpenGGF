@@ -19,7 +19,7 @@ will show an error. Ensure the files are in the same directory as the JAR (or th
 root if running from source). ROM filenames can be configured in `config.yaml` -- see
 [Configuration](configuration.md).
 
-**Java version too old.** The engine requires Java 21 or later. Run `java -version` to
+**Java version too old.** The engine requires Java 25 or later. Run `java -version` to
 check. If you have multiple Java installations, ensure the correct one is on your PATH.
 
 **OpenGL version too low.** The engine requires OpenGL 4.1 core profile. This is supported

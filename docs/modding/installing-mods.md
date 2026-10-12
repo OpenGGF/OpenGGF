@@ -2,7 +2,7 @@
 
 A mod is a `.jar`; keep it intact. Music packs and object reskins work on native
 and JVM builds. Objects, characters, zones, scenes and standalone games contain
-Java code and need the **JVM engine** with Java 21. Use matching candidate engine
+Java code and need the **JVM engine** with Java 25. Use matching candidate engine
 builds named by the author: the unpublished API can change without a version bump.
 
 ## Install

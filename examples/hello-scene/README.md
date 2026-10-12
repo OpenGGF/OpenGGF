@@ -19,7 +19,7 @@ and a ROM sprite by address, the controller and the mouse, music and sound effec
 
 ## Build and run
 
-You need Java 21 and Maven as for the engine, and your Sonic 3 & Knuckles ROM set up for
+You need Java 25 and Maven as for the engine, and your Sonic 3 & Knuckles ROM set up for
 OpenGGF in the repository root.
 
 ```bash
@@ -56,7 +56,7 @@ Things that trip people up:
 
 ## Use matching creator artifacts
 
-The mutable 0.7 Mod API is unpublished. See [candidate setup](../../docs/modding/getting-started.md) for Java 21 and matching engine/SDK jar paths. From this checkout the shared launcher supports artifact-only builds and explicit ROM paths:
+The mutable 0.7 Mod API is unpublished. See [candidate setup](../../docs/modding/getting-started.md) for Java 25 and matching engine/SDK jar paths. From this checkout the shared launcher supports artifact-only builds and explicit ROM paths:
 
 ```sh
 python3 examples/build_example.py hello-scene --engine /absolute/engine.jar --sdk /absolute/sdk.jar --run --s3k /absolute/own-s3k.gen

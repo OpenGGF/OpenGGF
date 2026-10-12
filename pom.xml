@@ -11,13 +11,15 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <maven.compiler.release>21</maven.compiler.release>
+        <maven.compiler.release>25</maven.compiler.release>
         <lwjgl.version>3.3.3</lwjgl.version>
         <joml.version>1.10.5</joml.version>
-        <mockito.version>5.14.2</mockito.version>
+        <mockito.version>5.20.0</mockito.version>
         <slf4j.version>2.0.17</slf4j.version>
         <mockito.agent.path>"${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar"</mockito.agent.path>
         <mockito.agent.argLine>-javaagent:${mockito.agent.path}</mockito.agent.argLine>
+        <!-- Classpath JNI dependencies (LWJGL and SQLite) require native access. -->
+        <native.access.argLine>--enable-native-access=ALL-UNNAMED</native.access.argLine>
         <test.cds.argLine>-Xshare:off</test.cds.argLine>
         <test.logging.config.file>${project.basedir}/src/test/resources/quiet-logging.properties</test.logging.config.file>
         <test.slf4j.verbosity>ERROR</test.slf4j.verbosity>
@@ -33,7 +35,7 @@
              temp-space, or OOM evidence. This proves 3 GiB sufficient; it does
              not establish a minimum. The former four 1 GiB forks OOMed before
              TestSampleRomArtRemixIntegration reported. -->
-        <surefire.argLine>${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g</surefire.argLine>
+        <surefire.argLine>${native.access.argLine} ${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g</surefire.argLine>
         <surefire.forkCount>1</surefire.forkCount>
         <surefire.reuseForks>true</surefire.reuseForks>
         <surefire.runOrder>alphabetical</surefire.runOrder>
@@ -83,7 +85,7 @@
             </activation>
             <properties>
                 <lwjgl.natives>natives-macos</lwjgl.natives>
-                <surefire.argLine>-XstartOnFirstThread ${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g</surefire.argLine>
+                <surefire.argLine>-XstartOnFirstThread ${native.access.argLine} ${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g</surefire.argLine>
                 <native.macos.package.skip>false</native.macos.package.skip>
             </properties>
         </profile>
@@ -94,7 +96,7 @@
             </activation>
             <properties>
                 <lwjgl.natives>natives-macos-arm64</lwjgl.natives>
-                <surefire.argLine>-XstartOnFirstThread ${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g</surefire.argLine>
+                <surefire.argLine>-XstartOnFirstThread ${native.access.argLine} ${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g</surefire.argLine>
                 <native.macos.package.skip>false</native.macos.package.skip>
             </properties>
         </profile>
@@ -126,8 +128,9 @@
                         <artifactId>exec-maven-plugin</artifactId>
                         <version>3.1.0</version>
                         <configuration>
-                            <executable>java</executable>
+                            <executable>${java.home}/bin/java</executable>
                             <arguments>
+                                <argument>${native.access.argLine}</argument>
                                 <argument>--add-exports</argument>
                                 <argument>java.base/java.lang=ALL-UNNAMED</argument>
                                 <argument>--add-exports</argument>
@@ -189,7 +192,7 @@
                 </property>
             </activation>
             <properties>
-                <surefire.argLine>${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g</surefire.argLine>
+                <surefire.argLine>${native.access.argLine} ${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g</surefire.argLine>
                 <surefire.forkCount>1</surefire.forkCount>
             </properties>
         </profile>
@@ -367,7 +370,7 @@
               pushes past this ceiling again.
             -->
             <properties>
-                <surefire.argLine>${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g</surefire.argLine>
+                <surefire.argLine>${native.access.argLine} ${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g</surefire.argLine>
             </properties>
             <build>
                 <plugins>
@@ -490,7 +493,7 @@
         <profile>
             <id>trace-segments</id>
             <properties>
-                <surefire.argLine>${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g</surefire.argLine>
+                <surefire.argLine>${native.access.argLine} ${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g</surefire.argLine>
             </properties>
             <build>
                 <plugins>
@@ -560,7 +563,7 @@
         <profile>
             <id>trace-replay-r7</id>
             <properties>
-                <surefire.argLine>${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g</surefire.argLine>
+                <surefire.argLine>${native.access.argLine} ${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g</surefire.argLine>
             </properties>
             <build>
                 <plugins>
@@ -658,7 +661,7 @@
                 <!-- ArchUnit and the reflection guards import the complete
                      production graph. Keep that graph in one adequately sized
                      fork instead of making four 1 GiB heaps compete. -->
-                <surefire.argLine>${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g</surefire.argLine>
+                <surefire.argLine>${native.access.argLine} ${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g</surefire.argLine>
                 <surefire.forkCount>1</surefire.forkCount>
             </properties>
             <build>
@@ -1173,6 +1176,9 @@
                             <addClasspath>true</addClasspath>
                             <mainClass>com.openggf.Engine</mainClass>
                         </manifest>
+                        <manifestEntries>
+                            <Enable-Native-Access>ALL-UNNAMED</Enable-Native-Access>
+                        </manifestEntries>
                     </archive>
 
                 </configuration>
@@ -1225,10 +1231,8 @@
                     </execution>
                     <!-- Fail fast when the build JVM is not the JDK the project targets.
                          Surefire forks inherit Maven's JVM, not whatever `java` is on PATH,
-                         so a newer JDK silently reaches the tests: Mockito/ByteBuddy then
-                         misbehave and the suite reports hundreds of phantom failures that
-                         look like real regressions. Cheaper to stop here with an
-                         actionable message. -->
+                         so require the validated compiler/instrumentation/runtime combination
+                         before compiling or running tests, with an actionable message. -->
                     <execution>
                         <id>verify-build-jdk</id>
                         <phase>validate</phase>
@@ -1239,22 +1243,20 @@
                             <target>
                                 <condition property="openggf.jdk.ok">
                                     <or>
-                                        <matches string="${java.version}" pattern="^21\."/>
+                                        <matches string="${java.version}" pattern="^25(\.|$)"/>
                                         <istrue value="${openggf.jdk.check.skip}"/>
                                     </or>
                                 </condition>
                                 <fail unless="openggf.jdk.ok">
 Wrong build JDK: Maven is running on Java ${java.version} (${java.home}).
 
-OpenGGF targets Java 21, and CI and the release workflow both build and test on
-temurin 21. Surefire forks inherit Maven's JVM rather than the `java` on PATH, so
-on a newer JDK the test suite reports large numbers of phantom failures (Mockito
-stubbing errors leaking across classes, ROM fixtures failing to load) that have
-nothing to do with your change.
+OpenGGF targets Java 25. CI and release builds use JDK 25, and Surefire forks
+inherit Maven's JVM rather than the `java` on PATH. Use the supported JDK so
+compilation, bytecode instrumentation, and test execution match those builds.
 
-Fix: point JAVA_HOME at a JDK 21 before building, e.g.
-  export JAVA_HOME=/path/to/jdk-21    # macOS: $(/usr/libexec/java_home -v 21)
-Verify with `mvn -v` — it must report "Java version: 21".
+Fix: point JAVA_HOME at a JDK 25 before building, e.g.
+  export JAVA_HOME=/path/to/jdk-25    # macOS: $(/usr/libexec/java_home -v 25)
+Verify with `mvn -v` — it must report "Java version: 25".
 
 To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
                                 </fail>
@@ -1329,7 +1331,7 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
                         <phase>prepare-package</phase>
                         <goals><goal>exec</goal></goals>
                         <configuration>
-                            <executable>java</executable>
+                            <executable>${java.home}/bin/java</executable>
                             <arguments>
                                 <argument>-cp</argument><classpath/>
                                 <argument>com.openggf.tools.modtestkit.ModTestKitPackager</argument>
@@ -1343,7 +1345,7 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
                         <phase>prepare-package</phase>
                         <goals><goal>exec</goal></goals>
                         <configuration>
-                            <executable>java</executable>
+                            <executable>${java.home}/bin/java</executable>
                             <arguments>
                                 <argument>-cp</argument>
                                 <classpath/>
@@ -1360,7 +1362,7 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
                         <phase>verify</phase>
                         <goals><goal>exec</goal></goals>
                         <configuration>
-                            <executable>java</executable>
+                            <executable>${java.home}/bin/java</executable>
                             <arguments>
                                 <argument>-cp</argument><classpath/>
                                 <argument>com.openggf.tools.modsdk.ModSdkArtifactVerifier</argument>

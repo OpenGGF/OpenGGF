@@ -31,7 +31,7 @@ def version(root):
 def project_pom(name):
     return f'''<project xmlns="http://maven.apache.org/POM/4.0.0"><modelVersion>4.0.0</modelVersion>
 <groupId>example.mods</groupId><artifactId>{name}</artifactId><version>1.0.0</version>
-<properties><maven.compiler.release>21</maven.compiler.release><openggf.creator.testSources>src/creator-tests-disabled</openggf.creator.testSources><skipTests>true</skipTests></properties>
+<properties><maven.compiler.release>25</maven.compiler.release><openggf.creator.testSources>src/creator-tests-disabled</openggf.creator.testSources><skipTests>true</skipTests></properties>
 <dependencies>
 <dependency><groupId>com.openggf</groupId><artifactId>engine-local</artifactId><version>0</version><scope>system</scope><systemPath>${{openggf.engine.jar}}</systemPath></dependency>
 <dependency><groupId>com.openggf</groupId><artifactId>sdk-local</artifactId><version>0</version><scope>system</scope><systemPath>${{openggf.sdk.jar}}</systemPath></dependency>
@@ -42,9 +42,9 @@ def project_pom(name):
 <dependency><groupId>com.openggf</groupId><artifactId>OpenGGF</artifactId><version>${{openggf.testkit.version}}</version><classifier>mod-testkit</classifier><scope>test</scope></dependency>
 </dependencies></profile></profiles><build><testSourceDirectory>${{openggf.creator.testSources}}</testSourceDirectory><plugins>
 <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><version>3.14.0</version></plugin>
-<plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId><version>3.2.5</version></plugin>
+<plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId><version>3.2.5</version><configuration><argLine>--enable-native-access=ALL-UNNAMED</argLine></configuration></plugin>
 <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-antrun-plugin</artifactId><version>3.1.0</version><executions><execution><id>clean-package-output</id><phase>initialize</phase><goals><goal>run</goal></goals><configuration><target><delete file="${{project.build.directory}}/{name}-mod.jar" quiet="true"/></target></configuration></execution></executions></plugin>
-<plugin><groupId>org.codehaus.mojo</groupId><artifactId>exec-maven-plugin</artifactId><version>3.1.0</version><executions><execution><id>validated-mod</id><phase>prepare-package</phase><goals><goal>exec</goal></goals><configuration><executable>java</executable><classpathScope>compile</classpathScope><arguments><argument>-cp</argument><classpath/><argument>com.openggf.tools.modsdk.GgfModCli</argument><argument>package</argument><argument>--input</argument><argument>${{project.build.outputDirectory}}</argument><argument>--out</argument><argument>${{project.build.directory}}/{name}-mod.jar</argument></arguments></configuration></execution></executions></plugin>
+<plugin><groupId>org.codehaus.mojo</groupId><artifactId>exec-maven-plugin</artifactId><version>3.1.0</version><executions><execution><id>validated-mod</id><phase>prepare-package</phase><goals><goal>exec</goal></goals><configuration><executable>${{java.home}}/bin/java</executable><classpathScope>compile</classpathScope><arguments><argument>--enable-native-access=ALL-UNNAMED</argument><argument>-cp</argument><classpath/><argument>com.openggf.tools.modsdk.GgfModCli</argument><argument>package</argument><argument>--input</argument><argument>${{project.build.outputDirectory}}</argument><argument>--out</argument><argument>${{project.build.directory}}/{name}-mod.jar</argument></arguments></configuration></execution></executions></plugin>
 </plugins></build></project>'''.encode()
 
 
@@ -93,7 +93,7 @@ def export_examples(root):
         game = base_game.group(1) if base_game else "s2"
         instructions = f'''# Build {name} from the creator kit
 
-Use a Java **21 JDK** and Python 3, or Maven **3.8 or newer**. Keep `engine.jar`
+Use a Java **25 JDK** and Python 3, or Maven **3.8 or newer**. Keep `engine.jar`
 and `sdk.jar` from the same creator kit/source commit; this is a mutable candidate.
 
 From this project directory, build with the portable launcher:
@@ -229,9 +229,9 @@ def collect(root, commit, allow_dirty=False, source_dirty=False):
         entries["tools/" + file] = (root / "tools/modding" / file).read_bytes()
     entries.update(export_examples(root))
     relocate_markdown_links(root, entries, commit)
-    entries["ggfmod"] = b'#!/bin/sh\nset -eu\nkit=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)\nexec java -cp "$kit/engine.jar:$kit/sdk.jar" com.openggf.tools.modsdk.GgfModCli "$@"\n'
-    entries["ggfmod.ps1"] = b'param([Parameter(ValueFromRemainingArguments=$true)][string[]]$CommandArgs)\n& java -cp "$PSScriptRoot/engine.jar$([IO.Path]::PathSeparator)$PSScriptRoot/sdk.jar" com.openggf.tools.modsdk.GgfModCli @CommandArgs\nexit $LASTEXITCODE\n'
-    entries["README.md"] = f'# OpenGGF {release} creator kit\n\nMutable unpublished Mod API {policy["currentApi"]} {policy["currentStatus"]}, built at {commit}. Read handbook/getting-started.md. Java 21 and Maven 3.8+; Python 3 for portable examples. No ROMs are included. This kit does not publish or freeze an API baseline.\n\nUse `sh ggfmod init /absolute/project --id my-mod --kind scene --package example.mymod`. Build generated starters with matching absolute engine.jar and sdk.jar properties. Use tools/build_project.py for exported examples. API docs are in api-docs.jar (unzip to browse); testkit support is in mod-testkit.jar.\n'.encode()
+    entries["ggfmod"] = b'#!/bin/sh\nset -eu\nkit=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)\nexec "${JAVA_HOME:+$JAVA_HOME/bin/}java" --enable-native-access=ALL-UNNAMED -cp "$kit/engine.jar:$kit/sdk.jar" com.openggf.tools.modsdk.GgfModCli "$@"\n'
+    entries["ggfmod.ps1"] = b'param([Parameter(ValueFromRemainingArguments=$true)][string[]]$CommandArgs)\n$javaExe = if ($env:JAVA_HOME) { Join-Path $env:JAVA_HOME "bin/java" } else { "java" }\n& $javaExe --enable-native-access=ALL-UNNAMED -cp "$PSScriptRoot/engine.jar$([IO.Path]::PathSeparator)$PSScriptRoot/sdk.jar" com.openggf.tools.modsdk.GgfModCli @CommandArgs\nexit $LASTEXITCODE\n'
+    entries["README.md"] = f'# OpenGGF {release} creator kit\n\nMutable unpublished Mod API {policy["currentApi"]} {policy["currentStatus"]}, built at {commit}. Read handbook/getting-started.md. Java 25 and Maven 3.8+; Python 3 for portable examples. No ROMs are included. This kit does not publish or freeze an API baseline.\n\nUse `sh ggfmod init /absolute/project --id my-mod --kind scene --package example.mymod`. Build generated starters with matching absolute engine.jar and sdk.jar properties. Use tools/build_project.py for exported examples. API docs are in api-docs.jar (unzip to browse); testkit support is in mod-testkit.jar.\n'.encode()
     entries["creator-kit.json"] = json.dumps({"formatVersion": 1, "engineVersion": release, "apiVersion": policy["currentApi"], "apiStatus": policy["currentStatus"], "sourceCommit": commit, "sourceDirty": dirty, "sha256": {name: hashlib.sha256(data).hexdigest() for name, data in sorted(entries.items())}}, indent=2, sort_keys=True).encode() + b"\n"
     return entries
 

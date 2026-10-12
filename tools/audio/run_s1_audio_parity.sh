@@ -122,7 +122,7 @@ if ! mvn -q -Pci -DskipTests compile dependency:build-classpath \
 fi
 [ -s "$CLASSPATH_FILE" ] || fail "Maven did not produce the parity tool classpath"
 JAVA_CP="$BUILD_ROOT/classes:$(<"$CLASSPATH_FILE")"
-JAVA_TOOL=(java -cp "$JAVA_CP" com.openggf.tools.audio.parity.S1AudioParityTool)
+JAVA_TOOL=("${JAVA_HOME:+$JAVA_HOME/bin/}java" --enable-native-access=ALL-UNNAMED -cp "$JAVA_CP" com.openggf.tools.audio.parity.S1AudioParityTool)
 
 VALIDATE_ARGS=(validate --repo "$REPO" --movie "$MOVIE_PATH" --bizhawk-home "$BIZHAWK_DIR" \
 	--output-root "$OUTPUT_ROOT" --capture "$MODE")

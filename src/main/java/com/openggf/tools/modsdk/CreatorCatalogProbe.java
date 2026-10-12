@@ -79,8 +79,8 @@ public final class CreatorCatalogProbe {
                 """.formatted(assetBytes));
         Path classes = root.resolve("classes"); Files.createDirectories(classes);
         var compiler = ToolProvider.getSystemJavaCompiler();
-        if (compiler == null || compiler.run(null, null, null, "--release", "21", "-cp", System.getProperty("java.class.path"), "-d", classes.toString(), source.toString()) != 0)
-            throw new IllegalStateException("Probe fixture compilation requires the matching Java 21 JDK/engine classpath");
+        if (compiler == null || compiler.run(null, null, null, "--release", "25", "-cp", System.getProperty("java.class.path"), "-d", classes.toString(), source.toString()) != 0)
+            throw new IllegalStateException("Probe fixture compilation requires the matching Java 25 JDK/engine classpath");
         return classes;
     }
 

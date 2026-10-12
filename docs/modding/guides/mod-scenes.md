@@ -23,7 +23,7 @@ Examples go with this guide:
   walks through its source in reading order.
 
 When this guide and their source differ, the source is authoritative. Build and run either
-from a checkout with `python3 examples/build_example.py <name> --run` (Java 21 and Maven, and
+from a checkout with `python3 examples/build_example.py <name> --run` (Java 25 and Maven, and
 your ROM set up as for the engine).
 
 Scenes are part of the Mod API 0.7 candidate and need the JVM build. Their types live in two
@@ -551,7 +551,7 @@ game headless with GL and plays a script of inputs (`tick:key`, `+ticks:click=x,
 music and sound effects to a WAV and encode an MP4 with ffmpeg:
 
 ```bash
-java -cp target/test-classes:target/classes:$(cat target/test-classpath.txt) \
+java --enable-native-access=ALL-UNNAMED -cp target/test-classes:target/classes:$(cat target/test-classpath.txt) \
   com.openggf.mods.code.ExampleModCapture --rom s3k.gen --mod examples/slay-the-robotnik \
   --out /tmp/cap --jump "sonic:42:fight:hcz:big_shaker" --script "150:enter +30:enter" \
   --every 30 --video /tmp/cap/fight.mp4 --audio /tmp/cap/fight.wav

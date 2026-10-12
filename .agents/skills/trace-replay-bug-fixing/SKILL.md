@@ -10,7 +10,7 @@ ROM. A passing fixture proves only the fields and rows it actually compares.
 
 ## Establish a trustworthy measurement
 
-Use JDK 21 and absolute ROM paths with the properties in root `AGENTS.md`.
+Use JDK 25 and absolute ROM paths with the properties in root `AGENTS.md`.
 Before reporting suite numbers, read the measurement-hazard table in
 [briefing-trace-rounds.md](../../../docs/agent-workflow/briefing-trace-rounds.md).
 Confirm the requested concrete test exists and which fixture/segments it drives.

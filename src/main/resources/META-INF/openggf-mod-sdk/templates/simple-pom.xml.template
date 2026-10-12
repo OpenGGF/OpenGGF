@@ -2,7 +2,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0">
   <modelVersion>4.0.0</modelVersion>
   <groupId>{{PACKAGE}}</groupId><artifactId>{{MOD_ID}}</artifactId><version>1.0.0</version>
-  <properties><maven.compiler.release>21</maven.compiler.release></properties>
+  <properties><maven.compiler.release>25</maven.compiler.release></properties>
   <dependencies>
     <dependency><groupId>com.openggf</groupId><artifactId>engine-local</artifactId><version>0</version><scope>system</scope><systemPath>${openggf.engine.jar}</systemPath></dependency>
     <dependency><groupId>com.openggf</groupId><artifactId>sdk-local</artifactId><version>0</version><scope>system</scope><systemPath>${openggf.sdk.jar}</systemPath></dependency>
@@ -17,8 +17,8 @@
     </executions></plugin>
     <plugin><groupId>org.codehaus.mojo</groupId><artifactId>exec-maven-plugin</artifactId><version>3.1.0</version><executions>
       {{CONVERSION}}
-      <execution><id>package-validated-mod</id><phase>prepare-package</phase><goals><goal>exec</goal></goals><configuration><executable>java</executable><classpathScope>compile</classpathScope><arguments>
-        <argument>-cp</argument><classpath/><argument>com.openggf.tools.modsdk.GgfModCli</argument><argument>package</argument><argument>--input</argument><argument>${project.build.outputDirectory}</argument><argument>--out</argument><argument>${project.build.directory}/{{MOD_ID}}-mod.jar</argument>
+      <execution><id>package-validated-mod</id><phase>prepare-package</phase><goals><goal>exec</goal></goals><configuration><executable>${java.home}/bin/java</executable><classpathScope>compile</classpathScope><arguments>
+        <argument>--enable-native-access=ALL-UNNAMED</argument><argument>-cp</argument><classpath/><argument>com.openggf.tools.modsdk.GgfModCli</argument><argument>package</argument><argument>--input</argument><argument>${project.build.outputDirectory}</argument><argument>--out</argument><argument>${project.build.directory}/{{MOD_ID}}-mod.jar</argument>
       </arguments></configuration></execution>
     </executions></plugin>
   </plugins></build>

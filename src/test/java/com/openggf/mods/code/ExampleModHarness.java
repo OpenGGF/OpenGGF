@@ -52,7 +52,7 @@ public final class ExampleModHarness implements AutoCloseable {
         ModManifest manifest = new ModManifestParser().parse(
                 Files.readAllBytes(project.resolve("src/main/resources/META-INF/openggf-mod.yaml")));
         Path classes = Files.createDirectories(work.resolve("classes"));
-        List<String> args = new ArrayList<>(List.of("--release", "21", "-cp", System.getProperty("java.class.path"),
+        List<String> args = new ArrayList<>(List.of("--release", "25", "-cp", System.getProperty("java.class.path"),
                 "-d", classes.toString()));
         try (Stream<Path> files = Files.walk(project.resolve("src/main/java"))) {
             files.filter(p -> p.toString().endsWith(".java")).sorted().forEach(p -> args.add(p.toString()));

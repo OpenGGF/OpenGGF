@@ -9,7 +9,7 @@ Usage:
 
 It compiles the engine once through the Maven queue (unless --skip-engine), compiles the
 example's src/main/java against it with javac, copies src/main/resources beside the classes,
-and packages the jar with `ggfmod package`, which runs the mod validator. Needs Java 21.
+and packages the jar with `ggfmod package`, which runs the mod validator. Needs Java 25.
 Examples use the player's ROM at runtime; some also ship original creator audio assets.
 
 Origin: Slay the Robotnik's build script (2026-10-05), shared by the examples on 2026-10-06.
@@ -53,12 +53,12 @@ def build(name, run=False, skip_engine=False, engine=None, sdk=None, roms=None):
         shutil.rmtree(classes)
     classes.mkdir(parents=True)
     classpath = os.pathsep.join([str(ROOT / "target/classes"), classpath_file.read_text().strip()])
-    call([java_tool("javac"), "--release", "21", "-cp", classpath, "-d", str(classes),
+    call([java_tool("javac"), "--release", "25", "-cp", classpath, "-d", str(classes),
           *map(str, sorted((project / "src/main/java").rglob("*.java")))])
     shutil.copytree(project / "src/main/resources", classes, dirs_exist_ok=True)
     jar = output / f"{Path(name).name}.jar"
     jar.unlink(missing_ok=True)
-    cli = [java_tool("java"), "-cp", classpath, "com.openggf.tools.modsdk.GgfModCli"]
+    cli = [java_tool("java"), "--enable-native-access=ALL-UNNAMED", "-cp", classpath, "com.openggf.tools.modsdk.GgfModCli"]
     call([*cli, "package", "--input", str(classes), "--out", str(jar)])
     print(f"Built {jar}", flush=True)
     if run:

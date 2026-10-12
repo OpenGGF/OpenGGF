@@ -5,7 +5,7 @@ on the ROM's own flight routine through five real zones. It starts from nothing,
 choice in part 1, and ends with the finished [`examples/flappy-tails`](../../../../examples/flappy-tails/README.md)
 game and a way to film it.
 
-You need Java 21, Maven and Python 3, an OpenGGF source checkout, and your own locked-on
+You need Java 25, Maven and Python 3, an OpenGGF source checkout, and your own locked-on
 Sonic 3 & Knuckles ROM set up for the engine. Code mods need the JVM build. Each part names
 its checkpoint: a complete mod you can build and play at that point.
 

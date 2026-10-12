@@ -248,6 +248,7 @@ public final class GgfModCli {
                 operatingSystem.startsWith("Windows") ? "java.exe" : "java").toString();
         List<String> command = new ArrayList<>();
         command.add(executable);
+        command.add("--enable-native-access=ALL-UNNAMED");
         if (operatingSystem.startsWith("Mac")) command.add("-XstartOnFirstThread");
         command.addAll(List.of("-Dggfmod.dev.modDir=" + root,
                 "-cp", System.getProperty("java.class.path"), "com.openggf.Engine"));

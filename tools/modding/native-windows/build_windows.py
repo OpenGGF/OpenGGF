@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build and qualify the experimental Windows x64 friends ZIP (2026-10-08).
 
-Inputs: Java 21 Maven artifacts, source-built mods and the checksum-pinned CE
+Inputs: Java 25 Maven artifacts, source-built mods and the checksum-pinned CE
 GraalVM below. Run on an MSVC-enabled Windows host. Does not publish a release,
 change production native policy, download ROMs or write user configuration.
 """
@@ -43,7 +43,7 @@ def run(command, cwd, expected=None):
 
 def extract_sdk(graal, destination):
     # The SDK jmod contains Java-11-compatible hosted APIs/annotations. Compile
-    # these extra sources with Java 21, without changing Maven's toolchain.
+    # these extra sources with Java 25, without changing Maven's toolchain.
     with zipfile.ZipFile(graal / "jmods/org.graalvm.nativeimage.jmod") as module:
         with zipfile.ZipFile(destination, "w", zipfile.ZIP_DEFLATED) as jar:
             for name in module.namelist():
@@ -161,7 +161,7 @@ def bootstrap_control(work, engine):
     # This shared regression source must never enter native image analysis.
     classes = work / "bootstrap-control-classes"
     classes.mkdir()
-    run([tool("javac"), "--release", "21", "-cp", engine, "-d", classes,
+    run([tool("javac"), "--release", "25", "-cp", engine, "-d", classes,
          ROOT / "tools/modding/native-linux/BootstrapControl.java"], work)
     manifest = classes / "META-INF/openggf-mod.yaml"
     manifest.parent.mkdir()
@@ -171,7 +171,7 @@ def bootstrap_control(work, engine):
         'dependencies: []\naudioOverrides: {}\nartOverrides: {}\n', encoding="utf-8")
     fixture = work / "bootstrap-control.jar"
     sdk = next((ROOT / "target").glob("*-openggf-mod-sdk.jar"))
-    run([tool("java"), "-cp", os.pathsep.join(map(str, (engine, sdk))),
+    run([tool("java"), "--enable-native-access=ALL-UNNAMED", "-cp", os.pathsep.join(map(str, (engine, sdk))),
          "com.openggf.tools.modsdk.GgfModCli", "package", "--input", classes, "--out", fixture], work)
 
 
@@ -198,10 +198,10 @@ def build(args):
     sources += sorted(Path(__file__).parent.glob("*.java"))
     sources += [ROOT / "tools/modding/native-linux" / name
                 for name in ("NativeGameplayCheck.java", "NativeSceneInspection.java")]
-    run([tool("javac"), "--release", "21", "-cp", os.pathsep.join(map(str, (engine, sdk, ROOT / "target/classes"))),
+    run([tool("javac"), "--release", "25", "-cp", os.pathsep.join(map(str, (engine, sdk, ROOT / "target/classes"))),
          "-d", classes, *sources], work)
     classpath = os.pathsep.join(map(str, (classes, engine)))
-    java = [tool("java"), "-cp", classpath]
+    java = [tool("java"), "--enable-native-access=ALL-UNNAMED", "-cp", classpath]
     run([*java, "com.openggf.tools.NativeModMemberContractTest", work / "fixtures"], work)
     contract = work / "contract"
     run([*java, "com.openggf.tools.NativeModMemberContract", engine, inputs / "mods", contract,
@@ -221,7 +221,7 @@ def build(args):
         "java.lang", "java.lang.invoke", "java.lang.runtime", "java.lang.reflect",
         "java.util", "java.util.function", "java.util.stream", "java.nio.charset"}
     preserve = f"path={contract / 'preserved-engine.jar'}," + ','.join('package=' + name for name in sorted(packages))
-    arguments = ["-march=compatibility", "-J-Xmx8g", "--parallelism=4",
+    arguments = ["--enable-native-access=ALL-UNNAMED", "-march=compatibility", "-J-Xmx8g", "--parallelism=4",
         "--add-modules=java.logging",
         "--initialize-at-run-time=org.lwjgl,java.awt,javax.swing,sun.awt,sun.java2d",
         "-H:+UnlockExperimentalVMOptions", "-H:+RuntimeClassLoading",

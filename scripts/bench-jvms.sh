@@ -16,9 +16,9 @@
 #
 # Usage:
 #   scripts/bench-jvms.sh --trace aiz1 \
-#       --jvm 'temurin21-g1|/usr/lib/jvm/temurin-21|-XX:+UseG1GC' \
-#       --jvm 'temurin21-zgc|/usr/lib/jvm/temurin-21|-XX:+UseZGC -XX:+ZGenerational' \
-#       --jvm 'graal21|/usr/lib/jvm/graalvm-21|'
+#       --jvm 'temurin25-g1|/usr/lib/jvm/temurin-25|-XX:+UseG1GC' \
+#       --jvm 'temurin25-zgc|/usr/lib/jvm/temurin-25|-XX:+UseZGC' \
+#       --jvm 'graal25|/usr/lib/jvm/graalvm-25|'
 #
 # Options:
 #   --trace <spec>        trace id, directory name, or path (required)
@@ -117,7 +117,7 @@ for (( round = 1; round <= ROUNDS; round++ )); do
         echo
         echo "-- $label (round $round) --"
         # shellcheck disable=SC2086
-        "${PIN[@]}" "$home/bin/java" $flags \
+        "${PIN[@]}" "$home/bin/java" --enable-native-access=ALL-UNNAMED $flags \
             --add-exports java.base/java.lang=ALL-UNNAMED \
             --add-exports java.desktop/sun.awt=ALL-UNNAMED \
             --add-exports java.desktop/sun.java2d=ALL-UNNAMED \
@@ -137,7 +137,7 @@ done
 # --- comparison --------------------------------------------------------------
 echo
 echo "===== comparison ====="
-java -cp "$JAR" com.openggf.tools.BenchmarkCompareTool --out "$REPORT" "${REPORT_FILES[@]}"
+"${JAVA_HOME:+$JAVA_HOME/bin/}java" --enable-native-access=ALL-UNNAMED -cp "$JAR" com.openggf.tools.BenchmarkCompareTool --out "$REPORT" "${REPORT_FILES[@]}"
 echo
 echo "Reports:   $OUT_DIR"
 echo "Comparison: $REPORT"

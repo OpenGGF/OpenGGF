@@ -191,12 +191,12 @@ def main(argv=None):
             source_hashes.update({str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest()
                                   for p in (sources/'MemoryProfileLauncher.java',sources/'SuiteMemoryListener.java')})
             helper=temporary/'observer'
-            execute([str(java/'javac') if java else 'javac','--release','21','-cp',cp+os.pathsep+str(launcher),'-d',str(helper),
+            execute([str(java/'javac') if java else 'javac','--release','25','-cp',cp+os.pathsep+str(launcher),'-d',str(helper),
                      str(sources/'MemoryProfileLauncher.java'),str(sources/'SuiteMemoryListener.java')])
             service=helper/'META-INF/services/org.junit.platform.launcher.TestExecutionListener'
             service.parent.mkdir(parents=True);service.write_text('com.openggf.tools.SuiteMemoryListener\n')
             if a.cold_compile: clear_compiled_outputs(root)
-            line='${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g -XX:NativeMemoryTracking=summary'
+            line='${native.access.argLine} ${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g -XX:NativeMemoryTracking=summary'
             if sys.platform=='darwin': line='-XstartOnFirstThread '+line
             # GC logs rotate; neither JVM heap is enlarged for the investigation.
             line+=' -Xlog:gc*:file='+str(temporary/'test-gc.log')+':time,uptime:filecount=2,filesize=4M'

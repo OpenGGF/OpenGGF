@@ -24,7 +24,7 @@ assert result["mode"] == "prepare-only"
 assert result["profile_collected"] is False
 assert result["timing_collected"] is False
 assert result["publishable"] is False
-assert result["java_major"] == 21
+assert result["java_major"] == 25
 assert result["dimensions"] == {"frames_per_phase": 32, "passes": 2}
 assert set(result["compiled_input_sha256"]) == {
     "NukedOpn2State.java", "NukedOpn2Tables.java", "NukedOpn2.java",

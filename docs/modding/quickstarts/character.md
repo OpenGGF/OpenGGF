@@ -1,6 +1,6 @@
 # Quickstart: playable character
 
-Read [candidate setup and first build](../getting-started.md) first: Java 21, Maven, and matching absolute engine/SDK jars from one commit. Generate a complete starter with `ggfmod init /absolute/my-character --id my-character --kind character --package example.mycharacter`. Build with the jar properties shown there, edit source, and repeat the same package command.
+Read [candidate setup and first build](../getting-started.md) first: Java 25, Maven, and matching absolute engine/SDK jars from one commit. Generate a complete starter with `ggfmod init /absolute/my-character --id my-character --kind character --package example.mycharacter`. Build with the jar properties shown there, edit source, and repeat the same package command.
 
 Playable characters are trusted code plus playable-v2 art.
 

@@ -605,7 +605,7 @@ including the TMX/`--music` step from Chapter 3:
 
 ```xml
 <execution><id>convert-level</id><phase>generate-resources</phase><goals><goal>exec</goal></goals><configuration>
-  <executable>java</executable><classpathScope>compile</classpathScope><arguments><argument>-cp</argument><classpath/><argument>com.openggf.tools.modsdk.GgfModCli</argument>
+  <executable>${java.home}/bin/java</executable><classpathScope>compile</classpathScope><arguments><argument>-cp</argument><classpath/><argument>com.openggf.tools.modsdk.GgfModCli</argument>
     <argument>convert</argument><argument>level</argument><argument>--from-tmx</argument><argument>${project.basedir}/src/main/mod/level.tmx</argument>
     <argument>--palette</argument><argument>${project.basedir}/src/main/mod/palette.gpal</argument>
     <argument>--music</argument><argument>sample-platformer:zone-theme</argument>

@@ -65,10 +65,10 @@ def build(project, engine, sdk, *, run=False, roms=None, testkit=None):
     classpath = os.pathsep.join(map(str, (engine, sdk)))
     sources = sorted((project / "src/main/java").rglob("*.java"))
     if sources:
-        subprocess.run([java_tool("javac"), "--release", "21", "-cp", classpath,
+        subprocess.run([java_tool("javac"), "--release", "25", "-cp", classpath,
                         "-d", str(classes), *map(str, sources)], check=True)
     shutil.copytree(project / "src/main/resources", classes, dirs_exist_ok=True)
-    cli = [java_tool("java"), "-cp", classpath, "com.openggf.tools.modsdk.GgfModCli"]
+    cli = [java_tool("java"), "--enable-native-access=ALL-UNNAMED", "-cp", classpath, "com.openggf.tools.modsdk.GgfModCli"]
     jar = project / "target" / (project.name + "-mod.jar")
     jar.unlink(missing_ok=True)
     subprocess.run([*cli, "package", "--input", str(classes), "--out", str(jar)], check=True)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build all maintained friends mods from source with a supplied Java 21 engine.
+"""Build all maintained friends mods from source with a supplied Java 25 engine.
 
 Origin: 2026-10-08 experimental Windows ZIP. Uses the same real converters and
 package validator as TestSampleModsPackage. No ROMs, downloads, live configuration
@@ -37,10 +37,10 @@ def build(engine, sdk, output):
     work = output / "work"
     work.mkdir()
     version = subprocess.check_output([tool("javac"), "-version"], text=True).strip()
-    if not version.startswith("javac 21."):
-        raise ValueError("Build the engine and mods with Java 21: " + version)
+    if not re.fullmatch(r"javac 25(?:[.+-]\S+)?", version):
+        raise ValueError("Build the engine and mods with Java 25: " + version)
     classpath = os.pathsep.join(map(str, (engine, sdk)))
-    cli = [tool("java"), "-cp", classpath, "com.openggf.tools.modsdk.GgfModCli"]
+    cli = [tool("java"), "--enable-native-access=ALL-UNNAMED", "-cp", classpath, "com.openggf.tools.modsdk.GgfModCli"]
 
     def run(args):
         subprocess.run([str(arg) for arg in args], cwd=work, check=True)
@@ -52,7 +52,7 @@ def build(engine, sdk, output):
         shutil.copytree(project / "src/main/resources", classes, dirs_exist_ok=True)
         sources = sorted((project / "src/main/java").rglob("*.java"))
         if sources:
-            arguments = ["--release", "21", "-cp", classpath, "-d", str(classes), *map(str, sources)]
+            arguments = ["--release", "25", "-cp", classpath, "-d", str(classes), *map(str, sources)]
             # Windows command-line limits apply to large examples. This is javac
             # argument-file syntax, not shell interpolation.
             argfile = work / "javac.args"

@@ -57,10 +57,10 @@ PY
 
 command -v javac >/dev/null || fail 'javac not found'
 command -v java >/dev/null || fail 'java not found'
-[[ $(javac -version 2>&1) = javac\ 21.* ]] || fail 'JDK 21 is required'
+[[ $(javac -version 2>&1) =~ ^javac\ 25(\.|$) ]] || fail 'JDK 25 is required'
 java_major=$(java -XshowSettings:properties -version 2>&1 \
   | sed -n 's/^[[:space:]]*java.version = \([0-9][0-9]*\).*/\1/p' | head -n1)
-[[ "$java_major" = 21 ]] || fail 'the Java runtime must be JDK 21'
+[[ "$java_major" = 25 ]] || fail 'the Java runtime must be JDK 25'
 if [[ "$mode" = record ]]; then
   command -v jfr >/dev/null || fail 'JDK jfr tool not found'
 fi

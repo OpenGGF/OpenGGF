@@ -302,7 +302,7 @@ class TestObjectUpdateClockTerminologyGuard {
                 Iterable<? extends JavaFileObject> files = fileManager.getJavaFileObjectsFromPaths(sources);
                 List<String> options = List.of(
                         "-proc:none",
-                        "--release", "21",
+                        "--release", "25",
                         "-classpath", System.getProperty("java.class.path"));
                 JavacTask task = (JavacTask) compiler.getTask(
                         null, fileManager, diagnostics, options, null, files);

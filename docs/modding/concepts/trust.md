@@ -17,7 +17,7 @@ break without an API migration promise.
 Static gameplay state remains unsupported: keep it on instances or session services,
 including state that an immutable record happens to contain. Literal compile-time
 primitive/String constants are allowed. A bounded ASM check also recognizes simple
-Java 21 enum constants with final primitive/String instance fields, compiler-generated
+Java 25 enum constants with final primitive/String instance fields, compiler-generated
 enum switch tables, and javac's synthetic assertion flag. Enum parameters must be literals, and constructors may only call
 `Enum(String, int)` and directly assign those fields; helper calls, constant-specific
 subclasses, implemented interfaces, arbitrary initialization, and mutable enum fields

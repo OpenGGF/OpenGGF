@@ -13,7 +13,7 @@ Building or loading the mod alone does not certify that every route passes.
 
 ## Build and launch
 
-Install Java 21, Maven, and Python 3, then run from this checkout:
+Install Java 25, Maven, and Python 3, then run from this checkout:
 
 ```sh
 python3 examples/putt-putt-paradise/build.py
@@ -21,7 +21,7 @@ python3 examples/putt-putt-paradise/build.py --run --rom /absolute/path/to/sonic
 ```
 
 The script queues the engine compile, compiles the external creator sources
-separately with `javac --release 21`, and runs the ordinary `ggfmod package`
+separately with `javac --release 25`, and runs the ordinary `ggfmod package`
 validation boundary. The output is `target/putt-putt-paradise/putt-putt-paradise.jar`.
 It skips engine tests; packaging validation is not gameplay verification.
 `--dry-run` prints these steps without changing files or starting Maven/Java.
@@ -303,7 +303,7 @@ ROM timing or every possible shot through every object.
 
 ## Use matching creator artifacts
 
-The mutable 0.7 Mod API is unpublished. See [candidate setup](../../docs/modding/getting-started.md) for Java 21 and matching engine/SDK jar paths. From this checkout the shared launcher supports artifact-only builds and explicit ROM paths:
+The mutable 0.7 Mod API is unpublished. See [candidate setup](../../docs/modding/getting-started.md) for Java 25 and matching engine/SDK jar paths. From this checkout the shared launcher supports artifact-only builds and explicit ROM paths:
 
 ```sh
 python3 examples/build_example.py putt-putt-paradise --engine /absolute/engine.jar --sdk /absolute/sdk.jar --run --s2 /absolute/own-s2.gen

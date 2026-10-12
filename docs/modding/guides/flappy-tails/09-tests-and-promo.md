@@ -82,7 +82,7 @@ own sound driver) and an MP4. With the autopilot, a whole tour films itself:
 python3 tools/testing/maven_queue.py -Dmse=off -DskipTests test-compile \
   dependency:build-classpath -Dmdep.outputFile=target/test-classpath.txt
 CP="target/test-classes:target/classes:$(cat target/test-classpath.txt)"
-java -cp "$CP" com.openggf.mods.code.ExampleModCapture --rom s3k.gen --mod examples/flappy-tails \
+java --enable-native-access=ALL-UNNAMED -cp "$CP" com.openggf.mods.code.ExampleModCapture --rom s3k.gen --mod examples/flappy-tails \
   --out /abs/out --scale 5 --every 0 --ticks 6400 \
   --script "1:jump=seed:0x5eed 2:jump=autopilot:on 3:jump=play:classic" \
   --audio /abs/out/tour.wav --video /abs/out/tour.mp4

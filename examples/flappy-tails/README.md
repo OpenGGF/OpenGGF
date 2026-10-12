@@ -21,7 +21,7 @@ or replace the whole screen; this is where the second road leads.
 
 ## Play
 
-From the repository root, with Java 21, Maven and your S3K ROM set up for OpenGGF:
+From the repository root, with Java 25, Maven and your S3K ROM set up for OpenGGF:
 
 ```bash
 ./launch-flappy-tails.sh                      # build the engine and the mod, then play
@@ -170,7 +170,7 @@ python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestFlappyTails*" \
 video and sound; with the autopilot it flies a whole tour unattended:
 
 ```bash
-java -cp "$CP" com.openggf.mods.code.ExampleModCapture --rom s3k.gen --mod examples/flappy-tails \
+java --enable-native-access=ALL-UNNAMED -cp "$CP" com.openggf.mods.code.ExampleModCapture --rom s3k.gen --mod examples/flappy-tails \
   --out /abs/out --script "1:jump=seed:0x5eed 2:jump=autopilot:on 3:jump=play:classic" \
   --ticks 6000 --every 0 --audio /abs/out/tour.wav --video /abs/out/tour.mp4
 ```
@@ -192,7 +192,7 @@ java -cp "$CP" com.openggf.mods.code.ExampleModCapture --rom s3k.gen --mod examp
 ## Use matching creator artifacts
 
 The mutable 0.7 Mod API is unpublished. See [candidate setup](../../docs/modding/getting-started.md)
-for Java 21 and matching engine/SDK jar paths. From this checkout the shared launcher supports
+for Java 25 and matching engine/SDK jar paths. From this checkout the shared launcher supports
 artifact-only builds and explicit ROM paths:
 
 ```sh

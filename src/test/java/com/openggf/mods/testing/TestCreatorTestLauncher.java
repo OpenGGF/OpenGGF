@@ -76,7 +76,7 @@ class TestCreatorTestLauncher {
         Path java = work.resolve(name + ".java");
         Files.writeString(java, source);
         Path classes = Files.createDirectories(work.resolve(name));
-        assertEquals(0, ToolProvider.getSystemJavaCompiler().run(null, null, null, "--release", "21", "-classpath",
+        assertEquals(0, ToolProvider.getSystemJavaCompiler().run(null, null, null, "--release", "25", "-classpath",
                 System.getProperty("java.class.path"), "-d", classes.toString(), java.toString()));
         return classes;
     }

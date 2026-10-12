@@ -13,7 +13,7 @@ PowerShell uses `tools/testing/install-hooks.ps1`.
 
 ## Test categories
 
-Use Python 3.11+ and Java 21. The runner uses the existing Maven defaults and exclusions;
+Use Python 3.11+ and Java 25. The runner uses the existing Maven defaults and exclusions;
 it does not move tests, alter CI/release coverage, or remove slow tests from a selected category.
 
 ```bash
@@ -105,7 +105,7 @@ passes for Git hooks, or claim that every candidate source produced a report.
 
 Run `python3 tools/testing/run_categories.py --base <pinned-base> --preflight` in the
 same environment as the intended test command. Every `--run` also performs these checks:
-Maven must use Java 21; selections with guards require executable Lua 5.4 (`LUA_BIN`,
+Maven must use Java 25; selections with guards require executable Lua 5.4 (`LUA_BIN`,
 default `lua`) and `pwsh` on PATH. Failures are collected before any test lane starts.
 This checks tool launches, not ROM completeness, native display access or every fixture
 prerequisite. On macOS use the known working native display/service permissions from the

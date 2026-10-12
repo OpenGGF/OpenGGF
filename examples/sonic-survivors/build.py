@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build/package the Sonic Survivors mod against this checkout (Java 21 + Maven).
+"""Build/package the Sonic Survivors mod against this checkout (Java 25 + Maven).
 
 Origin: Sonic Survivors project, 2026-10-06. No ROM data is included in the jar.
 """
@@ -33,12 +33,12 @@ def main():
     classes.mkdir(parents=True)
     classpath = os.pathsep.join([str(ROOT / "target/classes"),
                                 (ROOT / "target/survivors-classpath.txt").read_text().strip()])
-    run([java_tool("javac"), "--release", "21", "-cp", classpath, "-d", str(classes),
+    run([java_tool("javac"), "--release", "25", "-cp", classpath, "-d", str(classes),
          *map(str, sorted((PROJECT / "src/main/java").rglob("*.java")))])
     shutil.copytree(PROJECT / "src/main/resources", classes, dirs_exist_ok=True)
     jar = OUTPUT / "sonic-survivors.jar"
     jar.unlink(missing_ok=True)
-    cli = [java_tool("java"), "-cp", classpath, "com.openggf.tools.modsdk.GgfModCli"]
+    cli = [java_tool("java"), "--enable-native-access=ALL-UNNAMED", "-cp", classpath, "com.openggf.tools.modsdk.GgfModCli"]
     run([*cli, "package", "--input", str(classes), "--out", str(jar)])
     print(f"Built {jar}", flush=True)
     if args.run:
