@@ -86,6 +86,8 @@ public final class OwnerBoundCallbacks {
                         result = Objects.requireNonNull(result,"Owned zone runtime snapshot");
                     if (value instanceof com.openggf.game.render.SpecialRenderEffect && method.getName().equals("stage"))
                         result = Objects.requireNonNull(result,"Owned render effect stage");
+                    if (value instanceof com.openggf.game.mode.GameplayFrameController && method.getName().equals("beforeFrame"))
+                        result = Objects.requireNonNull(result,"Owned gameplay frame disposition");
                     if (value instanceof com.openggf.game.save.SaveSnapshotProvider && method.getName().equals("captureSaveFields"))
                         return com.openggf.game.save.RuntimeSaveCapture.freezeFields(saveFields(result));
                     Class<?> returned = method.getReturnType();

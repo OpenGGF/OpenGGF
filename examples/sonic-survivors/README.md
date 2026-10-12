@@ -365,7 +365,7 @@ python3 examples/sonic-survivors/build.py --run  # ... then launch the engine wi
 
 Install the jar through the Mod Manager like any trusted code mod. Native builds cannot load
 code mods. The mod plays at 16:9 and hides the stock level select. Version 0.5.0 requires the engine
-build containing `LevelInputOverlay`; rebuild this checkout when updating an older engine. Existing
+build containing `GameplayFrameDisposition`; rebuild the matching engine/SDK artifacts when updating an older candidate. Existing
 profile saves remain compatible.
 
 Film it headlessly with the gameplay capture tool's `--mod` option, for example:
@@ -391,7 +391,10 @@ seconds and `sonic-survivors.bossHp=N` sets every boss's hitpoints.
   `FloorSegmentSurveyProbe` and checked in captures), the zone line-ups and the boss art.
 - `Stage` is the arena controller: camera and boundary, phases, waves, weapons and moves (in
   growable projectile arrays and a bounded cosmetic-effect pool so mod-object rewind capture restores them), the combo, level-up cards
-  and menus. `Hud` draws everything with a code-drawn font.
+  and menus. The captured `FrameControl` admits menus before world stepping and resolves the
+  current Stage on each row, including after rewind recreation. Modal rows hold native timers,
+  power-up duration, physics, animation and object lifetimes; active rows retain normal player
+  input. Menu reveal/input clocks advance separately. `Hud` draws everything with a code-drawn font.
 - `Enemy` (one class, seven AI archetypes over `Species`), `Boss`, `Shot` and `Pickup` are mod
   objects drawn with the ROM art the zone already loads; frames were picked with the
   `ObjectArtContactSheetProbe`. `Guard` turns hits into ring tolls.
@@ -413,7 +416,9 @@ emerald and route choice, the Death Egg finale, death and banking, the shop, rin
 rewind round trip, plus the forfeit and retire payouts, the spin-dash rule, chests and evolutions,
 unlocks, rules, character perks, zone events and warden squads. Coverage includes both leaders across all 19 acts, the ARZ ceiling, forced solo
 teams, jump rejection/Enter confirmation through the host game loop, and lost-ring provenance
-through rewind.
+through rewind. Speed Shoes entry/long holds, Sonic/Tails native-state preservation and modal
+RNG/touch/lifetime rewind checks cover the frame controller, along with real TRY AGAIN/route
+fade loads and held Start-button release.
 
 `DefinitionsTest` is portable creator-kit coverage for every authored trait and line-up, wrapped
 species lookup, immutable frame arrays and repeated owner-scoped lookup. In an exported kit, run

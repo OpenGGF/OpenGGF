@@ -406,15 +406,21 @@ For streamed stock-music replacement metadata, see [Music packs](music-packs.md)
 
 Return a stable `GameplayFrameController` from a patch's module and register that
 same controller through `rewindAdapters()` if its mode state is rewindable.
-The host invokes `beforeTick(CourseControl, LogicalInputSnapshot)` once per mode
-row: `false` holds course physics, objects, clocks, animation and PLC work; `true`
-admits one native step with neutral player input. `afterTick` receives whether
-that step ran. Keep aim, menus and feedback in the controller; keep physics in
+The host invokes `beforeFrame(CourseControl, LogicalInputSnapshot)` once per mode
+row. Return `ADVANCE_NATIVE_INPUT` for the ordinary native step with supplied P1/P2
+logical input and the existing gameplay policy filters, `ADVANCE_CONTROLLED` for a
+native step with neutral input, or `HOLD` to freeze world physics, objects, clocks,
+animation and ordinary PLC work. The result must be non-null. The default maps the
+existing `beforeTick` result (`true`/`false`) to controlled advance/hold, so existing
+controllers, including Golf, keep their neutral-input behavior. `afterTick` receives
+whether a world step ran. Keep aim, menus and feedback in the controller; keep physics in
 native gameplay. Stock modules return no controller and retain their normal path.
 Initial setup rows are excluded from movie/history input; subsequent HOLD rows
 are included. Released native title-card text continues its presentation exit,
 including its normal control-lock ownership, on controlled rows. Pending entry
-music also retains its native presentation countdown. `presentationReady()`
+music also retains its native presentation countdown. Native destination fades remain
+host-owned presentation work while the source world is held. Modal `LevelInputOverlay`
+input is dispatched before configured host pause. `presentationReady()`
 waits for the entry fade and title overlay to finish; capture the first reusable
 course checkpoint after that boundary so rollback cannot bring an entry card back.
 `advanceEntryPresentation()` returns whether it serviced an active fade on this
@@ -512,6 +518,12 @@ so a shot's ledger can survive course rollback; creator key prefixes do not gran
 exemption. Full debug rewind restores the controller too. Course replacement
 invalidates speculative future history and preserves past; actual act loads reset
 history. Checkpoints are in-process handles, not a network format.
+
+`CourseControl.objectServices()` supplies the current level's injected services during
+this callback row. Resolve current objects through it on each row rather than retaining
+an object across rewind recreation. Its handle is revoked after `afterTick`, callback
+failure, level replacement or session teardown. Creator object creation retains the
+verified callback owner; creator-supplied identifiers never establish authority.
 
 `CourseControl.playerState()` returns centre coordinates, native 8.8 speeds,
 registered character identity and support/camera observations. `launchRolling`

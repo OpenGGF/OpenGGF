@@ -317,6 +317,7 @@ CF-ANNOTATION TYPE com.openggf.game.mode.CourseCheckpoint visible @com.openggf.g
 CF-ANNOTATION TYPE com.openggf.game.mode.CourseControl visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.mode.CourseControl$PlayerState visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.mode.GameplayFrameController visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.mode.GameplayFrameDisposition visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.modzone.ModObjectZoneSet visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.modzone.ModPaletteClaim visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.modzone.ModZoneAdapter visible @com.openggf.game.ModApi
@@ -2372,6 +2373,9 @@ FIELD com.openggf.game.dataselect.DataSelectActionType public,static,final com.o
 FIELD com.openggf.game.dataselect.HostSlotPreview$HostSlotPreviewType public,static,final com.openggf.game.dataselect.HostSlotPreview$HostSlotPreviewType IMAGE
 FIELD com.openggf.game.dataselect.HostSlotPreview$HostSlotPreviewType public,static,final com.openggf.game.dataselect.HostSlotPreview$HostSlotPreviewType NUMBERED_ZONE
 FIELD com.openggf.game.dataselect.HostSlotPreview$HostSlotPreviewType public,static,final com.openggf.game.dataselect.HostSlotPreview$HostSlotPreviewType TEXT_ONLY
+FIELD com.openggf.game.mode.GameplayFrameDisposition public,static,final com.openggf.game.mode.GameplayFrameDisposition ADVANCE_CONTROLLED
+FIELD com.openggf.game.mode.GameplayFrameDisposition public,static,final com.openggf.game.mode.GameplayFrameDisposition ADVANCE_NATIVE_INPUT
+FIELD com.openggf.game.mode.GameplayFrameDisposition public,static,final com.openggf.game.mode.GameplayFrameDisposition HOLD
 FIELD com.openggf.game.modzone.ModObjectZoneSet public,static,final com.openggf.game.modzone.ModObjectZoneSet S3KL
 FIELD com.openggf.game.modzone.ModObjectZoneSet public,static,final com.openggf.game.modzone.ModObjectZoneSet SKL
 FIELD com.openggf.game.modzone.ModZoneRuntimeProfile$ScrollPolicy public,static,final com.openggf.game.modzone.ModZoneRuntimeProfile$ScrollPolicy FLAT
@@ -6089,6 +6093,7 @@ METHOD com.openggf.game.mode.CourseControl public  boolean rewindHeld()
 METHOD com.openggf.game.mode.CourseControl public  com.openggf.audio.AudioReplay recordAudioReplay(int)
 METHOD com.openggf.game.mode.CourseControl public  com.openggf.game.mode.CourseCheckpoint capture()
 METHOD com.openggf.game.mode.CourseControl public  com.openggf.game.mode.CourseControl$PlayerState playerState()
+METHOD com.openggf.game.mode.CourseControl public  com.openggf.level.objects.ObjectServices objectServices()
 METHOD com.openggf.game.mode.CourseControl public  int actIndex()
 METHOD com.openggf.game.mode.CourseControl public  int courseMaxX()
 METHOD com.openggf.game.mode.CourseControl public  int courseMaxY()
@@ -6129,11 +6134,14 @@ METHOD com.openggf.game.mode.GameplayFrameController public  boolean consumeTitl
 METHOD com.openggf.game.mode.GameplayFrameController public  boolean drawScene()
 METHOD com.openggf.game.mode.GameplayFrameController public  boolean presentationPaused()
 METHOD com.openggf.game.mode.GameplayFrameController public  boolean retainRolling()
+METHOD com.openggf.game.mode.GameplayFrameController public  com.openggf.game.mode.GameplayFrameDisposition beforeFrame(com.openggf.game.mode.CourseControl,com.openggf.control.LogicalInputSnapshot)
 METHOD com.openggf.game.mode.GameplayFrameController public  com.openggf.game.presentation.RewindPresentation rewindPresentation()
 METHOD com.openggf.game.mode.GameplayFrameController public  void close()
 METHOD com.openggf.game.mode.GameplayFrameController public  void drawOverlay()
 METHOD com.openggf.game.mode.GameplayFrameController public,abstract  boolean beforeTick(com.openggf.game.mode.CourseControl,com.openggf.control.LogicalInputSnapshot)
 METHOD com.openggf.game.mode.GameplayFrameController public,abstract  void afterTick(com.openggf.game.mode.CourseControl,boolean)
+METHOD com.openggf.game.mode.GameplayFrameDisposition public,static  com.openggf.game.mode.GameplayFrameDisposition valueOf(java.lang.String)
+METHOD com.openggf.game.mode.GameplayFrameDisposition public,static  com.openggf.game.mode.GameplayFrameDisposition[] values()
 METHOD com.openggf.game.modzone.ModObjectZoneSet public,static  com.openggf.game.modzone.ModObjectZoneSet valueOf(java.lang.String)
 METHOD com.openggf.game.modzone.ModObjectZoneSet public,static  com.openggf.game.modzone.ModObjectZoneSet[] values()
 METHOD com.openggf.game.modzone.ModPaletteClaim public  int color()
@@ -17185,6 +17193,7 @@ TYPE enum public,final com.openggf.game.SpecialStageAccessType SUPER java.lang.E
 TYPE enum public,final com.openggf.game.SpecialStageStartupPolicy SUPER java.lang.Enum<com.openggf.game.SpecialStageStartupPolicy>
 TYPE enum public,final com.openggf.game.animation.AnimatedTileCachePolicy SUPER java.lang.Enum<com.openggf.game.animation.AnimatedTileCachePolicy>
 TYPE enum public,final com.openggf.game.dataselect.DataSelectActionType SUPER java.lang.Enum<com.openggf.game.dataselect.DataSelectActionType>
+TYPE enum public,final com.openggf.game.mode.GameplayFrameDisposition SUPER java.lang.Enum<com.openggf.game.mode.GameplayFrameDisposition>
 TYPE enum public,final com.openggf.game.modzone.ModObjectZoneSet SUPER java.lang.Enum<com.openggf.game.modzone.ModObjectZoneSet>
 TYPE enum public,final com.openggf.game.palette.PaletteSurface SUPER java.lang.Enum<com.openggf.game.palette.PaletteSurface>
 TYPE enum public,final com.openggf.game.patch.LogicalRom SUPER java.lang.Enum<com.openggf.game.patch.LogicalRom>
@@ -18226,6 +18235,7 @@ TYPE-ANNOTATION com.openggf.game.mode.CourseCheckpoint @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.mode.CourseControl @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.mode.CourseControl$PlayerState @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.mode.GameplayFrameController @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.mode.GameplayFrameDisposition @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.modzone.ModObjectZoneSet @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.modzone.ModPaletteClaim @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.modzone.ModZoneAdapter @com.openggf.game.ModApi

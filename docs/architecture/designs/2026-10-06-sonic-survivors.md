@@ -888,3 +888,77 @@ flashing rim, a white core, a five-step trail along its velocity and a muzzle fl
 from its age. Coloured reward rings were static cached circles; they now spin by squashing the
 cached shape horizontally through a 32-frame turn with an edge-on core line, also derived from
 age. Both inspected in previews; no state or rewind change.
+
+
+### Native menu admission and persistent settlement (2026-10-12)
+
+The mod-audit remediation branches from `15f3cf371a49e9755568588b00b1f515225aaa4d`.
+The production registry reproduction confirmed that rewind reset captured settlement
+flags while Profile kept its awards: one death paid 55 rings, the replay raised bank
+to 110. `37599e2f0` introduces a captured semantic run identity reserved before camp,
+non-rewound exact started/settled intervals and one atomic profile generation for an
+award plus its settlement marker. Writes that return false or throw remain dirty and
+retry without incrementing counts twice. Replayed TRY AGAIN derives the same successor
+from its captured parent; later real runs advance from that successor. Closing old
+ledger gaps is tied to service-graph replacement with foreign-graph capture rejection,
+never to an assumed rewind-history horizon or an ordinary level load.
+
+Eagerly publishing initial reservations was rejected: it shadowed legacy profile
+fixtures before they could be read. Reservation now publishes with a real counted
+start/profile edit. A second real rewind regression caught settled kills being added
+again to lifetime totals while calculating a clear-screen milestone; the settled-aware
+pool keeps that replay from falsely reaching the 300-kill Chain Zap threshold.
+
+`85796e996` prepares immutable owner-scoped definitions. Portable exported-kit tests
+cover every authored trait/line-up and mutation boundary. A warmed 1000-lookup identity
+counter reported 1000 distinct Traits on the original source and one on the prepared
+source. This is a bounded construction result, not a frame-time, byte-allocation or
+GC performance measurement. Internal animation access indexes immutable storage;
+public arrays remain defensive copies.
+
+The frame-control follow-up reproduced Speed Shoes consumption on the very first
+level-up row (1200 ticks became 1199). The captured FrameControl now resolves the live
+Stage each row and admits menus before native timers/physics/object work. It selects
+HOLD for modal rows and native logical input for play. Stage owns menu presentation
+clocks; native player velocity/control/protection state needs no restoration patch.
+Confirmation is held and release resumes on the following row. The common runtime
+keeps ordinary neutral behavior for existing boolean controllers, P2/policy-filter
+ownership for native input, released title text/music publication, and requested
+native destination fade/load/reveal while the source world is held.
+
+The affected matrix retains the existing 19-act solo Sonic/Tails traversal coverage
+at the supported 400x224 viewport. Short EHZ1 checks exercise modal entry, shoes,
+protection, airborne/hurt/rolling/on-object flags, overlapping enemy/reward touch,
+object lifetimes and menu RNG across real capture/restore for both leaders. The
+on-object case preserves captured native flags; it does not establish a new moving
+platform route. EHZ1 retry and EHZ1→CPZ1 route checks now use actual controller rows
+and native fades, rather than manually consuming the transition request. Existing
+chest, fight, finale and forward-replay checks remain required. Donor combinations,
+per-act boss rewind, wider unsupported viewports and full human campaign/audio
+listening remain inherited gaps. This custom mod coverage does not certify stock
+S2 gameplay. The integration coordinator owns the combined broad/API/trace gates
+and final unpublished candidate pins; focused local results alone do not complete
+that delivery.
+
+Local P11 verification used Java 21.0.12.1 and the queue wrapper with
+`-Dmse=off -Dtest=TestCourseControl,TestControlledFrameRuntime,TestOwnerFrameDisposition,TestPuttPuttParadise,TestSonicSurvivors,TestInfiniteSonic,TestLevelFrameHardwareTimingBoundaries,TestHostedRunController,TestSceneRunLauncher,TestModSceneHostGameplay,TestActPracticeExample`
+and absolute verified root S1/S2/S3K ROM properties. The completed run on the
+P05/P08 commits plus this frame change reported 532 checks: 499 passed, 33 skipped,
+zero failures/errors (3m48s Maven elapsed). Golf contributed 119 checks without
+skips; Survivors 133 with only the opt-in balance probe skipped. Infinite's 32
+skips are existing parameterized platform/flyer assumptions, not missing-ROM skips.
+The other nine selected classes had no skips. An earlier launch stopped before
+tests at the JDK guard after the host default became Java 25; the successful run
+explicitly supplied `JAVA_HOME=/usr/lib/jvm/java-21-openjdk`.
+
+The commit hook requires a candidate pin whenever an annotated declaration changes.
+The local `0.7` pin was therefore regenerated from the compiled branch and reviewed:
+ten additive lines for the new enum, callback and injected service accessor; no
+removed signatures or newly unannotated/external types. The coordinator still
+regenerates the combined pin after the other remediation APIs are integrated.
+
+After that pin update, the common API gate ran through the lean queue with Java 21:
+`-Dmse=off -Dtest=TestModApiSignatureSurface,TestModApiPinPolicy,TestModApiReleasePolicy,TestModApiRuntimePolicy,TestModValidator,TestModContextAndFaultBoundary test`.
+All 71 checks passed without skips (32.883s Maven elapsed). Combined broader
+validation, affected reference/trace checks and exported SDK qualification remain
+coordinator-owned integration obligations.

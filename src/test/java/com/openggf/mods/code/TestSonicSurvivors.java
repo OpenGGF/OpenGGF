@@ -411,7 +411,11 @@ class TestSonicSurvivors {
         fixture.stepIdleFrames(30);
         assertEquals(CAMP, phase());
         assertFalse((boolean) get(run(), "active"));
-        assertTrue(fixture.sprite().isObjectControlled(), "camp holds Sonic still");
+        int campX = fixture.sprite().getCentreX(), campY = fixture.sprite().getCentreY();
+        fixture.stepFrame(false, false, false, true, true);
+        assertEquals(campX, fixture.sprite().getCentreX());
+        assertEquals(campY, fixture.sprite().getCentreY(), "camp holds the whole native world");
+        assertFalse(fixture.sprite().isObjectControlled(), "a menu preserves native control state");
         tapEnter(fixture);
         assertTrue((boolean) get(run(), "active"));
         assertEquals(50, fixture.sprite().getRingCount(), "runs start with six base tolls");
@@ -780,6 +784,59 @@ class TestSonicSurvivors {
         }
     }
 
+    @Test void tryAgainCompletesThroughHeldNativeTransitionRows() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        long first = (long) get(run(), "id");
+        Object oldStage = stage();
+        assertTrue(fixture.sprite().applyCrushDeath());
+        fixture.stepIdleFrames(65);
+        assertEquals(DEAD, phase());
+        fixture.runner().stepFrame(false, false, false, false, false, true);
+        for (int row = 0; row < 90 && stage() == oldStage; row++) fixture.stepIdleFrames(1);
+        assertNotSame(oldStage, stage(), "held rows must finish the requested native fade/load");
+        fixture.stepIdleFrames(1);
+        assertEquals(CAMP, phase());
+        fixture.stepIdleFrames(30);
+        assertFalse(fixture.runtime().getFadeManager().isActive(), "retry reveals the new camp");
+        assertArrayEquals(new float[]{0, 0, 0}, fixture.runtime().getFadeManager().getFadeColor());
+        assertEquals(first + 1, get(run(), "id"));
+        assertEquals(1, getInt(profile(), "runs"), "camp has not started the new run yet");
+        startRun(fixture);
+        assertEquals(2, getInt(profile(), "runs"));
+    }
+
+    @Test void routeConfirmationLoadsTheNextArenaWithoutChangingTheRunIdentity() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        long id = (long) get(run(), "id");
+        call(stage(), "openClear");
+        fixture.stepIdleFrames(30);
+        fixture.runner().stepFrame(false, false, false, false, false, true);
+        for (int row = 0; row < 90 && GameServices.level().getCurrentZone() == 0; row++) fixture.stepIdleFrames(1);
+        assertEquals(1, GameServices.level().getCurrentZone());
+        fixture.stepIdleFrames(1);
+        assertEquals(INTRO, phase());
+        assertEquals(id, get(run(), "id"));
+        assertEquals(1, getInt(profile(), "runs"));
+    }
+
+    @Test void heldStartSelectsOneCardUntilTheButtonIsReleased() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        call(run(), "gainXp", 1000);
+        fixture.stepIdleFrames(1);
+        int pending = getInt(run(), "pendingLevels");
+        assertTrue(pending > 2);
+        fixture.runner().stepFrame(false, false, false, false, false, true);
+        assertEquals(pending - 1, getInt(run(), "pendingLevels"));
+        for (int row = 0; row < 20; row++) fixture.runner().stepFrame(false, false, false, false, false, true);
+        assertEquals(pending - 1, getInt(run(), "pendingLevels"));
+        fixture.runner().stepFrame(false, false, false, false, false, false);
+        fixture.runner().stepFrame(false, false, false, false, false, true);
+        assertEquals(pending - 2, getInt(run(), "pendingLevels"));
+    }
+
     static Stream<String> settlementPaths() { return Stream.of("victory", "retire"); }
 
     @ParameterizedTest @MethodSource("settlementPaths")
@@ -1104,7 +1161,7 @@ class TestSonicSurvivors {
         fixture.stepFrame(false, false, false, false, true);
         int pending = getInt(run(), "pendingLevels");
         assertTrue((boolean) get(run(), "paused"));
-        assertTrue(fixture.sprite().isObjectControlled());
+        assertFalse(fixture.sprite().isObjectControlled(), "world HOLD needs no player control override");
         int x = fixture.sprite().getCentreX(), y = fixture.sprite().getCentreY();
         int remaining = getInt(stage(), "stageFrames");
         for (int i = 0; i < 15; i++) fixture.stepFrame(false, false, false, true, i % 2 == 0);
@@ -1802,6 +1859,68 @@ class TestSonicSurvivors {
         tapEnter(fixture);
         fixture.stepIdleFrames(5);
         assertTrue(player.getInvincibleFrames() > protection - 10);
+    }
+
+    @Test void levelUpEntryHoldsSpeedShoesBeforeTheFirstWorldClock() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        var player = fixture.sprite();
+        player.giveSpeedShoes();
+        var timers = fixture.runtime().getTimerManager();
+        int before = timers.getTimerForCode("SpeedShoes-" + player.getCode()).getTicks();
+        call(run(), "gainXp", 6);
+        fixture.stepIdleFrames(1);
+        assertEquals(1, getInt(stage(), "overlay"));
+        assertEquals(before, timers.getTimerForCode("SpeedShoes-" + player.getCode()).getTicks(),
+                "menu admission must precede native timer service on its first row");
+        fixture.stepIdleFrames(600);
+        assertTrue(player.hasSpeedShoes());
+        assertEquals(before, timers.getTimerForCode("SpeedShoes-" + player.getCode()).getTicks());
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"sonic", "tails"})
+    void modalRowsPreserveNativeMovementProtectionAndObjectLifetimesAcrossRewind(String main) throws Exception {
+        var fixture = launch(0, 0, main, "");
+        startRun(fixture);
+        clearEnemies();
+        var player = fixture.sprite();
+        player.giveSpeedShoes(); player.setInvincibleFrames(70); player.setInvulnerableFrames(45);
+        player.setAir(true); player.setHurt(true); player.setRolling(true); player.setOnObject(true);
+        player.setXSpeed((short) 0x180); player.setYSpeed((short) -0x240); player.setGSpeed((short) 0x100);
+        var enemy = spawnEnemy(0, player.getCentreX(), player.getCentreY(), false, 500);
+        var reward = spawnPickup(0, 5, player.getCentreX(), player.getCentreY());
+        set(reward, "rewardAge", 100);
+        call(stage(), "projectile", 1, player.getCentreX() + 100, player.getCentreY(), 0, 0, 60, 2, 1);
+        call(run(), "gainXp", 6);
+        var registry = fixture.runtime().getRewindRegistry();
+        var before = registry.capture();
+        int x = player.getCentreX(), y = player.getCentreY(), rings = player.getRingCount();
+        int levelClock = GameServices.level().getFrameCounter(), spriteClock = GameServices.sprites().getFrameCounter();
+        int stageClock = getInt(stage(), "frameTick");
+        int shoes = GameServices.timers().getTimerForCode("SpeedShoes-" + main).getTicks();
+        long rngAfterOpen = 0;
+        for (int replay = 0; replay < 2; replay++) {
+            if (replay > 0) { registry.restore(before); player = fixture.sprite(); }
+            fixture.stepIdleFrames(1);
+            Object random = get(run(), "random");
+            long opened = (long) call(random, "snapshot");
+            if (replay == 0) rngAfterOpen = opened;
+            else assertEquals(rngAfterOpen, opened, "card choices replay from captured RNG");
+            fixture.stepIdleFrames(120);
+            assertEquals(opened, call(get(run(), "random"), "snapshot"));
+            assertEquals(x, player.getCentreX()); assertEquals(y, player.getCentreY());
+            assertEquals(0x180, player.getXSpeed()); assertEquals(-0x240, player.getYSpeed()); assertEquals(0x100, player.getGSpeed());
+            assertTrue(player.getAir()); assertTrue(player.isHurt()); assertTrue(player.getRolling()); assertTrue(player.isOnObject());
+            assertEquals(70, player.getInvincibleFrames()); assertEquals(45, player.getInvulnerableFrames());
+            assertEquals(shoes, GameServices.timers().getTimerForCode("SpeedShoes-" + main).getTicks());
+            assertEquals(rings, player.getRingCount(), "overlapping enemy/reward touch cannot run on modal rows");
+            assertEquals(0, getInt(objects("Enemy").getFirst(), "ticks"));
+            assertEquals(100, getInt(objects("Pickup").getFirst(), "rewardAge"));
+            assertEquals(levelClock, GameServices.level().getFrameCounter());
+            assertEquals(spriteClock, GameServices.sprites().getFrameCounter());
+            assertEquals(stageClock, getInt(stage(), "frameTick"));
+        }
     }
 
     @Test void weaponProjectilesGrowAndRewindWithoutDroppingAttacks() throws Exception {

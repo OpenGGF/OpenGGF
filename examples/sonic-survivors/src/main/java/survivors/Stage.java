@@ -96,9 +96,10 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
 
     // Balance telemetry (hitpoints spawned and damage dealt this arena), read by the balance probe.
     long statHpSpawned, statDamage;
-    // Frozen player state while a menu pauses play.
-    boolean playerFrozen;
-    int savedX, savedY, savedG, savedInvincible, savedInvulnerable;
+    // Presentation clock and row-local menu input are separate from the held world.
+    int overlayFrames;
+    @com.openggf.game.rewind.RewindTransient(reason="Input belongs only to the active frame callback")
+    private com.openggf.control.LogicalInputSnapshot menuInput;
     // Weapons and moves.
     int boomTimer, flickyTimer, barrierTimer, orbitAngle, ringTimer;
     int airFrames, airJumpsUsed, dashFrames, comboGrace;
@@ -164,62 +165,63 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
     // Frame update
     // =========================================================================================
 
+    /** Menu admission owns the row before native clocks and resolves the recreated Stage each time. */
+    boolean beforeFrame(AbstractPlayableSprite player, com.openggf.control.LogicalInputSnapshot input) {
+        menuInput = input;
+        try {
+            var run = run();
+            profile().tickPersistence();
+            holdTimer();
+            services().levelGamestate().setRingExtraLifeFlags(0x06);
+            services().levelManager().setForceHudSuppressed(true);
+            holdArena();
+            if (!started) start(player);
+            if (escapePressed()) { retire(true); run.paused = true; return true; }
+            if (player.getDead() && phase != DEAD && phase != VICTORY) die();
+            if (!player.getDead()) setLives(1);
+            if ((phase == INTRO || phase == FIGHT || phase == BOSS)
+                    && overlay == OVERLAY_NONE && run.pendingLevels > 0) openLevelUp();
+            boolean held = menuShowing();
+            run.paused = held;
+            if (!held) return false;
+            if (overlay != OVERLAY_NONE) overlayFrames++;
+            else phaseFrames++; // Camp/results input delay is presentation time.
+            if (overlay == OVERLAY_CHEST) chestMenu(player);
+            else if (overlay != OVERLAY_NONE) levelUpMenu(player);
+            else switch (phase) {
+                case CAMP -> campMenu(player);
+                case CLEAR -> clearMenu(player);
+                case DEAD -> deadMenu(player);
+                default -> victoryMenu(player);
+            }
+            // Confirmation/release is itself held. Physics resumes with the following input row.
+            run.paused = true;
+            return true;
+        } finally { menuInput = null; }
+    }
+
     @Override public void update(int vIntRunCount, PlayableEntity entity) {
-        if (!(entity instanceof AbstractPlayableSprite player)) return;
+        if (!(entity instanceof AbstractPlayableSprite player) || run().paused) return;
         var run = run();
-        profile().tickPersistence();
-        holdTimer();
-        // Lives come from nothing here: pre-claim the stock 100/200-ring extra lives every frame.
-        services().levelGamestate().setRingExtraLifeFlags(0x06);
-        services().levelManager().setForceHudSuppressed(true);
-        holdArena();
         holdCeiling(player);
         frameTick++;
         phaseFrames++;
         if (bannerFrames > 0) bannerFrames--;
         if (hitFlash > 0) hitFlash--;
-        if (!started) start(player);
-        if (escapePressed()) { retire(true); return; }
         run.pressure = phase == FIGHT || phase == BOSS ? pressureSeconds() : run.pressure;
-        if (player.getDead() && phase != DEAD && phase != VICTORY) { die(); }
-        if (!player.getDead()) setLives(1);
-        boolean wantPause = phase == CAMP || phase == CLEAR || phase == VICTORY || overlay != OVERLAY_NONE
-                || phase == DEAD;
-        run.paused = wantPause;
-        freezePlayer(player, wantPause && !player.getDead());
+        if (player.getDead() && phase != DEAD && phase != VICTORY) { die(); return; }
         switch (phase) {
-            case CAMP -> campMenu(player);
             case INTRO -> {
-                if (overlay == OVERLAY_NONE && run.pendingLevels > 0) {
-                    openLevelUp();
-                    run.paused = true;
-                    freezePlayer(player, true);
-                    break;
-                }
-                if (overlay != OVERLAY_NONE) { levelUpMenu(player); break; }
                 if (phaseFrames >= INTRO_FRAMES) beginFight();
                 updateEffects();
             }
-            case FIGHT, BOSS -> {
-                if (overlay == OVERLAY_NONE && run.pendingLevels > 0) {
-                    openLevelUp();
-                    run.paused = true;
-                    freezePlayer(player, true);
-                    break;
-                }
-                if (overlay == OVERLAY_CHEST) { chestMenu(player); break; }
-                if (overlay != OVERLAY_NONE) { levelUpMenu(player); break; }
-                fight(player);
-            }
+            case FIGHT, BOSS -> fight(player);
             case CLEAR_WAIT -> {
-                if (overlay == OVERLAY_CHEST) { chestMenu(player); break; }
                 updateProjectiles();
                 updateEffects();
                 if (phaseFrames > 330) collectEmeraldNow();
             }
-            case CLEAR -> clearMenu(player);
-            case DEAD -> deadMenu(player);
-            default -> victoryMenu(player);
+            default -> { }
         }
         if (!run.paused && !player.getDead() && ++ringMergeFrames >= RingClusters.PERIOD) {
             ringMergeFrames = 0;
@@ -749,18 +751,17 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
         // Pause at once: a chest picked up during the object pass must not leave badniks a frame.
         run.paused = true;
         menuIndex = 0;
-        phaseFramesAtOverlay = phaseFrames;
+        overlayFrames = 0;
         services().playSfx(0xBD); // sfx_Hammer: the chest lands.
     }
 
-    int phaseFramesAtOverlay;
 
     // The chest opening, in frames from its start: the chest drops in and shakes, the lid bursts
     // (flash, light rays, a fountain of rings, Super Sonic's theme), then each prize spins in.
     static final int CHEST_DROP = 18, CHEST_BURST = 64, CHEST_FIRST_PRIZE = 84, CHEST_PRIZE_GAP = 22,
             CHEST_SPIN = 14;
 
-    int chestFrames() { return phaseFrames - phaseFramesAtOverlay; }
+    int chestFrames() { return overlayFrames; }
 
     /** The frame the last prize lands; Enter before it reveals everything at once. */
     int chestRevealEnd() { return CHEST_FIRST_PRIZE + chestCount * CHEST_PRIZE_GAP + CHEST_SPIN; }
@@ -814,7 +815,7 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
         if (t < chestRevealEnd()) {
             // Skip straight to every prize revealed; a second press continues.
             if (t < CHEST_BURST) services().audioManager().playMusic(Sonic2Music.SUPER_SONIC.id);
-            phaseFramesAtOverlay = phaseFrames - chestRevealEnd();
+            overlayFrames = chestRevealEnd();
             return;
         }
         overlay = OVERLAY_NONE;
@@ -1366,7 +1367,8 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
 
     /** Edge-detected up/down (returns -1, 0 or 1) and Enter/Start confirm. */
     private int menuMove(AbstractPlayableSprite player) {
-        boolean up = player.isUpPressed(), down = player.isDownPressed();
+        boolean up = menuInput != null ? (menuInput.player1().heldMask() & AbstractPlayableSprite.INPUT_UP) != 0 : player.isUpPressed();
+        boolean down = menuInput != null ? (menuInput.player1().heldMask() & AbstractPlayableSprite.INPUT_DOWN) != 0 : player.isDownPressed();
         int move = (up && !upHeld ? -1 : 0) + (down && !downHeld ? 1 : 0);
         upHeld = up;
         downHeld = down;
@@ -1389,7 +1391,8 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
 
     /** Edge-detected left/right (returns -1, 0 or 1). */
     private int menuSideways(AbstractPlayableSprite player) {
-        boolean left = player.isLeftPressed(), right = player.isRightPressed();
+        boolean left = menuInput != null ? (menuInput.player1().heldMask() & AbstractPlayableSprite.INPUT_LEFT) != 0 : player.isLeftPressed();
+        boolean right = menuInput != null ? (menuInput.player1().heldMask() & AbstractPlayableSprite.INPUT_RIGHT) != 0 : player.isRightPressed();
         int move = (left && !leftHeld ? -1 : 0) + (right && !rightHeld ? 1 : 0);
         leftHeld = left;
         rightHeld = right;
@@ -1583,10 +1586,11 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
 
     /** Menu confirm that ignores the phase timer (overlays open mid-phase). */
     private boolean menuConfirmAny(AbstractPlayableSprite player) {
+        if (menuInput != null && menuInput.menuStart()) return true;
         var input = services().gameService(com.openggf.control.InputHandler.class);
         return input != null && (input.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER)
                 || input.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_KP_ENTER)
-                || input.logical().menuStart());
+                || (menuInput != null ? menuInput.menuStart() : input.logical().menuStart()));
     }
 
     // ---- Clear: results and the route ----
@@ -1703,7 +1707,7 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
         if (exiting) return;
         exiting = true;
         run().paused = false;
-        services().levelManager().requestGameOverExit(com.openggf.game.GameOverExit.TITLE_SCREEN);
+        services().gameService(FrameControl.class).requestTitle();
     }
 
     private boolean escapePressed() {
@@ -1715,46 +1719,6 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
         var state = services().gameState();
         while (state.getLives() > lives) state.loseLife();
         while (state.getLives() < lives) state.addLife();
-    }
-
-    /** While a menu is up Sonic holds still: speeds are saved and restored around the pause. */
-    private void freezePlayer(AbstractPlayableSprite player, boolean freeze) {
-        if (freeze == playerFrozen) {
-            if (freeze) {
-                holdProtection(player);
-                player.setXSpeed((short) 0);
-                player.setYSpeed((short) 0);
-                player.setGSpeed((short) 0);
-            }
-            return;
-        }
-        playerFrozen = freeze;
-        if (freeze) {
-            savedX = player.getXSpeed();
-            savedY = player.getYSpeed();
-            savedG = player.getGSpeed();
-            savedInvincible = player.getInvincibleFrames();
-            savedInvulnerable = player.getInvulnerableFrames();
-            holdProtection(player);
-            player.setObjectControlled(true);
-            player.setXSpeed((short) 0);
-            player.setYSpeed((short) 0);
-            player.setGSpeed((short) 0);
-        } else {
-            player.setInvincibleFrames(savedInvincible);
-            player.setInvulnerableFrames(savedInvulnerable);
-            player.setObjectControlled(false);
-            player.setXSpeed((short) savedX);
-            player.setYSpeed((short) savedY);
-            player.setGSpeed((short) savedG);
-        }
-    }
-
-    /** Player power-up clocks still tick under object control. Keep them above expiry during
-     * menus and restore the exact saved duration on release; the extra tick is never playable. */
-    private void holdProtection(AbstractPlayableSprite player) {
-        player.setInvincibleFrames(savedInvincible > 0 ? savedInvincible + 1 : 0);
-        player.setInvulnerableFrames(savedInvulnerable > 0 ? savedInvulnerable + 1 : 0);
     }
 
     // =========================================================================================
