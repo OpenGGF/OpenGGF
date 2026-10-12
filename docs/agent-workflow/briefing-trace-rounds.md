@@ -256,6 +256,12 @@ alone cost 5.3 ms due to repeated writes to an in-flight vertex buffer. Measure
 `ExampleModCapture --every 0` with no video never submits a frame; it cannot
 measure rendering throughput. Separate warm-up, update, submission and finish
 costs, and compare deterministic framebuffer output when changing uploads.
+The master-title follow-up to `2596fbc40` (2026-10-12) reproduced the same hazard:
+offline overlapping cue PCM was exact, while separate rectangle uploads made
+native hub drawing take about 27 ms and repeatedly starve the speaker queue.
+`MenuAudioProbeTool` checks the actual destination, nonzero cues and a physical
+speaker cursor, and reports warm-up underruns separately. PCM equality alone
+cannot certify continuous playback; slowing the cue envelope did not fix it.
 
 Test-boundary retained heap is not necessarily a leak (2026-10-07 test-throughput
 task): the positioned MHZ capture retained about 22 MiB after its callback while

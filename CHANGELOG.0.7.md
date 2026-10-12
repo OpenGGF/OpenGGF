@@ -646,7 +646,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   status kept apart; a line under the buttons describes the focused item. Back
   returns to the card before offering Quit. Mouse hover, click and wheel work across
   the shelf, chips, buttons and tabs. Confirmation, cancel and error cues stay
-  host-owned, and Time Attack arrives through Extras as a bundled mod.
+  host-owned with soft fades and moderate volume; compact text and shapes share
+  an atlas batch, and streamed quad buffers avoid GPU waits during drawing and
+  the launch flash to keep speaker playback fed. Start uses white lettering on
+  its gold button, and Time Attack arrives through Extras as a bundled mod.
 - **Game Setup:** replaces Launch Options with grouped Players, Screen and Extras
   rows labelled THIS GAME ONLY. Rewind, debug tools and aspect ratio follow the
   all-games Settings value ("Default (Off)") until a game overrides them, so turning

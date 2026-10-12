@@ -1324,16 +1324,14 @@ public class MasterTitleScreen {
         drawHubHeader(w, layout);
         for (CardSlot card : layout.cards()) drawCard(card);
         drawHubDetails(w, layout);
-        if (state == State.CONFIRMING && confirmTicks < 14) {
-            // A quick white flash as the game is chosen, before GameLoop's fade.
-            box(0, 0, w, SCREEN_H, 1f, 1f, 1f, 0.55f * (1f - confirmTicks / 14f));
-        }
     }
 
     private void drawHubHeader(int w, HubLayout layout) {
+        font.beginMegaBatch();
         box(0, 0, w, HUB_HEADER_H, 0.04f, 0.14f, 0.36f, 1f);
         box(0, HUB_HEADER_H - 2, w, 1, 1f, 0.84f, 0.3f, 1f);
         box(0, HUB_HEADER_H - 1, w, 1, 0.4f, 0.27f, 0.02f, 1f);
+        font.endMegaBatch();
         // Keep OpenGGF branding and ROM-decoded game logos, never mockup artwork.
         int room = layout.tabs().isEmpty() ? w - 16 : layout.tabs().getFirst().x() - 16;
         int logoH = 17;
@@ -1383,8 +1381,10 @@ public class MasterTitleScreen {
         boolean selected = card.offset() == 0;
         boolean available = isEntryAvailable(entry);
         // Card body with a one-pixel drop shadow.
+        font.beginMegaBatch();
         box(r.x() + 2, r.y() + 2, r.w(), r.h(), 0f, 0.01f, 0.06f, 0.55f);
         box(r.x(), r.y(), r.w(), r.h(), 0.02f, 0.06f, 0.2f, 0.78f);
+        font.endMegaBatch();
         RomPreviewState preview = entry instanceof MasterTitleEntry.Stock stock ? romPreviews.get(stock.game()) : null;
         if (preview != null && preview.textureId != 0 && preview.sequence != null && available) {
             if (selected) updateSelectedRomPreviewTexture();
@@ -1420,7 +1420,6 @@ public class MasterTitleScreen {
             MenuChrome.label(font, MenuChrome.fitLabel(name, r.w() - 8), r.x() + Math.max(4, (r.w() - MenuChrome.labelWidth(name)) / 2),
                     r.y() + r.h() / 2 - 5, MenuChrome.WHITE);
         }
-        font.endMegaBatch();
         // Neighbours recede: darker the further they sit from the centre.
         float dim = Math.min(1f, card.distance());
         if (dim > 0f) box(r.x(), r.y(), r.w(), r.h(), 0.01f, 0.03f, 0.12f, 0.5f * dim);
@@ -1440,6 +1439,7 @@ public class MasterTitleScreen {
         } else {
             outlineBox(r.x(), r.y(), r.w(), r.h(), MenuChrome.EDGE, 1);
         }
+        font.endMegaBatch();
     }
 
     private void outlineBox(int x, int y, int w, int h, float[] c, int t) {
@@ -1501,7 +1501,7 @@ public class MasterTitleScreen {
                 MenuChrome.fill(font, r.x() + (focused ? 2 : 0), r.y() + r.h() - (focused ? 3 : 1),
                         r.w() - (focused ? 4 : 0), 1, new float[] {.6f, .42f, .05f});
                 if (available) drawShimmer(r);
-                MenuChrome.label(font, action.label, r.x() + 8, r.y() + 5, MenuChrome.GOLD_INK);
+                MenuChrome.label(font, action.label, r.x() + 8, r.y() + 5, MenuChrome.WHITE);
             } else {
                 if (focused) MenuChrome.focus(font, r.x(), r.y(), r.w(), r.h(), frameCounter);
                 else MenuChrome.panel(font, r.x(), r.y(), r.w(), r.h());
@@ -1520,6 +1520,10 @@ public class MasterTitleScreen {
             MenuChrome.compact(font, legend, lx + 8, LEGEND_Y, MenuChrome.AMBER);
         }
         MenuChrome.footer(font, w, null, hubHints(), MenuChrome.controller(menuInput));
+        if (state == State.CONFIRMING && confirmTicks < 14) {
+            // A quick white flash as the game is chosen, before GameLoop's fade.
+            box(0, 0, w, SCREEN_H, 1f, 1f, 1f, 0.55f * (1f - confirmTicks / 14f));
+        }
         font.endMegaBatch();
     }
 
@@ -1670,7 +1674,7 @@ public class MasterTitleScreen {
     }
 
     private void box(int x, int y, int width, int height, float r, float g, float b, float alpha) {
-        renderer.drawTexture(solidWhiteTextureId, x, SCREEN_H - y - height, width, height, r, g, b, alpha);
+        MenuStyle.fill(font, x, y, width, height, r, g, b, alpha);
     }
 
 

@@ -12,6 +12,9 @@ final class HostUiSfx {
     private static final int SAMPLE_RATE = 48_000;
     private static final String ASSET_PREFIX = "host/ui/";
     private static final double TWO_PI = Math.PI * 2.0;
+    private static final double PEAK_GAIN = 0.18;
+    private static final int ATTACK_FRAMES = SAMPLE_RATE * 8 / 1_000;
+    private static final int RELEASE_FRAMES = SAMPLE_RATE * 18 / 1_000;
     private static final Map<String, DecodedPcm> CUES = Map.of(
             "UI_NAVIGATE", tone("UI_NAVIGATE", new Note(760, 45)),
             "UI_CONFIRM", tone("UI_CONFIRM", new Note(660, 55), new Note(990, 75)),
@@ -46,20 +49,23 @@ final class HostUiSfx {
         int frame = 0;
         for (Note note : notes) {
             int noteFrames = Math.round(SAMPLE_RATE * note.durationMillis() / 1_000f);
-            int attackFrames = Math.max(1, Math.round(noteFrames * 0.08f));
-            int releaseFrames = Math.max(1, Math.round(noteFrames * 0.16f));
             for (int noteFrame = 0; noteFrame < noteFrames; noteFrame++) {
-                double attack = Math.min(1.0, (noteFrame + 1.0) / attackFrames);
-                double release = Math.min(1.0,
-                        (noteFrames - noteFrame) / (double) releaseFrames);
+                // Ease both ends to exact silence, including the join between notes.
+                // Linear ramps with nonzero endpoints add sharp edges to short UI cues.
+                double attack = fade(noteFrame / (double) ATTACK_FRAMES);
+                double release = fade((noteFrames - 1 - noteFrame) / (double) RELEASE_FRAMES);
                 double envelope = Math.min(attack, release);
                 double value = Math.sin(TWO_PI * note.frequencyHz() * noteFrame
-                        / SAMPLE_RATE) * 0.28 * envelope;
+                        / SAMPLE_RATE) * PEAK_GAIN * envelope;
                 samples[frame++] = (short) Math.round(value * Short.MAX_VALUE);
             }
         }
         return new DecodedPcm(ASSET_PREFIX + cue.toLowerCase(Locale.ROOT),
                 1, SAMPLE_RATE, samples);
+    }
+
+    private static double fade(double progress) {
+        return 0.5 - 0.5 * Math.cos(Math.PI * Math.min(1.0, progress));
     }
 
     private record Note(int frequencyHz, int durationMillis) {

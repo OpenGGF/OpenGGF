@@ -11,6 +11,34 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class TestMenuPixelFont {
     @Test
+    void adjacentRectanglesBatchWithoutChangingOverlapOrderOrColour() throws Exception {
+        Fixture fixture = new Fixture();
+        fixture.font.beginMegaBatch();
+        // More than the initial capacity, with overlapping alpha rectangles.
+        for (int i = 0; i < 100; i++)
+            fixture.font.fillRect(i, 20, 50, 2, i / 100f, 0, 1, .5f);
+        assertTrue(fixture.renderer.draws.isEmpty());
+        fixture.font.drawText("a", 0, 20, .6f, 1, 1, 1, 1);
+        fixture.font.fillRect(0, 21, 50, 2, 1, 0, 0, 1);
+        fixture.font.endMegaBatch();
+        assertEquals(List.of(11), fixture.renderer.draws.stream().map(Draw::texture).toList());
+        assertEquals(List.of(102), fixture.renderer.draws.stream().map(Draw::quads).toList());
+        float[] vertices = fixture.renderer.draws.getFirst().vertices();
+        for (int i = 0; i < 100; i++) {
+            int offset = i * TexturedQuadRenderer.COLORED_QUAD_FLOATS;
+            assertEquals(i, vertices[offset]);
+            assertEquals(204, vertices[offset + 1]);
+            assertEquals(i / 100f, vertices[offset + 4]);
+            assertEquals(.5f, vertices[offset + 7]);
+        }
+        int submitted = fixture.renderer.draws.size();
+        fixture.font.endMegaBatch();
+        assertEquals(submitted, fixture.renderer.draws.size());
+        fixture.font.fillRect(0, 0, 1, 1, 1, 1, 1, 1);
+        assertEquals(submitted + 1, fixture.renderer.draws.size(), "Unbatched fills remain immediate");
+    }
+
+    @Test
     void checkerboardIsOneNativeGeometrySubmissionAndPreservesTextOrder() throws Exception {
         Fixture fixture = new Fixture();
         fixture.font.beginMegaBatch();
@@ -18,9 +46,10 @@ class TestMenuPixelFont {
         fixture.font.drawCheckerboard(0, 320);
         fixture.font.drawText("b", 0, 20, .6f, 1, 1, 1, 1);
         fixture.font.endMegaBatch();
-        assertEquals(List.of(7, 13, 11), fixture.renderer.draws.stream().map(Draw::texture).toList());
-        assertEquals(110, fixture.renderer.draws.get(1).quads());
-        float[] before = fixture.renderer.draws.get(1).vertices();
+        assertEquals(List.of(7, 11), fixture.renderer.draws.stream().map(Draw::texture).toList());
+        assertEquals(111, fixture.renderer.draws.get(1).quads());
+        float[] before = Arrays.copyOf(fixture.renderer.draws.get(1).vertices(),
+                110 * TexturedQuadRenderer.COLORED_QUAD_FLOATS);
         fixture.font.drawCheckerboard(0, 320);
         assertArrayEquals(before, fixture.renderer.draws.getLast().vertices());
         fixture.font.drawCheckerboard(160, 320);
@@ -66,14 +95,24 @@ class TestMenuPixelFont {
         font.drawText("e", 0, 23, .5f, 1, 1, 1, 1);
         font.drawText("A", 0, 32, 1.7f, 1, 1, 1, 1);
         font.endMegaBatch();
-        assertEquals(List.of(7, 11, 13, 11, 7),
+        assertEquals(List.of(7, 11, 7),
                 fixture.renderer.draws.stream().map(Draw::texture).toList());
-        assertEquals(List.of(2, 2, 1, 1, 1),
+        assertEquals(List.of(2, 4, 1),
                 fixture.renderer.draws.stream().map(Draw::quads).toList());
         assertEquals(1, fixture.renderer.draws.get(0).vertices()[4]);
         assertEquals(0, fixture.renderer.draws.get(0).vertices()[5]);
         assertEquals(0, fixture.renderer.draws.get(0).vertices()[TexturedQuadRenderer.COLORED_QUAD_FLOATS + 4]);
         assertEquals(1, fixture.renderer.draws.get(0).vertices()[TexturedQuadRenderer.COLORED_QUAD_FLOATS + 5]);
+        float[] middle = fixture.renderer.draws.get(1).vertices();
+        int solid = 2 * TexturedQuadRenderer.COLORED_QUAD_FLOATS;
+        assertEquals(204, middle[solid + 1], "Solid stays after c/d and before e");
+        assertEquals(1, middle[solid + 4]);
+        assertEquals(1, middle[solid + 7]);
+        for (int vertex = 0; vertex < 6; vertex++) {
+            assertEquals(MenuGlyphs.SOLID_U, middle[solid + vertex * 8 + 2]);
+            assertEquals(MenuGlyphs.SOLID_V, middle[solid + vertex * 8 + 3]);
+        }
+        assertEquals(201, middle[solid + TexturedQuadRenderer.COLORED_QUAD_FLOATS + 1]);
         int draws = fixture.renderer.draws.size();
         font.endMegaBatch();
         assertEquals(draws, fixture.renderer.draws.size(), "Completed batch is not submitted twice");
@@ -82,6 +121,8 @@ class TestMenuPixelFont {
     @Test
     void allPrintableAsciiHasArtworkAndAtlasCellsKeepTransparentColumnSpacing() {
         byte[] atlas = MenuGlyphs.atlasRgba();
+        assertEquals(255, alpha(atlas, MenuGlyphs.SOLID_X, MenuGlyphs.SOLID_Y));
+        assertEquals(0, alpha(atlas, MenuGlyphs.SOLID_X + 1, MenuGlyphs.SOLID_Y));
         for (char character = 33; character <= 126; character++) {
             int ink = 0;
             for (int y = 0; y < MenuGlyphs.HEIGHT; y++) ink |= MenuGlyphs.row(character, y);
@@ -170,7 +211,6 @@ class TestMenuPixelFont {
         Fixture() throws Exception {
             set(MenuPixelFont.class, font, "menuRenderer", renderer);
             set(MenuPixelFont.class, font, "compactTexture", 11);
-            set(MenuPixelFont.class, font, "solidTexture", 13);
             set(PixelFont.class, font, "renderer", renderer);
             set(PixelFont.class, font, "textureId", 7);
             set(PixelFont.class, font, "textureWidth", 416);

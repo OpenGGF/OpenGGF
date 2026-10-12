@@ -16,6 +16,33 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestHostUiSfx {
 
     @Test
+    void cuesEaseToSilenceAtTheirEndsAndBetweenNotesWithMixingHeadroom() {
+        for (String cue : new String[]{"UI_NAVIGATE", "UI_CONFIRM", "UI_CANCEL", "UI_ERROR"}) {
+            DecodedPcm pcm = HostUiSfx.forCue(cue);
+            short[] samples = pcm.copySamples();
+            assertEquals(0, samples[0], cue);
+            assertEquals(0, samples[samples.length - 1], cue);
+            // An 8 ms attack and 18 ms release should be effectively silent at the edges.
+            for (int i = 0; i < 16; i++) {
+                assertTrue(Math.abs(samples[i]) <= 32, cue + " attack");
+                assertTrue(Math.abs(samples[samples.length - 1 - i]) <= 32, cue + " release");
+            }
+            for (short sample : samples) {
+                assertTrue(Math.abs(sample) <= 6_000, cue + " leaves headroom for overlapping feedback");
+            }
+        }
+        assertSilentJoin("UI_CONFIRM", 55);
+        assertSilentJoin("UI_ERROR", 75);
+    }
+
+    private static void assertSilentJoin(String cue, int firstNoteMillis) {
+        DecodedPcm pcm = HostUiSfx.forCue(cue);
+        int join = pcm.sampleRate() * firstNoteMillis / 1_000;
+        assertEquals(0, pcm.sample(join - 1, 0), cue + " first note ends in silence");
+        assertEquals(0, pcm.sample(join, 0), cue + " second note starts in silence");
+    }
+
+    @Test
     void fallbackCuesResolveToDistinctNonSilentPcm() throws Exception {
         AudioPresentationSourceFactory factory = new AudioPresentationSourceFactory(
                 () -> true,

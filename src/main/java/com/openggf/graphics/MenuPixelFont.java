@@ -19,7 +19,6 @@ public final class MenuPixelFont extends PixelFont {
     private enum Batch { NONE, COMPACT, FULL }
     private TexturedQuadRenderer menuRenderer;
     private int compactTexture;
-    private int solidTexture;
     private boolean initialized;
     private boolean batching;
     private Batch activeBatch = Batch.NONE;
@@ -34,7 +33,6 @@ public final class MenuPixelFont extends PixelFont {
         initialized = true;
         try {
             compactTexture = upload(MenuGlyphs.ATLAS_WIDTH, MenuGlyphs.ATLAS_HEIGHT, MenuGlyphs.atlasRgba());
-            solidTexture = upload(1, 1, new byte[] {-1, -1, -1, -1});
         } catch (RuntimeException | Error failure) {
             cleanup();
             throw failure;
@@ -125,9 +123,16 @@ public final class MenuPixelFont extends PixelFont {
     /** Draw a solid rectangle in the same top-left coordinate system as text. */
     public void fillRect(int x, int y, int width, int height, float r, float g, float b, float a) {
         if (menuRenderer == null || width <= 0 || height <= 0) return;
-        // A rectangle may cover prior text or sit behind later text: preserve call order.
-        flushActiveBatch();
-        menuRenderer.drawTexture(solidTexture, x, 224 - y - height, width, height, r, g, b, a);
+        // Sampling the centre of the atlas's white texel lets shapes and compact
+        // text share one ordered submission, without texture switches or glyph bleed.
+        selectBatch(Batch.COMPACT);
+        ensureCompactCapacity(compactQuads + 1);
+        TexturedQuadRenderer.writeColoredQuadVerticesAtOffset(compactVertices,
+                compactQuads++ * TexturedQuadRenderer.COLORED_QUAD_FLOATS,
+                x, 224 - y - height, width, height,
+                MenuGlyphs.SOLID_U, MenuGlyphs.SOLID_V, MenuGlyphs.SOLID_U, MenuGlyphs.SOLID_V,
+                r, g, b, a);
+        if (!batching) flushActiveBatch();
     }
 
     // Reused native-grid geometry: the static checkerboard needs one submission,
@@ -138,7 +143,7 @@ public final class MenuPixelFont extends PixelFont {
 
     public void drawCheckerboard(int startX, int width) {
         if (menuRenderer == null || width <= startX) return;
-        flushActiveBatch();
+        selectBatch(Batch.COMPACT);
         CheckerGeometry geometry = null;
         for (CheckerGeometry cached : checkerCache) {
             if (cached != null && cached.start() == startX && cached.width() == width) { geometry = cached; break; }
@@ -153,14 +158,20 @@ public final class MenuPixelFont extends PixelFont {
                     TexturedQuadRenderer.writeColoredQuadVerticesAtOffset(checkerVertices,
                             checkerQuads++ * TexturedQuadRenderer.COLORED_QUAD_FLOATS,
                             x, 224 - y - height, Math.min(15, width - x), height,
-                            0, 0, 1, 1, .05f, .115f, .28f, 1);
+                            MenuGlyphs.SOLID_U, MenuGlyphs.SOLID_V, MenuGlyphs.SOLID_U, MenuGlyphs.SOLID_V,
+                            .05f, .115f, .28f, 1);
                 }
             }
             geometry = new CheckerGeometry(startX, width, checkerVertices, checkerQuads);
             checkerCache[nextCheckerSlot] = geometry;
             nextCheckerSlot = (nextCheckerSlot + 1) % checkerCache.length;
         }
-        menuRenderer.drawColoredTextureBatch(solidTexture, geometry.vertices(), geometry.quads());
+        ensureCompactCapacity(compactQuads + geometry.quads());
+        System.arraycopy(geometry.vertices(), 0, compactVertices,
+                compactQuads * TexturedQuadRenderer.COLORED_QUAD_FLOATS,
+                geometry.quads() * TexturedQuadRenderer.COLORED_QUAD_FLOATS);
+        compactQuads += geometry.quads();
+        if (!batching) flushActiveBatch();
     }
 
     private void selectBatch(Batch next) {
@@ -198,9 +209,7 @@ public final class MenuPixelFont extends PixelFont {
             super.cleanup();
         }
         PngTextureLoader.deleteTexture(compactTexture);
-        PngTextureLoader.deleteTexture(solidTexture);
         compactTexture = 0;
-        solidTexture = 0;
         initialized = false;
         menuRenderer = null;
     }

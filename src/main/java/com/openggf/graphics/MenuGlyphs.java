@@ -13,6 +13,11 @@ final class MenuGlyphs {
     static final int COLUMNS = 16;
     static final int ATLAS_WIDTH = COLUMNS * ADVANCE;
     static final int ATLAS_HEIGHT = 6 * HEIGHT;
+    // The final atlas cell is unused by the 95 printable glyphs.
+    static final int SOLID_X = ATLAS_WIDTH - ADVANCE;
+    static final int SOLID_Y = ATLAS_HEIGHT - HEIGHT;
+    static final float SOLID_U = (SOLID_X + .5f) / ATLAS_WIDTH;
+    static final float SOLID_V = 1f - (SOLID_Y + .5f) / ATLAS_HEIGHT;
     private static final byte[][] ROWS = new byte[95][];
 
     static {
@@ -158,6 +163,8 @@ final class MenuGlyphs {
                 }
             }
         }
+        int solidOffset = ((ATLAS_HEIGHT - 1 - SOLID_Y) * ATLAS_WIDTH + SOLID_X) * 4;
+        for (int channel = 0; channel < 4; channel++) rgba[solidOffset + channel] = (byte) 255;
         return rgba;
     }
 }
