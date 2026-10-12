@@ -59,6 +59,7 @@ public final class FlappyScene implements ModScene, DebuggableScene {
     private long ticks;
     private long screenTick;
     private Records records = new Records();
+    private String saveNotice = "";
     private Run run;
     private Run demo;
     private final Autopilot pilot = new Autopilot();
@@ -107,6 +108,7 @@ public final class FlappyScene implements ModScene, DebuggableScene {
             }
         }
         records = Records.load(ctx.storage());
+        saveNotice = records.saveEligible() ? "" : "EXISTING RECORDS PRESERVED";
         openTitle(ctx);
     }
 
@@ -134,6 +136,7 @@ public final class FlappyScene implements ModScene, DebuggableScene {
         ticks++;
         screenTick++;
         effects.update();
+        if (records.dirty() && records.saveEligible() && ticks % 60 == 0) saveRecords(ctx);
         switch (screen) {
             case TITLE -> updateTitle(ctx);
             case PLAY -> updatePlay(ctx);
@@ -201,7 +204,7 @@ public final class FlappyScene implements ModScene, DebuggableScene {
     private void choose(SceneContext ctx) {
         switch (cursor) {
             case ITEM_PLAY -> startRun(ctx, 0, false);
-            case ITEM_PRACTICE -> startRun(ctx, practiceZone * Zone.GATES, practiceZone > 0);
+            case ITEM_PRACTICE -> startRun(ctx, practiceZone * Zone.GATES, true);
             case ITEM_RECORDS -> {
                 ctx.audio().playSfx(Sounds.SFX_SWITCH);
                 show(Screen.RECORDS);
@@ -301,11 +304,16 @@ public final class FlappyScene implements ModScene, DebuggableScene {
 
     private void finishRun(SceneContext ctx) {
         newBest = records.finish(run);
-        records.save(ctx.storage());
+        saveRecords(ctx);
         resultMedal = run.practice ? 0 : Hud.medal(run.score());
         shownScore = 0;
         show(Screen.RESULTS);
         ctx.audio().playMusic(Sounds.MUS_GAME_OVER);
+    }
+
+    private void saveRecords(SceneContext ctx) {
+        if (!records.saveEligible()) saveNotice = "EXISTING RECORDS PRESERVED / THIS VISIT ONLY";
+        else saveNotice = records.save(ctx.storage()) ? "" : "RECORDS NOT SAVED - RETRYING";
     }
 
     // ---- results ----
@@ -373,6 +381,7 @@ public final class FlappyScene implements ModScene, DebuggableScene {
             case RECORDS -> drawRecords(ctx, canvas);
         }
         effects.drawFlash(canvas);
+        if (!saveNotice.isEmpty()) Hud.centred(canvas, saveNotice, 195, 1, Hud.WHITE);
     }
 
     /** The course, Tails and everything in the air: shared by the flight, the title and the results. */
@@ -803,6 +812,7 @@ public final class FlappyScene implements ModScene, DebuggableScene {
 
     @Override
     public void exit(SceneContext ctx) {
+        saveRecords(ctx);
         ctx.audio().stopMusic();
         if (cache != null) cache.close();
     }

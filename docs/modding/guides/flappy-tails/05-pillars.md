@@ -91,13 +91,24 @@ The gate sound is `sfx_BlueSphere`, the special stage's ding.
 
 `ctx.storage()` holds small text files under `saves/mods/<mod id>/`:
 
+Read into a candidate and accept only a nonnegative integer. Distinguish an absent
+file from rejected content: when the file is present but unreadable or malformed,
+keep it and disable automatic replacement for this visit.
+
 ```java
-best = ctx.storage().read("best.txt").map(FlappyScene::number).orElse(0);
-...
-if (score > best) ctx.storage().write("best.txt", Integer.toString(best = score));
+if (score > best) {
+    best = score;          // the best this visit, even when storage is unavailable
+    bestDirty = true;
+    saveBest(ctx);         // keep dirty when storage.write returns false or throws
+}
 ```
 
-Parse defensively: the player can edit that file.
+`saveBest` checks save eligibility and the boolean write result. Only successful
+publication clears `bestDirty`. Show a short unsaved notice, retry at a bounded
+cadence while the scene runs, and try once more in `exit`. Retrying writes the
+same best; it does not need another higher score. The
+[part 5 source](../../../../examples/flappy-tails/tutorial/part-5-pillars/src/main/java/flappytails/FlappyScene.java)
+implements this policy with owner-scoped storage.
 
 ## Try it
 

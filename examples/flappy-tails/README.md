@@ -90,7 +90,12 @@ Each zone cleared earns a medal, a ring the colour of its tier: **bronze** (10),
 (20), **gold** (30), **platinum** (40) and the rainbow **SUPER** ring (50). The results screen
 counts up your score, stamps the medal and marks a **NEW BEST!** with the 1-up jingle.
 RECORDS shows each mode's best and medal, the furthest zone reached and lifetime flights,
-gates and rings. Records live in `saves/mods/flappy-tails/records.txt`.
+gates and rings. Practice at Angel Island follows the same no-best/no-medal policy as later zones.
+Records live in `saves/mods/flappy-tails/records.txt`.
+
+Rejected or future records remain untouched. A failed write keeps the new totals in memory, shows an
+unsaved notice and retries during the scene and on exit; retrying storage never counts the flight
+again.
 
 ## What comes from the ROM
 

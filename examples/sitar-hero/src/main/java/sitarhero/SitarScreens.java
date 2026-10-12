@@ -508,7 +508,7 @@ final class SitarScreens {
             SitarUi.center(c, Math.round(s.result2.accuracy() * 100) + "% / " + s.result2.stars() + " STARS", x, 178, 128, CYAN);
         } else if (s.online != null) SitarUi.center(c, "PEER " + s.online.remoteScore(), x, 164, 128, GOLD);
         else SitarUi.center(c, failed ? "TRY AGAIN!" : "GREAT SHOW!", x, 164, 128, GOLD);
-        String recordNotice = s.saveFailed ? "SAVE FAILED / RECORDS REMAIN IN MEMORY" : s.autoplay ? "DEMO / RECORD NOT SAVED"
+        String recordNotice = s.saveBlocked ? "EXISTING SAVE PRESERVED / PROGRESS IN MEMORY" : s.saveFailed ? "SAVE FAILED / RECORDS REMAIN IN MEMORY" : s.autoplay ? "DEMO / RECORD NOT SAVED"
                 : s.saved ? "RECORD SAVED / " + s.profile.clears() + " CLEARS" : "PRACTICE / MULTIPLAYER / FAILED: NO SOLO RECORD";
         SitarUi.footer(base, recordNotice, s.mode == Mode.CAREER ? failed ? CareerStory.retryQuip(s.performer) : CareerStory.successQuip(s.performer)
                 : "ENTER / A: SELECT / ESC / B: SONG SELECT");
