@@ -9,6 +9,11 @@ The [remediation plan](../plans/2026-10-12-mod-audit-remediation.md) maps every 
 and API candidate to implementation steps, dependencies, acceptance tests and delivery
 checks. Its runtime work is planned, not implemented by the audit or plan delivery.
 
+The plan was reconciled with upstream `e76a380c3`: hosted stock runs, shared public
+networking, binary owner storage, Act Practice and bundled Time Attack have since
+landed. The inventory/results below remain the `f9d4e0474` audit snapshot; the plan
+reuses the new capabilities and includes a targeted audit of the two new mod sources.
+
 ## Basis, scope and interpretation
 
 Reviewed `develop` at **`f9d4e04747a6474c81cc9c9424951fecf3de191b`**, after fetching

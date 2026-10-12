@@ -3,10 +3,11 @@
 **Goal:** remediate every concrete finding in the [mod author/framework audit](../audits/2026-10-12-mod-author-framework-audit.md),
 then reduce repeated author work through proven existing helpers and narrow shared APIs.
 
-**Plan base:** `develop` at `5a1f9b0fe75456192d705e26a89d46aa4e99107d`.
-Runtime evidence in the audit is from `f9d4e0474`; the intervening delivery changes
-documentation only. This document is an execution plan, not an assertion that its
-runtime repairs or proposed APIs are already implemented.
+**Plan base:** reconciled `develop` at `e76a380c3d0c8e3769fcdb745f27ef3d8889c8fe`.
+The plan started at audit delivery `5a1f9b0fe`; upstream `dfa79f3b9` and `e76a380c3`
+landed during preparation and were incorporated before integration. Initial audit
+runtime evidence remains the historical `f9d4e0474` snapshot. This document is an
+execution plan, not an assertion that its runtime repairs or proposed APIs are implemented.
 
 **Approach:** correct behavior in the actual consumers first, preserving their game
 rules and regression evidence. Extract common mechanics after those consumers prove
@@ -19,6 +20,35 @@ paths, `src/main/java/com/openggf/` for engine package paths, and
 `src/test/java/com/openggf/` for engine test paths. Newly proposed files are identified
 as new; test selectors without file paths name existing engine wrappers unless marked new.
 
+## Reconciliation with the new upstream framework
+
+The [hosted-run guide](../../modding/guides/gameplay-runs.md) and
+[racing subsystem](../../../racing/README.md) add capabilities that must be reused:
+
+- `RunHost.admitStep` already holds **stock-only** scene-launched gameplay while retaining
+  native input. `SceneGameplay.launch` deliberately excludes all mod gameplay content.
+  It therefore does not directly replace Survivors/Infinite's patched modules or Golf's
+  controlled course. P11 extends the existing module seam and tests coexistence with the
+  hosted stock-run gate; it does not add another stock-run API.
+- Shared annotated `com.openggf.net` clients, room services and JDK host contracts are
+  now available independently of Time Attack. P17 compares/reuses these before proposing
+  transport changes. Race-specific protocol types must not become Golf's game rules.
+- `ModStorage.readBytes`/`writeBytes` already supply 4 MiB binary files alongside 1 MiB
+  text files. P01's storage fakes implement both; P12 adds load/recovery outcomes over
+  existing storage rather than inventing binary I/O. Size alone does not establish a
+  safe whole-world/chunked generation protocol.
+- [Act Practice](../../../examples/act-practice/README.md) and the bundled
+  `racing/time-attack` are new sources outside the initial audit's 25-manifest inventory.
+  P01 includes Act Practice's observed unchecked best-time write; P20 audits the new
+  sources and records any additional findings. Initial audit counts remain historical.
+  The actual exporter now has thirteen projects including Tide; portable example test
+  sources still total 60 with only Hello's one selected at this base.
+
+This reconciliation inspects the changed seams and source owners; it does not claim a
+new full audit or passing upstream engine suite. Upstream's own validation record reports
+incomplete ordinary-suite coverage and attributed baseline failures; future batches must
+use the current matched baseline rather than inheriting a full-green assumption.
+
 ## Sequence and ownership
 
 | Wave | Tasks | Result |
@@ -26,7 +56,7 @@ as new; test selectors without file paths name existing engine wrappers unless m
 | **1 — protect progress and restore correct play** | P01–P06 | Save preservation/results, bounded decoder, generated camp, render-independent targeting, payout regression/repair, practice and calibration correctness. |
 | **2 — remove lifecycle and authoring friction** | P07–P11 | Generation-scoped caches, instance-owned catalogues, owner-storage/helper adoption, reproducible creator forks, native-input-preserving holds. P11 is the first shared runtime API change. |
 | **3 — extract proven common mechanics** | P12–P16 | Save-slot helper, native contact/effects, composition/canvas helpers, verified ROM recipes and character/registry convenience. |
-| **4 — resolve remaining capability and quality decisions** | P17–P19 | Bounded investigations with explicit implement/defer verdicts, focused orchestration/diagnostic cleanup and installed-artifact verification. |
+| **4 — resolve remaining capability and quality decisions** | P17–P20 | Bounded investigations with explicit implement/defer verdicts, focused orchestration/diagnostic cleanup, installed-artifact verification and audit of newly landed mod sources. |
 
 Tasks in a wave can be independent, but source ownership matters. Keep a single owner
 for Flappy scene/records, Sitar scene/settings, Eggman's Sky state/art, and Survivors
@@ -128,7 +158,8 @@ Preserve unrelated installed mods, saves, dirty submodules and unknown work.
 and tutorial part 5; Sitar `model/CareerJournal.java`, `model/PlayerProfile.java`,
 `controls/ControlSettings.java`, `SitarScene.java`; Three Islands `Game.java` and
 save notices in `screen/FieldScreen.java`/`MenuScreen.java`; Slay `scene/Shell.java`/
-`Profile.java`; Hello `HelloScene.java`; Tower `TowerDefenseScene.java`.
+`Profile.java`; Hello `HelloScene.java`; Tower `TowerDefenseScene.java`; new Act
+Practice `PracticeHost.java` and engine `TestActPracticeExample.java`.
 
 - [ ] Add `futureFileSurvivesOpenExitAndFinishedRun`,
   `corruptPrimaryRecoverySurvivesFailedPrimaryWrite`, and
@@ -143,12 +174,15 @@ save notices in `screen/FieldScreen.java`/`MenuScreen.java`; Slay `scene/Shell.j
   corrupt primary bytes over it. In each scene separate in-memory progress, counted
   outcomes and dirty persistence state; propagate boolean results and retry without
   duplicate rewards. Show success only after publication; use one bounded failure notice.
+  Apply the same checked best-time/dirty-write treatment to Act Practice; a failed write
+  must not be hidden behind an updated in-memory best. Storage fakes implement the
+  current text and binary methods even where these consumer cases use only text.
 - [ ] Extend the actual scene lifecycle checks, including future file → entry → exit
   with no play, finish/retry, current/legacy data, and unknown fields. Update Hello and
   tutorial save examples so authors learn checked outcomes. Preserve room-entry saves,
   profile durability and Starfall's existing defensive generation behavior.
 
-**Verify:** queued `-Dmse=off "-Dtest=TestModStorage,TestFlappyTailsExample,TestFlappyTailsScene,TestFlappyTailsTutorial,TestSitarHeroCareer,TestSitarHeroControls,TestSlayTheRobotnikExample,TestSlayTheRobotnikScene,TestThreeIslandsExample,TestThreeIslandsScene,TestHelloSceneExample,TestRobotnikTowerDefenseExample,TestRobotnikTowerDefenseScene" test`
+**Verify:** queued `-Dmse=off "-Dtest=TestModStorage,TestFlappyTailsExample,TestFlappyTailsScene,TestFlappyTailsTutorial,TestSitarHeroCareer,TestSitarHeroControls,TestSlayTheRobotnikExample,TestSlayTheRobotnikScene,TestThreeIslandsExample,TestThreeIslandsScene,TestHelloSceneExample,TestRobotnikTowerDefenseExample,TestRobotnikTowerDefenseScene,TestActPracticeExample" test`
 with required ROM properties. Run these as smaller affected subsets during iteration;
 the combined selector defines the full P01 consumer coverage.
 
@@ -388,7 +422,9 @@ discoverable and executable, while distributed main jars contain only main conte
 **Owns:** R6/U2. **Files:** `game/mode/GameplayFrameController.java`,
 `ControlledFrameRuntime.java`, its owner-bound adapters and all stepping consumers;
 Survivors `Stage.java`/`RunState.java`/service registration; Golf `GolfMode.java`;
-Infinite controller phases. Depends on P05 for Survivors settlement policy.
+Infinite controller phases. Depends on P05 for Survivors settlement policy. Also inspect
+`HostedRunController.java`/`SceneRunLauncher.java` and the current GameLoop host-admission
+path: hosted stock runs already hold native-input rows, but exclude these gameplay mods.
 
 - [ ] Reproduce Speed Shoes consumption during a long Survivors menu through the
   real loop. Pin Golf's current neutral-step physics/input and ordinary stock movement
@@ -410,12 +446,15 @@ Infinite controller phases. Depends on P05 for Survivors settlement policy.
 - [ ] Give Infinite an explicit phase disposition table: partial ready/continue holds
   that intentionally leave enemies/animation live stay advancing. Migrate only true
   world freezes. Confirm Golf's existing neutral policy and stock unmodified path remain intact.
+  Reuse the hosted-run admission implementation where equivalent; test that a row decision
+  is made once, stock-run content remains mod-free, scene visits/handles are revoked on exit,
+  and new module dispositions do not bypass existing run policy or callback attribution.
 - [ ] Cover shoes/invincibility/protection/RNG/object lifetime/touch/physics, airborne/
   hurt/rolling/platform state, menu edges, held-button release, entry transitions,
   rewind/capture/forward replay and supported characters/viewports. Update runtime
   contract, signature pins and affected route matrices.
 
-**Verify:** queued `-Dmse=off "-Dtest=TestCourseControl,TestPuttPuttParadise,TestSonicSurvivors,TestInfiniteSonic,TestLevelFrameHardwareTimingBoundaries" test`
+**Verify:** queued `-Dmse=off "-Dtest=TestCourseControl,TestPuttPuttParadise,TestSonicSurvivors,TestInfiniteSonic,TestLevelFrameHardwareTimingBoundaries,TestHostedRunController,TestSceneRunLauncher,TestModSceneHostGameplay,TestActPracticeExample" test`
 plus the API gate below. This timing/public-contract change requires normal change-
 based validation and affected reference/trace fixtures. **Done:** native advance is
 behavior-equivalent to ordinary input; HOLD freezes the declared world; Golf and
@@ -442,6 +481,8 @@ reuse `TestModStorage` and migrated mod scenes.
 
 - [ ] Extract the repaired local behavior from Three Islands plus Flappy or Sitar,
   defining typed read outcomes and checked writes over an injected `ModStorage` handle.
+  Existing binary owner storage is retained for recording/ghost consumers; the first
+  slot coordinator operates over the current text contract and does not alter its caps.
   Codecs return version/validation status explicitly; they do not perform I/O or
   derive creator ownership. Corrupt and incompatible are distinct. Unexpected codec
   programming failures propagate through the owner boundary rather than becoming
@@ -581,7 +622,7 @@ missing evidence and reopening condition; it does not leave an untracked “TBD�
 | Candidate / source owners | Steps and decisive evidence | Initial disposition |
 |---|---|---|
 | Cancellable art preparation — Eggman's Sky `ui/LoadingMode.java`, Three Islands `screen/LoadingScreen.java`, scene ROM host | Measure expensive preparation steps; prototype host-owned independent ROM handles/work units with immutable detached results. Test cancel/replacement/owner fault/teardown and stale-result rejection; bound progress and memory. Never run current non-thread-safe SceneRomArt on a mod worker. | Design after P07/P15. Implement only if safe cancellation/ownership is proved and the measured loading cost warrants it; existing music preparation is the reference, not a claimed art API. |
-| Gameplay-session transport — Golf connection/listener/outbound queues, scene network host | Enumerate lifecycle/backpressure/terminal-delivery requirements and compare SceneNetwork. Probe close during DNS/connect/read/write, bounded reliable controls, replaceable presentation queue and reconnect. Keep golf protocol/authority/fingerprints local. | Retain Golf's audited local transport until a narrow session-owned lifecycle extension has acceptance tests and demonstrated demand; do not repurpose scene text transport blindly. |
+| Gameplay-session transport — Golf connection/listener/outbound queues, scene network host, newly exported `net.client.RaceConnection`/`RaceClient` and `net.host.RaceRoomHost` | Inventory the now-public shared client/host/protocol contracts before designing anything new. Compare Golf's reliable-control/latest-view needs and caller/session lifetime with those contracts and SceneNetwork. Probe close during DNS/connect/read/write, backpressure, terminal delivery and reconnect. Keep golf protocol/authority/fingerprints local; race protocol types cannot silently change its rules. | Prefer a protocol-preserving adapter to existing shared primitives. Retain Golf's local implementation where no equivalent contract exists, then design only the measured missing session-lifecycle/queue seam; do not claim shared networking is absent. |
 | Auxiliary spawning — Survivors `ArenaObjects.java`, ObjectManager native/auxiliary admission | Characterize native-slot versus auxiliary capacity/scheduling; prototype injected admission with verified owner, probe protection, faults, destruction and reconstruction. Test repeated restore with no duplicate spawn/identity. | Consider a narrow operation for this real consumer; no global object-pool redesign. Export only after service/lifetime/rewind tests pass. |
 | ROM title-card presentation — Flappy `TitleCard.java`, Sitar `SitarScreens.java`, Slay `scene/TitleCard.java` | Extract a pure time/hold/release evaluator plus provider metadata for omitted elements. Compare arrival/staggered exit, hurry, replacement name, missing frames and 320/400/528/800 widths in all three scenes. | Strong repeated demand: implement a small helper after P14/P15 if existing providers do not already cover the choreography. Caller owns elapsed time and game flow. |
 | Atlas case / inspectable focus — Three Islands `art/Font.java`, Slay hotspots, AtlasFont/FocusRegions | Add an opt-in exact-case glyph policy while preserving existing uppercase defaults and malformed/duplicate limits. Separate focusability/description from activation; identify a second real focus consumer and compare navigation behavior. | Case support is a bounded helper extension when Three Islands migrates. Keep Slay's focus policy local until the second-consumer case is established. |
@@ -618,6 +659,8 @@ status; accepted behavior, algorithms and saved streams remain unchanged.
 ### P19. Verify rebuilt installed artifacts without disturbing player state
 
 **Owns:** obsolete installed `sample-flappy-mod.jar`; final source/artifact qualification.
+Reinventory at execution time: new Act Practice and bundled Time Attack artifacts have
+independent source identities and installation/bundling rules.
 
 - [ ] Build the maintained Native Flappy source using matching final candidate engine/
   SDK artifacts into a dedicated task output; inspect range, identity and validator findings.
@@ -635,12 +678,47 @@ status; accepted behavior, algorithms and saved streams remain unchanged.
 **Done:** maintained sources build against one candidate identity, generated artifacts
 are qualified, and any requested local replacement has an explicit observed outcome.
 
+### P20. Audit the newly landed Act Practice and bundled Time Attack sources
+
+**Owns:** scope delta from upstream `dfa79f3b9`/`e76a380c3`, outside the historical
+25-manifest audit. **Files:** `examples/act-practice/`,
+`racing/time-attack/src/main/java/openggf/timeattack/` and its `mp`/ghost/UI owners,
+their manifests/tests, shared run/storage/network adapters and the linked upstream
+Time Attack extraction plan. The standalone operator server is a separate subsystem;
+inspect boundary usage without turning this mod-remediation task into a server rewrite.
+
+- [ ] Inventory new production areas, manifests, docs, source tests and actual validator
+  findings. Record them as a dated scope extension in the existing audit. Distinguish
+  strict bundled package validation from live run/network/timing qualification.
+- [ ] Examine stock-run launch/admission/retry/end, suspended scene resumption, revoked
+  visit handles, callback faults, no-mod gameplay isolation, ghost pose comparison-only
+  authority and attempts/recordings. Include restored/rewound Act Practice attempts and
+  timer/best-score persistence; P01 owns the already-observed ignored write result.
+- [ ] Examine Time Attack settings/legacy import and binary recording/ghost bounds,
+  corrupt/future-file preservation, peer queue/disconnect/teardown, shared-client/host
+  usage and mutable-static/asset ownership. Treat existing typed network rejection and
+  owner-private binary storage as implemented capabilities, not new uplift proposals.
+- [ ] Add real regressions only for established failures or missing important boundaries;
+  map each new finding to P01/P05/P09/P10/P11/P12/P17 or a separate bounded repair.
+  Compare newly repeated author patterns with both these mods and the original consumers
+  before changing public APIs. Record explicit evidence-based disposition when no fix is needed.
+- [ ] Preserve upstream's exact inherited failures/incomplete suite coverage in the
+  batch baseline. Run the new targeted boundary checks through the root queue/Jupiter
+  configuration, which includes the bundled mod's test sources, and record actual skips.
+
+**Verify:** queued `-Dmse=off "-Dtest=TestActPracticeExample,TestHostedRunController,TestSceneRunLauncher,TestModSceneHostGameplay,TestTimeAttackModPackage,TestTimeAttackRuntime,TestTimeAttackRuntimeMultiplayerSeams,TestTimeAttackSettings,TestAttemptRecordingVault,TestModStorage" test`
+with relevant ROMs; use affected shared-network tests for any identified transport change.
+**Done:** the current source inventory has no silently excluded new mod, and additional
+findings have observed evidence, explicit remediation ownership or a justified disposition.
+
 ## Batch handoff and completion criteria
 
 Start implementation with **P01/P02 save safety, P03 camp, P04 targeting and the P05
 settlement regression**. P06 is a small independent correctness follow-up. Run P10
 tooling alongside disjoint consumer work where useful. P11 is the first cross-cutting
 runtime delivery; do not couple all seven API uplifts into one large merge.
+Run P20 early alongside disjoint repairs so the newly landed consumers inform shared
+contracts before P12–P17. It does not require repeating unaffected original audit work.
 
 For each integrated batch mark only actually achieved checkboxes, record exact source,
 commands/failures/skips and migrated consumers, and update the coverage map disposition
