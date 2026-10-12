@@ -28,7 +28,8 @@ public final class FlappyScene implements ModScene {
 
     private ZoneArt art;
     private TailsArt tails;
-    private final Course course = new Course();
+    private final Zone.Tour tour = new Zone.Tour();
+    private final Course course = new Course(tour);
     private final Flight flight = new Flight();
     private boolean flying;
     private long crashedAt = -1;
@@ -36,25 +37,28 @@ public final class FlappyScene implements ModScene {
     private double scenery;
     private int score;
     private int best;
+    private boolean bestDirty, saveEligible = true;
+    private String saveNotice = "";
     private long seed = 1;
 
     @Override
     public void enter(SceneContext ctx) {
-        art = ZoneArt.load(ctx.art().rom(), Zone.tour().get(0));
+        art = ZoneArt.load(ctx.art().rom(), tour.at(0));
         tails = TailsArt.load(ctx.art().rom());
-        best = ctx.storage().read(BEST_FILE).map(FlappyScene::number).orElse(0);
+        loadBest(ctx);
         course.reset(seed, 0);
-        ctx.audio().playMusic(Zone.tour().get(0).music());
+        ctx.audio().playMusic(tour.at(0).music());
     }
 
     @Override
     public void update(SceneContext ctx) {
         ticks++;
+        if (bestDirty && saveEligible && ticks % 60 == 0) saveBest(ctx);
         if (crashedAt >= 0) {
             if (ticks - crashedAt > 90) restart();
             return;
         }
-        int speed = Zone.tour().get(0).speed();
+        int speed = tour.at(0).speed();
         scenery += speed / 256.0;
         boolean pressed = ctx.buttonPressed(SceneButtons.ACTIONS) || ctx.keyPressed(SceneKeys.SPACE)
                 || ctx.mouse().leftPressed();
@@ -87,7 +91,8 @@ public final class FlappyScene implements ModScene {
             ctx.audio().playSfx(SFX_DEATH);
             if (score > best) {
                 best = score;
-                ctx.storage().write(BEST_FILE, Integer.toString(best));
+                bestDirty = true;
+                saveBest(ctx);
             }
         }
     }
@@ -103,7 +108,7 @@ public final class FlappyScene implements ModScene {
     public void draw(SceneContext ctx, SceneCanvas canvas) {
         int width = ctx.width();
         if (art.backdrop != null) {
-            canvas.drawBackdrop(art.backdrop, Zone.tour().get(0).backdropTop(), scenery, ticks);
+            canvas.drawBackdrop(art.backdrop, tour.at(0).backdropTop(), scenery, ticks);
         } else {
             canvas.clear(0x3070D0);
         }
@@ -131,17 +136,42 @@ public final class FlappyScene implements ModScene {
         canvas.text(text, (width - canvas.textWidth(text)) / 2, 12, 0xFFFFFFFF);
         String bestText = "BEST " + best;
         canvas.text(bestText, width - 8 - canvas.textWidth(bestText), 12, 0xFFFFFFFF);
+        if (!saveNotice.isEmpty()) canvas.text(saveNotice, 8, 144, 0xFFFFFFFF);
         if (!flying) {
             String hint = "PRESS A, B, C, SPACE OR CLICK TO FLAP";
             canvas.text(hint, (width - canvas.textWidth(hint)) / 2, 160, 0xFFFFFFFF);
         }
     }
 
+    @Override public void exit(SceneContext ctx) { saveBest(ctx); }
+
+    private void loadBest(SceneContext ctx) {
+        bestDirty = false;
+        try {
+            var input = ctx.storage().read(BEST_FILE);
+            boolean present = input.isPresent() || ctx.storage().list().contains(BEST_FILE);
+            int parsed = input.map(FlappyScene::number).orElse(-1);
+            saveEligible = !present || parsed >= 0;
+            best = Math.max(0, parsed);
+        } catch (RuntimeException unreadable) { best = 0; saveEligible = false; }
+        saveNotice = saveEligible ? "" : "EXISTING BEST PRESERVED";
+    }
+
+    private void saveBest(SceneContext ctx) {
+        if (!bestDirty || !saveEligible) return;
+        boolean written;
+        try { written = ctx.storage().write(BEST_FILE, Integer.toString(best)); }
+        catch (RuntimeException unavailable) { written = false; }
+        bestDirty = !written;
+        saveNotice = written ? "" : "BEST NOT SAVED - RETRYING";
+    }
+
     private static int number(String text) {
         try {
-            return Integer.parseInt(text.trim());
+            int value = Integer.parseInt(text.trim());
+            return value >= 0 ? value : -1;
         } catch (NumberFormatException e) {
-            return 0;
+            return -1;
         }
     }
 }

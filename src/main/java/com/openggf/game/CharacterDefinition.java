@@ -65,7 +65,10 @@ public record CharacterDefinition(
     @ModApi
     @FunctionalInterface
     public interface PlayableFactory {
-        /** Creates a playable at ROM-style centre coordinates for the persisted key. */
+        /**
+         * Creates a fresh playable at ROM-style centre coordinates. The host binds the definition's
+         * canonical key; runtime sprite names can carry host suffixes and need no identity parsing.
+         */
         AbstractPlayableSprite create(String persistedCode, int x, int y);
     }
 

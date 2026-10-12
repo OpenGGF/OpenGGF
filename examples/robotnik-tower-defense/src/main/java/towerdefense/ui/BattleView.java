@@ -8,10 +8,14 @@ import towerdefense.core.*;
 public final class BattleView {
     // Slay the Robotnik's Sonic 3 palette and compact font establish the visual vocabulary.
     public static final int WHITE = 0xFFEEEEEE, GOLD = 0xFFFFDA24, MUTED = 0xFF928CA0;
+    private final Catalog.Prepared definitions;
     private final PixelFont font;
     private final RomArt art;
 
-    public BattleView(PixelFont font, RomArt art) { this.font = font; this.art = art; }
+    public BattleView(PixelFont font, RomArt art) { this(font, art, new Catalog.Prepared()); }
+    public BattleView(PixelFont font, RomArt art, Catalog.Prepared definitions) {
+        this.font = font; this.art = art; this.definitions = java.util.Objects.requireNonNull(definitions);
+    }
 
     public void background(SceneCanvas c, int ticks) {
         c.clear(0x172634);
@@ -43,7 +47,7 @@ public final class BattleView {
         door(c, b, ticks);
         Tower selected = b.tower(site);
         if (focus.equals("SHOP") || selected != null) {
-            int range = selected == null ? Catalog.defense(kind).range() : selected.range();
+            int range = selected == null ? definitions.defense(kind).range() : selected.range();
             dottedCircle(c, Battlefield.siteX(site), Battlefield.siteY(site) - 12, range, 0x5575CDE0);
         }
         for (int i = 0; i < Battlefield.SITES; i++) {
@@ -75,14 +79,14 @@ public final class BattleView {
         for (Flicky bird : b.birds()) bird(c, bird, ticks);
         for (Effect e : b.effects()) effect(c, e, ticks);
         c.fill(0, 176, 400, 8, 0xF00A1028);
-        String detail = selected != null && !focus.equals("SHOP") ? Catalog.defense(selected.kind()).name()
+        String detail = selected != null && !focus.equals("SHOP") ? definitions.defense(selected.kind()).name()
                 + " LV" + selected.level() + "  DMG " + (int) selected.damage() + "  RANGE " + selected.range()
                 + "  UP $" + b.upgradeCost(site) + "  SELL $" + b.sellValue(site)
-                : Catalog.defense(kind).description();
+                : definitions.defense(kind).description();
         boolean pointer = mouse.lastInputWasMouse();
         boolean inspecting = pointer && (mouse.over(0, 186, 308, 38) || mouse.over(312, 215, 85, 9));
         for (int i = 0; i < 6; i++) {
-            if (pointer && mouse.over(3 + i * 51, 186, 49, 27)) detail = Catalog.defense(i).description();
+            if (pointer && mouse.over(3 + i * 51, 186, 49, 27)) detail = definitions.defense(i).description();
         }
         if (pointer && mouse.over(54, 215, 74, 9)) detail = selected == null ? "SELECT A TOWER TO UPGRADE."
                 : selected.level() == 3 ? "LEVEL 3: MAXIMUM UPGRADE."
@@ -171,10 +175,10 @@ public final class BattleView {
                 case 0 -> "BLASTER"; case 1 -> "MORTAR"; case 2 -> "ANTI-AIR";
                 case 3 -> "SPIKER"; case 4 -> "ORBITS"; default -> "EGG ROBO";
             };
-            font.centered(c, name, x + 24, 189, Catalog.defense(i).color(), 1);
+            font.centered(c, name, x + 24, 189, definitions.defense(i).color(), 1);
             art.defense(c, i, b.ticks(), x + 12, 211, 15, WHITE);
-            font.text(c, "$" + Catalog.defense(i).cost(), x + 24, 201,
-                    b.scrap() >= Catalog.defense(i).cost() ? GOLD : MUTED);
+            font.text(c, "$" + definitions.defense(i).cost(), x + 24, 201,
+                    b.scrap() >= definitions.defense(i).cost() ? GOLD : MUTED);
         }
         button(c, "SEND WAVE", 312, 186, 85, 27, focus.equals("ACTIONS") && action == 4,
                 b.phase().equals(Battlefield.PREP) ? GOLD : MUTED);
@@ -242,8 +246,8 @@ public final class BattleView {
             for (int i = 0; i < 6; i++) {
                 int y = 49 + i * 21;
                 art.defense(c, i, ticks, 43, y + 13, 18, WHITE);
-                font.text(c, Catalog.defense(i).name() + "  $" + Catalog.defense(i).cost(), 62, y, Catalog.defense(i).color());
-                font.text(c, Catalog.defense(i).description(), 62, y + 8, WHITE);
+                font.text(c, definitions.defense(i).name() + "  $" + definitions.defense(i).cost(), 62, y, definitions.defense(i).color());
+                font.text(c, definitions.defense(i).description(), 62, y + 8, WHITE);
             }
             font.centered(c, "RED FLAGS: ORGANISERS SPEED THEIR COMRADES.", 200, 181, 0xFFFF9C9C, 1);
             font.centered(c, "GREEN TOOLS: SABOTEURS JAM NEARBY TOWERS.", 200, 190, 0xFFAEEC90, 1);

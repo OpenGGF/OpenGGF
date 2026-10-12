@@ -31,6 +31,31 @@ class WorldSizeTest {
             assertTrue(loaded.recall());assertEquals(Biome.ANGEL_ISLAND,loaded.region());
         }
     }
+    @org.junit.jupiter.api.TestFactory
+    java.util.stream.Stream<org.junit.jupiter.api.DynamicTest> beaconCompletesAtGeneratedCampForCurrentAndLegacyGeometry() {
+        return java.util.stream.Stream.concat(java.util.Arrays.stream(WorldSize.values()).map(size ->
+                org.junit.jupiter.api.DynamicTest.dynamicTest(size.name(),()->assertCamp(new World(73,size),false))),
+                java.util.stream.Stream.of(org.junit.jupiter.api.DynamicTest.dynamicTest("legacy 256x96",()->
+                        assertCamp(new World(73,true,256,96),true))));
+    }
+    private void assertCamp(World world,boolean legacy) {
+        world.wardens=7;world.add(starfall.Content.Item.BEACON,2);
+        world.x=40*World.T+6;world.y=world.campTileY()*World.T-11;
+        if(!legacy) {
+            double campY=world.y;world.y=28*World.T;
+            assertFalse(world.interact(40,27),"old row is not the expanded camp");world.y=campY;
+        }
+        World restored=SaveCodec.decode(SaveCodec.encode(world)).orElseThrow();
+        assertTrue(world.interact(40,world.campTileY()-2),"visible generated camp");
+        assertTrue(restored.interact(40,restored.campTileY()-2),"restored generated camp");
+        assertTrue(world.won);assertEquals(7,world.quest);
+        assertFalse(world.interact(40,world.campTileY()-2),"victory consumes one core only");
+        assertEquals(1,world.count(starfall.Content.Item.BEACON));
+        for(int tick=0;tick<30;tick++) {
+            world.step(new World.Input(0,false,false));restored.step(new World.Input(0,false,false));
+            assertEquals(SaveCodec.encode(world),SaveCodec.encode(restored),"deterministic replay after victory");
+        }
+    }
     @Test void unsupportedLengthsAndDepthsAreRejectedBeforeAllocation() {
         for(int width:new int[]{0,-1,256,12288,Integer.MAX_VALUE})
             assertThrows(IllegalArgumentException.class,()->new World(1,false,width,World.H));

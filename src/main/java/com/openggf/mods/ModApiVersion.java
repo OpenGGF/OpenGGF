@@ -66,6 +66,12 @@ public final class ModApiVersion {
      * and is resumed when each ends, learn a game's run fingerprint before launching, and
      * claim keyboard text input so global shortcuts stay quiet while the player types.
      * Owner storage also keeps bounded, atomically replaced binary files beside its text.
+     * Typed text save slots preserve incompatible/corrupt generations, validate recovery
+     * and report failed primary/backup publication with exact-checkpoint retries.
+     * Pure sprite compositions share bounds/emission, and scoped canvas transforms
+     * preserve nested opacity, full-viewport clears and the previous clip.
+     * Provider title-card positions share choreography while callers retain clocks
+     * and release policy. Atlas fonts can opt into exact-case glyphs and explicit fallback.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

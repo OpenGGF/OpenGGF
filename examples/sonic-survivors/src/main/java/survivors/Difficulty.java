@@ -28,6 +28,10 @@ final class Difficulty {
      * is rated as if five minutes had passed.
      */
     static int bossHp(int stage, int act, int pressureSeconds, int mode) {
+        return bossHp(stage, act, pressureSeconds, mode, Stages.averageHp(stage));
+    }
+
+    static int bossHp(int stage, int act, int pressureSeconds, int mode, double averageHp) {
         String override = System.getProperty("sonic-survivors.bossHp");
         if (override != null) {
             try { return Math.max(1, Integer.parseInt(override.trim())); } catch (NumberFormatException ignored) { }
@@ -35,7 +39,7 @@ final class Difficulty {
         int tier = Stages.tier(stage, act);
         int seconds = stage == Stages.DEZ ? 300 : pressureSeconds;
         double factor = stage == Stages.DEZ ? 18 : 12;
-        double hp = Stages.averageHp(stage) * hpScale(tier, act, seconds) * factor * (mode == RunState.LONG ? 1.25 : 1);
+        double hp = averageHp * hpScale(tier, act, seconds) * factor * (mode == RunState.LONG ? 1.25 : 1);
         return (int) Math.max(40 + 12 * tier, Math.round(hp));
     }
 

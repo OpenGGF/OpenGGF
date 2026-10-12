@@ -1,0 +1,26 @@
+package example.phase2sample;
+
+import com.openggf.mods.testing.ModTestKit;
+import java.nio.file.Path;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import static org.junit.jupiter.api.Assertions.*;
+
+/** Packages production output and checks enabled content through the engine's owner boundary. */
+class StarterIntegrationTest {
+    @TempDir Path work;
+
+    @Test void packedModRegistersWithoutFaults() throws Exception {
+        try (var kit = ModTestKit.packageAndOpen(Path.of("target/classes"),
+                work.resolve("mods"), work.resolve("storage"))) {
+            var enabled = kit.catalog().effective().orderedEnabled();
+            assertEquals(1, enabled.size());
+            var descriptor = enabled.getFirst();
+            assertEquals("phase2-sample", descriptor.manifest().id());
+            if (descriptor.containsCode() || !descriptor.manifest().artOverrides().isEmpty()) {
+                assertNotNull(kit.plan("phase2-sample"));
+            }
+            assertTrue(kit.findings().isEmpty(), kit.findings()::toString);
+        }
+    }
+}

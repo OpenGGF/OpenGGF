@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import javax.tools.ToolProvider;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -120,17 +121,28 @@ class TestPurposeStarters {
             assertTrue(pom.contains("<version>3.14.0</version>"), kind);
             assertTrue(pom.contains("<phase>initialize</phase>"), kind);
             assertTrue(pom.contains("my-" + kind + "-mod.jar"), kind);
+            assertTrue(pom.contains("<id>creator-tests</id>"), kind);
+            assertTrue(pom.contains("<classifier>mod-testkit</classifier>"), kind);
             try (var paths = Files.walk(project)) {
                 assertFalse(paths.anyMatch(p -> p.toString().endsWith(".base64") || p.getFileName().toString().equals("binary-assets.properties")), kind);
             }
-            List<String> sources;
-            try (var paths = Files.walk(project)) { sources = paths.filter(p -> p.toString().endsWith(".java")).map(Path::toString).toList(); }
+            List<String> sources = javaSources(project.resolve("src/main/java"));
+            Path classes = temp.resolve(kind + "-classes"); Files.createDirectories(classes);
             if (!sources.isEmpty()) {
-                Path classes = temp.resolve(kind + "-classes"); Files.createDirectories(classes);
                 var args = new ArrayList<>(List.of("--release", "25", "-cp", TestSessionOutputPaths.compiledClasses().toAbsolutePath().toString(), "-d", classes.toString()));
                 args.addAll(sources);
                 assertEquals(0, ToolProvider.getSystemJavaCompiler().run(null, null, null, args.toArray(String[]::new)), kind);
             }
+            List<String> tests = javaSources(project.resolve("src/test/java"));
+            assertFalse(tests.isEmpty(), kind + " must generate a packed-mod integration test");
+            Path testClasses = temp.resolve(kind + "-test-classes"); Files.createDirectories(testClasses);
+            String testClasspath = classes.toAbsolutePath() + java.io.File.pathSeparator
+                    + System.getProperty("java.class.path");
+            var testArgs = new ArrayList<>(List.of("--release", "25", "-cp", testClasspath,
+                    "-d", testClasses.toString()));
+            testArgs.addAll(tests);
+            assertEquals(0, ToolProvider.getSystemJavaCompiler().run(null, null, null,
+                    testArgs.toArray(String[]::new)), kind + " test sources compile with test dependencies");
             if (kind.equals("reskin")) {
                 Path baked = temp.resolve("reskin.ggfs");
                 new ArtConverter().convert(project.resolve("src/main/mod/sample.png"), project.resolve("src/main/mod/sample-sheet.yaml"), baked);
@@ -144,6 +156,14 @@ class TestPurposeStarters {
             }
             if (kind.equals("standalone"))
                 new LevelConverter().convert(project.resolve("src/main/mod/level-source"), temp.resolve("standalone-level"));
+        }
+    }
+
+    private static List<String> javaSources(Path root) throws IOException {
+        if (!Files.isDirectory(root)) return List.of();
+        try (var paths = Files.walk(root)) {
+            return paths.filter(path -> path.toString().endsWith(".java"))
+                    .map(Path::toString).sorted().toList();
         }
     }
 

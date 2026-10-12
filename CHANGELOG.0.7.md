@@ -1081,6 +1081,11 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   module-only rewind composition isolated from engine artifacts, portable
   example projects, repeatable builds, artifact-only CI and explicit packaging
   warnings suitable for automation.
+  Exported projects retain their authored tests, fixtures and source generators;
+  the portable test launcher checks matching artifacts and runs Jupiter with
+  empty discovery treated as failure. Generated starters include a separate test
+  profile and packed-mod integration test. Infinite Sonic and Sonic Survivors
+  share the example builder while keeping their documented jar paths.
   Separate experimental Windows and Linux native friends bundles package the maintained
   example mods and launch shortcuts using GraalVM runtime class loading, with
   generated engine/JDK member retention, runtime bootstrap controls and startup checks.
@@ -1102,9 +1107,18 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Save-field inputs are frozen through the provider's owner boundary, standalone
   audio profiles can omit a native ROM loader, and object reconstruction preserves
   optional restore services without exposing runtime fallback access.
-  Shared helpers cover standalone assembly, character landing/reset hooks,
-  immutable physics and placement edits, bounded storage and captured state,
-  authored fonts and overlays, remappable actions and ROM-qualified scene art.
+  Shared helpers cover declarative owned object assembly, factory-bound character
+  identity and standard art emission, immutable physics and placement edits,
+  checked owner-local save slots and captured state, authored fonts and overlays,
+  remappable actions and ROM-qualified scene art. Save slots preserve rejected files,
+  report failed publication and retry the same checkpoint without repeating rewards.
+  Ordered sprite composition and scoped canvas transforms share geometry across logic
+  and drawing; gameplay row admission distinguishes native input, controlled neutral
+  stepping and a complete hold. Injected floor/contact, spring sound and destruction
+  services remove repeated native-object workarounds.
+  Provider title-card positions share choreography while preserving each scene's
+  loading/release policy, and atlas fonts support authored mixed-case glyphs with
+  an explicit fallback.
   Shared compact-font metrics and drawing support scales 1–8, including Sitar's
   five-times-size count-in without changing its authored pixels or audible clock.
   Generated character starters draw their installed baked art; walkthroughs use
@@ -1112,7 +1126,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Generated standalone starters materialize authored audio as runtime resources
   before packaging.
   The maintained examples adopt these helpers while retaining their game rules,
-  visuals, input formats, random sequences and saved profiles. Creator tests use
+  visuals, input formats, random sequences and saved profiles. Prepared definitions
+  and generation-owned caches avoid repeated construction; Slay targeting is independent
+  of draw cadence and Survivors settlements credit once across rewind. Creator tests use
   production validation/loading/resolution and record real scene input and draws;
   authored playable routes retain their wider gameplay/rewind coverage obligations.
   The API descriptor remains the version/publication authority; this

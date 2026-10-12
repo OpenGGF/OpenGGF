@@ -1,6 +1,7 @@
 package survivors;
 
 import com.openggf.audio.GameSound;
+import com.openggf.game.CharacterKey;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.graphics.GLCommand;
@@ -96,9 +97,10 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
 
     // Balance telemetry (hitpoints spawned and damage dealt this arena), read by the balance probe.
     long statHpSpawned, statDamage;
-    // Frozen player state while a menu pauses play.
-    boolean playerFrozen;
-    int savedX, savedY, savedG, savedInvincible, savedInvulnerable;
+    // Presentation clock and row-local menu input are separate from the held world.
+    int overlayFrames;
+    @com.openggf.game.rewind.RewindTransient(reason="Input belongs only to the active frame callback")
+    private com.openggf.control.LogicalInputSnapshot menuInput;
     // Weapons and moves.
     int boomTimer, flickyTimer, barrierTimer, orbitAngle, ringTimer;
     int airFrames, airJumpsUsed, dashFrames, comboGrace;
@@ -164,61 +166,63 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
     // Frame update
     // =========================================================================================
 
+    /** Menu admission owns the row before native clocks and resolves the recreated Stage each time. */
+    boolean beforeFrame(AbstractPlayableSprite player, com.openggf.control.LogicalInputSnapshot input) {
+        menuInput = input;
+        try {
+            var run = run();
+            profile().tickPersistence();
+            holdTimer();
+            services().levelGamestate().setRingExtraLifeFlags(0x06);
+            services().levelManager().setForceHudSuppressed(true);
+            holdArena();
+            if (!started) start(player);
+            if (escapePressed()) { retire(true); run.paused = true; return true; }
+            if (player.getDead() && phase != DEAD && phase != VICTORY) die();
+            if (!player.getDead()) setLives(1);
+            if ((phase == INTRO || phase == FIGHT || phase == BOSS)
+                    && overlay == OVERLAY_NONE && run.pendingLevels > 0) openLevelUp();
+            boolean held = menuShowing();
+            run.paused = held;
+            if (!held) return false;
+            if (overlay != OVERLAY_NONE) overlayFrames++;
+            else phaseFrames++; // Camp/results input delay is presentation time.
+            if (overlay == OVERLAY_CHEST) chestMenu(player);
+            else if (overlay != OVERLAY_NONE) levelUpMenu(player);
+            else switch (phase) {
+                case CAMP -> campMenu(player);
+                case CLEAR -> clearMenu(player);
+                case DEAD -> deadMenu(player);
+                default -> victoryMenu(player);
+            }
+            // Confirmation/release is itself held. Physics resumes with the following input row.
+            run.paused = true;
+            return true;
+        } finally { menuInput = null; }
+    }
+
     @Override public void update(int vIntRunCount, PlayableEntity entity) {
-        if (!(entity instanceof AbstractPlayableSprite player)) return;
+        if (!(entity instanceof AbstractPlayableSprite player) || run().paused) return;
         var run = run();
-        holdTimer();
-        // Lives come from nothing here: pre-claim the stock 100/200-ring extra lives every frame.
-        services().levelGamestate().setRingExtraLifeFlags(0x06);
-        services().levelManager().setForceHudSuppressed(true);
-        holdArena();
         holdCeiling(player);
         frameTick++;
         phaseFrames++;
         if (bannerFrames > 0) bannerFrames--;
         if (hitFlash > 0) hitFlash--;
-        if (!started) start(player);
-        if (escapePressed()) { retire(true); return; }
         run.pressure = phase == FIGHT || phase == BOSS ? pressureSeconds() : run.pressure;
-        if (player.getDead() && phase != DEAD && phase != VICTORY) { die(); }
-        if (!player.getDead()) setLives(1);
-        boolean wantPause = phase == CAMP || phase == CLEAR || phase == VICTORY || overlay != OVERLAY_NONE
-                || phase == DEAD;
-        run.paused = wantPause;
-        freezePlayer(player, wantPause && !player.getDead());
+        if (player.getDead() && phase != DEAD && phase != VICTORY) { die(); return; }
         switch (phase) {
-            case CAMP -> campMenu(player);
             case INTRO -> {
-                if (overlay == OVERLAY_NONE && run.pendingLevels > 0) {
-                    openLevelUp();
-                    run.paused = true;
-                    freezePlayer(player, true);
-                    break;
-                }
-                if (overlay != OVERLAY_NONE) { levelUpMenu(player); break; }
                 if (phaseFrames >= INTRO_FRAMES) beginFight();
                 updateEffects();
             }
-            case FIGHT, BOSS -> {
-                if (overlay == OVERLAY_NONE && run.pendingLevels > 0) {
-                    openLevelUp();
-                    run.paused = true;
-                    freezePlayer(player, true);
-                    break;
-                }
-                if (overlay == OVERLAY_CHEST) { chestMenu(player); break; }
-                if (overlay != OVERLAY_NONE) { levelUpMenu(player); break; }
-                fight(player);
-            }
+            case FIGHT, BOSS -> fight(player);
             case CLEAR_WAIT -> {
-                if (overlay == OVERLAY_CHEST) { chestMenu(player); break; }
                 updateProjectiles();
                 updateEffects();
                 if (phaseFrames > 330) collectEmeraldNow();
             }
-            case CLEAR -> clearMenu(player);
-            case DEAD -> deadMenu(player);
-            default -> victoryMenu(player);
+            default -> { }
         }
         if (!run.paused && !player.getDead() && ++ringMergeFrames >= RingClusters.PERIOD) {
             ringMergeFrames = 0;
@@ -381,8 +385,9 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
     private void spawnWaves() {
         var arena = arena();
         int stage = arena.stage();
-        int[] ground = Stages.ground(stage), air = Stages.air(stage);
-        if (ground.length + air.length == 0) return;
+        var lineup = services().gameService(Definitions.class).stage(stage);
+        List<Integer> ground = lineup.ground(), air = lineup.air();
+        if (ground.size() + air.size() == 0) return;
         var run = run();
         int tier = tier();
         int seconds = pressureSeconds();
@@ -429,14 +434,14 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
         }
         int pattern = (encounterNumber() - 1) % 3;
         if (phase == FIGHT && !surge) {
-            if (pattern == 1 && air.length > 0) ground = new int[0];
-            if (pattern == 2 && ground.length > 0) air = new int[0];
+            if (pattern == 1 && air.size() > 0) ground = List.of();
+            if (pattern == 2 && ground.size() > 0) air = List.of();
         }
         for (int i = 0; i < batch; i++) spawnEnemy(ground, air, tier, false);
     }
 
     /** Mid-stage beats on the survival clock: the zone's event, then a warden squad. */
-    private void stageBeats(int[] ground, int[] air, int tier) {
+    private void stageBeats(List<Integer> ground, List<Integer> air, int tier) {
         int arenaStage = arena().stage();
         int elapsed = fightFrames / 60;
         boolean secondTick = fightFrames % 60 == 0;
@@ -504,10 +509,10 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
         }
     }
 
-    private void spawnEnemy(int[] ground, int[] air, int tier, boolean elite) {
+    private void spawnEnemy(List<Integer> ground, List<Integer> air, int tier, boolean elite) {
         var run = run();
-        boolean flying = ground.length == 0 || air.length > 0 && run.nextInt(2) == 0;
-        int species = flying ? air[run.nextInt(air.length)] : ground[run.nextInt(ground.length)];
+        boolean flying = ground.size() == 0 || air.size() > 0 && run.nextInt(2) == 0;
+        int species = flying ? air.get(run.nextInt(air.size())) : ground.get(run.nextInt(ground.size()));
         var camera = services().camera();
         var arena = arena();
         int side = run.nextInt(2) == 0 ? -1 : 1;
@@ -532,7 +537,7 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
 
     /** Spawns one badnik with the arena's current hitpoints; returns them. */
     private int spawnSpecies(int species, int x, int y, int tier, boolean elite) {
-        var t = Species.of(species);
+        var t = services().gameService(Definitions.class).species(species);
         double scale = Difficulty.hpScale(tier, arena().act(), pressureSeconds())
                 * (run().rule(Rules.TOUGH_HIDES) ? 1.5 : 1);
         int hp = (int) Math.max(1, Math.round(t.hp() * scale));
@@ -550,7 +555,8 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
         var arena = arena();
         var camera = services().camera();
         int stage = arena.stage();
-        int hp = (int) Math.round(Difficulty.bossHp(stage, arena.act(), pressureSeconds(), run().mode)
+        int hp = (int) Math.round(Difficulty.bossHp(stage, arena.act(), pressureSeconds(), run().mode,
+                services().gameService(Definitions.class).stage(stage).averageHp())
                 * (run().rule(Rules.TOUGH_HIDES) ? 1.5 : 1));
         int x = arena.clampX(camera.getX() + camera.getWidth() - 64, 64);
         int y = stage == Stages.DEZ ? arena.floorTop() - 40 : camera.getY() - 48;
@@ -583,9 +589,8 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
 
     /** The arena floor at {@code x}: the first surface from the floor's highest point down. */
     private int floorBelow(int x, Arena arena) {
-        var levelManager = services().levelManager();
         for (int y = arena.floorTop() - 16; y <= arena.floorBottom() + 48; y += 16) {
-            var r = com.openggf.physics.ObjectTerrainUtils.checkFloorDist(levelManager, x, y);
+            var r = services().floorSurface(x, y, TerrainSurface.Layer.FOREGROUND, TerrainSurface.Path.PRIMARY);
             if (r.foundSurface() && r.distance() >= 0 && r.distance() < 16) return y + r.distance();
         }
         return arena.floorTop();
@@ -746,18 +751,17 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
         // Pause at once: a chest picked up during the object pass must not leave badniks a frame.
         run.paused = true;
         menuIndex = 0;
-        phaseFramesAtOverlay = phaseFrames;
+        overlayFrames = 0;
         services().playSfx(0xBD); // sfx_Hammer: the chest lands.
     }
 
-    int phaseFramesAtOverlay;
 
     // The chest opening, in frames from its start: the chest drops in and shakes, the lid bursts
     // (flash, light rays, a fountain of rings, Super Sonic's theme), then each prize spins in.
     static final int CHEST_DROP = 18, CHEST_BURST = 64, CHEST_FIRST_PRIZE = 84, CHEST_PRIZE_GAP = 22,
             CHEST_SPIN = 14;
 
-    int chestFrames() { return phaseFrames - phaseFramesAtOverlay; }
+    int chestFrames() { return overlayFrames; }
 
     /** The frame the last prize lands; Enter before it reveals everything at once. */
     int chestRevealEnd() { return CHEST_FIRST_PRIZE + chestCount * CHEST_PRIZE_GAP + CHEST_SPIN; }
@@ -811,7 +815,7 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
         if (t < chestRevealEnd()) {
             // Skip straight to every prize revealed; a second press continues.
             if (t < CHEST_BURST) services().audioManager().playMusic(Sonic2Music.SUPER_SONIC.id);
-            phaseFramesAtOverlay = phaseFrames - chestRevealEnd();
+            overlayFrames = chestRevealEnd();
             return;
         }
         overlay = OVERLAY_NONE;
@@ -1363,7 +1367,8 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
 
     /** Edge-detected up/down (returns -1, 0 or 1) and Enter/Start confirm. */
     private int menuMove(AbstractPlayableSprite player) {
-        boolean up = player.isUpPressed(), down = player.isDownPressed();
+        boolean up = menuInput != null ? (menuInput.player1().heldMask() & AbstractPlayableSprite.INPUT_UP) != 0 : player.isUpPressed();
+        boolean down = menuInput != null ? (menuInput.player1().heldMask() & AbstractPlayableSprite.INPUT_DOWN) != 0 : player.isDownPressed();
         int move = (up && !upHeld ? -1 : 0) + (down && !downHeld ? 1 : 0);
         upHeld = up;
         downHeld = down;
@@ -1386,7 +1391,8 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
 
     /** Edge-detected left/right (returns -1, 0 or 1). */
     private int menuSideways(AbstractPlayableSprite player) {
-        boolean left = player.isLeftPressed(), right = player.isRightPressed();
+        boolean left = menuInput != null ? (menuInput.player1().heldMask() & AbstractPlayableSprite.INPUT_LEFT) != 0 : player.isLeftPressed();
+        boolean right = menuInput != null ? (menuInput.player1().heldMask() & AbstractPlayableSprite.INPUT_RIGHT) != 0 : player.isRightPressed();
         int move = (left && !leftHeld ? -1 : 0) + (right && !rightHeld ? 1 : 0);
         leftHeld = left;
         rightHeld = right;
@@ -1478,9 +1484,7 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
         var arena = arena();
         var profile = profile();
         run.begin(arena.stage(), profile, SurvivorsMod.seed());
-        run.tails = player instanceof com.openggf.sprites.playable.Tails;
-        profile.runs++;
-        profile.save();
+        run.tails = player.characterKey().equals(CharacterKey.TAILS);
         player.setRingCount(run.carriedRings);
         if (run.relic(5)) player.giveShield();
         bankedThisRun = 0;
@@ -1582,10 +1586,11 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
 
     /** Menu confirm that ignores the phase timer (overlays open mid-phase). */
     private boolean menuConfirmAny(AbstractPlayableSprite player) {
+        if (menuInput != null && menuInput.menuStart()) return true;
         var input = services().gameService(com.openggf.control.InputHandler.class);
         return input != null && (input.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER)
                 || input.isKeyPressed(org.lwjgl.glfw.GLFW.GLFW_KEY_KP_ENTER)
-                || input.logical().menuStart());
+                || (menuInput != null ? menuInput.menuStart() : input.logical().menuStart()));
     }
 
     // ---- Clear: results and the route ----
@@ -1602,7 +1607,7 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
             profile.unlocked = next;
             profile.save();
         }
-        int pool = profile.upgradePool(run.kills, run.bestCombo, run.level + 1, run.elitesDefeated, next, 0);
+        int pool = profile.upgradePool(run, next, 0);
         newUnlocks = profile.claimNewUnlocks(pool);
         // Milestones reached mid-run join this run's pool from the next zone.
         run.pool |= pool;
@@ -1642,26 +1647,12 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
         // Badnik ring values grow along the route, so the bank takes a quarter of them.
         int earned = run.ringsCollected / 4 + 25 * run.stagesCleared + run.kills / 10 + held + (won ? 300 : 0);
         int banked = earned * (100 + Rules.totalBonus(run.rules)) / 100;
-        newUnlocks = profile.claimNewUnlocks(profile.upgradePool(run.kills, run.bestCombo, run.level + 1,
-                run.elitesDefeated, 0, banked));
-        profile.bank += banked;
-        profile.bankedTotal += banked;
-        profile.totalKills += run.kills;
-        profile.totalElites += run.elitesDefeated;
-        for (int i = 0; i < Species.COUNT; i++) profile.speciesKills[i] += run.speciesKills[i];
-        profile.bestKills = Math.max(profile.bestKills, run.kills);
-        profile.bestCombo = Math.max(profile.bestCombo, run.bestCombo);
-        profile.bestStages = Math.max(profile.bestStages, run.stagesCleared);
-        profile.bestLevel = Math.max(profile.bestLevel, run.level + 1);
-        if (endless() && run.mode == RunState.ENDLESS) {
-            int stage = arena().stage();
-            profile.bestUnlimited[stage] = Math.max(profile.bestUnlimited[stage], fightFrames / 60);
-        }
-        if (won) profile.wins++;
-        profile.save();
-        bankedThisRun = banked;
+        var settlement = profile.settle(run, banked, won,
+                endless() && run.mode == RunState.ENDLESS ? arena().stage() : -1, fightFrames / 60);
+        newUnlocks = settlement.unlocks();
+        bankedThisRun = settlement.banked();
         run.end();
-        return banked;
+        return bankedThisRun;
     }
 
     private void die() {
@@ -1699,8 +1690,9 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
         moveCursor(menuMove(player), 2);
         if (!menuConfirm(player)) return;
         if (menuIndex == END_TITLE) { exitToTitle(); return; }
-        // A fresh run from the same start zone: its act 1 opens in camp.
+        // A fresh-run command owns one successor even when its results row is replayed.
         var run = run();
+        run.prepareNext(profile());
         run.paused = false;
         services().levelManager().requestZoneAndAct(Stages.zone(run.startStage), 0, true);
     }
@@ -1715,7 +1707,7 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
         if (exiting) return;
         exiting = true;
         run().paused = false;
-        services().levelManager().requestGameOverExit(com.openggf.game.GameOverExit.TITLE_SCREEN);
+        services().gameService(FrameControl.class).requestTitle();
     }
 
     private boolean escapePressed() {
@@ -1727,46 +1719,6 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
         var state = services().gameState();
         while (state.getLives() > lives) state.loseLife();
         while (state.getLives() < lives) state.addLife();
-    }
-
-    /** While a menu is up Sonic holds still: speeds are saved and restored around the pause. */
-    private void freezePlayer(AbstractPlayableSprite player, boolean freeze) {
-        if (freeze == playerFrozen) {
-            if (freeze) {
-                holdProtection(player);
-                player.setXSpeed((short) 0);
-                player.setYSpeed((short) 0);
-                player.setGSpeed((short) 0);
-            }
-            return;
-        }
-        playerFrozen = freeze;
-        if (freeze) {
-            savedX = player.getXSpeed();
-            savedY = player.getYSpeed();
-            savedG = player.getGSpeed();
-            savedInvincible = player.getInvincibleFrames();
-            savedInvulnerable = player.getInvulnerableFrames();
-            holdProtection(player);
-            player.setObjectControlled(true);
-            player.setXSpeed((short) 0);
-            player.setYSpeed((short) 0);
-            player.setGSpeed((short) 0);
-        } else {
-            player.setInvincibleFrames(savedInvincible);
-            player.setInvulnerableFrames(savedInvulnerable);
-            player.setObjectControlled(false);
-            player.setXSpeed((short) savedX);
-            player.setYSpeed((short) savedY);
-            player.setGSpeed((short) savedG);
-        }
-    }
-
-    /** Player power-up clocks still tick under object control. Keep them above expiry during
-     * menus and restore the exact saved duration on release; the extra tick is never playable. */
-    private void holdProtection(AbstractPlayableSprite player) {
-        player.setInvincibleFrames(savedInvincible > 0 ? savedInvincible + 1 : 0);
-        player.setInvulnerableFrames(savedInvulnerable > 0 ? savedInvulnerable + 1 : 0);
     }
 
     // =========================================================================================

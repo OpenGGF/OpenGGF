@@ -39,6 +39,11 @@ public final class Shell {
     private int currentMusic = -1;
     private int shake;
     private final CardTips cardTips = new CardTips();
+    private String pendingRunSave;
+    private boolean runWritable = true;
+    private boolean replacementAuthorized;
+    private boolean pendingDelete;
+    private String persistenceNotice;
 
     Shell(SceneContext ctx, SmallFont font, Art art, Catalog catalog) {
         this.ctx = ctx;
@@ -46,6 +51,8 @@ public final class Shell {
         this.art = art;
         this.catalog = catalog;
         this.profile = Profile.load(ctx.storage());
+        readRun();
+        if (!profile.writable()) persistenceNotice = "PROFILE PRESERVED; RECORDS ARE IN MEMORY ONLY";
     }
 
     public int width() {
@@ -124,34 +131,118 @@ public final class Shell {
 
     // ----- saving -----
 
-    public void saveRun() {
+    public boolean saveRun() {
         if (run != null && !run.over()) {
-            ctx.storage().write(SAVE_FILE, SaveCodec.encode(run));
+            pendingRunSave = SaveCodec.encode(run);
         }
+        return pendingRunSave == null || publishRun();
     }
 
-    public void deleteRun() {
-        ctx.storage().delete(SAVE_FILE);
+    public boolean deleteRun() {
+        pendingRunSave = null;
+        pendingDelete = true;
+        return publishDelete();
     }
 
     public boolean hasSavedRun() {
-        return ctx.storage().read(SAVE_FILE).map(t -> SaveCodec.decode(catalog, t) != null).orElse(false);
+        return readRun() != null;
     }
 
     public Run loadRun() {
-        return ctx.storage().read(SAVE_FILE).map(t -> SaveCodec.decode(catalog, t)).orElse(null);
+        return readRun();
     }
 
     /** Starts autosaving the run at every save point. */
     public void attach(Run newRun) {
         run = newRun;
-        run.setSaver(r -> ctx.storage().write(SAVE_FILE, SaveCodec.encode(r)));
+        run.setSaver(r -> saveRun());
+    }
+
+    /** The existing New Run -> Embark interaction explicitly replaces a rejected run slot. */
+    public void beginRun(Run newRun) {
+        replacementAuthorized = true;
+        runWritable = true;
+        pendingDelete = false;
+        pendingRunSave = null;
+        attach(newRun);
+        saveRun();
+    }
+
+    private Run readRun() {
+        try {
+            var text = ctx.storage().read(SAVE_FILE);
+            if (text.isEmpty()) {
+                runWritable = replacementAuthorized || !ctx.storage().list().contains(SAVE_FILE);
+                if (!runWritable) persistenceNotice = "RUN SAVE PRESERVED; NEW RUN CAN REPLACE IT";
+                return null;
+            }
+            Run candidate = SaveCodec.decode(catalog, text.get());
+            runWritable = replacementAuthorized || candidate != null;
+            if (!runWritable) persistenceNotice = "RUN SAVE PRESERVED; NEW RUN CAN REPLACE IT";
+            return candidate;
+        } catch (RuntimeException unavailable) {
+            runWritable = replacementAuthorized;
+            persistenceNotice = "RUN SAVE UNAVAILABLE; PROGRESS KEPT IN MEMORY";
+            return null;
+        }
+    }
+
+    private boolean publishRun() {
+        if (!runWritable) return false;
+        try {
+            if (ctx.storage().write(SAVE_FILE, pendingRunSave)) {
+                pendingRunSave = null;
+                replacementAuthorized = false;
+                clearPersistenceNotice();
+                return true;
+            }
+        } catch (RuntimeException unavailable) { /* Keep the checkpoint for a bounded retry. */ }
+        persistenceNotice = "COULD NOT SAVE RUN; RETRYING";
+        return false;
+    }
+
+    public boolean saveProfile() {
+        if (profile.save(ctx.storage())) {
+            clearPersistenceNotice();
+            return true;
+        }
+        persistenceNotice = profile.writable() ? "COULD NOT SAVE RECORDS; RETRYING"
+                : "PROFILE PRESERVED; RECORDS ARE IN MEMORY ONLY";
+        return false;
+    }
+
+    private boolean publishDelete() {
+        // Publish counted records before deleting their resume generation.
+        if (!runWritable || profile.dirty()) return false;
+        try {
+            if (!ctx.storage().list().contains(SAVE_FILE) || ctx.storage().delete(SAVE_FILE)) {
+                pendingDelete = false;
+                clearPersistenceNotice();
+                return true;
+            }
+        } catch (RuntimeException unavailable) { /* Retry without recounting the result. */ }
+        persistenceNotice = "COULD NOT REMOVE FINISHED RUN; RETRYING";
+        return false;
+    }
+
+    public void flushPersistence() {
+        if (profile.dirty()) saveProfile();
+        if (pendingRunSave != null && !pendingDelete) publishRun();
+        if (pendingDelete) publishDelete();
+    }
+
+    public String persistenceNotice() { return persistenceNotice; }
+
+    private void clearPersistenceNotice() {
+        if (profile.writable() && runWritable && !profile.dirty() && pendingRunSave == null && !pendingDelete)
+            persistenceNotice = null;
     }
 
     // ----- loop -----
 
     void update() {
         ticks++;
+        if (ticks % 120 == 0) flushPersistence();
         in.read(ctx);
         if (shake > 0) {
             shake--;
@@ -182,6 +273,8 @@ public final class Shell {
             screen.draw(this, canvas);
         }
         cardTips.draw(this, canvas);
+        if (persistenceNotice != null) font.drawCentered(canvas, persistenceNotice, width() / 2, height() - 8,
+                Colors.TEXT_BAD);
         float dark = 0f;
         if (fadeOut > 0) {
             dark = 1f - fadeOut / (float) FADE_TICKS;

@@ -13,7 +13,6 @@ import com.openggf.sprites.playable.SecondaryAbility;
 
 /** Bolt's character tuning is owned by each instance; the module supplies game rules and modifiers. */
 public final class BoltCharacter extends AbstractPlayableSprite {
-    private final CharacterKey key;
 
     /**
      * Double-jump latch. Rides the production rewind path via {@link #captureSubclassRewindState()}
@@ -28,7 +27,6 @@ public final class BoltCharacter extends AbstractPlayableSprite {
 
     public BoltCharacter(String code, int x, int y) {
         super(code, (short) x, (short) y, physicsSpec());
-        key = CharacterKey.parsePersisted(code.replaceFirst("_p\\d+$", ""));
     }
 
     public static CharacterDefinition definition(String owner, MaterializedArt materialized) {
@@ -36,10 +34,6 @@ public final class BoltCharacter extends AbstractPlayableSprite {
         return new CharacterDefinition(key, "Bolt", BoltCharacter::new, null,
                 PlayerCharacter.SONIC_ALONE, SecondaryAbility.NONE, false,
                 ignored -> materialized.art(), ignored -> materialized.palette());
-    }
-
-    @Override public CharacterKey characterKey() {
-        return key;
     }
 
     @Override public SecondaryAbility getSecondaryAbility() { return SecondaryAbility.NONE; }
@@ -56,7 +50,7 @@ public final class BoltCharacter extends AbstractPlayableSprite {
         doubleJumpUsed = true;
         setYSpeed((short) -0x600);
         setJumping(false);
-        key.ownerModId().ifPresent(owner ->
+        characterKey().ownerModId().ifPresent(owner ->
                 currentAudioManager().playNamespacedSfx(new StreamedMusicPort.SfxRef(owner, "jump2")));
         return true;
     }
@@ -65,10 +59,7 @@ public final class BoltCharacter extends AbstractPlayableSprite {
     @Override protected void onLevelReset() { doubleJumpUsed = false; }
 
     @Override public void draw() {
-        if (!isHidden() && getSpriteRenderer() != null) {
-            getSpriteRenderer().drawFrame(getMappingFrame(), getRenderCentreX(), getRenderCentreY(),
-                    getRenderHFlip(), getRenderVFlip());
-        }
+        drawStandardArt();
     }
 
     /** Immutable payload carrying the double-jump latch through a rewind keyframe. */

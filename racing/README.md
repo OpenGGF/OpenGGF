@@ -29,11 +29,43 @@ Open **Extras > Time Attack**. The same mod provides Solo, Host LAN, Join LAN an
 **R** retries an act by default; **Settings > Retry key** captures another keyboard key.
 Best and imported ghosts remain in `ghosts/`, and player identity remains in `identity/`.
 
+A best save validates the ghost and its input recording before publication. The
+atomic `.ggfghost` file selects an immutable input sidecar by its recorded hash;
+the familiar `.ggfinputs` filename remains a legacy copy. The HUD distinguishes
+an unconfirmed save, a preserved rejected primary, and a saved record whose legacy
+copy still needs maintenance. This is one atomic publication authority, not a
+two-file crash-atomic rename. Existing primary/history pairs remain available
+while a new record is staged, and previous valid ghosts can be used for playback
+without permitting an overwrite of a corrupt or future primary.
+
+Per-route hash sidecars retain the best and two previous records. Legacy sidecar
+lookup visits paths lazily, skips corrupt/oversized files, and limits depth to six,
+entries to 4096, legacy sidecars to 512 plus one hash-matching sidecar, and each
+input recording to 36,000 frames plus
+4096 bytes of metadata. A checked search failure means a requested upload is
+unavailable; it does not fault the scene. Ghost clocks and splits must be ordered
+within the 36,000-frame recording budget; partial pose streams remain valid.
+
 On first opening, if the mod has no settings file, it imports the old engine's retry,
 network and minimap preferences from `config.yaml` or `config.json` and their `.bak` or
 numbered backups. Live configuration values take precedence over backup values. It writes
 `settings.txt` in the mod's owner storage without changing the source files or replacing
 existing mod settings. Configuration files are limited to 1 MiB for this import.
+
+Settings edits and successful LAN joins keep their accepted values when storage refuses or throws
+on publication. The settings page reports a pending save, retries every 60 scene ticks, and flushes
+pending settings and LAN invite text on resume or exit. Imported legacy values follow the same
+retry path. A failed exit flush remains unconfirmed; reverting to confirmed values cancels an
+obsolete retry.
+
+Finished attempts retain at most 128 input recordings and 2 MiB of encoded bodies in memory.
+Each body has the existing 36,000-frame/4096-byte metadata limit. Unstamped records remain until
+explicit round end, then receive the ten-minute upload grace period. Duplicate bodies preserve
+that expiry; conflicting bodies or exhausted capacity are explicitly refused before copying.
+The uploader admits eight jobs including its active request, deduplicates pending requests and
+its last sixteen successful URLs, and rejects conflicting bodies for the same URL. Each uploader
+keeps its original session token. Closing resolves all accepted callbacks once and prevents queued
+work from sending or retrying; duplicate/rejected admissions own no callback.
 
 ## Build and test
 

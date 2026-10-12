@@ -83,6 +83,7 @@ public final class TimeAttackRuntime implements RunHost {
     private GhostRecording bestGhost;
     private boolean tainted;
     private boolean newBest;
+    private String saveNotice="";
     private boolean retryRequested;
     private RunHandle handle;
     private java.util.function.IntSupplier retryKey;
@@ -153,6 +154,7 @@ public final class TimeAttackRuntime implements RunHost {
         capture.reset();
         tainted = false;
         newBest = false;
+        saveNotice="";
         opponents.clear();
         opponentRecordings.clear();
         try {
@@ -277,12 +279,9 @@ public final class TimeAttackRuntime implements RunHost {
                 launch.zone(), launch.act(), launch.character(), displayName,
                 attempt.firstInputFrame(), attempt.finishFrame(), attempt.splitFrames(),
                 inputRecording.sha256());
-        try {
-            newBest = store.saveIfBest(new GhostRecording(header, capture.toFrameData()),
-                    inputRecording);
-        } catch (IOException e) {
-            LOGGER.log(Level.WARNING, "Failed saving best ghost", e);
-        }
+        GhostStore.SaveResult result=store.saveBest(new GhostRecording(header,capture.toFrameData()),inputRecording);
+        newBest=result.saved();
+        saveNotice=result.notice();
     }
 
     public TimeAttackHudState hudState() {
@@ -295,7 +294,7 @@ public final class TimeAttackRuntime implements RunHost {
                 : TimeAttackDeltas.deltaAtSplit(attemptSplits, attempt.firstInputFrame(),
                         ghostSplits, ghostFirstInput, attemptSplits.length - 1);
         return new TimeAttackHudState(true, attempt.elapsedDisplayFrames(), best, lastDelta,
-                attempt.phase() == TimeAttackAttempt.Phase.FINISHED, newBest);
+                attempt.phase() == TimeAttackAttempt.Phase.FINISHED, newBest,saveNotice);
     }
 
     int attemptFrameCountForPlayback() { return attempt == null ? 0 : attempt.frameCount(); }

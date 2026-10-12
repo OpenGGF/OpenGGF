@@ -115,6 +115,9 @@ public final class RaceSession implements AutoCloseable {
     private State state = State.IDLE;
     private String status = "";
     private String notice;
+    private String pendingInvite;
+    private int inviteRetryTicks;
+    private static final int PUBLICATION_RETRY_TICKS = 60;
     private boolean closed;
     private Attempt attempt;
 
@@ -206,8 +209,9 @@ public final class RaceSession implements AutoCloseable {
             String chosen = room.lockedCharacter() != null ? room.lockedCharacter() : character;
             return () -> {
                 settings.setLastJoinAddress(trimmed);
-                settings.save(storage);
+                boolean saved = settings.save(storage);
                 enterLobby(client, false, round, chosen, null);
+                if (!saved) notice = "Settings active - save pending";
             };
         });
     }
@@ -388,9 +392,33 @@ public final class RaceSession implements AutoCloseable {
     /** Scene exit, mod fault or engine shutdown: leaves and refuses new operations. */
     @Override
     public void close() {
+        if (closed) return;
         closed = true;
         leave();
         completions.clear();
+        flushPendingPublications();
+    }
+
+    /** Flushes accepted settings and invite text on resume or owner exit; failures remain pending. */
+    public void flushPendingPublications() {
+        if (!settings.flushPending(storage)) notice = "Settings active - save pending";
+        if (pendingInvite != null) publishInvite();
+    }
+
+    private boolean publishInvite() {
+        boolean saved;
+        try {
+            saved = storage != null && storage.write(INVITE_FILE, pendingInvite);
+        } catch (RuntimeException failure) {
+            saved = false;
+        }
+        if (saved) {
+            pendingInvite = null;
+        } else {
+            inviteRetryTicks = PUBLICATION_RETRY_TICKS;
+            notice = "LAN invite active - save pending";
+        }
+        return saved;
     }
 
     // ── Engine-thread pump ───────────────────────────────────────────────
@@ -400,6 +428,9 @@ public final class RaceSession implements AutoCloseable {
      * room between rounds, leaves on a lost or kicked connection, and launches each new round.
      */
     public void poll() {
+        if (closed) return;
+        if (settings.retryPending(storage)) notice = "Settings saved";
+        if (pendingInvite != null && --inviteRetryTicks <= 0 && publishInvite()) notice = "LAN invite saved";
         Runnable completion;
         while ((completion = completions.poll()) != null) {
             completion.run();
@@ -499,9 +530,8 @@ public final class RaceSession implements AutoCloseable {
         status = "";
         if (invite != null) {
             LOGGER.info("LAN invite (replace HOST_IP with this computer's LAN address): " + invite);
-            if (storage != null && !storage.write(INVITE_FILE, invite + "\n")) {
-                LOGGER.warning("Unable to save the LAN invite to the mod storage");
-            }
+            pendingInvite = invite + "\n";
+            publishInvite();
         }
     }
 

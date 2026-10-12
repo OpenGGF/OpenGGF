@@ -13,6 +13,9 @@ import java.util.List;
 import java.util.Map;
 import starpost.art.Art;
 import starpost.art.Tone;
+import starpost.art.AssetFailures;
+import com.openggf.mods.scene.art.SceneArtCache;
+import java.util.function.LongSupplier;
 
 /**
  * The festivals' pictures, all from the player's ROMs (addresses from s1disasm's sonic.lst,
@@ -32,8 +35,9 @@ import starpost.art.Tone;
  *   <li>Star Light Zone's night sky and Scrap Brain Zone's steel, from Sonic 1's level kits.</li>
  * </ul>
  *
- * Built on first use from {@code update} or a screen's {@code enter}, never in draw; anything
- * missing comes back null and the festival does without it.
+ * Built on first use and cached; the native activity presentation also asks for ship/board
+ * banks while drawing. Expected failures return null with bounded status and a 120 logic-tick
+ * cooldown, so an unavailable bank does not decode on every draw.
  */
 public final class FestivalArt {
     // Sonic 1 (sonic.lst).
@@ -69,6 +73,9 @@ public final class FestivalArt {
 
     public final Art art;
     private final SceneRomArt s2;
+    private final AssetFailures failures;
+    private final Map<SceneRomArt, SceneArtCache> spriteBanks = new java.util.IdentityHashMap<>();
+    public List<AssetFailures.Failure> failures() { return failures.failures(); }
     private final Map<Integer, SceneImage> boards = new HashMap<>();
     private SceneImage[] flowers;
     private SceneSpriteSet bumper;
@@ -80,24 +87,22 @@ public final class FestivalArt {
     private boolean slotFacesFromS2;
     private SceneBackdrop starLight;
     private SceneLevelKit scrapBrain;
-    private boolean triedFlowers;
-    private boolean triedBumper;
-    private boolean triedEgg;
-    private boolean triedMecha;
-    private boolean triedBoards;
-    private boolean triedSlots;
-    private boolean triedStarLight;
-    private boolean triedScrapBrain;
 
     public FestivalArt(Art art, SceneRomArt s2) {
+        this(art, s2, art::ticks);
+    }
+    public FestivalArt(Art art, SceneRomArt s2, LongSupplier clock) {
         this.art = art;
+        art.requireOpen();
         this.s2 = s2;
+        failures = new AssetFailures(art.owner(), clock);
     }
 
     // ------------------------------------------------------------------ the board
 
     /** The Signpost Board in a season's colours: a plank face framed with bridge logs, on two log posts. */
     public SceneImage board(int season) {
+        art.requireOpen();
         return boards.computeIfAbsent(season, s -> new Tone(s).apply(buildBoard()));
     }
 
@@ -154,6 +159,7 @@ public final class FestivalArt {
      * upper tier's top at row {@link #SHELF_UPPER} and the lower's at {@link #SHELF_LOWER}.
      */
     public SceneImage shelf(int season) {
+        art.requireOpen();
         return shelves.computeIfAbsent(season, k -> new Tone(k).apply(buildShelf()));
     }
 
@@ -199,13 +205,13 @@ public final class FestivalArt {
      * two tiles by two, palette line 1), which AniArt_GHZ_Bigflower fills from Art_GhzFlower1.
      */
     public SceneImage flower(int frame, int petals) {
-        if (!triedFlowers) {
-            triedFlowers = true;
-            try {
+        art.requireOpen();
+        if (flowers == null) {
+            flowers = failures.load("festival:flowers", () -> {
                 int[] line = new int[16];
                 System.arraycopy(art.ghzPalette, 16, line, 0, 16);
                 int[] cycle = petalCycle;
-                flowers = new SceneImage[2 * cycle.length];
+                SceneImage[] candidate = new SceneImage[2 * cycle.length];
                 for (int f = 0; f < 2; f++) {
                     int[] px = new int[32 * 32];
                     for (int chunk = 0; chunk < 4; chunk++) {
@@ -219,12 +225,11 @@ public final class FestivalArt {
                         }
                     }
                     for (int c = 0; c < cycle.length; c++) {
-                        flowers[f * cycle.length + c] = new SceneImage(32, 32, recolourPetals(px, cycle[c]));
+                        candidate[f * cycle.length + c] = new SceneImage(32, 32, recolourPetals(px, cycle[c]));
                     }
                 }
-            } catch (RuntimeException e) {
-                flowers = null;
-            }
+                return candidate;
+            });
         }
         if (flowers == null) {
             return null;
@@ -255,36 +260,30 @@ public final class FestivalArt {
 
     /** Spring Yard's round bumper (Map_Bump frame 0), or null. */
     public SceneSpriteSet bumper() {
-        if (!triedBumper) {
-            triedBumper = true;
-            bumper = load(art.s1, RomSpriteRequest.of(NEM_BUMPER, Compression.NEMESIS, MAP_BUMP, 0), art.ghzPalette);
+        art.requireOpen();
+        if (bumper == null) {
+            bumper = load("festival:bumper", art.s1, RomSpriteRequest.of(NEM_BUMPER, Compression.NEMESIS, MAP_BUMP, 0), art.ghzPalette);
         }
         return bumper;
     }
 
     /** Star Light Zone's night city sky (Sonic 1's level kit backdrop), or null. */
     public SceneBackdrop starLight() {
-        if (!triedStarLight) {
-            triedStarLight = true;
-            try {
+        art.requireOpen();
+        if (starLight == null) {
+            starLight = failures.load("festival:star-light", () -> {
                 SceneLevelKit kit = art.s1.levelKit(S1_SLZ, 0);
-                starLight = kit == null ? null : kit.backdrop();
-            } catch (RuntimeException e) {
-                starLight = null;
-            }
+                return kit == null ? null : kit.backdrop();
+            });
         }
         return starLight;
     }
 
     /** Scrap Brain Zone act 1's kit (its blocks are the haunted maze's steel), or null. */
     public SceneLevelKit scrapBrain() {
-        if (!triedScrapBrain) {
-            triedScrapBrain = true;
-            try {
-                scrapBrain = art.s1.levelKit(S1_SBZ, 0);
-            } catch (RuntimeException e) {
-                scrapBrain = null;
-            }
+        art.requireOpen();
+        if (scrapBrain == null) {
+            scrapBrain = failures.load("festival:scrap-brain", () -> art.s1.levelKit(S1_SBZ, 0));
         }
         return scrapBrain;
     }
@@ -399,9 +398,9 @@ public final class FestivalArt {
 
     /** The Egg Mobile (Map_RobotnikShip: frame 5 the ship, 2 Robotnik in it), or null. */
     public SceneSpriteSet eggMobile() {
-        if (!triedEgg) {
-            triedEgg = true;
-            eggMobile = load(art.s3k, RomSpriteRequest.of(ARTNEM_ROBOTNIK_SHIP, Compression.NEMESIS,
+        art.requireOpen();
+        if (eggMobile == null) {
+            eggMobile = load("festival:egg-mobile", art.s3k, RomSpriteRequest.of(ARTNEM_ROBOTNIK_SHIP, Compression.NEMESIS,
                     MAP_ROBOTNIK_SHIP, 0), art.aizPalette);
         }
         return eggMobile;
@@ -409,18 +408,16 @@ public final class FestivalArt {
 
     /** Mecha Sonic (Map_MechaSonic, art line 1 in Pal_SSZGHZMisc), or null. */
     public SceneSpriteSet mechaSonic() {
-        if (!triedMecha) {
-            triedMecha = true;
-            int[] palette = new int[64];
-            try {
+        art.requireOpen();
+        if (mechaSonic == null) {
+            mechaSonic = failures.load("festival:mecha", () -> {
+                int[] palette = new int[64];
                 System.arraycopy(art.s3k.palette(PAL_SONIC_TAILS, 16), 0, palette, 0, 16);
                 System.arraycopy(art.s3k.palette(PAL_DEZ, 48), 0, palette, 16, 48);
                 System.arraycopy(art.s3k.palette(PAL_SSZ_GHZ_MISC, 16), 0, palette, 16, 16);
-                mechaSonic = art.s3k.sprites(RomSpriteRequest.streamed(ARTUNC_MECHA_SONIC, ARTUNC_MECHA_SONIC_SIZE,
+                return sprites(art.s3k, RomSpriteRequest.streamed(ARTUNC_MECHA_SONIC, ARTUNC_MECHA_SONIC_SIZE,
                         MAP_MECHA_SONIC, DPLC_MECHA_SONIC, RomSpriteRequest.DplcLayout.OBJECT, 1), palette);
-            } catch (RuntimeException e) {
-                mechaSonic = null;
-            }
+            });
         }
         return mechaSonic;
     }
@@ -438,16 +435,18 @@ public final class FestivalArt {
     }
 
     private void loadBoards() {
-        if (triedBoards) {
-            return;
-        }
-        triedBoards = true;
-        int[] palette = art.aizPalette;
-        sonicBoard = load(art.s3k, RomSpriteRequest.streamed(ARTUNC_SONIC_SNOWBOARD, ARTUNC_SONIC_SNOWBOARD_SIZE,
-                MAP_SONIC_SNOWBOARD, DPLC_SONIC_SNOWBOARD, RomSpriteRequest.DplcLayout.PLAYER, 0), palette);
-        board = load(art.s3k, RomSpriteRequest.streamed(ARTUNC_SNOWBOARD, ARTUNC_SNOWBOARD_SIZE, MAP_SNOWBOARD,
-                DPLC_SNOWBOARD, RomSpriteRequest.DplcLayout.PLAYER, 0), palette);
+        art.requireOpen();
+        if (sonicBoard != null && board != null) return;
+        BoardBanks candidate = failures.load("festival:snowboards", () -> {
+            SceneSpriteSet sonic = sprites(art.s3k, RomSpriteRequest.streamed(ARTUNC_SONIC_SNOWBOARD, ARTUNC_SONIC_SNOWBOARD_SIZE,
+                    MAP_SONIC_SNOWBOARD, DPLC_SONIC_SNOWBOARD, RomSpriteRequest.DplcLayout.PLAYER, 0), art.aizPalette);
+            SceneSpriteSet empty = sprites(art.s3k, RomSpriteRequest.streamed(ARTUNC_SNOWBOARD, ARTUNC_SNOWBOARD_SIZE, MAP_SNOWBOARD,
+                    DPLC_SNOWBOARD, RomSpriteRequest.DplcLayout.PLAYER, 0), art.aizPalette);
+            return sonic == null || empty == null ? null : new BoardBanks(sonic, empty);
+        });
+        if (candidate != null) { sonicBoard = candidate.sonic(); board = candidate.empty(); }
     }
+    private record BoardBanks(SceneSpriteSet sonic, SceneSpriteSet empty) {}
 
     // ------------------------------------------------------------------ slot faces
 
@@ -457,35 +456,34 @@ public final class FestivalArt {
      * every Casino Night face but a different order). Null without either.
      */
     public SceneImage slotFace(int face) {
-        if (!triedSlots) {
-            triedSlots = true;
-            slotFaces = new SceneImage[6];
-            try {
-                if (s2 != null) {
-                    int[] palette = s2.palette(S2_PAL_SONIC, 16);
-                    for (int f = 0; f < 6; f++) {
-                        slotFaces[f] = s2.tiles(S2_CNZ_SLOT_PICS, Compression.UNCOMPRESSED, f * 16, 4, 4, true, palette);
-                    }
-                    slotFacesFromS2 = true;
+        art.requireOpen();
+        if (!slotFacesFromS2) {
+            SceneImage[] preferred = failures.load("festival:slots:s2", () -> {
+                SceneRomArt rom = AssetFailures.requireRom(s2, "s2");
+                int[] palette = rom.palette(S2_PAL_SONIC, 16);
+                SceneImage[] candidate = new SceneImage[6];
+                for (int f = 0; f < 6; f++) {
+                    candidate[f] = rom.tiles(S2_CNZ_SLOT_PICS, Compression.UNCOMPRESSED, f * 16, 4, 4, true, palette);
+                    if (candidate[f] == null) return null;
                 }
-            } catch (RuntimeException e) {
-                slotFacesFromS2 = false;
-            }
-            if (!slotFacesFromS2) {
-                try {
-                    int[] palette = art.s3k.palette(PAL_SLOT_SPECIAL, 16);
-                    // Sonic 3's faces: 0 Jackpot, 1 Sonic, 2 Tails, 3 Knuckles, 4 Robotnik, 5 Ring, 6 Bar.
-                    int[] fromS3 = {1, 2, 4, 0, 5, 6};
-                    for (int f = 0; f < 6; f++) {
-                        slotFaces[f] = art.s3k.tiles(ARTUNC_SLOT_OPTIONS, Compression.UNCOMPRESSED, fromS3[f] * 16,
-                                4, 4, true, palette);
-                    }
-                } catch (RuntimeException e) {
-                    slotFaces = new SceneImage[6];
-                }
-            }
+                return candidate;
+            });
+            if (preferred != null) { slotFaces = preferred; slotFacesFromS2 = true; }
         }
-        return face >= 0 && face < 6 ? slotFaces[face] : null;
+        if (slotFaces == null) {
+            slotFaces = failures.load("festival:slots:s3k", () -> {
+                int[] palette = art.s3k.palette(PAL_SLOT_SPECIAL, 16);
+                // Sonic 3's faces: 0 Jackpot, 1 Sonic, 2 Tails, 3 Knuckles, 4 Robotnik, 5 Ring, 6 Bar.
+                int[] fromS3 = {1, 2, 4, 0, 5, 6};
+                SceneImage[] candidate = new SceneImage[6];
+                for (int f = 0; f < 6; f++) {
+                    candidate[f] = art.s3k.tiles(ARTUNC_SLOT_OPTIONS, Compression.UNCOMPRESSED, fromS3[f] * 16, 4, 4, true, palette);
+                    if (candidate[f] == null) return null;
+                }
+                return candidate;
+            });
+        }
+        return slotFaces != null && face >= 0 && face < 6 ? slotFaces[face] : null;
     }
 
     /** Whether the slot booth wears Casino Night's faces (Sonic 2 supplied). */
@@ -494,14 +492,12 @@ public final class FestivalArt {
         return slotFacesFromS2;
     }
 
-    private static SceneSpriteSet load(SceneRomArt rom, RomSpriteRequest request, int[] palette) {
-        if (rom == null) {
-            return null;
-        }
-        try {
-            return rom.sprites(request, palette);
-        } catch (RuntimeException e) {
-            return null;
-        }
+    private SceneSpriteSet load(String key, SceneRomArt rom, RomSpriteRequest request, int[] palette) {
+        return failures.load(key, () -> sprites(rom, request, palette));
+    }
+    private SceneSpriteSet sprites(SceneRomArt rom, RomSpriteRequest request, int[] palette) {
+        art.requireOpen();
+        AssetFailures.requireRom(rom, "sprite source");
+        return spriteBanks.computeIfAbsent(rom, source -> new SceneArtCache(source, 32)).sprites(request, palette);
     }
 }

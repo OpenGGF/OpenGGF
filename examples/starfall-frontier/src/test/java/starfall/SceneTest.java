@@ -1,7 +1,6 @@
 package starfall;
 
 import com.openggf.mods.testing.ModTestKit;
-import com.openggf.mods.scene.host.SceneHostTestAccess;
 import com.openggf.mods.scene.host.SceneServices;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.patch.GameplayLaunchRequest;
@@ -24,7 +23,7 @@ class SceneTest {
                 (x,y)->new int[]{(int)x,(int)y,x>=0&&x<528&&y>=0&&y<224?1:0},null,null));
         kit.tick();return kit;
     }
-    private Object scene(ModTestKit kit){return SceneHostTestAccess.scene(kit.sceneHost());}
+    private Object scene(ModTestKit kit){return kit.scene();}
     private Object call(ModTestKit kit,String method) throws Exception {return scene(kit).getClass().getMethod(method).invoke(scene(kit));}
     private long ticks(ModTestKit kit) throws Exception {Object world=call(kit,"world");return world.getClass().getField("ticks").getLong(world);}
     private void press(ModTestKit kit,int key){kit.input().key(key,true);kit.tick();kit.input().key(key,false);kit.tick();}
@@ -35,6 +34,19 @@ class SceneTest {
         kit.input().handler().handleMouseButton(GLFW_MOUSE_BUTTON_LEFT,GLFW_RELEASE);kit.tick();
     }
     private int width(ModTestKit kit) throws Exception {Object w=call(kit,"world");return w.getClass().getField("width").getInt(w);}
+    @Test void visibleGeneratedCampCompletesOnceThroughTheSceneInput() throws Exception {
+        try(var kit=open(work.resolve("mods"),work.resolve("saves"))) {
+            begin(kit);Object world=call(kit,"world");Class<?> type=world.getClass();
+            type.getField("wardens").setInt(world,7);
+            Class<?> item=type.getClassLoader().loadClass("starfall.Content$Item");
+            Object core=java.util.Arrays.stream(item.getEnumConstants()).filter(i->i.toString().equals("BEACON")).findFirst().orElseThrow();
+            type.getMethod("add",item,int.class).invoke(world,core,2);
+            assertFalse(kit.draw().isEmpty());press(kit,GLFW_KEY_E);
+            assertTrue(type.getField("won").getBoolean(world));assertEquals(7,type.getField("quest").getInt(world));
+            press(kit,GLFW_KEY_E);assertEquals(1,type.getMethod("count",item).invoke(world,core));
+            assertTrue(kit.findings().isEmpty(),kit.findings()::toString);
+        }
+    }
     @Test void firstAdventureSelectsSmallWithKeyboardAndContinueRetainsItsWidth() throws Exception {
         Path saves=work.resolve("saves");
         try(var kit=open(work.resolve("mods-a"),saves)) {

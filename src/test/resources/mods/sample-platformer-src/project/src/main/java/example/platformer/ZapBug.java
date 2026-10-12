@@ -10,7 +10,6 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PatrolMovementHelper;
 import com.openggf.level.objects.ObjectReconstructionContext;
 import com.openggf.level.objects.ModRewindRecreatable;
-import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -82,23 +81,9 @@ public final class ZapBug extends AbstractBadnikInstance implements ModRewindRec
 
     @Override protected int getCollisionSizeIndex() { return 0; }
     @Override protected DestructionConfig getDestructionConfig() {
-        return new DestructionConfig(0, null, false, null, null, false);
-    }
-
-    /**
-     * {@link DestructionConfig#sfxId()} is a raw int (ROM-style SFX id),
-     * so there is no clean seam to route a namespaced mod SFX through
-     * {@code DestructionEffects.destroyBadnik}. Firing the "hit" cue here, at the
-     * destruction entry point, is the clean seam instead: it plays exactly once, only
-     * on an actual (non-double) destruction, before delegating to the base class's
-     * standard explosion/score/slot-transfer sequence.
-     */
-    @Override public void onPlayerAttack(PlayableEntity player, TouchResponseResult result) {
-        if (isDestroyed()) {
-            return;
-        }
-        services().playSfx(new SfxRef(OWNER, "hit"));
-        super.onPlayerAttack(player, result);
+        return new DestructionConfig(0, null, false, null, null, false).withSound(
+                com.openggf.level.objects.DestructionEffects.SoundCue.namespaced(new SfxRef(OWNER, "hit"),
+                        com.openggf.level.objects.DestructionEffects.SoundOrder.BEFORE_LATCH));
     }
 
     @Override public void appendRenderCommands(List<GLCommand> commands) {

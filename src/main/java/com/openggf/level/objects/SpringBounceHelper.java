@@ -69,4 +69,34 @@ public final class SpringBounceHelper {
     public static int strength(boolean red) {
         return red ? STRENGTH_RED : STRENGTH_YELLOW;
     }
+    /**
+     * Author-owned rectangular proximity contact, using native centre positions and downward
+     * velocity. Stock spring checkpoint geometry/position corrections remain in their owners.
+     */
+    public static boolean tryLaunchUp(com.openggf.game.PlayableEntity player,int x,int y,
+            int halfWidth,int halfHeight,int strength,int lockFrames) {
+        if(halfWidth<0||halfWidth>256||halfHeight<0||halfHeight>256)
+            throw new IllegalArgumentException("Spring contact half-extents must be 0..256");
+        validateLaunch(player,strength,lockFrames);
+        long dx=(long)player.getCentreX()-x,dy=(long)player.getCentreY()-y;
+        if(player.getDead()||player.getYSpeed()<=0||Math.abs(dx)>halfWidth||Math.abs(dy)>halfHeight)return false;
+        launchUp(player,strength,lockFrames);return true;
+    }
+
+    /** Native launch state only; caller owns accepted contact, art/animation, sound and position nudges. */
+    public static void launchUp(com.openggf.game.PlayableEntity player,int strength,int lockFrames) {
+        validateLaunch(player,strength,lockFrames);
+        player.setYSpeed((short)strength);player.setAir(true);player.setOnObject(false);
+        if(player instanceof com.openggf.sprites.playable.AbstractPlayableSprite nativePlayer) {
+            nativePlayer.setHurt(false);nativePlayer.setSpringing(lockFrames);
+        }
+    }
+    private static void validateLaunch(com.openggf.game.PlayableEntity player,int strength,int lockFrames) {
+        java.util.Objects.requireNonNull(player,"player");
+        if(strength>=0||strength<Short.MIN_VALUE||lockFrames<0||lockFrames>60)
+            throw new IllegalArgumentException("Upward spring strength must be negative and lock0..60 frames");
+        if(lockFrames>0&&!(player instanceof com.openggf.sprites.playable.AbstractPlayableSprite))
+            throw new IllegalArgumentException("Spring control lock requires a native playable sprite");
+    }
+
 }

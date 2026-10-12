@@ -49,12 +49,8 @@ public final class StationMode implements Mode {
     public void enter(Game g) {
         g.voice.say(VoiceLine.DOCKED);
         system = g.system();
-        try {
-            SceneLevelKit kit = g.art.s3k().levelKit(11, 0);
-            backdrop = kit == null ? null : kit.backdrop();
-        } catch (RuntimeException failed) {
-            backdrop = null;
-        }
+        SceneLevelKit kit = g.art.levelKit("s3k", 11, 0);
+        backdrop = kit == null ? null : kit.backdrop();
         Rng rng = new Rng(Rng.hash(system.seed, 0x53544F43L));
         int[] goods = {Catalog.CARBON, Catalog.FERRITE, Catalog.OXYGEN, Catalog.SODIUM, Catalog.DIHYDROGEN,
                 Catalog.PURE_FERRITE, Catalog.CONDENSED_CARBON, Catalog.CHROMATIC_METAL, Catalog.COBALT,

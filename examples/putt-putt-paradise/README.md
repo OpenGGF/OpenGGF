@@ -269,14 +269,17 @@ Use instance-owned state. Capture every field that affects subsequent frames
 in the controller's `State`; dispose owned presenters and sockets in `close`.
 The SDK rejects mutable static creator state and validates the same jar that
 users install. Do not package ROM bytes or use disassembly assets at runtime.
-The current package also reports ten `NON_API_ENGINE_REFERENCE` warnings.
-Those come from the session service facade, the ROM spring/contact helpers and
-the native Sonic 2 title decoder/mappings. They have no compatibility promise;
-this source-first example must be rebuilt against its matching checkout.
+The current residual ledger records eight `NON_API_ENGINE_REFERENCE` warnings
+from the clean `175531f6d` package checkpoint. These cover native service,
+presentation/audio bridges, the Sonic 2 spring subclass and title decoder/mappings.
+They have no compatibility promise; rebuild against matching engine/SDK artifacts.
 Use the model, UI timeline, transport and `CourseControl` reading paths as the
 reusable starting points. Keep a native object or title-art bridge isolated when
 your mod needs one, and review these warnings when upgrading the engine rather
-than treating an internal class as a supported API. The
+than treating an internal class as a supported API. Prefer public framework helpers
+where they cover the operation, and use the
+[residual reference ledger](../../docs/architecture/validation/2026-10-12-mod-audit-remediation.md#final-residual-findings-actual-class-call-and-purpose)
+to review each native bridge's owner and reopening conditions. The
 [SDK troubleshooting guide](../../docs/modding/troubleshooting.md) explains the distinction.
 For a smaller starting point, follow the examples in the
 [creator handbook](../../docs/modding/index.md).

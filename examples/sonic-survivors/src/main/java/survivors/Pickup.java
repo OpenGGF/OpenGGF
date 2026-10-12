@@ -5,7 +5,6 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.*;
-import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import java.util.List;
 
@@ -159,7 +158,9 @@ public final class Pickup extends AbstractObjectInstance implements ModRewindRec
             int clamped = arena.clampX(x, 8);
             if (clamped != x) { x = clamped; vx = -vx; }
         }
-        var r = ObjectTerrainUtils.checkFloorDist(services().levelManager(), x, y + 8);
+        var r = services().floorSurface(x, y + 8,
+                    com.openggf.level.objects.TerrainSurface.Layer.FOREGROUND,
+                    com.openggf.level.objects.TerrainSurface.Path.PRIMARY);
         if (vy > 0 && r.foundSurface() && r.distance() <= 0 && r.distance() > -16) {
             y += r.distance();
             if (vy > 0x200 && kind() == RING) {

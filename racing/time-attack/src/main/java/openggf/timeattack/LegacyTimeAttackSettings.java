@@ -20,7 +20,13 @@ final class LegacyTimeAttackSettings {
     private LegacyTimeAttackSettings() { }
 
     static void importOnce(ModStorage storage, Path directory) throws IOException {
-        if (storage == null || storage.list().contains(TimeAttackSettings.FILE_NAME)) return;
+        TimeAttackSettings settings = loadOrImport(storage, directory);
+        if (settings.pendingPublication()) throw new IOException("Could not save imported Time Attack settings");
+    }
+
+    /** Returns imported accepted values even when their first publication must be retried. */
+    static TimeAttackSettings loadOrImport(ModStorage storage, Path directory) throws IOException {
+        if (storage == null || storage.list().contains(TimeAttackSettings.FILE_NAME)) return TimeAttackSettings.load(storage);
         TimeAttackSettings settings = new TimeAttackSettings();
         for (String name : List.of("config.json", "config.yaml")) {
             // The engine preserves original files before converting/replacing unknown settings.
@@ -40,7 +46,8 @@ final class LegacyTimeAttackSettings {
                 apply(settings, values);
             }
         }
-        if (!settings.save(storage)) throw new IOException("Could not save imported Time Attack settings");
+        settings.save(storage);
+        return settings;
     }
 
     private static List<Path> backups(Path directory, String name) throws IOException {

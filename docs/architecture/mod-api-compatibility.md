@@ -741,3 +741,35 @@ The mutable `mod-api-signatures-0.7.txt` pin is regenerated against develop's co
 surface, including its existing scene art/audio capabilities. `ModApiVersion` describes
 the additions; the policy descriptor remains unpublished candidate `0.7.0` and published
 baselines remain untouched.
+
+### Mod audit text-slot and presentation helpers (2026-10-12)
+
+The unpublished `0.7.0` candidate adds owner-handle text `ModSaveSlot`, explicit
+load/write results and a creator codec. Incompatible primary bytes never select an
+older writable recovery generation; incompatible backups also require explicit
+replacement, and unreadable/failed required backups block publication.
+Retries retain encoded checkpoints. This is per-file atomic replacement, not a
+multi-file transaction. Codec/programming and revoked-handle failures remain faults.
+Three Islands and Slay profile formats demonstrate independent consumer adoption.
+If a corrupt primary arrives after an absent load, publication still requires explicit
+replacement unless the slot holds a genuinely validated recovery generation and
+has a configured backup that can preserve it. A no-backup slot also protects corrupt
+bytes that arrive after an earlier successful publication.
+
+`SpriteComposition` shares ordered pure sprite placement/bounds while boss recipes
+remain local. `SceneCanvasTransform` provides per-draw nested translation/opacity
+and restores the prior clip on close. `SceneCanvas.clipBounds` supplies the host clip
+state; custom canvases must expose it to use the scope. The mutable `0.7` pin is
+regenerated; descriptor version/status and published baselines remain unchanged.
+Closing an outer transform revokes all descendant views. Their later close cannot
+reintroduce a retired clip; ordinary nested try-with-resources also restores each scope
+after a creator fault.
+
+`TitleCardPresentation` supplies pure provider-piece positions; callers retain
+their clock, loading hold, release/hurry/completion and missing-piece policies.
+`AtlasFont.GlyphCase.EXACT_FIRST` with an explicit fallback retains distinct
+upper/lowercase glyphs while existing calls keep uppercase lookup and blank
+unknown-character advances. The descriptor was reviewed and retains `0.7.0`
+candidate with no published baselines; its strict key/value schema does not carry
+surface prose. `ModApiVersion`, curated roots and the exact mutable pin describe
+the additions together.

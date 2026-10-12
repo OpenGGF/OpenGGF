@@ -85,7 +85,7 @@ public final class TitleScreen implements Screen {
         if (game.controls.accept() || game.controls.menu()) {
             switch (selected) {
                 case 0 -> {
-                    if (save.isPresent()) {
+                    if (game.hasStoredSave()) {
                         confirmNew = true;
                         selected = 1;
                     } else {

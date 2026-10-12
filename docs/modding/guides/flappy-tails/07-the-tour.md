@@ -23,10 +23,13 @@ static List<Zone> tour() {
 ```
 
 Each stop has its zone and act, music id, backdrop window, pace (1/256 pixel a frame), gap and
-ground cut. It is a method returning a new list, not a static field: a mod may not keep static
-collections, because static state would outlive the scene and leak between sessions. Ten gates
-make a zone; fifty, a lap; later laps run faster and tighter (`Zone.forLap`), down to a gap of
-72.
+ground cut. The factory returns a new list for one scene-owned `Zone.Tour`; runtime
+lookups reuse its immutable definitions. The scene passes that tour to `Run` and
+`Course`, keeping preparation separate from mutable flight state and avoiding
+static collections that would outlive the owner. Ten gates make a zone; fifty, a
+lap; later laps run faster and tighter (`Zone.forLap`), down to a gap of 72. Their
+distinct definitions are prepared once, and later equivalent laps reuse the capped
+variant.
 
 Choosing `backdropTop` and the ground cuts was done by eye. Render what you are choosing
 from: a throwaway program that calls `levelStages` and draws each candidate stage's strip one
