@@ -1,11 +1,9 @@
 package survivors;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.sonic2.objects.badniks.Sonic2BadnikConfig;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.*;
-import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import java.util.List;
 
@@ -55,11 +53,8 @@ public final class Enemy extends AbstractBadnikInstance implements ModRewindRecr
     }
 
     private static DestructionEffects.DestructionConfig destructionWithoutPoints() {
-        var stock = Sonic2BadnikConfig.DESTRUCTION;
-        // Keep the ROM explosion/animal sequence, but the mod displays damage, not score.
-        return new DestructionEffects.DestructionConfig(stock.sfxId(),
-                (spawn, services) -> AnimalObjectInstance.deferredArtVariant(spawn, services, null),
-                stock.useRespawnTracking(), null, stock.explosionFactory(), stock.pointsAllocatedBeforeAnimal());
+        // S2 sfx_Explosion=$C1. Keep deferred animal/slot order, with no Obj29 popup child.
+        return DestructionEffects.deferredAnimalWithoutPopup(0xC1, true);
     }
 
     static ObjectSpawn spawnAt(int x, int y, int species, boolean elite) {
@@ -134,12 +129,10 @@ public final class Enemy extends AbstractBadnikInstance implements ModRewindRecr
 
     /** Floor surface Y below (x, feetY), searching a little above and below; MIN_VALUE if none. */
     private int floorAt(int x, int feetY) {
-        var levelManager = services().levelManager();
-        for (int probe = feetY - 24; probe <= feetY + 40; probe += 16) {
-            var r = ObjectTerrainUtils.checkFloorDist(levelManager, x, probe);
-            if (r.foundSurface() && r.distance() >= -16 && r.distance() < 16) return probe + r.distance();
-        }
-        return Integer.MIN_VALUE;
+        var floor = services().findFloorSurface(x, feetY, 24, 40,
+                com.openggf.level.objects.TerrainSurface.Layer.FOREGROUND,
+                com.openggf.level.objects.TerrainSurface.Path.PRIMARY);
+        return floor.foundSurface() ? floor.surfaceY() : Integer.MIN_VALUE;
     }
 
     private void walk(Species.Traits t, int px) {

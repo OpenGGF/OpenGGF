@@ -156,10 +156,11 @@ public abstract class AbstractBadnikInstance extends AbstractObjectInstance
     protected void destroyBadnik(PlayableEntity player) {
         // Clear our slot index so ObjectManager.freeSlot() won't release it
         // when this instance is removed. The explosion inherits the slot.
+        DestructionConfig config = DestructionEffects.prepareBeforeLatch(getDestructionConfig(), services());
         int mySlot = ObjectLifetimeOps.detachSlotForTransfer(this);
         ObjectLifetimeOps.destroyLatched(this);
         DestructionEffects.destroyBadnik(currentX, currentY, spawn, mySlot,
-                player, services(), getDestructionConfig());
+                player, services(), config);
     }
 
     @Override

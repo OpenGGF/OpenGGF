@@ -398,6 +398,9 @@ seconds and `sonic-survivors.bossHp=N` sets every boss's hitpoints.
 - `Enemy` (one class, seven AI archetypes over `Species`), `Boss`, `Shot` and `Pickup` are mod
   objects drawn with the ROM art the zone already loads; frames were picked with the
   `ObjectArtContactSheetProbe`. `Guard` turns hits into ring tolls.
+  Their live floor queries use injected `ObjectServices` with explicit primary foreground
+  collision and the same bounded native probe cadence. The shared deferred-animal recipe
+  keeps S2 explosion/respawn/slot order while suppressing the animal's deferred points child.
 - `SurvivorsMod` registers a `GameServiceBundle` factory: each patch application receives its own
   `RunState` (captured for rewind) and loaded `Profile`. The profile reads and writes owner-scoped
   `ModStorage`; it persists between runs and stays outside world rollback. Its compact settlement

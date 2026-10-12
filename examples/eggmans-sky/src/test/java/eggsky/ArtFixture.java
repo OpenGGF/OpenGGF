@@ -6,7 +6,7 @@ import eggsky.world.Biome;
 import java.lang.reflect.Proxy;
 import java.util.*;
 
-/** Original test pixels behind the SDK art boundary; ROM rendering has separate engine tests. */
+/** Original test pixels behind the SDK boundary, with recipe identity metadata; no ROM pixel authority. */
 final class ArtFixture {
     long ticks;
     int spriteLoads;
@@ -39,7 +39,7 @@ final class ArtFixture {
         };
         rom=(SceneRomArt)Proxy.newProxyInstance(SceneRomArt.class.getClassLoader(),new Class<?>[]{SceneRomArt.class},
                 (proxy,method,args)->switch(method.getName()) {
-                    case "gameId"->"s3k";case "levelKit"->kit;case "hasLevelKit"->true;
+                    case "gameId"->"s3k";case "romSha1"->"cfbf98c36c776677290a872547ac47c53d2761d6";case "levelKit"->kit;case "hasLevelKit"->true;
                     case "sprites"->{spriteLoads++;if(spriteFailure!=null)throw spriteFailure;yield sprites;}
                     case "character","characterAccessory"->sprites;
                     case "palette"->{paletteLoads++;if(paletteFailure!=null)throw paletteFailure;int[] colors=new int[(int)args[1]];Arrays.fill(colors,0xFFC08040);yield colors;}

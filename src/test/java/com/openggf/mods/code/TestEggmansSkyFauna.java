@@ -64,7 +64,7 @@ class TestEggmansSkyFauna {
             if (!game.code().equals(type.getMethod("game").invoke(def))) continue;
             bodies++;
             String key = (String) type.getMethod("key").invoke(def);
-            var request = (RomSpriteRequest) type.getMethod("request").invoke(def);
+            var request = (RomSpriteRequest) type.getMethod("request", com.openggf.mods.scene.SceneRomArt.class).invoke(def,art);
             if ((boolean) type.getMethod("animal").invoke(def)) {
                 assertTrue(animals.containsKey(key), "unverified animal " + key);
                 // Each ROM entry is x velocity, y velocity, then a long mapping pointer.

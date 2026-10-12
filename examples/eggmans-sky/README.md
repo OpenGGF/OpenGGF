@@ -137,6 +137,13 @@ unsupported requests and invalid/corrupt decodes have distinct status. Failed de
 reach the normal owner callback boundary. Creature banks use `SceneArtCache` request/palette
 identity; generation resets close those lookup caches without disposing live images.
 
+Repeated verified banks use `StockSceneArt`, retaining the expedition's chosen palettes and
+animation poses. The shared definitions cover ship, rings, capsule, explosion, Egg Robo,
+monitors, AIZ rocks and six reused S3K fauna banks. Expert streamed DPLC bodies and private
+mapping/table variants remain raw requests; each still reads the supplied ROM. The legacy
+Blue Flicky auto-frame request remains separate from the named recipe's explicit three-frame
+cap until that compatibility decision is qualified independently.
+
 ### System voice
 
 The system computer speaks plain status statements in a composed feminine voice: life support,

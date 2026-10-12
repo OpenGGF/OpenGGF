@@ -349,6 +349,7 @@ class TestSamplePlatformerIntegration {
             springPad.update(1, faller);
             assertEquals((short) SpringBounceHelper.STRENGTH_YELLOW, faller.getYSpeed(),
                     "SpringPad must apply the yellow spring strength verbatim (already negative = upward)");
+            assertTrue(faller.getSpringing(), "the creator spring uses the native player control-lock owner");
             StreamedMusicPort.SfxRef springSfx =
                     new StreamedMusicPort.SfxRef(OWNER, "spring");
             assertTrue(audio.commandTimeline().entries().stream()

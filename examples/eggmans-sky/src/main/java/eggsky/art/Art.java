@@ -6,6 +6,7 @@ import com.openggf.mods.scene.RomSpriteRequest.DplcLayout;
 import com.openggf.mods.scene.SceneContext;
 import com.openggf.mods.scene.SceneLevelKit;
 import com.openggf.mods.scene.art.SceneArtCache;
+import com.openggf.mods.scene.art.StockSceneArt;
 import com.openggf.mods.scene.SceneImage;
 import com.openggf.mods.scene.SceneRomArt;
 import com.openggf.mods.scene.SceneSprite;
@@ -145,22 +146,16 @@ public final class Art {
         if (rom != null) {
             try {
                 set = switch (key) {
-                    case "ship" -> rom.sprites(RomSpriteRequest.of(0x0D771E, Compression.NEMESIS, // ArtNem_RobotnikShip
-                            0x06820C, 0), aiz());                                                // Map_RobotnikShip
+                    case "ship" -> rom.sprites(StockSceneArt.S3K_ROBOTNIK_SHIP.request(rom), aiz());
                     case "boss_explosion" -> rom.sprites(RomSpriteRequest.of(0x0D73CE, Compression.NEMESIS, // ArtNem_BossExplosion
                             0x083FFC, 0), aiz());                                                // Map_BossExplosion
-                    case "explosion" -> rom.sprites(RomSpriteRequest.of(0x19200A, Compression.NEMESIS, // ArtNem_Explosion
-                            0x01E758, 0), aiz());                                                // Map_Explosion
-                    case "ring" -> rom.sprites(RomSpriteRequest.of(0x192AEE, Compression.NEMESIS, // ArtNem_RingHUDText
-                            0x01A99A, 1), aiz());                                                // Map_Ring
-                    case "monitor" -> rom.sprites(RomSpriteRequest.of(0x190F4A, Compression.NEMESIS, // ArtNem_Monitors
-                            0x01DBA2, 0), aiz());                                                // Map_Monitor
+                    case "explosion" -> rom.sprites(StockSceneArt.S3K_EXPLOSION.request(rom), aiz());
+                    case "ring" -> rom.sprites(StockSceneArt.S3K_RING.request(rom), aiz());
+                    case "monitor" -> rom.sprites(StockSceneArt.S3K_MONITOR.request(rom), aiz());
                     case "tornado" -> rom.sprites(RomSpriteRequest.of(0x382624, Compression.KOSINSKI_MODULED, // ArtKosM_AIZIntroPlane
                             0x364470, 0), aiz());                                                // Map_AIZIntroPlane
-                    case "rock" -> rom.sprites(RomSpriteRequest.of(0x38DC90, Compression.NEMESIS, // ArtNem_AIZMisc1
-                            0x21DCDC, 1), aiz());                                                // Map_AIZRock
-                    case "capsule" -> rom.sprites(RomSpriteRequest.of(0x0DD990, Compression.NEMESIS, // ArtNem_EggCapsule
-                            0x086BFC, 0), aiz());                                                // Map_EggCapsule
+                    case "rock" -> rom.sprites(StockSceneArt.S3K_AIZ_ROCK.request(rom), aiz());
+                    case "capsule" -> rom.sprites(StockSceneArt.S3K_EGG_CAPSULE.request(rom), aiz());
                     case "flicky" -> rom.sprites(RomSpriteRequest.of(0x1931D6, Compression.NEMESIS, // ArtNem_BlueFlicky
                             0x02CEBA, 0), aiz());                                                // Map_Animals1
                     case "starpost" -> rom.sprites(RomSpriteRequest.of(0x192D2A, Compression.NEMESIS, // ArtNem_EnemyPtsStarPost
@@ -169,8 +164,7 @@ public final class Art {
                             0x02D3AA, 0).withTileOffset(-8), aiz());                             // Map_StarpostStars
                     case "big_ring" -> rom.sprites(RomSpriteRequest.streamed(0x0D8766, 0x2700, // ArtUnc_SSEntryRing
                             0x0619E0, 0x061ABE, DplcLayout.OBJECT, 1), aiz());                   // Map/DPLC_SSEntryRing
-                    case "egg_robo" -> rom.sprites(RomSpriteRequest.of(0x17B17E, Compression.KOSINSKI_MODULED, // ArtKosM_EggRoboBadnik
-                            0x184F34, 0), rom.palette(PAL_CONTINUE, 64));                        // Map_EggRobo
+                    case "egg_robo" -> rom.sprites(StockSceneArt.S3K_EGG_ROBO.request(rom), rom.palette(PAL_CONTINUE, 64));
                     case "chaos_emerald" -> rom.sprites(RomSpriteRequest.of(0x0AE3EC, Compression.KOSINSKI_MODULED, // ArtKosM_SSChaosEmerald? (results emeralds)
                             0x00A6B2, 0), rom.palette(0x009D1E, 64));                            // Map_SSResultsEmeralds
                     case "hpz_emerald" -> rom.sprites(RomSpriteRequest.of(0x174B28, Compression.NEMESIS, // ArtNem_HPZEmeraldMisc
@@ -251,7 +245,7 @@ public final class Art {
             // The SDK keys actual requests plus copied palettes, independently of caller labels.
             // At most three supplied games retain 32 banks each; eviction leaves live images valid.
             SceneSpriteSet set = creatureBanks.computeIfAbsent(def.game(), game -> new SceneArtCache(rom, 32))
-                    .sprites(def.request(), palette);
+                    .sprites(def.request(rom), palette);
             failures.succeeded(request);
             return set;
         } catch (IllegalArgumentException | IllegalStateException | UnsupportedOperationException invalid) {

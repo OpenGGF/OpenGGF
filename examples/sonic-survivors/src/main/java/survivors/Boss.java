@@ -4,7 +4,6 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.*;
-import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import java.util.List;
 
@@ -254,12 +253,10 @@ public final class Boss extends AbstractObjectInstance
     }
 
     private int floorAt(int fx, int feetY) {
-        var levelManager = services().levelManager();
-        for (int probe = feetY - 24; probe <= feetY + 200; probe += 16) {
-            var r = ObjectTerrainUtils.checkFloorDist(levelManager, fx, probe);
-            if (r.foundSurface() && r.distance() >= -16 && r.distance() < 16) return probe + r.distance();
-        }
-        return Integer.MIN_VALUE;
+        var floor = services().findFloorSurface(fx, feetY, 24, 200,
+                com.openggf.level.objects.TerrainSurface.Layer.FOREGROUND,
+                com.openggf.level.objects.TerrainSurface.Path.PRIMARY);
+        return floor.foundSurface() ? floor.surfaceY() : Integer.MIN_VALUE;
     }
 
     /** Silver Sonic: walk at Sonic, crouch, then spin-dash wall to wall; leap when enraged. */

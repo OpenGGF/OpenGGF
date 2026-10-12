@@ -6,9 +6,8 @@ import java.util.Arrays;
 import java.util.List;
 import static com.openggf.mods.scene.RomSpriteRequest.Compression.KOSINSKI_MODULED;
 
-/** Native 16px block composition from LevelLoadBlock, cached once at scene entry. */
+/** Kit-backed native material samples; private ROM decoding remains for distinct backdrop variants. */
 public final class BiomeArt {
-    public final SceneImage[] blocks;
     public final SceneBackdrop backdrop;
     public final int backdropTop;
     public final SceneImage surface,interior;
@@ -25,31 +24,14 @@ public final class BiomeArt {
         int primary=pointer(entry,0),secondary=pointer(entry,4);
         int count=word(rom.read(primary,2),0)/32;
         int secondCount=primary==secondary?0:word(rom.read(secondary,2),0)/32;
-        byte[] maps=archivePair(rom,entry,8);
-        blocks=blockImages(rom,primary,secondary,count,secondCount,palette,maps,null);
-        // Material indices were checked against decoded native block sheets, not raw tile order.
-        // Use trim above soil/ice/sand, and coherent native rock or masonry inside it.
-        int[] samples=switch(biome) {
-            case MARBLE_GARDEN -> new int[]{280,2,36};
-            case MUSHROOM_HILL -> new int[]{50,51,44};
-            case CARNIVAL_NIGHT -> new int[]{56,20,45};
-            case ICECAP -> new int[]{36,70,71};
-            case SANDOPOLIS -> new int[]{1,4,162};
-            case LAUNCH_BASE -> new int[]{4,11,14};
-            case HYDROCITY -> new int[]{36,33,38};
-            case LAVA_REEF -> new int[]{5,17,23};
-            case HIDDEN_PALACE -> new int[]{13,1,3};
-            case SKY_SANCTUARY -> new int[]{4,1,2};
-            default -> throw new IllegalArgumentException("Angel Island has its own material bank");
-        };
-        variations=new SceneImage[samples.length-1];
-        for(int n=0;n<samples.length;n++)if(blocks[samples[n]]==null||!opaque(blocks[samples[n]]))
-            throw new IllegalStateException(biome.label+" ROM material "+samples[n]+" is incomplete");
-        surface=blocks[samples[0]];interior=blocks[samples[1]];
-        for(int n=1;n<samples.length;n++)variations[n-1]=blocks[samples[n]];
+        SceneImage[] samples=LevelKitMaterials.samples(rom,biome,act);
+        surface=samples[0];interior=samples[1];variations=new SceneImage[]{samples[1],samples[2]};
         if(rom.hasZonePictures(biome.zone,act))backdrop=rom.zoneBackdrop(biome.zone,act);
         else {
             int[] backgroundPalette=biome==Biome.ICECAP?icecapOutdoorPalette(rom,palette):palette;
+            // These presentation variants differ from the kit in plane origin, size, palette
+            // or first-frame uploads. Retain their ROM decoder until exact equality is available.
+            byte[] maps=archivePair(rom,entry,8);
             SceneImage[][] tiles=BackdropTiles.firstFrame(rom,biome,act,backgroundPalette);
             SceneImage[] backgroundBlocks=blockImages(rom,primary,secondary,count,secondCount,backgroundPalette,maps,tiles);
             backdrop=background(rom,entry,index,biome,backgroundPalette,backgroundBlocks);

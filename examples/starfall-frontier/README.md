@@ -114,6 +114,20 @@ Mining tiers, shrine rewards and the equipment/quest progression stay shared
 across the regions. The native terrain samples preserve solid rectangular
 blocks, with original resource highlights marking copper, iron and shards.
 
+Starfall's 39 material samples across 13 act variants now come from exact 16-pixel crops of
+`SceneRomArt.levelKit` layout blocks, with the native flips retained. A local channel conversion
+preserves the existing artwork: level-kit palette channels round `(n*255+3)/7`, while the
+example's original `SceneRomArt.palette` channels truncate `n*255/7`. The canonical locked-on
+ROM regression compares every material pixel to the original native 16-pixel block decoder.
+Launch Base 1, Hydrocity 1 and Sky Sanctuary 1 backdrops are also exact existing-provider images.
+
+The other ten backdrop variants retain their private ROM decoder. Their plane dimensions,
+first-frame AniPLC/direct uploads or IceCap outdoor origin/palette differ from current kit
+output. This decoder is presentation-only, bounded by its ROM table checks, and never writes
+live level art or animation clocks. Shared named sprite recipes cover reused ship, ring,
+monitor, rock, Bloominator, Monkey Dude, Orbinaut and Egg Robo banks; palette and pose choices
+remain Starfall's own. These are qualified identities, not a promise of live stock-zone animation.
+
 ## Build, install and launch
 
 From the repository root, with Java 21, Maven and Python 3 on PATH:

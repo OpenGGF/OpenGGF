@@ -45,6 +45,64 @@ class TestDestructionEffects {
     }
 
     @Test
+    void typedBeforeLatchCueRemainsOneShotAndPrecedesTransferredReplacement() {
+        List<String> events=new java.util.ArrayList<>();AbstractBadnikInstance[] badnik={null};
+        ObjectServices cueServices=new StubObjectServices() {
+            @Override public ObjectManager objectManager(){return objectManager;}
+            @Override public boolean playSfx(com.openggf.audio.StreamedMusicPort.SfxRef sound) {
+                events.add("sound:"+badnik[0].isDestroyed());return true;
+            }
+        };
+        objectManager = new ObjectManager(List.of(), new NoOpObjectRegistry(), 0, null, null,
+                null, GameServices.camera(), cueServices);
+        var config=new DestructionConfig(0,null,false,null,(x,y,svc,points)-> {
+            events.add("replacement:"+badnik[0].isDestroyed());
+            return new RecordingChildObject(new ObjectSpawn(x,y,0x27,0,0,false,0),"Replacement");
+        },false).withSound(DestructionEffects.SoundCue.namespaced(
+                new com.openggf.audio.StreamedMusicPort.SfxRef("sample-platformer","hit"),
+                DestructionEffects.SoundOrder.BEFORE_LATCH));
+        badnik[0]=new AbstractBadnikInstance(new ObjectSpawn(100,100,1,0,0,false,0),"Cue",config) {
+            @Override protected void updateMovement(int frame,com.openggf.game.PlayableEntity player) { }
+            @Override protected int getCollisionSizeIndex(){return 0;}
+            @Override public void appendRenderCommands(List<com.openggf.graphics.GLCommand> commands) { }
+        };
+        badnik[0].setServices(cueServices);objectManager.addDynamicObject(badnik[0]);
+        int slot=badnik[0].getSlotIndex();
+        badnik[0].onPlayerAttack(null,null);badnik[0].onPlayerAttack(null,null);
+        assertEquals(List.of("sound:false","replacement:true"),events);
+        assertTrue(objectManager.getActiveObjects().stream().anyMatch(object->object instanceof RecordingChildObject replacement &&replacement.getSlotIndex()==slot));
+    }
+
+    @Test
+    void semanticCueRunsAfterReplacementWithoutDuplicatingTheNativeId() {
+        List<String> events=new java.util.ArrayList<>();
+        ObjectServices cueServices=new StubObjectServices() {
+            @Override public ObjectManager objectManager(){return objectManager;}
+            @Override public void playSfx(com.openggf.audio.GameSound sound){events.add(sound.name());}
+            @Override public void playSfx(int sound){events.add("native:"+sound);}
+        };
+        var config=new DestructionConfig(0xC1,null,false,null,(x,y,svc,points)-> {
+            events.add("replacement");return new RecordingChildObject(new ObjectSpawn(x,y,0x27,0,0,false,0),"Replacement");
+        },false).withSound(DestructionEffects.SoundCue.semantic(com.openggf.audio.GameSound.BADNIK_HIT,
+                DestructionEffects.SoundOrder.AFTER_EFFECTS));
+        DestructionEffects.destroyBadnik(100,100,new ObjectSpawn(100,100,1,0,0,false,0),-1,null,cueServices,config);
+        assertEquals(List.of("replacement","BADNIK_HIT"),events);
+    }
+
+    @Test
+    void noPopupRecipeUsesTheSameDeferredAnimalOwnerAndNeverInstallsAChildPointsFactory() throws Exception {
+        var config=DestructionEffects.deferredAnimalWithoutPopup(0xC1,true);
+        assertEquals(0xC1,config.sfxId());assertTrue(config.useRespawnTracking());
+        org.junit.jupiter.api.Assertions.assertNull(config.pointsFactory());
+        org.junit.jupiter.api.Assertions.assertNull(config.explosionFactory());
+        ObjectSpawn spawn=new ObjectSpawn(100,100,0x28,0,0,false,0);
+        ObjectInstance animal=config.animalFactory().create(spawn,services);
+        assertEquals(AnimalObjectInstance.class,animal.getClass());
+        var points=AnimalObjectInstance.class.getDeclaredField("pointsFactory");points.setAccessible(true);
+        org.junit.jupiter.api.Assertions.assertNull(points.get(animal),"Obj29 is deferred by the animal, not config.pointsFactory");
+    }
+
+    @Test
     void sonic1BadnikDestructionDefersAnimalUntilExplosionExecutes() {
         DestructionConfig config = Sonic1DestructionConfig.S1_DESTRUCTION_CONFIG;
         config = new DestructionConfig(

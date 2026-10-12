@@ -12,21 +12,8 @@ import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
 
-/**
- * Spring gimmick, registered with {@code art/springpad.ggfs}. Mod API 0.7 does not publish
- * any solid-object marker interface ({@code SolidObjectProvider} and friends are engine-internal),
- * so this cannot ride the stock {@code SolidObject}/checkpoint-contact pipeline the way
- * {@code com.openggf.game.sonic2.objects.SpringObjectInstance} does. Instead it does simple
- * proximity + velocity detection each frame: is the main player's centre inside the pad's
- * 32x16 rect, and are they moving downward ({@link PlayableEntity#getYSpeed()} {@code > 0})?
- * If so, launch them with {@link SpringBounceHelper#STRENGTH_YELLOW} (already negative =
- * upward -- do not negate it) and mirror the published subset of what
- * {@code SpringObjectInstance#applyUpSpring} does ({@code setAir(true)}, {@code setOnObject(false)}).
- * {@link SpringBounceHelper#CONTROL_LOCK_FRAMES} cannot be mirrored: the input-lock setter
- * ({@code AbstractPlayableSprite#setSpringing}) is not part of the published {@code PlayableEntity}
- * surface, so this gimmick does not lock player input after launch (a known, documented gap
- * versus a ROM-accurate spring).
- */
+/** Authored 32x16 proximity contact; native launch/detachment/control-lock state uses the public helper.
+ * Stock springs retain their checkpoint geometry, position correction and ROM animation owners. */
 public final class SpringPad extends AbstractObjectInstance implements ModRewindRecreatable {
     private static final String OWNER = "sample-platformer";
 
@@ -44,25 +31,13 @@ public final class SpringPad extends AbstractObjectInstance implements ModRewind
 
     @Override public void update(int frameCounter, PlayableEntity player) {
         PlayableEntity contact = services().playerQuery().mainPlayerOrNull();
-        if (contact != null && contact.getYSpeed() > 0 && isWithinPad(contact)) {
-            // STRENGTH_YELLOW is already negative (= upward); do not negate it.
-            contact.setYSpeed((short) SpringBounceHelper.STRENGTH_YELLOW);
-            contact.setAir(true);
-            contact.setOnObject(false);
+        if (contact != null && SpringBounceHelper.tryLaunchUp(contact, spawn.x(), spawn.y(),
+                HALF_WIDTH, HALF_HEIGHT, SpringBounceHelper.STRENGTH_YELLOW, SpringBounceHelper.CONTROL_LOCK_FRAMES)) {
             services().playSfx(new SfxRef(OWNER, "spring"));
             extendedFramesRemaining = EXTENDED_FRAMES;
         } else if (extendedFramesRemaining > 0) {
             extendedFramesRemaining--;
         }
-    }
-
-    private boolean isWithinPad(PlayableEntity player) {
-        int springX = spawn.x();
-        int springY = spawn.y();
-        int playerX = player.getCentreX();
-        int playerY = player.getCentreY();
-        return playerX >= springX - HALF_WIDTH && playerX <= springX + HALF_WIDTH
-                && playerY >= springY - HALF_HEIGHT && playerY <= springY + HALF_HEIGHT;
     }
 
     @Override public void appendRenderCommands(List<GLCommand> commands) {

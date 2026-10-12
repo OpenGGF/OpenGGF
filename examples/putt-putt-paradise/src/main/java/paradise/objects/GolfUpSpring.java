@@ -29,9 +29,7 @@ public final class GolfUpSpring extends SpringObjectInstance {
         // Keep that separation, but recover the shot's momentum for the native bounce.
         player.setXSpeed(incomingXSpeed);
         player.setGSpeed(incomingGroundSpeed);
-        services().objectManager().solidContacts().releaseObjectPushLatch(entity, this);
-        services().objectManager().clearRidingObjectForJump(entity);
-        player.setPushing(false);
+        if (!services().detachCurrentSolidContact(entity)) return;
         if (!sideEntryActive) {
             sideEntryActive = true;
             // loc_189CA's +8px is a top-landing correction; side entry has no top landing.
