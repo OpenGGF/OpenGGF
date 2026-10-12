@@ -725,6 +725,17 @@ class TestPuttPuttParadise {
         configureRewinds("HOST", "sonic", "tails", 0, "NATIVE_4_3", 3, 1, number);
         f.stepIdleFrames(2);
         assertNotNull(value(mode(), "roomState"), "the real host listener has opened");
+        Object socketOwner = mode();
+        for (String fieldName : List.of("online", "room", "listener", "server")) {
+            var field = socketOwner.getClass().getDeclaredField(fieldName);
+            field.setAccessible(true);
+            socketOwner = field.get(socketOwner);
+            assertNotNull(socketOwner, fieldName);
+        }
+        var hostSocket = assertInstanceOf(java.net.ServerSocket.class, socketOwner);
+        assertTrue(hostSocket.isBound());
+        assertEquals(number, hostSocket.getLocalPort());
+        assertFalse(hostSocket.isClosed(), "capture the actual open host socket before the audio fault");
         var audio = GameServices.audio();
         var fail = new java.util.concurrent.atomic.AtomicBoolean();
         audio.setBackend(new com.openggf.audio.NullAudioBackend() {
@@ -754,9 +765,8 @@ class TestPuttPuttParadise {
             assertEquals("failed replay sink flush", sinkFailure.getMessage());
             assertTrue(replay.isClosed()); assertFalse(audio.isReverseAudioOutputActive());
             assertNull(value(mode(), "roomState"));
-            try (var port = new java.net.ServerSocket(number)) {
-                assertEquals(number, port.getLocalPort(), "audio failure cannot leak the host listener");
-            }
+            // Another local owner can acquire a released port; inspect the captured resource itself.
+            assertTrue(hostSocket.isClosed(), "audio failure cannot leak the owned host listener");
             assertDoesNotThrow(() -> GameServices.module().gameplayFrameController().close());
         } finally {
             // The audio manager survives headless sessions; never leave a test-local
