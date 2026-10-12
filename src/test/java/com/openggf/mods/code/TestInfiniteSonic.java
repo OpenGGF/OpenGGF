@@ -60,6 +60,76 @@ class TestInfiniteSonic {
     }
     @AfterEach void closeSession() { if (bootstrap != null) bootstrap.dispose(); }
 
+    @BeforeEach void isolatePlayerRecords() throws Exception {
+        Files.deleteIfExists(leaderboardFile());
+        Files.deleteIfExists(temp.resolve("saves/mods/infinite-sonic/leaderboard.txt"));
+    }
+
+    @Test void ownedLeaderboardRetriesWithoutDuplicatingRunsAndIsolatesInstances() throws Exception {
+        var files = new HashMap<String,String>();
+        var failed = new boolean[]{true};
+        com.openggf.mods.ModStorage storage = (com.openggf.mods.ModStorage) java.lang.reflect.Proxy.newProxyInstance(
+                getClass().getClassLoader(), new Class<?>[]{com.openggf.mods.ModStorage.class},
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "read" -> Optional.ofNullable(files.get(args[0]));
+                    case "list" -> files.keySet().stream().sorted().toList();
+                    case "write" -> { if (failed[0]) yield false; files.put((String)args[0], (String)args[1]); yield true; }
+                    default -> throw new AssertionError(method.getName());
+                });
+        Class<?> type = loader.loadClass("infinite.Leaderboard");
+        Object board = type.getConstructor(com.openggf.mods.ModStorage.class).newInstance(storage);
+        var submit = type.getMethod("submit", int.class, long.class, int.class, double.class);
+        submit.invoke(board, 0, 41L, 100, 1.25);
+        submit.invoke(board, 0, 41L, 100, 1.25);
+        assertTrue((boolean)type.getMethod("dirty").invoke(board));
+        assertNotNull(type.getMethod("persistenceNotice").invoke(board));
+        assertEquals(1, ((List<?>)type.getMethod("top",int.class).invoke(board,0)).size());
+        failed[0] = false;
+        assertTrue((boolean)type.getMethod("flush").invoke(board));
+        assertTrue((boolean)type.getMethod("flush").invoke(board));
+        assertNull(type.getMethod("persistenceNotice").invoke(board));
+        Object reread = type.getConstructor(com.openggf.mods.ModStorage.class).newInstance(storage);
+        assertEquals(1, ((List<?>)type.getMethod("top",int.class).invoke(reread,0)).size());
+        Object other = type.getConstructor(com.openggf.mods.ModStorage.class).newInstance(
+                com.openggf.mods.scene.host.ModStorageFactory.forOwner(temp.resolve("saves"), "other-course"));
+        assertEquals(0, ((List<?>)type.getMethod("top",int.class).invoke(other,0)).size());
+    }
+
+    @Test void oversizedLeaderboardIsPreservedAndLegacyGoodRowsRemainBounded() throws Exception {
+        var storage = com.openggf.mods.scene.host.ModStorageFactory.forOwner(temp.resolve("saves"), "infinite-sonic");
+        Path owned = temp.resolve("saves/mods/infinite-sonic/leaderboard.txt");
+        Files.createDirectories(owned.getParent());
+        String huge = "x".repeat(com.openggf.mods.ModStorage.MAX_TEXT_BYTES + 1);
+        Files.writeString(owned, huge);
+        Class<?> type = loader.loadClass("infinite.Leaderboard");
+        Object board = type.getConstructor(com.openggf.mods.ModStorage.class).newInstance(storage);
+        type.getMethod("submit",int.class,long.class,int.class,double.class).invoke(board,0,51L,100,1.0);
+        assertFalse((boolean)type.getMethod("flush").invoke(board));
+        assertEquals(huge, Files.readString(owned));
+        Files.delete(owned);
+        Files.createDirectories(leaderboardFile().getParent());
+        Files.writeString(leaderboardFile(), "0 100 125\nbad row\n-1 100 125\n0 -1 125\n");
+        Object legacy = type.getConstructor(com.openggf.mods.ModStorage.class).newInstance(storage);
+        assertEquals(1, ((List<?>)type.getMethod("top",int.class).invoke(legacy,0)).size());
+        assertFalse(Files.exists(owned), "Reading a legacy table must not publish or remove it");
+    }
+
+    @Test void badnikTraitsArePreparedOnceAndFramesCannotBeMutated() throws Exception {
+        Class<?> badnik = loader.loadClass("infinite.CourseBadnik");
+        Object enemy = badnik.getConstructor(ObjectSpawn.class).newInstance(new ObjectSpawn(10,20,0,0,0,false,20));
+        var traits = badnik.getDeclaredMethod("traits"); traits.setAccessible(true);
+        Object first = traits.invoke(enemy);
+        var distinct = Collections.newSetFromMap(new IdentityHashMap<Object,Boolean>());
+        for (int i=0;i<1000;i++) distinct.add(traits.invoke(enemy));
+        assertEquals(1, distinct.size(), "Previously each lookup constructed a new Traits record");
+        var frames = first.getClass().getMethod("frames");
+        int original = ((int[])frames.invoke(first))[0];
+        ((int[])frames.invoke(first))[0] = 999;
+        assertEquals(original, ((int[])frames.invoke(first))[0]);
+        Object other = badnik.getConstructor(ObjectSpawn.class).newInstance(new ObjectSpawn(10,20,0,0,0,false,20));
+        assertNotSame(first, traits.invoke(other), "Prepared values are scoped to each recreation");
+    }
+
     private HeadlessTestFixture launch(WidescreenAspect aspect) throws Exception {
         return launch(aspect, 0, 0);
     }
@@ -238,7 +308,8 @@ class TestInfiniteSonic {
 
     @Test void patchOnlyActivatesForSoloSonic() throws Exception {
         GamePatch patch = (GamePatch) loader.loadClass("infinite.InfiniteSonicMod$Patch")
-                .getConstructor().newInstance();
+                .getConstructor(com.openggf.mods.ModStorage.class).newInstance(
+                        com.openggf.mods.scene.host.ModStorageFactory.forOwner(temp.resolve("saves"), "infinite-sonic"));
         assertTrue(patch.activatesFor(new GameplayLaunchRequest("s1", "sonic", List.of())));
         assertFalse(patch.activatesFor(new GameplayLaunchRequest("s1", "tails", List.of())));
         assertFalse(patch.activatesFor(new GameplayLaunchRequest("s1", "sonic", List.of("tails"))));
@@ -468,7 +539,8 @@ class TestInfiniteSonic {
         assertEquals(second, entryScore(top(0).get(0)));
         assertEquals(1, top(2).size(), "other zones are untouched");
         // Saved to disk, and read back by a fresh table.
-        var reread = loader.loadClass("infinite.Leaderboard").getConstructor(Path.class).newInstance(leaderboardFile());
+        var reread = loader.loadClass("infinite.Leaderboard").getConstructor(com.openggf.mods.ModStorage.class).newInstance(
+                com.openggf.mods.scene.host.ModStorageFactory.forOwner(temp.resolve("saves"), "infinite-sonic"));
         var rereadTop = (List<?>) reread.getClass().getMethod("top", int.class).invoke(reread, 0);
         assertEquals(second, entryScore(rereadTop.get(0)));
 

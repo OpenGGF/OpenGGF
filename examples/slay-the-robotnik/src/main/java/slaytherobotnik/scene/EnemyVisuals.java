@@ -3,6 +3,7 @@ package slaytherobotnik.scene;
 import com.openggf.mods.scene.SceneCanvas;
 import com.openggf.mods.scene.SceneDraw;
 import com.openggf.mods.scene.SceneSprite;
+import com.openggf.mods.scene.art.SpriteComposition;
 import java.util.ArrayList;
 import java.util.List;
 import slaytherobotnik.core.Enemy;
@@ -21,7 +22,7 @@ import slaytherobotnik.ui.Colors;
  * it a {@code scale} or a {@code lift}.
  */
 final class EnemyVisuals {
-    /** Where an enemy was drawn this frame (for hotspots, intents and effects). */
+    /** Pure prepared geometry, shared by targeting, effects and drawing. */
     record Box(int x, int y, int w, int h) {
         int centerX() {
             return x + w / 2;
@@ -32,6 +33,17 @@ final class EnemyVisuals {
     private record Part(SceneSprite sprite, float dx, float dy, boolean flipX) {
     }
 
+    record Pose(List<Part> parts, float scale, float originX, float originY, Box box,
+                int flashColor, float alpha, Enemy placeholder, SpriteComposition.Placement prepared) {
+        Pose { parts = List.copyOf(parts); }
+        Pose(List<Part> parts, float scale, float originX, float originY, Box box,
+             int flashColor, float alpha, Enemy placeholder) {
+            this(parts, scale, originX, originY, box, flashColor, alpha, placeholder,
+                    placeholder == null ? composition(parts).place(originX, originY,
+                            SceneDraw.plain().withScale(scale).withFlash(flashColor).withAlpha(alpha)) : null);
+        }
+    }
+
     private EnemyVisuals() {
     }
 
@@ -40,9 +52,14 @@ final class EnemyVisuals {
      * 0..1 white flash; {@code alpha} fades it out when dying.
      */
     static Box draw(Shell shell, SceneCanvas c, Enemy enemy, int x, int groundY, long ticks, float flash, float alpha) {
+        return draw(shell, c, prepare(shell, enemy, x, groundY, ticks, flash, alpha));
+    }
+
+    static Pose prepare(Shell shell, Enemy enemy, int x, int groundY, long ticks, float flash, float alpha) {
         List<Part> parts = compose(shell, enemy, enemy.art(), ticks);
         if (parts.isEmpty()) {
-            return placeholder(shell, c, enemy, x, groundY, flash, alpha);
+            return new Pose(parts, 1f, x, groundY, placeholderBounds(enemy, x, groundY),
+                    flash > 0 ? Colors.alpha(Colors.WHITE, Math.min(1f, flash)) : 0, alpha, enemy);
         }
         float scale = scale(enemy);
         float[] b = bounds(parts);
@@ -53,31 +70,29 @@ final class EnemyVisuals {
         if (enemy.halfDead() && !enemy.art().startsWith("ssz:mecha")) {
             alpha *= 0.6f; // reviving: faded until it rises again
         }
-        for (Part p : parts) {
-            SceneDraw style = SceneDraw.plain().withScale(scale).withFlipX(p.flipX()).withFlash(flashColor)
-                    .withAlpha(alpha);
-            c.draw(p.sprite(), originX + p.dx() * scale, originY + p.dy() * scale, style);
-        }
-        return new Box(Math.round(originX + b[0] * scale), Math.round(originY + b[1] * scale),
+        Box box = new Box(Math.round(originX + b[0] * scale), Math.round(originY + b[1] * scale),
                 Math.round((b[2] - b[0]) * scale), Math.round((b[3] - b[1]) * scale));
+        return new Pose(parts, scale, originX, originY, box, flashColor, alpha, null);
+    }
+
+    static Box draw(Shell shell, SceneCanvas c, Pose pose) {
+        if (pose.placeholder() != null) {
+            return placeholder(shell, c, pose.placeholder(), Math.round(pose.originX()), Math.round(pose.originY()),
+                    ((pose.flashColor() >>> 24) & 255) / 255f, pose.alpha());
+        }
+        pose.prepared().draw(c);
+        return pose.box();
     }
 
     /** {minX, minY, maxX, maxY} of a composition relative to its origin. */
+    private static SpriteComposition composition(List<Part> parts) {
+        return new SpriteComposition(parts.stream().map(p -> new SpriteComposition.Part(
+                p.sprite(), p.dx(), p.dy(), p.flipX())).toList());
+    }
+
     private static float[] bounds(List<Part> parts) {
-        float minX = Float.MAX_VALUE;
-        float minY = Float.MAX_VALUE;
-        float maxX = -Float.MAX_VALUE;
-        float maxY = -Float.MAX_VALUE;
-        for (Part p : parts) {
-            SceneSprite s = p.sprite();
-            float left = p.flipX() ? p.dx() - (s.width() - s.originX()) : p.dx() - s.originX();
-            float top = p.dy() - s.originY();
-            minX = Math.min(minX, left);
-            minY = Math.min(minY, top);
-            maxX = Math.max(maxX, left + s.width());
-            maxY = Math.max(maxY, top + s.height());
-        }
-        return new float[] {minX, minY, maxX, maxY};
+        var b = composition(parts).bounds();
+        return new float[] { b.left(), b.top(), b.right(), b.bottom() };
     }
 
     /** Elites and the final boss are drawn at double size. */
@@ -461,10 +476,8 @@ final class EnemyVisuals {
 
     private static Box placeholder(Shell shell, SceneCanvas c, Enemy enemy, int x, int groundY, float flash,
             float alpha) {
-        boolean big = enemy.maxHp() >= 150;
-        boolean elite = enemy.maxHp() >= 80;
-        int w = big ? 72 : elite ? 52 : 36;
-        int h = big ? 80 : elite ? 52 : 34;
+        Box box = placeholderBounds(enemy, x, groundY);
+        int w = box.w(), h = box.h();
         int hue = Math.abs(enemy.id().hashCode());
         int body = 0xFF000000 | ((0x60 + hue % 0x80) << 16) | ((0x30 + (hue >> 8) % 0x60) << 8) | (0x40 + (hue >> 16) % 0x80);
         int left = x - w / 2;
@@ -478,6 +491,12 @@ final class EnemyVisuals {
         shell.font.drawOutlined(c, label, x - shell.font.width(label) / 2, top + h / 2 - 2,
                 Colors.alpha(Colors.WHITE, alpha), 1);
         return new Box(left, top, w, h);
+    }
+
+    private static Box placeholderBounds(Enemy enemy, int x, int groundY) {
+        boolean big = enemy.maxHp() >= 150, elite = enemy.maxHp() >= 80;
+        int w = big ? 72 : elite ? 52 : 36, h = big ? 80 : elite ? 52 : 34;
+        return new Box(x - w / 2, groundY - h, w, h);
     }
 
     /** The boss shown at the top of the map, shrunk to fit a 50x36 window; false when there is no art. */
@@ -500,10 +519,7 @@ final class EnemyVisuals {
         float ox = x - (b[0] + b[2]) / 2f * scale;
         float oy = bottomY + 2 - b[3] * scale;
         c.clip(x - 25, bottomY - 34, 50, 38);
-        for (Part p : parts) {
-            c.draw(p.sprite(), ox + p.dx() * scale, oy + p.dy() * scale,
-                    SceneDraw.plain().withScale(scale).withFlipX(p.flipX()));
-        }
+        composition(parts).place(ox, oy, SceneDraw.plain().withScale(scale)).draw(c);
         c.unclip();
         return true;
     }
@@ -523,10 +539,7 @@ final class EnemyVisuals {
         float scale = Math.min(maxScale, Math.min(maxW / (b[2] - b[0]), maxH / (b[3] - b[1])));
         float ox = x - (b[0] + b[2]) / 2f * scale;
         float oy = bottomY - b[3] * scale;
-        for (Part p : parts) {
-            c.draw(p.sprite(), ox + p.dx() * scale, oy + p.dy() * scale,
-                    SceneDraw.plain().withScale(scale).withFlipX(p.flipX()).withFlash(flash));
-        }
+        composition(parts).place(ox, oy, SceneDraw.plain().withScale(scale).withFlash(flash)).draw(c);
         return true;
     }
 }

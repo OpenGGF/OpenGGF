@@ -97,8 +97,9 @@ public final class HighwayView {
         long shown = ticks - milestoneAt;
         if (milestone > 0 && shown >= 0 && shown < MILESTONE_TICKS) {
             double fade = shown < MILESTONE_TICKS - 20 ? 1 : (MILESTONE_TICKS - shown) / 20.0;
-            SitarUi.center(new Motion.ShiftedCanvas(c, 0, fade), milestone + " NOTE STREAK!", x, top + 24 - (int) (shown / 10),
-                    width, SitarUi.GOLD);
+            try (var view = new com.openggf.mods.ui.SceneCanvasTransform(c, 0, 0, (float)fade)) {
+                SitarUi.center(view, milestone + " NOTE STREAK!", x, top + 24 - (int) (shown / 10), width, SitarUi.GOLD);
+            }
         }
         if (ticks < feedbackUntil) {
             SitarUi.center(c, good ? "HIT!" : "MISS", x, top + 8, width, good ? SitarUi.CYAN : 0xFFFF5969);

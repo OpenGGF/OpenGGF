@@ -16,6 +16,8 @@ public final class CourseBadnik extends AbstractBadnikInstance
         implements ModRewindRecreatable, TouchResponseListener {
     /** Subtype flag: bob in place instead of patrolling ({@link PlatformPlan.Bouncer}). */
     public static final int HOVER = 0x40;
+    @com.openggf.game.rewind.RewindTransient(reason = "Immutable traits derived from the restored spawn identity")
+    private CourseSpecies.Traits traitsCache;
     private long worldAnchor;
     private int anchorX;
     private int anchorY;
@@ -39,7 +41,10 @@ public final class CourseBadnik extends AbstractBadnikInstance
     /** The {@link CourseSpecies} id. */
     public int species() { return Math.floorMod(spawn.subtype() & ~HOVER, CourseSpecies.COUNT); }
     public boolean hover() { return (spawn.subtype() & HOVER) != 0; }
-    private CourseSpecies.Traits traits() { return CourseSpecies.of(species()); }
+    private CourseSpecies.Traits traits() {
+        if (traitsCache == null || traitsCache.id() != species()) traitsCache = CourseSpecies.of(species());
+        return traitsCache;
+    }
     public boolean flying() { return traits().flying(); }
     public long worldAnchor() { return worldAnchor; }
     @Override public boolean isPersistent() { return !isDestroyed(); }

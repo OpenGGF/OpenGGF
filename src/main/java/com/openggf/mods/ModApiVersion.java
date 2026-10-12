@@ -48,6 +48,10 @@ public final class ModApiVersion {
      * placement transforms, owner storage and service bundles, named single-act and
      * multi-act zone factories, shared UI/input and ROM-qualified scene art.
      * Owner storage also keeps bounded, atomically replaced binary files beside its text.
+     * Typed text save slots preserve incompatible/corrupt generations, validate recovery
+     * and report failed primary/backup publication with exact-checkpoint retries.
+     * Pure sprite compositions share bounds/emission, and scoped canvas transforms
+     * preserve nested opacity, full-viewport clears and the previous clip.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

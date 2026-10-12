@@ -31,6 +31,25 @@ class TestSceneArtHelpers {
                 });
     }
 
+    @Test void compositionSharesPureOriginsMirrorsBoundsAndEmissionOrder() {
+        SceneSprite first = new SceneSprite(new SceneImage(8,6,new int[48]), 2,4);
+        SceneSprite second = new SceneSprite(new SceneImage(4,3,new int[12]), 1,2);
+        SpriteComposition composition = new SpriteComposition(List.of(
+                new SpriteComposition.Part(first, 3,-2,false),
+                new SpriteComposition.Part(second,-6,5,true)));
+        assertEquals(new SpriteComposition.Bounds(-9,-6,9,6), composition.bounds());
+        var placed = composition.place(100,50,SceneDraw.plain().withScale(2).withFlipX(true));
+        assertEquals(new SpriteComposition.Bounds(82,38,118,62), placed.bounds());
+        assertEquals(94, placed.parts().get(0).x()); assertEquals(46, placed.parts().get(0).y());
+        assertTrue(placed.parts().get(0).style().flipX());
+        assertFalse(placed.parts().get(1).style().flipX());
+        assertSame(first, placed.parts().get(0).sprite()); assertSame(second, placed.parts().get(1).sprite());
+        assertThrows(UnsupportedOperationException.class, () -> composition.parts().clear());
+        assertThrows(IllegalArgumentException.class, () -> composition.place(0,0,SceneDraw.plain().withScale(Float.NaN)));
+        assertThrows(IllegalArgumentException.class, () -> composition.place(Float.MAX_VALUE,0,SceneDraw.plain()));
+        assertEquals(new SpriteComposition.Bounds(0,0,0,0),new SpriteComposition(List.of()).bounds());
+    }
+
     @Test void recipesFailClosedForUnknownOrWrongRomIdentity() {
         assertThrows(IllegalArgumentException.class, () -> StockSceneArt.S3K_RING.request(rom("")));
         assertThrows(IllegalArgumentException.class, () -> StockSceneArt.S3K_RING.request(rom("a".repeat(40))));

@@ -592,3 +592,18 @@ The mutable `mod-api-signatures-0.7.txt` pin is regenerated against develop's co
 surface, including its existing scene art/audio capabilities. `ModApiVersion` describes
 the additions; the policy descriptor remains unpublished candidate `0.7.0` and published
 baselines remain untouched.
+
+### Mod audit text-slot and presentation helpers (2026-10-12)
+
+The unpublished `0.7.0` candidate adds owner-handle text `ModSaveSlot`, explicit
+load/write results and a creator codec. Incompatible primary bytes never select an
+older writable recovery generation; required-backup failure blocks publication.
+Retries retain encoded checkpoints. This is per-file atomic replacement, not a
+multi-file transaction. Codec/programming and revoked-handle failures remain faults.
+Three Islands and Slay profile formats demonstrate independent consumer adoption.
+
+`SpriteComposition` shares ordered pure sprite placement/bounds while boss recipes
+remain local. `SceneCanvasTransform` provides per-draw nested translation/opacity
+and restores the prior clip on close. `SceneCanvas.clipBounds` supplies the host clip
+state; custom canvases must expose it to use the scope. The mutable `0.7` pin is
+regenerated; descriptor version/status and published baselines remain unchanged.

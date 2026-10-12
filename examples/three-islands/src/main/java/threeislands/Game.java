@@ -1,5 +1,8 @@
 package threeislands;
 
+import com.openggf.mods.state.ModSaveSlot;
+import com.openggf.mods.state.ModSaveCodec;
+import com.openggf.mods.state.ModSaveLoadResult;
 import com.openggf.mods.scene.SceneCanvas;
 import com.openggf.mods.scene.SceneContext;
 import java.util.ArrayList;
@@ -57,10 +60,22 @@ public final class Game {
     private long ticks;
     private final List<String> notices = new ArrayList<>();
     private Stage cachedStage;
+    public enum SaveStatus { ABSENT, VALID, RECOVERED, INCOMPATIBLE, CORRUPT, UNREADABLE }
+    private SaveStatus saveStatus = SaveStatus.ABSENT;
+    private final ModSaveSlot<Progress> saveSlot;
+    private String saveNotice;
     private final java.util.Map<Zone, DungeonArt> dungeonArt = new java.util.EnumMap<>(Zone.class);
 
     public Game(SceneContext ctx, byte[] font, byte[] script) {
         this.ctx = ctx;
+        this.saveSlot = new ModSaveSlot<>(ctx.storage(), SAVE, BACKUP, new ModSaveCodec<>() {
+            public ModSaveLoadResult<Progress> decode(String text) {
+                if (incompatible(text)) return ModSaveLoadResult.rejected(ModSaveLoadResult.Status.INCOMPATIBLE);
+                try { return ModSaveLoadResult.valid(SaveCodec.decode(text)); }
+                catch (IllegalArgumentException damaged) { return ModSaveLoadResult.rejected(ModSaveLoadResult.Status.CORRUPT); }
+            }
+            public String encode(Progress value) { return SaveCodec.encode(value); }
+        });
         this.font = new Font(font);
         this.ui = new Ui(this.font);
         this.art = new Art(ctx.art());
@@ -105,6 +120,7 @@ public final class Game {
 
     public void update() {
         ticks++;
+        if (saveSlot.pending() && ticks % 120 == 0) flushSave();
         controls.bind(ctx);
         if (next != null) {
             fade = Math.max(1, fade + 1);
@@ -121,6 +137,7 @@ public final class Game {
 
     public void draw(SceneCanvas canvas) {
         screen.draw(this, canvas);
+        if (saveNotice != null) font.centered(canvas, saveNotice, width() / 2, height() - 11, Ui.BAD);
         if (fade > 0) {
             int alpha = fade <= 12 ? fade * 255 / 12 : (24 - fade) * 255 / 12;
             canvas.fill(0, 0, canvas.width(), canvas.height(), Math.max(0, Math.min(255, alpha)) << 24);
@@ -138,31 +155,40 @@ public final class Game {
     }
 
     public Optional<Progress> readSave() {
-        for (String name : List.of(SAVE, BACKUP)) {
-            try {
-                Optional<String> text = ctx.storage().read(name);
-                if (text.isPresent()) return Optional.of(SaveCodec.decode(text.get()));
-            } catch (RuntimeException damaged) {
-                // Try the backup next.
-            }
-        }
-        return Optional.empty();
+        var result = saveSlot.load();
+        saveStatus = SaveStatus.valueOf(result.status().name());
+        if (saveStatus == SaveStatus.RECOVERED) saveNotice = "Recovered the last valid save.";
+        else if (saveStatus != SaveStatus.ABSENT && saveStatus != SaveStatus.VALID)
+            saveNotice = "Save preserved. Choose New Game to replace it.";
+        return result.value();
     }
 
-    public void save() {
-        String text = SaveCodec.encode(progress);
-        try {
-            Optional<String> old = ctx.storage().read(SAVE);
-            old.ifPresent(previous -> ctx.storage().write(BACKUP, previous));
-            ctx.storage().write(SAVE, text);
-        } catch (RuntimeException unavailable) {
-            // Storage problems never stop play; the next save tries again.
-        }
+    public SaveStatus saveStatus() { return saveStatus; }
+    public String saveNotice() { return saveNotice; }
+    public boolean hasStoredSave() { return saveStatus != SaveStatus.ABSENT; }
+
+    private static boolean incompatible(String text) {
+        String header = text.lines().findFirst().orElse("").strip();
+        return header.startsWith("three-islands-save ") && !header.equals(SaveCodec.HEADER);
+    }
+
+    public boolean save() { return saved(saveSlot.save(progress).saved()); }
+
+    /** Retry the last checkpoint, rather than accidentally saving mid-battle state. */
+    public boolean flushSave() { return !saveSlot.pending() || saved(saveSlot.retry().saved()); }
+
+    private boolean saved(boolean success) {
+        if (success) { saveStatus = SaveStatus.VALID; saveNotice = null; }
+        else saveNotice = saveSlot.writable() ? "Could not save. Progress kept in memory; retrying."
+                : "Save preserved. Choose New Game to replace it.";
+        return success;
     }
 
     // ------------------------------------------------------------------ story flow
 
     public void newGame() {
+        // The title's existing overwrite interaction is the only replacement authorization.
+        saveSlot.allowReplacement();
         progress = new Progress(System.nanoTime() ^ 0x7131A5D5L);
         enterZone(firstAvailable(), 0);
     }

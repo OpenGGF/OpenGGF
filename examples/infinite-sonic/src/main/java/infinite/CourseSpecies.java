@@ -33,6 +33,8 @@ public final class CourseSpecies {
      */
     public record Traits(int id, String name, String artKey, boolean flying, int collision, int priority,
             int halfWidth, int depth, int ticksPerFrame, boolean flipFacingLeft, int[] frames) {
+        public Traits { frames = frames.clone(); }
+        @Override public int[] frames() { return frames.clone(); }
         public int frame(int ticks) { return frames[(ticks / ticksPerFrame) % frames.length]; }
         public boolean hazard() { return (collision & 0x80) != 0; }
         /** Ball Hogs stand their ground; everything else patrols. */

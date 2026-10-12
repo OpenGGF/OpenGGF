@@ -48,7 +48,7 @@ public final class SlayScene implements ModScene, DebuggableScene {
     @Override
     public void exit(SceneContext ctx) {
         if (shell != null) {
-            try { shell.profile.save(ctx.storage()); }
+            try { shell.flushPersistence(); shell.saveProfile(); }
             finally { shell.art.close(); }
         }
     }

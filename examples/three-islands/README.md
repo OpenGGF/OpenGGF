@@ -321,3 +321,9 @@ java -cp target/test-classes:target/classes:$(cat target/test-classpath.txt) \
 - Other ROM fragments are the initial level-kit art; stock animated tiles and palette cycles beyond Green Hill field water are not simulated.
 - Sound effects are silent in Sonic 1 and Sonic 2 fields while their ROM theme plays
   (see Audio).
+
+The shared `ModSaveSlot` validates primary/recovery generations before use. A future
+primary remains preserved instead of silently loading an older backup. Failed required
+backup publication aborts the primary write; failed writes retain the exact checkpoint
+for retry and show a notice. New Game's overwrite interaction permits replacement.
+Individual files are atomically replaced; the two-file sequence is not a crash transaction.

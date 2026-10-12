@@ -72,7 +72,10 @@ public final class IslandsScene implements ModScene, DebuggableScene {
 
     @Override
     public void exit(SceneContext ctx) {
-        if (game != null) game.audio.close();
+        if (game != null) {
+            try { game.flushSave(); }
+            finally { game.audio.close(); }
+        }
     }
 
     /** The current screen's name, for tests. */

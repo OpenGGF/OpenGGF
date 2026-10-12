@@ -1,6 +1,7 @@
 package sitarhero;
 
 import com.openggf.mods.scene.SceneCanvas;
+import com.openggf.mods.ui.SceneCanvasTransform;
 import com.openggf.mods.scene.SceneDraw;
 import com.openggf.mods.scene.SceneRomArt;
 import com.openggf.mods.scene.SceneSpriteSet;
@@ -23,7 +24,7 @@ import static sitarhero.ui.SitarUi.*;
  * The pictures half of the scene: draws {@link SitarScene}'s state and never changes it.
  *
  * <p>Every screen stands on the current venue ({@link ConcertStage}): the act the song or
- * world comes from. A screen's content eases in through a {@link Motion.ShiftedCanvas} for
+ * world comes from. A screen's content eases in through a {@link SceneCanvasTransform} for
  * {@link Motion#ENTER_TICKS} after it opens, sliding from the side the player came from;
  * footers with the controls are drawn outside it, so they are readable from the first frame.
  */
@@ -49,7 +50,7 @@ final class SitarScreens {
         int step = s.screen == Screen.CHARACTERS ? 1 : s.screen == Screen.ROLES ? 2 : s.screen == Screen.DIFFICULTY ? 3
                 : s.screen == Screen.SONGS ? 4 : 0;
         SitarUi.page(base, step, s.mode == Mode.CAREER ? "TOUR" : "ARCADE");
-        SceneCanvas c = entering(base, now);
+        try (var c = entering(base, now)) {
         switch (s.screen) {
             case TITLE, ERROR -> drawError(c, base);
             case RECORDS -> drawRecords(c, base);
@@ -59,6 +60,7 @@ final class SitarScreens {
             case SETTINGS -> drawSettings(c, base);
             case RESULTS -> drawResults(c, base, now);
             default -> drawChoices(c, base, now);
+        }
         }
     }
 
@@ -73,7 +75,9 @@ final class SitarScreens {
                 ? Motion.progress(now, s.stageTick, VENUE_FADE) : 1;
         if (t < 1) {
             s.fadingStage.draw(base, now, sway(s.fadingStage, now));
-            current.draw(new Motion.ShiftedCanvas(base, 0, t), now, sway(current, now));
+            try (var view = new SceneCanvasTransform(base, 0, 0, (float)t)) {
+                current.draw(view, now, sway(current, now));
+            }
         } else current.draw(base, now, sway(current, now));
     }
     private int sway(ConcertStage stage, long now) {
@@ -81,11 +85,11 @@ final class SitarScreens {
     }
 
     /** The screen's content canvas: shifted and faded in for its first few ticks. */
-    private SceneCanvas entering(SceneCanvas base, long now) {
+    private SceneCanvasTransform entering(SceneCanvas base, long now) {
         double t = Motion.easeOut(Motion.progress(now, s.screenTick, Motion.ENTER_TICKS));
-        if (t >= 1) return base;
+        if (t >= 1) return new SceneCanvasTransform(base, 0, 0, 1);
         int direction = s.enteredBack ? -1 : 1;
-        return new Motion.ShiftedCanvas(base, (int) Math.round(direction * 14 * (1 - t)), 0.25 + 0.75 * t);
+        return new SceneCanvasTransform(base, (int) Math.round(direction * 14 * (1 - t)), 0, (float)(0.25 + 0.75 * t));
     }
 
     // ---------------------------------------------------------------- title
@@ -287,8 +291,9 @@ final class SitarScreens {
         SitarUi.text(c, count, width - 22 - SitarUi.width(count, 1), STORY_TOP + 6, DIM);
         // Each new line rises into place; the box itself stays put.
         double t = Motion.easeOut(Motion.progress(now, s.storyLineTick, 6));
-        SceneCanvas words = t >= 1 ? c : new Motion.ShiftedCanvas(c, 0, 0.3 + 0.7 * t);
-        SitarUi.wrapped(words, line.text(), 22, STORY_TOP + 20 + (int) Math.round(3 * (1 - t)), width - 44, line.action() ? CYAN : CREAM);
+        try (var words = new SceneCanvasTransform(c, 0, 0, (float)(t >= 1 ? 1 : 0.3 + 0.7 * t))) {
+            SitarUi.wrapped(words, line.text(), 22, STORY_TOP + 20 + (int) Math.round(3 * (1 - t)), width - 44, line.action() ? CYAN : CREAM);
+        }
         SitarUi.footer(base, "Robotnik's world tour / " + s.performer.label() + " on " + s.shortRole(),
                 "ENTER / A / CLICK: NEXT / ESC / B: SKIP / R ON BOARD: REPLAY");
     }
@@ -320,7 +325,7 @@ final class SitarScreens {
         if (!card) SitarUi.header(base, 0, "LOADING");
         if (!card) {
             double t = Motion.easeOut(Motion.progress(now, s.loadingTick, 16));
-            SceneCanvas c = new Motion.ShiftedCanvas(base, (int) Math.round(-40 * (1 - t)), t);
+            try (var c = new SceneCanvasTransform(base, (int) Math.round(-40 * (1 - t)), 0, (float)t)) {
             SitarUi.panel(c, 16, 52, width - 128, 92);
             SitarUi.text(c, s.calibratePending ? "SOUNDCHECK" : "NEXT UP", 28, 60, CYAN);
             SitarUi.label(c, s.calibratePending ? "Tap calibration" : s.song.label(), 28, 74, width - 152, GOLD);
@@ -329,6 +334,7 @@ final class SitarScreens {
             SitarUi.text(c, s.performer.label().toUpperCase(Locale.ROOT) + " ON " + s.shortRole().toUpperCase(Locale.ROOT)
                     + " / " + s.difficulty.label().toUpperCase(Locale.ROOT), 28, 108, CREAM);
             SitarUi.text(c, "GET READY", 28, 126, GOLD);
+            }
         } else {
             String who = s.performer.label().toUpperCase(Locale.ROOT) + " ON " + s.shortRole().toUpperCase(Locale.ROOT)
                     + " / " + s.difficulty.label().toUpperCase(Locale.ROOT);
@@ -379,7 +385,7 @@ final class SitarScreens {
         int rate = s.prepared.sampleRate();
         int lanes = s.role.drums() ? 4 : s.difficulty.lanes();
         double t = s.previousScreen == Screen.PAUSED ? 1 : Motion.easeOut(Motion.progress(now, s.screenTick, Motion.ENTER_TICKS));
-        SceneCanvas hud = t >= 1 ? c : new Motion.ShiftedCanvas(c, 0, t);
+        try (var hud = new SceneCanvasTransform(c, 0, 0, (float)t)) {
         hud.fill(0, 0, c.width(), 35, 0xF00B2457); hud.fill(0, 34, c.width(), 1, GOLD);
         SitarUi.text(hud, SitarUi.fit(s.song.label(), c.width() - 130), 8, 6, GOLD);
         SitarUi.text(hud, s.shortRole() + " / " + s.difficulty.label(), 8, 22, CREAM);
@@ -410,6 +416,7 @@ final class SitarScreens {
             s.highway2.draw(c, s.session2, position, rate, s.settings2, s.role.drums(), lanes, half + 12, 77, half - 84, 107, now);
             c.fill(half - 1, 37, 2, 158, 0xFF365E95);
         }
+        }
         countIn(c, position, rate);
         if (s.autoplay) SitarUi.text(c, "DEMO", 14, 185, CYAN);
         double progress = Math.max(0, Math.min(1, position / (double) s.prepared.lengthSamples()));
@@ -424,11 +431,14 @@ final class SitarScreens {
             long remaining = -position;
             int digit = (int) ((remaining + rate - 1) / rate);
             double through = 1 - (remaining - (digit - 1L) * rate) / (double) rate;
-            SceneCanvas faded = new Motion.ShiftedCanvas(c, 0, 1 - 0.5 * through * through);
-            SitarUi.big(faded, Integer.toString(digit), c.width() / 2, 92 - (int) Math.round(6 * through), 5, GOLD);
+            try (var faded = new SceneCanvasTransform(c, 0, 0, (float)(1 - 0.5 * through * through))) {
+                SitarUi.big(faded, Integer.toString(digit), c.width() / 2, 92 - (int) Math.round(6 * through), 5, GOLD);
+            }
         } else if (position < rate / 2) {
             double through = position / (rate / 2.0);
-            SitarUi.big(new Motion.ShiftedCanvas(c, 0, 1 - through), "GO!", c.width() / 2, 92, 4, CYAN);
+            try (var faded = new SceneCanvasTransform(c, 0, 0, (float)(1 - through))) {
+                SitarUi.big(faded, "GO!", c.width() / 2, 92, 4, CYAN);
+            }
         }
     }
 
@@ -457,7 +467,7 @@ final class SitarScreens {
     private void drawPause(SceneCanvas base, long now) {
         double t = Motion.easeOut(Motion.progress(now, s.screenTick, 6));
         base.fill(0, 0, base.width(), 224, Motion.fade(0xB8000B28, t));
-        SceneCanvas c = t >= 1 ? base : new Motion.ShiftedCanvas(base, 0, t);
+        try (var c = new SceneCanvasTransform(base, 0, 0, (float)t)) {
         int x = (c.width() - 248) / 2;
         SitarUi.panel(c, x, 48, 248, 144);
         title(c, "PAUSED", 59);
@@ -465,6 +475,7 @@ final class SitarScreens {
         for (int i = 0; i < 3; i++) SitarUi.choice(c, items.get(i), x + 10, 83 + i * 26, 228, 22, s.selected == i);
         SitarUi.wrapped(c, s.notice, x + 12, 166, 224, GOLD);
         SitarUi.footer(base, "Performance clock and score are paused", "ENTER / A: SELECT    ESC: RESUME");
+        }
     }
 
     // ---------------------------------------------------------------- results

@@ -49,7 +49,7 @@ final class EndView implements RunScreen.RoomView {
         if (victory) {
             shell.profile.add("wins." + id, 1);
         }
-        shell.profile.save(shell.ctx.storage());
+        shell.saveProfile();
         shell.deleteRun();
     }
 

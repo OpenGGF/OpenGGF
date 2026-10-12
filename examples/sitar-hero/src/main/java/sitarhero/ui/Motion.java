@@ -1,9 +1,5 @@
 package sitarhero.ui;
 
-import com.openggf.mods.scene.SceneCanvas;
-import com.openggf.mods.scene.SceneDraw;
-import com.openggf.mods.scene.SceneImage;
-import com.openggf.mods.scene.SceneSprite;
 
 /**
  * Draw-time easing. The scene changes screens and selections on the tick the input arrives;
@@ -66,41 +62,4 @@ public final class Motion {
         public double settled(long now, int ticks) { return progress(now, start, ticks); }
     }
 
-    /**
-     * Draws through to another canvas, shifted and faded. A screen's content is drawn through
-     * one while it eases in, so every panel, text and sprite moves together. Backdrops use
-     * {@link SceneCanvas}'s default band-by-band {@code drawRegion}, so they fade too.
-     */
-    public static final class ShiftedCanvas implements SceneCanvas {
-        private final SceneCanvas target;
-        private final int dx;
-        private final double alpha;
-
-        public ShiftedCanvas(SceneCanvas target, int dx, double alpha) {
-            this.target = target; this.dx = dx; this.alpha = Math.max(0, Math.min(1, alpha));
-        }
-
-        @Override public int width() { return target.width(); }
-        @Override public int height() { return target.height(); }
-        @Override public void clear(int rgb) {
-            if (alpha >= 1) target.clear(rgb);
-            else target.fill(0, 0, target.width(), target.height(), fade(0xFF000000 | rgb, alpha));
-        }
-        @Override public void fill(int x, int y, int w, int h, int argb) { target.fill(x + dx, y, w, h, fade(argb, alpha)); }
-        @Override public void draw(SceneImage image, float x, float y) { draw(image, x, y, SceneDraw.plain()); }
-        @Override public void draw(SceneImage image, float x, float y, SceneDraw style) {
-            target.draw(image, x + dx, y, style.withAlpha((float) alpha));
-        }
-        @Override public void draw(SceneSprite sprite, float x, float y, SceneDraw style) {
-            target.draw(sprite, x + dx, y, style.withAlpha((float) alpha));
-        }
-        @Override public void drawRegion(SceneImage image, int sx, int sy, int sw, int sh, float x, float y,
-                                         float w, float h, SceneDraw style) {
-            target.drawRegion(image, sx, sy, sw, sh, x + dx, y, w, h, style.withAlpha((float) alpha));
-        }
-        @Override public void text(String text, int x, int y, int argb) { target.text(text, x + dx, y, fade(argb, alpha)); }
-        @Override public int textWidth(String text) { return target.textWidth(text); }
-        @Override public void clip(int x, int y, int w, int h) { target.clip(x + dx, y, w, h); }
-        @Override public void unclip() { target.unclip(); }
-    }
 }

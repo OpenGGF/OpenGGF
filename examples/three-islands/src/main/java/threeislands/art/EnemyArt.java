@@ -4,6 +4,7 @@ import com.openggf.mods.scene.SceneCanvas;
 import com.openggf.mods.scene.SceneDraw;
 import com.openggf.mods.scene.SceneSprite;
 import com.openggf.mods.scene.SceneSpriteSet;
+import com.openggf.mods.scene.art.SpriteComposition;
 import java.util.ArrayList;
 import java.util.List;
 import threeislands.core.EnemyKind;
@@ -58,19 +59,13 @@ public final class EnemyArt {
             canvas.fill((int) x - 12, (int) (floorY - 28 - hover), 24, 28, 0x80FFFFFF);
             return 28;
         }
-        float bottom = Float.NEGATIVE_INFINITY;
-        float top = Float.POSITIVE_INFINITY;
-        for (Part part : parts) {
-            bottom = Math.max(bottom, part.dy() + part.sprite().height() - part.sprite().originY());
-            top = Math.min(top, part.dy() - part.sprite().originY());
-        }
-        double originY = floorY - hover - bottom * scale;
-        SceneDraw base = style.withScale(scale);
-        for (Part part : parts) {
-            canvas.draw(part.sprite(), (float) (x + part.dx() * scale), (float) (originY + part.dy() * scale),
-                    base.withFlipX(part.flip()));
-        }
-        return (int) ((bottom - top) * scale + hover);
+        var composition = new SpriteComposition(parts.stream().map(p -> new SpriteComposition.Part(
+                p.sprite(), p.dx(), p.dy(), p.flip())).toList());
+        var bounds = composition.bounds();
+        float originY = (float)(floorY - hover - bounds.bottom() * scale);
+        // Recipes own their facing; the caller's tint/flash remains local styling.
+        composition.place((float)x, originY, style.withScale(scale).withFlipX(false).withFlipY(false)).draw(canvas);
+        return (int) (bounds.height() * scale + hover);
     }
 
     private List<Part> parts(EnemyKind kind, long ticks) {

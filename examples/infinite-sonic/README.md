@@ -67,8 +67,8 @@ to confirm. Dying with no spare lives shows the mod's own GAME OVER text over a
 also leaves for the Sonic 1 title; holding Escape for two seconds still reaches the
 engine's own title as everywhere else.
 
-Every zone keeps a **top-10 leaderboard**, saved in `saves/infinite-sonic/leaderboard.txt`
-(under the engine's save root) so it survives restarts. Each entry is a run's score and the
+Every zone keeps a **top-10 leaderboard**, saved in owner-private `saves/mods/infinite-sonic/leaderboard.txt`
+(under the engine's save root; the prior `saves/infinite-sonic/leaderboard.txt` is read as a legacy source) so it survives restarts. Each entry is a run's score and the
 speed it reached. A run is recorded when Sonic dies and when you leave with Escape; a run
 that continues and dies again replaces its own entry, so one run never fills two places.
 The zone's top 10 shows at the top right for the first five seconds of every run. Passing the
@@ -279,3 +279,9 @@ python3 examples/build_example.py infinite-sonic --engine /absolute/engine.jar -
 ```
 
 Use `--s1`, `--s2`, or `--s3k` for the games this example consumes. Explicit paths create isolated development configuration and saves; no ROM is copied or linked. The creator kit exports this example with a portable POM and `tools/build_project.py`; it needs no engine source checkout. Only production sources/resources enter the validated mod jar. Read [recipient installation](../../docs/modding/installing-mods.md) before sharing.
+
+Leaderboard writes use the registration context's bounded storage handle. A failed
+write retains the in-memory table and shows a notice; bounded retries publish without
+resubmitting a run. Oversized/unreadable records remain untouched. The level and zone
+wrappers use `DelegatingLevel` and `DelegatingZoneRegistry`. Badnik traits are prepared
+per object/recreation, and callers receive defensive copies of animation frame arrays.

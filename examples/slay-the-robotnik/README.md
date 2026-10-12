@@ -170,7 +170,8 @@ Read it in that order: `SlayTheRobotnikMod`, `SlayScene`, `Shell` and `Screen`, 
 **Animation belongs in `update`.** The scene contract permits skipped or repeated `draw`
 calls, so gameplay and target layout must be prepared independently of rendering. The
 [mod audit](../../docs/architecture/audits/2026-10-12-mod-author-framework-audit.md#r4-slay-combat-targeting-depends-on-drawing)
-records the remaining correction to `CombatView`'s draw-populated target boxes.
+records the remediation. `CombatLayout` prepares target bounds during logic updates;
+drawing emits the same prepared sprite geometry without changing targeting.
 
 **The engine boundary is the candidate Mod API.** `GgfMod` and `ModContext` register
 the scene; the scene services provide input, canvas, supplied-ROM art, audio and
@@ -262,3 +263,9 @@ python3 examples/build_example.py slay-the-robotnik --engine /absolute/engine.ja
 ```
 
 Use `--s1`, `--s2`, or `--s3k` for the games this example consumes. Explicit paths create isolated development configuration and saves; no ROM is copied or linked. The creator kit exports this example with a portable POM and `tools/build_project.py`; it needs no engine source checkout. Only production sources/resources enter the validated mod jar. Read [recipient installation](../../docs/modding/installing-mods.md) before sharing.
+
+Save publication failures remain visible and retry at bounded intervals and on exit.
+Malformed or unsupported profiles/runs are preserved; starting a deliberate new run
+permits replacement of its rejected run slot. Profile counters saturate rather than
+overflowing into unreadable negative records. Profile parsing and Three Islands use
+the shared `ModSaveSlot` text helper; their formats and game checkpoint rules stay local.

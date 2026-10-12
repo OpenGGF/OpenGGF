@@ -35,14 +35,14 @@ final class SettingsScreen implements Screen {
             shell.sfx(Sounds.SFX_CURSOR);
         }
         if (shell.in.back || shell.in.mouse.rightPressed() || "back".equals(picked)) {
-            shell.profile.save(shell.ctx.storage());
+            shell.saveProfile();
             shell.sfx(Sounds.SFX_SWITCH);
             shell.go(new TitleScreen());
             return;
         }
         if (picked != null) {
             shell.profile.set(picked, 1 - shell.profile.get(picked));
-            shell.profile.save(shell.ctx.storage());
+            shell.saveProfile();
             if (picked.equals(NO_MUSIC)) {
                 if (shell.profile.get(NO_MUSIC) == 1) {
                     shell.ctx.audio().stopMusic();
