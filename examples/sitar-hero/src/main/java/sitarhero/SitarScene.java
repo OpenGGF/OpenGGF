@@ -48,6 +48,7 @@ public final class SitarScene implements ModScene, DebuggableScene {
     List<String> games = List.of();
     List<Roster> roster = List.of();
     List<SongSpec> songs = List.of();
+    private final SongCatalog.Prepared catalogue = new SongCatalog.Prepared();
     final Map<String, PerformerArt> actors = new HashMap<>();
     final ControlSettings settings = new ControlSettings();
     final MappedControls controls = new MappedControls(settings);
@@ -138,7 +139,7 @@ public final class SitarScene implements ModScene, DebuggableScene {
         context = ctx;
         games = ctx.art().availableGames();
         roster = Roster.availablePerformers(games);
-        songs = SongCatalog.available(games);
+        songs = catalogue.available(games);
         tours = CareerTours.available(songs);
         loadFile("settings.txt", settings::read, settings::encode);
         loadFile("settings-p2.txt", settings2::read, settings2::encode);
@@ -165,7 +166,7 @@ public final class SitarScene implements ModScene, DebuggableScene {
     private void stage(SongSpec source) {
         SceneRomArt rom = context.art().rom(source.game());
         SongSpec scenery = rom.hasZonePictures(source.zone(), source.act()) ? source
-                : SongCatalog.available(List.of(source.game())).stream()
+                : catalogue.available(List.of(source.game())).stream()
                 .filter(candidate -> rom.hasZonePictures(candidate.zone(), candidate.act()))
                 .findFirst().orElse(source);
         venue = ConcertStage.build(rom, scenery.zone(), scenery.act(), context.width(), context.height(), 0);
@@ -310,7 +311,7 @@ public final class SitarScene implements ModScene, DebuggableScene {
             if (!online.error().isEmpty()) {
                 error = online.error(); stop(); online.close(); online = null; screen = Screen.ERROR; return;
             }
-            if (online.connected()) songs = SongCatalog.available(online.commonGames());
+            if (online.connected()) songs = catalogue.available(online.commonGames());
             if (!online.host() && online.round() > preparedRound && screen != Screen.CHARACTERS) {
                 stop(); screen = Screen.LOBBY;
             }
@@ -460,7 +461,7 @@ public final class SitarScene implements ModScene, DebuggableScene {
     }
     boolean local() { return mode == Mode.LOCAL_COOP || mode == Mode.LOCAL_VERSUS; }
     private void home() {
-        stop(); if (online != null) online.close(); online = null; songs = SongCatalog.available(games);
+        stop(); if (online != null) online.close(); online = null; songs = catalogue.available(games);
         screen = Screen.TITLE; selected = 0; autoplay = false; choosingSecond = false; notice = "";
         careerRoleReturn = false;
         // Each return to the title stages the band on the next installed venue.

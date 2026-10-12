@@ -10,6 +10,7 @@ import java.util.List;
 
 /** Input and scene lifecycle; the rules core remains engine-independent. */
 public final class TowerDefenseScene implements ModScene, DebuggableScene {
+    private final Catalog.Prepared definitions = new Catalog.Prepared();
     private final byte[] fontBytes;
     private BattleView view;
     private Battlefield battle;
@@ -31,7 +32,7 @@ public final class TowerDefenseScene implements ModScene, DebuggableScene {
 
     @Override public void enter(SceneContext ctx) {
         loadRecords(ctx);
-        view = new BattleView(new PixelFont(fontBytes), new RomArt(ctx.art().rom()));
+        view = new BattleView(new PixelFont(fontBytes), new RomArt(ctx.art().rom()), definitions);
         ctx.audio().playMusic(0x2F); // S3K Data Select
     }
 
@@ -78,7 +79,7 @@ public final class TowerDefenseScene implements ModScene, DebuggableScene {
 
     private void newGame(SceneContext ctx) {
         saveRecords(ctx);
-        battle = new Battlefield();
+        battle = new Battlefield(definitions);
         site = kind = action = cursor = 0;
         focus = "GRID";
         screen = "BATTLE";
@@ -152,7 +153,7 @@ public final class TowerDefenseScene implements ModScene, DebuggableScene {
             switch (focus) {
                 case "SHOP" -> {
                     boolean ok = battle.build(site, kind);
-                    outcome(ctx, ok, "BUILT " + Catalog.defense(kind).name(),
+                    outcome(ctx, ok, "BUILT " + definitions.defense(kind).name(),
                             battle.tower(site) != null ? "SITE OCCUPIED. SELECT AN EMPTY SITE." : "NOT ENOUGH SCRAP.");
                     if (ok) focus = "GRID";
                 }
@@ -218,7 +219,7 @@ public final class TowerDefenseScene implements ModScene, DebuggableScene {
                 site = i;
                 if (focus.equals("SHOP") && battle.tower(site) == null) {
                     boolean ok = battle.build(site, kind);
-                    outcome(ctx, ok, "BUILT " + Catalog.defense(kind).name(), "NOT ENOUGH SCRAP.");
+                    outcome(ctx, ok, "BUILT " + definitions.defense(kind).name(), "NOT ENOUGH SCRAP.");
                     if (!ok) return;
                 } else if (battle.tower(site) == null) {
                     focus = "SHOP";
@@ -324,14 +325,14 @@ public final class TowerDefenseScene implements ModScene, DebuggableScene {
         try {
             if (command.equals("title")) { screen = "TITLE"; cursor = 0; paused = false; return true; }
             if (command.equals("help")) { help(screen); return true; }
-            if (command.equals("win")) battle = CampaignDemo.toWave(16);
+            if (command.equals("win")) battle = CampaignDemo.toWave(16, definitions);
             else if (command.equals("lose")) {
-                battle = new Battlefield(); battle.startWave();
+                battle = new Battlefield(definitions); battle.startWave();
                 for (int i = 0; i < 20000 && !battle.finished(); i++) battle.update();
             } else if (command.startsWith("wave:")) {
                 int number = Integer.parseInt(command.substring(5));
                 if (number < 1 || number > Catalog.WAVES) return false;
-                battle = CampaignDemo.toWave(number);
+                battle = CampaignDemo.toWave(number, definitions);
             } else return false;
             screen = "BATTLE";
             focus = "GRID";

@@ -16,6 +16,8 @@ the ROMs you supply, at runtime. It uses the unpublished Mod API 0.7 candidate.
 
 ## Play it
 
+The scene prepares an immutable song index and installed-ROM selections once. Each song retains its immutable supported roles, so menu rows reuse metadata without rebuilding the native catalogues.
+
 You need Java 21, Maven and Python 3 in this checkout, and at least one of these ROM
 dumps (any subset works):
 

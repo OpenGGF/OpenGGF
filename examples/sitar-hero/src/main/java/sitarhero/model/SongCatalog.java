@@ -13,6 +13,38 @@ public final class SongCatalog {
     public record TempoAnchor(double beat, int serviceFrame) { }
     public record MusicalForm(double introBeats, double loopBeats, double endBeats) { }
 
+    /** One immutable catalogue per scene/session; order and all eight installed-ROM selections are prepared once. */
+    public static final class Prepared {
+        private final List<SongArrangement> forms = arrangements();
+        private final List<SongSpec> songs = forms.stream().map(SongArrangement::song).toList();
+        private final java.util.Map<String, SongArrangement> byId;
+        private final java.util.Map<Integer, List<SongSpec>> available;
+        public Prepared() {
+            var index = new java.util.HashMap<String, SongArrangement>();
+            for (var form : forms) {
+                if (index.put(form.id(), form) != null) throw new IllegalArgumentException("Duplicate song " + form.id());
+            }
+            byId = java.util.Map.copyOf(index);
+            var selections = new java.util.HashMap<Integer, List<SongSpec>>();
+            for (int mask = 0; mask < 8; mask++) {
+                final int games = mask;
+                selections.put(mask, songs.stream().filter(song -> (games & gameBit(song.game())) != 0).toList());
+            }
+            available = java.util.Map.copyOf(selections);
+        }
+        public List<SongSpec> all() { return songs; }
+        public Optional<SongArrangement> arrangement(String id) { return Optional.ofNullable(byId.get(id)); }
+        public List<SongSpec> available(List<String> installedGames) {
+            int mask = 0;
+            for (String game : installedGames) mask |= gameBit(game);
+            return available.get(mask);
+        }
+        private static int gameBit(String game) {
+            if (game == null) return 0;
+            return switch (game) { case "s1" -> 1; case "s2" -> 2; case "s3k" -> 4; default -> 0; };
+        }
+    }
+
     public static List<SongArrangement> arrangements() {
         var forms = new ArrayList<SongArrangement>();
         forms.addAll(Sonic1Catalogue.all().stream()

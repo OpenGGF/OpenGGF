@@ -11,6 +11,8 @@ background, music and sounds come from your **locked-on Sonic 3 & Knuckles ROM**
 at runtime. The packaged jar contains code and the original text font only.
 Native builds cannot load code mods.
 
+Each scene prepares the campaign waves and defense definitions once, sharing them with simulation and previews. Another scene owns its own immutable tables; drawing does not regenerate lineups.
+
 ## Build and play
 
 With Java 21 and the ROM configured in OpenGGF:

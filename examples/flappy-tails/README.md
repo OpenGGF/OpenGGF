@@ -21,6 +21,8 @@ or replace the whole screen; this is where the second road leads.
 
 ## Play
 
+The scene prepares its immutable tour and capped lap variants once. Flights and courses share those definitions; seeded gate choices and RNG draw order remain unchanged.
+
 From the repository root, with Java 21, Maven and your S3K ROM set up for OpenGGF:
 
 ```bash

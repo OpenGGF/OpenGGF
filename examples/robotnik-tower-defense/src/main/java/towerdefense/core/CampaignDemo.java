@@ -18,9 +18,11 @@ public final class CampaignDemo {
         if (battle.doorHp() < 160) battle.repair();
     }
 
-    public static Battlefield toWave(int number) {
+    public static Battlefield toWave(int number) { return toWave(number, new Catalog.Prepared()); }
+
+    public static Battlefield toWave(int number, Catalog.Prepared definitions) {
         if (number < 1 || number > Catalog.WAVES + 1) throw new IllegalArgumentException("Wave " + number);
-        Battlefield battle = new Battlefield();
+        Battlefield battle = new Battlefield(definitions);
         while (!battle.finished() && battle.wave() < number) {
             prepare(battle);
             battle.startWave();

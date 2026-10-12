@@ -55,7 +55,25 @@ public final class Catalog {
     }
 
     public record Spawn(int kind, int tick) { }
-    public record Wave(String name, String tip, List<Spawn> spawns) { }
+    public record Wave(String name, String tip, List<Spawn> spawns) {
+        public Wave { spawns = List.copyOf(spawns); }
+    }
+
+    /** Immutable scene-owned definitions; simulation and drawing share the same prepared campaign. */
+    public static final class Prepared {
+        private final List<Defense> defenses = java.util.stream.IntStream.rangeClosed(SNALE, EGG_ROBO)
+                .mapToObj(Catalog::defense).toList();
+        private final List<Wave> waves = java.util.stream.IntStream.rangeClosed(1, WAVES)
+                .mapToObj(Catalog::wave).toList();
+        public Defense defense(int kind) {
+            if (kind < SNALE || kind > EGG_ROBO) throw new IllegalArgumentException("Unknown defense " + kind);
+            return defenses.get(kind);
+        }
+        public Wave wave(int number) {
+            if (number < 1 || number > WAVES) throw new IllegalArgumentException("Wave " + number);
+            return waves.get(number - 1);
+        }
+    }
 
     /** A fixed learnable campaign; later waves combine already introduced roles. */
     public static Wave wave(int number) {
