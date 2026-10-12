@@ -11,6 +11,7 @@ instead of patching a level. Everything you see — characters, badniks, bosses,
 rings, the Tornado, explosions, music and sounds — comes from your own ROM at runtime.
 The jar holds only code and text files.
 
+
 ## Requirements
 
 - The OpenGGF JVM build (code mods don't load in native builds) from the `develop`
@@ -177,6 +178,15 @@ drawing emits the same prepared sprite geometry without changing targeting.
 the scene; the scene services provide input, canvas, supplied-ROM art, audio and
 storage. Slay also uses the [shared creator helpers](../../docs/modding/guides/creator-helpers.md),
 including `AtlasFont`, `SceneArtCache`, `SpriteAnchors` and animation sampling.
+The scene's art facade keeps successful assets for reuse. Expected missing-ROM,
+unsupported-art and invalid-data failures appear in `shell.art.failures()` as at most
+64 entries with bounded request/cause text and the scene owner. A failed request can
+retry after 120 scene logic ticks; draws do not retry it continuously. Reel faces are
+published only after all eight decode successfully. Programming faults reach the
+engine's owner fault boundary. Closing the facade drops its caches without deleting
+the host's images or GPU resources.
+
+
 Game rules remain plain Java. The pictures come from the ROM through `SceneRomArt`:
 - `art/RomSprites` lists each sprite's art, mappings, DPLC and palette by disassembly label;
 - `scene/EnemyVisuals` assembles badniks and bosses from those frames, at the offsets of the

@@ -6,6 +6,7 @@ borrows from all three of your Sonic ROMs: Sonic 1 for South Island, Sonic 2 for
 Island and Sonic 3 & Knuckles for Angel Island and the Death Egg. Java 25 and the matching
 development JVM build are required; code mods do not load in native builds.
 
+
 > Three islands, cut off by Eggman's machines.
 
 The title frames all three island vistas together, with their heroes, drifting ROM
@@ -267,6 +268,15 @@ Battle and exploration share this renderer. Sonic the Hedgehog is a trademark of
 | `art/` | `Art` (every ROM request and palette), `Heroes` (poses from each ROM's animation scripts), `EnemyArt` (badniks and multi-part bosses), `Font`. |
 | `audio/Audio` | Driver songs and effects, live Sonic 1/2 ROM music with native intros/loops and deliberate battle/story cues. |
 | `screen/`, `view/` | Field, in-place battle and dialogue, travelling shop, party menu, loading, title, game over and ending; shared windows and controls. |
+
+Expected art failures are inspectable through `game.art.failures()`: at most 64 entries
+distinguish missing optional ROMs, unsupported art and invalid data, with bounded
+request/cause text and the actual scene owner. Failed requests retry after 120 game
+logic ticks. Successful palettes and sprite banks are reused; a missing level kit's
+zero palette is only a presentation fallback and never becomes decoded sprite data.
+Programming faults reach the engine's owner fault boundary. Scene teardown clears
+the facade's references while the host retains ownership of images and GPU resources.
+
 
 The old act route finder is retained for ROM loading/diagnostics only. Exploration
 uses its own two-dimensional coordinates; its terrain and encounter collision do not depend
