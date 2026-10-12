@@ -21,6 +21,7 @@ import eggsky.ui.Toasts;
 import eggsky.world.Biome;
 import eggsky.world.Biomes;
 import eggsky.world.Galaxy;
+import eggsky.world.GenerationKey;
 import eggsky.world.Planet;
 import eggsky.world.PlanetSpec;
 import eggsky.world.StarSystem;
@@ -54,11 +55,13 @@ public final class Game {
     private Mode mode;
     private Mode pending;
     private Planet planet;
+    private boolean saveEligible = true;
+    private boolean rejectionNoticed;
     /** Orbit textures of planets already seen, by system and planet. */
-    public final java.util.LinkedHashMap<String, eggsky.space.PlanetTexture> textureCache =
+    public final java.util.LinkedHashMap<GenerationKey, eggsky.space.PlanetTexture> textureCache =
             new java.util.LinkedHashMap<>(16, 0.75f, true) {
                 @Override
-                protected boolean removeEldestEntry(java.util.Map.Entry<String, eggsky.space.PlanetTexture> e) {
+                protected boolean removeEldestEntry(java.util.Map.Entry<GenerationKey, eggsky.space.PlanetTexture> e) {
                     return size() > 24;
                 }
             };
@@ -239,19 +242,27 @@ public final class Game {
     /** Builds a planet of the current system (may take a few hundred milliseconds). */
     public Planet buildPlanet(int index) {
         StarSystem s = system();
-        String key = s.id + ":" + index;
-        if (planet != null && planet.key.equals(key)) {
-            return planet;
-        }
         PlanetSpec spec = planetSpec(index);
-        if (spec == null) {
-            return null;
-        }
+        if (spec == null) return null;
+        GenerationKey key = generationKey(s, spec);
+        if (planet != null && planet.generationKey.equals(key)) return planet;
         SceneLevelKit kit = art.rom(spec.biome.game()).levelKit(spec.biome.zone(), spec.biome.act());
         boolean shrine = player.shrineSystem == s.id && player.shrinePlanet == index
                 && player.emeraldCount() < 7;
-        planet = new Planet(spec, s, kit, art, shrine);
+        planet = new Planet(spec, s, kit, art, shrine, key);
         return planet;
+    }
+
+    public GenerationKey generationKey(StarSystem system, PlanetSpec spec) {
+        return new GenerationKey(galaxy.seed, galaxy.number, system.id, spec.index,
+                spec.seed, spec.biome.key(), GenerationKey.SCHEMA);
+    }
+
+    private void resetGenerationCaches() {
+        planet = null;
+        textureCache.clear();
+        galaxyImage = null;
+        if (art != null) art.clearGeneration();
     }
 
     // ---------------------------------------------------------------- transitions
@@ -296,12 +307,44 @@ public final class Game {
 
     // ---------------------------------------------------------------- saving
 
+    public boolean hasStoredSave() {
+        return ctx.storage().list().contains(SAVE_FILE);
+    }
+
     public boolean hasSave() {
-        return ctx.storage().read(SAVE_FILE).isPresent();
+        var text = ctx.storage().read(SAVE_FILE);
+        if (text.isEmpty()) {
+            if (hasStoredSave()) rejectSave();
+            return false;
+        }
+        boolean usable = decodeSave(text.get()) != null;
+        if (!usable) rejectSave();
+        return usable;
+    }
+
+    private record SavedExpedition(Player player, Galaxy galaxy) { }
+
+    private SavedExpedition decodeSave(String text) {
+        Player candidate = new Player(catalog);
+        if (!candidate.decode(text)) return null;
+        Galaxy nextGalaxy = new Galaxy(candidate.galaxySeed, candidate.galaxyNumber);
+        nextGalaxy.start(); // Restore the home system's tutorial generation flag.
+        StarSystem savedSystem = nextGalaxy.system(candidate.systemId);
+        if (savedSystem == null || candidate.planet >= savedSystem.planetCount
+                || candidate.beaconPlanet >= savedSystem.planetCount) return null;
+        return new SavedExpedition(candidate, nextGalaxy);
+    }
+
+    private void rejectSave() {
+        saveEligible = false;
+        if (!rejectionNoticed) {
+            toast("SAVE UNREADABLE: NEW EXPEDITION REPLACES IT", 0xFFFF5050);
+            rejectionNoticed = true;
+        }
     }
 
     public boolean save() {
-        if (player == null || galaxy == null) {
+        if (!saveEligible || player == null || galaxy == null) {
             return false;
         }
         try {
@@ -320,22 +363,31 @@ public final class Game {
     public boolean load() {
         var text = ctx.storage().read(SAVE_FILE);
         if (text.isEmpty()) {
+            if (hasStoredSave()) rejectSave();
             return false;
         }
-        player = new Player(catalog);
-        player.decode(text.get());
+        SavedExpedition candidate = decodeSave(text.get());
+        if (candidate == null) {
+            rejectSave();
+            return false;
+        }
+        // Publish only after the complete candidate and its identity are usable.
+        player = candidate.player();
+        galaxy = candidate.galaxy();
+        saveEligible = true;
+        rejectionNoticed = false;
+        resetGenerationCaches();
         voice.reset();
         voice.say(VoiceLine.SYSTEMS_ONLINE);
-        galaxy = new Galaxy(player.galaxySeed, player.galaxyNumber);
-        StarSystem home = galaxy.start();
-        if (galaxy.system(player.systemId) == null) {
-            player.systemId = home.id;
-        }
         return true;
     }
 
     /** A brand-new expedition: crash-landed on the starting system's first planet. */
     public void newExpedition(long seed, int galaxyNumber, Player carry) {
+        if (galaxyNumber < 1) throw new IllegalArgumentException("Galaxy number");
+        saveEligible = true;
+        rejectionNoticed = false;
+        resetGenerationCaches();
         voice.reset();
         voice.say(VoiceLine.SYSTEMS_ONLINE);
         player = new Player(catalog);
@@ -406,7 +458,10 @@ public final class Game {
                         .orElse(null);
                 if (debugBiome != null) {
                     usableBiomes = new ArrayList<>(List.of(debugBiome));
+                    resetGenerationCaches();
                     galaxy = new Galaxy(p.length > 4 ? Long.parseLong(p[4]) : 7, 1);
+                    player.galaxySeed = galaxy.seed;
+                    player.galaxyNumber = galaxy.number;
                     player.systemId = galaxy.start().id;
                     planet = null;
                     land(0, true);

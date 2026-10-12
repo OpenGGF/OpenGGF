@@ -2,7 +2,7 @@ package eggsky.world;
 
 import eggsky.core.Rng;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Map;
 import java.util.List;
 
 /**
@@ -18,8 +18,17 @@ public final class Galaxy {
 
     public final long seed;
     public final int number;
-    private final HashMap<Long, StarSystem> cache = new HashMap<>();
-    private final HashMap<Long, Boolean> empty = new HashMap<>();
+    private final Map<Long, StarSystem> cache = bounded(512);
+    private final Map<Long, Boolean> empty = bounded(2048);
+    private Long homeId;
+
+    private static <V> Map<Long, V> bounded(int capacity) {
+        return new java.util.LinkedHashMap<>(16, .75f, true) {
+            @Override protected boolean removeEldestEntry(Map.Entry<Long, V> entry) {
+                return size() > capacity;
+            }
+        };
+    }
 
     public Galaxy(long seed, int number) {
         this.seed = seed;
@@ -67,6 +76,7 @@ public final class Galaxy {
         if (made == null) {
             empty.put(key, Boolean.TRUE);
         } else {
+            made.home = homeId != null && homeId == key;
             cache.put(key, made);
         }
         return made;
@@ -121,6 +131,7 @@ public final class Galaxy {
         }
         if (best != null) {
             best.home = true;
+            homeId = best.id;
         }
         return best;
     }

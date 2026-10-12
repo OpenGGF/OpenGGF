@@ -138,7 +138,7 @@ public final class TitleMode implements Mode {
                     }
                 }
                 case "NEW EXPEDITION" -> {
-                    if (g.hasSave() && !confirmNew) {
+                    if (g.hasStoredSave() && !confirmNew) {
                         confirmNew = true;
                         g.sound.sfx(Sound.ERROR);
                         return;

@@ -238,13 +238,15 @@ song restarts, boss overrides, saved-region music, recoil-safe enemy facing,
 terrain generation, tile collision, platforms, mining
 tiers, tree harvesting, station/cost rules, placement, shelter, weapons,
 healing, death, shrine rewards, quest progression, bounded saves and forward
-replay after save restoration. Production scene tests cover packaged loading,
+replay after save restoration. Camp completion uses the generated surface anchor for Small,
+Medium, Large and compact legacy worlds, consumes one core once, and remains deterministic
+after save restoration and forward replay. Production scene tests cover packaged loading,
 panels, pause, draw purity, save recovery and debug isolation. The engine bridge
 also checks ROM terrain/characters and every major screen; a cold production
 startup regression verifies both music and the isolated jump effect in PCM:
 
 ```sh
-python3 tools/testing/maven_queue.py --lean -Dmse=off \
+python3 tools/testing/maven_queue.py -Dmse=off \
   '-Dtest=TestStarfallFrontierExample,TestStarfallFrontierScene,TestModSceneLauncherAudio' \
   '-Ds3k.rom.path=/absolute/path/to/sonic3k.gen' test
 ```

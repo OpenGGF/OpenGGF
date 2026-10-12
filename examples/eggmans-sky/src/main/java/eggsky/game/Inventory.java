@@ -11,6 +11,7 @@ public final class Inventory {
 
     public Inventory(Catalog catalog, int slots) {
         this.catalog = catalog;
+        if (slots < 0 || slots > Player.maxSlots(catalog)) throw new IllegalArgumentException("Cargo capacity");
         this.item = new int[slots];
         this.count = new int[slots];
     }
@@ -21,6 +22,7 @@ public final class Inventory {
 
     /** Grows (never shrinks) to {@code slots}. */
     public void resize(int slots) {
+        if (slots < 0 || slots > Player.maxSlots(catalog)) throw new IllegalArgumentException("Cargo capacity");
         if (slots <= item.length) {
             return;
         }
@@ -144,24 +146,44 @@ public final class Inventory {
         return sb.toString();
     }
 
-    public void decode(String s) {
-        if (s == null || s.isEmpty()) {
-            return;
-        }
-        String[] parts = s.split(",");
-        resize(parts.length);
-        for (int i = 0; i < parts.length; i++) {
-            String[] kv = parts[i].split(":");
-            if (kv.length == 2) {
-                try {
-                    int id = Integer.parseInt(kv[0]);
-                    int n = Integer.parseInt(kv[1]);
-                    set(i, catalog.item(id) == null ? 0 : id, n);
-                } catch (NumberFormatException ignored) {
-                    set(i, 0, 0);
-                }
+    /** Checks slot and stack bounds before any allocation or mutation. */
+    public static boolean validEncoding(Catalog catalog, String text, int capacity) {
+        if (text == null) return false;
+        if (text.isEmpty()) return true;
+        int slots = 1;
+        for (int i = 0; i < text.length(); i++) if (text.charAt(i) == ',' && ++slots > capacity) return false;
+        if (slots > capacity) return false;
+        try {
+            for (String part : text.split(",", -1)) {
+                String[] pair = part.split(":", -1);
+                if (pair.length != 2) return false;
+                int id = Integer.parseInt(pair[0]);
+                int n = Integer.parseInt(pair[1]);
+                Catalog.Item definition = catalog.item(id);
+                if (id == 0 ? n != 0 : definition == null || n <= 0 || n > definition.stack()) return false;
             }
+            return true;
+        } catch (NumberFormatException invalid) {
+            return false;
         }
+    }
+
+    public boolean decode(String text) {
+        if (!validEncoding(catalog, text, Player.maxSlots(catalog))) return false;
+        String[] parts = text.isEmpty() ? new String[0] : text.split(",");
+        resize(parts.length);
+        java.util.Arrays.fill(item, 0);
+        java.util.Arrays.fill(count, 0);
+        for (int i = 0; i < parts.length; i++) {
+            String[] pair = parts[i].split(":");
+            set(i, Integer.parseInt(pair[0]), Integer.parseInt(pair[1]));
+        }
+        return true;
+    }
+
+    void replaceWith(Inventory candidate) {
+        item = candidate.item;
+        count = candidate.count;
     }
 
     /** Sorts slots by item id, merging partial stacks. */

@@ -110,6 +110,19 @@ Pins and cargo reserves survive saves; menu position is remembered only within t
 
 Progress saves to `saves/mods/eggmans-sky/expedition.txt` (plain `key=value` lines) at
 Starposts, landings, launches, docking, warps, every two minutes and on exit.
+Version 1 saves are validated before replacing the active expedition: the galaxy seed/number,
+system, planet, technology and cargo must be present, numbers and stack counts must be valid,
+and cargo capacity follows the existing six Cargo Pod upgrades and 24 capsule slots (64 slots
+maximum). Older version 1 saves may omit optional progress fields, including pins and reserves;
+unknown fields remain compatible. Unsupported versions, incomplete/corrupt data and oversized
+files stay untouched during Continue and exit. Continue appears only for a usable expedition;
+New Expedition retains its confirmation before replacing an existing rejected file.
+
+Generated planet and orbit lookups use galaxy seed, galaxy number, system/planet and generation
+schema independently of saved discovery/loot IDs. New Expedition and a validated Continue drop
+generation-owned lookup references. Orbit textures retain at most 24 entries, recoloured images
+256, creature banks 128, generated systems 512 and empty-cell lookups 2,048. Eviction leaves
+images already held by the active planet valid; the host still owns GPU texture disposal.
 
 ### System voice
 

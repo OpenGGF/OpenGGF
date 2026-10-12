@@ -37,7 +37,22 @@ public final class Art {
     private final HashMap<String, SceneRomArt> roms = new HashMap<>();
     private final List<String> games = new ArrayList<>();
     private final HashMap<String, SceneSpriteSet> sets = new HashMap<>();
-    private final HashMap<String, SceneImage> tinted = new HashMap<>();
+    private final java.util.Map<String, SceneSpriteSet> creatures = bounded(128);
+    private final java.util.Map<String, SceneImage> tinted = bounded(256);
+
+    private static <V> java.util.Map<String, V> bounded(int capacity) {
+        return new java.util.LinkedHashMap<>(16, .75f, true) {
+            @Override protected boolean removeEldestEntry(java.util.Map.Entry<String, V> entry) {
+                return size() > capacity;
+            }
+        };
+    }
+
+    /** Drop mod-owned lookup references; live sprites and host-owned textures stay valid. */
+    public void clearGeneration() {
+        creatures.clear();
+        tinted.clear();
+    }
     private int[] aizPalette;
     public final FaunaCatalog fauna = new FaunaCatalog();
 
@@ -187,8 +202,8 @@ public final class Art {
      * planet's level palette) recoloured by {@code recolor}. Cached by key.
      */
     public SceneSpriteSet creature(FaunaDef def, int[] palette, String cacheKey) {
-        if (sets.containsKey(cacheKey)) {
-            return sets.get(cacheKey);
+        if (creatures.containsKey(cacheKey)) {
+            return creatures.get(cacheKey);
         }
         SceneSpriteSet set = null;
         SceneRomArt rom = roms.get(def.game());
@@ -199,7 +214,7 @@ public final class Art {
                 set = null;
             }
         }
-        sets.put(cacheKey, set);
+        creatures.put(cacheKey, set);
         return set;
     }
 

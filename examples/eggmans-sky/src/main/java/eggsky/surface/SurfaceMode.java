@@ -1578,7 +1578,7 @@ public final class SurfaceMode implements Mode {
         for (int i = 0; i < 6; i++) {
             freeAnimal(t.x + rng.range(-16f, 16f), t.y - 30);
         }
-        if (p.bonusSlots < 24) {
+        if (p.bonusSlots < Player.MAX_BONUS_SLOTS) {
             p.bonusSlots++;
             p.cargo.resize(p.slots());
             g.banner(VoiceLine.CARGO_EXPANDED, "CARGO POD EXPANDED", "Egg Mobile cargo: " + p.slots() + " slots", 0xFFFFC040);
@@ -1845,7 +1845,7 @@ public final class SurfaceMode implements Mode {
     // ---------------------------------------------------------------- creature art
 
     public SceneSpriteSet creatureArt(Species s) {
-        String key = s.body.key() + "@" + planet.spec.biome.key();
+        String key = planet.generationKey + ":" + s.body.key();
         if (!creatureSets.containsKey(key)) {
             int[] palette = s.body.game().equals(planet.spec.biome.game()) ? planet.palette : null;
             if (palette == null) {
@@ -1857,7 +1857,7 @@ public final class SurfaceMode implements Mode {
     }
 
     public SceneSprite creatureFrame(Species s, int frame) {
-        String key = s.id + "#" + frame;
+        String key = planet.generationKey + ":" + s.id + "#" + frame;
         SceneSprite cached = creatureFrames.get(key);
         if (cached == null) {
             SceneSpriteSet set = creatureArt(s);

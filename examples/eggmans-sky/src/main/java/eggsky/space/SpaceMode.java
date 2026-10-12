@@ -257,7 +257,7 @@ public final class SpaceMode implements Mode {
             }
             return;
         }
-        PlanetTexture cached = g.textureCache.get(system.id + ":" + b.index);
+        PlanetTexture cached = g.textureCache.get(g.generationKey(system, b.spec));
         if (cached != null) {
             b.texture = cached;
             return;
@@ -269,7 +269,7 @@ public final class SpaceMode implements Mode {
             kit = null;
         }
         b.texture = PlanetTexture.build(b.spec, kit);
-        g.textureCache.put(system.id + ":" + b.index, b.texture);
+        g.textureCache.put(g.generationKey(system, b.spec), b.texture);
     }
 
     private PlanetSpec fallbackSpec() {

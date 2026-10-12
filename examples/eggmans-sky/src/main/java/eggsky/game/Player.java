@@ -9,10 +9,18 @@ import java.util.Set;
  * Everything about Dr. Eggman's expedition that survives a save: currencies, cargo, technology,
  * vital systems, where he is in the galaxy, what he has discovered and looted, the Chaos
  * Emeralds, missions and lifetime statistics. Saved as plain {@code key=value} lines; unknown
- * keys are ignored and missing ones keep their defaults, so saves stay compatible.
+ * keys are ignored and optional legacy fields keep defaults. Unsupported or malformed saves
+ * are rejected before publishing any state.
  */
 public final class Player {
     public static final int BASE_SLOTS = 16;
+    /** Capsule rewards stop granting cargo after 24 slots (SurfaceMode.openCapsule). */
+    public static final int MAX_BONUS_SLOTS = 24;
+    private static final int MAX_SAVE_BYTES = 1048576;
+
+    public static int maxSlots(Catalog catalog) {
+        return BASE_SLOTS + 4 * catalog.tech(Catalog.T_CARGO).max() + MAX_BONUS_SLOTS;
+    }
 
     private final Catalog catalog;
     public long rings = 250;
@@ -247,28 +255,47 @@ public final class Player {
         sb.append(key).append('=').append(String.valueOf(value).replace('\n', ' ')).append('\n');
     }
 
-    public void decode(String text) {
-        Map<String, String> m = new HashMap<>();
-        for (String line : text.split("\n")) {
-            int eq = line.indexOf('=');
-            if (eq > 0) {
-                m.put(line.substring(0, eq).trim(), line.substring(eq + 1).trim());
+    /** Returns false without changing this player for an unsupported or malformed save. */
+    public boolean decode(String text) {
+        if (text == null || text.length() > MAX_SAVE_BYTES
+                || text.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > MAX_SAVE_BYTES) return false;
+        try {
+            Map<String, String> values = new HashMap<>();
+            for (String line : text.split("\n")) {
+                if (line.isBlank()) continue;
+                int eq = line.indexOf('=');
+                if (eq <= 0 || values.putIfAbsent(line.substring(0, eq).trim(), line.substring(eq + 1).trim()) != null)
+                    return false;
             }
+            for (String required : new String[] {"version", "galaxySeed", "galaxyNumber", "system", "planet", "tech", "cargo"})
+                if (!values.containsKey(required)) return false;
+            if (!values.get("version").equals("1")) return false;
+            Player candidate = new Player(catalog);
+            candidate.read(values);
+            candidate.validate();
+            copyFrom(candidate);
+            return true;
+        } catch (IllegalArgumentException invalid) {
+            return false;
         }
+    }
+
+    private void read(Map<String, String> m) {
         rings = l(m, "rings", rings);
         shards = i(m, "shards", shards);
         bonusSlots = i(m, "bonusSlots", bonusSlots);
-        String[] t = m.getOrDefault("tech", "").split(",");
-        for (int k = 0; k < t.length && k < tech.length; k++) {
-            try {
-                tech[k] = Integer.parseInt(t[k].trim());
-            } catch (NumberFormatException ignored) {
-                tech[k] = 0;
-            }
+        String[] t = m.get("tech").split(",", -1);
+        if (t.length != tech.length) throw new IllegalArgumentException("Technology count");
+        for (int k = 0; k < tech.length; k++) {
+            tech[k] = Integer.parseInt(t[k].trim());
+            if (tech[k] < 0 || tech[k] > catalog.tech(k).max()) throw new IllegalArgumentException("Technology level");
         }
-        cargo.resize(slots());
+        if (bonusSlots < 0 || bonusSlots > MAX_BONUS_SLOTS) throw new IllegalArgumentException("Capsule slots");
+        // Technology and capsule limits prove this arithmetic and allocation are bounded.
+        int capacity = Math.addExact(BASE_SLOTS, Math.addExact(Math.multiplyExact(4, tech[Catalog.T_CARGO]), bonusSlots));
+        if (!Inventory.validEncoding(catalog, m.get("cargo"), capacity)) throw new IllegalArgumentException("Cargo");
+        cargo.resize(capacity);
         cargo.decode(m.get("cargo"));
-        cargo.resize(slots());
         hull = f(m, "hull", hull);
         shield = f(m, "shield", shield);
         life = f(m, "life", life);
@@ -295,21 +322,15 @@ public final class Player {
         set(looted, m.get("looted"));
         visitedSystems.clear();
         for (String s : m.getOrDefault("visitedSystems", "").split(";")) {
-            try {
-                if (!s.isEmpty()) {
-                    visitedSystems.add(Long.parseLong(s));
-                }
-            } catch (NumberFormatException ignored) {
-                // skip
-            }
+            if (!s.isEmpty() && !visitedSystems.add(Long.parseLong(s))) throw new IllegalArgumentException("Duplicate system visit");
         }
         set(visitedPlanets, m.get("visitedPlanets"));
         names.clear();
-        for (String s : m.getOrDefault("names", "").split(";")) {
-            int gt = s.indexOf('>');
-            if (gt > 0) {
-                names.put(s.substring(0, gt), s.substring(gt + 1));
-            }
+        for (String name : m.getOrDefault("names", "").split(";")) {
+            if (name.isEmpty()) continue;
+            int gt = name.indexOf('>');
+            if (gt <= 0 || names.putIfAbsent(name.substring(0, gt), name.substring(gt + 1)) != null)
+                throw new IllegalArgumentException("Discovery names");
         }
         emeralds = i(m, "emeralds", emeralds);
         shrineSystem = l(m, "shrineSystem", shrineSystem);
@@ -322,19 +343,19 @@ public final class Player {
         }
         reserves.clear();
         for (String entry : m.getOrDefault("reserves", "").split(";")) {
-            String[] pair = entry.split(":");
-            try {
-                int id = Integer.parseInt(pair[0]);
-                int amount = Integer.parseInt(pair[1]);
-                if (catalog.item(id) != null && amount > 0) {
-                    reserves.put(id, Math.min(100000, amount));
-                }
-            } catch (RuntimeException ignored) {
-                // Old saves have no reserves; malformed entries are ignored.
-            }
+            if (entry.isEmpty()) continue;
+            String[] pair = entry.split(":", -1);
+            if (pair.length != 2) throw new IllegalArgumentException("Cargo reserve");
+            int id = Integer.parseInt(pair[0]), amount = Integer.parseInt(pair[1]);
+            Catalog.Item definition = catalog.item(id);
+            // Reserve Stock records held cargo; no earned reserve can exceed all available slots.
+            if (definition == null || amount <= 0 || amount > maxSlots(catalog) * definition.stack()
+                    || reserves.putIfAbsent(id, amount) != null) throw new IllegalArgumentException("Cargo reserve");
         }
         missions = m.getOrDefault("missions", missions);
-        coreReached = Boolean.parseBoolean(m.getOrDefault("coreReached", "false"));
+        String core = m.getOrDefault("coreReached", "false");
+        if (!core.equals("true") && !core.equals("false")) throw new IllegalArgumentException("Core state");
+        coreReached = Boolean.parseBoolean(core);
         statWarps = i(m, "statWarps", statWarps);
         statPlanets = i(m, "statPlanets", statPlanets);
         statSpecies = i(m, "statSpecies", statSpecies);
@@ -356,35 +377,107 @@ public final class Player {
         if (value != null) {
             for (String s : value.split(";")) {
                 if (!s.isEmpty()) {
-                    target.add(s);
+                    if (!target.add(s)) throw new IllegalArgumentException("Duplicate progress entry");
                 }
             }
         }
     }
 
+    private void validate() {
+        if (galaxyNumber < 1 || planet < -1 || planet > 4 || beaconPlanet < -1 || beaconPlanet > 4
+                || gravePlanet < -1 || gravePlanet > 4 || shrinePlanet < -1 || shrinePlanet > 4
+                || emeralds < 0 || emeralds > 127 || tutorial < 0 || rings < 0 || shards < 0
+                || statWarps < 0 || statPlanets < 0 || statSpecies < 0 || statMined < 0
+                || statSonicRepelled < 0 || statDeaths < 0 || statRingsEarned < 0 || statPirates < 0 || playTicks < 0
+                || hull < 0 || shield < 0 || life < 0 || hazard < 0 || jet < 0 || launchFuel < 0 || shipShield < 0
+                || !Inventory.validEncoding(catalog, graveCargo, maxSlots(catalog)))
+            throw new IllegalArgumentException("Expedition state");
+    }
+
     private static int i(Map<String, String> m, String k, int d) {
-        try {
-            return Integer.parseInt(m.get(k));
-        } catch (RuntimeException e) {
-            return d;
-        }
+        return m.containsKey(k) ? Integer.parseInt(m.get(k)) : d;
     }
 
     private static long l(Map<String, String> m, String k, long d) {
-        try {
-            return Long.parseLong(m.get(k));
-        } catch (RuntimeException e) {
-            return d;
-        }
+        return m.containsKey(k) ? Long.parseLong(m.get(k)) : d;
     }
 
     private static float f(Map<String, String> m, String k, float d) {
-        try {
-            float v = Float.parseFloat(m.get(k));
-            return Float.isFinite(v) ? v : d;
-        } catch (RuntimeException e) {
-            return d;
-        }
+        float value = m.containsKey(k) ? Float.parseFloat(m.get(k)) : d;
+        if (!Float.isFinite(value)) throw new IllegalArgumentException("Non-finite " + k);
+        return value;
+    }
+
+    private void copyFrom(Player candidate) {
+        cargo.replaceWith(candidate.cargo);
+        System.arraycopy(candidate.tech, 0, tech, 0, tech.length);
+        System.arraycopy(candidate.menuRows, 0, menuRows, 0, menuRows.length);
+        System.arraycopy(candidate.menuItems, 0, menuItems, 0, menuItems.length);
+        System.arraycopy(candidate.stationRows, 0, stationRows, 0, stationRows.length);
+        System.arraycopy(candidate.stationItems, 0, stationItems, 0, stationItems.length);
+        rings = candidate.rings;
+        shards = candidate.shards;
+        hull = candidate.hull;
+        shield = candidate.shield;
+        life = candidate.life;
+        hazard = candidate.hazard;
+        jet = candidate.jet;
+        launchFuel = candidate.launchFuel;
+        shipShield = candidate.shipShield;
+        pulse = candidate.pulse;
+        galaxySeed = candidate.galaxySeed;
+        galaxyNumber = candidate.galaxyNumber;
+        systemId = candidate.systemId;
+        planet = candidate.planet;
+        surfaceX = candidate.surfaceX;
+        surfaceY = candidate.surfaceY;
+        spaceX = candidate.spaceX;
+        spaceY = candidate.spaceY;
+        spaceZ = candidate.spaceZ;
+        spaceYaw = candidate.spaceYaw;
+        spacePitch = candidate.spacePitch;
+        beaconPlanet = candidate.beaconPlanet;
+        beaconX = candidate.beaconX;
+        beaconY = candidate.beaconY;
+        emeralds = candidate.emeralds;
+        bonusSlots = candidate.bonusSlots;
+        shrineSystem = candidate.shrineSystem;
+        shrinePlanet = candidate.shrinePlanet;
+        tutorial = candidate.tutorial;
+        pinned = candidate.pinned;
+        menuTab = candidate.menuTab;
+        menuOpened = candidate.menuOpened;
+        stationTab = candidate.stationTab;
+        missions = candidate.missions;
+        coreReached = candidate.coreReached;
+        statWarps = candidate.statWarps;
+        statPlanets = candidate.statPlanets;
+        statSpecies = candidate.statSpecies;
+        statMined = candidate.statMined;
+        statSonicRepelled = candidate.statSonicRepelled;
+        statDeaths = candidate.statDeaths;
+        statRingsEarned = candidate.statRingsEarned;
+        statPirates = candidate.statPirates;
+        playTicks = candidate.playTicks;
+        graveSystem = candidate.graveSystem;
+        gravePlanet = candidate.gravePlanet;
+        graveX = candidate.graveX;
+        graveY = candidate.graveY;
+        graveCargo = candidate.graveCargo;
+        discovered.clear();
+        discovered.addAll(candidate.discovered);
+        uploaded.clear();
+        uploaded.addAll(candidate.uploaded);
+        looted.clear();
+        looted.addAll(candidate.looted);
+        visitedSystems.clear();
+        visitedSystems.addAll(candidate.visitedSystems);
+        visitedPlanets.clear();
+        visitedPlanets.addAll(candidate.visitedPlanets);
+        names.clear();
+        names.putAll(candidate.names);
+        reserves.clear();
+        reserves.putAll(candidate.reserves);
     }
 
     public Catalog catalog() {
