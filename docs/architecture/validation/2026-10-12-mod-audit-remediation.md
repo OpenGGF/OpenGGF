@@ -107,3 +107,198 @@ canvas migration. Local commits have not yet been integrated into main `develop`
 Final matching SDK-only exports, graphics/pixel qualification, broad ordinary/guards,
 remaining capabilities and main-branch delivery remain outstanding. Candidate version
 and release status stay0.7.0/unpublished; no published API baseline was changed.
+
+## Historical Java 25 consumer qualification: 28 manifests
+
+The worker at `df7a9a799` compiled the maintained inputs for all 28 tracked manifests,
+including the four Flappy tutorial projects, bundled TimeAttack, gallery music sample
+and nine test fixtures. This used the provisional engine/SDK/testkit artifacts built
+at `8172c0780`, all reporting `app.dirty=false`, version/base version
+`0.7.prerelease`. It precedes upstream `f02bdbfd` and its 29th manifest,
+Starpost Valley; that new source/API scope requires a new matching qualification.
+These results establish packaging/validator behavior, not gameplay, visual, audio,
+rewind or final delivery qualification.
+
+The three artifact SHA-256 identities were:
+
+| Artifact | SHA-256 |
+|---|---|
+| Engine | `a84a467ba807837a0d874626a4a0b91e830416d3934bfab54d81f8ee54239fda` |
+| SDK | `fbacfec56ec06f04208fc8b36c1e11a85ed6ddd0fc1a2eb0c91df7b2047f8159` |
+| Testkit | `8ec563e3453c3995f163fc260f7df1dd61cc92ba2ca165206205c40f877474cf` |
+
+Compilation used Java 25 `javac --release 25` with only the engine and SDK jars on
+the compile classpath. Task-owned external outputs replayed maintained SDK converter
+arguments, then invoked `GgfModCli package --input <classes> --out <jar> --format json
+--warnings allow` and `validate <jar> --format json --warnings allow`. Each pair
+returned identical reports: 28 valid packages, zero errors, 52 warnings. No ROM,
+player state or existing `target` tree was copied. Builds were bounded to two workers
+and 1 GiB SDK JVMs. Authored base64 resources were decoded; Tide's generator and
+`--check`, gallery waveform generator, object/playable art and TMX/from-export
+converters ran. Three Islands' Maps generator exactly reproduced its maintained
+`Maps.java`; that maintained source was compiled. Existing authored Egg voice
+resources were used without regenerating voice content.
+
+The first staging attempt incorrectly left `binary-assets.properties` alongside the
+strict level converter's exact input inventory, failing four fixture conversions.
+Removing that staging-only properties file and rerunning those four projects repaired
+the harness; this was not a source defect. Reports below are the completed run.
+
+| Maintained source root | Java sources | Validator warnings |
+|---|---:|---:|
+| `docs/modding/samples/phase4-gallery-music-pack` | 0 | 0 |
+| `examples/act-practice` | 3 | 0 |
+| `examples/eggmans-sky` | 65 | 0 |
+| `examples/example-mutators` | 10 | 0 |
+| `examples/flappy-tails` | 16 | 0 |
+| `examples/flappy-tails/tutorial/part-2-first-scene` | 2 | 0 |
+| `examples/flappy-tails/tutorial/part-3-tails` | 3 | 0 |
+| `examples/flappy-tails/tutorial/part-4-flight` | 4 | 0 |
+| `examples/flappy-tails/tutorial/part-5-pillars` | 7 | 0 |
+| `examples/hello-scene` | 2 | 0 |
+| `examples/infinite-sonic` | 31 | 25 |
+| `examples/putt-putt-paradise` | 36 | 9 |
+| `examples/robotnik-tower-defense` | 12 | 0 |
+| `examples/sitar-hero` | 41 | 0 |
+| `examples/slay-the-robotnik` | 171 | 0 |
+| `examples/sonic-survivors` | 25 | 18 |
+| `examples/starfall-frontier` | 16 | 0 |
+| `examples/three-islands` | 51 | 0 |
+| `racing/time-attack` | 40 | 0 |
+| `src/test/resources/mods/dynamic-rewind-src` | 1 | 0 |
+| `src/test/resources/mods/sample-character-src/project` | 3 | 0 |
+| `src/test/resources/mods/sample-flappy-src/project` | 3 | 0 |
+| `src/test/resources/mods/sample-mod-src/project` | 3 | 0 |
+| `src/test/resources/mods/sample-platformer-src/project` | 5 | 0 |
+| `src/test/resources/mods/sample-reskin-src` | 0 | 0 |
+| `src/test/resources/mods/sample-rom-art-remix-src/project` | 2 | 0 |
+| `src/test/resources/mods/sample-standalone-src/project` | 4 | 0 |
+| `src/test/resources/mods/sample-two-act-campaign-src/project` | 2 | 0 |
+
+### Actual findings and their dispositions
+
+Every finding was `WARNING / NON_API_ENGINE_REFERENCE`, with an empty member field.
+The tables preserve every reported referencing-class/referenced-class pair. Purposes
+and proposed alternatives are source-qualified reviews, not runtime certification.
+`com.openggf` is omitted from referenced type names. Dispositions are **existing
+alternative**, **narrow missing service**, or **retained expert bridge**. The action
+key links each pair to an owner and an explicit reopen condition below; retaining a
+bridge does not create a compatibility promise or mark the capability work complete.
+
+| Infinite referencing class | Referenced type | Actual call purpose | Disposition / action |
+|---|---|---|---|
+| `CourseBadnik` | `graphics.RenderPriority` | Validate species priority bucket | Retained expert bridge / A |
+| `CourseBadnik` | `level.objects.TouchResponseListener` | Guard absorption before native hurt | Narrow missing service / B |
+| `CourseBadnik` | `physics.TrigLookupTable` | Orbinaut quarter-turn spikes, integer sine/cosine shifted by 4 | Retained expert bridge / C |
+| `CourseBurst` | `graphics.RenderPriority` | Explosion bucket 1 | Retained expert bridge / A |
+| `CourseController` | `level.rings.LostRingObjectInstance` | Delay terrain rebasing until live unshifted ring spills settle | Retained expert bridge / D |
+| `CourseController` | `sprites.NativePositionOps` | Safe continue position with reset subpixels and history | Retained expert bridge / E |
+| `CourseController` | `sprites.animation.ScriptedVelocityAnimationProfile` | Copy native locomotion profile with lower run threshold | Retained expert bridge / F |
+| `CourseHazard` | `graphics.RenderPriority` | Hazard bucket 4 | Retained expert bridge / A |
+| `CourseHazard` | `level.objects.TouchResponseListener` | Shield/20-ring guard absorption and native flashing before hurt | Narrow missing service / B |
+| `CourseHazard` | `physics.TrigLookupTable` | Exact rolling, chain and wrecking-ball coordinates | Retained expert bridge / C |
+| `CourseMonitor` | `graphics.RenderPriority` | Native monitor bucket 3 | Retained expert bridge / A |
+| `CourseMonitor` | `level.objects.TouchResponseListener` | SPECIAL hit burst and item reward once | Narrow missing service / B |
+| `CourseRing` | `graphics.RenderPriority` | Ring bucket 2, sparkle bucket 1 | Retained expert bridge / A |
+| `CourseRing` | `level.objects.TouchResponseListener` | SPECIAL collection gated by native flashing/control state | Narrow missing service / B |
+| `InfiniteSonicMod$Module` | `data.RomManager` | ROM authority inferred from `GameServices.rom().getRom()` | Retained expert bridge / G |
+| `InfiniteSonicMod$Module` | `game.GameServices` | Current restored controller lookup and supplied title ROM | Retained expert bridge / G |
+| `InfiniteSonicMod$Module` | `game.sonic1.Sonic1` | Independent stock reader for act-1 title backgrounds, preserving session PLC ownership | Retained expert bridge / G |
+| `TitleBackground` | `game.sonic1.scroll.Sonic1ScrollHandlerProvider` | Separate stock Deform handlers produce packed scanline scrolls | Retained expert bridge / H |
+| `TitleBackground` | `game.sonic1.titlescreen.Sonic1TitleScreenManager` | Reserved atlas bounds and viewport tile-column policy | Retained expert bridge / H |
+| `TitleBackground` | `game.sonic1.titlescreen.Sonic1TitleScreenManager$BackgroundOverride` | Replace Plane B/backdrop while retaining stock title behavior | Retained expert bridge / H |
+| `TitleBackground` | `game.titlescreen.SegaPaletteFade` | Native fade precedence and 12-frame transition with full palette copies | Retained expert bridge / H |
+| `TitleBackground` | `game.titlescreen.SegaPaletteFade$Mode` | Select native title fade mode | Retained expert bridge / H |
+| `TitleWordmark` | `game.sonic1.titlescreen.Sonic1TitleScreenManager` | Attach background to the native title manager | Retained expert bridge / H |
+| `TitleWordmark` | `game.sonic1.titlescreen.Sonic1TitleScreenManager$BackgroundOverride` | Keep stock emblem/state machine while replacing background | Retained expert bridge / H |
+| `ZoneMenu` | `game.GameServices` | Native title selection `SFX_SWITCH` | Narrow missing service / I |
+
+| Golf referencing class | Referenced type | Actual call purpose | Disposition / action |
+|---|---|---|---|
+| `GolfMode` | `game.GameServices` | Native scene capture/presenter, focused camera, viewport/HUD/trail/guide overlay and guest gate | Retained expert bridge / J |
+| `GolfModule` | `game.GameServices` | Native title graphics, projection width, character/sidekick configuration and menu audio | Narrow missing service / I,J |
+| `GolfOnline` | `game.GameServices` | Publish/accept scene frames, peer viewport, focused radius and charge/release cues | Retained expert bridge / J |
+| `GolfSounds` | `game.GameServices` | Native title/feedback track IDs and act-clear cue | Narrow missing service / I |
+| `GolfSwing` | `game.GameServices` | Focused native springing/angle/speed state and launch/landing-spin audio | Existing partial alternative; retained expert bridge / J |
+| `objects.GolfUpSpring` | `game.sonic2.objects.SpringObjectInstance` | Native Obj41 subclass retains ROM geometry, art, strength, animation and SFX | Retained expert bridge / K |
+| `objects.GolfUpSpring` | `sprites.NativePositionOps` | Preserve-subpixel -8 nudge compensates top-only `loc_189CA` entry | Retained expert bridge / E,K |
+| `ui.GolfTitleArt` | `game.sonic2.titlescreen.TitleScreenDataLoader` | ROM title planes/palette/pattern GPU cache and reset after course | Retained expert bridge / L |
+| `ui.GolfTitleArt` | `game.sonic2.titlescreen.TitleScreenMappings` | Ordered priority mapping pieces and crown/wind frames | Retained expert bridge / L |
+
+| Survivors referencing class | Referenced type | Actual call purpose | Disposition / action |
+|---|---|---|---|
+| `ArenaObjects` | `level.objects.ObjectConstructionContext` | Inject construction services, suppress probe admission, then admit rewindable auxiliary object | Retained expert bridge / M |
+| `Boss` | `graphics.RenderPriority` | Boss bucket 3 | Retained expert bridge / A |
+| `Boss` | `level.objects.TouchResponseListener` | Native player contact: guard absorption then laugh, excluding CPU/dead players | Narrow missing service / B |
+| `Draw` | `level.render.SpritePieceRenderer` | Expand/mirror mapping pieces into scaled world-space quads | Narrow missing service / N |
+| `Draw` | `level.render.SpritePieceRenderer$TileConsumer` | Preserve piece tile, palette and priority bits while emitting scaled quads | Narrow missing service / N |
+| `Enemy` | `graphics.RenderPriority` | Enemy bucket 4 | Retained expert bridge / A |
+| `Enemy` | `level.objects.TouchResponseListener` | Guard absorption at actual native player contact | Narrow missing service / B |
+| `Hud` | `sprites.playable.Tails` | Describe captured Tails hover/magnet versus Sonic fever/combo perks | Existing alternative / O |
+| `Pickup` | `graphics.RenderPriority` | Collected bucket 1 versus active bucket 3 | Retained expert bridge / A |
+| `Shot` | `graphics.RenderPriority` | Projectile bucket 3 | Retained expert bridge / A |
+| `Shot` | `level.objects.TouchResponseListener` | Guard absorption destroys the absorbed projectile | Narrow missing service / B |
+| `Stage` | `game.sonic2.audio.Sonic2Music` | Boss/final boss, super/chest, restored boss, act-clear, emerald and ending cues | Existing partial alternative; retained expert bridge / P |
+| `Stage` | `physics.ObjectTerrainUtils` | Spawn-floor scan from floorTop-16 to floorBottom+48 in 16-pixel origins | Existing alternative / Q |
+| `Stage` | `physics.TerrainCheckResult` | Accept first distance 0..15, otherwise floorTop | Existing alternative / Q |
+| `Stage` | `sprites.NativePositionOps` | Arena ceiling resets Y subpixel, cancels upward velocity and sets airborne | Retained expert bridge / E |
+| `Stage` | `sprites.playable.Tails` | Capture run character identity for supported native Sonic/Tails perks | Existing alternative / O |
+| `SurvivorsMod$Module` | `game.rules.DynamicArtDmaServiceModel` | Full GameRules copy changes speed-shoes expiry while retaining native DMA policy | Narrow missing service / R |
+| `SurvivorsTitle` | `game.GameServices` | Start-zone picker title navigation SFX 0xCD | Narrow missing service / I |
+
+| Action | Owner and precise reopen condition |
+|---|---|
+| A | Native rendering / Mod API: deliberately publish a validated bucket/conversion seam and prove normalized native layering, including collectible phases. Literal `getPriorityBucket` values are mechanically available, but the implementation-pitfall catalogue requires `RenderPriority.bucket/fromS3kWord`; do not replace checked transcription with bare literals. |
+| B | Object callback/contact owner: publish a purpose-scoped, verified-owner pre-hurt/item callback port; prove attribution/fault boundaries, contact order, exactly-once reward/absorption, shields, CPU exclusion, HOLD and rewind/recreation. Public `TouchResponseProvider` exposes regions/gates, not this callback moment; update polling is not equivalent. |
+| C | Native physics / creator math: publish exact byte-angle integer sine/cosine only with all 256 entries and resulting render/contact coordinates equal. Floating-point `Math.sin` is not an exact substitute. |
+| D | Rings/object lifecycle: provide a complete semantic live-spill query across native slots, logical overflow, step order and rewind. `RingManager.getActiveLostRings` is a pooled snapshot whose equivalence to all live object instances is unproved. |
+| E | Playable position owner: deliberately expose reset/preserve-subpixel position operations with signed-short coordinates, sensors/history, velocity and rewind proof. Public centre setters show mechanical delegation but do not override the repository's native-write invariant. |
+| F | Playable animation owner: supply a prepared locomotion-threshold copy operation preserving every other field and native selection for fresh and recreated characters. Generic `SpriteAnimationProfile` has no equivalent operation. |
+| G | Native module lifecycle / ROM-title resources: inject current-world lookup and a bounded native-title background loader, verified before gameplay and after ROM/session changes/restore without PLC replacement. `SceneRomArt.levelBackground` belongs to a scene context and cannot be substituted into the unchanged native title lifecycle. |
+| H | Native title rendering/resources: an owned background/scroll/fade port must preserve stock fallback, atlas isolation, attach/detach, two instances, ROM reload, viewport and palette restoration. A scene-background rewrite would be a lifecycle migration. |
+| I | Native title/audio host: inject bounded owner-bound title audio/configuration/presentation capabilities, with live visit/thread/close behavior, stock coexistence and once-per-navigation cues. Gameplay `ObjectServices` and `SceneContext` cannot be assumed available to unchanged native title callbacks. |
+| J | Controlled course/presentation owner: use existing `CourseControl`/row `ObjectServices` for proven query/cue alternatives, and publish only remaining native presentation/state operations after launch/landing/wall/stock-spring/replay and peer-view proof. Preserve row lifetime; the public `SceneFrameCodec` alone does not own Golf's transport, peer presentation or legacy mode callbacks. P17 transport disposition remains root-owned. |
+| K | Native spring/contact owner: an admitted side-entry operation must retain complete Obj41 ROM behavior and the preserve-subpixel compensation, with exact route/replay proof. The P13 detach/checkpoint helper does not replace the whole native spring class. |
+| L | Native title art owner: require exact canonical plane/mapping pixels, origins, palette/priority, GPU reinitialization and 320/400/528/800 viewport equality before replacing these decoders. Existing stock scene recipes/level kits are not proven equivalents. |
+| M | Object construction/admission owner: consider convenience only with a second real consumer and equivalent probe suppression, factory fault, inherited ownership, slotless/native-pressure, deferred update and repeated recreation checks. |
+| N | Mapping renderer owner: add origin-aware scaled mapping rendering only with fractional scale, flips, palette/priority, camera translation and resource-lifetime pixel proof. `PatternSpriteRenderer.drawFrameIndex` lacks scale; scene sprite raster composition is a different path. |
+| O | Authored run-character policy: migrate to `characterKey().equals(CharacterKey.TAILS)` with both supported native leaders and captured/restored perk identity. Do not silently reinterpret custom Tails subclasses as capabilities. |
+| P | Explicit S2 soundtrack owner: `GameMusic.SUPER/ACT_CLEAR/EMERALD` are existing alternatives; boss/final/ending need a named provider, exact IDs, restore/preemption/expiry checks and another matching consumer. Unlabelled integers are not remediation. |
+| Q | Terrain provider / authored spawn placement: migrate to `ObjectServices.floorSurface` plus immutable `TerrainSurface`, preserving the exact scan cadence, first-floor selection and fallback with row-proxy lifetime coverage. `findFloorSurface` accepts [-16,16), which would change this caller's 0..15 contract. |
+| R | Semantic GameRules owner: a `withPowerUp` copy operation must retain every other component by identity, including hidden DMA scheduling, with native positive control. The older ten-argument constructor resets DMA policy and is unsafe here. |
+
+### P18 Slay and Three Islands facade qualification
+
+Commit `df7a9a799` separates successful art caches from bounded expected-failure status
+and retries at 120 owner logic ticks. Both retain success/image formats and host-owned
+CPU/GPU image lifetime; local close clears references and rejects reuse. Missing
+optional ROM, unsupported request and invalid data remain distinct. Dependency
+failures retain their original cause category and deadline. NPE, generic runtime
+faults, errors and `CallbackAborted` reach the actual verified owner boundary.
+Slay publishes eight slot faces only after the complete batch; Three Islands does
+not cache a missing-kit zero palette. The legacy pure `Art(SceneArt)` Three Islands
+constructor has a fixed clock; live Game supplies its explicit advancing logic clock.
+No claim of blanket scene-art host revocation is made.
+
+- The initial Java 25 exact two-example regression invocation failed both outer
+  selectors: Slay 139 nested checks (134 passed, five failures), Three Islands 91
+  (86 passed, five failures), zero skips. Meaningful failures included permanent
+  failed-cache entries, repeated title decode, swallowed NPE and premature palette
+  publication. Fixture clock/owner/stage inputs were then corrected.
+- Actual external creator consumers using `build_project.py --engine <engine>
+  --sdk <sdk> --testkit <testkit> --test` against the matching provisional identities
+  passed Slay 142/142 and Three Islands 95/95 authored Jupiter checks, zero skips.
+  Package validators reported zero findings. These include repair after failure,
+  bounded status, atomic faces/palette, underlying dependency cooldown, proper owned
+  host close and actual callback-fault attribution.
+- Queued normal Maven at `df7a9a799`, Java 25, exact selectors
+  `TestSlayTheRobotnikExample,TestThreeIslandsExample,TestSlayTheRobotnikScene,TestThreeIslandsScene`,
+  `-Dmse=off test` and all three verified canonical absolute ROM properties: 18 outer
+  tests passed, zero failures/errors/skips, 39.383 s execution on 2026-10-12.
+  This includes the production scene routes and ten Three Islands zones/interiors.
+- Two obsolete green requests were cancelled while still waiting, before execution,
+  because fixtures/source were revised; both are incomplete checks with zero tests,
+  not passes. Queue waiting was never bypassed.
+
+Final combined source/SDK identities, the new Starpost scope, graphics obligations
+and root baseline/integration checks remain separate, outstanding qualifications.
