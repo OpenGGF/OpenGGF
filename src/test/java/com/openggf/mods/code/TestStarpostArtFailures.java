@@ -47,6 +47,9 @@ class TestStarpostArtFailures {
                 for (int i = 0; i < 119; i++) harness.tick();
                 assertEquals(1, attempts.get());
                 damaged.set(false); harness.tick();
+                // The host advances ticks after update: this callback observed tick119.
+                assertEquals(1, attempts.get(), "No retry before the deadline observed by the callback");
+                harness.tick(); // This callback observes tick120 and must retry.
                 assertEquals(2, attempts.get());
                 assertTrue(harness.debugJump("new sonic"), "full source scene recovers, not just a fake success flag");
                 harness.tick(); assertFalse(draw(harness).isEmpty());
