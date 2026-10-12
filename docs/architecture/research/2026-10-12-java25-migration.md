@@ -280,3 +280,37 @@ The reconciled mixed-runtime build (`JAVA_HOME=25`, `PATH` Java 21,
 The universal engine and embedded Time Attack mod contain class-file version 69;
 the bundled manifest's size and SHA-256 match the embedded jar. This exercises
 the new Maven-selected bundled packager without relying on PATH's Java.
+
+
+## Reconciled hosted verification checkpoint
+
+Merge `eb874411a8624b609271adb2800455e8fcb55058` retains destination e76 and
+passed the actual PR policy range (12,367 audited release-tree entries). The
+non-publishing Release run
+[38243371330](https://github.com/OpenGGF/OpenGGF/actions/runs/38243371330) passed
+ordinary testing: 3,095 reports, 23,551 case executions, zero failures/errors,
+4,288 skips. Counts include repeated invocation identities (899 duplicate
+identity executions); they are not deduplicated test classes. Skips reflect the
+cloud's missing ROM/graphics/media and opt-in coverage, not local ROM acceptance.
+All three SfxData cases, both OwnedMocks cases and both final Java 25 Time Attack
+packaging cases passed without skips. The duplicate local two-case packaging
+request was canceled before admission rather than repeating that proof.
+
+The subsequent hosted guard stage ran 676 cases with one failure, zero errors
+and zero skips: `TestModTestKitDistributionGuard.
+effectiveEngineInputsExcludeTheActualSupportClassifier` expected bare `java`
+instead of the intentional `${java.home}/bin/java` POM executable. Its sole
+executable expectation is corrected; classifier exclusions, support-only jar
+contents, input arguments and isolated composition/rewind checks remain intact.
+The candidate broad and profile requests were canceled while still waiting
+before this test edit; the unchanged e76 baseline continues. The hosted ordinary
+result remains evidence for the unchanged production source. Native jobs did not
+run because the mandatory guard stage failed.
+
+After the merge commit, mixed-runtime universal verification was refreshed to
+stamp clean provenance (42.6 seconds). Two creator-kit ZIPs were byte-identical,
+with sourceCommit eb874411a and sourceDirty false. Portable hello-scene and the
+new act-practice example compiled and validated with zero findings using
+JAVA_HOME 25 while PATH selected Java 21; matching testkit identity verified.
+`racing/server/build.py --skip-engine` compiled 153 class files, all version 69;
+the generated launcher selects that JDK and declares native access.
