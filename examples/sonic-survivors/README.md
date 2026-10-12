@@ -401,6 +401,9 @@ seconds and `sonic-survivors.bossHp=N` sets every boss's hitpoints.
   intervals retain unpaid gaps for older seeks. A replacement service graph closes prior IDs;
   its new RunState rejects foreign-graph captures. Level loads retain the same services and
   ledger. `Module` reads these services from its backing bundle.
+- `Definitions` prepares the species traits and ordered encounter/boss line-ups once per owner
+  graph. Its lists are immutable; exposed animation arrays are copies. Enemy trait caches are
+  derived from the captured spawn subtype and rebuilt after object recreation.
 - `Difficulty` is the single pressure curve; `Upgrades` holds the catalogue, evolution pairs and
   unlock milestones; `Rules` holds Eggman's Rules.
 
@@ -411,6 +414,11 @@ rewind round trip, plus the forfeit and retire payouts, the spin-dash rule, ches
 unlocks, rules, character perks, zone events and warden squads. Coverage includes both leaders across all 19 acts, the ARZ ceiling, forced solo
 teams, jump rejection/Enter confirmation through the host game loop, and lost-ring provenance
 through rewind.
+
+`DefinitionsTest` is portable creator-kit coverage for every authored trait and line-up, wrapped
+species lookup, immutable frame arrays and repeated owner-scoped lookup. In an exported kit, run
+`python3 tools/build_project.py examples/sonic-survivors --test --testkit mod-testkit.jar`.
+These tests qualify catalogue behavior; native routes and rewind remain covered by the engine test above.
 
 `TestSonicSurvivors#balanceProbe` is an opt-in diagnostic: a scripted bot (jumps at the nearest
 badnik, takes weapons until it holds three, then ranks owned upgrades) plays whole runs and writes

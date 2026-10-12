@@ -739,7 +739,7 @@ final class Hud {
                 for (int id = 0; id < Species.COUNT; id++) {
                     int kills = profile.speciesKills[id];
                     int column = id % 3, row = id / 3;
-                    String line = kills > 0 ? Species.of(id).name() + " " + kills : "???";
+                    String line = kills > 0 ? s.gameService(Definitions.class).species(id).name() + " " + kills : "???";
                     Draw.shadow(s, line, left + 12 + column * 122, y + row * 13, 1, kills > 0 ? Draw.WHITE : Draw.GREY, 1f);
                 }
             }

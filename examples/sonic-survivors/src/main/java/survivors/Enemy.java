@@ -24,6 +24,8 @@ public final class Enemy extends AbstractBadnikInstance implements ModRewindRecr
     static final int WEAPON_IFRAMES = 8;
     static final int HIT_FLASH = 10;
 
+    @com.openggf.game.rewind.RewindTransient(reason = "Immutable owner definition selected by captured spawn subtype")
+    private Species.Traits preparedTraits;
     private int hp;
     private int maxHp;
     private int ticks;
@@ -65,7 +67,11 @@ public final class Enemy extends AbstractBadnikInstance implements ModRewindRecr
         return new ObjectSpawn(x, y, 0, subtype, 0, false, y, -1, SurvivorsMod.ID, SurvivorsMod.ID + ":enemy");
     }
 
-    Species.Traits traits() { return Species.of(spawn.subtype() & 0x1F); }
+    Species.Traits traits() {
+        if (preparedTraits == null)
+            preparedTraits = services().gameService(Definitions.class).species(spawn.subtype() & 0x1F);
+        return preparedTraits;
+    }
     boolean elite() { return (spawn.subtype() & ELITE) != 0; }
     int hp() { return hp; }
     int maxHp() { return maxHp; }

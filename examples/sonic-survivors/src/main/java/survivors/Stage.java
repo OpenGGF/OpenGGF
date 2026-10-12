@@ -382,8 +382,9 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
     private void spawnWaves() {
         var arena = arena();
         int stage = arena.stage();
-        int[] ground = Stages.ground(stage), air = Stages.air(stage);
-        if (ground.length + air.length == 0) return;
+        var lineup = services().gameService(Definitions.class).stage(stage);
+        List<Integer> ground = lineup.ground(), air = lineup.air();
+        if (ground.size() + air.size() == 0) return;
         var run = run();
         int tier = tier();
         int seconds = pressureSeconds();
@@ -430,14 +431,14 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
         }
         int pattern = (encounterNumber() - 1) % 3;
         if (phase == FIGHT && !surge) {
-            if (pattern == 1 && air.length > 0) ground = new int[0];
-            if (pattern == 2 && ground.length > 0) air = new int[0];
+            if (pattern == 1 && air.size() > 0) ground = List.of();
+            if (pattern == 2 && ground.size() > 0) air = List.of();
         }
         for (int i = 0; i < batch; i++) spawnEnemy(ground, air, tier, false);
     }
 
     /** Mid-stage beats on the survival clock: the zone's event, then a warden squad. */
-    private void stageBeats(int[] ground, int[] air, int tier) {
+    private void stageBeats(List<Integer> ground, List<Integer> air, int tier) {
         int arenaStage = arena().stage();
         int elapsed = fightFrames / 60;
         boolean secondTick = fightFrames % 60 == 0;
@@ -505,10 +506,10 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
         }
     }
 
-    private void spawnEnemy(int[] ground, int[] air, int tier, boolean elite) {
+    private void spawnEnemy(List<Integer> ground, List<Integer> air, int tier, boolean elite) {
         var run = run();
-        boolean flying = ground.length == 0 || air.length > 0 && run.nextInt(2) == 0;
-        int species = flying ? air[run.nextInt(air.length)] : ground[run.nextInt(ground.length)];
+        boolean flying = ground.size() == 0 || air.size() > 0 && run.nextInt(2) == 0;
+        int species = flying ? air.get(run.nextInt(air.size())) : ground.get(run.nextInt(ground.size()));
         var camera = services().camera();
         var arena = arena();
         int side = run.nextInt(2) == 0 ? -1 : 1;
@@ -533,7 +534,7 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
 
     /** Spawns one badnik with the arena's current hitpoints; returns them. */
     private int spawnSpecies(int species, int x, int y, int tier, boolean elite) {
-        var t = Species.of(species);
+        var t = services().gameService(Definitions.class).species(species);
         double scale = Difficulty.hpScale(tier, arena().act(), pressureSeconds())
                 * (run().rule(Rules.TOUGH_HIDES) ? 1.5 : 1);
         int hp = (int) Math.max(1, Math.round(t.hp() * scale));
@@ -551,7 +552,8 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
         var arena = arena();
         var camera = services().camera();
         int stage = arena.stage();
-        int hp = (int) Math.round(Difficulty.bossHp(stage, arena.act(), pressureSeconds(), run().mode)
+        int hp = (int) Math.round(Difficulty.bossHp(stage, arena.act(), pressureSeconds(), run().mode,
+                services().gameService(Definitions.class).stage(stage).averageHp())
                 * (run().rule(Rules.TOUGH_HIDES) ? 1.5 : 1));
         int x = arena.clampX(camera.getX() + camera.getWidth() - 64, 64);
         int y = stage == Stages.DEZ ? arena.floorTop() - 40 : camera.getY() - 48;
