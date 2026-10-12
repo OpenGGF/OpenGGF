@@ -37,7 +37,7 @@ public final class ModSaveSlot<T> {
     }
 
     private static String name(String name) {
-        if (name == null || !name.matches("[a-z0-9][a-z0-9._-]{0,63}"))
+        if (name == null || !name.matches("[a-z0-9._-]{1,64}") || name.startsWith("."))
             throw new IllegalArgumentException("Invalid owner-local save name");
         return name;
     }
@@ -141,6 +141,10 @@ public final class ModSaveSlot<T> {
         String previous = validated;
         try {
             Optional<String> old = read(primary);
+            if (old.isEmpty() && list().contains(primary) && !replacementAuthorized) {
+                writable = false;
+                return ModSaveWriteResult.REPLACEMENT_REQUIRED;
+            }
             if (old.isPresent()) {
                 var decoded = decode(old.get());
                 if (decoded.status() == INCOMPATIBLE && !replacementAuthorized) {

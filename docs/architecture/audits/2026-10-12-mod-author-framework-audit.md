@@ -496,3 +496,92 @@ Suggested delivery order:
 Each executable slice uses the actual integration-base change plan and relevant mod,
 owner-fault, API-signature, rewind/session, ROM-identity and route checks. A passed model
 probe or packaged jar alone cannot certify gameplay, graphics, audio or API publication.
+
+## Remediation execution and current scope (2026-10-12)
+
+The findings above describe the historical audit snapshot, not the current repaired
+runtime. Execution is recorded in the [validation artifact](../validation/2026-10-12-mod-audit-remediation.md)
+and [remediation plan](../plans/2026-10-12-mod-audit-remediation.md). Initial implementation
+base was `15f3cf371`; the integration tree subsequently reconciled published `develop`
+`b6d0ff76f`, including Java 25 and the expanded example-mutators. Earlier Java 21 checks
+remain historical evidence; final delivery qualifies the updated toolchain/base.
+
+| Finding/uplift | Implemented consumer/contract | Current qualification boundary |
+|---|---|---|
+| R1/R2, U1 | Checked save preservation/retries across the affected scenes; shared `ModSaveSlot` adopted by Three Islands and Slay profiles | Future primary never silently selects an older writable backup; required backup failure blocks primary. Per-file atomicity only. Starfall chunk generations remain specialized. |
+| R3/R7 | Generated camp uses the current centre; expedition parsing publishes a validated candidate; generation-keyed/cache owners | Canonical ROM and portable lifecycle/regeneration checks passed. Durable terrain carving remains a separate schema decision. |
+| R4, U4 | `CombatLayout` plus ordered pure `SpriteComposition`; scoped canvas translation/opacity adopted by Sitar | Targeted cards/monitors compare damage, energy, choices and saved state under zero/sparse/duplicate drawing. Native recipes/choreography remain local. |
+| R5 | Semantic run identity and non-rewound settlement intervals persisted with awards; dirty retry | Production restore reproduced 55→110 duplicate bank and repeated 200-kill milestone accounting. Once-per-run repair preserves rewind and rejects foreign graph snapshots. |
+| R6, U2 | One before-frame disposition: native input, controlled neutral, HOLD; owner/row/visit services; captured Survivors modal coordinator | Real first-row Shoes decrement reproduced and repaired. Golf neutral stepping and native input/filter/P2/timing tested. Newly reconciled Mutator overlay commands receive an additional integration check. |
+| R8 | Practice command carries practice independently of zone; configured timestamped calibration edges | Remapped keyboard/pad/axis/device checks and practice/retry/normal eligibility passed. |
+| R9, U3 | Owned Infinite leaderboard, existing forwarding helpers; injected bounded floor/contact/spring/destruction capabilities | Actual ROM consumer checks passed. Remaining expert GPU/title/network/auxiliary bridges require the final actual validator ledger and explicit dispositions. |
+| R10, U6 | Authored tests/resources/generators exported; real Jupiter launcher; test-ready seven-kind starters; shared builders | Structural/source/SDK checks passed. Final matching exported-consumer green/failure/empty/mismatch/ROM/artifact matrix remains a delivery gate. |
+| R11 | Immutable per-scene/per-module definitions and per-recreation traits | Warmed 1,000 lookups changed 1,000→1 identities with pinned content/RNG hashes unchanged; no unmeasured FPS/GC/bytes claim. |
+| U5 | Existing ROM-qualified recipes plus three independently reused banks; Starfall level-kit material crops | 39 material samples matched after local palette quantization conversion. Ten distinct backdrop variants and unproved Blue Flicky frame semantics retain explicit local decoding. |
+| U7 | Factory-bound default identity, protected standard art emission, declarative owned standalone object dispatch | Fresh construction, foreign-key publication, respawn/save/rewind and actual SDK-only generated projects qualified. Expert overrides remain validated. |
+
+### Newly landed consumers
+
+Current inventory contains 28 maintained manifest sources: the original examples,
+fixture/data samples and tutorial checkpoints, Act Practice and bundled Time Attack.
+The third added manifest is `examples/example-mutators`, delivered with the new
+Mutator Lab upstream. Its expanded version retains one manifest identity. Time Attack now uses one atomically published ghost as its
+pairing authority, retained hash-addressed sidecars, checked bounded lazy lookup,
+validated clock/route/split/encoding metadata and explicit save notices. Original
+corrupt/future primary bytes remain preserved; previous playback is read-only.
+Settings retry and upload/vault boundedness are completing separate observed regressions.
+
+Mutator Lab is ten authored Java files with eleven typed definitions and three native
+patches. It uses injected configuration and engine-owned title/overlay/policy state;
+no mod-source filesystem/singleton/world-write workaround was found in this bounded
+scope extension. Its held overlay, preference admission and native pacing/rewind remain
+part of the integration qualification, not evidence supplied by package validation.
+
+### Cancellable art preparation — defer with measured evidence
+
+The owned Egg preparation probe sampled three fresh seeded 55-biome visits: enters
+277.060/122.462/112.977ms and maximum LoadingMode callbacks 104.967/45.908/31.336ms.
+These are warmed-JVM, headless measurements without GPU/end-user latency evidence.
+The thirteen Starfall current-bank samples were 3.498–31.198ms after a different-work
+raw-material oracle, so they do not establish a speedup or cold-loading benchmark.
+
+Threading the current facade is rejected: LoadingMode's Supplier closes over mutable
+Game/player/generation state, GeneratedAssets and ROM/art/kit caches mutate on that
+callback, and SceneRomArt explicitly lacks worker-thread ownership. No safe independent
+work-unit/cancel/stale-result publication capability is delivered. Reopen this uplift
+when a host-owned immutable ROM input/decoder, bounded work/results, visit+generation
+identity, cancellation/replacement discard and owner fault handling can be proved
+before publication. The retained `TestEggmansSkyArtPreparation` gives a repeatable
+measurement method; it does not certify responsiveness.
+
+### Other author-friction decisions
+
+Title-card choreography is being extracted only at the shared pure position/clock
+seam used by Flappy, Slay and Sitar; callers retain completion, hurry and loading
+release policy. Atlas case lookup is opt-in, with Three Islands retaining wrapping,
+centering and shadow styling. Qualification of those accepted additions is recorded
+separately in the execution artifact.
+
+Infinite's current phases retain native admission: active play and opening/GO advance
+the native world; game-over keeps corpse/enemy behavior live; RESUME_READY pins the
+player/camera/protection while advancing the rest of the world; LANDED continues a
+partial native simulation. Rewind occurs before row admission. A new controller that
+holds these rows would strand the existing respawn/game-over transitions, so no
+unnecessary controller migration is made.
+
+Inspectable disabled focus is deferred. Tower's three always-enabled title regions
+are the only current FocusRegions consumer; Slay inspection and battlefield-shop
+navigation have different policies. Reopen with a second compatible consumer and
+navigation/disabled-description equivalence.
+
+Golf's gameplay transport remains an expert bridge. RaceConnection owns race-specific
+handshake/control/ghost protocols; SceneNetwork owns a visit-bound text endpoint.
+Neither reproduces Golf's TCP binary reliable FIFO, latest-view coalescing, deadline,
+terminal flush and classloader-owned close lifecycle. Reopen a protocol-neutral,
+owner-bound bounded binary seam only when the unchanged TransportProbe qualifies it.
+
+Auxiliary spawning remains an explicit expert bridge: Survivor ArenaObjects already
+uses injected ObjectConstructionContext.construct and the existing auxiliary admission
+operation. DynamicObjectOwnership retains verified callback ownership, deferred
+admission and slotless rewind identity. Reopen the four-line convenience uplift only
+with a second real consumer and probe/factory-fault/owner/recreation equivalence.

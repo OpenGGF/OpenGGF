@@ -79,6 +79,35 @@ class TestModSaveSlot {
         assertEquals("v2:9", storage.files.get("save.txt"));
     }
 
+    @Test void unreadablePrimaryArrivingAfterLoadAlsoRequiresReplacement() {
+        Memory storage = new Memory(); var slot = slot(storage);
+        assertEquals(ABSENT, slot.load().status());
+        storage.files.put("save.txt", "preserve unavailable generation"); storage.unreadable = true;
+        assertEquals(REPLACEMENT_REQUIRED, slot.save(3));
+        assertEquals("preserve unavailable generation", storage.files.get("save.txt"));
+    }
+
+    @Test void helperAcceptsTheSameLocalNameGrammarAsStorage() {
+        Memory storage = new Memory();
+        assertEquals(SAVED, new ModSaveSlot<>(storage, "_save.txt", CODEC).save(1));
+        assertEquals(SAVED, new ModSaveSlot<>(storage, "-save.txt", CODEC).save(2));
+    }
+
+    @Test void oversizedEncodedValueDoesNotRotateOrDiscardLastCheckpoint() {
+        Memory storage = new Memory(); storage.files.put("save.txt", "v1:7");
+        ModSaveCodec<String> codec = new ModSaveCodec<>() {
+            public ModSaveLoadResult<String> decode(String text) { return ModSaveLoadResult.valid(text); }
+            public String encode(String value) { return value; }
+        };
+        var slot = new ModSaveSlot<>(storage, "save.txt", "save.bak", codec);
+        slot.load(); storage.fail = "save.txt";
+        assertEquals(PRIMARY_FAILED, slot.save("checkpoint"));
+        assertEquals(TOO_LARGE, slot.save("x".repeat(ModStorage.MAX_TEXT_BYTES + 1)));
+        assertEquals("v1:7", storage.files.get("save.bak"));
+        storage.fail = null; assertEquals(SAVED, slot.retry());
+        assertEquals("checkpoint", storage.files.get("save.txt"));
+    }
+
     @Test void productionStorageEnforcesBoundsIsolationAndNames() throws Exception {
         var storage = ModStorageFactory.forOwner(root, "slot-test");
         var slot = slot(storage); assertEquals(ABSENT, slot.load().status());

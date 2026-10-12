@@ -309,3 +309,5 @@ Local Maven tests: [`tools/testing/maven_queue.py`](../../tools/testing/maven_qu
   production mask panels without GL, windows, input or audio. Player output also
   reviews ROM animation-frame sequences in fresh DPLC banks; standalone mapping
   order is diagnostic and can contain stale art in no-upload frames.
+
+- `TestEggmansSkyArtPreparation`: bounded owned-visit Egg preparation timing probe (three seeded fresh scenes; originating mod audit remediation 2026-10-12); headless warmed measurements only.

@@ -107,3 +107,79 @@ canvas migration. Local commits have not yet been integrated into main `develop`
 Final matching SDK-only exports, graphics/pixel qualification, broad ordinary/guards,
 remaining capabilities and main-branch delivery remain outstanding. Candidate version
 and release status stay0.7.0/unpublished; no published API baseline was changed.
+
+## Published upstream reconciliation and Java 25 boundary
+
+`8172c0780` composes all initial worker/API batches with published `develop`
+`b6d0ff76f` (Java 25 migration and expanded Mutator Lab). Seven conflicts were resolved
+by retaining checked exports/shared builder output/definition prose and adopting the
+upstream compiler 25/native-access requirements. Added creator-test compilation and
+profiles also use 25 and explicit native access. Existing disassemblies, archives,
+launch scripts and player settings remained untouched.
+
+Java 25 reconciliation check: queued normal commonAPI+ProjectScaffolder+
+TestModExamplePersistence selector 93/93 passed, zero skips,1m14s. The mistakenly named
+TestControlledFrameRuntimeNativeInput selector matches no class; no controlled-runtime
+qualification is inferred from it. The actual TestControlledFrameRuntime/CourseControl
+and new Mutator overlay integration are separately required. Creator Python safety
+suite remains 16/16. Build-only package passed 40.780s; bundled Time Attack strict package
+reported zero findings. This package is a provisional matching8172 source identity,
+not the final kit/install qualification.
+
+The updated destination base is pinned at b6d0ff76f73b3e57165e9d475f0c95496eb762ad.
+Baseline dry-run selects 3,144 ordinary classes plus all guards. Preflight initially
+rejected host default Lua 5.5, then passed with JAVA_HOME=/usr/lib/jvm/java-25-openjdk
+and LUA_BIN=/usr/bin/lua5.4. No alternatives or host tools were changed. Baseline run
+20261012T154326Z-11024d8f began after 333s queue wait; its complete outcome remains
+pending here. Execution timeout 40 minutes/no-output 10 minutes, with timeout treated as
+incomplete. The candidate union and post-integration checks remain required.
+
+Installed inventory at this checkpoint: Egg jar SHA256
+6eaf6ed5edd4928881df9fbf8abbcb50a5eebe70bab013f7a333d3759618bb22 is unrelated and untouched;
+old sample-Flappy SHA256 2e8d21c4c44ec9b30cf201919000d75260cae31f619da7c59496f65663084ed6
+is disabled/untrusted in modstate. Rebuild/replacement qualification will preserve that
+player choice, use isolated trust/Apply/startup checks and retain its rollback outside
+mods. No player enablement/trust/saves have been changed at this checkpoint.
+
+## Remaining source/API composition checkpoint
+
+Local root `17b94be0f` merges `df7a9a799` art lifecycle repairs for Slay and Three
+Islands. The actual provisional matching Java 25 creator runs pass Slay142/142 and
+Three Islands95/95, zero skips and strict package zero findings. Canonical engine/ROM
+selectors remain queued; these external checks do not certify native scene pixels.
+
+The pending root qualification strengthens Native Flappy's existing integration
+fixture with real isolated two-confirm trust, title Apply, persisted-hash rescan and
+native launch. `sample.flappy.jar.path` chooses a real SDK-built binary instead of
+recompiling source. Player installed enablement/trust stays untouched. A new offscreen
+Slay check compares actual ROM boss composition pixels with the pre-uplift ordered
+part emitter for origins/scale/mirrored children at three animation samples; availability
+and skips will be recorded after its queued result, not inferred from compilation.
+
+Time Attack's remaining settings/custody source is stable on the worker: dirty snapshot
+retry/exit/LAN publication, bounded uploader admission/dedup/close, and bounded round
+recording storage preserving the original unexpired-body policy. Initial regressions
+were five engine custody failures plus eight actual creator scene/TLS failures; final
+provisional external consumer run38/38, zero skips, strict package zero findings.
+The normal ten-class engine request remains the commit gate.
+
+The 28-manifest provisional ledger reports52 actual NON_API_ENGINE_REFERENCE warnings:
+Infinite25, Golf9, Survivors18, with zero findings in the other25 sources. All28 packages
+passed against matching8172 Java25 artifacts. Converter staging was initially wrong
+in four sources because binary-assets.properties must be removed after decoding;
+only those staging recipes were corrected/rerun. Tide's22 authored assets and gallery
+waveform were generated, Three Islands Maps generator matched source exactly. Final
+new-identity requalification and source-qualified warning dispositions follow separately.
+
+## Updated-base timeout (not a baseline suite pass)
+
+Baseline `b6d0ff76f` run20261012T154326Z-11024d8f stopped at the declared40-minute
+invocation limit after2401.33s. It had22720 reported tests,0 failures/errors and57
+skips in2593 XML reports; ordinary validation was incomplete at
+TestS3kDdzCompatibilityMatrix and guards did not run. The process was still producing
+route output, so this is a cost limit rather than evidence of a deadlock or pass.
+Skipped outcomes were inspected:32 Infinite terrain/fixture assumptions,5 GL/EGL
+availability checks,1 CPZ spin-tube interaction assumption and19 opt-in checks.
+Results were consumed and the run acknowledged/deleted. Full baseline qualification
+will be rerun unchanged with120-minute execution and10-minute no-output limits,
+consistent with the observed current full-run cost; no selection is removed.

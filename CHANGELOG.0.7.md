@@ -1091,9 +1091,15 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Save-field inputs are frozen through the provider's owner boundary, standalone
   audio profiles can omit a native ROM loader, and object reconstruction preserves
   optional restore services without exposing runtime fallback access.
-  Shared helpers cover standalone assembly, character landing/reset hooks,
-  immutable physics and placement edits, bounded storage and captured state,
-  authored fonts and overlays, remappable actions and ROM-qualified scene art.
+  Shared helpers cover declarative owned object assembly, factory-bound character
+  identity and standard art emission, immutable physics and placement edits,
+  checked owner-local save slots and captured state, authored fonts and overlays,
+  remappable actions and ROM-qualified scene art. Save slots preserve rejected files,
+  report failed publication and retry the same checkpoint without repeating rewards.
+  Ordered sprite composition and scoped canvas transforms share geometry across logic
+  and drawing; gameplay row admission distinguishes native input, controlled neutral
+  stepping and a complete hold. Injected floor/contact, spring sound and destruction
+  services remove repeated native-object workarounds.
   Shared compact-font metrics and drawing support scales 1–8, including Sitar's
   five-times-size count-in without changing its authored pixels or audible clock.
   Generated character starters draw their installed baked art; walkthroughs use
@@ -1101,7 +1107,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Generated standalone starters materialize authored audio as runtime resources
   before packaging.
   The maintained examples adopt these helpers while retaining their game rules,
-  visuals, input formats, random sequences and saved profiles. Creator tests use
+  visuals, input formats, random sequences and saved profiles. Prepared definitions
+  and generation-owned caches avoid repeated construction; Slay targeting is independent
+  of draw cadence and Survivors settlements credit once across rewind. Creator tests use
   production validation/loading/resolution and record real scene input and draws;
   authored playable routes retain their wider gameplay/rewind coverage obligations.
   The API descriptor remains the version/publication authority; this
