@@ -71,6 +71,14 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Enabled audio is not proof of a working runtime audio device (2026-10-12,
+runtime performance qualification): forcing an unavailable OpenAL backend
+continued with SMPS synthesis but a no-device speaker fallback. Reject that run
+as complete-runtime audio evidence. Inspect the actual sink, sample format and
+process-owned output stream. A task-owned private output can retain the mixer
+without audible desktop playback; verify its destination and leave the user's
+fallback device unchanged. Pin it before acceptance measurements.
+
 Native stage measurements have multiple caller boundaries (2026-10-09, Mutator
 Lab expansion): `GameLoop.step()` and the movie renderer do not certify
 interactive speed or native stage drawing. The configured Engine headless seam

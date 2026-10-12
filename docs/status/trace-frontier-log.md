@@ -112145,3 +112145,27 @@ updated ordinary plan selects all3060 classes plus fresh guards. Main6124
 is frozen in its owner's admitted replacement9377cfcd/session75501; root's
 original1f3/ec467d13/session57481 remains unchanged. Neither pending broad
 result, actual-main parity integration, push nor cleanup is claimed complete.
+
+
+## 2026-10-12 — AIZ → HCZ performance prerequisite candidate
+
+Worktree `.worktrees/ai-runtime-perf-series`, branch
+`feature/ai-runtime-perf-series`, uncommitted candidate over `a0e2b79cc`.
+The untouched complete routes fail with 57 errors (original, first row 20,302
+animation $00/$05) and 99 errors (alternate, first row 25,589 animation $13/$05).
+The candidate retains ROM boss/button/bridge owners, uses the native results
+allocator and parent release, and fixes input/eject dispatch ownership. Original
+now passes with zero errors across 20,463 compared observations and matching
+terminal hardware work. Alternate still fails with 59 errors at row 25,589,
+animation $13/$05. No fixture/tolerance change or gameplay trace hydration.
+
+Command: `JAVA_HOME=/usr/lib/jvm/java-21-openjdk python3 tools/testing/maven_queue.py
+-Dmse=off -Ptrace-replay -Dsurefire.forkCount=1
+'-Dtest=TestS3kAizTraceReplay#replayMatchesTrace,TestS3kAizZoneSliceTraceReplay'
+"-Ds3k.rom.path=${OPENGGF_ROM_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen"
+test -B`. Completed 2 tests, 1 inherited failure, no errors/skips. The
+[validation record](../architecture/validation/performance/2026-10-12-runtime-performance-series.md)
+contains the intermediate rejected accuracy variants, focused commands, native
+routine evidence and remaining coverage. Original is the proposed mandatory
+handoff route; alternate slot/lifetime mismatch remains explicit. Updated-base
+controls, combined validation, integration and performance qualification are pending.

@@ -34,6 +34,29 @@ public class TestSonic3kZoneFeatureProvider {
     }
 
     @Test
+    public void nativePostBossPhaseKeepsForestFrontDisplayWithoutSyntheticOwners() {
+        TestZoneFeatureProvider provider = new TestZoneFeatureProvider();
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        FakeAizEvents events = new FakeAizEvents();
+        events.setBossFlag(true);
+        provider.setAizEvents(events);
+        com.openggf.game.sonic3k.objects.Aiz2BossEndSequenceState.reset();
+        try {
+            com.openggf.game.sonic3k.objects.Aiz2BossEndSequenceState.triggerBridgeDrop();
+            provider.update(player, 0x4880, Sonic3kZoneIds.ZONE_AIZ);
+            assertEquals(RenderPriority.PLAYER_DEFAULT, player.getPriorityBucket(),
+                    "the bridge-open flag does not end the still-active boss phase");
+            events.setBossFlag(false);
+            provider.update(player, 0x4880, Sonic3kZoneIds.ZONE_AIZ);
+            assertEquals(RenderPriority.MIN, player.getPriorityBucket(),
+                    "the native post-boss phase retains the display bucket without replacing SSTs");
+            assertFalse(player.isHighPriority(), "Obj_PathSwap still owns the independent art tile bit");
+        } finally {
+            com.openggf.game.sonic3k.objects.Aiz2BossEndSequenceState.reset();
+        }
+    }
+
+    @Test
     public void forestFrontPhaseMovesPlayerBucketWithoutOwningPathPriority() {
         TestZoneFeatureProvider provider = new TestZoneFeatureProvider();
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
