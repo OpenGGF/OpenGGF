@@ -522,14 +522,17 @@ remain historical evidence; final delivery qualifies the updated toolchain/base.
 
 ### Newly landed consumers
 
-Current inventory contains 28 maintained manifest sources: the original examples,
+The preliminary checkpoint contained 28 maintained manifest sources: the original examples,
 fixture/data samples and tutorial checkpoints, Act Practice and bundled Time Attack.
 The third added manifest is `examples/example-mutators`, delivered with the new
 Mutator Lab upstream. Its expanded version retains one manifest identity. Time Attack now uses one atomically published ghost as its
 pairing authority, retained hash-addressed sidecars, checked bounded lazy lookup,
 validated clock/route/split/encoding metadata and explicit save notices. Original
 corrupt/future primary bytes remain preserved; previous playback is read-only.
-Settings retry and upload/vault boundedness are completing separate observed regressions.
+Settings retry and upload/vault boundedness were repaired and qualified in subsequent
+bounded checks recorded in the validation artifact. The updated destination then
+added Starpost Valley as the 29th manifest; its saves, art recovery and scene/native
+boundaries are included in the current remediation.
 
 Mutator Lab is ten authored Java files with eleven typed definitions and three native
 patches. It uses injected configuration and engine-owned title/overlay/policy state;

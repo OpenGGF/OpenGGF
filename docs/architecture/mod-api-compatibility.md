@@ -764,3 +764,12 @@ regenerated; descriptor version/status and published baselines remain unchanged.
 Closing an outer transform revokes all descendant views. Their later close cannot
 reintroduce a retired clip; ordinary nested try-with-resources also restores each scope
 after a creator fault.
+
+`TitleCardPresentation` supplies pure provider-piece positions; callers retain
+their clock, loading hold, release/hurry/completion and missing-piece policies.
+`AtlasFont.GlyphCase.EXACT_FIRST` with an explicit fallback retains distinct
+upper/lowercase glyphs while existing calls keep uppercase lookup and blank
+unknown-character advances. The descriptor was reviewed and retains `0.7.0`
+candidate with no published baselines; its strict key/value schema does not carry
+surface prose. `ModApiVersion`, curated roots and the exact mutable pin describe
+the additions together.

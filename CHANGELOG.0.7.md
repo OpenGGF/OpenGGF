@@ -1116,6 +1116,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   and drawing; gameplay row admission distinguishes native input, controlled neutral
   stepping and a complete hold. Injected floor/contact, spring sound and destruction
   services remove repeated native-object workarounds.
+  Provider title-card positions share choreography while preserving each scene's
+  loading/release policy, and atlas fonts support authored mixed-case glyphs with
+  an explicit fallback.
   Shared compact-font metrics and drawing support scales 1–8, including Sitar's
   five-times-size count-in without changing its authored pixels or audible clock.
   Generated character starters draw their installed baked art; walkthroughs use

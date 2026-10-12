@@ -178,8 +178,8 @@ invocation limit after2401.33s. It had22720 reported tests,0 failures/errors and
 skips in2593 XML reports; ordinary validation was incomplete at
 TestS3kDdzCompatibilityMatrix and guards did not run. The process was still producing
 route output, so this is a cost limit rather than evidence of a deadlock or pass.
-Skipped outcomes were inspected:32 Infinite terrain/fixture assumptions,5 GL/EGL
-availability checks,1 CPZ spin-tube interaction assumption and19 opt-in checks.
+Skipped outcomes were inspected: 32 Infinite terrain/fixture assumptions, 5 GL/EGL
+availability checks, 1 CPZ spin-tube interaction assumption and19 opt-in checks.
 Results were consumed and the run acknowledged/deleted. Full baseline qualification
 will be rerun unchanged with120-minute execution and10-minute no-output limits,
 consistent with the observed current full-run cost; no selection is removed.
@@ -489,7 +489,7 @@ matching the intended retained scene/act loop. No broader stale-history or forei
 graph guarantee is inferred from this bounded source review.
 
 The bounded P18 implementation introduces one local AssetFailures class (258 main
-sources after this batch), with at most64 expected failures and256-character request/
+sources after this batch), with at most 64 expected failures and256-character request/
 cause fields, retrying at120 owner logic ticks. Startup required art, Ruins/Festival
 facades and soundtrack retain successes separately, propagate NPE/generic runtime/
 Error/CallbackAborted faults and publish complete flower/slot/snowboard candidates.
@@ -609,8 +609,8 @@ does not claim a passing run. Input worker is promoting the actual Starpost prob
 
 Read-only comparison at `38958c67b` covers Egg's `ArtFailures`, Slay/Three Islands'
 `Art.attempt`, and Starpost's `AssetFailures.load`. All four now use the same pure
-mechanics: at most64 insertion-ordered failure entries, request/cause text bounded
-to256 characters, immutable snapshots without exception graphs, saturated
+mechanics: at most 64 insertion-ordered failure entries, request/cause text bounded
+to 256 characters, immutable snapshots without exception graphs, saturated
 `now + 120` deadlines, suppressed work before a deadline, and status removal after
 success. Successful images/banks stay in separate caches. Slay and Three additionally
 propagate a dependency's original category, cause and deadline; this avoids a new
@@ -669,7 +669,7 @@ files and the exact pending checkpoint for retry.
 Queued Java25 normal `TestSlayCompositePixels#romBossCpuPixelsPreserveLegacyOriginsFlipsAndOrder`
 with the canonical absolute S3K ROM passed 1/1, zero skips, 1m10 Maven execution.
 The actual packed Slay mod was validator-clean. Three ROM-backed boss poses
-(AIZ flamecraft, HCZ screw mobile and LBZ beam rocket) at ticks0/29/61 preserve
+(AIZ flamecraft, HCZ screw mobile and LBZ beam rocket) at ticks 0/29/61 preserve
 legacy ordered pixel-centre rasterization, sprite origins, flips and overlaps.
 The fixture tests detached CPU pixels; it does not certify the GPU renderer.
 Its separate GL test remains availability-skipped because the owned offscreen
@@ -686,13 +686,13 @@ env JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools
 
 The command was launched from the main checkout; `$PWD` denotes its actual canonical
 absolute ROM-directory argument without embedding a machine-local path here.
-The plan selected3155/3155 ordinary classes and all guards; reports cover3153
-ordinary and88 guard classes. Ordinary completed27,431 tests:26 failures,0 errors,
-63 skips,3659.31s. Fresh guards completed677 tests:0 failures/errors/skips,280.10s.
-This is a completed red baseline, not a green delivery. All26 failures are existing
-MHZ/LRZ/SSZ/DEZ route assertions. Skips were inspected:32 Infinite terrain/fixture
-assumptions,5 GL/EGL availability checks,1 CPZ interaction assumption,1 missing local
-BizHawk audio reference and24 opt-in diagnostics/captures. Required ROM paths were
+The plan selected 3155/3155 ordinary classes and all guards; reports cover 3153
+ordinary and 88 guard classes. Ordinary completed 27,431 tests: 26 failures, 0 errors,
+63 skips, 3659.31s. Fresh guards completed 677 tests: 0 failures/errors/skips, 280.10s.
+This is a completed red baseline, not a green delivery. All 26 failures are existing
+MHZ/LRZ/SSZ/DEZ route assertions. Skips were inspected: 32 Infinite terrain/fixture
+assumptions, 5 GL/EGL availability checks, 1 CPZ interaction assumption, 1 missing local
+BizHawk audio reference and 24 opt-in diagnostics/captures. Required ROM paths were
 injected from the existing main checkout; no ROM copies or links were created.
 
 Failure comparison uses the full assertion before its stack, not the runner
@@ -759,3 +759,33 @@ missing optional ROM produced inspectable status, and both NPE and generic provi
 state reached the verified owner fault boundary. XML cases/skips and the full earlier
 assertion were inspected; no raw logs were archived. This combined focused evidence
 does not certify the later final SDK identity or root integration/ordinary/guards.
+
+## Final helper composition checkpoint
+
+P17 source `505d52bfd` is integrated as `87d990bab`: pure title-card positions in
+Flappy, Sitar and Slay, and exact-case atlas lookup in Three Islands. The worker
+qualified six presentation classes (35 tests), its common API gate with
+CourseControl/JarValidator (93 tests), and four actual external portable consumers
+(Flappy 24, Sitar 52, Slay 142, Three Islands 95; total 313). All have zero skips; each
+portable package was validator-clean. The matching provisional artifacts were
+labelled dirty at `3b52e43c4`, so this is not the final clean kit identity. An actual
+Slay package failure caught helper calls in unsupported static initialization;
+queries moved to ordinary methods, preserving the caller's literal completion policy.
+Original recorded CPU pixels at 320/400/528/800 and release/hold/omission cases passed.
+
+Input followups `2a825aeff` and `e46ce73a9` are integrated. Java25 queued Starpost
+Example completed its two wrapper tests and all 231 authored checks with zero skips;
+six canonical native classes passed 94/94, zero skips, 161s after 2253s queue waiting.
+The latter includes real storage directory obstruction, exact retained checkpoint
+recovery without repeated day/RNG changes, proper exit and native scene handoffs.
+
+Root storage qualification first encountered a compile-phase source race: P17
+merged between production compilation and test compilation, leaving new tests
+without new helper classes. No tests ran in that attempt. A settled Java25 compile
+passed 49.685s, and the compiled inventory exactly matches all 20,101 pinned rows.
+Queued lean eight-class storage/common API run then completed 107 tests: 104 passes,
+three policy errors, zero skips (30.525s). The 33 storage/save-slot cases passed.
+The policy errors rejected comments added to the strict descriptor format; those
+comments were removed, preserving its existing authority values. Only the three
+affected policy classes reran: 18/18 passed, zero skips, 28.058s. No policy parser or
+selection rule was loosened. Final broad delivery and matching clean kit remain open.

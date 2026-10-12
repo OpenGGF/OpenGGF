@@ -632,6 +632,16 @@ API gate for accepted additions, actual cancellation/network/renderer/rewind pro
 specified. Record evidence and explicit limitations; do not call a prototype a shipped
 capability. These investigations may proceed separately from the core defect repairs.
 
+**Execution verdict:** title choreography and exact-case atlas lookup are implemented
+with real consumer migrations (`505d52bfd`, integrated as `87d990bab`). Presentation
+and common API checks passed; the provisional external consumer matrix passed 313
+tests without skips. Cancellable art, protocol-neutral Golf transport, auxiliary
+spawn convenience and inspectable disabled focus are deferred with measured/source
+evidence and explicit reopening conditions in the audit/validation record. The
+repeated art-failure ledgers are a further concrete pure-status extraction candidate;
+their clock, fault and resource-lifetime contract must be qualified before uplift.
+Final clean kit and combined delivery qualification remain separate gates.
+
 ### P18. Improve orchestration and diagnostic clarity where it serves the fixes
 
 **Owns:** remaining code-quality observations. **Files:** Eggman's Sky SurfaceMode/Game/

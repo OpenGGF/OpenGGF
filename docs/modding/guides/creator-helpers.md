@@ -67,6 +67,15 @@ glyphs, inconsistent dimensions and malformed rows. Font input is bounded to
 scale is 1–8. Tower Defence and Slay retain their authored fonts through this
 parser; their markup and card/button styling remain project code.
 
+The default parser normalizes headers and lookup to uppercase, and unknown
+characters advance without drawing. To retain distinct upper/lowercase artwork,
+use `AtlasFont.parse(bytes, height, AtlasFont.GlyphCase.EXACT_FIRST, '?')`.
+Lookup tries the exact character, then uppercase, then the specified fallback.
+A nonzero fallback must exist in the face; `'\0'` retains blank unknown-character
+advances. Spaces keep their normal advance, and measurement omits the final gap.
+Three Islands uses this overload while retaining its authored font pixels,
+wrapping, colors and shadows.
+
 `TextLayout` accepts a `Metrics` callback, so it works with either font:
 
 ```java
@@ -93,8 +102,8 @@ screen transitions and button actions. Map keyboard/pad input through
 
 Get the ROM handle from the scene's art service. Named `StockSceneArt` recipes
 are qualified by game and exact ROM SHA-1. The supplied catalogue currently covers
-twelve commonly reused S3&K locked-on banks, including rings, Robotnik's ship,
-the capsule, explosions, several badniks and the players' dash dust
+fifteen commonly reused S3&K locked-on banks, including rings, Robotnik's ship,
+the capsule, explosions, monitors, AIZ rocks, several badniks and the players' dash dust
 (`S3K_DASH_DUST`: the spin dash cloud and skid puffs, streamed through the player
 DPLC layout on palette line 0; play its `Ani_DashSplashDrown` scripts, read from
 the ROM at `$18DC0`, with `RomAnimationPlayer`). Skid child frames `$11–$14`
@@ -134,9 +143,47 @@ lifecycle, palette assembly and named/raw recipe mix.
 
 `SpriteAnchors.feet` places a sprite on a ground line using its origin, dimensions
 and scale. `centre` centers its image while respecting both mirror axes. `feet` retains the
-ground line under vertical mirroring. These
-avoid repeated placement arithmetic. Object children, composite bosses and other
-multi-part poses still need the mod's own arrangement.
+ground line under vertical mirroring. These avoid repeated placement arithmetic.
+
+For a multipart pose, build a `SpriteComposition` from an ordered immutable list
+of `Part(sprite, x, y, flipX)` values. `place(x, y, style)` prepares the complete
+pose, respecting each sprite origin, part flip, whole-pose flips and independent
+X/Y scaling. Its `Placement.bounds()` supplies detached geometry before drawing;
+`Placement.draw(canvas)` emits only those prepared parts in the original order.
+Slay and Three Islands use this shared geometry while retaining their own boss
+recipes and animation. Prepare interaction geometry during update so skipping or
+repeating a draw cannot change gameplay.
+
+`SceneCanvasTransform` supplies scoped translation and opacity without a parallel
+canvas implementation:
+
+```java
+try (var shifted = new SceneCanvasTransform(canvas, offsetX, offsetY, opacity)) {
+    shifted.clip(0, 0, panelWidth, panelHeight);
+    drawPanel(shifted);
+}
+```
+
+Nested transforms compose translation and opacity and restore the previous clip
+when closed. Closing a parent revokes its descendants. Keep them inside one draw
+callback and close them in reverse order. `clear` still covers the full viewport;
+custom canvas implementations must report their current `clipBounds()` for clip
+restoration. Sitar uses this helper for its shifted presentation.
+
+## Provider title-card presentation
+
+`TitleCardPresentation` evaluates positions for the provider's four title-card
+pieces: banner, name, ZONE and act. Call `position(element, arrivalElapsed,
+exitElapsed)` with indices 0–3, add `(canvas.width() - 320) / 2` to X and draw only
+frames the provider supplies. Skip absent/null pieces. Arrival moves 16 pixels
+per row; release moves 32, staggered at 1/3/5/7. Keep `exitElapsed` zero for an
+unlimited loading hold and start it at 1 on explicit release, or use
+`automaticExitElapsed(elapsed)` for the default 28-row arrival/90-row hold.
+`durationFrames(width)` supplies Flappy's existing width-dependent wait.
+
+The caller owns rendering, its clock, hurry/completion policy, replacement name
+and optional act display. The helper owns no images or scene lifetime. Flappy,
+Sitar and Slay share these positions without sharing their release policy.
 
 ## Choose an animation policy explicitly
 
@@ -182,8 +229,12 @@ recorded draws; use the level testing standard for full gameplay rewind.
 with ordered `Act` records containing a level index, authored `Level`, start
 position and `MusicReference`; the builder supplies core load/reset behavior,
 empty object/touch tables, native-silent audio and a default progression snapshot.
-Supply your own object registry, physics, audio, placement encoding, load profile
-or save provider where the game needs them. `AbstractStandaloneGameModule` and
+Use `.object(key, factory)` for owned factories: the builder supplies known-key
+lookup, creation and browsing consistently and rejects duplicate keys or a
+conflicting custom registry. Use the canonical identity bound by the factory;
+do not derive ownership from runtime class names. Supply your own registry,
+physics, audio, placement encoding, load profile or save provider where the game
+needs them. `AbstractStandaloneGameModule` and
 provider overrides remain available for expert assembly. The standalone and
 platformer gallery projects demonstrate the declarative path.
 
@@ -246,7 +297,37 @@ new writes use the canonical directory. Built-in game namespaces are excluded
 from that fallback. Updating or uninstalling a jar does not erase owner data.
 Survivors retains its existing profile format through the owner-storage migration.
 Infinite's leaderboard remains on its legacy
-`SavePaths.root()/infinite-sonic/leaderboard.txt` path; it has not migrated to owner storage.
+`SavePaths.root()/infinite-sonic/leaderboard.txt` read fallback, then writes to its
+verified owner storage. An unreadable or oversized generation remains read-only;
+unsaved leaderboard changes retry without reapplying the completed run.
+
+For an owner-local text checkpoint, `ModSaveSlot<T>` shares validation, recovery
+and checked publication while the mod owns its format through `ModSaveCodec<T>`.
+Construct one slot with `context.storage()`, a primary filename and optional
+backup filename, then keep it on the owning scene/module. The codec has no I/O:
+`decode` returns `VALID`, `CORRUPT` or `INCOMPATIBLE`, and `encode` must produce
+text that the same codec validates. Unexpected codec failures propagate through
+the normal owner fault boundary.
+
+`load()` distinguishes `ABSENT`, `VALID`, `RECOVERED`, `CORRUPT`, `INCOMPATIBLE`
+and `UNREADABLE`. A newer primary is authoritative and cannot silently fall back
+to an older format. Rejected bytes remain protected until the player's explicit
+New Game/reset decision calls `allowReplacement()`. A valid backup can recover a
+damaged primary; if corruption appears later, automatic recovery requires a backup
+to preserve the previously validated generation. A slot without a backup protects
+those new corrupt bytes until explicit replacement. `save(value)` returns a
+`ModSaveWriteResult`; display "saved"
+only when `saved()` is true. An incompatible backup also requires explicit replacement.
+Unreadable backups and required backup write failures prevent primary publication,
+and oversized text is rejected before writing.
+
+On a failed publication, `pending()` reports the retained encoded checkpoint;
+call `retry()` on a bounded cadence and during exit. Retrying does not encode
+again or repeat rewards, calendar changes or RNG. Each file write is atomic;
+the primary/backup sequence is not a transaction across two files. Slay, Three
+Islands and Starpost Valley demonstrate local codecs and explicit replacement
+decisions. Keep non-rewound settlement ledgers outside captured gameplay state
+when rewinding must not grant the same durable reward twice.
 
 `VersionedSettings` is an immutable ordered `key=value` document. Unversioned
 legacy text remains version zero; `empty(1)` declares `formatVersion=1`.
