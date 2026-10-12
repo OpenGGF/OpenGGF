@@ -104,6 +104,7 @@ public final class Capsule implements SaveSection {
      * the Vault). Completing a chamber sets its reward flag in the game.
      */
     public int deliver(Game game, Chamber chamber, Bundle bundle) {
+        if (complete(bundle)) return 0;
         int given = 0;
         if (bundle.rings() > 0) {
             int need = bundle.rings() - delivered(bundle, "rings");
@@ -173,29 +174,33 @@ public final class Capsule implements SaveSection {
 
     @Override
     public void load(Map<String, String> in, Catalog catalog) {
-        delivered.clear();
+        Map<String, Integer> accepted = new LinkedHashMap<>();
         for (Map.Entry<String, String> e : in.entrySet()) {
             int count = Integer.parseInt(e.getValue());
-            if (count > 0 && count <= 100000 && known(e.getKey())) {
-                delivered.put(e.getKey(), count);
-            }
+            int target = target(e.getKey());
+            if (target < 0) continue; // Preserve legacy handling of unknown bundle/item keys.
+            if (count > target) throw new IllegalArgumentException("Delivery exceeds bundle target: " + e.getKey());
+            if (count > 0) accepted.put(e.getKey(), count);
         }
+        delivered.clear();
+        delivered.putAll(accepted);
     }
 
-    /** Only keys naming a real bundle and one of its wants are kept. */
-    private boolean known(String key) {
+    /** The declared target of a known bundle/item, or -1 for an unknown key. */
+    private int target(String key) {
         int dot = key.indexOf('.');
         if (dot < 0) {
-            return false;
+            return -1;
         }
         String bundleId = key.substring(0, dot), item = key.substring(dot + 1);
         for (Chamber chamber : chambers) {
             for (Bundle bundle : chamber.bundles()) {
-                if (bundle.id().equals(bundleId) && (bundle.rings() > 0 ? item.equals("rings") : bundle.wants().containsKey(item))) {
-                    return true;
+                if (bundle.id().equals(bundleId)) {
+                    return bundle.rings() > 0 ? (item.equals("rings") ? bundle.rings() : -1)
+                            : bundle.wants().getOrDefault(item, -1);
                 }
             }
         }
-        return false;
+        return -1;
     }
 }
