@@ -28,6 +28,26 @@ class TestSonic1SfxData {
         }
 
         assertArrayEquals(expected, data.getZeroAddressFmVoice(1));
+        data.getZeroAddressFmVoice(1)[0] = 99;
+        assertArrayEquals(expected, data.getZeroAddressFmVoice(1));
+    }
+
+    @Test
+    void zeroAddressVoiceRejectsOverflowWithoutAliasingBankData() {
+        Sonic1SfxData data = new Sonic1SfxData(new byte[] {0, 0}, 0);
+        // An absent bank retains its null result even at the historical boundary.
+        assertNull(data.getZeroAddressFmVoice(85_899_345));
+        data.setZeroAddressVoiceBank(new byte[50]);
+
+        assertNull(data.getZeroAddressFmVoice(85_899_344)); // Last complete int range.
+        assertThrows(IllegalArgumentException.class,
+                () -> data.getZeroAddressFmVoice(85_899_345)); // End exceeds int range.
+        assertNull(data.getZeroAddressFmVoice(85_899_346)); // Start exceeds int range.
+        assertNull(data.getZeroAddressFmVoice(Integer.MAX_VALUE));
+        assertNull(data.getZeroAddressFmVoice(Integer.MIN_VALUE));
+        assertNull(data.getZeroAddressFmVoice(-1));
+        // int multiplication formerly wrapped this oversized ID to bank offset 3.
+        assertNull(data.getZeroAddressFmVoice(1_202_590_843));
     }
     @Test
     void musicSfxAndZeroAddressVoicesPreserveFormatBoundsAndCopyIsolation() {

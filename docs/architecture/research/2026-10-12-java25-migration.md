@@ -83,7 +83,8 @@ is separate from local ROM/trace evidence. User gameplay acceptance remains pend
 
 ## Validation evidence
 
-Implementation is complete; broad and platform execution remain in progress.
+The initial implementation is committed as `84fe179b4`; verification and the
+compatibility fixes discovered by hosted execution remain in progress.
 
 Completed focused evidence on the task worktree with Temurin 25.0.4.1+1:
 
@@ -91,16 +92,16 @@ Completed focused evidence on the task worktree with Temurin 25.0.4.1+1:
   after the cache type qualification (3,777 production / 3,650 test sources).
 - `python3 -m unittest discover -s tools/testing -p 'test_run_category_*.py' -q`:
   109 passed. An initial launch on the old PATH JDK failed two dynamic compiler
-  tests (`release version 25 not supported`); the correct JDK25 rerun passed.
+  tests (`release version 25 not supported`); the correct JDK 25 rerun passed.
   After native-access profiler updates, the twelve `test_run_category_*memory*.py`
   tests passed again.
 - Creator-kit Python12, Linux packaging Python3 and Windows packaging Python3:
   pass; these are packaging logic tests, not native-platform execution.
-- FM profile preparation and malformed-input harnesses: pass on Java25.
+- FM profile preparation and malformed-input harnesses: pass on Java 25.
 - `jdeps --jdk-internals --ignore-missing-deps --multi-release 25 target/classes`:
   no reported internal API usage; static analysis does not detect reflection.
 - Change-based plan selects the full ordinary suite (3,080 candidate classes)
-  and guards; actual Java25 / Lua5.4 / PowerShell preflight passed.
+  and guards; actual Java 25 / Lua5.4 / PowerShell preflight passed.
 - Combined read-only review: Python AST25 files, Bash13 scripts, XML10
   POM/templates, whitespace and mirrored guidance checks passed. No unresolved
   critical/important findings remained; this is not execution certification.
@@ -108,13 +109,13 @@ Completed focused evidence on the task worktree with Temurin 25.0.4.1+1:
 Exact completed broad commands, outcomes, remaining failure identities and
 coverage limits are recorded here before handoff.
 
-The first unchanged Java21 baseline invocation, `LUA_BIN=/usr/bin/lua5.4
+The first unchanged Java 21 baseline invocation, `LUA_BIN=/usr/bin/lua5.4
 python3 tools/testing/run_categories.py --category all --run`, stopped at its
 40-minute execution limit (run `20261012T092936Z-410c6146`, 2401.26 seconds).
 It is incomplete: 2,686 reports / 23,342 cases / one failure / zero errors /
 57 skips; guards had not started. The completed reports exposed the pre-existing
 `TestModManagerScreenHost.hostMapsRealInputHandlerAndPixelFontAcrossTheNeutralModUiBoundary`
-failure at line58 (`expected: <true> but was: <false>`): the test expects
+failure at line 58 (`expected: <true> but was: <false>`): the test expects
 `No mods discovered.` while existing production renders
 `No mods. Apply to rescan jars.`. No missing-ROM skips occurred. Skips comprised
 19 opt-in diagnostics/captures/soaks, five unavailable graphics contexts,
@@ -124,12 +125,121 @@ partial reports are not full-suite acceptance. Diagnostics were inspected and
 acknowledged before retrying.
 
 Focused candidate verification then reproduced that same UI assertion unchanged
-on Java25: `-Dtest=TestGgfModCliCommands,TestCompleteRunAudioCli,TestSmpsRepeatedPlaybackBenchmarkComparator,TestModManagerScreenHost`
+on Java 25: `-Dtest=TestGgfModCliCommands,TestCompleteRunAudioCli,TestSmpsRepeatedPlaybackBenchmarkComparator,TestModManagerScreenHost`
 ran 36 cases, one identical line58 failure, zero errors/skips. Only the stale
 expected UI text was corrected; production rendering is unchanged. This repairs
-pre-existing test debt needed for PR checks, not a Java25 engine defect.
+pre-existing test debt needed for PR checks, not a Java 25 engine defect.
 The nine-class SDK/SQLite/tooling check ran 187 cases with zero skips: all 67
 SDK/SQLite cases passed; two of 120 tooling guard cases exposed outdated JNI
 argLine and launcher-mock expectations. Those assertions were updated and a
 new executable launcher test proves JAVA_HOME precedence even when PATH Java
 would fail. The launcher Python suite passes all ten cases.
+
+
+At `84fe179b4`, the complete corrected `TestBuildToolingGuard` (120) and
+`TestModManagerScreenHost` (2) rerun passed all 122 cases with zero skips using
+`maven_queue.py --lean -Dmse=off -Dtest=TestBuildToolingGuard,TestModManagerScreenHost test`.
+The actual `ci-pr` policy range from the pinned base to this commit passed,
+including the release-tree audit (12,293 entries), documentation trailers and
+both exact model coauthors.
+
+Mixed-runtime packaging used Temurin 25 via JAVA_HOME while PATH `java` remained
+21.0.12.1: `maven_queue.py -Dmse=off -DskipTests -Puniversal-jar verify` passed
+in 31.5 seconds. Two creator-kit ZIP assemblies were byte-identical and recorded
+clean source commit `84fe179b4707fdd6030a8688ce96defce7562ce0`; the engine class
+major was 69 and the executable manifest declared native access. All seven
+exported starter kinds (music/reskin/object/character/zone/scene/standalone)
+initialized, packaged with explicit `-DskipTests` using their inspected generated
+POMs, and validated with zero findings/warnings in that same split-JDK environment.
+The portable hello-scene builder and matching testkit identity check also passed.
+This checks artifact construction, not user gameplay or native-platform execution.
+
+The parent pushed only the feature branch and dispatched the nonpublishing
+[Release workflow 38238511966](https://github.com/OpenGGF/OpenGGF/actions/runs/38238511966)
+on that exact commit with `validate_roms=false`. Its ordinary tests completed
+23,302 cases, one failure, two errors and 4,286 skips; guards/native jobs were
+skipped after failure. Two genuine migration regressions were exposed:
+
+- `TestSonic1SfxData.musicSfxAndZeroAddressVoicesPreserveFormatBoundsAndCopyIsolation`
+  expected `IllegalArgumentException` at line 58, but Java 25 `Arrays.copyOfRange`
+  instead reached `arraycopy` and threw `ArrayIndexOutOfBoundsException` for a
+  length of -2147483600 at `Sonic1SfxData:98`. A voice offset/end overflow had been
+  relying on the JDK's validation order. The unchanged Java 21 baseline passed
+  both methods in this class with no skips. The fix must use nonoverflowing
+  bounds while retaining normal voice bytes, copy isolation and the explicitly
+  tested historical exception boundary.
+- Both `TestOwnedMocks` methods errored with `DisabledMockException` after owned
+  inline mocks were cleared (lines23/43). Both passed on the unchanged Java 21 /
+  Mockito 5.14.2 baseline. Mockito 5.20 explicitly documents disabled access after
+  clearing; the helper's per-owned cleanup is correct, while its old tests assumed
+  cleared concrete mocks reverted to real methods. Updated coverage must retain
+  the stronger requirement that another fixture's same-class mock survives.
+
+The still-waiting candidate broad, trace and graphics jobs were canceled cleanly
+before execution to avoid knowingly running uncorrected source. The baseline
+jobs were preserved. Original focused reproduction and corrective verification
+are recorded below when complete; no successful hosted/native result is claimed.
+
+Primary behavior evidence:
+[OpenJDK 21 Arrays](https://raw.githubusercontent.com/openjdk/jdk/jdk-21-ga/src/java.base/share/classes/java/util/Arrays.java),
+[OpenJDK 25 Arrays](https://raw.githubusercontent.com/openjdk/jdk/jdk-25-ga/src/java.base/share/classes/java/util/Arrays.java),
+[Mockito 5.20 cleanup contract](https://raw.githubusercontent.com/mockito/mockito/v5.20.0/mockito-core/src/main/java/org/mockito/MockitoFramework.java).
+
+
+The 90-minute f9 baseline retry (`20261012T101159Z-091381b7`) completed its
+ordinary lane just before cancellation: 3,078 reports / 26,679 cases / 28 failures /
+zero errors / 63 skips in 3,483.52 seconds. Its guard lane had started and was
+interrupted after upstream advanced to `e76a380c3d0c8e3769fcdb745f27ef3d8889c8fe`.
+The combined run is **incomplete and superseded**, not a full-suite pass. The
+completed ordinary failures are historical baseline evidence only; e76 becomes
+the required actual-destination baseline. No missing-ROM skips occurred: 32 skips
+were inapplicable Infinite Sonic routes, five unavailable graphics contexts,
+one CPZ spin-tube assumption and 25 optional diagnostics/captures/native checks.
+Diagnostics were inspected and acknowledged after capturing these identities.
+
+| Historical f9 ordinary failure | Message |
+|---|---|
+| `com.openggf.TestModManagerScreenHost.hostMapsRealInputHandlerAndPixelFontAcrossTheNeutralModUiBoundary` | expected: <true> but was: <false> |
+| `com.openggf.tests.TestS3kMhzAct2AuthoredRoute.incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String, int)[2]` | late pulley owns Tails ==> expected: <true> but was: <false> |
+| `com.openggf.tests.TestS3kMhzAct2AuthoredRoute.incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String, int)[3]` | late pulley owns Sonic ==> expected: <true> but was: <false> |
+| `com.openggf.tools.TestDezIncomingFinalRouteCapture.coldOrdinarySoloTailsClearsAllFinalPhasesAndLoadsEnding` | expected: <96> but was: <0> |
+| `com.openggf.tools.TestDezIncomingFinalRouteCapture.coldOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding` | expected: <96> but was: <0> |
+| `com.openggf.tools.TestDezIncomingFinalRouteCapture.incomingFinalFightRestoresAndReplaysEveryPhase(int)[1]` | death at 26706 ==> expected: <false> but was: <true> |
+| `com.openggf.tools.TestDezIncomingFinalRouteCapture.incomingFinalFightRestoresAndReplaysEveryPhase(int)[2]` | death at 26750 ==> expected: <false> but was: <true> |
+| `com.openggf.tools.TestDezIncomingFinalRouteCapture.coldWideOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding` | expected: <96> but was: <0> |
+| `com.openggf.tools.TestDezIncomingFinalRouteCapture.coldEmeraldTeamClearsBothActsFinalFightAndDoomsday` | death at 53897 ==> expected: <false> but was: <true> |
+| `com.openggf.tools.TestDezIncomingFinalRouteCapture.coldOrdinaryTeamClearsHandsCoreAndEscapeShipAndLoadsEnding` | expected: <96> but was: <0> |
+| `com.openggf.tools.TestLrzActTwoColdRouteCapture.coldTeamCompletesActTwoAndReachesBossActWithRepeatableWorldState` | death at input 36526 ==> expected: <false> but was: <true> |
+| `com.openggf.tools.TestLrzBossColdRouteCapture.coldTeamCompletesBossActWithEarnedShieldAndRepeatableWorldState` | death at input 36526 ==> expected: <false> but was: <true> |
+| `com.openggf.tools.TestLrzKnucklesColdRouteCapture.coldKnucklesCompletesActTwoAndReachesPlayableHiddenPalace` | expected: <1069> but was: <899> |
+| `com.openggf.tools.TestLrzTailsColdRouteCapture.coldTailsClearsActOneAndRestoresTraversalFightAndHandoff` | death at input 19460 ==> expected: <false> but was: <true> |
+| `com.openggf.tools.TestLrzTailsColdRouteCapture.coldTailsRestoresActTwoTraversalToTheMiddleCorridor` | death at input 19460 ==> expected: <false> but was: <true> |
+| `com.openggf.tools.TestLrzTailsColdRouteCapture.coldTailsCompletesBossActAndReachesPlayableHiddenPalace` | death at input 19460 ==> expected: <false> but was: <true> |
+| `com.openggf.tools.TestLrzTailsColdRouteCapture.coldTailsCompletesActTwoAndRestoresTheBoulderHandoff` | death at input 19460 ==> expected: <false> but was: <true> |
+| `com.openggf.tools.TestLrzWideBossColdRouteCapture.coldWideTeamClearsBossAndReleasesHiddenPalaceWithRepeatableWorld` | expected: <2796> but was: <524> |
+| `com.openggf.tools.TestMhzPairColdRouteCapture.pairedColdCompletionIsolatesTheLiveTimelineAtTheActualFbzLoad` | the route must observe the actual history-reset boundary ==> expected: <true> but was: <false> |
+| `com.openggf.tools.TestMhzWideColdRouteCapture.wideSonicCompletesBothActsThroughProductionLoopWithWholeWorldReplay` | [wide-route-19500] restore 0 zone-runtime: [zone-runtime.stateBytes[2]: A=46 B=26, zone-runtime.stateBytes[3]: A=-104 B=64, zone-runtime.stateBytes[6]: A=38 B=21, zone-runtime.stateBytes[7]: A=-44 B=-32, zone-runtime.stateBytes[10]: A=31 B=17, zone-runtime.stateBytes[11]: A=16 B=-128] ==> expected: <true> but was: <false> |
+| `com.openggf.tools.TestSszColdRouteCapture.coldCompleteRouteDefeatsMechaAndLoadsDeathEggWithRewindAtLateEvents` | death at input 7311 ==> expected: <false> but was: <true> |
+| `com.openggf.tools.TestSszColdRouteCapture.coldRouteDefeatsBothReplicasAndReplaysTraversalAndTransport` | death at input 7311 ==> expected: <false> but was: <true> |
+| `com.openggf.tools.TestSszSoloColdRouteCapture.coldSoloSonicDefeatsBothReplicasAndReplaysTheirApproaches` | death at 7671 ==> expected: <false> but was: <true> |
+| `com.openggf.tools.TestSszSoloColdRouteCapture.coldSoloSonicDefeatsMechaAndLoadsDezWithIsolatedHistory` | death at 7671 ==> expected: <false> but was: <true> |
+| `com.openggf.tools.TestSszTailsColdRouteCapture.coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory(int)[1]` | expected: <48> but was: <0> |
+| `com.openggf.tools.TestSszTailsColdRouteCapture.coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory(int)[2]` | expected: <48> but was: <0> |
+| `com.openggf.tools.TestSszTailsColdRouteCapture.coldSoloTailsDefeatsBothReplicasAndRidesTheirTeleporters(int)[2]` | replay at 4018 object-manager: [object-manager.usedSlotsBits differs, object-manager.usedSlotsBits.onlyA: 24, 29, object-manager.dynamic[6][ObjectRefId[slotIndex=-1, generation=0, spawnId=-1, dynamicId=125, kind=DYNAMIC]] missing in B (A=DynamicObjectEntry[className=com.openggf.g… (truncated; full-message SHA-256 5344e2df6b89fd8630a267752e704c71dfb3bc4d9d862368600246eae3f7e22b) |
+| `com.openggf.tools.audio.timeline.TestS1GameplayAudioTimelineCli.shellUsesAbsoluteBootstrapToolsAndRejectsInjectedEnvironmentBeforePathLookup` | expected: <0> but was: <4> |
+
+Both `TestSonic1SfxData` methods and both `TestOwnedMocks` methods passed on this
+unchanged Java 21 baseline with zero skips. The local Java 25 focused reproduction
+then ran those exact four cases: one IAE-versus-AIOOBE failure and two
+`DisabledMockException` errors, zero skips (24.33 seconds, source 84fe179b4).
+This independently matched the hosted failures before either fix was applied.
+
+
+The corrected focused run passed all five cases (SfxData 3, OwnedMocks 2), zero
+failures/errors/skips, in 70 seconds. Long offset/end arithmetic now prevents
+wraparound aliasing while retaining the tested invalid-range exception and all
+valid voice bytes/copy isolation. OwnedMocks still clears only its own instances;
+tests now enforce Mockito's disabled lifecycle, surviving same-class foreign mocks,
+discarded default answers and idempotent close. LWJGL 3.3.3 emitted its expected
+JDK 25 `Unsafe.objectFieldOffset` deprecation warning; access succeeded and no
+suppression or experimental compatibility flag was added.

@@ -8,8 +8,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Mocks owned by one fixture invocation. Closing releases inline interceptors,
- * stubbings and recorded arguments without invalidating other fixtures' mocks.
+ * Mocks owned by one fixture invocation. Closing clears each owned mock's inline
+ * state (including stubbings and recorded arguments) without invalidating other
+ * fixtures' mocks. Mockito disables cleared mocks: they must not be inspected or
+ * invoked after close. Closing again is harmless; this owner can track fresh mocks.
  * Origin: 2026-10-07 ordinary-suite retained-memory investigation.
  */
 public final class OwnedMocks implements AutoCloseable {

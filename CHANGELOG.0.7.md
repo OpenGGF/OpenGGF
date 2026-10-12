@@ -1154,6 +1154,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 - **Java 25 baseline:** source builds, the JVM engine, creator SDK and examples now
   target Java 25, with compatible test instrumentation and explicit native access.
+  Audio voice bounds retain their exception contract without relying on integer overflow.
   Release builds use GraalVM 25; Intel macOS continues through the JVM distribution.
 
 - **`ggfmod package` works on macOS.** Packaging a mod from a directory failed with
