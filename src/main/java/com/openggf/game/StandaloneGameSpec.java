@@ -125,7 +125,7 @@ public final class StandaloneGameSpec {
             if (!owned.startsWith(owner+":")) throw new IllegalArgumentException("Standalone object key belongs to another owner");
             Objects.requireNonNull(factory,"factory");
             if (objectFactories.containsKey(owned)) throw new IllegalArgumentException("Duplicate standalone object: "+owned);
-            if (objectFactories.size()>=com.openggf.io.ModInputLimits.production().maxCollectionEntries())
+            if (objectFactories.size()>=com.openggf.io.ModInputLimits.DEFAULT_MAX_COLLECTION_ENTRIES)
                 throw new IllegalArgumentException("Too many standalone object factories");
             objectFactories.put(owned,factory); return this;
         }
