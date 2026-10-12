@@ -52,6 +52,21 @@ numbered backups. Live configuration values take precedence over backup values. 
 `settings.txt` in the mod's owner storage without changing the source files or replacing
 existing mod settings. Configuration files are limited to 1 MiB for this import.
 
+Settings edits and successful LAN joins keep their accepted values when storage refuses or throws
+on publication. The settings page reports a pending save, retries every 60 scene ticks, and flushes
+pending settings and LAN invite text on resume or exit. Imported legacy values follow the same
+retry path. A failed exit flush remains unconfirmed; reverting to confirmed values cancels an
+obsolete retry.
+
+Finished attempts retain at most 128 input recordings and 2 MiB of encoded bodies in memory.
+Each body has the existing 36,000-frame/4096-byte metadata limit. Unstamped records remain until
+explicit round end, then receive the ten-minute upload grace period. Duplicate bodies preserve
+that expiry; conflicting bodies or exhausted capacity are explicitly refused before copying.
+The uploader admits eight jobs including its active request, deduplicates pending requests and
+its last sixteen successful URLs, and rejects conflicting bodies for the same URL. Each uploader
+keeps its original session token. Closing resolves all accepted callbacks once and prevents queued
+work from sending or retrying; duplicate/rejected admissions own no callback.
+
 ## Build and test
 
 Use a Java 25 JDK for the engine, mod and server. Set `JAVA_HOME` to that JDK
