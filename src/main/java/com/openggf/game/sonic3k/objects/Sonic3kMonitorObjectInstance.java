@@ -395,6 +395,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
                 services().playMusic(GameMusic.EXTRA_LIFE);
             }
             case RINGS -> {
+                if (!com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(services())) return;
                 player.addRings(RING_MONITOR_REWARD);
                 services().playSfx(GameSound.RING);
             }
@@ -428,12 +429,12 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
                 }
             }
             case SUPER -> {
-                player.addRings(SUPER_RING_REWARD);
+                if (com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(services())) player.addRings(SUPER_RING_REWARD);
                 SuperStateController superState = player.getSuperStateController();
                 if (superState != null && superState.activateFromMonitor()) {
-                    LOGGER.info("Super monitor collected - 50 rings awarded and transformation started");
+                    LOGGER.info("Super monitor collected - transformation started");
                 } else {
-                    LOGGER.info("Super monitor collected - 50 rings awarded");
+                    LOGGER.info("Super monitor collected");
                 }
             }
         }

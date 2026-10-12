@@ -81,7 +81,7 @@ def diagnostic_command(root, temporary, classpath, gc, repeats, interval, select
         launcher = temporary / 'libs' / launcher.name
     mockito = next(p for p in jars if p.name.startswith('mockito-core-'))
     java = str(Path(os.environ['JAVA_HOME']) / 'bin/java') if os.environ.get('JAVA_HOME') else 'java'
-    command = [java, '-Xmx3g', '-Xshare:off', '-javaagent:' + str(mockito)]
+    command = [java, '--enable-native-access=ALL-UNNAMED', '-Xmx3g', '-Xshare:off', '-javaagent:' + str(mockito)]
     if sys.platform == 'darwin':
         command.append('-XstartOnFirstThread')
     command += ['-Djava.awt.headless=true', '-Dproject.basedir=' + str(root),
@@ -144,7 +144,7 @@ def main(argv=None):
                          '-Dartifact=org.junit.platform:junit-platform-launcher:' + engine.parent.name,
                          '-DoutputDirectory=' + str(temporary / 'libs')])
             javac = str(Path(os.environ['JAVA_HOME']) / 'bin/javac') if os.environ.get('JAVA_HOME') else 'javac'
-            execute([javac, '--release', '21', '-cp', classpath + os.pathsep + str(launcher),
+            execute([javac, '--release', '25', '-cp', classpath + os.pathsep + str(launcher),
                      '-d', str(temporary / 'classes'),
                      str(Path(__file__).parent / 'java/com/openggf/tools/MemoryProfileLauncher.java')])
             code = run_logged(command, root, temporary / 'execution.log', temporary,

@@ -17,6 +17,9 @@ import com.openggf.game.PlayableEntity;
 @com.openggf.game.ModApi
 public abstract class AbstractBadnikInstance extends AbstractObjectInstance
         implements TouchResponseProvider, TouchResponseAttackable {
+    @Override public com.openggf.game.mutators.ObjectHeadRole headPresentationRole() {
+        return com.openggf.game.mutators.ObjectHeadRole.BADNIK;
+    }
 
     protected int currentX;
     protected int currentY;

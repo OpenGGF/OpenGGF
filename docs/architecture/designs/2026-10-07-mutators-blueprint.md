@@ -1,7 +1,7 @@
 # Mutator framework and worked-example blueprint
 
 [Shared roadmap and reconciled decisions](2026-10-07-mod-challenges-blueprint.md).
-Research baseline: `develop` commit `09282b17305cb5794e43a26855cd2b9543b4ff5f`, inspected read-only on 2026-10-07. This document proposes future implementation; it changes no API or gameplay today. Repository paths below are relative to that tree. Prototype, MVP and polish are completion gates, not calendar estimates.
+Research baseline: `develop` commit `09282b17305cb5794e43a26855cd2b9543b4ff5f`, inspected read-only on 2026-10-07. This document records the accepted design; the bounded prototype is being implemented in the [implementation plan](../plans/2026-10-07-mutators-prototype-implementation.md). Later MVP/product gates remain future work. Repository paths below are relative to that tree. Prototype, MVP and polish are completion gates, not calendar estimates.
 
 ## Intent and observed starting point
 
@@ -19,7 +19,7 @@ The existing mod system supplies useful foundations, but does not supply this pr
 
 ## Recommended host contract
 
-The following names are proposed, not existing APIs. Add owner-scoped `ModContext.registerMutator` contributions to the frozen registration plan. A definition contains a stable local key, schema version, required semantic capabilities, enable scope, disable scope, typed options (each with edit scope), atomic groups, prerequisites/conflicts and a session factory. Creators return bounded policy values; they do not receive a general “apply settings to the live world” callback. Keep policy installation, boundary admission and owner provenance engine-internal.
+These names describe the accepted contract. Consult the implementation plan and creator guide for the shipped candidate subset. Add owner-scoped `ModContext.registerMutator` contributions to the frozen registration plan. A definition contains a stable local key, schema version, required semantic capabilities, enable scope, disable scope, typed options (each with edit scope), atomic groups, prerequisites/conflicts and a session factory. Creators return bounded policy values; they do not receive a general “apply settings to the live world” callback. Keep policy installation, boundary admission and owner provenance engine-internal.
 
 Prepare trusted installed packages independently of whether their mutators are active. Initially, a boot-loaded package may expose many dormant mutators with all activation defaults off; package load/trust remains distinct from the new activation switches. Extending preparation to boot-discovered inactive packages requires an explicit trusted preparation contract, because the current classloader factory omits disabled packages. Never silently execute untrusted registration to populate a settings screen.
 

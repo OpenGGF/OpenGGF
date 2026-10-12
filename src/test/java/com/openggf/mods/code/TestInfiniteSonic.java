@@ -39,7 +39,7 @@ class TestInfiniteSonic {
         System.setProperty(SEED_PROPERTY, FIXED_SEED);
         Path project = Path.of("examples/infinite-sonic");
         Path classes = Files.createDirectory(temp.resolve("classes"));
-        var args = new ArrayList<>(List.of("--release", "21", "-cp", System.getProperty("java.class.path"),
+        var args = new ArrayList<>(List.of("--release", "25", "-cp", System.getProperty("java.class.path"),
                 "-d", classes.toString()));
         try (var files = Files.walk(project.resolve("src/main/java"))) {
             files.filter(p -> p.toString().endsWith(".java")).sorted().forEach(p -> args.add(p.toString()));

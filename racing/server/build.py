@@ -54,13 +54,13 @@ def build(skip_engine=False):
     compile_cp = os.pathsep.join([str(ROOT / "target" / "classes"), deps])
     sources = sorted(str(p) for root in ("racing/time-attack/src/main/java", "racing/server/src/main/java")
                      for p in (ROOT / root).rglob("*.java"))
-    subprocess.run([java_tool("javac"), "--release", "21", "-nowarn", "-cp", compile_cp, "-d", str(classes),
+    subprocess.run([java_tool("javac"), "--release", "25", "-nowarn", "-cp", compile_cp, "-d", str(classes),
                     *sources], check=True)
     shutil.copytree(ROOT / "racing/server/src/main/resources", classes, dirs_exist_ok=True)
     runtime_cp = os.pathsep.join([str(classes), str(ROOT / "target" / "classes"), deps])
-    (OUT / "java-args.txt").write_text('-cp "' + runtime_cp.replace("\\", "/") + '"\n')
+    (OUT / "java-args.txt").write_text('--enable-native-access=ALL-UNNAMED\n-cp "' + runtime_cp.replace("\\", "/") + '"\n')
     if os.name == "nt":
-        print(f"Built {classes}; run a tool with: java @{OUT / 'java-args.txt'} <main class> [args...]")
+        print(f'Built {classes}; run a tool with: "{java_tool("java")}" @"{OUT / "java-args.txt"}" <main class> [args...]')
         return
     launcher = OUT / "racing-server"
     cases = "\n".join(f'  {name}) main={main} ;;' for name, main in TOOLS.items())
@@ -71,7 +71,7 @@ case "$tool" in
 {cases}
   *) echo "usage: racing-server <{'|'.join(TOOLS)}> [args...]" >&2; exit 2 ;;
 esac
-exec "{java_tool('java')}" -cp "{runtime_cp}" "$main" "$@"
+exec "{java_tool('java')}" --enable-native-access=ALL-UNNAMED -cp "{runtime_cp}" "$main" "$@"
 """)
     launcher.chmod(0o755)
     print(f"Built {launcher}", flush=True)

@@ -205,6 +205,7 @@ public class CheckpointObjectInstance extends BoxObjectInstance implements Rewin
     }
 
     private boolean shouldSpawnStars(AbstractPlayableSprite player) {
+        if (!com.openggf.game.mutators.LevelMutatorPolicyAccess.entryAllowed(services(), com.openggf.game.mutators.StageEntryKind.SPECIAL)) return false;
         // Not a ROM branch: the star circle requests special stage entry, which a
         // run whose GameplayRunPolicy forbids special stages also swallows at
         // GameLoop's chokepoint. Suppress the spawn itself so the player never sees

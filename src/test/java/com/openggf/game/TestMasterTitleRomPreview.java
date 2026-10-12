@@ -245,7 +245,7 @@ class TestMasterTitleRomPreview {
     @Test
     void sonic2PreviewPreservesOpaqueEmblemInteriorBehindCharacters() {
         MasterTitleScreen.GameEntry entry = MasterTitleScreen.GameEntry.SONIC_2;
-        Path path = Path.of(MasterTitleScreen.expectedRomFilename(entry));
+        Path path = providedRomPath(entry);
         assumeTrue(path.toFile().isFile(), "ROM not present: " + path);
 
         MasterTitleRomPreview.Image image = MasterTitleRomPreview.loadFor(entry, path).orElseThrow();
@@ -322,7 +322,7 @@ class TestMasterTitleRomPreview {
     @Test
     void sonic2PreviewRendersCopyrightRow() {
         MasterTitleScreen.GameEntry entry = MasterTitleScreen.GameEntry.SONIC_2;
-        Path path = Path.of(MasterTitleScreen.expectedRomFilename(entry));
+        Path path = providedRomPath(entry);
         assumeTrue(path.toFile().isFile(), "ROM not present: " + path);
 
         MasterTitleRomPreview.Image image = MasterTitleRomPreview.loadFor(entry, path).orElseThrow();
@@ -351,7 +351,7 @@ class TestMasterTitleRomPreview {
     @Test
     void loadFor_decodesRealRomPreviewWhenSuppliedRomExists() {
         for (MasterTitleScreen.GameEntry entry : MasterTitleScreen.GameEntry.values()) {
-            Path path = Path.of(MasterTitleScreen.expectedRomFilename(entry));
+            Path path = providedRomPath(entry);
             assumeTrue(path.toFile().isFile(), "ROM not present: " + path);
 
             Optional<MasterTitleRomPreview.Image> image = MasterTitleRomPreview.loadFor(entry, path);
@@ -402,4 +402,13 @@ class TestMasterTitleRomPreview {
         assertEquals(b, rgba[offset + 2] & 0xFF);
         assertEquals(a, rgba[offset + 3] & 0xFF);
     }
+    private static Path providedRomPath(MasterTitleScreen.GameEntry entry) {
+        var rom = switch (entry) {
+            case SONIC_1 -> com.openggf.tests.RomTestUtils.ensureSonic1RomAvailable();
+            case SONIC_2 -> com.openggf.tests.RomTestUtils.ensureSonic2RomAvailable();
+            case SONIC_3K -> com.openggf.tests.RomTestUtils.ensureSonic3kRomAvailable();
+        };
+        return rom == null ? Path.of(MasterTitleScreen.expectedRomFilename(entry)) : rom.toPath();
+    }
+
 }

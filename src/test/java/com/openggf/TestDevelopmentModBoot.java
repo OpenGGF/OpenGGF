@@ -20,7 +20,7 @@ class TestDevelopmentModBoot {
         Path build=temp.resolve("classes");Files.createDirectories(build);
         java.util.List<String> sources;try(var paths=Files.walk(project.resolve("src/main/java"))){
             sources=paths.filter(p->p.toString().endsWith(".java")).map(Path::toString).toList();}
-        var args=new java.util.ArrayList<>(java.util.List.of("--release","21","-cp",
+        var args=new java.util.ArrayList<>(java.util.List.of("--release","25","-cp",
                 TestSessionOutputPaths.compiledClasses().toAbsolutePath().toString(),
                 "-d",build.toString()));args.addAll(sources);
         assertEquals(0,javax.tools.ToolProvider.getSystemJavaCompiler().run(null,null,null,args.toArray(String[]::new)));

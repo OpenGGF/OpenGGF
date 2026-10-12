@@ -6,7 +6,7 @@
 #   examples/slay-the-robotnik/play.sh --fresh    # first delete the mod's saved run, records and settings
 #   examples/slay-the-robotnik/play.sh --rebuild  # force an engine rebuild
 #
-# Needs Java 21 and Maven, as for the engine, and your Sonic 3 & Knuckles ROM set up for
+# Needs Java 25 and Maven, as for the engine, and your Sonic 3 & Knuckles ROM set up for
 # OpenGGF in the repository root (the config.yaml and ROM the engine normally runs with).
 # On the master title choose Sonic 3 & Knuckles: the mod's title screen opens. Holding Escape
 # returns to the master title; close the window to quit.

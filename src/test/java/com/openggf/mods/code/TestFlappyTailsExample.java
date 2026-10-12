@@ -62,7 +62,7 @@ class TestFlappyTailsExample {
     }
 
     private static void compile(Path sources, String classpath, Path out) throws Exception {
-        List<String> args = new ArrayList<>(List.of("--release", "21", "-nowarn", "-cp", classpath, "-d", out.toString()));
+        List<String> args = new ArrayList<>(List.of("--release", "25", "-nowarn", "-cp", classpath, "-d", out.toString()));
         try (Stream<Path> files = Files.walk(sources)) {
             files.filter(p -> p.toString().endsWith(".java")).sorted().forEach(p -> args.add(p.toString()));
         }

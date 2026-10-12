@@ -65,6 +65,21 @@ class TestModValidator {
     }
 
     @Test
+    void acceptsJava25EntrypointBytecode() throws Exception {
+        // Existing generated fixtures remain V21 to preserve older-bytecode coverage.
+        ClassWriter writer = new ClassWriter(0);
+        writer.visit(Opcodes.V25, Opcodes.ACC_PUBLIC, ENTRY, null, "java/lang/Object",
+                new String[] {GGF_MOD});
+        constructor(writer, Opcodes.ACC_PUBLIC, false);
+        writer.visitEnd();
+
+        ModValidationReport report = new ModValidator(Set.of()).validate(
+                jar(Map.of(ENTRY, writer.toByteArray())), "example.Entry");
+
+        assertTrue(report.eligible(), report.findings().toString());
+    }
+
+    @Test
     void rejectsFieldlessClassInitializerWithoutExecutingIt() throws Exception {
         System.clearProperty("openggf.mod.validator.executed");
         ClassWriter writer = new ClassWriter(0);
@@ -224,7 +239,7 @@ class TestModValidator {
         String engine = Path.of(com.openggf.mods.code.GgfMod.class.getProtectionDomain().getCodeSource().getLocation()
                 .toURI()).toString();
         ByteArrayOutputStream errors = new ByteArrayOutputStream();
-        int result = javax.tools.ToolProvider.getSystemJavaCompiler().run(null, null, errors, "--release", "21",
+        int result = javax.tools.ToolProvider.getSystemJavaCompiler().run(null, null, errors, "--release", "25",
                 "-cp", engine + java.io.File.pathSeparator + System.getProperty("java.class.path"),
                 "-d", out.toString(), src.resolve("Entry.java").toString());
         assertEquals(0, result, () -> "javac: " + errors);
@@ -621,7 +636,7 @@ class TestModValidator {
         Path directory = Files.createTempDirectory(temp, "java-constants-");
         Path source = directory.resolve("Entry.java");
         Files.writeString(source, "package example; public class Entry implements com.openggf.mods.code.GgfMod { public void register(com.openggf.mods.code.ModContext context) { } } " + declarations);
-        assertEquals(0, ToolProvider.getSystemJavaCompiler().run(null, null, null, "--release", "21", "-classpath",
+        assertEquals(0, ToolProvider.getSystemJavaCompiler().run(null, null, null, "--release", "25", "-classpath",
                 System.getProperty("java.class.path"), "-d", directory.toString(), source.toString()));
         var result = new LinkedHashMap<String, byte[]>();
         try (var files = Files.walk(directory)) {

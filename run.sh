@@ -28,7 +28,8 @@ if [[ ! -f "$jar" ]]; then
     exit 1
 fi
 
-exec java \
+exec "${JAVA_HOME:+$JAVA_HOME/bin/}java" \
+    --enable-native-access=ALL-UNNAMED \
     --add-exports java.base/java.lang=ALL-UNNAMED \
     --add-exports java.desktop/sun.awt=ALL-UNNAMED \
     --add-exports java.desktop/sun.java2d=ALL-UNNAMED \

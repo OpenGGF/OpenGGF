@@ -325,7 +325,8 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         // executes later in the object pass, collision_flags remains $47, so a
         // following player slot sees the same first ring and returns instead of
         // skipping ahead to another overlapping ring.
-        if (collected && !collectionRoutineStarted) {
+        if (collected && !collectionRoutineStarted
+                && com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(servicesOrNull())) {
             collectionRoutineStarted = true;
             // ROM Touch_ChkValue only writes routine=4. GiveRing runs when this
             // Obj37 slot next executes (loc_1A7C2), which can be later in the
@@ -600,7 +601,8 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     public int getCollisionFlags() {
         // ROM Obj37: collision_flags = $47 while collectible; cleared on collection
         // (mirrors Sonic1RingInstance.java:167).
-        return collectionRoutineStarted ? 0 : LOST_RING_COLLISION_FLAGS;
+        return collectionRoutineStarted || !com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(servicesOrNull())
+                ? 0 : LOST_RING_COLLISION_FLAGS;
     }
 
     @Override
@@ -621,10 +623,12 @@ public class LostRingObjectInstance extends AbstractObjectInstance
      */
     @Override
     public boolean publishesTouchResponseListEntryThisFrame() {
-        return !collected && !isDestroyed();
+        return !collected && !isDestroyed()
+                && com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(servicesOrNull());
     }
 
     public void markCollected(int frameCounter) {
+        if (!com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(servicesOrNull())) return;
         collected = true;
     }
 

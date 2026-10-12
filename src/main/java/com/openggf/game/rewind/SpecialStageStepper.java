@@ -52,19 +52,17 @@ final class SpecialStageStepper implements RewindSeekAwareEngineStepper {
             GameplayModeContext gameplayMode,
             com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame frame) {
         Bk2FrameInput previous = inputs.read(Math.max(inputs.earliestFrame(), input.frameIndex() - 1));
-        liveInput.setLogicalOverride(RecordedInputSnapshots.fromBk2(input, previous));
+        var metadata = inputs.pacingFrame(input.frameIndex());
+        var recorded = RecordedInputSnapshots.fromBk2(input, previous);
+        liveInput.setLogicalOverride(metadata == null ? recorded : metadata.admitted(recorded, gameplayMode, provider));
         try {
             LevelFrameStep.executeHardwareTimedObjectScan(
                     LevelFrameContext.from(gameplayMode), frame,
                     PlcLifecyclePhase.SPECIAL_STAGE, () -> {
-                        SpecialStageInputMapper.MappedInput mapped =
-                                SpecialStageInputMapper.map(liveInput.logical());
-                        provider.handleInput(mapped.p1Held(), mapped.p1Pressed(),
-                                liveInput.isShiftDown(), liveInput.isControlDown());
-                        provider.handlePlayer2Input(
-                                mapped.p2Held(), mapped.p2Logical());
-                        provider.update();
+                        com.openggf.game.internal.NativeSpecialStageFrame.replay(
+                                provider, gameplayMode.getWorldSession(), liveInput);
                     });
+            if (metadata != null) metadata.restoreAfterTick(gameplayMode, provider);
             return LevelFrameResult.GAMEPLAY_FRAME;
         } finally {
             liveInput.clearLogicalOverride();

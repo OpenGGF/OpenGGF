@@ -32,13 +32,21 @@ import static com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageConstants
  * <p>
  * Reference: docs/skdisasm/sonic3k.asm SpecialStage (line 10585)
  */
-public class Sonic3kSpecialStageManager {
+public class Sonic3kSpecialStageManager implements com.openggf.game.internal.NativeSpecialStagePacing {
     private static final Logger LOGGER = Logger.getLogger(Sonic3kSpecialStageManager.class.getName());
 
     // ==================== Core State ====================
 
     private int currentStage;
     private boolean initialized;
+    private final com.openggf.game.internal.NativeSpecialStagePacingOwner pacingOwner =
+            new com.openggf.game.internal.NativeSpecialStagePacingOwner();
+    @Override public com.openggf.game.internal.NativeSpecialStagePacingOwner pacingOwner() { return pacingOwner; }
+    @Override public com.openggf.game.internal.NativeSpecialStagePacing.State pacingState() {
+        return pacingOwner.state(initialized && preBootFadeHoldFrames <= 0 && postBootFadeHoldFrames <= 0
+                && !firstUpdateCall && !finished && !exitSpinStarted && clearRoutine == 0
+                && player != null && player.isStarted(), heldButtons, p2HeldButtons, tailsEnabled);
+    }
     private boolean finished;
     private boolean emeraldCollected;
     private boolean superEmeraldMode;
@@ -249,6 +257,7 @@ public class Sonic3kSpecialStageManager {
     }
 
     public void initialize(int stageIndex, EmeraldRewardKind rewardKind) throws IOException {
+        pacingOwner.beginEntry();
         java.util.Objects.requireNonNull(rewardKind, "rewardKind");
         LOGGER.info("Initializing S3K special stage " + stageIndex);
         this.currentStage = stageIndex;
@@ -674,6 +683,7 @@ public class Sonic3kSpecialStageManager {
             return;
         }
 
+        pacingOwner.acceptedSample();
         boolean exitLoopIteration = exitSpinStarted;
 
         // Banner state machine
@@ -1432,6 +1442,7 @@ public class Sonic3kSpecialStageManager {
     }
 
     public void reset() {
+        pacingOwner.beginEntry();
         if (renderer != null) {
             renderer.resetStageGeometryCache();
         }

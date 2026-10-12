@@ -10,7 +10,6 @@ public final class RomTestUtils {
     }
 
     // Sonic 2 (default / backward-compatible)
-    private static final String ROM_FILENAME = "s2.gen";
     private static final String ROM_PATH_PROPERTY = "sonic.rom.path";
     private static final String ROM_PATH_ENV = "SONIC_ROM_PATH";
 
@@ -31,11 +30,13 @@ public final class RomTestUtils {
 
     /**
      * Ensures the Sonic 2 ROM is available (backward-compatible).
+     * Explicit legacy property/environment settings retain precedence; otherwise
+     * use the same game-specific path/configuration lookup as current fixtures.
      * Returns the ROM file, or null if not found locally.
      */
     public static File ensureRomAvailable() {
-        return findGameRomOrNull(ROM_PATH_PROPERTY, ROM_PATH_ENV,
-                SonicConfiguration.SONIC_2_ROM, ROM_FILENAME);
+        File legacy = findGameRomOrNull(ROM_PATH_PROPERTY, ROM_PATH_ENV, null, null);
+        return legacy != null ? legacy : ensureSonic2RomAvailable();
     }
 
     /**
@@ -89,7 +90,8 @@ public final class RomTestUtils {
 
         // 3. Config value from SonicConfigurationService
         try {
-            String configValue = SonicConfigurationService.getInstance().getString(configKey);
+            String configValue = configKey == null ? null
+                    : SonicConfigurationService.getInstance().getString(configKey);
             if (configValue != null && !configValue.isEmpty()) {
                 File f = new File(configValue);
                 if (f.exists()) return f;
@@ -99,6 +101,7 @@ public final class RomTestUtils {
         }
 
         // 4. Default filename in working directory
+        if (defaultFilename == null) return null;
         File f = new File(defaultFilename);
         return f.exists() ? f : null;
     }

@@ -1,7 +1,7 @@
 # Tide Circuit
 
 An original two-act Sonic 2 hosted campaign, maintained as a Mod API example.
-Use Java 21 and the locally built candidate engine/SDK artifacts to build:
+Use Java 25 and the locally built candidate engine/SDK artifacts to build:
 
 ```sh
 mvn package -Dopenggf.engine.jar=/absolute/path/OpenGGF-jar-with-dependencies.jar \

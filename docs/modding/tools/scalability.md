@@ -6,7 +6,7 @@ effective catalog, classloader validator and registration transaction once per o
 It closes loaders/snapshots and deletes its generated work directory afterwards.
 It reads no ROMs or installed mod state.
 
-Run the opt-in probe with a Java 21 **JDK** and matching engine/SDK artifacts. Use
+Run the opt-in probe with a Java 25 **JDK** and matching engine/SDK artifacts. Use
 a new absolute work directory outside the engine checkout. On Windows use `;`
 as the Java classpath separator.
 

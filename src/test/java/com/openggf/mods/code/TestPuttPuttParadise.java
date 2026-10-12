@@ -33,7 +33,7 @@ class TestPuttPuttParadise {
         Path project = Path.of("examples/putt-putt-paradise");
         assertTrue(Files.isDirectory(project.resolve("src/main/java")), "missing golf code mod");
         Path classes = Files.createDirectory(temp.resolve("classes"));
-        var args = new ArrayList<>(List.of("--release", "21", "-cp", System.getProperty("java.class.path"),
+        var args = new ArrayList<>(List.of("--release", "25", "-cp", System.getProperty("java.class.path"),
                 "-d", classes.toString()));
         try (var sources = Files.walk(project.resolve("src/main/java"))) {
             sources.filter(p -> p.toString().endsWith(".java")).sorted().forEach(p -> args.add(p.toString()));
@@ -1088,6 +1088,11 @@ class TestPuttPuttParadise {
         String previousDev = System.getProperty(com.openggf.mods.DevelopmentModSource.PROPERTY);
         int previousWidth = previousServices.graphics().getProjectionWidth();
         var config = SonicConfigurationService.createStandalone(temp.resolve("boot-config-" + act));
+        // This fresh configuration also feeds the real logical-ROM resolver; the
+        // @RequiresRom primary fixture does not populate its independent catalogue.
+        var sonicTwoRom = RomTestUtils.ensureSonic2RomAvailable();
+        assertNotNull(sonicTwoRom);
+        config.setConfigValue(SonicConfiguration.SONIC_2_ROM, sonicTwoRom.getAbsolutePath());
         var entry = MasterTitleScreen.GameEntry.SONIC_2;
         new com.openggf.game.launch.LaunchProfileApplier(config).apply(
                 com.openggf.game.launch.LaunchProfile.stockFor(entry), entry);

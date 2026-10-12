@@ -11,7 +11,7 @@ execution plan, not an assertion that its runtime repairs or proposed APIs are i
 
 **Approach:** correct behavior in the actual consumers first, preserving their game
 rules and regression evidence. Extract common mechanics after those consumers prove
-the contract. Java 21, Jupiter, the existing SDK/testkit and queued Maven remain the
+the contract. Java 25, Jupiter, the existing SDK/testkit and queued Maven remain the
 toolchain. Use the repository's delivery flow for each integrated batch, without a
 mandatory approval/review ceremony between routine steps.
 

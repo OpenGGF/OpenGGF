@@ -28,7 +28,7 @@ class TestSitarHeroOnlineMatch {
     static void compile() throws Exception {
         Path project = Path.of("examples/sitar-hero");
         Path output = Files.createDirectory(temp.resolve("classes"));
-        var args = new ArrayList<>(List.of("--release", "21", "-classpath", System.getProperty("java.class.path"),
+        var args = new ArrayList<>(List.of("--release", "25", "-classpath", System.getProperty("java.class.path"),
                 "-d", output.toString()));
         for (String tree : List.of("src/main/java/sitarhero/model", "src/main/java/sitarhero/catalogue",
                 "src/main/java/sitarhero/net", "src/main/java/sitarhero/audio", "src/test/java/sitarhero/net")) {

@@ -29,7 +29,7 @@ class TestGolfModel {
         assertTrue(Files.isDirectory(source), "External golf model has not been implemented");
         Path classes = Files.createDirectory(temp.resolve("classes"));
         Path emptyClasspath = Files.createDirectory(temp.resolve("empty-classpath"));
-        var args = new ArrayList<>(List.of("--release", "21", "-classpath", emptyClasspath.toString(),
+        var args = new ArrayList<>(List.of("--release", "25", "-classpath", emptyClasspath.toString(),
                 "-d", classes.toString()));
         for (Path root : List.of(source, project.resolve("src/test/java/paradise/model"))) {
             try (var files = Files.walk(root)) {

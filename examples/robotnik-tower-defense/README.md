@@ -15,7 +15,7 @@ Each scene prepares the campaign waves and defense definitions once, sharing the
 
 ## Build and play
 
-With Java 21 and the ROM configured in OpenGGF:
+With Java 25 and the ROM configured in OpenGGF:
 
 ```bash
 examples/robotnik-tower-defense/play.sh
@@ -117,7 +117,7 @@ contains decisions, verification scope and evidence.
 
 ## Use matching creator artifacts
 
-The mutable 0.7 Mod API is unpublished. See [candidate setup](../../docs/modding/getting-started.md) for Java 21 and matching engine/SDK jar paths. From this checkout the shared launcher supports artifact-only builds and explicit ROM paths:
+The mutable 0.7 Mod API is unpublished. See [candidate setup](../../docs/modding/getting-started.md) for Java 25 and matching engine/SDK jar paths. From this checkout the shared launcher supports artifact-only builds and explicit ROM paths:
 
 ```sh
 python3 examples/build_example.py robotnik-tower-defense --engine /absolute/engine.jar --sdk /absolute/sdk.jar --run --s3k /absolute/own-s3k.gen

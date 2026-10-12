@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build Infinite Sonic using the shared launcher; preserve target/infinite-sonic/infinite-sonic.jar.
 
-Origin: mod audit remediation 2026-10-12. Requires Java 21; assets use the player's ROM.
+Origin: mod audit remediation 2026-10-12. Requires Java 25; assets use the player's ROM.
 """
 from pathlib import Path
 import sys

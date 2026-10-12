@@ -98,6 +98,10 @@ class TestGameLoopSpecialStageRewindDebugBoundary {
             assertEquals("boundary", order.get(0), shortcut.name() + " must sever rewind before mutating live-only state");
             assertTrue(order.contains(shortcut.expectedAction()),
                     shortcut.name() + " should still run its live-only action after severing rewind");
+            if (shortcut.name().startsWith("alignment ") || shortcut.name().equals("F4 alignment toggle")) {
+                assertFalse(order.contains("handleInput"),
+                        shortcut.name() + " must consume alignment input before native dispatch");
+            }
             assertNull(context.getRewindController(),
                     shortcut.name() + " must suppress same-frame special-stage rewind recording");
         }

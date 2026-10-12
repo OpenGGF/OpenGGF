@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the source-first Putt Putt Paradise mod (Java 21 and Maven).
+"""Build the source-first Putt Putt Paradise mod (Java 25 and Maven).
 
 Origin: Putt Putt Paradise, 2026-10-05. No ROM bytes enter the package.
 """
@@ -65,14 +65,14 @@ def main():
         if classes.exists():
             shutil.rmtree(classes)
         classes.mkdir(parents=True)
-    run([java_tool("javac"), "--release", "21", "-cp", classpath, "-d", str(classes), *map(str, sources)])
+    run([java_tool("javac"), "--release", "25", "-cp", classpath, "-d", str(classes), *map(str, sources)])
     if args.dry_run:
         print(f"Copy manifest only: {manifest} -> {classes / 'META-INF/openggf-mod.yaml'}")
     else:
         (classes / "META-INF").mkdir()
         shutil.copyfile(manifest, classes / "META-INF/openggf-mod.yaml")
         jar.unlink(missing_ok=True)
-    cli = [java_tool("java"), "-cp", classpath, "com.openggf.tools.modsdk.GgfModCli"]
+    cli = [java_tool("java"), "--enable-native-access=ALL-UNNAMED", "-cp", classpath, "com.openggf.tools.modsdk.GgfModCli"]
     run([*cli, "package", "--input", str(classes), "--out", str(jar)])
     print(f"{'Planned' if args.dry_run else 'Built and SDK-validated'} {jar}", flush=True)
     if args.run:

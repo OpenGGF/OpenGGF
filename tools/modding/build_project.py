@@ -67,10 +67,10 @@ def build(project, engine, sdk, *, run=False, roms=None, testkit=None, test=Fals
     classpath = os.pathsep.join(map(str, (engine, sdk)))
     sources = sorted((project / "src/main/java").rglob("*.java"))
     if sources:
-        subprocess.run([java_tool("javac"), "--release", "21", "-cp", classpath,
+        subprocess.run([java_tool("javac"), "--release", "25", "-cp", classpath,
                         "-d", str(classes), *map(str, sources)], check=True)
     shutil.copytree(project / "src/main/resources", classes, dirs_exist_ok=True)
-    cli = [java_tool("java"), "-cp", classpath, "com.openggf.tools.modsdk.GgfModCli"]
+    cli = [java_tool("java"), "--enable-native-access=ALL-UNNAMED", "-cp", classpath, "com.openggf.tools.modsdk.GgfModCli"]
     jar = project / "target" / (project.name + "-mod.jar")
     jar.unlink(missing_ok=True)
     subprocess.run([*cli, "package", "--input", str(classes), "--out", str(jar)], check=True)
@@ -99,7 +99,7 @@ def test_project(project, engine, sdk, testkit, *, roms=None):
     classpath = os.pathsep.join(map(str, (tests, project / "target/classes", engine, sdk, testkit, console)))
     sources = sorted((project / "src/test/java").rglob("*.java"))
     if sources:
-        subprocess.run([java_tool("javac"), "--release", "21", "-cp", classpath,
+        subprocess.run([java_tool("javac"), "--release", "25", "-cp", classpath,
                         "-d", str(tests), *map(str, sources)], check=True)
     resources = project / "src/test/resources"
     if resources.is_dir():
@@ -109,7 +109,7 @@ def test_project(project, engine, sdk, testkit, *, roms=None):
                                 ("sonic3k", "s3k.rom.path")):
         if (roms or {}).get(game) is not None:
             properties.append("-D" + property_name + "=" + str(Path(roms[game]).resolve(strict=True)))
-    subprocess.run([java_tool("java"), "-Xmx1g", *properties, "-cp", classpath,
+    subprocess.run([java_tool("java"), "--enable-native-access=ALL-UNNAMED", "-Xmx1g", *properties, "-cp", classpath,
                     "com.openggf.mods.testing.CreatorTestLauncher", "execute",
                     "--scan-class-path=" + str(tests), "--include-classname=.*",
                     "--include-engine=junit-jupiter", "--details=summary", "--disable-ansi-colors",
