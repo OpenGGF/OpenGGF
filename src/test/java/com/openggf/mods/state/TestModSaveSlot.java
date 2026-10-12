@@ -97,6 +97,33 @@ class TestModSaveSlot {
         assertEquals("v1:3", storage.files.get("save.txt"));
     }
 
+    @Test void lateCorruptionWithoutBackupPreservesBytesUntilExplicitReplacement() {
+        Memory storage = new Memory();
+        var slot = new ModSaveSlot<>(storage, "save.txt", CODEC);
+        assertEquals(SAVED, slot.save(3));
+        storage.files.put("save.txt", "late corruption");
+        assertEquals(REPLACEMENT_REQUIRED, slot.save(4));
+        assertEquals("late corruption", storage.files.get("save.txt"));
+        assertTrue(slot.pending());
+        assertFalse(slot.writable());
+        slot.allowReplacement();
+        assertEquals(SAVED, slot.save(5));
+        assertEquals("v1:5", storage.files.get("save.txt"));
+    }
+
+    @Test void lateCorruptionWithBackupRetainsTheLastValidatedGeneration() {
+        Memory storage = new Memory(); var slot = slot(storage);
+        assertEquals(SAVED, slot.save(3));
+        storage.files.put("save.txt", "late corruption");
+        storage.fail = "save.bak";
+        assertEquals(BACKUP_FAILED, slot.save(4));
+        assertEquals("late corruption", storage.files.get("save.txt"));
+        storage.fail = null;
+        assertEquals(SAVED, slot.retry());
+        assertEquals("v1:3", storage.files.get("save.bak"));
+        assertEquals("v1:4", storage.files.get("save.txt"));
+    }
+
     @Test void helperAcceptsTheSameLocalNameGrammarAsStorage() {
         Memory storage = new Memory();
         assertEquals(SAVED, new ModSaveSlot<>(storage, "_save.txt", CODEC).save(1));

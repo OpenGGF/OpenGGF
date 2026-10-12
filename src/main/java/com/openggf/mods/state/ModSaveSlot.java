@@ -148,7 +148,7 @@ public final class ModSaveSlot<T> {
             if (old.isPresent()) {
                 var decoded = decode(old.get());
                 if (!replacementAuthorized && (decoded.status() == INCOMPATIBLE
-                        || (decoded.status() == CORRUPT && previous == null))) {
+                        || (decoded.status() == CORRUPT && (previous == null || backup == null)))) {
                     writable = false;
                     return ModSaveWriteResult.REPLACEMENT_REQUIRED;
                 }

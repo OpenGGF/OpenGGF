@@ -591,3 +591,16 @@ properties and exact selectors:
 `TestStarpostArtFailures,TestStarpostValleyExample,TestStarpostValleyScene,TestStarpostRealFestivals,TestStarpostRealRuins,TestEggmansSkyExample,TestEggmansSkyScene,TestEggmansSkyFauna,TestSlayTheRobotnikExample,TestSlayTheRobotnikScene,TestThreeIslandsExample,TestThreeIslandsScene`.
 Its ownership/scene/native/ROM outcomes remain pending here. Final matching29-manifest
 artifacts and combined root integration/ordinary/guard checks remain open.
+
+## Late corruption without a recovery slot
+
+The actual Starpost creator probe against clean `09af93df1` reproduced a no-backup
+slot saving once, then overwriting externally arrived corrupt `valley.sav` bytes on
+its next save (1 test, 1 failure, zero skips). The condition remained at `d2b8b6202`.
+Automatic late-corruption recovery now requires both a last validated generation
+and a configured backup that can retain it. Without that backup, publication returns
+REPLACEMENT_REQUIRED and protects the corrupt bytes until an explicit New Game/reset.
+Paired shared-helper regressions cover no-backup preservation/replacement and failed
+backup publication followed by exact-checkpoint retry. The queued lean
+`TestModSaveSlot,TestModStorage` qualification is pending; this source checkpoint
+does not claim a passing run. Input worker is promoting the actual Starpost probe.
