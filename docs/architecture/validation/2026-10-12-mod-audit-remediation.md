@@ -531,3 +531,52 @@ properties and exact selectors:
 `TestStarpostArtFailures,TestStarpostValleyExample,TestStarpostValleyScene,TestStarpostRealFestivals,TestStarpostRealRuins,TestEggmansSkyExample,TestEggmansSkyScene,TestEggmansSkyFauna,TestSlayTheRobotnikExample,TestSlayTheRobotnikScene,TestThreeIslandsExample,TestThreeIslandsScene`.
 Its ownership/scene/native/ROM outcomes remain pending here. Final matching29-manifest
 artifacts and combined root integration/ordinary/guard checks remain open.
+
+## Repeated art-failure mechanics: bounded uplift disposition
+
+Read-only comparison at `38958c67b` covers Egg's `ArtFailures`, Slay/Three Islands'
+`Art.attempt`, and Starpost's `AssetFailures.load`. All four now use the same pure
+mechanics: at most64 insertion-ordered failure entries, request/cause text bounded
+to256 characters, immutable snapshots without exception graphs, saturated
+`now + 120` deadlines, suppressed work before a deadline, and status removal after
+success. Successful images/banks stay in separate caches. Slay and Three additionally
+propagate a dependency's original category, cause and deadline; this avoids a new
+cooldown or misleading missing-ROM status at each parent request. Repetition is a
+real creator burden and is a concrete extraction candidate, not a reason to mark
+the four facades as an intended permanent SDK pattern.
+
+The policy differs. Egg and Slay use the scene visit clock; Three uses its advancing
+Game clock; Starpost uses the scene clock for menus/music and the captured activity
+or ruins clock for native presentations. Native clocks can restore backwards, while
+the compatibility-only constructors use a constant clock. Retry duration, reset on
+new asset owner, dependency/fallback choices and optional-versus-required ROM admission
+belong to those owners. Fault classification must also remain explicit: only proven
+decoder argument/unsupported failures and direct I/O-caused state wrappers are
+recoverable; generic provider state, NPE, callback aborts, ordinary runtime faults
+and Error propagate. Starpost's local invalid-data signal is not a published host
+failure type. Image/ROM/GPU destruction stays with the host; facade close and Egg's
+generation-cache reset have different scopes. `SceneArtCache` currently guarantees
+successful sprite requests/copied palettes, not any of these policies.
+
+Defer the public uplift here. The narrow next seam is a bounded status ledger with
+explicit `ready(request, now)`, `failed(request, category, cause, retryAt)`,
+`succeeded(request)`, snapshot and retirement operations; it need not execute a
+loader, classify exceptions or own images. Start with an internal implementation,
+then publish an owner-bound preparation/status capability only after the scene/native
+clock and typed expected-host-failure contracts are settled. The scene-art/Mod API
+owner should reopen this from these four maintained consumers, retaining their
+facades and dependency behavior rather than requiring authors to copy another
+catch-all loader. Do not accept caller-supplied owner strings as framework authority.
+
+Qualification must establish the following before migration/publication:
+
+- Equal request attempts/status through failure, tick119/120, success, saturation,
+  eviction and dependency reuse; bounded display text must not merge distinct keys.
+- Scene suspension, native HOLD, rewind to an earlier activity clock, new-owner
+  replacement and retirement behavior, with no work after close.
+- Actual owned provider faults reaching the callback boundary and expected decoder
+  failures remaining recoverable, including missing optional ROM versus invalid data.
+- Existing palette/batch atomicity, fallback repair and canonical CPU pixels, with
+  host resource ownership unchanged, followed by all four actual portable consumers
+  and their focused scene/native checks. Current local passes do not certify this
+  future extraction; no speculative API or duplicate test suite was added here.
