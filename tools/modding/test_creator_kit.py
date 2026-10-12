@@ -1,5 +1,6 @@
 """Creator kit contracts: reproducibility, identity and authored-source boundaries."""
 import hashlib
+import importlib.util
 import io
 import json
 from pathlib import Path
@@ -14,6 +15,73 @@ import build_project
 
 
 class CreatorKitTest(unittest.TestCase):
+    def test_starter_templates_have_separate_pinned_test_profile_and_nonempty_discovery(self):
+        templates = Path(__file__).resolve().parents[2] / "src/main/resources/META-INF/openggf-mod-sdk/templates"
+        namespace = {"m": "http://maven.apache.org/POM/4.0.0"}
+        for name in ("pom.xml.template", "simple-pom.xml.template"):
+            with self.subTest(template=name):
+                text = (templates / name).read_text().replace("{{CONVERSION}}", "")
+                document = ET.fromstring(text)
+                profiles = {p.findtext("m:id", namespaces=namespace): p
+                            for p in document.findall("m:profiles/m:profile", namespace)}
+                self.assertIn("creator-tests", profiles)
+                profile = profiles["creator-tests"]
+                self.assertEqual("false", profile.findtext("m:properties/m:skipTests", namespaces=namespace))
+                dependencies = profile.findall("m:dependencies/m:dependency", namespace)
+                self.assertTrue(all(d.findtext("m:scope", namespaces=namespace) == "test" for d in dependencies))
+                self.assertIn("<failIfNoTests>true</failIfNoTests>", text)
+
+    def test_shared_example_builder_preserves_legacy_output_and_run_arguments(self):
+        script = Path(__file__).resolve().parents[2] / "examples/build_example.py"
+        spec = importlib.util.spec_from_file_location("example_builder", script)
+        builder = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(builder)
+        project = self.root / "examples/infinite-sonic"
+        manifest = project / "src/main/resources/META-INF/openggf-mod.yaml"
+        manifest.parent.mkdir(parents=True)
+        manifest.write_text("id: infinite-sonic\n")
+        (project / "src/main/java").mkdir(parents=True)
+        (self.root / "target/examples-classpath.txt").write_text("dependencies")
+        legacy = self.root / "target/infinite-sonic"
+        with patch.object(builder, "ROOT", self.root), patch.object(builder.subprocess, "run") as run:
+            jar = builder.build("infinite-sonic", run=True, skip_engine=True, output=legacy)
+        self.assertEqual(legacy / "infinite-sonic.jar", jar)
+        package, launch = run.call_args_list[-2:]
+        self.assertEqual(["package", "--input", str(legacy / "classes"), "--out", str(jar)],
+                         package.args[0][-5:])
+        self.assertEqual(["run", str(legacy / "classes")], launch.args[0][-2:])
+
+    def test_exports_every_authored_test_resource_and_source_generator(self):
+        project = self.root / "examples/model-demo"
+        inputs = {
+            "src/main/resources/META-INF/openggf-mod.yaml": "id: model-demo\n",
+            "src/test/java/demo/ModelTest.java": "// portable Jupiter test\n",
+            "src/test/resources/fixture.txt": "authored fixture\n",
+            "tools/generate_maps.py": "# reproducible source generator\n",
+            "tools/__pycache__/stale.pyc": "not an authored input\n",
+            "target/test-classes/demo/ModelTest.class": "not an authored input\n",
+        }
+        for relative, text in inputs.items():
+            path = project / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text)
+        entries = kit.export_examples(self.root)
+        for relative in ("src/test/java/demo/ModelTest.java", "src/test/resources/fixture.txt",
+                         "tools/generate_maps.py"):
+            self.assertEqual((project / relative).read_bytes(), entries["examples/model-demo/" + relative])
+        self.assertFalse(any("__pycache__" in name or "target/test-classes" in name for name in entries))
+        readme = entries["examples/model-demo/README.md"].decode()
+        self.assertIn("--test", readme)
+
+    def test_actual_export_includes_every_portable_example_test_and_three_islands_generator(self):
+        root = Path(__file__).resolve().parents[2]
+        entries = kit.export_examples(root)
+        for name, project in kit.exported_projects(root).items():
+            for file in (project / "src/test").rglob("*"):
+                if file.is_file():
+                    self.assertEqual(file.read_bytes(), entries["examples/" + name + "/" + file.relative_to(project).as_posix()])
+        self.assertIn("examples/three-islands/tools/generate_maps.py", entries)
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)

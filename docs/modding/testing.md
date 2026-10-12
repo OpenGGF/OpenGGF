@@ -16,7 +16,26 @@ registers through the creator transaction, and resolves its launch through the
 normal module resolver. It opens the real scene host, feeds input, records drawing,
 and checks runtime findings. No checkout-only test harness is required.
 
-From an unpacked creator kit, verify the artifacts before installing the test
+Every exported fork includes its authored tests and test resources. Source
+generators, including Three Islands' map generator, remain in the project's
+`tools/` directory. Older `*Checks` and `*Probe` programs receive compiled Jupiter
+adapters in exported sources; the engine still discovers and reports actual tests.
+Projects without authored tests receive a packed-mod registration test.
+
+From an unpacked kit, run the portable test launcher:
+
+```sh
+python3 tools/build_project.py examples/hello-scene --test --testkit mod-testkit.jar
+python3 tools/build_project.py examples/flappy-tails --test --testkit mod-testkit.jar
+```
+
+The launcher verifies all three artifact identities before changing build output,
+resolves JUnit Platform Console 1.10.3 through Maven, compiles tests into a separate
+directory, and runs Jupiter with empty discovery treated as failure. Pass explicit
+`--s1`, `--s2` or `--s3k` paths when a test requires supplied ROMs. Test classes,
+fixtures and test dependencies stay out of the mod's main jar.
+
+For Maven's test profile, verify the artifacts before installing the separate test
 dependency locally:
 
 ```sh
@@ -30,16 +49,13 @@ mvn -f examples/hello-scene/pom.xml package -Pcreator-tests "-Dopenggf.testkit.v
 The version comes from the kit's metadata. This installs the supplied artifact in your local Maven cache; it
 does not publish an API or require an OpenGGF Maven repository. The exported POM
 pins compiler/Surefire plugins and Jupiter 5.10.3. Its `creator-tests` profile
-activates test sources and the separate classifier. These commands test the kit's
-exported Hello Scene; `ggfmod init` projects do not already include that profile.
+activates test sources and the separate classifier. Exported forks and all
+`ggfmod init` starters include this profile and a packed-mod integration test.
 Ordinary starter builds do not require the testkit.
 
-To add production-backed tests to your generated project, use the exported
-`examples/hello-scene/pom.xml` as the configuration reference. Copy its pinned
-Jupiter 5.10.3 and JUnit Platform Console 1.10.3 test dependencies, Surefire 3.2.5,
-`creator-tests` profile and test-source properties/directory into your existing POM.
-Keep your project's converters and production package execution. Add tests under
-`src/test/java`; adapt `HelloSceneIntegrationTest`'s base module and launch request
+Extend your starter's `StarterIntegrationTest`, or use the exported
+`HelloSceneIntegrationTest` for a scene-host test. Add tests under
+`src/test/java`; adapt the base module and launch request
 to your manifest's game. Use the same matching artifact/profile properties above,
 with `-f` pointing to your project's POM. Keep testkit/JUnit dependencies at test
 scope and package only `target/classes`, so test classes stay out of the mod jar.
@@ -47,8 +63,9 @@ scope and package only `target/classes`, so test classes stay out of the mod jar
 Jupiter runs discovery, lifecycle hooks, extensions, parameterized tests and
 dynamic tests. Repository checks use the same Jupiter engine through the pinned
 [JUnit Platform Console 1.10.3](https://docs.junit.org/5.10.3/user-guide/#running-tests-console-launcher),
-including classes named `*Checks`. A failing test or empty discovery produces a
-nonzero result; tests are never manually invoked by reflection.
+including classes named `*Checks` where they use Jupiter annotations. The exported
+adapters call older check entry points from Jupiter test methods. A failing test or
+empty discovery produces a nonzero result.
 
 ## Testing packed mods
 

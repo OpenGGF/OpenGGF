@@ -42,7 +42,7 @@ def project_pom(name):
 <dependency><groupId>com.openggf</groupId><artifactId>OpenGGF</artifactId><version>${{openggf.testkit.version}}</version><classifier>mod-testkit</classifier><scope>test</scope></dependency>
 </dependencies></profile></profiles><build><testSourceDirectory>${{openggf.creator.testSources}}</testSourceDirectory><plugins>
 <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><version>3.14.0</version></plugin>
-<plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId><version>3.2.5</version></plugin>
+<plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId><version>3.2.5</version><configuration><failIfNoTests>true</failIfNoTests></configuration></plugin>
 <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-antrun-plugin</artifactId><version>3.1.0</version><executions><execution><id>clean-package-output</id><phase>initialize</phase><goals><goal>run</goal></goals><configuration><target><delete file="${{project.build.directory}}/{name}-mod.jar" quiet="true"/></target></configuration></execution></executions></plugin>
 <plugin><groupId>org.codehaus.mojo</groupId><artifactId>exec-maven-plugin</artifactId><version>3.1.0</version><executions><execution><id>validated-mod</id><phase>prepare-package</phase><goals><goal>exec</goal></goals><configuration><executable>java</executable><classpathScope>compile</classpathScope><arguments><argument>-cp</argument><classpath/><argument>com.openggf.tools.modsdk.GgfModCli</argument><argument>package</argument><argument>--input</argument><argument>${{project.build.outputDirectory}}</argument><argument>--out</argument><argument>${{project.build.directory}}/{name}-mod.jar</argument></arguments></configuration></execution></executions></plugin>
 </plugins></build></project>'''.encode()
@@ -78,15 +78,22 @@ def exported_projects(root):
 def export_examples(root):
     entries = {}
     for name, project in exported_projects(root).items():
-        for file in sorted((project / "src/main").rglob("*")):
-            if file.is_file():
-                entries["examples/" + name + "/" + file.relative_to(project).as_posix()] = file.read_bytes()
-        if name == "tide-circuit":
-            entries["examples/tide-circuit/tools/generate_assets.py"] = (project / "tools/generate_assets.py").read_bytes()
-        if name == "hello-scene":
-            specimen = project / "src/test/java/hello/HelloSceneIntegrationTest.java"
-            if specimen.is_file():
-                entries["examples/hello-scene/src/test/java/hello/HelloSceneIntegrationTest.java"] = specimen.read_bytes()
+        for tree in ("src/main", "src/test", "tools"):
+            for file in sorted((project / tree).rglob("*")):
+                relative = file.relative_to(project)
+                if file.is_file() and "__pycache__" not in relative.parts and file.suffix != ".pyc":
+                    entries["examples/" + name + "/" + relative.as_posix()] = file.read_bytes()
+        adapter = legacy_check_adapter(project)
+        if adapter:
+            entries[f"examples/{name}/src/test/java/creator/exported/CreatorChecksTest.java"] = adapter
+        elif not any((project / "src/test/java").rglob("*.java")):
+            mod_id = re.search(r"(?m)^id:\s*([a-z0-9][a-z0-9._-]*)\s*$",
+                               (project / "src/main/resources/META-INF/openggf-mod.yaml").read_text()).group(1)
+            template = (root / "src/main/resources/META-INF/openggf-mod-sdk/templates/StarterIntegrationTest.java.template")
+            # Tiny fixture roots used by export tests may omit SDK templates.
+            if template.is_file():
+                entries[f"examples/{name}/src/test/java/creator/exported/StarterIntegrationTest.java"] = (
+                    template.read_text().replace("{{PACKAGE}}", "creator.exported").replace("{{MOD_ID}}", mod_id).encode())
         readme = project / "README.md"
         manifest = (project / "src/main/resources/META-INF/openggf-mod.yaml").read_text()
         base_game = re.search(r"(?m)^baseGame:\s*(s1|s2|s3k)\s*$", manifest)
@@ -101,6 +108,18 @@ From this project directory, build with the portable launcher:
 ```sh
 python3 ../../tools/build_project.py .
 ```
+
+Run all authored Jupiter tests (including the exported adapters for older check
+programs) with the matching kit's separate testkit:
+
+```sh
+python3 ../../tools/build_project.py . --test --testkit ../../mod-testkit.jar
+```
+
+The test launcher resolves pinned JUnit Platform Console 1.10.3 through Maven,
+compiles only `src/test` into `target/test-classes`, and fails on test failure or
+empty discovery. No test dependencies or classes enter the mod jar. Source
+generators are in `tools/`; run them from this project directory.
 
 The distributable is **`target/{name}-mod.jar`**. Only `src/main` classes
 and resources enter that jar. Alternatively, build with Maven and matching absolute
@@ -129,6 +148,34 @@ there refer to the pinned source tree; use the creator-kit commands above here.
         entries[f"examples/{name}/README.md"] = instructions.encode() + (readme.read_bytes() if readme.exists() else b"")
         entries[f"examples/{name}/pom.xml"] = project_pom(name)
     return entries
+
+
+def legacy_check_adapter(project):
+    """Keep the authored check programs, and discover their entry points through Jupiter.
+
+    These are deliberately named *Checks/*Probe test-only classes. Ordinary
+    helpers and main sources are never treated as tests. Calls are compiled Java,
+    so changed signatures fail compilation instead of disappearing from discovery.
+    """
+    calls = []
+    for source in sorted((project / "src/test/java").rglob("*.java")):
+        text = source.read_text()
+        package = re.search(r"(?m)^package\s+([\w.]+)\s*;", text)
+        if not package or not source.stem.endswith(("Checks", "Probe")):
+            continue
+        owner = package.group(1) + "." + source.stem
+        methods = re.findall(r"public\s+static\s+void\s+(\w+)\s*\(\s*\)", text)
+        if re.search(r"public\s+static\s+void\s+main\s*\(\s*String\s*\[\s*\]\s+\w+\s*\)", text):
+            # The authored program may also invoke private checks: preserve its full entry point.
+            calls.append((owner, "main", "new String[0]"))
+        elif methods:
+            calls.extend((owner, method, "") for method in methods if method != "run" or len(methods) == 1)
+    if not calls:
+        return None
+    tests = "\n".join(f"    @org.junit.jupiter.api.Test void check{i}() throws Exception {{ {owner}.{method}({args}); }}"
+                      for i, (owner, method, args) in enumerate(calls))
+    return ("package creator.exported;\n\n/** Generated Jupiter adapters for the authored legacy check entry points. */\n"
+            + "class CreatorChecksTest {\n" + tests + "\n}\n").encode()
 
 
 def build_identity(data, path):

@@ -1016,6 +1016,11 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   module-only rewind composition isolated from engine artifacts, portable
   example projects, repeatable builds, artifact-only CI and explicit packaging
   warnings suitable for automation.
+  Exported projects retain their authored tests, fixtures and source generators;
+  the portable test launcher checks matching artifacts and runs Jupiter with
+  empty discovery treated as failure. Generated starters include a separate test
+  profile and packed-mod integration test. Infinite Sonic and Sonic Survivors
+  share the example builder while keeping their documented jar paths.
   Separate experimental Windows and Linux native friends bundles package the maintained
   example mods and launch shortcuts using GraalVM runtime class loading, with
   generated engine/JDK member retention, runtime bootstrap controls and startup checks.

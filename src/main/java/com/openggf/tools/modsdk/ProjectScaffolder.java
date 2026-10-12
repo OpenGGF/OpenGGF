@@ -52,6 +52,7 @@ public final class ProjectScaffolder {
             } else {
                 writeSimpleProject(staging, kind, modId, javaPackage);
             }
+            writeTestSupport(staging, modId, javaPackage);
             writeText(staging.resolve("README.md"), "# " + displayName(modId) + "\n\n"
                     + "Complete " + kind + " starter for the unpublished Mod API 0.7 candidate.\n\n"
                     + "Use Java 21 and matching engine/SDK jars from the same commit. Build twice after an edit:\n\n"
@@ -59,6 +60,9 @@ public final class ProjectScaffolder {
                     + "-Dopenggf.sdk.jar=/absolute/path/sdk.jar\n```\n\n"
                     + "The validated distributable is target/" + modId + "-mod.jar. "
                     + "Run target/classes with ggfmod run, then validate the jar before sharing it.\n"
+                    + "The included src/test/java integration test uses the opt-in creator-tests profile. "
+                    + "Follow handbook/testing.md to verify and install the matching separate mod-testkit, "
+                    + "then run mvn test -Pcreator-tests -Dopenggf.testkit.version=<kit-version> with the same jar properties.\n"
                     + "See the creator kit handbook's getting-started.md and installing-mods.md.\n");
             Files.move(staging, output);
             return output;
@@ -100,6 +104,7 @@ public final class ProjectScaffolder {
             });
             writeSamplePng(staging.resolve("src/main/mod/sample.png"));
             writeMinimalLevel(staging.resolve("src/main/mod/level-source"), modId);
+            writeTestSupport(staging, modId, javaPackage);
             Files.move(staging, output);
             return output;
         } catch (ScaffoldFailure failure) {
@@ -138,6 +143,22 @@ public final class ProjectScaffolder {
         writeText(root.resolve("src/main/resources/META-INF/openggf-mod.yaml"), "formatVersion: 1\nid: " + id + "\nname: " + displayName(id) + "\nversion: 1.0.0\nauthors: [Mod Author]\ndescription: Original " + kind + " starter.\nengineApiRange: \">=0.7.0 <0.8.0\"\ntype: patch\nbaseGame: s2\ndependencies: []\naudioOverrides: " + (kind.equals("music") ? "{129: theme}" : "{}") + "\n" + manifestExtras);
         String pom = render("simple-pom.xml.template", Map.of("{{MOD_ID}}", id, "{{PACKAGE}}", pkg, "{{CONVERSION}}", conversion));
         writeText(root.resolve("pom.xml"), pom);
+    }
+
+    private static void writeTestSupport(Path root, String id, String pkg) throws IOException {
+        Path pomPath = root.resolve("pom.xml");
+        String pom = Files.readString(pomPath, StandardCharsets.UTF_8);
+        if (!pom.contains("<id>creator-tests</id>")) {
+            pom = pom.replaceFirst("</properties>", "<openggf.creator.testSources>src/creator-tests-disabled</openggf.creator.testSources><skipTests>true</skipTests></properties>");
+            pom = pom.replaceFirst("<build>", java.util.regex.Matcher.quoteReplacement(
+                    "<build><testSourceDirectory>${openggf.creator.testSources}</testSourceDirectory>"));
+            String profile = render("creator-tests-profile.xml.template", Map.of());
+            if (pom.contains("</profiles>")) pom = pom.replace("</profiles>", profile + "</profiles>");
+            else pom = pom.replace("</project>", "<profiles>" + profile + "</profiles></project>");
+            writeText(pomPath, pom);
+        }
+        writeText(root.resolve("src/test/java/" + pkg.replace('.', '/') + "/StarterIntegrationTest.java"),
+                render("StarterIntegrationTest.java.template", Map.of("{{MOD_ID}}", id, "{{PACKAGE}}", pkg)));
     }
 
     private static void writeTone(Path path) throws IOException {

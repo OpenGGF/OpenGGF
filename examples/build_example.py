@@ -26,7 +26,7 @@ sys.path.insert(0, str(ROOT / "tools/modding"))
 import build_project as portable  # noqa: E402
 
 
-def build(name, run=False, skip_engine=False, engine=None, sdk=None, roms=None):
+def build(name, run=False, skip_engine=False, engine=None, sdk=None, roms=None, output=None):
     project = ROOT / "examples" / name
     if not (project / "src/main/resources/META-INF/openggf-mod.yaml").exists():
         sys.exit(f"{project} is not an example mod (no src/main/resources/META-INF/openggf-mod.yaml)")
@@ -34,7 +34,7 @@ def build(name, run=False, skip_engine=False, engine=None, sdk=None, roms=None):
         if not engine or not sdk:
             raise ValueError("Supply both --engine and --sdk from the same candidate commit")
         return portable.build(project, engine, sdk, run=run, roms=roms)
-    output = ROOT / "target" / "examples" / name
+    output = Path(output) if output is not None else ROOT / "target" / "examples" / name
     java_home = os.environ.get("JAVA_HOME")
     suffix = ".exe" if os.name == "nt" else ""
 
@@ -67,9 +67,10 @@ def build(name, run=False, skip_engine=False, engine=None, sdk=None, roms=None):
     return jar
 
 
-def main():
+def main(default_name=None, output=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("name", help="the example's directory under examples/, e.g. hello-scene or "
+    parser.add_argument("name", nargs="?" if default_name else None, default=default_name,
+                        help="the example's directory under examples/, e.g. hello-scene or "
                         "flappy-tails/tutorial/part-2-first-scene")
     parser.add_argument("--run", action="store_true", help="launch the JVM engine with this development mod")
     parser.add_argument("--skip-engine", action="store_true", help="reuse the existing engine build in target/")
@@ -79,7 +80,7 @@ def main():
         parser.add_argument("--" + name, type=Path, help="explicit ROM path for an isolated development launch")
     args = parser.parse_args()
     build(args.name, run=args.run, skip_engine=args.skip_engine, engine=args.engine, sdk=args.sdk,
-          roms=dict(zip(("sonic1", "sonic2", "sonic3k"), (args.s1, args.s2, args.s3k))))
+          roms=dict(zip(("sonic1", "sonic2", "sonic3k"), (args.s1, args.s2, args.s3k))), output=output)
 
 
 if __name__ == "__main__":

@@ -31,6 +31,8 @@ class TestProjectScaffolder {
         assertEquals(2, pom.split(java.util.regex.Pattern.quote(dependencyVersion), -1).length - 1,
                 "engine and SDK dependencies must match the running build's Maven version");
         assertFalse(pom.contains("{{ENGINE_VERSION}}"));
+        assertTrue(pom.contains("<id>creator-tests</id>"));
+        assertTrue(pom.contains("<failIfNoTests>true</failIfNoTests>"));
 
         Set<String> files;
         try (var paths = Files.walk(project)) {
@@ -38,6 +40,7 @@ class TestProjectScaffolder {
                     .map(Path::toString).map(s -> s.replace('\\', '/')).collect(Collectors.toSet());
         }
         assertEquals(Set.of("pom.xml", "README.md",
+                "src/test/java/example/mods/sample/StarterIntegrationTest.java",
                 "src/main/java/example/mods/sample/MySampleMod.java",
                 "src/main/java/example/mods/sample/SampleBadnik.java",
                 "src/main/java/example/mods/sample/SampleCharacter.java",
