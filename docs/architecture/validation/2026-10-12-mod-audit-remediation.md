@@ -697,10 +697,13 @@ injected from the existing main checkout; no ROM copies or links were created.
 
 Failure comparison uses the full assertion before its stack, not the runner
 truncated `message`. The following SHA-256 values identify every full assertion.
-Only exact `com.openggf.game.rewind.schema.RewindObjectStateBlob@<hex>` identity
-tokens are normalized to `@IDENTITY`; gameplay fields, object identities, ordering,
-frames and byte differences remain intact. Candidate and integrated results must
-match by test identity and assertion, and any new/worsened failure blocks delivery.
+These are raw assertion digests. `RewindObjectStateBlob.hashCode()` combines class
+identity with schema and serialized state, so its `@<hex>` suffix is not a purely
+incidental identity token. An earlier normalized grouping digest is superseded here.
+If that suffix differs across JVMs, use a bounded semantic comparison of the failing
+snapshot before attributing the difference; normalization alone cannot prove an
+inherited failure. Candidate and integrated results must match by test identity and
+assertion, and any new/worsened or unattributed failure blocks delivery.
 
 | Failure identity | Assertion SHA-256 |
 |---|---|
@@ -729,7 +732,7 @@ match by test identity and assertion, and any new/worsened failure blocks delive
 | `com.openggf.tools.TestSszSoloColdRouteCapture#coldSoloSonicDefeatsMechaAndLoadsDezWithIsolatedHistory` | `00ac4ba91696465a1a8db1fd54a3b43bc46c1eae9ffb23d4ee9923dd694fe4ca` |
 | `com.openggf.tools.TestSszTailsColdRouteCapture#coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory(int)[1]` | `09c1414b4888b1025e4cbe3e38ffd88ea2e00ff8e4ec031760f63b18c4e67224` |
 | `com.openggf.tools.TestSszTailsColdRouteCapture#coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory(int)[2]` | `09c1414b4888b1025e4cbe3e38ffd88ea2e00ff8e4ec031760f63b18c4e67224` |
-| `com.openggf.tools.TestSszTailsColdRouteCapture#coldSoloTailsDefeatsBothReplicasAndRidesTheirTeleporters(int)[2]` | `c1d178ad1b21f274fb4890bdb1e1be6bb2bcce555520e53c94aa473a516f0074` |
+| `com.openggf.tools.TestSszTailsColdRouteCapture#coldSoloTailsDefeatsBothReplicasAndRidesTheirTeleporters(int)[2]` | `aa1f4afc287c8468e5ec8202d7ee021925681858f349f3d8580f080cfbb03a98` |
 
 Completed baseline diagnostics were inspected and acknowledged; the run directory was deleted.
 
@@ -824,3 +827,24 @@ env JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools
 Normal lane; no profile/custom JVM arguments. Actual XML outcomes and skips were
 inspected; no raw logs were retained. Completion: 2026-10-12 19:01:01 +0100.
 Final clean artifacts and broad candidate/integrated comparisons remain open.
+
+## Final independent contract-edge review
+
+The clean `0c5524060` producer package completed1m18 with tests skipped and bundled
+Time Attack validator-clean. That package is provisional: independent final review
+then found the direct-close overlay fade edge and explicit unreadable-backup reset
+asymmetry. No final matrix is attributed to that provisional producer.
+
+An actual production-storage probe against its matching engine failed1/1 without
+skips: explicit reset of an oversized backup returned BACKUP_FAILED instead of
+SAVED. The paired oversized/invalid-UTF8 production regression then passed in the
+queued Java25 lean `TestModSaveSlot,TestModStorage` run:34/34, zero skips,1m09.
+An additional reset-sequence probe reproduced two failures against that producer:
+replacing two rejected generations left the following checkpoint read-only, and
+required rejected-backup failure did not prevent primary publication (2/2 failures,
+zero skips). Explicit reset now retains a supported recovery generation or publishes
+the already validated reset checkpoint into a rejected existing backup before the
+primary. The queued Java25 lean `TestModSaveSlot,TestModStorage` run43231 passed
+36/36, zero skips,1m09 at dirty `0c5524060` with these exact two source changes;
+completion was 2026-10-12 19:23:25 +0100. This covers the following checkpoint and
+required backup-write failure, not a multi-file atomicity guarantee.

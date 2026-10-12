@@ -157,17 +157,24 @@ public final class ModSaveSlot<T> {
         } catch (StorageUnavailable unavailable) {
             return ModSaveWriteResult.PRIMARY_FAILED;
         }
-        if (backup != null && previous != null) {
+        if (backup != null && (previous != null || replacementAuthorized)) {
             try {
                 Optional<String> oldBackup = read(backup);
-                if (oldBackup.isEmpty() && list().contains(backup))
+                boolean backupExists = oldBackup.isPresent() || list().contains(backup);
+                if (oldBackup.isEmpty() && backupExists && !replacementAuthorized)
                     return ModSaveWriteResult.BACKUP_FAILED;
                 if (!replacementAuthorized && oldBackup.isPresent()
                         && decode(oldBackup.get()).status() == INCOMPATIBLE) {
                     writable = false;
                     return ModSaveWriteResult.REPLACEMENT_REQUIRED;
                 }
-                if (!oldBackup.filter(previous::equals).isPresent()
+                if (previous == null && backupExists) {
+                    // Explicit reset must leave a usable recovery generation too.
+                    // Retain a supported backup; replace rejected bytes with the validated checkpoint.
+                    previous = oldBackup.isPresent() && decode(oldBackup.get()).status() == VALID
+                            ? oldBackup.get() : pending;
+                }
+                if (previous != null && !oldBackup.filter(previous::equals).isPresent()
                         && !write(backup, previous)) return ModSaveWriteResult.BACKUP_FAILED;
             } catch (StorageUnavailable unavailable) { return ModSaveWriteResult.BACKUP_FAILED; }
         }

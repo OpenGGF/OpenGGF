@@ -154,6 +154,50 @@ class TestModSaveSlot {
         assertEquals("v1:4", storage.files.get("save.txt"));
     }
 
+    @Test void explicitReplacementCanReplaceUnreadableProductionBackup() throws Exception {
+        byte[][] rejected = {new byte[ModStorage.MAX_TEXT_BYTES + 1], {(byte) 0xC3, (byte) 0x28}};
+        for (int i = 0; i < rejected.length; i++) {
+            String owner = "slot-unreadable-" + i;
+            var storage = ModStorageFactory.forOwner(root, owner);
+            assertTrue(storage.write("save.txt", "v1:3"));
+            var slot = slot(storage); assertEquals(VALID, slot.load().status());
+            Path backup = root.resolve("mods").resolve(owner).resolve("save.bak");
+            Files.write(backup, rejected[i]);
+            assertEquals(BACKUP_FAILED, slot.save(4));
+            assertArrayEquals(rejected[i], Files.readAllBytes(backup));
+            assertEquals("v1:3", storage.read("save.txt").orElseThrow());
+            slot.allowReplacement();
+            assertEquals(SAVED, slot.save(4));
+            assertEquals("v1:3", storage.read("save.bak").orElseThrow());
+            assertEquals("v1:4", storage.read("save.txt").orElseThrow());
+        }
+    }
+
+    @Test void replacingRejectedGenerationsDoesNotBlockTheFollowingCheckpoint() {
+        for (String primary : List.of("v2:9", "broken")) {
+            Memory storage = new Memory(); storage.files.put("save.txt", primary);
+            storage.files.put("save.bak", "v2:8");
+            var slot = slot(storage); assertEquals(INCOMPATIBLE, slot.load().status());
+            slot.allowReplacement(); assertEquals(SAVED, slot.save(3));
+            assertEquals(SAVED, slot.save(4));
+            assertEquals("v1:3", storage.files.get("save.bak"));
+            assertEquals("v1:4", storage.files.get("save.txt"));
+        }
+    }
+
+    @Test void replacingRejectedBackupFailureRetainsTheExactResetCheckpoint() {
+        Memory storage = new Memory(); storage.files.put("save.txt", "v2:9");
+        storage.files.put("save.bak", "v2:8");
+        var slot = slot(storage); slot.load(); slot.allowReplacement(); storage.fail = "save.bak";
+        assertEquals(BACKUP_FAILED, slot.save(3));
+        assertEquals("v2:9", storage.files.get("save.txt"));
+        assertEquals("v2:8", storage.files.get("save.bak"));
+        assertTrue(slot.pending()); storage.fail = null;
+        assertEquals(SAVED, slot.retry());
+        assertEquals("v1:3", storage.files.get("save.bak"));
+        assertEquals("v1:3", storage.files.get("save.txt"));
+    }
+
     @Test void helperAcceptsTheSameLocalNameGrammarAsStorage() {
         Memory storage = new Memory();
         assertEquals(SAVED, new ModSaveSlot<>(storage, "_save.txt", CODEC).save(1));

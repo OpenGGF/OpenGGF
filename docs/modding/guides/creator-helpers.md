@@ -320,6 +320,11 @@ those new corrupt bytes until explicit replacement. `save(value)` returns a
 only when `saved()` is true. An incompatible backup also requires explicit replacement.
 Unreadable backups and required backup write failures prevent primary publication,
 and oversized text is rejected before writing.
+Explicit replacement can overwrite an unreadable generation when storage can still
+write it. When both generations are rejected, reset establishes a validated backup
+before publishing the new primary; a supported old backup is retained. This keeps
+the following ordinary checkpoint writable. Failed reset publication still retains
+the exact encoded checkpoint and reports its failed boundary.
 
 On a failed publication, `pending()` reports the retained encoded checkpoint;
 call `retry()` on a bounded cadence and during exit. Retrying does not encode

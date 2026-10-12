@@ -80,12 +80,13 @@ unresolved registry; do not replace ownership writes with direct palette mutatio
 
 Compare the full assertion, not its bounded summary (2026-10-12, Java 25
 migration): a 2,915-character rewind assertion was truncated at 2,048 in the
-runner's `message`; its complete assertion remained in `detail`. Across JVMs,
-incidental `RewindObjectStateBlob@...` identity strings differed while frame,
-slots, object kinds and serialized-state differences matched. Normalize only
-those exact nonsemantic tokens when justified; never strip arbitrary hexadecimal
-values, addresses or gameplay fields to manufacture equality. Retain the
-normalization rule and compare failure identities and exception types as well.
+runner's `message`; its complete assertion remained in `detail`. Check the owning
+`hashCode()` before treating a `ClassName@...` suffix as incidental identity:
+`RewindObjectStateBlob` mixes class identity with schema and serialized-state hashes.
+A differing suffix requires a bounded semantic snapshot comparison before failure
+attribution. Never strip such tokens, arbitrary hexadecimal values, addresses or
+gameplay fields merely to manufacture equality. Compare failure identities and
+exception types as well, and retain the actual comparison rule and evidence.
 
 Native stage measurements have multiple caller boundaries (2026-10-09, Mutator
 Lab expansion): `GameLoop.step()` and the movie renderer do not certify
