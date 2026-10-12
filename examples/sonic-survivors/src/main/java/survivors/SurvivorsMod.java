@@ -29,9 +29,12 @@ public final class SurvivorsMod implements GgfMod {
         context.registerObject("shot", (spawn, registry) -> new Shot(spawn));
         context.registerObject("pickup", (spawn, registry) -> new Pickup(spawn));
         var storage = context.storage();
-        context.registerServiceBundle("run", () -> GameServiceBundle.builder()
-                .capturedService("state", RunState.class, new RunState())
-                .service(Profile.class, new Profile(storage).load()).build());
+        context.registerServiceBundle("run", () -> {
+            var profile = new Profile(storage).load();
+            return GameServiceBundle.builder()
+                    .capturedService("state", RunState.class, new RunState(profile))
+                    .service(Profile.class, profile).build();
+        });
         context.registerGamePatch(new Patch());
     }
 
@@ -147,7 +150,10 @@ public final class SurvivorsMod implements GgfMod {
             active = arena != null;
             if (!active) return super.loadLevelOverride(index);
             // A run that reaches this level from somewhere off its route (a debug jump) restarts in camp.
-            if (run.active && (run.stage != arena.stage() || run.act != arena.act())) run.end();
+            if (run.active && (run.stage != arena.stage() || run.act != arena.act())) {
+                run.end();
+                run.prepareNext(profile());
+            }
             Level original = game.loadLevel(index);
             return com.openggf.level.MutableLevel.snapshot(new ArenaLevel(original, arena));
         }
