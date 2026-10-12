@@ -1,15 +1,15 @@
 package openggf.racing.server.host;
 
-import openggf.racing.host.RaceRoomHost;
+import com.openggf.net.host.RaceRoomHost;
 
 import openggf.racing.server.host.RaceHostServer;
 import openggf.racing.server.host.DirectRoomTls;
 
-import openggf.racing.host.jdk.JdkHostLimits;
-import openggf.racing.host.jdk.JdkRaceHostServer;
-import openggf.racing.hub.RoomHostConfig;
-import openggf.racing.hub.TrackValidationProfileSource;
-import openggf.racing.identity.PlayerIdentity;
+import com.openggf.net.host.jdk.JdkHostLimits;
+import com.openggf.net.host.jdk.JdkRaceHostServer;
+import com.openggf.net.hub.RoomHostConfig;
+import com.openggf.net.hub.TrackValidationProfileSource;
+import com.openggf.net.identity.PlayerIdentity;
 
 import java.util.function.LongSupplier;
 

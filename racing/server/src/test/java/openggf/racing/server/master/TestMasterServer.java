@@ -1,9 +1,9 @@
 package openggf.racing.server.master;
 
-import openggf.racing.client.ClientHandshake;
-import openggf.racing.identity.PlayerIdentity;
+import com.openggf.net.client.ClientHandshake;
+import com.openggf.net.identity.PlayerIdentity;
 import openggf.racing.protocol.ControlCodec;
-import openggf.racing.protocol.ControlMessage;
+import com.openggf.net.protocol.ControlMessage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;

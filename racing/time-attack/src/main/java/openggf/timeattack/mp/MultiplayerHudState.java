@@ -1,7 +1,7 @@
 package openggf.timeattack.mp;
 
-import openggf.racing.protocol.ControlMessage;
-import openggf.racing.client.RemoteGhostRegistry;
+import com.openggf.net.protocol.ControlMessage;
+import com.openggf.net.client.RemoteGhostRegistry;
 
 import java.util.List;
 

@@ -146,6 +146,97 @@ class CategoryPolicyTests(unittest.TestCase):
             self.assertEqual({'committed', 'staged', 'unstaged', 'deleted', 'renamed', 'new-name', 'untracked space'}, set(paths))
 
 
+class InventorySourceRootsTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.data = runner.policy()
+        self.source('src/test/java', 'com/openggf/TestCore.java')
+
+    def source(self, root, name):
+        path = self.root / root / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text('// inventory fixture')
+        return path
+
+    def pom(self, roots=(), extra='', plugin_config='', executions=None):
+        from xml.sax.saxutils import escape
+        sources = ''.join(f'<source>{escape(root)}</source>' for root in roots)
+        if executions is None:
+            executions = ('<execution><goals><goal>add-test-source</goal></goals>'
+                          f'<configuration><sources>{sources}</sources></configuration></execution>') if roots else ''
+        helper = ('<plugin><groupId>org.codehaus.mojo</groupId>'
+                  '<artifactId>build-helper-maven-plugin</artifactId>' + plugin_config
+                  + f'<executions>{executions}</executions></plugin>')
+        (self.root / 'pom.xml').write_text(
+            '<project xmlns="http://maven.apache.org/POM/4.0.0"><build><plugins>'
+            '<plugin><artifactId>maven-surefire-plugin</artifactId><configuration>'
+            '<excludes><exclude>**/Test*Guard.java</exclude></excludes>'
+            '</configuration></plugin>' + helper + '</plugins></build>' + extra + '</project>')
+
+    def test_external_sources_are_included_and_keep_surefire_exclusions(self):
+        self.source('racing/mod/src/test/java', 'openggf/timeattack/TestRun.java')
+        self.source('racing/mod/src/test/java', 'openggf/timeattack/TestRunGuard.java')
+        self.source('racing/mod/src/main/java', 'openggf/timeattack/Runtime.java')
+        self.pom(['racing/mod/src/main/java', 'racing/mod/src/test/java'])
+        self.assertEqual({'com/openggf/TestCore.java', 'openggf/timeattack/TestRun.java'},
+                         set(runner.inventory(self.root, self.data)))
+
+    def test_duplicate_normalized_roots_are_deduplicated(self):
+        self.pom(['src/test/java', '${project.basedir}/src/test/java', '${basedir}/src/test/java'])
+        self.assertEqual(1, len(runner.inventory(self.root, self.data)))
+
+    def test_duplicate_class_paths_in_distinct_roots_fail(self):
+        self.source('racing/tests', 'com/openggf/TestCore.java')
+        self.pom(['racing/tests'])
+        with self.assertRaisesRegex(ValueError, 'Duplicate Java class path'):
+            runner.inventory(self.root, self.data)
+
+    def test_overlapping_roots_fail_instead_of_creating_wrong_selectors(self):
+        self.pom(['src/test'])
+        with self.assertRaisesRegex(ValueError, 'Overlapping test source roots'):
+            runner.inventory(self.root, self.data)
+
+    def test_dynamic_missing_or_escaping_roots_fail_closed(self):
+        for root in ['${unresolved}/java', '../outside', '/outside', 'missing/java', '.', r'src\test\java']:
+            with self.subTest(root=root):
+                self.pom([root])
+                with self.assertRaises(ValueError):
+                    runner.inventory(self.root, self.data)
+
+    def test_symlinked_source_children_are_not_silently_omitted(self):
+        self.source('extra', 'TestLinked.java')
+        (self.root / 'src/test/java/linked').symlink_to(self.root / 'extra', target_is_directory=True)
+        self.pom()
+        with self.assertRaisesRegex(ValueError, 'Symlink inside test source root'):
+            runner.inventory(self.root, self.data)
+
+    def test_plugin_defaults_apply_but_inactive_profile_roots_do_not(self):
+        self.source('racing/tests', 'openggf/timeattack/TestRun.java')
+        config = '<configuration><sources><source>racing/tests</source></sources></configuration>'
+        execution = '<execution><goals><goal>add-test-source</goal></goals></execution>'
+        profile = ('<profiles><profile><build><plugins><plugin>'
+                   '<groupId>org.codehaus.mojo</groupId><artifactId>build-helper-maven-plugin</artifactId>'
+                   '<executions><execution><goals><goal>add-test-source</goal></goals>'
+                   '<configuration><sources><source>absent/profile-only</source></sources></configuration>'
+                   '</execution></executions></plugin></plugins></build></profile></profiles>')
+        self.pom(extra=profile, plugin_config=config, executions=execution)
+        self.assertIn('openggf/timeattack/TestRun.java', runner.inventory(self.root, self.data))
+
+    def test_execution_sources_override_plugin_defaults(self):
+        self.source('racing/tests', 'openggf/timeattack/TestRun.java')
+        config = '<configuration><sources><source>absent/plugin-default</source></sources></configuration>'
+        self.pom(['racing/tests'], plugin_config=config)
+        self.assertIn('openggf/timeattack/TestRun.java', runner.inventory(self.root, self.data))
+
+    def test_real_racing_projects_are_present_in_full_inventory(self):
+        inventory = runner.inventory(runner.ROOT, self.data)
+        self.assertIn('openggf/timeattack/TestTimeAttackModPackage.java', inventory)
+        self.assertIn('openggf/racing/server/master/TestMasterServer.java', inventory)
+        self.assertIn('com/openggf/net/identity/TestPlayerIdentity.java', inventory)
+
+
 class RunnerTests(unittest.TestCase):
     def test_failed_or_empty_run_stops_before_guards(self):
         for code in (0, 1):

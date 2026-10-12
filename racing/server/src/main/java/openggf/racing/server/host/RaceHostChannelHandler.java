@@ -1,10 +1,10 @@
 package openggf.racing.server.host;
 
-import openggf.racing.host.ConnectionHygiene;
+import com.openggf.net.host.ConnectionHygiene;
 
-import openggf.racing.hub.HubConnection;
-import openggf.racing.hub.RoomHost;
-import openggf.racing.protocol.Protocol;
+import com.openggf.net.hub.HubConnection;
+import com.openggf.net.hub.RoomHost;
+import com.openggf.net.protocol.Protocol;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;

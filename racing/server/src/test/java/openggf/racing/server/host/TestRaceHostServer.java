@@ -1,19 +1,19 @@
 package openggf.racing.server.host;
 
-import openggf.racing.host.RaceRoomHost;
-import openggf.racing.host.ConnectionHygiene;
-import openggf.racing.host.ControlledRaceHost;
-import openggf.racing.host.RawWebSocketClient;
+import com.openggf.net.host.RaceRoomHost;
+import com.openggf.net.host.ConnectionHygiene;
+import com.openggf.net.host.ControlledRaceHost;
+import com.openggf.net.host.RawWebSocketClient;
 
-import openggf.racing.client.ClientHandshake;
-import openggf.racing.client.DirectJoinAddress;
-import openggf.racing.client.RaceClient;
-import openggf.racing.hub.RoomHostConfig;
-import openggf.racing.hub.TrackValidationProfileSource;
-import openggf.racing.identity.PlayerIdentity;
+import com.openggf.net.client.ClientHandshake;
+import com.openggf.net.client.DirectJoinAddress;
+import com.openggf.net.client.RaceClient;
+import com.openggf.net.hub.RoomHostConfig;
+import com.openggf.net.hub.TrackValidationProfileSource;
+import com.openggf.net.identity.PlayerIdentity;
 import openggf.racing.protocol.ControlCodec;
-import openggf.racing.protocol.ControlMessage;
-import openggf.racing.protocol.Protocol;
+import com.openggf.net.protocol.ControlMessage;
+import com.openggf.net.protocol.Protocol;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
@@ -411,11 +411,22 @@ class TestRaceHostServer {
         try (RawWebSocketClient client = RawWebSocketClient.connect(server.port())) {
             assertInstanceOf(ControlMessage.JoinAccepted.class, client.join(
                     PlayerIdentity.loadOrCreate(dir.resolve("guest")), "Raw", FP));
-            for (int i = 0; i < ConnectionHygiene.MESSAGE_RATE_BURST * 3; i++) {
-                client.sendText(ControlCodec.encode(client.sessionToken(),
-                        new ControlMessage.Ping(i)));
+            try {
+                for (int i = 0; i < ConnectionHygiene.MESSAGE_RATE_BURST * 3; i++) {
+                    client.sendText(ControlCodec.encode(client.sessionToken(),
+                            new ControlMessage.Ping(i)));
+                }
+            } catch (java.net.SocketException closedDuringFlood) {
+                // The host may enforce its limit before the sender finishes the burst.
+                // Still verify closure and room removal below; a send failure alone is not success.
             }
             client.awaitServerClose();
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+            while (onRoomThread(() -> server.room().playerCount()) != 0
+                    && System.nanoTime() < deadline) {
+                Thread.sleep(10);
+            }
+            assertEquals(0, onRoomThread(() -> server.room().playerCount()));
         }
     }
 

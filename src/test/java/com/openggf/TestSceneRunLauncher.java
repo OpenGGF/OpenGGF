@@ -32,6 +32,7 @@ class TestSceneRunLauncher {
     void setUp() {
         TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
         loop = new GameLoop(new InputHandler());
+        loop.setGameMode(com.openggf.game.GameMode.MOD_SCENE);
         launcher = new SceneRunLauncher(loop, host -> { guarded++; return host; }, List.of("s2"),
                 started::add, returned::add);
     }
@@ -69,6 +70,17 @@ class TestSceneRunLauncher {
         assertEquals(java.util.Optional.of("0.8:s2"), withFingerprints.determinismFingerprint("s2"));
         assertEquals(java.util.Optional.empty(), withFingerprints.determinismFingerprint("s3k"),
                 "a game whose ROM is not available has no fingerprint");
+    }
+
+    @Test
+    void aRetainedLauncherCannotReplaceUnrelatedGameplayOrTheMasterTitle() {
+        for (com.openggf.game.GameMode mode : List.of(com.openggf.game.GameMode.LEVEL,
+                com.openggf.game.GameMode.MASTER_TITLE_SCREEN)) {
+            loop.setGameMode(mode);
+            assertThrows(IllegalStateException.class,
+                    () -> launcher.launch(spec("s2", "sonic"), new RunHost() { }));
+            assertFalse(loop.hostedRuns.isActive());
+        }
     }
 
     @Test

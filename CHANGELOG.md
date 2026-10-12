@@ -7,21 +7,25 @@ readable and historical versions can be referenced directly.
 
 - **Time Attack is a bundled mod:** Time Attack now ships as the first-party **Time Attack**
   mod, bundled with JVM builds and enabled by default (disable it in **Mods**). It adds a
-  Time Attack entry to the master title and plays every run as a stock, non-saving session,
+  Time Attack entry under **Extras** and plays every run as a stock, non-saving session,
   so ghost times stay comparable. Ghosts and the player identity stay in `ghosts/` and
-  `identity/`. The engine no longer carries racing code, its `timeAttack.*` settings or the
-  Netty, Bouncy Castle and SQLite libraries; the master server, dedicated host and verifier
+  `identity/`. Reusable networking stays in core for mods to share. The engine no longer carries
+  Time Attack gameplay, its `timeAttack.*` settings or the runtime Netty, Bouncy Castle
+  and SQLite libraries; the master server, dedicated host and verifier
   build separately from `racing/server`. Native builds do not load code mods, so Time Attack
   is JVM-only. Multiplayer racing lives in the mod too: host a LAN room on the in-process
   host, join one by invite, or browse and create master-server rooms; the lobby, room browser
-  and settings (port, display name, master URL, minimap) are part of the mod's menu, and its
-  settings are stored by the mod instead of `config.yaml`.
+  and settings (retry key, port, display name, master URL, minimap) are part of the mod's menu, and its
+  settings are stored by the mod instead of `config.yaml`, importing legacy preferences
+  once from the previous configuration or its preserved backup.
 
 - **Mod API candidate: title entries and gameplay runs:** a mod may add one master-title entry
-  whose scene launches stock gameplay runs through `SceneContext.gameplay()` and is resumed when
+  under Extras whose scene launches stock gameplay runs through `SceneContext.gameplay()` and is resumed when
   each ends. A run host observes level starts and executed steps, may hold steps, draws ghosts
   and an overlay, and issues retry, leave and post-completion spectator commands; a session run
-  policy controls special/bonus stage entry, act-completion handoff, rewind and the editor. See
+  policy controls special/bonus stage entry, act-completion handoff, rewind and the editor.
+  Scene exit revokes run capabilities; creator faults retire the run and its scene. Shared
+  core networking contracts expose room clients, JDK hosting, identity and ghost transport. See
   [Title entries and gameplay runs](docs/modding/guides/gameplay-runs.md).
 
 - **Configurable widescreen HUD anchor:** the score, time, rings, and lives HUD can

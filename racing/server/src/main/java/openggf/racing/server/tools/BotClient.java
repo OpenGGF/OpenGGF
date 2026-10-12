@@ -1,15 +1,15 @@
 package openggf.racing.server.tools;
 
-import openggf.racing.ghost.GhostFrame;
-import openggf.racing.client.ClientHandshake;
-import openggf.racing.client.GhostStreamPublisher;
-import openggf.racing.hub.HubConnection;
-import openggf.racing.hub.RoomHost;
-import openggf.racing.identity.PlayerIdentity;
+import com.openggf.net.ghost.GhostFrame;
+import com.openggf.net.client.ClientHandshake;
+import com.openggf.net.client.GhostStreamPublisher;
+import com.openggf.net.hub.HubConnection;
+import com.openggf.net.hub.RoomHost;
+import com.openggf.net.identity.PlayerIdentity;
 import openggf.racing.protocol.ControlCodec;
-import openggf.racing.protocol.ControlMessage;
-import openggf.racing.protocol.GhostPackets;
-import openggf.racing.protocol.Protocol;
+import com.openggf.net.protocol.ControlMessage;
+import com.openggf.net.protocol.GhostPackets;
+import com.openggf.net.protocol.Protocol;
 
 import java.nio.file.Path;
 import java.util.HexFormat;

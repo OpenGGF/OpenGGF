@@ -1,7 +1,7 @@
 package openggf.timeattack.mp;
 
 import com.openggf.mods.run.RunLevelStart;
-import openggf.racing.hub.TrackValidationProfile;
+import com.openggf.net.hub.TrackValidationProfile;
 
 /** Builds host validation metadata for the loaded act from the run's level-start report. */
 public final class LiveLevelProfileFactory {

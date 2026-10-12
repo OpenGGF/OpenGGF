@@ -1634,11 +1634,6 @@ public class GameLoop {
                 tcp, this::startPendingInLevelTitleCard,
                 this::applyTitleCardControlLock);
 
-        if (!hostedRuns.admitStep(inputHandler)) {
-            updateNonGameplayAudio(doFrameStep);
-            return true;
-        }
-
         // Check if a title card was requested (new level loaded)
         if (levelManager.consumeTitleCardRequest()) {
             enterTitleCard(levelManager.getTitleCardZone(), levelManager.getTitleCardAct());
@@ -1751,6 +1746,12 @@ public class GameLoop {
                 updateNonGameplayAudio(doFrameStep);
                 return false;
             }
+        }
+
+        // Held simulation must still process retries, exits and load transitions above.
+        if (!hostedRuns.admitStep(inputHandler)) {
+            updateNonGameplayAudio(doFrameStep);
+            return true;
         }
 
         boolean freezeForArtViewer = debugShortcutsEnabled()

@@ -1,9 +1,9 @@
 package openggf.racing.server.master;
 
-import openggf.racing.host.ConnectionHygiene;
+import com.openggf.net.host.ConnectionHygiene;
 import openggf.racing.server.master.BundledProfileSource;
-import openggf.racing.identity.PlayerIdentity;
-import openggf.racing.protocol.Protocol;
+import com.openggf.net.identity.PlayerIdentity;
+import com.openggf.net.protocol.Protocol;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;

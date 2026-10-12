@@ -89,7 +89,7 @@ When the engine starts, you will see:
 
 1. **Master title screen** -- Choose a game with left/right from either pane.
    Up/down enters its action list, then selects Start Game, Launch Options, Recordings,
-   Mods, Settings, Advanced, Quit, or a mod's entry such as the bundled **Time Attack**. Confirm from the game pane opens
+   Mods, Settings, Advanced, Quit, or **Extras** (which includes the bundled **Time Attack** mod). Confirm from the game pane opens
    **Browse Games**, a full-width list with availability and page navigation.
    Confirm from the action pane opens the selected action; Back returns
    one level. Quit (or Esc/B from game selection) opens an exit confirmation.

@@ -539,3 +539,23 @@ normalized 0.7 candidate pin gains exactly two additive entries, with no removal
 retains unpublished candidate `0.7.0` and its existing schema/publication state.
 See the [creator recipe](../modding/guides/mod-scenes.md) and
 [fumble implementation plan](plans/2026-10-08-sitar-hero-fumble-feedback.md).
+
+## Hosted stock runs and shared network contracts
+
+The unpublished 0.7 candidate exposes `SceneGameplay` and the immutable `mods.run`
+contracts for scene-owned stock runs. A scene visit retains its run host across fresh
+stock sessions; creator callbacks and ghost-list validation run inside that owner's
+fault boundary. Closing or exiting the scene revokes its launch capability, and commands
+are restricted to the engine thread. An owner failure ends the run and returns to the
+master title instead of resuming the disabled scene.
+
+Reusable `com.openggf.net` client, room-host, identity, protocol and ghost-transport
+contracts are explicit annotated API roots. Netty/SQLite operator servers and verifier
+tools are outside that surface. `RuntimeException` (typed connection/protocol rejection)
+and `IntSupplier` (room capacity callbacks) are individually audited JDK signature types;
+no third-party signature or package-prefix exemption is added.
+
+The mutable `mod-api-signatures-0.7.txt` pin is regenerated against next's complete
+surface. `ModApiVersion` describes
+the additions; the policy descriptor remains unpublished candidate `0.7.0` and published
+baselines remain untouched.

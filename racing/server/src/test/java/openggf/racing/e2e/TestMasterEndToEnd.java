@@ -1,15 +1,15 @@
 package openggf.racing.e2e;
 
-import openggf.racing.ghost.GhostFrame;
-import openggf.racing.client.GhostStreamPublisher;
-import openggf.racing.client.MasterClient;
-import openggf.racing.client.RaceClient;
-import openggf.racing.client.RaceConnection;
-import openggf.racing.identity.PlayerIdentity;
+import com.openggf.net.ghost.GhostFrame;
+import com.openggf.net.client.GhostStreamPublisher;
+import com.openggf.net.client.MasterClient;
+import com.openggf.net.client.RaceClient;
+import com.openggf.net.client.RaceConnection;
+import com.openggf.net.identity.PlayerIdentity;
 import openggf.racing.server.master.MasterServer;
 import openggf.racing.server.master.ControlledMasterServer;
 import openggf.racing.server.master.TestMasterServer;
-import openggf.racing.protocol.ControlMessage;
+import com.openggf.net.protocol.ControlMessage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;

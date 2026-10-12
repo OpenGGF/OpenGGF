@@ -5,7 +5,7 @@ import com.openggf.mods.code.ModContext;
 
 /**
  * Time Attack: race a stock act against your best ghost (and, in multiplayer, other players'
- * live ghosts). Bundled with OpenGGF and enabled by default; it adds a master-title entry and
+ * live ghosts). Bundled with OpenGGF and enabled by default; it adds an Extras entry and
  * launches every run as a stock, non-saving session through the gameplay run API.
  */
 public final class TimeAttackMod implements GgfMod {

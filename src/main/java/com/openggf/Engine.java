@@ -1957,7 +1957,16 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	/** Starts a run a mod scene launched; a load failure returns to the scene. */
 	void startSceneHostedRun(com.openggf.mods.run.RunSpec spec) {
-		if (!launchHostedRunSession(spec, message -> LOGGER.warning("Scene run failed to load: " + message))) {
+		boolean loaded;
+		try {
+			loaded = launchHostedRunSession(spec, message -> LOGGER.warning("Scene run failed to load: " + message));
+		} catch (ModFaultBoundary.CallbackAborted aborted) {
+			throw aborted;
+		} catch (RuntimeException failure) {
+			LOGGER.log(java.util.logging.Level.WARNING, "Scene run failed to load", failure);
+			loaded = false;
+		}
+		if (!loaded) {
 			gameLoop.endHostedRunAfterFailedLaunch(true);
 		}
 	}
@@ -2058,9 +2067,11 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		gameLoop.setGameMode(GameMode.MOD_SCENE);
 		try {
 			gameLoop.modSceneHost.resume(reason);
-		} catch (RuntimeException | Error failure) {
+		} catch (ModFaultBoundary.CallbackAborted aborted) {
+			throw aborted;
+		} catch (RuntimeException failure) {
 			LOGGER.log(java.util.logging.Level.WARNING, "Mod scene failed to resume; returning to the master title", failure);
-			returnToMasterTitleScreen();
+			gameLoop.returnToMasterTitle();
 			return;
 		}
 		FadeManager fadeManager = graphicsManager.getFadeManager();
@@ -2632,7 +2643,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	 */
 	private boolean display() {
 		return runFrameWithModAbort(this::displayFrame,
-				graphicsManager::discardQueuedCommands, this::returnToMasterTitleScreen);
+				graphicsManager::discardQueuedCommands, gameLoop::returnToMasterTitle);
 	}
 
 	private void displayFrame() {

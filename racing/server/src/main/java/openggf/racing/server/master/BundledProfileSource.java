@@ -1,7 +1,7 @@
 package openggf.racing.server.master;
 
-import openggf.racing.hub.TrackValidationProfile;
-import openggf.racing.hub.TrackValidationProfileSource;
+import com.openggf.net.hub.TrackValidationProfile;
+import com.openggf.net.hub.TrackValidationProfileSource;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

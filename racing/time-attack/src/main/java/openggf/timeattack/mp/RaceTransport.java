@@ -1,8 +1,8 @@
 package openggf.timeattack.mp;
 
-import openggf.racing.client.RaceClient;
-import openggf.racing.client.RaceConnection;
-import openggf.racing.protocol.ControlMessage;
+import com.openggf.net.client.RaceClient;
+import com.openggf.net.client.RaceConnection;
+import com.openggf.net.protocol.ControlMessage;
 
 import java.util.List;
 

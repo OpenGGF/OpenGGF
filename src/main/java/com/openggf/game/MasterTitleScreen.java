@@ -555,8 +555,6 @@ public class MasterTitleScreen {
     private void openExtras() {
         if (titleEntries.isEmpty()) {
             showActionError("Extras");
-        } else if (titleEntries.size() == 1) {
-            openTitleEntry(0);
         } else {
             extrasOpen = true;
             extrasIndex = 0;
@@ -595,8 +593,7 @@ public class MasterTitleScreen {
     }
 
     private String hubLabel(TitleHubNavigation.Action action) {
-        return action == TitleHubNavigation.Action.EXTRAS && titleEntries.size() == 1
-                ? titleEntries.get(0).toUpperCase(java.util.Locale.ROOT) : action.label;
+        return action.label;
     }
 
     /** This tick's mouse in menu pixels; null without a window or before the mouse is used. */

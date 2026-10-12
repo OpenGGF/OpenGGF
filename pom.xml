@@ -1177,8 +1177,8 @@
         </resources>
         <plugins>
             <plugin>
-                <!-- Racing (Time Attack mod, racing library, racing server) lives outside the engine
-                     artifact in racing/. Its sources and tests compile and run with the engine's test
+                <!-- Time Attack gameplay and racing server tools live outside the engine
+                     artifact in racing/; reusable networking stays in core. Their sources and tests compile with the engine's test
                      classpath so the ordinary suite covers them; the bundled-mod step packages the mod
                      separately and validates it against the public Mod API. -->
                 <groupId>org.codehaus.mojo</groupId>

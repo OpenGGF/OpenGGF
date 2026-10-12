@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.openggf.game.GameServices;
 import openggf.timeattack.TimeAttackTrackCatalog;
 import com.openggf.level.Level;
-import openggf.racing.hub.TrackValidationProfile;
+import com.openggf.net.hub.TrackValidationProfile;
 import com.openggf.tools.HeadlessGameBoot;
 
 import java.nio.file.Files;

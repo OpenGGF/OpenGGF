@@ -1,7 +1,7 @@
 package openggf.timeattack;
 
 import openggf.timeattack.ghost.GhostCaptureBuffer;
-import openggf.racing.ghost.GhostFrame;
+import com.openggf.net.ghost.GhostFrame;
 import openggf.timeattack.ghost.GhostHeader;
 import openggf.timeattack.ghost.GhostFileCodec;
 import openggf.timeattack.ghost.GhostPlaybackCursor;
@@ -73,7 +73,7 @@ public final class TimeAttackRuntime implements RunHost {
     private final GhostStore store;
     private final java.nio.file.Path identityDir;
     private final java.util.function.BooleanSupplier launchBlocked;
-    private openggf.racing.identity.PlayerIdentity identity;
+    private com.openggf.net.identity.PlayerIdentity identity;
     private TimeAttackLaunchRequest launch;
     private TimeAttackAttempt attempt;
     private AttemptInputRecording inputRecording;
@@ -109,7 +109,7 @@ public final class TimeAttackRuntime implements RunHost {
         this.attemptOrdinal = 0;
         if (identity == null) {
             try {
-                identity = openggf.racing.identity.PlayerIdentity.loadOrCreate(identityDir);
+                identity = com.openggf.net.identity.PlayerIdentity.loadOrCreate(identityDir);
                 LOGGER.info("Time attack identity " + identity.fingerprint());
             } catch (Exception e) {
                 LOGGER.log(Level.WARNING, "Player identity unavailable; continuing without", e);

@@ -2,7 +2,7 @@ package openggf.timeattack.mp;
 
 import com.openggf.mods.ui.CompactFont;
 import com.openggf.mods.ui.LevelOverlayCanvas;
-import openggf.racing.protocol.ControlMessage;
+import com.openggf.net.protocol.ControlMessage;
 import openggf.timeattack.TimeAttackTrackCatalog;
 
 import java.util.ArrayList;

@@ -276,6 +276,31 @@ class TestGameLoopFreezeContractWiring {
                 "the suppressed destination must route back to the host through a fade");
     }
 
+    @Test
+    void heldHostedRunStillAcceptsRetryAndLeaveCommands() throws Exception {
+        GameplayModeContext gameplay = install(new Sonic2GameModule());
+        LevelManager level = mock(LevelManager.class);
+        when(level.getCheckpointState()).thenReturn(mock(com.openggf.game.RespawnState.class));
+        when(level.getTransitions()).thenReturn(mock(com.openggf.level.LevelTransitionCoordinator.class));
+        setField(gameplay, "levelManager", level);
+        GameLoop loop = new GameLoop(new InputHandler());
+        var spec = new com.openggf.mods.run.RunSpec("s2", 0, 0, "sonic",
+                com.openggf.game.session.GameplayRunPolicy.isolatedAct());
+        gameplay.beginGameplayRun(spec.policy(), spec.zone(), spec.act());
+        var ended = new java.util.ArrayList<com.openggf.mods.run.RunEndReason>();
+        var handle = loop.beginHostedRun(spec, new com.openggf.mods.run.RunHost() {
+            @Override public boolean admitStep(com.openggf.mods.run.RunInput input) { return false; }
+        }, ended::add);
+        handle.retry();
+        loop.step();
+        verify(level.getCheckpointState()).clear();
+        verify(level.getTransitions()).requestZoneAndAct(0, 0);
+        handle.leave();
+        loop.step();
+        assertFalse(loop.hostedRuns.isActive());
+        assertEquals(1, ended.size());
+    }
+
     private static GameplayModeContext install(com.openggf.game.GameModule module) {
         TestEnvironment.configureGameModuleFixture(module);
         return SessionManager.getCurrentGameplayMode();

@@ -13,7 +13,7 @@ import com.openggf.mods.code.ModFaultBoundary;
 import com.openggf.mods.scene.SceneGameplay;
 import com.openggf.mods.scene.host.ModSceneHost;
 import com.openggf.mods.scene.host.SceneServices;
-import openggf.racing.protocol.ControlMessage;
+import com.openggf.net.protocol.ControlMessage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -39,6 +39,7 @@ class TestTimeAttackScene {
     private final List<String> exits = new ArrayList<>();
     private final List<RunSpec> launched = new ArrayList<>();
     private final List<RunHost> hosts = new ArrayList<>();
+    private int retries;
 
     @AfterEach
     void close() {
@@ -56,7 +57,7 @@ class TestTimeAttackScene {
                 launched.add(spec);
                 hosts.add(runHost);
                 return new RunHandle() {
-                    @Override public void retry() { }
+                    @Override public void retry() { retries++; }
                     @Override public void leave() { }
                     @Override public void spectate(boolean active, int dx, int dy) { }
                     @Override public boolean isActive() { return true; }
@@ -94,6 +95,26 @@ class TestTimeAttackScene {
         assertEquals("s2", spec.gameId());
         assertEquals(GameplayRunPolicy.isolatedAct(), spec.policy());
         assertInstanceOf(TimeAttackRuntime.class, hosts.get(0));
+    }
+
+    @Test
+    void importedRetryKeyDrivesTheLaunchedRunInsteadOfTheDefaultKey() throws Exception {
+        java.nio.file.Files.writeString(temp.resolve("config.yaml"), "timeAttack:\n  retryKey: F6\n");
+        open(List.of("s2"));
+        for (int i = 0; i < 5; i++) press(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+        RunHost runtime = hosts.getFirst();
+        runtime.admitStep(runKey(com.openggf.mods.scene.SceneKeys.R));
+        assertEquals(0, retries);
+        runtime.admitStep(runKey(com.openggf.mods.scene.SceneKeys.F6));
+        assertEquals(1, retries);
+    }
+
+    private static com.openggf.mods.run.RunInput runKey(int pressed) {
+        return new com.openggf.mods.run.RunInput() {
+            @Override public com.openggf.control.LogicalInputSnapshot input() { return null; }
+            @Override public boolean keyDown(int key) { return key == pressed; }
+            @Override public boolean keyPressed(int key) { return key == pressed; }
+        };
     }
 
     @Test
@@ -247,12 +268,12 @@ class TestTimeAttackScene {
 
     @Test
     void lanJoinThroughTheSceneRacesARoundAndLeavingClosesTheConnection() throws Exception {
-        openggf.racing.identity.PlayerIdentity roomIdentity =
-                openggf.racing.identity.PlayerIdentity.loadOrCreate(temp.resolve("room-host"));
-        try (openggf.racing.host.jdk.JdkRaceHostServer room = openggf.racing.host.jdk.JdkRaceHostServer.startTls(0,
-                new openggf.racing.hub.RoomHostConfig("LAN", "s2", 0, 0, "OPEN", null, 8, FP),
-                roomIdentity, openggf.racing.hub.TrackValidationProfileSource.none())) {
-            String invite = "127.0.0.1:" + room.port() + "#" + openggf.racing.client.DirectJoinAddress.shareCode(
+        com.openggf.net.identity.PlayerIdentity roomIdentity =
+                com.openggf.net.identity.PlayerIdentity.loadOrCreate(temp.resolve("room-host"));
+        try (com.openggf.net.host.jdk.JdkRaceHostServer room = com.openggf.net.host.jdk.JdkRaceHostServer.startTls(0,
+                new com.openggf.net.hub.RoomHostConfig("LAN", "s2", 0, 0, "OPEN", null, 8, FP),
+                roomIdentity, com.openggf.net.hub.TrackValidationProfileSource.none())) {
+            String invite = "127.0.0.1:" + room.port() + "#" + com.openggf.net.client.DirectJoinAddress.shareCode(
                     room.tlsCertificateSha256(), roomIdentity.fingerprint());
             fingerprint = Optional.of(FP);
             open(List.of("s2"));
@@ -290,7 +311,7 @@ class TestTimeAttackScene {
         }
     }
 
-    private static <T> T onRoomThread(openggf.racing.host.jdk.JdkRaceHostServer room,
+    private static <T> T onRoomThread(com.openggf.net.host.jdk.JdkRaceHostServer room,
                                       java.util.function.Supplier<T> read) throws Exception {
         java.util.concurrent.CompletableFuture<T> result = new java.util.concurrent.CompletableFuture<>();
         room.execute(() -> result.complete(read.get()));

@@ -1,15 +1,15 @@
 package openggf.timeattack.mp;
 
-import openggf.racing.ghost.GhostFrame;
-import openggf.racing.ghost.GhostFrameCodec;
+import com.openggf.net.ghost.GhostFrame;
+import com.openggf.net.ghost.GhostFrameCodec;
 import openggf.timeattack.GhostStore;
 import openggf.timeattack.TimeAttackLaunchRequest;
 import openggf.timeattack.TimeAttackRuntime;
 import openggf.timeattack.TimeAttackRuntimeTestBridge;
-import openggf.racing.client.ClientRaceSession;
-import openggf.racing.client.RaceClient;
-import openggf.racing.protocol.ControlMessage;
-import openggf.racing.protocol.GhostPackets;
+import com.openggf.net.client.ClientRaceSession;
+import com.openggf.net.client.RaceClient;
+import com.openggf.net.protocol.ControlMessage;
+import com.openggf.net.protocol.GhostPackets;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 

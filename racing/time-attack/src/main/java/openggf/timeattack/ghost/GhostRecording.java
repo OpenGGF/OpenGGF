@@ -1,7 +1,7 @@
 package openggf.timeattack.ghost;
 
-import openggf.racing.ghost.GhostFrame;
-import openggf.racing.ghost.GhostFrameCodec;
+import com.openggf.net.ghost.GhostFrame;
+import com.openggf.net.ghost.GhostFrameCodec;
 
 public final class GhostRecording {
     private final GhostHeader header;

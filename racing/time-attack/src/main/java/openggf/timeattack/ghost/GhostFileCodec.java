@@ -1,6 +1,6 @@
 package openggf.timeattack.ghost;
 
-import openggf.racing.ghost.GhostFrameCodec;
+import com.openggf.net.ghost.GhostFrameCodec;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;

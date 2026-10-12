@@ -3,7 +3,7 @@ package openggf.racing.server.verifier;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import openggf.racing.server.verifier.AttemptReplayHarness;
-import openggf.racing.identity.PlayerIdentity;
+import com.openggf.net.identity.PlayerIdentity;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;

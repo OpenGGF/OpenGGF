@@ -1,6 +1,6 @@
 package openggf.racing.server.master;
 
-import openggf.racing.hub.TrackValidationProfile;
+import com.openggf.net.hub.TrackValidationProfile;
 
 import org.junit.jupiter.api.Test;
 

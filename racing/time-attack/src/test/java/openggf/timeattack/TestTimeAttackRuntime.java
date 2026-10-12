@@ -1,6 +1,6 @@
 package openggf.timeattack;
 
-import openggf.racing.ghost.GhostFrame;
+import com.openggf.net.ghost.GhostFrame;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -35,7 +35,7 @@ class TestTimeAttackRuntime {
         assertArrayEquals(new int[] {2}, best.header().splitFrames());
         assertEquals(32, best.header().inputRecordingHash().length);
         assertEquals(8, best.header().displayName().length()); // fingerprint prefix from PlayerIdentity
-        assertEquals(openggf.racing.identity.PlayerIdentity.loadOrCreate(identityDir)
+        assertEquals(com.openggf.net.identity.PlayerIdentity.loadOrCreate(identityDir)
                 .fingerprint().substring(0, 8), best.header().displayName());
     }
 
@@ -54,7 +54,7 @@ class TestTimeAttackRuntime {
     @Test
     void incompatibleImportsAreSkipped(@TempDir Path root, @TempDir Path importDir) throws Exception {
         // A ghost recorded for a DIFFERENT track must never race in this one.
-        byte[] frames = new byte[openggf.racing.ghost.GhostFrameCodec.BYTES];
+        byte[] frames = new byte[com.openggf.net.ghost.GhostFrameCodec.BYTES];
         var wrongTrack = new openggf.timeattack.ghost.GhostRecording(
                 new openggf.timeattack.ghost.GhostHeader(1, "s3k", 1, 0, "sonic", "x", 0, 100,
                         new int[0], new byte[32]), frames);

@@ -1,10 +1,10 @@
 package openggf.racing.server.host;
 
-import openggf.racing.host.RaceRoomHost;
+import com.openggf.net.host.RaceRoomHost;
 
-import openggf.racing.hub.RoomHostConfig;
-import openggf.racing.hub.TrackValidationProfileSource;
-import openggf.racing.identity.PlayerIdentity;
+import com.openggf.net.hub.RoomHostConfig;
+import com.openggf.net.hub.TrackValidationProfileSource;
+import com.openggf.net.identity.PlayerIdentity;
 
 /** Internal engine adapter for broker-pinned direct-room TLS. */
 public final class DirectRoomTls {

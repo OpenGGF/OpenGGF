@@ -1,6 +1,6 @@
 package openggf.racing.server.master;
 
-import openggf.racing.protocol.VerdictCodec;
+import com.openggf.net.protocol.VerdictCodec;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 

@@ -32,6 +32,7 @@ class TestTimeAttackSettings {
     void savedSettingsRoundTripThroughModStorageAsUtf8Text() {
         MemoryModStorage storage = new MemoryModStorage();
         TimeAttackSettings settings = new TimeAttackSettings();
+        settings.setRetryKey(com.openggf.mods.scene.SceneKeys.F6);
         settings.setHostPort(30000);
         settings.setLastJoinAddress("[2001:db8::1]:27888#code");
         settings.setDisplayName("Knuckles é");
@@ -42,6 +43,7 @@ class TestTimeAttackSettings {
         assertTrue(storage.read(TimeAttackSettings.FILE_NAME).orElseThrow().contains("hostPort=30000"));
 
         TimeAttackSettings loaded = TimeAttackSettings.load(storage);
+        assertEquals(com.openggf.mods.scene.SceneKeys.F6, loaded.retryKey());
         assertEquals(30000, loaded.hostPort());
         assertEquals("[2001:db8::1]:27888#code", loaded.lastJoinAddress());
         assertEquals("Knuckles é", loaded.displayName());
@@ -128,4 +130,24 @@ class TestTimeAttackSettings {
         input.tapEscape(view::update);
         assertTrue(view.consumeCloseRequested());
     }
+    @Test
+    void retryKeyCaptureSavesAndEscapeCancelsWithoutLosingTheCurrentBinding() {
+        TimeAttackSettings settings = new TimeAttackSettings();
+        AtomicInteger saves = new AtomicInteger();
+        SettingsView view = new SettingsView(settings, saves::incrementAndGet, cue -> { });
+        FakeViewInput input = new FakeViewInput();
+        for (int row = 0; row < 5; row++) input.tapDown(view::update);
+        input.tapEnter(view::update);
+        assertTrue(view.isEditingText());
+        input.tapKey(view::update, com.openggf.mods.scene.SceneKeys.F6);
+        assertEquals(com.openggf.mods.scene.SceneKeys.F6, settings.retryKey());
+        assertEquals(1, saves.get());
+        assertFalse(view.isEditingText());
+        input.tapEnter(view::update);
+        input.tapEscape(view::update);
+        assertEquals(com.openggf.mods.scene.SceneKeys.F6, settings.retryKey());
+        assertEquals(1, saves.get());
+        assertFalse(view.consumeCloseRequested());
+    }
+
 }

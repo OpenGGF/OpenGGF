@@ -1,6 +1,6 @@
 package openggf.racing.server.master;
 
-import openggf.racing.protocol.ControlMessage;
+import com.openggf.net.protocol.ControlMessage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

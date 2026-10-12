@@ -2,8 +2,8 @@ package openggf.racing.server.master;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import openggf.racing.identity.PlayerIdentity;
-import openggf.racing.protocol.VerdictCodec;
+import com.openggf.net.identity.PlayerIdentity;
+import com.openggf.net.protocol.VerdictCodec;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;

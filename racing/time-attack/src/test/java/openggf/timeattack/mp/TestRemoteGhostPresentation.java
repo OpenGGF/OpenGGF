@@ -1,8 +1,8 @@
 package openggf.timeattack.mp;
 
-import openggf.racing.ghost.GhostFrame;
-import openggf.racing.client.RemoteGhostPlayback;
-import openggf.racing.client.RemoteGhostRegistry;
+import com.openggf.net.ghost.GhostFrame;
+import com.openggf.net.client.RemoteGhostPlayback;
+import com.openggf.net.client.RemoteGhostRegistry;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

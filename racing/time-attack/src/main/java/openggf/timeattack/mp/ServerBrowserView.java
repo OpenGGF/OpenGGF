@@ -3,7 +3,7 @@ package openggf.timeattack.mp;
 import com.openggf.mods.scene.SceneCanvas;
 import com.openggf.mods.scene.SceneKeys;
 import com.openggf.mods.ui.TextLayout;
-import openggf.racing.protocol.ControlMessage;
+import com.openggf.net.protocol.ControlMessage;
 import openggf.timeattack.ui.MenuCue;
 import openggf.timeattack.ui.ViewInput;
 

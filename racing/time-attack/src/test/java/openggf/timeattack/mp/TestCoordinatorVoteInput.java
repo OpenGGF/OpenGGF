@@ -1,8 +1,8 @@
 package openggf.timeattack.mp;
 
-import openggf.racing.client.ClientRaceSession;
-import openggf.racing.client.RaceClient;
-import openggf.racing.protocol.ControlMessage;
+import com.openggf.net.client.ClientRaceSession;
+import com.openggf.net.client.RaceClient;
+import com.openggf.net.protocol.ControlMessage;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;

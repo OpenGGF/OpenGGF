@@ -39,14 +39,27 @@ indices. Maintained contracts live in [creator handbook](../modding/index.md) an
 [compatibility contract](mod-api-compatibility.md);
 dated design specs under `docs/architecture/designs/` are historical provenance only.
 
-**Multiplayer time attack.** Racing is not engine code. The bundled Time Attack mod
-(`racing/time-attack`) carries the engine-free racing library `openggf.racing.protocol`,
-`.hub`, `.client`, `.identity`, `.host` (the transport contract and the JDK in-process room
-host) and `.ghost` (the ghost wire codec), plus the mod's own `openggf.timeattack` and
-`openggf.timeattack.mp` adapters, which reach the engine only through the gameplay-run and
-scene Mod API. The racing server (`racing/server`, `openggf.racing.server.*`) holds the
-master, the Netty dedicated host, the verifier and the operator tools.
-`TestTimeAttackModPackage` keeps the mod packaging through `ggfmod` with warnings as errors.
+**Multiplayer time attack.** The engine retains shared networking under
+`com.openggf.net`: typed protocol and ghost codecs, room services, clients, identity,
+and the JDK in-process host. Public contracts marked `@ModApi` are part of the
+candidate surface and can be used by other mods without installing Time Attack.
+Internal WebSocket, certificate and handshake implementations are not creator API.
+`TestNetIsolationRules` keeps the shared backend independent of engine gameplay
+owners, Time Attack and the standalone server.
+
+The bundled Time Attack mod (`racing/time-attack`, `openggf.timeattack` and
+`openggf.timeattack.mp`) owns racing flow, menus, settings and presentation, and
+uses the gameplay-run and scene Mod API to play stock acts. The standalone racing
+server (`racing/server`, `openggf.racing.server.*`) owns the master, Netty dedicated
+host, verifier and operator tools. Netty, Bouncy Castle and SQLite are server/test
+build dependencies and are not shipped in the engine runtime.
+`TestTimeAttackModPackage` requires strict SDK validation with no warnings.
+
+Scene mods with their own messages and rules can use the existing owner-scoped
+`SceneNetwork` transport, as Sitar Hero does. Putt Putt Paradise's independent direct
+TCP implementation is unchanged; adopting a shared transport does not require its
+rules to become Time Attack races.
+
 Each `RoomHost` and `GhostHub` is confined to a single room thread, and the master server
 reuses those room classes unchanged. Production masters
 require TLS (`plaintextForTest: true` is loopback-test only); the localhost admin HTTP

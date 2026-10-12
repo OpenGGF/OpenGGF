@@ -339,8 +339,7 @@ recording catalogs load in the background with a visible Cancel action.
 
 **Advanced > Trace replays** opens the trace catalog without enabling test mode.
 Recordings and Mods also have visible action-menu entries, and each enabled mod
-may add one entry of its own (shown under its label, or grouped under **EXTRAS**
-when several mods add one);
+may add one entry of its own under **EXTRAS**, including when only one mod contributes an entry;
 existing function-key shortcuts remain optional accelerators. Global display and
 capture shortcuts remain available in game selection, but yield to the action
 menu and its child pages so typing or rebinding a key cannot change unrelated
@@ -646,10 +645,12 @@ Audio: headless capture installs `HeadlessSmpsAudioBackend`, a true no-device SM
 ## Time Attack (bundled mod)
 
 Time Attack and multiplayer racing ship as the bundled, enabled-by-default **Time Attack**
-mod rather than as engine settings; the engine has no `timeAttack.*` keys, and old
-`timeAttack.*` entries in `config.yaml` are ignored with an "Unknown config key" warning.
-Disable or re-enable the mod in **Mods**. During a run, **R** retries the act from its
-start. The mod keeps best ghosts in `ghosts/<game>/` and the player identity in
+mod. Open it through **Extras > Time Attack**; disable or re-enable it in **Mods**.
+The engine no longer owns `timeAttack.*` settings. On its first opening, the mod imports
+previous retry, network and minimap preferences from `config.yaml` or legacy `config.json`,
+including the engine's `.bak` and numbered backup files, if it has no `settings.txt` yet.
+Existing mod settings and the source files are preserved. During a run, **R** retries the
+act from its start by default; change **Settings > Retry key** to use another key. The mod keeps best ghosts in `ghosts/<game>/` and the player identity in
 `identity/`, the same locations as before the move.
 
 The menu's **Mode** row offers **Solo**, **Host LAN**, **Join LAN** and **Browse** (rooms on a
@@ -676,6 +677,7 @@ folder. Edit them from the **Settings** row of the Time Attack menu; changes sav
 
 | Key | Default | Description |
 |-----|---------|-------------|
+| `retryKey` | `82` (`R`) | Keyboard key that retries the act. The settings page captures a key; the file accepts GLFW key codes or names such as `F6`. |
 | `hostPort` | `27888` | Port for player-hosted rooms (manual LAN and master-listed direct rooms), served as a pinned TLS WebSocket. |
 | `lastJoinAddress` | `""` | Most recently joined complete LAN invite; it prefills the invite field. |
 | `displayName` | `""` | Multiplayer display name; blank uses the identity prefix. |

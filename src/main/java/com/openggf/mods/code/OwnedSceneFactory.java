@@ -130,8 +130,12 @@ public final class OwnedSceneFactory {
 
             @Override
             public java.util.List<com.openggf.mods.run.GhostPose> ghosts() {
-                java.util.List<com.openggf.mods.run.GhostPose> poses = boundary.call(ownerModId, host::ghosts);
-                return poses == null ? java.util.List.of() : java.util.List.copyOf(poses);
+                return boundary.call(ownerModId, () -> {
+                    java.util.List<com.openggf.mods.run.GhostPose> poses = host.ghosts();
+                    // Iterating a creator list and rejecting null elements are part of
+                    // the creator callback, so failures retain the registering owner.
+                    return poses == null ? java.util.List.of() : java.util.List.copyOf(poses);
+                });
             }
 
             @Override

@@ -18,8 +18,8 @@ public final class DrillsMod implements GgfMod {
 
 - One entry per mod. Any patch mod may register one, including `baseGame: any` mods, which
   may register nothing else but a startup scene and its display width.
-- The entry never replaces a game's title screen. With one contributing mod the master title
-  shows the entry under its label; with several it shows **EXTRAS** and a chooser.
+- The entry never replaces a game's title screen. The master title shows **EXTRAS** and a
+  chooser for registered entries, including when only one mod contributes an entry.
 - The scene opens without a loaded game, so ROM art (`SceneContext.art().rom()`) is not
   available to title-entry scenes; draw with `SceneCanvas` text and shapes or PNGs from your mod.
 - `exitToMasterTitle()` (and `exitToGameTitle()`) return to the master title.

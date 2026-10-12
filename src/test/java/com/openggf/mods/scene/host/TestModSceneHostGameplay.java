@@ -24,7 +24,8 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /** Scene-side contract of gameplay runs: access to the launcher and resumption after a run. */
@@ -71,7 +72,54 @@ class TestModSceneHostGameplay {
         };
         host.open(owned(scene), new SceneServices(null, null, temp, null, () -> { }, () -> { }, null, launcher),
                 320, 224);
-        assertSame(launcher, scene.context.gameplay());
+        assertNotSame(launcher, scene.context.gameplay());
+        assertEquals(List.of("s2"), scene.context.gameplay().availableGames());
+    }
+
+    @Test
+    void retainedGameplayCapabilityIsRevokedBeforeExitAndAcrossReopenedScenes() {
+        java.util.concurrent.atomic.AtomicInteger launches = new java.util.concurrent.atomic.AtomicInteger();
+        SceneGameplay launcher = new SceneGameplay() {
+            @Override public List<String> availableGames() { return List.of("s2"); }
+            @Override public RunHandle launch(RunSpec spec, RunHost runHost) { launches.incrementAndGet(); return null; }
+        };
+        RunScene scene = new RunScene() {
+            @Override public void exit(SceneContext ctx) {
+                assertThrows(IllegalStateException.class, () -> ctx.gameplay().launch(null, null));
+            }
+        };
+        SceneServices services = new SceneServices(null, null, temp, null, () -> { }, () -> { }, null, launcher);
+        host.open(owned(scene), services, 320, 224);
+        SceneGameplay retained = scene.context.gameplay();
+        retained.launch(null, null);
+        assertEquals(1, launches.get());
+        scene.context.exitToMasterTitle();
+        assertThrows(IllegalStateException.class, () -> retained.launch(null, null));
+        host.close();
+        host.open(owned(new RunScene()), services, 320, 224);
+        assertThrows(IllegalStateException.class, () -> retained.launch(null, null));
+        assertThrows(IllegalStateException.class, retained::availableGames);
+        assertEquals(1, launches.get(), "the old visit must never reach a new scene's launcher");
+    }
+
+    @Test
+    void workerThreadCannotLaunchIntoTheEngine() throws Exception {
+        RunScene scene = new RunScene();
+        java.util.concurrent.atomic.AtomicInteger launches = new java.util.concurrent.atomic.AtomicInteger();
+        SceneGameplay launcher = new SceneGameplay() {
+            @Override public List<String> availableGames() { return List.of("s2"); }
+            @Override public RunHandle launch(RunSpec spec, RunHost runHost) { launches.incrementAndGet(); return null; }
+        };
+        host.open(owned(scene), new SceneServices(null, null, temp, null, () -> { }, () -> { }, null, launcher),
+                320, 224);
+        SceneGameplay capability = scene.context.gameplay();
+        java.util.concurrent.atomic.AtomicReference<Throwable> failure = new java.util.concurrent.atomic.AtomicReference<>();
+        Thread worker = Thread.ofVirtual().start(() -> {
+            try { capability.launch(null, null); } catch (Throwable thrown) { failure.set(thrown); }
+        });
+        worker.join();
+        assertTrue(failure.get() instanceof IllegalStateException);
+        assertEquals(0, launches.get());
     }
 
     @Test

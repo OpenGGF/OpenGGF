@@ -1,6 +1,6 @@
 package openggf.timeattack.ghost;
 
-import openggf.racing.ghost.GhostFrame;
+import com.openggf.net.ghost.GhostFrame;
 
 /** Spawn-anchored playback: attempt frame N maps directly to recorded frame N. */
 public final class GhostPlaybackCursor {

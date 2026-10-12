@@ -6,9 +6,8 @@ import com.openggf.mods.ModStorage;
 import com.openggf.mods.scene.ModScene;
 import com.openggf.mods.scene.SceneCanvas;
 import com.openggf.mods.scene.SceneContext;
-import com.openggf.mods.scene.SceneKeys;
 import com.openggf.mods.ui.TextLayout;
-import openggf.racing.protocol.ControlMessage;
+import com.openggf.net.protocol.ControlMessage;
 import openggf.timeattack.mp.RaceLobbyView;
 import openggf.timeattack.mp.RaceSession;
 import openggf.timeattack.mp.ServerBrowserView;
@@ -46,6 +45,7 @@ public final class TimeAttackScene implements ModScene {
 
     private final GhostStore ghostStore;
     private final Path identityDir;
+    private final Path legacyConfigDirectory;
     private TimeAttackMenuState state;
     private TimeAttackSettings settings;
     private ModStorage storage;
@@ -68,11 +68,17 @@ public final class TimeAttackScene implements ModScene {
     TimeAttackScene(Path ghostsRoot, Path identityDir) {
         this.ghostStore = new GhostStore(ghostsRoot);
         this.identityDir = identityDir;
+        this.legacyConfigDirectory = ghostsRoot.toAbsolutePath().getParent();
     }
 
     @Override
     public void enter(SceneContext ctx) {
         storage = ctx.storage();
+        try {
+            LegacyTimeAttackSettings.importOnce(storage, legacyConfigDirectory);
+        } catch (java.io.IOException failure) {
+            status = "Previous settings could not be imported";
+        }
         settings = TimeAttackSettings.load(storage);
         joinInvite = settings.lastJoinAddress();
         session = new RaceSession(identityDir, ghostStore, settings, storage,
@@ -85,7 +91,7 @@ public final class TimeAttackScene implements ModScene {
 
     private TimeAttackRuntime newRuntime() {
         TimeAttackRuntime run = new TimeAttackRuntime(ghostStore, identityDir, () -> false);
-        run.setRetryKey(() -> SceneKeys.R);
+        run.setRetryKey(settings::retryKey);
         return run;
     }
 

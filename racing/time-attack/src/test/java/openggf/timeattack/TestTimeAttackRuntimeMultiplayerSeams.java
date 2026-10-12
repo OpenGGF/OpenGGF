@@ -1,6 +1,6 @@
 package openggf.timeattack;
 
-import openggf.racing.ghost.GhostFrame;
+import com.openggf.net.ghost.GhostFrame;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 

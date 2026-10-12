@@ -8,9 +8,10 @@ Usage:
   target/racing-server/racing-server verifier --master https://host:27900 --registration-token T --rom s3k.gen --data ./verifier-data
   target/racing-server/racing-server load-test --n 256 --duration 30 --mix adversarial
 
-The server is not part of the engine artifact. It compiles the racing library
-(racing/time-attack) and racing/server against the engine build, with Netty, Bouncy Castle and
-SQLite from the engine's test-scoped dependencies, and writes a launcher whose classpath points at
+The server is not part of the engine artifact. It compiles the Time Attack replay
+implementation (racing/time-attack) and racing/server against the engine's shared networking
+library, with Netty, Bouncy Castle and SQLite from the engine's test-scoped dependencies,
+and writes a launcher whose classpath points at
 target/classes, the compiled racing classes and the resolved dependency jars. The verifier embeds
 the engine to replay attempts, so the engine build must match the clients' engine.
 
@@ -28,7 +29,6 @@ OUT = ROOT / "target" / "racing-server"
 TOOLS = {
     "master": "openggf.racing.server.master.MasterServerMain",
     "verifier": "openggf.racing.server.verifier.VerifierMain",
-    "bot": "openggf.racing.server.tools.BotClient",
     "load-test": "openggf.racing.server.tools.GhostLoadTestTool",
     "track-profiles": "openggf.racing.server.tools.TrackProfileExportTool",
 }

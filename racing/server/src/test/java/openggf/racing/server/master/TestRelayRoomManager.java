@@ -1,14 +1,14 @@
 package openggf.racing.server.master;
 
-import openggf.racing.ghost.GhostFrame;
-import openggf.racing.client.ClientHandshake;
-import openggf.racing.client.GhostStreamPublisher;
-import openggf.racing.hub.HubConnection;
-import openggf.racing.hub.TrackValidationProfileSource;
-import openggf.racing.identity.PlayerIdentity;
+import com.openggf.net.ghost.GhostFrame;
+import com.openggf.net.client.ClientHandshake;
+import com.openggf.net.client.GhostStreamPublisher;
+import com.openggf.net.hub.HubConnection;
+import com.openggf.net.hub.TrackValidationProfileSource;
+import com.openggf.net.identity.PlayerIdentity;
 import openggf.racing.protocol.ControlCodec;
-import openggf.racing.protocol.ControlMessage;
-import openggf.racing.protocol.VerdictCodec;
+import com.openggf.net.protocol.ControlMessage;
+import com.openggf.net.protocol.VerdictCodec;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 

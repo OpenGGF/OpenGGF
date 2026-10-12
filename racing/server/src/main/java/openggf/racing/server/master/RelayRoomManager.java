@@ -1,13 +1,13 @@
 package openggf.racing.server.master;
 
-import openggf.racing.hub.HubConnection;
-import openggf.racing.hub.RoomHost;
-import openggf.racing.hub.RoomHostConfig;
-import openggf.racing.hub.RoomHostHooks;
-import openggf.racing.hub.RoomRoundAccess;
-import openggf.racing.hub.TrackValidationProfileSource;
-import openggf.racing.identity.PlayerIdentity;
-import openggf.racing.protocol.ControlMessage;
+import com.openggf.net.hub.HubConnection;
+import com.openggf.net.hub.RoomHost;
+import com.openggf.net.hub.RoomHostConfig;
+import com.openggf.net.hub.RoomHostHooks;
+import com.openggf.net.hub.RoomRoundAccess;
+import com.openggf.net.hub.TrackValidationProfileSource;
+import com.openggf.net.identity.PlayerIdentity;
+import com.openggf.net.protocol.ControlMessage;
 
 import java.util.List;
 import java.util.Map;
@@ -17,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.LongSupplier;
-import openggf.racing.protocol.VerdictCodec;
+import com.openggf.net.protocol.VerdictCodec;
 
 /** Master-owned relay rooms, each confined to one event-loop executor. */
 public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
@@ -225,12 +225,12 @@ public final class RelayRoomManager implements RoomBroker.RelayRoomDirectory {
             String roomId = entry.getKey();
             RoomAccess access = entry.getValue();
             access.loop().execute(() -> {
-                openggf.racing.hub.HostRoundEngine.Phase previous =
+                com.openggf.net.hub.HostRoundEngine.Phase previous =
                         access.room().round().phase();
                 access.room().tick();
-                if (previous == openggf.racing.hub.HostRoundEngine.Phase.RUNNING
+                if (previous == com.openggf.net.hub.HostRoundEngine.Phase.RUNNING
                         && access.room().round().phase()
-                        == openggf.racing.hub.HostRoundEngine.Phase.ROUND_END) {
+                        == com.openggf.net.hub.HostRoundEngine.Phase.ROUND_END) {
                     selectSpotChecks(roomId, access.room());
                 }
                 ControlMessage.RoomDescriptor descriptor = access.room().descriptor();

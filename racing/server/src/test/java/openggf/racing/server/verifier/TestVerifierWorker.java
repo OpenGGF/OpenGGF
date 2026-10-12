@@ -4,9 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import openggf.timeattack.AttemptInputRecording;
 import openggf.racing.server.verifier.AttemptReplayHarness;
 import openggf.timeattack.AttemptStartDescriptor;
-import openggf.racing.identity.PlayerIdentity;
+import com.openggf.net.identity.PlayerIdentity;
 import openggf.racing.server.master.VerificationJobQueue;
-import openggf.racing.protocol.VerdictCodec;
+import com.openggf.net.protocol.VerdictCodec;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 

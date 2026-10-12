@@ -1,6 +1,6 @@
 package openggf.racing.server.master;
 
-import openggf.racing.identity.PlayerIdentity;
+import com.openggf.net.identity.PlayerIdentity;
 
 import java.security.SecureRandom;
 import java.util.Arrays;

@@ -1,14 +1,14 @@
 package openggf.racing.server.master;
 
-import openggf.racing.hub.HostHandshake;
-import openggf.racing.hub.HubConnection;
-import openggf.racing.hub.SessionTokenIssuer;
-import openggf.racing.identity.PlayerIdentity;
-import openggf.racing.identity.ProofOfWork;
+import com.openggf.net.hub.HostHandshake;
+import com.openggf.net.hub.HubConnection;
+import com.openggf.net.hub.SessionTokenIssuer;
+import com.openggf.net.identity.PlayerIdentity;
+import com.openggf.net.identity.ProofOfWork;
 import openggf.racing.protocol.ControlCodec;
-import openggf.racing.protocol.ControlMessage;
-import openggf.racing.protocol.Protocol;
-import openggf.racing.protocol.ProtocolViolationException;
+import com.openggf.net.protocol.ControlMessage;
+import com.openggf.net.protocol.Protocol;
+import com.openggf.net.protocol.ProtocolViolationException;
 
 import java.security.SecureRandom;
 import java.nio.charset.StandardCharsets;

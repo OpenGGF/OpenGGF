@@ -20,6 +20,7 @@ public final class TimeAttackSettings {
     public static final int MAX_TEXT_LENGTH = 192;
     public static final int MAX_DISPLAY_NAME_LENGTH = 24;
 
+    private int retryKey = com.openggf.mods.scene.SceneKeys.R;
     private int hostPort = DEFAULT_HOST_PORT;
     private String lastJoinAddress = "";
     private String displayName = "";
@@ -55,6 +56,10 @@ public final class TimeAttackSettings {
             String key = line.substring(0, equals).strip();
             String value = line.substring(equals + 1).strip();
             switch (key) {
+                case "retryKey" -> {
+                    try { settings.setRetryKey(RetryKey.parse(value)); }
+                    catch (IllegalArgumentException ignored) { }
+                }
                 case "hostPort" -> {
                     try {
                         settings.setHostPort(Integer.parseInt(value));
@@ -76,12 +81,20 @@ public final class TimeAttackSettings {
     /** The stored form: one {@code key=value} line per setting. */
     public String encode() {
         return "# Time Attack settings\n"
+                + "retryKey=" + retryKey + "\n"
                 + "hostPort=" + hostPort + "\n"
                 + "lastJoinAddress=" + lastJoinAddress + "\n"
                 + "displayName=" + displayName + "\n"
                 + "masterUrl=" + masterUrl + "\n"
                 + "masterTrustInsecure=" + masterTrustInsecure + "\n"
                 + "minimap=" + minimap + "\n";
+    }
+
+    public int retryKey() { return retryKey; }
+
+    public void setRetryKey(int code) {
+        if (!RetryKey.supported(code)) throw new IllegalArgumentException("Unsupported retry key: " + code);
+        retryKey = code;
     }
 
     public int hostPort() {

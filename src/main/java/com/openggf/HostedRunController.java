@@ -256,6 +256,10 @@ final class HostedRunController {
         leaveReason = null;
         try {
             ended.onRunEnded(reason);
+        } catch (com.openggf.mods.code.ModFaultBoundary.CallbackAborted aborted) {
+            // The owner is disabled: the outer engine boundary must close its scene,
+            // not resume it through the ordinary run-completion path.
+            throw aborted;
         } catch (RuntimeException e) {
             LOGGER.log(Level.WARNING, "Run host failed while ending the run", e);
         }
@@ -329,6 +333,19 @@ final class HostedRunController {
     }
 
     private void abort(RuntimeException failure) {
+        if (failure instanceof com.openggf.mods.code.ModFaultBoundary.CallbackAborted aborted) {
+            // Retire host state and visual registrations immediately. The original abort
+            // retains attribution even if the final owner cleanup callback also fails.
+            try {
+                end(RunEndReason.ABORTED);
+            } catch (RuntimeException cleanup) {
+                // This is another creator callback, not a failed engine teardown.
+                // The outer recovery treats suppressed cleanup errors as unsafe;
+                // the boundary has already attributed this one, and state is retired.
+                LOGGER.log(Level.WARNING, "Run host also failed during fault cleanup", cleanup);
+            }
+            throw aborted;
+        }
         LOGGER.log(Level.WARNING, "Run host failed; ending the run", failure);
         leaveReason = RunEndReason.ABORTED;
     }

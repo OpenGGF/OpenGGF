@@ -1,7 +1,7 @@
 package openggf.timeattack.mp;
 
 import openggf.timeattack.TimeAttackTimeFormat;
-import openggf.racing.protocol.ControlMessage;
+import com.openggf.net.protocol.ControlMessage;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,15 +1,15 @@
 package openggf.timeattack.mp;
 
-import openggf.racing.ghost.GhostFrame;
+import com.openggf.net.ghost.GhostFrame;
 import openggf.timeattack.AttemptInputRecording;
 import openggf.timeattack.GhostStore;
 import openggf.timeattack.TimeAttackRuntime;
-import openggf.racing.client.ClientRaceSession;
-import openggf.racing.client.GhostStreamPublisher;
-import openggf.racing.client.RaceClient;
-import openggf.racing.client.RemoteGhostRegistry;
-import openggf.racing.hub.HostRoundEngine;
-import openggf.racing.protocol.ControlMessage;
+import com.openggf.net.client.ClientRaceSession;
+import com.openggf.net.client.GhostStreamPublisher;
+import com.openggf.net.client.RaceClient;
+import com.openggf.net.client.RemoteGhostRegistry;
+import com.openggf.net.hub.HostRoundEngine;
+import com.openggf.net.protocol.ControlMessage;
 import com.openggf.mods.run.GhostPose;
 import com.openggf.mods.run.RunLevelStart;
 import com.openggf.mods.scene.SceneKeys;

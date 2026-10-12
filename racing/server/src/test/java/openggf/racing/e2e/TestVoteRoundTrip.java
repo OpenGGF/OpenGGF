@@ -1,8 +1,8 @@
 package openggf.racing.e2e;
 
-import openggf.racing.client.ClientRaceSession;
-import openggf.racing.hub.HostRoundEngine;
-import openggf.racing.protocol.ControlMessage;
+import com.openggf.net.client.ClientRaceSession;
+import com.openggf.net.hub.HostRoundEngine;
+import com.openggf.net.protocol.ControlMessage;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

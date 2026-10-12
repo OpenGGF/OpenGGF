@@ -1,6 +1,6 @@
 package openggf.racing.server.master;
 
-import openggf.racing.protocol.VerdictCodec;
+import com.openggf.net.protocol.VerdictCodec;
 
 import java.util.Objects;
 import java.util.function.LongSupplier;

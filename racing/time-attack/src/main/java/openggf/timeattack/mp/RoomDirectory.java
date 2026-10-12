@@ -1,7 +1,7 @@
 package openggf.timeattack.mp;
 
-import openggf.racing.client.MasterClient;
-import openggf.racing.protocol.ControlMessage;
+import com.openggf.net.client.MasterClient;
+import com.openggf.net.protocol.ControlMessage;
 
 import java.util.concurrent.CompletableFuture;
 

@@ -2,17 +2,17 @@ package openggf.racing.e2e;
 
 import openggf.racing.server.host.RaceHostImpl;
 
-import openggf.racing.ghost.GhostFrame;
-import openggf.racing.client.GhostStreamPublisher;
-import openggf.racing.client.RaceClient;
-import openggf.racing.client.RemoteGhostPlayback;
-import openggf.racing.host.ControlledRaceHost;
-import openggf.racing.host.RaceRoomHost;
-import openggf.racing.hub.HostRoundEngine;
-import openggf.racing.hub.RoomHostConfig;
-import openggf.racing.hub.TrackValidationProfileSource;
-import openggf.racing.identity.PlayerIdentity;
-import openggf.racing.protocol.ControlMessage;
+import com.openggf.net.ghost.GhostFrame;
+import com.openggf.net.client.GhostStreamPublisher;
+import com.openggf.net.client.RaceClient;
+import com.openggf.net.client.RemoteGhostPlayback;
+import com.openggf.net.host.ControlledRaceHost;
+import com.openggf.net.host.RaceRoomHost;
+import com.openggf.net.hub.HostRoundEngine;
+import com.openggf.net.hub.RoomHostConfig;
+import com.openggf.net.hub.TrackValidationProfileSource;
+import com.openggf.net.identity.PlayerIdentity;
+import com.openggf.net.protocol.ControlMessage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;

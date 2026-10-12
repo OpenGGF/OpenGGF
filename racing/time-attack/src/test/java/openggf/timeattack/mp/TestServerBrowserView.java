@@ -1,7 +1,7 @@
 package openggf.timeattack.mp;
 
 import com.openggf.mods.scene.SceneKeys;
-import openggf.racing.protocol.ControlMessage;
+import com.openggf.net.protocol.ControlMessage;
 import openggf.timeattack.ui.FakeViewInput;
 import openggf.timeattack.ui.MenuCue;
 import openggf.timeattack.ui.RecordingSceneCanvas;

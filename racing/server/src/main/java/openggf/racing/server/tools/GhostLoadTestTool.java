@@ -1,13 +1,13 @@
 package openggf.racing.server.tools;
 
-import openggf.racing.hub.RoomHost;
-import openggf.racing.hub.HostRoundEngine;
-import openggf.racing.hub.RoomHostConfig;
-import openggf.racing.hub.RoomHostHooks;
-import openggf.racing.hub.TrackValidationProfile;
-import openggf.racing.hub.TrackValidationProfileSource;
-import openggf.racing.identity.PlayerIdentity;
-import openggf.racing.protocol.ControlMessage;
+import com.openggf.net.hub.RoomHost;
+import com.openggf.net.hub.HostRoundEngine;
+import com.openggf.net.hub.RoomHostConfig;
+import com.openggf.net.hub.RoomHostHooks;
+import com.openggf.net.hub.TrackValidationProfile;
+import com.openggf.net.hub.TrackValidationProfileSource;
+import com.openggf.net.identity.PlayerIdentity;
+import com.openggf.net.protocol.ControlMessage;
 
 import java.nio.file.Files;
 import java.nio.file.Path;

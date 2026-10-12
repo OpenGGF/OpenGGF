@@ -61,6 +61,9 @@ final class SceneRunLauncher implements SceneGameplay {
     public RunHandle launch(RunSpec spec, RunHost host) {
         Objects.requireNonNull(spec, "spec");
         Objects.requireNonNull(host, "host");
+        if (gameLoop.getCurrentGameMode() != com.openggf.game.GameMode.MOD_SCENE) {
+            throw new IllegalStateException("Gameplay runs can only launch from the active scene");
+        }
         if (!games.contains(spec.gameId())) {
             throw new IllegalArgumentException("Game is not available: " + spec.gameId());
         }

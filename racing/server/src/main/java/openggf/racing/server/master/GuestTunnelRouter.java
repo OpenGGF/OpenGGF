@@ -1,10 +1,10 @@
 package openggf.racing.server.master;
 
-import openggf.racing.hub.HubConnection;
+import com.openggf.net.hub.HubConnection;
 import openggf.racing.protocol.ControlCodec;
-import openggf.racing.protocol.ControlMessage;
-import openggf.racing.protocol.GhostPackets;
-import openggf.racing.protocol.ProtocolViolationException;
+import com.openggf.net.protocol.ControlMessage;
+import com.openggf.net.protocol.GhostPackets;
+import com.openggf.net.protocol.ProtocolViolationException;
 
 import java.util.HashMap;
 import java.util.Map;

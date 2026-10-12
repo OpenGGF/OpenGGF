@@ -36,6 +36,8 @@ public class SonicConfigurationService {
 	private boolean defaultInsertedSinceLastApply;
 	/** Whether the loaded file already declared the sparse user-settings format. */
 	private boolean sparseFormatDeclared;
+	/** Original YAML with unrecognized fields, retained until a replacement is safely published. */
+	private Path configSourceNeedingPreservation;
 	private final Path configDirectoryOverride;
 	private final ConfigFileReader yamlReader;
 	private final Map<String, Object> sessionOverrides = new HashMap<>();
@@ -502,7 +504,9 @@ public class SonicConfigurationService {
 	void applySettings(Map<SonicConfiguration, Object> changes) throws IOException {
 		Map<String, Object> candidate = new HashMap<>(config);
 		changes.forEach((key, value) -> candidate.put(key.name(), value));
+		preserveUnknownConfigFields();
 		writeStringAtomically(resolveConfigFile().toPath(), new ConfigYamlWriter().write(candidate));
+		configSourceNeedingPreservation = null;
 		config = candidate;
 		invalidateResolvedCaches();
 	}
@@ -534,12 +538,36 @@ public class SonicConfigurationService {
 		File target = resolveConfigFile();
 		try {
 			String yaml = new ConfigYamlWriter().write(config);
+			preserveUnknownConfigFields();
 			writeStringAtomically(target.toPath(), yaml);
+			configSourceNeedingPreservation = null;
 			return true;
 		} catch (IOException e) {
 			LOGGER.log(Level.WARNING, "Failed to save config.yaml", e);
 			return false;
 		}
+	}
+
+	/** Never erase fields this build does not understand without keeping their original bytes. */
+	private void preserveUnknownConfigFields() throws IOException {
+		Path source = configSourceNeedingPreservation;
+		if (source == null) return;
+		if (!Files.isRegularFile(source)) {
+			throw new IOException("Cannot preserve original configuration: " + source);
+		}
+		for (int index = 0; index < 1000; index++) {
+			String suffix = index == 0 ? ".bak" : ".bak." + index;
+			Path backup = source.resolveSibling(source.getFileName().toString() + suffix);
+			try {
+				// COPY, never move: failure to publish the new YAML leaves the live source intact.
+				Files.copy(source, backup);
+				LOGGER.info("Preserved configuration with unknown fields at " + backup.getFileName());
+				return;
+			} catch (java.nio.file.FileAlreadyExistsException occupied) {
+				// Another build or save owns this backup; reserve the next name without replacing it.
+			}
+		}
+		throw new IOException("Could not reserve a configuration backup beside " + source);
 	}
 
 	private static void writeStringAtomically(Path target, String content) throws IOException {
@@ -885,11 +913,12 @@ public class SonicConfigurationService {
 		Object format = nested.remove(ConfigYamlWriter.FORMAT_KEY);
 		sparseFormatDeclared = format != null
 				&& String.valueOf(format).trim().equals(String.valueOf(ConfigYamlWriter.SPARSE_FORMAT));
-		return flattenAndWarn(nested);
+		return flattenAndWarn(nested, file.toPath().toAbsolutePath().normalize());
 	}
 
-	private Map<String, Object> flattenAndWarn(Map<String, Object> nested) {
+	private Map<String, Object> flattenAndWarn(Map<String, Object> nested, Path source) {
 		ConfigFlattener.Result result = ConfigFlattener.flatten(nested);
+		if (!result.unknownKeys().isEmpty()) configSourceNeedingPreservation = source;
 		for (String unknown : result.unknownKeys()) {
 			LOGGER.warning("Unknown config key ignored: " + unknown);
 		}

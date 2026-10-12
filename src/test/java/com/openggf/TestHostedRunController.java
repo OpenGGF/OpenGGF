@@ -63,6 +63,69 @@ class TestHostedRunController {
         assertEquals(RunEndReason.ABORTED, controller.consumeLeave());
     }
 
+    private static com.openggf.mods.code.OwnedSceneFactory ownedFactory(
+            java.util.concurrent.atomic.AtomicReference<java.util.Set<String>> disabled) {
+        var boundary = new com.openggf.mods.code.ModFaultBoundary(java.util.Map.of(),
+                new com.openggf.mods.ModRuntimeFindingStore(),
+                owners -> new com.openggf.mods.ModStateSaveResult.Saved(), disabled::set);
+        return com.openggf.mods.code.ModContextTestAccess.ownedScene("racer", () -> null, boundary);
+    }
+
+    @Test
+    void ownerFaultRetiresRunAndRenderersBeforeReachingOuterEngineRecovery() {
+        var disabled = new java.util.concurrent.atomic.AtomicReference<java.util.Set<String>>();
+        List<RunEndReason> endings = new ArrayList<>();
+        GhostRenderRegistry registry = new GhostRenderRegistry();
+        RunHandle handle = controller.begin(SPEC, ownedFactory(disabled).guard(new RunHost() {
+            @Override public void drawOverlay(com.openggf.mods.ui.LevelOverlayCanvas canvas) {
+                throw new IllegalStateException("bad overlay");
+            }
+            @Override public void onRunEnded(RunEndReason reason) {
+                endings.add(reason);
+                throw new IllegalStateException("bad cleanup");
+            }
+        }));
+        controller.attachRenderer(registry);
+        var aborted = assertThrows(com.openggf.mods.code.ModFaultBoundary.CallbackAborted.class,
+                () -> controller.drawOverlay(null));
+        assertEquals("bad overlay", aborted.getCause().getMessage());
+        assertEquals(0, aborted.getSuppressed().length, "successful engine cleanup must remain recoverable");
+        assertEquals(java.util.Set.of("racer"), disabled.get());
+        assertFalse(controller.isActive());
+        assertFalse(handle.isActive());
+        assertTrue(registry.isEmpty());
+        assertEquals(List.of(RunEndReason.ABORTED), endings);
+    }
+
+    @Test
+    void ownerFailureDuringRunEndStillReachesEngineRecoveryAfterCleanup() {
+        GhostRenderRegistry registry = new GhostRenderRegistry();
+        RunHandle handle = controller.begin(SPEC, ownedFactory(new java.util.concurrent.atomic.AtomicReference<>())
+                .guard(new RunHost() {
+                    @Override public void onRunEnded(RunEndReason reason) {
+                        throw new IllegalStateException("creator end failed");
+                    }
+                }));
+        controller.attachRenderer(registry);
+        assertThrows(com.openggf.mods.code.ModFaultBoundary.CallbackAborted.class,
+                () -> controller.end(RunEndReason.ACT_COMPLETED));
+        assertFalse(controller.isActive());
+        assertFalse(handle.isActive());
+        assertTrue(registry.isEmpty());
+    }
+
+    @Test
+    void copyingCreatorGhostListsStaysInsideTheOwnerBoundary() {
+        var disabled = new java.util.concurrent.atomic.AtomicReference<java.util.Set<String>>();
+        RunHost host = ownedFactory(disabled).guard(new RunHost() {
+            @Override public List<GhostPose> ghosts() {
+                return java.util.Arrays.asList((GhostPose) null);
+            }
+        });
+        assertThrows(com.openggf.mods.code.ModFaultBoundary.CallbackAborted.class, host::ghosts);
+        assertEquals(java.util.Set.of("racer"), disabled.get());
+    }
+
     @Test
     void onlyOneRunAtATime() {
         controller.begin(SPEC, new RunHost() { });

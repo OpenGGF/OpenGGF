@@ -13,7 +13,7 @@ import com.openggf.data.Rom;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
 import com.openggf.game.StockGameDataSources;
-import openggf.racing.ghost.GhostFrameCodec;
+import com.openggf.net.ghost.GhostFrameCodec;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.GameplayModeContext;
@@ -117,7 +117,7 @@ public final class AttemptReplayHarness {
                 int checkpointIndex = checkpoint == null ? -1
                         : checkpoint.getLastCheckpointIndex();
                 attempt.onFrame(mask, endOfLevel, checkpointIndex);
-                GhostFrameCodec.encode(new openggf.racing.ghost.GhostFrame(player.getCentreX(),
+                GhostFrameCodec.encode(new com.openggf.net.ghost.GhostFrame(player.getCentreX(),
                         player.getCentreY(), player.getMappingFrame(), player.getRenderHFlip(),
                         player.getRenderVFlip(), false, player.getPriorityBucket(),
                         player.isHighPriority()), encodedFrame, 0);

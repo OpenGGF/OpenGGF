@@ -1,7 +1,7 @@
 package openggf.timeattack.ui;
 
 import com.openggf.mods.scene.SceneKeys;
-import openggf.racing.client.DirectJoinAddress;
+import com.openggf.net.client.DirectJoinAddress;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;

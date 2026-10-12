@@ -1,13 +1,15 @@
 package openggf.racing.protocol;
 
+import com.openggf.net.protocol.ControlJsonCodec;
+import com.openggf.net.protocol.ControlMessage;
+
 /**
  * Static facade over one shared {@link ControlJsonCodec} for server-side callers
  * (master, relay broker, operator tools) and tests.
  *
- * <p>Not part of the mod-bound racing library: its shared codec is static state the mod
- * validator rejects. Room hosts and clients own a {@link ControlJsonCodec} instead, and
- * {@code TestRacingLibraryStaticState} checks that no mod-bound class references this
- * facade. It moves to the server artifact with the master when the split lands.
+ * <p>This operator-only convenience facade is packaged with the dedicated server.
+ * Shared engine room hosts and clients own a {@link ControlJsonCodec}; mods can use
+ * that public instance codec without depending on the operator artifact.
  */
 public final class ControlCodec {
     private static final ControlJsonCodec SHARED = new ControlJsonCodec();

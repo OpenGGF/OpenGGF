@@ -24,7 +24,7 @@ public final class SettingsView {
     private static final int FIRST_ROW_Y = 44;
     private static final int ROW_HEIGHT = 20;
 
-    enum Row { DISPLAY_NAME, HOST_PORT, MASTER_URL, MASTER_TLS, MINIMAP, BACK }
+    enum Row { DISPLAY_NAME, HOST_PORT, MASTER_URL, MASTER_TLS, MINIMAP, RETRY_KEY, BACK }
 
     private final TimeAttackSettings settings;
     private final Runnable changed;
@@ -32,6 +32,7 @@ public final class SettingsView {
     private Row focus = Row.DISPLAY_NAME;
     private TextEntry editor;
     private Row editing;
+    private boolean capturingKey;
     private String status = "";
     private boolean closeRequested;
 
@@ -45,6 +46,22 @@ public final class SettingsView {
     }
 
     public void update(ViewInput input) {
+        if (capturingKey) {
+            if (input.keyPressed(com.openggf.mods.scene.SceneKeys.ESCAPE)) {
+                capturingKey = false;
+                cues.accept(MenuCue.CANCEL);
+                return;
+            }
+            for (int key = 32; key <= 348; key++) {
+                if (RetryKey.supported(key) && input.keyPressed(key)) {
+                    settings.setRetryKey(key);
+                    capturingKey = false;
+                    changed();
+                    return;
+                }
+            }
+            return;
+        }
         if (editor != null) {
             switch (editor.update(input)) {
                 case ACCEPTED -> acceptEdit();
@@ -81,6 +98,12 @@ public final class SettingsView {
                 if (toggle) {
                     settings.setMinimap(!settings.minimap());
                     changed();
+                }
+            }
+            case RETRY_KEY -> {
+                if (input.accept()) {
+                    capturingKey = true;
+                    cues.accept(MenuCue.CONFIRM);
                 }
             }
             case BACK -> {
@@ -149,7 +172,7 @@ public final class SettingsView {
 
     /** True while a text field (name, port, master URL) takes keyboard text. */
     public boolean isEditingText() {
-        return editor != null;
+        return editor != null || capturingKey;
     }
 
     Row focusedRow() {
@@ -157,6 +180,13 @@ public final class SettingsView {
     }
 
     public void draw(SceneCanvas canvas) {
+        if (capturingKey) {
+            canvas.clear(BACKGROUND);
+            canvas.text("RETRY KEY", 10, 10, TITLE);
+            canvas.text("Press a key to retry an act", 10, 60, VALUE);
+            canvas.text("Escape cancels", 10, 208, HINT);
+            return;
+        }
         if (editor != null) {
             editor.draw(canvas);
             return;
@@ -164,7 +194,7 @@ public final class SettingsView {
         int width = canvas.width();
         canvas.clear(BACKGROUND);
         canvas.text("TIME ATTACK SETTINGS", 10, 10, TITLE);
-        canvas.text("Multiplayer racing", 10, 24, HINT);
+        canvas.text("Run controls and multiplayer", 10, 24, HINT);
         row(canvas, Row.DISPLAY_NAME, "Name",
                 settings.displayName().isBlank() ? "(identity prefix)" : settings.displayName(), VALUE);
         row(canvas, Row.HOST_PORT, "Host port", Integer.toString(settings.hostPort()), VALUE);
@@ -174,6 +204,7 @@ public final class SettingsView {
                 settings.masterTrustInsecure() ? "< TRUST ALL >" : "< VERIFY >",
                 settings.masterTrustInsecure() ? WARNING : VALUE);
         row(canvas, Row.MINIMAP, "Minimap", settings.minimap() ? "< ON >" : "< OFF >", VALUE);
+        row(canvas, Row.RETRY_KEY, "Retry key", RetryKey.label(settings.retryKey()), VALUE);
         int backY = FIRST_ROW_Y + Row.BACK.ordinal() * ROW_HEIGHT;
         if (focus == Row.BACK) canvas.fill(8, backY - 3, width - 16, 16, FOCUS);
         canvas.text("BACK", 14, backY, VALUE);

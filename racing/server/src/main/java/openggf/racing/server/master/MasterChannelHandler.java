@@ -1,12 +1,12 @@
 package openggf.racing.server.master;
 
-import openggf.racing.host.ConnectionHygiene;
-import openggf.racing.hub.HubConnection;
+import com.openggf.net.host.ConnectionHygiene;
+import com.openggf.net.hub.HubConnection;
 import openggf.racing.protocol.ControlCodec;
-import openggf.racing.protocol.ControlMessage;
-import openggf.racing.protocol.GhostPackets;
-import openggf.racing.protocol.Protocol;
-import openggf.racing.protocol.ProtocolViolationException;
+import com.openggf.net.protocol.ControlMessage;
+import com.openggf.net.protocol.GhostPackets;
+import com.openggf.net.protocol.Protocol;
+import com.openggf.net.protocol.ProtocolViolationException;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;

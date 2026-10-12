@@ -27,6 +27,9 @@ public final class ModApiVersion {
      * socket/thread ownership and lifetime kept in the engine.
      * Power-up rules expose explicit invincibility-expiry music ownership for modes
      * with continuous music.
+     * Shared network contracts include direct/relay room clients, JDK room hosting,
+     * identity, bounded ghost transport and protocol messages/codecs. Operator servers
+     * and verifier tools remain separate and outside the creator API.
      * Broker-pinned direct-room TLS wire fields are part of the race protocol.
      * A session-scoped gameplay run policy governs special/bonus stage entry, act
      * completion handing control back to the run's host, live rewind and editor entry.
