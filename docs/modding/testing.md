@@ -55,6 +55,11 @@ activates test sources and the separate classifier. Exported forks and all
 `ggfmod init` starters include this profile and a packed-mod integration test.
 Ordinary starter builds do not require the testkit.
 
+The starter test packages production output, checks its identity in the engine's
+effective catalog, and verifies registration when it supplies code or art overrides.
+Audio-only content such as the music starter has no runtime registration plan;
+its validated, enabled catalog entry is the integration boundary.
+
 Extend your starter's `StarterIntegrationTest`, or use the exported
 `HelloSceneIntegrationTest` for a scene-host test. Add tests under
 `src/test/java`; adapt the base module and launch request

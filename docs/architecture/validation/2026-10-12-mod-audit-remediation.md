@@ -969,3 +969,53 @@ additional observed failure. All three focused gates are complete; required root
 integration, broad post-integration comparison and delivery remain separate gates.
 Owned supplemental consumer directories/pointers were removed after inspection;
 normal output was consumed without archiving logs or copying build trees.
+
+## Creator-profile regression: audio-only starter integration test
+
+The actual external creator-profile reactor against clean `175531f6d` found a
+separate P10 template defect. Its first music child ran one test, zero failures,
+one error and zero skips: `StarterIntegrationTest.packedModRegistersWithoutFaults`
+called `kit.plan("final-creator-music")`, then failed with
+`IllegalArgumentException: No successful plan for final-creator-music` at
+`ModTestKit.java:167` and the emitted test's line16. Request36286 exited1. The
+reactor has seven starter children plus exported Hello; the six remaining starters
+and Hello had no reports and did not execute. This is an incomplete reactor,
+not a seven-starter pass. Its preserved originals belong to the qualifying worker.
+
+An authored normal-queue regression now emits music, reskin and scene through
+`ProjectScaffolder`, compiles main and test sources separately, converts reskin
+art, and executes the emitted test in the actual project directory through
+`CreatorTestLauncher`. Each child has a bounded256MiB heap and30-second timeout.
+Queued lean request39608 reproduced the music exception before the template fix:
+three outer cases, one failure, zero errors/skips, in28.187s after23s queue wait,
+completed20:51:41 BST. Reskin and scene already passed. Inspection explains the
+distinction: the loader retains manifest art overrides for a real reskin plan;
+pure audio content is effective but has no runtime registration plan.
+
+The shared template now checks exactly one actual effective catalog descriptor
+and its expected mod identity. Verified code or manifest art overrides still
+require the actual successful plan. Audio-only music verifies validated enabled
+content without fabricating a plan. The checked Phase2 emitted test remains
+byte-identical to the rendered template; its main code, POM and native paths are
+unchanged. The testing handbook explains these boundaries. No public API or
+production registration behavior changes.
+
+The exact focused qualification is:
+
+```sh
+env JAVA_HOME=/usr/lib/jvm/java-25-openjdk PATH=/usr/lib/jvm/java-25-openjdk/bin:$PATH LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestProjectScaffolder,TestPurposeStarters,TestModTestKit,TestCreatorTestLauncher' test
+```
+
+Request21708 passed23/23, zero failures/errors/skips: scaffolder5, purpose3,
+testkit13 and launcher2. It completed31.869s with no queue wait, at20:55:53 BST.
+The three new cases include actual emitted music, art-only reskin and code scene
+test execution; existing fault/disabled-owner, invalid content, failed/empty
+discovery and main/test compilation checks also pass. XML counts were inspected.
+Both local runs identify `app.commit=e299bff34`, `app.dirty=true`, with the exact
+stable source changes recorded here, rather than a later clean commit.
+
+The previously qualified tutorial/native Phase2 production paths are unchanged.
+A fresh matching exported SDK/testkit/engine kit and regeneration/execution of
+all seven actual Maven creator profiles remain required after integration.
+This focused pass does not complete that external gate or the final broad
+comparison, installation, push and cleanup gates.

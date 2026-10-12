@@ -1,21 +1,25 @@
 package com.openggf.tools.modsdk;
 
 import com.openggf.version.AppVersion;
-
 import com.openggf.tests.TestSessionOutputPaths;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import javax.tools.ToolProvider;
+import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.concurrent.TimeUnit;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -109,5 +113,63 @@ class TestProjectScaffolder {
         assertThrows(IllegalArgumentException.class,
                 () -> new ProjectScaffolder().scaffold(output, "Upper", "not-a-package"));
         assertFalse(Files.exists(output));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"music", "reskin", "scene"})
+    void generatedIntegrationTestsCoverDataOnlyAndCodeStarters(String kind) throws Exception {
+        Path project = new ProjectScaffolder().scaffold(temp.resolve(kind),
+                "test-" + kind, "example." + kind, kind);
+        Path classes = project.resolve("target/classes");
+        Files.createDirectories(classes);
+        Path sourceRoot = project.resolve("src/main/java");
+        if (Files.isDirectory(sourceRoot)) {
+            compileSources(sourceRoot, classes,
+                    TestSessionOutputPaths.compiledClasses().toAbsolutePath().toString());
+        }
+        Path resources = project.resolve("src/main/resources");
+        try (var paths = Files.walk(resources)) {
+            for (Path source : paths.filter(Files::isRegularFile).toList()) {
+                Path destination = classes.resolve(resources.relativize(source));
+                Files.createDirectories(destination.getParent());
+                Files.copy(source, destination);
+            }
+        }
+        if (kind.equals("reskin")) {
+            new ArtConverter().convert(project.resolve("src/main/mod/sample.png"),
+                    project.resolve("src/main/mod/sample-sheet.yaml"), classes.resolve("art/sample.ggfs"));
+        }
+        String dependencies = java.util.Arrays.stream(System.getProperty("java.class.path")
+                        .split(java.util.regex.Pattern.quote(File.pathSeparator)))
+                .map(path -> Path.of(path).toAbsolutePath().toString())
+                .collect(Collectors.joining(File.pathSeparator));
+        Path testClasses = project.resolve("target/test-classes");
+        Files.createDirectories(testClasses);
+        String classpath = classes + File.pathSeparator + dependencies;
+        compileSources(project.resolve("src/test/java"), testClasses, classpath);
+        String executable = System.getProperty("os.name").startsWith("Windows") ? "java.exe" : "java";
+        Process process = new ProcessBuilder(Path.of(System.getProperty("java.home"), "bin", executable).toString(),
+                "--enable-native-access=ALL-UNNAMED", "-Xmx256m", "-cp",
+                testClasses + File.pathSeparator + classpath,
+                "com.openggf.mods.testing.CreatorTestLauncher", "execute",
+                "--scan-class-path=" + testClasses, "--include-engine=junit-jupiter",
+                "--details=summary", "--disable-ansi-colors", "--fail-if-no-tests")
+                .directory(project.toFile()).redirectErrorStream(true).start();
+        if (!process.waitFor(30, TimeUnit.SECONDS)) {
+            process.destroyForcibly();
+            fail(kind + " generated integration test timed out");
+        }
+        String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        assertEquals(0, process.exitValue(), kind + " generated test failed:\n" + output);
+    }
+
+    private static void compileSources(Path root, Path classes, String classpath) throws Exception {
+        var args = new java.util.ArrayList<>(List.of("--release", "25", "-cp", classpath,
+                "-d", classes.toString()));
+        try (var sources = Files.walk(root)) {
+            sources.filter(path -> path.toString().endsWith(".java"))
+                    .map(Path::toString).sorted().forEach(args::add);
+        }
+        assertEquals(0, ToolProvider.getSystemJavaCompiler().run(null, null, null, args.toArray(String[]::new)));
     }
 }
