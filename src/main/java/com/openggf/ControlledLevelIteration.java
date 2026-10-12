@@ -41,7 +41,8 @@ final class ControlledLevelIteration {
         input.refreshLogicalSnapshot();
         boolean fadeWasActive = context.getFadeManager().isActive();
         boolean fadeServiced = false;
-        if (GameLoopPauseInput.configurationPaused(GameMode.LEVEL) || configuration.holdsTransition().getAsBoolean()) {
+        if (fadeWasActive && (GameLoopPauseInput.configurationPaused(GameMode.LEVEL)
+                || configuration.holdsTransition().getAsBoolean())) {
             servicePresentationFade(context);
             fadeServiced = true;
         }
@@ -84,6 +85,12 @@ final class ControlledLevelIteration {
         if (sceneAct.consume().getAsBoolean()) {
             if (fadeWasActive && !fadeServiced) servicePresentationFade(context);
             sceneAct.audio().run();
+            return;
+        }
+        // An overlay may release its hold directly without issuing RESUME.
+        // The fade already owned this row; admit gameplay on the next row.
+        if (fadeServiced) {
+            input.update();
             return;
         }
         if (ControlledFrameRuntime.prepareSetup(context)) return;
