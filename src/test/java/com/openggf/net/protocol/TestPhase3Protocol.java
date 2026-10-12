@@ -1,5 +1,7 @@
 package com.openggf.net.protocol;
 
+import openggf.racing.protocol.ControlCodec;
+
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
@@ -10,6 +12,20 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestPhase3Protocol {
+    @Test
+    void relayWireMessagesCarryExplicitNullDirectCertificatePin() {
+        ControlMessage.RoomDescriptor descriptor = new ControlMessage.RoomDescriptor(
+                "Relay", "s3k", 0, 0, "OPEN", null, 8, false);
+        String create = ControlCodec.encode(null,
+                new ControlMessage.RoomCreate(descriptor, "RELAY", 0, "fp"));
+        String result = ControlCodec.encode(null,
+                new ControlMessage.RoomJoinResult("r-1", "RELAY", null, 0, "master", "fp"));
+        assertTrue(create.contains("\"certificateSha256\":null"));
+        assertTrue(result.contains("\"certificateSha256\":null"));
+        assertInstanceOf(ControlMessage.RoomCreate.class, ControlCodec.decode(create).message());
+        assertInstanceOf(ControlMessage.RoomJoinResult.class, ControlCodec.decode(result).message());
+    }
+
     @Test
     void roundTripsEveryNewControlMessage() {
         ControlMessage.RoomDescriptor descriptor = new ControlMessage.RoomDescriptor(
@@ -33,7 +49,7 @@ class TestPhase3Protocol {
                 new ControlMessage.RelayAttach("room-1"),
                 new ControlMessage.RelayGuestOpen(7),
                 new ControlMessage.RelayGuestClose(7, "gone"),
-                new ControlMessage.RelayGuestText(7, "{\"v\":1}"),
+                new ControlMessage.RelayGuestText(7, "{\"v\":2}"),
                 new ControlMessage.StandingsPageRequest(2),
                 new ControlMessage.StandingsPage(List.of(new ControlMessage.StandingsRow(
                         0, "A", "sonic", 3600, 41, "NONE")), 2, 16),
@@ -78,7 +94,7 @@ class TestPhase3Protocol {
     @Test
     void relayGuestBinaryWrapsAndEnforcesCap() {
         byte[] inner = GhostPackets.encodeFrames(1, 0,
-                new byte[com.openggf.ghost.GhostFrameCodec.BYTES]);
+                new byte[com.openggf.net.ghost.GhostFrameCodec.BYTES]);
         GhostPackets.RelayGuestBinary decoded = GhostPackets.decodeRelayGuestBinary(
                 GhostPackets.encodeRelayGuestBinary(300, inner));
         assertEquals(300, decoded.guestId());

@@ -5,7 +5,7 @@ Start with [setup and your first project](getting-started.md). Recipients use
 mutable, unpublished 0.7.0 candidate; use matching artifacts from one commit.
 
 OpenGGF's mod workflow is source-first and reproducible: author files, convert them
-with `ggfmod`, validate/package a jar, then enable it in the Mod Manager and restart.
+with `ggfmod`, validate/package a jar, then enable it in the Mod Manager and choose Apply.
 Choose the smallest quickstart that matches your goal; they are ordered by typical
 effort. Mod API 0.7 includes exclusive fresh-game insertion plus destination-scoped,
 launch-only teams, deterministic input filters, and row-only HUD profiles; the
@@ -80,6 +80,10 @@ See the detailed guides for narrower contracts; roadmap entries do not imply imp
   characters, audio, storage and headless testing. Start from
   [hello-scene](../../examples/hello-scene/README.md), a two-class starter; Slay the Robotnik
   is the complete example.
+- [Title entries and gameplay runs](guides/gameplay-runs.md) — add a master-title entry whose
+  scene launches stock acts of Sonic 1, 2 or 3&K, observes and times them through a run host,
+  draws ghosts and an overlay, and is resumed when each run ends. The bundled Time Attack mod
+  (`racing/time-attack`) is built on it.
 - [AI-generated art](guides/ai-art.md) — prompting, quantizing, and laying out
   original sprite/tile PNGs for `ggfmod convert art`, and swapping generated art into
   either build-along sample.
@@ -133,6 +137,8 @@ See the detailed guides for narrower contracts; roadmap entries do not imply imp
 - [Catalog scalability probe and acceptance](tools/scalability.md)
 - [Maintained sample gallery](samples/index.md)
 - [Deferred-backlog decisions](BACKLOG.md)
+- [Mod author and framework audit](../architecture/audits/2026-10-12-mod-author-framework-audit.md)
+  — source-wide findings and proposed rewrite/API focal points, with verification limits.
 - [GUI tooling evaluation](GUI_TOOLING_EVALUATION.md)
 
 The nine sample sources are built by the default test suite. Treat them as

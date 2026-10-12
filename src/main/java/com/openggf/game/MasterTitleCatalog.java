@@ -8,7 +8,7 @@ import java.util.function.Supplier;
 public final class MasterTitleCatalog {
     private MasterTitleCatalog() { }
 
-    /** Re-read the effective catalog when the mod manager returns; pending mods still require restart. */
+    /** Re-read the effective catalog when the mod manager returns. */
     public static void bind(MasterTitleScreen title, Supplier<List<MasterTitleEntry>> source) {
         Objects.requireNonNull(title, "title").bindEntrySource(source);
     }

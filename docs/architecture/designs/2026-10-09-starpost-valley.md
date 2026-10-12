@@ -3059,3 +3059,56 @@ including the independent local farming edits. Proportionate local validation
 covers this canonical-identifier substitution with the actual source guard
 and compilation; broader local engine execution is not claimed. The farming
 edits stay outside this PR-review commit.
+
+### PR #220 develop merge (2026-10-12)
+
+The requested update merges `develop` at
+`15f3cf371a49e9755568588b00b1f515225aaa4d` into the prepared
+`feature/ai-starpost-valley` checkout at
+`7169f91e17358d973d3b2d10a4130687c3951025`; their common ancestor is
+`765ec853360432fefb41e105a1ea2cc7b539e4d2`. The main checkout remains on
+`develop`, already current after fetch/fast-forward pull. Its unrelated local
+files and dirty disassemblies are preserved.
+
+Nine conflicted paths reconcile two independent scene launch contracts. Owned
+mod acts still use `startAct` and `resume(ActResult)`, including suspended scene
+state, team restoration, native spawn overrides and once-only act exits.
+Develop's hosted stock runs keep `gameplay`, `resumed(RunEndReason)`, host-return
+routing, retired capabilities and text input ownership. Both callbacks retain
+their creator fault boundaries. `SceneServices` carries both capabilities;
+typed legacy overloads preserve each branch's existing callers. The frame loop
+admits both launch paths after creator callbacks unwind, and gameplay teardown
+for a hosted scene return remains separate from retiring the scene itself.
+
+The shared donor driver and scene-owned music tempo survive the merge, with
+tempo reset and donor cleanup before the ROM library closes. Reintroducing
+develop's superseded `LiveSceneMusic` field was rejected: the feature already
+routes donor music through `SceneDonorMusic`, so the orphan cleanup helper had
+no live resource to own. Creator guidance preserves the donor/tempo APIs and
+adds develop's binary storage contract. The candidate signature pin combines
+both reviewed surfaces while retaining upstream removals; the release policy
+descriptor and candidate version remain unchanged. Automatic merges retain
+develop's installed-mod reload and bundled Time Attack extraction.
+
+Java 21.0.12.1 fresh build validation in the feature worktree succeeds:
+`python3 tools/testing/maven_queue.py -B -Dmse=off -DskipTests clean package`
+(`BUILD SUCCESS`, about 100 seconds). It compiles production and test sources
+and builds the engine, SDK, Javadoc, testkit and bundled Time Attack artifacts;
+it does not execute JUnit. The packaged `ModApiSignatureSurface --snapshot`
+passes its recursive annotation/external-signature checks and matches all
+**19,339** sorted unique lines of `mod-api-signatures-0.7.txt`, with no missing
+or extra entries. Staged whitespace and conflict-marker checks pass.
+
+The unchanged runner selection against pre-merge `7169f91e` selects **3,108
+ordinary classes** across all ten categories plus guards. This update uses the
+user's requested merge/build delivery flow and direct verification of the
+reconciled contracts; no full-suite pass is inferred from the package build.
+
+An additional queued lean JUnit request selected
+`TestModApiSignatureSurface,TestModSceneActBridge,TestModSceneHost,TestModSceneHostGameplay,TestSceneDonorMusic,TestSceneNetworkLifetime,TestHostedRunController,TestSceneRunLauncher,TestGameplayRunRouting,TestLevelTransitionCoordinator,TestStarpostValleyExample,TestStarpostValleyScene,TestActPracticeExample,TestTimeAttackModPackage`,
+with explicit absolute S1/S2/S3K ROM properties. It never acquired admission
+while another worktree held the shared Maven queue. Only this task's waiting
+request was cancelled after more than eight minutes (exit 130), without
+interrupting other runs or changing queue locks. These JUnit checks and the
+ordinary/guard suites are **unrun**, not passing. The reflection snapshot above
+is a separate completed artifact check, not a substitute JUnit result.

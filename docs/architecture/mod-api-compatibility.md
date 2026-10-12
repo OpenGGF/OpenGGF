@@ -97,6 +97,14 @@ rebuild compiled mods using that constructor. Candidate `0.7.0` remains unpublis
 the runtime candidate description and normalized pin are updated together. The
 release descriptor retains its existing candidate version and publication state.
 
+The bundled-mod lane adds bounded binary owner storage: `ModStorage.readBytes`,
+`ModStorage.writeBytes`, and the `MAX_TEXT_BYTES` (1 MiB) and `MAX_BINARY_BYTES` (4 MiB)
+caps. Binary files share the text namespace and name rules, are staged and renamed
+into place like text, and reads return a fresh copy. `SceneStorage` inherits both
+methods, so creator test doubles implementing it must add them. These are additions
+to the unpublished `0.7.0` candidate; the runtime description and normalized pin are
+updated together and the descriptor is unchanged.
+
 ## What the 0.7 candidate includes
 
 The candidate exposes the accumulated creator capabilities together:
@@ -637,3 +645,24 @@ The default returns null for providers without a profile. No live level event st
 consumed, and no engine implementation type enters the creator signature surface. The
 unpublished descriptor remains candidate 0.7.0, with `ModApiVersion` and the mutable `0.7`
 signature pin updated together (five additive lines, no removed signatures).
+
+
+## Hosted stock runs and shared network contracts
+
+The unpublished 0.7 candidate exposes `SceneGameplay` and the immutable `mods.run`
+contracts for scene-owned stock runs. A scene visit retains its run host across fresh
+stock sessions; creator callbacks and ghost-list validation run inside that owner's
+fault boundary. Closing or exiting the scene revokes its launch capability, and commands
+are restricted to the engine thread. An owner failure ends the run and returns to the
+master title instead of resuming the disabled scene.
+
+Reusable `com.openggf.net` client, room-host, identity, protocol and ghost-transport
+contracts are explicit annotated API roots. Netty/SQLite operator servers and verifier
+tools are outside that surface. `RuntimeException` (typed connection/protocol rejection)
+and `IntSupplier` (room capacity callbacks) are individually audited JDK signature types;
+no third-party signature or package-prefix exemption is added.
+
+The mutable `mod-api-signatures-0.7.txt` pin is regenerated against develop's complete
+surface, including its existing scene art/audio capabilities. `ModApiVersion` describes
+the additions; the policy descriptor remains unpublished candidate `0.7.0` and published
+baselines remain untouched.

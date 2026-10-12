@@ -38,6 +38,31 @@ class TestPendingModStateEditor {
     }
 
     @Test
+    void bootDerivedTrustIsVisibleWhileEditingButNeverPersisted() {
+        ModDescriptor bundled = codeDescriptor("bundled", "a".repeat(64));
+        ModDescriptor user = codeDescriptor("user-code", "b".repeat(64));
+        ModState startup = new ModState(1, List.of(
+                new ModState.Entry("bundled", true, 0, true, bundled.sha256()),
+                new ModState.Entry("user-code", true, 1, true, user.sha256())));
+        Path root = temp.toAbsolutePath().normalize();
+        ModStateStore store = new ModStateStore(root);
+        PendingModStateEditor editor = new PendingModStateEditor(startup, List.of(bundled, user), store,
+                Map.of("bundled", bundled.sha256()));
+
+        editor.disable("bundled");
+        assertTrue(editor.pendingState().entries().getFirst().trustsSha256(bundled.sha256()));
+        assertInstanceOf(ModStateSaveResult.Saved.class, editor.save());
+
+        assertEquals(List.of(new ModState.Entry("bundled", false, 0),
+                        new ModState.Entry("user-code", true, 1, true, user.sha256())),
+                store.load().state().entries(), "only the player's own grant reaches modstate.json");
+        assertFalse(editor.dirty());
+        assertEquals(new ModState.Entry("other", true, 0, true, "c".repeat(64)),
+                editor.persistable(new ModState(1, List.of(new ModState.Entry("other", true, 0, true,
+                        "c".repeat(64))))).entries().getFirst());
+    }
+
+    @Test
     void normalizationRetainsUnknownIdsAndAppendsNewDescriptorsDisabledInStableOrder() {
         ModState persisted = new ModState(1, List.of(
                 new ModState.Entry("known-b", true, 4),

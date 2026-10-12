@@ -26,7 +26,7 @@ src/test/resources/mods/sample-flappy-src/build.sh \
 cp /tmp/sample-flappy/target/sample-flappy-mod.jar mods/
 ```
 
-Enable **Sample Flappy** in the Mod Manager, trust it, restart, choose Sonic 3 & Knuckles and
+Enable **Sample Flappy** in the Mod Manager, trust it, choose Apply, then choose Sonic 3 & Knuckles and
 start a **new game** (No Save, or an empty slot). Instead of Angel Island you are in a short
 custom sky with Tails flying. A, B or C flaps; pipes approach; passing one adds a point to the
 counter the HUD now calls SCORE. Touching a pipe, or leaving the top or bottom of the screen, is

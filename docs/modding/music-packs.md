@@ -1,6 +1,6 @@
 # Music packs
 
-Phase 1 music packs are restart-loaded patch mods that replace stock music with
+Phase 1 music packs are title-loaded patch mods that replace stock music with
 bounded WAV or Ogg/Vorbis assets. They do not contain executable code, and they
 never replace ROM data on disk.
 
@@ -10,7 +10,7 @@ playable characters, no-ROM standalone games, and explicit development-directory
 runs through `ggfmod`; those use separate eligibility and trust rules documented in
 [Content mods](content-mods.md). Standalone games may play declared streamed SFX
 through their own namespaced one-shot route. Base-game streamed SFX overrides, MP3,
-and hot reload remain unsupported.
+and applying changes within running gameplay remain unsupported.
 
 ## Source and packaged layout
 
@@ -26,10 +26,9 @@ audio/emerald-hill.wav
 
 Open the Mod Manager through the master title's `MODS` action. Newly discovered
 mods start disabled. Enable, disable, or reorder entries; dependency cascades
-require confirmation. Apply saves the pending state to `mods/modstate.json` without
-leaving the manager; Back asks before discarding unsaved changes.
-Restart OpenGGF to apply it: the running catalog and prepared audio session are
-immutable. A failed owner is disabled for the next start while independent
+require confirmation. Apply saves the pending state to `mods/modstate.json` and
+reloads the catalog and runtime at the title; Back asks before discarding unsaved changes.
+A failed owner is disabled for the next reload while independent
 owners and stock fallbacks continue.
 
 ## `META-INF/openggf-mod.yaml`

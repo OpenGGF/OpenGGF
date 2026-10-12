@@ -11,6 +11,7 @@ import com.openggf.mods.ModTrackRegistry;
 import com.openggf.mods.PendingModStateEditor;
 import com.openggf.mods.PreparedAudioSession;
 import com.openggf.mods.PreparedModMusic;
+import com.openggf.mods.BundledModSource;
 import com.openggf.mods.DefaultModRepositoryScanner;
 import com.openggf.mods.DevelopmentModSource;
 import com.openggf.mods.ModDescriptor;
@@ -40,7 +41,7 @@ import com.openggf.mods.code.ModPatternWindowAllocator;
 import com.openggf.graphics.PatternAtlasRange;
 
 /**
- * Process-lifetime mod catalog owner and the sole atomic owner of the session view.
+ * Title-scoped mod catalog owner and the sole atomic owner of the session view.
  * Deterministic entry seams use the static boundary so they cannot accidentally scan.
  */
 public final class ModSubsystem implements AutoCloseable {
@@ -59,6 +60,7 @@ public final class ModSubsystem implements AutoCloseable {
     private long sessionEpoch;
     private RewindClassResolver rewindClassResolver = RewindClassResolver.ENGINE_ONLY;
     private AutoCloseable bootResource = () -> { };
+    private Set<Path> bundledSourcePaths = Set.of();
     private final ModState startupModState;
     private boolean compiledModsSupported = true;
 
@@ -173,6 +175,9 @@ public final class ModSubsystem implements AutoCloseable {
 
     public boolean compiledModsSupported() { return compiledModsSupported; }
 
+    /** Carries the host's native/JVM capability into a freshly scanned title catalog. */
+    void setCompiledModsSupported(boolean supported) { compiledModsSupported = supported; }
+
     public Set<String> trustedCodeOwners() { return trustedCodeOwners; }
 
     public synchronized RewindClassResolver rewindClassResolver() { return rewindClassResolver; }
@@ -277,14 +282,14 @@ public final class ModSubsystem implements AutoCloseable {
                 java.util.logging.Level.SEVERE, "Compiled-mod owner failure: " + affected, failure);
         affected.forEach(owner -> runtimeFindings.replaceOwner(owner, List.of(
                 new com.openggf.mods.ModFinding(com.openggf.mods.ModFindingSeverity.ERROR,
-                        findingCode, "Compiled-mod owner failed; restart required", null))));
+                        findingCode, "Compiled-mod owner failed; re-enable and Apply at title", null))));
         if (affected.isEmpty() || pendingEditor == null) return;
         pendingEditor.setEnabledCascade(affected, false);
         com.openggf.mods.ModStateSaveResult saved = pendingEditor.save();
         if (saved instanceof com.openggf.mods.ModStateSaveResult.Failed failed) {
             affected.forEach(owner -> runtimeFindings.replaceOwner(owner, List.of(
                     new com.openggf.mods.ModFinding(com.openggf.mods.ModFindingSeverity.ERROR,
-                            findingCode, "Compiled-mod owner failed; restart required", null),
+                            findingCode, "Compiled-mod owner failed; re-enable and Apply at title", null),
                     new com.openggf.mods.ModFinding(com.openggf.mods.ModFindingSeverity.ERROR,
                             "MOD_DISABLE_SAVE_FAILED", failed.message(), null))));
         }
@@ -299,8 +304,11 @@ public final class ModSubsystem implements AutoCloseable {
         ModManagerScreen.TextSink text = font == null ? null : ModManagerScreenHost.textSink(font);
         return new ModManagerScreenHost(new ModManagerScreen(
                 processCatalog, managerEditor, runtimeFindings, text, patternWindowAllocator,
-                compiledModsSupported));
+                compiledModsSupported, bundledSourcePaths));
     }
+
+    /** Catalog source paths of mods bundled with this engine build, for presentation. */
+    public synchronized Set<Path> bundledSourcePaths() { return bundledSourcePaths; }
 
     public synchronized SessionExternalContentView sessionView() { return sessionView; }
 
@@ -343,7 +351,7 @@ public final class ModSubsystem implements AutoCloseable {
         previous.close();
     }
 
-    /** Return-to-title retires leases but deliberately retains the immutable process catalog. */
+    /** Return-to-title retires leases; Apply can then replace the catalog. */
     public synchronized void returnToTitle() {
         sessionEpoch++;
         SessionExternalContentView previous = sessionView;
@@ -419,10 +427,24 @@ public final class ModSubsystem implements AutoCloseable {
             Supplier<Path> rootSupplier, ModInputLimits limits,
             ModCatalogValidator.StockMusicDomain stockMusicDomain,
             SessionAudioBoundary audioBoundary) {
+        return normalBootLoader(rootSupplier, limits, stockMusicDomain, audioBoundary,
+                BundledModSource.Locator.NONE);
+    }
+
+    /**
+     * Normal-boot loader that also offers the mods bundled with this engine build. The locator
+     * runs inside the returned supplier, so deterministic boots never discover or extract them;
+     * explicit development runs skip them so the development mod stays the sole owner.
+     */
+    public static Supplier<ModSubsystem> normalBootLoader(
+            Supplier<Path> rootSupplier, ModInputLimits limits,
+            ModCatalogValidator.StockMusicDomain stockMusicDomain,
+            SessionAudioBoundary audioBoundary, BundledModSource.Locator bundledLocator) {
         Objects.requireNonNull(rootSupplier, "rootSupplier");
         Objects.requireNonNull(limits, "limits");
         Objects.requireNonNull(stockMusicDomain, "stockMusicDomain");
         Objects.requireNonNull(audioBoundary, "audioBoundary");
+        Objects.requireNonNull(bundledLocator, "bundledLocator");
         return () -> {
             Path declared = Objects.requireNonNull(rootSupplier.get(), "mod root");
             Path root = declared.toAbsolutePath().normalize();
@@ -438,10 +460,15 @@ public final class ModSubsystem implements AutoCloseable {
                     throw new IllegalStateException("Unable to snapshot explicit development mod", failure);
                 }
             }
-            var scanned = development == null ? new DefaultModRepositoryScanner(limits).scan(root)
-                    : development.scan();
+            BundledModSource bundled = BundledModSource.EMPTY;
             boolean completed=false;
             try {
+            if (development == null) {
+                bundled = Objects.requireNonNull(bundledLocator.open(limits), "bundled mod source");
+            }
+            var scanned = development == null
+                    ? bundled.withUserEntries(new DefaultModRepositoryScanner(limits).scan(root))
+                    : development.scan();
             ModCatalogValidator.ValidationResult validated = new ModCatalogValidator(
                     root, limits, stockMusicDomain).validate(scanned);
             ModStateStore stateStore = development == null ? new ModStateStore(root, limits) : null;
@@ -450,7 +477,7 @@ public final class ModSubsystem implements AutoCloseable {
             if (development == null) {
                 var loadedState = stateStore.load().state();
                 trust = reconcileBootTrust(loadedState, validated.entries(), stateStore::save);
-                startup = trust.state();
+                startup = bundled.applyStartupDefaults(trust.state(), validated.entries());
             } else {
                 ModDescriptor descriptor = validated.entries().stream()
                         .filter(ModDescriptor.class::isInstance).map(ModDescriptor.class::cast)
@@ -465,13 +492,14 @@ public final class ModSubsystem implements AutoCloseable {
             if(development!=null&&catalog.effective().orderedEnabled().size()!=1)
                 throw new IllegalStateException("Development mod must be the sole effective owner");
             PendingModStateEditor editor = development == null ? new PendingModStateEditor(
-                    startup, catalog.scanned(), stateStore) : null;
+                    startup, catalog.scanned(), stateStore, bundled.trustedSha256ById()) : null;
             ModRuntimeFindingStore findings = new ModRuntimeFindingStore();
             trust.findings().forEach(findings::replaceOwner);
             ModAudioPreparer preparer = new ModAudioPreparer(root, limits, findings,
                     editor == null ? owners -> new ModStateSaveResult.Saved()
                             : ModAudioPreparer.FailureStateSink.pending(editor));
-            Set<String> trustedOwners = development == null ? trust.trustedCodeOwners()
+            Set<String> trustedOwners = development == null
+                    ? startup.trustedCodeOwners(validated.entries())
                     : validated.entries().stream().filter(entry -> entry instanceof com.openggf.mods.ModDescriptor)
                     .map(entry -> ((com.openggf.mods.ModDescriptor) entry).manifest().id())
                     .collect(java.util.stream.Collectors.toUnmodifiableSet());
@@ -480,9 +508,16 @@ public final class ModSubsystem implements AutoCloseable {
                     audioBoundary, new ExternalContentPolicy(ExternalContentMode.NORMAL),
                     trustedOwners, startup);
             if (development != null) subsystem.bootResource = development;
+            else {
+                subsystem.bootResource = bundled;
+                subsystem.bundledSourcePaths = bundled.sourcePaths();
+            }
             completed=true;
             return subsystem;
-            } finally {if(!completed&&development!=null)development.close();}
+            } finally {
+                if(!completed&&development!=null)development.close();
+                if(!completed)bundled.close();
+            }
         };
     }
 

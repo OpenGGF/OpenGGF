@@ -806,8 +806,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             }
             return;
         }
-        // A finished/abandoned time attack attempt returns to the time attack
-        // menu instead of any of the below: the in-place Apparent_act flip
+        // Not a ROM branch: a run whose GameplayRunPolicy returns to its host on
+        // act completion ends here instead of any of the below: the in-place Apparent_act flip
         // (most Act 1 zones), arming the seamless-reload trigger via
         // End_of_level_flag (HCZ/MGZ Act 1 -- see hasSeamlessTransition below
         // and Sonic3kHCZEvents/Sonic3kMGZEvents), or setting End_of_level_flag
@@ -815,9 +815,10 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         // post-boss "next zone" handoff, e.g. AbstractS3kFloatingEndEggCapsuleInstance).
         // Every S3K results-screen subclass (Mgz2ResultsScreenObjectInstance,
         // the private Aiz2ResultsScreenObjectInstance) shares this onExitReady(),
-        // so gating here covers all S3K zones' act completion in one place.
-        if (services().gameState().isTimeAttackActive()) {
-            services().requestTimeAttackMenuReturn();
+        // so gating here covers all S3K zones' act completion in one place. The
+        // stock policy continues to the ROM exit below.
+        if (services().runPolicy().returnsToHostOnActCompletion()) {
+            services().requestHostReturn();
             ObjectLifetimeOps.deleteNoRespawn(this);
             return;
         }

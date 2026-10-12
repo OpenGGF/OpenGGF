@@ -14,6 +14,9 @@ import java.nio.file.Path;
  * @param mouse       maps raw window coordinates to logical pixels, or null
  * @param toGameTitle starts the fade back to the base game's title
  * @param toMasterTitle starts the fade back to the master title
+ * @param romLibrary  multi-ROM content for mixed-ROM scenes, or null
+ * @param validateAct validates owned retained-act visits, or null in isolated tests
+ * @param gameplay    launches gameplay runs from the scene, or null when the scene cannot
  */
 public record SceneServices(
         AudioManager audio,
@@ -23,17 +26,33 @@ public record SceneServices(
         Runnable toGameTitle,
         Runnable toMasterTitle,
         SceneRomLibrary romLibrary,
-        java.util.function.Consumer<com.openggf.mods.scene.ActLaunch> validateAct) {
+        java.util.function.Consumer<com.openggf.mods.scene.ActLaunch> validateAct,
+        com.openggf.mods.scene.SceneGameplay gameplay) {
 
+    /** Retained scenes launching their owner's registered acts. */
     public SceneServices(AudioManager audio, SceneRomArt romArt, Path storageRoot,
-            MouseMapper mouse, Runnable toGameTitle, Runnable toMasterTitle, SceneRomLibrary romLibrary) {
-        this(audio, romArt, storageRoot, mouse, toGameTitle, toMasterTitle, romLibrary, null);
+            MouseMapper mouse, Runnable toGameTitle, Runnable toMasterTitle, SceneRomLibrary romLibrary,
+            java.util.function.Consumer<com.openggf.mods.scene.ActLaunch> validateAct) {
+        this(audio, romArt, storageRoot, mouse, toGameTitle, toMasterTitle, romLibrary, validateAct, null);
+    }
+
+    /** Title-entry scenes launching hosted stock runs. */
+    public SceneServices(AudioManager audio, SceneRomArt romArt, Path storageRoot,
+            MouseMapper mouse, Runnable toGameTitle, Runnable toMasterTitle, SceneRomLibrary romLibrary,
+            com.openggf.mods.scene.SceneGameplay gameplay) {
+        this(audio, romArt, storageRoot, mouse, toGameTitle, toMasterTitle, romLibrary, null, gameplay);
     }
 
     /** Legacy running-ROM scenes do not need a multi-ROM library. */
     public SceneServices(AudioManager audio, SceneRomArt romArt, Path storageRoot,
             MouseMapper mouse, Runnable toGameTitle, Runnable toMasterTitle) {
-        this(audio, romArt, storageRoot, mouse, toGameTitle, toMasterTitle, null);
+        this(audio, romArt, storageRoot, mouse, toGameTitle, toMasterTitle, null, null, null);
+    }
+
+    /** Scenes that cannot launch gameplay runs. */
+    public SceneServices(AudioManager audio, SceneRomArt romArt, Path storageRoot,
+            MouseMapper mouse, Runnable toGameTitle, Runnable toMasterTitle, SceneRomLibrary romLibrary) {
+        this(audio, romArt, storageRoot, mouse, toGameTitle, toMasterTitle, romLibrary, null, null);
     }
 
     /** Window-to-logical mouse transform. Returns {@code {x, y, inside ? 1 : 0}}. */

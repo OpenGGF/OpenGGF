@@ -32,8 +32,8 @@ import java.util.PriorityQueue;
 import java.util.Set;
 
 /**
- * Pending-state editor for the immutable process catalog. The screen deliberately
- * owns no activation seam: all changes are persisted for the next process start.
+ * Pending-state editor for the current catalog. The host activates saved changes
+ * at the title screen, where no gameplay session owns mod resources.
  */
 public final class ModManagerScreen {
     public enum Feedback { NAVIGATE, CONFIRM, CANCEL, ERROR }
@@ -56,6 +56,7 @@ public final class ModManagerScreen {
     private final List<RepositoryScanFailure> repositoryFailures;
     private final PatternWindowState patternWindows;
     private final boolean compiledModsSupported;
+    private final Set<Path> bundledSourcePaths;
 
     private List<Row> rows = List.of();
     private int selectedIndex;
@@ -68,7 +69,9 @@ public final class ModManagerScreen {
     private ArmedTrust armedTrust;
     private String statusMessage = "";
     private String saveFailure;
+    private String reloadFailure;
     private boolean closeRequested;
+    private boolean activationRequested;
     private boolean actionFocus;
     private boolean discardPrompt;
     private boolean discardSelected;
@@ -95,6 +98,18 @@ public final class ModManagerScreen {
     public ModManagerScreen(ModCatalog catalog, PendingModStateEditor editor,
                             ModRuntimeFindingStore runtimeFindings, TextSink text,
                             PatternWindowState patternWindows, boolean compiledModsSupported) {
+        this(catalog, editor, runtimeFindings, text, patternWindows, compiledModsSupported, Set.of());
+    }
+
+    /**
+     * {@code bundledSourcePaths} names the catalog entries shipped with this engine build. They
+     * carry a BUNDLED badge and can be enabled or disabled like any mod, but not uninstalled.
+     */
+    public ModManagerScreen(ModCatalog catalog, PendingModStateEditor editor,
+                            ModRuntimeFindingStore runtimeFindings, TextSink text,
+                            PatternWindowState patternWindows, boolean compiledModsSupported,
+                            Set<Path> bundledSourcePaths) {
+        this.bundledSourcePaths = Set.copyOf(Objects.requireNonNull(bundledSourcePaths, "bundledSourcePaths"));
         this.catalog = Objects.requireNonNull(catalog, "catalog");
         this.editor = Objects.requireNonNull(editor, "editor");
         this.runtimeFindings = Objects.requireNonNull(runtimeFindings, "runtimeFindings");
@@ -202,7 +217,7 @@ public final class ModManagerScreen {
                 if (up || down || left || right) pageOffset = Math.clamp(pageOffset
                         + (down ? 1 : up ? -1 : right ? MAX_VISIBLE_DETAILS : -MAX_VISIBLE_DETAILS),
                         0, Math.max(0, noticeLines().size() - MAX_VISIBLE_DETAILS));
-                if (accept && saveFailure != null) applyDraft();
+                if (accept && (saveFailure != null || reloadFailure != null)) applyDraft();
             }
             return;
         }
@@ -293,14 +308,14 @@ public final class ModManagerScreen {
             if (noticesPage) {
                 renderReadingPage("MOD NOTICES", noticeLines(), pageOffset,
                         directionLabel + " Read  " + backLabel + " Back",
-                        saveFailure != null ? confirmLabel + " Retry save and return"
-                                : editor.editable() ? "Changes apply after restart" : "Mods are fixed for this launch");
+                        saveFailure != null || reloadFailure != null ? confirmLabel + " Retry Apply"
+                                : editor.editable() ? "Apply reloads mods at title" : "Mods are fixed for this launch");
                 return;
             }
             text.page("MOD MANAGER", patternBudgetLine());
             text.panel(6, 48, 308, 88);
             int y = 52;
-            if (rows.isEmpty()) drawPrimary("No mods discovered.", 12, y, 1f, 1f, 1f);
+            if (rows.isEmpty()) drawPrimary("No mods. Apply to rescan jars.", 12, y, 1f, 1f, 1f);
             for (RowView row : visibleRows()) {
                 boolean selected = rows.get(selectedIndex).identity().equals(row.identity());
                 if (selected && !actionFocus) text.focus(8, y - 2, 304, 14);
@@ -308,15 +323,21 @@ public final class ModManagerScreen {
                 String badges = row.badges().isEmpty() ? "" : " [" + String.join(",", row.badges()) + "]";
                 float green = !row.valid() ? .4f : row.enabled() ? .75f : 1f;
                 float blue = !row.valid() ? .4f : row.enabled() ? .25f : 1f;
-                drawPrimary(enabled + row.label() + badges, 12, text.primaryTextY(y - 2, 14), 1f, green, blue);
+                String rowText = enabled + row.gameLabel() + row.label() + badges;
+                if (rowText.length() > (320 - 12 - 6) / 9) {
+                    draw(rowText, 12, text.primaryTextY(y - 2, 14), 1f, green, blue);
+                } else {
+                    drawPrimary(rowText, 12, text.primaryTextY(y - 2, 14), 1f, green, blue);
+                }
                 y += 14;
             }
             draw((rows.isEmpty() ? "0" : Integer.toString(selectedIndex + 1)) + " / " + rows.size()
                     + " mods; choose Details for full information", 9, 141, .7f, .8f, .95f);
             List<String> banners = bannerLines();
-            String banner = saveFailure != null ? "Save failed: " + saveFailure
+            String banner = reloadFailure != null ? "Reload failed: " + reloadFailure
+                    : saveFailure != null ? "Save failed: " + saveFailure
                     : editor.dirty() ? "DRAFT: choose Apply to save"
-                    : banners.isEmpty() ? "SAVED: changes apply after restart" : banners.getFirst();
+                    : banners.isEmpty() ? "SAVED: choose Apply to reload" : banners.getFirst();
             draw(banner, 9, 153, 1f, .65f, .3f);
             if (!statusMessage.isBlank()) draw(statusMessage, 9, 165, 1f, .75f, .25f);
             String[] actions = editor.editable() ? new String[]{"Details", "Order", "Notices", "Apply"}
@@ -352,7 +373,7 @@ public final class ModManagerScreen {
         List<String> lines = new ArrayList<>();
         if (!statusMessage.isBlank()) lines.add(statusMessage);
         lines.addAll(bannerLines());
-        if (lines.isEmpty()) lines.add(editor.editable() ? "No notices. Changes apply after restart."
+        if (lines.isEmpty()) lines.add(editor.editable() ? "No notices. Apply reloads mods at title."
                 : "No notices. Mods are fixed for this launch.");
         return wrapped(lines);
     }
@@ -392,7 +413,8 @@ public final class ModManagerScreen {
     public List<String> detailLines() {
         if (rows.isEmpty()) return List.of("No mods discovered.");
         Row selected = rows.get(selectedIndex);
-        if (selected.invalid() != null) return invalidDetailLines(selected.invalid());
+        if (selected.invalid() != null) return invalidDetailLines(selected.invalid(),
+                isBundled(selected.invalid()));
         return descriptorDetailLines(selected.descriptor());
     }
 
@@ -423,8 +445,9 @@ public final class ModManagerScreen {
                         + " [" + owner + "] " + finding.code() + ": " + finding.message());
             }
         });
-        if (editor.restartRequired()) banners.add("Restart required");
+        if (editor.restartRequired()) banners.add("Changes await Apply");
         if (saveFailure != null) banners.add("Save failed: " + saveFailure);
+        if (reloadFailure != null) banners.add("Reload failed: " + reloadFailure);
         return List.copyOf(banners);
     }
 
@@ -443,6 +466,17 @@ public final class ModManagerScreen {
     public ModState pendingState() { return editor.pendingState(); }
 
     public String statusMessage() { return statusMessage; }
+
+    public boolean consumeActivationRequested() {
+        boolean requested = activationRequested;
+        activationRequested = false;
+        return requested;
+    }
+
+    public void activationFailed(String message) {
+        reloadFailure = message;
+        statusMessage = "Saved, but reload failed: " + message;
+    }
 
     public String patternBudgetLine() {
         return "Current pattern windows: " + patternWindows.totalWindows()
@@ -751,7 +785,9 @@ public final class ModManagerScreen {
         ModStateSaveResult result = editor.save();
         if (result instanceof ModStateSaveResult.Saved) {
             saveFailure = null;
-            statusMessage = "Saved. Restart to apply mod changes";
+            reloadFailure = null;
+            statusMessage = "Saved. Reloading mods";
+            activationRequested = true;
             closeRequested = false;
         } else if (result instanceof ModStateSaveResult.Failed failed) {
             saveFailure = failed.message();
@@ -814,12 +850,13 @@ public final class ModManagerScreen {
 
     private RowView toView(Row row) {
         if (row.invalid() != null) {
-            return new RowView(row.identity(), row.identity(), false, false, false,
-                    List.of("ERROR"));
+            return new RowView(row.identity(), row.identity(), "", false, false, false,
+                    isBundled(row.invalid()) ? List.of("BUNDLED", "ERROR") : List.of("ERROR"));
         }
         ModDescriptor descriptor = row.descriptor();
         String id = descriptor.manifest().id();
         LinkedHashSet<String> badges = new LinkedHashSet<>();
+        if (isBundled(descriptor)) badges.add("BUNDLED");
         ModEligibility eligibility = catalog.eligibility().get(id);
         if (eligibility != null && eligibility.status() == ModEligibility.Status.BLOCKED) badges.add("BLOCKED");
         if (descriptor.containsCode() && !isTrusted(descriptor)) badges.add("TRUST REQUIRED");
@@ -830,8 +867,20 @@ public final class ModManagerScreen {
         String label = descriptorCounts.getOrDefault(id, 0) > 1
                 ? descriptor.manifest().name() + " (" + filename(descriptor.jarPath()) + ")"
                 : descriptor.manifest().name();
-        return new RowView(row.identity(), label, isEnabled(id), true, notLoaded,
+        return new RowView(row.identity(), label, "[" + gameLabel(descriptor.manifest()) + "] ",
+                isEnabled(id), true, notLoaded,
                 List.copyOf(badges));
+    }
+
+    private static String gameLabel(com.openggf.mods.ModManifest manifest) {
+        if (manifest.type() == com.openggf.mods.ModType.STANDALONE) return "Standalone";
+        return switch (manifest.baseGame()) {
+            case "s1" -> "S1";
+            case "s2" -> "S2";
+            case "s3k" -> "S3K";
+            case "any" -> "S1/S2/S3K";
+            default -> throw new IllegalStateException("Unexpected base game: " + manifest.baseGame());
+        };
     }
 
     private static void addFindingBadges(Set<String> badges, List<ModFinding> findings, boolean runtime) {
@@ -846,7 +895,11 @@ public final class ModManagerScreen {
         var manifest = descriptor.manifest();
         lines.add(manifest.name() + "  " + manifest.version());
         lines.add("Jar: " + filename(descriptor.jarPath()));
-        lines.add("Id: " + manifest.id() + "  Game: " + manifest.baseGame());
+        if (isBundled(descriptor)) {
+            lines.add("Bundled with OpenGGF: enabled by default and trusted by this build's manifest. "
+                    + "You can disable it here; it cannot be uninstalled.");
+        }
+        lines.add("Id: " + manifest.id() + "  Applies to: " + gameLabel(manifest));
         int requestedWindows = manifest.patternWindows().orElse(1);
         String allocation = patternWindows.assignment(manifest.id())
                 .map(value -> " at 0x" + Integer.toHexString(value.base())
@@ -873,9 +926,12 @@ public final class ModManagerScreen {
         return immutableSafeLines(lines);
     }
 
-    private static List<String> invalidDetailLines(InvalidModEntry invalid) {
+    private static List<String> invalidDetailLines(InvalidModEntry invalid, boolean bundled) {
         List<String> lines = new ArrayList<>();
         lines.add("Invalid jar: " + filename(invalid.jarPath()));
+        if (bundled) {
+            lines.add("Bundled with OpenGGF but not loaded. Reinstall OpenGGF to repair it.");
+        }
         appendFindings(lines, invalid.findings());
         return immutableSafeLines(lines);
     }
@@ -884,6 +940,10 @@ public final class ModManagerScreen {
         for (ModFinding finding : findings) {
             lines.add(finding.severity() + " " + finding.code() + ": " + finding.message());
         }
+    }
+
+    private boolean isBundled(ModCatalogEntry entry) {
+        return bundledSourcePaths.contains(entry.sourcePath());
     }
 
     private boolean isEnabled(String id) {
@@ -939,7 +999,7 @@ public final class ModManagerScreen {
         return filename == null ? path.toString() : filename.toString();
     }
 
-    public record RowView(String identity, String label, boolean enabled, boolean valid,
+    public record RowView(String identity, String label, String gameLabel, boolean enabled, boolean valid,
                           boolean notLoaded, List<String> badges) {
         public RowView {
             badges = List.copyOf(badges);

@@ -7,6 +7,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class WorldSavesTest {
     private static final class Storage implements SceneStorage {
+        public Optional<byte[]> readBytes(String name) { return Optional.empty(); }
+        public boolean writeBytes(String name, byte[] data) { return false; }
         final Map<String,String> files=new HashMap<>();String fail="";
         public Optional<String> read(String name){return Optional.ofNullable(files.get(name));}
         public boolean write(String name,String text) {

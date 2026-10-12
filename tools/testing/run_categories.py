@@ -57,6 +57,45 @@ def ant_match(path, pattern):
     return re.fullmatch(escaped, path) is not None
 
 
+def test_source_roots(root, pom):
+    """Read ordinary static source roots; profile-only executions are not active here."""
+    checkout = root.resolve()
+    configured = [pom.findtext('m:build/m:testSourceDirectory', default=str(TEST_ROOT), namespaces=NS)]
+    for plugin in pom.findall('m:build/m:plugins/m:plugin', NS):
+        if (plugin.findtext('m:groupId', namespaces=NS) != 'org.codehaus.mojo'
+                or plugin.findtext('m:artifactId', namespaces=NS) != 'build-helper-maven-plugin'):
+            continue
+        for execution in plugin.findall('m:executions/m:execution', NS):
+            goals = [goal.text for goal in execution.findall('m:goals/m:goal', NS)]
+            if 'add-test-source' not in goals:
+                continue
+            # Execution configuration overrides plugin-level defaults, as Maven does.
+            sources = execution.find('m:configuration/m:sources', NS)
+            if sources is None:
+                sources = plugin.find('m:configuration/m:sources', NS)
+            if sources is None:
+                raise ValueError('build-helper add-test-source has no static sources')
+            configured.extend(source.text for source in sources.findall('m:source', NS))
+    roots = []
+    for value in configured:
+        if not value or not value.strip():
+            raise ValueError('Empty test source root in pom.xml')
+        value = value.strip().replace('${project.basedir}', checkout.as_posix()).replace('${basedir}', checkout.as_posix())
+        if '${' in value or '\\' in value:
+            raise ValueError(f'Test source root must be a static portable path: {value}')
+        source = (checkout / value).resolve()
+        if not source.is_relative_to(checkout) or source == checkout:
+            raise ValueError(f'Test source root must stay inside the checkout: {value}')
+        if not source.is_dir():
+            raise ValueError(f'Test source root does not exist: {value}')
+        if source in roots:
+            continue
+        if any(source.is_relative_to(other) or other.is_relative_to(source) for other in roots):
+            raise ValueError(f'Overlapping test source roots would give ambiguous class paths: {value}')
+        roots.append(source)
+    return roots
+
+
 def inventory(root, data):
     pom = ET.parse(root / 'pom.xml')
     config = pom.find("m:build/m:plugins/m:plugin[m:artifactId='maven-surefire-plugin']/m:configuration", NS)
@@ -67,10 +106,21 @@ def inventory(root, data):
     defaults = ['**/Test*.java', '**/*Test.java', '**/*Tests.java', '**/*TestCase.java']
     includes = [e.text for e in config.findall('m:includes/m:include', NS)] or defaults
     result = {}
-    for file in sorted((root / TEST_ROOT).rglob('*.java')):
-        path = file.relative_to(root / TEST_ROOT).as_posix()
-        if any(ant_match(path, p) for p in includes) and not any(ant_match(path, p) for p in excludes):
-            result[path] = owners(path, data)
+    source_files = {}
+    for source in test_source_roots(root, pom):
+        for file in sorted(source.rglob('*')):
+            # Directory links are not traversed by rglob; rejecting them avoids silent gaps.
+            if file.is_symlink():
+                raise ValueError(f'Symlink inside test source root is unsupported: {file}')
+            if not file.is_file() or file.suffix != '.java':
+                continue
+            path = file.relative_to(source).as_posix()
+            if path in source_files:
+                raise ValueError(f'Duplicate Java class path across test roots: {path} '
+                                 f'({source_files[path]} and {file})')
+            source_files[path] = file
+            if any(ant_match(path, p) for p in includes) and not any(ant_match(path, p) for p in excludes):
+                result[path] = owners(path, data)
     if not result:
         raise ValueError('Ordinary test inventory is empty')
     return result

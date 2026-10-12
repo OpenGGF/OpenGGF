@@ -556,8 +556,9 @@ the console. Leaving the scene stops another game's song that is still playing a
 the donor route back to cross-game donation; the base game's own music is left as it was.
 A `ctx.music()` song player still replaces all of this output while it exists.
 
-`ctx.storage()` keeps small text files for your mod under the save root
-(`saves/mods/<mod-id>/`): `read`, `write`, `delete`, `list`. Slay the Robotnik saves the
+`ctx.storage()` keeps small files for your mod under the save root
+(`saves/mods/<mod-id>/`): `read`, `write`, `delete`, `list` for text up to 1 MiB, and
+`readBytes`/`writeBytes` for binary data up to 4 MiB. Slay the Robotnik saves the
 run in progress, the player's records and the compendium there.
 
 Patch scenes may also declare bounded WAV/Ogg one-shots in

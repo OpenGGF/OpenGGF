@@ -18,7 +18,8 @@ findings below. `DUPLICATE_MOD_ID`, `DISABLED`, `CODE_TRUST_REQUIRED`,
 `DESCRIPTOR_INVALID`, and the `DEPENDENCY_*` findings are effective-catalog findings:
 they arise when the engine compares multiple discovered mods, not from validating one
 jar in isolation. The `REPOSITORY_*` findings likewise come from bounded multi-jar
-repository preflight rather than the single-jar CLI.
+repository preflight rather than the single-jar CLI, and the `BUNDLED_*` findings come
+from boot-time checks of the mods shipped with the engine build.
 
 | Code | What to fix |
 |---|---|
@@ -27,8 +28,8 @@ repository preflight rather than the single-jar CLI.
 | `MANIFEST_MISSING` / `MANIFEST_INVALID` | Add strict `META-INF/openggf-mod.yaml`; remove unknown/duplicate/alternate fields. |
 | `DUPLICATE_MOD_ID` | Give each discovered jar a unique manifest id. |
 | `ENGINE_API_INCOMPATIBLE` | Compile against a supported API and correct `engineApiRange`. |
-| `DISABLED` | Enable the mod in the manager and restart. |
-| `CODE_TRUST_REQUIRED` | Review the source/findings, grant trust for this exact jar hash, and restart. |
+| `DISABLED` | Enable the mod in the manager and choose Apply. |
+| `CODE_TRUST_REQUIRED` | Review the source/findings, grant trust for this exact jar hash, and choose Apply. |
 | `DEPENDENCY_MISSING` / `DEPENDENCY_DISABLED` / `DEPENDENCY_BLOCKED` | Install/enable/fix the named dependency first. |
 | `DEPENDENCY_VERSION_INCOMPATIBLE` / `DEPENDENCY_BASE_GAME_MISMATCH` | Align dependency version range and patch base game. |
 | `DEPENDENCY_CYCLE` | Remove a cycle from manifest dependencies. |
@@ -37,6 +38,10 @@ repository preflight rather than the single-jar CLI.
 | `PATTERN_WINDOW_BUDGET_EXCEEDED` | Lower `patternWindows` or reduce the effective enabled-mod window total. |
 | `REPOSITORY_JAR_LIMIT_EXCEEDED` / `REPOSITORY_VALIDATION_BYTES_EXCEEDED` / `REPOSITORY_PREFLIGHT_FAILED` | Reduce/fix the `mods/` repository before retrying. |
 | `MOD_JAR_CHANGED` | Stop mutating the jar during validation; rebuild and validate an immutable artifact. |
+| `BUNDLED_MANIFEST_INVALID` | The engine artifact's bundled-mod manifest is unreadable; reinstall OpenGGF. |
+| `BUNDLED_MOD_MISSING` / `BUNDLED_MOD_INVALID` | A mod bundled with OpenGGF is absent or unreadable; reinstall OpenGGF with its `bundled/` folder. |
+| `BUNDLED_MOD_HASH_MISMATCH` / `BUNDLED_MOD_IDENTITY_MISMATCH` | A bundled jar differs from the build manifest and was not loaded; reinstall OpenGGF rather than editing it. |
+| `BUNDLED_MOD_ID_RESERVED` | Remove the `mods/` copy; the id belongs to a mod bundled with OpenGGF. |
 
 ## Asset, level, and audio findings
 

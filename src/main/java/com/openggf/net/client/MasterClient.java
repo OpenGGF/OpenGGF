@@ -3,7 +3,7 @@ package com.openggf.net.client;
 import com.openggf.net.host.HostMasterLink;
 import com.openggf.net.identity.PlayerIdentity;
 import com.openggf.net.identity.ProofOfWork;
-import com.openggf.net.protocol.ControlCodec;
+import com.openggf.net.protocol.ControlJsonCodec;
 import com.openggf.net.protocol.ControlMessage;
 import com.openggf.net.protocol.GhostPackets;
 import com.openggf.net.protocol.Protocol;
@@ -15,7 +15,6 @@ import java.net.http.HttpClient;
 import java.net.http.WebSocket;
 import java.nio.ByteBuffer;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -25,11 +24,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /** Client for master browsing plus direct/relay room join orchestration. */
+@com.openggf.game.ModApi
 public final class MasterClient implements AutoCloseable {
     public static final long MASTER_REPLY_TIMEOUT_MILLIS = 5_000;
 
-    private final ConcurrentLinkedQueue<RaceClient.InboundEvent> inbound =
-            new ConcurrentLinkedQueue<>();
+    private final BoundedInboundQueue<RaceClient.InboundEvent> inbound =
+            new BoundedInboundQueue<>();
     private final ConcurrentLinkedQueue<CompletableFuture<ControlMessage.RoomListResult>>
             pendingLists = new ConcurrentLinkedQueue<>();
     private final ConcurrentLinkedQueue<CompletableFuture<ControlMessage.RoomCreated>>
@@ -38,6 +38,7 @@ public final class MasterClient implements AutoCloseable {
             pendingJoins = new ConcurrentLinkedQueue<>();
     private final AtomicReference<RelayRaceConnection> attached = new AtomicReference<>();
     private final Object sendLock = new Object();
+    private final ControlJsonCodec codec = new ControlJsonCodec();
     private final PlayerIdentity identity;
     private final ClientHandshake handshake;
     private volatile WebSocket webSocket;
@@ -74,7 +75,7 @@ public final class MasterClient implements AutoCloseable {
                         socket.abort();
                         return;
                     }
-                    client.sendRawText(ControlCodec.encode(null, client.handshake.hello()));
+                    client.sendRawText(client.codec.encode(null, client.handshake.hello()));
                 });
         admitted.orTimeout(MASTER_REPLY_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
                 .whenComplete((ignored, error) -> {
@@ -109,10 +110,18 @@ public final class MasterClient implements AutoCloseable {
     public CompletableFuture<ControlMessage.RoomCreated> createRoom(
             ControlMessage.RoomDescriptor descriptor, String routing, int directPort,
             String determinismFingerprint, List<String> voteTrackKeys) {
+        return createRoom(descriptor, routing, directPort, determinismFingerprint,
+                voteTrackKeys, null);
+    }
+
+    CompletableFuture<ControlMessage.RoomCreated> createRoom(
+            ControlMessage.RoomDescriptor descriptor, String routing, int directPort,
+            String determinismFingerprint, List<String> voteTrackKeys,
+            String certificateSha256) {
         CompletableFuture<ControlMessage.RoomCreated> future = new CompletableFuture<>();
         pendingCreates.add(future);
         sendControl(new ControlMessage.RoomCreate(descriptor, routing, directPort,
-                determinismFingerprint, voteTrackKeys));
+                determinismFingerprint, voteTrackKeys, certificateSha256));
         return future.orTimeout(MASTER_REPLY_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
     }
 
@@ -129,12 +138,17 @@ public final class MasterClient implements AutoCloseable {
         return requestJoin(roomId).thenCompose(result -> {
             if ("RELAY".equals(result.routing())) {
                 return relayHandshake(roomId, roomIdentity, displayName,
-                        determinismFingerprint);
+                        determinismFingerprint, result.hostServerId());
             }
-            URI directUri = URI.create("ws://" + result.directHost() + ":"
+            if (result.certificateSha256() == null || result.hostServerId() == null) {
+                return CompletableFuture.failedFuture(new RaceClient.JoinRejectedException(
+                        "direct room has no authenticated host identity"));
+            }
+            URI directUri = URI.create("wss://" + result.directHost() + ":"
                     + result.directPort() + "/race");
             return RaceClient.connect(directUri, roomIdentity, displayName,
-                            determinismFingerprint)
+                            determinismFingerprint, result.certificateSha256(),
+                            result.hostServerId())
                     .thenApply(client -> {
                         if (!java.util.Objects.equals(
                                 result.hostServerId(), client.serverId())) {
@@ -144,16 +158,16 @@ public final class MasterClient implements AutoCloseable {
                         }
                         return (RaceConnection) client;
                     }).exceptionallyCompose(error -> relayHandshake(roomId, roomIdentity,
-                            displayName, determinismFingerprint));
+                            displayName, determinismFingerprint, result.hostServerId()));
         });
     }
 
     private CompletableFuture<RaceConnection> relayHandshake(
             String roomId, PlayerIdentity roomIdentity, String displayName,
-            String determinismFingerprint) {
+            String determinismFingerprint, String expectedServerId) {
         try {
             return completeRoomHandshake(attachRelay(roomId), roomIdentity,
-                    displayName, determinismFingerprint);
+                    displayName, determinismFingerprint, expectedServerId);
         } catch (RuntimeException e) {
             return CompletableFuture.failedFuture(e);
         }
@@ -171,10 +185,17 @@ public final class MasterClient implements AutoCloseable {
     public static CompletableFuture<RaceConnection> completeRoomHandshake(
             RaceConnection raw, PlayerIdentity identity, String displayName,
             String determinismFingerprint) {
+        return completeRoomHandshake(raw, identity, displayName,
+                determinismFingerprint, null);
+    }
+
+    private static CompletableFuture<RaceConnection> completeRoomHandshake(
+            RaceConnection raw, PlayerIdentity identity, String displayName,
+            String determinismFingerprint, String expectedServerId) {
         CompletableFuture<RaceConnection> joined = new CompletableFuture<>();
         Thread.ofVirtual().name("relay-room-handshake").start(() -> {
             ClientHandshake handshake = new ClientHandshake(
-                    identity, displayName, determinismFingerprint);
+                    identity, displayName, determinismFingerprint, expectedServerId);
             raw.sendControl(handshake.hello());
             long deadline = System.nanoTime()
                     + TimeUnit.MILLISECONDS.toNanos(RaceClient.JOIN_TIMEOUT_MILLIS);
@@ -196,6 +217,12 @@ public final class MasterClient implements AutoCloseable {
                                         joined.complete(raw);
                                     }
                                     case ControlMessage.JoinRejected rejected ->
+                                            joined.completeExceptionally(
+                                                    new RaceClient.JoinRejectedException(
+                                                            rejected.reason()));
+                                    // The broker answers a failed RelayAttach with
+                                    // RoomJoinRejected on the already-attached socket.
+                                    case ControlMessage.RoomJoinRejected rejected ->
                                             joined.completeExceptionally(
                                                     new RaceClient.JoinRejectedException(
                                                             rejected.reason()));
@@ -246,7 +273,7 @@ public final class MasterClient implements AutoCloseable {
 
     public void sendControl(ControlMessage message) {
         if (open) {
-            sendRawText(ControlCodec.encode(joinAccepted.sessionToken(), message));
+            sendRawText(codec.encode(joinAccepted.sessionToken(), message));
         }
     }
 
@@ -255,12 +282,23 @@ public final class MasterClient implements AutoCloseable {
     }
 
     public List<RaceClient.InboundEvent> drainInbound() {
-        List<RaceClient.InboundEvent> result = new ArrayList<>();
-        RaceClient.InboundEvent event;
-        while ((event = inbound.poll()) != null) {
-            result.add(event);
+        return inbound.drain();
+    }
+
+    private void enqueueInbound(WebSocket socket, RaceClient.InboundEvent event) {
+        if (!inbound.offer(event)) {
+            open = false;
+            signalDisconnected("inbound event limit exceeded");
+            socket.abort();
         }
-        return result;
+    }
+
+    private void signalDisconnected(String reason) {
+        RaceClient.Disconnected event = new RaceClient.Disconnected(reason);
+        if (!inbound.offer(event)) {
+            inbound.clear();
+            inbound.offer(event);
+        }
     }
 
     public boolean isOpen() {
@@ -320,9 +358,9 @@ public final class MasterClient implements AutoCloseable {
                         reason == null || reason.isBlank() ? "connection closed" : reason);
                 RelayRaceConnection relay = attached.get();
                 if (relay != null) {
-                    relay.inbound.add(disconnected);
+                    relay.signalDisconnected(disconnected.reason());
                 } else {
-                    inbound.add(disconnected);
+                    signalDisconnected(disconnected.reason());
                 }
                 admitted.completeExceptionally(new RaceClient.JoinRejectedException(
                         "master closed during admission"));
@@ -337,9 +375,9 @@ public final class MasterClient implements AutoCloseable {
                                 : error.getMessage());
                 RelayRaceConnection relay = attached.get();
                 if (relay != null) {
-                    relay.inbound.add(disconnected);
+                    relay.signalDisconnected(disconnected.reason());
                 } else {
-                    inbound.add(disconnected);
+                    signalDisconnected(disconnected.reason());
                 }
                 admitted.completeExceptionally(error);
             }
@@ -355,7 +393,7 @@ public final class MasterClient implements AutoCloseable {
         }
         final ControlMessage message;
         try {
-            message = ControlCodec.decode(text, Protocol.MAX_MASTER_FRAME_BYTES).message();
+            message = codec.decode(text, Protocol.MAX_MASTER_FRAME_BYTES).message();
         } catch (ProtocolViolationException e) {
             fail(socket, admitted, e);
             return;
@@ -374,18 +412,22 @@ public final class MasterClient implements AutoCloseable {
             link.onMasterControl(message);
             return;
         }
-        inbound.add(new RaceClient.Control(message));
+        enqueueInbound(socket, new RaceClient.Control(message));
     }
 
     private void receiveAdmission(WebSocket socket, ControlMessage message,
                                   CompletableFuture<MasterClient> admitted) {
         try {
             switch (message) {
-                case ControlMessage.Welcome welcome -> sendRawText(ControlCodec.encode(
+                case ControlMessage.Welcome welcome -> sendRawText(codec.encode(
                         null, handshake.onWelcome(welcome)));
                 case ControlMessage.PowChallenge challenge ->
                         Thread.ofVirtual().start(() -> solveChallenge(socket, challenge, admitted));
                 case ControlMessage.JoinAccepted accepted -> {
+                    if (accepted.playerSlot() != -1 || accepted.room() != null
+                            || accepted.round() != null) {
+                        throw new ProtocolViolationException("invalid master admission");
+                    }
                     joinAccepted = accepted;
                     open = true;
                     admitted.complete(this);
@@ -412,7 +454,7 @@ public final class MasterClient implements AutoCloseable {
                         challenge.difficultyBits());
                 default -> throw new ProtocolViolationException("unknown proof challenge");
             };
-            sendRawText(ControlCodec.encode(null,
+            sendRawText(codec.encode(null,
                     new ControlMessage.PowSolution(challenge.kind(), nonce)));
         } catch (Exception e) {
             fail(socket, admitted, e);
@@ -422,6 +464,10 @@ public final class MasterClient implements AutoCloseable {
     private boolean completeReply(ControlMessage message) {
         switch (message) {
             case ControlMessage.RoomListResult result -> {
+                if (result.totalPages() == Protocol.ROOM_LIST_RATE_LIMITED) {
+                    return completeNext(pendingLists, null,
+                            new IllegalStateException("room list rate limited"));
+                }
                 return completeNext(pendingLists, result, null);
             }
             case ControlMessage.RoomCreated created -> {
@@ -489,12 +535,14 @@ public final class MasterClient implements AutoCloseable {
 
     private static <T> boolean completeNext(
             ConcurrentLinkedQueue<CompletableFuture<T>> queue, T value, Throwable error) {
-        CompletableFuture<T> future;
-        while ((future = queue.poll()) != null && future.isDone()) {
-            // discard timed-out/cancelled requests before matching the next reply
-        }
+        CompletableFuture<T> future = queue.poll();
         if (future == null) {
             return false;
+        }
+        // A timed-out request still owns its reply position. Dropping that reply
+        // is safer than completing a later request with stale room metadata.
+        if (future.isDone()) {
+            return true;
         }
         if (error == null) {
             future.complete(value);
@@ -506,8 +554,8 @@ public final class MasterClient implements AutoCloseable {
 
     private static final class RelayRaceConnection implements RaceConnection {
         private final MasterClient parent;
-        private final ConcurrentLinkedQueue<RaceClient.InboundEvent> inbound =
-                new ConcurrentLinkedQueue<>();
+        private final BoundedInboundQueue<RaceClient.InboundEvent> inbound =
+                new BoundedInboundQueue<>();
         private volatile ControlMessage.JoinAccepted joined;
         private volatile boolean open = true;
 
@@ -515,11 +563,26 @@ public final class MasterClient implements AutoCloseable {
             this.parent = parent;
         }
 
+        private void enqueue(RaceClient.InboundEvent event) {
+            if (!inbound.offer(event)) {
+                signalDisconnected("inbound event limit exceeded");
+                close();
+            }
+        }
+
+        private void signalDisconnected(String reason) {
+            RaceClient.Disconnected event = new RaceClient.Disconnected(reason);
+            if (!inbound.offer(event)) {
+                inbound.clear();
+                inbound.offer(event);
+            }
+        }
+
         void acceptText(String text) {
             try {
-                inbound.add(new RaceClient.Control(ControlCodec.decode(text).message()));
+                enqueue(new RaceClient.Control(parent.codec.decodeRoom(text).message()));
             } catch (ProtocolViolationException e) {
-                inbound.add(new RaceClient.Disconnected("protocol violation"));
+                signalDisconnected("protocol violation");
                 close();
             }
         }
@@ -531,15 +594,15 @@ public final class MasterClient implements AutoCloseable {
                 }
                 int type = data[0] & 0xFF;
                 if (type == GhostPackets.TYPE_GHOST_AGGREGATE) {
-                    inbound.add(new RaceClient.GhostData(GhostPackets.decodeAggregate(data)));
+                    enqueue(new RaceClient.GhostData(GhostPackets.decodeAggregate(data)));
                 } else if (type == GhostPackets.TYPE_ROSTER) {
-                    inbound.add(new RaceClient.Roster(GhostPackets.decodeRoster(data)));
+                    enqueue(new RaceClient.Roster(GhostPackets.decodeRoster(data)));
                 } else {
                     throw new ProtocolViolationException(
                             "unexpected room binary packet type " + type);
                 }
             } catch (ProtocolViolationException e) {
-                inbound.add(new RaceClient.Disconnected("protocol violation"));
+                signalDisconnected("protocol violation");
                 close();
             }
         }
@@ -549,21 +612,18 @@ public final class MasterClient implements AutoCloseable {
         }
 
         void restore(List<RaceClient.InboundEvent> events) {
-            inbound.addAll(events);
+            for (RaceClient.InboundEvent event : events) {
+                enqueue(event);
+            }
         }
 
         @Override public List<RaceClient.InboundEvent> drainInbound() {
-            List<RaceClient.InboundEvent> result = new ArrayList<>();
-            RaceClient.InboundEvent event;
-            while ((event = inbound.poll()) != null) {
-                result.add(event);
-            }
-            return result;
+            return inbound.drain();
         }
 
         @Override public void sendControl(ControlMessage message) {
             if (open) {
-                parent.sendRawText(ControlCodec.encode(sessionToken(), message));
+                parent.sendRawText(parent.codec.encode(sessionToken(), message));
             }
         }
         @Override public void sendBinary(byte[] data) { parent.sendRawBinary(data); }

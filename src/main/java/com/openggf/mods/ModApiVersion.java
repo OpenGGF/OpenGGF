@@ -45,6 +45,20 @@ public final class ModApiVersion {
      * NativePositionOps and the solid-platform provider/params are candidate creator contracts:
      * act controllers can reset native positions and provide rewindable top-solid decks.
      * Camera framing can cap the visible right edge independently of native player walls.
+     * Shared network contracts include direct/relay room clients, JDK room hosting,
+     * identity, bounded ghost transport and protocol messages/codecs. Operator servers
+     * and verifier tools remain separate and outside the creator API.
+     * Broker-pinned direct-room TLS wire fields are part of the race protocol.
+     * A session-scoped gameplay run policy governs special/bonus stage entry, act
+     * completion handing control back to the run's host, live rewind and editor entry.
+     * Scenes launch stock gameplay runs (RunSpec) observed by a RunHost: level-ready,
+     * step admission (hold), immutable executed steps with the player's pose, engine-drawn
+     * ghost poses, a screen overlay, end reasons and queued retry/leave commands; the level
+     * start reports the act's size and a finished act may pan a spectator camera.
+     * Any mod may add one master-title entry opening a scene that launches such runs
+     * and is resumed when each ends, learn a game's run fingerprint before launching, and
+     * claim keyboard text input so global shortcuts stay quiet while the player types.
+     * Owner storage also keeps bounded, atomically replaced binary files beside its text.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);
