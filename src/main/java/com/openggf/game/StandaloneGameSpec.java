@@ -36,7 +36,9 @@ public final class StandaloneGameSpec {
     private final byte[] touchResponses;
 
     private StandaloneGameSpec(Builder b) {
-        owner=b.owner; zones=List.copyOf(b.zones); sidekicks=b.sidekicks; objects=b.objects;
+        owner=b.owner; zones=List.copyOf(b.zones); sidekicks=b.sidekicks;
+        var factories=Collections.unmodifiableMap(new LinkedHashMap<>(b.objectFactories));
+        objects=b.objects == null ? ()->new DeclaredObjects(owner,factories) : b.objects;
         physics=b.physics; audio=b.audio; placements=b.placements; init=b.init;
         saves=b.saves == null ? defaultSaves() : b.saves; touchResponses=b.touchResponses.clone();
         if (zones.isEmpty()) throw new IllegalArgumentException("Standalone game needs at least one zone");
@@ -95,7 +97,8 @@ public final class StandaloneGameSpec {
         private final String owner;
         private final List<Zone> zones=new ArrayList<>();
         private boolean sidekicks;
-        private Supplier<ObjectRegistry> objects=EmptyObjects::new;
+        private Supplier<ObjectRegistry> objects;
+        private final Map<String,ObjectFactory> objectFactories=new LinkedHashMap<>();
         private PhysicsProvider physics=PhysicsProvider.fixed(PhysicsProfile.SONIC_2_SONIC,
                 PhysicsModifiers.STANDARD, com.openggf.game.rules.GameRules.SONIC_2);
         private GameAudioProfile audio=GameAudioProfile.silentNative();
@@ -110,7 +113,22 @@ public final class StandaloneGameSpec {
             zones.add(new Zone(name,copy)); return this;
         }
         public Builder supportsSidekick(boolean supported) { sidekicks=supported; return this; }
-        public Builder objects(Supplier<ObjectRegistry> factory) { objects=Objects.requireNonNull(factory); return this; }
+        /** Selects an expert registry factory instead of the declarative object path. */
+        public Builder objects(Supplier<ObjectRegistry> factory) {
+            if (!objectFactories.isEmpty()) throw new IllegalStateException("Cannot mix expert and declarative objects");
+            objects=Objects.requireNonNull(factory); return this;
+        }
+        /** Declares one namespaced key owned by this specification; create/known/browse share this definition. */
+        public Builder object(String key, ObjectFactory factory) {
+            if (objects!=null) throw new IllegalStateException("Cannot mix expert and declarative objects");
+            String owned=ModKeySyntax.requireDisplayKey(key);
+            if (!owned.startsWith(owner+":")) throw new IllegalArgumentException("Standalone object key belongs to another owner");
+            Objects.requireNonNull(factory,"factory");
+            if (objectFactories.containsKey(owned)) throw new IllegalArgumentException("Duplicate standalone object: "+owned);
+            if (objectFactories.size()>=com.openggf.io.ModInputLimits.production().maxCollectionEntries())
+                throw new IllegalArgumentException("Too many standalone object factories");
+            objectFactories.put(owned,factory); return this;
+        }
         public Builder physics(PhysicsProvider provider) { physics=Objects.requireNonNull(provider); return this; }
         public Builder audio(GameAudioProfile profile) { audio=Objects.requireNonNull(profile); return this; }
         public Builder placementEncoding(ObjectPlacementEncoding encoding) { placements=Objects.requireNonNull(encoding); return this; }
@@ -122,10 +140,24 @@ public final class StandaloneGameSpec {
         }
         public StandaloneGameSpec build() { return new StandaloneGameSpec(this); }
     }
-    private static final class EmptyObjects implements ObjectRegistry {
-        @Override public ObjectInstance create(ObjectSpawn spawn) { throw new IllegalArgumentException("No standalone objects registered"); }
+    private static final class DeclaredObjects implements ObjectRegistry {
+        private final String owner;
+        private final Map<String,ObjectFactory> factories;
+        private final List<String> keys;
+        private DeclaredObjects(String owner,Map<String,ObjectFactory> factories) {
+            this.owner=owner; this.factories=factories; keys=factories.keySet().stream().sorted().toList();
+        }
+        @Override public ObjectInstance create(ObjectSpawn spawn) {
+            Objects.requireNonNull(spawn,"spawn");
+            if (!owner.equals(spawn.ownerModId())) throw new IllegalArgumentException("Standalone object spawn owner mismatch");
+            ObjectFactory factory=factories.get(spawn.objectKey());
+            if (factory==null) throw new IllegalArgumentException("Unknown standalone object: "+spawn.objectKey());
+            return Objects.requireNonNull(factory.create(spawn,this),"Standalone object factory returned null");
+        }
         @Override public void reportCoverage(List<ObjectSpawn> spawns) { }
         @Override public String getPrimaryName(int id) { return "Standalone object"; }
+        @Override public boolean hasObjectKey(String key) { return factories.containsKey(key); }
+        @Override public List<String> browsableObjectKeys() { return keys; }
     }
     private static final class CoreInit extends AbstractLevelInitProfile {
         @Override public List<InitStep> levelLoadSteps(LevelLoadContext context) {

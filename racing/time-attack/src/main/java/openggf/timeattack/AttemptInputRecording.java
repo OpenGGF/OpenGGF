@@ -18,6 +18,7 @@ public final class AttemptInputRecording {
     public static final int START_HELD_BIT = 0x20;
     /** Ten minutes at 60fps — matches GhostFileCodec.MAX_FRAMES and the ROM time-over cap. */
     public static final int MAX_FRAMES = 36_000;
+    public static final int MAX_ENCODED_BYTES = MAX_FRAMES + 4096;
 
     private final AttemptStartDescriptor start;
     private final ByteArrayOutputStream masks;
@@ -58,20 +59,36 @@ public final class AttemptInputRecording {
     }
 
     public static AttemptInputRecording decode(byte[] encoded) {
+        try { return decodeChecked(encoded); }
+        catch(IOException e) { throw new UncheckedIOException(e); }
+    }
+
+    /** Checked bounded decoding for persisted/uploadable sidecars; the compatibility decoder retains its exception shape. */
+    public static AttemptInputRecording decodeChecked(byte[] encoded) throws IOException {
+        if(encoded==null || encoded.length>MAX_ENCODED_BYTES) throw new IOException("Attempt recording exceeds byte limit");
         try (DataInputStream in = new DataInputStream(new ByteArrayInputStream(encoded))) {
             AttemptStartDescriptor start = new AttemptStartDescriptor(in.readUTF(),
                     in.readUnsignedByte(), in.readUnsignedByte(), in.readUTF(), in.readUTF());
+            openggf.timeattack.ghost.GhostFileCodec.validateRoute(start.gameId(),start.zone(),start.act(),start.character());
             int length = in.readInt();
             if (length < 0 || length > MAX_FRAMES) {
                 throw new IOException("invalid attempt recording frame count " + length);
             }
             byte[] data = new byte[length];
             in.readFully(data);
+            if (in.read()!=-1) throw new IOException("Attempt recording has trailing bytes");
+            for(byte mask:data) if((mask & 0xC0)!=0) throw new IOException("Attempt recording has invalid input mask");
             ByteArrayOutputStream masks = new ByteArrayOutputStream();
             masks.write(data, 0, data.length);
-            return new AttemptInputRecording(start, masks);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
+            AttemptInputRecording recording=new AttemptInputRecording(start,masks);
+            // Hashes bind encoded bytes. Reject alternate modified-UTF encodings before sha256()
+            // can canonicalize them or encounter an unchecked writeUTF overflow.
+            try {
+                if(!java.util.Arrays.equals(encoded,recording.encode()))throw new IOException("Attempt recording has noncanonical encoding");
+            } catch(UncheckedIOException invalidEncoding) {
+                throw new IOException("Attempt recording cannot be encoded canonically",invalidEncoding.getCause());
+            }
+            return recording;
         }
     }
 

@@ -7,6 +7,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.lang.reflect.Proxy;
 import java.util.Map;
+import com.openggf.level.objects.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestStandaloneGameSpec {
@@ -14,6 +15,49 @@ class TestStandaloneGameSpec {
     private Level level() {
         return (Level)Proxy.newProxyInstance(Level.class.getClassLoader(),new Class<?>[]{Level.class},
                 (proxy,method,args)->null);
+    }
+
+    @Test void declarativeObjectsShareKnownBrowseCreateDefinitionAndSnapshotFactories() {
+        var calls=new java.util.ArrayList<ObjectRegistry>();
+        var builder=StandaloneGameSpec.builder("sample")
+                .zone("FIRST",new StandaloneGameSpec.Act(0x400,level(),0,0,MusicReference.stock(-1)));
+        builder.object("sample:zeta",(spawn,registry)-> { calls.add(registry); return new StubObject(spawn); });
+        builder.object("sample:alpha",(spawn,registry)->new StubObject(spawn));
+        var spec=builder.build();
+        builder.object("sample:later",(spawn,registry)->new StubObject(spawn));
+        ObjectRegistry first=spec.createObjectRegistry(),second=spec.createObjectRegistry();
+        assertNotSame(first,second);
+        assertEquals(java.util.List.of("sample:alpha","sample:zeta"),first.browsableObjectKeys());
+        assertThrows(UnsupportedOperationException.class,()->first.browsableObjectKeys().clear());
+        for(String key:first.browsableObjectKeys()) assertTrue(first.hasObjectKey(key));
+        assertFalse(first.hasObjectKey("sample:later"));
+        var spawn=new ObjectSpawn(32,64,0,0,0,false,64,-1,"sample","sample:zeta");
+        ObjectInstance original=first.create(spawn),recreated=second.create(spawn);
+        assertNotSame(original,recreated);
+        assertEquals(java.util.List.of(first,second),calls);
+        assertSame(spawn,original.getSpawn());
+        assertThrows(IllegalArgumentException.class,()->first.create(new ObjectSpawn(0,0,0,0,0,false,0,-1,"sample","sample:missing")));
+        assertThrows(IllegalArgumentException.class,()->first.create(new ObjectSpawn(0,0,0,0,0,false,0,-1,"foreign","foreign:zeta")));
+        assertThrows(IllegalArgumentException.class,()->first.create(new ObjectSpawn(0,0,0,0,0,false,0)));
+    }
+
+    @Test void declarativeObjectsRejectForeignDuplicateAndMixedExpertDeclarations() {
+        ObjectFactory factory=(spawn,registry)->new StubObject(spawn);
+        var builder=StandaloneGameSpec.builder("sample");
+        assertThrows(IllegalArgumentException.class,()->builder.object("foreign:walker",factory));
+        assertThrows(IllegalArgumentException.class,()->builder.object("walker",factory));
+        assertThrows(NullPointerException.class,()->builder.object("sample:walker",null));
+        builder.object("sample:walker",factory);
+        assertThrows(IllegalArgumentException.class,()->builder.object("sample:walker",factory));
+        assertThrows(IllegalStateException.class,()->builder.objects(()->null));
+        var expert=StandaloneGameSpec.builder("sample").objects(()->null);
+        assertThrows(IllegalStateException.class,()->expert.object("sample:walker",factory));
+    }
+
+    private static final class StubObject extends AbstractObjectInstance {
+        private StubObject(ObjectSpawn spawn) { super(spawn,"stub"); }
+        @Override public void update(int frame,com.openggf.game.PlayableEntity player) { }
+        @Override public void appendRenderCommands(java.util.List<com.openggf.graphics.GLCommand> commands) { }
     }
     @Test void typedMultiActAssemblyRetainsMusicDescriptorsAndNoRomBoundary() throws Exception {
         Level first=level(),second=level();
