@@ -848,3 +848,124 @@ primary. The queued Java25 lean `TestModSaveSlot,TestModStorage` run43231 passed
 36/36, zero skips,1m09 at dirty `0c5524060` with these exact two source changes;
 completion was 2026-10-12 19:23:25 +0100. This covers the following checkpoint and
 required backup-write failure, not a multi-file atomicity guarantee.
+
+## Candidate regression: Flappy tutorial shared definitions
+
+The full candidate at `175531f6d` found a new tutorial failure, separate from the
+26 known destination-baseline failures. `TestFlappyTailsTutorial` ran nine cases;
+its mirror check failed at line60 with the full assertion:
+
+```text
+org.opentest4j.AssertionFailedError: part-5-pillars has a stale copy of Course.java ==> array lengths differ, expected: <9287> but was: <9150>
+```
+
+The P08 finished-example update prepared immutable owner-scoped tour definitions
+but omitted the part5 mirrors. A byte comparison of every non-`FlappyScene.java`
+shared file across all four checkpoints found12 copies:10 identical, and only
+part5 `Course.java` (9150→9287 bytes) and `Zone.java` (3222→4300) stale. Both are now
+exact copies of the finished definitions. The part5 scene owns one immutable
+`Zone.Tour`, passes it to `Course`, and reuses it for entry/update/draw lookups.
+Prepared definitions remain separate from mutable flight/course/score state; seeded
+draw order, restart and checked best-save behavior are retained. Other checkpoint
+callers keep the same flight contracts. The finished Practice command still passes
+its explicit capability at Angel Island and later stops; normal Play stays eligible.
+Tutorial prose now explains retained preparation and this practice policy. No test
+or mirror invariant was weakened, and no new test duplicates the existing nine cases.
+
+The changed part5 source was copied to an owned directory outside the checkout and
+qualified through the final kit's actual `build_project.py`/Jupiter/SDK launcher.
+All three artifacts identify clean `175531f6d`. Its existing authored rejected-best/
+false-write retry test passed1/1, zero skips; ordinary and strict `--warnings error`
+packages each reported zero findings. The strict13-entry main-only jar had SHA-256
+`c45bb35d42e7a28ace9d4852f806042e289bc761b5e2ee6ce213adab650c4ebd`:
+`flappy-tails-part5`, version0.5.0, range `>=0.7.0 <0.8.0`, base `s3k`. No JUnit,
+testkit or authored test classes entered it. The frozen final kit contains no
+tutorial Java paths; this supersedes the changed part5 package row. The Phase2
+followup below supersedes one further row; the other27 artifact checks and matching
+engine/SDK identity remain unchanged.
+
+Queued normal Java25/Lua5.4 request84302 is the native/finished-consumer gate:
+
+```sh
+env JAVA_HOME=/usr/lib/jvm/java-25-openjdk PATH=/usr/lib/jvm/java-25-openjdk/bin:$PATH LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestFlappyTailsTutorial,TestFlappyTailsExample,TestFlappyTailsScene' "-Dsonic1.rom.path=$OPENGGF_ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=$OPENGGF_ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=$OPENGGF_ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test
+```
+
+The canonical supplied ROM directory is the existing main checkout; no ROM or build
+tree was copied. Request84302 passed15/15, zero failures/errors/skips: nine tutorial
+mirror/build/canonical-ROM cases, two finished-example wrappers with24/24 nested
+authored rules cases, and four finished scene cases. Maven completed1m17 after2793s
+queue waiting, at20:42:46 BST. The source was worker `9f5a1b79c` plus this stable
+repair diff; generated metadata reports `app.commit=9f5a1b79c`, `app.dirty=true`.
+It is not labelled a clean run at the later commit. The required post-integration
+comparison remains open; no full-suite pass follows from this focused check.
+
+## Candidate regression: checked Phase2 starter drift
+
+The same broad candidate found three new failures in `TestPhase2SampleModIntegration`:
+
+- `realCreatorSampleBuildsAndRegistersAuthoredResourcesWithoutRom`
+- `destroyedCreatorBadnikSubmitsTheGamesBadnikHitSound`
+- `realCreatorSampleLoadsZoneObjectRewindAndKeyedSave`
+
+All fail the unchanged `assertTreesEqual` inventory assertion, `Checked sample must
+match real ggfmod init inventory`. Actual clean175 SDK `init`, using the fixture's
+metadata (`id=phase2-sample`, `package=example.phase2sample`, default kind), produces
+20 files versus19 after materializing the checked binary assets. The sole inventory
+omission is `src/test/java/example/phase2sample/StarterIntegrationTest.java`.
+That early assertion also hid two byte differences: `pom.xml` lacked the P10
+creator-tests profile (4745→6049 bytes), and the minimal `SampleCharacter` stub
+still preceded the P16 explicit `CharacterPhysicsSpec`/`drawStandardArt` template
+(1406→1369 bytes). Exactly those three generated files are synchronized. Every
+other materialized file is byte-identical; authored badnik/mod/assets and unrelated
+character/standalone/platformer fixtures are preserved. Repository search finds
+only this fixture's full `ggfmod init` tree-equality assertion; those other fixtures
+build their authored projects rather than asserting regenerated identity.
+
+The actual regenerated project outside the checkout passed default Maven
+`-DskipTests package` against matching clean175 engine/SDK in1.500s, including both
+asset converters and zero-finding validated package. Tests were skipped in this
+build; it demonstrates the default main-only lane. Separately compiling its new
+test with the matching testkit and pinned Jupiter, then executing the actual
+CreatorTestLauncher, passed1/1, zero skips. Strict SDK packaging also reported zero
+findings; the16-entry main-only jar contains no JUnit, testkit or test classes,
+SHA-256 `b7a92e7428e88697a7fd016c5885110a44d54fa5c651269a3711c1a24b44f980`.
+This supersedes the changed Phase2 artifact row rather than repeating the other
+unchanged consumers.
+
+Queued normal request36768, Java25/Lua5.4, selects exactly
+`TestPhase2SampleModIntegration,TestProjectScaffolder` with all three canonical
+absolute ROM properties. It passed6/6, zero failures/errors/skips: four actual
+tree/SDK/registration/sound/keyed-save/rewind cases, including canonical S2 native
+behavior, plus two scaffolder checks. Maven completed37.049s after1738s queue wait,
+at20:43:24 BST, at the same worker/dirty source identity recorded above. No inventory
+invariant is weakened to accept the stale fixture.
+
+## Candidate regression: generated starter test compilation boundary
+
+The completed ordinary candidate reports31 failures: the26 inherited destination
+failures plus the five new fixture failures described here (one tutorial, three
+Phase2, one purpose starter). The additional exact case is
+`TestPurposeStarters.everyPurposeHasCompleteCompilableSourcesAndRepeatedBuildConfiguration`:
+`music ==> expected: <0> but was: <1>` at line132. Seven compiler errors show the
+fixture walking generated JUnit test source alongside main source, then supplying
+only the SDK/main compiled-class path. This is an observed compiler-boundary
+regression, not evidence that a data-only music starter needs JUnit in its main jar.
+
+The fixture now compiles `src/main/java` using that same SDK/main-only classpath,
+then compiles `src/test/java` separately with main output plus the proper Jupiter/
+testkit test classpath. It asserts generated test sources are nonempty for every
+kind and the creator-tests profile/testkit dependency are present. Data-only
+starters may have no main Java source; their test compilation is still required.
+The inventory and SDK main-only lane remain checked, and generated tests are not
+silently excluded. The separate actual seven-purpose Maven creator-profile
+qualification covers execution; this fixture covers compilation/artifact boundaries.
+
+Queued lean request65828 uses Java25/Lua5.4 and the exact bounded
+`-Dtest=TestPurposeStarters` selector, with no ROM/profile/custom JVM arguments.
+It passed3/3, zero failures/errors/skips, in28.719s after311s queue wait, at20:43:53
+BST with the same recorded worker/dirty source identity. Existing normal
+requests84302/36768 were retained; neither was cancelled or narrowed to bypass this
+additional observed failure. All three focused gates are complete; required root
+integration, broad post-integration comparison and delivery remain separate gates.
+Owned supplemental consumer directories/pointers were removed after inspection;
+normal output was consumed without archiving logs or copying build trees.

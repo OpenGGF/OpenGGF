@@ -73,6 +73,12 @@ alone; the engine tests now fly 100 gates on many seeds and require every one cl
 The course also keeps itself small: each tick it lays out gates that are about to come on
 screen and forgets those that have left it.
 
+The scene prepares one immutable `Zone.Tour` and passes it to `Course`. Entry,
+movement and drawing reuse that same tour for Angel Island's settings. Later-lap
+definitions are prepared once too; gate order and seeded random draws stay the same.
+The shared `Course` and `Zone` files are exact copies of the finished example,
+while this checkpoint keeps its own scene and simpler scoring rules.
+
 ## Scoring and crashing
 
 Tails' hit box is the ROM's player touch box (`Touch_NoInstaShield`): eight pixels either side

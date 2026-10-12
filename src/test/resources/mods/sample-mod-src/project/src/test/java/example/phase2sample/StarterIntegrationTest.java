@@ -1,0 +1,20 @@
+package example.phase2sample;
+
+import com.openggf.mods.testing.ModTestKit;
+import java.nio.file.Path;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import static org.junit.jupiter.api.Assertions.*;
+
+/** Packages the production output and checks registration through the engine's owner boundary. */
+class StarterIntegrationTest {
+    @TempDir Path work;
+
+    @Test void packedModRegistersWithoutFaults() throws Exception {
+        try (var kit = ModTestKit.packageAndOpen(Path.of("target/classes"),
+                work.resolve("mods"), work.resolve("storage"))) {
+            assertNotNull(kit.plan("phase2-sample"));
+            assertTrue(kit.findings().isEmpty(), kit.findings()::toString);
+        }
+    }
+}
