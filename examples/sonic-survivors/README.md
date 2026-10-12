@@ -343,8 +343,10 @@ convert once to the same totals on this scale, so nothing already bought is lost
 longest unlimited survival; every upgrade with its unlock milestone; the twelve evolutions
 (discovered ones named, every recipe shown); and a bestiary of badniks defeated per species.
 
-Progress is saved in `saves/sonic-survivors/profile.txt` under the engine's save root. The file
-is plain `key=value` lines; new records are added keys, so older saves load unchanged.
+Progress is saved in `saves/mods/sonic-survivors/profile.txt` under the engine's save root.
+The file is plain `key=value` lines; new records are added keys, so older saves load unchanged.
+When the canonical file is absent, the owner-storage service can read the legacy
+`saves/sonic-survivors/profile.txt`; subsequent writes use the canonical path.
 
 ## Build and run
 
