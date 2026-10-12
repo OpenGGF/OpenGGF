@@ -104,6 +104,7 @@ public final class StarpostScene implements ModScene, DebuggableScene {
     }
 
     @Override public void resume(SceneContext context, com.openggf.mods.scene.ActResult result) {
+        shell.flushPendingSaves();
         if (activities!=null && java.util.List.of("race","hunt","snowboard","lake").contains(result.destination().localName())) { resumeActivity(result); return; }
         if (result.destination().localName().equals("ruins")) { resumeRuins(result); return; }
         if (town == null || actPlay == null) throw new IllegalStateException("No suspended town act");
@@ -211,8 +212,20 @@ public final class StarpostScene implements ModScene, DebuggableScene {
 
     @Override
     public void exit(SceneContext ctx) {
-        if (shell != null) {
-            shell.music.stop();
+        try {
+            if (shell != null) {
+                try {
+                    shell.flushPendingSaves();
+                } finally {
+                    try {
+                        shell.music.close();
+                    } finally {
+                        if (shell.art != null) shell.art.close();
+                    }
+                }
+            }
+        } finally {
+            if (artFailures != null) artFailures.close();
         }
     }
 

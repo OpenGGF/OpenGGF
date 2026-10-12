@@ -24,6 +24,7 @@ public final class DayEndScreen implements Screen {
     private int paid;
     private long started;
     private long phaseAt;
+    private boolean applied;
 
     public DayEndScreen(boolean fainted) {
         this.fainted = fainted;
@@ -31,6 +32,8 @@ public final class DayEndScreen implements Screen {
 
     @Override
     public void enter(Shell shell) {
+        if (applied) return;
+        applied = true;
         Game game = shell.game;
         for (Map.Entry<String, Integer> e : game.shipping.entrySet()) {
             items.add(game.item(e.getKey()));
