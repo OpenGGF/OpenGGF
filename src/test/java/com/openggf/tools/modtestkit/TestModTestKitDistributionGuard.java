@@ -53,7 +53,7 @@ class TestModTestKitDistributionGuard {
                 + "/executions/execution[id='prepare-mod-testkit']");
         assertEquals("prepare-package", text(prepare, "phase"));
         assertEquals(List.of("exec"), texts(prepare, "goals/goal"));
-        assertEquals("java", text(prepare, "configuration/executable"));
+        assertEquals("${java.home}/bin/java", text(prepare, "configuration/executable"));
         List<String> arguments = texts(prepare, "configuration/arguments/argument");
         assertEquals(List.of("-cp", ModTestKitPackager.class.getName(),
                 "${project.build.outputDirectory}", "${project.build.directory}/mod-testkit/classes"), arguments);

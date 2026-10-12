@@ -8,6 +8,7 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameModule;
 import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.patch.PatchContext;
+import com.openggf.game.patch.LogicalRom;
 import com.openggf.io.ModAssetRoot;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.ObjectSpriteSheet;
@@ -18,6 +19,7 @@ import com.openggf.mods.ModStateSaveResult;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class TestModBackedGamePatchRomArt {
@@ -27,6 +29,31 @@ class TestModBackedGamePatchRomArt {
         context.registerRomObjectArt("bird",
                 new RomArtRequest(0x50000, RomArtCompression.NEMESIS, 0, 0x60000, 0, 0, 1));
         return context.freeze();
+    }
+
+    @Test
+    void legacyS2ArtUsesItsOpenHostWithoutAnotherLogicalRomPrerequisite() {
+        assertEquals(Set.of(), new ModBackedGamePatch(planWithRomArt()).romPrerequisites());
+    }
+
+    @Test
+    void mixedS2HostArtRequiresOnlyTheAdditionalS1Rom() {
+        ModContext context = new ModContext("owner", "s2", ModAssetRoot.forTests("owner"));
+        context.registerRomObjectArt("host", new RomArtRequest(
+                0x50000, RomArtCompression.NEMESIS, 0, 0x60000, 0, 0, 1));
+        context.registerRomObjectArt("borrowed", LogicalRom.S1, new RomArtRequest(
+                0x50000, RomArtCompression.NEMESIS, 0, 0x60000, 0, 0, 1));
+        assertEquals(Set.of(LogicalRom.S1), new ModBackedGamePatch(context.freeze()).romPrerequisites());
+    }
+
+    @Test
+    void crossRomS2ArtOnS3kCannotReadTheHostWhenContextIsMissing() {
+        ModContext context = new ModContext("owner", "s3k", ModAssetRoot.forTests("owner"));
+        context.registerRomObjectArt("borrowed", LogicalRom.S2, new RomArtRequest(
+                0x50000, RomArtCompression.NEMESIS, 0, 0x60000, 0, 0, 1));
+        ModBackedGamePatch patch = new ModBackedGamePatch(context.freeze());
+        assertEquals(Set.of(LogicalRom.S2), patch.romPrerequisites());
+        assertThrows(ModRegistrationException.class, () -> patch.apply(baseModule(), null));
     }
 
     @Test

@@ -343,8 +343,10 @@ convert once to the same totals on this scale, so nothing already bought is lost
 longest unlimited survival; every upgrade with its unlock milestone; the twelve evolutions
 (discovered ones named, every recipe shown); and a bestiary of badniks defeated per species.
 
-Progress is saved in `saves/sonic-survivors/profile.txt` under the engine's save root. The file
-is plain `key=value` lines; new records are added keys, so older saves load unchanged.
+Progress is saved in `saves/mods/sonic-survivors/profile.txt` under the engine's save root.
+The file is plain `key=value` lines; new records are added keys, so older saves load unchanged.
+When the canonical file is absent, the owner-storage service can read the legacy
+`saves/sonic-survivors/profile.txt`; subsequent writes use the canonical path.
 
 ## Build and run
 
@@ -361,7 +363,7 @@ profile saves remain compatible.
 Film it headlessly with the gameplay capture tool's `--mod` option, for example:
 
 ```bash
-java -XstartOnFirstThread -cp "target/classes:$(cat target/survivors-classpath.txt)" \
+java --enable-native-access=ALL-UNNAMED -XstartOnFirstThread -cp "target/classes:$(cat target/survivors-classpath.txt)" \
   com.openggf.tools.GameplayCaptureTool --game s2 --zone 0 --act 1 --width 400 \
   --mod target/sonic-survivors/sonic-survivors.jar --input run.txt --out-dir /tmp/survivors
 ```
@@ -410,7 +412,7 @@ results across changes rather than reading them as a human's difficulty. Design 
 
 ## Use matching creator artifacts
 
-The mutable 0.7 Mod API is unpublished. See [candidate setup](../../docs/modding/getting-started.md) for Java 21 and matching engine/SDK jar paths. From this checkout the shared launcher supports artifact-only builds and explicit ROM paths:
+The mutable 0.7 Mod API is unpublished. See [candidate setup](../../docs/modding/getting-started.md) for Java 25 and matching engine/SDK jar paths. From this checkout the shared launcher supports artifact-only builds and explicit ROM paths:
 
 ```sh
 python3 examples/build_example.py sonic-survivors --engine /absolute/engine.jar --sdk /absolute/sdk.jar --run --s2 /absolute/own-s2.gen

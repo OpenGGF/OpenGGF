@@ -53,6 +53,22 @@ class TestShieldRewindPendingRestore {
     }
 
     @Test
+    void playerRefreshRetainsCreatorCallbackOwnerForShield() {
+        ObjectManager manager = new ObjectManager(List.of(), null, 0, null, null);
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short)100, (short)200);
+        ShieldObjectInstance source = ObjectConstructionContext.construct(manager.services(), () -> new ShieldObjectInstance(player));
+        manager.restoreDynamicCallbackOwner(source, "creator");
+        manager.addDynamicObject(source);
+        var captured = manager.rewindSnapshottable().capture();
+        assertEquals("creator", captured.dynamicObjects().getFirst().ownerModId());
+        manager.removeDynamicObject(source);
+        // The generic Shield codec queues this captured entry for the later player refresh.
+        manager.enqueuePendingPlayerBoundEntry(ShieldObjectInstance.class, captured.dynamicObjects().getFirst());
+        new DefaultPowerUpSpawner(manager).spawnShield(player, ShieldType.BASIC);
+        assertEquals("creator", manager.rewindSnapshottable().capture().dynamicObjects().getFirst().ownerModId());
+    }
+
+    @Test
     void objectManagerRoundTripPreservesDynamicThenFixedCollisionOrderAndPartialBuild() {
         ObjectManager objectManager = new ObjectManager(List.of(), null, 0, null, null);
         TestablePlayableSprite sonic =

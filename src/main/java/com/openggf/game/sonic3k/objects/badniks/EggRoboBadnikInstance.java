@@ -70,7 +70,7 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
     static final int FLYBY_X_VEL = 0x80;
     /** {@code move.b #4,$39(a0)}. */
     public static final int ANIMAL_RELEASES = 4;
-    /** {@code andi.b #$F,d0} on {@code V_int_run_count+3}. */
+    /** {@code andi.b #$F,d0} on {@code (V_int_run_count+3).w}, the counter's low byte. */
     static final int ANIMAL_PERIOD_MASK = 0x0F;
     /** {@code move.w #-$300,d0} in {@code loc_915F6}. */
     static final int LAUNCH_X_VEL = 0x300;
@@ -191,8 +191,8 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
             case FLY_BY_ARC -> updateFlyBy();
             case HOVER, HOVER_SHOOTING -> updateHover(vIntRunCount, player);
             case RELEASING -> updateReleasing(vIntRunCount);
-            case RISING -> updateRising();
-            case FALLING -> updateFalling();
+            case RISING -> updateRising(vIntRunCount);
+            case FALLING -> updateFalling(vIntRunCount);
             default -> { }
         }
         // Keep standard badnik capture/restore aligned with this routine's
@@ -240,7 +240,7 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
     /** {@code loc_9159A} and {@code loc_915DE}. */
     private void updateHover(int vIntRunCount, PlayableEntity player) {
         spawnChildrenOnce();
-        mappingFrame = (vIntRunCount & 1) != 0 ? HOVER_FRAME_B : HOVER_FRAME_A;
+        mappingFrame = hoverFrame(vIntRunCount);
         if (state == State.HOVER_SHOOTING) {
             if (!gunArmed) {
                 state = State.HOVER;
@@ -286,9 +286,16 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
         yVelocity = (short) velocity;
     }
 
+    /** {@code sub_91988}: {@code btst #0,(V_int_run_count+3).w} picks frame 3 when set, else 1. */
+    private static int hoverFrame(int vIntRunCount) {
+        return (vIntRunCount & 1) != 0 ? HOVER_FRAME_B : HOVER_FRAME_A;
+    }
+
     /** {@code loc_915F6}. */
     private void updateReleasing(int vIntRunCount) {
-        if (((vIntRunCount + 3) & ANIMAL_PERIOD_MASK) != 0 || !isOnScreen()) {
+        // move.b (V_int_run_count+3).w,d0: the +3 addresses the longword's low byte, so an
+        // animal goes whenever the count itself is a multiple of 16.
+        if ((vIntRunCount & ANIMAL_PERIOD_MASK) != 0 || !isOnScreen()) {
             return;
         }
         releaseAnimal();
@@ -310,7 +317,8 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
     }
 
     /** {@code loc_9164E}. */
-    private void updateRising() {
+    private void updateRising(int vIntRunCount) {
+        mappingFrame = hoverFrame(vIntRunCount); // bsr.w sub_91988
         yVelocity = (short) (yVelocity + RISE_ACCELERATION);
         x = (x + (xVelocity >> 8)) & 0xFFFF;
         y = (y + (yVelocity >> 8)) & 0xFFFF;
@@ -322,7 +330,8 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
     }
 
     /** {@code loc_9167E}. */
-    private void updateFalling() {
+    private void updateFalling(int vIntRunCount) {
+        mappingFrame = hoverFrame(vIntRunCount); // bsr.w sub_91988
         yVelocity = (short) (yVelocity + FALL_ACCELERATION);
         x = (x + (xVelocity >> 8)) & 0xFFFF;
         y = (y + (yVelocity >> 8)) & 0xFFFF;

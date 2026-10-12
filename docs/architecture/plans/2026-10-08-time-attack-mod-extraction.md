@@ -524,3 +524,40 @@ not introduced into next where those examples do not exist.
   changes are made. Next therefore has **675 passing guards and one inherited failure**,
   not a green guard suite.
 - Final next `-DskipTests package`: passed; bundled Time Attack validator reports zero findings. Artifact inspection confirms shared core networking, separate mod/server code, and no Netty/SQLite/Bouncy Castle runtime classes in the engine artifact.
+
+### Full develop → next integration — 2026-10-12
+
+User requested the feature branch into develop, then develop into next. The
+feature tip already equals remote develop `f02bdbfd57`; local develop fast-forwards
+from `e76a380c3d`. Next's pre-integration base is `e82efe28be`. This merge brings
+both histories together instead of another selective Time Attack forward-port.
+
+The 27 textual conflicts resolve to develop's Java 25 packaging, retained
+scene/act bridge, mutator admission, scene audio, mod reload and creator API
+additions. Both mutator restrictions and hosted-run restrictions survive stage
+entry. Time Attack, shared networking, the scene host and gameplay launch/return
+implementation match develop. Next retains its 0.8.prerelease release line,
+policy target, HUD left-edge option, address clipboard input and security records.
+Its compiler guard keeps file-backed diagnostics and guaranteed child cleanup,
+with develop's measured 2 GiB heap and six-minute timeout; the competing pipe
+reader is removed. Both branches' measurement hazards are retained. The candidate
+0.7 API pin is exported from the actual compiled merged source.
+
+Validation uses Java 25 from a temporary Temurin JDK and all three verified
+absolute ROM paths. The change-based plan against `e82efe28be` selects 3,155
+ordinary candidates and guards. The documented macOS AWT/GLFW full-suite stall
+above remains a host limitation: do not repeat that same long-lived test JVM.
+Local validation therefore consists of 124 focused integration classes, a fresh
+guards JVM, and packaging. This is explicitly partial validation; the full
+ordinary suite and separate trace/native profiles are not certified by this merge.
+
+- Java 25/Lua 5.4/PowerShell preflight passed. Queued `clean test-compile`
+  passed (3,833 production and 3,805 test sources).
+- The compiled signature export contains 19,835 lines, with no annotation or
+  external signature errors. Its only difference from develop's pin is next's
+  existing `SonicConfiguration.DISPLAY_HUD_ANCHOR` constant.
+- Focused queued Java 25 selection: **869 tests passed, zero failures/errors/skips**
+  across 124 classes. Includes core networking, operator servers, Time Attack,
+  hosted-run/scene/act lifecycle, mod registration/reload, mutator policies, API
+  pins/hooks, bundled packaging, next's HUD/clipboard settings and the four
+  required S3K loading/bootstrap checks. Maven completed in 3m48s.

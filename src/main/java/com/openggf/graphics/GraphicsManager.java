@@ -39,6 +39,12 @@ import java.util.logging.Logger;
 
 @com.openggf.game.ModApi
 public class GraphicsManager {
+    private final PlayerHeadFragmentBanks playerHeadFragmentBanks = new PlayerHeadFragmentBanks();
+    private final ObjectHeadFragmentBanks objectHeadFragmentBanks = new ObjectHeadFragmentBanks();
+    /** Companion art namespace follows the original virtual player bank, independently of pose or game. */
+    public int playerHeadFragmentBase(int sourceBank) { return playerHeadFragmentBanks.baseFor(sourceBank); }
+    public int objectHeadFragmentBase() { return objectHeadFragmentBanks.allocate(); }
+
 	private static final Logger LOGGER = Logger.getLogger(GraphicsManager.class.getName());
 
 	private static final UnderwaterPaletteUploadOps OPEN_GL_UNDERWATER_PALETTE_UPLOAD_OPS =
@@ -201,6 +207,7 @@ public class GraphicsManager {
 
 	private boolean headlessMode = false;
 	SpritePresentation.Builder spritePresentationBuilder;
+	SpritePresentation.Subject spritePresentationSubject = SpritePresentation.Subject.WORLD;
 
 	/**
 	 * When true, the batch renderer will use the underwater palette texture
@@ -244,7 +251,7 @@ public class GraphicsManager {
 							+ command.getClass().getName());
 				}
 				spritePresentationBuilder.primitives.add(new SpritePresentation.Primitive(
-						spritePresentationBuilder.tiles.size(), spritePresentationBuilder.layer, geometry));
+						spritePresentationBuilder.tiles.size(), spritePresentationBuilder.layer, geometry, spritePresentationSubject));
 			} finally { command.discard(); }
 			return;
 		}
@@ -547,6 +554,7 @@ public class GraphicsManager {
 	public void discardQueuedCommands() {
 		discardCommands(commands, 0);
 		commands.clear();
+        if (!spriteSatCollectionActive && spriteSatEntries.isEmpty()) objectHeadFragmentBanks.reset();
 	}
 
 	/**
@@ -554,9 +562,12 @@ public class GraphicsManager {
 	 * Use this for screen-space rendering by passing (0, 0) for camera position.
 	 */
 	public void flushWithCamera(short cameraX, short cameraY, short cameraWidth, short cameraHeight) {
+        // Never recycle companions still referenced by native SAT entries awaiting admission.
+        boolean retireHeadBanks=!spriteSatCollectionActive && spriteSatEntries.isEmpty();
 		if (headlessMode || commands.isEmpty() || !glInitialized) {
 			discardCommands(commands, 0);
 			commands.clear();
+            if(retireHeadBanks) objectHeadFragmentBanks.reset();
 			return;
 		}
 
@@ -578,6 +589,7 @@ public class GraphicsManager {
 			PatternRenderCommand.cleanupFrameState(this);
 			discardCommands(commands, nextUnexecuted);
 			commands.clear();
+            if(retireHeadBanks) objectHeadFragmentBanks.reset();
 		}
 	}
 
@@ -1931,6 +1943,8 @@ public class GraphicsManager {
 		satReplayBatchOpen = false;
 		spriteSatEntries.clear();
 		currentSpriteSatDebugSource = null;
+		spritePresentationSubject = SpritePresentation.Subject.WORLD;
+        objectHeadFragmentBanks.reset();
 		waterlineScreenY = 0;
 		windowHeight = 224;
 		screenHeight = 224;
@@ -2136,7 +2150,9 @@ public class GraphicsManager {
 		SpritePieceRenderer.PreparedPiece taggedPiece = presentationSource == null
 				? piece
 				: piece.withDebugSource(presentationSource);
-		spriteSatEntries.add(SpriteSatEntry.fromPreparedPiece(taggedPiece, currentSpriteSatBucket));
+		SpriteSatEntry entry = SpriteSatEntry.fromPreparedPiece(taggedPiece, currentSpriteSatBucket);
+		spriteSatEntries.add(spritePresentationSubject == SpritePresentation.Subject.WORLD
+				? entry : entry.withPresentationSubject(spritePresentationSubject));
 	}
 
 	public void endSpriteSatCollectionAndReplay() {
@@ -2172,11 +2188,20 @@ public class GraphicsManager {
 						if (entry.debugSource() != null)
 							spritePresentationBuilder.layer = SpritePresentation.Layer.valueOf(entry.debugSource());
 						setCurrentSpriteHighPriority(entry.globalHighPriority());
-						appendBatchedReplayCommands(entry, -1);
+						SpritePresentation.withSubject(this, entry.presentationSubject(),
+								() -> appendBatchedReplayCommands(entry, -1));
 					}
 				}
 				return;
 			}
+
+            var headReplay = processedEntries.stream().map(entry -> entry.presentationSubject().head())
+                    .filter(java.util.Objects::nonNull).findFirst();
+            if (headReplay.isPresent()) {
+                headReplay.get().replay().replay(this, processedEntries,
+                        entry -> appendBatchedReplayCommands(entry, -1));
+                return;
+            }
 
 			// The SAT replay must not re-enter renderPatternWithId(): that could merge the
 			// carefully ordered SAT sequence into a still-open batch owned by another layer,
@@ -2237,7 +2262,7 @@ public class GraphicsManager {
 			for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
 				for (int i = processedEntries.size() - 1; i >= 0; i--) {
 					SpriteSatEntry processedEntry = processedEntries.get(i);
-					if (processedEntry.priorityBucket() == bucket) {
+					if (processedEntry.priorityBucket() == bucket && !processedEntry.presentationSubject().suppressed()) {
 						appendBatchedReplayCommands(processedEntry, paletteTexId);
 					}
 				}
@@ -2349,7 +2374,7 @@ public class GraphicsManager {
 		for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
 			for (int i = processedEntries.size() - 1; i >= 0; i--) {
 				SpriteSatEntry processedEntry = processedEntries.get(i);
-				if (processedEntry.priorityBucket() == bucket) {
+				if (processedEntry.priorityBucket() == bucket && !processedEntry.presentationSubject().suppressed()) {
 					appendDirectReplayCommands(processedEntry, paletteTextureId, reusableReplayCommands);
 				}
 			}

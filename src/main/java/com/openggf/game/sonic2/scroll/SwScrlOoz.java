@@ -134,7 +134,8 @@ public class SwScrlOoz extends AbstractZoneScrollHandler {
         composer.setVscrollFactorBG((short) cameraBgYPos);
 
         // ==================== Step 3: Update heat-haze phase ====================
-        // Phase decrements every 8 frames: when (Vint_runcount + 3) & 7 == 0
+        // Phase decrements every 8 frames: move.b (Vint_runcount+3).w,d1 / andi.w #7,d1 reads
+        // the counter's low byte, so it decrements when the count is a multiple of 8.
         updateHeatHazePhase(frameCounter);
 
         // ==================== Step 4: Calculate factory height ====================
@@ -326,8 +327,9 @@ public class SwScrlOoz extends AbstractZoneScrollHandler {
     /**
      * Update heat-haze phase counter.
      *
-     * Original logic: Every 8 frames (when (Vint_runcount + 3) & 7 == 0),
-     * decrement the phase counter (stored in TempArray_LayerDef).
+     * Original logic: every 8 frames, decrement the phase counter (stored in
+     * TempArray_LayerDef). SwScrl_OOZ reads {@code (Vint_runcount+3).w}, the low
+     * byte of the longword counter, so the qualifying frames are the multiples of 8.
      *
      * @param frameCounter Current frame number (Vint_runcount equivalent)
      */
@@ -338,11 +340,11 @@ public class SwScrlOoz extends AbstractZoneScrollHandler {
             phaseAnchorFrame = frameCounter - 1;
             phaseAnchored = true;
         }
-        // Count qualifying frames ((frameCounter + 3) & 7 == 0, i.e. ≡ 5 mod 8)
-        // strictly after the anchor through the current frame. Pure function of
-        // the frame counter, so it is idempotent and rewind-safe.
-        int decrements = Math.floorDiv(frameCounter - 5, 8)
-                - Math.floorDiv(phaseAnchorFrame - 5, 8);
+        // Count qualifying frames ((frameCounter & 7) == 0) strictly after the
+        // anchor through the current frame. Pure function of the frame counter,
+        // so it is idempotent and rewind-safe.
+        int decrements = Math.floorDiv(frameCounter, 8)
+                - Math.floorDiv(phaseAnchorFrame, 8);
         heatHazePhaseCounter = heatHazePhaseBase - decrements;
     }
 

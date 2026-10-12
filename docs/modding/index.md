@@ -5,7 +5,7 @@ Start with [setup and your first project](getting-started.md). Recipients use
 mutable, unpublished 0.7.0 candidate; use matching artifacts from one commit.
 
 OpenGGF's mod workflow is source-first and reproducible: author files, convert them
-with `ggfmod`, validate/package a jar, then enable it in the Mod Manager and restart.
+with `ggfmod`, validate/package a jar, then enable it in the Mod Manager and choose Apply.
 Choose the smallest quickstart that matches your goal; they are ordered by typical
 effort. Mod API 0.7 includes exclusive fresh-game insertion plus destination-scoped,
 launch-only teams, deterministic input filters, and row-only HUD profiles; the
@@ -54,12 +54,20 @@ See the detailed guides for narrower contracts; roadmap entries do not imply imp
 
 ## Follow-along guides
 
+- [Flappy Tails, a tutorial in nine parts](guides/flappy-tails/README.md) — from nothing
+  to a polished S3K game. Part 1 chooses between changing the native game (the
+  `sample-flappy` gallery sample) and replacing the screen with a mod scene; the scene path
+  builds [Flappy Tails](../../examples/flappy-tails/README.md) step by step, with buildable
+  checkpoints: ROM art and backdrops, a port of Tails' flight routine, pillars cut from real
+  levels, rules, a five-zone tour with title cards, screens and polish, tests, an autopilot
+  and filming a promo.
 - [ROM-art remix](guides/rom-art-remix.md) — source-first tour of the
   `sample-rom-art-remix` gallery sample: bounded Sonic 2 art, mapping, and DPLC
   intake, launch-memory materialization, decoded-pattern probes, and rewind.
 - [Native-Tails Flappy](guides/native-tails-flappy.md) — build-along tour of the
   `sample-flappy` gallery sample: an anchorless S3K fresh-game destination, scoped
-  Tails/input/HUD policies, fixed camera, and rewind-stable recycling pipes.
+  Tails/input/HUD policies, fixed camera, and rewind-stable recycling pipes. Path A of the
+  Flappy Tails tutorial.
 - [Standalone platformer](guides/standalone-platformer.md) — build-along tour of the
   `sample-platformer` gallery sample: a no-ROM standalone game with a Tiled-authored
   level, an original character with a double jump, a patrolling badnik, and a spring
@@ -82,6 +90,25 @@ See the detailed guides for narrower contracts; roadmap entries do not imply imp
 
 ## Experimental projects
 
+- [Mutator Lab](../../examples/example-mutators/README.md) — an eleven-effect
+  catalogue for Sonic 1, Sonic 2 and Sonic 3 & Knuckles, with common widgets,
+  explicit live/load scopes and rewind-separated preferences. See the
+  [guide](guides/mutators.md) and current verification in the expansion plan.
+
+- [Flappy Tails](../../examples/flappy-tails/README.md) — Tails flaps through five S3K
+  zones on the ROM's own flight routine, with pillars cut from each act's floor, real title
+  cards, medals, records and Super Tails. An S3K mod scene and the finished game of the
+  [tutorial](guides/flappy-tails/README.md); not one of the nine maintained gallery samples.
+- [Starfall Frontier](../../examples/starfall-frontier/README.md) — a Terraria inspired
+  solo mining and building adventure with a seeded tile world, three biomes,
+  crafting stations, equipment, seven quests, three wardens and persistent saves.
+  An original mod scene using the player's S3K character art and audio.
+
+- [Three Islands](../../examples/three-islands/README.md) — a story-driven JRPG with fully
+  turn-based battles across South Island, West Side Island and Angel Island: ten stock acts
+  walked through `SceneRomArt.levelKit`, heroes in each game's own art, Dual and Triple
+  Techs, multi-part ROM bosses and Sonic 1/2 zone themes through `ctx.music()`.
+
 - [Robotnik Tower Defence](../../examples/robotnik-tower-defense/README.md) —
   Industrial Action: defend Robotnik's base door from 15 waves of unionised
   Flickies with six ROM-drawn badnik defenses, upgrades, repair and an emergency
@@ -90,6 +117,7 @@ See the detailed guides for narrower contracts; roadmap entries do not imply imp
 
 - [Sonic Survivors](../../examples/sonic-survivors/README.md) — a separate Sonic 2 survivors roguelike: walled arenas cut from each route act, ROM-art badniks with hitpoints, a bounce combo, level-up cards, zone bosses, a route with act choice and saved meta-progression, all through the existing code-patch API. Not part of the nine maintained gallery samples.
 
+- [Eggman's Sky](../../examples/eggmans-sky/README.md) — a No Man's Sky-style S3K mod scene: Dr. Eggman explores planets remixed from every supplied ROM's zones with `SceneRomArt.levelKit`, a software-rendered space cockpit (streaming images), survival, scanning, crafting, Sonic as sentinels, Egg Stations and a galaxy map.
 - [Slay the Robotnik](../../examples/slay-the-robotnik/README.md) — a Slay the Spire-style deck-building roguelike on Sonic 3 & Knuckles, built as a mod scene: three heroes, four acts of zone maps, ROM-drawn badniks and bosses, events, shops and relics.
 - [Infinite Sonic](../../examples/infinite-sonic/README.md) — a separate endless Sonic 1 project with terrain-aware ground/flying encounters using ROM-derived sections, seeded world recycling and the existing code-patch API. Not part of the nine maintained gallery samples.
 
@@ -114,6 +142,8 @@ See the detailed guides for narrower contracts; roadmap entries do not imply imp
 - [Catalog scalability probe and acceptance](tools/scalability.md)
 - [Maintained sample gallery](samples/index.md)
 - [Deferred-backlog decisions](BACKLOG.md)
+- [Mod author and framework audit](../architecture/audits/2026-10-12-mod-author-framework-audit.md)
+  — source-wide findings and proposed rewrite/API focal points, with verification limits.
 - [GUI tooling evaluation](GUI_TOOLING_EVALUATION.md)
 
 The nine sample sources are built by the default test suite. Treat them as

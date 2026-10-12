@@ -1,5 +1,6 @@
 package com.openggf.mods.code;
 
+import com.openggf.game.GameId;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
 import com.openggf.game.patch.GamePatch;
@@ -36,18 +37,50 @@ public final class ModBackedGamePatch implements GamePatch {
      */
     interface RomArtSheetSource {
         Map<String, ObjectSpriteSheet> materialize(String owner, Map<String, RomArtRequest> requests);
+        default Map<String, ObjectSpriteSheet> materialize(String owner, Map<String, RomArtRequest> requests,
+                PatchContext context) { return materialize(owner, requests); }
     }
 
-    static RomArtSheetSource productionRomArtSource() {
-        return (owner, requests) -> {
-            try {
-                return RomArtMaterializer.materialize(owner, requests,
-                        GameServices.rom().getRom(), ModInputLimits.production());
-            } catch (IOException e) {
-                throw new ModRegistrationException(owner, "MOD_ROM_ART_INVALID",
-                        "ROM unavailable during art materialization", null, e);
+    static RomArtSheetSource productionRomArtSource(String baseGameId) {
+        return new RomArtSheetSource() {
+            public Map<String, ObjectSpriteSheet> materialize(String owner, Map<String, RomArtRequest> requests) {
+                try {
+                    return RomArtMaterializer.materialize(owner, requests,
+                            GameServices.rom().getRom(), ModInputLimits.production());
+                } catch (IOException e) {
+                    throw new ModRegistrationException(owner, "MOD_ROM_ART_INVALID", "ROM unavailable", null, e);
+                }
+            }
+            public Map<String, ObjectSpriteSheet> materialize(String owner, Map<String, RomArtRequest> requests,
+                    PatchContext context) {
+                if (context == null) {
+                    if (requests.values().stream().anyMatch(r -> !usesHostS2Rom(r.source(), baseGameId)))
+                        throw new ModRegistrationException(owner, "MOD_ROM_ART_INVALID", "Named art requires PatchContext", null, null);
+                    return materialize(owner, requests);
+                }
+                Map<String, ObjectSpriteSheet> sheets = new java.util.LinkedHashMap<>();
+                for (LogicalRom source : Set.of(LogicalRom.S1, LogicalRom.S2)) {
+                    Map<String, RomArtRequest> selected = new java.util.LinkedHashMap<>();
+                    requests.forEach((key, request) -> { if (request.source() == source) selected.put(key, request); });
+                    if (selected.isEmpty()) continue;
+                    // Preserve legacy S2 intake: its already-open base ROM needs no extra resolver.
+                    if (usesHostS2Rom(source, baseGameId)) {
+                        sheets.putAll(materialize(owner, selected));
+                        continue;
+                    }
+                    try (var rom = com.openggf.data.Rom.fromReader(context.openLogicalRom(source), source.name())) {
+                        sheets.putAll(RomArtMaterializer.materialize(owner, selected, rom, ModInputLimits.production()));
+                    } catch (IOException e) {
+                        throw new ModRegistrationException(owner, "MOD_ROM_ART_INVALID", "Logical ROM unavailable: " + source, null, e);
+                    }
+                }
+                return sheets;
             }
         };
+    }
+
+    private static boolean usesHostS2Rom(LogicalRom source, String baseGameId) {
+        return source == LogicalRom.S2 && GameId.S2.code().equals(baseGameId);
     }
 
     public ModBackedGamePatch(ModRegistrationPlan plan) {
@@ -61,7 +94,7 @@ public final class ModBackedGamePatch implements GamePatch {
     public ModBackedGamePatch(ModRegistrationPlan plan, ModFaultBoundary faultBoundary,
                               java.util.function.BiConsumer<String,
                                       com.openggf.game.sonic2.dataselect.S2SaveFinding> saveFindingSink) {
-        this(plan, faultBoundary, saveFindingSink, productionRomArtSource());
+        this(plan, faultBoundary, saveFindingSink, productionRomArtSource(plan.baseGameId()));
     }
 
     ModBackedGamePatch(ModRegistrationPlan plan, ModFaultBoundary faultBoundary,
@@ -75,7 +108,7 @@ public final class ModBackedGamePatch implements GamePatch {
                        java.util.function.BiConsumer<String,
                                com.openggf.game.sonic2.dataselect.S2SaveFinding> saveFindingSink,
                        String contentId) {
-        this(plan, faultBoundary, saveFindingSink, productionRomArtSource(), contentId);
+        this(plan, faultBoundary, saveFindingSink, productionRomArtSource(plan.baseGameId()), contentId);
     }
 
     private ModBackedGamePatch(ModRegistrationPlan plan, ModFaultBoundary faultBoundary,
@@ -88,6 +121,8 @@ public final class ModBackedGamePatch implements GamePatch {
         this.saveFindingSink = Objects.requireNonNull(saveFindingSink, "saveFindingSink");
         this.romArtSource = Objects.requireNonNull(romArtSource, "romArtSource");
         if (!plan.hasContent()) throw new IllegalArgumentException("Backing patch requires content");
+        if (!plan.mutators().isEmpty() && faultBoundary == null)
+            throw new IllegalArgumentException("Mutators require an installed owner fault boundary");
         if (!plan.objectArt().isEmpty()
                 && !plan.preparedObjectArt().keySet().equals(plan.objectArt().keySet())) {
             throw new IllegalArgumentException("Backing patch requires validated object art");
@@ -119,7 +154,11 @@ public final class ModBackedGamePatch implements GamePatch {
     @Override public boolean activatesFor(GameplayLaunchRequest request) {
         return plan.baseGameId().equals(request.gameId());
     }
-    @Override public Set<LogicalRom> romPrerequisites() { return Set.of(); }
+    @Override public Set<LogicalRom> romPrerequisites() {
+        return plan.romObjectArt().values().stream().map(RomArtRequest::source)
+                .filter(source -> !usesHostS2Rom(source, plan.baseGameId()))
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+    }
     @Override public List<String> providedMainCharacters() {
         return plan.characters().keySet().stream()
                 .map(com.openggf.game.CharacterKey::persisted).toList();
@@ -164,7 +203,7 @@ public final class ModBackedGamePatch implements GamePatch {
         ModObjectKeyRegistry objectKeys = new ModObjectKeyRegistry(registrations);
         Map<String, ObjectSpriteSheet> romSheets = plan.romObjectArt().isEmpty()
                 ? Map.of()
-                : romArtSource.materialize(plan.ownerModId(), plan.romObjectArt());
+                : romArtSource.materialize(plan.ownerModId(), plan.romObjectArt(), context);
         GameModule decorated = new DelegatingGameModule(base, id()) {
             private com.openggf.game.PlayableCharacterRegistry playableCharacters;
             private com.openggf.game.ObjectArtProvider objectArtProvider;
@@ -173,6 +212,7 @@ public final class ModBackedGamePatch implements GamePatch {
             private com.openggf.game.dataselect.DataSelectHostProfile dataSelectHost;
             private com.openggf.game.dataselect.DataSelectPresentationProvider dataSelectPresentation;
             private com.openggf.game.GameplayPolicyProvider gameplayPolicies;
+            private com.openggf.game.session.WorldSessionPolicyProvider worldPolicies;
 
             @Override
             public synchronized com.openggf.game.PlayableCharacterRegistry getPlayableCharacterRegistry() {
@@ -297,6 +337,20 @@ public final class ModBackedGamePatch implements GamePatch {
             @Override
             @SuppressWarnings("unchecked")
             public <T> T getGameService(Class<T> type) {
+                if (type == com.openggf.game.session.WorldSessionPolicyProvider.class && !plan.mutators().isEmpty()) {
+                    if (worldPolicies == null) {
+                        worldPolicies = new com.openggf.mods.mutators.MutatorWorldProvider(
+                                getGameService(com.openggf.mods.mutators.MutatorCatalog.class));
+                    }
+                    return type.cast(worldPolicies);
+                }
+                if (type == com.openggf.mods.mutators.MutatorCatalog.class && !plan.mutators().isEmpty()) {
+                    var inherited = super.getGameService(com.openggf.mods.mutators.MutatorCatalog.class);
+                    var catalog = inherited == null
+                            ? new com.openggf.mods.mutators.MutatorCatalog(List.copyOf(plan.mutators().values()), faultBoundary)
+                            : inherited.append(List.copyOf(plan.mutators().values()), faultBoundary);
+                    return type.cast(catalog);
+                }
                 if (type == OwnedSceneFactory.class && plan.startupScene() != null) {
                     return (T) new OwnedSceneFactory(plan.ownerModId(), plan.startupScene(), faultBoundary);
                 }

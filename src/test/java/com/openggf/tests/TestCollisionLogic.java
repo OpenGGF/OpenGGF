@@ -25,8 +25,9 @@ public class TestCollisionLogic {
             }
         } else {
             // Fallback: Try to read from ROM
-            Path romPath = Path.of("s2.gen");
-            Assumptions.assumeTrue(romPath.toFile().exists(), "Test data not available (neither .kos file nor ROM found)");
+            var romFile = RomTestUtils.ensureSonic2RomAvailable();
+            Assumptions.assumeTrue(romFile != null, "Test data not available (neither .kos file nor ROM found)");
+            Path romPath = romFile.toPath();
 
             try (FileChannel romChannel = FileChannel.open(romPath, StandardOpenOption.READ)) {
                 romChannel.position(0x44E50); // Offset for EHZ and HTZ primary from collisionindexes.txt

@@ -17,7 +17,16 @@ public enum StockSceneArt {
     S3K_BUGGERNAUT(0x36A3E0, NEMESIS, 0x360EB4, 1, "ArtNem_HCZDragonfly / Map_Buggernaut"),
     S3K_TURBO_SPIKER(0x36A968, KOSINSKI_MODULED, 0x361212, 1, "ArtKosM_TurboSpiker / Map_TurboSpiker"),
     S3K_ORBINAUT(0x377D1A, KOSINSKI_MODULED, 0x3604A4, 1, "ArtKosM_Orbinaut / Map_Orbinaut"),
-    S3K_BLUE_FLICKY(0x1931D6, NEMESIS, 0x02CEBA, 0, 3, "ArtNem_BlueFlicky / Map_Animals1");
+    S3K_BLUE_FLICKY(0x1931D6, NEMESIS, 0x02CEBA, 0, 3, "ArtNem_BlueFlicky / Map_Animals1"),
+    /**
+     * Obj_DashDust's dust (spin dash cloud frames $A-$10, skid puffs $11-$14) streamed from
+     * 5,952 bytes of uncompressed art through the player DPLC layout, on the player's palette
+     * line 0; its scripts are Ani_DashSplashDrown ($18DC0). Skid child frames $11-$14 have
+     * empty cues: their parent preloads the shared bank using cue $15 (DashDust_Load_DPLC).
+     * Decode that ROM-selected bank separately when presenting those child mappings.
+     */
+    S3K_DASH_DUST(RomSpriteRequest.streamed(0x18A604, 5952, 0x018DF4, 0x018EE2, RomSpriteRequest.DplcLayout.PLAYER, 0),
+            "ArtUnc_DashDust / Map_DashDust / DPLC_DashSplashDrown");
 
     private final RomSpriteRequest request;
     private final String reference;
@@ -27,7 +36,11 @@ public enum StockSceneArt {
 
     StockSceneArt(int art, RomSpriteRequest.Compression compression, int mappings, int line, int frames, String reference) {
         // Map_Animals1 has three pointers; frame 2 precedes frame 0 (sonic3k.lst 2CEBA).
-        request = RomSpriteRequest.of(art, compression, mappings, line).withMappingFrameCount(frames);
+        this(RomSpriteRequest.of(art, compression, mappings, line).withMappingFrameCount(frames), reference);
+    }
+
+    StockSceneArt(RomSpriteRequest request, String reference) {
+        this.request = request;
         this.reference = reference;
     }
 

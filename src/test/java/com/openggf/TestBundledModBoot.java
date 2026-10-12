@@ -190,7 +190,7 @@ class TestBundledModBoot {
         press(screen, Key.RIGHT);
         press(screen, Key.LEFT);
         press(screen, Key.ACCEPT);
-        assertEquals("Saved. Restart to apply mod changes", screen.statusMessage());
+        assertEquals("Saved. Reloading mods", screen.statusMessage());
     }
 
     private ModSubsystem boot(Path mods, Bundle bundle) {

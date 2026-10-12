@@ -4,10 +4,10 @@ This page is the detailed additive-content reference. New creators should start 
 the [handbook index](index.md), which orders the six quickstarts by effort and links
 the format, trust, identity, troubleshooting, and sample references.
 
-OpenGGF Mod API 0.7 supports restart-loaded music packs, code-backed objects,
+OpenGGF Mod API 0.7 supports title-loaded music packs, code-backed objects,
 baked art, complete Sonic 2 and Sonic 3&K zones, playable characters, and no-ROM
 standalone games. Mods are discovered from the
-process `mods/` directory at restart; executable mods must be enabled and granted
+process `mods/` directory at boot and when Apply is chosen at the title; executable mods must be enabled and granted
 trust in the Mod Manager before they run.
 
 The current Mod API is the unpublished, mutable `0.7.0` candidate on `develop`; no
@@ -73,7 +73,7 @@ Manual `convert` and `package` commands are an expert alternative. Choose fresh
 output paths: converters and the packager intentionally refuse to overwrite an
 existing destination. The generated project does that cleanup in its Maven lifecycle.
 Copy the validated `*-mod.jar` into `mods/`, start the engine, enable it in the Mod
-Manager, confirm the code-trust warning, and restart.
+Manager, confirm the code-trust warning, and choose Apply.
 
 Code-bearing mods require the JVM jar because GraalVM native-image builds cannot
 load new classes under closed-world AOT. On native builds they remain disabled for
@@ -126,7 +126,7 @@ previews use `registerObjectPreview`. The sheet YAML assigns each 8-by-8 tile to
 Genesis palette line and describes bounded pieces. `convert art` rejects images
 whose dimensions, palette use, or piece bounds cannot be represented exactly.
 
-## ROM art intake (Sonic 2 patch mods)
+## ROM art intake (named Sonic 1/2 ROMs)
 
 `ModContext.registerRomObjectArt(key, request)` materializes object art from the
 *player's own ROM* at gameplay launch, instead of shipping baked art in the mod jar.
@@ -135,6 +135,21 @@ flying frames) into a new mod object — the mod jar itself ships zero ROM bytes
 sheet is decoded into memory only after the engine opens the player's `s2.gen`.
 The maintained [ROM-art remix guide](guides/rom-art-remix.md) follows the complete
 source, decoded-pattern probe, rewind, and package-inspection workflow.
+
+For an S3K-base mod drawing Sonic 1 objects, use
+`registerRomObjectArt(key, LogicalRom.S1, request)`. The logical source is
+resolved through the launch `PatchContext`, declared as an art prerequisite,
+and closed after decoding. Sonic 1 uses byte-count, five-byte mapping pieces;
+Sonic 2 uses its own mapping and optional DPLC parser. S1 DPLCs are rejected.
+The seven-argument `RomArtRequest` and two-argument registration retain their
+Sonic 2 defaults. On an S2 host, S2 art uses its already-open base ROM without
+an additional logical-ROM resolver. Cross-ROM intake requires the declared
+source through `PatchContext`; a missing context never falls back to host bytes.
+Named requests are bounded by their source ROM size and
+are unavailable to standalone modules. A sheet's palette line refers to the
+active palette; a mixed-ROM mod must preserve or explicitly remap its source
+colours beside host palette claims. Starpost's Ruins rasterize their named S1
+sheets with their kit palette on the same level canvas as the town's ROM art.
 
 The request names a ROM art address, its compression, an S2 mapping table address, an
 optional DPLC table address, a palette line, and a bank size:

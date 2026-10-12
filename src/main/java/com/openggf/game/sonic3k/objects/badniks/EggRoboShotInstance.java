@@ -89,7 +89,9 @@ public final class EggRoboShotInstance extends AbstractObjectInstance
             return;
         }
         if (charge >= 0) {
-            mappingFrame = ((vIntRunCount + 3) & 1) != 0 ? CHARGE_FRAME_B : CHARGE_FRAME_A;
+            // loc_9176C: btst #0,(V_int_run_count+3).w tests bit 0 of the counter's low byte;
+            // a set bit selects frame 7.
+            mappingFrame = (vIntRunCount & 1) != 0 ? CHARGE_FRAME_B : CHARGE_FRAME_A;
             if (--charge >= 0) {
                 return;
             }
@@ -121,6 +123,7 @@ public final class EggRoboShotInstance extends AbstractObjectInstance
     public boolean armedForTest() { return charge < 0; }
     public int chargeForTest() { return charge; }
     public int xVelocityForTest() { return xVelocity; }
+    public int mappingFrameForTest() { return mappingFrame; }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {

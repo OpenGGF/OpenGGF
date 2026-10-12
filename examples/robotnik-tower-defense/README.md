@@ -13,7 +13,7 @@ Native builds cannot load code mods.
 
 ## Build and play
 
-With Java 21 and the ROM configured in OpenGGF:
+With Java 25 and the ROM configured in OpenGGF:
 
 ```bash
 examples/robotnik-tower-defense/play.sh
@@ -23,8 +23,8 @@ python3 examples/build_example.py robotnik-tower-defense
 
 The script launches this mod directly through `ggfmod run`. To install it,
 copy `target/examples/robotnik-tower-defense/robotnik-tower-defense.jar` into
-`mods/`, enable/trust it in the Mod Manager, restart and choose Sonic 3 &
-Knuckles. The title offers **Play Sonic 3 & Knuckles** to return to the stock
+`mods/` and choose Apply in the master title's Mod Manager to rescan. Enable/trust it,
+choose Apply again, then choose Sonic 3 & Knuckles. The title offers **Play Sonic 3 & Knuckles** to return to the stock
 game. Holding Escape returns to the master title. The scene asks for 400×224;
 the engine restores your display aspect at the master title.
 
@@ -113,7 +113,7 @@ contains decisions, verification scope and evidence.
 
 ## Use matching creator artifacts
 
-The mutable 0.7 Mod API is unpublished. See [candidate setup](../../docs/modding/getting-started.md) for Java 21 and matching engine/SDK jar paths. From this checkout the shared launcher supports artifact-only builds and explicit ROM paths:
+The mutable 0.7 Mod API is unpublished. See [candidate setup](../../docs/modding/getting-started.md) for Java 25 and matching engine/SDK jar paths. From this checkout the shared launcher supports artifact-only builds and explicit ROM paths:
 
 ```sh
 python3 examples/build_example.py robotnik-tower-defense --engine /absolute/engine.jar --sdk /absolute/sdk.jar --run --s3k /absolute/own-s3k.gen

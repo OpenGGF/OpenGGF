@@ -12,9 +12,10 @@ if [[ -z "$renderdoc_cmd" ]]; then
     exit 1
 fi
 
-java_exe="$(command -v java || true)"
+java_exe="${JAVA_HOME:+$JAVA_HOME/bin/}java"
+java_exe="$(command -v "$java_exe" || true)"
 if [[ -z "$java_exe" ]]; then
-    echo "java not found on PATH." >&2
+    echo "java not found through JAVA_HOME or PATH." >&2
     exit 1
 fi
 
@@ -43,6 +44,7 @@ exec "$renderdoc_cmd" capture \
     --opt-hook-children \
     -w \
     "$java_exe" \
+    --enable-native-access=ALL-UNNAMED \
     --add-exports java.base/java.lang=ALL-UNNAMED \
     --add-exports java.desktop/sun.awt=ALL-UNNAMED \
     --add-exports java.desktop/sun.java2d=ALL-UNNAMED \

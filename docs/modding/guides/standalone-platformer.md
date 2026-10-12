@@ -605,7 +605,7 @@ including the TMX/`--music` step from Chapter 3:
 
 ```xml
 <execution><id>convert-level</id><phase>generate-resources</phase><goals><goal>exec</goal></goals><configuration>
-  <executable>java</executable><classpathScope>compile</classpathScope><arguments><argument>-cp</argument><classpath/><argument>com.openggf.tools.modsdk.GgfModCli</argument>
+  <executable>${java.home}/bin/java</executable><classpathScope>compile</classpathScope><arguments><argument>-cp</argument><classpath/><argument>com.openggf.tools.modsdk.GgfModCli</argument>
     <argument>convert</argument><argument>level</argument><argument>--from-tmx</argument><argument>${project.basedir}/src/main/mod/level.tmx</argument>
     <argument>--palette</argument><argument>${project.basedir}/src/main/mod/palette.gpal</argument>
     <argument>--music</argument><argument>sample-platformer:zone-theme</argument>
@@ -666,7 +666,7 @@ which is a new grant as far as the trust store is concerned. Don't be surprised 
 re-enabling a mod you've already trusted once asks again after a rebuild.
 
 **Playing it.** Drop the packaged jar into your engine's `mods/` directory, start the
-engine, open the Mod Manager, enable `Sample Platformer`, and restart. From the
+engine, open the Mod Manager, enable `Sample Platformer`, and choose Apply. From the
 master title, `sample-platformer` appears as its own entry after the three stock
 games — no ROM required to see or select it. **New Game** starts Bolt Plains fresh
 in namespaced slot 1 (`saves/sample-platformer/slot1.json`); **Continue** appears

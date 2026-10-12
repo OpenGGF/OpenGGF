@@ -13,7 +13,7 @@ architectural guard tests in the OpenGGF Java game engine codebase.
 
 # Repo at a glance
 
-- Java 21 / Maven build (see `pom.xml` at repo root)
+- Java 25 / Maven build (see `pom.xml` at repo root)
 - JUnit 5 / Jupiter is the only allowed test framework (CLAUDE.md enforces this)
 - Surefire 3.2.5, ~4870 tests, runs in 4 parallel forks
 - Architecture is documented in `CLAUDE.md` (read this first — the relevant
@@ -44,7 +44,7 @@ survey package structure, and answer the questions below.
 
 ## 1. Feasibility check
 - Look up the current ArchUnit coordinate (`com.tngtech.archunit:archunit-junit5`)
-  and verify it supports Java 21 and JUnit Jupiter 5.x as used in this pom.
+  and verify it supports Java 25 and JUnit Jupiter 5.x as used in this pom.
 - Identify the transitive dependency footprint (ASM + others). Sizes in MB.
 - Note any classpath conflict risk vs. existing test deps (Mockito agent, etc.).
 
@@ -94,7 +94,7 @@ Justify with the tradeoffs you actually found in (1)-(4), not generic advice.
 
 ```
 ## Feasibility
-<verdict + dep footprint + Java 21 / JUnit 5 compatibility>
+<verdict + dep footprint + Java 25 / JUnit 5 compatibility>
 
 ## Rule translations (current 8)
 <one per row: rule | ArchUnit DSL | stronger/equivalent/weaker>

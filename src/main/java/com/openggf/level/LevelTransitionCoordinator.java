@@ -19,6 +19,12 @@ import java.util.OptionalInt;
 @com.openggf.game.ModApi
 public class LevelTransitionCoordinator {
 
+    private final LevelStageEntryAdmission stageAdmission;
+    public LevelTransitionCoordinator() { this(null); }
+    LevelTransitionCoordinator(com.openggf.game.session.WorldSession world) {
+        stageAdmission = new LevelStageEntryAdmission(world);
+    }
+
     // ── Special stage ──────────────────────────────────────────────────
     private SpecialStageEntryRequest specialStageEntryRequest;
     private boolean specialStageEntryRoutineArmed;
@@ -94,6 +100,8 @@ public class LevelTransitionCoordinator {
     // ── Credits ────────────────────────────────────────────────────────
     private boolean creditsRequested;
     private GameOverExit gameOverExitRequested;
+    boolean sceneActActive;
+    LevelSceneActAccess.Exit sceneActExit;
 
     // ── Time attack menu return ─────────────────────────────────────────
     private boolean hostReturnRequested;
@@ -125,7 +133,7 @@ public class LevelTransitionCoordinator {
     }
 
     public void requestSpecialStageEntry(SpecialStageEntryRequest request) {
-        this.specialStageEntryRequest = java.util.Objects.requireNonNull(request, "request");
+        if (stageAdmission.special()) this.specialStageEntryRequest = java.util.Objects.requireNonNull(request, "request");
     }
 
     public SpecialStageEntryRequest consumeSpecialStageEntryRequest() {
@@ -140,7 +148,7 @@ public class LevelTransitionCoordinator {
     }
 
     public void advanceToSpecialStageEntryRoutine() {
-        specialStageEntryRoutineArmed = true;
+        if (stageAdmission.special()) specialStageEntryRoutineArmed = true;
     }
 
     public void setLevelRoutineReentry(boolean reentry) {
@@ -417,7 +425,7 @@ public class LevelTransitionCoordinator {
      * Called by Sonic3kStarPostBonusStarChild on player touch.
      */
     public void requestBonusStageEntry(BonusStageType type) {
-        this.bonusStageRequested = type;
+        if (stageAdmission.bonus()) this.bonusStageRequested = type;
     }
 
     /**
@@ -644,7 +652,7 @@ public class LevelTransitionCoordinator {
 
     /** True once any engine-owned level-exit request has ended the main loop. */
     public boolean hasPendingLevelExit() {
-        return titleCardRequested
+        return sceneActExit != null || titleCardRequested
                 || respawnRequested
                 || nextActRequested
                 || nextZoneRequested
@@ -1014,6 +1022,8 @@ public class LevelTransitionCoordinator {
      * Called from {@code LevelManager.resetState()}.
      */
     public void resetState() {
+        sceneActActive = false;
+        sceneActExit = null;
         continuationCarry = null;
         specialStageEntryRequest = null;
         specialStageEntryRoutineArmed = false;

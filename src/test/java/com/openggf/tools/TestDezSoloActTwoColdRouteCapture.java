@@ -49,13 +49,14 @@ class TestDezSoloActTwoColdRouteCapture {
         int lastHealth = 8, hits = 0, loadFrame = -1;
         boolean bossSeen = false;
         long outgoingFrame = 0;
+        var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 11, 0, settings);
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
                 if (frame == 53650) GameServices.configuration().setSessionOverride(
                         com.openggf.configuration.SonicConfiguration.LIVE_REWIND_ENABLED, true);
                 session.step(movie.getFrame(frame));
-                session.render();
+                drawing.afterStep(session);
                 assertFalse(session.player().getDead(), "death at input " + frame);
                 assertFalse(session.player().isSuperSonic());
                 assertInstanceOf(Sonic.class, session.player());
@@ -82,17 +83,19 @@ class TestDezSoloActTwoColdRouteCapture {
                 if (!spots.contains(frame)) continue;
                 checked.add(frame);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                drawing.checkpoint(session);
                 var saved = registry.capture();
-                for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); session.render(); }
+                for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); drawing.draw(session); }
                 var forward = registry.capture();
                 registry.restore(saved);
                 same(saved, registry.capture(), "restore at " + frame);
                 session.restoreInputHistory(movie.getFrame(frame));
-                for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); session.render(); }
+                for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); drawing.draw(session); }
                 same(forward, registry.capture(), "replay at " + frame);
                 registry.restore(saved);
                 session.restoreInputHistory(movie.getFrame(frame));
             }
+            drawing.checkpoint(session);
             assertEquals(spots, checked);
             assertTrue(bossSeen);
             assertEquals(8, hits, "all eight hits must come from the production encounter");
@@ -138,13 +141,14 @@ class TestDezSoloActTwoColdRouteCapture {
         int lastHealth = 8, hits = 0, loadFrame = -1;
         boolean bossSeen = false;
         long outgoingFrame = 0;
+        var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 11, 0, settings);
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
                 if (frame == 53200) GameServices.configuration().setSessionOverride(
                         com.openggf.configuration.SonicConfiguration.LIVE_REWIND_ENABLED, true);
                 session.step(movie.getFrame(frame));
-                session.render();
+                drawing.afterStep(session);
                 assertEquals(800, GameServices.camera().getWidth());
                 assertFalse(session.player().getDead(), "death at input " + frame);
                 assertFalse(session.player().isSuperSonic());
@@ -172,19 +176,21 @@ class TestDezSoloActTwoColdRouteCapture {
                 if (!spots.contains(frame)) continue;
                 checked.add(frame);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                drawing.checkpoint(session);
                 var saved = registry.capture();
-                for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); session.render(); }
+                for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); drawing.draw(session); }
                 var forward = registry.capture();
                 for (int cycle = 0; cycle < 2; cycle++) {
                     registry.restore(saved);
                     same(saved, registry.capture(), "restore at " + frame + " cycle " + cycle);
                     session.restoreInputHistory(movie.getFrame(frame));
-                    for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); session.render(); }
+                    for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); drawing.draw(session); }
                     same(forward, registry.capture(), "replay at " + frame + " cycle " + cycle);
                 }
                 registry.restore(saved);
                 session.restoreInputHistory(movie.getFrame(frame));
             }
+            drawing.checkpoint(session);
             assertEquals(spots, checked);
             assertTrue(bossSeen);
             assertEquals(8, hits, "all eight hits must come from the production encounter");
@@ -223,13 +229,14 @@ class TestDezSoloActTwoColdRouteCapture {
         int lastHealth = 8, hits = 0, loadFrame = -1;
         boolean bossSeen = false;
         long outgoingFrame = 0;
+        var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 11, 0, settings);
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
                 if (frame == 62360) GameServices.configuration().setSessionOverride(
                         com.openggf.configuration.SonicConfiguration.LIVE_REWIND_ENABLED, true);
                 session.step(movie.getFrame(frame));
-                session.render();
+                drawing.afterStep(session);
                 assertFalse(session.player().getDead(), "death at input " + frame);
                 assertFalse(session.player().isSuperSonic());
                 assertInstanceOf(com.openggf.sprites.playable.Tails.class, session.player());
@@ -256,17 +263,19 @@ class TestDezSoloActTwoColdRouteCapture {
                 if (!spots.contains(frame)) continue;
                 checked.add(frame);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                drawing.checkpoint(session);
                 var saved = registry.capture();
-                for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); session.render(); }
+                for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); drawing.draw(session); }
                 var forward = registry.capture();
                 registry.restore(saved);
                 same(saved, registry.capture(), "restore at " + frame);
                 session.restoreInputHistory(movie.getFrame(frame));
-                for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); session.render(); }
+                for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); drawing.draw(session); }
                 same(forward, registry.capture(), "replay at " + frame);
                 registry.restore(saved);
                 session.restoreInputHistory(movie.getFrame(frame));
             }
+            drawing.checkpoint(session);
             assertEquals(spots, checked);
             assertTrue(bossSeen);
             assertEquals(8, hits, "all eight hits must come from the production encounter");
@@ -294,10 +303,11 @@ class TestDezSoloActTwoColdRouteCapture {
                 46395, 46480, 46581, 46615, 46680, 47043);
         var checked = new HashSet<Integer>();
         boolean bridgeReached = false;
+        var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 11, 0, settings);
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
-                session.step(movie.getFrame(frame)); session.render();
+                session.step(movie.getFrame(frame)); drawing.afterStep(session);
                 assertFalse(session.player().getDead(), "death at " + frame);
                 assertInstanceOf(com.openggf.sprites.playable.Tails.class, session.player());
                 assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
@@ -313,17 +323,19 @@ class TestDezSoloActTwoColdRouteCapture {
                 if (!spots.contains(frame)) continue;
                 checked.add(frame);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                drawing.checkpoint(session);
                 var saved = registry.capture();
-                for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); session.render(); }
+                for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); drawing.draw(session); }
                 var forward = registry.capture();
                 registry.restore(saved);
                 same(saved, registry.capture(), "Tails restore at " + frame);
                 session.restoreInputHistory(movie.getFrame(frame));
-                for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); session.render(); }
+                for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); drawing.draw(session); }
                 same(forward, registry.capture(), "Tails replay at " + frame);
                 registry.restore(saved);
                 session.restoreInputHistory(movie.getFrame(frame));
             }
+            drawing.checkpoint(session);
             assertEquals(spots, checked);
             assertTrue(bridgeReached);
             assertEquals(11, GameServices.level().getCurrentZone());

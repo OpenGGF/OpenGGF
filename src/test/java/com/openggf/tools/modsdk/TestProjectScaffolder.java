@@ -79,7 +79,7 @@ class TestProjectScaffolder {
             sources = paths.filter(p -> p.toString().endsWith(".java"))
                     .map(Path::toString).toList();
         }
-        var args = new java.util.ArrayList<>(List.of("--release", "21", "-cp",
+        var args = new java.util.ArrayList<>(List.of("--release", "25", "-cp",
                 TestSessionOutputPaths.compiledClasses().toAbsolutePath().toString(),
                 "-d", classes.toString()));
         args.addAll(sources);

@@ -167,6 +167,7 @@ public class MasterTitleScreen {
     private List<MasterTitleEntry> entries;
     private java.util.function.Supplier<List<MasterTitleEntry>> entrySource;
     private final Map<GameEntry, Boolean> stockAvailability = new EnumMap<>(GameEntry.class);
+    private Map<GameEntry, List<String>> enabledModsByGame = Map.of();
 
     // GL resources
     private TexturedQuadRenderer renderer;
@@ -216,6 +217,8 @@ public class MasterTitleScreen {
     private Runnable modManagerOpenHandler =
             () -> LOGGER.info("Mod manager open callback not configured.");
     private ModManagerScreenFactory modManagerScreenFactory;
+    private Runnable modManagerApplyHandler = () -> { };
+    private boolean modApplyPending;
     private ModManagerView modManagerScreen;
 
     /**
@@ -411,6 +414,10 @@ public class MasterTitleScreen {
         if (modManagerScreen != null) {
             ModManagerView menu = modManagerScreen;
             menu.update(inputHandler);
+            if (menu.consumeActivationRequested()) {
+                modApplyPending = true;
+                return;
+            }
             if (modManagerScreen == menu && menu.consumeCloseRequested()) {
                 modManagerScreen = null;
                 if (entrySource != null) replaceEntries(entrySource.get());
@@ -1150,6 +1157,8 @@ public class MasterTitleScreen {
         if (preview == null && selectedEntry() instanceof MasterTitleEntry.Stock) {
             box(8, 69, leftWidth, 61, 0.04f, 0.10f, 0.24f, 0.96f);
         }
+        // Give the two compact status lines one background across the footer's top edge.
+        box(8, 191, leftWidth, 19, 0.02f, 0.07f, 0.23f, 1f);
         font.beginMegaBatch();
         textFitted(navigation.actions() ? "ACTION MENU" : "SELECT GAME", viewportWidth - 111, 10, 103,
                 1f, 0.5f, 0.91f, 1f);
@@ -1182,6 +1191,8 @@ public class MasterTitleScreen {
                         MenuStyle.COMPACT, 1f, experimental ? 0.3f : count > 0 ? 0.72f : 1f,
                         experimental ? 0.3f : count > 0 ? 0.25f : 1f);
             }
+            textFitted(enabledModsLine(enabledModsByGame.getOrDefault(stock.game(), List.of()), frameCounter),
+                    12, 202, leftWidth - 2, MenuStyle.COMPACT, .5f, .91f, 1f);
         }
         String footer = navigation.actions()
                 ? "L/R Game  U/D Actions  " + confirmHint() + " Open  " + backHint() + " Back"
@@ -1542,6 +1553,38 @@ public class MasterTitleScreen {
         modManagerScreenFactory = Objects.requireNonNull(factory, "factory");
     }
 
+    public void setModManagerApplyHandler(Runnable handler) {
+        modManagerApplyHandler = Objects.requireNonNull(handler, "handler");
+    }
+
+    public void setEnabledModsByGame(Map<GameEntry, List<String>> namesByGame) {
+        Objects.requireNonNull(namesByGame, "namesByGame");
+        Map<GameEntry, List<String>> copy = new EnumMap<>(GameEntry.class);
+        namesByGame.forEach((game, names) -> copy.put(Objects.requireNonNull(game),
+                List.copyOf(Objects.requireNonNull(names))));
+        enabledModsByGame = Map.copyOf(copy);
+    }
+
+    static String enabledModsLine(List<String> names, int frame) {
+        if (names.isEmpty()) return "Mods: none";
+        int index = Math.floorMod(frame / 180, names.size());
+        return names.size() == 1 ? "Mods: " + names.getFirst()
+                : "Mods " + (index + 1) + "/" + names.size() + ": " + names.get(index);
+    }
+
+    /** Called after GameLoop finishes using this title instance for the frame. */
+    public void finishPendingModApply() {
+        if (!modApplyPending) return;
+        modApplyPending = false;
+        try {
+            modManagerApplyHandler.run();
+        } catch (RuntimeException failure) {
+            if (modManagerScreen != null) modManagerScreen.activationFailed(
+                    failure.getMessage() == null
+                            ? failure.getClass().getSimpleName() : failure.getMessage());
+        }
+    }
+
     private void openModManager() {
         if (modManagerScreenFactory != null) {
             modManagerScreen = Objects.requireNonNull(
@@ -1707,5 +1750,7 @@ public class MasterTitleScreen {
         void render();
         boolean consumeCloseRequested();
         void suppressInputUntilNeutral();
+        default boolean consumeActivationRequested() { return false; }
+        default void activationFailed(String message) { }
     }
 }

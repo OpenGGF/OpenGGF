@@ -1,5 +1,6 @@
 package com.openggf.level.objects;
 
+@com.openggf.game.ModApi
 public enum SolidRoutineKind {
     FULL_SOLID,
     TOP_SOLID_ONLY,

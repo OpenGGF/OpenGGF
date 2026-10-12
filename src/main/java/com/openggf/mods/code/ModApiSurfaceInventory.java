@@ -9,6 +9,8 @@ import java.util.List;
 public final class ModApiSurfaceInventory {
     private static final List<String> TYPE_NAMES = List.of(
             "com.openggf.mods.code.GgfMod",
+            "com.openggf.mods.mutators.MutatorConfigurationScreen",
+            "com.openggf.mods.mutators.MutatorSupportProfile",
             "com.openggf.mods.code.ModContext",
             "com.openggf.mods.code.BakedSheetRef",
             "com.openggf.mods.code.BakedLevelRef",
@@ -44,6 +46,9 @@ public final class ModApiSurfaceInventory {
             "com.openggf.level.objects.PatrolMovementHelper",
             "com.openggf.level.objects.PlatformBobHelper",
             "com.openggf.level.objects.SpringBounceHelper",
+            "com.openggf.sprites.NativePositionOps",
+            "com.openggf.level.objects.SolidObjectParams",
+            "com.openggf.level.objects.SolidObjectProvider",
             "com.openggf.level.objects.DestructionEffects",
             // Explicitly required transitive creator contracts.
             "com.openggf.game.GameModule",

@@ -50,6 +50,32 @@ investigation. All 3,574 rows and 55 lag rows remain accounted for. Combined
 delivery qualification remains open. No broader
 viewport, donor, character/team, native-pixel or audio coverage is inferred.
 
+## Stock fan-child follow-up — 2026-10-08
+
+The [round 3 lane audit](../../audits/2026-10-07-s3k-parity-gap-verification.md)
+qualifies four local fan corrections at `fa2ac5e67`: one `MoveSprite2` per
+bubble pass (eight pixels upward), water-owned retirement without a camera/age
+cap, gameplay-counter sound/spawn cadence, and lowest-slot allocation before
+randomness. Twelve fan regressions, graph restore/replay, sixteen conveyor
+controls and mandatory startup consumers pass in a ninety-case focused run,
+without failures/errors/skips. Native sampling separately matches 630
+represented frame ends across seven player/camera/clock fields; 11900 bubble
+updates retain the native eight-pixel movement outside the camera margin.
+This is state corroboration, not a pixel or complete-lifetime certificate.
+
+The normal five-case trace selection preserves the initial HCZ surface at
+zero errors (3574 rows, 55 lag), and the two prefix controls pass. Returned-HCZ
+standalone remains an independently matched inherited 3454-error failure,
+first row0 Y speed `0000/000E`. The complete chain's returned segment11 remains
+incomplete with 82067 differences (69393 physics/12674 animation), first
+mapping row1507 `0063/0095`, first primary Y row1510 `07D6/07DF`, then LEVEL
+ownership loss at cursor68801. Earlier AIZ6/8 profiles remain unchanged.
+The fan corrections do not close that route, establish conveyor causation,
+or expand the historical viewport/donor/character/team matrix above.
+Root composition `84f0c20f11` passes 275 focused cases. Its combined17-case
+normal trace selection retains these exact S3K profiles, with four qualified
+assertion failures and no errors/skips; ordinary/guard delivery remains pending.
+
 ## Route construction and rejected approaches
 
 Task `route-green-20260914`, pinned integration base `f1843f54a1`; isolated

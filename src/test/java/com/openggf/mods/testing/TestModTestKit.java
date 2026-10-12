@@ -332,7 +332,7 @@ class TestModTestKit {
         Files.createDirectories(source.getParent());
         Files.writeString(source,"package fixture; public final class Entry implements com.openggf.mods.code.GgfMod { "
                 +"public void register(com.openggf.mods.code.ModContext context) { "+registration+" } }");
-        List<String> args=new ArrayList<>(List.of("--release","21","-cp",System.getProperty("java.class.path"),
+        List<String> args=new ArrayList<>(List.of("--release","25","-cp",System.getProperty("java.class.path"),
                 "-d",classes.toString(),source.toString()));
         assertEquals(0,ToolProvider.getSystemJavaCompiler().run(null,null,null,args.toArray(String[]::new)));
         Path manifest=classes.resolve("META-INF/openggf-mod.yaml"); Files.createDirectories(manifest.getParent());

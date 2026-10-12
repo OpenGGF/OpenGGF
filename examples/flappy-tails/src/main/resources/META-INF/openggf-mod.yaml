@@ -1,0 +1,17 @@
+formatVersion: 1
+id: flappy-tails
+name: Flappy Tails
+version: 1.0.0
+authors:
+  - OpenGGF contributors
+description: >-
+  Tails flaps through five Sonic 3 & Knuckles zones on the ROM's own flight physics:
+  pillars cut from each act's ground, title cards, badniks, medals and records.
+  Everything you see and hear comes from your own ROM.
+engineApiRange: ">=0.7.0 <0.8.0"
+type: patch
+baseGame: s3k
+entrypoint: flappytails.FlappyTailsMod
+dependencies: []
+audioOverrides: {}
+artOverrides: {}

@@ -6,7 +6,7 @@ requires byte-identical duplicates, validates both captures through the fixed
 `CompleteRunAudioTool` class, and publishes the comparison report as one
 directory. It never deletes or overwrites a run.
 
-Build the executable JAR on JDK 21 first. Run roots are restricted to a direct
+Build the executable JAR on JDK 25 first. Run roots are restricted to a direct
 child of `target/audio-parity/runs`:
 
 ```bash
@@ -60,3 +60,14 @@ external `--output-root` to satisfy it). Fixing that needs a review of
 one-line change; it is out of scope here. The S1 gameplay driver oracle
 (`run_s1_audio_parity.sh --mode gameplay`) is the separate, working path for
 gameplay-sourced S1 audio capture.
+
+## Original creator voice assets
+
+`eggmans_sky_voice.py` is the offline OpenRouter generator for Eggman's Sky's original
+Alice announcements. It requires FFmpeg/FFprobe, NumPy and SciPy. Rendering preserves
+clean and processed WAV masters in the external source/verification cache; publication
+ships only Ogg/Vorbis quality 4 and records the distinct master and encoded identities.
+Its private key and raw-source cache stay outside shipped assets; see the
+[mod's regeneration instructions](../../examples/eggmans-sky/README.md#system-voice).
+
+The complete-run wrapper requires `/usr/bin/java` to resolve to Java 25. It checks that fixed system runtime before creating output. Maven’s `JAVA_HOME` does not select this hermetic producer runtime; the wrapper continues to reject ambient Java and tool overrides.

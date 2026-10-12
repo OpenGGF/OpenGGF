@@ -88,6 +88,8 @@ public class SmpsSequencer implements CoordFlagContext {
     private boolean isSfx = false; // Cached SFX status for performance (set by SmpsDriver.addSequencer)
     private int psgLatchChannel = -1; // Cached PSG latch channel for performance (set by SmpsDriver.writePsg)
     private int speedMultiplier = 1; // S3K: zTempoSpeedup value (0/1=off, 8=speed shoes)
+    private int musicTempoPercent = 100;
+    private int musicTempoPhase;
     private int speedupTimeout = 0;  // S3K: zSpeedupTimeout countdown for double-update
 
     public void setPitch(float pitch) {
@@ -186,6 +188,8 @@ public class SmpsSequencer implements CoordFlagContext {
         private boolean isSfx;
         private int psgLatchChannel;
         private int speedMultiplier;
+        private int musicTempoPercent;
+        private int musicTempoPhase;
         private int speedupTimeout;
         private int fadeSteps;
         private int fadeDelayInit;
@@ -254,6 +258,8 @@ public class SmpsSequencer implements CoordFlagContext {
         token.isSfx = isSfx;
         token.psgLatchChannel = psgLatchChannel;
         token.speedMultiplier = speedMultiplier;
+        token.musicTempoPercent = musicTempoPercent;
+        token.musicTempoPhase = musicTempoPhase;
         token.speedupTimeout = speedupTimeout;
         token.fadeSteps = fadeState.steps;
         token.fadeDelayInit = fadeState.delayInit;
@@ -313,6 +319,8 @@ public class SmpsSequencer implements CoordFlagContext {
         isSfx = token.isSfx;
         psgLatchChannel = token.psgLatchChannel;
         speedMultiplier = token.speedMultiplier;
+        musicTempoPercent = token.musicTempoPercent;
+        musicTempoPhase = token.musicTempoPhase;
         speedupTimeout = token.speedupTimeout;
         fadeState.steps = token.fadeSteps;
         fadeState.delayInit = token.fadeDelayInit;
@@ -2016,6 +2024,8 @@ public class SmpsSequencer implements CoordFlagContext {
                     for (Track t : tracks) {
                         t.duration++;
                     }
+                } else {
+                    applyMusicTempoPercent();
                 }
                 // The ROM's dispatch point: past the fade step, before any
                 // track is walked (SD:179-202).
@@ -2065,6 +2075,7 @@ public class SmpsSequencer implements CoordFlagContext {
         tempoAccumulator += tempoWeight;
         if (tempoAccumulator >= tempoModBase) {
             tempoAccumulator -= tempoModBase; // carry → normal frame
+            applyMusicTempoPercent();
         } else {
             // No carry → delay: the pre-increment cancels this update's decrement.
             for (Track t : tracks) {
@@ -2091,8 +2102,35 @@ public class SmpsSequencer implements CoordFlagContext {
             for (Track t : tracks) {
                 t.duration++;
             }
+        } else {
+            applyMusicTempoPercent();
         }
         tick();
+    }
+
+    /**
+     * Creator music pacing, layered over the ROM's admitted duration ticks.
+     * Like TempoWait, this holds note expiry while the normal track walk keeps
+     * envelopes, modulation, pitch, DAC sample clocks and fades running. It is
+     * separate from the shipped-ROM tempo byte and its coordination flags;
+     * 100 percent is an unchanged fast path. SFX never enter this gate.
+     */
+    private void applyMusicTempoPercent() {
+        if (musicTempoPercent == 100) return;
+        musicTempoPhase += musicTempoPercent;
+        if (musicTempoPhase >= 100) {
+            musicTempoPhase -= 100;
+        } else {
+            for (Track track : tracks) track.duration++;
+        }
+    }
+
+    public void setMusicTempoPercent(int percent) {
+        com.openggf.audio.MusicTempoPercent.requireValid(percent);
+        if (musicTempoPercent != percent) {
+            musicTempoPercent = percent;
+            musicTempoPhase = 0;
+        }
     }
 
     /** Set when the driver ran this service's fade step ahead of the queue. */
@@ -4744,6 +4782,8 @@ public class SmpsSequencer implements CoordFlagContext {
                 psgLatchChannel,
                 speedMultiplier,
                 speedupTimeout,
+                musicTempoPercent,
+                musicTempoPhase,
                 new SmpsSequencerSnapshot.FadeSnapshot(
                         fadeState.steps,
                         fadeState.delayInit,
@@ -4782,6 +4822,8 @@ public class SmpsSequencer implements CoordFlagContext {
         psgLatchChannel = snapshot.psgLatchChannel();
         speedMultiplier = snapshot.speedMultiplier();
         speedupTimeout = snapshot.speedupTimeout();
+        musicTempoPercent = snapshot.musicTempoPercent();
+        musicTempoPhase = snapshot.musicTempoPhase();
         fadeState.steps = snapshot.fade().steps();
         fadeState.delayInit = snapshot.fade().delayInit();
         fadeState.delayCounter = snapshot.fade().delayCounter();

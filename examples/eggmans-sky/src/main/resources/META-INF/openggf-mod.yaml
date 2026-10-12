@@ -1,0 +1,14 @@
+formatVersion: 1
+id: eggmans-sky
+name: Eggman's Sky
+version: 0.1.0
+authors:
+  - OpenGGF contributors
+description: A No Man's Sky-style exploration game starring Dr. Eggman. Pilot the Egg Mobile across a procedural galaxy of planets remixed from the zones of every Sonic ROM you own, scan alien badniks and flora, mine and refine resources, upgrade your ship, outrun Sonic's wanted-level patrols and warp toward the galactic core. Requires Sonic 3 & Knuckles; Sonic 1 and Sonic 2 add more worlds.
+engineApiRange: ">=0.7.0 <0.8.0"
+type: patch
+baseGame: s3k
+entrypoint: eggsky.EggmansSkyMod
+dependencies: []
+audioOverrides: {}
+artOverrides: {}

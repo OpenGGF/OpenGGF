@@ -29,6 +29,11 @@ public final class CnzEndBossRobotnikHeadChild extends AbstractObjectInstance
     }
 
     @Override
+    public com.openggf.game.mutators.ObjectHeadRole headPresentationRole() {
+        return com.openggf.game.mutators.ObjectHeadRole.BOSS;
+    }
+
+    @Override
     public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         CnzEndBossRobotnikShipChild restoredShip = CnzEndBossRewindLinks.ship(ctx);
         return restoredShip == null ? null : new CnzEndBossRobotnikHeadChild(restoredShip);

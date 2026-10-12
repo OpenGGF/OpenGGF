@@ -53,6 +53,11 @@ public final class MhzEndBossRobotnikHeadChild extends AbstractObjectInstance im
     }
 
     @Override
+    public com.openggf.game.mutators.ObjectHeadRole headPresentationRole() {
+        return com.openggf.game.mutators.ObjectHeadRole.BOSS;
+    }
+
+    @Override
     public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         MhzEndBossInstance liveParent = RewindRecreateObjectLinks.nearestLiveObject(
                 ctx, MhzEndBossInstance.class);

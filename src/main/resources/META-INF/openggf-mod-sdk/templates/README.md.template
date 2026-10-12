@@ -23,7 +23,7 @@ See `docs/modding/content-mods.md`, `docs/modding/characters.md`, and
 `docs/modding/standalone-games.md` in the OpenGGF source tree for the complete
 creator contracts and checked-in acceptance samples.
 
-Use Java 21 and Maven 3.8+. The current 0.7 API is unpublished and mutable; the
+Use Java 25 and Maven 3.8+. The current 0.7 API is unpublished and mutable; the
 engine and SDK jars must come from the same candidate commit. Build using absolute paths:
 
 ```sh

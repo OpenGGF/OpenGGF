@@ -41,7 +41,7 @@ import com.openggf.mods.code.ModPatternWindowAllocator;
 import com.openggf.graphics.PatternAtlasRange;
 
 /**
- * Process-lifetime mod catalog owner and the sole atomic owner of the session view.
+ * Title-scoped mod catalog owner and the sole atomic owner of the session view.
  * Deterministic entry seams use the static boundary so they cannot accidentally scan.
  */
 public final class ModSubsystem implements AutoCloseable {
@@ -175,6 +175,9 @@ public final class ModSubsystem implements AutoCloseable {
 
     public boolean compiledModsSupported() { return compiledModsSupported; }
 
+    /** Carries the host's native/JVM capability into a freshly scanned title catalog. */
+    void setCompiledModsSupported(boolean supported) { compiledModsSupported = supported; }
+
     public Set<String> trustedCodeOwners() { return trustedCodeOwners; }
 
     public synchronized RewindClassResolver rewindClassResolver() { return rewindClassResolver; }
@@ -279,14 +282,14 @@ public final class ModSubsystem implements AutoCloseable {
                 java.util.logging.Level.SEVERE, "Compiled-mod owner failure: " + affected, failure);
         affected.forEach(owner -> runtimeFindings.replaceOwner(owner, List.of(
                 new com.openggf.mods.ModFinding(com.openggf.mods.ModFindingSeverity.ERROR,
-                        findingCode, "Compiled-mod owner failed; restart required", null))));
+                        findingCode, "Compiled-mod owner failed; re-enable and Apply at title", null))));
         if (affected.isEmpty() || pendingEditor == null) return;
         pendingEditor.setEnabledCascade(affected, false);
         com.openggf.mods.ModStateSaveResult saved = pendingEditor.save();
         if (saved instanceof com.openggf.mods.ModStateSaveResult.Failed failed) {
             affected.forEach(owner -> runtimeFindings.replaceOwner(owner, List.of(
                     new com.openggf.mods.ModFinding(com.openggf.mods.ModFindingSeverity.ERROR,
-                            findingCode, "Compiled-mod owner failed; restart required", null),
+                            findingCode, "Compiled-mod owner failed; re-enable and Apply at title", null),
                     new com.openggf.mods.ModFinding(com.openggf.mods.ModFindingSeverity.ERROR,
                             "MOD_DISABLE_SAVE_FAILED", failed.message(), null))));
         }
@@ -348,7 +351,7 @@ public final class ModSubsystem implements AutoCloseable {
         previous.close();
     }
 
-    /** Return-to-title retires leases but deliberately retains the immutable process catalog. */
+    /** Return-to-title retires leases; Apply can then replace the catalog. */
     public synchronized void returnToTitle() {
         sessionEpoch++;
         SessionExternalContentView previous = sessionView;
@@ -400,7 +403,7 @@ public final class ModSubsystem implements AutoCloseable {
             boolean stock = "s1".equals(gameCode) || "s2".equals(gameCode) || "s3k".equals(gameCode);
             boolean selectedTrack = stock ? !registry.tracks().isEmpty() : registry.tracks().stream()
                     .anyMatch(track -> track.key().modId().equals(gameCode));
-            boolean selectedSfx = !stock && sfxRegistry.sfx().stream()
+            boolean selectedSfx = stock ? !sfxRegistry.sfx().isEmpty() : sfxRegistry.sfx().stream()
                     .anyMatch(sfx -> sfx.key().modId().equals(gameCode));
             if (!selectedTrack && !selectedSfx) return SessionExternalContentView.EMPTY;
             PreparedAudioSession audio = preparer.prepare(effective, registry, sfxRegistry, outputRate);

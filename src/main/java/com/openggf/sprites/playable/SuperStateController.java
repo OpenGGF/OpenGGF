@@ -116,7 +116,10 @@ public abstract class SuperStateController {
 
     public void debugActivate() {
         if (state != SuperState.NORMAL || !transformationSupported()) return;
-        player.addRings(50);
+        if (com.openggf.game.mutators.LevelMutatorPolicyAccess.mainLevelRingRestore(
+                player.currentLevelManagerIfAvailable(), 50) != 0) {
+            player.addRings(50);
+        }
         startTransformation();
         LOGGER.info("Debug: Super Sonic transformation started");
     }

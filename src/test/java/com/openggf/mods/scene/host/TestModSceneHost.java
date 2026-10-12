@@ -9,6 +9,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
+import com.openggf.audio.AudioManager;
+import com.openggf.audio.StreamedMusicPort;
 
 import com.openggf.control.InputHandler;
 import com.openggf.control.LogicalInputSnapshot;
@@ -51,6 +55,67 @@ import org.junit.jupiter.api.io.TempDir;
 class TestModSceneHost {
     @TempDir
     Path temp;
+
+    @Test void actSuspensionRetainsVisitAndDeliversResultOnce() {
+        var host = new ModSceneHost();
+        var contexts = new ArrayList<SceneContext>();
+        var calls = new ArrayList<String>();
+        var launch = new com.openggf.mods.scene.ActLaunch(new com.openggf.game.ZoneKey.Mod("cards", "garden"),
+            0, com.openggf.game.CharacterKey.TAILS, List.of(), java.util.OptionalInt.of(440),
+            java.util.OptionalInt.of(173), 7, Map.of("visit", "1"));
+        var result = new com.openggf.mods.scene.ActResult(launch.destination(),
+            com.openggf.game.ActExit.LEFT, 3, 40, Map.of("door", "inn"));
+        host.open(owned(() -> new ModScene() {
+            public void enter(SceneContext ctx) { contexts.add(ctx); calls.add("enter"); }
+            public void update(SceneContext ctx) { calls.add("update"); ctx.startAct(launch); ctx.startAct(launch); }
+            public void draw(SceneContext ctx, SceneCanvas canvas) { calls.add("draw"); }
+            public void resume(SceneContext ctx, com.openggf.mods.scene.ActResult actual) {
+                contexts.add(ctx); assertEquals(result, actual); calls.add("resume");
+                assertEquals(0, ctx.input().player1().heldMask());
+            }
+            public void exit(SceneContext ctx) { calls.add("exit"); }
+        }), services(new ArrayList<>()), 320, 224);
+        host.update(new InputHandler());
+        assertSame(launch, host.consumeActLaunch()); assertNull(host.consumeActLaunch());
+        host.suspend(); host.update(new InputHandler()); host.draw(null, null);
+        assertTrue(host.isOpen()); assertTrue(host.isSuspended());
+        assertEquals(List.of("enter", "update"), calls);
+        host.resume(result);
+        assertSame(contexts.getFirst(), contexts.getLast());
+        assertThrows(IllegalStateException.class, () -> host.resume(result));
+        host.close(); assertEquals(List.of("enter", "update", "resume", "exit"), calls);
+    }
+
+    @Test void resumeFaultIsBoundedAndClosesTheRetainedVisit() {
+        var host = new ModSceneHost(); var findings = new ModRuntimeFindingStore();
+        host.open(ModContextTestAccess.ownedScene("cards", () -> new ModScene() {
+            public void enter(SceneContext ctx) {}
+            public void update(SceneContext ctx) {}
+            public void draw(SceneContext ctx, SceneCanvas canvas) {}
+            public void resume(SceneContext ctx, com.openggf.mods.scene.ActResult result) {
+                throw new IllegalStateException("bad return");
+            }
+        }, boundary(findings)), services(new ArrayList<>()), 320, 224);
+        host.suspend();
+        assertThrows(ModFaultBoundary.CallbackAborted.class, () -> host.resume(new com.openggf.mods.scene.ActResult(
+            new com.openggf.game.ZoneKey.Mod("cards", "garden"), com.openggf.game.ActExit.LEFT, 0, 0, Map.of())));
+        assertFalse(host.isOpen()); assertTrue(findings.snapshot().containsKey("cards"));
+    }
+
+    @Test void sceneCannotForgeAnotherOwnersActLaunch() {
+        var host = new ModSceneHost(); var findings = new ModRuntimeFindingStore();
+        host.open(ModContextTestAccess.ownedScene("cards", () -> new ModScene() {
+            public void enter(SceneContext ctx) {}
+            public void update(SceneContext ctx) {
+                ctx.startAct(new com.openggf.mods.scene.ActLaunch(new com.openggf.game.ZoneKey.Mod("other", "garden"),
+                    0, com.openggf.game.CharacterKey.SONIC, List.of(), java.util.OptionalInt.empty(),
+                    java.util.OptionalInt.empty(), 0, Map.of()));
+            }
+            public void draw(SceneContext ctx, SceneCanvas canvas) {}
+        }, boundary(findings)), services(new ArrayList<>()), 320, 224);
+        assertThrows(ModFaultBoundary.CallbackAborted.class, () -> host.update(null));
+        assertFalse(host.isOpen()); assertTrue(findings.snapshot().containsKey("cards"));
+    }
 
     /** A scene that counts ticks, draws a little, and can be told to fail or leave. */
     static final class ProbeScene implements ModScene {
@@ -108,6 +173,42 @@ class TestModSceneHost {
         InputHandler input = mock(InputHandler.class);
         when(input.logical()).thenReturn(LogicalInputSnapshot.neutral());
         return input;
+    }
+
+    @Test
+    void sceneSfxUsesTheHostOwnerAndCannotOutliveItsContext() {
+        AudioManager audio = mock(AudioManager.class);
+        var ref = new StreamedMusicPort.SfxRef("cards", "voice-alert");
+        when(audio.playNamespacedSfx(ref)).thenReturn(true);
+        SceneContext[] retained = new SceneContext[1];
+        ModSceneHost host = new ModSceneHost();
+        host.open(owned(() -> new ModScene() {
+            @Override public void enter(SceneContext ctx) { retained[0] = ctx; }
+            @Override public void update(SceneContext ctx) { }
+            @Override public void draw(SceneContext ctx, SceneCanvas canvas) { }
+        }), new SceneServices(audio, null, temp, null, () -> { }, () -> { }), 320, 224);
+        assertTrue(retained[0].audio().playSfx("voice-alert"));
+        assertFalse(retained[0].audio().playSfx("missing"));
+        assertThrows(IllegalArgumentException.class,
+                () -> retained[0].audio().playSfx("other-mod:voice-alert"));
+        verify(audio).playNamespacedSfx(ref);
+        host.close();
+        assertFalse(retained[0].audio().playSfx("after-close"));
+        verify(audio, never()).playNamespacedSfx(new StreamedMusicPort.SfxRef("cards", "after-close"));
+    }
+
+    @Test
+    void sceneSfxWithoutAnAudioBackendIsSilentButStillValidatesNames() {
+        SceneContext[] retained = new SceneContext[1];
+        ModSceneHost host = new ModSceneHost();
+        host.open(owned(() -> new ModScene() {
+            @Override public void enter(SceneContext ctx) { retained[0] = ctx; }
+            @Override public void update(SceneContext ctx) { }
+            @Override public void draw(SceneContext ctx, SceneCanvas canvas) { }
+        }), services(new ArrayList<>()), 320, 224);
+        assertFalse(retained[0].audio().playSfx("voice-alert"));
+        assertThrows(IllegalArgumentException.class, () -> retained[0].audio().playSfx("../alert"));
+        host.close();
     }
 
     @Test

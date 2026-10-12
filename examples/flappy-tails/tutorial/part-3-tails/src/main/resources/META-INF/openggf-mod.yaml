@@ -1,0 +1,15 @@
+formatVersion: 1
+id: flappy-tails-part3
+name: Flappy Tails tutorial, part 3
+version: 0.3.0
+authors:
+  - OpenGGF contributors
+description: >-
+  Checkpoint 3 of the Flappy Tails tutorial: Tails drawn from your ROM, rotor spinning.
+engineApiRange: ">=0.7.0 <0.8.0"
+type: patch
+baseGame: s3k
+entrypoint: flappytails.FlappyTailsMod
+dependencies: []
+audioOverrides: {}
+artOverrides: {}

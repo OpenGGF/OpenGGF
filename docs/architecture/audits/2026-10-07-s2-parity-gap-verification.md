@@ -815,3 +815,173 @@ actual CPU Tails launch, but this follow-up adds no live timeline rewind route.
 Registry expiry was checked at completion, 2026-10-08 02:31:51 UTC, before
 its authoritative 15:39:46 UTC expiry. No owned Maven request remains pending;
 all temporary Spring probe changes and commit-message files are removed.
+
+
+## Round 3 — stock seventh-emerald results sequence (2026-10-08)
+
+Exact base: `098053c4a01c2af283ca6797463bb5051442ef0b`.
+Owned branch/worktree: `bugfix/ai-trace-s2-frontier-20261008-r3` /
+`.worktrees/trace-s2-frontier-20261008-r3`. Hooks installed; Java 21.0.12.1,
+`DISPLAY=:0`, `LUA_BIN=/usr/bin/lua5.4`. This round's `S2_ROM` is the original
+root `Sonic The Hedgehog 2 (W) (REV01) [!].gen`, freshly verified CRC32
+`7B905383` / SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`.
+No ROM aliases, submodule changes, or shared timing/driver changes were made.
+
+### Native owner and rejected alternatives
+
+Stock `Sonic2SpecialStageDataLoader.createResultsMessages` returns null;
+KiS2 overrides it with `SplitNameResultsMessages`. The stock fallback therefore
+paid the ordinary $78 wait before a stationary $B4 display, totaling 300
+post-tally passes. It omitted stock Obj6F's movement and replacement sequence.
+The committed foreign fade branch `26b8a3baa61700db50dc01e643e0c103c633cd53`
+was inspected read-only, is not an ancestor of this base, and was not imported.
+Its shared fade/music/PLC changes are separate from this local results branch.
+
+The read-only main disassembly `docs/s2disasm/s2.asm` identifies:
+
+- `Obj6F_TallyScore` ($14580, lines 28376–28420): after all countdowns are
+  already zero, the non-perfect path checks `Player_mode != 2` (Tails alone),
+  `Got_Emerald != 0`, and byte `Emerald_count == 7`; it writes routine $30
+  directly, without the $78 wait. The earlier perfect flag branch instead
+  selects $24/$5A and is not represented by this results owner's inputs.
+- `Obj6F_InitAndMoveSuperMsg` ($146A6): move main/heading to their sources
+  at $20 pixels/pass; once main is already at source, replace their mapping
+  frames with $1B/$1A and subtract 8 from their Y coordinates. Allocate the
+  later Super Sonic slot at hardware X=0, Y=$B4, target X=$120, frame $1C.
+  The later heading and allocated slot execute their $14 movement on this
+  same pass; the main only changes to $34 and moves on its next dispatch.
+- `Obj6F_MoveAndDisplay` ($14736) uses `Obj34_MoveTowardsTargetPosition`
+  ($13E1C), speed $10. Arrival is tested before movement; the following pass
+  latches $B4 and routine $20. `Obj6F_TimedDisplay` ($14572) predecrements
+  that word; routine $22/DisplayOnly executes on the next pass.
+
+Direct bytes in the verified ROM corroborate the branch and literals:
+$146A6 begins `11 7C 00 32 00 64 30 28 00 08 B0 68 00 32`; the replacement
+writes $14/$1A/$34/$1B and child $120/$B4/$14/$1C. $14736 begins
+`30 28 00 08 B0 68 00 30 66 00 F6 DC 31 7C 00 B4 00 1E 11 7C 00 20 00 24`.
+The resulting native duration is 9 leave passes + 1 replacement pass + 18
+main return passes + 1 arrival latch + 180 countdown passes + 1 DisplayOnly
+pass = 210. This derives from object dispatch order, not cursor 101691.
+
+The fix stays inside `SpecialStageResultsScreenObjectInstance`: primitive
+stock pose phases, direct exhausted-tally branch, exact equality and existing
+`ActiveGameplayTeamResolver` Tails-alone gate. KiS2's split-name layout and
+predicate remain unchanged. Stock emerald children continue displaying and
+mapping/art bytes still come through the existing ROM render pipeline.
+Movement routines suppress DisplaySprite when hardware X > $200; the new
+main visibility latch preserves this on leave/return, including equality at
+$200, while the replacement routine deliberately displays at hardware X=$240.
+The actual ROM-art command regression exercises native width 320 and width
+528. An earlier assertion that native-width clipping alone would hide the
+suppressed text was rejected: partial mapping pieces can remain onscreen.
+
+No fitted timer, comparator weakening, trace hydration, KiS2 layout reuse,
+shared fade adjustment, or new rewind API was introduced. Results mode is
+excluded by `GameLoop.isSpecialStageRewindable()`; this standalone overlay
+is not an AbstractObjectInstance and has no existing captured-state contract.
+The new primitive phases do not claim live results rewind support. The
+existing initialization/slot-order pitfall applies; no new mirrored skill
+contract was needed. Missing ROM tests skip; malformed/missing presentation
+services are not certified by these tests. Perfect results remain an inherited
+unsupported branch, not a flag inferred from the fixture's initial snapshot.
+
+### Commands and measured outcomes
+
+All commands used the shared queue from this worktree. `${S2_ROM}` below is
+passed as its verified absolute path, never a generated link. Profile defaults
+retain one Surefire fork; no CLI forkCount or heap/priority override was used.
+
+Baseline (session 85424; waited 1604 seconds; Maven 95 seconds):
+
+```bash
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.runOrder=alphabetical -Dtest=TestS2CompleteEmeraldRunChain,TestS2CompleteEmeraldRunPrefix,TestS2SpecialStage7TraceReplay "-Dsonic2.rom.path=${S2_ROM}" test
+```
+
+Fresh XML: 3 tests / 1 failure / 0 errors / 0 skips. Prefix and SS7 passed.
+Full chain reproduced the inherited 11 axes: SS7 results walk stuck at cursor
+101691 plus the ten gap identities in the preceding table. Every reached
+segment 0–17 report had zero comparator errors. Earliest gap remains edge 0
+`movie_logical_frame` 10308/10268. This is a compared clock discrepancy,
+not proof of a forty-gameplay-frame delay; its shared owner remains reserved.
+
+The focused regression command was:
+
+```bash
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off -Dtest=TestSonic2SpecialStageSuperResults "-Dsonic2.rom.path=${S2_ROM}" test
+```
+
+Session 60545 was unexpectedly cancelled while WAITING (exit 130, hold zero,
+2447.2 seconds); no test ran and this is not RED evidence. No worker cancellation
+was sent. Root's read-only inspection found only external SIGINT/SIGTERM paths
+could produce the wrapper message; the sender is unobserved. Exact retry 9560
+waited 5865 seconds, then yielded 5 tests / 0 failures / 5 setup errors / 0 skips:
+clearing the fixture session removed the active WorldSession. Corrected setup
+opens `GameModuleRegistry.getCurrent()` explicitly after clearing. RequiresRom's
+`TestEnvironment.configureRomFixture` has already detected the S2 module from
+this verified ROM. This is the existing active-session measurement hazard,
+not a production failure.
+
+Corrected old-production RED 74962 waited 42 seconds: 5 / 3 / 0 / 0. Intended
+failures were exhausted tally selecting state 3 instead of 10, completion still
+false on post-tally pass 210, and Tails-alone still incomplete after the ordinary
+exit. Count-six and GotEmerald-false controls passed. The candidate additionally
+covers above-seven equality, exact native pose boundaries, and native/wide draw
+visibility; those expanded assertions are candidate coverage, not executed RED.
+
+Focused candidate selector:
+
+```bash
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off -Dtest=TestSonic2SpecialStageSuperResults,TestSonic2SpecialStageResultsTallyCadence,TestSonic2SpecialStageResultsPlcReadiness,TestSonic2SpecialStageResultsWidescreenCommands,TestSplitNameResultsMessages "-Dsonic2.rom.path=${S2_ROM}" test
+```
+
+Intermediate 38091 passed 19 / 0 / 0 / 0. Expanded render attempt 25376 was
+20 / 0 / 1 / 0 because its new render fixture omitted injected RomManager.
+After injecting the verified ROM and engine ROM service, final 5539 passed
+20 / 0 / 0 / 0 (Maven 24.687 seconds): eight new stock tests, three tally,
+three FIFO, two widescreen, four KiS2 split-message tests. No production change
+was made to compensate for either fixture setup error.
+
+Matched replay and affected controls, sessions 27967 and final 64247:
+
+```bash
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.runOrder=alphabetical -Dtest=TestS2CompleteEmeraldRunChain,TestS2CompleteEmeraldRunPrefix,TestS2SpecialStage2TraceReplay,TestS2SpecialStage5TraceReplay,TestS2SpecialStage6TraceReplay,TestS2SpecialStage7TraceReplay,TestS2Ehz1Seg2CompleteEmeraldsSegmentTraceReplay,TestS2Cpz1Seg8CompleteEmeraldsSegmentTraceReplay "-Dsonic2.rom.path=${S2_ROM}" test
+```
+
+Both completed 8 / 1 / 0 / 0. Final Maven time 48.168 seconds. All seven
+standalone/prefix controls pass; full chain passes the SS7 results return and
+now reaches later ARZ segments. Its 14-axis assertion is a newly exposed
+frontier, not a full-chain pass or an aggregate-count improvement:
+
+- Segment 18 (`seg12_arz1`) completes with 119 aggregate comparator errors:
+  PHYSICS group 102 (including art edges), ANIMATION 17. First row 4213,
+  `dynamic_art.edge[2].mapping_frame`, native 61 / engine 65; player mapping
+  frame is also $3D/$41. This does not imply 102 coordinate-physics errors.
+- Segment 19 (`seg13_arz2`) is incomplete, 47450 errors (PHYSICS 45453,
+  ANIMATION 1997), first row 2175 `x_sub`, native $8800 / engine $5800.
+  The walk loses production ownership at cursor 110617 in TITLE_CARD,
+  level generation 15 / progression zone 2 / ROM zone 15 / act 1.
+- Twelve gap axes remain. The previous ten identities/first fields remain
+  as in the preceding table; newly reached SS7 → seg12_arz1 edge 0 is
+  101663/101626, and seg12_arz1 → seg13_arz2 edge 8 is 106743/106742.
+  Both candidate invocations' first-ten failure strings have SHA-256
+  `502f2f0349a22a6c7d8c0b97daf96ac80790abff8060c456927b227111d380bb`.
+  A fresh baseline digest was not extracted before report overwrite, so
+  no stronger whole-string baseline digest comparison is claimed.
+
+Segments 0–17 remain zero. Exact JSON identities below `target/trace-reports/`
+are `run-chain/s2-sonic-tails-complete-emeralds_seg18-segment-18-f267fee740938dd4.json`,
+`run-chain/s2-sonic-tails-complete-emeralds_seg19-segment-19-54fbcdedc41a859b.json`,
+and the existing full-chain gap suffix `63186ce890be658f`. Raw reports stay
+workflow-temporary. No downstream ARZ/animation/driver fix was attempted.
+
+Final owner SHA-256:
+`0a0206cf29e157014b8d3d25aa94180e1ce6ed2d6a1b176132f9d26589343e8f`;
+base owner: `933076d37c21e8befa20e305a07417917d09a736c6bf67fbad8f20dc8532032b`.
+Dry change selection `python3 tools/testing/run_categories.py --base
+098053c4a01c2af283ca6797463bb5051442ef0b` selects 2500/3028 ordinary classes plus
+guards. This worker did not run that broad plan: root owns actual-destination
+combined baseline/candidate/integrated qualification and central release,
+frontier, discrepancy, and hazard prose. Focused and domain checks above are
+partial validation. No owned Maven request remains pending.
+Registry checked at completion, 2026-10-08 12:30 UTC, before authoritative
+expiry 2026-10-09 09:16:06 UTC. No branch was pushed or integrated by this lane.

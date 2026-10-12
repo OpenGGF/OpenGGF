@@ -176,6 +176,7 @@ class TestDezColdRouteCapture {
         int completedBossPhases = 0;
         boolean eightHits = false;
         long largestOutgoingRewindFrame = 0;
+        var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 11, 0, settings);
             assertEquals(1, GameServices.sprites().getRegisteredSidekicks().size());
@@ -184,7 +185,7 @@ class TestDezColdRouteCapture {
                 if (transition && frame == historyStart) GameServices.configuration().setSessionOverride(
                         com.openggf.configuration.SonicConfiguration.LIVE_REWIND_ENABLED, true);
                 session.step(movie.getFrame(frame));
-                session.render();
+                drawing.afterStep(session);
                 if (transition && frame >= historyStart && GameServices.level().getCurrentZone() == 11
                         && GameServices.level().getCurrentAct() == (clear ? 1 : 0)) {
                     var rewind = SessionManager.getCurrentGameplayMode().getRewindController();
@@ -237,15 +238,16 @@ class TestDezColdRouteCapture {
                 }
                 if (!spots.contains(frame)) continue;
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                drawing.checkpoint(session);
                 var saved = registry.capture();
                 for (int n = 1; n <= 45; n++) {
-                    session.step(movie.getFrame(frame + n)); session.render();
+                    session.step(movie.getFrame(frame + n)); drawing.draw(session);
                 }
                 var forward = registry.capture();
                 registry.restore(saved);
                 previousInput.set(session, movie.getFrame(frame));
                 for (int n = 1; n <= 45; n++) {
-                    session.step(movie.getFrame(frame + n)); session.render();
+                    session.step(movie.getFrame(frame + n)); drawing.draw(session);
                 }
                 var replay = registry.capture();
                 assertEquals(forward.entries().keySet(), replay.entries().keySet());
@@ -257,6 +259,7 @@ class TestDezColdRouteCapture {
                 // Capture-session held input belongs to the external input driver.
                 previousInput.set(session, movie.getFrame(frame));
             }
+            drawing.checkpoint(session);
             assertEquals(clear ? 23 : 11, GameServices.level().getCurrentZone());
             assertEquals(clear ? 0 : complete || lower ? 1 : 0, GameServices.level().getCurrentAct());
             if (lower) {
@@ -275,7 +278,7 @@ class TestDezColdRouteCapture {
                 if (complete) assertEquals(2, completedBossPhases, "both eight-hit phases must be cleared");
                 assertTrue(largestOutgoingRewindFrame > 10, "outgoing history must have been recorded");
                 var neutral = new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, "");
-                for (int n = 0; n < 30; n++) { session.step(neutral); session.render(); }
+                for (int n = 0; n < 30; n++) { session.step(neutral); drawing.draw(session); }
                 var rewind = SessionManager.getCurrentGameplayMode().getRewindController();
                 assertNotNull(rewind);
                 if (clear) {

@@ -28,8 +28,8 @@ from boot-time checks of the mods shipped with the engine build.
 | `MANIFEST_MISSING` / `MANIFEST_INVALID` | Add strict `META-INF/openggf-mod.yaml`; remove unknown/duplicate/alternate fields. |
 | `DUPLICATE_MOD_ID` | Give each discovered jar a unique manifest id. |
 | `ENGINE_API_INCOMPATIBLE` | Compile against a supported API and correct `engineApiRange`. |
-| `DISABLED` | Enable the mod in the manager and restart. |
-| `CODE_TRUST_REQUIRED` | Review the source/findings, grant trust for this exact jar hash, and restart. |
+| `DISABLED` | Enable the mod in the manager and choose Apply. |
+| `CODE_TRUST_REQUIRED` | Review the source/findings, grant trust for this exact jar hash, and choose Apply. |
 | `DEPENDENCY_MISSING` / `DEPENDENCY_DISABLED` / `DEPENDENCY_BLOCKED` | Install/enable/fix the named dependency first. |
 | `DEPENDENCY_VERSION_INCOMPATIBLE` / `DEPENDENCY_BASE_GAME_MISMATCH` | Align dependency version range and patch base game. |
 | `DEPENDENCY_CYCLE` | Remove a cycle from manifest dependencies. |
@@ -59,7 +59,7 @@ the remaining rows can be produced while validating one packed jar.
 | `AUDIO_LOOP_INVALID` | Express loop points in decoded source frames and keep start/end within the asset. |
 | `AUDIO_OVERRIDE_ID_INVALID` / `AUDIO_OVERRIDE_TRACK_MISSING` | Use a valid stock music id and an existing owned track. |
 | `AUDIO_OVERRIDE_CONFLICT` | Resolve the intentional later-wins conflict or accept the reported effective owner. |
-| `SFX_UNSUPPORTED_PHASE1` | Remove SFX from a data-only/base-game path; standalone Mod API 0.7 content may declare namespaced SFX. |
+| `SFX_UNSUPPORTED_PHASE1` (older engines) | Use a current 0.7 candidate build for patch-scene namespaced SFX; both patch scenes and standalone games can declare bounded one-shots. Base-game SFX override mapping remains unavailable. |
 | `STANDALONE_AUDIO_OVERRIDE` | Remove base-game numeric music overrides from a standalone manifest. |
 
 ## Compiled-code and rewind findings

@@ -649,12 +649,12 @@ class TestPlcFrameLifecycleCoordinator {
     }
 
     /**
-     * S1 {@code RunPLC} (docs/s1disasm/sonic.asm:3032) sits at the tail of
-     * {@code Level_MainLoop}, after every expensive call in it. An iteration
-     * still in flight when the next V-blank fires takes {@code VBlank_Lag}
-     * (sonic.asm:709) and runs its {@code RunPLC} on that lag closure, so the
-     * held tail belongs to the lag row rather than to the row that closed the
-     * previous entry.
+     * An untimed service whose represented loop tail was withheld performs
+     * that preparation on the later lag closure. This verifies the generic
+     * fallback policy, not the native instruction sampled by the interrupt:
+     * S1 {@code FixBugs=0} can publish its arm inside {@code RunPLC} before
+     * a lag V-blank (docs/s1disasm/sonic.asm:1379-1415). A timed arm service
+     * instead owns visibility through matching recorded readiness.
      */
     @Test
     void aHeldIterationRunsItsLoopTailPreparationOnTheLagClosure() {

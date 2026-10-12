@@ -1,6 +1,6 @@
 # Quickstart: object or badnik
 
-Read [candidate setup and first build](../getting-started.md) first: Java 21, Maven, and matching absolute engine/SDK jars from one commit. Generate a complete starter with `ggfmod init /absolute/my-object --id my-object --kind object --package example.myobject`. Build with the jar properties shown there, edit source, and repeat the same package command.
+Read [candidate setup and first build](../getting-started.md) first: Java 25, Maven, and matching absolute engine/SDK jars from one commit. Generate a complete starter with `ggfmod init /absolute/my-object --id my-object --kind object --package example.myobject`. Build with the jar properties shown there, edit source, and repeat the same package command.
 
 The object/zone surface is part of the first Mod API 0.7 contract. Build against
 the current API, declare `engineApiRange: ">=0.7.0 <0.8.0"`, then grant explicit

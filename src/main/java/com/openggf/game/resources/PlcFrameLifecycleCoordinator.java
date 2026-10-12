@@ -315,12 +315,15 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
      * {@code ObjPosLoad} (3029), {@code PaletteCycle} (3031). An iteration that
      * has not reached the loop top's {@code move.b #id_VBlank_Levels,
      * (v_vblank_routine).w} (3000) by the next V-blank takes {@code VBlank_Lag}
-     * (sonic.asm:709) instead of the level handler, and has essentially always
-     * not reached {@code RunPLC} either: only {@code OscillateNumDo},
-     * {@code SynchroAnimate} and {@code SignpostArtLoad} separate 3032 from the
-     * re-arm. So the ROM's own {@code RunPLC} for that iteration executes
-     * during the closure that consumes the lag V-blank, and the
-     * still-decompressing head is what the previous row's sample observes.
+     * (sonic.asm:709) instead of the level handler. This counter classification
+     * does not locate the interrupt within that iteration: retail
+     * {@code RunPLC} writes {@code v_plc_patternsleft} before
+     * {@code NemDec_BuildCodeTable}, and can already have exposed the arm when
+     * that call overruns. The observed MZ2 return does exactly this; see the
+     * 2026-10-08 continuation in the stock parity gap audit. Without a matching
+     * hardware-timing stream this coarse hold can defer that arm one row too
+     * far. Timed arm owners decide visibility from their submitted readiness
+     * instead, as handled by {@code prepareAfterLoop} below.
      *
      * <p>This only moves <em>when</em> the engine's own already-submitted queue
      * head is armed between two represented closures of one ROM iteration. It

@@ -37,6 +37,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestObjectUpdateClockTerminologyGuard {
     private static final String EXPECTED_NAME = "vIntRunCount";
     private static final String PLAYABLE_ENTITY = "com.openggf.game.PlayableEntity";
+    /**
+     * Whole-tree attribution retains ~0.9 GiB, which kept a 1 GiB child in back-to-back marking
+     * cycles. CI runners take 94-130 s at either heap size, so the bound only catches a hung child.
+     */
+    private static final String GUARD_HEAP = "-Xmx2g";
+    private static final long GUARD_TIMEOUT_MINUTES = 6;
     private static final List<Path> SOURCE_ROOTS = List.of(
             Path.of("src", "main", "java"),
             Path.of("src", "test", "java"));
@@ -110,9 +116,7 @@ class TestObjectUpdateClockTerminologyGuard {
         Path log = temporary.resolve("terminology-guard.log");
         Process process = new ProcessBuilder(
                 Path.of(System.getProperty("java.home"), "bin", "java").toString(),
-                // Whole-source attribution approaches the old 1 GiB limit.
-                // Keep compiler headroom in a bounded heap outside Surefire.
-                "-Xmx2g",
+                GUARD_HEAP,
                 "-cp", System.getProperty("java.class.path"),
                 GuardProcess.class.getName())
                 .redirectErrorStream(true)
@@ -120,9 +124,9 @@ class TestObjectUpdateClockTerminologyGuard {
                 .redirectOutput(log.toFile())
                 .start();
         try {
-            // This scan takes about a minute locally; two minutes was too
-            // short under CI contention. Retain a bounded execution deadline.
-            boolean finished = process.waitFor(4, TimeUnit.MINUTES);
+            // Retain next's file-backed diagnostics and guaranteed cleanup with
+            // develop's measured heap and CI timeout bounds.
+            boolean finished = process.waitFor(GUARD_TIMEOUT_MINUTES, TimeUnit.MINUTES);
             if (!finished) {
                 process.destroyForcibly();
                 assertTrue(process.waitFor(10, TimeUnit.SECONDS), "terminology guard subprocess did not stop");
@@ -292,7 +296,7 @@ class TestObjectUpdateClockTerminologyGuard {
                 Iterable<? extends JavaFileObject> files = fileManager.getJavaFileObjectsFromPaths(sources);
                 List<String> options = List.of(
                         "-proc:none",
-                        "--release", "21",
+                        "--release", "25",
                         "-classpath", System.getProperty("java.class.path"));
                 JavacTask task = (JavacTask) compiler.getTask(
                         null, fileManager, diagnostics, options, null, files);

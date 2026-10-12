@@ -5,7 +5,7 @@ is a small Sonic 2 patch with two original exported acts. The user's Sonic 2 Wor
 REV01 ROM supplies the native player, rings, signpost, music and results services;
 the jar contains only original bounded level data and creator code.
 
-Build the project with Java 21 and the candidate engine/SDK jars:
+Build the project with Java 25 and the candidate engine/SDK jars:
 
 ```sh
 mvn -f project/pom.xml package \
@@ -18,7 +18,7 @@ Inside an unpacked kit, follow `examples/tide-circuit/README.md` and use its
 Python build launcher; the Maven command above uses checkout project paths.
 
 The normal SDK package step validates the jar. Enable the result in the JVM Mod
-Manager, restart, and complete EHZ Act 2 to enter Tide Circuit. The two acts follow
+Manager, choose Apply, and complete EHZ Act 2 to enter Tide Circuit. The two acts follow
 one tagged destination `sample-tide-circuit:tide-circuit`; their `64`/`1024` export
 numbers can be reused by another mod and are never saved as global identity.
 

@@ -34,7 +34,8 @@ HCZ compares 3519 executed samples of 3574 rows (55 lag), with zero physics,
 animation, bootstrap and warnings. Chain HCZ segment9 is complete with zero
 errors and 55 lag; the giant-ring handoff succeeds and reaches segment11.
 That segment remains incomplete: 82067 errors (69393 physics/12674 animation),
-first non-camera physics row1510 primary Y native `07D6`/engine `07DF`, then
+first compared difference is row1507 mapping frame native `0063`/engine `0095`;
+first primary-Y difference is row1510 native `07D6`/engine `07DF`, then
 ownership loss in LEVEL at BK2 cursor68801, load generation9, zone1 act0.
 AIZ segment6 retains 189 errors, first row3319 sidekick X `31C1/31CA`;
 segment8 retains 13254 (13113 physics/141 animation), first row1583
@@ -50,6 +51,19 @@ all load/rewind products. Published baseline `a872` retains 28 inherited ordinar
 failures and 62 literal skips, with no ROM skips; 672 guards pass. It is not a
 wholly green baseline. The completed composition qualification above removes
 the FBZ→SOZ failure while retaining all other concrete failures and skip reasons.
+
+**Round 3 private candidate, 2026-10-08:** fan-only native corrections at
+`fa2ac5e67` restore one eight-pixel bubble move, water-owned retirement,
+`Level_frame_counter` cadence and allocation-before-RNG. Ninety focused fan,
+conveyor, graph-rewind and startup cases pass without skips. The normal
+five-case trace selection retains two assertion failures: the complete chain
+and the independently baseline-qualified returned-HCZ standalone. Returned
+chain segment11 still has 82067 errors, first mapping row1507, first Y row1510,
+and ownership loss at cursor68801. No conveyor or AIZ correction is inferred.
+Root composition `84f0c20f11`, based on published framework `d740b7a0`, passes
+275 focused cases with zero failures/errors/skips, including the unchanged
+exported API pin. Combined canonical qualification completes17/4/0/0, with the same S3K
+profiles. Ordinary and fresh-guard qualification remain pending. See the [round 3 lane evidence](../architecture/audits/2026-10-07-s3k-parity-gap-verification.md).
 
 Entries should include:
 - **Location** — the file(s) where the bug lives, if known
@@ -6358,12 +6372,12 @@ needs its own ROM check and focused test before changing.
   appear swapped (ROM frames 3,3,4,5).
   `objects/AizMinibossFlameChild` — explode frames drawn from the wrong sheet;
   `AizMinibossImpactFlameChild` — uses the explosion art instead of the flame art.
-- **Location:** `objects/badniks/EggRoboShotInstance.java:92`,
-  `objects/badniks/EggRoboBadnikInstance.java:291`, `objects/badniks/CluckoidBadnikInstance.java:172`,
-  `objects/AizFlippingBridgeObjectInstance.java:304` — `(vIntRunCount + 3) & mask`. The ROM
-  reads the *byte at* `V_int_run_count+3` (the counter's low byte, e.g. `btst #0,(V_int_run_count+3).w`),
-  so the `+ 3` shifts the phase by three frames (the Egg Robo body flicker at
-  `EggRoboBadnikInstance.java:243` reads it correctly).
+- **Location:** `objects/AizFlippingBridgeObjectInstance.java`, the `sfx_GlideLand` gate. Its
+  `+ 3` is genuine (`move.b (Level_frame_counter+1).w,d0 / addq.b #3,d0 / andi.b #7,d0`), but
+  the engine applies it to `V_int_run_count` instead of `Level_frame_counter`, so the sound's
+  8-frame phase depends on how far the two counters have drifted apart. The EggRobo, EggRobo
+  shot and Cluckoid gates listed here before were byte-address misreads of
+  `(V_int_run_count+3)` and were fixed on 2026-10-09.
 - **Location:** `objects/badniks/EggRoboBadnikInstance.java:145` — the fighter subtype never
   bobs: ROM `loc_918C4` falls through into `sub_918E2` (y_vel `$100`, `Swing_UpAndDown`
   max `$100`, accel 8), but the engine leaves the swing at 0 for `Mode.FIGHTER`, so its legs
@@ -6381,3 +6395,22 @@ needs its own ROM check and focused test before changing.
 - **Suspected cause:** transcription errors when porting the objects.
 - **Removal condition:** each item is checked against the disassembly, fixed with a focused
   test (or shown to be correct), and removed from this list.
+
+---
+
+## SSZ EggRobo Skips Obj_WaitOffscreen's Entry Passes (SUSPECTED)
+
+- **Location** — `objects/badniks/EggRoboBadnikInstance.updateMovement`.
+- **Symptom** — `Obj_EggRobo` opens with `jsr (Obj_WaitOffscreen).l`. Its first pass only
+  installs `loc_85AD2` and draws; the first on-screen pass restores the saved return address
+  and returns; only the pass after that reaches `sub_9185E`, whose init falls through
+  (`movea.l (a0),a1 / jmp (a1)`) into the selected routine. The engine runs the routine on
+  the object's first update, at least two passes early. Found on 2026-10-09 when
+  `TestS3kSszEggRobo`'s animal releaser let an animal go on its very first pass (that
+  fixture's count starts at 0), once `loc_915F6`'s `(V_int_run_count+3)` gate read the
+  counter's low byte.
+- **Suspected cause** — The class treats `Obj_WaitOffscreen` as a plain on-screen gate
+  instead of the two-pass entry the badniks that keep a `waitOffscreenReleased` latch model.
+- **Removal condition** — EggRobo models the entry passes for all three subtypes, with
+  rewind capture for the new state and a focused test of the first release, fly-by and
+  fighter pass.

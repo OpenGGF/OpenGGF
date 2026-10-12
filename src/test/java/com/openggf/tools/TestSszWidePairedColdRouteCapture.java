@@ -38,11 +38,12 @@ class TestSszWidePairedColdRouteCapture {
         var checked = new HashSet<Integer>();
         boolean seen = false;
         int health = 8, hits = 0;
+        var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 10, 0, settings);
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
                 session.step(movie.getFrame(frame));
-                session.render();
+                drawing.afterStep(session);
                 assertFalse(session.player().getDead(), "death at input " + frame);
                 assertInstanceOf(Sonic.class, session.player());
                 assertEquals(1, GameServices.sprites().getRegisteredSidekicks().size());
@@ -57,9 +58,10 @@ class TestSszWidePairedColdRouteCapture {
                 if (!spots.contains(frame)) continue;
                 checked.add(frame);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                drawing.checkpoint(session);
                 var saved = registry.capture();
                 for (int n = 1; n <= 45; n++) {
-                    session.step(movie.getFrame(frame + n)); session.render();
+                    session.step(movie.getFrame(frame + n)); drawing.draw(session);
                 }
                 var forward = registry.capture();
                 for (int cycle = 0; cycle < 2; cycle++) {
@@ -67,13 +69,14 @@ class TestSszWidePairedColdRouteCapture {
                     same(saved, registry.capture(), "restore at " + frame + " cycle " + cycle);
                     session.restoreInputHistory(movie.getFrame(frame));
                     for (int n = 1; n <= 45; n++) {
-                        session.step(movie.getFrame(frame + n)); session.render();
+                        session.step(movie.getFrame(frame + n)); drawing.draw(session);
                     }
                     same(forward, registry.capture(), "replay at " + frame + " cycle " + cycle);
                 }
                 registry.restore(saved);
                 session.restoreInputHistory(movie.getFrame(frame));
             }
+            drawing.checkpoint(session);
             assertEquals(spots, checked);
             assertTrue(seen);
             assertEquals(8, hits);

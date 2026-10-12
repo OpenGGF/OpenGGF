@@ -100,6 +100,24 @@ class TestCompleteRunAudioCli {
     }
 
     @Test
+    void orchestratorRejectsWrongFixedJavaBeforeCreatingOutput() throws Exception {
+        Path fakeJava = temp.resolve("java");
+        Files.writeString(fakeJava, "#!/bin/sh\nprintf '    java.specification.version = 21\\n' >&2\n");
+        Files.setPosixFilePermissions(fakeJava, PosixFilePermissions.fromString("rwx------"));
+        Path script = temp.resolve("orchestrator.sh");
+        Files.writeString(script, Files.readString(Path.of("tools/audio/run_complete_audio_parity.sh"))
+                .replace("readonly java_bin='/usr/bin/java'", "readonly java_bin='" + fakeJava + "'"));
+        ProcessBuilder builder = new ProcessBuilder("/usr/bin/bash", "-p", script.toString(), "--bad")
+                .redirectErrorStream(true);
+        builder.environment().clear();
+        Process process = builder.start();
+        String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        assertEquals(2, process.waitFor(), output);
+        assertTrue(output.contains("fixed /usr/bin/java must use Java 25 (found 21)"), output);
+        assertFalse(Files.exists(temp.resolve("target")));
+    }
+
+    @Test
     void closedDispatcherReservesEveryGameAndUnavailableProducerPublishesNothing() throws Exception {
         assertEquals(java.util.List.of("S1", "S2", "S3K"),
                 java.util.Arrays.stream(CompleteRunAudioProducerRegistry.Game.values()).map(Enum::name).toList());

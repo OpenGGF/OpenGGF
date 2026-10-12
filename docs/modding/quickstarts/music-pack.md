@@ -1,6 +1,6 @@
 # Quickstart: music pack
 
-Read [candidate setup and first build](../getting-started.md) first: Java 21, Maven, and matching absolute engine/SDK jars from one commit. Generate a complete starter with `ggfmod init /absolute/my-music --id my-music --kind music --package example.mymusic`. Build with the jar properties shown there, edit source, and repeat the same package command.
+Read [candidate setup and first build](../getting-started.md) first: Java 25, Maven, and matching absolute engine/SDK jars from one commit. Generate a complete starter with `ggfmod init /absolute/my-music --id my-music --kind music --package example.mymusic`. Build with the jar properties shown there, edit source, and repeat the same package command.
 
 Music packs are the smallest mod: no Java and no trust grant.
 
@@ -10,7 +10,7 @@ Music packs are the smallest mod: no Java and no trust grant.
    that directory's `audio-manifest.yaml`.
 4. Map stock music ids to local track ids in `audioOverrides`.
 5. Repeat the Maven package command and validate `target/my-music-mod.jar`.
-6. Copy that jar to `mods/`, enable it, Apply the pending state, and restart.
+6. Copy that jar to `mods/`, enable it, Apply the pending state at the title.
 
 The [music sample](../samples/phase4-gallery-music-pack/README.md) is an alternative
 checkout reference; follow its asset-generator instructions before manual packaging.

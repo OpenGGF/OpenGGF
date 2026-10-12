@@ -386,6 +386,8 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             setSpeedShoes(speedShoes.enabled());
         } else if (command instanceof SetSpeedMultiplier speed) {
             setSpeedMultiplier(speed.multiplier());
+        } else if (command instanceof AudioPresentationCommand.SetMusicTempoPercent) {
+            // Session-owned SMPS pacing is applied before presentation metadata.
         } else if (command instanceof ChangeMusicTempo tempo) {
             changeMusicTempo(tempo.dividingTiming());
         } else if (command instanceof ResetRingAlternation reset) {
@@ -502,6 +504,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             speedShoesEnabled = smpsSession.speedShoesEnabled();
             return true;
         }
+        if (command instanceof AudioPresentationCommand.SetMusicTempoPercent) return true;
         if (command instanceof ChangeMusicTempo) {
             return true;
         }

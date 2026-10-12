@@ -370,7 +370,9 @@ public class TailsTailsController {
 
         int originX = sprite.getRenderCentreX();
         int originY = sprite.getRenderCentreY();
-        renderer.drawFrame(mappingFrame, originX, originY, hFlip, vFlip);
+        com.openggf.sprites.playable.PlayableMutatorPresentation.draw(sprite,
+                com.openggf.graphics.SpritePresentation.Part.APPENDAGE,
+                () -> renderer.drawFrame(mappingFrame, originX, originY, hFlip, vFlip));
     }
 
     public RewindState captureRewindState() {

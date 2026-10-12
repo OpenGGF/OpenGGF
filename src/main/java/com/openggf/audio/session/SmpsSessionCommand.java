@@ -51,6 +51,12 @@ public sealed interface SmpsSessionCommand {
     record SetSpeedShoes(boolean enabled) implements SmpsSessionCommand {
     }
 
+    record SetMusicTempoPercent(int percent) implements SmpsSessionCommand {
+        public SetMusicTempoPercent {
+            com.openggf.audio.MusicTempoPercent.requireValid(percent);
+        }
+    }
+
     record ChangeMusicTempo(int dividingTiming) implements SmpsSessionCommand {
     }
 

@@ -91,6 +91,46 @@ public class TestGameLoop {
     private GameLoop gameLoop;
     private InputHandler mockInputHandler;
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"bonus", "ending"})
+    void deferredLoadAbortEscapesBonusAndEndingIoFallbacks(String route) throws Exception {
+        var boundary = new com.openggf.mods.code.ModFaultBoundary(Map.of(), new com.openggf.mods.ModRuntimeFindingStore(),
+                owners -> new com.openggf.mods.ModStateSaveResult.Saved(), owners -> {});
+        var failure = com.openggf.level.DecodedLevelTransformAssertions.deferredCallbackLoadFailure(
+                () -> boundary.run("owner", () -> { throw new IllegalStateException("deferred load"); }));
+        var levels = mock(com.openggf.level.LevelManager.class);
+        doThrow(failure).when(levels).loadZoneAndAct(anyInt(), anyInt());
+        setPrivateField(gameLoop, "levelManager", levels);
+
+        var escaped = assertThrows(java.lang.reflect.InvocationTargetException.class,
+                () -> invokeFailingLoadRoute(route));
+        assertSame(failure.getCause(), escaped.getCause(), "The IO fallback must preserve the original callback abort");
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"bonus", "ending"})
+    void ordinaryIoFailureKeepsBonusAndEndingFallbackBehavior(String route) throws Exception {
+        var levels = mock(com.openggf.level.LevelManager.class);
+        doThrow(new java.io.IOException("missing ROM")).when(levels).loadZoneAndAct(anyInt(), anyInt());
+        setPrivateField(gameLoop, "levelManager", levels);
+        GameMode before = gameLoop.getCurrentGameMode();
+
+        assertDoesNotThrow(() -> invokeFailingLoadRoute(route));
+        assertEquals(route.equals("bonus") ? GameMode.LEVEL : before, gameLoop.getCurrentGameMode());
+        if (route.equals("bonus")) assertNull(getPrivateField(gameLoop, "activeBonusStageProvider"));
+    }
+
+    private void invokeFailingLoadRoute(String route) throws Exception {
+        if (route.equals("bonus")) {
+            invokePrivateMethod(gameLoop, "doEnterBonusStage",
+                    new Class<?>[]{BonusStageProvider.class, BonusStageType.class, BonusStageState.class},
+                    mock(BonusStageProvider.class), BonusStageType.GUMBALL, null);
+        } else {
+            setPrivateField(gameLoop, "endingProvider", mock(EndingProvider.class));
+            invokePrivateMethod(gameLoop, "loadEndingDemoZone");
+        }
+    }
+
     @BeforeEach
     public void setUp() {
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());

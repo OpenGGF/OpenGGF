@@ -296,9 +296,10 @@ class TestAudioPresentationCommandQueue {
                 RestoreMusicOverride.class.getSimpleName(),
                 SetSpeedShoes.class.getSimpleName(),
                 SetSpeedMultiplier.class.getSimpleName(),
+                AudioPresentationCommand.SetMusicTempoPercent.class.getSimpleName(),
                 ChangeMusicTempo.class.getSimpleName(),
                 ResetRingAlternation.class.getSimpleName())));
-        assertEquals(20, AudioCommand.class.getPermittedSubclasses().length);
+        assertEquals(21, AudioCommand.class.getPermittedSubclasses().length);
     }
 
     @Test
@@ -313,6 +314,7 @@ class TestAudioPresentationCommandQueue {
                 ReferenceLimitation.class,
                 FadeMusic.class, SetVoiceGain.class, SetVoicePitch.class,
                 SetSpeedShoes.class, SetSpeedMultiplier.class, ChangeMusicTempo.class,
+                AudioPresentationCommand.SetMusicTempoPercent.class,
                 ResetRingAlternation.class, ToggleMute.class, ToggleSolo.class,
                 RewindBoundary.class, HardReset.class);
 

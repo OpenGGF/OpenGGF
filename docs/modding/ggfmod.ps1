@@ -4,5 +4,6 @@ param(
     [Parameter(ValueFromRemainingArguments=$true)][string[]]$CommandArgs
 )
 
-& java -cp "$EngineJar$([IO.Path]::PathSeparator)$SdkJar" com.openggf.tools.modsdk.GgfModCli @CommandArgs
+$javaExe = if ($env:JAVA_HOME) { Join-Path $env:JAVA_HOME "bin/java" } else { "java" }
+& $javaExe --enable-native-access=ALL-UNNAMED -cp "$EngineJar$([IO.Path]::PathSeparator)$SdkJar" com.openggf.tools.modsdk.GgfModCli @CommandArgs
 exit $LASTEXITCODE

@@ -322,7 +322,23 @@ public class Sonic1GameModule implements GameModule {
             return (T) (com.openggf.level.render.ZonePictureSource.Factory) rom ->
                     new com.openggf.level.render.DetachedLevelPictures(0, 0,
                             () -> new Sonic1(rom).buildDetachedLevel(
-                                    com.openggf.level.LevelData.S1_GREEN_HILL_1.levelIndex()), 512, 512);
+                                    com.openggf.level.LevelData.S1_GREEN_HILL_1.levelIndex()), 512, 512,
+                    (zone, act) -> {
+                        // Any act of the public zone registry, for SceneRomArt.levelKit.
+                        if (zone < 0 || zone >= zoneRegistry.getZoneCount()) return null;
+                        var acts = zoneRegistry.getLevelDataForZone(zone);
+                        if (act < 0 || act >= acts.size()) return null;
+                        int levelIndex = acts.get(act).levelIndex();
+                        return () -> new Sonic1(rom).buildDetachedLevel(levelIndex);
+                    }).withBackgrounds((zone, act, kit) -> {
+                        com.openggf.level.scroll.ZoneScrollHandler scroll = switch (zone) {
+                            case 2 -> new com.openggf.game.sonic1.scroll.SwScrlSyz();
+                            case 4 -> new com.openggf.game.sonic1.scroll.SwScrlSlz();
+                            default -> null;
+                        };
+                        return scroll == null ? null : new com.openggf.level.render.DetachedBackground(
+                                kit.backdrop().picture(), scroll, act, 512, 512);
+                    });
         }
         if (type == S1DataSelectImageCacheManager.class) return (T) getDataSelectImageCacheManager();
         if (type == Sonic1LevelEventManager.class) return (T) levelEventManager;

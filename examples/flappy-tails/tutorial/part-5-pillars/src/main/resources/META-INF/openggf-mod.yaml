@@ -1,0 +1,15 @@
+formatVersion: 1
+id: flappy-tails-part5
+name: Flappy Tails tutorial, part 5
+version: 0.5.0
+authors:
+  - OpenGGF contributors
+description: >-
+  Checkpoint 5 of the Flappy Tails tutorial: pillars cut from the level, a score and a best.
+engineApiRange: ">=0.7.0 <0.8.0"
+type: patch
+baseGame: s3k
+entrypoint: flappytails.FlappyTailsMod
+dependencies: []
+audioOverrides: {}
+artOverrides: {}

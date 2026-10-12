@@ -64,7 +64,7 @@ public interface SceneContext {
     /** Image decoding: PNGs from the mod's files and art from the player's ROM. */
     SceneArt art();
 
-    /** Music and sound effects (the base game's sound driver and IDs). */
+    /** Base-game driver music/SFX and this mod's declared audio-manifest SFX. */
     SceneAudio audio();
 
     /** Finite ROM music with an audible sample clock, independent of scene update cadence. */
@@ -78,6 +78,12 @@ public interface SceneContext {
 
     /** Small text files kept for this mod across sessions (saves, settings, high scores). */
     SceneStorage storage();
+
+    /** Suspends this visit and launches an owned, registered mod act at the next frame boundary.
+     * The same scene and context receive {@link ModScene#resume} when it exits. */
+    default void startAct(ActLaunch launch) {
+        throw new UnsupportedOperationException("Scene acts unavailable");
+    }
 
     /** Fades out and returns to the base game's own title screen. */
     void exitToGameTitle();

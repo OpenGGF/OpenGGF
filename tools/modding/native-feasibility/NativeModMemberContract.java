@@ -44,19 +44,36 @@ public final class NativeModMemberContract {
     private final Map<String, Info> infos = new HashMap<>();
     private final Set<String> retained = new TreeSet<>();
     private final Set<String> contract = new TreeSet<>();
+    private final Set<String> jdkPackages = new TreeSet<>();
+    private boolean auditJdkStaticFields;
+    private boolean auditJdkMethods;
 
     public static void main(String[] args) throws Exception {
-        if (args.length != 3 && args.length != 4) {
-            throw new IllegalArgumentException("Expected: <engine.jar> <mods-directory> <output-directory> [--references-only]");
+        if (args.length < 3) {
+            throw new IllegalArgumentException("Expected: <engine.jar> <mods-directory> <output-directory> [--references-only] [--implementation-root=engine.Type] [--jdk-static-fields | --jdk-members]");
         }
-        boolean referencesOnly = args.length == 4 && args[3].equals("--references-only");
-        if (args.length == 4 && !referencesOnly) {
-            throw new IllegalArgumentException("Unknown mode: " + args[3]);
+        boolean referencesOnly = false;
+        var implementationRoots = new ArrayList<String>();
+        boolean jdkStaticFields = false;
+        boolean jdkMembers = false;
+        for (int i = 3; i < args.length; i++) {
+            if (args[i].equals("--references-only")) referencesOnly = true;
+            else if (args[i].equals("--jdk-static-fields")) jdkStaticFields = true;
+            else if (args[i].equals("--jdk-members")) jdkMembers = true;
+            else if (args[i].startsWith("--implementation-root=")) {
+                String root = args[i].substring("--implementation-root=".length()).replace('.', '/');
+                if (!engine(root)) throw new IllegalArgumentException("Expected an engine implementation root");
+                implementationRoots.add(root);
+            } else throw new IllegalArgumentException("Unknown mode: " + args[i]);
         }
-        new NativeModMemberContract().generate(Path.of(args[0]), Path.of(args[1]), Path.of(args[2]), referencesOnly);
+        var generator = new NativeModMemberContract();
+        generator.auditJdkStaticFields = jdkStaticFields || jdkMembers;
+        generator.auditJdkMethods = jdkMembers;
+        generator.generate(Path.of(args[0]), Path.of(args[1]), Path.of(args[2]), referencesOnly, implementationRoots);
     }
 
-    private void generate(Path engine, Path mods, Path output, boolean referencesOnly) throws Exception {
+    private void generate(Path engine, Path mods, Path output, boolean referencesOnly,
+                          List<String> implementationRoots) throws Exception {
         try (var jar = new JarFile(engine.toFile())) {
             for (var entry : jar.stream().filter(e -> e.getName().startsWith("com/openggf/")
                     && e.getName().endsWith(".class")).toList()) {
@@ -72,6 +89,14 @@ public final class NativeModMemberContract {
                 retain(api.getName().replace('.', '/'));
                 apiTypes++;
             }
+        }
+        // Known engine reflection seams can inspect an implementation rather
+        // than its annotated interface. Include even anonymous, unreferenced
+        // implementations and their method-owning ancestors in the same audit.
+        for (String root : implementationRoots) {
+            info(root); // Fail explicitly when a requested root is absent.
+            for (String name : new TreeSet<>(bytes.keySet()))
+                if (subtype(name, root)) retain(name);
         }
         List<Path> jars;
         try (var paths = Files.list(mods)) {
@@ -102,12 +127,72 @@ public final class NativeModMemberContract {
             }
         }
         Files.write(output.resolve("members.tsv"), contract, StandardCharsets.UTF_8);
+        Files.write(output.resolve("jdk-preserve-packages.txt"), jdkPackages, StandardCharsets.UTF_8);
         System.out.println("PASS generated contract: api-types=" + apiTypes + "; retained-types="
                 + retained.size() + "; member-entries=" + contract.size() + "; mod-jars=" + jars.size());
     }
 
     private static boolean engine(String name) {
         return name != null && name.startsWith("com/openggf/");
+    }
+
+    private void jdkStaticField(String owner, String name, String descriptor) {
+        if (!auditJdkStaticFields || !(owner.startsWith("java/") || owner.startsWith("javax/"))) return;
+        try {
+            // Resolve inherited symbolic owners without initializing the JDK class.
+            var field = Class.forName(owner.replace('/', '.'), false, getClass().getClassLoader()).getField(name);
+            if (!java.lang.reflect.Modifier.isStatic(field.getModifiers())
+                    || !Type.getDescriptor(field.getType()).equals(descriptor)) {
+                throw new NoSuchFieldException("Static field descriptor mismatch");
+            }
+            Class<?> declaring = field.getDeclaringClass();
+            contract.add("C\t" + declaring.getName());
+            contract.add("F\t" + declaring.getName() + "\t" + name + "\t" + descriptor);
+            jdkPackages.add(declaring.getPackageName());
+        } catch (ReflectiveOperationException failure) {
+            throw new IllegalStateException("MISSING input JDK static field: " + owner + "." + name + descriptor, failure);
+        }
+    }
+
+    private void jdkMethod(String owner, String name, String descriptor) {
+        if (!auditJdkMethods || !(owner.startsWith("java/") || owner.startsWith("javax/"))) return;
+        try {
+            Class<?> type = Class.forName(owner.replace('/', '.'), false, getClass().getClassLoader());
+            Class<?> declaring;
+            if (name.equals("<init>")) {
+                declaring = java.util.Arrays.stream(type.getDeclaredConstructors())
+                        .anyMatch(ctor -> Type.getConstructorDescriptor(ctor).equals(descriptor)) ? type : null;
+            } else {
+                declaring = declaringJdkMethod(type, name, descriptor, new HashSet<>());
+            }
+            if (declaring == null) throw new NoSuchMethodException(name + descriptor);
+            contract.add("C\t" + declaring.getName());
+            contract.add("M\t" + declaring.getName() + "\t" + name + "\t" + descriptor);
+            jdkPackages.add(declaring.getPackageName());
+        } catch (ReflectiveOperationException failure) {
+            throw new IllegalStateException("MISSING input JDK method: " + owner + "." + name + descriptor, failure);
+        }
+    }
+
+    private Class<?> declaringJdkMethod(Class<?> type, String name, String descriptor, Set<Class<?>> seen) {
+        if (type == null || !seen.add(type)) return null;
+        for (var method : type.getDeclaredMethods())
+            if (method.getName().equals(name) && Type.getMethodDescriptor(method).equals(descriptor)) return type;
+        Class<?> parent = declaringJdkMethod(type.getSuperclass(), name, descriptor, seen);
+        if (parent != null) return parent;
+        for (Class<?> iface : type.getInterfaces()) {
+            parent = declaringJdkMethod(iface, name, descriptor, seen);
+            if (parent != null) return parent;
+        }
+        return null;
+    }
+
+    private boolean subtype(String name, String root) {
+        if (root.equals(name)) return true;
+        if (!engine(name)) return false;
+        Info type = info(name);
+        return subtype(type.parent(), root)
+                || type.interfaces().stream().anyMatch(parent -> subtype(parent, root));
     }
 
     private Info info(String name) {
@@ -195,7 +280,10 @@ public final class NativeModMemberContract {
 
     private void reference(String owner, String name, String desc, boolean field) {
         descriptor(desc);
-        if (!engine(owner)) return;
+        if (!engine(owner)) {
+            if (!field) jdkMethod(owner, name, desc);
+            return;
+        }
         retain(owner);
         String declared = declaring(owner, name, desc, field, new HashSet<>());
         if (declared == null) {
@@ -238,6 +326,8 @@ public final class NativeModMemberContract {
     private void constant(Object value) {
         if (value instanceof Type type) type(type);
         if (value instanceof Handle handle) {
+            if (handle.getTag() == Opcodes.H_GETSTATIC || handle.getTag() == Opcodes.H_PUTSTATIC)
+                jdkStaticField(handle.getOwner(), handle.getName(), handle.getDesc());
             reference(handle.getOwner(), handle.getName(), handle.getDesc(), handle.getTag() <= Opcodes.H_PUTSTATIC);
         }
         if (value instanceof ConstantDynamic dynamic) {
@@ -254,6 +344,7 @@ public final class NativeModMemberContract {
             @Override public void visitEnum(String name, String descriptor, String value) {
                 descriptor(descriptor);
                 Type enumType = Type.getType(descriptor);
+                jdkStaticField(enumType.getInternalName(), value, descriptor);
                 reference(enumType.getInternalName(), value, descriptor, true);
             }
             @Override public AnnotationVisitor visitAnnotation(String name, String descriptor) { return annotation(descriptor); }
@@ -297,7 +388,10 @@ public final class NativeModMemberContract {
                     @Override public void visitTypeInsn(int opcode, String type) {
                         if (type.startsWith("[")) descriptor(type); else retain(type);
                     }
-                    @Override public void visitFieldInsn(int opcode, String owner, String name, String desc) { reference(owner, name, desc, true); }
+                    @Override public void visitFieldInsn(int opcode, String owner, String name, String desc) {
+                        if (opcode == Opcodes.GETSTATIC || opcode == Opcodes.PUTSTATIC) jdkStaticField(owner, name, desc);
+                        reference(owner, name, desc, true);
+                    }
                     @Override public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) { reference(owner, name, desc, false); }
                     @Override public void visitInvokeDynamicInsn(String name, String desc, Handle bootstrap, Object... arguments) {
                         descriptor(desc);

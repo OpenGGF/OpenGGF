@@ -1,0 +1,15 @@
+formatVersion: 1
+id: flappy-tails-part2
+name: Flappy Tails tutorial, part 2
+version: 0.2.0
+authors:
+  - OpenGGF contributors
+description: >-
+  Checkpoint 2 of the Flappy Tails tutorial: a scene of your own over Angel Island's parallax.
+engineApiRange: ">=0.7.0 <0.8.0"
+type: patch
+baseGame: s3k
+entrypoint: flappytails.FlappyTailsMod
+dependencies: []
+audioOverrides: {}
+artOverrides: {}

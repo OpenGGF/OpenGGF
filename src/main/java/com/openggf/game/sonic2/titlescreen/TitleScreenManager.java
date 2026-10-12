@@ -828,10 +828,12 @@ public class TitleScreenManager implements TitleScreenProvider {
                 // Obj0E_FlashingStar_Move advances the byte offset then reads Positions-4.
                 // All nine table entries are visited before the next Move deletes the object.
                 if (flashingStarPosIndex >= FLASHING_STAR_POSITIONS.length) {
-                    // All positions visited, delete star
+                    // All positions visited: Obj0E_FlashingStar_Move branches to a
+                    // plain DeleteObject (s2.asm:26748-26750). The ROM does not stop
+                    // sound here; the last SndID_Sparkle reaches its own smpsStop,
+                    // which clears the $70 SFX priority latch. Cutting it early left
+                    // the latch set and silenced the $6F title-menu SndID_Blip.
                     flashingStarSprite.active = false;
-                    // Force-stop any lingering SFX (sparkle FM channel may not self-terminate)
-                    GameServices.audio().stopAllSfx();
                 } else {
                     flashingStarSprite.x = FLASHING_STAR_POSITIONS[flashingStarPosIndex][0];
                     flashingStarSprite.y = FLASHING_STAR_POSITIONS[flashingStarPosIndex][1];
@@ -931,10 +933,10 @@ public class TitleScreenManager implements TitleScreenProvider {
         tailsHandSprite.y = 128 + 81;
         tailsHandPosIndex = TAILS_HAND_POSITIONS.length - 1;
 
-        // Flashing star is deleted
+        // Flashing star is deleted. TitleScreen_SetFinalState stops no sound
+        // (s2.asm:27068-27162), so a playing sparkle finishes and clears its
+        // own SFX priority latch exactly as on the intro's normal path.
         flashingStarSprite.active = false;
-        // Force-stop any lingering SFX (sparkle FM channel may not self-terminate)
-        GameServices.audio().stopAllSfx();
 
         // Load Sonic palette
         sonicPaletteLoaded = true;

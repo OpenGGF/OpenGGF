@@ -69,7 +69,7 @@ Work promoted from `next` is recorded in [CHANGELOG.0.7.md](CHANGELOG.0.7.md).
 
 ## Release files
 
-- [0.7 prerelease / current development snapshot](CHANGELOG.0.7.md) — including the controller-accessible title hub, engine settings, and shared UI improvements.
+- [0.7 prerelease / current development snapshot](CHANGELOG.0.7.md) — including the controller-accessible title hub, bundled Time Attack mod, engine settings, shared UI improvements, and the scoped Mutator Lab prototype.
 
 - [0.6.20260911](CHANGELOG.0.6.md)
 - [0.5.20260411](CHANGELOG.0.5.md)

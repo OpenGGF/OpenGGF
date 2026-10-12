@@ -47,7 +47,7 @@ Start with:
 
 Minimum requirements:
 
-- JDK 21 or later.
+- JDK 25 (Maven builds require this major version).
 - Maven 3.8 or later.
 - OpenGL 4.1+ for running the engine window.
 - Optional local ROM files for ROM-dependent tests and gameplay.

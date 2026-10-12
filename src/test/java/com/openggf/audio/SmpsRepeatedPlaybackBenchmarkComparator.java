@@ -237,8 +237,10 @@ public final class SmpsRepeatedPlaybackBenchmarkComparator {
         require(SHA_256.matcher(value(
                         run.header(), "manifestSha256")).matches(),
                 label + " manifest SHA-256 header is invalid");
-        require(value(run.header(), "java").startsWith("21."),
-                label + " did not run on JDK 21");
+        // Keep archived Java 21 pairs readable; environment equality below rejects
+        // comparisons across JDK versions, including 21 versus the current 25 baseline.
+        require(value(run.header(), "java").matches("(?:21|25)(?:[.+-].*)?"),
+                label + " did not run on supported measurement JDK 21 or 25");
         require("true".equals(value(
                         run.header(), "allocationSupported")),
                 label + " allocation accounting unsupported");

@@ -184,6 +184,33 @@ class TestSceneBackdropS3k {
     }
 
     @Test
+    void levelKitsCoverEveryStockZoneFromTheRomAlone() throws Exception {
+        Rom rom = TestEnvironment.currentRom();
+        try (var executor = Executors.newSingleThreadExecutor()) {
+            executor.submit(() -> {
+                try (var services = Mockito.mockStatic(GameServices.class, invocation -> {
+                    throw new AssertionError("Level kit resolved GameServices." + invocation.getMethod().getName());
+                }); var sessions = Mockito.mockStatic(SessionManager.class, invocation -> {
+                    throw new AssertionError("Level kit resolved SessionManager." + invocation.getMethod().getName());
+                })) {
+                    SceneRomArt art = SceneRomArtFactory.create(rom, GameId.S3K, () -> null, () -> null,
+                            new Sonic3kZoneArt(rom));
+                    // Pictured acts (AIZ1) and plain ones (Marble Garden, IceCap, Lava Reef, Hidden Palace).
+                    int[][] acts = {{0, 0}, {2, 0}, {5, 0}, {9, 1}, {22, 1}};
+                    for (int[] act : acts) {
+                        com.openggf.level.render.TestDetachedStockScenePictures.checkKit(art, act[0], act[1]);
+                    }
+                    assertEquals(25, art.levelKit(0, 0).backdrop().bands().size(),
+                            "pictured acts keep their zone backdrop's bands");
+                    assertNull(art.levelKit(13, 0), "the intro/ending zone has no kit");
+                    assertNull(art.levelKit(0, 2), "no act 3");
+                    return null;
+                }
+            }).get(300, TimeUnit.SECONDS);
+        }
+    }
+
+    @Test
     void unsupportedZonesAndGamesHaveNoBackdrop() throws Exception {
         Rom rom = TestEnvironment.currentRom();
         SceneRomArt art = SceneRomArtFactory.create(rom, GameId.S3K, () -> null, () -> null,

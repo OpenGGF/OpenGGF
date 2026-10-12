@@ -6,7 +6,7 @@ This page gets you from a fresh clone to running tests.
 
 | Requirement | Version | Notes |
 |-------------|---------|-------|
-| Java (JDK) | 21 or later | [Adoptium](https://adoptium.net/) recommended. Run `java -version` to check. |
+| Java (JDK) | 25 | [Adoptium](https://adoptium.net/) recommended. Run `java -version` to check. |
 | Maven | 3.8+ | Bundled with most IDEs. Run `mvn -version` to check. |
 | GPU | OpenGL 4.1+ | Required for the rendering pipeline. Not needed for headless tests. |
 | ROM files | See below | Required for ROM-dependent tests and running the engine. |
@@ -157,17 +157,17 @@ For a deeper look at the source layout, see [Architecture](architecture.md).
 The engine supports ahead-of-time compilation via GraalVM native image. This produces
 a standalone binary that starts faster and does not require a JVM installation.
 
-To build a native image, you need GraalVM 21 with the `native-image` tool installed
+To build a native image, you need GraalVM 25 with the `native-image` tool installed
 and selected as Maven's JDK. The build is configured in `pom.xml` under the `native`
 profile:
 
 ```bash
-export JAVA_HOME=/path/to/graalvm-21
+export JAVA_HOME=/path/to/graalvm-25
 export PATH="$JAVA_HOME/bin:$PATH"
 mvn -Dmse=off -Pnative -DskipTests package -B
 ```
 
-On macOS this produces `target/OpenGGF.app` as well as the direct
+On macOS Apple Silicon this produces `target/OpenGGF.app` as well as the direct
 `target/OpenGGF` executable. Put `config.yaml` and the user-supplied ROM files
 beside the app before launching it. Native image metadata is maintained in
 `src/main/resources/META-INF/native-image/`.

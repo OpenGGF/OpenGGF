@@ -112063,3 +112063,85 @@ inventories, source references, focused results and rejected prototypes are in
 This canonical trace profile is separate from the pending ordinary/guard
 qualification against publisheda872 and actual-main delivery. It certifies no
 full campaign, route-product breadth, pixel or audio parity.
+
+
+## 2026-10-08 — Stock parity swarm round 3, native fixes and remaining frontiers
+
+The three isolated Sol lanes start at `098053c4a01c`; their final commits are
+S1 `1f7e16cab7d0`, S2 `1604e7f7e790`, S3K `fa2ac5e67b91`.
+Their ancestry is retained in root's private composition `84f0c20f11c6`, based
+on actual published framework `d740b7a0fadd`. Final normal-profile lane jobs
+76328/64247/33300 complete respectively4/1/0/0,8/1/0/0,5/2/0/0
+(tests/failures/errors/skips). Exact individual recipes are in the linked
+lane audits. These are inherited or attributed trace assertions, not green
+complete-run claims.
+
+| Game | Closed or corrected behavior | Remaining measured frontier |
+| --- | --- | --- |
+| S1 | Native death floor/radius reset closes MZ1 segment7:3391 rows, zero physics/animation/bootstrap/warnings; standalone MZ1 and both prefixes pass. | MZ2_3 segment12 retains three errors, first101 `queue.s1_nemesis_plc.prepared`; later completed-segment/art-gap failures remain. Segment33 is incomplete3203 (2624physics/579animation), first356 `dynamic_art.edges`; ownership loss TITLE_CARD/cursor210396. Matched old/candidate probes attribute the +9physics/+2animation/cursor+1 to corrected corpse position in an already divergent premature-death route. |
+| S2 | Native exact-seven/Tails-gated leave/return/wait/draw sequence closes the SS7 results walk; every compared segment0–17 remains zero; seven standalone/prefix controls pass. | Newly reached ARZ1 segment18 completes119 (102physics-group including art/17animation), first4213 `dynamic_art.edge[2].mapping_frame`61/65. ARZ2 segment19 is incomplete47450 (45453physics/1997animation), first2175 `x_sub`8800/5800; TITLE_CARD/cursor110617. Twelve gap-clock axes remain; earliest10308/10268, SS7-return101663/101626. Full chain14axes, not green. |
+| S3K | Fan bubbles move once, retire at water, read the gameplay clock and reserve a slot before RNG; focus90/0/0/0 with graph/conveyor/startup controls. Initial standalone HCZ and both prefixes pass; chainHCZ9 complete0/55lag. | Returned HCZ11 unchanged/incomplete82067 (69393physics/12674animation), first mapping1507 `0063/0095`, first primaryY1510 `07D6/07DF`; LEVEL/cursor68801. Returned standalone retains3454 (2936physics/518animation), first0 `y_speed`0000/000E, independently reproduced on old production55655. AIZ6/8 retain189/13254; first sidekickX3319/1583. No conveyor causation or whole-act closure established. |
+
+Root's original S1 native recapture retains the manifest and all decompressed
+physics/auxiliary observations byte for byte. Added native timing streams close
+MZ2_3 and MZ3_2 locally, but normal four-case replay25381 fails later matching
+and closure: native SLZ1 row4570 `NEMESIS_PLC_QUEUE#170` has no prepared engine
+job; terminal mode LEVEL differs from TITLE_SCREEN. The complete timing
+fixture is withheld and the original committed package restored. Its accepted
+native capture remains external; no edge is dropped, renumbered or fitted.
+Strict gzip transport independently passes112 focused cases, preserving the
+timing authority contract and rejecting damaged/truncated compressed input.
+
+Root composed focus4920 ends13:04:13Z at `84f0c20f11c6`:31 fresh XML
+suites/275 cases, zero failures/errors/skips, exact API reflection and all
+mandatory S3K startup controls. Root submits the union below as71369 from
+`.worktrees/ai-parity-swarm-20261008-r3-integration`; it finishes13:34:11Z,
+Maven exit1/2:34 execution, 1589seconds queue waiting excluded:15 fresh suites,
+17 cases/four assertion failures/zero errors or skips. All thirteen controls
+pass. Every tabled frontier/count and first mismatch field/value agrees with
+the qualified worker lanes; failures are the three full chains and inherited
+returned-HCZ standalone. Original verified ROMs, Java21, normal trace profile
+and alphabetical order are used. This is composed trace qualification with
+explicit inherited/attributed failures, not a green campaign.
+
+```sh
+OPENGGF_ROM_ROOT=/absolute/path/to/OpenGGF
+DISPLAY=:0 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.runOrder=alphabetical \
+  '-Dtest=TestS1CompleteEmeraldRunChain,TestS1Mz1CompleteRunTraceReplay,TestS1CompleteEmeraldRunPrefix,TestS2CompleteEmeraldRunChain,TestS2CompleteEmeraldRunPrefix,TestS2SpecialStage2TraceReplay,TestS2SpecialStage5TraceReplay,TestS2SpecialStage6TraceReplay,TestS2SpecialStage7TraceReplay,TestS2Ehz1Seg2CompleteEmeraldsSegmentTraceReplay,TestS2Cpz1Seg8CompleteEmeraldsSegmentTraceReplay,TestS3kSonicTailsCompleteEmeraldRunChain,TestS3kSonicTailsHczSegmentTraceReplay,TestS3kSonicTailsHcz2SegmentTraceReplay,TestS3kSonicTailsCompleteEmeraldRunPrefix' \
+  "-Dsonic1.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${OPENGGF_ROM_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test
+```
+
+Actual updated-base plan/preflight passes, selecting all3058 ordinary classes
+and fresh guards. Combined candidate, mandatory actual-main, push and cleanup
+remain pending. The [continued stock audit](../architecture/audits/2026-10-07-stock-parity-gap-verification.md#round-3-composed-candidate-against-the-published-framework)
+retains source owners, rejected setups, matched attribution and updated-base
+provenance. Next causal targets are S1 PLC prepared-state, S2 newly reached
+ARZ1/return-clock and S3K returned HCZ mapping before Y. Separately owned AIZ
+paths and all foreign jobs remain untouched; no full act/route-product,
+pixel or audio certificate is inferred.
+
+
+Read-only resumption while ordinary qualification runs refines the same targets
+without new code or test jobs. S1 row101 is an untimed held-tail preparation
+limit: native `FixBugs=0` publishes the count before table construction, so a
+held counter cannot locate the arm. S2 ARZ1 row4213 maps to Super reversion's
+missing `prev_anim=Run` sentinel and later engine dispatch; a same-tick real
+Roll/Run discriminator is still required before calling it a fix. S3K mapping
+1507 and Y1510 correspond to different thresholds of conveyor pose phase:
+engine marker0/phase0 versus the native fan marker1 and advancing phase.
+Unconditional fan lifecycle/marker and belt-entry observations remain needed
+to identify the missing writer or overwrite; active-only logging and a fitted
+timer increment remain rejected. Exact source/ROM owners and limits are in
+[the continued audit](../architecture/audits/2026-10-07-stock-parity-gap-verification.md#read-only-next-frontier-resumption).
+
+A separate private composition at `2683eb992` preserves integrated Sitar source
+and passes50 fresh XML suites/476 cases, zero failures/errors/skips at15:05:37Z
+(session61683). Qualified Sandopolis input6124 merges conflict-free afterwards;
+stock/trace source and the15-selector domain inputs remain unchanged, so the
+completed17-case result above is retained without a duplicate trace run. The
+updated ordinary plan selects all3060 classes plus fresh guards. Main6124
+is frozen in its owner's admitted replacement9377cfcd/session75501; root's
+original1f3/ec467d13/session57481 remains unchanged. Neither pending broad
+result, actual-main parity integration, push nor cleanup is claimed complete.

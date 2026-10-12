@@ -1,6 +1,6 @@
 # Quickstart: data-only reskin
 
-Read [candidate setup and first build](../getting-started.md) first: Java 21, Maven, and matching absolute engine/SDK jars from one commit. Generate a complete starter with `ggfmod init /absolute/my-reskin --id my-reskin --kind reskin --package example.myreskin`. Build with the jar properties shown there, edit source, and repeat the same package command.
+Read [candidate setup and first build](../getting-started.md) first: Java 25, Maven, and matching absolute engine/SDK jars from one commit. Generate a complete starter with `ggfmod init /absolute/my-reskin --id my-reskin --kind reskin --package example.myreskin`. Build with the jar properties shown there, edit source, and repeat the same package command.
 
 An art reskin needs no Java or trust prompt.
 
@@ -10,7 +10,7 @@ An art reskin needs no Java or trust prompt.
 3. Repeat the Maven package command; it converts the sheet to `art/sample.ggfs`.
 4. Keep an exact key from `ggfmod art-keys --game s2` mapped to that baked path in
    `artOverrides`.
-5. Validate `target/my-reskin-mod.jar`, then enable, Apply and restart.
+5. Validate `target/my-reskin-mod.jar`, then enable and Apply at the title.
 
 The [`sample-reskin-src` manifest](../../../src/test/resources/mods/sample-reskin-src/META-INF/openggf-mod.yaml)
 is a reference, not another project to copy over the generated starter. For manual

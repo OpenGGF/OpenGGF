@@ -1475,6 +1475,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void resetForGameplayFromMasterTitle() {
+		gameLoop.retireModScene();
 		var worldSession = SessionManager.getCurrentWorldSession();
 		if (worldSession != null) {
 			worldSession.getGameModule().resetModuleScopedState();
@@ -1684,34 +1685,57 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				ModSubsystem.SessionAudioBoundary.audioManager(audioManager),
 				com.openggf.mods.BundledModSource.Locator.production()),
 				compiledModsSupported);
-		modRuntime = replaceModRuntime(modRuntime, ModRuntime.empty());
-		ModSubsystem.current().installRewindClassResolver(
-				com.openggf.level.objects.RewindClassResolver.ENGINE_ONLY);
 		try {
 			var effectiveMods = ModSubsystem.current().processCatalog().effective();
 			ModSubsystem.current().transferDevelopmentSourceOwnership();
-			modRuntime = replaceModRuntime(modRuntime,
-					new ModClassLoaderFactory(Engine.class.getClassLoader())
-							.create(effectiveMods, ModSubsystem.current().trustedCodeOwners(),
-									compiledModsSupported));
-			modRuntime.installFaultBoundary(ModSubsystem.current().createFaultBoundary(modRuntime));
-			modRuntime.installSaveFindingSink((owner, finding) ->
-					ModSubsystem.current().runtimeFindings().upsertOwnerFinding(owner,
-							new com.openggf.mods.ModFinding(
-									com.openggf.mods.ModFindingSeverity.WARNING,
-									finding.code(), finding.detail(), null)));
-			ModSubsystem.current().installRewindClassResolver(
-					new ModClassResolver(modRuntime, Engine.class.getClassLoader()));
-			moduleResolutionService.installModPlanSource(
-					new EffectiveCatalogPatchEnablement(effectiveMods), enablement -> {
-						var plan = modRuntime.newRegistrationPlan();
-						ModSubsystem.current().recordRegistrationFailures(
-								modRuntime.registrationFailures());
-						return plan;
-					});
+			installModRuntime(ModSubsystem.current(), new ModClassLoaderFactory(Engine.class.getClassLoader())
+					.create(effectiveMods, ModSubsystem.current().trustedCodeOwners(), compiledModsSupported));
 		} catch (IOException error) {
 			LOGGER.log(java.util.logging.Level.WARNING, "Compiled-mod runtime initialization failed", error);
 		}
+	}
+
+	/** Rebuilds the catalog and code owners while the title owns no gameplay session. */
+	private void reloadExternalContentAtTitle() {
+		ModSubsystem candidate = ModSubsystem.normalBootLoader(
+				() -> Path.of("mods").toAbsolutePath().normalize(),
+				ModInputLimits.production(), StockMusicDomains::containsSupported,
+				ModSubsystem.SessionAudioBoundary.audioManager(audioManager)).get();
+		candidate.setCompiledModsSupported(compiledModsSupported);
+		ModRuntime replacement;
+		try {
+			replacement = new ModClassLoaderFactory(Engine.class.getClassLoader())
+					.create(candidate.processCatalog().effective(), candidate.trustedCodeOwners(),
+							compiledModsSupported);
+		} catch (IOException | RuntimeException failure) {
+			candidate.close();
+			throw new IllegalStateException("Unable to prepare mods", failure);
+		}
+		ModSubsystem.installProcess(candidate);
+		installModRuntime(candidate, replacement);
+		MasterTitleScreen previous = masterTitleScreen;
+		MasterTitleScreen refreshed = createMasterTitleScreen();
+		refreshed.initialize();
+		masterTitleScreen = refreshed;
+		if (previous != null) previous.cleanup();
+	}
+
+	private void installModRuntime(ModSubsystem subsystem, ModRuntime replacement) {
+		modRuntime = replaceModRuntime(modRuntime, replacement);
+		replacement.installFaultBoundary(subsystem.createFaultBoundary(replacement));
+		replacement.installSaveFindingSink((owner, finding) ->
+				subsystem.runtimeFindings().upsertOwnerFinding(owner,
+						new com.openggf.mods.ModFinding(com.openggf.mods.ModFindingSeverity.WARNING,
+								finding.code(), finding.detail(), null)));
+		subsystem.installRewindClassResolver(
+				new ModClassResolver(replacement, Engine.class.getClassLoader()));
+		var effectiveMods = subsystem.processCatalog().effective();
+		moduleResolutionService.installModPlanSource(
+				new EffectiveCatalogPatchEnablement(effectiveMods), enablement -> {
+					var plan = replacement.newRegistrationPlan();
+					subsystem.recordRegistrationFailures(replacement.registrationFailures());
+					return plan;
+				});
 	}
 
 	static ExternalContentMode externalContentBootMode(boolean testMode){
@@ -1732,15 +1756,44 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 						configService, moduleResolutionService, preparedLaunch),
 				masterTitleEntries(),
 				cue -> audioManager.playSfx(cue.sfxName()));
+		screen.setEnabledModsByGame(enabledTitleModsByGame());
 		com.openggf.game.MasterTitleCatalog.bind(screen, this::masterTitleEntries);
 		if (ModSubsystem.current().policy().mayScanAtBoot()) {
 			screen.setModManagerScreenFactory(font -> ModSubsystem.current().createManager(font));
+			screen.setModManagerApplyHandler(this::reloadExternalContentAtTitle);
 			List<com.openggf.mods.code.OwnedTitleEntry> titleEntries = modRuntime.titleEntries();
 			screen.setTitleEntries(titleEntries.stream().map(com.openggf.mods.code.OwnedTitleEntry::label).toList(),
 					(games, index) -> gameLoop.requestTitleEntryOpen(
 							() -> openTitleEntryScene(titleEntries.get(index), games)));
 		}
 		return screen;
+	}
+
+	private Map<MasterTitleScreen.GameEntry, List<String>> enabledTitleModsByGame() {
+		Map<MasterTitleScreen.GameEntry, List<String>> names =
+				new java.util.EnumMap<>(MasterTitleScreen.GameEntry.class);
+		var subsystem = ModSubsystem.current();
+		var trusted = subsystem.trustedCodeOwners();
+		var rejected = modRuntime == null ? java.util.Set.<String>of()
+				: modRuntime.rejectedOwners().keySet();
+		var failed = modRuntime == null ? java.util.Set.<String>of()
+				: modRuntime.registrationFailures().keySet();
+		var disabled = modRuntime == null ? java.util.Set.<String>of()
+				: modRuntime.runtimeDisabledOwners();
+		for (MasterTitleScreen.GameEntry game : MasterTitleScreen.GameEntry.values()) {
+			List<String> gameNames = new ArrayList<>();
+			for (var descriptor : subsystem.processCatalog().effective().orderedEnabled()) {
+				var manifest = descriptor.manifest();
+				if (manifest.type() != com.openggf.mods.ModType.PATCH
+						|| !(game.gameId.equals(manifest.baseGame()) || "any".equals(manifest.baseGame()))
+						|| descriptor.containsCode() && (!compiledModsSupported || !trusted.contains(manifest.id()))
+						|| rejected.contains(manifest.id()) || failed.contains(manifest.id())
+						|| disabled.contains(manifest.id())) continue;
+				gameNames.add(manifest.name());
+			}
+			names.put(game, List.copyOf(gameNames));
+		}
+		return names;
 	}
 
 	private void ensureMasterTitleAudioBackend() {
@@ -2877,7 +2930,9 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		try {
 			frame.run();
 			return true;
-		} catch (ModFaultBoundary.CallbackAborted aborted) {
+		} catch (RuntimeException frameFailure) {
+			var aborted = ModFaultBoundary.callbackAbortFromLoadFailure(frameFailure);
+			if (aborted == null) throw frameFailure;
 			Throwable fatalCleanup = null;
 			try {
 				discardFailedFrame.run();
@@ -3856,6 +3911,12 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			graphicsManager.flushScreenSpace();
 		}
 		drawActiveLevelTitleCardOverlay();
+		var overlay = GameLoopPauseInput.overlay(GameMode.LEVEL);
+		if (overlay != null) {
+			graphicsManager.flush();
+			overlay.drawOverlay();
+			graphicsManager.flushScreenSpace();
+		}
 	}
 
 	private void drawActiveLevelTitleCardOverlay() {

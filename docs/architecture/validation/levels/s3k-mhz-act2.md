@@ -405,3 +405,17 @@ pass5 tests,0 skips. Native Sonic/Tails/pair cold consumer routes pass3 tests,
 0 skips (42.921s Maven). The complete FBZ route class and defeat-child checks
 pass24 tests,0 skips (49.714s Maven), including the corrected boundary oracle.
 Integration follows these completed candidate checks.
+
+
+### Route drawing policy follow-up (2026-10-09)
+
+The two MHZ cold-route JUnit classes keep every input and every scene
+draw while omitting discarded screenshot readback. The restore-based prefix
+control has the same palette mismatch with full drawing and drawing gaps;
+independent cold snapshots also differ in session-local spawn/owner references.
+Drawing gaps remain unqualified for MHZ, so scene drawing is retained.
+Complete forward/replay branches remain fully drawn. The bounded
+state/pixel controls and their limits are described in the
+[headless testing guide](../../../guide/contributing/headless-testing.md).
+This performance change supplies no new native reference, full-route visual
+certification or missing viewport/donor/character coverage; inherited gaps remain.

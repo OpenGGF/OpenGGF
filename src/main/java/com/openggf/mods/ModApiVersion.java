@@ -21,12 +21,37 @@ public final class ModApiVersion {
      * scenes expose supplied-game art, immutable timestamped physical input and
      * bounded semantic ROM music with consumed-sample playback, section parts,
      * and bounded pitch-gliding ROM-part cues that preserve the song clock.
+     * Boot-prepared typed mutators declare independent action/option scopes,
+     * immutable gravity/Stealth, scatter, fixed or ring-scaled head-presentation with
+     * independent player/sidekick/badnik/boss targets, grouped checkboxes and declarative
+     * retired-choice preference migration, semantic placement,
+     * checkpoint, ring-award, stage-entry, defeat-knockback and pacing policies;
+     * explicit assembly causes and common
+     * modal configuration presentation. The unpublished candidate remains 0.7.0.
+     * Detached scene backgrounds reuse stock scanline scroll handlers with independent state.
      * Full-song and selected-part synthesis expose cancellable host jobs with
      * progress, a ten-minute duration cap and a 256 MiB stereo PCM budget.
+     * Scene audio also starts supplied-ROM music live, preserving native intros/loops
+     * with bounded packet buffering and scene-owned stop/fade/close lifetime.
      * Scene-owned direct peer text messaging is asynchronous and bounded, with
      * socket/thread ownership and lifetime kept in the engine.
      * Power-up rules expose explicit invincibility-expiry music ownership for modes
-     * with continuous music.
+     * with continuous music. Owned patch scenes can play their validated audio-manifest
+     * SFX by local name without numeric ids or creator-supplied ownership.
+     * Scene audio can play any supplied ROM's song as the base driver's music through
+     * the cross-game donor route, under a donor registration scoped to the scene.
+     * Scene-owned ROM music pacing preserves pitch and SFX and follows retained acts.
+     * Scene visits can suspend into owned registered acts with typed launch/result,
+     * native centre spawn overrides and once-only frame-boundary exit consumption.
+     * Entry/exit isolate rewind timelines while preserving the scene and its ROM library.
+     * Creator helpers include character specifications and lifecycle hooks, decoded
+     * placement transforms, owner storage and service bundles, named single-act and
+     * multi-act zone factories, shared UI/input and ROM-qualified scene art, including
+     * the players' S3K dash dust. Object art may name LogicalRom.S1 with S1 mapping
+     * parsing even in an S3K-base mod; the legacy call retains Sonic 2 semantics.
+     * NativePositionOps and the solid-platform provider/params are candidate creator contracts:
+     * act controllers can reset native positions and provide rewindable top-solid decks.
+     * Camera framing can cap the visible right edge independently of native player walls.
      * Shared network contracts include direct/relay room clients, JDK room hosting,
      * identity, bounded ghost transport and protocol messages/codecs. Operator servers
      * and verifier tools remain separate and outside the creator API.
@@ -40,9 +65,6 @@ public final class ModApiVersion {
      * Any mod may add one master-title entry opening a scene that launches such runs
      * and is resumed when each ends, learn a game's run fingerprint before launching, and
      * claim keyboard text input so global shortcuts stay quiet while the player types.
-     * Creator helpers include character specifications and lifecycle hooks, decoded
-     * placement transforms, owner storage and service bundles, named single-act and
-     * multi-act zone factories, shared UI/input and ROM-qualified scene art.
      * Owner storage also keeps bounded, atomically replaced binary files beside its text.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");

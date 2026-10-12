@@ -1,5 +1,10 @@
 # Build-along: native Tails Flappy in Sonic 3 & Knuckles
 
+*This is the native road of the [Flappy Tails tutorial](flappy-tails/README.md). Its
+[Path A page](flappy-tails/native.md) shows this sample running, suggests changes and explains
+where the native road ends; the tutorial's scene road builds the polished
+[Flappy Tails](../../../examples/flappy-tails/README.md).*
+
 This guide tours the maintained `sample-flappy` source: a Mod API 0.7 Sonic 3 &
 Knuckles patch that starts a fresh game in a short custom sky level, launches native
 Tails, and turns his normal flight into a fixed-position obstacle game. The mod does

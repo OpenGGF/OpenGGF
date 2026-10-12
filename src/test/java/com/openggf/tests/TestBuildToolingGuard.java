@@ -342,6 +342,27 @@ class TestBuildToolingGuard {
             "src/main/java/com/openggf/game/sonic3k/objects/IczSnowboardArtLoader.java - private static boolean loaded;");
 
     @Test
+    void javaVersionGuardAcceptsGaAndPatched25Only() throws Exception {
+        NodeList matches = parsePom("pom.xml").getElementsByTagName("matches");
+        String expression = null;
+        for (int index = 0; index < matches.getLength(); index++) {
+            Element match = (Element) matches.item(index);
+            if ("${java.version}".equals(match.getAttribute("string"))) {
+                expression = match.getAttribute("pattern");
+                break;
+            }
+        }
+        assertNotNull(expression, "build must require the supported Java major");
+        Pattern supported = Pattern.compile(expression);
+        for (String version : List.of("25", "25.0.1", "25.0.4.1")) {
+            assertTrue(supported.matcher(version).find(), version);
+        }
+        for (String version : List.of("21", "24.0.2", "26", "250")) {
+            assertFalse(supported.matcher(version).find(), version);
+        }
+    }
+
+    @Test
     void surefireShouldPreloadMockitoAsJavaAgent() throws Exception {
         String file = "pom.xml";
         Document pom = parsePom(file);
@@ -697,9 +718,9 @@ class TestBuildToolingGuard {
                 "pom.xml must expose the ordinary fork-reuse property");
         assertEquals("true", ordinaryReuseForks.getTextContent().trim(),
                 "the ordinary suite must reuse its single fork");
-        assertEquals("${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g",
+        assertEquals("${native.access.argLine} ${test.cds.argLine} ${mockito.agent.argLine} -Xmx3g",
                 directChild(projectProperties, "surefire.argLine").getTextContent().trim(),
-                "the ordinary suite must retain exact CDS/Mockito semantics and the proven-sufficient 3 GiB heap");
+                "the ordinary suite must retain native access, exact CDS/Mockito semantics and the proven-sufficient 3 GiB heap");
 
         for (String profileId : List.of("lwjgl-natives-macos", "lwjgl-natives-macos-arm64", "ci")) {
             Element profile = profileById(pom, profileId);
@@ -1197,6 +1218,27 @@ class TestBuildToolingGuard {
      * fails here.
      */
     @Test
+    void mandatoryJavaPackagingExecutionsUseMavensRuntime() throws Exception {
+        Document pom = parsePom("pom.xml");
+        for (String id : List.of("prepare-mod-testkit", "prepare-openggf-mod-sdk",
+                "verify-openggf-mod-sdk-artifacts")) {
+            NodeList executions = pom.getElementsByTagName("execution");
+            boolean found = false;
+            for (int index = 0; index < executions.getLength(); index++) {
+                Element execution = (Element) executions.item(index);
+                if (!id.equals(execution.getElementsByTagName("id").item(0).getTextContent())) {
+                    continue;
+                }
+                assertEquals("${java.home}/bin/java",
+                        execution.getElementsByTagName("executable").item(0).getTextContent(),
+                        id + " must not run classfile 69 on a different PATH JVM");
+                found = true;
+            }
+            assertTrue(found, "missing mandatory packaging execution " + id);
+        }
+    }
+
+    @Test
     void everyGuardTestClassIsSelectedByTheGuardsProfile() throws Exception {
         Document pom = parsePom("pom.xml");
         Element guards = profileById(pom, "guards");
@@ -1564,9 +1606,11 @@ class TestBuildToolingGuard {
             assertTrue(build.contains("needs: test"), name);
             assertFalse(build.contains("rom-validation"), name);
         }
-        for (String os : List.of("windows-latest", "macos-latest", "ubuntu-latest")) {
+        for (String os : List.of("windows-latest", "macos-15", "ubuntu-latest")) {
             assertTrue(jobs.get("build").contains("os: " + os), os);
         }
+        assertFalse(jobs.get("build").contains("macos-15-intel"),
+                "GraalVM 25 native macOS builds require Apple Silicon");
         assertTrue(jobs.get("rom-validation").contains(
                 "if: github.event_name == 'workflow_dispatch' && inputs.validate_roms"));
         assertTrue(workflow.contains("default: false"));

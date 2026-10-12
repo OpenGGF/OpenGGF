@@ -45,6 +45,7 @@ class TestSozLowerRockPuzzleCapture {
         var checked=new HashSet<Integer>();
         var settings=new GameplayCaptureSession.Settings(width,main,"","off",null,
                 0x4940,0x430,"0000000",false,false,null,null,false,37,false);
+        var drawing = new RouteFrameDrawing("openggf.soz.drawEveryFrame");
         try(var session=new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(),8,1,settings);
             assertEquals(width, GameServices.camera().getWidth());
@@ -54,7 +55,7 @@ class TestSozLowerRockPuzzleCapture {
             assertNotNull(session.player().getSpriteRenderer());
             int oldFloor=GameServices.level().getCurrentLevel().getMap().getValue(0,0x8F,0xB);
             for(int frame=0;frame<movie.getFrameCount();frame++) {
-                session.step(movie.getFrame(frame));session.renderFrame();
+                session.step(movie.getFrame(frame));drawing.afterStep(session);
                 assertFalse(session.player().getDead(),"death at "+frame);
                 var manager=GameServices.level().getObjectManager();
                 if(frame==240) assertNotEquals(oldFloor,
@@ -76,11 +77,12 @@ class TestSozLowerRockPuzzleCapture {
                 if(!spots.contains(frame)) continue;
                 checked.add(frame);
                 var registry=SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                drawing.checkpoint(session);
                 var saved=registry.capture();
-                for(int n=1;n<=45;n++) {session.step(movie.getFrame(frame+n));session.renderFrame();}
+                for(int n=1;n<=45;n++) {session.step(movie.getFrame(frame+n));drawing.draw(session);}
                 var forward=registry.capture();
                 registry.restore(saved);session.restoreInputHistory(movie.getFrame(frame));
-                for(int n=1;n<=45;n++) {session.step(movie.getFrame(frame+n));session.renderFrame();}
+                for(int n=1;n<=45;n++) {session.step(movie.getFrame(frame+n));drawing.draw(session);}
                 var replay=registry.capture();
                 assertEquals(forward.entries().keySet(),replay.entries().keySet());
                 for(String key:forward.entries().keySet()) {
@@ -89,6 +91,7 @@ class TestSozLowerRockPuzzleCapture {
                 }
                 registry.restore(saved);session.restoreInputHistory(movie.getFrame(frame));
             }
+            drawing.checkpoint(session);
             assertEquals(spots,checked);
             assertTrue(session.player().getCentreX()>0x4A40,"player crossed the lower door");
             assertEquals(8,GameServices.level().getCurrentZone()); assertEquals(1,GameServices.level().getCurrentAct());

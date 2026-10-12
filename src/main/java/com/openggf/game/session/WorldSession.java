@@ -36,6 +36,7 @@ public final class WorldSession {
     // construction.
     private Level currentLevel;
     PatternWindowState patternWindowState = PatternWindowState.EMPTY;
+    final WorldSessionPolicyState policies;
 
     public WorldSession(GameModule gameModule) {
         this(gameModule, null);
@@ -62,6 +63,8 @@ public final class WorldSession {
                 ? PlayableCharacterRegistry.empty()
                 : registry;
         this.saveSessionContext = saveSessionContext;
+        var policyProvider = resolvedGameModule.getGameService(WorldSessionPolicyProvider.class);
+        policies = policyProvider == null ? null : policyProvider.open(this);
     }
 
     public GameModule rootGameModule() {

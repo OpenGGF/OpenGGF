@@ -4,12 +4,14 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareWorkKind;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.zip.GZIPInputStream;
 
 /** Strict field mechanics only; record schemas and stream identity belong to each loader. */
 final class StrictTimingFields {
@@ -59,7 +61,17 @@ final class StrictTimingFields {
     }
 
     static String decodeUtf8(Path path, String fileName) throws IOException {
-        byte[] bytes = Files.readAllBytes(path);
+        byte[] bytes;
+        if (path.getFileName().toString().endsWith(".gz")) {
+            try (InputStream input = Files.newInputStream(path);
+                    GZIPInputStream gzip = new GZIPInputStream(input)) {
+                bytes = gzip.readAllBytes();
+            } catch (IOException e) {
+                throw new IOException(path.getFileName() + ": invalid gzip stream", e);
+            }
+        } else {
+            bytes = Files.readAllBytes(path);
+        }
         try {
             return StandardCharsets.UTF_8.newDecoder()
                     .onMalformedInput(CodingErrorAction.REPORT)

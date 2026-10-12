@@ -50,15 +50,14 @@ public interface TraceExecutionModel {
      * {@code v_vblank_routine} was still 0 because the loop had not yet reached
      * the {@code move.b} that re-arms it (sonic.asm:3000).
      *
-     * <p>That places the iteration's loop tail after the sample that closed
-     * {@code current}. In S1 the tail is where {@code RunPLC} lives
-     * (sonic.asm:3032), reached only after {@code ExecuteObjects} (3010),
-     * {@code DeformLayers} (3025), {@code BuildSprites} (3028),
-     * {@code ObjPosLoad} (3029) and {@code PaletteCycle} (3031) -- the whole of
-     * the loop's cost. Had the loop already run {@code RunPLC}, only
-     * {@code OscillateNumDo}, {@code SynchroAnimate} and
-     * {@code SignpostArtLoad} would have stood between it and the re-arm at
-     * 3000, so the V-blank that fired would not have been a lag one.
+     * <p>S1's {@code RunPLC} is at the loop tail (sonic.asm:3032), but
+     * this row shape does not locate the interrupt before or inside that call.
+     * Shipped {@code FixBugs=0} publishes {@code v_plc_patternsleft} before
+     * {@code NemDec_BuildCodeTable} (sonic.asm:1379-1415); a lag V-blank can
+     * therefore sample an armed queue while the call is still in flight.
+     * A service owning a timed loop-tail arm uses its matching admitted job's
+     * readiness. Untimed represented rows retain the coordinator's held-tail
+     * fallback; counters alone do not establish the native arm boundary.
      *
      * <p>Like {@link #isVblankStarvedRow} this is a hardware-timing
      * classification of the recorded row shape: it carries no gameplay,

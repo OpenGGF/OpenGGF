@@ -1070,7 +1070,7 @@ every nearby-object position every frame through a 20-minute run.
    `S3K-Known-Discrepancies`, `Agent-Docs`, `Configuration-Docs`, `Skills`) with `updated`
    or `n/a`, and cross-checks trailer ↔ file staging (e.g. `Changelog: updated` requires
    `CHANGELOG.md` to be in the diff). Runs via `bash .githooks/validate-policy.sh ci-pr ...`.
-2. **`test`** — sets up Java 21 (Temurin) with Maven cache, then runs
+2. **`test`** — sets up Java 25 (Temurin) with Maven cache, then runs
    `mvn test -B` and reads `target/surefire-reports` plus owner-keyed reports recursively
    below `target/trace-reports/<profile>/`.
 

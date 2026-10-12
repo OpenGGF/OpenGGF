@@ -1,6 +1,6 @@
 # sample-platformer
 
-Use a Java 21 JDK and matching engine/SDK artifacts from one commit of the mutable,
+Use a Java 25 JDK and matching engine/SDK artifacts from one commit of the mutable,
 unpublished candidate. The default Maven profile uses local jars; it does not
 resolve an unpublished API from a Maven repository:
 
