@@ -21,8 +21,13 @@ P09's actual warning ledger and README consolidation are complete. P10's export/
 contracts, seven fresh starter profiles and external controls are qualified.
 P17 ends in the explicit implement/defer dispositions below. P19's matching binary
 passed 11/11 and replaced only the obsolete installed jar with a preserved rollback.
-Main-branch integration, post-integration comparison, push and accounted cleanup
-remain delivery gates.
+Main integration and the post-integration comparison are complete at `f9d192a18`.
+All 677 guards pass; the ordinary run retains 26 inherited failures, 64 skips and
+one historical socket-test error. Test-only correction `232771401`, integrated as
+`4a07baff6`, passes the actual native close case plus 16 transport checks on develop.
+This is a completed red full run with a focused follow-up, not a full-green claim.
+The coordinator pushes only integrated develop and accounts for task cleanup after
+committing the final evidence; frozen creator artifacts retain their original identity.
 
 Checked boxes record achieved implementation and the stated focused evidence, not a
 full-suite or delivery pass. The updated destination baseline completed with **26
@@ -846,6 +851,35 @@ The 26 baseline identities recur; the SSZ blob-hash difference has bounded seman
 attribution. Five new ordinary and three guard failures received recorded repairs
 and focused qualification. The 120-minute execution and 10-minute idle limits were
 unchanged. The fresh `54e771314` artifact/starter/binary gates and observed local
-replacement are complete. Main integration, its required repaired-source comparison,
-push and accounted cleanup remain open. No full-green or delivered claim follows
-from these focused results.
+replacement are complete. Main integration and its required repaired-source comparison
+are recorded below; the final operational handoff is the develop push and accounted
+cleanup. No full-green claim follows from the focused results.
+
+## Final remediation and verification disposition
+
+All P01–P20 implementation/investigation obligations have a recorded result. R1–R11
+have actual consumer repairs or disproved-risk regression evidence; U1–U7 have
+consumer-backed delivery or explicit bounded dispositions. P17's deferred candidates,
+45 acknowledged internal references and route/GPU/network coverage limits remain
+visible. These are follow-up criteria, not omitted remediation steps.
+
+The final develop ordinary run selected all 3,170 ordinary classes and completed
+27,631 checks: 26 inherited failures, one new test error and 64 skips. Twenty-five
+baseline failures match their complete raw assertion SHA-256 and exception type.
+The remaining SSZ failure has complete six-row semantic attribution at unchanged
+production source; no hash-token stripping or SSZ gameplay change was used.
+Fresh guards completed 677/677 without skips.
+
+The new error came from the Golf audio-fault test attempting to acquire a released
+port. Matched unchanged baseline/current cases both pass; an owned contender proves
+that rebinding can fail even after the original host socket closes. The actual
+full-run contender was not observed. The test-only correction captures the same
+physical socket before the fault and checks its closure afterward, retaining owner,
+fault, replay, room and idempotent teardown assertions. Worker and integrated-main
+focused checks each pass 17/17 without skips. No production network change or
+TIME_WAIT attribution is claimed. The existing transport rebind checks remain.
+
+The [final execution record](../validation/2026-10-12-mod-audit-remediation.md#integrated-develop-comparison-and-final-follow-up)
+contains the commands, exact tested commits, historical red results, bounded
+follow-ups and artifact identities. No second engine full run is required for the
+final test-only oracle correction and prose; production behavior is unchanged.

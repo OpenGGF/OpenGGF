@@ -1592,3 +1592,135 @@ retained independently of disposable qualification outputs.
 
 Main integration, its required ordinary/guard comparison, push and accounted task
 cleanup remain open at this checkpoint.
+
+## Integrated develop comparison and final follow-up
+
+The clean remediation branch `11bc07944` was merged into the unchanged main
+`develop` branch as `f9d192a18ff064bbbd3476bf91c746d899e8fe35`. Integration preserved
+the existing dirty disassemblies and unrelated user files. The actual destination
+and comparison base remained `f02bdbfd570276f7377d7055d236f63e34691484`; a fresh fetch
+after verification still found that remote develop head. No source or live fixture
+changed during the ordinary/guard invocation.
+
+Preflight passed Java 25 and Lua 5.4. The runner selected 3,170 ordinary classes;
+ordinary execution produced 3,168 reports before the fresh guard JVM. Expected
+cost was approximately one hour ordinary plus five
+minutes guards; the unchanged stopping rules were 120 minutes execution and ten
+minutes without output. `OPENGGF_ROM_ROOT` below denotes the existing canonical
+supplied-ROM checkout; paths are absolute at execution and no ROM was copied.
+
+```sh
+env JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base f02bdbfd570276f7377d7055d236f63e34691484 --rom-directory "$OPENGGF_ROM_ROOT" --max-minutes 120 --run
+```
+
+Completed run `20261012T201727Z-398709d4`, command session 71706:
+
+| Lane | Reports | Checks | Failures | Errors | Skips | Execution seconds / exit |
+|---|---:|---:|---:|---:|---:|---|
+| Ordinary | 3,168 | 27,631 | 26 | 1 | 64 | 3,619.27 / 1 |
+| Fresh guards | 88 | 677 | 0 | 0 | 0 | 265.17 / 0 |
+
+This is a completed red full run, not a green suite. All 26 baseline failure
+identities recur. Twenty-five match exception type and SHA-256 of the complete raw
+assertion exactly. The SSZ width-400 assertion SHA-256 differs
+(`13ac120a05a92dfcff17999e9920fd96d6cdd6bf89a4346ee53b611167406150`);
+its full non-blob fields retain frame 4018, slot bits 24/29, missing children
+125/126 and relocated children 128/129. The bounded semantic repeat below resolves
+the mixed blob hashes. The full assertions, not the runner's bounded `message`,
+were compared. No assertion tokens were stripped to manufacture equality.
+
+All 64 skip identities and complete reasons exactly match the prior candidate:
+32 Infinite act/roster gaps, six GL availability cases, one CPZ tube scenario,
+one missing local BizHawk audio reference and 24 opt-in diagnostics. The original
+canonical ROMs were supplied; these are not wrong-path ROM skips. The GL gap
+remains explicit: CPU composition checks do not certify window/GPU rendering.
+After reading both lanes and their failure/skip details, the run directory was
+acknowledged and deleted with the runner's normal command; raw logs are not archived.
+
+### Integrated-source SSZ semantic repeat
+
+Normal queued request 4254 ran the unchanged two-case SSZ method on production
+`54e771314` (production-equivalent to integrated `f9d192a18`; integration adds
+prose/history). A temporary comparison-only diagnostic was the sole dirty source:
+SHA-256 `bb10bb4304d3a5028fbe996d9a00c8c08531d3f063b43bbf1185030101c148b5`.
+Maven completed in 29.560s after 137s admission wait, at 22:23:09 +0100:
+two checks, one pass and the same frame-4018 failure, zero errors/skips.
+
+All six complete rows exactly match the retained f02b baseline by side, every
+`ObjectRefId` field, schema ID, full native type, scalar bytes and opaque values.
+The scalar/type table in the earlier compact-state section remains exact;
+every identity is `slotIndex=-1, generation=0, spawnId=-1, kind=DYNAMIC` with its
+listed dynamic ID. Current class hashes are `04b6d92e` (JetFlame) and `290d10ef`
+(GunArm); baseline hashes are `6726cc69` and `7899de11`. After complete semantic
+matching, all six blob-hash changes also equal the class component's
+`31² × classHashDelta` modulo 2³². That arithmetic corroborates, rather than
+replaces, the semantic comparison. This supports inherited-failure attribution;
+the slot/missing-child failure itself remains unfixed and outside the mod task.
+
+The original test was restored byte-for-byte to SHA-256
+`db4583214f4430c81cf25b7260a716358be575ff2d7772a6067be01367c2af1e`;
+the worker was clean at 54e771314. All five owned diagnostic files and their
+outside directory were removed after coordinator consumption. No production
+formatter, gameplay state hydration, assertion weakening or SSZ fix was committed.
+
+### Socket ownership oracle correction
+
+The full run's one new error was
+`TestPuttPuttParadise#closingOnlineModeReleasesRoomEvenWhenAudioSinkFlushFails`:
+`java.net.BindException: Address already in use`, at the test's attempted rebind
+of the closed host port. Production Golf teardown and this original test were
+unchanged between f02b and the repaired mod source. Source review found listener
+closure in the existing fault-safe teardown; this observation alone was not a pass.
+
+Matched normal queued requests 45722 (unchanged current) and 16949 (clean f02b)
+each passed the original native close case 1/1, zero errors/skips, in 27.045s
+and 24.800s respectively, using Java 25, the same canonical S2 ROM, selector and
+independent checkout classes. Pure Java/Jupiter OS control 92187 passed 1/1 in
+0.853s. The tested Java 25 constructor's observed default reuse is true on this
+host; a controlled TCP TIME_WAIT state permits
+the original constructor's rebind. The initially proposed different-reuse/TIME_WAIT
+explanation was disproved and no corresponding production change was made.
+
+A direct diagnostic using the actual Golf listener confirmed the captured socket
+closed. A second owned listener then acquired its released port and reproduced
+the original `BindException` while the first socket remained closed. This proves
+global port availability is an invalid sole assertion of that owner's closure.
+It does **not** identify the actor during the historical full run, whose port owner
+remains unobserved. No unrelated process was stopped or OS networking changed.
+
+Test-only commit `232771401733401d50035a8551d6c8e648f9d3e3` captures the actual
+host `ServerSocket`, verifies its live configured binding before the audio fault,
+then asserts that same socket is closed afterward. All fault owner/disable/cause,
+replay closure, reverse-audio, null-room and idempotent-close assertions remain.
+The 16 independent transport checks still cover live binding, rebind, worker and
+terminal shutdown. No production/API/signature change or reuse patch is included.
+
+Worker request 67990 passed 17/17, zero failures/errors/skips, in 42.738s after
+132s admission wait, at 22:23:53 +0100. The coordinator independently inspected
+both XML reports and their own-checkout Java/ROM properties. It merged the change
+through the task branch into develop as `4a07baff64d205d841def5ab3982350e0dded9f0`
+and ran the same normal queued focused selector on main:
+
+```sh
+env JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestPuttPuttParadise#closingOnlineModeReleasesRoomEvenWhenAudioSinkFlushFails,TestGolfTransport' "-Dsonic1.rom.path=$OPENGGF_ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=$OPENGGF_ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=$OPENGGF_ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test
+```
+
+Main session 40179 acquired immediately and completed exit 0 in 41.926s at
+22:29:03 +0100: **17/17, zero failures/errors/skips**. This focused post-integration
+evidence qualifies the localized test correction. It does not erase the historical
+full-run error or claim a second full-suite pass. Production code is unchanged;
+the final evidence/measurement lesson is prose-only, so no further engine full run
+is warranted. Push only integrated develop, preserve player rollback and the frozen
+creator ZIP, and remove only fully accounted owned task trees/branches and outputs.
+
+The final player-state comparison found 37 of the 38 original auxiliary files
+byte-identical. The sole difference is the generated S1 image-cache manifest,
+rewritten at 20:18:39 UTC during the main broad run with the tested engine identity
+and generation timestamp (397 bytes). Its current SHA-256 is
+`30a6ff440f729ca03e204505096f0816379aedaec96ebd93560620e796e1683b`;
+the prior hash was `90ce141ad6f223ce33532a272ddc7be452666313f253a9a74e6eef938055752a`.
+All seven inventoried cache PNGs, player save files, modstate, configuration and
+unrelated jar remain unchanged. The regenerated manifest is preserved, not replaced
+with invented prior metadata. The qualified Flappy jar and retained original rollback
+still independently match their recorded hashes. The earlier 38/38 observation
+describes the replacement checkpoint before this later test-generated refresh.

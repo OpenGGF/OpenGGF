@@ -7,7 +7,9 @@ additions. A generic game framework or a wholesale rewrite of the mods is not ju
 
 The [remediation plan](../plans/2026-10-12-mod-audit-remediation.md) maps every finding
 and API candidate to implementation steps, dependencies, acceptance tests and delivery
-checks. Its runtime work is planned, not implemented by the audit or plan delivery.
+checks. The original audit and plan preceded implementation; the
+[current dispositions](#remediation-execution-and-current-scope-2026-10-12) below
+record the implemented remediation and its verification limits.
 
 The plan was reconciled with upstream `e76a380c3`: hosted stock runs, shared public
 networking, binary owner storage, Act Practice and bundled Time Attack have since
@@ -509,8 +511,13 @@ counts remain historical evidence. Clean producer
 `175531f6dc4a0d0005c4593022393182d1f5e58c` is a completed historical artifact checkpoint.
 Current composed source `54e771314` includes later fixture/template, presentation
 and standalone-bound repairs. Its fresh matching kit, seven starter profiles and
-native binary qualification are complete. Final delivery still requires main
-integration, the repaired-source/base comparison, push and accounted cleanup.
+native binary qualification are complete. Main integration at `f9d192a18` completed
+the ordinary/guard comparison against `f02bdbfd5`: 26 inherited failures, one
+port-availability test error and 64 skips; all 677 guards passed. The bounded test-only
+socket ownership correction `232771401` was integrated as `4a07baff6` and passed
+17/17 focused checks on develop, zero skips. The full run remains historically red;
+the focused correction does not relabel it as green. Push and accounted cleanup
+follow the repository delivery flow after the final evidence commit.
 
 | Finding/uplift | Implemented consumer/contract | Current qualification boundary |
 |---|---|---|
@@ -518,7 +525,7 @@ integration, the repaired-source/base comparison, push and accounted cleanup.
 | R3/R7 | Generated camp uses the current centre; expedition parsing publishes a validated candidate; generation-keyed/cache owners | Canonical ROM and portable lifecycle/regeneration checks passed. Durable terrain carving remains a separate schema decision. |
 | R4, U4 | `CombatLayout` plus ordered pure `SpriteComposition`; scoped canvas translation/opacity adopted by Sitar | Targeted cards/monitors compare damage, energy, choices and saved state under zero/sparse/duplicate drawing. Native recipes/choreography remain local. |
 | R5 | Semantic run identity and non-rewound settlement intervals persisted with awards; dirty retry | Production restore reproduced 55→110 duplicate bank and repeated 200-kill milestone accounting. Once-per-run repair preserves rewind and rejects foreign graph snapshots. |
-| R6, U2 | One before-frame disposition: native input, controlled neutral, HOLD; owner/row/visit services; captured Survivors modal coordinator | Real first-row Shoes decrement reproduced and repaired. Golf neutral stepping and native input/filter/P2/timing tested. Native-act host pause/admission/retirement and released-overlay fade ownership are repaired with focused regressions; final broad comparison remains open. |
+| R6, U2 | One before-frame disposition: native input, controlled neutral, HOLD; owner/row/visit services; captured Survivors modal coordinator | Real first-row Shoes decrement reproduced and repaired. Golf neutral stepping and native input/filter/P2/timing tested. Native-act host pause/admission/retirement and released-overlay fade ownership are repaired. Final ordinary comparison retains the attributed stock-route failures; all guards and the post-integration 17-case socket/transport gate pass. |
 | R8 | Practice command carries practice independently of zone; configured timestamped calibration edges | Remapped keyboard/pad/axis/device checks and practice/retry/normal eligibility passed. |
 | R9, U3 | Owned Infinite leaderboard, existing forwarding helpers; injected bounded floor/contact/spring/destruction capabilities | Actual ROM consumer checks passed. Completed clean 29-package collection reports 45 advisory references: Infinite 24, Golf 8, Survivors 13. The actual call/purpose/owner/reopening ledger and README consolidation are complete; retained expert bridges remain explicit. |
 | R10, U6 | Authored tests/resources/generators exported; real Jupiter launcher; test-ready seven-kind starters; shared builders | Exported Starpost at clean `175531f6d` passes 231/231 with strict package zero findings. Music's profile failure was reproduced and repaired with 23 focused passes. Fresh seven-starter plus Hello Maven profiles at clean `54e771314` pass 10/10, zero skips; main/test separation and all 90 scaffold paths checked. Portable failure/empty/mismatch/generator controls retain their explicitly recorded prior producer identity. |
