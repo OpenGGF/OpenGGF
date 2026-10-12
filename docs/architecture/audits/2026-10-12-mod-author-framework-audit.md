@@ -506,8 +506,10 @@ base was `15f3cf371`; the integration tree subsequently reconciled published `de
 `b6d0ff76f` (Java 25 and expanded example-mutators), then `f02bdbfd5` (Starpost Valley).
 The current inventory is **29 maintained manifests**. Earlier Java 21 and 25/28-source
 counts remain historical evidence. Clean producer
-`175531f6dc4a0d0005c4593022393182d1f5e58c` contains the final implementation batches;
-final delivery still requires the candidate/base comparison, main integration and
+`175531f6dc4a0d0005c4593022393182d1f5e58c` is a completed historical artifact checkpoint.
+Current composed source `54e771314` includes later fixture/template, presentation
+and standalone-bound repairs. Fresh producer qualification and final delivery still
+require the repaired candidate/base comparison, main integration and
 post-integration qualification, push and accounted cleanup.
 
 | Finding/uplift | Implemented consumer/contract | Current qualification boundary |
@@ -518,18 +520,19 @@ post-integration qualification, push and accounted cleanup.
 | R5 | Semantic run identity and non-rewound settlement intervals persisted with awards; dirty retry | Production restore reproduced 55→110 duplicate bank and repeated 200-kill milestone accounting. Once-per-run repair preserves rewind and rejects foreign graph snapshots. |
 | R6, U2 | One before-frame disposition: native input, controlled neutral, HOLD; owner/row/visit services; captured Survivors modal coordinator | Real first-row Shoes decrement reproduced and repaired. Golf neutral stepping and native input/filter/P2/timing tested. Native-act host pause/admission/retirement and released-overlay fade ownership are repaired with focused regressions; final broad comparison remains open. |
 | R8 | Practice command carries practice independently of zone; configured timestamped calibration edges | Remapped keyboard/pad/axis/device checks and practice/retry/normal eligibility passed. |
-| R9, U3 | Owned Infinite leaderboard, existing forwarding helpers; injected bounded floor/contact/spring/destruction capabilities | Actual ROM consumer checks passed. Final clean 29-package collection reports 45 advisory references: Infinite 24, Golf 8, Survivors 13. Retained GPU/title/network/auxiliary bridges have narrow owners/reopening conditions; the final ledger and README consolidation are separate from API implementation. |
-| R10, U6 | Authored tests/resources/generators exported; real Jupiter launcher; test-ready seven-kind starters; shared builders | Structural/source/SDK and real provisional fork/starter checks passed. Final clean exported Starpost passes 231/231 with strict package zero findings; remaining final starter/green/failure/empty/mismatch/artifact checks are delivery gates. |
+| R9, U3 | Owned Infinite leaderboard, existing forwarding helpers; injected bounded floor/contact/spring/destruction capabilities | Actual ROM consumer checks passed. Completed clean 29-package collection reports 45 advisory references: Infinite 24, Golf 8, Survivors 13. The actual call/purpose/owner/reopening ledger and README consolidation are complete; retained expert bridges remain explicit. |
+| R10, U6 | Authored tests/resources/generators exported; real Jupiter launcher; test-ready seven-kind starters; shared builders | Structural/source/SDK and recorded external checks passed; exported Starpost at clean `175531f6d` passes 231/231 with strict package zero findings. Music's actual profile failure reproduced and template repaired with 23 focused passes. Fresh seven-starter/green/failure/empty/mismatch/artifact checks remain delivery gates. |
 | R11 | Immutable per-scene/per-module definitions and per-recreation traits | Warmed 1,000 lookups changed 1,000→1 identities with pinned content/RNG hashes unchanged; no unmeasured FPS/GC/bytes claim. |
 | U5 | Existing ROM-qualified recipes plus three independently reused banks; Starfall level-kit material crops | 39 material samples matched after local palette quantization conversion. Ten distinct backdrop variants and unproved Blue Flicky frame semantics retain explicit local decoding. |
 | U7 | Factory-bound default identity, protected standard art emission, declarative owned standalone object dispatch | Fresh construction, foreign-key publication, respawn/save/rewind and actual SDK-only generated projects qualified. Expert overrides remain validated. |
 
-### Final frozen creator qualification and remaining gates
+### Completed 175531f6d creator checkpoint and remaining gates
 
-The final package collection compiled/packaged all 29 sources against the clean
+The completed package collection compiled/packaged all 29 sources against the clean
 `175531f6d` producer. Twenty-six packages are strict validator-clean; the remaining
 three retain the 45 actual warnings above. Those warning purposes, owning services
-and reopening conditions belong to the final ledger in the execution record.
+and reopening conditions are recorded in the completed ledger in the execution record.
+README consolidation at `54e771314` preserves these counts and matching-build guidance.
 Package validation is not native gameplay, pixel, audio or network qualification.
 
 Starpost's exported project was copied to an owned task directory outside the
@@ -566,20 +569,24 @@ foreign-history rewrite was introduced.
 The updated destination `f02bdbfd5` baseline completed 27,431 ordinary tests with
 **26 known failures**, zero errors and 63 inspected skips; fresh guards passed
 677/677, zero skips. Exact failure identities/full-assertion digests and skip reasons
-are in the execution record. Final candidate comparison is still running; integrated
-ordinary/guard/domain checks, final starter/negative-discovery/identity matrix,
-final Native Flappy binary runtime/installation disposition, main integration/push and
-accounted worktree cleanup remain open. An inherited assertion difference still
-requires semantic attribution where rewind-state class identity contributes to its
-hash. Neither this baseline nor the focused results support a full-green delivery claim.
+are in the execution record. The clean `175531f6d` candidate completed 27,627 ordinary checks:
+31 failures, zero errors and 64 skips; fresh guards ran 677 with three failures and
+zero errors/skips. All 26 baseline identities recur; the SSZ blob-hash difference
+received bounded semantic attribution. Five new ordinary and three guard failures
+have recorded repairs/focused qualification. The repaired-source broad comparison,
+integrated ordinary/guard/domain checks, fresh starter/negative-discovery/identity
+matrix, new-source Native Flappy runtime, installed replacement/disposition, main
+integration/push and accounted cleanup remain open. Neither this baseline nor the
+focused results support a full-green delivery claim.
 
-Native Flappy's maintained SDK build also produced a matching final `175531f6d`
+Native Flappy's maintained SDK build also produced a matching historical `175531f6d`
 artifact: `sample-flappy` version 1.0.0, range `>=0.7.0 <0.8.0`, base `s3k`, strict
 validator zero findings; SHA-256
 `03c311c6701058eb69721a9540f2ab327af0573f10e00b6c73203ad92b9e0bfd`.
-The isolated 11-case canonical trust/Apply/runtime selector for that actual binary
-is queued, separate from the earlier 11/11 source-built provisional checks. Local
-installed replacement/disposition remains pending; the obsolete player's jar was
+Actual maintained-binary request 43929 passed 11/11, zero failures/errors/skips,
+through the isolated canonical trust/Apply/runtime flow at clean `175531f6d`.
+New `54e771314` source/artifact runtime qualification and local installed
+replacement/disposition remain pending; the obsolete player's jar was
 disabled/untrusted, and a build does not authorize changing that choice.
 
 ### Newly landed consumers

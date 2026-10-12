@@ -9,14 +9,17 @@ landed during preparation and were incorporated before integration. Initial audi
 runtime evidence remains the historical `f9d4e0474` snapshot. This document is an
 execution plan; the checkpoint below distinguishes implemented work from remaining delivery gates.
 
-**Execution checkpoint:** the clean producer `175531f6dc4a0d0005c4593022393182d1f5e58c`
-contains the repaired consumers and accepted shared contracts. The current inventory
-is **29 maintained manifests**, including Act Practice, bundled Time Attack,
+**Completed artifact checkpoint:** clean producer `175531f6dc4a0d0005c4593022393182d1f5e58c`
+qualified the repaired consumers and accepted shared contracts at that historical source.
+**Current composed source:** `54e771314` also contains the later fixture/template,
+presentation and standalone-bound repairs; fresh producer qualification remains open.
+The current inventory is **29 maintained manifests**, including Act Practice, bundled Time Attack,
 example-mutators and Starpost Valley. Initial 25/28-manifest counts remain historical.
-P01–P08, P11–P16, P18 and P20 have implemented repairs and focused qualification;
-P09/P10 have implemented adoption/export tooling with final ledger/starter checks
-still open. P17 ends in the explicit implement/defer dispositions below. P19's final
-binary runtime/installation work, the combined candidate comparison, main-branch integration,
+P01–P09, P11–P16, P18 and P20 have implemented repairs and focused qualification;
+P09's actual warning ledger and README consolidation are complete. P10's export/test
+contracts are implemented; fresh seven-starter and external checks remain open.
+P17 ends in the explicit implement/defer dispositions below. P19's new-source
+binary runtime/installation work, the repaired candidate comparison, main-branch integration,
 post-integration checks, push and accounted cleanup remain delivery gates.
 
 Checked boxes record achieved implementation and the stated focused evidence, not a
@@ -98,7 +101,7 @@ the remaining dependency inventory, which P13/P15/P16/P17 subsequently reduce.
 | R6 — menu/world hold semantics | P11 | Implemented: native/controlled/HOLD admission, host pause before callbacks, once-only input/audio/fade and native-act retirement; focused runtime/ROM checks passed. Final broad comparison remains open. |
 | R7 — galaxy/cache identity | P07 | Implemented and focused-qualified: generation identity, bounded caches, re-entry/new expedition/Continue isolation. |
 | R8 — practice/calibration | P06 | Implemented: explicit practice capability and configured timestamped rising edges, with remapping/device/retry regressions. |
-| R9 — internals and raw storage | P09, P13, P15, P16, P17 | Existing alternatives and proven narrow services migrated. Retained expert bridges have purpose/owner/reopening dispositions; the final 29-manifest warning ledger remains open. |
+| R9 — internals and raw storage | P09, P13, P15, P16, P17 | Existing alternatives and proven narrow services migrated. Actual 29-manifest/45-reference ledger and README consolidation complete; retained expert bridges have purpose/owner/reopening dispositions. |
 | R10 — omitted creator tests/tools | P10 | Export/test/generator repairs implemented; real external forks and starters qualified at recorded identities. Final starter/failure/empty/mismatch matrix remains open. |
 | R11 — repeated hot-path definitions | P08 | Implemented: immutable owner preparation, protected arrays, seeded/RNG equality and concurrent/reload isolation; measured lookups changed 1,000→1 identities. |
 | U1 — save-slot orchestration | P12 | Implemented: Three Islands and Slay profiles, plus Starpost progress/settings, use checked owner-local slots. Specialized Starfall/ghost protocols remain separate. |
@@ -383,7 +386,7 @@ are unchanged. Any performance claim has matched before/after evidence.
 `Leaderboard.java`, `InfiniteLevel.java`, `CourseZones.java`; Infinite/Survivors
 `build.py` plus `examples/build_example.py`; per-mod art/control/UI wrappers and READMEs.
 
-- [ ] Package each example and collect **actual** validator warning identities by mod,
+- [x] Package each example and collect **actual** validator warning identities by mod,
   referenced class and call purpose. Categorize each as an existing alternative,
   narrow missing semantic service, or temporarily retained expert bridge. Record this
   ledger in the dated audit; do not treat the 31 import sites as a warning count.
@@ -397,14 +400,15 @@ are unchanged. Any performance claim has matched before/after evidence.
 - [x] Consolidate duplicate Infinite/Survivors builders on the shared launcher while
   preserving their documented jar output paths and run behavior. Avoid direct player
   modstate manipulation in new launch flows.
-- [ ] Update READMEs with the final current residual
+- [x] Update READMEs with the final current residual
   warning inventory and matching-build guidance.
 
 **Execution:** shared builders, bounded owned leaderboard and equivalent helper
-adoptions are implemented. Final clean `175531f6d` compiled/packaged all 29 sources;
+adoptions are implemented. Completed clean `175531f6d` compiled/packaged all 29 sources;
 26 are strict-clean, while Infinite/Golf/Survivors retain 24/8/13 advisory references
-(45 total). Durable final warning-ledger and README consolidation remain open;
-the historical 28-package ledger is preserved as dated evidence.
+(45 total). The actual call/purpose/owner/reopening ledger and README consolidation
+are complete; README commit `54e771314` retains the checkpoint attribution and
+matching-build guidance. The historical 28-package ledger is preserved as dated evidence.
 
 **Verify:** queued `-Dmse=off "-Dtest=TestInfiniteSonic,TestSonicSurvivors,TestModStorage,TestModValidator" test`,
 portable launcher tests, and SDK packaging/validation of each changed example.
@@ -437,10 +441,12 @@ or weaken validation just to erase warnings.
 
 **Execution:** portable authored tests/resources/generators, seven starter profiles,
 matching-identity checks and launcher contracts are implemented. Actual provisional
-external fork/starter/generator checks are recorded; the final clean Starpost fork
-passes 231/231 and strict packaging. The unchecked external/negative matrix items
-still include final generated starters, deliberate failure, empty discovery and
-artifact mismatch checks at the frozen final producer identity.
+external fork/starter/generator checks are recorded; Starpost at clean `175531f6d`
+passes 231/231 and strict packaging. That producer's music creator-profile failure
+exposed an absent-plan template bug: `545d045f6` repairs it with 23/23 focused passes,
+zero skips. Fresh seven-starter Maven profiles and the unchecked external/negative
+matrix remain required at the new matching producer identity; earlier Hello/failure/
+empty controls retain their recorded historical identity.
 
 **Verify:** `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tools/modding -p test_creator_kit.py`,
 queued `-Dmse=off "-Dtest=TestCreatorTestLauncher,TestModTestKit,TestModSdkArtifactVerifier,TestModApiSdkPackager" test`,
@@ -716,7 +722,7 @@ independent source identities and installation/bundling rules.
 - [x] Build the maintained Native Flappy source using matching final candidate engine/
   SDK artifacts into a dedicated task output; inspect range, identity and validator findings.
   Never patch the old binary manifest to pretend code compatibility.
-- [ ] Verify a clean isolated runtime with explicit S3K ROM and the normal code-trust/
+- [x] Verify a clean isolated runtime with explicit S3K ROM and the normal code-trust/
   title Apply flow. Keep jars, ROMs, saves and modstate from the player's current runtime
   out of generated test directories and creator exports.
 - [ ] Inventory actual installed hashes/source identities at execution time. Replace
@@ -726,13 +732,14 @@ independent source identities and installation/bundling rules.
 - [ ] Record final candidate source/artifact identities, residual warnings, exercised
   routes, skips and any pending replacement in the existing audit/validation record.
 
-**Execution:** the maintained SDK build produced a final matching `175531f6d`
+**Execution:** the maintained SDK build produced a matching historical `175531f6d`
 Native Flappy jar, strict validator-clean, with `sample-flappy` version 1.0.0,
 range `>=0.7.0 <0.8.0`, base `s3k`. Its SHA-256 is
 `03c311c6701058eb69721a9540f2ab327af0573f10e00b6c73203ad92b9e0bfd`.
-The earlier source-built isolated trust/Apply/gameplay selector passed 11/11 without
-skips at its recorded provisional identity. Final isolated qualification using
-this actual maintained binary and local installation disposition remain open. The
+Actual maintained-binary request 43929 passed 11/11, zero failures/errors/skips,
+through isolated canonical-ROM trust/Apply/runtime checks at clean `175531f6d`.
+This completes that checkpoint's runtime obligation. New `54e771314` source/artifact
+runtime qualification and local installed replacement/disposition remain open. The
 existing obsolete jar was disabled/untrusted; unknown jars and player trust,
 enablement and saves remain untouched. A final build or isolated test must not be
 reported as installation, or used to silently change that player choice.
@@ -826,7 +833,11 @@ the native route matrix or certify missing GPU/audio/end-to-end network coverage
 The updated-base full3155-class ordinary/guard run completed: 27,431 ordinary tests,
 26 failures, zero errors and 63 skips; fresh guards passed 677/677, zero skips.
 Exact baseline assertions and skip reasons are retained in the validation record.
-The final candidate union is running with the observed-cost120-minute execution
-limit and10-minute idle limit. Its comparison, final artifact/starter/installation
+Clean `175531f6d` completed the candidate union: 27,627 ordinary checks, 31 failures,
+zero errors and 64 skips; guards ran 677 with three failures and zero errors/skips.
+The 26 baseline identities recur; the SSZ blob-hash difference has bounded semantic
+attribution. Five new ordinary and three guard failures received recorded repairs
+and focused qualification. The 120-minute execution and 10-minute idle limits were
+unchanged. The repaired-source comparison, fresh artifact/starter/installation
 gates, main integration, post-integration qualification, push and accounted cleanup
 remain open. No full-green or delivered claim follows from these focused results.
