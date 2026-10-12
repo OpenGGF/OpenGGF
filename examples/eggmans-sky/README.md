@@ -121,8 +121,21 @@ New Expedition retains its confirmation before replacing an existing rejected fi
 Generated planet and orbit lookups use galaxy seed, galaxy number, system/planet and generation
 schema independently of saved discovery/loot IDs. New Expedition and a validated Continue drop
 generation-owned lookup references. Orbit textures retain at most 24 entries, recoloured images
-256, creature banks 128, generated systems 512 and empty-cell lookups 2,048. Eviction leaves
+256, creature banks 32 per supplied ROM (96 maximum), generated systems 512 and empty-cell lookups 2,048. Eviction leaves
 images already held by the active planet valid; the host still owns GPU texture disposal.
+
+Terrain-shaper cuts belong to the current generated Planet instance. Launching and landing again
+on that retained planet keeps its cuts. Building a different planet replaces the instance;
+returning then rebuilds its terrain. Continue, New Expedition and scene teardown also reset cuts.
+Carving is absent from the version 1 expedition save; gathered resources and recorded discoveries
+remain saved independently.
+
+The art facade exposes `Art.failures()` as an immutable diagnostic snapshot, capped at 64 entries
+with 256-character request/cause text and the host-supplied owner. Missing optional ROMs,
+unsupported requests and invalid/corrupt decodes have distinct status. Failed decodes retry after
+120 scene ticks instead of every draw; a new scene probes supplied ROMs again. Programming faults
+reach the normal owner callback boundary. Creature banks use `SceneArtCache` request/palette
+identity; generation resets close those lookup caches without disposing live images.
 
 ### System voice
 
@@ -173,6 +186,8 @@ masters stay in the cache; they are excluded from the jar.
 
 ## How it is built
 
+- `world/GeneratedAssets` owns the current planet and derived orbit/backdrop lookups; `Game`
+  keeps the transition facade and `Player` the expedition state.
 - `world/TerrainGen` remixes an act's foreground layout. A planet is a loop of runs of source
   layout columns; a run may jump to another column only where the new neighbours sit side by
   side somewhere in the stock layout, or their facing pixel and collision edges match. Up to a

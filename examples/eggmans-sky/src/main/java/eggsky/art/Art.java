@@ -4,6 +4,8 @@ import com.openggf.mods.scene.RomSpriteRequest;
 import com.openggf.mods.scene.RomSpriteRequest.Compression;
 import com.openggf.mods.scene.RomSpriteRequest.DplcLayout;
 import com.openggf.mods.scene.SceneContext;
+import com.openggf.mods.scene.SceneLevelKit;
+import com.openggf.mods.scene.art.SceneArtCache;
 import com.openggf.mods.scene.SceneImage;
 import com.openggf.mods.scene.SceneRomArt;
 import com.openggf.mods.scene.SceneSprite;
@@ -16,8 +18,8 @@ import java.util.List;
 /**
  * Every ROM sprite the game draws, decoded once per scene and cached. Sonic 3 &amp; Knuckles is
  * the base game and supplies Eggman, the HUD props and the heroes; Sonic 1 and Sonic 2 are
- * opened when supplied for their worlds and creatures. Lookups never throw: missing art comes
- * back null and callers draw a stand-in.
+ * opened when supplied for their worlds and creatures. Expected asset failures return null with
+ * bounded diagnostics and retries; programming faults reach the scene owner boundary.
  */
 public final class Art {
     // S3K palettes (sonic3k.lst).
@@ -37,7 +39,8 @@ public final class Art {
     private final HashMap<String, SceneRomArt> roms = new HashMap<>();
     private final List<String> games = new ArrayList<>();
     private final HashMap<String, SceneSpriteSet> sets = new HashMap<>();
-    private final java.util.Map<String, SceneSpriteSet> creatures = bounded(128);
+    private final HashMap<String, SceneArtCache> creatureBanks = new HashMap<>();
+    private final ArtFailures failures;
     private final java.util.Map<String, SceneImage> tinted = bounded(256);
 
     private static <V> java.util.Map<String, V> bounded(int capacity) {
@@ -50,29 +53,53 @@ public final class Art {
 
     /** Drop mod-owned lookup references; live sprites and host-owned textures stay valid. */
     public void clearGeneration() {
-        creatures.clear();
+        creatureBanks.values().forEach(SceneArtCache::close);
+        creatureBanks.clear();
         tinted.clear();
     }
     private int[] aizPalette;
     public final FaunaCatalog fauna = new FaunaCatalog();
 
     public Art(SceneContext ctx) {
+        failures = new ArtFailures(ctx);
         for (String game : new String[] {"s3k", "s2", "s1"}) {
-            try {
-                SceneRomArt rom = ctx.art().rom(game);
-                if (rom != null) {
-                    roms.put(game, rom);
-                    games.add(game);
-                }
-            } catch (RuntimeException unavailable) {
-                // That ROM is not supplied.
+            SceneRomArt rom = ctx.art().rom(game);
+            if (rom != null) {
+                roms.put(game, rom);
+                games.add(game);
             }
         }
-        if (!roms.containsKey("s3k") && ctx.art().rom() != null) {
-            roms.put(ctx.art().rom().gameId(), ctx.art().rom());
-            if (!games.contains(ctx.art().rom().gameId())) {
-                games.add(ctx.art().rom().gameId());
-            }
+        SceneRomArt running = ctx.art().rom();
+        if (!roms.containsKey("s3k") && running != null) {
+            roms.put(running.gameId(), running);
+            if (!games.contains(running.gameId())) games.add(running.gameId());
+        }
+    }
+
+    /** Immutable snapshots; records retain bounded text, not exception objects or assets. */
+    public record Failure(String request, String owner, String kind, String cause) { }
+    public List<Failure> failures() {
+        return failures.entries().stream().map(entry -> new Failure(entry.request(), entry.owner(),
+                entry.kind().name(), entry.cause())).toList();
+    }
+
+    /** Optional level kits use the same cause reporting and retry policy as sprites. */
+    public SceneLevelKit levelKit(String game, int zone, int act) {
+        String request = "level:" + game + ":" + zone + ":" + act;
+        if (!failures.ready(request)) return null;
+        SceneRomArt rom = roms.get(game);
+        if (rom == null) {
+            failures.record(request, ArtFailures.Kind.OPTIONAL_ROM_MISSING, "ROM unavailable: " + game);
+            return null;
+        }
+        try {
+            SceneLevelKit kit = rom.levelKit(zone, act);
+            if (kit == null) failures.record(request, ArtFailures.Kind.UNSUPPORTED, "No level kit for this act");
+            else failures.succeeded(request);
+            return kit;
+        } catch (IllegalArgumentException | IllegalStateException | UnsupportedOperationException invalid) {
+            failures.record(request, invalid);
+            return null;
         }
     }
 
@@ -91,12 +118,13 @@ public final class Art {
 
     private int[] aiz() {
         if (aizPalette == null) {
-            aizPalette = new int[64];
+            int[] prepared = new int[64];
             SceneRomArt rom = s3k();
             if (rom != null) {
-                System.arraycopy(rom.palette(PAL_SONIC_TAILS, 16), 0, aizPalette, 0, 16);
-                System.arraycopy(rom.palette(PAL_AIZ, 48), 0, aizPalette, 16, 48);
+                System.arraycopy(rom.palette(PAL_SONIC_TAILS, 16), 0, prepared, 0, 16);
+                System.arraycopy(rom.palette(PAL_AIZ, 48), 0, prepared, 16, 48);
             }
+            aizPalette = prepared; // Publish only a complete successful palette.
         }
         return aizPalette;
     }
@@ -109,9 +137,9 @@ public final class Art {
 
     /** A named S3K sprite set (see the switch for names), or null. */
     public SceneSpriteSet set(String key) {
-        if (sets.containsKey(key)) {
-            return sets.get(key);
-        }
+        if (sets.containsKey(key)) return sets.get(key);
+        String request = "set:" + key;
+        if (!failures.ready(request)) return null;
         SceneSpriteSet set = null;
         SceneRomArt rom = s3k();
         if (rom != null) {
@@ -161,25 +189,35 @@ public final class Art {
                     case "tails" -> rom.character("tails");
                     case "tails_tails" -> rom.characterAccessory("tails");
                     case "knuckles" -> rom.character("knuckles");
-                    default -> null;
+                    default -> {
+                        failures.record(request, ArtFailures.Kind.UNSUPPORTED, "Unknown sprite set");
+                        yield null;
+                    }
                 };
-            } catch (RuntimeException failed) {
-                set = null;
+            } catch (IllegalArgumentException | IllegalStateException | UnsupportedOperationException invalid) {
+                failures.record(request, invalid);
             }
+        } else {
+            failures.record(request, ArtFailures.Kind.OPTIONAL_ROM_MISSING, "ROM unavailable: s3k");
         }
-        sets.put(key, set);
+        if (set != null) { sets.put(key, set); failures.succeeded(request); }
         return set;
     }
 
     /** Frame {@code frame} of a named set, or null. */
     public SceneSprite frame(String key, int frame) {
-        SceneSpriteSet set = set(key);
-        if (set == null || frame < 0 || frame >= set.frameCount()) {
-            return null;
-        }
+        return frame(set(key), "frame:" + key + ":" + frame, frame);
+    }
+
+    /** Lazy rasterisation has its own bounded diagnostic/retry entry. */
+    public SceneSprite frame(SceneSpriteSet set, String request, int frame) {
+        if (set == null || frame < 0 || frame >= set.frameCount() || !failures.ready(request)) return null;
         try {
-            return set.frame(frame);
-        } catch (RuntimeException broken) {
+            SceneSprite sprite = set.frame(frame);
+            failures.succeeded(request);
+            return sprite;
+        } catch (IllegalArgumentException | IllegalStateException | UnsupportedOperationException invalid) {
+            failures.record(request, invalid);
             return null;
         }
     }
@@ -202,20 +240,24 @@ public final class Art {
      * planet's level palette) recoloured by {@code recolor}. Cached by key.
      */
     public SceneSpriteSet creature(FaunaDef def, int[] palette, String cacheKey) {
-        if (creatures.containsKey(cacheKey)) {
-            return creatures.get(cacheKey);
-        }
-        SceneSpriteSet set = null;
+        String request = "creature:" + cacheKey;
+        if (!failures.ready(request)) return null;
         SceneRomArt rom = roms.get(def.game());
-        if (rom != null) {
-            try {
-                set = rom.sprites(def.request(), palette);
-            } catch (RuntimeException failed) {
-                set = null;
-            }
+        if (rom == null) {
+            failures.record(request, ArtFailures.Kind.OPTIONAL_ROM_MISSING, "ROM unavailable: " + def.game());
+            return null;
         }
-        creatures.put(cacheKey, set);
-        return set;
+        try {
+            // The SDK keys actual requests plus copied palettes, independently of caller labels.
+            // At most three supplied games retain 32 banks each; eviction leaves live images valid.
+            SceneSpriteSet set = creatureBanks.computeIfAbsent(def.game(), game -> new SceneArtCache(rom, 32))
+                    .sprites(def.request(), palette);
+            failures.succeeded(request);
+            return set;
+        } catch (IllegalArgumentException | IllegalStateException | UnsupportedOperationException invalid) {
+            failures.record(request, invalid);
+            return null;
+        }
     }
 
     /** A recoloured copy of a sprite frame's image, cached by key. */

@@ -61,11 +61,7 @@ public final class TitleMode implements Mode {
         SceneLevelKit kit = null;
         if (!g.usableBiomes.isEmpty()) {
             spec = new PlanetSpec(0x7171L, 0, StarSystem.YELLOW, g.usableBiomes.subList(0, 1));
-            try {
-                kit = g.art.rom(spec.biome.game()).levelKit(spec.biome.zone(), spec.biome.act());
-            } catch (RuntimeException failed) {
-                kit = null;
-            }
+            kit = g.art.levelKit(spec.biome.game(), spec.biome.zone(), spec.biome.act());
         }
         Body planet = new Body(0, 2600, -1300, 9000, 3200, 0.35, 0.0012, spec, false);
         planet.texture = spec == null ? null : PlanetTexture.build(spec, kit);

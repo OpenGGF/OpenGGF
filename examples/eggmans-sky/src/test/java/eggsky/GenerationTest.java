@@ -28,6 +28,18 @@ class GenerationTest {
         assertTrue(retained.save());assertTrue(retained.load());
         assertNotSame(second,retained.buildPlanet(0),"Continue replaces generation-owned data");
     }
+    @Test void carvingLivesWithTheCurrentPlanetAndIsNotInTheExpeditionSave() {
+        Game game=new ArtFixture().game();game.newExpedition(42,1,null);
+        Planet active=game.buildPlanet(0);int x=0,y=-1;
+        for(;x<active.terrain.width();x+=16){y=active.terrain.topFloor(x);if(y>=0)break;}
+        assertTrue(y>=0);String saved=game.player.encode();
+        assertTrue(active.terrain.carve(x,y+3,6)>0);assertTrue(active.terrain.carvedCells()>0);
+        assertSame(active,game.buildPlanet(0),"orbit/relanding on the retained planet preserves edits");
+        assertEquals(saved,game.player.encode(),"carving does not alter the v1 stream");
+        assertTrue(game.system().planetCount>1);assertNotNull(game.buildPlanet(1));
+        Planet rebuilt=game.buildPlanet(0);assertNotSame(active,rebuilt);assertEquals(0,rebuilt.terrain.carvedCells());
+        assertTrue(game.save());assertTrue(game.load());assertEquals(0,game.buildPlanet(0).terrain.carvedCells());
+    }
     private Object orbit(Game game) throws Exception {
         SpaceMode mode=new SpaceMode(SpaceMode.ARRIVE_LAUNCH,0);mode.enter(game);
         var field=SpaceMode.class.getDeclaredField("bodies");field.setAccessible(true);

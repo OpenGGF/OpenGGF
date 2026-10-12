@@ -1846,12 +1846,13 @@ public final class SurfaceMode implements Mode {
 
     public SceneSpriteSet creatureArt(Species s) {
         String key = planet.generationKey + ":" + s.body.key();
-        if (!creatureSets.containsKey(key)) {
+        if (creatureSets.get(key) == null) {
             int[] palette = s.body.game().equals(planet.spec.biome.game()) ? planet.palette : null;
             if (palette == null) {
                 palette = new int[64];
             }
-            creatureSets.put(key, game.art.creature(s.body, palette, key));
+            SceneSpriteSet set = game.art.creature(s.body, palette, key);
+            if (set != null) creatureSets.put(key, set);
         }
         return creatureSets.get(key);
     }
@@ -1861,12 +1862,7 @@ public final class SurfaceMode implements Mode {
         SceneSprite cached = creatureFrames.get(key);
         if (cached == null) {
             SceneSpriteSet set = creatureArt(s);
-            SceneSprite raw;
-            try {
-                raw = set.frame(frame);
-            } catch (RuntimeException broken) {
-                raw = null;
-            }
+            SceneSprite raw = game.art.frame(set, "frame:" + key, frame);
             cached = raw == null ? null : game.art.recolored(raw, s.recolor, key);
             if (cached != null) {
                 creatureFrames.put(key, cached);

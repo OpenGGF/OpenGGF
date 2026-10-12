@@ -262,12 +262,7 @@ public final class SpaceMode implements Mode {
             b.texture = cached;
             return;
         }
-        SceneLevelKit kit = null;
-        try {
-            kit = g.art.rom(b.spec.biome.game()).levelKit(b.spec.biome.zone(), b.spec.biome.act());
-        } catch (RuntimeException failed) {
-            kit = null;
-        }
+        SceneLevelKit kit = g.art.levelKit(b.spec.biome.game(), b.spec.biome.zone(), b.spec.biome.act());
         b.texture = PlanetTexture.build(b.spec, kit);
         g.textureCache.put(g.generationKey(system, b.spec), b.texture);
     }
@@ -978,39 +973,34 @@ public final class SpaceMode implements Mode {
             return null;
         }
         SceneSpriteSet set = enemySets.get(def.key());
-        if (set == null && !enemySets.containsKey(def.key())) {
+        if (set == null) {
             int[] pal = def.game().equals("s2") ? s2Palette(g) : null;
             set = g.art.creature(def, pal == null ? s3kPalette(g) : pal, "space:" + def.key());
-            enemySets.put(def.key(), set);
+            if (set != null) enemySets.put(def.key(), set);
         }
         if (set == null || set.frameCount() == 0) {
             return null;
         }
         int[] frames = def.frames();
-        return set.frame(Math.min(set.frameCount() - 1, frames[(int) ((g.ticks / 4) % frames.length)]));
+        int frame = Math.min(set.frameCount() - 1, frames[(int) ((g.ticks / 4) % frames.length)]);
+        return g.art.frame(set, "frame:space:" + def.key() + ":" + frame, frame);
     }
 
     private int[] s2Palette(Game g) {
         if (s2pal == null) {
-            try {
-                // Sky Chase's level palette (its badniks' home).
-                s2pal = g.art.rom("s2").levelKit(8, 0).palette();
-            } catch (RuntimeException failed) {
-                s2pal = new int[64];
-            }
+            // Sky Chase's level palette (its badniks' home).
+            SceneLevelKit kit = g.art.levelKit("s2", 8, 0);
+            if (kit != null) s2pal = kit.palette();
         }
         return s2pal;
     }
 
     private int[] s3kPalette(Game g) {
         if (s3kpal == null) {
-            try {
-                s3kpal = g.art.s3k().levelKit(6, 0).palette();
-            } catch (RuntimeException failed) {
-                s3kpal = new int[64];
-            }
+            SceneLevelKit kit = g.art.levelKit("s3k", 6, 0);
+            if (kit != null) s3kpal = kit.palette();
         }
-        return s3kpal;
+        return s3kpal == null ? new int[64] : s3kpal;
     }
 
     private int[] s2pal;
