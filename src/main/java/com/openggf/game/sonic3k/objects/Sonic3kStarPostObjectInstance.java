@@ -324,12 +324,12 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
      * S3K requires 20 rings (not 50 like S2).
      */
     private boolean shouldSpawnBonusStars(AbstractPlayableSprite player) {
-        // Time attack: bonus stars request bonus-stage entry, which is already
-        // swallowed at GameLoop's chokepoint (see GameLoop.enterSpecialStage()).
-        // Suppress the spawn itself so the player never sees stars circling with
-        // nothing to jump into. Checkpoint save/SFX/orbiting star above are unaffected.
-        var timeAttackGate = services().gameState();
-        if (timeAttackGate != null && timeAttackGate.isTimeAttackActive()) {
+        // Not a ROM branch: bonus stars request bonus-stage entry, which a run whose
+        // GameplayRunPolicy forbids bonus stages also swallows at GameLoop's
+        // chokepoint. Suppress the spawn itself so the player never sees stars
+        // circling with nothing to jump into. Checkpoint save/SFX/orbiting star above
+        // are unaffected; the stock policy always reaches the ROM checks below.
+        if (!services().runPolicy().bonusStageEntry()) {
             return false;
         }
 

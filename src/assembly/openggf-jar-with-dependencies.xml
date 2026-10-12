@@ -18,6 +18,17 @@
                 <exclude>META-INF/openggf-mod-sdk/**</exclude>
             </excludes>
         </fileSet>
+        <!-- Bundled first-party mod jars. The universal-jar profile points this at
+             target/bundled; otherwise it names a directory that never exists, so the
+             ordinary fat jar embeds nothing. The pinned manifest already travels in the
+             project classes above. -->
+        <fileSet>
+            <directory>${openggf.bundled.embed.directory}</directory>
+            <outputDirectory>openggf-bundled</outputDirectory>
+            <includes>
+                <include>*.jar</include>
+            </includes>
+        </fileSet>
     </fileSets>
     <dependencySets>
         <dependencySet>

@@ -22,7 +22,7 @@ public final class ModApiSignatureSurface {
             com.fasterxml.jackson.annotation.OptBoolean.class,
             java.io.BufferedReader.class, java.io.IOException.class, java.io.InputStream.class,
             AutoCloseable.class, Boolean.class, Class.class, Deprecated.class, Enum.class,
-            Exception.class, Float.class, Integer.class, Long.class, Object.class, Record.class,
+            Exception.class, RuntimeException.class, Float.class, Integer.class, Long.class, Object.class, Record.class,
             Runnable.class, String.class, StringBuilder.class, Throwable.class,
             FunctionalInterface.class, java.lang.annotation.Annotation.class,
             java.lang.annotation.ElementType.class, java.lang.annotation.Retention.class,
@@ -37,7 +37,8 @@ public final class ModApiSignatureSurface {
             java.util.function.BiConsumer.class, java.util.function.BiFunction.class,
             java.util.function.BooleanSupplier.class,
             java.util.function.Consumer.class, java.util.function.Function.class,
-            java.util.function.LongSupplier.class, java.util.function.Predicate.class,
+            // Room transport exposes bounded integer capacity/clock selectors as JDK callbacks.
+            java.util.function.IntSupplier.class, java.util.function.LongSupplier.class, java.util.function.Predicate.class,
             java.util.function.Supplier.class, javax.net.ssl.SSLContext.class);
 
     /**

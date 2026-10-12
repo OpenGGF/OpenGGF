@@ -1,23 +1,28 @@
 package com.openggf.net.hub;
 
 import com.openggf.net.identity.PlayerIdentity;
-import com.openggf.net.protocol.ControlCodec;
+import com.openggf.net.protocol.ControlJsonCodec;
 import com.openggf.net.protocol.ControlMessage;
 import com.openggf.net.protocol.Protocol;
 import com.openggf.net.protocol.ProtocolViolationException;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.LongSupplier;
 
 /** Single-threaded room protocol driver and owner of its hub and round state. */
+@com.openggf.game.ModApi
 public final class RoomHost {
     public static final long ADMISSION_TIMEOUT_MILLIS = 5000;
     public static final long STANDINGS_PAGE_INTERVAL_MILLIS = 2000;
     public static final int STANDINGS_PAGE_SIZE = 10;
     private static final int TOKEN_STRIKE_LIMIT = 3;
+    private static final int MAX_DISPLAY_NAME_BYTES = 64;
+    private static final int MAX_CHARACTER_BYTES = 32;
 
     private static final class Member {
         final HubConnection connection;
@@ -26,6 +31,7 @@ public final class RoomHost {
         boolean admitted;
         int slot = -1;
         String token;
+        String participantId;
         String fingerprint;
         String displayName;
         String character;
@@ -35,6 +41,8 @@ public final class RoomHost {
         int tokenStrikes;
         int violationsThisRound;
         boolean finishedThisRound;
+        int activeAttemptId = -1;
+        int lastAttemptId = -1;
 
         Member(HubConnection connection, HostHandshake handshake, long connectedAt) {
             this.connection = connection;
@@ -50,6 +58,7 @@ public final class RoomHost {
     private final GhostHub hub;
     private final HostRoundEngine round;
     private final RoomHostHooks hooks;
+    private final ControlJsonCodec codec;
     private final Map<HubConnection, Member> members = new LinkedHashMap<>();
     private final Map<HubConnection, String> expectedFingerprints = new LinkedHashMap<>();
     private String roomGameId;
@@ -66,6 +75,15 @@ public final class RoomHost {
                     LongSupplier wallClockMillis,
                     TrackValidationProfileSource profiles,
                     RoomHostHooks hooks) {
+        this(config, hostIdentity, wallClockMillis, profiles, hooks, new ControlJsonCodec());
+    }
+
+    /** Lets a process hosting many rooms share one thread-safe control codec. */
+    public RoomHost(RoomHostConfig config, PlayerIdentity hostIdentity,
+                    LongSupplier wallClockMillis,
+                    TrackValidationProfileSource profiles,
+                    RoomHostHooks hooks, ControlJsonCodec codec) {
+        this.codec = java.util.Objects.requireNonNull(codec, "codec");
         this.config = config;
         this.hostIdentity = hostIdentity;
         this.wallClockMillis = wallClockMillis;
@@ -113,9 +131,9 @@ public final class RoomHost {
             connection.close("not connected");
             return;
         }
-        final ControlCodec.DecodedControl decoded;
+        final ControlJsonCodec.Decoded decoded;
         try {
-            decoded = ControlCodec.decode(text);
+            decoded = codec.decode(text);
         } catch (ProtocolViolationException e) {
             drop(member, "protocol violation: " + e.getMessage());
             return;
@@ -138,6 +156,11 @@ public final class RoomHost {
         if (member == null || !member.admitted) {
             connection.close("binary before admission");
             members.remove(connection);
+            return;
+        }
+        if (round.phase() != HostRoundEngine.Phase.RUNNING
+                || member.activeAttemptId < 0) {
+            recordAttemptViolation(member, "binary outside active attempt");
             return;
         }
         hub.onBinary(member.slot, data);
@@ -167,12 +190,14 @@ public final class RoomHost {
         HostRoundEngine.Phase previousPhase = round.phase();
         round.onTick();
         if (previousPhase == HostRoundEngine.Phase.RUNNING
-                && round.phase() == HostRoundEngine.Phase.ROUND_END
-                && hooks.roundOutcomeListener() != null) {
+                && round.phase() == HostRoundEngine.Phase.ROUND_END) {
             for (Member member : List.copyOf(members.values())) {
                 if (member.admitted) {
-                    hooks.roundOutcomeListener().onRoundComplete(member.fingerprint,
-                            member.finishedThisRound && member.violationsThisRound == 0);
+                    clearActiveAttempt(member);
+                    if (hooks.roundOutcomeListener() != null) {
+                        hooks.roundOutcomeListener().onRoundComplete(member.fingerprint,
+                                member.finishedThisRound && member.violationsThisRound == 0);
+                    }
                 }
             }
         }
@@ -188,6 +213,8 @@ public final class RoomHost {
         for (Member member : members.values()) {
             member.violationsThisRound = 0;
             member.finishedThisRound = false;
+            member.activeAttemptId = -1;
+            member.lastAttemptId = -1;
         }
         hub.setTrack(roundConfig.gameId(), roundConfig.zone(), roundConfig.act());
         roomGameId = roundConfig.gameId();
@@ -246,6 +273,20 @@ public final class RoomHost {
         }
     }
 
+    void sendToParticipantInSlot(int slot, String participantId,
+                                 ControlMessage message) {
+        Member member = memberForSlot(slot);
+        if (member != null && member.participantId.equals(participantId)) {
+            send(member, message);
+        }
+    }
+
+    String participantIdForSlot(int slot, String fingerprint) {
+        Member member = memberForSlot(slot);
+        return member != null && member.fingerprint.equals(fingerprint)
+                ? member.participantId : null;
+    }
+
     public String identityFingerprintForSlot(int slot) {
         Member member = memberForSlot(slot);
         return member == null ? null : member.fingerprint;
@@ -263,9 +304,9 @@ public final class RoomHost {
         };
         switch (step) {
             case HostHandshake.SendWelcome welcome -> member.connection.sendText(
-                    ControlCodec.encode(null, welcome.welcome()));
+                    codec.encode(null, welcome.welcome()));
             case HostHandshake.Reject reject -> {
-                member.connection.sendText(ControlCodec.encode(null,
+                member.connection.sendText(codec.encode(null,
                         new ControlMessage.JoinRejected(reject.reason())));
                 drop(member, reject.reason());
             }
@@ -276,21 +317,21 @@ public final class RoomHost {
     private void admitMember(Member member, HostHandshake.Admit admit) {
         String expected = expectedFingerprints.remove(member.connection);
         if (expected != null && !expected.equals(admit.fingerprint())) {
-            member.connection.sendText(ControlCodec.encode(null,
+            member.connection.sendText(codec.encode(null,
                     new ControlMessage.JoinRejected("identity mismatch")));
             drop(member, "identity mismatch");
             return;
         }
         if (members.values().stream().anyMatch(existing -> existing.admitted
                 && existing.fingerprint.equals(admit.fingerprint()))) {
-            member.connection.sendText(ControlCodec.encode(null,
+            member.connection.sendText(codec.encode(null,
                     new ControlMessage.JoinRejected("identity already connected")));
             drop(member, "duplicate identity");
             return;
         }
         int slot = lowestFreeSlot();
         if (slot < 0) {
-            member.connection.sendText(ControlCodec.encode(null,
+            member.connection.sendText(codec.encode(null,
                     new ControlMessage.JoinRejected("room full")));
             drop(member, "room full");
             return;
@@ -302,10 +343,20 @@ public final class RoomHost {
                 ? admit.fingerprint().substring(0, 8) : admit.displayName();
         member.character = "LOCKED".equals(config.characterPolicy())
                 ? config.lockedCharacter() : "sonic";
+        if (!boundedLabel(member.displayName, MAX_DISPLAY_NAME_BYTES)
+                || !boundedLabel(member.character, MAX_CHARACTER_BYTES)
+                || !roomStateFits()) {
+            member.admitted = false;
+            member.connection.sendText(codec.encode(null,
+                    new ControlMessage.JoinRejected("room state limit exceeded")));
+            drop(member, "room state limit exceeded");
+            return;
+        }
         member.memberSinceMillis = wallClockMillis.getAsLong();
         member.token = tokens.issue();
+        member.participantId = UUID.randomUUID().toString();
         hub.addPlayer(slot, member.fingerprint, member.connection);
-        member.connection.sendText(ControlCodec.encode(null,
+        member.connection.sendText(codec.encode(null,
                 new ControlMessage.JoinAccepted(member.token, slot, descriptor(),
                         round.snapshot())));
         broadcast(new ControlMessage.RoomState(players()));
@@ -315,14 +366,19 @@ public final class RoomHost {
         long now = wallClockMillis.getAsLong();
         switch (message) {
             case ControlMessage.Chat chat -> handleChat(member, chat, now);
-            case ControlMessage.Ping ping -> member.connection.sendText(ControlCodec.encode(
+            case ControlMessage.Ping ping -> member.connection.sendText(codec.encode(
                     null, new ControlMessage.Pong(ping.t0ClientMillis(), now)));
             case ControlMessage.SelectCharacter select -> {
                 if (round.phase() == HostRoundEngine.Phase.LOBBY
                         && !"LOCKED".equals(config.characterPolicy())
-                        && select.character() != null && !select.character().isBlank()) {
+                        && boundedLabel(select.character(), MAX_CHARACTER_BYTES)) {
+                    String previous = member.character;
                     member.character = select.character();
-                    broadcast(new ControlMessage.RoomState(players()));
+                    if (roomStateFits()) {
+                        broadcast(new ControlMessage.RoomState(players()));
+                    } else {
+                        member.character = previous;
+                    }
                 }
             }
             case ControlMessage.RoundConfigure configure -> {
@@ -332,20 +388,24 @@ public final class RoomHost {
                     requestStartRound(configure.config());
                 }
             }
-            case ControlMessage.AttemptStart start ->
-                    hub.onAttemptStart(member.slot, start.attemptId());
-            case ControlMessage.AttemptReset reset ->
-                    hub.onAttemptReset(member.slot, reset.attemptId());
+            case ControlMessage.AttemptStart start -> startAttempt(member, start.attemptId());
+            case ControlMessage.AttemptReset reset -> resetAttempt(member, reset.attemptId());
             case ControlMessage.TrackVote vote ->
                     round.onTrackVote(member.slot, vote.trackKey());
             case ControlMessage.AttemptFinish finish -> {
+                if (round.phase() != HostRoundEngine.Phase.RUNNING
+                        || finish.attemptId() != member.activeAttemptId) {
+                    recordAttemptViolation(member, "finish outside matching active attempt");
+                    break;
+                }
                 HostRoundEngine.FinishOutcome outcome = round.onAttemptFinish(
-                        member.slot, member.displayName, member.character,
+                        member.slot, member.participantId, member.fingerprint,
+                        member.displayName, member.character,
                         finish, !hub.hasFinishEvidence(member.slot,
                                 finish.attemptId(), finish.finishFrame(),
                                 finish.ghostStreamHashHex()));
-                member.finishedThisRound = round.standings().stream()
-                        .anyMatch(row -> row.slot() == member.slot);
+                clearActiveAttempt(member);
+                member.finishedThisRound = round.hasBestForParticipant(member.participantId);
                 if (outcome != null && outcome.outsideBroadcastCap()) {
                     send(member, new ControlMessage.RankUpdate(
                             outcome.rank(), finish.timeFrames()));
@@ -393,8 +453,45 @@ public final class RoomHost {
         broadcast(new ControlMessage.ChatBroadcast(member.slot, member.displayName, text));
     }
 
+    private void startAttempt(Member member, int attemptId) {
+        if (!round.mayStartAttempt()
+                || member.activeAttemptId >= 0 || attemptId <= member.lastAttemptId) {
+            recordAttemptViolation(member, "invalid attempt start " + attemptId);
+            return;
+        }
+        member.activeAttemptId = attemptId;
+        member.lastAttemptId = attemptId;
+        hub.onAttemptStart(member.slot, attemptId);
+    }
+
+    private void resetAttempt(Member member, int attemptId) {
+        if (attemptId != member.activeAttemptId) {
+            recordAttemptViolation(member, "reset outside matching active attempt");
+            return;
+        }
+        clearActiveAttempt(member);
+    }
+
+    private void clearActiveAttempt(Member member) {
+        if (member.activeAttemptId >= 0) {
+            hub.onAttemptReset(member.slot, member.activeAttemptId);
+            member.activeAttemptId = -1;
+        }
+    }
+
+    private void recordAttemptViolation(Member member, String detail) {
+        member.violationsThisRound++;
+        System.getLogger(RoomHost.class.getName()).log(
+                System.Logger.Level.WARNING,
+                "attempt violation slot=" + member.slot + " fp=" + member.fingerprint
+                        + ": " + detail);
+        if (member.violationsThisRound >= GhostStreamValidator.KICK_THRESHOLD) {
+            drop(member, "attempt protocol violations");
+        }
+    }
+
     private void broadcast(ControlMessage message) {
-        String encoded = ControlCodec.encode(null, message);
+        String encoded = codec.encode(null, message);
         for (Member member : members.values()) {
             if (member.admitted) {
                 member.connection.sendText(encoded);
@@ -402,8 +499,20 @@ public final class RoomHost {
         }
     }
 
-    private static void send(Member member, ControlMessage message) {
-        member.connection.sendText(ControlCodec.encode(null, message));
+    private boolean roomStateFits() {
+        return codec.encode(null, new ControlMessage.RoomState(players()))
+                .getBytes(StandardCharsets.UTF_8).length <= Protocol.MAX_CONTROL_BYTES;
+    }
+
+    private static boolean boundedLabel(String value, int maxBytes) {
+        return value != null && !value.isBlank()
+                && value.getBytes(StandardCharsets.UTF_8).length <= maxBytes
+                && value.codePoints().noneMatch(codePoint -> codePoint < 0x20
+                || codePoint == '"' || codePoint == '\\');
+    }
+
+    private void send(Member member, ControlMessage message) {
+        member.connection.sendText(codec.encode(null, message));
     }
 
     private int lowestFreeSlot() {

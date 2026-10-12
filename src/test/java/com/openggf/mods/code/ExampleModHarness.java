@@ -102,6 +102,11 @@ public final class ExampleModHarness implements AutoCloseable {
         return kit.plan(manifest.id());
     }
 
+    /** The example's master-title entry, as the engine would show and open it. */
+    public OwnedTitleEntry titleEntry() {
+        return kit.titleEntry(manifest.id());
+    }
+
     /** The module the engine would run with the mod applied on top of {@code base}. */
     public GameModule apply(GameModule base) {
         return kit.launch(base, new GameplayLaunchRequest(base.getGameCode(), "sonic", List.of()));

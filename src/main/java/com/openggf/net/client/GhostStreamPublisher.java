@@ -1,15 +1,17 @@
 package com.openggf.net.client;
 
-import com.openggf.ghost.GhostFrame;
-import com.openggf.ghost.GhostFrameCodec;
+import com.openggf.net.ghost.GhostFrame;
+import com.openggf.net.ghost.GhostFrameCodec;
 import com.openggf.net.protocol.GhostPackets;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 /** Three-frame upstream batching plus a SHA-256 digest of the exact frame stream. */
+@com.openggf.game.ModApi
 public final class GhostStreamPublisher {
     @FunctionalInterface
+    @com.openggf.game.ModApi
     public interface BinarySender {
         void sendBinary(byte[] data);
     }

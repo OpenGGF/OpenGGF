@@ -1,7 +1,7 @@
 package com.openggf.net.hub;
 
-import com.openggf.ghost.GhostFrame;
-import com.openggf.ghost.GhostFrameCodec;
+import com.openggf.net.ghost.GhostFrame;
+import com.openggf.net.ghost.GhostFrameCodec;
 import com.openggf.net.protocol.GhostPackets;
 import com.openggf.net.protocol.ProtocolViolationException;
 
@@ -15,8 +15,10 @@ import java.util.TreeMap;
 import java.util.function.LongSupplier;
 
 /** Single-threaded ingest and 20 Hz aggregation core for cosmetic ghost streams. */
+@com.openggf.game.ModApi
 public final class GhostHub {
     @FunctionalInterface
+    @com.openggf.game.ModApi
     public interface HubViolationRecorder {
         void record(int slot, String fingerprint, String kind, String detail);
     }
@@ -207,9 +209,13 @@ public final class GhostHub {
     public boolean hasFinishEvidence(int slot, int attemptId, int finishFrame,
                                      String claimedStreamHashHex) {
         Player player = players.get(slot);
-        return player != null
-                && player.validator.hasFinishEvidence(
+        if (player == null) {
+            return false;
+        }
+        boolean accepted = player.validator.hasFinishEvidence(
                 attemptId, finishFrame, claimedStreamHashHex);
+        closeIfThresholdReached(player);
+        return accepted;
     }
 
     public int tickCount() {

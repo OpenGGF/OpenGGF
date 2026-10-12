@@ -13,13 +13,20 @@ public final class ClientHandshake {
     private final PlayerIdentity identity;
     private final String displayName;
     private final String determinismFingerprint;
+    private final String expectedServerId;
     private String serverId;
 
     public ClientHandshake(PlayerIdentity identity, String displayName,
                            String determinismFingerprint) {
+        this(identity, displayName, determinismFingerprint, null);
+    }
+
+    public ClientHandshake(PlayerIdentity identity, String displayName,
+                           String determinismFingerprint, String expectedServerId) {
         this.identity = identity;
         this.displayName = displayName;
         this.determinismFingerprint = determinismFingerprint;
+        this.expectedServerId = expectedServerId;
     }
 
     public ControlMessage.Hello hello() {
@@ -34,6 +41,9 @@ public final class ClientHandshake {
             throws GeneralSecurityException {
         if (welcome.protocolVersion() != Protocol.VERSION) {
             throw new GeneralSecurityException("protocol version mismatch");
+        }
+        if (expectedServerId != null && !expectedServerId.equals(welcome.serverId())) {
+            throw new GeneralSecurityException("host identity mismatch");
         }
         serverId = welcome.serverId();
         final byte[] nonce;

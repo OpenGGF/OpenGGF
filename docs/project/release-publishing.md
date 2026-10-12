@@ -58,6 +58,30 @@ publish job from running. A manual dispatch is not a way to publish.
    itself. For a failed or cancelled run, inspect its tag and any partial
    release before retrying.
 
+## Bundled first-party mods
+
+JVM distributions carry the first-party mods listed in the `openggf.bundled.mods`
+property of `pom.xml` (comma-separated project directories in the `examples/` layout;
+empty by default). During `package`, `BundledModPackager` compiles each project against
+the engine build, packages it with `ggfmod package` treating validator warnings as
+errors, writes the jars to `target/bundled/`, and pins their id, version, file, size and
+SHA-256 in `META-INF/openggf/bundled-mods.json` inside the engine classes. The
+`universal-jar` profile embeds the jars as `openggf-bundled/<file>`; the `native`
+profile skips the step, and native images include neither the manifest nor the jars.
+
+The `universal-jar` job fails unless the jar contains the manifest and every listed jar
+with its pinned size and hash, and nothing unlisted. The native packaging smoke check
+fails if a Windows, macOS or Linux archive contains a `bundled/` folder, embedded
+bundled jars or the manifest. To check the pipeline locally with a test payload:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -DskipTests -Puniversal-jar \
+    -Dopenggf.bundled.mods=examples/hello-scene package
+```
+
+See [trust](../modding/concepts/trust.md#first-party-bundled-mods-a-deliberate-narrowing)
+for why only the pinned hash is trusted by default.
+
 ## Website refresh after publication
 
 After `release` succeeds, the separate `notify-website` job sends an

@@ -5,6 +5,7 @@ import com.openggf.net.protocol.Protocol;
 import java.util.List;
 
 /** Immutable parameters for a player-hosted direct room. */
+@com.openggf.game.ModApi
 public record RoomHostConfig(String roomName, String gameId, int zone, int act,
                              String characterPolicy, String lockedCharacter,
                              int maxPlayers, String requiredDeterminismFingerprint,
