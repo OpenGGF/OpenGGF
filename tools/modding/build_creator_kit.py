@@ -28,10 +28,11 @@ def version(root):
     return ET.parse(root / "pom.xml").findtext("{http://maven.apache.org/POM/4.0.0}version")
 
 
-def project_pom(name):
+def project_pom(name, has_resource_generator=False):
+    generator = '''<execution><id>generate-authored-resources</id><phase>process-resources</phase><goals><goal>exec</goal></goals><configuration><executable>${openggf.python}</executable><arguments><argument>${project.basedir}/generate_resources.py</argument><argument>${project.build.outputDirectory}</argument></arguments></configuration></execution>''' if has_resource_generator else ""
     return f'''<project xmlns="http://maven.apache.org/POM/4.0.0"><modelVersion>4.0.0</modelVersion>
 <groupId>example.mods</groupId><artifactId>{name}</artifactId><version>1.0.0</version>
-<properties><maven.compiler.release>25</maven.compiler.release><openggf.creator.testSources>src/creator-tests-disabled</openggf.creator.testSources><skipTests>true</skipTests></properties>
+<properties><maven.compiler.release>25</maven.compiler.release><openggf.creator.testSources>src/creator-tests-disabled</openggf.creator.testSources><skipTests>true</skipTests><openggf.python>python3</openggf.python></properties>
 <dependencies>
 <dependency><groupId>com.openggf</groupId><artifactId>engine-local</artifactId><version>0</version><scope>system</scope><systemPath>${{openggf.engine.jar}}</systemPath></dependency>
 <dependency><groupId>com.openggf</groupId><artifactId>sdk-local</artifactId><version>0</version><scope>system</scope><systemPath>${{openggf.sdk.jar}}</systemPath></dependency>
@@ -44,7 +45,7 @@ def project_pom(name):
 <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><version>3.14.0</version></plugin>
 <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId><version>3.2.5</version><configuration><argLine>--enable-native-access=ALL-UNNAMED</argLine><failIfNoTests>true</failIfNoTests></configuration></plugin>
 <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-antrun-plugin</artifactId><version>3.1.0</version><executions><execution><id>clean-package-output</id><phase>initialize</phase><goals><goal>run</goal></goals><configuration><target><delete file="${{project.build.directory}}/{name}-mod.jar" quiet="true"/></target></configuration></execution></executions></plugin>
-<plugin><groupId>org.codehaus.mojo</groupId><artifactId>exec-maven-plugin</artifactId><version>3.1.0</version><executions><execution><id>validated-mod</id><phase>prepare-package</phase><goals><goal>exec</goal></goals><configuration><executable>${{java.home}}/bin/java</executable><classpathScope>compile</classpathScope><arguments><argument>--enable-native-access=ALL-UNNAMED</argument><argument>-cp</argument><classpath/><argument>com.openggf.tools.modsdk.GgfModCli</argument><argument>package</argument><argument>--input</argument><argument>${{project.build.outputDirectory}}</argument><argument>--out</argument><argument>${{project.build.directory}}/{name}-mod.jar</argument></arguments></configuration></execution></executions></plugin>
+<plugin><groupId>org.codehaus.mojo</groupId><artifactId>exec-maven-plugin</artifactId><version>3.1.0</version><executions>{generator}<execution><id>validated-mod</id><phase>prepare-package</phase><goals><goal>exec</goal></goals><configuration><executable>${{java.home}}/bin/java</executable><classpathScope>compile</classpathScope><arguments><argument>--enable-native-access=ALL-UNNAMED</argument><argument>-cp</argument><classpath/><argument>com.openggf.tools.modsdk.GgfModCli</argument><argument>package</argument><argument>--input</argument><argument>${{project.build.outputDirectory}}</argument><argument>--out</argument><argument>${{project.build.directory}}/{name}-mod.jar</argument></arguments></configuration></execution></executions></plugin>
 </plugins></build></project>'''.encode()
 
 
@@ -78,6 +79,9 @@ def exported_projects(root):
 def export_examples(root):
     entries = {}
     for name, project in exported_projects(root).items():
+        generator = project / "generate_resources.py"
+        if generator.is_file():
+            entries["examples/" + name + "/generate_resources.py"] = generator.read_bytes()
         for tree in ("src/main", "src/test", "tools"):
             for file in sorted((project / tree).rglob("*")):
                 relative = file.relative_to(project)
@@ -146,7 +150,7 @@ there refer to the pinned source tree; use the creator-kit commands above here.
 
 '''
         entries[f"examples/{name}/README.md"] = instructions.encode() + (readme.read_bytes() if readme.exists() else b"")
-        entries[f"examples/{name}/pom.xml"] = project_pom(name)
+        entries[f"examples/{name}/pom.xml"] = project_pom(name, generator.is_file())
     return entries
 
 

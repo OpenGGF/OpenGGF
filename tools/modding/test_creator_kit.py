@@ -58,6 +58,7 @@ class CreatorKitTest(unittest.TestCase):
             "src/test/java/demo/ModelTest.java": "// portable Jupiter test\n",
             "src/test/resources/fixture.txt": "authored fixture\n",
             "tools/generate_maps.py": "# reproducible source generator\n",
+            "generate_resources.py": "# shared launcher's authored resource generator\n",
             "tools/__pycache__/stale.pyc": "not an authored input\n",
             "target/test-classes/demo/ModelTest.class": "not an authored input\n",
         }
@@ -67,11 +68,17 @@ class CreatorKitTest(unittest.TestCase):
             path.write_text(text)
         entries = kit.export_examples(self.root)
         for relative in ("src/test/java/demo/ModelTest.java", "src/test/resources/fixture.txt",
-                         "tools/generate_maps.py"):
+                         "tools/generate_maps.py", "generate_resources.py"):
             self.assertEqual((project / relative).read_bytes(), entries["examples/model-demo/" + relative])
         self.assertFalse(any("__pycache__" in name or "target/test-classes" in name for name in entries))
         readme = entries["examples/model-demo/README.md"].decode()
         self.assertIn("--test", readme)
+        pom = ET.fromstring(entries["examples/model-demo/pom.xml"])
+        ns = {"m": "http://maven.apache.org/POM/4.0.0"}
+        execution = next(e for e in pom.findall("m:build/m:plugins/m:plugin/m:executions/m:execution", ns)
+                         if e.findtext("m:id", namespaces=ns) == "generate-authored-resources")
+        self.assertEqual("process-resources", execution.findtext("m:phase", namespaces=ns))
+        self.assertEqual("${openggf.python}", execution.findtext("m:configuration/m:executable", namespaces=ns))
 
     def test_actual_export_includes_every_portable_example_test_and_three_islands_generator(self):
         root = Path(__file__).resolve().parents[2]

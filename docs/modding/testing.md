@@ -17,8 +17,10 @@ normal module resolver. It opens the real scene host, feeds input, records drawi
 and checks runtime findings. No checkout-only test harness is required.
 
 Every exported fork includes its authored tests and test resources. Source
-generators, including Three Islands' map generator, remain in the project's
-`tools/` directory. Older `*Checks` and `*Probe` programs receive compiled Jupiter
+generators, including Three Islands' map generator, retain their authored paths.
+A project-root `generate_resources.py` runs after resource copying in both portable
+and exported Maven builds. Maven uses `python3`; override `-Dopenggf.python=` for
+another Python 3 executable. Older `*Checks` and `*Probe` programs receive compiled Jupiter
 adapters in exported sources; the engine still discovers and reports actual tests.
 Projects without authored tests receive a packed-mod registration test.
 

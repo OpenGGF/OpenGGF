@@ -411,3 +411,30 @@ Java25/Lua5.4. No completed broad result is claimed yet. Starpost's newly reprod
 unchecked progress/settings writes, rejected-save replacement and art fault/failure
 caches are assigned to existing P01/P12/P18 tasks; scene-act/controller coexistence is
 assigned to P11. Native session/identity/outcome protections are retained.
+
+Root clean09af93df1 provisional Java25 package passed38.234s, including strict bundled
+Time Attack zero findings; engine/SDK/testkit are matching and supplied to Starpost
+workers for actual external creator checks. Compiled inventory exactly matched all
+20072 combined pin rows with zero missing/stale rows, after compilation completed.
+The newly merged optional root generate_resources.py contract exposed an exporter gap:
+its source path was absent (actual Python KeyError regression). The exporter now retains
+it and schedules it after Maven resource copying as well as portable copying; the
+existing17-test Python suite passes. Final actual Maven/portable generated-resource
+matrix remains pending with the final kit.
+
+A bounded owned offscreen diagnostic established the pixel provider limitation:
+GLFW3.4 initializes, but EGL returns GLFW_FORMAT_UNAVAILABLE / Failed to find a suitable
+EGLConfig, including scoped surfaceless/software settings. The still-waiting redundant
+GPU request was cancelled before execution; no ambient desktop or driver installation
+was used. An independent actual-ROM CPU pixel-centre oracle is added to compare the
+three boss recipes at three animation samples; this qualifies decoded part geometry
+and ordering separately from the optional production GL readback test.
+
+The root generator contract has actual external qualification against matching clean09af
+Java25 jars, separate from the final kit: exported Hello plus an authored generator
+passes three Jupiter checks (zero skips), strict package zero findings. The generator
+verified authored manifest copying before writing its resource. Exported Maven
+`-DskipTests package` also passed1.207s; the generated resource is present in both
+packed jars and Jupiter/testkit/test classes are absent. This is an SDK/build contract
+qualification, not a Maven engine-suite pass. The owned consumer tree was deleted after
+inspection; no raw logs retained. Python safety/export suite remains17/17.
