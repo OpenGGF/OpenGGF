@@ -253,6 +253,9 @@ the harness; this was not a source defect. Reports below are the completed run.
 
 ### Actual findings and their dispositions
 
+This historical 52-pair finding set is superseded by the clean `175531f6d`
+45-pair ledger below. Its purposes and action-owner definitions remain preserved.
+
 Every finding was `WARNING / NON_API_ENGINE_REFERENCE`, with an empty member field.
 The tables preserve every reported referencing-class/referenced-class pair. Purposes
 and proposed alternatives are source-qualified reviews, not runtime certification.
@@ -1100,3 +1103,324 @@ A fresh matching exported SDK/testkit/engine kit and regeneration/execution of
 all seven actual Maven creator profiles remain required after integration.
 This focused pass does not complete that external gate or the final broad
 comparison, installation, push and cleanup gates.
+
+## Clean 175531f6d producer: 29-manifest package and strict-validator checkpoint
+
+This supersedes the historical 52-pair finding set above. The historical recipes,
+purposes and action-owner definitions remain evidence, rather than a current count.
+At this checkpoint the engine, SDK and testkit were built from committed
+`175531f6dc4a0d0005c4593022393182d1f5e58c`, all reporting `app.commit=175531f6d`,
+`app.dirty=false`, version/base version `0.7.prerelease`. Only those frozen jars and
+committed authored sources were materialized outside the checkout; no ROM, player
+state or existing build tree was copied. The source was archived at the same producer
+SHA, so later documentation commits do not change this qualification identity.
+Later source and exported-template repairs require their separately identified
+qualifications; these frozen artifacts are not relabelled as a later producer.
+
+| Artifact | SHA-256 |
+|---|---|
+| Engine | `014a89f7ee16c5c0f6c583e25bf28d73ab5c07d386d196e7ff8780549045c320` |
+| SDK | `0e5945ae6f089342ccfcdf40adc4752a16d18ce7799c7a378ac7ddafbf78489c` |
+| Testkit | `b304922c92aa10a9ef978844cac191b7be20a8cad95196996fe2f7cf4b421c7c` |
+| API Javadoc jar | `c08ef0f4dcf1aa83d82b4b0c9c0938cec943ed3ab1756739adc46a8851738f48` |
+
+The coordinator independently verified all 20,101 compiled/pinned candidate API
+rows; signature-pin SHA-256
+`ff5ac4e6ac6fbbf9b7d7243fa1eda335bb220a49870aa5065ef8377e2c7cac34`.
+The Javadoc and pin checks are producer evidence, distinct from this worker's
+29-source consumer compilation and validator runs.
+
+Actual Java 25 `javac --release 25` compilation used engine/SDK only. Two workers
+configured each compiler/SDK JVM with `-Xmx1g` and `ActiveProcessorCount=2`. Every project executed
+`GgfModCli package` and `validate` with both `--warnings allow` and `--warnings error`,
+JSON reports. All 29 compiled and produced valid normal-policy jars, zero errors;
+26 were strict-clean. Infinite/Golf/Survivors retained 24/8/13 warnings respectively
+(45 total): both strict commands exited 1 and the strict package published no jar.
+All other strict commands exited 0, and their jars exactly matched normal-policy
+bytes. Package/validate findings and allow/strict finding identities were compared,
+not inferred from process totals. This is compilation/package/API-reference evidence,
+not gameplay, render, audio, rewind, lifecycle or ordinary/guard-suite certification.
+
+The later candidate broad run reproduced stale `part-5-pillars` Course/Zone mirrors
+against the finished Flappy source. Compilation and validator acceptance do not
+certify source-copy parity. The table below is the actual pre-repair `175531f6d`
+checkpoint; that one consumer row requires the input worker's repaired-source SDK/
+strict and native tutorial qualification. The other 28 main source/resource inputs
+are unchanged, so their existing proof remains valid by source diff. This exported kit contains
+no tutorial entries, and its finished example/shared engine/API are unchanged;
+no producer rebuild or general 29-project repeat is implied by that tutorial repair.
+The later starter-test template repair requires its own exported-kit qualification. The
+separate tutorial regression section records the corrected source and its outcomes.
+
+The completed matrix took **23.757 seconds**, replacing the deliberately conservative
+3–6 minute estimate. Each compiler/converter/SDK subprocess had a 300-second cap;
+no subprocess timed out. The initial artifact-only preflight looked for `testkit.jar`
+in the exported kit; its actual filename is `mod-testkit.jar`. That preflight stopped
+before source staging/compilation. The matching testkit was then frozen under the
+harness's `testkit.jar` name; no source repair or repeated qualification was needed.
+
+`OPENGGF_TASK_TREE` denotes the isolated integration checkout;
+`OPENGGF_QUAL_HARNESS` denotes the task-owned external directory containing
+`qualify.py`, frozen artifacts and project outputs. `OPENGGF_ROM_ROOT` denotes
+the existing canonical-ROM checkout for the later runtime command;
+`OPENGGF_NATIVE_FLAPPY_PROJECT` denotes the task-owned maintained Native Flappy
+project built by the coordinator against this kit. These variables describe
+locations, not copies of ROMs, player state or existing build trees.
+
+Exact matrix invocation (task-owned output adjacent to `qualify.py`):
+
+```sh
+env JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 OPENGGF_QUAL_SOURCE_TREE="$OPENGGF_TASK_TREE" OPENGGF_QUAL_SOURCE_COMMIT=175531f6dc4a0d0005c4593022393182d1f5e58c OPENGGF_QUAL_ARTIFACT_COMMIT=175531f6dc4a0d0005c4593022393182d1f5e58c python3 "$OPENGGF_QUAL_HARNESS/qualify.py"
+```
+
+Authored resources were produced through the existing base64 inventory, playable/
+object-art and TMX/from-export SDK converters, Tide's generator plus `--check`,
+gallery waveform generator and exact Three Islands Maps generator comparison.
+Starpost's authored `make_placeholder.py` regenerated valley (line 3, colour 15)
+and ruins (line 1, colour 2); all nine records per destination exactly matched the
+maintained resources. Authored Egg voice content was used unchanged. The matrix
+includes all four tutorials, gallery, Time Attack and nine fixtures.
+
+| Maintained source root | Java sources | Warnings | Strict package/validate exits |
+|---|---:|---:|---|
+| `docs/modding/samples/phase4-gallery-music-pack` | 0 | 0 | 0/0 |
+| `examples/act-practice` | 3 | 0 | 0/0 |
+| `examples/eggmans-sky` | 65 | 0 | 0/0 |
+| `examples/example-mutators` | 10 | 0 | 0/0 |
+| `examples/flappy-tails` | 16 | 0 | 0/0 |
+| `examples/flappy-tails/tutorial/part-2-first-scene` | 2 | 0 | 0/0 |
+| `examples/flappy-tails/tutorial/part-3-tails` | 3 | 0 | 0/0 |
+| `examples/flappy-tails/tutorial/part-4-flight` | 4 | 0 | 0/0 |
+| `examples/flappy-tails/tutorial/part-5-pillars` | 7 | 0 | 0/0 |
+| `examples/hello-scene` | 2 | 0 | 0/0 |
+| `examples/infinite-sonic` | 31 | 24 | 1/1 |
+| `examples/putt-putt-paradise` | 36 | 8 | 1/1 |
+| `examples/robotnik-tower-defense` | 12 | 0 | 0/0 |
+| `examples/sitar-hero` | 41 | 0 | 0/0 |
+| `examples/slay-the-robotnik` | 171 | 0 | 0/0 |
+| `examples/sonic-survivors` | 25 | 13 | 1/1 |
+| `examples/starfall-frontier` | 16 | 0 | 0/0 |
+| `examples/starpost-valley` | 258 | 0 | 0/0 |
+| `examples/three-islands` | 51 | 0 | 0/0 |
+| `racing/time-attack` | 40 | 0 | 0/0 |
+| `src/test/resources/mods/dynamic-rewind-src` | 1 | 0 | 0/0 |
+| `src/test/resources/mods/sample-character-src/project` | 3 | 0 | 0/0 |
+| `src/test/resources/mods/sample-flappy-src/project` | 3 | 0 | 0/0 |
+| `src/test/resources/mods/sample-mod-src/project` | 3 | 0 | 0/0 |
+| `src/test/resources/mods/sample-platformer-src/project` | 5 | 0 | 0/0 |
+| `src/test/resources/mods/sample-reskin-src` | 0 | 0 | 0/0 |
+| `src/test/resources/mods/sample-rom-art-remix-src/project` | 2 | 0 | 0/0 |
+| `src/test/resources/mods/sample-standalone-src/project` | 4 | 0 | 0/0 |
+| `src/test/resources/mods/sample-two-act-campaign-src/project` | 2 | 0 | 0/0 |
+
+### Final residual findings: actual class, call and purpose
+
+All 45 are `WARNING / NON_API_ENGINE_REFERENCE`, empty member field. The validator
+reports class/type references; the calls and purposes below were checked against
+committed source. They do not imply that the validator certified those runtime
+contracts. Referenced names omit `com.openggf`; action keys A–R above identify the
+specific owner and reopen conditions. Retained expert bridges remain outside the
+compatibility promise. No internal class was annotated merely to silence this run.
+
+| Referencing class | Referenced type | Actual call / purpose | Disposition / action |
+|---|---|---|---|
+| `infinite.CourseBadnik` | `graphics.RenderPriority` | `getPriorityBucket`: `RenderPriority.bucket`; Validate species priority bucket | Retained expert bridge / A |
+| `infinite.CourseBadnik` | `level.objects.TouchResponseListener` | Implemented `onTouchResponse` native callback; Guard absorption before native hurt | Narrow missing service / B |
+| `infinite.CourseBadnik` | `physics.TrigLookupTable` | Native spike/ball coordinates: `cosHex` / `sinHex`; Orbinaut quarter-turn spikes, integer sine/cosine shifted by 4 | Retained expert bridge / C |
+| `infinite.CourseBurst` | `graphics.RenderPriority` | `getPriorityBucket`: `RenderPriority.bucket`; Explosion bucket 1 | Retained expert bridge / A |
+| `infinite.CourseController` | `level.rings.LostRingObjectInstance` | `spilledRings`: live-object `instanceof`; Delay terrain rebasing until live unshifted ring spills settle | Retained expert bridge / D |
+| `infinite.CourseController` | `sprites.animation.ScriptedVelocityAnimationProfile` | `showRunAtCourseSpeed`: `instanceof` / `withRunSpeedThreshold`; Copy native locomotion profile with lower run threshold | Retained expert bridge / F |
+| `infinite.CourseHazard` | `graphics.RenderPriority` | `getPriorityBucket`: `RenderPriority.bucket`; Hazard bucket 4 | Retained expert bridge / A |
+| `infinite.CourseHazard` | `level.objects.TouchResponseListener` | Implemented `onTouchResponse` native callback; Shield/20-ring guard absorption and native flashing before hurt | Narrow missing service / B |
+| `infinite.CourseHazard` | `physics.TrigLookupTable` | Native spike/ball coordinates: `cosHex` / `sinHex`; Exact rolling, chain and wrecking-ball coordinates | Retained expert bridge / C |
+| `infinite.CourseMonitor` | `graphics.RenderPriority` | `getPriorityBucket`: `RenderPriority.bucket`; Native monitor bucket 3 | Retained expert bridge / A |
+| `infinite.CourseMonitor` | `level.objects.TouchResponseListener` | Implemented `onTouchResponse` native callback; SPECIAL hit burst and item reward once | Narrow missing service / B |
+| `infinite.CourseRing` | `graphics.RenderPriority` | `getPriorityBucket`: `RenderPriority.bucket`; Ring bucket 2, sparkle bucket 1 | Retained expert bridge / A |
+| `infinite.CourseRing` | `level.objects.TouchResponseListener` | Implemented `onTouchResponse` native callback; SPECIAL collection gated by native flashing/control state | Narrow missing service / B |
+| `infinite.InfiniteSonicMod$Module` | `data.RomManager` | `titleLevel`: inferred `GameServices.rom().getRom()` return; ROM authority inferred from `GameServices.rom().getRom()` | Retained expert bridge / G |
+| `infinite.InfiniteSonicMod$Module` | `game.GameServices` | `courseController`: `levelOrNull`; `titleLevel`: `rom`; Current restored controller lookup and supplied title ROM | Retained expert bridge / G |
+| `infinite.InfiniteSonicMod$Module` | `game.sonic1.Sonic1` | `titleLevel`: independent `new Sonic1` / `loadLevel`; Independent stock reader for act-1 title backgrounds, preserving session PLC ownership | Retained expert bridge / G |
+| `infinite.TitleBackground` | `game.sonic1.scroll.Sonic1ScrollHandlerProvider` | `handler`: construct / `load` / `getHandler`; Separate stock Deform handlers produce packed scanline scrolls | Retained expert bridge / H |
+| `infinite.TitleBackground` | `game.sonic1.titlescreen.Sonic1TitleScreenManager` | `draw` / background: atlas constants / `bgTileColumns`; Reserved atlas bounds and viewport tile-column policy | Retained expert bridge / H |
+| `infinite.TitleBackground` | `game.sonic1.titlescreen.Sonic1TitleScreenManager$BackgroundOverride` | Implemented `BackgroundOverride.draw/backdrop` contract; Replace Plane B/backdrop while retaining stock title behavior | Retained expert bridge / H |
+| `infinite.TitleBackground` | `game.titlescreen.SegaPaletteFade` | `faded`: `apply` / `ROM_FADE_FRAMES`; Native fade precedence and 12-frame transition with full palette copies | Retained expert bridge / H |
+| `infinite.TitleBackground` | `game.titlescreen.SegaPaletteFade$Mode` | `faded` / `backdrop`: native fade mode selection; Select native title fade mode | Retained expert bridge / H |
+| `infinite.TitleWordmark` | `game.sonic1.titlescreen.Sonic1TitleScreenManager` | Constructor: `instanceof` / `setBackgroundOverride`; Attach background to the native title manager | Retained expert bridge / H |
+| `infinite.TitleWordmark` | `game.sonic1.titlescreen.Sonic1TitleScreenManager$BackgroundOverride` | Constructor: `setBackgroundOverride` parameter type; Keep stock emblem/state machine while replacing background | Retained expert bridge / H |
+| `infinite.ZoneMenu` | `game.GameServices` | Selection feedback: `audio().playSfx`; Native title selection `SFX_SWITCH` | Narrow missing service / I |
+| `paradise.GolfMode` | `game.GameServices` | Scene capture/presenter; `camera` / `graphics` / `level`; Native scene capture/presenter, focused camera, viewport/HUD/trail/guide overlay and guest gate | Retained expert bridge / J |
+| `paradise.GolfModule` | `game.GameServices` | Title construction: `graphics` / `configuration`; Native title graphics, projection width, character/sidekick configuration and menu audio | Narrow missing service / I,J |
+| `paradise.GolfOnline` | `game.GameServices` | `receive` / publish: scene presenter/capture, camera, audio; Publish/accept scene frames, peer viewport, focused radius and charge/release cues | Retained expert bridge / J |
+| `paradise.GolfSounds` | `game.GameServices` | `play` / `menu`: `audio` native cues; Native title/feedback track IDs and act-clear cue | Narrow missing service / I |
+| `paradise.GolfSwing` | `game.GameServices` | `launch` / vertical drive / landing spin: focused player/audio; Focused native springing/angle/speed state and launch/landing-spin audio | Existing partial alternative; retained expert bridge / J |
+| `paradise.objects.GolfUpSpring` | `game.sonic2.objects.SpringObjectInstance` | Subclass constructor / `super.update` / `applyUpSpring`; Native Obj41 subclass retains ROM geometry, art, strength, animation and SFX | Retained expert bridge / K |
+| `paradise.ui.GolfTitleArt` | `game.sonic2.titlescreen.TitleScreenDataLoader` | Loader field / native planes, patterns and palette; ROM title planes/palette/pattern GPU cache and reset after course | Retained expert bridge / L |
+| `paradise.ui.GolfTitleArt` | `game.sonic2.titlescreen.TitleScreenMappings` | Frame field: `createFrames`; ordered piece emission; Ordered priority mapping pieces and crown/wind frames | Retained expert bridge / L |
+| `survivors.ArenaObjects` | `level.objects.ObjectConstructionContext` | `construct` / `isProbeConstruction`; Inject construction services, suppress probe admission, then admit rewindable auxiliary object | Retained expert bridge / M |
+| `survivors.Boss` | `graphics.RenderPriority` | `getPriorityBucket`: `RenderPriority.bucket`; Boss bucket 3 | Retained expert bridge / A |
+| `survivors.Boss` | `level.objects.TouchResponseListener` | Implemented `onTouchResponse` native callback; Native player contact: guard absorption then laugh, excluding CPU/dead players | Narrow missing service / B |
+| `survivors.Draw` | `level.render.SpritePieceRenderer` | `scaledSprite`: `renderPiece`; Expand/mirror mapping pieces into scaled world-space quads | Narrow missing service / N |
+| `survivors.Draw` | `level.render.SpritePieceRenderer$TileConsumer` | `scaledSprite`: tile-emission lambda; Preserve piece tile, palette and priority bits while emitting scaled quads | Narrow missing service / N |
+| `survivors.Enemy` | `graphics.RenderPriority` | `getPriorityBucket`: `RenderPriority.bucket`; Enemy bucket 4 | Retained expert bridge / A |
+| `survivors.Enemy` | `level.objects.TouchResponseListener` | Implemented `onTouchResponse` native callback; Guard absorption at actual native player contact | Narrow missing service / B |
+| `survivors.Pickup` | `graphics.RenderPriority` | `getPriorityBucket`: `RenderPriority.bucket`; Collected bucket 1 versus active bucket 3 | Retained expert bridge / A |
+| `survivors.Shot` | `graphics.RenderPriority` | `getPriorityBucket`: `RenderPriority.bucket`; Projectile bucket 3 | Retained expert bridge / A |
+| `survivors.Shot` | `level.objects.TouchResponseListener` | Implemented `onTouchResponse` native callback; Guard absorption destroys the absorbed projectile | Narrow missing service / B |
+| `survivors.Stage` | `game.sonic2.audio.Sonic2Music` | Run/reward/restore: named track `.id` to injected audio; Boss/final boss, super/chest, restored boss, act-clear, emerald and ending cues | Existing partial alternative; retained expert bridge / P |
+| `survivors.SurvivorsMod$Module` | `game.rules.DynamicArtDmaServiceModel` | Rules constructor: inferred `dynamicArtDmaService` copy; Full GameRules copy changes speed-shoes expiry while retaining native DMA policy | Narrow missing service / R |
+| `survivors.SurvivorsTitle` | `game.GameServices` | Zone picker: `audio().playSfx(0xCD)`; Start-zone picker title navigation SFX 0xCD | Narrow missing service / I |
+
+### Seven removed historical warnings and their actual owners
+
+- `infinite.CourseController`, `paradise.objects.GolfUpSpring` and `survivors.Stage`
+  no longer warn on `sprites.NativePositionOps`: upstream `6159c444d` declared the
+  existing native reset/preserve-subpixel helper as `@ModApi`, now present in the final source,
+  compiled API and SDK. The callers retain that helper and their position semantics;
+  no unqualified setter substitution or task-local warning-suppression annotation
+  was introduced. Owner: playable position API. The historical E reopening request
+  is superseded for these operations present in the candidate API.
+- `survivors.Hud` and `survivors.Stage` no longer reference concrete `Tails`:
+  `266c8be0c` uses `characterKey().equals(CharacterKey.TAILS)` for the supported native
+  Sonic/Tails perk policy. Owner: Survivor run-character policy, preserving captured
+  identity/restore behavior; this does not generalize custom subclasses to abilities.
+- `survivors.Stage` no longer references `ObjectTerrainUtils` or `TerrainCheckResult`:
+  `266c8be0c` uses injected `floorSurface(FOREGROUND, PRIMARY)` with immutable
+  `TerrainSurface`, preserving the 16-pixel origin scan, distance 0..15 acceptance
+  and original fallback. Owners: terrain provider and author spawn placement.
+  Historical O/Q existing-alternative rows are adopted, not remaining warnings.
+
+The actual final finding set is exactly the historical set minus those seven pairs;
+there are no added or silently omitted pairs. Existing partial alternatives remain
+explicit in GolfSwing and Survivor soundtrack rows. Other retained/missing services
+still require the owner-specific qualifications above.
+
+### G: deferred native-title failure and ROM-generation lifetime
+
+At this final source, `InfiniteSonicMod.Module.titleLevel` (lines 209–215) catches
+`IOException | RuntimeException` and memoizes `Optional.empty()` in `titleLevels`;
+its supplied-ROM `titleGame` is long-lived. This unchanged native expert bridge is
+a concrete known limitation, distinct from the four repaired P18 scene-art facades.
+Neither 26 strict-clean packages nor this class-reference inventory certifies its
+failure recovery, programming-fault attribution or ROM/session replacement behavior.
+
+`TitleBackground` requests `levels.apply` during update/draw/backdrop, potentially
+multiple times per frame. Removing the negative cache alone would cause repeated
+unbounded work and would leave ROM-owner lifetime unresolved. Owner G must provide
+bounded native-title admission/status/recovery, propagate programming faults, publish
+successful art only, and invalidate or replace the reader/cache on supplied-ROM or
+session changes. Reopen with actual native-title tests for missing/failed-to-repaired
+assets, attempt bounds/deadlines, verified owner faults, repeated requests per frame,
+stock fallback, two instances, ROM replacement and resource retirement, plus canonical
+pixels/atlas isolation. No speculative catch/cache change was made during final
+qualification; retained source is not a completed native-title failure contract.
+
+### Final Native Flappy artifacts and consumption
+
+The matrix's actual SDK-built `sample-flappy` package is version `1.0.0`, API range
+`>=0.7.0 <0.8.0`, base `s3k`, entrypoint `example.flappysample.FlappySampleMod`.
+Its three classes and required converted resources package/validate with zero findings
+under both policies. Retained binary:
+`$OPENGGF_QUAL_HARNESS/projects/23-project/build/qualified.jar`,
+SHA-256 `1ecf6473580be55502898e31b029b5830535c1a01404eed3f734ac93a5b1bc8e`.
+The root separately produced the maintained `build.sh`/Maven jar against the same final
+kit at `$OPENGGF_NATIVE_FLAPPY_PROJECT/target/sample-flappy-mod.jar`,
+SHA-256 `03c311c6701058eb69721a9540f2ab327af0573f10e00b6c73203ad92b9e0bfd`.
+The latter is the requested runtime binary; matrix validation is not its launch pass.
+Its actual normal canonical `TestSampleFlappyIntegration` request 43929 completed
+at 20:40:53 BST: **11/11 passed, zero failures/errors/skips**, Maven execution 1m04,
+suite 1.633s. Queue telemetry records 3,774.9s waiting and 65.3s lease hold; telemetry
+is cost evidence, not a test receipt. Fresh runtime build metadata was exactly
+`app.commit=175531f6d`, `app.dirty=false`, version/base `0.7.prerelease`; XML records
+Java 25.0.4.1, the requested binary and all three canonical absolute ROM properties.
+The runtime jar hash was rechecked and unchanged.
+
+Exact normal request from the clean owned world tree:
+
+```sh
+env JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestSampleFlappyIntegration' "-Dsample.flappy.jar.path=$OPENGGF_NATIVE_FLAPPY_PROJECT/target/sample-flappy-mod.jar" "-Dsonic1.rom.path=$OPENGGF_ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=$OPENGGF_ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=$OPENGGF_ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test
+```
+
+The property selects the actual SDK/Maven binary and validates it, without the
+fixture's source-build fallback. Each isolated repository goes through the normal
+title editor's two-confirm trust, Apply, persisted hash/enablement and validated
+rescan before runtime registration. The case results inspected in actual XML were:
+
+| Completed case | Outcome |
+|---|---|
+| `firstForwardUpdateCreatesSixIndependentEntriesAndCoversSuper32By9` | PASS |
+| `engineRestartResetsRunAndRecreatesTheSameInitialSequence` | PASS |
+| `scoreCrossingOneHundredDoesNotRunCollectibleRingBonusLogic` | PASS |
+| `pipeAndVisibleBoundsAlwaysUseCrushDeath` | PASS |
+| `initialTitleCardSeesTheResolvedS3kCustomZonePalette` | PASS |
+| `bootsVisibleNativeTailsAtFixedAnchorAndMaintainsFlight` | PASS |
+| `rewindRestoresAndResimulatesScoreAndLiveRecycleExactly` | PASS |
+| `rewindAcrossFirstControllerUpdateKeepsOneControllerAndSixStablePipes` | PASS |
+| `recycleMovesTheSameEntryAndAdvancesCounterPermutation` | PASS |
+| `onePipeScoresOncePerCycleAndResetEnablesTheNextCycle` | PASS |
+| `customZoneComposesNativeTailsHudCreatorClaimsAndDecodedPipeArt` | PASS |
+
+These are actual native launch/flight/score/recycle/restart/rewind and decoded-art
+checks through the real title trust flow, without ambient desktop UI. State was
+isolated under the fixture's temporary repositories. This worker did not replace
+installed jars or change player trust, enablement, saves or configuration; those
+installation/preservation steps remain coordinator-owned.
+
+
+Task-owned external source/class/jar/structured-report outputs remain accounted for
+until binary consumption and durable evidence are complete. Cleanup must preserve
+both final Native Flappy binaries until the coordinator's P19 handoff is consumed,
+then remove only this worker's known scratch outputs; unknown/user outputs, the
+coordinator's kit and binaries, ROMs and player state remain untouched. No raw logs
+were archived. Prose-only follow-ups retain the explicit `175531f6d` producer identity
+and do not require relabelling or rebuilding these artifacts.
+
+## Playable presentation responsibility extraction
+
+The later architecture guard reproduced the clean `175531f6d` class-budget failure:
+`AbstractPlayableSprite` had 3,264 effective lines against its existing 3,258 limit.
+The newly added protected final `drawStandardArt` helper accounts for six effective
+lines. Source `9e2bf932f` extracts standard pose submission and the existing native
+hurt/invulnerability display decision into package-private, stateless
+`PlayableSpriteArtPresentation`, restoring 3,258 without raising the ratchet or
+compressing formatting. The protected helper and candidate API signatures remain
+unchanged. The collaborator owns no sprite state, rewind state, cache or resources;
+physics, native positioning and renderer ownership are untouched.
+
+Read-only peer review checked the exact virtual getter order and short-circuit
+behavior: hidden check, renderer null check, renderer receiver, frame, centre X/Y,
+then horizontal/vertical flips. Display timer fields are captured before virtual
+`isHurt`, with direct-display ownership read afterward as before. No preservation
+must-fix was found; this is review evidence, distinct from the executed checks.
+
+The lean red request 89821 ran
+`TestArchitecturalSourceGuard#releaseCriticalLargeClassesDoNotGrowWithoutExtraction`
+at the clean producer and failed exactly that one check (zero errors/skips), 23.117s
+execution after 53s queue waiting. The lean green request 34957 completed at
+20:52:53 BST in 1m11 after 26s waiting: **192/192 passed, zero failures/errors/skips**.
+Its generated metadata was `app.commit=175531f6d`, `app.dirty=true`, version/base
+`0.7.prerelease`; the only dirty source files were the two presentation extraction
+files, subsequently committed unchanged as `9e2bf932f`. Actual XML counts were:
+
+| Selected class | Passed |
+|---|---:|
+| `TestModCharacterConstructionIdentity` | 14 |
+| `TestPlayableCharacterRegistry` | 11 |
+| `TestAbstractPlayableSpriteRewindCapture` | 14 |
+| `TestSidekickCpuDespawnParity` | 65 |
+| `TestPlayableMutatorPresentation` | 8 |
+| `TestSpriteManagerRender` | 4 |
+| `TestGraphicsManagerSpriteSatReplay` | 2 |
+| `TestPlayerSpriteRendererPaletteContext` | 2 |
+| `TestArchitecturalSourceGuard` | 72 |
+
+Exact green invocation:
+
+```sh
+env JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestModCharacterConstructionIdentity,TestPlayableCharacterRegistry,TestAbstractPlayableSpriteRewindCapture,TestSidekickCpuDespawnParity,TestPlayableMutatorPresentation,TestSpriteManagerRender,TestGraphicsManagerSpriteSatReplay,TestPlayerSpriteRendererPaletteContext,TestArchitecturalSourceGuard' test
+```
+
+These are bounded pure sprite/character/CPU/SAT and architecture checks. They do not
+relate the earlier clean producer's artifacts to a later engine build or certify
+ordinary/guard delivery. The unchanged-source Native Flappy binary qualification
+above was not repeated; final integration, broad comparison and cleanup remain
+coordinator-owned.
