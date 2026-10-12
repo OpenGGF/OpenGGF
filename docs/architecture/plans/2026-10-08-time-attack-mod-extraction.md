@@ -486,3 +486,41 @@ in this document qualify their named historical source only.
 - Remote develop advanced to `5a1f9b0fe7` during validation with documentation-only
   creator-audit changes; integration retains those changes.
 - Final corrected develop `-DskipTests package`: passed; bundled mod validation has zero findings.
+
+### Next forward-port
+
+Applies the extraction corrections from `dfa79f3b9e` onto `1d3b05a568`, without
+merging unrelated develop features. Keeps next 0.8.prerelease, candidate API 0.7.0,
+existing restart-to-apply Mods behavior, scene audio contracts and HUD/security work.
+Shared core networking and Time Attack implementation match develop. The API pin
+is regenerated from the actual next surface. Develop-only example test fixes are
+not introduced into next where those examples do not exist.
+
+- `next` change-based plan against `1d3b05a568` selects all 3,075 ordinary candidates
+  and guards. The combined ordinary attempt above is incomplete due to a confirmed
+  macOS AWT stall; it is not repeated on this host. Next composition is checked by
+  focused tests plus its fresh guards lane, with full-suite coverage still incomplete.
+- Next `test-compile` initially found a duplicate `openTitleEntryScene` introduced by
+  the three-way merge. Preserving next's existing launcher removed the duplicate;
+  subsequent compilation passed. The API generator reports no missing annotations
+  or signature leaks; next's actual candidate pin adds 1,505 lines.
+- Python category inventory tests: 28 passed. Java 21/Lua 5.4/PowerShell preflight passed.
+- Next queued focused selection covered every `com/openggf/net/**/Test*`,
+  `openggf/racing/**/Test*` and `openggf/timeattack/**/Test*`, plus
+  `TestNetIsolationRules,TestHostedRunController,TestSceneRunLauncher,TestModSceneHostGameplay,TestUnknownConfigPreservation,TestGameLoopFreezeContractWiring,TestMasterTitleHub,TestModTitleEntryRegistration,TestBundledModPackager,TestBundledModBoot,TestModApi*,TestModEngineWiringSeams,TestMasterTitleSecondaryActions,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`.
+  With all three verified absolute ROM properties: 693 tests, zero failures, one
+  error, zero skips. The host flood test observed an expected reset during sending,
+  before reaching its receive-side closure assertion. The test now tolerates that
+  specific early socket-close signal while still asserting server closure and
+  eventual removal from the room; production behavior is unchanged.
+- Focused flood-test repair rerun: `-Dtest=openggf.racing.server.host.TestRaceHostServer test`, **56 passed, zero skips**, covering both Netty and JDK hosts.
+- Next fresh `python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B`:
+  676 tests, one failure, zero errors/skips (10m22s). The sole failure is
+  `TestBuildToolingGuard.releaseGateToolsShouldRejectCorruptAndChangedEvidence`,
+  specifically Python `CollectTests.test_failure_messages_and_report_payloads_have_checkout_paths_normalized`.
+  Matched fresh subprocesses loading baseline `1d3b05a568` and candidate collector/test
+  modules each reproduced one failure, zero errors/skips: macOS `/var` versus
+  `/private/var` temporary checkout paths are not normalized. No unrelated release-tool
+  changes are made. Next therefore has **675 passing guards and one inherited failure**,
+  not a green guard suite.
+- Final next `-DskipTests package`: passed; bundled Time Attack validator reports zero findings. Artifact inspection confirms shared core networking, separate mod/server code, and no Netty/SQLite/Bouncy Castle runtime classes in the engine artifact.

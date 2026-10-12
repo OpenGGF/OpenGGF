@@ -411,11 +411,22 @@ class TestRaceHostServer {
         try (RawWebSocketClient client = RawWebSocketClient.connect(server.port())) {
             assertInstanceOf(ControlMessage.JoinAccepted.class, client.join(
                     PlayerIdentity.loadOrCreate(dir.resolve("guest")), "Raw", FP));
-            for (int i = 0; i < ConnectionHygiene.MESSAGE_RATE_BURST * 3; i++) {
-                client.sendText(ControlCodec.encode(client.sessionToken(),
-                        new ControlMessage.Ping(i)));
+            try {
+                for (int i = 0; i < ConnectionHygiene.MESSAGE_RATE_BURST * 3; i++) {
+                    client.sendText(ControlCodec.encode(client.sessionToken(),
+                            new ControlMessage.Ping(i)));
+                }
+            } catch (java.net.SocketException closedDuringFlood) {
+                // The host may enforce its limit before the sender finishes the burst.
+                // Still verify closure and room removal below; a send failure alone is not success.
             }
             client.awaitServerClose();
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+            while (onRoomThread(() -> server.room().playerCount()) != 0
+                    && System.nanoTime() < deadline) {
+                Thread.sleep(10);
+            }
+            assertEquals(0, onRoomThread(() -> server.room().playerCount()));
         }
     }
 
