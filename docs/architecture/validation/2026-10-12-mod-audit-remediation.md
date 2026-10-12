@@ -580,3 +580,30 @@ Qualification must establish the following before migration/publication:
   host resource ownership unchanged, followed by all four actual portable consumers
   and their focused scene/native checks. Current local passes do not certify this
   future extraction; no speculative API or duplicate test suite was added here.
+
+## Completed canonical art qualification and callback-clock fixture correction
+
+The unchanged twelve-class normal request81071 completed at `85c2b28c6` (runtime
+source identical to `38958c67b`), Java25/Lua5.4, with all three canonical absolute ROM
+properties:112 checks,111 passes, one fixture failure, zero errors/skips. Execution
+took186s after1288s queue wait. `TestStarpostRealFestivals` passed30/30 and
+`TestStarpostRealRuins`37/37; all eleven other classes passed. Full failure identity
+was `TestStarpostArtFailures.expectedPreparationFailureRetriesAndProperHostCloseRetiresArt:50`,
+expected attempt2 but observed1. This is not a production art regression.
+
+`ModSceneHost.update` increments its context clock after the callback. The fixture's
+120th call therefore observed tick119, before the unchanged retry deadline120.
+The three-line test correction now asserts no retry on that callback and invokes
+the callback observing tick120 before asserting recovery. No deadline, loader or
+production policy changed. The original failure stopped before the close assertions;
+the initial run alone did not qualify those assertions.
+
+The required focused normal rerun92446 used
+`python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestStarpostArtFailures test`
+with the same Java25/Lua5.4 and canonical S1/S2/S3K absolute ROM properties. It acquired
+immediately and completed at18:49:03 BST in30.528s:4/4 passes, zero failures/errors/skips.
+The actual packaged scene recovered fully, proper host close retired its retained Art,
+missing optional ROM produced inspectable status, and both NPE and generic provider
+state reached the verified owner fault boundary. XML cases/skips and the full earlier
+assertion were inspected; no raw logs were archived. This combined focused evidence
+does not certify the later final SDK identity or root integration/ordinary/guards.
