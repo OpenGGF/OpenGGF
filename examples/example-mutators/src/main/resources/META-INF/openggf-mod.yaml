@@ -1,0 +1,14 @@
+formatVersion: 1
+id: example-mutators
+name: Mutator Lab
+version: 0.2.0
+authors:
+  - OpenGGF contributors
+description: The original Mutator Lab catalogue for Sonic 1, Sonic 2 and Sonic 3 & Knuckles, with common per-option lifecycle settings, native ROM title/art/sound, pause/resume/restart and session rewind.
+engineApiRange: ">=0.7.0 <0.8.0"
+type: patch
+baseGame: any
+entrypoint: mutators.MutatorsMod
+dependencies: []
+audioOverrides: {}
+artOverrides: {}

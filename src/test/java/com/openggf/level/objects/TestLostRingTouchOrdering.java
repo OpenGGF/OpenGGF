@@ -121,6 +121,23 @@ public class TestLostRingTouchOrdering {
     }
 
     @Test
+    public void deniedLowerSlotRingDoesNotSuppressLaterHazardOrPublishTouchEntry() {
+        var policies = new com.openggf.tests.LevelMutatorTestWorld(new com.openggf.game.sonic2.Sonic2GameModule());
+        policies.policy(new com.openggf.game.mutators.LevelMutatorPolicy(java.util.Set.of(), true, false, false, false));
+        services.withWorldSession(policies.worldSession());
+        LostRingObjectInstance ring = ringAtSlot(20);
+        hurtAtSlot(21);
+        objectManager.runTouchResponsesForPlayer(player, 1);
+        assertFalse(ring.isCollected());
+        assertEquals(0, ring.getCollisionFlags());
+        assertFalse(ring.publishesTouchResponseListEntryThisFrame());
+        verify(player).applyHurtOrDeath(anyInt(), any(), anyBoolean());
+        ring.markCollected(1);
+        ring.update(2, player);
+        verify(player, never()).addRings(anyInt());
+    }
+
+    @Test
     public void lowerSlotRingSuppressesLaterHazard() {
         LostRingObjectInstance ring = ringAtSlot(20);
         hurtAtSlot(21);

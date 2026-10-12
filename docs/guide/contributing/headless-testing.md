@@ -212,3 +212,11 @@ The native route appears once in each alternative lane. Complete traversal,
 per-frame team identity, boss completion and exit assertions remain in the
 exhaustive lane; passing short scenarios does not establish route completion.
 Act 1 retains its existing 75 configuration combinations and lifecycle checks.
+
+### Scoped mutator prototype checks
+
+[Mutator Lab](../../modding/guides/mutators.md) touches the real movement,
+presentation and session owners. Its synthetic scope tests complement native
+stock-identity and production pause/load/fault checks; they do not replace real
+ROM gameplay or GPU/PCM observations. Queue focused tests and the combined
+change-based selection. Use explicit absolute ROM properties and inspect skips.

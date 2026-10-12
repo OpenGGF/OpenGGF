@@ -3519,7 +3519,17 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			sprite.setYSpeed((short) (sprite.getYSpeed() + 0x08));
 			return;
 		}
-		sprite.setYSpeed((short) (sprite.getYSpeed() + sprite.getGravity()));
+		var policy = com.openggf.sprites.playable.PlayableSpriteInternalAccess.mutatorPolicy(sprite);
+		if (policy.dryAirGravityPercent() != 100 && sprite.getAir() && !sprite.isInWater()
+				&& !sprite.isHurt() && !sprite.getDead() && !sprite.isObjectControlled()) {
+			// ObjectMoveAndFall (s2.asm:29945-29953) still integrates the OLD y_vel.
+			// Scale only this owned acceleration, never jump/slope/death/scripted values.
+			int acceleration = policy.scaleDryAirGravity((int) sprite.getGravity());
+			sprite.setYSpeed((short) (sprite.getYSpeed() + acceleration));
+		} else {
+			// Keep the exact stock float-to-word expression on the identity path.
+			sprite.setYSpeed((short) (sprite.getYSpeed() + sprite.getGravity()));
+		}
 	}
 
 	/**

@@ -103,6 +103,53 @@ class TestDdzSuperStars {
         assertTrue(GameServices.level().getObjectManager().activeObjectsOfType(DdzSuperStarsObjectInstance.class).isEmpty());
         assertFalse(GameServices.level().getObjectManager().activeObjectsOfType(HyperSonicStarsObjectInstance.class).isEmpty());
     }
+    @ParameterizedTest @org.junit.jupiter.params.provider.ValueSource(booleans={false,true})
+    void nativeSuperAndHyperAppearanceSuppressionPreservesSlotsMotionAndRewind(boolean hyper) {
+        var fixture=boot(hyper);fixture.stepIdleFrames(57);
+        // Replay to pass60: Super frame4 has real art; pass63 intentionally anchors empty frame0.
+        var registry=TestEnvironment.activeGameplayMode().getRewindRegistry();
+        var saved=registry.capture();
+        var graphics=com.openggf.game.session.EngineServices.current().graphics();
+        java.util.List<com.openggf.graphics.SpritePresentation.Tile> expected=null;
+        String motion=null;
+        for(boolean hidden:new boolean[]{false,true,false}) {
+            registry.restore(saved);
+            var player=fixture.sprite();
+            com.openggf.sprites.playable.PlayableSpriteInternalAccess.bindMutatorPolicies(player,
+                    p->new com.openggf.sprites.playable.PlayableMutatorPolicy(100,true,true,hidden));
+            fixture.stepIdleFrames(3);
+            var objects=GameServices.level().getObjectManager();
+            com.openggf.level.objects.AbstractObjectInstance effect=hyper
+                    ?objects.activeObjectsOfType(HyperSonicStarsObjectInstance.class).stream().findFirst().orElseThrow()
+                    :stars();
+            int slot=effect.getSlotIndex();
+            var state=player.captureRewindState();
+            var frame=com.openggf.level.render.SpritePresentationRenderer.prepare(graphics,0,0,
+                    ()->effect.appendRenderCommands(new java.util.ArrayList<>()));
+            assertFalse(frame.tiles().isEmpty(),"real native DDZ star art must be admitted");
+            assertTrue(frame.tiles().stream().allMatch(t->t.subject().id().equals(player.getCode())
+                    &&t.subject().part()==com.openggf.graphics.SpritePresentation.Part.ATTACHED_EFFECT
+                    &&t.subject().suppressed()==hidden));
+            assertTrue(frame.tiles().stream().anyMatch(t->{
+                var pixels=com.openggf.graphics.SpritePresentation.patternSample(graphics,t.patternId());
+                return pixels!=null&&!pixels.equals(new com.openggf.graphics.SpritePresentation.PatternVersion(0,0,0,0));
+            }),"DDZ sheet contains real indexed ROM pixels");
+            var display=com.openggf.level.render.SpritePresentationRenderer.prepare(graphics,0,0,
+                    ()->com.openggf.level.render.SpritePresentationRenderer.draw(graphics,frame,0,0,l->true));
+            assertEquals(hidden?0:frame.tiles().size(),display.tiles().size());
+            com.openggf.tests.MutatorPlayerStateAssertions.assertNativeStateEquals(state,player.captureRewindState(),
+                    "DDZ appearance does not change attack or control state");
+            assertEquals(slot,effect.getSlotIndex(),"appearance never reallocates the native effect");
+            var nativeTiles=frame.tiles().stream().map(t->new com.openggf.graphics.SpritePresentation.Tile(t.layer(),
+                    t.patternId(),t.palette(),t.hFlip(),t.vFlip(),t.priority(),t.x(),t.y(),t.width(),t.height(),
+                    t.priorityShader(),t.occlusionMask(),t.ghost(),t.ghostAlpha(),t.rowStart(),t.rowEnd())).toList();
+            String current=player.getCentreX()+","+player.getCentreY()+","+effect.getX()+","+effect.getY()+","+slot;
+            if(expected==null) {expected=nativeTiles;motion=current;}
+            else {assertEquals(expected,nativeTiles,"rewind restores native animation under both visibility policies");assertEquals(motion,current);}
+            com.openggf.sprites.playable.PlayableSpriteInternalAccess.bindMutatorPolicies(player,null);
+        }
+    }
+
     @Test void cadenceReanchorsEveryTwelvePassesAndAppliesWrapBeforeMotion() {
         var fixture = boot(false); fixture.stepIdleFrames(60);
         var star = new DdzSuperStarsObjectInstance(new ObjectSpawn(0,0,0,0,0,false,0));

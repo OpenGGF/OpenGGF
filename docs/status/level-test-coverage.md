@@ -1,5 +1,12 @@
 # Level test coverage backlog
 
+Mutator Lab expansion (2026-10-08): the [all-game affected-mechanic matrix](../architecture/validation/levels/mutator-lab-native-games.md) records native S1/S2/S3K focused cells and remaining composed capture/domain/broad obligations. Complete act, team, donor and viewport breadth remains unqualified.
+
+Mutator Lab (2026-10-07): the [S2 EHZ1 prototype matrix](../architecture/validation/levels/mutator-lab-s2-ehz1.md)
+tracks native solo-Sonic opening play, configuration/load boundaries, selective
+presentation and effective-state rewind. Execution and audiovisual evidence are
+pending; this does not certify an act-clear, teams, donors or other viewports.
+
 Tide Circuit creator fixture (2026-10-07): the [two-act matrix](../architecture/validation/levels/tide-circuit.md) records actual runtime consumers, original floor traversal, tagged saves, event and world rewind, fresh loads and results-driven handoff. Execution and viewport/donor/character/team breadth remain explicit; the fixture does not certify stock receiving acts.
 
 Stock parity round 3 (2026-10-08, private candidate): the [continued audit](../architecture/audits/2026-10-07-stock-parity-gap-verification.md) records native cross-game death-radius reset, S2 seventh-emerald results and [HCZ fan-child matrix follow-through](../architecture/validation/levels/s3k-hcz1-sonic.md#stock-fan-child-follow-up--2026-10-08). Root composition `84f0c20f11` against published `d740b7a0` passes 275 focused cases without failures/errors/skips. MZ1's 192 differences and the S2 results walk close in the individual normal trace lanes; returned HCZ remains unchanged. A whole fresh S1 timing fixture is withheld after downstream closure failures. Combined canonical verification completes 17 cases with four qualified assertion failures and no errors/skips, preserving the lane profiles. Candidate/actual-main ordinary and fresh guards remain pending. Existing stock act, character/team, viewport/donor, load/respawn, whole-route rewind and native presentation gaps are not certified by these local fixes. The earlier follow-ups below retain their dated scope.

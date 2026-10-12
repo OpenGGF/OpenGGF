@@ -448,18 +448,7 @@ public class Sonic1YadrinBadnikInstance extends AbstractBadnikInstance
     }
 
     private void applyEnemyBounce(AbstractPlayableSprite player) {
-        short ySpeed = player.getYSpeed();
-        if (ySpeed < 0) {
-            player.setYSpeed((short) (ySpeed + 0x100));
-            return;
-        }
-
-        int playerY = player.getCentreY();
-        if (playerY < currentY) {
-            player.setYSpeed((short) -ySpeed);
-        } else {
-            player.setYSpeed((short) (ySpeed - 0x100));
-        }
+        com.openggf.level.objects.EnemyDefeatBounce.apply(player, currentY, services().worldSession());
     }
 
     private void applyTouchHurt(AbstractPlayableSprite player, int frameCounter) {

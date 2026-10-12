@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.mutators.LevelMutatorPolicyAccess;
 import com.openggf.audio.GameSound;
 import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageController;
 import com.openggf.graphics.GLCommand;
@@ -132,6 +133,13 @@ public final class S3kSlotRingRewardObjectInstance extends AbstractObjectInstanc
         currentY32 += dy >> 4;
 
         if (--framesRemaining > 0) {
+            return;
+        }
+
+        if (!LevelMutatorPolicyAccess.ringsAllowed(services())) {
+            controller.onRewardExpired();
+            active = false;
+            setDestroyed(true);
             return;
         }
 

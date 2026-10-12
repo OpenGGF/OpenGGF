@@ -1,5 +1,7 @@
 package com.openggf.mods.code;
 
+import com.openggf.game.mutators.MonitorContent;
+import com.openggf.level.objects.MutatorPlacementClassifier;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectFactory;
 import com.openggf.level.objects.ObjectRegistry;
@@ -11,7 +13,7 @@ import java.util.List;
 import java.util.Objects;
 
 /** Routes tagged mod spawns by namespaced key while leaving stock registry behavior untouched. */
-public final class ModDecoratedObjectRegistry implements ObjectRegistry,
+public final class ModDecoratedObjectRegistry implements ObjectRegistry, MutatorPlacementClassifier,
         java.util.function.Supplier<Object> {
     private final ObjectRegistry base;
     private final ModObjectKeyRegistry modKeys;
@@ -56,6 +58,15 @@ public final class ModDecoratedObjectRegistry implements ObjectRegistry,
         ObjectFactory factory = modKeys.requireFactory(owner, spawn.objectKey());
         if (boundary == null) return factory.create(spawn, this);
         return boundary.call(owner, () -> ownerLookup.remember(owner, factory.create(spawn, this)));
+    }
+
+    @Override public MonitorContent monitorContent(ObjectSpawn spawn) {
+        return spawn.ownerModId() == null && base instanceof MutatorPlacementClassifier classifier
+                ? classifier.monitorContent(spawn) : null;
+    }
+    @Override public boolean isRingPlacement(ObjectSpawn spawn) {
+        return spawn.ownerModId() == null && base instanceof MutatorPlacementClassifier classifier
+                && classifier.isRingPlacement(spawn);
     }
 
     @Override public void reportCoverage(List<ObjectSpawn> spawns) { base.reportCoverage(spawns); }

@@ -21,6 +21,13 @@ public final class ModApiVersion {
      * scenes expose supplied-game art, immutable timestamped physical input and
      * bounded semantic ROM music with consumed-sample playback, section parts,
      * and bounded pitch-gliding ROM-part cues that preserve the song clock.
+     * Boot-prepared typed mutators declare independent action/option scopes,
+     * immutable gravity/Stealth, scatter, fixed or ring-scaled head-presentation with
+     * independent player/sidekick/badnik/boss targets, grouped checkboxes and declarative
+     * retired-choice preference migration, semantic placement,
+     * checkpoint, ring-award, stage-entry, defeat-knockback and pacing policies;
+     * explicit assembly causes and common
+     * modal configuration presentation. The unpublished candidate remains 0.7.0.
      * Detached scene backgrounds reuse stock scanline scroll handlers with independent state.
      * Full-song and selected-part synthesis expose cancellable host jobs with
      * progress, a ten-minute duration cap and a 256 MiB stereo PCM budget.

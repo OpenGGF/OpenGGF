@@ -47,7 +47,7 @@ final class FreshLevelTransitionBoundaryController {
         level.camera.setX(previousCameraX);
         level.camera.setY(previousCameraY);
         if (level.levelGamestate != null) {
-            level.levelGamestate.setRings(previousRings);
+            level.levelGamestate.setRings(com.openggf.game.mutators.LevelMutatorPolicyAccess.mainLevelRingRestore(level, previousRings));
         }
         AbstractPlayableSprite player = mainPlayable(level);
         if (player != null) {

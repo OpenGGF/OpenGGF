@@ -16,12 +16,22 @@ final class GameLoopPauseInput {
     private GameLoopPauseInput() { }
 
     static boolean handleOverlay(GameMode mode, InputHandler input) {
+        if (ExternalFrameOrInputOwnership.active(com.openggf.game.session.EngineServices.current())) return false;
+        var overlay = overlay(mode);
+        return overlay != null && overlay.handleInput(input);
+    }
+
+    static LevelInputOverlay overlay(GameMode mode) {
         var world = SessionManager.getCurrentWorldSession();
         if (mode != GameMode.LEVEL || world == null || world.getGameModule() == null) {
-            return false;
+            return null;
         }
-        var overlay = world.getGameModule().getGameService(LevelInputOverlay.class);
-        return overlay != null && overlay.handleInput(input);
+        return world.getGameModule().getGameService(LevelInputOverlay.class);
+    }
+
+    static boolean configurationPaused(GameMode mode) {
+        var overlay = overlay(mode);
+        return overlay != null && overlay.pausesGameplay();
     }
 
     static boolean userPauseAllowed(GameMode mode) {

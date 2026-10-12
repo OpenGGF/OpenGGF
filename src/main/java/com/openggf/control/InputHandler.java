@@ -431,7 +431,12 @@ public class InputHandler {
 		return mouseInputSeen;
 	}
 
+    void publishNativeStagePlayers(PlayerInputState p1, PlayerInputState p2) {
+        logicalSnapshot = NativeStageLogicalSample.withPlayers(logicalSnapshot, p1, p2);
+    }
+
 	public void setLogicalOverride(LogicalInputSnapshot override) {
+		retainedGameplayInput = null;
 		logicalOverride = override != null ? override : LogicalInputSnapshot.neutral();
 		logicalSnapshot = logicalOverride;
 	}
@@ -466,7 +471,20 @@ public class InputHandler {
 		PlayerInputState p1 = keyboardP1.merge(gamepadSnapshot.player1());
 		PlayerInputState p2 = keyboardP2.merge(gamepadSnapshot.player2());
 		logicalSnapshot = LogicalInputSnapshot.ofPlayers(p1, p2);
+		if (retainedGameplayInput != null) {
+			logicalSnapshot = retainedGameplayInput.apply(logicalSnapshot);
+			retainedGameplayInput = null;
+		}
 	}
+
+	private RetainedGameplayInput retainedGameplayInput;
+
+	/** Internal host bridge: player edges for the next live refresh, never external replay authority. */
+	void retainGameplayInputForNextRefresh(PlayerInputState player1, PlayerInputState player2) {
+		retainedGameplayInput = new RetainedGameplayInput(player1, player2);
+	}
+
+	void discardRetainedGameplayInput() { retainedGameplayInput = null; }
 
 	LogicalInputSnapshot menuWithoutMappedKeyboard() {
 		// An override already owns logical input; it contains no live keyboard mapping.

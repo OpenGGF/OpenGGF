@@ -166,7 +166,8 @@ public final class BonusStageTransitionCoordinator {
 
         LevelState levelState = levelManager.getLevelGamestate();
         if (levelState != null) {
-            levelState.setRings(interiorExitRingCount);
+            levelState.setRings(com.openggf.game.mutators.LevelMutatorPolicyAccess.mainLevelRingRestore(levelManager, interiorExitRingCount));
+            if (!com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(levelManager)) levelState.setRingExtraLifeFlags(0);
             levelState.setTimerFrames(savedState.savedTimerFrames());
             levelState.resumeTimer();
         }

@@ -119,7 +119,7 @@ class TestSpecialStageVisualTraceSession {
     @Test
     void visualSessionPacesLagRowsAndEndsAtStageFinished() throws Exception {
         File romFile = RomTestUtils.ensureSonic2RomAvailable();
-        assumeTrue(romFile != null && Files.exists(Path.of("s2.gen")),
+        assumeTrue(romFile != null,
                 "s2.gen ROM required for the SS visual-session lifecycle test");
 
         // Boot headless graphics + ROM fixture + recorded team (mirrors the

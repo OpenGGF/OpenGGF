@@ -2,6 +2,11 @@ package com.openggf.level;
 
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.rings.RingManagerInternalAccess;
+import com.openggf.game.mutators.GameplayMutatorPolicy;
+import com.openggf.game.mutators.GameplayMutatorPolicySource;
+import com.openggf.game.mutators.LevelMutatorPolicyAccess;
+import com.openggf.game.session.WorldSessionPolicyAccess;
 import com.openggf.sprites.Sprite;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -32,18 +37,24 @@ final class LevelLostRingSpawnCoordinator
         if (levelManager.ringManager == null || player == null) {
             return;
         }
-        int count = player.getRingCount();
-        if (count <= 0) {
+        Scatter scatter = resolveScatter(player);
+        if (scatter.count() <= 0) {
             return;
         }
-        levelManager.ringManager.spawnLostRings(player, count, frameCounter);
+        if (scatter.beyondNativeLimit()) {
+            RingManagerInternalAccess.spawnLostRingsBeyondNativeLimit(
+                    levelManager.ringManager, player, scatter.count(), frameCounter);
+        } else {
+            levelManager.ringManager.spawnLostRings(player, scatter.count(), frameCounter);
+        }
     }
 
     void queue(AbstractPlayableSprite player, int scheduledFrame, boolean deferOwnerRingClear) {
         if (player == null || levelManager.ringManager == null) {
             return;
         }
-        int count = player.getRingCount();
+        Scatter scatter = resolveScatter(player);
+        int count = scatter.count();
         if (count <= 0) {
             return;
         }
@@ -58,6 +69,7 @@ final class LevelLostRingSpawnCoordinator
         boolean slotsFullyReserved = false;
         if (preallocatedFirstSlot >= 0 && objectManager != null
                 && objectManager.lostRingRemainderAllocatesAfterOwnerSlot()) {
+            // Only the native Obj37 portion reserves SST slots; full-inventory extras are slotless.
             int requested = Math.min(count, 32);
             int[] reserved = new int[requested];
             reserved[0] = preallocatedFirstSlot;
@@ -75,8 +87,8 @@ final class LevelLostRingSpawnCoordinator
             slotsFullyReserved = true;
         }
         pending.add(new PendingLostRingSpawn(
-                player, count, player.getCentreX(), player.getCentreY(), scheduledFrame,
-                preallocatedSlots, slotsFullyReserved, deferOwnerRingClear));
+                player, count, scatter.beyondNativeLimit(), player.getCentreX(), player.getCentreY(),
+                scheduledFrame, preallocatedSlots, slotsFullyReserved, deferOwnerRingClear));
     }
 
     void processPending() {
@@ -90,11 +102,18 @@ final class LevelLostRingSpawnCoordinator
             if (frameCounter <= spawn.frameCounter()) {
                 continue;
             }
-            if (spawn.player().getRingCount() > 0) {
-                levelManager.ringManager.spawnLostRingsWithInitialObjectStep(
-                        spawn.player(), spawn.ringCount(), frameCounter,
-                        spawn.x(), spawn.y(), spawn.preallocatedSlots(),
-                        spawn.slotsFullyReserved(), spawn.deferOwnerRingClear());
+            if (allowSpill(spawn.player()) && spawn.player().getRingCount() > 0) {
+                if (spawn.beyondNativeLimit()) {
+                    RingManagerInternalAccess.spawnLostRingsBeyondNativeLimitWithInitialObjectStep(
+                            levelManager.ringManager, spawn.player(), spawn.ringCount(), frameCounter,
+                            spawn.x(), spawn.y(), spawn.preallocatedSlots(),
+                            spawn.slotsFullyReserved(), spawn.deferOwnerRingClear());
+                } else {
+                    levelManager.ringManager.spawnLostRingsWithInitialObjectStep(
+                            spawn.player(), spawn.ringCount(), frameCounter,
+                            spawn.x(), spawn.y(), spawn.preallocatedSlots(),
+                            spawn.slotsFullyReserved(), spawn.deferOwnerRingClear());
+                }
             } else if (levelManager.objectManager != null) {
                 for (int slot : spawn.preallocatedSlots()) {
                     levelManager.objectManager.releaseDynamicSlot(slot);
@@ -102,6 +121,45 @@ final class LevelLostRingSpawnCoordinator
             }
             iterator.remove();
         }
+    }
+
+    /**
+     * Latches the scatter before allocation. Stock defers the native $20 ceiling to
+     * Obj37_Init; Ringfall's full-inventory choice lifts it, so the percentage applies to
+     * every held ring and only the ring counter bounds the count.
+     */
+    private Scatter resolveScatter(AbstractPlayableSprite player) {
+        int held = player.getRingCount();
+        if (held <= 0 || !allowSpill(player)) return Scatter.NONE;
+        ObjectManager objects = levelManager.objectManager;
+        var services = objects == null ? null : objects.getObjectServices();
+        GameplayMutatorPolicySource source = services == null ? null
+                : WorldSessionPolicyAccess.getService(services.worldSession(), GameplayMutatorPolicySource.class);
+        GameplayMutatorPolicy policy = source == null ? GameplayMutatorPolicy.STOCK : source.policy();
+        boolean fullInventory = policy.ringfallFullInventory();
+        if (!fullInventory && policy.ringfallPercent() == 100 && policy.ringfallCap() == 0) {
+            return new Scatter(held, false);
+        }
+        int basis = fullInventory ? held : Math.min(held, 32);
+        int count = Math.min(basis, Math.max(1, basis * policy.ringfallPercent() / 100));
+        if (policy.ringfallCap() != 0) count = Math.min(count, policy.ringfallCap());
+        return new Scatter(count, fullInventory && count > 32);
+    }
+
+    private record Scatter(int count, boolean beyondNativeLimit) {
+        static final Scatter NONE = new Scatter(0, false);
+    }
+
+    private boolean allowSpill(AbstractPlayableSprite player) {
+        var objects = levelManager.objectManager;
+        var services = objects == null ? null : objects.getObjectServices();
+        if (LevelMutatorPolicyAccess.ringsAllowed(services)) return true;
+        if (player.getRingCount() > 0) {
+            var state = levelManager.getLevelGamestate();
+            if (state != null) state.resetRingsForLoss();
+            else player.setRingCount(0);
+        }
+        return false;
     }
 
     void reset() {
@@ -120,8 +178,9 @@ final class LevelLostRingSpawnCoordinator
         for (int i = 0; i < pending.size(); i++) {
             PendingLostRingSpawn spawn = pending.get(i);
             pendingSnapshots[i] = new PendingLostRingSpawnSnapshot(
-                    spawn.player().getCode(), spawn.ringCount(), spawn.x(), spawn.y(), spawn.frameCounter(),
-                    spawn.preallocatedSlots(), spawn.slotsFullyReserved(), spawn.deferOwnerRingClear());
+                    spawn.player().getCode(), spawn.ringCount(), spawn.beyondNativeLimit(), spawn.x(), spawn.y(),
+                    spawn.frameCounter(), spawn.preallocatedSlots(), spawn.slotsFullyReserved(),
+                    spawn.deferOwnerRingClear());
         }
         return new Snapshot(pendingSnapshots);
     }
@@ -142,8 +201,9 @@ final class LevelLostRingSpawnCoordinator
                         "Lost-ring rewind owner is unavailable: " + saved.playerCode());
             }
             pending.add(new PendingLostRingSpawn(
-                    player, saved.ringCount(), saved.x(), saved.y(), saved.frameCounter(),
-                    saved.preallocatedSlots(), saved.slotsFullyReserved(), saved.deferOwnerRingClear()));
+                    player, saved.ringCount(), saved.beyondNativeLimit(), saved.x(), saved.y(),
+                    saved.frameCounter(), saved.preallocatedSlots(), saved.slotsFullyReserved(),
+                    saved.deferOwnerRingClear()));
         }
     }
 
@@ -188,7 +248,7 @@ final class LevelLostRingSpawnCoordinator
     }
 
     private record PendingLostRingSpawn(
-            AbstractPlayableSprite player, int ringCount, int x, int y, int frameCounter,
+            AbstractPlayableSprite player, int ringCount, boolean beyondNativeLimit, int x, int y, int frameCounter,
             int[] preallocatedSlots, boolean slotsFullyReserved, boolean deferOwnerRingClear) {
         private PendingLostRingSpawn {
             preallocatedSlots = preallocatedSlots.clone();
@@ -212,7 +272,7 @@ final class LevelLostRingSpawnCoordinator
     }
 
     private record PendingLostRingSpawnSnapshot(
-            String playerCode, int ringCount, int x, int y, int frameCounter,
+            String playerCode, int ringCount, boolean beyondNativeLimit, int x, int y, int frameCounter,
             int[] preallocatedSlots, boolean slotsFullyReserved, boolean deferOwnerRingClear) {
         private PendingLostRingSpawnSnapshot {
             preallocatedSlots = preallocatedSlots.clone();

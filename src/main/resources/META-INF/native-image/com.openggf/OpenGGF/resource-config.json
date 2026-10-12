@@ -10,6 +10,8 @@
       { "pattern": "icon/.*\\.png" },
       { "pattern": "load-time-profiles/.*\\.json" },
       { "pattern": "net/.*\\.json" },
+      { "pattern": "presentation/heads/.*\\.txt" },
+      { "pattern": "presentation/heads/profiles\\.list" },
       { "pattern": "\\QMETA-INF/openggf-mod-sdk/templates/\\E.*" },
       { "pattern": "\\QMETA-INF/openggf-mod-sdk/starters/\\E.*" },
       { "pattern": "shaders/.*\\.(glsl|vert|frag)" },

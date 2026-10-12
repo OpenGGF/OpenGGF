@@ -253,6 +253,8 @@ public class CheckpointState implements RespawnState {
         // Obj79_LoadData: gameRevision=3 (shipped KiS2, fixBugs=0) keeps
         // Saved_Ring_count / Saved_Extra_life_flags; stock S2 clears both.
         boolean restoreRings = GameServices.module().getRules().ring().checkpointRestoresSavedRings();
+        restoreRings &= com.openggf.game.mutators.LevelMutatorPolicyAccess.mainLevelRingRestore(
+                    player.currentLevelManagerIfAvailable(), 1) != 0;
         player.setRingCount(restoreRings ? savedRings : 0);
         var level = GameServices.levelOrNull();
         LevelState state = level == null ? null : level.getLevelGamestate();

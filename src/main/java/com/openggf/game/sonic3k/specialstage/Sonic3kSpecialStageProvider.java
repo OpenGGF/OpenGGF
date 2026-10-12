@@ -29,7 +29,7 @@ import java.util.Optional;
  * S3K special stages are accessed via giant rings hidden in levels.
  * Each stage awards one of seven Chaos Emeralds upon successful completion.
  */
-public class Sonic3kSpecialStageProvider implements SpecialStageProvider, SpecialStageResultsEntry {
+public class Sonic3kSpecialStageProvider implements SpecialStageProvider, com.openggf.game.internal.NativeSpecialStagePacing, SpecialStageResultsEntry {
     private final Sonic3kSpecialStageManager manager;
     private SpecialStageViewport viewport = SpecialStageViewport.nativeViewport();
 
@@ -111,6 +111,9 @@ public class Sonic3kSpecialStageProvider implements SpecialStageProvider, Specia
         return true;
     }
 
+    @Override public com.openggf.game.internal.NativeSpecialStagePacing.State pacingState() { return manager.pacingState(); }
+    @Override public com.openggf.game.internal.NativeSpecialStagePacingOwner pacingOwner() { return manager.pacingOwner(); }
+
     @Override
     public boolean supportsRewind() {
         return true;
@@ -118,7 +121,8 @@ public class Sonic3kSpecialStageProvider implements SpecialStageProvider, Specia
 
     @Override
     public Optional<RewindSnapshottable<?>> rewindAdapter() {
-        return Optional.of(new Sonic3kSpecialStageRewindAdapter(manager));
+        return Optional.of(com.openggf.game.internal.NativeSpecialStagePacingRewind.wrap(
+                new Sonic3kSpecialStageRewindAdapter(manager), manager.pacingOwner()));
     }
 
     @Override
