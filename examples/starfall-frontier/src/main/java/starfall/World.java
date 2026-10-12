@@ -64,9 +64,9 @@ public final class World {
         shrineY=new int[]{depthTiles(52),depthTiles(62),depthTiles(73)};
         this.seed=seed;randomState=seed==0?1:seed;
         if(generate) {
-            generate();x=40*T+6;y=surface(40)*T-12;
+            generate();x=campTileX()*T+6;y=campTileY()*T-12;
             add(PICK,1);add(AXE,1);add(SWORD,1);add(Content.Item.TORCH,8);add(BERRY,6);add(GEL,3);add(ACORN,3);
-            aimX=42;aimY=surface(42)-1;reveal();
+            aimX=campTileX()+2;aimY=surface(aimX)-1;reveal();
         }
     }
     public int random(int bound) {
@@ -79,9 +79,12 @@ public final class World {
     public int depthTiles(int original){return original*height/96;}
     public Biome surfaceBiome(int tx){return Biome.surface(geographyX(tx));}
     public int surface(int tx) {
-        if(tx>=32&&tx<=51) return depthTiles(29);
+        if(tx>=campTileX()-8&&tx<=campTileX()+11) return depthTiles(29);
         return depthTiles(29)+(int)Math.round(Math.sin(tx*.095)*2+Math.sin(tx*.031)*3);
     }
+    /** Stable beacon anchor, independent of mined or rebuilt camp tiles. */
+    public int campTileX(){return 40;}
+    public int campTileY(){return surface(campTileX());}
     private void generate() {
         for(int tx=0;tx<width;tx++) for(int ty=0;ty<height;ty++) {
             int s=surface(tx),v=AIR;
@@ -103,17 +106,17 @@ public final class World {
             set(tx,ty,v);
         }
         for(int tx=6;tx<width-6;tx+=5+random(5)) {
-            if(tx>=36&&tx<=51||surfaceBiome(tx)!=Biome.ANGEL_ISLAND&&surfaceBiome(tx)!=Biome.MUSHROOM_HILL) continue;
+            if(tx>=campTileX()-4&&tx<=campTileX()+11||surfaceBiome(tx)!=Biome.ANGEL_ISLAND&&surfaceBiome(tx)!=Biome.MUSHROOM_HILL) continue;
             tree(tx,surface(tx)-1,4+random(4));
         }
-        for(int tx=9;tx<width-9;tx+=9+random(7)) if((tx<36||tx>47)&&tile(tx,surface(tx)-1)==AIR) set(tx,surface(tx)-1,BUSH);
+        for(int tx=9;tx<width-9;tx+=9+random(7)) if((tx<campTileX()-4||tx>campTileX()+7)&&tile(tx,surface(tx)-1)==AIR) set(tx,surface(tx)-1,BUSH);
         // A gently lit starter descent; one-way platforms make the surface reachable again.
-        for(int ty=surface(40);ty<=surface(40)+25;ty++) {
-            for(int tx=48;tx<=51;tx++) set(tx,ty,AIR);
-            if(ty%4==1) { set(48,ty,PLATFORM);set(49,ty,PLATFORM);set(51,ty-1,TORCH); }
+        for(int ty=campTileY();ty<=campTileY()+25;ty++) {
+            for(int tx=campTileX()+8;tx<=campTileX()+11;tx++) set(tx,ty,AIR);
+            if(ty%4==1) { set(campTileX()+8,ty,PLATFORM);set(campTileX()+9,ty,PLATFORM);set(campTileX()+11,ty-1,TORCH); }
         }
-        for(int tx=43;tx<48;tx++) for(int ty=surface(40)+7;ty<surface(40)+10;ty++) set(tx,ty,COPPER);
-        for(int tx=54;tx<60;tx++) for(int ty=surface(40)+15;ty<surface(40)+19;ty++) set(tx,ty,IRON);
+        for(int tx=campTileX()+3;tx<campTileX()+8;tx++) for(int ty=campTileY()+7;ty<campTileY()+10;ty++) set(tx,ty,COPPER);
+        for(int tx=campTileX()+14;tx<campTileX()+20;tx++) for(int ty=campTileY()+15;ty<campTileY()+19;ty++) set(tx,ty,IRON);
         for(int i=0;i<3;i++) {
             int sx=shrineX[i],sy=shrineY[i];
             for(int tx=sx-8;tx<=sx+8;tx++) for(int ty=sy-5;ty<=sy;ty++) {
@@ -315,8 +318,8 @@ public final class World {
             Enemy boss=new Enemy(tx*T+6,(ty-3)*T,3);boss.shrine=which;enemies.add(boss);
             say("THE "+new String[]{"JUNGLE","RUINS","CORE"}[which]+" SENTINEL AWAKENS!");return true;
         }
-        if(Math.abs(tx-40)<3&&Math.abs(ty-27)<4) {
-            if(Integer.bitCount(wardens)==3&&take(BEACON,1)){won=true;quest=7;say("The beacon shines. The frontier is yours.");burst(x,y,0xFFEBD7A0,70);return true;}
+        if(Math.abs(tx-campTileX())<3&&Math.abs(ty-(campTileY()-2))<4) {
+            if(!won&&Integer.bitCount(wardens)==3&&take(BEACON,1)){won=true;quest=7;say("The beacon shines. The frontier is yours.");burst(x,y,0xFFEBD7A0,70);return true;}
             say("The beacon needs a starlight core. Seek three shrine sentinels.");return false;
         }
         return false;
@@ -361,9 +364,9 @@ public final class World {
     }
     private void respawn() {
         // Terrain remains changed; clear only a spawn pocket so a built camp cannot trap a return.
-        int sy=surface(40);
-        for(int a=39;a<=41;a++)for(int b=sy-3;b<sy;b++)set(a,b,AIR);
-        set(40,sy,GRASS);x=40*T+6;y=sy*T-11;vx=vy=0;hp=maxHp;mana=100;respawns++;invulnerable=180;
+        int sx=campTileX(),sy=campTileY();
+        for(int a=sx-1;a<=sx+1;a++)for(int b=sy-3;b<sy;b++)set(a,b,AIR);
+        set(sx,sy,GRASS);x=sx*T+6;y=sy*T-11;vx=vy=0;hp=maxHp;mana=100;respawns++;invulnerable=180;
         enemies.removeIf(e->e.kind==3);shots.clear();say("Rescued at camp. Your backpack and world are safe.");
     }
     public boolean recall() {

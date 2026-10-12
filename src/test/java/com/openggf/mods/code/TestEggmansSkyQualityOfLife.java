@@ -50,6 +50,62 @@ class TestEggmansSkyQualityOfLife {
     }
     private String encode(Object p) throws Exception { return (String) call(p, "encode", new Class<?>[0]); }
 
+    @org.junit.jupiter.api.TestFactory
+    java.util.stream.Stream<org.junit.jupiter.api.DynamicTest> rejectedSavesNeverMutateTheActivePlayerOrResizeCargo() throws Exception {
+        String valid = encode(player());
+        List<String> rejected = List.of("arbitrary prose", valid.replace("version=1", "version=999"),
+                valid.replace("bonusSlots=0", "bonusSlots=1000000"), valid.replace("bonusSlots=0", "bonusSlots=-1"),
+                valid.replace("bonusSlots=0", "bonusSlots=2147483647"), valid.replace("spaceX=0.0", "spaceX=NaN"),
+                valid + "rings=1\n", "version=1\nrings=42\n", valid.replace("cargo=", "cargo=999:1,"),
+                valid.replace("cargo=0:0", "cargo=1:-1"), valid.replace("statDeaths=0", "statDeaths=-1"),
+                valid.replace("rings=250", "rings=9223372036854775808"), valid.replace("tech=0,", "tech=7,"),
+                valid.replace("tech=0,", "tech=-1,"), valid.replace("tech=", "tech=0,"),
+                valid.replace("reserves=", "reserves=1:-1;"), valid.replace("names=", "names=place>one;place>two"),
+                valid.replace("visitedSystems=", "visitedSystems=0;0"), "x".repeat(1048577));
+        return java.util.stream.IntStream.range(0,rejected.size()).mapToObj(index ->
+                org.junit.jupiter.api.DynamicTest.dynamicTest("rejected save " + index, () -> {
+                    Object p = player();add(p,"OXYGEN",25);
+                    String before = encode(p);
+                    Object result = call(p,"decode",new Class<?>[]{String.class},rejected.get(index));
+                    assertEquals(16,call(cargo(p),"slots",new Class<?>[0]),"rejected candidate cannot drive allocation");
+                    assertEquals(before,encode(p),"rejected candidate preserves all fields and cargo");
+                    assertEquals(false,result,"decoder reports rejection");
+                }));
+    }
+
+    @Test void catalogueAndCapsuleLimitsBoundValidCargoBeforeDecode() throws Exception {
+        Object p = player();
+        int[] tech = (int[]) playerType.getField("tech").get(p);
+        tech[id("T_CARGO")] = 6;
+        playerType.getField("bonusSlots").setInt(p, 24);
+        call(cargo(p), "resize", new Class<?>[] {int.class}, 64);
+        add(p, "OXYGEN", 250);
+        String encoded = encode(p);
+        Object loaded = player();
+        assertEquals(true, call(loaded, "decode", new Class<?>[] {String.class}, encoded));
+        assertEquals(encoded, encode(loaded));
+        tech[id("T_CARGO")] = 7;
+        assertEquals(false, call(loaded, "decode", new Class<?>[] {String.class}, encode(p)));
+        assertEquals(encoded, encode(loaded));
+        assertEquals(false, call(loaded, "decode", new Class<?>[] {String.class}, encoded.replace("cargo=", "cargo=1:251,")));
+    }
+
+    @Test void longExplorationBoundsSystemLookupAndPreservesHomeOnReentry() throws Exception {
+        Class<?> type = harness.loader().loadClass("eggsky.world.Galaxy");
+        Object galaxy = type.getConstructor(long.class,int.class).newInstance(42L,1);
+        Object home = call(galaxy,"start",new Class<?>[0]);
+        long homeId = home.getClass().getField("id").getLong(home);
+        long seed = home.getClass().getField("seed").getLong(home);
+        for(int i=100;i<10100;i++) call(galaxy,"system",new Class<?>[]{int.class,int.class},i,120);
+        for(var entry : Map.of("cache",512,"empty",2048).entrySet()) {
+            var field=type.getDeclaredField(entry.getKey());field.setAccessible(true);
+            assertTrue(((Map<?,?>)field.get(galaxy)).size()<=entry.getValue(),entry.getKey()+" remains bounded");
+        }
+        Object revisited = call(galaxy,"system",new Class<?>[]{long.class},homeId);
+        assertEquals(seed,revisited.getClass().getField("seed").getLong(revisited));
+        assertTrue(revisited.getClass().getField("home").getBoolean(revisited),"eviction preserves tutorial planet generation");
+    }
+
     @Test void fullCargoCanProduceIntoSlotsFreedByItsIngredients() throws Exception {
         Object p = player();
         Object bag = cargo(p);
@@ -100,7 +156,8 @@ class TestEggmansSkyQualityOfLife {
         Object loaded = player();
         call(loaded, "decode", new Class<?>[] {String.class}, encode(p));
         assertEquals(encode(p), encode(loaded));
-        call(loaded, "decode", new Class<?>[] {String.class}, "version=1\nrings=42\n");
+        String legacy = encode(player()).lines().filter(line -> !line.startsWith("pinned=") && !line.startsWith("reserves=")).collect(java.util.stream.Collectors.joining("\n"));
+        assertEquals(true, call(loaded, "decode", new Class<?>[] {String.class}, legacy));
         assertEquals(0, playerType.getField("pinned").getInt(loaded));
         assertTrue(reserves(loaded).isEmpty());
     }

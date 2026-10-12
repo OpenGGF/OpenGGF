@@ -110,6 +110,32 @@ Pins and cargo reserves survive saves; menu position is remembered only within t
 
 Progress saves to `saves/mods/eggmans-sky/expedition.txt` (plain `key=value` lines) at
 Starposts, landings, launches, docking, warps, every two minutes and on exit.
+Version 1 saves are validated before replacing the active expedition: the galaxy seed/number,
+system, planet, technology and cargo must be present, numbers and stack counts must be valid,
+and cargo capacity follows the existing six Cargo Pod upgrades and 24 capsule slots (64 slots
+maximum). Older version 1 saves may omit optional progress fields, including pins and reserves;
+unknown fields remain compatible. Unsupported versions, incomplete/corrupt data and oversized
+files stay untouched during Continue and exit. Continue appears only for a usable expedition;
+New Expedition retains its confirmation before replacing an existing rejected file.
+
+Generated planet and orbit lookups use galaxy seed, galaxy number, system/planet and generation
+schema independently of saved discovery/loot IDs. New Expedition and a validated Continue drop
+generation-owned lookup references. Orbit textures retain at most 24 entries, recoloured images
+256, creature banks 32 per supplied ROM (96 maximum), generated systems 512 and empty-cell lookups 2,048. Eviction leaves
+images already held by the active planet valid; the host still owns GPU texture disposal.
+
+Terrain-shaper cuts belong to the current generated Planet instance. Launching and landing again
+on that retained planet keeps its cuts. Building a different planet replaces the instance;
+returning then rebuilds its terrain. Continue, New Expedition and scene teardown also reset cuts.
+Carving is absent from the version 1 expedition save; gathered resources and recorded discoveries
+remain saved independently.
+
+The art facade exposes `Art.failures()` as an immutable diagnostic snapshot, capped at 64 entries
+with 256-character request/cause text and the host-supplied owner. Missing optional ROMs,
+unsupported requests and invalid/corrupt decodes have distinct status. Failed decodes retry after
+120 scene ticks instead of every draw; a new scene probes supplied ROMs again. Programming faults
+reach the normal owner callback boundary. Creature banks use `SceneArtCache` request/palette
+identity; generation resets close those lookup caches without disposing live images.
 
 ### System voice
 
@@ -160,6 +186,8 @@ masters stay in the cache; they are excluded from the jar.
 
 ## How it is built
 
+- `world/GeneratedAssets` owns the current planet and derived orbit/backdrop lookups; `Game`
+  keeps the transition facade and `Player` the expedition state.
 - `world/TerrainGen` remixes an act's foreground layout. A planet is a loop of runs of source
   layout columns; a run may jump to another column only where the new neighbours sit side by
   side somewhere in the stock layout, or their facing pixel and collision edges match. Up to a

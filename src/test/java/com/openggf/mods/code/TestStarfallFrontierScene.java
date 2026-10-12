@@ -15,6 +15,26 @@ import static org.lwjgl.glfw.GLFW.*;
 @RequiresRom(SonicGame.SONIC_3K)
 class TestStarfallFrontierScene {
     @TempDir Path work;
+    @Test void visibleGeneratedCampCompletesThroughTheSceneInput() throws Exception {
+        SharedLevel level=SharedLevel.load(SonicGame.SONIC_3K,0,0);
+        try(ExampleModHarness harness=ExampleModHarness.build(Path.of("examples/starfall-frontier"),work.resolve("build"))) {
+            harness.open(harness.apply(GameServices.module()),work.resolve("saves"),528,224);
+            harness.press(GLFW_KEY_ENTER);harness.press(GLFW_KEY_ENTER);
+            Object world=harness.scene().getClass().getMethod("world").invoke(harness.scene());
+            Class<?> type=world.getClass();
+            type.getField("wardens").setInt(world,7);
+            Class<?> item=type.getClassLoader().loadClass("starfall.Content$Item");
+            Object beacon=java.util.Arrays.stream(item.getEnumConstants()).filter(i->i.toString().equals("BEACON")).findFirst().orElseThrow();
+            type.getMethod("add",item,int.class).invoke(world,beacon,2);
+            // Initial position is the generated camp. E uses the scene's normal forward aim.
+            harness.host().draw(null,null);harness.press(GLFW_KEY_E);
+            assertTrue(type.getField("won").getBoolean(world));
+            assertEquals(7,type.getField("quest").getInt(world));
+            harness.press(GLFW_KEY_E);
+            assertEquals(1,type.getMethod("count",item).invoke(world,beacon));
+            assertTrue(harness.findings().isEmpty(),harness.findings()::toString);
+        }finally{level.dispose();}
+    }
     @Test void realRomHeroPanelsCavernsAndWardensDrawWithoutOwnerFaults() throws Exception {
         SharedLevel level=SharedLevel.load(SonicGame.SONIC_3K,0,0);
         try(ExampleModHarness harness=ExampleModHarness.build(Path.of("examples/starfall-frontier"),work.resolve("build"))) {

@@ -46,6 +46,7 @@ public final class Planet {
     public final PlanetSpec spec;
     public final StarSystem system;
     public final String key;
+    public final GenerationKey generationKey;
     public final SceneLevelKit kit;
     public final Terrain terrain;
     public final SceneImage backdrop;
@@ -69,10 +70,11 @@ public final class Planet {
     public final SceneSprite goldVein;
     public final int specialColour;
 
-    public Planet(PlanetSpec spec, StarSystem system, SceneLevelKit kit, Art art, boolean shrineHere) {
+    public Planet(PlanetSpec spec, StarSystem system, SceneLevelKit kit, Art art, boolean shrineHere, GenerationKey generationKey) {
         this.spec = spec;
         this.system = system;
         this.key = system.id + ":" + spec.index;
+        this.generationKey = generationKey;
         this.kit = kit;
         int size = kit.blockSize();
         int columns = Math.max(16, spec.columns * 128 / size);
@@ -380,7 +382,7 @@ public final class Planet {
                 SceneSprite rom = v < 2 ? art.frame("rock", v + 1) : null;
                 s.sprites[v] = rom != null && i == 0
                         ? art.recolored(rom, new Recolor(spec.ground.hueShift() + rng.range(-20f, 20f), 0.8f, 0.9f, 0, 0),
-                        key + ":rock" + v)
+                        generationKey + ":rock" + v)
                         : PixelArt.boulder(seed + v, Colour.scale(rockColour, 0.9f + 0.1f * v), vein, 0.9f + 0.25f * v);
             }
             s.colour = vein;
