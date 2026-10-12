@@ -1530,3 +1530,44 @@ Git beside the captures in `baseline-summary.json`, `baseline-skip-recovery.json
 Owned private servers and Maven/Java helpers terminate normally; the feature
 worktree remains for PR #215, and the clean baseline checkout is removed after
 its evidence is consumed. Main develop and unrelated work remain untouched.
+
+## 2026-10-12 — PR #215 source-size guard repair
+
+At PR head `5b86d76353a097b6d6ab6a357a3fb940daa71725`, CI run
+`38249643901` fails only
+`TestArchitecturalSourceGuard.releaseCriticalLargeClassesDoNotGrowWithoutExtraction`:
+`GameLoop` has 3,341 effective source lines against its unchanged 3,313 budget.
+Move its special-stage debug input handling into the existing
+`GameLoopSpecialStageInput` collaborator; the loop retains the alignment early
+return and lazy world lookup before native dispatch. Capability normalization,
+toggle order and the original debug-key predicate remain intact. The existing
+debug/rewind integration test now also asserts that alignment input never reaches
+the native provider's `handleInput`. The extraction removes 30 effective lines.
+
+The change-based plan against that exact PR head selects all 3,144 ordinary
+classes because of shared-file fallback. Proportionate validation uses the
+affected loop, debug/input, pacing, rewind, results and S3K startup consumers plus
+fresh complete guards: no gameplay algorithm, public API or timing contract
+changes. This is focused validation, not a new full ordinary-suite result.
+
+```bash
+pr215_rom_root="$HOME/code/projects/OpenGGF"
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 5b86d76353a097b6d6ab6a357a3fb940daa71725 --preflight
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestGameLoop,TestGameLoopSpecialStageRewindDebugBoundary,TestGameLoopSpecialStageRewindBoundary,TestGameLoopSpecialStageRewindGate,TestGameLoopSpecialStageResultsHandoff,TestGameLoopNativeStageMutatorPacing,TestSpecialStageVisualTraceSession,TestNativeStagePacingRewind,TestNativeStageSpeedScopeRegression,TestSpecialStageViewportContract,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' \
+  "-Dsonic1.rom.path=$pr215_rom_root/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=$pr215_rom_root/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=$pr215_rom_root/Sonic and Knuckles & Sonic 3 (W) [!].gen" test
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B
+```
+
+Preflight passes with explicit Lua 5.4; all three original ROM SHA-1 identities
+match repository guidance. Focused validation passes 206 cases in 15 classes,
+with zero failures, errors or skips. The initial local ratchet-only reproduction
+was cancelled while waiting for Maven admission; its failure evidence is the
+completed CI run at the exact pre-repair head, not a claimed local run.
+The complete fresh guards profile passes 675 cases in 88 classes, with zero
+failures, errors or skips; its 72 architectural-source cases include the repaired
+ratchet. `GameLoop` is now 3,311 effective source lines under the same budget.
+Both completed local runs test the extraction atop `5b86d76353`; subsequent
+edits only record these results. There are no local failures to attribute.

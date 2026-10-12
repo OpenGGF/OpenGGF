@@ -4626,44 +4626,9 @@ public class GameLoop {
     }
 
     private void updateSpecialStageInput() {
-        int leftKey = configService.getInt(SonicConfiguration.LEFT);
-        int rightKey = configService.getInt(SonicConfiguration.RIGHT);
-        int upKey = configService.getInt(SonicConfiguration.UP);
-        int downKey = configService.getInt(SonicConfiguration.DOWN);
-        int debugModeKey = configService.getInt(SonicConfiguration.DEBUG_MODE_KEY);
-
         SpecialStageProvider ssProvider = getActiveSpecialStageProvider();
-        SpecialStageDebugCapabilities capabilities =
-                SpecialStageDebugCapabilities.orNone(ssProvider.debugCapabilities());
-
-        if (capabilities.gameplayMovement() && isUnmodifiedDebugKeyPressed(debugModeKey)) {
-            ssProvider.toggleGameplayDebugMode();
-        }
-
-        if (capabilities.alignment() && isUnmodifiedDebugKeyPressed(GLFW_KEY_F4)) {
-            ssProvider.toggleAlignmentTestMode();
-        }
-
-        if (capabilities.lagCompensation() && isUnmodifiedDebugKeyPressed(GLFW_KEY_F1)) {
-            ssProvider.toggleLagCompensationDisplay();
-        }
-
-        if (capabilities.alignment() && ssProvider.isAlignmentTestMode()) {
-            if (isUnmodifiedDebugKeyPressed(leftKey)) {
-                ssProvider.adjustAlignmentOffset(-1);
-            }
-            if (isUnmodifiedDebugKeyPressed(rightKey)) {
-                ssProvider.adjustAlignmentOffset(1);
-            }
-            if (isUnmodifiedDebugKeyPressed(upKey)) {
-                ssProvider.adjustAlignmentSpeed(0.1);
-            }
-            if (isUnmodifiedDebugKeyPressed(downKey)) {
-                ssProvider.adjustAlignmentSpeed(-0.1);
-            }
-            if (isUnmodifiedDebugKeyPressed(GLFW_KEY_SPACE)) {
-                ssProvider.toggleAlignmentStepMode();
-            }
+        if (GameLoopSpecialStageInput.handleDebugInput(ssProvider, configService,
+                this::isUnmodifiedDebugKeyPressed)) {
             return;
         }
 
