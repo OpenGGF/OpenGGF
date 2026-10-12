@@ -42,6 +42,26 @@ To install the jar instead, copy it into `mods/` and enable and trust it in the 
 choose **Sonic 3 & Knuckles** on the master title. The mod plays at 16:9 (400×224). *Play Sonic 3 &
 Knuckles* on its title returns to the stock game; holding Escape returns to the master title.
 
+## Saves and options
+
+Bedtime saves the completed night's checkpoint to the original `valley.sav` format. A refused
+write keeps those exact bytes in memory and shows **FARM SAVE PENDING - RETRYING**; the scene
+retries every 60 active ticks and on resume or exit without repeating shipping, sleep, calendar
+changes or random rolls. Continue uses that retained checkpoint while the same visit remains
+active. A pending checkpoint can still be lost if the process closes while storage remains
+unavailable; **FARM SAVED** appears only after publication succeeds.
+
+An unreadable, corrupt or newer farm file is preserved. New Game asks before replacing an
+existing farm, and grants replacement only when the farmer choice is confirmed; the new farm
+first saves at bedtime. Cancelling either screen keeps the old file. Capsule deliveries loaded
+from a save cannot exceed their own bundle targets, and a completed bundle takes nothing more.
+
+Options keep the original three-line `settings.txt` format. Accepted choices apply immediately;
+refused writes show **OPTIONS SAVE PENDING - RETRYING** and retain an immutable retry snapshot.
+Rejected or unknown settings remain intact until **REPLACE STORED OPTIONS** is explicitly
+confirmed in Options. Exiting flushes both pending saves and retires the scene's art/music
+facades even when publication fails.
+
 ## Controls
 
 | Action | Keyboard | Pad |

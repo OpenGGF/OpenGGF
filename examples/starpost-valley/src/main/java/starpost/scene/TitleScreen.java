@@ -44,7 +44,10 @@ final class TitleScreen implements Screen {
             shell.sfx(Sfx.SWITCH);
         } else if (shell.in.confirm || shell.in.menu) {
             switch (cursor) {
-                case 0 -> shell.push(new FarmerSelect());
+                case 0 -> {
+                    if (shell.hasStoredFarm()) shell.push(new ConfirmMenu("REPLACE EXISTING FARM?", () -> shell.push(new FarmerSelect())));
+                    else shell.push(new FarmerSelect());
+                }
                 case 1 -> {
                     Game game = shell.load();
                     if (game != null) {
@@ -82,7 +85,8 @@ final class TitleScreen implements Screen {
         String[] options = options();
         for (int i = 0; i < options.length; i++) {
             boolean disabled = i == 1 && !hasSave;
-            String label = (i == cursor ? "> " : "  ") + options[i];
+            String label = (i == cursor ? "> " : "  ") + (i == 1 && shell.farmSavePending()
+                    ? "CONTINUE (SAVE PENDING)" : options[i]);
             Text.centred(canvas, label, 116 + i * 14, disabled ? 0xFF6D6D6D : i == cursor ? Text.YELLOW : Text.WHITE);
         }
     }
