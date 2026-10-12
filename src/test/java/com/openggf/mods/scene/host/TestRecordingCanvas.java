@@ -80,6 +80,23 @@ class TestRecordingCanvas {
         assertThrows(IllegalStateException.class,outer::width);
     }
 
+    @Test void closingOuterScopeRevokesNestedViewsWithoutRestoringRetiredClip() {
+        RecordingCanvas canvas = new RecordingCanvas(400,224,null);
+        canvas.clip(1,2,3,4); var original = canvas.clipBounds();
+        var outer = new com.openggf.mods.ui.SceneCanvasTransform(canvas,0,0,1);
+        outer.clip(10,20,30,40);
+        var inner = new com.openggf.mods.ui.SceneCanvasTransform(outer,1,2,1);
+        var leaf = new com.openggf.mods.ui.SceneCanvasTransform(inner,3,4,1);
+        outer.close();
+        assertEquals(original,canvas.clipBounds());
+        assertThrows(IllegalStateException.class, () -> inner.fill(0,0,1,1,0xFFFFFFFF));
+        assertThrows(IllegalStateException.class,leaf::width);
+        assertThrows(IllegalStateException.class, () -> leaf.clip(5,6,7,8));
+        leaf.close(); inner.close(); outer.close();
+        assertEquals(original,canvas.clipBounds(),"A retired child cannot reintroduce its parent's clip");
+        assertTrue(canvas.ops().isEmpty());
+    }
+
     private static void assertRegion(SceneDrawOp op, int sx, int sy, int sw, int sh, int dx, int dy) {
         assertEquals(sx, op.u0(), "source x " + op);
         assertEquals(sy, op.v0(), "source y " + op);

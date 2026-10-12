@@ -378,3 +378,36 @@ No claim of blanket scene-art host revocation is made.
 
 Final combined source/SDK identities, the new Starpost scope, graphics obligations
 and root baseline/integration checks remain separate, outstanding qualifications.
+
+## Peer review and second upstream composition
+
+Published `f02bdbfd5` adds Starpost Valley (257 main Java /18 authored test files),
+the29th maintained manifest. Root `4b631cdc5` retains the resource-generator path
+and creator Jupiter launcher while merging scene/act APIs; combined pins were a
+three-way set composition respecting upstream removals, pending compiled inventory.
+Creator Python checks now17/17. P20 settings/custody `5e838fa78` merged as
+`ebfacef35`; its normal ten-class Java25 selector81/81 and subsequent uploader7/7
+passed with zero skips. Historical28-ledger merged as `3b52e43c4`.
+
+Peer review reproduced two missing helper edges at the updated composition:
+ABSENT→new readable corrupt primary incorrectly returned SAVED; closing an outer
+canvas scope left its descendants usable and allowed their close to restore a retired
+clip. Both regressions failed exactly as reported (14 tests,2 failures,0 errors/skips).
+Retain CORRUPT bytes when no validated recovery/replacement exists; ancestor closure
+now revokes descendants and skips retired clip restoration. Queued lean
+TestModSaveSlot,TestModStorage,TestRecordingCanvas,TestSceneArtHelpers,TestCreatorUi
+passed55/55, zero skips,1m07s. Recovered known-valid generations still repair normally.
+
+Native Flappy's source-built normal title trust/Apply and gameplay selector passed11/11,
+zero skips,24.524s combined Maven execution. The new boss pixel test was the twelfth
+outcome and skipped: offscreen OpenGL4.1 unavailable despite EGL_PLATFORM=surfaceless.
+No pixels are certified by that skip. A scoped software-renderer qualification is
+pending, keeping the test off the ambient desktop. Its first obsolete waiting request
+was cancelled before execution to add the known surfaceless environment.
+
+Full updated baseline is run20261012T163202Z-606c65e8 at f02bdbfd5,3155 ordinary
+classes plus guards,120-minute execution/10-minute idle limits. Preflight passed scoped
+Java25/Lua5.4. No completed broad result is claimed yet. Starpost's newly reproduced
+unchecked progress/settings writes, rejected-save replacement and art fault/failure
+caches are assigned to existing P01/P12/P18 tasks; scene-act/controller coexistence is
+assigned to P11. Native session/identity/outcome protections are retained.

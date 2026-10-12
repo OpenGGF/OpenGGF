@@ -87,6 +87,16 @@ class TestModSaveSlot {
         assertEquals("preserve unavailable generation", storage.files.get("save.txt"));
     }
 
+    @Test void corruptPrimaryArrivingWithoutValidatedRecoveryRequiresReplacement() {
+        Memory storage = new Memory(); var slot = slot(storage);
+        assertEquals(ABSENT, slot.load().status()); storage.files.put("save.txt", "broken");
+        assertEquals(REPLACEMENT_REQUIRED, slot.save(3));
+        assertEquals("broken", storage.files.get("save.txt"));
+        assertFalse(storage.files.containsKey("save.bak"));
+        slot.allowReplacement(); assertEquals(SAVED, slot.save(3));
+        assertEquals("v1:3", storage.files.get("save.txt"));
+    }
+
     @Test void helperAcceptsTheSameLocalNameGrammarAsStorage() {
         Memory storage = new Memory();
         assertEquals(SAVED, new ModSaveSlot<>(storage, "_save.txt", CODEC).save(1));

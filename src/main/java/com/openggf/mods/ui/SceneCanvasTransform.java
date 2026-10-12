@@ -8,10 +8,12 @@ import java.util.Optional;
  * A translated, faded view valid only inside one draw callback. Use try-with-resources
  * to restore the previous clip even when drawing throws. Nested transforms compose;
  * clear still covers the full target viewport and ignores translation and clipping.
+ * Closing an ancestor revokes its descendants; their later close cannot restore a retired clip.
  */
 @com.openggf.game.ModApi
 public final class SceneCanvasTransform implements SceneCanvas, AutoCloseable {
     private final SceneCanvas target;
+    private final SceneCanvasTransform parent;
     private final int dx, dy;
     private final float alpha;
     private final Optional<SceneClip> prior;
@@ -23,16 +25,23 @@ public final class SceneCanvasTransform implements SceneCanvas, AutoCloseable {
             throw new IllegalArgumentException("Opacity must be finite and within 0..1");
         if (target instanceof SceneCanvasTransform parent) {
             parent.open();
+            this.parent = parent;
             this.target = parent.target;
             this.dx = Math.addExact(parent.dx, dx); this.dy = Math.addExact(parent.dy, dy);
             this.alpha = parent.alpha * alpha;
         } else {
+            this.parent = null;
             this.target = target; this.dx = dx; this.dy = dy; this.alpha = alpha;
         }
         prior = Objects.requireNonNull(this.target.clipBounds(), "clip state");
     }
 
-    private void open() { if (closed) throw new IllegalStateException("Canvas transform is closed"); }
+    private boolean active() {
+        for (SceneCanvasTransform scope = this; scope != null; scope = scope.parent)
+            if (scope.closed) return false;
+        return true;
+    }
+    private void open() { if (!active()) throw new IllegalStateException("Canvas transform is closed"); }
     private int x(int x) { open(); return Math.addExact(x, dx); }
     private int y(int y) { open(); return Math.addExact(y, dy); }
     private float x(float x) { open(); return coordinate((double)x + dx); }
@@ -97,6 +106,10 @@ public final class SceneCanvasTransform implements SceneCanvas, AutoCloseable {
                 Math.subtractExact(c.y(),dy), c.width(), c.height()));
     }
     @Override public void close() {
-        if (!closed) { restore(prior); closed = true; }
+        if (!closed) {
+            boolean restoreClip = parent == null || parent.active();
+            closed = true;
+            if (restoreClip) restore(prior);
+        }
     }
 }

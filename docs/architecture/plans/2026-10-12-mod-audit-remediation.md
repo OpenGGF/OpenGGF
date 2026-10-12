@@ -731,3 +731,26 @@ each U1–U7 has a delivered consumer-backed contract or a documented evidence-b
 disposition, exploratory candidates have explicit verdicts, and residual internal
 dependencies/coverage gaps remain visible. A package pass, model probe, or plan checkbox
 alone does not certify full gameplay, graphics, audio, timing or API publication.
+
+## Execution scope update — published Starpost Valley
+
+Published develop `f02bdbfd570276f7377d7055d236f63e34691484` adds the29th
+maintained manifest, Starpost Valley, plus scene-to-native-act ownership and music
+pacing capabilities. The updated destination supersedes b6d0ff76f for combined
+qualification. Preserve the historical audit/28-package ledger as dated evidence.
+
+- [ ] P01/P12: reproduce and repair Starpost progress/settings false-write outcomes,
+  rejected/future-file preservation and explicit New Game replacement. Retain the
+  exact bedtime checkpoint for retry without repeating calendar/RNG/progress.
+- [ ] P09/P10: record the source/docs/framework inventory and actual package warnings,
+  preserve creator generators/tests and qualify the Java25 creator fixture.
+- [ ] P11: compose controller admission with native-act exit/hold before any world
+  decision; test both fades, once-only input/audio/presentation service, exact return
+  result/team restoration and gameplay-context retirement.
+- [ ] P20: preserve fresh Game/save-section construction, same-identity town/activity/
+  Ruins restore boundaries and once-only outcome guards; record native-route coverage
+  limits rather than reimplementing this newly delivered subsystem.
+
+The updated-base full3155-class ordinary/guard run uses the observed-cost120-minute
+execution limit with10-minute idle limit. Its result, final candidate union and
+post-integration qualification remain delivery gates.
