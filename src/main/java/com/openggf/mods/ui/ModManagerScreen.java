@@ -59,6 +59,7 @@ public final class ModManagerScreen {
     private final Set<Path> bundledSourcePaths;
 
     private List<Row> rows = List.of();
+    private String gameFilter;
     private int selectedIndex;
     private int scrollOffset;
     private int detailScrollOffset;
@@ -334,7 +335,8 @@ public final class ModManagerScreen {
             text.page("MOD MANAGER", patternBudgetLine());
             text.panel(6, 48, 308, 88);
             int y = 52;
-            if (rows.isEmpty()) drawPrimary("No mods. Apply to rescan jars.", 12, y, 1f, 1f, 1f);
+            if (rows.isEmpty()) draw(gameFilter == null ? "No mods. Apply to rescan jars."
+                    : "No mods apply to this game.", 12, y + 1, 1f, 1f, 1f);
             for (RowView row : visibleRows()) {
                 boolean selected = rows.get(selectedIndex).identity().equals(row.identity());
                 if (selected && !actionFocus) text.focus(8, y - 2, 304, 14);
@@ -343,11 +345,7 @@ public final class ModManagerScreen {
                 float green = !row.valid() ? .4f : row.enabled() ? .75f : 1f;
                 float blue = !row.valid() ? .4f : row.enabled() ? .25f : 1f;
                 String rowText = enabled + row.gameLabel() + row.label() + badges;
-                if (rowText.length() > (320 - 12 - 6) / 9) {
-                    draw(rowText, 12, text.primaryTextY(y - 2, 14), 1f, green, blue);
-                } else {
-                    drawPrimary(rowText, 12, text.primaryTextY(y - 2, 14), 1f, green, blue);
-                }
+                draw(rowText, 12, y + 1, 1f, green, blue);
                 y += 14;
             }
             draw((rows.isEmpty() ? "0" : Integer.toString(selectedIndex + 1)) + " / " + rows.size()
@@ -453,10 +451,7 @@ public final class ModManagerScreen {
                 banners.add("Repository error: " + finding.message());
             }
         }
-        java.util.Set<String> catalogOwners = rows.stream()
-                .filter(row -> row.descriptor() != null)
-                .map(row -> row.descriptor().manifest().id())
-                .collect(java.util.stream.Collectors.toSet());
+        Set<String> catalogOwners = descriptorsById.keySet();
         runtimeFindings.snapshot().forEach((owner, findings) -> {
             if (catalogOwners.contains(owner)) return;
             for (ModFinding finding : findings) {
@@ -514,6 +509,15 @@ public final class ModManagerScreen {
     public void suppressInputUntilNeutral() {
         suppressInputUntilNeutral = true;
         previousInput = MenuInput.NEUTRAL;
+    }
+
+    /** Filters presentation only; pending state and dependency operations retain the full catalog. */
+    public void setGameFilter(String gameId) {
+        gameFilter = gameId;
+        selectedIndex = 0;
+        scrollOffset = 0;
+        rebuildRows(null);
+        actionFocus = rows.isEmpty();
     }
 
     /** Selects a visible catalog row without changing pending state. */
@@ -823,12 +827,15 @@ public final class ModManagerScreen {
                 descriptor.manifest().id(), Integer.MAX_VALUE)));
         List<Row> rebuilt = new ArrayList<>(ordered.size() + invalidEntries.size());
         for (ModDescriptor descriptor : ordered) {
+            if (gameFilter != null && !gameFilter.equals(descriptor.manifest().baseGame())
+                    && !"any".equals(descriptor.manifest().baseGame())) continue;
             String id = descriptor.manifest().id();
             String identity = descriptorCounts.getOrDefault(id, 0) > 1
                     ? id + " (" + filename(descriptor.jarPath()) + ")" : id;
             rebuilt.add(new Row(descriptor, null, identity));
         }
         for (InvalidModEntry invalid : invalidEntries) {
+            if (gameFilter != null) continue;
             rebuilt.add(new Row(null, invalid, filename(invalid.jarPath())));
         }
         rows = List.copyOf(rebuilt);

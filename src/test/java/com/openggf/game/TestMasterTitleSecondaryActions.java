@@ -143,6 +143,40 @@ class TestMasterTitleSecondaryActions {
     }
 
     @Test
+    void gameShortcutFiltersManagerWhileHeaderTabShowsAllMods() {
+        MasterTitleScreen screen = activeScreen(SonicConfigurationService.createStandalone(tempDir));
+        screen.setSelectedIndexForTest(0);
+        ModManagerScreen manager = managerScreen(new RecordingFont());
+        screen.setModManagerScreenFactory(font -> new ModManagerScreenHost(manager));
+        InputHandler input = new InputHandler();
+        input.handleKeyEvent(GLFW_KEY_M, GLFW_PRESS);
+        screen.update(input);
+        // The selected card is Sonic 1; this fixture contains only a Sonic 2 mod.
+        assertTrue(manager.rows().isEmpty());
+
+        MasterTitleScreen header = activeScreen(SonicConfigurationService.createStandalone(tempDir));
+        header.setModManagerScreenFactory(font -> new ModManagerScreenHost(manager));
+        InputHandler headerInput = new InputHandler();
+        focusMods(header, headerInput);
+        headerInput.setLogicalOverride(logical(0, InputActionMasks.ACTION_A));
+        header.update(headerInput);
+        assertEquals(1, manager.rows().size());
+    }
+
+    @Test
+    void modsShortcutWithNoGameShowsFullCatalog() {
+        MasterTitleScreen screen = activeScreen(SonicConfigurationService.createStandalone(tempDir));
+        screen.replaceEntries(List.of());
+        ModManagerScreen manager = managerScreen(new RecordingFont());
+        screen.setModManagerScreenFactory(font -> new ModManagerScreenHost(manager));
+        InputHandler input = new InputHandler();
+        input.handleKeyEvent(GLFW_KEY_M, GLFW_PRESS);
+        screen.update(input);
+        assertTrue(screen.isModManagerOpenForTest());
+        assertEquals(1, manager.rows().size());
+    }
+
+    @Test
     void keyboardAndGamepadUseTheSameLogicalDownAndAcceptPath() {
         SonicConfigurationService keyboardConfig = SonicConfigurationService.createStandalone(tempDir.resolve("keyboard"));
         MasterTitleScreen keyboardScreen = activeScreen(keyboardConfig);

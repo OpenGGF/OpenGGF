@@ -97,7 +97,9 @@ When the engine starts, you will see:
    and **Quit**. The footer shows only the keys that work on the focused row, as key
    caps or your controller's buttons. Back returns to the game card; on the card it
    asks whether to quit. Games without a ROM stay on the shelf and name the file to
-   add. The Mods list labels each installed mod with its target game: S1, S2, S3K,
+   add. Opening Mods from a game's setup chip or Game Setup shows mods for that
+   game, including shared mods. The header Mods tab shows the full catalog.
+   The Mods list labels each installed mod with its target game: S1, S2, S3K,
    S1/S2/S3K for all three, or Standalone. When audio is enabled, navigation,
    confirmation and errors use short host-owned cues that do not depend on the
    selected game's ROM.

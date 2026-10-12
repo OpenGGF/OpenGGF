@@ -480,7 +480,7 @@ public class MasterTitleScreen {
                 launchConfigPanel = null;
             } else if (result == LaunchConfigPanel.Result.OPEN_MODS) {
                 // Game Setup stays open underneath; it resumes when the mod manager closes.
-                openModManager();
+                openModManager(selectedEntry().gameId());
                 // A host without an in-title manager screen opens it elsewhere: resume at once.
                 if (modManagerScreen == null) launchConfigPanel.resumeAfterMods();
             } else if (result == LaunchConfigPanel.Result.CLOSED) {
@@ -511,7 +511,10 @@ public class MasterTitleScreen {
         boolean modsShortcut = inputHandler.isKeyPressedWithoutModifiers(GLFW_KEY_M);
         boolean openMods = modsShortcut && !modsShortcutHeld;
         modsShortcutHeld = modsShortcut;
-        if (openMods) { openModManager(); return; }
+        if (openMods) {
+            openModManager(navigation.zone() == TitleHubNavigation.Zone.TABS ? null : getSelectedGameId());
+            return;
+        }
         int recordKey = configService.getInt(SonicConfiguration.RECORDING_RECORD_KEY);
         boolean recordingRequest = inputHandler.isKeyPressed(recordKey) && inputHandler.isShiftDown();
         if (recordingRequest) {
@@ -571,7 +574,7 @@ public class MasterTitleScreen {
         List<HubSetupChips.Chip> chips = hubChips();
         if (index < 0 || index >= chips.size()) return;
         HubSetupChips.Chip chip = chips.get(index);
-        if (chip.row() == null) { openModManager(); return; }
+        if (chip.row() == null) { openModManager(selectedEntry().gameId()); return; }
         if (!openLaunchOptions(chip.row())) showActionError("Game setup");
     }
 
@@ -1975,9 +1978,14 @@ public class MasterTitleScreen {
     }
 
     private void openModManager() {
+        openModManager(null);
+    }
+
+    private void openModManager(String gameId) {
         if (modManagerScreenFactory != null) {
             modManagerScreen = Objects.requireNonNull(
                     modManagerScreenFactory.create(font), "mod manager screen");
+            modManagerScreen.setGameFilter(gameId);
             modManagerScreen.suppressInputUntilNeutral();
         } else {
             modManagerOpenHandler.run();
@@ -2135,6 +2143,7 @@ public class MasterTitleScreen {
     }
 
     public interface ModManagerView {
+        default void setGameFilter(String gameId) { }
         void update(InputHandler input);
         void render();
         boolean consumeCloseRequested();

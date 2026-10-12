@@ -1095,7 +1095,50 @@ class TestModManagerScreen {
     }
 
     @Test
-    void sixPrimaryRowsKeepBalancedFocusPaddingInsideTheListPanel() {
+    void gameFilterIncludesMatchingAndSharedModsAndKeepsHiddenState() {
+        List<ModDescriptor> mods = new ArrayList<>();
+        for (String game : List.of("s1", "s2", "s3k", "any")) {
+            ModManifest manifest = new ModManifest(1, "pack-" + game, game,
+                    SemanticVersion.parse("1.2.3"), List.of("Alice"), "Game filter",
+                    VersionRange.parse(">=0.7.0 <0.8.0"), ModType.PATCH, game,
+                    "any".equals(game) ? "example.Shared" : null, List.of(), Map.of(),
+                    Map.of(), null, OptionalInt.empty());
+            mods.add(new ModDescriptor(Path.of(game + ".jar"), manifest, "a".repeat(64),
+                    "any".equals(game), List.of()));
+        }
+        ModManagerScreen screen = screen(catalog(mods),
+                state(new boolean[]{true, false, true, false}, "pack-s1", "pack-s2", "pack-s3k", "pack-any"),
+                new ModRuntimeFindingStore(), null, temp.resolve("filter"));
+        ModState before = screen.pendingState();
+        screen.setGameFilter("s2");
+        assertEquals(List.of("pack-s2", "pack-any"), screen.rows().stream()
+                .map(ModManagerScreen.RowView::identity).toList());
+        accept(screen);
+        assertTrue(enabled(screen, "pack-s2"));
+        assertEquals(before.entries().getFirst(), screen.pendingState().entries().getFirst());
+        screen.setGameFilter("s1");
+        assertEquals(List.of("pack-s1", "pack-any"), screen.rows().stream()
+                .map(ModManagerScreen.RowView::identity).toList());
+        screen.setGameFilter(null);
+        assertEquals(4, screen.rows().size());
+    }
+
+    @Test
+    void shortAndLongModEntriesUseTheSameCompactSize() {
+        List<ModDescriptor> mods = List.of(descriptor("short", "Short", List.of(), List.of()),
+                descriptor("long", "A much longer mod name that exceeds the primary text width", List.of(), List.of()));
+        RecordingFont font = new RecordingFont();
+        ModManagerScreen screen = screen(catalog(mods), state(new boolean[2], "short", "long"),
+                new ModRuntimeFindingStore(), font, temp.resolve("font-size"));
+        screen.render();
+        List<RenderedLine> rows = font.lines.stream()
+                .filter(line -> line.x() == 12 && line.value().startsWith("[OFF]")).toList();
+        assertEquals(2, rows.size());
+        assertTrue(rows.stream().allMatch(line -> line.scale() == 2f / 3f));
+    }
+
+    @Test
+    void sixCompactRowsKeepBalancedFocusPaddingInsideTheListPanel() {
         String[] ids = {"pack-a", "pack-b", "pack-c", "pack-d", "pack-e", "pack-f"};
         List<ModDescriptor> mods = java.util.Arrays.stream(ids)
                 .map(id -> descriptor(id, id, List.of(), List.of())).toList();
@@ -1107,12 +1150,12 @@ class TestModManagerScreen {
             font.focus.clear();
             screen.render();
             List<RenderedLine> rows = font.lines.stream()
-                    .filter(line -> line.x() == 12 && line.scale() == 1 && line.value().startsWith("[OFF]")).toList();
+                    .filter(line -> line.x() == 12 && line.scale() == 2f / 3f && line.value().startsWith("[OFF]")).toList();
             assertEquals(6, rows.size());
             FocusRect focus = font.focus.getFirst();
             RenderedLine selectedLine = rows.get(selected);
-            assertEquals(2, selectedLine.y() - focus.y());
-            assertEquals(2, focus.y() + focus.height() - selectedLine.y() - 10);
+            assertEquals(3, selectedLine.y() - focus.y());
+            assertEquals(3, focus.y() + focus.height() - selectedLine.y() - 8);
             assertTrue(focus.y() >= 48 && focus.y() + focus.height() <= 136);
             if (selected < 5) press(screen, Action.DOWN);
         }

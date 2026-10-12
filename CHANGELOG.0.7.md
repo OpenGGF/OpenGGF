@@ -641,7 +641,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Setup chips under the selected game say what Start will launch (players, aspect,
   rewind, borrowed features, debug, mods); amber chips are set for that game only and
   open Game Setup on their row. Start, Game Setup and Recordings follow; Mods,
-  Settings, Extras, Advanced and Quit are engine-wide header tabs. Footers show only
+  Settings, Extras, Advanced and Quit are engine-wide header tabs. Opening Mods from
+  a game filters the list to applicable mods; catalog entries use consistent compact
+  lettering regardless of name length. Footers show only
   the keys that work on the focused row as key caps or controller buttons, with
   status kept apart; a line under the buttons describes the focused item. Back
   returns to the card before offering Quit. Mouse hover, click and wheel work across
