@@ -18,7 +18,7 @@ public final class ActivityPresentation {
     private final starpost.fishing.LakeOverlay lake;
     private final starpost.fishing.LakeView lakeView;
     public ActivityPresentation(ActivitySession s) {
-        festivalArt=new FestivalArt(s.shell().art,s.shell().ctx.art().rom("s2"));
+        festivalArt=new FestivalArt(s.shell().art,s.shell().ctx.art().rom("s2"), () -> s.ticks());
         peopleArt=new PeopleArt(s.shell().art); lake=new starpost.fishing.LakeOverlay(s.shell().art); lakeView=new starpost.fishing.LakeView(s.shell().art);
     }
     private SceneCanvas canvas(ObjectServices services) {

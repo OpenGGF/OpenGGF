@@ -72,7 +72,7 @@ public final class StarpostScene implements ModScene, DebuggableScene {
         boolean retain=returnToRuins && number==ruinNumber;
         actPlay=play;
         returnToAct=false; returnToRuins=false; ruinNumber=number;
-        var art=new starpost.ruins.RuinsArt(shell.art);
+        var art=new starpost.ruins.RuinsArt(shell.art, ruins::ticks);
         ruins.attachShell(shell);
         ruins.prepare(shell.game,town,art,number,retain);
         var chamber=ruins.chamber();
@@ -142,26 +142,34 @@ public final class StarpostScene implements ModScene, DebuggableScene {
         starpost.realtown.TownBridge.resume(shell, actPlay, town.consumeHandBack());
     }
     private String failure;
+    private starpost.art.AssetFailures artFailures;
+    public java.util.List<starpost.art.AssetFailures.Failure> failures() {
+        return artFailures == null ? java.util.List.of() : artFailures.failures();
+    }
 
     @Override
     public void enter(SceneContext ctx) {
-        SceneRomArt s1 = ctx.art().rom("s1");
-        SceneRomArt s3k = ctx.art().rom();
-        if (s1 == null) {
-            failure = "STARPOST VALLEY NEEDS YOUR SONIC 1 ROM";
+        if (artFailures != null) throw new IllegalStateException("Scene was already entered");
+        artFailures = new starpost.art.AssetFailures(ctx.ownerModId(), ctx::ticks);
+        prepareArt(ctx);
+    }
+
+    private void prepareArt(SceneContext ctx) {
+        var source = ctx.art(); // Context access remains outside expected asset-load catches.
+        String owner = ctx.ownerModId();
+        Art art = artFailures.load("scene:required-art", () -> {
+            SceneRomArt s1 = starpost.art.AssetFailures.requireRom(source.rom("s1"), "s1");
+            SceneRomArt s3k = starpost.art.AssetFailures.requireRom(source.rom(), "s3k");
+            return new Art(s1, s3k, ctx::ticks, owner);
+        });
+        if (art == null) {
+            var status = artFailures.failures().getLast();
+            failure = status.kind() == starpost.art.AssetFailures.Kind.OPTIONAL_ROM_MISSING
+                ? "STARPOST VALLEY NEEDS YOUR SONIC 1 AND S3K ROMS"
+                : "STARPOST VALLEY ART COULD NOT BE LOADED";
             return;
         }
-        if (s3k == null) {
-            failure = "SONIC 3 & KNUCKLES ART IS UNAVAILABLE";
-            return;
-        }
-        Art art;
-        try {
-            art = new Art(s1, s3k);
-        } catch (RuntimeException e) {
-            failure = "GREEN HILL COULD NOT BE LOADED";
-            return;
-        }
+        failure = null;
         shell = new Shell(ctx, art, new Catalog());
         shell.activityAct = activities==null?null:this::launchActivity;
         shell.townAct = town == null ? null : this::launchTown;
@@ -174,6 +182,8 @@ public final class StarpostScene implements ModScene, DebuggableScene {
         if (failure != null) {
             if (ctx.buttonPressed(SceneButtons.START)) {
                 ctx.exitToGameTitle();
+            } else {
+                prepareArt(ctx);
             }
             return;
         }
@@ -192,7 +202,7 @@ public final class StarpostScene implements ModScene, DebuggableScene {
         if (failure != null) {
             canvas.clear(0x000000);
             Text.centred(canvas, failure, 96, Text.WHITE);
-            Text.centred(canvas, "SET IT UP AS FOR THE STOCK GAME, THEN RESTART.", 112, Text.GREY);
+            Text.centred(canvas, "CHECK ROM SETUP. ART RETRIES AFTER TWO SECONDS.", 112, Text.GREY);
             Text.centred(canvas, "START: THE STOCK TITLE SCREEN", 136, Text.GREY);
             return;
         }
