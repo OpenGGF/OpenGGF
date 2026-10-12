@@ -124,6 +124,36 @@ class TestModSaveSlot {
         assertEquals("v1:4", storage.files.get("save.txt"));
     }
 
+    @Test void futureBackupAlsoRequiresExplicitReplacement() {
+        Memory storage = new Memory(); storage.files.put("save.txt", "v1:3");
+        storage.files.put("save.bak", "v2:9");
+        var slot = slot(storage); assertEquals(VALID, slot.load().status());
+        assertEquals(REPLACEMENT_REQUIRED, slot.save(4));
+        assertEquals("v1:3", storage.files.get("save.txt"));
+        assertEquals("v2:9", storage.files.get("save.bak"));
+        slot.allowReplacement(); assertEquals(SAVED, slot.save(4));
+        assertEquals("v1:3", storage.files.get("save.bak"));
+        assertEquals("v1:4", storage.files.get("save.txt"));
+    }
+
+    @Test void unreadableBackupCannotBeOverwrittenDuringRotation() {
+        Memory storage = new Memory() {
+            @Override public Optional<String> read(String name) {
+                return name.equals("save.bak") && unreadable ? Optional.empty() : Optional.ofNullable(files.get(name));
+            }
+        };
+        storage.files.put("save.txt", "v1:3"); storage.files.put("save.bak", "preserve unreadable backup");
+        var slot = slot(storage); assertEquals(VALID, slot.load().status());
+        storage.unreadable = true;
+        assertEquals(BACKUP_FAILED, slot.save(4));
+        assertEquals("v1:3", storage.files.get("save.txt"));
+        assertEquals("preserve unreadable backup", storage.files.get("save.bak"));
+        storage.unreadable = false;
+        assertEquals(SAVED, slot.retry());
+        assertEquals("v1:3", storage.files.get("save.bak"));
+        assertEquals("v1:4", storage.files.get("save.txt"));
+    }
+
     @Test void helperAcceptsTheSameLocalNameGrammarAsStorage() {
         Memory storage = new Memory();
         assertEquals(SAVED, new ModSaveSlot<>(storage, "_save.txt", CODEC).save(1));

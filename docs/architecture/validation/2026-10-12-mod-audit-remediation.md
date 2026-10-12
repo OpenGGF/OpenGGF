@@ -653,3 +653,82 @@ Qualification must establish the following before migration/publication:
   host resource ownership unchanged, followed by all four actual portable consumers
   and their focused scene/native checks. Current local passes do not certify this
   future extraction; no speculative API or duplicate test suite was added here.
+
+## Backup rejection and CPU composite qualification
+
+Two additional focused source probes failed against the clean `09af93df1` engine:
+future-format backup rotation returned SAVED instead of REPLACEMENT_REQUIRED; an
+unreadable existing backup returned SAVED instead of BACKUP_FAILED (2 tests, 2
+failures, zero skips). The repaired helper and those tests compiled from current
+authored sources against the same artifact dependencies passed 2/2, zero skips.
+This is a bounded CPU helper qualification, not a final matching-kit or broad run.
+The queued lean Maven storage gate remains responsible for the integrated source check.
+Future backups now require explicit replacement; unreadable backups preserve both
+files and the exact pending checkpoint for retry.
+
+Queued Java25 normal `TestSlayCompositePixels#romBossCpuPixelsPreserveLegacyOriginsFlipsAndOrder`
+with the canonical absolute S3K ROM passed 1/1, zero skips, 1m10 Maven execution.
+The actual packed Slay mod was validator-clean. Three ROM-backed boss poses
+(AIZ flamecraft, HCZ screw mobile and LBZ beam rocket) at ticks0/29/61 preserve
+legacy ordered pixel-centre rasterization, sprite origins, flips and overlaps.
+The fixture tests detached CPU pixels; it does not certify the GPU renderer.
+Its separate GL test remains availability-skipped because the owned offscreen
+GLFW/EGL provider cannot create a suitable configuration on this host.
+
+## Updated destination baseline: f02bdbfd5
+
+Actual destination commit `f02bdbfd570276f7377d7055d236f63e34691484`, completed run
+`20261012T163202Z-606c65e8`, Java25/Lua5.4; command:
+
+```sh
+env JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base f02bdbfd570276f7377d7055d236f63e34691484 --category all --rom-directory "$PWD" --max-minutes 120 --run
+```
+
+The command was launched from the main checkout; `$PWD` denotes its actual canonical
+absolute ROM-directory argument without embedding a machine-local path here.
+The plan selected3155/3155 ordinary classes and all guards; reports cover3153
+ordinary and88 guard classes. Ordinary completed27,431 tests:26 failures,0 errors,
+63 skips,3659.31s. Fresh guards completed677 tests:0 failures/errors/skips,280.10s.
+This is a completed red baseline, not a green delivery. All26 failures are existing
+MHZ/LRZ/SSZ/DEZ route assertions. Skips were inspected:32 Infinite terrain/fixture
+assumptions,5 GL/EGL availability checks,1 CPZ interaction assumption,1 missing local
+BizHawk audio reference and24 opt-in diagnostics/captures. Required ROM paths were
+injected from the existing main checkout; no ROM copies or links were created.
+
+Failure comparison uses the full assertion before its stack, not the runner
+truncated `message`. The following SHA-256 values identify every full assertion.
+Only exact `com.openggf.game.rewind.schema.RewindObjectStateBlob@<hex>` identity
+tokens are normalized to `@IDENTITY`; gameplay fields, object identities, ordering,
+frames and byte differences remain intact. Candidate and integrated results must
+match by test identity and assertion, and any new/worsened failure blocks delivery.
+
+| Failure identity | Assertion SHA-256 |
+|---|---|
+| `com.openggf.tests.TestS3kMhzAct2AuthoredRoute#incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String, int)[2]` | `c78f100afd3f3ed7379fdd15ed9746c6664e69286a8ac65a808a66806dbaf856` |
+| `com.openggf.tests.TestS3kMhzAct2AuthoredRoute#incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String, int)[3]` | `5865a5f5ba14ca053c854e3be29043e16e8880ef2a049b9aed634adb8f1809f0` |
+| `com.openggf.tools.TestDezIncomingFinalRouteCapture#coldOrdinarySoloTailsClearsAllFinalPhasesAndLoadsEnding` | `5f31236278beb31ffe74659120fe89b2efe2ba864cc6b828a443fd29bbed2456` |
+| `com.openggf.tools.TestDezIncomingFinalRouteCapture#coldOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding` | `5f31236278beb31ffe74659120fe89b2efe2ba864cc6b828a443fd29bbed2456` |
+| `com.openggf.tools.TestDezIncomingFinalRouteCapture#incomingFinalFightRestoresAndReplaysEveryPhase(int)[1]` | `511552908ae3c54c14a3220cf1ad1749670c1a8a3ade21cbecfc237b37f87093` |
+| `com.openggf.tools.TestDezIncomingFinalRouteCapture#incomingFinalFightRestoresAndReplaysEveryPhase(int)[2]` | `7938aa41f6646ff7cf2c3ea103cb7a05b8851098fe04ffcb14b96da05b0d031f` |
+| `com.openggf.tools.TestDezIncomingFinalRouteCapture#coldWideOrdinarySoloSonicClearsAllFinalPhasesAndLoadsEnding` | `5f31236278beb31ffe74659120fe89b2efe2ba864cc6b828a443fd29bbed2456` |
+| `com.openggf.tools.TestDezIncomingFinalRouteCapture#coldEmeraldTeamClearsBothActsFinalFightAndDoomsday` | `1d3379af510e98acb1e16c79b7445bf765258c9abb1f8e77536f26ce7dfe74b8` |
+| `com.openggf.tools.TestDezIncomingFinalRouteCapture#coldOrdinaryTeamClearsHandsCoreAndEscapeShipAndLoadsEnding` | `5f31236278beb31ffe74659120fe89b2efe2ba864cc6b828a443fd29bbed2456` |
+| `com.openggf.tools.TestLrzActTwoColdRouteCapture#coldTeamCompletesActTwoAndReachesBossActWithRepeatableWorldState` | `298ea9a43c0ec187c7508b8872f745d20989ec462ed3278a32bc051cd9906940` |
+| `com.openggf.tools.TestLrzBossColdRouteCapture#coldTeamCompletesBossActWithEarnedShieldAndRepeatableWorldState` | `298ea9a43c0ec187c7508b8872f745d20989ec462ed3278a32bc051cd9906940` |
+| `com.openggf.tools.TestLrzKnucklesColdRouteCapture#coldKnucklesCompletesActTwoAndReachesPlayableHiddenPalace` | `71c9a94d11db41cbdfec16d6458e8e0a59d4947c7ee96e84a03d127da38c6c85` |
+| `com.openggf.tools.TestLrzTailsColdRouteCapture#coldTailsClearsActOneAndRestoresTraversalFightAndHandoff` | `3c4aeb3cf3950ca7bb7678707d23cf1512bb55d7cacae43cc8f64b6310590800` |
+| `com.openggf.tools.TestLrzTailsColdRouteCapture#coldTailsRestoresActTwoTraversalToTheMiddleCorridor` | `3c4aeb3cf3950ca7bb7678707d23cf1512bb55d7cacae43cc8f64b6310590800` |
+| `com.openggf.tools.TestLrzTailsColdRouteCapture#coldTailsCompletesBossActAndReachesPlayableHiddenPalace` | `3c4aeb3cf3950ca7bb7678707d23cf1512bb55d7cacae43cc8f64b6310590800` |
+| `com.openggf.tools.TestLrzTailsColdRouteCapture#coldTailsCompletesActTwoAndRestoresTheBoulderHandoff` | `3c4aeb3cf3950ca7bb7678707d23cf1512bb55d7cacae43cc8f64b6310590800` |
+| `com.openggf.tools.TestLrzWideBossColdRouteCapture#coldWideTeamClearsBossAndReleasesHiddenPalaceWithRepeatableWorld` | `49ca51894f4d6e67b693c698250a219ecc8074a00f06034b2320c51536c597eb` |
+| `com.openggf.tools.TestMhzPairColdRouteCapture#pairedColdCompletionIsolatesTheLiveTimelineAtTheActualFbzLoad` | `489cb0022b1a8048135fa731250f4a9fd956bab37a9b987ba0c70f2bf2070190` |
+| `com.openggf.tools.TestMhzWideColdRouteCapture#wideSonicCompletesBothActsThroughProductionLoopWithWholeWorldReplay` | `b8caa35f5648f2de6ffdab9b642b49a4850f43ae81cfe86a1f64263295ea85d3` |
+| `com.openggf.tools.TestSszColdRouteCapture#coldCompleteRouteDefeatsMechaAndLoadsDeathEggWithRewindAtLateEvents` | `a331f9ebdb13fa37ad2a8e804e3b5eed1d0c0202dacd6483f05dabd3595d849f` |
+| `com.openggf.tools.TestSszColdRouteCapture#coldRouteDefeatsBothReplicasAndReplaysTraversalAndTransport` | `a331f9ebdb13fa37ad2a8e804e3b5eed1d0c0202dacd6483f05dabd3595d849f` |
+| `com.openggf.tools.TestSszSoloColdRouteCapture#coldSoloSonicDefeatsBothReplicasAndReplaysTheirApproaches` | `00ac4ba91696465a1a8db1fd54a3b43bc46c1eae9ffb23d4ee9923dd694fe4ca` |
+| `com.openggf.tools.TestSszSoloColdRouteCapture#coldSoloSonicDefeatsMechaAndLoadsDezWithIsolatedHistory` | `00ac4ba91696465a1a8db1fd54a3b43bc46c1eae9ffb23d4ee9923dd694fe4ca` |
+| `com.openggf.tools.TestSszTailsColdRouteCapture#coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory(int)[1]` | `09c1414b4888b1025e4cbe3e38ffd88ea2e00ff8e4ec031760f63b18c4e67224` |
+| `com.openggf.tools.TestSszTailsColdRouteCapture#coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory(int)[2]` | `09c1414b4888b1025e4cbe3e38ffd88ea2e00ff8e4ec031760f63b18c4e67224` |
+| `com.openggf.tools.TestSszTailsColdRouteCapture#coldSoloTailsDefeatsBothReplicasAndRidesTheirTeleporters(int)[2]` | `c1d178ad1b21f274fb4890bdb1e1be6bb2bcce555520e53c94aa473a516f0074` |
+
+Completed baseline diagnostics were inspected and acknowledged; the run directory was deleted.

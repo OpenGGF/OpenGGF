@@ -159,7 +159,15 @@ public final class ModSaveSlot<T> {
         }
         if (backup != null && previous != null) {
             try {
-                if (!read(backup).filter(previous::equals).isPresent()
+                Optional<String> oldBackup = read(backup);
+                if (oldBackup.isEmpty() && list().contains(backup))
+                    return ModSaveWriteResult.BACKUP_FAILED;
+                if (!replacementAuthorized && oldBackup.isPresent()
+                        && decode(oldBackup.get()).status() == INCOMPATIBLE) {
+                    writable = false;
+                    return ModSaveWriteResult.REPLACEMENT_REQUIRED;
+                }
+                if (!oldBackup.filter(previous::equals).isPresent()
                         && !write(backup, previous)) return ModSaveWriteResult.BACKUP_FAILED;
             } catch (StorageUnavailable unavailable) { return ModSaveWriteResult.BACKUP_FAILED; }
         }

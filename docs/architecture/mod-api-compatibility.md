@@ -746,12 +746,15 @@ baselines remain untouched.
 
 The unpublished `0.7.0` candidate adds owner-handle text `ModSaveSlot`, explicit
 load/write results and a creator codec. Incompatible primary bytes never select an
-older writable recovery generation; required-backup failure blocks publication.
+older writable recovery generation; incompatible backups also require explicit
+replacement, and unreadable/failed required backups block publication.
 Retries retain encoded checkpoints. This is per-file atomic replacement, not a
 multi-file transaction. Codec/programming and revoked-handle failures remain faults.
 Three Islands and Slay profile formats demonstrate independent consumer adoption.
 If a corrupt primary arrives after an absent load, publication still requires explicit
-replacement unless the slot holds a genuinely validated recovery generation.
+replacement unless the slot holds a genuinely validated recovery generation and
+has a configured backup that can preserve it. A no-backup slot also protects corrupt
+bytes that arrive after an earlier successful publication.
 
 `SpriteComposition` shares ordered pure sprite placement/bounds while boss recipes
 remain local. `SceneCanvasTransform` provides per-draw nested translation/opacity

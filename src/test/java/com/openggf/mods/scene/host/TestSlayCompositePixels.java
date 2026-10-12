@@ -112,6 +112,63 @@ class TestSlayCompositePixels {
         }
     }
 
+    @Test
+    @RequiresRom(SonicGame.SONIC_3K)
+    void romBossCpuPixelsPreserveLegacyOriginsFlipsAndOrder() throws Exception {
+        SharedLevel level = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
+        try (ExampleModHarness harness = ExampleModHarness.build(
+                Path.of("examples/slay-the-robotnik"), work.resolve("cpu-build"))) {
+            harness.open(harness.apply(GameServices.module()), work.resolve("cpu-saves"), 400, 224);
+            Object shell = harness.scene().getClass().getMethod("shell").invoke(harness.scene());
+            Class<?> visuals = harness.loader().loadClass("slaytherobotnik.scene.EnemyVisuals");
+            Method prepare = visuals.getDeclaredMethod("prepare", shell.getClass(),
+                    harness.loader().loadClass("slaytherobotnik.core.Enemy"),
+                    int.class, int.class, long.class, float.class, float.class);
+            prepare.setAccessible(true);
+            for (String encounter : List.of("aiz:flame_craft", "hcz:screw_mobile", "lbz:beam_rocket")) {
+                assertTrue(harness.debugJump("sonic:7:fight:" + encounter));
+                Object run = shell.getClass().getField("run").get(shell);
+                Object room = run.getClass().getMethod("room").invoke(run);
+                Object combat = room.getClass().getMethod("combat").invoke(room);
+                Object enemy = ((List<?>) combat.getClass().getMethod("enemies").invoke(combat)).getFirst();
+                for (long tick : new long[] {0,29,61}) {
+                    Object pose = prepare.invoke(null,shell,enemy,200,185,tick,0f,1f);
+                    List<?> parts = (List<?>) value(pose,"parts");
+                    assertTrue(parts.size()>1,"Decoded ROM composite required");
+                    float scale=(float)value(pose,"scale"), x=(float)value(pose,"originX"), y=(float)value(pose,"originY");
+                    RecordingCanvas legacy = new RecordingCanvas(400,224,null);
+                    for(Object part:parts) legacy.draw((SceneSprite)value(part,"sprite"),
+                            x+(float)value(part,"dx")*scale, y+(float)value(part,"dy")*scale,
+                            SceneDraw.plain().withScale(scale).withFlipX((boolean)value(part,"flipX")));
+                    RecordingCanvas shared = new RecordingCanvas(400,224,null);
+                    ((SpriteComposition.Placement)value(pose,"prepared")).draw(shared);
+                    int[] expected=cpuPixels(legacy),actual=cpuPixels(shared);
+                    assertTrue(Arrays.stream(expected).anyMatch(pixel->(pixel&0xFFFFFF)!=0),"Visible ROM pixels required");
+                    assertArrayEquals(expected,actual,encounter+" tick="+tick);
+                }
+            }
+            assertEquals(java.util.Map.of(),harness.findings());
+        } finally { level.dispose(); }
+    }
+
+    /** Pixel-centre nearest-neighbour oracle for these opaque ROM parts; does not call the helper. */
+    private static int[] cpuPixels(RecordingCanvas canvas) {
+        int[] pixels=new int[400*224]; Arrays.fill(pixels,0xFF000000);
+        for(SceneDrawOp op:canvas.ops()) {
+            assertNotNull(op.image()); assertEquals(0xFFFFFFFF,op.tint()); assertEquals(0,op.flash());
+            for(int y=0;y<224;y++) for(int x=0;x<400;x++) {
+                float px=x+0.5f,py=y+0.5f;
+                if(px<op.x0()||px>=op.x1()||py<op.y0()||py>=op.y1()) continue;
+                int sx=(int)Math.floor(op.u0()+(px-op.x0())/(op.x1()-op.x0())*(op.u1()-op.u0()));
+                int sy=(int)Math.floor(op.v0()+(py-op.y0())/(op.y1()-op.y0())*(op.v1()-op.v0()));
+                int color=op.image().pixel(sx,sy),alpha=color>>>24;
+                assertTrue(alpha==0||alpha==255,"This oracle requires opaque/transparent ROM palette pixels");
+                if(alpha!=0)pixels[y*400+x]=color;
+            }
+        }
+        return pixels;
+    }
+
     private static Object value(Object record, String name) throws Exception {
         Method method = record.getClass().getDeclaredMethod(name);
         method.setAccessible(true);
