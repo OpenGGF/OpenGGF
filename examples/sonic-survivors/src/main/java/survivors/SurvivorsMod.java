@@ -31,10 +31,12 @@ public final class SurvivorsMod implements GgfMod {
         var storage = context.storage();
         context.registerServiceBundle("run", () -> {
             var profile = new Profile(storage).load();
+            var frames = new FrameControl();
             return GameServiceBundle.builder()
                     .capturedService("state", RunState.class, new RunState(profile))
                     .service(Profile.class, profile)
-                    .service(Definitions.class, new Definitions()).build();
+                    .service(Definitions.class, new Definitions())
+                    .service(FrameControl.class, frames).frameController("frames", frames).build();
         });
         context.registerGamePatch(new Patch());
     }
@@ -120,6 +122,9 @@ public final class SurvivorsMod implements GgfMod {
         }
 
         @Override public com.openggf.game.rules.GameRules getRules() { return arenaRules; }
+        @Override public com.openggf.game.mode.GameplayFrameController gameplayFrameController() {
+            return active ? base().getGameService(com.openggf.game.mode.GameplayFrameController.class) : null;
+        }
 
         // Super forms are deferred until they have a Survivors-specific design.
         // Omit the controller so native jump, monitor and debug activation stay disabled.
