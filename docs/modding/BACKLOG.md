@@ -18,6 +18,10 @@ reviews all eleven example projects, tutorial checkpoints, fixture mods and SDK
 starters at `f9d4e0474`. Its findings are proposed work, not implementation promises
 or a change to the candidate API policy.
 
+The [remediation plan](../architecture/plans/2026-10-12-mod-audit-remediation.md)
+provides the per-finding execution sequence and checks; it does not mark these
+proposed capabilities as delivered.
+
 The first priorities are save-format preservation, checked save recovery/results,
 render-independent targeting, and ordinary-input frame holds. Shared candidates
 include a validated save-slot coordinator, extension of the existing frame controller,
