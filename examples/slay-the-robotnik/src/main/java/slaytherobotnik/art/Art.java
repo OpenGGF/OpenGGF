@@ -27,6 +27,9 @@ public final class Art implements AutoCloseable {
     private final Map<String, List<SceneLevelStage>> stages = new HashMap<>();
     /** The last few stage foregrounds (each a screen of pixels), most recent last. */
     private final Map<String, SceneImage> foregrounds = new java.util.LinkedHashMap<>();
+    private final Map<String, SceneSpriteSet> titleCards = new HashMap<>();
+    private final java.util.LinkedHashMap<String, Failure> failures = new java.util.LinkedHashMap<>();
+    private boolean closed;
     private SceneImage blank;
     private com.openggf.mods.scene.art.SceneArtCache spriteCache;
 
@@ -50,17 +53,28 @@ public final class Art implements AutoCloseable {
         return cards;
     }
 
-    /** True when ROM art is available (always, for this S3K patch mod). */
-    public boolean hasRom() {
-        return ctx.art().rom() != null;
-    }
+    /** True when the supplied running ROM is available for this visit. */
+    public boolean hasRom() { return rom() != null; }
 
     public SceneRomArt rom() {
-        return ctx.art().rom();
+        requireOpen();
+        var driver = ctx.art();
+        return attempt("rom:s3k", () -> {
+            SceneRomArt found = driver.rom();
+            if (found == null) throw new MissingRom();
+            return found;
+        });
+    }
+
+    private SceneRomArt requireRom() {
+        SceneRomArt found = rom();
+        if (found == null) throw dependency("rom:s3k");
+        return found;
     }
 
     /** A text-art icon by name; a 1x1 transparent image when missing. */
     public SceneImage icon(String name) {
+        requireOpen();
         SceneImage image = icons.get(name);
         if (image == null) {
             if (blank == null) {
@@ -72,35 +86,22 @@ public final class Art implements AutoCloseable {
     }
 
     public boolean hasIcon(String name) {
+        requireOpen();
         return icons.containsKey(name);
     }
 
     /** A playable character's ROM frames ("sonic", "tails", "knuckles"), or null without a ROM. */
     public SceneSpriteSet character(String id) {
-        if (!hasRom()) {
-            return null;
-        }
-        return characterSets.computeIfAbsent(id, key -> rom().character(key));
+        return cached(characterSets, id, "character:" + id, () -> requireRom().character(id));
     }
 
     /** A sprite from the ROM table in {@link RomSprites}, or null when unavailable. */
     public SceneSpriteSet rom(String key) {
-        if (!hasRom()) {
-            return null;
-        }
-        if (romSets.containsKey(key)) {
-            return romSets.get(key);
-        }
-        SceneSpriteSet set = null;
-        try {
-            if (spriteCache == null) spriteCache = new com.openggf.mods.scene.art.SceneArtCache(rom(), 32);
-            set = RomSprites.load(rom(), spriteCache, key);
-        } catch (RuntimeException e) {
-            failed("the ROM sprite " + key, e);
-            set = null;
-        }
-        romSets.put(key, set);
-        return set;
+        return cached(romSets, key, "sprite:" + key, () -> {
+            SceneRomArt supplied = requireRom();
+            if (spriteCache == null) spriteCache = new com.openggf.mods.scene.art.SceneArtCache(supplied, 32);
+            return RomSprites.load(supplied, spriteCache, key);
+        });
     }
 
     /**
@@ -109,17 +110,8 @@ public final class Art implements AutoCloseable {
      */
     public SceneImage levelOverview(int zone, int act, int maxHeight) {
         String key = zone + ":" + act + ":" + maxHeight;
-        if (!overviews.containsKey(key)) {
-            SceneImage image = null;
-            try {
-                image = hasRom() ? rom().levelOverview(zone, act, maxHeight) : null;
-            } catch (RuntimeException e) {
-                failed("a picture of zone " + zone + " act " + act, e);
-                image = null;
-            }
-            overviews.put(key, image);
-        }
-        return overviews.get(key);
+        return cached(overviews, key, "overview:" + key,
+                () -> requireRom().levelOverview(zone, act, maxHeight));
     }
 
     /**
@@ -128,17 +120,12 @@ public final class Art implements AutoCloseable {
      */
     public List<SceneLevelStage> levelStages(int zone, int act, int width, int headroom, int maxRise) {
         String key = zone + ":" + act + ":" + width + ":" + headroom + ":" + maxRise;
-        if (!stages.containsKey(key)) {
-            List<SceneLevelStage> found = List.of();
-            try {
-                found = hasRom() ? rom().levelStages(zone, act, width, headroom, maxRise) : List.of();
-            } catch (RuntimeException e) {
-                failed("the level stages of zone " + zone + " act " + act, e);
-                found = List.of();
-            }
-            stages.put(key, found);
-        }
-        return stages.get(key);
+        List<SceneLevelStage> found = cached(stages, key, "stages:" + key, () -> {
+            SceneRomArt supplied = requireRom();
+            if (!supplied.hasZonePictures(zone, act)) throw new UnsupportedOperationException("No zone pictures");
+            return supplied.levelStages(zone, act, width, headroom, maxRise);
+        });
+        return found == null ? List.of() : found;
     }
 
     /**
@@ -146,20 +133,14 @@ public final class Art implements AutoCloseable {
      * Keeps the last eight, so a room's stage is built once.
      */
     public SceneImage levelForeground(int zone, int act, int x, int y, int width, int height) {
+        requireOpen();
         String key = zone + ":" + act + ":" + x + ":" + y + ":" + width + ":" + height;
-        boolean known = foregrounds.containsKey(key);
         SceneImage image = foregrounds.remove(key);
-        if (!known) {
-            try {
-                image = hasRom() ? rom().levelForeground(zone, act, x, y, width, height) : null;
-            } catch (RuntimeException e) {
-                failed("a picture of zone " + zone + " act " + act, e);
-                image = null;
-            }
-        }
-        foregrounds.put(key, image);
-        if (foregrounds.size() > 8) {
-            foregrounds.remove(foregrounds.keySet().iterator().next());
+        if (image == null) image = attempt("foreground:" + key,
+                () -> requireRom().levelForeground(zone, act, x, y, width, height));
+        if (image != null) {
+            foregrounds.put(key, image);
+            if (foregrounds.size() > 8) foregrounds.remove(foregrounds.keySet().iterator().next());
         }
         return image;
     }
@@ -179,66 +160,46 @@ public final class Art implements AutoCloseable {
      * sixteen 8x8 tiles stored a column at a time, as the stage's reel copy reads them.
      */
     public SceneImage slotFace(int face) {
-        if (slotFaces == null) {
-            slotFaces = new SceneImage[8];
-            try {
-                if (hasRom()) {
-                    int[] palette = rom().palette(SLOT_PALETTE, 16);
-                    for (int f = 0; f < 8; f++) {
-                        slotFaces[f] = rom().tiles(SLOT_FACES, RomSpriteRequest.Compression.UNCOMPRESSED, f * 16, 4, 4,
-                                true, palette);
-                    }
-                }
-            } catch (RuntimeException e) {
-                failed("the slot machine faces", e);
-                slotFaces = new SceneImage[8];
+        requireOpen();
+        if (face < 0 || face >= 8) return null;
+        if (slotFaces == null) slotFaces = attempt("slot:faces", () -> {
+            SceneRomArt supplied = requireRom();
+            int[] palette = supplied.palette(SLOT_PALETTE, 16);
+            SceneImage[] candidate = new SceneImage[8];
+            for (int f = 0; f < candidate.length; f++) {
+                candidate[f] = java.util.Objects.requireNonNull(supplied.tiles(SLOT_FACES,
+                        RomSpriteRequest.Compression.UNCOMPRESSED, f * 16, 4, 4, true, palette), "slot face");
             }
-        }
-        return face >= 0 && face < 8 ? slotFaces[face] : null;
+            return candidate; // Publish only after all eight faces are complete.
+        });
+        return slotFaces == null ? null : slotFaces[face];
     }
 
     /** The three reels' strips of faces (byte_4C8CC and the two after it), or null without the ROM. */
     public int[][] slotStrips() {
-        if (slotStrips == null && hasRom()) {
-            try {
-                byte[] bytes = rom().read(SLOT_STRIPS, 24);
-                int[][] strips = new int[3][8];
-                for (int i = 0; i < 24; i++) {
-                    strips[i / 8][i % 8] = bytes[i] & 7;
-                }
-                slotStrips = strips;
-            } catch (RuntimeException e) {
-                failed("the slot machine reel strips", e);
-                slotStrips = null;
-            }
-        }
+        requireOpen();
+        if (slotStrips == null) slotStrips = attempt("slot:strips", () -> {
+            byte[] bytes = requireRom().read(SLOT_STRIPS, 24);
+            int[][] candidate = new int[3][8];
+            for (int i = 0; i < 24; i++) candidate[i / 8][i % 8] = bytes[i] & 7;
+            return candidate;
+        });
         return slotStrips;
     }
 
     /** A zone act's parallax background from the ROM ({@link SceneRomArt#zoneBackdrop}), or null. */
     public SceneBackdrop zoneBackdrop(int zone, int act) {
         String key = zone + ":" + act;
-        if (!backdrops.containsKey(key)) {
-            SceneBackdrop backdrop = null;
-            try {
-                backdrop = hasRom() ? rom().zoneBackdrop(zone, act) : null;
-            } catch (RuntimeException e) {
-                failed("the backdrop of zone " + zone + " act " + act, e);
-                backdrop = null;
-            }
-            backdrops.put(key, backdrop);
-        }
-        return backdrops.get(key);
+        return cached(backdrops, key, "backdrop:" + key, () -> requireRom().zoneBackdrop(zone, act));
     }
 
     /** The act's title card ({@link SceneRomArt#titleCard}), or null when the game has none for it. */
     public SceneSpriteSet titleCard(int zone, int act) {
-        try {
-            return hasRom() && rom().hasTitleCard(zone, act) ? rom().titleCard(zone, act) : null;
-        } catch (RuntimeException e) {
-            failed("the title card of zone " + zone + " act " + act, e);
-            return null;
-        }
+        String key = zone + ":" + act;
+        return cached(titleCards, key, "title:" + key, () -> {
+            SceneRomArt supplied = requireRom();
+            return supplied.hasTitleCard(zone, act) ? supplied.titleCard(zone, act) : null;
+        });
     }
 
     private SceneSprite emptyTornado;
@@ -250,6 +211,7 @@ public final class Art implements AutoCloseable {
      * leaves the plane whole for someone else to fly.
      */
     public SceneSprite emptyTornado() {
+        requireOpen();
         if (emptyTornado == null) {
             SceneSprite plane = romFrame("tornado", 0);
             if (plane == null) {
@@ -273,21 +235,83 @@ public final class Art implements AutoCloseable {
     /** One frame of a ROM sprite, or null. */
     public SceneSprite romFrame(String key, int frame) {
         SceneSpriteSet set = rom(key);
-        return set == null || frame < 0 || frame >= set.frameCount() ? null : set.frame(frame);
+        return set == null || frame < 0 || frame >= set.frameCount() ? null
+                : attempt("frame:" + key + ":" + frame, () -> set.frame(frame));
     }
 
-    /**
-     * Logs a picture that could not be built. Callers cache the failure (as null or empty), so
-     * it is logged once, and the game draws on without the picture.
-     */
-    private static void failed(String what, RuntimeException e) {
-        java.util.logging.Logger.getLogger(Art.class.getName()).log(java.util.logging.Level.WARNING,
-                "Slay the Robotnik could not build " + what + "; drawing without it", e);
+    public enum FailureKind { OPTIONAL_ROM_MISSING, UNSUPPORTED, INVALID_REQUEST }
+    public record Failure(String request, String owner, FailureKind kind, String cause, long retryAt) { }
+
+    /** At most 64 bounded request/cause entries; no exception graphs or image ownership are retained. */
+    public List<Failure> failures() { return List.copyOf(failures.values()); }
+
+    private <T> T cached(Map<String, T> cache, String key, String request, java.util.function.Supplier<T> loader) {
+        requireOpen();
+        T value = cache.get(key);
+        if (value == null) {
+            value = attempt(request, loader);
+            if (value != null) cache.put(key, value);
+        }
+        return value;
     }
+
+    private <T> T attempt(String request, java.util.function.Supplier<T> loader) {
+        requireOpen();
+        String id = bounded(request);
+        Failure prior = failures.get(id);
+        if (prior != null && ctx.ticks() < prior.retryAt()) return null;
+        try {
+            T value = loader.get();
+            if (value == null) record(id, FailureKind.UNSUPPORTED, "No art for this request");
+            else failures.remove(id);
+            return value;
+        } catch (DependencyFailure unavailable) {
+            Failure source = unavailable.failure;
+            record(id, source.kind(), source.cause(), source.retryAt());
+        } catch (MissingRom missing) {
+            record(id, FailureKind.OPTIONAL_ROM_MISSING, "Running ROM unavailable");
+        } catch (UnsupportedOperationException unsupported) {
+            record(id, FailureKind.UNSUPPORTED, detail(unsupported));
+        } catch (IllegalArgumentException | IllegalStateException invalid) {
+            record(id, FailureKind.INVALID_REQUEST, detail(invalid));
+        }
+        return null;
+    }
+
+    private void record(String request, FailureKind kind, String cause) {
+        long now = ctx.ticks();
+        long retryAt = now > Long.MAX_VALUE - 120 ? Long.MAX_VALUE : now + 120;
+        record(request, kind, cause, retryAt);
+    }
+    private void record(String request, FailureKind kind, String cause, long retryAt) {
+        if (!failures.containsKey(request) && failures.size() == 64)
+            failures.remove(failures.keySet().iterator().next());
+        failures.put(request, new Failure(request, ctx.ownerModId(), kind, bounded(cause), retryAt));
+    }
+    private static String detail(RuntimeException cause) {
+        return cause.getClass().getSimpleName() + ": " + cause.getMessage();
+    }
+    private static String bounded(String value) { return value.length() <= 256 ? value : value.substring(0, 256); }
+    private void requireOpen() { if (closed) throw new IllegalStateException("Art facade is closed"); }
+    private DependencyFailure dependency(String request) {
+        Failure source = failures.get(bounded(request));
+        if (source == null) throw new AssertionError("Missing asset failure status: " + request);
+        return new DependencyFailure(source);
+    }
+    private static final class DependencyFailure extends RuntimeException {
+        final Failure failure;
+        DependencyFailure(Failure failure) { this.failure = failure; }
+    }
+    private static final class MissingRom extends RuntimeException { }
+
     @Override public void close() {
+        if (closed) return;
+        closed = true;
         if (spriteCache != null) spriteCache.close();
-        romSets.clear(); characterSets.clear(); overviews.clear(); backdrops.clear();
-        stages.clear(); foregrounds.clear();
+        spriteCache = null;
+        romSets.clear(); characterSets.clear(); overviews.clear(); backdrops.clear(); titleCards.clear();
+        stages.clear(); foregrounds.clear(); icons.clear(); failures.clear();
+        slotFaces = null; slotStrips = null; emptyTornado = null; blank = null;
     }
 
 }

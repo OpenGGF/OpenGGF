@@ -74,7 +74,10 @@ public final class IslandsScene implements ModScene, DebuggableScene {
     public void exit(SceneContext ctx) {
         if (game != null) {
             try { game.flushSave(); }
-            finally { game.audio.close(); }
+            finally {
+                try { game.audio.close(); }
+                finally { game.art.close(); }
+            }
         }
     }
 

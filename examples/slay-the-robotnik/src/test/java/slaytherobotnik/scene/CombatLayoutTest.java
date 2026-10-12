@@ -43,6 +43,8 @@ class CombatLayoutTest {
             case "input" -> LogicalInputSnapshot.neutral();
             case "width" -> 400;
             case "height" -> 224;
+            case "ticks" -> 0L;
+            case "ownerModId" -> "slay-the-robotnik";
             default -> throw new AssertionError(m.getName());
         });
         SceneCanvas canvas = proxy(SceneCanvas.class, (p, m, a) -> switch (m.getName()) {

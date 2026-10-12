@@ -78,7 +78,7 @@ public final class Game {
         });
         this.font = new Font(font);
         this.ui = new Ui(this.font);
-        this.art = new Art(ctx.art());
+        this.art = new Art(ctx.art(), this::ticks, ctx.ownerModId());
         this.heroes = new Heroes(art);
         this.enemies = new EnemyArt(art, heroes);
         this.audio = new Audio(ctx);

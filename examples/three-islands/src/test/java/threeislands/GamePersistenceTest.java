@@ -74,6 +74,7 @@ class GamePersistenceTest {
                     case "input" -> LogicalInputSnapshot.neutral();
                     case "width" -> 400;
                     case "height" -> 224;
+                    case "ownerModId" -> "three-islands";
                     case "keyPressed", "keyDown", "buttonPressed", "buttonDown", "buttonRepeated" -> false;
                     default -> throw new AssertionError(method.getName());
                 });
