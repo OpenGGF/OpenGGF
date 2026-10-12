@@ -28,7 +28,8 @@ public final class FlappyScene implements ModScene {
 
     private ZoneArt art;
     private TailsArt tails;
-    private final Course course = new Course();
+    private final Zone.Tour tour = new Zone.Tour();
+    private final Course course = new Course(tour);
     private final Flight flight = new Flight();
     private boolean flying;
     private long crashedAt = -1;
@@ -42,11 +43,11 @@ public final class FlappyScene implements ModScene {
 
     @Override
     public void enter(SceneContext ctx) {
-        art = ZoneArt.load(ctx.art().rom(), Zone.tour().get(0));
+        art = ZoneArt.load(ctx.art().rom(), tour.at(0));
         tails = TailsArt.load(ctx.art().rom());
         loadBest(ctx);
         course.reset(seed, 0);
-        ctx.audio().playMusic(Zone.tour().get(0).music());
+        ctx.audio().playMusic(tour.at(0).music());
     }
 
     @Override
@@ -57,7 +58,7 @@ public final class FlappyScene implements ModScene {
             if (ticks - crashedAt > 90) restart();
             return;
         }
-        int speed = Zone.tour().get(0).speed();
+        int speed = tour.at(0).speed();
         scenery += speed / 256.0;
         boolean pressed = ctx.buttonPressed(SceneButtons.ACTIONS) || ctx.keyPressed(SceneKeys.SPACE)
                 || ctx.mouse().leftPressed();
@@ -107,7 +108,7 @@ public final class FlappyScene implements ModScene {
     public void draw(SceneContext ctx, SceneCanvas canvas) {
         int width = ctx.width();
         if (art.backdrop != null) {
-            canvas.drawBackdrop(art.backdrop, Zone.tour().get(0).backdropTop(), scenery, ticks);
+            canvas.drawBackdrop(art.backdrop, tour.at(0).backdropTop(), scenery, ticks);
         } else {
             canvas.clear(0x3070D0);
         }

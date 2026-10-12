@@ -31,8 +31,8 @@ record Zone(int zone, int act, String name, int music, int backdropTop, int spee
     static final int TOUR_LENGTH = 5;
 
     /**
-     * The five acts the engine can picture, in tour order. A new list on every call: mods may not
-     * keep static collections.
+     * The five acts the engine can picture, in tour order. This cold factory supplies an owner
+     * {@link Tour}; runtime lookups reuse that immutable instance rather than static collections.
      */
     static List<Zone> tour() {
         return List.of(
@@ -41,6 +41,27 @@ record Zone(int zone, int act, String name, int music, int backdropTop, int spee
                 new Zone(1, 0, "HYDROCITY", 0x03, 64, 0x240, 92, true, new Ground(5, 0, 360)),
                 new Zone(6, 0, "LAUNCH BASE", 0x0D, 8, 0x260, 88, true, new Ground(1, 0, 400)),
                 new Zone(10, 0, "SKY SANCTUARY", 0x15, 520, 0x280, 84, true, new Ground(4, 0, 380)));
+    }
+
+    /** Immutable definitions owned by one scene/run, including every distinct later-lap variant. */
+    static final class Tour {
+        private final List<Zone> zones = Zone.tour();
+        private final List<List<Zone>> laps;
+        Tour() {
+            // forLap caps speed after four laps and gaps at 72; beyond this bound every value is identical.
+            int lastLap = zones.stream().mapToInt(zone -> Math.max(4, (zone.gap() - 72 + 3) / 4)).max().orElse(4);
+            var prepared = new java.util.ArrayList<List<Zone>>();
+            for (int lap = 0; lap <= lastLap; lap++) {
+                final int variant = lap;
+                prepared.add(zones.stream().map(zone -> zone.forLap(variant)).toList());
+            }
+            laps = List.copyOf(prepared);
+        }
+        List<Zone> zones() { return zones; }
+        Zone at(int gates) {
+            int lap = Math.max(0, Math.min(Zone.lap(gates), laps.size() - 1));
+            return laps.get(lap).get(tourIndex(gates));
+        }
     }
 
     /** The zone for a gate count, looping the tour; later laps keep the last zone's pace and tighten. */
