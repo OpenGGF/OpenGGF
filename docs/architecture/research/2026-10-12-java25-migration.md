@@ -314,3 +314,34 @@ new act-practice example compiled and validated with zero findings using
 JAVA_HOME 25 while PATH selected Java 21; matching testkit identity verified.
 `racing/server/build.py --skip-engine` compiled 153 class files, all version 69;
 the generated launcher selects that JDK and declares native access.
+
+
+## Transport probe scheduling race
+
+The next hosted run
+[38247110837](https://github.com/OpenGGF/OpenGGF/actions/runs/38247110837), at
+`efe80a0da9e80d08eec1237c03f22ffa0850e1a1`, stopped in ordinary testing:
+23,551 executions, one failure, zero errors, 4,288 skips. The sole failure was
+`TestGolfTransport.localhostOrderingBoundsDeadlineAndCleanup`: “room gets
+overflow hold event”. Its 15-case class passed in the previous complete hosted
+run on identical ordinary code; the actual unchanged e76 Java 21 baseline also
+passed all 15 cases, with this method taking 5.212 seconds. Guards/native jobs
+did not run in this failed workflow.
+
+The cause is an existing test synchronization assumption. `GolfConnection.
+disconnect` publishes its atomic closed flag, then closes the outbound mailbox,
+then publishes `Disconnected` under the incoming monitor. Observing the first
+write does not establish happens-before for the later event. The test awaited
+`isClosed()` and drained once, so it could miss that event; the production room
+drains each tick and consumes eventual publication. Both Java 21 and 25 permit
+this ordering. No evidence attributes the race itself to a Java 25 semantic
+change. A production locking change and blanket timeout increases were rejected.
+
+The probe now accumulates drain snapshots until a terminal event appears within
+the probe’s existing 3-second await bound, asserts exactly one notification and
+retains the exact overflow/deadline reasons. The same correction covers the
+adjacent asynchronous reconnect and deadline checks; synchronous send-overflow
+is unchanged. A new deterministic case holds the outbound mailbox monitor during
+a real 257-packet overflow, proves closure is visible before event publication,
+then releases the monitor and checks one overflow event, an empty queue and
+retired workers. No production source changes are involved.
