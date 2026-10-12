@@ -40,12 +40,16 @@ import java.util.Optional;
 import static org.lwjgl.glfw.GLFW.GLFW_CONTEXT_VERSION_MAJOR;
 import static org.lwjgl.glfw.GLFW.GLFW_CONTEXT_VERSION_MINOR;
 import static org.lwjgl.glfw.GLFW.GLFW_FALSE;
+import static org.lwjgl.glfw.GLFW.GLFW_ANY_PLATFORM;
+import static org.lwjgl.glfw.GLFW.GLFW_PLATFORM;
+import static org.lwjgl.glfw.GLFW.GLFW_PLATFORM_NULL;
 import static org.lwjgl.glfw.GLFW.GLFW_RESIZABLE;
 import static org.lwjgl.glfw.GLFW.GLFW_VISIBLE;
 import static org.lwjgl.glfw.GLFW.glfwCreateWindow;
 import static org.lwjgl.glfw.GLFW.glfwDefaultWindowHints;
 import static org.lwjgl.glfw.GLFW.glfwDestroyWindow;
 import static org.lwjgl.glfw.GLFW.glfwInit;
+import static org.lwjgl.glfw.GLFW.glfwInitHint;
 import static org.lwjgl.glfw.GLFW.glfwMakeContextCurrent;
 import static org.lwjgl.glfw.GLFW.glfwTerminate;
 import static org.lwjgl.glfw.GLFW.glfwWindowHint;
@@ -133,12 +137,14 @@ public final class HeadlessGameBoot implements AutoCloseable {
     private final SessionCloser sessionCloser;
 
     private long window = NULL;
+    private SurfacelessEglContext eglContext;
 
     // JOML projection state, mirroring VisualReferenceGenerator.
     private final Matrix4f projectionMatrix = new Matrix4f();
     private final float[] matrixBuffer = new float[16];
 
     private Rom rom;
+    private HeadlessSmpsAudioBackend installedHeadlessAudioBackend;
     private boolean closed;
     private java.util.function.UnaryOperator<GameModule> moduleDecorator = java.util.function.UnaryOperator.identity();
 
@@ -146,8 +152,19 @@ public final class HeadlessGameBoot implements AutoCloseable {
      * Wraps the detected game module before the gameplay session opens, as an enabled patch
      * mod does in the launcher (used by {@code GameplayCaptureTool --mod}).
      */
+    private boolean bootToTitle;
+
+    /** Capture the real title/launch flow before the first level assembly (Mutator Lab, 2026-10-07). */
+    public void setBootToTitle(boolean enabled) { bootToTitle = enabled; }
+
     public void setModuleDecorator(java.util.function.UnaryOperator<GameModule> decorator) {
         this.moduleDecorator = java.util.Objects.requireNonNull(decorator, "decorator");
+    }
+
+    /** Observes this boot's exact audio owner without exposing backend commands. */
+    boolean hasInstalledHeadlessAudioBackend() {
+        return !closed && installedHeadlessAudioBackend != null
+                && engineServices.audio().hasInstalledBackend(installedHeadlessAudioBackend);
     }
 
     /**
@@ -267,10 +284,33 @@ public final class HeadlessGameBoot implements AutoCloseable {
 
         GLFWErrorCallback.createPrint(System.err).set();
 
-        if (!glfwInit()) {
-            throw new IllegalStateException("Unable to initialize GLFW");
+        boolean surfaceless = SurfacelessEglContext.requested();
+        if (surfaceless) {
+            // GLFW keeps its timer/input role on the display-free null platform.
+            glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_NULL);
+        }
+        try {
+            if (!glfwInit()) {
+                throw new IllegalStateException("Unable to initialize GLFW");
+            }
+        } finally {
+            if (surfaceless) {
+                // Init hints survive glfwTerminate. Reset the next owner's selection even
+                // on failure; this does not change the null platform already initialized.
+                glfwInitHint(GLFW_PLATFORM, GLFW_ANY_PLATFORM);
+            }
         }
 
+        if (surfaceless) {
+            eglContext = SurfacelessEglContext.create(width, height, coreProfile);
+        } else {
+            createHiddenWindowContext();
+        }
+        GL.createCapabilities();
+        initGlState();
+    }
+
+    private void createHiddenWindowContext() {
         glfwDefaultWindowHints();
         glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
         glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
@@ -290,8 +330,9 @@ public final class HeadlessGameBoot implements AutoCloseable {
         }
 
         glfwMakeContextCurrent(window);
-        GL.createCapabilities();
+    }
 
+    private void initGlState() {
         GraphicsManager graphicsManager = EngineServices.current().graphics();
         // Test and batch-tool JVMs can reuse this process after a logic-only
         // session called initHeadless(). This boot owns a real GL context, so
@@ -424,6 +465,7 @@ public final class HeadlessGameBoot implements AutoCloseable {
         // Mirrors Engine.initializeGlobalGameplayServices (Engine.java:676);
         // setBackend() falls back to NullAudioBackend if OpenAL init fails.
         SonicConfigurationService audioConfig = services.configuration();
+        installedHeadlessAudioBackend = null;
         if (audioConfig.getBoolean(SonicConfiguration.AUDIO_ENABLED)) {
             // Headless backend: it builds the normal presentation producer
             // over a NoDeviceAudioSink (AudioBackend.createPresentationSink),
@@ -431,8 +473,9 @@ public final class HeadlessGameBoot implements AutoCloseable {
             // without ever opening an audio device. AudioManager's offline
             // capture lease is a non-consuming view of that producer, not a
             // replacement for it.
-            services.audio().setBackend(
-                    new HeadlessSmpsAudioBackend(audioConfig, services.profiler()));
+            installedHeadlessAudioBackend =
+                    new HeadlessSmpsAudioBackend(audioConfig, services.profiler());
+            services.audio().setBackend(installedHeadlessAudioBackend);
         }
 
         // --- per-replay subsystem reset ---------------------------------
@@ -461,6 +504,11 @@ public final class HeadlessGameBoot implements AutoCloseable {
                 GameplayTeamBootstrap.registerActiveTeam(
                         module, GameServices.sprites(), configService);
 
+        if (bootToTitle) {
+            GameServices.camera().setFocusedSprite(team.mainSprite());
+            loop.initializeTitleScreenMode();
+            return loop;
+        }
         GameServices.level().loadZoneAndAct(zone, act);
 
         GameServices.camera().setFocusedSprite(team.mainSprite());
@@ -679,9 +727,14 @@ public final class HeadlessGameBoot implements AutoCloseable {
             rethrowCloseFailure(failure);
         }
         closed = true;
+        installedHeadlessAudioBackend = null;
     }
 
     private void closeNativeGl() {
+        if (eglContext != null) {
+            eglContext.close();
+            eglContext = null;
+        }
         if (window != NULL) {
             glfwDestroyWindow(window);
             window = NULL;

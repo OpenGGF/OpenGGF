@@ -15,6 +15,13 @@ import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import com.openggf.audio.session.SmpsDriverSession;
+import com.openggf.audio.session.SmpsSessionTestSupport;
+import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.any;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -209,6 +216,105 @@ class TestAudioPresentationProducer {
         assertArrayEquals(new short[] {0, 100, 32, 132, 64, 164, 96, 196},
                 fixture.sink.lastPacket(4));
         assertEquals(97L << 32, sampleCursor(fixture.registry));
+    }
+
+    @Test
+    void quarterRateLegacyVoiceConsumesOneSampleAndPublishesOnePacketOnEachPresentation() {
+        Fixture f = fixture(8, 2, rampStereo("quarter-legacy", 32));
+        try {
+            f.submitTone();
+            f.producer.setForwardRate(0.25);
+            for (int outer = 0; outer < 4; outer++) {
+                f.producer.present(outer, PresentationMode.FORWARD);
+                assertArrayEquals(repeatStereo(4, (short) outer, (short) (outer + 100)), f.sink.lastPacket(4));
+                assertEquals((long) (outer + 1) << 32, sampleCursor(f.registry));
+            }
+            assertEquals(AudioPresentationSnapshot.ForwardTiming.INITIAL.phase(), f.producer.snapshot().forwardTiming().phase());
+            assertEquals(4, f.sink.acceptCount);
+        } finally { f.producer.close(); }
+    }
+
+    @Test
+    void sampleOnlyQuarterRateClearsThePreviousChunkWhenItsVoiceEnds() {
+        Fixture f = fixture(8, 2, constantStereo("quarter-end", 1, (short) 123, (short) -321));
+        try {
+            f.submitTone();
+            f.producer.setForwardRate(0.25);
+            f.producer.present(0, PresentationMode.FORWARD);
+            assertArrayEquals(repeatStereo(4, (short) 123, (short) -321), f.sink.lastPacket(4));
+            assertEquals(0, f.registry.orderedVoiceCount());
+            f.producer.present(1, PresentationMode.FORWARD);
+            assertArrayEquals(new short[8], f.sink.lastPacket(4),
+                    "no session or remaining PCM voice may reuse the previous source chunk");
+            assertEquals(2, f.sink.acceptCount);
+            assertEquals(0.5, f.producer.snapshot().forwardTiming().phase());
+        } finally { f.producer.close(); }
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0.25,1,50", "0.5,2,50", "1,4,50", "1.5,6,50", "2,8,50", "4,16,50",
+            "0.25,1,60", "0.5,2,60", "1,4,60", "1.5,6,60", "2,8,60", "4,16,60"})
+    void nativeSmpsServiceAndPcmConsumptionFollowFractionalSourceTime(double rate, int services, int hz) {
+        int frameSamples = 44_100 / hz;
+        int sourceFrames = frameSamples * services;
+        SmpsDriverSession session = spy(SmpsSessionTestSupport.installed(44_100));
+        Fixture f = fixture(44_100, hz, rampStereo("paced-smps", frameSamples * 16 + 16),
+                new RecordingSink(44_100, frameSamples), session);
+        try {
+            f.submitTone();
+            f.producer.setForwardRate(rate);
+            for (int outer = 0; outer < 4; outer++) f.producer.present(outer, PresentationMode.FORWARD);
+            verify(session, times(services)).serviceForward();
+            assertEquals((long) sourceFrames << 32, sampleCursor(f.registry));
+            assertEquals(4, f.sink.acceptCount, "SMPS source service never multiplies wall-clock packet publication");
+            assertEquals(frameSamples * 4L, f.sink.totalStereoFrames);
+            assertEquals(0, f.producer.snapshot().forwardTiming().phase());
+            f.producer.present(4, PresentationMode.SILENT);
+            verify(session, times(services)).serviceForward();
+            assertEquals((long) sourceFrames << 32, sampleCursor(f.registry));
+            assertArrayEquals(new short[frameSamples * 2], f.sink.lastPacket(frameSamples));
+        } finally { f.producer.close(); }
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0.25,2", "1.5,12", "4,32"})
+    void nativeFractionalRateSnapshotReplaysSameSourceIntervalAndPcm(double rate, int consumedSamples) {
+        SmpsDriverSession session = SmpsSessionTestSupport.installed(8);
+        Fixture f = fixture(8, 2, rampStereo("paced-restore", 128), new RecordingSink(8, 4), session);
+        try {
+            f.submitTone(); f.producer.setForwardRate(rate);
+            f.producer.present(0, PresentationMode.FORWARD);
+            var saved = f.producer.snapshot();
+            f.producer.present(1, PresentationMode.FORWARD);
+            short[] expected = f.sink.lastPacket(4);
+            var after = f.producer.snapshot().forwardTiming();
+            f.producer.restore(saved, f.resolver, false);
+            f.producer.present(2, PresentationMode.FORWARD);
+            assertArrayEquals(expected, f.sink.lastPacket(4));
+            assertEquals(after, f.producer.snapshot().forwardTiming());
+            assertEquals((long) consumedSamples << 32, sampleCursor(f.registry));
+        } finally { f.producer.close(); }
+    }
+
+    @Test
+    void nativeQuarterRateRenderFailureRollsBackSourcePhaseVoiceAndDriverBeforeRetry() {
+        SmpsDriverSession session = spy(SmpsSessionTestSupport.installed(8));
+        Fixture f = fixture(8, 2, rampStereo("quarter-retry", 32), new RecordingSink(8, 4), session);
+        try {
+            f.submitTone();
+            f.producer.setForwardRate(0.25);
+            doThrow(new IllegalStateException("injected source render failure"))
+                    .doCallRealMethod().when(session).renderFrames(any(short[].class), anyInt(), anyInt());
+            var before = f.producer.snapshot();
+            assertThrows(IllegalStateException.class, () -> f.producer.present(0, PresentationMode.FORWARD));
+            assertEquals(before.forwardTiming(), f.producer.snapshot().forwardTiming());
+            assertEquals(0, f.registry.orderedVoiceCount(), "uncommitted queued tone is removed with the failed transaction");
+            assertEquals(0, f.sink.acceptCount);
+            f.producer.present(1, PresentationMode.FORWARD);
+            assertArrayEquals(repeatStereo(4, (short) 0, (short) 100), f.sink.lastPacket(4));
+            assertEquals(1L << 32, sampleCursor(f.registry));
+            assertEquals(0.25, f.producer.snapshot().forwardTiming().phase());
+        } finally { f.producer.close(); }
     }
 
     @Test
@@ -660,6 +766,11 @@ class TestAudioPresentationProducer {
     private static Fixture fixture(
             int sampleRate, int frameRate, DecodedPcm pcm,
             AudioPresentationSink sink) {
+        return fixture(sampleRate, frameRate, pcm, sink, null);
+    }
+
+    private static Fixture fixture(int sampleRate, int frameRate, DecodedPcm pcm,
+                                   AudioPresentationSink sink, SmpsDriverSession session) {
         AudioPresentationDependencyResolver resolver =
                 new AudioPresentationDependencyResolver() {
                     @Override
@@ -674,16 +785,16 @@ class TestAudioPresentationProducer {
                 new SmpsCoordFlagHandlerOwner(new SmpsCoordFlagRuntimeState()),
                 warning -> {
                     throw new AssertionError(warning);
-                });
+                }, session);
         int maxFrames = (sampleRate + frameRate - 1) / frameRate;
         AudioPresentationCommandQueue commands =
                 new AudioPresentationCommandQueue(registry::isRendering);
         AudioPresentationProducer producer = new AudioPresentationProducer(
                 sampleRate, frameRate, sampleRate, 2, registry, commands,
                 new AudioPresentationMixer(maxFrames, registry::onVoiceFailure),
-                sink);
+                sink, session);
         return new Fixture(registry, commands, producer,
-                sink instanceof RecordingSink recording ? recording : null, pcm);
+                sink instanceof RecordingSink recording ? recording : null, pcm, resolver);
     }
 
     private static SmpsSfxInstantiation noSmps() {
@@ -785,7 +896,8 @@ class TestAudioPresentationProducer {
             AudioPresentationCommandQueue commands,
             AudioPresentationProducer producer,
             RecordingSink sink,
-            DecodedPcm pcm) {
+            DecodedPcm pcm,
+            AudioPresentationDependencyResolver resolver) {
         private void submitTone() {
             SampleBackedVoice voice = SampleBackedVoice.oneShot(
                     1, 1, pcm, pcm.sampleRate(), 1.0f, 1.0f);

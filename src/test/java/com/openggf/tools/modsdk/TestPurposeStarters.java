@@ -76,7 +76,7 @@ class TestPurposeStarters {
 
             Path classes = project.resolve("target/classes");
             Files.createDirectories(classes);
-            var compilerArgs = new ArrayList<>(List.of("--release", "21", "-cp", sessionClasses.toAbsolutePath().toString(),
+            var compilerArgs = new ArrayList<>(List.of("--release", "25", "-cp", sessionClasses.toAbsolutePath().toString(),
                     "-d", classes.toString()));
             try (var sources = Files.walk(project.resolve("src/main/java"))) {
                 sources.filter(path -> path.toString().endsWith(".java")).map(Path::toString).forEach(compilerArgs::add);
@@ -127,7 +127,7 @@ class TestPurposeStarters {
             try (var paths = Files.walk(project)) { sources = paths.filter(p -> p.toString().endsWith(".java")).map(Path::toString).toList(); }
             if (!sources.isEmpty()) {
                 Path classes = temp.resolve(kind + "-classes"); Files.createDirectories(classes);
-                var args = new ArrayList<>(List.of("--release", "21", "-cp", TestSessionOutputPaths.compiledClasses().toAbsolutePath().toString(), "-d", classes.toString()));
+                var args = new ArrayList<>(List.of("--release", "25", "-cp", TestSessionOutputPaths.compiledClasses().toAbsolutePath().toString(), "-d", classes.toString()));
                 args.addAll(sources);
                 assertEquals(0, ToolProvider.getSystemJavaCompiler().run(null, null, null, args.toArray(String[]::new)), kind);
             }

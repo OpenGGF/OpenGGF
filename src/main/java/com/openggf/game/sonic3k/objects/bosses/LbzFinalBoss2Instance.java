@@ -1533,6 +1533,11 @@ public final class LbzFinalBoss2Instance extends AbstractObjectInstance
         protected int priority;
 
         @Override
+        public com.openggf.game.mutators.ObjectHeadRole headPresentationRole() {
+            return com.openggf.game.mutators.ObjectHeadRole.BOSS;
+        }
+
+        @Override
         public boolean isPersistent() {
             return boss != null && boss.isPersistent();
         }

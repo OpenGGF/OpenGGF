@@ -311,7 +311,7 @@ class TestSampleModsPackage {
     }
 
     private static void compileJava(Path source, Path output) throws Exception {
-        List<String> arguments = new ArrayList<>(List.of("--release", "21", "-classpath",
+        List<String> arguments = new ArrayList<>(List.of("--release", "25", "-classpath",
                 TestSessionOutputPaths.compiledClasses().toAbsolutePath().toString(),
                 "-d", output.toString()));
         try (var files = Files.walk(source)) {

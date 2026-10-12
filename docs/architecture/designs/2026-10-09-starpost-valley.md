@@ -3112,3 +3112,27 @@ request was cancelled after more than eight minutes (exit 130), without
 interrupting other runs or changing queue locks. These JUnit checks and the
 ordinary/guard suites are **unrun**, not passing. The reflection snapshot above
 is a separate completed artifact check, not a substitute JUnit result.
+
+
+### Develop refresh after Java 25 and Mutator Lab promotion (2026-10-12)
+
+Merge `develop` at `b6d0ff76f73b3e57165e9d475f0c95496eb762ad` into PR #220
+head `06792459f7dc9b8ad7b60544177efbcc3cc9fda1`, preserving both histories.
+All six conflicts are reconciled: four documentation files retain the Starpost
+and incoming Mutator Lab/Java 25 evidence; the creator launcher retains optional
+resource generation together with Java 25 compilation and native-access admission.
+The candidate API pin includes both scene/act and mutator contracts; its sorted
+19,834 lines exactly match the compiled surface, including the feature's extended
+camera snapshot. The API remains unpublished candidate 0.7.0.
+
+Verification in the prepared feature checkout:
+`JAVA_HOME=/usr/lib/jvm/java-25-openjdk python3 tools/testing/maven_queue.py
+-Dmse=off -DskipTests package` passes, compiling production and test sources and
+building engine, SDK, Javadoc, testkit and bundled Time Attack artifacts.
+`python3 -m unittest discover -s tools/modding -p test_creator_kit.py` passes all
+13 tests. The packaged `ModApiSignatureSurface --snapshot` matches the pin and
+passes annotation/external-type checks. The resolved `tools/modding/build_project.py`
+packages Starpost Valley against those engine/SDK artifacts with zero findings.
+Both conflicted documentation blocks and constructor sets are retained, and
+agent/skill mirrors match. This is the requested merge/build validation; engine
+JUnit and the broad ordinary/guard suites were not run.

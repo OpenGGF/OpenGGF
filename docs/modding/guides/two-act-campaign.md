@@ -5,7 +5,7 @@ is a small Sonic 2 patch with two original exported acts. The user's Sonic 2 Wor
 REV01 ROM supplies the native player, rings, signpost, music and results services;
 the jar contains only original bounded level data and creator code.
 
-Build the project with Java 21 and the candidate engine/SDK jars:
+Build the project with Java 25 and the candidate engine/SDK jars:
 
 ```sh
 mvn -f project/pom.xml package \

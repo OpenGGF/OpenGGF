@@ -61,6 +61,7 @@ public class Sonic1RingFlashObjectInstance extends AbstractObjectInstance implem
     private int animFrame = -1; // Will advance to 0 on first tick
     private boolean triggerFired = false;
     private boolean finished = false;
+    private long stageEntryPermit = -1;
 
     private Sonic1RingFlashObjectInstance(ObjectSpawn spawn) {
         this(null, spawn.x(), spawn.y(), false);
@@ -78,6 +79,7 @@ public class Sonic1RingFlashObjectInstance extends AbstractObjectInstance implem
                                          int x, int y, boolean hFlip) {
         super(new ObjectSpawn(x, y, 0x7C, 0, 0, false, 0), "RingFlash");
         this.parent = parent;
+        this.stageEntryPermit = parent == null ? -1 : parent.stageEntryPermit();
         this.posX = x;
         this.posY = y;
         this.hFlip = hFlip;
@@ -136,6 +138,7 @@ public class Sonic1RingFlashObjectInstance extends AbstractObjectInstance implem
             triggerFired = true;
 
             // ROM: move.b #1,(f_bigring).w — block hidden bonuses
+            com.openggf.game.mutators.LevelMutatorPolicyAccess.holdResultsPermit(services(), stageEntryPermit);
             services().gameState().setBigRingCollected(true);
 
             // ROM: move.b #6,obRoutine(a1) - delete parent Giant Ring

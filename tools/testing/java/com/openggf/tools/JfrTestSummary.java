@@ -9,7 +9,7 @@ import java.util.*;
  * event JSON and retaining counters rather than recorded events. Origin: 2026-10-08
  * SOZ test-throughput follow-up, base 5d1ff9b8206594ee1c979ae5174328dd9134ffd4.
  * Inputs: recording path and optional test-class prefixes (default com.openggf.tools.Test).
- * Run with Java 21 source-file mode and a bounded heap; no engine build is required.
+ * Run with Java 25 source-file mode and a bounded heap; no engine build is required.
  * Sample counts are observations, not CPU time; native samples include waiting.
  * Allocation sample weights estimate churn, not retained heap or leaks.
  */

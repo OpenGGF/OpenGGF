@@ -44,7 +44,7 @@ class TestSonicSurvivors {
         System.setProperty(SEED_PROPERTY, "0x534F4E4943");
         Path project = Path.of("examples/sonic-survivors");
         Path classes = Files.createDirectory(temp.resolve("classes"));
-        var args = new ArrayList<>(List.of("--release", "21", "-cp", System.getProperty("java.class.path"),
+        var args = new ArrayList<>(List.of("--release", "25", "-cp", System.getProperty("java.class.path"),
                 "-d", classes.toString()));
         try (var files = Files.walk(project.resolve("src/main/java"))) {
             files.filter(p -> p.toString().endsWith(".java")).sorted().forEach(p -> args.add(p.toString()));

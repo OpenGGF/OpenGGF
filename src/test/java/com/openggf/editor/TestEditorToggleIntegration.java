@@ -73,7 +73,6 @@ import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 
 @Isolated
 class TestEditorToggleIntegration {
-    private static final Path S2_ROM = Path.of("s2.gen");
 
     @TempDir
     Path tempSaves;
@@ -973,9 +972,10 @@ class TestEditorToggleIntegration {
     }
 
     private static void assumeS2RomAvailableForResumeReload() {
-        assumeTrue(Files.exists(S2_ROM), "S2 ROM is not available in this environment");
+        var romFile = com.openggf.tests.RomTestUtils.ensureSonic2RomAvailable();
+        assumeTrue(romFile != null, "S2 ROM is not available in this environment");
         Rom rom = new Rom();
-        assumeTrue(rom.open(S2_ROM.toString()), "S2 ROM could not be opened in this environment");
+        assumeTrue(rom.open(romFile.getAbsolutePath()), "S2 ROM could not be opened in this environment");
         TestEnvironment.configureRomFixture(rom);
     }
 

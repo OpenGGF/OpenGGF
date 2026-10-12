@@ -28,6 +28,8 @@ public class PatternSpriteRenderer {
     private final PatternBounds[] patternBoundsCache;
     private final byte[] frameValidationCache;
     private final PatternDesc reusableDesc = new PatternDesc();
+    private com.openggf.sprites.render.PlayerHeadProfile headProfile;
+    private boolean headProfileResolved;
 
     public PatternSpriteRenderer(SpriteSheet<? extends SpriteFrame<? extends SpriteFramePiece>> spriteSheet) {
         this(spriteSheet, GameServices.graphics());
@@ -54,6 +56,7 @@ public class PatternSpriteRenderer {
         if (graphicsManager == null || patternBase < 0 || count <= 0) {
             return;
         }
+        headProfileResolved=false;
         Pattern[] patterns = spriteSheet.getPatterns();
         int end = Math.min(patterns.length, startIndex + count);
         for (int i = Math.max(0, startIndex); i < end; i++) {
@@ -83,6 +86,7 @@ public class PatternSpriteRenderer {
             throw new IllegalArgumentException("replacement sheet shape differs");
         }
         spriteSheet = replacement;
+        headProfileResolved=false;
     }
 
     /** Returns the allocated virtual pattern base, or {@code -1} before caching. */
@@ -149,6 +153,11 @@ public class PatternSpriteRenderer {
         SpriteFrame<? extends SpriteFramePiece> frame = spriteSheet.getFrame(frameIndex);
         int paletteIndex = paletteOverride >= 0 ? paletteOverride : spriteSheet.getPaletteIndex();
         GraphicsManager graphicsManager = this.graphicsManager;
+        if (graphicsManager.isSpriteSatCollectionActive() && drawWithHead(frame.pieces(), originX, originY,
+                hFlip, vFlip, index -> SpritePieceRenderer.preparePiece(frame.pieces().get(index),
+                        originX, originY, patternBase, paletteIndex, hFlip, vFlip,
+                        graphicsManager.getCurrentSpriteHighPriority(),
+                        prepared -> graphicsManager.submitSpriteSatPiece(prepared.withMaskReplayRole(satReplayRole))))) return;
         if (graphicsManager.isSpriteSatCollectionActive()) {
             for (int i = 0; i < frame.pieces().size(); i++) {
                 SpritePieceRenderer.preparePiece(
@@ -290,12 +299,27 @@ public class PatternSpriteRenderer {
                 });
     }
 
+    private boolean drawWithHead(List<? extends SpriteFramePiece> pieces, int originX, int originY,
+            boolean hFlip, boolean vFlip, java.util.function.IntConsumer nativePiece) {
+        if (!headProfileResolved && com.openggf.graphics.SpritePresentation.subject(graphicsManager).part()
+                == com.openggf.graphics.SpritePresentation.Part.OBJECT_BODY) {
+            headProfile = com.openggf.sprites.render.PlayerHeadProfile.resolve(spriteSheet);
+            headProfileResolved = true;
+        }
+        return ObjectHeadPiecePresentation.draw(graphicsManager, headProfile, spriteSheet, pieces,
+                spriteSheet.getPatterns(), patternBase, originX, originY, hFlip, vFlip, nativePiece);
+    }
+
     private void drawFramePieces(List<? extends SpriteFramePiece> pieces,
-            int originX,
-            int originY,
-            boolean hFlip,
-            boolean vFlip,
-            int paletteIndex) {
+            int originX, int originY, boolean hFlip, boolean vFlip, int paletteIndex) {
+        if (drawWithHead(pieces, originX, originY, hFlip, vFlip,
+                index -> drawNativeFramePieces(List.of(pieces.get(index)),
+                        originX, originY, hFlip, vFlip, paletteIndex))) return;
+        drawNativeFramePieces(pieces, originX, originY, hFlip, vFlip, paletteIndex);
+    }
+
+    private void drawNativeFramePieces(List<? extends SpriteFramePiece> pieces,
+            int originX,int originY,boolean hFlip,boolean vFlip,int paletteIndex) {
         GraphicsManager graphicsManager = this.graphicsManager;
         if (graphicsManager.isSpriteSatCollectionActive()) {
             for (int i = 0; i < pieces.size(); i++) {
@@ -371,6 +395,9 @@ public class PatternSpriteRenderer {
         SpriteFrame<? extends SpriteFramePiece> frame = spriteSheet.getFrame(frameIndex);
         int paletteIndex = paletteOverride >= 0 ? paletteOverride : spriteSheet.getPaletteIndex();
         List<? extends SpriteFramePiece> pieces = frame.pieces();
+        if (drawWithHead(pieces, originX, originY, hFlip, vFlip,
+                index -> drawNativeFilteredPiece(pieces.get(index), originX, originY,
+                        hFlip, vFlip, paletteIndex, priorityFilter, satReplayRole))) return;
         GraphicsManager graphicsManager = this.graphicsManager;
         if (graphicsManager.isSpriteSatCollectionActive()) {
             for (int i = 0; i < pieces.size(); i++) {
@@ -406,6 +433,16 @@ public class PatternSpriteRenderer {
         }
     }
 
+    private void drawNativeFilteredPiece(SpriteFramePiece piece,int x,int y,boolean hFlip,boolean vFlip,
+            int palette,boolean priorityFilter,SpriteMaskReplayRole role) {
+        if (piece.priority()!=priorityFilter) return;
+        if (graphicsManager.isSpriteSatCollectionActive()) {
+            SpritePieceRenderer.preparePiece(piece,x,y,patternBase,palette,hFlip,vFlip,
+                    graphicsManager.getCurrentSpriteHighPriority(),
+                    prepared->graphicsManager.submitSpriteSatPiece(prepared.withMaskReplayRole(role)));
+        } else drawNativeFramePieces(List.of(piece),x,y,hFlip,vFlip,palette);
+    }
+
     /**
      * Draws a frame while forcing every piece to the same VDP priority bit.
      * Used for objects whose ROM composition relies on re-layering a mixed frame.
@@ -428,6 +465,9 @@ public class PatternSpriteRenderer {
             boolean vFlip,
             int paletteIndex,
             boolean forcedPriority) {
+        if (drawWithHead(pieces, originX, originY, hFlip, vFlip,
+                index -> drawFramePiecesForcedPriority(List.of(pieces.get(index)),
+                        originX, originY, hFlip, vFlip, paletteIndex, forcedPriority))) return;
         GraphicsManager graphicsManager = this.graphicsManager;
         if (graphicsManager.isSpriteSatCollectionActive()) {
             for (int i = 0; i < pieces.size(); i++) {

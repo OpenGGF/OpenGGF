@@ -2,7 +2,7 @@
 
 A Terraria inspired mining, crafting and building adventure for OpenGGF's
 unpublished **Mod API 0.7 candidate**, played as Sonic using your Sonic 3 &
-Knuckles ROM. Java 21 and the matching development JVM build are required.
+Knuckles ROM. Java 25 and the matching development JVM build are required.
 
 An ancient beacon on **Angel Island** has fallen silent. Run through the palm
 jungle, mine beneath the island, gather power rings and chaos shards, and
@@ -116,7 +116,7 @@ blocks, with original resource highlights marking copper, iron and shards.
 
 ## Build, install and launch
 
-From the repository root, with Java 21, Maven and Python 3 on PATH:
+From the repository root, with Java 25, Maven and Python 3 on PATH:
 
 ```sh
 python3 examples/starfall-frontier/build.py

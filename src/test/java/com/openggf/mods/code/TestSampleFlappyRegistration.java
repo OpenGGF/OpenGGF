@@ -101,7 +101,7 @@ class TestSampleFlappyRegistration {
         Path classes = temp.resolve("classes");
         Files.createDirectories(classes);
         List<String> arguments = new ArrayList<>(List.of(
-                "--release", "21", "-classpath",
+                "--release", "25", "-classpath",
                 TestSessionOutputPaths.compiledClasses().toAbsolutePath().toString(),
                 "-d", classes.toString()));
         try (var sources = Files.walk(SAMPLE.resolve("src/main/java"))) {

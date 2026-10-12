@@ -7,7 +7,7 @@ usage() {
 Usage: run-jni-proof.sh --output ABSOLUTE_TARGET_PATH --nuked-source DIR \
   [--capture COMPLETE_PHYSICAL_BUS_JSONL]
 
-Builds and runs a Linux/JDK-21 correctness proof. It transfers actual stereo
+Builds and runs a Linux/JDK-25 correctness proof. It transfers actual stereo
 PCM through JNI and collects no timings. Output must be a new directory below
 the invoking worktree's target/.
 EOF
@@ -50,10 +50,10 @@ command -v javac >/dev/null || fail 'javac not found'
 command -v java >/dev/null || fail 'java not found'
 cc=${CC:-cc}
 command -v "$cc" >/dev/null || fail "C compiler not found: $cc"
-[[ $(javac -version 2>&1) = javac\ 21.* ]] || fail 'JDK 21 is required'
+[[ $(javac -version 2>&1) =~ ^javac\ 25(\.|$) ]] || fail 'JDK 25 is required'
 java_major=$(java -XshowSettings:properties -version 2>&1 \
   | sed -n 's/^[[:space:]]*java.version = \([0-9][0-9]*\).*/\1/p' | head -n1)
-[[ "$java_major" = 21 ]] || fail 'the Java runtime must be JDK 21'
+[[ "$java_major" = 25 ]] || fail 'the Java runtime must be JDK 25'
 javac_path=$(readlink -f -- "$(command -v javac)")
 jdk_root=${javac_path%/bin/javac}
 [[ -f "$jdk_root/include/jni.h" && -f "$jdk_root/include/linux/jni_md.h" ]] \
@@ -83,7 +83,7 @@ javac -d "$resolved/classes" \
 mv -- "$resolved/stage/libopenggf-fm-jni-proof.so" "$resolved/relocated/"
 (
   cd -- "$repo_root/target"
-  java -cp "$resolved/classes" com.openggf.tools.audio.benchmark.JniNukedProof \
+  java --enable-native-access=ALL-UNNAMED -cp "$resolved/classes" com.openggf.tools.audio.benchmark.JniNukedProof \
     "$resolved/relocated/libopenggf-fm-jni-proof.so"
 ) > "$resolved/result.json"
 
@@ -96,7 +96,7 @@ PY
 )
   (
     cd -- "$repo_root/target"
-    java -cp "$resolved/classes" com.openggf.tools.audio.benchmark.JniNukedProof \
+    java --enable-native-access=ALL-UNNAMED -cp "$resolved/classes" com.openggf.tools.audio.benchmark.JniNukedProof \
       "$resolved/relocated/libopenggf-fm-jni-proof.so" \
       --capture-events "$resolved/capture-events.tsv" "$terminal"
   ) > "$resolved/capture-proof.json"
@@ -120,7 +120,7 @@ from pathlib import Path
 proof_path, output_path, repo, compiler, metadata_path, capture_proof_path, capture_path, *inputs = sys.argv[1:]
 result = json.loads(Path(proof_path).read_text(encoding="utf-8"))
 result.update({
-    "java_major": 21,
+    "java_major": 25,
     "java_version": subprocess.run(["java", "-version"], capture_output=True,
                                    text=True, check=True).stderr.splitlines()[0],
     "native_compiler": subprocess.run([compiler, "--version"], capture_output=True,

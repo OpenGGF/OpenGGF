@@ -1,6 +1,6 @@
 # Quickstart: data-only reskin
 
-Read [candidate setup and first build](../getting-started.md) first: Java 21, Maven, and matching absolute engine/SDK jars from one commit. Generate a complete starter with `ggfmod init /absolute/my-reskin --id my-reskin --kind reskin --package example.myreskin`. Build with the jar properties shown there, edit source, and repeat the same package command.
+Read [candidate setup and first build](../getting-started.md) first: Java 25, Maven, and matching absolute engine/SDK jars from one commit. Generate a complete starter with `ggfmod init /absolute/my-reskin --id my-reskin --kind reskin --package example.myreskin`. Build with the jar properties shown there, edit source, and repeat the same package command.
 
 An art reskin needs no Java or trust prompt.
 

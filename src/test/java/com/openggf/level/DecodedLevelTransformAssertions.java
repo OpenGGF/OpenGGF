@@ -24,6 +24,14 @@ public final class DecodedLevelTransformAssertions {
     public static void executeLoadProfile(GameModule module) throws java.io.IOException {
         manager(module,mock(Game.class)).loadLevel(0);
     }
+    /** Captures the real checked load boundary after a deferred host/creator callback fails. */
+    public static java.io.IOException deferredCallbackLoadFailure(Runnable callback) {
+        GameModule module = mock(GameModule.class);
+        LevelInitProfile profile = mock(LevelInitProfile.class);
+        when(module.getLevelInitProfile()).thenReturn(profile);
+        when(profile.levelLoadSteps(any())).thenReturn(List.of(new InitStep("Deferred", "test", callback)));
+        return assertThrows(java.io.IOException.class, () -> executeLoadProfile(module));
+    }
     public static void verifyAllLoadPaths() throws Exception {
         for (String route : List.of("native", "override", "prepared")) {
             Game game=mock(Game.class,withSettings().extraInterfaces(PreparableLevelLoader.class));

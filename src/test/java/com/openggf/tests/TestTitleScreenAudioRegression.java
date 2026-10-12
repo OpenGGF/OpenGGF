@@ -228,4 +228,49 @@ public class TestTitleScreenAudioRegression {
         assertEquals(0, backend.musicPlayCalls);
         assertEquals(0, backend.sparkleSfxCalls);
     }
+
+    /**
+     * Obj0E_FlashingStar_Move deletes the star with a plain DeleteObject and
+     * TitleScreen_SetFinalState only starts title music (s2.asm:26739-26762,
+     * :27068-27162); neither stops sound. The last SndID_Sparkle therefore runs
+     * to its own smpsStop, where cfStopTrack/zStoppedChannel reset the $70 latch
+     * (s2.sounddriver.asm:3514-3535). A non-ROM stop that cut the track first
+     * left the latch at $70, so every later $6F SndID_Blip a menu played over the
+     * title was rejected (the ROM menu's cue: Obj0F_Main, s2.asm:27205-27230;
+     * zSFXPriority :3716-3722).
+     */
+    @Test
+    void titleIntroLeavesSparklePriorityToItsOwnStopSoMenuBlipIsAdmitted() throws Exception {
+        AudioManager audioManager = AudioManager.getInstance();
+        audioManager.setBackend(new CountingBackend());
+        audioManager.setAudioProfile(new Sonic2AudioProfile());
+        audioManager.setRom(GameServices.rom().getRom());
+        TitleScreenManager title = TitleScreenManager.getInstance();
+        title.initialize();
+
+        InputHandler input = new InputHandler();
+        for (int i = 0; i < 900; i++) {
+            title.update(input);
+            input.update();
+            audioManager.presentFrame(
+                    com.openggf.audio.presentation.PresentationMode.FORWARD);
+        }
+        var request = (com.openggf.game.sonic2.audio.Sonic2SoundRequestService.Snapshot)
+                audioManager.captureLogicalSnapshot().forwardServiceSnapshot();
+        assertEquals(0, request.pipeline().sfxPriorityValue(),
+                "the last sparkle must clear its own priority latch");
+
+        assertTrue(audioManager.playSfx(
+                com.openggf.game.sonic2.constants.Sonic2AudioConstants.SFX_BLIP));
+        audioManager.presentFrame(
+                com.openggf.audio.presentation.PresentationMode.FORWARD);
+        long blips = audioManager.commandTimeline().entries().stream()
+                .map(com.openggf.audio.rewind.AudioTimelineEntry::command)
+                .filter(com.openggf.audio.rewind.AudioCommand.PlaySfx.class::isInstance)
+                .map(com.openggf.audio.rewind.AudioCommand.PlaySfx.class::cast)
+                .filter(command -> command.sfxId()
+                        == com.openggf.game.sonic2.constants.Sonic2AudioConstants.SFX_BLIP)
+                .count();
+        assertEquals(1, blips, "the title menu blip must reach the driver");
+    }
 }

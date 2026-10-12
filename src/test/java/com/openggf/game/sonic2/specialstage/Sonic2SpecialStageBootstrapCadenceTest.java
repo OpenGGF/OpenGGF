@@ -7,11 +7,11 @@ import com.openggf.game.SpecialStageStartupPolicy;
 import com.openggf.game.sonic2.Sonic2SpecialStageProvider;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.RomTestUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -70,8 +70,9 @@ class Sonic2SpecialStageBootstrapCadenceTest {
 
     @BeforeEach
     void bootSpecialStage() throws Exception {
-        Path romPath = Path.of("s2.gen");
-        assumeTrue(Files.isRegularFile(romPath), "s2.gen ROM required for bootstrap cadence tests");
+        var romFile = RomTestUtils.ensureSonic2RomAvailable();
+        assumeTrue(romFile != null, "s2.gen ROM required for bootstrap cadence tests");
+        Path romPath = romFile.toPath();
 
         GraphicsManager.getInstance().resetState();
         GraphicsManager.getInstance().initHeadless();

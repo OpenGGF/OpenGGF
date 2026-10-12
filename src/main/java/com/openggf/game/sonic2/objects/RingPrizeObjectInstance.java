@@ -113,6 +113,11 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance
             return;
         }
 
+        if (!com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(services())) {
+            if (!ringCollected && prizeCounter != null && prizeCounter.length > 0) prizeCounter[0]--;
+            ringCollected = true; setDestroyed(true); return;
+        }
+
         // Store frame counter for animation in render
         lastVIntRunCount = vIntRunCount;
 
@@ -212,7 +217,7 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance
      * Collect the ring (add to player).
      */
     private void collectRing(AbstractPlayableSprite player) {
-        if (ringCollected) {
+        if (ringCollected || !com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(services())) {
             return;
         }
         ringCollected = true;

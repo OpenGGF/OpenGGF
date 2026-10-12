@@ -674,7 +674,7 @@ except KeyboardInterrupt:
         invoked = json.loads(marker.with_suffix('.args').read_text())
         self.assertEqual('-Xmx1g', invoked['mavenOpts'])
         self.assertIn('-Dprobe=spaces and $literal', invoked['args'])
-        self.assertIn('-Dsurefire.argLine=${test.cds.argLine} ${mockito.agent.argLine} -Xmx1g', invoked['args'])
+        self.assertIn('-Dsurefire.argLine=--enable-native-access=ALL-UNNAMED ${test.cds.argLine} ${mockito.agent.argLine} -Xmx1g', invoked['args'])
         self.assertIn('-Dsurefire.forkCount=1', invoked['args'])
         self.assertIn('-Dsurefire.reuseForks=true', invoked['args'])
         records = list((self.root / '.git/maven-running').glob('*.lease'))

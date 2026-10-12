@@ -2930,7 +2930,9 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		try {
 			frame.run();
 			return true;
-		} catch (ModFaultBoundary.CallbackAborted aborted) {
+		} catch (RuntimeException frameFailure) {
+			var aborted = ModFaultBoundary.callbackAbortFromLoadFailure(frameFailure);
+			if (aborted == null) throw frameFailure;
 			Throwable fatalCleanup = null;
 			try {
 				discardFailedFrame.run();
@@ -3909,6 +3911,12 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			graphicsManager.flushScreenSpace();
 		}
 		drawActiveLevelTitleCardOverlay();
+		var overlay = GameLoopPauseInput.overlay(GameMode.LEVEL);
+		if (overlay != null) {
+			graphicsManager.flush();
+			overlay.drawOverlay();
+			graphicsManager.flushScreenSpace();
+		}
 	}
 
 	private void drawActiveLevelTitleCardOverlay() {

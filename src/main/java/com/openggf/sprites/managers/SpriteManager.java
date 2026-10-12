@@ -137,6 +137,17 @@ public class SpriteManager implements PlayableSstDispatcher {
 	private AbstractPlayableSprite activePlayableUpdate;
 	private boolean playableFrameActive;
 
+	private com.openggf.sprites.playable.PlayableMutatorPolicySource mutatorPolicySource;
+
+	void bindMutatorPolicies(com.openggf.sprites.playable.PlayableMutatorPolicySource source) {
+		mutatorPolicySource = source;
+		for (Sprite sprite : sprites.values()) {
+			if (sprite instanceof AbstractPlayableSprite playable) {
+				com.openggf.sprites.playable.PlayableSpriteInternalAccess.bindMutatorPolicies(playable, source);
+			}
+		}
+	}
+
 	public SpriteManager() {
 		this(GameServices.configuration());
 	}
@@ -172,9 +183,13 @@ public class SpriteManager implements PlayableSstDispatcher {
 	 */
 	public boolean addSprite(Sprite sprite) {
 		bucketsDirty = true;
+		if (sprite instanceof AbstractPlayableSprite playable) {
+			com.openggf.sprites.playable.PlayableSpriteInternalAccess.bindMutatorPolicies(playable, mutatorPolicySource);
+		}
 		Sprite previous = sprites.put(sprite.getCode(), sprite);
 		boolean replaced = previous != null;
 		if (previous instanceof AbstractPlayableSprite previousPlayable) {
+			if (previous != sprite) com.openggf.sprites.playable.PlayableSpriteInternalAccess.bindMutatorPolicies(previousPlayable, null);
 			sidekicks.remove(previousPlayable);
 			sidekickCharacterNames.remove(previousPlayable);
 			temporarySidekicks.remove(previousPlayable);
@@ -264,6 +279,11 @@ public class SpriteManager implements PlayableSstDispatcher {
 	 * Useful for test cleanup to ensure a clean state.
 	 */
 	public void clearAllSprites() {
+		for (Sprite sprite : sprites.values()) {
+			if (sprite instanceof AbstractPlayableSprite playable) {
+				com.openggf.sprites.playable.PlayableSpriteInternalAccess.bindMutatorPolicies(playable, null);
+			}
+		}
 		sprites.clear();
 		sidekicks.clear();
 		sidekickCharacterNames.clear();
@@ -277,6 +297,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 	 */
 	public void resetState() {
 		clearAllSprites();
+		mutatorPolicySource = null;
 		levelManager = null;
 		frameCounter = 0;
 		inputSuppressed = false;
@@ -469,6 +490,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 	}
 
 	public void update(InputHandler handler) {
+		if (mutatorPolicySource != null) mutatorPolicySource.beforeForwardTick();
 		frameCounter++;
 		boolean suppressInput = inputSuppressed
 				|| (playbackInputSuppressed && !handler.hasLogicalOverride());
@@ -1016,6 +1038,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 	}
 
 	public void updateWithoutInput() {
+		if (mutatorPolicySource != null) mutatorPolicySource.beforeForwardTick();
 		frameCounter++;
 		processPlayableSlots(PlayableDispatchContext.ordinaryWithoutInput(
 				ProcessSpritesEpoch.ordinary(
@@ -1532,6 +1555,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 		}
 		bucketsDirty = true;
 		if (sprite instanceof AbstractPlayableSprite playable) {
+			com.openggf.sprites.playable.PlayableSpriteInternalAccess.bindMutatorPolicies(playable, null);
 			sidekicks.remove(playable);
 			sidekickCharacterNames.remove(playable);
 			temporarySidekicks.remove(playable);

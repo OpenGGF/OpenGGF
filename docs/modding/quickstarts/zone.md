@@ -1,6 +1,6 @@
 # Quickstart: Sonic 2 zone
 
-Read [candidate setup and first build](../getting-started.md) first: Java 21, Maven, and matching absolute engine/SDK jars from one commit. Generate a complete starter with `ggfmod init /absolute/my-zone --id my-zone --kind zone --package example.myzone`. Build with the jar properties shown there, edit source, and repeat the same package command.
+Read [candidate setup and first build](../getting-started.md) first: Java 25, Maven, and matching absolute engine/SDK jars from one commit. Generate a complete starter with `ggfmod init /absolute/my-zone --id my-zone --kind zone --package example.myzone`. Build with the jar properties shown there, edit source, and repeat the same package command.
 
 This quickstart uses the Sonic 2 format-v1 adapter. S3K has a delivered bounded
 format-v2 adapter; see [S3K zones](../content-mods.md#add-a-sonic-3k-zone).

@@ -28,7 +28,7 @@ class TestGolfMenu {
         Path source = project.resolve("src/main/java/paradise/ui");
         assertTrue(Files.isDirectory(source), "External golf menu has not been implemented");
         Path classes = Files.createDirectory(temp.resolve("classes"));
-        var args = new ArrayList<>(List.of("--release", "21", "-classpath", System.getProperty("java.class.path"),
+        var args = new ArrayList<>(List.of("--release", "25", "-classpath", System.getProperty("java.class.path"),
                 "-d", classes.toString()));
         for (Path root : List.of(source, project.resolve("src/main/java/paradise/model"), project.resolve("src/test/java/paradise/ui"))) {
             try (var files = Files.walk(root)) {

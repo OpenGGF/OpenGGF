@@ -88,6 +88,36 @@ class TestSpritePresentation {
         assertTrue(graphics.commands.isEmpty());
     }
 
+    @Test void injectedHeadReplayReceivesNativeAdmissionAndFaultsCannotLeaveSatCollectionActive() {
+        var mask = new SpritePresentation.HeadMask(0, 4, java.util.Set.of(0),
+                java.util.List.of(new SpritePresentation.MaskPoint(0, 0),
+                        new SpritePresentation.MaskPoint(8, 0), new SpritePresentation.MaskPoint(8, 4)));
+        var calls = new java.util.concurrent.atomic.AtomicInteger();
+        SpritePresentation.HeadSatReplay replay = (host, entries, emitter) -> {
+            assertSame(graphics, host);
+            assertFalse(host.isSpriteSatCollectionActive(), "native admission finishes before the adapter runs");
+            assertEquals(1, entries.size());
+            assertEquals(3, entries.getFirst().firstPatternIndex());
+            assertEquals("sonic", entries.getFirst().presentationSubject().id());
+            calls.incrementAndGet();
+            throw new IllegalStateException("adapter failed");
+        };
+        var head = new SpritePresentation.HeadTransform(mask, 0, 10, 20, false, false,
+                150, PatternAtlasRange.PLAYER_PRESENTATION.base(), java.util.Map.of(), replay);
+        graphics.beginSpriteSatCollection();
+        SpritePresentation.withSubject(graphics,
+                new SpritePresentation.Subject("sonic", SpritePresentation.Part.BODY, false, 150, head),
+                () -> graphics.submitSpriteSatPiece(new com.openggf.level.render.SpritePieceRenderer.PreparedPiece(
+                        10, 20, 1, 1, 3, 3, 2, false, false, true, false,
+                        SpriteMaskReplayRole.NORMAL, 0, 1, 0, 1, "player")));
+        assertThrows(IllegalStateException.class, graphics::endSpriteSatCollectionAndReplay);
+        assertEquals(1, calls.get());
+        assertFalse(graphics.isSpriteSatCollectionActive());
+        graphics.beginSpriteSatCollection();
+        graphics.endSpriteSatCollectionAndReplay();
+        assertEquals(1, calls.get(), "failed replay cannot survive into another native table");
+    }
+
     @Test void mutableDplcBanksCannotChangeAnAlreadyPreparedPresentation() {
         var pattern = new com.openggf.level.Pattern();
         pattern.setPixel(2, 3, (byte) 7);

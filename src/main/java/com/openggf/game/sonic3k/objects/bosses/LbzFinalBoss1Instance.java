@@ -1312,6 +1312,11 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         }
 
         @Override
+        public com.openggf.game.mutators.ObjectHeadRole headPresentationRole() {
+            return com.openggf.game.mutators.ObjectHeadRole.BOSS;
+        }
+
+        @Override
         protected boolean skipsSameFrameUpdateAfterSpawn() {
             return boss.deferChildrenSameFrame;
         }

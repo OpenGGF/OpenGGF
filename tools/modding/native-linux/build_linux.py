@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build the experimental native Linux x64 friends ZIP (2026-10-09).
 
-Inputs: Java 21 Maven artifacts, source-built mods, pinned CE GraalVM and an
+Inputs: Java 25 Maven artifacts, source-built mods, pinned CE GraalVM and an
 optional Ubuntu 22.04 rootfs for a glibc 2.35 compile baseline. Run under the
 Maven queue's resource reservation. Production native policy is unchanged.
 """
@@ -40,7 +40,7 @@ def elf_x64(path):
 def bootstrap_control(work, engine):
     # Compile separately: this fixture must remain invisible to image analysis.
     classes=work / "bootstrap-control-classes";classes.mkdir()
-    run([tool("javac"),"--release","21","-cp",engine,"-d",classes,
+    run([tool("javac"),"--release","25","-cp",engine,"-d",classes,
         Path(__file__).parent / "BootstrapControl.java"],work)
     manifest=classes / "META-INF/openggf-mod.yaml";manifest.parent.mkdir()
     manifest.write_text('formatVersion: 1\nid: native-bootstrap-control\nname: Native bootstrap control\n'
@@ -49,7 +49,7 @@ def bootstrap_control(work, engine):
         'dependencies: []\naudioOverrides: {}\nartOverrides: {}\n')
     fixture=work / "bootstrap-control.jar"
     sdk=next((ROOT / "target").glob("*-openggf-mod-sdk.jar"))
-    run([tool("java"),"-cp",os.pathsep.join(map(str,(engine,sdk))),
+    run([tool("java"), "--enable-native-access=ALL-UNNAMED","-cp",os.pathsep.join(map(str,(engine,sdk))),
         "com.openggf.tools.modsdk.GgfModCli","package","--input",classes,"--out",fixture],work)
     return fixture
 
@@ -139,8 +139,8 @@ def prepare(args):
     sources += sorted(source for source in Path(__file__).parent.glob("*.java")
         if source.name != "BootstrapControl.java")
     classes=work / "host-classes"
-    run([tool("javac"),"--release","21","-cp",os.pathsep.join(map(str,(engine,sdk,ROOT / "target/classes"))),"-d",classes,*sources],work)
-    java=[tool("java"),"-cp",os.pathsep.join(map(str,(classes,engine)))]
+    run([tool("javac"),"--release","25","-cp",os.pathsep.join(map(str,(engine,sdk,ROOT / "target/classes"))),"-d",classes,*sources],work)
+    java=[tool("java"), "--enable-native-access=ALL-UNNAMED","-cp",os.pathsep.join(map(str,(classes,engine)))]
     run([*java,"com.openggf.tools.NativeModMemberContractTest",work / "fixtures"],work)
     contract=work / "contract"
     run([*java,"com.openggf.tools.NativeModMemberContract",engine,inputs / "mods",contract,
@@ -156,7 +156,7 @@ def prepare(args):
         "java.lang","java.lang.invoke","java.lang.runtime","java.lang.reflect",
         "java.util","java.util.function","java.util.stream","java.nio.charset"}
     preserve=f"path={contract / 'preserved-engine.jar'},"+','.join('package='+name for name in sorted(packages))
-    arguments=["-march=compatibility","-J-Xmx8g","--parallelism=4",
+    arguments=["--enable-native-access=ALL-UNNAMED", "-march=compatibility","-J-Xmx8g","--parallelism=4",
         "--add-modules=java.logging",
         "--initialize-at-run-time=org.lwjgl,java.awt,javax.swing,sun.awt,sun.java2d",
         "-H:+UnlockExperimentalVMOptions","-H:+RuntimeClassLoading",
@@ -221,7 +221,7 @@ def qualify(args):
     finally: fixture.unlink(missing_ok=True)
     for mod in json.loads((inputs / "build-info.json").read_text())["mods"]:
         owner,slug=mod["id"],mod["slug"]
-        jvm=run([tool("java"),"-Xmx1g","-cp",os.pathsep.join(map(str,(work / "host-classes",engine))),
+        jvm=run([tool("java"), "--enable-native-access=ALL-UNNAMED","-Xmx1g","-cp",os.pathsep.join(map(str,(work / "host-classes",engine))),
             "com.openggf.tools.NativeModRegistrationProbe",inputs / "mods",owner],work)
         if f"PASS registration: {owner};" not in jvm: raise AssertionError("No JVM registration result: "+owner)
         output=run(native_command(args,bundle,"--check-mods",owner),bundle)

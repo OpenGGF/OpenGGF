@@ -13,7 +13,7 @@ PowerShell uses `tools/testing/install-hooks.ps1`.
 
 ## Test categories
 
-Use Python 3.11+ and Java 21. The runner uses the existing Maven defaults and exclusions;
+Use Python 3.11+ and Java 25. The runner uses the existing Maven defaults and exclusions;
 it does not move tests, alter CI/release coverage, or remove slow tests from a selected category.
 
 ```bash
@@ -96,7 +96,10 @@ Run that additional lane for FBZ traversal changes and exhaustive ROM validation
 The category runner's ordinary/guard result does not include this lane.
 
 The runner discovers existing root `.gen` files by the documented SHA-1 identities and passes
-absolute ROM paths. It never creates ROM links or copies. Missing ROMs still require inspecting
+absolute ROM paths. In an isolated worktree, use `--rom-directory /absolute/original/ROM/directory`
+to discover the originals there as well, including the documented KiS2 lock-on dump when present.
+Each path is one Maven argument, including filenames with spaces. This avoids Java environment
+injection and creates no ROM links or copies. Missing ROMs still require inspecting
 skips; a successful exit alone does not establish ROM-backed coverage.
 
 Each run starts in `target/category-tests/<run-id>/`. The plan retains the tested head,
@@ -112,7 +115,7 @@ passes for Git hooks, or claim that every candidate source produced a report.
 
 Run `python3 tools/testing/run_categories.py --base <pinned-base> --preflight` in the
 same environment as the intended test command. Every `--run` also performs these checks:
-Maven must use Java 21; selections with guards require executable Lua 5.4 (`LUA_BIN`,
+Maven must use Java 25; selections with guards require executable Lua 5.4 (`LUA_BIN`,
 default `lua`) and `pwsh` on PATH. Failures are collected before any test lane starts.
 This checks tool launches, not ROM completeness, native display access or every fixture
 prerequisite. On macOS use the known working native display/service permissions from the
@@ -509,6 +512,51 @@ certification. Inspect Surefire outcomes/skips as well as memory. Raw event file
 rotating GC/Maven logs, temporary helper classes and test artifacts are removed after
 extracting the report, including handled interruption. Record durable conclusions
 in the research artifact and remove consumed target reports.
+
+## Bounded category-result comparison
+
+`compare_category_outcomes.py` compares the ordinary failures and skips in a
+completed category runner's `results.json` with an explicitly supplied light
+baseline. The baseline names its tested `source` (or `tested_sha`) and `run`,
+and supplies `failures` entries with `identity`, `kind`, `type`, `message` plus
+`skips` entries with `identity`, `message`. Failure identity is `class#test`;
+messages contain the complete assertion or causal line, not a capped excerpt.
+
+```bash
+python3 tools/testing/compare_category_outcomes.py \
+  --baseline /absolute/task/baseline-summary.json \
+  --results target/category-tests/<run-id>/results.json \
+  --output /absolute/task/comparison.json
+python3 -m unittest discover -s tools/testing -p 'test_compare_category_outcomes.py'
+```
+
+The tool requires both ordinary and guard lanes, reconciles negative-case
+inventories with their counters, and rejects incomplete exits, omitted or
+duplicate identities, and unavailable full assertions. It recovers a capped
+2 KiB assertion only from matching complete runner detail. A Surefire JUnit abort message
+may contain a stack: the tool compares its complete first causal line only when every
+remaining line is a stack frame. Chained causes, arbitrary multiline tails and capped
+messages remain invalid evidence. The runner checks the entire uncapped XML abort
+stack before projecting its complete causal line, recording the projection kind,
+original character count and validated frame count. This keeps long framework stacks
+from exhausting the 4 KiB message bound. Unrecognized tails and causal lines that
+reach that bound remain capped excerpts; the comparator still rejects them.
+Changed or absent failures, changed skip causes,
+and any guard failure/skip require review. Exit
+0 means unchanged negative cases; 1 means differences; 2 means invalid evidence.
+A failed comparison writes an invalid verdict rather than leaving a prior
+successful output at the requested path.
+
+`--normalize-known-ssz-blobs` is an explicit, narrow exception for independently
+verified Java object hashes in the named SSZ Tails cold-route testcase. It also
+recognizes that owner's `@HASH` light-summary projection; other test identities,
+numbers and values remain literal. Record why this normalization is valid.
+
+This is negative-case post-processing, not a complete outcome inventory or suite
+certification. Independently verify selection, source fingerprint, terminal run
+status, and baseline reuse authority. It neither runs tests nor changes runner
+selection or diagnostic cleanup. Inspect the comparison, then acknowledge the
+category run normally. The complete inventory tools below cover all outcomes.
 
 ## Complete Surefire outcome inventories
 

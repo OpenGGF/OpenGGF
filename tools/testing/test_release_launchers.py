@@ -57,6 +57,7 @@ exit "${JAVA_STATUS:-0}"
         for artifact in artifacts:
             (self.target / artifact).write_text("stub", encoding="utf-8")
         env = os.environ.copy()
+        env.pop("JAVA_HOME", None)
         env.update(
             PATH=f"{self.bin}{os.pathsep}{env['PATH']}",
             FINAL_NAME=final_name,
@@ -97,6 +98,20 @@ exit "${JAVA_STATUS:-0}"
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self._java_jar_argument(), str(self.target / current))
         self.assertIn(" ", self._java_jar_argument())
+
+    def test_java_home_takes_precedence_over_path_and_declares_native_access(self):
+        jdk = self.project / "selected jdk"
+        (jdk / "bin").mkdir(parents=True)
+        shutil.copy2(self.bin / "java", jdk / "bin/java")
+        self._write_stub(self.bin / "java", "#!/bin/sh\nexit 99\n")
+        current = "OpenGGF-0.6.prerelease-jar-with-dependencies.jar"
+
+        result = self._run(artifacts=(current,), JAVA_HOME=str(jdk))
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self._java_jar_argument(), str(self.target / current))
+        self.assertIn("--enable-native-access=ALL-UNNAMED",
+                      self.java_args.read_text().splitlines())
 
     def test_missing_current_artifact_fails_even_when_stale_artifact_exists(self):
         stale = "OpenGGF-0.7.prerelease-jar-with-dependencies.jar"
@@ -154,7 +169,8 @@ class WindowsLauncherContractTests(unittest.TestCase):
         self.assertIn("finalName", launcher)
         self.assertIn("if errorlevel 1", launcher)
         self.assertIn("if not exist \"%JAR%\"", launcher)
-        self.assertIn('java --add-exports', launcher)
+        self.assertIn('if defined JAVA_HOME set "OPENGGF_JAVA=%JAVA_HOME%\\bin\\java.exe"', launcher)
+        self.assertIn('"%OPENGGF_JAVA%" --enable-native-access=ALL-UNNAMED --add-exports', launcher)
 
 
 if __name__ == "__main__":

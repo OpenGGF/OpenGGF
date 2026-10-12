@@ -19,6 +19,15 @@ The publish condition requires a non-deletion `push` event on
 `refs/heads/master`. Builds or dependency failures can still prevent the
 publish job from running. A manual dispatch is not a way to publish.
 
+## Toolchain and platform requirements
+
+Source and universal-JAR builds use JDK 25. Native packaging uses GraalVM 25
+for Windows x64, Linux x64, and macOS Apple Silicon; Intel macOS uses the JVM
+distribution. The Java 25 migration does not enable preview APIs or optional VM
+tuning. A manual dispatch on a candidate branch with `validate_roms=false`
+checks hosted-platform packaging without publishing; it does not replace required
+ROM/trace validation.
+
 ## Prepare and publish
 
 1. Complete the release gates and prepare the reviewed release in a separate

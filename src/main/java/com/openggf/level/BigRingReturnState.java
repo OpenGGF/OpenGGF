@@ -177,9 +177,11 @@ public record BigRingReturnState(
         camera.setMaxY((short) cameraMaxY);
         camera.updatePosition(true);
         if (levelState != null) {
-            levelState.setRings(rings);
+            boolean ringsAllowed = com.openggf.game.mutators.LevelMutatorPolicyAccess.mainLevelRingRestore(
+                    player.currentLevelManagerIfAvailable(), 1) != 0;
+            levelState.setRings(ringsAllowed ? rings : 0);
             levelState.setTimerFrames(restoredTimerFrames());
-            levelState.setRingExtraLifeFlags(extraLifeFlags);
+            levelState.setRingExtraLifeFlags(ringsAllowed ? extraLifeFlags : 0);
         }
         restoreShield(player);
         player.setTopSolidBit(topSolidBit);

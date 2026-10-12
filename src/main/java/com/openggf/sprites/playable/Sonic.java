@@ -43,21 +43,24 @@ public class Sonic extends AbstractPlayableSprite {
 				getSpindashDustController().draw();
 			}
 			if (getSuperStateController() != null) {
-				getSuperStateController().renderPoweredTrail();
+				PlayableMutatorPresentation.draw(this, com.openggf.graphics.SpritePresentation.Part.ATTACHED_EFFECT,
+						() -> getSuperStateController().renderPoweredTrail());
 			}
-			getSpriteRenderer().drawFrame(
+			PlayableMutatorPresentation.draw(this, com.openggf.graphics.SpritePresentation.Part.BODY,
+					() -> getSpriteRenderer().drawFrame(
 					getMappingFrame(),
 					getRenderCentreX(),
 					getRenderCentreY(),
 					getRenderHFlip(),
-					getRenderVFlip());
+					getRenderVFlip()));
 			return;
 		}
-		graphicsManager.registerCommand(new GLCommand(GLCommand.CommandType.RECTI,
-				GL_TRIANGLE_FAN, 1, 1, 1, xPixel, yPixel, xPixel + width, yPixel
-						+ height));
-		graphicsManager.registerCommand(new GLCommand(GLCommand.CommandType.VERTEX2I,
-				-1, 1, 0, 0, getCentreX(), getCentreY(), 0, 0));
+		PlayableMutatorPresentation.draw(this, com.openggf.graphics.SpritePresentation.Part.BODY, () -> {
+			graphicsManager.registerCommand(new GLCommand(GLCommand.CommandType.RECTI,
+					GL_TRIANGLE_FAN, 1, 1, 1, xPixel, yPixel, xPixel + width, yPixel + height));
+			graphicsManager.registerCommand(new GLCommand(GLCommand.CommandType.VERTEX2I,
+					-1, 1, 0, 0, getCentreX(), getCentreY(), 0, 0));
+		});
 	}
 
 	@Override

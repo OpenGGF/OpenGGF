@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build Starfall Frontier against this checkout; optionally install or launch it.
 
-Origin: Starfall Frontier creator mod, 2026-10-08. Requires Java 21 and Maven.
+Origin: Starfall Frontier creator mod, 2026-10-08. Requires Java 25 and Maven.
 Uses the ordinary creator packaging validator. Installation explicitly enables
 and trusts only the resulting local jar; existing mod entries are preserved.
 """

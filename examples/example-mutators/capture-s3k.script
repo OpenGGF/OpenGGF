@@ -1,0 +1,42 @@
+# S3K-only proposed capture: conservative input-only entry waits.
+# 1800 neutral ticks are a margin, not a readiness gate or solo-timing certificate.
+# Shared native title + eleven-row catalogue. S1/S2/S3K use the same UI inputs.
+# Input only; no physics or trace rows are supplied. Inspect state.csv per game.
+600 -
+# How to play; return to the title.
+1 D; 1 -; 1 D; 1 -; 1 A; 60 -; 1 C; 1 -
+# Back returns focus to How to play; Configure is one row up.
+# Configure Gravity ON at 50%.
+1 U; 1 -; 1 A; 1 -; 1 A; 1 -; 1 R; 1 -; 1 D; 1 -
+repeat 10 { 1 L; 1 - }
+40 -; 1 C; 1 -
+# Big Head ON at its 150% default; native ball/unsupported poses remain stock.
+repeat 2 { 1 D; 1 - }
+1 A; 1 -; 1 R; 40 -; 1 C; 1 -
+# Back keeps focus on Big Head; Stealth is the next row.
+# Prepare Stealth's all-team target and attached effects while it is still off.
+1 D; 1 -
+1 A; 1 -; 1 D; 1 -; 1 R; 1 -; 1 D; 1 -; 1 R; 40 -; 1 C; 1 -
+# From Stealth, scroll past the remaining definitions to Start.
+repeat 8 { 1 D; 1 - }
+1 A; 1800 -
+60 R; 1 R+A; 30 R; 90 -
+# Open settings; enable Stealth at row3, then explicitly Resume at row11.
+1 S; 1 -
+repeat 3 { 1 D; 1 - }
+1 R; 40 -
+repeat 8 { 1 D; 1 - }
+1 A; 30 -
+60 R; 1 R+A; 30 R; 90 -
+# Turn Gravity, Big Head and Stealth off; Resume uses native presentation again.
+1 S; 1 -; 1 R; 20 -
+repeat 2 { 1 D; 1 - }
+1 R; 20 -; 1 D; 1 -; 1 R; 20 -
+repeat 8 { 1 D; 1 - }
+1 A; 30 -
+60 R; 1 R+A; 30 R; 90 -
+# Request a full act restart from row12.
+1 S; 1 -
+repeat 12 { 1 D; 1 - }
+1 A; 1800 -
+60 R; 1 A; 40 -

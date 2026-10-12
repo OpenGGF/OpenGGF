@@ -363,7 +363,7 @@ profile saves remain compatible.
 Film it headlessly with the gameplay capture tool's `--mod` option, for example:
 
 ```bash
-java -XstartOnFirstThread -cp "target/classes:$(cat target/survivors-classpath.txt)" \
+java --enable-native-access=ALL-UNNAMED -XstartOnFirstThread -cp "target/classes:$(cat target/survivors-classpath.txt)" \
   com.openggf.tools.GameplayCaptureTool --game s2 --zone 0 --act 1 --width 400 \
   --mod target/sonic-survivors/sonic-survivors.jar --input run.txt --out-dir /tmp/survivors
 ```
@@ -412,7 +412,7 @@ results across changes rather than reading them as a human's difficulty. Design 
 
 ## Use matching creator artifacts
 
-The mutable 0.7 Mod API is unpublished. See [candidate setup](../../docs/modding/getting-started.md) for Java 21 and matching engine/SDK jar paths. From this checkout the shared launcher supports artifact-only builds and explicit ROM paths:
+The mutable 0.7 Mod API is unpublished. See [candidate setup](../../docs/modding/getting-started.md) for Java 25 and matching engine/SDK jar paths. From this checkout the shared launcher supports artifact-only builds and explicit ROM paths:
 
 ```sh
 python3 examples/build_example.py sonic-survivors --engine /absolute/engine.jar --sdk /absolute/sdk.jar --run --s2 /absolute/own-s2.gen

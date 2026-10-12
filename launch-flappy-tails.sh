@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build Flappy Tails and launch it with the ROMs configured in config.yaml.
-# Requires Java 21, Maven, Python 3, and your Sonic 3 & Knuckles ROM.
+# Requires Java 25, Maven, Python 3, and your Sonic 3 & Knuckles ROM.
 # Usage: ./launch-flappy-tails.sh [--skip-engine]
 set -euo pipefail
 

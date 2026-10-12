@@ -6,7 +6,7 @@ requires byte-identical duplicates, validates both captures through the fixed
 `CompleteRunAudioTool` class, and publishes the comparison report as one
 directory. It never deletes or overwrites a run.
 
-Build the executable JAR on JDK 21 first. Run roots are restricted to a direct
+Build the executable JAR on JDK 25 first. Run roots are restricted to a direct
 child of `target/audio-parity/runs`:
 
 ```bash
@@ -69,3 +69,5 @@ clean and processed WAV masters in the external source/verification cache; publi
 ships only Ogg/Vorbis quality 4 and records the distinct master and encoded identities.
 Its private key and raw-source cache stay outside shipped assets; see the
 [mod's regeneration instructions](../../examples/eggmans-sky/README.md#system-voice).
+
+The complete-run wrapper requires `/usr/bin/java` to resolve to Java 25. It checks that fixed system runtime before creating output. Maven’s `JAVA_HOME` does not select this hermetic producer runtime; the wrapper continues to reject ambient Java and tool overrides.
