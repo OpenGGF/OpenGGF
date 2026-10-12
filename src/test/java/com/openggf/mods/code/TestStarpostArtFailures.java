@@ -77,21 +77,27 @@ class TestStarpostArtFailures {
         }
     }
 
-    @Test void preparationProgrammingFaultReachesVerifiedOwnerBoundary() throws Exception {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.MethodSource("providerFaults")
+    void preparationProgrammingFaultReachesVerifiedOwnerBoundary(RuntimeException injectedFailure) throws Exception {
         level = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
         try (var harness = ExampleModHarness.build(Path.of("examples/starpost-valley"), work.resolve("build"))) {
             var module = harness.apply(GameServices.module());
             try (var real = new SceneRomLibrary(module, GameServices.rom().getRom(), GameServices.rom())) {
                 SceneRomArt s1 = real.rom("s1"); assumeTrue(s1 != null, "verified S1 is required");
                 var library = mock(SceneRomLibrary.class);
-                when(library.rom("s1")).thenReturn(wrap(s1, () -> { throw new NullPointerException("fixture preparation bug"); }));
+                when(library.rom("s1")).thenReturn(wrap(s1, () -> { throw injectedFailure; }));
                 var fault = assertThrows(ModFaultBoundary.CallbackAborted.class,
                         () -> open(harness, module, real.rom("s3k"), library));
-                assertInstanceOf(NullPointerException.class, fault.getCause());
+                assertInstanceOf(injectedFailure.getClass(), fault.getCause());
                 assertTrue(harness.findings().get("starpost-valley").stream().anyMatch(f -> f.code().equals("MOD_CALLBACK_FAILED")));
                 harness.host().close();
             }
         }
+    }
+    private static java.util.stream.Stream<RuntimeException> providerFaults() {
+        return java.util.stream.Stream.of(new NullPointerException("fixture preparation bug"),
+                new IllegalStateException("fixture provider owner is retired"));
     }
 
     private void open(ExampleModHarness harness, com.openggf.game.GameModule module,

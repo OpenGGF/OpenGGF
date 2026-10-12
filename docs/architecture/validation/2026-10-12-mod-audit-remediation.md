@@ -529,3 +529,65 @@ expected-failure contract before declaring all new Starpost art qualified. SaveC
 parse/section catches are input/save-owned; Debug's broad command-parser catch is a
 separate diagnostics path. The new29-package final artifact ledger, native routes,
 held/modal pacing, rewind breadth, graphics and combined delivery checks remain open.
+
+## P18 source follow-up: remaining facades and provider-state faults
+
+The named art batch is `cff57b9c9`; input/save checkpoint `ed8633ff6` was cherry-picked
+into the world worker as `a2ebbe2d6`. Their source was combined before this follow-up.
+All ten remaining FishArt/TreeArt/MuseumArt broad catches are removed. Complete
+palette-dependent fish banks and crimson frames publish on success; native lake
+facades use the activity clock. Tree's authored palm fallback remains in world drawing
+but cannot become permanent Mushroom Hill art. Museum banks, pictures and icons are
+success-only caches. ItemIcons separates source successes from the built-in fallback,
+so the actual rendered item icon recovers. Original successful ROM requests and pixel
+transforms remain; this is not a new canonical pixel certification.
+
+Peer review found Music losing ownership of song A after an expected failed switch
+to B, even if A still played. A regression reproduced release performing zero stops;
+the repair retains the last successful marker until audio stops and leaves B retryable.
+Input's nested exit finally closes saves, Music, non-null Art and the failed-enter
+ledger even when Shell construction never occurred.
+
+Root review found generic IllegalStateException being treated as invalid data.
+Actual RomSceneArt/SceneRomArtFactory direct IOException-caused state wrappers alone
+remain retryable UNAVAILABLE failures. Unqualified state faults, including closed
+provider/owner state, propagate. Starpost's block-size/skid-cue validation uses an
+explicit local invalid-data signal. The same correction applies to Egg, Slay and
+Three Islands, including Egg's central recorder. This does not assert a blanket
+production scene-art revocation API.
+
+SceneArtCache remains the successful request/copied-palette cache. It has no typed
+failure authority, owner clock or native-versus-suspended-scene clock policy. Moving
+retry handling there requires a deliberate host contract and owner/lifetime evidence.
+The proven handling stays mod-local; no speculative generic public API was added.
+
+Actual Java25 external creator `build_project.py --test` qualification uses the clean
+matching `09af93df1` engine/SDK/testkit identity:
+
+| Consumer | Completed authored checks | Skips | Package findings |
+|---|---:|---:|---:|
+| Starpost | 230/230 | 0 | 0 |
+| Egg | 35/35 | 0 | 0 |
+| Slay | 144/144 | 0 | 0 |
+| Three Islands | 97/97 | 0 | 0 |
+
+Starpost's first follow-up red ran210 checks (203 passed/seven failed): six remaining-
+facade failures and Music release. Two independent rendered-icon/provider-state reds
+then ran229 (227 passed/two failed), zero skips. A staging copy missed the new test
+directory once and launched mixed external inputs; its ten failures are harness
+evidence, not a source result. A complete copy and completed230-check run supersede it.
+Older-facade reds were Egg35 (33 passed/two failed), Slay144 (142/two), Three Islands97
+(95/two), all zero skips: pure lookup and actual owned state faults were swallowed.
+NPE callback faults remain positive controls; direct I/O wrappers recover after120
+ticks. One old Slay fixture used generic state for damaged art; the tightened contract
+rejected it and the fixture now uses the decoder's invalid-argument shape.
+
+Two obsolete Starpost requests were cancelled while waiting, before any engine tests
+executed: the initial ownership selector while exit/remaining source changed, and the
+five-selector request when root extended the same correction to older facades. Both
+are incomplete. Frozen combined normal request81071 at `a2ebbe2d6` plus this final
+source diff uses Java25/Lua5.4, `-Dmse=off test`, all three canonical absolute ROM
+properties and exact selectors:
+`TestStarpostArtFailures,TestStarpostValleyExample,TestStarpostValleyScene,TestStarpostRealFestivals,TestStarpostRealRuins,TestEggmansSkyExample,TestEggmansSkyScene,TestEggmansSkyFauna,TestSlayTheRobotnikExample,TestSlayTheRobotnikScene,TestThreeIslandsExample,TestThreeIslandsScene`.
+Its ownership/scene/native/ROM outcomes remain pending here. Final matching29-manifest
+artifacts and combined root integration/ordinary/guard checks remain open.

@@ -9,6 +9,13 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** Original fixture pixels exercise repair and publication, rather than ROM pixel equivalence. */
 class ArtRetryTest {
+    @Test void providerStateFaultEscapesAndDocumentedIoFailureStillRetries() {
+        Fixture f = new Fixture(); f.failure = new IllegalStateException("fixture provider owner is retired");
+        assertThrows(IllegalStateException.class, () -> f.art().sprites("s3k:ring"));
+        f.failure = new IllegalStateException("ROM unavailable", new java.io.IOException("fixture I/O"));
+        Art art = f.art(); assertNull(art.sprites("s3k:ring"));
+        f.failure = null; f.ticks = 120; assertNotNull(art.sprites("s3k:ring"));
+    }
     @Test void failedSpriteAndMissingRomAreNotPermanentSuccessCacheEntries() throws Exception {
         Fixture f = new Fixture();
         Art art = f.art();

@@ -8,6 +8,13 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** Original fixture pixels exercise the facade; canonical ROM equivalence is covered separately. */
 class ArtRetryTest {
+    @Test void providerStateFaultEscapesAndDocumentedIoFailureStillRetries() {
+        Fixture f = new Fixture(); f.failure = new IllegalStateException("fixture provider owner is retired");
+        assertThrows(IllegalStateException.class, () -> f.art().rom("ring"));
+        f.failure = new IllegalStateException("ROM unavailable", new java.io.IOException("fixture I/O"));
+        Art art = f.art(); assertNull(art.rom("ring"));
+        f.failure = null; f.ticks = 120; assertNotNull(art.rom("ring"));
+    }
     @Test void repairedSpriteIsAdmittedAfter120TicksAndSuccessfulImagesRemainLive() {
         Fixture f = new Fixture();
         Art art = f.art();
@@ -48,7 +55,7 @@ class ArtRetryTest {
     @Test void titleCardAndOverviewFailuresHaveTheSameBoundedRetryAdmission() {
         Fixture f = new Fixture();
         Art art = f.art();
-        f.failure = new IllegalStateException("damaged act");
+        f.failure = new IllegalArgumentException("damaged act");
         assertNull(art.titleCard(0, 0));
         assertNull(art.levelOverview(0, 0, 80));
         f.failure = null;

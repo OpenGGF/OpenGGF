@@ -9,7 +9,8 @@ import starpost.ui.Text;
 /** Casting and Bubble Bar presentation on the lake level, reusing the pond's ROM art. */
 public final class LakeOverlay {
     private final FishArt art;
-    public LakeOverlay(Art art) { this.art=new FishArt(art); }
+    public LakeOverlay(Art art) { this(art, art::ticks); }
+    public LakeOverlay(Art art, java.util.function.LongSupplier clock) { this.art=new FishArt(art, clock); }
     public static int poolY(Art art) {
         var image=art.kit.blockImage(51);
         for(int y=Art.FLOOR-50;y<Art.BLOCK-8;y++) { int drawn=0;

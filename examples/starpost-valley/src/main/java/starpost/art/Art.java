@@ -169,9 +169,8 @@ public final class Art implements AutoCloseable {
         this.s1 = s1;
         this.s3k = s3k;
         kit = s1.levelKit(0, 0);
-        if (kit == null || kit.blockSize() != BLOCK) {
-            throw new IllegalStateException("Green Hill's level kit is unavailable");
-        }
+        if (kit == null) throw new UnsupportedOperationException("Green Hill's level kit is unavailable");
+        if (kit.blockSize() != BLOCK) throw AssetFailures.invalidData("Green Hill's level kit must use 256-pixel blocks");
         ghzPalette = kit.palette();
         solidity = new byte[kit.blockCount()][];
 
@@ -286,7 +285,7 @@ public final class Art implements AutoCloseable {
         int relative = (offset[0] & 0xFF) << 8 | offset[1] & 0xFF;
         byte[] cue = rom.read(source.dplcAddress() + relative, 4);
         if (cue[0] != 0 || cue[1] != 1) {
-            throw new IllegalStateException("The skid preload must contain one tile-bank cue");
+            throw AssetFailures.invalidData("The skid preload must contain one tile-bank cue");
         }
         int entry = (cue[2] & 0xFF) << 8 | cue[3] & 0xFF;
         return RomSpriteRequest.uncompressed(source.artAddress() + (entry & 0xFFF) * 32,
