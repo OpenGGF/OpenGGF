@@ -344,9 +344,17 @@ longest unlimited survival; every upgrade with its unlock milestone; the twelve 
 (discovered ones named, every recipe shown); and a bestiary of badniks defeated per species.
 
 Progress is saved in `saves/mods/sonic-survivors/profile.txt` under the engine's save root.
-The file is plain `key=value` lines; new records are added keys, so older saves load unchanged.
-When the canonical file is absent, the owner-storage service can read the legacy
-`saves/sonic-survivors/profile.txt`; subsequent writes use the canonical path.
+The file is plain `key=value` lines. Unversioned profiles migrate to format 1 on the next
+successful write, keeping their bank, shop and lifetime records. When the canonical file is
+absent, the owner-storage service can read the legacy `saves/sonic-survivors/profile.txt`;
+subsequent writes use the canonical path.
+
+Each run has a captured identity. Starting it counts once, and its death, retirement or victory
+settles once: rewinding and playing the same run again cannot add another lifetime award.
+The profile stays outside world rollback. Settlement and its awards publish in one atomic
+profile write; a failed write leaves the previous file intact and retries while the arena is
+open. A new run advances the captured lineage, while reloading camp or replaying TRY AGAIN
+retains the same command identity.
 
 ## Build and run
 
@@ -389,8 +397,10 @@ seconds and `sonic-survivors.bossHp=N` sets every boss's hitpoints.
   `ObjectArtContactSheetProbe`. `Guard` turns hits into ring tolls.
 - `SurvivorsMod` registers a `GameServiceBundle` factory: each patch application receives its own
   `RunState` (captured for rewind) and loaded `Profile`. The profile reads and writes owner-scoped
-  `ModStorage`; it persists between runs and stays outside world rollback. `Module` reads these
-  services from its backing bundle.
+  `ModStorage`; it persists between runs and stays outside world rollback. Its compact settlement
+  intervals retain unpaid gaps for older seeks. A replacement service graph closes prior IDs;
+  its new RunState rejects foreign-graph captures. Level loads retain the same services and
+  ledger. `Module` reads these services from its backing bundle.
 - `Difficulty` is the single pressure curve; `Upgrades` holds the catalogue, evolution pairs and
   unlock milestones; `Rules` holds Eggman's Rules.
 

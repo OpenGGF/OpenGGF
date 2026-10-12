@@ -2,6 +2,7 @@ package survivors;
 
 import com.openggf.mods.state.VersionedSettings;
 import com.openggf.mods.ModStorage;
+import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -22,6 +23,13 @@ final class Profile {
     private final ModStorage storage;
     private boolean loaded;
     private boolean writable = true;
+    private boolean dirty;
+    private int retryFrames;
+    static final int FORMAT_VERSION = 1;
+    /** Durable allocation cursor; current-graph snapshots carry these positive identities. */
+    private long issuedRuns;
+    private final RunIds startedRuns = new RunIds();
+    private final RunIds settledRuns = new RunIds();
     /** Shop scale version: 2 is the small-increment shop. Older saves convert once on load. */
     static final int SHOP_VERSION = 2;
     int shopVersion;
@@ -45,6 +53,130 @@ final class Profile {
     final int[] bestUnlimited = new int[Stages.COUNT];
 
     Profile(ModStorage storage) { this.storage = java.util.Objects.requireNonNull(storage); }
+
+    /** Reserve before the graph's first capture, never from ordinary level initialization. */
+    long reserveRun() {
+        issuedRuns = nextIdentity();
+        // Reservation is not progress. Publish its cursor together with the first
+        // counted start or another real profile edit, preserving absent/legacy files.
+        return issuedRuns;
+    }
+
+    /** Only a deliberate fresh-run command creates a successor; replay reuses that command. */
+    long successor(long previous) {
+        requireRun(previous);
+        // One graph has one captured run lineage. The same captured fresh-run command
+        // has the same child; a later real command advances from that child in turn.
+        if (previous >= Long.MAX_VALUE - 1) throw new IllegalStateException("Run identities exhausted");
+        long next = previous + 1;
+        if (next > issuedRuns) {
+            issuedRuns = next;
+        } else retrySave();
+        return next;
+    }
+
+    void startRun(long id) {
+        requireRun(id);
+        if (startedRuns.add(id)) {
+            runs++;
+            save();
+        } else retrySave();
+    }
+
+    record Settlement(int banked, int unlocks) { }
+
+    /** Award and its settled identity are one atomic profile generation, outside rollback. */
+    Settlement settle(RunState run, int banked, boolean won, int unlimitedStage, int seconds) {
+        requireRun(run.id);
+        if (!startedRuns.contains(run.id)) throw new IllegalStateException("Run was not started");
+        if (!settledRuns.add(run.id)) {
+            retrySave();
+            return new Settlement(0, 0);
+        }
+        int pool = upgradePool(run.kills, run.bestCombo, run.level + 1, run.elitesDefeated, 0, banked);
+        int fresh = pool & ~announcedUnlocks;
+        announcedUnlocks |= pool;
+        bank += banked;
+        bankedTotal += banked;
+        totalKills += run.kills;
+        totalElites += run.elitesDefeated;
+        for (int i = 0; i < Species.COUNT; i++) speciesKills[i] += run.speciesKills[i];
+        bestKills = Math.max(bestKills, run.kills);
+        bestCombo = Math.max(bestCombo, run.bestCombo);
+        bestStages = Math.max(bestStages, run.stagesCleared);
+        bestLevel = Math.max(bestLevel, run.level + 1);
+        if (unlimitedStage >= 0) bestUnlimited[unlimitedStage] = Math.max(bestUnlimited[unlimitedStage], seconds);
+        if (won) wins++;
+        save();
+        return new Settlement(banked, fresh);
+    }
+
+    private long nextIdentity() {
+        if (issuedRuns >= Long.MAX_VALUE - 1) throw new IllegalStateException("Run identities exhausted");
+        return issuedRuns + 1;
+    }
+
+    private void requireRun(long id) {
+        if (id <= 0 || id > issuedRuns) throw new IllegalArgumentException("Unknown run identity");
+    }
+
+    /** Non-rewound retry pacing; held menus still give a failed generation another chance. */
+    void tickPersistence() {
+        if (dirty && --retryFrames <= 0) save();
+    }
+
+    private void retrySave() { if (dirty) save(); }
+
+    /** Compact exact intervals retain unpaid gaps and support older seeks after newer awards. */
+    private static final class RunIds {
+        private final TreeMap<Long, Long> ranges = new TreeMap<>();
+        boolean contains(long id) {
+            var before = ranges.floorEntry(id);
+            return before != null && before.getValue() >= id;
+        }
+        boolean add(long id) {
+            if (contains(id)) return false;
+            addRange(id, id);
+            return true;
+        }
+        void addRange(long first, long last) {
+            var before = ranges.floorEntry(first);
+            if (before != null && before.getValue() >= first - 1) {
+                first = before.getKey();
+                last = Math.max(last, before.getValue());
+                ranges.remove(before.getKey());
+            }
+            var after = ranges.ceilingEntry(first);
+            while (after != null && after.getKey() <= last + 1) {
+                last = Math.max(last, after.getValue());
+                ranges.remove(after.getKey());
+                after = ranges.ceilingEntry(first);
+            }
+            ranges.put(first, last);
+        }
+        String encode() {
+            var out = new StringBuilder();
+            ranges.forEach((first, last) -> {
+                if (!out.isEmpty()) out.append(',');
+                out.append(first).append(':').append(last);
+            });
+            return out.toString();
+        }
+        void decode(String text, long issued) {
+            if (text == null) throw new IllegalArgumentException("Missing run ledger");
+            if (text.isEmpty()) return;
+            try {
+                for (String range : text.split(",", -1)) {
+                    String[] ends = range.split(":", -1);
+                    if (ends.length != 2) throw new IllegalArgumentException("Invalid run ledger");
+                    long first = Long.parseLong(ends[0]), last = Long.parseLong(ends[1]);
+                    if (first <= 0 || last < first || last > issued) throw new IllegalArgumentException("Invalid run interval");
+                    addRange(first, last);
+                }
+            } catch (NumberFormatException bad) { throw new IllegalArgumentException("Invalid run ledger", bad); }
+        }
+    }
+
 
     static String shopName(int item) {
         return switch (item) {
@@ -186,6 +318,13 @@ final class Profile {
 
     int upgradePool() { return upgradePool(0, 0, 0, 0, 0, 0); }
 
+    /** Settled run counters already belong to the lifetime totals, even during an older seek. */
+    int upgradePool(RunState run, int runUnlocked, int runBanked) {
+        boolean counted = settledRuns.contains(run.id);
+        return upgradePool(counted ? 0 : run.kills, run.bestCombo, run.level + 1,
+                counted ? 0 : run.elitesDefeated, runUnlocked, counted ? 0 : runBanked);
+    }
+
     /** Claims unlocks not yet announced; returns them (id bits). */
     int claimNewUnlocks(int pool) {
         int fresh = pool & ~announcedUnlocks;
@@ -218,7 +357,24 @@ final class Profile {
         var text = storage.read("profile.txt");
         if (text.isEmpty()) return this;
         try {
-            var settings = VersionedSettings.parse(text.orElseThrow()).requireVersion(0);
+            var settings = VersionedSettings.parse(text.orElseThrow());
+            int format = settings.version();
+            if (format != 0 && format != FORMAT_VERSION) throw new IllegalArgumentException("Unsupported profile version");
+            if (format == FORMAT_VERSION) {
+                try { issuedRuns = Long.parseLong(settings.entries().getOrDefault("runIssued", "-1")); }
+                catch (NumberFormatException bad) { throw new IllegalArgumentException("Invalid run allocation cursor", bad); }
+                if (issuedRuns < 0 || issuedRuns == Long.MAX_VALUE) throw new IllegalArgumentException("Invalid run allocation cursor");
+                startedRuns.decode(settings.entries().get("runStarted"), issuedRuns);
+                settledRuns.decode(settings.entries().get("runSettled"), issuedRuns);
+                // A bundle application replaces Profile and RunState together. RunState rejects
+                // snapshots from the prior graph before restoring simulation. Only this actual
+                // graph boundary closes its old gaps; level loads never compact live ledgers.
+                if (issuedRuns > 0) {
+                    startedRuns.addRange(1, issuedRuns);
+                    settledRuns.addRange(1, issuedRuns);
+                }
+            }
+            // Unversioned/format-zero profiles migrate explicitly; their lifetime totals stay intact.
             for (var entry : settings.entries().entrySet()) {
                 String key = entry.getKey();
                 int value;
@@ -262,6 +418,9 @@ final class Profile {
             }
         } catch (IllegalArgumentException unsupportedFormat) {
             writable = false;
+            issuedRuns = 0;
+            startedRuns.ranges.clear();
+            settledRuns.ranges.clear();
             Logger.getLogger(Profile.class.getName()).log(Level.WARNING, "Unsupported owned Survivors profile format", unsupportedFormat);
         } catch (RuntimeException e) {
             Logger.getLogger(Profile.class.getName()).log(Level.WARNING, "Could not read owned Survivors profile", e);
@@ -282,9 +441,15 @@ final class Profile {
         shopVersion = SHOP_VERSION;
     }
 
-    void save() {
-        if (!writable) return;
+    boolean save() {
+        if (!writable) return false;
+        dirty = true;
+        retryFrames = 60;
         var out = new StringBuilder();
+        out.append("formatVersion=").append(FORMAT_VERSION).append('\n');
+        out.append("runIssued=").append(issuedRuns).append('\n');
+        out.append("runStarted=").append(startedRuns.encode()).append('\n');
+        out.append("runSettled=").append(settledRuns.encode()).append('\n');
         out.append("mode=").append(mode).append('\n');
         out.append("bank=").append(bank).append('\n');
         out.append("emeralds=").append(emeralds).append('\n');
@@ -310,10 +475,14 @@ final class Profile {
         }
         for (int i = 0; i < SHOP_COUNT; i++) out.append("shop.").append(i).append('=').append(shop[i]).append('\n');
         try {
-            if (!storage.write("profile.txt", VersionedSettings.parse(out.toString()).serialize()))
-                Logger.getLogger(Profile.class.getName()).warning("Could not save owned Survivors profile");
+            if (storage.write("profile.txt", VersionedSettings.parse(out.toString()).serialize())) {
+                dirty = false;
+                return true;
+            }
+            Logger.getLogger(Profile.class.getName()).warning("Could not save owned Survivors profile");
         } catch (RuntimeException e) {
             Logger.getLogger(Profile.class.getName()).log(Level.WARNING, "Could not save owned Survivors profile", e);
         }
+        return false;
     }
 }

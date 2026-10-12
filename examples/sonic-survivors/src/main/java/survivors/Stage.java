@@ -167,6 +167,7 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
     @Override public void update(int vIntRunCount, PlayableEntity entity) {
         if (!(entity instanceof AbstractPlayableSprite player)) return;
         var run = run();
+        profile().tickPersistence();
         holdTimer();
         // Lives come from nothing here: pre-claim the stock 100/200-ring extra lives every frame.
         services().levelGamestate().setRingExtraLifeFlags(0x06);
@@ -1479,8 +1480,6 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
         var profile = profile();
         run.begin(arena.stage(), profile, SurvivorsMod.seed());
         run.tails = player instanceof com.openggf.sprites.playable.Tails;
-        profile.runs++;
-        profile.save();
         player.setRingCount(run.carriedRings);
         if (run.relic(5)) player.giveShield();
         bankedThisRun = 0;
@@ -1602,7 +1601,7 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
             profile.unlocked = next;
             profile.save();
         }
-        int pool = profile.upgradePool(run.kills, run.bestCombo, run.level + 1, run.elitesDefeated, next, 0);
+        int pool = profile.upgradePool(run, next, 0);
         newUnlocks = profile.claimNewUnlocks(pool);
         // Milestones reached mid-run join this run's pool from the next zone.
         run.pool |= pool;
@@ -1642,26 +1641,12 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
         // Badnik ring values grow along the route, so the bank takes a quarter of them.
         int earned = run.ringsCollected / 4 + 25 * run.stagesCleared + run.kills / 10 + held + (won ? 300 : 0);
         int banked = earned * (100 + Rules.totalBonus(run.rules)) / 100;
-        newUnlocks = profile.claimNewUnlocks(profile.upgradePool(run.kills, run.bestCombo, run.level + 1,
-                run.elitesDefeated, 0, banked));
-        profile.bank += banked;
-        profile.bankedTotal += banked;
-        profile.totalKills += run.kills;
-        profile.totalElites += run.elitesDefeated;
-        for (int i = 0; i < Species.COUNT; i++) profile.speciesKills[i] += run.speciesKills[i];
-        profile.bestKills = Math.max(profile.bestKills, run.kills);
-        profile.bestCombo = Math.max(profile.bestCombo, run.bestCombo);
-        profile.bestStages = Math.max(profile.bestStages, run.stagesCleared);
-        profile.bestLevel = Math.max(profile.bestLevel, run.level + 1);
-        if (endless() && run.mode == RunState.ENDLESS) {
-            int stage = arena().stage();
-            profile.bestUnlimited[stage] = Math.max(profile.bestUnlimited[stage], fightFrames / 60);
-        }
-        if (won) profile.wins++;
-        profile.save();
-        bankedThisRun = banked;
+        var settlement = profile.settle(run, banked, won,
+                endless() && run.mode == RunState.ENDLESS ? arena().stage() : -1, fightFrames / 60);
+        newUnlocks = settlement.unlocks();
+        bankedThisRun = settlement.banked();
         run.end();
-        return banked;
+        return bankedThisRun;
     }
 
     private void die() {
@@ -1699,8 +1684,9 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
         moveCursor(menuMove(player), 2);
         if (!menuConfirm(player)) return;
         if (menuIndex == END_TITLE) { exitToTitle(); return; }
-        // A fresh run from the same start zone: its act 1 opens in camp.
+        // A fresh-run command owns one successor even when its results row is replayed.
         var run = run();
+        run.prepareNext(profile());
         run.paused = false;
         services().levelManager().requestZoneAndAct(Stages.zone(run.startStage), 0, true);
     }

@@ -717,6 +717,261 @@ class TestSonicSurvivors {
         assertEquals(55, getInt(reloaded, "bank"));
     }
 
+    @Test void deathSettlementCannotCreditTheSameRunAfterProductionRewind() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        var registry = fixture.runtime().getRewindRegistry();
+        var beforeDeath = registry.capture();
+        for (int replay = 0; replay < 2; replay++) {
+            if (replay != 0) registry.restore(beforeDeath);
+            set(run(), "ringsCollected", 200);
+            set(run(), "kills", 50);
+            set(run(), "elitesDefeated", 3);
+            ((int[]) get(run(), "speciesKills"))[0] = 50;
+            fixture.sprite().setRingCount(0);
+            fixture.sprite().applyCrushDeath();
+            for (int frame = 0; frame < 200 && phase() != DEAD; frame++) fixture.stepIdleFrames(1);
+            assertEquals(DEAD, phase());
+            assertFalse((boolean) get(run(), "active"));
+            assertEquals(55, getInt(profile(), "bank"), "rewinding the same run cannot bank it twice");
+            assertEquals(55, getInt(profile(), "bankedTotal"));
+            assertEquals(50, getInt(profile(), "totalKills"));
+            assertEquals(3, getInt(profile(), "totalElites"));
+            assertEquals(50, ((int[]) get(profile(), "speciesKills"))[0]);
+            assertEquals(1, getInt(profile(), "runs"));
+            assertEquals(0, getInt(profile(), "wins"));
+        }
+    }
+
+    @Test void restoringCampCannotCountTheSameStartCommandTwice() throws Exception {
+        var fixture = launch(0, 0);
+        fixture.stepIdleFrames(30);
+        var registry = fixture.runtime().getRewindRegistry();
+        var camp = registry.capture();
+        tapEnter(fixture);
+        assertEquals(1, getInt(profile(), "runs"));
+        registry.restore(camp);
+        assertEquals(CAMP, phase());
+        tapEnter(fixture);
+        assertEquals(1, getInt(profile(), "runs"), "restored run-start replay counts once");
+    }
+
+    @Test void restoringResultsAndReplayingTryAgainCannotCountAnotherRun() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        call(stage(), "die");
+        fixture.stepIdleFrames(80);
+        var registry = fixture.runtime().getRewindRegistry();
+        var results = registry.capture();
+        for (int replay = 0; replay < 2; replay++) {
+            if (replay != 0) registry.restore(results);
+            // Exercise the semantic menu command before the driver's fade starts; this
+            // regression checks its captured identity, independently of entry presentation.
+            var input = new com.openggf.control.InputHandler();
+            input.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER, org.lwjgl.glfw.GLFW.GLFW_PRESS);
+            assertTrue(GameServices.module().getGameService(LevelInputOverlay.class).handleInput(input));
+            call(stage(), "deadMenu", fixture.sprite());
+            assertEquals(0, GameServices.level().getRequestedZone());
+            assertTrue(GameServices.level().consumeZoneActRequest());
+            input.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER, org.lwjgl.glfw.GLFW.GLFW_RELEASE);
+            GameServices.level().loadZoneAndAct(0, 0);
+            startRun(fixture);
+            assertEquals(2, getInt(profile(), "runs"), "the captured retry command has one successor identity");
+        }
+    }
+
+    static Stream<String> settlementPaths() { return Stream.of("victory", "retire"); }
+
+    @ParameterizedTest @MethodSource("settlementPaths")
+    void settlementCannotCreditTheSameRunAfterProductionRewind(String ending) throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        set(run(), "ringsCollected", 200);
+        set(run(), "kills", 50);
+        set(run(), "elitesDefeated", 3);
+        ((int[]) get(run(), "speciesKills"))[0] = 50;
+        if (ending.equals("retire")) {
+            set(stage(), "phase", CLEAR);
+            fixture.sprite().setRingCount(100);
+        }
+        var registry = fixture.runtime().getRewindRegistry();
+        var before = registry.capture();
+        for (int replay = 0; replay < 2; replay++) {
+            if (replay != 0) registry.restore(before);
+            if (ending.equals("retire")) call(stage(), "retire", false);
+            else call(stage(), "victory");
+            assertEquals(ending.equals("retire") ? 105 : 355, getInt(profile(), "bank"));
+            assertEquals(50, getInt(profile(), "totalKills"));
+            assertEquals(3, getInt(profile(), "totalElites"));
+            assertEquals(50, ((int[]) get(profile(), "speciesKills"))[0]);
+            assertEquals(ending.equals("victory") ? 1 : 0, getInt(profile(), "wins"));
+            assertEquals(1, getInt(profile(), "runs"));
+        }
+    }
+
+    @Test void distinctRunsRemainPayableWhenAnOlderUnsettledRunIsRestored() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        set(run(), "ringsCollected", 100);
+        var registry = fixture.runtime().getRewindRegistry();
+        var older = registry.capture();
+        // The module also uses end() when a debug route jump abandons a run without payout.
+        call(run(), "end");
+        call(run(), "prepareNext", profile());
+        GameServices.level().loadZoneAndAct(0, 0);
+        startRun(fixture);
+        set(run(), "ringsCollected", 200);
+        call(stage(), "die");
+        assertEquals(50, getInt(profile(), "bank"));
+        var newer = registry.capture();
+        registry.restore(older);
+        call(stage(), "die");
+        assertEquals(75, getInt(profile(), "bank"), "a gap below a newer settled ID remains payable");
+        registry.restore(newer);
+        call(stage(), "die");
+        registry.restore(older);
+        call(stage(), "die");
+        assertEquals(75, getInt(profile(), "bank"));
+        assertEquals(2, getInt(profile(), "runs"));
+    }
+
+    @Test void runCaptureRejectsAForeignServiceGraphBeforeMutatingTheRun() throws Exception {
+        launch(0, 0);
+        var constructor = loader.loadClass("survivors.RunState").getDeclaredConstructor();
+        constructor.setAccessible(true);
+        Object otherRun = constructor.newInstance();
+        Object foreign = call(otherRun, "capture");
+        var failure = assertThrows(java.lang.reflect.InvocationTargetException.class,
+                () -> call(run(), "restore", foreign));
+        assertInstanceOf(IllegalArgumentException.class, failure.getCause());
+        assertFalse((boolean) get(run(), "active"));
+    }
+
+    private static Object reloadProfile(com.openggf.mods.ModStorage storage) throws Exception {
+        var constructor = loader.loadClass("survivors.Profile").getDeclaredConstructor(com.openggf.mods.ModStorage.class);
+        constructor.setAccessible(true);
+        Object result = constructor.newInstance(storage);
+        call(result, "load");
+        return result;
+    }
+
+    @Test void legacyProfileMigratesAndANewGraphCannotReuseItsPreviousRunIds() throws Exception {
+        launch(0, 0);
+        var storage = (com.openggf.mods.ModStorage) get(profile(), "storage");
+        assertTrue(storage.write("profile.txt", "bank=42\nruns=7\nshopVersion=2\n"));
+        Object legacy = reloadProfile(storage);
+        assertEquals(42, getInt(legacy, "bank"));
+        assertEquals(7, getInt(legacy, "runs"));
+        long first = (long) call(legacy, "reserveRun");
+        call(legacy, "startRun", first);
+        assertEquals(8, getInt(legacy, "runs"));
+        assertTrue(storage.read("profile.txt").orElseThrow().contains("formatVersion=1\n"));
+        Object reloaded = reloadProfile(storage);
+        call(reloaded, "startRun", first);
+        assertEquals(8, getInt(reloaded, "runs"), "previous graph IDs are closed, never counted again");
+        long second = (long) call(reloaded, "reserveRun");
+        assertTrue(second > first);
+        call(reloaded, "startRun", second);
+        assertEquals(9, getInt(reloaded, "runs"));
+        assertEquals(42, getInt(reloaded, "bank"));
+    }
+
+    @Test void settlementIntervalsMergeNeighborsWithoutClosingAnUnpaidGap() throws Exception {
+        var constructor = loader.loadClass("survivors.Profile$RunIds").getDeclaredConstructor();
+        constructor.setAccessible(true);
+        Object ids = constructor.newInstance();
+        assertEquals(true, call(ids, "add", 2L));
+        assertEquals(true, call(ids, "add", 4L));
+        assertEquals("2:2,4:4", call(ids, "encode"));
+        assertEquals(false, call(ids, "contains", 3L));
+        assertEquals(true, call(ids, "add", 3L));
+        assertEquals("2:4", call(ids, "encode"));
+        assertEquals(true, call(ids, "add", 1L));
+        assertEquals("1:4", call(ids, "encode"));
+        assertEquals(false, call(ids, "add", 2L));
+        assertEquals(false, call(ids, "contains", 5L));
+    }
+
+    @Test void freshRunLineageReusesItsChildAndRejectsAllocationOverflow() throws Exception {
+        launch(0, 0);
+        long first = (long) get(run(), "id");
+        long second = (long) call(profile(), "successor", first);
+        long third = (long) call(profile(), "successor", second);
+        assertEquals(first + 1, second);
+        assertEquals(second + 1, third);
+        assertEquals(second, call(profile(), "successor", first));
+        assertEquals(third, get(profile(), "issuedRuns"));
+        set(profile(), "issuedRuns", Long.MAX_VALUE - 1);
+        var failure = assertThrows(java.lang.reflect.InvocationTargetException.class,
+                () -> call(profile(), "reserveRun"));
+        assertInstanceOf(IllegalStateException.class, failure.getCause());
+        assertEquals(Long.MAX_VALUE - 1, get(profile(), "issuedRuns"));
+    }
+
+    @Test void replayingASettledRunCannotCountItsKillsAgainForAMilestone() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        set(run(), "kills", 200);
+        var registry = fixture.runtime().getRewindRegistry();
+        var before = registry.capture();
+        call(stage(), "die");
+        int zap = field(loader.loadClass("survivors.Upgrades"), "CHAIN_ZAP").getInt(null);
+        assertEquals(200, getInt(profile(), "totalKills"));
+        assertEquals(0, getInt(profile(), "announcedUnlocks") & 1 << zap);
+        registry.restore(before);
+        call(stage(), "openClear");
+        assertEquals(200, getInt(profile(), "totalKills"));
+        assertEquals(0, getInt(profile(), "announcedUnlocks") & 1 << zap,
+                "the same settled 200 kills cannot become a 300-kill lifetime milestone");
+    }
+
+    static Stream<Boolean> failedWriteKinds() { return Stream.of(false, true); }
+
+    @ParameterizedTest @MethodSource("failedWriteKinds")
+    void failedSettlementPublicationRetriesTheWholeAwardWithoutDuplicatingIt(boolean throwsOnWrite) throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        var actual = (com.openggf.mods.ModStorage) get(profile(), "storage");
+        var rejecting = new FailingProfileStorage(actual, throwsOnWrite);
+        set(profile(), "storage", rejecting);
+        set(run(), "ringsCollected", 200);
+        set(run(), "kills", 50);
+        var registry = fixture.runtime().getRewindRegistry();
+        var before = registry.capture();
+        for (int replay = 0; replay < 2; replay++) {
+            if (replay != 0) registry.restore(before);
+            call(stage(), "die");
+            assertEquals(55, getInt(profile(), "bank"));
+            assertEquals(50, getInt(profile(), "totalKills"));
+            assertEquals(0, getInt(reloadProfile(actual), "bank"), "failed write leaves the previous generation intact");
+        }
+        rejecting.reject = false;
+        fixture.stepIdleFrames(65);
+        assertEquals(55, getInt(reloadProfile(actual), "bank"));
+        assertEquals(50, getInt(reloadProfile(actual), "totalKills"));
+        assertTrue(actual.read("profile.txt").orElseThrow().contains("runSettled="),
+                "settlement and award publish in the same atomic profile write");
+    }
+
+    private static final class FailingProfileStorage implements com.openggf.mods.ModStorage {
+        final com.openggf.mods.ModStorage delegate;
+        final boolean throwsOnWrite;
+        boolean reject = true;
+        FailingProfileStorage(com.openggf.mods.ModStorage delegate, boolean throwsOnWrite) {
+            this.delegate = delegate;
+            this.throwsOnWrite = throwsOnWrite;
+        }
+        public Optional<String> read(String name) { return delegate.read(name); }
+        public boolean write(String name, String text) {
+            if (reject && throwsOnWrite) throw new IllegalStateException("injected profile failure");
+            return !reject && delegate.write(name, text);
+        }
+        public Optional<byte[]> readBytes(String name) { return delegate.readBytes(name); }
+        public boolean writeBytes(String name, byte[] bytes) { return !reject && delegate.writeBytes(name, bytes); }
+        public boolean delete(String name) { return delegate.delete(name); }
+        public List<String> list() { return delegate.list(); }
+    }
+
     @Test void campShopSpendsTheBank() throws Exception {
         var fixture = launch(0, 0);
         fixture.stepIdleFrames(30);
