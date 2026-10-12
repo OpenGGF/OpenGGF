@@ -11,6 +11,21 @@ case-insensitively for `defer`, `out-of-scope`, `parked`, `follow-on`, `future`,
 `revisit`, `when-demanded`, `later`, `optional`, `narrowing`, `non-goal`,
 `unsupported`, and `TODO`.
 
+## Author-workflow audit (2026-10-12)
+
+The [source-wide mod audit](../architecture/audits/2026-10-12-mod-author-framework-audit.md)
+reviews all eleven example projects, tutorial checkpoints, fixture mods and SDK
+starters at `f9d4e0474`. Its findings are proposed work, not implementation promises
+or a change to the candidate API policy.
+
+The first priorities are save-format preservation, checked save recovery/results,
+render-independent targeting, and ordinary-input frame holds. Shared candidates
+include a validated save-slot coordinator, extension of the existing frame controller,
+narrow terrain/contact/effect services, pure sprite compositions and canvas transforms,
+and test/tool-preserving creator exports. Recipe, input, storage and provider helpers
+already exist; the audit distinguishes their adoption from new API work and records
+consumer evidence, rejected shortcuts and acceptance criteria.
+
 ## Current release disposition (2026-09-08)
 
 The [0.7 roadmap](../project/v0.7-roadmap.md) closes stock campaigns while

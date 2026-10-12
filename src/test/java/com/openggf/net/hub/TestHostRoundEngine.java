@@ -40,7 +40,10 @@ class TestHostRoundEngine {
         now = start.countdownEndsAtHubMillis();
         engine.onTick();
         assertEquals(HostRoundEngine.Phase.RUNNING, engine.phase());
-        now = start.deadlineHubMillis() + 1;
+        now = start.deadlineHubMillis() + HostRoundEngine.FINISH_GRACE_MILLIS;
+        engine.onTick();
+        assertEquals(HostRoundEngine.Phase.RUNNING, engine.phase());
+        now++;
         engine.onTick();
         assertEquals(HostRoundEngine.Phase.ROUND_END, engine.phase());
         assertInstanceOf(ControlMessage.RoundEnd.class, broadcast.get(broadcast.size() - 1));
@@ -108,6 +111,21 @@ class TestHostRoundEngine {
     }
 
     @Test
+    void acceptsFinishAfterDeadlineTickDuringGrace() {
+        assertTrue(engine.startRound(config));
+        now += HostRoundEngine.COUNTDOWN_MILLIS;
+        engine.onTick();
+        long deadline = engine.snapshot().deadlineHubMillis();
+        now = deadline + 1;
+        engine.onTick();
+
+        assertEquals(HostRoundEngine.Phase.RUNNING, engine.phase());
+        assertNotNull(engine.onAttemptFinish(0, "A", "sonic", finish(1, 4000), false));
+        assertEquals(1, engine.standings().size());
+        assertTrue(broadcast.stream().noneMatch(ControlMessage.RoundEnd.class::isInstance));
+    }
+
+    @Test
     void playerLeavingKeepsBestForTheRound() {
         engine.startRound(config);
         now += HostRoundEngine.COUNTDOWN_MILLIS;
@@ -115,6 +133,27 @@ class TestHostRoundEngine {
         engine.onAttemptFinish(0, "A", "sonic", finish(1, 4000), false);
         engine.onPlayerLeft(0);
         assertEquals(1, engine.standings().size());
+    }
+
+    @Test
+    void reusedSlotKeepsFinishAndVerificationBoundToOriginalParticipant() {
+        engine.setVerifiedRoom(true);
+        engine.startRound(config);
+        now += HostRoundEngine.COUNTDOWN_MILLIS;
+        engine.onTick();
+        engine.onAttemptFinish(0, "old-session", "old-fingerprint", "Old", "sonic",
+                finish(1, 4000), false);
+        engine.onPlayerLeft(0);
+        engine.onAttemptFinish(0, "new-session", "new-fingerprint", "New", "tails",
+                finish(1, 3000), false);
+
+        assertTrue(engine.hasBestForParticipant("old-session"));
+        assertTrue(engine.hasBestForParticipant("new-session"));
+        assertEquals(List.of("new-fingerprint", "old-fingerprint"),
+                engine.results().stream().map(HostRoundEngine.Result::fingerprint).toList());
+        engine.onVerdictForParticipant("old-session", 1, "ab".repeat(32), false);
+        assertFalse(engine.hasBestForParticipant("old-session"));
+        assertTrue(engine.hasBestForParticipant("new-session"));
     }
 
     @Test

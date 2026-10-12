@@ -1,62 +1,78 @@
 package com.openggf.net.client;
 
 import com.openggf.net.identity.PlayerIdentity;
-import com.openggf.net.protocol.ControlCodec;
+import com.openggf.net.protocol.ControlJsonCodec;
 import com.openggf.net.protocol.ControlMessage;
 import com.openggf.net.protocol.GhostPackets;
 import com.openggf.net.protocol.ProtocolViolationException;
 
 import java.net.URI;
+import java.net.Socket;
 import java.net.http.HttpClient;
 import java.net.http.WebSocket;
 import java.nio.ByteBuffer;
+import java.security.GeneralSecurityException;
+import java.security.MessageDigest;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.HexFormat;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509ExtendedTrustManager;
 
 /**
  * Network-thread WebSocket client. Listener callbacks only enqueue typed events;
  * the game thread owns all state mutation through {@link #drainInbound()}.
  */
+@com.openggf.game.ModApi
 public final class RaceClient implements RaceConnection {
     public static final long JOIN_TIMEOUT_MILLIS = 3000;
 
+    @com.openggf.game.ModApi
     public static final class JoinRejectedException extends RuntimeException {
         public JoinRejectedException(String reason) {
             super(reason);
         }
     }
 
+    @com.openggf.game.ModApi
     public sealed interface InboundEvent permits Control, GhostData, Roster, Disconnected {
     }
 
+    @com.openggf.game.ModApi
     public record Control(ControlMessage message) implements InboundEvent {
         public Control {
             Objects.requireNonNull(message, "message");
         }
     }
 
+    @com.openggf.game.ModApi
     public record GhostData(GhostPackets.Aggregate aggregate) implements InboundEvent {
         public GhostData {
             Objects.requireNonNull(aggregate, "aggregate");
         }
     }
 
+    @com.openggf.game.ModApi
     public record Roster(List<GhostPackets.RosterEntry> entries) implements InboundEvent {
         public Roster {
             entries = List.copyOf(entries);
         }
     }
 
+    @com.openggf.game.ModApi
     public record Disconnected(String reason) implements InboundEvent {
     }
 
-    private final ConcurrentLinkedQueue<InboundEvent> inbound = new ConcurrentLinkedQueue<>();
+    private final BoundedInboundQueue<InboundEvent> inbound = new BoundedInboundQueue<>();
+    private final ControlJsonCodec codec = new ControlJsonCodec();
     private final Object sendLock = new Object();
     private volatile WebSocket webSocket;
     private volatile ControlMessage.JoinAccepted joinAccepted;
@@ -70,9 +86,26 @@ public final class RaceClient implements RaceConnection {
     public static CompletableFuture<RaceClient> connect(
             URI wsUri, PlayerIdentity identity, String displayName,
             String determinismFingerprint) {
+        return connect(wsUri, identity, displayName, determinismFingerprint, null, null);
+    }
+
+    /** Connects to a broker-listed direct room using its pinned certificate and host identity. */
+    public static CompletableFuture<RaceClient> connect(
+            URI wsUri, PlayerIdentity identity, String displayName,
+            String determinismFingerprint, String certificateSha256,
+            String expectedServerId) {
+        if ((certificateSha256 == null) != (expectedServerId == null)
+                || (expectedServerId != null && expectedServerId.isBlank())) {
+            return CompletableFuture.failedFuture(new IllegalArgumentException(
+                    "direct-room certificate pin and host identity are both required"));
+        }
+        if (certificateSha256 != null && !"wss".equalsIgnoreCase(wsUri.getScheme())) {
+            return CompletableFuture.failedFuture(new IllegalArgumentException(
+                    "pinned direct rooms require wss"));
+        }
         RaceClient client = new RaceClient();
         ClientHandshake handshake = new ClientHandshake(
-                identity, displayName, determinismFingerprint);
+                identity, displayName, determinismFingerprint, expectedServerId);
         CompletableFuture<RaceClient> joined = new CompletableFuture<>();
 
         WebSocket.Listener listener = new WebSocket.Listener() {
@@ -109,10 +142,10 @@ public final class RaceClient implements RaceConnection {
                         }
                         int type = packet[0] & 0xFF;
                         if (type == GhostPackets.TYPE_GHOST_AGGREGATE) {
-                            client.inbound.add(new GhostData(
+                            client.enqueueInbound(ws, new GhostData(
                                     GhostPackets.decodeAggregate(packet)));
                         } else if (type == GhostPackets.TYPE_ROSTER) {
-                            client.inbound.add(new Roster(GhostPackets.decodeRoster(packet)));
+                            client.enqueueInbound(ws, new Roster(GhostPackets.decodeRoster(packet)));
                         } else {
                             throw new ProtocolViolationException(
                                     "unexpected room binary packet type " + type);
@@ -131,7 +164,7 @@ public final class RaceClient implements RaceConnection {
                 client.open = false;
                 String detail = reason == null || reason.isBlank()
                         ? "connection closed" : reason;
-                client.inbound.add(new Disconnected(detail));
+                client.signalDisconnected(detail);
                 joined.completeExceptionally(
                         new JoinRejectedException("connection closed during join: " + detail));
                 return null;
@@ -140,29 +173,29 @@ public final class RaceClient implements RaceConnection {
             @Override
             public void onError(WebSocket ws, Throwable error) {
                 client.open = false;
-                client.inbound.add(new Disconnected(
+                client.signalDisconnected(
                         error.getMessage() == null ? error.getClass().getSimpleName()
-                                : error.getMessage()));
+                                : error.getMessage());
                 joined.completeExceptionally(error);
             }
 
             private void handleText(WebSocket ws, String text) {
                 final ControlMessage message;
                 try {
-                    message = ControlCodec.decode(text).message();
+                    message = client.codec.decodeRoom(text).message();
                 } catch (ProtocolViolationException e) {
                     fail(ws, e);
                     return;
                 }
                 if (client.joinAccepted != null) {
-                    client.inbound.add(new Control(message));
+                    client.enqueueInbound(ws, new Control(message));
                     return;
                 }
                 try {
                     switch (message) {
                         case ControlMessage.Welcome welcome -> {
                             client.serverId = welcome.serverId();
-                            client.enqueueSendText(ControlCodec.encode(
+                            client.enqueueSendText(client.codec.encode(
                                     null, handshake.onWelcome(welcome)));
                         }
                         case ControlMessage.JoinAccepted accepted -> {
@@ -175,7 +208,7 @@ public final class RaceClient implements RaceConnection {
                                     new JoinRejectedException(rejected.reason()));
                             ws.abort();
                         }
-                        default -> client.inbound.add(new Control(message));
+                        default -> client.enqueueInbound(ws, new Control(message));
                     }
                 } catch (Exception e) {
                     joined.completeExceptionally(e);
@@ -185,15 +218,22 @@ public final class RaceClient implements RaceConnection {
 
             private void fail(WebSocket ws, ProtocolViolationException cause) {
                 client.open = false;
-                client.inbound.add(new Disconnected("protocol violation"));
+                client.signalDisconnected("protocol violation");
                 joined.completeExceptionally(cause);
                 ws.abort();
             }
         };
 
-        HttpClient.newBuilder()
-                .connectTimeout(Duration.ofMillis(JOIN_TIMEOUT_MILLIS))
-                .build()
+        HttpClient.Builder http = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofMillis(JOIN_TIMEOUT_MILLIS));
+        if (certificateSha256 != null) {
+            try {
+                http.sslContext(pinnedSslContext(certificateSha256));
+            } catch (GeneralSecurityException | IllegalArgumentException e) {
+                return CompletableFuture.failedFuture(e);
+            }
+        }
+        http.build()
                 .newWebSocketBuilder()
                 .buildAsync(wsUri, listener)
                 .whenComplete((ws, error) -> {
@@ -206,7 +246,7 @@ public final class RaceClient implements RaceConnection {
                         ws.abort();
                         return;
                     }
-                    client.enqueueSendText(ControlCodec.encode(null, handshake.hello()));
+                    client.enqueueSendText(client.codec.encode(null, handshake.hello()));
                 });
 
         joined.orTimeout(JOIN_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
@@ -222,20 +262,100 @@ public final class RaceClient implements RaceConnection {
         return joined;
     }
 
-    public List<InboundEvent> drainInbound() {
-        List<InboundEvent> events = new ArrayList<>();
-        InboundEvent event;
-        while ((event = inbound.poll()) != null) {
-            events.add(event);
+    private static SSLContext pinnedSslContext(String certificateSha256)
+            throws GeneralSecurityException {
+        final byte[] expected;
+        try {
+            expected = HexFormat.of().parseHex(certificateSha256);
+        } catch (IllegalArgumentException e) {
+            throw new GeneralSecurityException("invalid direct-room certificate pin", e);
         }
-        return events;
+        if (expected.length != 32) {
+            throw new GeneralSecurityException("invalid direct-room certificate pin length");
+        }
+        X509ExtendedTrustManager pinning = new X509ExtendedTrustManager() {
+            @Override
+            public void checkClientTrusted(X509Certificate[] chain, String authType)
+                    throws CertificateException {
+                throw new CertificateException("client certificates are not accepted");
+            }
+
+            @Override
+            public void checkClientTrusted(X509Certificate[] chain, String authType,
+                                           Socket socket) throws CertificateException {
+                checkClientTrusted(chain, authType);
+            }
+
+            @Override
+            public void checkClientTrusted(X509Certificate[] chain, String authType,
+                                           SSLEngine engine) throws CertificateException {
+                checkClientTrusted(chain, authType);
+            }
+
+            @Override
+            public void checkServerTrusted(X509Certificate[] chain, String authType)
+                    throws CertificateException {
+                if (chain == null || chain.length != 1) {
+                    throw new CertificateException("unexpected direct-room certificate chain");
+                }
+                byte[] actual;
+                try {
+                    actual = MessageDigest.getInstance("SHA-256").digest(chain[0].getEncoded());
+                } catch (GeneralSecurityException e) {
+                    throw new CertificateException("cannot inspect direct-room certificate", e);
+                }
+                if (!MessageDigest.isEqual(expected, actual)) {
+                    throw new CertificateException("direct-room certificate mismatch");
+                }
+                chain[0].checkValidity();
+            }
+
+            @Override
+            public void checkServerTrusted(X509Certificate[] chain, String authType,
+                                           Socket socket) throws CertificateException {
+                checkServerTrusted(chain, authType);
+            }
+
+            @Override
+            public void checkServerTrusted(X509Certificate[] chain, String authType,
+                                           SSLEngine engine) throws CertificateException {
+                checkServerTrusted(chain, authType);
+            }
+
+            @Override
+            public X509Certificate[] getAcceptedIssuers() {
+                return new X509Certificate[0];
+            }
+        };
+        SSLContext context = SSLContext.getInstance("TLS");
+        context.init(null, new TrustManager[] {pinning}, null);
+        return context;
+    }
+
+    public List<InboundEvent> drainInbound() {
+        return inbound.drain();
+    }
+
+    private void enqueueInbound(WebSocket socket, InboundEvent event) {
+        if (!inbound.offer(event)) {
+            open = false;
+            signalDisconnected("inbound event limit exceeded");
+            socket.abort();
+        }
+    }
+
+    private void signalDisconnected(String reason) {
+        if (!inbound.offer(new Disconnected(reason))) {
+            inbound.clear();
+            inbound.offer(new Disconnected(reason));
+        }
     }
 
     public void sendControl(ControlMessage message) {
         if (!open) {
             return;
         }
-        enqueueSendText(ControlCodec.encode(sessionToken(), message));
+        enqueueSendText(codec.encode(sessionToken(), message));
     }
 
     public void sendBinary(byte[] data) {

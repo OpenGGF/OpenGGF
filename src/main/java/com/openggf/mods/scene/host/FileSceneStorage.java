@@ -20,7 +20,7 @@ import java.util.stream.Stream;
 final class FileSceneStorage implements SceneStorage {
     private static final Logger LOG = Logger.getLogger(FileSceneStorage.class.getName());
     private static final Pattern NAME = Pattern.compile("[a-z0-9._-]{1,64}");
-    static final int MAX_BYTES = 1 << 20;
+    static final int MAX_BYTES = MAX_TEXT_BYTES;
 
     private final Path root;
     private final Path directory;
@@ -58,6 +58,35 @@ final class FileSceneStorage implements SceneStorage {
 
     @Override
     public Optional<String> read(String name) {
+        Optional<byte[]> bytes = readBounded(name, MAX_TEXT_BYTES);
+        if (bytes.isEmpty()) return Optional.empty();
+        try {
+            return Optional.of(StandardCharsets.UTF_8.newDecoder()
+                    .decode(java.nio.ByteBuffer.wrap(bytes.get())).toString());
+        } catch (IOException e) {
+            LOG.log(Level.WARNING, "Mod storage text is not UTF-8: " + name, e);
+            return Optional.empty();
+        }
+    }
+
+    @Override
+    public boolean write(String name, String text) {
+        return writeBounded(name, (text == null ? "" : text).getBytes(StandardCharsets.UTF_8),
+                MAX_TEXT_BYTES);
+    }
+
+    @Override
+    public Optional<byte[]> readBytes(String name) {
+        return readBounded(name, MAX_BINARY_BYTES);
+    }
+
+    @Override
+    public boolean writeBytes(String name, byte[] bytes) {
+        java.util.Objects.requireNonNull(bytes, "bytes");
+        return writeBounded(name, bytes, MAX_BINARY_BYTES);
+    }
+
+    private Optional<byte[]> readBounded(String name, int cap) {
         Path path = file(name);
         if (!safe(path)) return Optional.empty();
         if (!Files.exists(path, LinkOption.NOFOLLOW_LINKS) && legacyDirectory != null) {
@@ -65,20 +94,19 @@ final class FileSceneStorage implements SceneStorage {
         }
         if (!safe(path) || !Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) return Optional.empty();
         try (var input = Files.newInputStream(path, LinkOption.NOFOLLOW_LINKS)) {
-            byte[] bytes = input.readNBytes(MAX_BYTES + 1);
-            return bytes.length > MAX_BYTES ? Optional.empty() : Optional.of(StandardCharsets.UTF_8.newDecoder().decode(java.nio.ByteBuffer.wrap(bytes)).toString());
+            byte[] bytes = input.readNBytes(cap + 1);
+            return bytes.length > cap ? Optional.empty() : Optional.of(bytes);
         } catch (IOException e) {
             LOG.log(Level.WARNING, "Mod storage read failed: " + path, e);
             return Optional.empty();
         }
     }
 
-    @Override
-    public boolean write(String name, String text) {
+    /** Stages the whole file beside its target, then renames it over the target. */
+    private boolean writeBounded(String name, byte[] bytes, int cap) {
         Path path = file(name);
         if (!safe(path)) return false;
-        byte[] bytes = (text == null ? "" : text).getBytes(StandardCharsets.UTF_8);
-        if (bytes.length > MAX_BYTES) {
+        if (bytes.length > cap) {
             return false;
         }
         try {

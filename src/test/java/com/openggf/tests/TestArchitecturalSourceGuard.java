@@ -106,7 +106,8 @@ class TestArchitecturalSourceGuard {
             // 2026-08-26: exact merged inventory for next's mod/editor/session and
             // seamless-transition surface plus develop's bootstrap, VBlank and
             // transient oscillation/respawn handoff wiring.
-            "com/openggf/level/LevelManager.java", 3145,
+            // 2026-10-09: 3145 -> 3144; the time-attack gate became a generic host-return request.
+            "com/openggf/level/LevelManager.java", 3144,
             // 2026-07-02: 2888 -> 2890 for the live-rewind VHS effect envelope tick
             // (RewindEffectEnvelope wiring + intensity/speed accessors).
             // 2026-07-04: 2890 -> 2962. The solo-ghost-racing phase-1 tasks (time
@@ -132,7 +133,9 @@ class TestArchitecturalSourceGuard {
             // 2026-08-26: exact merged inventory for multi-segment dispatch,
             // transition-freeze admission, time-attack/multiplayer hooks and the
             // special-stage return boundary. State machines remain collaborator-owned.
-            GAME_LOOP_PATH, 3381
+            // 2026-10-09: 3381 -> 3313 after Time Attack and multiplayer moved into the
+            // bundled mod; the loop keeps only generic hosted-run hooks (HostedRunController).
+            GAME_LOOP_PATH, 3313
     );
     private static final int ENGINE_MAX_LARGE_METHODS = 3;
     private static final int ENGINE_LARGE_METHOD_THRESHOLD = 100;

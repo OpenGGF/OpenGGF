@@ -1,6 +1,8 @@
 package com.openggf.net.protocol;
 
-import com.openggf.ghost.GhostFrameCodec;
+import openggf.racing.protocol.ControlCodec;
+
+import com.openggf.net.ghost.GhostFrameCodec;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 

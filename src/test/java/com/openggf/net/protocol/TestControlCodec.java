@@ -1,5 +1,7 @@
 package com.openggf.net.protocol;
 
+import openggf.racing.protocol.ControlCodec;
+
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -36,8 +38,8 @@ class TestControlCodec {
         List<ControlMessage.StandingsRow> rows =
                 List.of(new ControlMessage.StandingsRow(0, "A", "sonic", 3600, 1, "NONE"));
         List<ControlMessage> all = List.of(
-                new ControlMessage.Hello(1, "a", "b", "c"),
-                new ControlMessage.Welcome(1, "bm9uY2U=", "serverfp"),
+                new ControlMessage.Hello(Protocol.VERSION, "a", "b", "c"),
+                new ControlMessage.Welcome(Protocol.VERSION, "bm9uY2U=", "serverfp"),
                 new ControlMessage.AuthProof("c2ln"),
                 new ControlMessage.JoinRejected("room full"),
                 new ControlMessage.Kick("protocol violation"),
@@ -66,7 +68,7 @@ class TestControlCodec {
 
     @Test
     void rejectsOversizedText() {
-        String big = "{\"v\":1,\"msg\":{\"type\":\"Chat\",\"text\":\""
+        String big = "{\"v\":2,\"msg\":{\"type\":\"Chat\",\"text\":\""
                 + "x".repeat(Protocol.MAX_CONTROL_BYTES) + "\"}}";
         assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(big));
     }
@@ -74,20 +76,101 @@ class TestControlCodec {
     @Test
     void rejectsUnknownTypeWrongVersionAndGarbage() {
         assertThrows(ProtocolViolationException.class,
-                () -> ControlCodec.decode("{\"v\":1,\"msg\":{\"type\":\"Nope\"}}"));
+                () -> ControlCodec.decode("{\"v\":2,\"msg\":{\"type\":\"Nope\"}}"));
         assertThrows(ProtocolViolationException.class,
                 () -> ControlCodec.decode(
-                        "{\"v\":2,\"msg\":{\"type\":\"Ping\",\"t0ClientMillis\":1}}"));
+                        "{\"v\":1,\"msg\":{\"type\":\"Ping\",\"t0ClientMillis\":1}}"));
         assertThrows(ProtocolViolationException.class,
-                () -> ControlCodec.decode("{\"v\":1}"));
+                () -> ControlCodec.decode("{\"v\":2}"));
         assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode("not json at all"));
     }
 
     @Test
-    void ignoresUnknownFieldsForForwardCompat() {
-        ControlCodec.DecodedControl back = ControlCodec.decode(
-                "{\"v\":1,\"token\":null,\"msg\":{\"type\":\"Ping\","
-                        + "\"t0ClientMillis\":7,\"futureField\":true}}");
-        assertEquals(new ControlMessage.Ping(7L), back.message());
+    void rejectsUnknownEnvelopeAndMessageFields() {
+        assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(
+                "{\"v\":2,\"token\":null,\"futureField\":true,"
+                        + "\"msg\":{\"type\":\"Ping\",\"t0ClientMillis\":7}}"));
+        assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(
+                "{\"v\":2,\"token\":null,\"msg\":{\"type\":\"Ping\","
+                        + "\"t0ClientMillis\":7,\"futureField\":true}}"));
+    }
+
+    @Test
+    void rejectsDuplicateSecuritySensitiveFields() {
+        assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(
+                "{\"v\":2,\"token\":\"first\",\"token\":\"second\","
+                        + "\"msg\":{\"type\":\"Ping\",\"t0ClientMillis\":7}}"));
+        assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(
+                "{\"v\":2,\"token\":null,\"msg\":{\"type\":\"Ping\","
+                        + "\"t0ClientMillis\":7,\"t0ClientMillis\":8}}"));
+    }
+
+    @Test
+    void rejectsMissingOrNullRoomStatePlayers() {
+        assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(
+                "{\"v\":1,\"token\":null,\"msg\":{\"type\":\"RoomState\"}}"));
+        assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(
+                "{\"v\":1,\"token\":null,\"msg\":{\"type\":\"RoomState\",\"players\":null}}"));
+    }
+
+    @Test
+    void rejectsInvalidRoundPhaseBeforeClientPump() {
+        String wire = ControlCodec.encode(null, new ControlMessage.JoinAccepted(
+                "tok", 0, null,
+                new ControlMessage.RoundSnapshot("BOGUS", null, 0, 0, List.of())));
+        assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(wire));
+    }
+
+    @Test
+    void rejectsIncompleteNestedClientState() {
+        String player = ControlCodec.encode(null, new ControlMessage.RoomState(
+                List.of(new ControlMessage.PlayerInfo(0, "fp", null, "sonic"))));
+        assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(player));
+
+        String config = ControlCodec.encode(null, new ControlMessage.RoundStart(
+                new ControlMessage.RoundConfig(null, 0, 0, 30, "OPEN", null), 0, 30_000));
+        assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(config));
+
+        String standings = ControlCodec.encode(null, new ControlMessage.StandingsDelta(
+                List.of(new ControlMessage.StandingsRow(0, "A", null, 120, 1, "NONE"))));
+        assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(standings));
+
+        String token = ControlCodec.encode(null, new ControlMessage.JoinAccepted(
+                null, 0, null, null));
+        assertThrows(ProtocolViolationException.class, () -> ControlCodec.decode(token));
+    }
+
+    @Test
+    void rejectsMalformedJoinMetadataButPreservesMasterAdmission() {
+        String masterAdmission = ControlCodec.encode(null,
+                new ControlMessage.JoinAccepted("master-token", -1, null, null));
+        assertInstanceOf(ControlMessage.JoinAccepted.class,
+                ControlCodec.decode(masterAdmission).message());
+        assertThrows(ProtocolViolationException.class,
+                () -> ControlCodec.decodeRoom(masterAdmission));
+
+        String negativeRoomSlot = ControlCodec.encode(null,
+                new ControlMessage.JoinAccepted("room-token", -2, null, null));
+        assertThrows(ProtocolViolationException.class,
+                () -> ControlCodec.decode(negativeRoomSlot));
+
+        String missingRoom = ControlCodec.encode(null,
+                new ControlMessage.JoinAccepted("room-token", 0, null, null));
+        assertThrows(ProtocolViolationException.class,
+                () -> ControlCodec.decode(missingRoom));
+
+        String invalidSlot = ControlCodec.encode(null,
+                new ControlMessage.JoinAccepted("room-token", Protocol.MAX_PLAYERS_RELAY,
+                        new ControlMessage.RoomDescriptor("LAN Room", "s3k", 0, 0,
+                                "OPEN", null, 8, false), null));
+        assertThrows(ProtocolViolationException.class,
+                () -> ControlCodec.decode(invalidSlot));
+
+        String missingSnapshot = ControlCodec.encode(null,
+                new ControlMessage.JoinAccepted("room-token", 0,
+                        new ControlMessage.RoomDescriptor("LAN Room", "s3k", 0, 0,
+                                "OPEN", null, 8, false), null));
+        assertThrows(ProtocolViolationException.class,
+                () -> ControlCodec.decode(missingSnapshot));
     }
 }

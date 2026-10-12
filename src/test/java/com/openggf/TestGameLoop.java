@@ -609,6 +609,15 @@ public class TestGameLoop {
         int methodEnd = source.indexOf("void fadeOutTo(Runnable next)", methodStart);
         assertTrue(methodStart >= 0 && methodEnd > methodStart, "returnToMasterTitle method must exist");
         String methodBody = source.substring(methodStart, methodEnd);
+        // The shared teardown also serves a hosted run's return to its mod scene; inline it here
+        // so the ordering below is checked against the master-title hand-back.
+        assertTrue(methodBody.indexOf("tearDownGameplayForReturn();")
+                        < methodBody.indexOf("masterTitleLaunchCoordinator.returnToMasterTitle()"),
+                "Gameplay teardown must run before gameplay is handed back to master title");
+        int teardownStart = source.indexOf("void tearDownGameplayForReturn()");
+        int teardownEnd = source.indexOf("\n    }\n", teardownStart);
+        methodBody = methodBody.replace("tearDownGameplayForReturn();",
+                source.substring(teardownStart, teardownEnd));
 
         assertTrue(methodBody.contains("userRecordingSessionLauncher.stopActiveRecording"),
                 "Escape/return-to-title must finalize active user recordings");

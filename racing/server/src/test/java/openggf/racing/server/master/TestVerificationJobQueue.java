@@ -1,0 +1,133 @@
+package openggf.racing.server.master;
+
+import org.junit.jupiter.api.Test;
+
+import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class TestVerificationJobQueue {
+    private static VerificationJobQueue.Job job(String fingerprint, String hash) {
+        return new VerificationJobQueue.Job(null, "r-1", 2, "player",
+                "r-1#2#3", fingerprint, "s3k:0:0", "sonic",
+                100, 10, 110, hash, "bb", false, 0);
+    }
+
+    @Test
+    void submitAwaitsUploadThenQueuesOnMatchingHash() {
+        VerificationJobQueue queue = new VerificationJobQueue(() -> 0, 100);
+        String id = queue.submit(job("0.6:cafe", "aa"), 1000);
+        assertEquals(VerificationJobQueue.State.AWAITING_UPLOAD, queue.stateOf(id));
+        queue.onRecordingUploaded("aa", "player");
+        assertEquals(VerificationJobQueue.State.QUEUED, queue.stateOf(id));
+    }
+
+    @Test
+    void leaseOnlyMatchingFingerprintAndOnlyQueued() {
+        VerificationJobQueue queue = new VerificationJobQueue(() -> 0, 100);
+        queue.submit(job("0.6:cafe", "aa"), 1000);
+        queue.onRecordingUploaded("aa", "player");
+        assertTrue(queue.lease("wrong", Set.of("0.7:beef")).isEmpty());
+        assertTrue(queue.lease("right", Set.of("0.6:cafe")).isPresent());
+        assertTrue(queue.lease("other", Set.of("0.6:cafe")).isEmpty());
+    }
+
+    @Test
+    void perJobUploadDeadlinesVoidIndependentlyAndOnlyOnce() {
+        long[] now = {0};
+        VerificationJobQueue queue = new VerificationJobQueue(() -> now[0], 100);
+        String early = queue.submit(job("fp", "aa"), 10);
+        String late = queue.submit(job("fp", "bb"), 20);
+        now[0] = 11;
+        assertEquals(1, queue.voidExpiredUploads().size());
+        assertEquals(VerificationJobQueue.State.VOID, queue.stateOf(early));
+        assertEquals(VerificationJobQueue.State.AWAITING_UPLOAD, queue.stateOf(late));
+        assertTrue(queue.voidExpiredUploads().isEmpty());
+    }
+
+    @Test
+    void expiredLeaseRequeuesAndCanBeCompletedOnlyByNewLeaseholder() {
+        long[] now = {0};
+        VerificationJobQueue queue = new VerificationJobQueue(() -> now[0], 10);
+        String id = queue.submit(job("fp", "aa"), 100);
+        queue.onRecordingUploaded("aa", "player");
+        queue.lease("w1", Set.of("fp")).orElseThrow();
+        now[0] = 11;
+        assertEquals(1, queue.requeueExpiredLeases());
+        queue.lease("w2", Set.of("fp")).orElseThrow();
+        assertTrue(queue.complete(id, "w1").isEmpty());
+        assertTrue(queue.complete(id, "w2").isPresent());
+    }
+
+    @Test
+    void completeRequiresLeaseholderAndIsIdempotent() {
+        VerificationJobQueue queue = new VerificationJobQueue(() -> 0, 100);
+        String id = queue.submit(job("fp", "aa"), 1000);
+        queue.onRecordingUploaded("aa", "player");
+        assertTrue(queue.complete(id, "w1").isEmpty());
+        queue.lease("w1", Set.of("fp")).orElseThrow();
+        assertTrue(queue.complete(id, "w2").isEmpty());
+        assertEquals(VerificationJobQueue.State.LEASED, queue.stateOf(id));
+        assertTrue(queue.complete(id, "w1").isPresent());
+        assertTrue(queue.complete(id, "w1").isEmpty());
+    }
+
+    @Test
+    void uploadMustMatchAwaitingJobIdentity() {
+        VerificationJobQueue queue = new VerificationJobQueue(() -> 0, 100);
+        String id = queue.submit(job("fp", "aa"), 1000);
+        assertTrue(!queue.awaitsUpload("aa", "attacker"));
+        assertTrue(!queue.onRecordingUploaded("aa", "attacker"));
+        assertEquals(VerificationJobQueue.State.AWAITING_UPLOAD, queue.stateOf(id));
+        assertTrue(queue.onRecordingUploaded("aa", "player"));
+        assertEquals(VerificationJobQueue.State.QUEUED, queue.stateOf(id));
+    }
+
+    @Test
+    void pruningRemovesOnlyTerminalJobsPastRetention() {
+        long[] now = {10};
+        VerificationJobQueue queue = new VerificationJobQueue(() -> now[0], 100);
+        String done = queue.submit(job("fp", "aa"), 1000);
+        queue.onRecordingUploaded("aa", "player");
+        queue.lease("worker", Set.of("fp")).orElseThrow();
+        queue.complete(done, "worker").orElseThrow();
+
+        String voided = queue.submit(job("fp", "bb"), 1000);
+        queue.voidJob(voided).orElseThrow();
+        String active = queue.submit(job("fp", "cc"), 1000);
+
+        now[0] = 20;
+        assertEquals(0, queue.pruneTerminalBefore(10));
+        assertEquals(2, queue.pruneTerminalBefore(11));
+        assertTrue(queue.find(done).isEmpty());
+        assertTrue(queue.find(voided).isEmpty());
+        assertTrue(queue.find(active).isPresent());
+    }
+
+    @Test
+    void uploadedJobExpiresWhenVerifierNeverReturnsButCannotBeCompletedLater() {
+        long[] now = {0};
+        VerificationJobQueue queue = new VerificationJobQueue(() -> now[0], 100);
+        String id = queue.submit(job("fp", "aa"), 10);
+        queue.onRecordingUploaded("aa", "player");
+        queue.lease("worker", Set.of("fp")).orElseThrow();
+        now[0] = 3_600_001;
+        assertEquals(id, queue.expireStalledJobs(3_600_000).getFirst().jobId());
+        assertEquals(VerificationJobQueue.State.VOID, queue.stateOf(id));
+        assertTrue(queue.complete(id, "worker").isEmpty());
+        assertTrue(queue.expireStalledJobs(3_600_000).isEmpty());
+    }
+
+    @Test
+    void queueRefusesNewJobsAtCapacityInsteadOfGrowingWithoutBound() {
+        VerificationJobQueue queue = new VerificationJobQueue(() -> 0, 100);
+        for (int i = 0; i < VerificationJobQueue.MAX_TRACKED_JOBS; i++) {
+            queue.submit(job("fp", "aa"), 1000);
+        }
+        assertThrows(IllegalStateException.class,
+                () -> queue.submit(job("fp", "aa"), 1000));
+        assertEquals(VerificationJobQueue.MAX_TRACKED_JOBS, queue.size());
+    }
+}

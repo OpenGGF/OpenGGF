@@ -243,3 +243,40 @@ tests now enforce Mockito's disabled lifecycle, surviving same-class foreign moc
 discarded default answers and idempotent close. LWJGL 3.3.3 emitted its expected
 JDK 25 `Unsafe.objectFieldOffset` deprecation warning; access succeeded and no
 suppression or experimental compatibility flag was added.
+
+
+## Updated destination reconciliation
+
+While verification was queued, develop advanced to
+`e76a380c3d0c8e3769fcdb745f27ef3d8889c8fe`. Its Time Attack extraction,
+bundled-mod packaging, racing server, scoped networking dependencies and new Mod
+API signatures are retained. The migration follows the moved identity cache and
+raises both the new bundled-mod compiler and standalone racing compiler to 25.
+The new Maven packager uses Maven's own Java executable; racing launchers declare
+native access and use the selected JAVA_HOME toolchain. The bundled packaging
+regression checks actual generated class files for major version 69.
+
+A clean Java 25 focused run of `TestBundledModPackager,TestBundledModSource,
+TestActPracticeExample,TestTimeAttackModPackage,TestSqliteIdentityStore` passed
+27 tests, zero failures/errors/skips, in 85 seconds. It used the queued lean lane
+and all three absolute original ROM properties. This verifies the newly moved
+SQLite consumer and bundled runtime packaging, not full-suite acceptance.
+
+The obsolete f9 baseline was stopped and acknowledged after its ordinary stage;
+its incomplete guard stage is not a pass. The replacement unchanged e76 Java 21
+baseline selects 3097 ordinary classes plus guards. Both replacement baseline and
+candidate use a 120-minute per-invocation ceiling and the existing 10-minute
+no-output limit: queue history now measures about 64 minutes median / 91 minutes
+p95 for broad holds, substantially longer than the old 24-minute estimate. Queue
+waiting is excluded. Both launch environments remove inherited LD_LIBRARY_PATH,
+which the documented hermetic audio CLI deliberately rejects; negative-injection
+tests retain their own controlled values.
+
+The reconciled Python runner safety discovery (`test_run_categor*.py`, including
+`test_run_categories.py`) passed all 137 tests under JAVA_HOME 25 in 24 seconds.
+
+The reconciled mixed-runtime build (`JAVA_HOME=25`, `PATH` Java 21,
+`maven_queue.py -Dmse=off -DskipTests -Puniversal-jar verify`) passed in 34.8 seconds.
+The universal engine and embedded Time Attack mod contain class-file version 69;
+the bundled manifest's size and SHA-256 match the embedded jar. This exercises
+the new Maven-selected bundled packager without relying on PATH's Java.

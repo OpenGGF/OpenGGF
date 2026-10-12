@@ -175,9 +175,6 @@ public final class EngineSettingsDraft {
             case CONTROLLER_DEADZONE -> {
                 if (n < 0 || n >= 1) throw new IllegalArgumentException("Deadzone: 0 to below 1");
             }
-            case TIME_ATTACK_NET_HOST_PORT -> {
-                if (n < 1 || n > 65535) throw new IllegalArgumentException("Port: 1 to 65535");
-            }
             case FPS, SCREEN_WIDTH, SCREEN_HEIGHT, SCALE, CAPTURE_SCALE, CAPTURE_FPS,
                     CAPTURE_QUEUE_BUDGET_MB, REWIND_HISTORY_SECONDS, REWIND_AUDIO_HISTORY_SECONDS,
                     REWIND_AUDIO_HISTORY_SIZE_MB, LIVE_REWIND_TAPE_COAST_MIN_STEPS,

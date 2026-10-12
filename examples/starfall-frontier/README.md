@@ -128,8 +128,8 @@ The first command queues the engine compile and packages the creator sources
 through `ggfmod package`. The jar is
 `target/examples/starfall-frontier/starfall-frontier.jar`. `--install` copies
 it to this checkout's `mods/`, enables it, and grants code trust to that exact
-jar hash, preserving other mod state. Restart the JVM and select **Sonic 3 &
-Knuckles** on the master title. The mod requests a 528 × 224 logical viewport.
+jar hash, preserving other mod state. At the master title, open Mod Manager and
+choose Apply, then select **Sonic 3 & Knuckles**. The mod requests a 528 × 224 logical viewport.
 Other installed mods remain enabled; later applicable startup scenes take
 precedence. Use Mod Manager to disable Starfall Frontier when you want the
 stock S3K title again. This code mod does not run in native-image releases.

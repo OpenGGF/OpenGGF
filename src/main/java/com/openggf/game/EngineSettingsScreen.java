@@ -182,7 +182,6 @@ public final class EngineSettingsScreen {
         return switch (key) {
             case SONIC_1_ROM, SONIC_2_ROM, SONIC_3K_ROM, ROMS_DIRECTORY, PLAYBACK_MOVIE_PATH,
                     TRACE_CATALOG_DIR, CAPTURE_OUTPUT_DIR -> MenuTextEditor.Mode.PATH;
-            case TIME_ATTACK_NET_LAST_JOIN_ADDRESS -> MenuTextEditor.Mode.ADDRESS;
             default -> switch (ConfigCatalog.meta(key).type()) {
                 case INT -> MenuTextEditor.Mode.INTEGER;
                 case DOUBLE -> MenuTextEditor.Mode.DECIMAL;
@@ -202,7 +201,6 @@ public final class EngineSettingsScreen {
             case SONIC_1_ROM, SONIC_2_ROM, SONIC_3K_ROM, ROMS_DIRECTORY, ROMS_PREFER_COMPOSITE ->
                     "After Apply: the ROM catalogue rescans and previews refresh; used for the next game load.";
             case TRACE_CATALOG_DIR -> "After Apply: used when the trace picker next opens.";
-            case TIME_ATTACK_NET_LAST_JOIN_ADDRESS -> "After Apply: used when the LAN menu next opens.";
             // LiveCaptureRecorderFactory reads these when creating a recording.
             case CAPTURE_CODEC, CAPTURE_AUDIO_CODEC, CAPTURE_ENCODER_THREADS, CAPTURE_ENCODER_PRESET,
                     CAPTURE_FFMPEG_PASS1_ARGS, CAPTURE_FFMPEG_PASS2_ARGS, CAPTURE_QUEUE_BUDGET_MB,

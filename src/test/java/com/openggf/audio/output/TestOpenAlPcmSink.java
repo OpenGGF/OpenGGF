@@ -17,10 +17,11 @@ import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.LiveCaptureAudioHandle;
-import com.openggf.audio.AudioBenchmarkMemoryProbe;
+import com.sun.management.ThreadMXBean;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
+import java.lang.management.ManagementFactory;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -45,12 +46,28 @@ class TestOpenAlPcmSink {
             device.consumed = 3_072;
             long expected = device.consumed + sink.droppedStereoFrames();
             for (int chunk = 0; chunk < 100; chunk++) assertEquals(expected * 100, queryCursor(sink, 100));
-            AudioBenchmarkMemoryProbe probe = AudioBenchmarkMemoryProbe.create();
-            long[] checksum = new long[1];
-            probe.measureTimedRun(() -> checksum[0] = queryCursor(sink, 1_000));
-            var measured = probe.measureTimedRun(() -> checksum[0] = queryCursor(sink, 10_000));
-            assertEquals(expected * 10_000, checksum[0]);
-            Assumptions.assumeTrue(measured.allocatedBytesSupported(), "JVM cannot report per-thread allocation");
+            var rawBean = ManagementFactory.getThreadMXBean();
+            Assumptions.assumeTrue(rawBean instanceof ThreadMXBean, "JVM cannot report per-thread allocation");
+            ThreadMXBean bean = (ThreadMXBean) rawBean;
+            Assumptions.assumeTrue(bean.isThreadAllocatedMemorySupported(), "JVM cannot report per-thread allocation");
+            if (!bean.isThreadAllocatedMemoryEnabled()) {
+                try {
+                    bean.setThreadAllocatedMemoryEnabled(true);
+                } catch (SecurityException | UnsupportedOperationException ignored) {
+                    // Skip only the metric when the JVM disallows enabling it.
+                }
+            }
+            Assumptions.assumeTrue(bean.isThreadAllocatedMemoryEnabled(), "JVM cannot enable thread allocation");
+            long threadId = Thread.currentThread().threadId();
+            Assumptions.assumeTrue(bean.getThreadAllocatedBytes(threadId) >= 0, "JVM cannot read thread allocation");
+            // Measure only cursor queries, without the shared benchmark probe's
+            // polymorphic Runnable call site or its unrelated heap/GC reads.
+            // Warm this exact measured loop shape before enforcing the zero budget.
+            for (int warm = 0; warm < 20; warm++) {
+                assertEquals(expected * 10_000, measureCursor(bean, threadId, sink).checksum());
+            }
+            CursorMeasurement measured = measureCursor(bean, threadId, sink);
+            assertEquals(expected * 10_000, measured.checksum());
             assertEquals(0, measured.allocatedBytes(), "an audible cursor query must reuse primitive gap storage");
         } finally { producer.close(); }
     }
@@ -60,6 +77,15 @@ class TestOpenAlPcmSink {
         for (int index = 0; index < count; index++) checksum += sink.consumedStereoFrames();
         return checksum;
     }
+
+    private static CursorMeasurement measureCursor(ThreadMXBean bean, long threadId, OpenAlPcmSink sink) {
+        long before = bean.getThreadAllocatedBytes(threadId);
+        long checksum = queryCursor(sink, 10_000);
+        long allocated = bean.getThreadAllocatedBytes(threadId) - before;
+        return new CursorMeasurement(checksum, allocated);
+    }
+
+    private record CursorMeasurement(long checksum, long allocatedBytes) { }
 
     @Test
     void deviceUpdatesRetireProlongedDropsWithoutAnAudibleCursorReader() {

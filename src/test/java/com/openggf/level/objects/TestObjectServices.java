@@ -47,6 +47,9 @@ public class TestObjectServices implements ObjectServices {
     private LevelManager levelManager;
     private Camera camera;
     private GameStateManager gameState;
+    private com.openggf.game.session.GameplayRunPolicy runPolicy =
+            com.openggf.game.session.GameplayRunPolicy.stock();
+    private boolean hostReturnRequested;
     private SpriteManager spriteManager;
     private FadeManager fadeManager;
     private WaterSystem waterSystem;
@@ -106,6 +109,20 @@ public class TestObjectServices implements ObjectServices {
     public TestObjectServices withGameState(GameStateManager gameState) {
         this.gameState = gameState;
         return this;
+    }
+
+    public TestObjectServices withRunPolicy(com.openggf.game.session.GameplayRunPolicy runPolicy) {
+        this.runPolicy = runPolicy;
+        return this;
+    }
+
+    @Override
+    public com.openggf.game.session.GameplayRunPolicy runPolicy() {
+        return runPolicy;
+    }
+
+    public boolean hostReturnRequested() {
+        return hostReturnRequested;
     }
 
     public TestObjectServices withSpriteManager(SpriteManager spriteManager) {
@@ -508,7 +525,8 @@ public class TestObjectServices implements ObjectServices {
     }
 
     @Override
-    public void requestTimeAttackMenuReturn() {
+    public void requestHostReturn() {
+        hostReturnRequested = true;
     }
 
     @Override

@@ -241,8 +241,9 @@ python3 examples/infinite-sonic/build.py --run
 
 `--run` uses the SDK's explicit development-mod launch. Select/configure your Sonic 1
 ROM in the engine as usual. For normal launches, copy
-`target/infinite-sonic/infinite-sonic.jar` into the root `mods/` directory, enable
-**Infinite Sonic** in Mod Manager, grant code trust, and restart the JVM engine.
+`target/infinite-sonic/infinite-sonic.jar` into the root `mods/` directory and choose
+Apply in the master title's Mod Manager to rescan. Enable **Infinite Sonic**, grant
+code trust, and choose Apply again.
 Native-image builds cannot load code mods.
 
 The project is source-first and builds against this checkout's unpublished Mod API

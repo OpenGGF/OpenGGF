@@ -485,8 +485,8 @@ remaining S3K gates. Existing modding, racing, editor and widescreen work stays
 under regression coverage while those campaign owners settle.
 
 The [0.8 roadmap](docs/project/v0.8-roadmap.md) then graduates those additions:
-final policy/API design, Time Attack and multiplayer extraction into a bundled
-mod, measured extensions to the already-delivered background loading, live FM
+final policy/API design, qualification of the bundled Time Attack mod and shared
+multiplayer services, measured extensions to the already-delivered background loading, live FM
 switching, and feature/platform qualification. API publication follows those
 consumers; the current Mod API remains an unpublished candidate. Native builds
 currently reject code mods, so bundled racing's native availability needs an

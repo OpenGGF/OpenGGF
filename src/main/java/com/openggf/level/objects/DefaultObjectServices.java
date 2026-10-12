@@ -512,8 +512,14 @@ public class DefaultObjectServices implements ObjectServices {
     }
 
     @Override
-    public void requestTimeAttackMenuReturn() {
-        lm().requestTimeAttackMenuReturn();
+    public com.openggf.game.session.GameplayRunPolicy runPolicy() {
+        return gameplayMode != null ? gameplayMode.getRunPolicy()
+                : com.openggf.game.session.GameplayRunPolicy.stock();
+    }
+
+    @Override
+    public void requestHostReturn() {
+        lm().requestHostReturn();
     }
 
     @Override

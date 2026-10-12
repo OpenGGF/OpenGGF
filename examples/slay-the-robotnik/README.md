@@ -167,15 +167,16 @@ run.Run ── room() ───────────────────�
 Read it in that order: `SlayTheRobotnikMod`, `SlayScene`, `Shell` and `Screen`, `TitleScreen`,
 `RunScreen`, then `CombatView` against `core/Combat`.
 
-**Animation lives in `update`.** Views advance their timers in `update` and only read them in
-`draw`, because the engine may skip or repeat `draw` (headless capture draws only some frames).
+**Animation belongs in `update`.** The scene contract permits skipped or repeated `draw`
+calls, so gameplay and target layout must be prepared independently of rendering. The
+[mod audit](../../docs/architecture/audits/2026-10-12-mod-author-framework-audit.md#r4-slay-combat-targeting-depends-on-drawing)
+records the remaining correction to `CombatView`'s draw-populated target boxes.
 
-**The engine surface is 20 types**, all in two packages: `GgfMod` and `ModContext` to
-register, and `ModScene`, `SceneContext`, `SceneCanvas`, `SceneDraw`, `SceneImage`,
-`SceneSprite`, `SceneSpriteSet`, `SceneRomArt`, `RomSpriteRequest`, `SceneBackdrop`,
-`SceneLevelStage`, `SceneButtons`, `SceneKeys`, `SceneMouse`, `SceneStorage` and
-`DebuggableScene` to run. Everything else is plain Java. The pictures come from the ROM
-through `SceneRomArt`:
+**The engine boundary is the candidate Mod API.** `GgfMod` and `ModContext` register
+the scene; the scene services provide input, canvas, supplied-ROM art, audio and
+storage. Slay also uses the [shared creator helpers](../../docs/modding/guides/creator-helpers.md),
+including `AtlasFont`, `SceneArtCache`, `SpriteAnchors` and animation sampling.
+Game rules remain plain Java. The pictures come from the ROM through `SceneRomArt`:
 - `art/RomSprites` lists each sprite's art, mappings, DPLC and palette by disassembly label;
 - `scene/EnemyVisuals` assembles badniks and bosses from those frames, at the offsets of the
   original child objects;
@@ -186,9 +187,11 @@ through `SceneRomArt`:
 
 See the [mod scene guide](../../docs/modding/guides/mod-scenes.md) for the API itself.
 
-**Mod code has no static state.** The mod validator rejects enums, static collections and
-static initialisers, so kinds such as card types are `String` constants and tables are
-built per instance. `build.py` packages through `ggfmod`, which runs that validator.
+**Mod code has no mutable static gameplay state.** The validator permits literal
+primitive/String constants and verified immutable enum/compiler initialization;
+arbitrary static collections and initialization remain unsupported. Slay's String
+kinds and instance-built tables are its current design, not a requirement to avoid
+all enums. `build.py` packages through `ggfmod`, which runs that validator.
 
 ## Extending it
 

@@ -23,8 +23,8 @@ python3 examples/build_example.py robotnik-tower-defense
 
 The script launches this mod directly through `ggfmod run`. To install it,
 copy `target/examples/robotnik-tower-defense/robotnik-tower-defense.jar` into
-`mods/`, enable/trust it in the Mod Manager, restart and choose Sonic 3 &
-Knuckles. The title offers **Play Sonic 3 & Knuckles** to return to the stock
+`mods/` and choose Apply in the master title's Mod Manager to rescan. Enable/trust it,
+choose Apply again, then choose Sonic 3 & Knuckles. The title offers **Play Sonic 3 & Knuckles** to return to the stock
 game. Holding Escape returns to the master title. The scene asks for 400×224;
 the engine restores your display aspect at the master title.
 

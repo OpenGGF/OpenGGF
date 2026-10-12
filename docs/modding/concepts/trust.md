@@ -5,6 +5,36 @@ a manifest entrypoint, structural validation, explicit user trust for its exact 
 hash, and an API-compatible range before the engine creates its owner classloader.
 Changing any byte changes the hash and requires a new grant.
 
+## First-party bundled mods: a deliberate narrowing
+
+Mods bundled with an OpenGGF build are the one exception to the explicit-grant rule.
+The build packages each first-party mod with `ggfmod package --warnings error` and
+writes its id, version, file name, size and SHA-256 into a manifest inside the engine
+artifact itself (`META-INF/openggf/bundled-mods.json`). That build-pinned manifest is
+the only source of this default trust:
+
+- A bundled jar is trusted, and enabled unless the player disabled it, only when its
+  immutable snapshot matches the manifest's hash, size, id and version. Nothing the jar
+  declares about itself grants trust; there is no first-party flag, package exception
+  or validator exemption. The engine validates and class-loads it exactly like any other
+  code mod, through the same structural validator and owner classloader.
+- The trust is derived on every boot and never written to `modstate.json`, which keeps
+  recording only the player's own grants and choices. A new build trusts only the hash
+  its own manifest names; an older grant never carries over to changed bytes.
+- A missing, resized, tampered or mislabelled bundled jar is not loaded and is shown as
+  an error entry (`BUNDLED_MOD_*` findings). It is never silently trusted, and the
+  player-installed copy of the same id does not take its place.
+- Manifest ids are reserved: a jar in `mods/` with a bundled id is ignored and reported
+  (`BUNDLED_MOD_ID_RESERVED`) rather than blocking both copies as duplicates.
+- The player can disable a bundled mod in the Mod Manager; the choice persists across
+  upgrades. It cannot be uninstalled from the manager, because the engine artifact owns it.
+- Deterministic, certifying and development boots never read, extract or load bundled
+  mods. Native builds carry no bundled manifest or jars and keep rejecting code mods.
+
+Anyone able to replace files in the install directory can already replace the engine
+jar, so trusting the engine's own manifest adds no new authority. The narrowing is
+limited to that manifest; it does not extend to any other directory or to user mods.
+
 `ggfmod package` always validates its staging jar before publication. The separate
 `ggfmod validate` command prints sorted findings for an existing jar. The engine
 independently repeats validation and does not trust an author-generated report.

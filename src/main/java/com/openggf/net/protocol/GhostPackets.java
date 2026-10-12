@@ -1,12 +1,13 @@
 package com.openggf.net.protocol;
 
-import com.openggf.ghost.GhostFrameCodec;
+import com.openggf.net.ghost.GhostFrameCodec;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
 /** Binary ghost packets using the canonical seven-byte ghost-frame encoding. */
+@com.openggf.game.ModApi
 public final class GhostPackets {
     public static final int TYPE_GHOST_FRAMES = 0x01;
     public static final int TYPE_GHOST_AGGREGATE = 0x02;
@@ -25,6 +26,7 @@ public final class GhostPackets {
     private static final int ENTRY_HEADER = 1 + 4 + 4 + 1;
     private static final int AGGREGATE_HEADER = 1 + 4 + 1;
 
+    @com.openggf.game.ModApi
     public record FramesBatch(int attemptId, int startFrameIndex, int frameCount,
                               byte[] frameData) {
         public FramesBatch {
@@ -37,6 +39,7 @@ public final class GhostPackets {
         }
     }
 
+    @com.openggf.game.ModApi
     public record AggregateEntry(int playerSlot, int attemptId, int startFrameIndex,
                                  int frameCount, byte[] frameData) {
         public AggregateEntry {
@@ -49,15 +52,18 @@ public final class GhostPackets {
         }
     }
 
+    @com.openggf.game.ModApi
     public record Aggregate(int hubTick, List<AggregateEntry> entries) {
         public Aggregate {
             entries = List.copyOf(entries);
         }
     }
 
+    @com.openggf.game.ModApi
     public record RosterEntry(int playerSlot, int cellX, int cellY, int status) {
     }
 
+    @com.openggf.game.ModApi
     public record RelayGuestBinary(int guestId, byte[] payload) {
         public RelayGuestBinary {
             payload = payload.clone();
