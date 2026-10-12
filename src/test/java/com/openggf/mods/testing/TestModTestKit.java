@@ -32,10 +32,12 @@ class TestModTestKit {
                 """);
         Path storage = work.resolve("storage");
         try (ModTestKit kit = ModTestKit.openTrusted(repository, storage)) {
+            assertNull(kit.scene());
             assertEquals("owner", kit.plan("owner").ownerModId());
             assertNotSame(getClass().getClassLoader(), kit.loader("owner"));
             var module = kit.launch(new Sonic3kGameModule(), new GameplayLaunchRequest("s3k","sonic",List.of()));
             kit.openScene(module, 320,224);
+            assertSame(kit.loader("owner"), kit.scene().getClass().getClassLoader());
             kit.input().key(org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE,true);
             kit.tick(); kit.tick();
             var frame = kit.draw();
