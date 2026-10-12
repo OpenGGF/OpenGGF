@@ -279,3 +279,8 @@ Malformed or unsupported profiles/runs are preserved; starting a deliberate new 
 permits replacement of its rejected run slot. Profile counters saturate rather than
 overflowing into unreadable negative records. Profile parsing and Three Islands use
 the shared `ModSaveSlot` text helper; their formats and game checkpoint rules stay local.
+
+Art retries distinguish decode arguments, unsupported requests, absent ROM and direct
+ROM I/O failures. Generic provider state/closed-handle errors propagate to the owner
+boundary; they are never cached as invalid art. Successful images retain their formats
+and host ownership.

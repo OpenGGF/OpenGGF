@@ -337,3 +337,8 @@ primary remains preserved instead of silently loading an older backup. Failed re
 backup publication aborts the primary write; failed writes retain the exact checkpoint
 for retry and show a notice. New Game's overwrite interaction permits replacement.
 Individual files are atomically replaced; the two-file sequence is not a crash transaction.
+
+Art retries distinguish decode arguments, unsupported requests, absent ROM and direct
+ROM I/O failures. Generic provider state/closed-handle errors propagate to the owner
+boundary; they are never cached as invalid art. Successful images retain their formats
+and host ownership.

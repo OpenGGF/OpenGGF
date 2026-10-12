@@ -22,6 +22,7 @@ public final class AssetFailures implements AutoCloseable {
     public List<Failure> failures() { return List.copyOf(failures.values()); }
     public <T> T load(String request, Supplier<T> load) {
         requireOpen();
+        request = bounded(request);
         long now = clock.getAsLong(); // A broken clock is a creator fault, outside the load catches.
         Failure prior = failures.get(request);
         if (prior != null && now < prior.retryAt()) return null;
@@ -33,14 +34,21 @@ public final class AssetFailures implements AutoCloseable {
                 failures.remove(request);
             }
             return value;
+        } catch (InvalidData invalid) {
+            record(request, Kind.INVALID_DATA, invalid.getMessage(), now);
         } catch (MissingRom missing) {
             record(request, Kind.OPTIONAL_ROM_MISSING, missing.getMessage(), now);
         } catch (Unavailable unavailable) {
             record(request, Kind.UNAVAILABLE, unavailable.getMessage(), now);
         } catch (UnsupportedOperationException unsupported) {
             record(request, Kind.UNSUPPORTED, cause(unsupported), now);
-        } catch (IllegalArgumentException | IllegalStateException invalid) {
+        } catch (IllegalArgumentException invalid) {
             record(request, Kind.INVALID_DATA, cause(invalid), now);
+        } catch (IllegalStateException state) {
+            // RomSceneArt/SceneRomArtFactory wrap direct I/O failures this way. Other state
+            // failures (closed handles, owner/thread faults, impossible decoder state) escape.
+            if (!(state.getCause() instanceof java.io.IOException)) throw state;
+            record(request, Kind.UNAVAILABLE, cause(state), now);
         }
         // NPE, CallbackAborted, ordinary RuntimeException and Error retain the owner boundary.
         return null;
@@ -50,6 +58,7 @@ public final class AssetFailures implements AutoCloseable {
         return rom;
     }
     public static void unavailable(String cause) { throw new Unavailable(cause); }
+    public static RuntimeException invalidData(String cause) { return new InvalidData(cause); }
     private void record(String request, Kind kind, String cause, long now) {
         if (!failures.containsKey(request) && failures.size() == 64) failures.remove(failures.keySet().iterator().next());
         long retryAt = now > Long.MAX_VALUE - 120 ? Long.MAX_VALUE : now + 120;
@@ -61,4 +70,5 @@ public final class AssetFailures implements AutoCloseable {
     @Override public void close() { closed = true; failures.clear(); }
     private static final class MissingRom extends RuntimeException { MissingRom(String cause) { super(cause); } }
     private static final class Unavailable extends RuntimeException { Unavailable(String cause) { super(cause); } }
+    private static final class InvalidData extends RuntimeException { InvalidData(String cause) { super(cause); } }
 }

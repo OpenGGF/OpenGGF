@@ -367,7 +367,7 @@ public final class Art implements AutoCloseable {
                 .sprites(request, palette);
     }
 
-    public enum FailureKind { OPTIONAL_ROM_MISSING, UNSUPPORTED, INVALID_REQUEST }
+    public enum FailureKind { OPTIONAL_ROM_MISSING, UNSUPPORTED, INVALID_REQUEST, UNAVAILABLE }
     public record Failure(String request, String owner, FailureKind kind, String cause, long retryAt) { }
 
     /** At most 64 bounded entries, independent of successful images and without retained exception graphs. */
@@ -390,8 +390,11 @@ public final class Art implements AutoCloseable {
             record(id, FailureKind.OPTIONAL_ROM_MISSING, "ROM unavailable: " + missing.game);
         } catch (UnsupportedOperationException unsupported) {
             record(id, FailureKind.UNSUPPORTED, detail(unsupported));
-        } catch (IllegalArgumentException | IllegalStateException invalid) {
+        } catch (IllegalArgumentException invalid) {
             record(id, FailureKind.INVALID_REQUEST, detail(invalid));
+        } catch (IllegalStateException state) {
+            if (!(state.getCause() instanceof java.io.IOException)) throw state;
+            record(id, FailureKind.UNAVAILABLE, detail(state));
         }
         return null;
     }

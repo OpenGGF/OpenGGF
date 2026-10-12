@@ -6,7 +6,7 @@ import java.util.List;
 
 /** Small scene-owned diagnostics, without retained exception graphs or retries on every draw. */
 final class ArtFailures {
-    enum Kind { OPTIONAL_ROM_MISSING, UNSUPPORTED, INVALID_REQUEST }
+    enum Kind { OPTIONAL_ROM_MISSING, UNSUPPORTED, INVALID_REQUEST, UNAVAILABLE }
     record Entry(String request, String owner, Kind kind, String cause, long retryAt) { }
     private static final int CAPACITY = 64;
     private static final long RETRY_TICKS = 120;
@@ -29,8 +29,15 @@ final class ArtFailures {
         entries.put(request, new Entry(bounded(request), context.ownerModId(), kind, bounded(cause), retryAt));
     }
 
+    /** Decode argument/I/O failures are retryable; generic provider-state faults are rethrown. */
     void record(String request, RuntimeException cause) {
-        record(request, Kind.INVALID_REQUEST, cause.getClass().getSimpleName() + ": " + cause.getMessage());
+        Kind kind = cause instanceof UnsupportedOperationException ? Kind.UNSUPPORTED : Kind.INVALID_REQUEST;
+        if (cause instanceof IllegalStateException state) {
+            // Actual ROM decoders wrap direct I/O; closed/owner/programming state is terminal.
+            if (!(state.getCause() instanceof java.io.IOException)) throw state;
+            kind = Kind.UNAVAILABLE;
+        }
+        record(request, kind, cause.getClass().getSimpleName() + ": " + cause.getMessage());
     }
 
     void succeeded(String request) { entries.remove(bounded(request)); }

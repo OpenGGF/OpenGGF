@@ -35,18 +35,24 @@ class SceneArtFailureTest {
             kit.sceneHost().close();assertNull(kit.scene());
         }
     }
-    @Test void programmingFaultInArtDisablesAndAttributesTheActualSceneOwner() throws Exception {
-        ArtFixture fixture=new ArtFixture();fixture.spriteFailure=new NullPointerException("fixture decoder programming fault");
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.MethodSource("providerFaults")
+    void programmingFaultInArtDisablesAndAttributesTheActualSceneOwner(RuntimeException injectedFailure) throws Exception {
+        ArtFixture fixture=new ArtFixture();fixture.spriteFailure=injectedFailure;
         try(var kit=open(fixture)) {
             kit.tick();
             var failure=assertThrows(com.openggf.mods.code.ModFaultBoundary.CallbackAborted.class,kit::draw);
-            assertInstanceOf(NullPointerException.class,failure.getCause());
-            assertEquals("fixture decoder programming fault",failure.getCause().getMessage());
+            assertInstanceOf(injectedFailure.getClass(),failure.getCause());
+            assertEquals(injectedFailure.getMessage(),failure.getCause().getMessage());
             assertTrue(kit.disabledOwners().contains("eggmans-sky"));
             assertTrue(kit.findings().containsKey("eggmans-sky"),kit.findings()::toString);
             assertTrue(kit.findings().get("eggmans-sky").stream()
                     .anyMatch(finding->finding.code().equals("MOD_CALLBACK_FAILED")));
             kit.sceneHost().close();assertNull(kit.scene());
         }
+    }
+    private static java.util.stream.Stream<RuntimeException> providerFaults() {
+        return java.util.stream.Stream.of(new NullPointerException("fixture decoder programming fault"),
+                new IllegalStateException("fixture provider owner is retired"));
     }
 }

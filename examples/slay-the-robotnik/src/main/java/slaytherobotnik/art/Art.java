@@ -239,7 +239,7 @@ public final class Art implements AutoCloseable {
                 : attempt("frame:" + key + ":" + frame, () -> set.frame(frame));
     }
 
-    public enum FailureKind { OPTIONAL_ROM_MISSING, UNSUPPORTED, INVALID_REQUEST }
+    public enum FailureKind { OPTIONAL_ROM_MISSING, UNSUPPORTED, INVALID_REQUEST, UNAVAILABLE }
     public record Failure(String request, String owner, FailureKind kind, String cause, long retryAt) { }
 
     /** At most 64 bounded request/cause entries; no exception graphs or image ownership are retained. */
@@ -272,8 +272,11 @@ public final class Art implements AutoCloseable {
             record(id, FailureKind.OPTIONAL_ROM_MISSING, "Running ROM unavailable");
         } catch (UnsupportedOperationException unsupported) {
             record(id, FailureKind.UNSUPPORTED, detail(unsupported));
-        } catch (IllegalArgumentException | IllegalStateException invalid) {
+        } catch (IllegalArgumentException invalid) {
             record(id, FailureKind.INVALID_REQUEST, detail(invalid));
+        } catch (IllegalStateException state) {
+            if (!(state.getCause() instanceof java.io.IOException)) throw state;
+            record(id, FailureKind.UNAVAILABLE, detail(state));
         }
         return null;
     }

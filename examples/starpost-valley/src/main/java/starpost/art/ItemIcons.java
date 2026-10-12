@@ -22,6 +22,7 @@ public final class ItemIcons {
 
     private final Art art;
     private final Map<String, SceneImage> cache = new HashMap<>();
+    private final Map<String, SceneImage> sourcePictures = new HashMap<>();
     private final CropArt crops;
     private final Map<String, Source> sources = new LinkedHashMap<>();
 
@@ -37,6 +38,7 @@ public final class ItemIcons {
 
     /** Draws an item's icon centred in the 16x16 box at (x, y). */
     public void draw(SceneCanvas canvas, Item item, float x, float y, SceneDraw style) {
+        art.requireOpen();
         if (item.id().equals("water_shield")) {
             SceneImage can = art.wateringCan.icon();
             canvas.draw(can, x, y + (16 - can.height()) / 2f, style);
@@ -52,7 +54,15 @@ public final class ItemIcons {
             canvas.draw(screen, x + (16 - screen.width()) / 2f, y + (16 - screen.height()) / 2f, style);
             return;
         }
-        SceneImage image = cache.computeIfAbsent(item.id(), id -> build(item));
+        SceneImage image = sourcePictures.get(item.id());
+        if (image == null) {
+            for (Source source : sources.values()) {
+                image = source.icon(item);
+                if (image != null) { sourcePictures.put(item.id(), image); break; }
+            }
+        }
+        // The built-in fallback can be cached, but must not shadow a repaired source icon.
+        if (image == null) image = cache.computeIfAbsent(item.id(), id -> build(item));
         canvas.draw(image, x + (16 - image.width()) / 2f, y + (16 - image.height()) / 2f, style);
     }
 
@@ -60,6 +70,7 @@ public final class ItemIcons {
     public void addSource(String key, Source source) {
         sources.put(key, source);
         cache.clear();
+        sourcePictures.clear();
     }
 
     /**
@@ -71,12 +82,6 @@ public final class ItemIcons {
     }
 
     private SceneImage build(Item item) {
-        for (Source source : sources.values()) {
-            SceneImage image = source.icon(item);
-            if (image != null) {
-                return image;
-            }
-        }
         if (item.kind() == Kind.CROP) {
             return fit(crops.stage(item.id(), 4, false));
         }

@@ -66,6 +66,26 @@ class ArtRetryTest {
         assertThrows(NullPointerException.class, () -> new StarpostScene().enter(f.context()));
     }
 
+    @Test void providerOwnershipStateIsNotExpectedInvalidData() throws Exception {
+        Fixture f = new Fixture(); RuinsArt ruins = ruins(f.art(), f);
+        f.failure = new IllegalStateException("fixture provider owner is retired");
+        assertThrows(IllegalStateException.class, () -> ruins.missile(0));
+        f.audioFailure = new IllegalStateException("fixture audio owner is retired");
+        Music music = new Music(f.context()); music.want("s1", Music.S1_GHZ);
+        assertThrows(IllegalStateException.class, music::update);
+    }
+
+    @Test void documentedIoWrapperRetriesAndAuthoredMetadataValidationIsExplicit() throws Exception {
+        Fixture f = new Fixture(); RuinsArt ruins = ruins(f.art(), f);
+        f.failure = new IllegalStateException("ROM unavailable", new java.io.IOException("fixture I/O"));
+        assertNull(ruins.missile(0));
+        f.failure = null; f.ticks = 120;
+        assertNotNull(ruins.missile(0));
+        Fixture invalid = new Fixture(); invalid.blockSize = 128;
+        StarpostScene scene = new StarpostScene(); scene.enter(invalid.context());
+        assertEquals(AssetFailures.Kind.INVALID_DATA, scene.failures().getFirst().kind());
+    }
+
     @Test void unavailableMusicRetriesWithoutPublishingAPermanentPlayingTrack() {
         Fixture f = new Fixture(); f.musicAvailable = false;
         Music music = new Music(f.context()); music.want("s1", Music.S1_GHZ);
@@ -77,6 +97,18 @@ class ArtRetryTest {
         f.ticks = 120; music.update();
         assertEquals(2, f.musicLoads);
         music.update(); assertEquals(2, f.musicLoads);
+    }
+
+    @Test void failedMusicSwitchKeepsThePreviousSongOwnedUntilItIsReleased() {
+        Fixture f = new Fixture(); Music music = new Music(f.context());
+        music.want("s1", Music.S1_GHZ); music.update();
+        f.audioFailure = new IllegalArgumentException("fixture unavailable switch");
+        music.want("s1", Music.S1_MZ); music.update();
+        music.parkForAct();
+        assertEquals(1, f.musicStops, "the prior successfully started song still needs release");
+        f.audioFailure = null; f.ticks = 120; music.update();
+        assertEquals(3, f.musicLoads, "the failed switch remains retryable");
+        music.close(); assertEquals(2, f.musicStops);
     }
 
     @Test void mechaPaletteIsPublishedOnlyAfterAllThreeRangesLoad() throws Exception {
@@ -121,8 +153,9 @@ class ArtRetryTest {
 
     static final class Fixture {
         long ticks;
-        int spriteLoads, tileLoads, musicLoads, paletteLoads, tileFailureAt = -1, paletteFailureAt = -1;
+        int spriteLoads, tileLoads, musicLoads, musicStops, paletteLoads, tileFailureAt = -1, paletteFailureAt = -1;
         int[] lastPalette;
+        int blockSize = 256;
         boolean kitAvailable = true, musicAvailable = true, alwaysS3TilesFail;
         RuntimeException failure, kitFailure, audioFailure;
         final SceneImage image = picture(256, 256);
@@ -135,7 +168,7 @@ class ArtRetryTest {
         };
         final SceneLevelKit kit = (SceneLevelKit) Proxy.newProxyInstance(SceneLevelKit.class.getClassLoader(), new Class<?>[] {SceneLevelKit.class},
             (p, m, a) -> switch (m.getName()) {
-                case "blockSize" -> 256;
+                case "blockSize" -> blockSize;
                 case "blockCount" -> 64;
                 case "columns", "rows" -> 1;
                 case "block" -> 60;
@@ -147,7 +180,7 @@ class ArtRetryTest {
                 default -> throw new UnsupportedOperationException(m.getName());
             });
         final SceneRomArt s1 = rom("s1"), s3k = rom("s3k"), s2 = rom("s2");
-        Art art() { return new Art(s1, s3k); }
+        Art art() { return new Art(s1, s3k, () -> ticks, "starpost-valley"); }
         SceneRomArt rom(String game) {
             return (SceneRomArt) Proxy.newProxyInstance(SceneRomArt.class.getClassLoader(), new Class<?>[] {SceneRomArt.class},
                 (p, m, a) -> switch (m.getName()) {
@@ -169,7 +202,7 @@ class ArtRetryTest {
             SceneArt source = (SceneArt) Proxy.newProxyInstance(SceneArt.class.getClassLoader(), new Class<?>[] {SceneArt.class},
                 (p, m, a) -> m.getName().equals("rom") ? (a == null || a.length == 0 ? s3k : a[0].equals("s1") ? s1 : s2) : null);
             SceneAudio audio = (SceneAudio) Proxy.newProxyInstance(SceneAudio.class.getClassLoader(), new Class<?>[] {SceneAudio.class},
-                (p, m, a) -> { if (m.getName().equals("playMusic")) { musicLoads++; if (audioFailure != null) throw audioFailure; return m.getReturnType() == boolean.class ? musicAvailable : null; } return null; });
+                (p, m, a) -> { if (m.getName().equals("playMusic")) { musicLoads++; if (audioFailure != null) throw audioFailure; return m.getReturnType() == boolean.class ? musicAvailable : null; } if (m.getName().equals("stopMusic")) musicStops++; return null; });
             return (SceneContext) Proxy.newProxyInstance(SceneContext.class.getClassLoader(), new Class<?>[] {SceneContext.class},
                 (p, m, a) -> switch (m.getName()) { case "ticks" -> ticks; case "ownerModId" -> "starpost-valley"; case "art" -> source; case "audio" -> audio; default -> throw new UnsupportedOperationException(m.getName()); });
         }

@@ -28,6 +28,16 @@ class ArtTest {
         ArtFixture fixture=new ArtFixture();fixture.spriteFailure=new NullPointerException("programming fault");
         assertThrows(NullPointerException.class,()->fixture.game().art.set("ship"));
     }
+    @Test void providerStateFaultEscapesAndDocumentedIoFailureStillRetries() {
+        ArtFixture fixture = new ArtFixture();
+        fixture.spriteFailure = new IllegalStateException("fixture provider owner is retired");
+        assertThrows(IllegalStateException.class, () -> fixture.game().art.set("ship"));
+        fixture.spriteFailure = new IllegalStateException("ROM unavailable", new java.io.IOException("fixture I/O"));
+        Art art = fixture.game().art;
+        assertNull(art.set("ship"));
+        fixture.spriteFailure = null; fixture.ticks = 120;
+        assertNotNull(art.set("ship"));
+    }
     @Test void failedRequestsHaveBoundedDistinctCauseAndOwnerStatus() throws Exception {
         ArtFixture fixture=new ArtFixture();Art art=fixture.game().art;
         assertNull(art.set("unknown"));

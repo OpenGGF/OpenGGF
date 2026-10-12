@@ -43,17 +43,23 @@ class OwnedArtFailureTest {
             assertInstanceOf(IllegalStateException.class, closed.getCause());
         }
     }
-    @Test void decoderProgrammingFaultReachesTheActualOwnerBoundary() throws Exception {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.MethodSource("providerFaults")
+    void decoderProgrammingFaultReachesTheActualOwnerBoundary(RuntimeException injectedFailure) throws Exception {
         ArtRetryTest.Fixture fixture = new ArtRetryTest.Fixture();
-        fixture.failure = new NullPointerException("fixture decoder programming fault");
+        fixture.failure = injectedFailure;
         try (var kit = open(fixture)) {
             kit.tick();
             var aborted = assertThrows(ModFaultBoundary.CallbackAborted.class, kit::draw);
-            assertInstanceOf(NullPointerException.class, aborted.getCause());
+            assertInstanceOf(injectedFailure.getClass(), aborted.getCause());
             assertTrue(kit.disabledOwners().contains("three-islands"));
             assertTrue(kit.findings().get("three-islands").stream().anyMatch(f -> f.code().equals("MOD_CALLBACK_FAILED")));
             kit.sceneHost().close();
             assertNull(kit.scene());
         }
+    }
+    private static java.util.stream.Stream<RuntimeException> providerFaults() {
+        return java.util.stream.Stream.of(new NullPointerException("fixture decoder programming fault"),
+                new IllegalStateException("fixture provider owner is retired"));
     }
 }

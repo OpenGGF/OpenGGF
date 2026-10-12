@@ -226,3 +226,9 @@ planet remixed from every supplied biome, and a save round trip.
 Debug commands (for capture tools and tests, through `DebuggableScene`): `new[:seed]`,
 `planet:i[:seed]`, `biome:game:zone:act[:seed]`, `space[:i]`, `station`, `galaxy`, `rich`,
 `wanted:n`, `storm`, `night`, `pirates[:tornado]` and `title`.
+
+## Art failure classification
+
+Generic provider state/closed-handle faults propagate to the scene owner. Documented
+ROM decoder failures with a direct I/O cause remain bounded, retryable `UNAVAILABLE`
+status; invalid decode arguments and missing optional ROM retain their own categories.

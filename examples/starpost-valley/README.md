@@ -170,14 +170,18 @@ act replaces them with terrain read from the supplied Sonic 1 ROM; its native
 objects use ROM-backed art intake. No Sega
 asset bytes are committed or bundled.
 
-Expected failures in the startup art, Ruins and Festival facades and soundtrack are
+Expected failures in the startup art, Ruins, Festival, Fish, Tree and Museum facades and soundtrack are
 inspectable through bounded local `failures()` status: at most 64 entries, with
 request/cause text capped at 256 characters. Missing optional ROM, unsupported art,
 invalid data and unavailable music remain distinct. A failed request retries after
 120 owner logic ticks; it never occupies a successful asset cache. Slot faces,
 snowboard banks and generated flower batches publish only after the complete batch,
 and Mecha Sonic's palette is assembled before its sprite bank is prepared. Programming
-faults still reach the mod's owner fault boundary.
+faults still reach the mod's owner fault boundary. Generic provider state errors also
+propagate; only the ROM decoders' direct I/O wrapper is retryable. A temporary palm
+fallback cannot replace Mushroom Hill's recovered tree art, and repaired source icons
+replace the inventory's built-in fallback. Required palette ranges finish before a
+new bank is published.
 
 The live startup scene supplies its scene clock; native Ruins and Festival activity
 facades use their captured session clocks while the scene is suspended. Compatibility

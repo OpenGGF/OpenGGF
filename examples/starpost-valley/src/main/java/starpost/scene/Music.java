@@ -75,12 +75,13 @@ public final class Music implements AutoCloseable {
         Boolean played = failures.load("music:" + wantedGame + ":" + wantedId, () -> {
             if (!audio.playMusic(wantedGame, wantedId)) {
                 audio.stopMusic(); // Unavailable donor/domain: silence, not the preceding song.
+                playingGame = null; playingId = -1;
                 starpost.art.AssetFailures.unavailable("Music ROM or song is unavailable");
             }
             return true;
         });
-        playingGame = played == null ? null : wantedGame;
-        playingId = played == null ? -1 : wantedId;
+        // Expected switch failures may leave the previous song playing; retain its ownership.
+        if (played != null) { playingGame = wantedGame; playingId = wantedId; }
     }
 
     private void release() {
