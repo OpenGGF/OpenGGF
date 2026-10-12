@@ -14,6 +14,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static com.openggf.game.TestMasterTitleHub.press;
 import static org.junit.jupiter.api.Assertions.*;
@@ -89,6 +90,31 @@ class TestMasterTitleHubMessages {
         screen.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_2, false);
         draw(screen);
         assertFalse(font.has("Stock profile"));
+    }
+
+    @Test void enabledModNamesFollowTheSelectedGameBesideItsProfile() throws Exception {
+        var screen = screen(false);
+        screen.setEnabledModsByGame(Map.of(
+                MasterTitleScreen.GameEntry.SONIC_1, List.of("Green Hill Remix"),
+                MasterTitleScreen.GameEntry.SONIC_2, List.of("Tide Circuit", "Music Pack")));
+        screen.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_1, true);
+        screen.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_2, true);
+        screen.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_3K, true);
+
+        draw(screen);
+        assertTrue(font.has("Mods 1/2: Tide Circuit"));
+        assertTrue(font.has("Stock profile"));
+        screen.setSelectedIndexForTest(0);
+        draw(screen);
+        assertTrue(font.has("Mods: Green Hill Remix"));
+        screen.setSelectedIndexForTest(2);
+        draw(screen);
+        assertTrue(font.has("Mods: none"));
+        screen.setRomAvailableForTest(MasterTitleScreen.GameEntry.SONIC_3K, false);
+        draw(screen);
+        assertFalse(font.has("Mods: none"));
+        assertEquals("Mods 2/2: Music Pack",
+                MasterTitleScreen.enabledModsLine(List.of("Tide Circuit", "Music Pack"), 180));
     }
 
     private MasterTitleScreen screen(boolean standalone) throws Exception {

@@ -91,6 +91,10 @@ When the engine starts, you will see:
    Up/down enters its action list, then selects Start Game, Launch Options, Time Attack,
    Recordings, Mods, Settings, Advanced, or Quit. Confirm from the game pane opens
    **Browse Games**, a full-width list with availability and page navigation.
+   The Mods list labels each installed mod with its target game: S1, S2, S3K,
+   S1/S2/S3K for all three, or Standalone.
+   The selected game's pane shows its enabled mods below the launch profile;
+   when several apply, it cycles through their names and shows the current number.
    Confirm from the action pane opens the selected action; Back returns
    one level. Quit (or Esc/B from game selection) opens an exit confirmation.
    Missing ROM entries remain visible but dimmed. Prompts follow the last

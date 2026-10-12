@@ -990,6 +990,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   The installed-mod manager applies saved enablement, order, and code trust at the
   master title by rescanning jars and rebuilding the mod runtime and launch choices;
   restarting the engine is no longer required to change loaded mods.
+  Its list identifies each mod's target game (S1, S2, S3K, all three, or standalone).
+  The master title's game pane shows enabled mod names below the launch profile,
+  cycling through names when several apply to the selected game.
   The creator handbook now starts with a Java 21 setup path, seven purpose-specific
   starters, a capability matrix and the complete recipient install/update/trust/
   rollback journey. Creator kits pair the engine, SDK, API documentation and

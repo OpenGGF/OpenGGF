@@ -1810,12 +1810,40 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 						configService, moduleResolutionService, preparedLaunch),
 				masterTitleEntries(),
 				cue -> audioManager.playSfx(cue.sfxName()));
+		screen.setEnabledModsByGame(enabledTitleModsByGame());
 		com.openggf.game.MasterTitleCatalog.bind(screen, this::masterTitleEntries);
 		if (ModSubsystem.current().policy().mayScanAtBoot()) {
 			screen.setModManagerScreenFactory(font -> ModSubsystem.current().createManager(font));
 			screen.setModManagerApplyHandler(this::reloadExternalContentAtTitle);
 		}
 		return screen;
+	}
+
+	private Map<MasterTitleScreen.GameEntry, List<String>> enabledTitleModsByGame() {
+		Map<MasterTitleScreen.GameEntry, List<String>> names =
+				new java.util.EnumMap<>(MasterTitleScreen.GameEntry.class);
+		var subsystem = ModSubsystem.current();
+		var trusted = subsystem.trustedCodeOwners();
+		var rejected = modRuntime == null ? java.util.Set.<String>of()
+				: modRuntime.rejectedOwners().keySet();
+		var failed = modRuntime == null ? java.util.Set.<String>of()
+				: modRuntime.registrationFailures().keySet();
+		var disabled = modRuntime == null ? java.util.Set.<String>of()
+				: modRuntime.runtimeDisabledOwners();
+		for (MasterTitleScreen.GameEntry game : MasterTitleScreen.GameEntry.values()) {
+			List<String> gameNames = new ArrayList<>();
+			for (var descriptor : subsystem.processCatalog().effective().orderedEnabled()) {
+				var manifest = descriptor.manifest();
+				if (manifest.type() != com.openggf.mods.ModType.PATCH
+						|| !(game.gameId.equals(manifest.baseGame()) || "any".equals(manifest.baseGame()))
+						|| descriptor.containsCode() && (!compiledModsSupported || !trusted.contains(manifest.id()))
+						|| rejected.contains(manifest.id()) || failed.contains(manifest.id())
+						|| disabled.contains(manifest.id())) continue;
+				gameNames.add(manifest.name());
+			}
+			names.put(game, List.copyOf(gameNames));
+		}
+		return names;
 	}
 
 	private void ensureMasterTitleAudioBackend() {

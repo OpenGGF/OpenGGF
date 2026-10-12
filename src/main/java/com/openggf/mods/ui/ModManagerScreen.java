@@ -310,7 +310,12 @@ public final class ModManagerScreen {
                 String badges = row.badges().isEmpty() ? "" : " [" + String.join(",", row.badges()) + "]";
                 float green = !row.valid() ? .4f : row.enabled() ? .75f : 1f;
                 float blue = !row.valid() ? .4f : row.enabled() ? .25f : 1f;
-                drawPrimary(enabled + row.label() + badges, 12, text.primaryTextY(y - 2, 14), 1f, green, blue);
+                String rowText = enabled + row.gameLabel() + row.label() + badges;
+                if (rowText.length() > (320 - 12 - 6) / 9) {
+                    draw(rowText, 12, text.primaryTextY(y - 2, 14), 1f, green, blue);
+                } else {
+                    drawPrimary(rowText, 12, text.primaryTextY(y - 2, 14), 1f, green, blue);
+                }
                 y += 14;
             }
             draw((rows.isEmpty() ? "0" : Integer.toString(selectedIndex + 1)) + " / " + rows.size()
@@ -831,7 +836,7 @@ public final class ModManagerScreen {
 
     private RowView toView(Row row) {
         if (row.invalid() != null) {
-            return new RowView(row.identity(), row.identity(), false, false, false,
+            return new RowView(row.identity(), row.identity(), "", false, false, false,
                     List.of("ERROR"));
         }
         ModDescriptor descriptor = row.descriptor();
@@ -847,8 +852,20 @@ public final class ModManagerScreen {
         String label = descriptorCounts.getOrDefault(id, 0) > 1
                 ? descriptor.manifest().name() + " (" + filename(descriptor.jarPath()) + ")"
                 : descriptor.manifest().name();
-        return new RowView(row.identity(), label, isEnabled(id), true, notLoaded,
+        return new RowView(row.identity(), label, "[" + gameLabel(descriptor.manifest()) + "] ",
+                isEnabled(id), true, notLoaded,
                 List.copyOf(badges));
+    }
+
+    private static String gameLabel(com.openggf.mods.ModManifest manifest) {
+        if (manifest.type() == com.openggf.mods.ModType.STANDALONE) return "Standalone";
+        return switch (manifest.baseGame()) {
+            case "s1" -> "S1";
+            case "s2" -> "S2";
+            case "s3k" -> "S3K";
+            case "any" -> "S1/S2/S3K";
+            default -> throw new IllegalStateException("Unexpected base game: " + manifest.baseGame());
+        };
     }
 
     private static void addFindingBadges(Set<String> badges, List<ModFinding> findings, boolean runtime) {
@@ -863,7 +880,7 @@ public final class ModManagerScreen {
         var manifest = descriptor.manifest();
         lines.add(manifest.name() + "  " + manifest.version());
         lines.add("Jar: " + filename(descriptor.jarPath()));
-        lines.add("Id: " + manifest.id() + "  Game: " + manifest.baseGame());
+        lines.add("Id: " + manifest.id() + "  Applies to: " + gameLabel(manifest));
         int requestedWindows = manifest.patternWindows().orElse(1);
         String allocation = patternWindows.assignment(manifest.id())
                 .map(value -> " at 0x" + Integer.toHexString(value.base())
@@ -956,7 +973,7 @@ public final class ModManagerScreen {
         return filename == null ? path.toString() : filename.toString();
     }
 
-    public record RowView(String identity, String label, boolean enabled, boolean valid,
+    public record RowView(String identity, String label, String gameLabel, boolean enabled, boolean valid,
                           boolean notLoaded, List<String> badges) {
         public RowView {
             badges = List.copyOf(badges);
