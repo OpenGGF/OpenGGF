@@ -11,7 +11,9 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 /** Player-host endpoint for guests tunneled through the host's master connection. */
+@com.openggf.game.ModApi
 public final class HostMasterLink {
+    @com.openggf.game.ModApi
     public interface MessageSink {
         void sendControl(ControlMessage message);
         void sendBinary(byte[] data);
@@ -36,7 +38,7 @@ public final class HostMasterLink {
         this.sink = sink;
     }
 
-    public static HostMasterLink forServer(RaceHostServer server, MessageSink sink) {
+    public static HostMasterLink forServer(RaceRoomHost server, MessageSink sink) {
         return new HostMasterLink(
                 connection -> server.execute(() -> server.room().onConnected(connection)),
                 (connection, text) -> server.execute(() ->

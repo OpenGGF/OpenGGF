@@ -55,7 +55,7 @@ class TestModManagerScreenHost {
         host.render();
 
         assertTrue(font.drawn.contains("MOD MANAGER"));
-        assertTrue(font.drawn.contains("No mods discovered."));
+        assertTrue(font.drawn.contains("No mods. Apply to rescan jars."));
     }
 
     private static final class RecordingFont extends PixelFont {

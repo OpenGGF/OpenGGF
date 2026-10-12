@@ -18,6 +18,7 @@ java.lang.Long
 java.lang.Object
 java.lang.Record
 java.lang.Runnable
+java.lang.RuntimeException
 java.lang.String
 java.lang.StringBuilder
 java.lang.Throwable
@@ -48,6 +49,7 @@ java.util.function.BiFunction
 java.util.function.BooleanSupplier
 java.util.function.Consumer
 java.util.function.Function
+java.util.function.IntSupplier
 java.util.function.LongSupplier
 java.util.function.Predicate
 java.util.function.Supplier

@@ -6,6 +6,15 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Gameplay and presentation
 
+- **Time Attack bundled mod:** solo ghosts, retries and LAN/master-server racing now
+  ship together in an enabled-by-default mod, launched through **Extras > Time Attack**.
+  Disable it in Mods. Existing ghosts and identities keep their locations; the mod
+  imports legacy retry and network preferences once and owns its settings thereafter.
+  Reusable networking remains in the engine for mods to use; dedicated/master servers
+  and verification tools build separately from `racing/server`. Normal native builds
+  do not load the bundled code mod.
+
+
 - **Sonic 1 background scrolling:** Scrap Brain Act 1 uses the REV01 cloud
   interpolation and three building bands, with separate fractional cameras,
   rewind restoration and tile-cache window coverage at wider viewports. Scrap
@@ -982,6 +991,13 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   normalization, scroll uploads and audio reference input checks each reuse their
   existing behavior. Public API and ROM behavior
   remain unchanged.
+
+- **Hosted gameplay and bundled mods:** scenes can launch stock, non-saving runs
+  through a bounded run API, observe steps, hold gameplay, draw ghosts and overlays,
+  and request retry or return. Scene capabilities expire on exit and creator faults
+  retire the run before returning to the title. Build-pinned bundled jars use the
+  ordinary mod validation and trust flow; private binary storage supports ghost data.
+  Shared client, room and protocol contracts are available to other mods.
 
 - **Unpublished Mod API candidate:** mod loading, creator tooling, characters,
   standalone games, and custom-zone work are now available on the development

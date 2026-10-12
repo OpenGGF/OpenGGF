@@ -56,6 +56,13 @@ oracles into gameplay. Categories overlap. New ordinary
 classes without a narrower owner fall into `common`, so naming changes cannot silently drop
 them. Candidate counts include Maven-discovered helper/abstract classes, not just executed tests.
 The union covers the ordinary source inventory; Maven's existing tags and exclusions still apply.
+The inventory reads the POM's ordinary test source directory and static
+`build-helper-maven-plugin` `add-test-source` executions, including the separate
+Time Attack and racing-server projects. Identical resolved roots are deduplicated;
+missing/dynamic/escaping roots, overlapping roots, symlinked source children and
+duplicate Java class paths fail planning instead of silently losing tests. Profile-only
+source executions are outside the ordinary inventory. Unclassified external-project
+changes retain the full ordinary-suite fallback; this discovery does not narrow selection.
 
 Change rules are deliberately narrower than test ownership. Physics changes also select
 related gameplay, rendering and rewind tests. Audio changes also select rewind and tooling.

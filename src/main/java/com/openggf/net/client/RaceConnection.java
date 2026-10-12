@@ -5,6 +5,7 @@ import com.openggf.net.protocol.ControlMessage;
 import java.util.List;
 
 /** Transport-neutral connection to a race room, direct or master-relayed. */
+@com.openggf.game.ModApi
 public interface RaceConnection {
     List<RaceClient.InboundEvent> drainInbound();
     void sendControl(ControlMessage message);

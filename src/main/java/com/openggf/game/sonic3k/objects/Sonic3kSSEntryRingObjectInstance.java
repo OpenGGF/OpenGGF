@@ -407,14 +407,13 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
                 player.getCentreX(), player.getCentreY()));
         var gameState = services().gameState();
 
-        // Special stage entry is fully disabled during a time attack (see
-        // GameLoop.enterSpecialStage()). Unlike the star-post-bonus-star path,
-        // the special-stage-entry branch below hides/control-locks the player
-        // and freezes the camera well before the GameLoop chokepoint is ever
-        // reached — swallowing the request there alone would leave the run
-        // stuck. Check here, before any state change, so the ring stays inert
-        // and the player simply passes through.
-        if (gameState != null && gameState.isTimeAttackActive()) {
+        // Not a ROM branch: a run whose GameplayRunPolicy forbids special stages
+        // leaves the ring inert. Unlike the star-post-bonus-star path, the
+        // special-stage-entry branch below hides/control-locks the player and
+        // freezes the camera well before GameLoop's entry chokepoint is reached, so
+        // the policy must be consulted here, before any state change. The stock
+        // policy always reaches the ROM touch path below.
+        if (!services().runPolicy().specialStageEntry()) {
             return;
         }
 

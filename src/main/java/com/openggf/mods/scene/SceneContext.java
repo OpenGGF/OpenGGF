@@ -73,6 +73,9 @@ public interface SceneContext {
     /** Explicit, bounded direct peer messaging owned by this scene visit. */
     default SceneNetwork network() { throw new UnsupportedOperationException("Scene networking unavailable"); }
 
+    /** Launches stock gameplay runs from this scene, when the scene's entry allows it. */
+    default SceneGameplay gameplay() { throw new UnsupportedOperationException("Gameplay launch unavailable"); }
+
     /** Small text files kept for this mod across sessions (saves, settings, high scores). */
     SceneStorage storage();
 
