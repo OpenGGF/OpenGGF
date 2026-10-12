@@ -3,11 +3,14 @@ package com.openggf;
 import com.openggf.control.InputHandler;
 import com.openggf.debug.playback.PlaybackDebugManager;
 import com.openggf.game.GameMode;
+import com.openggf.game.LevelInputOverlay;
 import com.openggf.game.mode.ControlledFrameRuntime;
+import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.recording.UserRecordingRuntimeControls;
 import com.openggf.game.rewind.LiveRewindManager;
 import com.openggf.game.session.GameplayModeContext;
 import java.util.function.BooleanSupplier;
+import java.util.function.Predicate;
 
 /** Host-row orchestration for creator-controlled gameplay, shared owners remain injected. */
 final class ControlledLevelIteration {
@@ -24,25 +27,63 @@ final class ControlledLevelIteration {
         }
     }
 
+    record ConfigurationCommands(BooleanSupplier levelActive, BooleanSupplier holdsTransition,
+            Predicate<LevelInputOverlay> handle) { }
+
+    record SceneActAdmission(BooleanSupplier consume, Runnable audio) { }
+
     static void step(GameplayModeContext context, InputHandler input,
             EscapeToMasterTitleController escape, UserRecordingRuntimeControls recording,
             LiveRewindManager rewind, PlaybackDebugManager playback,
-            HostPause hostPause, Runnable syncPlayback, Runnable beginAudio,
+            HostPause hostPause, ConfigurationCommands configuration, SceneActAdmission sceneAct,
+            Runnable syncPlayback, Runnable beginAudio,
             Runnable finishAudio, Runnable showTitle) {
         input.refreshLogicalSnapshot();
-        escape.update(GameMode.LEVEL, input);
-        // Returning to the host is presentation work: HOLD and window/user
-        // pause must not prevent its fade callback from completing.
-        if (escape.transitionStarted()) {
-            context.plcFrameLifecycle().runLogicalIteration(context.getFadeManager()::update, frame -> null);
+        boolean fadeWasActive = context.getFadeManager().isActive();
+        boolean fadeServiced = false;
+        if (GameLoopPauseInput.configurationPaused(GameMode.LEVEL) || configuration.holdsTransition().getAsBoolean()) {
+            servicePresentationFade(context);
+            fadeServiced = true;
+        }
+        // A completion may replace this visit or return to a scene/title. The
+        // finishing presentation row cannot enter the former level's controller.
+        if (!configuration.levelActive().getAsBoolean()) {
             input.update();
             return;
         }
-        recording.updateLevelControlInput(input);
-        boolean overlayOwnsPause = GameLoopPauseInput.handleOverlay(GameMode.LEVEL, input);
-        boolean frameStep = hostPause.frameStep(input, overlayOwnsPause);
-        if (hostPause.paused().getAsBoolean() && !frameStep) {
+        if (configuration.holdsTransition().getAsBoolean()) {
             input.update();
+            return;
+        }
+        boolean overlayOwnsPause = GameLoopPauseInput.handleOverlay(GameMode.LEVEL, input);
+        var overlay = GameLoopPauseInput.overlay(GameMode.LEVEL);
+        if (overlayOwnsPause) escape.reset();
+        if (overlay != null && configuration.handle().test(overlay)) {
+            input.update();
+            return;
+        }
+        if (!overlayOwnsPause) escape.update(GameMode.LEVEL, input);
+        // Returning to the host is presentation work: HOLD and window/user
+        // pause must not prevent its fade callback from completing.
+        if (escape.transitionStarted()) {
+            if (!fadeServiced) servicePresentationFade(context);
+            input.update();
+            return;
+        }
+        if (!overlayOwnsPause) recording.updateLevelControlInput(input);
+        boolean frameStep = !GameLoopPauseInput.configurationPaused(GameMode.LEVEL)
+                && hostPause.frameStep(input, overlayOwnsPause);
+        if (hostPause.paused().getAsBoolean() && !frameStep) {
+            if (!fadeServiced) servicePresentationFade(context);
+            input.update();
+            return;
+        }
+        // The native scene/act bridge owns both fades and the exit-admission row.
+        // Its consume call advances input; service only a fade already active at
+        // row entry, preserving the native outer iteration's fade timing.
+        if (sceneAct.consume().getAsBoolean()) {
+            if (fadeWasActive && !fadeServiced) servicePresentationFade(context);
+            sceneAct.audio().run();
             return;
         }
         if (ControlledFrameRuntime.prepareSetup(context)) return;
@@ -70,5 +111,14 @@ final class ControlledLevelIteration {
             showTitle.run();
         }
         input.update();
+    }
+
+    /** Modal holds retain the native palette fade owner without entering a controller/world row. */
+    private static void servicePresentationFade(GameplayModeContext context) {
+        if (!context.getFadeManager().isActive()) return;
+        context.plcFrameLifecycle().runLogicalIteration(frame -> {
+            if (frame.isOwnedBy(PlcLifecyclePhase.PALETTE_FADE))
+                LevelFrameStep.dispatchGameVBlank(LevelFrameContext.from(context), frame);
+        }, context.getFadeManager()::update, frame -> null);
     }
 }
