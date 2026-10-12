@@ -1,6 +1,7 @@
 package survivors;
 
 import com.openggf.audio.GameSound;
+import com.openggf.game.CharacterKey;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.graphics.GLCommand;
@@ -588,9 +589,8 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
 
     /** The arena floor at {@code x}: the first surface from the floor's highest point down. */
     private int floorBelow(int x, Arena arena) {
-        var levelManager = services().levelManager();
         for (int y = arena.floorTop() - 16; y <= arena.floorBottom() + 48; y += 16) {
-            var r = com.openggf.physics.ObjectTerrainUtils.checkFloorDist(levelManager, x, y);
+            var r = services().floorSurface(x, y, TerrainSurface.Layer.FOREGROUND, TerrainSurface.Path.PRIMARY);
             if (r.foundSurface() && r.distance() >= 0 && r.distance() < 16) return y + r.distance();
         }
         return arena.floorTop();
@@ -1484,7 +1484,7 @@ public final class Stage extends AbstractObjectInstance implements ModRewindRecr
         var arena = arena();
         var profile = profile();
         run.begin(arena.stage(), profile, SurvivorsMod.seed());
-        run.tails = player instanceof com.openggf.sprites.playable.Tails;
+        run.tails = player.characterKey().equals(CharacterKey.TAILS);
         player.setRingCount(run.carriedRings);
         if (run.relic(5)) player.giveShield();
         bankedThisRun = 0;
