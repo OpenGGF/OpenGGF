@@ -1424,3 +1424,171 @@ relate the earlier clean producer's artifacts to a later engine build or certify
 ordinary/guard delivery. The unchanged-source Native Flappy binary qualification
 above was not repeated; final integration, broad comparison and cleanup remain
 coordinator-owned.
+
+## Post-repair clean creator producer
+
+The final worker repairs are composed at `98e495bf06f032510593e61c536794abb757a867`.
+README-only `54e771314a38ec575a38e486c167a94e33bce2e6` then reconciles the three
+residual-warning consumers with the actual 24/8/13 ledger. The task tree was clean
+at both build admissions. Java 25 queued build-only `-Dmse=off -DskipTests package`
+completed successfully in 1m21 and 40.214s respectively; tests were skipped, not
+passed. The second build contains all repaired source/template/resource inputs and
+the corrected exported README guidance.
+
+`build_creator_kit.py` exported an exclusive new archive from clean `54e771314`.
+All four artifacts independently report `app.commit=54e771314`, `app.dirty=false`
+and version/base version `0.7.prerelease`. All 1,132 manifest hashes were checked;
+no ROM, target tree or player-state file was exported. Handbook local-link checks
+found zero broken links. The actual compiled engine/SDK signature export remains
+byte-identical to all 20,101 candidate pin rows, SHA-256
+`ff5ac4e6ac6fbbf9b7d7243fa1eda335bb220a49870aa5065ef8377e2c7cac34`.
+The mutable unpublished API remains `0.7.0` candidate; this does not publish or
+freeze a baseline. Later delivery prose does not relabel these frozen artifacts.
+
+| Artifact | SHA-256 |
+|---|---|
+| Engine | `114a46fec0a3a64381b4204db4ccfef842ea45ba1976fbeb5ce96d2229b2b0f4` |
+| SDK | `e1892ee68ff778eb6b0e00c8e45d7ab2795de1931cd1293e7c2fd1e1855d3fae` |
+| Testkit | `36593e5634dc7cd54b88bc88464d67b1a563b47b1769e948d3e6cd8efdb30121` |
+| API Javadoc jar | `13f75781f9705fb7ced8ec4fd9a4622e2c2f1bdf993e4744e58c6df4410b70b5` |
+| Creator archive | `d9671244c9825b4ed6915a29ef1e30e9282ad82b7b38dad105abdfed2d8bd64a` |
+
+The Python creator-tool safety suite passed 17/17 at composed source `98e495bf0`,
+zero failures, in 0.199s: `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest
+test_creator_kit` from `tools/modding`. The following README-only commit changes
+exported prose, not that tool implementation. Fresh seven-kind Maven profiles,
+the two changed maintained consumer packages and the rebuilt Native Flappy binary
+have separate qualification below; they are not inherited as runs of this producer.
+
+## Standalone registration dependency repair and portable negative controls
+
+The default object-factory collection bound remains exactly 10,000. Its runtime
+`ModInputLimits.production()` call unnecessarily added a `game -> io` architecture
+edge; using the existing compile-time default constant removes that edge without
+changing registration or collection policy. The new boundary regression accepts
+exactly 10,000 and rejects 10,001. No architecture exemption, public API or pin
+change was introduced. Normal queued request 20415 passed 62/62 with zero
+failures/errors/skips in 1m11 after 51s admission, completed 20:54:05 BST:
+
+```sh
+env JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestArchUnitRules,TestStandaloneGameSpec,TestOwnerAwareStandaloneModule,TestCreatorCatalogProbe' test
+```
+
+These are 29 architecture, 7 standalone, 25 owner-module and 1 actual catalog
+checks. They ran at dirty `175531f6d` with only the two source files subsequently
+committed unchanged in `fe0371e241194fb1785c25df04d0a954b27c30e3`.
+
+External portable controls used the earlier matching clean `175531f6d` kit.
+Corrected harness request 32028 completed successfully in 6.115s at 20:54:11 BST:
+Hello discovered/started/passed 3/3, zero skips; the deliberately failing test
+discovered/started/failed 1/1, zero aborts/skips; the empty tree discovered zero.
+Mismatch rejection happened before launch/output and preserved the existing target
+bytes. Optional root generation produced the exact payload; its failure published
+no jar. Bounded request 57821 recorded actual nested exits in 2.116s at 20:56:16:
+deliberate failure builder/Jupiter 1/1, empty builder/Jupiter 1/2, generator failure
+builder/nested generator 1/17. The first harness request 23102 had failed its own
+incorrect Hello count expectation after the actual three tests passed; only that
+temporary expectation was corrected. These are explicit positive and negative
+contract outcomes, not a claim that failure/empty fixtures pass tests. Fresh
+generated-profile evidence uses the post-repair producer separately.
+
+## Fresh seven-kind Maven qualification
+
+All seven kinds were generated again by the actual frozen `54e771314` SDK with
+the original `final-creator-KIND` identities and `creator.KIND` packages. Every
+one of the 90 source paths remains; exactly seven integration tests changed to
+the repaired template, while the other 83 files are byte-identical. The fresh
+exported Hello source is byte-identical to the earlier kit. Fresh independent
+output directories contain no reused targets or checkout classes.
+
+The matching testkit was installed with Maven's build-only `install-file` goal.
+Normal queued request 61105 then acquired after 4s and completed in 7.647s,
+exit 0, at 21:09:06 +0100. All eight child projects and their reactor succeeded.
+The exact command used the task-owned external reactor; `OPENGGF_CREATOR_RUN`
+denotes that fresh directory and `OPENGGF_KIT` the unpacked frozen kit:
+
+```sh
+env JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 PYTHONDONTWRITEBYTECODE=1 python3 tools/testing/maven_queue.py -Dmse=off -f "$OPENGGF_CREATOR_RUN/reactor/pom.xml" -Pcreator-tests -Dopenggf.testkit.version=0.7.prerelease "-Dopenggf.engine.jar=$OPENGGF_KIT/engine.jar" "-Dopenggf.sdk.jar=$OPENGGF_KIT/sdk.jar" package
+```
+
+The coordinator independently read all nine Surefire XML reports: music, reskin,
+object, character, zone, scene and standalone each pass one actual integration
+test; Hello passes one integration and two persistence checks. Total **10/10,
+zero failures/errors/skips**. These pure creator cases require no ROM. Runtime
+classpaths use only the supplied matching artifacts and fresh generated classes;
+the cached testkit's hash matches the manifest exactly. All eight main mod jars
+and main class trees exclude integration/persistence tests, Jupiter and testkit
+helpers. Engine/SDK contain no Jupiter or testkit helpers; the separate classifier
+contains exactly three maintained test helpers and no Jupiter dependency classes.
+The worker checkout stayed clean at `fe0371e24`; the external source/artifacts
+executed here were exclusively `54e771314`, not that checkout's engine classes.
+
+This completes the previously failed music-first Maven reactor gate. The earlier
+36286 failure and its unexecuted children remain recorded; the fresh successful
+reactor is separate evidence rather than a reinterpretation of that red run.
+
+## Changed maintained consumer compatibility
+
+The coordinator independently compared decompressed SDK/testkit entries from
+175531 to 54e771: no entries were added or removed and every class byte matches.
+SDK differences are exclusively producer metadata and the repaired integration
+test template; testkit differs exclusively in producer metadata. This supports
+retaining the 27 unchanged maintained-source package/strict rows at their original
+producer identity. It does not certify engine runtime equivalence: the presentation
+extraction has its focused checks and the native binary repeat below.
+
+The two changed maintained-source rows were rebuilt against the frozen 54e771
+engine/SDK. Owned request 63958 completed actual compilation, package and both
+allow/strict validation in 1.947s, zero findings for both rows. The part5 tutorial
+has seven main Java sources and jar SHA-256
+`c45bb35d42e7a28ace9d4852f806042e289bc761b5e2ee6ce213adab650c4ebd`.
+The Phase2 fixture has three main Java sources plus its authored art/level converter
+inputs; its jar SHA-256 is
+`be9fa8b5778fd074040ef6cfee421743fce4dfb9cb9a27f73f52aad44b31ca01`.
+These are separately identified compilation/package qualifications; their tutorial
+and native production behavior checks remain recorded at the exact tested sources.
+All 29 maintained manifests are accounted for, with the unchanged 45-reference
+expert-bridge ledger and seven generated starter profiles kept distinct.
+
+## Final Native Flappy binary and local replacement
+
+The unchanged maintained `sample-flappy-src/build.sh` was run with the matching
+54e771 engine/SDK into a fresh owned external project. A task-local Maven shim
+added only `-DskipTests` for this build-only command; the authored script/POM,
+base64 inputs and art/level converter behavior were unchanged. Actual packaging
+and both allow/strict validation reported zero findings. The resulting jar is
+byte-identical to the earlier qualified binary: SHA-256
+`03c311c6701058eb69721a9540f2ab327af0573f10e00b6c73203ad92b9e0bfd`,
+`sample-flappy` version 1.0.0, range `>=0.7.0 <0.8.0`, base `s3k`.
+
+The engine presentation extraction nevertheless warrants an actual runtime repeat.
+Normal queued request 1077 acquired immediately and passed **11/11, zero
+failures/errors/skips** against that rebuilt jar and clean 54e771 engine classes.
+Maven completed in 1m05 at 21:12:00 +0100; the suite itself took 2.132s. The
+coordinator independently inspected the XML counts, Java 25.0.4.1, candidate jar
+property/hash and all three original canonical absolute ROM properties. The same
+11 named cases recorded above exercise isolated normal title trust/Apply/rescan,
+native S3K startup, palette/art/HUD, flight/crash/scoring/recycle and rewind.
+This is headless runtime evidence, not unavailable GPU/window footage.
+
+Exact invocation, with `OPENGGF_NATIVE_JAR` the actual rebuilt jar and
+`OPENGGF_ROM_ROOT` the existing supplied-ROM checkout:
+
+```sh
+env JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestSampleFlappyIntegration' "-Dsample.flappy.jar.path=$OPENGGF_NATIVE_JAR" "-Dsonic1.rom.path=$OPENGGF_ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=$OPENGGF_ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=$OPENGGF_ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test
+```
+
+At replacement time the installed obsolete jar still matched its recorded
+SHA-256 `2e8d21c4c44ec9b30cf201919000d75260cae31f619da7c59496f65663084ed6`.
+All 38 inventoried configuration, save, state/cache and unrelated artifact files
+matched their pre-task hashes. That original jar was copied and independently
+hash-checked in an explicit rollback directory outside `mods/`, then only
+`mods/sample-flappy-mod.jar` was atomically replaced. Its installed hash matches
+the qualified binary. All 38 other files remain byte-identical after replacement;
+unknown jars and the player's disabled/untrusted choice are preserved. Normal
+trust renewal and Apply were verified in the isolated candidate runtime, not
+written into the player's real modstate. The original user artifact/rollback is
+retained independently of disposable qualification outputs.
+
+Main integration, its required ordinary/guard comparison, push and accounted task
+cleanup remain open at this checkpoint.

@@ -11,16 +11,18 @@ execution plan; the checkpoint below distinguishes implemented work from remaini
 
 **Completed artifact checkpoint:** clean producer `175531f6dc4a0d0005c4593022393182d1f5e58c`
 qualified the repaired consumers and accepted shared contracts at that historical source.
-**Current composed source:** `54e771314` also contains the later fixture/template,
-presentation and standalone-bound repairs; fresh producer qualification remains open.
+**Qualified creator producer:** clean `54e771314` also contains the later fixture/template,
+presentation and standalone-bound repairs; matching kit and external qualifications
+are complete at that explicitly recorded source.
 The current inventory is **29 maintained manifests**, including Act Practice, bundled Time Attack,
 example-mutators and Starpost Valley. Initial 25/28-manifest counts remain historical.
 P01–P09, P11–P16, P18 and P20 have implemented repairs and focused qualification;
 P09's actual warning ledger and README consolidation are complete. P10's export/test
-contracts are implemented; fresh seven-starter and external checks remain open.
-P17 ends in the explicit implement/defer dispositions below. P19's new-source
-binary runtime/installation work, the repaired candidate comparison, main-branch integration,
-post-integration checks, push and accounted cleanup remain delivery gates.
+contracts, seven fresh starter profiles and external controls are qualified.
+P17 ends in the explicit implement/defer dispositions below. P19's matching binary
+passed 11/11 and replaced only the obsolete installed jar with a preserved rollback.
+Main-branch integration, post-integration comparison, push and accounted cleanup
+remain delivery gates.
 
 Checked boxes record achieved implementation and the stated focused evidence, not a
 full-suite or delivery pass. The updated destination baseline completed with **26
@@ -429,11 +431,11 @@ or weaken validation just to erase warnings.
 - [x] Emit a test profile for each portable fork and starter with pinned existing
   Jupiter/Surefire and matching engine/SDK/testkit identity. Include a minimal packed-
   mod integration test in generated projects; authors should not copy the profile manually.
-- [ ] Verify the actual unpacked kit in an external task directory with no checkout:
+- [x] Verify the actual unpacked kit in an external task directory with no checkout:
   run Hello, a pure-model fork (Tower or Flappy), Three Islands generator, and an
   appropriate ROM-backed fork with explicit user ROM paths. Regeneration must reproduce
   authored inputs; no source checkout paths, ROM files or player state enter the kit.
-- [ ] Test green, deliberate failure and zero discovery via Jupiter; mismatched artifact
+- [x] Test green, deliberate failure and zero discovery via Jupiter; mismatched artifact
   identities must reject before launch. Inspect mod jars for absence of testkit/JUnit/
   test classes and inspect source ZIPs for absence of targets, saves and generated caches.
 - [x] Preserve launcher output/argument compatibility and update testing/setup guidance.
@@ -444,9 +446,12 @@ matching-identity checks and launcher contracts are implemented. Actual provisio
 external fork/starter/generator checks are recorded; Starpost at clean `175531f6d`
 passes 231/231 and strict packaging. That producer's music creator-profile failure
 exposed an absent-plan template bug: `545d045f6` repairs it with 23/23 focused passes,
-zero skips. Fresh seven-starter Maven profiles and the unchecked external/negative
-matrix remain required at the new matching producer identity; earlier Hello/failure/
-empty controls retain their recorded historical identity.
+zero skips. Fresh seven-starter plus Hello Maven profiles at clean `54e771314` pass
+10/10, zero skips, with main/test artifact separation checked. Portable failure,
+empty-discovery, identity and generator controls retain their recorded `175531f6d`
+identity; the unchanged launcher/testkit classes and all 83 unchanged scaffold files
+are explicitly compared rather than relabelled as new executions. Source generators,
+portable model forks and canonical-ROM Starpost checks remain producer-attributed.
 
 **Verify:** `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tools/modding -p test_creator_kit.py`,
 queued `-Dmse=off "-Dtest=TestCreatorTestLauncher,TestModTestKit,TestModSdkArtifactVerifier,TestModApiSdkPackager" test`,
@@ -725,11 +730,11 @@ independent source identities and installation/bundling rules.
 - [x] Verify a clean isolated runtime with explicit S3K ROM and the normal code-trust/
   title Apply flow. Keep jars, ROMs, saves and modstate from the player's current runtime
   out of generated test directories and creator exports.
-- [ ] Inventory actual installed hashes/source identities at execution time. Replace
+- [x] Inventory actual installed hashes/source identities at execution time. Replace
   only the specifically requested obsolete artifact after preserving its rollback copy
-  outside `mods/`; unknown installed jars remain untouched. Renew trust for the new hash,
-  rescan/apply and verify startup. Building alone does not establish player installation.
-- [ ] Record final candidate source/artifact identities, residual warnings, exercised
+  outside `mods/`; unknown installed jars remain untouched. Qualify new-hash trust,
+  rescan/Apply and startup in the isolated runtime; preserve player enablement/trust.
+- [x] Record final candidate source/artifact identities, residual warnings, exercised
   routes, skips and any pending replacement in the existing audit/validation record.
 
 **Execution:** the maintained SDK build produced a matching historical `175531f6d`
@@ -738,11 +743,13 @@ range `>=0.7.0 <0.8.0`, base `s3k`. Its SHA-256 is
 `03c311c6701058eb69721a9540f2ab327af0573f10e00b6c73203ad92b9e0bfd`.
 Actual maintained-binary request 43929 passed 11/11, zero failures/errors/skips,
 through isolated canonical-ROM trust/Apply/runtime checks at clean `175531f6d`.
-This completes that checkpoint's runtime obligation. New `54e771314` source/artifact
-runtime qualification and local installed replacement/disposition remain open. The
-existing obsolete jar was disabled/untrusted; unknown jars and player trust,
-enablement and saves remain untouched. A final build or isolated test must not be
-reported as installation, or used to silently change that player choice.
+This completes that checkpoint's runtime obligation. A fresh maintained build against
+clean `54e771314` produces the identical jar; its actual binary runtime repeat 1077
+passes 11/11, zero skips. Only the obsolete installed jar was replaced atomically
+after a hash-checked rollback copy outside `mods/`; all 38 other inventoried files
+remain byte-identical. Player enablement/trust remains disabled/untrusted. Normal
+new-hash trust/rescan/Apply was qualified in the isolated runtime, preserving that
+player choice. Installed replacement is observed separately from the build/test.
 
 **Done:** maintained sources build against one candidate identity, generated artifacts
 are qualified, and any requested local replacement has an explicit observed outcome.
@@ -838,6 +845,7 @@ zero errors and 64 skips; guards ran 677 with three failures and zero errors/ski
 The 26 baseline identities recur; the SSZ blob-hash difference has bounded semantic
 attribution. Five new ordinary and three guard failures received recorded repairs
 and focused qualification. The 120-minute execution and 10-minute idle limits were
-unchanged. The repaired-source comparison, fresh artifact/starter/installation
-gates, main integration, post-integration qualification, push and accounted cleanup
-remain open. No full-green or delivered claim follows from these focused results.
+unchanged. The fresh `54e771314` artifact/starter/binary gates and observed local
+replacement are complete. Main integration, its required repaired-source comparison,
+push and accounted cleanup remain open. No full-green or delivered claim follows
+from these focused results.
