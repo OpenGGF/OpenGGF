@@ -28,8 +28,9 @@ From the repository root, with Java 21, Maven and your S3K ROM set up for OpenGG
 python3 examples/build_example.py flappy-tails   # just package target/examples/flappy-tails/flappy-tails.jar
 ```
 
-To install it instead, copy the jar into `mods/`, enable and trust it in the Mod Manager,
-restart and choose Sonic 3 & Knuckles. The game always plays on the 400-pixel 16:9 screen; your
+To install it instead, copy the jar into `mods/` and choose Apply in the master title's
+Mod Manager to rescan. Enable and trust it, choose Apply again, then choose Sonic 3 &
+Knuckles. The game always plays on the 400-pixel 16:9 screen; your
 own display setting returns at the master title. Holding Escape returns to the master title.
 
 | Control | Does |
