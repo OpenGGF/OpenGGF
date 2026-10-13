@@ -162,7 +162,7 @@ individual effects; the displayed pool does not override those gates.
   pinned base; do not repeat unchanged suites as a ceremony or use full-suite.
 - [x] Update API descriptor/version/signatures together, creator documentation,
   example instructions, configuration and affected route/support matrices.
-- [ ] Review high-risk owner/rewind/native boundaries, fix attributable defects,
+- [x] Review high-risk owner/rewind/native boundaries, fix attributable defects,
   integrate into the updated main branch, verify policy, push and account for
   every worker change before removing fully merged task trees/branches.
 
@@ -470,3 +470,26 @@ Both ROM-backed focused commands and final `-Pguards test -B` add
 `sonic1.rom.path`, `sonic2.rom.path`, `s3k.rom.path`, unset desktop display
 variables and use `LUA_BIN=/usr/bin/lua5.4`. These are the existing root files
 listed in the repository ROM identity table, not renamed fixture copies.
+
+
+Delivery completed: `f3e27834963550791667d08f897fe57f5620d127` merged the
+verified feature into the main workspace's existing `develop` branch and was
+pushed to `origin/develop`. Its tracked tree is exactly the verified feature tree
+`3d6126686275608e049db2e65b2feed75cfa6bf9`; the later evidence edits are prose only.
+The push policy/release-tree audit passed. Main's unknown user files and dirty
+reference submodules remain unchanged; its branch was never switched. All ten
+owned task/worker/attribution worktrees and local branches were removed after
+mapping their committed counterparts and checking native's three borrowed dirty
+files against the integrated source (two byte-identical, one blank-line-only).
+Task-generated test/build outputs and acknowledged diagnostics were discarded;
+the useful external captures and packaged jar remain. There are no live task
+Maven/native workers. The presentation child backing thread and both runs are
+completed with no active run or pending request; its aggregate task metadata still
+shows an obsolete waiting-for-children state, and the app-owned stop request was
+issued. That metadata is not a running process or unresolved repository change.
+
+This delivers the maintained 105-effect mod and bounded verification above. Stock
+route failures, legacy graphics-helper skips, unsupported donor/context gates and
+complete all-act/team/window coverage remain explicitly inherited limitations;
+stream voting remains future work. No public release or whole-suite green claim
+is made.
