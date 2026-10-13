@@ -157,7 +157,47 @@ factory calls to share identity; the corrected fixture supplies one known provid
 and verifies forwarding.
 
 Final build-only SDK/Javadoc/binary artifact verification passed; its tests were
-deliberately skipped. Remaining delivery gates: the repaired delegation fixture,
-bounded native save/launch tests, change-selected smoke/guards, destination
-composition and main integration/push. No full-suite or finished delivery is
-claimed here.
+deliberately skipped. The repaired delegation and bounded native save/launch
+checks subsequently passed. Remaining delivery gates are change-selected
+smoke/guards, destination composition and main integration/push. No full-suite
+or finished delivery is claimed here.
+
+## Combined validation checkpoint
+
+Implementation `b2d31bd3e` is composed with documentation-only destination
+`b3464b31b6a6d855797f353e2c192d514ffaaf2b` at `b5a496175`. Executable,
+test, build and API inputs of the destination are identical to the pinned
+`13add5b0b918a1f7ff7e343c8ccc858ad4527d85` base. The repaired delegation
+case passed once without skips, then six native confirmation, save-slot,
+fade/dispatch and patch re-resolution cases passed without skips. The observed
+native menu action remains separate from actual Engine launch/save coverage.
+
+The unchanged 3,178-class, all-category **smoke** selection ran with fresh guards
+requested, Java 25/Lua 5.4 and desktop display variables unset:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 \
+  python3 tools/testing/run_categories.py \
+  --base 13add5b0b918a1f7ff7e343c8ccc858ad4527d85 --max-minutes 40 --run
+```
+
+Run `20261013T134518Z-cf7752fa` admitted at 13:45:18 UTC after 1,473 seconds
+of queue wait. The ordinary invocation reached its 2,402.48-second execution
+limit: 2,758 reports, 23,497 cases, two assertions, zero errors and 57 skips.
+All eight new prototype/ownership classes completed: 49 cases passed with zero
+skips. The invocation is **incomplete**; remaining ordinary coverage and fresh
+guards did not run. The diagnostic tail shows continuing native route tests,
+not a stalled or crashed process. The two complete disputed assertions are:
+
+- `TestS3kMhzAct2AuthoredRoute#incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String, int)[2]`:
+  `late pulley owns Tails ==> expected: <true> but was: <false>`.
+- The same method `[3]`:
+  `late pulley owns Sonic ==> expected: <true> but was: <false>`.
+
+All 57 skip identities and first causal reasons were inspected; they comprise
+explicit opt-in diagnostics/probes, native renderer availability, the Infinite
+Sonic platform/flyer prerequisites and CPZ's unobserved tube interaction. No
+missing-ROM skip occurred. A bounded matched method on the exact stock base is
+required before attribution. Consumed diagnostics were acknowledged/deleted.
+The same smoke selection needs a revised measured execution budget; this is
+not a passing broad result or release-only full-suite validation.
