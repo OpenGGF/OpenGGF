@@ -95,7 +95,9 @@ class TestAudioMutatorAccess {
         assertEquals(3, audio.commandTimeline().entryCount());
         assertFalse(((AudioCommand.PlayMusic) audio.commandTimeline().entryAt(0).command()).override());
         assertTrue(((AudioCommand.PlayMusic) audio.commandTimeline().entryAt(1).command()).override());
-        assertInstanceOf(AudioCommand.FadeOutMusic.class, audio.commandTimeline().entryAt(2).command());
+        var stop = assertInstanceOf(AudioCommand.RetainGlobalStop.class,
+                audio.commandTimeline().entryAt(2).command());
+        assertEquals(0xE0, stop.sourceCommandId());
     }
 
     @Test void safeMusicPoolAndThumpPrepareFromTheRealNativeRom() {
