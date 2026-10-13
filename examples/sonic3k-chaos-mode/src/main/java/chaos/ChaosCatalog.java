@@ -149,6 +149,10 @@ public final class ChaosCatalog {
     }
     /** Sample once at activation. Dynamic envelopes subsequently replace only their admitted scalar. */
     public Map<String,Object> sample(Effect effect, SnapshotRandom random) {
+        return sample(effect,random,-1);
+    }
+    /** Only detached ROM-backed backgrounds with a prepared native renderer enter the donor pool. */
+    public Map<String,Object> sample(Effect effect, SnapshotRandom random,int nativeZone) {
         int n=effect.number(), percent=100, cap=0;
         String target="leader", side=n==52?"behind":"ahead";
         if(n==22)side=random.nextInt(2)==0?"ahead":"behind";
@@ -175,7 +179,8 @@ public final class ChaosCatalog {
         values.put("cue",n==94?1+random.nextInt(23):0x49);
         values.put("delay",6+random.nextInt(4));
         values.put("magnitude",n==8?4:n==9?5:n==97?6:n==98?20:0);
-        values.put("scenery",n==99?random.nextInt(14):0);
+        int[] scenery=java.util.stream.IntStream.of(0,1,6,11).filter(zone->zone!=nativeZone).toArray();
+        values.put("scenery",n==99?scenery[random.nextInt(scenery.length)]:0);
         values.put("sequence",n==24?1+random.nextInt(15):1);
         return Map.copyOf(values);
     }

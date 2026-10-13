@@ -13,6 +13,7 @@ public final class ChaosSchedule {
         public Snapshot { recent=List.copyOf(recent); active=List.copyOf(active); }
     }
     public interface Admission {
+        default int nativeZone() {return -1;}
         boolean eligible(ChaosCatalog.Effect effect,Map<String,Object> options);
         long activate(ChaosCatalog.Effect effect,Map<String,Object> options,int duration);
         void cancel(long id);
@@ -69,7 +70,7 @@ public final class ChaosSchedule {
                 .filter(e->e.severity()!=ChaosCatalog.Severity.MAJOR || clock>=majorAfter).toList();
         if(candidates.isEmpty()) return;
         // Eligibility is checked with a deterministic representative before any RNG is consumed.
-        candidates=candidates.stream().filter(e->admission.eligible(e,catalogue.sample(e,new SnapshotRandom(1)))).toList();
+        candidates=candidates.stream().filter(e->admission.eligible(e,catalogue.sample(e,new SnapshotRandom(1),admission.nativeZone()))).toList();
         if(candidates.isEmpty()) return;
         int ticket=random.nextInt(100);
         var tier=ticket<90?ChaosCatalog.Severity.ORDINARY:ticket<99?ChaosCatalog.Severity.DISRUPTIVE:ChaosCatalog.Severity.MAJOR;
@@ -87,7 +88,7 @@ public final class ChaosSchedule {
         if(!fresh.isEmpty())eligible=fresh;
         var effect=decisions.choose(eligible,random);
         if(!eligible.contains(effect)) throw new IllegalArgumentException("Decision outside admitted tier/pool");
-        var options=catalogue.sample(effect,random);
+        var options=catalogue.sample(effect,random,admission.nativeZone());
         if(!admission.eligible(effect,options)) return;
         int duration=effect.duration(settings.durationQuarters());
         long id=admission.activate(effect,options,duration);

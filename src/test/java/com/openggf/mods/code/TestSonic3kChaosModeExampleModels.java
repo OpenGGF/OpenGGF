@@ -54,6 +54,8 @@ class TestSonic3kChaosModeExampleModels {
     @Test void saveFailureBlocksTitleExitAndSuccessPreservesNativeRoute() throws Exception {check("ChaosControllerChecks","titlePublishesChoiceBeforeNativeOnePlayerExit");}
     @Test void patchKeepsNativeDataSelectTeamsAndInjectedQualification() throws Exception {check("ChaosControllerChecks","moduleRetainsNativeDataSelectAndInjectedSupport");}
     @Test void nativeArtGateAndActualPongWinSubmitOneBoundedReward() throws Exception {check("ChaosControllerChecks","missingNativeArtExcludesGamesAndPongWinSubmitsOneDeclaredReward");}
+    @Test void terminalReceiptsSurviveAcknowledgementAndExpiryWithoutRepeatedRewards() throws Exception {check("ChaosControllerChecks","terminalResultsSurviveLeaseRemovalAndRewardOnceAcrossReplay");}
+    @Test void scenerySamplesPreparedDonorsAndExcludesNativeZone() throws Exception {check("ChaosControllerChecks","sceneryUsesPreparedDonorsAndExcludesNativeZone");}
     @Test void creatorPackageValidatesAndRegistersDormantFamilies() throws Exception {
         var manifest=classes.resolve("META-INF/openggf-mod.yaml");Files.createDirectories(manifest.getParent());
         Files.copy(Path.of("examples/sonic3k-chaos-mode/src/main/resources/META-INF/openggf-mod.yaml"),manifest);

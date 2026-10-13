@@ -23,6 +23,7 @@ public final class ChaosControllerChecks {
     private static final class Port implements TemporaryMutators {
         final Map<String,MutatorDefinition> definitions=new HashMap<>();
         final Map<Long,ActiveActivation> leases=new LinkedHashMap<>();
+        final Map<Long,ActivationOutcome> results=new LinkedHashMap<>();
         Optional<com.openggf.mods.scene.SceneRomArt> art=Optional.empty();
         int activations,replacements,cancellations,cues,reward;
         Port(ChaosCatalog catalogue) {ChaosDefinitions.create(catalogue).forEach(d->definitions.put(d.localId(),d));}
@@ -46,6 +47,7 @@ public final class ChaosControllerChecks {
         }
         @Override public boolean cancel(long id) {cancellations++;return leases.remove(id)!=null;}
         @Override public List<ActiveActivation> active() {return List.copyOf(leases.values());}
+        @Override public List<ActivationOutcome> outcomes() {return List.copyOf(results.values());}
         @Override public List<Availability> available() {return definitions.keySet().stream().map(id->new Availability(id,true,"")).toList();}
         @Override public void playSfx(GameSound sound) {cues++;}
         @Override public Optional<com.openggf.mods.scene.SceneRomArt> nativeArt() {return art;}
@@ -208,5 +210,67 @@ public final class ChaosControllerChecks {
         check(!support.capabilities(0,0).isEmpty() && !support.supportsPlayer(MutatorCapability.DRY_SONIC_GRAVITY,"tails",true),"Native character qualification missing");
         configuration.setSessionOverride(com.openggf.configuration.SonicConfiguration.CROSS_GAME_FEATURES_ENABLED,true);
         check(support.capabilities(0,0).isEmpty(),"Support read ambient configuration instead of patch context");
+    }
+    public static void terminalResultsSurviveLeaseRemovalAndRewardOnceAcrossReplay() {
+        var catalogue=new ChaosCatalog();var controller=controller(catalogue,"brake-check");var port=new Port(catalogue);
+        for(int n=1;n<600;n++)controller.onPresentation(observe(n,n,GameplayObservation.Phase.ACTIVE),port);
+        var before=controller.capture();
+        // Native completion on the final tick can precede lease expiry and this callback.
+        port.results.put(41L,new TemporaryMutators.ActivationOutcome(41,"challenge","Complete: Ring target reached"));
+        controller.onPresentation(observe(600,600,GameplayObservation.Phase.ACTIVE),port);
+        check(port.activations==0 && controller.capture().quietUntil()==899,"Final-tick completion was lost or allowed the due draw");
+        var rewarded=controller.capture();
+        for(int n=601;n<=650;n++)controller.onPresentation(observe(n,n,GameplayObservation.Phase.ACTIVE),port);
+        check(controller.capture().quietUntil()==899,"Retained completion renewed respite every frame");
+        var forward=controller.capture();controller.restore(rewarded);
+        for(int n=601;n<=650;n++)controller.onPresentation(observe(n,n,GameplayObservation.Phase.ACTIVE),port);
+        check(forward.equals(controller.capture()),"Rewind replay duplicated terminal respite or lost captured receipt tracking");
+        controller.restore(before);
+        controller.onPresentation(observe(600,600,GameplayObservation.Phase.ACTIVE),port);
+        check(rewarded.equals(controller.capture()),"Replaying a newly delivered completion changed its captured result");
+        // One-shot native acknowledgement removes its lease before publishing failure to the UI.
+        port.results.put(42L,new TemporaryMutators.ActivationOutcome(42,"player-motion","Failed: No safe grounded opportunity"));
+        controller.onPresentation(observe(601,601,GameplayObservation.Phase.ACTIVE),port);
+        var failed=controller.capture();
+        check(failed.notice().equals("Failed: No safe grounded opportunity") && failed.noticeUntil()==900,"Acknowledged failure vanished without a readable notice");
+        for(int n=602;n<=610;n++)controller.onPresentation(observe(n,n,GameplayObservation.Phase.ACTIVE),port);
+        check(controller.capture().noticeUntil()==900 && controller.capture().quietUntil()==899,"Repeated failure/result extended feedback or earned respite");
+        controller.restore(failed);
+        for(int n=602;n<=610;n++)controller.onPresentation(observe(n,n,GameplayObservation.Phase.ACTIVE),port);
+        check(controller.capture().noticeUntil()==900,"Rewind replay renewed a seen failure notice");
+        // A receipt evicted from the FIFO still has an active Complete status.
+        port.results.remove(41L);
+        port.leases.put(41L,new TemporaryMutators.ActiveActivation(41,"challenge",Map.of(),0,30,false,"Complete: Ring target reached"));
+        controller.onPresentation(observe(611,611,GameplayObservation.Phase.ACTIVE),port);
+        check(controller.capture().quietUntil()==899,"Active terminal status lost receipt deduplication");
+        controller.onBoundary(observe(612,612,GameplayObservation.Phase.TRANSITION),port);
+        check(controller.capture().terminalSeen().isEmpty() && controller.capture().quietUntil()==0,"Boundary retained terminal outcome history");
+    }
+    public static void sceneryUsesPreparedDonorsAndExcludesNativeZone() {
+        var catalogue=new ChaosCatalog();var allowed=Set.of(0,1,6,11);
+        for(int zone=-1;zone<14;zone++) {
+            var random=new SnapshotRandom(17);long captured=random.snapshot();var sampled=new ArrayList<Map<String,Object>>();
+            var seen=new HashSet<Integer>();
+            for(int n=0;n<256;n++) {
+                var values=catalogue.sample(catalogue.effect(99),random,zone);sampled.add(values);
+                int source=(Integer)values.get("scenery");seen.add(source);
+                check(allowed.contains(source) && source!=zone,"Scenery sampler selected an unsupported or unchanged donor");
+            }
+            var expected=new HashSet<>(allowed);expected.remove(zone);
+            check(seen.equals(expected),"A prepared donor disappeared from the captured pool");
+            random.restore(captured);
+            for(var values:sampled)check(values.equals(catalogue.sample(catalogue.effect(99),random,zone)),"Scenery sampling changed after RNG restore");
+        }
+        for(int zone:allowed) {
+            var controller=controller(catalogue,"wrong-zone-scenery");var port=new Port(catalogue);
+            for(int n=1;n<=600;n++) {
+                var base=observe(n,n,GameplayObservation.Phase.ACTIVE);
+                var current=new GameplayObservation(base.worldGeneration(),base.visitGeneration(),base.activePresentations(),base.nativeTicks(),base.phase(),zone,0,
+                        base.viewportWidth(),base.viewportHeight(),base.leader(),base.team(),base.input(),base.loadCause());
+                controller.onPresentation(current,port);
+            }
+            int source=(Integer)port.active().getFirst().options().get("scenery");
+            check(allowed.contains(source) && source!=zone,"Scenery selected an unsupported or unchanged native donor");
+        }
     }
 }
