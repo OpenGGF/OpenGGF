@@ -278,6 +278,8 @@ class TestMutatorWorldServices {
         var sprites=org.mockito.Mockito.mock(com.openggf.sprites.managers.SpriteManager.class);
         org.mockito.Mockito.when(sprites.getMainPlayable()).thenReturn(leader);
         org.mockito.Mockito.when(sprites.getAllSprites()).thenReturn(List.of(leader));
+        org.mockito.Mockito.when(com.openggf.sprites.managers.SpriteManagerInternalAccess.publishedInput(sprites))
+                .thenReturn(LogicalInputSnapshot.neutral());
         var frame=org.mockito.Mockito.mock(com.openggf.LevelFrameContext.class);
         org.mockito.Mockito.when(frame.levelManager()).thenReturn(level);
         org.mockito.Mockito.when(frame.spriteManager()).thenReturn(sprites);
