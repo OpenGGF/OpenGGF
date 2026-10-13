@@ -23,6 +23,42 @@ for the current question. Routine implementation choices do not need a
 planning ceremony or another approval. User instructions override skill
 workflow defaults.
 
+## Coordination and progress
+
+- Give delegated work a bounded outcome, owned files/worktree, focused checks
+  and a stopping condition. Delegate independent work that can advance the task;
+  do not create extra workers just to watch the same job or repeat an unchanged review.
+- One lead owns the delivery-wide validation plan and schedules combined smoke
+  coverage when the policy below requires it. Workers validate their own changes
+  with relevant focused checks; do not assign the same broad run to every worker.
+- Before submitting costly validation, check the task's existing queued/running
+  jobs. For the same unchanged worktree/source fingerprint (including uncommitted
+  inputs), selection, fixtures, flags and environment, use the existing job
+  instead of submitting another copy. A completed result is
+  reusable only when current policy permits it and its tested state and coverage
+  match; a branch name or identical command alone is insufficient. New edits,
+  failures or unresolved risk still require the affected checks.
+- Keep one command session and one observer per job. Prefer completion
+  notifications or a bounded wait. For lengthy jobs that need polling, back off
+  to 30–60 seconds or longer, read only changed status or a bounded final
+  summary, and avoid repeated full-log reads or identical progress commands.
+  Report meaningful progress to the user independently of the polling cadence.
+- Queue waiting is pending work, not a failed run. Keep the existing request
+  alive and advance independent work while it waits. Cancel only task-owned jobs
+  that are no longer needed; do not restart a request merely because admission is
+  slow. Coordination never bypasses the Maven queue, changes resource limits or
+  forces unrelated worktrees to serialize.
+- At a work-slice boundary, handoff, compaction or changed blocker, update a
+  compact checkpoint in the existing task plan/status or a task message: outcome,
+  current/tested SHA and relevant uncommitted changes, ownership,
+  validation selection/results/limits, live job
+  handles, blocker and next action. Reuse that summary; load only the references
+  needed for the next question. Do not create pass caches, validation receipts or
+  extra log archives; existing diagnostic cleanup still applies.
+- Distinguish queue delay, execution, user-response waits and unmeasured time in
+  status reports. Parallel worker/process intervals overlap; their sum is not
+  elapsed delivery time. Report unavailable timing as unknown.
+
 ## Build and verification
 
 ```bash
