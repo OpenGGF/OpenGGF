@@ -852,6 +852,7 @@ CF-ANNOTATION TYPE com.openggf.mods.mutators.SpritePresentationPolicy visible @c
 CF-ANNOTATION TYPE com.openggf.mods.mutators.SpritePresentationPolicy$Mode visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.SpritePresentationPolicy$Target visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.TemporaryMutators visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.mutators.TemporaryMutators$ActivationOutcome visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.TemporaryMutators$ActivationResult visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.TemporaryMutators$ActiveActivation visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.TemporaryMutators$Availability visible @com.openggf.game.ModApi
@@ -1743,6 +1744,7 @@ CONSTRUCTOR com.openggf.mods.mutators.SignedGravityPolicy public  <init>()
 CONSTRUCTOR com.openggf.mods.mutators.SignedGravityPolicy public  <init>(java.util.List<java.lang.Boolean>,int)
 CONSTRUCTOR com.openggf.mods.mutators.SpringResponsePolicy public  <init>(int)
 CONSTRUCTOR com.openggf.mods.mutators.SpritePresentationPolicy public  <init>(com.openggf.mods.mutators.SpritePresentationPolicy$Mode,com.openggf.mods.mutators.SpritePresentationPolicy$Target,int,int)
+CONSTRUCTOR com.openggf.mods.mutators.TemporaryMutators$ActivationOutcome public  <init>(long,java.lang.String,java.lang.String)
 CONSTRUCTOR com.openggf.mods.mutators.TemporaryMutators$ActivationResult public  <init>(boolean,long,java.lang.String)
 CONSTRUCTOR com.openggf.mods.mutators.TemporaryMutators$ActiveActivation public  <init>(long,java.lang.String,java.util.Map<java.lang.String,java.lang.Object>,long,long,boolean,java.lang.String)
 CONSTRUCTOR com.openggf.mods.mutators.TemporaryMutators$Availability public  <init>(java.lang.String,boolean,java.lang.String)
@@ -12080,6 +12082,7 @@ METHOD com.openggf.mods.mutators.SpritePresentationPolicy$Mode public,static  co
 METHOD com.openggf.mods.mutators.SpritePresentationPolicy$Target public,static  com.openggf.mods.mutators.SpritePresentationPolicy$Target valueOf(java.lang.String)
 METHOD com.openggf.mods.mutators.SpritePresentationPolicy$Target public,static  com.openggf.mods.mutators.SpritePresentationPolicy$Target[] values()
 METHOD com.openggf.mods.mutators.TemporaryMutators public  com.openggf.mods.mutators.TemporaryMutators$ActivationResult complete(long,boolean)
+METHOD com.openggf.mods.mutators.TemporaryMutators public  java.util.List<com.openggf.mods.mutators.TemporaryMutators$ActivationOutcome> outcomes()
 METHOD com.openggf.mods.mutators.TemporaryMutators public  java.util.Optional<com.openggf.mods.scene.SceneRomArt> nativeArt()
 METHOD com.openggf.mods.mutators.TemporaryMutators public,abstract  boolean cancel(long)
 METHOD com.openggf.mods.mutators.TemporaryMutators public,abstract  com.openggf.mods.mutators.TemporaryMutators$ActivationResult activate(java.lang.String,java.util.Map<java.lang.String,java.lang.Object>,long)
@@ -12087,6 +12090,12 @@ METHOD com.openggf.mods.mutators.TemporaryMutators public,abstract  com.openggf.
 METHOD com.openggf.mods.mutators.TemporaryMutators public,abstract  java.util.List<com.openggf.mods.mutators.TemporaryMutators$ActiveActivation> active()
 METHOD com.openggf.mods.mutators.TemporaryMutators public,abstract  java.util.List<com.openggf.mods.mutators.TemporaryMutators$Availability> available()
 METHOD com.openggf.mods.mutators.TemporaryMutators public,abstract  void playSfx(com.openggf.audio.GameSound)
+METHOD com.openggf.mods.mutators.TemporaryMutators$ActivationOutcome public  java.lang.String localDefinitionId()
+METHOD com.openggf.mods.mutators.TemporaryMutators$ActivationOutcome public  java.lang.String status()
+METHOD com.openggf.mods.mutators.TemporaryMutators$ActivationOutcome public  long activationId()
+METHOD com.openggf.mods.mutators.TemporaryMutators$ActivationOutcome public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.mods.mutators.TemporaryMutators$ActivationOutcome public,final  int hashCode()
+METHOD com.openggf.mods.mutators.TemporaryMutators$ActivationOutcome public,final  java.lang.String toString()
 METHOD com.openggf.mods.mutators.TemporaryMutators$ActivationResult public  boolean accepted()
 METHOD com.openggf.mods.mutators.TemporaryMutators$ActivationResult public  java.lang.String reason()
 METHOD com.openggf.mods.mutators.TemporaryMutators$ActivationResult public  long activationId()
@@ -15405,6 +15414,7 @@ NESTED com.openggf.mods.mutators.RingEconomyPolicy com.openggf.mods.mutators.Rin
 NESTED com.openggf.mods.mutators.ScenePresentationPolicy com.openggf.mods.mutators.ScenePresentationPolicy$Mode
 NESTED com.openggf.mods.mutators.SpritePresentationPolicy com.openggf.mods.mutators.SpritePresentationPolicy$Mode
 NESTED com.openggf.mods.mutators.SpritePresentationPolicy com.openggf.mods.mutators.SpritePresentationPolicy$Target
+NESTED com.openggf.mods.mutators.TemporaryMutators com.openggf.mods.mutators.TemporaryMutators$ActivationOutcome
 NESTED com.openggf.mods.mutators.TemporaryMutators com.openggf.mods.mutators.TemporaryMutators$ActivationResult
 NESTED com.openggf.mods.mutators.TemporaryMutators com.openggf.mods.mutators.TemporaryMutators$ActiveActivation
 NESTED com.openggf.mods.mutators.TemporaryMutators com.openggf.mods.mutators.TemporaryMutators$Availability
@@ -17548,6 +17558,9 @@ RECORD-COMPONENT com.openggf.mods.mutators.SpritePresentationPolicy mode com.ope
 RECORD-COMPONENT com.openggf.mods.mutators.SpritePresentationPolicy periodPresentations int
 RECORD-COMPONENT com.openggf.mods.mutators.SpritePresentationPolicy strengthPercent int
 RECORD-COMPONENT com.openggf.mods.mutators.SpritePresentationPolicy target com.openggf.mods.mutators.SpritePresentationPolicy$Target
+RECORD-COMPONENT com.openggf.mods.mutators.TemporaryMutators$ActivationOutcome activationId long
+RECORD-COMPONENT com.openggf.mods.mutators.TemporaryMutators$ActivationOutcome localDefinitionId java.lang.String
+RECORD-COMPONENT com.openggf.mods.mutators.TemporaryMutators$ActivationOutcome status java.lang.String
 RECORD-COMPONENT com.openggf.mods.mutators.TemporaryMutators$ActivationResult accepted boolean
 RECORD-COMPONENT com.openggf.mods.mutators.TemporaryMutators$ActivationResult activationId long
 RECORD-COMPONENT com.openggf.mods.mutators.TemporaryMutators$ActivationResult reason java.lang.String
@@ -19497,6 +19510,7 @@ TYPE record public,static,final com.openggf.mods.mutators.MutatorPolicy$NoRings 
 TYPE record public,static,final com.openggf.mods.mutators.MutatorPolicy$NoSpecialStages SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.mutators.MutatorPolicy$PlayerStealth SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.mutators.MutatorPolicy$Ringfall SUPER java.lang.Record
+TYPE record public,static,final com.openggf.mods.mutators.TemporaryMutators$ActivationOutcome SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.mutators.TemporaryMutators$ActivationResult SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.mutators.TemporaryMutators$ActiveActivation SUPER java.lang.Record
 TYPE record public,static,final com.openggf.mods.mutators.TemporaryMutators$Availability SUPER java.lang.Record
@@ -20476,6 +20490,7 @@ TYPE-ANNOTATION com.openggf.mods.mutators.SpritePresentationPolicy @com.openggf.
 TYPE-ANNOTATION com.openggf.mods.mutators.SpritePresentationPolicy$Mode @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.SpritePresentationPolicy$Target @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.TemporaryMutators @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.mutators.TemporaryMutators$ActivationOutcome @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.TemporaryMutators$ActivationResult @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.TemporaryMutators$ActiveActivation @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.TemporaryMutators$Availability @com.openggf.game.ModApi

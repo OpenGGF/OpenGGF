@@ -136,6 +136,87 @@ class TestTemporaryMutatorState {
         }
     }
 
+    @Test void retainedCallbackPortCannotReenterAnyMutationDuringFactoryPreparation() {
+        var faults=mock(ModFaultBoundary.class);
+        when(faults.isOwnerAvailable(anyString())).thenReturn(true);
+        when(faults.call(anyString(),any())).thenAnswer(call -> ((java.util.function.Supplier<?>)call.getArgument(1)).get());
+        var portReference=new java.util.concurrent.atomic.AtomicReference<TemporaryMutators>();
+        var nested=new java.util.concurrent.atomic.AtomicReference<TemporaryMutators.ActivationResult>();
+        long[] retainedIds=new long[2];
+        var calls=new AtomicInteger();
+        var recursive=new MutatorDefinition("recursive","Recursive","",MutatorScope.LIVE,MutatorScope.LIVE,List.of(),
+                Set.of(MutatorCapability.DRY_SONIC_GRAVITY),options -> {
+                    if(calls.incrementAndGet()==1) {
+                        var retained=portReference.get();
+                        nested.set(retained.activate("recursive",Map.of(),4));
+                        assertFalse(retained.cancel(retainedIds[0]));
+                        assertFalse(retained.replace(retainedIds[0],Map.of("percent",75)).accepted());
+                        assertFalse(retained.complete(retainedIds[1],true).accepted());
+                    }
+                    return List.of(new MutatorPolicy.DrySonicGravity(50));
+                });
+        var gravity=new MutatorDefinition("gravity","Gravity","",MutatorScope.LIVE,MutatorScope.LIVE,
+                List.of(new MutatorOption.IntegerSlider("percent","Percent","",MutatorScope.LIVE,100,25,200,5,"%")),
+                Set.of(MutatorCapability.DRY_SONIC_GRAVITY),options -> List.of(new MutatorPolicy.DrySonicGravity(options.integer("percent"))));
+        var pong=new MutatorDefinition("pong","Pong","",MutatorScope.LIVE,MutatorScope.LIVE,List.of(),
+                Set.of(MutatorCapability.GAMEPLAY_HOLD,MutatorCapability.OVERLAY_CONTENT),
+                options -> List.of(new GameplayHoldPolicy(3),new OverlayPolicy(OverlayPolicy.Mode.PONG)));
+        var state=new TemporaryMutatorState(12,List.of(new OwnedMutator("alpha",recursive),new OwnedMutator("alpha",gravity),new OwnedMutator("alpha",pong)),faults);
+        try(var port=state.open("alpha",Set.of(MutatorCapability.DRY_SONIC_GRAVITY,MutatorCapability.GAMEPLAY_HOLD,MutatorCapability.OVERLAY_CONTENT))) {
+            portReference.set(port);
+            retainedIds[0]=port.activate("gravity",Map.of(),4).activationId();
+            retainedIds[1]=port.activate("pong",Map.of(),3).activationId();
+            assertTrue(port.activate("recursive",Map.of(),4).accepted());
+            assertFalse(nested.get().accepted());assertEquals(1,calls.get());assertEquals(3,port.active().size());
+            assertEquals(100,port.active().getFirst().options().get("percent"));
+            assertTrue(state.completions().isEmpty());
+        }
+    }
+
+    @Test void terminalResultsSurviveAcknowledgementAndExpiryWithoutKeepingFamiliesActive() {
+        var state=state(new AtomicInteger());
+        try(var port=state.open("alpha",Set.of(MutatorCapability.PLAYER_MOTION,MutatorCapability.DRY_SONIC_GRAVITY));
+            var foreign=state.open("beta",Set.of())) {
+            long instant=port.activate("pulse",Map.of(),0).activationId();
+            assertTrue(state.report(instant,"Task: waiting for service"));assertTrue(port.outcomes().isEmpty());
+            assertTrue(state.report(instant,"Failed: no qualified route"));
+            assertTrue(state.report(instant,"Failed: route unavailable"));
+            assertTrue(state.acknowledge(instant));assertTrue(port.active().isEmpty());
+            assertEquals(List.of(new TemporaryMutators.ActivationOutcome(instant,"pulse","Failed: route unavailable")),port.outcomes());
+            assertTrue(foreign.outcomes().isEmpty());
+            long timed=port.activate("gravity",Map.of(),1).activationId();
+            assertTrue(state.report(timed,"Complete: target reached"));
+            state.advancePresentation();assertTrue(port.active().isEmpty());
+            var captured=state.capture();
+            assertEquals(2,port.outcomes().size());
+            assertTrue(port.activate("gravity",Map.of(),1).accepted(),"receipts do not retain a family");
+            state.clear();assertTrue(port.outcomes().isEmpty());
+            state.restore(captured);assertEquals(2,port.outcomes().size());assertTrue(state.entries().isEmpty());
+        }
+    }
+
+    @Test void terminalResultStorageIsBoundedCapturedAndRevokedWithItsOwner() {
+        var available=new java.util.concurrent.atomic.AtomicBoolean(true);
+        var faults=mock(ModFaultBoundary.class);
+        when(faults.isOwnerAvailable(anyString())).thenAnswer(call -> available.get());
+        when(faults.call(anyString(),any())).thenAnswer(call -> ((java.util.function.Supplier<?>)call.getArgument(1)).get());
+        var pulse=new MutatorDefinition("pulse","Pulse","",MutatorScope.LIVE,MutatorScope.LIVE,List.of(),
+                Set.of(MutatorCapability.PLAYER_MOTION),options -> List.of(new PlayerMotionPolicy(PlayerMotionPolicy.Mode.MOMENTUM_PULSE,0)));
+        var state=new TemporaryMutatorState(13,List.of(new OwnedMutator("alpha",pulse)),faults);
+        try(var port=state.open("alpha",pulse.capabilities())) {
+            long first=0,last=0;
+            for(int i=0;i<40;i++) {
+                last=port.activate("pulse",Map.of(),0).activationId();if(i==0)first=last;
+                state.report(last,"Failed: bounded rejection");state.acknowledge(last);
+            }
+            assertEquals(32,port.outcomes().size());assertEquals(last,port.outcomes().getLast().activationId());
+            long evicted=first;assertTrue(port.outcomes().stream().noneMatch(result -> result.activationId()==evicted));
+            var captured=state.capture();assertEquals(32,captured.outcomes().size());
+            available.set(false);assertTrue(state.capture().outcomes().isEmpty());
+            assertThrows(IllegalStateException.class,()->state.restore(captured));
+        }
+    }
+
     private TemporaryMutatorState pongState() {
         var faults=mock(ModFaultBoundary.class);
         when(faults.isOwnerAvailable(anyString())).thenReturn(true);

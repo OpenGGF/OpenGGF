@@ -10,7 +10,8 @@ public interface GameplayObserver {
     default void onPresentation(GameplayObservation observation, TemporaryMutators mutators) { }
     /** One admitted native tick, immediately before its native consumers run. */
     default void onTick(GameplayObservation observation, TemporaryMutators mutators) { }
-    /** A visit, phase or disposal boundary. Host revocation precedes creator cleanup. */
+    /** A visit or phase boundary. Leases and pending completion jobs are revoked before this
+     * callback; captured native-child cleanup follows even when the callback throws. */
     default void onBoundary(GameplayObservation observation, TemporaryMutators mutators) { }
     /** Screen-space view only; native world/counter state and clocks remain untouched. */
     default void drawOverlay(PixelCanvas canvas, GameplayObservation observation) { }

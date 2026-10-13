@@ -17,6 +17,7 @@ class TestWorldPolicyHistory {
         var module=mock(GameModule.class);
         when(module.getGameService(WorldSessionPolicyProvider.class)).thenReturn(world -> state);
         var world=new WorldSession(module);
+        WorldSessionPolicyAccess.setHistoryRecording(world,true);
         var level=mock(LevelManager.class);when(level.getWorldSession()).thenReturn(world);
         var frame=mock(LevelFrameContext.class);when(frame.levelManager()).thenReturn(level);
         // Three zero-tick presentations can admit/replace a decision before the next canonical row.
@@ -57,6 +58,7 @@ class TestWorldPolicyHistory {
         var module=mock(GameModule.class);
         when(module.getGameService(WorldSessionPolicyProvider.class)).thenReturn(world -> { state.world=world;return state; });
         var world=new WorldSession(module);
+        WorldSessionPolicyAccess.setHistoryRecording(world,true);
         var level=mock(LevelManager.class);when(level.getWorldSession()).thenReturn(world);
         var frame=mock(LevelFrameContext.class);when(frame.levelManager()).thenReturn(level);
         state.value=5;state.nativeObjectAlive=true;
@@ -70,6 +72,41 @@ class TestWorldPolicyHistory {
         assertFalse(state.nativeObjectAlive,"host cleanup replays against its captured pre-cleanup graph");
         assertEquals(2,state.nativeCleanupCalls);assertEquals(1,state.creatorBoundaryCalls);
         WorldSessionPolicyAccess.restoreHistoryAfter(world,recorded);
+    }
+
+    @Test void disabledHistoryDoesNotCaptureOrAccumulateStageBoundariesAndArmingStartsFresh() {
+        var captures=new java.util.concurrent.atomic.AtomicInteger();
+        var state=new CapturedChild() {
+            @Override public Integer capture() { captures.incrementAndGet();return super.capture(); }
+            @Override public void leaveOrdinaryGameplay(com.openggf.game.GameplayObservation.Phase phase) {
+                nativeCleanupCalls++;
+            }
+        };
+        var module=mock(GameModule.class);
+        when(module.getGameService(WorldSessionPolicyProvider.class)).thenReturn(world -> state);
+        var world=new WorldSession(module);
+        var level=mock(LevelManager.class);when(level.getWorldSession()).thenReturn(world);
+        var frame=mock(LevelFrameContext.class);when(frame.levelManager()).thenReturn(level);
+        for(int i=0;i<40;i++) {
+            WorldSessionPolicyAccess.beforeNativeTick(frame);WorldSessionPolicyAccess.afterNativeTick(frame);
+            WorldSessionPolicyAccess.leaveOrdinaryGameplay(world,com.openggf.game.GameplayObservation.Phase.STAGE);
+            assertNull(WorldSessionPolicyAccess.captureHistory(world));
+        }
+        assertEquals(0,captures.get(),"disabled/canonical execution records no policy snapshots");
+        WorldSessionPolicyAccess.setHistoryRecording(world,true);
+        WorldSessionPolicyAccess.beforeNativeTick(frame);WorldSessionPolicyAccess.afterNativeTick(frame);
+        var recorded=WorldSessionPolicyAccess.captureHistory(world);assertNotNull(recorded);
+        WorldSessionPolicyAccess.restoreHistoryBefore(world,recorded);
+        assertEquals(40,state.nativeCleanupCalls,"newly armed history has no abandoned disabled boundaries");
+        WorldSessionPolicyAccess.restoreHistoryAfter(world,recorded);
+        WorldSessionPolicyAccess.leaveOrdinaryGameplay(world,com.openggf.game.GameplayObservation.Phase.STAGE);
+        WorldSessionPolicyAccess.setHistoryRecording(world,false);
+        WorldSessionPolicyAccess.setHistoryRecording(world,true);
+        WorldSessionPolicyAccess.beforeNativeTick(frame);WorldSessionPolicyAccess.afterNativeTick(frame);
+        var rearmed=WorldSessionPolicyAccess.captureHistory(world);
+        WorldSessionPolicyAccess.restoreHistoryBefore(world,rearmed);
+        assertEquals(41,state.nativeCleanupCalls,"disarming discards pending zero-tick events");
+        WorldSessionPolicyAccess.restoreHistoryAfter(world,rearmed);
     }
 
     @Test void cleanupDispatchRetiresEveryCapturedPackEvenIfOneThrows() {

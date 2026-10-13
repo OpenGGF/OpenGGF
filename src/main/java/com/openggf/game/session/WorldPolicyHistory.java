@@ -8,19 +8,23 @@ import java.util.*;
 final class WorldPolicyHistory {
     private Snapshot beforeTick;
     private boolean replaying;
+    private boolean armed;
+    boolean nativeTickActive;
     private final List<Boundary> boundaries=new ArrayList<>();
     record Snapshot(Object policies,List<Object> observers) { Snapshot { observers=List.copyOf(observers); } }
     record Boundary(Snapshot before,com.openggf.game.GameplayObservation.Phase phase) { }
     record Frame(Snapshot before,Snapshot after,List<Boundary> boundaries) { Frame { boundaries=List.copyOf(boundaries); } }
     boolean replaying() { return replaying; }
-    void recordBefore(WorldSession world) { if(!replaying)beforeTick=capture(world); }
+    void recording(boolean enabled) { if(armed!=enabled)discardPending();armed=enabled; }
+    void recordBefore(WorldSession world) { if(armed && !replaying)beforeTick=capture(world); }
     Frame frame(WorldSession world) {
         if(beforeTick==null)return null;
         var frame=new Frame(beforeTick,capture(world),boundaries); beforeTick=null;boundaries.clear(); return frame;
     }
-    void clear() { beforeTick=null;replaying=false;boundaries.clear(); }
+    void discardPending() { beforeTick=null;boundaries.clear();nativeTickActive=false; }
+    void clear() { discardPending();replaying=false; }
     void beforeBoundary(WorldSession world,com.openggf.game.GameplayObservation.Phase phase) {
-        if(replaying)return;
+        if(!armed || replaying)return;
         if(boundaries.size()>=32)throw new IllegalStateException("Pending native boundary journal is full");
         boundaries.add(new Boundary(capture(world),phase));
     }

@@ -71,6 +71,7 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
     @Override public void beforeAssembly(LevelLoadCause cause) {
         loadCause=cause;
         if(cause!=LevelLoadCause.DECODE_ONLY && cause!=LevelLoadCause.PREVIEW) {
+            temporary.clear();
             try {
                 if(observation!=null) {
                     observation=withPhase(com.openggf.game.GameplayObservation.Phase.TRANSITION);
@@ -251,9 +252,7 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
     }
     @Override public void observeTick(com.openggf.LevelFrameContext context,com.openggf.control.LogicalInputSnapshot input) {
         if(retired)return;
-        var leader=context.spriteManager()==null?null:context.spriteManager().getMainPlayable();
-        var phase=leader!=null && leader.getDead() || context.levelManager()!=null && context.levelManager().isLevelInactiveForTransition()
-                ? com.openggf.game.GameplayObservation.Phase.TRANSITION : com.openggf.game.GameplayObservation.Phase.ACTIVE;
+        var phase=com.openggf.game.session.NativeGameplayPhase.of(context);
         admitPhaseBoundary(phase);
         observation=com.openggf.game.session.GameplayObservationFactory.capture(world,generation,visitGeneration,temporary.clock(),nativeTicks,
                 gameplayContext,context,input,phase,loadCause);
@@ -266,6 +265,7 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
             com.openggf.game.session.WorldSessionPolicyAccess.leaveOrdinaryGameplay(world,phase);
     }
     @Override public void leaveOrdinaryGameplay(com.openggf.game.GameplayObservation.Phase phase) {
+        temporary.clear();
         try {
             if(observation!=null) {
                 observation=withPhase(phase);
@@ -323,6 +323,8 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
         pacing.restore(snapshot.pacing());
         temporary.restore(snapshot.temporary());
         visitGeneration=snapshot.visitGeneration(); nativeTicks=snapshot.nativeTicks(); observation=snapshot.observation();loadCause=snapshot.loadCause();
+        // A registry seek abandons presentation-only work from the former future.
+        com.openggf.game.session.WorldSessionPolicyAccess.discardPendingHistory(world);
     }
     record Snapshot(MutatorSessionState.Snapshot policies,
                     com.openggf.game.mutators.LevelMutatorRuntime.Snapshot entries,

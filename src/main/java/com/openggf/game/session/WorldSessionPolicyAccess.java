@@ -70,13 +70,14 @@ public final class WorldSessionPolicyAccess {
         if(!hasPolicies(world))return;
         var input=context.spriteManager()==null?com.openggf.control.LogicalInputSnapshot.neutral():
                 com.openggf.sprites.managers.SpriteManagerInternalAccess.publishedInput(context.spriteManager());
+        world.policyHistory.nativeTickActive=NativeGameplayPhase.of(context)==com.openggf.game.GameplayObservation.Phase.ACTIVE;
         if(!world.policyHistory.replaying())world.policies.observeTick(context,input);
         world.policyHistory.recordBefore(world);
-        world.policies.beforeNativeTick(context,input);
+        if(world.policyHistory.nativeTickActive)world.policies.beforeNativeTick(context,input);
     }
     public static void afterNativeTick(com.openggf.LevelFrameContext context) {
         var world=context.levelManager()==null?null:context.levelManager().getWorldSession();
-        if(hasPolicies(world))world.policies.afterNativeTick(context,context.spriteManager()==null?
+        if(hasPolicies(world) && world.policyHistory.nativeTickActive)world.policies.afterNativeTick(context,context.spriteManager()==null?
                 com.openggf.control.LogicalInputSnapshot.neutral():
                 com.openggf.sprites.managers.SpriteManagerInternalAccess.publishedInput(context.spriteManager()));
     }
@@ -88,6 +89,9 @@ public final class WorldSessionPolicyAccess {
     public static void restoreHistoryAfter(WorldSession world,Object frame) {
         if(hasPolicies(world)&&frame!=null)world.policyHistory.restoreAfter(world,(WorldPolicyHistory.Frame)frame);
     }
+    public static void discardPendingHistory(WorldSession world) { if(hasPolicies(world))world.policyHistory.discardPending(); }
+    /** Only the installed live rewind owner arms accepted-decision recording; trace/canonical play stays quiet. */
+    public static void setHistoryRecording(WorldSession world,boolean enabled) { if(hasPolicies(world))world.policyHistory.recording(enabled); }
     public static void endHistoryReplay(WorldSession world) { if(hasPolicies(world))world.policyHistory.endReplay(); }
 
     static void retire(WorldSession world) {

@@ -16,8 +16,10 @@ public final class TemporaryMutatorState implements TransientMutatorPolicySource
     private final java.util.function.Supplier<Optional<com.openggf.mods.scene.SceneRomArt>> nativeArt;
     private final Map<Long,Lease> leases = new LinkedHashMap<>();
     private final Map<Long,Completion> completions=new LinkedHashMap<>();
+    private final Map<Long,Outcome> outcomes=new LinkedHashMap<>();
+    // Accepted IDs never repeat after branching: only the presentation clock is rewound.
     private long ordinal, clock;
-    private boolean retired;
+    private boolean retired,preparing;
 
     public TemporaryMutatorState(long generation, List<OwnedMutator> definitions, ModFaultBoundary faults) {
         this(generation,definitions,faults,Set::of);
@@ -62,11 +64,12 @@ public final class TemporaryMutatorState implements TransientMutatorPolicySource
         });
         leases.clear(); leases.putAll(next);
     }
-    public void clear() { leases.clear();completions.clear(); }
+    public void clear() { leases.clear();completions.clear();outcomes.clear(); }
     public void retire() { retired = true; clear(); }
     private void prune() {
         leases.values().removeIf(value -> !faults.isOwnerAvailable(value.owner()));
         completions.values().removeIf(value -> !faults.isOwnerAvailable(value.owner()));
+        outcomes.values().removeIf(value -> !faults.isOwnerAvailable(value.owner()));
     }
     @Override public List<Entry> entries() {
         prune(); var result = new ArrayList<Entry>();
@@ -85,22 +88,32 @@ public final class TemporaryMutatorState implements TransientMutatorPolicySource
         prune(); var lease = leases.get(id);
         if(lease == null) return false;
         Objects.requireNonNull(status); if(status.length()>160) throw new IllegalArgumentException("Status exceeds 160 characters");
+        if(status.startsWith("Complete:") || status.startsWith("Failed:")) {
+            // Terminal feedback owns no policy or retry authority and cannot hold a family slot.
+            outcomes.remove(id);
+            outcomes.put(id,new Outcome(lease.owner(),id,lease.localId(),status));
+            if(outcomes.size()>32)outcomes.remove(outcomes.keySet().iterator().next());
+        }
         leases.put(id,lease.withStatus(status)); return true;
     }
-    public Snapshot capture() { prune(); return new Snapshot(generation,clock,List.copyOf(leases.values()),List.copyOf(completions.values())); }
+    public Snapshot capture() { prune(); return new Snapshot(generation,clock,List.copyOf(leases.values()),List.copyOf(completions.values()),List.copyOf(outcomes.values())); }
     public void restore(Snapshot snapshot) {
         if(retired || snapshot.generation()!=generation) throw new IllegalArgumentException("Temporary snapshot belongs to a retired/other world");
         for(var lease:snapshot.leases()) if(!faults.isOwnerAvailable(lease.owner()))
             throw new IllegalStateException("Historical temporary policy owner is quarantined");
         for(var completion:snapshot.completions())if(!faults.isOwnerAvailable(completion.owner()))
             throw new IllegalStateException("Historical completion owner is quarantined");
-        clock=snapshot.clock();leases.clear();completions.clear();
+        for(var outcome:snapshot.outcomes())if(!faults.isOwnerAvailable(outcome.owner()))
+            throw new IllegalStateException("Historical result owner is quarantined");
+        clock=snapshot.clock();leases.clear();completions.clear();outcomes.clear();
         snapshot.leases().forEach(value -> leases.put(value.id(),value));
         snapshot.completions().forEach(value -> completions.put(value.activationId(),value));
+        snapshot.outcomes().forEach(value -> outcomes.put(value.activationId(),value));
     }
-    public record Snapshot(long generation,long clock,List<Lease> leases,List<Completion> completions) {
-        public Snapshot { leases=List.copyOf(leases);completions=List.copyOf(completions); }
+    public record Snapshot(long generation,long clock,List<Lease> leases,List<Completion> completions,List<Outcome> outcomes) {
+        public Snapshot { leases=List.copyOf(leases);completions=List.copyOf(completions);outcomes=List.copyOf(outcomes); }
     }
+    public record Outcome(String owner,long activationId,String localId,String status) { }
     public record Lease(long id,String owner,String localId,Map<String,Object>options,List<MutatorPolicy>policies,
                         long duration,long agePresentations,String status) {
         public Lease { options=Map.copyOf(options); policies=List.copyOf(policies); }
@@ -120,6 +133,7 @@ public final class TemporaryMutatorState implements TransientMutatorPolicySource
         private void check() { if(Thread.currentThread()!=callbackThread||closed||retired||!faults.isOwnerAvailable(owner)) throw new IllegalStateException("Temporary callback authority is closed"); }
         @Override public ActivationResult activate(String localId,Map<String,Object>options,long duration) {
             check(); prune();
+            if(preparing)return rejected("Mutator factories cannot reenter lease mutation");
             if(!activationAllowed)return rejected("Temporary admission requires active ordinary gameplay");
             if(duration<0||duration>3600) return rejected("Duration must be 0..3600 presentations");
             if(leases.size()>=MAX_ACTIVE) return rejected("Temporary activation limit reached");
@@ -157,6 +171,7 @@ public final class TemporaryMutatorState implements TransientMutatorPolicySource
         }
         @Override public ActivationResult replace(long id,Map<String,Object>options) {
             check(); prune();
+            if(preparing)return rejected("Mutator factories cannot reenter lease mutation");
             if(!activationAllowed)return rejected("Temporary replacement requires active ordinary gameplay");
             var old=leases.get(id);
             if(old==null||!old.owner().equals(owner)) return rejected("Activation is unavailable to this owner");
@@ -173,9 +188,11 @@ public final class TemporaryMutatorState implements TransientMutatorPolicySource
             leases.put(id,new Lease(id,owner,old.localId(),validated,policies,old.duration(),old.agePresentations(),old.status()));
             return new ActivationResult(true,id,"");
         }
-        @Override public boolean cancel(long id) { check();var value=leases.get(id);return value!=null&&value.owner().equals(owner)&&leases.remove(id)!=null; }
+        @Override public boolean cancel(long id) { check();if(preparing)return false;var value=leases.get(id);return value!=null&&value.owner().equals(owner)&&leases.remove(id)!=null; }
         @Override public ActivationResult complete(long id,boolean won) {
-            check();prune();var lease=leases.get(id);
+            check();prune();
+            if(preparing)return rejected("Mutator factories cannot reenter lease mutation");
+            var lease=leases.get(id);
             if(lease==null || !lease.owner().equals(owner) || lease.oneShot()
                     || lease.policies().stream().noneMatch(GameplayHoldPolicy.class::isInstance)
                     || lease.policies().stream().noneMatch(p -> p instanceof OverlayPolicy overlay && overlay.mode()!=OverlayPolicy.Mode.SIMULATED_CHAT))
@@ -190,6 +207,10 @@ public final class TemporaryMutatorState implements TransientMutatorPolicySource
         @Override public List<ActiveActivation> active() {
             check();prune();return leases.values().stream().filter(value -> value.owner().equals(owner))
                     .map(value -> new ActiveActivation(value.id(),value.localId(),value.options(),value.agePresentations(),value.remaining(),value.oneShot(),value.status())).toList();
+        }
+        @Override public List<ActivationOutcome> outcomes() {
+            check();prune();return outcomes.values().stream().filter(value -> value.owner().equals(owner))
+                    .map(value -> new ActivationOutcome(value.activationId(),value.localId(),value.status())).toList();
         }
         @Override public List<Availability> available() {
             check();return definitions.values().stream().filter(value -> value.ownerModId().equals(owner)).map(value -> {
@@ -207,6 +228,7 @@ public final class TemporaryMutatorState implements TransientMutatorPolicySource
             return supported.containsAll(d.capabilities())?"":"Capabilities are unavailable in this gameplay cell";
         }
         private List<MutatorPolicy> prepare(OwnedMutator owned,Map<String,Object>options) {
+            preparing=true;
             try {
                 return faults.call(owner,() -> {
                     var result=List.copyOf(owned.definition().factory().prepare(new MutatorOptions(options)));
@@ -216,7 +238,9 @@ public final class TemporaryMutatorState implements TransientMutatorPolicySource
                     return result;
                 });
             } catch(ModFaultBoundary.CallbackAborted failure) { leases.values().removeIf(value -> failure.disabledOwners().contains(value.owner()));
-                completions.values().removeIf(value -> failure.disabledOwners().contains(value.owner()));throw failure; }
+                completions.values().removeIf(value -> failure.disabledOwners().contains(value.owner()));
+                outcomes.values().removeIf(value -> failure.disabledOwners().contains(value.owner()));throw failure;
+            } finally { preparing=false; }
         }
         private ActivationResult rejected(String reason) { return new ActivationResult(false,0,reason); }
     }

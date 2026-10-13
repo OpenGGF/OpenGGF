@@ -28,6 +28,7 @@ public final class GameplayObservationFactory {
     private static GameplayObservation.Player player(AbstractPlayableSprite sprite) {
         return new GameplayObservation.Player(sprite.characterKey().persisted(),sprite.getCentreX(),sprite.getCentreY(),
                 sprite.getXSpeed(),sprite.getYSpeed(),sprite.getGSpeed(),sprite.getRingCount(),sprite.getAir(),sprite.getDead(),sprite.isHurt(),
-                sprite.isObjectControlled(),sprite.isControlLocked(),sprite.isInWater(),sprite.getShieldType().name());
+                sprite.isObjectControlled() || sprite.isOnObject(),sprite.isControlLocked(),sprite.isInWater(),
+                sprite.getShieldType()==null?"none":sprite.getShieldType().name());
     }
 }

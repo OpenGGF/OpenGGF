@@ -18,6 +18,9 @@ public interface TemporaryMutators {
         return new ActivationResult(false,0,"Native completion is unavailable");
     }
     List<ActiveActivation> active();
+    /** Latest terminal native results, bounded to 32 for this world and scoped to this owner.
+     * Results survive lease acknowledgement/expiry; load, death and owner retirement clear them. */
+    default List<ActivationOutcome> outcomes() { return List.of(); }
     List<Availability> available();
     /** Native semantic cue, issued from an observation callback, never a draw callback. */
     void playSfx(GameSound sound);
@@ -30,4 +33,10 @@ public interface TemporaryMutators {
         public ActiveActivation { options = Map.copyOf(options); }
     }
     @ModApi record Availability(String localDefinitionId, boolean available, String reason) { }
+    @ModApi record ActivationOutcome(long activationId, String localDefinitionId, String status) {
+        public ActivationOutcome {
+            java.util.Objects.requireNonNull(localDefinitionId);
+            java.util.Objects.requireNonNull(status);
+        }
+    }
 }
