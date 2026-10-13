@@ -134,6 +134,18 @@ class TestAudioMutatorRuntime {
         assertTrue(sfxRequests().isEmpty());
     }
 
+    @Test void inconsistentEngineProjectionCannotTurnTimedAudioIntoAnInstantPolicy() {
+        fixture.source.add(new TransientMutatorPolicySource.Entry("test", 1,
+                new AudioEffectPolicy(AudioEffectPolicy.Mode.MUSIC, 3, 15), 0, 0, true));
+        fixture.source.add(new TransientMutatorPolicySource.Entry("test", 2,
+                new AudioEffectPolicy(AudioEffectPolicy.Mode.LANDING_CUE, 0x49, 15), 0, 0, false));
+        tick();
+        assertTrue(fixture.reports.get(1L).contains("live timed activation"));
+        assertTrue(fixture.reports.get(2L).contains("live timed activation"));
+        assertEquals(List.of(1), musicRequests());
+        assertTrue(sfxRequests().isEmpty());
+    }
+
     @Test void realLandingAndCompletedSpindashEventsShareStrictGlobalCooldown() {
         fixture.clang();
         landing();

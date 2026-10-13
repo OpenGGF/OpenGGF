@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public final class AudioMutatorRuntime implements WorldSessionPolicyState,
         RewindSnapshottable<AudioMutatorRuntime.Snapshot>, AudioMutatorAccess.Listener {
     private static final AtomicLong GENERATIONS = new AtomicLong();
+    // A brief clip, at most three nominal 60 Hz native seconds; the catalogue must advertise this same bound.
     private static final int MAX_MUSIC_TICKS = 180;
     private static final int WARNING_QUIET_TICKS = 30;
     private final long generation = GENERATIONS.incrementAndGet();
@@ -125,6 +126,11 @@ public final class AudioMutatorRuntime implements WorldSessionPolicyState,
         TransientMutatorPolicySource.Entry landing = null;
         for (var entry : entries) {
             if (!(entry.policy() instanceof AudioEffectPolicy policy) || handled.contains(entry.activationId())) continue;
+            // TemporaryPolicyTiming admits both modes only as positive-duration timed policies.
+            if (entry.oneShot() || entry.remainingPresentations() <= 0) {
+                reject(entry, source, new IllegalArgumentException("Audio effects require a live timed activation"));
+                continue;
+            }
             if (policy.mode() == AudioEffectPolicy.Mode.MUSIC) music = entry;
             else landing = entry;
         }
@@ -219,7 +225,6 @@ public final class AudioMutatorRuntime implements WorldSessionPolicyState,
         musicExpires = nativeTicks + Math.min(MAX_MUSIC_TICKS, Math.max(1, entry.remainingPresentations()));
         lastMusicTick = nativeTicks;
         handled.add(entry.activationId());
-        if (entry.oneShot()) source.acknowledge(entry.activationId());
         report(source, entry.activationId(), "Native ROM music surprise playing");
     }
     private void playLanding(TransientMutatorPolicySource.Entry entry, TransientMutatorPolicySource source) {
@@ -235,7 +240,6 @@ public final class AudioMutatorRuntime implements WorldSessionPolicyState,
         try { binding.playLandingCue(policy.cueId()); }
         catch (IllegalArgumentException | IllegalStateException failure) { reject(entry, source, failure); return; }
         lastCueTick = nativeTicks;
-        if (entry.oneShot()) { handled.add(entry.activationId()); source.acknowledge(entry.activationId()); }
         report(source, entry.activationId(), "Native ROM landing cue played");
     }
     private void reject(TransientMutatorPolicySource.Entry entry, TransientMutatorPolicySource source, RuntimeException failure) {
