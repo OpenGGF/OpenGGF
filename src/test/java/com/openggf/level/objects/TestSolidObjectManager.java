@@ -1,6 +1,7 @@
 package com.openggf.level.objects;
 
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.mutators.PlayableAudioEvents;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -483,7 +484,10 @@ public class TestSolidObjectManager {
             player.setAir(true);
 
             int startCentreY = player.getCentreY();
-            manager.updateSolidContacts(player);
+            try (var events = mockStatic(PlayableAudioEvents.class)) {
+                manager.updateSolidContacts(player);
+                events.verifyNoInteractions();
+            }
 
             assertEquals(startCentreY + 3, player.getCentreY(),
                     "loc_1E154 lifts the rising graze by +3 (distY=0) even at the right edge");
@@ -2468,7 +2472,13 @@ public class TestSolidObjectManager {
             int centerY = 100 - 4 - (params.groundHalfHeight() + rollingRadius) + distY;
             player.setCentreY((short) centerY);
 
-            manager.updateSolidContacts(player);
+            try (var events = mockStatic(PlayableAudioEvents.class)) {
+                manager.updateSolidContacts(player);
+                events.verify(() -> PlayableAudioEvents.landed(player));
+                manager.updateSolidContacts(player);
+                events.verify(() -> PlayableAudioEvents.landed(player));
+                events.verifyNoMoreInteractions();
+            }
 
             assertTrue(player.isOnObject());
             assertFalse(player.getAir());

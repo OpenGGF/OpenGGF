@@ -25,6 +25,16 @@ public final class SpriteManagerInternalAccess {
         return sprite.getMovementManager() instanceof PlayableSpriteMovement movement ? movement.motionMutators : null;
     }
 
+    public static void prepareMotionInputForNativeTick(SpriteManager manager) {
+        requireEngineCaller();
+        manager.prepareMotionInputForNativeTick();
+    }
+
+    public static void clearPreparedMotionInput(SpriteManager manager) {
+        requireEngineCaller();
+        manager.clearPreparedMotionInput();
+    }
+
     private static void requireEngineCaller() {
         if (com.openggf.util.EngineCallerAccess.callerOutside(SpriteManagerInternalAccess.class).getClassLoader()
                 != SpriteManagerInternalAccess.class.getClassLoader()) throw new SecurityException("Engine motion access only");

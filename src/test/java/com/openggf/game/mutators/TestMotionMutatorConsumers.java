@@ -27,14 +27,37 @@ import static com.openggf.tests.MutatorPlayerStateAssertions.assertNativeStateEq
 @FullReset
 @Isolated
 class TestMotionMutatorConsumers {
-    private static final class Source implements TransientMutatorPolicySource {
+    private static final class Source implements TransientMutatorPolicySource,
+            com.openggf.game.session.WorldSessionPolicyState,
+            com.openggf.game.rewind.RewindSnapshottable<Source.State> {
+        record State(List<Entry> entries, long ordinal, List<Long> acknowledgements, List<String> reports) { }
         final List<Entry> active = new ArrayList<>();
+        final List<Long> acknowledgements = new ArrayList<>();
+        final List<String> reports = new ArrayList<>();
         long ordinal;
         void policy(MutatorPolicy policy) { active.clear(); add(policy, false); }
         void add(MutatorPolicy policy, boolean once) { active.add(new Entry("fixture", ++ordinal, policy, 0, once ? 0 : 600, once)); }
         @Override public List<Entry> entries() { return List.copyOf(active); }
-        @Override public boolean acknowledge(long id) { return active.removeIf(e -> e.activationId() == id); }
-        @Override public boolean report(long id, String status) { return true; }
+        @Override public boolean acknowledge(long id) { acknowledgements.add(id); return active.removeIf(e -> e.activationId() == id); }
+        @Override public boolean report(long id, String status) { reports.add(id + ":" + status); return true; }
+        @Override public <T> T getService(Class<T> type) {
+            return type == TransientMutatorPolicySource.class ? type.cast(this) : null;
+        }
+        @Override public com.openggf.game.rewind.RewindSnapshottable<?> rewindAdapter() { return this; }
+        @Override public String key() { return "fixture-transient-source"; }
+        @Override public State capture() {
+            return new State(List.copyOf(active), ordinal, List.copyOf(acknowledgements), List.copyOf(reports));
+        }
+        @Override public void restore(State state) {
+            active.clear(); active.addAll(state.entries()); ordinal = state.ordinal();
+            acknowledgements.clear(); acknowledgements.addAll(state.acknowledgements());
+            reports.clear(); reports.addAll(state.reports());
+        }
+        @Override public void beforeAssembly(LevelLoadCause cause) { active.clear(); }
+        @Override public void bindRoster(SpriteManager sprites) { }
+        @Override public void failedAssembly(LevelLoadCause cause) { active.clear(); }
+        @Override public void closeScreens() { }
+        @Override public void retire() { active.clear(); }
     }
     private Source source;
     private MotionMutatorRuntime runtime;
@@ -122,11 +145,76 @@ class TestMotionMutatorConsumers {
         player.setGSpeed((short) 0x300); runtime.beforeMovement(player); assertEquals(0x300, player.getGSpeed());
     }
 
+    @ParameterizedTest @ValueSource(strings = {"boss", "transport", "airborne", "stationary"})
+    void oneShotNativeDeadlineRejectsSkippedOrUnqualifiedOwnersExactlyOnceAndReplays(String context) {
+        var player = player("sonic");
+        var mode = context.equals("airborne") ? PlayerMotionPolicy.Mode.GROUND_STOP : PlayerMotionPolicy.Mode.MOMENTUM_PULSE;
+        source.add(new PlayerMotionPolicy(mode, 0), true);
+        if (!context.equals("stationary")) { player.setXSpeed((short) 0x240); player.setGSpeed((short) 0x240); }
+        if (context.equals("boss")) gsm.setCurrentBossId(1);
+        if (context.equals("transport")) player.setObjectControlled(true);
+        if (context.equals("airborne")) player.setAir(true);
+        var frame = org.mockito.Mockito.mock(com.openggf.LevelFrameContext.class);
+        for (int tick = 1; tick < MotionMutatorRuntime.ONE_SHOT_NATIVE_TICK_LIMIT; tick++) {
+            runtime.beforeNativeTick(frame, com.openggf.control.LogicalInputSnapshot.neutral());
+            if (context.equals("stationary") || context.equals("airborne")) runtime.beforeMovement(player);
+            assertEquals(1, source.entries().size());
+        }
+        var before = runtime.capture(); var leasesBefore = source.capture();
+        runtime.beforeNativeTick(frame, com.openggf.control.LogicalInputSnapshot.neutral());
+        assertTrue(source.entries().isEmpty()); assertEquals(1, source.acknowledgements.size());
+        assertEquals(1, source.reports.size()); assertTrue(source.reports.getFirst().contains("Failed:"));
+        var expected = runtime.capture(); var expectedLeases = source.capture();
+        for (int tick = 0; tick < 3; tick++) runtime.beforeNativeTick(frame, com.openggf.control.LogicalInputSnapshot.neutral());
+        assertEquals(1, source.acknowledgements.size()); assertEquals(1, source.reports.size());
+        source.restore(leasesBefore); runtime.restore(before);
+        runtime.beforeNativeTick(frame, com.openggf.control.LogicalInputSnapshot.neutral());
+        assertEquals(expected, runtime.capture()); assertEquals(expectedLeases, source.capture());
+        assertEquals(context.equals("stationary") ? 0 : 0x240, player.getXSpeed());
+    }
+
+    @Test void oneShotPresentationDeadlineAndPausedBudgetAreCapturedAndQualifiedOpportunityStillSucceeds() {
+        var player = player("sonic"); source.add(new PlayerMotionPolicy(PlayerMotionPolicy.Mode.GROUND_STOP, 0), true);
+        var entry = source.active.getFirst();
+        source.active.set(0, new TransientMutatorPolicySource.Entry(entry.owner(), entry.activationId(), entry.policy(),
+                MotionMutatorRuntime.ONE_SHOT_PRESENTATION_LIMIT, 0, true));
+        var frame = org.mockito.Mockito.mock(com.openggf.LevelFrameContext.class);
+        var before = runtime.capture();
+        for (var phase : List.of(com.openggf.game.GameplayObservation.Phase.PAUSED,
+                com.openggf.game.GameplayObservation.Phase.HELD, com.openggf.game.GameplayObservation.Phase.REWIND)) {
+            runtime.leaveOrdinaryGameplay(phase); assertEquals(before, runtime.capture());
+        }
+        runtime.beforeNativeTick(frame, com.openggf.control.LogicalInputSnapshot.neutral());
+        assertTrue(source.entries().isEmpty()); assertEquals(1, source.acknowledgements.size());
+        assertTrue(source.reports.getFirst().contains("Failed:"));
+        source.add(new PlayerMotionPolicy(PlayerMotionPolicy.Mode.MOMENTUM_PULSE, 0), true);
+        var pulse = source.active.getFirst(); source.active.add(pulse); // shared activation is acknowledged once
+        player.setGSpeed((short) 0x240); player.setXSpeed((short) 0x240);
+        runtime.beforeNativeTick(frame, com.openggf.control.LogicalInputSnapshot.neutral());
+        runtime.beforeMovement(player);
+        assertEquals(-0x240, player.getGSpeed()); assertTrue(source.entries().isEmpty());
+        assertEquals(2, source.acknowledgements.size()); assertEquals(1, source.reports.size());
+    }
+
     @Test void freshJumpGatePreservesExistingAirborneJumpAndSpindashButtons() throws Exception {
         var player = player("sonic"); source.policy(new InputControlPolicy(InputControlPolicy.Mode.NO_FRESH_JUMP));
         assertEquals(false, call(player,"doJump")); assertFalse(player.getAir());
         player.setAir(true); player.setYSpeed((short)-0x500); runtime.beforeMovement(player); assertEquals(-0x500, player.getYSpeed());
         player.setAir(false); player.setSpindash(true); assertFalse(runtime.blocksFreshJump(player));
+    }
+
+    @Test void nativeSpindashCancellationAndLevelResetDoNotPublishReleaseOrLandingEvents() {
+        var player = player("sonic");
+        try (var events = org.mockito.Mockito.mockStatic(PlayableAudioEvents.class)) {
+            player.setSpindash(true);
+            player.completeHurtLandingRecovery();
+            assertFalse(player.getSpindash());
+            player.setSpindash(true); player.applyHurtIgnoringIFrames(player.getCentreX(), false);
+            assertFalse(player.getSpindash());
+            player.setSpindash(true); player.resetState();
+            assertFalse(player.getSpindash());
+            events.verifyNoInteractions();
+        }
     }
 
     @Test void rollingUsesNativeRadiiAndCruiseUsesNativeAccelerationAndBoundedSpeed() throws Exception {
@@ -275,6 +363,36 @@ class TestMotionMutatorConsumers {
         assertFalse(player.isInWater());
     }
 
+    @Test void relocationFluidQueryComposesNativePlaneAtTargetWithIndependentCapturedCircle() {
+        var player = player("sonic"); source.policy(new FluidContextPolicy(64));
+        var water = org.mockito.Mockito.mock(com.openggf.level.WaterSystem.class);
+        org.mockito.Mockito.when(water.hasWater(5, 1)).thenReturn(true);
+        org.mockito.Mockito.when(water.getGameplayWaterLevelY(5, 1)).thenReturn(200);
+        var objects = org.mockito.Mockito.mock(com.openggf.level.objects.ObjectManager.class);
+        org.mockito.Mockito.when(objects.getObjectServices()).thenReturn(
+                new com.openggf.level.objects.TestObjectServices().withWaterSystem(water));
+        var level = org.mockito.Mockito.mock(com.openggf.level.LevelManager.class);
+        org.mockito.Mockito.when(level.getObjectManager()).thenReturn(objects);
+        org.mockito.Mockito.when(level.getFeatureZoneId()).thenReturn(5);
+        org.mockito.Mockito.when(level.getFeatureActId()).thenReturn(1);
+        var frame = org.mockito.Mockito.mock(com.openggf.LevelFrameContext.class);
+        org.mockito.Mockito.when(frame.levelManager()).thenReturn(level);
+        runtime.beforeNativeTick(frame, com.openggf.control.LogicalInputSnapshot.neutral());
+        var query = runtime.getService(EffectiveFluidContextSource.class);
+        var circle = runtime.fluidRegion();
+        assertTrue(query.underwaterAt(player, circle.centreX(), circle.centreY()));
+        assertFalse(query.underwaterAt(player, 500, 200), "native surface equality stays dry outside the local circle");
+        assertTrue(query.underwaterAt(player, 500, 201), "native owner evaluates the target, not the old player status");
+        assertFalse(player.isInWater());
+        var checkpoint = runtime.capture();
+        runtime.beforeAssembly(LevelLoadCause.FULL_RESTART); runtime.restore(checkpoint);
+        assertEquals(circle, runtime.fluidRegion());
+        assertTrue(query.underwaterAt(player, 500, 201));
+        source.active.clear();
+        assertFalse(query.underwaterAt(player, circle.centreX(), circle.centreY()));
+        assertTrue(query.underwaterAt(player, 500, 201), "overlay expiry cannot erase native water");
+    }
+
     @Test void emptyOrRetiredOwnerKeepsCompleteNativeStateAndCannotRestoreAcrossRetirement() throws Exception {
         var player = player("sonic"); var stock=new Sonic("sonic",(short)100,(short)100);
         player.setAir(true);stock.setAir(true); player.setYSpeed((short)-0x101);stock.setYSpeed((short)-0x101);
@@ -285,6 +403,53 @@ class TestMotionMutatorConsumers {
 
     @Test void snapshotsCannotCrossWorlds() {
         assertThrows(IllegalArgumentException.class,()->new MotionMutatorRuntime().restore(runtime.capture()));
+    }
+
+    @Test void assembledWorldBindsAfterPolicyCreationAndRewindsLeasesInputAndAcknowledgedPulseTogether() {
+        var child = new MotionMutatorRuntime();
+        var module = org.mockito.Mockito.mock(com.openggf.game.GameModule.class);
+        org.mockito.Mockito.when(module.getIdentifier()).thenReturn("test:motion-assembly");
+        org.mockito.Mockito.when(module.getGameService(com.openggf.game.session.WorldSessionPolicyProvider.class))
+                .thenReturn(world -> com.openggf.game.session.CompositeWorldSessionPolicyState.of(source, child));
+        var world = new com.openggf.game.session.WorldSession(module);
+        var context = org.mockito.Mockito.mock(com.openggf.game.session.GameplayModeContext.class);
+        org.mockito.Mockito.when(context.getWorldSession()).thenReturn(world);
+        org.mockito.Mockito.when(context.getSpriteManager()).thenReturn(sprites);
+        org.mockito.Mockito.when(context.getGameStateManager()).thenReturn(gsm);
+        var player = player("sonic");
+        source.add(new InputControlPolicy(InputControlPolicy.Mode.DELAY, 6), false);
+        source.add(new PlayerMotionPolicy(PlayerMotionPolicy.Mode.MOMENTUM_PULSE, 0), true);
+        source.add(new FluidContextPolicy(64), false);
+        source.add(new SignedGravityPolicy(), false);
+        assertEquals(player.getJump(), child.jumpImpulse(player, player.getJump()), "provider construction is not a gameplay binding");
+        com.openggf.game.session.WorldSessionPolicyAccess.bindGameplay(context);
+        assertTrue(child.leader(player));
+        var registry = new com.openggf.game.rewind.RewindRegistry();
+        com.openggf.game.session.WorldSessionPolicyAccess.registerRewind(world, registry);
+        var right = com.openggf.control.PlayerInputState.of(AbstractPlayableSprite.INPUT_RIGHT,
+                AbstractPlayableSprite.INPUT_RIGHT, 0, 0, false, false);
+        assertEquals(com.openggf.control.PlayerInputState.neutral(), child.admitInput(right, false));
+        player.setGSpeed((short) 0x240); player.setXSpeed((short) 0x240);
+        var nativeBefore = player.captureRewindState();
+        var before = registry.capture();
+        child.beforeMovement(player);
+        assertEquals(-0x240, player.getGSpeed());
+        assertEquals(3, source.entries().size(), "one-shot acknowledgement removes only the pulse");
+        var nativeAfter = player.captureRewindState();
+        var after = registry.capture();
+        player.restoreRewindState(nativeBefore); registry.restore(before);
+        assertEquals(4, source.entries().size(), "rewind restores the engine-owned activation alongside its consumer");
+        child.beforeMovement(player);
+        assertNativeStateEquals(nativeAfter, player.captureRewindState());
+        assertEquals(after.entries(), registry.capture().entries());
+        for (int tick = 0; tick < 5; tick++) child.admitInput(com.openggf.control.PlayerInputState.neutral(), false);
+        assertEquals(right, child.admitInput(com.openggf.control.PlayerInputState.neutral(), false));
+        var replacement = new SpriteManager();
+        var recreated = new Sonic("sonic", (short) 100, (short) 100);
+        replacement.addSprite(recreated);
+        com.openggf.game.session.WorldSessionPolicyAccess.bindRoster(world, replacement);
+        assertTrue(child.leader(recreated)); assertFalse(child.leader(player));
+        assertTrue(PlayerFluidContextAccess.movementUnderwater(recreated));
     }
 
     @Test void leavingOrdinaryGameplayClearsQueuesAndContributionsWhilePauseHoldRewindPreserveThem() {

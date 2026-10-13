@@ -1403,6 +1403,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		sprite.setRolling(true);
 
 		audioManager.playSfx(GameSound.SPINDASH_RELEASE);
+		com.openggf.game.mutators.PlayableAudioEvents.spindashReleased(sprite);
 		short originalX = sprite.getX();
 		short originalY = sprite.getY();
 		sprite.updateSensors(originalX, originalY);

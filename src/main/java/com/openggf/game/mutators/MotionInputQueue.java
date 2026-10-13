@@ -18,7 +18,7 @@ final class MotionInputQueue {
     PlayerInputState admit(PlayerInputState input, InputControlPolicy policy, long id,
                            boolean eligible, boolean airborne) {
         boolean landed = wasAirborne && !airborne;
-        wasAirborne = airborne;
+        wasAirborne = eligible && airborne;
         if (!eligible || policy == null) {
             clearDelay();
             return input;

@@ -123,6 +123,8 @@ public class SpriteManager implements PlayableSstDispatcher {
 	private InputHandler publishedInputHandler;
 	private PlayerInputState publishedRawPlayerOne;
 	private PlayerInputState publishedEffectivePlayerOne;
+	// Scratch for the current admitted native tick; the captured FIFO belongs to MotionMutatorRuntime.
+	private PlayerInputState admittedMotionPlayerOne;
 	private GameplayInputFilter publishedGameplayInputFilter;
 	private final IdentityHashMap<AbstractPlayableSprite, Integer> playableUpdateOrder = new IdentityHashMap<>();
 	// Reused per-frame scratch for buildPlayableUpdateOrderInto(); valid only
@@ -142,6 +144,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 
 	void bindMotionMutators(com.openggf.game.mutators.MotionMutatorRuntime runtime) {
 		motionMutators = runtime;
+		clearPreparedMotionInput();
 		for (Sprite sprite : sprites.values()) {
 			if (sprite instanceof AbstractPlayableSprite playable
 					&& playable.getMovementManager() instanceof PlayableSpriteMovement movement) movement.motionMutators = runtime;
@@ -476,13 +479,37 @@ public class SpriteManager implements PlayableSstDispatcher {
 		boolean suppressInput = inputSuppressed
 				|| (playbackInputSuppressed && !handler.hasLogicalOverride());
 		PlayerInputState raw = handler.logical().player1();
+		clearPreparedMotionInput();
 		publishedInputHandler = handler;
 		publishedRawPlayerOne = raw;
 		publishedGameplayInputFilter = GameplayInputFilterAccess.currentSessionFilter();
 		publishedEffectivePlayerOne = null;
 		publishedEffectivePlayerOne = filterPlayerOne(raw, publishedGameplayInputFilter);
-		PlayerInputState p1 = publishedEffectivePlayerOne;
-		PlayerInputState p2 = handler.logical().player2();
+		for (Sprite sprite : getAllSprites()) {
+			if (sprite instanceof AbstractPlayableSprite playable && !playable.isCpuControlled())
+				playable.applyQueuedControlStateForFrameStart();
+		}
+		publishPlayerOneSnapshot(publishedEffectivePlayerOne, handler.logical().player2(), suppressInput);
+	}
+
+	void prepareMotionInputForNativeTick() {
+		if (motionMutators == null || publishedInputHandler == null || admittedMotionPlayerOne != null) return;
+		boolean suppressInput = inputSuppressed
+				|| (playbackInputSuppressed && !publishedInputHandler.hasLogicalOverride());
+		PlayerInputState raw = publishedInputHandler.logical().player1();
+		GameplayInputFilter filter = GameplayInputFilterAccess.currentSessionFilter();
+		if (raw != publishedRawPlayerOne || filter != publishedGameplayInputFilter) {
+			publishedRawPlayerOne = raw;
+			publishedGameplayInputFilter = filter;
+			publishedEffectivePlayerOne = filterPlayerOne(raw, filter);
+		}
+		admittedMotionPlayerOne = motionMutators.admitInput(publishedEffectivePlayerOne, suppressInput);
+		publishPlayerOneSnapshot(admittedMotionPlayerOne, publishedInputHandler.logical().player2(), suppressInput);
+	}
+
+	void clearPreparedMotionInput() { admittedMotionPlayerOne = null; }
+
+	private void publishPlayerOneSnapshot(PlayerInputState p1, PlayerInputState p2, boolean suppressInput) {
 		joypadPressSnapshot = suppressInput
 				? JoypadPressSnapshot.NONE
 				: new JoypadPressSnapshot(
@@ -495,7 +522,6 @@ public class SpriteManager implements PlayableSstDispatcher {
 		boolean right = (p1Held & AbstractPlayableSprite.INPUT_RIGHT) != 0;
 		for (Sprite sprite : getAllSprites()) {
 			if (sprite instanceof AbstractPlayableSprite playable && !playable.isCpuControlled()) {
-				playable.applyQueuedControlStateForFrameStart();
 				playable.setDirectionalInputPressed(up, down, left, right);
 			}
 		}
@@ -511,8 +537,13 @@ public class SpriteManager implements PlayableSstDispatcher {
 		frameCounter++;
 		boolean suppressInput = inputSuppressed
 				|| (playbackInputSuppressed && !handler.hasLogicalOverride());
-		PlayerInputState p1 = effectivePlayerOneForUpdate(handler);
-		if (motionMutators != null) p1 = motionMutators.admitInput(p1, suppressInput);
+		PlayerInputState p1 = admittedMotionPlayerOne;
+		if (p1 != null) {
+			clearPublishedPlayerOne();
+		} else {
+			p1 = effectivePlayerOneForUpdate(handler);
+			if (motionMutators != null) p1 = motionMutators.admitInput(p1, suppressInput);
+		}
 		int p1Held = !suppressInput ? p1.heldMask() : 0;
 		int p1Pressed = !suppressInput ? p1.pressedMask() : 0;
 		int p1ActionPressedMask = !suppressInput ? p1.actionPressedMask() : 0;
@@ -822,6 +853,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 	}
 
 	private void clearPublishedPlayerOne() {
+		clearPreparedMotionInput();
 		publishedInputHandler = null;
 		publishedRawPlayerOne = null;
 		publishedEffectivePlayerOne = null;
@@ -1056,6 +1088,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 	}
 
 	public void updateWithoutInput() {
+		clearPublishedPlayerOne();
 		if (mutatorPolicySource != null) mutatorPolicySource.beforeForwardTick();
 		if (motionMutators != null) motionMutators.admitInput(PlayerInputState.neutral(), true);
 		frameCounter++;

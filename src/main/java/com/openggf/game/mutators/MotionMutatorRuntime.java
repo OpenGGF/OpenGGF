@@ -22,6 +22,10 @@ public final class MotionMutatorRuntime implements WorldSessionPolicyState,
     private final long generation = GENERATIONS.incrementAndGet();
     private final MotionInputQueue input = new MotionInputQueue();
     private final java.util.Set<Long> cancelledCruises = new java.util.HashSet<>();
+    static final int ONE_SHOT_NATIVE_TICK_LIMIT = 120;
+    static final int ONE_SHOT_PRESENTATION_LIMIT = 180;
+    private final java.util.Map<Long, Integer> oneShotAttempts = new java.util.HashMap<>();
+    private final java.util.Set<Long> settledOneShots = new java.util.HashSet<>();
     private SpriteManager sprites;
     private GameStateManager gameState;
     private com.openggf.level.WaterSystem nativeWater;
@@ -171,7 +175,7 @@ public final class MotionMutatorRuntime implements WorldSessionPolicyState,
             if (!(entry.policy() instanceof PlayerMotionPolicy policy)) continue;
             switch (policy.mode()) {
                 case MOMENTUM_PULSE -> {
-                    if (!entry.oneShot() || !source.acknowledge(entry.activationId())) continue;
+                    if (!hasHorizontalMomentum(sprite) || !settleOneShot(entry, null)) continue;
                     sprite.setXSpeed((short) -sprite.getXSpeed());
                     sprite.setGSpeed((short) -sprite.getGSpeed());
                     int velocity = sprite.getAir() ? sprite.getXSpeed() : sprite.getGSpeed();
@@ -179,11 +183,38 @@ public final class MotionMutatorRuntime implements WorldSessionPolicyState,
                             ? com.openggf.physics.Direction.LEFT : com.openggf.physics.Direction.RIGHT);
                 }
                 case GROUND_STOP -> {
-                    if (sprite.getAir() || !entry.oneShot() || !source.acknowledge(entry.activationId())) continue;
+                    if (sprite.getAir() || !hasHorizontalMomentum(sprite) || !settleOneShot(entry, null)) continue;
                     sprite.setGSpeed((short) 0); sprite.setXSpeed((short) 0);
                 }
                 default -> { }
             }
+        }
+    }
+
+    private static boolean hasHorizontalMomentum(AbstractPlayableSprite sprite) {
+        return sprite.getAir() ? sprite.getXSpeed() != 0 : sprite.getXSpeed() != 0 || sprite.getGSpeed() != 0;
+    }
+
+    private boolean settleOneShot(TransientMutatorPolicySource.Entry entry, String failure) {
+        if (!entry.oneShot() || !settledOneShots.add(entry.activationId())) return false;
+        if (failure != null) source.report(entry.activationId(), failure);
+        oneShotAttempts.remove(entry.activationId());
+        return source.acknowledge(entry.activationId());
+    }
+
+    /** Runs even when a native control/routine owner skips the ordinary movement consumer. */
+    private void advanceOneShotDeadlines() {
+        var pending = entries().stream().filter(e -> e.oneShot() && e.policy() instanceof PlayerMotionPolicy p
+                && (p.mode() == PlayerMotionPolicy.Mode.MOMENTUM_PULSE || p.mode() == PlayerMotionPolicy.Mode.GROUND_STOP)).toList();
+        var activeIds = pending.stream().map(TransientMutatorPolicySource.Entry::activationId).collect(java.util.stream.Collectors.toSet());
+        oneShotAttempts.keySet().retainAll(activeIds); settledOneShots.retainAll(activeIds);
+        var visited = new java.util.HashSet<Long>();
+        for (var entry : pending) {
+            if (!visited.add(entry.activationId()) || settledOneShots.contains(entry.activationId())) continue;
+            int attempts = oneShotAttempts.merge(entry.activationId(), 1,
+                    (previous, next) -> Math.min(ONE_SHOT_NATIVE_TICK_LIMIT, previous + next));
+            if (attempts >= ONE_SHOT_NATIVE_TICK_LIMIT || entry.agePresentations() >= ONE_SHOT_PRESENTATION_LIMIT)
+                settleOneShot(entry, "Failed: no qualified motion opportunity before deadline");
         }
     }
 
@@ -295,7 +326,7 @@ public final class MotionMutatorRuntime implements WorldSessionPolicyState,
         if (source != null && gameState != null) bind(sprites, gameState, source);
     }
     /** The foundation calls this after the context managers and world policy graph are attached. */
-    public void bindGameplay(com.openggf.game.session.GameplayModeContext context) {
+    @Override public void bindGameplay(com.openggf.game.session.GameplayModeContext context) {
         requireEngineCaller();
         var policies = TransientMutatorPolicyAccess.source(context.getWorldSession());
         if (policies != null) {
@@ -305,9 +336,11 @@ public final class MotionMutatorRuntime implements WorldSessionPolicyState,
     }
     @Override public void beforeNativeTick(com.openggf.LevelFrameContext context, com.openggf.control.LogicalInputSnapshot input) {
         ordinaryGameplay = true;
+        advanceOneShotDeadlines();
         bindNativeWater(context.levelManager());
         sampleGravityQualification();
         if (sprites != null) prepareFluid(sprites.getMainPlayable());
+        if (sprites != null) SpriteManagerInternalAccess.prepareMotionInputForNativeTick(sprites);
     }
     @Override public void onPresentation(com.openggf.game.session.GameplayModeContext context,
             com.openggf.control.LogicalInputSnapshot input, com.openggf.game.GameplayObservation.Phase phase) {
@@ -317,8 +350,8 @@ public final class MotionMutatorRuntime implements WorldSessionPolicyState,
             if (sprites != null) prepareFluid(sprites.getMainPlayable());
         }
     }
-    /** Matches the foundation's forthcoming internal lifecycle hook without editing its central interface. */
-    public void leaveOrdinaryGameplay(com.openggf.game.GameplayObservation.Phase phase) {
+    /** Clear departed gameplay contributions while paused, held and rewind presentations preserve them. */
+    @Override public void leaveOrdinaryGameplay(com.openggf.game.GameplayObservation.Phase phase) {
         if (phase == com.openggf.game.GameplayObservation.Phase.SETUP
                 || phase == com.openggf.game.GameplayObservation.Phase.STAGE
                 || phase == com.openggf.game.GameplayObservation.Phase.TRANSITION
@@ -333,25 +366,35 @@ public final class MotionMutatorRuntime implements WorldSessionPolicyState,
     @Override public void closeScreens() { }
     @Override public void retire() { retired = true; reset(); }
     private void reset() {
+        if (sprites != null) SpriteManagerInternalAccess.clearPreparedMotionInput(sprites);
         input.reset(); cancelledCruises.clear(); fluidActivation = 0; fluidX = fluidY = 0;
+        oneShotAttempts.clear(); settledOneShots.clear();
         gravityQualified = fluidMovementActive = fluidMovementSample = false;
     }
     @Override public String key() { return "motion-mutators"; }
     @Override public Snapshot capture() { return new Snapshot(generation, input.capture(), fluidActivation, fluidX, fluidY,
-            cancelledCruises, gravityQualified, fluidMovementActive, fluidMovementSample, ordinaryGameplay); }
+            cancelledCruises, oneShotAttempts, settledOneShots, gravityQualified, fluidMovementActive, fluidMovementSample, ordinaryGameplay); }
     @Override public void restore(Snapshot snapshot) {
         if (retired) throw new IllegalStateException("Motion owner is retired");
         if (snapshot.generation() != generation) throw new IllegalArgumentException("Motion snapshot belongs to another world");
+        if (sprites != null) SpriteManagerInternalAccess.clearPreparedMotionInput(sprites);
         input.restore(snapshot.input()); fluidActivation = snapshot.fluidActivation();
         fluidX = snapshot.fluidX(); fluidY = snapshot.fluidY();
         cancelledCruises.clear(); cancelledCruises.addAll(snapshot.cancelledCruises());
+        oneShotAttempts.clear(); oneShotAttempts.putAll(snapshot.oneShotAttempts());
+        settledOneShots.clear(); settledOneShots.addAll(snapshot.settledOneShots());
         gravityQualified = snapshot.gravityQualified(); fluidMovementActive = snapshot.fluidMovementActive();
         fluidMovementSample = snapshot.fluidMovementSample();
         ordinaryGameplay = snapshot.ordinaryGameplay();
     }
     public record Snapshot(long generation, MotionInputQueue.Snapshot input, long fluidActivation, int fluidX, int fluidY,
-                           java.util.Set<Long> cancelledCruises, boolean gravityQualified,
+                           java.util.Set<Long> cancelledCruises, java.util.Map<Long, Integer> oneShotAttempts,
+                           java.util.Set<Long> settledOneShots, boolean gravityQualified,
                            boolean fluidMovementActive, boolean fluidMovementSample, boolean ordinaryGameplay) {
-        public Snapshot { cancelledCruises = java.util.Set.copyOf(cancelledCruises); }
+        public Snapshot {
+            cancelledCruises = java.util.Set.copyOf(cancelledCruises);
+            oneShotAttempts = java.util.Map.copyOf(oneShotAttempts);
+            settledOneShots = java.util.Set.copyOf(settledOneShots);
+        }
     }
 }

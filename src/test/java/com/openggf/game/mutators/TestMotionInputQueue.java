@@ -59,4 +59,17 @@ class TestMotionInputQueue {
         queue.restore(checkpoint);
         assertEquals(landed, queue.admit(NONE, hop, 3, true, false));
     }
+
+    @Test void nativeControlSuppressionCannotLeaveAFakeLandingJumpOnRestoration() {
+        var queue = new MotionInputQueue();
+        var hop = new InputControlPolicy(InputControlPolicy.Mode.LANDING_JUMP);
+        queue.admit(NONE, hop, 3, false, true);
+        var suppressed = queue.capture();
+        assertEquals(NONE, queue.admit(NONE, hop, 3, true, false));
+        queue.restore(suppressed);
+        assertEquals(NONE, queue.admit(NONE, hop, 3, true, false));
+        queue.admit(NONE, hop, 3, true, true);
+        queue.admit(NONE, hop, 3, false, false);
+        assertEquals(NONE, queue.admit(NONE, hop, 3, true, false));
+    }
 }
