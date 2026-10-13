@@ -11,7 +11,7 @@ implementation reviewed historically; current campaign act certification pending
 | --- | --- |
 | Implemented | Original direct audit found no further missing Sonic/Tails feature; later miniboss lifetime, explosion and transition-identity fixes landed. |
 | Cold-reachable | Fresh 320px Sonic, Tails and paired routes, plus the 2026-09-27 800px Sonic candidate, reach the miniboss and MHZ2; no position/clock/ring/health seed. |
-| Completable | Native Sonic, Tails and paired routes, plus the 800px Sonic candidate, complete all six boss hits, sign/results, seamless MHZ2 load and released player movement. Other configurations remain open. |
+| Completable | Native Sonic, Tails, Knuckles and paired routes, plus the 800px Sonic candidate, complete all six boss hits, sign/results, seamless MHZ2 load and released player movement. Other configurations remain open. |
 | Native-accurate | Disassembly-backed review plus local regressions; frame-perfect/native visual certification not claimed. |
 | Rewind/standard | Several live interaction and graph checks exist; breadth and complete before/active/after obligations remain incomplete. |
 
@@ -280,3 +280,36 @@ absolute verified locked-on ROM: 93 cases pass, zero failures/errors/skips,
 This short component admission does not certify the complete Knuckles cold route.
 Ordinary controller authoring has passed the old lock and real wall climbs;
 miniboss, seamless MHZ2 and subsequent FBZ completion still require qualification.
+
+
+### Cold Knuckles Act 1 qualification, 2026-10-13
+
+The new `mhz1-knuckles-cold-complete-320` script/BK2 has 30,000 ordinary inputs,
+byte-identical to the selected uninterrupted authoring prefix. No position,
+clock, rings, health, shield, boss state or emerald inventory is seeded. Native
+Knuckles passes the locked-on intro gate, real ground loops, blower/wall climbs,
+bars/pulleys, sticky release and twisted-vine ascent, all six miniboss hits,
+results and the actual seamless MHZ2 load at input 29044. Released ordinary
+movement continues in Act2. The rapid fresh jump presses retain actual rebounds;
+the independent flame children remain harmful during body hit-flash.
+
+`TestMhzKnucklesColdRouteCapture#coldKnucklesCompletesActOneAndRestoresNativeInteractions`
+passes one case without failures/errors/skips on `bed44fae6` plus these new
+fixtures/test (2026-10-13 19:16:41 BST; 21.40 seconds class, 1:32 minutes Maven).
+Command: `env -u DISPLAY -u WAYLAND_DISPLAY
+JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl LUA_BIN=/usr/bin/lua5.4
+ALSOFT_DRIVERS=null python3 "$S3K_TASK_QUEUE"
+-Dmse=off '-Dtest=TestMhzKnucklesColdRouteCapture#coldKnucklesCompletesActOneAndRestoresNativeInteractions'
+"-Ds3k.rom.path=$S3K_TASK_ROM" test -B` in
+`ai-s3k-playable-finish`. Forty-three independent whole-registry windows each
+restore and replay twice with full drawing; all seven health values are mandatory.
+Actual outgoing live history is recorded and the seamless handoff must retire it
+while retaining frame numbering. The first attempt exposed the Act2 switch's
+retired-parent reference; the unchanged cold test now passes after its native
+ownership correction. This qualifies native320 solo Knuckles Act1. Complete
+Knuckles Act2/FBZ, other widths/donors/teams and remaining lifecycle/native
+presentation products are separate obligations.
+
+The command records normalize only machine-local paths: `S3K_TASK_QUEUE` is
+the updated main-workspace focused wrapper, and `S3K_TASK_ROM` is the absolute
+existing locked-on ROM path with the documented supported SHA-1.

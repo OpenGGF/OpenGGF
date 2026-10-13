@@ -8,7 +8,7 @@ other worktrees are preserved.
 
 ## Work and acceptance
 
-| Lane | Current evidence | Required result |
+| Lane | Initial blocker evidence | Required result |
 | --- | --- | --- |
 | MHZ | Authored Tails/team pulley checks, wide world restoration and paired FBZ history isolation fail in the October stock audit | Reproduce current identities, distinguish runtime defects from entry/input/observation errors, and complete affected cold routes with restoration and forward replay |
 | LRZ | Tails/team routes die; Knuckles/wide HPZ endpoints disagree | Resolve first blockers against ROM owners, qualify actual live destination and history isolation, retain unqualified breadth explicitly |
@@ -59,8 +59,9 @@ removing fully merged task worktrees and branches.
 
 ## Execution record
 
-Current investigation and queued reproductions are in progress. No route or
-ending completion is certified by this plan.
+The following execution entries preserve initial observations and rejected
+approaches. Later completed evidence supersedes their pending labels; final
+combined validation and delivery are recorded separately.
 
 The first confirmed shared defect is the omitted fresh title presentation:
 `FreshLevelTransitionBoundaryController` parks decoded destination players at
@@ -277,8 +278,8 @@ Knuckles switch/miniboss/end-boss/FBZ owners, but a cold MHZ1→2→FBZ route re
 unqualified. The source-only suggestion that these owners implied no concrete
 MHZ blocker was rejected by the actual cold production probe below.
 
-LBZ has a separate concrete prerequisite: the placed `$CD` upper-arena entry
-is an unconditional placeholder. Verified placement bytes `4410 8440 CD00` at
+At the pinned initial baseline, LBZ has a separate concrete prerequisite:
+the placed `$CD` upper-arena entry is an unconditional placeholder. Verified placement bytes `4410 8440 CD00` at
 ROM `$1F11CC` belong to native `Obj_LBZFinalBossKnux` / `word_72FEA`. Existing
 `$CA` / `$CC` Big Arm/carrier tests manually insert the later owner and bypass
 this admission. Its native gate must precede the same-slot `$CA` transition;
@@ -340,3 +341,86 @@ The paired MHZ live-history rerun passes one case at 18:04:43 BST (request 50505
 48.141 seconds Maven), retaining actual outgoing history and load isolation.
 Qualified LRZ paired continuation and Tails Act1 evidence are integrated as
 `a1cf9181c` and `7144c7618`; the later Tails Act2 route remains in authoring.
+
+
+### Integrated native owners and remaining qualification, 2026-10-13
+
+The native ending feature `c2103d5f7` is integrated as `d63bfe397` after merging
+current develop `1ead8d9b4` in `bfdf381a2`. The upstream AIZ native dispatch slots,
+drawbridge standing latch and selected-world physics-profile initialization are
+preserved. DDZ roster retirement, pure restored scroll output and seven
+continuous incoming scenarios are integrated from `3a9e6252a` as `1fab3806c`.
+Focused D01 lifecycle/roster/projection checks pass 48 cases without skips;
+Knuckles lifecycle/transition/donor/graph checks pass 58, and native scene-clear
+and auxiliary-owner regressions pass 2 and 33 respectively. These are bounded
+qualification, not full-scene native parity. The ending matrix records the
+individual commands, source states and corrected fixture-only premises.
+
+The placed LBZ gate `efbef3d38` is integrated as `976863de8`. Its initial
+five-width negative witness resolves CD to a placeholder. The corrected actual
+ROM placement admits native camera bounds, retains the negative CD music timer
+across same-slot CA initialization, and captures exact parent/sibling edges
+through pure child reconstruction. Fifty-seven entry/schema cases, 60 mandatory
+S3K startup cases and ten carrier graph cases pass without skips. Positioned
+CD→CA→CC→capsule/results/floor/carrier→released MHZ composition passes; its last
+ordinary Right-input assertion was corrected from an accidentally neutral mask
+and rerun independently. This does not establish a cold LBZ traversal or every
+transient detached-child/allocation prefix. See the [LBZ2 matrix](../validation/levels/s3k-lbz-act2.md).
+
+LRZ Tails' repaired first-act and middle routes are integrated as `7144c7618`
+and `c67886b74`; their production whole-world checks pass. Late Tails boss/HPZ
+and the cold Knuckles MHZ1→2→FBZ controller route remain in authoring. Knuckles
+passes the corrected standalone-mode gate, actual lower vine, upper pulley and
+reaches the real six-hit MHZ1 miniboss alive without gameplay-state seeds.
+These observations do not yet certify the complete route.
+
+The current change-based plan against the original integration pin selects all
+ten smoke categories (3,201 candidate classes before the remaining route test),
+with batches of at most 50 and separate guards. Root owns combined validation;
+workers run focused checks. No broad run or integration push has completed yet.
+
+
+The final LRZ Tails continuation `f52eb1810` is integrated as `f2b4962a6`.
+Its final 53,259/62,524-input movies exactly preserve the qualified 36,714-input
+incoming prefix. Three focused methods pass with zero failures/errors/skips at
+19:02:16 BST (37.95 seconds in class, 1:02 minutes Maven): actual Act1 history
+isolation, 71 Act2 and 62 boss/HPZ whole-world windows, all fourteen boss-health
+states, earned FIRE/ring12 approach, capsule/results, no encounter hurt and
+released HPZ `393/2800/ring3`. The raw cross-act registry checkpoint was invalid
+across an intentional seamless history barrier; the apparently active second
+fade was produced by a callback-bearing authoring fork. Fresh uninterrupted
+replay and the checkpoint guard reject that fork as evidence of a runtime PLC
+or history defect.
+
+Cold Knuckles ordinary rapid fresh jump presses defeat the real MHZ1 miniboss
+at input 28613 and reach MHZ2 at 29044. Native body `$CF` has a 32-dispatch hit
+cooldown, while flame children `$9A` remain independently harmful during body
+hit-flash and use V-int parity; longer airborne re-presses also trigger glide.
+Sonic's long jump cadence therefore cannot be assumed suitable for Knuckles.
+These are controller choices, not changes to physics or damage handling.
+The new 30,000-input Act1 fixture is byte-identical to its selected uninterrupted
+production prefix and reaches released Act2 without a death.
+
+The first formal Knuckles check, request 36128, completes one error, zero
+assertion failures/skips at 19:00:15 BST (19.40 seconds class, 1:29 minutes Maven)
+on `fd46e1bed` plus the new controller test/resources. Actual live history after
+the MHZ2 load captures `Mhz2KnucklesRouteSwitchChild#parent`, which refers to the
+immediately deleted Knuckles parent and has no registered rewind identity.
+This is a real ownership defect, not a reason to disable live history. Native
+`loc_6311A` creates the switch and deletes the parent; `loc_632CA` gives the
+Knuckles switch its own position/frame/respawn state and `Sprite_OnScreen_Test`.
+Only Sonic/Tails keep `loc_63308` / `Child_Draw_Sprite` and a live parent edge.
+A short actual-ROM ownership regression and pure shell correction are in the
+isolated worker; the unchanged full controller assertions will be rerun after
+integration. Later MHZ2 input authoring remains independent of that correction.
+
+
+The switch fix `3596237c3` is integrated as `bed44fae6`; 173 short entry/cutscene/
+graph/startup cases pass at 19:08:47 BST, no skips. The unchanged 30,000-input cold
+Knuckles Act1 test then passes one case at 19:16:41 BST (21.40 seconds class,
+1:32 minutes Maven), covering 43 two-cycle whole-world windows, every health
+value and actual seamless history retirement. Source includes current develop
+`843aa4738` reconciled without conflicts in `accf871d9`: native placement patches,
+optional S3K difficulty contracts and their candidate API pins are preserved.
+No stock rule or authoring-input change was made to accommodate those upstream
+contracts. The original combined selection pin remains `5e2f51f079`.
