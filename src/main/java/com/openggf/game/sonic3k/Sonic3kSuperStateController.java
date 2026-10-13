@@ -100,6 +100,13 @@ public class Sonic3kSuperStateController extends SuperStateController {
      */
     private boolean doomsdayForm;
     private static final int DOOMSDAY_FORM_SNAPSHOT_BIT = 0x100;
+    /** Native ending-script ownership, distinct from gameplay and Doomsday. */
+    private boolean endingSceneForm;
+    private boolean endingReunionForm;
+    private boolean endingRescueRevertMappingsPending;
+    private static final int ENDING_FORM_SNAPSHOT_BIT = 0x200;
+    private static final int ENDING_REUNION_SNAPSHOT_BIT = 0x400;
+    private static final int ENDING_REVERT_MAPPINGS_SNAPSHOT_BIT = 0x800;
     private final HyperKnucklesWallQuake wallQuake = new HyperKnucklesWallQuake();
     private int hyperFlashFrames;
     private boolean hyperFlashRestorePending;
@@ -130,6 +137,9 @@ public class Sonic3kSuperStateController extends SuperStateController {
         }
         super.reset();
         doomsdayForm = false;
+        endingSceneForm = false;
+        endingReunionForm = false;
+        endingRescueRevertMappingsPending = false;
         paletteState = 0;
         paletteFrame = 0;
         paletteTimer = 0;
@@ -146,6 +156,10 @@ public class Sonic3kSuperStateController extends SuperStateController {
 
     @Override
     public void update() {
+        if (endingSceneForm) {
+            updateEndingForm();
+            return;
+        }
         if (player.getDead() && isSuper()) {
             debugDeactivate();
             return;
@@ -232,12 +246,251 @@ public class Sonic3kSuperStateController extends SuperStateController {
         paletteState = 0;
     }
 
+    /** Native rescue {@code sub_5FC8E}: active Super palette/mappings, no transformation. */
+    public void initializeEndingSuperSonic() {
+        initializeEndingForm(S3kFormTier.SUPER);
+        player.setForcedAnimationId(-1);
+        player.setAnimationId(0);
+        paletteFrame = 0x24;
+        paletteTimer = 0;
+        installPoweredMappingPresentation();
+    }
+
+    /** {@code sub_5FCCE}: the same mapping owner with a negative Hyper flag and frame zero. */
+    public void initializeEndingHyperSonic() {
+        initializeEndingForm(S3kFormTier.HYPER);
+        paletteFrame = 0;
+        paletteTimer = 0;
+        installPoweredMappingPresentation();
+    }
+
+    /** {@code sub_5FCB4}: reset both palette cursors; neither timer nor flock is written. */
+    public void initializeEndingSuperTails() {
+        initializeEndingForm(S3kFormTier.SUPER_TAILS);
+        paletteFrame = 0;
+        superTailsCompanionPaletteFrame = 0;
+    }
+
+    /** {@code loc_5E70E}: powered Knuckles flight keeps its cursor and writes timer $F. */
+    public void initializeEndingKnucklesFlight() {
+        int previousFrame = paletteFrame;
+        initializeEndingForm(S3kFormTier.SUPER);
+        paletteFrame = previousFrame;
+        paletteTimer = 0xF;
+        holdEndingRingDrain();
+        // The flight scene writes neither Hyper nor its trail pointer, mappings,
+        // animation, motion, physics, control, invincibility, rings or audio.
+    }
+
+    private void initializeEndingForm(S3kFormTier tier) {
+        if (activeFormTier == S3kFormTier.NORMAL) captureNormalPalette();
+        endingSceneForm = true;
+        endingReunionForm = false;
+        endingRescueRevertMappingsPending = false;
+        doomsdayForm = false;
+        activeFormTier = tier;
+        configurePaletteForActiveTier();
+        paletteState = -1;
+        player.setSuperSonic(true);
+        setEndingCoreState(SuperState.SUPER, captureRewindState().ringDrainCounter());
+        // These routines write no speed, control, ring or audio field. The
+        // rescue owner loc_5D8BC owns its scripted motion and $81 control.
+    }
+
+    /** {@code loc_5D8BC}: the rescue caller's explicit Super_frame_count write. */
+    public void holdEndingRingDrain() {
+        setEndingCoreState(getState(), 0x7FFF);
+    }
+
+    /** {@code loc_5FDE0}: expiry of the caller-owned 119-decrement rescue helper. */
+    public void beginEndingRescueRevert() {
+        endingSceneForm = true;
+        endingReunionForm = false;
+        endingRescueRevertMappingsPending = true;
+        player.setSuperSonic(false);
+        player.setForcedAnimationId(-1);
+        player.setAnimationId(0xF);
+        paletteState = 2;
+        paletteFrame = 0x1E;
+        activeFormTier = S3kFormTier.NORMAL;
+        setEndingCoreState(SuperState.NORMAL, captureRewindState().ringDrainCounter());
+        if (normalAnimSet != null) player.setAnimationSet(normalAnimSet);
+        // Native ending reversion does not clear object_control, restore
+        // physics or seed invincibility_timer=1 (the gameplay music-return path).
+        // Palette_timer is retained; Map_Sonic belongs to the following dispatch.
+    }
+
+    /** {@code loc_5FE10}: the next helper dispatch installs Map_Sonic and retires. */
+    public void completeEndingRescueRevertMappings() {
+        endingRescueRevertMappingsPending = false;
+        restoreNormalMappingPresentation();
+    }
+
+    /** {@code loc_5E9E2}: offscreen Knuckles flight clears form without touching the actor. */
+    public void beginEndingKnucklesFlightRevert() {
+        endingSceneForm = true;
+        endingReunionForm = false;
+        endingRescueRevertMappingsPending = false;
+        player.setSuperSonic(false);
+        paletteState = 2;
+        paletteFrame = 0x1E;
+        activeFormTier = S3kFormTier.NORMAL;
+        setEndingCoreState(SuperState.NORMAL, captureRewindState().ringDrainCounter());
+        // No animation, mappings, control, palette timer, motion or physics write.
+    }
+
+    /**
+     * {@code loc_5E39E -> Ending_Give_SuperSonic}: post-credits reunion transformation.
+     * FixBugs=0 forces Sonic Hyper without his trail; Knuckles remains flagged
+     * Super while still receiving the Hyper trail. The fixed branches repair both.
+     */
+    public void startEndingReunionTransformation() {
+        if (activeFormTier == S3kFormTier.NORMAL) captureNormalPalette();
+        endingSceneForm = true;
+        endingReunionForm = true;
+        endingRescueRevertMappingsPending = false;
+        doomsdayForm = false;
+        activeFormTier = player instanceof Tails ? S3kFormTier.SUPER_TAILS
+                : player instanceof Knuckles ? S3kFormTier.SUPER : S3kFormTier.HYPER;
+        int tailsTimer = paletteTimer;
+        int tailsFrame = paletteFrame;
+        configurePaletteForActiveTier();
+        paletteState = 1;
+        if (player instanceof Tails) {
+            // Palette_timer_Tails is not written by Ending_Give_SuperSonic.
+            paletteTimer = tailsTimer;
+            paletteFrame = tailsFrame;
+            superTailsCompanionPaletteFrame = 0; // loc_5E39E clears shared Palette_frame.
+            superTailsCompanionPaletteTimer = 0xF;
+        } else {
+            paletteFrame = 0;
+            paletteTimer = 0xF;
+        }
+        var levelState = player.currentLevelState();
+        if (levelState != null) {
+            com.openggf.game.LevelRingDisplay.writeWithoutRefresh(levelState,
+                    (levelState.getRings() + 50) & 0xFFFF);
+        }
+        player.setSuperSonic(true);
+        player.applyExternalPhysicsProfile(getSuperProfile());
+        player.setForcedAnimationId(getTransformationAnimationId());
+        player.setAnimationId(getTransformationAnimationId());
+        player.setInvincibleFrames(0);
+        player.setObjectMappingFrameControl(false); // object_control=$81 clears its bit-1 mapping gate.
+        com.openggf.sprites.playable.ObjectControlState.nativeBit7FullControl().applyTo(player);
+        setEndingCoreState(SuperState.TRANSFORMING, 60);
+        installPoweredMappingPresentation();
+        var level = player.currentLevelManagerIfAvailable();
+        ObjectManager objects = level != null ? level.getObjectManager() : null;
+        if (player instanceof Tails) {
+            if (objects != null) ensureSuperTailsFlickies(objects);
+            else if (player.getPowerUpSpawner() != null) {
+                player.getPowerUpSpawner().registerObject(new SuperTailsFlickyFlockObjectInstance(player));
+            }
+        } else if (!(player instanceof Knuckles)) {
+            ensureHyperSonicStars(objects);
+        }
+        // No whistle, transform SFX, Super music or emerald eligibility check.
+    }
+
+    private void updateEndingForm() {
+        if (getState() == SuperState.TRANSFORMING) {
+            boolean finished;
+            if (player instanceof Tails) {
+                finished = --superTailsCompanionPaletteTimer < 0;
+                if (finished) {
+                    superTailsCompanionPaletteTimer = 1;
+                    superTailsCompanionPaletteFrame = 0;
+                    paletteFrame = 0;
+                    paletteState = -1;
+                }
+            } else if (player instanceof Knuckles) {
+                finished = --paletteTimer < 0;
+                if (finished) {
+                    paletteTimer = 1;
+                    paletteFrame = 0;
+                    paletteState = -1;
+                }
+            } else {
+                updatePaletteFade();
+                finished = paletteState == -1;
+            }
+            if (finished) {
+                setEndingCoreState(SuperState.SUPER, captureRewindState().ringDrainCounter());
+                player.setObjectMappingFrameControl(false); // SuperHyper_PalCycle writes the entire control byte to zero.
+                com.openggf.sprites.playable.ObjectControlState.none().applyTo(player);
+                player.setForcedAnimationId(-1);
+            }
+        } else {
+            updateSuperPalette();
+            updateEndingRevertPalette();
+        }
+        if (endingReunionForm && isSuperTailsFormActive()) {
+            var level = player.currentLevelManagerIfAvailable();
+            ensureSuperTailsFlickies(level != null ? level.getObjectManager() : null);
+        }
+        // The ending script owns control, life and ring timing. Only the native
+        // palette/transformation owner runs here, once through ordinary update().
+    }
+
+    private void updateEndingRevertPalette() {
+        if (paletteState != 2) return;
+        if (!usesSonicFormPresentation()) {
+            // SuperHyper_PalCycle_RevertNotSonic pops both cursors to zero
+            // without changing either timer, even when the caller wrote $1E.
+            paletteState = 0;
+            paletteFrame = 0;
+            superTailsCompanionPaletteFrame = 0;
+            applyNonSonicRevertPalette();
+            return;
+        }
+        if (--paletteTimer >= 0) return;
+        paletteTimer = 3;
+        int frameOffset = paletteFrame;
+        paletteFrame -= BYTES_PER_FRAME;
+        if (paletteFrame < 0) {
+            // FixBugs=0 clears only the high byte of Palette_frame after
+            // underflow ($FFFA -> $00FA). The fixed branch clears the word.
+            paletteFrame &= 0xFF;
+            paletteState = 0;
+        }
+        applyPaletteFrame(frameOffset, true);
+    }
+
+    private void setEndingCoreState(SuperState state, int ringCounter) {
+        var current = captureRewindState();
+        restoreCoreRewindState(new RewindState(state, ringCounter, current.paletteState(),
+                current.paletteFrame(), current.paletteTimer(), current.transformFramesRemaining(),
+                current.presentationTier(), current.savedNormalPalette(), current.savedNormalUnderwaterPalette()));
+    }
+
+    private void installPoweredMappingPresentation() {
+        if (!usesSonicFormPresentation()) return;
+        if (superAnimSet != null) {
+            if (normalAnimSet == null) normalAnimSet = player.getAnimationSet();
+            player.setAnimationSet(superAnimSet);
+        }
+        if (superRenderer != null) {
+            if (normalRenderer == null) normalRenderer = player.getSpriteRenderer();
+            ensurePoweredPatternBank();
+            player.setSpriteRenderer(superRenderer);
+        }
+    }
+
+    private void restoreNormalMappingPresentation() {
+        if (normalAnimSet != null) player.setAnimationSet(normalAnimSet);
+        if (normalRenderer != null) player.setSpriteRenderer(normalRenderer);
+    }
+
     @Override
     public RewindState captureRewindState() {
         int companionState = ((superTailsCompanionPaletteFrame / BYTES_PER_FRAME) & 0xF)
                 | ((superTailsCompanionPaletteTimer & 0xF) << 4);
         return createRewindState(paletteState, paletteFrame, paletteTimer,
-                doomsdayForm ? DOOMSDAY_FORM_SNAPSHOT_BIT : 0,
+                (doomsdayForm ? DOOMSDAY_FORM_SNAPSHOT_BIT : 0)
+                        | (endingSceneForm ? ENDING_FORM_SNAPSHOT_BIT : 0)
+                        | (endingReunionForm ? ENDING_REUNION_SNAPSHOT_BIT : 0)
+                        | (endingRescueRevertMappingsPending ? ENDING_REVERT_MAPPINGS_SNAPSHOT_BIT : 0),
                 activeFormTier.ordinal()
                         | (wallQuake.capture().framesRemaining() << 8)
                         | ((hyperFlashFrames | (hyperFlashRestorePending ? 0x80 : 0)) << 16)
@@ -255,6 +508,10 @@ public class Sonic3kSuperStateController extends SuperStateController {
         paletteState = rewindState.paletteState();
         paletteTimer = rewindState.paletteTimer();
         doomsdayForm = (rewindState.transformFramesRemaining() & DOOMSDAY_FORM_SNAPSHOT_BIT) != 0;
+        endingSceneForm = (rewindState.transformFramesRemaining() & ENDING_FORM_SNAPSHOT_BIT) != 0;
+        endingReunionForm = (rewindState.transformFramesRemaining() & ENDING_REUNION_SNAPSHOT_BIT) != 0;
+        endingRescueRevertMappingsPending =
+                (rewindState.transformFramesRemaining() & ENDING_REVERT_MAPPINGS_SNAPSHOT_BIT) != 0;
         savedNormalPalette = unpackPalette(rewindState.savedNormalPalette());
         savedNormalUnderwaterPalette = unpackPalette(rewindState.savedNormalUnderwaterPalette());
         activeFormTier = formTierFromSnapshot(rewindState.presentationTier() & 0xFF);
@@ -436,9 +693,10 @@ public class Sonic3kSuperStateController extends SuperStateController {
     }
 
     public HyperFormTrailSample currentTrailSample(int levelFrameCounter) {
-        if (!isHyperFormActive() || player instanceof Tails) {
-            return null;
-        }
+        boolean trailActive = endingSceneForm
+                ? endingReunionForm && isSuper() && player instanceof Knuckles
+                : isHyperFormActive();
+        if (!trailActive || player instanceof Tails) return null;
         return HyperFormTrailSample.sample(player, levelFrameCounter);
     }
 
@@ -556,6 +814,9 @@ public class Sonic3kSuperStateController extends SuperStateController {
 
     @Override
     protected void onTransformationStarted() {
+        endingSceneForm = false;
+        endingReunionForm = false;
+        endingRescueRevertMappingsPending = false;
         doomsdayForm = doomsdayActivation;
         activeFormTier = doomsdayActivation
                 ? S3kFormTier.SUPER
@@ -851,6 +1112,14 @@ public class Sonic3kSuperStateController extends SuperStateController {
     }
 
     private void reconcileRewindPresentation(SuperState restoredState) {
+        if (endingSceneForm) {
+            // Player rewind already restored its captured physics profile. The
+            // rescue flag writers never replace those values or release control.
+            if (restoredState == SuperState.SUPER || restoredState == SuperState.TRANSFORMING
+                    || endingRescueRevertMappingsPending) installPoweredMappingPresentation();
+            else restoreNormalMappingPresentation();
+            return;
+        }
         boolean activeSuper = restoredState == SuperState.SUPER;
         reconcileRewindPhysicsAndAnimationProfile(activeSuper);
         if (restoredState == SuperState.TRANSFORMING) {
