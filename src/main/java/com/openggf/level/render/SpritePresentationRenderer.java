@@ -117,6 +117,50 @@ public final class SpritePresentationRenderer {
     /** Resolve stable art addresses in the cache and restore the published generation of mutable virtual banks. */
     public static void draw(GraphicsManager graphics, Frame frame, int cameraX, int cameraY,
                             Predicate<Layer> visible) {
+        draw(graphics,frame,cameraX,cameraY,visible,null);
+    }
+
+    /** Presentation state is sampled by the logical loop; draw consumes immutable values only. */
+    public static void draw(GraphicsManager graphics, Frame frame, int cameraX, int cameraY,
+                            Predicate<Layer> visible,com.openggf.game.mutators.LivePresentationRuntime runtime) {
+        try {
+            frame=runtime==null?com.openggf.level.objects.HudProfileAccess.projectPresentation(graphics,frame):
+                    com.openggf.level.objects.HudProfileAccess.projectPresentation(runtime.world(),graphics,frame);
+            if(runtime!=null&&!runtime.trails().isEmpty())drawTrails(graphics,frame,cameraX,cameraY,visible,runtime);
+            drawPicture(graphics,frame,cameraX,cameraY,visible,runtime,1);
+        } catch(RuntimeException|Error failure) {
+            if(runtime!=null)runtime.releaseTrailArt();
+            throw failure;
+        }
+    }
+
+    private static void drawTrails(GraphicsManager graphics,Frame current,int cameraX,int cameraY,Predicate<Layer> visible,
+                                    com.openggf.game.mutators.LivePresentationRuntime runtime) {
+        var displayed=current.tiles().stream().filter(t->!t.subject().suppressed()&&t.subject().body()!=null
+                &&(t.subject().part()==Part.BODY||t.subject().part()==Part.APPENDAGE))
+                .map(t->new DisplayPart(t.subject().id(),t.subject().part())).collect(java.util.stream.Collectors.toSet());
+        if(displayed.isEmpty())return;
+        int bank=runtime.trailBank(graphics),poseIndex=0;
+        for(var pose:runtime.trails()) {
+            int poseSlot=poseIndex;
+            var versions=new java.util.HashMap<Integer,PatternVersion>();
+            var tiles=new java.util.ArrayList<Tile>();
+            var ids=new java.util.HashMap<Integer,Integer>();
+            for(var tile:pose.frame().tiles()) {
+                if(!displayed.contains(new DisplayPart(tile.subject().id(),tile.subject().part())))continue;
+                int id=ids.computeIfAbsent(tile.patternId(),source->bank+poseSlot*256+ids.size());
+                versions.put(id,pose.frame().patternVersions().get(tile.patternId()));
+                tiles.add(new Tile(tile.layer(),id,tile.palette(),tile.hFlip(),tile.vFlip(),tile.priority(),
+                        tile.x()+pose.cameraX()-cameraX,tile.y()+pose.cameraY()-cameraY,tile.width(),tile.height(),
+                        tile.priorityShader(),tile.occlusionMask(),tile.ghost(),tile.ghostAlpha(),tile.rowStart(),tile.rowEnd(),tile.subject()));
+            }
+            float opacity=.12f+.1f*poseIndex++;
+            drawPicture(graphics,new Frame(tiles,java.util.List.of(),versions),cameraX,cameraY,visible,runtime,opacity);
+        }
+    }
+    private record DisplayPart(String id,Part part) { }
+    private static void drawPicture(GraphicsManager graphics,Frame frame,int cameraX,int cameraY,Predicate<Layer> visible,
+                                     com.openggf.game.mutators.LivePresentationRuntime runtime,float opacity) {
         boolean priority = graphics.isUseSpritePriorityShader();
         int mask = graphics.getCurrentSpriteTileOcclusionPaletteMask();
         boolean ghost = graphics.isGhostRenderEffectActive();
@@ -171,7 +215,12 @@ public final class SpritePresentationRenderer {
                 desc.setVFlip(tile.vFlip());
                 desc.setPriority(tile.priority());
                 float x = tile.x() + cameraX, y = tile.y() + cameraY;
-                if (tile.rowClipped()) {
+                var transform=runtime==null?com.openggf.game.mutators.SpritePictureTransform.IDENTITY:
+                        com.openggf.game.mutators.SpritePictureTransform.forTile(tile,cameraX,cameraY,runtime.spritePolicies());
+                if(!transform.identity()||opacity!=1) {
+                    com.openggf.graphics.PresentationGraphicsAccess.render(graphics,tile.patternId(),desc,tile.rowStart(),tile.rowEnd(),
+                            transform.quad(tile,cameraX,cameraY),transform.hue(),opacity);
+                } else if (tile.rowClipped()) {
                     SpritePresentation.renderTileRows(graphics, tile, desc, (int) x, (int) y);
                 } else if (tile.width() == 8 && tile.height() == 8 && x == (int) x && y == (int) y) {
                     graphics.renderPatternWithId(tile.patternId(), desc, (int) x, (int) y);

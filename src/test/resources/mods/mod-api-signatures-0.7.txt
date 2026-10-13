@@ -645,6 +645,8 @@ CF-ANNOTATION TYPE com.openggf.level.objects.ObjectPlayerQuery visible @com.open
 CF-ANNOTATION TYPE com.openggf.level.objects.ObjectPlayerQuery$NearestPlayerX visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.ObjectPlayerQuery$PlayerVisitor visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.ObjectPlayerQuery$PlayerVisitor visible @java.lang.FunctionalInterface
+CF-ANNOTATION TYPE com.openggf.level.objects.ObjectPresentationMetadata visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.objects.ObjectPresentationMetadata$Role visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.ObjectQuery visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.ObjectReconstructionContext visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.ObjectRegistry visible @com.openggf.game.ModApi
@@ -1580,6 +1582,7 @@ CONSTRUCTOR com.openggf.level.objects.ObjectManager public  <init>(java.util.Lis
 CONSTRUCTOR com.openggf.level.objects.ObjectManager public  <init>(java.util.List<com.openggf.level.objects.ObjectSpawn>,com.openggf.level.objects.ObjectRegistry,int,com.openggf.level.objects.PlaneSwitcherConfig,com.openggf.level.objects.TouchResponseTable,com.openggf.graphics.GraphicsManager,com.openggf.camera.Camera,com.openggf.level.objects.ObjectServices)
 CONSTRUCTOR com.openggf.level.objects.ObjectPlayerQuery public  <init>(java.util.function.Supplier<? extends com.openggf.game.PlayableEntity>,java.util.function.Supplier<? extends java.util.List<? extends com.openggf.game.PlayableEntity>>)
 CONSTRUCTOR com.openggf.level.objects.ObjectPlayerQuery$NearestPlayerX public  <init>(com.openggf.game.PlayableEntity,int)
+CONSTRUCTOR com.openggf.level.objects.ObjectPresentationMetadata public  <init>(com.openggf.level.objects.ObjectPresentationMetadata$Role,int,int)
 CONSTRUCTOR com.openggf.level.objects.ObjectRenderManager public  <init>(com.openggf.game.ObjectArtProvider)
 CONSTRUCTOR com.openggf.level.objects.ObjectSlotLayout public  <init>(int,int)
 CONSTRUCTOR com.openggf.level.objects.ObjectSlotLayout public  <init>(int,int,boolean)
@@ -2734,6 +2737,7 @@ FIELD com.openggf.graphics.PatternAtlasRange public,static,final com.openggf.gra
 FIELD com.openggf.graphics.PatternAtlasRange public,static,final com.openggf.graphics.PatternAtlasRange OBJECTS
 FIELD com.openggf.graphics.PatternAtlasRange public,static,final com.openggf.graphics.PatternAtlasRange OBJECT_HEAD_PRESENTATION
 FIELD com.openggf.graphics.PatternAtlasRange public,static,final com.openggf.graphics.PatternAtlasRange PLAYER_PRESENTATION
+FIELD com.openggf.graphics.PatternAtlasRange public,static,final com.openggf.graphics.PatternAtlasRange PRESENTATION_TRAILS
 FIELD com.openggf.graphics.PatternAtlasRange public,static,final com.openggf.graphics.PatternAtlasRange RESULTS_SCREENS
 FIELD com.openggf.graphics.PatternAtlasRange public,static,final com.openggf.graphics.PatternAtlasRange S3K_TITLE_SCREEN_ANIMATION
 FIELD com.openggf.graphics.PatternAtlasRange public,static,final com.openggf.graphics.PatternAtlasRange S3K_TITLE_SCREEN_SPRITES
@@ -2912,6 +2916,10 @@ FIELD com.openggf.level.objects.ObjectPlayerParticipationPolicy public,static,fi
 FIELD com.openggf.level.objects.ObjectPlayerParticipationPolicy public,static,final com.openggf.level.objects.ObjectPlayerParticipationPolicy MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED
 FIELD com.openggf.level.objects.ObjectPlayerParticipationPolicy public,static,final com.openggf.level.objects.ObjectPlayerParticipationPolicy NATIVE_P1_P2
 FIELD com.openggf.level.objects.ObjectPlayerParticipationPolicy public,static,final com.openggf.level.objects.ObjectPlayerParticipationPolicy NEAREST_ENGINE_PLAYER
+FIELD com.openggf.level.objects.ObjectPresentationMetadata public,static,final com.openggf.level.objects.ObjectPresentationMetadata NONE
+FIELD com.openggf.level.objects.ObjectPresentationMetadata$Role public,static,final com.openggf.level.objects.ObjectPresentationMetadata$Role BADNIK
+FIELD com.openggf.level.objects.ObjectPresentationMetadata$Role public,static,final com.openggf.level.objects.ObjectPresentationMetadata$Role NONE
+FIELD com.openggf.level.objects.ObjectPresentationMetadata$Role public,static,final com.openggf.level.objects.ObjectPresentationMetadata$Role PICKUP
 FIELD com.openggf.level.objects.ObjectQuery public,static,final com.openggf.level.objects.ObjectQuery EMPTY
 FIELD com.openggf.level.objects.ObjectRenderManager$SpringVariant public,static,final com.openggf.level.objects.ObjectRenderManager$SpringVariant DIAGONAL
 FIELD com.openggf.level.objects.ObjectRenderManager$SpringVariant public,static,final com.openggf.level.objects.ObjectRenderManager$SpringVariant HORIZONTAL
@@ -9952,6 +9960,7 @@ METHOD com.openggf.level.objects.ObjectInstance public  boolean shouldStayActive
 METHOD com.openggf.level.objects.ObjectInstance public  boolean usesCurrentTouchResponseState()
 METHOD com.openggf.level.objects.ObjectInstance public  boolean usesCustomOutOfRangeCheck()
 METHOD com.openggf.level.objects.ObjectInstance public  com.openggf.game.mutators.ObjectHeadRole headPresentationRole()
+METHOD com.openggf.level.objects.ObjectInstance public  com.openggf.level.objects.ObjectPresentationMetadata presentationMetadata()
 METHOD com.openggf.level.objects.ObjectInstance public  int getCollisionX()
 METHOD com.openggf.level.objects.ObjectInstance public  int getCollisionY()
 METHOD com.openggf.level.objects.ObjectInstance public  int getOutOfRangeReferenceX()
@@ -10217,6 +10226,14 @@ METHOD com.openggf.level.objects.ObjectPlayerQuery$NearestPlayerX public,final  
 METHOD com.openggf.level.objects.ObjectPlayerQuery$NearestPlayerX public,final  int hashCode()
 METHOD com.openggf.level.objects.ObjectPlayerQuery$NearestPlayerX public,final  java.lang.String toString()
 METHOD com.openggf.level.objects.ObjectPlayerQuery$PlayerVisitor public,abstract  void visit(C,com.openggf.game.PlayableEntity)
+METHOD com.openggf.level.objects.ObjectPresentationMetadata public  com.openggf.level.objects.ObjectPresentationMetadata$Role role()
+METHOD com.openggf.level.objects.ObjectPresentationMetadata public  int anchorX()
+METHOD com.openggf.level.objects.ObjectPresentationMetadata public  int anchorY()
+METHOD com.openggf.level.objects.ObjectPresentationMetadata public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.level.objects.ObjectPresentationMetadata public,final  int hashCode()
+METHOD com.openggf.level.objects.ObjectPresentationMetadata public,final  java.lang.String toString()
+METHOD com.openggf.level.objects.ObjectPresentationMetadata$Role public,static  com.openggf.level.objects.ObjectPresentationMetadata$Role valueOf(java.lang.String)
+METHOD com.openggf.level.objects.ObjectPresentationMetadata$Role public,static  com.openggf.level.objects.ObjectPresentationMetadata$Role[] values()
 METHOD com.openggf.level.objects.ObjectQuery public,abstract  java.util.Optional<com.openggf.game.rewind.identity.ObjectRefId> identityOf(com.openggf.level.objects.ObjectInstance)
 METHOD com.openggf.level.objects.ObjectQuery public,abstract  java.util.Optional<com.openggf.level.objects.ObjectInstance> resolve(com.openggf.game.rewind.identity.ObjectRefId)
 METHOD com.openggf.level.objects.ObjectQuery public,abstract <T extends com.openggf.level.objects.ObjectInstance> java.util.List<T> activeObjectsOfType(java.lang.Class<T>)
@@ -15301,6 +15318,7 @@ NESTED com.openggf.level.objects.DestructionEffects com.openggf.level.objects.De
 NESTED com.openggf.level.objects.ObjectManager com.openggf.level.objects.ObjectManager$ObjectDrawCallback
 NESTED com.openggf.level.objects.ObjectPlayerQuery com.openggf.level.objects.ObjectPlayerQuery$NearestPlayerX
 NESTED com.openggf.level.objects.ObjectPlayerQuery com.openggf.level.objects.ObjectPlayerQuery$PlayerVisitor
+NESTED com.openggf.level.objects.ObjectPresentationMetadata com.openggf.level.objects.ObjectPresentationMetadata$Role
 NESTED com.openggf.level.objects.ObjectRenderManager com.openggf.level.objects.ObjectRenderManager$SpringVariant
 NESTED com.openggf.level.objects.PatrolMovementHelper com.openggf.level.objects.PatrolMovementHelper$PatrolResult
 NESTED com.openggf.level.objects.PerObjectRewindSnapshot com.openggf.level.objects.PerObjectRewindSnapshot$ArzPlatformRewindExtra
@@ -16864,6 +16882,9 @@ RECORD-COMPONENT com.openggf.level.objects.HudStaticArt timeFlashFrame com.openg
 RECORD-COMPONENT com.openggf.level.objects.HudStaticArt timeFrame com.openggf.level.render.SpriteMappingFrame
 RECORD-COMPONENT com.openggf.level.objects.ObjectPlayerQuery$NearestPlayerX distance int
 RECORD-COMPONENT com.openggf.level.objects.ObjectPlayerQuery$NearestPlayerX player com.openggf.game.PlayableEntity
+RECORD-COMPONENT com.openggf.level.objects.ObjectPresentationMetadata anchorX int
+RECORD-COMPONENT com.openggf.level.objects.ObjectPresentationMetadata anchorY int
+RECORD-COMPONENT com.openggf.level.objects.ObjectPresentationMetadata role com.openggf.level.objects.ObjectPresentationMetadata$Role
 RECORD-COMPONENT com.openggf.level.objects.ObjectSlotLayout dynamicSlotCount int
 RECORD-COMPONENT com.openggf.level.objects.ObjectSlotLayout firstDynamicSlot int
 RECORD-COMPONENT com.openggf.level.objects.ObjectSlotLayout lostRingRemainderAllocatesAfterOwnerSlot boolean
@@ -18886,6 +18907,7 @@ TYPE enum public,static,final com.openggf.level.SeamlessLevelTransitionRequest$O
 TYPE enum public,static,final com.openggf.level.SeamlessLevelTransitionRequest$ObjectSurvivalPolicy SUPER java.lang.Enum<com.openggf.level.SeamlessLevelTransitionRequest$ObjectSurvivalPolicy>
 TYPE enum public,static,final com.openggf.level.SeamlessLevelTransitionRequest$TransitionType SUPER java.lang.Enum<com.openggf.level.SeamlessLevelTransitionRequest$TransitionType>
 TYPE enum public,static,final com.openggf.level.objects.DestructionEffects$SoundOrder SUPER java.lang.Enum<com.openggf.level.objects.DestructionEffects$SoundOrder>
+TYPE enum public,static,final com.openggf.level.objects.ObjectPresentationMetadata$Role SUPER java.lang.Enum<com.openggf.level.objects.ObjectPresentationMetadata$Role>
 TYPE enum public,static,final com.openggf.level.objects.ObjectRenderManager$SpringVariant SUPER java.lang.Enum<com.openggf.level.objects.ObjectRenderManager$SpringVariant>
 TYPE enum public,static,final com.openggf.level.objects.TerrainSurface$Layer SUPER java.lang.Enum<com.openggf.level.objects.TerrainSurface$Layer>
 TYPE enum public,static,final com.openggf.level.objects.TerrainSurface$Path SUPER java.lang.Enum<com.openggf.level.objects.TerrainSurface$Path>
@@ -19240,6 +19262,7 @@ TYPE record public,final com.openggf.level.TransitionSstOccupant SUPER java.lang
 TYPE record public,final com.openggf.level.objects.HudProfile SUPER java.lang.Record
 TYPE record public,final com.openggf.level.objects.HudRow SUPER java.lang.Record
 TYPE record public,final com.openggf.level.objects.HudStaticArt SUPER java.lang.Record
+TYPE record public,final com.openggf.level.objects.ObjectPresentationMetadata SUPER java.lang.Record
 TYPE record public,final com.openggf.level.objects.ObjectSlotLayout SUPER java.lang.Record
 TYPE record public,final com.openggf.level.objects.ObjectSpawn SUPER java.lang.Record
 TYPE record public,final com.openggf.level.objects.PerObjectRewindSnapshot SUPER java.lang.Record
@@ -20242,6 +20265,8 @@ TYPE-ANNOTATION com.openggf.level.objects.ObjectPlayerQuery @com.openggf.game.Mo
 TYPE-ANNOTATION com.openggf.level.objects.ObjectPlayerQuery$NearestPlayerX @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.ObjectPlayerQuery$PlayerVisitor @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.ObjectPlayerQuery$PlayerVisitor @java.lang.FunctionalInterface
+TYPE-ANNOTATION com.openggf.level.objects.ObjectPresentationMetadata @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.objects.ObjectPresentationMetadata$Role @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.ObjectQuery @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.ObjectReconstructionContext @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.ObjectRegistry @com.openggf.game.ModApi

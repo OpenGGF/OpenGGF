@@ -352,6 +352,45 @@ public class GraphicsManager {
 		restartPatternBatch(restartInstanced, restartBatched, 0);
 	}
 
+	/** Internal post-SAT picture bridge: source row crop/flips stay native; only the final quad/colour changes. */
+	void renderPresentationPattern(int patternId,PatternDesc desc,int rowStart,int rowEnd,float[] quad,float hue,float opacity) {
+		if(quad.length!=8||!Float.isFinite(hue)||!Float.isFinite(opacity))throw new IllegalArgumentException("Invalid presentation geometry or colour");
+		for(float value:quad)if(!Float.isFinite(value))throw new IllegalArgumentException("Nonfinite picture vertex");
+		if(headlessMode) return;
+		ensurePatternAtlas();
+		var entry=patternAtlas==null?null:patternAtlas.getEntry(patternId);
+		Integer palette=resolveEffectivePatternPaletteTextureId();
+		if(entry==null||palette==null||rowStart>=rowEnd) return;
+		flushPatternBatch();
+		var command=PatternRenderCommand.obtainRows(entry,palette,desc.getPaletteIndex(),desc.getHFlip(),desc.getVFlip(),desc.getPriority(),0,0,rowStart,rowEnd,this);
+		command.presentation(quad,hue,opacity);
+		registerCommand(command);
+	}
+
+	private final java.util.IdentityHashMap<Object,Integer> presentationTrailBanks=new java.util.IdentityHashMap<>();
+	private final java.util.IdentityHashMap<Object,Long> presentationTrailGenerations=new java.util.IdentityHashMap<>();
+	private long nextPresentationTrailGeneration;
+	/** One bank per live owner; four poses, each with at most 256 distinct frozen tiles. */
+	int presentationTrailBank(Object owner) {
+		java.util.Objects.requireNonNull(owner);
+		var existing=presentationTrailBanks.get(owner);if(existing!=null)return existing;
+		var range=PatternAtlasRange.PRESENTATION_TRAILS;
+		for(int base=range.base();base<range.endExclusive();base+=1024) if(!presentationTrailBanks.containsValue(base)) {
+			presentationTrailBanks.put(owner,base);presentationTrailGenerations.put(owner,++nextPresentationTrailGeneration);return base;
+		}
+		throw new IllegalStateException("Presentation trail owner budget exhausted");
+	}
+	void releasePresentationTrailBank(Object owner) {
+		Integer base=presentationTrailBanks.remove(owner);if(base==null)return;
+		presentationTrailGenerations.remove(owner);
+		for(int id=base;id<base+1024;id++)uncachePattern(id);
+	}
+	long presentationTrailGeneration(Object owner) { return presentationTrailGenerations.getOrDefault(owner,0L); }
+	boolean presentationTrailBankValid(Object owner,int base,long generation) {
+		return generation!=0&&java.util.Objects.equals(presentationTrailBanks.get(owner),base)
+				&&presentationTrailGeneration(owner)==generation;
+	}
+
 	/**
 	 * Initialize the GraphicsManager with shader loading.
 	 */
@@ -1828,6 +1867,8 @@ public class GraphicsManager {
 	 * Cleanup method to delete textures and release resources.
 	 */
 	public void cleanup() {
+        presentationTrailBanks.clear();
+        presentationTrailGenerations.clear();
         if (!headlessMode) arenaMaskRenderer.cleanup();
 		clearPendingRenderThreadTasks();
 		discardCommands(commands, 0);
@@ -1980,6 +2021,11 @@ public class GraphicsManager {
 			return spritePriorityShaderProgram;
 		}
 		return currentShaderProgram;
+	}
+
+	/** Priority choice is frozen at picture submission; native water/default intent still resolves at execution. */
+	ShaderProgram presentationShader(boolean priority) {
+		return priority&&spritePriorityShaderProgram!=null?spritePriorityShaderProgram:currentShaderProgram;
 	}
 
 	/** Immutable local cache sample for ROM-recipe projection; never supplies guest art content. */

@@ -18,7 +18,7 @@ public final class PlayableMutatorPresentation {
                                     java.util.List<com.openggf.graphics.GLCommand> commands,
                                     java.util.function.Consumer<java.util.List<com.openggf.graphics.GLCommand>> producer) {
         if (!(owner instanceof AbstractPlayableSprite sprite)
-                || !hasPresentation(PlayableSpriteInternalAccess.mutatorPolicy(sprite))) {
+                || (!hasPresentation(PlayableSpriteInternalAccess.mutatorPolicy(sprite)) && !hasBodyPresentation(sprite))) {
             producer.accept(commands);
             return;
         }
@@ -40,10 +40,13 @@ public final class PlayableMutatorPresentation {
             return;
         }
         var policy = PlayableSpriteInternalAccess.mutatorPolicy(sprite);
+        var runtime=runtime(sprite);
+        var role=runtime==null?SpritePresentation.Role.NONE:runtime.playerRole(sprite);
+        boolean body=runtime!=null&&runtime.tags(role);
         int headScale = part == SpritePresentation.Part.BODY
                 ? policy.headScalePercent() : 100;
         if (!policy.suppressBody() && !policy.suppressAppendage() && !policy.suppressAttachedEffects()
-                && headScale == 100) {
+                && headScale == 100 && !body) {
             producer.run();
             return;
         }
@@ -54,7 +57,8 @@ public final class PlayableMutatorPresentation {
             case WORLD, OBJECT_BODY -> false;
         };
         var graphics = SpriteGraphicsAccess.graphics(sprite);
-        var subject = new SpritePresentation.Subject(sprite.getCode(), part, suppressed, headScale);
+        var subject = new SpritePresentation.Subject(sprite.getCode(), part, suppressed, headScale,null,
+                body?new SpritePresentation.Body(role,sprite.getCentreX(),sprite.getCentreY()):null);
         if (SpritePresentation.isPreparing(graphics) || graphics.isSpriteSatCollectionActive()) {
             SpritePresentation.withSubject(graphics, subject, producer);
         } else if (suppressed || headScale != 100) {
@@ -66,5 +70,12 @@ public final class PlayableMutatorPresentation {
         } else {
             SpritePresentation.withSubject(graphics, subject, producer);
         }
+    }
+    private static com.openggf.game.mutators.LivePresentationRuntime runtime(AbstractPlayableSprite sprite) {
+        var level=sprite.currentLevelManagerIfAvailable();
+        return level==null?null:com.openggf.game.mutators.LivePresentationRuntime.from(level.getWorldSession());
+    }
+    private static boolean hasBodyPresentation(AbstractPlayableSprite sprite) {
+        var runtime=runtime(sprite);return runtime!=null&&runtime.tags(runtime.playerRole(sprite));
     }
 }
