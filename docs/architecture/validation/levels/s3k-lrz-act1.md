@@ -78,6 +78,20 @@ using the same ROM and a temporary capture directory. It failed before gameplay
 at shader compilation: the available OpenGL context does not support GLSL 4.10.
 No screenshot or native pixel-match claim is made.
 
+## Current route qualification (2026-10-13)
+
+Pinned develop `5e2f51f07917d5eff8ac120007dac55327f93f32` reproduces
+`TestLrzTailsColdRouteCapture#coldTailsClearsActOneAndRestoresTraversalFightAndHandoff`
+with a zero-ring death at input 19460. The historical cold completion below is
+not a current passing claim. The native Toxomister facing correction is retained;
+ordinary six-frame left/right release alternatives are under continuation
+measurement. Exact command, ROM identity, state witnesses and rejected runtime
+rescue are recorded in the [October 13 follow-up](../../plans/2026-09-17-lrz-bring-up.md#playable-completion-follow-up-2026-10-13).
+No replacement movie or new native/pixel qualification is published yet. The complete
+Knuckles native320 and pair800 cold walks through this act now pass on the
+committed omitted-title assembly dependency `d9b11f7db`; their selected rewind
+windows are later Act2/boss windows, so this does not requalify every Act1 spot.
+
 ## Obligations
 
 | Obligation + spot | Contract / oracle | Config cases | Test binding | Implementation | Result (revision) | Gap / action |

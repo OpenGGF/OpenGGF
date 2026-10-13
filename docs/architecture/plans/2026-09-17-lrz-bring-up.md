@@ -26,6 +26,77 @@ Other roster/donor/width/lifecycle and native
 whole-scene obligations, final highlights and campaign integration remain open.
 Earlier execution checklists are historical where superseded by dated matrices.
 
+## Playable-completion follow-up (2026-10-13)
+
+This follow-up starts from pinned develop `5e2f51f07917d5eff8ac120007dac55327f93f32`
+in `.worktrees/ai-s3k-finish-lrz`. The traversal families, events, scrolling,
+miniboss, end boss and both Hidden Palace exits already exist; the initial
+inventory below is historical, not a list of missing implementation.
+
+A Java 25 focused run reproduces four current inherited negatives with no
+errors or skips: solo Tails dies at input 19460, the native pair dies at
+36526 in Act 2, Knuckles' HPZ endpoint X is 899 rather than 1069, and the
+800px pair HPZ endpoint Y is 524 rather than 2796. Runtime source and route
+inputs were unchanged; temporary read-only diagnostics recorded the owning
+state. Reproduction command (`LRZ_S3K_ROM` is the discovered existing
+absolute locked-on ROM path; the observed identity is recorded below):
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestLrzTailsColdRouteCapture#coldTailsClearsActOneAndRestoresTraversalFightAndHandoff,TestLrzActTwoColdRouteCapture#coldTeamCompletesActTwoAndReachesBossActWithRepeatableWorldState,TestLrzKnucklesColdRouteCapture#coldKnucklesCompletesActTwoAndReachesPlayableHiddenPalace,TestLrzWideBossColdRouteCapture#coldWideTeamClearsBossAndReleasesHiddenPalaceWithRepeatableWorld' \
+  "-Ds3k.rom.path=$LRZ_S3K_ROM" test
+```
+
+The run completes in 55.344 seconds after 1004 seconds of queue waiting.
+The supplied ROM rehashes to CRC32 `63522553` and SHA-1
+`CFBF98C36C776677290A872547AC47C53D2761D6`. Tool preflight passes with
+`LUA_BIN=/usr/bin/lua5.4`; the default Lua launcher fails the version check,
+so it is not used for required Lua guards.
+
+The HPZ observations disprove a stale capture-player reference: the cached
+player, registered main player and camera focus remain the same object.
+Instead the fresh boundary remains pending after the omitted title. At the
+wide load, input 50538 parks the player at 0/0; 50540 reaches 2736/0 before
+normal physics has assembled HPZ's native start; the endpoint remains pending
+at 2845/524. Knuckles similarly parks at 0/0 at 49286 and ends at 899/748
+with the boundary still pending. The coordinator owns the shared capture
+boundary correction; the route assertions must retain their native-entry
+expectations.
+
+The controller investigation preserves the corrected Toxomister behavior.
+`Find_SonicTails` / `Change_FlipX` now breathes toward the native participant,
+and `Check_LRControllerShake` permits release after six changed nonzero
+left/right states inside its sixty-tick window. Suppressing cloud movement,
+ring drain or damage to rescue old inputs is rejected. The original Tails
+probe loses its first ring at 18619 after attachment, then dies to a later
+zero-ring contact. The original pair's coordinates match the earlier cold
+capture until 36421; the changed contact precedes its missed upper-platform
+jump and death. Six-frame pad alternatives and full continuations are being
+measured independently before publishing replacement routes. Probe output
+and diagnostic source are temporary, not completion or parity evidence.
+
+The extended two-case probe completes in 1 minute 51 seconds with no diagnostic
+errors or skips, but rejects a cloud-only repair. Tails' six changed states at
+18600/18620 pass the old death point and then die at 20568/20553 near 10170/949.
+The latter route loses its saved nine rings to a fragment contact at 19461,
+then the next cloud drains its smaller remaining ring supply. Braking before
+the rock approach is being checked against simply escaping the second cloud.
+For the pair, the 36430 shake does release the cloud at 36435, but has lost
+the run-up speed: the original 36445 jump starts at 7227 rather than 7271,
+hits the low ceiling at 7241/1428 and misses the upper step before dying 36526.
+Delaying that ordinary jump is being tested. Suppressing the native slowdown
+or changing ceiling collision to preserve the old movie is rejected.
+
+The coordinator's omitted-title assembly correction is now carried as
+`d9b11f7db` (cherry-pick of `8438d7040`), with its own seven focused checks
+passing. The complete Knuckles and 800px HPZ endpoint regressions pass on this
+dependency: two tests, zero failures/errors/skips, 46.445 seconds Maven time.
+The original 49,526/50,659-input movies, native endpoint X1069/Y2796 and
+full-registry restore/forward checks are unchanged. These close the two
+inherited HPZ negatives; Tails and the 320px pair still need controller-route
+repairs. The inactive ending-controller source used by this run is now
+committed as `60221d5c8` (blob `6ac3d60da28776fb511792a4fec64690dee885f4`).
+
 ## Goal and delivery rule
 
 Deliver three cold routes: Sonic + Tails `$900` → seamless `$901` → boulder cutscene → `$1600` →

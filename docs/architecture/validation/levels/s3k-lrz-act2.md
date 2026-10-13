@@ -41,6 +41,22 @@ The compatibility matrix verifies Act 2's ROM-backed skins, including its own
 sinking rock, doors, buttons and swinging-spike-ball art. That does not establish
 behavior at every placement; the remaining obligations below retain that distinction.
 
+## Current route qualification (2026-10-13)
+
+On common dependency `d9b11f7db` (from `8438d7040`),
+`TestLrzKnucklesColdRouteCapture#coldKnucklesCompletesActTwoAndReachesPlayableHiddenPalace`
+now passes the original 49,526-input cold movie and its full-registry
+restore/forward checks. The HPZ endpoint X1069 remains unchanged. The combined
+Knuckles/pair800 endpoint command passes two tests with zero failures/errors/skips
+in 46.445 seconds Maven time. This closes the Knuckles fresh-boundary negative.
+
+The native320 pair remains blocked: pinned-base
+`TestLrzActTwoColdRouteCapture#coldTeamCompletesActTwoAndReachesBossActWithRepeatableWorldState`
+dies at input 36526. Cloud release alone loses the original run-up speed; the
+following jump hits a low ceiling or the active flame. Controller navigation
+trials remain unqualified. See the [October 13 follow-up](../../plans/2026-09-17-lrz-bring-up.md#playable-completion-follow-up-2026-10-13)
+for exact commands, incoming prefixes and rejected runtime rescue.
+
 ## Obligations
 
 | Obligation + spot | Contract / oracle | Config cases | Test binding | Implementation | Result (revision) | Gap / action |

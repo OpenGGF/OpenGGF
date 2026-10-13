@@ -34,6 +34,24 @@ Placement baseline (`TestS3kLrzPlacementCensus`): 35 placed objects, of which **
 leading `(0,0)` sentinel). The end boss, capsule, `StartNewLevel`, dome platform and Death Egg sprite are
 event-spawned and are not in the placement list.
 
+## Current route qualification (2026-10-13)
+
+On common dependency `d9b11f7db` (from `8438d7040`),
+`TestLrzWideBossColdRouteCapture#coldWideTeamClearsBossAndReleasesHiddenPalaceWithRepeatableWorld`
+now passes the original 50,659-input pair800 cold chain and its full-registry
+restore/forward checks. The native HPZ endpoint Y2796 remains unchanged. The
+combined Knuckles/pair800 command passes two tests, zero failures/errors/skips,
+in 46.445 seconds Maven time. The source/movies/assertions in these route tests
+are unchanged.
+
+The prior Y524 failure came from deferred assembly after the omitted title:
+the same actor stayed registered/camera-focused but was parked at 0/0, selecting
+HPZ's upper-route camera branch. Completing the production boundary closes
+that negative. Native320 Tails/pair controller routes remain blocked before
+this boss act; inherited broader products and native/pixel claims remain open.
+See the [October 13 follow-up](../../plans/2026-09-17-lrz-bring-up.md#playable-completion-follow-up-2026-10-13)
+for exact execution and remaining blockers.
+
 ## Obligations
 
 | Obligation + spot | Contract / oracle | Config cases | Test binding | Implementation | Result (revision) | Gap / action |
