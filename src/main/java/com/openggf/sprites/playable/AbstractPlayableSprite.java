@@ -1586,6 +1586,16 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public void giveSpeedShoes() {
+                giveSpeedShoes(SpeedShoesTimer.ROM_DURATION_FRAMES);
+        }
+
+        /** Grants native shoes with a bounded duration, without shortening an existing pickup. */
+        public void giveSpeedShoes(int durationFrames) {
+                SpeedShoesTimer admitted = new SpeedShoesTimer("SpeedShoes-" + getCode(), this, durationFrames);
+                Timer existing = currentTimerManager().getTimerForCode(admitted.getCode());
+                if (hasSpeedShoes() && existing != null) {
+                        admitted.setTicks(Math.max(admitted.getTicks(), existing.getTicks()));
+                }
                 // S3K: shoes activation uses absolute values from canonical base ($C00/$18/$80),
                 // not 2x of Character_Speeds init values (sonic3k.asm:40823-40825)
                 clearInitOverride();
@@ -1593,7 +1603,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // Register speed shoes timer using the existing timer framework
                 // Duration is 1200 frames (20 seconds @ 60fps) per SPG Sonic 2
                 currentTimerManager().registerTimer(
-                                new SpeedShoesTimer("SpeedShoes-" + getCode(), this));
+                                admitted);
         }
 
         /**
@@ -1644,7 +1654,15 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public void giveInvincibility() {
-                setInvincibleFrames(1200); // 20 seconds @ 60fps
+                giveInvincibility(1200); // 20 seconds @ 60fps
+        }
+
+        /** Grants native protection/stars while retaining any longer existing protection. */
+        public void giveInvincibility(int durationFrames) {
+                if (durationFrames < 1 || durationFrames > 3600) {
+                        throw new IllegalArgumentException("Invincibility duration must be 1..3600 native frames");
+                }
+                setInvincibleFrames(Math.max(getInvincibleFrames(), durationFrames));
                 if (shieldObject != null) {
                         shieldObject.setVisible(false);
                 }
