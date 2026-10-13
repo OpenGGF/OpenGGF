@@ -341,6 +341,8 @@ class TestLevelRendererBackgroundSamplingPerformance {
 
         private Capture executeCapture() {
             graphics.executeCommands();
+            assertEquals(1, graphics.backgroundRenderer.compositorCalls,
+                    "the metadata bridge must dispatch the recording compositor exactly once");
             return new Capture(
                     graphics.backgroundRenderer.shaderScrollMidpoint,
                     tilemapRenderer.worldOffsetY,
@@ -570,9 +572,19 @@ class TestLevelRendererBackgroundSamplingPerformance {
     private static final class RecordingBackgroundRenderer extends BackgroundRenderer {
         private int shaderScrollMidpoint;
         private int vOffset;
+        private int compositorCalls;
 
         private RecordingBackgroundRenderer(GraphicsManager graphics) {
             super(graphics);
+            // The production metadata bridge requires initialized compositor state.
+            // This recorder owns a no-GL render override rather than a real FBO.
+            try {
+                Field initialized = BackgroundRenderer.class.getDeclaredField("initialized");
+                initialized.setAccessible(true);
+                initialized.setBoolean(this, true);
+            } catch (ReflectiveOperationException e) {
+                throw new AssertionError("Cannot initialize the recording compositor", e);
+            }
         }
 
         @Override
@@ -603,6 +615,7 @@ class TestLevelRendererBackgroundSamplingPerformance {
                                          int extraBuffer,
                                          int vOffset,
                                          boolean perLineScroll) {
+            compositorCalls++;
             this.shaderScrollMidpoint = scrollMidpoint;
             this.vOffset = vOffset;
         }

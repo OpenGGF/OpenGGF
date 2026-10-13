@@ -566,6 +566,14 @@ high-background replay plus sprite mask independently. Rebuilding correct BG
 pixels alone cannot repair a background-first draw order. Preserve column
 VScroll in the replay, since the pool slope is part of its sampling contract.
 
+**Keep native GL state with the pass owner.** Background descriptor alpha is
+metadata, so its tile pass disables blending and restores the incoming state.
+Do that inside the initialized `BackgroundRenderer` begin/end boundary. A raw
+`glIsEnabled` in the caller can abort an isolated JVM whose command recorder
+deliberately overrides the GPU operations; an earlier native test can conceal
+the dependency. Verify the recorder independently and real pixels with both
+incoming blend states (GitHub issue sweep, 2026-10-13).
+
 **The bucket encoding differs per game and the engine defaults are silent.** S1/S2
 store the bucket as a byte (`move.b #4,priority(a0)` is bucket 4); S3K stores the
 display-list byte offset as a word (`move.w #$280,priority(a0)` is bucket 5, `$80` is

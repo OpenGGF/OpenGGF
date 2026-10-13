@@ -104,8 +104,53 @@ and the S3K art-registry mapping check. The corrected eight-test rerun passed
 in 26 seconds, with no failures, errors or skips. Production code was unchanged
 between these runs. The pickup regression checks S2 `Touch_Rings`
 (`s2.asm:31942-31943`) at the blocked timer 90 and permitted timer 89.
-Change-based smoke, separate fresh guards, integration, push and cleanup remain
-pending.
+On `8a1660050`, the change-based plan selected 3,185 candidate smoke classes
+and separate guards. The actual launch environment passed preflight. Ordinary
+smoke completed 26,715 tests in 3,458.69 seconds: 33 failures, no errors,
+63 skips. The fresh guard JVM passed all 678 tests in 257.65 seconds, with no
+failures, errors or skips. The run ID was `20261013T143418Z-d19fe86b`;
+the 105-minute execution limit and ten-minute no-output limit were not reached.
+Queue admission took approximately 48 minutes and did not count toward that limit.
+
+Three smoke failures exposed test obligations of this change: the new ICZ
+chain-link class adds one real isolated rewind pass, so inventory totals must
+be 1,317/1,074/243; the background sampling recorder must mark its overridden
+compositor initialized before the metadata bridge dispatches it. Its two
+sampling expectations remain unchanged and an exactly-once assertion checks
+the recording seam. Of the other 30 failures, 26 match the completed baseline
+comparisons recorded in the concurrent
+[mod-compatibility delivery](../designs/2026-10-13-mod-runtime-compatibility.md#completed-recovery-and-attribution):
+the two MHZ authored-route pulley assertions and all 24 DEZ/LRZ/MHZ/SSZ recovery
+identities, frames, slots and state-byte differences. Only nonsemantic Java
+identity suffixes in the named SSZ Tails dump are normalized. `git diff --name-only`
+between pinned `5e2f51f07` and their baseline `b3464b31b` is empty for `src`,
+`examples`, `racing`, `pom.xml`, `tools`, `.githooks` and `.mvn`; those baseline
+updates were documentation only. The recorded baseline uses Java 25 and the
+same supplied ROM identities. This is reuse of observed matching negative cases,
+not a new baseline run or a claim of complete route coverage. The remaining
+Infinite Sonic, SOZ, CLI and network failures require focused attribution here.
+Integration, push and cleanup remain pending.
+
+The first corrected focused run was not a pass: the inventory test passed its
+one case (1.365 seconds, no skips), then the JVM aborted at the newly added
+`GL11.glIsEnabled` in `LevelRenderer`'s background tile command. A no-GL recorder
+cannot own that native state. Blend suppression/restoration now belongs to
+`BackgroundRenderer.beginTilePass/endTilePass`, behind that owner's initialized
+boundary and override seam. The pixel oracle exercises both incoming blend
+states, verifies exact restoration and retains its sampled color/mask checks.
+This replaces the insufficient test-only initialization repair; it is not an
+OOM or a successful lean run. The failed fork dump was inspected and discarded.
+The owner correction passed bounded source review and
+`python3 tools/testing/maven_queue.py -Dmse=off test-compile -B` (Java 25,
+73 seconds); no tests run in that build. Native/recorder verification is pending.
+
+The 63 ordinary skips comprise 32 Infinite Sonic cases whose selected acts lack
+the prerequisite platform/flyer, 24 opt-in probes/captures/soaks or missing local
+audio-reference captures, six graphics capability assumptions, and one existing
+CPZ spin-tube fixture that did not capture/release Sonic. ROM identity checks
+passed; no missing-ROM skip was reported. The affected MGZ priority-pixel checks
+ran successfully in their explicit surfaceless EGL fixture; these skips still
+limit broader graphics coverage.
 
 Commands below substitute `MAIN` for the absolute main-checkout path used by the
 invocations; the supplied aliases were passed directly, without copying ROMs.
@@ -127,6 +172,12 @@ python3 tools/testing/maven_queue.py -Dmse=off \
 LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off \
   "-Dsonic1.rom.path=$MAIN/s1.gen" \
   '-Dtest=TestSonic1SyzBackgroundSampling,TestPlayableHurtLandingObjectControl' test -B
+
+LUA_BIN=/usr/bin/lua5.4 EGL_PLATFORM=surfaceless \
+JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+python3 tools/testing/run_categories.py \
+  --base 5e2f51f07917d5eff8ac120007dac55327f93f32 \
+  --rom-directory "$MAIN" --max-minutes 105 --run
 ```
 
 Coverage limits for retained/prior behavior: the S1 drowning check observes the

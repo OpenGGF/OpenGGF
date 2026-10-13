@@ -14,7 +14,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   recovery releases pipe control at the native landing boundary. Ice Cap's broken
   chain detaches into rewindable falling links, Carnival Night's escape flame
   stays behind Robotnik, and Marble Garden's head triggers, platform skid sound
-  and raised-background sprite occlusion follow their ROM paths.
+  and raised-background sprite occlusion follow their ROM paths. Standalone
+  background passes preserve their caller's blend state and priority metadata.
 
 - **Mutator Lab catalogue:** one JVM boot-prepared package exposes eleven effects
   in Sonic 1, Sonic 2 and Sonic 3 & Knuckles, with native game labels, monitor-type

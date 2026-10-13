@@ -81,56 +81,63 @@ class TestBackgroundPlaneSpriteOcclusion {
                     }
                     tiles.setTilemapData(source, packDescriptors(descriptors), 64, 34);
                     for (boolean perLineTilePass : new boolean[]{false, true}) {
-                        int[] scroll = new int[224];
-                        for (int y = 0; y < 224; y++) scroll[y] = y < 112 ? 7 : 21;
-                        IntIndexedView view = new IntIndexedView() {
-                            @Override public int size() { return scroll.length; }
-                            @Override public int get(int index) { return scroll[index]; }
-                        };
-                        background.beginTilePass(512, 272, true);
-                        if (perLineTilePass) {
-                            background.uploadHScroll(view);
-                            tiles.enablePerLineScroll(background.getHScrollTextureId(), 224, 0, 0, 5);
+                        for (boolean initialBlending : new boolean[]{false, true}) {
+                            int[] scroll = new int[224];
+                            for (int y = 0; y < 224; y++) scroll[y] = y < 112 ? 7 : 21;
+                            IntIndexedView view = new IntIndexedView() {
+                                @Override public int size() { return scroll.length; }
+                                @Override public int get(int index) { return scroll[index]; }
+                            };
+                            if (initialBlending) glEnable(GL_BLEND); else glDisable(GL_BLEND);
+                            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                            background.beginTilePass(512, 272, true);
+                            assertFalse(glIsEnabled(GL_BLEND), "descriptor alpha must be stored without blending");
+                            if (perLineTilePass) {
+                                background.uploadHScroll(view);
+                                tiles.enablePerLineScroll(background.getHScrollTextureId(), 224, 0, 0, 5);
+                            }
+                            tiles.render(source, 512, 272, 0, 0, 512, 272, 0, 0,
+                                    24, 8, atlas, palette, palette, -2, true, false, false, 224);
+                            background.endTilePass();
+                            assertEquals(initialBlending, glIsEnabled(GL_BLEND), "the tile pass restores its caller's blend state");
+                            glDisable(GL_BLEND);
+                            glClearColor(0, 0, 0, 1); glClear(GL_COLOR_BUFFER_BIT);
+                            BackgroundRendererInternalAccess.renderWithPriorityMetadata(background,
+                                    view, null, null, 0, 0, 5, perLineTilePass);
+                            ByteBuffer visible = pixels();
+                            Arrays.fill(scroll, 99); // delayed mask must retain the color pass's captured scroll
+                            mask.begin();
+                            when(graphics.getViewportWidth()).thenReturn(960);
+                            when(graphics.getViewportHeight()).thenReturn(672);
+                            BackgroundRendererInternalAccess.renderPriorityMask(background);
+                            ByteBuffer priority = pixels();
+                            mask.end();
+                            when(graphics.getViewportWidth()).thenReturn(320);
+                            when(graphics.getViewportHeight()).thenReturn(224);
+                            int highPixels = 0, holes = 0;
+                            for (int i = 0; i < 320 * 224; i++) {
+                                boolean highTile = (visible.get(i * 4 + 1) & 255) == 255;
+                                assertEquals(highTile ? 255 : 0, priority.get(i * 4) & 255,
+                                        "mask must match sampled high tile color for " + source + "/" + perLineTilePass);
+                                if (highTile) {
+                                    assertEquals(255, priority.get(i * 4 + 1) & 255, "palette line 3 must survive replay");
+                                    highPixels++;
+                                } else if ((visible.get(i * 4) & 255) == 0) holes++;
+                                assertEquals(255, visible.get(i * 4 + 3) & 255, "metadata must not become visible translucency");
+                            }
+                            assertTrue(highPixels > 1000); assertTrue(holes > 1000);
+                            drawSprite(sprite, palette, spriteTexture, mask.getTextureId(), vao, false);
+                            ByteBuffer lowSprite = pixels();
+                            for (int i = 0; i < 320 * 224; i++) {
+                                boolean highTile = (visible.get(i * 4 + 1) & 255) == 255;
+                                assertEquals(highTile ? 0 : 255, lowSprite.get(i * 4 + 2) & 255,
+                                        "low sprite covers only low/transparent background pixels");
+                            }
+                            drawSprite(sprite, palette, spriteTexture, mask.getTextureId(), vao, true);
+                            ByteBuffer highSprite = pixels();
+                            for (int i = 0; i < 320 * 224; i++) assertEquals(255, highSprite.get(i * 4 + 2) & 255);
+                            assertEquals(GL_NO_ERROR, glGetError());
                         }
-                        tiles.render(source, 512, 272, 0, 0, 512, 272, 0, 0,
-                                24, 8, atlas, palette, palette, -2, true, false, false, 224);
-                        background.endTilePass();
-                        glClearColor(0, 0, 0, 1); glClear(GL_COLOR_BUFFER_BIT);
-                        BackgroundRendererInternalAccess.renderWithPriorityMetadata(background,
-                                view, null, null, 0, 0, 5, perLineTilePass);
-                        ByteBuffer visible = pixels();
-                        Arrays.fill(scroll, 99); // delayed mask must retain the color pass's captured scroll
-                        mask.begin();
-                        when(graphics.getViewportWidth()).thenReturn(960);
-                        when(graphics.getViewportHeight()).thenReturn(672);
-                        BackgroundRendererInternalAccess.renderPriorityMask(background);
-                        ByteBuffer priority = pixels();
-                        mask.end();
-                        when(graphics.getViewportWidth()).thenReturn(320);
-                        when(graphics.getViewportHeight()).thenReturn(224);
-                        int highPixels = 0, holes = 0;
-                        for (int i = 0; i < 320 * 224; i++) {
-                            boolean highTile = (visible.get(i * 4 + 1) & 255) == 255;
-                            assertEquals(highTile ? 255 : 0, priority.get(i * 4) & 255,
-                                    "mask must match sampled high tile color for " + source + "/" + perLineTilePass);
-                            if (highTile) {
-                                assertEquals(255, priority.get(i * 4 + 1) & 255, "palette line 3 must survive replay");
-                                highPixels++;
-                            } else if ((visible.get(i * 4) & 255) == 0) holes++;
-                            assertEquals(255, visible.get(i * 4 + 3) & 255, "metadata must not become visible translucency");
-                        }
-                        assertTrue(highPixels > 1000); assertTrue(holes > 1000);
-                        drawSprite(sprite, palette, spriteTexture, mask.getTextureId(), vao, false);
-                        ByteBuffer lowSprite = pixels();
-                        for (int i = 0; i < 320 * 224; i++) {
-                            boolean highTile = (visible.get(i * 4 + 1) & 255) == 255;
-                            assertEquals(highTile ? 0 : 255, lowSprite.get(i * 4 + 2) & 255,
-                                    "low sprite covers only low/transparent background pixels");
-                        }
-                        drawSprite(sprite, palette, spriteTexture, mask.getTextureId(), vao, true);
-                        ByteBuffer highSprite = pixels();
-                        for (int i = 0; i < 320 * 224; i++) assertEquals(255, highSprite.get(i * 4 + 2) & 255);
-                        assertEquals(GL_NO_ERROR, glGetError());
                     }
                 }
             } finally {

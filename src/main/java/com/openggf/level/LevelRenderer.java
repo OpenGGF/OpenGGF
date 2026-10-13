@@ -421,10 +421,6 @@ public final class LevelRenderer {
             return;
         }
         bgRenderer.beginTilePass(pendingBgTilePassRenderWidth, pendingBgTilePassRenderHeight, true);
-        boolean blending = glIsEnabled(GL_BLEND);
-        // Alpha carries descriptor metadata in this intermediate image, not
-        // transparency. Store its RGB/alpha bytes without color blending.
-        glDisable(GL_BLEND);
         int savedShimmerStyle = tilemapRenderer.getShimmerStyle();
         try {
             tilemapRenderer.setShimmerState(pendingFrameCounter, 0);
@@ -474,7 +470,6 @@ public final class LevelRenderer {
             try {
                 bgRenderer.endTilePass();
             } finally {
-                if (blending) glEnable(GL_BLEND);
                 lm.graphicsManager.setUseUnderwaterPaletteForBackground(false);
             }
         }

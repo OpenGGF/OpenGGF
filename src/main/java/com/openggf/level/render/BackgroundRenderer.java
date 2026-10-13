@@ -72,6 +72,7 @@ public class BackgroundRenderer {
 
     private boolean initialized = false;
     private final int[] savedViewport = new int[4];
+    private boolean savedTilePassBlending;
     private float backdropR = 0.0f;
     private float backdropG = 0.0f;
     private float backdropB = 0.0f;
@@ -190,7 +191,8 @@ public class BackgroundRenderer {
     }
 
     /**
-     * Begin the tile rendering pass - binds FBO and clears it.
+     * Begin the tile rendering pass - binds FBO, clears it, and disables blending
+     * so descriptor alpha is retained exactly.
      * After calling this, render background tiles using GPU tilemap.
      *
      * @param width      The rendering viewport width (may be smaller than FBO allocation)
@@ -211,6 +213,12 @@ public class BackgroundRenderer {
         savedViewport[2] = gm.getViewportWidth();
         savedViewport[3] = gm.getViewportHeight();
 
+        // Tile alpha stores descriptor metadata, so preserve its bytes without
+        // blending. Keep GL state in this initialized pass owner; recording
+        // renderers can override begin/end without requiring a native context.
+        savedTilePassBlending = glIsEnabled(GL_BLEND);
+        glDisable(GL_BLEND);
+
         glBindFramebuffer(GL_FRAMEBUFFER, fboId);
         glViewport(0, 0, renderWidth, renderHeight);
 
@@ -224,7 +232,7 @@ public class BackgroundRenderer {
     }
 
     /**
-     * End the tile rendering pass - unbinds FBO.
+     * End the tile rendering pass - unbinds FBO and restores viewport/blend state.
      */
     public void endTilePass() {
         if (!initialized)
@@ -234,6 +242,11 @@ public class BackgroundRenderer {
 
         // Restore viewport
         glViewport(savedViewport[0], savedViewport[1], savedViewport[2], savedViewport[3]);
+        if (savedTilePassBlending) {
+            glEnable(GL_BLEND);
+        } else {
+            glDisable(GL_BLEND);
+        }
     }
 
     /**
