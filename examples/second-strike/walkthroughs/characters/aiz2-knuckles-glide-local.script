@@ -1,0 +1,17 @@
+# Second Strike character opportunity capture, 2026-10-13.
+# Supplementary positioned physical AIZ2 local setup: solo Knuckles,
+# requested ROM centre ($0EF8,$03A0). Native AIZ2_KnuxResize1 on direct
+# apparent Act 2 entry sets minX=$1040; frame 1 clamps the player to $1050.
+# This cell proves ordinary glide at the admitted native floor, NOT access
+# to the requested $EF8 Knuckles-only rock or an AIZ1 fire continuation.
+# No ability, ring, reward, health, clock, or terrain state is supplied.
+# Settle on native terrain, jump, release, jump again and Right for glide.
+# Up only requests native climbing if collision admits a wall grab;
+# this cell did not enter climbing.
+# Observed: native glide mapping $C0 on frames 85..134; alive for 255 frames.
+60 -
+24 R+A
+1 R
+50 R+A
+60 U
+60 -

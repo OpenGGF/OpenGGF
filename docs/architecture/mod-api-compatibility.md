@@ -4,6 +4,14 @@ OpenGGF Mod API 0.7 (`0.7.0`) is the unpublished, mutable compiled-mod candidate
 carried by `develop` and `next` after the 0.6 release rollover. No Mod API baseline
 has been published yet. The runtime-visible, type-only `com.openggf.game.ModApi`
 annotation marks its roots.
+
+Second Strike extends the candidate with explicit native decoded-placement
+bindings and original-ring retention, preserving concrete level identity for
+native transition consumers. Three S3K service policies admit bounded late-boss,
+Blue Sphere layout and Gumball spring variants inside the canonical owner boundary.
+Invalid values are creator faults; offered arrays and admitted returns are isolated.
+The normalized mutable `0.7` pin is regenerated from the compiled inventory; the
+descriptor remains unpublished candidate `0.7.0`, with no published pin edited.
 Every engine type reachable through those roots' public or protected
 constructors, methods, fields, generic bounds, annotations, nested types,
 supertypes, interfaces, record components, and sealed permits clauses belongs to

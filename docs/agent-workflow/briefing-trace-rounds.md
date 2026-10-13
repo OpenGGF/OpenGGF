@@ -870,6 +870,18 @@ its consumers are migrated and validated together. Its CSV keeps input last;
 appending host observation columns silently broke a prefix comparator that strips
 the final field. Extended host columns are explicit in the title-first mode.
 
+Title-first capture is not the complete Engine UI graph (2026-10-13 Second
+Strike). `HeadlessGameBoot` creates a bare loop without Engine's data-select
+launch callback; a valid native confirmation can therefore consume its action,
+reset the provider and remain in `DATA_SELECT`. The capture renderer also falls
+through to level drawing for that mode, producing blank output without a level.
+Inspect wiring and native provider drawing before calling either symptom a game
+defect. A callback recorder proves native menu admission only; actual launch,
+patch re-resolution and save ownership require the real Engine seams. Keep the
+native listing's relative `saves` directory and Engine's save root in the same
+owned private profile. Never repair a probe by forcing level mode or bypassing
+save/patch resolution.
+
 Exact window ownership does not isolate desktop input (2026-10-09 Mutator Lab
 polish): the helper validated its own Engine PID but repeatedly focused that
 window and injected keys on shared `DISPLAY=:0` for 181–321 seconds, taking input
