@@ -35,3 +35,7 @@ must not replace classification by purpose.
 define researched prototype, MVP and polished-product stages, with detailed
 lifecycle, engine ownership, authoring and validation gates. These are proposed
 implementations, not claims of delivered gameplay or APIs.
+
+[Sonic3K Chaos Mode](designs/2026-10-13-sonic3k-chaos-mode.md) proposes a
+30-effect catalogue, configurable random scheduling, rare displacement and
+later streamer voting, with current mutator reuse and required host API additions.
