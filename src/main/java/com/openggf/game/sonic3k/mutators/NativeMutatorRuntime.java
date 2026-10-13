@@ -55,6 +55,8 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
     private final Map<Long,Integer> opportunities = new HashMap<>();
     private final Map<Long,FieldTargets> fieldTargets = new HashMap<>();
     private final Map<ObjectRefId,List<ObjectRefId>> ownedChildren = new HashMap<>();
+    // Derived only within one uninterrupted native destruction pass; never a persisted slot claim.
+    private final Map<Integer,ObjectRefId> pendingReplacements = new HashMap<>();
     private final Map<ObjectRefId, Integer> projectileAges = new HashMap<>();
     private final Set<ObjectRefId> budded = new HashSet<>();
     private final Set<ObjectRefId> impacts = new HashSet<>();
@@ -103,7 +105,7 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
     }
     @Override public void resetForMissingSnapshot() { reset(); }
     private void reset() {
-        admitted.clear(); owned.clear(); clocks.clear(); tasks.clear(); opportunities.clear(); fieldTargets.clear(); ownedChildren.clear(); projectileAges.clear(); budded.clear(); impacts.clear();
+        admitted.clear(); owned.clear(); clocks.clear(); tasks.clear(); opportunities.clear(); fieldTargets.clear(); ownedChildren.clear(); pendingReplacements.clear(); projectileAges.clear(); budded.clear(); impacts.clear();
         entries = List.of(); chainDispatch = false; lastAir = false; companions.clear(); rides.clear(); encounteredCheckpoints.clear(); landmarkThumbnail=null; landmarkSheet=null; landmarkPalette=null; landmarkVisible=false;
     }
     @Override public void beforeAssembly(LevelLoadCause cause) { releaseOwned(); reset(); services = null; assemblyEpoch++; }
@@ -127,6 +129,7 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
         var currentServices=objects==null?null:objects.getObjectServices();
         if(currentServices==null || currentServices.worldSession()!=world || currentSprites==null) return;
         sprites=currentSprites; services=currentServices;
+        pendingReplacements.clear();
         entries = TransientMutatorPolicyAccess.entries(world).stream().filter(e->e.oneShot() || e.remainingPresentations()>0).toList();
         bossActive = context.levelEventProvider() instanceof com.openggf.game.AbstractLevelEventManager events && events.isBossActive();
         if (touchSizes == null && world.getDataSource().rom().isPresent()) {
@@ -193,6 +196,7 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
         prepareLandmarkThumbnail();
     }
     @Override public void afterNativeTick(LevelFrameContext context, LogicalInputSnapshot input) {
+        pendingReplacements.clear();
         if(retired || sprites==null) return;
         var player=sprites.getMainPlayable();
         if(player==null) return;
@@ -424,8 +428,19 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
         if(services==null || retired || child.isDestroyed()) return;
         var parentId=services.objectQuery().identityOf(parent).orElse(null);
         var childId=services.objectQuery().identityOf(child).orElse(null);
-        if(parentId==null || childId==null || owned.stream().noneMatch(lease->lease.identity().equals(parentId))
-                && ownedChildren.values().stream().noneMatch(children->children.contains(parentId))) return;
+        if(parentId==null || childId==null || !belongsToOwnedGraph(parentId)) return;
+        registerOwnedChild(parentId,childId,child);
+    }
+    private boolean belongsToOwnedGraph(ObjectRefId identity) {
+        return owned.stream().anyMatch(lease->lease.identity().equals(identity))
+                || ownedChildren.values().stream().anyMatch(children->children.contains(identity));
+    }
+    @Override public void replacementSpawned(int transferredSlot,ObjectInstance replacement) {
+        var parent=pendingReplacements.remove(transferredSlot);
+        if(services==null || retired || parent==null || replacement.isDestroyed() || !belongsToOwnedGraph(parent)) return;
+        services.objectQuery().identityOf(replacement).ifPresent(child->registerOwnedChild(parent,child,replacement));
+    }
+    private void registerOwnedChild(ObjectRefId parentId,ObjectRefId childId,ObjectInstance child) {
         if(ownedChildren.values().stream().mapToInt(List::size).sum()>=64) {
             if(child instanceof AbstractObjectInstance object) ObjectLifetimeOps.expireDynamic(object);
             return;
@@ -582,6 +597,10 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
     }
     @Override public void badnikDefeated(ObjectInstance object, PlayableEntity player) {
         if (services==null || !(player instanceof AbstractPlayableSprite sprite)) return;
+        if(object instanceof AbstractObjectInstance nativeObject && nativeObject.getSlotIndex()>=0) {
+            services.objectQuery().identityOf(object).filter(this::belongsToOwnedGraph)
+                    .ifPresent(identity->pendingReplacements.put(nativeObject.getSlotIndex(),identity));
+        }
         for (var e:entries) if (ownerAvailable(e.owner()) && e.policy() instanceof RingEconomyPolicy p && p.kind()==RingEconomyPolicy.Kind.BOUNTY) {
             int awarded=clocks.getOrDefault(e.activationId(),0);
             if(awarded<18) { rain(e.activationId(),object.getX(),object.getY(),3); clocks.put(e.activationId(),awarded+3); }

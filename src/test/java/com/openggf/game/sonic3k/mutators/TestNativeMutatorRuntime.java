@@ -324,6 +324,24 @@ class TestNativeMutatorRuntime {
         for(var id:children)assertTrue(rig.objects.objectQuery().resolve(id).orElseThrow().isDestroyed());
         assertFalse(rig.objects.objectQuery().resolve(siblingId).orElseThrow().isDestroyed());
     }
+    @Test void nativeDefeatReplacementAndDestructionChildrenBelongOnlyToTheExactOwnedGraph() throws Exception {
+        var rig=new Rig();rig.active(new EncounterPolicy(EncounterPolicy.Kind.GUST,EncounterPolicy.Side.AHEAD),true);
+        var root=rig.objects.objectQuery().activeObjectsOfType(NativeGustObjectInstance.class).getFirst();
+        rig.runtime.badnikDefeated(root,rig.player);
+        int slot=ObjectLifetimeOps.detachSlotForTransfer(root);root.setDestroyed(true);
+        var config=new DestructionEffects.DestructionConfig(-1,
+                (spawn,services)->new NativeGustObjectInstance(spawn),false,
+                (spawn,services,points)->new NativeGustObjectInstance(spawn),null,false);
+        DestructionEffects.destroyBadnik(root.getX(),root.getY(),root.getSpawn(),slot,rig.player,rig.services,config);
+        var explosion=rig.objects.objectQuery().activeObjectsOfType(ExplosionObjectInstance.class).getFirst();
+        explosion.update(0,rig.player);
+        assertEquals(3,rig.runtime.capture().ownedChildren().values().stream().mapToInt(List::size).sum());
+        var unrelated=rig.objects.createDynamicObject(()->new NativeGustObjectInstance(new ObjectSpawn(400,100,0,0,0,false,0)));
+        rig.runtime.replacementSpawned(slot,unrelated);
+        rig.runtime.ownerRetired("test");assertTrue(explosion.isDestroyed());
+        for(var object:rig.objects.objectQuery().activeObjectsOfType(NativeGustObjectInstance.class))
+            assertEquals(object!=unrelated,object.isDestroyed(),"replacement association is consumed once and cannot capture unrelated occupants");
+    }
     @Test void completedPowerupGrantSurvivesSourceCancellationAndReportsNativeOwnership() throws Exception {
         var rig=new Rig();doNothing().when(rig.player).giveInvincibility(600);
         rig.active(new NativePowerupPolicy(NativePowerupPolicy.Kind.INVINCIBILITY,600),false);
