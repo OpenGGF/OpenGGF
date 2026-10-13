@@ -7,6 +7,48 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class TestParallaxRewindSnapshot {
 
+    private static final class StatefulHandler extends com.openggf.level.scroll.AbstractZoneScrollHandler
+            implements com.openggf.level.scroll.ScrollOutputRebuilder {
+        int ticks, rebuilds;
+        @Override public void update(int[] output, int x, int y, int frame, int act) {
+            ticks++;
+            java.util.Arrays.fill(output, ticks);
+        }
+        @Override public void rebuildOutput(int[] output, int x, int y, int frame, int act) {
+            rebuilds++;
+            java.util.Arrays.fill(output, ticks);
+        }
+    }
+
+    @Test void initialReconciliationDoesNotConsumeTheFirstNativeScrollTick() {
+        var pm = new ParallaxManager();
+        var handler = new StatefulHandler();
+        pm.installContributedHandler(37, handler);
+        var camera = new com.openggf.camera.Camera();
+        var saved = pm.capture();
+        pm.restore(saved); // No handler has been initialized or dispatched yet.
+        pm.rebuildDerivedOutput(37, 0, camera, 0, null);
+        assertEquals(0, handler.ticks);
+        assertEquals(1, handler.rebuilds);
+        assertEquals(0, pm.getHScroll()[0]);
+        pm.update(37, 0, camera, 0);
+        assertEquals(1, handler.ticks);
+        assertEquals(1, pm.getHScroll()[0]);
+    }
+
+    @Test void initializedReconciliationUsesLogicalStateWithoutAnotherDispatch() {
+        var pm = new ParallaxManager();
+        var handler = new StatefulHandler();
+        pm.installContributedHandler(37, handler);
+        var camera = new com.openggf.camera.Camera();
+        pm.update(37, 0, camera, 0);
+        pm.rebuildDerivedOutput(37, 0, camera, 0, null);
+        pm.rebuildDerivedOutput(37, 0, camera, 0, null);
+        assertEquals(1, handler.ticks);
+        assertEquals(2, handler.rebuilds);
+        assertEquals(1, pm.getHScroll()[0]);
+    }
+
     @Test
     void roundTripTreatsParallaxAsDerivedState() {
         ParallaxManager pm = new ParallaxManager();

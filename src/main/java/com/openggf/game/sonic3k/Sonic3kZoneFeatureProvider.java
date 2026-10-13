@@ -111,6 +111,21 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
                     .orElse(false);
     }
 
+    @Override public java.util.OptionalInt presentationNativeHorizontalOrigin() {
+        if (!GameServices.hasRuntime()) return java.util.OptionalInt.empty();
+        var state = GameServices.zoneRuntimeState();
+        // Obj_5D86A owns native screen coordinates throughout $0D01. SSZ2
+        // loc_58B7C clears Camera_X_pos before loc_58B9E's screen/credits plane,
+        // retaining the old gameplay bounds. Those words cannot mask this plane.
+        boolean screenScene = state instanceof com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState
+                || (state instanceof com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz
+                && ssz.actIndex() == 1 && ssz.foregroundRoutine() >= 0x10);
+        if (!screenScene) return java.util.OptionalInt.empty();
+        var camera = GameServices.camera();
+        return java.util.OptionalInt.of(
+                com.openggf.game.sonic3k.ending.EndingScreenProjection.nativeHorizontalOrigin(camera));
+    }
+
     @Override
     public boolean negativeTumbleUsesUnreflectedAngle(boolean facingLeft) {
         // Anim_Tumble / Anim_TumbleLeft (sonic3k.asm:24938-24984):
@@ -348,6 +363,18 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
     }
 
     @Override public long foregroundDescriptorRevision() {
+        if(!GameServices.hasRuntime())return 0;
+        var ending = com.openggf.game.sonic3k.ending.S3kEndingCoordinator
+                .current(GameServices.zoneRuntimeRegistry()).orElse(null);
+        if (ending != null && (ending.credits().active() || (ending.postCreditsStarted() && ending.flag(3)))) {
+            int origin=GameServices.camera().getX()+com.openggf.camera.NativeViewportFraming.inset(GameServices.camera().getWidth());
+            return Long.MIN_VALUE|((long)ending.credits().clearedRows()<<32)
+                    |(ending.flag(3)?1L<<31:0)|(origin&0xFFFFL);
+        }
+        if (GameServices.zoneRuntimeState() instanceof com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState endingZone
+                && endingZone.ending().scene().foreground().revision() != 0
+                && endingZone.ending().scene().foreground().remaining() >= 0)
+            return endingZone.ending().scene().foreground().revision();
         if (GameServices.hasRuntime() && GameServices.zoneRuntimeState() instanceof
                 com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz && ssz.actIndex() == 1)
             return ssz.endingPlane().revision();
@@ -365,6 +392,21 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
     }
 
     @Override public int foregroundDescriptorAt(int sourceX, int sourceY) {
+        if(!GameServices.hasRuntime())return 0;
+        var ending = com.openggf.game.sonic3k.ending.S3kEndingCoordinator
+                .current(GameServices.zoneRuntimeRegistry()).orElse(null);
+        if (ending != null && (ending.credits().active() || (ending.postCreditsStarted() && ending.flag(3)))) {
+            if(ending.flag(3))return 0;
+            var camera=GameServices.camera();
+            int relativeX=sourceX-camera.getX()-com.openggf.camera.NativeViewportFraming.inset(camera.getWidth());
+            if(relativeX<0||relativeX>=320)return 0;
+            // loc_5B276 writes real $347-based descriptors to Plane A. The
+            // normal foreground and tile-priority passes must own them, so
+            // low sprites sit behind text and high sprites remain above it.
+            return ending.credits().tile(relativeX>>3,sourceY>>3);
+        }
+        if (GameServices.zoneRuntimeState() instanceof com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState endingZone)
+            return endingZone.ending().scene().foreground().descriptor(sourceX, sourceY);
         if (GameServices.zoneRuntimeState() instanceof
                 com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz && ssz.actIndex() == 1)
             return ssz.endingPlane().descriptor(sourceX, sourceY);
@@ -391,6 +433,14 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
     }
 
     @Override public long backgroundDescriptorRevision() {
+        if(!GameServices.hasRuntime())return 0;
+        var ending = com.openggf.game.sonic3k.ending.S3kEndingCoordinator
+                .current(GameServices.zoneRuntimeRegistry()).orElse(null);
+        if (ending != null && ending.postCreditsStarted() && ending.flag(3)) return Long.MIN_VALUE;
+        if (GameServices.zoneRuntimeState() instanceof com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState endingZone
+                && endingZone.ending().scene().background().revision() != 0
+                && endingZone.ending().scene().background().remaining() >= 0)
+            return endingZone.ending().scene().background().revision();
         if (GameServices.hasRuntime() && GameServices.zoneRuntimeState() instanceof
                 com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz
                 && ssz.actIndex() == 1 && ssz.endingPlane().revision() != 0
@@ -415,6 +465,12 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
     }
 
     @Override public int backgroundDescriptorAt(int sourceX, int sourceY) {
+        if(!GameServices.hasRuntime())return 0;
+        var ending = com.openggf.game.sonic3k.ending.S3kEndingCoordinator
+                .current(GameServices.zoneRuntimeRegistry()).orElse(null);
+        if (ending != null && ending.postCreditsStarted() && ending.flag(3)) return 0;
+        if (GameServices.zoneRuntimeState() instanceof com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState endingZone)
+            return endingZone.ending().scene().background().descriptor(sourceX, sourceY);
         if (GameServices.hasRuntime() && GameServices.zoneRuntimeState() instanceof
                 com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz
                 && ssz.actIndex() == 1 && ssz.endingPlane().revision() != 0
@@ -1070,6 +1126,10 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
 
     @Override
     public boolean shouldSuppressHud(int zoneIndex, int actIndex) {
+        if(zoneIndex==0x0D&&actIndex==1)return true; // Level loc_6460 disables the native HUD timer.
+        var ending = com.openggf.game.sonic3k.ending.S3kEndingCoordinator
+                .current(GameServices.zoneRuntimeRegistryOrNull()).orElse(null);
+        if (ending != null && ending.initialized()) return true;
         if (zoneIndex != 0 || actIndex != 0) {
             return false;
         }
@@ -1079,6 +1139,8 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
 
     @Override
     public boolean shouldSuppressInitialTitleCard(int zoneIndex, int actIndex) {
+        // Obj_TitleCardInit: $D01 is a scene, so delete before art submission.
+        if (zoneIndex == 0x0D && actIndex == 1) return true;
         // The ROM's $1701 arena restart bypasses Obj_TitleCard explicitly.
         if (zoneIndex == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA && actIndex == 1) {
             return true;

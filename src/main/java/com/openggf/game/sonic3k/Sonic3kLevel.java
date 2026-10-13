@@ -1065,6 +1065,37 @@ public class Sonic3kLevel extends AbstractLevel {
         LOG.info("S3K map loaded successfully");
     }
 
+    /** Load_Level's in-place scene layout swap; the canonical zone/act stays unchanged. */
+    public void applySceneLayout(Rom rom, int layoutAddr) throws IOException { loadMap(rom, layoutAddr); }
+
+    /** Logical layout geometry is separate from the shared level snapshot's table bytes. */
+    public record SceneLayoutSnapshot(int width, int height, byte[] mapData,
+            int fgWidth, int fgHeight, int bgWidth, int bgHeight, boolean[] backgroundRows) { }
+
+    public SceneLayoutSnapshot captureSceneLayout() {
+        return new SceneLayoutSnapshot(map.getWidth(), map.getHeight(), map.getData(),
+                fgLayoutWidthBlocks, fgLayoutHeightBlocks, bgLayoutWidthBlocks, bgLayoutHeightBlocks,
+                backgroundCollisionRows.clone());
+    }
+
+    public void restoreSceneLayout(SceneLayoutSnapshot snapshot) {
+        map = new Map(2, snapshot.width(), snapshot.height(), snapshot.mapData());
+        fgLayoutWidthBlocks=snapshot.fgWidth(); fgLayoutHeightBlocks=snapshot.fgHeight();
+        bgLayoutWidthBlocks=snapshot.bgWidth(); bgLayoutHeightBlocks=snapshot.bgHeight();
+        System.arraycopy(snapshot.backgroundRows(), 0, backgroundCollisionRows, 0, backgroundCollisionRows.length);
+    }
+
+    /** LoadSolids rewrites collision indices on the resident 16x16 definitions. */
+    public void applySceneCollisionIndices(byte[] primary, byte[] secondary) {
+        Chunk[] updated = chunks.clone();
+        for (int i=0;i<updated.length;i++) {
+            int[] state=updated[i].saveState();
+            state[4]=readCollisionIndex(primary,i); state[5]=readCollisionIndex(secondary,i);
+            Chunk chunk=new Chunk(); chunk.restoreState(state); updated[i]=chunk;
+        }
+        chunks=updated;
+    }
+
     private void decodeInMemoryMap(int width, int height, byte[] foreground, byte[] background) {
         byte[] interleaved = new byte[Math.multiplyExact(Math.multiplyExact(width, height),
                 Sonic3kConstants.MAP_LAYERS)];

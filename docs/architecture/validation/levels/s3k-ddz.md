@@ -24,8 +24,9 @@ history isolation now pass at320/800. Nothing below certifies the zone.
 Incoming: DEZ final boss → `$C00` verified at320/800, including a positioned
 DEZ2-boss start with no reseeding across either load. Full cold DEZ1→DEZ2→final
 DEZ→DDZ completion now has a preserved native320 team movie. Level select is
-also supported. Outgoing: `$D01` ending (the request is asserted; ending
-presentation remains outside this route's accepted scope).
+also supported. Outgoing: `$D01` ending. Historical tests assert the request
+and load-history isolation; [the ending matrix](s3k-ending.md) now owns the
+native rescue, AIZ restoration, reunion, credits and terminal continuation.
 
 Widths / donors / characters / teams (support authority `LaunchProfile.sanitizedFor`, same roster
 as HPZ): widths 320/400/512/640/800; supported character/donor pairs off×{Sonic,Tails,Knuckles},

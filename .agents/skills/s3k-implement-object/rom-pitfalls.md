@@ -5091,3 +5091,16 @@ double their delay (`sub_8756A`/`sub_87592`).
 child movement latch clears. It does not rewrite the owner's `$2E`. Retained
 owners must wait for the real ROM art and the final stationary child poll, and
 keep their presentation clock running.
+
+## A fixed-slot address includes its object-RAM base
+
+Ending `loc_5D96A` writes Tornado and Master Emerald owners at
+`Dynamic_object_RAM+object_size*5` and `*45`, not at `Object_RAM+...`.
+The locked-on constants place `Dynamic_object_RAM` three SSTs after
+`Object_RAM`, so those native writes target global slots 8 and 48. The current
+S3K object manager takes global slot indexes directly. Preserve the base before
+translating the offset; neither subtracting three nor treating the relative
+5/45 as global indexes is correct. The short ending-init test exposed this as a
+missing Tornado owner (one actor instead of two), before any flight timing test.
+See the 2026-10-13 ending lifecycle design for the rejected translations and
+the production fixed-role/rewind checks.

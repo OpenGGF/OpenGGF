@@ -38,6 +38,9 @@ Incoming: the act 2 boss exit (`loc_7F310` saves `Act3_ring_count`, `Act3_timer`
 `Saved2_status_secondary`, then `StartNewLevel $1700`). The ROM level select lists
 `$1700` as "DDZ act 2" (sonic3k.asm:10161); the engine now exposes the distinct final-boss level-select entry.
 Outgoing: `loc_803D6` → `$C00`, `$D01` or `Game_mode 0`.
+The2026-10-13 request adds native `$D01` continuation, tracked in
+[the ending matrix](s3k-ending.md); historical arrival coordinates describe the
+old placeholder, while the rescue writes its own native screen coordinates.
 
 ## Baseline behaviour without a resource profile (measured 2026-09-17, `035e48a58`)
 

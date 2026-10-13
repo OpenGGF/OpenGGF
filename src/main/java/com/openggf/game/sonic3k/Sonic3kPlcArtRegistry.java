@@ -340,6 +340,9 @@ public final class Sonic3kPlcArtRegistry {
         List<LevelArtEntry> levelArt = new ArrayList<>(SHARED_LEVEL_ART);
 
         addZoneEntries(zoneIndex, actIndex, standalone, levelArt);
+        if ((zoneIndex == 0x0D || zoneIndex == 0x0A) && actIndex == 1) {
+            standalone.addAll(com.openggf.game.sonic3k.ending.S3kEndingArt.terminalEntries());
+        }
 
         return new ZoneArtPlan(
                 Collections.unmodifiableList(standalone),
