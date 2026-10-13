@@ -67,14 +67,22 @@ class TestPlayableHurtLandingObjectControl {
 
         assertFalse(rings.collectPlacedRing(ring, player, 0), "tube obj_control=$81 blocks touches");
         player.setAir(false);
+        assertFalse(player.isObjectControlled(), "HurtStop clears the tube control byte on landing");
         assertFalse(rings.collectPlacedRing(ring, player, 1), "HurtStop retains the ordinary pickup delay");
-        // Sonic_Display decrements the reset $78 timer only after HurtStop's display pass.
-        for (int frame = 0; frame < 26; frame++) {
+        // HurtStop resets $78 and its direct display does not decrement it. Thirty
+        // subsequent Sonic_Display decrements reach $5A, still blocked by Touch_Rings
+        // (s2.asm:31942-31943); pickup resumes only below that inclusive threshold.
+        for (int frame = 0; frame < 31; frame++) {
             player.endOfTick();
             player.tickStatus();
         }
+        assertEquals(0x5A, player.getInvulnerableFrames());
+        assertFalse(rings.collectPlacedRing(ring, player, 32), "Touch_Rings blocks timer == $5A");
+        player.endOfTick();
+        player.tickStatus();
+        assertEquals(0x59, player.getInvulnerableFrames());
 
-        assertTrue(rings.collectPlacedRing(ring, player, 27),
+        assertTrue(rings.collectPlacedRing(ring, player, 33),
                 "HurtStop must clear the tube control byte so pickup resumes after the native delay");
     }
 

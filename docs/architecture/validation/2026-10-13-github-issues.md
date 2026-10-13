@@ -48,6 +48,11 @@ source inspection alone does not certify a complete act or route.
   gravity and boundary writes instead.
 - Reject an unconditional HCZ FALL write and S1 lava/Caterkiller bug fixes on the
   owning ROM evidence above.
+- Reject the first SYZ test bootstrap: raw decoder indexes `$86`–`$88` select
+  ROM MZ, not the registry's third gameplay zone. The failing BG Y of 343 is
+  exactly MZ3's `$720 * 48 / 256 + 1`; supplied-ROM SYZ3 uses `$620` and yields
+  295. The corrected test derives `$8C`–`$8E` from `ZONE_SYZ` and asserts the
+  loaded native zone before inspecting its layout.
 - ICZ peer review initially questioned gravity and piece ordinal 4. Full reads
   overturned both: `MoveSprite` adds `$38` gravity (`sonic3k.asm:36077`), and
   `Go_Delete_Sprite_2` returns to the caller's final `sub_8AFA2` chain refresh.
@@ -73,7 +78,11 @@ source inspection alone does not certify a complete act or route.
 The [coverage backlog](../../status/level-test-coverage.md) retains the incomplete
 stock-route obligations. These local checks do not certify an entire level.
 
-## Validation
+## Integration context and validation
+
+Implementation commit: `78da80b2c`. Upstream `10db9f005` and `b3464b31b`
+changed documentation only; `db52f62a5` merged them into the development
+checkout without conflicts. The main checkout remained on `develop`.
 
 Verified supplied ROM aliases in the main checkout, without copying/linking:
 S1 `s1.gen` CRC32 `AFE05EEE`, S2 `s2.gen` `7B905383`, S3K `s3k.gen` `63522553`.
@@ -85,6 +94,45 @@ references; no tests ran in those attempts. The references were corrected.
 `python3 tools/testing/maven_queue.py -Dmse=off test-compile -B` then passed
 on the stable development tree (Java 25; 3,847 main and 3,835 test sources;
 69 seconds). This is compilation evidence, not a test pass.
-Combined focused checks are queued. Change-based smoke and separate fresh guards,
-integration, push and cleanup remain pending. Completed outcomes and exact
-commands will replace this pending state before delivery.
+On `db52f62a5`, the primary focused invocation ran 304 tests in 87 seconds:
+three failures, no errors or skips. Two new SYZ assertions had bootstrapped MZ
+instead; the new ring-pickup assertion stopped at timer 95, above the native
+inclusive `$5A` cutoff. Both corrections change test setup/expectations only.
+The supplemental invocation passed four tests in 26 seconds, with no skips:
+HCZ terrain pixels across results-art publication, detached ICZ movement/culling,
+and the S3K art-registry mapping check. The corrected eight-test rerun passed
+in 26 seconds, with no failures, errors or skips. Production code was unchanged
+between these runs. The pickup regression checks S2 `Touch_Rings`
+(`s2.asm:31942-31943`) at the blocked timer 90 and permitted timer 89.
+Change-based smoke, separate fresh guards, integration, push and cleanup remain
+pending.
+
+Commands below substitute `MAIN` for the absolute main-checkout path used by the
+invocations; the supplied aliases were passed directly, without copying ROMs.
+
+```bash
+MAIN=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
+LUA_BIN=/usr/bin/lua5.4 EGL_PLATFORM=surfaceless \
+python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Dsonic1.rom.path=$MAIN/s1.gen" "-Dsonic2.rom.path=$MAIN/s2.gen" \
+  "-Ds3k.rom.path=$MAIN/s3k.gen" \
+  '-Dtest=TestResultsScoreUnits,TestGameLoopTitleCardPause,TestS3kSpecialStageResultsTally,TestSonic2SpecialStageResultsTallyCadence,TestSonic1PowerUpMusicRestore,Sonic1SpecialStageResultsScreenTest,TestSonic1SpecialStageContinueArt,TestSonic1SpecialStageResultsPlcReadiness,TestSonic1ResultsRomMappings,TestSonic1ResultsNumberPatterns,TestNumericPatternWriter,TestSonic1SyzBackgroundSampling,Sonic1SpecialStageWidescreenPresentationTest,TestPowerUpMusicRestore,TestSmpsPhysicalPolicy,TestPlayableHurtLandingObjectControl,TestPlayableHurtObjectControlMovement,TestCPZSpinTubeObjectInstance,TestSonic2OOZBossLaserSound,TestTitleScreenStarTiming,TestWfzTornadoThrusterRendering,TestSonic2PaletteOwnershipIntegration,TestSonic2ResultsFixedZeroArt,TestSonic2SpecialStageResultsWidescreenCommands,TestCnzEndBossShip,TestMGZHeadTriggerObjectInstance,TestMgzTopPlatformSkid,TestS3kIczSwingingPlatformObject,TestTailsCarryController,TestSidekickCpuControllerCarry,TestS3kBadnikChildGraphRewind#iczDetachedChainRestoresVisibilityAndForwardDebrisMotion,TestBackgroundPlaneSpriteOcclusion,TestS3kMgzBackgroundPriorityPixels,TestAbstractPlayableSpriteRewindCapture,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestModApiSignatureSurface,TestModApiReleasePolicy,TestHybridGameRules' test -B
+
+LUA_BIN=/usr/bin/lua5.4 EGL_PLATFORM=surfaceless \
+python3 tools/testing/maven_queue.py -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$MAIN/s3k.gen" \
+  '-Dtest=TestHczResultsTerrainPixels,TestIczSwingingChainLinkMovement,TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits' test -B
+
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  "-Dsonic1.rom.path=$MAIN/s1.gen" \
+  '-Dtest=TestSonic1SyzBackgroundSampling,TestPlayableHurtLandingObjectControl' test -B
+```
+
+Coverage limits for retained/prior behavior: the S1 drowning check observes the
+native FM/PSG silence write program, not an audible drowning transition. No
+dedicated S1 lava-plus-flashing-plus-later-ring reproduction test was found;
+that disposition rests on the owning `React_ChkHurt` branch. Caterkiller's
+delayed-body behavior has the existing
+`TestSonic1CaterkillerBodyChaining#normalHeadDestructionKeepsBodySegmentsCollidableThroughNextVblank`
+regression. HCZ's animation evidence above is read-only trace comparison.

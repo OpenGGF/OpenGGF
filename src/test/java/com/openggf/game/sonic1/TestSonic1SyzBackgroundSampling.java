@@ -1,6 +1,7 @@
 package com.openggf.game.sonic1;
 
 import com.openggf.game.sonic1.scroll.SwScrlSyz;
+import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.LevelGeometry;
 import com.openggf.level.LevelTilemapManager;
@@ -19,11 +20,16 @@ import static org.mockito.Mockito.mock;
 
 @RequiresRom(SonicGame.SONIC_1)
 class TestSonic1SyzBackgroundSampling {
+    // Sonic1's detached decoder indexes ROM zone order, whereas the registry
+    // presents SYZ as the third zone in gameplay progression.
+    private static final int SYZ_LEVEL_INDEX = 0x80 + Sonic1Constants.ZONE_SYZ * 3;
+
     @Test
     void shortBackgroundLayoutsKeepNativeEmptyRowsBelowTheSuppliedData() throws Exception {
         Sonic1 game = new Sonic1(TestEnvironment.currentRom());
         for (int act = 0; act < 3; act++) {
-            Sonic1Level level = game.buildDetachedLevel(0x86 + act);
+            Sonic1Level level = game.buildDetachedLevel(SYZ_LEVEL_INDEX + act);
+            assertEquals(Sonic1Constants.ZONE_SYZ, level.getZoneIndex(), "the source must be the native SYZ zone");
             assertTrue((level.getMap().getValue(1, 0, 0) & 0x7F) != 0);
             assertTrue((level.getMap().getValue(1, 0, 1) & 0x7F) != 0);
             for (int y = 2; y < level.getMap().getHeight(); y++) {
@@ -38,7 +44,8 @@ class TestSonic1SyzBackgroundSampling {
 
     @Test
     void actThreeLowestCameraUsesTheEmptyTailRatherThanTopClouds() throws Exception {
-        Sonic1Level level = new Sonic1(TestEnvironment.currentRom()).buildDetachedLevel(0x88);
+        Sonic1Level level = new Sonic1(TestEnvironment.currentRom()).buildDetachedLevel(SYZ_LEVEL_INDEX + 2);
+        assertEquals(Sonic1Constants.ZONE_SYZ, level.getZoneIndex(), "the source must be the native SYZ zone");
         SwScrlSyz scroll = new SwScrlSyz();
         scroll.update(new int[224], 0, level.getMaxY(), 0, 2);
         int bgY = scroll.getVscrollFactorBG();
