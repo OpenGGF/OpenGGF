@@ -505,3 +505,47 @@ These are completed bounded controller/rewind results, not whole-game parity or
 all viewport/donor/lifecycle certification. The earlier native Sonic/Tails/team
 four-case pass is before the retirement follow-up; final combined smoke includes
 those identities on the consolidated source. No strict trace frontier is moved.
+
+
+### Consolidated ending presentation and combined launch
+
+Ending repair `f664a1e1a` is merged normally as `7df0c44cb`, retaining the
+original `c2103d5f7` capture commit in ancestry. Only the independently appended
+ROM pitfall sections conflict; both are retained in identical skill mirrors.
+No bootstrap-physics or candidate API change is overwritten. The lane qualifies
+50 distinct affected checks across completed runs, with no unresolved failures,
+errors or skips; this is not a claim of one50-case invocation. IslandLift's
+ROM art/animation graph, independent Master Emerald palette helper and explicit
+AIZ hold palette owner close the three previously catalogued omissions.
+The [ending matrix](../validation/levels/s3k-ending.md#repaired-native-presentation-owners--2026-10-13)
+records allocation/rewind, publication-generation pixel premises and inherited
+unchecked full-capacity SST-overwrite emulation. Two new85-second excerpts
+(Sonic Chaos320 and Tails Super800) have completed CSV/video/hash/full-decode
+checks; the original films and their historical source identities are preserved.
+
+The updated local category runner's complete change-based plan against original
+integration base `5e2f51f07917d5eff8ac120007dac55327f93f32` selects3214 candidate
+classes across all ten ordinary smoke categories and separate guards. The shared
+and upstream changes justify that complete selection; no manual narrowing is
+used. The actual launch environment's Java25/Lua5.4/PowerShell preflight passed
+at19:27 BST; required EGL/null-audio flags and correct existing absolute ROM
+paths remain in place. Main develop fetch/fast-forward check at21:18 BST remains
+`5d9dd8138`, already included in the development ancestry.
+
+Expected ROM-backed execution cost is60–120 minutes, in65 batches of at most50
+candidate classes, followed by fresh guards. Queue waiting is excluded from the
+combined120-minute execution limit; ten minutes without output is the no-output
+stopping rule. A timeout is incomplete validation, not a pass. The lead owns this
+one combined run; workers perform no duplicate broad checks. Source edits remain
+frozen while its worktree lease is live. Final failures/skips will be inspected
+by identity, disputed failures attributed by bounded matched tests, and consumed
+run diagnostics acknowledged before delivery. Packaging uses`-DskipTests`
+after the required validation.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null python3 tools/testing/run_categories.py --base 5e2f51f07917d5eff8ac120007dac55327f93f32 --rom-directory "$S3K_TASK_ROM_DIRECTORY" --max-minutes 120 --run
+```
+
+`S3K_TASK_ROM_DIRECTORY` denotes the original main checkout containing the three
+verified user ROMs. This launch plan is not a completed smoke/guard result.
+Integration into develop, push and owned-worktree cleanup remain pending.

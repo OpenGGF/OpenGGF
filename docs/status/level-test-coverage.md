@@ -8,7 +8,7 @@ post-credits and Start/title handoffs. The [placed LBZ2 Knuckles entry matrix](.
 records actual CD admission, same-slot CA activation, child restoration and a
 positioned fight/carrier continuation into released MHZ. Repaired MHZ, LRZ and
 SSZ route results are recorded in their matrices. The final cold Tails LRZ chain passes through released HPZ with its boss and
-whole-world assertions retained. Cold native320 Knuckles now completes both MHZ acts into released FBZ, retaining43 Act1 and22 Act2 two-cycle world windows and actual handoff history isolation. The native terminal contract is health nine through one, with escape at one; wide Sonic retains25 windows. Combined smoke/guards and integration remain pending. Ending presentation repair is qualified in its lane and awaits consolidation; inherited route/configuration/native-conformance breadth stays explicit. These checks do not certify whole-game parity.
+whole-world assertions retained. Cold native320 Knuckles now completes both MHZ acts into released FBZ, retaining43 Act1 and22 Act2 two-cycle world windows and actual handoff history isolation. The native terminal contract is health nine through one, with escape at one; wide Sonic retains25 windows. Combined smoke/guards and integration remain pending. The three native ending presentation owners are consolidated with50 distinct focused checks; inherited route/configuration/native-conformance breadth stays explicit. These checks do not certify whole-game parity.
 
 Starpost Valley phase 4 (2026-10-10): the [festival and lake matrix](../architecture/designs/2026-10-09-starpost-valley.md#festival-and-lake-route-matrix) adds native solo Sonic/Tails/Knuckles at 320/400 through Race, Ring Hunt, snowboard, lake and Ice Cap fishing with result consumption and whole-registry restore/replay. Wider viewport/donor/team, load/respawn and interaction-boundary obligations remain open.
 
@@ -331,7 +331,7 @@ isolation and native parity remain open. Both recreations now emit defeat explos
 | S3K | `S3K_DOOMSDAY` | [Zone matrix](../architecture/validation/levels/s3k-ddz.md) — in progress; seeded Sonic route matches native; fresh Super routes complete320/800 with fight/wrap/exit replay; death/restart and live timeline reset covered at320/800; Hyper-star display-list/art-queue phase, retained HUD redraw and recording exit freeze corrected; full cold native320 Sonic+Tails now completes DEZ1→DEZ2→final→DDZ with boot-only emeralds in64648 inputs; seeded ending-load save request and history isolation pass at320/800; remaining native presentation and incoming width/donor breadth open |
 | S3K | `S3K_DOOMSDAY_2` | Audit pending |
 | S3K | `S3K_AIZ_INTRO` | Audit pending |
-| S3K | `S3K_ENDING_SCENE` | [Native ending matrix](../architecture/validation/levels/s3k-ending.md) — bounded native lifecycle and incoming composition qualified; presentation omissions and remaining formal conformance/breadth assessment open |
+| S3K | `S3K_ENDING_SCENE` | [Native ending matrix](../architecture/validation/levels/s3k-ending.md) — bounded native lifecycle, incoming composition and the three catalogued presentation owners qualified; remaining formal conformance/breadth assessment open |
 | S3K | `S3K_AZURE_LAKE` | Audit pending |
 | S3K | `S3K_AZURE_LAKE_2` | Audit pending |
 | S3K | `S3K_BALLOON_PARK` | Audit pending |
