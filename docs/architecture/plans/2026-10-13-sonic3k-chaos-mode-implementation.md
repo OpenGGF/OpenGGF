@@ -241,3 +241,24 @@ the native data-select draw branch and the same post-fade hosted pass; the pass
 flushes its rectangles and is dormant without policies or a hosted run. A real-ROM
 title/data-select pixel regression checks the current frame, including drawing
 without framebuffer readback. No desktop input or display is used.
+
+Checkpoint qualification rejected layout-number inference. Native high-water marks
+can include unseen alternate-route or duplicate-number posts. `312c7a01d` instead
+captures up to 32 exact native saved coordinate banks observed before/after native
+ticks; assembly clears uncertain history and the current native bank seeds it
+conservatively. Source/tests compile; its unchanged focused request still awaits
+execution.
+
+The descendant audit found that monitor free children and transferred-slot broken
+wall pieces bypassed the first child hook. `a2e83ea77` extends the existing internal
+notification to structurally owned free/anchored/legacy children and wall piece
+zero. Removed producers remain graph anchors for their original bounded lease;
+expiry and owner retirement reach exact descendants. Explicit independent siblings
+retain their own lifetime. Source/tests compile; behavioral verification is pending.
+
+The final combined plan selects 3,191 smoke classes and separate guards against
+`10db9f005`. The launch uses verified ROM-directory discovery, Lua 5.4 and production
+surfaceless EGL with desktop display variables unset. Historical large-category
+holds are about 64–91 minutes, so the invocation allows 120 minutes excluding
+queue wait, with a ten-minute no-output stopping rule. Exhaustive slow-suite and
+release-only full-suite tests remain excluded. The run is queued, not completed.
