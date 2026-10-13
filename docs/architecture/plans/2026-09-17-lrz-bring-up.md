@@ -185,6 +185,40 @@ The checks establish these native cold routes and their captured replay spots,
 not complete width/donor/team/lifecycle coverage or ROM pixel/trace parity.
 Solo Tails route recovery continues independently.
 
+### Qualified ordinary Tails Act1 continuation
+
+The repaired29,157-input solo Tails movie preserves the first18,560 inputs.
+Six alternating nonzero pad states release the native Toxomister cloud;
+ordinary braking avoids the next zero-ring collision. The fight uses the
+miniboss's native hover/rise/swing/drop/slam cycle: a charge-release dodge,
+paired ascent/descent body hits on three attacks and one ring retained through
+results. All health values0..6, the nine-ring approach, native `-$2C00` act
+rebase, ring1 carry and427/1973/ring0 playable Act2 endpoint are asserted.
+An earlier zero-ring final defeat is rejected because it did not meet the
+existing positive handoff carry obligation. No health, damage, attack clock,
+ring drain, collision or movement value is written to help the movie.
+
+The first selected run has1 error: the28500+45 replay window crosses the28507
+seamless load and `ZoneRuntimeRegistry.validateSnapshotIdentity` rejects the
+saved `$900` runtime against live `$901`. The Act1 route then qualifies 58
+full-registry spots with28450 before and28530 after that load. Cross-act runtime
+restoration remains inherited work; continuous gameplay and either-side replay
+must not be described as proof of restoring through the identity change.
+
+From parent `12d6c372e` plus this controller/checkpoint candidate, the replacement
+finishes on2026-10-13 at18:09 BST:
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" -Dmse=off \
+  '-Dtest=TestLrzTailsColdRouteCapture#coldTailsClearsActOneAndRestoresTraversalFightAndHandoff' \
+  "-Ds3k.rom.path=$LRZ_S3K_ROM" test
+```
+
+Result:1 test,0 failures/errors/skips;32.012 seconds Maven time (8.395 seconds
+in the class), with the same verified locked-on ROM. The first movie is qualified;
+Act2/full-chain authoring continues independently. This is bounded route/replay
+validation, not broad product coverage or native pixel/trace parity.
+
 ## Goal and delivery rule
 
 Deliver three cold routes: Sonic + Tails `$900` → seamless `$901` → boulder cutscene → `$1600` →

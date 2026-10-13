@@ -80,17 +80,31 @@ No screenshot or native pixel-match claim is made.
 
 ## Current route qualification (2026-10-13)
 
-Pinned develop `5e2f51f07917d5eff8ac120007dac55327f93f32` reproduces
-`TestLrzTailsColdRouteCapture#coldTailsClearsActOneAndRestoresTraversalFightAndHandoff`
-with a zero-ring death at input 19460. The historical cold completion below is
-not a current passing claim. The native Toxomister facing correction is retained;
-ordinary six-frame left/right release alternatives are under continuation
-measurement. Exact command, ROM identity, state witnesses and rejected runtime
-rescue are recorded in the [October 13 follow-up](../../plans/2026-09-17-lrz-bring-up.md#playable-completion-follow-up-2026-10-13).
-No replacement movie or new native/pixel qualification is published yet. The complete
-Knuckles native320 and pair800 cold walks through this act now pass on the
-committed omitted-title assembly dependency `d9b11f7db`; their selected rewind
-windows are later Act2/boss windows, so this does not requalify every Act1 spot.
+Pinned develop `5e2f51f07917d5eff8ac120007dac55327f93f32` reproduces the old
+Tails zero-ring death at input19460. The replacement ordinary controller route
+now passes `TestLrzTailsColdRouteCapture#coldTailsClearsActOneAndRestoresTraversalFightAndHandoff`
+on parent `12d6c372e`:29,157 cold inputs, 58 full-registry45-input restore/forward
+spots, all six miniboss health decrements, results, native act rebase and
+playable Act2 at427/1973 with zero deaths. The native Toxomister facing, damage
+and cloud drain remain unchanged. The first18,560 inputs are preserved; ordinary
+six-frame release, braking, attacks and dodges repair the rest. The approach
+retains nine rings and the handoff retains one until the ordinary Act2 title
+reset. Endpoint rings remain zero as before.
+
+The exact focused replacement completes1 test,0 failures/errors/skips in32.012
+seconds Maven time. One earlier candidate checkpoint at28500 crossed the28507
+seamless act change and exposed inherited zone-runtime identity rejection
+(`s3k:9/0` into `s3k:9/1`); that run was1 error, not a pass. The qualifying
+45-input windows are now28450 before and28530 after the handoff. Gameplay
+crosses continuously, while capture/replay across the act identity itself is
+still an explicit gap. Other lifecycle/configuration products and native pixel
+matching remain open. Exact command, rejected zero-ring fight and controller
+provenance are in the [October 13 follow-up](../../plans/2026-09-17-lrz-bring-up.md#playable-completion-follow-up-2026-10-13).
+
+Knuckles native320 and pair800 cold walks through this act pass on the committed
+omitted-title assembly dependency `d9b11f7db`; their selected replay windows are
+later Act2/boss windows, so this does not requalify every Act1 spot. Solo Tails
+Act2 and the full HPZ chain remain under ordinary controller recovery.
 
 ## Obligations
 

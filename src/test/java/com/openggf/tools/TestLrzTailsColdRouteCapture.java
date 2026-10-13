@@ -29,7 +29,7 @@ class TestLrzTailsColdRouteCapture {
     void coldTailsClearsActOneAndRestoresTraversalFightAndHandoff() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/lrz-tails-cold-act1-clear-320.bk2"));
-        assertEquals(34128, movie.getFrameCount());
+        assertEquals(29157, movie.getFrameCount());
         var settings = new GameplayCaptureSession.Settings(320, "tails", "", "off", null, null, null);
         // Flight/landing, buttons, corkscrew, elevators, crusher collapse, low
         // passages, arena entry, each drill hit and both sides of the act load.
@@ -38,8 +38,8 @@ class TestLrzTailsColdRouteCapture {
                 11595, 11715, 12930, 13460, 14145, 15568, 16068, 17418,
                 18608, 18905, 19443, 20554, 21020, 21553, 21673, 21853,
                 22238, 22626, 23336, 24560, 24767, 25257, 25520, 25660,
-                26410, 28650, 30260, 31340, 32420, 32920, 33000, 33420,
-                33500, 34050);
+                25852, 25980, 26401, 26441, 26810, 27250, 27310, 27650,
+                28016, 28110, 28160, 28300, 28450, 28530, 28925, 28980, 29100);
         var checked = new HashSet<Integer>();
         var healthSeen = new HashSet<Integer>();
         boolean defeated = false;
@@ -62,7 +62,7 @@ class TestLrzTailsColdRouteCapture {
                     assertTrue(session.player().isHighPriority(), "placed lava path switch was crossed");
                     assertEquals(9, session.player().getRingCount(), "ordinary approach carry");
                 }
-                if (frame == 33477) {
+                if (frame == 28507) {
                     assertEquals(1, GameServices.level().getCurrentAct(), "seamless act load");
                     assertTrue(session.player().getCentreX() < 320, "native -$2C00 rebase");
                     assertEquals(1, session.player().getRingCount(), "carry remains until the title reset");
