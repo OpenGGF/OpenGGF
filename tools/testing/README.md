@@ -20,8 +20,8 @@ regressions, affected traces and structural guards as needed. Full ordinary suit
 are **only** for preparing a new version for public release:
 
 ```bash
-# Routine default; queued locally.
-python3 tools/testing/maven_queue.py -Dmse=off test
+# Routine broad coverage: all smoke candidates, queued in batches plus guards.
+python3 tools/testing/run_categories.py --category all --run
 # Public release preparation only; restores the former complete ordinary suite.
 python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
 ```
@@ -30,7 +30,11 @@ The Release workflow explicitly opts into `full-suite`, including manual release
 preparation and ROM-fixture validation. Separate trace/audio/route profiles retain
 their own prerequisites. For a targeted slow oracle during development, use an exact
 `-Dtest` selector and `-Dsurefire.excludedGroups=`; do not use that override for an
-unfiltered routine run. Smoke passes do not establish exhaustive-oracle coverage.
+unfiltered routine run. Smoke passes do not establish exhaustive-oracle coverage. ROM-heavy smoke runs can
+still take an hour overall; the category runner yields shared admission between
+batches rather than holding it for that whole duration. Raw unfiltered Maven `test`
+and `package` remain monolithic. Use the runner for routine broad coverage and
+package with `-DskipTests` after the required validation.
 In category plan JSON, `full` means all smoke categories were selected, not that
 the release-only full suite will run; `suite` and `scope` identify the bounded lane.
 
@@ -99,8 +103,10 @@ an explicit workload policy, not a proof of semantic independence: agents must a
 or choose `all` when a change crosses these boundaries (for example, changing an object's audio
 request contract). Do not add a rule just to avoid an inconvenient failing test.
 
-Change-based runs (`--base`) and `--category all` include the separate `guards` profile in its
-own Maven invocation. Focused category runs omit guards to avoid repeating them during
+Ordinary candidates are partitioned deterministically into batches of at most **50
+source classes**, preserving the entire selected inventory and existing smoke tag
+exclusions. Each batch queues independently; change-based runs (`--base`) and
+`--category all` queue the separate `guards` invocation after ordinary batches. Focused category runs omit guards to avoid repeating them during
 iteration; add `--guards` to request them explicitly. Trace
 replay, native graphics, diagnostics, performance profiles and TraceChaser integration retain
 their existing commands and prerequisites. Gameplay category coverage does not replace affected
@@ -128,11 +134,14 @@ skips; a successful exit alone does not establish ROM-backed coverage.
 
 Each run starts in `target/category-tests/<run-id>/`. The plan retains the tested head,
 working-tree fingerprint, ordinary worker count and selected source classes; command arrays record the exact Maven
-arguments. `results.json` records each lane's worker count, totals, skipped cases and failure details, and `status.json`
+arguments for every batch. `results.json` aggregates each lane's worker count, totals,
+completed/planned batch counts, skipped cases and failure details, and `status.json`
 distinguishes passed, failed and incomplete runs. Diagnostic lists are capped at 1,000 records
 per kind with explicit omitted counts; messages/stacks are bounded excerpts. Inspect skips,
 omissions and domain coverage before delivery. The runner checks exit status and nonempty
-execution and rejects a changed working tree at completion. It does not cache or authenticate
+execution and rejects a changed working tree at completion. A failed Maven batch
+without JUnit failure reports stops further execution and preserves the failed
+batch identity and causal log; remaining coverage is incomplete. It does not cache or authenticate
 passes for Git hooks, or claim that every candidate source produced a report.
 
 ### Cost, prerequisites and stopping
@@ -246,7 +255,10 @@ the queue; older wrappers remain lock-compatible but reserve normal budgets.
 Submit checks when ready, even while another agent is testing. Leave the command session
 running: it prints a waiting notice every 30 seconds and starts automatically when it
 acquires a slot. On Linux, the queue admits up to three invocations in different
-worktrees when memory and CPU budgets fit; category ordinary/guard lanes stay together.
+worktrees when memory and CPU budgets fit. Category runs release shared CPU/RAM
+admission after each ordinary batch and before guards, retaining their worktree
+lock throughout so another command cannot overwrite `target/` or prune active
+diagnostics. Each batch joins the ordinary waiting order afresh.
 The same worktree always remains exclusive. Unsupported resource probes/platforms
 and CPU allocations smaller than two per-run reservations retain serial execution.
 There is no background service, task owner or approval step. Participating waiters
@@ -256,7 +268,7 @@ use short-run priority with aging; different clones have separate queues. Each c
 
 Each admitted or cancelled request appends one line to `.git/maven-queue-log.jsonl`:
 kind (`focused`, `focused-lean`, `full`, `category`, `category-full`, `profile:<names>`, `exclusive`,
-`cleanup`), worktree name, wait and hold seconds, sampled peak RSS and mean CPU. It
+`cleanup`, `category-batch`, `category-guards`), worktree name, wait and hold seconds, sampled peak RSS and mean CPU. It
 records no Maven arguments and no test results, so it is not a validation receipt.
 The log is trimmed to its newest half above 512 KiB. Summarise it with:
 
@@ -284,6 +296,10 @@ existing runs finish normally. An aged resource-aware request waiting only for i
 own busy worktree allows unrelated trees to proceed: pausing them cannot release its
 `target/`. Later requests for that same tree cannot overtake it, even if the holder
 exits during a scheduler scan. Aged serial requests still drain the shared queue.
+A category continuation retains its worktree lease: same-tree requests cannot
+prevent that holder from resuming to finish and release `target/`. This also applies
+to an aged serial waiter on that held tree; unrelated aged capacity requests keep
+their normal priority. Execution locks, not the continuation marker, authorize work.
 Already-running backfill can still delay an older request.
 
 Estimates are coarse ordering hints, independent of the RAM/CPU reservation:
@@ -291,7 +307,8 @@ Estimates are coarse ordering hints, independent of the RAM/CPU reservation:
 | Request shape | Initial estimate |
 |---|---:|
 | Exact `-Dtest=Class` or `Class#method` selector | 30 seconds startup, plus 0.3 seconds per additional comma-separated selector |
-| Partial category selection | 30 seconds startup, plus 0.3 seconds per additional selected class; add 180 seconds for guards |
+| Ordinary category batch | 30 seconds startup, plus 0.3 seconds per additional candidate (at most 50) |
+| Category guard lane | 180 seconds |
 | Full suite, wildcard selector, or unknown Maven command/profile | 900 seconds |
 | Explicit guard-only Maven run without a test selector | 180 seconds |
 | Diagnostic acknowledgment | 1 second, exclusive metadata operation |
@@ -299,7 +316,9 @@ Estimates are coarse ordering hints, independent of the RAM/CPU reservation:
 Estimates are capped at 900 seconds. The per-class allowance rounds the earlier
 722-second / 2,588-class ordinary profile; it is only a rough average. The category
 estimate uses the plan at submission;
-the actual selection is still recomputed after waiting. Compilation, expensive individual
+the actual selection is recomputed after acquiring the worktree lock. Source
+fingerprints are checked after shared-admission waits and after every batch; edits
+invalidate the combined run instead of launching more batches from stale inputs. Compilation, expensive individual
 tests and local cache state can make these estimates inaccurate. Aging handles mistakes;
 there is no timing history, estimate override flag, timeout change or smaller heap budget
 for a focused request. A short check submitted after a full suite has already started
@@ -309,7 +328,9 @@ The wrapper forwards Maven arguments without shell interpolation, streams normal
 and returns Maven's exit status. It adds no timeout to a focused/raw Maven command.
 Ctrl-C or SIGTERM cancels a waiting request or stops the running Maven process tree before
 releasing the slot. Category runs retain their timeouts and diagnostic summaries. Category
-selection is recomputed after waiting so it describes the tree actually being tested.
+selection is recomputed after the worktree wait; shared-admission waits are checked
+against the combined source fingerprint. Execution timeouts accumulate across
+batches and guards, excluding every queue wait.
 Avoid editing that worktree during execution; the category runner rejects changed trees.
 
 Admission uses available memory, CPU affinity, visible cgroup v2 limits and one-minute
@@ -327,13 +348,20 @@ usage or budget records making admission more conservative. These are admission
 estimates, not hard limits or a guarantee against
 unrelated host load. No running command is preempted when resources later fall.
 
+The exact `-Dopenggf.headless.gl=surfaceless-egl` flag in `JAVA_TOOL_OPTIONS`,
+`JDK_JAVA_OPTIONS` or `MAVEN_OPTS` selects the supported isolated graphics backend
+without changing heap/fork/thread budgets. It therefore does **not** force global
+exclusive admission and remains intact in the lean environment. Unknown options,
+malformed quoting or that flag mixed with a resource override remain conservative.
+This is a narrow allowance, not permission to strip flags or reduce reservations.
+
 The estimate covers one reused test fork with the shared 3 GiB heap. That is the
 single-worker default suite and the profiles that keep it: `smoke`, `guards`, `ci`,
 `trace-replay`, `trace-segments`, `trace-replay-r7`, `trace-diagnostics`, `fbz-routes`,
 `audio-reference` and `audio-local-wave`. A Python test pins that shape against `pom.xml`.
 `benchmarks` (wall-clock sensitive), `test-concurrent` (two forks), `audio-stress`,
 `tracechaser-integration`, packaging with tests and other profiles, category `--workers 2`,
-Maven thread/fork/heap overrides, and nonempty `MAVEN_OPTS`,
+Maven thread/fork/heap overrides, and unrecognized options in `MAVEN_OPTS`,
 `JAVA_TOOL_OPTIONS` or `JDK_JAVA_OPTIONS` retain exclusive execution. Implicit profiles
 or heap settings in custom project/user Maven configuration are not detected; use the
 serial override for those unmeasured shapes.

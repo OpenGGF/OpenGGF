@@ -1072,6 +1072,12 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   master title by rescanning jars and rebuilding the mod runtime and launch choices;
   restarting the engine is no longer required to change loaded mods.
   Its list identifies each mod's target game (S1, S2, S3K, all three, or standalone).
+  Compatibility notices distinguish published overlaps, suspected interactions
+  and verified preparation blockers, with targets, participant builds and affected
+  content. Declared conflicts and valid exclusive overlaps warn while retaining
+  ordinary override policy; hard contracts and failed-owner recovery remain enforced.
+  Healthy dependencies are identified as context rather than blocked content, and
+  retired audio no longer retains active overlap evidence.
   The master title's game pane shows enabled mod names below the launch profile,
   cycling through names when several apply to the selected game.
   The creator handbook now starts with a Java 25 setup path, seven purpose-specific
@@ -1319,7 +1325,11 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   No task registration, validation receipts,
   cumulative budgets or retry gates are needed. Per-invocation category timeouts exclude
   queue waiting. Category runs explicitly use the bounded smoke suite; even the
-  broad fallback excludes exhaustive oracles. Full ordinary validation is reserved
+  broad fallback excludes exhaustive oracles. Ordinary coverage queues in batches
+  that release shared admission between jobs while retaining worktree ownership;
+  guards queue separately. Supported headless graphics flags no longer force
+  exclusive admission, while unmeasured JVM overrides remain conservative.
+  Full ordinary validation is reserved
   for preparing new public releases through the explicit `full-suite` profile.
   A separate bounded-result comparator checks full failure identities/assertions
   and causal skip reasons against an explicit source/run baseline, rejecting
