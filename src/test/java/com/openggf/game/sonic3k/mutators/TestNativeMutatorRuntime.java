@@ -33,7 +33,7 @@ class TestNativeMutatorRuntime {
         final LevelManager level=mock(LevelManager.class);
         final com.openggf.camera.Camera camera=mock(com.openggf.camera.Camera.class);
         final TestObjectServices services;
-        final TestablePlayableSprite player=new TestablePlayableSprite("sonic",(short)0,(short)0);
+        final TestablePlayableSprite player=spy(new TestablePlayableSprite("sonic",(short)0,(short)0));
         final SpriteManager sprites=mock(SpriteManager.class);
         final ObjectManager objects;
         final NativeMutatorRuntime runtime;
@@ -104,14 +104,14 @@ class TestNativeMutatorRuntime {
     @Test void completionIsNativeOnceOnlyAndNoRingsOrOwnerFaultDominates() throws Exception {
         var rig=new Rig();rig.completions.set(List.of(new TransientMutatorPolicySource.Completion("test",7,5)));
         rig.active(new RingEconomyPolicy(RingEconomyPolicy.Kind.COMPLETION_REWARD,5),false);
-        assertEquals(5,rig.player.getRingCount());
-        rig.runtime.beforeNativeTick(rig.frame,LogicalInputSnapshot.neutral());assertEquals(5,rig.player.getRingCount());
+        verify(rig.player,times(1)).addRings(5);
+        rig.runtime.beforeNativeTick(rig.frame,LogicalInputSnapshot.neutral());verify(rig.player,times(1)).addRings(5);
         rig.levelPolicy.set(new com.openggf.game.mutators.LevelMutatorPolicy(java.util.Set.of(),true,false,false,false));
         rig.completions.set(List.of(new TransientMutatorPolicySource.Completion("test",8,5)));
-        rig.runtime.beforeNativeTick(rig.frame,LogicalInputSnapshot.neutral());assertEquals(5,rig.player.getRingCount());
+        rig.runtime.beforeNativeTick(rig.frame,LogicalInputSnapshot.neutral());verify(rig.player,times(1)).addRings(5);
         when(rig.source.ownerAvailable("test")).thenReturn(false);
         rig.completions.set(List.of(new TransientMutatorPolicySource.Completion("test",9,5)));
-        rig.runtime.beforeNativeTick(rig.frame,LogicalInputSnapshot.neutral());assertEquals(5,rig.player.getRingCount());
+        rig.runtime.beforeNativeTick(rig.frame,LogicalInputSnapshot.neutral());verify(rig.player,times(1)).addRings(5);
         verify(rig.source).acknowledgeCompletion(7);verify(rig.source).acknowledgeCompletion(8);verify(rig.source).acknowledgeCompletion(9);
     }
     @Test void nativeEncounterGeometryRejectsTerrainSolidsAndActorIntersections() throws Exception {
@@ -139,7 +139,7 @@ class TestNativeMutatorRuntime {
         when(carrier.getTailsCarryController()).thenReturn(carry);when(rig.sprites.getSprite("helper")).thenReturn(carrier);
         when(carry.isCarryingMainCharacter()).thenReturn(true);
         var state=rig.runtime.capture();var lease=new NativeMutatorRuntime.Companion(1,"test","helper",2,true,true,192,100);
-        rig.runtime.restore(new NativeMutatorRuntime.State(state.generation(),state.assemblyEpoch(),state.admitted(),state.owned(),state.clocks(),state.tasks(),state.opportunities(),state.fieldTargets(),state.projectileAges(),state.budded(),state.impacts(),state.lastAir(),List.of(lease),state.rides()));
+        rig.runtime.restore(new NativeMutatorRuntime.State(state.generation(),state.assemblyEpoch(),state.admitted(),state.owned(),state.clocks(),state.tasks(),state.opportunities(),state.fieldTargets(),state.ownedChildren(),state.projectileAges(),state.budded(),state.impacts(),state.lastAir(),List.of(lease),state.rides()));
         assertTrue(rig.runtime.inputFor(alien).isEmpty());assertTrue(rig.runtime.inputFor(carrier).isEmpty());
         when(carry.isCarrying(rig.player)).thenReturn(true);assertTrue(rig.runtime.inputFor(carrier).isPresent());
         rig.runtime.beforeNativeTick(rig.frame,LogicalInputSnapshot.neutral());rig.runtime.beforeNativeTick(rig.frame,LogicalInputSnapshot.neutral());rig.runtime.beforeNativeTick(rig.frame,LogicalInputSnapshot.neutral());
@@ -152,6 +152,21 @@ class TestNativeMutatorRuntime {
         rig.runtime.badnikDefeated(badnik,rig.player);
         assertEquals(3,rig.objects.objectQuery().activeObjectsOfType(com.openggf.level.rings.LostRingObjectInstance.class).size());
         clearInvocations(rig.level);rig.runtime.drawOverlay(mock(com.openggf.mods.ui.PixelCanvas.class));verifyNoInteractions(rig.level);
+    }
+    @Test void nativeFrameFromAnotherWorldCannotRebindOwnershipOrRetireCollidingObjectIds() throws Exception {
+        var first=new Rig();var second=new Rig();
+        first.active(new EncounterPolicy(EncounterPolicy.Kind.GUST,EncounterPolicy.Side.AHEAD),true);
+        second.active(new EncounterPolicy(EncounterPolicy.Kind.GUST,EncounterPolicy.Side.AHEAD),true);
+        var alien=second.objects.objectQuery().activeObjectsOfType(NativeGustObjectInstance.class).getFirst();
+        first.runtime.beforeNativeTick(second.frame,LogicalInputSnapshot.neutral());first.runtime.retire();
+        assertFalse(alien.isDestroyed());
+        assertTrue(first.objects.objectQuery().activeObjectsOfType(NativeGustObjectInstance.class).getFirst().isDestroyed());
+    }
+    @Test void ringBalanceNeverRemovesAnExistingHighBankBeyondItsTenRingBound() throws Exception {
+        var rig=new Rig();doReturn(120).when(rig.player).getRingCount();
+        var rng=mock(com.openggf.game.GameRng.class);when(rng.nextRaw()).thenReturn(0);rig.services.withRng(rng);
+        rig.active(new RingEconomyPolicy(RingEconomyPolicy.Kind.BALANCE),true);
+        verify(rig.player).setRingCount(110);
     }
     @Test void snapshotsCannotCrossWorldAssemblyOrRetirementAndPausesRetainOwnedTails() throws Exception {
         var first=new Rig();var second=new Rig();
@@ -213,6 +228,29 @@ class TestNativeMutatorRuntime {
         rig.objects.rewindSnapshottable().restore(objectState);rig.runtime.restore(state);
         rig.runtime.beforeNativeTick(rig.frame,LogicalInputSnapshot.neutral());
         assertEquals(selected,rig.runtime.capture().fieldTargets().get(1L).identities());
+    }
+    @Test void acknowledgedOwnedRootRetainsAndRewindsItsExactNativeDescendantGraph() throws Exception {
+        var rig=new Rig();rig.active(new EncounterPolicy(EncounterPolicy.Kind.GUST,EncounterPolicy.Side.AHEAD),true);
+        var root=rig.objects.objectQuery().activeObjectsOfType(NativeGustObjectInstance.class).getFirst();
+        var child=rig.objects.createDynamicObject(()->new NativeGustObjectInstance(new ObjectSpawn(300,100,0,0,1,false,0)));
+        var unrelated=rig.objects.createDynamicObject(()->new NativeGustObjectInstance(new ObjectSpawn(400,100,0,0,1,false,0)));
+        rig.runtime.childSpawned(root,child);
+        var unrelatedId=rig.objects.objectQuery().identityOf(unrelated).orElseThrow();
+        var state=rig.runtime.capture();var objects=rig.objects.rewindSnapshottable().capture();
+        rig.runtime.ownerRetired("test");assertTrue(root.isDestroyed());assertTrue(child.isDestroyed());assertFalse(unrelated.isDestroyed());
+        rig.objects.rewindSnapshottable().restore(objects);rig.runtime.restore(state);
+        var ownedRoot=rig.objects.objectQuery().resolve(state.owned().getFirst().identity()).orElseThrow();
+        var ownedChild=rig.objects.objectQuery().resolve(state.ownedChildren().values().iterator().next().getFirst()).orElseThrow();
+        rig.runtime.leaveOrdinaryGameplay(com.openggf.game.GameplayObservation.Phase.TRANSITION);
+        assertTrue(ownedRoot.isDestroyed());assertTrue(ownedChild.isDestroyed());
+        assertFalse(rig.objects.objectQuery().resolve(unrelatedId).orElseThrow().isDestroyed());
+    }
+    @Test void completedPowerupGrantSurvivesSourceCancellationAndReportsNativeOwnership() throws Exception {
+        var rig=new Rig();doNothing().when(rig.player).giveInvincibility(600);
+        rig.active(new NativePowerupPolicy(NativePowerupPolicy.Kind.INVINCIBILITY,600),false);
+        verify(rig.player).giveInvincibility(600);verify(rig.source).report(eq(1L),contains("Applied: native invincibility grant"));
+        rig.entries.set(List.of());rig.runtime.beforeNativeTick(rig.frame,LogicalInputSnapshot.neutral());
+        verify(rig.player,never()).setInvincibleFrames(0);
     }
     @Test void stasisRetainsContactAndTruceRetainsTheRoutine() throws Exception {
         var rig=new Rig();var enemy=rig.objects.createDynamicObject(()->new RhinobotBadnikInstance(new ObjectSpawn(100,100,0,0,0,false,0)));

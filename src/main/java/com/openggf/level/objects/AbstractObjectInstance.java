@@ -1260,7 +1260,12 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * @param <T> the child type
      */
     protected <T extends AbstractObjectInstance> T spawnChild(java.util.function.Supplier<T> factory) {
-        return allocateAfterCurrent(factory);
+        T child=allocateAfterCurrent(factory);
+        if(!ObjectConstructionContext.isProbeConstruction() && !ObjectConstructionContext.isRewindActiveRestore()) {
+            var policies=com.openggf.game.mutators.NativeObjectPolicyAccess.port(services());
+            if(policies!=null && child!=null) policies.childSpawned(this,child);
+        }
+        return child;
     }
 
     /**

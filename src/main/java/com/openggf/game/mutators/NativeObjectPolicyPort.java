@@ -11,5 +11,6 @@ public interface NativeObjectPolicyPort {
     void ringAcquired(PlayableEntity player);
     void projectileImpact(ObjectInstance projectile, PlayableEntity player);
     boolean playerProjectileStep(ObjectInstance projectile, PlayableEntity player);
+    default void childSpawned(ObjectInstance parent,ObjectInstance child) { }
     void badnikDefeated(ObjectInstance object, PlayableEntity player);
 }
