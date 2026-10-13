@@ -315,6 +315,18 @@ public final class GameplayCaptureSession implements AutoCloseable {
         seedSidekickPosition();
     }
 
+    /** Optional interactive owner; one input-log row is one presentation, including menu and hold rows. */
+    void stepPresentation(Bk2FrameInput input, MutatorGameplayCaptureTool.PresentationInput driver) {
+        requireBooted();
+        driver.step(loop, input, showTitleCard);
+        previousInput = input;
+        if (startAtTitle) {
+            var focused = GameServices.camera().getFocusedSprite();
+            if (focused != null) player = focused;
+        }
+        seedSidekickPosition();
+    }
+
     /** Renders the current frame through the gameplay renderer and reads it back. */
     public RgbaImage render() {
         return render(true);

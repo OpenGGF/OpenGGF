@@ -307,6 +307,13 @@ Local Maven tests: [`tools/testing/maven_queue.py`](../../tools/testing/maven_qu
   input/tick pump, offline PCM and policy/checkpoint/monitor observations
   (2026-10-10, source `379b66413`); see [capture contract](../../tools/media/README.md#mutator-gameplay-showcase-captures).
 
+- `GameplayCaptureTool --interactive-pacing` reuses that production presentation
+  owner for ordinary capture, including title menus and Chaos Mode scheduling
+  (Sonic3K Chaos Mode, 2026-10-13). Canonical one-native-tick capture remains the
+  default. A canonical capture freezes presentation observers and cannot qualify
+  their countdowns or menus; use the explicit flag and inspect `state.csv` before
+  selecting images. See [gameplay-capture](../../.agents/skills/gameplay-capture/SKILL.md).
+
 - `ggfmod head-inventory` and `object-head-inventory` (Big Head polish,
   2026-10-11) export original-ROM indexed pixels, mapping coordinates and CPU
   production mask panels without GL, windows, input or audio. Player output also

@@ -18,6 +18,29 @@ import static org.mockito.Mockito.*;
 @RequiresRom(SonicGame.SONIC_3K)
 class TestGameplayCaptureFrameRendering {
     @Test
+    void interactiveCaptureUsesTheProductionPresentationCallbackOncePerFrame() throws Exception {
+        var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off",
+                null, null, null, null, false, false);
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 0, 0, settings);
+            var presentations = new java.util.concurrent.atomic.AtomicInteger();
+            try (var callbacks = mockStatic(com.openggf.game.session.WorldSessionPolicyAccess.class,
+                    CALLS_REAL_METHODS);
+                 var input = MutatorGameplayCaptureTool.PresentationInput.install(session.loop())) {
+                callbacks.when(() -> com.openggf.game.session.WorldSessionPolicyAccess.onPresentation(
+                        any(), any(), any())).thenAnswer(call -> {
+                    presentations.incrementAndGet();
+                    return null;
+                });
+                for (int i = 0; i < 20; i++) session.stepPresentation(null, input);
+                assertEquals(20, presentations.get());
+                assertFalse(session.loop().getInputHandler().hasLogicalOverride(),
+                        "the production pacing owner must consume its own physical input sample");
+            }
+        }
+    }
+
+    @Test
     void titleAndDataSelectDrawHostedPixelsAboveNativeFadesWithoutReadback() throws Exception {
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off",
                 null, null, null, null, false, false);
