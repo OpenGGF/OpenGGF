@@ -103,7 +103,7 @@ class TestAiz2BossEndSequenceObjects {
     }
 
     @Test
-    void cutsceneButtonRetainsUpForLaterPlayerSlotWhenKnucklesReachesIt() throws Exception {
+    void cutsceneButtonRetainsConsumedUpHistoryAndUnlocksNextPlayerDispatch() throws Exception {
         S3kCutsceneButtonObjectInstance button =
                 new S3kCutsceneButtonObjectInstance(new ObjectSpawn(0x4B18, 0x0189, 0x83, 0, 0, false, 0));
         button.setServices(new TestObjectServices());
@@ -111,6 +111,9 @@ class TestAiz2BossEndSequenceObjects {
         TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
         sonic.setControlLocked(true);
         sonic.setForcedInputMask(AbstractPlayableSprite.INPUT_UP);
+        sonic.setLogicalInputState(true, false, false, false, false);
+        sonic.recordFollowerHistoryForTick();
+        short consumedInput = sonic.getInputHistory(0);
 
         CutsceneKnucklesAiz2Instance knuckles = CutsceneKnucklesAiz2Instance.createDefault();
         setField(knuckles, "currentX", 0x4B10);
@@ -124,8 +127,111 @@ class TestAiz2BossEndSequenceObjects {
         assertTrue(Aiz2BossEndSequenceState.isButtonPressed());
         assertFalse(sonic.isControlLocked(),
                 "loc_65C56 clears Ctrl_1_locked in the button's own SST slot");
-        assertEquals(AbstractPlayableSprite.INPUT_UP, sonic.getForcedInputMask(),
-                "the later Player_1 slot still consumes loc_69588's retained logical UP word");
+        assertEquals(0, sonic.getForcedInputMask(),
+                "Player_1 already ran in slot 0; the next dispatch consumes unlocked raw input");
+        assertEquals(consumedInput, sonic.getInputHistory(0),
+                "the late unlock must retain Sonic_RecordPos's already-consumed UP history");
+    }
+
+    @Test
+    void aizResultsUseAllocateObjectBelowTheCapsuleOwner() {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.setX((short) 0x4880);
+        TestObjectServices services = new TestObjectServices().withCamera(camera)
+                .withGameState(new GameStateManager());
+        var manager = new com.openggf.level.objects.ObjectManager(List.of(),
+                new Sonic3kObjectRegistry(), 0, null, null,
+                com.openggf.game.GameServices.graphics(), camera, services);
+        services.withDirectObjectManager(manager);
+        Aiz2EndEggCapsuleInstance capsule = new Aiz2EndEggCapsuleInstance(0x49E9, 0x0163) {
+            @Override public void update(int vIntRunCount, com.openggf.game.PlayableEntity player) {
+                spawnResultsScreen();
+            }
+        };
+        manager.addDynamicObjectAtSlot(capsule, 30);
+
+        manager.update(camera.getX(), null, List.of(), 1);
+
+        var results = manager.getActiveObjects().stream()
+                .filter(S3kResultsScreenObjectInstance.class::isInstance)
+                .map(S3kResultsScreenObjectInstance.class::cast).findFirst().orElseThrow();
+        assertTrue(results.getSlotIndex() < 30,
+                "sub_86984 uses AllocateObject, which may reuse a lower free slot");
+    }
+
+    @Test
+    void countdownOnlyBridgeKeepsItsNativeRiderLatchAfterAJump() throws Exception {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.setX((short) 0x4A00);
+        TestObjectServices services = new TestObjectServices().withCamera(camera)
+                .withSolidExecutionRegistry(new com.openggf.game.solid.DefaultSolidExecutionRegistry());
+        var manager = new com.openggf.level.objects.ObjectManager(List.of(),
+                new Sonic3kObjectRegistry(), 0, null, null,
+                com.openggf.game.GameServices.graphics(), camera, services);
+        services.withDirectObjectManager(manager);
+        AizDrawBridgeObjectInstance bridge = new AizDrawBridgeObjectInstance(
+                new ObjectSpawn(0x4B48, 0x0218, 0x32, 0, 2, false, 0));
+        setField(bridge, "settled", 1);
+        setField(bridge, "dropStarted", 1);
+        setField(bridge, "currentX", 0x4AE0);
+        setField(bridge, "currentY", 0x0218);
+        manager.addDynamicObjectAtSlot(bridge, 6);
+        TestablePlayableSprite rider = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        rider.setCentreX((short) 0x4AD9);
+        rider.setCentreY((short) (0x0218 - 8 - rider.getYRadius()));
+        rider.setOnObject(true);
+        manager.forceRidingObjectForBootstrap(rider, bridge);
+        manager.update(camera.getX(), rider, List.of(), 1);
+        assertFalse(bridge.isDestroyed(), "normal contact must stay inside the bridge's range window");
+        assertTrue(manager.isRidingObject(rider, bridge));
+        setField(bridge, "collapseStarted", 1);
+        setField(bridge, "collapseTimer", 14);
+        rider.setAir(true);
+        rider.setOnObject(false);
+        rider.setAnimationId(Sonic3kAnimationIds.ROLL);
+
+        manager.update(camera.getX(), rider, List.of(), 2);
+        assertTrue(manager.isRidingObject(rider, bridge),
+                "loc_2B452 only counts down; it does not call the solid helper's airborne-unseat path");
+        assertFalse(rider.isOnObject(), "the countdown does not rewrite the player's jump status");
+        assertTrue(rider.getAir());
+        for (int entry = 0; entry < 14; entry++) bridge.update(entry + 2, rider);
+        assertEquals(Sonic3kAnimationIds.HURT_FALL.id(), rider.getAnimationId(),
+                "loc_2B45E consumes the retained native standing latch even after the player jumped");
+    }
+
+    @Test
+    void nativeDrawBridgeRetainsABit7ControlledRiderWithoutRepositioning() throws Exception {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.setX((short) 0x4880);
+        TestObjectServices services = new TestObjectServices().withCamera(camera);
+        var manager = new com.openggf.level.objects.ObjectManager(List.of(),
+                new Sonic3kObjectRegistry(), 0, null, null,
+                com.openggf.game.GameServices.graphics(), camera, services);
+        services.withDirectObjectManager(manager);
+        AizDrawBridgeObjectInstance bridge = new AizDrawBridgeObjectInstance(
+                new ObjectSpawn(0x4B48, 0x0218, 0x32, 0, 2, false, 0));
+        bridge.setServices(services);
+        setField(bridge, "dropStarted", 1);
+        setField(bridge, "settled", 1);
+        setField(bridge, "currentX", 0x4AE0);
+        setField(bridge, "currentY", 0x0218);
+        manager.addDynamicObjectAtSlot(bridge, 6);
+        TestablePlayableSprite rider = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        rider.setCentreX((short) 0x4AA8);
+        rider.setCentreY((short) 0x0201);
+        rider.setAir(false);
+        manager.forceRidingObjectForBootstrap(rider, bridge);
+        ObjectControlState.nativeBit7FullControl().applyTo(rider);
+
+        manager.processImmediateInlineSolidCheckpoint(bridge, rider, List.of());
+
+        assertTrue(manager.isRidingObject(rider, bridge),
+                "SolidObjectFull2 keeps the standing owner when MvSonicOnPtfm rejects signed control");
+        assertTrue(rider.isOnObject());
+        assertFalse(rider.getAir());
+        assertEquals(0x4AA8, rider.getCentreX() & 0xFFFF);
+        assertEquals(0x0201, rider.getCentreY() & 0xFFFF);
     }
 
     @Test
@@ -152,7 +258,7 @@ class TestAiz2BossEndSequenceObjects {
         }
 
         assertTrue(bridge.isSolidFor(player),
-                "Obj_AIZDrawBridge continues running SolidObjectFull2 through the $0E collapse countdown");
+                "The parent retains its existing rider latch through the $0E collapse countdown");
         assertFalse(player.getAir(),
                 "Players stay ride-supported until loc_2B45E ejects them and deletes the parent object");
 
@@ -1041,6 +1147,103 @@ class TestAiz2BossEndSequenceObjects {
     }
 
     @Test
+    void lastResultsChildDoesNotPublishTheParentsCapsuleRelease() throws Exception {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        QueryOnlyServices services = new QueryOnlyServices(camera, sonic, List.of());
+        services.withGameState(new GameStateManager());
+        Aiz2EndEggCapsuleInstance capsule = new Aiz2EndEggCapsuleInstance(0x49E9, 0x0163);
+        capsule.setServices(services);
+        S3kResultsScreenObjectInstance results = (S3kResultsScreenObjectInstance)
+                ObjectConstructionContext.construct(services, capsule::createResultsScreen);
+        results.setServices(services);
+        setField(results, "act", 1);
+        setField(results, "childrenRemaining", 1);
+        Aiz2BossEndSequenceState.reset();
+
+        results.childExited(null);
+
+        assertFalse(Aiz2BossEndSequenceState.isEggCapsuleReleased(),
+                "the last child clears $30; only the parent's next Obj_LevelResultsWait2 entry clears _unkFAA8");
+        results.onExitReady();
+        assertTrue(Aiz2BossEndSequenceState.isEggCapsuleReleased());
+    }
+
+    @Test
+    void aizResultsExitRetainsTheNativeBossArenaWithoutSyntheticOverrides() throws Exception {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.setMinX((short) 0x4880);
+        camera.setMaxX((short) 0x4880);
+        camera.setMinY((short) 0);
+        camera.setMaxY((short) 0x0300);
+        var level = org.mockito.Mockito.mock(com.openggf.level.Level.class);
+        org.mockito.Mockito.when(level.getMinX()).thenReturn(0);
+        org.mockito.Mockito.when(level.getMaxX()).thenReturn(0x5000);
+        org.mockito.Mockito.when(level.getMinY()).thenReturn(0);
+        org.mockito.Mockito.when(level.getMaxY()).thenReturn(0x1000);
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        QueryOnlyServices services = new QueryOnlyServices(camera, sonic, List.of()) {
+            @Override public com.openggf.level.Level currentLevel() { return level; }
+        };
+        services.withGameState(new GameStateManager());
+        Aiz2EndEggCapsuleInstance capsule = new Aiz2EndEggCapsuleInstance(0x49E9, 0x0163);
+        capsule.setServices(services);
+        S3kResultsScreenObjectInstance results = (S3kResultsScreenObjectInstance)
+                ObjectConstructionContext.construct(services, capsule::createResultsScreen);
+        results.setServices(services);
+        setField(results, "act", 1);
+        Aiz2BossEndSequenceState.reset();
+
+        results.onExitReady();
+
+        assertEquals(0x4880, camera.getMinX() & 0xFFFF,
+                "Obj_LevelResultsWait2 leaves the retained boss's arena words untouched");
+        assertEquals(0x4880, camera.getMaxX() & 0xFFFF);
+        assertEquals(0, camera.getMinY() & 0xFFFF);
+        assertEquals(0x0300, camera.getMaxY() & 0xFFFF);
+    }
+
+    @Test
+    void aizResultsExitDoesNotScheduleACapsuleAnimationRestore() throws Exception {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        GameStateManager gameState = new GameStateManager();
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        QueryOnlyServices services = new QueryOnlyServices(camera, sonic, List.of(tails));
+        services.withGameState(gameState);
+        services.zoneRuntimeRegistry().install(new AizZoneRuntimeState(
+                1, PlayerCharacter.SONIC_AND_TAILS,
+                new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL)));
+        Aiz2EndEggCapsuleInstance capsule = new Aiz2EndEggCapsuleInstance(0x49E9, 0x0163);
+        capsule.setServices(services);
+        S3kResultsScreenObjectInstance results =
+                (S3kResultsScreenObjectInstance) ObjectConstructionContext.construct(
+                        services, capsule::createResultsScreen);
+        results.setServices(services);
+        setField(results, "act", 1);
+        results.onExitReady();
+
+        // AIZEndBoss_StartPostDefeatCutscene is the restore owner. Once that
+        // owner has released control, the floating capsule's loc_866CC only
+        // checks the ending-pose gate and swings; it must not overwrite the
+        // playables again (sonic3k.asm:138263-138276,181675-181679).
+        sonic.setAnimationId(Sonic3kAnimationIds.WALK);
+        tails.setAnimationId(Sonic3kAnimationIds.ROLL);
+        sonic.setAir(true);
+        tails.setAir(true);
+        sonic.setAnimationFrameIndex(3);
+        sonic.setAnimationTick(7);
+        for (int i = 0; i < 8; i++) capsule.onBeforeCapsuleUpdate();
+
+        assertEquals(Sonic3kAnimationIds.WALK.id(), sonic.getAnimationId());
+        assertEquals(Sonic3kAnimationIds.ROLL.id(), tails.getAnimationId());
+        assertTrue(sonic.getAir());
+        assertTrue(tails.getAir());
+        assertEquals(3, sonic.getAnimationFrameIndex());
+        assertEquals(7, sonic.getAnimationTick());
+    }
+
+    @Test
     void aizCapsulePublishesRestorePlayerControlAnimationWordAfterResultsExitDelay() {
         Camera camera = TestEnvironment.activeGameplayMode().getCamera();
         camera.resetState();
@@ -1232,6 +1435,9 @@ class TestAiz2BossEndSequenceObjects {
         Aiz2BossEndSequenceState.pressButton();
         player.setTestY((short) 0x01F0);
         controller.update(100, player);
+        assertEquals(-1, services.requestedZone,
+                "unlock first installs the Y-check routine for the following object dispatch");
+        controller.update(101, player);
 
         assertEquals(Sonic3kZoneIds.ZONE_HCZ, services.requestedZone);
         assertEquals(0, services.requestedAct);
@@ -1319,6 +1525,38 @@ class TestAiz2BossEndSequenceObjects {
                 "loc_69526 keeps native player control restored");
         assertEquals(Sonic3kAnimationIds.WAIT.id(), player.getAnimationId());
         assertTrue(player.isForcedInputActive(AbstractPlayableSprite.INPUT_RIGHT));
+    }
+
+    @Test
+    void controllerUsesAllocateObjectForCutsceneKnuckles() throws Exception {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.setX((short) 0x4880);
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        player.setCentreX((short) 0x4A78);
+        QueryOnlyServices services = new QueryOnlyServices(camera, player, List.of());
+        services.withGameState(new GameStateManager());
+        services.withCamera(camera);
+        services.withGraphicsManager(com.openggf.game.GameServices.graphics());
+        var manager = new com.openggf.level.objects.ObjectManager(
+                List.of(), new Sonic3kObjectRegistry(), 0, null, null,
+                com.openggf.game.GameServices.graphics(), camera, services);
+        services.withDirectObjectManager(manager);
+        Aiz2BossEndSequenceController controller = new Aiz2BossEndSequenceController(0x4880, 0);
+        setField(controller, "initialized", 1);
+        setField(controller, "postResultsControlRestoreDelay", 0);
+        setField(controller, "postCapsuleSequenceStarted", 1);
+        manager.addDynamicObjectAtSlot(controller, 30);
+        Aiz2BossEndSequenceState.releaseEggCapsule();
+
+        manager.update(0x4880, player, List.of(), 0);
+
+        var knuckles = manager.getActiveObjects().stream()
+                .filter(CutsceneKnucklesAiz2Instance.class::isInstance)
+                .map(CutsceneKnucklesAiz2Instance.class::cast).findFirst().orElseThrow();
+        assertTrue(knuckles.getSlotIndex() < controller.getSlotIndex(),
+                "AIZEndBoss_StopPlayer uses AllocateObject, which fills an earlier free slot");
+        assertEquals(false, getObjectField(knuckles, "initialized"),
+                "an earlier SST slot must wait for the next object scan");
     }
 
     @Test
@@ -1482,6 +1720,28 @@ class TestAiz2BossEndSequenceObjects {
     }
 
     @Test
+    void hydrocityTransitionWaitsForTheDispatchAfterButtonUnlock() throws Exception {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.resetState();
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        player.setCentreX((short) 0x4AD8);
+        player.setCentreY((short) 0x0342);
+        RecordingServices services = new RecordingServices();
+        services.withCamera(camera).withGameState(new GameStateManager());
+        Aiz2BossEndSequenceController controller = new Aiz2BossEndSequenceController(0x4880, 0x015A);
+        controller.setServices(services);
+        setField(controller, "postResultsControlRestoreDelay", 0);
+        Aiz2BossEndSequenceState.releaseEggCapsule();
+        Aiz2BossEndSequenceState.pressButton();
+
+        controller.update(100, player);
+        assertEquals(-1, services.requestedZone,
+                "AIZEndBoss_StartLevelTransitionCheck changes routine and returns without testing Y");
+        controller.update(101, player);
+        assertEquals(Sonic3kZoneIds.ZONE_HCZ, services.requestedZone);
+    }
+
+    @Test
     void hydrocityTransitionUsesRomCentreYRatherThanSpriteTopY() throws Exception {
         Camera camera = TestEnvironment.activeGameplayMode().getCamera();
         camera.resetState();
@@ -1505,6 +1765,7 @@ class TestAiz2BossEndSequenceObjects {
         Aiz2BossEndSequenceState.pressButton();
 
         controller.update(100, player);
+        controller.update(101, player);
 
         assertEquals(Sonic3kZoneIds.ZONE_HCZ, services.requestedZone,
                 "ROM y_pos maps to centre Y; top-left/test Y must not delay the HCZ transition");
@@ -1535,6 +1796,7 @@ class TestAiz2BossEndSequenceObjects {
         Aiz2BossEndSequenceState.pressButton();
 
         controller.update(100, player);
+        controller.update(101, player);
 
         assertEquals(0x02B6, camera.getY() & 0xFFFF,
                 "StartNewLevel preserves the camera target from the pre-physics player position");

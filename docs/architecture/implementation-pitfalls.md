@@ -1535,6 +1535,17 @@ of selecting the whole piece, and verify an opaque glove pixel remains at its st
 body coordinate. Distinct geometry is required even when piece IDs appear convenient
 (Mutator Lab mask refinement, 2026-10-08).
 
+### Playable rule binding must follow the selected world
+
+A bootstrap default can remain Sonic 2 while a normal Engine world has selected
+Sonic 1 or S3K. Bind construction and level-reset physics/rules through the
+current-or-bootstrap accessor; an end-of-frame status refresh is too late for
+CPU initialization and fresh-level assembly. The 2026-10-12 runtime qualification
+exposed Tails' first S3K CPU dispatch writing S2's $4000 offscreen position instead
+of `sub_13ECA`'s $7F00. Fixtures that select the same bootstrap and world hide this
+lifetime error. Test differing modules at construction and reset, plus the
+pre-session bootstrap fallback, without writing expected trace values into play.
+
 ### Native service recreation needs verified publication authority
 
 `LevelManager.initGameModule` calls `createGame` on every full load. Sonic 2 and

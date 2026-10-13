@@ -71,6 +71,50 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A performance-only flock does not isolate shared-worktree test jobs
+(2026-10-13, P5 CPU audit). Another task's queued Maven run overlapped a
+negative timing pair; its result was excluded and a preliminary rejection
+withdrawn. Hold the existing test admission lease exclusively throughout fresh
+process timings, audit completed-job intervals, and reject bypassing build/test
+overlap. Never remove queue locks or stop unrelated work to force isolation.
+A batched runner now retains its worktree while awaiting another admission.
+Acquire linked-worktree build leases before exclusive test admission, in a
+consistent order, then lend the held current-tree descriptor to the queue.
+Holding exclusive admission while waiting for that retained worktree deadlocks
+its next batch. The real OS-lease regression fails before this ordering fix.
+
+A live recording can still be finalizing after the gameplay loop stops
+(2026-10-13, runtime performance controls). Engine cleanup has a shorter recorder
+abort limit than the long handoff capture needs. A partial or deleted file is
+not pixel/PCM evidence. Request stop after the last intended presentation,
+wait with a bounded deadline for INACTIVE, and reject any lastFailure before
+cleanup or decoding. Keep recording/CSV runs separate from acceptance timings.
+
+Enabled audio is not proof of a working runtime audio device (2026-10-12,
+runtime performance qualification): forcing an unavailable OpenAL backend
+continued with SMPS synthesis but a no-device speaker fallback. Reject that run
+as complete-runtime audio evidence. Inspect the actual sink, sample format and
+process-owned output stream. A task-owned private output can retain the mixer
+without audible desktop playback; verify its destination and leave the user's
+fallback device unchanged. Pin it before acceptance measurements.
+
+A locked desktop can stall live presentation before or during rendering
+(2026-10-12, runtime performance qualification): Java 25 reached XWayland's
+`glfwShowWindow` and waited in `XCheckTypedWindowEvent`; a minimal window
+reproduced it. Native Wayland opened the same-sized window, then the full engine
+waited at `glfwSwapBuffers`. The desktop's read-only ScreenSaver `GetActive`
+reported true. Stop the owned stalled process. Qualify a visible desktop or an
+owned private virtual display with the actual hardware renderer and normal swap
+path; reject software-renderer substitution. Do not bypass show/swap, disable rendering, or count offscreen
+helper work as the full-runtime baseline. This does not prove a Java-version
+regression; the earlier successful Java 21 run had different desktop visibility.
+
+A live Engine still loads classes lazily (2026-10-12, runtime qualification).
+Recompiling its worktree can remove target/classes before a late object or cleanup
+owner first loads, invalidating the run with ClassNotFoundException. Isolate all
+builds from live correctness runs as well as timing; separate Java input-plan
+compilation that only reads an already-built classpath from Maven rebuilding it.
+
 Smoke is a selection, not a short-runtime guarantee (2026-10-13, queue contention):
 a ROM-backed smoke run executed 26,690 ordinary cases in about 59 minutes, then
 spent five more minutes on guards. Report candidate count and actual environment,

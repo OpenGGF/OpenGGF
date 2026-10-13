@@ -58,6 +58,14 @@ class TestScrollBufferUploadNative {
                 expected[1] = foreground ? -1 : 1;
                 expected[2] = (foreground ? -1 : 1) / 32767.0f;
                 assertArrayEquals(expected, read(buffer.getTextureId(), 224));
+                // Repeated values, including the other overload, must retain
+                // exact contents and the public unbound texture-state contract.
+                glBindTexture(GL_TEXTURE_1D, buffer.getTextureId());
+                buffer.upload(packed);
+                assertArrayEquals(expected, read(buffer.getTextureId(), 224));
+                glBindTexture(GL_TEXTURE_1D, buffer.getTextureId());
+                buffer.upload(view);
+                assertArrayEquals(expected, read(buffer.getTextureId(), 224));
                 buffer.upload(new int[] {0});
                 buffer.upload(view);
                 assertArrayEquals(expected, read(buffer.getTextureId(), 224));
@@ -66,6 +74,10 @@ class TestScrollBufferUploadNative {
                 assertArrayEquals(expected, read(buffer.getTextureId(), 224));
                 buffer.upload(new int[] {0});
                 assertArrayEquals(new float[224], read(buffer.getTextureId(), 224));
+                // The next resource has to receive this same data again; an
+                // old resource's upload history cannot certify the new one.
+                buffer.upload(packed);
+                assertArrayEquals(expected, read(buffer.getTextureId(), 224));
                 int oldTexture = buffer.getTextureId();
                 buffer.cleanup();
                 assertFalse(glIsTexture(oldTexture), "cleanup must delete the texture");

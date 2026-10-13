@@ -13,6 +13,14 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 submodule changes recorder ownership, not Sonic 3 & Knuckles runtime behaviour.
 No S3K discrepancy was added or reclassified by the cutover.
 
+**AIZ handoff prerequisite (2026-10-12, candidate):** the runtime performance
+qualification repairs shipped-ROM boss/results/button/bridge ownership without
+adding an intentional deviation. The complete original AIZ → HCZ control passes;
+the alternate still has an inherited allocation frontier. See the
+[validation record](architecture/validation/performance/2026-10-12-runtime-performance-series.md)
+and [known-bug record](status/s3k-known-bugs.md). Integration and performance
+qualification remain pending.
+
 **Stock parity audit (2026-10-07):** the continued swarm uses shipped-ROM
 initialization, level-load and fan-child semantics; it adds no accepted deviation.
 Executed qualification and remaining campaign/rewind frontiers belong in the

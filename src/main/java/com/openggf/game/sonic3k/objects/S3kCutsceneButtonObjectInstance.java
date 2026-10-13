@@ -110,11 +110,13 @@ public class S3kCutsceneButtonObjectInstance extends AbstractObjectInstance
         if (playerEntity instanceof AbstractPlayableSprite player) {
             // loc_65C56 clears Ctrl_1_locked in the button's own SST slot.
             // Player_1 is SST slot 0 and has already run this frame, so the
-            // logical UP word AIZEndBoss_WaitForCutsceneKnuckles wrote from
-            // slot 7 is still the word that pass consumed; the unlock only
-            // reaches the player on the following frame
+            // logical UP word AIZEndBoss_WaitForCutsceneKnuckles wrote is
+            // already recorded by that player dispatch. Unlock the input
+            // override now so the following player entry reads raw input
             // (sonic3k.asm:133968-133970, 138317-138323).
             player.setControlLocked(false);
+            player.clearForcedInputMask();
+            player.setForceInputRight(false);
         }
         // loc_65C04 only publishes st (_unkFAA9).w; the draw bridge consumes it
         // from its own, strictly later, SST slot in this same object scan

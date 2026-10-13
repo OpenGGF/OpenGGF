@@ -450,9 +450,9 @@ final class DefaultObjectRewindPolicies {
             // stranded rider off; ejectedPlayers guards a knocked-off rider from re-standing/double-ejecting.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance", "standingPlayers"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance", "ejectedPlayers"), RewindFieldPolicy.CAPTURED),
-            // AIZ draw bridge stays a live solid surface for the whole collapse countdown, so onSolidContact
-            // refills standingPlayers every frame the player stands — the set is re-derived, not durable state.
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizDrawBridgeObjectInstance", "standingPlayers"), RewindFieldPolicy.TRANSIENT),
+            // AIZ drawbridge loc_2B452 returns without a solid pass throughout its countdown.
+            // Retain the native standing latch, including riders who jumped, for the delayed eject.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizDrawBridgeObjectInstance", "standingPlayers"), RewindFieldPolicy.CAPTURED),
             // AIZ flipping bridge never terminates; each per-segment solid frame re-adds standing players via
             // onSolidContact, so an empty list self-heals next frame (mirrors SeesawObjectInstance standing refs).
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizFlippingBridgeObjectInstance", "standingPlayers"), RewindFieldPolicy.TRANSIENT),
