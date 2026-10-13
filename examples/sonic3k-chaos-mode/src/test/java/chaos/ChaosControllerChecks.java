@@ -248,6 +248,9 @@ public final class ChaosControllerChecks {
     }
     public static void sceneryUsesPreparedDonorsAndExcludesNativeZone() {
         var catalogue=new ChaosCatalog();var allowed=Set.of(0,1,6,11);
+        var jukebox=catalogue.effect(94);
+        check(jukebox.basePresentations()==180 && jukebox.maximumPresentations()==180,"Jukebox metadata exceeds its three-second native cap");
+        for(int quarters=1;quarters<=12;quarters++)check(jukebox.duration(quarters)>0 && jukebox.duration(quarters)<=180,"Audio source duration became zero or exceeded its cap");
         for(int zone=-1;zone<14;zone++) {
             var random=new SnapshotRandom(17);long captured=random.snapshot();var sampled=new ArrayList<Map<String,Object>>();
             var seen=new HashSet<Integer>();
