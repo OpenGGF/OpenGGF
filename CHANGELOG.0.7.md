@@ -1323,7 +1323,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Surefire class floors, native evidence and the Maven parent's separate memory cost.
   No task registration, validation receipts,
   cumulative budgets or retry gates are needed. Per-invocation category timeouts exclude
-  queue waiting. Full CI and release validation remain unchanged.
+  queue waiting. Category runs explicitly use the bounded smoke suite; even the
+  broad fallback excludes exhaustive oracles. Full ordinary validation is reserved
+  for preparing new public releases through the explicit `full-suite` profile.
   A separate bounded-result comparator checks full failure identities/assertions
   and causal skip reasons against an explicit source/run baseline, rejecting
   incomplete evidence and preserving the existing runner selection and cleanup.
@@ -1335,7 +1337,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 - **CI trigger policy:** `develop` and `next` run the smoke suite once a branch has had
   no push for 30 minutes, so bursts of pushes cost one run; non-draft
-  pull requests into any branch run branch policy, the full suite and structural guards;
+  pull requests into any branch and manual CI use the bounded smoke default and
+  structural guards (with branch policy on pull requests);
   master pushes keep full release validation, packaging and publication. Feature and
   bugfix pushes no longer start CI, and the ROM-fixture jobs are manual opt-ins again.
 - **Release-line integration:** preserve hosted release builds, snapshot policy

@@ -43,7 +43,7 @@ Worked below as "0.6 ships", which promotes master 0.5 → 0.6, develop 0.6 →
 
 ### 1. Gate
 
-Do not start until `develop` satisfies the release gates: ordinary `mvn test`,
+Do not start until `develop` satisfies the release gates: explicit `mvn -Dmse=off -Pfull-suite test -B`,
 `mvn -Dmse=off -Pguards test -B` separately, the trace no-regression policy in
 `docs/status/trace-scope-release-<n>.md`, and the human end-to-end gameplay and
 audio QA that automated gates cannot cover. Record the evidence in

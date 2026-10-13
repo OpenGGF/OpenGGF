@@ -10,8 +10,8 @@ commit being investigated when diagnosing a run.
 | Action | Publish job |
 |---|---|
 | Push to `master` | Publishes after required builds succeed, provided the version tag is new. |
-| Pull request (any base, non-draft) | Release workflow does not run. CI runs branch policy, the full suite and guards, without native packaging. |
-| Manual dispatch | Validation/build run only; does not publish, even on `master`. |
+| Pull request (any base, non-draft) | Release workflow does not run. CI runs branch policy, the bounded smoke suite and guards, without native packaging. |
+| Manual Release dispatch | Public release preparation: full-suite validation/build run only; does not publish, even on `master`. |
 | Push to another branch or delete `master` | Release workflow does not run; `develop`/`next` pushes get CI smoke only. |
 | Re-run a master push run | Can publish if the previous attempt did not create its version tag; inspect partial results first. |
 
@@ -30,7 +30,11 @@ ROM/trace validation.
 
 ## Prepare and publish
 
-1. Complete the release gates and prepare the reviewed release in a separate
+1. Run the full ordinary suite explicitly with
+   `python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B`,
+   separate guards and required ROM/trace checks. Full suites are reserved for
+   preparing a new public release; routine development and CI use smoke.
+   Complete the release gates and prepare the reviewed release in a separate
    `master` worktree. Follow [release rollover](release-rollover.md) when
    promoting versions. Read the version from that commit's `pom.xml`.
 2. Check the remote `v<version>` tag before pushing. The workflow rejects an

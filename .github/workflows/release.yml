@@ -1,9 +1,9 @@
 name: Release
 
 # Full CI for master: every master push is validated, packaged on all three
-# platforms and published. Pull requests (including those into master) get full
-# CI from ci.yml, without native packaging. A manual run validates and packages
-# the chosen ref without publishing, and adds the ROM-fixture validation job only
+# platforms and published. Pull requests (including those into master) get bounded
+# smoke CI from ci.yml, without native packaging. A manual release-preparation
+# run validates and packages the chosen ref without publishing, and adds ROM-fixture validation only
 # when validate_roms is ticked. TestBuildToolingGuard pins these triggers.
 on:
   push:
@@ -57,11 +57,11 @@ jobs:
 
       - name: Run tests (push)
         if: github.event_name == 'push'
-        run: mvn -Dmse=off test -B -DmodApi.destinationBranch="${{ github.ref_name }}"
+        run: mvn -Dmse=off -Pfull-suite test -B -DmodApi.destinationBranch="${{ github.ref_name }}"
 
       - name: Run tests (manual)
         if: github.event_name == 'workflow_dispatch'
-        run: mvn -Dmse=off test -B
+        run: mvn -Dmse=off -Pfull-suite test -B
 
       - name: Assert cloud test coverage
         run: |
@@ -153,7 +153,7 @@ jobs:
       - name: Run tests with ROM fixtures
         shell: bash
         run: |
-          mvn -Dmse=off test -B \
+          mvn -Dmse=off -Pfull-suite test -B \
             -Dopenggf.test.gl.native=true \
             -Dsonic1.rom.path="${SONIC1_ROM_PATH}" \
             -Dsonic2.rom.path="${SONIC2_ROM_PATH}" \

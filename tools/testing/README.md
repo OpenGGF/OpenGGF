@@ -11,10 +11,34 @@ tools/testing/install-hooks.sh
 
 PowerShell uses `tools/testing/install-hooks.ps1`.
 
+## Default suite and release-only validation
+
+Plain Maven `test` and `package` use the existing bounded `smoke` exclusions.
+`-Psmoke` remains an explicit alias. Use this suite for routine development,
+integration, baseline comparisons, pull requests and manual CI. Add focused
+regressions, affected traces and structural guards as needed. Full ordinary suites
+are **only** for preparing a new version for public release:
+
+```bash
+# Routine default; queued locally.
+python3 tools/testing/maven_queue.py -Dmse=off test
+# Public release preparation only; restores the former complete ordinary suite.
+python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
+```
+
+The Release workflow explicitly opts into `full-suite`, including manual release
+preparation and ROM-fixture validation. Separate trace/audio/route profiles retain
+their own prerequisites. For a targeted slow oracle during development, use an exact
+`-Dtest` selector and `-Dsurefire.excludedGroups=`; do not use that override for an
+unfiltered routine run. Smoke passes do not establish exhaustive-oracle coverage.
+In category plan JSON, `full` means all smoke categories were selected, not that
+the release-only full suite will run; `suite` and `scope` identify the bounded lane.
+
 ## Test categories
 
 Use Python 3.11+ and Java 25. The runner uses the existing Maven defaults and exclusions;
-it does not move tests, alter CI/release coverage, or remove slow tests from a selected category.
+ordinary lanes explicitly select `smoke`, excluding exhaustive `slow-suite` and performance
+measurements even when every category is selected. Full-suite validation is public-release-only.
 
 ```bash
 python3 tools/testing/run_categories.py --list
@@ -26,14 +50,14 @@ python3 tools/testing/run_categories.py --base develop --run
 python3 tools/testing/run_categories.py --base develop --category audio --run
 # Focused development; not a substitute for the change-based delivery command.
 python3 tools/testing/run_categories.py --category physics --run
-# Full ordinary suite and guards, including for release preparation.
+# All bounded smoke categories and separate guards (still excludes slow-suite).
 python3 tools/testing/run_categories.py --category all --run
 ```
 
 Use the actual integration branch or pinned base SHA instead of `develop` where appropriate.
 The diff includes committed, staged, unstaged, deleted, renamed and untracked files. A rename
 checks both old and new paths. Explicit categories are additive: they cannot override an
-unknown change's full-suite fallback. Without `--run`, no Maven process starts. Add `--json` only when the complete class
+unknown change's all-smoke fallback. Without `--run`, no Maven process starts. Add `--json` only when the complete class
 inventory is needed; default plans cap changed-path detail at 50 entries to keep output bounded.
 
 | Category | Coverage |
@@ -41,7 +65,7 @@ inventory is needed; default plans cap changed-path detail at 50 entries to keep
 | `common` | Shared and unclassified ordinary tests; included in every category run |
 | `physics` | Movement, collision, sensors, solid objects and playable sprites |
 | `gameplay` | Objects, bosses, zone events, stages and game flow |
-| `audio` | Audio drivers, synthesis, presentation and audio tooling, including exhaustive oracles |
+| `audio` | Audio drivers, synthesis, presentation and audio tooling, excluding exhaustive slow-suite oracles |
 | `rendering` | Graphics, palettes, scrolling, sprite art and viewports |
 | `rewind` | Rewind, recording, playback and save state |
 | `content` | ROM decoding, compression and resource loading |
@@ -62,20 +86,20 @@ Time Attack and racing-server projects. Identical resolved roots are deduplicate
 missing/dynamic/escaping roots, overlapping roots, symlinked source children and
 duplicate Java class paths fail planning instead of silently losing tests. Profile-only
 source executions are outside the ordinary inventory. Unclassified external-project
-changes retain the full ordinary-suite fallback; this discovery does not narrow selection.
+changes retain the all-smoke fallback; this discovery does not narrow selection.
 
 Change rules are deliberately narrower than test ownership. Physics changes also select
 related gameplay, rendering and rewind tests. Audio changes also select rewind and tooling.
 Game-specific object changes select gameplay, physics, rendering, rewind and content. Ordinary
 documentation changes select tooling, so updating a changelog does not force audio sweeps.
 Shared clocks, game-loop code, ROM pipelines, configuration, resources, build files, test
-infrastructure and unclassified changes select **all** ordinary categories. A new narrow rule
+infrastructure and unclassified changes select **all** smoke categories. A new narrow rule
 must document its dependent categories and include a selector regression test. The selector is
 an explicit workload policy, not a proof of semantic independence: agents must add categories
 or choose `all` when a change crosses these boundaries (for example, changing an object's audio
 request contract). Do not add a rule just to avoid an inconvenient failing test.
 
-Change-based runs (`--base`) and `--category all` include the full `guards` profile in its
+Change-based runs (`--base`) and `--category all` include the separate `guards` profile in its
 own Maven invocation. Focused category runs omit guards to avoid repeating them during
 iteration; add `--guards` to request them explicitly. Trace
 replay, native graphics, diagnostics, performance profiles and TraceChaser integration retain
@@ -121,9 +145,10 @@ This checks tool launches, not ROM completeness, native display access or every 
 prerequisite. On macOS use the known working native display/service permissions from the
 first graphics launch, especially after a documented sandbox failure.
 
-Full selections and selections of at least 500 candidate classes print a cost warning.
+All-category selections and selections of at least 500 candidate classes print a cost warning.
+These are bounded smoke selections, not exhaustive release validation.
 The September normalization run measured about 24 minutes ordinary and 10 minutes guards;
-this is historical context, not a prediction. Category `--max-minutes` defaults to
+this measured the former full ordinary suite, not today's smoke default. Category `--max-minutes` defaults to
 **40 minutes per invocation across Maven lanes**, including compilation, and can be
 adjusted for the intended checks. There is also a **10-minute no-output timeout**.
 Both terminate the Maven process tree and report incomplete validation. Queue waiting
