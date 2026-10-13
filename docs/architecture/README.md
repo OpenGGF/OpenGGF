@@ -41,3 +41,8 @@ implementations, not claims of delivered gameplay or APIs.
 encounters, with configurable random scheduling, rare displacement and later
 streamer voting. It distinguishes current mutator/native-code reuse from required
 host API additions.
+
+The [top 50 additional Chaos candidates](research/2026-10-13-chaos-effect-shortlist.md)
+rank distinct adaptations from Zolika's other published catalogues, with source
+links, Sonic behavior, severity and qualification boundaries. This shortlist
+does not automatically expand the proposed pool.
