@@ -679,3 +679,52 @@ from the ending cwd and completed18:32:29:10 tests, zero failures/errors/skips,
 22.477s Maven. The record still supplies only derived resources; membership and
 ordinary captured sprite RAM remain authoritative. No composed ending rerun was
 added for this declaration move; final integration smoke covers its consumers.
+
+## Read-only presentation audit — 2026-10-13
+
+After playable feature `c2103d5f7` was integrated as `d63bfe397`, a bounded
+independent review identified three unimplemented native presentation owners.
+Verification used the ending tree's unchanged production code and the optional
+locked-on disassembly in the main workspace, not a runtime asset fallback.
+No implementation or test rerun was authorized for this follow-up. The playable
+lifecycle/replay/credits/title results remain qualified; complete native scene
+presentation was never established by those checks.
+
+`loc_5DB76` creates two IslandLift subtype $42 pieces from `word_5DBB6` and
+submits `ArtKosM_IslandLiftGfx` to tile $2FF. The later `loc_5DD6A` path, unless
+Player_mode3 or signed progress < 0, creates 18 further pieces: 6 subtype $41,
+2 subtype $43,4 subtype $44 and 2 each subtype $45/$46/$47. The initial short
+inspection counted 16 by stopping before the final $47 pair; expanding the owning
+routine rejects that count. `loc_5EDAC` supplies Map_IslandLiftGfx, priority,
+raw animation and screen/world projection. The current director's corresponding
+hold/departure paths publish signals/timers without these allocations or art.
+Scene geometry/clouds are separate owners and do not implement the missing family.
+
+`loc_5D9EE` allocates a single `loc_5DF58` Master Emerald palette helper once
+the normal white color is ready. For positive signed progress only, `_unkFAC1`
+nonzero chooses `off_7DD5A`:positive writes native Normal_palette_line_3+$1C,
+negative writes Normal_palette_line_2+$1C, two cells 14–15. These are zero-based
+engine lines 2/1; spelling out the native symbols avoids a line-number ambiguity.
+`loc_5E08A` sets the negative AIZ-return mode and admits the same helper;
+`loc_5DE46` and `loc_5E170` clear the selector and stop it. The existing
+S3kEndingMasterPaletteState is genuinely implemented for Knuckles flight,
+including its captured cursor/delay, but is called only there and targets fixed
+engine line2. It supplies neither the rescue allocation nor the return mode.
+Thus a source search for off_7DD5A alone would falsely mark this obligation done.
+
+`loc_5AD56` advances background drift and calls AnPal_AIZ1 until Events_fg_4
+begins the return fade. The preceding fade completion clears the native counters
+and secondary-cycle gate. Current ending FG32 advances drift/signals only.
+Ordinary AIZ1's cycle exists, but its zone0 selection is not active while the
+ending retains internal $D01; the terrain handoff does not replace the level
+animation manager. A normal gameplay isLevelStarted gate is not proof of the
+explicit native ending call. No rendered parity result is inferred from this
+source-only diagnosis.
+
+The ending matrix now separates these missing effects from existing producer
+pixels and playable acceptance. The current S3K known-bug record owns their
+removal conditions. The intentional-discrepancy document receives only a scope
+note linking to unfinished work; none of these omissions is reclassified as an
+accepted engine presentation extension. Their future correction requires native
+ROM-backed allocation/animation and captured palette state, phase/stop/rewind
+checks and moving/native-window evidence. This audit changes documentation only.
