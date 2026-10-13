@@ -3411,6 +3411,13 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         if (!transitions.consumeTitleCardRequest()) {
             return false;
         }
+        // A fresh title loop holds the destination's already-decoded players
+        // and initial Process_Sprites pass in a deferred boundary. Omitting
+        // that presentation must publish its assembly before the skipped
+        // presentation's animation/PLC tail runs, just as the visible owner
+        // reaches loc_6468 before LevelLoop. Otherwise ordinary frames run
+        // against the temporary zeroed player slots indefinitely.
+        freshLevelTransitionBoundary.complete(this);
         // A consumed request already ran the owner's init through the
         // presentation path, so this boundary queues no entry art.
         completeSkippedInitialTitleCardPresentation(false);
