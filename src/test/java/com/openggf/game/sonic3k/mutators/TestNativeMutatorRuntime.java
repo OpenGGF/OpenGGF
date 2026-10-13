@@ -79,7 +79,8 @@ class TestNativeMutatorRuntime {
             var world=new WorldSession(module,module,data,null);
             runtime=WorldSessionPolicyAccess.getService(world,NativeMutatorRuntime.class);
             when(camera.getMaxX()).thenReturn((short)4096);when(camera.getWidth()).thenReturn((short)320);
-            when(level.getCurrentLevel()).thenReturn(emptyLevel());
+            var terrain=emptyLevel();
+            when(level.getCurrentLevel()).thenReturn(terrain);
             when(sprites.getMainPlayable()).thenReturn(player);
             when(sprites.getSidekicks()).thenReturn(List.of());
             services=new TestObjectServices().withWorldSession(world).withLevelManager(level)
