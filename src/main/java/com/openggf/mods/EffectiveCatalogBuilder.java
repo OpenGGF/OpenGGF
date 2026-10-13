@@ -29,6 +29,15 @@ public final class EffectiveCatalogBuilder {
 
     public ModCatalog build(List<? extends ModCatalogEntry> scanned, ModState startupState) {
         List<ModCatalogEntry> retained = new ArrayList<>(Objects.requireNonNull(scanned, "scanned"));
+        for (int index = 0; index < retained.size(); index++) {
+            if (retained.get(index) instanceof ModDescriptor descriptor) {
+                List<ModFinding> staticFindings = descriptor.findings().stream()
+                        .filter(finding -> !isCompositionWarning(finding)).toList();
+                if (staticFindings.size() != descriptor.findings().size()) {
+                    retained.set(index, withFindings(descriptor, staticFindings));
+                }
+            }
+        }
         Objects.requireNonNull(startupState, "startupState");
         Map<String, ModState.Entry> stateById = new LinkedHashMap<>();
         startupState.entries().forEach(entry -> stateById.put(entry.id(), entry));
@@ -84,23 +93,8 @@ public final class EffectiveCatalogBuilder {
             if (!cycles.containsKey(id)) resolved.put(id, blocked(id, "ORDERING_CYCLE",
                     "Composition ordering cycle: " + String.join(" -> ", participants), participants));
         });
-        Map<String, java.util.SortedSet<String>> conflictNeighbors = new java.util.TreeMap<>();
-        for (String owner : compositionOwners) {
-            for (String conflict : descriptors.get(owner).manifest().composition().conflictsWith()) {
-                if (!compositionOwners.contains(conflict)) continue;
-                conflictNeighbors.computeIfAbsent(owner, ignored -> new java.util.TreeSet<>()).add(conflict);
-                conflictNeighbors.computeIfAbsent(conflict, ignored -> new java.util.TreeSet<>()).add(owner);
-            }
-        }
-        conflictNeighbors.forEach((owner, neighbors) -> {
-            var participants = new java.util.TreeSet<>(neighbors); participants.add(owner);
-            List<String> sorted = List.copyOf(participants);
-            resolved.putIfAbsent(owner, blocked(owner, "MOD_CONFLICT",
-                    "Conflicting enabled owners: " + String.join(", ", sorted), sorted));
-        });
-        // Stock data replacements are prepared before compiled registration. Reject
-        // their exclusive collisions here so no blocked owner's audio can become live.
-        Map<String, List<String>> dataSources = new java.util.TreeMap<>();
+        // Data claims can be validated before compiled registration. An unused or
+        // unknown claim is malformed; competing valid claims only warrant a warning.
         for (String owner : compositionOwners.stream().sorted().toList()) {
             if (resolved.containsKey(owner)) continue;
             ModManifest manifest = descriptors.get(owner).manifest();
@@ -112,21 +106,7 @@ public final class EffectiveCatalogBuilder {
                 if (unused || unknownArt) resolved.put(owner, blocked(owner, "MOD_COMPOSITION_REJECTED",
                         "Unused or unknown exclusive contribution claim: " + claim, List.of(owner)));
             }
-            if (resolved.containsKey(owner)) continue;
-            manifest.audioOverrides().keySet().forEach(key -> dataSources.computeIfAbsent(
-                    manifest.baseGame() + "/audio:" + key, ignored -> new ArrayList<>()).add(owner));
-            manifest.artOverrides().keySet().forEach(key -> dataSources.computeIfAbsent(
-                    manifest.baseGame() + "/art:" + key, ignored -> new ArrayList<>()).add(owner));
         }
-        dataSources.forEach((target, sources) -> {
-            String claim = target.substring(target.indexOf('/') + 1);
-            if (sources.size() > 1 && sources.stream().anyMatch(owner -> descriptors.get(owner).manifest()
-                    .composition().exclusiveContributions().contains(claim))) {
-                List<String> participants = sources.stream().sorted().toList();
-                for (String owner : participants) resolved.put(owner, blocked(owner, "MOD_COMPOSITION_REJECTED",
-                        "Exclusive contribution conflict at " + target + ": " + String.join(", ", participants), participants));
-            }
-        });
         acyclic.removeAll(resolved.keySet());
         int[] allocatedPatternWindows = {0};
         for (String id : applicationGraph.stableOrder(acyclic, priority, discoveryOrder)) {
@@ -134,6 +114,21 @@ public final class EffectiveCatalogBuilder {
                     allocatedPatternWindows));
         }
 
+        Set<String> effectiveIds = new LinkedHashSet<>();
+        resolved.forEach((id, eligibility) -> {
+            if (eligibility.status() == ModEligibility.Status.EFFECTIVE) effectiveIds.add(id);
+        });
+        Map<String, List<ModFinding>> warnings = compositionWarnings(descriptors, effectiveIds);
+        for (int index = 0; index < retained.size(); index++) {
+            if (retained.get(index) instanceof ModDescriptor descriptor) {
+                List<ModFinding> ownerWarnings = warnings.get(descriptor.manifest().id());
+                if (ownerWarnings != null) {
+                    List<ModFinding> findings = new ArrayList<>(descriptor.findings());
+                    findings.addAll(ownerWarnings);
+                    retained.set(index, withFindings(descriptor, findings));
+                }
+            }
+        }
         List<ModCatalogEntry> staticCatalog = List.copyOf(retained);
         Map<String, ModDescriptor> staticById = new LinkedHashMap<>();
         for (ModCatalogEntry entry : staticCatalog) {
@@ -141,13 +136,60 @@ public final class EffectiveCatalogBuilder {
                 staticById.putIfAbsent(descriptor.manifest().id(), descriptor);
             }
         }
-        Set<String> effectiveIds = new LinkedHashSet<>();
-        resolved.forEach((id, eligibility) -> {
-            if (eligibility.status() == ModEligibility.Status.EFFECTIVE) effectiveIds.add(id);
-        });
         List<ModDescriptor> ordered = applicationGraph.stableOrder(effectiveIds, priority, discoveryOrder).stream()
                 .map(staticById::get).toList();
         return new ModCatalog(staticCatalog, new EffectiveModCatalog(ordered), resolved);
+    }
+
+    private static Map<String, List<ModFinding>> compositionWarnings(
+            Map<String, ModDescriptor> descriptors, Set<String> effectiveIds) {
+        Map<String, List<ModFinding>> warnings = new LinkedHashMap<>();
+        Map<String, java.util.SortedSet<String>> conflictNeighbors = new java.util.TreeMap<>();
+        Map<String, List<String>> dataSources = new java.util.TreeMap<>();
+        for (String owner : effectiveIds.stream().sorted().toList()) {
+            ModManifest manifest = descriptors.get(owner).manifest();
+            for (String conflict : manifest.composition().conflictsWith()) {
+                if (!effectiveIds.contains(conflict)) continue;
+                conflictNeighbors.computeIfAbsent(owner, ignored -> new java.util.TreeSet<>()).add(conflict);
+                conflictNeighbors.computeIfAbsent(conflict, ignored -> new java.util.TreeSet<>()).add(owner);
+            }
+            manifest.audioOverrides().keySet().forEach(key -> dataSources.computeIfAbsent(
+                    manifest.baseGame() + "/audio:" + key, ignored -> new ArrayList<>()).add(owner));
+            manifest.artOverrides().keySet().forEach(key -> dataSources.computeIfAbsent(
+                    manifest.baseGame() + "/art:" + key, ignored -> new ArrayList<>()).add(owner));
+        }
+        conflictNeighbors.forEach((owner, neighbors) -> {
+            var participants = new java.util.TreeSet<>(neighbors);
+            participants.add(owner);
+            warnings.computeIfAbsent(owner, ignored -> new ArrayList<>()).add(new ModFinding(
+                    ModFindingSeverity.WARNING, "MOD_DECLARED_CONFLICT",
+                    "Enabled mods have an author-declared, unverified incompatibility: "
+                            + String.join(", ", participants), null));
+        });
+        dataSources.forEach((target, sources) -> {
+            String claim = target.substring(target.indexOf('/') + 1);
+            if (sources.size() > 1 && sources.stream().anyMatch(owner -> descriptors.get(owner).manifest()
+                    .composition().exclusiveContributions().contains(claim))) {
+                ModFinding warning = new ModFinding(ModFindingSeverity.WARNING, "MOD_EXCLUSIVE_OVERLAP",
+                        "Exclusive contribution overlap at " + target + ": " + String.join(", ", sources)
+                                + "; author-declared exclusivity is unverified; later application wins", null);
+                for (String owner : sources) {
+                    warnings.computeIfAbsent(owner, ignored -> new ArrayList<>()).add(warning);
+                }
+            }
+        });
+        return warnings;
+    }
+
+    private static boolean isCompositionWarning(ModFinding finding) {
+        return finding.severity() == ModFindingSeverity.WARNING
+                && (finding.code().equals("MOD_DECLARED_CONFLICT")
+                    || finding.code().equals("MOD_EXCLUSIVE_OVERLAP"));
+    }
+
+    private static ModDescriptor withFindings(ModDescriptor descriptor, List<ModFinding> findings) {
+        return new ModDescriptor(descriptor.jarPath(), descriptor.manifest(), descriptor.sha256(),
+                descriptor.containsCode(), findings, descriptor.retainedSource());
     }
 
     private ModEligibility evaluate(ModDescriptor descriptor, Map<String, ModDescriptor> descriptors,
