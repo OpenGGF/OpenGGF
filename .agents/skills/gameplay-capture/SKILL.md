@@ -18,6 +18,12 @@ native ticks. P1 controller input is mapped to the capture's owned input handler
 P2 and debug inputs are rejected. The default remains one canonical native tick
 per input row. Neither mode sends keyboard events to the desktop.
 
+Title captures share Engine's native data-select launch owner: No Save and slot
+confirmation retain the selected team and native save/progression behavior.
+An explicitly loaded mod gets fresh registrations for that exact launch team;
+the capture keeps its physical input handler and follows the new player.
+Headless Return to hub remains unsupported.
+
 It is not parity evidence and does not read traces. For rendering an existing trace
 replay use `trace-capture`; for authoring the input log use `bk2-input-authoring`.
 

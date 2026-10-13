@@ -13,7 +13,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   native movement, objects, audio and presentation; accepted decisions, deadlines
   and cleanup participate in rewind. Native target, art, route and control
   qualifications constrain effects, including bounded Cluckoid gusts and ghost
-  encounters. Stream voting remains a future extension.
+  encounters. Offscreen title captures share the native save-selection launch,
+  retain the selected team and prepare fresh mod callbacks for the new world.
+  Stream voting remains a future extension.
 
 - **Mutator Lab catalogue:** one JVM boot-prepared package exposes eleven effects
   in Sonic 1, Sonic 2 and Sonic 3 & Knuckles, with native game labels, monitor-type

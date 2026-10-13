@@ -128,9 +128,9 @@ individual effects; the displayed pool does not override those gates.
 | Sprite/HUD/scene pictures and private trails | 17 HUD, five geometry and six actual production surfaceless-EGL cases passed at `1b244ab4d`; ten runtime/private-bank cases passed at `2538ca2cc`, all without skips. Root nonempty-bank decode/preview preservation passed | Final union checks and complete composed visual breadth |
 | Prepared wrong-zone scenery | Real supplied-ROM backgrounds AIZ1/HCZ1/LBZ1/DEZ1 at 320/400 pixels and five camera offsets passed without skips | Other donor indices remain unsupported and are not sampled; complete gameplay routes are separate |
 | Native audio arbitration and cues | `463cda8e7` executable plus test-only `f1c729946`: 45 distinct runtime/access/real-PCM/rewind cases passed without skips. Root `12b220f5e` actual outer-E4/source-history keyframe method and `da3e5a768` decode/preview preservation also passed without skips | Final union checks |
-| Catalogue, scheduler and ROM sidegames | Early model and real-ROM art checks; packaged registration/Pong reward and final receipt/scenery/duration methods passed; validator zero findings. Root roulette metadata/options guard passed | Native title/save-selection launch capture and final union checks |
-| Host ownership and pack assembly | Foundation `6ce6cd2a4`: 56 final observer/lease/service/API cases pass without skips. Root `fd777df75`: three actual assembly cases plus nine API cases pass without skips | New assembled decode/preview regression and updated-develop union checks |
-| Native title/save flow and Chaos menu | Root `3fa5ca44e`: fourteen capture args/native title/data-select/hosted pixel cases pass without skips | Explicit presentation-pacing capture callback and authored menu/effect captures; canonical captures cannot qualify observer scheduling |
+| Catalogue, scheduler and ROM sidegames | Early model and real-ROM art checks; packaged registration/Pong reward and final receipt/scenery/duration methods passed; validator zero findings. Root roulette metadata/options guard passed | Final union checks |
+| Host ownership and pack assembly | Foundation `6ce6cd2a4`: 56 final observer/lease/service/API cases pass without skips. Root `fd777df75`: three actual assembly cases plus nine API cases pass without skips; assembled decode/preview preservation passed at `da3e5a768` | Updated-develop union checks |
+| Native title/save flow and Chaos menu | Root capture args/title/data-select/pixels and production presentation callback passed. `3fbc29d15`: 46 distinct affected Engine/GameLoop/save/package and actual-ROM cases passed without skips. Root `5f724050b` captured title configuration, native No Save/Sonic selection and AIZ gameplay | Headless hub return remains unsupported; full interactive window route breadth is separate |
 | Stock S3K loading/bootstrap/decoding/AIZ1 | Required native identities passed with verified absolute ROM on `b3962897c` | Final union smoke/guards and exact skips |
 
 ## Delivery checks
@@ -257,7 +257,7 @@ zero. Removed producers remain graph anchors for their original bounded lease;
 expiry and owner retirement reach exact descendants. Explicit independent siblings
 retain their own lifetime. Source/tests compile; behavioral verification is pending.
 
-The updated combined plan selects 3,194 smoke classes and separate guards against
+The updated combined plan selects 3,198 smoke classes and separate guards against
 `10db9f005`. The launch uses verified ROM-directory discovery, Lua 5.4 and production
 surfaceless EGL with desktop display variables unset. Historical large-category
 holds are about 64–91 minutes, so the invocation allows 120 minutes excluding
@@ -268,6 +268,8 @@ cleanly at `ad98d0dcd`; its local runner retains the complete smoke selection in
 batches of at most fifty candidates and releases admission between them and before
 guards. Actual Java 25/Lua 5.4/PowerShell preflight passed again. The next combined
 run follows the bounded final-review fixes and corrected captures.
+Delivered upstream runtime-rule binding and AIZ ownership repairs at `1ead8d9b4`
+also merged cleanly at `9d1fb0456`, preserving the Chaos fluid/input consumers.
 
 
 The final bounded source audit traced all 105 entries to executable mode paths
@@ -331,5 +333,25 @@ capture reached native data select but could not enter gameplay: the headless
 host omitted Engine's data-select action callback. That capture is menu evidence,
 not a successful launch claim. The dedicated capture worker is sharing the native
 launch owner and preparing fresh mod registrations for the selected team, rather
-than forcing a mode flag or reusing retired callbacks. Final launch capture and
-the complete smoke/guard run remain pending.
+than forcing a mode flag or reusing retired callbacks.
+
+The later shared launch owner preserves Engine's native slot payload, selected
+team, progression restore and save reason. A capture-owned jar loader creates a
+fresh registration transaction and fault boundary per exact launch request;
+retired observers are not reused. `3fbc29d15` passed 46 distinct affected checks
+without skips, including actual-ROM No Save/new-slot confirmations and a packaged
+Knuckles-specific activation despite Sonic title configuration. Two generated
+fixture prerequisites were repaired before its final pass: the protected
+delegating constructor needs an anonymous subclass, and the observer needs a
+declared support profile to receive an actual world-policy close.
+
+Root `5f724050b` completed a fresh 2,822-presentation title capture using native
+No Save and Sonic selection. Its CSV changes from TITLE_SCREEN to DATA_SELECT at
+838 and LEVEL at 1242; later native AIZ pictures and the advancing Chaos countdown
+confirm the fresh gameplay observer. This fresh-settings capture used the default
+30-second interval and edited 95-entry pool, unlike the earlier deliberately
+seeded five-second/DVD-only configuration capture. No effect activation is claimed
+from its shorter gameplay portion. The separate controlled DVD/gust captures
+remain the effect evidence. Capture inputs, settings and pictures live in the
+task's explicit directory outside the repository. The complete smoke/guard run
+remains pending.
