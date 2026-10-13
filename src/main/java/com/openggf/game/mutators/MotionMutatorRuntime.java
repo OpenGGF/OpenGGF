@@ -36,6 +36,7 @@ public final class MotionMutatorRuntime implements WorldSessionPolicyState,
     private boolean gravityQualified;
     private boolean fluidMovementActive;
     private boolean fluidMovementSample;
+    private long inputControlGeneration = -1;
     private long fluidActivation;
     private int fluidX, fluidY;
 
@@ -91,8 +92,12 @@ public final class MotionMutatorRuntime implements WorldSessionPolicyState,
         // Input interference is exclusive. Deterministic first admission wins; report every other lease.
         for (int i = 1; i < candidates.size(); i++) source.report(candidates.get(i).activationId(), "Input interference already active");
         var policy = selected == null ? null : (InputControlPolicy) selected.policy();
+        long controlGeneration = leader == null ? -1 : leader.getObjectControlGeneration();
+        boolean landingContinuity = inputControlGeneration < 0 || inputControlGeneration == controlGeneration;
+        inputControlGeneration = controlGeneration;
         PlayerInputState admitted = input.admit(sample, policy, selected == null ? 0 : selected.activationId(),
-                !suppressed && free(leader), leader != null && leader.getAir());
+                !suppressed && free(leader) && (policy == null || policy.mode() != InputControlPolicy.Mode.LANDING_JUMP
+                        || landingContinuity), leader != null && leader.getAir());
         var active = entries();
         cancelledCruises.removeIf(id -> active.stream().noneMatch(e -> e.activationId() == id));
         for (var entry : active) if (entry.policy() instanceof PlayerMotionPolicy p && p.mode() == PlayerMotionPolicy.Mode.CRUISE) {
@@ -368,12 +373,14 @@ public final class MotionMutatorRuntime implements WorldSessionPolicyState,
     private void reset() {
         if (sprites != null) SpriteManagerInternalAccess.clearPreparedMotionInput(sprites);
         input.reset(); cancelledCruises.clear(); fluidActivation = 0; fluidX = fluidY = 0;
+        inputControlGeneration = -1;
         oneShotAttempts.clear(); settledOneShots.clear();
         gravityQualified = fluidMovementActive = fluidMovementSample = false;
     }
     @Override public String key() { return "motion-mutators"; }
     @Override public Snapshot capture() { return new Snapshot(generation, input.capture(), fluidActivation, fluidX, fluidY,
-            cancelledCruises, oneShotAttempts, settledOneShots, gravityQualified, fluidMovementActive, fluidMovementSample, ordinaryGameplay); }
+            cancelledCruises, oneShotAttempts, settledOneShots, inputControlGeneration,
+            gravityQualified, fluidMovementActive, fluidMovementSample, ordinaryGameplay); }
     @Override public void restore(Snapshot snapshot) {
         if (retired) throw new IllegalStateException("Motion owner is retired");
         if (snapshot.generation() != generation) throw new IllegalArgumentException("Motion snapshot belongs to another world");
@@ -383,13 +390,14 @@ public final class MotionMutatorRuntime implements WorldSessionPolicyState,
         cancelledCruises.clear(); cancelledCruises.addAll(snapshot.cancelledCruises());
         oneShotAttempts.clear(); oneShotAttempts.putAll(snapshot.oneShotAttempts());
         settledOneShots.clear(); settledOneShots.addAll(snapshot.settledOneShots());
+        inputControlGeneration = snapshot.inputControlGeneration();
         gravityQualified = snapshot.gravityQualified(); fluidMovementActive = snapshot.fluidMovementActive();
         fluidMovementSample = snapshot.fluidMovementSample();
         ordinaryGameplay = snapshot.ordinaryGameplay();
     }
     public record Snapshot(long generation, MotionInputQueue.Snapshot input, long fluidActivation, int fluidX, int fluidY,
                            java.util.Set<Long> cancelledCruises, java.util.Map<Long, Integer> oneShotAttempts,
-                           java.util.Set<Long> settledOneShots, boolean gravityQualified,
+                           java.util.Set<Long> settledOneShots, long inputControlGeneration, boolean gravityQualified,
                            boolean fluidMovementActive, boolean fluidMovementSample, boolean ordinaryGameplay) {
         public Snapshot {
             cancelledCruises = java.util.Set.copyOf(cancelledCruises);

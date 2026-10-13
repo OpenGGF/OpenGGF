@@ -217,6 +217,21 @@ class TestMotionMutatorConsumers {
         }
     }
 
+    @Test void aControlLeaseRestoredWithinOneNativeTickCannotCreateAnAutoHopAndReplayKeepsThatGeneration() {
+        var player = player("sonic"); source.policy(new InputControlPolicy(InputControlPolicy.Mode.LANDING_JUMP));
+        var none = com.openggf.control.PlayerInputState.neutral();
+        player.setAir(true); runtime.admitInput(none, false);
+        player.setObjectControlled(true); player.setAir(false); player.setObjectControlled(false);
+        var nativeBefore = player.captureRewindState(); var before = runtime.capture();
+        assertEquals(none, runtime.admitInput(none, false));
+        var after = runtime.capture();
+        player.restoreRewindState(nativeBefore); runtime.restore(before);
+        assertEquals(none, runtime.admitInput(none, false)); assertEquals(after, runtime.capture());
+        player.setAir(true); runtime.admitInput(none, false); player.setAir(false);
+        assertEquals(com.openggf.control.InputActionMasks.ACTION_A, runtime.admitInput(none, false).actionPressedMask(),
+                "an ordinary landing in the restored control generation still requests one jump");
+    }
+
     @Test void rollingUsesNativeRadiiAndCruiseUsesNativeAccelerationAndBoundedSpeed() throws Exception {
         var player = player("sonic"); source.policy(new PlayerMotionPolicy(PlayerMotionPolicy.Mode.ROLLING,0));
         player.setGSpeed((short)0x300); call(player,"doCheckStartRoll");
