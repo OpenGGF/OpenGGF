@@ -22,14 +22,14 @@ source inspection alone does not certify a complete act or route.
 | [197](https://github.com/OpenGGF/OpenGGF/issues/197) | Fixed | `Draw_Sprite`'s multisprite path suppresses main mapping frame zero while retaining the column child. Ordinary projectile frame zero is an arrow and must not be emitted for a defeated head trigger. |
 | [196](https://github.com/OpenGGF/OpenGGF/issues/196) | Fixed | MGZ `sub_3555C` / `sub_355E4` requests `sfx_Skid` when platform running reverses into the skid animation in shipped `FixBugs=0` code. |
 | [195](https://github.com/OpenGGF/OpenGGF/issues/195) | ROM behavior retained | HCZ cutscene/button/tension-bridge routines release standing status without forcing a falling animation. In comparison-only `s3k-sonic-tails-complete-emeralds/hcz_4`, physics CSV rows `$381`→`$382` clear OnObj/set InAir but retain LOOKUP animation 7; `$383`–`$391` continue falling with that animation. These are segment-relative rows; V5 metadata records BK2 offset 97208, and row 898 corresponds to native recording frame 98107 under its offset convention. No forced FALL write was added. |
-| [194](https://github.com/OpenGGF/OpenGGF/issues/194) | Existing art isolation; current reproduction checked separately | The older screenshot names a 0.6 prerelease. Current results jobs claim standalone pattern payloads, assemble a private bank, and cache it in `RESULTS_SCREENS` at `$60000`; they do not overwrite the level's tile bank. |
+| [194](https://github.com/OpenGGF/OpenGGF/issues/194) | Existing art isolation; current HCZ results/tally pixels pass | The older screenshot names a 0.6 prerelease. Current results jobs claim standalone pattern payloads, assemble a private bank, and cache it in `RESULTS_SCREENS` at `$60000`; they do not overwrite the level's tile bank. |
 | [193](https://github.com/OpenGGF/OpenGGF/issues/193) | Existing palette behavior | The WFZ flame uses native palette line 2. Added actual placement-trigger/fire-cycle/decoded-flame color coverage instead of changing a correct palette selector. |
 | [191](https://github.com/OpenGGF/OpenGGF/issues/191) | Existing fix | `4cb33be27` restores eleven-update sparkle sequences and six/eight-update blank gaps; `a2b89a071` preserves the final twinkle's natural SFX tail. |
 | [190](https://github.com/OpenGGF/OpenGGF/issues/190) | Existing cue | `c3370a23a` requests OOZ laser SFX `$EA`. Added shooter Fire-event/mailbox admission and real ROM program PCM coverage. |
 | [188](https://github.com/OpenGGF/OpenGGF/issues/188) | Fixed engine recovery; native hurt-pipe bug retained | Shipped Obj1E preserves Hurt; the optional `fixBugs` branch changes its routine to normal. The engine now honors hurt gravity/bounds despite object control and clears the control byte at S2/S3K HurtStop, matching owning player routines. S1's different recovery remains explicit in landing rules. |
 | [187](https://github.com/OpenGGF/OpenGGF/issues/187) | Fixed | S1 music restoration tests `f_lockscreen`, including the interval after defeat before lock release. S1 events now expose that native lock to the existing shared music guard. |
 | [186](https://github.com/OpenGGF/OpenGGF/issues/186) | Fixed | A `SETUP_ONLY` title/load iteration now consumes host input edges before returning. Holding the unpause key no longer produces another pause edge on the next title frame. |
-| [185](https://github.com/OpenGGF/OpenGGF/issues/185) | Fixed | S1 SS results load the ROM mini-Sonic art through the existing results PLC and use Map_SSR's Continue/mini-Sonic frames after the native award boundary. |
+| [185](https://github.com/OpenGGF/OpenGGF/issues/185) | Fixed | S1 SS results load the ROM mini-Sonic art through the existing results PLC and use Map_SSR's text-only Continue frame during the initial slide, then show and animate the mini-Sonic icon at the native award boundary. |
 | [184](https://github.com/OpenGGF/OpenGGF/issues/184) | Existing fix | `a56e126c8` installs the shipped S1 InitMusicPlayback FM/PSG silence program; `TestSmpsPhysicalPolicy` covers its writes. |
 | [183](https://github.com/OpenGGF/OpenGGF/issues/183) | Fixed | REV01 SYZ layout is two 256-pixel rows. `LevelLayoutLoad` clears eight-row RAM, and `GetBlockData` indexes that RAM rather than repeating supplied rows. Decoder zero rows and `BgScroll_SYZ`'s initial +1 expose the correct lower strip instead of top clouds. |
 | [182](https://github.com/OpenGGF/OpenGGF/issues/182) | Shipped ROM bug retained | Caterkiller's delayed body deletion has an explicit `FixBugs` comment about rolling hurt from a surviving body. Changing it would violate the project's shipped `FixBugs=0` contract. |
@@ -127,9 +127,9 @@ between pinned `5e2f51f07` and their baseline `b3464b31b` is empty for `src`,
 `examples`, `racing`, `pom.xml`, `tools`, `.githooks` and `.mvn`; those baseline
 updates were documentation only. The recorded baseline uses Java 25 and the
 same supplied ROM identities. This is reuse of observed matching negative cases,
-not a new baseline run or a claim of complete route coverage. The remaining
-Infinite Sonic, SOZ, CLI and network failures require focused attribution here.
-Integration, push and cleanup remain pending.
+not a new baseline run or a claim of complete route coverage. At that checkpoint, Infinite Sonic, SOZ, CLI and networking still required
+focused attribution. Their later results and remaining limits are recorded below.
+Integration, push and cleanup had not yet run.
 
 The first corrected focused run was not a pass: the inventory test passed its
 one case (1.365 seconds, no skips), then the JVM aborted at the newly added
@@ -148,9 +148,8 @@ verified both CPU recordings and the native mask/Spiker pixels.
 The remaining matched baseline command cleaned `target/` and ran on pinned
 `5e2f51f07` in the same task worktree: five cases in 103 seconds, one CLI failure,
 no errors/skips. Infinite Sonic, the SOZ wide Knuckles route and both networking
-backends passed. This confirms the Infinite Sonic regression; SOZ requires a
-current isolated run, and the earlier network failure remains unreproduced on
-unchanged networking dependencies.
+backends passed. This confirms the Infinite Sonic regression; The later current SOZ run below confirms its recording regression. The earlier
+network failure remains unreproduced on unchanged networking dependencies.
 
 The baseline CLI subprocess was observed directly with the report's classpath:
 both launches returned status 4 and empty stdout. With the graphics option in
@@ -183,8 +182,8 @@ difference is input 24045: hurt Knuckles is released from the light at
 `($45F2,$4B6)` with base Y velocity `-$400`, candidate `-$3D0`. Native
 `loc_17BD0` integrates motion and adds `$30` independently of `object_control`,
 so the candidate owns the correct acceleration. The positions reconverge by
-24100; the retained Y fraction later produces candidate/base Y 1203/1202 at
-26990. At 26992 the candidate catches the wall at X 18837 while the original
+24100; later candidate/base Y 1203/1202 at 26990 is consistent with retained
+fractional motion; that original comparison observed integer centres, not raw fractions. At 26992 the candidate catches the wall at X 18837 while the original
 recording passes at X 18840. This is controller-recording invalidation after a
 ROM correction, not evidence for restoring the omitted gravity. Raw CSVs remain
 temporary; the comparison does not hydrate either run.
@@ -203,6 +202,62 @@ with no errors/skips. Two temporary controller candidates added one jump at
 the wall and reached the lower light, but died later at 27773/27774 during the
 rock-pushing passage. They are rejected inputs, not weakened route assertions or
 passing cold completions. The complete 216-case invocation took 90 seconds.
+
+### SOZ recording repair and merged-develop checks
+
+Follow-ups `013d57d74` (GL state owner), `ff64248bc` (logical S1 foreground
+bounds) and `a1aa708b1` (real hurt terrain callback) remain part of this delivery.
+Merge `73f23d89e` incorporated develop through `5d9dd8138`, including the updated
+Maven queue, runtime compatibility fixes and Second Strike. The only conflict was
+release prose; both entries were retained. A bounded post-merge invocation passed
+230 permanent cases across selected-world rules, native AIZ object/child/rider
+rewind, bootstrap/loading/decoding, API signatures, default difficulty policies and
+hurt recovery. Its temporary jump-only candidate still died at 27773; the complete
+231-case invocation took 91 seconds with no errors/skips. The union retained all
+25 additive candidate API signatures, including this task's three landing-rule
+entries. No candidate version or published pin changed.
+
+The lower passage requires a Down-only roll: shipped `SonicKnux_Roll` rejects
+Down while Left/Right is held. R+Down at 27437 never rolled and died at 27773.
+Down-only at that grounded speed defeats the lower Skorp and retires its tail,
+but the unchanged upper approach hits sideways spikes at `($4BF4,$517)` and dies
+later at 30010. Moving the glide one input earlier did not clear the corner.
+A26987 with the same lower roll also failed there. A short hop with the old later
+Right inputs hit the spike during that hop; an A2/A1 hop sequence and two extra
+full jumps instead met the upper Skorp tail during descent. These are rejected
+controller recordings, not engine adjustments or passing routes.
+
+The selected approach rolls through the upper Skorp at 28852 instead of jumping
+over its body; a later roll at 28879 had already passed its actual X19202 body.
+Two short stationary hops use the existing wait on the upper switch. The native
+integer-only landing writes in `loc_1E154` retain the fraction: the measured
+starting fraction 50688 becomes 30208 then 9728. Near-apex Right input leaves
+Knuckles at `(19416,1275)` before the original glide edge; the next two inputs
+reach `(19420,1277)` and `(19424,1279)` without hurt, then the narrow native top
+landing succeeds at X19428. The full `SolidObject_cont` / `loc_1E154` path matters:
+the four-pixel forced-top branch alone is insufficient without its narrower
+`width_pixels` check. `SolidObjectParams` orders air height before ground height.
+No player, spike, enemy, physics, ring, position or timer state was seeded or tuned.
+
+The original boss suffix no longer fits that arrival. Reimplementing its steering
+with a four-pixel deadband or velocity feedback failed; the existing
+`SozEndBossVictoryRoute` uses an eight-pixel deadband and its own capsule policy.
+Its documented 16-input / four-held-input / -48 approach was authored from a cold
+30450-input prefix using engine-owned snapshots and restored pad history. Phase0
+lost after three hits; phase1 naturally landed all eight at
+31299/31763/32115/32467/32819/33171/33523/33875. Authoring stops restoring once the
+selected continuation crosses the real LRZ load. Only controller buttons were
+exported through `InputLogAuthorTool`; no live adaptive controller remains.
+
+The new 35,412-input script and BK2 have identical controller logs. The independent
+frozen-input acceptance passed one case in 35.441 Maven seconds (13.30 test seconds),
+no failures/errors/skips, on `73f23d89e` runtime: real LRZ load/control readiness
+35191, 48 selected 45-input whole-world restore/replay windows, eleven puzzle spots,
+18 semantic events, actual capsule/results, outgoing-history isolation and 180
+playable destination inputs. Temporary witnesses and authoring code were removed
+before promotion. This is engine route evidence, not native-emulator parity or
+certification of other viewport/donor products. Fresh permanent route and final
+integration checks are recorded after they run.
 
 The 63 ordinary skips comprise 32 Infinite Sonic cases whose selected acts lack
 the prerequisite platform/flyer, 24 opt-in probes/captures/soaks or missing local
