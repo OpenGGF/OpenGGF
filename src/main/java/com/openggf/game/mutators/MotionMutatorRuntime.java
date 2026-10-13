@@ -28,6 +28,7 @@ public final class MotionMutatorRuntime implements WorldSessionPolicyState,
     private int waterZone, waterAct;
     private TransientMutatorPolicySource source;
     private boolean retired;
+    private boolean ordinaryGameplay = true;
     private boolean gravityQualified;
     private boolean fluidMovementActive;
     private boolean fluidMovementSample;
@@ -37,6 +38,8 @@ public final class MotionMutatorRuntime implements WorldSessionPolicyState,
     public void bind(SpriteManager sprites, GameStateManager gsm, TransientMutatorPolicySource source) {
         requireEngineCaller();
         if (retired) throw new IllegalStateException("Motion owner is retired");
+        if (source != null && source.getClass().getClassLoader() != MotionMutatorRuntime.class.getClassLoader())
+            throw new SecurityException("Motion policies require a trusted engine source");
         this.sprites = java.util.Objects.requireNonNull(sprites);
         this.gameState = java.util.Objects.requireNonNull(gsm);
         this.source = java.util.Objects.requireNonNull(source);
@@ -51,7 +54,7 @@ public final class MotionMutatorRuntime implements WorldSessionPolicyState,
     }
 
     private List<TransientMutatorPolicySource.Entry> entries() {
-        return retired || source == null ? List.of() : source.entries().stream()
+        return retired || !ordinaryGameplay || source == null ? List.of() : source.entries().stream()
                 .filter(entry -> entry.oneShot() || entry.remainingPresentations() > 0).toList();
     }
 
@@ -291,7 +294,17 @@ public final class MotionMutatorRuntime implements WorldSessionPolicyState,
     @Override public void bindRoster(SpriteManager sprites) {
         if (source != null && gameState != null) bind(sprites, gameState, source);
     }
+    /** The foundation calls this after the context managers and world policy graph are attached. */
+    public void bindGameplay(com.openggf.game.session.GameplayModeContext context) {
+        requireEngineCaller();
+        var policies = TransientMutatorPolicyAccess.source(context.getWorldSession());
+        if (policies != null) {
+            bind(context.getSpriteManager(), context.getGameStateManager(), policies);
+            bindNativeWater(context.getLevelManager());
+        }
+    }
     @Override public void beforeNativeTick(com.openggf.LevelFrameContext context, com.openggf.control.LogicalInputSnapshot input) {
+        ordinaryGameplay = true;
         bindNativeWater(context.levelManager());
         sampleGravityQualification();
         if (sprites != null) prepareFluid(sprites.getMainPlayable());
@@ -299,7 +312,19 @@ public final class MotionMutatorRuntime implements WorldSessionPolicyState,
     @Override public void onPresentation(com.openggf.game.session.GameplayModeContext context,
             com.openggf.control.LogicalInputSnapshot input, com.openggf.game.GameplayObservation.Phase phase) {
         bindNativeWater(context.getLevelManager());
-        if (phase == com.openggf.game.GameplayObservation.Phase.ACTIVE && sprites != null) prepareFluid(sprites.getMainPlayable());
+        if (phase == com.openggf.game.GameplayObservation.Phase.ACTIVE) {
+            ordinaryGameplay = true;
+            if (sprites != null) prepareFluid(sprites.getMainPlayable());
+        }
+    }
+    /** Matches the foundation's forthcoming internal lifecycle hook without editing its central interface. */
+    public void leaveOrdinaryGameplay(com.openggf.game.GameplayObservation.Phase phase) {
+        if (phase == com.openggf.game.GameplayObservation.Phase.SETUP
+                || phase == com.openggf.game.GameplayObservation.Phase.STAGE
+                || phase == com.openggf.game.GameplayObservation.Phase.TRANSITION
+                || phase == com.openggf.game.GameplayObservation.Phase.CLOSED) {
+            ordinaryGameplay = false; reset(); nativeWater = null;
+        }
     }
     @Override public void beforeAssembly(LevelLoadCause cause) {
         if (cause != LevelLoadCause.DECODE_ONLY && cause != LevelLoadCause.PREVIEW) reset();
@@ -313,7 +338,7 @@ public final class MotionMutatorRuntime implements WorldSessionPolicyState,
     }
     @Override public String key() { return "motion-mutators"; }
     @Override public Snapshot capture() { return new Snapshot(generation, input.capture(), fluidActivation, fluidX, fluidY,
-            cancelledCruises, gravityQualified, fluidMovementActive, fluidMovementSample); }
+            cancelledCruises, gravityQualified, fluidMovementActive, fluidMovementSample, ordinaryGameplay); }
     @Override public void restore(Snapshot snapshot) {
         if (retired) throw new IllegalStateException("Motion owner is retired");
         if (snapshot.generation() != generation) throw new IllegalArgumentException("Motion snapshot belongs to another world");
@@ -322,10 +347,11 @@ public final class MotionMutatorRuntime implements WorldSessionPolicyState,
         cancelledCruises.clear(); cancelledCruises.addAll(snapshot.cancelledCruises());
         gravityQualified = snapshot.gravityQualified(); fluidMovementActive = snapshot.fluidMovementActive();
         fluidMovementSample = snapshot.fluidMovementSample();
+        ordinaryGameplay = snapshot.ordinaryGameplay();
     }
     public record Snapshot(long generation, MotionInputQueue.Snapshot input, long fluidActivation, int fluidX, int fluidY,
                            java.util.Set<Long> cancelledCruises, boolean gravityQualified,
-                           boolean fluidMovementActive, boolean fluidMovementSample) {
+                           boolean fluidMovementActive, boolean fluidMovementSample, boolean ordinaryGameplay) {
         public Snapshot { cancelledCruises = java.util.Set.copyOf(cancelledCruises); }
     }
 }

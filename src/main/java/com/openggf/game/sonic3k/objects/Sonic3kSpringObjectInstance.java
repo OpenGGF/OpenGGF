@@ -696,7 +696,8 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         int reviewedMinimum = minima == null ? -1 : minima.minimumLaunchMagnitude(spawn, downward);
         // Upward/sideways springs can be mandatory route launches. An unreviewed site
         // retains its native minimum. Downward launches have the native $D00 cap.
-        int minimum = reviewedMinimum < 0 ? (downward ? 0 : Math.abs(nativeStrength)) : reviewedMinimum;
+        boolean physicalDownward = downward && !isReverseGravityActive(player);
+        int minimum = reviewedMinimum < 0 ? (physicalDownward ? 0 : Math.abs(nativeStrength)) : reviewedMinimum;
         int cap = downward ? 0x0D00 : 0x1000;
         return runtime.springResponse(player, nativeStrength, minimum, cap);
     }

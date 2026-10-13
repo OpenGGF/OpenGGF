@@ -202,6 +202,9 @@ class TestMotionMutatorConsumers {
         source.policy(new SpringResponsePolicy(75)); up.invoke(spring,player);
         assertEquals(-0xA00,player.getYSpeed(),"unreviewed route retains its launch minimum");
         down.invoke(spring,player);assertEquals(0x780,player.getYSpeed());
+        gsm.setReverseGravityActive(true);down.invoke(spring,player);
+        assertEquals(0xA00,player.getYSpeed(),"a reversed down variant can be a required upward route launch");
+        gsm.setReverseGravityActive(false);
         source.active.clear();down.invoke(spring,player);assertEquals(0xA00,player.getYSpeed());
     }
 
@@ -245,6 +248,22 @@ class TestMotionMutatorConsumers {
         runtime.endFluidMovement(player);assertEquals(30,player.getYSpeed(),"the next complete wet dispatch uses native $10 gravity");
     }
 
+    @Test void fluidProtectionReachesFixedNativeCountdownBeforeItsTimerAndRng() throws Exception {
+        var player=player("sonic");player.setInWater(true);source.policy(new FluidContextPolicy(64));runtime.beforeMovement(player);
+        var type=Class.forName("com.openggf.game.sonic3k.S3kFixedAirCountdownManager$FixedController");
+        var constructor=type.getDeclaredConstructor(String.class);constructor.setAccessible(true);
+        var controller=constructor.newInstance("Breathing_bubbles");
+        var timer=type.getDeclaredField("obj3c");timer.setAccessible(true);timer.setInt(controller,0);
+        var countdown=type.getDeclaredMethod("countdown",AbstractPlayableSprite.class);countdown.setAccessible(true);
+        var rng=player.currentRng().capture();
+        for (int tick=0;tick<90;tick++) countdown.invoke(controller,player);
+        assertEquals(0,timer.getInt(controller));assertEquals(rng,player.currentRng().capture());
+        assertEquals(30,player.getDrowningController().getRemainingAir());
+        source.active.clear();countdown.invoke(controller,player);
+        assertEquals(59,timer.getInt(controller));assertNotEquals(rng,player.currentRng().capture());
+        assertEquals(29,player.getDrowningController().getRemainingAir());
+    }
+
     @Test void relocationFluidQueryUsesTheCircleAtTheTargetAndQualifiedLeaderIdentity() {
         var player=player("sonic");source.policy(new FluidContextPolicy(64));runtime.beforeMovement(player);
         var region=runtime.fluidRegion();var query=runtime.getService(EffectiveFluidContextSource.class);
@@ -266,5 +285,18 @@ class TestMotionMutatorConsumers {
 
     @Test void snapshotsCannotCrossWorlds() {
         assertThrows(IllegalArgumentException.class,()->new MotionMutatorRuntime().restore(runtime.capture()));
+    }
+
+    @Test void leavingOrdinaryGameplayClearsQueuesAndContributionsWhilePauseHoldRewindPreserveThem() {
+        var player=player("sonic");source.policy(new FluidContextPolicy(64));runtime.beforeMovement(player);
+        var historical=runtime.capture();
+        for (var phase : List.of(com.openggf.game.GameplayObservation.Phase.PAUSED,
+                com.openggf.game.GameplayObservation.Phase.HELD,com.openggf.game.GameplayObservation.Phase.REWIND)) {
+            runtime.leaveOrdinaryGameplay(phase);assertEquals(historical,runtime.capture());
+        }
+        runtime.leaveOrdinaryGameplay(com.openggf.game.GameplayObservation.Phase.STAGE);
+        assertNull(runtime.fluidRegion());assertFalse(PlayerFluidContextAccess.movementUnderwater(player));
+        assertTrue(runtime.capture().input().pending().isEmpty());assertFalse(gsm.isReverseGravityActive());
+        runtime.restore(historical);assertTrue(PlayerFluidContextAccess.movementUnderwater(player));
     }
 }
