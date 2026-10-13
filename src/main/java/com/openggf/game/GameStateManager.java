@@ -150,6 +150,8 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
      * so S1 and S2 behaviour cannot change.
      */
     private boolean reverseGravityActive;
+    // A structural world binding, not historical gameplay state. The source owns its rewind state.
+    java.util.function.BooleanSupplier signedGravityContribution;
 
     /**
      * S3K Special Stage Entry Ring collected bitfield (ROM: Collected_special_ring_array).
@@ -818,8 +820,10 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
      * @return true if reverse gravity is active
      */
     public boolean isReverseGravityActive() {
-        return reverseGravityActive;
+        return reverseGravityActive ^ (signedGravityContribution != null && signedGravityContribution.getAsBoolean());
     }
+
+    boolean nativeReverseGravityActive() { return reverseGravityActive; }
 
     /**
      * Sets the reverse gravity flag.

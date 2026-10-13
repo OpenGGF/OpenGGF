@@ -24,12 +24,18 @@ public final class WorldSessionPolicyAccess {
         if (hasPolicies(world)) world.policies.beforeSpecialStageForwardTick();
     }
 
+    public static void bindGameplay(GameplayModeContext context) {
+        if(context!=null && hasPolicies(context.getWorldSession()))context.getWorldSession().policies.bindGameplay(context);
+    }
     public static void bindRoster(WorldSession world, SpriteManager sprites) {
         if (hasPolicies(world)) world.policies.bindRoster(sprites);
     }
 
     public static void beforeAssembly(WorldSession world, LevelLoadCause cause) {
-        if (hasPolicies(world)) world.policies.beforeAssembly(cause);
+        if (hasPolicies(world)) {
+            if(cause!=LevelLoadCause.DECODE_ONLY && cause!=LevelLoadCause.PREVIEW)world.policyHistory.clear();
+            world.policies.beforeAssembly(cause);
+        }
     }
 
     public static void failedAssembly(WorldSession world, LevelLoadCause cause) {
@@ -39,6 +45,54 @@ public final class WorldSessionPolicyAccess {
     public static void closeScreens(WorldSession world) {
         if (hasPolicies(world)) world.policies.closeScreens();
     }
+
+    public static void onPresentation(GameplayModeContext context, com.openggf.control.LogicalInputSnapshot input,
+                                      com.openggf.game.GameplayObservation.Phase phase) {
+        if(context!=null && hasPolicies(context.getWorldSession())) context.getWorldSession().policies.onPresentation(context,input,phase);
+    }
+    public static void onMenuPresentation(WorldSession world,com.openggf.control.LogicalInputSnapshot input,int width,int height,
+            java.util.function.Consumer<com.openggf.audio.GameSound> sounds) {
+        if(hasPolicies(world))world.policies.onMenuPresentation(input,width,height,sounds);
+    }
+    public static void leaveOrdinaryGameplay(WorldSession world,com.openggf.game.GameplayObservation.Phase phase) {
+        if(hasPolicies(world)) {
+            world.policyHistory.beforeBoundary(world,phase);
+            world.policies.leaveOrdinaryGameplay(phase);
+        }
+    }
+    public static void drawOverlay(WorldSession world, com.openggf.mods.ui.PixelCanvas canvas) {
+        if(hasPolicies(world))world.policies.drawOverlay(canvas);
+    }
+    public static boolean holdsGameplay(WorldSession world) { return hasPolicies(world)&&world.policies.holdsGameplay(); }
+    public static boolean replaying(WorldSession world) { return hasPolicies(world)&&world.policyHistory.replaying(); }
+    public static void beforeNativeTick(com.openggf.LevelFrameContext context) {
+        var world=context.levelManager()==null?null:context.levelManager().getWorldSession();
+        if(!hasPolicies(world))return;
+        var input=context.spriteManager()==null?com.openggf.control.LogicalInputSnapshot.neutral():
+                com.openggf.sprites.managers.SpriteManagerInternalAccess.publishedInput(context.spriteManager());
+        world.policyHistory.nativeTickActive=NativeGameplayPhase.of(context)==com.openggf.game.GameplayObservation.Phase.ACTIVE;
+        if(!world.policyHistory.replaying())world.policies.observeTick(context,input);
+        world.policyHistory.recordBefore(world);
+        if(world.policyHistory.nativeTickActive)world.policies.beforeNativeTick(context,input);
+    }
+    public static void afterNativeTick(com.openggf.LevelFrameContext context) {
+        var world=context.levelManager()==null?null:context.levelManager().getWorldSession();
+        if(hasPolicies(world) && world.policyHistory.nativeTickActive)world.policies.afterNativeTick(context,context.spriteManager()==null?
+                com.openggf.control.LogicalInputSnapshot.neutral():
+                com.openggf.sprites.managers.SpriteManagerInternalAccess.publishedInput(context.spriteManager()));
+    }
+    /** Opaque accepted-outcome history used only by live rewind, never trace comparisons. */
+    public static Object captureHistory(WorldSession world) { return hasPolicies(world)?world.policyHistory.frame(world):null; }
+    public static void restoreHistoryBefore(WorldSession world,Object frame) {
+        if(hasPolicies(world)&&frame!=null)world.policyHistory.restoreBefore(world,(WorldPolicyHistory.Frame)frame);
+    }
+    public static void restoreHistoryAfter(WorldSession world,Object frame) {
+        if(hasPolicies(world)&&frame!=null)world.policyHistory.restoreAfter(world,(WorldPolicyHistory.Frame)frame);
+    }
+    public static void discardPendingHistory(WorldSession world) { if(hasPolicies(world))world.policyHistory.discardPending(); }
+    /** Only the installed live rewind owner arms accepted-decision recording; trace/canonical play stays quiet. */
+    public static void setHistoryRecording(WorldSession world,boolean enabled) { if(hasPolicies(world))world.policyHistory.recording(enabled); }
+    public static void endHistoryReplay(WorldSession world) { if(hasPolicies(world))world.policyHistory.endReplay(); }
 
     static void retire(WorldSession world) {
         if (hasPolicies(world)) world.policies.retire();

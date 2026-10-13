@@ -32,6 +32,16 @@ in float v_paletteLine;
 
 out vec4 FragColor;
 
+uniform float PresentationHue = 0.0;
+uniform float PresentationOpacity = 1.0;
+
+vec3 presentationColour(vec3 colour) {
+    // Rotate colour around the neutral RGB axis; native palette textures remain untouched.
+    vec3 axis = vec3(0.57735026919);
+    float c = cos(PresentationHue), s = sin(PresentationHue);
+    return clamp(colour*c + cross(axis,colour)*s + axis*dot(axis,colour)*(1.0-c),0.0,1.0);
+}
+
 void main()
 {
     // Get the color index from the indexed texture
@@ -98,4 +108,6 @@ void main()
     } else {
         FragColor = indexedColor; // Output the final color
     }
+    FragColor.rgb = presentationColour(FragColor.rgb);
+    FragColor.a *= PresentationOpacity;
 }

@@ -74,6 +74,16 @@ public final class GameServiceBundle {
             return this;
         }
 
+        /** Observes ordinary native gameplay; mutable scheduling state shares the captured adapter. */
+        public <T extends GameplayObserver & RewindSnapshottable<?>> Builder gameplayObserver(String localKey, T observer) {
+            requireUnusedContract(GameplayObserver.class);
+            if (rewindAdapters.containsKey(ModKeySyntax.requireLocalName(localKey)))
+                throw new IllegalArgumentException("Duplicate bundle rewind key: " + localKey);
+            service(GameplayObserver.class, observer);
+            rewindAdapter(localKey, observer);
+            return this;
+        }
+
         public GameServiceBundle build() { return new GameServiceBundle(this); }
 
         private void requireUnusedContract(Class<?> contract) {

@@ -16,6 +16,15 @@ final class LevelManagerInitializationSupport {
     private LevelManagerInitializationSupport() {
     }
 
+    static void registerWorldRenderEffects(com.openggf.game.session.WorldSession world,
+                                          com.openggf.game.render.SpecialRenderEffectRegistry registry) {
+        var motion = com.openggf.game.session.WorldSessionPolicyAccess.getService(
+                world, com.openggf.game.mutators.MotionMutatorRuntime.class);
+        if (motion != null && registry != null) {
+            registry.register(new com.openggf.game.mutators.MotionFluidRenderEffect(motion));
+        }
+    }
+
     static void rebindPowerUpSpawners(
             ObjectManager objectManager,
             SpriteManager spriteManager,

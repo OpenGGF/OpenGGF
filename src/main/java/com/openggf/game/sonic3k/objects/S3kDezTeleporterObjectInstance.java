@@ -241,7 +241,7 @@ public final class S3kDezTeleporterObjectInstance extends AbstractObjectInstance
         }
         // rol.b #1,d0 / andi.b #1,d0 (:95072-95074): subtype bit 7, nothing else.
         boolean target = (spawn.subtype() & 0x80) != 0;
-        state.flagChangedLatch = target != gameState.isReverseGravityActive();
+        state.flagChangedLatch = target != com.openggf.game.GameStateInternalAccess.nativeReverseGravity(gameState);
         gameState.setReverseGravityActive(target);
     }
 

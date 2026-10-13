@@ -103,6 +103,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
     private ObjectAnimationState animationState;
     private boolean broken;
     private int mappingFrame;
+    private boolean encounterRingDisguise;
     private boolean initialized;
 
     // "Revealed from hidden monitor" mode: pop up with velocity, fall with gravity
@@ -214,7 +215,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         this.broken = previouslyBroken;
 
         // Initialize animation: animId = subtype
-        int initialAnim = type.animId;
+        int initialAnim = encounterRingDisguise ? 3 : type.animId;
         int initialFrame = broken ? BROKEN_FRAME : 0;
         this.animationState = new ObjectAnimationState(currentMonitorAnimations(), initialAnim, initialFrame);
         this.mappingFrame = initialFrame;
@@ -222,6 +223,15 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
             effectApplied = true;
         }
     }
+
+    @Override public com.openggf.level.objects.ObjectPresentationMetadata presentationMetadata() {
+        return broken ? com.openggf.level.objects.ObjectPresentationMetadata.NONE
+                : new com.openggf.level.objects.ObjectPresentationMetadata(
+                        com.openggf.level.objects.ObjectPresentationMetadata.Role.PICKUP, posX(), posY());
+    }
+
+    /** Encounter presentation only: the native Eggman payload and break lifecycle remain intact. */
+    public void disguiseEncounterAsRingMonitor() { encounterRingDisguise = true; }
 
     private com.openggf.sprites.animation.SpriteAnimationSet currentMonitorAnimations() {
         var ctx = tryServices();

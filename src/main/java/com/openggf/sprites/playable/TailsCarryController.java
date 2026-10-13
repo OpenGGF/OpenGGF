@@ -20,7 +20,7 @@ public final class TailsCarryController {
     };
 
     @com.openggf.game.ModApi
-    public enum CarryContext { NONE, MANUAL, CNZ, MGZ_BOSS }
+    public enum CarryContext { NONE, MANUAL, CNZ, MGZ_BOSS, ENCOUNTER }
 
     @com.openggf.game.ModApi
     public record Snapshot(short latchX, short latchY, boolean carrying,
@@ -39,6 +39,8 @@ public final class TailsCarryController {
     }
 
     public boolean isCarryingMainCharacter() { return carrying; }
+    /** The native carry owner resolves its target through the carrier's bound world roster. */
+    public boolean isCarrying(AbstractPlayableSprite target) { return carrying && target != null && resolveMain() == target; }
     public CarryContext getContext() { return context; }
 
     public boolean tryGrabMainCharacter() {
@@ -243,9 +245,20 @@ public final class TailsCarryController {
         release(left || right || (input & (AbstractPlayableSprite.INPUT_UP | AbstractPlayableSprite.INPUT_DOWN)) != 0
                 ? 0x3C : 0x12);
     }
+    /** Bounded encounter admission uses the native attach/follow/release owner and its captured context. */
+    public boolean tryEncounterCarry() {
+        var main = resolveMain();
+        if (main == null || carrying || main.getDead() || main.isHurt() || main.isObjectControlled()
+                || main.getSpindash() || main.isDebugMode() || !isInContactWindow(main)
+                || carrier.getDead() || carrier.isHurt() || carrier.getTailsFlightController() == null) return false;
+        carrier.getTailsFlightController().activate();
+        attach(main, CarryContext.ENCOUNTER, true);
+        return true;
+    }
+
     public void forceScriptedCarry(CarryContext context) {
         Objects.requireNonNull(context, "context");
-        if (context == CarryContext.NONE || context == CarryContext.MANUAL) {
+        if (context != CarryContext.CNZ && context != CarryContext.MGZ_BOSS) {
             throw new IllegalArgumentException("Scripted carry requires CNZ or MGZ_BOSS context");
         }
         AbstractPlayableSprite main = resolveMain();

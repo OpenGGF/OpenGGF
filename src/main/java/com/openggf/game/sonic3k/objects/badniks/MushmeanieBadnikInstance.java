@@ -107,6 +107,8 @@ public final class MushmeanieBadnikInstance extends AbstractS3kBadnikInstance
         shellReleased = true;
     }
 
+    @Override protected boolean independentPresentationBody() { return true; }
+
     @Override
     protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         if (isDestroyed()) {

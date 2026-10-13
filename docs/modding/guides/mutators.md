@@ -159,6 +159,74 @@ revision and the visible draft/error; retry the same action after repairing the
 settings path. Closing the Engine window remains available if the path stays
 unavailable.
 
+## Observe ordinary play and issue temporary effects
+
+[Sonic3K Chaos Mode](../../../examples/sonic3k-chaos-mode/README.md) uses
+`GameplayObserver` alongside the stock game loop. Register its mutable scheduler
+with `GameServiceBundle.builder().gameplayObserver(localKey, observer)`; the same
+instance must implement `RewindSnapshottable`. The host aggregates verified
+observers from successive patches instead of replacing earlier observers.
+`GameplayObservation` copies player, input, clock and phase values. It exposes no
+mutable gameplay managers, and observing a native tick does not replace it.
+
+Observation callbacks receive an owner-scoped `TemporaryMutators` port. Register
+dormant LIVE definitions first, then call `activate(localId, options, duration)`.
+The complete typed policy bundle must match that definition's fixed capabilities.
+`replace(id, options)` keeps the activation identity and expiry; `cancel(id)`
+removes only that owner's contribution. Callback ports cannot be retained for
+later threads, frames or drawing. Inspect rejection reasons and `available()`;
+registered capabilities alone do not establish a qualified native target.
+
+Positive durations are 1–3600 active presentations. Duration zero is reserved for
+native one-shots, which remain pending until native acknowledgement, including
+presentations with no native tick. The host rejects timed/one-shot mismatches and
+mixed bundles. An instantaneous activation contains one native action; a single
+acknowledgement cannot safely settle independent actions from different consumers.
+Temporary effects do not enable a persistent preference or append
+to the user's configuration journal. Rewind restores accepted policies, option
+replacements and native outcomes without rerunning creator factories.
+
+`outcomes()` returns up to 32 captured owner-scoped terminal `Complete:`/`Failed:`
+reports, including after a native acknowledgement or final-tick expiry. Receipts
+retain no effect, family slot or retry authority. Record observed result identities
+in captured state so repeated reads cannot renew a reward or respite.
+
+Check the observation phase before advancing a scheduler. Ordinary active clocks
+freeze for real pause, focus holds, setup, stages, transitions and rewind. A modal
+`GameplayHoldPolicy` can keep native gameplay frozen while its own held-presentation
+deadline advances, up to 1200 presentations. Its paired overlay stays part of the
+same activation. A real pause freezes this deadline too. Ordinary leave, faults,
+death and world retirement revoke owned state and resources.
+
+`nativeArt()` exposes the existing bounded read-only `SceneRomArt` port for the
+world's ROM. Cache decoded imagery during callbacks, then draw it through the
+pixel canvas. Missing art is an availability result, never authority to substitute
+runtime assets. `drawOverlay` reads captured state and does not select effects,
+advance clocks, allocate native objects or play cues.
+
+An optional modal reward uses a declared
+`RingEconomyPolicy(COMPLETION_REWARD, amount)` with an amount of 1–10.
+`complete(id, won)` atomically closes the caller's active modal lease and queues
+that bounded native grant only on success. Native service acknowledges the
+completion once; duplicate, foreign or inactive completion requests are rejected.
+No Rings retains authority. Pong declares this extra capability separately from
+the other four sidegames, rather than changing a definition's capabilities at run
+time. This port is not a general inventory setter.
+
+The S3K host also consumes typed motion/input, signed gravity, spring/fluid,
+encounter/enemy/projectile, object-field, transport/relocation, challenge,
+presentation and audio policies. Consumers retain native collision, control,
+warning, route and art qualifications. Upward and horizontal weak springs retain
+native launch minima until a host route explicitly qualifies a weaker launch.
+Gravity contributions compose with native gravity pads; expiry never restores an
+old native flag. Visual policies transform already admitted sprite/HUD/world
+presentation, without changing collision or taking over native PLC ownership.
+
+Native power-up grants are consumed actions. A granted shield, ring award or bounded
+shoes/invincibility timer follows its normal native owner after cancellation; the
+host does not restore prior inventory or shorten a longer existing timer. These
+timers use native ticks, while the scheduler's lease uses active presentations.
+
 ## Human and agent walkthrough
 
 1. Read the example README, one class per effect, `NativeLabProfile.java`,

@@ -11,6 +11,19 @@ frame by frame from a BizHawk input log, and writes PNG frames, `state.csv`, and
 MP4 when `ffmpeg` is on `PATH`. Use it to show a user what happens at a location, to
 check a visual change, or to reproduce a route failure with real rendering.
 
+Use `--interactive-pacing` for title menus, gameplay observers and presentation-timed
+effects such as Chaos Mode. It uses the production `GameLoop.stepPresentationFrame`
+owner: each input row represents one presentation, which may admit zero or several
+native ticks. P1 controller input is mapped to the capture's owned input handler;
+P2 and debug inputs are rejected. The default remains one canonical native tick
+per input row. Neither mode sends keyboard events to the desktop.
+
+Title captures share Engine's native data-select launch owner: No Save and slot
+confirmation retain the selected team and native save/progression behavior.
+An explicitly loaded mod gets fresh registrations for that exact launch team;
+the capture keeps its physical input handler and follows the new player.
+Headless Return to hub remains unsupported.
+
 It is not parity evidence and does not read traces. For rendering an existing trace
 replay use `trace-capture`; for authoring the input log use `bk2-input-authoring`.
 
@@ -59,6 +72,7 @@ Use a task directory outside the repository for captures the user should keep.
 | `--camera-x-sub <n>` | fresh | Declared inherited `Camera_X_pos` low word; only zones that keep a camera fraction (S3K DDZ) accept it |
 | `--rings <n>` | unchanged | Declared ring count the route carried in; a boss filmed from a positioned start otherwise begins on 0 rings, where the first touch is fatal |
 | `--title-screen` | off | Initialize the production title before first assembly; first zone/act only, no positioned/checkpoint/clock/donor seeds |
+| `--interactive-pacing` | off | Use production presentation/input pacing, including menus and gameplay observer callbacks; P1 controller input only, fps 60, no debug stage completion |
 | `--audio` | off | Write `audio.wav` from one final SMPS PCM packet per outer frame; every=1, capture-from=0, matching 60-Hz presentation. Video remains silent until muxed |
 | `--title-card` | off | Keep and draw title-card presentations instead of omitting them |
 | `--complete-special-stage` | off | Request the debug special-stage completion while a special stage runs (awards its emerald with 50 rings; no key binding is involved), so the capture continues into the results screen; results frames render as `Engine` draws them, including the S3K Super Emerald sanctuary backdrop |

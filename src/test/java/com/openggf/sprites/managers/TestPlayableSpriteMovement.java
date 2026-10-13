@@ -1207,8 +1207,12 @@ public class TestPlayableSpriteMovement {
                 mockSprite.setSpindash(true);
                 mockSprite.setSpindashCounter((short) 0);
 
-                manager.handleMovement(false, false, false, false,
-                                false, false, false, false);
+                try (var events = org.mockito.Mockito.mockStatic(com.openggf.game.mutators.PlayableAudioEvents.class)) {
+                        manager.handleMovement(false, false, false, false,
+                                        false, false, false, false);
+                        events.verify(() -> com.openggf.game.mutators.PlayableAudioEvents.spindashReleased(mockSprite));
+                        events.verifyNoMoreInteractions();
+                }
 
                 assertEquals(rightBoundary, mockSprite.getCentreX() & 0xFFFF,
                                 "SonicKnux_Spindash reaches Player_LevelBound while x_vel is still zero");

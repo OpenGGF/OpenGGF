@@ -17,6 +17,7 @@ import java.util.function.Supplier;
 
 @com.openggf.game.ModApi
 public class HudRenderManager {
+    com.openggf.game.session.WorldSession presentationWorld;
 
     private static final java.util.logging.Logger LOGGER =
             java.util.logging.Logger.getLogger(HudRenderManager.class.getName());
@@ -208,6 +209,17 @@ public class HudRenderManager {
         if (levelGamestate == null) {
             return;
         }
+        SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.HUD);
+
+        var presentation = HudProfileAccess.runtime(graphicsManager);
+        if (presentation != null && presentation.active() && !SpritePresentation.isPreparing(graphicsManager)) {
+            int cameraX = camera.getXWithShake(), cameraY = camera.getYWithShake();
+            var source = com.openggf.level.render.SpritePresentationRenderer.prepare(graphicsManager, cameraX, cameraY,
+                    () -> draw(levelGamestate, player));
+            com.openggf.level.render.SpritePresentationRenderer.draw(graphicsManager, source, cameraX, cameraY,
+                    SpritePresentation.Layer::isHud);
+            return;
+        }
 
         graphicsManager.beginPatternBatch();
         boolean batchOpen = true;
@@ -225,10 +237,13 @@ public class HudRenderManager {
             List<HudRow> rows = debugMode
                     ? HudProfile.stock().rows() : profile.rows();
 
-            for (HudRow row : rows) {
+            for (int index = 0; index < rows.size(); index++) {
+                HudRow row = rows.get(index);
                 if (row.visible() && !isLivesRow(row)) {
-                    drawStaticFrame(selectLabelFrame(row, levelGamestate, debugMode),
-                            row.labelX(), row.labelY(), hudOrigin);
+                    int id = index;
+                    HudProfileAccess.withReadout(graphicsManager, id, () ->
+                            drawStaticFrame(selectLabelFrame(row, levelGamestate, debugMode),
+                                    row.labelX(), row.labelY(), hudOrigin));
                 }
             }
 
@@ -236,16 +251,19 @@ public class HudRenderManager {
                 int hexStartX = 48;
                 int playerX = player.getCentreX() & 0xFFFF;
                 int playerY = player.getCentreY() & 0xFFFF;
-                drawSmallHexCoordinates(hexStartX, 8, playerX, playerY, hudOrigin);
-
                 int camX = camera.getX() & 0xFFFF;
                 int camY = camera.getY() & 0xFFFF;
-                drawSmallHexCoordinates(hexStartX, 16, camX, camY, hudOrigin);
+                HudProfileAccess.withReadout(graphicsManager, 0, () -> {
+                    drawSmallHexCoordinates(hexStartX, 8, playerX, playerY, hudOrigin);
+                    drawSmallHexCoordinates(hexStartX, 16, camX, camY, hudOrigin);
+                });
             }
-            for (HudRow row : rows) {
+            for (int index = 0; index < rows.size(); index++) {
+                HudRow row = rows.get(index);
                 if (row.visible() && !isLivesRow(row)
                         && !(debugMode && row.metric() == HudMetric.SCORE)) {
-                    drawMetric(row, levelGamestate, hudOrigin);
+                    int id = index;
+                    HudProfileAccess.withReadout(graphicsManager, id, () -> drawMetric(row, levelGamestate, hudOrigin));
                 }
             }
 
@@ -259,11 +277,15 @@ public class HudRenderManager {
                 graphicsManager.beginPatternBatch();
                 batchOpen = true;
             }
-            for (HudRow row : rows) {
+            for (int index = 0; index < rows.size(); index++) {
+                HudRow row = rows.get(index);
                 if (row.visible() && isLivesRow(row)) {
-                    drawStaticFrame(selectLabelFrame(row, levelGamestate, debugMode),
-                            row.labelX(), row.labelY(), hudOrigin);
-                    drawMetric(row, levelGamestate, hudOrigin);
+                    int id = index;
+                    HudProfileAccess.withReadout(graphicsManager, id, () -> {
+                        drawStaticFrame(selectLabelFrame(row, levelGamestate, debugMode),
+                                row.labelX(), row.labelY(), hudOrigin);
+                        drawMetric(row, levelGamestate, hudOrigin);
+                    });
                 }
             }
             graphicsManager.flushPatternBatch();
@@ -280,6 +302,36 @@ public class HudRenderManager {
 
     private static boolean isLivesRow(HudRow row) {
         return row.label() == HudLabel.LIVES || row.metric() == HudMetric.LIVES;
+    }
+
+    List<com.openggf.game.mutators.HudPresentationRuntime.Readout> presentationReadouts() {
+        var player = camera.getFocusedSprite();
+        boolean debug = player != null && player.isDebugMode();
+        List<HudRow> rows = bonusStageHudLayout ? List.of(new HudRow(true, HudLabel.RINGS, HudMetric.RINGS,
+                16, 8, 64, 8, 3, HudWarningPolicy.ZERO_FLASH)) : debug ? HudProfile.stock().rows() : profile.rows();
+        var readouts = new java.util.ArrayList<com.openggf.game.mutators.HudPresentationRuntime.Readout>();
+        for (int index = 0; index < rows.size(); index++) {
+            var row = rows.get(index); if (!row.visible()) continue;
+            List<SpriteMappingFrame> frames = staticHudArt == null ? List.of() : switch (row.label()) {
+                case SCORE -> java.util.Collections.singletonList(debug ? staticHudArt.debugScoreFrame() : staticHudArt.scoreFrame());
+                case TIME -> java.util.Arrays.asList(staticHudArt.timeFrame(), staticHudArt.timeFlashFrame());
+                case RINGS -> java.util.Arrays.asList(staticHudArt.ringsFrame(), staticHudArt.ringsFlashFrame());
+                case LIVES -> java.util.Collections.singletonList(staticHudArt.livesFrame());
+            };
+            int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE;
+            for (var frame : frames) if (frame != null) for (var piece : frame.pieces()) {
+                minX = Math.min(minX, piece.xOffset()); minY = Math.min(minY, piece.yOffset());
+                maxX = Math.max(maxX, piece.xOffset() + piece.widthTiles() * 8);
+                maxY = Math.max(maxY, piece.yOffset() + piece.heightTiles() * 8);
+            }
+            boolean hasLabel = minX != Integer.MAX_VALUE;
+            int valueWidth = debug && row.metric() == HudMetric.SCORE ? 64 : row.maxDigits() * 8;
+            int valueHeight = row.metric() == HudMetric.LIVES ? 8 : 16;
+            readouts.add(new com.openggf.game.mutators.HudPresentationRuntime.Readout(index,
+                    row.labelX() + (hasLabel ? minX : 0), row.labelY() + (hasLabel ? minY : 0),
+                    hasLabel ? maxX - minX : 0, hasLabel ? maxY - minY : 0, row.valueY(), valueWidth, valueHeight));
+        }
+        return List.copyOf(readouts);
     }
 
     private static boolean hasVisibleLivesRow(List<HudRow> rows) {
@@ -338,8 +390,10 @@ public class HudRenderManager {
     }
 
     private void drawBonusStageHud(LevelState levelGamestate) {
-        drawStaticFrame(selectRingsFrame(levelGamestate.getRings(), flashCycle(levelGamestate)), 16, 8, 0);
-        drawRings(com.openggf.game.LevelRingDisplay.value(levelGamestate), 8, 0);
+        HudProfileAccess.withReadout(graphicsManager, 0, () -> {
+            drawStaticFrame(selectRingsFrame(levelGamestate.getRings(), flashCycle(levelGamestate)), 16, 8, 0);
+            drawRings(com.openggf.game.LevelRingDisplay.value(levelGamestate), 8, 0);
+        });
     }
 
     private void drawRings(int rings, int y, int hudOrigin) {

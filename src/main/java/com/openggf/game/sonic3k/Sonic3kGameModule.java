@@ -486,6 +486,9 @@ public class Sonic3kGameModule implements GameModule {
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == com.openggf.game.session.WorldSessionPolicyProvider.class) {
+            return type.cast(com.openggf.game.sonic3k.mutators.Sonic3kMutatorPolicyProvider.INSTANCE);
+        }
         if (type == Sonic3kCheatFlags.class) {
             return (T) cheatFlags;
         }

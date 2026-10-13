@@ -84,6 +84,13 @@ final class ObjectCollisionResponseList {
         captureCompletedBuild();
     }
 
+    /** Explicit transient admission before the player slot, retaining native capacity and existing relative order. */
+    boolean admitBeforePlayer(ObjectInstance instance) {
+        if (!isEligible(instance) || previousObjects.size() >= S3K_MAX_ENTRIES) return false;
+        if (!previousObjects.contains(instance)) previousObjects.addFirst(instance);
+        return true;
+    }
+
     List<ObjectInstance> playerReadView() {
         return previousObjects;
     }
