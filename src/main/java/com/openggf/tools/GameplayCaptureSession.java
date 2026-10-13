@@ -100,6 +100,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
     }
 
     private boolean startAtTitle;
+    private com.openggf.mods.code.DevelopmentPatchLoader.PreparedDecorator developmentMod;
     /** Capture production title initialization and its ordinary GameLoop launch transition. */
     public void startAtTitle() { startAtTitle = true; boot.setBootToTitle(true); }
     /** Enable the existing ROM-backed SMPS presentation producer before boot. */
@@ -110,7 +111,11 @@ public final class GameplayCaptureSession implements AutoCloseable {
 
     /** Boots with a packaged patch mod applied, as if it were enabled in the launcher. */
     public void applyMod(Path modJar) throws IOException {
-        boot.setModuleDecorator(com.openggf.mods.code.DevelopmentPatchLoader.fromJar(modJar));
+        if (loop != null) throw new IllegalStateException("capture session is already booted");
+        var next = com.openggf.mods.code.DevelopmentPatchLoader.openJar(modJar);
+        if (developmentMod != null) developmentMod.close();
+        developmentMod = next;
+        boot.setLaunchModuleDecorator(developmentMod::apply);
     }
 
     /** Boots the level, consumes the title card, and optionally teleports the leader. */
@@ -537,9 +542,20 @@ public final class GameplayCaptureSession implements AutoCloseable {
             // current, or a second session in the same process renders black frames.
             com.openggf.game.session.WorldSessionPolicyAccess.closeScreens(com.openggf.game.session.SessionManager.getCurrentWorldSession());
             GraphicsManager.destroyForReinit();
-            boot.close();
         } finally {
-            GameServices.configuration().clearSessionOverrides();
+            try {
+                // Retire creator callbacks before releasing the jar loader that defines them.
+                boot.close();
+            } finally {
+                try {
+                    if (developmentMod != null) developmentMod.close();
+                } catch (IOException failure) {
+                    throw new java.io.UncheckedIOException("Failed to close capture mod loader", failure);
+                } finally {
+                    developmentMod = null;
+                    GameServices.configuration().clearSessionOverrides();
+                }
+            }
         }
     }
 

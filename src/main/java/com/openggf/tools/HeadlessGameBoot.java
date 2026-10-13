@@ -146,7 +146,8 @@ public final class HeadlessGameBoot implements AutoCloseable {
     private Rom rom;
     private HeadlessSmpsAudioBackend installedHeadlessAudioBackend;
     private boolean closed;
-    private java.util.function.UnaryOperator<GameModule> moduleDecorator = java.util.function.UnaryOperator.identity();
+    private java.util.function.BiFunction<GameModule, GameplayLaunchRequest, GameModule> moduleDecorator =
+            (module, request) -> module;
 
     /**
      * Wraps the detected game module before the gameplay session opens, as an enabled patch
@@ -158,7 +159,14 @@ public final class HeadlessGameBoot implements AutoCloseable {
     public void setBootToTitle(boolean enabled) { bootToTitle = enabled; }
 
     public void setModuleDecorator(java.util.function.UnaryOperator<GameModule> decorator) {
-        this.moduleDecorator = java.util.Objects.requireNonNull(decorator, "decorator");
+        java.util.Objects.requireNonNull(decorator, "decorator");
+        this.moduleDecorator = (module, request) -> decorator.apply(module);
+    }
+
+    /** Fresh creator registration is selected against this launch's native team. */
+    public void setLaunchModuleDecorator(
+            java.util.function.BiFunction<GameModule, GameplayLaunchRequest, GameModule> decorator) {
+        moduleDecorator = java.util.Objects.requireNonNull(decorator, "decorator");
     }
 
     /** Observes this boot's exact audio owner without exposing backend commands. */
@@ -437,11 +445,16 @@ public final class HeadlessGameBoot implements AutoCloseable {
 
         Optional<GameModule> detected =
                 services.romDetection().detectAndCreateModule(rom);
-        GameModule rootModule = moduleDecorator.apply(detected.orElseThrow(() ->
-                new IOException("No game module detected for ROM: " + description)));
+        GameModule rootModule = detected.orElseThrow(() ->
+                new IOException("No game module detected for ROM: " + description));
         // --- gameplay session + managers --------------------------------
         SessionManager.armNextGameplayAdmissionPolicy(admissionPolicy);
-        GameplayModeContext mode = openResolvedSessionForBoot(services, rootModule);
+        disableExternalContentForDeterminism();
+        var request = GameplayLaunchRequest.fromConfig(services.configuration(), rootModule.getGameId().code());
+        GameModule resolved = services.moduleResolutionService().resolveForLaunch(
+                moduleDecorator.apply(rootModule, request), request, ModuleResolutionService.LaunchPolicy.DETERMINISTIC);
+        GameplayModeContext mode = SessionManager.openGameplaySession(rootModule, resolved,
+                com.openggf.game.StockGameDataSources.pinned(rom, rootModule), null);
         GameModule module = mode.getWorldSession().resolvedGameModule();
         GameplaySessionFactory.attachManagers(mode, services, createGameplayCamera(services));
         if (!mode.isGameplayRuntimeReady()) {
@@ -454,6 +467,28 @@ public final class HeadlessGameBoot implements AutoCloseable {
         loop.setGameplayMode(mode);
         loop.setInputHandler(new InputHandler());
         loop.setGameMode(GameMode.LEVEL);
+        loop.setDataSelectActionHandler(action -> com.openggf.game.dataselect.NativeDataSelectLaunchFlow.launch(
+                action, services, loop, new com.openggf.game.dataselect.NativeDataSelectLaunchFlow.Host() {
+                    @Override public ModuleResolutionService.PreparedLaunch prepareLaunch() {
+                        return services.moduleResolutionService().prepareLaunch(ModuleResolutionService.LaunchPolicy.DETERMINISTIC);
+                    }
+                    @Override public GameModule resolve(ModuleResolutionService.PreparedLaunch launch,
+                            GameModule root, GameplayLaunchRequest launchRequest) {
+                        return services.moduleResolutionService().resolveForLaunch(launch,
+                                moduleDecorator.apply(root, launchRequest), launchRequest);
+                    }
+                    @Override public void initialize(GameplayModeContext gameplay) {
+                        // Keep the capture's physical input owner while replacing every world manager.
+                        GameplaySessionFactory.attachManagers(gameplay, services, createGameplayCamera(services));
+                        loop.setGameplayMode(gameplay);
+                        GameModule current = gameplay.getWorldSession().resolvedGameModule();
+                        GameModuleRegistry.setCurrent(current);
+                        GameplayTeamBootstrap.BootstrappedTeam launchTeam = GameplayTeamBootstrap.registerActiveTeam(
+                                current, gameplay.getSpriteManager(), services.configuration());
+                        gameplay.getCamera().setFocusedSprite(launchTeam.mainSprite());
+                        gameplay.getCamera().updatePosition(true);
+                    }
+                }));
 
         GameModuleRegistry.setCurrent(module);
 
