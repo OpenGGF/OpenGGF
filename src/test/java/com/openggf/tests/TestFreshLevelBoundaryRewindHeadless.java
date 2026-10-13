@@ -25,10 +25,12 @@ class TestFreshLevelBoundaryRewindHeadless {
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_FBZ, 1).build();
         var level = GameServices.level();
         var camera = GameServices.camera();
+        fixture.sprite().setRingCount(28);
         level.loadZoneAndActAtFreshTitleCardBoundary(Sonic3kZoneIds.ZONE_SOZ, 0);
         var player = fixture.sprite();
         assertTrue(level.hasPendingFreshLevelTransitionBoundary());
         assertEquals(0, player.getCentreX(), "fresh title holds the destination player slot");
+        assertEquals(28, player.getRingCount(), "only the title boundary borrows the source count");
         assertEquals(InitialProcessSpritesLifecycle.NONE,
                 level.capturePendingInitialProcessSpritesLifecycleForRewind(),
                 "the boundary retains the initial pass until real completion");
@@ -37,6 +39,10 @@ class TestFreshLevelBoundaryRewindHeadless {
         var registry = fixture.gameplayMode().getRewindRegistry();
         var unpublishedOwners = registry.capture();
         level.publishFreshLevelTransitionInitialBoundary();
+        assertEquals(0, player.getRingCount(), "native fresh assembly publishes the destination count");
+        player.setRingCount(3);
+        level.publishFreshLevelTransitionInitialBoundary();
+        assertEquals(3, player.getRingCount(), "publishing twice cannot erase a later counter write");
         short initialX = player.getCentreX();
         short initialY = player.getCentreY();
         short destinationCameraX = camera.getX();
@@ -50,6 +56,7 @@ class TestFreshLevelBoundaryRewindHeadless {
         short assembledXSpeed = player.getXSpeed();
         short assembledYSpeed = player.getYSpeed();
         assertFalse(level.hasPendingFreshLevelTransitionBoundary());
+        assertEquals(3, player.getRingCount(), "completion cannot repeat the already-published reset");
 
         // The actual initial object pass needs its captured object/native-slot
         // owners too. Replaying only the boundary against already-initialized
@@ -70,6 +77,8 @@ class TestFreshLevelBoundaryRewindHeadless {
         assertEquals(0x444, camera.getX(), "restore itself must not write the camera");
 
         level.publishFreshLevelTransitionInitialBoundary();
+        assertEquals(published ? 3 : 0, player.getRingCount(),
+                "rewind retains whether the destination counter boundary was published");
         if (published) {
             assertEquals(0x222, player.getCentreX(), "already-published boundary is idempotent");
             assertEquals(0x123, player.getXSpeed());
@@ -85,6 +94,7 @@ class TestFreshLevelBoundaryRewindHeadless {
         }
         int objectPasses = level.getObjectManager().getFrameCounter();
         level.completeFreshLevelTransitionBoundary();
+        assertEquals(published ? 3 : 0, player.getRingCount());
         assertEquals(assembledX, player.getCentreX());
         assertEquals(assembledY, player.getCentreY());
         assertEquals(assembledXSpeed, player.getXSpeed());

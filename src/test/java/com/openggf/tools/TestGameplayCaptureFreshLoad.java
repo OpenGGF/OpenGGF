@@ -17,9 +17,11 @@ class TestGameplayCaptureFreshLoad {
                 320, "sonic", "tails", "off", null, null, null);
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 7, 0, settings);
+            session.player().setRingCount(28);
             GameServices.level().requestZoneAndAct(4, 0);
             boolean destinationSeen = false;
             boolean pendingAssemblySeen = false;
+            boolean releasedCounterSeen = false;
             for (int frame = 0; frame < 400; frame++) {
                 session.step(null);
                 // Prepared resources publish through the real render-thread queue.
@@ -28,6 +30,12 @@ class TestGameplayCaptureFreshLoad {
                 if (level.getCurrentZone() != 4) continue;
                 destinationSeen = true;
                 pendingAssemblySeen |= level.hasPendingFreshLevelTransitionBoundary();
+                if (!level.hasPendingFreshLevelTransitionBoundary() && !releasedCounterSeen) {
+                    // loc_63B4's ordinary destination count must replace the
+                    // source count retained only for the locked title loop.
+                    assertEquals(0, session.player().getRingCount());
+                    releasedCounterSeen = true;
+                }
                 if (!level.hasPendingFreshLevelTransitionBoundary()
                         && !GameServices.fade().hasPendingCompletion()
                         && level.getFrameCounter() > 0) {
@@ -38,6 +46,7 @@ class TestGameplayCaptureFreshLoad {
                     assertFalse(livePlayer.isObjectControlled());
                     assertFalse(livePlayer.isControlLocked());
                     assertTrue(pendingAssemblySeen, "the test crosses the production deferred boundary");
+                    assertTrue(releasedCounterSeen);
                     return;
                 }
             }

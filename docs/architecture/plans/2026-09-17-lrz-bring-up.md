@@ -97,6 +97,66 @@ inherited HPZ negatives; Tails and the 320px pair still need controller-route
 repairs. The inactive ending-controller source used by this run is now
 committed as `60221d5c8` (blob `6ac3d60da28776fb511792a4fec64690dee885f4`).
 
+### Fresh ring publication and controller continuation
+
+The next controller-only pair candidate preserves the first 36,318 inputs,
+then jumps over the Toxomister body, uses a short jump against door 7's real
+side button, brakes and waits before the turbine bank, adjusts the door 5
+approach and retimes the final stair jump. Cloud-only shaking, delayed first
+jumps and the three spindash-release alternatives are rejected: they either
+miss the upper step or die to the placed flame. No slowdown, ceiling collision,
+damage or object state is changed to accommodate the input.
+
+One intermediate candidate reaches the final stairs but releases the boulder
+51 inputs late. Shifting the entire boss suffix by that delay still dies at
+45650; this is rejected. Retiming the earlier stair jump instead produces the
+real full load at 43566 and preserves the 43,761-input boss-act arrival at
+296/1196 with six rings. The complete 53,047-input candidate reaches HPZ alive
+at 393/2796. Both movie lengths and the existing route assertions are retained.
+These observations come from the existing production `GameplayInputBranchTool`,
+running cold with ordinary rendering from an immutable class snapshot copied
+under the worktree's build lock, a 1GiB heap/two active processors and surfaceless
+EGL with display variables absent. They do not certify the registry replay tests.
+
+The tool stops a branching candidate when the Level object changes. Its first
+LRZ boss-load row therefore shows the ordinary initial ring clear before the
+destination ScreenEvent. Treating that row's zero as erased carry was rejected:
+the full continuation shows ring 5 at 43560, zero at 43566, then five at 43567 and
+43570. Native `loc_63C14` saves `Act3_ring_count`/`Act3_timer` before
+`StartNewLevel`; `loc_59B1C` restores and clears that bank on the first destination
+ScreenEvent. An additional post-assembly carry hook was considered but never
+introduced. `LevelContinuationCarry` already models this ordering correctly.
+
+The uninterrupted HPZ result exposes a different, released-boundary defect:
+the boss approach naturally carries 28 rings, and HPZ ends with 31 rather than
+three. The ordinary `Obj_StartNewLevel`/`loc_86418` path has no Act3 bank;
+`StartNewLevel` clears `Last_star_post_hit`, and Level's `loc_63B4` clears rings
+after the title loop. `FreshLevelTransitionBoundaryController.load` temporarily
+restores the source count for that loop, but its playable snapshots do not
+capture `LevelState` rings. Releasing those snapshots leaves the source count
+live. Timer, score, lives and extra-life flags are not borrowed by this boundary
+and must not receive an arbitrary additional reset.
+
+The minimal correction captures the actual destination ring value alongside
+the deferred assembly. Initial publication, or direct omitted completion,
+publishes it once; the existing captured publication flag prevents a later
+completion from erasing a new counter write. The continuation path with no
+title owner remains untouched. A Java25 build completes in 55.912 seconds.
+Repeating the uninterrupted pair candidate on this compiled correction retains
+the valid LRZ 0→5 bank, clears HPZ 28→0 at 52926 and ends at 393/2796/ring 3 at 53046.
+On parent `83bb7f22c` plus the frozen correction (`15e898eb1`), the queued
+`TestFreshLevelBoundaryRewindHeadless,TestGameplayCaptureFreshLoad,TestS3kLevelContinuationHeadless,TestLevelContinuationCarry`
+check completes 14 tests with zero failures, errors or skips (26.833 seconds),
+using the absolute locked-on ROM path. The four mandatory S3K startup classes
+complete 60 tests, likewise without failures, errors or skips (25.273 seconds).
+The four selected LRZ route checks complete 4 tests with one failure and no
+errors or skips: the arrival route's `door6` fully-open assertion at 39980.
+The full pair HPZ, Knuckles HPZ and 800px HPZ identities pass without changed
+assertions. The arrival input remains provisional until its real button/open
+obligation is retimed or repaired; a successful endpoint does not erase that
+intermediate failure. These are focused checks, not a suite pass. Both temporary
+diagnostic JUnit probes completed and their source was removed.
+
 ## Goal and delivery rule
 
 Deliver three cold routes: Sonic + Tails `$900` → seamless `$901` → boulder cutscene → `$1600` →
