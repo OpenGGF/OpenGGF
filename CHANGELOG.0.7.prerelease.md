@@ -24,6 +24,8 @@ Unreleased. The earlier development themes remain in
   and the score awarded after the clock stops at the escape threshold. Its hit
   proxy and spikes recreate from captured placement, retain the exact boss
   identity, and retire at the native escape threshold while their owner remains alive.
+  Preserved cold Knuckles inputs now complete both Mushroom Hill acts and the
+  ship handoff into playable Flying Battery, with world replay and load-history checks.
 
 - **S3K endings:** Sonic and Tails continue from Death Egg or Doomsday into
   the Tornado rescue, earned Super Emerald restoration, reunion, ROM credits

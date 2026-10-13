@@ -57,6 +57,7 @@ class TestS3kMhzAct2AuthoredRoute {
         assertEquals(320, fixture.camera().getWidth());
         fixture.runner().primeInputState(movie.getFrame(0));
         var checked = new HashSet<String>();
+        var health = new HashSet<Integer>();
         // Captures omit title-card presentation; the recording driver retains
         // the native title owner. Allow neutral input for that destination tail.
         int frameLimit = movie.getFrameCount() + 600;
@@ -69,9 +70,11 @@ class TestS3kMhzAct2AuthoredRoute {
             var boss = manager.activeObjectsOfType(MhzEndBossInstance.class).stream().findFirst().orElse(null);
             String spot = null;
             if (boss != null && boss.getCustomFlag(0x100) != 0) {
+                health.add(boss.getState().hitCount);
+                if (boss.isDefeated()) assertEquals(1, boss.getState().hitCount, "native terminal health");
                 if (boss.getState().hitCount == 9) spot = "admission";
                 if (boss.getState().hitCount == 5) spot = "chase-hit";
-                if (boss.getState().hitCount == 1) spot = "last-hit";
+                if (boss.getState().hitCount == 1 && (boss.getCustomFlag(0x38) & 0x80) != 0) spot = "last-hit";
                 if (boss.isDefeated()) spot = "defeat";
                 if (boss.isDefeated() && GameServices.gameState().isEndOfLevelActive()) spot = "capsule-results";
                 if (!manager.activeObjectsOfType(MhzShipSequenceControllerInstance.class).isEmpty()) spot = "ship";
@@ -149,6 +152,8 @@ class TestS3kMhzAct2AuthoredRoute {
         if (pair) required.addAll(Set.of("opening-catapult", "first-pulley", "lower-loop",
                 "swing-vine", "shared-pulley-pull", "shared-pulley-climb", "final-catapult"));
         assertEquals(required, checked);
+        assertEquals(Set.of(1, 2, 3, 4, 5, 6, 7, 8, 9), health,
+                "loc_767F6 starts escape at one; no ninth hit to zero");
         assertEquals(4, GameServices.level().getCurrentZone());
         assertEquals(0, GameServices.level().getCurrentAct());
         assertFalse(GameServices.sprites().getMainPlayable().isObjectControlled());

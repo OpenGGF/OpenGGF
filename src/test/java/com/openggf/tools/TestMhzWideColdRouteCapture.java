@@ -29,6 +29,7 @@ class TestMhzWideColdRouteCapture {
         var spots = Set.of(11000, 12000, 13000, 13800, 14500, 15000, 16000,
                 17000, 18000, 18900, 19500, 20000, 21000, 21450, 22000, 22350);
         var checked = new HashSet<String>();
+        var health = new HashSet<Integer>();
         int reload = -1;
         // Preserve full drawing: MHZ replay controls cannot isolate a drawing gap.
         var drawing = new RouteFrameDrawing(true);
@@ -46,9 +47,11 @@ class TestMhzWideColdRouteCapture {
                 if (spots.contains(frame)) pending.add("wide-route-" + frame);
                 for (var boss : manager.activeObjectsOfType(MhzEndBossInstance.class)) {
                     if (boss.getCustomFlag(0x100) == 0) continue;
+                    health.add(boss.getState().hitCount);
+                    if (boss.isDefeated()) assertEquals(1, boss.getState().hitCount, "native terminal health");
                     if (boss.getState().hitCount == 9) pending.add("admission");
                     if (boss.getState().hitCount == 5) pending.add("chase-hit");
-                    if (boss.getState().hitCount == 1) pending.add("last-hit");
+                    if (boss.getState().hitCount == 1 && (boss.getCustomFlag(0x38) & 0x80) != 0) pending.add("last-hit");
                     if (boss.isDefeated()) pending.add("defeat");
                     if (boss.isDefeated() && GameServices.gameState().isEndOfLevelActive()) {
                         pending.add("capsule-results");
@@ -111,6 +114,8 @@ class TestMhzWideColdRouteCapture {
                     "capsule-results", "ship", "ship-carry", "fbz-loaded", "weather-fade"));
             spots.forEach(frame -> required.add("wide-route-" + frame));
             assertEquals(required, checked);
+            assertEquals(Set.of(1, 2, 3, 4, 5, 6, 7, 8, 9), health,
+                    "loc_767F6 starts escape at one; no ninth hit to zero");
             assertEquals(28981, reload);
             assertEquals(4, GameServices.level().getCurrentZone());
             assertEquals(0, GameServices.level().getCurrentAct());

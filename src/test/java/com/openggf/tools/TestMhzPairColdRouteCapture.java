@@ -30,7 +30,7 @@ class TestMhzPairColdRouteCapture {
         assertEquals(44004, movie.getFrameCount());
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "tails", "off", null, null, null);
         // Authored input 41705 is the live capsule approach, before ship carry and
-        // the actual FBZ load at input 43234. The released FBZ tail is longer than
+        // the actual FBZ load. The released FBZ tail is longer than
         // 480 inputs, so an end-relative activation would begin after that load.
         int beginOutgoingHistory = 41705;
         long outgoingHistory = 0;

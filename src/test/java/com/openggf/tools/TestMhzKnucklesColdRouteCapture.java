@@ -120,6 +120,142 @@ class TestMhzKnucklesColdRouteCapture {
         }
     }
 
+    @Test void coldKnucklesCompletesActTwoAndIsolatesTheFbzTimeline() throws Exception {
+        var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
+                "src/test/resources/routes/s3k/mhz2-knuckles-cold-complete-320.bk2"));
+        var actOne = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
+                "src/test/resources/routes/s3k/mhz1-knuckles-cold-complete-320.bk2"));
+        assertEquals(66271, movie.getFrameCount());
+        for (int frame = 0; frame < actOne.getFrameCount(); frame++) {
+            assertEquals(actOne.getFrame(frame), movie.getFrame(frame),
+                    "preserve qualified cold Act1 input " + frame);
+            assertEquals(0, movie.getFrame(frame).p2InputMask());
+        }
+        var settings = new GameplayCaptureSession.Settings(320, "knuckles", "", "off", null, null, null);
+        // Act1 has a separate 43-window contract. These windows cover the real
+        // Act2 switch, vines/loops, walls, earned ring recovery, final pulley,
+        // fresh ground jump/glide and the admitted end-boss chase.
+        var spots = Set.of(30050, 32145, 34660, 41911, 42512, 54220,
+                56200, 57500, 59574, 61196, 61830, 62200, 63690);
+        var checked = new HashSet<String>();
+        var health = new HashSet<Integer>();
+        int reload = -1;
+        long outgoingHistory = 0;
+        boolean isolatedHistory = false;
+        boolean escapedAtOne = false;
+        var drawing = new RouteFrameDrawing(true);
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 7, 0, settings);
+            int previousLives = GameServices.gameState().getLives();
+            for (int frame = 0; frame < movie.getFrameCount(); frame++) {
+                if (frame == 63600) GameServices.configuration().setSessionOverride(
+                        SonicConfiguration.LIVE_REWIND_ENABLED, true);
+                session.step(movie.getFrame(frame));
+                drawing.afterStep(session);
+                assertEquals(CharacterKey.KNUCKLES, session.player().characterKey());
+                assertEquals(320, GameServices.camera().getWidth());
+                assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
+                assertFalse(session.player().getDead(), "cold Knuckles death at " + frame);
+                assertFalse(session.player().isSuperSonic());
+                int lives = GameServices.gameState().getLives();
+                assertTrue(lives >= previousLives, "no hidden respawn at " + frame);
+                previousLives = lives;
+                var level = GameServices.level();
+                var manager = level.getObjectManager();
+                var pending = new HashSet<String>();
+                if (spots.contains(frame)) pending.add("knuckles-route-" + frame);
+                for (var boss : manager.activeObjectsOfType(
+                        com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance.class)) {
+                    if (boss.getCustomFlag(0x100) == 0) continue;
+                    health.add(boss.getState().hitCount);
+                    assertTrue(boss.getState().hitCount >= 1, "native MHZ terminal health is one");
+                    if (boss.getState().hitCount == 9) pending.add("admission");
+                    if (boss.getState().hitCount == 5) pending.add("chase-hit");
+                    if (boss.getState().hitCount == 1 && (boss.getCustomFlag(0x38) & 0x80) != 0) {
+                        // loc_760C4 has admitted the chase; a pending pre-arena
+                        // touch can briefly publish HP1 before sub_76782 clamps it.
+                        pending.add("terminal-flash");
+                    }
+                    if (boss.isDefeated()) {
+                        escapedAtOne = true;
+                        assertEquals(1, boss.getState().hitCount);
+                        pending.add("escape-at-one");
+                        if (GameServices.gameState().isEndOfLevelActive()) pending.add("capsule-results");
+                    }
+                }
+                if (level.getCurrentZone() == 7 && level.getCurrentAct() == 1
+                        && !manager.activeObjectsOfType(
+                            com.openggf.game.sonic3k.objects.MhzShipSequenceControllerInstance.class).isEmpty()) {
+                    pending.add("ship");
+                    if (session.player().isObjectControlled()) pending.add("ship-carry");
+                }
+                if (!manager.activeObjectsOfType(
+                        com.openggf.game.sonic3k.objects.bosses.MhzEndBossPaletteFadeController.class).isEmpty()) {
+                    pending.add("weather-fade");
+                }
+                var rewind = SessionManager.getCurrentGameplayMode().getRewindController();
+                if (frame >= 63600 && level.getCurrentZone() == 7) {
+                    outgoingHistory = Math.max(outgoingHistory, rewind.currentFrame());
+                } else if (level.getCurrentZone() == 4 && reload < 0) {
+                    reload = frame;
+                    assertTrue(outgoingHistory > 10, "record real outgoing live history");
+                    assertTrue(rewind.currentFrame() < outgoingHistory,
+                            "actual FBZ assembly retires the outgoing timeline");
+                    isolatedHistory = true;
+                }
+                if (level.getCurrentZone() == 4 && level.getCurrentAct() == 0
+                        && !level.hasPendingFreshLevelTransitionBoundary()
+                        && !SessionManager.getCurrentGameplayMode().getFadeManager().hasPendingCompletion()
+                        && level.getFrameCounter() > 0) pending.add("fbz-released");
+                pending.removeAll(checked);
+                if (pending.isEmpty()) continue;
+                assertEquals(com.openggf.game.GameMode.LEVEL, session.loop().getCurrentGameMode());
+                var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                drawing.checkpoint(session);
+                var saved = registry.capture();
+                var savedLevel = level.getCurrentLevel();
+                int horizon = Math.min(pending.contains("weather-fade") ? 90 : 45,
+                        movie.getFrameCount() - frame - 1);
+                if (frame < 66053) horizon = Math.min(horizon, 66053 - frame - 1);
+                assertTrue(horizon > 0, "same-world interval " + pending);
+                for (int n = 1; n <= horizon; n++) {
+                    session.step(movie.getFrame(frame + n));
+                    drawing.draw(session);
+                    assertSame(savedLevel, level.getCurrentLevel(), "same level replay " + pending);
+                    assertEquals(com.openggf.game.GameMode.LEVEL, session.loop().getCurrentGameMode());
+                }
+                var forward = registry.capture();
+                for (int cycle = 0; cycle < 2; cycle++) {
+                    registry.restore(saved);
+                    same(saved, registry.capture(), pending + " restore " + cycle);
+                    session.restoreInputHistory(movie.getFrame(frame));
+                    for (int n = 1; n <= horizon; n++) {
+                        session.step(movie.getFrame(frame + n));
+                        drawing.draw(session);
+                    }
+                    same(forward, registry.capture(), pending + " replay " + cycle);
+                }
+                registry.restore(saved);
+                session.restoreInputHistory(movie.getFrame(frame));
+                checked.addAll(pending);
+            }
+            var required = new HashSet<>(Set.of("admission", "chase-hit", "terminal-flash",
+                    "escape-at-one", "capsule-results", "ship", "ship-carry", "weather-fade", "fbz-released"));
+            spots.forEach(frame -> required.add("knuckles-route-" + frame));
+            assertEquals(required, checked);
+            assertEquals(Set.of(1, 2, 3, 4, 5, 6, 7, 8, 9), health);
+            assertTrue(escapedAtOne);
+            assertTrue(isolatedHistory);
+            assertEquals(66053, reload);
+            assertEquals(4, GameServices.level().getCurrentZone());
+            assertEquals(0, GameServices.level().getCurrentAct());
+            assertFalse(session.player().isObjectControlled());
+            assertFalse(session.player().isControlLocked());
+            assertTrue(session.player().getCentreX() > 128, "ordinary released FBZ movement");
+            System.out.println("MHZ Knuckles Act2: " + checked.size() + " two-cycle whole-world windows");
+        }
+    }
+
     private static void same(CompositeSnapshot expected, CompositeSnapshot actual, String label) {
         assertEquals(expected.entries().keySet(), actual.entries().keySet(), label);
         for (String key : expected.entries().keySet()) {

@@ -424,3 +424,84 @@ value and actual seamless history retirement. Source includes current develop
 optional S3K difficulty contracts and their candidate API pins are preserved.
 No stock rule or authoring-input change was made to accommodate those upstream
 contracts. The original combined selection pin remains `5e2f51f079`.
+
+
+### MHZ native terminal ownership and current route replay
+
+The cold Knuckles authoring prefix exposed a real terminal mismatch: after an
+admitted final hit, the old owner retained health one indefinitely instead of
+starting native escape. `sub_76782` runs after movement, including the same-update
+`loc_760C4` arena admission. Its pre-arena health floor therefore belongs in that
+tail, not immediately in the collision callback. `loc_767F6` / `loc_76822` starts
+escape at health one after the 32-dispatch flash; a ninth hit to zero is not the
+ROM contract. The correction preserves character-specific speed, the `$3F`
+underflow wait, clock stop before score, and the fractional low word while
+`loc_761A4` applies arena repetition after the unrebased escape threshold.
+Worker `e3dc92ea5` integrates as `b143f272e`; 169 affected boss, native damage,
+graph and schema checks pass at 20:53:51 BST with no failures, errors or skips.
+The 60 mandatory startup checks passed on the same normal boss owner at
+20:45:17 BST; later exact-parent reconstruction does not change normal offsets.
+
+The hit proxy now recreates its captured placement and exact captured boss
+reference. A two-live-boss negative proved the nearest-parent factory selected
+another owner. An earlier single-parent spawn mismatch was incomplete fixture
+dispatch: advancing the real moving parent and proxy together passed without
+that metadata change. Treating it as a production spawn-drift defect was rejected.
+
+On root `b143f272e` plus the native health assertions, the command below passes
+four cases at 21:05:03 BST, zero failures, errors or skips: native Sonic, solo
+Tails, native Sonic/Tails and paired live-history isolation. This is focused
+qualification before the subsequent native child-retirement follow-up; final
+combined source verification remains pending.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestS3kMhzAct2AuthoredRoute,TestMhzPairColdRouteCapture' "-Ds3k.rom.path=$S3K_TASK_ROM" test -B
+```
+
+Independent full-drawing controller replay on the immutable `b143f272e` runtime
+jar observes wide Sonic health nine through one, terminal flash at input 24797,
+escape at 24828, and the actual FBZ load at 28981. Cold native Knuckles retains
+the qualified 30,000-input Act1 prefix, reaches terminal health one at 63690,
+escapes at 63721 and loads FBZ at 66053. Input 66054 publishes the actual
+destination at `(96,1900)`, rings zero, and accepts ordinary right input.
+The selected safe endpoint at 66270 is grounded at `(779,1388)` with seven earned
+rings. These producer observations do not substitute for the new full-route
+world-replay and timeline-isolation contract, whose qualification is pending.
+
+Read-only review also identifies a native lifetime gap: `loc_76164` publishes
+parent status bit seven at `$44D0` while retaining the boss body. Both
+`Child_AddToTouchList` and spike `loc_76674` consume that signal and retire their
+children. The previous Java children only tested actual parent destruction;
+the misleading status-bit fixture tested that fallback. A captured local owner
+signal and graph-before/after regression are being qualified separately. The
+head's `$38` bit five and weather machine's own child owner remain distinct.
+
+
+The retirement follow-up `2688b2cf1` integrates as `f9ac22318`. Its174 affected
+native/component/graph/schema checks pass at21:11:56 BST with no failures,
+errors or skips. The native-threshold negatives fail exactly on the still-live
+proxy and spikes. Independent subtype negatives prove nearest-parent spike
+recreation can select another boss; captured placement and exact links now
+retain the real owner. A new explosion replay initially omitted the fixture's
+production RNG from its bounded registry; registering that existing RNG resolves
+the failure without changing production behavior or weakening comparisons.
+
+Final source `f9ac22318` plus the controller tests passes two cases at21:15:27 BST
+(1:57 Maven, zero failures/errors/skips): the new cold native320 Knuckles full
+chain and the existing800px Sonic chain. Knuckles's66271-input movie preserves
+all30000 Act1 inputs, remains alive without transformation or hidden respawn,
+visits every native boss health value9..1 and escapes at one, restores/replays
+22 Act2 windows twice and isolates live history at the actual FBZ load66053.
+Its final grounded FBZ endpoint has seven earned rings and released movement.
+The separate Act1 contract retains43 two-cycle windows. Wide Sonic retains all
+25 windows, health9..1 and actual load28981 with released ordinary FBZ control.
+The exact focused command is:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestMhzWideColdRouteCapture,TestMhzKnucklesColdRouteCapture#coldKnucklesCompletesActTwoAndIsolatesTheFbzTimeline' "-Ds3k.rom.path=$S3K_TASK_ROM" test -B
+```
+
+These are completed bounded controller/rewind results, not whole-game parity or
+all viewport/donor/lifecycle certification. The earlier native Sonic/Tails/team
+four-case pass is before the retirement follow-up; final combined smoke includes
+those identities on the consolidated source. No strict trace frontier is moved.

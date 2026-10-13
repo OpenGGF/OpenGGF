@@ -11,7 +11,7 @@ historically; current campaign act certification pending.
 | --- | --- |
 | Implemented | Historical source review missed composition gaps; the campaign has corrected entry/boss lifetime, shared defeat acknowledgement, results ownership and the ship Plane A consumer. |
 | Cold-reachable | Actual fresh MHZ1 incoming native320 Sonic solo route traverses Act2 and reaches FBZ1 without gameplay seeds or deaths (2026-09-23). |
-| Completable | The23775-input cold production capture includes all9 hits, actual capsule/results, ship carry and playable FBZ1. Other route products remain open. |
+| Completable | Cold native Sonic/Tails/pair and800px Sonic reach actual capsule/results, ship carry and released FBZ1. Native320 Knuckles now completes the full cold chain with terminal health one; current evidence below supersedes the historical ninth-hit-to-zero assumption. Other route products remain open. |
 | Native-accurate | Direct ROM review/local corrections; no complete native visual or frame-perfect claim. |
 | Rewind/standard | Native320 incoming route now passes all eight complete-registry restore/45-input replay spots through released FBZ1; five-preset entry/admission have independent short checks. Other breadth and lifecycle obligations remain incomplete. |
 
@@ -44,7 +44,7 @@ The console pulley debug-menu unlock is excluded; engine debug controls remain.
 Do not restart the excluded trace work.
 
 This matrix was assembled on 2026-09-23 from current test source and historical
-validation records. **Current component execution:498 cases pass, zero skips, on2026-09-23 at19:21 BST**
+validation records. **Historical component execution:498 cases pass, zero skips, on2026-09-23 at19:21 BST**
 (`b6c1147a2` plus campaign edits;37 explicitly selected non-trace MHZ classes).
 The campaign audit records the selection and limits; cold route authoring is ongoing. Existing
 unit/graph tests are candidates for the listed contracts, not proof of complete
@@ -59,7 +59,7 @@ baseline. They cannot be relabelled a green campaign baseline.
 | --- | --- |
 | Width | Current selectable presets are320/352/400/528/800. Entry and endboss admission are checked at all five presets; complete native320 traversal is observed. The same cold320 input at800 dies in MHZ1 at3523, before Act2, and is not an Act2 failure or wide completion proof. Donor/lifecycle breadth remains open. |
 | Donor | Native plus every currently supported S3K movement donor; resolve support from production before selecting cases. No per-act donor certification from the reviewed records. |
-| Main | Sonic and Tails, plus Sonic/Tails native pairing; Knuckles implementation expansion is excluded as above. Existing locked-on Knuckles camera test remains a regression, not route coverage. |
+| Main | Sonic and Tails, plus Sonic/Tails native pairing; October13 adds complete cold native320 Knuckles traversal. The September exclusion above is historical; other route products remain unqualified. |
 | Team | Solo/native pair are reviewed implementation paths. Mixed, duplicate and maximum participant shapes need current contract-derived authority/lifecycle checks; absence of evidence is not an unsupported classification. |
 | Lifecycle | Checkpoint respawn, death/restart, alternate entry where applicable, repeated loads, and exit behavior need their own short cases and width × supported-donor coverage. |
 
@@ -443,7 +443,7 @@ ordinary controllers only, with CPU-controlled P2. They were authored against
 immutable runtime `8438d7040` and the verified locked-on ROM, not seeded state
 or trace data.
 
-Current qualification on `2e992da7d` plus these route changes passes all three
+Earlier qualification on `2e992da7d` plus these route changes passes all three
 `TestS3kMhzAct2AuthoredRoute` cases (2026-10-13 17:51 BST, zero skips).
 The changed `TestMhzPairColdRouteCapture` passes at 18:04:43 BST (one case,
 zero skips). It activates live history at the capsule approach, input 41705,
@@ -488,3 +488,44 @@ The actual cold native320 Knuckles Act1→released Act2 rerun subsequently passe
 The command records normalize only machine-local paths: `S3K_TASK_QUEUE` is
 the updated main-workspace focused wrapper, and `S3K_TASK_ROM` is the absolute
 existing locked-on ROM path with the documented supported SHA-1.
+
+
+### Native terminal flow and full cold Knuckles completion, 2026-10-13
+
+Current native ownership is `f9ac22318` (`e3dc92ea5` / `2688b2cf1` integrated).
+`sub_76782` runs after movement/arena admission; its pre-arena floor preserves
+health two, and `loc_767F6` starts escape at health one after32 flash dispatches.
+Earlier descriptions of nine hits to zero reflected the old Java terminal
+assumption. Clock-stop/score ordering, character escape speed, `$3F` underflow
+wait and fractional arena-repeat position now follow their native owners.
+The proxy and both spikes retire on parent status-seven semantics at `$44D0`,
+while the boss body and head remain live. Fresh recreation preserves captured
+placement and exact parent identity, including independent two-parent negatives.
+The174-case native/component/graph/schema gate passes without failures,
+errors/skips at21:11:56 BST; the [dated record](../../plans/2026-10-13-s3k-playable-completion.md#mhz-native-terminal-ownership-and-current-route-replay)
+contains commands and negative-fixture attribution.
+
+`TestMhzKnucklesColdRouteCapture#coldKnucklesCompletesActTwoAndIsolatesTheFbzTimeline`
+passes on the integrated owner plus its new controller contract at21:15:27 BST,
+with the existing wide test (two cases, no failures/errors/skips). The66271-input
+`mhz2-knuckles-cold-complete-320` script/BK2 preserves the qualified30000-input
+Act1 prefix exactly. True cold native320 solo Knuckles covers thirteen fixed
+Act2 vine/loop/wall/ring/pulley/jump/glide spots plus nine dynamic boss/terminal/
+capsule/ship/weather/FBZ spots. All22 windows restore the entire world and
+replay twice; weather uses90 inputs and the other windows45, clamped before the
+actual fresh load. Every native health value9..1 is observed, escape remains at
+one, no death/transformation/hidden respawn occurs, and live history enabled at
+63600 resets at actual FBZ66053. Released destination movement ends grounded at
+`(779,1388)` with seven earned rings. The independent Act1 contract retains43
+windows and its seamless history barrier. This is cold traversal, rather than a
+positioned encounter or a movie whose raw parked load substitutes for control.
+
+The800px Sonic test retains25 two-cycle world windows and released FBZ control,
+actual load28981 and health9..1. Native Sonic/Tails/team and paired history pass
+four cases on preceding`b143f272e` at21:05:03 BST; consolidated smoke must cover
+them after the retirement follow-up. Other selectable widths, supported donors,
+team products and native whole-scene conformance remain inherited obligations.
+One inspected conformance follow-up is spike`loc_76674` status-six hit-flash
+suppression and separate draw/touch admission: current Java still combines its
+draw gate with touch flags. This bounded terminal/parent repair does not certify
+that branch or full native parity, and adds no accepted discrepancy.
