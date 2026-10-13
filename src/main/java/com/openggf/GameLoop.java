@@ -58,6 +58,7 @@ import com.openggf.game.save.SessionSaveRequests;
 import com.openggf.game.SpecialStageReturnSpawn;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.session.GameplayModeContext;
+import com.openggf.game.session.WorldSessionPolicyAccess;
 import com.openggf.game.session.ScheduledPlaybackInputOps;
 import com.openggf.game.session.SessionManager;
 import com.openggf.integration.presence.PresenceFormatter;
@@ -503,6 +504,11 @@ public class GameLoop {
 
     /** Draws the hosted run's screen-space overlay above the level and stock HUD. */
     public void renderHostedRunOverlay() {
+        var context = resolveGameplayModeContext();
+        var world=context==null?SessionManager.getCurrentWorldSession():context.getWorldSession();
+        if(world!=null)WorldSessionPolicyAccess.drawOverlay(world,new com.openggf.mods.ui.LevelOverlayCanvas(engineServices.graphics(),
+                camera==null?engineServices.graphics().getProjectionWidth():camera.getWidth(),
+                camera==null?Math.max(1,(int)engineServices.graphics().getScreenHeight()):camera.getHeight()));
         if (hostedRuns.isActive() && camera != null) {
             hostedRuns.drawOverlay(new com.openggf.mods.ui.LevelOverlayCanvas(
                     GameServices.graphics(), camera.getWidth(), camera.getHeight()));
@@ -830,6 +836,11 @@ public class GameLoop {
 
     /** Interactive 60/50 Hz presentation entry; canonical {@link #step()} remains one tick. */
     public void stepPresentationFrame() {
+        boolean chaosSetupBefore = currentGameMode != GameMode.LEVEL || levelManager == null
+                || levelManager.hasPendingInitialProcessSpritesPass()
+                || titleCardProvider != null && titleCardProvider.isOverlayActive();
+        boolean chaosPausedBefore = isPaused() || gameState != null && gameState.isGamePaused();
+        boolean chaosHeldBefore = resolveGameplayModeContext()!=null && WorldSessionPolicyAccess.holdsGameplay(resolveGameplayModeContext().getWorldSession());
         gameplayAudioRateOwned = GameLoopGameplayPacing.step(this, resolveGameplayModeContext(),
                 () -> levelManager == null ? null : levelManager.getCurrentLevel(),
                 inputHandler, audioManager, this::canUseGameplayPacing, this::canUseGameplayPacingOutsideRewind,
@@ -845,6 +856,27 @@ public class GameLoop {
                         runAfterStepMasterTitleLaunchCallbackIfPresent(); presenceManager.tick();
                     }
                 }, specialStagePacingInput, gameplayAudioRateOwned);
+        var context = resolveGameplayModeContext();
+        if (context != null) {
+            var phase = liveRewindManager.isRewindingOrReleasing() ? com.openggf.game.GameplayObservation.Phase.REWIND
+                    : isPaused() || gameState != null && gameState.isGamePaused() ? com.openggf.game.GameplayObservation.Phase.PAUSED
+                    : currentGameMode == GameMode.SPECIAL_STAGE || currentGameMode == GameMode.BONUS_STAGE
+                        ? com.openggf.game.GameplayObservation.Phase.STAGE
+                    : chaosPausedBefore ? com.openggf.game.GameplayObservation.Phase.PAUSED
+                    : chaosSetupBefore || currentGameMode != GameMode.LEVEL ? com.openggf.game.GameplayObservation.Phase.SETUP
+                    : levelManager == null || levelManager.hasPendingInitialProcessSpritesPass()
+                        || titleCardProvider != null && titleCardProvider.isOverlayActive()
+                        ? com.openggf.game.GameplayObservation.Phase.SETUP
+                    : !canUseGameplayPacing() || resolveFadeManager().isActive()
+                        ? com.openggf.game.GameplayObservation.Phase.TRANSITION
+                    : chaosHeldBefore ? com.openggf.game.GameplayObservation.Phase.HELD
+                    : com.openggf.game.GameplayObservation.Phase.ACTIVE;
+            WorldSessionPolicyAccess.onPresentation(context,inputHandler.logical(),phase);
+        } else if(currentGameMode==GameMode.TITLE_SCREEN || currentGameMode==GameMode.DATA_SELECT) {
+            WorldSessionPolicyAccess.onMenuPresentation(SessionManager.getCurrentWorldSession(),inputHandler.logical(),
+                    engineServices.graphics().getProjectionWidth(),Math.max(1,(int)engineServices.graphics().getScreenHeight()),
+                    engineServices.audio()::playSfx);
+        }
     }
 
     private void releaseGameplayAudioRate() {

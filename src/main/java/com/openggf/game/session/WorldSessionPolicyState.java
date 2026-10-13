@@ -10,11 +10,16 @@ public interface WorldSessionPolicyState {
     RewindSnapshottable<?> rewindAdapter();
     void beforeAssembly(LevelLoadCause cause);
     void bindRoster(SpriteManager sprites);
+    default void bindGameplay(GameplayModeContext context) { }
     default void beforeSpecialStageForwardTick() { }
+    default void observeTick(com.openggf.LevelFrameContext context, com.openggf.control.LogicalInputSnapshot input) { }
     default void beforeNativeTick(com.openggf.LevelFrameContext context, com.openggf.control.LogicalInputSnapshot input) { }
     default void afterNativeTick(com.openggf.LevelFrameContext context, com.openggf.control.LogicalInputSnapshot input) { }
     default void onPresentation(GameplayModeContext context, com.openggf.control.LogicalInputSnapshot input,
                                 com.openggf.game.GameplayObservation.Phase phase) { }
+    default void onMenuPresentation(com.openggf.control.LogicalInputSnapshot input,int width,int height,
+                                    java.util.function.Consumer<com.openggf.audio.GameSound> sounds) { }
+    default void leaveOrdinaryGameplay(com.openggf.game.GameplayObservation.Phase phase) { }
     default void drawOverlay(com.openggf.mods.ui.PixelCanvas canvas) { }
     default boolean holdsGameplay() { return false; }
     void failedAssembly(LevelLoadCause cause);

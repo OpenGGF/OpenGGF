@@ -1733,6 +1733,7 @@ CONSTRUCTOR com.openggf.mods.mutators.PlayerMotionPolicy public  <init>(com.open
 CONSTRUCTOR com.openggf.mods.mutators.ProjectileRulePolicy public  <init>(com.openggf.mods.mutators.ProjectileRulePolicy$Kind)
 CONSTRUCTOR com.openggf.mods.mutators.RelocationPolicy public  <init>(com.openggf.mods.mutators.RelocationPolicy$Kind)
 CONSTRUCTOR com.openggf.mods.mutators.RingEconomyPolicy public  <init>(com.openggf.mods.mutators.RingEconomyPolicy$Kind)
+CONSTRUCTOR com.openggf.mods.mutators.RingEconomyPolicy public  <init>(com.openggf.mods.mutators.RingEconomyPolicy$Kind,int)
 CONSTRUCTOR com.openggf.mods.mutators.ScenePresentationPolicy public  <init>(com.openggf.mods.mutators.ScenePresentationPolicy$Mode,int,int)
 CONSTRUCTOR com.openggf.mods.mutators.ScenePresentationPolicy public  <init>(com.openggf.mods.mutators.ScenePresentationPolicy$Mode,int,int,int)
 CONSTRUCTOR com.openggf.mods.mutators.SignedGravityPolicy public  <init>()
@@ -3096,6 +3097,7 @@ FIELD com.openggf.mods.mutators.RelocationPolicy$Kind public,static,final com.op
 FIELD com.openggf.mods.mutators.RelocationPolicy$Kind public,static,final com.openggf.mods.mutators.RelocationPolicy$Kind TEAM_SWAP
 FIELD com.openggf.mods.mutators.RingEconomyPolicy$Kind public,static,final com.openggf.mods.mutators.RingEconomyPolicy$Kind BALANCE
 FIELD com.openggf.mods.mutators.RingEconomyPolicy$Kind public,static,final com.openggf.mods.mutators.RingEconomyPolicy$Kind BOUNTY
+FIELD com.openggf.mods.mutators.RingEconomyPolicy$Kind public,static,final com.openggf.mods.mutators.RingEconomyPolicy$Kind COMPLETION_REWARD
 FIELD com.openggf.mods.mutators.RingEconomyPolicy$Kind public,static,final com.openggf.mods.mutators.RingEconomyPolicy$Kind LEAK
 FIELD com.openggf.mods.mutators.RingEconomyPolicy$Kind public,static,final com.openggf.mods.mutators.RingEconomyPolicy$Kind RAIN
 FIELD com.openggf.mods.mutators.ScenePresentationPolicy$Mode public,static,final com.openggf.mods.mutators.ScenePresentationPolicy$Mode INPUT_SQUASH
@@ -8975,6 +8977,7 @@ METHOD com.openggf.level.LevelManager public  com.openggf.game.resources.Dynamic
 METHOD com.openggf.level.LevelManager public  com.openggf.game.rewind.RewindSnapshottable<?> levelTransitionRewindSnapshottable()
 METHOD com.openggf.level.LevelManager public  com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.LevelSnapshot> levelRewindSnapshottable()
 METHOD com.openggf.level.LevelManager public  com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.LevelTilemapSnapshot> levelTilemapRewindSnapshottable()
+METHOD com.openggf.level.LevelManager public  com.openggf.game.session.WorldSession getWorldSession()
 METHOD com.openggf.level.LevelManager public  com.openggf.level.BigRingReturnState getBigRingReturn()
 METHOD com.openggf.level.LevelManager public  com.openggf.level.ChunkDesc getChunkDescAt(byte,int,int)
 METHOD com.openggf.level.LevelManager public  com.openggf.level.ChunkDesc getChunkDescAt(byte,int,int,boolean)
@@ -12016,6 +12019,7 @@ METHOD com.openggf.mods.mutators.RelocationPolicy$Kind public,static  com.opengg
 METHOD com.openggf.mods.mutators.RelocationPolicy$Kind public,static  com.openggf.mods.mutators.RelocationPolicy$Kind[] values()
 METHOD com.openggf.mods.mutators.RingEconomyPolicy public  com.openggf.mods.mutators.MutatorCapability capability()
 METHOD com.openggf.mods.mutators.RingEconomyPolicy public  com.openggf.mods.mutators.RingEconomyPolicy$Kind kind()
+METHOD com.openggf.mods.mutators.RingEconomyPolicy public  int amount()
 METHOD com.openggf.mods.mutators.RingEconomyPolicy public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.mods.mutators.RingEconomyPolicy public,final  int hashCode()
 METHOD com.openggf.mods.mutators.RingEconomyPolicy public,final  java.lang.String toString()
@@ -12056,6 +12060,8 @@ METHOD com.openggf.mods.mutators.SpritePresentationPolicy$Mode public,static  co
 METHOD com.openggf.mods.mutators.SpritePresentationPolicy$Mode public,static  com.openggf.mods.mutators.SpritePresentationPolicy$Mode[] values()
 METHOD com.openggf.mods.mutators.SpritePresentationPolicy$Target public,static  com.openggf.mods.mutators.SpritePresentationPolicy$Target valueOf(java.lang.String)
 METHOD com.openggf.mods.mutators.SpritePresentationPolicy$Target public,static  com.openggf.mods.mutators.SpritePresentationPolicy$Target[] values()
+METHOD com.openggf.mods.mutators.TemporaryMutators public  com.openggf.mods.mutators.TemporaryMutators$ActivationResult complete(long,boolean)
+METHOD com.openggf.mods.mutators.TemporaryMutators public  java.util.Optional<com.openggf.mods.scene.SceneRomArt> nativeArt()
 METHOD com.openggf.mods.mutators.TemporaryMutators public,abstract  boolean cancel(long)
 METHOD com.openggf.mods.mutators.TemporaryMutators public,abstract  com.openggf.mods.mutators.TemporaryMutators$ActivationResult activate(java.lang.String,java.util.Map<java.lang.String,java.lang.Object>,long)
 METHOD com.openggf.mods.mutators.TemporaryMutators public,abstract  com.openggf.mods.mutators.TemporaryMutators$ActivationResult replace(long,java.util.Map<java.lang.String,java.lang.Object>)
@@ -17504,6 +17510,7 @@ RECORD-COMPONENT com.openggf.mods.mutators.PlayerMotionPolicy mode com.openggf.m
 RECORD-COMPONENT com.openggf.mods.mutators.PlayerMotionPolicy speedCap int
 RECORD-COMPONENT com.openggf.mods.mutators.ProjectileRulePolicy kind com.openggf.mods.mutators.ProjectileRulePolicy$Kind
 RECORD-COMPONENT com.openggf.mods.mutators.RelocationPolicy kind com.openggf.mods.mutators.RelocationPolicy$Kind
+RECORD-COMPONENT com.openggf.mods.mutators.RingEconomyPolicy amount int
 RECORD-COMPONENT com.openggf.mods.mutators.RingEconomyPolicy kind com.openggf.mods.mutators.RingEconomyPolicy$Kind
 RECORD-COMPONENT com.openggf.mods.mutators.ScenePresentationPolicy magnitude int
 RECORD-COMPONENT com.openggf.mods.mutators.ScenePresentationPolicy mode com.openggf.mods.mutators.ScenePresentationPolicy$Mode

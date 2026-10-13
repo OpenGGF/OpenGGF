@@ -17,6 +17,17 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
     // Identity allocation only. No configuration or gameplay values live in process statics.
     private static final AtomicLong GENERATIONS = new AtomicLong();
     final MutatorSessionState state;
+    private final long generation;
+    private final com.openggf.mods.code.ModFaultBoundary faults;
+    private final TemporaryMutatorState temporary;
+    private final com.openggf.mods.code.GameplayObserverRegistry observers;
+    private long visitGeneration, nativeTicks;
+    private com.openggf.game.LevelLoadCause loadCause = LevelLoadCause.FULL_LEVEL_ASSEMBLY;
+    private com.openggf.game.GameplayObservation observation;
+    private com.openggf.game.session.GameplayModeContext gameplayContext;
+    private boolean retired;
+    private java.util.Optional<com.openggf.mods.scene.SceneRomArt> nativeArt;
+    private java.util.function.Consumer<com.openggf.audio.GameSound> observerSounds=ignored -> { };
     private final WorldSession world;
     private final MutatorSupportProfile support;
     private final MutatorPreferenceStore store;
@@ -31,6 +42,7 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
 
     MutatorWorldState(WorldSession world, MutatorCatalog catalog, MutatorSupportProfile support) {
         this.world = world;
+        faults=catalog.faults();
         this.support = support;
         String profile = world.rootGameModule().getGameId().code();
         var preferenceRoot = com.openggf.game.save.SavePaths.root().toAbsolutePath().normalize().resolve("mutators");
@@ -43,16 +55,29 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
         Map<String, MutatorSessionState.Configuration> requested = Map.of();
         try { requested = preferences.forSession(catalog.definitions()); }
         catch (IllegalArgumentException invalid) { saveError = invalid.getMessage(); }
-        state = new MutatorSessionState(GENERATIONS.incrementAndGet(), catalog.definitions(),
+        generation = GENERATIONS.incrementAndGet();
+        observers = world.resolvedGameModule().getGameService(com.openggf.mods.code.GameplayObserverRegistry.class);
+        state = new MutatorSessionState(generation, catalog.definitions(),
                 support == null ? Set.of() : Set.copyOf(support.capabilities(0, 0)),
                 catalog.faults(), catalog.faults()::isOwnerAvailable, requested);
+        temporary = new TemporaryMutatorState(generation,catalog.definitions(),catalog.faults(),
+                () -> state.effective().policies().keySet(),this::nativeArt);
         entryRuntime = new com.openggf.game.mutators.LevelMutatorRuntime(world);
         pacing = new com.openggf.game.mutators.GameplayMutatorPacing(() ->
                 state.isClosed() ? com.openggf.game.mutators.GameplayMutatorPolicy.STOCK
-                        : state.effectiveBeforeNextForwardTick().gameplayPolicy(availableCapabilities()));
+                        : composed(state.effectiveBeforeNextForwardTick()).gameplayPolicy(availableCapabilities()));
     }
 
     @Override public void beforeAssembly(LevelLoadCause cause) {
+        loadCause=cause;
+        if(cause!=LevelLoadCause.DECODE_ONLY && cause!=LevelLoadCause.PREVIEW) {
+            try {
+                if(observation!=null) {
+                    observation=withPhase(com.openggf.game.GameplayObservation.Phase.TRANSITION);
+                    dispatch((observer,port) -> observer.onBoundary(observation,port));
+                }
+            } finally { temporary.clear();visitGeneration++;nativeTicks=0; }
+        }
         MutatorSessionState.LoadCause mapped = mapped(cause);
         if (mapped == null || !mapped.qualifies()) return;
         // A fresh native assembly cannot inherit fractional time or input edges.
@@ -77,12 +102,13 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
 
     @Override public void bindRoster(SpriteManager sprites) {
         SpriteManagerInternalAccess.bindMutatorPolicies(sprites, new PlayableMutatorPolicySource() {
+            @Override public com.openggf.game.mutators.TransientMutatorPolicySource transientPolicies() { return temporary; }
             @Override public void beforeForwardTick() { state.onForwardTick(); }
             @Override public PlayableMutatorPolicy policyFor(AbstractPlayableSprite sprite) {
                 if (support == null || state.isClosed()) return PlayableMutatorPolicy.STOCK;
                 boolean leader = sprites.getMainPlayable() == sprite;
                 Set<MutatorCapability> available = Set.copyOf(support.capabilities(world.getCurrentZone(), world.getCurrentAct()));
-                var effective = state.effective();
+                var effective = composed(state.effective());
                 int gravity = available.contains(MutatorCapability.DRY_SONIC_GRAVITY)
                         && support.supportsPlayer(MutatorCapability.DRY_SONIC_GRAVITY, sprite.characterKey().persisted(), leader)
                         ? effective.gravityPercent() : 100;
@@ -117,7 +143,10 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
         return support != null && !support.capabilities(world.getCurrentZone(), world.getCurrentAct()).isEmpty();
     }
     void ownScreen(com.openggf.mods.mutators.MutatorConfigurationScreen screen) { screens.add(screen); }
-    @Override public void closeScreens() { screens.forEach(com.openggf.mods.mutators.MutatorConfigurationScreen::close); }
+    @Override public void closeScreens() {
+        temporary.clear();
+        screens.forEach(com.openggf.mods.mutators.MutatorConfigurationScreen::close);
+    }
 
     /** Host-selected settings directory, created without following existing ancestor symlinks.
      * Publication separately pins directory identity and uses SecureDirectoryStream.
@@ -163,21 +192,22 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
             return type.cast((com.openggf.game.mutators.ObjectHeadScaleSource) (role, rings) ->
                     state.isClosed() || !availableCapabilities().contains(MutatorCapability.BIG_HEAD)
                             || role == com.openggf.game.mutators.ObjectHeadRole.NONE ? 100
-                            : state.effective().headScalePercent(role == com.openggf.game.mutators.ObjectHeadRole.BADNIK
+                            : composed(state.effective()).headScalePercent(role == com.openggf.game.mutators.ObjectHeadRole.BADNIK
                                     ? MutatorPolicy.HeadTarget.BADNIKS : MutatorPolicy.HeadTarget.BOSSES, rings));
         }
+        if (type == com.openggf.game.mutators.TransientMutatorPolicySource.class) return type.cast(temporary);
         if (type == MutatorWorldState.class) return type.cast(this);
         if (type == com.openggf.game.mutators.LevelMutatorRuntime.class) return type.cast(entryRuntime);
         if (type == com.openggf.game.mutators.GameplayMutatorPacing.class) return type.cast(pacing);
         if (type == com.openggf.game.mutators.LevelMutatorPolicySource.class) {
             return type.cast((com.openggf.game.mutators.LevelMutatorPolicySource)
                     () -> state.isClosed() ? com.openggf.game.mutators.LevelMutatorPolicy.STOCK
-                            : state.effective().levelPolicy(availableCapabilities()));
+                            : composed(state.effective()).levelPolicy(availableCapabilities()));
         }
         if (type == com.openggf.game.mutators.GameplayMutatorPolicySource.class) {
             return type.cast((com.openggf.game.mutators.GameplayMutatorPolicySource)
                     () -> state.isClosed() ? com.openggf.game.mutators.GameplayMutatorPolicy.STOCK
-                            : state.effective().gameplayPolicy(availableCapabilities()));
+                            : composed(state.effective()).gameplayPolicy(availableCapabilities()));
         }
         return null;
     }
@@ -185,25 +215,120 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
         return support == null || state.isClosed() ? Set.of()
                 : Set.copyOf(support.capabilities(world.getCurrentZone(), world.getCurrentAct()));
     }
+    private java.util.Optional<com.openggf.mods.scene.SceneRomArt> nativeArt() {
+        if(nativeArt==null)nativeArt=world.getDataSource().rom().map(rom ->
+                com.openggf.mods.scene.host.SceneRomArtFactory.forModule(world.rootGameModule(),rom));
+        return nativeArt;
+    }
+    private MutatorSessionState.Effective composed(MutatorSessionState.Effective base) {
+        var policies=new java.util.LinkedHashMap<>(base.policies());
+        var grouped=new java.util.LinkedHashMap<String,java.util.List<MutatorPolicy>>();
+        for(var entry:temporary.entries())grouped.computeIfAbsent("temporary/"+entry.activationId(),ignored -> new java.util.ArrayList<>()).add(entry.policy());
+        policies.putAll(grouped);
+        return new MutatorSessionState.Effective(base.revision(),policies);
+    }
+    @Override public boolean holdsGameplay() {
+        return temporary.entries().stream().anyMatch(e -> e.policy() instanceof GameplayHoldPolicy);
+    }
+    @Override public void onPresentation(com.openggf.game.session.GameplayModeContext context,
+            com.openggf.control.LogicalInputSnapshot input,com.openggf.game.GameplayObservation.Phase phase) {
+        if(retired)return; gameplayContext=context;
+        observerSounds=context::playObservedSfx;
+        admitPhaseBoundary(phase);
+        if(phase==com.openggf.game.GameplayObservation.Phase.ACTIVE || phase==com.openggf.game.GameplayObservation.Phase.HELD)
+            temporary.advancePresentation(phase==com.openggf.game.GameplayObservation.Phase.HELD);
+        observation=com.openggf.game.session.GameplayObservationFactory.capture(world,generation,visitGeneration,temporary.clock(),nativeTicks,
+                context,null,input,phase,loadCause);
+        dispatch((observer,port) -> observer.onPresentation(observation,port));
+    }
+    @Override public void onMenuPresentation(com.openggf.control.LogicalInputSnapshot input,int width,int height,
+            java.util.function.Consumer<com.openggf.audio.GameSound> sounds) {
+        if(retired)return;observerSounds=sounds;
+        observation=new com.openggf.game.GameplayObservation(generation,visitGeneration,temporary.clock(),nativeTicks,
+                com.openggf.game.GameplayObservation.Phase.SETUP,world.getCurrentZone(),world.getCurrentAct(),width,height,
+                java.util.Optional.empty(),java.util.List.of(),input,loadCause);
+        dispatch((observer,port) -> observer.onPresentation(observation,port));
+    }
+    @Override public void observeTick(com.openggf.LevelFrameContext context,com.openggf.control.LogicalInputSnapshot input) {
+        if(retired)return;
+        var leader=context.spriteManager()==null?null:context.spriteManager().getMainPlayable();
+        var phase=leader!=null && leader.getDead() || context.levelManager()!=null && context.levelManager().isLevelInactiveForTransition()
+                ? com.openggf.game.GameplayObservation.Phase.TRANSITION : com.openggf.game.GameplayObservation.Phase.ACTIVE;
+        admitPhaseBoundary(phase);
+        observation=com.openggf.game.session.GameplayObservationFactory.capture(world,generation,visitGeneration,temporary.clock(),nativeTicks,
+                gameplayContext,context,input,phase,loadCause);
+        dispatch((observer,port) -> observer.onTick(observation,port));
+    }
+    private void admitPhaseBoundary(com.openggf.game.GameplayObservation.Phase phase) {
+        if((phase==com.openggf.game.GameplayObservation.Phase.SETUP || phase==com.openggf.game.GameplayObservation.Phase.STAGE
+                || phase==com.openggf.game.GameplayObservation.Phase.TRANSITION)
+                && (observation==null || observation.phase()!=phase || !temporary.entries().isEmpty()))
+            com.openggf.game.session.WorldSessionPolicyAccess.leaveOrdinaryGameplay(world,phase);
+    }
+    @Override public void leaveOrdinaryGameplay(com.openggf.game.GameplayObservation.Phase phase) {
+        try {
+            if(observation!=null) {
+                observation=withPhase(phase);
+                if(!com.openggf.game.session.WorldSessionPolicyAccess.replaying(world))
+                    dispatch((observer,port) -> observer.onBoundary(observation,port));
+            }
+        } finally { temporary.clear(); }
+    }
+    @Override public void afterNativeTick(com.openggf.LevelFrameContext context,com.openggf.control.LogicalInputSnapshot input) { nativeTicks++; }
+    @Override public void drawOverlay(com.openggf.mods.ui.PixelCanvas canvas) {
+        if(observers!=null && observation!=null && !retired)for(var entry:observers.entries())
+            if(temporary.ownerAvailable(entry.owner()))entry.observer().drawOverlay(canvas,observation);
+    }
+    private void dispatch(java.util.function.BiConsumer<com.openggf.game.GameplayObserver,TemporaryMutators> callback) {
+        if(observers==null)return;
+        for(var entry:observers.entries()) {
+            if(!temporary.ownerAvailable(entry.owner()))continue;
+            try(var port=temporary.open(entry.owner(),availableCapabilities(),observerSounds,observation!=null && (observation.phase()==com.openggf.game.GameplayObservation.Phase.ACTIVE
+                    || observation.phase()==com.openggf.game.GameplayObservation.Phase.HELD))) { callback.accept(entry.observer(),port); }
+        }
+    }
+    private com.openggf.game.GameplayObservation withPhase(com.openggf.game.GameplayObservation.Phase phase) {
+        var o=observation;
+        return new com.openggf.game.GameplayObservation(generation,visitGeneration,temporary.clock(),nativeTicks,phase,o.zone(),o.act(),
+                o.viewportWidth(),o.viewportHeight(),o.leader(),o.team(),o.input(),loadCause);
+    }
     @Override public RewindSnapshottable<?> rewindAdapter() { return this; }
     @Override public void failedAssembly(LevelLoadCause cause) {
         if (cause != LevelLoadCause.DECODE_ONLY && cause != LevelLoadCause.PREVIEW) {
-            entryRuntime.retire(); pacing.reset(); state.close();
+            temporary.retire(); entryRuntime.retire(); pacing.reset(); state.close();
         }
     }
-    @Override public void retire() { closeScreens(); entryRuntime.retire(); pacing.reset(); state.close(); }
+    @Override public void retire() {
+        if(retired)return; retired=true;
+        var availableObservers=observers==null?java.util.List.<com.openggf.mods.code.GameplayObserverRegistry.Entry>of():
+                observers.entries().stream().filter(e -> faults.isOwnerAvailable(e.owner())).toList();
+        temporary.retire(); entryRuntime.retire(); pacing.reset(); state.close();
+        RuntimeException first=null;
+        try { closeScreens(); } catch(RuntimeException failure) { first=failure; }
+        for(var entry:availableObservers) {
+            try { entry.observer().close(); } catch(RuntimeException failure) {
+                if(first==null)first=failure;else first.addSuppressed(failure);
+            }
+        }
+        gameplayContext=null;
+        if(first!=null)throw first;
+    }
     @Override public String key() { return "mutators"; }
-    @Override public Snapshot capture() { return new Snapshot(state.snapshot(), entryRuntime.capture(), pacing.capture()); }
+    @Override public Snapshot capture() { return new Snapshot(state.snapshot(), entryRuntime.capture(), pacing.capture(),temporary.capture(),visitGeneration,nativeTicks,observation,loadCause); }
     @Override public void restore(Snapshot snapshot) {
         // The registered world adapter precedes player/object reconstruction. Saved
         // preferences and host owner quarantine remain outside this historical state.
         state.restore(snapshot.policies());
         entryRuntime.restore(snapshot.entries());
         pacing.restore(snapshot.pacing());
+        temporary.restore(snapshot.temporary());
+        visitGeneration=snapshot.visitGeneration(); nativeTicks=snapshot.nativeTicks(); observation=snapshot.observation();loadCause=snapshot.loadCause();
     }
     record Snapshot(MutatorSessionState.Snapshot policies,
                     com.openggf.game.mutators.LevelMutatorRuntime.Snapshot entries,
-                    com.openggf.game.mutators.GameplayMutatorPacing.Snapshot pacing) {
+                    com.openggf.game.mutators.GameplayMutatorPacing.Snapshot pacing,
+                    TemporaryMutatorState.Snapshot temporary,long visitGeneration,long nativeTicks,
+                    com.openggf.game.GameplayObservation observation,LevelLoadCause loadCause) {
         Snapshot {
             java.util.Objects.requireNonNull(policies);
             java.util.Objects.requireNonNull(entries);

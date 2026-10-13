@@ -30,11 +30,16 @@ public final class CompositeWorldSessionPolicyState implements WorldSessionPolic
         for (int i=0;i<children.size();i++) ((RewindSnapshottable)children.get(i).rewindAdapter()).restore(snapshot.get(i));
     }
     @Override public void beforeAssembly(LevelLoadCause cause) { children.forEach(c -> c.beforeAssembly(cause)); }
+    @Override public void bindGameplay(GameplayModeContext context) { children.forEach(c -> c.bindGameplay(context)); }
     @Override public void bindRoster(SpriteManager sprites) { children.forEach(c -> c.bindRoster(sprites)); }
     @Override public void beforeSpecialStageForwardTick() { children.forEach(WorldSessionPolicyState::beforeSpecialStageForwardTick); }
+    @Override public void observeTick(LevelFrameContext context, LogicalInputSnapshot input) { children.forEach(c -> c.observeTick(context,input)); }
     @Override public void beforeNativeTick(LevelFrameContext context, LogicalInputSnapshot input) { children.forEach(c -> c.beforeNativeTick(context,input)); }
     @Override public void afterNativeTick(LevelFrameContext context, LogicalInputSnapshot input) { children.forEach(c -> c.afterNativeTick(context,input)); }
     @Override public void onPresentation(GameplayModeContext context, LogicalInputSnapshot input, GameplayObservation.Phase phase) { children.forEach(c -> c.onPresentation(context,input,phase)); }
+    @Override public void onMenuPresentation(LogicalInputSnapshot input,int width,int height,
+            java.util.function.Consumer<com.openggf.audio.GameSound> sounds) { children.forEach(c -> c.onMenuPresentation(input,width,height,sounds)); }
+    @Override public void leaveOrdinaryGameplay(GameplayObservation.Phase phase) { clean(c -> c.leaveOrdinaryGameplay(phase)); }
     @Override public void drawOverlay(PixelCanvas canvas) { children.forEach(c -> c.drawOverlay(canvas)); }
     @Override public boolean holdsGameplay() { return children.stream().anyMatch(WorldSessionPolicyState::holdsGameplay); }
     @Override public void failedAssembly(LevelLoadCause cause) { clean(c -> c.failedAssembly(cause)); }

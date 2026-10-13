@@ -32,7 +32,7 @@ final class OwnedModServices {
                     fixed.put(service.getKey(), service.getKey().cast(Objects.requireNonNull(service.getValue())));
                 }
                 for (var service : bundle.dynamicServices().entrySet()) {
-                    if (service.getKey() == GameplayFrameController.class)
+                    if (service.getKey() == GameplayFrameController.class || service.getKey() == com.openggf.game.GameplayObserver.class)
                         throw new IllegalArgumentException("Frame controllers need a stable captured bundle instance");
                     if (fixed.containsKey(service.getKey()) || dynamic.containsKey(service.getKey()))
                         throw new IllegalArgumentException("Duplicate owner service contract: " + service.getKey().getName());
@@ -43,6 +43,10 @@ final class OwnedModServices {
             Object controller = fixed.get(GameplayFrameController.class);
             if (controller instanceof RewindSnapshottable<?> && adapters.values().stream().noneMatch(value -> value == controller))
                 throw new IllegalArgumentException("A rewindable frame controller must be captured in its service graph");
+            Object observer = fixed.get(com.openggf.game.GameplayObserver.class);
+            if (observer != null && (!(observer instanceof RewindSnapshottable<?>)
+                    || adapters.values().stream().noneMatch(value -> value == observer)))
+                throw new IllegalArgumentException("Gameplay observers require a stable captured bundle instance");
             com.openggf.game.rewind.NativeRewindAdapterPublication.reserve(base);
             OwnerBoundCallbacks callbacks = new OwnerBoundCallbacks(plan.ownerModId(), boundary, plan.contributionLimit(), adapters);
             LinkedHashMap<Class<?>,Supplier<?>> services = new LinkedHashMap<>();
@@ -51,11 +55,17 @@ final class OwnedModServices {
                 services.put(contract, () -> bound);
             });
             dynamic.forEach((contract, provider) -> services.put(contract, dynamic(callbacks,contract,provider)));
+            var inheritedObservers = base.getGameService(GameplayObserverRegistry.class);
+            var observerRegistry = inheritedObservers == null ? new GameplayObserverRegistry() : inheritedObservers;
+            if (observer != null) observerRegistry = observerRegistry.append(plan.ownerModId(),
+                    (com.openggf.game.GameplayObserver) services.get(com.openggf.game.GameplayObserver.class).get());
+            final var accumulatedObservers = observerRegistry;
             List<RewindSnapshottable<?>> ownedAdapters = adapters.values().stream().map(callbacks::adapter).toList();
             List<com.openggf.level.LevelPatch> patches = plan.decodedLevelPatches().values().stream()
                     .map(patch -> com.openggf.level.LevelPatchOwnership.bind(plan.ownerModId(), patch, plan.objectFactories().keySet())).toList();
             return new DelegatingGameModule(base, plan.ownerModId() + ":services") {
                 @Override public <T> T getGameService(Class<T> type) {
+                    if (type == GameplayObserverRegistry.class) return type.cast(accumulatedObservers);
                     Supplier<?> service = services.get(type);
                     return service == null ? super.getGameService(type) : type.cast(service.get());
                 }

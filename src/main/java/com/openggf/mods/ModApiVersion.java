@@ -72,7 +72,8 @@ public final class ModApiVersion {
      * preserve nested opacity, full-viewport clears and the previous clip.
      * Gameplay observers receive immutable native observations and scoped owner-bound
      * temporary mutator leases, including acknowledged one-shot work, replacement
-     * envelopes, modal holds and semantic presentation/native policy families.
+     * envelopes, modal holds, bounded native sidegame completion rewards, scoped
+     * supplied-ROM art and semantic presentation/native policy families.
      * Provider title-card positions share choreography while callers retain clocks
      * and release policy. Atlas fonts can opt into exact-case glyphs and explicit fallback.
      */

@@ -465,6 +465,10 @@ public class SpriteManager implements PlayableSstDispatcher {
 		this.frameCounter = value;
 	}
 
+    com.openggf.control.LogicalInputSnapshot publishedLogicalInput() {
+        return publishedInputHandler == null ? com.openggf.control.LogicalInputSnapshot.neutral() : publishedInputHandler.logical();
+    }
+
 	public void publishHeldInputForLevelEvents(InputHandler handler) {
 		if (handler == null) {
 			return;

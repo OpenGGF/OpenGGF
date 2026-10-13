@@ -29,4 +29,8 @@ public final class SpriteManagerInternalAccess {
         if (com.openggf.util.EngineCallerAccess.callerOutside(SpriteManagerInternalAccess.class).getClassLoader()
                 != SpriteManagerInternalAccess.class.getClassLoader()) throw new SecurityException("Engine motion access only");
     }
+
+    public static com.openggf.control.LogicalInputSnapshot publishedInput(SpriteManager manager) {
+        return manager.publishedLogicalInput();
+    }
 }

@@ -177,6 +177,10 @@ class TestGameLoopMutatorPacing {
     }
 
     private static Fixture fixture(String game, int speed, boolean follows, LevelInputOverlay overlay) throws Exception {
+        return fixture(game,speed,follows,overlay,null);
+    }
+    private static Fixture fixture(String game,int speed,boolean follows,LevelInputOverlay overlay,
+            com.openggf.game.session.WorldSessionPolicyState child) throws Exception {
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         SonicConfigurationService.getInstance().clearSessionOverrides();
         GameModule nativeModule = switch (game) {
@@ -189,7 +193,7 @@ class TestGameLoopMutatorPacing {
         };
         TestEnvironment.configureGameModuleFixture(module);
         var policy = new AtomicReference<>(policy(speed, follows));
-        var world = MutatorPhysicsWorld.create(policy::get);
+        var world = MutatorPhysicsWorld.create(policy::get,com.openggf.game.mutators.LevelMutatorPolicy.STOCK,child);
         var context = mock(GameplayModeContext.class);
         when(context.getWorldSession()).thenReturn(world);
         when(context.isGameplayRuntimeReady()).thenReturn(true);
@@ -198,8 +202,52 @@ class TestGameLoopMutatorPacing {
         PumpLoop loop = new PumpLoop(input);
         var audio = mock(AudioManager.class); var fade = mock(FadeManager.class);
         set(loop, "gameplayMode", context); set(loop, "audioManager", audio); set(loop, "fadeManager", fade);
+        if(child!=null) {
+            var level=mock(com.openggf.level.LevelManager.class);
+            when(context.getLevelManager()).thenReturn(level);when(level.getWorldSession()).thenReturn(world);
+            set(loop,"levelManager",level);
+        }
         loop.setGameMode(GameMode.LEVEL);
         return new Fixture(loop, input, pacing, policy, audio, fade);
+    }
+
+    @Test void observerGetsOneEligiblePresentationAcrossZeroAndMultipleNativeTicks() throws Exception {
+        var probe=new PresentationProbe();
+        Fixture f=fixture("s3k",25,false,null,probe);
+        f.loop.stepPresentationFrame();
+        assertEquals(0,f.loop.admitted.size());
+        assertEquals(List.of(com.openggf.game.GameplayObservation.Phase.ACTIVE),probe.phases);
+        f.policy.set(policy(400,false));f.loop.stepPresentationFrame();
+        assertEquals(4,f.loop.admitted.size());
+        assertEquals(2,probe.phases.size(),"multiple native ticks share one presentation observation");
+    }
+    @Test void modalHoldStopsNativeTicksAndPauseAdmissionFreezesItsPresentationClock() throws Exception {
+        var probe=new PresentationProbe();probe.held=true;
+        Fixture f=fixture("s3k",25,false,null,probe);
+        f.loop.stepPresentationFrame();
+        assertTrue(f.loop.admitted.isEmpty());assertEquals(0,f.pacing.capture().remainder());
+        assertEquals(List.of(com.openggf.game.GameplayObservation.Phase.HELD),probe.phases);
+        int pause=SonicConfigurationService.getInstance().getInt(SonicConfiguration.PAUSE_KEY);
+        f.input.handleKeyEvent(pause,GLFW_PRESS);f.loop.stepPresentationFrame();
+        assertTrue(f.loop.isPaused());assertTrue(f.loop.admitted.isEmpty());
+        assertEquals(com.openggf.game.GameplayObservation.Phase.PAUSED,probe.phases.getLast());
+        assertEquals(0,f.pacing.capture().remainder());
+    }
+    private static final class PresentationProbe implements com.openggf.game.session.WorldSessionPolicyState,
+            com.openggf.game.rewind.RewindSnapshottable<Boolean> {
+        boolean held;final List<com.openggf.game.GameplayObservation.Phase> phases=new ArrayList<>();
+        public <T>T getService(Class<T>type){return null;}
+        public com.openggf.game.rewind.RewindSnapshottable<?> rewindAdapter(){return this;}
+        public String key(){return "presentation-probe";}
+        public Boolean capture(){return held;}
+        public void restore(Boolean value){held=value;}
+        public void onPresentation(GameplayModeContext context,LogicalInputSnapshot input,com.openggf.game.GameplayObservation.Phase phase){phases.add(phase);}
+        public boolean holdsGameplay(){return held;}
+        public void beforeAssembly(com.openggf.game.LevelLoadCause cause){}
+        public void bindRoster(com.openggf.sprites.managers.SpriteManager sprites){}
+        public void failedAssembly(com.openggf.game.LevelLoadCause cause){}
+        public void closeScreens(){}
+        public void retire(){}
     }
 
     private static void set(GameLoop loop, String name, Object value) throws Exception {
