@@ -621,3 +621,64 @@ MHZ/DEZ/LRZ/SSZ route and PLC-registry consumers are present in that selection;
 The lead still owns preflight in the actual launch environment, execution cost
 and stopping rule, identity-by-identity comparison, integration and push. No
 engine test or new broad run is started by this preparation work.
+
+
+## Composed-source focused qualification and launch plan, 2026-10-14
+
+On `33fe50206`, the exact 17 retained-smoke error identities plus six new
+ending-resource cases pass **23 tests, zero failures/errors/skips** at
+00:16:32 BST: 30.124 seconds Maven execution, 24 seconds queue waiting excluded.
+The selector contains the 16 failed provider methods, the one
+`TestSonic3kTitleCardKosQueue#freshLevelTerrainWaitsForTitleAndNemesisButNotChildExit`
+method, and `TestSwScrlEndingResources`. The owning
+[ending design](../designs/2026-10-13-s3k-ending-lifecycle.md#deferred-ending-deformation-resources--2026-10-13)
+records the deferred ROM-read negatives and the 55 affected follow-up checks.
+The integrated `SwScrlEnding` blob remains
+`0afdeaa074c34c97e3901574cc1c886fe381a09a`; its private paired cache changes neither
+native arithmetic nor captured RAM. The corrected title-card fixture blob is
+`9bfabae99334876b4a7fddd67077537d57be59cb`. Its prior four-argument reflective
+constructor no longer matched the task's two destination coordinates, rings,
+roster and lifecycle arguments. The corrected fixture supplies the current destination
+rings. All 11 title-card cases passed on `5cbcec969`; the matched one-case
+negative on task-intermediate `2e992da7d` has the exact `NoSuchMethodException`.
+That intermediate is not an executed original-base result for this identity.
+The bounded independent review finds no uncovered consumer requiring another
+unchanged 55/11-case campaign.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null python3 tools/testing/maven_queue.py --lean -Dmse=off "-Ds3k.rom.path=$S3K_TASK_ROM" '-Dtest=com.openggf.game.sonic3k.TestFbzScrollHandler#providerReloadCreatesFreshFbzAccumulatorOwner,com.openggf.game.sonic3k.TestSonic3kCnzScroll#providerReturnsCnzHandlerForCnzZone,com.openggf.game.sonic3k.scroll.SwScrlHczTest#providerRoutesHczToDedicatedHandler,com.openggf.game.sonic3k.scroll.SwScrlHpzTest#giantRingDestinationUsesSanctuaryScrollButBossActKeepsFallback+providerRoutesHpzToDedicatedHandler,com.openggf.game.sonic3k.scroll.SwScrlIczTest#providerRoutesIczToDedicatedHandler,com.openggf.game.sonic3k.scroll.SwScrlLbzTest#providerRoutesLbzToDedicatedHandler,com.openggf.game.sonic3k.scroll.SwScrlLrzTest#bossActsNoLongerBorrowTheHiddenPalaceHandler+initForZoneMakesTheZoneOnlyLookupActAware+providerRoutesBothLavaReefActsToTheDedicatedHandler+zoneOnlyLookupStillReturnsTheHiddenPalaceHandler,com.openggf.game.sonic3k.scroll.SwScrlMgzTest#providerRoutesMgzToDedicatedHandler,com.openggf.game.sonic3k.scroll.SwScrlMhzTest#providerUsesMhzDeformForMushroomHill,com.openggf.game.sonic3k.scroll.SwScrlSlotsTest#providerRoutesSlotsToDedicatedHandler,com.openggf.game.sonic3k.scroll.TestS3kSszScrollBands#providerRoutesSkySanctuaryToItsOwnHandler,com.openggf.game.sonic3k.scroll.TestSwScrlS3kDezFinalBoss#providerSeparatesFinalBossFromSanctuary,com.openggf.game.sonic3k.titlecard.TestSonic3kTitleCardKosQueue#freshLevelTerrainWaitsForTitleAndNemesisButNotChildExit,com.openggf.game.sonic3k.scroll.TestSwScrlEndingResources' test -B
+```
+
+All six resource cases executed, including
+the two ROM-dependent cases; no missing-ROM skip occurred.
+
+The separately qualified wide SSZ lane `c22a1c451` merges cleanly as
+`967b6db0a`. On that newly composed source the complete paired 800px case passes
+**1 test, zero failures/errors/skips**, at 00:31:25 BST: 52.897 seconds Maven,
+27.91 seconds test execution and 637 seconds queue waiting excluded. All 21,014
+ordinary inputs and the first 9,914 unchanged inputs remain intact. All three
+bosses visit health 8..0; the 44 two-cycle 45-input world spots, live native P2,
+P1 survival/lives and full-load history retirement pass. Actual Death Egg load
+is input 20,863, fresh assembly is 20,864, and the native intro owner releases
+both pad locks at 20,946. Assembly publication is not ordinary control release.
+The grounded destination has three earned rings. No runtime or movie change
+was needed for the newer movement source. Source-specific authoring negatives
+and retained artifacts are in the
+[SSZ1 matrix](../validation/levels/s3k-ssz-act1.md#current-native-800px-paired-cold-completion-2026-10-14).
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null python3 tools/testing/maven_queue.py --lean -Dmse=off "-Ds3k.rom.path=$S3K_TASK_ROM" '-Dtest=TestSszWidePairedColdRouteCapture#coldCompleteWideRouteDefeatsAllBossesAndIsolatesTheDezTimeline' test -B
+```
+
+Actual Java 25/Lua 5.4/PowerShell preflight passes in the intended headless
+launch environment. The current plan from original integration base `5e2f51f079`
+still selects **3,253 of 3,253 smoke candidate classes**, all ten categories,
+66 batches of at most 50 classes and fresh guards. This complete selection
+includes the new wide method; it is not narrowed manually. Expected execution
+cost is 60–120 minutes. The execution stopping rule is 120 minutes combined,
+with ten minutes without output; queue waiting is excluded. The lead preserves
+the original retained smoke through completion before starting this new-source
+run. Both failed/skipped identities and actual completed lanes will be inspected,
+and consumed diagnostics acknowledged. This is a launch plan, not a completed
+composed smoke result. Integration into develop, push, reproduction normalization
+and owned cleanup remain outstanding.

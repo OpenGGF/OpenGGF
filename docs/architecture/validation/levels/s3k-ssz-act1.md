@@ -1385,3 +1385,11 @@ changes require the integration lead's subsequent combined-source check;
 this record does not claim that untested merge. Sonic solo at800, intermediate
 widths, donors, additional teams, deliberate death/starpost breadth and native
 acceptance remain inherited obligations.
+
+
+The lead's newer-source follow-up on `967b6db0a` completes at00:31:25 BST:
+1 test, zero failures/errors/skips, 52.897 seconds Maven /27.91 seconds test,
+with637 seconds queue waiting excluded. All44 spots and unchanged inputs pass
+with actual load20863, assembly20864 and native control release20946. The
+[completion plan](../../plans/2026-10-13-s3k-playable-completion.md#composed-source-focused-qualification-and-launch-plan-2026-10-14)
+records this combined-source command and the remaining smoke/delivery gate.

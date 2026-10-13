@@ -23,16 +23,18 @@ ROM `Current_zone_and_act = $1700`. **Not Sonic 2's Death Egg**, and not the
 `$1701` Super Emerald sanctuary, which has its own
 [matrix](s3k-hpz-sanctuary.md). Owning plan:
 [S3K DEZ bring-up](../../plans/2026-09-17-s3k-dez-bring-up.md).
-Status: hands, core, escape and DDZ handoff are implemented, with positioned
-DEZ2-incoming continuity through complete DDZ at320/800 and whole-registry replay
-evidence. Cold native320 ordinary Sonic+Tails now clears both main acts and all
-final phases, reaching the ordinary ending in54692 controller frames without death
-or transformation. The final sequence adds31 full-registry replay spots; DEZ2 entry
-has real full-load history isolation. Native scene matching, remaining roster/donor
-breadth and outgoing ending-history isolation remain open. A second cold native320
-team movie, with emeralds declared only at DEZ1 boot, now continues through both
-DDZ boss phases and its ending request in64648 inputs; see the
-[DDZ follow-up](s3k-ddz.md#2026-09-25--full-cold-dez1-through-incoming-ddz-completion).
+Status: hands, core, escape and DDZ handoff are implemented. The selected cold
+native320 ordinary Sonic+Tails, solo Sonic and solo Tails routes, and800 solo
+Sonic route, continue from their actual bosses through native D01 rescue,
+both credit parts, post-credits and controller Start/title. All original hit/world
+checkpoints and actual outgoing load/history retirement are retained. Three
+incoming DDZ scenarios also complete that composition, including the cold
+native emerald-team DEZ1 chain and positioned Hyper incoming routes at320/800.
+Exact source-specific commands and corrections are in the October13 record
+below; earlier movie lengths and request-only stop lines remain historical.
+Native whole-scene matching and remaining viewport/donor/roster, deliberate
+load/respawn and lifecycle breadth remain open. Newer upstream-composed
+smoke/guard qualification and delivery remain lead-owned gates.
 Nothing below certifies the act.
 
 LevelSizes (sonic3k.asm:38143): x `0`-`$6000`, y `$20`-`$20`. Level art

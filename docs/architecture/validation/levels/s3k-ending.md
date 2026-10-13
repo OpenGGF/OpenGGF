@@ -2,7 +2,7 @@
 
 This matrix belongs to the [2026-10-13 playable-completion work](../../plans/2026-10-13-s3k-playable-completion.md), against integration base `5e2f51f07917d5eff8ac120007dac55327f93f32`. Native Sonic/Tails endings remain inside `$0D01`; Knuckles continues inside `$0A01` after SSZ2. Locked-on `S3Credits` is an RTS, so a generic `GameMode.ENDING` would discard the actual scene owners. Resources, rejected approaches and run history are in the [ending lifecycle design](../../designs/2026-10-13-s3k-ending-lifecycle.md).
 
-Focused playable ending qualification is complete on the ending worktree candidate. The three source-confirmed presentation omissions were subsequently repaired and qualified below; whole-scene native pixel parity remains unclaimed. Combined integration smoke/guards and the separately owned continuous incoming DEZ/DDZ routes remain coordinator obligations. The evidence below distinguishes declared scene entry from an actual final-fight continuation.
+Focused playable ending qualification is complete on the ending worktree candidate. The three source-confirmed presentation omissions were subsequently repaired and qualified below; whole-scene native pixel parity remains unclaimed. Seven actual incoming DEZ/DDZ scenarios also complete the continuous composed ending, as recorded in their owning matrices. Smoke/guards on the newer upstream composition remain a coordinator obligation. The evidence below distinguishes declared scene entry from an actual final-fight continuation.
 
 ## Character routes
 
