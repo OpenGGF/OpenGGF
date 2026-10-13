@@ -14,7 +14,7 @@ The ordinary native320 Sonic+Tails cold Act1 route now reaches playable Act2
 The native320 Sonic+Tails route now completes Act2 and reaches the boss act
 from cold Act1 in43761 inputs without a death. See the
 [completion evidence](#ordinary-cold-act2-completion-2026-09-24). Solo Tails also completes
-the cold Act1→Act2 route in59712 inputs with85 Act2 restore/replay spots across
+the cold Act1→Act2 route in53,259 inputs with96 Act2 restore/replay spots across
 the middle and completion tests; see [Tails completion](#tails-cold-act2-completion-2026-09-25).
 Ordinary solo Knuckles now also completes cold Act1→Act2→direct HPZ in52659
 inputs with zero deaths; see [Knuckles completion](#knuckles-cold-act2-completion-and-direct-hpz-2026-09-25).
@@ -70,8 +70,18 @@ captures/releases are ordinary controller actions; six-frame braking and a
 short wait avoid the real spike-ball pair before the endpoint. The old fixture's
 exact ring1 becomes the newly observed positive ring2, not a zero-ring relaxation.
 The exact middle replacement completes1 test,0 failures/errors/skips (31.133
-seconds Maven time). Tails completion through the boulder/boss and wider
-donor/roster/lifecycle/native-pixel products remain open. See the
+seconds Maven time). The final53,259-input Tails completion preserves every
+qualified middle input and reaches296/1200/ring1 in the playable boss act.
+The real boulder admission at52507 satisfies `word_63B94`'s strict X/Y box;
+source53057 remains object-controlled with zero rings and loads `$1600` at53058.
+Doors8/5/6 remain required fully open at their actual retimed checkpoints.
+All71 completion45-input full-registry restore/forward spots pass, including
+both sides of the released load without replaying through its callback fade.
+Together with the unchanged25 middle spots this establishes96 Act2 windows.
+The final focused three-method selection completes3 tests,0 failures/errors/skips,
+37.95 seconds in class (1:02 minutes Maven time) on parent `dd563ef67` plus
+these route changes and the identical known checkpoint-guard dependency.
+Wider donor/roster/lifecycle/native-pixel products remain open. See the
 [October 13 follow-up](../../plans/2026-09-17-lrz-bring-up.md#playable-completion-follow-up-2026-10-13)
 for commands, preserved incoming prefixes and rejected runtime rescue.
 

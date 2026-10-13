@@ -14,17 +14,18 @@ content errors corrected on 2026-09-17; labels stay authoritative) and the per-s
 [placement inventory](../research/s3k-zones/lrz-object-inventory.md) (1099 objects, 251 rows,
 byte-matched to the ROM; the `$1D`/`$A0` row was restored on 2026-09-17, see the evidence log). `loc_` labels are ROM addresses, never line numbers.
 
-## Current continuation checkpoint (2026-09-25)
+## Current continuation checkpoint (2026-10-13)
 
-The native320 Sonic+Tails cold route now completes LRZ1→2→3→playable HPZ
-in53047 inputs without deaths; the act matrices record185 Act1,81 Act2 and62
-boss-route full-registry replay spots. The original mandatory Tails-solo and
-Knuckles cold routes below remain open. Tails solo now clears Act1 and reaches
-playable Act2 in34128 ordinary inputs, with51 full-registry restore/replay spots
-and no gameplay-state seeding; its Act2→3→HPZ continuation remains open.
-Other roster/donor/width/lifecycle and native
-whole-scene obligations, final highlights and campaign integration remain open.
-Earlier execution checklists are historical where superseded by dated matrices.
+The native320 Sonic+Tails cold route completes LRZ1→2→3→playable HPZ
+in53,047 inputs without deaths. Ordinary native320 solo Tails now completes
+the same chain in62,524 inputs; its qualification spans58 Act1,25 Act2-middle,
+71 Act2-completion and62 boss/HPZ full-registry45-input replay spots plus
+actual seamless-history isolation. Native320 Knuckles completes its Act1→2→HPZ
+route, and the existing pair800 full chain also passes the fresh-boundary endpoint
+checks. See the dated follow-up below and the act matrices for exact runs.
+Broader roster/donor/width/lifecycle and native whole-scene obligations, final
+highlights and campaign integration remain open. Earlier checklists are historical
+where superseded by dated matrices; these route passes do not certify every product.
 
 ## Playable-completion follow-up (2026-10-13)
 
@@ -201,9 +202,13 @@ ring drain, collision or movement value is written to help the movie.
 The first selected run has1 error: the28500+45 replay window crosses the28507
 seamless load and `ZoneRuntimeRegistry.validateSnapshotIdentity` rejects the
 saved `$900` runtime against live `$901`. The Act1 route then qualifies 58
-full-registry spots with28450 before and28530 after that load. Cross-act runtime
-restoration remains inherited work; continuous gameplay and either-side replay
-must not be described as proof of restoring through the identity change.
+full-registry spots with28450 before and28530 after that load. The original
+classification as inherited cross-act work is rejected: this seamless load
+intentionally retires outgoing history, as the existing wide cold-route test
+already asserts. A raw manual registry restore into the next act bypasses that
+history barrier and is an invalid test checkpoint. The final Tails qualification
+also enables real live history before the handoff, measures its outgoing frame
+and requires the destination earliest available frame to exceed it.
 
 From parent `12d6c372e` plus this controller/checkpoint candidate, the replacement
 finishes on2026-10-13 at18:09 BST:
@@ -249,10 +254,80 @@ python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" -Dmse=off \
 
 Result:1 test,0 failures/errors/skips;31.133 seconds Maven time (6.241 seconds
 in the class). All25 retimed real traversal checkpoints restore the full registry
-and replay45 inputs. The later boulder/boss suffix is still provisional: moving
-lifts require the actual downward departure, and corrected clouds/flames require
-fresh ordinary approach input. A successful partial endpoint does not qualify
-that remaining route or the width/donor/team/lifecycle/native-pixel products.
+and replay45 inputs. At this checkpoint the later boulder/boss suffix remained provisional: moving
+lifts required the actual downward departure, and corrected clouds/flames required
+fresh ordinary approach input. The subsequent completion below supersedes that
+route gap; broader width/donor/team/lifecycle/native-pixel products remain open.
+
+### Ordinary Tails boulder and boss continuation
+
+On parent `dd563ef67`, the final ordinary-controller movies contain53,259 inputs
+through playable LRZ boss-act arrival and62,524 through playable HPZ. Both
+round-trip through production `InputLogAuthorTool`; their first36,714 inputs
+exactly preserve the independently qualified middle route. No gameplay values,
+object fields or comparison rows supply input state.
+
+The selected moving-platform departure uses its actual downward phase. Ordinary
+jumping and six alternating Left/Right states release the two Toxomister clouds;
+a grounded wait and short jump clear the real side button and flame bank.
+An eastern turbine turn first matched position alone but retained ground speed36,
+so Left changed immediately to-$80 and hit its thin native blades (`Obj_LRZTurbineSprites`, collision byte `$A0`).
+Four Right inputs returned to the same nonzero speed and are rejected. One Right
+input plus three neutral inputs reaches native zero ground speed before the
+original safe suffix. This is controller alignment, not a collision override.
+
+Later flight exhausted before the cutscene gate. Landing on the real upper stair
+at13369/912 resets flight, then ordinary input reaches the native boulder box at
+52507. `Obj_LRZ2CutsceneKnuckles` routine0/`word_63B94` admits only
+`$38B0-$10 <= X < $38B0`, `0 <= Y < $240`; its next routine waits for
+X `$39B0`, then owns the ground/drop before `loc_63C14` saves the Act3 bank and
+requests `$1600`. An attempt below the Y gate ran off the right boundary; no
+admission widening, flight-energy override or fixture-based event rule is used.
+
+An intermediate branch taken during a callback-bearing load fade later threw
+“a native blocking fade is already active.” The coordinator's verified
+`GameplayInputBranchTool` guard rejects such fresh-pending or poisoned callback
+snapshots (integrated `1fab3806c`, source blob `ba7471202a3e23ddc408fc24da3b1b767b7f8e16`).
+Repeating the chosen full movie uninterrupted on immutable classes reaches HPZ
+and accepts the fully released endpoint. This disconfirms the proposed PLC/load
+runtime defect: the negative was an invalid branch checkpoint. The copied guard
+is a known dependency, excluded from this lane's commit.
+
+The fresh production run observes native boss-act load53058 after an ordinary
+zero-ring source carry; playable arrival53258 is296/1200/ring1. The placed fire
+monitor and12-ring approach remain required at55947. HPZ loads62402 with the
+source HUD temporarily borrowed, then releases62403 at48/2800/ring0 and ends
+62523 at393/2800/ring3. The prior destination-counter correction preserves
+native Act3 bank ownership and publishes HPZ's captured destination count.
+The CSV's boss sidecar covers `AbstractBossInstance` (the miniboss), so it is
+not evidence for the14-hit end boss. Actual boss health, capsule/results and
+no hurt after the earned fire-shield approach remain mandatory in JUnit.
+
+Final focused command, with Java25, display variables removed, surfaceless EGL
+and the same verified absolute locked-on ROM:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LIBGL_ALWAYS_SOFTWARE=1 EGL_PLATFORM=surfaceless \
+  python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --lean -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestLrzTailsColdRouteCapture#coldTailsClearsActOneAndRestoresTraversalFightAndHandoff+coldTailsCompletesActTwoAndRestoresTheBoulderHandoff+coldTailsCompletesBossActAndReachesPlayableHiddenPalace' \
+  "-Ds3k.rom.path=$LRZ_S3K_ROM" test -B
+```
+
+On `dd563ef67` plus these final input/checkpoint changes and the identical known
+guard dependency, the command completes at19:02:16 BST on2026-10-13:3 tests,
+0 failures/errors/skips,37.95 seconds in the class and1:02 minutes Maven time
+(the separate9-second queue wait is excluded). All14 end-boss health values,
+placed fire shield/ring12, real capsule/results and the unchanged playable HPZ
+endpoint pass. No pristine-source JUnit red is claimed for this route repair;
+the earlier ordinary-input deaths and invalid-checkpoint negatives are the
+bounded measurements recorded above.
+The actual windows are58 Act1,71 Act2 completion and62 boss/HPZ, each capturing
+the full registry and comparing restore plus45-input forward replay. The middle
+route's separate25-window pass is unchanged. The Act1 check also requires actual
+history isolation. This is bounded native320 solo-route validation, not complete
+viewport/donor/team/lifecycle coverage or native visual/trace parity. Combined
+integration validation remains the coordinator's delivery gate.
 
 ## Goal and delivery rule
 

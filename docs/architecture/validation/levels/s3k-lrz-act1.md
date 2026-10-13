@@ -91,20 +91,24 @@ six-frame release, braking, attacks and dodges repair the rest. The approach
 retains nine rings and the handoff retains one until the ordinary Act2 title
 reset. Endpoint rings remain zero as before.
 
-The exact focused replacement completes1 test,0 failures/errors/skips in32.012
-seconds Maven time. One earlier candidate checkpoint at28500 crossed the28507
-seamless act change and exposed inherited zone-runtime identity rejection
-(`s3k:9/0` into `s3k:9/1`); that run was1 error, not a pass. The qualifying
-45-input windows are now28450 before and28530 after the handoff. Gameplay
-crosses continuously, while capture/replay across the act identity itself is
-still an explicit gap. Other lifecycle/configuration products and native pixel
-matching remain open. Exact command, rejected zero-ring fight and controller
-provenance are in the [October 13 follow-up](../../plans/2026-09-17-lrz-bring-up.md#playable-completion-follow-up-2026-10-13).
+The original focused replacement completes1 test,0 failures/errors/skips in32.012
+seconds Maven time. Its earlier28500+45 raw-registry window crossed the28507
+seamless act change and was rejected (`s3k:9/0` into `s3k:9/1`). The initial
+interpretation as missing cross-act restoration is superseded: this load
+intentionally retires outgoing live history, already asserted by
+`TestLrzWideColdRouteCapture#coldTeamClearsActOneAndReleasesPlayableActTwoWithIsolatedHistory`.
+The Tails test now records actual outgoing live history and requires the earliest
+available destination frame to exceed it; this assertion passes in the final
+three-method selection (3 tests,0 failures/errors/skips,37.95 seconds in class).
+Valid45-input windows remain28450 before and28530 after the handoff. The final focused qualification is recorded
+in the [October 13 follow-up](../../plans/2026-09-17-lrz-bring-up.md#playable-completion-follow-up-2026-10-13).
+Other lifecycle/configuration products and native pixel matching remain open.
 
 Knuckles native320 and pair800 cold walks through this act pass on the committed
 omitted-title assembly dependency `d9b11f7db`; their selected replay windows are
-later Act2/boss windows, so this does not requalify every Act1 spot. Solo Tails
-Act2 and the full HPZ chain remain under ordinary controller recovery.
+later Act2/boss windows, so this does not requalify every Act1 spot. The complete
+ordinary Tails route now reaches playable HPZ in62,524 inputs; its focused
+Act2 and boss qualification passes as recorded by the corresponding matrices.
 
 ## Obligations
 

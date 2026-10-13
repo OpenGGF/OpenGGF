@@ -43,6 +43,7 @@ class TestLrzTailsColdRouteCapture {
         var checked = new HashSet<Integer>();
         var healthSeen = new HashSet<Integer>();
         boolean defeated = false;
+        long outgoingHistory = 0;
         var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 9, 0, settings);
@@ -50,8 +51,14 @@ class TestLrzTailsColdRouteCapture {
             assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
             assertEquals(320, GameServices.camera().getWidth());
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
+                if (frame == 28000) GameServices.configuration().setSessionOverride(
+                        com.openggf.configuration.SonicConfiguration.LIVE_REWIND_ENABLED, true);
                 session.step(movie.getFrame(frame));
                 drawing.afterStep(session);
+                if (frame >= 28000 && GameServices.level().getCurrentAct() == 0) {
+                    outgoingHistory = Math.max(outgoingHistory, SessionManager.getCurrentGameplayMode()
+                            .getRewindController().currentFrame());
+                }
                 assertFalse(session.player().getDead(), "death at input " + frame);
                 for (var boss : GameServices.level().getObjectManager()
                         .activeObjectsOfType(LrzMinibossInstance.class)) {
@@ -100,6 +107,10 @@ class TestLrzTailsColdRouteCapture {
             assertEquals(427, session.player().getCentreX());
             assertEquals(1973, session.player().getCentreY());
             assertEquals(0, session.player().getRingCount(), "Act2 title has reset the act counters");
+            assertTrue(outgoingHistory > 10, "record actual outgoing live history");
+            var rewind = SessionManager.getCurrentGameplayMode().getRewindController();
+            assertTrue(rewind.earliestAvailableFrame() > outgoingHistory,
+                    "seamless handoff retires outgoing Act1 history before recording Act2");
         }
     }
 
@@ -163,21 +174,24 @@ class TestLrzTailsColdRouteCapture {
     void coldTailsCompletesActTwoAndRestoresTheBoulderHandoff() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/lrz-tails-cold-act2-clear-320.bk2"));
-        assertEquals(59712, movie.getFrameCount());
+        assertEquals(53259, movie.getFrameCount());
         var settings = new GameplayCaptureSession.Settings(320, "tails", "", "off", null, null, null);
-        // Lower return, door8, Fireworm timing, both eastern turbines, breakable
+        // Lower return, door8, cloud escape and flame timing, both eastern turbines, breakable
         // walls and tunnel, doors5/6, flight/platform landings, stairs and boulder.
         // Separate post-load spots never replay across the act-load boundary.
         // Stop the last source replay before its callback-bearing fade begins;
         // GameLoop.isRewindBlocked deliberately excludes that host transition.
-        var spots = Set.of(42100, 43200, 43700, 43826, 43982, 44500, 45192,
-                45600, 46000, 46182, 46320, 46363, 46800, 47183, 47800,
-                48393, 49000, 49603, 50113, 50153, 50251, 50633, 51283,
-                51800, 52493, 52824, 53245, 53800, 54245, 54600, 55000,
-                55345, 55375, 55460, 55500, 55620, 55740, 55830, 55920,
-                56062, 56243, 56300, 56493, 56734, 57055, 57296, 57477,
-                57649, 57800, 58259, 58700, 58754, 58950, 59050, 59200,
-                59300, 59400, 59430, 59550, 59650);
+        var spots = Set.of(36892, 37992, 38300, 38426, 38582, 39100, 39792,
+                40200, 40600, 40782, 40920, 40963, 41400, 41783,
+                42000, 42196, 42472, 42592, 42770, 43090, 43145,
+                43240, 43327, 43331, 43841, 43881, 43979, 44361,
+                45011, 45528, 46221, 46552, 46973, 47528, 47973,
+                48328, 48728, 49073, 49103, 49188, 49228, 49348,
+                49468, 49558, 49648, 49790, 49971, 50028, 50221,
+                50462, 50783, 51024, 51205, 51320, 51460, 51650,
+                51760, 51960, 52020, 52050, 52220, 52400, 52510,
+                52600, 52700, 52800, 52950, 52977, 53100, 53180,
+                53200);
         var checked = new HashSet<Integer>();
         var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
@@ -189,27 +203,27 @@ class TestLrzTailsColdRouteCapture {
                 session.step(movie.getFrame(frame));
                 drawing.afterStep(session);
                 assertFalse(session.player().getDead(), "death at input " + frame);
-                if (frame == 46320 || frame == 55500 || frame == 55920) {
-                    int trigger = frame == 46320 ? 8 : frame == 55500 ? 5 : 6;
+                if (frame == 40920 || frame == 49228 || frame == 49648) {
+                    int trigger = frame == 40920 ? 8 : frame == 49228 ? 5 : 6;
                     assertTrue(GameServices.level().getObjectManager()
                             .activeObjectsOfType(LrzDoorObjectInstance.class).stream()
                             .anyMatch(door -> door.triggerIndex() == trigger && door.isFullyOpen()),
                             "ordinary controller approach opens door" + trigger);
                 }
-                if (frame == 59510) {
+                if (frame == 53057) {
                     assertEquals(9, GameServices.level().getCurrentZone());
                     assertEquals(1, GameServices.level().getCurrentAct());
                     assertTrue(session.player().isObjectControlled(), "boulder owns the final drop");
                     assertEquals(0, session.player().getRingCount());
                 }
-                if (frame == 59511) {
+                if (frame == 53058) {
                     assertEquals(22, GameServices.level().getCurrentZone());
                     assertEquals(0, GameServices.level().getCurrentAct());
                     assertEquals(0, session.player().getRingCount(), "act load retains the ordinary carry");
                 }
                 if (!spots.contains(frame)) continue;
-                assertEquals(frame < 59511 ? 9 : 22, GameServices.level().getCurrentZone());
-                assertEquals(frame < 59511 ? 1 : 0, GameServices.level().getCurrentAct());
+                assertEquals(frame < 53058 ? 9 : 22, GameServices.level().getCurrentZone());
+                assertEquals(frame < 53058 ? 1 : 0, GameServices.level().getCurrentAct());
                 checked.add(frame);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
                 drawing.checkpoint(session);
@@ -247,19 +261,20 @@ class TestLrzTailsColdRouteCapture {
     void coldTailsCompletesBossActAndReachesPlayableHiddenPalace() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/lrz-tails-cold-hpz-320.bk2"));
-        assertEquals(68977, movie.getFrameCount());
+        assertEquals(62524, movie.getFrameCount());
         var settings = new GameplayCaptureSession.Settings(320, "tails", "", "off", null, null, null);
         // Arrival flash, missiles, flight/landings, checkpoint, earned shield,
         // native left-bound arena entry, mine cycles, capsule/results and HPZ.
         // The outgoing callback-bearing load fade has separate destination spots.
-        var spots = Set.of(59720, 59800, 59900, 60050, 60163, 60250, 60350,
-                60500, 60618, 60750, 60900, 61063, 61244, 61365, 61500,
-                61700, 61850, 61902, 62000, 62173, 62250, 62367, 62400,
-                62500, 62700, 62900, 63050, 63150, 63250, 63350, 63500,
-                63650, 63750, 63850, 64100, 64400, 64600, 64750, 64850,
-                65100, 65400, 65550, 65700, 65800, 66100, 66400, 66550,
-                66650, 66750, 67000, 67300, 67450, 67550, 67650, 67800,
-                68000, 68200, 68400, 68600, 68750, 68880, 68920);
+        var spots = Set.of(53267, 53347, 53447, 53597, 53710, 53797, 53897,
+                54047, 54165, 54297, 54447, 54610, 54791, 54912,
+                55047, 55247, 55397, 55449, 55547, 55720, 55797,
+                55914, 55947, 56047, 56247, 56447, 56597, 56697,
+                56797, 56897, 57047, 57197, 57297, 57397, 57647,
+                57947, 58147, 58297, 58397, 58647, 58947, 59097,
+                59247, 59347, 59647, 59947, 60097, 60197, 60297,
+                60547, 60847, 60997, 61097, 61197, 61347, 61547,
+                61747, 61947, 62147, 62297, 62427, 62467);
         var checked = new HashSet<Integer>();
         var healthSeen = new HashSet<Integer>();
         boolean sawCapsule = false, sawResults = false;
@@ -273,22 +288,22 @@ class TestLrzTailsColdRouteCapture {
                 session.step(movie.getFrame(frame));
                 drawing.afterStep(session);
                 assertFalse(session.player().getDead(), "death at input " + frame);
-                if (frame < 59712) continue;
+                if (frame < 53259) continue;
                 var manager = GameServices.level().getObjectManager();
                 for (var boss : manager.activeObjectsOfType(LrzEndBossObjectInstance.class)) {
                     healthSeen.add(boss.getCollisionProperty());
                 }
                 sawCapsule |= !manager.activeObjectsOfType(LrzEndBossEggCapsule.class).isEmpty();
                 sawResults |= !manager.activeObjectsOfType(LrzEndBossEggCapsule.Results.class).isEmpty();
-                if (frame == 59712) assertFalse(session.player().hasShield(), "ordinary cold carry");
-                if (frame == 62400) {
+                if (frame == 53259) assertFalse(session.player().hasShield(), "ordinary cold carry");
+                if (frame == 55947) {
                     assertEquals(ShieldType.FIRE, session.player().getShieldType(), "placed monitor pickup");
                     assertEquals(12, session.player().getRingCount());
                 }
-                if (frame >= 62400) assertFalse(session.player().isHurt(), "encounter/exit hurt at " + frame);
+                if (frame >= 55947) assertFalse(session.player().isHurt(), "encounter/exit hurt at " + frame);
                 if (!spots.contains(frame)) continue;
                 assertEquals(22, GameServices.level().getCurrentZone());
-                assertEquals(frame < 68856 ? 0 : 1, GameServices.level().getCurrentAct());
+                assertEquals(frame < 62402 ? 0 : 1, GameServices.level().getCurrentAct());
                 checked.add(frame);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
                 drawing.checkpoint(session);

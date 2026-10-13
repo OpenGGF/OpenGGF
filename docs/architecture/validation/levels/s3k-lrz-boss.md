@@ -54,8 +54,20 @@ and full-registry restore/forward assertions. The four-case run has three green
 HPZ identities and one arrival-door failure; the separate actual-open checkpoint
 repair now passes that fourth identity. Source HUD rings are borrowed only during
 the locked fresh boundary: destination HPZ publishes its captured zero, while
-LRZ's native Act3 ring5 continuation bank remains intact. Solo Tails before this
-boss act, inherited broader products and native/pixel claims remain open.
+LRZ's native Act3 ring5 continuation bank remains intact.
+
+Ordinary native320 solo Tails now completes the whole cold chain in62,524 inputs
+on parent `dd563ef67` plus the final input/checkpoint changes. It preserves the
+qualified36,714-input middle prefix, loads the boss act at53058, arrives without
+a shield and collects the placed FIRE shield with12 rings before the arena.
+`TestLrzTailsColdRouteCapture#coldTailsCompletesBossActAndReachesPlayableHiddenPalace`
+passes all health values0..14, real capsule/results, no hurt after that earned
+approach, and HPZ393/2800/ring3 with released player control. All62 boss/HPZ
+45-input full-registry restore/forward spots pass. Native HPZ load62402 borrows
+source HUD rings only during presentation; release62403 publishes destination
+zero before ordinary pickup. The final Act1/Act2/boss three-method selection
+completes3 tests,0 failures/errors/skips,37.95 seconds in class (1:02 minutes
+Maven time). Broader products and native/pixel claims remain open.
 See the [October 13 follow-up](../../plans/2026-09-17-lrz-bring-up.md#playable-completion-follow-up-2026-10-13)
 for exact execution and remaining blockers.
 
