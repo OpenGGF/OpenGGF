@@ -2475,25 +2475,25 @@ public class TestSolidObjectManager {
             try (var events = mockStatic(PlayableAudioEvents.class)) {
                 manager.updateSolidContacts(player);
                 events.verify(() -> PlayableAudioEvents.landed(player));
+
+                assertTrue(player.isOnObject());
+                assertFalse(player.getAir());
+                assertFalse(player.getRolling());
+                assertFalse(player.getPushing(),
+                    "ResetOnFloor_Part3 clears Status_Push on an ordinary object landing");
+                assertEquals(0, player.getAnimationId(),
+                    "Object landing must publish Sonic_ResetOnFloor's id_Walk write after clearing roll");
+                assertEquals(0, player.getFlipAngle());
+                assertEquals(0, player.getFlipType());
+                assertFalse(player.isFlipTurned());
+                assertEquals(0, player.getFlipsRemaining());
+
+                int expectedStandingCenterY = 100 - params.groundHalfHeight() - 19 - 1;
+                assertEquals(expectedStandingCenterY, player.getCentreY());
                 manager.updateSolidContacts(player);
                 events.verify(() -> PlayableAudioEvents.landed(player));
                 events.verifyNoMoreInteractions();
             }
-
-            assertTrue(player.isOnObject());
-            assertFalse(player.getAir());
-            assertFalse(player.getRolling());
-            assertFalse(player.getPushing(),
-                    "ResetOnFloor_Part3 clears Status_Push on an ordinary object landing");
-            assertEquals(0, player.getAnimationId(),
-                    "Object landing must publish Sonic_ResetOnFloor's id_Walk write after clearing roll");
-            assertEquals(0, player.getFlipAngle());
-            assertEquals(0, player.getFlipType());
-            assertFalse(player.isFlipTurned());
-            assertEquals(0, player.getFlipsRemaining());
-
-            int expectedStandingCenterY = 100 - params.groundHalfHeight() - 19 - 1;
-            assertEquals(expectedStandingCenterY, player.getCentreY());
         } finally {
             GameModuleRegistry.setCurrent(previous);
         }

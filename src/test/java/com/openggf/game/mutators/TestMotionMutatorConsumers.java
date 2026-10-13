@@ -467,6 +467,107 @@ class TestMotionMutatorConsumers {
         assertTrue(PlayerFluidContextAccess.movementUnderwater(recreated));
     }
 
+    @Test void worldPolicyHistoryRecordsBeforeDelayCommitAndReplaysPublicationAndMovementOnce() throws Exception {
+        source.policy(new InputControlPolicy(InputControlPolicy.Mode.DELAY, 6));
+        var player = new CapturingInputPlayer(); sprites.addSprite(player);
+        var module = org.mockito.Mockito.mock(com.openggf.game.GameModule.class);
+        org.mockito.Mockito.when(module.getIdentifier()).thenReturn("test:motion-history");
+        org.mockito.Mockito.when(module.getGameService(com.openggf.game.session.WorldSessionPolicyProvider.class))
+                .thenReturn(world -> com.openggf.game.session.CompositeWorldSessionPolicyState.of(source, runtime));
+        var world = new com.openggf.game.session.WorldSession(module);
+        var level = org.mockito.Mockito.mock(com.openggf.level.LevelManager.class);
+        org.mockito.Mockito.when(level.getWorldSession()).thenReturn(world);
+        TestEnvironment.activeGameplayMode().attachLevelManagers(new com.openggf.level.WaterSystem(),
+                new com.openggf.level.ParallaxManager(), org.mockito.Mockito.mock(com.openggf.physics.TerrainCollisionManager.class),
+                org.mockito.Mockito.mock(com.openggf.physics.CollisionSystem.class), sprites, level);
+        var context = org.mockito.Mockito.mock(com.openggf.game.session.GameplayModeContext.class);
+        org.mockito.Mockito.when(context.getWorldSession()).thenReturn(world);
+        org.mockito.Mockito.when(context.getLevelManager()).thenReturn(level);
+        org.mockito.Mockito.when(context.getSpriteManager()).thenReturn(sprites);
+        org.mockito.Mockito.when(context.getGameStateManager()).thenReturn(gsm);
+        com.openggf.game.session.WorldSessionPolicyAccess.bindGameplay(context);
+        var frame = org.mockito.Mockito.mock(com.openggf.LevelFrameContext.class);
+        org.mockito.Mockito.when(frame.levelManager()).thenReturn(level);
+        org.mockito.Mockito.when(frame.spriteManager()).thenReturn(sprites);
+        var tap = com.openggf.control.PlayerInputState.of(AbstractPlayableSprite.INPUT_LEFT,
+                AbstractPlayableSprite.INPUT_LEFT, com.openggf.control.InputActionMasks.ACTION_C,
+                com.openggf.control.InputActionMasks.ACTION_C, false, false);
+        var input = logicalInput(tap);
+        var beforeZeroTick = runtime.capture();
+        for (int presentation = 0; presentation < 3; presentation++) {
+            sprites.publishHeldInputForLevelEvents(input);
+            com.openggf.game.session.WorldSessionPolicyAccess.onPresentation(context, input.logical(),
+                    com.openggf.game.GameplayObservation.Phase.ACTIVE);
+        }
+        assertEquals(beforeZeroTick, runtime.capture());
+        assertNull(com.openggf.game.session.WorldSessionPolicyAccess.captureHistory(world));
+        var histories = new ArrayList<Object>();
+        var beforeTicks = new ArrayList<MotionMutatorRuntime.Snapshot>();
+        var afterTicks = new ArrayList<MotionMutatorRuntime.Snapshot>();
+        var nativeBefore = new ArrayList<com.openggf.level.objects.PerObjectRewindSnapshot>();
+        var heldOutcomes = new ArrayList<Integer>(); var pressOutcomes = new ArrayList<Integer>();
+        // Several native ticks in one presentation: delay counts these ticks, not presentations.
+        for (int tick = 0; tick <= 6; tick++) {
+            input = logicalInput(tick == 0 ? tap : com.openggf.control.PlayerInputState.neutral());
+            sprites.publishHeldInputForLevelEvents(input);
+            beforeTicks.add(runtime.capture()); nativeBefore.add(player.captureRewindState());
+            com.openggf.game.session.WorldSessionPolicyAccess.beforeNativeTick(frame);
+            var committed = runtime.capture();
+            sprites.update(input);
+            assertEquals(committed, runtime.capture(), "movement consumes the prepared sample without committing a second FIFO step");
+            heldOutcomes.add(player.movementHeld); pressOutcomes.add(sprites.getJoypadPressSnapshot().player1ActionPressed());
+            com.openggf.game.session.WorldSessionPolicyAccess.afterNativeTick(frame);
+            histories.add(com.openggf.game.session.WorldSessionPolicyAccess.captureHistory(world));
+            assertNotNull(histories.getLast()); afterTicks.add(runtime.capture());
+            assertEquals(tick == 6 ? tap.heldMask() : 0, player.movementHeld);
+        }
+        var prepared = SpriteManager.class.getDeclaredField("admittedMotionPlayerOne"); prepared.setAccessible(true);
+        for (int tick = 0; tick <= 6; tick++) {
+            // Leave a different prepared sample outstanding so restoreBefore must invalidate it itself.
+            sprites.publishHeldInputForLevelEvents(logicalInput(com.openggf.control.PlayerInputState.neutral()));
+            runtime.beforeNativeTick(frame, com.openggf.control.LogicalInputSnapshot.neutral());
+            assertNotNull(prepared.get(sprites));
+            com.openggf.game.session.WorldSessionPolicyAccess.restoreHistoryBefore(world, histories.get(tick));
+            assertNull(prepared.get(sprites), "history restore clears scratch before replay publication");
+            assertEquals(beforeTicks.get(tick), runtime.capture(), "the world before snapshot precedes DELAY queue commitment");
+            player.restoreRewindState(nativeBefore.get(tick));
+            input = logicalInput(tick == 0 ? tap : com.openggf.control.PlayerInputState.neutral());
+            sprites.publishHeldInputForLevelEvents(input);
+            com.openggf.game.session.WorldSessionPolicyAccess.beforeNativeTick(frame);
+            sprites.update(input);
+            com.openggf.game.session.WorldSessionPolicyAccess.afterNativeTick(frame);
+            assertEquals(heldOutcomes.get(tick).intValue(), player.movementHeld);
+            assertEquals(pressOutcomes.get(tick).intValue(), sprites.getJoypadPressSnapshot().player1ActionPressed());
+            assertEquals(afterTicks.get(tick), runtime.capture());
+            com.openggf.game.session.WorldSessionPolicyAccess.restoreHistoryAfter(world, histories.get(tick));
+            assertFalse(com.openggf.game.session.WorldSessionPolicyAccess.replaying(world));
+        }
+    }
+
+    private static com.openggf.control.InputHandler logicalInput(com.openggf.control.PlayerInputState p1) {
+        var input = new com.openggf.control.InputHandler();
+        input.setLogicalOverride(com.openggf.control.LogicalInputSnapshot.ofPlayers(p1,
+                com.openggf.control.PlayerInputState.neutral()));
+        return input;
+    }
+
+    private static final class CapturingInputPlayer extends AbstractPlayableSprite implements CustomPlayablePhysics {
+        int movementHeld;
+        CapturingInputPlayer() { super("sonic", (short) 100, (short) 100); }
+        @Override protected void defineSpeeds() { }
+        @Override protected void createSensorLines() {
+            groundSensors = new com.openggf.physics.Sensor[0];
+            ceilingSensors = new com.openggf.physics.Sensor[0];
+            pushSensors = new com.openggf.physics.Sensor[0];
+        }
+        @Override public void draw() { }
+        @Override public void tickCustomPhysics(boolean up, boolean down, boolean left, boolean right,
+                boolean jump, boolean test, boolean speedUp, boolean slowDown,
+                com.openggf.level.LevelManager level, int frameCounter) {
+            movementHeld = (left ? INPUT_LEFT : 0) | (right ? INPUT_RIGHT : 0) | (jump ? INPUT_JUMP : 0);
+        }
+    }
+
     @Test void leavingOrdinaryGameplayClearsQueuesAndContributionsWhilePauseHoldRewindPreserveThem() {
         var player=player("sonic");source.policy(new FluidContextPolicy(64));runtime.beforeMovement(player);
         var historical=runtime.capture();
