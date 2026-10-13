@@ -340,14 +340,11 @@ Angel Island Act 1 no longer fails to load when its intro tilemap pre-build
 cannot read the ROM; the pre-build is a cache warm the terrain-swap frame
 already knows how to do without.
 
-Continuous integration has been cut back to a fast per-push check. A push runs
-only the `smoke` profile -- the ordinary suite minus ten exhaustive oracle
-sweeps that were most of its runtime -- so it finishes in minutes instead of
-half an hour. The full suite, the structural guards and the trace replay
-fixtures now run on pull requests and on demand, with no scheduled run, so a
-regression in the guards or the excluded sweeps is caught by a contributor
-running them locally rather than by CI. Release validation is unchanged and
-still runs everything. Known-red Sonic 2 CPZ2 and
+Routine development and CI use the bounded `smoke` suite, excluding exhaustive
+oracle sweeps. Plain Maven and local category runs use it by default; pull requests
+and manual CI pair it with separate structural guards. Integration pushes retain
+the 30-minute quiet period. The full suite is reserved for preparing new public
+releases and is selected explicitly by the Release workflow. Known-red Sonic 2 CPZ2 and
 Sonic 3 & Knuckles trace/run-chain frontiers are documented 0.6 limitations;
 finishing those parity campaigns is deferred to the next release. A frontier
 still returns to the 0.6 fix queue when it exposes a confirmed release-impacting

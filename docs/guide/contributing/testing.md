@@ -7,32 +7,35 @@ All new or updated tests must use JUnit 5 / Jupiter. Do not add JUnit 4 tests, r
 ## Running Tests
 
 ```bash
-# Run all tests
-mvn test
-
-# Run a single test class
-mvn test -Dtest=TestCollisionLogic
-
-# Run a single test method
-mvn test -Dtest=TestCollisionLogic#testSlopeAngle
-
-# Run with full Maven output (disable silent extension)
-mvn test -Dmse=off
+# Routine default: bounded smoke suite, through the local queue.
+python3 tools/testing/maven_queue.py -Dmse=off test
+# Focused regression (use --lean for small checks).
+python3 tools/testing/maven_queue.py --lean -Dmse=off -Dtest=TestCollisionLogic test
+# Single method.
+python3 tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestCollisionLogic#testSlopeAngle' test
+# Public release preparation ONLY: the former complete ordinary suite.
+python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
 ```
 
-Tests are configured for parallel execution across 4 JVM forks locally (`1` fork in CI).
-This significantly speeds up the full test suite but means tests must be independent of
-each other.
+Plain Maven `test` and `package` default to the existing `smoke` exclusions;
+`-Psmoke` is an explicit alias. Full-suite validation is reserved for new public
+releases, never routine development, integration, baseline or post-integration
+checks. Add focused regressions, affected ROM/trace checks and separate guards
+as needed. Category `all` is all smoke categories, not the exhaustive full suite.
+See [testing utilities](../../../tools/testing/README.md#default-suite-and-release-only-validation).
+
+Tests use one reused 3 GiB JVM by default. `test-concurrent` opts into two forks;
+Jupiter execution remains serial inside each fork. Guards use a separate JVM.
 
 ## CI in GitHub
 
 | Event | What runs |
 |---|---|
 | Push to `develop` or `next` | Basic CI: the `smoke` profile (about seven minutes), once the branch has had no push for 30 minutes. |
-| Non-draft pull request, any base | Full CI: branch policy, the complete ordinary suite and `-Pguards`. Draft PRs run nothing until marked ready; a newer push cancels the older run. |
+| Non-draft pull request, any base | Routine CI: branch policy, the bounded smoke suite and `-Pguards`. Draft PRs run nothing until marked ready; a newer push cancels the older run. |
 | Push to `master` | The Release workflow below: full validation, native packaging, publication. |
 | Push to a feature or bugfix branch | Nothing. Open a pull request, or run CI by hand. |
-| Manual dispatch | Full CI on the chosen ref. `trace_replay` adds the ROM-fixture develop trace replay on the self-hosted runner. |
+| Manual dispatch | Smoke and guards on the chosen ref. `trace_replay` adds the ROM-fixture develop trace replay on the self-hosted runner. |
 
 The 30-minute quiet period is the `ci-quiet-period` environment's wait timer
 (repository Settings -> Environments). The smoke job waits there without using a
@@ -48,14 +51,15 @@ packaging failures first show on the master push that would publish.
 ## Release builds in GitHub
 
 The Release workflow builds Windows, macOS, Linux, and the universal JAR on
-GitHub-hosted runners. Its blocking `test` job runs the ordinary suite and
+GitHub-hosted runners. Its blocking `test` job explicitly runs `-Pfull-suite` and
 structural guards on Ubuntu, installing Lua 5.4 first. Private ROMs are absent
 on these runners, so ROM-dependent skips remain visible in the uploaded test
 evidence; a successful cloud build does not establish ROM replay parity.
 
 A push to `master` validates, builds and publishes a release with a new
 version tag; see [publishing a GitHub release](../../project/release-publishing.md).
-Manual dispatch validates and builds without publishing.
+Manual Release dispatch is for release preparation; it runs full-suite and builds
+without publishing. Routine manual CI uses smoke.
 
 ROM-backed release evidence is collected locally with the existing release
 comparison and skip-classification tools. The optional `validate_roms` manual

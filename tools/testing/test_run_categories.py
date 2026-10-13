@@ -336,6 +336,9 @@ class RunnerTests(unittest.TestCase):
                     with patch.object(runner, 'tree_state', return_value='state'), patch.object(runner, 'rom_args', return_value=['-Dsonic1.rom.path=/roms/s1.gen']), patch.object(runner, 'summarize', side_effect=lambda _: dict(summary)), patch.object(runner, 'run_logged', return_value=0) as process:
                         self.assertEqual(0, runner.run_plan(root, plan))
                     ordinary, guards = [call.args[0] for call in process.call_args_list]
+                    self.assertIn('-Psmoke', ordinary)
+                    self.assertNotIn('-Pfull-suite', ordinary)
+                    self.assertNotIn('-Psmoke', guards)
                     self.assertEqual(workers == 2, '-Ptest-concurrent' in ordinary)
                     self.assertEqual(not full, any('includesFile=' in arg for arg in ordinary))
                     self.assertNotIn('-Ptest-concurrent', guards)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Plan and run ordinary Maven test categories without changing CI/release suites."""
+"""Plan and run bounded smoke categories; exhaustive suites are release-only."""
 from __future__ import annotations
 
 import argparse
@@ -168,7 +168,7 @@ def select_changes(paths, data):
             reason = 'test ownership'
             if selected == {'common'}:
                 selected = set(data['categories'])
-                reason = 'shared test infrastructure: full ordinary suite'
+                reason = 'shared test infrastructure: all smoke categories'
                 full = True
         else:
             # Multiple matching rules add coverage; ordering cannot narrow a rule.
@@ -179,7 +179,7 @@ def select_changes(paths, data):
             reason = 'subsystem rule'
             if not selected:
                 selected = set(data['categories'])
-                reason = 'shared or unclassified change: full ordinary suite'
+                reason = 'shared or unclassified change: all smoke categories'
                 full = True
         categories.update(selected)
         reasons.append({'path': path, 'categories': sorted(selected), 'reason': reason})
@@ -207,7 +207,8 @@ def make_plan(root, data, base, requested, guards=False, workers=1):
             'categories': sorted(selected), 'reasons': reasons, 'tests': chosen,
             'inventory_count': len(tests), 'guards': bool(base or full or guards),
             'workers': workers,
-            'scope': 'ordinary suite and guards; explicit trace/native profiles are separate'}
+            'suite': 'smoke',
+            'scope': 'bounded smoke suite and guards; full-suite is public-release-only; trace/native profiles are separate'}
 
 
 def rom_args(root, rom_directory=None):
@@ -329,6 +330,7 @@ def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, qu
             if lane == 'guards':
                 command.append('-Pguards')
             else:
+                command.append('-Psmoke')
                 if workers == 2:
                     command.append('-Ptest-concurrent')
                 if not plan['full']:
@@ -425,8 +427,8 @@ def main(argv=None):
             plan['rom_directory'] = str(args.rom_directory)
         if args.run or args.preflight:
             if is_broad(plan):
-                print('BROAD selection: allow tens of minutes; the September normalization run '
-                      'took ~24 minutes ordinary + ~10 minutes guards. This is context, not an ETA.', flush=True)
+                print('BROAD smoke selection: exhaustive slow-suite tests remain excluded; '
+                      'allow several minutes plus separate guards. This is not full-suite validation.', flush=True)
             print(f'Invocation timeout: {args.max_minutes:g} minutes, excluding queue wait; '
                   '10 minutes without output. Timeout means incomplete.', flush=True)
             if sys.platform == 'darwin':

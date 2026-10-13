@@ -665,6 +665,32 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void routineTestsMustDefaultToSmokeAndFullSuiteMustBeReleaseOnly() throws Exception {
+        Document pom = parsePom("pom.xml");
+        String defaultGroups = property(pom, "surefire.excludedGroups");
+        Element smoke = profileById(pom, "smoke");
+        assertEquals(directChildText(directChild(smoke, "properties"), "surefire.excludedGroups"),
+                defaultGroups, "plain Maven and smoke must select the same bounded suite");
+        assertTrue(defaultGroups.contains("slow-suite"));
+        assertTrue(defaultGroups.contains("performance-measurement"));
+
+        Element full = profileById(pom, "full-suite");
+        assertNotNull(full, "public release validation needs an explicit full-suite profile");
+        assertNull(directChild(full, "activation"), "full-suite must never activate implicitly");
+        String fullGroups = directChildText(directChild(full, "properties"), "surefire.excludedGroups");
+        assertEquals(Set.of("tracechaser-integration", "audio-reference", "audio-stress",
+                        "audio-local-wave", "fbz-route"), Set.of(fullGroups.split(",")),
+                "release validation must restore the previous complete ordinary suite");
+
+        String ci = Files.readString(Path.of(".github/workflows/ci.yml"));
+        assertFalse(ci.contains("-Pfull-suite"), "routine CI must not run full-suite");
+        String release = Files.readString(Path.of(".github/workflows/release.yml"));
+        Map<String, String> releaseJobs = yamlJobBlocks(release);
+        assertTrue(releaseJobs.get("test").contains("mvn -Dmse=off -Pfull-suite test -B"));
+        assertTrue(releaseJobs.get("rom-validation").contains("mvn -Dmse=off -Pfull-suite test -B"));
+    }
+
+    @Test
     void defaultSuiteMustLeaveStructuralGuardsToTheFreshGuardsSession() throws Exception {
         Document pom = parsePom("pom.xml");
         Element build = directChild(pom.getDocumentElement(), "build");
@@ -1397,7 +1423,7 @@ class TestBuildToolingGuard {
         assertTrue(releaseTest.contains("assert(_VERSION == \"Lua 5.4\")"),
                 "release test job must verify the configured Lua version");
         assertTrue(releaseTest.indexOf("Verify Lua 5.4")
-                        < releaseTest.indexOf("mvn -Dmse=off test -B"),
+                        < releaseTest.indexOf("mvn -Dmse=off -Pfull-suite test -B"),
                 "release test job must verify Lua before running Maven");
 
         String boundaryGuard = Files.readString(Path.of(
@@ -1595,7 +1621,7 @@ class TestBuildToolingGuard {
         String test = jobs.get("test");
         assertNotNull(test);
         assertTrue(test.contains("runs-on: ubuntu-latest"));
-        assertTrue(test.contains("mvn -Dmse=off test -B"));
+        assertTrue(test.contains("mvn -Dmse=off -Pfull-suite test -B"));
         assertTrue(test.contains("mvn -Dmse=off -Pguards test -B"));
         assertTrue(test.contains("sudo apt-get install --yes lua5.4"));
         assertFalse(test.contains("ROM_PATH"));
@@ -1630,7 +1656,7 @@ class TestBuildToolingGuard {
         if (verifyIndex < 0 || broadTestIndex < 0 || verifyIndex > broadTestIndex) {
             violations.add(".github/workflows/release.yml must verify ROM paths before the broad test suite");
         }
-        if (!workflow.contains("mvn -Dmse=off test -B")) {
+        if (!workflow.contains("mvn -Dmse=off -Pfull-suite test -B")) {
             violations.add(".github/workflows/release.yml broad test run must disable Maven Silent Extension");
         }
         if (!workflow.contains("-Dsonic1.rom.path=\"${SONIC1_ROM_PATH}\"")) {
@@ -2351,7 +2377,7 @@ class TestBuildToolingGuard {
         if (!ci.contains("mvn -Dmse=off test -B")) {
             violations.add(".github/workflows/ci.yml test command must pass -Dmse=off");
         }
-        if (!release.contains("mvn -Dmse=off test -B")) {
+        if (!release.contains("mvn -Dmse=off -Pfull-suite test -B")) {
             violations.add(".github/workflows/release.yml broad test command must pass -Dmse=off");
         }
         if (!release.contains("mvn -Dmse=off test -Ptrace-replay -B")) {
@@ -2381,7 +2407,7 @@ class TestBuildToolingGuard {
             }
         }
         for (String command : List.of(
-                "mvn -Dmse=off test -B",
+                "mvn -Dmse=off -Pfull-suite test -B",
                 "mvn -Dmse=off test -Ptrace-replay -B",
                 "mvn -Dmse=off package -Pnative -DskipTests -B",
                 "mvn -Dmse=off package -Puniversal-jar -DskipTests -B")) {
@@ -3005,8 +3031,8 @@ class TestBuildToolingGuard {
      *       suite, and no other Maven job -- after the {@code ci-quiet-period}
      *       environment's wait timer, which a newer push to the branch
      *       restarts;</li>
-     *   <li>non-draft pull requests into any branch run full CI (policy, the
-     *       complete suite and guards), re-run when a draft is marked ready, and
+     *   <li>non-draft pull requests into any branch run routine CI (policy, the
+     *       bounded smoke suite and guards), re-run when a draft is marked ready, and
      *       are superseded by a newer push to the same pull request;</li>
      *   <li>master pushes run release.yml only: full validation, native
      *       packaging and publication;</li>
@@ -3088,7 +3114,7 @@ class TestBuildToolingGuard {
             }
             if (!"github.event_name == 'push'".equals(yamlJobCondition(smokeJob))) {
                 violations.add(".github/workflows/ci.yml smoke job must run on integration pushes only;"
-                        + " pull requests run the full suite instead");
+                        + " pull requests run the default smoke suite plus guards");
             }
             // The wait timer lives on the environment (a repository setting a test
             // cannot read); the job must at least keep waiting on it.
