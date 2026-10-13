@@ -476,11 +476,14 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
         for (var lease:rides) releaseRide(lease);
     }
     private boolean enemyRule(EnemyRulePolicy.Kind kind) {
-        return entries.stream().anyMatch(e->ownerAvailable(e.owner()) && e.policy() instanceof EnemyRulePolicy p && p.kind()==kind);
+        return entries.stream().anyMatch(e->ownerAvailable(e.owner()) && e.policy() instanceof EnemyRulePolicy p && p.kind()==kind
+                && (kind!=EnemyRulePolicy.Kind.BUDDING || !admitted.contains(e.activationId())));
     }
     @Override public boolean permitsRoutine(ObjectInstance object, PlayableEntity player) {
         if (!(object instanceof AbstractBadnikInstance)) return true;
         if (enemyRule(EnemyRulePolicy.Kind.STASIS) && movableBadnik(object)) {
+            // A native init/wait release with no contact byte must establish its stock body first.
+            if(object instanceof TouchResponseProvider touch && touch.getCollisionFlags()==0) return true;
             return services.objectQuery().activeObjectsOfType(AbstractBadnikInstance.class).stream()
                     .filter(NativeMutatorRuntime::movableBadnik)
                     .filter(enemy->player!=null && Math.abs(enemy.getX()-player.getCentreX())<=256)
@@ -737,7 +740,7 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
         }
     }
     private void relocation(TransientMutatorPolicySource.Entry entry,RelocationPolicy policy,AbstractPlayableSprite player) {
-        if(bossActive || player.isObjectControlled() || player.isHurt() || services.camera()==null || services.camera().getFrozen()) return;
+        if(bossActive || !NativeEncounterGeometry.ordinary(services,player)) return;
         long id=entry.activationId();
         int tick=clocks.merge(id,1,Integer::sum);
         if(policy.kind()!=RelocationPolicy.Kind.STEPS && policy.kind()!=RelocationPolicy.Kind.DELAYED_RETURN && admitted.contains(id)) return;
@@ -745,12 +748,16 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
         int direction=player.getDirection()==Direction.LEFT?-1:1;
         switch(policy.kind()) {
             case LAST_CHECKPOINT -> {
-                if(!(services.checkpointState() instanceof CheckpointState checkpoint) || checkpoint.getLastCheckpointIndex()<=0) return;
+                if(!(services.checkpointState() instanceof CheckpointState checkpoint) || checkpoint.getStarPostActivationMark()<=0) return;
                 x=checkpoint.getSavedX(); y=checkpoint.getSavedY();
             }
             case RANDOM_CHECKPOINT -> {
+                var checkpoint=services.checkpointState();
+                if(checkpoint==null || checkpoint.getStarPostActivationMark()<=0) return;
+                // Native activation high-water is route evidence; unvisited staging is not certified by empty terrain.
                 var candidates=services.objectManager().getAllSpawns().stream()
                         .filter(spawn->spawn.objectId()==Sonic3kObjectIds.STAR_POST
+                                && (spawn.subtype()&0x7F)>0 && (spawn.subtype()&0x7F)<=checkpoint.getStarPostActivationMark()
                                 && Math.abs(spawn.x()-player.getCentreX())<=640).toList();
                 if(candidates.isEmpty()) return;
                 var selected=candidates.get(services.rng().nextInt(candidates.size())); x=selected.x(); y=selected.y();

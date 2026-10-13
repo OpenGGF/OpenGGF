@@ -207,6 +207,15 @@ class TestNativeMutatorRuntime {
         assertEquals(3,rig.objects.objectQuery().activeObjectsOfType(RhinobotBadnikInstance.class).size());
         verify(rig.source).acknowledge(1);
     }
+    @Test void failedBuddingCannotSpawnOrAcknowledgeAgainLaterInTheSameNativeTick() throws Exception {
+        var rig=new Rig();
+        rig.entries.set(List.of(new TransientMutatorPolicySource.Entry("test",1,new EnemyRulePolicy(EnemyRulePolicy.Kind.BUDDING),1200,0,true)));
+        rig.runtime.beforeNativeTick(rig.frame,LogicalInputSnapshot.neutral());
+        var badnik=rig.objects.createDynamicObject(()->new RhinobotBadnikInstance(new ObjectSpawn(100,100,0,0,0,false,0)));
+        rig.runtime.badnikDefeated(badnik,rig.player);
+        assertEquals(1,rig.objects.objectQuery().activeObjectsOfType(RhinobotBadnikInstance.class).size());
+        verify(rig.source,times(1)).acknowledge(1);
+    }
     @Test void fieldsWriteNativeProjectileCoordinatesAndCancellationLeavesNoContribution() throws Exception {
         var rig=new Rig();var shot=rig.objects.createDynamicObject(()->new EggRoboShotInstance(new ObjectSpawn(50,100,0,0,1,false,0)));
         rig.active(new ObjectFieldPolicy(ObjectFieldPolicy.Target.PROJECTILE,ObjectFieldPolicy.Mode.ATTRACT),false);
@@ -253,8 +262,10 @@ class TestNativeMutatorRuntime {
         verify(rig.player,never()).setInvincibleFrames(0);
     }
     @Test void stasisRetainsContactAndTruceRetainsTheRoutine() throws Exception {
-        var rig=new Rig();var enemy=rig.objects.createDynamicObject(()->new RhinobotBadnikInstance(new ObjectSpawn(100,100,0,0,0,false,0)));
+        var rig=new Rig();var enemy=rig.objects.createDynamicObject(()->new com.openggf.game.sonic3k.objects.badniks.ButterdroidBadnikInstance(new ObjectSpawn(100,100,0,0,0,false,0)));
+        var initializing=rig.objects.createDynamicObject(()->new RhinobotBadnikInstance(new ObjectSpawn(140,100,0,0,0,false,0)));
         rig.active(new EnemyRulePolicy(EnemyRulePolicy.Kind.STASIS),false);
+        assertTrue(rig.runtime.permitsRoutine(initializing,rig.player),"stock init must establish contact before stasis pauses AI");
         assertFalse(rig.runtime.permitsRoutine(enemy,rig.player));assertTrue(rig.runtime.permitsContact(enemy,rig.player));
         rig.active(new EnemyRulePolicy(EnemyRulePolicy.Kind.TRUCE),false);
         assertTrue(rig.runtime.permitsRoutine(enemy,rig.player));assertFalse(rig.runtime.permitsContact(enemy,rig.player));

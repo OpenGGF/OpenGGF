@@ -13,7 +13,7 @@ final class CoherentRelocationOps {
     static Landing landing(ObjectServices services,AbstractPlayableSprite player,int x,int y,int radius, AbstractPlayableSprite... ignoredActors) {
         var level=services.currentLevel();
         var camera=services.camera();
-        if (level==null || camera==null || camera.getFrozen() || player.isObjectControlled()
+        if (level==null || camera==null || camera.getFrozen() || player.isObjectControlled() || player.isControlLocked()
                 || player.isHurt() || player.getDead() || player.getLayer()!=0
                 || services.useSecondaryTerrainCollisionPath() || services.gameState().isReverseGravityActive()) return null;
         if (x<camera.getMinX()+16 || x>camera.getMaxX()+camera.getWidth()-16) return null;
