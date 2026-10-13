@@ -1319,7 +1319,11 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   No task registration, validation receipts,
   cumulative budgets or retry gates are needed. Per-invocation category timeouts exclude
   queue waiting. Category runs explicitly use the bounded smoke suite; even the
-  broad fallback excludes exhaustive oracles. Full ordinary validation is reserved
+  broad fallback excludes exhaustive oracles. Ordinary coverage queues in batches
+  that release shared admission between jobs while retaining worktree ownership;
+  guards queue separately. Supported headless graphics flags no longer force
+  exclusive admission, while unmeasured JVM overrides remain conservative.
+  Full ordinary validation is reserved
   for preparing new public releases through the explicit `full-suite` profile.
   A separate bounded-result comparator checks full failure identities/assertions
   and causal skip reasons against an explicit source/run baseline, rejecting

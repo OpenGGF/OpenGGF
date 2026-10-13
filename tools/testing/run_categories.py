@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter
+from contextlib import nullcontext
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -19,12 +20,13 @@ import xml.etree.ElementTree as ET
 
 from category_artifacts import compact_run, prune_runs, run_logged, acknowledge_run
 from category_control import DEFAULT_MINUTES, IDLE_SECONDS, preflight, is_broad
-from maven_queue import maven_slot, handle_termination, needs_exclusive
+from maven_queue import maven_slot, worktree_build_slot, handle_termination, needs_exclusive
 from maven_schedule import plan_estimate
 
 ROOT = Path(__file__).resolve().parents[2]
 TEST_ROOT = Path('src/test/java')
 PACKAGE = 'com/openggf/'
+ORDINARY_BATCH_CLASSES = 50
 NS = {'m': 'http://maven.apache.org/POM/4.0.0'}
 ROM_PROPERTIES = {
     '69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b': 'sonic1.rom.path',
@@ -289,17 +291,44 @@ def tree_state(root):
     return digest.hexdigest()
 
 
+def ordinary_batches(tests):
+    """Partition the complete candidate inventory without changing smoke tag filtering."""
+    return [tests[offset:offset + ORDINARY_BATCH_CLASSES]
+            for offset in range(0, len(tests), ORDINARY_BATCH_CLASSES)]
+
+
+def merge_summary(total, summary):
+    """Aggregate counts and bounded case evidence without losing omitted-case counts."""
+    for key in ('reports', 'tests', 'failures', 'errors', 'skipped'):
+        total[key] = total.get(key, 0) + summary[key]
+    for key in ('skipped_cases', 'failed_cases'):
+        cases = total.setdefault(key, [])
+        incoming = summary.get(key, [])
+        available = 1000 - len(cases)
+        cases.extend(incoming[:available])
+        omitted = key + '_omitted'
+        total[omitted] = (total.get(omitted, 0) + summary.get(omitted, 0)
+                          + max(0, len(incoming) - available))
+
+
 def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, queue_fd=None,
-             rom_directory=None):
-    """Execute a plan while the CLI holds the shared Maven slot."""
+             rom_directory=None, admission=None):
+    """Run batches under a retained worktree lock, releasing shared admission between jobs.
+
+    admission(batch_plan, lane) yields that job's shared queue descriptor. Direct
+    callers may instead supply a trusted, already-held queue_fd as before.
+    """
     workers = plan.get('workers', 1)
     if workers not in (1, 2):
         raise ValueError('Ordinary workers must be 1 or 2')
+    if not plan['tests']:
+        raise ValueError('No tests selected')
     target = root / 'target'
     target.mkdir(exist_ok=True)
     run = None
     status = 'incomplete'
     results = []
+    elapsed = 0.0
     try:
         base = target / 'category-tests'
         prune_runs(base)
@@ -308,63 +337,109 @@ def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, qu
         if keep_diagnostics:
             (run / 'keep-diagnostics').touch()
         print(f'Bounded diagnostics: {run}', flush=True)
+        batches = ordinary_batches(plan['tests'])
         print(f"Categories: {', '.join(plan['categories'])}; "
               f"{len(plan['tests'])}/{plan['inventory_count']} candidate classes; "
+              f"{len(batches)} ordinary batches (at most {ORDINARY_BATCH_CLASSES} classes); "
               f"ordinary workers={workers}; guards={'on (1 worker)' if plan['guards'] else 'off'}", flush=True)
         initial_state = tree_state(root)
         plan['working_tree_fingerprint'] = initial_state
         plan['max_minutes'] = max_minutes
+        plan['ordinary_batch_classes'] = ORDINARY_BATCH_CLASSES
         (run / 'plan.json').write_text(json.dumps(plan, indent=2) + '\n')
         includes = run / 'includes.txt'
-        includes.write_text('\n'.join(plan['tests']) + '\n')
-        deadline = time.monotonic() + max_minutes * 60
-        results = []
         failed = False
         for lane in (('ordinary', 'guards') if plan['guards'] else ('ordinary',)):
+            lane_batches = batches if lane == 'ordinary' else [[]]
+            total = dict(lane=lane, workers=workers if lane == 'ordinary' else 1,
+                         batches_planned=len(lane_batches), batches_completed=0,
+                         exit_code=0, elapsed_seconds=0.0, status='incomplete')
+            merge_summary(total, dict(reports=0, tests=0, failures=0, errors=0, skipped=0))
+            results.append(total)
+            (run / 'results.json').write_text(json.dumps(results, indent=2) + '\n')
             reports = run / f'{lane}-reports'
             temporary = run / f'{lane}-tmp'
-            temporary.mkdir()
-            command = ['mvn', '-Dmse=off', 'test', '-B',
-                       f'-Dopenggf.surefire.reports={reports}',
-                       f'-Dopenggf.test.tmpdir={temporary}']
-            if lane == 'guards':
-                command.append('-Pguards')
-            else:
-                command.append('-Psmoke')
-                if workers == 2:
-                    command.append('-Ptest-concurrent')
-                if not plan['full']:
-                    command.append(f'-Dsurefire.includesFile={includes}')
-            command.extend(rom_args(root, rom_directory))
-            (run / f'{lane}-command.json').write_text(json.dumps(command, indent=2) + '\n')
-            print(f'Running {lane}; rolling output: {run / (lane + ".log")}', flush=True)
-            try:
-                lane_started = time.monotonic()
-                exit_code = run_logged(command, root, run / f'{lane}.log', temporary,
-                                       timeout=deadline - lane_started, idle_timeout=IDLE_SECONDS, queue_fd=queue_fd)
-            except TimeoutError as error:
-                summary = summarize(reports)
-                summary.update(lane=lane, workers=1 if lane == 'guards' else workers, status='incomplete', reason=str(error),
-                               elapsed_seconds=round(time.monotonic() - lane_started, 2))
-                results.append(summary)
-                (run / 'results.json').write_text(json.dumps(results, indent=2) + '\n')
-                raise
-            finally:
-                # run_logged reaps Maven before returning/raising. Only this run's
-                # temporary files are removed, never another run's target/test-tmp.
-                shutil.rmtree(temporary)
-            summary = summarize(reports)
-            summary.update(lane=lane, workers=1 if lane == 'guards' else workers, exit_code=exit_code, elapsed_seconds=round(time.monotonic() - lane_started, 2))
-            results.append(summary)
+            for index, candidates in enumerate(lane_batches, 1):
+                if tree_state(root) != initial_state:
+                    raise ValueError('Working tree changed during validation; stop before another batch')
+                if elapsed >= max_minutes * 60:
+                    total['reason'] = 'Invocation timeout exhausted before another batch'
+                    (run / 'results.json').write_text(json.dumps(results, indent=2) + '\n')
+                    raise TimeoutError(total['reason'])
+                batch_plan = dict(plan, full=False, tests=candidates, guards=(lane == 'guards'))
+                slot = admission(batch_plan, lane) if admission else nullcontext(queue_fd)
+                with slot as fd:
+                    # Edits made while waiting invalidate both the selection and any
+                    # previous results; never launch another batch from stale inputs.
+                    if tree_state(root) != initial_state:
+                        raise ValueError('Working tree changed while waiting for validation admission')
+                    if reports.exists():
+                        shutil.rmtree(reports)
+                    temporary.mkdir()
+                    command = ['mvn', '-Dmse=off', 'test', '-B',
+                               f'-Dopenggf.surefire.reports={reports}',
+                               f'-Dopenggf.test.tmpdir={temporary}']
+                    if lane == 'guards':
+                        command.append('-Pguards')
+                    else:
+                        includes.write_text('\n'.join(candidates) + '\n')
+                        command += ['-Psmoke', f'-Dsurefire.includesFile={includes}',
+                                    '-Dsurefire.failIfNoSpecifiedTests=false', '-DfailIfNoTests=false']
+                        if workers == 2:
+                            command.append('-Ptest-concurrent')
+                    command.extend(rom_args(root, rom_directory))
+                    command_name = (f'ordinary-command-{index:03d}.json' if lane == 'ordinary'
+                                    else 'guards-command.json')
+                    (run / command_name).write_text(json.dumps(command, indent=2) + '\n')
+                    print(f'Running {lane} batch {index}/{len(lane_batches)}; '
+                          f'rolling output: {run / (lane + ".log")}', flush=True)
+                    started = time.monotonic()
+                    exit_code = None
+                    try:
+                        exit_code = run_logged(command, root, run / f'{lane}.log', temporary,
+                                               timeout=max_minutes * 60 - elapsed,
+                                               idle_timeout=IDLE_SECONDS, queue_fd=fd)
+                    except TimeoutError as error:
+                        total['reason'] = str(error)
+                        raise
+                    finally:
+                        duration = time.monotonic() - started
+                        elapsed += duration
+                        total['elapsed_seconds'] = round(total['elapsed_seconds'] + duration, 2)
+                        batch_summary = summarize(reports)
+                        merge_summary(total, batch_summary)
+                        if exit_code is not None:
+                            total['exit_code'] = total['exit_code'] or exit_code
+                            total['batches_completed'] += 1
+                        (run / 'results.json').write_text(json.dumps(results, indent=2) + '\n')
+                        # run_logged has reaped Maven. Keep case evidence in JSON,
+                        # not stale XML that the next batch could count again.
+                        shutil.rmtree(temporary)
+                        if reports.exists():
+                            shutil.rmtree(reports)
+                if exit_code and not (batch_summary['failures'] or batch_summary['errors']):
+                    # Compilation/launcher/crashed-JVM failures without JUnit
+                    # failure reports are not a completed test lane. Stop here
+                    # instead of retrying the same build or overwriting its only
+                    # causal log with the output from a later batch.
+                    total.update(failed_batch=index,
+                                 reason='Maven batch failed without test failure reports; remaining coverage not run')
+                    (run / 'results.json').write_text(json.dumps(results, indent=2) + '\n')
+                    return 1
+                if tree_state(root) != initial_state:
+                    raise ValueError('Working tree changed during validation; stop before another batch')
+            # Tag-excluded/helper-only batches are valid; only an entirely empty
+            # or entirely skipped lane cannot demonstrate executed coverage.
+            empty = not total['reports'] or total['tests'] == total['skipped']
+            lane_failed = bool(empty or total['exit_code'] or total['failures'] or total['errors'])
+            total['status'] = 'failed' if lane_failed else 'passed'
             (run / 'results.json').write_text(json.dumps(results, indent=2) + '\n')
-            print(json.dumps({k: v for k, v in summary.items()
+            print(json.dumps({k: v for k, v in total.items()
                               if k not in ('skipped_cases', 'failed_cases')}), flush=True)
-            if tree_state(root) != initial_state:
-                raise ValueError('Working tree changed during validation; stop before another lane')
-            if not summary['reports'] or summary['tests'] == summary['skipped']:
+            if empty:
                 status = 'failed'
                 return 1
-            failed |= bool(exit_code or summary['failures'] or summary['errors'])
+            failed |= lane_failed
         status = 'failed' if failed else 'passed'
         print('Selected checks ' + status + '. Inspect results.json for skips/failures; '
               'a category pass is not full-suite certification.')
@@ -428,7 +503,9 @@ def main(argv=None):
         if args.run or args.preflight:
             if is_broad(plan):
                 print('BROAD smoke selection: exhaustive slow-suite tests remain excluded; '
-                      'allow several minutes plus separate guards. This is not full-suite validation.', flush=True)
+                      'ROM-heavy coverage can still take an hour. Ordinary work releases admission '
+                      'between batches of at most 50 candidates, then queues guards separately. '
+                      'This is not full-suite validation.', flush=True)
             print(f'Invocation timeout: {args.max_minutes:g} minutes, excluding queue wait; '
                   '10 minutes without output. Timeout means incomplete.', flush=True)
             if sys.platform == 'darwin':
@@ -438,17 +515,23 @@ def main(argv=None):
                 preflight(ROOT, plan)
                 print('Tool prerequisites passed; no tests executed.')
                 return 0
-            # Re-plan after waiting: edits or integration may have changed this tree.
-            # The timeout starts inside run_plan, after the slot is acquired.
-            with maven_slot(ROOT, exclusive=args.workers > 1 or needs_exclusive([]),
-                            estimate=plan_estimate(plan),
-                            kind='category-full' if plan['full'] else 'category') as fd:
+            # Keep target/ and diagnostics exclusively owned while shared CPU/RAM
+            # admission is released between bounded batches and the guard lane.
+            with worktree_build_slot(ROOT) as tree_fd:
                 plan = make_plan(ROOT, data, args.base, args.category, args.guards, args.workers)
                 if args.rom_directory is not None:
                     plan['rom_directory'] = str(args.rom_directory)
                 preflight(ROOT, plan)
-                return run_plan(ROOT, plan, args.max_minutes, args.keep_diagnostics, queue_fd=fd,
-                                rom_directory=args.rom_directory)
+
+                def admission(batch_plan, lane):
+                    return maven_slot(ROOT, tree_fd=tree_fd,
+                                      exclusive=(lane == 'ordinary' and args.workers > 1)
+                                      or needs_exclusive([]),
+                                      estimate=plan_estimate(batch_plan),
+                                      kind='category-batch' if lane == 'ordinary' else 'category-guards')
+
+                return run_plan(ROOT, plan, args.max_minutes, args.keep_diagnostics,
+                                rom_directory=args.rom_directory, admission=admission)
         display = plan if args.json else {
             **{k: v for k, v in plan.items() if k not in ('tests', 'reasons')},
             'selected_classes': len(plan['tests']), 'reasons': plan['reasons'][:50],
