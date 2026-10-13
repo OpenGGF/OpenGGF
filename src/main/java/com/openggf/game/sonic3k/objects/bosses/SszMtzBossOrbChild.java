@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
+import com.openggf.game.mutators.PlayerFluidContextAccess;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -480,7 +481,7 @@ public final class SszMtzBossOrbChild extends AbstractObjectInstance
             return ability == 1 || ability == 3;
         }
         if (hit instanceof Tails tails) {
-            if (hit.getDoubleJumpFlag() == 0 || tails.isInWater()) {
+            if (hit.getDoubleJumpFlag() == 0 || PlayerFluidContextAccess.movementUnderwater(tails)) {
                 return false;
             }
             int dx = (short) (hit.getCentreX() - getX());

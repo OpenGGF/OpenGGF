@@ -21,7 +21,7 @@ source inspection alone does not certify a complete act or route.
 | [198](https://github.com/OpenGGF/OpenGGF/issues/198) | Fixed | MGZ state 8 uses ordinary plane assignment. Its high-priority Plane B terrain was absent from the sprite mask. The mask now replays the completed background compositor with its original window, scroll and sampling metadata. Spiker's native low hardware priority is unchanged. |
 | [197](https://github.com/OpenGGF/OpenGGF/issues/197) | Fixed | `Draw_Sprite`'s multisprite path suppresses main mapping frame zero while retaining the column child. Ordinary projectile frame zero is an arrow and must not be emitted for a defeated head trigger. |
 | [196](https://github.com/OpenGGF/OpenGGF/issues/196) | Fixed | MGZ `sub_3555C` / `sub_355E4` requests `sfx_Skid` when platform running reverses into the skid animation in shipped `FixBugs=0` code. |
-| [195](https://github.com/OpenGGF/OpenGGF/issues/195) | ROM behavior retained | HCZ cutscene/button/tension-bridge routines release standing status without forcing a falling animation. In comparison-only `s3k-sonic-tails-complete-emeralds/hcz_4`, physics CSV rows `$381`→`$382` clear OnObj/set InAir but retain LOOKUP animation 7; `$383`–`$391` continue falling with that animation. These are segment-relative rows; V5 metadata records BK2 offset 97208, and row 898 corresponds to native recording frame 98107 under its offset convention. No forced FALL write was added. |
+| [195](https://github.com/OpenGGF/OpenGGF/issues/195) | ROM behavior retained | `CutsceneKnux_HCZ2` / `loc_65C72` triggers button 8; tension-bridge `loc_38918` / `loc_3892C` clears OnObj and sets InAir without writing animation. In comparison-only `s3k-sonic-tails-complete-emeralds/hcz_4`, physics CSV rows `$381`→`$382` clear OnObj/set InAir but retain LOOKUP animation 7 and mapping `$C3`; `$383`–`$391` continue falling with that animation. These are segment-relative rows; V5 metadata records BK2 offset 97208, and row 898 corresponds to native recording frame 98107 under its offset convention. No forced FALL write was added. |
 | [194](https://github.com/OpenGGF/OpenGGF/issues/194) | Existing art isolation; current HCZ results/tally pixels pass | The older screenshot names a 0.6 prerelease. Current results jobs claim standalone pattern payloads, assemble a private bank, and cache it in `RESULTS_SCREENS` at `$60000`; they do not overwrite the level's tile bank. |
 | [193](https://github.com/OpenGGF/OpenGGF/issues/193) | Existing palette behavior | The WFZ flame uses native palette line 2. Added actual placement-trigger/fire-cycle/decoded-flame color coverage instead of changing a correct palette selector. |
 | [191](https://github.com/OpenGGF/OpenGGF/issues/191) | Existing fix | `4cb33be27` restores eleven-update sparkle sequences and six/eight-update blank gaps; `a2b89a071` preserves the final twinkle's natural SFX tail. |
@@ -32,8 +32,8 @@ source inspection alone does not certify a complete act or route.
 | [185](https://github.com/OpenGGF/OpenGGF/issues/185) | Fixed | S1 SS results load the ROM mini-Sonic art through the existing results PLC and use Map_SSR's text-only Continue frame during the initial slide, then show and animate the mini-Sonic icon at the native award boundary. |
 | [184](https://github.com/OpenGGF/OpenGGF/issues/184) | Existing fix | `a56e126c8` installs the shipped S1 InitMusicPlayback FM/PSG silence program; `TestSmpsPhysicalPolicy` covers its writes. |
 | [183](https://github.com/OpenGGF/OpenGGF/issues/183) | Fixed | REV01 SYZ layout is two 256-pixel rows. `LevelLayoutLoad` clears eight-row RAM, and `GetBlockData` indexes that RAM rather than repeating supplied rows. Decoder zero rows and `BgScroll_SYZ`'s initial +1 expose the correct lower strip instead of top clouds. |
-| [182](https://github.com/OpenGGF/OpenGGF/issues/182) | Shipped ROM bug retained | Caterkiller's delayed body deletion has an explicit `FixBugs` comment about rolling hurt from a surviving body. Changing it would violate the project's shipped `FixBugs=0` contract. |
-| [181](https://github.com/OpenGGF/OpenGGF/issues/181) | Shipped ROM bug retained | S1 `React_ChkHurt` exits the scan during flashing. The source explicitly identifies lava blocking later ring contacts; no touch-order rewrite was made. |
+| [182](https://github.com/OpenGGF/OpenGGF/issues/182) | Shipped ROM bug retained | Caterkiller's `Cat_BodySeg1.chkBroken` selects delayed body deletion after the head breaks, with an explicit `FixBugs` comment about rolling hurt from a surviving body. Changing it would violate the project's shipped `FixBugs=0` contract. |
+| [181](https://github.com/OpenGGF/OpenGGF/issues/181) | Shipped ROM bug retained | S1 `React_ChkHurt.damage` branches on nonzero flashing time to `.noDamage`; shipped `FixBugs=0` returns from the scan rather than continuing to the next contact. The source explicitly identifies lava blocking later ring contacts; no touch-order rewrite was made. |
 
 ## Decisions and rejected changes
 
@@ -67,12 +67,13 @@ source inspection alone does not certify a complete act or route.
 | --- | --- | --- |
 | S1 SYZ1/2/3 lower background | Native ROM layout, cleared row and raster/window sampling at low camera positions | Full-act viewport/donor/load/respawn/rewind routes |
 | S1 boss music and SS Continue/results | Locked and defeated-but-locked music expiry; real ROM mappings/patterns, award timing and glyph output | Full boss-to-special-stage campaigns and viewport/team breadth |
-| S2 CPZ hurt tube | Actual tube capture, hurt gravity/bounds, S1/S2/S3K landing-control rules | Long route and composed ring-contact replay across loads |
+| S2 CPZ hurt tube | Actual tube capture, hurt gravity/bounds, S1/S2/S3K landing-control rules, real S2/S3K terrain callbacks and normal-held controls | Long route and composed ring-contact replay across loads |
 | S2 WFZ flame / OOZ cue | Actual trigger/palette and native shooter/mailbox/ROM PCM | Full encounter replay and supported viewport/team breadth |
 | S3K ICZ1 chain | Breakup, native child motion/lifetime, captured graph restore and forward replay | Supported donor/team/viewport routes and respawn boundaries |
 | S3K MGZ trigger/platform/carry | Head composition, skid cue, player-steered carry | Whole act/boss routes, all supported donor/team combinations |
 | S3K MGZ2 rising background | Production ROM Spiker overlap at 320/400; compositor priority/transparency/scroll oracle | Remaining widths, donors, teams and complete rising-floor rewind route |
 | S3K CNZ2 escape | Both ship/flame facing directions | Complete boss route/escape rewind across all supported teams |
+| S3K SOZ2 wide Knuckles controller | Refreshed 800px frozen inputs pass 48 whole-world replay windows and 18 semantic events through playable LRZ | Fresh nine-route class validation pending; other widths/donors and native-emulator presentation remain open |
 | Shared scores, host pause and player priority | Award/display conservation; locked title input edge consumption; two-direction priority restoration | Full per-act campaign and transition matrices |
 
 The [coverage backlog](../../status/level-test-coverage.md) retains the incomplete
@@ -127,8 +128,9 @@ between pinned `5e2f51f07` and their baseline `b3464b31b` is empty for `src`,
 `examples`, `racing`, `pom.xml`, `tools`, `.githooks` and `.mvn`; those baseline
 updates were documentation only. The recorded baseline uses Java 25 and the
 same supplied ROM identities. This is reuse of observed matching negative cases,
-not a new baseline run or a claim of complete route coverage. At that checkpoint, Infinite Sonic, SOZ, CLI and networking still required
-focused attribution. Their later results and remaining limits are recorded below.
+not a new baseline run or a claim of complete route coverage. At that checkpoint,
+Infinite Sonic, SOZ, CLI and networking still required focused attribution.
+Their later results and remaining limits are recorded below.
 Integration, push and cleanup had not yet run.
 
 The first corrected focused run was not a pass: the inventory test passed its
@@ -148,8 +150,9 @@ verified both CPU recordings and the native mask/Spiker pixels.
 The remaining matched baseline command cleaned `target/` and ran on pinned
 `5e2f51f07` in the same task worktree: five cases in 103 seconds, one CLI failure,
 no errors/skips. Infinite Sonic, the SOZ wide Knuckles route and both networking
-backends passed. This confirms the Infinite Sonic regression; The later current SOZ run below confirms its recording regression. The earlier
-network failure remains unreproduced on unchanged networking dependencies.
+backends passed. This confirms the Infinite Sonic regression. The later current
+SOZ run below confirms its recording regression. The earlier network failure
+remains unreproduced on unchanged networking dependencies.
 
 The baseline CLI subprocess was observed directly with the report's classpath:
 both launches returned status 4 and empty stdout. With the graphics option in
@@ -171,8 +174,9 @@ The clean current focused run on `013d57d74` plus that S1 correction completed
 both CPU compositor recordings, native mask/Spiker pixels, three S1 geometry/
 background tests, Infinite Sonic, CLI and both racing backends passed. The mask
 oracle covered both incoming blend states. SOZ still failed at `cold route reaches
-its real boss`; its baseline case passed, so this is a delivery-blocking regression
-requiring frame-state attribution. The network failure was not reproduced in
+its real boss`; its baseline case passed, so that checkpoint required frame-state
+attribution before delivery. The later witness and controller repair are recorded
+below. The network failure was not reproduced in
 either focused comparison; its unchanged synthetic transport dependencies and
 packet-discarding test wait helper limit attribution of the original broad failure.
 
@@ -183,7 +187,8 @@ difference is input 24045: hurt Knuckles is released from the light at
 `loc_17BD0` integrates motion and adds `$30` independently of `object_control`,
 so the candidate owns the correct acceleration. The positions reconverge by
 24100; later candidate/base Y 1203/1202 at 26990 is consistent with retained
-fractional motion; that original comparison observed integer centres, not raw fractions. At 26992 the candidate catches the wall at X 18837 while the original
+fractional motion; that original comparison observed integer centres, not raw
+fractions. At 26992 the candidate catches the wall at X 18837 while the original
 recording passes at X 18840. This is controller-recording invalidation after a
 ROM correction, not evidence for restoring the omitted gravity. Raw CSVs remain
 temporary; the comparison does not hydrate either run.
@@ -259,6 +264,32 @@ before promotion. This is engine route evidence, not native-emulator parity or
 certification of other viewport/donor products. Fresh permanent route and final
 integration checks are recorded after they run.
 
+Commit `8837dc657` promotes that controller-only repair to the canonical
+`soz2-cold-knuckles-800.script` / `.bk2`; the historical 35,440-input recording
+retains its original dated evidence in the
+[SOZ2 matrix](levels/s3k-soz-act2.md#knuckles-800px-controller-refresh-2026-10-13).
+The promoted route has 35,412 fixed pads; all nine permanent cold-route cases
+still require fresh final validation after the latest merge.
+
+The subsequent working-tree merge of develop `e6ebe555` reconciled six conflicts,
+retaining the Chaos and issue entries, the 20,838-entry candidate API pin and
+rewind inventory totals 1,320/1,077/243. Those totals supersede the earlier
+1,317/1,074/243 expectation only for this later merged tree. Its final merge
+commit, verification, integration, push and cleanup are not yet recorded here.
+
+The background tile-pass owner also now saves/restores the actual native draw
+and read framebuffer bindings and four-component viewport, instead of assuming
+the manager's cached display state. Uninitialized begin/end calls remain free
+of GL queries. `TestBackgroundRendererStateRestoration` supplies the focused
+regression; its final execution is pending. Earlier blend/mask pixel passes
+retain their recorded scope and do not certify this new restoration change.
+
+The updated local change-based plan selects 3,222 candidate classes across all
+ten smoke categories plus guards. Preflight passes Java 25, Lua 5.4 and
+PowerShell. The final focused selection is based on the reviewed new upstream
+scope and affected consumers; the earlier 3,185-class smoke run is historical
+coverage, not a pass on this merged candidate. Final results remain pending.
+
 The 63 ordinary skips comprise 32 Infinite Sonic cases whose selected acts lack
 the prerequisite platform/flyer, 24 opt-in probes/captures/soaks or missing local
 audio-reference captures, six graphics capability assumptions, and one existing
@@ -294,6 +325,31 @@ python3 tools/testing/run_categories.py \
   --base 5e2f51f07917d5eff8ac120007dac55327f93f32 \
   --rom-directory "$MAIN" --max-minutes 105 --run
 ```
+
+The exact matched five-case baseline invocation below ran on pinned `5e2f51f07`;
+the inherited `JDK_JAVA_OPTIONS` prefix explains its one CLI assertion failure.
+It used the updated main-checkout queue wrapper while retaining this worktree's
+cwd and `target/`.
+
+```bash
+LUA_BIN=/usr/bin/lua5.4 EGL_PLATFORM=surfaceless \
+JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl \
+python3 "${MAIN}/tools/testing/maven_queue.py" \
+  -Dmse=off -Psmoke \
+  '-Dtest=TestInfiniteSonic#openSectionsMixRomHalvesAndClimbBetweenTiers,TestSozColdRouteCapture#knucklesWideColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef,TestCompleteRunAudioCli#freshJvmBootstrapsTheS1ProfileButItsUnavailableDispatcherEmitsNoStandardOutput,TestDirectConnectEndToEnd#fullRoundWithLatencyProxiedGuest' \
+  "-Dsonic1.rom.path=${MAIN}/s1.gen" \
+  "-Dsonic2.rom.path=${MAIN}/s2.gen" \
+  "-Ds3k.rom.path=${MAIN}/s3k.gen" \
+  "-Dkis2.rom.path=${MAIN}/kis2.gen" clean test -B
+```
+
+Exact historical launch strings for the 13-case current run and the 216-case
+invocation were not retained; their observed outcomes above are not replaced
+with reconstructed commands. The latter's 214 permanent cases were selected by
+`TestPlayableHurtObjectControlMovement,TestPlayableHurtLandingObjectControl,TestCollisionSystemAirLanding,TestPlayableSpriteMovement`;
+the two additional cases were rejected temporary controller probes, since removed.
+That permanent selector is a reproduction scope, not a separately observed
+214-case invocation or a claim that the latest merged tree has passed it.
 
 Coverage limits for retained/prior behavior: the S1 drowning check observes the
 native FM/PSG silence write program, not an audible drowning transition. No

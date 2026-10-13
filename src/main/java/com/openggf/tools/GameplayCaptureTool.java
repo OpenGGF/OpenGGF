@@ -57,6 +57,11 @@ public final class GameplayCaptureTool {
         if (totalFrames <= 0) {
             throw new IllegalArgumentException("Nothing to capture: supply --input or --frames");
         }
+        if (arguments.interactivePacing() && movie != null) {
+            int usedFrames = Math.min(scriptFrames, Math.max(0, totalFrames - arguments.settle()));
+            for (int i = 0; i < usedFrames; i++)
+                MutatorGameplayCaptureTool.PresentationInput.validate(movie.getFrame(i + arguments.inputStart()));
+        }
         Path outDir = arguments.outDir();
         Path framesDir = outDir.resolve("frames");
         Files.createDirectories(framesDir);
@@ -88,7 +93,9 @@ public final class GameplayCaptureTool {
             if (arguments.audio() && audio.presentationFrameRate()!=arguments.fps())
                 throw new IllegalArgumentException("Audio presentation rate differs from capture fps");
             // The manager-owned handle carries its lease through ordinary title/level producer rebuilds.
-            try (var capture = arguments.audio() ? audio.beginLiveCaptureAudio(arguments.fps()) : null;
+            try (var presentationInput = arguments.interactivePacing()
+                        ? MutatorGameplayCaptureTool.PresentationInput.install(session.loop()) : null;
+                 var capture = arguments.audio() ? audio.beginLiveCaptureAudio(arguments.fps()) : null;
                  var pcm = arguments.audio() ? Files.newOutputStream(outDir.resolve("audio.pcm")) : java.io.OutputStream.nullOutputStream()) {
                 if (capture!=null && (capture.frameRate()!=arguments.fps() || capture.sampleRate()!=sampleRate))
                     throw new IllegalArgumentException("Audio clock differs from capture settings");
@@ -100,9 +107,11 @@ public final class GameplayCaptureTool {
                     int movieIndex = scriptIndex + arguments.inputStart();
                     Bk2FrameInput input = movie != null && scriptIndex >= 0 && scriptIndex < scriptFrames
                             ? movie.getFrame(movieIndex) : null;
-                    session.step(input);
+                    if (presentationInput == null) session.step(input);
+                    else session.stepPresentation(input, presentationInput);
                     if (arguments.audio()) {
-                        session.loop().presentOuterFrame(false, false);
+                        if (presentationInput == null) session.loop().presentOuterFrame(false, false);
+                        else com.openggf.Engine.presentOuterAudioFrame(session.loop(), false, false);
                         int count=capture.drainPresentationFrame(samples)*2;
                         for(int i=0;i<count;i++) { pcm.write(samples[i]&255); pcm.write((samples[i]>>>8)&255); }
                     }
@@ -200,7 +209,7 @@ public final class GameplayCaptureTool {
                             boolean stopOnDeath, int deathGrace, boolean video, int scale, int fps,
                             Path outDir, String emeralds, boolean titleCard, boolean completeSpecialStage,
                             Integer vIntRunCount, Integer cameraXSub, boolean starPost, Integer rings, boolean reverseGravity,
-                            Path mod, boolean titleScreen, boolean audio) {
+                            Path mod, boolean titleScreen, boolean audio, boolean interactivePacing) {
 
         public static Arguments parse(String[] argv) {
             String game = "s3k";
@@ -236,7 +245,7 @@ public final class GameplayCaptureTool {
             boolean titleCard = false;
             boolean completeSpecialStage = false;
             Path mod = null;
-            boolean titleScreen=false, audio=false;
+            boolean titleScreen=false, audio=false, interactivePacing=false;
             for (int i = 0; i < argv.length; i++) {
                 String flag = argv[i];
                 switch (flag) {
@@ -244,6 +253,7 @@ public final class GameplayCaptureTool {
                     case "--rom" -> rom = Path.of(value(argv, ++i, flag));
                     case "--mod" -> mod = Path.of(value(argv, ++i, flag));
                     case "--title-screen" -> titleScreen=true;
+                    case "--interactive-pacing" -> interactivePacing=true;
                     case "--audio" -> audio=true;
                     case "--zone" -> zone = value(argv, ++i, flag);
                     case "--act" -> act = number(value(argv, ++i, flag), flag);
@@ -304,10 +314,12 @@ public final class GameplayCaptureTool {
                     || ZoneIds.resolve(game,zone)!=0 || act!=1))
                 throw new IllegalArgumentException("--title-screen starts before assembly: use first zone/act and no positioned/donor setup");
             if (audio && (captureFrom!=0 || every!=1 || fps!=60)) throw new IllegalArgumentException("--audio requires capture-from 0, every 1, fps 60");
+            if (interactivePacing && (completeSpecialStage || fps != 60))
+                throw new IllegalArgumentException("--interactive-pacing requires native 60 Hz presentation and no debug stage completion");
             return new Arguments(game, rom, zone, act - 1, startX, startY, width, main, sidekick, donor, donorRom, input,
                     settle, inputStart, frames, captureFrom, every, Set.copyOf(stills), stopOnDeath, deathGrace,
                     video, scale, fps, outDir, emeralds, titleCard, completeSpecialStage,
-                    vIntRunCount, cameraXSub, starPost, rings, reverseGravity, mod, titleScreen, audio);
+                    vIntRunCount, cameraXSub, starPost, rings, reverseGravity, mod, titleScreen, audio, interactivePacing);
         }
 
         private static String value(String[] argv, int index, String flag) {

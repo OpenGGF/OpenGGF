@@ -247,19 +247,24 @@ public class ExplosionObjectInstance extends AbstractObjectInstance implements S
         int x = spawn.x();
         int y = spawn.y();
         if (pointsAllocatedBeforeAnimal && pointsFactory != null) {
-            objectManager.createDynamicObject(() -> pointsFactory.create(
+            spawnDestructionChild(objectManager,svc,() -> pointsFactory.create(
                     new ObjectSpawn(x, y, 0x29, 0, 0, false, 0), svc, pointsValue));
         }
         // S3K Obj_Explosion routine 0 allocates Obj_Animal before initializing
         // its animation/SFX (docs/skdisasm/sonic3k.asm:42157-42180).
         if (animalFactory != null) {
-            objectManager.createDynamicObject(() -> animalFactory.create(
+            spawnDestructionChild(objectManager,svc,() -> animalFactory.create(
                     new ObjectSpawn(x, y, 0x28, 0, 0, false, pointsValue), svc));
         }
         if (!pointsAllocatedBeforeAnimal && pointsFactory != null) {
-            objectManager.createDynamicObject(() -> pointsFactory.create(
+            spawnDestructionChild(objectManager,svc,() -> pointsFactory.create(
                     new ObjectSpawn(x, y, 0x29, 0, 0, false, 0), svc, pointsValue));
         }
+    }
+    private void spawnDestructionChild(ObjectManager manager,ObjectServices svc,java.util.function.Supplier<ObjectInstance> factory) {
+        var child=manager.createDynamicObject(factory);
+        var policies=com.openggf.game.mutators.NativeObjectPolicyAccess.port(svc);
+        if(policies!=null && child!=null) policies.childSpawned(this,child);
     }
 
     /**

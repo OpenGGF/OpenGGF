@@ -1,9 +1,12 @@
 # S3K Sandopolis Act 2 coverage matrix
 
 Canonical slot: `S3K_SANDOPOLIS_2`; ROM zone `$08`, act index 1, SKL pointer set.
-Status: current-base native-movement solo Sonic, solo Tails, solo Knuckles and Sonic + Tails cold completion at width320,
+Status: dated native-movement solo Sonic, solo Tails, solo Knuckles and Sonic + Tails cold completion at width320,
 with rendered whole-world rewind checks and actual LRZ timeline isolation.
 Knuckles also has a separate 800px cold completion with the same replay obligations.
+The [2026-10-13 controller refresh](#knuckles-800px-controller-refresh-2026-10-13)
+passes its independent frozen-input check; fresh validation of all nine permanent
+cold-route cases on the latest merged runtime remains pending.
 Full methodology acceptance, broader routes and native/visual parity remain open.
 “Native” configuration here means the engine movement profile, not emulator
 parity. Dated evidence retains its original scope; the final
@@ -104,7 +107,7 @@ S2 replaces Knuckles with Sonic. The native/off rosters are unchanged.
 | --- | --- | --- |
 | Sonic solo / Sonic + Tails | Cold entry, ordinary traversal, checkpoint/death, boss and exit | Sonic solo and Sonic + Tails at native 320 complete cold entry through eight natural boss hits, capsule/results and playable Lava Reef using fixed controller input with whole-world replay; broader products remain open |
 | Tails solo | Same, including native character branches and flight interactions | Native 320 solo cold completion reaches playable Lava Reef with eight hits and whole-world replay. Every authored post activates/reloads; positioned solo victory covers off/S2 donors at all five widths. Wider/donor cold routes remain open; S1-donor Tails is outside the production roster |
-| Knuckles solo | Verify distinct start/capsule/boss/progression branches from ROM | Separate native-profile 320/800 fixed-input cold completions cover cork/rock and upper-switch puzzles, all eight boss hits, capsule/results and playable LRZ, each with 48 traversal/destination replay windows plus semantic events. Every authored post activates/reloads; positioned solo victory covers all five widths. The original 320 input fails at 800; the separately authored wide route closes that traversal gap below |
+| Knuckles solo | Verify distinct start/capsule/boss/progression branches from ROM | Dated native-profile 320/800 fixed-input cold completions cover cork/rock and upper-switch puzzles, all eight boss hits, capsule/results and playable LRZ, each with 48 traversal/destination replay windows plus semantic events. The 2026-10-13 wide controller refresh passes its independent frozen-input check; fresh class validation is pending. Every authored post activates/reloads; positioned solo victory covers all five widths. The original 320 input fails at 800; the separately authored wide route closes that traversal gap below |
 | Mixed / maximum / duplicate followers | Independent held state, authority, release, death and leader chain | Selected mechanisms and three-player terrain restore/replay covered; repeated checkpoint team reset evidence below. No finite follower maximum is declared by the production team contract; full multi-owner interaction breadth remains open |
 | Production presets 320/352/400/528/800 | Actual selected preset and camera width; entry/reset × every supported donor; sensitive interactions and rewind | Checkpoint and team lifecycle matrices now select `WidescreenAspect.values()` through the production resolver, including previously omitted352/528. See current execution below; historical512/640 checks remain historical custom-width evidence, not menu coverage |
 | Donors off/S1/S2 | Confirm production support, actual movement profile, mandatory mechanics and rewind | Every authored checkpoint covers the six supported character/donor combinations × five widths, asserting movement capability and reload state. Thirty positioned boss-to-LRZ cases cover all six supported character/donor combinations at each width; full traversal/interaction breadth remains open |
@@ -812,3 +815,42 @@ state/pixel controls and their limits are described in the
 [headless testing guide](../../../guide/contributing/headless-testing.md).
 This performance change supplies no new native reference, full-route visual
 certification or missing viewport/donor/character coverage; inherited gaps remain.
+
+## Knuckles 800px controller refresh (2026-10-13)
+
+The 35,440-input wide recording and results in the 2026-09-27 section remain
+historical evidence on their original runtime. The GitHub issue sweep's native
+hurt correction invalidated that recording: at input 24045, hurt Knuckles leaves
+the light with Y velocity `-$3D0` rather than `-$400`. Shipped `loc_17BD0` adds
+`$30` after integrating motion despite object control. Restoring the omitted
+gravity would contradict that owning routine. A separate terrain-landing repair
+allows `Player_TouchFloor` / `Knux_TouchFloor` to clear InAir before HurtStop
+tests it and clears control; ordinary held movement remains suppressed.
+
+Commit `8837dc657` promotes the canonical wide controller script and BK2
+after authoring ordinary buttons through the lower rock, upper Skorp and narrow
+spike-corner passage, then freezing a replacement boss/capsule suffix. The current
+`src/test/resources/routes/s3k/soz2-cold-knuckles-800.script` and `.bk2` have the
+same 35,412 controller inputs. Runtime physics, puzzle geometry, damage, enemy
+and boss parameters were not retuned to fit the route. No position, rings,
+velocity, timer or object state is supplied by the recording.
+
+The independent frozen-input helper passed one case on `73f23d89e` runtime,
+with no failures, errors or skips. It observed all eight natural boss hits at
+31299/31763/32115/32467/32819/33171/33523/33875 and real LRZ load/control readiness
+at 35191. Its 48 selected 45-input whole-world restore/replay windows include
+eleven puzzle spots; 18 semantic events cover background/boss/capsule/results
+boundaries. Nonempty outgoing history is cleared by the actual LRZ load, and
+180 playable destination inputs retain the solo roster and released control.
+The script/BK2 controller logs match; temporary authoring and witness code was
+removed before promotion.
+
+The permanent owner remains
+`TestSozColdRouteCapture#knucklesWideColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef`.
+Fresh execution of all nine permanent class cases and final merged-runtime
+checks are pending. The prior 2026-09-27 video and counts do not document this
+new recording. This is engine cold-route and selected drawn replay evidence,
+not native-emulator trajectory/pixel parity, presentation on every intermediate
+frame, or certification of additional viewport/donor/character products.
+Exact issue-sweep attribution, rejected inputs and validation history are in the
+[dated issue artifact](../2026-10-13-github-issues.md#soz-recording-repair-and-merged-develop-checks).

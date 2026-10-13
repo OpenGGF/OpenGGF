@@ -180,4 +180,24 @@ class TestSonic3kSpeedShoesCommandSemantics {
         assertEquals(commandCountAfterPickup + 1, count);
         assertEquals(1, off.multiplier());
     }
+    @Test
+    void shorterNativeGrantRetainsStockDurationAndRewindRestoresBehavioralExpiry() {
+        var player=new TestablePlayableSprite("grant-sonic",(short)0,(short)0);
+        player.giveSpeedShoes();
+        String code="SpeedShoes-"+player.getCode();
+        int existing=GameServices.timers().getTimerForCode(code).getTicks();
+        player.giveSpeedShoes(600);
+        assertEquals(existing,GameServices.timers().getTimerForCode(code).getTicks());
+        player.giveInvincibility(1200);player.giveInvincibility(600);assertEquals(1200,player.getInvincibleFrames());
+        var snapshot=player.captureRewindState();
+        player.deactivateSpeedShoes();player.setInvincibleFrames(0);
+        player.restoreRewindState(snapshot);
+        assertTrue(player.hasSpeedShoes());assertEquals(1200,player.getInvincibleFrames());
+        var level=player.currentLevelManagerIfAvailable();
+        for(int frame=0;frame<1208;frame++) {
+            level.setFrameCounter(frame);GameServices.timers().updateDisplayPhaseTimersFor(player);
+        }
+        assertFalse(player.hasSpeedShoes());assertNull(GameServices.timers().getTimerForCode(code));
+    }
+
 }

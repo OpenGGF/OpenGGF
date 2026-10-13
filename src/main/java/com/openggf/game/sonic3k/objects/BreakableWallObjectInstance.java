@@ -144,13 +144,18 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
     private int savedPreContactAnimationId;
 
     public BreakableWallObjectInstance(ObjectSpawn spawn) {
+        this(spawn, -1);
+    }
+
+    /** Explicit native art/geometry source for isolated encounters; -1 retains the placed-object path. */
+    protected BreakableWallObjectInstance(ObjectSpawn spawn, int sourceZone) {
         super(spawn, "BreakableWall");
         int subtype = spawn.subtype() & 0xFF;
         this.triggerControlled = (subtype & 0x80) != 0;
         this.mappingFrame = subtype & 0x0F;
         this.x = spawn.x();
         this.y = spawn.y();
-        this.config = resolveConfig(subtype, mappingFrame);
+        this.config = sourceZone < 0 ? resolveConfig(subtype, mappingFrame) : resolveForZone(sourceZone, subtype, mappingFrame);
     }
 
     @Override
@@ -464,6 +469,8 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
                         config.halfWidth, config.halfHeight);
                 ObjectLifetimeOps.addReplacementAtTransferredSlot(
                         objectManager, firstFragment, transferredSlot);
+                var policies=com.openggf.game.mutators.NativeObjectPolicyAccess.port(services());
+                if(policies!=null) policies.childSpawned(this,firstFragment);
                 // The ROM immediately falls through to loc_21692 after the
                 // in-place conversion, so piece zero moves once this same tick.
                 firstFragment.update(0, null);

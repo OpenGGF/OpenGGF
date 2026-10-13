@@ -208,6 +208,24 @@ public final class Sonic3kZoneArt implements ZonePictureSource {
         return kit;
     }
 
+    /**
+     * Native object art from an isolated ROM level build. This does not publish the source
+     * act's tiles or palette into the running level; the object atlas owns the returned copy.
+     */
+    public com.openggf.level.objects.ObjectSpriteSheet objectArt(int zone, int act, String key) {
+        Profile selected = profile(zone, act);
+        if (selected == null) {
+            var mode = zone == Sonic3kZoneIds.ZONE_AIZ && act == 0
+                    ? Sonic3kLoadBootstrap.Mode.SKIP_INTRO : Sonic3kLoadBootstrap.Mode.NORMAL;
+            selected = new Profile(zone, act, mode, List.of(), 0, PLANE_WIDTH, 0x200, 0, 0, 0x200,
+                    Integer.MAX_VALUE, height -> List.of(new Band(0, height, 0.25, 0)), Integer.MAX_VALUE);
+        }
+        Built built = build(selected);
+        return Sonic3kObjectArtProvider.buildLevelArtSheets(built.level(), zone, act, reader).sheets()
+                .stream().filter(entry -> key.equals(entry.key())).map(entry -> entry.sheet())
+                .findFirst().orElse(null);
+    }
+
     @Override
     public boolean hasTitleCard(int zone, int act) {
         return Sonic3kTitleCardArt.supports(zone, act);

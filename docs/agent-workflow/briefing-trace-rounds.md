@@ -552,6 +552,17 @@ spawn-derived latch key, so querying every active object falsely labels the
 chain display as a second physical support. The separate riding owner is the
 actual carrier; shared latch-key observations alone do not establish contact.
 
+SOZ fixed-input repair (2026-10-13, GitHub issue #188): native Hurt gravity
+continues after object control takes the player. Its first integer-position
+difference can reconverge while later contacts still change. Read the owning
+solid routine through its narrow-width and forced-top branches; a permissive
+vertical catch alone does not prove landing. Preserve X/Y fractions, actual
+riding ownership and button-edge history in engine-owned authoring snapshots.
+Directional input prevents the native roll entry, so Down plus Right is not a
+roll instruction. Freeze successful controller choices into ordinary input,
+then verify them in a fresh cold session with the unchanged replay/load checks.
+See [the issue audit](../architecture/validation/2026-10-13-github-issues.md).
+
 Live rewind recording versus route-driver snapshots (2026-09-27): enabling
 LIVE_REWIND_ENABLED in a RecordingFrameDriver/HeadlessTestFixture route does not
 exercise GameLoop's history recorder. A new MHZ paired load-boundary test had

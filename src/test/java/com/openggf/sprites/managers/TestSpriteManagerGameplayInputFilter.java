@@ -119,6 +119,89 @@ class TestSpriteManagerGameplayInputFilter {
     }
 
     @Test
+    void motionAdmissionRepublishesDirectionsBeforeNativeEventsAndMovementUsesTheSameSample() {
+        var runtime = motion(new com.openggf.mods.mutators.InputControlPolicy(
+                com.openggf.mods.mutators.InputControlPolicy.Mode.REVERSE_HORIZONTAL));
+        CapturingPlayable player = new CapturingPlayable(); sprites.addSprite(player);
+        var raw = PlayerInputState.of(AbstractPlayableSprite.INPUT_LEFT, AbstractPlayableSprite.INPUT_LEFT,
+                InputActionMasks.ACTION_C, InputActionMasks.ACTION_C, true, true);
+        var input = input(raw);
+        sprites.publishHeldInputForLevelEvents(input);
+        runtime.beforeNativeTick(com.openggf.LevelFrameContext.from(gameplay), input.logical());
+        assertFalse(player.isLeftPressed()); assertTrue(player.isRightPressed());
+        sprites.update(input);
+        assertFalse(player.movementLeft); assertTrue(player.movementRight); assertTrue(player.movementJump);
+        assertEquals(AbstractPlayableSprite.INPUT_RIGHT,
+                player.getInputHistory(0) & (AbstractPlayableSprite.INPUT_LEFT | AbstractPlayableSprite.INPUT_RIGHT));
+        assertEquals(InputActionMasks.ACTION_C, sprites.getJoypadPressSnapshot().player1ActionPressed());
+    }
+
+    @Test
+    void delayedMotionInputAdvancesOncePerNativeTickAndPublicationAloneFreezesItsTail() {
+        var runtime = motion(new com.openggf.mods.mutators.InputControlPolicy(
+                com.openggf.mods.mutators.InputControlPolicy.Mode.DELAY, 6));
+        CapturingPlayable player = new CapturingPlayable(); sprites.addSprite(player);
+        var tap = PlayerInputState.of(AbstractPlayableSprite.INPUT_LEFT, AbstractPlayableSprite.INPUT_LEFT,
+                InputActionMasks.ACTION_C, InputActionMasks.ACTION_C, true, true);
+        var input = input(tap);
+        var beforePresentations = runtime.capture();
+        for (int presentation = 0; presentation < 3; presentation++) sprites.publishHeldInputForLevelEvents(input);
+        assertEquals(beforePresentations, runtime.capture(), "paused/held publication does not admit a native tick");
+        for (int tick = 0; tick <= 6; tick++) {
+            input = input(tick == 0 ? tap : PlayerInputState.neutral());
+            sprites.publishHeldInputForLevelEvents(input);
+            runtime.beforeNativeTick(com.openggf.LevelFrameContext.from(gameplay), input.logical());
+            assertEquals(tick == 6 ? InputActionMasks.ACTION_C : 0,
+                    sprites.getJoypadPressSnapshot().player1ActionPressed());
+            assertEquals(tick == 0, sprites.getJoypadPressSnapshot().player1StartPressed());
+            var admittedTail = runtime.capture();
+            sprites.update(input);
+            assertEquals(admittedTail, runtime.capture(), "movement must not admit the already-published native sample again");
+            assertEquals(tick == 6, player.movementLeft); assertEquals(tick == 6, player.movementJump);
+        }
+    }
+
+    private com.openggf.game.mutators.MotionMutatorRuntime motion(com.openggf.mods.mutators.InputControlPolicy policy) {
+        var runtime = new com.openggf.game.mutators.MotionMutatorRuntime();
+        runtime.bind(sprites, gameplay.getGameStateManager(), new com.openggf.game.mutators.TransientMutatorPolicySource() {
+            public java.util.List<Entry> entries() { return java.util.List.of(new Entry("fixture", 1, policy, 0, 600, false)); }
+            public boolean acknowledge(long id) { return true; }
+            public boolean report(long id, String status) { return true; }
+        });
+        return runtime;
+    }
+
+    @Test
+    void nativeMotionAdmissionRevalidatesAFilterReplacedAfterInitialEventPublication() {
+        var runtime = motion(new com.openggf.mods.mutators.InputControlPolicy(
+                com.openggf.mods.mutators.InputControlPolicy.Mode.REVERSE_HORIZONTAL));
+        CapturingPlayable player = new CapturingPlayable(); sprites.addSprite(player);
+        GameplayInputFilterAccess.install(gameplay, raw -> PlayerInputState.neutral());
+        var input = input(PlayerInputState.of(AbstractPlayableSprite.INPUT_LEFT, 0, 0, 0, false, false));
+        sprites.publishHeldInputForLevelEvents(input);
+        GameplayInputFilterAccess.install(gameplay, GameplayInputFilter.IDENTITY);
+        runtime.beforeNativeTick(com.openggf.LevelFrameContext.from(gameplay), input.logical());
+        assertTrue(player.isRightPressed()); assertFalse(player.isLeftPressed());
+        sprites.update(input);
+        assertTrue(player.movementRight); assertFalse(player.movementLeft);
+    }
+
+    @Test
+    void destinationResetInvalidatesPreparedMotionBeforeItsReplacementFilterRuns() {
+        var runtime = motion(new com.openggf.mods.mutators.InputControlPolicy(
+                com.openggf.mods.mutators.InputControlPolicy.Mode.REVERSE_HORIZONTAL));
+        CapturingPlayable player = new CapturingPlayable(); sprites.addSprite(player);
+        var input = input(PlayerInputState.of(AbstractPlayableSprite.INPUT_LEFT, 0, 0, 0, false, false));
+        sprites.publishHeldInputForLevelEvents(input);
+        runtime.beforeNativeTick(com.openggf.LevelFrameContext.from(gameplay), input.logical());
+        assertTrue(player.isRightPressed());
+        runtime.beforeAssembly(com.openggf.game.LevelLoadCause.FULL_RESTART);
+        GameplayInputFilterAccess.install(gameplay, raw -> PlayerInputState.neutral());
+        sprites.update(input);
+        assertFalse(player.movementRight); assertFalse(player.movementLeft);
+    }
+
+    @Test
     void changingPolicyBetweenEventPublishAndMovementDoesNotReuseTheOldSnapshot() {
         GameplayInputFilterAccess.install(gameplay, raw -> PlayerInputState.neutral());
         CapturingPlayable player = new CapturingPlayable();
@@ -182,6 +265,7 @@ class TestSpriteManagerGameplayInputFilter {
     private static final class CapturingPlayable extends AbstractPlayableSprite
             implements CustomPlayablePhysics {
         private boolean movementLeft;
+        private boolean movementRight;
         private boolean movementJump;
 
         private CapturingPlayable() {
@@ -193,6 +277,7 @@ class TestSpriteManagerGameplayInputFilter {
                                       boolean jump, boolean test, boolean speedUp, boolean slowDown,
                                       LevelManager levelManager, int frameCounter) {
             movementLeft = left;
+            movementRight = right;
             movementJump = jump;
         }
 

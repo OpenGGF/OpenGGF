@@ -175,6 +175,11 @@ public class AizRideVineObjectInstance extends AbstractObjectInstance
     @Override
     public void onUnload() {
         clearGrabbedPlayers();
+        if (spawn.layoutIndex() < 0 && childSlotsReserved) {
+            for (int i = 0; i < getReservedChildSlotCount(); i++) {
+                com.openggf.level.objects.ObjectLifetimeOps.freeReservedChildSlot(services().objectManager(), spawn, i);
+            }
+        }
     }
 
     @Override

@@ -198,6 +198,8 @@ public final class DestructionEffects {
                             pointsValue,
                             config.pointsAllocatedBeforeAnimal());
             ObjectLifetimeOps.addReplacementAtTransferredSlot(objectManager, explosion, badnikSlot);
+            var policies=com.openggf.game.mutators.NativeObjectPolicyAccess.port(services);
+            if(policies!=null) policies.replacementSpawned(badnikSlot,explosion);
         }
 
         // --- Play explosion SFX ---

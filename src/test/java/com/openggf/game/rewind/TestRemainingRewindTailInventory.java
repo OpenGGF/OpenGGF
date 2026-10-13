@@ -178,7 +178,10 @@ class TestRemainingRewindTailInventory {
         // ICZ's detached swinging-chain link passes the real isolated manager
         // round-trip; its moving/deferred-delete state also has forward-replay
         // coverage in TestS3kBadnikChildGraphRewind for both launch directions.
-        return new TailInventory(1317, 1074, 243, 0, buckets);
+        // NativeBreakableWallObjectInstance, NativeGhostEncounterObjectInstance and
+        // NativeGustObjectInstance each pass the real isolated ObjectManager round-trip;
+        // their spawn recreation and owned scalar state add three passes, with no bucket growth.
+        return new TailInventory(1320, 1077, 243, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {

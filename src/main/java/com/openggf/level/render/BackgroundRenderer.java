@@ -72,6 +72,8 @@ public class BackgroundRenderer {
 
     private boolean initialized = false;
     private final int[] savedViewport = new int[4];
+    private int savedTilePassDrawFbo;
+    private int savedTilePassReadFbo;
     private boolean savedTilePassBlending;
     private float backdropR = 0.0f;
     private float backdropG = 0.0f;
@@ -206,12 +208,11 @@ public class BackgroundRenderer {
         this.renderWidth = width;
         this.renderHeight = height;
 
-        // Save current viewport to restore later
-        GraphicsManager gm = this.graphicsManager;
-        savedViewport[0] = gm.getViewportX();
-        savedViewport[1] = gm.getViewportY();
-        savedViewport[2] = gm.getViewportWidth();
-        savedViewport[3] = gm.getViewportHeight();
+        // A scene-picture pass may own distinct draw/read FBOs and a viewport
+        // that differs from the manager's cached display viewport.
+        savedTilePassDrawFbo = glGetInteger(GL_DRAW_FRAMEBUFFER_BINDING);
+        savedTilePassReadFbo = glGetInteger(GL_READ_FRAMEBUFFER_BINDING);
+        glGetIntegerv(GL_VIEWPORT, savedViewport);
 
         // Tile alpha stores descriptor metadata, so preserve its bytes without
         // blending. Keep GL state in this initialized pass owner; recording
@@ -232,13 +233,13 @@ public class BackgroundRenderer {
     }
 
     /**
-     * End the tile rendering pass - unbinds FBO and restores viewport/blend state.
+     * End the tile rendering pass - restores the caller's FBOs, viewport and blend state.
      */
     public void endTilePass() {
         if (!initialized)
             return;
 
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        restoreFramebufferBindings(savedTilePassDrawFbo, savedTilePassReadFbo);
 
         // Restore viewport
         glViewport(savedViewport[0], savedViewport[1], savedViewport[2], savedViewport[3]);
@@ -535,21 +536,30 @@ public class BackgroundRenderer {
      * avoiding mid-frame GPU reallocation hitches.
      */
     public void ensureCapacity(int width, int height) {
-        if (width <= fboAllocWidth && height <= fboAllocHeight) {
+        if (!initialized || width <= fboAllocWidth && height <= fboAllocHeight) {
             return;
         }
 
         int newWidth = Math.max(width, fboAllocWidth);
         int newHeight = Math.max(height, fboAllocHeight);
+        int drawFbo = glGetInteger(GL_DRAW_FRAMEBUFFER_BINDING);
+        int readFbo = glGetInteger(GL_READ_FRAMEBUFFER_BINDING);
 
-        // Delete old FBO resources
-        FboHelper.destroy(fboHandle);
+        try {
+            // Delete old FBO resources
+            FboHelper.destroy(fboHandle);
+            fboAllocWidth = newWidth;
+            fboAllocHeight = newHeight;
+            createFBO(newWidth, newHeight);
+            LOGGER.info("BackgroundRenderer FBO grown to " + newWidth + "x" + newHeight);
+        } finally {
+            restoreFramebufferBindings(drawFbo, readFbo);
+        }
+    }
 
-        fboAllocWidth = newWidth;
-        fboAllocHeight = newHeight;
-        createFBO(newWidth, newHeight);
-
-        LOGGER.info("BackgroundRenderer FBO grown to " + newWidth + "x" + newHeight);
+    private static void restoreFramebufferBindings(int drawFbo, int readFbo) {
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, drawFbo);
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, readFbo);
     }
 
     /**

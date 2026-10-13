@@ -180,7 +180,7 @@ public final class S3kDezGravitySwitchObjectInstance extends AbstractObjectInsta
         if (gameState == null) {
             return;
         }
-        gameState.setReverseGravityActive(!gameState.isReverseGravityActive());
+        gameState.setReverseGravityActive(!com.openggf.game.GameStateInternalAccess.nativeReverseGravity(gameState));
     }
 
     /**

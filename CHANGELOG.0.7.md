@@ -16,7 +16,19 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   chain detaches into rewindable falling links, Carnival Night's escape flame
   stays behind Robotnik, and Marble Garden's head triggers, platform skid sound
   and raised-background sprite occlusion follow their ROM paths. Standalone
-  background passes preserve their caller's blend state and priority metadata.
+  background passes preserve their caller's framebuffer, viewport and blend state
+  while retaining priority metadata.
+
+- **Sonic3K Chaos Mode:** a maintained code mod adds 105 selectable effects over
+  ordinary native S3K, with available/selected lists, interval and duration controls,
+  severity-weighted scheduling and five optional ROM-art sidegames. Owner-scoped
+  temporary mutators and immutable gameplay observations keep scheduling alongside
+  native movement, objects, audio and presentation; accepted decisions, deadlines
+  and cleanup participate in rewind. Native target, art, route and control
+  qualifications constrain effects, including bounded Cluckoid gusts and ghost
+  encounters. Offscreen title captures share the native save-selection launch,
+  retain the selected team and prepare fresh mod callbacks for the new world.
+  Stream voting remains a future extension.
 
 - **Second Strike prototype:** a source-first difficulty patch follows the native
   S3K Angel Island opening with cooperating spotters, committed guards/artillery,

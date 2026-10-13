@@ -34,6 +34,9 @@ import com.openggf.level.objects.HudRenderManager;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.render.BackgroundRenderer;
+import com.openggf.level.render.ScenePresentationPass;
+import com.openggf.game.mutators.LivePresentationRuntime;
+import com.openggf.game.session.WorldSessionPolicyAccess;
 import com.openggf.level.rings.RingManager;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -87,6 +90,11 @@ public final class LevelRenderer {
      * definite-assignment rules flag the lambda captures otherwise.
      */
     private LevelManager lm;
+    private final ScenePresentationPass scenePresentationPass = new ScenePresentationPass();
+
+    private LivePresentationRuntime presentationRuntime() {
+        return WorldSessionPolicyAccess.getService(lm.getWorldSession(), LivePresentationRuntime.class);
+    }
 
     // Pre-allocated viewport buffer to avoid per-frame int[4] allocations inside GL commands.
     private final int[] viewportBuffer = new int[4];
@@ -150,6 +158,7 @@ public final class LevelRenderer {
     private float pendingFboFgWorldOffsetY;
     private Integer pendingFboAtlasId;
     private Integer pendingFboPaletteId;
+    private boolean pendingFboSuppressFrontScenery;
 
     // Mutable state for the pre-allocated BG tile pass command.
     private int pendingBgTilePassRenderWidth;
@@ -372,44 +381,59 @@ public final class LevelRenderer {
             return;
         }
 
-        tileFbo.begin();
+        int drawFbo = org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER_BINDING);
+        int readFbo = org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER_BINDING);
+        int[] viewport = new int[4]; glGetIntegerv(GL_VIEWPORT, viewport);
+        try {
+            tileFbo.begin();
 
-        glEnable(GL_BLEND);
-        glBlendEquation(GL_MAX);
-        glBlendFunc(GL_ONE, GL_ONE);
+            glEnable(GL_BLEND);
+            glBlendEquation(GL_MAX);
+            glBlendFunc(GL_ONE, GL_ONE);
 
-        BackgroundRenderer background = lm.graphicsManager.getBackgroundRenderer();
-        if (background != null && isBackgroundCompositeCurrent(tilemapRenderer)) {
-            // Both hardware planes hide low sprites. Reuse the completed BG
-            // compositor's exact source/window/scroll sampling, including
-            // per-line tile passes and VScroll, for its high-priority pixels.
-            com.openggf.level.render.BackgroundRendererInternalAccess.renderPriorityMask(background);
+            BackgroundRenderer background = lm.graphicsManager.getBackgroundRenderer();
+            if (background != null && isBackgroundCompositeCurrent(tilemapRenderer)) {
+                // Reuse the completed rear compositor's exact window, scroll,
+                // priority and transparency, including reversed plane assignment.
+                com.openggf.level.render.BackgroundRendererInternalAccess.renderPriorityMask(background);
+            } else if (currentAdvancedRenderFrameState.reversePlaneAssignment()) {
+                // Indexed/outline scene terrain bypasses the rear compositor.
+                renderReversedRearHighTiles(true);
+            }
+            if (!pendingFboSuppressFrontScenery) {
+                applyForegroundScrollFeatures(tilemapRenderer);
+                enableForegroundPerColumnVScroll(tilemapRenderer);
+                tilemapRenderer.render(
+                        foregroundPlaneSource(currentAdvancedRenderFrameState),
+                        pendingFboScreenW,
+                        pendingFboScreenH,
+                        0, 0, pendingFboScreenW, pendingFboScreenH,
+                        pendingFboFgWorldOffsetX,
+                        pendingFboFgWorldOffsetY,
+                        lm.graphicsManager.getPatternAtlasWidth(),
+                        lm.graphicsManager.getPatternAtlasHeight(),
+                        pendingFboAtlasId,
+                        pendingFboPaletteId,
+                        0, 1, pendingFgVerticalWrap, true, false, 0.0f);
+            }
+            lm.graphicsManager.executeCapturedCommands(
+                    () -> dispatchSpecialRenderEffects(SpecialRenderEffectStage.SPRITE_PRIORITY_MASK, pendingFrameCounter),
+                    Math.round(pendingFboFgWorldOffsetX),
+                    Math.round(pendingFboFgWorldOffsetY),
+                    pendingFboScreenW,
+                    pendingFboScreenH);
+
+            glBlendEquation(GL_FUNC_ADD);
+            glDisable(GL_BLEND);
+
+        } finally {
+            try { tileFbo.end(); }
+            finally {
+                restoreFramebufferBindings(drawFbo, readFbo);
+                org.lwjgl.opengl.GL11.glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+                glBlendEquation(GL_FUNC_ADD); glDisable(GL_BLEND);
+            }
         }
-        applyForegroundScrollFeatures(tilemapRenderer);
-        enableForegroundPerColumnVScroll(tilemapRenderer);
-        tilemapRenderer.render(
-                foregroundPlaneSource(currentAdvancedRenderFrameState),
-                pendingFboScreenW,
-                pendingFboScreenH,
-                0, 0, pendingFboScreenW, pendingFboScreenH,
-                pendingFboFgWorldOffsetX,
-                pendingFboFgWorldOffsetY,
-                lm.graphicsManager.getPatternAtlasWidth(),
-                lm.graphicsManager.getPatternAtlasHeight(),
-                pendingFboAtlasId,
-                pendingFboPaletteId,
-                0, 1, pendingFgVerticalWrap, true, false, 0.0f);
-        lm.graphicsManager.executeCapturedCommands(
-                () -> dispatchSpecialRenderEffects(SpecialRenderEffectStage.SPRITE_PRIORITY_MASK, pendingFrameCounter),
-                Math.round(pendingFboFgWorldOffsetX),
-                Math.round(pendingFboFgWorldOffsetY),
-                pendingFboScreenW,
-                pendingFboScreenH);
-
-        glBlendEquation(GL_FUNC_ADD);
-        glDisable(GL_BLEND);
-
-        tileFbo.end();
     });
 
     private final GLCommand bgTilePassCommand = new GLCommand(GLCommand.CommandType.CUSTOM, (cx, cy, cw, ch) -> {
@@ -420,9 +444,9 @@ public final class LevelRenderer {
                         pendingBgTilePassContentGeneration)) {
             return;
         }
-        bgRenderer.beginTilePass(pendingBgTilePassRenderWidth, pendingBgTilePassRenderHeight, true);
         int savedShimmerStyle = tilemapRenderer.getShimmerStyle();
         try {
+            bgRenderer.beginTilePass(pendingBgTilePassRenderWidth, pendingBgTilePassRenderHeight, true);
             tilemapRenderer.setShimmerState(pendingFrameCounter, 0);
             try {
                 Integer atlasId = lm.graphicsManager.getPatternAtlasTextureId();
@@ -474,6 +498,11 @@ public final class LevelRenderer {
             }
         }
     });
+
+    private static void restoreFramebufferBindings(int drawFbo, int readFbo) {
+        org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER, drawFbo);
+        org.lwjgl.opengl.GL30.glBindFramebuffer(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER, readFbo);
+    }
 
     static final class FrameCommandPool {
         private final ArrayDeque<FrameCommand> available = new ArrayDeque<>();
@@ -540,7 +569,7 @@ public final class LevelRenderer {
     }
 
     static final class FrameCommand implements GLCommandable {
-        enum Kind { WATER, BG_ENSURE, BG_RENDER, FG_LOW, FG_HIGH, REVERSED_REAR_HIGH, HIGH_FBO, BG_TILE, TEST }
+        enum Kind { WATER, BG_ENSURE, BG_RENDER, FG_LOW, FG_HIGH, REVERSED_REAR_HIGH, REVERSED_REAR_ALL, HIGH_FBO, BG_TILE, TEST }
 
         private final FrameCommandPool pool;
         private final int[] viewport = new int[4];
@@ -628,6 +657,7 @@ public final class LevelRenderer {
             bools[4] = r.pendingBgTilePassHasWater;
             bools[5] = r.pendingBgTilePassPerLineScroll;
             bools[6] = r.lm.verticalWrapEnabled;
+            bools[7] = r.pendingFboSuppressFrontScenery;
             refs[0] = r.pendingFgAtlasId_low;
             refs[1] = r.pendingFgPaletteId_low;
             refs[2] = r.pendingFgUnderwaterPaletteId_low;
@@ -651,7 +681,7 @@ public final class LevelRenderer {
                     setShort0(r.pendingBgVScrollData);
                     setShort1(r.pendingBgVScrollColumnData);
                 }
-                case FG_LOW, FG_HIGH, REVERSED_REAR_HIGH, HIGH_FBO -> {
+                case FG_LOW, FG_HIGH, REVERSED_REAR_HIGH, REVERSED_REAR_ALL, HIGH_FBO -> {
                     setScroll0(r.presentationHScroll());
                     setShort0(r.presentationForegroundColumns());
                 }
@@ -710,6 +740,7 @@ public final class LevelRenderer {
             r.pendingBgTilePassHasWater = bools[4];
             r.pendingBgTilePassPerLineScroll = bools[5];
             r.pendingFgVerticalWrap = bools[6];
+            r.pendingFboSuppressFrontScenery = bools[7];
             r.pendingFgAtlasId_low = (Integer) refs[0];
             r.pendingFgPaletteId_low = (Integer) refs[1];
             r.pendingFgUnderwaterPaletteId_low = (Integer) refs[2];
@@ -726,7 +757,7 @@ public final class LevelRenderer {
                     r.pendingBgVScrollView = short0Present ? short0View : null;
                     r.pendingBgVScrollColumnView = short1Present ? short1View : null;
                 }
-                case FG_LOW, FG_HIGH, REVERSED_REAR_HIGH, HIGH_FBO -> {
+                case FG_LOW, FG_HIGH, REVERSED_REAR_HIGH, REVERSED_REAR_ALL, HIGH_FBO -> {
                     r.pendingFgHScrollView = scroll0Present ? scroll0View : null;
                     r.pendingFgDefaultVScrollView = short0Present ? short0View : null;
                 }
@@ -747,6 +778,7 @@ public final class LevelRenderer {
                     case FG_LOW -> owner.fgTilemapPassLowCommand.execute(cameraX, cameraY, cameraWidth, cameraHeight);
                     case FG_HIGH -> owner.fgTilemapPassHighCommand.execute(cameraX, cameraY, cameraWidth, cameraHeight);
                     case REVERSED_REAR_HIGH -> owner.reversedRearHighCommand.execute(cameraX, cameraY, cameraWidth, cameraHeight);
+                    case REVERSED_REAR_ALL -> owner.renderReversedRearTiles(false, -1);
                     case HIGH_FBO -> owner.highPriorityFboCommand.execute(cameraX, cameraY, cameraWidth, cameraHeight);
                     case BG_TILE -> owner.bgTilePassCommand.execute(cameraX, cameraY, cameraWidth, cameraHeight);
                     case TEST -> { }
@@ -957,6 +989,7 @@ public final class LevelRenderer {
                         if (lm.hudRenderManager != null && !lm.isHudSuppressed()) {
                             SpritePresentation.layer(lm.graphicsManager,
                                     SpritePresentation.Layer.HUD);
+                            com.openggf.level.objects.HudProfileAccess.bindWorld(lm.hudRenderManager, lm.getWorldSession());
                             prepareHudForDraw(lm.hudRenderManager, lm.graphicsManager);
                             lm.hudRenderManager.draw(lm.levelGamestate, lm.camera.getFocusedSprite());
                         }
@@ -971,6 +1004,7 @@ public final class LevelRenderer {
         spriteTables.publishCounters(com.openggf.level.render.SpritePresentationRenderer.prepare(lm.graphicsManager,
                 lm.camera.getXWithShake(), lm.camera.getYWithShake(), () -> {
                     SpritePresentation.layer(lm.graphicsManager, SpritePresentation.Layer.HUD);
+                    com.openggf.level.objects.HudProfileAccess.bindWorld(lm.hudRenderManager, lm.getWorldSession());
                     prepareHudForDraw(lm.hudRenderManager, lm.graphicsManager);
                     com.openggf.level.objects.HudProfileAccess.drawVBlankCounters(lm.hudRenderManager,
                             lm.levelGamestate, lm.camera.getFocusedSprite(), advanceTimer);
@@ -979,12 +1013,13 @@ public final class LevelRenderer {
 
     private void drawPublishedSprites(java.util.function.Predicate<SpritePresentation.Layer> visible) {
         com.openggf.level.render.SpritePresentationRenderer.draw(lm.graphicsManager, spriteTables.published(),
-                lm.camera.getXWithShake(), lm.camera.getYWithShake(), visible);
+                lm.camera.getXWithShake(), lm.camera.getYWithShake(), visible, presentationRuntime());
     }
 
     /** Resets per-frame derived state (used when the level is unloaded). */
     void resetState() {
         spriteTables.reset();
+        if (lm != null && lm.graphicsManager != null && lm.graphicsManager.isGlInitialized()) scenePresentationPass.cleanup();
         boundsMask.reset();
         currentScrollPresentation = null;
         frameCommandPool.cancelOutstanding();
@@ -1133,23 +1168,95 @@ public final class LevelRenderer {
                 ? lm.debugRenderer.getCollisionCommands() : new ArrayList<>();
         collisionCommands.clear();
 
+        LivePresentationRuntime runtime = presentationRuntime();
+        var player = camera.getFocusedSprite();
+        var sceneFrame = runtime == null ? ScenePresentationPass.Frame.stock(0, 0)
+                : ScenePresentationPass.resolve(runtime.scenePolicies(), runtime.sceneInput(),
+                        player == null ? lm.cachedScreenWidth / 2f : player.getCentreX() - presentationCameraXWithShake(),
+                        player == null ? lm.cachedScreenHeight / 2f : player.getCentreY() - presentationCameraY());
+        com.openggf.level.render.ZonePictureSource.Picture scenery = runtime == null ? null : runtime.sceneryPicture();
+        if (sceneFrame.sceneryIndex() >= 0 && scenery == null) sceneFrame = sceneFrame.withoutScenery();
+        if (sceneFrame.active() && runtime != null) runtime.registerRenderResource(scenePresentationPass, scenePresentationPass::cleanup);
+        ScenePresentationPass.Scope sceneScope = sceneFrame.active() && !lm.graphicsManager.isHeadlessMode()
+                ? scenePresentationPass.open(lm.graphicsManager, sceneFrame, scenery, lm.cachedScreenWidth, lm.cachedScreenHeight) : null;
+        int viewportX = viewportBuffer[0], viewportY = viewportBuffer[1];
+        if (sceneScope != null) {
+            lm.graphicsManager.registerCommand(sceneScope.beginCommand());
+            viewportBuffer[0] = 0; viewportBuffer[1] = 0;
+        }
+        try {
+            drawSceneTerrain(camera, collisionCommands, sceneScope == null ? null : sceneFrame, sceneScope);
+            drawSceneSprites(spriteManager, options, camera);
+            if (sceneScope != null) lm.graphicsManager.registerCommand(sceneScope.endCommand());
+        } finally {
+            viewportBuffer[0] = viewportX; viewportBuffer[1] = viewportY;
+        }
+        PerformanceProfiler profiler = lm.profiler;
+        DebugOverlayManager overlayManager = lm.overlayManager;
+        profiler.beginSection("render.hud");
+        if (options.includeHud() && lm.hudRenderManager != null
+                && (LevelSpritePresentation.enabled(lm) || !lm.isHudSuppressed())
+                && (TraceGhostHook.active() == null || currentTraceVisibility.showGameHud())) {
+            if (LevelSpritePresentation.enabled(lm)) {
+                drawPublishedSprites(layer -> layer == SpritePresentation.Layer.HUD);
+                if (spriteTables.published().tiles().stream().anyMatch(tile -> tile.layer().isHud())) {
+                    com.openggf.level.render.SpritePresentationRenderer.draw(lm.graphicsManager, spriteTables.counters(),
+                            camera.getXWithShake(), camera.getYWithShake(),
+                            layer -> layer == SpritePresentation.Layer.HUD_COUNTERS, presentationRuntime());
+                }
+            } else {
+                AbstractPlayableSprite focusedPlayer = camera.getFocusedSprite();
+                com.openggf.level.objects.HudProfileAccess.bindWorld(lm.hudRenderManager, lm.getWorldSession());
+                prepareHudForDraw(lm.hudRenderManager, lm.graphicsManager);
+                lm.hudRenderManager.draw(lm.levelGamestate, focusedPlayer);
+            }
+        }
+        profiler.endSection("render.hud");
+
+        boolean debugViewEnabled = lm.configService.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED);
+        boolean overlayEnabled = options.includeDebugOverlays()
+                && debugViewEnabled
+                && overlayManager.isEnabled(DebugOverlayToggle.OVERLAY);
+        if (options.includeDebugOverlays() && lm.debugRenderer != null
+                && (TraceGhostHook.active() == null || currentTraceVisibility.showDebugHud())) {
+            lm.debugRenderer.renderDebugOverlays(overlayEnabled, lm.objectManager, lm.ringManager,
+                    spriteManager, lm.gameModule, lm.configService, lm.frameCounter);
+        }
+        lm.graphicsManager.enqueueDefaultShaderState();
+    }
+
+    private void drawSceneTerrain(Camera camera, List<GLCommand> collisionCommands,
+                                  ScenePresentationPass.Frame sceneFrame, ScenePresentationPass.Scope sceneScope) {
         PerformanceProfiler profiler = lm.profiler;
         // Update water shader state before rendering level
         profiler.beginSection("render.water_setup");
         updateWaterShaderState();
         profiler.endSection("render.water_setup");
 
-        // Draw Background (Layer 1)
-        profiler.beginSection("render.bg");
-        if (lm.useShaderBackground && lm.graphicsManager.getBackgroundRenderer() != null) {
-            renderBackgroundShader(collisionCommands);
+        boolean reversedSceneTerrain = sceneFrame != null && currentAdvancedRenderFrameState.reversePlaneAssignment()
+                && (sceneFrame.outline() >= 0 || sceneFrame.sceneryIndex() >= 0);
+        if (reversedSceneTerrain) {
+            // In a reversed VDP assignment, the rear pass reads native foreground terrain.
+            // Draw it directly so transparent terrain pixels do not acquire the BG backdrop fill.
+            lm.ensureForegroundTilemapData();
+            enqueueForegroundTilemapPass(0, false);
+            if (sceneScope != null) lm.graphicsManager.registerCommand(sceneScope.beginTerrainCommand());
+            lm.graphicsManager.registerCommand(frameCommandPool.obtain(this, FrameCommand.Kind.REVERSED_REAR_ALL));
+            if (sceneScope != null) lm.graphicsManager.registerCommand(sceneScope.endTerrainCommand());
+        } else {
+            profiler.beginSection("render.bg");
+            if ((sceneFrame == null || sceneFrame.sceneryIndex() < 0)
+                    && lm.useShaderBackground && lm.graphicsManager.getBackgroundRenderer() != null) {
+                renderBackgroundShader(collisionCommands);
+            }
+            profiler.endSection("render.bg");
         }
-        profiler.endSection("render.bg");
-
-        if (lm.zoneFeatureProvider != null) {
-            lm.zoneFeatureProvider.renderAfterBackground(camera, lm.frameCounter);
-        }
+        if (lm.zoneFeatureProvider != null) lm.zoneFeatureProvider.renderAfterBackground(camera, lm.frameCounter);
         dispatchSpecialRenderEffects(SpecialRenderEffectStage.AFTER_BACKGROUND, lm.frameCounter);
+        if (sceneScope != null && !currentAdvancedRenderFrameState.reversePlaneAssignment())
+            lm.graphicsManager.registerCommand(sceneScope.beginTerrainCommand());
+        boolean replaceFrontScenery = sceneFrame != null && sceneFrame.sceneryIndex() >= 0
+                && currentAdvancedRenderFrameState.reversePlaneAssignment();
 
         // Draw Foreground (Layer 0) low-priority pass. The AIZ2 forest-loop
         // plane ring takes its camera and Level_repeat_offset from the gameplay
@@ -1158,8 +1265,8 @@ public final class LevelRenderer {
         // from the live CPU camera inside ScreenEvents.
         profiler.beginSection("render.fg");
         lm.ensureForegroundTilemapData();
-        enqueueForegroundTilemapPass(0);
-        if (currentAdvancedRenderFrameState.reversePlaneAssignment()) {
+        if (!replaceFrontScenery) enqueueForegroundTilemapPass(0);
+        if (currentAdvancedRenderFrameState.reversePlaneAssignment() && !reversedSceneTerrain) {
             // VDP order: B-low, A-low, B-high, A-high. The normal background
             // composite includes both priorities, so replay B-high above A-low.
             lm.graphicsManager.registerCommand(frameCommandPool.obtain(this, FrameCommand.Kind.REVERSED_REAR_HIGH));
@@ -1206,7 +1313,7 @@ public final class LevelRenderer {
         // Section name reflects that the registered command sets up GL_MAX blend
         // mode and renders into the TilePriorityFBO ("FBO compose").
         profiler.beginSection("render.fbo_compose");
-        renderHighPriorityTilesToFBO();
+        renderHighPriorityTilesToFBO(replaceFrontScenery);
         profiler.endSection("render.fbo_compose");
 
         // The HTZ earthquake BG high-priority cave-ceiling overlay used to render
@@ -1215,8 +1322,15 @@ public final class LevelRenderer {
         // CNZ slot overlay and other AFTER_FOREGROUND effects.
 
         // Draw Foreground (Layer 0) high-priority pass to screen
-        enqueueForegroundTilemapPass(1);
+        if (!replaceFrontScenery) enqueueForegroundTilemapPass(1);
+        if (sceneScope != null && !currentAdvancedRenderFrameState.reversePlaneAssignment())
+            lm.graphicsManager.registerCommand(sceneScope.endTerrainCommand());
 
+    }
+
+    private void drawSceneSprites(SpriteManager spriteManager, LevelManager.LevelRenderOptions options, Camera camera) {
+        PerformanceProfiler profiler = lm.profiler;
+        DebugOverlayManager overlayManager = lm.overlayManager;
         if (options.hasGameplayPass()) {
             if (options.includePlayerSprites()
                     && options.includeObjectSprites()
@@ -1249,35 +1363,6 @@ public final class LevelRenderer {
                     : currentScrollPresentation.registers().arenaMask();
             com.openggf.graphics.ArenaMaskRenderer.enqueue(lm.graphicsManager, mask);
         }
-        profiler.beginSection("render.hud");
-        if (options.includeHud() && lm.hudRenderManager != null
-                && (LevelSpritePresentation.enabled(lm) || !lm.isHudSuppressed())
-                && (TraceGhostHook.active() == null || currentTraceVisibility.showGameHud())) {
-            if (LevelSpritePresentation.enabled(lm)) {
-                drawPublishedSprites(layer -> layer == SpritePresentation.Layer.HUD);
-                if (spriteTables.published().tiles().stream().anyMatch(tile -> tile.layer().isHud())) {
-                    com.openggf.level.render.SpritePresentationRenderer.draw(lm.graphicsManager, spriteTables.counters(),
-                            camera.getXWithShake(), camera.getYWithShake(),
-                            layer -> layer == SpritePresentation.Layer.HUD_COUNTERS);
-                }
-            } else {
-                AbstractPlayableSprite focusedPlayer = camera.getFocusedSprite();
-                prepareHudForDraw(lm.hudRenderManager, lm.graphicsManager);
-                lm.hudRenderManager.draw(lm.levelGamestate, focusedPlayer);
-            }
-        }
-        profiler.endSection("render.hud");
-
-        boolean debugViewEnabled = lm.configService.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED);
-        boolean overlayEnabled = options.includeDebugOverlays()
-                && debugViewEnabled
-                && overlayManager.isEnabled(DebugOverlayToggle.OVERLAY);
-        if (options.includeDebugOverlays() && lm.debugRenderer != null
-                && (TraceGhostHook.active() == null || currentTraceVisibility.showDebugHud())) {
-            lm.debugRenderer.renderDebugOverlays(overlayEnabled, lm.objectManager, lm.ringManager,
-                    spriteManager, lm.gameModule, lm.configService, lm.frameCounter);
-        }
-        lm.graphicsManager.enqueueDefaultShaderState();
     }
 
     /** Package-private owner seam for executable HUD viewport wiring tests. */
@@ -1829,7 +1914,9 @@ public final class LevelRenderer {
     }
 
     /** High-priority rear-plane pixels participate in both VDP tile order and sprite occlusion. */
-    private void renderReversedRearHighTiles(boolean mask) {
+    private void renderReversedRearHighTiles(boolean mask) { renderReversedRearTiles(mask, 1); }
+
+    private void renderReversedRearTiles(boolean mask, int priorityPass) {
         TilemapGpuRenderer renderer = lm.graphicsManager.getTilemapGpuRenderer();
         BackgroundRenderer background = lm.graphicsManager.getBackgroundRenderer();
         Integer atlas = mask ? pendingFboAtlasId : pendingFgAtlasId_low;
@@ -1848,10 +1935,12 @@ public final class LevelRenderer {
                 0, worldY, lm.graphicsManager.getPatternAtlasWidth(), lm.graphicsManager.getPatternAtlasHeight(),
                 atlas, palette,
                 !mask && pendingFgUnderwaterPaletteId_low != null ? pendingFgUnderwaterPaletteId_low : 0,
-                1, pendingFgVerticalWrap, mask, !mask && pendingFgUseUnderwater_low, waterline);
+                priorityPass, pendingFgVerticalWrap, mask, !mask && pendingFgUseUnderwater_low, waterline);
     }
 
-    private void enqueueForegroundTilemapPass(int priorityPass) {
+    private void enqueueForegroundTilemapPass(int priorityPass) { enqueueForegroundTilemapPass(priorityPass, true); }
+
+    private void enqueueForegroundTilemapPass(int priorityPass, boolean draw) {
         TilemapGpuRenderer renderer = lm.graphicsManager.getTilemapGpuRenderer();
         if (renderer == null) {
             return;
@@ -1897,7 +1986,7 @@ public final class LevelRenderer {
             pendingFgAtlasId_low = atlasId;
             pendingFgPaletteId_low = paletteId;
             pendingFgUnderwaterPaletteId_low = underwaterPaletteId;
-            lm.graphicsManager.registerCommand(frameCommandPool.obtain(this, FrameCommand.Kind.FG_LOW));
+            if (draw) lm.graphicsManager.registerCommand(frameCommandPool.obtain(this, FrameCommand.Kind.FG_LOW));
         } else {
             pendingFgWorldOffsetX_high = worldOffsetX;
             pendingFgWorldOffsetY_high = worldOffsetY;
@@ -1909,7 +1998,7 @@ public final class LevelRenderer {
             pendingFgAtlasId_high = atlasId;
             pendingFgPaletteId_high = paletteId;
             pendingFgUnderwaterPaletteId_high = underwaterPaletteId;
-            lm.graphicsManager.registerCommand(frameCommandPool.obtain(this, FrameCommand.Kind.FG_HIGH));
+            if (draw) lm.graphicsManager.registerCommand(frameCommandPool.obtain(this, FrameCommand.Kind.FG_HIGH));
         }
     }
 
@@ -1918,8 +2007,15 @@ public final class LevelRenderer {
      * This FBO is sampled by the sprite priority shader to determine
      * if low-priority sprites should be hidden behind high-priority tiles.
      */
-    private void renderHighPriorityTilesToFBO() {
-        TilePriorityFBO fbo = lm.graphicsManager.getTilePriorityFBO(lm.cachedScreenWidth, lm.cachedScreenHeight);
+    private void renderHighPriorityTilesToFBO(boolean suppressFrontScenery) {
+        pendingFboSuppressFrontScenery = suppressFrontScenery;
+        TilePriorityFBO fbo;
+        if (lm.graphicsManager.isGlInitialized()) {
+            int drawFbo = org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER_BINDING);
+            int readFbo = org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER_BINDING);
+            try { fbo = lm.graphicsManager.getTilePriorityFBO(lm.cachedScreenWidth, lm.cachedScreenHeight); }
+            finally { restoreFramebufferBindings(drawFbo, readFbo); }
+        } else fbo = lm.graphicsManager.getTilePriorityFBO(lm.cachedScreenWidth, lm.cachedScreenHeight);
         if (fbo == null || !fbo.isInitialized()) {
             return;
         }
