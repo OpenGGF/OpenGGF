@@ -3,8 +3,8 @@
 ## Status and source
 
 Accuracy prerequisites and complete-runtime qualification are in progress.
-**The workload/protocol is frozen; original numeric runs are pending. No
-performance experiment has begun or been accepted; rejection count is zero.** The intended
+**The original numeric baseline is frozen from five fresh processes per scenario.
+No performance experiment has begun or been accepted; rejection count is zero.** The intended
 metric is total process CPU time per simulated frame, equally weighted between
 normal and demanding scenarios in each game. No saving is attributed to accuracy
 repairs, upstream changes, Java migration, or replacing an invalid helper harness.
@@ -314,3 +314,83 @@ skips; neutral-load-only final change compiled and all three LIVE probes passed.
 CSV-disabled startup-boundary smoke retained the qualified controller/trajectory
 digests and verified 240 actual frames. No smoke/profiling resource figures are
 used as the original numeric baseline.
+
+## Original numeric baseline — frozen
+
+Source `184c9d54ed4fc2c1fed3cb6313653a95f9156e3d`; final external protocol SHA-256
+`43f6fd83c89bcc9c373a5136b47fb68f1a5282f56dc278ffe48947ea705f0bf5` (full source
+identity attached to the prior frozen protocol). Thirty runtime runs and fifteen
+separate LIVE load runs completed. No builds/tests/profiles overlapped these
+measurements; periodic process checks found no concurrent Maven or profiler.
+Every runtime has exact qualified controller/trajectory hashes, controller rows,
+actual measured simulation counts and full-route presentations, CSV disabled,
+full rewind at the bounds, valid resident counters and zero shared VRAM. All
+five full handoffs match the exact four terminal-job identities. Raw numeric
+reports and compact aggregation are in the external task directory; no consumed
+Maven diagnostics were retained.
+
+CPU is total process time / verified simulation frames. Other columns show the
+median of five per-run medians or peaks; tails are paced presentation intervals.
+Resident GPU peaks are sampled at 50 ms, with the stated spike-coverage limit.
+
+| Scenario | CPU ms/frame median | MAD | Min–max | RSS / peak MiB | Resident VRAM / sampled peak MiB | Frame p50 / p95 / p99 ms |
+|---|---:|---:|---:|---:|---:|---:|
+| s1-normal | 1.527685 | 0.046698 | 1.474316–1.607738 | 413.3 / 421.7 | 77.3 / 86.9 | 16.694 / 16.934 / 17.306 |
+| s1-demanding | 1.417112 | 0.120321 | 1.256684–1.537433 | 429.1 / 557.6 | 66.0 / 70.0 | 16.814 / 17.053 / 17.204 |
+| s2-normal | 1.400000 | 0.033333 | 1.286667–1.486667 | 439.3 / 440.4 | 70.0 / 70.0 | 16.817 / 17.095 / 17.292 |
+| s2-demanding | 1.669243 | 0.085008 | 1.584235–1.808346 | 550.7 / 558.5 | 68.0 / 70.0 | 16.809 / 17.072 / 17.266 |
+| s3k-normal | 2.569231 | 0.076923 | 2.415385–2.692308 | 546.8 / 558.5 | 79.1 / 79.1 | 16.791 / 17.285 / 17.476 |
+| s3k-demanding | 2.581921 | 0.045198 | 2.531073–2.689266 | 491.5 / 625.9 | 83.5 / 88.1 | 16.783 / 17.247 / 17.436 |
+
+Equally weighted frozen CPU scores (mean of the two scenario medians):
+
+| Game | ms/simulated frame | 50% target |
+|---|---:|---:|
+| s1 | 1.472399 | 0.736199 |
+| s2 | 1.534621 | 0.767311 |
+| s3k | 2.575576 | 1.287788 |
+
+Startup through first completed gameplay presentation, and separate LIVE fresh-load medians:
+
+| Scenario / load | Process CPU ms | Wall ms |
+|---|---:|---:|
+| s1-normal startup | 2270.000 | 2966.397 |
+| s1-demanding startup | 2450.000 | 2890.720 |
+| s2-normal startup | 2320.000 | 2066.468 |
+| s2-demanding startup | 2700.000 | 2075.699 |
+| s3k-normal startup | 2310.000 | 763.758 |
+| s3k-demanding startup | 2220.000 | 799.067 |
+| s1 separate fresh load | 1060.000 | 2413.133 |
+| s2 separate fresh load | 1260.000 | 1505.522 |
+| s3k separate fresh load | 1210.000 | 2364.835 |
+
+The observed CPU spread is significant in demanding S1 and several other
+scenarios. Keep every result; do not substitute a favorable original run or
+credit warm-cache/drift changes. Paired alternating baseline/candidate evidence
+must exceed this noise and satisfy every per-scenario regression guard.
+
+Whole-process profiling has begun in separate fresh runs of this accepted
+implementation. Verified async-profiler 4.5 official release archive SHA-256
+`89546fbb9ee0fc5496c7edd4099b0709489bc78b0d8057ccbb4b801f6b032b62`. CPU stacks
+are collected only over the frozen window, alongside OS per-thread user/system
+CPU deltas; profiling resource numbers are not acceptance numbers. No measured
+bottleneck or optimization hypothesis has been selected yet.
+
+### First profiling audit
+
+Separate six-scenario CPU profiles all retained the frozen controller/trajectory
+digests. OS per-thread user/system deltas independently cover workers/GC.
+S1 normal's C2 thread consumed 98 ticks out of 236 total observed thread ticks;
+S1 demanding 78/211, S2 normal 56/212, S2 demanding 78/231, S3K normal 79/316,
+S3K demanding 25/493. Main-thread and driver work remain substantial; S3K
+demanding's `java:gdrv0` used 217 ticks (190 user/27 system), versus main 206.
+At 100 Hz these are measured contributions, not allocation or FPS proxies.
+
+An unprofiled fresh S1 normal control retained its exact trajectory and showed
+C2 91 ticks (90 user/1 system), main 105, confirming compiler work is not merely
+profiler-attach overhead. Stack profiles have a coverage limit: the busy native
+`gdrv0` thread is absent from async-profiler's sampled roots, although OS CPU
+deltas include it. Do not normalize visible Java/native samples into a claim
+about all-process savings. JVM debug symbols were unavailable, so compilation
+task labels are being collected separately before ranking a concrete hypothesis.
+No production performance edit or accepted/rejected experiment exists yet.
