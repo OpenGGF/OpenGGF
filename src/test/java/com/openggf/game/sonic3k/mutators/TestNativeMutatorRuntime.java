@@ -38,7 +38,8 @@ class TestNativeMutatorRuntime {
         final ObjectManager objects;
         final NativeMutatorRuntime runtime;
         final LevelFrameContext frame=mock(LevelFrameContext.class);
-        Rig() throws java.io.IOException {
+        Rig() throws java.io.IOException { this(List.of()); }
+        Rig(List<ObjectSpawn> spawns) throws java.io.IOException {
             var module=mock(GameModule.class);
             var data=mock(com.openggf.game.GameDataSource.class);
             var rom=com.openggf.data.Rom.fromReader(com.openggf.data.RomByteReader.fromBytes(new byte[128]),"native-runtime fixture");
@@ -71,7 +72,7 @@ class TestNativeMutatorRuntime {
             when(sprites.getSidekicks()).thenReturn(List.of());
             services=new TestObjectServices().withWorldSession(world).withLevelManager(level)
                     .withSpriteManager(sprites).withCamera(camera).withGameState(mock(GameStateManager.class));
-            objects=new ObjectManager(List.of(),null,0,null,null,null,null,services);
+            objects=new ObjectManager(spawns,null,0,null,null,null,null,services);
             services.withDirectObjectManager(objects);
             when(level.getObjectManager()).thenReturn(objects);
             when(frame.spriteManager()).thenReturn(sprites);when(frame.levelManager()).thenReturn(level);
@@ -100,6 +101,37 @@ class TestNativeMutatorRuntime {
         verify(rig.source).acknowledge(1);verify(rig.source).report(eq(1L),contains("Failed: last checkpoint"));
         rig.runtime.restore(state);rig.runtime.beforeNativeTick(rig.frame,LogicalInputSnapshot.neutral());
         assertEquals(2,rig.runtime.capture().opportunities().get(1L));
+    }
+    @Test void rouletteUsesExactObservedCheckpointBanksAndNeverInfersLowerOrDuplicatePosts() throws Exception {
+        var rig=new Rig(List.of(
+                new ObjectSpawn(256,96,com.openggf.game.sonic3k.constants.Sonic3kObjectIds.STAR_POST,2,0,false,0),
+                new ObjectSpawn(420,96,com.openggf.game.sonic3k.constants.Sonic3kObjectIds.STAR_POST,1,0,false,1),
+                new ObjectSpawn(460,96,com.openggf.game.sonic3k.constants.Sonic3kObjectIds.STAR_POST,2,0,false,2)));
+        var checkpoint=mock(com.openggf.game.RespawnState.class);
+        when(rig.level.getCheckpointState()).thenReturn(checkpoint);
+        when(checkpoint.getStarPostActivationMark()).thenReturn(2);
+        when(checkpoint.getSavedX()).thenReturn(256);when(checkpoint.getSavedY()).thenReturn(96);
+        var rng=mock(com.openggf.game.GameRng.class);when(rng.nextInt(anyInt())).thenAnswer(i->(int)i.getArgument(0)-1);
+        rig.services.withRng(rng);
+        var terrain=rig.services.currentLevel();var block=terrain.getBlock(0);
+        for(int x=0;x<8;x++)block.setChunkDesc(x,7,new com.openggf.level.ChunkDesc(0x1001));
+        var chunk=mock(com.openggf.level.Chunk.class);when(chunk.getSolidTileIndex()).thenReturn(1);
+        byte[] heights=new byte[16];java.util.Arrays.fill(heights,(byte)16);
+        when(terrain.getChunkCount()).thenReturn(2);when(terrain.getChunk(1)).thenReturn(chunk);
+        when(terrain.getSolidTileCount()).thenReturn(2);
+        when(terrain.getSolidTile(1)).thenReturn(new com.openggf.level.SolidTile(1,heights,new byte[16],(byte)0));
+        rig.active(new RelocationPolicy(RelocationPolicy.Kind.RANDOM_CHECKPOINT),true);
+        assertTrue(Math.abs(rig.player.getCentreX()-256)<=12,"Roulette must stage around the exact saved post, never the unvisited layout alternatives");
+        verify(rng).nextInt(1);verify(rig.source).acknowledge(1);
+        var first=rig.runtime.capture();assertEquals(List.of(new NativeMutatorRuntime.CheckpointDestination(256,96)),first.encounteredCheckpoints());
+        when(checkpoint.getSavedX()).thenReturn(460);
+        rig.runtime.afterNativeTick(rig.frame,LogicalInputSnapshot.neutral());
+        assertEquals(2,rig.runtime.capture().encounteredCheckpoints().size());
+        when(checkpoint.getSavedX()).thenReturn(256);rig.runtime.restore(first);
+        assertEquals(first.encounteredCheckpoints(),rig.runtime.capture().encounteredCheckpoints());
+        rig.runtime.beforeAssembly(LevelLoadCause.FULL_DEATH_RELOAD);
+        rig.runtime.beforeNativeTick(rig.frame,LogicalInputSnapshot.neutral());
+        assertEquals(first.encounteredCheckpoints(),rig.runtime.capture().encounteredCheckpoints(),"a respawn may seed only its exact authoritative saved bank");
     }
     @Test void completionIsNativeOnceOnlyAndNoRingsOrOwnerFaultDominates() throws Exception {
         var rig=new Rig();rig.completions.set(List.of(new TransientMutatorPolicySource.Completion("test",7,5)));
@@ -139,7 +171,7 @@ class TestNativeMutatorRuntime {
         when(carrier.getTailsCarryController()).thenReturn(carry);when(rig.sprites.getSprite("helper")).thenReturn(carrier);
         when(carry.isCarryingMainCharacter()).thenReturn(true);
         var state=rig.runtime.capture();var lease=new NativeMutatorRuntime.Companion(1,"test","helper",2,true,true,192,100);
-        rig.runtime.restore(new NativeMutatorRuntime.State(state.generation(),state.assemblyEpoch(),state.admitted(),state.owned(),state.clocks(),state.tasks(),state.opportunities(),state.fieldTargets(),state.ownedChildren(),state.projectileAges(),state.budded(),state.impacts(),state.lastAir(),List.of(lease),state.rides()));
+        rig.runtime.restore(new NativeMutatorRuntime.State(state.generation(),state.assemblyEpoch(),state.admitted(),state.owned(),state.clocks(),state.tasks(),state.opportunities(),state.fieldTargets(),state.ownedChildren(),state.projectileAges(),state.budded(),state.impacts(),state.lastAir(),List.of(lease),state.rides(),state.encounteredCheckpoints()));
         assertTrue(rig.runtime.inputFor(alien).isEmpty());assertTrue(rig.runtime.inputFor(carrier).isEmpty());
         when(carry.isCarrying(rig.player)).thenReturn(true);assertTrue(rig.runtime.inputFor(carrier).isPresent());
         rig.runtime.beforeNativeTick(rig.frame,LogicalInputSnapshot.neutral());rig.runtime.beforeNativeTick(rig.frame,LogicalInputSnapshot.neutral());rig.runtime.beforeNativeTick(rig.frame,LogicalInputSnapshot.neutral());

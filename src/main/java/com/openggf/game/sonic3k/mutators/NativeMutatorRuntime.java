@@ -62,6 +62,7 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
     private boolean lastAir;
     private final List<Companion> companions = new ArrayList<>();
     private final List<Ride> rides = new ArrayList<>();
+    private final List<CheckpointDestination> encounteredCheckpoints = new ArrayList<>();
     private boolean bossActive;
     private TouchResponseTable touchSizes;
     private com.openggf.mods.scene.SceneImage landmarkThumbnail;
@@ -76,9 +77,11 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
     }
     public record Ride(long activationId,String owner,ObjectRefId platform,int ticks) { }
     public record Task(int x, int y, int initialRings, int ticks, int progress, boolean complete) { }
+    public record CheckpointDestination(int x,int y) { }
     public record State(long generation,long assemblyEpoch,Set<Long> admitted, List<Owned> owned, Map<Long,Integer> clocks,
                         Map<Long,Task> tasks, Map<Long,Integer> opportunities, Map<Long,FieldTargets> fieldTargets, Map<ObjectRefId,List<ObjectRefId>> ownedChildren, Map<ObjectRefId,Integer> projectileAges,
-                        Set<ObjectRefId> budded, Set<ObjectRefId> impacts, boolean lastAir, List<Companion> companions,List<Ride> rides) { }
+                        Set<ObjectRefId> budded, Set<ObjectRefId> impacts, boolean lastAir, List<Companion> companions,List<Ride> rides,
+                        List<CheckpointDestination> encounteredCheckpoints) { }
 
     public NativeMutatorRuntime(WorldSession world) { this.world = java.util.Objects.requireNonNull(world); }
     @Override public <T> T getService(Class<T> type) {
@@ -88,7 +91,7 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
     @Override public String key() { return "native-mutator-runtime"; }
     @Override public State capture() {
         return new State(generation,assemblyEpoch,Set.copyOf(admitted), List.copyOf(owned), Map.copyOf(clocks), Map.copyOf(tasks), Map.copyOf(opportunities),Map.copyOf(fieldTargets),Map.copyOf(ownedChildren),
-                Map.copyOf(projectileAges), Set.copyOf(budded), Set.copyOf(impacts), lastAir, List.copyOf(companions),List.copyOf(rides));
+                Map.copyOf(projectileAges), Set.copyOf(budded), Set.copyOf(impacts), lastAir, List.copyOf(companions),List.copyOf(rides),List.copyOf(encounteredCheckpoints));
     }
     @Override public void restore(State state) {
         if(retired) throw new IllegalStateException("Native policy owner belongs to a retired world");
@@ -96,12 +99,12 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
             throw new IllegalArgumentException("Native policy snapshot belongs to another world or assembly");
         reset(); admitted.addAll(state.admitted()); owned.addAll(state.owned()); clocks.putAll(state.clocks());
         tasks.putAll(state.tasks()); opportunities.putAll(state.opportunities()); fieldTargets.putAll(state.fieldTargets()); ownedChildren.putAll(state.ownedChildren()); projectileAges.putAll(state.projectileAges()); budded.addAll(state.budded()); impacts.addAll(state.impacts());
-        lastAir = state.lastAir(); companions.addAll(state.companions()); rides.addAll(state.rides());
+        lastAir = state.lastAir(); companions.addAll(state.companions()); rides.addAll(state.rides()); encounteredCheckpoints.addAll(state.encounteredCheckpoints());
     }
     @Override public void resetForMissingSnapshot() { reset(); }
     private void reset() {
         admitted.clear(); owned.clear(); clocks.clear(); tasks.clear(); opportunities.clear(); fieldTargets.clear(); ownedChildren.clear(); projectileAges.clear(); budded.clear(); impacts.clear();
-        entries = List.of(); chainDispatch = false; lastAir = false; companions.clear(); rides.clear(); landmarkThumbnail=null; landmarkSheet=null; landmarkPalette=null; landmarkVisible=false;
+        entries = List.of(); chainDispatch = false; lastAir = false; companions.clear(); rides.clear(); encounteredCheckpoints.clear(); landmarkThumbnail=null; landmarkSheet=null; landmarkPalette=null; landmarkVisible=false;
     }
     @Override public void beforeAssembly(LevelLoadCause cause) { releaseOwned(); reset(); services = null; assemblyEpoch++; }
     @Override public void failedAssembly(LevelLoadCause cause) { beforeAssembly(cause); }
@@ -136,6 +139,7 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
         if (services == null || sprites == null) return;
         AbstractPlayableSprite player = sprites.getMainPlayable();
         if (player == null) return;
+        observeCheckpoint();
         expireOwned();
         expireCompanions();
         expireRides();
@@ -192,12 +196,23 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
         if(retired || sprites==null) return;
         var player=sprites.getMainPlayable();
         if(player==null) return;
+        observeCheckpoint();
         if(player.getAir() && player.isJumping() && !lastAir) advanceTasks(ChallengePolicy.Kind.SKILL_CHAIN,player,2);
         lastAir=player.getAir();
         for(var lease:List.copyOf(owned)) if(!ownerAvailable(lease.owner())) ownerRetired(lease.owner());
         for(var lease:List.copyOf(companions)) if(!ownerAvailable(lease.owner())) ownerRetired(lease.owner());
         for(var lease:List.copyOf(rides)) if(!ownerAvailable(lease.owner())) ownerRetired(lease.owner());
         prepareLandmarkThumbnail();
+    }
+    private void observeCheckpoint() {
+        var checkpoint=services==null?null:services.checkpointState();
+        if(checkpoint==null || checkpoint.getStarPostActivationMark()<=0) return;
+        // The saved native bank is exact visit evidence. A high-water subtype cannot certify
+        // other layout posts on alternate routes, including posts sharing the same number.
+        var destination=new CheckpointDestination(checkpoint.getSavedX(),checkpoint.getSavedY());
+        if(encounteredCheckpoints.contains(destination)) return;
+        if(encounteredCheckpoints.size()==32) encounteredCheckpoints.removeFirst();
+        encounteredCheckpoints.add(destination);
     }
     private static boolean ownsOneShot(MutatorPolicy policy) {
         return policy instanceof EncounterPolicy || policy instanceof NativePowerupPolicy
@@ -752,13 +767,8 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
                 x=checkpoint.getSavedX(); y=checkpoint.getSavedY();
             }
             case RANDOM_CHECKPOINT -> {
-                var checkpoint=services.checkpointState();
-                if(checkpoint==null || checkpoint.getStarPostActivationMark()<=0) return;
-                // Native activation high-water is route evidence; unvisited staging is not certified by empty terrain.
-                var candidates=services.objectManager().getAllSpawns().stream()
-                        .filter(spawn->spawn.objectId()==Sonic3kObjectIds.STAR_POST
-                                && (spawn.subtype()&0x7F)>0 && (spawn.subtype()&0x7F)<=checkpoint.getStarPostActivationMark()
-                                && Math.abs(spawn.x()-player.getCentreX())<=640).toList();
+                var candidates=encounteredCheckpoints.stream()
+                        .filter(destination->Math.abs(destination.x()-player.getCentreX())<=640).toList();
                 if(candidates.isEmpty()) return;
                 var selected=candidates.get(services.rng().nextInt(candidates.size())); x=selected.x(); y=selected.y();
             }
