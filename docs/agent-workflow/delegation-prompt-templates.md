@@ -158,10 +158,13 @@ RULES (see RULE BLOCK): 1, 2, 4, 6, 7, 8, 9, 11. Specifically:
 
 TESTS: Add a focused JUnit 5 test (HeadlessTestRunner where physics is involved; StubObjectServices
 for service doubles). Keep these green: TestSonic3kPlcArtRegistry, TestS3kAiz1SkipHeadless,
-TestSonic3kLevelLoading. Build/test commands (PowerShell, quote -D props):
-  mvn package
-  mvn "-Dtest=com.openggf.game.sonic3k.TestSonic3kPlcArtRegistry" test
-  mvn "-Ds3k.rom.path=s3k.gen" test
+TestSonic3kLevelLoading. Select the changed object's regressions and those required checks;
+discover the existing ROM and supply its absolute path. Queue the focused run (PowerShell,
+quote -D props):
+  python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=<OBJECT-REGRESSION>,TestSonic3kPlcArtRegistry,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading" "-Ds3k.rom.path=<absolute-S3K-ROM>" test
+The lead owns combined delivery validation under current root AGENTS.md. Check the task's
+existing jobs before submitting an equivalent run; retain one command session/observer.
+Do not launch a broad package/test run for each worker. Required ROM/trace checks still apply.
 
 OUTPUT FORMAT (Markdown):
 ## Implementation Report: <OBJECT>
@@ -169,7 +172,8 @@ OUTPUT FORMAT (Markdown):
 - ROM addresses used (table) and the brief they came from.
 - Behavior contracts / helpers reused (list) — and anything NOT reused, with reason.
 - Guard tests considered (list) and how the code stays compliant (no baseline expansion).
-- Tests added (class + what they assert) and the exact mvn command + pass/fail.
+- Tests added (class + what they assert), exact queued command, tested source state,
+  pass/fail, skips and coverage limits.
 - Known discrepancies (candidate entries for docs/S3K_KNOWN_DISCREPANCIES.md).
 - LOW-confidence areas needing review.
 ```
