@@ -708,8 +708,9 @@ dependency, ignore absent/disabled neighbours, and do not disable optional
 neighbours when a callback fails. Actual dependencies still determine eligibility
 and dependent fault closure. Self references, duplicates, unknown fields and
 unbounded declarations are rejected. Ordering cycles block their participants;
-explicit conflicts block both enabled participants. Diagnostics sort participants
-so scan order does not change the reason.
+explicit conflicts warn both enabled participants with `MOD_DECLARED_CONFLICT`.
+Author declarations are suspected incompatibilities, not proof that play fails.
+Diagnostics sort participants so scan order does not change the reason.
 
 The default singular policies use the later application for a startup scene,
 required display width, stock art key, stock music id or fresh-game destination,
@@ -721,8 +722,9 @@ Zone runtime facilities replace only that owner's selected act lifetime.
 An exclusive claim is accepted only when that owner's successful transaction
 actually publishes the named target. Unused claims fail the transaction. When a
 successfully contributed singular target has multiple owners and any claims
-exclusivity, all conflicting participants and their required dependents are
-rejected, instead of choosing a winner. Exclusive keys currently cover
+exclusivity, `MOD_EXCLUSIVE_OVERLAP` warns the participants while the ordinary
+later-wins policy remains in effect. Valid overlap alone does not reject the
+participants or their required dependents. Exclusive keys currently cover
 `startup-scene`, `display-width`, `game-start`, `art:<stock-key>` and
 `audio:<nonnegative-stock-id>`; unknown kinds are rejected. The engine's immutable
 registration report lists scoped winners, shadowed owners, additive targets and
@@ -732,8 +734,13 @@ until their lifetime factories run, rather than inventing service contracts.
 Audio is reported separately by `PreparedModMusic.overrideReport()` after actual
 decoding and publication, with winner and shadowed track identities. Failed audio
 preparation excludes that owner's tracks and retains the previous healthy override.
-Exclusive stock data collisions are rejected in catalog eligibility before audio
-preparation; compiled claims are checked before registration publication.
+Stock data claim validity is checked in catalog eligibility before audio preparation;
+compiled claim validity is checked before registration publication. The Mod Manager
+combines declaration warnings with published contribution overlap, attributed
+callback evidence and verified preparation blockers. Blockers separately identify
+the content that cannot be prepared and other participants supplying context.
+See [compatibility evidence](installing-mods.md#compatibility-evidence) for the
+player-facing levels and their observation limits.
 
 ## Advanced module session controls
 
