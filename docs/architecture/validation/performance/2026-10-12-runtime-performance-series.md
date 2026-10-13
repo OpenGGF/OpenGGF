@@ -948,3 +948,22 @@ Main advanced during document-only coordination to `5e2f51f07917d5eff8ac120007da
 confirmed; no upstream runtime source or build setting changed. The original
 numeric baseline remains fixed, and no upstream performance saving is attributed.
 This is the actual destination for the resumed combined selection.
+
+### Delivery validation deadline/audio correction
+
+Run `20261013T115209Z-8a0b83ae` at `bd635447b` was admitted after a long
+queue wait, then cancelled early. No completed test summary or pass is claimed;
+its diagnostics were inspected and acknowledged. A comparable smoke run
+confirmed the 40-minute default stopped ordinary validation incomplete at
+2,733 reports / 23,381 tests before guards. Retain the same 3,173-class smoke
+selection and fresh guards, with `--max-minutes 120`; this is a deadline
+correction, not selection narrowing or release-only full-suite validation.
+Expected cost is now about an hour ordinary plus separate guards; stop at
+120 minutes or 10 minutes without output, marking any timeout incomplete.
+
+The early ordinary log showed real speaker activity. The benchmark's private
+display/runtime directory and original audio sink had already been cleaned,
+so a fresh owned null sink is created solely for delivery tests, using the same
+verified private ALSA/OpenAL route. Host default audio is unchanged. Apply this
+environment to both candidate and any matched baseline checks; remove the
+new sink after the final required audio/test work. No acceptance timing changes.
