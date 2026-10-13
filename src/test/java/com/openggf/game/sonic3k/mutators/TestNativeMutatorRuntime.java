@@ -216,7 +216,10 @@ class TestNativeMutatorRuntime {
     @Test void ringLeakRetainsTheLastRingAndDoesNotRestoreSpentInventoryOnExpiry() throws Exception {
         for (int initial : new int[] { 0, 1, 2 }) {
             var rig = new Rig();
+            var inventory = new com.openggf.game.LevelGamestate();
+            doReturn(inventory).when(rig.player).currentLevelState();
             rig.player.setRingCount(initial);
+            assertEquals(initial, rig.player.getRingCount(), "the standalone fixture needs a native inventory owner");
             rig.active(new RingEconomyPolicy(RingEconomyPolicy.Kind.LEAK), false);
             for (int tick = 1; tick < 120; tick++)
                 rig.runtime.beforeNativeTick(rig.frame, LogicalInputSnapshot.neutral());

@@ -93,6 +93,7 @@ class TestAudioMutatorHistory {
             when(context.gameModule()).thenReturn(module);
             var registry = new RewindRegistry();
             WorldSessionPolicyAccess.registerRewind(world, registry);
+            WorldSessionPolicyAccess.setHistoryRecording(world, true);
             var diagnostics = new ArrayList<Integer>();
             audio.setRequestObserver((kind, cue) -> diagnostics.add(cue));
             audio.playMusic(1);
