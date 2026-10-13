@@ -27,6 +27,34 @@ and whether deterministic test/trace/time-attack mode excludes external mods.
 If a mod is blocked, read Details and the [finding catalogue](troubleshooting.md).
 An incompatible or missing dependency is not fixed by changing the load order.
 
+## Compatibility evidence
+
+Details and Notices distinguish three levels for the active mod configuration:
+
+- **OVERLAP:** a published contribution replaces another mod's contribution.
+  The evidence names the target, winner and replaced owners. Ordinary overrides
+  remain allowed; an overlap does not establish broken gameplay.
+- **POSSIBLE CONFLICT:** an author declares incompatibility/exclusivity, or an
+  attributed callback failed while other relevant mods were prepared. The engine
+  reports the evidence without claiming those other mods caused the failure.
+- **PLAY BLOCKED:** a mandatory dependency, ordering, allocation or registration
+  contract prevents that mod's content from being prepared. A healthy dependency
+  can appear as **RELATED BLOCKER** because it is part of the evidence, while its
+  own content remains available. Details name the affected owners separately.
+
+Author-declared conflicts and valid exclusive overlaps warn instead of disabling
+the combination. Mandatory validation and the existing failed-owner/dependent
+recovery still apply. A callback fault alone does not establish an incompatible
+pair or justify blacklisting every enabled mod.
+
+Reports include package versions/hashes and identify the active enablement/order
+configuration. Pending changes apply only after Apply. Registration reports are
+preparation evidence; audio overlaps use successful session publication and expire
+when that presentation is retired. The engine retains at most 512 producer-owned
+reports, preferring verified blockers when discarding old entries. A clean report
+means no conflict was detected in these observed paths; arbitrary code interactions,
+hangs and routes that become impossible are not certified compatible.
+
 ## Mods bundled with OpenGGF
 
 Some first-party mods ship inside the JVM distribution and appear in **MODS** with a
