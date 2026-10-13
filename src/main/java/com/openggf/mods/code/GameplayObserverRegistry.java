@@ -5,7 +5,7 @@ import com.openggf.game.rewind.RewindSnapshottable;
 import java.util.*;
 
 /** Verified observer graph, accumulated across service decorations; never creator-reported owners. */
-public final class GameplayObserverRegistry {
+public final class GameplayObserverRegistry implements com.openggf.game.session.GameplayObserverSnapshots {
     public record Entry(String owner, GameplayObserver observer, RewindSnapshottable<?> adapter) { }
     private final List<Entry> entries;
     public GameplayObserverRegistry() {
@@ -15,6 +15,9 @@ public final class GameplayObserverRegistry {
     }
     private GameplayObserverRegistry(List<Entry> entries) { this.entries=List.copyOf(entries); }
     public List<Entry> entries() { return entries; }
+    @Override public List<RewindSnapshottable<?>> adapters() {
+        return entries.stream().map(Entry::adapter).toList();
+    }
     GameplayObserverRegistry append(String owner,GameplayObserver observer) {
         if(!(observer instanceof RewindSnapshottable<?> adapter)) throw new IllegalArgumentException("Gameplay observers require captured state");
         if(!com.openggf.game.rewind.RewindAdapterOwnership.isBoundToOwner(adapter,owner))

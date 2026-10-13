@@ -7,7 +7,7 @@ import com.openggf.game.session.CompositeWorldSessionPolicyState;
 import com.openggf.game.session.WorldSession;
 import com.openggf.game.session.WorldSessionPolicyProvider;
 import com.openggf.game.session.WorldSessionPolicyState;
-import com.openggf.mods.mutators.MutatorCatalog;
+import com.openggf.game.mutators.PreparedMutatorConfiguration;
 import com.openggf.mods.mutators.MutatorSupportProfile;
 
 /** Native consumers are constructed once per supported world, after the host's lease owner. */
@@ -18,9 +18,9 @@ public final class Sonic3kMutatorPolicyProvider implements WorldSessionPolicyPro
 
     @Override
     public WorldSessionPolicyState open(WorldSession world) {
-        var catalog = world.resolvedGameModule().getGameService(MutatorCatalog.class);
+        var catalog = world.resolvedGameModule().getGameService(PreparedMutatorConfiguration.class);
         var support = world.resolvedGameModule().getGameService(MutatorSupportProfile.class);
-        if (catalog == null || catalog.definitions().isEmpty() || support == null) return null;
+        if (catalog == null || !catalog.hasDefinitions() || support == null) return null;
         // WorldSession assigns its policy graph after this factory returns. Children acquire
         // the trusted source from bindGameplay/native callbacks, never from constructors.
         return CompositeWorldSessionPolicyState.of(

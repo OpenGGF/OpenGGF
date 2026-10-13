@@ -55,6 +55,16 @@ public final class LivePresentationRuntime implements WorldSessionPolicyState, R
         return !retired&&TransientMutatorPolicyAccess.entries(world).stream().anyMatch(e->e.remainingPresentations()>0&&e.policy() instanceof SpritePresentationPolicy p && targets(p.target(),role));
     }
     public LogicalInputSnapshot input() { return input; }
+    public com.openggf.level.render.ScenePresentationPass.Input sceneInput() {
+        var player = input.player1();
+        int held = player.heldMask();
+        return new com.openggf.level.render.ScenePresentationPass.Input(
+                (held & (com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_LEFT
+                        | com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_RIGHT)) != 0,
+                (held & (com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_UP
+                        | com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_DOWN)) != 0,
+                player.actionHeldMask() != 0);
+    }
     public WorldSession world() { return world; }
     /** Structural render owners register their own exact teardown; callbacks are never snapshot gameplay values. */
     public void registerRenderResource(Object owner,Runnable cleanup) { renderResources.put(Objects.requireNonNull(owner),Objects.requireNonNull(cleanup)); }

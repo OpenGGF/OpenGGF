@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.HashMap;
 import com.openggf.game.mutators.HudPresentationRuntime;
-import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.WorldSession;
 import com.openggf.game.session.WorldSessionPolicyAccess;
 import com.openggf.graphics.GraphicsManager;
@@ -50,17 +49,11 @@ public final class HudProfileAccess {
         return hud == null ? List.of() : hud.presentationReadouts();
     }
 
-    static HudPresentationRuntime runtime() {
-        var context = SessionManager.getCurrentGameplayMode();
-        return context == null || !context.isGameplayRuntimeReady() ? null
-                : WorldSessionPolicyAccess.getService(context.getWorldSession(), HudPresentationRuntime.class);
-    }
-
     public static void bindWorld(HudRenderManager hud,WorldSession world) { hud.presentationWorld=world; }
     static HudPresentationRuntime runtime(GraphicsManager graphics) {
         var pipeline=graphics.getUiRenderPipeline();
         var hud=pipeline==null?null:pipeline.getHudRenderManager();
-        return hud!=null&&hud.presentationWorld!=null?WorldSessionPolicyAccess.getService(hud.presentationWorld,HudPresentationRuntime.class):runtime();
+        return hud!=null&&hud.presentationWorld!=null?WorldSessionPolicyAccess.getService(hud.presentationWorld,HudPresentationRuntime.class):null;
     }
 
     /** Called once at replay entry, after native SAT/counter publication and before drawing. */

@@ -375,8 +375,11 @@ class TestMutatorWorldServices {
         }
         var provider=new MutatorWorldProvider(catalog);
         var observers=org.mockito.Mockito.mock(com.openggf.mods.code.GameplayObserverRegistry.class);
-        if(observer!=null)org.mockito.Mockito.when(observers.entries()).thenReturn(List.of(
-                new com.openggf.mods.code.GameplayObserverRegistry.Entry("fixture",observer,observer)));
+        if(observer!=null) {
+            org.mockito.Mockito.when(observers.entries()).thenReturn(List.of(
+                    new com.openggf.mods.code.GameplayObserverRegistry.Entry("fixture",observer,observer)));
+            org.mockito.Mockito.when(observers.adapters()).thenReturn(List.of(observer));
+        }
         var profile=new MutatorSupportProfile() {
             @Override public Set<MutatorCapability> capabilities(int zone,int act) { return EnumSet.allOf(MutatorCapability.class); }
             @Override public boolean supportsPlayer(String key,boolean leader) { return true; }
@@ -385,7 +388,9 @@ class TestMutatorWorldServices {
             @Override public <T> T getGameService(Class<T> type) {
                 if(type==WorldSessionPolicyProvider.class)return type.cast((WorldSessionPolicyProvider) world ->
                         com.openggf.game.session.CompositeWorldSessionPolicyState.of(provider.open(world),nativeChild));
-                if(type==com.openggf.mods.code.GameplayObserverRegistry.class && observer!=null)return type.cast(observers);
+                if((type==com.openggf.mods.code.GameplayObserverRegistry.class
+                        || type==com.openggf.game.session.GameplayObserverSnapshots.class) && observer!=null)
+                    return type.cast(observers);
                 if(type==MutatorSupportProfile.class) return type.cast(profile);
                 return super.getGameService(type);
             }

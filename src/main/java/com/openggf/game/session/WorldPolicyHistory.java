@@ -1,7 +1,6 @@
 package com.openggf.game.session;
 
 import com.openggf.game.rewind.RewindSnapshottable;
-import com.openggf.mods.code.GameplayObserverRegistry;
 import java.util.*;
 
 /** Per-world accepted policy/creator-state sidecar; canonical input remains the live recorder's authority. */
@@ -43,16 +42,22 @@ final class WorldPolicyHistory {
     void restoreAfter(WorldSession world,Frame frame) { try { restore(world,frame.after()); } finally { replaying=false; } }
     void endReplay() { replaying=false; }
     private static Snapshot capture(WorldSession world) {
-        var observers=world.getGameModule().getGameService(GameplayObserverRegistry.class);
-        return new Snapshot(world.policies.rewindAdapter().capture(),observers==null?List.of():
-                observers.entries().stream().map(e -> (Object)e.adapter().capture()).toList());
+        return new Snapshot(world.policies.rewindAdapter().capture(), adapters(world).stream()
+                .map(adapter -> (Object) adapter.capture()).toList());
     }
     @SuppressWarnings({"rawtypes","unchecked"})
     private static void restore(WorldSession world,Snapshot snapshot) {
         ((RewindSnapshottable)world.policies.rewindAdapter()).restore(snapshot.policies());
-        var registry=world.getGameModule().getGameService(GameplayObserverRegistry.class);
-        var observers=registry==null?List.<GameplayObserverRegistry.Entry>of():registry.entries();
+        var observers = adapters(world);
         if(observers.size()!=snapshot.observers().size())throw new IllegalStateException("Gameplay observer graph changed");
-        for(int i=0;i<observers.size();i++)((RewindSnapshottable)observers.get(i).adapter()).restore(snapshot.observers().get(i));
+        for(int i=0;i<observers.size();i++)((RewindSnapshottable)observers.get(i)).restore(snapshot.observers().get(i));
     }
+    private static List<RewindSnapshottable<?>> adapters(WorldSession world) {
+        var graph = world.getGameModule().getGameService(GameplayObserverSnapshots.class);
+        if (graph == null) return List.of();
+        if (graph.getClass().getClassLoader() != WorldPolicyHistory.class.getClassLoader())
+            throw new SecurityException("Observer history belongs to the verified engine graph");
+        return graph.adapters();
+    }
+
 }

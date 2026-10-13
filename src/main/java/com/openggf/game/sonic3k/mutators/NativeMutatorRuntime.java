@@ -760,7 +760,9 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
         for(int line=0;line<4;line++) for(int color=0;color<16;color++)
             palette[line*16+color]=com.openggf.level.render.PlaneRasterizer.argb(services.currentLevel().getPalette(line).getColor(color));
         if(landmarkThumbnail==null || landmarkSheet!=sheet || !java.util.Arrays.equals(landmarkPalette,palette)) {
-            landmarkThumbnail=com.openggf.mods.scene.host.SpriteRasterizer.rasterize(sheet.getFrame(4),sheet.getPatterns(),palette,sheet.getPaletteIndex(),0).image();
+            var pixels=com.openggf.level.render.SpriteMappingRasterizer.rasterize(
+                    sheet.getFrame(4),sheet.getPatterns(),palette,sheet.getPaletteIndex(),0);
+            landmarkThumbnail=new com.openggf.mods.scene.SceneImage(pixels.width(),pixels.height(),pixels.argb());
             landmarkSheet=sheet; landmarkPalette=palette;
         }
     }

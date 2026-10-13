@@ -628,9 +628,6 @@ public final class LiveRewindManager {
     private boolean clear() {
         if(installedGameplayMode!=null)
             com.openggf.game.session.WorldSessionPolicyAccess.setHistoryRecording(installedGameplayMode.getWorldSession(),false);
-        var current=SessionManager.getCurrentGameplayMode();
-        if(current!=null)
-            com.openggf.game.session.WorldSessionPolicyAccess.setHistoryRecording(current.getWorldSession(),false);
         if (rewinding && rewindController != null) {
             if (!cleanupPresentationAfterRealtimeRewind(
                     AudioPresentationPolicy.STOP_ALL_PRESENTATION)) {

@@ -353,7 +353,8 @@ public class GraphicsManager {
 	}
 
 	/** Internal post-SAT picture bridge: source row crop/flips stay native; only the final quad/colour changes. */
-	void renderPresentationPattern(int patternId,PatternDesc desc,int rowStart,int rowEnd,float[] quad,float hue,float opacity) {
+	void renderPresentationPattern(int patternId, int paletteIndex, boolean hFlip, boolean vFlip, boolean priority,
+	                               int rowStart, int rowEnd, float[] quad, float hue, float opacity) {
 		if(quad.length!=8||!Float.isFinite(hue)||!Float.isFinite(opacity))throw new IllegalArgumentException("Invalid presentation geometry or colour");
 		for(float value:quad)if(!Float.isFinite(value))throw new IllegalArgumentException("Nonfinite picture vertex");
 		if(headlessMode) return;
@@ -362,7 +363,7 @@ public class GraphicsManager {
 		Integer palette=resolveEffectivePatternPaletteTextureId();
 		if(entry==null||palette==null||rowStart>=rowEnd) return;
 		flushPatternBatch();
-		var command=PatternRenderCommand.obtainRows(entry,palette,desc.getPaletteIndex(),desc.getHFlip(),desc.getVFlip(),desc.getPriority(),0,0,rowStart,rowEnd,this);
+		var command=PatternRenderCommand.obtainRows(entry,palette,paletteIndex,hFlip,vFlip,priority,0,0,rowStart,rowEnd,this);
 		command.presentation(quad,hue,opacity);
 		registerCommand(command);
 	}

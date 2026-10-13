@@ -1171,7 +1171,7 @@ public final class LevelRenderer {
         LivePresentationRuntime runtime = presentationRuntime();
         var player = camera.getFocusedSprite();
         var sceneFrame = runtime == null ? ScenePresentationPass.Frame.stock(0, 0)
-                : ScenePresentationPass.resolve(runtime.scenePolicies(), runtime.input(),
+                : ScenePresentationPass.resolve(runtime.scenePolicies(), runtime.sceneInput(),
                         player == null ? lm.cachedScreenWidth / 2f : player.getCentreX() - presentationCameraXWithShake(),
                         player == null ? lm.cachedScreenHeight / 2f : player.getCentreY() - presentationCameraY());
         com.openggf.level.render.ZonePictureSource.Picture scenery = runtime == null ? null : runtime.sceneryPicture();

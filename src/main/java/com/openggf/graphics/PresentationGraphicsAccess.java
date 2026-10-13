@@ -1,15 +1,11 @@
 package com.openggf.graphics;
 
-import com.openggf.game.session.EngineCallerInspectionBootstrap;
-import com.openggf.level.PatternDesc;
 
 /** Engine-only geometry and private art bridge. The bank handle is bound to the actual render host and owner. */
 public final class PresentationGraphicsAccess {
-    private static final StackWalker CALLERS=EngineCallerInspectionBootstrap.create();
     private PresentationGraphicsAccess() { }
     private static void engineCaller() {
-        Class<?> caller=CALLERS.walk(frames->frames.map(StackWalker.StackFrame::getDeclaringClass)
-                .filter(type->type!=PresentationGraphicsAccess.class&&type.getClassLoader()!=null).findFirst().orElseThrow());
+        Class<?> caller = com.openggf.util.EngineCallerAccess.callerOutside(PresentationGraphicsAccess.class);
         if(caller.getClassLoader()!=PresentationGraphicsAccess.class.getClassLoader())
             throw new SecurityException("Presentation bridge belongs to the engine renderer");
     }
@@ -44,7 +40,9 @@ public final class PresentationGraphicsAccess {
             bank.released=true;
         }
     }
-    public static void render(GraphicsManager graphics,int id,PatternDesc desc,int rowStart,int rowEnd,float[] quad,float hue,float opacity) {
-        engineCaller();graphics.renderPresentationPattern(id,desc,rowStart,rowEnd,quad,hue,opacity);
+    public static void render(GraphicsManager graphics, int id, int palette, boolean hFlip, boolean vFlip,
+                              boolean priority, int rowStart, int rowEnd, float[] quad, float hue, float opacity) {
+        engineCaller();
+        graphics.renderPresentationPattern(id, palette, hFlip, vFlip, priority, rowStart, rowEnd, quad, hue, opacity);
     }
 }

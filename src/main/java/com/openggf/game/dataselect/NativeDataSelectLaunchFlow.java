@@ -32,6 +32,7 @@ public final class NativeDataSelectLaunchFlow {
         GameModule resolve(ModuleResolutionService.PreparedLaunch launch, GameModule root,
                            GameplayLaunchRequest request);
         void initialize(GameplayModeContext gameplay);
+        RuntimeException unavailableCharacter(String owner, String message, RuntimeException cause);
     }
 
     public static void launch(DataSelectAction action, EngineContext services, GameLoop loop, Host host) {
@@ -83,8 +84,7 @@ public final class NativeDataSelectLaunchFlow {
         } catch (GameplayTeamBootstrap.UnavailableRequiredCharacter unavailable) {
             String owner = destination instanceof ZoneKey.Mod mod ? mod.ownerModId()
                     : unavailable.key().ownerModId().orElse("engine");
-            throw new com.openggf.mods.code.ModRegistrationException(owner,
-                    "MOD_LAUNCH_CHARACTER_UNAVAILABLE", unavailable.getMessage(), null, unavailable);
+            throw host.unavailableCharacter(owner, unavailable.getMessage(), unavailable);
         }
         return SessionManager.openGameplaySession(root, resolved, dataSource, launchContext);
     }

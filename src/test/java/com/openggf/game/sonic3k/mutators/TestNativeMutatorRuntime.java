@@ -27,7 +27,7 @@ import static org.mockito.Mockito.*;
 class TestNativeMutatorRuntime {
     private static final class LifetimeChildProducer extends AbstractObjectInstance implements RewindRecreatable {
         LifetimeChildProducer(ObjectSpawn spawn) { super(spawn,"lifetime-child-producer"); }
-        @Override public void update(int frame,com.openggf.game.PlayableEntity player) { }
+        @Override public void update(int vIntRunCount,com.openggf.game.PlayableEntity player) { }
         @Override public void appendRenderCommands(List<com.openggf.graphics.GLCommand> commands) { }
         @Override public LifetimeChildProducer recreateForRewind(RewindRecreateContext context) { return new LifetimeChildProducer(context.spawn()); }
         private NativeGustObjectInstance gust() { return new NativeGustObjectInstance(new ObjectSpawn(300,100,0,0,1,false,0)); }

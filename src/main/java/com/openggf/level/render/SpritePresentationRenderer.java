@@ -218,7 +218,8 @@ public final class SpritePresentationRenderer {
                 var transform=runtime==null?com.openggf.game.mutators.SpritePictureTransform.IDENTITY:
                         com.openggf.game.mutators.SpritePictureTransform.forTile(tile,cameraX,cameraY,runtime.spritePolicies());
                 if(!transform.identity()||opacity!=1) {
-                    com.openggf.graphics.PresentationGraphicsAccess.render(graphics,tile.patternId(),desc,tile.rowStart(),tile.rowEnd(),
+                    com.openggf.graphics.PresentationGraphicsAccess.render(graphics, tile.patternId(), tile.palette(),
+                            tile.hFlip(), tile.vFlip(), tile.priority(), tile.rowStart(), tile.rowEnd(),
                             transform.quad(tile,cameraX,cameraY),transform.hue(),opacity);
                 } else if (tile.rowClipped()) {
                     SpritePresentation.renderTileRows(graphics, tile, desc, (int) x, (int) y);

@@ -477,6 +477,10 @@ public final class HeadlessGameBoot implements AutoCloseable {
                         return services.moduleResolutionService().resolveForLaunch(launch,
                                 moduleDecorator.apply(root, launchRequest), launchRequest);
                     }
+                    @Override public RuntimeException unavailableCharacter(String owner, String message, RuntimeException cause) {
+                        return new com.openggf.mods.code.ModRegistrationException(owner,
+                                "MOD_LAUNCH_CHARACTER_UNAVAILABLE", message, null, cause);
+                    }
                     @Override public void initialize(GameplayModeContext gameplay) {
                         // Keep the capture's physical input owner while replacing every world manager.
                         GameplaySessionFactory.attachManagers(gameplay, services, createGameplayCamera(services));

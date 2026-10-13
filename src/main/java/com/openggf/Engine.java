@@ -1950,6 +1950,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 					GameModule root, GameplayLaunchRequest request) {
 				return consumePatchResolution(moduleResolutionService.resolveForLaunchResult(launch, root, request), true);
 			}
+			@Override public RuntimeException unavailableCharacter(String owner, String message, RuntimeException cause) {
+				return new com.openggf.mods.code.ModRegistrationException(owner,
+						"MOD_LAUNCH_CHARACTER_UNAVAILABLE", message, null, cause);
+			}
 			@Override public void initialize(GameplayModeContext gameplay) {
 				initializeGameplayRuntime(gameplay, true);
 			}

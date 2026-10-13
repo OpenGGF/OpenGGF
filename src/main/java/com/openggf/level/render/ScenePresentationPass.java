@@ -1,13 +1,11 @@
 package com.openggf.level.render;
 
-import com.openggf.control.LogicalInputSnapshot;
 import com.openggf.game.mutators.TransientMutatorPolicySource.Entry;
 import com.openggf.graphics.GLCommandable;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PatternRenderCommand;
 import com.openggf.graphics.ShaderProgram;
 import com.openggf.mods.mutators.ScenePresentationPolicy;
-import com.openggf.sprites.playable.AbstractPlayableSprite;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
@@ -52,12 +50,14 @@ public final class ScenePresentationPass {
         }
     }
 
-    public static Frame resolve(List<Entry> entries, LogicalInputSnapshot input, float anchorX, float anchorY) {
+    /** Already resolved input intent; the render pass neither reads nor remaps controllers. */
+    public record Input(boolean horizontal, boolean vertical, boolean action) { }
+
+    public static Frame resolve(List<Entry> entries, Input input, float anchorX, float anchorY) {
         boolean negative = false, mirrorX = false, mirrorY = false;
         float sx = 1, sy = 1, shakeX = 0, shakeY = 0;
         int outline = -1, scenery = -1;
-        var player = input == null ? LogicalInputSnapshot.neutral().player1() : input.player1();
-        int held = player.heldMask();
+        Input resolved = input == null ? new Input(false, false, false) : input;
         for (var entry : entries) {
             if (entry.remainingPresentations() <= 0 || !(entry.policy() instanceof ScenePresentationPolicy policy)) continue;
             double phase = Math.floorMod(entry.agePresentations(), policy.periodPresentations())
@@ -76,10 +76,9 @@ public final class ScenePresentationPass {
                     sx *= zoom; sy *= zoom;
                 }
                 case INPUT_SQUASH -> {
-                    boolean horizontal = (held & (AbstractPlayableSprite.INPUT_LEFT | AbstractPlayableSprite.INPUT_RIGHT)) != 0;
-                    boolean vertical = (held & (AbstractPlayableSprite.INPUT_UP | AbstractPlayableSprite.INPUT_DOWN)) != 0;
-                    float deformation = horizontal == vertical ? 0 : horizontal ? amount : -amount;
-                    if (player.actionHeldMask() != 0) deformation = -amount;
+                    float deformation = resolved.horizontal() == resolved.vertical() ? 0
+                            : resolved.horizontal() ? amount : -amount;
+                    if (resolved.action()) deformation = -amount;
                     sx *= 1 + deformation; sy *= 1 - deformation;
                 }
                 case OUTLINE -> outline = Math.max(outline, policy.magnitude());

@@ -33,29 +33,40 @@ class TestScenePresentationPass {
                 action ? InputActionMasks.ACTION_A : 0, 0, false, false), PlayerInputState.neutral());
     }
 
+    private static ScenePresentationPass.Frame resolve(List<Entry> entries, LogicalInputSnapshot input,
+                                                       float anchorX, float anchorY) {
+        var player = input == null ? PlayerInputState.neutral() : input.player1();
+        int held = player.heldMask();
+        var intent = new ScenePresentationPass.Input(
+                (held & (AbstractPlayableSprite.INPUT_LEFT | AbstractPlayableSprite.INPUT_RIGHT)) != 0,
+                (held & (AbstractPlayableSprite.INPUT_UP | AbstractPlayableSprite.INPUT_DOWN)) != 0,
+                player.actionHeldMask() != 0);
+        return ScenePresentationPass.resolve(entries, intent, anchorX, anchorY);
+    }
+
     @Test void logicalInputSquashesThePictureWithoutRemappingInputsAndExpiryIsImmediate() {
         var entries = List.of(entry(Mode.INPUT_SQUASH, 8, 17, 3));
-        var neutral = ScenePresentationPass.resolve(entries, LogicalInputSnapshot.neutral(), 100, 75);
+        var neutral = resolve(entries, LogicalInputSnapshot.neutral(), 100, 75);
         assertFalse(neutral.active());
         var right = input(AbstractPlayableSprite.INPUT_RIGHT, false);
-        var horizontal = ScenePresentationPass.resolve(entries, right, 100, 75);
+        var horizontal = resolve(entries, right, 100, 75);
         assertEquals(1.08f, horizontal.scaleX(), .00001); assertEquals(.92f, horizontal.scaleY(), .00001);
         assertEquals(AbstractPlayableSprite.INPUT_RIGHT, right.player1().heldMask());
-        var jump = ScenePresentationPass.resolve(entries, input(0, true), 100, 75);
+        var jump = resolve(entries, input(0, true), 100, 75);
         assertEquals(.92f, jump.scaleX(), .00001); assertEquals(1.08f, jump.scaleY(), .00001);
-        assertFalse(ScenePresentationPass.resolve(List.of(entry(Mode.INPUT_SQUASH, 8, 20, 0)), right, 100, 75).active());
-        assertEquals(horizontal, ScenePresentationPass.resolve(entries, right, 100, 75), "redraw is clock-neutral");
+        assertFalse(resolve(List.of(entry(Mode.INPUT_SQUASH, 8, 20, 0)), right, 100, 75).active());
+        assertEquals(horizontal, resolve(entries, right, 100, 75), "redraw is clock-neutral");
     }
 
     @Test void transformsComposeWithinTheGlobalPictureBoundsAndUseThePlayerAnchor() {
         var entries = List.of(entry(Mode.SHAKE, 6, 15, 10), entry(Mode.SHAKE, 6, 15, 10),
                 entry(Mode.ZOOM, 8, 30, 10), entry(Mode.INPUT_SQUASH, 8, 30, 10));
-        var frame = ScenePresentationPass.resolve(entries, input(AbstractPlayableSprite.INPUT_RIGHT, false), 89, 71);
+        var frame = resolve(entries, input(AbstractPlayableSprite.INPUT_RIGHT, false), 89, 71);
         assertEquals(1.08f, frame.scaleX(), .00001); assertTrue(frame.scaleY() >= .92f);
         assertTrue(Math.abs(frame.shakeX()) <= 6); assertTrue(Math.abs(frame.shakeY()) <= 6);
-        var zoom = ScenePresentationPass.resolve(List.of(entry(Mode.ZOOM, 8, 30, 10)), null, 89, 71);
+        var zoom = resolve(List.of(entry(Mode.ZOOM, 8, 30, 10)), null, 89, 71);
         assertArrayEquals(new float[]{89, 71}, zoom.source(89, 71, 528, 224), .00001f);
-        assertFalse(ScenePresentationPass.resolve(List.of(entry(Mode.NEGATIVE, 0, 15, 0)), null, 89, 71).active());
+        assertFalse(resolve(List.of(entry(Mode.NEGATIVE, 0, 15, 0)), null, 89, 71).active());
     }
 
     @Test void offscreenPixelsMatchTheLogicalTransformsAtNativeAndWideSizes() {
@@ -73,7 +84,7 @@ class TestScenePresentationPass {
                     for (Mode mode : new Mode[]{Mode.NEGATIVE, Mode.MIRROR_HORIZONTAL, Mode.MIRROR_VERTICAL,
                             Mode.SHAKE, Mode.ZOOM, Mode.INPUT_SQUASH, Mode.SCENERY}) {
                         int magnitude = switch (mode) { case SHAKE -> 6; case ZOOM, INPUT_SQUASH -> 8; default -> 0; };
-                        var frame = ScenePresentationPass.resolve(List.of(entry(mode, magnitude, 15, 120)),
+                        var frame = resolve(List.of(entry(mode, magnitude, 15, 120)),
                                 input(AbstractPlayableSprite.INPUT_RIGHT, false), 93, 105);
                         prepareCaller(graphics, fbo, otherFbo, oldVao, oldTexture, width, height);
                         pass.render(graphics, frame, picture, () -> { }, () -> { }, 0, 0, logicalWidth, 224);
@@ -114,7 +125,7 @@ class TestScenePresentationPass {
             try {
                 for (int width : new int[]{320, 528}) {
                     prepareCaller(graphics, fbo, readFbo, oldVao, oldTexture, width, 224);
-                    var frame = ScenePresentationPass.resolve(List.of(entry(Mode.OUTLINE, 10, 7, 50)), null, 100, 100);
+                    var frame = resolve(List.of(entry(Mode.OUTLINE, 10, 7, 50)), null, 100, 100);
                     pass.render(graphics, frame, picture(width, 224),
                             () -> rect(30, 30, 100, 80, 1, 0, 0),
                             () -> rect(60, 50, 16, 24, 1, 1, 0), 0, 0, width, 224);
@@ -158,7 +169,7 @@ class TestScenePresentationPass {
             try {
                 prepareCaller(graphics, fbo, readFbo, oldVao, oldTexture, 528, 224);
                 var first = pass.open(graphics,
-                        ScenePresentationPass.resolve(List.of(entry(Mode.NEGATIVE, 0, 1, 20)), null, 100, 100),
+                        resolve(List.of(entry(Mode.NEGATIVE, 0, 1, 20)), null, 100, 100),
                         picture(528, 224), 528, 224);
                 graphics.registerCommand(first.beginCommand());
                 graphics.registerCommand(new GLCommand(GLCommand.CommandType.CUSTOM, (cx, cy, cw, ch) -> rect(30, 40, 16, 16, 1, 0, 0)));
@@ -170,7 +181,7 @@ class TestScenePresentationPass {
                     glBindFramebuffer(GL_READ_FRAMEBUFFER, readFbo);
                 }));
                 var second = pass.open(graphics,
-                        ScenePresentationPass.resolve(List.of(entry(Mode.MIRROR_HORIZONTAL, 0, 10, 20)), null, 200, 100),
+                        resolve(List.of(entry(Mode.MIRROR_HORIZONTAL, 0, 10, 20)), null, 200, 100),
                         picture(528, 224), 528, 224);
                 graphics.registerCommand(second.beginCommand());
                 graphics.registerCommand(new GLCommand(GLCommand.CommandType.CUSTOM, (cx, cy, cw, ch) -> rect(80, 40, 16, 16, 1, 0, 0)));

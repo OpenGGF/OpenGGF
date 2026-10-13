@@ -841,11 +841,7 @@ public class GameLoop {
 
     /** Interactive 60/50 Hz presentation entry; canonical {@link #step()} remains one tick. */
     public void stepPresentationFrame() {
-        boolean chaosSetupBefore = currentGameMode != GameMode.LEVEL || levelManager == null
-                || levelManager.hasPendingInitialProcessSpritesPass()
-                || titleCardProvider != null && titleCardProvider.isOverlayActive();
-        boolean chaosPausedBefore = isPaused() || gameState != null && gameState.isGamePaused();
-        boolean chaosHeldBefore = resolveGameplayModeContext()!=null && WorldSessionPolicyAccess.holdsGameplay(resolveGameplayModeContext().getWorldSession());
+        var policyBefore = GameLoopWorldPolicyPresentation.capture(this, titleCardProvider);
         gameplayAudioRateOwned = GameLoopGameplayPacing.step(this, resolveGameplayModeContext(),
                 () -> levelManager == null ? null : levelManager.getCurrentLevel(),
                 inputHandler, audioManager, this::canUseGameplayPacing, this::canUseGameplayPacingOutsideRewind,
@@ -861,27 +857,9 @@ public class GameLoop {
                         runAfterStepMasterTitleLaunchCallbackIfPresent(); presenceManager.tick();
                     }
                 }, specialStagePacingInput, gameplayAudioRateOwned);
-        var context = resolveGameplayModeContext();
-        if (context != null) {
-            var phase = liveRewindManager.isRewindingOrReleasing() ? com.openggf.game.GameplayObservation.Phase.REWIND
-                    : isPaused() || gameState != null && gameState.isGamePaused() ? com.openggf.game.GameplayObservation.Phase.PAUSED
-                    : currentGameMode == GameMode.SPECIAL_STAGE || currentGameMode == GameMode.BONUS_STAGE
-                        ? com.openggf.game.GameplayObservation.Phase.STAGE
-                    : chaosPausedBefore ? com.openggf.game.GameplayObservation.Phase.PAUSED
-                    : chaosSetupBefore || currentGameMode != GameMode.LEVEL ? com.openggf.game.GameplayObservation.Phase.SETUP
-                    : levelManager == null || levelManager.hasPendingInitialProcessSpritesPass()
-                        || titleCardProvider != null && titleCardProvider.isOverlayActive()
-                        ? com.openggf.game.GameplayObservation.Phase.SETUP
-                    : !canUseGameplayPacing() || resolveFadeManager().isActive()
-                        ? com.openggf.game.GameplayObservation.Phase.TRANSITION
-                    : chaosHeldBefore ? com.openggf.game.GameplayObservation.Phase.HELD
-                    : com.openggf.game.GameplayObservation.Phase.ACTIVE;
-            WorldSessionPolicyAccess.onPresentation(context,inputHandler.logical(),phase);
-        } else if(currentGameMode==GameMode.TITLE_SCREEN || currentGameMode==GameMode.DATA_SELECT) {
-            WorldSessionPolicyAccess.onMenuPresentation(SessionManager.getCurrentWorldSession(),inputHandler.logical(),
-                    engineServices.graphics().getProjectionWidth(),Math.max(1,(int)engineServices.graphics().getScreenHeight()),
-                    engineServices.audio()::playSfx);
-        }
+        GameLoopWorldPolicyPresentation.publish(this, policyBefore, titleCardProvider, inputHandler, engineServices,
+                liveRewindManager::isRewindingOrReleasing, this::canUseGameplayPacing,
+                () -> resolveFadeManager().isActive());
     }
 
     private void releaseGameplayAudioRate() {

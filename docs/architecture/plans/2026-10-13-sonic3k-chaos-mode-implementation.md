@@ -355,3 +355,33 @@ from its shorter gameplay portion. The separate controlled DVD/gust captures
 remain the effect evidence. Capture inputs, settings and pictures live in the
 task's explicit directory outside the repository. The complete smoke/guard run
 remains pending.
+
+
+The first complete combined invocation on `0047d2cb1` finished all 64 ordinary
+batches: 26,837 tests, 28 failures, one error and 64 skips in 4,180.19 execution
+seconds. Its separate guards finished 678 tests, eight failures, no errors/skips
+in 266.04 seconds. This is a completed red smoke/guard result, not a green suite.
+The unchanged motion fixture lacked live history admission and the rewind inventory
+needed the three new concrete encounter classes; their test-only repairs landed at
+`d3d0b7db2` and `f01f42aa9`. The guard failures exposed global HUD/history lookup,
+render/input layer coupling, three class-size ratchets, native-clock terminology,
+and a pre-registration scanner treating an injected manager collaborator as an
+object. These were repaired through exact world ownership, pure render values,
+focused timer/presentation collaborators and object hierarchy analysis. Frozen
+layer/global baselines and size budgets were not widened. Explicit Mod API policy
+and UI values are enumerated in the cycle guard; a new unfrozen assertion rejects
+concrete mod-host dependencies. Observer snapshot/configuration projections,
+native launch error translation and shared ROM mapping pixels remove those
+implementation dependencies while retaining host fault/identity authority.
+
+The consolidated repair selector completed 391 tests across 35 class reports with
+zero failures/errors/skips on `f01f42aa9` plus the bounded repair patch. Every selected
+XML report was inspected separately from seven stale reports left by earlier
+focused commands. It covers every originally failing guard, actual surfaceless EGL
+pixels, native launch/team/save behavior, observer/source history, motion/timers,
+and all five mandatory S3K loading/bootstrap/decoding/AIZ classes. The exact command
+used `tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl
+-Dtest=... test -B`, all three verified absolute ROM properties, Lua 5.4 and unset
+desktop display variables. Unchanged broad smoke coverage is not repeated as a
+ceremony; remaining route attribution and the later updated-develop union remain
+separate delivery checks.

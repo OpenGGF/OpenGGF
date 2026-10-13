@@ -27,7 +27,6 @@ import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.PlayerCapabilityRules;
 import com.openggf.game.rules.PlayerMovementRules;
 import com.openggf.game.rewind.RewindTransient;
-import com.openggf.timer.Timer;
 import com.openggf.timer.TimerManager;
 
 import com.openggf.audio.GameAudioProfile;
@@ -1592,11 +1591,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         /** Grants native shoes with a bounded duration, without shortening an existing pickup. */
         public void giveSpeedShoes(int durationFrames) {
-                SpeedShoesTimer admitted = new SpeedShoesTimer("SpeedShoes-" + getCode(), this, durationFrames);
-                Timer existing = currentTimerManager().getTimerForCode(admitted.getCode());
-                if (hasSpeedShoes() && existing != null) {
-                        admitted.setTicks(Math.max(admitted.getTicks(), existing.getTicks()));
-                }
+                SpeedShoesTimer admitted = PlayableSpeedShoesLifecycle.admit(this, durationFrames);
                 // S3K: shoes activation uses absolute values from canonical base ($C00/$18/$80),
                 // not 2x of Character_Speeds init values (sonic3k.asm:40823-40825)
                 clearInitOverride();
@@ -1623,11 +1618,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * Zero when speed shoes are not active.
          */
         private int currentSpeedShoesRemainingTicks() {
-                if (!speedShoes) {
-                        return 0;
-                }
-                Timer timer = currentTimerManager().getTimerForCode("SpeedShoes-" + getCode());
-                return timer != null ? timer.getTicks() : 0;
+                return PlayableSpeedShoesLifecycle.remainingTicks(this, speedShoes);
         }
 
         /**
@@ -1643,15 +1634,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * RewindRegistry's cross-subsystem restore ordering.
          */
         private void restoreSpeedShoesTimer(int remainingTicks) {
-                TimerManager timerManager = currentTimerManager();
-                String code = "SpeedShoes-" + getCode();
-                if (!speedShoes) {
-                        timerManager.removeTimerForCode(code);
-                        return;
-                }
-                SpeedShoesTimer replacement = new SpeedShoesTimer(code, this);
-                replacement.setTicks(remainingTicks > 0 ? remainingTicks : SpeedShoesTimer.ROM_DURATION_FRAMES);
-                timerManager.registerTimer(replacement);
+                PlayableSpeedShoesLifecycle.restoreTimer(this, speedShoes, remainingTicks);
         }
 
         public void giveInvincibility() {

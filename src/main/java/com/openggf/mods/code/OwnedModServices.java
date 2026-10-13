@@ -65,7 +65,9 @@ final class OwnedModServices {
                     .map(patch -> com.openggf.level.LevelPatchOwnership.bind(plan.ownerModId(), patch, plan.objectFactories().keySet())).toList();
             return new DelegatingGameModule(base, plan.ownerModId() + ":services") {
                 @Override public <T> T getGameService(Class<T> type) {
-                    if (type == GameplayObserverRegistry.class) return type.cast(accumulatedObservers);
+                    if (type == GameplayObserverRegistry.class
+                            || type == com.openggf.game.session.GameplayObserverSnapshots.class)
+                        return type.cast(accumulatedObservers);
                     Supplier<?> service = services.get(type);
                     return service == null ? super.getGameService(type) : type.cast(service.get());
                 }
