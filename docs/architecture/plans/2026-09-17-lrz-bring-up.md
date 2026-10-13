@@ -219,6 +219,41 @@ in the class), with the same verified locked-on ROM. The first movie is qualifie
 Act2/full-chain authoring continues independently. This is bounded route/replay
 validation, not broad product coverage or native pixel/trace parity.
 
+### Qualified ordinary Tails Act2 middle corridor
+
+The next36,714-input movie retains the entire qualified29,157-input Act1 prefix.
+Actual contacts, rather than screenshot overlap, establish the Act2 route:
+land on the red spring at2896/1694, climb the moving bank through flight,
+land again at4068/1520, fly left onto the vertical platform at3808 and ride it
+up, then enter and release both native turbines. Their owning `loc_44448` capture
+bands and `sub_4450A` release remain unchanged. The old flight timing missed the
+spring or the second climb; a two-input overshoot and native lift direction both
+mattered, so attributing every miss only to the changed global phase was rejected.
+
+Before the middle endpoint, long and short jumps still lose both rings at the
+real orbiting spike-ball pair anchored5288/976 and5288/1008. An earlier Fireworm
+attribution is rejected by its actual distant Y and the observed nearby owners.
+Six Left braking inputs plus eight neutral inputs avoid that contact. The endpoint
+remains5497/1008 at36713, now with two naturally earned rings. The test preserves
+a positive exact counter obligation by changing old ring1 to actual ring2; no
+counter hydration, hazard weakening or fitted runtime rule is introduced.
+
+From parent `d1f203e1a` plus this input/checkpoint candidate, the exact command
+finishes on2026-10-13 at18:26 BST:
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" -Dmse=off \
+  '-Dtest=TestLrzTailsColdRouteCapture#coldTailsRestoresActTwoTraversalToTheMiddleCorridor' \
+  "-Ds3k.rom.path=$LRZ_S3K_ROM" test
+```
+
+Result:1 test,0 failures/errors/skips;31.133 seconds Maven time (6.241 seconds
+in the class). All25 retimed real traversal checkpoints restore the full registry
+and replay45 inputs. The later boulder/boss suffix is still provisional: moving
+lifts require the actual downward departure, and corrected clouds/flames require
+fresh ordinary approach input. A successful partial endpoint does not qualify
+that remaining route or the width/donor/team/lifecycle/native-pixel products.
+
 ## Goal and delivery rule
 
 Deliver three cold routes: Sonic + Tails `$900` → seamless `$901` → boulder cutscene → `$1600` →

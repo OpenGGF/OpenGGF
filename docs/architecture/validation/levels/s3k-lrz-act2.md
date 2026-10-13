@@ -62,8 +62,16 @@ boundary. The focused replacement completes1 test with zero failures/errors/skip
 (37.808 seconds Maven time); it replaces only the previously red arrival identity.
 
 The full native320 pair, Knuckles and pair800 HPZ identities also pass in the
-four-case boundary run; its sole arrival failure is resolved above. Tails Act2
-and wider donor/roster/lifecycle/native-pixel products remain open. See the
+four-case boundary run; its sole arrival failure is resolved above. Tails now
+qualifies the Act2 middle corridor independently:36,714 cold inputs,25 real
+traversal full-registry45-input restore/forward spots,5497/1008 and two earned
+rings. Native red-spring landing, flight/platform landings and both turbine
+captures/releases are ordinary controller actions; six-frame braking and a
+short wait avoid the real spike-ball pair before the endpoint. The old fixture's
+exact ring1 becomes the newly observed positive ring2, not a zero-ring relaxation.
+The exact middle replacement completes1 test,0 failures/errors/skips (31.133
+seconds Maven time). Tails completion through the boulder/boss and wider
+donor/roster/lifecycle/native-pixel products remain open. See the
 [October 13 follow-up](../../plans/2026-09-17-lrz-bring-up.md#playable-completion-follow-up-2026-10-13)
 for commands, preserved incoming prefixes and rejected runtime rescue.
 

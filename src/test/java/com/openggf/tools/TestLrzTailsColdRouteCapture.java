@@ -107,13 +107,13 @@ class TestLrzTailsColdRouteCapture {
     void coldTailsRestoresActTwoTraversalToTheMiddleCorridor() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/lrz-tails-cold-act2-middle-320.bk2"));
-        assertEquals(41922, movie.getFrameCount());
+        assertEquals(36714, movie.getFrameCount());
         var settings = new GameplayCaptureSession.Settings(320, "tails", "", "off", null, null, null);
         // Moving platforms, both turbine captures/releases, flight, monitor alcove,
         // collision-path switches, spring return and the lower badnik passage.
-        var spots = Set.of(34300, 34820, 35080, 35468, 35680, 35848, 35939,
-                36261, 36361, 36461, 36736, 37181, 37370, 37421, 37586,
-                37867, 38142, 38340, 39222, 39612, 39950, 41366, 41446, 41600, 41800);
+        var spots = Set.of(29329, 29849, 30109, 30500, 30709, 30880, 30971,
+                31293, 31372, 31472, 31762, 32100, 32190, 32241, 32378,
+                32659, 32934, 33132, 34014, 34404, 34742, 36158, 36238, 36392, 36592);
         var checked = new HashSet<Integer>();
         var drawing = new RouteFrameDrawing();
         try (var session = new GameplayCaptureSession(settings)) {
@@ -155,7 +155,7 @@ class TestLrzTailsColdRouteCapture {
             assertFalse(session.player().isObjectControlled());
             assertEquals(5497, session.player().getCentreX());
             assertEquals(1008, session.player().getCentreY());
-            assertEquals(1, session.player().getRingCount());
+            assertEquals(2, session.player().getRingCount(), "ordinary braking preserves both earned rings");
         }
     }
 
