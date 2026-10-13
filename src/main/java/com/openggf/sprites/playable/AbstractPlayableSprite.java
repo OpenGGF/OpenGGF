@@ -1996,6 +1996,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // (invulnerableFrames already set in applyHurt() per ROM behavior)
                 if (!air && this.air && hurt) {
                         hurt = false;
+                        PlayableHurtRecovery.clearObjectControlAfterLanding(this);
                         forcedAnimationId = -1;
                         // HurtStop's direct draw path delays decrementing the reset timer by one frame.
                         invulnerableFrames = 0x78;
@@ -2112,10 +2113,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 controller.markHurtRecoveryCompleted();
                 invulnerableFrames = 0x78;
                 suppressNextInvulnerabilityDecrement = true;
-                setXSpeed((short) 0);
-                setYSpeed((short) 0);
-                setGSpeed((short) 0);
-                setSpindash(false);
+                PlayableHurtRecovery.stop(this);
         }
 
         public boolean isJumping() {

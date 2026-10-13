@@ -65,6 +65,7 @@ public class BackgroundRenderer {
     private com.openggf.game.internal.BackgroundColumnRemap.Columns uploadedColumns;
     private com.openggf.game.internal.BackgroundColumnRemap.Columns preparedColumns;
     private int remapEnabledLocation, remapXLocation, remapYLocation, remapEndYLocation;
+    private int priorityMetadataLocation, priorityMaskLocation;
     private ParallaxShaderProgram parallaxShader;
     private final QuadRenderer quadRenderer = new QuadRenderer();
     private final GraphicsManager graphicsManager;
@@ -79,6 +80,31 @@ public class BackgroundRenderer {
     private int shimmerFrameCounter = 0;
     private int shimmerStyle = 0;
     private float shimmerWaterlineScreenY = 9999.0f;
+    private boolean priorityMetadata;
+    private boolean priorityMask;
+    private boolean priorityReplayReady;
+    private int[] priorityHScroll = new int[224];
+    private short[] priorityLineVScroll = new short[224];
+    private short[] priorityColumnVScroll = new short[0];
+    private int priorityHScrollLength, priorityLineVScrollLength, priorityColumnVScrollLength;
+    private int priorityMidpoint, priorityExtraBuffer, priorityVScroll;
+    private int priorityShimmerFrame, priorityShimmerStyle;
+    private float priorityShimmerWaterline;
+    private boolean priorityNoHScroll;
+    private final int[] priorityViewport = new int[4];
+    private com.openggf.game.internal.BackgroundColumnRemap.Columns priorityColumns;
+    private final IntIndexedView priorityHScrollView = new IntIndexedView() {
+        @Override public int size() { return priorityHScrollLength; }
+        @Override public int get(int index) { return priorityHScroll[index]; }
+    };
+    private final ShortIndexedView priorityLineVScrollView = new ShortIndexedView() {
+        @Override public int size() { return priorityLineVScrollLength; }
+        @Override public short get(int index) { return priorityLineVScroll[index]; }
+    };
+    private final ShortIndexedView priorityColumnVScrollView = new ShortIndexedView() {
+        @Override public int size() { return priorityColumnVScrollLength; }
+        @Override public short get(int index) { return priorityColumnVScroll[index]; }
+    };
 
     public BackgroundRenderer() {
         this(GameServices.graphics());
@@ -114,6 +140,8 @@ public class BackgroundRenderer {
         remapXLocation = org.lwjgl.opengl.GL20.glGetUniformLocation(parallaxShader.getProgramId(), "ColumnRemapX");
         remapYLocation = org.lwjgl.opengl.GL20.glGetUniformLocation(parallaxShader.getProgramId(), "ColumnRemapY");
         remapEndYLocation = org.lwjgl.opengl.GL20.glGetUniformLocation(parallaxShader.getProgramId(), "ColumnRemapEndY");
+        priorityMetadataLocation = org.lwjgl.opengl.GL20.glGetUniformLocation(parallaxShader.getProgramId(), "PriorityMetadata");
+        priorityMaskLocation = org.lwjgl.opengl.GL20.glGetUniformLocation(parallaxShader.getProgramId(), "PriorityMaskOutput");
         quadRenderer.init();
 
         // Create FBO for background tile rendering.
@@ -306,6 +334,63 @@ public class BackgroundRenderer {
                 vScrollPerLine != null, vScrollPerColumn != null);
     }
 
+    void renderWithPriorityMetadata(IntIndexedView hScroll, ShortIndexedView lineVScroll,
+            ShortIndexedView columnVScroll, int midpoint, int extraBuffer, int vScroll, boolean noHScroll) {
+        if (!initialized) return;
+        priorityHScrollLength = hScroll.size();
+        if (priorityHScroll.length < priorityHScrollLength) priorityHScroll = new int[priorityHScrollLength];
+        for (int i = 0; i < priorityHScrollLength; i++) priorityHScroll[i] = hScroll.get(i);
+        priorityLineVScrollLength = lineVScroll == null ? 0 : lineVScroll.size();
+        if (priorityLineVScroll.length < priorityLineVScrollLength) priorityLineVScroll = new short[priorityLineVScrollLength];
+        for (int i = 0; i < priorityLineVScrollLength; i++) priorityLineVScroll[i] = lineVScroll.get(i);
+        priorityColumnVScrollLength = columnVScroll == null ? 0 : columnVScroll.size();
+        if (priorityColumnVScroll.length < priorityColumnVScrollLength) priorityColumnVScroll = new short[priorityColumnVScrollLength];
+        for (int i = 0; i < priorityColumnVScrollLength; i++) priorityColumnVScroll[i] = columnVScroll.get(i);
+        priorityMidpoint = midpoint;
+        priorityExtraBuffer = extraBuffer;
+        priorityVScroll = vScroll;
+        priorityNoHScroll = noHScroll;
+        priorityColumns = preparedColumns;
+        priorityShimmerFrame = shimmerFrameCounter;
+        priorityShimmerStyle = shimmerStyle;
+        priorityShimmerWaterline = shimmerWaterlineScreenY;
+        priorityReplayReady = false;
+        priorityMetadata = true;
+        try {
+            renderWithScrollWide(hScroll, lineVScroll, columnVScroll, midpoint, extraBuffer, vScroll, noHScroll);
+            priorityReplayReady = true;
+        } finally {
+            priorityMetadata = false;
+        }
+    }
+
+    void renderPriorityMask() {
+        if (!initialized || !priorityReplayReady) return;
+        var savedColumns = preparedColumns;
+        int savedShimmerFrame = shimmerFrameCounter;
+        int savedShimmerStyle = shimmerStyle;
+        float savedShimmerWaterline = shimmerWaterlineScreenY;
+        preparedColumns = priorityColumns;
+        shimmerFrameCounter = priorityShimmerFrame;
+        shimmerStyle = priorityShimmerStyle;
+        shimmerWaterlineScreenY = priorityShimmerWaterline;
+        priorityMetadata = true;
+        priorityMask = true;
+        try {
+            renderWithScrollWide(priorityHScrollView,
+                    priorityLineVScrollLength == 0 ? null : priorityLineVScrollView,
+                    priorityColumnVScrollLength == 0 ? null : priorityColumnVScrollView,
+                    priorityMidpoint, priorityExtraBuffer, priorityVScroll, priorityNoHScroll);
+        } finally {
+            priorityMetadata = false;
+            priorityMask = false;
+            preparedColumns = savedColumns;
+            shimmerFrameCounter = savedShimmerFrame;
+            shimmerStyle = savedShimmerStyle;
+            shimmerWaterlineScreenY = savedShimmerWaterline;
+        }
+    }
+
     private void renderUploadedScroll(int scrollMidpoint, int extraBuffer, int fboVScroll,
             boolean noHScroll, boolean usePerLineVScroll, boolean usePerColumnVScroll) {
 
@@ -341,6 +426,8 @@ public class BackgroundRenderer {
 
         // Bind shader and set uniforms
         parallaxShader.use();
+        org.lwjgl.opengl.GL20.glUniform1i(priorityMetadataLocation, priorityMetadata ? 1 : 0);
+        org.lwjgl.opengl.GL20.glUniform1i(priorityMaskLocation, priorityMask ? 1 : 0);
         org.lwjgl.opengl.GL20.glUniform1i(remapEnabledLocation, columns != null ? 1 : 0);
         org.lwjgl.opengl.GL20.glUniform1i(remapXLocation, 4);
         org.lwjgl.opengl.GL20.glUniform1i(remapYLocation, 5);
@@ -360,6 +447,16 @@ public class BackgroundRenderer {
         float viewportY = gm.getViewportY();
         float realWidth = gm.getViewportWidth();
         float realHeight = gm.getViewportHeight();
+        if (priorityMask) {
+            // The mask framebuffer uses logical display pixels even when the
+            // output window is scaled/letterboxed. Its own viewport is the
+            // coordinate system consumed later by the sprite-priority shader.
+            glGetIntegerv(GL_VIEWPORT, priorityViewport);
+            viewportX = priorityViewport[0];
+            viewportY = priorityViewport[1];
+            realWidth = priorityViewport[2];
+            realHeight = priorityViewport[3];
+        }
 
         // Set dimensions and scroll
         // BGTextureWidth = renderWidth (wrap period), FBOAllocationWidth = fboAllocWidth (UV mapping)
@@ -468,6 +565,8 @@ public class BackgroundRenderer {
      */
     public void cleanup() {
         preparedColumns = null;
+        priorityColumns = null;
+        priorityReplayReady = false;
         if (remapXBuffer != null) {
             remapXBuffer.cleanup(); remapYBuffer.cleanup();
             remapXBuffer = null; remapYBuffer = null; uploadedColumns = null;

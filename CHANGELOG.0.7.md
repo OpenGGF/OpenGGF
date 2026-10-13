@@ -6,6 +6,16 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Gameplay and presentation
 
+- **Stock-game results and issue fixes:** act and special-stage bonuses award
+  the full native point totals, with S1/S2 trailing-zero art and S3K bonus digits
+  matching the score. Locked title cards consume the unpause press. Sonic 1
+  retains boss music through invincibility expiry, shows its special-stage Continue
+  award, and preserves Spring Yard's cleared lower background rows. Sonic 2 hurt
+  recovery releases pipe control at the native landing boundary. Ice Cap's broken
+  chain detaches into rewindable falling links, Carnival Night's escape flame
+  stays behind Robotnik, and Marble Garden's head triggers, platform skid sound
+  and raised-background sprite occlusion follow their ROM paths.
+
 - **Mutator Lab catalogue:** one JVM boot-prepared package exposes eleven effects
   in Sonic 1, Sonic 2 and Sonic 3 & Knuckles, with native game labels, monitor-type
   availability, scrolling settings and explicit unavailable-feature reasons. Effects use

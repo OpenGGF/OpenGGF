@@ -53,6 +53,7 @@ import static org.lwjgl.opengl.GL11.GL_ONE;
 import static org.lwjgl.opengl.GL11.GL_VIEWPORT;
 import static org.lwjgl.opengl.GL11.glBindTexture;
 import static org.lwjgl.opengl.GL11.glBlendFunc;
+import static org.lwjgl.opengl.GL11.glIsEnabled;
 import static org.lwjgl.opengl.GL11.glDisable;
 import static org.lwjgl.opengl.GL11.glEnable;
 import static org.lwjgl.opengl.GL11.glGetIntegerv;
@@ -294,7 +295,8 @@ public final class LevelRenderer {
         if (bgRenderer != null && tilemapRenderer != null
                 && isBackgroundCompositeCurrent(tilemapRenderer)) {
             com.openggf.level.render.BackgroundRendererInternalAccess.setColumns(bgRenderer, pendingBgColumns);
-            bgRenderer.renderWithScrollWide(pendingBgHScrollView, pendingBgVScrollView, pendingBgVScrollColumnView,
+            com.openggf.level.render.BackgroundRendererInternalAccess.renderWithPriorityMetadata(
+                    bgRenderer, pendingBgHScrollView, pendingBgVScrollView, pendingBgVScrollColumnView,
                     pendingBgShaderScrollMidpoint, pendingBgShaderExtraBuffer,
                     pendingBgVOffset, pendingBgPerLineScroll);
         }
@@ -376,8 +378,12 @@ public final class LevelRenderer {
         glBlendEquation(GL_MAX);
         glBlendFunc(GL_ONE, GL_ONE);
 
-        if (currentAdvancedRenderFrameState.reversePlaneAssignment()) {
-            renderReversedRearHighTiles(true);
+        BackgroundRenderer background = lm.graphicsManager.getBackgroundRenderer();
+        if (background != null && isBackgroundCompositeCurrent(tilemapRenderer)) {
+            // Both hardware planes hide low sprites. Reuse the completed BG
+            // compositor's exact source/window/scroll sampling, including
+            // per-line tile passes and VScroll, for its high-priority pixels.
+            com.openggf.level.render.BackgroundRendererInternalAccess.renderPriorityMask(background);
         }
         applyForegroundScrollFeatures(tilemapRenderer);
         enableForegroundPerColumnVScroll(tilemapRenderer);
@@ -415,6 +421,10 @@ public final class LevelRenderer {
             return;
         }
         bgRenderer.beginTilePass(pendingBgTilePassRenderWidth, pendingBgTilePassRenderHeight, true);
+        boolean blending = glIsEnabled(GL_BLEND);
+        // Alpha carries descriptor metadata in this intermediate image, not
+        // transparency. Store its RGB/alpha bytes without color blending.
+        glDisable(GL_BLEND);
         int savedShimmerStyle = tilemapRenderer.getShimmerStyle();
         try {
             tilemapRenderer.setShimmerState(pendingFrameCounter, 0);
@@ -451,7 +461,7 @@ public final class LevelRenderer {
                             lm.graphicsManager.getPatternAtlasHeight(),
                             atlasId, paletteId,
                             underwaterPaletteId != null ? underwaterPaletteId : 0,
-                            -1, true, false, useUnderwaterPalette,
+                            -2, true, false, useUnderwaterPalette,
                             pendingBgTilePassFboWaterlineY);
                     completedBgTilePassFrame = pendingFrameCounter;
                     completedBgTilePassSourceGeneration = pendingBgTilePassContentGeneration;
@@ -464,6 +474,7 @@ public final class LevelRenderer {
             try {
                 bgRenderer.endTilePass();
             } finally {
+                if (blending) glEnable(GL_BLEND);
                 lm.graphicsManager.setUseUnderwaterPaletteForBackground(false);
             }
         }

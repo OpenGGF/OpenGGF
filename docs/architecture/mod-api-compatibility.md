@@ -37,6 +37,13 @@ Creator manifests should declare the maintained candidate range:
 engineApiRange: ">=0.7.0 <0.8.0"
 ```
 
+`PlayerLandingRules.hurtLandingClearsObjectControl` selects the shipped S2/S3K
+hurt-landing release; S1 leaves that byte intact. The five-argument constructor
+sets this gate explicitly, while the existing four-argument constructor retains
+the former behavior. Its accessor, component and constructor extend the mutable
+`0.7` signature pin. The descriptor and runtime description remain aligned at
+unpublished candidate `0.7.0`.
+
 Manifest `formatVersion: 1` is a separate wire-format version. It does not mean
 Mod API 1.x and must not be used to infer compiled-code compatibility.
 

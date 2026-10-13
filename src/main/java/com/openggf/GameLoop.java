@@ -1490,6 +1490,9 @@ public class GameLoop {
             return false;
         }
         if (admission == LevelFrameResult.SETUP_ONLY) {
+            // Locked title/load iterations skip the ordinary frame tail, but
+            // still consume host input edges (including the unpause press).
+            inputHandler.update();
             return false;
         }
         if (levelIterationAdmission.completePendingBoundary(

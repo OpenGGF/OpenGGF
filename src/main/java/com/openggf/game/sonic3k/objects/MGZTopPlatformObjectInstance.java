@@ -1200,6 +1200,8 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
                 if (mgzMiniMotionSkidThresholdMet(player, gSpeed, true)) {
                     player.setAnimationId(Sonic3kAnimationIds.SKID);
                     player.setDirection(Direction.RIGHT);
+                    // loc_3559E calls Play_SFX on each qualifying skid pass.
+                    playSfx(Sonic3kSfx.SKID);
                 }
             } else {
                 // Accel ROM loc_35578: sub.w d5, d0 (=$C).
@@ -1216,6 +1218,8 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
                 if (mgzMiniMotionSkidThresholdMet(player, gSpeed, false)) {
                     player.setAnimationId(Sonic3kAnimationIds.SKID);
                     player.setDirection(Direction.LEFT);
+                    // loc_35620 mirrors the left-input skid sound path.
+                    playSfx(Sonic3kSfx.SKID);
                 }
             } else {
                 setMiniMotionDirection(player, Direction.RIGHT);
@@ -1258,6 +1262,11 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         // +/-$400 skid comparison, so preserve the accelerated speed's high
         // byte and reproduce the shipped result (sonic3k.asm:72360-72467).
         int angleByte = (((player.getAngle() & 0xFF) + 0x20) & 0xC0);
+        if (angleByte != 0) {
+            // FixBugs=0 still branches on the angle-byte result before using
+            // the partly overwritten inertia for its speed comparison.
+            return false;
+        }
         short corruptedSpeed = (short) ((groundSpeed & 0xFF00) | angleByte);
         return leftInput ? corruptedSpeed >= 0x400 : corruptedSpeed <= -0x400;
     }

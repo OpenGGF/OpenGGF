@@ -5,6 +5,16 @@ headless tests, or audio. S3K-specific routing is in [AGENTS_S3K.md](../../AGENT
 
 The things that cost the most time when missed.
 
+**Native score words are tens of displayed points.** S1/S2 `AddPoints` and S3K
+`HUD_AddToScore` add native bonus words while the ROM HUD supplies a final zero.
+The engine score stores points. Keep native counters for tally timing, multiply
+awards by ten, and verify the actual glyph layout: S1/S2 results have variable
+columns followed by `Hud_Base`'s fixed zero, while S3K's BCD sprite loop rotates a
+seventh zero nibble. Clearing the fixed zero makes a bonus ten times too small;
+scaling the variable digits as well makes it ten times too large. At zero, clear
+all variable columns to avoid `00`. The October 13 issue sweep's ROM pattern and
+award regressions exercise both ends.
+
 **A background layout needs its presentation art and event palette.** Starfall
 Frontier's background revision (base `68d1e03482`, 2026-10-08) found numbered
 filler inside otherwise valid S3K background chunks. Append both block/chunk

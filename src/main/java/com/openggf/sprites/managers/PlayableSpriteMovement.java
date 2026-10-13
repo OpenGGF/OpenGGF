@@ -3504,7 +3504,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * carried leader), so the regular gate doesn't cover this case.
 	 */
 	private void applyGravity() {
-		if (sprite.isObjectControlSuppressesMovement()) {
+		// Hurt dispatch bypasses Obj01_Control's obj_control gate: Obj01_Hurt_Normal
+		// always adds $30 after ObjectMove (s2.asm:38173-38180), including inside Obj1E.
+		if (sprite.isObjectControlSuppressesMovement() && !sprite.isHurt()) {
 			return;
 		}
 		if (sprite.consumeSuppressNextGravityStep()) {
@@ -3563,7 +3565,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private void doLevelBoundary() {
 		// ROM: When object_control is set, level boundary checks are skipped
 		// (Obj01_Control skips movement routines entirely).
-		if (sprite.isObjectControlSuppressesMovement()) {
+		// Obj01_Hurt_Normal calls Sonic_LevelBound outside that normal-control gate.
+		if (sprite.isObjectControlSuppressesMovement() && !sprite.isHurt()) {
 			return;
 		}
 		Camera camera = camera();

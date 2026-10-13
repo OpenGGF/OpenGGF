@@ -5,17 +5,23 @@ import com.openggf.game.GameServices;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.palette.PaletteSurface;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
+import com.openggf.game.sonic2.objects.WFZPalSwitcherObjectInstance;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Level;
 import com.openggf.level.Palette;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TestObjectServices;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.TestablePlayableSprite;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -227,6 +233,52 @@ class TestSonic2PaletteOwnershipIntegration {
         updateAnimatedPaletteManager();
 
         assertEquals(WFZ_FIRE_BELT_OWNER, registry.ownerAt(PaletteSurface.NORMAL, 2, 7));
+    }
+
+    @Test
+    void finalWfzPaletteTriggerRestoresWarmColorsUsedByTheTornadoFlame() throws Exception {
+        loadZone(Sonic2ZoneConstants.ZONE_WFZ, 0);
+        GameServices.gameState().setWfzFireToggle(true);
+        // WFZ_1 placement $2723,$2340: Obj8B subtype 3, x-flipped, Y window $240..$440.
+        // Crossing right clears WFZ_SCZ_Fire_Toggle (loc_2142A), restoring the fire
+        // cycle before the ObjB2 ending sequence uses mapping palette line 2.
+        var player = new TestablePlayableSprite("sonic", (short) 0x2722, (short) 0x0340);
+        NativePositionOps.writeXPosPreserveSubpixel(player, 0x2722);
+        NativePositionOps.writeYPosPreserveSubpixel(player, 0x0340);
+        var trigger = new WFZPalSwitcherObjectInstance(
+                new ObjectSpawn(0x2723, 0x0340, 0x8B, 3, 1, false, 0x2340), "WFZPalSwitcher");
+        trigger.setServices(new TestObjectServices().withGameState(GameServices.gameState()));
+        trigger.update(0, player);
+        NativePositionOps.writeXPosPreserveSubpixel(player, 0x2723);
+        trigger.update(1, player);
+        assertFalse(GameServices.gameState().isWfzFireToggle());
+
+        var registry = GameServices.paletteOwnershipRegistry();
+        registry.beginFrame();
+        updateAnimatedPaletteManager();
+        Palette[] palettes = livePalettes();
+        registry.resolveInto(palettes, null, null, null);
+        byte[] fireData = romSlice(Sonic2Constants.CYCLING_PAL_WFZ_FIRE_ADDR, 8);
+        for (int color = 7; color <= 10; color++) {
+            assertColorWord(palettes[2], color, fireData, (color - 7) * 2);
+        }
+
+        var rom = TestEnvironment.currentRom();
+        var sheet = new Sonic2ObjectArt(rom, RomByteReader.fromRom(rom)).loadTornadoThrusterSheet();
+        assertNotNull(sheet);
+        int warmPixels = 0;
+        // ObjB2_MapUnc_3B292 frame 1's flame uses art tiles $0E..$15, palette 2.
+        for (int tile = 0x0E; tile <= 0x15; tile++) {
+            for (int y = 0; y < 8; y++) {
+                for (int x = 0; x < 8; x++) {
+                    int index = sheet.getPatterns()[tile].getPixel(x, y) & 0xF;
+                    if (index == 0) continue;
+                    var color = palettes[2].getColor(index);
+                    if ((color.r & 0xFF) > (color.b & 0xFF)) warmPixels++;
+                }
+            }
+        }
+        assertTrue(warmPixels > 0, "the actual Tornado flame pixels must use warm fire-cycle colors");
     }
 
     @Test

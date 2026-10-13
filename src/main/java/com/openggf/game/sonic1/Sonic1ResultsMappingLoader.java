@@ -22,6 +22,22 @@ public final class Sonic1ResultsMappingLoader {
         return load(addr -> S1SpriteDataLoader.loadMappingFramesWithSignedOffsets(reader, addr));
     }
 
+    /** Map_SSR's continue frames, relative to Nem_MiniSonic at tile $551. */
+    public static List<SpriteMappingFrame> loadContinueFrames(RomByteReader reader) {
+        int tileAdjustment = Sonic1Constants.VRAM_RESULTS_TITLE_CARD - 0x551;
+        return S1SpriteDataLoader.loadMappingFramesWithSignedOffsets(
+                        reader, Sonic1Constants.MAP_RESULTS_SPECIAL_STAGE_ADDR)
+                .subList(4, 7).stream()
+                .map(frame -> new SpriteMappingFrame(frame.pieces().stream()
+                        // Preserve the full signed tile word: adding the ROM
+                        // base cancels the negative CONTINUE offsets and keeps
+                        // mini-Sonic's palette-1 attribute.
+                        .map(piece -> SpriteMappingPieces.withTileWord(piece,
+                                (SpriteMappingPieces.toTileWord(piece) + tileAdjustment) & 0xFFFF))
+                        .toList()))
+                .toList();
+    }
+
     public static List<SpriteMappingFrame> load(Function<Integer, List<SpriteMappingFrame>> mappingLoader) {
         List<SpriteMappingFrame> gotFrames = adjustFrames(
                 mappingLoader.apply(Sonic1Constants.MAP_RESULTS_GOT_ADDR));

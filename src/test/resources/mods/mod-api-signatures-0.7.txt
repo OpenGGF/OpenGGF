@@ -1420,6 +1420,7 @@ CONSTRUCTOR com.openggf.game.rules.PlayerAnimationRules public  <init>(boolean,b
 CONSTRUCTOR com.openggf.game.rules.PlayerCapabilityRules public  <init>(boolean,short[],boolean,boolean,boolean,boolean,boolean,short[],boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerGroundPoseRules public  <init>(short,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerLandingRules public  <init>(boolean,boolean,boolean,boolean)
+CONSTRUCTOR com.openggf.game.rules.PlayerLandingRules public  <init>(boolean,boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerMovementRules public  <init>(boolean,boolean,boolean,com.openggf.game.rules.PlayerGroundPoseRules,com.openggf.game.rules.PlayerAirMovementRules,boolean,boolean,boolean,com.openggf.game.rules.PlayerLandingRules,com.openggf.game.rules.PlayerLevelBoundaryRules,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.PowerUpRules public  <init>(int,int,int,int,int,boolean,boolean,int,int,boolean)
 CONSTRUCTOR com.openggf.game.rules.RingRules public  <init>(int,int,boolean,boolean,int,int,int,boolean,boolean,boolean)
@@ -7608,6 +7609,7 @@ METHOD com.openggf.game.rules.PlayerGroundPoseRules public  short movingCrouchTh
 METHOD com.openggf.game.rules.PlayerGroundPoseRules public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.game.rules.PlayerGroundPoseRules public,final  int hashCode()
 METHOD com.openggf.game.rules.PlayerGroundPoseRules public,final  java.lang.String toString()
+METHOD com.openggf.game.rules.PlayerLandingRules public  boolean hurtLandingClearsObjectControl()
 METHOD com.openggf.game.rules.PlayerLandingRules public  boolean landingRollClearUsesCurrentYRadiusDelta()
 METHOD com.openggf.game.rules.PlayerLandingRules public  boolean objectSolidHurtLandingRetainsRoutine()
 METHOD com.openggf.game.rules.PlayerLandingRules public  boolean pinballLandingPreservesPinballMode()
@@ -16100,6 +16102,7 @@ RECORD-COMPONENT com.openggf.game.rules.PlayerCapabilityRules tailsFlightEnabled
 RECORD-COMPONENT com.openggf.game.rules.PlayerGroundPoseRules balanceFacingFlipRestartsScript boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerGroundPoseRules movingCrouchThreshold short
 RECORD-COMPONENT com.openggf.game.rules.PlayerGroundPoseRules skidThresholdPreservesLowByte boolean
+RECORD-COMPONENT com.openggf.game.rules.PlayerLandingRules hurtLandingClearsObjectControl boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerLandingRules landingRollClearUsesCurrentYRadiusDelta boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerLandingRules objectSolidHurtLandingRetainsRoutine boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerLandingRules pinballLandingPreservesPinballMode boolean
