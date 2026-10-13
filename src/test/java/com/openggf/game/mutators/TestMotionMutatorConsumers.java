@@ -505,6 +505,10 @@ class TestMotionMutatorConsumers {
         org.mockito.Mockito.when(context.getSpriteManager()).thenReturn(sprites);
         org.mockito.Mockito.when(context.getGameStateManager()).thenReturn(gsm);
         com.openggf.game.session.WorldSessionPolicyAccess.bindGameplay(context);
+        // The live rewind owner registers and arms history; ordinary worlds stay dormant.
+        var registry = new com.openggf.game.rewind.RewindRegistry();
+        com.openggf.game.session.WorldSessionPolicyAccess.registerRewind(world, registry);
+        com.openggf.game.session.WorldSessionPolicyAccess.setHistoryRecording(world, true);
         var frame = org.mockito.Mockito.mock(com.openggf.LevelFrameContext.class);
         org.mockito.Mockito.when(frame.levelManager()).thenReturn(level);
         org.mockito.Mockito.when(frame.spriteManager()).thenReturn(sprites);
