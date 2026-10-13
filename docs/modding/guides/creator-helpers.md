@@ -276,6 +276,28 @@ ownership-changing replacements fail. Register the operation with
 and decoded-load contract. Golf uses this path for course placement changes
 while preserving stock geometry and loading.
 
+For native campaigns that depend on a concrete decoded level (such as AIZ's fire
+reload), opt into `nativePlacements()`. This path admits verified factory bindings
+and `retainRings((rings, objects) -> ...)` while keeping the same native level.
+Retain only an ordered subset of the exact offered ring records: never reconstruct,
+move, duplicate or reorder them. `forZone(index)` and `whenInventory(predicate)`
+gate admission before edits. Binding and retention are validated before either
+table is published, inside the registered owner boundary. Moves/removals/replacements
+remain the legacy snapshot path; native ring-object mappings and creator-defined
+level implementations cannot use this opt-in path. The
+[Second Strike example](../../../examples/second-strike/README.md) shows separate
+forest/fire inventory plans and preserves later Act 2 content.
+
+S3K difficulty policies are optional services, not alternate stage controllers.
+`AizMinibossAttackPolicy` selects a bounded warned follow-up at the native breath
+boundary; `BlueSphereLayoutPolicy` receives an isolated ROM-layout copy and may add
+at most 32 red/bumper approach cells while preserving entry, blue/ring cells and
+their reachable native grid; `GumballSpringPolicy` selects two to four symmetric
+native spring offsets. Creator returns are copied/validated inside the canonical
+owner fault boundary. Stage rewards, native movement, results, exit and return
+remain the host's responsibility. Layout admission proves bounded integrity,
+not that a board has been solved using native player input.
+
 ## Captured state and persistent settings
 
 `ModStorage` supplies bounded UTF-8 `read`, `write`, `delete` and `list` operations

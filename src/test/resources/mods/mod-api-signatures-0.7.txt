@@ -512,6 +512,12 @@ CF-ANNOTATION TYPE com.openggf.game.solid.PostContactState visible @com.openggf.
 CF-ANNOTATION TYPE com.openggf.game.solid.PreContactState visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.solid.SolidCheckpointBatch visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.solid.SolidExecutionRegistry visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.AizMinibossAttackPolicy visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.AizMinibossAttackPolicy visible @java.lang.FunctionalInterface
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.BlueSphereLayoutPolicy visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.BlueSphereLayoutPolicy visible @java.lang.FunctionalInterface
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.GumballSpringPolicy visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.GumballSpringPolicy visible @java.lang.FunctionalInterface
 CF-ANNOTATION TYPE com.openggf.game.startup.DonatedDataSelectWarmupTask visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.zone.ZoneRuntimeRegistry visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.zone.ZoneRuntimeState visible @com.openggf.game.ModApi
@@ -8122,6 +8128,9 @@ METHOD com.openggf.game.solid.SolidExecutionRegistry public,abstract  void endOb
 METHOD com.openggf.game.solid.SolidExecutionRegistry public,abstract  void finishFrame()
 METHOD com.openggf.game.solid.SolidExecutionRegistry public,abstract  void publishCheckpoint(com.openggf.game.solid.SolidCheckpointBatch)
 METHOD com.openggf.game.solid.SolidExecutionRegistry public,static  com.openggf.game.solid.SolidExecutionRegistry inert()
+METHOD com.openggf.game.sonic3k.difficulty.AizMinibossAttackPolicy public,abstract  int followupDelayTicks(int)
+METHOD com.openggf.game.sonic3k.difficulty.BlueSphereLayoutPolicy public,abstract  byte[] transformLayout(int,byte[])
+METHOD com.openggf.game.sonic3k.difficulty.GumballSpringPolicy public,abstract  int[] springOffsets()
 METHOD com.openggf.game.startup.DonatedDataSelectWarmupTask public,abstract  boolean isRunning()
 METHOD com.openggf.game.startup.DonatedDataSelectWarmupTask public,abstract  void start()
 METHOD com.openggf.game.zone.ZoneRuntimeRegistry public  com.openggf.game.rewind.snapshot.ZoneRuntimeSnapshot capture()
@@ -9232,6 +9241,10 @@ METHOD com.openggf.level.LevelManager$LevelRenderOptions public,final  java.lang
 METHOD com.openggf.level.LevelManager$LevelRenderOptions public,static  com.openggf.level.LevelManager$LevelRenderOptions gameplay()
 METHOD com.openggf.level.LevelManager$LevelRenderOptions public,static  com.openggf.level.LevelManager$LevelRenderOptions previewCapture()
 METHOD com.openggf.level.LevelManager$LevelRenderOptions public,static  com.openggf.level.LevelManager$LevelRenderOptions tilesOnly()
+METHOD com.openggf.level.LevelPatch public  com.openggf.level.LevelPatch forZone(int)
+METHOD com.openggf.level.LevelPatch public  com.openggf.level.LevelPatch nativePlacements()
+METHOD com.openggf.level.LevelPatch public  com.openggf.level.LevelPatch retainRings(java.util.function.BiFunction<java.util.List<com.openggf.level.rings.RingSpawn>,java.util.List<com.openggf.level.objects.ObjectSpawn>,java.util.List<com.openggf.level.rings.RingSpawn>>)
+METHOD com.openggf.level.LevelPatch public  com.openggf.level.LevelPatch whenInventory(java.util.function.Predicate<java.util.List<com.openggf.level.objects.ObjectSpawn>>)
 METHOD com.openggf.level.LevelPatch public  com.openggf.level.LevelPatch$Selection select(java.util.function.Predicate<com.openggf.level.objects.ObjectSpawn>)
 METHOD com.openggf.level.LevelPatch public  com.openggf.level.MutableLevel apply(com.openggf.level.Level)
 METHOD com.openggf.level.LevelPatch public  java.util.List<com.openggf.level.objects.ObjectSpawn> applyToObjects(java.util.List<com.openggf.level.objects.ObjectSpawn>)
@@ -19045,6 +19058,9 @@ TYPE interface public,abstract com.openggf.game.rewind.RewindSnapshottable<S> SU
 TYPE interface public,abstract com.openggf.game.rewind.ScriptedRewind SUPER <none>
 TYPE interface public,abstract com.openggf.game.save.SaveSnapshotProvider SUPER <none>
 TYPE interface public,abstract com.openggf.game.solid.SolidExecutionRegistry SUPER <none>
+TYPE interface public,abstract com.openggf.game.sonic3k.difficulty.AizMinibossAttackPolicy SUPER <none>
+TYPE interface public,abstract com.openggf.game.sonic3k.difficulty.BlueSphereLayoutPolicy SUPER <none>
+TYPE interface public,abstract com.openggf.game.sonic3k.difficulty.GumballSpringPolicy SUPER <none>
 TYPE interface public,abstract com.openggf.game.startup.DonatedDataSelectWarmupTask SUPER <none>
 TYPE interface public,abstract com.openggf.game.zone.ZoneRuntimeState SUPER <none>
 TYPE interface public,abstract com.openggf.graphics.GLCommandable SUPER <none>
@@ -20150,6 +20166,12 @@ TYPE-ANNOTATION com.openggf.game.solid.PostContactState @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.solid.PreContactState @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.solid.SolidCheckpointBatch @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.solid.SolidExecutionRegistry @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.AizMinibossAttackPolicy @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.AizMinibossAttackPolicy @java.lang.FunctionalInterface
+TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.BlueSphereLayoutPolicy @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.BlueSphereLayoutPolicy @java.lang.FunctionalInterface
+TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.GumballSpringPolicy @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.GumballSpringPolicy @java.lang.FunctionalInterface
 TYPE-ANNOTATION com.openggf.game.startup.DonatedDataSelectWarmupTask @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.zone.ZoneRuntimeRegistry @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.zone.ZoneRuntimeState @com.openggf.game.ModApi

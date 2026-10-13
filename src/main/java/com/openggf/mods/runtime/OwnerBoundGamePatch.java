@@ -112,7 +112,9 @@ public final class OwnerBoundGamePatch {
                     && (adapters || (queryInterface(method, args) != null || characterRegistryQuery(method, args))
                         && (method.getParameterCount() == 0 || method.getName().equals("getGameService")))
                     ? directInvoke(base, method, args) : null;
-            return boundary.call(owner, () -> returned(method, args, ownedInvoke(delegate, method, args), inherited, adapters));
+            return boundary.call(owner, () -> returned(method, args,
+                    OwnerBoundDifficultyPolicies.invoke(delegate,method,args,
+                            offeredArgs -> ownedInvoke(delegate,method,offeredArgs)), inherited, adapters));
         }
         private boolean inheritedModuleMethod(Method method) throws NoSuchMethodException {
             if (!(delegate instanceof GameModule) || !(base instanceof GameModule)) return false;

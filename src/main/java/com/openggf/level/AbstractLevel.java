@@ -155,6 +155,14 @@ public abstract class AbstractLevel implements Level {
         return rings;
     }
 
+    /** Engine decoded admission publishes validated placement tables without replacing native geometry owners. */
+    final void installDecodedPlacements(List<ObjectSpawn> objectSpawns,List<RingSpawn> ringSpawns) {
+        List<ObjectSpawn> admittedObjects=List.copyOf(objectSpawns);
+        List<RingSpawn> admittedRings=List.copyOf(ringSpawns);
+        objects=admittedObjects;
+        rings=admittedRings;
+    }
+
     @Override
     public RingSpriteSheet getRingSpriteSheet() {
         return ringSpriteSheet;
