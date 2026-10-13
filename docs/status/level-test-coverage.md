@@ -1,5 +1,19 @@
 # Level test coverage backlog
 
+S3K playable completion (2026-10-13, delivery in progress): the [native ending matrix](../architecture/validation/levels/s3k-ending.md)
+records Sonic/Tails `$0D01`, Knuckles SSZ2 and all native emerald-progress branches.
+Bounded native lifecycle, roster, donor and whole-world replay checks pass; seven
+continuous ordinary DEZ/DDZ incoming scenarios continue through credits,
+post-credits and Start/title handoffs. The [placed LBZ2 Knuckles entry matrix](../architecture/validation/levels/s3k-lbz-act2.md)
+records actual CD admission, same-slot CA activation, child restoration and a
+positioned fight/carrier continuation into released MHZ. Repaired MHZ, LRZ and
+SSZ route results are recorded in their matrices. The final cold Tails LRZ chain passes through released HPZ with its boss and
+whole-world assertions retained. Cold native320 Knuckles MHZ1 now passes 43 two-cycle world windows and actual
+MHZ2 history isolation; its later Act2/FBZ completion, combined smoke/guards
+and integration remain pending. Native
+ending presentation omissions and inherited route/configuration breadth remain
+explicitly open; these checks do not certify whole-game parity.
+
 Starpost Valley phase 4 (2026-10-10): the [festival and lake matrix](../architecture/designs/2026-10-09-starpost-valley.md#festival-and-lake-route-matrix) adds native solo Sonic/Tails/Knuckles at 320/400 through Race, Ring Hunt, snowboard, lake and Ice Cap fishing with result consumption and whole-registry restore/replay. Wider viewport/donor/team, load/respawn and interaction-boundary obligations remain open.
 
 Starpost Valley integration (2026-10-10): the [integration route matrix](../architecture/designs/2026-10-09-starpost-valley.md#integration-route-matrix) covers native solo Sonic/Tails/Knuckles at 320/400px through the real farm → inn → farm loop, purchases and donor music, with whole-registry rewind/replay. The separate schedule check exercises real slope floors and doorway bases. Wider widths, donors, follower/team and respawn/festival/day-end breadth remain open; the scene valley fallback was subsequently removed by phase 4.
@@ -83,9 +97,11 @@ both acts, and 154 focused passes without skips. Gameplay capture is blocked
 by this environment's GLSL support; inherited route/configuration and native
 whole-scene coverage gaps remain open.
 
-## Current S&K campaign position — 2026-09-28
+## Historical S&K campaign snapshot — 2026-09-28
 
-This summary reconciles the dated milestones below against integrated `ee8e470e4`.
+This September snapshot reconciles its dated milestones against integrated
+`ee8e470e4`. Its task exclusions are historical; the October 13 summary above
+reopens Knuckles MHZ and ending work.
 Earlier entries retain their historical scope; their old “pending” labels are not
 current blockers where a later entry records completion. No zone is certified by
 route completion alone. Viewport, supported donor/roster, lifecycle, rewind and
@@ -297,8 +313,8 @@ matrices; never collapse skipped or unrun into pass.
 | S3K | `S3K_FLYING_BATTERY_2` | [Act 2 coverage matrix](../architecture/validation/levels/s3k-fbz-act2.md) — native Sonic/Tails/Knuckles and donor completion routes pass; broader rewind/visual certification remains partial |
 | S3K | `S3K_ICECAP_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-3--knuckles--mhz-delivered-scope-others-conditional); matrix pending |
 | S3K | `S3K_ICECAP_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-3--knuckles--mhz-delivered-scope-others-conditional); matrix pending |
-| S3K | `S3K_LAUNCH_BASE_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-3--knuckles--mhz-delivered-scope-others-conditional); matrix pending |
-| S3K | `S3K_LAUNCH_BASE_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-3--knuckles--mhz-delivered-scope-others-conditional); matrix pending |
+| S3K | `S3K_LAUNCH_BASE_1` | [Act 1 matrix](../architecture/validation/levels/s3k-lbz-act1.md) — partial; cold traversal and viewport/donor/team, lifecycle and native presentation breadth remain open |
+| S3K | `S3K_LAUNCH_BASE_2` | [Act 2 matrix](../architecture/validation/levels/s3k-lbz-act2.md) — actual placed Knuckles CD entry and positioned CA→CC→released MHZ are qualified; cold traversal and donor/team, lifecycle and native presentation breadth remain open |
 | S3K | `S3K_MUSHROOM_HILL_1` | [Act 1 matrix](../architecture/validation/levels/s3k-mhz-act1.md) — fresh native 320 Sonic solo controller route completes the miniboss and seamless Act 2 handoff, with six capture/restore/forward-replay spots; broader roster, viewport and lifecycle certification remains open |
 | S3K | `S3K_MUSHROOM_HILL_2` | [Act 2 matrix](../architecture/validation/levels/s3k-mhz-act2.md) — real incoming handoff plus fresh Sonic solo leaf-blower entry/replay at all five presets; complete Act 2 route and broader certification remain open |
 | S3K | `S3K_SANDOPOLIS_1` | [Act 1 matrix](../architecture/validation/levels/s3k-soz-act1.md) — v2 bring-up; concrete objects, bosses, coupled events and recreation tracked; full-route/native and transient redraw gaps remain |
@@ -319,7 +335,7 @@ isolation and native parity remain open. Both recreations now emit defeat explos
 | S3K | `S3K_DOOMSDAY` | [Zone matrix](../architecture/validation/levels/s3k-ddz.md) — in progress; seeded Sonic route matches native; fresh Super routes complete320/800 with fight/wrap/exit replay; death/restart and live timeline reset covered at320/800; Hyper-star display-list/art-queue phase, retained HUD redraw and recording exit freeze corrected; full cold native320 Sonic+Tails now completes DEZ1→DEZ2→final→DDZ with boot-only emeralds in64648 inputs; seeded ending-load save request and history isolation pass at320/800; remaining native presentation and incoming width/donor breadth open |
 | S3K | `S3K_DOOMSDAY_2` | Audit pending |
 | S3K | `S3K_AIZ_INTRO` | Audit pending |
-| S3K | `S3K_ENDING_SCENE` | Audit pending |
+| S3K | `S3K_ENDING_SCENE` | [Native ending matrix](../architecture/validation/levels/s3k-ending.md) — bounded native lifecycle and incoming composition qualified; presentation omissions and remaining formal conformance/breadth assessment open |
 | S3K | `S3K_AZURE_LAKE` | Audit pending |
 | S3K | `S3K_AZURE_LAKE_2` | Audit pending |
 | S3K | `S3K_BALLOON_PARK` | Audit pending |

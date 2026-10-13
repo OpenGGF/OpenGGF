@@ -266,12 +266,28 @@ class TestSszTailsColdRouteCapture {
             assertTrue(seen); assertEquals(8, hits); assertEquals(0, health);
             assertEquals(11, GameServices.level().getCurrentZone(), "actual DEZ load");
             assertEquals(0, GameServices.level().getCurrentAct());
-            assertEquals(48, session.player().getCentreX());
-            assertEquals(2476, session.player().getCentreY());
+            // loc_6468 owns the deferred assembly after the load-producing tick.
+            // An omitted presentation is consumed by the next ordinary capture step.
+            var neutral = new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, "");
+            if (GameServices.level().hasPendingFreshLevelTransitionBoundary()
+                    || GameServices.level().getTransitions().isTitleCardRequested()) {
+                session.step(neutral); drawing.draw(session);
+            }
+            assertFalse(GameServices.level().hasPendingFreshLevelTransitionBoundary());
+            assertFalse(GameServices.level().getTransitions().isTitleCardRequested());
+            assertSame(GameServices.sprites().getMainPlayable(), session.player());
+            assertSame(session.player(), GameServices.camera().getFocusedSprite());
+            assertFalse(session.player().isObjectControlled());
+            assertEquals(0, session.player().getRingCount(), "loc_63B4 publishes fresh DEZ rings");
+            assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
+            assertEquals(0x30, session.player().getCentreX());
+            // loc_1BE7A reads DEZ1's ($30,$9AC) start; Sonic_Init has radius$13,
+            // Tails_Init radius$F. The first ordinary floor pass seats the same feet.
+            assertEquals(0xF, session.player().getYRadius());
+            assertEquals(0x9AC + 0x13, session.player().getCentreY() + session.player().getYRadius());
             assertTrue(com.openggf.game.internal.NativeArenaCameraFraming.current()
                     .lockedNativeHorizontalCamera().isEmpty(), "SSZ final X lock must retire at the DEZ load");
             assertTrue(outgoingHistory > 10, "outgoing SSZ history must actually exist");
-            var neutral = new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, "");
             for (int n = 0; n < 30; n++) {session.step(neutral);drawing.draw(session);}
             var rewind = SessionManager.getCurrentGameplayMode().getRewindController();
             assertNotNull(rewind);

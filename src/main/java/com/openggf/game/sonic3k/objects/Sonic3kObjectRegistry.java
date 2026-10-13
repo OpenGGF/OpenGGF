@@ -1492,6 +1492,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
         registerStockZoneBound(Sonic3kObjectIds.LBZ_FINAL_BOSS_KNUX,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
+                    if (zoneSet == S3kZoneSet.S3KL && currentRomZoneId() == Sonic3kZoneIds.ZONE_LBZ) {
+                        return new LbzFinalBoss1Instance(spawn);
+                    }
                     return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
                 });
         registerStockZoneBound(Sonic3kObjectIds.LBZ_MINIBOSS_BOX,

@@ -23,6 +23,42 @@ for the current question. Routine implementation choices do not need a
 planning ceremony or another approval. User instructions override skill
 workflow defaults.
 
+## Coordination and progress
+
+- Give delegated work a bounded outcome, owned files/worktree, focused checks
+  and a stopping condition. Delegate independent work that can advance the task;
+  do not create extra workers just to watch the same job or repeat an unchanged review.
+- One lead owns the delivery-wide validation plan and schedules combined smoke
+  coverage when the policy below requires it. Workers validate their own changes
+  with relevant focused checks; do not assign the same broad run to every worker.
+- Before submitting costly validation, check the task's existing queued/running
+  jobs. For the same unchanged worktree/source fingerprint (including uncommitted
+  inputs), selection, fixtures, flags and environment, use the existing job
+  instead of submitting another copy. A completed result is
+  reusable only when current policy permits it and its tested state and coverage
+  match; a branch name or identical command alone is insufficient. New edits,
+  failures or unresolved risk still require the affected checks.
+- Keep one command session and one observer per job. Prefer completion
+  notifications or a bounded wait. For lengthy jobs that need polling, back off
+  to 30–60 seconds or longer, read only changed status or a bounded final
+  summary, and avoid repeated full-log reads or identical progress commands.
+  Report meaningful progress to the user independently of the polling cadence.
+- Queue waiting is pending work, not a failed run. Keep the existing request
+  alive and advance independent work while it waits. Cancel only task-owned jobs
+  that are no longer needed; do not restart a request merely because admission is
+  slow. Coordination never bypasses the Maven queue, changes resource limits or
+  forces unrelated worktrees to serialize.
+- At a work-slice boundary, handoff, compaction or changed blocker, update a
+  compact checkpoint in the existing task plan/status or a task message: outcome,
+  current/tested SHA and relevant uncommitted changes, ownership,
+  validation selection/results/limits, live job
+  handles, blocker and next action. Reuse that summary; load only the references
+  needed for the next question. Do not create pass caches, validation receipts or
+  extra log archives; existing diagnostic cleanup still applies.
+- Distinguish queue delay, execution, user-response waits and unmeasured time in
+  status reports. Parallel worker/process intervals overlap; their sum is not
+  elapsed delivery time. Report unavailable timing as unknown.
+
 ## Build and verification
 
 ```bash
@@ -34,7 +70,7 @@ python3 tools/testing/run_categories.py --list
 python3 tools/testing/run_categories.py --base <pre-task-commit> --run  # bounded smoke selection unless focused validation applies
 python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestCollisionLogic" test  # focused iteration
 python3 tools/testing/maven_queue.py --lean -Dmse=off "-Dtest=TestCollisionLogic" test  # small focused tests, 1 GiB JVM heaps
-python3 tools/testing/maven_queue.py -Dmse=off package              # default smoke suite plus packaging
+python3 tools/testing/maven_queue.py -Dmse=off package -DskipTests  # build only; batched smoke validation is separate
 python3 tools/testing/maven_queue.py -Dmse=off -Psmoke test -B         # explicit alias for the default smoke suite
 python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B        # separate fresh JVM for structural guards
 # Public release preparation ONLY:
@@ -55,7 +91,7 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
 - Use JUnit 5/Jupiter. `-Dmse=off` exposes full Maven logs. PowerShell quotes
   `-D...` arguments and uses `tools/testing/install-hooks.ps1`.
 - **Routine validation defaults to smoke.** Plain Maven `test`/`package`, category
-  runs, pull requests and manual CI use the bounded `smoke` suite. It excludes
+  runs, pull requests and manual CI use the `smoke` selection. It excludes
   `slow-suite` exhaustive oracles and performance measurements. **Run the full
   suite ONLY when preparing a new version for public release**, explicitly with
   `-Pfull-suite`; the Release workflow selects it. Do not request or launch the
@@ -67,7 +103,13 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
   inspect `run_categories.py --base <integration-base>` against the pinned
   pre-task destination SHA, then run it when appropriate. Add semantic dependencies
   with `--category NAME`. Shared or unknown changes and `--category all` select
-  all **smoke** categories, never the release-only full suite. Do not manually
+  all **smoke** categories, never the release-only full suite. Broad routine local
+  coverage uses the category runner, which partitions the complete selection into
+  at most 50 candidate classes per ordinary batch and releases shared admission
+  between batches and before guards. Keep the combined worktree lock so another
+  command cannot modify its `target/`. Raw unfiltered Maven runs remain monolithic;
+  do not use them for routine broad checks or repeat testing during packaging.
+  Do not manually
   narrow the runner's selection. See [test categories](tools/testing/README.md#test-categories).
 - **Proportionate validation:** choose checks from changed behavior, consumers
   and plausible failure modes. Focused regression/integration checks can replace
@@ -80,7 +122,10 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
   remain separate; routine validation is not an exhaustive trace sweep.
 - Plan validation for the whole delivery, using the pre-task integration SHA.
   Finish focused fixes first. Before a broad smoke run, state its candidate class
-  count, expected cost and stopping rule. Run
+  count, expected cost and stopping rule. ROM-heavy smoke coverage can still take
+  an hour overall; smoke is a selection, not a short-runtime guarantee. Batches
+  provide admission opportunities for focused jobs; a single expensive class,
+  memory pressure or an existing serial holder can still cause a wait. Run
   `run_categories.py --base <integration-base> --preflight` in the actual launch
   environment to check Java 25, Lua 5.4 and PowerShell. On macOS retain known
   working display/service permissions; tool preflight does not prove GLFW access.
@@ -104,6 +149,9 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
   inspect their behavior before running them directly as builds. The serial override applies
   to queued tests, not build-only commands. Native builds also bypass admission when tests
   are skipped, but their resource needs are separate from ordinary Java compilation.
+  The exact JVM-environment flag `-Dopenggf.headless.gl=surfaceless-egl` preserves
+  normal admission and lean eligibility; unknown options and resource overrides
+  remain conservative. Do not clear required graphics flags to get a slot.
   Submit the command even if another agent is testing: it waits, reports status and
   starts automatically. Waiting requires no permission or manual lock cleanup.
   For small focused tests with known bounded memory needs, prefer `--lean`: it caps

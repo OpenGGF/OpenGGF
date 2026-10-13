@@ -73,6 +73,8 @@ class TestCharacterTypeResolution {
     }
 
     private static void install(PhysicsProvider provider) {
+        // This fixture exercises provider lookup before any world is opened.
+        SessionManager.clear();
         GameModule module = mock(GameModule.class);
         when(module.getIdentifier()).thenReturn("identity-test");
         when(module.getPhysicsProvider()).thenReturn(provider);

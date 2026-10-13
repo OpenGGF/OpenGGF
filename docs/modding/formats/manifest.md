@@ -44,18 +44,19 @@ actual data and compiled patch order. Missing, disabled or blocked optional
 neighbors add no edge. These edges do not grant class visibility or cause a
 neighbor to be disabled when a callback faults. Required `dependencies` retain
 those separate hard dependency semantics. Combined ordering cycles produce
-`ORDERING_CYCLE`; incompatible enabled owners produce `MOD_CONFLICT`, with sorted
-participants.
+`ORDERING_CYCLE` and block the affected preparation. `conflictsWith` produces
+`MOD_DECLARED_CONFLICT` warnings with sorted participants; the declaration alone
+does not establish a crash or prevent enabling the combination.
 
 Exclusive claims accept `startup-scene`, `display-width`, `game-start`,
 `art:<stock-key>` or `audio:<nonnegative-stock-id>`. Claims require the owner's
 actual corresponding contribution. Unknown/game-inapplicable stock art keys and
 unused claims reject. Competing successful contributions with any exclusive
-claim reject every participant and required dependents, rather than silently
-choosing a winner. Stock data conflicts are rejected before audio preparation;
-compiled scene/display/start claims are checked after successful registration
-transactions and before publication. Without exclusivity, later application wins
-for these singular targets. Owner-qualified zones, objects, character identities,
+claim produce `MOD_EXCLUSIVE_OVERLAP` warnings and retain the ordinary later-wins
+policy. Valid competing claims do not block owners or required dependents.
+Stock data claims are validated before audio preparation; compiled scene/display/
+start claims are checked against successful registration transactions. Later
+application wins for these singular targets. Owner-qualified zones, objects, character identities,
 service bundles and decoded patches compose additively. See
 [content composition and runtime services](../content-mods.md) and the
 [two-act worked campaign](../guides/two-act-campaign.md).

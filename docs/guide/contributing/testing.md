@@ -7,8 +7,8 @@ All new or updated tests must use JUnit 5 / Jupiter. Do not add JUnit 4 tests, r
 ## Running Tests
 
 ```bash
-# Routine default: bounded smoke suite, through the local queue.
-python3 tools/testing/maven_queue.py -Dmse=off test
+# Routine broad coverage: all smoke candidates, yielding admission between batches.
+python3 tools/testing/run_categories.py --category all --run
 # Focused regression (use --lean for small checks).
 python3 tools/testing/maven_queue.py --lean -Dmse=off -Dtest=TestCollisionLogic test
 # Single method.
@@ -22,6 +22,12 @@ Plain Maven `test` and `package` default to the existing `smoke` exclusions;
 releases, never routine development, integration, baseline or post-integration
 checks. Add focused regressions, affected ROM/trace checks and separate guards
 as needed. Category `all` is all smoke categories, not the exhaustive full suite.
+ROM-heavy smoke coverage can still take an hour overall. The category runner
+queues at most 50 candidate classes per ordinary batch, releases shared admission
+between batches and before guards, and retains the worktree lock throughout.
+Queue waits do not consume its execution timeout. Raw unfiltered Maven runs remain
+monolithic; use the runner for broad local coverage and package with `-DskipTests`.
+
 See [testing utilities](../../../tools/testing/README.md#default-suite-and-release-only-validation).
 
 Tests use one reused 3 GiB JVM by default. `test-concurrent` opts into two forks;

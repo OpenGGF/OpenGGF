@@ -1259,7 +1259,13 @@ public final class LbzFinalBoss2Instance extends AbstractObjectInstance
     }
 
     private int cameraX() {
-        return services().camera() == null ? 0 : services().camera().getX() & 0xFFFF;
+        var camera = services().camera();
+        if (camera == null) return 0;
+        if (services().zoneRuntimeState() instanceof LbzZoneRuntimeState state
+                && state.centerNativeArenaCamera()) {
+            return com.openggf.camera.NativeViewportFraming.nativeLeft(camera.getX(), camera.getWidth()) & 0xFFFF;
+        }
+        return camera.getX() & 0xFFFF;
     }
 
     private int cameraY() {

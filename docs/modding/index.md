@@ -54,6 +54,10 @@ See the detailed guides for narrower contracts; roadmap entries do not imply imp
 
 ## Follow-along guides
 
+- [Second Strike](../../examples/second-strike/README.md) — a normal-campaign S3K
+  difficulty prototype using native placement bindings, original-ring retention,
+  cooperating enemy roles and bounded boss/special/bonus-stage policies.
+
 - [Flappy Tails, a tutorial in nine parts](guides/flappy-tails/README.md) — from nothing
   to a polished S3K game. Part 1 chooses between changing the native game (the
   `sample-flappy` gallery sample) and replacing the screen with a mod scene; the scene path

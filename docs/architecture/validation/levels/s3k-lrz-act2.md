@@ -14,7 +14,7 @@ The ordinary native320 Sonic+Tails cold Act1 route now reaches playable Act2
 The native320 Sonic+Tails route now completes Act2 and reaches the boss act
 from cold Act1 in43761 inputs without a death. See the
 [completion evidence](#ordinary-cold-act2-completion-2026-09-24). Solo Tails also completes
-the cold Act1→Act2 route in59712 inputs with85 Act2 restore/replay spots across
+the cold Act1→Act2 route in53,259 inputs with96 Act2 restore/replay spots across
 the middle and completion tests; see [Tails completion](#tails-cold-act2-completion-2026-09-25).
 Ordinary solo Knuckles now also completes cold Act1→Act2→direct HPZ in52659
 inputs with zero deaths; see [Knuckles completion](#knuckles-cold-act2-completion-and-direct-hpz-2026-09-25).
@@ -40,6 +40,50 @@ were 281 at `035e48a58`, 188 before slice 7, 23 at `c708e1a2b`, and five at `87f
 The compatibility matrix verifies Act 2's ROM-backed skins, including its own
 sinking rock, doors, buttons and swinging-spike-ball art. That does not establish
 behavior at every placement; the remaining obligations below retain that distinction.
+
+## Current route qualification (2026-10-13)
+
+On common dependency `d9b11f7db` (from `8438d7040`),
+`TestLrzKnucklesColdRouteCapture#coldKnucklesCompletesActTwoAndReachesPlayableHiddenPalace`
+now passes the original 49,526-input cold movie and its full-registry
+restore/forward checks. The HPZ endpoint X1069 remains unchanged. The combined
+Knuckles/pair800 endpoint command passes two tests with zero failures/errors/skips
+in 46.445 seconds Maven time. This closes the Knuckles fresh-boundary negative.
+
+The native320 pair now passes
+`TestLrzActTwoColdRouteCapture#coldTeamCompletesActTwoAndReachesBossActWithRepeatableWorldState`
+on `f7d1aea0b` and the repaired controller inputs. The first36,318 inputs are
+unchanged; ordinary jumps, braking and waiting navigate the corrected Toxomister
+and placed flames. The43,761-input arrival remains296/1196 with six rings,
+including native ring5 carry on the first released boss-act ScreenEvent.
+The door6 assertion remains fully open: it moves from39980 (native rise63) to
+40030 (rise64), with a full-registry restore/forward spot at that actual open
+boundary. The focused replacement completes1 test with zero failures/errors/skips
+(37.808 seconds Maven time); it replaces only the previously red arrival identity.
+
+The full native320 pair, Knuckles and pair800 HPZ identities also pass in the
+four-case boundary run; its sole arrival failure is resolved above. Tails now
+qualifies the Act2 middle corridor independently:36,714 cold inputs,25 real
+traversal full-registry45-input restore/forward spots,5497/1008 and two earned
+rings. Native red-spring landing, flight/platform landings and both turbine
+captures/releases are ordinary controller actions; six-frame braking and a
+short wait avoid the real spike-ball pair before the endpoint. The old fixture's
+exact ring1 becomes the newly observed positive ring2, not a zero-ring relaxation.
+The exact middle replacement completes1 test,0 failures/errors/skips (31.133
+seconds Maven time). The final53,259-input Tails completion preserves every
+qualified middle input and reaches296/1200/ring1 in the playable boss act.
+The real boulder admission at52507 satisfies `word_63B94`'s strict X/Y box;
+source53057 remains object-controlled with zero rings and loads `$1600` at53058.
+Doors8/5/6 remain required fully open at their actual retimed checkpoints.
+All71 completion45-input full-registry restore/forward spots pass, including
+both sides of the released load without replaying through its callback fade.
+Together with the unchanged25 middle spots this establishes96 Act2 windows.
+The final focused three-method selection completes3 tests,0 failures/errors/skips,
+37.95 seconds in class (1:02 minutes Maven time) on parent `dd563ef67` plus
+these route changes and the identical known checkpoint-guard dependency.
+Wider donor/roster/lifecycle/native-pixel products remain open. See the
+[October 13 follow-up](../../plans/2026-09-17-lrz-bring-up.md#playable-completion-follow-up-2026-10-13)
+for commands, preserved incoming prefixes and rejected runtime rescue.
 
 ## Obligations
 

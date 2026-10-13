@@ -78,6 +78,38 @@ using the same ROM and a temporary capture directory. It failed before gameplay
 at shader compilation: the available OpenGL context does not support GLSL 4.10.
 No screenshot or native pixel-match claim is made.
 
+## Current route qualification (2026-10-13)
+
+Pinned develop `5e2f51f07917d5eff8ac120007dac55327f93f32` reproduces the old
+Tails zero-ring death at input19460. The replacement ordinary controller route
+now passes `TestLrzTailsColdRouteCapture#coldTailsClearsActOneAndRestoresTraversalFightAndHandoff`
+on parent `12d6c372e`:29,157 cold inputs, 58 full-registry45-input restore/forward
+spots, all six miniboss health decrements, results, native act rebase and
+playable Act2 at427/1973 with zero deaths. The native Toxomister facing, damage
+and cloud drain remain unchanged. The first18,560 inputs are preserved; ordinary
+six-frame release, braking, attacks and dodges repair the rest. The approach
+retains nine rings and the handoff retains one until the ordinary Act2 title
+reset. Endpoint rings remain zero as before.
+
+The original focused replacement completes1 test,0 failures/errors/skips in32.012
+seconds Maven time. Its earlier28500+45 raw-registry window crossed the28507
+seamless act change and was rejected (`s3k:9/0` into `s3k:9/1`). The initial
+interpretation as missing cross-act restoration is superseded: this load
+intentionally retires outgoing live history, already asserted by
+`TestLrzWideColdRouteCapture#coldTeamClearsActOneAndReleasesPlayableActTwoWithIsolatedHistory`.
+The Tails test now records actual outgoing live history and requires the earliest
+available destination frame to exceed it; this assertion passes in the final
+three-method selection (3 tests,0 failures/errors/skips,37.95 seconds in class).
+Valid45-input windows remain28450 before and28530 after the handoff. The final focused qualification is recorded
+in the [October 13 follow-up](../../plans/2026-09-17-lrz-bring-up.md#playable-completion-follow-up-2026-10-13).
+Other lifecycle/configuration products and native pixel matching remain open.
+
+Knuckles native320 and pair800 cold walks through this act pass on the committed
+omitted-title assembly dependency `d9b11f7db`; their selected replay windows are
+later Act2/boss windows, so this does not requalify every Act1 spot. The complete
+ordinary Tails route now reaches playable HPZ in62,524 inputs; its focused
+Act2 and boss qualification passes as recorded by the corresponding matrices.
+
 ## Obligations
 
 | Obligation + spot | Contract / oracle | Config cases | Test binding | Implementation | Result (revision) | Gap / action |

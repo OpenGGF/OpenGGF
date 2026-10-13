@@ -71,6 +71,60 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A performance-only flock does not isolate shared-worktree test jobs
+(2026-10-13, P5 CPU audit). Another task's queued Maven run overlapped a
+negative timing pair; its result was excluded and a preliminary rejection
+withdrawn. Hold the existing test admission lease exclusively throughout fresh
+process timings, audit completed-job intervals, and reject bypassing build/test
+overlap. Never remove queue locks or stop unrelated work to force isolation.
+A batched runner now retains its worktree while awaiting another admission.
+Acquire linked-worktree build leases before exclusive test admission, in a
+consistent order, then lend the held current-tree descriptor to the queue.
+Holding exclusive admission while waiting for that retained worktree deadlocks
+its next batch. The real OS-lease regression fails before this ordering fix.
+
+A live recording can still be finalizing after the gameplay loop stops
+(2026-10-13, runtime performance controls). Engine cleanup has a shorter recorder
+abort limit than the long handoff capture needs. A partial or deleted file is
+not pixel/PCM evidence. Request stop after the last intended presentation,
+wait with a bounded deadline for INACTIVE, and reject any lastFailure before
+cleanup or decoding. Keep recording/CSV runs separate from acceptance timings.
+
+Enabled audio is not proof of a working runtime audio device (2026-10-12,
+runtime performance qualification): forcing an unavailable OpenAL backend
+continued with SMPS synthesis but a no-device speaker fallback. Reject that run
+as complete-runtime audio evidence. Inspect the actual sink, sample format and
+process-owned output stream. A task-owned private output can retain the mixer
+without audible desktop playback; verify its destination and leave the user's
+fallback device unchanged. Pin it before acceptance measurements.
+
+A locked desktop can stall live presentation before or during rendering
+(2026-10-12, runtime performance qualification): Java 25 reached XWayland's
+`glfwShowWindow` and waited in `XCheckTypedWindowEvent`; a minimal window
+reproduced it. Native Wayland opened the same-sized window, then the full engine
+waited at `glfwSwapBuffers`. The desktop's read-only ScreenSaver `GetActive`
+reported true. Stop the owned stalled process. Qualify a visible desktop or an
+owned private virtual display with the actual hardware renderer and normal swap
+path; reject software-renderer substitution. Do not bypass show/swap, disable rendering, or count offscreen
+helper work as the full-runtime baseline. This does not prove a Java-version
+regression; the earlier successful Java 21 run had different desktop visibility.
+
+A live Engine still loads classes lazily (2026-10-12, runtime qualification).
+Recompiling its worktree can remove target/classes before a late object or cleanup
+owner first loads, invalidating the run with ClassNotFoundException. Isolate all
+builds from live correctness runs as well as timing; separate Java input-plan
+compilation that only reads an already-built classpath from Maven rebuilding it.
+
+Smoke is a selection, not a short-runtime guarantee (2026-10-13, queue contention):
+a ROM-backed smoke run executed 26,690 ordinary cases in about 59 minutes, then
+spent five more minutes on guards. Report candidate count and actual environment,
+not a ROM-free CI duration. The headless graphics flag in JDK_JAVA_OPTIONS also
+made the old wrapper take an exclusive lease despite an otherwise shared profile;
+inspect the OS lock and launch environment, not just a profile/telemetry label.
+Bounded category batches now yield shared admission while retaining target/
+ownership. This creates opportunities for short jobs, not a per-batch time bound.
+See [queue evidence](../architecture/research/2026-10-13-maven-queue-contention.md).
+
 A released port is a global resource, not a socket-close oracle (2026-10-12,
 mod audit delivery): Golf's audio-fault teardown test received `BindException`
 while trying to bind the former host port. Both unchanged baseline/current cases
@@ -815,6 +869,18 @@ cold route handoffs and fade snapshot assertions. Preserve the default driver un
 its consumers are migrated and validated together. Its CSV keeps input last;
 appending host observation columns silently broke a prefix comparator that strips
 the final field. Extended host columns are explicit in the title-first mode.
+
+Title-first capture is not the complete Engine UI graph (2026-10-13 Second
+Strike). `HeadlessGameBoot` creates a bare loop without Engine's data-select
+launch callback; a valid native confirmation can therefore consume its action,
+reset the provider and remain in `DATA_SELECT`. The capture renderer also falls
+through to level drawing for that mode, producing blank output without a level.
+Inspect wiring and native provider drawing before calling either symptom a game
+defect. A callback recorder proves native menu admission only; actual launch,
+patch re-resolution and save ownership require the real Engine seams. Keep the
+native listing's relative `saves` directory and Engine's save root in the same
+owned private profile. Never repair a probe by forcing level mode or bypassing
+save/patch resolution.
 
 Exact window ownership does not isolate desktop input (2026-10-09 Mutator Lab
 polish): the helper validated its own Engine PID but repeatedly focused that

@@ -72,7 +72,8 @@ final class OwnedModServices {
                     com.openggf.level.Level inherited = super.transformDecodedLevel(source);
                     return boundary.call(plan.ownerModId(), () -> {
                         com.openggf.level.Level transformed = inherited;
-                        for (var patch : patches) transformed = patch.apply(transformed);
+                        for (var patch : patches)
+                            transformed = com.openggf.level.LevelPatchOwnership.applyDecoded(patch,transformed);
                         return transformed;
                     });
                 }

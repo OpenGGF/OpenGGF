@@ -5092,6 +5092,35 @@ child movement latch clears. It does not rewrite the owner's `$2E`. Retained
 owners must wait for the real ROM art and the final stationary child poll, and
 keep their presentation clock running.
 
+## Standalone mode gates can precede a retained locked-on placement
+
+`CutsceneKnux_SKIntro` tests character 2 and a clear checkpoint, then BEQ-deletes
+when `SK_alone_flag` is zero before camera/P1 writes. The locked-on placement still
+contains subtype `$30`; player identity and placement presence do not authorize
+the standalone intro. Keep the supported ROM-mode prerequisite and declare a
+standalone mode explicitly in component fixtures; capture it through recreation.
+
+## AIZ post-boss owners keep their native dispatch slots
+
+`Obj_AIZEndBossWait` has no range-delete tail. Retain its original SST through
+camera backtracking, then change its routine in place for the capsule/results
+continuation. `AIZEndBoss_StartDefeat` owns `_unkFAA3`; the ROM-loaded button and
+bridge consume the shared flags from their own slots. Do not replace those owners
+or borrow a later capsule's restore routine (`loc_7D078` belongs to Sky Sanctuary).
+`sub_86984` and `AIZEndBoss_StopPlayer` use lowest-free `AllocateObject`; their
+selected slots determine same-scan versus next-scan dispatch without added delays.
+`Obj_LevelResultsWait2`, not the last result child, clears `_unkFAA8`.
+
+## Countdown-only routines retain object standing latches
+
+AIZ drawbridge `loc_2B452` decrements and returns without `SolidObjectFull2`.
+`loc_2B45E`/`loc_2B478` later consume the parent's standing bits even if a player
+jumped and cleared their own OnObj bit. Place solid resolution at the normal
+routine checkpoint, consume manual checkpoint results (which omit compatibility
+listener callbacks), and capture the rider latch for rewind. A transient list
+cannot be rebuilt during the countdown. Functional test setups need a real solid
+registry and an in-range owner before establishing the first contact.
+
 ## A fixed-slot address includes its object-RAM base
 
 Ending `loc_5D96A` writes Tornado and Master Emerald owners at
@@ -5104,3 +5133,46 @@ translating the offset; neither subtracting three nor treating the relative
 missing Tornado owner (one actor instead of two), before any flight timing test.
 See the 2026-10-13 ending lifecycle design for the rejected translations and
 the production fixed-role/rewind checks.
+
+
+## Native P2 erasure requires roster retirement, not presentation suppression
+
+`loc_815DC` clears the whole Player_2 SST in DDZ. A module's CPU/input/render
+suppression can hide that sprite while leaving the registered follower alive.
+The owning object must retire the actual roster through injected services; a
+short before-init snapshot must restore its same identity and replay the native
+erasure. Scene-local retirement uses the internal rewind bridge, not a shared
+zone-name branch. Also keep post-restore scroll reconciliation pure:
+`sub_59648/DDZ_ScreenEvent` advances foreground RAM, so `SwScrlDdz` rebuilds
+output from saved words without dispatching it a second time. This matters
+for valid snapshots taken before the first ordinary controller/scroll update.
+Origin: 2026-10-13 S3K playable completion, DDZ native-entry and composed-route lane.
+
+## A placed prelude can change code without resetting the native wait
+
+LBZ `Obj_LBZFinalBossKnux` (`$CD`) uses the first `word_72FEA` record for
+unsigned camera admission and the following record for the arena lock.
+`loc_7304C` changes the same SST code pointer to CA; its negative music timer
+survives into CA init and `Obj_Wait`. Do not seed CA's Sonic delay for Knuckles
+or return before that wait can dispatch. `loc_7498E` reads the second record's
+FAB0 (`$328`), so its carrier threshold is `$528`, not the admission word plus
+`$200`. Camera comparisons use native coordinates before viewport projection.
+
+Pure CA child reconstruction needs exact captured parent/sibling object IDs;
+retaining the slots alone leaves null gameplay links. Register each owning edge
+explicitly and clone captured arrays. Reconstruction must not allocate children,
+run gameplay init or consume shared RNG. Snapshot the defeat explosion helper
+and rebind its RNG separately from its parent-child links.
+
+## Route selection can retire a parent before its switch child dispatch
+
+MHZ2 `loc_6311A` allocates `ChildObjDat_665BC` and deletes the press actor for
+Knuckles. `loc_632CA` gives that child `Sprite_OnScreen_Test`, its own position,
+frame 0, palette 0 and a one-time copied respawn index. It never enters the
+parent-reading `loc_63308` branch. Holding the deleted Java parent therefore
+adds a gameplay dependency absent from the ROM and makes live rewind capture
+fail with an unregistered ObjectRef. Detach the Knuckles child's parent authority;
+recreate a pure shell from its own spawn. Sonic/Tails keep `Child_Draw_Sprite`
+and require exact captured parent identity, not a nearest-parent reconstruction.
+The five-width actual MHZ2 entry regression reproduces the deleted-parent error
+before the fix and verifies fresh child recreation plus whole-registry replay.

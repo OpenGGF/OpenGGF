@@ -22,7 +22,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/** Actual DEZ2 boss → final hands/core/escape → DDZ, with no reseeding at either load. */
+/** Actual DEZ boss routes through native ending, credits and terminal Start, without reseeding loads. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestDezIncomingFinalRouteCapture {
     @ParameterizedTest @ValueSource(ints = {320, 800})
@@ -47,7 +47,9 @@ class TestDezIncomingFinalRouteCapture {
                                      int startAct) throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(input);
         var checked = new HashSet<String>();
-        boolean chaseSeen = false;
+        boolean chaseSeen = false, releasedDdzEntrySeen = false;
+        long outgoingDdzHistory = 0;
+        int historyStart = movie.getFrameCount() - 120;
         int previousCamera = 0;
         // Held-button history belongs to this external input driver, not gameplay.
         var previousInput = GameplayCaptureSession.class.getDeclaredField("previousInput");
@@ -57,11 +59,29 @@ class TestDezIncomingFinalRouteCapture {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 11, startAct, settings);
             assertEquals(startAct == 0 ? 1 : 0, GameServices.sprites().getRegisteredSidekicks().size());
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
+                if (frame == historyStart) GameServices.configuration().setSessionOverride(
+                        com.openggf.configuration.SonicConfiguration.LIVE_REWIND_ENABLED, true);
                 session.step(movie.getFrame(frame));
                 drawing.afterStep(session);
                 assertFalse(session.player().getDead(), "death at " + frame);
                 String spot = null;
                 int zone = GameServices.level().getCurrentZone();
+                if (zone == 12 && frame >= historyStart) {
+                    var rewind = SessionManager.getCurrentGameplayMode().getRewindController();
+                    if (rewind != null) outgoingDdzHistory = Math.max(outgoingDdzHistory, rewind.currentFrame());
+                }
+                if (zone == 12 && !releasedDdzEntrySeen
+                        && !GameServices.level().hasPendingFreshLevelTransitionBoundary()
+                        && !GameServices.level().getTransitions().isTitleCardRequested()) {
+                    // loc_63B4 publishes the destination counter before loc_8160A
+                    // adds50 during the native fall-in. Source HUD rings are not energy.
+                    assertEquals(0, session.player().getRingCount());
+                    assertSame(GameServices.sprites().getMainPlayable(), session.player());
+                    assertSame(session.player(), GameServices.camera().getFocusedSprite());
+                    assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty(),
+                            "loc_81554 clears Player_2 before native DDZ flight");
+                    releasedDdzEntrySeen = true;
+                }
                 if (zone == 23) {
                     int fingers = health("DezFinalHand$Finger");
                     if (fingers == 18) spot = "hands";
@@ -107,11 +127,14 @@ class TestDezIncomingFinalRouteCapture {
                 previousInput.set(session, movie.getFrame(frame));
             }
             drawing.checkpoint(session);
+            assertTrue(releasedDdzEntrySeen, "incoming DDZ assembly must release through the actual route");
             assertEquals(12, GameServices.level().getCurrentZone());
             assertEquals(13, GameServices.level().getRequestedZone());
             assertEquals(1, GameServices.level().getRequestedAct());
             assertEquals(Set.of("hands", "half-hands", "core-half", "core-last", "ship-half",
                     "ship-last", "ship-defeat", "ddz-flight", "ddz-body", "ddz-wrap", "ddz-defeat"), checked);
+            assertTrue(outgoingDdzHistory > 10, "real outgoing DDZ history precedes the ending load");
+            verifyEndingComposition(session, drawing, 2);
         }
     }
 
@@ -167,6 +190,8 @@ class TestDezIncomingFinalRouteCapture {
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
                 drawing.checkpoint(session);
                 var saved = registry.capture();
+                assertFalse(((com.openggf.graphics.FadeManagerSnapshot) saved.get("fademanager")).isPoisoned(),
+                        "cold checkpoint must belong to the production rewind contract at " + frame);
                 for (int n = 1; n <= 45; n++) step(session, movie.getFrame(frame + n));
                 var expected = registry.capture();
                 registry.restore(saved);
@@ -184,12 +209,10 @@ class TestDezIncomingFinalRouteCapture {
             assertTrue(shipSeen && shipDefeated);
             assertEquals(8, coreHits);
             assertEquals(8, shipHits);
-            // With no emerald override this is the ordinary ending, not DDZ.
-            assertEquals(13, GameServices.level().getCurrentZone());
-            assertEquals(1, GameServices.level().getCurrentAct());
-            assertEquals(96, session.player().getCentreX());
-            assertEquals(300, session.player().getCentreY());
-            assertEquals(1, GameServices.sprites().getRegisteredSidekicks().size());
+            // The unchanged input endpoint may still belong to native PaletteWhiteOut.
+            // The existing bounded helper consumes that transition, then requires the
+            // actual D01 owner, roster, progress and continuous terminal handoff.
+            verifyOrdinaryEndingHandoff(session, drawing);
         }
     }
 
@@ -247,6 +270,8 @@ class TestDezIncomingFinalRouteCapture {
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
                 drawing.checkpoint(session);
                 var saved = registry.capture();
+                assertFalse(((com.openggf.graphics.FadeManagerSnapshot) saved.get("fademanager")).isPoisoned(),
+                        "cold checkpoint must belong to the production rewind contract at " + frame);
                 for (int n = 1; n <= 45; n++) step(session, movie.getFrame(frame + n));
                 var expected = registry.capture();
                 registry.restore(saved);
@@ -264,12 +289,10 @@ class TestDezIncomingFinalRouteCapture {
             assertTrue(shipSeen && shipDefeated);
             assertEquals(8, coreHits);
             assertEquals(8, shipHits);
-            // With no emerald override this is the ordinary ending, not DDZ.
-            assertEquals(13, GameServices.level().getCurrentZone());
-            assertEquals(1, GameServices.level().getCurrentAct());
-            assertEquals(96, session.player().getCentreX());
-            assertEquals(300, session.player().getCentreY());
-            assertEquals(0, GameServices.sprites().getRegisteredSidekicks().size());
+            // The unchanged input endpoint may still belong to native PaletteWhiteOut.
+            // The existing bounded helper consumes that transition, then requires the
+            // actual D01 owner, roster, progress and continuous terminal handoff.
+            verifyOrdinaryEndingHandoff(session, drawing);
         }
     }
 
@@ -384,6 +407,8 @@ class TestDezIncomingFinalRouteCapture {
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
                 drawing.checkpoint(session);
                 var saved = registry.capture();
+                assertFalse(((com.openggf.graphics.FadeManagerSnapshot) saved.get("fademanager")).isPoisoned(),
+                        "cold checkpoint must belong to the production rewind contract at " + frame);
                 for (int n = 1; n <= 45; n++) step(session, movie.getFrame(frame + n));
                 var expected = registry.capture();
                 for (int cycle = 0; cycle < 2; cycle++) {
@@ -401,19 +426,23 @@ class TestDezIncomingFinalRouteCapture {
             assertTrue(checkedPendingFade);
             assertEquals(50371, finalLoad);
             assertTrue(outgoingActTwoHistory > 10);
-            assertEquals(60297, endingLoad);
+            if (endingLoad < 0) {
+                var fade = (com.openggf.graphics.FadeManagerSnapshot) SessionManager.getCurrentGameplayMode()
+                        .getRewindRegistry().capture().get("fademanager");
+                assertTrue(fade.isPoisoned(), "the unchanged wide input endpoint retains native PaletteWhiteOut ownership");
+                assertEquals(13, GameServices.level().getRequestedZone());
+                assertEquals(1, GameServices.level().getRequestedAct());
+            }
             assertTrue(outgoingFinalHistory > 10, "ending load must retire a recorded final-stage timeline");
             assertTrue(handsSeen && handsDefeated, "all six fingers must be cleared");
             assertTrue(coreSeen && coreDefeated);
             assertTrue(shipSeen && shipDefeated);
             assertEquals(8, coreHits);
             assertEquals(8, shipHits);
-            // With no emerald override this is the ordinary ending, not DDZ.
-            assertEquals(13, GameServices.level().getCurrentZone());
-            assertEquals(1, GameServices.level().getCurrentAct());
-            assertEquals(96, session.player().getCentreX());
-            assertEquals(300, session.player().getCentreY());
-            assertEquals(0, GameServices.sprites().getRegisteredSidekicks().size());
+            // The unchanged input endpoint may still belong to native PaletteWhiteOut.
+            // The existing bounded helper consumes that transition, then requires the
+            // actual D01 owner, roster, progress and continuous terminal handoff.
+            verifyOrdinaryEndingHandoff(session, drawing);
         }
     }
 
@@ -481,6 +510,8 @@ class TestDezIncomingFinalRouteCapture {
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
                 drawing.checkpoint(session);
                 var saved = registry.capture();
+                assertFalse(((com.openggf.graphics.FadeManagerSnapshot) saved.get("fademanager")).isPoisoned(),
+                        "cold checkpoint must belong to the production rewind contract at " + frame);
                 for (int n = 1; n <= 45; n++) step(session, movie.getFrame(frame + n));
                 var expected = registry.capture();
                 registry.restore(saved);
@@ -498,13 +529,199 @@ class TestDezIncomingFinalRouteCapture {
             assertTrue(shipSeen && shipDefeated);
             assertEquals(8, coreHits);
             assertEquals(8, shipHits);
-            // With no emerald override this is the ordinary ending, not DDZ.
+            // The unchanged input endpoint may still belong to native PaletteWhiteOut.
+            // The existing bounded helper consumes that transition, then requires the
+            // actual D01 owner, roster, progress and continuous terminal handoff.
+            verifyOrdinaryEndingHandoff(session, drawing);
+        }
+    }
+
+    private static com.openggf.game.sonic3k.ending.EndingRescueDirectorObjectInstance rescueOwner() {
+        return GameServices.level().getObjectManager()
+                .activeObjectsOfType(com.openggf.game.sonic3k.ending.EndingRescueDirectorObjectInstance.class)
+                .stream().filter(o -> o.sequence()
+                        == com.openggf.game.sonic3k.ending.EndingRescueDirectorObjectInstance.RESCUE)
+                .findFirst().orElseThrow();
+    }
+
+    private static void verifyOrdinaryEndingHandoff(GameplayCaptureSession session,
+                                                     RouteFrameDrawing drawing) throws Exception {
+        verifyEndingComposition(session, drawing, -2);
+    }
+
+    private static void verifyEndingComposition(GameplayCaptureSession session,
+                                                RouteFrameDrawing drawing, int expectedProgress) throws Exception {
+        var neutral = new Bk2FrameInput(0, 0, 0, false, "");
+        var sourceRewind = SessionManager.getCurrentGameplayMode().getRewindController();
+        long outgoingHistory = sourceRewind == null ? 0 : sourceRewind.currentFrame();
+        boolean incomingLoadPending = GameServices.level().getCurrentZone() != 13;
+        if (incomingLoadPending) {
+            var source = GameServices.level();
+            var fade = (com.openggf.graphics.FadeManagerSnapshot) SessionManager.getCurrentGameplayMode()
+                    .getRewindRegistry().capture().get("fademanager");
+            assertEquals(13, source.getRequestedZone(), "the real source owner must request D01");
+            assertEquals(1, source.getRequestedAct());
+            assertTrue(source.hasPendingLevelExit() || fade.isPoisoned(),
+                    "the source owns either an unconsumed native exit request or its in-flight fade: " + fade);
+            System.out.printf("native-ending-input-endpoint zone=%d act=%d fresh=%s fade=%s%n",
+                    source.getCurrentZone(), source.getCurrentAct(), source.hasPendingFreshLevelTransitionBoundary(), fade);
+        }
+        for (int n = 0; n < 64 && GameServices.level().getCurrentZone() != 13; n++) step(session, neutral);
+        assertEquals(13, GameServices.level().getCurrentZone(), "actual ending load follows the source request");
+        assertEquals(1, GameServices.level().getCurrentAct());
+        if (incomingLoadPending && outgoingHistory > 10) {
+            var releasedHistory = SessionManager.getCurrentGameplayMode().getRewindController();
+            assertNotNull(releasedHistory);
+            assertEquals(0, releasedHistory.earliestAvailableFrame());
+            assertTrue(releasedHistory.currentFrame() < outgoingHistory,
+                    "actual ending load discards its recorded source timeline");
+        }
+        if (GameServices.level().hasPendingFreshLevelTransitionBoundary()
+                || GameServices.level().getTransitions().isTitleCardRequested()) {
+            session.step(neutral); drawing.draw(session);
+        }
+        assertFalse(GameServices.level().hasPendingFreshLevelTransitionBoundary());
+        assertFalse(GameServices.level().getTransitions().isTitleCardRequested());
+        assertSame(GameServices.sprites().getMainPlayable(), session.player());
+        assertSame(session.player(), GameServices.camera().getFocusedSprite());
+        var state = assertInstanceOf(com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState.class,
+                GameServices.zoneRuntimeState());
+        assertTrue(state.ending().initialized());
+        assertEquals(expectedProgress, state.ending().progress(), "native progression is inherited through the real load");
+        assertInstanceOf(com.openggf.game.sonic3k.Sonic3kSuperStateController.class,
+                session.player().getSuperStateController(), "the rescue owns native P1 presentation");
+        assertTrue(session.player().isObjectControlled());
+        assertTrue(session.player().isObjectControlSuppressesMovement());
+        assertFalse(session.player().isObjectControlAllowsCpu());
+        assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty(),
+                "Obj_5D8BC clears Player_2 after the actual incoming team route");
+        assertEquals(0, session.player().getRingCount(), "native destination owns the cleared counter");
+        var owner = rescueOwner();
+        assertEquals(2, owner.routine());
+        assertEquals(0x100, session.player().getCentreX(), "Obj_5D8BC raw screen-relative x_pos");
+        assertEquals(0xE0, session.player().getCentreY(), "Obj_5D8BC raw screen-relative y_pos");
+        int inset = Math.max(0, (GameServices.camera().getWidth() - 320) / 2);
+        assertEquals(owner.getX() + GameServices.camera().getX() + inset - 0x80,
+                session.player().getRenderCentreX());
+        assertEquals(owner.getY() + GameServices.camera().getY() - 0x80,
+                session.player().getRenderCentreY());
+        var actors = GameServices.level().getObjectManager()
+                .activeObjectsOfType(com.openggf.game.sonic3k.ending.EndingRescueDirectorObjectInstance.Actor.class);
+        // Dynamic_object_RAM follows three Object_RAM slots; loc_5D96A uses5/45.
+        assertTrue(actors.stream().anyMatch(a -> a.getSlotIndex() == 8));
+        assertTrue(actors.stream().anyMatch(a -> a.getSlotIndex() == 48));
+        var incoming = SessionManager.getCurrentGameplayMode().getRewindController();
+        if (incoming != null) {
+            assertEquals(0, incoming.earliestAvailableFrame());
+            assertTrue(incoming.currentFrame() <= 2, "source final-stage history cannot enter D01");
+        }
+        // Keep independent registry replay separate from live-history recording.
+        GameServices.configuration().setSessionOverride(
+                com.openggf.configuration.SonicConfiguration.LIVE_REWIND_ENABLED, false);
+        var checked = new HashSet<String>();
+        boolean caught = false;
+        for (int frame = 0; frame < 750; frame++) {
+            step(session, neutral);
+            assertFalse(session.player().getDead(), "native rescue continuation at " + frame);
             assertEquals(13, GameServices.level().getCurrentZone());
             assertEquals(1, GameServices.level().getCurrentAct());
-            assertEquals(96, session.player().getCentreX());
-            assertEquals(300, session.player().getCentreY());
-            assertEquals(0, GameServices.sprites().getRegisteredSidekicks().size());
+            owner = rescueOwner();
+            String spot = owner.routine() >= 8 ? "plane-catch"
+                    : owner.planeReleased() ? "plane-release" : null;
+            if (spot != null && checked.add(spot)) {
+                var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                var saved = registry.capture();
+                assertFalse(((com.openggf.graphics.FadeManagerSnapshot) saved.get("fademanager")).isPoisoned(),
+                        "native rescue replay must start outside callback-bearing transition fades");
+                for (int n = 0; n < 45; n++) step(session, neutral);
+                var expected = registry.capture();
+                registry.restore(saved);
+                same(saved, registry.capture(), spot + " incoming restore");
+                session.restoreInputHistory(neutral);
+                for (int n = 0; n < 45; n++) step(session, neutral);
+                same(expected, registry.capture(), spot + " incoming replay");
+                registry.restore(saved);
+                session.restoreInputHistory(neutral);
+                owner = rescueOwner();
+            }
+            var plane = GameServices.level().getObjectManager()
+                    .activeObjectsOfType(com.openggf.game.sonic3k.ending.EndingRescueDirectorObjectInstance.Actor.class)
+                    .stream().filter(a -> a.getSlotIndex() == 8).findFirst().orElseThrow();
+            int seat = session.player() instanceof com.openggf.sprites.playable.Tails ? 0x27 : 0x2B;
+            caught = checked.contains("plane-catch") && owner.routine() >= 8
+                    && plane.getX() == owner.getX() - 0x20 && plane.getY() == owner.getY() + seat;
+            if (caught) break;
         }
+        assertEquals(Set.of("plane-release", "plane-catch"), checked);
+        assertTrue(caught, "native Tornado must catch the incoming P1 within the bounded rescue phase");
+        assertEquals(owner.getX(), session.player().getCentreX());
+        assertEquals(owner.getY(), session.player().getCentreY());
+        assertEquals(session.player() instanceof com.openggf.sprites.playable.Tails ? 0xAD : 0xBA,
+                session.player().getMappingFrame());
+        GameServices.configuration().setSessionOverride(
+                com.openggf.configuration.SonicConfiguration.LIVE_REWIND_ENABLED, true);
+        for (int n = 0; n < 30; n++) step(session, neutral);
+        incoming = SessionManager.getCurrentGameplayMode().getRewindController();
+        assertNotNull(incoming);
+        assertEquals(0, incoming.earliestAvailableFrame());
+        assertTrue(incoming.currentFrame() > 10 && incoming.currentFrame() <= 35,
+                "native rescue records a fresh destination timeline after independent replay");
+        GameServices.configuration().setSessionOverride(
+                com.openggf.configuration.SonicConfiguration.LIVE_REWIND_ENABLED, false);
+        boolean creditsSeen = false, postSeen = false, aizReturnSeen = expectedProgress != 2;
+        boolean reunionSeen = false, terminalReady = false;
+        var continuationSpots = new HashSet<String>();
+        // The native script supplies timing; this is only a failure budget, also
+        // used by the independent ending scenario checks, never a scene clock seed.
+        for (int frame = 0; frame < 60_000; frame++) {
+            step(session, neutral);
+            assertEquals(com.openggf.game.GameMode.LEVEL, session.loop().getCurrentGameMode(),
+                    "native post object must be observed before the requested Start handoff");
+            assertFalse(session.player().getDead(), "continuous ending at " + frame);
+            state = assertInstanceOf(com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState.class,
+                    GameServices.zoneRuntimeState());
+            assertEquals(expectedProgress, state.ending().progress());
+            var directors = GameServices.level().getObjectManager()
+                    .activeObjectsOfType(com.openggf.game.sonic3k.ending.EndingRescueDirectorObjectInstance.class);
+            aizReturnSeen |= directors.stream().anyMatch(o -> o.sequence()
+                    == com.openggf.game.sonic3k.ending.EndingRescueDirectorObjectInstance.AIZ_RETURN);
+            reunionSeen |= directors.stream().anyMatch(o -> o.sequence()
+                    == com.openggf.game.sonic3k.ending.EndingRescueDirectorObjectInstance.REUNION);
+            creditsSeen |= state.ending().credits().active();
+            var post = GameServices.level().getObjectManager()
+                    .activeObjectsOfType(com.openggf.game.sonic3k.ending.S3kPostCreditsObjectInstance.class)
+                    .stream().findFirst().orElse(null);
+            postSeen |= post != null;
+            String spot = post != null && post.terminalInputReady() ? "terminal"
+                    : state.ending().credits().active() && !state.ending().credits().complete() ? "credits" : null;
+            if (spot != null && continuationSpots.add(spot)) {
+                var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                var saved = registry.capture();
+                assertFalse(((com.openggf.graphics.FadeManagerSnapshot) saved.get("fademanager")).isPoisoned());
+                for (int n = 0; n < 45; n++) step(session, neutral);
+                var expected = registry.capture();
+                registry.restore(saved); same(saved, registry.capture(), spot + " continuous restore");
+                session.restoreInputHistory(neutral);
+                for (int n = 0; n < 45; n++) step(session, neutral);
+                same(expected, registry.capture(), spot + " continuous replay");
+                registry.restore(saved); session.restoreInputHistory(neutral);
+                post = GameServices.level().getObjectManager()
+                        .activeObjectsOfType(com.openggf.game.sonic3k.ending.S3kPostCreditsObjectInstance.class)
+                        .stream().findFirst().orElse(null);
+            }
+            terminalReady = post != null && post.terminalInputReady();
+            if (terminalReady) break;
+        }
+        assertTrue(aizReturnSeen, "all-Super DDZ progression must take the native AIZ return");
+        assertTrue(reunionSeen && creditsSeen && postSeen && terminalReady,
+                "the actual incoming route must reach native reunion, credits and terminal input");
+        assertTrue(state.ending().credits().complete());
+        assertEquals(Set.of("credits", "terminal"), continuationSpots);
+        step(session, new Bk2FrameInput(0, 0, 0, true, ""));
+        for (int n = 0; n < 128 && session.loop().getCurrentGameMode()
+                != com.openggf.game.GameMode.TITLE_SCREEN; n++) step(session, neutral);
+        assertEquals(com.openggf.game.GameMode.TITLE_SCREEN, session.loop().getCurrentGameMode(),
+                "native terminal Start uses the production title handoff");
     }
 
     private static int health(String name) {

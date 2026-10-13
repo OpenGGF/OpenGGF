@@ -32,7 +32,7 @@ class TestCollisionModel {
     @BeforeEach
     void setUp() {
         ensureBootstrapRuntime();
-        GameModuleRegistry.setCurrent(new Sonic2GameModule());
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
     }
 
     @AfterEach
@@ -81,7 +81,7 @@ class TestCollisionModel {
     @MethodSource("setterGuardProvider")
     void solidBitSetterGuarding(GameModule module, String setter, int initial,
                                 byte newValue, int expected, String label) {
-        GameModuleRegistry.setCurrent(module);
+        TestEnvironment.configureGameModuleFixture(module);
         TestablePlayableSprite sprite = new TestablePlayableSprite("test", (short) 100, (short) 100);
 
         if ("topSolidBit".equals(setter)) {
@@ -101,13 +101,13 @@ class TestCollisionModel {
 
     @Test
     void moduleSwitch_s2ToS1_settersBecomGuarded() {
-        GameModuleRegistry.setCurrent(new Sonic2GameModule());
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
         TestablePlayableSprite sprite = new TestablePlayableSprite("test", (short) 100, (short) 100);
 
         sprite.setTopSolidBit((byte) 0x0E);
         assertEquals(0x0E, sprite.getTopSolidBit(), "S2 allows change");
 
-        GameModuleRegistry.setCurrent(new Sonic1GameModule());
+        TestEnvironment.configureGameModuleFixture(new Sonic1GameModule());
         sprite.resetState();
 
         assertEquals(0x0C, sprite.getTopSolidBit(), "After reset, topSolidBit default");
@@ -131,7 +131,7 @@ class TestCollisionModel {
     @ParameterizedTest(name = "{3}")
     @MethodSource("springHelperProvider")
     void springHelperLayerBits(GameModule module, int expectedTop, int expectedLrb, String label) {
-        GameModuleRegistry.setCurrent(module);
+        TestEnvironment.configureGameModuleFixture(module);
         TestablePlayableSprite sprite = new TestablePlayableSprite("test", (short) 100, (short) 100);
 
         SpringHelper.applyCollisionLayerBits(sprite, 0x08);

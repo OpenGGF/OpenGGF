@@ -946,7 +946,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.statusTertiary = 0;
                 resetBaseSpeeds(); // Reset speeds to default
                 instaShieldRegistered = false; // Force re-registration with new ObjectManager on level load
-                resolvePhysicsProfile(GameServices.bootstrapGameModule());
+                // Fresh level assembly runs before tickStatus refreshes cached rules.
+                resolvePhysicsProfile(GameServices.currentOrBootstrapGameModule());
                 // ROM: Obj01_Init unconditionally sets y_radius=$13, x_radius=9.
                 // Since we reuse the sprite rather than recreating it, we must
                 // explicitly restore standing dimensions and sensor offsets here.
@@ -4025,7 +4026,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // Must define speeds before creating Manager (it will read speeds upon
                 // instantiation).
                 resetBaseSpeeds();
-                resolvePhysicsProfile(GameServices.bootstrapGameModule());
+                // Runtime construction belongs to the selected world; pre-session
+                // construction still uses the bootstrap default through this accessor.
+                resolvePhysicsProfile(GameServices.currentOrBootstrapGameModule());
 
                 if (specification != null) {
                         setWidth((standXRadius + 1) * 2);

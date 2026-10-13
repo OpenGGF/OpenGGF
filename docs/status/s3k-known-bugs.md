@@ -8,6 +8,18 @@ deliberate bug-fixes of ROM data), see
 
 For general (cross-game) bugs, see [known-bugs.md](known-bugs.md).
 
+**AIZ2 post-boss handoff, 2026-10-12 (candidate):** the complete original
+`aiz1_to_hcz_fullrun` control improves from 57 errors to zero, including terminal
+hardware-work ownership. The alternate `aiz_completerun` improves from 99 to 59
+errors, first row 25,589 animation `$13/$05`; it remains failing. Native slot 5
+is free before its waiting boss loads, while the engine still retains a path
+switcher there and allocates the boss in slot 11. Further allocation/lifetime
+diagnosis is pending; no route-specific delay is accepted. The
+[runtime validation record](../architecture/validation/performance/2026-10-12-runtime-performance-series.md)
+contains commands and rejected variants. These observations are over source
+`a0e2b79cc` in `.worktrees/ai-runtime-perf-series`; updated-base validation and
+integration remain pending.
+
 > **Audit note, 2026-06-12:** this file still contains many historical dedicated-trace entries
 > retained for diagnosis context. The canonical current S3K parity ledger is
 > `docs/status/trace-frontier-log.md`, especially the S3K complete-run per-zone frontiers. Use this file

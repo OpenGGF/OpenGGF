@@ -83,6 +83,11 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
     @Override public boolean centerNativeArenaCamera() {
         if (!GameServices.hasRuntime()) return false;
         int zone = getFeatureZoneId();
+        if (zone == Sonic3kZoneIds.ZONE_LBZ && GameServices.level().getFeatureActId() == 1) {
+            return S3kRuntimeStates.currentLbz(GameServices.zoneRuntimeRegistry())
+                    .map(com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState::centerNativeArenaCamera)
+                    .orElse(false);
+        }
         if (zone == Sonic3kZoneIds.ZONE_MHZ) {
             return S3kRuntimeStates.currentMhz(GameServices.zoneRuntimeRegistry())
                     .map(com.openggf.game.sonic3k.runtime.MhzZoneRuntimeState::centerNativeArenaCamera)
@@ -861,7 +866,10 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
         // bridge collapse), keep the engine display bucket in front of the
         // forest sprites. Obj_PathSwap owns the independent ROM art_tile bit.
         boolean postBossCutsceneActive = com.openggf.game.sonic3k.objects
-                .Aiz2BossEndSequenceState.isCutsceneOverrideObjectsActive();
+                .Aiz2BossEndSequenceState.isCutsceneOverrideObjectsActive()
+                || (aizState != null && !aizState.isBossFlagActive()
+                    && com.openggf.game.sonic3k.objects.Aiz2BossEndSequenceState
+                            .isBridgeDropTriggered());
 
         if (forestFrontPhaseActive || postBossCutsceneActive) {
             player.setPriorityBucket(RenderPriority.MIN);

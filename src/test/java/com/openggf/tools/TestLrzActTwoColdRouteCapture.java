@@ -36,7 +36,7 @@ class TestLrzActTwoColdRouteCapture {
         // final stairs, boulder phases, then independent post-load replay spots.
         var spots = Set.of(36240, 36300, 36450, 36540, 36690, 36720, 36734, 36780,
                 36870, 37020, 37200, 37830, 37965, 38340, 38491, 38551, 38800,
-                39031, 39180, 39426, 39486, 39577, 39830, 39910, 40140, 40365,
+                39031, 39180, 39426, 39486, 39577, 39830, 39910, 40030, 40140, 40365,
                 40432, 40625, 40667, 40757, 40822, 40942, 41580, 41640, 41862,
                 41982, 42100, 42190, 42360, 42540, 42750, 42870, 43020, 43150,
                 43260, 43350, 43440, 43500, 43680, 43710);
@@ -64,8 +64,9 @@ class TestLrzActTwoColdRouteCapture {
                             .anyMatch(door -> door.triggerIndex() == 8 && door.isFullyOpen()),
                             "the approach jump must press the real button and open door8");
                 }
-                // Door6 starts opening at39911; ROM travel takes64 updates.
-                if (frame == 39577 || frame == 39980) {
+                // The repaired real-button approach releases door6 later. Native
+                // loc_42994 still needs64 updates; its full rise is observed at40030.
+                if (frame == 39577 || frame == 40030) {
                     int trigger = frame == 39577 ? 5 : 6;
                     assertTrue(GameServices.level().getObjectManager()
                             .activeObjectsOfType(LrzDoorObjectInstance.class).stream()

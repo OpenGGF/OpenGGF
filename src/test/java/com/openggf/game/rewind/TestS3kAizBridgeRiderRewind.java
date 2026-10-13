@@ -6,6 +6,9 @@ import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance;
+import com.openggf.game.sonic3k.objects.AizDrawBridgeObjectInstance;
+import com.openggf.game.sonic3k.objects.Aiz2BossEndSequenceState;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.graphics.GraphicsManager;
@@ -14,6 +17,7 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.TestablePlayableSprite;
@@ -117,6 +121,48 @@ class TestS3kAizBridgeRiderRewind {
     }
 
     // --- harness ---------------------------------------------------------
+
+    @Test
+    void drawBridgeCountdownRiderSurvivesRecreationAndForwardEject() throws Exception {
+        Aiz2BossEndSequenceState.reset();
+        ObjectManager objectManager = harness();
+        objectManager.setRewindInPlaceRestoreEnabledForTest(false);
+        AizDrawBridgeObjectInstance source = objectManager.createDynamicObject(
+                () -> new AizDrawBridgeObjectInstance(
+                        new ObjectSpawn(0x0300, 0x0200, 0x32, 0, 0, false, 42)));
+        source.onSolidContact(player, new SolidContact(true, false, false, true, false), 0);
+        writeField(source, "settled", true);
+        writeField(source, "collapseStarted", true);
+        writeField(source, "collapseTimer", 3);
+        player.setAir(true);
+        player.setOnObject(false);
+        player.setAnimationId(Sonic3kAnimationIds.ROLL);
+        ObjectRefId id = objectId(objectManager, source);
+        CompositeSnapshot snapshot = registryFor(objectManager).capture();
+        for (int entry = 0; entry < 4; entry++) source.update(entry, player);
+        assertEquals(Sonic3kAnimationIds.HURT_FALL.id(), player.getAnimationId());
+
+        objectManager.removeDynamicObject(source);
+        registryFor(objectManager).restore(snapshot);
+        AizDrawBridgeObjectInstance restored =
+                objectById(objectManager, AizDrawBridgeObjectInstance.class, id);
+        assertNotSame(source, restored);
+        assertTrue(collectionContains(restored, "standingPlayers", player),
+                "countdown skips solids, so its captured rider latch cannot be re-derived");
+        player.setAir(true);
+        player.setOnObject(false);
+        player.setAnimationId(Sonic3kAnimationIds.ROLL);
+        for (int entry = 0; entry < 4; entry++) restored.update(entry, player);
+        assertTrue(restored.isDestroyed());
+        assertEquals(Sonic3kAnimationIds.HURT_FALL.id(), player.getAnimationId(),
+                "forward replay after recreation must perform the same delayed eject");
+    }
+
+    private static void writeField(Object target, String name, Object value) throws Exception {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(target, value);
+    }
 
     private ObjectManager harness() {
         ObjectManager[] holder = new ObjectManager[1];
