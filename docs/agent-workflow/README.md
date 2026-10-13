@@ -320,4 +320,4 @@ Local Maven tests: [`tools/testing/maven_queue.py`](../../tools/testing/maven_qu
 
 - `com.openggf.tools.RuntimeEngineVisualControl`: lossless production-presented framebuffer and PCM qualification with compiled controller plans; separate from runtime acceptance timing (2026-10-12 performance series).
 
-- `tools/performance/run_isolated.py`: OS-leased exclusion of linked-worktree builds/tests plus a bypass-process guard for prebuilt measurements; writes an isolation audit (2026-10-13 P5 timing correction).
+- `tools/performance/run_isolated.py`: OS-leased exclusion of linked-worktree builds/tests plus a bypass-process guard for prebuilt measurements; writes an isolation audit (2026-10-13 P5 timing correction). Acquire build leases before shared admission so retained category batches can finish.

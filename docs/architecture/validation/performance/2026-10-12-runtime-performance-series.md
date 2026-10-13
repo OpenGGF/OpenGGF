@@ -26,9 +26,10 @@ fixtures failed their untouched-source controls. Local checkpoints:
 
 Worktree `.worktrees/ai-runtime-perf-series`, local branch
 `feature/ai-runtime-perf-series`; clean control `.worktrees/ai-runtime-perf-control`
-is now at `5e2f51f07`. Main advanced to `b3464b31b` through documentation-only
-commits; no upstream runtime gain is attributed. Unrelated dirty submodules/files
-were preserved.
+is now at `4a9bec1eaf86e7b70959113e484315c5013c1b7c`. The development tree
+merged that updated base at `4a0b2cd6bdf3050ffd5044c4c40f4e29aa3d2723`.
+Upstream Mod compatibility and queue changes receive no task performance credit.
+Unrelated dirty submodules/files were preserved.
 Detailed earlier derivations/commands are preserved in this same dated artifact
 at `1baa8e6dc` and `48bc7c34b` (`git show COMMIT:PATH`); this current record condenses
 the outcome without archiving raw diagnostics.
@@ -1065,3 +1066,63 @@ python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestArenaMaskRenderer,Test
 Source audit before delivery: `git diff --name-only 184c9d54ed4fc2c1fed3cb6313653a95f9156e3d -- src/main/java` lists only the two runtime CLI tools. Gameplay, audio, rendering and rewind production sources therefore retain the qualified numeric baseline implementation; rejected optimizations are reverted. The frozen protocol SHA remains `43f6fd83c89bcc9c373a5136b47fb68f1a5282f56dc278ffe48947ea705f0bf5`, and the final decision file records five rejections and 0% accepted gain.
 
 Upstream advanced to `4a9bec1eaf86e7b70959113e484315c5013c1b7c`: runtime Mod compatibility reporting plus a queue-contention fix. The waiting guard request (owned PID 1723741, session 48341) was cancelled with SIGINT before execution, exit 130, because updated-source delivery now requires reconciliation; no pass is claimed. This is a source/queue-policy change, not an observation timeout. The checkpoint contains 263 focused passes, matched SSZ attribution and all 63 existing skip reasons. Guard verification remains pending on the reconciled source. Original protocol, numeric baseline and rejection count remain fixed; upstream performance effects are unmeasured and receive no task credit.
+
+
+Updated-base merge `4a0b2cd6bdf3050ffd5044c4c40f4e29aa3d2723` retains both
+measurement-hazard accounts in the sole conflict; release prose combined cleanly.
+Runtime compatibility reporting is upstream work, not a task performance gain.
+Preflight passed Java 25/Lua 5.4/PowerShell on the reconciled tree. The complete
+change-based plan against `4a9bec1eaf86e7b70959113e484315c5013c1b7c` selects
+3,176 smoke candidates plus guards; prior completed smoke coverage is not erased.
+
+The new retained-worktree batching exposes a real isolation-CLI lock inversion:
+our exclusive admission waited for a category holder's worktree while that holder
+needed admission to finish. A real private Git-worktree/OS-flock regression failed
+before repair, with shared admission blocked at the retained-peer boundary. Acquire
+all existing build leases in sorted order **before** exclusive admission, lending
+the held current-tree descriptor to the queue. Canonicalize the requested worktree
+root and report only actually leased trees. The test then passed; seven performance
+Python checks passed, zero failures/skips, and CLI help passed. The probe launches
+no compiler/game and signals only its owned child during bounded cleanup. This is
+validation-tool correctness for the upstream queue contract, not experiment six
+or an accepted runtime optimization. Original benchmark isolation/data remain
+fixed; that run predated retained category batching.
+
+
+### Reconciled-source delivery scope
+
+The completed combined smoke/guard run covers this task's shared runtime changes.
+The inspected updated plan selects 3,176 smoke candidates plus guards. The
+subsequent reconciliation adds upstream compatibility diagnostics/catalog/fault
+reporting and the Python isolation lease-order fix; it changes no gameplay,
+physics, synthesis, rendering or rewind algorithm. Repeat the affected upstream
+contracts and repaired fixture identities on matched sources, the failed guards
+in a fresh JVM, and the mandatory domain routes. This is focused follow-up to
+completed broad coverage, not a new full-suite pass. Public-release preparation
+remains the only reason to select `-Pfull-suite`.
+
+Matched source pins: control `4a9bec1eaf86e7b70959113e484315c5013c1b7c`,
+candidate Java `4a0b2cd6bdf3050ffd5044c4c40f4e29aa3d2723`. Both use the
+updated local queue with the pinned Java/private-audio environment above.
+The exact shared selector is:
+
+```text
+TestCollisionModel,TestEdgeBalance,TestGroundSpeedCapping,TestLookScrollDelay,TestSonic3kSuperTransformationEligibility,TestFbzWireCages,TestPlayableSpriteMovement,TestSpriteManagerCollisionOrder,TestCharacterTypeResolution,TestModCompatibilityRuntime,TestEffectiveCatalogBuilder,TestModCompatibilityDiagnostics,TestModCompatibilityReporter,TestModRegistrationRuntime,TestModManagerScreen,TestModContextAndFaultBoundary,TestModGameplayPolicyFaultBoundary,TestModRuntime
+```
+
+Command: `python3 tools/testing/maven_queue.py --lean -Dmse=off
+-Dtest=<shared-selector> test`; candidate additionally selects
+`TestPlayableSessionRules,TestRuntimeInputPlan` (20 versus 18 classes).
+Two earlier waiting requests were cancelled before execution because the selector
+incorrectly named nonexistent `TestModFaultBoundary`; no result is claimed for
+those requests. The corrected requests remain alive; no duplicate was submitted.
+
+Fresh guard command is the two-class command recorded above. Domain command:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical -Dtest=TestPlayableSessionRules,TestS1Lz2CompleteRunTraceReplay,TestS3kAizTraceReplay,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils "-Dsonic1.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen" "-Ds3k.rom.path=${OPENGGF_ROM_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+All four requests are queued; results, integration, push and cleanup are pending.
+There is no active owned delegate; Astra's read-only task is terminal. The queue
+coordination update is applied locally, with no idle worker restarted for a relay.

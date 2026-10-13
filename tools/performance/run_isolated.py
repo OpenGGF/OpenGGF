@@ -66,33 +66,41 @@ def main():
     command=a.command[1:] if a.command[:1]==['--'] else a.command
     if not command:parser.error('a prebuilt measurement command is required')
     if not Path('/proc').is_dir():parser.error('Linux /proc is required for bypass detection')
-    root=a.worktree.resolve()
-    with handle_termination(), maven_slot(root, exclusive=True, estimate=a.estimate_seconds, kind='runtime-performance-measurement') as fd, ExitStack() as build_leases:
+    root=Path(subprocess.check_output(['git','rev-parse','--show-toplevel'],
+                                     cwd=a.worktree, text=True).strip()).resolve()
+    # Category runners retain their worktree while waiting for another batch.
+    # Acquire all build leases before exclusive admission, so those holders can
+    # finish their queued batches rather than waiting on our shared queue lock.
+    with handle_termination(), ExitStack() as build_leases:
         inventory=subprocess.check_output(['git','worktree','list','--porcelain'], cwd=root, text=True)
         trees=sorted({Path(line[9:]).resolve() for line in inventory.splitlines() if line.startswith('worktree ')})
-        build_fds=[build_leases.enter_context(worktree_build_slot(tree)) for tree in trees if tree!=root and tree.exists()]
-        fd=(fd if isinstance(fd,tuple) else (fd,))+tuple(build_fds)
-        print('Linked worktree build leases held:',len(build_fds), flush=True)
-        bad=interfering_processes()
-        if bad: raise SystemExit('Unexpected build/test/profiler before batch: '+str(bad))
-        p=subprocess.Popen(command, cwd=a.cwd, start_new_session=True, **inherited_slot(fd))
-        audit={'started_utc_epoch':time.time(),'guard_interval_seconds':0.5,'exclusive_test_lease':True,'batch_pid':p.pid,'build_locked_worktrees':[str(t) for t in trees]}
-        try:
-            while p.poll() is None:
-                bad=interfering_processes()
-                if bad:
-                    audit['interference']=bad
+        tree_fds={tree: build_leases.enter_context(worktree_build_slot(tree))
+                  for tree in trees if tree.exists()}
+        with maven_slot(root, exclusive=True, estimate=a.estimate_seconds,
+                        kind='runtime-performance-measurement', tree_fd=tree_fds[root]) as fd:
+            build_fds=[value for tree,value in tree_fds.items() if tree!=root]
+            fd=(fd if isinstance(fd,tuple) else (fd,))+tuple(build_fds)
+            print('Linked worktree build leases held:',len(build_fds), flush=True)
+            bad=interfering_processes()
+            if bad: raise SystemExit('Unexpected build/test/profiler before batch: '+str(bad))
+            p=subprocess.Popen(command, cwd=a.cwd, start_new_session=True, **inherited_slot(fd))
+            audit={'started_utc_epoch':time.time(),'guard_interval_seconds':0.5,'exclusive_test_lease':True,'batch_pid':p.pid,'build_locked_worktrees':[str(t) for t in tree_fds]}
+            try:
+                while p.poll() is None:
+                    bad=interfering_processes()
+                    if bad:
+                        audit['interference']=bad
+                        stop_owned_group(p)
+                        raise SystemExit('Rejected timing batch due to bypassing build/test/profiler: '+str(bad))
+                    time.sleep(0.5)
+                audit['exit_code']=p.returncode
+            finally:
+                if p.poll() is None:
                     stop_owned_group(p)
-                    raise SystemExit('Rejected timing batch due to bypassing build/test/profiler: '+str(bad))
-                time.sleep(0.5)
-            audit['exit_code']=p.returncode
-        finally:
-            if p.poll() is None:
-                stop_owned_group(p)
-            audit['ended_utc_epoch']=time.time()
-            a.audit_report.parent.mkdir(parents=True, exist_ok=True)
-            a.audit_report.write_text(json.dumps(audit,indent=2)+'\n')
-        raise SystemExit(p.returncode)
+                audit['ended_utc_epoch']=time.time()
+                a.audit_report.parent.mkdir(parents=True, exist_ok=True)
+                a.audit_report.write_text(json.dumps(audit,indent=2)+'\n')
+            raise SystemExit(p.returncode)
 
 
 if __name__ == '__main__':

@@ -77,6 +77,11 @@ negative timing pair; its result was excluded and a preliminary rejection
 withdrawn. Hold the existing test admission lease exclusively throughout fresh
 process timings, audit completed-job intervals, and reject bypassing build/test
 overlap. Never remove queue locks or stop unrelated work to force isolation.
+A batched runner now retains its worktree while awaiting another admission.
+Acquire linked-worktree build leases before exclusive test admission, in a
+consistent order, then lend the held current-tree descriptor to the queue.
+Holding exclusive admission while waiting for that retained worktree deadlocks
+its next batch. The real OS-lease regression fails before this ordering fix.
 
 A live recording can still be finalizing after the gameplay loop stops
 (2026-10-13, runtime performance controls). Engine cleanup has a shorter recorder
