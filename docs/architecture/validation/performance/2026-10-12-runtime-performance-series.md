@@ -612,3 +612,82 @@ upload and recreation checks, which passed on original source. Accepted
 gains: zero; consecutive rejected performance experiments: **three**.
 Next inspect the other common measured rendering costs rather than inferring
 engine savings from skipped GL calls.
+### Experiment P4 — respect tilemap shader location caching (rejected)
+
+Isolated `feature/ai-perf-uniform-cache`, parent `3cd17e86c`. The accepted
+source profiles contain repeated `TilemapShaderProgram.cacheUniformLocations`
+work in ordinary rendering: S1 normal 24/1,931 visible samples and S2 normal
+20/1,663. These are modest visible contributions, not total-process fractions.
+The owning source override calls its superclass but proceeds to query all
+40 tilemap locations on every draw despite the superclass's `uniformsCached`
+flag. The renderer calls it during each draw.
+
+Hypothesis: return when the existing cache flag is set, retaining all per-draw
+uniform value writes. Inherited `setProgramId` already invalidates the flag,
+including same-ID reassignment after relink; new shader instances begin
+uncached. No shader, uniform value, graphics resolution, effect, GL version,
+texture lifetime, gameplay, audio or rewind changes. A package-private query
+seam permits native query-count checks without changing public/Mod API contracts.
+
+The [OpenGL 4.1 specification §2.11.7](https://registry.khronos.org/OpenGL/specs/gl/glspec41.core.pdf)
+(pp. 73–74) assigns locations on successful link and retains them until
+relink. The native control exercises the shipping shader, repeated calls,
+explicit same-ID invalidation, a test-only partial replacement shader with
+inactive optional uniforms, ownership cleanup and real uniform-value readback.
+An initial test wrongly assumed the shipping shader had inactive uniforms;
+all forty are active. The corrected replacement fixture covers that case.
+Before the cache guard, the corrected control failed at
+`locationsAreReusedUntilTheProgramIsReassigned`: repeated calls queried
+40 then 80 locations (1 failure, no errors/skips). This reproduces the
+performance bug. Candidate native shader/cache and scroll/lifetime controls
+passed 2 tests, no failures/errors/skips. The query count stayed at 40 on
+repeated calls and advanced only at explicit invalidation. Per-scenario
+visible location-cache samples across the full matrix were 24/1,931,
+11/1,729, 20/1,663, 13/1,793, 10/2,157 and 15/1,825 in frozen scenario order.
+Whole-process performance acceptance remains pending.
+
+Native command is queued Maven `-Dmse=off -Dtest=TestTilemapUniformCacheNative
+-Dopenggf.shaderNative=true test -B`; the candidate selection additionally
+includes `TestScrollBufferUploadNative -Dopenggf.scrollNative=true`. Before
+starting the test JVM/Engine, the launcher now verifies the exact owned
+display process/group, private 0700 runtime directory, owned socket and live
+connection. DISPLAY and ambient DBus settings are removed; isolation failure
+never falls back to the user's desktop. This enforces the updated AGENTS
+instructions and does not alter frozen workload/configuration or JVM flags.
+
+Candidate `2a1e413a9ec449ee7141cf41f89ed2f8a559949d`. All six production
+frame/PCM controls matched baseline, with full input/trajectory/presentation/
+executed-frame checks and S3K terminal prepared jobs unchanged.
+
+Rejected preliminary CPU screen (ms/simulated frame):
+
+| Scenario / pair | Baseline | Candidate | Change |
+|---|---:|---:|---:|
+| s1-normal / 1 | 1.474316 | 1.567712 | +6.33% |
+| s1-normal / 2 | 1.380921 | 1.607738 | +16.43% |
+| s1-demanding / 1 | 1.316845 | 1.470588 | +11.68% |
+
+Normal S1 repeatedly exceeded the 5% CPU regression threshold, blocking
+acceptance. Helper query reduction is not engine improvement. The cause of
+the whole-process increase is not attributed by these timing runs; compiler
+variability and waiting remain separate profiling questions. The second
+demanding baseline completed but its candidate was cancelled; this unpaired
+run is excluded. No S2/S3K acceptance timing or completed five-pair matrix
+is claimed. Original baseline scores remain fixed.
+
+Commands: `python3 ${OPENGGF_PERF_TASK_DIR}/visual_p4_batch.py`, then
+`python3 ${OPENGGF_PERF_TASK_DIR}/p4_s1_screen.py`, identical frozen child
+arguments/flags and external sampling. Retain native uniform value/lifetime
+checks that pass on unchanged source, without the rejected query-count
+expectation or production query seam. The repeated-query behavior remains
+in production; its isolated control and rejection evidence are preserved here.
+Accepted gains: zero; consecutive rejected performance experiments: **four**.
+Profile actual frame waiting/pacing CPU before selecting the fifth hypothesis;
+do not tune constants from wall-time or use a faster helper as acceptance.
+
+The retained `TestTilemapUniformLifetimeNative#uniformWritesSurviveRepeatedCachingAndProgramReplacement`
+passed on unchanged production source (1 test, no failure/error/skip), using
+the private display and `-Dopenggf.shaderNative=true` in the queued Maven
+command. It verifies actual uniform writes after repeated caching, same-ID
+reassignment, replacement by a partial shader, and ownership cleanup. The
+rejected query-count expectation and query seam are not retained.
