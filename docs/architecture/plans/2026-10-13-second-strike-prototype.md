@@ -274,9 +274,9 @@ The complete 914,400-frame stereo 48 kHz WAV and inspected native PNGs at
 normally; the existing missing-Sonic-silhouette limitation remains visible.
 The final witness is under external `second-strike-20261013/final-stage-blue`.
 
-Main integration, source-equivalence/build checks, push and accounted worktree
-cleanup remain pending. No whole-suite green result or completed delivery is
-claimed while those steps remain open.
+At that checkpoint, main integration, source-equivalence/build checks, push and
+accounted worktree cleanup were pending. The completed steps are recorded below;
+no whole-suite green result is claimed.
 
 The destination subsequently advanced to
 `1ead8d9b44b303f3a7617a2ab3c2b0541c37a8ae`, including native AIZ post-boss/
@@ -298,8 +298,8 @@ external `second-strike-20261013/final-route-{pair,solo}`. Private runtime/save
 directories, surfaceless EGL, unset desktop display variables and null host
 audio were retained; all owned replay processes exited normally.
 
-Final destination composition, integration and cleanup facts will follow;
-no additional unchanged smoke sweep is required for these bounded follow-ups.
+The final destination composition, integration and cleanup facts follow below;
+no additional unchanged smoke sweep was required for these bounded follow-ups.
 
 ## Main integration verification
 
@@ -315,4 +315,39 @@ verify -B` completed with build success in 1:27, including current engine, SDK,
 Javadoc and binary artifact verification. Tests were deliberately skipped in
 that build. The CI-push policy audit passed across 13,044 tree entries. Known
 dirty disassembly states, archives, launch scripts and notes are preserved.
-Publication and accounted worktree cleanup are the remaining delivery steps.
+The integration and evidence were pushed on `develop` at
+`843aa4738d9905a9125acb37fc5459f80d73633f`; the remote head was independently
+verified. This closing prose changes no executable, test, build or API input.
+
+## Delivery and cleanup
+
+All fifty accepted child paths match their original handoff hashes and the
+committed `b2d31bd3ea8768c20238aae438179c9e24bd7d40` source. The integrated tree
+has only the two documented root follow-ups to those paths: the admitted-world
+stage-policy lookup and its native regression tests. Expanded staged/untracked
+inventories contain no unknown child changes. All five task branch heads are
+ancestors of the delivered `develop` history.
+
+The three child worktrees, the stock-control baseline and the lead worktree,
+with their five local branches, were removed after that accounting. No owned
+build, test or capture process remained. Four config templates, the lead's
+existing rewind-gap notes and its Starpost Valley save were preserved outside
+the repository before removal. Linked main configs, ROMs and disassembly
+directories were left untouched. Generated build trees and image caches were
+discarded; useful captures, source accounting, bounded stock comparisons and
+app-owned conversations remain available. The lifecycle registry is closed
+with no pending cleanup.
+
+The ROM-free deliverable is external
+`second-strike-20261013/second-strike.jar`, with the SHA-256 recorded above.
+The continuous native campaign movie remains
+under external `second-strike-route-survey/mod-canonical-pair-phase2-film/`.
+The external task directory also holds the small cleanup record and preserved
+files. A final read-only check confirmed the known unrelated main files and
+submodule states match their pre-integration preservation record.
+
+Delivery comprises the observed AIZ1 cold campaign slice through native results
+and playable Act 2, the local character opportunities and first-stage variants.
+The smoke run's twenty-six ordinary failures are stock-attributed; the repaired
+fresh guards and focused compositions pass. This is a verified prototype with
+the support limits above, not full campaign coverage or a green full-suite claim.
