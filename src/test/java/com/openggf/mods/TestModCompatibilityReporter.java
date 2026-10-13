@@ -142,6 +142,35 @@ class TestModCompatibilityReporter {
     }
 
     @Test
+    void standaloneFailureDoesNotAccuseSharedStockDecorators() {
+        var solo = scopedMod("solo", ModType.STANDALONE, null);
+        var shared = scopedMod("shared", ModType.PATCH, "any");
+        var nativePatch = mod("native-patch");
+        var otherSolo = scopedMod("other-solo", ModType.STANDALONE, null);
+        var reporter = new ModCompatibilityReporter(catalog(List.of(solo, shared, nativePatch, otherSolo)));
+
+        var report = reporter.callbackFailure("solo", new IllegalStateException(),
+                List.of("solo", "shared", "native-patch", "other-solo"), "solo");
+
+        assertEquals(List.of("solo"), report.participants());
+        assertFalse(report.blocksPlay());
+    }
+
+    @Test
+    void stockFailureKeepsSharedDecoratorsDespiteAStandaloneCodeCollision() {
+        var nativePatch = mod("native-patch");
+        var shared = scopedMod("shared", ModType.PATCH, "any");
+        var standalone = scopedMod("s2", ModType.STANDALONE, null);
+        var reporter = new ModCompatibilityReporter(catalog(List.of(nativePatch, shared, standalone)));
+
+        var report = reporter.callbackFailure("native-patch", new IllegalStateException(),
+                List.of("native-patch", "shared", "s2"), "s2");
+
+        assertEquals(List.of("native-patch", "shared"), report.participants());
+        assertFalse(report.blocksPlay());
+    }
+
+    @Test
     void contextIdentityChangesWithEffectiveOrderAndArtifactButNotDiscoveryOrder() {
         var a = mod("a");
         var b = mod("b");
@@ -164,5 +193,12 @@ class TestModCompatibilityReporter {
                 "Test", VersionRange.parse(">=0.7.0 <0.8.0"), ModType.PATCH, "s2", null,
                 List.of(), Map.of(), Map.of(), null, OptionalInt.empty(), composition);
         return new ModDescriptor(Path.of(id + ".jar"), manifest, "a".repeat(64), false, List.of());
+    }
+
+    private static ModDescriptor scopedMod(String id, ModType type, String baseGame) {
+        var manifest = new ModManifest(1, id, id, SemanticVersion.parse("1.0.0"), List.of("Author"),
+                "Test", VersionRange.parse(">=0.7.0 <0.8.0"), type, baseGame, "example.Entry",
+                List.of(), Map.of(), Map.of(), null, OptionalInt.empty());
+        return new ModDescriptor(Path.of(id + ".jar"), manifest, "b".repeat(64), true, List.of());
     }
 }

@@ -202,9 +202,15 @@ public final class ModCompatibilityReporter {
         String scope = gameCode == null || gameCode.isBlank()
                 ? executing == null ? "unselected" : executing.manifest().baseGame() : gameCode;
         if (scope == null) scope = owner;
+        ModDescriptor receiving = descriptors.get(scope);
+        boolean standaloneScope = owner.equals(scope) && receiving != null
+                && receiving.manifest().type() == ModType.STANDALONE;
         for (String candidate : preparedOwners) {
             ModDescriptor descriptor = descriptors.get(candidate);
-            if (descriptor != null && appliesTo(descriptor, scope)) participants.add(candidate);
+            // Shared stock decorators are not registered into standalone modules.
+            if (descriptor != null && descriptor.manifest().type()
+                    == (standaloneScope ? ModType.STANDALONE : ModType.PATCH)
+                    && appliesTo(descriptor, scope)) participants.add(candidate);
         }
         return diagnostic(SUSPECTED_INCOMPATIBILITY, "MOD_CALLBACK_INTERACTION_UNKNOWN", scope + "/callback/" + owner,
                 List.copyOf(participants), owner + " failed during a callback; combination causality is unverified.",
