@@ -69,7 +69,9 @@ public final class MhzEndBossHitProxyChild extends AbstractObjectInstance
         if (parent == null) {
             return; // An unhydrated recreation shell has no native authority yet.
         }
-        if (parent.isDestroyed()) {
+        // Child_AddToTouchList tests native parent status bit7, which loc_76164
+        // publishes before the still-live escape body waits for its music fade.
+        if (parent.hasRetiredTouchChildren() || parent.isDestroyed()) {
             setDestroyed(true);
             return;
         }

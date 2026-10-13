@@ -112,6 +112,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
     private boolean cameraRangePassed;
     private boolean paletteLoaded;
     private boolean arenaSetupApplied;
+    private boolean touchChildrenRetired;
     private int finalHitExplosionTimer;
     private int finalHitExplosionIntervalCounter;
 
@@ -133,6 +134,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         cameraRangePassed = false;
         paletteLoaded = false;
         arenaSetupApplied = false;
+        touchChildrenRetired = false;
         finalHitExplosionTimer = -1;
         finalHitExplosionIntervalCounter = FINAL_HIT_EXPLOSION_INTERVAL - 1;
     }
@@ -512,6 +514,9 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
 
     private void startFinalDefeatFadeWait() {
         finalDefeatPhase = FINAL_PHASE_WAIT_FADE_TO_LEVEL_MUSIC;
+        // loc_76164 sets status bit7 at $44D0. Child_AddToTouchList consumes
+        // that retirement signal while the parent continues its native escape.
+        touchChildrenRetired = true;
         var services = tryServices();
         var gameState = services == null ? null : services.gameState();
         if (gameState != null) {
@@ -528,6 +533,10 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         if (gameState != null) {
             gameState.addScore(1000);
         }
+    }
+
+    boolean hasRetiredTouchChildren() {
+        return touchChildrenRetired;
     }
 
     private void updateFinalDefeatFadeWait() {

@@ -1326,7 +1326,7 @@ class TestMhzBossObjects {
     }
 
     @Test
-    void mhzEndBossHitProxyDeletesWhenParentStatusBit7IsSet() {
+    void mhzEndBossHitProxyDeletesWhenOwnerIsDestroyed() {
         List<ObjectInstance> spawned = new ArrayList<>();
         ObjectManager objectManager = mocks.mock(ObjectManager.class);
         doAnswer(invocation -> {
@@ -1354,7 +1354,7 @@ class TestMhzBossObjects {
         hitProxy.update(1, null);
 
         assertTrue(hitProxy.isDestroyed(),
-                "Child_AddToTouchList deletes the hit proxy when parent3 has status bit 7 set");
+                "a destroyed Java owner also retires its hit proxy; native threshold retirement is tested separately");
     }
 
     @Test
@@ -1421,7 +1421,7 @@ class TestMhzBossObjects {
     }
 
     @Test
-    void mhzEndBossSpikeChildrenDeleteWhenParentStatusBit7IsSet() {
+    void mhzEndBossSpikeChildrenDeleteWhenOwnerIsDestroyed() {
         List<ObjectInstance> spawned = new ArrayList<>();
         ObjectManager objectManager = mocks.mock(ObjectManager.class);
         doAnswer(invocation -> {
@@ -1452,7 +1452,7 @@ class TestMhzBossObjects {
 
         for (ObjectInstance spike : spikes) {
             assertTrue(spike.isDestroyed(),
-                    "loc_76674 deletes spike children when parent3 has status bit 7 set");
+                    "a destroyed Java owner also retires its spikes; native status retirement is tested separately");
         }
     }
 

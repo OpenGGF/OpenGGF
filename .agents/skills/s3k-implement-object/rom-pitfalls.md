@@ -5219,3 +5219,18 @@ old nearest-parent shortcut. Update both moving actors in component replay:
 leaving the proxy undispatched creates stale spawn metadata and can falsely
 attribute a fixture error to production restoration. Keep immediate full-object
 capture equality and the subsequent forward replay, including that metadata.
+
+`loc_76164` also sets parent `status` bit7 at that threshold. The hit proxy's
+`Child_AddToTouchList` and both spike children's `loc_76674` / `loc_766C4`
+consume it and delete those children while the escape body and Robotnik head
+remain live; the head consumes parent `$38` bit5 instead. Terminal damage alone
+does not retire these children. Capture this semantic signal separately from
+Java object destruction. A fixture that only calls `setDestroyed(true)` does
+not prove the native status-bit boundary. Restore and replay both the
+pre-threshold linked graph and post-threshold absent-child graph. Include the
+production RNG when continuing through randomized explosion allocations.
+Both spike subtypes also need pure captured placement and exact `parent3`
+restoration: independent two-parent negatives prove that the old nearest-boss
+factory can attach either spike to the wrong retirement owner. This is distinct
+from the passing single-parent boundary replay and earlier partial-dispatch
+proxy fixture error; do not describe either as a demonstrated metadata defect.

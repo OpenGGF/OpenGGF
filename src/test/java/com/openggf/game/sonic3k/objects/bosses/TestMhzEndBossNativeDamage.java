@@ -147,6 +147,83 @@ class TestMhzEndBossNativeDamage {
     }
 
     @Test
+    void hitProxyRetiresAtEscapeThresholdWhileLiveOwnerReplaysBothGraphSides() {
+        var harness = new Harness(PlayerCharacter.KNUCKLES);
+        harness.spikes.add(harness.manager.createDynamicObject(() ->
+                new MhzEndBossSpikeChild(harness.boss, 0, -0x14, 0x18)));
+        harness.spikes.add(harness.manager.createDynamicObject(() ->
+                new MhzEndBossSpikeChild(harness.boss, 1, -0x2C, 0x18)));
+        harness.head = harness.manager.createDynamicObject(() -> new MhzEndBossRobotnikHeadChild(harness.boss));
+        harness.boss.onPlayerAttack(null, null);
+        harness.advance(32);
+        assertTrue(harness.boss.isDefeated());
+        assertFalse(harness.proxy.isDestroyed(),
+                "loc_76822 starts escape before loc_76164 retires the touch child");
+        harness.boss.getState().x = 0x44C6;
+        harness.boss.getState().xFixed = 0x44C6 << 16;
+        harness.advance(1);
+        assertEquals(0x44CB, harness.boss.getState().x);
+        assertFalse(harness.proxy.isDestroyed(), "the child remains live immediately below $44D0");
+        assertFalse(harness.boss.hasRetiredTouchChildren());
+        assertEquals(2, harness.spikes.size());
+        assertTrue(harness.spikes.stream().noneMatch(MhzEndBossSpikeChild::isDestroyed),
+                "loc_76674 leaves both status-linked spikes live below $44D0");
+
+        var registry = new RewindRegistry();
+        registry.register(harness.manager.rewindSnapshottable());
+        // Native escape explosions consume the same production RNG; their
+        // spawn metadata belongs to this replay as much as the linked graph.
+        registry.register(harness.rng);
+        var before = registry.capture();
+        int beforeClock = harness.clock;
+        harness.advance(1);
+        assertEquals(0x44D0, harness.boss.getState().x);
+        assertFalse(harness.boss.isDestroyed(), "native status bit7 retires children while the body escapes");
+        assertTrue(harness.proxy.isDestroyed(),
+                "loc_76164 sets parent status bit7; Child_AddToTouchList deletes the exact touch child");
+        assertTrue(harness.spikes.stream().allMatch(MhzEndBossSpikeChild::isDestroyed),
+                "loc_76674 branches loc_766C4 for both spikes on native parent status bit7");
+        assertFalse(harness.head.isDestroyed(), "RobotnikHead4 owns $38 bit5, not parent status bit7");
+        harness.removeRetiredTouchChildren();
+        var after = registry.capture();
+        harness.advance(2);
+        var continued = registry.capture();
+
+        registry.restore(before);
+        harness.refreshObjects();
+        harness.clock = beforeClock;
+        sameObjects(before, registry.capture(), "before-threshold fresh graph restoration");
+        assertNotNull(harness.proxy, "restoring before native retirement recreates the exact linked child");
+        assertFalse(harness.proxy.isDestroyed());
+        assertEquals(2, harness.spikes.size(), "fresh restoration must recreate both linked spike children");
+        assertTrue(harness.spikes.stream().noneMatch(MhzEndBossSpikeChild::isDestroyed));
+        assertFalse(harness.head.isDestroyed());
+        harness.advance(1);
+        assertFalse(harness.boss.isDestroyed());
+        assertTrue(harness.proxy.isDestroyed(), "restored native threshold must retire the child again");
+        assertTrue(harness.spikes.stream().allMatch(MhzEndBossSpikeChild::isDestroyed),
+                "loc_76674 branches loc_766C4 for both spikes on native parent status bit7");
+        assertFalse(harness.head.isDestroyed(), "RobotnikHead4 owns $38 bit5, not parent status bit7");
+        harness.removeRetiredTouchChildren();
+        sameObjects(after, registry.capture(), "native threshold graph replay");
+        harness.advance(2);
+        sameObjects(continued, registry.capture(), "post-retirement same-world forward replay");
+
+        registry.restore(after);
+        harness.refreshObjects();
+        harness.clock = beforeClock + 1;
+        sameObjects(after, registry.capture(), "after-threshold fresh graph restoration");
+        assertNull(harness.proxy, "restoring the released graph must not heal the deleted child");
+        assertTrue(harness.spikes.isEmpty(), "restoring the released graph must not heal the deleted spikes");
+        assertFalse(harness.head.isDestroyed());
+        assertTrue(harness.boss.hasRetiredTouchChildren(),
+                "native parent retirement is captured independently of Java body destruction");
+        assertFalse(harness.boss.isDestroyed());
+        harness.advance(2);
+        sameObjects(continued, registry.capture(), "restored post-retirement owner replay");
+    }
+
+    @Test
     void escapeThresholdResetsNativeWaitBeforeMusicFadeUnderflow() {
         var harness = new Harness(PlayerCharacter.SONIC_ALONE);
         var boss = harness.boss;
@@ -239,6 +316,41 @@ class TestMhzEndBossNativeDamage {
         sameObjects(checkpoint, registry.capture(), "two-parent moving proxy restoration");
     }
 
+    @ParameterizedTest
+    @ValueSource(ints = {0, 1})
+    void freshSpikeRetainsItsNativeParentAndPlacementWhenAnotherBossIsCloser(int subtype) throws Exception {
+        var harness = new Harness(PlayerCharacter.KNUCKLES);
+        harness.advance(11);
+        var other = harness.manager.createDynamicObject(() -> new MhzEndBossInstance(new ObjectSpawn(
+                harness.boss.getState().x - 0xC0 - 0x10, 0x02E0, Sonic3kObjectIds.MHZ_END_BOSS,
+                0, 0, false, 1)));
+        other.setCustomFlag(0x100, 1);
+        other.setCustomFlag(0x2E, 1000);
+        other.getState().routine = 0x0E;
+        other.update(11, null);
+        var spike = harness.manager.createDynamicObject(() -> new MhzEndBossSpikeChild(
+                harness.boss, subtype, subtype == 0 ? -0x14 : -0x2C, 0x18));
+        spike.update(11, null);
+        var identity = harness.manager.captureIdentityContext().requireIdentityTable();
+        var parentId = identity.idFor(harness.boss);
+        var spikeId = identity.idFor(spike);
+        var registry = new RewindRegistry();
+        registry.register(harness.manager.rewindSnapshottable());
+        var checkpoint = registry.capture();
+        registry.restore(checkpoint);
+        var restoredIdentity = harness.manager.captureIdentityContext().requireIdentityTable();
+        var restoredParent = harness.manager.getActiveObjects().stream()
+                .filter(MhzEndBossInstance.class::isInstance).map(MhzEndBossInstance.class::cast)
+                .filter(boss -> parentId.equals(restoredIdentity.idFor(boss))).findFirst().orElseThrow();
+        var restoredSpike = harness.manager.getActiveObjects().stream()
+                .filter(MhzEndBossSpikeChild.class::isInstance).map(MhzEndBossSpikeChild.class::cast)
+                .filter(child -> spikeId.equals(restoredIdentity.idFor(child))).findFirst().orElseThrow();
+        var link = MhzEndBossSpikeChild.class.getDeclaredField("parent");
+        link.setAccessible(true);
+        assertSame(restoredParent, link.get(restoredSpike), "native parent3 cannot switch to the nearer boss");
+        sameObjects(checkpoint, registry.capture(), "two-parent spike immutable placement restoration");
+    }
+
     private static void sameObjects(com.openggf.game.rewind.CompositeSnapshot expected,
                                     com.openggf.game.rewind.CompositeSnapshot actual, String label) {
         assertEquals(expected.entries().keySet(), actual.entries().keySet());
@@ -251,8 +363,11 @@ class TestMhzEndBossNativeDamage {
     private static final class Harness {
         final List<Integer> sounds = new ArrayList<>();
         final ObjectManager manager;
+        final com.openggf.game.GameRng rng;
         MhzEndBossInstance boss;
         MhzEndBossHitProxyChild proxy;
+        final List<MhzEndBossSpikeChild> spikes = new ArrayList<>();
+        MhzEndBossRobotnikHeadChild head;
         int clock;
 
         Harness(PlayerCharacter character) {
@@ -268,6 +383,7 @@ class TestMhzEndBossNativeDamage {
                 @Override public MhzZoneRuntimeState zoneRuntimeState() { return runtime; }
                 @Override public void playSfx(int id) { sounds.add(id); }
             };
+            rng = services.rng();
             manager = new ObjectManager(List.of(), null, 0, null, null, null, null, services);
             holder[0] = manager;
             manager.reset(0);
@@ -284,10 +400,41 @@ class TestMhzEndBossNativeDamage {
             proxy = manager.createDynamicObject(() -> new MhzEndBossHitProxyChild(boss));
         }
 
+        void removeRetiredTouchChildren() {
+            manager.removeDynamicObject(proxy);
+            proxy = null;
+            spikes.forEach(manager::removeDynamicObject);
+            spikes.clear();
+        }
+
+        void refreshObjects() {
+            boss = manager.getActiveObjects().stream()
+                    .filter(MhzEndBossInstance.class::isInstance).map(MhzEndBossInstance.class::cast)
+                    .findFirst().orElseThrow();
+            proxy = manager.getActiveObjects().stream()
+                    .filter(MhzEndBossHitProxyChild.class::isInstance).map(MhzEndBossHitProxyChild.class::cast)
+                    .findFirst().orElse(null);
+            spikes.clear();
+            manager.getActiveObjects().stream().filter(MhzEndBossSpikeChild.class::isInstance)
+                    .map(MhzEndBossSpikeChild.class::cast).forEach(spikes::add);
+            head = manager.getActiveObjects().stream().filter(MhzEndBossRobotnikHeadChild.class::isInstance)
+                    .map(MhzEndBossRobotnikHeadChild.class::cast).findFirst().orElse(null);
+        }
+
         void advance(int count) {
             for (int i = 0; i < count; i++) {
                 boss.update(++clock, null);
-                proxy.update(clock, null);
+                if (proxy != null && !proxy.isDestroyed()) {
+                    proxy.update(clock, null);
+                }
+                for (var spike : spikes) {
+                    if (!spike.isDestroyed()) {
+                        spike.update(clock, null);
+                    }
+                }
+                if (head != null && !head.isDestroyed()) {
+                    head.update(clock, null);
+                }
             }
         }
     }
