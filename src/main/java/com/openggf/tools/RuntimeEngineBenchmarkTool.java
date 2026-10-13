@@ -66,6 +66,12 @@ public final class RuntimeEngineBenchmarkTool extends Engine {
     private boolean playbackStarted;
     private boolean measured;
     private boolean measurementEnded;
+    private boolean firstGameplayPresentationPending;
+    private boolean firstGameplayPresentationObserved;
+    private long startupWallStart;
+    private long startupCpuStart;
+    private long selectedLoadWallStart;
+    private long selectedLoadCpuStart;
 
     private RuntimeEngineBenchmarkTool(EngineContext context, RuntimeInputPlan plan,
             int from, int to, Path qualificationCsv) throws Exception {
@@ -89,6 +95,16 @@ public final class RuntimeEngineBenchmarkTool extends Engine {
                 startPlayback();
             }
             long now = System.nanoTime();
+            // The preceding update's normal draw/audio/swap has finished here.
+            if (firstGameplayPresentationPending && !firstGameplayPresentationObserved) {
+                firstGameplayPresentationObserved = true;
+                report.put("startupToFirstGameplayPresentationWallNs", now - startupWallStart);
+                report.put("startupToFirstGameplayPresentationProcessCpuNs", OS.getProcessCpuTime() - startupCpuStart);
+                if (selectedLoadWallStart != 0) {
+                    report.put("selectedLevelLoadToFirstPresentationWallNs", now - selectedLoadWallStart);
+                    report.put("selectedLevelLoadToFirstPresentationProcessCpuNs", OS.getProcessCpuTime() - selectedLoadCpuStart);
+                }
+            }
             if (playbackStarted && cursor == measureFrom && !measured) {
                 var rewind = rewindState();
                 if ((int) rewind.get("retainedFrames") < 3600) {
@@ -181,6 +197,7 @@ public final class RuntimeEngineBenchmarkTool extends Engine {
             public void afterFrameAdvanced(com.openggf.debug.playback.Bk2FrameInput input, boolean skipped) {
                 var row = plan.rows().get(cursor);
                 if (row.phase() == TraceExecutionPhase.FULL_LEVEL_FRAME) {
+                    firstGameplayPresentationPending = true;
                     fullFrames++;
                     if (cursor >= measureFrom && cursor < measureTo) measuredFullFrames++;
                 }
@@ -272,6 +289,10 @@ public final class RuntimeEngineBenchmarkTool extends Engine {
     }
 
     private static void run(String[] args) throws Exception {
+        if (args.length == 6 && args[0].equals("--load")) {
+            runLoadProbe(args);
+            return;
+        }
         if (args.length < 5 || args.length > 6) throw new IllegalArgumentException(
                 "Usage: RuntimeEngineBenchmarkTool <plan> <rom-root> <report-json> <measure-from> <measure-to> [qualification-csv]");
         var plan = RuntimeInputPlan.read(Path.of(args[0]));
@@ -282,12 +303,16 @@ public final class RuntimeEngineBenchmarkTool extends Engine {
         try {
             glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_WAYLAND);
             long wall = System.nanoTime(), cpu = OS.getProcessCpuTime();
+            engine.startupWallStart = wall;
+            engine.startupCpuStart = cpu;
             method("init").invoke(engine);
             engine.report.put("startupWallNs", System.nanoTime() - wall);
             engine.report.put("startupProcessCpuNs", OS.getProcessCpuTime() - cpu);
             var level = GameServices.level();
             if (level.getCurrentZone() != plan.zone() || level.getCurrentAct() != plan.act()) {
                 wall = System.nanoTime(); cpu = OS.getProcessCpuTime();
+                engine.selectedLoadWallStart = wall;
+                engine.selectedLoadCpuStart = cpu;
                 level.loadZoneAndActForFreshRuntime(plan.zone(), plan.act());
                 engine.report.put("selectedLevelLoadWallNs", System.nanoTime() - wall);
                 engine.report.put("selectedLevelLoadProcessCpuNs", OS.getProcessCpuTime() - cpu);
@@ -341,6 +366,78 @@ public final class RuntimeEngineBenchmarkTool extends Engine {
             if (engine.qualification != null) engine.qualification.close();
             method("cleanup").invoke(engine);
             Engine.clearGlobalInstance();
+        }
+    }
+
+    /** Separate LIVE fresh-load diagnostic; no trace, playback or score window. */
+    private static void runLoadProbe(String[] args) throws Exception {
+        var config = SonicConfigurationService.getInstance();
+        configure(config, args[1], Path.of(args[4]));
+        var engine = new LoadProbe(EngineContext.fromLegacySingletonsForBootstrap());
+        try {
+            glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_WAYLAND);
+            long wall = System.nanoTime(), cpu = OS.getProcessCpuTime();
+            method("init").invoke(engine);
+            engine.result.put("startupInitializationWallNs", System.nanoTime() - wall);
+            engine.result.put("startupInitializationProcessCpuNs", OS.getProcessCpuTime() - cpu);
+            engine.loadWall = System.nanoTime();
+            engine.loadCpu = OS.getProcessCpuTime();
+            GameServices.level().loadZoneAndActForFreshRuntime(
+                    Integer.parseInt(args[2]), Integer.parseInt(args[3]));
+            var neutralInputs = new ArrayList<com.openggf.debug.playback.Bk2FrameInput>();
+            for (int i = 0; i <= 3000; i++) {
+                neutralInputs.add(new com.openggf.debug.playback.Bk2FrameInput(i, 0, 0, false, 0, 0, false, ""));
+            }
+            GameServices.playbackDebug().startSession(
+                    new Bk2Movie(Path.of("neutral-live-load"), "", Map.of(), neutralInputs, 1), 0);
+            GameServices.playbackDebug().setOverlayOwnedExternally(true);
+            method("loop").invoke(engine);
+            if (!engine.completed) throw new IllegalStateException("Incomplete LIVE level-load probe");
+            engine.result.put("game", args[1]);
+            engine.result.put("zone", Integer.parseInt(args[2]));
+            engine.result.put("act", Integer.parseInt(args[3]));
+            engine.result.put("renderer", glGetString(GL_RENDERER));
+            engine.result.put("presentationUpdates", engine.updates);
+            engine.result.put("mode", engine.getCurrentGameMode().name());
+            engine.result.put("readinessPolicy", "LIVE");
+            engine.result.put("routeCertification", false);
+            engine.result.put("controllerInputs", "neutral P1/P2; no trace admission");
+            new ObjectMapper().writerWithDefaultPrettyPrinter()
+                    .writeValue(Path.of(args[5]).toFile(), engine.result);
+            System.out.println("RUNTIME_LOAD_COMPLETE game=" + args[1]);
+        } finally {
+            method("cleanup").invoke(engine);
+            Engine.clearGlobalInstance();
+        }
+    }
+
+    private static final class LoadProbe extends Engine {
+        private final Map<String, Object> result = new LinkedHashMap<>();
+        private long loadWall;
+        private long loadCpu;
+        private int updates;
+        private boolean gameplayPresented;
+        private boolean completed;
+
+        private LoadProbe(EngineContext context) { super(context); }
+
+        @Override public void update() {
+            try {
+                if (gameplayPresented) {
+                    result.put("freshLoadToFirstGameplayPresentationWallNs", System.nanoTime() - loadWall);
+                    result.put("freshLoadToFirstGameplayPresentationProcessCpuNs", OS.getProcessCpuTime() - loadCpu);
+                    completed = true;
+                    glfwSetWindowShouldClose((Long) field(this, "window"), true);
+                    return;
+                }
+                int before = GameServices.level().getFrameCounter();
+                super.update();
+                gameplayPresented = getCurrentGameMode() == GameMode.LEVEL
+                        && GameServices.level().getFrameCounter() != before;
+                if (++updates > 3000) throw new IllegalStateException("LIVE level load never became playable");
+            } catch (ReflectiveOperationException e) {
+                throw new IllegalStateException(e);
+            }
         }
     }
 }
