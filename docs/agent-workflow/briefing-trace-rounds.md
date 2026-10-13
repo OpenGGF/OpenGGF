@@ -110,6 +110,16 @@ owner first loads, invalidating the run with ClassNotFoundException. Isolate all
 builds from live correctness runs as well as timing; separate Java input-plan
 compilation that only reads an already-built classpath from Maven rebuilding it.
 
+Smoke is a selection, not a short-runtime guarantee (2026-10-13, queue contention):
+a ROM-backed smoke run executed 26,690 ordinary cases in about 59 minutes, then
+spent five more minutes on guards. Report candidate count and actual environment,
+not a ROM-free CI duration. The headless graphics flag in JDK_JAVA_OPTIONS also
+made the old wrapper take an exclusive lease despite an otherwise shared profile;
+inspect the OS lock and launch environment, not just a profile/telemetry label.
+Bounded category batches now yield shared admission while retaining target/
+ownership. This creates opportunities for short jobs, not a per-batch time bound.
+See [queue evidence](../architecture/research/2026-10-13-maven-queue-contention.md).
+
 A released port is a global resource, not a socket-close oracle (2026-10-12,
 mod audit delivery): Golf's audio-fault teardown test received `BindException`
 while trying to bind the former host port. Both unchanged baseline/current cases

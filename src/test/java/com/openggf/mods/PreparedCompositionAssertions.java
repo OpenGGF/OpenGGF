@@ -34,10 +34,22 @@ public final class PreparedCompositionAssertions {
                 new ModCompositionMetadata(List.of(),List.of(),List.of(),Set.of("audio:12")));
         var dependent=descriptor("dependent","s2",Map.of(),Map.of(),List.of(new ModDependency("first",VersionRange.parse("*"))),ModCompositionMetadata.EMPTY);
         var otherGame=descriptor("other-game","s1",Map.of(12,"music"),Map.of(),List.of(),ModCompositionMetadata.EMPTY);
-        var rejected=new EffectiveCatalogBuilder().build(List.of(exclusive,second,dependent,otherGame),enabled(exclusive,second,dependent,otherGame));
-        assertEquals(List.of("other-game"),rejected.effective().orderedEnabled().stream().map(d->d.manifest().id()).toList());
-        assertEquals("MOD_COMPOSITION_REJECTED",rejected.eligibility().get("first").reasons().getFirst().code());
-        assertEquals("DEPENDENCY_BLOCKED",rejected.eligibility().get("dependent").reasons().getFirst().code());
+        var overlapping=new EffectiveCatalogBuilder().build(List.of(exclusive,second,dependent,otherGame),enabled(exclusive,second,dependent,otherGame));
+        assertEquals(List.of("first","second","dependent","other-game"),overlapping.effective().orderedEnabled().stream().map(d->d.manifest().id()).toList());
+        for (var owner : List.of("first", "second")) {
+            var descriptor = overlapping.effective().orderedEnabled().stream()
+                    .filter(value -> value.manifest().id().equals(owner)).findFirst().orElseThrow();
+            assertTrue(descriptor.findings().stream().anyMatch(finding -> finding.code().equals("MOD_EXCLUSIVE_OVERLAP")
+                    && finding.severity() == ModFindingSeverity.WARNING));
+        }
+        var firstTrack=track("first"); var secondTrack=track("second"); var otherTrack=track("other-game");
+        try (var music=PreparedModMusic.build(overlapping.effective(),registry(List.of(firstTrack,secondTrack,otherTrack)),
+                new PreparedAudioSession(List.of(firstTrack,secondTrack,otherTrack),List.of(),Set.of()),8000)) {
+            var target=music.overrideReport().stream().filter(value -> value.gameId().equals("s2")).findFirst().orElseThrow();
+            assertEquals(secondTrack.key(),target.winner());
+            assertEquals(List.of(firstTrack.key()),target.shadowed());
+            assertSame(secondTrack,ModMusicResolver.from(music).resolveStockOverride("s2",12).orElseThrow().track());
+        }
         var unused=descriptor("unused","s2",Map.of(),Map.of(),List.of(),new ModCompositionMetadata(List.of(),List.of(),List.of(),Set.of("audio:999")));
         var unknown=descriptor("unknown","s2",Map.of(),Map.of("EndSign","art/sheet"),List.of(),new ModCompositionMetadata(List.of(),List.of(),List.of(),Set.of("art:EndSign")));
         assertTrue(new EffectiveCatalogBuilder().build(List.of(unused,unknown),enabled(unused,unknown)).effective().orderedEnabled().isEmpty());

@@ -239,7 +239,7 @@ class TestModRegistrationRuntime {
         return new ModState(1,entries);
     }
     @Test
-    void catalogOptionalOrderCyclesAndConflictsHaveDeterministicProductionEligibility() throws Exception {
+    void catalogOptionalOrderCyclesAndDeclaredConflictWarningsHaveDeterministicProductionEligibility() throws Exception {
         var a = descriptor("a",GoodEntrypoint.class,List.of());
         var b = withComposition(descriptor("b",GoodEntrypoint.class,List.of()),
                 new ModCompositionMetadata(List.of("a"),List.of("missing"),List.of(),Set.of()));
@@ -252,9 +252,17 @@ class TestModRegistrationRuntime {
         assertTrue(cyclic.effective().orderedEnabled().isEmpty());
         assertEquals("ORDERING_CYCLE",cyclic.eligibility().get("a").reasons().getFirst().code());
         var conflict = withComposition(a,new ModCompositionMetadata(List.of(),List.of(),List.of("b"),Set.of()));
-        var conflicting = new EffectiveCatalogBuilder().build(List.of(conflict,b),enabled(List.of(a,b)));
-        assertTrue(conflicting.effective().orderedEnabled().isEmpty());
-        assertEquals("MOD_CONFLICT",conflicting.eligibility().get("b").reasons().getFirst().code());
+        var conflictDependent = descriptor("conflict-dependent", GoodEntrypoint.class,
+                List.of(new ModDependency("a", VersionRange.parse("*"))));
+        var conflicting = new EffectiveCatalogBuilder().build(List.of(conflict,b,conflictDependent),
+                enabled(List.of(a,b,conflictDependent)));
+        assertEquals(List.of("b", "a", "conflict-dependent"), conflicting.effective().orderedEnabled().stream()
+                .map(value -> value.manifest().id()).toList());
+        assertTrue(conflicting.effective().orderedEnabled().stream()
+                .filter(value -> !value.manifest().id().equals("conflict-dependent"))
+                .allMatch(value -> value.findings().stream()
+                .anyMatch(finding -> finding.code().equals("MOD_DECLARED_CONFLICT")
+                        && finding.severity() == ModFindingSeverity.WARNING)));
         var unavailableA = withComposition(descriptor("a",GoodEntrypoint.class,List.of(
                 new ModDependency("absent",VersionRange.parse("*")))),
                 new ModCompositionMetadata(List.of("b"),List.of(),List.of(),Set.of()));
@@ -263,21 +271,33 @@ class TestModRegistrationRuntime {
         assertEquals("DEPENDENCY_MISSING",unavailableNeighbor.eligibility().get("a").reasons().getFirst().code());
     }
     @Test
-    void unusedAndConflictingActualPublishedExclusiveClaimsRejectOwnersAndHardDependents() throws Exception {
+    void exclusiveStartupOverlapKeepsSuccessfulOwnersAndDependentsWhileUnusedClaimsStillReject() throws Exception {
         var first = withComposition(descriptor("first",SharedSceneEntrypoint.class,List.of()),
                 new ModCompositionMetadata(List.of(),List.of(),List.of(),Set.of("startup-scene")));
         var second = descriptor("second",SharedSceneEntrypoint.class,List.of());
         var dependent = descriptor("dependent",GoodEntrypoint.class,List.of(new ModDependency("first",VersionRange.parse("*"))));
         var unused = withComposition(descriptor("unused",GoodEntrypoint.class,List.of()),
                 new ModCompositionMetadata(List.of(),List.of(),List.of(),Set.of("game-start")));
+        var unusedDependent = descriptor("unused-dependent",GoodEntrypoint.class,
+                List.of(new ModDependency("unused",VersionRange.parse("*"))));
         var factory = new ModClassLoaderFactory(getClass().getClassLoader(),(descriptor,snapshot)->new ModValidationReport(List.of()));
-        try (var runtime = factory.create(new EffectiveModCatalog(List.of(first,second,dependent,unused)),Set.of("first","second","dependent","unused"))) {
+        var descriptors = List.of(first, second, dependent, unused, unusedDependent);
+        var catalog = new EffectiveCatalogBuilder().build(descriptors, enabled(descriptors));
+        assertEquals(5, catalog.effective().orderedEnabled().size());
+        try (var runtime = factory.create(catalog.effective(),Set.of("first","second","dependent","unused","unused-dependent"))) {
             runtime.installFaultBoundary(new ModFaultBoundary(Map.of(),new ModRuntimeFindingStore(), ignored -> new ModStateSaveResult.Saved(),ignored -> {}));
-            assertTrue(runtime.newRegistrationPlan().registrations().isEmpty());
-            assertTrue(runtime.registrationPlans().isEmpty());
-            assertEquals(Set.of("first","second","dependent","unused"),runtime.registrationFailures().keySet());
-            assertTrue(runtime.registrationFailures().get("first").getMessage().contains("Exclusive contribution conflict"));
+            assertEquals(List.of("first:content", "second:content", "dependent:content", "dependent:extra"),
+                    runtime.newRegistrationPlan().registrations().stream().map(RegisteredPatch::namespacedId).toList());
+            assertEquals(Set.of("first", "second", "dependent"), runtime.registrationPlans().keySet());
+            assertEquals(Set.of("unused", "unused-dependent"),runtime.registrationFailures().keySet());
+            assertEquals(Set.of("unused", "unused-dependent"),runtime.runtimeDisabledOwners());
             assertTrue(runtime.registrationFailures().get("unused").getMessage().contains("Unused exclusive"));
+            assertTrue(runtime.registrationFailures().get("unused-dependent").getMessage().contains("Dependency contribution rejected"));
+            var target = runtime.contributionReport().targets().stream()
+                    .filter(value -> value.contribution().equals("startup-scene")).findFirst().orElseThrow();
+            assertEquals("second", target.winner());
+            assertEquals(List.of("first"), target.shadowedOwners());
+            assertEquals("later application wins", target.policy());
         }
         try (var runtime = factory.create(new EffectiveModCatalog(List.of(second)),Set.of("second"))) {
             runtime.installFaultBoundary(new ModFaultBoundary(Map.of(),new ModRuntimeFindingStore(), ignored -> new ModStateSaveResult.Saved(),ignored -> {}));
@@ -285,6 +305,96 @@ class TestModRegistrationRuntime {
             var target = runtime.contributionReport().targets().stream().filter(value -> value.contribution().equals("startup-scene")).findFirst().orElseThrow();
             assertEquals("second",target.winner()); assertTrue(target.shadowedOwners().isEmpty());
             runtime.disableOwnersForProcess(Set.of("second")); assertTrue(runtime.contributionReport().targets().isEmpty());
+        }
+    }
+
+    @Test
+    void differingExclusiveDisplayWidthsKeepBothOwnersAndUseLastApplication() throws Exception {
+        var narrow = withComposition(descriptor("narrow", DisplayWidthEntrypoint.class, List.of()),
+                new ModCompositionMetadata(List.of(), List.of(), List.of(), Set.of("display-width")));
+        var wide = descriptor("wide", DisplayWidthEntrypoint.class, List.of());
+        var descriptors = List.of(narrow, wide);
+        var catalog = new EffectiveCatalogBuilder().build(descriptors, enabled(descriptors));
+        var factory = new ModClassLoaderFactory(getClass().getClassLoader(),
+                (descriptor, snapshot) -> new ModValidationReport(List.of()));
+
+        try (var runtime = factory.create(catalog.effective(), Set.of("narrow", "wide"))) {
+            assertEquals(List.of("narrow:content", "wide:content"), runtime.newRegistrationPlan()
+                    .registrations().stream().map(RegisteredPatch::namespacedId).toList());
+            assertTrue(runtime.registrationFailures().isEmpty());
+            assertTrue(runtime.runtimeDisabledOwners().isEmpty());
+            var target = runtime.contributionReport().targets().stream()
+                    .filter(value -> value.contribution().equals("display-width")).findFirst().orElseThrow();
+            assertEquals("wide", target.winner());
+            assertEquals(List.of("narrow"), target.shadowedOwners());
+            assertEquals("later application wins", target.policy());
+            assertNotEquals(target.winnerValue(), target.shadowedValues().getFirst());
+        }
+    }
+
+    @Test
+    void preparationObserverSeesPublishedWinnersFailuresAndReportsAfterQuarantine() throws Exception {
+        var first = descriptor("first", SharedSceneEntrypoint.class, List.of());
+        var second = descriptor("second", SharedSceneEntrypoint.class, List.of());
+        var broken = descriptor("broken", ThrowingEntrypoint.class, List.of());
+        var factory = new ModClassLoaderFactory(getClass().getClassLoader(),
+                (descriptor, snapshot) -> new ModValidationReport(List.of()));
+        List<ModContributionReport> reports = new ArrayList<>();
+        List<Map<String, Throwable>> failures = new ArrayList<>();
+
+        try (var runtime = factory.create(new EffectiveModCatalog(List.of(first, second, broken)),
+                Set.of("first", "second", "broken"))) {
+            runtime.installFaultBoundary(new ModFaultBoundary(Map.of(), new ModRuntimeFindingStore(),
+                    ignored -> new ModStateSaveResult.Saved(), ignored -> {}));
+            runtime.installPreparationObserver((report, registrationFailures) -> {
+                assertSame(runtime.contributionReport(), report);
+                assertSame(runtime.registrationFailures(), registrationFailures);
+                reports.add(report);
+                failures.add(registrationFailures);
+            });
+
+            runtime.newRegistrationPlan();
+
+            assertEquals(1, reports.size());
+            assertEquals("second", reports.getFirst().targets().stream()
+                    .filter(target -> target.contribution().equals("startup-scene")).findFirst().orElseThrow().winner());
+            assertEquals(Set.of("broken"), failures.getFirst().keySet());
+            assertThrows(UnsupportedOperationException.class, () -> failures.getFirst().clear());
+
+            runtime.disableOwnersForProcess(Set.of("second"));
+
+            assertEquals(2, reports.size());
+            var remaining = reports.getLast().targets().stream()
+                    .filter(target -> target.contribution().equals("startup-scene")).findFirst().orElseThrow();
+            assertEquals("first", remaining.winner());
+            assertTrue(remaining.shadowedOwners().isEmpty());
+            assertEquals(Set.of("broken"), failures.getLast().keySet());
+
+            runtime.disableOwnersForProcess(Set.of("first"));
+
+            assertEquals(3, reports.size());
+            assertTrue(reports.getLast().targets().isEmpty());
+        }
+        assertEquals(3, reports.size(), "Closing assets must not publish another preparation");
+    }
+
+    @Test
+    void diagnosticObserverFailureDoesNotRejectOrQuarantineSuccessfulRegistration() throws Exception {
+        var narrow = descriptor("narrow", DisplayWidthEntrypoint.class, List.of());
+        var factory = new ModClassLoaderFactory(getClass().getClassLoader(),
+                (descriptor, snapshot) -> new ModValidationReport(List.of()));
+
+        try (var runtime = factory.create(new EffectiveModCatalog(List.of(narrow)), Set.of("narrow"))) {
+            runtime.installPreparationObserver((report, failures) -> {
+                throw new IllegalStateException("diagnostic sink failed");
+            });
+
+            assertEquals(List.of("narrow:content"), runtime.newRegistrationPlan().registrations().stream()
+                    .map(RegisteredPatch::namespacedId).toList());
+            assertTrue(runtime.registrationFailures().isEmpty());
+            assertTrue(runtime.runtimeDisabledOwners().isEmpty());
+            assertDoesNotThrow(() -> runtime.disableOwnersForProcess(Set.of("narrow")));
+            assertTrue(runtime.contributionReport().targets().isEmpty());
         }
     }
 
@@ -314,6 +424,12 @@ class TestModRegistrationRuntime {
                 @Override public void draw(com.openggf.mods.scene.SceneContext context,
                         com.openggf.mods.scene.SceneCanvas canvas) { }
             });
+        }
+    }
+
+    public static final class DisplayWidthEntrypoint implements GgfMod {
+        @Override public void register(ModContext context) {
+            context.requireDisplayWidth(context.ownerModId().equals("narrow") ? 320 : 400);
         }
     }
 
