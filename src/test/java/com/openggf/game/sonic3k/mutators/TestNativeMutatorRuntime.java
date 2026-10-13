@@ -120,6 +120,7 @@ class TestNativeMutatorRuntime {
                 new ObjectSpawn(256,96,com.openggf.game.sonic3k.constants.Sonic3kObjectIds.STAR_POST,2,0,false,0),
                 new ObjectSpawn(420,96,com.openggf.game.sonic3k.constants.Sonic3kObjectIds.STAR_POST,1,0,false,1),
                 new ObjectSpawn(460,96,com.openggf.game.sonic3k.constants.Sonic3kObjectIds.STAR_POST,2,0,false,2)));
+        doReturn(null).when(rig.player).currentWaterSystem(); // Standalone fixture has an explicitly dry fluid context.
         var checkpoint=mock(com.openggf.game.RespawnState.class);
         when(rig.level.getCheckpointState()).thenReturn(checkpoint);
         when(checkpoint.getStarPostActivationMark()).thenReturn(2);
@@ -371,6 +372,13 @@ class TestNativeMutatorRuntime {
     @Test void stasisRetainsContactAndTruceRetainsTheRoutine() throws Exception {
         var rig=new Rig();var enemy=rig.objects.createDynamicObject(()->new com.openggf.game.sonic3k.objects.badniks.ButterdroidBadnikInstance(new ObjectSpawn(100,100,0,0,0,false,0)));
         var initializing=rig.objects.createDynamicObject(()->new RhinobotBadnikInstance(new ObjectSpawn(140,100,0,0,0,false,0)));
+        AbstractObjectInstance.updateCameraBounds(0,0,320,224,0);
+        assertEquals(0,enemy.getCollisionFlags(),"the native offscreen-wait placeholder has no contact yet");
+        enemy.refreshPostCameraRenderState();
+        enemy.update(0,rig.player); // Release the native camera-visible wait.
+        assertEquals(0,enemy.getCollisionFlags(),"the release dispatch precedes native initialization");
+        enemy.update(1,rig.player);
+        assertNotEquals(0,enemy.getCollisionFlags(),"native initialization must establish contact before applying stasis");
         rig.active(new EnemyRulePolicy(EnemyRulePolicy.Kind.STASIS),false);
         assertTrue(rig.runtime.permitsRoutine(initializing,rig.player),"stock init must establish contact before stasis pauses AI");
         assertFalse(rig.runtime.permitsRoutine(enemy,rig.player));assertTrue(rig.runtime.permitsContact(enemy,rig.player));
