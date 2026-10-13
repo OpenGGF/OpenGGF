@@ -14,6 +14,23 @@ headless tests, or audio. S3K-specific routing is in [AGENTS_S3K.md](../../AGENT
 
 The things that cost the most time when missed.
 
+**Decoded storage capacity can differ from a layer's logical height.** S1's
+cleared eight-row background RAM must not enlarge foreground geometry merely
+because both layers share a `Map`. Keep the previous declared-layout maximum
+for the foreground accessor and expose native BG capacity independently. GHZ1's
+5/1 layout became 8 rows in storage; treating that as eight foreground rows
+changed Infinite Sonic's terrain candidates (GitHub issue sweep, 2026-10-13).
+
+**Native score words are tens of displayed points.** S1/S2 `AddPoints` and S3K
+`HUD_AddToScore` add native bonus words while the ROM HUD supplies a final zero.
+The engine score stores points. Keep native counters for tally timing, multiply
+awards by ten, and verify the actual glyph layout: S1/S2 results have variable
+columns followed by `Hud_Base`'s fixed zero, while S3K's BCD sprite loop rotates a
+seventh zero nibble. Clearing the fixed zero makes a bonus ten times too small;
+scaling the variable digits as well makes it ten times too large. At zero, clear
+all variable columns to avoid `00`. The October 13 issue sweep's ROM pattern and
+award regressions exercise both ends.
+
 **A background layout needs its presentation art and event palette.** Starfall
 Frontier's background revision (base `68d1e03482`, 2026-10-08) found numbered
 filler inside otherwise valid S3K background chunks. Append both block/chunk
@@ -406,6 +423,14 @@ ROM writes jump radii explicitly and then sets the roll bit, use
 The DEZ carrier regression preserves airborne jump fields and custom radii on
 capture, and native centre/fractions on release.
 
+**Hurt owns its terrain landing despite object control.** Normal held movement
+may skip `resetOnFloor`, but the hurt dispatch runs terrain outside that gate.
+Native `Player_TouchFloor`/`Knux_TouchFloor` clears InAir before HurtStop tests it
+and releases `object_control` (`sonic3k.asm:24365-24403,32894-32904,32967-32982`).
+Test through public movement and a real terrain floor callback: calling
+`setAir(false)` directly can conceal an early return that leaves a hurt player
+airborne with zero velocities and stale control.
+
 **Custom retirement tails must retain the viewport term.** New objects that override
 `isCustomOutOfRange` bypass the manager's widened placement-window policy.
 A literal native `$280` then lets an 800-pixel viewport load an object early,
@@ -564,6 +589,14 @@ lava-wall tiles. Verify the source window, retained-plane lifetime, and the
 high-background replay plus sprite mask independently. Rebuilding correct BG
 pixels alone cannot repair a background-first draw order. Preserve column
 VScroll in the replay, since the pool slope is part of its sampling contract.
+
+**Keep native GL state with the pass owner.** Background descriptor alpha is
+metadata, so its tile pass disables blending and restores the incoming state.
+Do that inside the initialized `BackgroundRenderer` begin/end boundary. A raw
+`glIsEnabled` in the caller can abort an isolated JVM whose command recorder
+deliberately overrides the GPU operations; an earlier native test can conceal
+the dependency. Verify the recorder independently and real pixels with both
+incoming blend states (GitHub issue sweep, 2026-10-13).
 
 **The bucket encoding differs per game and the engine defaults are silent.** S1/S2
 store the bucket as a byte (`move.b #4,priority(a0)` is bucket 4); S3K stores the

@@ -26,6 +26,23 @@ import static org.mockito.Mockito.when;
 class TestSpeedShoesTimer {
 
     @Test
+    void boundedGrantRunsForItsNativeFrameDurationAtTheExistingDisplayCadence() {
+        AbstractPlayableSprite sprite = mock(AbstractPlayableSprite.class);
+        com.openggf.level.LevelManager level = mock(com.openggf.level.LevelManager.class);
+        when(sprite.getGameRules()).thenReturn(GameRules.SONIC_3K);
+        when(sprite.currentLevelManagerIfAvailable()).thenReturn(level);
+        SpeedShoesTimer timer = new SpeedShoesTimer("short-shoes", sprite, 600);
+        for (int frame = 1; frame < 600; frame++) {
+            when(level.getFrameCounter()).thenReturn(frame);
+            timer.decrementTick();
+            assertTrue(timer.getTicks() > 0, "grant must retain shoes through frame " + frame);
+        }
+        when(level.getFrameCounter()).thenReturn(600);
+        timer.decrementTick();
+        assertEquals(0, timer.getTicks(), "ten-second grant expires on its native display boundary");
+    }
+
+    @Test
     void decimationOneDecrementsEveryFrame() {
         for (int frame = 0; frame < 16; frame++) {
             assertTrue(SpeedShoesTimer.isDecrementFrame(frame, 1),

@@ -436,6 +436,8 @@ public class PatternAtlas {
     SpritePresentation.PatternVersion scenePatternSample(int patternId) {
         return scenePatternSamples.get(patternId);
     }
+    /** Private presentation owners release their CPU pixel version together with atlas residency. */
+    void releaseScenePatternSample(int patternId) { scenePatternSamples.remove(patternId); }
 
     public Entry updatePattern(Pattern pattern, int patternId) {
         return cachePattern(pattern, patternId);

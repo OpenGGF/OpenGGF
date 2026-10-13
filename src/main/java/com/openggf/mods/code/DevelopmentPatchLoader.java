@@ -31,6 +31,11 @@ public final class DevelopmentPatchLoader {
      * object registrations and game patches. The jar's classes stay loaded for the process.
      */
     public static UnaryOperator<GameModule> fromJar(Path jar) throws IOException {
+        return openJar(jar);
+    }
+
+    /** A capture owns this loader until its final world has retired. */
+    public static PreparedDecorator openJar(Path jar) throws IOException {
         Path absolute = jar.toAbsolutePath().normalize();
         ModManifest manifest;
         try (var zip = new ZipFile(absolute.toFile())) {
@@ -45,29 +50,58 @@ public final class DevelopmentPatchLoader {
         if (manifest.entrypoint() == null) throw new IOException(absolute + " has no code entrypoint");
         var loader = new URLClassLoader(new java.net.URL[]{absolute.toUri().toURL()},
                 DevelopmentPatchLoader.class.getClassLoader());
-        // The declared asset root must contain the jar itself.
-        Path assetsRoot = absolute.getParent();
-        ModRegistrationPlan plan;
-        try (var assets = ModAssetRoot.jar(assetsRoot, absolute, ModInputLimits.production())) {
-            var context = new ModContext(manifest.id(), manifest.baseGame(), assets);
-            var mod = (GgfMod) loader.loadClass(manifest.entrypoint()).getConstructor().newInstance();
-            mod.register(context);
-            plan = context.freeze();
-        } catch (ReflectiveOperationException | ClassCastException e) {
-            throw new IOException("Could not load entrypoint " + manifest.entrypoint(), e);
+        try {
+            var entrypoint = loader.loadClass(manifest.entrypoint()).asSubclass(GgfMod.class);
+            entrypoint.getConstructor();
+            return new PreparedDecorator(absolute, manifest, loader, entrypoint);
+        } catch (ReflectiveOperationException | ClassCastException failure) {
+            loader.close();
+            throw new IOException("Could not load entrypoint " + manifest.entrypoint(), failure);
         }
-        ModRegistrationPlan frozen = plan;
-        // An explicitly supplied development jar remains owner-attributed in capture tools.
-        var boundary = new ModFaultBoundary(java.util.Map.of(), new com.openggf.mods.ModRuntimeFindingStore(),
-                disabled -> new com.openggf.mods.ModStateSaveResult.Saved(), disabled -> { });
-        return base -> {
+    }
+
+    /** One jar loader, fresh transaction and callback identities for every native launch. */
+    public static final class PreparedDecorator implements UnaryOperator<GameModule>, AutoCloseable {
+        private final Path jar;
+        private final ModManifest manifest;
+        private final URLClassLoader loader;
+        private final Class<? extends GgfMod> entrypoint;
+        private boolean closed;
+
+        private PreparedDecorator(Path jar, ModManifest manifest, URLClassLoader loader,
+                                  Class<? extends GgfMod> entrypoint) {
+            this.jar = jar;
+            this.manifest = manifest;
+            this.loader = loader;
+            this.entrypoint = entrypoint;
+        }
+
+        @Override public GameModule apply(GameModule base) {
+            return apply(base, GameplayLaunchRequest.fromConfig(GameServices.configuration(), base.getGameId().code()));
+        }
+
+        public GameModule apply(GameModule base, GameplayLaunchRequest request) {
+            if (closed) throw new IllegalStateException("Development mod loader is closed");
+            java.util.Objects.requireNonNull(request, "request");
+            ModRegistrationPlan frozen;
+            try (var assets = ModAssetRoot.jar(jar.getParent(), jar, ModInputLimits.production())) {
+                var context = new ModContext(manifest.id(), manifest.baseGame(), assets);
+                entrypoint.getConstructor().newInstance().register(context);
+                frozen = context.freeze();
+            } catch (IOException failure) {
+                throw new java.io.UncheckedIOException("Could not open development mod " + jar, failure);
+            } catch (ReflectiveOperationException failure) {
+                throw new IllegalStateException("Could not register entrypoint " + manifest.entrypoint(), failure);
+            }
+            // Every launch receives a distinct callback quarantine as well as fresh registration objects.
+            var boundary = new ModFaultBoundary(java.util.Map.of(), new com.openggf.mods.ModRuntimeFindingStore(),
+                    disabled -> new com.openggf.mods.ModStateSaveResult.Saved(), disabled -> { });
             String game = base.getGameId().code();
             ModRegistrationPlan nativePlan = frozen.stockScenePlans().stream()
                     .filter(candidate -> game.equals(candidate.baseGameId()))
                     .findFirst().orElseThrow(() -> new IllegalArgumentException(
                             "Development mod " + manifest.id() + " does not support " + game));
             var config = GameServices.configuration();
-            var request = GameplayLaunchRequest.fromConfig(config, game);
             var logicalRoms = LogicalRomResolver.fromRomManager(GameServices.rom());
             var patchContext = new PatchContext(logicalRoms::openOrThrow, config);
             GameModule effective = new ModBackedGamePatch(nativePlan, boundary).apply(base, patchContext);
@@ -80,6 +114,12 @@ public final class DevelopmentPatchLoader {
                     effective = owned.apply(effective, patchContext);
             }
             return effective;
-        };
+        }
+
+        @Override public void close() throws IOException {
+            if (closed) return;
+            closed = true;
+            loader.close();
+        }
     }
 }

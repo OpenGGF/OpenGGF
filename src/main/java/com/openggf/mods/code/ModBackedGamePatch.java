@@ -340,9 +340,13 @@ public final class ModBackedGamePatch implements GamePatch {
                 if (type == com.openggf.game.session.WorldSessionPolicyProvider.class && !plan.mutators().isEmpty()) {
                     if (worldPolicies == null) {
                         worldPolicies = new com.openggf.mods.mutators.MutatorWorldProvider(
-                                getGameService(com.openggf.mods.mutators.MutatorCatalog.class));
+                                getGameService(com.openggf.mods.mutators.MutatorCatalog.class),
+                                super.getGameService(com.openggf.game.session.WorldSessionPolicyProvider.class));
                     }
                     return type.cast(worldPolicies);
+                }
+                if (type == com.openggf.game.mutators.PreparedMutatorConfiguration.class) {
+                    return type.cast(getGameService(com.openggf.mods.mutators.MutatorCatalog.class));
                 }
                 if (type == com.openggf.mods.mutators.MutatorCatalog.class && !plan.mutators().isEmpty()) {
                     var inherited = super.getGameService(com.openggf.mods.mutators.MutatorCatalog.class);

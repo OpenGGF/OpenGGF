@@ -1937,32 +1937,27 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void launchGameplayFromDataSelect(com.openggf.game.dataselect.DataSelectAction action) {
-		com.openggf.game.save.SessionSaveRequests.flushPendingSaves();
-		GameModule module = SessionManager.requireCurrentGameModule();
-		SaveManager saveManager = new SaveManager(com.openggf.game.save.SavePaths.root());
-		Map<String, Object> loadedPayload = loadDataSelectPayload(module, action, saveManager);
-		com.openggf.game.save.SaveSessionContext saveContext = createDataSelectSaveContext(module, action, saveManager);
-		String gameId = SessionManager.getCurrentWorldSession().rootGameModule().getGameId().code();
-		ModuleResolutionService.PreparedLaunch preparedLaunch =
-				moduleResolutionService.prepareLaunch(ModuleResolutionService.LaunchPolicy.STANDARD);
-		List<String> availableCharacters = new ArrayList<>(stockCharacters(gameId));
-		availableCharacters.addAll(moduleResolutionService.availableMainCharacters(
-				preparedLaunch, gameId));
-		if (CrossGameFeatureProvider.isActive()) {
-			availableCharacters.addAll(stockCharacters(crossGameFeatureProvider.getDonorGameId()));
-		}
-		GameplayModeContext gameplay = openDataSelectPatchSession(
-				saveContext, availableCharacters, preparedLaunch);
-		if (gameplay == null) {
-			return;
-		}
-		initializeGameplayRuntime(gameplay, true);
-		loadLevelFromDataSelect(action.zone(), action.act());
-		restoreGameplayModeFromDataSelectPayload(gameplayMode, loadedPayload);
-		gameLoop.setGameMode(GameMode.LEVEL);
+		com.openggf.game.dataselect.NativeDataSelectLaunchFlow.launch(
+				action, EngineServices.current(), gameLoop, dataSelectLaunchHost());
+	}
 
-		dataSelectLaunchSaveReason(action.type())
-				.ifPresent(gameLoop::requestSaveForCurrentSession);
+	private com.openggf.game.dataselect.NativeDataSelectLaunchFlow.Host dataSelectLaunchHost() {
+		return new com.openggf.game.dataselect.NativeDataSelectLaunchFlow.Host() {
+			@Override public ModuleResolutionService.PreparedLaunch prepareLaunch() {
+				return moduleResolutionService.prepareLaunch(ModuleResolutionService.LaunchPolicy.STANDARD);
+			}
+			@Override public GameModule resolve(ModuleResolutionService.PreparedLaunch launch,
+					GameModule root, GameplayLaunchRequest request) {
+				return consumePatchResolution(moduleResolutionService.resolveForLaunchResult(launch, root, request), true);
+			}
+			@Override public RuntimeException unavailableCharacter(String owner, String message, RuntimeException cause) {
+				return new com.openggf.mods.code.ModRegistrationException(owner,
+						"MOD_LAUNCH_CHARACTER_UNAVAILABLE", message, null, cause);
+			}
+			@Override public void initialize(GameplayModeContext gameplay) {
+				initializeGameplayRuntime(gameplay, true);
+			}
+		};
 	}
 
 	/** Package-visible no-render seam for data-select patch relaunch integration tests. */
@@ -1970,42 +1965,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			com.openggf.game.save.SaveSessionContext saveContext,
 			List<String> availableCharacters,
 			ModuleResolutionService.PreparedLaunch preparedLaunch) {
-		GameModule rootModule = SessionManager.getCurrentWorldSession().rootGameModule();
-		GameDataSource dataSource = SessionManager.getCurrentWorldSession().getDataSource();
-		String gameId = rootModule.getGameId().code();
-		com.openggf.game.save.SaveSessionContext sanitized =
-				GameplayTeamAvailability.sanitizeForLaunch(
-						saveContext, gameId, availableCharacters);
-		SelectedTeam selectedTeam = sanitized.selectedTeam();
-		GameplayLaunchRequest launchRequest =
-				new GameplayLaunchRequest(
-						gameId, selectedTeam.mainCharacter(), selectedTeam.sidekicks());
-		GameModule resolvedModule = consumePatchResolution(
-				moduleResolutionService.resolveForLaunchResult(preparedLaunch, rootModule,
-						launchRequest),
-				true);
-		if (resolvedModule == null) {
-			return null;
-		}
-		com.openggf.game.ZoneKey destination = resolvedModule.getZoneRegistry()
-				.zoneKey(sanitized.startZone());
-		java.util.Optional<com.openggf.game.GameplayLaunchTeam> contributed =
-				resolvedModule.getGameplayPolicyProvider().launchTeam(destination);
-		com.openggf.game.GameplayLaunchTeam launchTeam = contributed.orElseGet(
-				() -> toGameplayLaunchTeam(selectedTeam));
-		com.openggf.game.save.SaveSessionContext launchContext;
-		try {
-			launchContext = GameplayTeamAvailability.requireForLaunch(sanitized, launchTeam,
-					resolvedModule.getPlayableCharacterRegistry());
-		} catch (GameplayTeamBootstrap.UnavailableRequiredCharacter unavailable) {
-			String owner = destination instanceof com.openggf.game.ZoneKey.Mod mod
-					? mod.ownerModId()
-					: unavailable.key().ownerModId().orElse("engine");
-			throw new com.openggf.mods.code.ModRegistrationException(owner,
-					"MOD_LAUNCH_CHARACTER_UNAVAILABLE", unavailable.getMessage(), null, unavailable);
-		}
-		return SessionManager.openGameplaySession(
-				rootModule, resolvedModule, dataSource, launchContext);
+		return com.openggf.game.dataselect.NativeDataSelectLaunchFlow.openSession(
+				saveContext, availableCharacters, preparedLaunch, dataSelectLaunchHost());
 	}
 
 	/** Starts a run a mod scene launched; a load failure returns to the scene. */
@@ -2146,35 +2107,12 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private static List<String> stockCharacters(String gameId) {
-		return switch (gameId) {
-			case "s1" -> List.of("sonic");
-			case "s2" -> List.of("sonic", "tails");
-			case "s3k" -> List.of("sonic", "tails", "knuckles");
-			default -> List.of("sonic");
-		};
-	}
-
-	private static GameplayLaunchTeam toGameplayLaunchTeam(SelectedTeam team) {
-		return new GameplayLaunchTeam(parseLaunchCharacterKey(team.mainCharacter()),
-				team.sidekicks().stream().map(Engine::parseLaunchCharacterKey).toList());
-	}
-
-	private static CharacterKey parseLaunchCharacterKey(String persisted) {
-		String canonical = persisted.equalsIgnoreCase("sonic")
-				|| persisted.equalsIgnoreCase("tails")
-				|| persisted.equalsIgnoreCase("knuckles")
-				? persisted.toLowerCase(java.util.Locale.ROOT) : persisted;
-		return CharacterKey.parsePersisted(canonical);
+		return com.openggf.game.dataselect.NativeDataSelectLaunchFlow.stockCharacters(gameId);
 	}
 
 	static Optional<com.openggf.game.save.SaveReason> dataSelectLaunchSaveReason(
 			com.openggf.game.dataselect.DataSelectActionType actionType) {
-		return switch (actionType) {
-			case NEW_SLOT_START -> Optional.of(com.openggf.game.save.SaveReason.NEW_SLOT_START);
-			case LOAD_SLOT -> Optional.of(com.openggf.game.save.SaveReason.EXISTING_SLOT_LOAD);
-			case CLEAR_RESTART -> Optional.of(com.openggf.game.save.SaveReason.CLEAR_RESTART_COMMIT);
-			case NONE, NO_SAVE_START, DELETE_SLOT -> Optional.empty();
-		};
+		return com.openggf.game.dataselect.NativeDataSelectLaunchFlow.saveReason(actionType);
 	}
 
 	private void loadLevelFromDataSelect(int zone, int act) {
@@ -2186,103 +2124,22 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	static com.openggf.game.save.SaveSessionContext createDataSelectSaveContext(
-			GameModule module,
-			com.openggf.game.dataselect.DataSelectAction action,
-			SaveManager saveManager) {
-		Map<String, Object> payload = loadDataSelectPayload(module, action, saveManager);
-		return createDataSelectSaveContext(module, action, payload);
+			GameModule module, com.openggf.game.dataselect.DataSelectAction action, SaveManager saveManager) {
+		return createDataSelectSaveContext(module, action, loadDataSelectPayload(module, action, saveManager));
 	}
 
 	static com.openggf.game.save.SaveSessionContext createDataSelectSaveContext(
-			GameModule module,
-			com.openggf.game.dataselect.DataSelectAction action,
-			Map<String, Object> payload) {
-		String gameCode = module.getGameCode();
-		SelectedTeam team = payload == null ? action.team() : teamFromPayload(payload, action.team());
-		com.openggf.game.save.SaveSessionContext context =
-				action.slot() > 0
-						? com.openggf.game.save.SaveSessionContext.forSlot(
-								gameCode, action.slot(), team, action.zone(), action.act())
-						: com.openggf.game.save.SaveSessionContext.noSave(
-								gameCode, team, action.zone(), action.act());
-		if (payload != null && Boolean.TRUE.equals(payload.get("clear"))) {
-			context.markClear();
-		}
-		return context;
+			GameModule module, com.openggf.game.dataselect.DataSelectAction action, Map<String, Object> payload) {
+		return com.openggf.game.dataselect.NativeDataSelectLaunchFlow.saveContext(module, action, payload);
 	}
 
 	static Map<String, Object> loadDataSelectPayload(
-			GameModule module,
-			com.openggf.game.dataselect.DataSelectAction action,
-			SaveManager saveManager) {
-		if (action.slot() <= 0) {
-			return null;
-		}
-		return switch (action.type()) {
-			case LOAD_SLOT, CLEAR_RESTART -> {
-				try {
-					String gameCode = module.getGameCode();
-					SaveSlotSummary summary = saveManager.readSlotSummary(gameCode, action.slot());
-					yield summary.isLoadable() ? summary.payload() : null;
-				} catch (IOException e) {
-					throw new RuntimeException("Failed to read save slot " + action.slot() + " for data select launch", e);
-				}
-			}
-			case NONE, NO_SAVE_START, NEW_SLOT_START, DELETE_SLOT -> null;
-		};
+			GameModule module, com.openggf.game.dataselect.DataSelectAction action, SaveManager saveManager) {
+		return com.openggf.game.dataselect.NativeDataSelectLaunchFlow.loadPayload(module, action, saveManager);
 	}
 
 	static void restoreGameplayModeFromDataSelectPayload(GameplayModeContext gameplayMode, Map<String, Object> payload) {
-		if (gameplayMode == null || payload == null) {
-			return;
-		}
-		int lives = readInt(payload, "lives", gameplayMode.getGameStateManager().getLives());
-		int continues = readInt(payload, "continues", gameplayMode.getGameStateManager().getContinues());
-		GameStateManager gameState = gameplayMode.getGameStateManager();
-		com.openggf.game.save.SaveSnapshotProvider saveProvider =
-				gameplayMode.getWorldSession() == null
-						? null
-						: gameplayMode.getWorldSession().getGameModule().getSaveSnapshotProvider();
-		boolean restored = saveProvider != null
-				&& saveProvider.restoreProgress(gameState, lives, continues, payload);
-		if (!restored) {
-			gameState.restoreSaveProgress(
-					lives,
-					continues,
-					readIntList(payload.get("chaosEmeralds")),
-					readIntList(payload.get("superEmeralds")),
-					payload.get("emeraldsConverted") instanceof Boolean converted ? converted : null);
-		}
-	}
-
-	private static SelectedTeam teamFromPayload(Map<String, Object> payload, SelectedTeam fallback) {
-		Object mainRaw = payload.get("mainCharacter");
-		if (!(mainRaw instanceof String main)) {
-			return fallback;
-		}
-		Object sidekicksRaw = payload.get("sidekicks");
-		List<String> sidekicks = sidekicksRaw instanceof List<?>
-				? ((List<?>) sidekicksRaw).stream().map(String::valueOf).toList()
-				: List.of();
-		return new SelectedTeam(main, sidekicks);
-	}
-
-	private static int readInt(Map<String, Object> payload, String key, int fallback) {
-		Object value = payload.get(key);
-		return value instanceof Number number ? number.intValue() : fallback;
-	}
-
-	private static List<Integer> readIntList(Object raw) {
-		if (!(raw instanceof List<?> list)) {
-			return List.of();
-		}
-		List<Integer> values = new ArrayList<>();
-		for (Object value : list) {
-			if (value instanceof Number number) {
-				values.add(number.intValue());
-			}
-		}
-		return List.copyOf(values);
+		com.openggf.game.dataselect.NativeDataSelectLaunchFlow.restoreProgress(gameplayMode, payload);
 	}
 
 	public void toggleEditorPlaytestMode() {

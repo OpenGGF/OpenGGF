@@ -435,6 +435,24 @@ public class SidekickCpuController {
 
         clearInputs();
         carryController().setParentagePending(false);
+        var world = sidekick.currentLevelManagerIfAvailable() != null
+                ? sidekick.currentLevelManagerIfAvailable().getWorldSession() : null;
+        var encounter = com.openggf.game.session.WorldSessionPolicyAccess.getService(world,
+                com.openggf.game.mutators.NativeCompanionControlSource.class);
+        var steering = encounter != null ? encounter.inputFor(sidekick) : java.util.Optional.<com.openggf.control.PlayerInputState>empty();
+        if (steering.isPresent()) {
+            var input = steering.orElseThrow();
+            inputUp = (input.heldMask() & AbstractPlayableSprite.INPUT_UP) != 0;
+            inputDown = (input.heldMask() & AbstractPlayableSprite.INPUT_DOWN) != 0;
+            inputLeft = (input.heldMask() & AbstractPlayableSprite.INPUT_LEFT) != 0;
+            inputRight = (input.heldMask() & AbstractPlayableSprite.INPUT_RIGHT) != 0;
+            inputJump = input.actionHeldMask() != 0;
+            inputJumpPress = input.actionPressedMask() != 0;
+            diagnosticCtrl2HeldLatch = input.heldMask();
+            diagnosticCtrl2PressedLatch = input.pressedMask();
+            beginNormalStepDiagnostics("leased_native_carry");
+            return;
+        }
         if (releasedCarryCooldown) {
             // The release-side logical direction remains visible through the
             // current Tails body, then the following CPU pass publishes an

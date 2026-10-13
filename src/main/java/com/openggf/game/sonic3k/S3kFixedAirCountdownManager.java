@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k;
 
+import com.openggf.game.mutators.PlayerFluidContextAccess;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.ShieldType;
@@ -172,6 +173,10 @@ final class S3kFixedAirCountdownManager {
         }
 
         private void countdown(AbstractPlayableSprite owner) {
+            if (PlayerFluidContextAccess.breathProtected(owner)) {
+                if (owner.getDrowningController() != null) owner.getDrowningController().replenishAir();
+                return; // Protection precedes native timer/RNG/bubble emission.
+            }
             if (!owner.isInWater()
                     || owner.getDead()
                     || owner.isDrowningPreDeath()

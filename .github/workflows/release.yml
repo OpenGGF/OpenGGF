@@ -55,6 +55,13 @@ jobs:
           command -v "$LUA_BIN"
           "$LUA_BIN" -e 'assert(_VERSION == "Lua 5.4")'
 
+      # Pixel tests create a Mesa surfaceless EGL context without a desktop.
+      - name: Install offscreen rendering dependencies
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes libegl1 libegl-mesa0 libgl1 libgl1-mesa-dri
+
       - name: Run tests (push)
         if: github.event_name == 'push'
         run: mvn -Dmse=off -Pfull-suite test -B -DmodApi.destinationBranch="${{ github.ref_name }}"

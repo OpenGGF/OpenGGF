@@ -549,3 +549,55 @@ env -u DISPLAY -u WAYLAND_DISPLAY JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surface
 `S3K_TASK_ROM_DIRECTORY` denotes the original main checkout containing the three
 verified user ROMs. This launch plan is not a completed smoke/guard result.
 Integration into develop, push and owned-worktree cleanup remain pending.
+
+
+## Pinned upstream composition, 2026-10-14
+
+The retained task smoke source is `7d0a9acbb`, based on destination
+`5d9dd8138`; it does not qualify later upstream code. An isolated integration
+branch first merges the qualified ending follow-ups through `c893df427`, then
+pinned upstream `ea8c9c627`. The ending merge preserves the retained route
+owners and changes only `SwScrlEnding`, its resource contract test and the
+stale title-card reflection fixture under `src/`. The upstream delta has 309
+paths, with 18,512 added and 843 removed lines.
+
+The upstream merge automatically combines all eight intersecting runtime
+owners: `GameLoop`, `Sonic3kGameModule`, `Sonic3kObjectArtProvider`,
+`EggRoboBadnikInstance`, `LevelManager`, `SpriteManager`,
+`SpriteManagerInternalAccess` and `AbstractPlayableSprite`. The sole textual
+conflict is the coverage backlog introduction: retain both the task's playable
+completion record and upstream's issue-sweep/Chaos records. No owner is replaced
+wholesale. In particular, preserve the ending Start/white-entry semantics,
+resident-art DMA refresh registration, reversible follower retirement, captured
+InstaShield absence and fresh render-origin reset alongside upstream policy,
+motion and hurt-landing changes.
+
+The behavioral risks are composed consumers, despite clean Java merges:
+upstream changes setup-only host input-edge consumption, ordinary native-tick
+policy hooks and accepted world-history replay, motion/fluid bindings for newly
+registered roster members, S2/S3K native hurt landing through object control,
+and shared SAT/priority/background-FBO/shader rendering. Stock worlds without
+prepared mutator definitions retain a null policy graph; this limits active
+Chaos mechanics to configured content, but does not remove the shared drawing
+and input changes. The new capture launch/decorator and optional presentation
+pacing paths also require their normal CLI consumers; old media keeps its
+original immutable source and is not relabeled as combined-source parity.
+
+Upstream executable tree `a2280d37b:src` equals `ea8c9c627:src`
+(`534374ca3d17755a6001dfd4ba6f9662a6ddeeee`); the [issue-sweep record](../validation/2026-10-13-github-issues.md)
+records 383 movement/API/rewind/loading cases, ten graphics cases, nine SOZ
+routes and 680 fresh guards, all without failures, errors or skips. These are
+completed unchanged upstream baseline checks, not proof for this combined
+source. The earlier Chaos broad run retains its dated, matched inherited reds;
+CI EGL package provisioning has no recorded hosted-run result here.
+
+Build and final validation remain lead-owned delivery gates. Inspect the
+change-based smoke selection from the original pre-task destination `5e2f51f079`
+after composition; shared movement/history/rendering changes justify a new
+source qualification rather than repeating unchanged task checks. Preserve
+exact test identities and skips when comparing the retained run and upstream
+baseline. Focused ending entry/Start, roster/effect reverse restore, D01 and
+actual Knuckles terminal lifecycles, changed presentation pixels, and real cold
+route/handoff consumers should run on the composed source wherever they are
+outside the selected smoke lane. Do not add another broad baseline run or infer
+native scene conformance from these bounded checks.

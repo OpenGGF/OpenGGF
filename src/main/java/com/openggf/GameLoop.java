@@ -58,6 +58,7 @@ import com.openggf.game.save.SessionSaveRequests;
 import com.openggf.game.SpecialStageReturnSpawn;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.session.GameplayModeContext;
+import com.openggf.game.session.WorldSessionPolicyAccess;
 import com.openggf.game.session.ScheduledPlaybackInputOps;
 import com.openggf.game.session.SessionManager;
 import com.openggf.integration.presence.PresenceFormatter;
@@ -503,10 +504,20 @@ public class GameLoop {
 
     /** Draws the hosted run's screen-space overlay above the level and stock HUD. */
     public void renderHostedRunOverlay() {
+        var context = resolveGameplayModeContext();
+        var world=context==null?SessionManager.getCurrentWorldSession():context.getWorldSession();
+        if (!WorldSessionPolicyAccess.hasPolicies(world) && !hostedRuns.isActive()) return;
+        engineServices.graphics().resetForFixedFunction();
+        if(world!=null)WorldSessionPolicyAccess.drawOverlay(world,new com.openggf.mods.ui.LevelOverlayCanvas(engineServices.graphics(),
+                camera==null?engineServices.graphics().getProjectionWidth():camera.getWidth(),
+                camera==null?Math.max(1,(int)engineServices.graphics().getScreenHeight()):camera.getHeight()));
         if (hostedRuns.isActive() && camera != null) {
             hostedRuns.drawOverlay(new com.openggf.mods.ui.LevelOverlayCanvas(
                     GameServices.graphics(), camera.getWidth(), camera.getHeight()));
         }
+        // PixelCanvas queues rectangles. Complete them in this post-fade pass,
+        // rather than letting the following frame draw them beneath its fade.
+        engineServices.graphics().flushScreenSpace();
     }
 
     public boolean shouldSuppressUserRecordingSceneRendering() {
@@ -830,6 +841,7 @@ public class GameLoop {
 
     /** Interactive 60/50 Hz presentation entry; canonical {@link #step()} remains one tick. */
     public void stepPresentationFrame() {
+        var policyBefore = GameLoopWorldPolicyPresentation.capture(this, titleCardProvider);
         gameplayAudioRateOwned = GameLoopGameplayPacing.step(this, resolveGameplayModeContext(),
                 () -> levelManager == null ? null : levelManager.getCurrentLevel(),
                 inputHandler, audioManager, this::canUseGameplayPacing, this::canUseGameplayPacingOutsideRewind,
@@ -845,6 +857,9 @@ public class GameLoop {
                         runAfterStepMasterTitleLaunchCallbackIfPresent(); presenceManager.tick();
                     }
                 }, specialStagePacingInput, gameplayAudioRateOwned);
+        GameLoopWorldPolicyPresentation.publish(this, policyBefore, titleCardProvider, inputHandler, engineServices,
+                liveRewindManager::isRewindingOrReleasing, this::canUseGameplayPacing,
+                () -> resolveFadeManager().isActive());
     }
 
     private void releaseGameplayAudioRate() {
@@ -1490,6 +1505,9 @@ public class GameLoop {
             return false;
         }
         if (admission == LevelFrameResult.SETUP_ONLY) {
+            // Locked title/load iterations skip the ordinary frame tail, but
+            // still consume host input edges (including the unpause press).
+            inputHandler.update();
             return false;
         }
         if (levelIterationAdmission.completePendingBoundary(

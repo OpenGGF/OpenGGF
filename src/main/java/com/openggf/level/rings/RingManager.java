@@ -176,6 +176,14 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         attractStageRings(player, levelManager != null ? levelManager.getFrameCounter() : 0);
     }
 
+    private com.openggf.mods.mutators.ObjectFieldPolicy.Mode ringFieldMode() {
+        for (var entry : com.openggf.game.mutators.TransientMutatorPolicyAccess.entries(mutatorWorld)) {
+            if (entry.policy() instanceof com.openggf.mods.mutators.ObjectFieldPolicy policy
+                    && policy.target() == com.openggf.mods.mutators.ObjectFieldPolicy.Target.RING) return policy.mode();
+        }
+        return null;
+    }
+
     private void attractStageRings(AbstractPlayableSprite player, int frameCounter) {
         if (!ringsAllowed()) return;
         if (player != null && !player.isCpuControlled()) {
@@ -186,8 +194,9 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             attractedRingTargetY = player.getCentreY();
             attractedRingTargetCaptured = true;
         }
-        if (player == null || player.getDead() || !lightningShieldEnabled(player)
-                || player.getShieldType() != ShieldType.LIGHTNING) {
+        var fieldMode = ringFieldMode();
+        if (player == null || player.getDead() || fieldMode == null && (!lightningShieldEnabled(player)
+                || player.getShieldType() != ShieldType.LIGHTNING)) {
             return;
         }
         RingRules ringRules = playerRingRules(player);
@@ -209,7 +218,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                     // Test_Ring_Collisions_AttractRing loc_EB16 rejoins
                     // loc_EAC6 when AllocateObject fails: give this ring
                     // directly, then continue scanning the attraction box.
-                    collectPlacedRingAtIndex(index, player, frameCounter);
+                    if (fieldMode == null) collectPlacedRingAtIndex(index, player, frameCounter);
                     continue;
                 }
                 placement.markCollected(index);
@@ -251,6 +260,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 continue;
             }
             player.addRings(1);
+            notifyNativeRingPickup(player);
             playRingAcquisitionSound();
             ring.collected = true;
             ring.sparkleStartFrame = frameCounter;
@@ -415,6 +425,12 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         return true;
     }
 
+    private void notifyNativeRingPickup(AbstractPlayableSprite player) {
+        var policies = com.openggf.game.session.WorldSessionPolicyAccess.getService(mutatorWorld,
+                com.openggf.game.mutators.NativeObjectPolicyPort.class);
+        if (policies != null) policies.ringAcquired(player);
+    }
+
     private void collectPlacedRingAtIndex(int index, AbstractPlayableSprite player, int frameCounter) {
         if (!ringsAllowed()) return;
         placement.markCollected(index);
@@ -423,6 +439,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         }
         playRingAcquisitionSound();
         player.addRings(1);
+        notifyNativeRingPickup(player);
     }
 
     private void playRingAcquisitionSound() {
@@ -942,7 +959,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
      */
     private void updateAttractedRings(AbstractPlayableSprite player, int frameCounter, int cameraX) {
         ObjectManager objectManager = levelManager != null ? levelManager.getObjectManager() : null;
-        boolean lightningShieldActive = lightningShieldEnabled(player)
+        var fieldMode = ringFieldMode();
+        boolean lightningShieldActive = fieldMode != null || lightningShieldEnabled(player)
                 && player.getShieldType() == ShieldType.LIGHTNING;
         for (AttractedRing ar : activeAttractedRingsInSlotOrder()) {
             if (!ar.active) continue;
@@ -962,6 +980,15 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             int pcy = hasSlotTarget
                     ? objectManager.getPlayerCentreYAtObjectSlotStart(ar.objectSlotIndex)
                     : attractedRingTargetCaptured ? attractedRingTargetY : player.getCentreY();
+
+            if (fieldMode == com.openggf.mods.mutators.ObjectFieldPolicy.Mode.REPEL) {
+                pcx = ar.x + Integer.signum(ar.x - pcx) * 96;
+                pcy = ar.y + Integer.signum(ar.y - pcy) * 96;
+            } else if (fieldMode == com.openggf.mods.mutators.ObjectFieldPolicy.Mode.ORBIT) {
+                int phase = (frameCounter * 2 + ar.sourceIndex * 32) & 0xFF;
+                pcx += com.openggf.physics.TrigLookupTable.cosHex(phase) * 40 >> 8;
+                pcy += com.openggf.physics.TrigLookupTable.sinHex(phase) * 40 >> 8;
+            }
 
             // --- X axis acceleration (AttractedRing_Move) ---
             int accelX = ATTRACT_ACCEL;
@@ -993,6 +1020,11 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 }
             }
             ar.yVel = (short) (ar.yVel + accelY);
+
+            if (fieldMode != null) {
+                ar.xVel = Math.clamp(ar.xVel, -0x300, 0x300);
+                ar.yVel = Math.clamp(ar.yVel, -0x300, 0x300);
+            }
 
             // --- MoveSprite2: apply velocity to position (subpixel precision) ---
             int xLong = (ar.x << 16) | (ar.xSub & 0xFFFF);

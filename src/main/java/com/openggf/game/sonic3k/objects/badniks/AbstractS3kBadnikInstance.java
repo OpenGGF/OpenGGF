@@ -27,7 +27,7 @@ import java.util.List;
  * position/collision, and sprite rendering.
  */
 abstract class AbstractS3kBadnikInstance extends AbstractBadnikInstance
-        implements TouchResponseProvider, TouchResponseAttackable, PoweredScreenAttackable {
+        implements TouchResponseProvider, TouchResponseAttackable, PoweredScreenAttackable, com.openggf.game.mutators.NativeObjectFieldTarget {
 
     private final String rendererKey;
     private int collisionSizeIndex;
@@ -53,6 +53,19 @@ abstract class AbstractS3kBadnikInstance extends AbstractBadnikInstance
         this.planePriority = planePriority;
         // S3K render_flags bit 0 mirrors horizontally. Clear = face left, set = face right.
         this.facingLeft = (spawn.renderFlags() & 0x01) == 0;
+    }
+
+    protected boolean independentPresentationBody() { return false; }
+    @Override public com.openggf.level.objects.ObjectPresentationMetadata presentationMetadata() {
+        if (!independentPresentationBody()) return com.openggf.level.objects.ObjectPresentationMetadata.NONE;
+        return new com.openggf.level.objects.ObjectPresentationMetadata(
+                com.openggf.level.objects.ObjectPresentationMetadata.Role.BADNIK, getBodyAnchorX(), getBodyAnchorY());
+    }
+    @Override public Kind fieldKind() { return Kind.BADNIK; }
+    @Override public void displaceForField(int dx, int dy) {
+        currentX = (currentX + dx) & 0xFFFF;
+        currentY = (currentY + dy) & 0xFFFF;
+        updateDynamicSpawn(resolveDynamicSpawnX(), resolveDynamicSpawnY());
     }
 
     @Override
@@ -86,6 +99,8 @@ abstract class AbstractS3kBadnikInstance extends AbstractBadnikInstance
         if (instance.isDestroyed()) {
             return;
         }
+        var policies = com.openggf.game.mutators.NativeObjectPolicyAccess.port(services);
+        if (policies != null) policies.badnikDefeated(instance, player);
         int mySlot = ObjectLifetimeOps.detachSlotForTransfer(instance);
         instance.setDestroyed(true);
         if (powered) {

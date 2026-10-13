@@ -17,6 +17,9 @@ public final class MutatorPhysicsWorld {
     }
 
     public static WorldSession create(GameplayMutatorPolicySource source, LevelMutatorPolicy level) {
+        return create(source,level,null);
+    }
+    public static WorldSession create(GameplayMutatorPolicySource source, LevelMutatorPolicy level,WorldSessionPolicyState child) {
         GameModule module = mock(GameModule.class);
         when(module.getIdentifier()).thenReturn("test:mutator-physics");
         var pacing = new GameplayMutatorPacing(source);
@@ -34,7 +37,7 @@ public final class MutatorPhysicsWorld {
             public void closeScreens() { }
             public void retire() { pacing.reset(); }
         };
-        when(module.getGameService(WorldSessionPolicyProvider.class)).thenReturn(world -> state);
+        when(module.getGameService(WorldSessionPolicyProvider.class)).thenReturn(world -> CompositeWorldSessionPolicyState.of(state,child));
         return new WorldSession(module);
     }
 }

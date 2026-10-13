@@ -42,7 +42,10 @@ public final class CnzEndBossRobotnikFlameChild extends AbstractObjectInstance
             ObjectLifetimeOps.expireDynamic(this);
             return;
         }
-        int offset = ship.isFacingRight() ? 0x1E : -0x1E;
+        // Refresh_ChildPositionAdjusted negates child_dx when the ship's
+        // render bit 0 is set. Its unflipped art faces left, so rightward
+        // escape puts the flame behind the ship, at -$1E.
+        int offset = ship.isFacingRight() ? -0x1E : 0x1E;
         centreX = ship.getCentreX() + offset;
         centreY = ship.getCentreY();
         visible = (vIntRunCount & 1) == 0;

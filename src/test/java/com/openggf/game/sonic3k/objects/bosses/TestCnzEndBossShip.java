@@ -12,6 +12,30 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestCnzEndBossShip {
 
     @Test
+    void escapingFlameMirrorsItsOffsetBehindRightFacingShip() throws Exception {
+        CnzEndBossRobotnikShipChild ship = new CnzEndBossRobotnikShipChild(boss());
+        Field routine = field(ship, "routine");
+        for (Object value : routine.getType().getEnumConstants()) {
+            if (((Enum<?>) value).name().equals("ESCAPE")) routine.set(ship, value);
+        }
+        setBoolean(ship, "facingRight", true);
+        setInt(ship, "centreX", 0x4800);
+        setInt(ship, "centreY", 0x0200);
+        CnzEndBossRobotnikFlameChild flame = new CnzEndBossRobotnikFlameChild(ship);
+
+        flame.update(0, null);
+
+        assertEquals(ship.getCentreX() - 0x1E, flame.getX() + 8,
+                "Refresh_ChildPositionAdjusted negates child_dx for right-facing ship art");
+        assertEquals(ship.getCentreY(), flame.getY() + 4);
+
+        setBoolean(ship, "facingRight", false);
+        flame.update(2, null);
+        assertEquals(ship.getCentreX() + 0x1E, flame.getX() + 8,
+                "the unflipped left-facing ship keeps the positive child offset");
+    }
+
+    @Test
     void subtypeNineShipAndRealHeadUseRomFrames() throws Exception {
         ObjectServices services = new StubObjectServices();
         CnzEndBossInstance boss = boss();

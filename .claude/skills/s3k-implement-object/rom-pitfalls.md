@@ -4665,6 +4665,14 @@ Do not assume mirrored branches share equality: `sub_6F8F2` accepts left
 `angle <= $80`, but right `angle > $80`, before clamping. Test before, at,
 and across each boundary, including odd angles and repeated clamped updates.
 
+ICZ swinging-platform release (2026-10-13, GitHub #203): `loc_8AD5C` and
+`loc_8ADE6` compare the velocity **word unsigned** with `$200` and use `bhs`.
+A negative word passes even when its absolute magnitude is below `$200`.
+Replacing this with `Math.abs(velocity)` suppresses flipped detachment; a
+signed positive-only test also loses unflipped release on the return arc.
+Keep the angle comparisons unsigned too, and exercise a negative-velocity
+release alongside its neighboring angle/positive-velocity non-trigger.
+
 Follow every pointer hop before translating a control-bit write. In
 `sub_6F85A`, `$44 -> arm -> parent3 -> root` publishes root bit 2; it does
 not publish arm bit 2. The terminal recycle tail at `loc_6F64E` owns arm

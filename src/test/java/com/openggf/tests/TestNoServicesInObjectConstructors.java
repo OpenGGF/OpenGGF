@@ -329,27 +329,10 @@ public class TestNoServicesInObjectConstructors {
             return;
         }
 
-        // Step 1: Build a map of className -> set of methods that call services()
-        Map<String, Set<String>> methodsCallingServices = new HashMap<>();
-        for (String pkg : OBJECT_PACKAGES) {
-            Path pkgDir = srcMain.resolve(pkg);
-            if (!Files.isDirectory(pkgDir)) continue;
-
-            try (Stream<Path> files = Files.walk(pkgDir)) {
-                files.filter(p -> p.toString().endsWith(".java"))
-                        .forEach(path -> {
-                            try {
-                                String content = Files.readString(path);
-                                String className = path.getFileName().toString().replace(".java", "");
-                                Set<String> methods = findMethodsCallingServices(content, className);
-                                if (!methods.isEmpty()) {
-                                    methodsCallingServices.put(className, methods);
-                                }
-                            } catch (IOException ignored) {
-                            }
-                        });
-            }
-        }
+        // Registration injects ObjectServices into object instances, not manager
+        // collaborators that receive an already initialized ObjectManager.
+        Map<String, Set<String>> methodsCallingServices = registrationSensitiveMethods(
+                loadObjectClassSources(srcMain));
 
         // Step 2: Scan ALL source for the pattern:
         //   varName = new ClassName(...);
@@ -381,6 +364,37 @@ public class TestNoServicesInObjectConstructors {
                     + "ensureInitialized() in update().\n\n  "
                     + String.join("\n  ", violations));
         }
+    }
+
+    private static Map<String, Set<String>> registrationSensitiveMethods(Map<String, ClassSource> classes) {
+        Map<String, Set<String>> result = new HashMap<>();
+        for (ClassSource source : subclassesIncludingSelf(classes, "AbstractObjectInstance")) {
+            Set<String> methods = findMethodsCallingServices(source.content(), source.className());
+            if (!methods.isEmpty()) result.put(source.className(), methods);
+        }
+        return result;
+    }
+
+    @Test
+    void preRegistrationAnalysisDistinguishesObjectsFromInjectedManagerCollaborators() {
+        ClassSource base = new ClassSource("AbstractObjectInstance.java", "AbstractObjectInstance", null,
+                "class AbstractObjectInstance { }");
+        ClassSource child = new ClassSource("Child.java", "Child", "AbstractObjectInstance",
+                "class Child extends AbstractObjectInstance { public void initialize() { services(); } }");
+        ClassSource grandchild = new ClassSource("Grandchild.java", "Grandchild", "Child",
+                "class Grandchild extends Child { public void initialize() { services(); } }");
+        ClassSource controller = new ClassSource("Controller.java", "Controller", null,
+                "class Controller { public void execute() { objects.services(); } }");
+        var methods = registrationSensitiveMethods(Map.of("AbstractObjectInstance", base, "Child", child,
+                "Grandchild", grandchild, "Controller", controller));
+        assertEquals(Set.of("Child", "Grandchild"), methods.keySet());
+        assertEquals(1, findPreRegistrationCalls(
+                "Child child = new Child();\nchild.initialize();\nobjects.addDynamicObject(child);",
+                "Example.java", methods).size());
+        assertEquals(1, findPreRegistrationCalls(
+                "Grandchild child = new Grandchild();\nchild.initialize();", "Example.java", methods).size());
+        assertEquals(List.of(), findPreRegistrationCalls(
+                "Controller controller = new Controller();\ncontroller.execute();", "Example.java", methods));
     }
 
     // Match: ClassName varName = new ClassName(...)

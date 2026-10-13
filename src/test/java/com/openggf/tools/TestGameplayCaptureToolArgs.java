@@ -12,6 +12,16 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestGameplayCaptureToolArgs {
+    @Test
+    void interactivePresentationCaptureIsExplicitAndRetainsCanonicalDefault() {
+        String[] base = {"--game", "s3k", "--zone", "aiz", "--act", "1", "--out-dir", "out"};
+        assertFalse(GameplayCaptureTool.Arguments.parse(base).interactivePacing());
+        var flags = new java.util.ArrayList<>(java.util.List.of(base));
+        flags.add("--interactive-pacing");
+        flags.add("--title-screen");
+        assertTrue(GameplayCaptureTool.Arguments.parse(flags.toArray(String[]::new)).interactivePacing());
+    }
+
 
     @Test
     void parsesHexPositionsOneBasedActsAndStills() {

@@ -54,6 +54,10 @@ public class PatternRenderCommand implements GLCommandable {
     private float width;
     private float height;
     private GraphicsManager graphicsManager;
+    private float[] presentationQuad;
+    private float presentationHue;
+    private float presentationOpacity=1;
+    private boolean presentationPriorityShader;
 
     // Static state tracking for batch optimization
     private static int lastAtlasTextureId = -1;
@@ -73,6 +77,7 @@ public class PatternRenderCommand implements GLCommandable {
     private static float lastPriorityWindowHeight = Float.NaN;
     private static float lastPriorityScreenHeight = Float.NaN;
     private static boolean stateInitialized = false;
+    private static int lastExecutedShaderProgramId=-1;
 
     // Pre-allocated vertex buffers for transformed coordinates
     private static FloatBuffer vertexBuffer;
@@ -161,6 +166,7 @@ public class PatternRenderCommand implements GLCommandable {
             cmd = new PatternRenderCommand();
         }
         cmd.graphicsManager = Objects.requireNonNull(graphicsManager, "graphicsManager");
+        cmd.presentationQuad=null;cmd.presentationHue=0;cmd.presentationOpacity=1;
         cmd.paletteTextureId = paletteTextureId;
         cmd.atlasIndex = entry.atlasIndex();
         cmd.paletteIndex = paletteIndex;
@@ -203,6 +209,7 @@ public class PatternRenderCommand implements GLCommandable {
             float width, float height,
             GraphicsManager graphicsManager) {
         this.graphicsManager = Objects.requireNonNull(graphicsManager, "graphicsManager");
+        presentationQuad=null;presentationHue=0;presentationOpacity=1;
         this.paletteTextureId = paletteTextureId;
         this.u0 = entry.u0();
         this.v0 = entry.v0();
@@ -236,6 +243,7 @@ public class PatternRenderCommand implements GLCommandable {
         }
         leased = false;
         graphicsManager = null;
+        presentationQuad=null;
         if (pool.size() < 512) { // Cap pool size to prevent unbounded growth
             pool.offerFirst(this);
         }
@@ -268,6 +276,7 @@ public class PatternRenderCommand implements GLCommandable {
         lastPriorityWindowHeight = Float.NaN;
         lastPriorityScreenHeight = Float.NaN;
         stateInitialized = false;
+        lastExecutedShaderProgramId=-1;
     }
 
     private static void ensureVbos() {
@@ -300,7 +309,11 @@ public class PatternRenderCommand implements GLCommandable {
 
     private void executeLeased(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
         GraphicsManager graphicsManager = this.graphicsManager;
-        ShaderProgram shaderProgram = graphicsManager.getShaderProgram();
+        ShaderProgram shaderProgram = presentationQuad==null?graphicsManager.getShaderProgram():
+                graphicsManager.presentationShader(presentationPriorityShader);
+        if(lastExecutedShaderProgramId!=shaderProgram.getProgramId()) {
+            resetFrameState();lastExecutedShaderProgramId=shaderProgram.getProgramId();
+        }
 
         // Initialize persistent state once per batch of patterns
         if (!stateInitialized) {
@@ -475,12 +488,17 @@ public class PatternRenderCommand implements GLCommandable {
             y1 = temp;
         }
 
-        // Fill vertex buffer (quad: bottom-left, bottom-right, top-right, top-left)
+        // Whole-picture geometry uses frozen source UVs and the admitted row crop.
         vertexBuffer.clear();
-        vertexBuffer.put(x0).put(y0); // Bottom-left
-        vertexBuffer.put(x1).put(y0); // Bottom-right
-        vertexBuffer.put(x1).put(y1); // Top-right
-        vertexBuffer.put(x0).put(y1); // Top-left
+        if(presentationQuad!=null) {
+            int displayHeight=resolveDisplayHeight(graphicsManager);
+            for(int vertex:new int[]{3,2,1,0}) vertexBuffer.put(presentationQuad[vertex*2]).put(displayHeight-presentationQuad[vertex*2+1]);
+        } else {
+            vertexBuffer.put(x0).put(y0);
+            vertexBuffer.put(x1).put(y0);
+            vertexBuffer.put(x1).put(y1);
+            vertexBuffer.put(x0).put(y1);
+        }
         vertexBuffer.flip();
 
         // Fill texture coordinate buffer
@@ -512,8 +530,17 @@ public class PatternRenderCommand implements GLCommandable {
         glVertexAttribPointer(ATTRIB_PALETTE, 1, GL_FLOAT, false, 0, 0L);
         glEnableVertexAttribArray(ATTRIB_PALETTE);
 
-        glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+        shaderProgram.setPresentationColor(presentationHue,presentationOpacity);
+        try { glDrawArrays(GL_TRIANGLE_FAN, 0, 4); }
+        finally { shaderProgram.setPresentationColor(0,1); }
 
+    }
+
+    void presentation(float[] quad,float hue,float opacity) {
+        if(quad.length!=8) throw new IllegalArgumentException("Presentation quad requires four vertices");
+        for(float value:quad) if(!Float.isFinite(value)) throw new IllegalArgumentException("Nonfinite picture vertex");
+        presentationQuad=quad.clone();presentationHue=hue;presentationOpacity=Math.clamp(opacity,0,1);
+        presentationPriorityShader=graphicsManager.isUseSpritePriorityShader();
     }
 
     /**

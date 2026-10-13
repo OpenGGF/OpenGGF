@@ -1212,6 +1212,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
         } else {
             sprite.setAngle((byte) surfaceAngle(sprite, result));
         }
+        com.openggf.game.mutators.PlayableAudioEvents.landed(sprite);
         landingHandler.accept(sprite);
         updateGroundMode(sprite);
     }
@@ -1246,6 +1247,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
             }
             updateGroundMode(sprite);
             resetWallCeilingLandingState(sprite, ceilingAngle);
+            com.openggf.game.mutators.PlayableAudioEvents.landed(sprite);
             if (wasHurt) {
                 // ROM Sonic_HurtStop (s1disasm/_incObj/01 Sonic.asm:1918-1923; S2
                 // s2.asm:38216-38221; S3K sub_12318 sonic3k.asm:24492-24496): after

@@ -5,6 +5,7 @@ import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.runtime.MhzZoneRuntimeState;
+import com.openggf.game.sonic3k.objects.CluckoidWindPressure;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -146,7 +147,7 @@ public final class CluckoidBadnikInstance extends AbstractS3kBadnikInstance impl
         mappingFrame = 0;
         windActive = false;
         resetBreathAnimation();
-        PlayableEntity target = closestNativePlayerByHorizontalDistance(playerEntity);
+        PlayableEntity target = com.openggf.game.mutators.NativeObjectPolicyAccess.permitsTargeting(services()) ? closestNativePlayerByHorizontalDistance(playerEntity) : null;
         if (target == null) {
             return;
         }
@@ -181,27 +182,7 @@ public final class CluckoidBadnikInstance extends AbstractS3kBadnikInstance impl
     }
 
     private void applyWindPressure(PlayableEntity playerEntity) {
-        if (!(playerEntity instanceof AbstractPlayableSprite player)) {
-            return;
-        }
-        if (player.getAnimationId() == DUCK_ANIMATION_ID || player.getSpindash() || player.isObjectControlled()) {
-            return;
-        }
-
-        int dx = player.getCentreX() - currentX;
-        int dy = Math.abs(player.getCentreY() - currentY);
-        if (Math.abs(dx) >= WIND_X_RANGE || dy >= ACTIVATION_Y_RANGE) {
-            return;
-        }
-        if (facingLeft ? dx > 0 : dx <= 0) {
-            return;
-        }
-
-        int push = 0x10 - Math.min(0x0F, Math.abs(dx) >> 4);
-        if (facingLeft) {
-            push = -push;
-        }
-        NativePositionOps.addXPosPreserveSubpixel(player, push);
+        CluckoidWindPressure.apply(currentX, currentY, facingLeft, playerEntity);
     }
 
     private void updateCooldown() {

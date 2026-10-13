@@ -1126,6 +1126,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                         advancedRenderModeController, getFeatureZoneId(), getFeatureActId());
             }
         }
+        // Zone registries are cleared on every load; restore the world-owned local fluid
+        // presentation here, after native zone effects, rather than only at manager creation.
+        LevelManagerInitializationSupport.registerWorldRenderEffects(worldSession, specialRenderEffectRegistry);
     }
 
     /**
@@ -2903,6 +2906,10 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     public boolean areAllRingsCollected() {
         return ringManager != null && ringManager.areAllCollected();
     }
+
+    public WorldSession getWorldSession() { return worldSession; }
+    int observedViewportWidth() { return camera==null?320:camera.getWidth(); }
+    int observedViewportHeight() { return camera==null?224:camera.getHeight(); }
 
     public ObjectManager getObjectManager() {
         return objectManager;

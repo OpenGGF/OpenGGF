@@ -38,7 +38,8 @@ public enum PatternAtlasRange {
     MGZ_ZOOM_CUES(0x108000, 0x80000, "MGZ zoom-cue instance banks"),
     CONTINUE_SCREEN(0x188000, 0x10000, "Continue screen"),
     PLAYER_PRESENTATION(0x198000, 0x10000, "ROM-derived player presentation fragments"),
-    OBJECT_HEAD_PRESENTATION(0x1A8000, 0x20000, "ROM-derived enemy head draw fragments");
+    OBJECT_HEAD_PRESENTATION(0x1A8000, 0x20000, "ROM-derived enemy head draw fragments"),
+    PRESENTATION_TRAILS(0x1C8000, 0x10000, "Frozen admitted player trail pixels");
 
     private static final PatternAtlasRange[] LOOKUP_VALUES = values();
 

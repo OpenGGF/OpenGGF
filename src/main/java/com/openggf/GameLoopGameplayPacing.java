@@ -32,15 +32,20 @@ final class GameLoopGameplayPacing {
         boolean paced = module != null && eligible.getAsBoolean();
         boolean modified = paced && runtime != null && runtime.policy().gameplaySpeedPercent() != 100
                 && module.gameplayFrameController() == null && !loop.resolveFadeManager().isActive();
-        BooleanSupplier pumpAllowed = modified
-                ? () -> eligible.getAsBoolean() && !loop.resolveFadeManager().isActive() : eligible;
+        final var pumpContext=context;
+        BooleanSupplier pumpAllowed = () -> eligible.getAsBoolean()
+                && (!modified || !loop.resolveFadeManager().isActive())
+                && (pumpContext==null || !WorldSessionPolicyAccess.holdsGameplay(pumpContext.getWorldSession()));
         double rate = !paced ? 1.0 : modified
                 ? (runtime.policy().audioFollowsSpeed() ? runtime.policy().gameplaySpeedPercent() / 100.0 : 1.0)
                 : module.gameplayAudioPlaybackRate();
         rate = Double.isFinite(rate) ? Math.clamp(rate, modified ? 0.25 : 1.0, 32.0) : 1.0;
         if (rate != 1.0 || audioOwned) audio.setForwardPlaybackRate(rate);
         audioOwned = rate != 1.0;
-        int steps = modified ? runtime.stepsForPresentation()
+        boolean held = context != null && paced && loop.getCurrentGameMode() == com.openggf.game.GameMode.LEVEL
+                && WorldSessionPolicyAccess.holdsGameplay(context.getWorldSession()) && !loop.resolveFadeManager().isActive()
+                && (context.getGameStateManager()==null || !context.getGameStateManager().isGamePaused());
+        int steps = held ? 0 : modified ? runtime.stepsForPresentation()
                 : paced ? Math.clamp(module.gameplayStepsPerFrame(), 1, 32) : 1;
         boolean interrupted = !paced || runtime != null && !modified
                 && (module.gameplayFrameController() != null || loop.resolveFadeManager().isActive());
@@ -48,6 +53,7 @@ final class GameLoopGameplayPacing {
         if (interrupted) InputHandlerInternalAccess.discardRetainedGameplayInput(input);
         if (steps == 0) {
             zeroStep.accept(runtime);
+            if(held && runtime!=null) runtime.clearPendingInput();
         } else {
             boolean special = loop.getCurrentGameMode() == com.openggf.game.GameMode.SPECIAL_STAGE;
             if (!special && runtime != null && runtime.hasPendingInput() && !restoredBefore) {

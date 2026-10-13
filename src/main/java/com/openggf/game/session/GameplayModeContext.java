@@ -541,6 +541,9 @@ public final class GameplayModeContext implements ModeContext {
      * FadeManager itself, so their package does not gain a graphics edge
      * (TestArchUnitRules#core_runtime_cycle_cluster_does_not_gain_top_level_edges).
      */
+    /** Internal semantic cue port for an owner-scoped gameplay observer. */
+    public void playObservedSfx(com.openggf.audio.GameSound sound) { if(audioManager!=null)audioManager.playSfx(sound); }
+
     public void updateFade() {
         if (fadeManager != null) {
             fadeManager.update();

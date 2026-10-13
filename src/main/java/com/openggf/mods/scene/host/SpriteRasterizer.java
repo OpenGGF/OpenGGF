@@ -3,7 +3,7 @@ package com.openggf.mods.scene.host;
 import com.openggf.level.Pattern;
 import com.openggf.level.render.SpriteDplcFrame;
 import com.openggf.level.render.SpriteMappingFrame;
-import com.openggf.level.render.SpriteMappingPiece;
+import com.openggf.level.render.SpriteMappingRasterizer;
 import com.openggf.level.render.TileLoadRequest;
 import com.openggf.mods.scene.SceneImage;
 import com.openggf.mods.scene.SceneSprite;
@@ -16,62 +16,16 @@ import java.util.List;
  * coloured from the piece's palette line, with colour 0 transparent and earlier pieces on
  * top of later ones. Engine-internal.
  */
-final class SpriteRasterizer {
+public final class SpriteRasterizer {
     private SpriteRasterizer() {
     }
 
     /** {@code tiles} is the art (or the frame's DPLC bank); {@code palette} has 64 ARGB colours. */
-    static SceneSprite rasterize(SpriteMappingFrame frame, Pattern[] tiles, int[] palette, int paletteLine,
+    public static SceneSprite rasterize(SpriteMappingFrame frame, Pattern[] tiles, int[] palette, int paletteLine,
             int tileOffset) {
-        List<SpriteMappingPiece> pieces = frame == null ? List.of() : frame.pieces();
-        if (pieces.isEmpty()) {
-            return new SceneSprite(new SceneImage(1, 1, new int[1]), 0, 0);
-        }
-        int minX = Integer.MAX_VALUE;
-        int minY = Integer.MAX_VALUE;
-        int maxX = Integer.MIN_VALUE;
-        int maxY = Integer.MIN_VALUE;
-        for (SpriteMappingPiece p : pieces) {
-            minX = Math.min(minX, p.xOffset());
-            minY = Math.min(minY, p.yOffset());
-            maxX = Math.max(maxX, p.xOffset() + p.widthTiles() * 8);
-            maxY = Math.max(maxY, p.yOffset() + p.heightTiles() * 8);
-        }
-        int width = Math.max(1, maxX - minX);
-        int height = Math.max(1, maxY - minY);
-        int[] out = new int[width * height];
-        // The first piece in a mapping frame has the highest priority, so draw it last.
-        for (int i = pieces.size() - 1; i >= 0; i--) {
-            SpriteMappingPiece p = pieces.get(i);
-            int line = (paletteLine + p.paletteIndex()) & 3;
-            for (int col = 0; col < p.widthTiles(); col++) {
-                for (int row = 0; row < p.heightTiles(); row++) {
-                    int tileIndex = p.tileIndex() - tileOffset + col * p.heightTiles() + row;
-                    if (tileIndex < 0 || tileIndex >= tiles.length || tiles[tileIndex] == null) {
-                        continue;
-                    }
-                    Pattern tile = tiles[tileIndex];
-                    int destCol = p.hFlip() ? p.widthTiles() - 1 - col : col;
-                    int destRow = p.vFlip() ? p.heightTiles() - 1 - row : row;
-                    int baseX = p.xOffset() - minX + destCol * 8;
-                    int baseY = p.yOffset() - minY + destRow * 8;
-                    for (int py = 0; py < 8; py++) {
-                        for (int px = 0; px < 8; px++) {
-                            int index = tile.getPixel(p.hFlip() ? 7 - px : px, p.vFlip() ? 7 - py : py) & 0x0F;
-                            if (index == 0) {
-                                continue;
-                            }
-                            int x = baseX + px;
-                            int y = baseY + py;
-                            if (x >= 0 && y >= 0 && x < width && y < height) {
-                                out[y * width + x] = palette[line * 16 + index];
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return new SceneSprite(new SceneImage(width, height, out), -minX, -minY);
+        var pixels = SpriteMappingRasterizer.rasterize(frame, tiles, palette, paletteLine, tileOffset);
+        return new SceneSprite(new SceneImage(pixels.width(), pixels.height(), pixels.argb()),
+                pixels.originX(), pixels.originY());
     }
 
     /** The tiles a DPLC frame streams into VRAM, in bank order. */

@@ -244,7 +244,8 @@ public class Sonic2ObjectArt {
                 titleCardPatterns,
                 resultsTextPatterns,
                 miniSonicPatterns,
-                hudTextPatterns);
+                hudTextPatterns,
+                hudDigitPatterns);
 
         // Load mappings with offset relative to Numbers VRAM base (0x520)
         List<SpriteMappingFrame> resultsMappings = loadMappingFramesWithTileOffset(
@@ -2404,7 +2405,8 @@ public class Sonic2ObjectArt {
             Pattern[] titleCard,
             Pattern[] resultsText,
             Pattern[] miniSonic,
-            Pattern[] hudText) {
+            Pattern[] hudText,
+            Pattern[] hudDigits) {
         int base = Sonic2Constants.VRAM_BASE_NUMBERS;
         int maxEnd = base;
         maxEnd = Math.max(maxEnd, base + bonusDigits.length);
@@ -2413,7 +2415,7 @@ public class Sonic2ObjectArt {
         maxEnd = Math.max(maxEnd, Sonic2Constants.VRAM_BASE_RESULTS_TEXT + resultsText.length);
         maxEnd = Math.max(maxEnd, Sonic2Constants.VRAM_BASE_MINI_CHARACTER + miniSonic.length);
         maxEnd = Math.max(maxEnd, Sonic2Constants.VRAM_BASE_HUD_TEXT + hudText.length);
-        // Include space for trailing blank at $6F0-$6F1 (used in results mappings)
+        // Include Hud_Base's fixed trailing score zero at $6F0-$6F1.
         maxEnd = Math.max(maxEnd, 0x6F2);
 
         int totalSize = Math.max(0, maxEnd - base);
@@ -2430,12 +2432,13 @@ public class Sonic2ObjectArt {
         copyPatterns(result, miniSonic, Sonic2Constants.VRAM_BASE_MINI_CHARACTER - base);
         copyPatterns(result, hudText, Sonic2Constants.VRAM_BASE_HUD_TEXT - base);
 
-        // Tile $6F0 is used as a trailing blank in the results mappings.
-        int trailingBlank = 0x6F0 - base;
-        if (trailingBlank >= 0 && trailingBlank < result.length) {
-            result[trailingBlank] = new Pattern();
-            if (trailingBlank + 1 < result.length) {
-                result[trailingBlank + 1] = new Pattern();
+        // Hud_Base initializes `E      0` starting at $6E2; the final zero pair
+        // comes from Art_Hud, not the static ArtNem_HUD text (s2.asm:88158,88219).
+        int trailingZero = 0x6F0 - base;
+        if (hudDigits.length >= 2 && trailingZero >= 0 && trailingZero + 1 < result.length) {
+            for (int i = 0; i < 2; i++) {
+                result[trailingZero + i] = new Pattern();
+                result[trailingZero + i].copyFrom(hudDigits[i]);
             }
         }
 
