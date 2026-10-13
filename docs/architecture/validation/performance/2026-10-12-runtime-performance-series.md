@@ -4,7 +4,7 @@
 
 The required accuracy prerequisite and complete-runtime baseline are qualified.
 **The original numeric baseline is frozen from five fresh processes per scenario.
-Five valid consecutive performance experiments were rejected. Optimization stopped at the requested checkpoint with 0% accepted gain in each game. Accuracy/tooling delivery validation, integration and cleanup remain pending.** The intended
+Five valid consecutive performance experiments were rejected. Optimization stopped at the requested checkpoint with 0% accepted gain in each game. Accuracy/tooling delivery validation is complete; integration and cleanup remain pending.** The intended
 metric selected for this frozen series is total process CPU time per simulated frame, equally weighted between
 normal and demanding scenarios in each game. No saving is attributed to accuracy
 repairs, upstream changes, Java migration, or replacing an invalid helper harness.
@@ -1063,7 +1063,7 @@ Exact matched-skip arguments (same Java/private-audio environment as above;
 python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestArenaMaskRenderer,TestBackgroundScrollWrapPixels,TestCPZObjectBugs,TestDisplayShaderPackDiagnostics,TestForegroundWindowRendering,TestInfiniteSonic,TestLevelRendererBackgroundSamplingPerformance,TestLiveRewindCheckpointCost,TestObjectRewindTypeSafetyDispatchPerformance,TestRewindTorture,TestS1Ghz1OpenGgfAudioTimelineCapture,TestS1OpenGgfAudioCapture,TestS3kAiz1CompatibilityRoutes,TestS3kAiz1SpringRecovery,TestS3kRewindAllocationProbe,TestS3kSlotsGlassNative,TestSceneRenderer,TestScrollBufferUploadNative,TestShaderPixelCentreSampling,TestSlayCompositePixels,TestSlotWindowGpuPassNative,TestSmpsRepeatedPlaybackBenchmark,TestSonicSurvivors,TestSozAct1ArenaCapture,TestSozAct1VictoryCapture,TestSozColdAct1Capture,TestSozColdAct2Capture,TestSozConnectedMechanismCapture,TestSozEndBossVictoryCapture,TestSozMinibossCapture,TestSozPostBossRedrawCapture "-Dsonic1.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=${OPENGGF_ROM_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test
 ```
 
-Source audit before delivery: `git diff --name-only 184c9d54ed4fc2c1fed3cb6313653a95f9156e3d -- src/main/java` lists only the two runtime CLI tools. Gameplay, audio, rendering and rewind production sources therefore retain the qualified numeric baseline implementation; rejected optimizations are reverted. The frozen protocol SHA remains `43f6fd83c89bcc9c373a5136b47fb68f1a5282f56dc278ffe48947ea705f0bf5`, and the final decision file records five rejections and 0% accepted gain.
+Source audit before merging upstream `4a9bec1ea`: `git diff --name-only 184c9d54ed4fc2c1fed3cb6313653a95f9156e3d -- src/main/java` lists only the two runtime CLI tools. Gameplay, audio, rendering and rewind production sources therefore retain the qualified numeric baseline implementation; rejected optimizations are reverted. The frozen protocol SHA remains `43f6fd83c89bcc9c373a5136b47fb68f1a5282f56dc278ffe48947ea705f0bf5`, and the final decision file records five rejections and 0% accepted gain.
 
 Upstream advanced to `4a9bec1eaf86e7b70959113e484315c5013c1b7c`: runtime Mod compatibility reporting plus a queue-contention fix. The waiting guard request (owned PID 1723741, session 48341) was cancelled with SIGINT before execution, exit 130, because updated-source delivery now requires reconciliation; no pass is claimed. This is a source/queue-policy change, not an observation timeout. The checkpoint contains 263 focused passes, matched SSZ attribution and all 63 existing skip reasons. Guard verification remains pending on the reconciled source. Original protocol, numeric baseline and rejection count remain fixed; upstream performance effects are unmeasured and receive no task credit.
 
@@ -1126,3 +1126,38 @@ python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay -Dsurefire.forkCou
 All four requests are queued; results, integration, push and cleanup are pending.
 There is no active owned delegate; Astra's read-only task is terminal. The queue
 coordination update is applied locally, with no idle worker restarted for a relay.
+
+
+### Completed reconciled delivery checks
+
+Executed candidate source: `7d12e4c2cb5f2d26fb65a65042dbc3df82499560`
+(Java unchanged from `4a0b2cd6b`); control remains `4a9bec1eaf86e7b70959113e484315c5013c1b7c`.
+All commands above completed with exit 0:
+
+| Check | Tests | Failures / errors / skips | Execution |
+|---|---:|---|---|
+| Updated-base shared focused checks (18 classes) | 399 | 0 / 0 / 0 | 1m19 |
+| Combined candidate focused checks (20 classes) | 404 | 0 / 0 / 0 | 1m14 |
+| Two repaired guard classes, fresh JVM | 49 | 0 / 0 / 0 | 33.880s |
+| Required domain routes/loading, trace profile | 80 | 0 / 0 / 0 | 1m16 |
+
+The 399 shared full test identities and outcomes match exactly; the candidate
+adds five passing tests. Domain coverage includes the complete original
+AIZ → HCZ and S1 LZ2 fixtures, selected-world rules, and all mandatory S3K
+loading checks. ROM properties resolved without skips. The seven Python
+performance-tool checks and CLI help also passed as recorded above.
+`maven_queue.py -Dmse=off -DskipTests package` passed in 36.566s on Java 25.
+This packages the validated source without rerunning tests.
+
+All 17 introduced fixture failures and five guard failures from the completed
+combined run are repaired. The 26 attributed inherited ordinary failures remain
+explicitly inherited; the 63 existing skip identities/reasons matched their
+control, with one new opt-in native diagnostic already separately exercised.
+These are focused follow-up passes to a completed red smoke/guard run, not a
+green full-suite claim or public-release certification.
+
+After upstream reconciliation, production differences against the immutable
+numeric baseline consist of nine upstream Mod compatibility files plus the two
+CLI tools. No rejected runtime optimization remains. Upstream effects are
+unmeasured and receive no performance credit. The original protocol SHA and
+all three original CPU scores remain fixed. Integration/push/cleanup pending.
