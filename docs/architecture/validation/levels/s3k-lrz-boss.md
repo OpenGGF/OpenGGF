@@ -47,8 +47,15 @@ are unchanged.
 The prior Y524 failure came from deferred assembly after the omitted title:
 the same actor stayed registered/camera-focused but was parked at 0/0, selecting
 HPZ's upper-route camera branch. Completing the production boundary closes
-that negative. Native320 Tails/pair controller routes remain blocked before
-this boss act; inherited broader products and native/pixel claims remain open.
+that negative. On `f7d1aea0b`, the repaired native320 Sonic+Tails53,047-input
+cold chain also passes `TestLrzBossColdRouteCapture` with its unchanged boss
+health, placed fire-shield, ring28 approach, capsule/results, HPZ393/2796/ring3
+and full-registry restore/forward assertions. The four-case run has three green
+HPZ identities and one arrival-door failure; the separate actual-open checkpoint
+repair now passes that fourth identity. Source HUD rings are borrowed only during
+the locked fresh boundary: destination HPZ publishes its captured zero, while
+LRZ's native Act3 ring5 continuation bank remains intact. Solo Tails before this
+boss act, inherited broader products and native/pixel claims remain open.
 See the [October 13 follow-up](../../plans/2026-09-17-lrz-bring-up.md#playable-completion-follow-up-2026-10-13)
 for exact execution and remaining blockers.
 

@@ -157,6 +157,34 @@ obligation is retimed or repaired; a successful endpoint does not erase that
 intermediate failure. These are focused checks, not a suite pass. Both temporary
 diagnostic JUnit probes completed and their source was removed.
 
+### Qualified native320 pair continuation
+
+The arrival failure is an intermediate door observation, not missing native
+travel. At39980 the real trigger6 door has risen63 pixels; at40030 it reaches
+64. `loc_42994` waits the full `$40` updates and uses the ROM sine table:
+index63 is255, index64 is256. The assertion still requires the real door to be
+fully open, and40030 adds a full-world45-input restore/forward spot. The
+controller-only arrival and full HPZ movies retain43,761/53,047 frames and their
+first36,318 controller rows. All native ring carry, shield, health and destination
+assertions are unchanged.
+
+From parent `f7d1aea0b` with these reviewed input/checkpoint changes, the unique
+replacement command completes on2026-10-13 at17:56 BST:
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" -Dmse=off \
+  '-Dtest=TestLrzActTwoColdRouteCapture#coldTeamCompletesActTwoAndReachesBossActWithRepeatableWorldState' \
+  "-Ds3k.rom.path=$LRZ_S3K_ROM" test
+```
+
+Result:1 test,0 failures/errors/skips;37.808 seconds Maven time (11.08 seconds
+in the class). The three unchanged HPZ identities from the preceding four-case
+run remain green: native320 pair, Knuckles and pair800. This replaces the sole
+red identity, rather than claiming that the earlier four-case command passed.
+The checks establish these native cold routes and their captured replay spots,
+not complete width/donor/team/lifecycle coverage or ROM pixel/trace parity.
+Solo Tails route recovery continues independently.
+
 ## Goal and delivery rule
 
 Deliver three cold routes: Sonic + Tails `$900` → seamless `$901` → boulder cutscene → `$1600` →

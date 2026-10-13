@@ -50,12 +50,22 @@ restore/forward checks. The HPZ endpoint X1069 remains unchanged. The combined
 Knuckles/pair800 endpoint command passes two tests with zero failures/errors/skips
 in 46.445 seconds Maven time. This closes the Knuckles fresh-boundary negative.
 
-The native320 pair remains blocked: pinned-base
+The native320 pair now passes
 `TestLrzActTwoColdRouteCapture#coldTeamCompletesActTwoAndReachesBossActWithRepeatableWorldState`
-dies at input 36526. Cloud release alone loses the original run-up speed; the
-following jump hits a low ceiling or the active flame. Controller navigation
-trials remain unqualified. See the [October 13 follow-up](../../plans/2026-09-17-lrz-bring-up.md#playable-completion-follow-up-2026-10-13)
-for exact commands, incoming prefixes and rejected runtime rescue.
+on `f7d1aea0b` and the repaired controller inputs. The first36,318 inputs are
+unchanged; ordinary jumps, braking and waiting navigate the corrected Toxomister
+and placed flames. The43,761-input arrival remains296/1196 with six rings,
+including native ring5 carry on the first released boss-act ScreenEvent.
+The door6 assertion remains fully open: it moves from39980 (native rise63) to
+40030 (rise64), with a full-registry restore/forward spot at that actual open
+boundary. The focused replacement completes1 test with zero failures/errors/skips
+(37.808 seconds Maven time); it replaces only the previously red arrival identity.
+
+The full native320 pair, Knuckles and pair800 HPZ identities also pass in the
+four-case boundary run; its sole arrival failure is resolved above. Tails Act2
+and wider donor/roster/lifecycle/native-pixel products remain open. See the
+[October 13 follow-up](../../plans/2026-09-17-lrz-bring-up.md#playable-completion-follow-up-2026-10-13)
+for commands, preserved incoming prefixes and rejected runtime rescue.
 
 ## Obligations
 
