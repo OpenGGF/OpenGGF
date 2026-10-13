@@ -79,6 +79,23 @@ process-owned output stream. A task-owned private output can retain the mixer
 without audible desktop playback; verify its destination and leave the user's
 fallback device unchanged. Pin it before acceptance measurements.
 
+A locked desktop can stall live presentation before or during rendering
+(2026-10-12, runtime performance qualification): Java 25 reached XWayland's
+`glfwShowWindow` and waited in `XCheckTypedWindowEvent`; a minimal window
+reproduced it. Native Wayland opened the same-sized window, then the full engine
+waited at `glfwSwapBuffers`. The desktop's read-only ScreenSaver `GetActive`
+reported true. Stop the owned stalled process. Qualify a visible desktop or an
+owned private virtual display with the actual hardware renderer and normal swap
+path; reject software-renderer substitution. Do not bypass show/swap, disable rendering, or count offscreen
+helper work as the full-runtime baseline. This does not prove a Java-version
+regression; the earlier successful Java 21 run had different desktop visibility.
+
+A live Engine still loads classes lazily (2026-10-12, runtime qualification).
+Recompiling its worktree can remove target/classes before a late object or cleanup
+owner first loads, invalidating the run with ClassNotFoundException. Isolate all
+builds from live correctness runs as well as timing; separate Java input-plan
+compilation that only reads an already-built classpath from Maven rebuilding it.
+
 A released port is a global resource, not a socket-close oracle (2026-10-12,
 mod audit delivery): Golf's audio-fault teardown test received `BindException`
 while trying to bind the former host port. Both unchanged baseline/current cases

@@ -2,8 +2,15 @@
 
 ## Status
 
-Baseline qualification is in progress. No numeric performance baseline is frozen,
-no performance experiment has been accepted, and no percentage saving is claimed.
+Baseline qualification is in progress. The inherited original complete AIZ → HCZ
+route now passes its trace and terminal controls at local accuracy checkpoint
+`1baa8e6dc` plus updated-base merge `eca81166b`; broad matched validation is
+complete: all 26 ordinary failures and all 64 skips are inherited/matched, and
+fresh guards pass. The alternate retains 59 inherited mismatches. No numeric performance
+baseline is frozen, no performance experiment has been accepted, and no percentage
+saving is claimed. Private-display runtime qualification is in progress while the desktop remains
+locked. The audible task process was stopped, and subsequent device streams were
+verified on the private audio sink. Integration and push have not happened.
 The intended target is total process CPU time per simulated frame in S1, S2 and
 S3K, with resident/peak memory, attributable GPU memory and frame-time tails as
 regression checks. The user authorized repairing inherited AIZ → HCZ handoff
@@ -501,3 +508,390 @@ change completed: original passes all 20,463 compared observations and terminal
 hardware checks; alternate retains 59 errors, first row 25,589 animation $13/$05
 (2 tests, 1 inherited failure, no errors/skips). This is still accuracy work, with zero performance
 experiments or measured gains.
+
+## Updated-base accuracy checkpoint
+
+Accuracy checkpoint: `1baa8e6dc9c5de5223a64633e7043411845a997f`.
+The main branch advanced to `3ac1363ed2b2549d9e7c9d913b3b617b47e1bc53`;
+fetch/fast-forward pull reported already up to date and preserved unrelated files.
+Local merge `eca81166b7bbb06eeb557f92f4a804029130a5b4` adopts that source.
+The sole conflict was the measurement-hazard table: both the private-audio
+lesson and upstream socket/palette/full-assertion lessons were retained.
+No runtime code conflicted. Main now requires Java 25. This change precedes
+numeric baseline freezing; no Java/upstream gain is attributed to this task.
+
+Java 25 clean compile passed (46.574 seconds is build cost, not runtime evidence).
+Java 25/Lua 5.4/tool preflight passed. Both owned worktrees initialize pinned
+TraceChaser `e0a2443e086ca657a49227c5467eeecd06e40ece` for guard prerequisites.
+The old control tree was clean and wholly ancestral before moving its local
+control branch from `a0e2b79cc` to the updated base; untouched capture evidence
+retains the old source identity. The original numeric baseline still does not exist.
+
+Updated candidate focused checks: 167 tests, zero failures/errors/skips,
+including both level-loading classes, the required S3K skip/bootstrap/decoder
+checks, capture-audio boundaries, boss/bridge recreation and the 99 earlier
+local/schema checks. Selectors:
+`TestAiz2BossEndSequenceObjects,TestAizEndBossInstance,TestSonic3kZoneFeatureProvider,TestS3kAizEndBossGraphRewind,TestS3kAizBridgeRiderRewind,TestAiz2ObjectRewindCodecs,TestCompactFieldCapturerPolicy,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestTraceCaptureUnifiedAudio`.
+Command used Java 25, the normal queued `-Dmse=off '-Dtest=<selectors>' test -B`
+shape and all three absolute canonical ROM properties from the variables above.
+
+Updated route controls: 7 tests, 6 passing, one inherited alternate-AIZ failure,
+zero errors/skips. S1 GHZ1/LZ1, S2 EHZ1/ARZ, original complete AIZ → HCZ, and
+HCZ1 pilot pass. Alternate AIZ still has 59 errors at row 25,589 animation
+$13/$05. Selectors were
+`TestS1Ghz1TraceReplay,TestS1Lz1CompleteRunTraceReplay,TestS2Ehz1TraceReplay,TestS2ArzLevelSelectTraceReplay,TestS3kAizTraceReplay#replayMatchesTrace,TestS3kAizZoneSliceTraceReplay,TestS3kHcz1RoutePilot`,
+using the same normal `-Ptrace-replay -Dsurefire.forkCount=1` command with Java 25.
+These remain separate replay controls, not full Engine.loop qualifications.
+
+The combined plan against actual destination `3ac1363ed` selects all 3,170
+ordinary classes plus all guards. The matched main-source run recorded in the
+[upstream delivery evidence](../2026-10-12-mod-audit-remediation.md#integrated-develop-comparison-and-final-follow-up)
+has 26 inherited assertion failures, 64 skips and one historical Golf socket
+error subsequently repaired by a test-only correction and a 17-case focused run.
+Its raw diagnostics were consumed by their owner. Our matched base/current runs
+will retain full failure and skip identity comparison before acknowledgment.
+Expect roughly 65 minutes per combined invocation, based on the completed
+3,619-second ordinary plus 265-second guard run. Stop at 120 execution minutes
+or 10 minutes without output; a timeout is incomplete validation. New/worsened
+or unattributed failures block integration. Timing measurements remain isolated
+from these builds/tests and have not begun.
+
+### Locked-desktop live-runtime qualification
+
+After adopting Java 25, the normal Engine driver stalled at `glfwShowWindow`
+before GL capabilities/audio initialization. An owned child-launched debugger
+located the native wait in `XCheckTypedWindowEvent` through Xlib/XCB. Both automatic
+and explicit X11 selection reproduced it; a minimal 640×448 GLFW window also
+stalled on X11. Native Wayland opened that minimal window. A separate full Engine
+Wayland probe initialized normal GL, SMPS/OpenAL and the configured live rewind,
+then waited at `glfwSwapBuffers` without completing its route. These probes do not
+qualify a runtime baseline, and no hardware/JDK gain or performance rejection is
+counted from them.
+
+Read-only `qdbus6 org.freedesktop.ScreenSaver /ScreenSaver GetActive` returned
+`true`; KWin reports 6.7.5/Wayland with the same RX 9070 XT/Mesa driver. This is
+consistent with the blocked visibility/presentation boundaries, rather than
+establishing a Java regression. An unlocked, visible desktop is needed to retest that desktop path; the private
+hardware display qualification below provides a separate route.
+No desktop unlock, global display/audio setting, or unrelated process was changed.
+
+The Wayland full-runtime probe's actual process-owned ALSA/OpenAL stream was
+verified on the explicitly named private sink, Float32 stereo at 48 kHz. It was
+stopped after locating the swap wait. The idle owned null-sink module was then
+unloaded after verifying its ID/name/arguments and zero connected streams.
+The owned debugger inferiors and minimal-window probes were also reaped. The
+private output must be recreated and verified before any further audible engine
+launch. Task sound does not reach the desktop speakers; unrelated streams remain
+untouched. Both matched broad correctness invocations remain active/queued;
+there are no timing measurements running concurrently.
+
+### Updated Java 25 handoff media
+
+A correctness-only `TraceCaptureTool` launch at `eca81166b` used Java 25,
+`--enable-native-access=ALL-UNNAMED -Xmx3g`, the task tree's own production classes
+and the same `--trace src/test/resources/traces/s3k/aiz1_to_hcz_fullrun --scale 2
+--clip frames:20180:20797 --no-ghosts` arguments, with output under
+`${OPENGGF_PERF_TASK_DIR}/handoff-captures-java25`. It completed with exit 0 and
+no process-owned speaker stream. All 618 decoded frame hashes and all 494,400
+stereo PCM sample frames match the earlier candidate captures exactly. The
+newline-joined video MD5 list retains SHA-256
+`51ed6bbf4b9b778c980f47bd7934fd881915d1f0c9eff35c38888e854dd3ee90`;
+PCM SHA-256 remains
+`7d32aea56b52460d544aeafa4dd6906146e03d4c17ab449beeae5565604b5cfa`.
+This corroborates deterministic rendering/audio across the final accuracy edge,
+updated base and Java migration for that handoff window; it does not certify
+native RGB/waveform equality or provide a complete-runtime resource score.
+
+### Completed candidate broad checks (matched base still active)
+
+At runtime source `eca81166b`, combined run `20261012T215139Z-2c945d94`
+completed its full selection of 3,170 ordinary classes and all guards. Ordinary:
+3,168 class reports, 27,645 checks, 26 assertion failures, no errors, 64 skips,
+3,575.50 seconds. Fresh guards: 88 reports, 677 checks, no failures/errors/skips,
+276.30 seconds. Invocation exit 1. Diagnostics remain needed for comparison with
+matched base run `20261012T225115Z-b1b082de` at `3ac1363ed`; acknowledge both
+only after inspecting the comparison. The tested working-tree fingerprint was
+`dc8dbbcfa3e519c82c887e767bb06c7e8775284fe98c9068099cd29915645d37`.
+
+All 26 failed identities match the upstream MHZ/LRZ/SSZ/DEZ table; 25 complete
+raw assertions also match its SHA-256 digests. The SSZ width-400 composite
+snapshot assertion differs (`13ac120a05a92dfcff17999e9920fd96d6cdd6bf89a4346ee53b611167406150`);
+its class/schema/state-combining hashes require semantic attribution with the
+matched base, not token normalization. Skip identity/reason comparison is pending.
+The candidate adds 14 net checks. One old incorrect button oracle was replaced:
+`cutsceneButtonRetainsUpForLaterPlayerSlotWhenKnucklesReachesIt` becomes
+`cutsceneButtonRetainsConsumedUpHistoryAndUnlocksNextPlayerDispatch`, preserving
+the already-consumed logical input history while checking native next-dispatch
+unlock. Do not call the broad run green or integrate before attribution completes.
+
+### Private hardware display qualification
+
+A task-owned `dbus-run-session -- kwin_wayland --virtual --width 1280 --height
+720 --scale 1 --output-count 1 --socket openggf-runtime-perf --no-lockscreen
+--no-global-shortcuts --no-kactivities` has a private 0700 runtime directory,
+configuration/data directories, and session bus. It opens no desktop window.
+The first socket path exceeded Unix's 108-byte limit and was rejected; the
+owned retry uses a short generated path. The first minimal client selected the
+integrated GPU and was rejected. Child-only `DRI_PRIME=pci-0000_03_00_0` selects
+the RX 9070 XT, as documented by
+[Mesa's GPU selector](https://docs.mesa3d.org/envvars.html#envvar-DRI_PRIME).
+A normal OpenGL 4.1-core GLFW Wayland window then completed 60 buffer swaps with
+focus and reported RX 9070 XT/radeonsi/gfx1201/ACO, OpenGL 4.6, Mesa
+26.2.4-arch3.1. This is real hardware rendering, not a software renderer.
+
+The full Engine S1 GHZ1 probe completed 3,905 controller rows with 3,900 level
+iterations, movie indices 840–4,744, actual 640×448 window, normal audio/render
+submission and configured live rewind. A fresh expanded run exited 0:
+4,057 presentation updates, rewind current 3,905 / earliest 300 (filled history,
+including the preceding keyframe). Position, all three speeds, subpixels, angle,
+air/rolling flags, camera, rings and animation/mapping match native exactly.
+All controller masks match and the five held level rows preserve the recorded
+execution shape. Absolute VBlank count has a constant 524 offset; its per-row
+advances match, and no gameplay clock was set from the recording. The native
+`ground_mode` column is angle-derived; seven cached internal enum boundary
+values differ, while the existing `TraceBinder` angle projection matches.
+Retain the internal values for baseline/candidate comparison rather than hiding them.
+
+Reading `GL_FRONT` after swap returned zero even for a minimal nonblack clear
+with no GL error; it is not a valid image oracle on this path. The earlier final
+blank-frame rejection was a probe/readback failure. The normal Engine F12
+screenshot path instead captures before swap and produced a visually inspected,
+nonblank 640×448 gameplay image at row 999, without an extra simulation tick.
+The later generic probe hands the diagnostic playback panel to its external
+owner through the existing API, leaving the game HUD available.
+
+S2 EHZ1's first full live run completed 5,852 rows (movie 899–6,750), actual
+640×448, rewind current 5,852 / earliest 2,250, with private audio verified.
+Position/speeds/subpixels/camera/rings/animation and flags match; controller masks
+and VBlank deltas match. Absolute level counter starts 27 rather than 1 and keeps
+that 26-count offset. Starting playback as soon as the main player exists instead
+of waiting for `Level_started_flag` did not change that offset. This hypothesis
+is rejected; do not reset/hydrate the counter to make it match. Startup preparation
+and canonical clock/sidekick control coverage still need qualification.
+
+These are correctness/driver runs concurrent with tests, not acceptance timing.
+The prototype retains comparison data and emits per-row diagnostics; it is not
+an acceptable memory/timing measurement driver as-is. The private compositor and
+null sink remain owned and registered outside the repo and must be cleaned up.
+No numeric baseline, performance gain or performance-rejection count exists.
+
+### Matched broad attribution completed
+
+Updated base `3ac1363ed`, run `20261012T225115Z-b1b082de`: ordinary 3,168
+reports / 27,631 checks, 26 assertion failures, no errors, 64 skips, 3,640.93s;
+fresh guards 88 reports / 677 checks, no failures/errors/skips, 263.10s. Exit 1.
+Against candidate `eca81166b`, there are no added/removed failed identities,
+25 complete assertion matches, no added/removed skips, and no changed complete
+skip reasons. No failure/skip details were omitted. The remaining SSZ assertion
+has base SHA-256 `23eaae1f14b8fdd3889bbaed36d28e6078f7259b9d47af973d615665fa9cad12`
+and candidate SHA-256 `13ac120a05a92dfcff17999e9920fd96d6cdd6bf89a4346ee53b611167406150`.
+
+Normal queued matched selector
+`TestSszTailsColdRouteCapture#coldSoloTailsDefeatsBothReplicasAndRidesTheirTeleporters`
+with Java 25, `-Dmse=off`, canonical absolute S3K ROM property and `test -B`
+completed two checks per source: one pass, the same frame-4018 assertion failure,
+no errors/skips. Comparison-only temporary test SHA-256 was
+`e52f7ce0b97c308cfe721c80bf940be7acc9384f6bf1eea76ab334fef6544f0b`.
+All six rows match by side, every ObjectRefId field, schema ID, full native type,
+complete scalar bytes and opaque values. JetFlame schema 15 and GunArm schema 16
+retain the full scalar table in the upstream validation artifact, and every
+opaque array is empty. The second parameter is width 800 in the current test;
+older prose calls it width 400. The failing slot/child identities are unchanged.
+No hash tokens were stripped to claim equality. Both original tests were restored
+byte-for-byte to `db4583214f4430c81cf25b7260a716358be575ff2d7772a6067be01367c2af1e`.
+These checks attribute all 26 failures as inherited; this is a completed red
+ordinary suite with passing guards, not a green full suite. No SSZ fix or
+production formatter change was made. Integration/push remain pending.
+
+### Complete-driver S3K qualification frontier
+
+The standalone full Engine probe initially used row 335, confusing compared-row
+count with pre-level length. The canonical resolver observes `Game_mode=12` at
+row 289. With controller start `511 + 289 = 800`, the 1,000-row prefix matches all
+checked gameplay state; its sole raw-field difference is first-row camera Y
+918/912. Canonical `phaseForReplay` classifies row 289 as `VBLANK_ONLY`, and
+`shouldCompareGameplayStateForReplay` is false there (row 290 is the first full
+compared level frame). No expected camera/player/clock value was written into
+the engine.
+
+The first 20,509-row full live attempt omitted the native controller latch offset
+and diverged at row 1,428, speed 0/12 when manual control began. The existing
+`TraceReplayRowPolicy.appliedInputOffset` selects the previous BK2 input for this
+native sample phase. Adding that input-only rule matched the playable route until
+row 5,463, when LIVE readiness completed the AIZ1 → AIZ2 work ahead of the
+reference: X 12,237/205, Y 893/765, camera X 12,048/16 and Y 736/608. This full
+attempt remains rejected as a driver qualification; its EOF is not proof it
+followed the mandatory handoff. There is still no performance experiment or score.
+
+The next external-only prototype activates the approved recorded-admission port
+after idle LIVE queues, installs the original v5 readiness schedule, and attaches
+the existing service-boundary observer. It registers the port with live rewind,
+selects each raw input row, and checks unmatched completions. Its only authority
+is matching kind/ordinal/fingerprint/boundary for already-prepared ROM work; it
+neither supplies gameplay values nor creates jobs. A 1,800-row prefix exited 0
+and retained only the non-gameplay initial camera difference. Full handoff
+qualification and terminal readiness checks remain pending.
+
+One full retry failed closed before any controller rows because Pulse briefly
+reported the new process-owned stream's sink as unassigned (`4294967295`). The
+watcher now permits that unassigned state to settle under its deadline while
+still immediately rejecting any assigned physical output. The owned private sink
+was checked before relaunch. No desktop sound or acceptance measurement came
+from that failed startup. All subsequent source/hardware flags must be pinned
+before the numeric baseline; the latest prototype uses `-Xmx3g`, whereas earlier
+S1/S2 qualification probes used `-Xmx1g`.
+
+### C8 — live construction/reset uses the selected world
+
+The normal Engine exposed a setup difference hidden by matching bootstrap and
+world modules in the existing headless fixtures. `AbstractPlayableSprite` used
+`bootstrapGameModule()` at construction and reset even after a world had selected
+S3K. The bootstrap remained S2: Tails' first CPU dispatch wrote $4000 instead of
+S3K `sub_13ECA`'s $7F00 (sonic3k.asm:26806). Status/animation refresh later repaired
+the cached rules but could not undo that first dispatch. Rebinding the legacy
+configuration before Engine construction did not fix this and was rejected.
+
+Two new `TestPlayableSessionRules` regressions preserve an S3K world with a
+different S2 bootstrap. Both failed before the change (2 assertion failures,
+0 errors/skips). Construction and reset now use the existing
+`currentOrBootstrapGameModule()` accessor, preserving the pre-session fallback.
+Focused tests `TestPlayableSessionRules,TestPhysicsProfileRegression,
+TestHybridGameRules,TestPhysicsProfile` passed 60 checks, 0 failures/errors/skips:
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  -Dtest=TestPlayableSessionRules,TestPhysicsProfileRegression,TestHybridGameRules,TestPhysicsProfile test -B
+```
+
+The private normal-Engine 1,800-row prefix (raw rows 289–2088) then matched both
+characters across X/Y, X/Y/ground speed, angle, air, rolling, both subpixels,
+routine, status, animation and mapping (14 fields each; 0 differences on compared
+rows). Initial raw row 289 is a non-gameplay observation under the canonical
+policy. The complete rendered route and C8 broader checks remain in progress;
+the previously completed broad result predates C8 and is not its validation.
+
+The preceding full readiness-controlled prototype completed all 20,509 rows
+289–20797 only after the ordinary title-card/loading iterations were observed by
+the playback cursor. Before that change it stopped seven rows early; that run
+was rejected despite reaching the presentation iteration cap. Strict EOF now
+requires every input row. The two raw P1 differences occur only at non-gameplay
+rows 289 and 20791; every canonically compared P1 state matched. Full P2 and
+terminal-job verification is still required. These are driver/accuracy trials,
+not rejected performance experiments (the performance rejection streak is zero).
+
+The completed C8 private rendered run executed 20,509 rows, 289–20797, and
+20,512 normal presentation updates at 640×448 on the RX 9070 XT. The existing
+`TraceBinder` / canonical phase and comparison projection applied to the captured
+CSV passed **20,463 compared observations, 0 errors/warnings**. Raw checks retain
+26 sidekick status differences at rows 16217–16242 (facing bit only); they satisfy
+the existing airborne, zero-horizontal-speed facing-only comparator predicate.
+That predicate was not changed. Stand-slot raw sentinels remain documented as
+engine -1 versus native 0 when no object is ridden. No gameplay value was written
+from comparison data.
+
+The live terminal state has exactly the original control's four KOS_MODULE_QUEUE
+parents, ordinals 38–41, matching all four fingerprints and ROM sources $0D6F28,
+$15C3A2, $0D6D84, $39BEDA. Unmatched recorded completions are zero. The destination
+HCZ title owner has submitted its load; the fixture ends before that load finishes.
+Its EOF correctly resets live rewind history; filled-history RSS must be measured
+in the preceding frozen gameplay window, not at that empty-history EOF.
+
+Real process fdinfo also exposes kernel `drm-resident-vram` and workload engine
+counters. Deduplicate FDs by `(drm-pdev, drm-client-id)` as required by the
+[DRM usage-statistics specification](https://docs.kernel.org/gpu/drm-usage-stats.html).
+The probe had one active discrete client and one integrated setup client; both
+reported zero shared VRAM. These are measured resident backing-store counters,
+not requested texture sizes. This correctness-run observation is not a frozen
+VRAM benchmark or performance gain; sampling cadence and window aggregation remain
+to be qualified and pinned.
+
+C8 follow-up/domain validation passed 80 checks with no failures/errors/skips,
+including the new bootstrap-fallback regression, original AIZ complete trace,
+LZ2 complete trace, and all four mandatory S3K loading/bootstrap classes. Command:
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk \
+  python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay \
+  -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+  -Dtest=TestPlayableSessionRules,TestS1Lz2CompleteRunTraceReplay,TestS3kAizTraceReplay,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils \
+  "-Dsonic1.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Ds3k.rom.path=${OPENGGF_ROM_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+ARZ's complete private rendered route passed 5,073 input rows / 5,064 canonical
+compared observations, 0 errors/warnings (Sonic and Tails included). LZ1's rendered
+1,500-row prefix failed at row 534, rings 0/1; all checked movement fields matched,
+and rings caught up at 535. Native first VBlank is $6C69 while normal fresh load
+starts at 2. A startup-clock phase hypothesis is unproven; no clock was copied
+from trace data. That route is not qualified by trimming it. LZ2's independent
+complete trace passes. Its first rendered full attempt was invalidated at roughly
+7,560 rows by concurrent recompilation of its own target/classes, which removed a
+lazily loaded cleanup class. Keep ALL builds separate from live runs, including
+correctness qualification; the required complete LZ2 retry remains pending.
+
+LZ2's rebuilt, isolated private rendered retry passed all 10,173 input rows /
+9,901 canonical compared observations (0 errors/warnings), with 10,307 normal
+presentation updates and live rewind current/earliest 10173/6570 at EOF.
+The input-only maintained normal-Engine tool reproduced GHZ1 fullrun at 3,905
+input rows / 3,900 compared observations, 0 errors/warnings. Its proposed 240-row
+window verified 240 executed simulation frames using actual level-counter deltas,
+and exactly 3,600 retained rewind frames at both boundaries. Its optional CSV
+mode is correctness-only and its numeric output is not an acceptance baseline.
+The original short normal S1 route leaves only four seconds after history fills;
+a longer GHZ1 complete-run fixture is being checked before freezing the window
+so memory stability and smaller improvements can be assessed over a longer span.
+
+`RuntimeInputPlan` and `RuntimeEngineBenchmarkTool` promote the recurrent
+qualification method into engine-facing tools. Plan compilation runs in a
+separate process and retains only controller inputs (including the preceding
+latched input), structural row policies and approved hardware completion edges.
+No expected physics/auxiliary values are retained by the runtime. Two focused
+input-plan regressions first caught missing optional `source_bk2`; the compiler
+now uses the existing adjacent-movie fallback when absent. Round-trip controller
+identity, immutable ownership, comparison-field exclusion and unknown-field
+rejection passed alongside all three session-rule checks (5 tests, 0 failures/
+errors/skips). The maintained tool verifies actual simulation counter deltas and
+filled history, and rejects incomplete workloads; requested full-row counts are
+labelled separately from measured executed-frame counts.
+
+The longer GHZ1 complete-run fixture passed its independent control (1 test,
+0 failures/errors/skips) and the input-only normal Engine: 5,598 controller rows /
+5,595 canonical observations, 0 errors/warnings. Its proposed 4000–5500 window
+verified 1,499 executed simulation frames (one held row) and exactly 3,600 retained
+rewind frames at both boundaries. External sampling recorded 489 observations
+while that CSV-enabled qualification window ran; those values are not the numeric
+acceptance baseline. The six-scenario proposal now uses this longer normal S1
+route and LZ2 as its demanding route.
+
+The external sampler's independent controls pass (2 Python tests): duplicated
+FDs are deduplicated within the device/client pair, requested storage is ignored
+in favor of residency, and unknown units fail instead of producing plausible
+byte counts. Measurement code and all windows remain to be frozen after the
+remaining input-only driver qualifications.
+
+The maintained input-only S2 normal EHZ1 run passed all 5,852 canonical compared
+observations, 0 errors/warnings, with Sonic and Tails included. Its 4000–5500
+window verified 1,500 executed frames and full 3,600-frame rewind retention at both
+boundaries. The normal startup retains the previously observed absolute level
+counter offset +26; comparator policy does not certify that absolute origin.
+Measured counter deltas and controller/trajectory identities are explicit; no
+expected counter was written into the engine. This is a coverage limit, not a
+claim of matching every raw CSV clock field.
+
+The first maintained S3K full-route qualification failed closed after its
+measurement window: fade entry held the cursor at the end boundary, causing a
+second interval write beyond its fixed array. No numeric result was accepted.
+The tool now closes the boundary exactly once and distinguishes presentation
+interval count from controller rows and verified simulation frames. A bounded
+interval capacity includes legitimate held presentations; only recorded samples
+enter percentiles. Complete S3K rerun is required. EOF reporting now also captures
+actual pending-job kinds/ordinals/fingerprints/ROM sources for comparison with
+the existing terminal control. This remains driver qualification, not a
+performance experiment; the rejection streak is zero.
+
+After the boundary/reporting repair, focused
+`TestRuntimeInputPlan,TestPlayableSessionRules,TestHardwareTimingAuthorityGuard,
+TestTraceHydrateSwitchDefault` completed 31 tests, 0 failures/errors/skips under
+Java 25 with normal queued `-Dmse=off -Dtest=<selectors> test -B`. The full S3K
+input-only rerun remains active; this focused result is not broad validation.

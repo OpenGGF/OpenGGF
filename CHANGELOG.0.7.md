@@ -632,7 +632,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   releases it, instead of easing back toward the loaded act's default bounds.
   The AIZ2 boss retains its native owner through results and the Knuckles
   cutscene, preserving button input release, the drawbridge's delayed eject,
-  and captured rider state through rewind.
+  and captured rider state through rewind. Playable construction and level reset
+  bind rules from the selected world before the first CPU dispatch, retaining
+  the bootstrap fallback for pre-session construction.
 
 - **Ring visibility:** restore full-X sorting of expanded ring placements so a
   nearer ring cannot be hidden behind a farther off-screen record, fixing late
