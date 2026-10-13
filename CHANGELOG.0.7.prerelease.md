@@ -11,9 +11,12 @@ Unreleased. The earlier development themes remain in
   restores the destination ring count after the title boundary temporarily
   retains the source count, including rewind across that boundary.
 
-- **S3K Knuckles entry:** Locked-on Mushroom Hill deletes the standalone S&K
+- **S3K Knuckles routes:** Locked-on Mushroom Hill deletes the standalone S&K
   intro before it can freeze the camera and take player control. Its native
   `SK_alone_flag` prerequisite is kept separate from the selected character.
+  Launch Base's placed final-boss prelude now admits its native camera gate,
+  retains the ship's activation timer and restores the complete child graph.
+  Its carrier continues into Mushroom Hill with released player control.
 
 - **S3K endings:** Sonic and Tails continue from Death Egg or Doomsday into
   the Tornado rescue, earned Super Emerald restoration, reunion, ROM credits

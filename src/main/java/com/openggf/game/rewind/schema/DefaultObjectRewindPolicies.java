@@ -623,6 +623,12 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterColumn", "extensionGrabbed"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeImpactExplosion", "boss"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleButton", "parent"), RewindFieldPolicy.CAPTURED),
+            // The preceding native CA turret graph restores the same exact SST
+            // parent/sibling edges. Constructor-only links would orphan its shells.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$BossChild", "boss"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$LaserHeadChild", "segment"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$MuzzleLaserChild", "head"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$GunPodChild", "segment"), RewindFieldPolicy.CAPTURED),
             // LBZ Big Arm is a native multi-slot graph. These fields must use
             // ObjectRefId capture; geometric/nearest reconstruction is
             // ambiguous for the two arm segments and the later explosion set.

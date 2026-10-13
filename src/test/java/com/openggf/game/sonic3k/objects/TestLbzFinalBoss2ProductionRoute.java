@@ -59,8 +59,8 @@ import static org.mockito.Mockito.when;
 @RequiresRom(SonicGame.SONIC_3K)
 @ExtendWith(SingletonResetExtension.class)
 class TestLbzFinalBoss2ProductionRoute {
-    /** word_72FEA clamps the Knuckles wrapper arena to Camera_X=$4380. */
-    private static final int CAMERA_X = 0x4380;
+    /** word_72FEA second record clamps the Knuckles final arena to Camera_X=$4300. */
+    private static final int CAMERA_X = 0x4300;
     private static final int CAMERA_Y = 0x0328;
     private static final int SAFE_PLAYER_X = 0x43A0;
     private static final int SAFE_PLAYER_Y = 0x03E0;
@@ -94,13 +94,13 @@ class TestLbzFinalBoss2ProductionRoute {
     void realCapsuleResultsFloorAndCarrierCompleteTheKnucklesRoute() {
         ObjectManager objectManager = GameServices.level().getObjectManager();
         GameServices.water().setDynamicWaterLocked(Sonic3kZoneIds.ZONE_LBZ, 1, true);
-        LbzFinalBoss1Instance wrapper = spawnFinalBoss1ThroughRegistry(objectManager);
+        LbzFinalBoss1Instance wrapper = admitPlacedFinalBoss1ThroughNativeGate(objectManager);
         fixture.stepIdleFrames(1);
         assertEquals(Sonic3kObjectIds.LBZ_FINAL_BOSS_1,
                 GameServices.gameState().getCurrentBossId(),
                 "the live $CA wrapper owns Boss_flag setup before the Big Arm handoff");
         assertFalse(GameServices.water().isDynamicWaterLocked(Sonic3kZoneIds.ZONE_LBZ, 1),
-                "the Knuckles wrapper owns the stale _unkFAA2 clear");
+                "the actual placed CD prelude owns the stale _unkFAA2 clear");
 
         stepPinnedUntil(() -> wrapper.getCollisionFlags() == 0x0F, 0x40,
                 SAFE_PLAYER_X, SAFE_PLAYER_Y, false);
@@ -293,15 +293,48 @@ class TestLbzFinalBoss2ProductionRoute {
         assertEquals(0x8C, fixture.sprite().getMappingFrame(),
                 "later reloads alternate $8C/$8D every 11 entries");
 
-        for (int frame = 0;
-             frame < 0x200 && !GameServices.level().isLevelInactiveForTransition();
-             frame++) {
-            fixture.stepIdleFrames(1);
-        }
-        assertTrue(GameServices.level().consumeZoneActRequest());
-        assertEquals(Sonic3kZoneIds.ZONE_MHZ, GameServices.level().getRequestedZone());
-        assertEquals(0, GameServices.level().getRequestedAct());
-        assertTrue(GameServices.level().isLevelInactiveForTransition());
+        // Continue this actual carrier through the production load. The fight
+        // remains a declared positioned/pinned component diagnostic; no manual
+        // CA allocation or joined separate MHZ boot substitutes for composition.
+        GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, true);
+        var input = new com.openggf.control.InputHandler();
+        var neutral = new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, "");
+        input.setLogicalOverride(com.openggf.debug.playback.RecordedInputSnapshots.fromBk2(neutral, neutral));
+        var loop = new com.openggf.GameLoop(input);
+        loop.setGameplayMode(fixture.gameplayMode());
+        loop.setGameMode(com.openggf.game.GameMode.LEVEL);
+        try {
+            for (int frame = 0; frame < 30; frame++) { fixture.gameplayMode().getFadeManager().update(); loop.step(); }
+            var outgoing = fixture.gameplayMode().getRewindController();
+            assertTrue(outgoing != null && outgoing.currentFrame() > 10, "carrier builds actual outgoing history");
+            long largestOutgoing = outgoing.currentFrame();
+            for (int frame = 0; frame < 0x200 && GameServices.level().getCurrentZone() != Sonic3kZoneIds.ZONE_MHZ; frame++) {
+                fixture.gameplayMode().getFadeManager().update(); loop.step();
+                if (GameServices.level().getCurrentZone() == Sonic3kZoneIds.ZONE_LBZ)
+                    largestOutgoing = Math.max(largestOutgoing, outgoing.currentFrame());
+            }
+            assertEquals(Sonic3kZoneIds.ZONE_MHZ, GameServices.level().getCurrentZone());
+            assertEquals(0, GameServices.level().getCurrentAct());
+            var incoming = fixture.gameplayMode().getRewindController();
+            assertTrue(incoming == null || incoming.currentFrame() < largestOutgoing, "native full load isolates carrier history");
+            GameServices.level().skipPendingInitialTitleCardPresentation();
+            for (int frame = 0; frame < 4; frame++) { fixture.gameplayMode().getFadeManager().update(); loop.step(); }
+            assertFalse(GameServices.level().hasPendingFreshLevelTransitionBoundary());
+            assertFalse(GameServices.level().getTransitions().isTitleCardRequested());
+            var player = GameServices.sprites().getMainPlayable();
+            assertSame(player, GameServices.camera().getFocusedSprite());
+            assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
+            assertFalse(player.getDead()); assertFalse(player.isObjectControlled());
+            assertFalse(player.isControlLocked()); assertFalse(GameServices.camera().getFrozen());
+            assertTrue(GameServices.camera().isLevelStarted());
+            int before = player.getCentreX();
+            // The five-argument BK2 constructor begins with frameIndex, then P1 held mask.
+            var right = new com.openggf.debug.playback.Bk2FrameInput(0, 8, 0, false, "");
+            input.setLogicalOverride(com.openggf.debug.playback.RecordedInputSnapshots.fromBk2(right, neutral));
+            for (int frame = 0; frame < 16; frame++) { fixture.gameplayMode().getFadeManager().update(); loop.step(); }
+            assertTrue(player.getCentreX() > before, "released native Knuckles accepts ordinary controller movement in actual MHZ");
+        } finally { loop.closePresence(); }
+
     }
 
     @Test
@@ -309,9 +342,9 @@ class TestLbzFinalBoss2ProductionRoute {
         ObjectManager objectManager = GameServices.level().getObjectManager();
         fixture.stepIdleFrames(8);
         assertTrue(objectManager.activeObjectsOfType(LbzFinalBoss2Instance.class).isEmpty(),
-                "without the $CA route wrapper, an ordinary manager run cannot invent $CC");
+                "the placed CD prelude and nine-hit CA owner must precede CC");
 
-        LbzFinalBoss1Instance wrapper = spawnFinalBoss1ThroughRegistry(objectManager);
+        LbzFinalBoss1Instance wrapper = admitPlacedFinalBoss1ThroughNativeGate(objectManager);
         fixture.stepIdleFrames(1);
         stepPinnedUntil(() -> wrapper.getCollisionFlags() == 0x0F, 0x40,
                 SAFE_PLAYER_X, SAFE_PLAYER_Y, false);
@@ -723,13 +756,24 @@ class TestLbzFinalBoss2ProductionRoute {
         assertTrue(condition.getAsBoolean(), "production route did not reach the expected state within " + limit + " frames");
     }
 
-    private LbzFinalBoss1Instance spawnFinalBoss1ThroughRegistry(ObjectManager objectManager) {
-        ObjectRegistry registry = GameServices.module().createObjectRegistry();
-        ObjectSpawn spawn = new ObjectSpawn(
-                0x44A0, CAMERA_Y + 0x58, Sonic3kObjectIds.LBZ_FINAL_BOSS_1,
-                0, 0, false, 0);
-        return objectManager.createDynamicObject(() -> assertInstanceOf(
-                LbzFinalBoss1Instance.class, registry.create(spawn)));
+    private LbzFinalBoss1Instance admitPlacedFinalBoss1ThroughNativeGate(ObjectManager objectManager) {
+        LbzFinalBoss1Instance placed = null;
+        for (int frame = 0; frame < 32 && placed == null; frame++) {
+            pinPlayer(SAFE_PLAYER_X, SAFE_PLAYER_Y, false);
+            fixture.stepIdleFrames(1);
+            placed = objectManager.activeObjectsOfType(LbzFinalBoss1Instance.class).stream()
+                    .filter(o -> o.getSpawn().objectId() == Sonic3kObjectIds.LBZ_FINAL_BOSS_KNUX)
+                    .findFirst().orElse(null);
+        }
+        assertNotNull(placed, "actual native upper-route CD must be admitted from ROM placement");
+        var owner = placed;
+        stepPinnedUntil(() -> owner.getCollisionFlags() == 0x0F, 0x100,
+                SAFE_PLAYER_X, SAFE_PLAYER_Y, false);
+        assertEquals(0x4410, owner.getSpawn().x());
+        assertEquals(0x440, owner.getSpawn().y());
+        assertEquals(9, owner.getCollisionProperty());
+        assertEquals(0x4300, fixture.camera().getMinX() & 0xFFFF);
+        return owner;
     }
 
     private static <T extends AbstractObjectInstance> T createChild(

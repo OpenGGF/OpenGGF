@@ -31,7 +31,7 @@ public final class LbzFinalBoss2RomData {
         reader.slice(Sonic3kConstants.LBZ_FINAL_BOSS_2_DEBRIS_CHILD_TABLE_ADDR, 2 + 5 * CHILD_ENTRY_BYTES);
         reader.slice(Sonic3kConstants.BOSS_EXPLOSION_HITBOX_CHILD_TABLE_ADDR,
                 2 + 7 * CHILD_ENTRY_BYTES);
-        reader.slice(Sonic3kConstants.LBZ_FINAL_BOSS_KNUX_BOUNDS_ADDR, 2);
+        reader.slice(Sonic3kConstants.LBZ_FINAL_BOSS_KNUX_BOUNDS_ADDR, 16);
         // Big Arm's Child_DrawTouch_Sprite_FlickerMove calls
         // Set_IndexedVelocity with d0=$0C.  The controller, two segment
         // subtypes, and joint therefore reach through byte offset $17.
@@ -162,9 +162,9 @@ public final class LbzFinalBoss2RomData {
         return new int[]{reader.readS16BE(address), reader.readS16BE(address + 2)};
     }
 
-    /** Native {@code _unkFAB0} seed selected by Knuckles' first LBZ bounds record. */
+    /** Native {@code _unkFAB0}: sub_85D6A consumes word_72FEA's lock record after the admission rectangle. */
     public int escapeMinimumY() {
-        return reader.readU16BE(Sonic3kConstants.LBZ_FINAL_BOSS_KNUX_BOUNDS_ADDR);
+        return reader.readU16BE(Sonic3kConstants.LBZ_FINAL_BOSS_KNUX_BOUNDS_ADDR + 8);
     }
 
     private int[] unsignedBytes(int address, int count) {

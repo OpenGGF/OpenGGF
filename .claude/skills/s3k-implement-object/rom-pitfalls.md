@@ -5147,3 +5147,19 @@ zone-name branch. Also keep post-restore scroll reconciliation pure:
 output from saved words without dispatching it a second time. This matters
 for valid snapshots taken before the first ordinary controller/scroll update.
 Origin: 2026-10-13 S3K playable completion, DDZ native-entry and composed-route lane.
+
+## A placed prelude can change code without resetting the native wait
+
+LBZ `Obj_LBZFinalBossKnux` (`$CD`) uses the first `word_72FEA` record for
+unsigned camera admission and the following record for the arena lock.
+`loc_7304C` changes the same SST code pointer to CA; its negative music timer
+survives into CA init and `Obj_Wait`. Do not seed CA's Sonic delay for Knuckles
+or return before that wait can dispatch. `loc_7498E` reads the second record's
+FAB0 (`$328`), so its carrier threshold is `$528`, not the admission word plus
+`$200`. Camera comparisons use native coordinates before viewport projection.
+
+Pure CA child reconstruction needs exact captured parent/sibling object IDs;
+retaining the slots alone leaves null gameplay links. Register each owning edge
+explicitly and clone captured arrays. Reconstruction must not allocate children,
+run gameplay init or consume shared RNG. Snapshot the defeat explosion helper
+and rebind its RNG separately from its parent-child links.
