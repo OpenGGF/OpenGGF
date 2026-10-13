@@ -95,6 +95,11 @@ See the detailed guides for narrower contracts; roadmap entries do not imply imp
   explicit live/load scopes and rewind-separated preferences. See the
   [guide](guides/mutators.md) and current verification in the expansion plan.
 
+- [Sonic3K Chaos Mode](../../examples/sonic3k-chaos-mode/README.md) — 105 selectable
+  effects over native S3K, with a captured random scheduler, available/selected
+  lists, interval and duration settings, and five optional ROM-art sidegames.
+  Uses owner-scoped temporary mutators alongside the native game loop.
+
 - [Flappy Tails](../../examples/flappy-tails/README.md) — Tails flaps through five S3K
   zones on the ROM's own flight routine, with pillars cut from each act's floor, real title
   cards, medals, records and Super Tails. An S3K mod scene and the finished game of the

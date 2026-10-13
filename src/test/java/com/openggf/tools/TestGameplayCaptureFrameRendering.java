@@ -18,6 +18,41 @@ import static org.mockito.Mockito.*;
 @RequiresRom(SonicGame.SONIC_3K)
 class TestGameplayCaptureFrameRendering {
     @Test
+    void titleAndDataSelectDrawHostedPixelsAboveNativeFadesWithoutReadback() throws Exception {
+        var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off",
+                null, null, null, null, false, false);
+        try (var session = new GameplayCaptureSession(settings)) {
+            session.startAtTitle();
+            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 0, 0, settings);
+            var world = com.openggf.game.session.SessionManager.getCurrentWorldSession();
+            assertNotNull(world);
+            try (var overlays = mockStatic(com.openggf.game.session.WorldSessionPolicyAccess.class,
+                    CALLS_REAL_METHODS)) {
+                overlays.when(() -> com.openggf.game.session.WorldSessionPolicyAccess.hasPolicies(world))
+                        .thenReturn(true);
+                overlays.when(() -> com.openggf.game.session.WorldSessionPolicyAccess.drawOverlay(
+                        eq(world), any(com.openggf.mods.ui.PixelCanvas.class))).thenAnswer(call -> {
+                    com.openggf.mods.ui.PixelCanvas canvas = call.getArgument(1);
+                    canvas.fill(8, 8, 16, 16, 0xFF00FFFF);
+                    return null;
+                });
+                session.renderFrame();
+                assertEquals(0xFF00FFFF, ScreenshotCapture.captureFramebuffer(320, 224).argb(12, 12),
+                        "hosted title choices must remain readable above native fades");
+                var dataSelect = session.loop().getDataSelectProvider();
+                assertNotNull(dataSelect);
+                dataSelect.initialize();
+                session.loop().setGameMode(GameMode.DATA_SELECT);
+                session.renderFrame();
+                assertEquals(0xFF00FFFF, ScreenshotCapture.captureFramebuffer(320, 224).argb(12, 12),
+                        "native data select and the hosted overlay both draw");
+                overlays.verify(() -> com.openggf.game.session.WorldSessionPolicyAccess.drawOverlay(
+                        eq(world), any(com.openggf.mods.ui.PixelCanvas.class)), times(2));
+            }
+        }
+    }
+
+    @Test
     @RequiresRom(SonicGame.SONIC_2)
     void titleDrawingWithoutReadbackPreservesTheNativeTitlePixels() throws Exception {
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off",

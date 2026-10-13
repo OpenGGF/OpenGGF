@@ -6,6 +6,15 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Gameplay and presentation
 
+- **Sonic3K Chaos Mode:** a maintained code mod adds 105 selectable effects over
+  ordinary native S3K, with available/selected lists, interval and duration controls,
+  severity-weighted scheduling and five optional ROM-art sidegames. Owner-scoped
+  temporary mutators and immutable gameplay observations keep scheduling alongside
+  native movement, objects, audio and presentation; accepted decisions, deadlines
+  and cleanup participate in rewind. Native target, art, route and control
+  qualifications constrain effects, including bounded Cluckoid gusts and ghost
+  encounters. Stream voting remains a future extension.
+
 - **Mutator Lab catalogue:** one JVM boot-prepared package exposes eleven effects
   in Sonic 1, Sonic 2 and Sonic 3 & Knuckles, with native game labels, monitor-type
   availability, scrolling settings and explicit unavailable-feature reasons. Effects use

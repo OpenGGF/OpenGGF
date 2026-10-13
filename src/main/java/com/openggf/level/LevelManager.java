@@ -1126,6 +1126,13 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                         advancedRenderModeController, getFeatureZoneId(), getFeatureActId());
             }
         }
+        // Zone registries are cleared on every load; restore the world-owned local fluid
+        // presentation here, after native zone effects, rather than only at manager creation.
+        var motion = com.openggf.game.session.WorldSessionPolicyAccess.getService(
+                worldSession, com.openggf.game.mutators.MotionMutatorRuntime.class);
+        if (motion != null && specialRenderEffectRegistry != null) {
+            specialRenderEffectRegistry.register(new com.openggf.game.mutators.MotionFluidRenderEffect(motion));
+        }
     }
 
     /**

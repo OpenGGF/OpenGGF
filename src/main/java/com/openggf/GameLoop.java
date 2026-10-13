@@ -506,6 +506,8 @@ public class GameLoop {
     public void renderHostedRunOverlay() {
         var context = resolveGameplayModeContext();
         var world=context==null?SessionManager.getCurrentWorldSession():context.getWorldSession();
+        if (!WorldSessionPolicyAccess.hasPolicies(world) && !hostedRuns.isActive()) return;
+        engineServices.graphics().resetForFixedFunction();
         if(world!=null)WorldSessionPolicyAccess.drawOverlay(world,new com.openggf.mods.ui.LevelOverlayCanvas(engineServices.graphics(),
                 camera==null?engineServices.graphics().getProjectionWidth():camera.getWidth(),
                 camera==null?Math.max(1,(int)engineServices.graphics().getScreenHeight()):camera.getHeight()));
@@ -513,6 +515,9 @@ public class GameLoop {
             hostedRuns.drawOverlay(new com.openggf.mods.ui.LevelOverlayCanvas(
                     GameServices.graphics(), camera.getWidth(), camera.getHeight()));
         }
+        // PixelCanvas queues rectangles. Complete them in this post-fade pass,
+        // rather than letting the following frame draw them beneath its fade.
+        engineServices.graphics().flushScreenSpace();
     }
 
     public boolean shouldSuppressUserRecordingSceneRendering() {

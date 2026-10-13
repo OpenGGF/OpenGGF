@@ -349,6 +349,17 @@ public final class GameplayCaptureSession implements AutoCloseable {
             title.setClearColor(); glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             title.draw(); graphics.flushScreenSpace();
             if (graphics.getUiRenderPipeline()!=null) graphics.getUiRenderPipeline().renderFadePass();
+            loop.renderHostedRunOverlay();
+            glFinish(); return;
+        }
+        if (loop.getCurrentGameMode() == GameMode.DATA_SELECT) {
+            var dataSelect = loop.getDataSelectProvider();
+            dataSelect.setViewportWidth(width);
+            dataSelect.setClearColor(); glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            graphics.resetForFixedFunction();
+            dataSelect.draw(); graphics.flushScreenSpace();
+            if (graphics.getUiRenderPipeline()!=null) graphics.getUiRenderPipeline().renderFadePass();
+            loop.renderHostedRunOverlay();
             glFinish(); return;
         }
         level.setClearColor();
@@ -385,6 +396,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
                     width, HEIGHT, graphics.getViewportX(), graphics.getViewportY(),
                     graphics.getViewportWidth(), graphics.getViewportHeight());
         }
+        loop.renderHostedRunOverlay();
         glFinish();
     }
 
@@ -411,6 +423,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
         if (ui != null) {
             ui.renderFadePass();
         }
+        loop.renderHostedRunOverlay();
         glFinish();
     }
 

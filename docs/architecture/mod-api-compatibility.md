@@ -122,6 +122,17 @@ methods, so creator test doubles implementing it must add them. These are additi
 to the unpublished `0.7.0` candidate; the runtime description and normalized pin are
 updated together and the descriptor is unchanged.
 
+The Chaos Mode additions expose captured gameplay observers, callback-scoped
+transient mutator leases, typed motion/input/native encounter/presentation/audio
+policies, bounded native ROM art and terminal outcomes. Native object presentation
+metadata qualifies post-SAT transforms, and private trail atlas ranges retain
+historical poses. The source timing contract admits one instantaneous action per
+zero-duration lease and bounded positive timed bundles. These extend the mutable
+`0.7` signature pin and runtime candidate description; `0.7.0` remains unpublished
+and the release descriptor and published baselines are unchanged. Rebuild compiled
+mods against the current candidate. See the [mutator guide](../modding/guides/mutators.md)
+and [Chaos implementation](plans/2026-10-13-sonic3k-chaos-mode-implementation.md).
+
 ## What the 0.7 candidate includes
 
 The candidate exposes the accumulated creator capabilities together:
