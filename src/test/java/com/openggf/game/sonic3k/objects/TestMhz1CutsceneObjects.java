@@ -1491,10 +1491,10 @@ class TestMhz1CutsceneObjects {
     }
 
     @Test
-    void skIntroDeletesUnlessKnucklesAloneAndThenSetsCameraAndControl() {
+    void standaloneSkIntroDeletesUnlessKnucklesAndThenSetsCameraAndControl() {
         Camera camera = new Camera();
         CutsceneKnucklesSkIntroInstance sonicPath = new CutsceneKnucklesSkIntroInstance(new ObjectSpawn(
-                0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0));
+                0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0), true);
         sonicPath.setServices(new TestObjectServices()
                 .withCamera(camera)
                 .withZoneRuntimeRegistry(runtime(PlayerCharacter.SONIC_ALONE)));
@@ -1502,10 +1502,10 @@ class TestMhz1CutsceneObjects {
         sonicPath.update(0, new TestablePlayableSprite("sonic", (short) 0x0560, (short) 0x0948));
 
         assertTrue(sonicPath.isDestroyed(),
-                "CutsceneKnux_SKIntro deletes unless Player_mode is Knuckles-alone");
+                "declared standalone CutsceneKnux_SKIntro deletes unless character_id is Knuckles");
 
         CutsceneKnucklesSkIntroInstance knucklesPath = new CutsceneKnucklesSkIntroInstance(new ObjectSpawn(
-                0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0));
+                0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0), true);
         knucklesPath.setServices(new TestObjectServices()
                 .withCamera(camera)
                 .withZoneRuntimeRegistry(runtime(PlayerCharacter.KNUCKLES)));
@@ -1531,7 +1531,7 @@ class TestMhz1CutsceneObjects {
         CheckpointState checkpointState = new CheckpointState();
         checkpointState.restoreFromSaved(0x052A, 0x05AC, 0, 0, 7);
         CutsceneKnucklesSkIntroInstance skIntro = new CutsceneKnucklesSkIntroInstance(new ObjectSpawn(
-                0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0));
+                0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0), true);
         TestObjectServices services = new TestObjectServices() {
             @Override
             public RespawnState checkpointState() {
@@ -1561,7 +1561,7 @@ class TestMhz1CutsceneObjects {
         when(renderManager.getRenderer(Sonic3kObjectArtKeys.KNUX_INTRO_LAYING)).thenReturn(renderer);
         when(renderer.isReady()).thenReturn(true);
         CutsceneKnucklesSkIntroInstance skIntro = new CutsceneKnucklesSkIntroInstance(new ObjectSpawn(
-                0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0));
+                0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0), true);
         skIntro.setServices(new TestObjectServices()
                 .withLevelManager(levelManager)
                 .withCamera(camera)
@@ -1581,7 +1581,7 @@ class TestMhz1CutsceneObjects {
         AtomicReference<SaveReason> saveReason = new AtomicReference<>();
         int[] requestedZoneAct = {-1, -1};
         CutsceneKnucklesSkIntroInstance skIntro = new CutsceneKnucklesSkIntroInstance(new ObjectSpawn(
-                0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0));
+                0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0), true);
         TestObjectServices services = new TestObjectServices() {
             @Override
             public RespawnState checkpointState() {
@@ -1638,7 +1638,7 @@ class TestMhz1CutsceneObjects {
     @Test
     void skIntroBombSignalAdvancesToGrabRoutineAndFrame() {
         CutsceneKnucklesSkIntroInstance skIntro = new CutsceneKnucklesSkIntroInstance(new ObjectSpawn(
-                0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0));
+                0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0), true);
         skIntro.setServices(new TestObjectServices()
                 .withCamera(new Camera())
                 .withZoneRuntimeRegistry(runtime(PlayerCharacter.KNUCKLES)));
@@ -1665,7 +1665,7 @@ class TestMhz1CutsceneObjects {
         List<Integer> sfxIds = new ArrayList<>();
         when(levelManager.getObjectManager()).thenReturn(objectManager);
         CutsceneKnucklesSkIntroInstance skIntro = new CutsceneKnucklesSkIntroInstance(new ObjectSpawn(
-                0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0));
+                0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0), true);
         TestObjectServices services = new TestObjectServices() {
             @Override
             public void playSfx(int soundId) {
@@ -1716,7 +1716,7 @@ class TestMhz1CutsceneObjects {
         boolean[] fadeOutMusic = {false};
         when(levelManager.getObjectManager()).thenReturn(objectManager);
         CutsceneKnucklesSkIntroInstance skIntro = new CutsceneKnucklesSkIntroInstance(new ObjectSpawn(
-                0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0));
+                0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0), true);
         TestObjectServices services = new TestObjectServices() {
             @Override
             public void playSfx(int soundId) {
@@ -1784,7 +1784,7 @@ class TestMhz1CutsceneObjects {
         List<Integer> sfxIds = new ArrayList<>();
         when(levelManager.getObjectManager()).thenReturn(objectManager);
         CutsceneKnucklesSkIntroInstance skIntro = new CutsceneKnucklesSkIntroInstance(new ObjectSpawn(
-                0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0));
+                0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0), true);
         TestObjectServices services = new TestObjectServices() {
             @Override
             public void playSfx(int soundId) {
@@ -1844,7 +1844,7 @@ class TestMhz1CutsceneObjects {
         List<ObjectInstance> spawned = new ArrayList<>();
         when(levelManager.getObjectManager()).thenReturn(objectManager);
         CutsceneKnucklesSkIntroInstance skIntro = new CutsceneKnucklesSkIntroInstance(new ObjectSpawn(
-                0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0));
+                0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0), true);
         TestObjectServices services = new TestObjectServices();
         skIntro.setServices(services
                 .withCamera(camera)
@@ -1906,7 +1906,7 @@ class TestMhz1CutsceneObjects {
         List<ObjectInstance> spawned = new ArrayList<>();
         when(levelManager.getObjectManager()).thenReturn(objectManager);
         CutsceneKnucklesSkIntroInstance skIntro = new CutsceneKnucklesSkIntroInstance(new ObjectSpawn(
-                0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0));
+                0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0), true);
         byte[] sszLine2 = new byte[32];
         for (int i = 0; i < sszLine2.length; i += 2) {
             sszLine2[i] = 0x0E;
@@ -1969,7 +1969,7 @@ class TestMhz1CutsceneObjects {
         List<Integer> musicIds = new ArrayList<>();
         when(levelManager.getObjectManager()).thenReturn(objectManager);
         CutsceneKnucklesSkIntroInstance skIntro = new CutsceneKnucklesSkIntroInstance(new ObjectSpawn(
-                0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0));
+                0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0), true);
         TestObjectServices services = new TestObjectServices() {
             @Override
             public void playMusic(int musicId) {
@@ -2094,7 +2094,7 @@ class TestMhz1CutsceneObjects {
     @Test
     void skIntroGrabSignalAdvancesToFallingRoutineAndVelocity() {
         CutsceneKnucklesSkIntroInstance skIntro = new CutsceneKnucklesSkIntroInstance(new ObjectSpawn(
-                0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0));
+                0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0), true);
         skIntro.setServices(new TestObjectServices()
                 .withCamera(new Camera())
                 .withZoneRuntimeRegistry(runtime(PlayerCharacter.KNUCKLES)));
@@ -2119,7 +2119,7 @@ class TestMhz1CutsceneObjects {
     @Test
     void skIntroFallSignalAdvancesToLandingRoutineAndAdjustsBounds() {
         CutsceneKnucklesSkIntroInstance skIntro = new CutsceneKnucklesSkIntroInstance(new ObjectSpawn(
-                0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0));
+                0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0), true);
         skIntro.setServices(new TestObjectServices()
                 .withCamera(new Camera())
                 .withZoneRuntimeRegistry(runtime(PlayerCharacter.KNUCKLES)));
@@ -2150,7 +2150,7 @@ class TestMhz1CutsceneObjects {
     @Test
     void skIntroLandingRoutineMovesWithLightGravityAndSnapsToFloor() {
         CutsceneKnucklesSkIntroInstance skIntro = new CutsceneKnucklesSkIntroInstance(new ObjectSpawn(
-                0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0));
+                0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0), true);
         skIntro.setServices(new TestObjectServices()
                 .withCamera(new Camera())
                 .withZoneRuntimeRegistry(runtime(PlayerCharacter.KNUCKLES)));
@@ -2181,7 +2181,7 @@ class TestMhz1CutsceneObjects {
     @Test
     void skIntroLandingAnimationCallbackStartsExitRunPose() {
         CutsceneKnucklesSkIntroInstance skIntro = new CutsceneKnucklesSkIntroInstance(new ObjectSpawn(
-                0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0));
+                0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0), true);
         skIntro.setServices(new TestObjectServices()
                 .withCamera(new Camera())
                 .withZoneRuntimeRegistry(runtime(PlayerCharacter.KNUCKLES)));
@@ -2212,7 +2212,7 @@ class TestMhz1CutsceneObjects {
     @Test
     void skIntroLandingRoutineUsesSharedObjectFloorDistance() {
         CutsceneKnucklesSkIntroInstance skIntro = new CutsceneKnucklesSkIntroInstance(new ObjectSpawn(
-                0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0));
+                0x0560, 0x0948, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x30, 0, false, 0), true);
         skIntro.setServices(new TestObjectServices()
                 .withCamera(new Camera())
                 .withZoneRuntimeRegistry(runtime(PlayerCharacter.KNUCKLES)));

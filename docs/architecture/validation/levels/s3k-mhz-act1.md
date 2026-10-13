@@ -44,9 +44,12 @@ Locked-on S3&K ROM, native `FixBugs=0`; Sonic, Tails and Sonic with Tails are th
 accepted implementation scope. The [original completion audit](../../research/s3k-zones/mhz-completion-audit.md)
 records the user's exclusions: no further Knuckles-route work after the camera
 correction, no standalone S&K entry, and no further trace-driven development.
-These are accepted scope limits, **not evidence that Knuckles is unsupported**.
+Those exclusions describe the earlier MHZ task, **not evidence that Knuckles
+is unsupported**. The 2026-10-13 playable-route completion request reopens the
+native Knuckles route; standalone cartridge and strict trace work remain outside
+this task.
 The console pulley debug-menu unlock is excluded; engine debug controls remain.
-Do not restart excluded trace work or expand the route scope by implication.
+Do not restart excluded trace work from this playable-route request.
 
 This matrix was assembled on 2026-09-23 from current test source and historical
 validation records. **Current component execution:498 cases pass, zero skips, on2026-09-23 at19:21 BST**
@@ -64,7 +67,7 @@ baseline. They cannot be relabelled a green campaign baseline.
 | --- | --- |
 | Width | Supported presets are 320, 352, 400, 528, 800 through the supported configuration. Current per-act entry/lifecycle cross-product, meaningful traversal and rewind coverage are unassessed; historical local camera checks do not fill this row. |
 | Donor | Native plus every currently supported S3K movement donor; resolve support from production before selecting cases. No per-act donor certification from the reviewed records. |
-| Main | Sonic and Tails, plus Sonic/Tails native pairing; Knuckles implementation expansion is excluded as above. Existing locked-on Knuckles camera test remains a regression, not route coverage. |
+| Main | Sonic, Tails, Sonic/Tails native pairing and the current native Knuckles route. The short locked-on intro admission is qualified below; full Knuckles traversal remains pending. |
 | Team | Solo/native pair are reviewed implementation paths. Mixed, duplicate and maximum participant shapes need current contract-derived authority/lifecycle checks; absence of evidence is not an unsupported classification. |
 | Lifecycle | Checkpoint respawn, death/restart, alternate entry where applicable, repeated loads, and exit behavior need their own short cases and width × supported-donor coverage. |
 
@@ -258,3 +261,22 @@ DEZ reloads: pending/published SAT and HUD counters survive, while fresh loads
 still clear them. Shared validation and exact route limitations are recorded in
 [the campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md#seamless-sprite-publication-and-mhz-scroll-carry--2026-09-27).
 This adds transition coverage, not another whole-act or native-pixel certification.
+
+## 2026-10-13 — locked-on Knuckles admission
+
+`CutsceneKnux_SKIntro` tests character 2, a clear checkpoint and then a nonzero
+`SK_alone_flag` before claiming the camera and P1. The supported locked-on image
+has that flag clear even though subtype `$30` remains in the ROM placement table.
+The old character-only gate wrongly froze the cold native route at input 1000.
+The production constructor now retains the locked-on prerequisite; declared
+standalone object fixtures supply it explicitly and capture it through recreation.
+
+`TestMhzKnucklesLockedOnIntroGate` admits the verified placement at `$5C3/$9F5`
+through the production factory and manager at widths 320, 352, 400, 528 and 800.
+Each case checks deletion before ownership and repeats full-world restore/replay.
+The focused command selects that class and `TestMhz1CutsceneObjects` with the
+absolute verified locked-on ROM: 93 cases pass, zero failures/errors/skips,
+2026-10-13 18:02:16 BST, 29.684 seconds, on `2e992da7d` plus the intro changes.
+This short component admission does not certify the complete Knuckles cold route.
+Ordinary controller authoring has passed the old lock and real wall climbs;
+miniboss, seamless MHZ2 and subsequent FBZ completion still require qualification.

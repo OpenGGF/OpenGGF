@@ -5091,3 +5091,11 @@ double their delay (`sub_8756A`/`sub_87592`).
 child movement latch clears. It does not rewrite the owner's `$2E`. Retained
 owners must wait for the real ROM art and the final stationary child poll, and
 keep their presentation clock running.
+
+## Standalone mode gates can precede a retained locked-on placement
+
+`CutsceneKnux_SKIntro` tests character 2 and a clear checkpoint, then BEQ-deletes
+when `SK_alone_flag` is zero before camera/P1 writes. The locked-on placement still
+contains subtype `$30`; player identity and placement presence do not authorize
+the standalone intro. Keep the supported ROM-mode prerequisite and declare a
+standalone mode explicitly in component fixtures; capture it through recreation.

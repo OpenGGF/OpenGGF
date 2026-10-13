@@ -551,6 +551,12 @@ takes on `SK_alone_flag` (standalone S&K entry, the pulley-lift cheat's direct
 flag clear. This is a product-scope decision, not a parity gap: the standalone image is
 not a supported input.
 
+Locked-on MHZ subtype `$30` follows that prerequisite before any P1 or camera
+claim (`CutsceneKnux_SKIntro`). The 2026-10-13 correction removes the former
+character-only admission. Five supported-width manager/restore cases and the
+existing cutscene cases pass; standalone component fixtures declare their mode
+explicitly. Full cold Knuckles traversal remains a separate route obligation.
+
 ---
 
 

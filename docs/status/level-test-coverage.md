@@ -1,5 +1,12 @@
 # Level test coverage backlog
 
+S3K playable completion (2026-10-13, in progress): the [native ending matrix](../architecture/validation/levels/s3k-ending.md)
+tracks Sonic/Tails `$0D01`, Knuckles SSZ2 and all native emerald-progress branches.
+Only the initial four credits decoder cases have completed successfully; production
+entry, incoming routes, scene/rewind composition, terminal handoffs and native
+presentation remain pending. Current MHZ/LRZ/SSZ/DEZ failures are being repaired
+against the pinned develop base; historical campaign passes remain dated evidence.
+
 Starpost Valley phase 4 (2026-10-10): the [festival and lake matrix](../architecture/designs/2026-10-09-starpost-valley.md#festival-and-lake-route-matrix) adds native solo Sonic/Tails/Knuckles at 320/400 through Race, Ring Hunt, snowboard, lake and Ice Cap fishing with result consumption and whole-registry restore/replay. Wider viewport/donor/team, load/respawn and interaction-boundary obligations remain open.
 
 Starpost Valley integration (2026-10-10): the [integration route matrix](../architecture/designs/2026-10-09-starpost-valley.md#integration-route-matrix) covers native solo Sonic/Tails/Knuckles at 320/400px through the real farm → inn → farm loop, purchases and donor music, with whole-registry rewind/replay. The separate schedule check exercises real slope floors and doorway bases. Wider widths, donors, follower/team and respawn/festival/day-end breadth remain open; the scene valley fallback was subsequently removed by phase 4.

@@ -419,3 +419,43 @@ state/pixel controls and their limits are described in the
 [headless testing guide](../../../guide/contributing/headless-testing.md).
 This performance change supplies no new native reference, full-route visual
 certification or missing viewport/donor/character coverage; inherited gaps remain.
+
+## 2026-10-13 — current incoming controller repair
+
+The untouched five-case reproduction fails the Tails/team late-pulley owner
+assertions, paired FBZ history isolation and wide frame19500 deformation restore.
+The wide route actually enters `SPECIAL_STAGE` at input19466 while retaining the
+outgoing level object; restoring only that level registry against the new mode's
+camera is an invalid world composition. Replay checkpoints now require LEVEL
+and the same current level on both sides of their forward interval. No MHZ
+scroll arithmetic or physics constants are changed.
+
+Re-authored ordinary inputs complete fresh incoming Tails320 (35815 inputs),
+Sonic/Tails320 (44004) and Sonic800 (29744) through MHZ1/MHZ2 and into released
+FBZ1. Independent uninterrupted production playback observes load inputs
+35454, 43234 and 28981 respectively, with no deaths. The team catches the actual
+shared handle at35047 and reaches its top at35734; the two replay spots require
+both players to be controlled and share its native X/Y. Its swing-vine spot
+also requires both native participants to be controlled. Scripts/BK2s retain
+ordinary controllers only, with CPU-controlled P2. They were authored against
+immutable runtime `8438d7040` and the verified locked-on ROM, not seeded state
+or trace data.
+
+Current qualification on `2e992da7d` plus these route changes passes all three
+`TestS3kMhzAct2AuthoredRoute` cases (2026-10-13 17:51 BST, zero skips).
+The changed `TestMhzPairColdRouteCapture` passes at 18:04:43 BST (one case,
+zero skips). It activates live history at the capsule approach, input 41705,
+before the actual FBZ load at 43234. The first attempt activated after that load
+because its old end-relative offset did not account for the longer FBZ tail.
+Outgoing-history and actual destination isolation assertions are retained.
+These bounded passes do not certify the remaining inherited breadth.
+
+
+The revised wide controller qualification completed on 2026-10-13 at 16:42:43 BST:
+`TestMhzWideColdRouteCapture` passes one case with zero failures, errors or skips,
+retaining all 25 named whole-world spots, two cycles and forward replay horizons.
+It observes the real FBZ load at 28981 and released movement. This is the queued
+ROM-backed regression in `ai-s3k-playable-finish`, with the verified absolute
+S3K ROM and `python3 tools/testing/maven_queue.py -Dmse=off
+-Dtest=TestMhzWideColdRouteCapture test -B`. Native Sonic/Tails/team and paired
+history qualification is recorded above.
