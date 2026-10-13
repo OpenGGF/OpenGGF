@@ -26,6 +26,7 @@ and pushes only `develop`; unknown files and dirty reference submodules remain.
 | Motion | `.worktrees/sonic3k-chaos-motion` | Native movement/input, signed gravity composition, spring responses and isolated fluid context |
 | Presentation | `.worktrees/sonic3k-chaos-presentation` | World/sprite/HUD transforms, trails, ROM scenery and visual qualification |
 | Audio | `.worktrees/sonic3k-chaos-audio` | ROM music arbitration, native landing/spindash cues and captured audio ownership |
+| Capture | `.worktrees/sonic3k-chaos-capture` | Shared native save-selection launch owner and fresh headless patch resolution |
 
 Motion, Presentation and Audio are app-owned delegated children. The other workers
 are native children of this conversation. No external CLI sessions or top-level
@@ -122,12 +123,12 @@ individual effects; the displayed pool does not override those gates.
 
 | Context | Completed evidence and tested worker SHA | Remaining qualification |
 | --- | --- | --- |
-| Native Sonic input/motion, signed gravity, springs and local fluid | `b3962897c`: nine classes/372 tests and eleven native/ROM classes/114 tests, no failures/errors/skips; includes actual DELAY/WorldPolicyHistory replay and authoritative audio producers | Root flat-floor jump-gate correction and final union checks; complete affected character/team routes remain separate |
-| Native actors, projectiles, fields, challenges, transport and relocation | `d8626bd90`: 141 cases outside the runtime fixture pass without skips, including inactive Bloominator, ROM ghost/assets and native rewind | The 19 runtime cases await fixture-only `bfe1fa983` rerun; root last-ring/load-boundary fixes; all-act placement/transport breadth remains separate |
-| Sprite/HUD/scene pictures and private trails | `1b244ab4d`: 17 HUD, five geometry and six actual production surfaceless-EGL cases pass without skips, at native/wider viewports | Ten runtime/private-bank cases on numeric-owner repair `2538ca2cc`; root decode/preview preservation; composed captures |
+| Native Sonic input/motion, signed gravity, springs and local fluid | `b3962897c`: nine classes/372 tests and eleven native/ROM classes/114 tests, no failures/errors/skips; includes actual DELAY/WorldPolicyHistory replay and authoritative audio producers. Root flat-floor qualification passed at `da3e5a768` | Final union checks; complete affected character/team routes remain separate |
+| Native actors, projectiles, fields, challenges, transport and relocation | 160 distinct cases passed without skips across executable `d8626bd90` and fixture-only repairs `bfe1fa983`/`40bc4e012`; includes ROM ghost/assets, exact descendants and native rewind. Root last-ring and wrapped native-gust regressions passed | Final union checks; all-act placement/transport breadth remains separate |
+| Sprite/HUD/scene pictures and private trails | 17 HUD, five geometry and six actual production surfaceless-EGL cases passed at `1b244ab4d`; ten runtime/private-bank cases passed at `2538ca2cc`, all without skips. Root nonempty-bank decode/preview preservation passed | Final union checks and complete composed visual breadth |
 | Prepared wrong-zone scenery | Real supplied-ROM backgrounds AIZ1/HCZ1/LBZ1/DEZ1 at 320/400 pixels and five camera offsets passed without skips | Other donor indices remain unsupported and are not sampled; complete gameplay routes are separate |
-| Native audio arbitration and cues | `463cda8e7` executable plus test-only `f1c729946`: 45 distinct runtime/access/real-PCM/rewind cases pass without skips | Actual outer-E4/source-history keyframe method and root decode/preview preservation |
-| Catalogue, scheduler and ROM sidegames | Early model and real-ROM art checks; packaged registration/Pong reward and final receipt/scenery/duration methods passed; validator zero findings | Updated roulette metadata/options guard and assembled controller/menu captures |
+| Native audio arbitration and cues | `463cda8e7` executable plus test-only `f1c729946`: 45 distinct runtime/access/real-PCM/rewind cases passed without skips. Root `12b220f5e` actual outer-E4/source-history keyframe method and `da3e5a768` decode/preview preservation also passed without skips | Final union checks |
+| Catalogue, scheduler and ROM sidegames | Early model and real-ROM art checks; packaged registration/Pong reward and final receipt/scenery/duration methods passed; validator zero findings. Root roulette metadata/options guard passed | Native title/save-selection launch capture and final union checks |
 | Host ownership and pack assembly | Foundation `6ce6cd2a4`: 56 final observer/lease/service/API cases pass without skips. Root `fd777df75`: three actual assembly cases plus nine API cases pass without skips | New assembled decode/preview regression and updated-develop union checks |
 | Native title/save flow and Chaos menu | Root `3fa5ca44e`: fourteen capture args/native title/data-select/hosted pixel cases pass without skips | Explicit presentation-pacing capture callback and authored menu/effect captures; canonical captures cannot qualify observer scheduling |
 | Stock S3K loading/bootstrap/decoding/AIZ1 | Required native identities passed with verified absolute ROM on `b3962897c` | Final union smoke/guards and exact skips |
@@ -293,3 +294,42 @@ countdown and were rejected as effect/menu evidence. Explicit `--interactive-pac
 reuses the existing production physical-input/presentation owner, preserving the
 canonical default and admitting zero/multiple native ticks per presentation. Fresh
 owned captures use that flag. No desktop keyboard or ambient display is involved.
+
+The final focused boundary run on `da3e5a768` completed 44 cases: 43 passed,
+and the last-ring fixture failed because it had no native inventory owner.
+`7a9450ab8` binds the real `LevelGamestate` rather than weakening the assertion;
+its exact rerun passed on `61c7aa7be`. The actual audio-history fixture also needed
+the live owner's explicit history-recording admission. After that admission,
+the first real E4 check disproved an immediate physical music-slot restoration
+assumption: native intent changes immediately, while the producer drains the
+restore command on its next outer packet. `12b220f5e` checks that native ordering,
+admits a new jukebox and accepted landing in the gap, and proves the new cue wins
+after the queued restore. The exact history method passed with no skips, including
+source/runtime and native audio keyframes, retained zero-native-tick clocks and
+unchanged diagnostic/command counts under rewind suppression. These results give
+45 distinct passing root boundary cases with no skips; they are focused evidence,
+not a combined smoke result.
+
+The root commands used the verified S3K ROM, unset desktop display variables and
+`LUA_BIN=/usr/bin/lua5.4`. The boundary selector included capture argument and
+production presentation-callback checks, last-ring preservation, free flat-floor
+jump admission, assembled decode/preview preservation, nonempty trail ownership,
+native audio preservation, wrapped Cluckoid gusts and every catalogue entry's
+bounded semantic preparation. The two repaired exact selectors were
+`TestNativeMutatorRuntime#ringLeakRetainsTheLastRingAndDoesNotRestoreSpentInventoryOnExpiry`
+and
+`TestAudioMutatorHistory#naturalOneUpBetweenTicksAndAcceptedAudioReplayAcrossKeyframes`,
+through `tools/testing/maven_queue.py -Dmse=off -Dtest=... test -B`.
+
+Fresh 1,000-presentation supplied-ROM captures completed after the interactive
+pacing fix. DVD HUD pictures at presentations 650 and 800 show the native plaque
+at different positions while its lease and next-effect clocks advance. Windy Day
+moves Sonic from native centre X=5024 to X=5184 between presentations 600 and 650
+with neutral input, without death. The title configuration capture selects DVD
+HUD alone, a five-second interval and the default duration multiplier. Its next
+capture reached native data select but could not enter gameplay: the headless
+host omitted Engine's data-select action callback. That capture is menu evidence,
+not a successful launch claim. The dedicated capture worker is sharing the native
+launch owner and preparing fresh mod registrations for the selected team, rather
+than forcing a mode flag or reusing retired callbacks. Final launch capture and
+the complete smoke/guard run remain pending.
