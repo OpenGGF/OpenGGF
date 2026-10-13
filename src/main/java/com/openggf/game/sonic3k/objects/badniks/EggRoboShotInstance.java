@@ -37,7 +37,7 @@ import java.util.List;
  * gravity and no lifetime beyond leaving the screen.
  */
 public final class EggRoboShotInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable {
+        implements TouchResponseProvider, RewindRecreatable, com.openggf.game.mutators.NativeObjectFieldTarget {
     /** {@code dc.w $280}. */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x280);
     /** {@code move.w #$1F,$2E(a0)}. */
@@ -63,6 +63,7 @@ public final class EggRoboShotInstance extends AbstractObjectInstance
     private int xFixed;
     private int charge = CHARGE_FRAMES;
     private int xVelocity;
+    private boolean playerOwned;
     private int mappingFrame = CHARGE_FRAME_B;
 
     public EggRoboShotInstance(ObjectSpawn spawn, boolean facingLeft) {
@@ -73,6 +74,13 @@ public final class EggRoboShotInstance extends AbstractObjectInstance
         this.xFixed = spawn.x() << 16;
     }
 
+    /** Same native charging/motion owner, admitted with a player attack allegiance. */
+    public static EggRoboShotInstance playerShot(ObjectSpawn spawn, boolean facingLeft) {
+        var shot = new EggRoboShotInstance(spawn, facingLeft);
+        shot.playerOwned = true;
+        return shot;
+    }
+
     /** Probe/rewind constructor. */
     public EggRoboShotInstance(ObjectSpawn spawn) {
         this(spawn, (spawn.renderFlags() & 1) == 0);
@@ -81,6 +89,14 @@ public final class EggRoboShotInstance extends AbstractObjectInstance
     @Override
     public EggRoboShotInstance recreateForRewind(RewindRecreateContext ctx) {
         return new EggRoboShotInstance(ctx.spawn());
+    }
+
+    @Override public Kind fieldKind() { return Kind.PROJECTILE; }
+    @Override public void displaceForField(int dx, int dy) {
+        x = (x + dx) & 0xFFFF;
+        y = (y + dy) & 0xFFFF;
+        xFixed += dx << 16;
+        updateDynamicSpawn(x, y);
     }
 
     @Override
@@ -103,6 +119,13 @@ public final class EggRoboShotInstance extends AbstractObjectInstance
         xFixed += xVelocity << 8;
         x = (xFixed >> 16) & 0xFFFF;
         updateDynamicSpawn(x, y);
+        if (playerOwned) {
+            var policies = com.openggf.game.mutators.NativeObjectPolicyAccess.port(services());
+            if (policies != null && policies.playerProjectileStep(this, player)) {
+                ObjectLifetimeOps.expireDynamic(this);
+                return;
+            }
+        }
         var camera = services().camera();
         if (camera != null && isCoarseXOutOfRange(x, camera.getX(), coarseXCullRange())) {
             ObjectLifetimeOps.deleteNoRespawn(this);
@@ -115,7 +138,7 @@ public final class EggRoboShotInstance extends AbstractObjectInstance
     @Override public int getOnScreenHalfWidth() { return 0x20; }
     @Override public int getOnScreenHalfHeight() { return 4; }
     /** word_919CA's collision byte is zero: the muzzle flash cannot hurt anybody. */
-    @Override public int getCollisionFlags() { return charge >= 0 ? 0 : ARMED_COLLISION_FLAGS; }
+    @Override public int getCollisionFlags() { return playerOwned || charge >= 0 ? 0 : ARMED_COLLISION_FLAGS; }
     @Override public int getCollisionProperty() { return 0; }
     @Override public int getShieldReactionFlags() { return SHIELD_REACTION; }
     @Override public TouchResponseProfile getTouchResponseProfile() { return TOUCH; }

@@ -38,6 +38,8 @@ public final class ButterdroidBadnikInstance extends AbstractS3kBadnikInstance i
         animationTimer = 0;
     }
 
+    @Override protected boolean independentPresentationBody() { return true; }
+
     @Override
     protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         if (isDestroyed()) {
@@ -59,7 +61,7 @@ public final class ButterdroidBadnikInstance extends AbstractS3kBadnikInstance i
             return;
         }
 
-        PlayableEntity target = closestNativePlayerByHorizontalDistance(playerEntity);
+        PlayableEntity target = com.openggf.game.mutators.NativeObjectPolicyAccess.permitsTargeting(services()) ? closestNativePlayerByHorizontalDistance(playerEntity) : null;
         if (target != null) {
             facingLeft = !findSonicTailsTargetIsRight(target);
             chase(target.getCentreX(), target.getCentreY());

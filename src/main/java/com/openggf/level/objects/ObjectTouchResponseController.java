@@ -128,7 +128,9 @@ final class ObjectTouchResponseController {
         if (player == null) {
             return;
         }
+        var policies = com.openggf.game.mutators.NativeObjectPolicyAccess.port(objectManager.services());
         for (ObjectInstance instance : objectManager.initialCollisionResponseList().playerReadView()) {
+            if (policies != null && !policies.permitsContact(instance, player)) continue;
             if (instance == null || objectCallbacks.call(instance, instance::isDestroyed)) {
                 continue;
             }
@@ -477,7 +479,9 @@ final class ObjectTouchResponseController {
         boolean usePreviousCollisionResponseList =
                 usePreUpdateState && objectManager.touchUsesPreviousCollisionResponseList();
 
+        var policies = com.openggf.game.mutators.NativeObjectPolicyAccess.port(objectManager.services());
         for (ObjectInstance instance : touchObjects) {
+            if (policies != null && !policies.permitsContact(instance, player)) continue;
             TouchResponseProvider provider = (TouchResponseProvider) instance;
             if (objectCallbacks.call(instance, instance::isSkipTouchThisFrame)) {
                 continue;
@@ -824,7 +828,10 @@ final class ObjectTouchResponseController {
         if (!overlap) {
             return false;
         }
-        return objectCallbacks.call(instance, () -> provider.onShieldDeflect(player));
+        boolean deflected = objectCallbacks.call(instance, () -> provider.onShieldDeflect(player));
+        var policies = com.openggf.game.mutators.NativeObjectPolicyAccess.port(objectManager.services());
+        if (deflected && policies != null) policies.projectileImpact(instance, player);
+        return deflected;
     }
 
     private boolean canDeflectShieldReactiveProjectile(PlayableEntity player) {
@@ -1342,6 +1349,8 @@ final class ObjectTouchResponseController {
             }
         }
         player.applyHurtOrDeath(sourceX, cause, hadRings);
+        var policies = com.openggf.game.mutators.NativeObjectPolicyAccess.port(objectManager.services());
+        if (policies != null && instance != null) policies.projectileImpact(instance, player);
     }
 
     TouchResponseDebugState getDebugState() {

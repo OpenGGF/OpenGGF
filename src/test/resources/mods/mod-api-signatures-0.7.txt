@@ -3570,6 +3570,7 @@ FIELD com.openggf.sprites.playable.SuperState public,static,final com.openggf.sp
 FIELD com.openggf.sprites.playable.SuperState public,static,final com.openggf.sprites.playable.SuperState TRANSFORMING
 FIELD com.openggf.sprites.playable.SuperStateController protected,final com.openggf.sprites.playable.AbstractPlayableSprite player
 FIELD com.openggf.sprites.playable.TailsCarryController$CarryContext public,static,final com.openggf.sprites.playable.TailsCarryController$CarryContext CNZ
+FIELD com.openggf.sprites.playable.TailsCarryController$CarryContext public,static,final com.openggf.sprites.playable.TailsCarryController$CarryContext ENCOUNTER
 FIELD com.openggf.sprites.playable.TailsCarryController$CarryContext public,static,final com.openggf.sprites.playable.TailsCarryController$CarryContext MANUAL
 FIELD com.openggf.sprites.playable.TailsCarryController$CarryContext public,static,final com.openggf.sprites.playable.TailsCarryController$CarryContext MGZ_BOSS
 FIELD com.openggf.sprites.playable.TailsCarryController$CarryContext public,static,final com.openggf.sprites.playable.TailsCarryController$CarryContext NONE
@@ -10006,6 +10007,7 @@ METHOD com.openggf.level.objects.ObjectLifetimeOps public,static  void markSpawn
 METHOD com.openggf.level.objects.ObjectLifetimeOps public,static  void releaseParentSlotKeepingChildren(com.openggf.level.objects.ObjectManager,com.openggf.level.objects.AbstractObjectInstance)
 METHOD com.openggf.level.objects.ObjectLifetimeOps public,static  void releaseSpawnForRespawn(com.openggf.level.objects.ObjectManager,com.openggf.level.objects.ObjectInstance,com.openggf.level.objects.ObjectSpawn)
 METHOD com.openggf.level.objects.ObjectLifetimeOps public,static  void removeSpawnFromActive(com.openggf.level.objects.ObjectManager,com.openggf.level.objects.ObjectSpawn)
+METHOD com.openggf.level.objects.ObjectManager public  boolean admitTransientContactBeforePlayer(com.openggf.level.objects.AbstractObjectInstance)
 METHOD com.openggf.level.objects.ObjectManager public  boolean checkPlayerReleaseFromObjectFloor(com.openggf.game.PlayableEntity)
 METHOD com.openggf.level.objects.ObjectManager public  boolean getPreContactRolling()
 METHOD com.openggf.level.objects.ObjectManager public  boolean hasActiveInitialProcessSpritesDispatch()
@@ -14413,7 +14415,9 @@ METHOD com.openggf.sprites.playable.SuperStateController$RewindState public  lon
 METHOD com.openggf.sprites.playable.SuperStateController$RewindState public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.sprites.playable.SuperStateController$RewindState public,final  int hashCode()
 METHOD com.openggf.sprites.playable.SuperStateController$RewindState public,final  java.lang.String toString()
+METHOD com.openggf.sprites.playable.TailsCarryController public  boolean isCarrying(com.openggf.sprites.playable.AbstractPlayableSprite)
 METHOD com.openggf.sprites.playable.TailsCarryController public  boolean isCarryingMainCharacter()
+METHOD com.openggf.sprites.playable.TailsCarryController public  boolean tryEncounterCarry()
 METHOD com.openggf.sprites.playable.TailsCarryController public  boolean tryGrabMainCharacter()
 METHOD com.openggf.sprites.playable.TailsCarryController public  com.openggf.sprites.playable.TailsCarryController$CarryContext getContext()
 METHOD com.openggf.sprites.playable.TailsCarryController public  com.openggf.sprites.playable.TailsCarryController$Snapshot capture()

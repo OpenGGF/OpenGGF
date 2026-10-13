@@ -159,6 +159,28 @@ public final class LevelFloorScanner {
         return out;
     }
 
+    /**
+     * Whether a bounded half-open body rectangle has no primary-path terrain. Uses the same
+     * decoded column heights and solidity bits as the floor scan; missing layout is rejected.
+     */
+    public static boolean clearRectangle(Level level, int left, int top, int right, int bottom) {
+        if (level == null || left < 0 || top < 0 || right <= left || bottom <= top
+                || right - left > 512 || bottom - top > 256) return false;
+        for (int x = left; x < right; x++) {
+            for (int cellY = Math.floorDiv(top, CELL) * CELL; cellY < bottom; cellY += CELL) {
+                ChunkDesc desc = chunkDesc(level, x, cellY);
+                if (desc == null) return false;
+                if (!desc.isSolidityBitSet(TOP_SOLID_BIT) && !desc.isSolidityBitSet(LRB_SOLID_BIT)) continue;
+                int metric = heightMetric(level, desc, x);
+                if (metric == 0) continue;
+                int solidTop = metric > 0 ? cellY + CELL - metric : cellY;
+                int solidBottom = metric > 0 ? cellY + CELL : cellY - metric;
+                if (solidTop < bottom && solidBottom > top) return false;
+            }
+        }
+        return true;
+    }
+
     /** The column's height in its chunk's primary solid tile, oriented for a downward scan. */
     private static int heightMetric(Level level, ChunkDesc desc, int x) {
         int chunkIndex = desc.getChunkIndex();

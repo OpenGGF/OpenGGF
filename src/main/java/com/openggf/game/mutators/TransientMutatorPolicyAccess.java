@@ -11,7 +11,8 @@ public final class TransientMutatorPolicyAccess {
         return WorldSessionPolicyAccess.getService(world, TransientMutatorPolicySource.class);
     }
     public static List<TransientMutatorPolicySource.Entry> entries(WorldSession world) {
-        var source = source(world); return source == null ? List.of() : source.entries();
+        var source = source(world); return source == null ? List.of() : source.entries().stream()
+                .filter(entry -> entry.oneShot() || entry.remainingPresentations() > 0).toList();
     }
     public static boolean acknowledge(WorldSession world, long id) {
         var source = source(world); return source != null && source.acknowledge(id);

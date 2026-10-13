@@ -20,7 +20,7 @@ public final class SozHyudoroBodyObjectInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable,TouchResponseProvider,TouchResponseListener {
     private static final int ANIM_BASE=0x8F682;
     private static final int[] APPEAR={0x8F682,0x8F695,0x8F6AA};
-    private SozHyudoroControllerObjectInstance controller;
+    private HyudoroContext controller;
     private final List<AbstractPlayableSprite> pendingContacts = new ArrayList<>();
     private int xFixed,yFixed,xVelocity,yVelocity,maxVelocity,acceleration;
     private int routine,darkness,frame,animationAddress,animationIndex,animationTimer,attackTimer,collisionProperty;
@@ -29,7 +29,7 @@ public final class SozHyudoroBodyObjectInstance extends AbstractObjectInstance
     private int lastVIntRunCount;
     private byte[] animations;
     public SozHyudoroBodyObjectInstance(ObjectSpawn spawn){this(spawn,null);}
-    public SozHyudoroBodyObjectInstance(ObjectSpawn spawn,SozHyudoroControllerObjectInstance controller){
+    public SozHyudoroBodyObjectInstance(ObjectSpawn spawn,HyudoroContext controller){
         super(spawn,"SOZHyudoro");this.controller=controller;xFixed=spawn.x()<<16;yFixed=spawn.y()<<16;
     }
     @Override public void update(int vIntRunCount,PlayableEntity leader){
@@ -102,6 +102,7 @@ public final class SozHyudoroBodyObjectInstance extends AbstractObjectInstance
         }
         return false;
     }
+    public boolean belongsToEncounter(HyudoroContext owner) { return controller == owner; }
     private void initialize(){
         initialized=true;routine=2;darkness=controller.darkness();
         try{animations=services().rom().readBytes(ANIM_BASE,0x5A);}catch(IOException e){throw new UncheckedIOException(e);}

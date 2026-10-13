@@ -8,7 +8,7 @@ import com.openggf.sprites.playable.Knuckles;
 import java.util.List;
 
 /** Dynamic title-completion owner, Obj_Hyudoro/Hyudoro_ctr ($8F0B8). */
-public final class SozHyudoroControllerObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public final class SozHyudoroControllerObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, HyudoroContext {
     private static final int[] COUNTS={0,1,2,2,3,3};
     private int count,timer;
     public SozHyudoroControllerObjectInstance(ObjectSpawn spawn){super(spawn,"SOZHyudoroController");}
@@ -23,8 +23,8 @@ public final class SozHyudoroControllerObjectInstance extends AbstractObjectInst
         // CreateChild6_Simple increments RAM count before trying allocation.
         spawnChild(()->new SozHyudoroBodyObjectInstance(new ObjectSpawn(0x120,0xA0,0xAA,0,0,false,0),this));
     }
-    int darkness(){return services().zoneRuntimeState() instanceof SozZoneRuntimeState state?state.lighting().darknessLevel():0;}
-    void ghostDeleted(){count=(count-1)&255;}
+    @Override public int darkness(){return services().zoneRuntimeState() instanceof SozZoneRuntimeState state?state.lighting().darknessLevel():0;}
+    @Override public void ghostDeleted(){count=(count-1)&255;}
     public int ghostCount(){return count;}
     @Override public int getX(){return 0x120;}
     @Override public int getY(){return 0xA0;}

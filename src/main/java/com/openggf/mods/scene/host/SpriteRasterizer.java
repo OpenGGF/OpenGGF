@@ -16,12 +16,12 @@ import java.util.List;
  * coloured from the piece's palette line, with colour 0 transparent and earlier pieces on
  * top of later ones. Engine-internal.
  */
-final class SpriteRasterizer {
+public final class SpriteRasterizer {
     private SpriteRasterizer() {
     }
 
     /** {@code tiles} is the art (or the frame's DPLC bank); {@code palette} has 64 ARGB colours. */
-    static SceneSprite rasterize(SpriteMappingFrame frame, Pattern[] tiles, int[] palette, int paletteLine,
+    public static SceneSprite rasterize(SpriteMappingFrame frame, Pattern[] tiles, int[] palette, int paletteLine,
             int tileOffset) {
         List<SpriteMappingPiece> pieces = frame == null ? List.of() : frame.pieces();
         if (pieces.isEmpty()) {

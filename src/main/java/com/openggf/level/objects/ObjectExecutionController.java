@@ -65,8 +65,12 @@ final class ObjectExecutionController {
         try {
             // Creator object routines run inside the fault boundary so a mod
             // failure aborts its owner rather than propagating raw.
-            objects.runObjectCallback(instance,
-                    () -> instance.update(objects.vblaCounter(), player));
+            var policies = com.openggf.game.mutators.NativeObjectPolicyAccess.port(objects.services());
+            if (policies == null || policies.permitsRoutine(instance, player)) {
+                objects.runObjectCallback(instance,
+                        () -> instance.update(objects.vblaCounter(), player));
+                if (policies != null) policies.afterRoutine(instance, player);
+            }
             if (instance instanceof AbstractObjectInstance object) {
                 object.clearAwaitingFirstTouchExecution();
             }

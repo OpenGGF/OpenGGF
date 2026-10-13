@@ -56,6 +56,8 @@ public final class BloominatorBadnikInstance extends AbstractS3kBadnikInstance i
         this.mappingFrame = 0;
     }
 
+    @Override protected boolean independentPresentationBody() { return true; }
+
     @Override
     protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
@@ -122,7 +124,7 @@ public final class BloominatorBadnikInstance extends AbstractS3kBadnikInstance i
         attackStep++;
         if (attackStep >= ATTACK_FRAMES.length) {
             state = State.IDLE_WAIT;
-            stateTimer = REPEAT_WAIT_FRAMES;
+            stateTimer = com.openggf.game.mutators.NativeObjectPolicyAccess.firingCooldown(services(), REPEAT_WAIT_FRAMES);
             mappingFrame = 0;
             return;
         }
@@ -138,6 +140,7 @@ public final class BloominatorBadnikInstance extends AbstractS3kBadnikInstance i
     }
 
     private void fireProjectile() {
+        if (!com.openggf.game.mutators.NativeObjectPolicyAccess.permitsFiring(services(), currentX)) return;
         services().playSfx(Sonic3kSfx.PROJECTILE.id);
 
         int xVel = PROJECTILE_X_VEL;
