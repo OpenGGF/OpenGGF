@@ -601,3 +601,23 @@ actual Knuckles terminal lifecycles, changed presentation pixels, and real cold
 route/handoff consumers should run on the composed source wherever they are
 outside the selected smoke lane. Do not add another broad baseline run or infer
 native scene conformance from these bounded checks.
+
+
+The isolated merge commits are `b01eaeb6a` (ending) and `b01a0c665`
+(upstream). On the composed `b01a0c665` source, build-only
+`python3 tools/testing/maven_queue.py -Dmse=off compile` succeeds at
+00:13:39 BST on 2026-10-14: 3,964 production sources, Java release 25,
+50.669 seconds Maven time, no tests executed. The normal hooks and exact final
+coauthor parse passed both merges; all eight Java intersections were automatic.
+
+The read-only plan command
+`python3 tools/testing/run_categories.py --base 5e2f51f079 --json` selects
+3,253 of 3,253 smoke candidate classes across all ten categories: 66 ordinary
+batches of at most 50 classes plus the separate fresh guard lane. This is the
+complete bounded smoke selection, not the public-release full suite. The
+ending lifecycle/Knuckles/pixel/entry/donor/roster, changed native ROM-table,
+MHZ/DEZ/LRZ/SSZ route and PLC-registry consumers are present in that selection;
+`TestPatternSpriteRendererCorruptionGuard` belongs to the separate guard lane.
+The lead still owns preflight in the actual launch environment, execution cost
+and stopping rule, identity-by-identity comparison, integration and push. No
+engine test or new broad run is started by this preparation work.
