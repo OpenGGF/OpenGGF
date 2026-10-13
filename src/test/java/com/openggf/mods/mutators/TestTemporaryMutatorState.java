@@ -123,6 +123,15 @@ class TestTemporaryMutatorState {
                 new PlayerMotionPolicy(PlayerMotionPolicy.Mode.MOMENTUM_PULSE,0),new MutatorPolicy.DrySonicGravity(50)));
         var mixedState=new TemporaryMutatorState(10,List.of(new OwnedMutator("alpha",mixed)),faults);
         try(var port=mixedState.open("alpha",mixed.capabilities())) { assertFalse(port.activate("mixed",Map.of(),0).accepted()); }
+        var twoActions=new MutatorDefinition("two-actions","Two actions","",MutatorScope.LIVE,MutatorScope.LIVE,List.of(),
+                Set.of(MutatorCapability.PLAYER_MOTION,MutatorCapability.ENCOUNTER),options -> List.of(
+                new PlayerMotionPolicy(PlayerMotionPolicy.Mode.MOMENTUM_PULSE,0),new EncounterPolicy(EncounterPolicy.Kind.BUMPER,EncounterPolicy.Side.AHEAD)));
+        var oneShotState=new TemporaryMutatorState(14,List.of(new OwnedMutator("alpha",twoActions)),faults);
+        try(var port=oneShotState.open("alpha",twoActions.capabilities())) {
+            var rejected=port.activate("two-actions",Map.of(),0);
+            assertFalse(rejected.accepted());assertTrue(rejected.reason().contains("exactly one native policy"));
+            assertTrue(oneShotState.entries().isEmpty(),"cross-consumer actions cannot be partly acknowledged");
+        }
     }
 
     @Test void capturedFacadeCannotBeUsedByAnAsynchronousCreatorCallback() throws Exception {

@@ -245,6 +245,7 @@ final class MutatorWorldState implements WorldSessionPolicyState, RewindSnapshot
     @Override public void onMenuPresentation(com.openggf.control.LogicalInputSnapshot input,int width,int height,
             java.util.function.Consumer<com.openggf.audio.GameSound> sounds) {
         if(retired)return;observerSounds=sounds;
+        admitPhaseBoundary(com.openggf.game.GameplayObservation.Phase.SETUP);
         observation=new com.openggf.game.GameplayObservation(generation,visitGeneration,temporary.clock(),nativeTicks,
                 com.openggf.game.GameplayObservation.Phase.SETUP,world.getCurrentZone(),world.getCurrentAct(),width,height,
                 java.util.Optional.empty(),java.util.List.of(),input,loadCause);

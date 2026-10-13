@@ -8,7 +8,8 @@ import java.util.Map;
 /** Engine-minted callback-scoped activation authority for the current owner's registered LIVE families. */
 @ModApi
 public interface TemporaryMutators {
-    /** Zero duration submits a one-shot which waits for native acknowledgement. Timed duration is 1..3600 presentations. */
+    /** Zero duration submits exactly one instantaneous native policy, waiting for acknowledgement.
+     * Timed bundles require duration 1..3600; instantaneous and timed policies cannot mix. */
     ActivationResult activate(String localDefinitionId, Map<String, Object> options, long durationPresentations);
     /** Changes bounded options without changing identity, family or expiry. */
     ActivationResult replace(long activationId, Map<String, Object> options);

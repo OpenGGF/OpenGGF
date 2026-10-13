@@ -230,6 +230,35 @@ class TestMutatorWorldServices {
             assertTrue(nativeCleaned.get(),"native-child cleanup follows even when creator cleanup fails");
         }
     }
+    @org.junit.jupiter.api.Test void nativeMenuFallbackRevokesBeforePresentationAndDoesNotRepeatSetupCleanup() {
+        var observer=new BoundaryObserver();
+        var nativeChild=org.mockito.Mockito.mock(com.openggf.game.session.WorldSessionPolicyState.class);
+        var adapter=org.mockito.Mockito.mock(com.openggf.game.rewind.RewindSnapshottable.class);
+        org.mockito.Mockito.when(adapter.capture()).thenReturn(0);
+        org.mockito.Mockito.when(nativeChild.rewindAdapter()).thenReturn(adapter);
+        var fixture=fixture("s3k",observer,nativeChild);
+        var temporary=(TemporaryMutatorState)service(fixture.world(),com.openggf.game.mutators.TransientMutatorPolicySource.class);
+        var context=org.mockito.Mockito.mock(com.openggf.game.session.GameplayModeContext.class);
+        org.mockito.Mockito.when(context.getWorldSession()).thenReturn(fixture.world());
+        WorldSessionPolicyAccess.onPresentation(context,LogicalInputSnapshot.neutral(),com.openggf.game.GameplayObservation.Phase.ACTIVE);
+        var boundaries=new AtomicInteger();
+        observer.boundaryCheck=port -> {
+            assertTrue(port.active().isEmpty());assertTrue(temporary.completions().isEmpty());boundaries.incrementAndGet();
+        };
+        try(var port=temporary.open("fixture",EnumSet.allOf(MutatorCapability.class))) {
+            long modal=port.activate("pong",Map.of(),3).activationId();assertTrue(port.complete(modal,true).accepted());
+            assertTrue(port.activate("speed",Map.of(),5).accepted());
+            WorldSessionPolicyAccess.onMenuPresentation(fixture.world(),LogicalInputSnapshot.neutral(),320,224,ignored -> { });
+            assertTrue(temporary.entries().isEmpty());assertTrue(temporary.completions().isEmpty());
+            assertEquals(com.openggf.game.GameplayObservation.Phase.SETUP,fixture.owner().capture().observation().phase());
+            assertTrue(fixture.owner().capture().observation().leader().isEmpty());
+            WorldSessionPolicyAccess.onMenuPresentation(fixture.world(),LogicalInputSnapshot.neutral(),320,224,ignored -> { });
+            assertEquals(1,boundaries.get());
+            org.mockito.Mockito.verify(nativeChild,org.mockito.Mockito.times(1))
+                    .leaveOrdinaryGameplay(com.openggf.game.GameplayObservation.Phase.SETUP);
+        }
+    }
+
     @org.junit.jupiter.api.Test void rawRegistryRestoreDiscardsAnAbandonedZeroTickBoundaryBeforeBranching() {
         var observer=new BoundaryObserver();
         var nativeChild=org.mockito.Mockito.mock(com.openggf.game.session.WorldSessionPolicyState.class);

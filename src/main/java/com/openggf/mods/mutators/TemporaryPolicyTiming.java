@@ -9,6 +9,7 @@ final class TemporaryPolicyTiming {
         boolean instant=policies.stream().anyMatch(TemporaryPolicyTiming::oneShot);
         boolean timed=policies.stream().anyMatch(policy -> !oneShot(policy));
         if(instant && timed)return "A temporary bundle cannot mix instantaneous and timed policies";
+        if(instant && policies.size()!=1)return "An instantaneous activation must contain exactly one native policy";
         if(instant && duration!=0)return "Instantaneous native policies require duration zero and acknowledgement";
         if(timed && duration==0)return "Timed policies require a positive bounded presentation duration";
         return "";
