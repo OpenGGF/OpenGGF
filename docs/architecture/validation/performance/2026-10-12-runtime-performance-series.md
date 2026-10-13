@@ -4,14 +4,14 @@
 
 The required accuracy prerequisite and complete-runtime baseline are qualified.
 **The original numeric baseline is frozen from five fresh processes per scenario.
-Five valid consecutive performance experiments were rejected. Optimization stopped at the requested checkpoint with 0% accepted gain in each game. Accuracy/tooling delivery validation is complete; integration and cleanup remain pending.** The intended
+Five valid consecutive performance experiments were rejected. Optimization stopped at the requested checkpoint with 0% accepted gain in each game. Accuracy/tooling delivery is validated, integrated, pushed and cleaned up.** The intended
 metric selected for this frozen series is total process CPU time per simulated frame, equally weighted between
 normal and demanding scenarios in each game. No saving is attributed to accuracy
 repairs, upstream changes, Java migration, or replacing an invalid helper harness.
 The original request allows CPU, resident memory, or measured GPU VRAM, using one
 metric consistently across all games. The 50% stretch target is **cumulative**
 across accepted changes; individual changes need only show a verified gain. This
-CPU series has none. Integration, push and task-worktree cleanup have not happened.
+CPU series has none. The checkpoint is delivered on `develop`; see the final delivery record below.
 
 The user authorized repairing inherited AIZ → HCZ failures after both complete
 fixtures failed their untouched-source controls. Local checkpoints:
@@ -24,11 +24,11 @@ fixtures failed their untouched-source controls. Local checkpoints:
 | Updated matched develop base | `3ac1363ed2b2549d9e7c9d913b3b617b47e1bc53` |
 | C8 selected-world binding, input-only runtime tools and detailed qualification record | `48bc7c34bd6068199763f62620a5193586c67293` |
 
-Worktree `.worktrees/ai-runtime-perf-series`, local branch
-`feature/ai-runtime-perf-series`; clean control `.worktrees/ai-runtime-perf-control`
-is now at `4a9bec1eaf86e7b70959113e484315c5013c1b7c`. The development tree
-merged that updated base at `4a0b2cd6bdf3050ffd5044c4c40f4e29aa3d2723`.
-Upstream Mod compatibility and queue changes receive no task performance credit.
+Development used `.worktrees/ai-runtime-perf-series` and a clean control at
+`4a9bec1eaf86e7b70959113e484315c5013c1b7c`; updated-base merge was
+`4a0b2cd6bdf3050ffd5044c4c40f4e29aa3d2723`. Both trees and all six experiment/
+original-baseline trees are now removed after verification and push. Upstream
+Mod compatibility and queue changes receive no task performance credit.
 Unrelated dirty submodules/files were preserved.
 Detailed earlier derivations/commands are preserved in this same dated artifact
 at `1baa8e6dc` and `48bc7c34b` (`git show COMMIT:PATH`); this current record condenses
@@ -1161,3 +1161,50 @@ numeric baseline consist of nine upstream Mod compatibility files plus the two
 CLI tools. No rejected runtime optimization remains. Upstream effects are
 unmeasured and receive no performance credit. The original protocol SHA and
 all three original CPU scores remain fixed. Integration/push/cleanup pending.
+
+
+### Final delivery and cleanup — 2026-10-13
+
+Integrated into the main workspace's existing `develop` branch, without switching
+branches, at **`52e411be5f71ee412b28c1825730b1e43898e217`**. The updated destination
+was still `4a9bec1eaf86e7b70959113e484315c5013c1b7c`; fast-forward pull found no
+further upstream change. Integration had no conflicts, and its tracked tree
+exactly matched validated task commit `2b22095b3`. Unrelated dirty disassemblies,
+archives, scripts and notes remain untouched.
+
+Post-integration command, using the same Java/private-audio environment:
+
+```bash
+python3 tools/testing/maven_queue.py --lean -Dmse=off -Dtest=TestPlayableSessionRules,TestRuntimeInputPlan test
+```
+
+**5 tests, 0 failures/errors/skips, exit 0**, 1m14 execution. The full identities
+were inspected. The completed candidate/control, guard, domain, media and rewind
+evidence above remains applicable to the identical integrated sources. No
+unchanged broad run was repeated, and no green full-suite claim is made.
+
+`git push origin develop` succeeded; `git ls-remote origin refs/heads/develop`
+confirmed the exact integration SHA. Only the integrated destination branch was
+pushed. This documentation-only follow-up records that observed delivery.
+
+After successful verification/push, all eight owned worktrees were clean, with
+clean initialized submodules and commits reachable from `develop`; all were
+removed with their local branches. Workflow build outputs, caches and hook-created
+links were discarded. Eleven ignored example configs/notes/mod-save files were
+preserved, with byte hashes, under the external task directory's
+`cleanup-preserved/`; `delivery-cleanup.json` records exact trees and preservation.
+No unknown/user-authored file was discarded. Worktree metadata cleanup completed.
+
+The owned private display was already removed. The delivery private audio module
+was verified by exact ID/name/arguments, had zero streams, and was unloaded;
+desktop audio was unchanged. Astra is terminal, with its useful review committed
+and no owned CLI process/session. All timing quiet holds were released earlier.
+Durable protocol, captures and measurement reports remain outside the repository.
+Consumed category diagnostics were acknowledged and removed; no raw Maven logs
+were archived.
+
+**Stop condition: five consecutive valid rejected experiments, 0% accepted CPU
+gain in S1/S2/S3K; the cumulative 50% stretch target is not reached.** The best
+next measured hypothesis remains reducing small atlas texture-upload commands;
+YM synthesis/resampling is the second investigation. Their whole-engine savings
+are unmeasured. No sixth optimization was started.
