@@ -5,6 +5,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.openggf.game.GameModule;
+import com.openggf.game.session.SessionManager;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.sonic1.Sonic1GameModule;
 import com.openggf.game.sonic2.Sonic2GameModule;
@@ -24,6 +26,7 @@ public class TestSpriteManagerCollisionOrder {
 
     @AfterEach
     public void tearDown() {
+        SessionManager.clear();
         if (previousModule != null) {
             GameModuleRegistry.setCurrent(previousModule);
         } else {
@@ -33,7 +36,7 @@ public class TestSpriteManagerCollisionOrder {
 
     @Test
     public void testSonic1UsesPostMovementSolidPass() {
-        GameModuleRegistry.setCurrent(new Sonic1GameModule());
+        TestEnvironment.configureGameModuleFixture(new Sonic1GameModule());
         TestPlayableSprite sprite = new TestPlayableSprite();
 
         assertTrue(SpriteManager.requiresPostMovementSolidPass(sprite));
@@ -41,7 +44,7 @@ public class TestSpriteManagerCollisionOrder {
 
     @Test
     public void testSonic2DoesNotUsePostMovementSolidPass() {
-        GameModuleRegistry.setCurrent(new Sonic2GameModule());
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
         TestPlayableSprite sprite = new TestPlayableSprite();
 
         assertFalse(SpriteManager.requiresPostMovementSolidPass(sprite));

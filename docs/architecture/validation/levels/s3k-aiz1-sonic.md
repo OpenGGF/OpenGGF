@@ -495,3 +495,22 @@ loaded defaults cannot move the lock. Without the fix,
 `TestSonic3kAIZEvents#eventsFg5StartsFireTransitionAndAppliesSeamlessFlow` fails
 after one ordinary boundary tick (expected 16, got 14). The native lock/release
 assertions and `TestS3kAiz1ReloadRewind` pass.
+
+## Post-boss handoff prerequisite — 2026-10-12 candidate
+
+The full Sonic + CPU Tails `aiz1_to_hcz_fullrun` fixture exercises AIZ1's
+seamless reload, AIZ2 boss/results, button and drawbridge, then HCZ title-load
+submission. Over `a0e2b79cc` in `.worktrees/ai-runtime-perf-series`, its 57 inherited
+errors become zero across 20,463 compared observations; terminal hardware work
+also matches. The alternative `aiz_completerun` remains failing (99→59 errors,
+first row 25,589 animation $13/$05) and is excluded from performance routes.
+
+Local checks cover original-owner lifetime, allocation/dispatch boundaries,
+consumed input history, signed-control support, camera/display consumers and
+drawbridge countdown recreation followed by the same eject. They do not certify
+whole-route rewind or viewport/donor/character breadth. Two fresh lossless
+handoff captures match all 618 decoded video frames and 494,400 stereo sample
+frames; this proves determinism, not native waveform/pixel parity. Matched
+updated-base validation is pending; the
+[performance validation record](../performance/2026-10-12-runtime-performance-series.md)
+records exact commands and scope. No performance score is frozen or claimed.

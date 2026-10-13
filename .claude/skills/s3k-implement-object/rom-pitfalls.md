@@ -5099,3 +5099,24 @@ when `SK_alone_flag` is zero before camera/P1 writes. The locked-on placement st
 contains subtype `$30`; player identity and placement presence do not authorize
 the standalone intro. Keep the supported ROM-mode prerequisite and declare a
 standalone mode explicitly in component fixtures; capture it through recreation.
+
+## AIZ post-boss owners keep their native dispatch slots
+
+`Obj_AIZEndBossWait` has no range-delete tail. Retain its original SST through
+camera backtracking, then change its routine in place for the capsule/results
+continuation. `AIZEndBoss_StartDefeat` owns `_unkFAA3`; the ROM-loaded button and
+bridge consume the shared flags from their own slots. Do not replace those owners
+or borrow a later capsule's restore routine (`loc_7D078` belongs to Sky Sanctuary).
+`sub_86984` and `AIZEndBoss_StopPlayer` use lowest-free `AllocateObject`; their
+selected slots determine same-scan versus next-scan dispatch without added delays.
+`Obj_LevelResultsWait2`, not the last result child, clears `_unkFAA8`.
+
+## Countdown-only routines retain object standing latches
+
+AIZ drawbridge `loc_2B452` decrements and returns without `SolidObjectFull2`.
+`loc_2B45E`/`loc_2B478` later consume the parent's standing bits even if a player
+jumped and cleared their own OnObj bit. Place solid resolution at the normal
+routine checkpoint, consume manual checkpoint results (which omit compatibility
+listener callbacks), and capture the rider latch for rewind. A transient list
+cannot be rebuilt during the countdown. Functional test setups need a real solid
+registry and an in-range owner before establishing the first contact.

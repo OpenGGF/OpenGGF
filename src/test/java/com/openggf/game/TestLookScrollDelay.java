@@ -1,5 +1,8 @@
 package com.openggf.game;
 
+import com.openggf.tests.TestEnvironment;
+import com.openggf.game.session.SessionManager;
+
 import com.openggf.game.rules.GameRules;
 
 import com.openggf.game.sonic1.Sonic1GameModule;
@@ -21,17 +24,18 @@ public class TestLookScrollDelay {
 
     @BeforeEach
     public void setUp() {
-        GameModuleRegistry.setCurrent(new Sonic2GameModule());
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
     }
 
     @AfterEach
     public void tearDown() {
+        SessionManager.clear();
         GameModuleRegistry.reset();
     }
 
     @Test
     public void testSonic1_InstantLookScroll() {
-        GameModuleRegistry.setCurrent(new Sonic1GameModule());
+        TestEnvironment.configureGameModuleFixture(new Sonic1GameModule());
         TestableSprite sprite = new TestableSprite("test", (short) 100, (short) 100);
 
         GameRules fs = sprite.getGameRules();
@@ -41,7 +45,7 @@ public class TestLookScrollDelay {
 
     @Test
     public void testSonic2_DelayedLookScroll() {
-        GameModuleRegistry.setCurrent(new Sonic2GameModule());
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
         TestableSprite sprite = new TestableSprite("test", (short) 100, (short) 100);
 
         GameRules fs = sprite.getGameRules();
@@ -51,7 +55,7 @@ public class TestLookScrollDelay {
 
     @Test
     public void testSonic3k_DelayedLookScroll() {
-        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+        TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
         TestableSprite sprite = new TestableSprite("test", (short) 100, (short) 100);
 
         GameRules fs = sprite.getGameRules();
