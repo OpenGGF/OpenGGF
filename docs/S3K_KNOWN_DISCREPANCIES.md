@@ -27,6 +27,13 @@ Executed qualification and remaining campaign/rewind frontiers belong in the
 [dated stock audit](architecture/audits/2026-10-07-stock-parity-gap-verification.md#continued-swarm-from-the-delivered-base)
 and [known-bug record](status/s3k-known-bugs.md), rather than new intentional entries.
 
+**Ending presentation scope, 2026-10-13:** playable lifecycle qualification
+for `c2103d5f7` does not certify all native scene effects. IslandLift sprite/art
+groups, the rescue/AIZ Master Emerald palette helper and AIZ return-hold water
+cycling remain [unfinished native presentation work](status/s3k-known-bugs.md#native-ending-presentation-gaps-open),
+with source evidence in the [ending matrix](architecture/validation/levels/s3k-ending.md#unimplemented-native-presentation-breadth--2026-10-13).
+They are not accepted discrepancies or intentional widescreen extensions.
+
 ## Table of Contents
 
 1. [YM Service Timing: Source-Relative Timeline Without Absolute VInt Phase](#ym-service-timing-source-relative-timeline-without-absolute-vint-phase)
