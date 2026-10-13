@@ -17,6 +17,8 @@ Unreleased. The earlier development themes remain in
   Launch Base's placed final-boss prelude now admits its native camera gate,
   retains the ship's activation timer and restores the complete child graph.
   Its carrier continues into Mushroom Hill with released player control.
+  Mushroom Hill's independent Knuckles route switch survives its press actor's
+  native deletion and rewinds without retaining that erased parent.
 
 - **S3K endings:** Sonic and Tails continue from Death Egg or Doomsday into
   the Tornado rescue, earned Super Emerald restoration, reunion, ROM credits

@@ -5163,3 +5163,16 @@ retaining the slots alone leaves null gameplay links. Register each owning edge
 explicitly and clone captured arrays. Reconstruction must not allocate children,
 run gameplay init or consume shared RNG. Snapshot the defeat explosion helper
 and rebind its RNG separately from its parent-child links.
+
+## Route selection can retire a parent before its switch child dispatch
+
+MHZ2 `loc_6311A` allocates `ChildObjDat_665BC` and deletes the press actor for
+Knuckles. `loc_632CA` gives that child `Sprite_OnScreen_Test`, its own position,
+frame 0, palette 0 and a one-time copied respawn index. It never enters the
+parent-reading `loc_63308` branch. Holding the deleted Java parent therefore
+adds a gameplay dependency absent from the ROM and makes live rewind capture
+fail with an unregistered ObjectRef. Detach the Knuckles child's parent authority;
+recreate a pure shell from its own spawn. Sonic/Tails keep `Child_Draw_Sprite`
+and require exact captured parent identity, not a nearest-parent reconstruction.
+The five-width actual MHZ2 entry regression reproduces the deleted-parent error
+before the fix and verifies fresh child recreation plus whole-registry replay.

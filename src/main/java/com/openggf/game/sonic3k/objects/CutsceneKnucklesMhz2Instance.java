@@ -19,7 +19,6 @@ import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
@@ -773,27 +772,39 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
         private boolean knucklesRoute;
 
         private Mhz2KnucklesRouteSwitchChild(CutsceneKnucklesMhz2Instance parent) {
-            super(new ObjectSpawn(parent.getX() + KNUCKLES_ROUTE_SWITCH_CHILD_X_OFFSET, parent.getY(),
-                    Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x20, 0, false, 0),
-                    "MHZ2KnucklesRouteSwitch");
-            this.parent = parent;
+            this(new ObjectSpawn(parent.getX() + KNUCKLES_ROUTE_SWITCH_CHILD_X_OFFSET, parent.getY(),
+                    Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x20, 0, false, 0));
             this.knucklesRoute = parent.isKnucklesPlayer();
+            if (knucklesRoute) {
+                // loc_632CA switches to Sprite_OnScreen_Test: own position and
+                // frame0 survive loc_6311A's parent erasure. Copy respawn_addr
+                // once rather than retaining authority through that deleted SST.
+                setRespawnStateIndex(parent.getRespawnStateIndex());
+            } else {
+                // loc_63308/Child_Draw_Sprite retain an exact live parent relation.
+                this.parent = parent;
+            }
+        }
+
+        private Mhz2KnucklesRouteSwitchChild(ObjectSpawn spawn) {
+            // Pure phase-one shell. Exact parent/scalars hydrate only after all
+            // owners exist; no nearest-parent lookup, gameplay init or allocation.
+            super(spawn, "MHZ2KnucklesRouteSwitch");
         }
 
         @Override
         public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-            CutsceneKnucklesMhz2Instance liveParent = findNearestLiveParent(ctx);
-            return liveParent == null ? null : new Mhz2KnucklesRouteSwitchChild(liveParent);
+            return new Mhz2KnucklesRouteSwitchChild(ctx.spawn());
         }
 
         @Override
         public int getX() {
-            return parent.getX() + KNUCKLES_ROUTE_SWITCH_CHILD_X_OFFSET;
+            return parent != null ? parent.getX() + KNUCKLES_ROUTE_SWITCH_CHILD_X_OFFSET : getSpawn().x();
         }
 
         @Override
         public int getY() {
-            return parent.getY();
+            return parent != null ? parent.getY() : getSpawn().y();
         }
 
         @Override
@@ -813,7 +824,7 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
 
         @Override
         public void update(int vIntRunCount, PlayableEntity playerEntity) {
-            if (!knucklesRoute && parent.isDestroyed()) {
+            if (!knucklesRoute && (parent == null || parent.isDestroyed())) {
                 setDestroyed(true);
                 return;
             }
@@ -830,7 +841,10 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
             if (renderer == null || !renderer.isReady()) {
                 return;
             }
-            int childFrame = parent.mappingFrame == 2 ? 1 : 0;
+            // Knuckles never enters loc_63308: ObjDat3_66456's frame0 is
+            // independent of the erased parent. The ordinary branch reads it live.
+            if (!knucklesRoute && parent == null) return;
+            int childFrame = !knucklesRoute && parent.mappingFrame == 2 ? 1 : 0;
             if (knucklesRoute) {
                 renderer.drawFrameIndex(childFrame, getX(), getY(), false, false,
                         SWITCH_CHILD_KNUCKLES_ROUTE_PALETTE);
@@ -839,29 +853,6 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
             renderer.drawFrameIndex(childFrame, getX(), getY(), false, false);
         }
 
-        private static CutsceneKnucklesMhz2Instance findNearestLiveParent(RewindRecreateContext ctx) {
-            if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null) {
-                return null;
-            }
-            ObjectSpawn spawn = ctx.spawn();
-            CutsceneKnucklesMhz2Instance best = null;
-            long bestDistance = Long.MAX_VALUE;
-            for (ObjectInstance object : ctx.objectServices().objectManager().getActiveObjects()) {
-                if (!(object instanceof CutsceneKnucklesMhz2Instance candidate) || candidate.isDestroyed()) {
-                    continue;
-                }
-                if (spawn == null) {
-                    return candidate;
-                }
-                long dx = candidate.getX() - spawn.x();
-                long dy = candidate.getY() - spawn.y();
-                long distance = dx * dx + dy * dy;
-                if (distance < bestDistance) {
-                    bestDistance = distance;
-                    best = candidate;
-                }
-            }
-            return best;
-        }
+
     }
 }

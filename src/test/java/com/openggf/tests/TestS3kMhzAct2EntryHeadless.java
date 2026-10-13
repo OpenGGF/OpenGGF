@@ -5,12 +5,19 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.configuration.WidescreenAspect;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.GameServices;
+import com.openggf.game.rewind.CompositeSnapshot;
+import com.openggf.game.rewind.RewindSnapshotDiff;
+import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance;
+import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.game.session.SessionManager;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.Arguments;
 import java.util.stream.Stream;
 
@@ -114,6 +121,63 @@ class TestS3kMhzAct2EntryHeadless {
         assertTrue(release, "the lift must return player control");
         assertFalse(fixture.sprite().isHighPriority(), "loc_633D6 clears lift priority on release");
         assertEquals(7, GameServices.level().getCheckpointState().getLastCheckpointIndex());
+    }
+
+    @ParameterizedTest @EnumSource(WidescreenAspect.class)
+    void knucklesSwitchRetainsNativeOwnershipAfterParentDeletionAndReplays(WidescreenAspect aspect) {
+        var config = SonicConfigurationService.getInstance();
+        config.clearSessionOverrides();
+        config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");
+        config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+        config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, aspect.name());
+        config.resolveDisplayAspect();
+        config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS, aspect.pixelWidth());
+        CrossGameFeatureProvider.getInstance().resetState();
+        SessionManager.clear(); TestEnvironment.activeGameplayMode();
+        var fixture = HeadlessTestFixture.builder().withZoneAndAct(7, 1)
+                .withFreshLevelStartLifecycle().build();
+        assertEquals(aspect.pixelWidth(), fixture.camera().getWidth());
+        var level = GameServices.level(); var manager = level.getObjectManager();
+        var placement = level.getCurrentLevel().getObjects().stream()
+                .filter(p -> p.objectId() == Sonic3kObjectIds.CUTSCENE_KNUCKLES && p.subtype() == 0x20)
+                .findFirst().orElseThrow();
+        // Shipped Object Pos/2.bin row14; decoded through the actual ROM level.
+        assertEquals(0x4E8, placement.x()); assertEquals(0x7EC, placement.y());
+        AbstractObjectInstance child = null;
+        for (int frame = 0; frame < 400; frame++) {
+            right(fixture);
+            assertFalse(fixture.sprite().getDead(), "native switch approach death at " + frame);
+            child = switchChild(manager.getActiveObjects());
+            if (child != null) break;
+        }
+        assertNotNull(child, "ordinary native MHZ2 entry must admit its actual placed switch owner");
+        assertTrue(manager.activeObjectsOfType(CutsceneKnucklesMhz2Instance.class).isEmpty(),
+                "loc_6311A deletes the placed parent after allocating its independent switch");
+        assertEquals(0x4E0, child.getX()); assertEquals(0x7EC, child.getY());
+        assertFalse(fixture.sprite().isControlLocked(), "Knuckles does not enter the Sonic press sequence");
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        var saved = registry.capture(); // must not retain an ObjectRef to the native-erased parent
+        fixture.stepIdleFrames(30); var forward = registry.capture();
+        manager.removeDynamicObject(switchChild(manager.getActiveObjects()));
+        registry.restore(saved); sameWorld(saved, registry.capture(), "independent switch recreation");
+        var restored = switchChild(manager.getActiveObjects());
+        assertNotNull(restored); assertNotSame(child, restored);
+        assertEquals(0x4E0, restored.getX()); assertEquals(0x7EC, restored.getY());
+        fixture.stepIdleFrames(30); sameWorld(forward, registry.capture(), "independent switch replay");
+    }
+
+    private static AbstractObjectInstance switchChild(java.util.Collection<ObjectInstance> objects) {
+        return objects.stream().filter(o -> !o.isDestroyed()
+                        && o.getClass().getSimpleName().equals("Mhz2KnucklesRouteSwitchChild"))
+                .map(AbstractObjectInstance.class::cast).findFirst().orElse(null);
+    }
+
+    private static void sameWorld(CompositeSnapshot expected, CompositeSnapshot actual, String label) {
+        assertEquals(expected.entries().keySet(), actual.entries().keySet(), label);
+        for (var key : expected.entries().keySet()) {
+            var differences = RewindSnapshotDiff.diffKey(key, expected.get(key), actual.get(key));
+            assertTrue(differences.isEmpty(), () -> label + " " + key + ": " + differences);
+        }
     }
 
     private static void right(HeadlessTestFixture fixture) {
