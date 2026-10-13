@@ -1,0 +1,16 @@
+# Second Strike character opportunity capture, 2026-10-13.
+# Supplementary positioned AIZ1 local setup: solo Tails at ROM centre ($2720,$0320).
+# Native crown ring records 71..77 lie at ($2754..$279C,$01C0/$01D8).
+# No ability, ring, reward, health, clock, or terrain state is supplied.
+# Let native floor collision settle. Right during the jump controls the
+# native slope's leftward launch; jump again for flight, then tap jump
+# for ascent and use Right across the crown. Final bounded second attempt.
+# Observed: native flight mapping $A0 from frame 43, crown ring 0->1
+# at frame 375, alive through all 380 frames. Whole Tails route unverified.
+30 -
+12 R+A
+1 R
+1 R+A
+repeat 30 { 1 A ; 7 - }
+repeat 6 { 1 R+A ; 5 R }
+60 -

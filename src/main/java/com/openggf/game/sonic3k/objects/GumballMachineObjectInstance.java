@@ -9,6 +9,8 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.graphics.SpriteMaskReplayRole;
 import com.openggf.game.GameRng;
+import com.openggf.game.sonic3k.difficulty.GumballSpringPolicy;
+import com.openggf.game.sonic3k.difficulty.S3kDifficultyRules;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -366,6 +368,13 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
     }
 
     private void spawnChildren() {
+        int[] springOffsets = SPRING_X_OFFSETS;
+        var module = services().gameModule();
+        GumballSpringPolicy springPolicy = module == null ? null
+                : module.getGameService(GumballSpringPolicy.class);
+        if (springPolicy != null) {
+            springOffsets = S3kDifficultyRules.gumballSpringOffsets(springPolicy.springOffsets());
+        }
         int px = spawn.x();
         int py = spawn.y() + MACHINE_Y_OFFSET;
 
@@ -416,7 +425,7 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
         // Springs crumble on first use and are respawned by REP gumball.
         springs.clear();
         springOriginalPositions.clear();
-        for (int springX : SPRING_X_OFFSETS) {
+        for (int springX : springOffsets) {
             final int sx = DISPENSER_ABSOLUTE_X + springX;
             final int sy = DISPENSER_ABSOLUTE_Y + SPRING_Y_OFFSET;
             springOriginalPositions.add(new int[]{sx, sy});
