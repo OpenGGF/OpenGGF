@@ -33,7 +33,7 @@ import static com.openggf.level.scroll.M68KMath.negWord;
  * word 1/8 of that smaller; word 0 stays at the {@code clr.w (HScroll_table)} value, zero.
  * {@code DDZ_BGDeformArray} bands them from the top.
  */
-public class SwScrlDdz extends SwScrlS3kDefault {
+public class SwScrlDdz extends SwScrlS3kDefault implements com.openggf.level.scroll.ScrollOutputRebuilder {
     /** {@code DDZ_BGDeformArray}. */
     private static final int[] DDZ_BG_DEFORM = {0xB0, 0x10, 8, 8, 0x18, 0x38, 0x7FFF};
     private static final int SPEED_WORDS = 6;
@@ -51,6 +51,16 @@ public class SwScrlDdz extends SwScrlS3kDefault {
 
     @Override
     public void update(int[] horizScrollBuf, int cameraX, int cameraY, int frameCounter, int actId) {
+        fillScrollOutput(horizScrollBuf, cameraX, cameraY, frameCounter, actId, false);
+    }
+
+    @Override
+    public void rebuildOutput(int[] horizScrollBuf, int cameraX, int cameraY, int frameCounter, int actId) {
+        fillScrollOutput(horizScrollBuf, cameraX, cameraY, frameCounter, actId, true);
+    }
+
+    private void fillScrollOutput(int[] horizScrollBuf, int cameraX, int cameraY,
+                                  int frameCounter, int actId, boolean rebuild) {
         DdzZoneRuntimeState ddz = GameServices.hasRuntime()
                 ? S3kRuntimeStates.currentDdz(GameServices.zoneRuntimeRegistry()).orElse(null)
                 : null;
@@ -62,7 +72,9 @@ public class SwScrlDdz extends SwScrlS3kDefault {
         resetScrollTracking();
         composer.reset();
 
-        applyScreenEvent(ddz, cameraX, cameraY);
+        // sub_59648/DDZ_ScreenEvent are native dispatches, not post-restore
+        // presentation reconciliation. Derive output from the restored RAM.
+        if (!rebuild) applyScreenEvent(ddz, cameraX, cameraY);
         ddz.setInitialPlaneBlank(initialPlaneBlank());
 
         short bgY = (short) (((short) cameraY) >> 1);

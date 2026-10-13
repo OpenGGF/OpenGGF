@@ -20,4 +20,9 @@ Unreleased. The earlier development themes remain in
   and their progress-dependent final scenes. Knuckles continues from the final
   Sky Sanctuary fight through his plane flight, island credits and terminal
   scene. Scene resources, palette and animation owners, terminal Start input
-  and rewind state remain inside the native level lifecycle.
+  and rewind state remain inside the native level lifecycle. Doomsday retires
+  registered followers at its native entry and rebuilds restored scroll output
+  without advancing the screen event.
+
+- **Controller authoring:** Input branches reject checkpoints whose pending
+  fresh assembly or transition callback cannot be restored by gameplay rewind.

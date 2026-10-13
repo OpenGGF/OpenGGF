@@ -72,7 +72,13 @@ and at termination. `prefix-objects.txt` lists nearby active objects. It stops
 at death, a level reload or a game-mode transition, and refuses to restore another
 candidate across either world boundary. The branch checkpoint itself must be in
 LEVEL mode; a special-stage transition can retain the outgoing level object while
-changing active mode, so level identity alone is not a safe restore guard. Use a new empty output directory; existing products are preserved.
+changing active mode, so level identity alone is not a safe restore guard. Pending
+fresh assembly and callback-bearing fades are also unavailable to rewind. The
+production loop blocks those windows, and raw fade restore deliberately drops
+its transient completion callback. Choose a pre-fade checkpoint or continue
+ordinary input through the load until destination ownership is released. The
+tool rejects these checkpoints before writing candidate products or restoring.
+Use a new empty output directory; existing products are preserved.
 
 These are exploratory branches, not fresh-run or parity evidence. Read the CSV
 before inspecting images. Replay the chosen BK2 independently with

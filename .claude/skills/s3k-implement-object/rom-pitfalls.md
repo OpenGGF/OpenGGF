@@ -5133,3 +5133,17 @@ translating the offset; neither subtracting three nor treating the relative
 missing Tornado owner (one actor instead of two), before any flight timing test.
 See the 2026-10-13 ending lifecycle design for the rejected translations and
 the production fixed-role/rewind checks.
+
+
+## Native P2 erasure requires roster retirement, not presentation suppression
+
+`loc_815DC` clears the whole Player_2 SST in DDZ. A module's CPU/input/render
+suppression can hide that sprite while leaving the registered follower alive.
+The owning object must retire the actual roster through injected services; a
+short before-init snapshot must restore its same identity and replay the native
+erasure. Scene-local retirement uses the internal rewind bridge, not a shared
+zone-name branch. Also keep post-restore scroll reconciliation pure:
+`sub_59648/DDZ_ScreenEvent` advances foreground RAM, so `SwScrlDdz` rebuilds
+output from saved words without dispatching it a second time. This matters
+for valid snapshots taken before the first ordinary controller/scroll update.
+Origin: 2026-10-13 S3K playable completion, DDZ native-entry and composed-route lane.

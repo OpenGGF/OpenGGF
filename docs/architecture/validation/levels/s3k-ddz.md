@@ -1,5 +1,13 @@
 # S3K The Doomsday Zone coverage matrix
 
+**Current selected incoming composition (2026-10-13):** native320 cold emerald
+team and declared positioned320/800 incoming fights pass continuously through
+actual DDZ, D01 rescue/AIZ return/reunion, credits and terminal Start/title.
+The registered P2 clear and pre-init full-world restore boundary pass
+independently at320/800. See the dated current gates below for exact commands,
+source/dependency context and remaining breadth; older request-only scopes and
+lengths are historical. This does not certify the full zone or native pixels.
+
 **2026-09-25 incoming-route refresh:** correcting DEZ final-floor grounding changed
 incoming timing. Reauthored controller movies now pass full incoming/replay checks:
 cold emerald team59722 inputs and positioned320/80027122/27224. These supersede
@@ -24,9 +32,11 @@ history isolation now pass at320/800. Nothing below certifies the zone.
 Incoming: DEZ final boss → `$C00` verified at320/800, including a positioned
 DEZ2-boss start with no reseeding across either load. Full cold DEZ1→DEZ2→final
 DEZ→DDZ completion now has a preserved native320 team movie. Level select is
-also supported. Outgoing: `$D01` ending. Historical tests assert the request
-and load-history isolation; [the ending matrix](s3k-ending.md) now owns the
-native rescue, AIZ restoration, reunion, credits and terminal continuation.
+also supported. Outgoing: `$D01` native ending through credits and controller
+Start/title for the three selected incoming scenarios; their current composed
+qualification supersedes the older request-only scope below. The
+[ending matrix](s3k-ending.md) owns native rescue, AIZ restoration, reunion,
+credits and terminal continuation.
 
 Widths / donors / characters / teams (support authority `LaunchProfile.sanitizedFor`, same roster
 as HPZ): widths 320/400/512/640/800; supported character/donor pairs off×{Sonic,Tails,Knuckles},
@@ -534,3 +544,136 @@ state/pixel controls and their limits are described in the
 [headless testing guide](../../../guide/contributing/headless-testing.md).
 This performance change supplies no new native reference, full-route visual
 certification or missing viewport/donor/character coverage; inherited gaps remain.
+
+
+## 2026-10-13 incoming suffix dependency
+
+The finish lane's exploratory `DdzIncomingRouteAuthorTool` replays the exact
+positioned DEZ2 prefixes (native320/800; declared boot position,200 rings and
+emerald inventory) and the separate cold emerald-team DEZ1 prefix (inventory
+only). It authors controller buttons from actual DDZ state and reaches the
+ending request, but those exploratory outputs are rejected for qualification:
+the current fresh boundary borrows outgoing rings without publishing the
+cleared destination counter. Native `loc_8160A` subsequently adds50. In the
+320 positioned case the actual DEZ departure has98 rings, so DDZ inputs16755
+and16756 retain98 and input16780 has148. This is surplus energy from a shared
+boundary defect, not evidence of a completed native DDZ route. The integration
+lane's destination-counter fix must land before regenerating and qualifying
+these three suffixes. No fixture, runtime rule or native ring oracle is
+changed to preserve that surplus; positioned and cold evidence remain
+separate.
+
+The coordinator subsequently authorized exploration with the reviewed
+single-file `FreshLevelTransitionBoundaryController` candidate, SHA256
+`9e8a05eb51fe5084d6dabe6bd0e29c749afdf0c3183ee44f2d9caefbd86b5926`.
+Build-only `maven_queue.py -Dmse=off compile` reports success in44.994 seconds
+at15:56:53 BST. Production CLI classes are frozen under the lane's worktree
+lock before authoring; the source candidate is excluded from the lane commit.
+This changes the sequencing above: suffix exploration may run now, while
+qualification and integration still depend on the owning lane's14-case
+regression and coherent dependency commit. No candidate exploration is a
+passing route regression.
+
+On that frozen candidate, all three maintained authors complete without death
+and request `$D01`. Every authored BK2 is production-loader round-tripped, and
+its complete serialized controller rows equal the committed fixture exactly:
+positioned320/800 remain27122/27224 inputs and the cold emerald team59722.
+No fixture edit is justified. The positioned320 departure still has98 rings
+on its load-producing input16755, but the first released DDZ input16756 has0
+and native `loc_8160A` reaches50 at16780; the corresponding wide inputs are
+16760/16761/16785. The cold team preserves its49448-input DEZ prefix: outgoing
+11 at49447, released DDZ0 at49448, native50 at49472, ending request alive at
+59721 with14 rings. This is uninterrupted production controller exploration
+on the reviewed candidate, not native pixel parity or completed route/world
+qualification. The route regression now requires released-entry zero rings,
+live session/main/camera identity and `loc_81554`'s empty follower roster;
+all eleven semantic fight/wrap/defeat restore and replay spots remain.
+
+The same three incoming scenarios are now required to leave the real DDZ
+ending request, consume the native fresh boundary and inherit typed Super
+progress2 through D01. They then execute the actual rescue, AIZ return,
+reunion, credits and terminal object before controller Start/title. Existing
+eleven DDZ semantic replays remain; independent45-frame full-world replays
+at plane release/catch, credits and terminal readiness and live-history
+isolation extend the composed obligation. No ending boot or progression seed
+substitutes for this route. The focused three-case request remains queued;
+test compilation passed16:52:31 BST, not continuous-route qualification.
+
+The counter owner subsequently qualifies and commits `f7d1aea0b` (local mirror
+`f831748bb`). Its source is unchanged from the reviewed candidate blob
+`15e898eb1d28aed6e8c5121a0ea393b0178fed15`: the14 focused boundary/carry
+cases and60 mandatory S3K startup cases pass with zero failures, errors or
+skips. The corrected-energy author observations remain valid. Only the LRZ
+plan conflicted during local cherry-pick because this lane lacked the earlier
+dated context; that incoming context and the qualification record are retained.
+No runtime conflict or source correction occurred. The coherent native ending
+dependency and the continuous three-case route gate remain outstanding.
+
+
+### 2026-10-13 continuous incoming gate and native P2 writer
+
+The unique normal focused request69792 completes at17:46:15 BST on local
+`f831748bb` plus the coherent ending Java delta`93da7b51` and owned route
+checks. Exact selector:
+`-Dtest=TestDezIncomingFinalRouteCapture#incomingFinalFightRestoresAndReplaysEveryPhase+coldEmeraldTeamClearsBothActsFinalFightAndDoomsday`,
+with the absolute supported locked-on ROM property. Three cases execute:
+the two positioned320/800 incoming routes pass the actual boss→D01→credits→
+terminal Start/title composition and all retained semantic replays. The cold
+emerald team fails at the first released DDZ roster check, before the later
+fight: `loc_81554 clears Player_2`, expected empty registered followers, actual
+nonempty. There are1 failure,0 errors and0 skips; this is a partial result,
+not a three-route pass. The positioned declarations remain separate from
+actual cold coverage.
+
+The source cause is a missing native writer. `loc_815DC` clears the whole P2
+object; `DdzFlightControllerObjectInstance.init` only relied on
+`isSidekickSuppressedForZone`. That service hides/suppresses CPU sprites but
+retains registered permanent followers. The local correction calls the same
+injected internal retirement bridge used by native rescue, at the owning
+controller initialization. `TestS3kDdzRosterEntryHeadless` independently checks
+320/800 actual configured P2 admission, native retirement, identity restoration
+before init, exact whole-registry one-frame retirement replay and30-frame
+flight replay. This short check is queued separately from the cold chain.
+The failed cold-team method requires a fresh rerun after that bounded gate;
+the unchanged positioned results are not gratuitously repeated.
+
+
+The short actual-entry/flight rerun8998 passes18:16:26 BST:4 tests,0 failures,
+errors or skips. This includes both actual320/800 registered-roster boundaries
+and both inherited native flight/transformation/HUD checks. The first short
+52568 was2 failures with no errors/skips at pre-entry restore: captured
+foregroundY0 became`$01A0`. `SwScrlDdz` had run native `sub_59648` during
+post-restore parallax reconciliation. Its new existing `ScrollOutputRebuilder`
+hook derives presentation from restored RAM without that native dispatch;
+ordinary scroll arithmetic and event stepping are unchanged.
+
+Changed three-route rerun30586 executes18:16:00 BST:3 failures,0 errors/skips,
+all in a new test-only endpoint precondition after every fight/semantic spot
+passed. The exact endpoint fade is NONE, frame0, WHITE, hadPendingCompletion=false:
+DDZ's native request13/1 has not yet been consumed by the host, as the existing
+author intentionally stops on that request. Requiring an already-created fade
+was too strict for this owner phase. The common bounded continuation now
+requires the exact requested destination and either the real pending level
+exit or its callback-bearing fade. Actual D01 ownership/roster/progress and
+continuous terminal assertions remain unchanged; no runtime or input edit
+is justified. Its corrected three-route qualification remains pending.
+
+
+Corrected continuous request27637 passes18:27:24 BST:3 tests,0 failures,
+errors or skips,26.06 test seconds. Exact selector remains
+`-Dtest=TestDezIncomingFinalRouteCapture#incomingFinalFightRestoresAndReplaysEveryPhase+coldEmeraldTeamClearsBothActsFinalFightAndDoomsday`.
+All three now preserve the unchanged controller fixtures and native cleared
+DDZ energy, actual registered P2 retirement, all eleven semantic fight/wrap
+restore/replay windows, live source/destination timeline isolation, inherited
+Super progress2, real D01 rescue/AIZ-return/reunion/credits/post object and
+controller Start/title. The two positioned320/800 scenarios remain declared
+positioned evidence; only the emerald team boots cold DEZ1. The exact source
+endpoint is zone12/act0 with queued13/1 and fade NONE/frame0/no completion;
+the bounded native host continuation consumes that real request.
+
+These results use local`f831748bb` plus coherent ending source through
+`f115d262` and the owned native roster/pure-scroll/helper/test changes. The
+ending dependency's private derived helper is being relocated by its owner
+to avoid an approximate API-surface false positive, without gameplay changes;
+final integration and combined smoke remain the coordinator's obligation.
+No cold donor/team/viewport sweep or native pixel parity is claimed.

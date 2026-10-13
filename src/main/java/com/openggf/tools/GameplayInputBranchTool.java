@@ -1,5 +1,7 @@
 package com.openggf.tools;
 
+import com.openggf.game.rewind.CompositeSnapshot;
+import com.openggf.graphics.FadeManagerSnapshot;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
@@ -77,6 +79,8 @@ public final class GameplayInputBranchTool {
             if (checkpointMode != com.openggf.game.GameMode.LEVEL) {
                 throw new IllegalStateException("Branch checkpoint must be in LEVEL mode: " + checkpointMode);
             }
+            requireRestorableCheckpoint(checkpoint,
+                    GameServices.level().hasPendingFreshLevelTransitionBoundary());
             var previousInput = prefix == 0 ? null : baseMovie.getFrame(prefix - 1);
             var objects = new StringBuilder();
             for (var object : GameServices.level().getObjectManager().getActiveObjects()) {
@@ -136,6 +140,20 @@ public final class GameplayInputBranchTool {
                         .append(state.routine).append(',').append(boss.getCollisionProperty()).append(',')
                         .append(boss.getCollisionFlags()).append(',').append(state.defeated).append('\n');
             }
+        }
+    }
+
+    /** Match the production rewind exclusion before any raw candidate restore. */
+    static void requireRestorableCheckpoint(CompositeSnapshot checkpoint, boolean pendingFreshAssembly) {
+        if (pendingFreshAssembly) {
+            throw new IllegalStateException("Branch checkpoint has pending fresh level assembly; "
+                    + "continue ordinary input until destination ownership is released");
+        }
+        if (checkpoint.get("fademanager") instanceof FadeManagerSnapshot fade && fade.isPoisoned()) {
+            // GameLoop.isRewindBlocked rejects this window: FadeManager.restore
+            // clears its transient callback, which would orphan the load or mode change.
+            throw new IllegalStateException("Branch checkpoint has a callback-bearing fade; "
+                    + "choose a checkpoint before the fade or after the destination is released");
         }
     }
 
