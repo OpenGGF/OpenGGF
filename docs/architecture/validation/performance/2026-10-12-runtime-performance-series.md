@@ -5,10 +5,13 @@
 The required accuracy prerequisite and complete-runtime baseline are qualified.
 **The original numeric baseline is frozen from five fresh processes per scenario.
 Five valid consecutive performance experiments were rejected. Optimization stopped at the requested checkpoint with 0% accepted gain in each game. Accuracy/tooling delivery validation, integration and cleanup remain pending.** The intended
-metric is total process CPU time per simulated frame, equally weighted between
+metric selected for this frozen series is total process CPU time per simulated frame, equally weighted between
 normal and demanding scenarios in each game. No saving is attributed to accuracy
 repairs, upstream changes, Java migration, or replacing an invalid helper harness.
-Integration, push and task-worktree cleanup have not happened.
+The original request allows CPU, resident memory, or measured GPU VRAM, using one
+metric consistently across all games. The 50% stretch target is **cumulative**
+across accepted changes; individual changes need only show a verified gain. This
+CPU series has none. Integration, push and task-worktree cleanup have not happened.
 
 The user authorized repairing inherited AIZ → HCZ failures after both complete
 fixtures failed their untouched-source controls. Local checkpoints:
@@ -23,7 +26,9 @@ fixtures failed their untouched-source controls. Local checkpoints:
 
 Worktree `.worktrees/ai-runtime-perf-series`, local branch
 `feature/ai-runtime-perf-series`; clean control `.worktrees/ai-runtime-perf-control`
-remains at `3ac1363ed`. Main's unrelated dirty submodules/files were preserved.
+is now at `5e2f51f07`. Main advanced to `b3464b31b` through documentation-only
+commits; no upstream runtime gain is attributed. Unrelated dirty submodules/files
+were preserved.
 Detailed earlier derivations/commands are preserved in this same dated artifact
 at `1baa8e6dc` and `48bc7c34b` (`git show COMMIT:PATH`); this current record condenses
 the outcome without archiving raw diagnostics.
@@ -967,3 +972,96 @@ so a fresh owned null sink is created solely for delivery tests, using the same
 verified private ALSA/OpenAL route. Host default audio is unchanged. Apply this
 environment to both candidate and any matched baseline checks; remove the
 new sink after the final required audio/test work. No acceptance timing changes.
+
+### Completed combined delivery run and focused fixture repair
+
+Run `20261013T120250Z-ff9534d2` tested `a6fef6a27b3b06d5a02f90dc9e87e6dfb0d5be90`
+against pinned destination `5e2f51f07917d5eff8ac120007dac55327f93f32`:
+`python3 tools/testing/run_categories.py --base 5e2f51f07917d5eff8ac120007dac55327f93f32 --max-minutes 120 --run`.
+Java 25/Lua 5.4 and the private real audio route above were retained. Ordinary
+smoke: **3,154 reports / 26,690 tests / 43 failures / 0 errors / 64 skips**,
+3,534.65 seconds. Fresh guards: **88 reports / 678 tests / 5 failures / 0 errors /
+0 skips**, 287.54 seconds. Both completed red; no green/full-suite claim.
+
+Twenty-five complete inherited assertions match the linked 26-identity baseline
+SHA table exactly. The SSZ second-width assertion has raw SHA
+`452f095108f505bc9d598a2e4eecacbcf6efe135716491000b399a142b11ab05`;
+its composite state hashes require a fresh bounded semantic comparison.
+Seventeen additional failures expose fixtures changing only the bootstrap
+registry while an active world still owns another module. Nine classes fail:
+collision model (4), edge balance (2), speed capping (2), look delay (1), S3K
+super eligibility (1), FBZ cages (1), playable movement (4), collision order (1),
+and character provider resolution (1). Assertions remain intact. The fixtures
+now select the world with `configureGameModuleFixture`, or explicitly clear the
+session when testing pre-session provider lookup. No gameplay source changes.
+
+Matched baseline commands on `5e2f51f07`, each through `maven_queue.py --lean
+-Dmse=off ... test`, passed **21** and **237** tests with zero failures/errors/skips:
+
+- `-Dtest=TestCollisionModel,TestEdgeBalance,TestGroundSpeedCapping,TestLookScrollDelay`
+- `-Dtest=TestSonic3kSuperTransformationEligibility,TestFbzWireCages,TestPlayableSpriteMovement,TestSpriteManagerCollisionOrder,TestCharacterTypeResolution`
+
+Candidate repair (uncommitted over `a6fef6a27`) uses their combined selector plus
+`TestPlayableSessionRules,TestRuntimeInputPlan`: **263 passed**, no failures,
+errors or skips, 1m11 execution. The original 17 failures are therefore resolved
+by fixture ownership, with selected-world and pre-session regression coverage
+retained. The five guard failures identify unaudited CLI singleton/bootstrap
+access and stale exact module-access approvals. CLI tools now use the existing
+`EngineServices` root, configure its shared service before `Engine.init`, and
+retain the same loop/counters/settings. Module-resolution configuration is held
+by reference, not snapshotted by root construction. Original measurement inputs,
+source, binary and numeric baseline remain fixed; these tooling repairs earn
+no performance credit. Guard rerun and SSZ attribution remain pending.
+
+Upstream `b3464b31b` adds coordination guidance over a Chaos research document
+commit: no executable runtime changes. Reconcile those documents at integration;
+do not repeat unchanged broad smoke coverage as a ceremony.
+
+
+SSZ attribution completed with the exact two-case selector
+`-Dtest=TestSszTailsColdRouteCapture#coldSoloTailsDefeatsBothReplicasAndRidesTheirTeleporters`
+through the normal Maven queue, canonical absolute S3K ROM and private audio.
+Each source had **2 tests / 1 pass / 1 identical frame-4018 failure / 0 errors /
+0 skips**. The comparison-only probe SHA was
+`0adbc4f1df9d2ab34ad980dc9b467f79a2cb8a74e6cad249c7025baee93202c0`.
+All six rows match exactly by side, complete ObjectRefId, schema, native type,
+scalar bytes and opaque arrays (`[]`). Structured row digest:
+`7de7616f613d913918e462add180c5d07efcfdac6a6124a7a84a158dd80dc324`.
+The linked earlier scalar table remains exact. Every blob hash delta also equals
+`31² × classHashDelta mod 2³²`. Only after this full semantic match, substitute
+the captured schema/type/scalar/opaque representation for each known blob in the
+complete raw assertion: all other assertion fields match exactly. This is not
+arbitrary hash stripping. Both diagnostic files were restored byte-for-byte to
+`db4583214f4430c81cf25b7260a716358be575ff2d7772a6067be01367c2af1e`.
+The remaining 26 failures are attributed inherited outcomes, not a green suite.
+
+A bounded baseline check selected the **31 existing classes corresponding to
+candidate skip identities**, excluding the new `TestTilemapUniformLifetimeNative`.
+Exact selector is the sorted unique simple class names from the completed run's
+`skipped_cases`; all three canonical absolute ROM properties and the same private
+audio environment were passed through `maven_queue.py -Dmse=off ... test`.
+**447 tests, 0 failures/errors, 63 skips**, 2m52 execution. Compare with the
+category runner's own `summarize`/skip-reason representation: all **63 existing
+identities and complete reasons match**, with no omissions. The candidate's
+64th skip is the newly added opt-in native uniform diagnostic, whose separate
+native execution already passed; its guard property remains unchanged. Smoke
+scope differs from the older full ordinary scope, so equal aggregate counts were
+never used as equivalence evidence. The first comparison attempt incorrectly
+included stack traces in XML reasons; rerunning the comparison using the owning
+runner's representation established exact equality without changing assertions.
+
+Focused fresh-JVM guard repair check:
+`maven_queue.py -Dmse=off -Pguards -Dtest=TestProductionSingletonClosureGuard,TestBootstrapModuleProviderCachingGuard test`.
+Only the two failed guard classes are repeated; the other completed guard coverage
+is unchanged. Result pending. Integration/push/cleanup remain pending.
+
+Exact matched-skip arguments (same Java/private-audio environment as above;
+`OPENGGF_ROM_ROOT` denotes the pinned canonical absolute ROM directory):
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestArenaMaskRenderer,TestBackgroundScrollWrapPixels,TestCPZObjectBugs,TestDisplayShaderPackDiagnostics,TestForegroundWindowRendering,TestInfiniteSonic,TestLevelRendererBackgroundSamplingPerformance,TestLiveRewindCheckpointCost,TestObjectRewindTypeSafetyDispatchPerformance,TestRewindTorture,TestS1Ghz1OpenGgfAudioTimelineCapture,TestS1OpenGgfAudioCapture,TestS3kAiz1CompatibilityRoutes,TestS3kAiz1SpringRecovery,TestS3kRewindAllocationProbe,TestS3kSlotsGlassNative,TestSceneRenderer,TestScrollBufferUploadNative,TestShaderPixelCentreSampling,TestSlayCompositePixels,TestSlotWindowGpuPassNative,TestSmpsRepeatedPlaybackBenchmark,TestSonicSurvivors,TestSozAct1ArenaCapture,TestSozAct1VictoryCapture,TestSozColdAct1Capture,TestSozColdAct2Capture,TestSozConnectedMechanismCapture,TestSozEndBossVictoryCapture,TestSozMinibossCapture,TestSozPostBossRedrawCapture "-Dsonic1.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=${OPENGGF_ROM_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test
+```
+
+Source audit before delivery: `git diff --name-only 184c9d54ed4fc2c1fed3cb6313653a95f9156e3d -- src/main/java` lists only the two runtime CLI tools. Gameplay, audio, rendering and rewind production sources therefore retain the qualified numeric baseline implementation; rejected optimizations are reverted. The frozen protocol SHA remains `43f6fd83c89bcc9c373a5136b47fb68f1a5282f56dc278ffe48947ea705f0bf5`, and the final decision file records five rejections and 0% accepted gain.
+
+Upstream advanced to `4a9bec1eaf86e7b70959113e484315c5013c1b7c`: runtime Mod compatibility reporting plus a queue-contention fix. The waiting guard request (owned PID 1723741, session 48341) was cancelled with SIGINT before execution, exit 130, because updated-source delivery now requires reconciliation; no pass is claimed. This is a source/queue-policy change, not an observation timeout. The checkpoint contains 263 focused passes, matched SSZ attribution and all 63 existing skip reasons. Guard verification remains pending on the reconciled source. Original protocol, numeric baseline and rejection count remain fixed; upstream performance effects are unmeasured and receive no task credit.

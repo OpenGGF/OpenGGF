@@ -10,6 +10,7 @@ import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
 import com.openggf.game.rewind.RewindController;
 import com.openggf.game.session.EngineContext;
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.trace.TraceCharacterState;
 import com.openggf.trace.TraceExecutionPhase;
@@ -321,14 +322,15 @@ public final class RuntimeEngineVisualControl extends Engine {
         if (args.length != 9) throw new IllegalArgumentException(
                 "Usage: RuntimeEngineVisualControl <plan> <rom-root> <report-json> <measure-from> <measure-to> <qualification-csv> <capture-from> <capture-to> <capture-directory>");
         var plan = RuntimeInputPlan.read(Path.of(args[0]));
-        var config = SonicConfigurationService.getInstance();
+        var services = EngineServices.current();
+        var config = services.configuration();
         configure(config, plan.game(), Path.of(args[1]));
         config.setSessionOverride(SonicConfiguration.CAPTURE_OUTPUT_DIR, args[8]);
         config.setSessionOverride(SonicConfiguration.CAPTURE_CODEC, "ffv1");
         config.setSessionOverride(SonicConfiguration.CAPTURE_AUDIO_CODEC, "pcm-s24le");
         config.setSessionOverride(SonicConfiguration.CAPTURE_CONTAINER, "mkv");
 
-        var engine = new RuntimeEngineVisualControl(EngineContext.fromLegacySingletonsForBootstrap(),
+        var engine = new RuntimeEngineVisualControl(services,
                 plan, Integer.parseInt(args[3]), Integer.parseInt(args[4]), Path.of(args[5]));
         engine.captureFrom = Integer.parseInt(args[6]);
         engine.captureTo = Integer.parseInt(args[7]);
@@ -417,9 +419,10 @@ public final class RuntimeEngineVisualControl extends Engine {
 
     /** Separate LIVE fresh-load diagnostic; no trace, playback or score window. */
     private static void runLoadProbe(String[] args) throws Exception {
-        var config = SonicConfigurationService.getInstance();
+        var services = EngineServices.current();
+        var config = services.configuration();
         configure(config, args[1], Path.of(args[4]));
-        var engine = new LoadProbe(EngineContext.fromLegacySingletonsForBootstrap());
+        var engine = new LoadProbe(services);
         try {
             glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_WAYLAND);
             long wall = System.nanoTime(), cpu = OS.getProcessCpuTime();

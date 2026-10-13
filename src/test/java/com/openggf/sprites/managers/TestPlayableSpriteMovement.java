@@ -1617,7 +1617,7 @@ public class TestPlayableSpriteMovement {
 
         @Test
         public void s3kSidekickHurtRestoresStandingRadiiWhenRollStatusWasAlreadyCleared() {
-                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
                 Tails tails = new Tails("tails_p2", (short) 0x200, (short) 0x300);
                 tails.applyRollingRadii(false);
                 tails.clearRollingFlagPreserveRadii();
@@ -1638,7 +1638,7 @@ public class TestPlayableSpriteMovement {
 
         @Test
         public void s3kHurtAppliesNativeLiveRadiusDeltaSignForBothAngleHalvesAndGravityStates() {
-                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
                 int[][] cases = {
                         {0x00, 0, 1},
                         {0x00, 1, -1},
@@ -1679,7 +1679,7 @@ public class TestPlayableSpriteMovement {
 
         @Test
         public void s3kHurtUsesLiveRadiusDeltaWhenRollBitOutlivesRollingRadii() {
-                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
                 Sonic sonic = new Sonic("sonic", (short) 0x200, (short) 0x300);
                 sonic.setRolling(true);
                 sonic.applyStandingRadii(false);
@@ -5191,7 +5191,7 @@ public class TestPlayableSpriteMovement {
 
         @Test
         public void invertedHurtDeathStopsBeforeTerrainForEveryS3kCharacter() throws Exception {
-                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
                 GameServices.gameState().setReverseGravityActive(true);
                 Method modeAirborne = PlayableSpriteMovement.class.getDeclaredMethod("modeAirborne");
                 modeAirborne.setAccessible(true);

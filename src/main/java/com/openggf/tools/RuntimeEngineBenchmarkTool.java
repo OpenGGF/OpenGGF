@@ -10,6 +10,7 @@ import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
 import com.openggf.game.rewind.RewindController;
 import com.openggf.game.session.EngineContext;
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.trace.TraceCharacterState;
 import com.openggf.trace.TraceExecutionPhase;
@@ -296,9 +297,10 @@ public final class RuntimeEngineBenchmarkTool extends Engine {
         if (args.length < 5 || args.length > 6) throw new IllegalArgumentException(
                 "Usage: RuntimeEngineBenchmarkTool <plan> <rom-root> <report-json> <measure-from> <measure-to> [qualification-csv]");
         var plan = RuntimeInputPlan.read(Path.of(args[0]));
-        var config = SonicConfigurationService.getInstance();
+        var services = EngineServices.current();
+        var config = services.configuration();
         configure(config, plan.game(), Path.of(args[1]));
-        var engine = new RuntimeEngineBenchmarkTool(EngineContext.fromLegacySingletonsForBootstrap(),
+        var engine = new RuntimeEngineBenchmarkTool(services,
                 plan, Integer.parseInt(args[3]), Integer.parseInt(args[4]), args.length == 6 ? Path.of(args[5]) : null);
         try {
             glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_WAYLAND);
@@ -371,9 +373,10 @@ public final class RuntimeEngineBenchmarkTool extends Engine {
 
     /** Separate LIVE fresh-load diagnostic; no trace, playback or score window. */
     private static void runLoadProbe(String[] args) throws Exception {
-        var config = SonicConfigurationService.getInstance();
+        var services = EngineServices.current();
+        var config = services.configuration();
         configure(config, args[1], Path.of(args[4]));
-        var engine = new LoadProbe(EngineContext.fromLegacySingletonsForBootstrap());
+        var engine = new LoadProbe(services);
         try {
             glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_WAYLAND);
             long wall = System.nanoTime(), cpu = OS.getProcessCpuTime();
