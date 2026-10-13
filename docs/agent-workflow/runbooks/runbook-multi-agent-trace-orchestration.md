@@ -7,6 +7,14 @@ agent fixes one trace") and above the `trace-replay-bug-fixing` skill. For the
 fleet-scale decision history see
 [`../trace-green-fleet-decisions.md`](../trace-green-fleet-decisions.md).
 
+Current [root agent guidance](../../../AGENTS.md#coordination-and-progress) governs
+validation scope, queue use, coordination and delivery. The lead owns combined
+validation; loop/sweep examples below do not require every worker to launch a
+broad run or repeat unchanged coverage. Independently inspect evidence and rerun
+affected checks for changed candidates, failures, missing coverage or unresolved
+risk. Required ROM/trace gates below remain separate from smoke validation.
+Continuous reassignment applies only when the user authorized continuous work.
+
 ## Purpose
 
 Advance the `*TraceReplay` frontiers (engine vs recorded BizHawk ROM traces)
