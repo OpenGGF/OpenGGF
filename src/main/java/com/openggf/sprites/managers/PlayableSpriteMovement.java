@@ -4117,9 +4117,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * @return whether the rolling-clear branch owned the landing's Walk write
 	 */
 	private boolean resetOnFloor() {
-		// Don't reset states if player is controlled by an object (e.g., LauncherSpring).
-		// The controlling object manages these states directly.
-		if (sprite.isObjectControlSuppressesMovement()) {
+		// Normal object control owns landing state, but HurtStop calls terrain
+		// collision outside that gate. Player_TouchFloor/Knux_TouchFloor clear
+		// InAir before HurtStop tests it and releases object_control
+		// (sonic3k.asm:24365-24403,32894-32904,32967-32982).
+		if (sprite.isObjectControlSuppressesMovement() && !sprite.isHurt()) {
 			return false;
 		}
 

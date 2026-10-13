@@ -142,7 +142,8 @@ This replaces the insufficient test-only initialization repair; it is not an
 OOM or a successful lean run. The failed fork dump was inspected and discarded.
 The owner correction passed bounded source review and
 `python3 tools/testing/maven_queue.py -Dmse=off test-compile -B` (Java 25,
-73 seconds); no tests run in that build. Native/recorder verification is pending.
+73 seconds); no tests run in that build. The subsequent clean 13-case run below
+verified both CPU recordings and the native mask/Spiker pixels.
 
 The remaining matched baseline command cleaned `target/` and ran on pinned
 `5e2f51f07` in the same task worktree: five cases in 103 seconds, one CLI failure,
@@ -175,6 +176,33 @@ its real boss`; its baseline case passed, so this is a delivery-blocking regress
 requiring frame-state attribution. The network failure was not reproduced in
 either focused comparison; its unchanged synthetic transport dependencies and
 packet-discarding test wait helper limit attribution of the original broad failure.
+
+The temporary read-only SOZ witness then ran the same input on `ff64248bc` and
+the pinned base, cleaning build outputs when changing HEAD. The first physics
+difference is input 24045: hurt Knuckles is released from the light at
+`($45F2,$4B6)` with base Y velocity `-$400`, candidate `-$3D0`. Native
+`loc_17BD0` integrates motion and adds `$30` independently of `object_control`,
+so the candidate owns the correct acceleration. The positions reconverge by
+24100; the retained Y fraction later produces candidate/base Y 1203/1202 at
+26990. At 26992 the candidate catches the wall at X 18837 while the original
+recording passes at X 18840. This is controller-recording invalidation after a
+ROM correction, not evidence for restoring the omitted gravity. Raw CSVs remain
+temporary; the comparison does not hydrate either run.
+
+That investigation also found the terrain callback's inherited `resetOnFloor`
+gate still skipped hurt landing while an object held movement. Native
+`Player_TouchFloor`/`Knux_TouchFloor` clears InAir before HurtStop tests it and
+clears control. The correction keeps normal held suppression and allows that
+hurt landing tail. Added tests enter the public movement dispatch and real
+terrain collision, covering both floor callbacks under S2/S3K and normal-held
+controls; they do not call the landing setter directly.
+The clean focused run on `ff64248bc` plus this correction passed 214 permanent
+cases (nine hurt-movement, six landing-control, 13 air-landing, 186 movement),
+with no errors/skips. Two temporary controller candidates added one jump at
+26985 or 26987 while preserving the remaining 35,440-input stream. Both cleared
+the wall and reached the lower light, but died later at 27773/27774 during the
+rock-pushing passage. They are rejected inputs, not weakened route assertions or
+passing cold completions. The complete 216-case invocation took 90 seconds.
 
 The 63 ordinary skips comprise 32 Infinite Sonic cases whose selected acts lack
 the prerequisite platform/flyer, 24 opt-in probes/captures/soaks or missing local

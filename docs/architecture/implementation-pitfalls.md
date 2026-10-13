@@ -414,6 +414,14 @@ ROM writes jump radii explicitly and then sets the roll bit, use
 The DEZ carrier regression preserves airborne jump fields and custom radii on
 capture, and native centre/fractions on release.
 
+**Hurt owns its terrain landing despite object control.** Normal held movement
+may skip `resetOnFloor`, but the hurt dispatch runs terrain outside that gate.
+Native `Player_TouchFloor`/`Knux_TouchFloor` clears InAir before HurtStop tests it
+and releases `object_control` (`sonic3k.asm:24365-24403,32894-32904,32967-32982`).
+Test through public movement and a real terrain floor callback: calling
+`setAir(false)` directly can conceal an early return that leaves a hurt player
+airborne with zero velocities and stale control.
+
 **Custom retirement tails must retain the viewport term.** New objects that override
 `isCustomOutOfRange` bypass the manager's widened placement-window policy.
 A literal native `$280` then lets an 800-pixel viewport load an object early,
