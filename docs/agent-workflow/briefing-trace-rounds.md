@@ -125,6 +125,17 @@ Bounded category batches now yield shared admission while retaining target/
 ownership. This creates opportunities for short jobs, not a per-batch time bound.
 See [queue evidence](../architecture/research/2026-10-13-maven-queue-contention.md).
 
+Fork options and child-launcher output (2026-10-14, S3K composition): an admitted
+headless flag does not prove propagation into a test fork. With the current
+Maven3.9.16/Surefire3.2.5 POM, `MAVEN_OPTS` supplies parent JVM properties;
+CLI `-D` or inherited `JDK_JAVA_OPTIONS` reaches tests. The latter also adds a
+Java notice before child stderr, so a first-byte diagnostic assertion can fail
+while its correct exit status and empty stdout pass. Confirm the actual fork's
+graphics setting and attribute the exact assertion/source/environment; tool
+preflight alone does not prove pixel coverage. Preserve required graphics when
+reporting a known launcher-prefix failure. See the
+[S3K composed record](../architecture/plans/2026-10-13-s3k-playable-completion.md#inherited-child-launcher-prefix-and-preserved-graphics).
+
 A released port is a global resource, not a socket-close oracle (2026-10-12,
 mod audit delivery): Golf's audio-fault teardown test received `BindException`
 while trying to bind the former host port. Both unchanged baseline/current cases

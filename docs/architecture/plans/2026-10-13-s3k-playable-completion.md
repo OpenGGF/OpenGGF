@@ -682,3 +682,48 @@ run. Both failed/skipped identities and actual completed lanes will be inspected
 and consumed diagnostics acknowledged. This is a launch plan, not a completed
 composed smoke result. Integration into develop, push, reproduction normalization
 and owned cleanup remain outstanding.
+
+
+### Inherited child-launcher prefix and preserved graphics
+
+The retained run's additional assertion is exactly
+`TestCompleteRunAudioCli#freshJvmBootstrapsTheS1ProfileButItsUnavailableDispatcherEmitsNoStandardOutput`,
+line182: stderr must start with `PRODUCER_UNAVAILABLE:`. Its preceding expected
+status4 and empty-stdout assertions pass. The [upstream issue record](../validation/2026-10-13-github-issues.md)
+already supplies a matched original-`5e2f51f079` run: five cases, one identical
+CLI assertion failure, zero errors/skips, 103 seconds. Two direct subprocess
+controls both return4/empty stdout; Java's `JDK_JAVA_OPTIONS` notice precedes
+the correct unavailable-producer diagnostic only when that variable is present.
+Test blob `87c070511453f2b1447648269ddd8a747cce0206`, tool blob
+`20d8d2417cee8dba47e59ca8da7a48061fad669e`, and complete-run production tree
+`a7e86e12af500d7018650188f338b9e2e2dca760` match original5e2, baseline2e992,
+retained7d0, composed2d55 and upstreamea8. The retained runner has the same
+headless JDK option. Its compact assertion does not retain the actual child
+stderr bytes; this attribution does not claim a new byte-for-byte observation.
+
+A current environment-controlled qualification on `2d55d6927` passes the one
+exact method at00:44:42 BST: zero failures/errors/skips, 25.942 seconds Maven,
+0.440 seconds test and no queue waiting. No production/test edit is made.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JDK_JAVA_OPTIONS LUA_BIN=/usr/bin/lua5.4 ALSOFT_DRIVERS=null python3 tools/testing/maven_queue.py --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestCompleteRunAudioCli#freshJvmBootstrapsTheS1ProfileButItsUnavailableDispatcherEmitsNoStandardOutput' test -B
+```
+
+The complete category runner has no extra Maven-argument option. Installed
+Maven3.9.16 keeps `MAVEN_OPTS` JVM properties in request system properties;
+Surefire3.2.5's effective-properties assembly forwards explicit configuration
+and Maven user properties, including CLI `-D`, not those parent JVM properties.
+This POM has no EGL forwarding in `argLine`/`systemPropertyVariables`.
+The queue's exact-flag whitelist is admission support, not proof that a test
+fork receives the flag. Therefore the next complete category run retains the
+known `JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl` environment and
+its real graphics coverage, with this precisely attributed inherited assertion
+reported if it repeats. Do not weaken the unrelated assertion, change scheduling
+or silently lose graphics coverage to obtain a green total.
+
+The user's coordination window starts only after the entire original retained
+run, including fresh guards, actually releases. Defer the not-yet-submitted
+66-batch composed run for up to five minutes, preserving all existing requests.
+Keep source stable and submit no additional tests/builds during that opportunity;
+report its actual start/deadline to the runtime-memory coordinator. Another
+retained-tree obstacle does not extend the window implicitly.
