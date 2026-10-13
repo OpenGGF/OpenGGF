@@ -144,7 +144,31 @@ LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off \
 
 It also covers paused clear/held cancellation with no clock or trail advancement,
 world isolation, and the readable unsupported scenery receipt. Its outcome is
-pending; the checkpoint remains red until the affected checks complete.
+**35 tests, 1 failure, 1 error, 0 skips**, exit 1, on compiled repair checkpoint
+`1b244ab4d17f1fe0ce327276ac6a0d4dafc0d506`. Queue admission took 5,782 seconds;
+Maven execution took 25.958 seconds. All 17 HUD tests, all five geometry tests,
+and all six actual surfaceless EGL pixel tests passed, including native/wider
+viewports, flips, clipping, distinct frozen trail versions, stealth precedence,
+priority masking, scene composition and GL fault restoration.
+The unsupported scenery test incorrectly supplied index 13 as magnitude;
+the fixed fixture uses the existing four-argument constructor. The ownership
+failure exposed a production allocator bug: `IdentityHashMap.containsValue`
+compared boxed bank addresses by identity, allowing two owners to reserve the
+same range. Numeric reservation checks now compare values, with a dedicated
+two-owner range/pixel/release regression. The affected follow-up is:
+
+```bash
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  '-Dtest=TestLivePresentationRuntime,TestPresentationGraphicsAccess' test -B
+```
+
+This bounded CPU follow-up is pending. Unchanged completed GL/HUD/geometry/ROM
+checks are not repeated; the candidate remains red until the affected runtime
+and bank ownership checks complete.
+The coordinator requested a compiled bank repair checkpoint while that sole
+CPU request waited. Build-only `test-compile -B` passed on the numeric allocator
+and corrected fixtures (Maven reported 1 minute 5 seconds), executing no tests.
+The CPU result remains pending; this compilation is not behavior qualification.
 The coordinator requested a second compiled checkpoint while that sole request
 waited for admission. The same build-only `test-compile -B` command passed on
 all repair sources (Maven reported 1 minute 8 seconds), with no test execution.

@@ -375,8 +375,13 @@ public class GraphicsManager {
 		java.util.Objects.requireNonNull(owner);
 		var existing=presentationTrailBanks.get(owner);if(existing!=null)return existing;
 		var range=PatternAtlasRange.PRESENTATION_TRAILS;
-		for(int base=range.base();base<range.endExclusive();base+=1024) if(!presentationTrailBanks.containsValue(base)) {
-			presentationTrailBanks.put(owner,base);presentationTrailGenerations.put(owner,++nextPresentationTrailGeneration);return base;
+		for(int base=range.base();base<range.endExclusive();base+=1024) {
+			// Owners use identity, but reserved numeric addresses must use value equality.
+			boolean occupied=false;
+			for(int assigned:presentationTrailBanks.values())if(assigned==base){occupied=true;break;}
+			if(!occupied) {
+				presentationTrailBanks.put(owner,base);presentationTrailGenerations.put(owner,++nextPresentationTrailGeneration);return base;
+			}
 		}
 		throw new IllegalStateException("Presentation trail owner budget exhausted");
 	}

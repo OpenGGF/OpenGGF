@@ -133,7 +133,7 @@ class TestLivePresentationRuntime {
         var pictureSource=mock(com.openggf.level.render.ZonePictureSource.class);
         var f=fixture(pictureSource);
         f.source.values=List.of(new Entry("test",13,new com.openggf.mods.mutators.ScenePresentationPolicy(
-                com.openggf.mods.mutators.ScenePresentationPolicy.Mode.SCENERY,13,120),0,120,false));
+                com.openggf.mods.mutators.ScenePresentationPolicy.Mode.SCENERY,0,120,13),0,120,false));
         var context=mock(GameplayModeContext.class);when(context.getWorldSession()).thenReturn(f.world);
         var camera=mock(com.openggf.camera.Camera.class);when(context.getCamera()).thenReturn(camera);
         when(camera.getWidth()).thenReturn((short)320);when(camera.getHeight()).thenReturn((short)224);

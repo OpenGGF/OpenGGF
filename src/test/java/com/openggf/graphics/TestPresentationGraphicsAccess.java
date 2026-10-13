@@ -43,4 +43,27 @@ class TestPresentationGraphicsAccess {
             assertThrows(SecurityException.class,()->hidden.apply(new GraphicsManager(),new Object()));
         }
     }
+    @Test void simultaneousWorldOwnersReserveDistinctNumericRangesAndReleaseOnlyTheirPixels() {
+        var graphics=new GraphicsManager();graphics.initHeadless();
+        Object firstOwner=new Object(),secondOwner=new Object();
+        var first=PresentationGraphicsAccess.acquire(graphics,firstOwner);
+        var second=PresentationGraphicsAccess.acquire(graphics,secondOwner);
+        int a=PresentationGraphicsAccess.base(first,graphics,firstOwner),b=PresentationGraphicsAccess.base(second,graphics,secondOwner);
+        assertEquals(a+1024,b,"identity owner keys must not turn numeric reservation checks into identity comparisons");
+        var red=new com.openggf.level.Pattern();red.setPixel(0,0,(byte)1);
+        var blue=new com.openggf.level.Pattern();blue.setPixel(0,0,(byte)2);
+        for(int offset:new int[]{0,1023}) {graphics.cachePatternTexture(red,a+offset);graphics.cachePatternTexture(blue,b+offset);}
+        PresentationGraphicsAccess.release(first,firstOwner);
+        for(int offset:new int[]{0,1023}) {
+            assertNull(SpritePresentation.patternSample(graphics,a+offset));
+            assertEquals(2,SpritePresentation.patternSample(graphics,b+offset).a()&15);
+        }
+        assertTrue(PresentationGraphicsAccess.valid(second,graphics,secondOwner));
+        Object nextOwner=new Object();var reused=PresentationGraphicsAccess.acquire(graphics,nextOwner);
+        assertEquals(a,PresentationGraphicsAccess.base(reused,graphics,nextOwner));
+        assertFalse(PresentationGraphicsAccess.valid(first,graphics,firstOwner));
+        PresentationGraphicsAccess.release(reused,nextOwner);
+        PresentationGraphicsAccess.release(second,secondOwner);
+        graphics.cleanup();
+    }
 }
