@@ -87,6 +87,49 @@ public class AudioManager implements MusicRestoreSink {
     private Map<GameSound, Integer> soundMap;
     private boolean ringLeft = true;
     private AudioRequestObserver requestObserver = AudioRequestObserver.NONE;
+    // Internal world ownership never replaces the single external diagnostic observer.
+    AudioMutatorAccess.Binding mutatorBinding;
+    int mutatorSubmissionDepth;
+
+    private void mutatorMusicIntent(AudioMutatorAccess.Kind kind, int value) {
+        if (mutatorBinding != null && mutatorSubmissionDepth == 0) mutatorBinding.musicIntent(kind, value);
+    }
+
+    private void mutatorSfxIntent(int id) {
+        if (mutatorBinding == null || mutatorSubmissionDepth != 0) return;
+        if (id >= 0xE0) mutatorBinding.musicIntent(AudioMutatorAccess.Kind.COMMAND, id);
+        else mutatorBinding.sfxIntent(id);
+    }
+
+    void prepareMutatorCue(int id, boolean music) {
+        var source = baseAudioSource;
+        if (!(source.profile() instanceof NativeAudioEffectCues cues)
+                || !(music ? cues.permitsTemporaryMusic(id) : cues.permitsLandingCue(id)))
+            throw new IllegalArgumentException("Disallowed native " + (music ? "music" : "landing") + " cue: " + id);
+        if (source.rom() == null || source.loader() == null || !hasCatalogDependencies(source.dac(), source.config()))
+            throw new IllegalStateException("Native ROM audio is not prepared");
+        ensureShadowPresentation();
+        if (music) {
+            var key = new SmpsAssetKey(baseGameId(source), SmpsAssetKey.Route.BASE_MUSIC, id, null);
+            if (shadowFactory.findRegisteredSmpsMusicAsset(key, source.generation()) == null) {
+                var data = source.loader().loadMusic(id);
+                if (data == null) throw new IllegalStateException("Native ROM music cue is unavailable: " + id);
+                shadowFactory.registerSmpsMusicAsset(key, source.generation(), data, source.dac(), source.config());
+            }
+        } else if (!ensureRegisteredSmpsSfx(new SmpsAssetKey(baseGameId(source), SmpsAssetKey.Route.BASE_ID, id, null),
+                baseSfxSource(source))) {
+            throw new IllegalStateException("Native ROM landing cue is unavailable: " + id);
+        }
+    }
+
+    boolean mutatorWarningActive() {
+        if (!(baseAudioSource.profile() instanceof NativeAudioEffectCues cues) || shadowProducer == null) return false;
+        var logical = shadowProducer.snapshot().smpsLogical();
+        if (logical == null) return false;
+        return logical.sequencers().stream().anyMatch(entry -> entry.sfx()
+                && cues.isWarningCue(entry.smpsData().getId())
+                && entry.snapshot().tracks().stream().anyMatch(com.openggf.audio.rewind.SmpsTrackSnapshot::active));
+    }
     private AudioAdmissionObserver admissionObserver =
             AudioAdmissionObserver.NONE;
     private SmpsDriverServiceObserver driverServiceObserver =
@@ -1929,6 +1972,7 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     public void restoreMusic() {
+        mutatorMusicIntent(AudioMutatorAccess.Kind.RESTORE, 0);
         if (suppressingRewindReplay()) {
             return;
         }
@@ -1939,6 +1983,7 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     public void setSpeedShoes(boolean enabled) {
+        mutatorMusicIntent(AudioMutatorAccess.Kind.SPEED_SHOES, enabled ? 1 : 0);
         if (suppressingRewindReplay()) {
             return;
         }
@@ -1949,6 +1994,7 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     public void setSpeedMultiplier(int multiplier) {
+        mutatorMusicIntent(AudioMutatorAccess.Kind.SPEED_MULTIPLIER, multiplier);
         if (suppressingRewindReplay()) {
             return;
         }
@@ -1981,6 +2027,7 @@ public class AudioManager implements MusicRestoreSink {
      * request byte, so the payload takes the driver's own classification.
      */
     public void playMusicMailboxNativeRequest(int nativeRequestId) {
+        mutatorSfxIntent(nativeRequestId);
         if (suppressingRewindReplay()) {
             return;
         }
@@ -2001,6 +2048,7 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     public void playMusic(int musicId) {
+        mutatorMusicIntent(musicId >= 0xE0 ? AudioMutatorAccess.Kind.COMMAND : AudioMutatorAccess.Kind.MUSIC, musicId);
         if (suppressingRewindReplay()) {
             return;
         }
@@ -2100,6 +2148,7 @@ public class AudioManager implements MusicRestoreSink {
 
     /** Plays an exact namespaced streamed track without allocating a stock music id. */
     public boolean playNamespacedMusic(StreamedMusicPort.TrackRef track) {
+        mutatorMusicIntent(AudioMutatorAccess.Kind.FOREIGN, -1);
         java.util.Objects.requireNonNull(track, "track");
         if (suppressingRewindReplay()) {
             return false;
@@ -2258,6 +2307,10 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     private void playSfx(GameSound sound, float pitch, boolean secondaryRequest) {
+        Integer observedId = sound == GameSound.RING
+                ? soundMap == null ? null : soundMap.get(GameSound.RING_RIGHT)
+                : soundMap == null ? null : soundMap.get(sound);
+        if (observedId != null) mutatorSfxIntent(observedId);
         if (suppressingRewindReplay()) {
             return;
         }
@@ -2410,6 +2463,7 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     public boolean playSfx(int sfxId, float pitch) {
+        mutatorSfxIntent(sfxId);
         if (suppressingRewindReplay()) {
             return false;
         }
@@ -2995,6 +3049,7 @@ public class AudioManager implements MusicRestoreSink {
      * @param musicId the music ID in the donor game's format
      */
     public void playDonorMusic(String donorGameId, int musicId) {
+        mutatorMusicIntent(AudioMutatorAccess.Kind.FOREIGN, musicId);
         if (suppressingRewindReplay()) {
             return;
         }
@@ -3056,6 +3111,7 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     public void endMusicOverride(int musicId) {
+        mutatorMusicIntent(AudioMutatorAccess.Kind.END_OVERRIDE, musicId);
         if (suppressingRewindReplay()) {
             return;
         }
@@ -3101,6 +3157,7 @@ public class AudioManager implements MusicRestoreSink {
     /** Sets creator ROM music pacing; the default 100 preserves shipped-ROM timing. */
     public void setMusicTempoPercent(int percent) {
         MusicTempoPercent.requireValid(percent);
+        mutatorMusicIntent(AudioMutatorAccess.Kind.TEMPO, percent);
         if (suppressingRewindReplay()) return;
         recordTimelineCommand(new AudioCommand.SetMusicTempoPercent(percent));
         // Publish this opt-in scene control before an immediate native-act source
@@ -3115,6 +3172,7 @@ public class AudioManager implements MusicRestoreSink {
      * @param newDividingTiming the new dividing timing value
      */
     public void changeMusicTempo(int newDividingTiming) {
+        mutatorMusicIntent(AudioMutatorAccess.Kind.TEMPO, newDividingTiming);
         if (suppressingRewindReplay()) {
             return;
         }
@@ -3143,6 +3201,7 @@ public class AudioManager implements MusicRestoreSink {
      * Used when exiting special stages or changing game modes.
      */
     public void stopMusic() {
+        mutatorMusicIntent(AudioMutatorAccess.Kind.STOP, 0);
         if (suppressingRewindReplay()) {
             return;
         }
@@ -3213,6 +3272,7 @@ public class AudioManager implements MusicRestoreSink {
      * @param delay frames between each volume step (ROM default: 3)
      */
     public void fadeOutMusic(int steps, int delay) {
+        mutatorMusicIntent(AudioMutatorAccess.Kind.FADE, 0);
         if (suppressingRewindReplay()) {
             return;
         }
@@ -3474,6 +3534,11 @@ public class AudioManager implements MusicRestoreSink {
      * (e.g. Sonic 1 SMPS loader contaminating Sonic 2 tests).
      */
     public synchronized void resetState() {
+        if (mutatorBinding != null) {
+            var previous = mutatorBinding;
+            mutatorBinding = null;
+            previous.musicIntent(AudioMutatorAccess.Kind.STOP, 0);
+        }
         invalidateAndReleaseStreamedMusicSession();
         beginSourceMutation();
         try {
