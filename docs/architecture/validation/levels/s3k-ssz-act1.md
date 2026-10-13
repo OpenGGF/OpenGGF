@@ -1222,3 +1222,74 @@ exploratory branches, not independently replayed complete routes. Navigation
 repair and the separate shared DEZ assembly correction remain open. No act,
 donor/roster/viewport product, native presentation or complete route
 certification is inferred from this bounded selection.
+
+
+## 2026-10-13 controller candidates and native entry ownership
+
+The lane `bugfix/ai-s3k-finish-ssz` at `bd7f58a17` combines the already
+qualified `de5e291a5` EggRobo retirement with the integration lane's fresh
+assembly commit `8438d7040` (local cherry-pick `bd7f58a17`). New controller
+fixtures and endpoint checks remain uncommitted while their focused world
+replays wait for shared Maven admission. Build-only `test-compile` completes
+with exit 0 in23.009 seconds; this is compilation, not route qualification.
+
+The maintained `GameplayInputBranchTool` and `SszBossInputAuthorTool` use a
+coherent compiled snapshot copied under `maven-worktree.lock`. Standalone
+exploration is bounded to1 GiB and2 active processors with surfaceless EGL.
+It supplies controller inputs only: no position, health, rings, native clock
+or trace state is written after the cold boot. Both selected Sonic routes
+start with the ordinary native320 entry and donor off. InputLogAuthorTool
+round-trips every selected BK2; its actual header count is checked, including
+semicolon-delimited author tails rather than counting physical script lines.
+
+| Route | Selected input lengths | Fresh uninterrupted observation | World replay status |
+| --- | --- | --- | --- |
+| Sonic + Tails | replicas11051, complete20540 | both replicas escape; receiving platform `(5888,140)`; all three killing hits; DEZ actually loads at20539 and the next ordinary entry dispatch releases Sonic `(48,2476)` with one native follower | replica and complete methods pass, one case each, zero failures/errors/skips |
+| Sonic solo | replicas11200, complete17600 | corrected initial cloud/column staircase, both replicas and Mecha killing hit15298; DEZ actually loads at17599 and the next ordinary entry dispatch releases Sonic `(48,2476)` with no followers | replica and complete methods pass, one case each, zero failures/errors/skips |
+| Tails solo | existing complete17670/16893 at320/800 | full drawing reaches actual DEZ; next ordinary entry dispatch releases the live Tails sprite `(48,2480)` | unchanged input fixtures; both complete-width cases pass, zero failures/errors/skips |
+
+The early carrier repair catches the actual bar at7087. Reusing the old MTZ
+combat and later traversal inputs did not finish either Sonic route, and
+copying the team's later inputs into solo Sonic missed the first wrapped
+columns. The selected controller tails instead observe real combat state and
+land the narrow columns before the third teleporter. None of those rejected
+controller policies changes gameplay code or proves a native discrepancy.
+
+`loc_1BE7A` selects `Sonic_Start_Locations` for both Sonic and Tails; the DEZ1
+entry is raw bytes `0030 09AC`. `loc_6468` owns the assembly after the
+load-producing tick, so the test takes one ordinary neutral capture step only
+when fresh/title ownership is still pending. It then requires those owners
+to be released, the session/main/camera sprite identities to agree, ordinary
+control and the proper roster. `Sonic_Init` installs radius `$13` and
+`Tails_Init` radius `$0F`: the first floor pass seats both at foot coordinate
+`$9BF`, giving Sonic centre2476 and Tails centre2480. This replaces a borrowed
+Sonic-centre oracle for Tails without bypassing the native presentation phase.
+
+Complete-route replay spots now include the selected staircase, third and
+final transports, real Mecha combat and spiral. The last independent replay
+is `movieLength-170`; live history begins at `movieLength-120`, after every
+45-input replay window. Actual DEZ load and the subsequent fresh-history
+isolation remain mandatory. Sonic wide/donor breadth, native presentation
+acceptance and the full act matrix remain open; these candidates do not
+certify the act or move a trace frontier.
+
+The selected route gates subsequently pass on the combined provisional source
+at local `ad6454611`: qualified EggRobo/common assembly/native controller
+dependencies, the reviewed fresh-counter candidate, and coherent native ending
+source patch SHA256
+`9481c00cb1292b91467a212d3c6ea317e281e1b2f421945b8b83839ebcafde7c`.
+The counter and ending files stay unstaged until their owning lanes qualify
+and commit them. These are observed route checks on that source, not a claim
+that the provisional dependencies or the full act matrix are delivered.
+
+All commands use `python3 tools/testing/maven_queue.py -Dmse=off`, the verified
+absolute S3K ROM property and `test`:
+
+- `-Dtest=TestSszTailsColdRouteCapture#coldSoloTailsDefeatsMechaAndLoadsDezWithIsolatedHistory`: two widths, zero failures/errors/skips, completed16:37:58 BST,36.675 seconds total.
+- `-Dtest=TestSszColdRouteCapture#coldRouteDefeatsBothReplicasAndReplaysTraversalAndTransport,TestSszSoloColdRouteCapture#coldSoloSonicDefeatsBothReplicasAndReplaysTheirApproaches`: two cases, zero failures/errors/skips, completed16:38:32 BST,32.930 seconds total.
+- `-Dtest=TestSszColdRouteCapture#coldCompleteRouteDefeatsMechaAndLoadsDeathEggWithRewindAtLateEvents`: one case, zero failures/errors/skips, completed16:41:11 BST,29.438 seconds total.
+- `-Dtest=TestSszSoloColdRouteCapture#coldSoloSonicDefeatsMechaAndLoadsDezWithIsolatedHistory`: one case, zero failures/errors/skips, completed16:45:58 BST,29.254 seconds total.
+
+The ordinary drawing policy applies: render work is serviced each input;
+checkpoints, independent replay branches and load endpoints are drawn. No
+every-frame visual or native pixel claim follows from these passes.

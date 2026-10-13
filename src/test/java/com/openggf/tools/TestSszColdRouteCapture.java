@@ -29,6 +29,8 @@ class TestSszColdRouteCapture {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/ssz1-sonic-tails-cold-"
                         + (complete ? "complete" : "upper") + "-320.bk2"));
+        int historyStart = movie.getFrameCount() - 120;
+        int lastReplaySpot = movie.getFrameCount() - 170;
         var previousInput = GameplayCaptureSession.class.getDeclaredField("previousInput");
         previousInput.setAccessible(true);
         var drawing = new RouteFrameDrawing();
@@ -41,12 +43,12 @@ class TestSszColdRouteCapture {
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
                 // Arm live history only after the independent snapshot replay spots.
                 // This exercises the real SSZ→DEZ boundary without storing the entire route.
-                if (complete && frame == 19400) {
+                if (complete && frame == historyStart) {
                     GameServices.configuration().setSessionOverride(
                             com.openggf.configuration.SonicConfiguration.LIVE_REWIND_ENABLED, true);
                 }
                 session.step(movie.getFrame(frame)); drawing.afterStep(session);
-                if (complete && frame >= 19400 && GameServices.level().getCurrentZone() == 10) {
+                if (complete && frame >= historyStart && GameServices.level().getCurrentZone() == 10) {
                     var rewind = SessionManager.getCurrentGameplayMode().getRewindController();
                     if (rewind != null) largestOutgoingRewindFrame = Math.max(largestOutgoingRewindFrame,
                             rewind.currentFrame());
@@ -63,7 +65,7 @@ class TestSszColdRouteCapture {
                         com.openggf.game.sonic3k.objects.bosses.SszMechaSonicObjectInstance.class);
                 sawMecha |= !mecha.isEmpty();
                 sawMechaDefeat |= mecha.stream().anyMatch(b -> b.getCollisionProperty() == 0);
-                if (frame == 18600) {
+                if (complete && frame == 19683) {
                     assertFalse(session.player().getRenderHFlip(),
                             "loc_58016 clears render_flags bits 0/1 before the fixed spiral mappings");
                     assertFalse(session.player().getRenderVFlip());
@@ -102,15 +104,16 @@ class TestSszColdRouteCapture {
                 if (frame != 2888 && frame != 3440 && frame != 3540 && frame != 3818
                         && frame != 4168 && frame != 4400 && frame != 4700
                         && frame != 4930 && frame != 5320 && frame != 5400
-                        && frame != 6300 && frame != 6459 && frame != 7076
+                        && frame != 6300 && frame != 6459 && frame != 7087
                         && frame != 7460 && frame != 8260 && frame != 8640
                         && frame != 8810 && frame != 9051 && frame != 9160
-                        && frame != 10150 && frame != 10270 && frame != 10360
+                        && frame != 9175 && frame != 9776 && frame != 10037 && frame != 10150 && frame != 10270 && frame != 10360
                         && frame != 11850 && frame != 12050 && frame != 12177
-                        && frame != 13110 && frame != 13400 && frame != 14330
+                        && frame != 12227 && frame != 12268 && frame != 12690 && frame != 12820
+                        && frame != 13110 && frame != 13400 && frame != 13669 && frame != 17000 && frame != 17230 && frame != 14330
                         && frame != 14450 && frame != 14840 && frame != 15050
                         && frame != 15890 && frame != 16925 && frame != 17220
-                        && frame != 18000 && frame != 18600 && frame != 19350) continue;
+                        && frame != 18000 && frame != 19683 && frame != 19350 && (!complete || frame != lastReplaySpot)) continue;
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
                 drawing.checkpoint(session);
                 var saved = registry.capture();
@@ -136,12 +139,24 @@ class TestSszColdRouteCapture {
                 assertTrue(sawMecha && sawMechaDefeat, "cold route must defeat the final Mecha Sonic");
                 assertEquals(11, GameServices.level().getCurrentZone(), "actual DEZ load, not just a request");
                 assertEquals(0, GameServices.level().getCurrentAct());
+                // loc_6468 releases the destination on its ordinary entry dispatch.
+                var neutral = new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, "");
+                if (GameServices.level().hasPendingFreshLevelTransitionBoundary()
+                        || GameServices.level().getTransitions().isTitleCardRequested()) {
+                    session.step(neutral); drawing.draw(session);
+                }
+                assertFalse(GameServices.level().hasPendingFreshLevelTransitionBoundary());
+                assertFalse(GameServices.level().getTransitions().isTitleCardRequested());
+                assertSame(GameServices.sprites().getMainPlayable(), session.player());
+                assertSame(session.player(), GameServices.camera().getFocusedSprite());
+                assertFalse(session.player().isObjectControlled());
+                assertEquals(0, session.player().getRingCount(), "loc_63B4 publishes fresh DEZ rings");
+                assertEquals(1, GameServices.sprites().getRegisteredSidekicks().size());
                 assertEquals(48, session.player().getCentreX());
                 assertEquals(2476, session.player().getCentreY());
                 assertTrue(largestOutgoingRewindFrame > 10, "outgoing SSZ history was actually recorded");
                 // The handover clears the old timeline; step the incoming level so a fresh
                 // controller is installed even when the transition fade retired the old one.
-                var neutral = new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, "");
                 for (int n = 0; n < 30; n++) { session.step(neutral); drawing.draw(session); }
                 var rewind = SessionManager.getCurrentGameplayMode().getRewindController();
                 assertNotNull(rewind, "DEZ starts a new rewind timeline");
