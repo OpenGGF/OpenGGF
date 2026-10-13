@@ -686,7 +686,8 @@ After playable feature `c2103d5f7` was integrated as `d63bfe397`, a bounded
 independent review identified three unimplemented native presentation owners.
 Verification used the ending tree's unchanged production code and the optional
 locked-on disassembly in the main workspace, not a runtime asset fallback.
-No implementation or test rerun was authorized for this follow-up. The playable
+That read-only follow-up authorized no implementation or test rerun; the later
+repair is recorded below. The playable
 lifecycle/replay/credits/title results remain qualified; complete native scene
 presentation was never established by those checks.
 
@@ -728,3 +729,155 @@ note linking to unfinished work; none of these omissions is reclassified as an
 accepted engine presentation extension. Their future correction requires native
 ROM-backed allocation/animation and captured palette state, phase/stop/rewind
 checks and moving/native-window evidence. This audit changes documentation only.
+
+## Native presentation repair — 2026-10-13
+
+The completion target subsequently authorized these three owners. The clean
+ending tree merged pinned integrated `772092298` as `79cb117ff`; six historical
+conflicts retained the already integrated versions, including upstream physics
+profile bodies, newer ring-publication and incoming-route evidence and both
+mirrored pitfall catalogues. The merged tree had zero diff from `772092298` before the
+repair. Root owns the later regular branch merge, composed smoke and delivery.
+
+### Native resource and dispatch decisions
+
+ROM LEA operands independently establish IslandLift art `$160AAA` (at `$5DBA4`) and
+Map `$6068E` (at `$5EDAE`). The KosM header/decompressor yields 1984 bytes/62 patterns;
+all 27 mapping frames contain one piece except the empty final frame. The native
+hold expiry allocates 2 subtype `$42` objects then queues tile `$2FF`. The late departure
+allocates six groups in table order: 6×`$41`, 2×`$43`, 4×`$44`, 2×`$45`, 2×`$46`, 2×`$47`. Each table
+restarts ordinal byte-offset 0/4/8..., using lowest-free AllocateObject, not
+allocation after the parent or an ordinal frame number. The initial `loc_5EDAC`
+returns without drawing. Types `$43`–`$47` retain the pointer-based Animate_Raw call,
+which falls into Animate_RawNoSST; their delay thresholds are not rewritten into
+one common delay. Type `$41` changes coordinate mode at its signed-word camera-copy
+threshold without same-dispatch movement, then moves at velocity `$10` on later
+passes and draws only on even native VInt.
+
+A bounded independent review rejected passing wrapped uint16 screen words to the
+integer renderer: type `$41` can retain Y `$FF44`, while ordinary Mode5 SAT displays its
+center at 196. `loc_1AF76` adds the mapping offset before masking X to `$1FF` and changes
+X 0 to 1. Derived one-piece X/Y projection now follows those completed fields;
+raw words, fractions, gameplay camera and screen-copy words remain untouched.
+World-mode pieces keep their native world positioning plus the existing display
+inset. The renderer uses the existing registered resident-VRAM range/DMA refresh
+helper; drawing neither reloads art nor submits substitute jobs.
+
+Create_Continue_Sprite has no failure test. At full native dynamic RAM it can
+write over the last occupied SST. This inherited missing-emulation edge remains
+unsupported/unqualified; it is not accepted as an intentional deviation. The
+typed manager retains the admitted prefix in one pass, with no retries/healing.
+Ordinary and fragmented stock admission and reconstruction are covered.
+
+`loc_5D9EE` and `loc_5E08A` admit one independently managed palette owner after normal
+color 1 becomes `$EEE`. The local guard is set before the one allocation attempt.
+FAC1 is a captured signed byte in screen RAM: positive selects engine line 2,
+negative line 1, two colors 14–15 from `off_7DD5A`. Positive progress and rotation-disable
+checks precede the captured byte predecrement/cursor script. A zero selector parks
+the owner until native clear-RAM removes it. `loc_5DE46`/`loc_5E170` clear the selector.
+The existing Knuckles palette state's default line 2 consumer is preserved.
+
+The explicit `loc_5AD56` caller gets a local captured AIZ palette bank, rather than
+selecting zone 0 or borrowing ordinary LEVEL_STARTED. Fresh ending RAM clears the
+F632/F634 words and F650/F652 gate/secondary offset; temporary AIZ terrain loading
+does not dispatch AIZ1_Resize or set its alternate palette selector. The native
+hold reset clears primary/timer/gate while preserving the secondary offset.
+AnPal reads the old primary offset masked `$18`, advances its word by 8, and when the
+secondary gate is 0 reads/advances its word by 6 with `$30` wrap. Timer predecrements
+as a signed word and reloads 7; the object rotation-disable flag is not this gate.
+Late event writes keep native ordering against object patches. FG 24→28→32 and
+32→36 retain native same-dispatch fade/hold/fade-out fallthroughs.
+
+### Captured ownership and rejected test premises
+
+IslandLift primitives use the default compact schema. Its final preconstructed
+S3kRawAnimation.State already implements RewindStateful; StatefulValueCodec
+captures State.Value, so no redundant legacy extra was added. The independently
+allocated Master palette helper carries an explicit immutable timer/cursor extra.
+All factories reconstruct pure ObjectSpawn shells; scripts/mappings are derived
+ROM caches. Whole-world replay recreates the graph and verifies every registered
+owner, including native palette banks and prepared/published graphics.
+
+Coherent test-compile succeeded in 1:15 at 20:41:17 BST, 3892 production and 3863 test
+sources. Production Java remained byte-identical throughout qualification:
+`70c0990389436562191a211c342493331496bfac6c5a9a4957216fabe1a4f35a`.
+Initial all-src Java was `4b390491`; final 7653-path source is
+`46805c543ea2d319932b854f58dc3e7c3e38025e900a80a760ac9fdc5f5a95d4`.
+Digests sort repo-relative paths and hash path-NUL-file-bytes-NUL.
+
+The short 29-case attempt had two assertions at native subtype `$42`'s Draw gate.
+The draft spawned X `$180` with scroll 0, so `sub_5FE48` correctly published X `$200` and
+hid it. Changing the declared clock-vector position to X `$100` retained the native
+animation assertions; it did not change production behaviour. The corrected 12
+parameter vectors pass. The original remaining short 17 checks also pass.
+
+The first scene 17-case attempt passed all nine complete D01 lifecycles and both AIZ
+hold cases; four pixel assertions failed. Immutable exploration jar
+`ed7dc6503834671f0dee3b372c92fe4b8edd10076c8a17746c7276d4c2c3f9e9`
+(compiled initial `4b390491`) showed the published cells at X 516 while the new CPU
+state implied X 514. A manual particle creation had no published cells until its
+natural even-VInt preparation and next VInt; afterward eight tiles appeared at
+Y 188/196 while raw Y remained `$FF44`. The oracle now samples producer RAM/mapping/CRAM
+before publication; it never fits a fixed position or input offset.
+
+Corrected 20-case run passed all 12 clock vectors, both wrapped-Y pixels and both AIZ holds,
+leaving two 800px actual-scene RGB failures. The same probe measured mask bounds
+240..560 with opacity 0.35973397 at X 514 and 0.048668668 at X 400 during the moving
+render-copy phase. LevelBoundsMaskTransition deliberately retargets a world-space
+edge crossfade; those pixels cannot equal unblended CRAM. The test moved to the
+level package for typed access to the existing prepared mask and selects an
+actually transparent footprint before natural publication. It keeps exact RGB
+and native art assertions. Final actual-scene 4 pass; no renderer/mask algorithm
+change or weakened threshold was used. This recurring sampling lesson is added
+to the existing implementation-pitfall catalogue. The exploratory probe took
+less than an hour and remains temporary, not a new production tool.
+
+### Focused outcomes and commands
+
+All passing slices have zero failures/errors/skips and explicit original ROM
+paths. There are 50 distinct covered checks: graph 22, palette 3, unchanged Knuckles
+palette 1, art guards 3, new GPU 8, affected D01 lifecycle 9 and structural 4. Successful
+unchanged slices are retained across the failures above; no whole Knuckles fight
+or broad worker sweep was added. Complete scene lifecycles assert real phases,
+both credit parts, full-world replay and controller Start/title, not a fixed
+frame-budget endpoint. Combined smoke/guards and integration remain root-owned.
+
+Commands run from the ending tree (Java 25), with `S3K_ENDING_ROM` set to the
+verified original ROM's absolute path. The variable renders that argument
+portably; external capture sidecars retain the original machine-local commands:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off test-compile
+python3 tools/testing/maven_queue.py --lean -Dmse=off "-Ds3k.rom.path=$S3K_ENDING_ROM" '-Dtest=TestS3kEndingIslandLift,TestS3kEndingPaletteOwners,TestS3kKnucklesEnding#completeSuperProgressRotatesNativeMasterPairOnInitAndReplaysTheByteTimer,TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits,TestPatternSpriteRendererCorruptionGuard' test
+JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl python3 tools/testing/maven_queue.py -Dmse=off "-Ds3k.rom.path=$S3K_ENDING_ROM" '-Dtest=TestS3kEndingPresentationCapture,TestS3kEndingLifecycleCapture' test
+JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl python3 tools/testing/maven_queue.py -Dmse=off "-Ds3k.rom.path=$S3K_ENDING_ROM" '-Dtest=TestS3kEndingIslandLift#nativeInitReturnsAndOrdinalOffsetsDelayOnlyTheOwningScripts,TestS3kEndingPresentationCapture' test
+JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl python3 tools/testing/maven_queue.py -Dmse=off "-Ds3k.rom.path=$S3K_ENDING_ROM" '-Dtest=TestS3kEndingPresentationCapture#nativeRescueAllocatesBothIslandGroupsAndKeepsTheirArtAndPhaseReplay' test
+python3 tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestHelperStateRewindCoverageGuard,TestRewindCoverageGuard,TestRewindTransientGuard' test
+```
+
+Initial short29/2fail took25.879s; scene 17-case/4fail took1:19; corrected20/2fail
+36.897s; final scene 4 pass 32.385s at 20:59:08 BST; structural 4 pass 24.141s at 21:04:43.
+Nine lifecycle cases passed in 47.59s of the initial scene command. These are
+bounded focused checks, not full-suite or whole-scene ROM parity certification.
+
+### Moving presentation follow-up
+
+Two 6000-neutral-input excerpts supplement, rather than overwrite, the four
+historical full ending films. `presentation-repair-70c099038943/sonic-chaos-320`
+and `tails-super-800` each capture 1275 PNGs from input 900/every4. Their 85-second
+silent videos use 15fps (native 60-input speed), nearest-neighbor 2x: 640×448 and
+1600×448. Input-to-source time is `(input-900)/60`. Declared D01 inventory is
+1111111/3333333; the matching production GPU/lifecycle setup asserts actual
+progress 0/+2. These are presentation excerpts, not cold campaigns or terminal
+movies. The wider film retains the existing intentional flank treatment.
+
+The command sidecars and existing ending-capture-index record original ROM
+identity, neutral input recipe, immutable jar/source hashes, per-frame CSV and
+video identity. Both FFprobe counts/durations and full xerror decode pass;
+temporal producer stills cover IslandLift departure, AIZ restoration/hold and
+reunion/credits. Sonic film SHA256 is
+`a81c612c319ef23e5653cb9bd72752c9a86b810b4167b3545293a20b43000fb7`;
+Tails is `7567a3a393f9f67fffaeb23cc90b8dec267e77842aa272670705511035fbc2d4`.
+Historical negative/corrected films and their source identities remain intact.
+The final reachable integrated commit will become the reproduction target after
+root delivery; captured hashes remain the actual historical identities.

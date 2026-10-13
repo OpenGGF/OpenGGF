@@ -5176,3 +5176,13 @@ recreate a pure shell from its own spawn. Sonic/Tails keep `Child_Draw_Sprite`
 and require exact captured parent identity, not a nearest-parent reconstruction.
 The five-width actual MHZ2 entry regression reproduces the deleted-parent error
 before the fix and verifies fresh child recreation plus whole-registry replay.
+
+## Screen-only sprite coordinates are completed SAT fields
+
+`Render_Sprites` bit2-clear bypasses world/camera clipping. `loc_1AF76` adds the
+mapping piece offset, masks X to 9 bits and changes X 0 to 1; ordinary Mode5 Y is also
+9-bit. IslandLift subtype `$41`'s camera conversion can retain native Y `$FF44`, which
+still displays at 196. Preserve raw words/fractions and normalize the derived
+one-piece origin after its mapping offset. Test natural even-VInt admission and
+publication: current CPU positions/mappings need not describe the published SAT.
+The 2026-10-13 ending repair tests both wrapping and the completed piece X 0 edge.

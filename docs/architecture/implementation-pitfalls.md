@@ -886,6 +886,24 @@ previous `Render_HUD` geometry. Buffering the digit choice with that geometry
 adds a one-frame second-rollover error (21 pixels in FBZ B1 reverse). Lag,
 fade and title-card handlers do not run the same numeric update.
 
+Ending IslandLift evidence (2026-10-13, immutable jar `ed7dc650`, production
+Java `70c09903`) reproduces this distinction: the displayed table placed cells
+at X 516 while the next CPU RAM implied X 514. A manually created particle had no
+published tiles until its natural even-VInt preparation and following publication.
+Sample the producer's position, mapping and CRAM before that publication. In wide
+views also check the prepared mask: `LevelBoundsMaskTransition` deliberately
+crossfades edges in world space, and moving render copies left opacity 0.35973397
+at X 514 inside bounds 240..560. Exact RGB tests select a transparent prepared
+footprint; they do not fit a position/frame offset or weaken the color comparison.
+
+**Screen-only SAT words wrap per piece.** `Render_Sprites` bit2-clear skips the
+world camera clip; loc_1AF76 adds each mapping offset, masks X to 9 bits and replaces
+X 0 with 1. Ordinary Mode5 Y is 9 bits too. IslandLift subtype `$41` can hold raw Y `$FF44`
+after its camera threshold: native displayed center is 196. Preserve its raw word
+and fraction; normalize only the derived one-piece draw origin, after the offset.
+Passing 65348-style unsigned words straight to an integer renderer hides
+native visible particles. Qualify wrapped-Y and X 0→1 as well as the normal case.
+
 **S3K retained plane strip counts and clipping.** `Setup_TileRowDraw` and
 `Setup_TileColumnDraw` subtract one before DBF: callers supplying `$20`/`$10`
 write 32/16 blocks, not 33/17. `Draw_PlaneVertSingleTopDown`/`BottomUp`

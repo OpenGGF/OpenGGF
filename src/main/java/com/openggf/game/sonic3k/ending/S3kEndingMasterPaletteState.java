@@ -14,7 +14,10 @@ public final class S3kEndingMasterPaletteState {
     public Value captureRewindStateValue() { return new Value(delay, cursor); }
     public void restoreRewindStateValue(Value value) { delay=value.delay();cursor=value.cursor(); }
 
-    public void tick(ObjectServices services) {
+    public void tick(ObjectServices services) { tick(services,2); }
+
+    /** loc_5DF58 selects native line3/line2 by FAC1 sign; Knuckles retains line3. */
+    public void tick(ObjectServices services, int line) {
         var registry=services.paletteOwnershipRegistryOrNull();
         if (registry!=null&&registry.isPaletteRotationDisabled()) return;
         delay=(byte)(delay-1);
@@ -31,7 +34,7 @@ public final class S3kEndingMasterPaletteState {
             int address=rows+(short)rom.readU16BE(rows+row*2);
             S3kPaletteWriteSupport.applyContiguousPatch(registry,services.currentLevel(),
                     services.graphicsManager(),"s3k-ending-master",S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,
-                    2,14,services.rom().readBytes(address,count*2));
+                    line,14,services.rom().readBytes(address,count*2));
         } catch (IOException failure) { throw new UncheckedIOException(failure); }
     }
 }

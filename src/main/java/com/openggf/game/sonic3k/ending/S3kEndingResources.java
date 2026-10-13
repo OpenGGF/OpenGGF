@@ -21,6 +21,8 @@ public final class S3kEndingResources {
     public static final int MAP_ENDING_PLANE_EXTRA = 0x60486;
     public static final int TORNADO_SUBSPRITE_OFFSETS = 0x6006E; // byte_6006E
     public static final int TORNADO_NOSE_FRAMES = 0x60072; // byte_60072
+    public static final int ISLAND_LIFT = 0x160AAA; // loc_5DB76 Queue_Kos_Module LEA
+    public static final int MAP_ISLAND_LIFT = 0x6068E; // loc_5EDAC
     public static final int MASTER_EMERALD = 0x17FCBA;
     public static final int MAP_MASTER_EMERALD = 0x7D712; // ObjDat3_7D450's actual mapping pointer
     public static final int SONIC_POSE = 0x161660;

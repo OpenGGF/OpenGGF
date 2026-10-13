@@ -20,7 +20,7 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
     private int sequence, routine, timer, xFixed, yFixed, xVelocity, yVelocity;
     private int baseY, bobPhase, swingMaximum = 0x80, mappingFrame, animationCounter, animationFrame;
     private int nativeVInt;
-    private boolean swingReverse, planeReleased, smallPlane, retired, hidePlayer, flipX;
+    private boolean swingReverse, planeReleased, smallPlane, retired, hidePlayer, flipX, paletteHelperAdmitted;
     private transient S3kRawAnimation scripts;
     private transient S3kRawAnimation knucklesScripts;
     // Scalars are captured by AbstractObjectInstance's generic subclass schema.
@@ -59,7 +59,7 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
     private void rescue() {
         switch(routine) {
             case 0 -> initializeRescue();
-            case 2 -> { ram().scrollYFixed+=0x8000;if(ram().scrollYFixed>=0x800000){routine=4;
+            case 2 -> { admitMasterPalette(1);ram().scrollYFixed+=0x8000;if(ram().scrollYFixed>=0x800000){routine=4;
                 services().objectManager().createDynamicObject(EndingCloudObjectInstance::new);
                 ending().clouds().configure(0x1F,-0x100,-0x100);} }
             case 4 -> { ram().scrollYFixed+=0x8000;if(ram().scrollYFixed>=0x1000000){routine=6;planeReleased=true;} }
@@ -106,11 +106,12 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
                     S3kEndingPalette.loadLine(services(),0,S3kEndingResources.PAL_SMALL_PLANE);}
             }
             case 26 -> { move();if(getX()<0x120){routine=28;timer=59;} }
-            case 28 -> { if((timer=(short)(timer-1))<0){routine=30;ram().foregroundSignal=true;} }
+            case 28 -> { if((timer=(short)(timer-1))<0){routine=30;ram().foregroundSignal=true;
+                if(!knucklesMode()&&ending().progress()>=0)createIslandLiftGroups();} }
             case 30 -> { move();if(getX()<0x60)routine=32; }
             case 32 -> {
                 if(ending().progress()<0 || (ram().foregroundY&0xFFFF)>=0x78){ram().foregroundSignal=true;
-                    services().fadeOutMusic();ending().clearFlag(0);ending().clearFlag(1);ObjectLifetimeOps.deleteNoRespawn(this);}
+                    services().fadeOutMusic();ram().masterPaletteMode=0;ending().clearFlag(0);ending().clearFlag(1);ObjectLifetimeOps.deleteNoRespawn(this);}
             }
             default -> { }
         }
@@ -149,7 +150,27 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
     }
     private void tickRescueHold(){
         if((timer=(short)(timer-1))<0){routine=14;timer=0xBF;ram().backgroundSignal=true;
-            ending().clouds().configure(0,ending().clouds().xVelocity(),-0x100);}bob();
+            ending().clouds().configure(0,ending().clouds().xVelocity(),-0x100);
+            EndingIslandLiftObjectInstance.createGroup(services(),0x5DBB6,0x42,2);
+            ending().art().queueModule(services(),S3kEndingResources.ISLAND_LIFT,0x2FF);}bob();
+    }
+    private boolean knucklesMode(){return zone().playerCharacter()==PlayerCharacter.KNUCKLES;}
+    /** loc_5D9EE / loc_5E08A set their local guard before the one allocation attempt. */
+    private void admitMasterPalette(int mode){
+        int white=com.openggf.game.palette.PaletteWriteSupport.segaWordFromColor(
+                services().currentLevel().getPalette(0).getColor(1));
+        if(white!=0xEEE||paletteHelperAdmitted)return;
+        paletteHelperAdmitted=true;ram().masterPaletteMode=mode;
+        services().objectManager().createDynamicObject(EndingMasterPaletteObjectInstance::new);
+    }
+    private void createIslandLiftGroups(){
+        // loc_5DD6A: ordinal $2D restarts at0 for each source table.
+        EndingIslandLiftObjectInstance.createGroup(services(),0x5DDD2,0x41,6);
+        EndingIslandLiftObjectInstance.createGroup(services(),0x5DDEA,0x43,2);
+        EndingIslandLiftObjectInstance.createGroup(services(),0x5DDF2,0x44,4);
+        EndingIslandLiftObjectInstance.createGroup(services(),0x5DE02,0x45,2);
+        EndingIslandLiftObjectInstance.createGroup(services(),0x5DE0A,0x46,2);
+        EndingIslandLiftObjectInstance.createGroup(services(),0x5DE12,0x47,2);
     }
     private void aizReturn() {
         switch(routine) {
@@ -161,13 +182,13 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
                 ending().clearFlag(0);
                 services().objectManager().createDynamicObject(()->new Actor(Actor.MASTER_AIZ));
             }
-            case 2 -> { swing(8);move();if(getX()<0x60)routine=3; }
+            case 2 -> { admitMasterPalette(-1);swing(8);move();if(getX()<0x60)routine=3; }
             case 3 -> {routine=4;setX(0x1E0);setY(0xE0);
                 xVelocity=-0x200;yVelocity=0;mappingFrame=7;animationCounter=animationFrame=0;
                 S3kEndingPalette.loadLine(services(),0,0x5CC2A); // Pal_ContinueScreen+$60
             }
             case 4 -> { animateKnucklesReturn();move();if(getX()<0x120){routine=6;mappingFrame=0x55;timer=119;} }
-            case 6 -> { if((timer=(short)(timer-1))<0){routine=8;ram().foregroundSignal=true;} }
+            case 6 -> { if((timer=(short)(timer-1))<0){routine=8;ram().masterPaletteMode=0;ram().foregroundSignal=true;} }
             default -> { }
         }
     }
