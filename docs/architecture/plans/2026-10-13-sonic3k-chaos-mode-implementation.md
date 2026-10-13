@@ -135,32 +135,32 @@ individual effects; the displayed pool does not override those gates.
 
 ## Delivery checks
 
-- [ ] Observer and lease tests cover owner isolation, faults, expiry, replacement,
+- [x] Observer and lease tests cover owner isolation, faults, expiry, replacement,
   one-shot acknowledgement, empty support, load retirement and capture/restore.
-- [ ] Scheduler tests cover empty/small pools, 90/9/1 rarity, downward-only
+- [x] Scheduler tests cover empty/small pools, 90/9/1 rarity, downward-only
   fallback, repeat reduction, sampled bounds, revision admission and rewind.
-- [ ] The actual packaged mod registers all 105 choices within 32 definitions,
+- [x] The actual packaged mod registers all 105 choices within 32 definitions,
   preserves native title/save flow and renders the available/selected lists,
   interval, duration multiplier, countdown and effect instructions.
-- [ ] Each effect reaches a real host or mod consumer in an eligible context.
+- [x] Each effect reaches a real host or mod consumer in an eligible context.
   Availability and registration counts alone are not behavior evidence.
-- [ ] Motion checks cover input history/queues, native gravity pads plus expiry,
+- [x] Motion checks cover input history/queues, native gravity pads plus expiry,
   required-route spring minima, fluid entry/exit and captured forward replay.
-- [ ] Native checks cover art readiness, graph/slot budgets, actor opt-in,
+- [x] Native checks cover art readiness, graph/slot budgets, actor opt-in,
   shield/defeat/targeting precedence, rewards, occupied-solid expiry, relocation
   sensor/camera/team reconciliation and the native gust dispatch clock.
-- [ ] Presentation checks cover native SAT/DPLC identity, collision unchanged,
+- [x] Presentation checks cover native SAT/DPLC identity, collision unchanged,
   supported viewports, paired HUD values, world-only transforms, trails and
   resource/lifetime cleanup. Headless/offscreen captures inspect real output.
-- [ ] Sidegames prove their independent deadline, input ownership, optional
+- [x] Sidegames prove their independent deadline, input ownership, optional
   selection, rewind, bounded rewards and immediate safe cancellation.
-- [ ] Native S3K loading/bootstrap/decoding and AIZ1 checks remain green, with
+- [x] Native S3K loading/bootstrap/decoding and AIZ1 checks remain green, with
   original ROM identity and absolute ROM paths so required checks do not skip.
-- [ ] Inspect change-based smoke selection against the pinned destination and
+- [x] Inspect change-based smoke selection against the pinned destination and
   run actual tool preflight before its bounded run. State class count, expected
   cost and stopping rule. Attribute disputed failures with matched tests on the
   pinned base; do not repeat unchanged suites as a ceremony or use full-suite.
-- [ ] Update API descriptor/version/signatures together, creator documentation,
+- [x] Update API descriptor/version/signatures together, creator documentation,
   example instructions, configuration and affected route/support matrices.
 - [ ] Review high-risk owner/rewind/native boundaries, fix attributable defects,
   integrate into the updated main branch, verify policy, push and account for
@@ -385,3 +385,88 @@ used `tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-e
 desktop display variables. Unchanged broad smoke coverage is not repeated as a
 ceremony; remaining route attribution and the later updated-develop union remain
 separate delivery checks.
+
+
+Final attribution compared clean baseline `1ead8d9b4` with frozen Chaos `0047d2cb1`:
+all remaining 26 failures and one error are pre-existing in this bounded comparison.
+The MHZ boss fixture's missing gameplay owner and two late-pulley route failures
+match exact identities/types/assertions; the DEZ/LRZ/MHZ selector ran 17 cases,
+all failing identically, and the SSZ selector ran eight cases with seven identical
+outcomes and no errors/skips on both trees. Twenty-six of the 27 failing/error
+cases have exact raw assertion/detail equivalence. SSZ Tails teleporter case `[2]`
+requires semantic comparison: replay 4018 misses children 125/126 and shifts slots
+128/129 on both trees, while printed compact blob hashes differ between JVMs.
+An identical temporary diagnostic retained the original assertion/input and read
+actual blobs before failure. Jet schema 15 has scalar bytes
+`01050000000b0500001c090000`; gun schema 16 has
+`ffffffff011b050000fc080000`; both opaque arrays are empty and these captured
+contents match exactly. Each blob hash delta equals the real Class hash delta
+multiplied by 961. Jet classfile bytes match; gun bytes differ at the owned firing
+hooks, whose empty-port paths preserve native firing/cooldown. Child recreation,
+parent restoration and parent-null deletion are unchanged. This supports semantic
+inherited-state attribution, not raw-text or classfile equality. Both fixtures were
+restored byte-for-byte and both attribution trees are clean, with no live jobs.
+The diagnostic source and raw logs are temporary; no trace row supplied gameplay.
+
+The 64 ordinary skips are 23 opt-in diagnostic/soak/property cases, 32 InfiniteSonic
+cases without the requested native targets, six legacy GLFW-null/EGL-window context
+checks, one CPZ tube fixture admission assumption, and two external audio-reference
+opt-ins. No missing/wrong-ROM skip was recorded. The supplied-ROM properties were
+identical across every batch. Actual Chaos production surfaceless-EGL pixel cases
+passed separately; those results do not certify the skipped legacy helpers.
+
+Develop advanced independently to `5d9dd81381b` with Second Strike. Integration at
+`312979cc5` retains both changelog entries, the observer snapshot projection and
+new decoded-placement ownership. The candidate signature pin is exactly the sorted
+union of both parents: 20,835 lines, all 22 incoming signatures retained, zero
+removals; the descriptor stays unpublished `0.7.0`. Current compiled signature
+checks pass. The actual final union passed 197 cases/22 classes, 26 legacy patch/
+owner cases/two classes and 69 native graph/reload/policy/SDK cases/ten classes,
+all without failures/errors/skips. Commands use the wrapper with exact selectors;
+the last invocation uses `verify` and completed SDK/Javadoc/binary artifact checks.
+The three selectors cover all eight incoming ordinary test classes plus affected
+Chaos history/assembly/capture and required S3K consumers. Fresh `-Pguards` then
+passed 680 cases/88 classes, zero skips, in 4:23. These are bounded focused and guard
+results; no unchanged broad or release-only full-suite run was repeated.
+Second Strike's authored enemies/projectiles have no native Chaos field/firing
+opt-in; combined-mod effect breadth against them is not certified by these checks.
+
+`python3 examples/sonic3k-chaos-mode/build.py` completed on `312979cc5`, and the
+actual ROM-free mod package has zero validation findings. The 80,806-byte jar's
+SHA-256 is `954b580e8566cca2803bc8e11d59f229e41f1b4559a64797e63e1e6877165ba1`.
+Useful captures and the jar are retained in the explicit external task directory;
+consumed combined-run diagnostics were acknowledged and deleted. Integration push
+and fully accounted worktree cleanup follow this evidence checkpoint.
+
+
+The completed combined command on `0047d2cb1` was the following, with
+`OPENGGF_ROM_ROOT` resolving to the main checkout's existing verified ROM files:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 \
+  MAVEN_ARGS=-Dopenggf.headless.gl=surfaceless-egl \
+  python3 tools/testing/run_categories.py \
+  --base 10db9f00523d2eab79e065bdfc764cb2253781c5 \
+  --rom-directory "$OPENGGF_ROM_ROOT" --max-minutes 120 --run
+```
+
+Final-union focused selectors, each submitted once at `312979cc5`, were:
+
+```text
+TestNativeDecodedPlacementPatch,TestNativeDecodedPlacementPatchRom,TestNativeDecodedPlacementPatchHost,TestOwnerBoundDifficultyPolicies,TestSecondStrikeBoss,TestSecondStrikeCampaign,TestSecondStrikeEnemies,TestSecondStrikeStages,TestModApiSignatureSurface,TestModContextAndFaultBoundary,TestMutatorWorldServices,TestWorldPolicyHistory,TestSonic3kChaosPackAssembly,TestAudioMutatorHistory,TestEngineDataSelectPatchResolution,TestGameplayCaptureDataSelectLaunch,TestSonic3kChaosModeExampleModels,TestS3kAiz1SkipHeadless,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+```
+
+The first selector uses `tools/testing/maven_queue.py -Dmse=off -Dtest=... test -B`.
+The ROM-free legacy selector uses `--lean -Dmse=off
+-Dtest=TestLevelPatch,TestOwnerBoundGamePatch test -B`. The final domain selector
+uses ordinary admission and `verify -B`:
+
+```text
+TestModApiPinPolicy,TestModApiRuntimePolicy,TestModApiReleasePolicy,TestModApiJavadocTool#canonicalInventoryIsExactSortedAndContainsTheMandatedRoots,TestModApiSdkPackager#mergedCreatorContractTypesStayInCreatorApiClosure+gameSpecificTraceDiagnosticsStayInCreatorApiClosure,TestTemporaryMutatorState,TestNativeMutatorRuntime,TestGameLoopNativeStageMutatorPacing,TestS3kAizMinibossGraphRewind,TestS3kAiz1FireTransitionPreparedReload
+```
+
+Both ROM-backed focused commands and final `-Pguards test -B` add
+`-Dopenggf.headless.gl=surfaceless-egl`, the three absolute properties
+`sonic1.rom.path`, `sonic2.rom.path`, `s3k.rom.path`, unset desktop display
+variables and use `LUA_BIN=/usr/bin/lua5.4`. These are the existing root files
+listed in the repository ROM identity table, not renamed fixture copies.
