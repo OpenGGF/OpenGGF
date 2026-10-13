@@ -7,7 +7,9 @@ import java.util.Objects;
 
 public final class ModApiVersion {
     /**
-     * Current unpublished compiled-mod API candidate, including the 0.7
+     * Current unpublished compiled-mod API candidate, including native decoded
+     * factory binding and original-ring retention on class-preserving levels,
+     * and bounded S3K boss/special/bonus-stage difficulty policies. Including the 0.7
      * widescreen presentation, KiS2 movement/touch/checkpoint/menu handoff contracts,
      * deferred SMPS header construction, explicit dynamic solid-contact rewind binding,
      * opt-in whole-game presentation pacing, modal level input ownership, controlled level admission and opaque

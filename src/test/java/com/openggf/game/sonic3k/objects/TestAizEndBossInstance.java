@@ -331,6 +331,125 @@ class TestAizEndBossInstance {
                         + "after 128 Obj_Wait entries from $2E=$7F");
     }
 
+    @Test
+    void waitingLayoutBossRetainsItsOriginalSlotUntilTheArenaIsReached() throws Exception {
+        RecordingServices services = new RecordingServices();
+        services.withCamera(camera);
+        services.withGameState(new GameStateManager());
+        var manager = new com.openggf.level.objects.ObjectManager(List.of(),
+                new Sonic3kObjectRegistry(), 0, null, null,
+                GameServices.graphics(), camera, services);
+        services.withDirectObjectManager(manager);
+        camera.setX((short) 0x4680);
+        camera.setY((short) 0x015A);
+        AizEndBossInstance boss = buildBoss(services);
+        manager.addDynamicObjectAtSlot(boss, 14);
+
+        manager.update(camera.getX(), null, List.of(), 1);
+        camera.setX((short) 0x44C0);
+        manager.update(camera.getX(), null, List.of(), 2);
+
+        assertFalse(boss.isDestroyed(),
+                "Obj_AIZEndBossWait returns while Camera_X_pos is below $4880; it has no range tail");
+        assertTrue(manager.getActiveObjects().contains(boss));
+        assertEquals(14, boss.getSlotIndex(), "later controls must retain the original Obj_Load allocation");
+        camera.setX((short) 0x4880);
+        manager.update(camera.getX(), null, List.of(), 3);
+        assertEquals(14, boss.getSlotIndex());
+        assertTrue(services.gameState().getCurrentBossId() != 0);
+    }
+
+    @Test
+    void startDefeatArmsTheRomDrawBridgeOwner() throws Exception {
+        RecordingServices services = new RecordingServices();
+        services.withCamera(camera);
+        services.withGameState(new GameStateManager());
+        AizEndBossInstance boss = buildBoss(services);
+
+        invokeNoArg(boss, "startDefeat");
+
+        assertTrue(Aiz2BossEndSequenceState.isBridgeDropTriggered(),
+                "AIZEndBoss_StartDefeat writes _unkFAA3 before the capsule wait");
+    }
+
+    @Test
+    void capsuleCreationRetainsRomLayoutOwnersAndTheBossSlot() throws Exception {
+        RecordingServices services = new RecordingServices();
+        services.withCamera(camera);
+        services.withGameState(new GameStateManager());
+        var manager = new com.openggf.level.objects.ObjectManager(
+                List.of(), new Sonic3kObjectRegistry(), 0, null, null,
+                GameServices.graphics(), camera, services);
+        services.withDirectObjectManager(manager);
+        AizEndBossInstance boss = buildBoss(services);
+        S3kCutsceneButtonObjectInstance button = new S3kCutsceneButtonObjectInstance(
+                new ObjectSpawn(0x4B18, 0x0189, 0x83, 0, 0, false, 0));
+        AizDrawBridgeObjectInstance bridge = new AizDrawBridgeObjectInstance(
+                new ObjectSpawn(0x4B48, 0x0218, 0x32, 0, 2, false, 0));
+        manager.addDynamicObjectAtSlot(button, 4);
+        manager.addDynamicObjectAtSlot(bridge, 8);
+        manager.addDynamicObjectAtSlot(boss, 14);
+        Aiz2BossEndSequenceState.triggerBridgeDrop();
+
+        invokeNoArg(boss, "spawnEggCapsuleAndFinish");
+        button.update(0, null);
+        bridge.update(0, null);
+
+        assertFalse(button.isDestroyed(), "the ROM-loaded button must keep its identity and SST slot");
+        assertFalse(bridge.isDestroyed(), "the ROM-loaded drawbridge must keep its identity and SST slot");
+        assertEquals(4, button.getSlotIndex());
+        assertEquals(8, bridge.getSlotIndex());
+        assertEquals(14, boss.getSlotIndex());
+        assertTrue(Aiz2BossEndSequenceState.isBridgeDropTriggered(),
+                "creating the capsule must not clear _unkFAA3");
+        assertTrue(manager.getActiveObjects().stream()
+                        .noneMatch(Aiz2BossEndSequenceController.class::isInstance),
+                "post-defeat dispatch replaces the boss routine, not its SST owner");
+    }
+
+    @Test
+    void postDefeatContinuationRewindsIntoARecreatedBossAndReplaysForward() throws Exception {
+        RecordingServices services = new RecordingServices();
+        services.withCamera(camera);
+        services.withGameState(new GameStateManager());
+        AizEndBossInstance original = buildBoss(services);
+        Field active = AizEndBossInstance.class.getDeclaredField("postDefeatSequenceActive");
+        active.setAccessible(true);
+        active.setBoolean(original, true);
+        Aiz2BossEndSequenceController originalController = continuationController(original);
+        var checkpoint = new Aiz2BossEndSequenceController.SequenceSnapshot(
+                0x4880, 0x015A, true, true, false, true, true, false,
+                false, true, 0x100, 0);
+        originalController.restoreSequenceState(checkpoint);
+        var context = com.openggf.game.rewind.schema.RewindCaptureContext.withIdentityTable(
+                new com.openggf.game.rewind.identity.RewindIdentityTable());
+        var snapshot = com.openggf.game.rewind.schema.CompactFieldCapturer
+                .captureDefaultObjectSubclassScalars(original, context);
+        AizEndBossInstance restored = buildBoss(services);
+        com.openggf.game.rewind.schema.CompactFieldCapturer
+                .restoreDefaultObjectSubclassScalars(restored, snapshot, context);
+        Aiz2BossEndSequenceController restoredController = continuationController(restored);
+
+        assertTrue(readBoolean(restored, "postDefeatSequenceActive"));
+        assertEquals(checkpoint, restoredController.captureSequenceState(),
+                "the continuation is value state, not a reference to an unregistered object");
+        org.junit.jupiter.api.Assertions.assertNotSame(originalController, restoredController);
+        original.update(42, new TestablePlayableSprite("sonic", (short) 0x4A78, (short) 0x0200));
+        restored.update(42, new TestablePlayableSprite("sonic", (short) 0x4A78, (short) 0x0200));
+        assertEquals(originalController.captureSequenceState(), restoredController.captureSequenceState(),
+                "forward replay must resume the same camera-release and transition phase");
+    }
+
+    private static Aiz2BossEndSequenceController continuationController(AizEndBossInstance boss)
+            throws Exception {
+        Field sequence = AizEndBossInstance.class.getDeclaredField("postDefeatSequence");
+        sequence.setAccessible(true);
+        Object holder = sequence.get(boss);
+        Field controller = holder.getClass().getDeclaredField("controller");
+        controller.setAccessible(true);
+        return (Aiz2BossEndSequenceController) controller.get(holder);
+    }
+
     private static AizEndBossInstance buildBoss(ObjectServices services) throws Exception {
         if (services instanceof TestObjectServices testServices && testServices.configuration() == null) {
             testServices.withConfiguration(SonicConfigurationService.getInstance());

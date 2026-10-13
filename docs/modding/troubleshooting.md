@@ -93,6 +93,11 @@ single-jar `ggfmod validate` command:
 | `NATIVE_UNSUPPORTED` | This code-bearing mod cannot load on a native build. Run the JVM jar (`OpenGGF-<ver>-jar-with-dependencies.jar`) to use it. Data-only music/reskin mods are unaffected. |
 | `MOD_REGISTRATION_DISABLE_SAVE_FAILED` / `TRUST_REVOCATION_SAVE_FAILED` | Check mod-state storage after a failed registration or trust revocation; the requested persisted disable/revocation did not save. |
 | `MOD_PATCH_METADATA_FAILED` / `MOD_PATCH_APPLY_FAILED` | Fix the patch owner's metadata/callback failure; the engine leaves that patch unapplied. |
+| `MOD_DECLARED_CONFLICT` | Advisory author declaration between enabled mods. Read the participants/evidence; it does not block the combination. |
+| `MOD_EXCLUSIVE_OVERLAP` | Advisory competing exclusive claim. The ordinary override policy still selects a winner. |
+| `MOD_CONTRIBUTION_OVERLAP` / `MOD_AUDIO_OVERLAP` | Published contributions share a target; evidence names the winner and replaced owners. Change order or disable one if the replacement is unwanted. |
+| `MOD_CALLBACK_INTERACTION_UNKNOWN` | The named owner failed while the listed relevant owners were prepared. Recovery isolates the failed owner/dependents; a causal mod combination has not been established. |
+| `MOD_RUNTIME_OWNER_REJECTED` | A mandatory runtime requirement, such as immutable snapshot identity or dependency availability, failed before registration. Details name the requirement and affected content. |
 | `MOD_CHARACTER_DISABLED_FALLBACK` / `MOD_CHARACTER_UNKNOWN_FALLBACK` | Re-enable/install the saved character owner or select an available character; launch used a stock fallback. |
 
 Successful packaging prints warnings too. `--format json` emits versioned structured

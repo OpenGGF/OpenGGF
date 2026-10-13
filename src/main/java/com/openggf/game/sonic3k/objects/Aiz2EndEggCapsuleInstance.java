@@ -124,6 +124,13 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
     }
 
     @Override
+    protected void spawnResultsScreen() {
+        // sub_86984 uses AllocateObject, not CreateChild6. The selected SST
+        // determines whether Obj_LevelResults runs later in this scan.
+        spawnFreeChild(this::createResultsScreen);
+    }
+
+    @Override
     protected void onResultsActiveWait() {
         resultsActiveWaitEntries++;
         advanceTailsEndingPoseCheck(false);
@@ -368,43 +375,39 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
         @Override
         protected boolean shouldRestorePlayerControlsOnExit() {
             // ROM Obj_LevelResultsWait2 clears _unkFAA8 and deletes itself
-            // (sonic3k.asm:62693-62705). The AIZ2 owner at loc_7D078 performs
-            // Restore_PlayerControl/2 after Check_TailsEndPose observes that
-            // flag clear (sonic3k.asm:166696-166703).
+            // (sonic3k.asm:62693-62705). AIZEndBoss_StartPostDefeatCutscene
+            // owns Restore_PlayerControl/2 after its own SST dispatch observes
+            // that flag clear (sonic3k.asm:138263-138276).
             return false;
         }
 
         @Override
-        protected boolean skipsSameFrameUpdateAfterSpawn() {
-            // AIZ2's sub_868F8 publishes Obj_LevelResults through the general
-            // AllocateObject path, so its first Obj_LevelResultsInit dispatch
-            // remains on the following ExecuteObjects pass (sonic3k.asm:
-            // 181976-181996). The signpost-owned results path uses the
-            // after-current allocation contract instead.
-            return true;
-        }
-
-        @Override
-        protected void onResultsChildrenRetired() {
-            // Obj_LevelResultsWait2 clears _unkFAA8 as soon as the final
-            // results child has left the screen.  The AIZ2 controller is an
-            // earlier SST slot, so it consumes this release on the following
-            // object pass while the results owner performs its final delete.
-            Aiz2BossEndSequenceState.releaseEggCapsule();
+        protected boolean shouldRestoreCameraBoundsOnExit(int zone, int act) {
+            // Obj_LevelResultsWait2 clears the result flag and deletes its SST.
+            // AIZEndBoss_StartPostDefeatCutscene retains the arena and creates
+            // Obj_IncLevEndXGradual from the surviving boss slot; there is no
+            // full-level camera restore (sonic3k.asm:62693-62705,138263-138276).
+            return false;
         }
 
         @Override
         protected void onExitReady() {
+            boolean returnsToHost = services().runPolicy().returnsToHostOnActCompletion();
             super.onExitReady();
-            // This later results slot clears _unkFAA8 after the capsule owner
-            // has already run. Publish Restore_PlayerControl2 here so the next
-            // Player_2 CPU pass sees the released state.
-            var registry = services().zoneRuntimeRegistry();
-            if (registry != null) {
-                registry.currentAs(AizZoneRuntimeState.class)
-                        .ifPresent(state -> state.scheduleTailsControlRelease(4));
+            if (!returnsToHost) {
+                // The final child decrements $30; Obj_LevelResultsWait2 reads
+                // that zero from its own SST on the next scan, then clears
+                // _unkFAA8 (sonic3k.asm:62685-62705). Publish here so the
+                // surviving boss observes the release in native slot order.
+                Aiz2BossEndSequenceState.releaseEggCapsule();
             }
         }
+
+        // AIZEndBoss_StartPostDefeatCutscene owns Restore_PlayerControl/2.
+        // The floating capsule's loc_866CC only calls Check_TailsEndPose and
+        // continues swinging after _unkFAA8 clears (sonic3k.asm:138263-138276,
+        // 181675-181679). Do not schedule the later restore from loc_7D078:
+        // that is a different post-boss owner, not this AIZ capsule route.
     }
 
     private AizZoneRuntimeState aizRuntimeStateOrNull() {

@@ -10,6 +10,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -218,6 +219,86 @@ class TestEffectiveCatalogBuilder {
         assertEquals(first.eligibility(), second.eligibility());
         assertEquals(List.of("AUDIO_OVERRIDE_CONFLICT"), findingCodes(resultDescriptor(second, "effective")));
         assertTrue(findingCodes(resultDescriptor(second, "blocked")).isEmpty());
+    }
+
+    @Test
+    void unilateralDeclaredConflictWarnsBothOwnersAndKeepsRequiredDependentEffective() {
+        ModDescriptor alpha = compositionPatch("alpha", Map.of(), Map.of(), List.of(),
+                new ModCompositionMetadata(List.of(), List.of(), List.of("beta"), Set.of()));
+        ModDescriptor beta = patch("beta", "s2", "1.0.0", "*");
+        ModDescriptor dependent = withDependencies("dependent", "s2", dependency("alpha", "*"));
+        ModState startup = enabledState("alpha", "beta", "dependent");
+
+        ModCatalog first = new EffectiveCatalogBuilder().build(List.of(beta, dependent, alpha), startup);
+
+        assertEquals(List.of("alpha", "beta", "dependent"), effectiveIds(first));
+        for (String owner : List.of("alpha", "beta")) {
+            ModFinding warning = resultDescriptor(first, owner).findings().getFirst();
+            assertEquals(ModFindingSeverity.WARNING, warning.severity());
+            assertEquals("MOD_DECLARED_CONFLICT", warning.code());
+            assertTrue(warning.message().contains("alpha, beta"));
+            assertTrue(warning.message().contains("author-declared"));
+            assertTrue(warning.message().contains("unverified"));
+            assertTrue(first.eligibility().get(owner).reasons().isEmpty());
+            assertEquals(resultDescriptor(first, owner), first.effective().orderedEnabled().stream()
+                    .filter(descriptor -> descriptor.manifest().id().equals(owner)).findFirst().orElseThrow());
+        }
+        assertTrue(resultDescriptor(first, "dependent").findings().isEmpty());
+
+        ModCatalog rebuilt = new EffectiveCatalogBuilder().build(first.scanned(), startup);
+        assertEquals(first.scanned(), rebuilt.scanned(), "Derived composition warnings must not accumulate on rebuilding");
+        assertEquals(first.effective().orderedEnabled(), rebuilt.effective().orderedEnabled());
+        assertEquals(first.eligibility(), rebuilt.eligibility());
+
+        ModCatalog disabledNeighbor = new EffectiveCatalogBuilder().build(rebuilt.scanned(),
+                state(entry("alpha", true, 0), entry("beta", false, 1), entry("dependent", true, 2)));
+        assertEquals(List.of("alpha", "dependent"), effectiveIds(disabledNeighbor));
+        assertTrue(resultDescriptor(disabledNeighbor, "alpha").findings().isEmpty());
+        assertTrue(resultDescriptor(disabledNeighbor, "beta").findings().isEmpty());
+    }
+
+    @Test
+    void exclusiveAudioAndArtOverlapsWarnWithoutBlockingEitherOwnerOrRequiredDependent() {
+        ModDescriptor first = compositionPatch("first", Map.of(12, "first-track"),
+                Map.of("signpost", "art/first.bin"), List.of(),
+                new ModCompositionMetadata(List.of(), List.of(), List.of(), Set.of("audio:12", "art:signpost")));
+        ModDescriptor second = compositionPatch("second", Map.of(12, "second-track"),
+                Map.of("signpost", "art/second.bin"), List.of(), ModCompositionMetadata.EMPTY);
+        ModDescriptor dependent = withDependencies("dependent", "s2", dependency("first", "*"));
+        ModState startup = enabledState("first", "second", "dependent");
+
+        ModCatalog result = new EffectiveCatalogBuilder().build(List.of(first, second, dependent), startup);
+
+        assertEquals(List.of("first", "second", "dependent"), effectiveIds(result));
+        for (String owner : List.of("first", "second")) {
+            List<ModFinding> warnings = resultDescriptor(result, owner).findings();
+            assertEquals(2, warnings.size());
+            assertTrue(warnings.stream().allMatch(finding -> finding.severity() == ModFindingSeverity.WARNING
+                    && finding.code().equals("MOD_EXCLUSIVE_OVERLAP")
+                    && finding.message().contains("first, second")));
+            assertTrue(warnings.stream().anyMatch(finding -> finding.message().contains("s2/audio:12")));
+            assertTrue(warnings.stream().anyMatch(finding -> finding.message().contains("s2/art:signpost")));
+        }
+        ModCatalog rebuilt = new EffectiveCatalogBuilder().build(result.scanned(), startup);
+        assertEquals(result.scanned(), rebuilt.scanned());
+        assertEquals(result.effective().orderedEnabled(), rebuilt.effective().orderedEnabled());
+    }
+
+    @Test
+    void unusedAndUnknownExclusiveDataClaimsStillBlockTheirRequiredDependents() {
+        ModDescriptor unused = compositionPatch("unused", Map.of(), Map.of(), List.of(),
+                new ModCompositionMetadata(List.of(), List.of(), List.of(), Set.of("audio:12")));
+        ModDescriptor unknown = compositionPatch("unknown", Map.of(), Map.of("EndSign", "art/sheet"),
+                List.of(), new ModCompositionMetadata(List.of(), List.of(), List.of(), Set.of("art:EndSign")));
+        ModDescriptor dependent = withDependencies("dependent", "s2", dependency("unused", "*"));
+
+        ModCatalog result = new EffectiveCatalogBuilder().build(List.of(unused, unknown, dependent),
+                enabledState("unused", "unknown", "dependent"));
+
+        assertTrue(effectiveIds(result).isEmpty());
+        assertReason(result, "unused", "MOD_COMPOSITION_REJECTED");
+        assertReason(result, "unknown", "MOD_COMPOSITION_REJECTED");
+        assertReason(result, "dependent", "DEPENDENCY_BLOCKED");
     }
 
     @Test
@@ -482,6 +563,15 @@ class TestEffectiveCatalogBuilder {
     private static ModDescriptor patch(String id, String baseGame, String version, String apiRange) {
         return descriptor(id, baseGame, version, apiRange, List.of(), false, null,
                 Map.of(), null, OptionalInt.empty(), List.of());
+    }
+
+    private static ModDescriptor compositionPatch(String id, Map<Integer, String> audio,
+                                                   Map<String, String> art, List<ModDependency> dependencies,
+                                                   ModCompositionMetadata composition) {
+        ModManifest manifest = new ModManifest(1, id, id, SemanticVersion.parse("1.0.0"),
+                List.of("Author"), "Description", VersionRange.parse("*"), ModType.PATCH,
+                "s2", null, dependencies, audio, art, null, OptionalInt.empty(), composition);
+        return new ModDescriptor(Path.of(id + ".jar"), manifest, "0".repeat(64), false, List.of());
     }
 
     private static ModDescriptor withDependencies(String id, String baseGame, ModDependency... dependencies) {

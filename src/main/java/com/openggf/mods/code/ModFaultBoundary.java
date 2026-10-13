@@ -22,16 +22,26 @@ public final class ModFaultBoundary implements com.openggf.level.objects.ObjectC
     private final ModRuntimeFindingStore findings;
     private final ModAudioPreparer.FailureStateSink stateSink;
     private final java.util.function.Consumer<Set<String>> processDisable;
+    private final java.util.function.BiConsumer<String, Throwable> compatibilityFaultObserver;
     private volatile Set<String> quarantinedOwners = Set.of();
 
     public ModFaultBoundary(Map<String, ? extends Set<String>> dependencies,
                             ModRuntimeFindingStore findings,
                             ModAudioPreparer.FailureStateSink stateSink,
                             java.util.function.Consumer<Set<String>> processDisable) {
+        this(dependencies, findings, stateSink, processDisable, (owner, failure) -> { });
+    }
+
+    public ModFaultBoundary(Map<String, ? extends Set<String>> dependencies,
+                            ModRuntimeFindingStore findings,
+                            ModAudioPreparer.FailureStateSink stateSink,
+                            java.util.function.Consumer<Set<String>> processDisable,
+                            java.util.function.BiConsumer<String, Throwable> compatibilityFaultObserver) {
         this.dependents = reverse(dependencies);
         this.findings = Objects.requireNonNull(findings, "findings");
         this.stateSink = Objects.requireNonNull(stateSink, "stateSink");
         this.processDisable = Objects.requireNonNull(processDisable, "processDisable");
+        this.compatibilityFaultObserver = Objects.requireNonNull(compatibilityFaultObserver, "compatibilityFaultObserver");
     }
 
     public void run(String owner, Runnable callback) {
@@ -53,6 +63,13 @@ public final class ModFaultBoundary implements com.openggf.level.objects.ObjectC
                     failure instanceof IoCallbackFailure ? failure.getCause() : failure);
             if (loadAbort != null) throw loadAbort;
             Set<String> disabled = ownerAndDependents(owner);
+            // Observe before quarantine retires published plans. Context identifies
+            // possible interactions, never grants a second owner causal blame.
+            try {
+                compatibilityFaultObserver.accept(owner, failure);
+            } catch (RuntimeException diagnosticFailure) {
+                LOG.log(Level.WARNING, "Unable to publish callback compatibility evidence", diagnosticFailure);
+            }
             synchronized (this) {
                 var quarantine = new LinkedHashSet<>(quarantinedOwners);
                 quarantine.addAll(disabled);

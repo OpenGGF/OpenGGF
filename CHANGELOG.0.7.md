@@ -18,6 +18,15 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   and raised-background sprite occlusion follow their ROM paths. Standalone
   background passes preserve their caller's blend state and priority metadata.
 
+- **Second Strike prototype:** a source-first difficulty patch follows the native
+  S3K Angel Island opening with cooperating spotters, committed guards/artillery,
+  curated original ring banks, a warned late Fire Breath follow-up, first-board
+  Blue Sphere turn gates and a three-spring Gumball variant. The normal campaign
+  retains terrain, physics, lives, checkpoints, save UI, stage rewards and act
+  progression. An opt-in decoded placement contract preserves the native level
+  class and transition owners; owner-bound stage policies validate isolated data.
+  The example launcher uses a separate native save/config profile.
+
 - **Mutator Lab catalogue:** one JVM boot-prepared package exposes eleven effects
   in Sonic 1, Sonic 2 and Sonic 3 & Knuckles, with native game labels, monitor-type
   availability, scrolling settings and explicit unavailable-feature reasons. Effects use
@@ -642,6 +651,11 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   first terrain contact after leaving the tree.
   The fire reload keeps its horizontal camera lock until the native reveal
   releases it, instead of easing back toward the loaded act's default bounds.
+  The AIZ2 boss retains its native owner through results and the Knuckles
+  cutscene, preserving button input release, the drawbridge's delayed eject,
+  and captured rider state through rewind. Playable construction and level reset
+  bind rules from the selected world before the first CPU dispatch, retaining
+  the bootstrap fallback for pre-session construction.
 
 - **Ring visibility:** restore full-X sorting of expanded ring placements so a
   nearer ring cannot be hidden behind a farther off-screen record, fixing late
@@ -1084,6 +1098,12 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   master title by rescanning jars and rebuilding the mod runtime and launch choices;
   restarting the engine is no longer required to change loaded mods.
   Its list identifies each mod's target game (S1, S2, S3K, all three, or standalone).
+  Compatibility notices distinguish published overlaps, suspected interactions
+  and verified preparation blockers, with targets, participant builds and affected
+  content. Declared conflicts and valid exclusive overlaps warn while retaining
+  ordinary override policy; hard contracts and failed-owner recovery remain enforced.
+  Healthy dependencies are identified as context rather than blocked content, and
+  retired audio no longer retains active overlap evidence.
   The master title's game pane shows enabled mod names below the launch profile,
   cycling through names when several apply to the selected game.
   The creator handbook now starts with a Java 25 setup path, seven purpose-specific
@@ -1331,7 +1351,11 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   No task registration, validation receipts,
   cumulative budgets or retry gates are needed. Per-invocation category timeouts exclude
   queue waiting. Category runs explicitly use the bounded smoke suite; even the
-  broad fallback excludes exhaustive oracles. Full ordinary validation is reserved
+  broad fallback excludes exhaustive oracles. Ordinary coverage queues in batches
+  that release shared admission between jobs while retaining worktree ownership;
+  guards queue separately. Supported headless graphics flags no longer force
+  exclusive admission, while unmeasured JVM overrides remain conservative.
+  Full ordinary validation is reserved
   for preparing new public releases through the explicit `full-suite` profile.
   A separate bounded-result comparator checks full failure identities/assertions
   and causal skip reasons against an explicit source/run baseline, rejecting
