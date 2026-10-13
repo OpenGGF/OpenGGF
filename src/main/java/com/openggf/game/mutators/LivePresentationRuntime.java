@@ -96,18 +96,25 @@ public final class LivePresentationRuntime implements WorldSessionPolicyState, R
     }
     @Override public void onPresentation(GameplayModeContext context, LogicalInputSnapshot input, GameplayObservation.Phase phase) {
         if(context!=null&&context.getWorldSession()!=world)return;
+        if(retired)return;
         hud.onPresentation(context,input,phase);
-        if(retired||phase!=GameplayObservation.Phase.ACTIVE) return;
-        this.input=Objects.requireNonNullElse(input,LogicalInputSnapshot.neutral());
-        activePresentations++;
         policies=List.copyOf(TransientMutatorPolicyAccess.entries(world));
         if(scenePolicies().stream().noneMatch(entry->entry.remainingPresentations()>0))releaseRenderResources();
-        advanceScenery(context);
+        var sceneryId=scenePolicies().stream().filter(entry->entry.remainingPresentations()>0
+                &&entry.policy() instanceof ScenePresentationPolicy p&&p.mode()==ScenePresentationPolicy.Mode.SCENERY)
+                .mapToLong(TransientMutatorPolicySource.Entry::activationId).reduce((first,last)->last).orElse(0);
+        if(sceneryActivation!=sceneryId) { scenery.reset();sceneryActivation=sceneryId; }
         var ids=new HashSet<Long>();
         for(var entry:spritePolicies()) if(entry.remainingPresentations()>0&&((SpritePresentationPolicy)entry.policy()).mode()==SpritePresentationPolicy.Mode.TRAIL) ids.add(entry.activationId());
         if(!ids.equals(trailActivations)) clearTrails();
         trailActivations=Set.copyOf(ids);
-        if(ids.isEmpty()) { clearTrails(); return; }
+        if(ids.isEmpty())clearTrails();
+        // Removal is serviced on held/paused boundaries, but surviving presentation history and clocks freeze.
+        if(phase!=GameplayObservation.Phase.ACTIVE)return;
+        this.input=Objects.requireNonNullElse(input,LogicalInputSnapshot.neutral());
+        activePresentations++;
+        advanceScenery(context);
+        if(ids.isEmpty())return;
         if(context!=null && context.getCamera()!=null && activePresentations%3==0) {
             remember(LevelSpritePresentation.published(context.getLevelManager()),context.getCamera().getXWithShake(),context.getCamera().getYWithShake());
         }

@@ -24,12 +24,18 @@ import static org.lwjgl.opengl.GL11.*;
 class TestPresentationSpritePixels {
     @Test void admittedRowsFlipsWholeBodyTransformsAndDistinctFrozenTrailVersionsRenderAt320And640() throws Exception {
         long window=0;boolean initialized=false;GraphicsManager graphics=null;
+        com.openggf.tools.PresentationOffscreenTestContext offscreen=null;
         try {
+            if(com.openggf.tools.PresentationOffscreenTestContext.requested()) {
+                offscreen=com.openggf.tools.PresentationOffscreenTestContext.open(640,224);
+            } else {
             glfwInitHint(GLFW_PLATFORM,GLFW_PLATFORM_NULL);initialized=glfwInit();assumeTrue(initialized,"GLFW null platform unavailable");
             glfwDefaultWindowHints();glfwWindowHint(GLFW_VISIBLE,GLFW_FALSE);glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR,4);glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR,1);
             glfwWindowHint(GLFW_OPENGL_PROFILE,GLFW_OPENGL_CORE_PROFILE);glfwWindowHint(GLFW_CONTEXT_CREATION_API,GLFW_EGL_CONTEXT_API);
             window=glfwCreateWindow(640,224,"owned sprite presentation pixels",0,0);assumeTrue(window!=0,"Offscreen OpenGL4.1 unavailable");
-            glfwMakeContextCurrent(window);GL.createCapabilities();glDisable(GL_DITHER);
+            glfwMakeContextCurrent(window);GL.createCapabilities();
+            }
+            glDisable(GL_DITHER);
             graphics=new GraphicsManager();graphics.init("shaders/shader_the_hedgehog.glsl");graphics.setBatchingEnabled(false);
             var palette=new Palette();palette.colors[1]=new Palette.Color((byte)255,(byte)0,(byte)0);
             palette.colors[2]=new Palette.Color((byte)0,(byte)255,(byte)0);palette.colors[3]=new Palette.Color((byte)0,(byte)0,(byte)255);
@@ -111,6 +117,7 @@ class TestPresentationSpritePixels {
             }
         } finally {
             if(graphics!=null)graphics.cleanup();
+            if(offscreen!=null)offscreen.close();
             if(window!=0){GL.setCapabilities(null);glfwDestroyWindow(window);}if(initialized)glfwTerminate();glfwInitHint(GLFW_PLATFORM,GLFW_ANY_PLATFORM);
         }
     }

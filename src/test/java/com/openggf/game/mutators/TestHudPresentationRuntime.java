@@ -2,11 +2,14 @@ package com.openggf.game.mutators;
 
 import com.openggf.camera.Camera;
 import com.openggf.control.LogicalInputSnapshot;
+import com.openggf.control.PlayerInputState;
 import com.openggf.game.*;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.session.*;
+import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.SpritePresentation;
+import com.openggf.graphics.pipeline.UiRenderPipeline;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.*;
 import com.openggf.level.render.SpriteMappingFrame;
@@ -39,12 +42,17 @@ class TestHudPresentationRuntime {
     Source source;
     LevelGamestate level;
 
-    @BeforeEach void setup() {
+    @BeforeEach void setup() throws ReflectiveOperationException {
         previous = EngineServices.current();
         graphics = new GraphicsManager(); graphics.setHeadlessMode(true);
         var engine = mock(EngineContext.class); when(engine.graphics()).thenReturn(graphics);
+        when(engine.configuration()).thenReturn(previous.configuration());
         EngineServices.configure(engine);
         camera = mock(Camera.class); when(camera.getHeight()).thenReturn((short)224);
+        var pipeline = new UiRenderPipeline(graphics);
+        var pipelineField = GraphicsManager.class.getDeclaredField("uiRenderPipeline");
+        pipelineField.setAccessible(true); pipelineField.set(graphics,pipeline);
+        graphics.bindRuntimeManagedReferences(camera,new FadeManager());
         game = mock(GameStateManager.class); when(game.getScore()).thenReturn(123); when(game.getLives()).thenReturn(3);
         hud = new HudRenderManager(graphics, camera, game);
         hud.setDigitPatternIndex(200); hud.setLivesNumbersPatternIndex(220);
@@ -169,6 +177,88 @@ class TestHudPresentationRuntime {
             runtime.restore(saved); for(int i=0;i<31;i++) tick();
             assertEquals(expected,runtime.capture()); assertEquals(pixels,project(nativeFrame));
             assertPaired(pixels);
+        }
+    }
+
+    @Test void pausedLeaseRemovalRestoresNativePoseAndHiddenHudImmediately() {
+        for(var mode:List.of(BOUNCE,HIDE)) {
+            activate(mode,7); var nativeFrame=prepare();
+            assertNotEquals(nativeFrame,project(nativeFrame));
+            source.entries=List.of();
+            runtime.onPresentation(context,LogicalInputSnapshot.neutral(),GameplayObservation.Phase.PAUSED);
+            assertFalse(runtime.active()); assertFalse(runtime.hidden());
+            assertTrue(runtime.capture().pairs().isEmpty()); assertNull(runtime.capture().plaque());
+            assertSame(nativeFrame,project(nativeFrame),"paused cancellation must restore the retained native packet");
+        }
+    }
+
+    @Test void heldLeaseCancellationRestoresNativePoseAndHiddenHudImmediately() {
+        for(var mode:List.of(SCALE,HIDE)) for(boolean expired:new boolean[]{false,true}) {
+            activate(mode,7); var nativeFrame=prepare();
+            assertNotEquals(nativeFrame,project(nativeFrame));
+            var lease=source.entries.getFirst();
+            source.entries=expired?List.of(new Entry(lease.owner(),lease.activationId(),lease.policy(),1000,0,false)):List.of();
+            var cancelledSource=source.capture();
+            runtime.onPresentation(context,LogicalInputSnapshot.neutral(),GameplayObservation.Phase.HELD);
+            assertFalse(runtime.active()); assertFalse(runtime.hidden());
+            assertTrue(runtime.capture().pairs().isEmpty()); assertNull(runtime.capture().plaque());
+            assertSame(nativeFrame,project(nativeFrame),"held cancellation must restore even a retained expired lease");
+            assertEquals(cancelledSource,source.capture(),"HUD cancellation must not alter the source lease");
+        }
+    }
+
+    @Test void replacedLeaseClearsCachedPoseDuringNonActivePhasesAndWaitsForActiveAdmission() {
+        for(var phase:List.of(GameplayObservation.Phase.PAUSED,GameplayObservation.Phase.HELD,
+                GameplayObservation.Phase.REWIND)) for(int changedField=0;changedField<3;changedField++) {
+            activate(HIDE,11); var nativeFrame=prepare(); var lease=source.entries.getFirst();
+            Entry replacement=switch(changedField) {
+                case 0 -> new Entry(lease.owner(),++source.ordinal,lease.policy(),0,1000,false);
+                case 1 -> new Entry("replacement-owner",lease.activationId(),lease.policy(),0,1000,false);
+                default -> new Entry(lease.owner(),lease.activationId(),new HudPresentationPolicy(BOUNCE,30,11),0,1000,false);
+            };
+            // A newer winner cancels the cached pose even when its previous lease still exists.
+            source.entries=changedField==0?List.of(lease,replacement):List.of(replacement);
+            runtime.onPresentation(context,LogicalInputSnapshot.neutral(),phase);
+            assertFalse(runtime.active()); assertFalse(runtime.hidden());
+            assertTrue(runtime.capture().pairs().isEmpty()); assertNull(runtime.capture().plaque());
+            assertSame(nativeFrame,project(nativeFrame));
+            var cancelled=runtime.capture();
+            runtime.onPresentation(context,LogicalInputSnapshot.neutral(),phase);
+            assertEquals(cancelled,runtime.capture(),"a replacement cannot initialize before an active presentation");
+            tick();
+            assertTrue(runtime.active());
+            assertEquals(replacement.owner(),runtime.capture().owner());
+            assertEquals(replacement.activationId(),runtime.capture().activation());
+            assertEquals(replacement.policy(),runtime.capture().policy());
+            assertEquals(1,runtime.capture().presentations());
+            assertNotEquals(nativeFrame,project(nativeFrame));
+        }
+    }
+
+    @Test void unchangedLeasePreservesExactStateWithoutSamplingLayoutOrPlayerOnNonActivePresentations() {
+        var sprites=mock(SpriteManager.class); var player=mock(AbstractPlayableSprite.class);
+        when(sprites.getMainPlayable()).thenReturn(player); when(context.getSpriteManager()).thenReturn(sprites);
+        var input=LogicalInputSnapshot.ofPlayers(PlayerInputState.of(AbstractPlayableSprite.INPUT_RIGHT,
+                AbstractPlayableSprite.INPUT_RIGHT,0,0,true,true),null);
+        for(var mode:HudPresentationPolicy.Mode.values()) {
+            graphics.setProjectionWidth(320); hud.setViewportWidth(320);
+            when(camera.getHeight()).thenReturn((short)224);
+            activate(mode,19); var nativeFrame=prepare();
+            for(int i=0;i<7;i++) tick();
+            var saved=runtime.capture(); var savedSource=source.capture(); var projected=project(nativeFrame);
+            graphics.setProjectionWidth(640); hud.setViewportWidth(640);
+            when(camera.getHeight()).thenReturn((short)160);
+            when(camera.getXWithShake()).thenReturn((short)900); when(camera.getYWithShake()).thenReturn((short)500);
+            when(player.getCentreX()).thenReturn((short)1100); when(player.getCentreY()).thenReturn((short)600);
+            clearInvocations(context,camera,sprites,player);
+            for(var phase:GameplayObservation.Phase.values()) if(phase!=GameplayObservation.Phase.ACTIVE) {
+                runtime.onPresentation(context,input,phase);
+                assertEquals(saved,runtime.capture(),"unchanged leases must freeze clock, RNG, geometry and velocity in "+phase);
+                assertEquals(projected,project(nativeFrame),"input and moved players cannot pose a frozen HUD");
+                assertEquals(savedSource,source.capture());
+            }
+            verify(context,never()).getCamera(); verify(context,never()).getSpriteManager();
+            verifyNoInteractions(camera,sprites,player);
         }
     }
 
@@ -341,8 +431,16 @@ class TestHudPresentationRuntime {
         });
         var otherWorld=new WorldSession(otherModule);
         var otherContext=mock(GameplayModeContext.class); when(otherContext.getWorldSession()).thenReturn(otherWorld);
-        runtime.onPresentation(otherContext,LogicalInputSnapshot.neutral(),GameplayObservation.Phase.ACTIVE);
-        assertEquals(saved,runtime.capture());
+        for(var phase:GameplayObservation.Phase.values()) {
+            runtime.onPresentation(otherContext,LogicalInputSnapshot.neutral(),phase);
+            assertEquals(saved,runtime.capture(),"another world's lease cannot cancel this HUD in "+phase);
+        }
+        source.entries=List.of();
+        for(var phase:List.of(GameplayObservation.Phase.PAUSED,GameplayObservation.Phase.HELD,
+                GameplayObservation.Phase.REWIND)) {
+            runtime.onPresentation(otherContext,LogicalInputSnapshot.neutral(),phase);
+            assertEquals(saved,runtime.capture(),"cancellation must be observed through the owning world");
+        }
         assertSame(nativeFrame,HudProfileAccess.projectPresentation(otherWorld,graphics,nativeFrame));
         assertThrows(IllegalArgumentException.class,()->otherRuntime[0].restore(saved));
         assertEquals("test",runtime.capture().owner(),"the lease owner comes from this world's source");

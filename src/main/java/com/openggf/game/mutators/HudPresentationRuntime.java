@@ -67,8 +67,7 @@ public final class HudPresentationRuntime implements WorldSessionPolicyState,
 
     @Override public void onPresentation(GameplayModeContext context, LogicalInputSnapshot input,
                                          GameplayObservation.Phase phase) {
-        if (retired || phase != GameplayObservation.Phase.ACTIVE || context == null
-                || context.getWorldSession() != world) return;
+        if (retired || context == null || context.getWorldSession() != world) return;
         TransientMutatorPolicySource.Entry selected = null;
         for (var entry : TransientMutatorPolicyAccess.entries(world)) {
             if (entry.remainingPresentations() > 0 && entry.policy() instanceof HudPresentationPolicy
@@ -76,12 +75,18 @@ public final class HudPresentationRuntime implements WorldSessionPolicyState,
         }
         if (selected == null) { clear(); return; }
         var nextPolicy = (HudPresentationPolicy) selected.policy();
+        boolean changed = policy == null || activation != selected.activationId()
+                || !owner.equals(selected.owner()) || !policy.equals(nextPolicy);
+        // Cancellation is current-world authority even while motion is frozen. A
+        // replacement waits for ACTIVE before sampling layout, RNG or player pose.
+        if (phase != GameplayObservation.Phase.ACTIVE) {
+            if (changed && policy != null) clear();
+            return;
+        }
         var graphics = EngineServices.current().graphics();
         width = Math.max(320, graphics.getProjectionWidth());
         height = context.getCamera() == null ? 224 : Math.max(1, context.getCamera().getHeight());
         var readouts = HudProfileAccess.presentationReadouts(graphics);
-        boolean changed = policy == null || activation != selected.activationId()
-                || !owner.equals(selected.owner()) || !policy.equals(nextPolicy);
         if (changed) {
             owner = selected.owner(); activation = selected.activationId(); policy = nextPolicy;
             presentations = 0; random = policy.seed() == 0 ? 0x6D2B79F5 : policy.seed();

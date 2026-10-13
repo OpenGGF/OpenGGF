@@ -383,7 +383,10 @@ public class GraphicsManager {
 	void releasePresentationTrailBank(Object owner) {
 		Integer base=presentationTrailBanks.remove(owner);if(base==null)return;
 		presentationTrailGenerations.remove(owner);
-		for(int id=base;id<base+1024;id++)uncachePattern(id);
+		for(int id=base;id<base+1024;id++) {
+			uncachePattern(id);
+			if(patternAtlas!=null)patternAtlas.releaseScenePatternSample(id);
+		}
 	}
 	long presentationTrailGeneration(Object owner) { return presentationTrailGenerations.getOrDefault(owner,0L); }
 	boolean presentationTrailBankValid(Object owner,int base,long generation) {

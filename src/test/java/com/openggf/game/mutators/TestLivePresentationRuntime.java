@@ -19,7 +19,9 @@ import static org.mockito.Mockito.*;
 class TestLivePresentationRuntime {
     private static final class Source implements WorldSessionPolicyState,TransientMutatorPolicySource,RewindSnapshottable<List<Entry>> {
         List<Entry> values=List.of();
-        public List<Entry> entries(){return values;}public boolean acknowledge(long id){return false;}public boolean report(long id,String s){return false;}
+        final Map<Long,String> reports=new HashMap<>();
+        public List<Entry> entries(){return values;}public boolean acknowledge(long id){return false;}
+        public boolean report(long id,String s){reports.put(id,s);return true;}
         public <T>T getService(Class<T> type){return type==TransientMutatorPolicySource.class?type.cast(this):null;}
         public RewindSnapshottable<?> rewindAdapter(){return this;}public String key(){return "source";}
         public List<Entry> capture(){return values;}public void restore(List<Entry> values){this.values=values;}
@@ -27,10 +29,17 @@ class TestLivePresentationRuntime {
     }
     record Fixture(WorldSession world,Source source,LivePresentationRuntime runtime){}
     private Fixture fixture() {
+        return fixture(null);
+    }
+    private Fixture fixture(com.openggf.level.render.ZonePictureSource pictureSource) {
         var source=new Source();var module=mock(GameModule.class);when(module.getIdentifier()).thenReturn("presentation-test");
+        var data=mock(GameDataSource.class);
+        when(data.rom()).thenReturn(Optional.of(mock(com.openggf.data.Rom.class)));
+        if(pictureSource!=null)when(module.getGameService(com.openggf.level.render.ZonePictureSource.Factory.class))
+                .thenReturn(rom->pictureSource);
         LivePresentationRuntime[] runtime=new LivePresentationRuntime[1];
         when(module.getGameService(WorldSessionPolicyProvider.class)).thenReturn(world->{runtime[0]=new LivePresentationRuntime(world);return CompositeWorldSessionPolicyState.of(source,runtime[0]);});
-        var world=new WorldSession(module);return new Fixture(world,source,runtime[0]);
+        var world=new WorldSession(module,module,data,null);return new Fixture(world,source,runtime[0]);
     }
     private void trail(Fixture f,long id) {
         f.source.values=List.of(new TransientMutatorPolicySource.Entry("test",id,new SpritePresentationPolicy(SpritePresentationPolicy.Mode.TRAIL,SpritePresentationPolicy.Target.LEADER,100,120),0,600,false));
@@ -99,5 +108,40 @@ class TestLivePresentationRuntime {
         assertThrows(IllegalStateException.class,f.runtime::retire);assertEquals(1,closed.get());
         assertTrue(f.runtime.spritePolicies().isEmpty());assertTrue(f.runtime.trails().isEmpty());
         assertFalse(hud.active());assertThrows(IllegalStateException.class,()->hud.restore(hudState));
+    }
+    @Test void pausedClearAndHeldCancellationRefreshPoliciesWithoutAdvancingClockOrRetainedPoses() {
+        for(var phase:List.of(GameplayObservation.Phase.PAUSED,GameplayObservation.Phase.HELD)) {
+            var f=fixture();trail(f,1);f.runtime.remember(frame(1,2,false),0,0);
+            Entry trail=f.source.values.getFirst();
+            f.source.values=List.of(trail,new Entry("test",2,new com.openggf.mods.mutators.ScenePresentationPolicy(
+                    com.openggf.mods.mutators.ScenePresentationPolicy.Mode.NEGATIVE,0,120),0,100,false));
+            f.runtime.onPresentation(null,LogicalInputSnapshot.neutral(),GameplayObservation.Phase.ACTIVE);
+            var saved=f.runtime.capture();var closed=new java.util.concurrent.atomic.AtomicInteger();
+            f.runtime.registerRenderResource(new Object(),closed::incrementAndGet);
+            f.runtime.onPresentation(null,LogicalInputSnapshot.neutral(),phase);
+            assertEquals(saved,f.runtime.capture(),"unchanged leases freeze every logical presentation value");
+            f.source.values=List.of(trail);f.runtime.onPresentation(null,LogicalInputSnapshot.neutral(),phase);
+            assertTrue(f.runtime.scenePolicies().isEmpty());assertEquals(1,closed.get());
+            assertEquals(saved.trails(),f.runtime.trails(),"unrelated cancellation must retain surviving trail poses");
+            assertEquals(saved.activePresentations(),f.runtime.activePresentations());
+            f.source.values=List.of();f.runtime.onPresentation(null,LogicalInputSnapshot.neutral(),phase);
+            assertTrue(f.runtime.spritePolicies().isEmpty());assertTrue(f.runtime.trails().isEmpty());
+            assertEquals(saved.activePresentations(),f.runtime.activePresentations());assertEquals(saved.input(),f.runtime.input());
+        }
+    }
+    @Test void unsupportedExternalSceneryReportsItsSourceWithoutPublishingAFallbackPicture() {
+        var pictureSource=mock(com.openggf.level.render.ZonePictureSource.class);
+        var f=fixture(pictureSource);
+        f.source.values=List.of(new Entry("test",13,new com.openggf.mods.mutators.ScenePresentationPolicy(
+                com.openggf.mods.mutators.ScenePresentationPolicy.Mode.SCENERY,13,120),0,120,false));
+        var context=mock(GameplayModeContext.class);when(context.getWorldSession()).thenReturn(f.world);
+        var camera=mock(com.openggf.camera.Camera.class);when(context.getCamera()).thenReturn(camera);
+        when(camera.getWidth()).thenReturn((short)320);when(camera.getHeight()).thenReturn((short)224);
+        f.runtime.onPresentation(context,LogicalInputSnapshot.neutral(),GameplayObservation.Phase.ACTIVE);
+        assertEquals("Scenery unavailable: Native ROM scenery 13 is not prepared",f.source.reports.get(13L));
+        assertNull(f.runtime.sceneryPicture());
+        verify(pictureSource).background(0x16,1);
+        f.source.values=List.of();f.runtime.onPresentation(context,LogicalInputSnapshot.neutral(),GameplayObservation.Phase.PAUSED);
+        assertNull(f.runtime.sceneryPicture());assertTrue(f.runtime.scenePolicies().isEmpty());
     }
 }

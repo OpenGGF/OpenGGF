@@ -37,5 +37,5 @@ public record SpritePictureTransform(double xx,double xy,double yx,double yy,dou
         return new float[]{x(left,top)+cameraX,y(left,top)+cameraY,x(right,top)+cameraX,y(right,top)+cameraY,
                 x(right,bottom)+cameraX,y(right,bottom)+cameraY,x(left,bottom)+cameraX,y(left,bottom)+cameraY};
     }
-    public boolean identity() { return equals(IDENTITY); }
+    public boolean identity() { return xx==1&&xy==0&&yx==0&&yy==1&&tx==0&&ty==0&&hue==0; }
 }

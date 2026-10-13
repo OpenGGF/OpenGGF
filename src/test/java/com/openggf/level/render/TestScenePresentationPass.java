@@ -257,6 +257,10 @@ class TestScenePresentationPass {
         assertEquals(GL_FRAMEBUFFER_COMPLETE, glCheckFramebufferStatus(GL_FRAMEBUFFER)); return fbo;
     }
     private static void withContext(Runnable test) {
+        if(com.openggf.tools.PresentationOffscreenTestContext.requested()) {
+            try(var context=com.openggf.tools.PresentationOffscreenTestContext.open(64,64)) { test.run(); }
+            return;
+        }
         boolean nativeDisplay = Boolean.getBoolean("openggf.test.gl.native");
         glfwInitHint(GLFW_PLATFORM, nativeDisplay ? GLFW_ANY_PLATFORM : GLFW_PLATFORM_NULL);
         boolean initialized = glfwInit();
