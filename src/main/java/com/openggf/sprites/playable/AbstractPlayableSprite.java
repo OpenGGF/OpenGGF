@@ -1,5 +1,6 @@
 package com.openggf.sprites.playable;
 
+import com.openggf.game.mutators.PlayerFluidContextAccess;
 import com.openggf.game.ModApi;
 
 import com.openggf.camera.Camera;
@@ -2562,10 +2563,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public short getJump() {
                 if (physicsModifiers != null) {
-                        return physicsModifiers.effectiveJump(jump, inWater);
+                        return physicsModifiers.effectiveJump(jump, PlayerFluidContextAccess.movementUnderwater(this));
                 }
                 // Fallback: Water reduced jump force (ROM s2.asm line 37019: 0x380 vs normal 0x680)
-                if (inWater) {
+                if (PlayerFluidContextAccess.movementUnderwater(this)) {
                         return 0x380;
                 }
                 return jump;
@@ -4290,10 +4291,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // (s2.asm:36014 — expiry code restores Super values, confirming this design)
                 boolean effectiveShoes = hasSpeedShoes() && !isSuperSonic();
                 if (physicsModifiers != null) {
-                        return physicsModifiers.effectiveAccel(runAccel, waterPhysicsActive, effectiveShoes);
+                        return physicsModifiers.effectiveAccel(runAccel, PlayerFluidContextAccess.speedConstantsUnderwater(this, waterPhysicsActive), effectiveShoes);
                 }
                 // Fallback: Water overrides shoes (ROM sets absolute values on water entry)
-                if (waterPhysicsActive) {
+                if (PlayerFluidContextAccess.speedConstantsUnderwater(this, waterPhysicsActive)) {
                         return (short) (runAccel / 2);
                 }
                 if (effectiveShoes) {
@@ -4305,10 +4306,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public short getRunDecel() {
                 boolean effectiveShoes = hasSpeedShoes() && !isSuperSonic();
                 if (physicsModifiers != null) {
-                        return physicsModifiers.effectiveDecel(runDecel, waterPhysicsActive, effectiveShoes);
+                        return physicsModifiers.effectiveDecel(runDecel, PlayerFluidContextAccess.speedConstantsUnderwater(this, waterPhysicsActive), effectiveShoes);
                 }
                 // Fallback: Water overrides shoes
-                if (waterPhysicsActive) {
+                if (PlayerFluidContextAccess.speedConstantsUnderwater(this, waterPhysicsActive)) {
                         return (short) (runDecel / 2);
                 }
                 return runDecel;
@@ -4329,10 +4330,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public short getFriction() {
                 boolean effectiveShoes = hasSpeedShoes() && !isSuperSonic();
                 if (physicsModifiers != null) {
-                        return physicsModifiers.effectiveFriction(friction, waterPhysicsActive, effectiveShoes);
+                        return physicsModifiers.effectiveFriction(friction, PlayerFluidContextAccess.speedConstantsUnderwater(this, waterPhysicsActive), effectiveShoes);
                 }
                 // Fallback: Water overrides shoes (ROM sets absolute values on water entry)
-                if (waterPhysicsActive) {
+                if (PlayerFluidContextAccess.speedConstantsUnderwater(this, waterPhysicsActive)) {
                         return (short) (friction / 2);
                 }
                 if (effectiveShoes) {
@@ -4344,10 +4345,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public short getMax() {
                 boolean effectiveShoes = hasSpeedShoes() && !isSuperSonic();
                 if (physicsModifiers != null) {
-                        return physicsModifiers.effectiveMax(max, waterPhysicsActive, effectiveShoes);
+                        return physicsModifiers.effectiveMax(max, PlayerFluidContextAccess.speedConstantsUnderwater(this, waterPhysicsActive), effectiveShoes);
                 }
                 // Fallback: Water overrides shoes (ROM sets absolute values on water entry)
-                if (waterPhysicsActive) {
+                if (PlayerFluidContextAccess.speedConstantsUnderwater(this, waterPhysicsActive)) {
                         return (short) (max / 2);
                 }
                 if (effectiveShoes) {
@@ -5217,7 +5218,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         // Bubble shield prevents drowning (s3.asm: Player_ResetAirTimer)
                         PlayerCapabilityRules capabilityRules = playerCapabilityRulesOrNull();
                         if (capabilityRules != null && capabilityRules.elementalShieldsEnabled()
-                                        && shield && shieldType == ShieldType.BUBBLE) {
+                                        && shield && shieldType == ShieldType.BUBBLE
+                                        || PlayerFluidContextAccess.breathProtected(this)) {
                                 controller.getDrowning().replenishAir();
                         } else if (fixedLevelObjectOwnsDrowningBubbleCadence()) {
                                 // S3K installs Breathing_bubbles/Breathing_bubbles_P2
@@ -5550,14 +5552,14 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         public short getEffectiveRunAccel() {
                 return PlayablePhysicsValueResolver.runAcceleration(
-                                runAccel, waterPhysicsActive, speedShoes);
+                                runAccel, PlayerFluidContextAccess.speedConstantsUnderwater(this, waterPhysicsActive), speedShoes);
         }
 
         /**
          * Returns effective run deceleration, accounting for modifiers.
          */
         public short getEffectiveRunDecel() {
-                return PlayablePhysicsValueResolver.runDeceleration(runDecel, waterPhysicsActive);
+                return PlayablePhysicsValueResolver.runDeceleration(runDecel, PlayerFluidContextAccess.speedConstantsUnderwater(this, waterPhysicsActive));
         }
 
         /**
@@ -5565,7 +5567,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         public short getEffectiveFriction() {
                 return PlayablePhysicsValueResolver.friction(
-                                friction, waterPhysicsActive, speedShoes);
+                                friction, PlayerFluidContextAccess.speedConstantsUnderwater(this, waterPhysicsActive), speedShoes);
         }
 
         /**
@@ -5573,7 +5575,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         public short getEffectiveMax() {
                 return PlayablePhysicsValueResolver.maximumSpeed(
-                                max, waterPhysicsActive, speedShoes);
+                                max, PlayerFluidContextAccess.speedConstantsUnderwater(this, waterPhysicsActive), speedShoes);
         }
 
         /**
@@ -5581,7 +5583,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * ROM s2.asm line 37019: Underwater = 0x380 (896), Normal = 0x680 (1664)
          */
         public short getEffectiveJump() {
-                return PlayablePhysicsValueResolver.jumpForce(jump, inWater);
+                return PlayablePhysicsValueResolver.jumpForce(jump, PlayerFluidContextAccess.movementUnderwater(this));
         }
 
         /**
@@ -5590,7 +5592,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * Underwater: 0x10 (16 subpixels)
          */
         public short getEffectiveGravity() {
-                return PlayablePhysicsValueResolver.gravity(inWater);
+                return PlayablePhysicsValueResolver.gravity(PlayerFluidContextAccess.movementUnderwater(this));
         }
 
         /**
@@ -5599,6 +5601,6 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * Underwater: -0x200
          */
         public short getEffectiveAirDragThreshold() {
-                return PlayablePhysicsValueResolver.airDragThreshold(inWater);
+                return PlayablePhysicsValueResolver.airDragThreshold(PlayerFluidContextAccess.movementUnderwater(this));
         }
 }

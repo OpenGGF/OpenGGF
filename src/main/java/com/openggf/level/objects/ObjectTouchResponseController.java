@@ -1,5 +1,6 @@
 package com.openggf.level.objects;
 
+import com.openggf.game.mutators.PlayerFluidContextAccess;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.CollisionModel;
@@ -1198,7 +1199,7 @@ final class ObjectTouchResponseController {
     private boolean isS3kAbilityAttack(PlayableEntity player, ObjectInstance target) {
         if (player instanceof Tails tails) {
             return player.getDoubleJumpFlag() != 0
-                    && !tails.isInWater()
+                    && !PlayerFluidContextAccess.movementUnderwater(tails)
                     && isTailsFlightAttackAngle(player, target);
         }
         return false;

@@ -1,5 +1,6 @@
 package com.openggf.sprites.managers;
 
+import com.openggf.game.mutators.PlayerFluidContextAccess;
 import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameOverFlowProvider;
@@ -58,6 +59,7 @@ import java.util.function.Consumer;
  */
 @com.openggf.game.ModApi
 public class PlayableSpriteMovement extends AbstractSpriteMovementManager<AbstractPlayableSprite> {
+	com.openggf.game.mutators.MotionMutatorRuntime motionMutators;
 
 	// ROM spindash speed table (s2.asm:37294) - indexed by spindash_counter >> 8
 	private static final short[] SPINDASH_SPEEDS = {
@@ -478,9 +480,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	@Override
 	public void handleMovement(boolean up, boolean down, boolean left, boolean right, boolean jump, boolean testKey,
 			boolean speedUp, boolean slowDown) {
+		if (motionMutators != null) motionMutators.beginFluidMovement(sprite);
 		try {
 			handleMovementDispatch(up, down, left, right, jump, testKey, speedUp, slowDown);
 		} finally {
+			if (motionMutators != null) motionMutators.endFluidMovement(sprite);
 			// Sonic/Tails main always copy the shared Primary_Angle and
 			// Secondary_Angle bytes at the player-routine tail, including object
 			// control and other branches that skipped movement/collision entirely.
@@ -681,6 +685,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		wasCrouching = sprite.getCrouching();
 		sprite.setCrouching(false);
 
+		if (motionMutators != null) {
+			motionMutators.beforeMovement(sprite);
+		}
 		storeInputState(up, down, left, right, jump);
 
 		// ROM-accurate: Track whether effective movement input is active for animation.
@@ -736,7 +743,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// then complete the hurt-stop recovery without entering normal
 			// ground control this frame.
 			doObjectMoveAndFall();
-			if (sprite.isInWater()) {
+			if (PlayerFluidContextAccess.movementUnderwater(sprite)) {
 				var modifiers = sprite.getPhysicsModifiers();
 				short reduction = modifiers != null
 						? modifiers.waterHurtGravityReduction()
@@ -1418,6 +1425,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 	/** Sonic_Jump: Handle jump initiation (s2.asm:36996) */
 	private boolean doJump() {
+		if (motionMutators != null && motionMutators.blocksFreshJump(sprite)) return false;
 		int hexAngle = sprite.getAngle() & 0xFF;
 
 		// Sonic_Jump mirrors the angle it hands to CalcRoomOverHead when
@@ -1448,8 +1456,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// for negative products. The previous approach of -cosHex(angle)*jump>>8 rounds
 		// differently: -(x>>8) != (-x)>>8 when x%256 != 0 (68000 ASR rounds toward -∞).
 		int adjustedAngle = (hexAngle - 0x40) & 0xFF;
-		int xJumpChange = (TrigLookupTable.cosHex(adjustedAngle) * sprite.getJump()) >> 8;
-		int yJumpChange = (TrigLookupTable.sinHex(adjustedAngle) * sprite.getJump()) >> 8;
+		int jumpImpulse = motionMutators == null ? sprite.getJump() : motionMutators.jumpImpulse(sprite, sprite.getJump());
+		int xJumpChange = (TrigLookupTable.cosHex(adjustedAngle) * jumpImpulse) >> 8;
+		int yJumpChange = (TrigLookupTable.sinHex(adjustedAngle) * jumpImpulse) >> 8;
 		sprite.setXSpeed((short) (sprite.getXSpeed() + xJumpChange));
 		sprite.setYSpeed((short) (sprite.getYSpeed() + yJumpChange));
 
@@ -1503,7 +1512,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// -0xFC0 cap, docs/s2disasm/s2.asm:37431-37436 / 40446-40451), so a
 		// slower-than-0xFC0 flipper launch only receives gravity.
 		if (sprite.isJumping()) {
-			short ySpeedCap = sprite.isInWater() ? (short) 0x200 : (short) 0x400;
+			short ySpeedCap = PlayerFluidContextAccess.movementUnderwater(sprite) ? (short) 0x200 : (short) 0x400;
 			if (sprite.getYSpeed() < -ySpeedCap && !inputJump) {
 				sprite.setYSpeed((short) -ySpeedCap);
 			}
@@ -1566,7 +1575,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	private boolean isAirAbilityWindowOpen() {
-		int threshold = sprite.isInWater() ? -0x200 : -0x400;
+		int threshold = PlayerFluidContextAccess.movementUnderwater(sprite) ? -0x200 : -0x400;
 		return sprite.getDoubleJumpFlag() == 0 && sprite.getYSpeed() >= threshold;
 	}
 
@@ -2860,8 +2869,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 
 		short runAccel = sprite.getRunAccel();
-		short runDecel = sprite.getRunDecel();
-		short friction = sprite.getFriction();
+		short runDecel = motionMutators == null ? sprite.getRunDecel() : motionMutators.traction(sprite, sprite.getRunDecel());
+		short friction = motionMutators == null ? sprite.getFriction() : motionMutators.traction(sprite, sprite.getFriction());
 		short max = sprite.getMax();
 		Camera camera = playerCameraBiasController();
 
@@ -3037,10 +3046,15 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// Friction
 		// ROM ref: s2.asm:36443-36446 — Super Sonic uses normal friction (0x0C) not his profile friction (0x30)
 		if (!inputRawLeft && !inputRawRight) {
-			short effectiveFriction = sprite.isSuperSonic() ? (short) 0x0C : friction;
+			short effectiveFriction = sprite.isSuperSonic()
+					? (motionMutators == null ? (short) 0x0C : motionMutators.traction(sprite, (short) 0x0C)) : friction;
 			gSpeed = applyFriction(gSpeed, effectiveFriction);
 		}
 
+		if (motionMutators != null) {
+			int cruise = motionMutators.cruiseDirection(sprite);
+			if (cruise != 0) gSpeed = (short) (cruise > 0 ? Math.min(cruise, gSpeed) : Math.max(cruise, gSpeed));
+		}
 		sprite.setGSpeed(gSpeed);
 		calculateXYFromGSpeed();
 		collisionSystem().resolveGroundWallCollision(FrameCollisionPlan.terrainOnly(), sprite);
@@ -3069,8 +3083,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// for left/right/down (sonic3k.asm:27523-27524,28461-28472). S1/S2 use the same
 		// held-left/right roll gate (docs/s1disasm/_incObj/01 Sonic.asm:
 		// 899-902; docs/s2disasm/s2.asm:36960-36963,39939-39942).
-		if (inputLeft || inputRight || inputRawLeft || inputRawRight) return;
-		if (!inputDown) return;
+		boolean requestedRoll = motionMutators != null && motionMutators.requestsRoll(sprite);
+		if (!requestedRoll && (inputLeft || inputRight || inputRawLeft || inputRawRight)) return;
+		if (!requestedRoll && !inputDown) return;
 		if (sprite.getAir() || sprite.getRolling()) return;
 
 		short preRollCentreX = sprite.getCentreX();
@@ -3520,7 +3535,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			return;
 		}
 		var policy = com.openggf.sprites.playable.PlayableSpriteInternalAccess.mutatorPolicy(sprite);
-		if (policy.dryAirGravityPercent() != 100 && sprite.getAir() && !sprite.isInWater()
+		if (policy.dryAirGravityPercent() != 100 && sprite.getAir() && !PlayerFluidContextAccess.movementUnderwater(sprite)
 				&& !sprite.isHurt() && !sprite.getDead() && !sprite.isObjectControlled()) {
 			// ObjectMoveAndFall (s2.asm:29945-29953) still integrates the OLD y_vel.
 			// Scale only this owned acceleration, never jump/slope/death/scripted values.
@@ -4381,7 +4396,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * Underwater: reduced velocity (0x400).
 	 */
 	private void applyBubbleShieldBounce(AbstractPlayableSprite sprite) {
-		int velocity = sprite.isInWater() ? 0x400 : 0x780;
+		int velocity = PlayerFluidContextAccess.movementUnderwater(sprite) ? 0x400 : 0x780;
 		int angle = sprite.getAngle() & 0xFF;
 		// Rotate 90° CCW to get surface normal direction (s3.asm:21873: subi.b #$40,d0)
 		int rotated = (angle - 0x40) & 0xFF;
@@ -4621,7 +4636,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// NOT the $28 used in Obj01_MdAir/MdJump. All three games (S1/S2/S3K) are identical.
 		// S3K Tails_FlyingSwimming owns its +$08 flight/swim gravity and skips
 		// this generic underwater subtraction (sonic3k.asm:27570, 27633).
-		if (!sprite.isInWater() || isTailsFlightPhysicsActive(sprite) && !tailsFlightActivatedThisFrame) {
+		if (!PlayerFluidContextAccess.movementUnderwater(sprite) || isTailsFlightPhysicsActive(sprite) && !tailsFlightActivatedThisFrame) {
 			return;
 		}
 		short reduction = 0x28;

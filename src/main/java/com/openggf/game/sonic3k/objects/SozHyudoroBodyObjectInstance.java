@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.mutators.PlayerFluidContextAccess;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.DamageCause;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -136,7 +137,7 @@ public final class SozHyudoroBodyObjectInstance extends AbstractObjectInstance
     private boolean attacking(AbstractPlayableSprite p){
         if(p.getInvincibleFrames()>0||p.isSuperSonic()||p.getAnimationId()==9||p.getAnimationId()==2)return true;
         if(p instanceof Knuckles)return p.getDoubleJumpFlag()==1||p.getDoubleJumpFlag()==3;
-        if(p instanceof Tails tails &&p.getDoubleJumpFlag()!=0&&!tails.isInWater()){
+        if(p instanceof Tails tails &&p.getDoubleJumpFlag()!=0&&!PlayerFluidContextAccess.movementUnderwater(tails)){
             int a=TrigLookupTable.calcAngle((short)(p.getCentreX()-getX()),(short)(p.getCentreY()-getY()));return ((a-0x20)&255)<0x40;
         }return false;
     }

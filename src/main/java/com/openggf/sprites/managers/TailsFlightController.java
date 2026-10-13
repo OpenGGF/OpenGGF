@@ -1,5 +1,6 @@
 package com.openggf.sprites.managers;
 
+import com.openggf.game.mutators.PlayerFluidContextAccess;
 import com.openggf.audio.GameSound;
 import com.openggf.camera.Camera;
 import com.openggf.game.CanonicalAnimation;
@@ -59,7 +60,7 @@ public final class TailsFlightController {
         int ySpeed = sprite.getYSpeed();
         if (state == 1) {
             if (jumpPressed && ySpeed >= -0x100 && flightTime != 0
-                    && !(sprite.isInWater() && carryingMainCharacter)) {
+                    && !(PlayerFluidContextAccess.movementUnderwater(sprite) && carryingMainCharacter)) {
                 state = 2;
             }
             ySpeed += 0x08;
@@ -101,7 +102,7 @@ public final class TailsFlightController {
 
     private void applyAnimation(boolean carryingMainCharacter) {
         CanonicalAnimation animation;
-        if (sprite.isInWater()) {
+        if (PlayerFluidContextAccess.movementUnderwater(sprite)) {
             if ((sprite.getDoubleJumpProperty() & 0xFF) == 0) {
                 animation = CanonicalAnimation.TAILS_SWIM_TIRED;
             } else if (carryingMainCharacter) {
@@ -133,7 +134,7 @@ public final class TailsFlightController {
     }
 
     private void applyAudio(int romVisibleLevelFrameCounter) {
-        if (sprite.isInWater() || ((romVisibleLevelFrameCounter + 8) & 0x0F) != 0
+        if (PlayerFluidContextAccess.movementUnderwater(sprite) || ((romVisibleLevelFrameCounter + 8) & 0x0F) != 0
                 || !isOnScreen()) {
             return;
         }

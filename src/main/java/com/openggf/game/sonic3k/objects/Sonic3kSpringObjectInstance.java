@@ -196,7 +196,7 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         // (sonic3k.asm:47720-47726), a net -8.
         player.setCentreYPreserveSubpixel((short) (player.getCentreY()
                 + com.openggf.physics.ReverseGravity.mirrorYDelta(isReverseGravityActive(player), 8)));
-        player.setYSpeed((short) getStrength());
+        player.setYSpeed((short) modifiedStrength(player, getStrength(), false));
         player.setAir(true);
         // ROM sub_22F98 clears jumping(a1) after the spring overwrites y_vel;
         // release input must not apply Sonic_JumpHeight's variable-height cap
@@ -245,6 +245,7 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         if (yVel == -SpringBounceHelper.STRENGTH_RED) {
             yVel = 0x0D00;
         }
+        yVel = modifiedStrength(player, yVel, true);
         player.setYSpeed((short) yVel);
 
         player.setAir(true);
@@ -280,7 +281,7 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
      */
     private void applyHorizontalSpring(AbstractPlayableSprite player) {
         boolean wasAirborne = player.getAir();
-        int strength = getStrength(); // starts negative
+        int strength = modifiedStrength(player, getStrength(), false); // starts negative
         boolean flipped = isFlippedHorizontal();
 
         // ROM updates x_pos (centre coordinate) with word-sized add/sub, so preserve x_sub.
@@ -328,7 +329,7 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
      * ROM: addq.w #6,y_pos(a1) / addq.w #6,x_pos(a1) / [subi.w #12 if not flipped]
      */
     private void applyDiagonalSpring(AbstractPlayableSprite player, boolean up) {
-        int strength = getStrength(); // negative base
+        int strength = modifiedStrength(player, getStrength(), false); // negative base; both axes retain the diagonal cap
         boolean flipped = isFlippedHorizontal();
 
         int newY = player.getCentreY() + (up ? 6 : -6);
@@ -435,7 +436,8 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         }
         initialized = true;
         // ROM: Reverse_gravity_flag swaps UP<->DOWN during init (sonic3k.asm:47622-47627)
-        if (services().gameState() != null && services().gameState().isReverseGravityActive()) {
+        // This cached native variant must not retain a temporary reversal after its expiry.
+        if (services().gameState() != null && com.openggf.game.GameStateInternalAccess.nativeReverseGravity(services().gameState())) {
             if (springType == TYPE_UP) {
                 springType = TYPE_DOWN;
             } else if (springType == TYPE_DOWN) {
@@ -684,6 +686,19 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
      */
     private int getStrength() {
         return SpringBounceHelper.strength(redSpring);
+    }
+
+    private int modifiedStrength(AbstractPlayableSprite player, int nativeStrength, boolean downward) {
+        var runtime = com.openggf.sprites.managers.SpriteManagerInternalAccess.motionMutators(player);
+        if (runtime == null) return nativeStrength;
+        var minima = com.openggf.game.session.WorldSessionPolicyAccess.getService(services().worldSession(),
+                com.openggf.game.mutators.SpringRouteMinimumSource.class);
+        int reviewedMinimum = minima == null ? -1 : minima.minimumLaunchMagnitude(spawn, downward);
+        // Upward/sideways springs can be mandatory route launches. An unreviewed site
+        // retains its native minimum. Downward launches have the native $D00 cap.
+        int minimum = reviewedMinimum < 0 ? (downward ? 0 : Math.abs(nativeStrength)) : reviewedMinimum;
+        int cap = downward ? 0x0D00 : 0x1000;
+        return runtime.springResponse(player, nativeStrength, minimum, cap);
     }
 
     private boolean isFlippedHorizontal() {

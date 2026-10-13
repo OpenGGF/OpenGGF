@@ -138,6 +138,15 @@ public class SpriteManager implements PlayableSstDispatcher {
 	private boolean playableFrameActive;
 
 	private com.openggf.sprites.playable.PlayableMutatorPolicySource mutatorPolicySource;
+	private com.openggf.game.mutators.MotionMutatorRuntime motionMutators;
+
+	void bindMotionMutators(com.openggf.game.mutators.MotionMutatorRuntime runtime) {
+		motionMutators = runtime;
+		for (Sprite sprite : sprites.values()) {
+			if (sprite instanceof AbstractPlayableSprite playable
+					&& playable.getMovementManager() instanceof PlayableSpriteMovement movement) movement.motionMutators = runtime;
+		}
+	}
 
 	void bindMutatorPolicies(com.openggf.sprites.playable.PlayableMutatorPolicySource source) {
 		mutatorPolicySource = source;
@@ -185,11 +194,13 @@ public class SpriteManager implements PlayableSstDispatcher {
 		bucketsDirty = true;
 		if (sprite instanceof AbstractPlayableSprite playable) {
 			com.openggf.sprites.playable.PlayableSpriteInternalAccess.bindMutatorPolicies(playable, mutatorPolicySource);
+			if (playable.getMovementManager() instanceof PlayableSpriteMovement movement) movement.motionMutators = motionMutators;
 		}
 		Sprite previous = sprites.put(sprite.getCode(), sprite);
 		boolean replaced = previous != null;
 		if (previous instanceof AbstractPlayableSprite previousPlayable) {
 			if (previous != sprite) com.openggf.sprites.playable.PlayableSpriteInternalAccess.bindMutatorPolicies(previousPlayable, null);
+			if (previous != sprite && previousPlayable.getMovementManager() instanceof PlayableSpriteMovement movement) movement.motionMutators = null;
 			sidekicks.remove(previousPlayable);
 			sidekickCharacterNames.remove(previousPlayable);
 			temporarySidekicks.remove(previousPlayable);
@@ -282,6 +293,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 		for (Sprite sprite : sprites.values()) {
 			if (sprite instanceof AbstractPlayableSprite playable) {
 				com.openggf.sprites.playable.PlayableSpriteInternalAccess.bindMutatorPolicies(playable, null);
+				if (playable.getMovementManager() instanceof PlayableSpriteMovement movement) movement.motionMutators = null;
 			}
 		}
 		sprites.clear();
@@ -298,6 +310,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 	public void resetState() {
 		clearAllSprites();
 		mutatorPolicySource = null;
+		motionMutators = null;
 		levelManager = null;
 		frameCounter = 0;
 		inputSuppressed = false;
@@ -495,6 +508,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 		boolean suppressInput = inputSuppressed
 				|| (playbackInputSuppressed && !handler.hasLogicalOverride());
 		PlayerInputState p1 = effectivePlayerOneForUpdate(handler);
+		if (motionMutators != null) p1 = motionMutators.admitInput(p1, suppressInput);
 		int p1Held = !suppressInput ? p1.heldMask() : 0;
 		int p1Pressed = !suppressInput ? p1.pressedMask() : 0;
 		int p1ActionPressedMask = !suppressInput ? p1.actionPressedMask() : 0;
@@ -1039,6 +1053,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 
 	public void updateWithoutInput() {
 		if (mutatorPolicySource != null) mutatorPolicySource.beforeForwardTick();
+		if (motionMutators != null) motionMutators.admitInput(PlayerInputState.neutral(), true);
 		frameCounter++;
 		processPlayableSlots(PlayableDispatchContext.ordinaryWithoutInput(
 				ProcessSpritesEpoch.ordinary(
@@ -1556,6 +1571,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 		bucketsDirty = true;
 		if (sprite instanceof AbstractPlayableSprite playable) {
 			com.openggf.sprites.playable.PlayableSpriteInternalAccess.bindMutatorPolicies(playable, null);
+			if (playable.getMovementManager() instanceof PlayableSpriteMovement movement) movement.motionMutators = null;
 			sidekicks.remove(playable);
 			sidekickCharacterNames.remove(playable);
 			temporarySidekicks.remove(playable);
