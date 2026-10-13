@@ -32,7 +32,9 @@ Unreleased. The earlier development themes remain in
   and their progress-dependent final scenes. Knuckles continues from the final
   Sky Sanctuary fight through his plane flight, island credits and terminal
   scene. Scene resources, palette and animation owners, terminal Start input
-  and rewind state remain inside the native level lifecycle. Doomsday retires
+  and rewind state remain inside the native level lifecycle. Island-lift sprites
+  and the Master Emerald, waterfall and torch palette cycles follow their native
+  object and screen-event timing. Doomsday retires
   registered followers at its native entry and rebuilds restored scroll output
   without advancing the screen event.
 

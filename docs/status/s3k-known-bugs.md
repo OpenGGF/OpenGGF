@@ -87,7 +87,7 @@ Entries should include:
 
 ## Table of Contents
 
-0. [Native Ending Presentation Gaps (OPEN)](#native-ending-presentation-gaps-open)
+0. [Native Ending Presentation Gaps (RESOLVED)](#native-ending-presentation-gaps-resolved)
 0. [AIZ1 Ledge — Ground Sensors and `checkFloorDist` Disagree About Solidity (OPEN — question, not yet a diagnosis)](#aiz1-ledge--ground-sensors-and-checkfloordist-disagree-about-solidity-open--question-not-yet-a-diagnosis)
 0. [Reverse Gravity — Native Route Qualification Remains Open](#reverse-gravity--native-route-qualification-remains-open)
 1. [Knuckles LBZ Big Arm — ROM Port (IMPLEMENTED; TRACE BOUNDARY OPEN)](#knuckles-lbz-big-arm--rom-port-implemented-trace-boundary-open)
@@ -139,38 +139,26 @@ Entries should include:
 
 ---
 
-## Native Ending Presentation Gaps (OPEN)
+<a id="native-ending-presentation-gaps-open"></a>
+## Native Ending Presentation Gaps (RESOLVED)
 
-**2026-10-13 source audit:** playable ending feature `c2103d5f7` (coordinator
-integration `d63bfe397`) connects native rescue/restoration, reunion, both
-credits and actual terminal/title flow. Its focused lifecycle/rewind/pixel
-results preserve their recorded scope. Three unimplemented presentation owners
-remain; they are not accepted deviations and do not invalidate those observed
-playable results. No new test or native pixel comparison was run for this audit.
+**2026-10-13:** the source-only audit after `c2103d5f7` identified missing
+IslandLift decoration/art, rescue/AIZ Master Emerald palette cycling and the
+explicit AIZ return-hold AnPal owner. The bounded follow-up from integrated
+`772092298` implements all three with ROM assets and native allocation, timer,
+caller-fallthrough, palette-stop and rewind ownership. The prior playable ending
+qualification remains bounded to its original source; the new 50 focused checks
+qualify these changed owners, including actual 320/800 pixels, wrapped-Y drawing,
+full registry replay and all nine D01 lifecycles. No unresolved focused failure
+or ROM skip remains.
 
-- **IslandLift sprite family/art.** `loc_5DB76` allocates two continuation
-  subtype $42 pieces and queues ArtKosM_IslandLiftGfx at tile $2FF.
-  `loc_5DD6A` conditionally adds18 pieces (6×$41,2×$43,4×$44,2 each$45/$46/$47),
-  all owned by `loc_5EDAC`. Current EndingRescueDirectorObjectInstance advances
-  those hold/departure timers/signals without this graph or art upload. Terrain
-  redraw and cloud objects do not replace its mappings/raw animations.
-- **Rescue/return Master Emerald color cycle.** `loc_5D9EE` and `loc_5E08A`
-  admit the `loc_5DF58` helper; positive progress and signed `_unkFAC1` select
-  off_7DD5A into cells 14–15 of native Normal_palette_line_3/line_2
-  (zero-based engine lines 2/1). Current rescue/AIZ actors have no allocated
-  helper or selection/cursor/stop lifecycle. The separately implemented
-  Knuckles flight S3kEndingMasterPaletteState is not this missing owner.
-- **AIZ return-hold water palette.** `loc_5AD56` explicitly invokes AnPal_AIZ1
-  until Events_fg_4 starts the fade. Current Sonic3kEndingEvents FG32 advances
-  drift/signals only; the ordinary zone0 palette cycle is not selected while
-  the resource handoff retains internal $D01.
-
-**Removal condition:** port the native ROM-backed object/art/animation and
-palette admission, dispatch and stop owners; capture their state and exact
-allocation identities; verify meaningful phase/rewind spots and moving/native
-window output. Existing Tornado/departure/terminal pixels do not cover these
-missing effects. See the [ending matrix](../architecture/validation/levels/s3k-ending.md#unimplemented-native-presentation-breadth--2026-10-13)
-and [dated source audit](../architecture/designs/2026-10-13-s3k-ending-lifecycle.md#read-only-presentation-audit--2026-10-13).
+The native full-table unchecked allocation/occupied-RAM overwrite remains an
+inherited unsupported missing-emulation edge. The repair retains the admitted
+prefix with no retries; ordinary/fragmented stock graphs are qualified. This is
+not an accepted intentional discrepancy or a claim of whole-scene native pixel
+parity. Combined integration remains coordinator-owned. The original audit and
+rejected pixel premises are retained in the [ending design](../architecture/designs/2026-10-13-s3k-ending-lifecycle.md#native-presentation-repair--2026-10-13)
+and [ending matrix](../architecture/validation/levels/s3k-ending.md#repaired-native-presentation-owners--2026-10-13).
 
 ## Blue Sphere FM Pickup Onset — Automated Parity Complete, Listening Gate Open
 

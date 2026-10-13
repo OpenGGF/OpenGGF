@@ -42,11 +42,10 @@ public final class Sonic3kEndingEvents extends Sonic3kZoneEvents {
                 camera().setX((short)0x1EB8);camera().setY((short)0x1E0);
                 camera().setXCopy((short)0x1EB8);camera().setYCopy((short)0x1E0);drawForeground(true);}}
             case 20 -> drawForeground(true);
-            case 24 -> {if(ram.backgroundRoutine>=16){ram.foregroundRoutine=28;ram.fadeTimer=0x15;}}
-            case 28 -> {fadeIn();if((ram.fadeTimer=(short)(ram.fadeTimer-1))<0)ram.foregroundRoutine=32;}
-            case 32 -> {ram.aizBackgroundScrollFixed+=0x1000;if(ram.foregroundSignal){ram.foregroundSignal=false;
-                ram.fadeTimer=0x15;ram.foregroundRoutine=36;}}
-            case 36 -> {S3kEndingPalette.toBlackAll(services);if((ram.fadeTimer=(short)(ram.fadeTimer-1))<0){clearSprites();beginReunion();}}
+            case 24 -> {if(ram.backgroundRoutine>=16){ram.foregroundRoutine=28;ram.fadeTimer=0x15;fadeAizIn();}}
+            case 28 -> fadeAizIn();
+            case 32 -> holdAiz();
+            case 36 -> fadeAizOut();
             case 40 -> {if(EndingSceneResourceHandoff.ready(services)){
                 EndingSceneResourceHandoff.installSsz(services);ram.foregroundRoutine=44;
                 camera().setX((short)0x200);camera().setY((short)0x200);
@@ -80,6 +79,18 @@ public final class Sonic3kEndingEvents extends Sonic3kZoneEvents {
             services.objectManager().createDynamicObject(()->new EndingRescueDirectorObjectInstance(EndingRescueDirectorObjectInstance.AIZ_RETURN));
             EndingSceneResourceHandoff.queueAiz(services);ram.foregroundRoutine=16;
         }else beginReunion();
+    }
+    private void fadeAizIn(){var ram=state().screen();fadeIn();
+        if((ram.fadeTimer=(short)(ram.fadeTimer-1))>=0)return;
+        ram.aizPalette.beginHold();ram.foregroundRoutine=32;holdAiz(); // loc_5AD30 -> 5AD56
+    }
+    private void holdAiz(){var ram=state().screen();
+        if(!ram.foregroundSignal){ram.aizBackgroundScrollFixed+=0x1000;ram.aizPalette.tick(objectServices());return;}
+        ram.foregroundSignal=false;ram.fadeTimer=0x15;ram.aizPalette.beginFade();ram.foregroundRoutine=36;
+        fadeAizOut(); // loc_5AD72 falls through Pal_ToBlack in this same ScreenEvents dispatch
+    }
+    private void fadeAizOut(){var ram=state().screen();S3kEndingPalette.toBlackAll(objectServices());
+        if((ram.fadeTimer=(short)(ram.fadeTimer-1))<0){clearSprites();beginReunion();}
     }
     private void clearSprites(){
         var services=objectServices();

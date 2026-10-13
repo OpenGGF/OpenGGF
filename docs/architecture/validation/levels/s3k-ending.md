@@ -2,7 +2,7 @@
 
 This matrix belongs to the [2026-10-13 playable-completion work](../../plans/2026-10-13-s3k-playable-completion.md), against integration base `5e2f51f07917d5eff8ac120007dac55327f93f32`. Native Sonic/Tails endings remain inside `$0D01`; Knuckles continues inside `$0A01` after SSZ2. Locked-on `S3Credits` is an RTS, so a generic `GameMode.ENDING` would discard the actual scene owners. Resources, rejected approaches and run history are in the [ending lifecycle design](../../designs/2026-10-13-s3k-ending-lifecycle.md).
 
-Focused playable ending qualification is complete on the ending worktree candidate. Three source-confirmed native presentation omissions remain open below; the passing lifecycle checks do not certify those effects. Combined integration smoke/guards and the separately owned continuous incoming DEZ/DDZ routes remain coordinator obligations. The evidence below distinguishes declared scene entry from an actual final-fight continuation.
+Focused playable ending qualification is complete on the ending worktree candidate. The three source-confirmed presentation omissions were subsequently repaired and qualified below; whole-scene native pixel parity remains unclaimed. Combined integration smoke/guards and the separately owned continuous incoming DEZ/DDZ routes remain coordinator obligations. The evidence below distinguishes declared scene entry from an actual final-fight continuation.
 
 ## Character routes
 
@@ -54,17 +54,54 @@ The donor30 pass predates the final type-independent unclaimed-origin restore co
 
 Native art/maps/palettes and moving output are verified at specific producer boundaries, not by whole-scene BizHawk pixel parity. Literal controller tests cover audio request absence; the retained films are silent and do not qualify rendered audio. No trace parity sweep or release-only full suite was run for this feature.
 
+## Repaired native presentation owners — 2026-10-13
+
+The follow-up starts from integrated `772092298`, merged into the ending branch
+as `79cb117ff` with no tree difference before the repair. Production Java is
+`70c0990389436562191a211c342493331496bfac6c5a9a4957216fabe1a4f35a` (3892 paths,
+path-NUL-bytes-NUL SHA256); final production/test Java is
+`46805c543ea2d319932b854f58dc3e7c3e38025e900a80a760ac9fdc5f5a95d4` (7653 paths).
+
+| Changed owner | Native contract and qualified check | Observed result |
+| --- | --- | --- |
+| IslandLift family and resident art | `loc_5DB76` allocates 2 subtype `$42` pieces and queues ROM `$160AAA` at tile `$2FF`; `loc_5DD6A` conditionally adds 18 in native table/allocation order. Map `$6068E` has 27 frames; the module has 62 patterns. All seven subtype dispatches retain their raw words/fractions, delays, priority and native even-VInt admission | `TestS3kEndingIslandLift`: 22 vectors, including five widths, fragmented lowest-free allocation, complete recreation/replay and per-piece 9-bit SAT/X 0→1 projection. The mapping and PatternSpriteRenderer corruption guards pass |
+| Independent Master Emerald palette helper | One white-ready admission per rescue/AIZ director; signed FAC1 selects engine line 2/line 1 cells 14–15, with positive-progress/rotation-disable/zero-mode gates and captured byte timer/cursor | `TestS3kEndingPaletteOwners`: 3 literal channel/timer/wrap/helper registry vectors; the existing Knuckles palette consumer also passes unchanged |
+| AIZ restoration hold AnPal | The event-owned fresh bank retains word F632/F634 and secondary F650/F652 state. FG 24→28→32 and 32→36 keep native same-dispatch fallthroughs; hold resets only the owning counters and leaves the secondary offset intact | Two actual Super Tails hold at 320/800 cases assert both channels, independent helper, inactive ordinary LEVEL_STARTED gate and full-world replay |
+| Actual producer pixels and lifecycle | New `TestS3kEndingPresentationCapture` in the level package selects actual 2+18 graph phases and a transparent prepared mask; the next ordinary VInt publishes its sampled SAT/CRAM. Separate wrapped-Y vectors use natural even-VInt preparation and publication | Eight GPU cases cover 320/800, Chaos/Super admission, ROM module pixels, graph replay and wrapped-Y visibility. The affected nine complete D01 lifecycles pass through both credit parts and actual Start/title |
+| Structural helper ownership | Default compact `StatefulValueCodec` captures the final mutable `S3kRawAnimation.State`; the independent palette helper supplies an explicit immutable object extra | Helper-state coverage 1, object coverage 1 and transient-reference 2 guards pass |
+
+There are 50 distinct focused checks across the completed runs, with no unresolved
+failures/errors/skips. Initial short 29 had two fixture failures (subtype `$42` X `$180`
+projected to native X `$200` and was correctly hidden). Initial scene 17 had four pixel
+oracle failures; its complete lifecycle 9 and AIZ hold 2 passed. Corrected 20 passed
+all 12 clock vectors and wrapped-Y 2, leaving only two wide moving-edge pixel
+premises. Final actual-scene 4 passed with producer-correct SAT/CRAM sampling and
+transparent prepared-mask selection; structural 4 also passed. The unchanged
+passing slices were preserved rather than repeated. Commands and negative
+attribution are in the [dated repair record](../../designs/2026-10-13-s3k-ending-lifecycle.md#native-presentation-repair--2026-10-13).
+
+Full-capacity `Create_Continue_Sprite` has no allocation-failure branch and can
+overwrite occupied native RAM. Typed safe rejection retains only the admitted
+prefix, without retries/healing. This inherited missing emulation is unsupported
+and unqualified here, not an accepted deviation. Ordinary and fragmented stock
+graphs are qualified. No cold campaign breadth or whole-scene BizHawk parity is
+added by this local presentation repair; combined validation remains the lead's
+obligation.
+
 ## Unimplemented native presentation breadth — 2026-10-13
 
-A bounded independent source review after feature `c2103d5f7` (coordinator integration `d63bfe397`) confirms three omissions. These are unfinished parity work, not accepted deviations or newly observed playable blockers. No tests were repeated for this documentation audit. Existing scene progression, registry replay, both credits and terminal/title qualification remains valid within its recorded scope.
+**Historical audit, superseded by the qualified repair above.** The following
+records the c210 source, not the current repaired implementation.
 
-| Missing native owner | Native behavior and affected scope | Current source evidence |
+A bounded independent source review after feature `c2103d5f7` (coordinator integration `d63bfe397`) confirmed three omissions. They were unfinished parity work, not accepted deviations or newly observed playable blockers. No tests were repeated for this documentation audit. Existing scene progression, registry replay, both credits and terminal/title qualification remains valid within its recorded scope.
+
+| Missing native owner at c210 | Native behavior and affected scope | Source evidence at the audit |
 | --- | --- | --- |
 | IslandLift ending decoration family | `loc_5DB76` allocates two continuation subtype `$42` pieces at `word_5DBB6` and queues `ArtKosM_IslandLiftGfx` at tile `$2FF`. `loc_5DD6A`, unless Player_mode3 or progress < 0, later allocates 18 pieces: 6×`$41`, 2×`$43`, 4×`$44`, 2×`$45`, 2×`$46`, 2×`$47`. `loc_5EDAC` owns their mappings, raw animation, priority and screen/world projection | Rescue hold/departure routines advance the native signals and timers but allocate no corresponding IslandLift graph or art upload. Existing terrain redraw/cloud owners do not replace this animated sprite family |
 | Rescue and AIZ-return Master Emerald palette helper | `loc_5D9EE` admits one `loc_5DF58` owner when the normal white color is ready. For progress>0, nonzero `_unkFAC1` selects `off_7DD5A` and cells 14–15 of native `Normal_palette_line_3` when positive, or `Normal_palette_line_2` when negative. `loc_5E08A` sets the negative mode for AIZ return; clear writers stop it. These native line symbols are zero-based engine lines 2/1 | `S3kEndingMasterPaletteState` is used only by `EndingKnucklesFlightObjectInstance` and writes fixed engine line2. The rescue/AIZ director has neither this allocated helper nor its `_unkFAC1` selection/cursor lifecycle. The existing Knuckles flight cycle is implemented and is not the reported omission |
 | AIZ water palette animation during restoration hold | `loc_5AD56` calls `AnPal_AIZ1` every ordinary screen-event pass until Events_fg_4 signals the fade. The preceding fade completion clears the relevant native palette-cycle gates/counters | Ending FG32 advances background scroll and checks the signal but never invokes an AIZ palette owner. Ordinary `Sonic3kPaletteCycler` selects AIZ only for zone0; resource handoff retains internal `$0D01` and does not rebind that cycle |
 
-Removal requires ROM-backed allocation/art/animation and palette state with the native admission, dispatch, stop and rewind ownership, plus independent producer/phase checks and moving/native-window evidence. The current rendered Tornado, mask, terminal and departure pixel cases do not assert these three missing effects. See the [current unfinished-work record](../../../status/s3k-known-bugs.md#native-ending-presentation-gaps-open) and [dated decision/evidence record](../../designs/2026-10-13-s3k-ending-lifecycle.md#read-only-presentation-audit--2026-10-13).
+The subsequent repair supplies ROM-backed allocation/art/animation and palette state with the native admission, dispatch, stop and rewind ownership, plus independent producer/phase checks and moving/native-window evidence. The older c210 Tornado, mask, terminal and departure pixel cases did not assert these effects; the new producer cases above do. See the [resolved work record](../../../status/s3k-known-bugs.md#native-ending-presentation-gaps-resolved) and [dated decision/evidence record](../../designs/2026-10-13-s3k-ending-lifecycle.md#read-only-presentation-audit--2026-10-13).
 
 ## Moving evidence
 
@@ -73,3 +110,12 @@ Durable sources are outside the repo at `~/Videos/OGGF/s3k-finish-endings-2026-1
 The original missing-plane movie is rejected: identity-only resident-art caching missed in-place DMA. The first Tails b2af film is also retained as negative evidence because physical camera0 versus renderCopy608 filled the center with mask grain. The corrected final Tails film uses source d1a298ec / immutable jar ed152e71, preserves the identical state CSV and visibly clears the native center through departure.
 
 A reproducible61-second silent highlights reel under `highlights/ending-reel-render-copy-d1a298ec789d` includes the corrected departure, AIZ restoration, reunion, credits, Knuckles flight/Mecha terminal and title. Its EDL retains exact native-input↔source-time mapping and honest scene-entry/final-fight labels; it does not present editorial cuts as a cold campaign. FFprobe, full xerror decode and representative temporal frames qualify the media artifact. Integration smoke/guards remain pending.
+
+Two 85-second presentation excerpts now supplement the historical films under
+`presentation-repair-70c099038943/`: Sonic Chaos 320 and Tails Super 800, each 6000
+neutral inputs, captured from 900/every 4, native 60-input speed encoded 15fps at
+nearest-neighbor 2x. They show the changed IslandLift departure and Super AIZ
+restoration/hold, not a cold campaign or terminal continuation. The external
+index preserves the older jar/source/video identities and adds the immutable
+repair jar ed7dc650 plus exact commands, CSV and media hashes. Both full xerror
+decodes and temporal still inspection pass.
