@@ -50,6 +50,8 @@ public class Sonic1Level extends AbstractLevel implements com.openggf.level.obje
     private boolean[] fgLoopFlags;
     private int fgMapWidth;
     private int fgMapHeight;
+    /** Logical foreground bounds before native background RAM padding. */
+    private int logicalFgMapHeight;
 
     /** Maps each ring ObjectSpawn to its expanded RingSpawn positions. Used by Sonic1ObjectRegistry. */
     private java.util.Map<ObjectSpawn, List<RingSpawn>> ringSpawnMapping = java.util.Map.of();
@@ -123,6 +125,13 @@ public class Sonic1Level extends AbstractLevel implements com.openggf.level.obje
     @Override
     public int getChunksPerBlockSide() {
         return 16;
+    }
+
+    @Override
+    public int getLayerHeightBlocks(int layer) {
+        // Layout consumers retain the former shared-map foreground bounds.
+        // Only the background exposes all eight native layout RAM rows.
+        return layer == 0 ? logicalFgMapHeight : map != null ? map.getHeight() : 0;
     }
 
     // ===== Loop flag accessors =====
@@ -468,6 +477,7 @@ public class Sonic1Level extends AbstractLevel implements com.openggf.level.obje
         // Preserve loop flags (bit 7) from FG layout before stripping
         this.fgMapWidth = fgWidth;
         this.fgMapHeight = fgHeight;
+        this.logicalFgMapHeight = Math.max(fgHeight, bgHeight);
         this.fgLoopFlags = new boolean[fgWidth * fgHeight];
         for (int y = 0; y < fgHeight; y++) {
             for (int x = 0; x < fgWidth; x++) {
@@ -477,7 +487,7 @@ public class Sonic1Level extends AbstractLevel implements com.openggf.level.obje
 
         // Build Map with 2 layers
         int mapWidth = Math.max(fgWidth, bgWidth);
-        int mapHeight = Math.max(NATIVE_LAYOUT_ROWS, Math.max(fgHeight, bgHeight));
+        int mapHeight = Math.max(NATIVE_LAYOUT_ROWS, logicalFgMapHeight);
         byte[] mapBuffer = new byte[2 * mapWidth * mapHeight];
 
         // Copy FG (layer 0) - strip loop flag (bit 7)

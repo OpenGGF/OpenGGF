@@ -25,11 +25,26 @@ class TestSonic1SyzBackgroundSampling {
     private static final int SYZ_LEVEL_INDEX = 0x80 + Sonic1Constants.ZONE_SYZ * 3;
 
     @Test
+    void foregroundGeometryRetainsItsLogicalHeightWhileBackgroundHasNativeRamRows() throws Exception {
+        Sonic1Level level = new Sonic1(TestEnvironment.currentRom()).buildDetachedLevel(0x80);
+        assertEquals(Sonic1Constants.ZONE_GHZ, level.getZoneIndex());
+        assertEquals(8, level.getMap().getHeight(), "the stored map has the native background capacity");
+        assertEquals(5, level.getLayerHeightBlocks(0), "GHZ1 retains its previous logical foreground bounds");
+        assertEquals(8, level.getLayerHeightBlocks(1));
+
+        LevelGeometry geometry = LevelGeometry.forLevel(level);
+        assertEquals(5 * 256, geometry.fgHeightPx(), "geometry consumers see the logical foreground extent");
+        assertEquals(8 * 256, geometry.bgHeightPx(), "background consumers can sample the cleared native rows");
+    }
+
+    @Test
     void shortBackgroundLayoutsKeepNativeEmptyRowsBelowTheSuppliedData() throws Exception {
         Sonic1 game = new Sonic1(TestEnvironment.currentRom());
         for (int act = 0; act < 3; act++) {
             Sonic1Level level = game.buildDetachedLevel(SYZ_LEVEL_INDEX + act);
             assertEquals(Sonic1Constants.ZONE_SYZ, level.getZoneIndex(), "the source must be the native SYZ zone");
+            assertEquals(5 + act, level.getLayerHeightBlocks(0));
+            assertEquals(8, level.getLayerHeightBlocks(1));
             assertTrue((level.getMap().getValue(1, 0, 0) & 0x7F) != 0);
             assertTrue((level.getMap().getValue(1, 0, 1) & 0x7F) != 0);
             for (int y = 2; y < level.getMap().getHeight(); y++) {

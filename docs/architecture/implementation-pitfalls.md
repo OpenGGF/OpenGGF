@@ -5,6 +5,13 @@ headless tests, or audio. S3K-specific routing is in [AGENTS_S3K.md](../../AGENT
 
 The things that cost the most time when missed.
 
+**Decoded storage capacity can differ from a layer's logical height.** S1's
+cleared eight-row background RAM must not enlarge foreground geometry merely
+because both layers share a `Map`. Keep the previous declared-layout maximum
+for the foreground accessor and expose native BG capacity independently. GHZ1's
+5/1 layout became 8 rows in storage; treating that as eight foreground rows
+changed Infinite Sonic's terrain candidates (GitHub issue sweep, 2026-10-13).
+
 **Native score words are tens of displayed points.** S1/S2 `AddPoints` and S3K
 `HUD_AddToScore` add native bonus words while the ROM HUD supplies a final zero.
 The engine score stores points. Keep native counters for tally timing, multiply

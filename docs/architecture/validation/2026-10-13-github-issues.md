@@ -144,6 +144,38 @@ The owner correction passed bounded source review and
 `python3 tools/testing/maven_queue.py -Dmse=off test-compile -B` (Java 25,
 73 seconds); no tests run in that build. Native/recorder verification is pending.
 
+The remaining matched baseline command cleaned `target/` and ran on pinned
+`5e2f51f07` in the same task worktree: five cases in 103 seconds, one CLI failure,
+no errors/skips. Infinite Sonic, the SOZ wide Knuckles route and both networking
+backends passed. This confirms the Infinite Sonic regression; SOZ requires a
+current isolated run, and the earlier network failure remains unreproduced on
+unchanged networking dependencies.
+
+The baseline CLI subprocess was observed directly with the report's classpath:
+both launches returned status 4 and empty stdout. With the graphics option in
+`JDK_JAVA_OPTIONS`, stderr begins `NOTE: Picked up JDK_JAVA_OPTIONS:` before
+`PRODUCER_UNAVAILABLE: fixed producer pair is not installed`; without that
+environment variable it starts with the expected producer diagnostic. This is
+an inherited launcher-prefix assumption, not an audio dispatcher regression.
+Subsequent focused checks retain the graphics backend through Maven's explicit
+`-Dopenggf.headless.gl=surfaceless-egl` property.
+
+The S1 correction preserves `max(declaredFG, declaredBG)` as logical foreground
+height while retaining eight cleared BG rows. All 19 supplied S1 routes have
+BG height no greater than FG height; GHZ1 is 5/1, so padding had incorrectly
+changed Infinite Sonic's foreground source height from 5 to 8. New assertions
+exercise real GHZ1 `LevelGeometry` (1,280 FG / 2,048 BG pixels) and all three SYZ
+foreground heights. No procedural-mod budget or assertion threshold was changed.
+The clean current focused run on `013d57d74` plus that S1 correction completed
+13 tests in 96 seconds: 12 passes, one SOZ failure, no errors or skips. Inventory,
+both CPU compositor recordings, native mask/Spiker pixels, three S1 geometry/
+background tests, Infinite Sonic, CLI and both racing backends passed. The mask
+oracle covered both incoming blend states. SOZ still failed at `cold route reaches
+its real boss`; its baseline case passed, so this is a delivery-blocking regression
+requiring frame-state attribution. The network failure was not reproduced in
+either focused comparison; its unchanged synthetic transport dependencies and
+packet-discarding test wait helper limit attribution of the original broad failure.
+
 The 63 ordinary skips comprise 32 Infinite Sonic cases whose selected acts lack
 the prerequisite platform/flyer, 24 opt-in probes/captures/soaks or missing local
 audio-reference captures, six graphics capability assumptions, and one existing
