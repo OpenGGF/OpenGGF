@@ -300,3 +300,19 @@ audio were retained; all owned replay processes exited normally.
 
 Final destination composition, integration and cleanup facts will follow;
 no additional unchanged smoke sweep is required for these bounded follow-ups.
+
+## Main integration verification
+
+The main checkout remains on `develop`; its fast-forward pull found destination
+`1ead8d9b44b303f3a7617a2ab3c2b0541c37a8ae` already current. Integration is
+`85c73afa9152e8352f879227006e78a4ad4a7888`, with no conflicts. Its index tree
+exactly equals qualified feature `7c5ea81b3b2174c54b93a079f3684a67f3dd95b3`.
+The latest composed checks and native replays therefore apply to the integrated
+executable/test inputs; they were not repeated as an unchanged smoke ceremony.
+
+Post-integration `python3 tools/testing/maven_queue.py -Dmse=off -DskipTests
+verify -B` completed with build success in 1:27, including current engine, SDK,
+Javadoc and binary artifact verification. Tests were deliberately skipped in
+that build. The CI-push policy audit passed across 13,044 tree entries. Known
+dirty disassembly states, archives, launch scripts and notes are preserved.
+Publication and accounted worktree cleanup are the remaining delivery steps.
