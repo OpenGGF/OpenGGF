@@ -458,3 +458,83 @@ Next investigate common measured FM/PSG synthesis work, or real rendering-driver
 work (particularly demanding S3K), with an exact PCM/framebuffer control before
 any acceptance benchmark. Do not treat sampled Java coverage as whole-process
 coverage or a helper speedup as an engine saving.
+### Experiment P2 — batch PSG ticks between generator events (rejected)
+
+Isolated `feature/ai-perf-psg-quiet`, parent `010e8aef3`. The six-scenario
+profiles show common PSG output/tick work: visible exclusive samples in
+`emitLevelChanges` are 51/1,931 S1 normal, 77/1,663 S2 normal, and 46/1,825
+S3K demanding, with additional counter/noise work. These are profiler-visible
+samples, not complete process shares; native driver sampling misses remain.
+The saving ceiling is modest and must be demonstrated in complete runtime
+measurements. Compiler work and rendering remain separate bottlenecks.
+
+Hypothesis: checking all four outputs on every internal tick spends CPU when
+none can change. Render in spans ending at the next generator expiry or render
+boundary; emit each level change at the same original tick and run the existing
+expiry logic. Quiet-span arithmetic must preserve every counter even when muted,
+all polarity/LFSR evolution, discrete period-zero behavior, integrated held-high
+periods, prior-period countdowns after a write, and pending changes at a render
+endpoint. Writes remain at their existing render boundaries. No persistent
+state, public API, sample rate, noise model, gain, resampling or rewind changes.
+
+Controls: public-API single-tick versus batched rendering at the chip tick rate,
+both variants, period 0/1/2/1023, randomized intermediate periods, all noise
+modes, chip-type changes, mute/panning and snapshot restore; existing hardware,
+slicing, physical-write/admission, snapshot and presentation-rewind checks.
+Require frozen full-route controller/trajectory/frame counts and identical
+decoded presented pixels/PCM, then at least five alternating fresh-process
+pairs for acceptance. Reject early if a correctness control fails or a
+preliminary screen establishes no worthwhile benefit; an early rejection is
+not a completed acceptance matrix. Original baseline remains fixed.
+
+The new single-tick/batch control passed on the untouched source (1 test,
+no failure/error/skip) before the edit. Candidate focused audio selection
+passed 92 checks; physical-write/admission selection passed 41, both without
+failures/errors/skips (the overlapping fade check was rerun with explicit
+absolute ROM paths). Commands: queued Maven `--lean -Dmse=off -Dtest=` with
+`TestPsgChipHardwareBehaviour,TestPsgChipSnapshot,TestPsgSfxAdmissionNoiseSilence,TestS3kFadeOutPsgSilence,TestPsgVolumeChangeSemantics,TestS3kOverriddenPsgEnvelopeTiming,TestAudioManagerRewindSuppression,TestAudioPresentationProducerRewind`,
+then `TestS3kFadeOutPsgSilence,TestChipWriteObserver,TestSmpsPhysicalDevice,TestSmpsPhysicalPort,TestSfxAdmissionMutationJournal,TestS3kProductionAdmissionObservation`
+and all three absolute canonical ROM properties, `test -B`. These are focused
+checks, not broad delivery validation. Full runtime pixel/PCM controls and
+performance acceptance remain pending; P2 is not accepted.
+
+Candidate `97bcc5a72e82be92ca565d7b3bc26c2ad5efcb4d`. All six normal-runtime
+presented captures matched the immutable baseline's decoded frame and PCM
+hashes, controller/trajectory digests and presentation counts. The demanding
+S3K control includes 15,550 presentations across both AIZ transitions and HCZ
+handoff. These capture runs were separate from acceptance measurements.
+
+Rejected preliminary CPU screen (ms/simulated frame):
+
+| Scenario / pair | Baseline | Candidate | Change |
+|---|---:|---:|---:|
+| s1-normal / 1 | 1.387592 | 1.460974 | +5.29% |
+| s1-normal / 2 | 1.407605 | 1.514343 | +7.58% |
+| s1-demanding / 1 | 1.363636 | 1.510695 | +10.78% |
+
+S1 normal repeated an increase above 5%, blocking acceptance. The candidate
+was slower than both fresh matched normal baselines; comparing only with the
+higher original median would have concealed that result. No acceptance or
+50% claim is made: the five-pair/all-game matrix was **not completed**. An
+in-progress second demanding baseline and an earlier unpaired S2 baseline
+were cancelled and are excluded. Original CPU scores remain unchanged.
+
+Commands: `python3 ${OPENGGF_PERF_TASK_DIR}/visual_p2_batch.py` reused
+unchanged baseline media controls and captured all six candidate routes;
+`python3 ${OPENGGF_PERF_TASK_DIR}/p2_paired_batch.py`, then
+`python3 ${OPENGGF_PERF_TASK_DIR}/p2_s1_screen.py` prioritised the second S1
+pairs after the initial negative screen. Per-child JVM flags, input plans,
+windows, rewind/audio/render settings and external sampling commands were
+identical to P1. Pair order changed for rejection screening; scenario weights
+and acceptance obligations did not. Only verified owned process groups were
+stopped, and unrelated desktop/audio processes were preserved.
+
+Revert the source batching. Keep the public-API randomized equivalence test
+as a useful independent chip contract check; it passes on untouched source.
+Accepted gains: zero; consecutive rejected performance experiments: **two**.
+The event-batching hypothesis passed functional controls but did not improve
+whole-process runtime. Do not credit its reduced helper iteration count.
+Next measured common rendering bottleneck is HScrollBuffer upload: inclusive
+visible samples 96/1,931 S1 normal, 151/1,663 S2 normal, 167/1,825 S3K demanding.
+S3K additionally has substantial atlas upload/driver work. As before, visible
+sample shares omit busy native driver threads and are not process percentages.
