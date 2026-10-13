@@ -7,14 +7,29 @@ import com.openggf.level.scroll.AbstractZoneScrollHandler;
 import com.openggf.level.scroll.ScrollOutputRebuilder;
 import com.openggf.level.objects.ObjectServices;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 
 /** Ending_BackgroundEvent: sub_5B092/loc_58D44 and sub_5B0A8. */
 public final class SwScrlEnding extends AbstractZoneScrollHandler implements ScrollOutputRebuilder {
-    private final int[] islandBands,cloudBands;
+    private final Rom rom;
+    private BandTables bands;
+    private record BandTables(int[] island, int[] clouds) {}
     private final SwScrlAiz aiz=SwScrlAiz.detachedPresentation();
     private int foregroundY,backgroundX;
-    public SwScrlEnding(Rom rom)throws IOException{
-        islandBands=readBands(rom,0x5B144,11);cloudBands=readBands(rom,0x5B15A,10);
+    public SwScrlEnding(Rom rom)throws IOException{ this.rom=rom; }
+    private BandTables bands() {
+        if (bands == null) {
+            try {
+                // Like SOZ/LRZ3, unrelated provider registration does not consume this zone's ROM.
+                // Publish the immutable pair only after both native terminators validate.
+                int[] island = readBands(rom, 0x5B144, 11);
+                int[] clouds = readBands(rom, 0x5B15A, 10);
+                bands = new BandTables(island, clouds);
+            } catch (IOException failure) {
+                throw new UncheckedIOException("Native ending deformation tables", failure);
+            }
+        }
+        return bands;
     }
     private static int[] readBands(Rom rom,int address,int count)throws IOException{
         byte[] bytes=rom.readBytes(address,count*2);int[] bands=new int[count];
@@ -30,6 +45,7 @@ public final class SwScrlEnding extends AbstractZoneScrollHandler implements Scr
     }
     private void fillScroll(int[] output,int cameraX,int cameraY,int frame,int act,boolean rebuild){
         if(!(GameServices.zoneRuntimeRegistry().current() instanceof EndingZoneRuntimeState ending))return;
+        var tables = bands(); // Fail before native RAM/output changes, including pure post-restore rebuild.
         var ram=ending.screen();foregroundY=ram.foregroundRoutine>=16&&ram.foregroundRoutine<=36?cameraY:
                 ram.foregroundRoutine>=56?cameraY:ram.foregroundY;
         if(ram.backgroundRoutine>=8&&ram.backgroundRoutine<=16){
@@ -46,7 +62,7 @@ public final class SwScrlEnding extends AbstractZoneScrollHandler implements Scr
             if(cloud)cloudParameters(ram);else islandParameters(ram);}
         vscrollFactorBG=(short)ram.backgroundCameraY;backgroundX=ram.hScrollWords[2];
         int foregroundX=ram.foregroundRoutine>=56?cameraX:ram.foregroundX;
-        compose(output,foregroundX,ram.backgroundCameraY,ram.hScrollWords,cloud?cloudBands:islandBands);
+        compose(output,foregroundX,ram.backgroundCameraY,ram.hScrollWords,cloud?tables.clouds():tables.island());
         resetScrollTracking();for(int i=0;i<224;i++)trackOffsetFromPacked(output[i]);
     }
     /** loc_58D44 consumes the old longword, clears its fraction, then writes backwards. */
