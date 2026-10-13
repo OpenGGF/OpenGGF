@@ -2,9 +2,9 @@
 
 ## Status and source
 
-Accuracy prerequisites and complete-runtime qualification are in progress.
+The required accuracy prerequisite and complete-runtime baseline are qualified.
 **The original numeric baseline is frozen from five fresh processes per scenario.
-Four valid performance experiments were rejected. P5 remains under measurement after excluding a contaminated pair; no performance improvement is accepted. Accuracy/tooling delivery validation, integration and cleanup remain pending.** The intended
+Five valid consecutive performance experiments were rejected. Optimization stopped at the requested checkpoint with 0% accepted gain in each game. Accuracy/tooling delivery validation, integration and cleanup remain pending.** The intended
 metric is total process CPU time per simulated frame, equally weighted between
 normal and demanding scenarios in each game. No saving is attributed to accuracy
 repairs, upstream changes, Java migration, or replacing an invalid helper harness.
@@ -251,7 +251,7 @@ restored to `db4583214f4430c81cf25b7260a716358be575ff2d7772a6067be01367c2af1e`.
 No production SSZ/formatter fix was made. C8/tools require their own combined
 validation at delivery; this earlier broad result does not certify them.
 
-## Exact command shapes and next work
+## Reproducible command shapes (baseline and qualification)
 
 All Java commands use a separately built, own-worktree classpath; never share
 or copy target trees. Concrete classpaths/plan files/backend configs are external.
@@ -285,7 +285,7 @@ JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
   --rom-directory "$OPENGGF_ROM_ROOT" --max-minutes 120 --run
 ```
 
-Next: collect repeated fresh-process original CPU/RSS/VRAM/tail/startup/load results
+Historical baseline plan: collect repeated fresh-process original CPU/RSS/VRAM/tail/startup/load results
 with builds/tests/profile runs absent. Profile that accepted runtime, rank measured
 bottlenecks, test one isolated hypothesis, and require at least five alternating
 paired baseline/candidate acceptance runs against original and previous accepted.
@@ -692,7 +692,7 @@ command. It verifies actual uniform writes after repeated caching, same-ID
 reassignment, replacement by a partial shader, and ownership cleanup. The
 rejected query-count expectation and query seam are not retained.
 
-### Pacing profiling audit and experiment P5 — PSG level comparison (unaccepted)
+### Pacing profiling audit and experiment P5 — PSG level comparison (rejected)
 
 Separate fresh S1 normal original and rejected-P4 diagnostics used an
 instrumented Engine copy to count deadline-spin episodes and current-thread
@@ -740,13 +740,13 @@ is fixed at `184c9d54ed4fc2c1fed3cb6313653a95f9156e3d`; accepted gains remain ze
 | P2 quiet PSG batching | Passing / six scenarios identical | S1 normal +5.29%, +7.58%; demanding +10.78% | Rejected |
 | P3 identical hscroll upload reuse | Passing / six scenarios identical | S1 weighted pairs +0.46%, +1.13%; direction unstable | Rejected |
 | P4 uniform locations once per program | Passing / six scenarios identical | S1 normal +6.33%, +16.43%; demanding +11.68% | Rejected |
-| P5 PSG amplitude locals / ordered comparisons | 123 tests, zero failures/errors/skips; six media controls identical | Mixed valid pairs; contaminated third pair excluded | Pending |
+| P5 PSG amplitude locals / ordered comparisons | 123 tests, zero failures/errors/skips; six media controls identical | Five S1 pairs: score −2.98%, uncertainty crosses zero | Rejected |
 
 Before/after CPU is total process time per verified executed frame, including
 compiler/driver/audio workers and GC. Negative screens are bounded rejections,
 not five-pair acceptance matrices; their individual tables above preserve
-coverage and variability. Astra is conducting a user-authorized read-only
-review of measured bottlenecks and interpretation; suggestions are hypotheses
+coverage and variability. Astra completed a user-authorized read-only
+review of measured bottlenecks and interpretation; suggestions remain hypotheses
 until tested. No concurrent builds/tests/profiling during acceptance timings.
 
 ### Astra review (read-only, 2026-10-13)
@@ -839,3 +839,112 @@ blocks scheduled tests without deleting locks or stopping foreign work. The
 original source/protocol/flags/routes/windows/settings/weights remain unchanged.
 Timing remains separate from builds/tests/profiling; detect bypassing build
 processes and fail the run rather than count contaminated observations.
+
+The exclusive-test-only retry detected two subsequent bypassing Maven builds
+and stopped its own batch. Neither incomplete attempt counts as a performance
+result. The second identified source was `.worktrees/ai-second-strike-routes`;
+foreign work was never stopped or edited. Build-only commands intentionally
+bypass shared test admission, so test exclusivity alone was insufficient.
+
+The next retry also holds the existing per-worktree build leases for 122
+registered linked worktrees (plus the admitted task-tree lease) before launching
+any measured JVM. Existing builds finish first; new wrapped builds/tests wait.
+All leases are OS-owned, inherited by the batch, and released through scoped
+cleanup; no lock file is deleted. A 0.5-second bypass-process guard remains.
+Source, flags, routes, frame windows, settings, controller plans, scenario weights
+and process/residency counters are unchanged. The external queue/guard overhead
+is common to both sources and is not charged as application CPU. Original
+baseline scores remain fixed; this isolation repair contributes no claimed gain.
+
+Updated-base build comparison (original `184c9d54e`, updated task `437eb321a`):
+7,498 existing files are byte-identical, none missing. The sole changed existing
+resource is `version.properties`, where only `app.commit` changes; version,
+base version and dirty=false agree. Added classes are the three lossless
+`RuntimeEngineVisualControl` diagnostic classes, unused by acceptance. No
+upstream runtime saving is attributed. The actual P5 build's generated metadata
+is commit `974b43d3e`, dirty=true from its pre-commit focused build; its PSG
+bytecode is pinned to the final experimental source `a9ab1e2b0` (only Javadoc
+changed after compilation), and all six production media controls matched.
+Metadata differences are explicit; no compilation is performed during timing.
+
+After repeated bypasses, the user authorized a 30-minute quiet interval. All
+four other active T3 threads and their owned helpers confirmed no build/test,
+direct javac, replay/capture, benchmark or profiler work would launch until
+2026-10-13 11:05 UTC or an earlier release. The original workload is retried
+with admission/build leases and the bypass guard still enabled. Record release
+and final audit before claiming this interval complete.
+
+### Final P5 decision — fifth valid rejection (2026-10-13)
+
+The contaminated and interrupted attempts above remain excluded. The complete
+retry finished at 11:04:59 UTC, exit 0, with no bypass interference recorded.
+All admission/build leases released, and release messages were delivered to
+the four other threads. A final-minute extension was coordinated as a precaution;
+completion preceded even the original 11:05 deadline.
+
+P5 source `a9ab1e2b023a90b1f17d5b8de49dcd32ac80c8d9` is **rejected for
+no verified score saving beyond noise**, not a demonstrated repeatable CPU
+regression. All 123 focused checks and six complete lossless pixel/PCM controls
+passed. Previous accepted implementation and original baseline have the same
+production performance code; the production PSG change is reverted.
+
+| Pair | Normal baseline | Normal candidate | Change | Demanding baseline | Demanding candidate | Change |
+|---|---:|---:|---:|---:|---:|---:|
+| 1 | 1.541027 | 1.494330 | -3.03% | 1.336898 | 1.303476 | -2.50% |
+| 2 | 1.541027 | 1.647765 | +6.93% | 1.377005 | 1.270053 | -7.77% |
+| 3 | 1.567712 | 1.587725 | +1.28% | 1.370321 | 1.323529 | -3.41% |
+| 4 | 1.440961 | 1.501001 | +4.17% | 1.397059 | 1.336898 | -4.31% |
+| 5 | 1.547698 | 1.440961 | -6.90% | 1.229947 | 1.390374 | +13.04% |
+
+CPU median / MAD / range in ms per verified simulated frame:
+
+- s1-normal, baseline: 1.541027 / 0.006671 / 1.440961–1.567712.
+- s1-normal, candidate: 1.501001 / 0.060040 / 1.440961–1.647765.
+- s1-demanding, baseline: 1.370321 / 0.026738 / 1.229947–1.397059.
+- s1-demanding, candidate: 1.323529 / 0.020053 / 1.270053–1.390374.
+
+The equally weighted frozen S1 score is baseline **1.455674**, candidate
+**1.412265 ms/frame**, nominal −2.98%. Original frozen S1 score remains
+**1.472399**; comparison to it is nominal −4.08%, never credited as accepted
+saving. Across actual paired rounds, score change median is −0.0073%, MAD
+0.9041 percentage points, range −2.784% to +1.933%. Exhaustive paired bootstrap
+(5⁵ = 3,125 resamples; same round indices for both scenarios and sources) of
+the frozen score gives candidate-minus-baseline 95% interval **−0.056778 to
++0.026845 ms/frame**. It spans zero; the nominal median saving is insufficient
+for acceptance. This is S1-only timing coverage; no S2/S3K timing or complete
+six-scenario acceptance certificate is claimed. Their media controls did pass.
+
+S1 normal median RSS/peak RSS/VRAM/peak VRAM/p95/p99 changes are
+−2.73/−2.32/−0.01/−0.01/−0.14/−0.29%; demanding
+−5.78/−1.53/−0.01/−0.01/−0.17/−0.29%. Individual RSS differences varied
+widely (including positive demanding pairs); these are reported as variability,
+not an accepted memory gain or a clean memory certificate. No allocation
+proxy or requested texture storage substitutes for resident measurements.
+Startup/extra live-load comparisons were not completed for this rejected candidate.
+
+Commands: `python3 ${OPENGGF_PERF_TASK_DIR}/visual_p5_batch.py`, initial
+`p5_s1_screen.py`, then corrected `exclusive_p5_screen.py` retry around
+`p5_s1_five_screen.py`. Input/controller/trajectory/frame/terminal checks remain
+mandatory for every completed report. The reusable isolation runner is promoted
+as `tools/performance/run_isolated.py`; its four focused guard/ownership checks passed, with the two residency checks: six tests, no failures or skips.
+
+**Five consecutive valid rejections; accepted gains 0% in S1, S2, S3K.
+The 50% target is not reached. No sixth optimization is started.**
+Original game scores remain 1.472399, 1.534621, 2.575576 ms/frame. The best
+next measured hypotheses remain atlas upload coalescing/driver-command work
+and coherent fast-YM synthesis from Astra's review, with attainable savings
+unmeasured. Complete updated-base correctness/tooling validation, integration,
+push and cleanup before claiming delivery.
+
+Isolation utility verification: `python3 -m unittest discover -s tools/performance
+-p 'test_*.py' -v` completed six tests with no failures/errors/skips. The new
+checks reject real compiler/test launchers without mistaking a benchmark classpath
+for Maven, refuse to signal a changed process group, and bound cleanup of the
+owned session. The reusable CLI holds existing OS leases and never kills a
+discovered foreign PID.
+
+Main advanced during document-only coordination to `5e2f51f07917d5eff8ac120007dac55327f93f32`
+(two Chaos Mode design/document commits over `13add5b0b`). Fetch/fast-forward
+confirmed; no upstream runtime source or build setting changed. The original
+numeric baseline remains fixed, and no upstream performance saving is attributed.
+This is the actual destination for the resumed combined selection.
