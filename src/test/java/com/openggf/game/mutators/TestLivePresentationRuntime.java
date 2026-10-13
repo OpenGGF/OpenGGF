@@ -61,6 +61,20 @@ class TestLivePresentationRuntime {
         assertEquals(5,SpritePresentationRenderer.pattern(saved.trails().getFirst().frame().patternVersions().get(42)).getPixel(0,0));
         for(var pose:f.runtime.trails()) { var tile=pose.frame().tiles().getFirst();assertEquals(2,tile.rowStart());assertEquals(7,tile.rowEnd());assertTrue(tile.hFlip());assertTrue(tile.priority()); }
     }
+    @Test void decodeAndPreviewKeepActiveCapturedPicturesAndRenderOwnership() {
+        var f=fixture();trail(f,1);f.runtime.remember(frame(1,2,false),0,0);
+        var graphics=new GraphicsManager();graphics.initHeadless();
+        int bank=f.runtime.trailBank(graphics);
+        var state=f.runtime.capture();
+        try {
+            for(var cause:List.of(LevelLoadCause.DECODE_ONLY,LevelLoadCause.PREVIEW)) {
+                f.runtime.beforeAssembly(cause);f.runtime.failedAssembly(cause);
+                assertEquals(state,f.runtime.capture());
+                assertEquals(bank,f.runtime.trailBank(graphics));
+                assertDoesNotThrow(()->f.runtime.restore(state));
+            }
+        } finally {f.runtime.retire();graphics.cleanup();}
+    }
     @Test void invisibleOrUnversionedPicturesCannotEnterHistoryAndPauseDoesNotTick() {
         var f=fixture();trail(f,1);f.runtime.remember(frame(1,2,true),0,0);assertTrue(f.runtime.trails().isEmpty());
         var unversioned=frame(1,2,false);f.runtime.remember(new Frame(unversioned.tiles()),0,0);assertTrue(f.runtime.trails().isEmpty());

@@ -203,6 +203,25 @@ class TestMotionMutatorConsumers {
         player.setAir(false); player.setSpindash(true); assertFalse(runtime.blocksFreshJump(player));
     }
 
+    @Test void freshJumpGateQualifiesOnlyFreeFlatGround() {
+        var player = player("sonic");
+        source.policy(new InputControlPolicy(InputControlPolicy.Mode.NO_FRESH_JUMP));
+        assertTrue(runtime.blocksFreshJump(player));
+        for (int angle : new int[] { 1, 0x20, 0x40, 0x80, 0xC0, 0xFF }) {
+            player.setAngle((byte) angle);
+            assertFalse(runtime.blocksFreshJump(player));
+        }
+        player.setAngle((byte) 0);
+        player.setGroundMode(com.openggf.game.GroundMode.CEILING);
+        assertFalse(runtime.blocksFreshJump(player));
+        player.setGroundMode(com.openggf.game.GroundMode.GROUND);
+        player.setAir(true);
+        assertFalse(runtime.blocksFreshJump(player));
+        player.setAir(false);
+        player.setObjectControlled(true);
+        assertFalse(runtime.blocksFreshJump(player));
+    }
+
     @Test void nativeSpindashCancellationAndLevelResetDoNotPublishReleaseOrLandingEvents() {
         var player = player("sonic");
         try (var events = org.mockito.Mockito.mockStatic(PlayableAudioEvents.class)) {

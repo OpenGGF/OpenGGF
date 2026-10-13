@@ -47,6 +47,18 @@ class TestAudioMutatorRuntime {
         assertTrue(fixture.reports.get(1L).contains("expired"));
     }
 
+    @Test void decodeAndPreviewKeepCurrentNativeIntentAndAcceptedMusicTail() {
+        fixture.music(1,3);tick();
+        var state=fixture.runtime.capture();
+        var requests=musicRequests();
+        for(var cause:List.of(LevelLoadCause.DECODE_ONLY,LevelLoadCause.PREVIEW)) {
+            fixture.runtime.beforeAssembly(cause);fixture.runtime.failedAssembly(cause);
+            assertEquals(state,fixture.runtime.capture());
+            assertEquals(requests,musicRequests());
+            assertDoesNotThrow(()->fixture.runtime.restore(state));
+        }
+    }
+
     @Test void nativePrioritySongsSupersedeAndExpiryNeverReplaysOldZone() {
         for (int priority : new int[]{0x18, 0x19, 0x29, 0x2C, 0x31}) {
             fixture.music(priority, 3);

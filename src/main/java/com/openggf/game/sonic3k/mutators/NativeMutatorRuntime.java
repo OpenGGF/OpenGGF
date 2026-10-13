@@ -108,7 +108,10 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
         admitted.clear(); owned.clear(); clocks.clear(); tasks.clear(); opportunities.clear(); fieldTargets.clear(); ownedChildren.clear(); pendingReplacements.clear(); projectileAges.clear(); budded.clear(); impacts.clear();
         entries = List.of(); chainDispatch = false; lastAir = false; companions.clear(); rides.clear(); encounteredCheckpoints.clear(); landmarkThumbnail=null; landmarkSheet=null; landmarkPalette=null; landmarkVisible=false;
     }
-    @Override public void beforeAssembly(LevelLoadCause cause) { releaseOwned(); reset(); services = null; assemblyEpoch++; }
+    @Override public void beforeAssembly(LevelLoadCause cause) {
+        if (cause == LevelLoadCause.DECODE_ONLY || cause == LevelLoadCause.PREVIEW) return;
+        releaseOwned(); reset(); services = null; assemblyEpoch++;
+    }
     @Override public void failedAssembly(LevelLoadCause cause) { beforeAssembly(cause); }
     @Override public void bindRoster(SpriteManager sprites) { this.sprites = sprites; }
     @Override public void closeScreens() { }
@@ -670,7 +673,7 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
         switch(policy.kind()) {
             case RAIN -> { if (tick%20==1) rain(entry.activationId(),player.getCentreX(),player.getCentreY()-72,2); }
             case LEAK -> {
-                if (tick%60==0 && player.getRingCount()>0) { player.setRingCount(player.getRingCount()-1); rain(entry.activationId(),player.getCentreX(),player.getCentreY(),1); }
+                if (tick%60==0 && player.getRingCount()>1) { player.setRingCount(player.getRingCount()-1); rain(entry.activationId(),player.getCentreX(),player.getCentreY(),1); }
             }
             case BALANCE -> {
                 if (!admitted.contains(entry.activationId())) {

@@ -76,6 +76,7 @@ public final class AudioMutatorRuntime implements WorldSessionPolicyState,
     }
     @Override public void beforeAssembly(LevelLoadCause cause) {
         requireEngineCaller();
+        if (cause == LevelLoadCause.DECODE_ONLY || cause == LevelLoadCause.PREVIEW) return;
         leaveOrdinaryGameplay(Phase.SETUP);
         nativeMusic = -1;
         nativeOverrides.clear();
@@ -90,7 +91,10 @@ public final class AudioMutatorRuntime implements WorldSessionPolicyState,
         this.sprites = sprites;
         clearTick();
     }
-    @Override public void failedAssembly(LevelLoadCause cause) { leaveOrdinaryGameplay(Phase.SETUP); }
+    @Override public void failedAssembly(LevelLoadCause cause) {
+        if (cause != LevelLoadCause.DECODE_ONLY && cause != LevelLoadCause.PREVIEW)
+            leaveOrdinaryGameplay(Phase.SETUP);
+    }
     @Override public void closeScreens() { }
     @Override public void retire() {
         requireEngineCaller();

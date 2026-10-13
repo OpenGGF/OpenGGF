@@ -100,6 +100,11 @@ public final class ChaosControllerChecks {
             if(effect.number()==20)check(policies.equals(List.of(new MutatorPolicy.Ringfall(100,0,true))),"Full spill changed to ordinary native scatter");
             if(effect.sidegame())check(policies.stream().anyMatch(GameplayHoldPolicy.class::isInstance),"Sidegame omitted bounded host hold");
             if(effect.number()==19 || effect.number()==90)check(policies.getFirst() instanceof InputControlPolicy,"Fresh-jump rules escaped input ownership");
+            if(effect.number()==100) {
+                check(effect.duration(4)==0,"Ring roulette must be an instantaneous inventory action");
+                check(values.equals(Map.of("kind","balance")),"Ring roulette advertises an unsupported amount option");
+                check(policies.equals(List.of(new RingEconomyPolicy(RingEconomyPolicy.Kind.BALANCE))),"Ring roulette lost its bounded native consumer");
+            }
         }
     }
     public static void presentationClockIgnoresNativeTickMultiplicityAndBoundaryRevokes() {

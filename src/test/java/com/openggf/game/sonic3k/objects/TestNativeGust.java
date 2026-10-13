@@ -8,6 +8,19 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestNativeGust {
+    @Test void nativeWordRelativePressureRemainsLocalAcrossCoordinateWrap() {
+        var gust = new NativeGustObjectInstance(new ObjectSpawn(0xFFC0, 0xFFF0, 0, 0, 1, false, 0));
+        gust.setServices(new TestObjectServices());
+        var player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        NativePositionOps.writeXPosPreserveSubpixel(player, 32);
+        NativePositionOps.writeYPosPreserveSubpixel(player, 16);
+        player.setSubpixelRaw(0x5A00, 0x6B00);
+        gust.update(0, player);
+        assertEquals(42, player.getCentreX());
+        assertEquals(16, player.getCentreY());
+        assertEquals(0x5A00, player.getXSubpixelRaw());
+        assertEquals(0x6B00, player.getYSubpixelRaw());
+    }
     @Test void burstRunsForExactlyTheNativeSeventyDispatchPressurePhase() {
         var gust = new NativeGustObjectInstance(new ObjectSpawn(100, 100, 0, 0, 1, false, 0));
         gust.setServices(new TestObjectServices());

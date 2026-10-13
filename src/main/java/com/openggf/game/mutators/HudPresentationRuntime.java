@@ -235,9 +235,11 @@ public final class HudPresentationRuntime implements WorldSessionPolicyState,
         plaque = state.plaque();
     }
     @Override public void resetForMissingSnapshot() { clear(); }
-    @Override public void beforeAssembly(LevelLoadCause cause) { clear(); }
+    @Override public void beforeAssembly(LevelLoadCause cause) {
+        if (cause != LevelLoadCause.DECODE_ONLY && cause != LevelLoadCause.PREVIEW) clear();
+    }
     @Override public void bindRoster(SpriteManager sprites) { }
-    @Override public void failedAssembly(LevelLoadCause cause) { clear(); }
+    @Override public void failedAssembly(LevelLoadCause cause) { beforeAssembly(cause); }
     public void leaveOrdinaryGameplay(GameplayObservation.Phase phase) {
         if (phase == GameplayObservation.Phase.SETUP || phase == GameplayObservation.Phase.STAGE
                 || phase == GameplayObservation.Phase.TRANSITION) clear();

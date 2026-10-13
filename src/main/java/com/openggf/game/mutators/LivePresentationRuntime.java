@@ -171,14 +171,20 @@ public final class LivePresentationRuntime implements WorldSessionPolicyState, R
         policies=List.of();clearTrails();trailActivations=Set.of();input=LogicalInputSnapshot.neutral();
         scenery.reset();sceneryActivation=0;hud.resetForMissingSnapshot();releaseRenderResources();
     }
-    @Override public void beforeAssembly(LevelLoadCause cause) { clear();hud.beforeAssembly(cause); }
+    @Override public void beforeAssembly(LevelLoadCause cause) {
+        if (cause == LevelLoadCause.DECODE_ONLY || cause == LevelLoadCause.PREVIEW) return;
+        clear();hud.beforeAssembly(cause);
+    }
     public void leaveOrdinaryGameplay(GameplayObservation.Phase phase) {
         if(phase==GameplayObservation.Phase.SETUP||phase==GameplayObservation.Phase.STAGE||phase==GameplayObservation.Phase.TRANSITION||phase==GameplayObservation.Phase.CLOSED) {
             clear();hud.leaveOrdinaryGameplay(phase);
         }
     }
     @Override public void bindRoster(SpriteManager sprites) { roster=sprites;hud.bindRoster(sprites); }
-    @Override public void failedAssembly(LevelLoadCause cause) { clear();hud.failedAssembly(cause); }
+    @Override public void failedAssembly(LevelLoadCause cause) {
+        if (cause == LevelLoadCause.DECODE_ONLY || cause == LevelLoadCause.PREVIEW) return;
+        clear();hud.failedAssembly(cause);
+    }
     @Override public void closeScreens() { clear();hud.closeScreens(); }
     @Override public void resetForMissingSnapshot() { clear();hud.resetForMissingSnapshot(); }
     @Override public void retire() {

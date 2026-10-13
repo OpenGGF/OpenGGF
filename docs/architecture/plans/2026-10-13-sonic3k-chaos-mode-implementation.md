@@ -120,17 +120,17 @@ remain inherited. Cross-game donors are deliberately unavailable. Native target
 whitelists, safe placement, ordinary control ownership and route minima qualify
 individual effects; the displayed pool does not override those gates.
 
-| Context | Evidence available at this checkpoint | Remaining qualification |
+| Context | Completed evidence and tested worker SHA | Remaining qualification |
 | --- | --- | --- |
-| Native Sonic input/motion, dry/signed gravity, springs and local fluid | 31 early focused input/consumer/fluid tests passed on `bbe132405`; final input publication, deadline and actual history replay cases compile | Final nine-class and ROM/native checks; complete affected character/team routes |
-| Native actors, projectiles, fields, challenges, transport and relocation | Real native consumers and bounded actor/descendant/field ownership implemented; first focused inactive Bloominator defect repaired | Final 14-class ROM-backed run; all-act placement/transport routes and load/respawn breadth |
-| Accepted terrain/solid landings and native spindash releases | Nine of ten exact producer/history cases passed; the sole failure was an added riding pass preceding an original first-contact assertion | Repaired assertion ordering and final consumer run; Knuckles state transitions outside accepted terrain/solid owners remain native |
-| Sprite/HUD/scene pictures and private trails | CPU/pixel fixtures and native metadata implemented; first run red and narrow fixes compile | Repaired CPU and surfaceless-EGL run with exact skips; composed native-frame captures |
+| Native Sonic input/motion, signed gravity, springs and local fluid | `b3962897c`: nine classes/372 tests and eleven native/ROM classes/114 tests, no failures/errors/skips; includes actual DELAY/WorldPolicyHistory replay and authoritative audio producers | Root flat-floor jump-gate correction and final union checks; complete affected character/team routes remain separate |
+| Native actors, projectiles, fields, challenges, transport and relocation | `d8626bd90`: 141 cases outside the runtime fixture pass without skips, including inactive Bloominator, ROM ghost/assets and native rewind | The 19 runtime cases await fixture-only `bfe1fa983` rerun; root last-ring/load-boundary fixes; all-act placement/transport breadth remains separate |
+| Sprite/HUD/scene pictures and private trails | `1b244ab4d`: 17 HUD, five geometry and six actual production surfaceless-EGL cases pass without skips, at native/wider viewports | Ten runtime/private-bank cases on numeric-owner repair `2538ca2cc`; root decode/preview preservation; composed captures |
 | Prepared wrong-zone scenery | Real supplied-ROM backgrounds AIZ1/HCZ1/LBZ1/DEZ1 at 320/400 pixels and five camera offsets passed without skips | Other donor indices remain unsupported and are not sampled; complete gameplay routes are separate |
-| Native audio arbitration and cues | 37 runtime/real-PCM/rewind-suppression/observer cases passed on `463cda8e7`, without skips | Eight access cases after correcting S3K stop-command assertion; actual outer-E4/source-history keyframe ordering |
-| Catalogue, scheduler and ROM sidegames | 11 early model cases; real-ROM art case; packaged registration and actual Pong reward cases passed, validator zero findings | Final receipts/scenery/duration checks and assembled controller/menu captures |
-| Native title/save flow and Chaos menu | Mod preserves native providers; capture drawing now includes data select and hosted overlays above fade | Actual authored-input title/configuration/save-selection captures and framebuffer regression |
-| Stock S3K loading/bootstrap/decoding/AIZ1 | Required identities are part of combined validation and use verified absolute ROM paths | Completed selected smoke/domain results, with skips inspected |
+| Native audio arbitration and cues | `463cda8e7` executable plus test-only `f1c729946`: 45 distinct runtime/access/real-PCM/rewind cases pass without skips | Actual outer-E4/source-history keyframe method and root decode/preview preservation |
+| Catalogue, scheduler and ROM sidegames | Early model and real-ROM art checks; packaged registration/Pong reward and final receipt/scenery/duration methods passed; validator zero findings | Updated roulette metadata/options guard and assembled controller/menu captures |
+| Host ownership and pack assembly | Foundation `6ce6cd2a4`: 56 final observer/lease/service/API cases pass without skips. Root `fd777df75`: three actual assembly cases plus nine API cases pass without skips | New assembled decode/preview regression and updated-develop union checks |
+| Native title/save flow and Chaos menu | Root `3fa5ca44e`: fourteen capture args/native title/data-select/hosted pixel cases pass without skips | Explicit presentation-pacing capture callback and authored menu/effect captures; canonical captures cannot qualify observer scheduling |
+| Stock S3K loading/bootstrap/decoding/AIZ1 | Required native identities passed with verified absolute ROM on `b3962897c` | Final union smoke/guards and exact skips |
 
 ## Delivery checks
 
@@ -256,9 +256,40 @@ zero. Removed producers remain graph anchors for their original bounded lease;
 expiry and owner retirement reach exact descendants. Explicit independent siblings
 retain their own lifetime. Source/tests compile; behavioral verification is pending.
 
-The final combined plan selects 3,191 smoke classes and separate guards against
+The updated combined plan selects 3,194 smoke classes and separate guards against
 `10db9f005`. The launch uses verified ROM-directory discovery, Lua 5.4 and production
 surfaceless EGL with desktop display variables unset. Historical large-category
 holds are about 64–91 minutes, so the invocation allows 120 minutes excluding
 queue wait, with a ten-minute no-output stopping rule. Exhaustive slow-suite and
-release-only full-suite tests remain excluded. The run is queued, not completed.
+release-only full-suite tests remain excluded. The earlier broad request was
+canceled while waiting and never executed. Updated develop `4a9bec1ea` merged
+cleanly at `ad98d0dcd`; its local runner retains the complete smoke selection in
+batches of at most fifty candidates and releases admission between them and before
+guards. Actual Java 25/Lua 5.4/PowerShell preflight passed again. The next combined
+run follows the bounded final-review fixes and corrected captures.
+
+
+The final bounded source audit traced all 105 entries to executable mode paths
+across 27 families; this is consumer coverage, not certification of every route.
+It found four concrete catalogue/consumer edges: retain the final existing ring
+under Leak without manufacturing inventory from zero; describe Roulette's actual
+bounded +/-10 change and remove its unused sampled amount; limit Grounded to free,
+non-airborne movement at angle zero in floor mode; preserve native position-word
+subtraction in Cluckoid pressure across coordinate wrap. `Find_OtherObject` uses
+`sub.w` before signed direction and absolute range gates, so clamping the source
+coordinate was rejected in favor of the ROM arithmetic. Focused regressions cover
+these boundaries; their results remain pending at this checkpoint.
+
+The assembly review also found that decode-only/preview admission preserves the
+host lease graph but native/presentation/audio children cleared it. Those consumers
+now preserve captured state and exact render/audio ownership on both successful and
+failed non-admitting loads. Full assembly continues to revoke the graph. Tests use
+an actual assembled source/pack, a nonempty private trail bank and a live ROM music
+tail rather than inferring safety from an empty registration list.
+
+Canonical `GameplayCaptureTool` rows call one native step and do not advance
+presentation observers. The first title/DVD/gust captures therefore froze the Chaos
+countdown and were rejected as effect/menu evidence. Explicit `--interactive-pacing`
+reuses the existing production physical-input/presentation owner, preserving the
+canonical default and admitting zero/multiple native ticks per presentation. Fresh
+owned captures use that flag. No desktop keyboard or ambient display is involved.

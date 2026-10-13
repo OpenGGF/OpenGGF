@@ -118,7 +118,8 @@ public final class MotionMutatorRuntime implements WorldSessionPolicyState,
     }
 
     public boolean blocksFreshJump(AbstractPlayableSprite sprite) {
-        if (!free(sprite)) return false;
+        if (!free(sprite) || sprite.getAir() || sprite.getAngle() != 0
+                || sprite.getGroundMode() != com.openggf.game.GroundMode.GROUND) return false;
         for (var entry : entries()) if (entry.policy() instanceof InputControlPolicy p)
             return p.mode() == InputControlPolicy.Mode.NO_FRESH_JUMP;
         return false;

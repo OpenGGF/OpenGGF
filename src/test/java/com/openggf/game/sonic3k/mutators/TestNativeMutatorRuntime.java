@@ -213,6 +213,21 @@ class TestNativeMutatorRuntime {
         rig.active(new RingEconomyPolicy(RingEconomyPolicy.Kind.BALANCE),true);
         verify(rig.player).setRingCount(110);
     }
+    @Test void ringLeakRetainsTheLastRingAndDoesNotRestoreSpentInventoryOnExpiry() throws Exception {
+        for (int initial : new int[] { 0, 1, 2 }) {
+            var rig = new Rig();
+            rig.player.setRingCount(initial);
+            rig.active(new RingEconomyPolicy(RingEconomyPolicy.Kind.LEAK), false);
+            for (int tick = 1; tick < 120; tick++)
+                rig.runtime.beforeNativeTick(rig.frame, LogicalInputSnapshot.neutral());
+            assertEquals(Math.min(initial, 1), rig.player.getRingCount());
+            assertEquals(initial == 2 ? 1 : 0, rig.objects.objectQuery()
+                    .activeObjectsOfType(com.openggf.level.rings.LostRingObjectInstance.class).size());
+            rig.entries.set(List.of());
+            rig.runtime.beforeNativeTick(rig.frame, LogicalInputSnapshot.neutral());
+            assertEquals(Math.min(initial, 1), rig.player.getRingCount());
+        }
+    }
     @Test void snapshotsCannotCrossWorldAssemblyOrRetirementAndPausesRetainOwnedTails() throws Exception {
         var first=new Rig();var second=new Rig();
         first.active(new EncounterPolicy(EncounterPolicy.Kind.GUST,EncounterPolicy.Side.AHEAD),true);

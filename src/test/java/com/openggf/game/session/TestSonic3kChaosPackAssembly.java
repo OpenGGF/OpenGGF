@@ -139,6 +139,39 @@ class TestSonic3kChaosPackAssembly {
         second.policies.retire();
     }
 
+    @Test void decodeAndPreviewPreserveTheCapturedPackAndAcceptedLeases() {
+        var context = open();
+        var world = context.getWorldSession();
+        var source = (TemporaryMutatorState) TransientMutatorPolicyAccess.source(world);
+        try (var port = source.open("second-chaos", Set.of(MutatorCapability.PLAYER_MOTION))) {
+            assertTrue(port.activate("jump", Map.of(), 600).accepted());
+        }
+        var nativeRuntime = WorldSessionPolicyAccess.getService(world, NativeMutatorRuntime.class);
+        var motion = WorldSessionPolicyAccess.getService(world, MotionMutatorRuntime.class);
+        var picture = WorldSessionPolicyAccess.getService(world, LivePresentationRuntime.class);
+        var audio = WorldSessionPolicyAccess.getService(world, AudioMutatorRuntime.class);
+        var nativeState = nativeRuntime.capture();
+        var motionState = motion.capture();
+        var pictureState = picture.capture();
+        var audioState = audio.capture();
+        var entries = source.entries();
+        Object wholeGraph = world.policies.rewindAdapter().capture();
+        for (var cause : List.of(com.openggf.game.LevelLoadCause.DECODE_ONLY,
+                com.openggf.game.LevelLoadCause.PREVIEW)) {
+            WorldSessionPolicyAccess.beforeAssembly(world, cause);
+            WorldSessionPolicyAccess.failedAssembly(world, cause);
+            assertEquals(nativeState, nativeRuntime.capture());
+            assertEquals(motionState, motion.capture());
+            assertEquals(pictureState, picture.capture());
+            assertEquals(audioState, audio.capture());
+            assertEquals(entries, source.entries());
+            assertDoesNotThrow(() -> restore(world.policies.rewindAdapter(), wholeGraph));
+        }
+        WorldSessionPolicyAccess.beforeAssembly(world, com.openggf.game.LevelLoadCause.FULL_LEVEL_ASSEMBLY);
+        assertTrue(source.entries().isEmpty());
+        assertThrows(IllegalArgumentException.class, () -> nativeRuntime.restore(nativeState));
+    }
+
     @SuppressWarnings({"rawtypes", "unchecked"})
     static void restore(RewindSnapshottable adapter, Object snapshot) { adapter.restore(snapshot); }
 }
