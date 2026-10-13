@@ -14,6 +14,7 @@ import com.openggf.game.session.WorldSessionPolicyState;
 import com.openggf.mods.mutators.AudioEffectPolicy;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.util.EngineCallerAccess;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -40,6 +41,8 @@ public final class AudioMutatorRuntime implements WorldSessionPolicyState,
     private long lastMusicTick = -600;
     private long lastCueTick = -600;
     private long warningUntil;
+    private boolean pendingNativeResume;
+    private long resumeActivation;
     private final Set<Long> handled = new HashSet<>();
     private final Map<String, PlayerGate> beforePlayers = new HashMap<>();
     private final Set<String> events = new HashSet<>();
@@ -47,7 +50,11 @@ public final class AudioMutatorRuntime implements WorldSessionPolicyState,
     private boolean retired;
 
     // WorldSession is still constructing its policy composite here. Resolve its source only in callbacks.
-    public AudioMutatorRuntime(WorldSession world) { this.world = Objects.requireNonNull(world); }
+    public AudioMutatorRuntime(WorldSession world) { requireEngineCaller(); this.world = Objects.requireNonNull(world); }
+    private static void requireEngineCaller() {
+        if (EngineCallerAccess.callerOutside(AudioMutatorRuntime.class).getClassLoader() != AudioMutatorRuntime.class.getClassLoader())
+            throw new SecurityException("Native audio policy state belongs to the engine");
+    }
     @Override public <T> T getService(Class<T> type) { return type == AudioMutatorRuntime.class ? type.cast(this) : null; }
     @Override public RewindSnapshottable<?> rewindAdapter() { return this; }
     @Override public String key() { return "audio-mutator-runtime"; }
@@ -61,11 +68,13 @@ public final class AudioMutatorRuntime implements WorldSessionPolicyState,
         binding = AudioMutatorAccess.bind(manager, this);
     }
     @Override public void bindGameplay(GameplayModeContext context) {
+        requireEngineCaller();
         if (context.getWorldSession() != world) throw new IllegalArgumentException("Audio context belongs to another world");
         bindAudio();
         bindRoster(context.getSpriteManager());
     }
     @Override public void beforeAssembly(LevelLoadCause cause) {
+        requireEngineCaller();
         leaveOrdinaryGameplay(Phase.SETUP);
         nativeMusic = -1;
         nativeOverrides.clear();
@@ -76,12 +85,14 @@ public final class AudioMutatorRuntime implements WorldSessionPolicyState,
         bindAudio();
     }
     @Override public void bindRoster(SpriteManager sprites) {
+        requireEngineCaller();
         this.sprites = sprites;
         clearTick();
     }
     @Override public void failedAssembly(LevelLoadCause cause) { leaveOrdinaryGameplay(Phase.SETUP); }
     @Override public void closeScreens() { }
     @Override public void retire() {
+        requireEngineCaller();
         if (retired) return;
         leaveOrdinaryGameplay(Phase.CLOSED);
         retired = true;
@@ -92,6 +103,7 @@ public final class AudioMutatorRuntime implements WorldSessionPolicyState,
     private boolean ownsAudio() { return !retired && binding != null && binding.active(); }
 
     @Override public void beforeNativeTick(LevelFrameContext context, LogicalInputSnapshot input) {
+        requireEngineCaller();
         clearTick();
         if (!ownsAudio() || context != null && context.gameModule() != world.getGameModule()) return;
         if (context != null) sprites = context.spriteManager();
@@ -102,11 +114,13 @@ public final class AudioMutatorRuntime implements WorldSessionPolicyState,
         }
     }
     @Override public void afterNativeTick(LevelFrameContext context, LogicalInputSnapshot input) {
+        requireEngineCaller();
         if (!tickArmed || !ownsAudio()) { clearTick(); return; }
         nativeTicks++;
         var source = TransientMutatorPolicyAccess.source(world);
         var entries = source == null ? List.<TransientMutatorPolicySource.Entry>of() : source.entries();
         reconcile(entries, source);
+        resumeWhenWarningsRelease();
         TransientMutatorPolicySource.Entry music = null;
         TransientMutatorPolicySource.Entry landing = null;
         for (var entry : entries) {
@@ -119,12 +133,15 @@ public final class AudioMutatorRuntime implements WorldSessionPolicyState,
         clearTick();
     }
     @Override public void onPresentation(GameplayModeContext context, LogicalInputSnapshot input, Phase phase) {
+        requireEngineCaller();
         if (phase != Phase.ACTIVE) { leaveOrdinaryGameplay(phase); return; }
         if (!ownsAudio()) return;
         var source = TransientMutatorPolicyAccess.source(world);
         reconcile(source == null ? List.of() : source.entries(), source);
+        resumeWhenWarningsRelease();
     }
     @Override public void leaveOrdinaryGameplay(Phase phase) {
+        requireEngineCaller();
         if (phase == Phase.PAUSED || phase == Phase.HELD || phase == Phase.REWIND || phase == Phase.ACTIVE) return;
         if (musicActivation != 0) {
             report(TransientMutatorPolicyAccess.source(world), musicActivation, "Cancelled on leaving ordinary gameplay");
@@ -138,10 +155,11 @@ public final class AudioMutatorRuntime implements WorldSessionPolicyState,
     private void clearTick() { tickArmed = false; beforePlayers.clear(); events.clear(); }
 
     /** Accepted native landing only; generic air-bit changes never call this. */
-    public void landed(AbstractPlayableSprite player) { event(player, false); }
+    void landed(AbstractPlayableSprite player) { event(player, false); }
     /** The native release branch, including a zero-inertia boundary-clamped release. */
-    public void spindashReleased(AbstractPlayableSprite player) { event(player, true); }
+    void spindashReleased(AbstractPlayableSprite player) { event(player, true); }
     private void event(AbstractPlayableSprite player, boolean spindash) {
+        requireEngineCaller();
         if (!tickArmed || !ownsAudio() || sprites == null || player == null
                 || sprites.getSprite(player.getCode()) != player) return;
         var before = beforePlayers.get(player.getCode());
@@ -183,14 +201,8 @@ public final class AudioMutatorRuntime implements WorldSessionPolicyState,
         var policy = (AudioEffectPolicy) entry.policy();
         try { binding.prepareMusic(policy.cueId()); }
         catch (IllegalArgumentException | IllegalStateException failure) { reject(entry, source, failure); return; }
-        if (binding.isOverride(nativeMusic) && musicActivation == 0) {
-            Integer current = binding.foregroundMusic();
-            if (current != null && current != nativeMusic && binding.permitsMusic(current)) {
-                nativeMusic = current;
-                nativeOverrides.clear();
-            }
-        }
-        if (!binding.permitsMusic(nativeMusic) || speedShoes || speedMultiplier > 1 || tempoOwned) {
+        if (warningProtected() || pendingNativeResume || !binding.permitsMusic(nativeMusic)
+                || !nativeOverrides.isEmpty() || speedShoes || speedMultiplier > 1 || tempoOwned) {
             report(source, entry.activationId(), "Native music/control has priority");
             return;
         }
@@ -234,14 +246,34 @@ public final class AudioMutatorRuntime implements WorldSessionPolicyState,
         if (source != null) source.report(id, text.length() > 120 ? text.substring(0, 120) : text);
     }
     private void releaseMusic(boolean resume) {
-        if (musicActivation == 0) return;
+        releaseMusic(resume, true);
+    }
+    private void releaseMusic(boolean resume, boolean protectWarnings) {
+        if (musicActivation == 0 && !pendingNativeResume) return;
+        long activation = musicActivation != 0 ? musicActivation : resumeActivation;
         musicActivation = 0;
         musicCue = -1;
         musicExpires = 0;
-        if (resume && ownsAudio() && binding.permitsMusic(nativeMusic)) binding.resumeNativeMusic(nativeMusic);
+        pendingNativeResume = false;
+        resumeActivation = 0;
+        if (!resume || !ownsAudio() || !binding.permitsMusic(nativeMusic)) return;
+        if (protectWarnings && warningProtected()) {
+            pendingNativeResume = true;
+            resumeActivation = activation;
+            return;
+        }
+        try { binding.resumeNativeMusic(nativeMusic); }
+        catch (IllegalArgumentException | IllegalStateException failure) {
+            report(TransientMutatorPolicyAccess.source(world), activation, "Rejected native resume: " + failure.getMessage());
+        }
+    }
+    private boolean warningProtected() { return nativeTicks < warningUntil || binding.warningActive(); }
+    private void resumeWhenWarningsRelease() {
+        if (pendingNativeResume && !warningProtected()) releaseMusic(true);
     }
 
     @Override public void onMusicIntent(AudioMutatorAccess.MusicIntent intent) {
+        requireEngineCaller();
         if (retired) return;
         var source = TransientMutatorPolicyAccess.source(world);
         if (musicActivation != 0) report(source, musicActivation, "Cancelled: native audio intent has priority");
@@ -249,9 +281,11 @@ public final class AudioMutatorRuntime implements WorldSessionPolicyState,
             case MUSIC -> {
                 boolean override = ownsAudio() && binding.isOverride(intent.value());
                 // A native 1-up must save native zone music, never the optional foreground.
-                releaseMusic(override);
-                if (override && nativeMusic >= 0) nativeOverrides.add(nativeMusic);
-                else nativeOverrides.clear();
+                // The original native override will replace SFX itself, so it may resume its save target immediately.
+                releaseMusic(override, false);
+                if (override) {
+                    if (nativeMusic >= 0 && nativeMusic != intent.value()) nativeOverrides.add(nativeMusic);
+                } else nativeOverrides.clear();
                 nativeMusic = intent.value();
                 tempoOwned = false;
             }
@@ -261,28 +295,37 @@ public final class AudioMutatorRuntime implements WorldSessionPolicyState,
                     if (!nativeOverrides.isEmpty()) nativeMusic = nativeOverrides.removeLast();
                 }
             }
+            case NATURAL_RESTORE -> {
+                // A notification from the authoritative driver, not a command or physical resubmission.
+                if (!nativeOverrides.isEmpty()) nativeMusic = nativeOverrides.removeLast();
+            }
             case SPEED_SHOES -> { releaseMusic(true); speedShoes = intent.value() != 0; }
             case SPEED_MULTIPLIER -> { releaseMusic(true); speedMultiplier = intent.value(); }
             case TEMPO -> { releaseMusic(true); tempoOwned = true; }
-            case COMMAND, STOP, FADE, FOREIGN -> {
+            case COMMAND, STOP, FADE, FOREIGN, SOURCE -> {
                 // Release before a driver command takes effect; the original command remains last and authoritative.
                 releaseMusic(intent.kind() == AudioMutatorAccess.Kind.COMMAND);
                 nativeMusic = -1;
                 nativeOverrides.clear();
+                pendingNativeResume = false;
+                resumeActivation = 0;
             }
         }
     }
     @Override public void onNativeSfx(int id) {
+        requireEngineCaller();
         if (ownsAudio() && binding.isWarning(id)) warningUntil = Math.max(warningUntil, nativeTicks + WARNING_QUIET_TICKS);
     }
-    @Override public void onDisplaced() { releaseMusic(false); clearTick(); }
+    @Override public void onDisplaced() { requireEngineCaller(); releaseMusic(false); clearTick(); }
 
     @Override public Snapshot capture() {
+        requireEngineCaller();
         return new Snapshot(generation, nativeTicks, nativeMusic, nativeOverrides, speedShoes, speedMultiplier, tempoOwned,
                 musicActivation, musicCue, musicExpires, lastMusicTick, lastCueTick, warningUntil, handled,
-                beforePlayers, events, tickArmed);
+                beforePlayers, events, tickArmed, pendingNativeResume, resumeActivation);
     }
     @Override public void restore(Snapshot snapshot) {
+        requireEngineCaller();
         if (retired) throw new IllegalStateException("Audio runtime belongs to a retired world");
         if (snapshot.generation() != generation) throw new IllegalArgumentException("Audio snapshot belongs to another world");
         nativeTicks = snapshot.nativeTicks(); nativeMusic = snapshot.nativeMusic();
@@ -292,13 +335,15 @@ public final class AudioMutatorRuntime implements WorldSessionPolicyState,
         lastMusicTick = snapshot.lastMusicTick(); lastCueTick = snapshot.lastCueTick(); warningUntil = snapshot.warningUntil();
         handled.clear(); handled.addAll(snapshot.handled()); beforePlayers.clear(); beforePlayers.putAll(snapshot.beforePlayers());
         events.clear(); events.addAll(snapshot.events()); tickArmed = snapshot.tickArmed();
+        pendingNativeResume = snapshot.pendingNativeResume(); resumeActivation = snapshot.resumeActivation();
         // AudioManager's timeline/adapter restores presentation. Never emit commands during this logical restore.
     }
     public record PlayerGate(boolean eligible, int controlGeneration, boolean spindash) { }
     public record Snapshot(long generation, long nativeTicks, int nativeMusic, List<Integer> nativeOverrides,
             boolean speedShoes, int speedMultiplier, boolean tempoOwned, long musicActivation, int musicCue, long musicExpires,
             long lastMusicTick, long lastCueTick, long warningUntil, Set<Long> handled,
-            Map<String, PlayerGate> beforePlayers, Set<String> events, boolean tickArmed) {
+            Map<String, PlayerGate> beforePlayers, Set<String> events, boolean tickArmed,
+            boolean pendingNativeResume, long resumeActivation) {
         public Snapshot {
             nativeOverrides = List.copyOf(nativeOverrides); handled = Set.copyOf(handled);
             beforePlayers = Map.copyOf(beforePlayers); events = Set.copyOf(events);

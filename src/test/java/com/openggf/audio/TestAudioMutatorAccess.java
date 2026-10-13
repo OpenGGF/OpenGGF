@@ -2,6 +2,7 @@ package com.openggf.audio;
 
 import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.rewind.AudioReplayReason;
+import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.game.sonic3k.audio.Sonic3kAudioProfile;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
@@ -95,5 +96,36 @@ class TestAudioMutatorAccess {
         assertFalse(((AudioCommand.PlayMusic) audio.commandTimeline().entryAt(0).command()).override());
         assertTrue(((AudioCommand.PlayMusic) audio.commandTimeline().entryAt(1).command()).override());
         assertInstanceOf(AudioCommand.FadeOutMusic.class, audio.commandTimeline().entryAt(2).command());
+    }
+
+    @Test void safeMusicPoolAndThumpPrepareFromTheRealNativeRom() {
+        try (var binding = AudioMutatorAccess.bind(audio, intent -> { })) {
+            for (int id = 1; id <= 23; id++) {
+                int cue = id;
+                assertDoesNotThrow(() -> binding.prepareMusic(cue));
+            }
+            assertDoesNotThrow(() -> binding.prepareLandingCue(0x49));
+            assertEquals(0, audio.commandTimeline().entryCount(), "preparation must not manufacture playback");
+        }
+    }
+
+    @Test void preparedNativeCuesProducePcmThroughTheAuthoritativeProducer() {
+        try (var binding = AudioMutatorAccess.bind(audio, intent -> { });
+             var capture = audio.beginLiveCaptureAudio(60)) {
+            binding.playTemporaryMusic(3);
+            binding.playLandingCue(0x49);
+            short[] samples = new short[capture.maxStereoFramesPerPacket() * 2];
+            boolean nonzero = false;
+            for (int frame = 0; frame < 12; frame++) {
+                audio.presentFrame(PresentationMode.FORWARD);
+                int frames = capture.drainPresentationFrame(samples);
+                assertTrue(frames > 0);
+                for (int i = 0; i < frames * 2; i++) nonzero |= samples[i] != 0;
+            }
+            assertTrue(nonzero, "real ROM music/SFX must reach final producer PCM");
+            var state = audio.captureLogicalSnapshot().presentation();
+            assertEquals(3, state.activeMusic().musicId());
+            assertNotNull(state.smpsLogical());
+        }
     }
 }

@@ -3,6 +3,7 @@ package com.openggf.game.mutators;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.rewind.AudioReplayReason;
+import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.control.LogicalInputSnapshot;
 import com.openggf.game.GameplayObservation.Phase;
 import com.openggf.game.LevelLoadCause;
@@ -65,10 +66,30 @@ class TestAudioMutatorRuntime {
         fixture.music(1, 3); tick();
         audio.playMusic(0x2A);
         assertEquals(List.of(1, 3, 1, 0x2A), musicRequests());
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertEquals(List.of(1), audio.captureLogicalSnapshot().presentation().overrideStack().stream()
+                .map(slot -> slot.musicId()).toList());
         audio.endMusicOverride(0x2A);
         fixture.source.clear(); tick();
         assertEquals(0, fixture.runtime.capture().musicActivation());
         assertEquals(1, fixture.runtime.capture().nativeMusic());
+    }
+
+    @Test void pendingAndNaturalOneUpPriorityIsObservedWithoutRawForegroundInference() {
+        fixture.clang();
+        audio.playMusic(0x2A);
+        audio.playMusic(0x2A); // Shipped retrigger policy ignores a second request.
+        fixture.source.add(entry(2, AudioEffectPolicy.Mode.MUSIC, 3));
+        tick();
+        assertEquals(List.of(1, 0x2A, 0x2A), musicRequests(), "a pending native jingle already owns priority");
+        assertEquals(List.of(1), fixture.runtime.capture().nativeOverrides());
+        for (int i = 0; i < 300 && !fixture.runtime.capture().nativeOverrides().isEmpty(); i++)
+            audio.presentFrame(PresentationMode.FORWARD);
+        assertTrue(fixture.runtime.capture().nativeOverrides().isEmpty(), "native E4 must notify the world intent owner");
+        assertEquals(1, fixture.runtime.capture().nativeMusic());
+        fixture.source.removeIf(e -> e.activationId() == 2);
+        landing();
+        assertEquals(List.of(0x49), sfxRequests());
     }
 
     @Test void speedAndControlRequestsReleaseMusicWithoutRestoringCapturedControls() {
@@ -140,12 +161,45 @@ class TestAudioMutatorRuntime {
         fixture.clang();
         before(); audio.playSfx(0xA9); fixture.runtime.landed(fixture.player); after();
         assertEquals(List.of(0xA9), sfxRequests());
+        audio.presentFrame(PresentationMode.FORWARD);
         for (int i = 0; i < 31; i++) tick();
-        // Materialize the real warning but do not advance it to completion.
-        audio.captureLogicalSnapshot();
+        // Keep the real, now-materialized warning alive independently of gameplay's quiet period.
         landing();
         assertEquals(List.of(0xA9), sfxRequests());
         assertTrue(fixture.reports.get(1L).contains("warning"));
+    }
+
+    @Test void surpriseAndItsDeferredExpiryCannotTruncateNativeWarning() {
+        fixture.music(1, 3);
+        audio.playSfx(0xA9);
+        tick();
+        assertEquals(List.of(1), musicRequests());
+        audio.presentFrame(PresentationMode.FORWARD);
+        for (int i = 0; i < 31; i++) tick();
+        assertEquals(List.of(1), musicRequests(), "an active warning remains protected after the quiet period");
+        for (int i = 0; i < 90; i++) audio.presentFrame(PresentationMode.FORWARD);
+        tick();
+        assertEquals(List.of(1, 3), musicRequests());
+        audio.playSfx(0xA9);
+        audio.presentFrame(PresentationMode.FORWARD);
+        fixture.source.clear(); tick();
+        assertTrue(fixture.runtime.capture().pendingNativeResume());
+        assertEquals(List.of(1, 3), musicRequests(), "expiry must preserve the warning instead of loading zone music over it");
+        for (int i = 0; i < 90; i++) audio.presentFrame(PresentationMode.FORWARD);
+        for (int i = 0; i < 31; i++) tick();
+        assertEquals(List.of(1, 3, 1), musicRequests());
+        assertFalse(fixture.runtime.capture().pendingNativeResume());
+    }
+
+    @Test void sourceLossCancelsLeaseAndCannotAbortFollowingNativeControl() {
+        fixture.music(1, 3); tick();
+        audio.setRom(null);
+        assertEquals(0, fixture.runtime.capture().musicActivation());
+        assertDoesNotThrow(() -> audio.setSpeedMultiplier(8));
+        assertInstanceOf(AudioCommand.SetSpeedMultiplier.class, commands().getLast());
+        fixture.source.clear();
+        for (int i = 0; i < 200; i++) tick();
+        assertEquals(List.of(1, 3), musicRequests());
     }
 
     @Test void pauseHoldRewindPreserveStateAndLeavingOrdinaryGameplayReleasesIt() {
@@ -192,6 +246,35 @@ class TestAudioMutatorRuntime {
         assertEquals(5, musicRequests().getLast());
         other.runtime.retire();
         assertThrows(IllegalStateException.class, () -> fixture.runtime.restore(fixture.runtime.capture()));
+    }
+
+    @Test void creatorClassloaderCannotArmTicksOrForgeNativeContactEvents() throws Exception {
+        String name = ForeignCaller.class.getName();
+        byte[] bytes;
+        try (var input = ForeignCaller.class.getResourceAsStream("/" + name.replace('.', '/') + ".class")) {
+            assertNotNull(input); bytes = input.readAllBytes();
+        }
+        var loader = new ClassLoader(AudioMutatorRuntime.class.getClassLoader()) {
+            @Override protected Class<?> loadClass(String type, boolean resolve) throws ClassNotFoundException {
+                if (!type.equals(name)) return super.loadClass(type, resolve);
+                var value = findLoadedClass(type);
+                if (value == null) value = defineClass(type, bytes, 0, bytes.length);
+                if (resolve) resolveClass(value);
+                return value;
+            }
+        };
+        var caller = loader.loadClass(name);
+        var arm = assertThrows(java.lang.reflect.InvocationTargetException.class,
+                () -> caller.getMethod("arm", AudioMutatorRuntime.class).invoke(null, fixture.runtime));
+        assertInstanceOf(SecurityException.class, arm.getCause());
+        var contact = assertThrows(java.lang.reflect.InvocationTargetException.class,
+                () -> caller.getMethod("contact", com.openggf.sprites.playable.AbstractPlayableSprite.class)
+                        .invoke(null, fixture.player));
+        assertInstanceOf(SecurityException.class, contact.getCause());
+    }
+    public static class ForeignCaller {
+        public static void arm(AudioMutatorRuntime runtime) { runtime.beforeNativeTick(null, LogicalInputSnapshot.neutral()); }
+        public static void contact(com.openggf.sprites.playable.AbstractPlayableSprite player) { PlayableAudioEvents.landed(player); }
     }
 
     private void before() { fixture.runtime.beforeNativeTick(null, LogicalInputSnapshot.neutral()); }

@@ -7,7 +7,7 @@ import java.util.Objects;
 public final class AudioMutatorAccess {
     private AudioMutatorAccess() { }
 
-    public enum Kind { MUSIC, COMMAND, RESTORE, END_OVERRIDE, SPEED_SHOES, SPEED_MULTIPLIER, TEMPO, STOP, FADE, FOREIGN }
+    public enum Kind { MUSIC, COMMAND, RESTORE, NATURAL_RESTORE, END_OVERRIDE, SPEED_SHOES, SPEED_MULTIPLIER, TEMPO, STOP, FADE, FOREIGN, SOURCE }
     public record MusicIntent(Kind kind, int value) { }
     @FunctionalInterface public interface Listener {
         void onMusicIntent(MusicIntent intent);
@@ -53,18 +53,12 @@ public final class AudioMutatorAccess {
             return audio.getAudioProfile() instanceof NativeAudioEffectCues cues && cues.isWarningCue(id);
         }
         public boolean warningActive() { requireOwner(); return audio.mutatorWarningActive(); }
-        /** Driver-completed 1-up restoration is observed, never commanded by this binding. */
-        public Integer foregroundMusic() {
-            requireOwner();
-            if (audio.isRewindReplaySuppressed() || audio.isReverseAudioPresentationActive()) return null;
-            var music = audio.captureLogicalSnapshot().presentation().activeMusic();
-            return music == null ? null : music.musicId();
-        }
         public void prepareMusic(int id) { requireOwner(); audio.prepareMutatorCue(id, true); }
         public void prepareLandingCue(int id) { requireOwner(); audio.prepareMutatorCue(id, false); }
         public void playTemporaryMusic(int id) {
             requireOwner();
             audio.prepareMutatorCue(id, true);
+            if (audio.mutatorWarningActive()) throw new IllegalStateException("Native warning audio has priority");
             submit(() -> audio.playMusic(id));
         }
         public void resumeNativeMusic(int id) {

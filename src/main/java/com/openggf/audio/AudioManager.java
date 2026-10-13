@@ -851,6 +851,7 @@ public class AudioManager implements MusicRestoreSink {
                     previous.rom(), audioProfile,
                     candidateLoader, candidateDac,
                     candidateConfig, candidateGeneration);
+            mutatorMusicIntent(AudioMutatorAccess.Kind.SOURCE, 0);
             if (shadowProducer != null) {
                 replaceShadowPresentationForBaseMutation();
             } else if (shadowFactory != null) {
@@ -878,6 +879,7 @@ public class AudioManager implements MusicRestoreSink {
                     rom, previous.profile(), candidateLoader, candidateDac,
                     previous.config(),
                     candidateGeneration);
+            mutatorMusicIntent(AudioMutatorAccess.Kind.SOURCE, 0);
             if (shadowProducer != null) {
                 replaceShadowPresentationForBaseMutation();
             }
@@ -1081,6 +1083,7 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     public void playSegaPcmCommand(int sourceCommandId) {
+        mutatorMusicIntent(AudioMutatorAccess.Kind.COMMAND, sourceCommandId);
         BaseAudioSource source = baseAudioSource;
         if (suppressingRewindReplay()
                 || source.profile() == null || source.rom() == null) {
@@ -1114,6 +1117,7 @@ public class AudioManager implements MusicRestoreSink {
 
     /** S3K FE: remove raw PCM now and retain one global driver stop. */
     public void stopSegaPcmAndRetainGlobalStop(int sourceCommandId) {
+        mutatorMusicIntent(AudioMutatorAccess.Kind.STOP, sourceCommandId);
         if (suppressingRewindReplay()) {
             return;
         }
@@ -1124,6 +1128,7 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     public void retainGlobalStop(int sourceCommandId) {
+        mutatorMusicIntent(AudioMutatorAccess.Kind.STOP, sourceCommandId);
         if (suppressingRewindReplay()) {
             return;
         }
@@ -1141,6 +1146,7 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     public void silencePsg(int sourceCommandId) {
+        mutatorMusicIntent(AudioMutatorAccess.Kind.COMMAND, sourceCommandId);
         if (suppressingRewindReplay()) {
             return;
         }
@@ -3761,6 +3767,8 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     private void restoreShadowMusic() {
+        // Native E4 completion is intent authority too, independent of the external observer.
+        mutatorMusicIntent(AudioMutatorAccess.Kind.NATURAL_RESTORE, 0);
         shadowRegistry.requestMusicOverrideRestore();
         shadowRestoreRequested = true;
     }
