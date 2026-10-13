@@ -262,33 +262,33 @@ no failures/errors/skips, on `73f23d89e` runtime: real LRZ load/control readines
 playable destination inputs. Temporary witnesses and authoring code were removed
 before promotion. This is engine route evidence, not native-emulator parity or
 certification of other viewport/donor products. Fresh permanent route and final
-integration checks are recorded after they run.
+merged-candidate checks are recorded below.
 
 Commit `8837dc657` promotes that controller-only repair to the canonical
 `soz2-cold-knuckles-800.script` / `.bk2`; the historical 35,440-input recording
 retains its original dated evidence in the
 [SOZ2 matrix](levels/s3k-soz-act2.md#knuckles-800px-controller-refresh-2026-10-13).
 The promoted route has 35,412 fixed pads; all nine permanent cold-route cases
-still require fresh final validation after the latest merge.
+passed fresh final validation after the latest merge.
 
-The subsequent working-tree merge of develop `e6ebe555` reconciled six conflicts,
+Merge `a2280d37b` of develop `e6ebe555` reconciled six conflicts,
 retaining the Chaos and issue entries, the 20,838-entry candidate API pin and
 rewind inventory totals 1,320/1,077/243. Those totals supersede the earlier
-1,317/1,074/243 expectation only for this later merged tree. Its final merge
-commit, verification, integration, push and cleanup are not yet recorded here.
+1,317/1,074/243 expectation only for this later merged tree. The executable
+candidate verified below is `a2280d37b`; subsequent closeout edits are documentation only.
 
 The background tile-pass owner also now saves/restores the actual native draw
 and read framebuffer bindings and four-component viewport, instead of assuming
 the manager's cached display state. Uninitialized begin/end calls remain free
 of GL queries. `TestBackgroundRendererStateRestoration` supplies the focused
-regression; its final execution is pending. Earlier blend/mask pixel passes
-retain their recorded scope and do not certify this new restoration change.
+regression; both cases passed in the final native graphics group. Earlier
+blend/mask pixel passes retain their original recorded scope.
 
 The updated local change-based plan selects 3,222 candidate classes across all
 ten smoke categories plus guards. Preflight passes Java 25, Lua 5.4 and
 PowerShell. The final focused selection is based on the reviewed new upstream
 scope and affected consumers; the earlier 3,185-class smoke run is historical
-coverage, not a pass on this merged candidate. Final results remain pending.
+coverage, not a pass on this merged candidate. Final focused results follow.
 
 The 63 ordinary skips comprise 32 Infinite Sonic cases whose selected acts lack
 the prerequisite platform/flyer, 24 opt-in probes/captures/soaks or missing local
@@ -358,3 +358,53 @@ that disposition rests on the owning `React_ChkHurt` branch. Caterkiller's
 delayed-body behavior has the existing
 `TestSonic1CaterkillerBodyChaining#normalHeadDestructionKeepsBodySegmentsCollidableThroughNextVblank`
 regression. HCZ's animation evidence above is read-only trace comparison.
+
+### Final merged-candidate verification
+
+On `a2280d37b`, the clean movement/API/rewind/ROM-loading group passed 383
+cases in 80 Maven seconds; native graphics passed ten in 23.132 seconds;
+all nine permanent SOZ cold-route cases passed in 67 seconds; and fresh guards
+passed 680 cases across 88 classes in 258 seconds. Every invocation completed
+with zero failures, errors and skips. Queue waits were respectively 207, 52, 23
+and 50 seconds, excluded from these execution times. The required four S3K
+loading/bootstrap/decoding/AIZ checks were included in the first group.
+
+The reviewed integration preserves Chaos's nested presentation ownership and
+this task's rear-plane priority metadata, native Hurt gravity and real terrain
+landing. Candidate API signatures are the exact sorted parent union; both
+landing-rule constructors remain. Separate draw/read FBOs, offset viewport,
+caller pixels and both incoming blend-enable states passed actual native EGL
+checks. The permanent SOZ class uses the committed fixed recording with all
+existing cold-start, puzzle, replay, results and destination assertions unchanged.
+
+The 3,222-class planner fallback includes upstream work already separately
+validated and changes covered by the earlier complete smoke selection. Repeating
+that hour-long selection would duplicate unaffected coverage; the final groups
+cover the reviewed interaction points and repaired failures, with fresh guards.
+This is proportionate focused validation, not a green rerun of all smoke
+categories or a release-only full-suite pass. The historical broad run remains
+red with the recorded inherited failures and one unreproduced network failure;
+its matched baseline/current networking checks passed. No new engine trace
+frontier or native-emulator presentation certification is claimed.
+
+The exact final launch arguments are below, with `$MAIN` substituting the same
+absolute main-checkout path as above. All tests used the updated local wrapper
+from this single task worktree. Graphics flags remain explicit; no ambient
+desktop display was used. The final destination is the main workspace's existing
+`develop`; its executable tree can fast-forward to this validated candidate.
+
+```bash
+env -u JDK_JAVA_OPTIONS -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 EGL_PLATFORM=surfaceless python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dsonic1.rom.path=$MAIN/s1.gen" "-Dsonic2.rom.path=$MAIN/s2.gen" "-Ds3k.rom.path=$MAIN/s3k.gen" '-Dtest=TestPlayableSessionRules,TestHybridGameRules,TestPlayableHurtLandingObjectControl,TestPlayableHurtObjectControlMovement,TestPlayableSpriteMovement,TestCPZSpinTubeObjectInstance,TestMotionMutatorConsumers,TestCollisionSystemAirLanding,TestWorldPolicyHistory,TestGameLoopTitleCardPause,TestGameLoopMutatorPacing,TestRemainingRewindTailInventory,TestNativeMutatorRuntime,TestSonic3kChaosPackAssembly,TestModApiSignatureSurface,TestModApiPinPolicy,TestLevelRendererBackgroundSamplingPerformance#stationaryPositiveScrollAndNegativeYRetainExactSamplingOutput+deferredCommandsRetainAnchorsAndRingGenerationAfterSourceMutation,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' clean test -B
+
+env -u JDK_JAVA_OPTIONS -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 EGL_PLATFORM=surfaceless python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dsonic1.rom.path=$MAIN/s1.gen" "-Dsonic2.rom.path=$MAIN/s2.gen" "-Ds3k.rom.path=$MAIN/s3k.gen" '-Dtest=TestBackgroundRendererStateRestoration,TestBackgroundPlaneSpriteOcclusion,TestScenePresentationPass,TestPresentationSpritePixels,TestS3kMgzBackgroundPriorityPixels' test -B
+
+env -u JDK_JAVA_OPTIONS -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 EGL_PLATFORM=surfaceless python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Dsonic1.rom.path=$MAIN/s1.gen" "-Dsonic2.rom.path=$MAIN/s2.gen" "-Ds3k.rom.path=$MAIN/s3k.gen" '-Dtest=TestSozColdRouteCapture' test -B
+
+env -u JDK_JAVA_OPTIONS -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 EGL_PLATFORM=surfaceless python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl -Pguards test -B
+```
+
+Packaging the same executable candidate with
+`env -u JDK_JAVA_OPTIONS -u DISPLAY -u WAYLAND_DISPLAY LUA_BIN=/usr/bin/lua5.4 EGL_PLATFORM=surfaceless python3 tools/testing/maven_queue.py -Dmse=off -DskipTests package -B`
+passed in 31.734 seconds. Maven explicitly skipped tests and produced the main,
+fat, mod-testkit, SDK and SDK-javadoc jars. No executable changes followed the
+completed checks; the remaining commit records these outcomes and matrix updates.

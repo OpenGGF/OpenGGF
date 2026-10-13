@@ -847,8 +847,10 @@ removed before promotion.
 
 The permanent owner remains
 `TestSozColdRouteCapture#knucklesWideColdActTwoCompletesWithPuzzleReplayAndPlayableLavaReef`.
-Fresh execution of all nine permanent class cases and final merged-runtime
-checks are pending. The prior 2026-09-27 video and counts do not document this
+Fresh execution on `a2280d37b` passed all nine permanent class cases, zero
+failures/errors/skips, in 67 Maven seconds (45.66 test seconds). The native
+graphics group passed ten cases and fresh guards passed 680 cases without
+skips; those are bounded integration checks, not additional cold-route products. The prior 2026-09-27 video and counts do not document this
 new recording. This is engine cold-route and selected drawn replay evidence,
 not native-emulator trajectory/pixel parity, presentation on every intermediate
 frame, or certification of additional viewport/donor/character products.
