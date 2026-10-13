@@ -4,7 +4,7 @@
 
 Accuracy prerequisites and complete-runtime qualification are in progress.
 **The original numeric baseline is frozen from five fresh processes per scenario.
-Five consecutive performance experiments were rejected. Optimization has stopped at the requested checkpoint; no performance improvement was accepted. Accuracy/tooling delivery validation, integration and cleanup remain pending.** The intended
+Four valid performance experiments were rejected. P5 remains under measurement after excluding a contaminated pair; no performance improvement is accepted. Accuracy/tooling delivery validation, integration and cleanup remain pending.** The intended
 metric is total process CPU time per simulated frame, equally weighted between
 normal and demanding scenarios in each game. No saving is attributed to accuracy
 repairs, upstream changes, Java migration, or replacing an invalid helper harness.
@@ -740,7 +740,7 @@ is fixed at `184c9d54ed4fc2c1fed3cb6313653a95f9156e3d`; accepted gains remain ze
 | P2 quiet PSG batching | Passing / six scenarios identical | S1 normal +5.29%, +7.58%; demanding +10.78% | Rejected |
 | P3 identical hscroll upload reuse | Passing / six scenarios identical | S1 weighted pairs +0.46%, +1.13%; direction unstable | Rejected |
 | P4 uniform locations once per program | Passing / six scenarios identical | S1 normal +6.33%, +16.43%; demanding +11.68% | Rejected |
-| P5 PSG amplitude locals / ordered comparisons | 123 tests, zero failures/errors/skips; six media controls identical | S1 normal +6.93%, +15.35% on repeat pairs | Rejected |
+| P5 PSG amplitude locals / ordered comparisons | 123 tests, zero failures/errors/skips; six media controls identical | Mixed valid pairs; contaminated third pair excluded | Pending |
 
 Before/after CPU is total process time per verified executed frame, including
 compiler/driver/audio workers and GC. Negative screens are bounded rejections,
@@ -811,50 +811,31 @@ pairs with `python3 ${OPENGGF_PERF_TASK_DIR}/p5_s1_five_screen.py` before
 deciding whether to complete the other frozen scenarios. No settings, windows,
 weights or source change. No gain accepted and rejection count remains four.
 
-### P5 rejection and five-experiment optimization checkpoint
+### P5 timing-isolation audit — rejection withdrawn
 
-P5 `a9ab1e2b023a90b1f17d5b8de49dcd32ac80c8d9` is rejected. Original
-production PSG behavior is retained. All 123 focused audio/state/rewind checks
-passed, no failures/errors/skips, and all six normal-runtime framebuffer/PCM
-comparisons were identical. Performance correctness alone does not justify
-keeping the change. Source baseline and previous accepted implementation have
-identical production performance code.
+The preliminary fifth-rejection claim in `c5d40485e` is withdrawn. Queue
+telemetry identified another worktree's Maven test from 10:08:51–10:10:02 UTC,
+overlapping the third S1 normal pair. Its +15.35% result and the matching baseline
+are excluded from all performance evidence. P5 remains unaccepted and pending;
+consecutive valid rejected hypotheses remain **four**. No production gain retained.
 
-| Scenario / pair | Baseline ms/frame | Candidate ms/frame | CPU change |
-|---|---:|---:|---:|
-| s1-normal / 1 | 1.541027 | 1.494330 | -3.03% |
-| s1-normal / 2 | 1.541027 | 1.647765 | +6.93% |
-| s1-normal / 3 | 1.434290 | 1.654436 | +15.35% |
-| s1-demanding / 1 | 1.336898 | 1.303476 | -2.50% |
-| s1-demanding / 2 | 1.377005 | 1.270053 | -7.77% |
+Original numerical runs (02:29–03:42 UTC report completions) and P1–P4 timing
+intervals have no overlapping completed Maven jobs in the shared queue history.
+P5 pairs 1/2 remain valid. A separate short foreign test at 10:05:29–10:05:57 UTC
+was after pair 2 had finished and before pair 3's measurement, but that whole
+third process pair is conservatively excluded anyway. The raw excluded pair
+remains task-external as invalid evidence, not an acceptance result.
 
-CPU median / MAD / range (ms/frame):
+The first combined delivery category run `20261013T101218Z-7e7ec548` at
+`437eb321a` was cancelled to repair measurement isolation. It is incomplete;
+no suite pass is claimed. The runner stopped owned Maven children and its
+diagnostics were inspected/acknowledged. Resume validation after performance
+work is final.
 
-- s1-normal baseline: 1.541027 / 0.000000 / 1.434290–1.541027.
-- s1-normal candidate: 1.647765 / 0.006671 / 1.494330–1.654436.
-- s1-demanding baseline: 1.356952 / 0.020053 / 1.336898–1.377005.
-- s1-demanding candidate: 1.286765 / 0.016711 / 1.270053–1.303476.
-
-Two normal-route increases exceed the repeatable 5% blocking threshold.
-The third demanding baseline was stopped by exact owned JVM identity before
-a complete pair; it is excluded. No S2/S3K timing or five-pair acceptance is
-claimed. This is a conservative blocking screen, not a quantified full-matrix
-regression estimate. Startup/load timing was not completed for this rejected
-candidate. No production optimization is retained.
-
-Commands: `python3 ${OPENGGF_PERF_TASK_DIR}/p5_s1_screen.py`, followed by
-`python3 ${OPENGGF_PERF_TASK_DIR}/p5_s1_five_screen.py`, unchanged frozen
-arguments, classpaths and external resident-memory sampling. The candidate's
-PSG bytecode hash differs from baseline as expected; the probe prefix contains
-no production classes that shadow either source. CPU governor remains powersave.
-
-**Achieved accepted CPU gains: 0% in S1, S2 and S3K. Target not reached.**
-Original equally weighted scores remain 1.472399, 1.534621 and 2.575576
-ms/frame. Five consecutive experiments yielded no accepted improvement, so
-no sixth optimization or speculative rewrite is started. The strongest next
-hypotheses are atlas upload coalescing/driver-command work and coherent fast-YM
-synthesis, as ranked in Astra's review above; achievable savings are unmeasured.
-The accepted task contains prerequisite accuracy repairs, reproducible full
-runtime/input/residency tools, useful passing regression controls, and this
-evidence record. Delivery remains separately subject to updated-base validation,
-integration, push and ownership-aware cleanup.
+Retry the same pinned P5 source `a9ab1e2b0` with
+`python3 ${OPENGGF_PERF_TASK_DIR}/exclusive_p5_screen.py`, which holds the
+existing shared Maven admission lease exclusively for the full batch. This
+blocks scheduled tests without deleting locks or stopping foreign work. The
+original source/protocol/flags/routes/windows/settings/weights remain unchanged.
+Timing remains separate from builds/tests/profiling; detect bypassing build
+processes and fail the run rather than count contaminated observations.

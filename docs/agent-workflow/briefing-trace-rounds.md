@@ -71,6 +71,13 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A performance-only flock does not isolate shared-worktree test jobs
+(2026-10-13, P5 CPU audit). Another task's queued Maven run overlapped a
+negative timing pair; its result was excluded and a preliminary rejection
+withdrawn. Hold the existing test admission lease exclusively throughout fresh
+process timings, audit completed-job intervals, and reject bypassing build/test
+overlap. Never remove queue locks or stop unrelated work to force isolation.
+
 A live recording can still be finalizing after the gameplay loop stops
 (2026-10-13, runtime performance controls). Engine cleanup has a shorter recorder
 abort limit than the long handoff capture needs. A partial or deleted file is
