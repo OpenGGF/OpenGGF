@@ -130,7 +130,10 @@ class TestAudioMutatorHistory {
                         "real temporary leases age during zero-tick presentations");
                 assertEquals(commandsBeforeE4, audio.commandTimeline().entryCount(), "E4 notification submits no duplicate command");
                 assertEquals(observedBeforeE4, diagnostics.size());
-                assertEquals(1, audio.captureLogicalSnapshot().presentation().activeMusic().musicId());
+                var deferredRestore = audio.captureLogicalSnapshot().presentation();
+                assertEquals(0x2A, deferredRestore.activeMusic().musicId(),
+                        "E4 reports native intent before the next producer drains its restore command");
+                assertTrue(deferredRestore.pendingRestore());
 
                 var jukebox = port.activate("jukebox", Map.of(), 180);
                 assertTrue(jukebox.accepted());
@@ -146,6 +149,9 @@ class TestAudioMutatorHistory {
                 assertTrue(port.active().stream().allMatch(activation -> activation.status().contains("played")
                         || activation.status().contains("playing")));
                 present(world, gameplay, audio);
+                assertEquals(3, audio.captureLogicalSnapshot().presentation().activeMusic().musicId(),
+                        "the deferred native restore must precede, not overwrite, the newly admitted jukebox");
+                assertFalse(audio.captureLogicalSnapshot().presentation().pendingRestore());
                 var acceptedKeyframe = registry.capture();
                 var acceptedPhysicalAudio = audio.captureLogicalSnapshot();
 
