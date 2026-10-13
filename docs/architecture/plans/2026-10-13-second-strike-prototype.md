@@ -277,3 +277,26 @@ The final witness is under external `second-strike-20261013/final-stage-blue`.
 Main integration, source-equivalence/build checks, push and accounted worktree
 cleanup remain pending. No whole-suite green result or completed delivery is
 claimed while those steps remain open.
+
+The destination subsequently advanced to
+`1ead8d9b44b303f3a7617a2ab3c2b0541c37a8ae`, including native AIZ post-boss/
+drawbridge ownership fixes and selected-world initial-rule binding. Its
+composition is conflict-free. The affected physics/character/bridge/boss,
+prototype, API and required startup checks passed 404 cases across 24 actual
+classes without skips in 1:41; a separate fresh invocation passed all 678
+guards/88 classes without skips in 4:32. SDK/binary verification completed.
+Frozen tested index: `9ce204872a24fa32cd2e7b58705b8ca946d4faf7`.
+
+The maintained cold driver then replays both original phase-2 BK2s against
+that compiled composition, without video-wide rendering or authoring feedback:
+8,746 pair and 9,193 solo ordinary updates, both exiting successfully at their
+same playable Act 2 boundary. All thirty shared non-input state fields match
+the prior proof on every row; intro hold remains zero and the late-boss cue
+still begins at 6993. The earlier continuous movie remains applicable to those
+unchanged observations. Final replay state and milestone images live under
+external `second-strike-20261013/final-route-{pair,solo}`. Private runtime/save
+directories, surfaceless EGL, unset desktop display variables and null host
+audio were retained; all owned replay processes exited normally.
+
+Final destination composition, integration and cleanup facts will follow;
+no additional unchanged smoke sweep is required for these bounded follow-ups.
