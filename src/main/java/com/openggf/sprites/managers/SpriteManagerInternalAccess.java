@@ -6,6 +6,11 @@ import com.openggf.sprites.playable.PlayableMutatorPolicySource;
 public final class SpriteManagerInternalAccess {
     private SpriteManagerInternalAccess() { }
 
+    /** Retire a scene's follower roster while retaining reversible same-world membership. */
+    public static void retireAllSidekicksForRewind(SpriteManager manager) {
+        manager.retireAllSidekicksForRewind();
+    }
+
     /**
      * Bind after gameplay-context creation. New/recreated roster members inherit
      * this source; a replacement gameplay context must be bound independently.

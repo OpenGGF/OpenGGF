@@ -90,4 +90,17 @@ class TestPlayableGroundTransitions {
         assertEquals(1, c.landings);
         assertEquals(1, c.resets);
     }
+
+    @Test void freshStockPlayersLeaveScriptedScreenOriginsAndRenderInWorldSpace() {
+        for (var c : new AbstractPlayableSprite[]{new Sonic("sonic", (short) 100, (short) 200),
+                new Tails("tails", (short) 100, (short) 200),
+                new Knuckles("knuckles", (short) 100, (short) 200)}) {
+            c.setRenderOffsets((short) 0x780, (short) -0x240);
+            assertNotEquals(c.getCentreX(), c.getRenderCentreX());
+            assertNotEquals(c.getCentreY(), c.getRenderCentreY());
+            c.resetState();
+            assertEquals(c.getCentreX(), c.getRenderCentreX(), c.getCode());
+            assertEquals(c.getCentreY(), c.getRenderCentreY(), c.getCode());
+        }
+    }
 }

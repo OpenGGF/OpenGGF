@@ -2036,7 +2036,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     public void recomputeParallaxAfterRewindRestore() {
-        frameRuntimeUpdater.refreshParallaxState();
+        frameRuntimeUpdater.recomputeParallaxAfterRewindRestore();
     }
 
     /** Prepares the demo scene before Level_Delay / PalFadeIn_Alt. */

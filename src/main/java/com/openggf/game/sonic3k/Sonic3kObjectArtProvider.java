@@ -1295,6 +1295,16 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
      */
     private void registerLevelArtSheet(String key, ObjectSpriteSheet sheet, Sonic3kObjectArt art) {
         registerSheet(key, sheet);
+        recordLevelArtTileRanges(key, sheet, art);
+    }
+
+    /** Runtime ROM mappings retain their VRAM ranges so module DMA refreshes GPU consumers. */
+    public void refreshLevelArtSheet(String key, ObjectSpriteSheet sheet, Sonic3kObjectArt art) {
+        refreshSheetPatterns(key, sheet);
+        recordLevelArtTileRanges(key, sheet, art);
+    }
+
+    private void recordLevelArtTileRanges(String key, ObjectSpriteSheet sheet, Sonic3kObjectArt art) {
         if (sheet != null && art.getLastBuildStartTile() >= 0) {
             List<Sonic3kPlcLoader.TileRange> ranges = art.getLastBuildTileRanges();
             if (ranges.isEmpty()) {

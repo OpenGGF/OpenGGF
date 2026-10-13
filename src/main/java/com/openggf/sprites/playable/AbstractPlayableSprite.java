@@ -915,6 +915,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.leftInputPressed = false;
                 this.rightInputPressed = false;
                 this.logicalInputState = 0;
+                // Scripted screens can project native coordinates through a
+                // temporary drawing origin. A fresh player returns to world space.
+                this.renderXOffset = 0;
+                this.renderYOffset = 0;
                 this.renderFlagWidthPixels = 0x18;
                 this.renderFlagOnScreen = true;
                 this.renderFlagOnScreenValid = false;
@@ -1256,6 +1260,15 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // subclasses without a captured payload): see restoreSubclassRewindState()
                 // Javadoc for the null contract subclasses must honor.
                 restoreSubclassRewindState(extra.subclassExtra());
+                if (!instaShieldRegistered
+                        && !(s.objectSubclassExtra() instanceof PendingInstaShieldRewindExtra)) {
+                        // No registered SST and no captured pending owner means absence.
+                        // A live handle from another timeline must not become pending now.
+                        if (instaShieldObject != null && !instaShieldObject.isDestroyed()) {
+                                instaShieldObject.destroy();
+                        }
+                        instaShieldObject = null;
+                }
                 instaShieldObject = PendingInstaShieldRewindExtra.restore(s.objectSubclassExtra(),
                         instaShieldObject, powerUpSpawner != null
                                 ? () -> instaShieldObject = powerUpSpawner.createInstaShield(this) : null);
@@ -1416,6 +1429,12 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         private void refreshPersistentInstaShieldRegistration(boolean registerNow) {
                 if (!hasPersistentInstaShieldAbility() || powerUpSpawner == null) {
+                        return;
+                }
+                if (!registerNow && (instaShieldObject == null || instaShieldObject.isDestroyed())) {
+                        // Native object-RAM clears can retire this auxiliary owner.
+                        // PendingInstaShieldRewindExtra restores an explicitly captured
+                        // pending handle before this visual refresh; absence stays absent.
                         return;
                 }
                 if (instaShieldObject == null || instaShieldObject.isDestroyed()) {

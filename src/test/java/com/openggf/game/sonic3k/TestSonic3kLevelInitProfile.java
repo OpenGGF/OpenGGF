@@ -8,6 +8,18 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class TestSonic3kLevelInitProfile {
+    @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    @Test
+    public void nativeEndingLoadCreatesNoTitleOwnerEvenWhenPresentationIsOmitted() {
+        com.openggf.tests.HeadlessTestFixture.builder().withZoneAndAct(0x0D,1)
+                .withFreshLevelStartLifecycle().build();
+        assertFalse(com.openggf.game.GameServices.level().isTitleCardRequested());
+        var provider=com.openggf.game.GameServices.module().getTitleCardProvider();
+        assertFalse(provider.ownsInLevelPlayerControlLock(),"$D01 must not retain a title PLC/player owner");
+        var title=(com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager)provider;
+        assertFalse(title.ownsOmittedFreshLevelPresentation());
+        assertTrue(title.capture().artHandles().isEmpty(),"native early deletion submits no title archives");
+    }
 
     private final Sonic3kLevelInitProfile profile =
             new Sonic3kLevelInitProfile(new Sonic3kLevelEventManager());

@@ -12,6 +12,7 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.WorldSession;
 import com.openggf.level.scroll.BgTilemapUpdateMode;
 import com.openggf.level.scroll.CameraDrivenScrollHandler;
+import com.openggf.level.scroll.ScrollOutputRebuilder;
 import com.openggf.level.scroll.ZoneScrollHandler;
 
 import java.io.IOException;
@@ -326,6 +327,10 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
     }
 
     public void update(int zoneId, int actId, Camera cam, int frameCounter) {
+        updateScrollOutput(zoneId, actId, cam, frameCounter, false);
+    }
+
+    private void updateScrollOutput(int zoneId, int actId, Camera cam, int frameCounter, boolean rebuild) {
         // Clear scroll buffer to ensure deterministic state
         // (some zone handlers intentionally leave lines unwritten)
         java.util.Arrays.fill(hScroll, 0);
@@ -353,7 +358,11 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
 
             ZoneScrollHandler handler = getHandler(zoneId);
             if (handler != null) {
-                handler.update(hScroll, cameraX, cameraY, frameCounter, actId);
+                if (rebuild && handler instanceof ScrollOutputRebuilder rebuilder) {
+                    rebuilder.rebuildOutput(hScroll, cameraX, cameraY, frameCounter, actId);
+                } else {
+                    handler.update(hScroll, cameraX, cameraY, frameCounter, actId);
+                }
                 minScroll = handler.getMinScrollOffset();
                 maxScroll = handler.getMaxScrollOffset();
                 vscrollFactorBG = handler.getVscrollFactorBG();
@@ -429,6 +438,14 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
         update(zoneId, actId, cam, frameCounter);
 
         // Update zone-specific dynamic art via the provider
+        if (scrollProvider != null && zoneId != contributedZone && level != null) {
+            scrollProvider.updateDynamicArt(level, cam.getX());
+        }
+    }
+
+    /** Engine post-restore reconciliation, separate from a native scroll dispatch. */
+    void rebuildDerivedOutput(int zoneId, int actId, Camera cam, int frameCounter, Level level) {
+        updateScrollOutput(zoneId, actId, cam, frameCounter, true);
         if (scrollProvider != null && zoneId != contributedZone && level != null) {
             scrollProvider.updateDynamicArt(level, cam.getX());
         }

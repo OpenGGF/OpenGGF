@@ -1,5 +1,14 @@
 # Shared implementation pitfalls
 
+Screen-relative sprites must cancel the camera origin that the renderer actually
+subtracts. S3K endings deliberately write `Camera_X_pos_copy`/`Camera_Y_pos_copy`
+independently of physical camera words: Tails departure can have physicalX0 and
+copy608 for hundreds of passes. Adding physical camera coordinates to a native
+bit2-clear sprite or fixed presentation mask hides the native scene. Project from
+copies plus shake, refresh derived playable offsets at the existing post-camera
+Render_Sprites boundary, and preserve both native words. See the
+[ending lifecycle evidence](designs/2026-10-13-s3k-ending-lifecycle.md).
+
 Read the relevant section when working on coordinates, objects, rendering, rewind,
 headless tests, or audio. S3K-specific routing is in [AGENTS_S3K.md](../../AGENTS_S3K.md).
 
@@ -815,6 +824,16 @@ explicit ring owners and background wrapping. Compare pixel bounds to the latche
 The LRZ seamless-handoff check caught this distinction at the last3pixels before
 camera X=0 (September23S&K completion campaign).
 
+**A screen-coordinate scene can outlive its world bounds.** S3K SSZ2
+`loc_58B7C` clears camera X for credits while preserving the final arena's
+native min/max. The wide bounds mask then used world459..779 and concealed
+terminal sprites in the centered240..560 window. Gray pixels with thousands
+of grain colors came from `shader_arena_mask.frag`, not a sixteen-color
+resident Pattern0. Use the internal presentation-origin policy for that
+screen window without rewriting gameplay bounds or changing unrelated plane
+wrapping. The initial flight's masked wide wings remain intentional.
+See the [ending ownership record](designs/2026-10-13-s3k-ending-lifecycle.md).
+
 **Retained SAT requires retained scroll.** S3K `VInt` writes `V_scroll_value`
 to VSRAM and `VInt_8_Cont` uploads `H_scroll_buffer` alongside the prepared
 sprite table. Retaining screen-relative sprites while sampling terrain with the
@@ -1590,3 +1609,30 @@ runtime-ready before resolving its world/module/policies; an eager global module
 lookup crashes startup even when no gameplay body is due. Bonus mode also does not
 imply interactive readiness: let its pending initial ProcessSprites setup finish
 at canonical cadence before spending a modified speed budget.
+
+**Resident patterns can change without changing identity.** KosM DMA updates
+`Sonic3kLevel` patterns in place. A sprite sheet decoded from resident VRAM
+must register its native source tile range with the object-art provider so
+`refreshAffectedRenderers` republishes its virtual atlas. A ready renderer and
+nonzero CPU patterns do not prove GPU pixels are current. The S3K ending
+Tornado at input600 had6845 nonzero pixels and a ready virtual base137948
+while remaining invisible: an identity-only cache missed the upload and the
+sheet lacked `levelArtTileRanges`. Use the existing range refresh owner, not
+a hash scan, extra art job or fitted delay (2026-10-13 ending lifecycle task).
+
+**External pad priming is not a production setup row.** The native initial
+`Process_Sprites` callback has no VInt, but GameLoop still admits its input row.
+`consumePendingInitialProcessSpritesPass()` executes that callback; do not infer
+a token-only skip from its name. S3K Knuckles ending authoring (2026-10-13)
+externally primed input0 then started at1, copying an older HeadlessTestRunner
+fixture, and died2096 before the first fight. Production input0 published the
+same SST4/5/6 and P1 as the fixture callback, with VInt unchanged, then matched
+all three boss milestones. Match the actual callback/slot/input boundary before
+reauthoring ordinary controls; never suppress setup or shift gameplay clocks.
+
+**A width override does not resize an already-created test camera.** The ROM
+Jupiter extension creates its gameplay managers before a test's session override.
+A local HeadlessTestFixture can retain that camera. Explicitly refresh its viewport
+before loading and assert the dimension, or create a fresh scenario context.
+Four wider S3K credit-plane vectors read shifted glyphs with a retained320 camera
+while the320 vector passed (2026-10-13). A width parameter is not width evidence.

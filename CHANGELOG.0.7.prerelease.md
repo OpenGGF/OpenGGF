@@ -14,3 +14,10 @@ Unreleased. The earlier development themes remain in
 - **S3K Knuckles entry:** Locked-on Mushroom Hill deletes the standalone S&K
   intro before it can freeze the camera and take player control. Its native
   `SK_alone_flag` prerequisite is kept separate from the selected character.
+
+- **S3K endings:** Sonic and Tails continue from Death Egg or Doomsday into
+  the Tornado rescue, earned Super Emerald restoration, reunion, ROM credits
+  and their progress-dependent final scenes. Knuckles continues from the final
+  Sky Sanctuary fight through his plane flight, island credits and terminal
+  scene. Scene resources, palette and animation owners, terminal Start input
+  and rewind state remain inside the native level lifecycle.

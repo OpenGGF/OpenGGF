@@ -129,6 +129,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     private com.openggf.game.sonic3k.events.Sonic3kLRZEvents lrzEvents;
     private com.openggf.game.sonic3k.events.Sonic3kSSZEvents sszEvents;
     private com.openggf.game.sonic3k.events.Sonic3kDEZEvents dezEvents;
+    private com.openggf.game.sonic3k.events.Sonic3kEndingEvents endingEvents;
     private final AizPreparedTransitionArtState aizPreparedTransitionArt =
             new AizPreparedTransitionArtState();
     private final S3kFixedAirCountdownManager fixedAirCountdownManager =
@@ -341,6 +342,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         // Install typed zone runtime state into the registry.
         // Uses getActiveRuntime() to avoid the mode-checking side effects of
         // getCurrent() which can destroy the runtime during level loading.
+        if (zone == Sonic3kZoneIds.ZONE_INTRO_ENDING && act == 1) {
+            endingEvents = new com.openggf.game.sonic3k.events.Sonic3kEndingEvents();
+            endingEvents.init(act);
+        } else endingEvents = null;
         installZoneRuntimeState(zone, act);
         restoreFbzMagneticTransitionState(fbzMagneticTransitionState);
         installFixedDynamicObjects(zone);
@@ -529,6 +534,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             registry.install(new LbzZoneRuntimeState(act, playerCharacter));
         } else if (zone == Sonic3kZoneIds.ZONE_SSZ) {
             registry.install(new com.openggf.game.sonic3k.runtime.SszZoneRuntimeState(act, playerCharacter));
+        } else if (zone == Sonic3kZoneIds.ZONE_INTRO_ENDING && act == 1) {
+            registry.install(new com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState(playerCharacter));
+            if (endingEvents != null) endingEvents.initializeScreen();
         } else if (zone == Sonic3kZoneIds.ZONE_DEZ) {
             registry.install(new com.openggf.game.sonic3k.runtime.S3kDezZoneRuntimeState(
                     act, playerCharacter));
@@ -701,6 +709,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (sszEvents != null && currentZone == Sonic3kZoneIds.ZONE_SSZ) {
             sszEvents.update(currentAct, frameCounter);
         }
+        if (endingEvents != null && currentZone == Sonic3kZoneIds.ZONE_INTRO_ENDING && currentAct == 1)
+            endingEvents.update(currentAct, frameCounter);
         if (dezEvents != null && currentZone == Sonic3kZoneIds.ZONE_DEZ) {
             dezEvents.update(currentAct, frameCounter);
         }
@@ -1475,6 +1485,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     @Override
     public java.util.List<com.openggf.game.rewind.RewindSnapshottable<?>> extraRewindAdapters() {
         return java.util.List.of(
+                new com.openggf.game.sonic3k.ending.EndingSceneResourceHandoff.GeometryAdapter(),
+                new com.openggf.game.sonic3k.ending.EndingNativePlayerBinding.Adapter(),
                 aizPreparedTransitionArt,
                 new com.openggf.game.sonic3k.objects.AizTreeRevealStaticAdapter(),
                 new com.openggf.game.sonic3k.objects.Aiz2BossEndSequenceStaticAdapter(),
@@ -1758,6 +1770,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             // Reinstalling would zero the Sky Sanctuary event bytes and re-run the screen init.
             case Sonic3kZoneIds.ZONE_SSZ ->
                     state instanceof com.openggf.game.sonic3k.runtime.SszZoneRuntimeState;
+            case Sonic3kZoneIds.ZONE_INTRO_ENDING -> currentAct == 1
+                    && state instanceof com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState;
             // Reinstalling would zero the Doomsday words and allocate a second flight controller.
             case Sonic3kZoneIds.ZONE_DDZ -> state instanceof com.openggf.game.sonic3k.runtime.DdzZoneRuntimeState;
             case Sonic3kZoneIds.ZONE_LRZ ->
