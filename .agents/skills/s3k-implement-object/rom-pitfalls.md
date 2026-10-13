@@ -5244,3 +5244,15 @@ still displays at 196. Preserve raw words/fractions and normalize the derived
 one-piece origin after its mapping offset. Test natural even-VInt admission and
 publication: current CPU positions/mappings need not describe the published SAT.
 The 2026-10-13 ending repair tests both wrapping and the completed piece X 0 edge.
+
+## Registration does not consume every zone's ROM tables
+
+Applies across game providers; observed in S3K ending bring-up. The scroll
+provider creates every zone handler during load. Eager ending tables therefore
+broke unrelated FBZ/CNZ registration, which intentionally accepts an unopened
+ROM until a relevant native owner uses it. Follow the existing SOZ/LRZ3 pattern:
+retain the ROM reference, read and validate both ending banks on actual use,
+publish one immutable cache only after success, and propagate invalid bytes
+before changing RAM/output. Cache construction during pure post-restore rebuild
+must not advance captured scroll state. Missing required data still fails; no
+fallback table or ROM-required fixture skip replaces that boundary.

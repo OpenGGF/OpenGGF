@@ -1490,6 +1490,17 @@ and retains the latter. Resetting both on act initialization makes the forest
 jump. Restore the accumulator only after the destination scroll handler's lazy
 initialization, then recompute deformation without another animation tick.
 
+**Provider registration is not every zone's resource-use boundary.** S3K's
+provider constructs all handlers before selecting a zone. Eager ending-band
+reads made unrelated FBZ/CNZ no-ROM registration tests fail and caused
+`ParallaxManager.load` to discard the entire provider on the same IOException.
+SOZ/LRZ3 already defer their native tables until relevant init/render. Store the
+ROM reference, validate the ending `$5B144`/`$5B15A` banks into one immutable pair
+on actual ending use, and fail before native RAM/output changes if either bank
+is unavailable or malformed. A first post-restore rebuild may populate that
+derived cache without consuming a scroll tick. Do not replace unrelated fixtures
+with ROM-required skips or supply fallback tables to hide this contract regression.
+
 MHZ2 pillar arithmetic (2026-09-27): successive `DIVU.W` operations at
 `loc_55586` are a 32-bit division assembled from two words, not independent
 word quotients. The first remainder stays in the upper half of D2 while MOVE.W

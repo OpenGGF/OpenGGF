@@ -12,8 +12,9 @@ Positioned320/800 boss-to-Act2 routes and palette-ramp replay pass. Fourteen pre
 native320 ordinary Sonic+Tails cold routes now include miniboss defeat, results and
 playable Act2 at31440inputs, with185 full-registry replay spots. The complete route
 uses no gameplay seeds and has zero deaths. A separate Tails-solo native320 cold
-route now clears the act and reaches playable Act2 in34128 inputs, with51
-full-registry restore/replay spots and no deaths. Other character/donor/width products,
+route now clears the act and reaches playable Act2 in 29,157 inputs, with 58
+full-registry 45-input restore/replay spots and no deaths, as recorded in the
+[October 13 current qualification](#current-route-qualification-2026-10-13). Other character/donor/width products,
 lifecycle coverage and native whole-scene acceptance remain open. The new cold800
 native-pair candidate clears Act1 in25,650 inputs with115 two-cycle replay windows
 and seamless history isolation; broad validation/integration is pending.

@@ -88,6 +88,25 @@ graphs are qualified. No cold campaign breadth or whole-scene BizHawk parity is
 added by this local presentation repair; combined validation remains the lead's
 obligation.
 
+## Deferred deformation resource follow-up — 2026-10-13
+
+The first FBZ/CNZ errors in the coordinator's frozen `7d0a9acbb` smoke were a
+shared resource-boundary regression, not new scroll arithmetic differences.
+The unchanged FBZ method passes on baseline `2e992da7d`, whose test/provider/
+interface bytes equal original `5e2f51f07`. Sixteen explicit no-ROM provider
+methods share this registration contract. Ending-only immutable banks now load
+on relevant use, validate together before publication, and fail before native
+RAM/output mutation; pure first rebuild remains tick-free.
+
+Focused contract 32 passes with zero failures/errors/skips: sixteen provider
+clients, six first-use/failure cases, four ending math/RAM checks and six generic
+parallax rebuild checks. Affected consumers also pass 23/0/0/0: D01 lifecycle 9,
+scene handoff 1, clouds 2, scene state 5 and actual IslandLift/AIZ GPU 6. All 55
+follow-up checks have zero failures/errors/skips; combined smoke remains lead-owned.
+See the [dated follow-up](../../designs/2026-10-13-s3k-ending-lifecycle.md#deferred-ending-deformation-resources--2026-10-13).
+Historical media hashes remain their actual earlier sources; no new film or
+latest-integrated pixel-parity claim is added by this immutable-data change.
+
 ## Unimplemented native presentation breadth — 2026-10-13
 
 **Historical audit, superseded by the qualified repair above.** The following

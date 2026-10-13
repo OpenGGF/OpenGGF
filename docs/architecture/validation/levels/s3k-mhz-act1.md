@@ -10,7 +10,7 @@ implementation reviewed historically; current campaign act certification pending
 | Claim | Evidence / state |
 | --- | --- |
 | Implemented | Original direct audit found no further missing Sonic/Tails feature; later miniboss lifetime, explosion and transition-identity fixes landed. |
-| Cold-reachable | Fresh 320px Sonic, Tails and paired routes, plus the 2026-09-27 800px Sonic candidate, reach the miniboss and MHZ2; no position/clock/ring/health seed. |
+| Cold-reachable | Native 320px Sonic, Tails, Sonic+Tails and Knuckles, plus Sonic at 800px, complete the miniboss/results and released MHZ2. Knuckles uses 30,000 ordinary inputs with 43 two-cycle full-registry windows and actual seamless history isolation; no position/clock/ring/health seed. Other products remain open. |
 | Completable | Native Sonic, Tails, Knuckles and paired routes, plus the 800px Sonic candidate, complete all six boss hits, sign/results, seamless MHZ2 load and released player movement. Other configurations remain open. |
 | Native-accurate | Disassembly-backed review plus local regressions; frame-perfect/native visual certification not claimed. |
 | Rewind/standard | Several live interaction and graph checks exist; breadth and complete before/active/after obligations remain incomplete. |
@@ -67,7 +67,7 @@ baseline. They cannot be relabelled a green campaign baseline.
 | --- | --- |
 | Width | Supported presets are 320, 352, 400, 528, 800 through the supported configuration. Current per-act entry/lifecycle cross-product, meaningful traversal and rewind coverage are unassessed; historical local camera checks do not fill this row. |
 | Donor | Native plus every currently supported S3K movement donor; resolve support from production before selecting cases. No per-act donor certification from the reviewed records. |
-| Main | Sonic, Tails, Sonic/Tails native pairing and the current native Knuckles route. The short locked-on intro admission is qualified below; full Knuckles traversal remains pending. |
+| Main | Sonic, Tails, Sonic/Tails native pairing and the current native Knuckles route. Cold native 320px Knuckles Act 1 is qualified below (43 two-cycle windows), and the [Act 2 matrix](s3k-mhz-act2.md#native-terminal-flow-and-full-cold-knuckles-completion-2026-10-13) records the complete cold chain into released FBZ. Other configuration/lifecycle products remain open. |
 | Team | Solo/native pair are reviewed implementation paths. Mixed, duplicate and maximum participant shapes need current contract-derived authority/lifecycle checks; absence of evidence is not an unsupported classification. |
 | Lifecycle | Checkpoint respawn, death/restart, alternate entry where applicable, repeated loads, and exit behavior need their own short cases and width × supported-donor coverage. |
 

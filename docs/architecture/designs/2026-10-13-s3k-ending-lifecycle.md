@@ -881,3 +881,62 @@ Tails is `7567a3a393f9f67fffaeb23cc90b8dec267e77842aa272670705511035fbc2d4`.
 Historical negative/corrected films and their source identities remain intact.
 The final reachable integrated commit will become the reproduction target after
 root delivery; captured hashes remain the actual historical identities.
+
+## Deferred ending deformation resources — 2026-10-13
+
+Coordinator smoke on frozen `7d0a9acbb` first observed two errors:
+`TestFbzScrollHandler#providerReloadCreatesFreshFbzAccumulatorOwner` and
+`TestSonic3kCnzScroll#providerReturnsCnzHandlerForCnzZone`. Both passed an
+unopened `Rom` to registration; eager `SwScrlEnding` construction read `$5B144`
+and failed with `size=-1` before the provider marked itself loaded. The unchanged
+FBZ test passes on `2e992da7d` (1/0/0/0, 24.286s, 22:32:48 BST). Baseline test
+blob `51b2974a`, provider `a884a882` and interface `46966b8e` equal original
+`5e2f51f07`; the current provider change only added the ending owner/map.
+The lead owns the incomplete broad run and its final identities; a passing
+baseline method is not a green smoke claim.
+
+Source search found sixteen same-contract methods in twelve classes: FBZ and
+CNZ one each; HCZ/ICZ/LBZ/MGZ/MHZ/Slots one each; HPZ two; LRZ four; SSZ bands
+one; DEZ-final one. `ScrollHandlerProvider.load` does not require globally eager
+zone reads. SOZ and LRZ3 retain the ROM and decode only at relevant init/render;
+SSZ act2 likewise reads its tables at active use. `ParallaxManager.load` discards
+the entire provider after IOException, so rewriting FBZ/CNZ to require real ROMs
+would hide the cross-zone resource contract. That approach was rejected.
+
+The ending handler now retains its ROM reference and validates both native
+`$5B144`/11-word and `$5B15A`/10-word banks into local arrays before publishing
+one immutable pair. The actual ending-runtime guard precedes this demand; both
+ordinary update and pure rebuild use it before native RAM/output mutation.
+Invalid required bytes still throw contextual `UncheckedIOException`; no fallback
+or swallowed IO was added. Native table offsets, arithmetic, clocks and captured
+RAM are unchanged. A fresh derived cache may be populated during restore without
+consuming the initial scroll tick.
+
+The six new checks first ran RED (5 failures/1 error/0 skips, 27.196s), all from
+constructor-time reads. They cover unselected no-read behavior, unopened/
+truncated/malformed relevant ROMs, and ordinary/rebuild first use through real
+ROM reads with a fresh pure reconstruction. The corrected contract run passes
+32/0/0/0 in 1:11 at 22:39:10 BST: provider 16 + new 6 + ending math/RAM 4 + generic
+pure rebuild 6. The unique affected consumer run also passes 23/0/0/0 in 1:18
+at 22:43:14 BST: D01 lifecycle 9 + scene handoff 1 + clouds 2 + scene state 5 +
+actual IslandLift/AIZ GPU 6. All 55 follow-up checks have zero failures/errors/skips.
+No broad worker run or duplicate unchanged 50-case presentation campaign was added.
+Candidate production SHA256 is
+`767066e0042476c2af1bee1c484a8999fe5fad012bc38fc09684704d1591fdf8`;
+all-src Java is `699ba28d11f2957f0237eecc7e9ad66b91f94a149f279a7ca06fb583e187bcc2`.
+`SwScrlEnding` blob is `0afdeaa074c34c97e3901574cc1c886fe381a09a`.
+The earlier `70c09903` films and their hashes remain historical evidence;
+this follow-up neither recaptures them nor claims latest-integrated pixel parity.
+
+Commands use the updated main wrapper from the intended tree cwd. The variables
+`OPENGGF_REPOSITORY_ROOT` and `S3K_ENDING_ROM` render the repository root and
+verified original ROM absolute paths portably:
+
+```bash
+# Baseline tree 2e992da7d; exact test/provider/interface bytes match original 5e2.
+python3 "$OPENGGF_REPOSITORY_ROOT/tools/testing/maven_queue.py" --lean -Dmse=off '-Dtest=TestFbzScrollHandler#providerReloadCreatesFreshFbzAccumulatorOwner' test
+# Ending tree f664 plus this scoped candidate; first command is the pre-fix RED.
+python3 "$OPENGGF_REPOSITORY_ROOT/tools/testing/maven_queue.py" --lean -Dmse=off "-Ds3k.rom.path=$S3K_ENDING_ROM" '-Dtest=TestSwScrlEndingResources' test
+python3 "$OPENGGF_REPOSITORY_ROOT/tools/testing/maven_queue.py" --lean -Dmse=off "-Ds3k.rom.path=$S3K_ENDING_ROM" '-Dtest=TestSwScrlEndingResources,TestSwScrlEnding,TestParallaxRewindSnapshot,TestFbzScrollHandler#providerReloadCreatesFreshFbzAccumulatorOwner,TestSonic3kCnzScroll#providerReturnsCnzHandlerForCnzZone,SwScrlMhzTest#providerUsesMhzDeformForMushroomHill,SwScrlLbzTest#providerRoutesLbzToDedicatedHandler,SwScrlHpzTest#providerRoutesHpzToDedicatedHandler+giantRingDestinationUsesSanctuaryScrollButBossActKeepsFallback,TestS3kSszScrollBands#providerRoutesSkySanctuaryToItsOwnHandler,SwScrlIczTest#providerRoutesIczToDedicatedHandler,SwScrlLrzTest#providerRoutesBothLavaReefActsToTheDedicatedHandler+bossActsNoLongerBorrowTheHiddenPalaceHandler+zoneOnlyLookupStillReturnsTheHiddenPalaceHandler+initForZoneMakesTheZoneOnlyLookupActAware,SwScrlSlotsTest#providerRoutesSlotsToDedicatedHandler,SwScrlHczTest#providerRoutesHczToDedicatedHandler,SwScrlMgzTest#providerRoutesMgzToDedicatedHandler,TestSwScrlS3kDezFinalBoss#providerSeparatesFinalBossFromSanctuary' test
+JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl python3 "$OPENGGF_REPOSITORY_ROOT/tools/testing/maven_queue.py" -Dmse=off "-Ds3k.rom.path=$S3K_ENDING_ROM" '-Dtest=TestS3kEndingLifecycleCapture,TestS3kEndingSceneResources,TestS3kEndingClouds,TestS3kEndingSceneState,TestS3kEndingPresentationCapture#nativeRescueAllocatesBothIslandGroupsAndKeepsTheirArtAndPhaseReplay+nativeSuperAizHoldOwnsWaterfallTorchClockAndIndependentMasterPaletteWithReplay' test
+```
