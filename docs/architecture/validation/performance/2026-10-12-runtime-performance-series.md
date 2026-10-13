@@ -394,3 +394,67 @@ deltas include it. Do not normalize visible Java/native samples into a claim
 about all-process savings. JVM debug symbols were unavailable, so compilation
 task labels are being collected separately before ranking a concrete hypothesis.
 No production performance edit or accepted/rejected experiment exists yet.
+### Experiment P1 — shared execution-order preparation (rejected)
+
+Isolated `feature/ai-perf-exec-order`, parent `7ffa810a48351283ed654417a7769ac27088cb0e`.
+Measured unprofiled S1 compiler CPU is 91 ticks; a separate HotSpot compilation
+log has repeated `ObjectManager.updateCounterBasedExecThenLoad` tasks, about
+0.242 seconds elapsed across three tasks near the window. This motivates a small
+method-boundary experiment, not a predicted whole-engine percentage. Native
+driver CPU and sampling coverage limits remain separate bottlenecks.
+
+Extract the two identical position-snapshot and execution-index blocks into
+shared private helpers. Each ROM path retains its exact local clearing order;
+all callbacks, active/dynamic iteration order, fixed-slot exclusions, slot
+allocation, dispatch, unload, retirement and placement remain unchanged.
+HotSpot may inline the helpers or move compilation elsewhere; reject if paired
+whole-process savings do not exceed noise. No JVM flags or game behavior changes.
+
+Candidate `1227f4cb7210219cf420f6c0205fbc4b703868aa`; original numeric
+source `184c9d54ed4fc2c1fed3cb6313653a95f9156e3d`. Focused slot/callback/lifetime/
+handoff-rewind checks passed 35 tests; frozen route/terminal checks passed 20,
+all without failures/errors/skips. Presented FFV1 frame hashes and decoded
+48 kHz stereo PCM matched byte-for-byte on all six routes. The demanding S3K
+capture covered 15,550 presentations from cursor 4,961 through EOF, including
+AIZ act reload and AIZ → HCZ. Long capture finalization was awaited before
+engine cleanup; early shutdown had discarded an incomplete control recording.
+That discarded capture is not correctness evidence.
+
+Preliminary alternating fresh-process screen (CPU ms/simulated frame):
+
+| Scenario | Complete pairs | Baseline median | Candidate median | Change |
+|---|---:|---:|---:|---:|
+| s1-normal | 2 | 1.527685 | 1.577718 | +3.28% |
+| s1-demanding | 2 | 1.383690 | 1.463904 | +5.80% |
+| s2-normal | 1 | 1.413333 | 1.386667 | −1.89% |
+| s2-demanding | 1 | 1.684699 | 1.731066 | +2.75% |
+| s3k-normal | 1 | 2.392308 | 2.530769 | +5.79% |
+| s3k-demanding | 1 | 2.553672 | 2.649718 | +3.76% |
+
+S1 normal paired changes +5.26%/+1.30%; demanding +4.72%/+6.93%.
+All four S1 candidate runs were slower. This conservative rejection screen
+established no benefit; it is **not** a completed five-pair acceptance matrix
+or a claim of a statistically established >5% regression. Demanding S1 peak
+RSS also varied −5.56%/+10.54%, requiring investigation if a later candidate
+otherwise merits acceptance. No measurements were discarded in favor of a
+faster run. First-round separate LIVE loads completed; one later S2 baseline
+was unpaired, and its in-progress candidate was cancelled. Those are excluded
+from paired conclusions.
+
+Commands used the fixed protocol and source-specific classpaths:
+`python3 ${OPENGGF_PERF_TASK_DIR}/visual_batch.py`, then
+`python3 ${OPENGGF_PERF_TASK_DIR}/p1_paired_batch.py`; each measured child ran
+`RuntimeEngineBenchmarkTool <frozen-plan> ${OPENGGF_ROM_ROOT} <report> <measure-from> <measure-to>`
+with `--enable-native-access=ALL-UNNAMED -Xmx3g`, no qualification CSV,
+capture or profiling. The external sampler command was
+`python3 tools/performance/sample_runtime.py --pid <owned-java-pid> --log <runtime-log> --report <report>`.
+Completed per-run reports and decoded capture controls are in the external task
+directory; no raw logs are added to Git. The original baseline is unchanged.
+
+Reject the source extraction and retain only this evidence. Accepted gains:
+zero; consecutive rejected performance experiments: **one**. Compiler-heavy
+fresh-process CPU remains real, but this method-boundary change did not help.
+Next investigate common measured FM/PSG synthesis work, or real rendering-driver
+work (particularly demanding S3K), with an exact PCM/framebuffer control before
+any acceptance benchmark. Do not treat sampled Java coverage as whole-process
+coverage or a helper speedup as an engine saving.
