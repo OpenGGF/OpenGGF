@@ -1161,3 +1161,64 @@ state/pixel controls and their limits are described in the
 [headless testing guide](../../../guide/contributing/headless-testing.md).
 This performance change supplies no new native reference, full-route visual
 certification or missing viewport/donor/character coverage; inherited gaps remain.
+
+### Current-base route and EggRobo retirement follow-up (2026-10-13)
+
+Task tree `.worktrees/ai-s3k-finish-ssz`, branch `bugfix/ai-s3k-finish-ssz`,
+pinned develop base `5e2f51f07917d5eff8ac120007dac55327f93f32`. Java 25 and
+the original absolute-path locked-on ROM are used; independently verified
+CRC32 `63522553`, SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`.
+
+The bounded baseline selects the native Sonic+Tails and solo Sonic replica
+routes, plus the two Tails replica widths. It completes four cases with three
+failures, zero errors/skips: team death at input 7311, solo death 7671, and
+the 800px Tails object-manager replay at 4018. Native 320px Tails passes.
+The failing wide replay retains gun/flame children whose parent is absent
+from the captured world; forward execution continues using the old Java
+parent while restored execution resolves their parent IDs to null and retires
+them, changing later slot allocation.
+
+Native `Sprite_CheckDeleteTouch` branches to `loc_85094`, which sets parent
+status bit 7 before scheduling `Delete_Current_Sprite`. Both EggRobo children
+end in `Child_Draw_Sprite`, which reads that bit. Manager offscreen retirement
+had removed the body without publishing the signal. EggRobo now uses the
+existing `onUnload`/`destroyRespawnableOffscreen` contract, as Chainspike already
+does for the same native tail. No shared allocator, slot order, child null
+tolerance, snapshot format, movement, timing or input owner changes.
+
+The independent two-facing regression removes the body through the real
+object manager, checks both children retire, restores the complete live graph
+and forwards it, then captures/restores the retired-parent boundary and checks
+orphan retirement repeats. Both cases first fail on the missing native signal
+(two failures, zero errors/skips), before the production correction.
+
+Separate uninterrupted controller-only observations reproduce both Sonic
+deaths without rewind. The team is already falling by 7050 and its old 7077 jump
+does not recover the carrier route; the solo route also runs into the lower
+pit. These are current navigation frontiers, without evidence of a new ROM
+movement defect. Tails' full input reaches DEZ with the actual live main player
+still at (0, 0) and `hasPendingFreshLevelTransitionBoundary=true`; session/current
+player identity is equal, so a stale cached sprite alone does not explain the
+old 48/0 endpoint failure. Shared fresh-load assembly is owned by the integration
+lane; destination assertions remain unchanged.
+
+Commands use the prefix `python3 tools/testing/maven_queue.py -Dmse=off` and
+`-Ds3k.rom.path=<verified absolute ROM>`:
+
+- Baseline: `-Dtest=TestSszColdRouteCapture#coldRouteDefeatsBothReplicasAndReplaysTraversalAndTransport,TestSszSoloColdRouteCapture#coldSoloSonicDefeatsBothReplicasAndReplaysTheirApproaches,TestSszTailsColdRouteCapture#coldSoloTailsDefeatsBothReplicasAndRidesTheirTeleporters test`.
+- Independent red, with `--lean`: `-Dtest=TestSszEggRoboPresentation#parentRetirementSignalsBothChildrenAndRestoredGraphFollowsItsLiveOwner test`.
+
+Candidate verification completes 79 tests with zero failures, errors or skips:
+`-Dtest=TestSszEggRoboPresentation,TestSszEggRoboClockGates,TestS3kSszEggRobo,TestSszTailsColdRouteCapture#coldSoloTailsDefeatsBothReplicasAndRidesTheirTeleporters,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`.
+The original absolute S1/S2 ROM paths are also supplied for the loading checks;
+both matching `TestSonic3kLevelLoading` classes execute. This includes both
+Tails replica widths and the formerly failing 800px replay at 4018.
+
+The maintained `GameplayInputBranchTool`, with full scene drawing on the
+corrected owner, reproduces team death 7311 when the jump starts at 7060.
+Earlier controller jumps from the same cold-replayed 7030 prefix reach the
+monitor ledge alive; a 7030 jump actually catches the bar at 7087. These are
+exploratory branches, not independently replayed complete routes. Navigation
+repair and the separate shared DEZ assembly correction remain open. No act,
+donor/roster/viewport product, native presentation or complete route
+certification is inferred from this bounded selection.
