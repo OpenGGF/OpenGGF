@@ -175,7 +175,10 @@ class TestRemainingRewindTailInventory {
         // Final emerald probes independently; palette cursors are captured by each zone runtime.
         // Final escape scenery adds one scalar/parent-captured recreate owner.
         // SSZ background camera tracker adds one spawn-recreatable scalar owner.
-        return new TailInventory(1316, 1073, 243, 0, buckets);
+        // NativeBreakableWallObjectInstance, NativeGhostEncounterObjectInstance and
+        // NativeGustObjectInstance each pass the real isolated ObjectManager round-trip;
+        // their spawn recreation and owned scalar state add three passes, with no bucket growth.
+        return new TailInventory(1319, 1076, 243, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {
