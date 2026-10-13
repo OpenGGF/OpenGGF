@@ -538,3 +538,77 @@ Next measured common rendering bottleneck is HScrollBuffer upload: inclusive
 visible samples 96/1,931 S1 normal, 151/1,663 S2 normal, 167/1,825 S3K demanding.
 S3K additionally has substantial atlas upload/driver work. As before, visible
 sample shares omit busy native driver threads and are not process percentages.
+### Original build isolation and experiment P3 — unchanged HScroll upload (rejected)
+
+Original numeric source stays `184c9d54ed4fc2c1fed3cb6313653a95f9156e3d`.
+A dedicated `feature/ai-perf-original` worktree was built with the same JDK
+and dependencies before rebuilding any accepted-tree classes. All **7,354
+class files and 145 other classpath resources** matched the existing original
+build byte-for-byte. Sorted class-path/hash manifest SHA-256
+`125abe28c5b434e441d55fef8199dee56591acf1ac0c1bb3ee84e3ff59411d91`.
+Only the external baseline classpath location changed to this immutable build;
+no build trees were shared/copied and no original measurements or protocol
+fields changed. Build command: `JAVA_HOME=/usr/lib/jvm/java-25-openjdk python3 tools/testing/maven_queue.py -Dmse=off compile -B`.
+
+P3 is isolated at `feature/ai-perf-hscroll-cache`, parent `48cbbc76e`.
+HScroll upload is common measured work (visible inclusive samples S1 normal
+96/1,931; S2 normal 151/1,663; S3K demanding 167/1,825). Its synchronous
+texture updates also contribute native driver work not fully visible in these
+profiles. The hypothesis is that unchanged normalized scanline values need
+no data upload. Cache the exact values last uploaded by this texture owner;
+retain binding-to-zero behavior even when skipping, and invalidate on cleanup.
+Do not quantize, approximate, change format/resolution or reuse another
+resource's cache. Array/view overloads share the same normalized contents,
+including signed packed-word selection and zero-filled missing rows.
+
+Controls cover real 1D texture readback, repeated uploads through both
+overloads with a pre-existing binding, null input, zeros, signed extrema,
+foreground/background selection and identical-data resource/context recreation.
+Run these on unchanged source before implementation, then candidate, in the
+owned private hardware rendering environment. Existing rewind/lifetime checks
+and all frozen normal-runtime pixel/PCM, input/trajectory and frame-count
+controls remain required. Five paired runs across all scenarios are required
+for acceptance; preliminary rejection does not certify full coverage.
+
+Unchanged source and candidate native selections each passed 2 tests, no
+failures/errors/skips. Command in the private hardware Wayland environment:
+`JAVA_HOME=/usr/lib/jvm/java-25-openjdk python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestHScrollBufferCompatibility,TestScrollBufferUploadNative -Dopenggf.scrollNative=true test -B`.
+The current change adds only owner-private exact-value cache storage, keeps
+texture binding zero on a hit, and invalidates the cache in cleanup.
+A separate diagnostic-only classpath counts actual upload decisions over
+the frozen runtime window; those instrumented CPU numbers are not acceptance.
+Require workload digests/frame counts to match before using its frequency
+evidence. Production acceptance classes contain no diagnostic counters.
+
+P3 candidate `33576af86f33ec3de2989787d74290a5529e2802`. Separate diagnostic
+profiles retained the frozen input/trajectory digests and measured frame
+counts. S1 normal had 1 unchanged upload out of 1,500 calls; demanding S1
+had 712/1,500. The latter justified a runtime screen, but helper call counts
+were never credited as CPU savings. All six normal-runtime frame/PCM captures
+matched exactly, including the extended S3K transitions, explicit full-route
+frame counts and final prepared hardware jobs.
+
+Preliminary CPU screen (ms/simulated frame):
+
+| Scenario / pair | Baseline | Candidate | Change |
+|---|---:|---:|---:|
+| s1-normal / 1 | 1.574383 | 1.507672 | −4.24% |
+| s1-normal / 2 | 1.547698 | 1.641094 | +6.03% |
+| s1-demanding / 1 | 1.356952 | 1.437166 | +5.91% |
+| s1-demanding / 2 | 1.383690 | 1.323529 | −4.35% |
+
+Both equally weighted S1 round scores were slightly slower (+0.46%, +1.13%),
+with opposite per-scenario directions. No saving beyond noise was established.
+Conservatively reject; this is not a statistically established material
+regression, a complete five-pair matrix, or evidence about S2/S3K CPU gains.
+Original scores stay fixed. Commands: diagnostic-only
+`python3 ${OPENGGF_PERF_TASK_DIR}/hscroll_profile_batch.py` (separate named
+classpath with upload counters), `python3 ${OPENGGF_PERF_TASK_DIR}/visual_p3_batch.py`
+(production classes), then `python3 ${OPENGGF_PERF_TASK_DIR}/p3_s1_screen.py`
+(two baseline/candidate pairs per S1 scenario, no captures/counters/CSV).
+
+Restore the production HScroll implementation; retain the native repeated
+upload and recreation checks, which passed on original source. Accepted
+gains: zero; consecutive rejected performance experiments: **three**.
+Next inspect the other common measured rendering costs rather than inferring
+engine savings from skipped GL calls.
