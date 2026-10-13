@@ -1201,6 +1201,7 @@ class TestMhzBossObjects {
                 0x4200, 0x0300, Sonic3kObjectIds.MHZ_END_BOSS, 0, 0, false, 0));
         endBoss.setServices(services);
         endBoss.getState().hitCount = 2;
+        endBoss.setCustomFlag(0x38, 0x80);
 
         endBoss.update(0, null);
 
@@ -1951,13 +1952,15 @@ class TestMhzBossObjects {
                 0x4400, 0x02E0, Sonic3kObjectIds.MHZ_END_BOSS, 0, 0, false, 0));
         endBoss.setServices(services);
         endBoss.getState().routine = 0x0E;
-        endBoss.getState().hitCount = 1;
+        endBoss.getState().hitCount = 2;
         endBoss.setCustomFlag(0x38, 0xC8);
 
         endBoss.onPlayerAttack(null, null);
+        assertFalse(endBoss.isDefeated(), "loc_767B0 keeps the terminal hit flashing before escape");
+        for (int flash = 0; flash < 0x20; flash++) endBoss.update(flash, null);
 
-        assertEquals(0, endBoss.getState().hitCount,
-                "fatal Touch_Enemy_Part2 hit consumes the final collision_property count");
+        assertEquals(1, endBoss.getState().hitCount,
+                "loc_767F6 installs escape at collision_property1 after the hit flash");
         assertEquals(0x400, endBoss.getState().xVel,
                 "loc_76822 starts the post-hit defeat dash with x_vel=$400 for non-Knuckles");
         assertEquals(0, endBoss.getCustomFlag(0x38) & 0x40,
@@ -1966,7 +1969,7 @@ class TestMhzBossObjects {
                 "the custom defeat handoff cancels the base hit flash timer");
         assertEquals(Sonic3kSfx.BOSS_HIT.id, lastSfx[0],
                 "the final hit still plays sfx_BossHit before the defeat handoff");
-        verify(gameState).addScore(1000);
+        verifyNoInteractions(gameState);
     }
 
     @Test
@@ -1977,6 +1980,7 @@ class TestMhzBossObjects {
         endBoss.setServices(services);
         endBoss.getState().routine = 0x0E;
         endBoss.getState().hitCount = 2;
+        endBoss.setCustomFlag(0x38, 0x80);
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x43F0, (short) 0x02E0);
         player.setXSpeed((short) 0x0600);
 
@@ -2006,20 +2010,23 @@ class TestMhzBossObjects {
                 0x4400, 0x02E0, Sonic3kObjectIds.MHZ_END_BOSS, 0, 0, false, 0));
         endBoss.setServices(services);
         endBoss.getState().routine = 0x0E;
-        endBoss.getState().hitCount = 1;
+        endBoss.getState().hitCount = 2;
         endBoss.setCustomFlag(0x38, 0xC8);
 
         endBoss.onPlayerAttack(null, null);
+        assertFalse(endBoss.isDefeated(), "loc_767B0 keeps the terminal hit flashing before escape");
+        for (int flash = 0; flash < 0x20; flash++) endBoss.update(flash, null);
 
         assertEquals(0x500, endBoss.getState().xVel,
                 "loc_76822 starts the post-hit defeat dash with x_vel=$500 for Knuckles");
         assertEquals(0, endBoss.getCustomFlag(0x38) & 0x40,
                 "loc_76822 still clears $38 bit 6 before the Knuckles defeat dash");
-        verify(gameState).addScore(1000);
+        verifyNoInteractions(gameState);
     }
 
     @Test
     void mhzEndBossFatalHitSpawnsRomPlayerWalkoffPrepController() throws Exception {
+        com.openggf.tests.TestEnvironment.activeGameplayMode();
         ObjectManager objectManager = mocks.mock(ObjectManager.class);
         GameStateManager gameState = mocks.mock(GameStateManager.class);
         Sonic3kMHZEvents mhzEvents = new Sonic3kMHZEvents();
@@ -2049,10 +2056,12 @@ class TestMhzBossObjects {
                 0x4400, 0x02E0, Sonic3kObjectIds.MHZ_END_BOSS, 0, 0, false, 0));
         endBoss.setServices(services);
         endBoss.getState().routine = 0x0E;
-        endBoss.getState().hitCount = 1;
+        endBoss.getState().hitCount = 2;
         endBoss.setCustomFlag(0x38, 0xC8);
 
         endBoss.onPlayerAttack(null, null);
+        assertFalse(endBoss.isDefeated(), "loc_767B0 keeps the terminal hit flashing before escape");
+        for (int flash = 0; flash < 0x20; flash++) endBoss.update(flash, null);
 
         assertEquals(1, freeSpawned.size(),
                 "loc_76822 allocates the loc_768B6 Player_1 walkoff-prep controller on the fatal hit");
@@ -2148,10 +2157,12 @@ class TestMhzBossObjects {
                 0x4300, 0x02E0, Sonic3kObjectIds.MHZ_END_BOSS, 0, 0, false, 0));
         endBoss.setServices(services);
         endBoss.getState().routine = 0x0E;
-        endBoss.getState().hitCount = 1;
+        endBoss.getState().hitCount = 2;
         endBoss.setCustomFlag(0x38, 0xC8);
 
         endBoss.onPlayerAttack(null, null);
+        assertFalse(endBoss.isDefeated(), "loc_767B0 keeps the terminal hit flashing before escape");
+        for (int flash = 0; flash < 0x20; flash++) endBoss.update(flash, null);
         endBoss.update(0, null);
         endBoss.update(1, null);
         endBoss.update(2, null);
@@ -2198,15 +2209,30 @@ class TestMhzBossObjects {
         endBoss.setCustomFlag(0x3E, 0xC0);
         endBoss.setCustomFlag(0x40, 0x10);
 
+        doAnswer(invocation -> {
+            assertEquals(0, endBoss.getCustomFlag(0x2E), "native HUD stop precedes the wait reset");
+            return null;
+        }).when(levelState).pauseTimer();
+        doAnswer(invocation -> {
+            assertEquals(0x3F, endBoss.getCustomFlag(0x2E), "native wait reset precedes the score write");
+            return null;
+        }).when(gameState).addScore(1000);
+
         endBoss.update(0, null);
-        endBoss.update(1, null);
+        assertEquals(0x3F, endBoss.getCustomFlag(0x2E), "BossDefeated installs its own native wait");
+        for (int wait = 1; wait <= 0x3F; wait++) endBoss.update(wait, null);
+        assertEquals(0, endBoss.getCustomFlag(0x2E));
+        verify(objectManager, org.mockito.Mockito.never()).addDynamicObject(any(SongFadeTransitionInstance.class));
+        endBoss.update(0x40, null);
 
         assertEquals(0x44D0, endBoss.getX(),
                 "loc_76164 checks the threshold after Swing_UpAndDown/MoveSprite2 moves x_pos to $44D0");
         verify(objectManager).addDynamicObject(any(SongFadeTransitionInstance.class));
         verify(objectManager, org.mockito.Mockito.times(6)).addDynamicObjectAfterCurrent(any(ObjectInstance.class));
-        verify(gameState).setScreenShakeActive(true);
-        verify(levelState).pauseTimer();
+        var nativeOrder = org.mockito.Mockito.inOrder(gameState, levelState);
+        nativeOrder.verify(gameState).setScreenShakeActive(true);
+        nativeOrder.verify(levelState).pauseTimer();
+        nativeOrder.verify(gameState).addScore(1000);
         verifyNoMoreInteractions(objectManager, gameState, levelState);
     }
 
@@ -2255,6 +2281,7 @@ class TestMhzBossObjects {
         endBoss.setCustomFlag(0x40, 0x10);
 
         endBoss.update(0, null);
+        holdNativeEndBossDefeatWait(endBoss, null, 1);
         endBoss.update(1, null);
         endBoss.update(2, null);
 
@@ -2339,6 +2366,7 @@ class TestMhzBossObjects {
         endBoss.setCustomFlag(0x40, 0x10);
 
         endBoss.update(0, null);
+        holdNativeEndBossDefeatWait(endBoss, null, 1);
         endBoss.update(1, null);
         endBoss.update(2, null);
 
@@ -2447,6 +2475,7 @@ class TestMhzBossObjects {
         endBoss.setCustomFlag(0x40, 0x10);
 
         endBoss.update(0, null);
+        holdNativeEndBossDefeatWait(endBoss, null, 0);
         endBoss.update(1, null);
         endBoss.update(2, null);
 
@@ -2525,6 +2554,7 @@ class TestMhzBossObjects {
         endBoss.setCustomFlag(0x40, 0x10);
 
         endBoss.update(0, player);
+        holdNativeEndBossDefeatWait(endBoss, player, 0);
         endBoss.update(1, player);
         endBoss.update(2, player);
         endBoss.update(3, player);
@@ -2631,6 +2661,7 @@ class TestMhzBossObjects {
         endBoss.setCustomFlag(0x40, 0x10);
 
         endBoss.update(0, null);
+        holdNativeEndBossDefeatWait(endBoss, null, 0);
         endBoss.update(1, null);
         endBoss.update(2, null);
         endBoss.update(3, null);
@@ -2666,6 +2697,7 @@ class TestMhzBossObjects {
 
     @Test
     void mhzEndBossCapsuleResultsFlagRelocksNativePlayersWithUpInput() {
+        com.openggf.tests.TestEnvironment.activeGameplayMode();
         ObjectManager objectManager = mocks.mock(ObjectManager.class);
         GameStateManager gameState = mocks.mock(GameStateManager.class);
         Camera camera = new Camera();
@@ -2712,7 +2744,9 @@ class TestMhzBossObjects {
         endBoss.setCustomFlag(0x3E, 0xC0);
         endBoss.setCustomFlag(0x40, 0x10);
 
-        for (int frame = 0; frame <= 5; frame++) {
+        endBoss.update(0, player);
+        holdNativeEndBossDefeatWait(endBoss, player, 0);
+        for (int frame = 1; frame <= 5; frame++) {
             endBoss.update(frame, player);
         }
 
@@ -2791,6 +2825,7 @@ class TestMhzBossObjects {
         endBoss.setCustomFlag(0x40, 0x10);
 
         endBoss.update(0, null);
+        holdNativeEndBossDefeatWait(endBoss, null, 0);
         endBoss.update(1, null);
         endBoss.update(2, null);
         endBoss.update(3, null);
@@ -2881,6 +2916,7 @@ class TestMhzBossObjects {
         endBoss.setCustomFlag(0x40, 0x10);
 
         endBoss.update(0, null);
+        holdNativeEndBossDefeatWait(endBoss, null, 0);
         endBoss.update(1, null);
         endBoss.update(2, null);
         endBoss.update(3, null);
@@ -2979,6 +3015,7 @@ class TestMhzBossObjects {
         endBoss.setCustomFlag(0x40, 0x10);
 
         endBoss.update(0, null);
+        holdNativeEndBossDefeatWait(endBoss, null, 0);
         endBoss.update(1, null);
         endBoss.update(2, null);
         endBoss.update(3, null);
@@ -3081,6 +3118,7 @@ class TestMhzBossObjects {
         endBoss.setCustomFlag(0x40, 0x10);
 
         endBoss.update(0, null);
+        holdNativeEndBossDefeatWait(endBoss, null, 0);
         endBoss.update(1, null);
         endBoss.update(2, null);
         endBoss.update(3, null);
@@ -3153,6 +3191,7 @@ class TestMhzBossObjects {
         endBoss.setCustomFlag(0x40, 0x10);
 
         endBoss.update(0, player);
+        holdNativeEndBossDefeatWait(endBoss, player, 0);
         endBoss.update(1, player);
         endBoss.update(2, player);
         endBoss.update(3, player);
@@ -3226,6 +3265,7 @@ class TestMhzBossObjects {
         endBoss.setCustomFlag(0x40, 0x10);
 
         endBoss.update(0, player);
+        holdNativeEndBossDefeatWait(endBoss, player, 0);
         endBoss.update(1, player);
         endBoss.update(2, player);
         endBoss.update(3, player);
@@ -3305,6 +3345,7 @@ class TestMhzBossObjects {
         endBoss.setCustomFlag(0x40, 0x10);
 
         endBoss.update(0, player);
+        holdNativeEndBossDefeatWait(endBoss, player, 0);
         endBoss.update(1, player);
         endBoss.update(2, player);
         endBoss.update(3, player);
@@ -3392,6 +3433,7 @@ class TestMhzBossObjects {
         endBoss.setCustomFlag(0x40, 0x10);
 
         endBoss.update(0, player);
+        holdNativeEndBossDefeatWait(endBoss, player, 0);
         endBoss.update(1, player);
         endBoss.update(2, player);
         endBoss.update(3, player);
@@ -3514,6 +3556,7 @@ class TestMhzBossObjects {
         endBoss.setCustomFlag(0x40, 0x10);
 
         endBoss.update(0, player);
+        holdNativeEndBossDefeatWait(endBoss, player, 0);
         endBoss.update(1, player);
         endBoss.update(2, player);
         endBoss.update(3, player);
@@ -3628,6 +3671,7 @@ class TestMhzBossObjects {
         endBoss.setCustomFlag(0x40, 0x10);
 
         endBoss.update(0, player);
+        holdNativeEndBossDefeatWait(endBoss, player, 0);
         endBoss.update(1, player);
         endBoss.update(2, player);
         endBoss.update(3, player);
@@ -3704,6 +3748,7 @@ class TestMhzBossObjects {
         endBoss.setCustomFlag(0x40, 0x10);
 
         endBoss.update(0, player);
+        holdNativeEndBossDefeatWait(endBoss, player, 0);
         endBoss.update(1, player);
         endBoss.update(2, player);
         endBoss.update(3, player);
@@ -5321,6 +5366,17 @@ class TestMhzBossObjects {
         } else {
             field.setInt(target, value);
         }
+    }
+
+    /** The post-defeat fixtures enter their target phase through native Wait_FadeToLevelMusic. */
+    private static void holdNativeEndBossDefeatWait(MhzEndBossInstance boss, PlayableEntity player,
+                                                    int remainingBeforeContinuation) {
+        assertEquals(0x3F, boss.getCustomFlag(0x2E), "BossDefeated installs the native wait at the threshold");
+        for (int held = 0; held < 0x3F - remainingBeforeContinuation; held++) {
+            boss.update(held + 1, player);
+        }
+        assertEquals(remainingBeforeContinuation, boss.getCustomFlag(0x2E),
+                "the fixture's continuation begins after the declared native held updates");
     }
 
     private static int getPrivateInt(Object target, String fieldName) throws Exception {

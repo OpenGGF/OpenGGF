@@ -1,13 +1,11 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseAttackable;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -32,45 +30,31 @@ public final class MhzEndBossHitProxyChild extends AbstractObjectInstance
     private static final int RENDER_HALF_WIDTH = 0x18;
     private static final int RENDER_HALF_HEIGHT = 0x28;
 
-    @RewindTransient(reason = "Structural parent link; live collision derives from parent boss state.")
-    private final MhzEndBossInstance parent;
+    private MhzEndBossInstance parent;
     private int x;
     private int y;
 
     private MhzEndBossHitProxyChild() {
-        this(placeholderParentForRewindProbe());
+        this(new ObjectSpawn(0, 0, Sonic3kObjectIds.MHZ_END_BOSS, 0, 0, false, 0));
+    }
+
+    /** Pure recreation shell; parent3 is restored through its captured ObjectRefId. */
+    private MhzEndBossHitProxyChild(ObjectSpawn spawn) {
+        super(spawn, "MHZEndBossHitProxy");
+        x = spawn.x();
+        y = spawn.y();
     }
 
     MhzEndBossHitProxyChild(MhzEndBossInstance parent) {
-        super(new ObjectSpawn(
-                        parent.getX() + X_OFFSET,
-                        parent.getY() + Y_OFFSET,
-                        Sonic3kObjectIds.MHZ_END_BOSS,
-                        0,
-                        0,
-                        false,
-                        0),
-                "MHZEndBossHitProxy");
+        this(new ObjectSpawn(parent.getX() + X_OFFSET, parent.getY() + Y_OFFSET,
+                Sonic3kObjectIds.MHZ_END_BOSS, 0, 0, false, 0));
         this.parent = parent;
         refreshFromParent();
     }
 
     @Override
     public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        MhzEndBossInstance liveParent = RewindRecreateObjectLinks.nearestLiveObject(
-                ctx, MhzEndBossInstance.class);
-        return liveParent != null ? new MhzEndBossHitProxyChild(liveParent) : null;
-    }
-
-    private static MhzEndBossInstance placeholderParentForRewindProbe() {
-        return new MhzEndBossInstance(new ObjectSpawn(
-                -0xC0,
-                0,
-                Sonic3kObjectIds.MHZ_END_BOSS,
-                0,
-                0,
-                false,
-                0));
+        return new MhzEndBossHitProxyChild(ctx.spawn());
     }
 
     @Override
@@ -82,6 +66,9 @@ public final class MhzEndBossHitProxyChild extends AbstractObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
+        if (parent == null) {
+            return; // An unhydrated recreation shell has no native authority yet.
+        }
         if (parent.isDestroyed()) {
             setDestroyed(true);
             return;
@@ -117,7 +104,8 @@ public final class MhzEndBossHitProxyChild extends AbstractObjectInstance
 
     @Override
     public int getCollisionFlags() {
-        return parent.getState().invulnerable || parent.getState().defeated ? 0 : ACTIVE_COLLISION_FLAGS;
+        return parent == null || parent.getState().invulnerable || parent.getState().defeated
+                ? 0 : ACTIVE_COLLISION_FLAGS;
     }
 
     @Override

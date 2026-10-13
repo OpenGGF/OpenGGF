@@ -5176,3 +5176,46 @@ recreate a pure shell from its own spawn. Sonic/Tails keep `Child_Draw_Sprite`
 and require exact captured parent identity, not a nearest-parent reconstruction.
 The five-width actual MHZ2 entry regression reproduces the deleted-parent error
 before the fix and verifies fresh child recreation plus whole-registry replay.
+
+### MHZ end boss finishes at native health one after the hit flash
+
+`Obj_MHZEndBoss` initializes `collision_property=9`, but that is not nine
+required attacks. `sub_76782` / `loc_767A0` clamps accepted damage to two until
+`loc_760C4` sets `$38` bit7 for the camera chase. An accepted vehicle hit from
+two to one disables both touch slots and starts the `$20` countdown at `$20`.
+`loc_767F6` selects `loc_76822` only when that 32-update flash expires, retaining
+health one. The old routine movement and `Level_repeat_offset` run first in
+`loc_75FD4`; escape movement starts on the next update. Knuckles escapes at
+`$500`, Sonic/Tails at `$400`. `loc_76164` awards the boss score and stops the
+clock at `x_pos >= $44D0`, not on the last accepted attack.
+
+The generic zero-health boss handler caused a real cold Knuckles route to
+remain vulnerable at health one 75 inputs after its legitimate terminal hit.
+Older component fixtures seeded one and attacked to zero, accidentally proving
+the same mistake. Keep encounter damage and delayed escape local; test the
+pre-chase floor, disabled hit proxy, exact flash expiry, all three character
+speeds, and fresh object recreation/replay through a mid-flash snapshot.
+
+The clamp reads the arena bit at the routine tail: an accepted touch may
+transiently publish health one before the same movement dispatch sets bit7.
+A touch-time clamp silently rejects that admitted final hit. After escape,
+`loc_761A4` subtracts `Level_repeat_offset` once, after the unrebased threshold
+comparison, while preserving `x_pos`'s fractional word. This boss owns that
+subtraction; it does not opt into the manager's generic repeat shift.
+
+`BossDefeated_StopTimer` falls through `BossDefeated`: stop the HUD timer,
+write `$2E=$3F`, then add the score. `Wait_FadeToLevelMusic` holds for 63 updates
+and allocates its music-fade helper on the 64th signed-underflow update. The
+old component oracle expected that helper on the next dispatch from a borrowed
+zero dash timer. Short negatives independently expose the admission edge,
+borrowed timer, both escape wrap boundaries and destructive fractional reset;
+requalification must observe new route/load windows rather than retain old
+frame numbers.
+
+`loc_764C4` follows a specific `parent3`, not the nearest ship. A fresh proxy
+must retain its captured immutable spawn and resolve its captured parent
+identity after constructing a pure shell. A two-boss negative catches the
+old nearest-parent shortcut. Update both moving actors in component replay:
+leaving the proxy undispatched creates stale spawn metadata and can falsely
+attribute a fixture error to production restoration. Keep immediate full-object
+capture equality and the subsequent forward replay, including that metadata.

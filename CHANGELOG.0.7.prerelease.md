@@ -18,7 +18,11 @@ Unreleased. The earlier development themes remain in
   retains the ship's activation timer and restores the complete child graph.
   Its carrier continues into Mushroom Hill with released player control.
   Mushroom Hill's independent Knuckles route switch survives its press actor's
-  native deletion and rewinds without retaining that erased parent.
+  native deletion and rewinds without retaining that erased parent. Its end boss
+  preserves the native health floor and escapes at health one after the hit flash,
+  with character-specific speed, native arena wrapping and music-fade waits,
+  and the score awarded after the clock stops at the escape threshold. Its hit
+  proxy recreates from captured placement and retains the exact boss identity.
 
 - **S3K endings:** Sonic and Tails continue from Death Egg or Doomsday into
   the Tornado rescue, earned Super Emerald restoration, reunion, ROM credits
