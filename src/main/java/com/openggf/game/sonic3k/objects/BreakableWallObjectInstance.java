@@ -469,6 +469,8 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
                         config.halfWidth, config.halfHeight);
                 ObjectLifetimeOps.addReplacementAtTransferredSlot(
                         objectManager, firstFragment, transferredSlot);
+                var policies=com.openggf.game.mutators.NativeObjectPolicyAccess.port(services());
+                if(policies!=null) policies.childSpawned(this,firstFragment);
                 // The ROM immediately falls through to loc_21692 after the
                 // in-place conversion, so piece zero moves once this same tick.
                 firstFragment.update(0, null);

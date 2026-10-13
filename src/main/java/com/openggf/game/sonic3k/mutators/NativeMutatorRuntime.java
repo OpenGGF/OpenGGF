@@ -115,7 +115,7 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
                 && phase!=com.openggf.game.GameplayObservation.Phase.STAGE
                 && phase!=com.openggf.game.GameplayObservation.Phase.TRANSITION
                 && phase!=com.openggf.game.GameplayObservation.Phase.CLOSED) return;
-        if(services!=null) for(var lease:owned) services.objectQuery().resolve(lease.identity()).ifPresent(this::terminateGraph);
+        if(services!=null) for(var lease:owned) terminateOwnedGraph(lease);
         releaseOwned(); reset();
     }
     @Override public void retire() { leaveOrdinaryGameplay(com.openggf.game.GameplayObservation.Phase.CLOSED); retired=true; services = null; sprites = null; }
@@ -355,21 +355,22 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
     }
     private void rollbackActivation(long id) {
         for(int i=owned.size()-1;i>=0;i--) if(owned.get(i).activationId()==id) {
-            services.objectQuery().resolve(owned.get(i).identity()).ifPresent(this::terminateGraph); owned.remove(i);
+            terminateOwnedGraph(owned.get(i)); owned.remove(i);
         }
     }
     private void expireOwned() {
         for (int i=owned.size()-1;i>=0;i--) {
             Owned lease=owned.get(i);
             var object=services.objectQuery().resolve(lease.identity()).orElse(null);
-            if (object == null || object.isDestroyed()) { releaseChildren(lease.identity()); owned.remove(i); continue; }
             boolean cancelled=lease.cancelOnRemoval() && entries.stream().noneMatch(e->e.activationId()==lease.activationId());
-            if(!ownerAvailable(lease.owner())) { terminateGraph(object); owned.remove(i); }
+            if(!ownerAvailable(lease.owner())) { terminateOwnedGraph(lease); owned.remove(i); }
             else if (lease.remainingTicks() <= 0 || cancelled) {
-                expire(object);
+                if(object!=null) expire(object); else releaseChildren(lease.identity());
                 if(object instanceof NativeGhostEncounterObjectInstance)
                     owned.set(i,new Owned(lease.activationId(),lease.owner(),lease.identity(),0,lease.cancelOnRemoval()));
                 else owned.remove(i);
+            } else if((object==null || object.isDestroyed()) && !ownedChildren.containsKey(lease.identity())) {
+                owned.remove(i);
             } else owned.set(i,new Owned(lease.activationId(),lease.owner(),lease.identity(),lease.remainingTicks()-1,lease.cancelOnRemoval()));
         }
     }
@@ -395,7 +396,9 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
         for(var lease:companions) active.add(lease.activationId());
         for(var lease:rides) active.add(lease.activationId());
         admitted.retainAll(active);
-        ownedChildren.replaceAll((parent,children)->children.stream().filter(id->services.objectQuery().resolve(id).filter(object->!object.isDestroyed()).isPresent()).toList());
+        // Missing native parents remain graph anchors while their live descendants finish.
+        ownedChildren.replaceAll((parent,children)->children.stream().filter(id->ownedChildren.containsKey(id)
+                || services.objectQuery().resolve(id).filter(object->!object.isDestroyed()).isPresent()).toList());
         ownedChildren.values().removeIf(List::isEmpty);
         projectileAges.keySet().removeIf(id->services.objectQuery().resolve(id).isEmpty());
         budded.removeIf(id->services.objectQuery().resolve(id).isEmpty());
@@ -410,7 +413,7 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
     }
     public void ownerRetired(String owner) {
         if(services!=null) for(int i=owned.size()-1;i>=0;i--) if(owned.get(i).owner().equals(owner)) {
-            services.objectQuery().resolve(owned.get(i).identity()).ifPresent(this::terminateGraph); owned.remove(i);
+            terminateOwnedGraph(owned.get(i)); owned.remove(i);
         }
         for(int i=companions.size()-1;i>=0;i--) if(companions.get(i).owner().equals(owner)) {
             removeCompanion(companions.get(i)); companions.remove(i);
@@ -450,6 +453,10 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
             ObjectLifetimeOps.expireDynamic(ghost);
         } else expire(object);
     }
+    private void terminateOwnedGraph(Owned lease) {
+        releaseChildren(lease.identity());
+        services.objectQuery().resolve(lease.identity()).ifPresent(this::terminateGraph);
+    }
     private boolean cancellationBound(long id) {
         return entries.stream().anyMatch(e->e.activationId()==id && !e.oneShot());
     }
@@ -486,7 +493,7 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
         }
     }
     private void releaseOwned() {
-        if (services != null) for (Owned lease : owned) services.objectQuery().resolve(lease.identity()).ifPresent(this::terminateGraph);
+        if (services != null) for (Owned lease : owned) terminateOwnedGraph(lease);
         for (var lease:companions) removeCompanion(lease);
         for (var lease:rides) releaseRide(lease);
     }

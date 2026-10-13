@@ -25,6 +25,18 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class TestNativeMutatorRuntime {
+    private static final class LifetimeChildProducer extends AbstractObjectInstance implements RewindRecreatable {
+        LifetimeChildProducer(ObjectSpawn spawn) { super(spawn,"lifetime-child-producer"); }
+        @Override public void update(int frame,com.openggf.game.PlayableEntity player) { }
+        @Override public void appendRenderCommands(List<com.openggf.graphics.GLCommand> commands) { }
+        @Override public LifetimeChildProducer recreateForRewind(RewindRecreateContext context) { return new LifetimeChildProducer(context.spawn()); }
+        private NativeGustObjectInstance gust() { return new NativeGustObjectInstance(new ObjectSpawn(300,100,0,0,1,false,0)); }
+        void legacy() { spawnDynamicObject(gust()); }
+        void lowestFree() { spawnDynamicObjectLowestFreeSlot(gust()); }
+        void free() { spawnFreeChild(this::gust); }
+        void afterSlot() { spawnChildAfterSlot(getSlotIndex(),this::gust); }
+        void sibling() { spawnAfterCurrentSibling(this::gust); }
+    }
     private static final class Rig {
         final AtomicReference<List<TransientMutatorPolicySource.Entry>> entries=new AtomicReference<>(List.of());
         final TransientMutatorPolicySource source=mock(TransientMutatorPolicySource.class);
@@ -285,6 +297,32 @@ class TestNativeMutatorRuntime {
         rig.runtime.leaveOrdinaryGameplay(com.openggf.game.GameplayObservation.Phase.TRANSITION);
         assertTrue(ownedRoot.isDestroyed());assertTrue(ownedChild.isDestroyed());
         assertFalse(rig.objects.objectQuery().resolve(unrelatedId).orElseThrow().isDestroyed());
+    }
+    @Test void nativeAllocationHelpersCaptureOwnedTailsAfterRootRemovalAndLeaveIndependentSiblingsAlone() throws Exception {
+        var rig=new Rig();rig.active(new EncounterPolicy(EncounterPolicy.Kind.GUST,EncounterPolicy.Side.AHEAD),true);
+        var root=rig.objects.objectQuery().activeObjectsOfType(NativeGustObjectInstance.class).getFirst();
+        var producer=rig.objects.createDynamicObject(()->new LifetimeChildProducer(new ObjectSpawn(260,100,0,0,0,false,0)));
+        rig.runtime.childSpawned(root,producer);
+        producer.legacy();producer.lowestFree();producer.free();producer.afterSlot();producer.sibling();
+        var producerId=rig.objects.objectQuery().identityOf(producer).orElseThrow();
+        var state=rig.runtime.capture();var children=state.ownedChildren().get(producerId);
+        assertEquals(4,children.size(),"all native structural allocation helpers must notify ownership");
+        var sibling=rig.objects.objectQuery().activeObjectsOfType(NativeGustObjectInstance.class).stream()
+                .filter(object->object!=root && !children.contains(rig.objects.objectQuery().identityOf(object).orElseThrow())).findFirst().orElseThrow();
+        var siblingId=rig.objects.objectQuery().identityOf(sibling).orElseThrow();
+        rig.objects.removeDynamicObject(root);rig.entries.set(List.of());
+        rig.runtime.beforeNativeTick(rig.frame,LogicalInputSnapshot.neutral());
+        rig.objects.removeDynamicObject(producer);
+        rig.runtime.beforeNativeTick(rig.frame,LogicalInputSnapshot.neutral());
+        for(var id:children)assertFalse(rig.objects.objectQuery().resolve(id).orElseThrow().isDestroyed(),"native tails survive root removal under the bounded lease");
+        var tail=rig.runtime.capture();var objects=rig.objects.rewindSnapshottable().capture();
+        rig.runtime.ownerRetired("test");
+        for(var id:children)assertTrue(rig.objects.objectQuery().resolve(id).orElseThrow().isDestroyed());
+        assertFalse(sibling.isDestroyed());
+        rig.objects.rewindSnapshottable().restore(objects);rig.runtime.restore(tail);
+        rig.runtime.leaveOrdinaryGameplay(com.openggf.game.GameplayObservation.Phase.CLOSED);
+        for(var id:children)assertTrue(rig.objects.objectQuery().resolve(id).orElseThrow().isDestroyed());
+        assertFalse(rig.objects.objectQuery().resolve(siblingId).orElseThrow().isDestroyed());
     }
     @Test void completedPowerupGrantSurvivesSourceCancellationAndReportsNativeOwnership() throws Exception {
         var rig=new Rig();doNothing().when(rig.player).giveInvincibility(600);
