@@ -118,6 +118,9 @@ class TestAudioMutatorAccess {
             boolean nonzero = false;
             for (int frame = 0; frame < 12; frame++) {
                 audio.presentFrame(PresentationMode.FORWARD);
+                if (frame == 0) assertTrue(audio.captureLogicalSnapshot().presentation().smpsLogical().sequencers()
+                        .stream().anyMatch(entry -> entry.sfx() && entry.smpsData().getId() == 0x49),
+                        "THUMP must be admitted as a real native SMPS voice");
                 int frames = capture.drainPresentationFrame(samples);
                 assertTrue(frames > 0);
                 for (int i = 0; i < frames * 2; i++) nonzero |= samples[i] != 0;
@@ -126,6 +129,21 @@ class TestAudioMutatorAccess {
             var state = audio.captureLogicalSnapshot().presentation();
             assertEquals(3, state.activeMusic().musicId());
             assertNotNull(state.smpsLogical());
+        }
+    }
+
+    @Test void landingCueAloneProducesNativePcm() {
+        try (var binding = AudioMutatorAccess.bind(audio, intent -> { });
+             var capture = audio.beginLiveCaptureAudio(60)) {
+            binding.playLandingCue(0x49);
+            short[] samples = new short[capture.maxStereoFramesPerPacket() * 2];
+            boolean nonzero = false;
+            for (int frame = 0; frame < 12; frame++) {
+                audio.presentFrame(PresentationMode.FORWARD);
+                int count = capture.drainPresentationFrame(samples);
+                for (int i = 0; i < count * 2; i++) nonzero |= samples[i] != 0;
+            }
+            assertTrue(nonzero, "native landing SFX must be audible independently of music");
         }
     }
 }
