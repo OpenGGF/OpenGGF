@@ -9,6 +9,7 @@ import com.openggf.game.GameStateManager;
 import com.openggf.game.EmeraldRewardKind;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.SpecialStageViewport;
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
 import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
@@ -363,7 +364,9 @@ public class Sonic3kSpecialStageManager implements com.openggf.game.internal.Nat
                 System.arraycopy(skCompressed, offset, stageData, 0, stageData.length);
             }
         }
-        var module = GameServices.currentOrBootstrapGameModule();
+        // Creator layout services belong to the admitted world, not bootstrap state.
+        var world = SessionManager.getCurrentWorldSession();
+        var module = world == null ? null : world.getGameModule();
         BlueSphereLayoutPolicy layoutPolicy = module == null ? null
                 : module.getGameService(BlueSphereLayoutPolicy.class);
         if (layoutPolicy != null) {

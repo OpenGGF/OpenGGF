@@ -18,9 +18,12 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /** Boot-scoped, immutable ownership registry for enabled compiled-mod loaders. */
 public final class ModRuntime implements AutoCloseable {
+    private static final Logger LOG = Logger.getLogger(ModRuntime.class.getName());
     private final Map<String, ModDependencyClassLoader> loaders;
     private final List<String> owners;
     private final Map<String, SnapshotModAssetRoot> snapshots;
@@ -38,6 +41,8 @@ public final class ModRuntime implements AutoCloseable {
     private java.nio.file.Path storageRoot = com.openggf.game.save.SavePaths.root();
     private java.util.function.BiConsumer<String,
             com.openggf.game.sonic2.dataselect.S2SaveFinding> saveFindingSink = (owner, finding) -> {};
+    private java.util.function.BiConsumer<ModContributionReport, Map<String, Throwable>>
+            preparationObserver = (report, failures) -> {};
 
     ModRuntime(Map<String, ModDependencyClassLoader> loaders,
                Map<String, SnapshotModAssetRoot> snapshots,
@@ -192,15 +197,8 @@ public final class ModRuntime implements AutoCloseable {
                         && !com.openggf.mods.StockArtOverrideCatalog.contains(plan.baseGameId(), claim.substring(4)))
                     rejectedClaims.put(owner, "Unused exclusive contribution claim or unknown target: " + claim);
         });
-        ModContributionReport.sources(currentPlans, descriptors).forEach((target, claimants) -> {
-            String claim = target.substring(target.indexOf('/')+1);
-            if (claimants.size() > 1 && claimants.stream().anyMatch(owner ->
-                    descriptors.get(owner).manifest().composition().exclusiveContributions().contains(claim))) {
-                List<String> sorted = claimants.stream().sorted().toList();
-                for (String owner : sorted) rejectedClaims.put(owner,
-                        "Exclusive contribution conflict at " + target + ": " + String.join(", ", sorted));
-            }
-        });
+        // Multiple successful contributions retain the ordinary arbitration policy.
+        // Author-declared exclusivity alone does not prove an unsafe combination.
         boolean changed;
         do {
             changed = false;
@@ -233,6 +231,7 @@ public final class ModRuntime implements AutoCloseable {
         standaloneModules = Map.copyOf(currentStandaloneModules);
         currentTitleEntries.keySet().retainAll(currentPlans.keySet());
         titleEntries = List.copyOf(currentTitleEntries.values());
+        notifyPreparationObserver();
         return new ModuleResolutionService.PatchPlan(registrations, dependencies, ordering);
     }
 
@@ -301,6 +300,21 @@ public final class ModRuntime implements AutoCloseable {
         saveFindingSink = Objects.requireNonNull(sink, "sink");
     }
 
+    /** Installs engine-owned diagnostics that observe completed publication without creator calls. */
+    public synchronized void installPreparationObserver(
+            java.util.function.BiConsumer<ModContributionReport, Map<String, Throwable>> observer) {
+        if (closed) throw new IllegalStateException("Mod runtime is closed");
+        preparationObserver = Objects.requireNonNull(observer, "observer");
+    }
+
+    private void notifyPreparationObserver() {
+        try {
+            preparationObserver.accept(contributionReport, registrationFailures);
+        } catch (RuntimeException failure) {
+            LOG.log(Level.WARNING, "Failed to report mod preparation diagnostics", failure);
+        }
+    }
+
     public synchronized void disableOwnersForProcess(Set<String> owners) {
         runtimeDisabledOwners.addAll(Set.copyOf(Objects.requireNonNull(owners, "owners")));
         LinkedHashMap<String, ModRegistrationPlan> retained = new LinkedHashMap<>(registrationPlans);
@@ -309,6 +323,7 @@ public final class ModRuntime implements AutoCloseable {
         titleEntries = titleEntries.stream()
                 .filter(entry -> !runtimeDisabledOwners.contains(entry.ownerModId())).toList();
         contributionReport = ModContributionReport.build(registrationPlans, descriptors);
+        notifyPreparationObserver();
     }
 
     public synchronized Set<String> runtimeDisabledOwners() {

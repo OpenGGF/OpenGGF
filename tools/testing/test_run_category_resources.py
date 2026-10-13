@@ -126,6 +126,28 @@ class ResourceTests(unittest.TestCase):
             with patch.dict(resources.os.environ, {'MAVEN_OPTS': '-Xmx8g'}):
                 self.assertTrue(needs_exclusive(['test']))
 
+    def test_headless_graphics_environment_does_not_make_tests_exclusive(self):
+        from maven_queue import needs_exclusive, lean_command
+        graphics = '-Dopenggf.headless.gl=surfaceless-egl'
+        for key in ('JAVA_TOOL_OPTIONS', 'JDK_JAVA_OPTIONS', 'MAVEN_OPTS'):
+            with self.subTest(key=key), patch.dict(resources.os.environ, {key: graphics}, clear=True):
+                self.assertFalse(needs_exclusive(['-Psmoke', 'test']))
+                _args, environment = lean_command(['-Dmse=off', '-Dtest=One', 'test'])
+                self.assertIn(graphics, environment[key])
+                self.assertIn('-Xmx1g', environment['MAVEN_OPTS'])
+
+    def test_graphics_allowance_never_accepts_heap_or_unknown_environment_options(self):
+        from maven_queue import needs_exclusive, lean_command
+        graphics = '-Dopenggf.headless.gl=surfaceless-egl'
+        for value in (graphics + ' -Xmx8g', graphics + ' -XX:MaxRAMPercentage=80',
+                      graphics + ' -javaagent:unmeasured.jar', '-Dopenggf.headless.gl=unknown',
+                      '-Dunknown.property=true', '\"unterminated'):
+            for key in ('JAVA_TOOL_OPTIONS', 'JDK_JAVA_OPTIONS', 'MAVEN_OPTS'):
+                with self.subTest(key=key, value=value), patch.dict(resources.os.environ, {key: value}, clear=True):
+                    self.assertTrue(needs_exclusive(['test']))
+                    with self.assertRaises(ValueError):
+                        lean_command(['-Dtest=One', 'test'])
+
     def test_shared_profiles_keep_the_measured_single_fork_shape(self):
         """Admitting a profile under the default reservation needs one <=3 GiB fork."""
         import re

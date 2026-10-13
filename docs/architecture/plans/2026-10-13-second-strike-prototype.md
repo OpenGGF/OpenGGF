@@ -201,3 +201,79 @@ missing-ROM skip occurred. A bounded matched method on the exact stock base is
 required before attribution. Consumed diagnostics were acknowledged/deleted.
 The same smoke selection needs a revised measured execution budget; this is
 not a passing broad result or release-only full-suite validation.
+
+The necessary retry used the same selection and environment with
+`--max-minutes 75`. Run `20261013T154956Z-784d9cd3` tested clean `370d081b2`
+against `13add5b0`, admitting at 15:49:56 UTC after 3,539 seconds of queue
+wait. All ordinary coverage finished in 3,335.71 seconds: 3,159 reports,
+26,718 cases, 26 assertions, zero errors and 63 skips. No failure/skip detail
+was omitted, and no missing-ROM skip occurred. The skips were explicitly
+inspected: opt-in diagnostics, native graphics prerequisites, the Infinite
+Sonic platform/flyer prerequisites, CPZ's unobserved tube interaction and
+optional local audio reference/capture work. This is smoke coverage, not a
+release-only full-suite result.
+
+Matched stock controls on exact, clean `13add5b0` ran the three MHZ cases
+once (one pass/two identical assertions), then only the other failing methods:
+eleven classes, 22 whole methods, 25 cases, 24 assertions, one pass and zero
+errors/skips. All 26 candidate negative identities and exception types
+reproduced. Twenty-five complete assertion messages match literally; the
+complete SSZ Tails replica diagnostic matches after replacing only its two
+verified `RewindObjectStateBlob@hex` identity suffixes. Frame numbers, native
+slots/IDs and every mutable field remain equal. This does not claim raw blob
+byte equality. The shared negative inventory is also documented in the
+[runtime compatibility record](../designs/2026-10-13-mod-runtime-compatibility.md#completed-recovery-and-attribution).
+Both matched runs ended with Maven exit 1; consumed XML/text reports were
+removed, and the complete category run was acknowledged/deleted.
+
+Fresh guards finished in 275.60 seconds: 88 reports, 678 cases, one owned
+failure and zero errors/skips. `TestBootstrapModuleProviderCachingGuard`
+identified the new Blue Sphere policy lookup's bootstrap-capable accessor.
+The repair reads only the admitted `WorldSession` module; pre-session ROM
+loading retains stock layout and never invokes creator callbacks. Two real
+ROM initialization checks cover active-world precedence and stale bootstrap
+policy isolation. Guard approvals and budgets are unchanged; verification of
+this repair is pending.
+
+Published destination `4a9bec1eaf86e7b70959113e484315c5013c1b7c` is now
+privately composed by intent. It includes runtime compatibility diagnostics
+as well as the Maven queue fix; the merge was conflict-free and preserves
+both hazard entries. Its local runner batches the complete smoke selection
+at 50 candidates and releases admission between batches/guards. The existing
+monolithic request was preserved through completion; it was not restarted
+to adopt new scheduling. All 161 Python safety checks and actual Java 25,
+Lua 5.4 and PowerShell preflight pass on this composition.
+
+The composed change-based plan selects 3,181 smoke classes and guards.
+Completed native gameplay coverage remains applicable to unchanged inputs;
+the bounded policy repair and incoming mod/runtime composition require
+focused mod, real-stage, API/SDK and startup checks plus fresh guards. They
+do not require repeating the unchanged ordinary campaign coverage.
+
+The composed checks completed on frozen index tree
+`7b89a2b6e298e6ab26644b6f2d5c18f43ea93810`: 23 exact selectors matched 24
+actual test classes, with 276 cases passing without skips, including both new
+ROM stage initializations, all affected compatibility/runtime consumers,
+native placement owners, stage snapshots/results, API reflection/pins and the
+four required S3K startup/loading classes. The normal `verify` invocation
+compiled 3,852 production and 3,831 test sources and completed SDK/Javadoc/
+binary artifact verification in 1:40. Its actual compiled candidate surface
+matches all 20,123 canonical pin lines. A separate fresh `-Pguards` invocation
+passed all 88 classes/678 cases without skips in 4:40. The owned bootstrap
+guard failure is resolved without changing its approval list or any budget.
+
+The example rebuild passes the packager with the same eight documented internal
+API warnings and no errors. Its final ROM-free jar SHA-256 remains
+`1e2e9b0094a3819439ada9d544c916d463ef4ac874ec45da298a919244188d01`.
+The final composed Blue Sphere witness runs 1,143 native updates, observes all
+twelve gates, turn/jump, natural failure/results and a normal level return at
+1022. All 39 previously recorded state fields match the earlier witness exactly;
+the maintained driver now also records mapping-frame/fade-timer diagnostics.
+The complete 914,400-frame stereo 48 kHz WAV and inspected native PNGs at
+294/600/1022 are byte-identical. Its isolated surfaceless EGL process closes
+normally; the existing missing-Sonic-silhouette limitation remains visible.
+The final witness is under external `second-strike-20261013/final-stage-blue`.
+
+Main integration, source-equivalence/build checks, push and accounted worktree
+cleanup remain pending. No whole-suite green result or completed delivery is
+claimed while those steps remain open.

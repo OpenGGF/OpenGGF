@@ -2,13 +2,16 @@ package com.openggf.mods.code;
 
 import com.openggf.game.GameServices;
 import com.openggf.game.GameModule;
+import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.patch.DelegatingGameModule;
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.objects.GumballMachineObjectInstance;
 import com.openggf.game.sonic3k.difficulty.BlueSphereLayoutPolicy;
 import com.openggf.game.sonic3k.difficulty.GumballSpringPolicy;
 import com.openggf.game.sonic3k.difficulty.S3kDifficultyRules;
 import com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageGrid;
+import com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageManager;
 import com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageDataLoader;
 import com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageRingConverter;
 import com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageRomOffsets;
@@ -30,6 +33,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageConstants.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -93,6 +97,60 @@ class TestSecondStrikeStages {
         assertEquals(16, convertTopLeftLoop(source));
         assertEquals(16, convertTopLeftLoop(boards.transformLayout(0, source)),
                 "extra approach hazards must not change the native ring-conversion reward");
+    }
+
+    @Test
+    @RequiresRom(SonicGame.SONIC_3K)
+    void nativeBoardUsesTheActiveWorldPolicyEvenWhenBootstrapIsStock() throws Exception {
+        GameModule bootstrap = GameModuleRegistry.getBootstrapDefault();
+        AtomicInteger calls = new AtomicInteger();
+        GameModule active = boardModule((stage, source) -> {
+            calls.incrementAndGet();
+            return boards.transformLayout(stage, source);
+        });
+        try {
+            SessionManager.openGameplaySession(new Sonic3kGameModule(), active, null);
+            GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+            var manager = new Sonic3kSpecialStageManager();
+            manager.initialize(0);
+            assertEquals(1, calls.get());
+            assertEquals(CELL_RED, manager.getGrid().getCell(2, 8));
+            assertEquals(102, manager.getSpheresLeft());
+        } finally {
+            SessionManager.clear();
+            GameModuleRegistry.setCurrent(bootstrap);
+        }
+    }
+
+    @Test
+    @RequiresRom(SonicGame.SONIC_3K)
+    void preSessionBoardIgnoresAStaleCreatorPolicyInBootstrap() throws Exception {
+        GameModule bootstrap = GameModuleRegistry.getBootstrapDefault();
+        AtomicInteger calls = new AtomicInteger();
+        try {
+            SessionManager.clear();
+            GameModuleRegistry.setCurrent(boardModule((stage, source) -> {
+                calls.incrementAndGet();
+                return boards.transformLayout(stage, source);
+            }));
+            var manager = new Sonic3kSpecialStageManager();
+            manager.initialize(0);
+            assertEquals(0, calls.get(), "pre-session loading must not invoke creator callbacks");
+            assertEquals(CELL_EMPTY, manager.getGrid().getCell(2, 8));
+            assertEquals(102, manager.getSpheresLeft());
+        } finally {
+            SessionManager.clear();
+            GameModuleRegistry.setCurrent(bootstrap);
+        }
+    }
+
+    private static GameModule boardModule(BlueSphereLayoutPolicy policy) {
+        return new DelegatingGameModule(new Sonic3kGameModule(), "test:second-strike-board") {
+            @Override public <T> T getGameService(Class<T> contract) {
+                return contract == BlueSphereLayoutPolicy.class ? contract.cast(policy)
+                        : super.getGameService(contract);
+            }
+        };
     }
 
     @Test

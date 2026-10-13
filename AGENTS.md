@@ -70,7 +70,7 @@ python3 tools/testing/run_categories.py --list
 python3 tools/testing/run_categories.py --base <pre-task-commit> --run  # bounded smoke selection unless focused validation applies
 python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestCollisionLogic" test  # focused iteration
 python3 tools/testing/maven_queue.py --lean -Dmse=off "-Dtest=TestCollisionLogic" test  # small focused tests, 1 GiB JVM heaps
-python3 tools/testing/maven_queue.py -Dmse=off package              # default smoke suite plus packaging
+python3 tools/testing/maven_queue.py -Dmse=off package -DskipTests  # build only; batched smoke validation is separate
 python3 tools/testing/maven_queue.py -Dmse=off -Psmoke test -B         # explicit alias for the default smoke suite
 python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B        # separate fresh JVM for structural guards
 # Public release preparation ONLY:
@@ -91,7 +91,7 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
 - Use JUnit 5/Jupiter. `-Dmse=off` exposes full Maven logs. PowerShell quotes
   `-D...` arguments and uses `tools/testing/install-hooks.ps1`.
 - **Routine validation defaults to smoke.** Plain Maven `test`/`package`, category
-  runs, pull requests and manual CI use the bounded `smoke` suite. It excludes
+  runs, pull requests and manual CI use the `smoke` selection. It excludes
   `slow-suite` exhaustive oracles and performance measurements. **Run the full
   suite ONLY when preparing a new version for public release**, explicitly with
   `-Pfull-suite`; the Release workflow selects it. Do not request or launch the
@@ -103,7 +103,13 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
   inspect `run_categories.py --base <integration-base>` against the pinned
   pre-task destination SHA, then run it when appropriate. Add semantic dependencies
   with `--category NAME`. Shared or unknown changes and `--category all` select
-  all **smoke** categories, never the release-only full suite. Do not manually
+  all **smoke** categories, never the release-only full suite. Broad routine local
+  coverage uses the category runner, which partitions the complete selection into
+  at most 50 candidate classes per ordinary batch and releases shared admission
+  between batches and before guards. Keep the combined worktree lock so another
+  command cannot modify its `target/`. Raw unfiltered Maven runs remain monolithic;
+  do not use them for routine broad checks or repeat testing during packaging.
+  Do not manually
   narrow the runner's selection. See [test categories](tools/testing/README.md#test-categories).
 - **Proportionate validation:** choose checks from changed behavior, consumers
   and plausible failure modes. Focused regression/integration checks can replace
@@ -116,7 +122,10 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
   remain separate; routine validation is not an exhaustive trace sweep.
 - Plan validation for the whole delivery, using the pre-task integration SHA.
   Finish focused fixes first. Before a broad smoke run, state its candidate class
-  count, expected cost and stopping rule. Run
+  count, expected cost and stopping rule. ROM-heavy smoke coverage can still take
+  an hour overall; smoke is a selection, not a short-runtime guarantee. Batches
+  provide admission opportunities for focused jobs; a single expensive class,
+  memory pressure or an existing serial holder can still cause a wait. Run
   `run_categories.py --base <integration-base> --preflight` in the actual launch
   environment to check Java 25, Lua 5.4 and PowerShell. On macOS retain known
   working display/service permissions; tool preflight does not prove GLFW access.
@@ -140,6 +149,9 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pfull-suite test -B
   inspect their behavior before running them directly as builds. The serial override applies
   to queued tests, not build-only commands. Native builds also bypass admission when tests
   are skipped, but their resource needs are separate from ordinary Java compilation.
+  The exact JVM-environment flag `-Dopenggf.headless.gl=surfaceless-egl` preserves
+  normal admission and lean eligibility; unknown options and resource overrides
+  remain conservative. Do not clear required graphics flags to get a slot.
   Submit the command even if another agent is testing: it waits, reports status and
   starts automatically. Waiting requires no permission or manual lock cleanup.
   For small focused tests with known bounded memory needs, prefer `--lean`: it caps

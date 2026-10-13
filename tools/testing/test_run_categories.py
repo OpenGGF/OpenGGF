@@ -340,7 +340,7 @@ class RunnerTests(unittest.TestCase):
                     self.assertNotIn('-Pfull-suite', ordinary)
                     self.assertNotIn('-Psmoke', guards)
                     self.assertEqual(workers == 2, '-Ptest-concurrent' in ordinary)
-                    self.assertEqual(not full, any('includesFile=' in arg for arg in ordinary))
+                    self.assertTrue(any('includesFile=' in arg for arg in ordinary))
                     self.assertNotIn('-Ptest-concurrent', guards)
                     self.assertIn('-Pguards', guards)
                     self.assertFalse(any('includesFile=' in arg for arg in guards))
