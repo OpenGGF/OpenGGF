@@ -71,6 +71,13 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+A live recording can still be finalizing after the gameplay loop stops
+(2026-10-13, runtime performance controls). Engine cleanup has a shorter recorder
+abort limit than the long handoff capture needs. A partial or deleted file is
+not pixel/PCM evidence. Request stop after the last intended presentation,
+wait with a bounded deadline for INACTIVE, and reject any lastFailure before
+cleanup or decoding. Keep recording/CSV runs separate from acceptance timings.
+
 Enabled audio is not proof of a working runtime audio device (2026-10-12,
 runtime performance qualification): forcing an unavailable OpenAL backend
 continued with SMPS synthesis but a no-device speaker fallback. Reject that run

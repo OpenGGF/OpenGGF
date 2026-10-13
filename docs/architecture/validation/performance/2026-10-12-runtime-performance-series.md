@@ -4,7 +4,7 @@
 
 Accuracy prerequisites and complete-runtime qualification are in progress.
 **The original numeric baseline is frozen from five fresh processes per scenario.
-No performance experiment has begun or been accepted; rejection count is zero.** The intended
+Five consecutive performance experiments were rejected. Optimization has stopped at the requested checkpoint; no performance improvement was accepted. Accuracy/tooling delivery validation, integration and cleanup remain pending.** The intended
 metric is total process CPU time per simulated frame, equally weighted between
 normal and demanding scenarios in each game. No saving is attributed to accuracy
 repairs, upstream changes, Java migration, or replacing an invalid helper harness.
@@ -691,3 +691,170 @@ the private display and `-Dopenggf.shaderNative=true` in the queued Maven
 command. It verifies actual uniform writes after repeated caching, same-ID
 reassignment, replacement by a partial shader, and ownership cleanup. The
 rejected query-count expectation and query seam are not retained.
+
+### Pacing profiling audit and experiment P5 — PSG level comparison (unaccepted)
+
+Separate fresh S1 normal original and rejected-P4 diagnostics used an
+instrumented Engine copy to count deadline-spin episodes and current-thread
+CPU time, never elapsed waiting time. Both matched frozen controller/trajectory
+digests, executed frames and presentations; both recorded **zero episodes and
+zero spin CPU** over the window. Thread CPU support/enabling was checked before
+launch. Commands `python3 ${OPENGGF_PERF_TASK_DIR}/pacing_profile_batch.py` and
+`python3 ${OPENGGF_PERF_TASK_DIR}/pacing_p4_profile_batch.py`. Their named
+classpaths are profiling-only; production/acceptance builds remain untouched.
+Do not infer a pacing cause for the rejected CPU screens or tune the spin margin
+from this evidence. This diagnostic is not a fifth optimization experiment.
+
+P5 is isolated at `feature/ai-perf-psg-levels`, parent `974b43d3e`. Common
+measured output-comparison work remains: `PsgChip.emitLevelChanges` exclusive
+visible samples S1 normal 51/1,931, S2 normal 77/1,663, S3K demanding 46/1,825.
+Whole-engine saving is plausibly modest; these are not process percentages.
+Hypothesis: repeated amplitude array loads and the four-channel loop spend
+CPU at every chip tick. Cache the eight amplitudes in render-call locals and
+expand the four output comparisons in their original channel order. Keep
+every generator tick, counter/LFSR event, delta-buffer call, render boundary
+and public state contract unchanged. No batching, new persistent state,
+allocation, sample-rate, mute/panning, resampling, waveform or rewind changes.
+Writes/configuration occur between renders per the existing PSG time contract
+(§2.4), so amplitudes are constant within one call; polarity/LFSR are still
+read afresh at each original tick.
+
+Run existing hardware/slicing/mixed-register equivalence, snapshot, physical
+write, admission and audio-rewind controls with explicit canonical ROM paths.
+Require all frozen normal-runtime pixel/PCM/input/trajectory/frame/terminal
+controls, then five alternating fresh-process pairs for acceptance. A bounded
+negative screen may reject without claiming full timing coverage. If this is
+the fifth consecutive rejection, end optimization and deliver the checkpoint
+with original scores, achieved gains, rejection evidence and next bottleneck.
+
+### Active goal and experiment ledger (2026-10-13)
+
+Tracked goal: whole-process CPU reduction of at least 50% in each frozen game
+score, or an evidence-backed checkpoint after five consecutive rejections,
+followed by required delivery validation/integration/cleanup. Original baseline
+is fixed at `184c9d54ed4fc2c1fed3cb6313653a95f9156e3d`; accepted gains remain zero.
+
+| Idea | Focused / media controls | Paired CPU result | Decision |
+|---|---|---|---|
+| P1 execution-loop extraction | Passing / six scenarios identical | All four S1 comparisons slower | Rejected |
+| P2 quiet PSG batching | Passing / six scenarios identical | S1 normal +5.29%, +7.58%; demanding +10.78% | Rejected |
+| P3 identical hscroll upload reuse | Passing / six scenarios identical | S1 weighted pairs +0.46%, +1.13%; direction unstable | Rejected |
+| P4 uniform locations once per program | Passing / six scenarios identical | S1 normal +6.33%, +16.43%; demanding +11.68% | Rejected |
+| P5 PSG amplitude locals / ordered comparisons | 123 tests, zero failures/errors/skips; six media controls identical | S1 normal +6.93%, +15.35% on repeat pairs | Rejected |
+
+Before/after CPU is total process time per verified executed frame, including
+compiler/driver/audio workers and GC. Negative screens are bounded rejections,
+not five-pair acceptance matrices; their individual tables above preserve
+coverage and variability. Astra is conducting a user-authorized read-only
+review of measured bottlenecks and interpretation; suggestions are hypotheses
+until tested. No concurrent builds/tests/profiling during acceptance timings.
+
+### Astra review (read-only, 2026-10-13)
+
+User-authorized `OpenAI GPT-6-Astra`, native delegated task
+`/root/astra_perf_review`, made no edits and ran no builds/tests/benchmarks.
+It corroborated P5's amplitude lifetime and tick/delta ordering under the existing
+between-render write contract. Full production PCM/state comparison remains
+required and all six P5 media controls subsequently passed.
+
+P3 is a rejection for no demonstrated benefit, not proven regression. C2 thread
+CPU is part of the frozen fresh-process cost: S1 normal 98/236 OS ticks, S2 normal
+56/212, S3K demanding 25/493. S3K demanding driver work is 217/493 ticks versus
+206 on main, so visible profiler counts cannot estimate total-process percentages.
+The two zero-spin diagnostics do not support changing the deadline margin.
+
+Best checkpoint hypotheses, **unimplemented and unaccepted**:
+
+1. Measure driver command generation and small texture updates: demanding S3K
+   has 272 visible Gallium samples under `PatternAtlas$GlUploadSink.upload` and
+   162 under hscroll upload. The atlas small-change path (`PatternAtlas.java`,
+   lines 770–791 at accepted source) issues per-tile uploads. Consider contiguous
+   upload coalescing only after measuring counts/bytes and driver-thread CPU,
+   preserving art versions, flush boundaries and sprite ordering. P3 tested
+   identical hscroll reuse, not atlas coalescing.
+2. Profile coherent fast-YM synthesis: `FastYm2612Dsp.renderChannel` exclusive
+   visible samples are 102/86/70 in S1 normal/S2 normal/S3K demanding, with
+   additional operator/envelope costs. Measure the full chip/DSP/resampler path;
+   preserve register admission, DAC, envelope and snapshots. Its achievable
+   whole-process saving is unknown.
+
+Neither idea overrides the five-consecutive-rejection stopping rule.
+
+### Delivery base reconciliation (pending validation)
+
+Main and `origin/develop` advanced to `13add5b0b918a1f7ff7e343c8ccc858ad4527d85`.
+`git fetch origin` and `git pull --ff-only origin develop` completed on main
+without switching its branch or changing unrelated files/submodules. The sole
+upstream commit changes routine validation selection/documentation to smoke;
+it changes no runtime production Java. The original numerical source, protocol
+and scores remain immutable. Updated-base build equivalence and combined
+validation remain pending, and no upstream performance gain is attributed.
+
+The current repository instruction expressly supersedes older routine
+full-suite delivery requirements: release-only exhaustive tests are not selected
+for this task. Use actual updated-base change-based smoke selection with fresh
+guards and required focused ROM/trace/native checks; compare outcomes, failures
+and skips by identity. The earlier completed ordinary-suite results remain
+historical evidence, not a pass for subsequent C8/tool additions.
+
+P5 source `a9ab1e2b023a90b1f17d5b8de49dcd32ac80c8d9` passed all six
+normal presented framebuffer/PCM controls, including 15,550 presentations
+across the complete demanding S3K route. Controller/trajectory digests, frame
+counts, terminal hardware jobs and sample counts are identical. Command:
+`python3 ${OPENGGF_PERF_TASK_DIR}/visual_p5_batch.py`.
+
+Initial S1 paired screen (ms/frame): normal 1.541027→1.494330 (−3.03%)
+and 1.541027→1.647765 (+6.93%); demanding 1.336898→1.303476 (−2.50%)
+and 1.377005→1.270053 (−7.77%). This mixed result is **not acceptance** or
+a demonstrated repeatable normal-route regression. Extend S1 to five fresh
+pairs with `python3 ${OPENGGF_PERF_TASK_DIR}/p5_s1_five_screen.py` before
+deciding whether to complete the other frozen scenarios. No settings, windows,
+weights or source change. No gain accepted and rejection count remains four.
+
+### P5 rejection and five-experiment optimization checkpoint
+
+P5 `a9ab1e2b023a90b1f17d5b8de49dcd32ac80c8d9` is rejected. Original
+production PSG behavior is retained. All 123 focused audio/state/rewind checks
+passed, no failures/errors/skips, and all six normal-runtime framebuffer/PCM
+comparisons were identical. Performance correctness alone does not justify
+keeping the change. Source baseline and previous accepted implementation have
+identical production performance code.
+
+| Scenario / pair | Baseline ms/frame | Candidate ms/frame | CPU change |
+|---|---:|---:|---:|
+| s1-normal / 1 | 1.541027 | 1.494330 | -3.03% |
+| s1-normal / 2 | 1.541027 | 1.647765 | +6.93% |
+| s1-normal / 3 | 1.434290 | 1.654436 | +15.35% |
+| s1-demanding / 1 | 1.336898 | 1.303476 | -2.50% |
+| s1-demanding / 2 | 1.377005 | 1.270053 | -7.77% |
+
+CPU median / MAD / range (ms/frame):
+
+- s1-normal baseline: 1.541027 / 0.000000 / 1.434290–1.541027.
+- s1-normal candidate: 1.647765 / 0.006671 / 1.494330–1.654436.
+- s1-demanding baseline: 1.356952 / 0.020053 / 1.336898–1.377005.
+- s1-demanding candidate: 1.286765 / 0.016711 / 1.270053–1.303476.
+
+Two normal-route increases exceed the repeatable 5% blocking threshold.
+The third demanding baseline was stopped by exact owned JVM identity before
+a complete pair; it is excluded. No S2/S3K timing or five-pair acceptance is
+claimed. This is a conservative blocking screen, not a quantified full-matrix
+regression estimate. Startup/load timing was not completed for this rejected
+candidate. No production optimization is retained.
+
+Commands: `python3 ${OPENGGF_PERF_TASK_DIR}/p5_s1_screen.py`, followed by
+`python3 ${OPENGGF_PERF_TASK_DIR}/p5_s1_five_screen.py`, unchanged frozen
+arguments, classpaths and external resident-memory sampling. The candidate's
+PSG bytecode hash differs from baseline as expected; the probe prefix contains
+no production classes that shadow either source. CPU governor remains powersave.
+
+**Achieved accepted CPU gains: 0% in S1, S2 and S3K. Target not reached.**
+Original equally weighted scores remain 1.472399, 1.534621 and 2.575576
+ms/frame. Five consecutive experiments yielded no accepted improvement, so
+no sixth optimization or speculative rewrite is started. The strongest next
+hypotheses are atlas upload coalescing/driver-command work and coherent fast-YM
+synthesis, as ranked in Astra's review above; achievable savings are unmeasured.
+The accepted task contains prerequisite accuracy repairs, reproducible full
+runtime/input/residency tools, useful passing regression controls, and this
+evidence record. Delivery remains separately subject to updated-base validation,
+integration, push and ownership-aware cleanup.

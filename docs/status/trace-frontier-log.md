@@ -112169,3 +112169,31 @@ contains the intermediate rejected accuracy variants, focused commands, native
 routine evidence and remaining coverage. Original is the proposed mandatory
 handoff route; alternate slot/lifetime mismatch remains explicit. Updated-base
 controls, combined validation, integration and performance qualification are pending.
+
+
+## 2026-10-13 — qualified AIZ → HCZ runtime performance baseline
+
+Local C1–C7 repair `1baa8e6dc`, updated-base merge `eca81166b`, and selected-world
+bootstrap repair C8 `48bc7c34b` preserve ROM ownership and timing. The immutable
+original numerical baseline is `184c9d54e`; performance experiments never hydrate
+gameplay from comparison rows. Original complete handoff remains zero errors over
+20,463 compared observations; its terminal four pending ROM jobs match. The
+alternate complete route retains 59 inherited mismatches, first row 25,589
+`player_animation_id` $13/$05. No passing claim is made for that alternate or the
+standalone HCZ route.
+
+Domain command at the C8 source, `.worktrees/ai-runtime-perf-series`:
+`JAVA_HOME=/usr/lib/jvm/java-25-openjdk python3 tools/testing/maven_queue.py
+-Dmse=off -Ptrace-replay -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+-Dtest=TestPlayableSessionRules,TestS1Lz2CompleteRunTraceReplay,TestS3kAizTraceReplay,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+"-Dsonic1.rom.path=${OPENGGF_ROM_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen"
+"-Ds3k.rom.path=${OPENGGF_ROM_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B`.
+Completed 80 focused checks, no failures/errors/skips. Normal Engine controls
+compile only controller/structural/hardware readiness inputs offline and compare
+actual trajectories afterward. Six frozen routes pass their independent controls.
+
+The [performance validation record](../architecture/validation/performance/2026-10-12-runtime-performance-series.md)
+preserves baseline scores, source hashes, complete-runtime/media evidence and
+rejected hypotheses. Broad C1–C7 matching validation had 26 inherited failures and
+64 identical skips, with passing separate guards; C8/tools combined updated-base
+validation, integration, push and cleanup remain pending.

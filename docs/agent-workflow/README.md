@@ -317,3 +317,5 @@ Local Maven tests: [`tools/testing/maven_queue.py`](../../tools/testing/maven_qu
   order is diagnostic and can contain stale art in no-upload frames.
 
 - `TestEggmansSkyArtPreparation`: bounded owned-visit Egg preparation timing probe (three seeded fresh scenes; originating mod audit remediation 2026-10-12); headless warmed measurements only.
+
+- `com.openggf.tools.RuntimeEngineVisualControl`: lossless production-presented framebuffer and PCM qualification with compiled controller plans; separate from runtime acceptance timing (2026-10-12 performance series).
