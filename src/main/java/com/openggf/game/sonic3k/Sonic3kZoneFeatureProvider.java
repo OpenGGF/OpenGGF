@@ -805,7 +805,10 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
         // bridge collapse), keep the engine display bucket in front of the
         // forest sprites. Obj_PathSwap owns the independent ROM art_tile bit.
         boolean postBossCutsceneActive = com.openggf.game.sonic3k.objects
-                .Aiz2BossEndSequenceState.isCutsceneOverrideObjectsActive();
+                .Aiz2BossEndSequenceState.isCutsceneOverrideObjectsActive()
+                || (aizState != null && !aizState.isBossFlagActive()
+                    && com.openggf.game.sonic3k.objects.Aiz2BossEndSequenceState
+                            .isBridgeDropTriggered());
 
         if (forestFrontPhaseActive || postBossCutsceneActive) {
             player.setPriorityBucket(RenderPriority.MIN);

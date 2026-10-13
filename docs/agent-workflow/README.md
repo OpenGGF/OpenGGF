@@ -75,7 +75,7 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 - [Native reference capture](../../tools/bizhawk/README.md) runs explicit zone-owned Lua exporters/plans with an isolated BizHawk 2.11 configuration, source hashes and failed-export detection. The FBZ command remains a compatibility profile (2026-09-15 SOZ methodology v2).
 
-Nine `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each `-D...` property).
+The following `com.openggf.tools` CLIs. Maven examples quote each `-D...` property. Runtime measurements invoke Java directly from an already-built classpath.
 
 | Tool | Purpose | Invocation |
 |------|---------|------------|
@@ -85,6 +85,9 @@ Nine `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each
 | `TraceTriageTool` | Reads `target/trace-reports/<game>_<zone>_report.json` and prints a first-divergence brief (frame/field, ROM vs engine, likely owning subsystem, disasm search terms). Comparison-only; never hydrates engine state. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.TraceTriageTool" "-Dexec.args=s2 mtz1"` |
 | `ZoneSpecNormalizerTool` | Normalizes an `s3k-zone-analysis` spec into the stable 13-section layout (palette cycling vs mutation kept separate; `(not analyzed)` placeholders for gaps). | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.ZoneSpecNormalizerTool" "-Dexec.args=<path-to-zone-analysis-spec.md>"` |
 | `TraceBenchmarkTool` | Replays a trace headlessly with no pacing and reports per-subsystem frame-time percentiles, for comparing JVMs or catching a performance regression. Writes a JSON report. Never quote its numbers without checking the trajectory digest matched. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.TraceBenchmarkTool" "-Dexec.args=--trace aiz1 --json target/bench/temurin21-g1.json"` |
+| `RuntimeInputPlan` | Compile v5 controller inputs, structural loop admission and dedicated hardware readiness into a comparison-free plan for the complete runtime benchmark (2026-10-12 task). | `java -cp "$OPENGGF_RUNTIME_CLASSPATH" com.openggf.tools.RuntimeInputPlan TRACE_DIR ZONE ACT START COUNT PLAN_JSON` |
+| `RuntimeEngineBenchmarkTool` | Run the normal paced Engine window/render/audio/filled-rewind workload; reports total-process CPU and presentation intervals. External process sampling supplies RSS/peak and DRM residency. Optional final CSV is qualification-only; `--load GAME ZONE ACT ROM_ROOT REPORT_JSON` measures a separate LIVE fresh load through its first gameplay presentation. | `java --enable-native-access=ALL-UNNAMED -Xmx3g -cp "$OPENGGF_RUNTIME_CLASSPATH" com.openggf.tools.RuntimeEngineBenchmarkTool PLAN_JSON ROM_ROOT REPORT_JSON MEASURE_FROM MEASURE_TO` |
+| `tools/performance/sample_runtime.py` | Sample an owned runtime process outside its marked measurement window and within filled history; append steady RSS/peak and deduplicated resident GPU counters to the runtime report. | `python3 tools/performance/sample_runtime.py --pid PID --log LOG --report REPORT_JSON` |
 | `BenchmarkCompareTool` | Renders a Markdown comparison from two or more benchmark reports; the first is the baseline. Pure post-processing, so it can run under any JVM. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.BenchmarkCompareTool" "-Dexec.args=--out target/bench/comparison.md target/bench/a.json target/bench/b.json"` |
 | `InputLogAuthorTool` | Compiles a short controller script (`60 R; 1 D+R; repeat 3 { 1 A ; 1 - }`) into a BizHawk `Input Log.txt` or minimal `.bk2`, then re-parses it with `Bk2MovieLoader` so the file is proven loadable. Skill: `bk2-input-authoring`. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.InputLogAuthorTool" "-Dexec.args=--inline '60 R; 1 A' --out target/capture/run.txt"` |
 | `DezFinalRouteAuthorTool` | Observes the final DEZ encounter and authors controller-only input through hands, core and escape. Declared solo Sonic boot: 200 rings, seven Super Emeralds. Optional DEZ2 input starts at ($34B0,$300), traverses its boss/real final-arena load and continues without reseeding. A fifth argument (`cold-solo`, `cold-team`, `cold-team-emeralds`) instead plays an input prefix from the real DEZ1 start without position/ring seeds. Writes input script/state CSV; no post-boot gameplay-state injection or parity claim. | `DezFinalRouteAuthorTool <ROM> <width> <output-prefix> [input [cold-solo\|cold-team\|cold-team-emeralds]]` (same Java classpath as gameplay capture) |
@@ -321,3 +324,7 @@ Local Maven tests: [`tools/testing/maven_queue.py`](../../tools/testing/maven_qu
   order is diagnostic and can contain stale art in no-upload frames.
 
 - `TestEggmansSkyArtPreparation`: bounded owned-visit Egg preparation timing probe (three seeded fresh scenes; originating mod audit remediation 2026-10-12); headless warmed measurements only.
+
+- `com.openggf.tools.RuntimeEngineVisualControl`: lossless production-presented framebuffer and PCM qualification with compiled controller plans; separate from runtime acceptance timing (2026-10-12 performance series).
+
+- `tools/performance/run_isolated.py`: OS-leased exclusion of linked-worktree builds/tests plus a bypass-process guard for prebuilt measurements; writes an isolation audit (2026-10-13 P5 timing correction). Acquire build leases before shared admission so retained category batches can finish.

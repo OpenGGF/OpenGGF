@@ -1,5 +1,8 @@
 package com.openggf.game;
 
+import com.openggf.tests.TestEnvironment;
+import com.openggf.game.session.SessionManager;
+
 import com.openggf.game.rules.GameRules;
 
 import com.openggf.game.sonic1.Sonic1GameModule;
@@ -31,11 +34,12 @@ class TestEdgeBalance {
 
     @BeforeEach
     void setUp() {
-        GameModuleRegistry.setCurrent(new Sonic2GameModule());
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
     }
 
     @AfterEach
     void tearDown() {
+        SessionManager.clear();
         GameModuleRegistry.reset();
     }
 
@@ -50,7 +54,7 @@ class TestEdgeBalance {
     @ParameterizedTest(name = "{2} extendedEdgeBalance = {1}")
     @MethodSource("edgeBalanceProvider")
     void extendedEdgeBalanceMatchesModule(GameModule module, boolean expected, String label) {
-        GameModuleRegistry.setCurrent(module);
+        TestEnvironment.configureGameModuleFixture(module);
         TestablePlayableSprite sprite = new TestablePlayableSprite("test", (short) 100, (short) 100);
 
         GameRules fs = sprite.getGameRules();
@@ -60,7 +64,7 @@ class TestEdgeBalance {
 
     @Test
     void sonic1_singleBalanceState() {
-        GameModuleRegistry.setCurrent(new Sonic1GameModule());
+        TestEnvironment.configureGameModuleFixture(new Sonic1GameModule());
         TestablePlayableSprite sprite = new TestablePlayableSprite("test", (short) 100, (short) 100);
 
         GameRules fs = sprite.getGameRules();

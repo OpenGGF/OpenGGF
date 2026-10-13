@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -472,6 +473,75 @@ class TestPsgChipHardwareBehaviour {
     }
 
     // --- Rendering contract ----------------------------------------------
+
+    @Test
+    void tickBatchesMatchSingleTicksAcrossRegisterAndModelChanges() {
+        for (PsgChip.ChipType type : PsgChip.ChipType.values()) {
+            PsgChip whole = new PsgChip(PsgChip.TICK_RATE_HZ, type);
+            PsgChip sliced = new PsgChip(PsgChip.TICK_RATE_HZ, type);
+            Random random = new Random(0x505347L);
+            int[] oneLeft = new int[1];
+            int[] oneRight = new int[1];
+            for (int step = 0; step < 768; step++) {
+                int channel = random.nextInt(3);
+                int period = switch (step % 8) {
+                    case 0 -> 0;
+                    case 1 -> 1;
+                    case 2 -> 2;
+                    case 3 -> 1023;
+                    default -> random.nextInt(1024);
+                };
+                int latch = 0x80 | (channel << 5) | (period & 15);
+                whole.write(latch);
+                sliced.write(latch);
+                whole.write(period >> 4);
+                sliced.write(period >> 4);
+                int attenuation = 0x90 | (channel << 5) | random.nextInt(16);
+                whole.write(attenuation);
+                sliced.write(attenuation);
+                int noise = 0xE0 | (step & 7);
+                whole.write(noise);
+                sliced.write(noise);
+                whole.write(0xF0 | (step & 15));
+                sliced.write(0xF0 | (step & 15));
+                if (step % 13 == 0) {
+                    int pan = random.nextInt(256);
+                    whole.configure(100, pan);
+                    sliced.configure(100, pan);
+                    boolean mute = (step & 1) == 0;
+                    whole.setMute(channel, mute);
+                    sliced.setMute(channel, mute);
+                }
+                if (step % 37 == 0) {
+                    PsgChip.ChipType next = PsgChip.ChipType.values()[(step / 37) & 1];
+                    whole.setChipType(next);
+                    sliced.setChipType(next);
+                }
+                if (step % 19 == 0) {
+                    whole.restoreSnapshot(whole.captureSnapshot());
+                    sliced.restoreSnapshot(sliced.captureSnapshot());
+                }
+                int count = 1 + random.nextInt(257);
+                int[] expectedLeft = new int[count];
+                int[] expectedRight = new int[count];
+                int[] actualLeft = new int[count];
+                int[] actualRight = new int[count];
+                whole.renderStereo(expectedLeft, expectedRight, count);
+                for (int i = 0; i < count; i++) {
+                    oneLeft[0] = 0;
+                    oneRight[0] = 0;
+                    sliced.renderStereo(oneLeft, oneRight, 1);
+                    actualLeft[i] = oneLeft[0];
+                    actualRight[i] = oneRight[0];
+                }
+                String context = type + " step " + step;
+                assertArrayEquals(expectedLeft, actualLeft, context + " left");
+                assertArrayEquals(expectedRight, actualRight, context + " right");
+                assertEquals(withoutDeltaBuffer(whole.captureSnapshot()),
+                        withoutDeltaBuffer(sliced.captureSnapshot()), context + " generators");
+            }
+        }
+    }
 
     @Test
     void renderingIsInvariantToBufferSlicingAndStaysBounded() {

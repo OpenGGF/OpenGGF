@@ -74,6 +74,40 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
         this(spawn.x(), spawn.y());
     }
 
+    void configureArena(int arenaMaxX, int arenaBaseY) {
+        this.arenaMaxX = arenaMaxX;
+        this.arenaBaseY = arenaBaseY;
+    }
+
+    SequenceSnapshot captureSequenceState() {
+        return new SequenceSnapshot(arenaMaxX, arenaBaseY, initialized,
+                postCapsuleSequenceStarted, pendingButtonInputRelease,
+                knucklesSpawned, buttonHandled, transitionRequested,
+                pendingLookUpInputAfterStop, postButtonMaxYReleaseActive,
+                postButtonMaxYAccumulator, postResultsControlRestoreDelay);
+    }
+
+    void restoreSequenceState(SequenceSnapshot snapshot) {
+        arenaMaxX = snapshot.arenaMaxX();
+        arenaBaseY = snapshot.arenaBaseY();
+        initialized = snapshot.initialized();
+        postCapsuleSequenceStarted = snapshot.postCapsuleSequenceStarted();
+        pendingButtonInputRelease = snapshot.pendingButtonInputRelease();
+        knucklesSpawned = snapshot.knucklesSpawned();
+        buttonHandled = snapshot.buttonHandled();
+        transitionRequested = snapshot.transitionRequested();
+        pendingLookUpInputAfterStop = snapshot.pendingLookUpInputAfterStop();
+        postButtonMaxYReleaseActive = snapshot.postButtonMaxYReleaseActive();
+        postButtonMaxYAccumulator = snapshot.postButtonMaxYAccumulator();
+        postResultsControlRestoreDelay = snapshot.postResultsControlRestoreDelay();
+    }
+
+    record SequenceSnapshot(int arenaMaxX, int arenaBaseY, boolean initialized,
+                            boolean postCapsuleSequenceStarted, boolean pendingButtonInputRelease,
+                            boolean knucklesSpawned, boolean buttonHandled, boolean transitionRequested,
+                            boolean pendingLookUpInputAfterStop, boolean postButtonMaxYReleaseActive,
+                            int postButtonMaxYAccumulator, int postResultsControlRestoreDelay) { }
+
     @Override
     public int getX() {
         return arenaMaxX;
@@ -166,29 +200,29 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
             // player physics tick has consumed the previous RIGHT logical word.
             pendingLookUpInputAfterStop = true;
             setSidekickControlLocked(player, true);
-            spawnDynamicObject(CutsceneKnucklesAiz2Instance.createDefault());
+            // AIZEndBoss_StopPlayer uses AllocateObject, not
+            // CreateChild6_Simple (sonic3k.asm:138299-138304). A lower free
+            // SST slot waits for the next scan; allocating after this owner
+            // instead can start the cutscene on this same scan.
+            spawnFreeChild(CutsceneKnucklesAiz2Instance::createDefault);
         }
 
         // Phase: Wait for button press (triggered by Knuckles animation)
         if (!buttonHandled && Aiz2BossEndSequenceState.isButtonPressed()) {
             buttonHandled = true;
-            // Bridge collapses — release all player locks so the bridge's
-            // ejectStandingPlayers() can set the hurt-fall state and the
-            // animation system doesn't overwrite it.
-            // Obj_CutsceneButton clears Ctrl_1_locked in its earlier object
-            // slot. This controller then observes the shared button flag and
-            // clears its engine-side forced word so the next player dispatch
-            // reads the unlocked raw input, matching loc_65C56/loc_69588.
-            // Obj_CutsceneButton clears Ctrl_1_locked from an object slot, but
-            // Player_1 is SST slot 0 and consumed the retained logical UP word
-            // earlier in this same scan. Keep the engine's late-write
-            // representation through that player dispatch and release it on the
-            // next controller entry (sonic3k.asm:133968-133970, 138317-138323).
+            // The button already owns P1's unlock and input-override release.
+            // Retain the cleanup for standalone controller callers which only
+            // publish the flag, without a live button owner.
             pendingButtonInputRelease = true;
             player.setControlLocked(false);
             services().camera().setMaxYTarget((short) POST_BUTTON_CAMERA_MAX_Y_TARGET);
             postButtonMaxYReleaseActive = true;
             postButtonMaxYAccumulator = 0;
+            // AIZEndBoss_StartLevelTransitionCheck changes this SST's routine
+            // and returns. Only the next dispatch tests Y (sonic3k.asm:
+            // 138327-138340). The folded independent camera child still runs.
+            updatePostButtonCameraMaxYRelease();
+            return;
         }
         // Phase: Wait for player to fall past Y threshold, then transition
         if (buttonHandled && !transitionRequested) {
@@ -233,21 +267,10 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance
     }
 
     private int postResultsControlRestoreDelay() {
-        // AIZEndBoss_StartPostDefeatCutscene polls tst.b (_unkFAA8).w from the
-        // boss's own SST slot and only restores control on the entry that first
-        // reads it clear (sonic3k.asm:138263-138268). The clearing owner is
-        // Obj_LevelResultsWait2, created through AllocateObject
-        // (sonic3k.asm:62700-62712, 181967-181971), so whether the boss sees
-        // the clear in the same scan or on its next entry depends on the
-        // lowest free SST slot AllocateObject happened to return -- runtime
-        // allocation state the engine's folded controller does not model.
-        //
-        // This controller is allocated below the egg capsule that publishes the
-        // engine-side release, so its first entry that observes the release
-        // already stands for the boss entry that first read _unkFAA8 clear: no
-        // further entry is retained. The previous two-way selector keyed this
-        // off the bridge/button dispatch marker, which answers an unrelated
-        // ordering question and is gone.
+        // The first boss entry that reads _unkFAA8 clear restores controls
+        // and returns; walking starts on its following dispatch
+        // (AIZEndBoss_StartPostDefeatCutscene, sonic3k.asm:138263-138276).
+        // One phase entry is consumed here, without adding a synthetic wait.
         return POST_RESULTS_CONTROL_RESTORE_DELAY;
     }
 
