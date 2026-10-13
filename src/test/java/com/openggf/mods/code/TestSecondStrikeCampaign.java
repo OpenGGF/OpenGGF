@@ -8,8 +8,15 @@ import com.openggf.game.sonic3k.Sonic3kRingPlacement;
 import com.openggf.game.sonic3k.difficulty.AizMinibossAttackPolicy;
 import com.openggf.game.sonic3k.difficulty.BlueSphereLayoutPolicy;
 import com.openggf.game.sonic3k.difficulty.GumballSpringPolicy;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
+import com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance;
 import com.openggf.io.ModAssetRoot;
 import com.openggf.level.AbstractLevel;
+import com.openggf.level.objects.TestObjectServices;
+import com.openggf.level.objects.TouchCategory;
+import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.level.rings.RingSpawn;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.mods.ModRuntimeFindingStore;
 import com.openggf.mods.ModStateSaveResult;
 import com.openggf.tests.rules.RequiresRom;
@@ -70,26 +77,83 @@ class TestSecondStrikeCampaign {
             objects = new Sonic3kObjectPlacement(rom).load(zone, act);
             rings = new Sonic3kRingPlacement(rom).load(zone, act);
         }
+        void addRing(RingSpawn ring) { rings = java.util.stream.Stream.concat(rings.stream(), java.util.stream.Stream.of(ring)).toList(); }
     }
 
     @Test void registrationPatchesBothNativeBanksWithoutTouchingLaterEnemyRoutes() throws Exception {
         var plan = registration();
-        assertEquals(4, plan.objectFactories().size());
+        assertEquals(5, plan.objectFactories().size());
         assertEquals(2, plan.decodedLevelPatches().size());
         assertEquals(1, plan.explicitPatches().size());
         var module = services(plan);
         var forest = new NativeInventory(0, 0);
+        var shoes = forest.getObjects().stream().filter(s -> s.objectId() == 1 && (s.subtype() & 15) == 4).toList();
         assertSame(forest, module.transformDecodedLevel(forest));
-        assertEquals(68, forest.getRings().size());
-        assertEquals(10, forest.getObjects().stream().filter(s -> s.ownerModId() != null).count());
+        assertEquals(3, forest.getRings().size());
+        assertEquals(20, forest.getObjects().stream().filter(s -> s.ownerModId() != null).count());
+        assertEquals(shoes, forest.getObjects().stream().filter(s -> s.objectId() == 1 && (s.subtype() & 15) == 4).toList());
+        assertSame(shoes.getFirst(), forest.getObjects().get(shoes.getFirst().layoutIndex()));
+        assertEquals(10, forest.getObjects().stream().filter(s -> "second-strike:robotnik-monitor".equals(s.objectKey())).count());
+        assertEquals(List.of(1, 35, 74), forest.getRings().stream().map(RingSpawn::placementId).toList());
+        var forestObjects = forest.getObjects(); var forestRings = forest.getRings();
+        assertSame(forest, module.transformDecodedLevel(forest));
+        assertEquals(forestObjects, forest.getObjects()); assertEquals(forestRings, forest.getRings());
         var fire = new NativeInventory(0, 1);
         var later = fire.getObjects().stream().filter(s -> s.x() >= 0x1000).toList();
         assertSame(fire, module.transformDecodedLevel(fire));
-        assertEquals(3, fire.getObjects().stream().filter(s -> s.ownerModId() != null).count());
-        assertEquals(45, fire.getRings().stream().filter(r -> r.x() < 0x1000).count());
+        assertEquals(8, fire.getObjects().stream().filter(s -> s.ownerModId() != null).count());
+        assertEquals(2, fire.getRings().stream().filter(r -> r.x() < 0x1000).count());
+        assertEquals(List.of(12, 68), fire.getRings().stream().filter(r -> r.x() < 0x1000).map(RingSpawn::placementId).toList());
+        assertEquals(5, forest.getRings().size() + fire.getRings().stream().filter(r -> r.x() < 0x1000).count());
+        assertEquals(5, fire.getObjects().stream().filter(s -> "second-strike:robotnik-monitor".equals(s.objectKey())).count());
+        assertTrue(forest.getRings().size() + fire.getRings().stream().filter(r -> r.x() < 0x1000).count() < 20,
+                "Placed rings and converted ordinary monitors cannot qualify a native bonus post; stage prizes are separate");
         assertEquals(later, fire.getObjects().stream().filter(s -> s.x() >= 0x1000).toList());
         assertSame(fire, module.transformDecodedLevel(fire));
-        assertEquals(3, fire.getObjects().stream().filter(s -> s.ownerModId() != null).count(), "idempotent reload");
+        assertEquals(8, fire.getObjects().stream().filter(s -> s.ownerModId() != null).count(), "idempotent reload");
+    }
+
+    @Test void everyNonShoeMonitorUsesActualNativeRobotnikContentsWithoutChangingItsPlacement() throws Exception {
+        var plan = registration(); var module = services(plan); int converted = 0;
+        for (int act : new int[]{0, 1}) {
+            var source = new NativeInventory(0, act);
+            var original = source.getObjects(); module.transformDecodedLevel(source);
+            for (var spawn : source.getObjects()) {
+                if (!"second-strike:robotnik-monitor".equals(spawn.objectKey())) continue;
+                var nativeSpawn = original.get(spawn.layoutIndex());
+                assertEquals(nativeSpawn.x(), spawn.x()); assertEquals(nativeSpawn.y(), spawn.y());
+                assertEquals(nativeSpawn.subtype(), spawn.subtype()); assertEquals(nativeSpawn.rawYWord(), spawn.rawYWord());
+                assertEquals(nativeSpawn.renderFlags(), spawn.renderFlags()); assertEquals(nativeSpawn.objectId(), spawn.objectId());
+                assertEquals(nativeSpawn.respawnTracked(), spawn.respawnTracked());
+                assertNotEquals(4, spawn.subtype() & 15, "Never replace speed shoes");
+                var monitor = (Sonic3kMonitorObjectInstance) plan.objectFactories().get(spawn.objectKey()).create(spawn, null);
+                assertSame(spawn, monitor.getSpawn());
+                monitor.setServices(new TestObjectServices());
+                var player = mock(AbstractPlayableSprite.class);
+                when(player.getAnimationId()).thenReturn(Sonic3kAnimationIds.ROLL.id());
+                when(player.getRingCount()).thenReturn(1);
+                monitor.onTouchResponse(player, new TouchResponseResult(0, 14, 14, TouchCategory.SPECIAL), 0);
+                for (int tick = 1; tick <= 34; tick++) monitor.update(tick, player);
+                verify(player).applyHurtOrDeath(0, false, true);
+                verify(player, never()).addRings(anyInt());
+                var restored = monitor.recreateForRewind(new com.openggf.level.objects.RewindRecreateContext(
+                        spawn, monitor.captureRewindState(), new TestObjectServices()));
+                assertEquals(monitor.getClass(), restored.getClass()); assertSame(spawn, restored.getSpawn());
+                converted++;
+            }
+        }
+        assertEquals(15, converted, "All first-act reward boxes except the exact original shoe monitor are hostile");
+    }
+
+    @Test void addedOpeningRecordsCannotEvadeScarcityAndLaterPhysicalRingsRemainExact() throws Exception {
+        var module = services(registration()); var forest = new NativeInventory(0, 0);
+        forest.addRing(new RingSpawn(0x2000, 0x220, 1000)); module.transformDecodedLevel(forest);
+        assertEquals(3, forest.getRings().size());
+        var fire = new NativeInventory(0, 1); var later = fire.getRings().stream().filter(r -> r.x() >= 0x1000).toList();
+        fire.addRing(new RingSpawn(0x800, 0x220, 1000)); module.transformDecodedLevel(fire);
+        assertEquals(2, fire.getRings().stream().filter(r -> r.x() < 0x1000).count());
+        assertEquals(later, fire.getRings().stream().filter(r -> r.x() >= 0x1000).toList());
+        assertThrows(UnsupportedOperationException.class, () -> forest.getRings().clear());
     }
 
     @Test void servicesAreCanonicalAndStockTitleSaveAndFrameOwnersStayDelegated() throws Exception {

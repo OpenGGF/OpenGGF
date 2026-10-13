@@ -19,7 +19,7 @@ controller, instant retry menu, forced fresh position or scripted victory.
 | --- | --- | --- |
 | Badnik roles | Native-art spotter, guard and artillery replacements | Cooperation changes a real encounter; destroying the caller ends new assistance |
 | Provoke/dodge/punish | Committed dash/volleys, visible brake/reload openings | Native attacking, shield deflection, hurt, destruction, score and life behavior |
-| Meaningful rings | Curated original ring groups and recovery footholds | Real scarcity, usable safe/exposed routes, attainable native bonus entry |
+| Meaningful rings | Five original ring placements across forest and fire together | Severe scarcity with native hurt/recollection; stage-entry thresholds remain native |
 | Dangerous shortcuts | Hardened enemies on existing fast/upper paths | Readable fast solution and viable cautious alternative |
 | Environmental combinations | Native enemies beside existing vines, logs, slopes and landings | Native terrain/mechanics and transition objects stay intact |
 | Boss second trick | A bounded delayed extra breath wave late in Fire Breath | Native HP, arena, defeat, results and transition; cancellation on killing hit |
@@ -351,3 +351,103 @@ and playable Act 2, the local character opportunities and first-stage variants.
 The smoke run's twenty-six ordinary failures are stock-attributed; the repaired
 fresh guards and focused compositions pass. This is a verified prototype with
 the support limits above, not full campaign coverage or a green full-suite claim.
+
+## Harsher AIZ1 revision
+
+The user requested a stronger difficulty layer after that delivery. Its pinned
+integration base is `5d9dd81381b05db66f530f55b8627f90ad1b88cc`. The requested
+economy is at most five original placed rings across the forest and its physical
+fire continuation together. Ordinary non-speed-shoe monitors become visibly
+native Robotnik boxes; speed shoes remain unchanged. Native stage prizes and
+ring recollection are not a ring-counter cap. The twenty-ring checkpoint bonus
+threshold remains native, so those five placed rings alone cannot qualify it.
+The later playable Act 2 and other zones remain outside this authored slice.
+The six hidden boss/results-region monitors remain native: physical table
+records 162/164/167/168/170/174 at `$1130`–`$11E8` have contents
+8/8/7/5/1/7, none a ring or super monitor. Fifteen ordinary boxes become
+Robotnik traps, one keeps speed shoes, and those six remain hidden rewards.
+This implements the requested majority of hostile monitors without changing
+the native signpost's reward-spawning graph.
+
+Enemy durability is two separated accepted hits for spotters/artillery and
+three for guards, with bounded hit recovery and final-hit-only native rewards.
+Extra allies are admitted from verified enemy ground anchors, with bounded
+population, lifetime and replay state. Guard dash speed rises from four to ten
+pixels per update, preserving its committed direction, readable wind-up,
+native floor/ledge checks and recovery opening. While dashing it is invulnerable
+and uses the native fire-shield dash art; no invented fallback sprite is used.
+
+The reported strange sound near vines was investigated without changing stock
+audio or vine behavior. The added spotter used S3K Whistle `$46`, a 48-tick
+modulated FM tone. Stock Monkey Dude instead uses Missile Throw `$51` when
+throwing a coconut (`MonkeyDudeArm_ThrowCoconut`). The native vine grab uses
+Grab `$4A` at its successful grab edge (`AIZRideVineHandle_CheckGrab`), and the
+guard's Blast `$48` matches `Rhinobot_StartChargePrep`. All numeric IDs and
+the S3K bank path agree with the disassembly. The prior route records spotter
+CALL entries at 2473, 2577 and 2752; native unload/recreation explains the short
+first interval. There is no per-frame cue loop or established bank-routing bug.
+The spotter cue will use `$51` at the same CALL-entry edge. Mixed prior PCM does
+not establish which sound the user heard; this is creator cue polish.
+
+The native floor audit admits three additional guard companions: both forest
+artillery anchors and the first early-fire anchor. The fourth candidate has a
+real gap at its proposed feet and is rejected rather than changing terrain or
+relaxing the floor sensor. Guards probe every pixel of their ten-pixel stride,
+stop within their bounded charge range and expose a seventy-two-update brake.
+They then return toward their post at at most two pixels per update, with a
+sixty-four-update cap and normal vulnerable collision. A dry first-stride check
+prevents a blocked tell from flashing a stationary flame charge. The return
+samples native centre-foot terrain at each pixel: opposite-front sampling
+rejected a continuous native slope after the prior charge's front sensor set Y.
+The acceptance range is unchanged; no terrain, position or fixture is fitted.
+The native flame attack cue is `$43`; dash immunity includes powered attacks,
+while the native wind-up contact behavior remains intact.
+
+A supplementary direct-level observation positions solo Sonic at
+`($1BC0,$3B0)` with neutral input. The candidate produced 300 native GPU frames
+and 240,000 stereo PCM frames at 48 kHz. Inspected frames 35/40/45/60 show the
+wind-up, moving flame-shield dash and exposed brake. It uses surfaceless EGL,
+an owned profile and the null host-audio backend; it neither proves physical
+speaker output nor a cold campaign completion. The native pixel oracle checks
+all six dash frames and flips against ROM DPLCs, independently of player-shield
+bank changes. The compiled candidate surface has 20,123 signatures and exactly
+matches the existing unpublished `0.7` pin; these internal helpers do not expand
+the supported Mod API.
+
+The original continuous movie and full-route evidence above describe the
+previous ring economy and enemy behavior. They are historical evidence, not
+validation of this revision. New focused native monitor/damage/art/rewind
+checks, the actual change-based smoke plan and a fresh gameplay witness are
+required before integrating it. Isolated worktrees and the updated batched
+category runner are used; no shared-desktop automation is permitted.
+
+### Focused revision evidence and route limits
+
+The final combined nineteen-class check used the normal Maven wrapper with
+all three original absolute ROM properties and `verify dependency:build-classpath`.
+It passed 167 cases without failures, errors or skips in 52.806 seconds,
+including native monitors, contact/floor/slot rewind, ROM pixels, all required
+S3K startup classes, API pins and SDK/Javadoc/binary artifact verification.
+The subsequent return-to-post polish passed twenty-two affected unit/native
+cases without skips; unchanged art, monitor and API checks were not repeated.
+
+The final ROM-free jar builds with twelve explicit unsupported-internals
+warnings and no package errors. Its new offscreen witness is external
+`second-strike-hard-mode-20261013/guard-final-capture/flaming-rhino.mp4`:
+300 decoded 960x672 frames and five seconds of native stereo audio. Inspected
+frames 40/130/205 show the first flaming charge, slow return and another full
+charge. Both video and audio decode completely. These are positioned visual
+observations; native contact/immunity and return replay have separate tests.
+
+A controller-only cold exploration retained the native intro, reached the
+physical fire reload and checkpoint three, and showed actual separated
+multi-hit losses and ten-pixel dash strides. It did not reach the boss/results:
+the controller repeatedly hopped beside the native tree/wall near `$F35`.
+Two ordinary-input retreat heuristics did not clear that obstacle and were
+discarded. No observed death, enemy crash or terrain change explains that
+controller limitation. The earlier complete campaign movie stays historical;
+this revision does not claim a new full cold campaign completion.
+
+The combined change-based smoke run and final destination integration are
+pending. Existing twenty-six stock-attributed negatives are the comparison
+reference; new or worsened failures remain delivery blockers.
