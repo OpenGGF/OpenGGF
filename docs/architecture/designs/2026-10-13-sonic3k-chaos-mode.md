@@ -13,6 +13,10 @@ custom characters, special stages and bonus stages require separate
 qualification; they must not inherit support just because a policy exists.
 The requested research-first pass does not implement or change the Mod API.
 
+The [top 50 additional candidates](../research/2026-10-13-chaos-effect-shortlist.md)
+rank further adaptations from Zolika's other published catalogues. They remain
+a separate shortlist; the 55-effect pool and its stable IDs below are unchanged.
+
 ## Inspiration from existing chaos mods
 
 [Vice City's ZChaos](https://github.com/Zolika1351/ChaosModGTAVC) documents a
