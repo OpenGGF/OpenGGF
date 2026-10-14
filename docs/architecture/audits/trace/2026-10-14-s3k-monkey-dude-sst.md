@@ -869,3 +869,83 @@ Low code bytes are not unique type proof; the source FallingShot floor/Go_Delete
 and creation-table context supplies this next attribution. Real cutscene
 FallingShot admission/collision/lifetime remains required next work. No new
 rendered-pixel, SAT/priority, PCM or arbitrary reused-header pressure certification.
+
+
+## AIZ real cutscene FallingShot and copied explosion lifecycle
+
+Source1db1ebd89 plus four local native owners; final qualified runtime SHA256:
+AizMinibossFlameBarrelChild.java:563a9cb8fb7de20b6755e70c7097d3550d0e81ab4502b8e9037cd1f9374a5931, AizMinibossNapalmProjectile.java:014e4a0163436934c4cfd7f038de53fd6f7337227c07e3e8ea5df04e415493b1, AizMinibossNapalmExplosionChild.java:23fe8cb6f3473cdef8505fde3553d75e845e7f6632fcfa61e9ac1bbc5e7141a7, AizMinibossBarrelShotChild.java:3cbbf7d045aa281924757d617a5cd3448998e16b43454c2cb424b7a55a07a8bf.
+
+Native ChildObjDat_690A8 (:137890) selects Flare/FallingShot with second-child
+subtype02. The cutscene now uses the existing real FallingShot owner rather
+than the advanced common-shot simulation. Common second children also retain
+subtype02 independently of their barrel's0/2/4 position-table subtype, matching
+CreateChild1_Normal (:176923). FallingShot_Init (:137474) reads the actual barrel
+operation and clears its collision byte for the cutscene; the fight keeps98.
+BossExplosionHitbox_Init (:137549) copies that byte into seven independently
+staggered children. They retain art priority0/bucket1 and have no generic
+explosion-child Init sound. No shared explosion factory/art/SFX reuse added.
+
+FallingShot dispatches its own routine before the grandparent-status7 branch
+(:137450). Floor impact (:137529) creates the seven actual Hitboxes, marks its
+own Go_Delete and still reaches AddList/Draw when the grandparent is live. The
+own marker is distinct from that grandparent gate. Hitbox Animate (:137580)
+also reaches Draw_And_Touch after its F4 callback; its final mapping5 and97
+publication stay live until the following Delete_Current_Sprite dispatch
+(:36108/:179136). Existing immediate-destruction/21-harmful-publication oracles
+were incorrect: native has21 mapping holds plus one callback touch/draw pass.
+
+Both objects read their real ROM raw banks (6914C/83FCC), capture byte cursor/
+timer/terminal state, and recreate from the entire ctx.spawn shell without
+live lookup or work. Existing exact live parent/barrel links remain CAPTURED;
+no shared schema/API, clock or allocator change. Numeric recycled-parent
+pressure remains unqualified. Unknown pressure must not be inferred from these
+logical live-reference vectors. Pause/Drop retain the same raw bank.
+
+| Normal queue request | Terminal result | Timing BST |
+| --- | --- | --- |
+|38406 matched literal/caller/factory negative|14/8fail/0errors/0skip; six graph/world controls pass|20:18:08;25.197s execution/913s queue|
+|97580 first candidate|test compilation error: missing assertFalse import; no tests executed|20:23:42;64s/25s|
+|49960 affected676 plus16 new and7 existing standalone consumers|699/7fail/0errors/0skip; all failures are old common-only callback family predicates|20:25:18;31.928s/0s|
+|84889 corrected callback-only selectors, runtime unchanged|7/0/0/0|20:27:49;24.286s/0s|
+|31590 alternate trace-segments|1/1fail/0errors/0skip, retained60 spans|20:29:31;35.301s/0s|
+|85181 four -Pguards selectors|111/0/0/0|20:30:05;33.374s/36s|
+|49498 canonical five-case trace/slot observation|5/1fail/0errors/0skip; four controls pass|20:31:43;96s/70s|
+
+The unchanged692 passing identities from49960 and corrected7 from84889 qualify
+all699 affected identities, not one all-green699 invocation. Source/tests were
+frozen for each actual invocation; no source changed after the missing import
+except that one callback test's family predicate/independent ROM unit banks.
+Sixteen new cases cover caller selection, both barrel roles, clear/retained raw
+state, parent-tail ordering, collision copy, seven subtype windows, F4/physical
+clear, pure complete metadata, and two45-pass forced recreation cycles at five
+component cameras320/352/400/528/800. One separately declared loaded-AIZ world
+uses the complete production registry with no key filtering, forcing graph
+recreation around birth/rise and impact/retirement for two45-pass cycles. This
+is local world evidence, not cold-route or full viewport/donor/team breadth.
+The existing actual-ROM Knuckles napalm route4, standalone7, live graph/Second
+Strike/scalar and all four startup consumers pass. Callback family tests still
+assert exact wait/counter/admission/tail frames; they now count the real native
+common/Falling families and assert the second callback's literal Falling child.
+
+Affected selector adds TestAizMinibossFallingShotNativeGraph and
+TestAizMinibossNapalmProjectile to27598;84889 selects only
+TestAizMinibossBarrelWaitCallback. Standard canonical/alternate/guard profiles
+and exact selectors remain those of30405/50339/11033 with Java25/EGL/absolute
+original S3K ROM. Slot observer directory is target/falling-shot-native-slot-occupancy.
+
+Chain6/8/11 raw189/12,719/82,067, physics189/12,604/69,393, animation0/115/12,674
+remain unchanged. First non-camera3319 P2X31C1/31CA,1583 P2X366C/3674,
+1510 Y7D6/7DF; source closure still stops at input68,801/loadgen9. Alternate60
+spans is25physics/35animation, first25589 animation13/05, first physics25590
+Tails subX7800/6C00. Original AIZ/initial HCZ/two prefixes remain green.
+
+Sampled segment2 presence advances3067→3084 (native-only18; preceding3081).
+At3067 engine21 is the real retiring FallingShot and39..45 are the actual
+Hitboxes, matching the native96→B6/88 context. At3081 native18 is common-shot
+code44 and engine18 is SIMPLE at12164/1080; at3084 native18 is B6 while engine18
+is absent, and both are absent at3087. This independently identifies the next
+common-shot final Obj_Wait→Go_Delete occupancy owner; low code bytes alone do
+not certify complete type identity. No fixture/metric/hydration change, broad
+run or new rendered/SAT/PCM parity claim. Native screenshot scope remains the
+previously inspected source-bounded AIZ/HCZ spot pairs.

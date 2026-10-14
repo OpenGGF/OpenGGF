@@ -108,7 +108,7 @@ public class AizMinibossBarrelShotChild extends AbstractObjectInstance
                                       int x,
                                       int y,
                                       Mode mode) {
-        super(new ObjectSpawn(x, y, 0x90, barrel.getBarrelSubtype(), 0, false, 0), "AIZMinibossBarrelShot");
+        super(new ObjectSpawn(x, y, 0x90, 2, 0, false, 0), "AIZMinibossBarrelShot");
         this.parent = parent;
         this.barrel = barrel;
         this.barrelSubtype = barrel.getBarrelSubtype() & 0xFF;
