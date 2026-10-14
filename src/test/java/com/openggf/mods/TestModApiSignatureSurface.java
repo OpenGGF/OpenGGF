@@ -117,6 +117,18 @@ class TestModApiSignatureSurface {
     }
 
     @Test
+    void boundedNativeEnemyHelpersAreCandidateRootsWithoutExportingNativeAi() {
+        var roots = ModApiSurfaceInventory.rootTypes();
+        assertTrue(roots.contains(com.openggf.mods.objects.CaterkillerJrFactory.class));
+        assertTrue(roots.contains(com.openggf.mods.objects.CaterkillerJrRecipe.class));
+        assertTrue(roots.contains(com.openggf.level.objects.ShieldProjectileMotion.class));
+        var surface = ModApiSignatureSurface.recursiveTypes();
+        assertTrue(surface.contains(com.openggf.level.objects.ShieldProjectileMotion.Velocity.class));
+        assertFalse(surface.contains(com.openggf.game.sonic3k.objects.badniks.CaterkillerJrHeadInstance.class));
+        assertFalse(surface.contains(com.openggf.game.sonic3k.objects.badniks.S3kBadnikProjectileInstance.class));
+    }
+
+    @Test
     void candidateZeroSevenSurfaceIsPinnedToTheCurrentSurface() throws Exception {
         List<String> candidate = readBaseline(CANDIDATE_BASELINE);
         assertEquals(new ArrayList<>(new TreeSet<>(candidate)), candidate,

@@ -89,6 +89,100 @@ class CreatorKitTest(unittest.TestCase):
                     self.assertEqual(file.read_bytes(), entries["examples/" + name + "/" + file.relative_to(project).as_posix()])
         self.assertIn("examples/three-islands/tools/generate_maps.py", entries)
 
+    def test_archive_preserves_authored_walkthroughs_without_runtime_outputs(self):
+        project = self.root / "examples/walkthrough-demo"
+        inputs = {
+            "src/main/resources/META-INF/openggf-mod.yaml": b"id: walkthrough-demo\nbaseGame: s3k\n",
+            "walkthroughs/routes/cold.script": b"frames 20 RIGHT\n",
+            "walkthroughs/routes/cold.bk2": b"authored controller movie\n",
+            "walkthroughs/characters/README.md": b"# Authored character inputs\n",
+            "walkthroughs/player.gen": b"private ROM bytes",
+            "walkthroughs/config.yaml": b"private paths",
+            "walkthroughs/frames/001.png": b"generated image",
+            "walkthroughs/target/recorded.bk2": b"generated movie",
+            "walkthroughs/saves/checkpoint.script": b"private save",
+            "walkthroughs/.private/input.script": b"private workflow input",
+            "walkthroughs/__pycache__/stale.script": b"not an authored input",
+        }
+        for relative, data in inputs.items():
+            path = project / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(data)
+        entries = kit.collect(self.root, "abcdef123456")
+        archive = self.root / "creator-kit.zip"
+        kit.write_zip(entries, archive)
+        expected = {"walkthroughs/routes/cold.script", "walkthroughs/routes/cold.bk2",
+                    "walkthroughs/characters/README.md"}
+        prefix = "examples/walkthrough-demo/"
+        with zipfile.ZipFile(archive) as exported:
+            actual = {name.removeprefix(prefix) for name in exported.namelist()
+                      if name.startswith(prefix + "walkthroughs/")}
+            self.assertEqual(expected, actual)
+            manifest = json.loads(exported.read("creator-kit.json"))
+            for relative in expected:
+                name = prefix + relative
+                self.assertEqual(inputs[relative], exported.read(name))
+                self.assertEqual(hashlib.sha256(inputs[relative]).hexdigest(), manifest["sha256"][name])
+
+    def test_walkthrough_export_does_not_follow_symlinked_inputs(self):
+        project = self.root / "examples/link-demo"
+        manifest = project / "src/main/resources/META-INF/openggf-mod.yaml"
+        manifest.parent.mkdir(parents=True)
+        manifest.write_text("id: link-demo\n")
+        walkthroughs = project / "walkthroughs"
+        walkthroughs.mkdir()
+        (walkthroughs / "local.script").write_text("authored input")
+        private = self.root / "private.gen"
+        private.write_bytes(b"private ROM")
+        try:
+            (walkthroughs / "linked.bk2").symlink_to(private)
+        except (OSError, NotImplementedError) as error:
+            self.skipTest("Host does not permit creating symlinks: " + str(error))
+        entries = kit.export_examples(self.root)
+        self.assertTrue("examples/link-demo/walkthroughs/local.script" in entries,
+                        "The ordinary authored input must be exported")
+        self.assertFalse("examples/link-demo/walkthroughs/linked.bk2" in entries,
+                         "A symlink must not supply controller input bytes")
+        (walkthroughs / "linked.bk2").unlink()
+        (walkthroughs / "local.script").unlink()
+        walkthroughs.rmdir()
+        private_directory = self.root / "private-inputs"
+        private_directory.mkdir()
+        (private_directory / "linked.script").write_text("private input")
+        walkthroughs.symlink_to(private_directory, target_is_directory=True)
+        self.assertFalse(any(name.startswith("examples/link-demo/walkthroughs/")
+                             for name in kit.export_examples(self.root)))
+
+    def test_generated_test_command_supplies_declared_base_game_rom(self):
+        for game in ("s1", "s2", "s3k", None):
+            with self.subTest(base_game=game):
+                name = "native-" + game if game else "standalone-demo"
+                manifest = self.root / "examples" / name / "src/main/resources/META-INF/openggf-mod.yaml"
+                manifest.parent.mkdir(parents=True)
+                manifest.write_text("id: " + name + "\n" + ("baseGame: " + game + "\n" if game else ""))
+                readme = kit.export_examples(self.root)["examples/" + name + "/README.md"].decode()
+                command = next(line for line in readme.splitlines()
+                               if line.startswith("python3 ../../tools/build_project.py . --test "))
+                expected = "python3 ../../tools/build_project.py . --test --testkit ../../mod-testkit.jar"
+                if game:
+                    expected += " --" + game + " /absolute/own-" + game + ".gen"
+                self.assertEqual(expected, command)
+                self.assertIn("other tested games or donors", readme)
+
+    def test_actual_second_strike_export_preserves_documented_controller_recipes(self):
+        root = Path(__file__).resolve().parents[2]
+        project = root / "examples/second-strike"
+        inputs = sorted((project / "walkthroughs").rglob("*.script"))
+        inputs += sorted((project / "walkthroughs").rglob("*.bk2"))
+        self.assertTrue(inputs, "The maintained example must provide its documented inputs")
+        entries = kit.export_examples(root)
+        for source in inputs:
+            name = "examples/second-strike/" + source.relative_to(project).as_posix()
+            self.assertTrue(name in entries, "Missing authored controller recipe: " + name)
+            self.assertEqual(source.read_bytes(), entries[name])
+        self.assertIn(b"--test --testkit ../../mod-testkit.jar --s3k /absolute/own-s3k.gen",
+                      entries["examples/second-strike/README.md"])
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)

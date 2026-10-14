@@ -2246,6 +2246,17 @@ overlap with Tails.
 
 ---
 
+**Opted-in warning presentation.** A parent timer scheduled after its timer-update
+step starts decrementing next pass, while a later-slot raw-animation child already
+consumes an update in its birth pass. Test through the real manager's native
+scheduling boundary and invoke the render producer after each pass; counting live
+children before updates can hide an invisible final pose. Second Strike's AIZ
+follow-up exposed a one-presentation gap with the ordinary sixteen-update flare.
+Its semantic opt-in cue captures a birth-update allowance and bounded final-pose
+hold; ordinary ROM flares retain their constructor and sequence. Verify exact
+anchor/remaining hold rewind, both parent/barrel slot orders, exhaustion and
+policy-disabled graph/timing equality. Origin: 2026-10-14 Second Strike expansion.
+
 ## P67 -- Solid checkpoints before same-entry deletion require manual execution
 
 **Symptom.** A player remains grounded and `Status_OnObj` stays set after the

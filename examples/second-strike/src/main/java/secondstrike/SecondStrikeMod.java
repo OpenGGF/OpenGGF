@@ -16,6 +16,7 @@ import com.openggf.mods.code.GgfMod;
 import com.openggf.mods.code.ModContext;
 import secondstrike.boss.SecondStrikeBosses;
 import secondstrike.enemies.SecondStrikeEnemies;
+import secondstrike.enemies.SecondStrikeCaterkiller;
 import secondstrike.monitors.SecondStrikeMonitors;
 import secondstrike.routes.SecondStrikeRoutes;
 import secondstrike.stages.SecondStrikeStages;
@@ -27,6 +28,7 @@ import java.util.Set;
 public final class SecondStrikeMod implements GgfMod {
     @Override public void register(ModContext context) {
         SecondStrikeEnemies.register(context);
+        SecondStrikeCaterkiller.register(context);
         SecondStrikeMonitors.register(context);
         context.decodedLevelPatch("forest", nativeOpening(SecondStrikeRoutes.Bank.FOREST));
         context.decodedLevelPatch("fire", nativeOpening(SecondStrikeRoutes.Bank.FIRE_CONTINUATION));
@@ -42,14 +44,13 @@ public final class SecondStrikeMod implements GgfMod {
 
     /** Separate inventory-gated plans make selection independent of mutable globals. */
     private static LevelPatch nativeOpening(SecondStrikeRoutes.Bank bank) {
-        java.util.function.Predicate<com.openggf.level.objects.ObjectSpawn> eligible = spawn ->
-                spawn.ownerModId() == null && (bank == SecondStrikeRoutes.Bank.FOREST || spawn.x() < 0x1000);
         return LevelPatch.empty().nativePlacements().forZone(0)
                 .whenInventory(objects -> SecondStrikeRoutes.bank(objects) == bank)
-                .select(spawn -> eligible.test(spawn) && spawn.objectId() == 0x8E).bind("spotter")
-                .select(spawn -> eligible.test(spawn) && spawn.objectId() == 0x8D).bind("guard")
-                .select(spawn -> eligible.test(spawn) && spawn.objectId() == 0x8C).bind("artillery")
-                .select(spawn -> eligible.test(spawn) && SecondStrikeMonitors.replaces(spawn)).bind("robotnik-monitor")
+                .select(spawn -> "spotter".equals(SecondStrikeRoutes.enemyFactory(bank, spawn))).bind("spotter")
+                .select(spawn -> "guard".equals(SecondStrikeRoutes.enemyFactory(bank, spawn))).bind("guard")
+                .select(spawn -> "artillery".equals(SecondStrikeRoutes.enemyFactory(bank, spawn))).bind("artillery")
+                .select(spawn -> "caterkiller".equals(SecondStrikeRoutes.enemyFactory(bank, spawn))).bind("caterkiller")
+                .select(spawn -> SecondStrikeRoutes.inOpening(bank, spawn) && SecondStrikeMonitors.replaces(spawn)).bind("robotnik-monitor")
                 .retainRings(SecondStrikeRoutes::rings);
     }
 

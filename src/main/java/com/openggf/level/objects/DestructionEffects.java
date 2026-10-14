@@ -20,7 +20,7 @@ public final class DestructionEffects {
     /**
      * Functional interface for game-specific points popup creation.
      * S2 creates {@code PointsObjectInstance}, S1 creates {@code Sonic1PointsObjectInstance},
-     * S3K passes {@code null} (no popup).
+     * S3K retains its native {@code Sonic3kPointsObjectInstance} popup.
      */
     @FunctionalInterface
     @com.openggf.game.ModApi
@@ -110,6 +110,27 @@ public final class DestructionEffects {
     public static DestructionConfig deferredAnimalWithoutPopup(int sfxId,boolean respawnTracking) {
         return new DestructionConfig(sfxId,(spawn,services)->AnimalObjectInstance.deferredArtVariant(spawn,services,null),
                 respawnTracking,null,null,false);
+    }
+
+    /** Final enemy defeat with native policy notification before identity/slot retirement, exactly once. */
+    public static void defeatBadnik(AbstractBadnikInstance instance, PlayableEntity player, boolean powered) {
+        java.util.Objects.requireNonNull(instance, "instance");
+        if (instance.isDestroyed()) return;
+        var services = instance.services();
+        var config = prepareBeforeLatch(instance.getDestructionConfig(), services);
+        var policies = com.openggf.game.mutators.NativeObjectPolicyAccess.port(services);
+        if (policies != null) policies.badnikDefeated(instance, player);
+        int slot = ObjectLifetimeOps.detachSlotForTransfer(instance);
+        ObjectLifetimeOps.destroyLatched(instance);
+        destroyBadnik(instance.getX(), instance.getY(), instance.spawn, slot, player, services, config, powered);
+    }
+
+    /** Shipped S3K Touch_EnemyNormal recipe, including the native animal and points child order. */
+    public static DestructionConfig sonic3kBadnik() {
+        return new DestructionConfig(com.openggf.game.sonic3k.audio.Sonic3kSfx.BREAK.id,
+                (spawn, services) -> AnimalObjectInstance.deferredArtVariant(spawn, services, null), false,
+                (spawn, services, points) -> new com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInstance(
+                        spawn, services, points), null, false);
     }
 
     /** Called by the badnik owner before slot transfer; returns a silent copy so shared effects cannot replay it. */

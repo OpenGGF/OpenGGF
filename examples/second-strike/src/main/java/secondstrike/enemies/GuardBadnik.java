@@ -1,8 +1,7 @@
 package secondstrike.enemies;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.graphics.RenderPriority;
-import com.openggf.graphics.SpritePresentation;
+import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectReconstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
@@ -12,9 +11,40 @@ public final class GuardBadnik extends SecondStrikeBadnik {
     private static final int WATCH = 0, WINDUP = 1, DASH = 2, RECOVER = 3, RETURN = 4;
     // Previous full flat-floor travel was 90px: 150% further is 225px.
     private static final int DASH_DISTANCE = 225, DASH_STEP = 10, RETURN_STEP = 2;
+    private static final int TELL_UPDATES = 36, BRAKE_UPDATES = 72;
+    private static final int PRIORITY_BUCKET = 5; // Native ObjSlot $280 / $80.
     private int dashAge;
+    private boolean companion;
+    private boolean parentDefeated;
+    private ObjectRefId parentIdentity;
+    // Placement identity deduplicates an ally across combat respawn; never grants lifetime authority.
+    private int parentAnchorX;
+    private int parentAnchorY;
+    private int parentLayoutIndex;
+
+    void attachToParent(ArtilleryBadnik parent, ObjectRefId identity) {
+        parentIdentity = java.util.Objects.requireNonNull(identity);
+        companion = true;
+        parentAnchorX = parent.anchorX; parentAnchorY = parent.anchorY;
+        parentLayoutIndex = parent.getSpawn().layoutIndex();
+    }
+    boolean companionOf(int x, int y, int layoutIndex) {
+        return companion && parentAnchorX == x && parentAnchorY == y && parentLayoutIndex == layoutIndex;
+    }
+    void releaseFromDefeatedParent(ObjectRefId identity) {
+        if (parentIdentity != null && parentIdentity.equals(identity)) parentDefeated = true;
+    }
+    @Override protected boolean hasLiveLifetimeOwner() {
+        if (!companion) return true;
+        if (!activeOnScreen()) return false;
+        if (parentDefeated) return true;
+        var parent = services().objectQuery().resolve(parentIdentity).orElse(null);
+        return parent instanceof ArtilleryBadnik artillery && !artillery.isDestroyed() && artillery.activeOnScreen();
+    }
 
     public GuardBadnik(ObjectSpawn spawn) { super(spawn, "Second Strike guard", 3); }
+
+    @Override public boolean supportsGroundedFieldMotion() { return true; }
 
     public boolean armed() { return phase == WINDUP || phase == DASH; }
     public boolean recovering() { return phase == RECOVER || phase == RETURN; }
@@ -25,11 +55,11 @@ public final class GuardBadnik extends SecondStrikeBadnik {
         age++;
         switch (phase) {
             case WATCH -> {
-                if (startTarget(nearestPlayer(updatePlayer), 144, 48)) {
+                if (startTarget(144, 48)) {
                     xVelocity = facingLeft ? -0xa00 : 0xa00;
                     if (canStartDash()) {
                         phase = WINDUP;
-                        timer = 36;
+                        timer = TELL_UPDATES;
                         services().playSfx(0x48); // sfx_Blast, native Rhinobot_StartChargePrep cue.
                     } else beginReturn();
                 }
@@ -133,7 +163,7 @@ public final class GuardBadnik extends SecondStrikeBadnik {
 
     private void recover() {
         phase = RECOVER;
-        timer = 72;
+        timer = BRAKE_UPDATES;
         xVelocity = 0;
         services().playSfx(0x36); // sfx_Skid: armor disappears for the punish window.
     }
@@ -147,7 +177,7 @@ public final class GuardBadnik extends SecondStrikeBadnik {
         int flags = super.getCollisionFlags();
         return flags == 0 ? 0 : (armed() ? 0x80 : 0) | flags;
     }
-    @Override public int getPriorityBucket() { return RenderPriority.bucket(5); } // ObjSlot $280.
+    @Override public int getPriorityBucket() { return PRIORITY_BUCKET; } // ObjSlot $280.
     @Override public int getOnScreenHalfWidth() { return 24; }
     @Override public int getOnScreenHalfHeight() { return 32; }
 
@@ -163,12 +193,8 @@ public final class GuardBadnik extends SecondStrikeBadnik {
             if (flame != null) {
                 // Ani_FireShield script1: delay1, frames9..14 twice then SWITCH0.
                 // Fire shield's native right-facing art flips on LEFT, unlike Rhinobot body art.
-                var graphics = services().graphicsManager();
-                var subject = SpritePresentation.subject(graphics);
-                SpritePresentation.withSubject(graphics, new SpritePresentation.Subject(subject.id(),
-                        SpritePresentation.Part.ATTACHED_EFFECT, subject.suppressed()),
-                        () -> flame.drawFrameIndex(9 + ((dashAge / 2) % 6),
-                                currentX, currentY, facingLeft, false));
+                services().renderAttachedEffect(() -> flame.drawFrameIndex(9 + ((dashAge / 2) % 6),
+                        currentX, currentY, facingLeft, false));
             }
         }
         if (!recovering()) {

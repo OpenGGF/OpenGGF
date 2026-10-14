@@ -31,11 +31,9 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import javax.tools.ToolProvider;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -54,14 +52,7 @@ class TestSecondStrikeCampaign {
         String romPath = System.getProperty("s3k.rom.path");
         assertNotNull(romPath, "Use the original absolute S3K ROM; these checks must not skip");
         rom = new RomByteReader(Files.readAllBytes(Path.of(romPath)));
-        var output = Files.createDirectory(temporary.resolve("classes"));
-        var args = new ArrayList<>(List.of("--release", "25", "-cp", System.getProperty("java.class.path"),
-                "-d", output.toString()));
-        try (var files = Files.walk(Path.of("examples/second-strike/src/main/java"))) {
-            files.filter(p -> p.toString().endsWith(".java")).sorted().forEach(p -> args.add(p.toString()));
-        }
-        assertEquals(0, ToolProvider.getSystemJavaCompiler().run(null, null, null, args.toArray(String[]::new)));
-        loader = new URLClassLoader(new java.net.URL[]{output.toUri().toURL()}, TestSecondStrikeCampaign.class.getClassLoader());
+        loader = SecondStrikeSourceFixture.compile(temporary.resolve("classes"), SecondStrikeSourceFixture.MAIN);
         mod = (GgfMod) loader.loadClass("secondstrike.SecondStrikeMod").getConstructor().newInstance();
     }
     @AfterAll static void closeLoader() throws Exception { if (loader != null) loader.close(); }
@@ -87,7 +78,7 @@ class TestSecondStrikeCampaign {
 
     @Test void registrationPatchesBothNativeBanksWithoutTouchingLaterEnemyRoutes() throws Exception {
         var plan = registration();
-        assertEquals(5, plan.objectFactories().size());
+        assertEquals(6, plan.objectFactories().size());
         assertEquals(2, plan.decodedLevelPatches().size());
         assertEquals(1, plan.explicitPatches().size());
         var module = services(plan);
@@ -104,18 +95,31 @@ class TestSecondStrikeCampaign {
         assertSame(forest, module.transformDecodedLevel(forest));
         assertEquals(forestObjects, forest.getObjects()); assertEquals(forestRings, forest.getRings());
         var fire = new NativeInventory(0, 1);
+        var nativeCaterkillers = fire.getObjects().stream().filter(s -> s.objectId() == 0x8f && s.x() < 0x1000).toList();
+        assertEquals(List.of(82, 100, 119), nativeCaterkillers.stream().map(s -> s.layoutIndex()).toList());
         var later = fire.getObjects().stream().filter(s -> s.x() >= 0x1000).toList();
         assertSame(fire, module.transformDecodedLevel(fire));
-        assertEquals(8, fire.getObjects().stream().filter(s -> s.ownerModId() != null).count());
+        assertEquals(11, fire.getObjects().stream().filter(s -> s.ownerModId() != null).count());
         assertEquals(2, fire.getRings().stream().filter(r -> r.x() < 0x1000).count());
         assertEquals(List.of(12, 68), fire.getRings().stream().filter(r -> r.x() < 0x1000).map(RingSpawn::placementId).toList());
         assertEquals(5, forest.getRings().size() + fire.getRings().stream().filter(r -> r.x() < 0x1000).count());
         assertEquals(5, fire.getObjects().stream().filter(s -> "second-strike:robotnik-monitor".equals(s.objectKey())).count());
+        var longer = fire.getObjects().stream().filter(s -> "second-strike:caterkiller".equals(s.objectKey())).toList();
+        assertEquals(3, longer.size());
+        for (int i = 0; i < longer.size(); i++) {
+            var original = nativeCaterkillers.get(i); var bound = longer.get(i);
+            assertEquals(original.objectId(), bound.objectId()); assertEquals(original.layoutIndex(), bound.layoutIndex());
+            assertEquals(original.x(), bound.x()); assertEquals(original.y(), bound.y());
+            assertEquals(original.renderFlags(), bound.renderFlags()); assertEquals(original.subtype(), bound.subtype());
+            assertEquals(original.rawYWord(), bound.rawYWord()); assertEquals(original.respawnTracked(), bound.respawnTracked());
+            assertInstanceOf(com.openggf.game.sonic3k.objects.badniks.CaterkillerJrHeadInstance.class,
+                    plan.objectFactories().get(bound.objectKey()).create(bound, null));
+        }
         assertTrue(forest.getRings().size() + fire.getRings().stream().filter(r -> r.x() < 0x1000).count() < 20,
                 "Placed rings and converted ordinary monitors cannot qualify a native bonus post; stage prizes are separate");
         assertEquals(later, fire.getObjects().stream().filter(s -> s.x() >= 0x1000).toList());
         assertSame(fire, module.transformDecodedLevel(fire));
-        assertEquals(8, fire.getObjects().stream().filter(s -> s.ownerModId() != null).count(), "idempotent reload");
+        assertEquals(11, fire.getObjects().stream().filter(s -> s.ownerModId() != null).count(), "idempotent reload");
     }
 
     @Test void everyNonShoeMonitorUsesActualNativeRobotnikContentsWithoutChangingItsPlacement() throws Exception {
@@ -164,7 +168,7 @@ class TestSecondStrikeCampaign {
     @Test void servicesAreCanonicalAndStockTitleSaveAndFrameOwnersStayDelegated() throws Exception {
         var plan = registration();
         var module = services(plan);
-        assertEquals(20, module.getGameService(AizMinibossAttackPolicy.class).followupDelayTicks(3));
+        assertEquals(16, module.getGameService(AizMinibossAttackPolicy.class).followupDelayTicks(3));
         assertEquals(-1, module.getGameService(AizMinibossAttackPolicy.class).followupDelayTicks(6));
         assertArrayEquals(new int[]{-32, 0, 32}, module.getGameService(GumballSpringPolicy.class).springOffsets());
         assertNotNull(module.getGameService(BlueSphereLayoutPolicy.class));
@@ -195,7 +199,7 @@ class TestSecondStrikeCampaign {
         assertFalse(WorldSessionPolicyAccess.hasPolicies(world));
         assertNull(TransientMutatorPolicyAccess.source(world));
         assertNull(WorldSessionPolicyAccess.getService(world, NativeMutatorRuntime.class));
-        assertEquals(20, world.getGameModule().getGameService(AizMinibossAttackPolicy.class).followupDelayTicks(3));
+        assertEquals(16, world.getGameModule().getGameService(AizMinibossAttackPolicy.class).followupDelayTicks(3));
     }
 
     @Test void otherZonesKeepTheirExactNativeTables() throws Exception {
@@ -218,4 +222,21 @@ class TestSecondStrikeCampaign {
         assertFalse(content.activatesFor(otherGame));
         assertFalse(presentation.activatesFor(otherGame));
     }
+    @Test void hostSuppliedTitleCanvasDelegatesNativeDrawingAndDrawsBadgeOnlyWhileActive() throws Exception {
+        var base = mock(GameModule.class);
+        var nativeTitle = mock(TitleScreenProvider.class);
+        when(base.getTitleScreenProvider()).thenReturn(nativeTitle);
+        var title = registration().explicitPatches().getFirst().apply(base, null).getTitleScreenProvider();
+        var canvas = mock(com.openggf.mods.ui.PixelCanvas.class);
+        when(canvas.width()).thenReturn(528); when(canvas.height()).thenReturn(224);
+        when(nativeTitle.getState()).thenReturn(TitleScreenProvider.State.ACTIVE);
+        title.draw(); title.drawOverlay(canvas);
+        verify(nativeTitle).draw(); verify(nativeTitle).drawOverlay(canvas);
+        verify(canvas).fill(anyInt(), eq(195), eq(91), eq(12), eq(0xEF102438));
+        clearInvocations(canvas);
+        when(nativeTitle.getState()).thenReturn(TitleScreenProvider.State.FADE_IN);
+        title.drawOverlay(canvas);
+        verifyNoInteractions(canvas);
+    }
+
 }

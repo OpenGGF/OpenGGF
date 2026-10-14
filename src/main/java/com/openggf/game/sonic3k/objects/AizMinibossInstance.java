@@ -796,14 +796,13 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
             return;
         }
         difficultyFollowupTimer = delay;
-        // The second attack uses existing ROM-backed muzzle flares as its visible
-        // cue. They last 16 updates and already participate in parent defeat and
-        // rewind graph cleanup. Native hit eligibility/movement remain unchanged.
+        // The opted-in cue includes its same-pass child birth and holds the final
+        // ROM pose for the admitted delay. Ordinary barrel flares are unchanged.
         int warnedBarrels = 0;
         for (var child : childComponents) {
             if (child instanceof AizMinibossFlameBarrelChild barrel && !barrel.isDestroyed()
                     && warnedBarrels++ < 3) {
-                spawnChild(() -> new AizMinibossBarrelShotFlareChild(barrel));
+                spawnChild(() -> AizMinibossBarrelShotFlareChild.warning(barrel, delay));
             }
         }
         services().playSfx(Sonic3kSfx.FLAMETHROWER_QUIET.id);

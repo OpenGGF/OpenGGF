@@ -10,6 +10,10 @@ bindings and original-ring retention, preserving concrete level identity for
 native transition consumers. Three S3K service policies admit bounded late-boss,
 Blue Sphere layout and Gumball spring variants inside the canonical owner boundary.
 Invalid values are creator faults; offered arrays and admitted returns are isolated.
+Small candidate roots also cover Caterkiller recipes/factories, Eggman monitor
+contents, shield radial motion, native combat-policy queries and semantic powered
+attack/field callbacks. Title overlays and attached-effect rendering retain host
+presentation ownership. Native AI implementations remain internal.
 The normalized mutable `0.7` pin is regenerated from the compiled inventory; the
 descriptor remains unpublished candidate `0.7.0`, with no published pin edited.
 Every engine type reachable through those roots' public or protected

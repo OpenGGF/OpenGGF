@@ -3673,6 +3673,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		TitleScreenProvider titleScreen = gameLoop.getTitleScreenProvider();
 		if (titleScreen != null) {
 			titleScreen.draw();
+			titleScreen.drawOverlay(new com.openggf.mods.ui.LevelOverlayCanvas(graphicsManager,
+					graphicsManager.getProjectionWidth(), graphicsManager.getConfiguredScreenHeightPx()));
 		}
 	}
 

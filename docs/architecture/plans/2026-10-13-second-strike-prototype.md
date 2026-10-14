@@ -606,22 +606,67 @@ Only the final eligible health point is cleared. The new test uses the productio
 powered surface; the older direct-callback test is explicitly named as such.
 There is no generic touch/physics change or new mod-only exception in that owner.
 
-The remaining prototype debt is explicit. The example still compiles against
-unsupported native internals; the last delivered packager reported 12 warnings,
-not a supported-API-only creator example. Optional native field/firing and whole
-picture mutators do not automatically target all replacements. The common enemy
-base also knows artillery/guard relationships, and existing companion/projectile
-keys partly use coordinates. The expansion will keep budgets and lifetime identity
-separate, move family-specific responsibilities out of the common base, and use a
-small validated native-family recipe/factory for the longer Caterkiller. It will
-not export entire native implementation classes or add a general difficulty bag.
+The composed expansion retains literal stock Caterkiller roles/delays and admits
+an explicit twelve-body preset: three firing tall, three non-firing middle, two
+thin and four tails. Exact head/body links and the recreation recipe survive
+rewind. Original-ROM inventory yields twenty forest bindings and eleven early-fire
+bindings (six badniks including three Caterkillers, five monitors); later canonical
+placements remain unchanged. Plants emit ten committed seeds per release, twice
+twelve updates apart, with twenty live seeds per exact owner, gravity `$18`,
+36-update tell, 108-update reload and 120-update TTL. Native Bloominator's unrelated
+allocation/parity observation remains untouched.
 
-The requested 12-segment Caterkiller and two wider bounded plant fans are separate
-isolated implementation tasks and are not yet delivered by this checkpoint.
-Stock Caterkiller roles/delays must remain literal; the longer preset uses explicit
-roles/delays and exact reconstructed owner links. The plant keeps the committed
-warning/reload role, bounds live seeds per exact owner and emits one release cue
-only after successful slot admission. Native Bloominator's allocation/parity
-observation is outside the current mod-projectile repair; it is not silently
-changed or reported fixed. New slots, teardown, rewind, ROM pixels and composed
-package/API checks remain required before integration and publication.
+The user's debt-cleanup steering supersedes the earlier twelve-warning acceptance.
+The current strict bundled package exits zero with zero findings; no warning
+suppression, budget relaxation or wholesale native AI export was used. The actual
+compiled candidate pin has 20,897 lines, 59 additions and no removals against
+`f36cc16c2`; descriptor and runtime version remain unpublished `0.7.0`.
+
+| Reviewed debt | Disposition in the lead composition |
+| --- | --- |
+| Twelve unsupported references | Native score/popup/animal recipe, tiny powered callback, monitor factory, title canvas and attached-effect seams; mod-owned valid priority constants. Strict packaging reports zero findings. |
+| Common-base enemy coupling | Guard owns companion state; Artillery overrides final-defeat release. Placement dedupe and exact captured lifetime ObjectRefId have distinct authority. Committed seeds survive combat defeat; unload retires them. |
+| Target eligibility | Existing native P1/P2 query filters alive and each role's range before nearest-X selection; swapped-role, dead and off-range participant regressions retain commitment/dodge. |
+| Repeated/dead control state | Supported SubpixelMotion replaces copied fixed-point arithmetic; obsolete origin coordinates, targetY, ID-zero rewrite and copied EnemyBinding oracle removed. Actual registration/decoded placements are asserted. |
+| Optional capabilities | Semantic body centres, native firing/field queries, attached effects and grounded creator derivatives compose under the original content owner. Collision state remains unchanged by picture transforms. Other capability/family support is not inferred. |
+| Copied stage admission | Authored twelve gates, empty-cell requirement and cloning remain; canonical host admission owns reachability/trailer/runway safety. Incomplete playback now writes its summary and fails; failure/results exits do not require an emerald. |
+| Builder snapshot/publication | One inherited build lease covers Maven/classpath/javac/strict publisher. A validated temporary candidate atomically replaces the prior jar; failed validation preserves it. Existing profile options are rejected explicitly, never overwritten. Five bounded Python tests include a competing writer. |
+| Creator-kit omission | Exact root two-path patch exports all sixteen authored ROM-free walkthroughs and explicit native-ROM Jupiter prerequisites. Twenty-one Python checks pass. SDK remains tools/templates paired with the same-source engine fatjar. |
+| Test setup/static state | One explicit test-only compiler/loader fixture replaces copied setup, without shared authority/cache. No mutable gameplay statics or unresolved TODOs were found. |
+
+Source accounting: exact child index trees `14a7a5a8` (eight paths) and `eea5f71f`
+(seven paths) were reviewed and applied as stable Git patches; child sources and
+history were retained. Root creator-kit commit `d1e8383a` contributes only
+`tools/modding/build_creator_kit.py` and `test_creator_kit.py`; both imported index
+blobs equal that clean peer. Rework after import is confined to the lead tree.
+
+A real manager negative-peak test reproduced the late-boss cue gap (three expected
+live flares, zero actual). The old out-of-Process_Sprites fixture hid the creation
+pass: a later-slot flare consumes its first animation update immediately, while
+the newly scheduled follow-up timer first decrements on the next parent update.
+Only opted-in warnings now include that birth update and hold the native final
+pose for longer admitted delays. Ordinary stock flare construction/sequence remains
+sixteen updates. Twelve boss checks verify every pre-wave render producer call,
+child-first/parent-first barrel slots, no-slot bounded failure, exact pending-wave
+rewind, defeat cancellation and policy-disabled graph/timing equality. Stock napalm,
+miniboss graph and AIZ2 codecs also pass (20-case prior composed warning run, no skips).
+
+Focused evidence before the combined run: the composed 164-case invocation had
+four fixture/assertion issues (array identity, two obsolete delay expectations and
+missing camera); the affected twenty cases pass after correction. Sixty mandatory
+S3K loading/bootstrap/decoding/AIZ checks passed without skips. Native floor, gap,
+collision, shield reflection, exhaustion, colocated identities, double graphs,
+registered owner/fault boundaries and restore/replay have focused coverage. The
+maintained builder and strict bundled `-Dopenggf.bundled.mods=examples/second-strike
+-DskipTests package` pass. Matched engine fatjar + SDK + testkit compile the actual
+exported example, strict-validate it with zero findings, and execute four public
+ModTestKit Jupiter placement cases without skips; SDK-only compilation is an
+expected negative, not a packaging-contract defect.
+
+Private upstream fetch pins `origin/develop` at `f076ef0063b4da24c52cb08038946e80d595b425`.
+Its native tooling retains native policy implementations/erased service factories
+and scene-owned startup. Intent composition, matched tooling checks, final artifacts,
+short supplementary GPU/PCM witnesses and one change-based smoke run remain pending
+at this checkpoint. No main integration/push has occurred in this private phase.
+Historical gentler full-route movies do not certify the harder cold campaign, and
+custom-character traversal and exhaustive/native-image portability remain unverified.

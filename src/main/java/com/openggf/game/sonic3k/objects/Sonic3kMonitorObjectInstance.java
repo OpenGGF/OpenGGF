@@ -18,7 +18,6 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.RomWorldPositionedObject;
@@ -135,6 +134,11 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         this.type = MonitorType.fromSubtype(contentSubtype);
         this.animationState = new ObjectAnimationState(currentMonitorAnimations(), type.animId, 0);
         this.motion = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, 0);
+    }
+
+    /** Internal implementation bridge for the bounded creator factory; native class stays outside the API. */
+    public static Sonic3kMonitorObjectInstance withEggmanContents(ObjectSpawn spawn) {
+        return new Sonic3kMonitorObjectInstance(java.util.Objects.requireNonNull(spawn, "spawn"), 0);
     }
 
     @Override
@@ -476,6 +480,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
     private void destroyMonitorContentsSlot() {
         if (monitorContentsSlot != null) {
             monitorContentsSlot.setDestroyed(true);
+            monitorContentsSlot.parent = null;
             monitorContentsSlot = null;
         }
     }
@@ -863,7 +868,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
     }
 
     private static final class MonitorContentsSlot extends AbstractObjectInstance implements RewindRecreatable {
-        private final Sonic3kMonitorObjectInstance parent;
+        private Sonic3kMonitorObjectInstance parent;
 
         private MonitorContentsSlot(Sonic3kMonitorObjectInstance parent, ObjectSpawn spawn) {
             super(spawn, "MonitorContents");
@@ -876,36 +881,35 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
 
         @Override
         public MonitorContentsSlot recreateForRewind(RewindRecreateContext ctx) {
-            Sonic3kMonitorObjectInstance restoredParent =
-                    RewindRecreateObjectLinks.nearestLiveObject(ctx, Sonic3kMonitorObjectInstance.class);
-            return restoredParent == null ? null : new MonitorContentsSlot(restoredParent, ctx.spawn());
+            // Detached shell: the generic object-id fixup restores the exact captured owner.
+            return new MonitorContentsSlot(null, ctx.spawn());
         }
 
         @Override
         public void update(int vIntRunCount, PlayableEntity player) {
-            if (!parent.isMonitorContentsSlotActive()) {
+            if (parent == null || !parent.isMonitorContentsSlotActive()) {
                 setDestroyed(true);
             }
         }
 
         @Override
         public int getX() {
-            return parent.posX();
+            return parent == null ? spawn.x() : parent.posX();
         }
 
         @Override
         public int getY() {
-            return parent.iconSubY >> 8;
+            return parent == null ? spawn.y() : parent.iconSubY >> 8;
         }
 
         @Override
         public ObjectSpawn getSpawn() {
-            return parent.buildSpawnAt(getX(), getY());
+            return parent == null ? spawn : parent.buildSpawnAt(getX(), getY());
         }
 
         @Override
         public boolean isDestroyed() {
-            return super.isDestroyed() || parent.isDestroyed();
+            return super.isDestroyed() || parent != null && parent.isDestroyed();
         }
 
         @Override

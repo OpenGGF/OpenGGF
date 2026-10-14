@@ -39,10 +39,4 @@ public final class SecondStrikeEnemies {
         return new ObjectSpawn(x, y, 0, 0, 0, false, y, layoutIndex, OWNER, key);
     }
 
-    /** Keep the stock placement identity, facing and subtype when replacing one badnik. */
-    public static ObjectSpawn replace(ObjectSpawn stock, String key) {
-        ownedSpawn(key, stock.x(), stock.y(), stock.layoutIndex());
-        return new ObjectSpawn(stock.x(), stock.y(), 0, stock.subtype(), stock.renderFlags(),
-                stock.respawnTracked(), stock.rawYWord(), stock.layoutIndex(), OWNER, key);
-    }
 }

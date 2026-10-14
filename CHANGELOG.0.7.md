@@ -34,14 +34,19 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   S3K Angel Island opening with cooperating spotters, committed guards/artillery,
   five original rings across forest/fire, hostile Robotnik monitors with speed
   shoes retained, multi-hit enemies and invulnerable flame-shield rhino charges
-  with a 225-pixel budget and bounded vulnerable return,
+  with a 225-pixel budget and bounded vulnerable return, twelve-body native
+  Caterkiller chains, and two broad ten-seed plant fans,
   a warned late Fire Breath follow-up, first-board
   Blue Sphere turn gates and a three-spring Gumball variant. The normal campaign
   retains terrain, physics, lives, checkpoints, save UI, stage rewards and act
   progression. An opt-in decoded placement contract preserves the native level
   class, fixed object-slot initialization and transition owners; owner-bound
   stage policies validate isolated data.
-  The example launcher uses a separate native save/config profile.
+  Bounded creator helpers preserve native destruction, shields, monitor contents
+  and presentation; exact lifetime links survive rewind and colocated placements.
+  The example passes strict packaging without unsupported engine references.
+  Its launcher preserves a separate native save/config profile and atomically
+  publishes only a validated build; creator kits include ROM-free walkthroughs.
 
 - **Mutator Lab catalogue:** one JVM boot-prepared package exposes eleven effects
   in Sonic 1, Sonic 2 and Sonic 3 & Knuckles, with native game labels, monitor-type

@@ -5,14 +5,16 @@ import com.openggf.game.PlayableEntity;
 
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.physics.SwingMotion;
+import com.openggf.mods.objects.CaterkillerJrRecipe;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Comparator;
+import java.util.Objects;
 
 /**
  * S3K Obj $8F - CaterKiller Jr head (AIZ).
@@ -39,12 +41,34 @@ public final class CaterkillerJrHeadInstance extends AbstractS3kBadnikInstance
     private static final int SWING_ACCEL = 8;
     private static final int SLOW_PEAK_COUNT = 3;
     private static final int BODY_SEGMENT_COUNT = 6;
+    // Shipped off_877C6 / byte_877D2: do not derive stock roles/delays from length.
     private static final int[] SEGMENT_WAIT_DELAYS = {0x0B, 0x17, 0x23, 0x2F, 0x37, 0x3F};
+    private record SegmentSpec(CaterkillerJrBodyInstance.SegmentRole role, int waitDelay) { }
+    // Creator extension: repeat the tall silhouette without adding firing bodies,
+    // then double the thin and coconut tail portions. The native -$100 movement
+    // makes these explicit 12-pixel body / 8-pixel tail activation spacings.
+    // These are intentional recipe values, not a claim about the shipped ROM.
+    private static final List<SegmentSpec> DOUBLE_LENGTH_SEGMENTS = List.of(
+            new SegmentSpec(CaterkillerJrBodyInstance.SegmentRole.TALL, 0x0B),
+            new SegmentSpec(CaterkillerJrBodyInstance.SegmentRole.TALL, 0x17),
+            new SegmentSpec(CaterkillerJrBodyInstance.SegmentRole.TALL, 0x23),
+            new SegmentSpec(CaterkillerJrBodyInstance.SegmentRole.MIDDLE, 0x2F),
+            new SegmentSpec(CaterkillerJrBodyInstance.SegmentRole.MIDDLE, 0x3B),
+            new SegmentSpec(CaterkillerJrBodyInstance.SegmentRole.MIDDLE, 0x47),
+            new SegmentSpec(CaterkillerJrBodyInstance.SegmentRole.THIN, 0x53),
+            new SegmentSpec(CaterkillerJrBodyInstance.SegmentRole.THIN, 0x5F),
+            new SegmentSpec(CaterkillerJrBodyInstance.SegmentRole.TAIL, 0x67),
+            new SegmentSpec(CaterkillerJrBodyInstance.SegmentRole.TAIL, 0x6F),
+            new SegmentSpec(CaterkillerJrBodyInstance.SegmentRole.TAIL, 0x77),
+            new SegmentSpec(CaterkillerJrBodyInstance.SegmentRole.TAIL, 0x7F));
     /** Obj_WaitOffscreen's placeholder is width_pixels = height_pixels = $20. */
     private static final int WAIT_OFFSCREEN_MARGIN = 0x20;
 
     private enum Phase { SWING_COUNTED, SWING_FAST, SWING_FINISH }
 
+    // Non-final: the compact enum codec must restore the intentional recipe even
+    // when this owner was captured before its Init dispatch allocated any bodies.
+    private CaterkillerJrRecipe recipe;
     private Phase phase;
     private int peakCounter;
     private int swingMaxVel;
@@ -61,8 +85,13 @@ public final class CaterkillerJrHeadInstance extends AbstractS3kBadnikInstance
     private boolean initPending = true;
 
     public CaterkillerJrHeadInstance(ObjectSpawn spawn) {
+        this(spawn, CaterkillerJrRecipe.STOCK);
+    }
+
+    public CaterkillerJrHeadInstance(ObjectSpawn spawn, CaterkillerJrRecipe recipe) {
         super(spawn, "CaterKillerJr",
                 Sonic3kObjectArtKeys.CATERKILLER_JR, COLLISION_SIZE_INDEX, PRIORITY_BUCKET);
+        this.recipe = Objects.requireNonNull(recipe, "recipe");
         this.mappingFrame = 0;
         this.xVelocity = INITIAL_X_VEL;
         initSwingPhase1();
@@ -130,47 +159,47 @@ public final class CaterkillerJrHeadInstance extends AbstractS3kBadnikInstance
     }
 
     private void spawnBodySegments() {
-        for (int i = 0; i < BODY_SEGMENT_COUNT; i++) {
-            int segmentIndex = i;
-            // CreateChild3_NormalRepeated allocates each child with
-            // AllocateObjectAfterCurrent, preserving head-before-body touch order.
-            CaterkillerJrBodyInstance segment = spawnChild(
-                    () -> new CaterkillerJrBodyInstance(
-                            spawn, segmentIndex, SEGMENT_WAIT_DELAYS[segmentIndex]));
-            if (!segment.isDestroyed() && segment.getSlotIndex() >= 0) {
-                bodySegments.add(segment);
+        if (recipe == CaterkillerJrRecipe.STOCK) {
+            for (int i = 0; i < BODY_SEGMENT_COUNT; i++) {
+                spawnBodySegment(i, SEGMENT_WAIT_DELAYS[i], CaterkillerJrBodyInstance.stockRole(i));
+            }
+        } else {
+            for (int i = 0; i < DOUBLE_LENGTH_SEGMENTS.size(); i++) {
+                SegmentSpec segment = DOUBLE_LENGTH_SEGMENTS.get(i);
+                spawnBodySegment(i, segment.waitDelay(), segment.role());
             }
         }
+        // CreateChild3_NormalRepeated is one attempt, including partial or full
+        // allocation failure. Later free slots must not grow a truncated graph.
         bodySpawned = true;
     }
 
-    void attachBodySegmentForRewind(CaterkillerJrBodyInstance segment) {
-        if (!bodySegments.contains(segment)) {
+    private void spawnBodySegment(int index, int delay, CaterkillerJrBodyInstance.SegmentRole role) {
+        // AllocateObjectAfterCurrent preserves head-before-body execution/touch order.
+        CaterkillerJrBodyInstance segment = spawnChild(
+                () -> new CaterkillerJrBodyInstance(spawn, index, delay, role, this));
+        if (!segment.isDestroyed() && segment.getSlotIndex() >= 0) {
             bodySegments.add(segment);
         }
-        bodySpawned = true;
     }
 
-    static CaterkillerJrHeadInstance findLiveHeadForRewind(RewindRecreateContext ctx) {
-        if (ctx == null || ctx.spawn() == null || ctx.objectServices() == null
-                || ctx.objectServices().objectManager() == null) {
-            return null;
-        }
-        CaterkillerJrHeadInstance best = null;
-        long bestDistance = Long.MAX_VALUE;
-        for (ObjectInstance instance : ctx.objectServices().objectManager().getActiveObjects()) {
-            if (!(instance instanceof CaterkillerJrHeadInstance head) || head.isDestroyed()) {
-                continue;
-            }
-            long dx = head.getX() - ctx.spawn().x();
-            long dy = head.getY() - ctx.spawn().y();
-            long distance = dx * dx + dy * dy;
-            if (distance < bestDistance) {
-                bestDistance = distance;
-                best = head;
+    @Override
+    protected void afterRewindRestoreSettled() {
+        // This structural list is not captured. Rebuild it only after every
+        // body's ownerRef has resolved through the exact identity table. Neither
+        // proximity nor a namespaced spawn key uniquely identifies adjacent heads.
+        bodySegments.clear();
+        for (ObjectInstance instance : services().objectManager().getActiveObjects()) {
+            if (instance instanceof CaterkillerJrBodyInstance body && body.belongsTo(this)
+                    && !body.isDestroyed()) {
+                bodySegments.add(body);
             }
         }
-        return best;
+        bodySegments.sort(Comparator.comparingInt(CaterkillerJrBodyInstance::segmentIndex));
+    }
+
+    void detachBodySegment(CaterkillerJrBodyInstance segment) {
+        bodySegments.remove(segment);
     }
 
     /** Routine 4: swing with counter. Skip movement on transition to phase 2. */

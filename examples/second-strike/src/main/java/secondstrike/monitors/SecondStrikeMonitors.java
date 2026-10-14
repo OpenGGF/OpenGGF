@@ -2,6 +2,7 @@ package secondstrike.monitors;
 
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.mods.code.ModContext;
+import com.openggf.mods.objects.Sonic3kMonitorFactory;
 
 /** Native Robotnik contents for ordinary first-act boxes, preserving every speed-shoe box. */
 public final class SecondStrikeMonitors {
@@ -10,7 +11,7 @@ public final class SecondStrikeMonitors {
     private SecondStrikeMonitors() { }
 
     public static void register(ModContext context) {
-        context.registerObject("robotnik-monitor", (spawn, registry) -> new RobotnikMonitor(spawn));
+        context.registerObject("robotnik-monitor", (spawn, registry) -> Sonic3kMonitorFactory.eggman(spawn));
     }
 
     public static boolean replaces(ObjectSpawn spawn) {

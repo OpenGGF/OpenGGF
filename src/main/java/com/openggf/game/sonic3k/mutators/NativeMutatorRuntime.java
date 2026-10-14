@@ -72,7 +72,7 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
     private int[] landmarkPalette;
     private boolean landmarkVisible;
 
-    public record Owned(long activationId, String owner, ObjectRefId identity, int remainingTicks, boolean cancelOnRemoval) { }
+    public record Owned(long activationId, String owner, String contentOwner, ObjectRefId identity, int remainingTicks, boolean cancelOnRemoval) { }
     public record Companion(long activationId,String owner,String code,int ticks,boolean cancelOnRemoval,boolean carry,int landingX,int landingY) { }
     public record FieldTargets(List<ObjectRefId> identities,int acquired) {
         public FieldTargets { identities=List.copyOf(identities); }
@@ -206,7 +206,10 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
         observeCheckpoint();
         if(player.getAir() && player.isJumping() && !lastAir) advanceTasks(ChallengePolicy.Kind.SKILL_CHAIN,player,2);
         lastAir=player.getAir();
-        for(var lease:List.copyOf(owned)) if(!ownerAvailable(lease.owner())) ownerRetired(lease.owner());
+        for(var lease:List.copyOf(owned)) {
+            if(!ownerAvailable(lease.owner())) ownerRetired(lease.owner());
+            else if(lease.contentOwner()!=null && !ownerAvailable(lease.contentOwner())) ownerRetired(lease.contentOwner());
+        }
         for(var lease:List.copyOf(companions)) if(!ownerAvailable(lease.owner())) ownerRetired(lease.owner());
         for(var lease:List.copyOf(rides)) if(!ownerAvailable(lease.owner())) ownerRetired(lease.owner());
         prepareLandmarkThumbnail();
@@ -261,7 +264,7 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
         if (owned.size() >= MAX_OWNED_ROOTS) return null;
         T object = services.objectManager().createDynamicObject(factory);
         if (object != null) services.objectQuery().identityOf(object)
-                .ifPresent(id -> owned.add(new Owned(activation, owner(activation), id, ticks, cancellationBound(activation))));
+                .ifPresent(id -> owned.add(new Owned(activation, owner(activation), null, id, ticks, cancellationBound(activation))));
         return object;
     }
     private static ObjectSpawn at(int x, int y, int id, int subtype, int flags) {
@@ -370,15 +373,15 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
             Owned lease=owned.get(i);
             var object=services.objectQuery().resolve(lease.identity()).orElse(null);
             boolean cancelled=lease.cancelOnRemoval() && entries.stream().noneMatch(e->e.activationId()==lease.activationId());
-            if(!ownerAvailable(lease.owner())) { terminateOwnedGraph(lease); owned.remove(i); }
+            if(!ownerAvailable(lease.owner()) || lease.contentOwner()!=null && !ownerAvailable(lease.contentOwner())) { terminateOwnedGraph(lease); owned.remove(i); }
             else if (lease.remainingTicks() <= 0 || cancelled) {
                 if(object!=null) expire(object); else releaseChildren(lease.identity());
                 if(object instanceof NativeGhostEncounterObjectInstance)
-                    owned.set(i,new Owned(lease.activationId(),lease.owner(),lease.identity(),0,lease.cancelOnRemoval()));
+                    owned.set(i,new Owned(lease.activationId(),lease.owner(),lease.contentOwner(),lease.identity(),0,lease.cancelOnRemoval()));
                 else owned.remove(i);
             } else if((object==null || object.isDestroyed()) && !ownedChildren.containsKey(lease.identity())) {
                 owned.remove(i);
-            } else owned.set(i,new Owned(lease.activationId(),lease.owner(),lease.identity(),lease.remainingTicks()-1,lease.cancelOnRemoval()));
+            } else owned.set(i,new Owned(lease.activationId(),lease.owner(),lease.contentOwner(),lease.identity(),lease.remainingTicks()-1,lease.cancelOnRemoval()));
         }
     }
     private void expire(ObjectInstance object) {
@@ -419,7 +422,7 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
         return source!=null && source.ownerAvailable(owner);
     }
     public void ownerRetired(String owner) {
-        if(services!=null) for(int i=owned.size()-1;i>=0;i--) if(owned.get(i).owner().equals(owner)) {
+        if(services!=null) for(int i=owned.size()-1;i>=0;i--) if(owned.get(i).owner().equals(owner) || owner.equals(owned.get(i).contentOwner())) {
             terminateOwnedGraph(owned.get(i)); owned.remove(i);
         }
         for(int i=companions.size()-1;i>=0;i--) if(companions.get(i).owner().equals(owner)) {
@@ -521,11 +524,11 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
     }
     @Override public boolean permitsRoutine(ObjectInstance object, PlayableEntity player) {
         if (!(object instanceof AbstractBadnikInstance)) return true;
-        if (enemyRule(EnemyRulePolicy.Kind.STASIS) && movableBadnik(object)) {
+        if (enemyRule(EnemyRulePolicy.Kind.STASIS) && groundedMotionTarget(object)) {
             // A native init/wait release with no contact byte must establish its stock body first.
             if(object instanceof TouchResponseProvider touch && touch.getCollisionFlags()==0) return true;
             return services.objectQuery().activeObjectsOfType(AbstractBadnikInstance.class).stream()
-                    .filter(NativeMutatorRuntime::movableBadnik)
+                    .filter(NativeMutatorRuntime::groundedMotionTarget)
                     .filter(enemy->player!=null && Math.abs(enemy.getX()-player.getCentreX())<=256)
                     .limit(4).noneMatch(enemy->enemy==object);
         }
@@ -536,10 +539,16 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
         if (enemyRule(EnemyRulePolicy.Kind.TRUCE)) return false;
         return true;
     }
-    private static boolean movableBadnik(ObjectInstance object) {
+    private static boolean groundedMotionTarget(ObjectInstance object) {
+        return object instanceof NativeObjectFieldTarget target && target.fieldKind() == NativeObjectFieldTarget.Kind.BADNIK
+                && target.supportsGroundedFieldMotion();
+    }
+    /** Native duplication retains the four bounded constructor recipes, independent of motion admission. */
+    private static boolean clonableNativeBadnik(ObjectInstance object) {
         return object instanceof ButterdroidBadnikInstance || object instanceof RhinobotBadnikInstance
                 || object instanceof PenguinatorBadnikInstance || object instanceof MushmeanieBadnikInstance;
     }
+
     private void selectFieldTargets(AbstractPlayableSprite player) {
         for(var entry:entries) if(entry.policy() instanceof ObjectFieldPolicy field && field.target()!=ObjectFieldPolicy.Target.RING) {
             int cap=field.target()==ObjectFieldPolicy.Target.BADNIK?4:6;
@@ -549,7 +558,7 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
                 return object==null || object.isDestroyed() || Math.abs(object.getX()-player.getCentreX())>256 || Math.abs(object.getY()-player.getCentreY())>160;});
             int acquired=previous.acquired();
             var candidates=services.objectQuery().activeObjectsOfType(ObjectInstance.class).stream()
-                    .filter(object->!object.isDestroyed() && (field.target()==ObjectFieldPolicy.Target.BADNIK?movableBadnik(object)
+                    .filter(object->!object.isDestroyed() && (field.target()==ObjectFieldPolicy.Target.BADNIK?groundedMotionTarget(object)
                             :object instanceof NativeObjectFieldTarget target && target.fieldKind()==NativeObjectFieldTarget.Kind.PROJECTILE))
                     .filter(object->Math.abs(object.getX()-player.getCentreX())<=160 && Math.abs(object.getY()-player.getCentreY())<=96)
                     .sorted(java.util.Comparator.<ObjectInstance>comparingInt(object->Math.abs(object.getX()-player.getCentreX())+Math.abs(object.getY()-player.getCentreY()))
@@ -579,7 +588,7 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
             if(fieldX!=0 || fieldY!=0) {
                 int dx=Math.clamp(fieldX,-2,2),dy=Math.clamp(fieldY,-2,2);
                 boolean clear=true;
-                if(movableBadnik(object)) {
+                if(groundedMotionTarget(object)) {
                     int flags=((TouchResponseProvider)object).getCollisionFlags();
                     clear=touchSizes!=null && NativeEncounterGeometry.clear(services,new NativeEncounterGeometry.Body(object.getX()+dx,object.getY()+dy,
                             touchSizes.getWidthRadius(flags&63),Math.max(1,touchSizes.getHeightRadius(flags&63)-1)),null);
@@ -608,7 +617,9 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
             int awarded=clocks.getOrDefault(e.activationId(),0);
             if(awarded<18) { rain(e.activationId(),object.getX(),object.getY(),3); clocks.put(e.activationId(),awarded+3); }
         }
-        if (movableBadnik(object) && enemyRule(EnemyRulePolicy.Kind.BUDDING)) {
+        String contentOwner = groundedMotionTarget(object)
+                ? ObjectCallbackDispatch.registeredContentOwner(services.objectManager(), object) : null;
+        if ((clonableNativeBadnik(object) || contentOwner != null && ownerAvailable(contentOwner)) && enemyRule(EnemyRulePolicy.Kind.BUDDING)) {
             var identity=services.objectQuery().identityOf(object).orElse(null);
             var activation=entries.stream().filter(e->e.policy() instanceof EnemyRulePolicy p && p.kind()==EnemyRulePolicy.Kind.BUDDING).findFirst().orElse(null);
             if(identity!=null && activation!=null && budded.add(identity) && clocks.getOrDefault(activation.activationId(),0)<2) {
@@ -617,15 +628,25 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
                 int halfWidth=touchSizes==null?0:touchSizes.getWidthRadius(flags&63);
                 int halfHeight=touchSizes==null?0:touchSizes.getHeightRadius(flags&63);
                 boolean clear=halfWidth>0 && halfHeight>0 && NativeEncounterGeometry.ordinary(services,sprite) && !bossActive && owned.size()+2<=MAX_OWNED_ROOTS;
-                for(int side:new int[]{-1,1}) clear &= NativeEncounterGeometry.clear(services,
-                        new NativeEncounterGeometry.Body(object.getX()+side*48,object.getY(),halfWidth,Math.max(1,halfHeight-1)),null);
+                for(int side:new int[]{-1,1}) {
+                    int x=object.getX()+side*48;
+                    clear &= NativeEncounterGeometry.clear(services,
+                            new NativeEncounterGeometry.Body(x,object.getY(),halfWidth,Math.max(1,halfHeight-1)),null);
+                    if(contentOwner!=null) {
+                        var floor=services.floorSurface(x,object.getY()+halfHeight,TerrainSurface.Layer.FOREGROUND,TerrainSurface.Path.PRIMARY);
+                        clear &= floor.foundSurface() && floor.distance()>=-1 && floor.distance()<12;
+                    }
+                }
                 if(!clear) {
                     TransientMutatorPolicyAccess.report(world,activation.activationId(),"Failed: the defeated badnik has no clear native child positions");
                     acknowledge(activation); return;
                 }
                 for(int side:new int[]{-1,1}) {
                     ObjectSpawn cloneSpawn=at(object.getX()+side*48,object.getY(),source.objectId(),source.subtype(),source.renderFlags());
-                    var clone=spawn(activation.activationId(),360,()->cloneMovable(object,cloneSpawn));
+                    var clone=contentOwner==null ? spawn(activation.activationId(),360,()->cloneMovable(object,cloneSpawn))
+                            : ObjectCallbackDispatch.createRegisteredDerivative(services.objectManager(),object,cloneSpawn.x(),cloneSpawn.y());
+                    if(clone!=null && contentOwner!=null) services.objectQuery().identityOf(clone).ifPresent(id ->
+                            owned.add(new Owned(activation.activationId(),activation.owner(),contentOwner,id,360,cancellationBound(activation.activationId()))));
                     if(clone!=null) services.objectQuery().identityOf(clone).ifPresent(budded::add);
                 }
                 clocks.put(activation.activationId(),2);

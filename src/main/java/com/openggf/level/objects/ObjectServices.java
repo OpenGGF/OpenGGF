@@ -70,6 +70,17 @@ public interface ObjectServices {
     }
     ObjectRenderManager renderManager();
 
+    /** Draws an attached visual under the enclosing object identity/body transform, without head scaling. */
+    default void renderAttachedEffect(Runnable producer) {
+        java.util.Objects.requireNonNull(producer, "producer");
+        GraphicsManager graphics = graphicsManager();
+        var subject = com.openggf.graphics.SpritePresentation.subject(graphics);
+        com.openggf.graphics.SpritePresentation.withSubject(graphics,
+                new com.openggf.graphics.SpritePresentation.Subject(subject.id(),
+                        com.openggf.graphics.SpritePresentation.Part.ATTACHED_EFFECT, subject.suppressed(),
+                        100, null, subject.body()), producer);
+    }
+
     // Level state
     LevelState levelGamestate();
     RespawnState checkpointState();

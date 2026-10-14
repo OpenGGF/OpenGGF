@@ -126,4 +126,44 @@ class TestSonic3kMonitorContentOverride {
                 .map(RobotnikMonitor.class::cast).findFirst().orElseThrow();
         assertEquals(0, shell.getCollisionFlags(), "Remembered reload is the broken shell, never a fresh payout");
     }
+    @Test void colocatedFactoryShellsRestoreTheirExactContentsOwnersAndReplayIndependently() throws Exception {
+        var player = breaker();
+        var camera = mock(Camera.class);
+        when(camera.getWidth()).thenReturn((short) 320); when(camera.getHeight()).thenReturn((short) 224);
+        var sprites = mock(SpriteManager.class); when(sprites.getSprite("sonic")).thenReturn(player);
+        var services = new TestObjectServices().withCamera(camera).withSpriteManager(sprites);
+        var registry = new Sonic3kGameModule().createObjectRegistry();
+        var manager = new ObjectManager(List.of(), registry, 0, null, null, null, camera, services);
+        services.withDirectObjectManager(manager);
+        var spawnA = new ObjectSpawn(100, 100, 1, 3, 0, false, 100, 40);
+        var spawnB = new ObjectSpawn(100, 100, 1, 9, 0, false, 100, 41);
+        var a = (Sonic3kMonitorObjectInstance) com.openggf.mods.objects.Sonic3kMonitorFactory.eggman(spawnA);
+        var b = (Sonic3kMonitorObjectInstance) com.openggf.mods.objects.Sonic3kMonitorFactory.eggman(spawnB);
+        manager.addDynamicObject(a); manager.addDynamicObject(b);
+        var hit = new TouchResponseResult(0, 14, 14, TouchCategory.SPECIAL);
+        a.onTouchResponse(player, hit, 0); b.onTouchResponse(player, hit, 0);
+        var context = manager.captureIdentityContext().requireIdentityTable();
+        var aId = context.idFor(a); var bId = context.idFor(b);
+        var captured = manager.rewindSnapshottable().capture();
+        for (var object : List.copyOf(manager.getActiveObjects())) manager.removeDynamicObject(object);
+        manager.rewindSnapshottable().restore(captured);
+        var restoredA = (Sonic3kMonitorObjectInstance) manager.objectQuery().resolve(aId).orElseThrow();
+        var restoredB = (Sonic3kMonitorObjectInstance) manager.objectQuery().resolve(bId).orElseThrow();
+        var ownerField = Sonic3kMonitorObjectInstance.class.getDeclaredField("monitorContentsSlot");
+        ownerField.setAccessible(true);
+        var aSlot = ownerField.get(restoredA); var bSlot = ownerField.get(restoredB);
+        assertNotNull(aSlot); assertNotNull(bSlot); assertNotSame(aSlot, bSlot);
+        var parentField = aSlot.getClass().getDeclaredField("parent"); parentField.setAccessible(true);
+        assertSame(restoredA, parentField.get(aSlot), "colocated icon belongs to captured shell A");
+        assertSame(restoredB, parentField.get(bSlot), "colocated icon belongs to captured shell B");
+        assertEquals(List.of(), RewindSnapshotDiff.diffKey("object-manager", captured, manager.rewindSnapshottable().capture()));
+        manager.removeDynamicObject(restoredA);
+        assertTrue(((ObjectInstance) aSlot).isDestroyed());
+        assertFalse(((ObjectInstance) bSlot).isDestroyed());
+        assertDoesNotThrow(() -> manager.rewindSnapshottable().capture(), "retired contents cannot retain an unregistered shell");
+        for (int tick = 1; tick <= 34; tick++) restoredB.update(tick, player);
+        verify(player).applyHurtOrDeath(0, false, true);
+        verify(player, never()).addRings(anyInt());
+    }
+
 }

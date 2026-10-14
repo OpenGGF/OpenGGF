@@ -5,8 +5,15 @@ import com.openggf.game.sonic3k.Sonic3kObjectPlacement;
 import com.openggf.game.sonic3k.Sonic3kRingPlacement;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.rings.RingSpawn;
+import com.openggf.level.AbstractLevel;
+import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.mods.testing.ModTestKit;
+import com.openggf.game.patch.GameplayLaunchRequest;
+import com.openggf.game.patch.LogicalRomResolver;
+import com.openggf.configuration.SonicConfigurationService;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,6 +24,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** ROM-backed authoring checks; gameplay/lifecycle evidence belongs to the native integration tests. */
 public final class TestSecondStrikeRoutes {
+    @TempDir Path temporary;
+    private static byte[] originalRomBytes;
     private static List<ObjectSpawn> forestObjects;
     private static List<ObjectSpawn> fireObjects;
     private static List<RingSpawn> forestRings;
@@ -30,6 +39,7 @@ public final class TestSecondStrikeRoutes {
         crc.update(bytes);
         assertEquals(0x63522553L, crc.getValue(), "Authoring indices require the locked-on World ROM");
         RomByteReader rom = new RomByteReader(bytes);
+        originalRomBytes = bytes;
         Sonic3kObjectPlacement objects = new Sonic3kObjectPlacement(rom);
         Sonic3kRingPlacement rings = new Sonic3kRingPlacement(rom);
         forestObjects = objects.load(0, 0);
@@ -68,19 +78,49 @@ public final class TestSecondStrikeRoutes {
         assertEquals(3, SecondStrikeRoutes.rings(extended, forestObjects).size());
     }
 
-    @Test void nativeCheckpointSpecialEntryAndCharacterMechanicsAreNotEnemyBindings() {
-        var forest = SecondStrikeRoutes.enemyBindings(forestObjects);
-        assertEquals(10, forest.size());
-        assertTrue(forest.stream().allMatch(binding -> List.of(0x8C, 0x8D, 0x8E)
-                .contains(binding.spawn().objectId())));
-        assertEquals(3, SecondStrikeRoutes.enemyBindings(fireObjects).size());
-        assertTrue(SecondStrikeRoutes.enemyBindings(fireObjects).stream()
-                .allMatch(binding -> binding.spawn().x() < 0x1000));
+    @Test void nativeCheckpointSpecialEntryAndCharacterMechanicsAreNotEnemyBindings() throws Exception {
+        try (var kit = ModTestKit.openTrusted(Path.of("target"), temporary.resolve("saves"),
+                new LogicalRomResolver(() -> originalRomBytes), SonicConfigurationService.createStandalone(), List.of())) {
+        var plan = kit.plan("second-strike");
+        var module = kit.launch(new Sonic3kGameModule(), new GameplayLaunchRequest("s3k", "sonic", List.of()));
+        assertEquals(6, plan.objectFactories().size());
+        for (boolean fire : List.of(false, true)) {
+            var originals = fire ? fireObjects : forestObjects;
+            var inventory = new NativeInventory(originals, fire ? fireRings : forestRings);
+            assertSame(inventory, module.transformDecodedLevel(inventory));
+            var bound = inventory.getObjects().stream().filter(spawn -> spawn.ownerModId() != null
+                    && !"second-strike:robotnik-monitor".equals(spawn.objectKey())).toList();
+            assertEquals(fire ? 6 : 10, bound.size());
+            for (var spawn : bound) {
+                var original = originals.get(spawn.layoutIndex());
+                assertEquals(original.objectId(), spawn.objectId()); assertEquals(original.subtype(), spawn.subtype());
+                assertEquals(original.x(), spawn.x()); assertEquals(original.y(), spawn.y());
+                assertEquals(original.renderFlags(), spawn.renderFlags()); assertEquals(original.rawYWord(), spawn.rawYWord());
+                assertEquals(original.respawnTracked(), spawn.respawnTracked());
+                assertTrue(List.of(0x8C, 0x8D, 0x8E, 0x8F).contains(spawn.objectId()));
+                assertTrue(plan.objectFactories().containsKey(spawn.objectKey()));
+                if (fire) assertTrue(spawn.x() < 0x1000);
+            }
+            if (fire) {
+                assertEquals(List.of(82, 100, 119), bound.stream().filter(s -> "second-strike:caterkiller".equals(s.objectKey()))
+                        .map(ObjectSpawn::layoutIndex).toList());
+                assertEquals(originals.stream().filter(s -> s.x() >= 0x1000).toList(),
+                        inventory.getObjects().stream().filter(s -> s.x() >= 0x1000).toList());
+            }
+        }
         assertEquals(List.of("sonic", "tails", "knuckles"),
                 SecondStrikeRoutes.opportunities().stream().map(SecondStrikeRoutes.Opportunity::character).toList());
         assertEquals(5, SecondStrikeRoutes.rings(forestRings, forestObjects).size()
                 + SecondStrikeRoutes.rings(fireRings, fireObjects).stream().filter(ring -> ring.x() < 0x1000).count());
         assertTrue(forestObjects.stream().anyMatch(spawn -> spawn.objectId() == 0x01
                 && spawn.subtype() == 0x04 && spawn.x() == 0x1790), "Original shoes stay available");
+        assertTrue(kit.disabledOwners().isEmpty(), kit.findings()::toString);
+        }
+    }
+
+    private static final class NativeInventory extends AbstractLevel {
+        NativeInventory(List<ObjectSpawn> placements, List<RingSpawn> ringPlacements) {
+            super(0); objects = placements; rings = ringPlacements;
+        }
     }
 }

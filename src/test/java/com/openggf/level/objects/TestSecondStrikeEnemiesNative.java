@@ -18,13 +18,10 @@ import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.io.TempDir;
 
-import javax.tools.ToolProvider;
 import java.net.URLClassLoader;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -41,14 +38,8 @@ class TestSecondStrikeEnemiesNative {
     private GameStateManager score;
 
     @BeforeAll static void compileOwnedEnemySource() throws Exception {
-        var classes = Files.createDirectory(temporary.resolve("enemies"));
-        var args = new ArrayList<>(List.of("--release", "25", "-cp", System.getProperty("java.class.path"),
-                "-d", classes.toString()));
-        try (var paths = Files.walk(Path.of("examples/second-strike/src/main/java/secondstrike/enemies"))) {
-            paths.filter(p -> p.toString().endsWith(".java")).sorted().forEach(p -> args.add(p.toString()));
-        }
-        assertEquals(0, ToolProvider.getSystemJavaCompiler().run(null, null, null, args.toArray(String[]::new)));
-        creator = new URLClassLoader(new java.net.URL[]{classes.toUri().toURL()}, TestSecondStrikeEnemiesNative.class.getClassLoader());
+        creator = com.openggf.mods.code.SecondStrikeSourceFixture.compile(temporary.resolve("enemies"),
+                com.openggf.mods.code.SecondStrikeSourceFixture.ENEMIES);
     }
     @AfterAll static void closeCreator() throws Exception { if (creator != null) creator.close(); }
     @AfterEach void cleanup() {
@@ -83,20 +74,7 @@ class TestSecondStrikeEnemiesNative {
                 GraphicsManager.getInstance(), camera, services);
         // Match the production host's owned class resolution boundary, restricted
         // to the exact loader used by this source-compiled interaction fixture.
-        manager.setRewindClassResolver(new RewindClassResolver() {
-            @Override public Optional<Class<?>> resolve(String owner, String name) {
-                if (owner == null) return ENGINE_ONLY.resolve(null, name);
-                if (!owner.equals("second-strike") || !name.startsWith("secondstrike.enemies.")) return Optional.empty();
-                try {
-                    var type = Class.forName(name, false, creator);
-                    return type.getClassLoader() == creator ? Optional.of(type) : Optional.empty();
-                } catch (ClassNotFoundException missing) { return Optional.empty(); }
-            }
-            @Override public Optional<String> ownerOf(Class<?> type) {
-                return type.getClassLoader() == creator && type.getName().startsWith("secondstrike.enemies.")
-                        ? Optional.of("second-strike") : Optional.empty();
-            }
-        });
+        manager.setRewindClassResolver(com.openggf.mods.code.SecondStrikeSourceFixture.ownedResolver(creator));
         services.withDirectObjectManager(manager);
         assertSame(manager, services.objectManager());
         AbstractObjectInstance.updateCameraBounds(0, 0, 900, 500, 0);
@@ -311,4 +289,26 @@ class TestSecondStrikeEnemiesNative {
         var replacement = enemy("GuardBadnik", "guard", 400, 200, -1);
         assertEquals(slot, replacement.getSlotIndex(), "retired companion's SST slot is available again");
     }
+    @Test void colocatedPlacementDeduplicationCannotTransferCompanionLifetimeToAnotherParent() throws Exception {
+        setup(0);
+        AbstractObjectInstance.updateCameraBounds(0x1d20, 0x20c, 0x1f00, 0x2ec, 0);
+        var original = enemy("ArtilleryBadnik", "artillery", 0x1dc0, 0x27c, 40);
+        original.update(0, sonic);
+        var ally = manager.getActiveObjects().stream().filter(o -> o.getClass().getSimpleName().equals("GuardBadnik"))
+                .map(AbstractObjectInstance.class::cast).findFirst().orElseThrow();
+        var colocated = enemy("ArtilleryBadnik", "artillery", 0x1dc0, 0x27c, 40);
+        colocated.update(0, sonic);
+        assertEquals(1, manager.getActiveObjects().stream().filter(o -> o.getClass().getSimpleName().equals("GuardBadnik")).count(),
+                "placement deduplication still bounds one ally for this authored anchor");
+        assertNotEquals(manager.objectQuery().identityOf(original), manager.objectQuery().identityOf(colocated));
+        original.setDestroyedByOffscreen();
+        assertEquals(0, ((TouchResponseProvider) ally).getCollisionFlags(),
+                "same-pass authority belongs to the exact original lifetime, not another live placement match");
+        manager.removeDynamicObject(original);
+        ally.update(1, sonic);
+        assertTrue(ally.isDestroyed());
+        assertFalse(colocated.isDestroyed());
+        assertEquals(0, score.getScore());
+    }
+
 }

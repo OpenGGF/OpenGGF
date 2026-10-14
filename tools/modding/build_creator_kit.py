@@ -87,6 +87,18 @@ def export_examples(root):
                 relative = file.relative_to(project)
                 if file.is_file() and "__pycache__" not in relative.parts and file.suffix != ".pyc":
                     entries["examples/" + name + "/" + relative.as_posix()] = file.read_bytes()
+        # Controller recipes are creator inputs; rendered captures, ROMs and
+        # runtime state are not. Never follow a linked walkthrough source.
+        walkthroughs = project / "walkthroughs"
+        if not walkthroughs.is_symlink():
+            for file in sorted(walkthroughs.rglob("*")):
+                relative = file.relative_to(project)
+                if (file.is_symlink() or not file.is_file()
+                        or file.suffix not in (".script", ".bk2", ".md")
+                        or any(part.startswith(".") or part in ("target", "saves", "__pycache__")
+                               for part in relative.parts)):
+                    continue
+                entries["examples/" + name + "/" + relative.as_posix()] = file.read_bytes()
         adapter = legacy_check_adapter(project)
         if adapter:
             entries[f"examples/{name}/src/test/java/creator/exported/CreatorChecksTest.java"] = adapter
@@ -102,6 +114,7 @@ def export_examples(root):
         manifest = (project / "src/main/resources/META-INF/openggf-mod.yaml").read_text()
         base_game = re.search(r"(?m)^baseGame:\s*(s1|s2|s3k)\s*$", manifest)
         game = base_game.group(1) if base_game else "s2"
+        test_rom = f" --{game} /absolute/own-{game}.gen" if base_game else ""
         instructions = f'''# Build {name} from the creator kit
 
 Use a Java **25 JDK** and Python 3, or Maven **3.8 or newer**. Keep `engine.jar`
@@ -117,8 +130,11 @@ Run all authored Jupiter tests (including the exported adapters for older check
 programs) with the matching kit's separate testkit:
 
 ```sh
-python3 ../../tools/build_project.py . --test --testkit ../../mod-testkit.jar
+python3 ../../tools/build_project.py . --test --testkit ../../mod-testkit.jar{test_rom}
 ```
+
+Native gameplay tests need your original ROMs. The command includes the declared
+base game when present; add `--s1`, `--s2` or `--s3k` for other tested games or donors.
 
 The test launcher resolves pinned JUnit Platform Console 1.10.3 through Maven,
 compiles only `src/test` into `target/test-classes`, and fails on test failure or
