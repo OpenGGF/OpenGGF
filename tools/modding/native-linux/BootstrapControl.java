@@ -62,5 +62,21 @@ public final class BootstrapControl implements GgfMod {
                         .mapToInt(String::length).sum() != 5) {
             throw new AssertionError("Runtime primitive/reference stream dispatch failed");
         }
+        // Erased engine service factories can return implementations absent from
+        // creator bytecode. Name the implementation only through reflection, so
+        // the policy implementation-root retention must supply its callable body.
+        try {
+            var boundary = new com.openggf.mods.code.ModFaultBoundary(java.util.Map.of(),
+                    new com.openggf.mods.ModRuntimeFindingStore(),
+                    owners -> new com.openggf.mods.ModStateSaveResult.Saved(), owners -> { });
+            Object prepared = Class.forName("com.openggf.mods.mutators.MutatorCatalog")
+                    .getConstructor(java.util.List.class, com.openggf.mods.code.ModFaultBoundary.class)
+                    .newInstance(java.util.List.of(), boundary);
+            if (((com.openggf.game.mutators.PreparedMutatorConfiguration) prepared).hasDefinitions()) {
+                throw new AssertionError("Empty prepared policy reported definitions");
+            }
+        } catch (ReflectiveOperationException failure) {
+            throw new AssertionError("Engine-created policy dispatch failed", failure);
+        }
     }
 }
