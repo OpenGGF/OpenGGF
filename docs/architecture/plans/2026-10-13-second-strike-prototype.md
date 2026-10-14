@@ -665,8 +665,13 @@ expected negative, not a packaging-contract defect.
 
 Private upstream fetch pins `origin/develop` at `f076ef0063b4da24c52cb08038946e80d595b425`.
 Its native tooling retains native policy implementations/erased service factories
-and scene-owned startup. Intent composition, matched tooling checks, final artifacts,
-short supplementary GPU/PCM witnesses and one change-based smoke run remain pending
-at this checkpoint. No main integration/push has occurred in this private phase.
+and scene-owned startup. Intent composition is conflict-free and preserves original ancestry. Matched
+upstream checks compile the member contract/native gameplay probe with the actual
+engine + testkit, pass the bytecode contract controls and host-JVM bootstrap policy
+probe, and pass all six Linux/Windows packaging safety cases. The initial probe
+compile omitted the testkit/helper, executed no cases, and was corrected without
+production edits. This is no native-image portability qualification. Current
+strict artifacts, compiled pin and paired SDK source/Jupiter gates pass; short
+supplementary GPU/PCM witnesses and one change-based smoke run remain pending. No main integration/push has occurred in this private phase.
 Historical gentler full-route movies do not certify the harder cold campaign, and
 custom-character traversal and exhaustive/native-image portability remain unverified.

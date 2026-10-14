@@ -897,3 +897,149 @@ outputs, not archived evidence. Changes integrated upstream since the announcer
 fix affect Second Strike and its S3K art/monitor consumers; the tested announcer
 and audio/test inputs remain unchanged. Those upstream changes are preserved
 in the next image and receive the workflow's own gates and native gameplay checks.
+
+### Refreshed Windows image qualification
+
+The retention correction integrated conflict-free and published as
+`485e89fbea5a2587b763052f0db115986ca681ce`, after preserving the separately
+integrated Second Strike changes. Windows workflow
+[38546428448](https://github.com/OpenGGF/OpenGGF/actions/runs/38546428448)
+completed successfully: the Windows job finished 10:12:24Z and fresh guards
+finished 10:14:09Z, with 680 cases and zero failures/errors/skips. The new
+executable passes the actual separately loaded bootstrap control, including
+file operations; the previously absent `Path.of` body is therefore exercised
+on Microsoft Windows. Its 18,192-entry/1,469-type audit passes, deliberate missing
+field/method controls fail with ordinary exit 1, all 25 shipped mods match their
+JVM registration results, and native development-source boot/batch launcher
+checks pass. The scanned 26th JAR is the disposable bootstrap fixture, not a
+shipped mod.
+
+The downloaded immutable artifact is source-pinned to that commit and SHA-256
+`e303626fbb6690a8023b017b75efc5195d20ab96a2dc668bb2a772769ca718e6`.
+Its Windows executable SHA-256 is
+`123610afc2574cf048dc2a054a9794981850d0c12365e775a24a644679e0277c`.
+Representative rendered gameplay, full voice-bank PCM and matched old/corrected
+announcer controls are submitted together through normal admission and the
+worktree lease, using an owned isolated Xvfb display rather than the shared
+desktop. Terminal results and the delivered ZIP checksum remain pending.
+
+The first leased Wine run admitted after 121 seconds and stopped with ordinary
+exit 1 after 38.185 seconds, at the same immutable Windows image. Act Practice
+and Eggman's Sky passed; all 122 voice clips reached final mixed PCM (minimum
+peak 17,272, minimum range 26,146). The next mod, Example Mutators, threw
+`AbstractMethodError` at `Sonic3kMutatorPolicyProvider.open`: its prepared catalog
+projection invokes `MutatorCatalog.hasDefinitions`, whose implementation was
+absent from the retention manifest. Registration and metadata for directly named
+members do not cover this engine-created service dispatch. This image is not
+qualified as a complete friends bundle and is not delivered.
+
+Both builders now include every implementation of the semantic prepared/transient
+mutator service and world-policy provider/state interfaces, alongside `GameModule`.
+The existing generator includes anonymous/unreferenced implementations and their
+method-owning ancestors automatically; this is not a concrete-class whitelist.
+A bootstrap-only matched contract control confirms that the old selection omits
+`MutatorCatalog.hasDefinitions()Z`, and that the new policy roots retain and audit
+it. It passed under normal admission at 10:21:27Z (Maven 3.332 seconds), with the
+standalone generator controls and six portable packaging cases. A further shared
+runtime bootstrap regression constructs the engine catalog reflectively and
+invokes its prepared policy projection, so the Windows builder exercises this
+callable body without ROMs. Its implementation class is named only as a string;
+creator bytecode therefore cannot incidentally supply its retention. Native
+gameplay of the full updated bundle is still required.
+
+The final updated fixture/selection check passed at 10:29:22Z under normal
+admission and the worktree lease, after 353 seconds of queue waiting and 3.408
+seconds of Maven execution. `maven_queue.py -B -Dmse=off exec:exec
+-Dexec.executable=python3 -Dexec.args=target/run_policy_retention_final_checks.py`
+compiled and executed the actual bootstrap fixture on Java 25, passed the
+matched omission/retention assertion for `hasDefinitions`, audited the corrected
+17,999-entry/1,413-type bootstrap-only contract, and passed the standalone
+generator regressions and six Windows/Linux packaging cases. Actual Windows
+dispatch and all-mod gameplay on the rebuilt image remain pending; the prior
+image's successes do not qualify changed native bodies.
+
+The policy correction integrated and published as
+`5e8961ffbc4ea532edea159b23ce36c0ffb1ebf5`. Workflow
+[38550048115](https://github.com/OpenGGF/OpenGGF/actions/runs/38550048115)
+passed: fresh guards completed 10:45:05Z with 680 cases and zero failures/errors/
+skips; Windows completed 10:47:52Z after the actual reflected catalog projection,
+the original JDK bootstrap controls, 25 JVM/native registrations and shortcut
+checks passed. The generated contract retains 1,446 engine types with 19,461
+member entries; its scanned 26th JAR is again the unshipped fixture. The downloaded
+ZIP hash is `0771a40e298f02e3aaf3e29c6043f70861ff05c4b7f02dafa64cdeddc75ae4d4`,
+and the executable hash is
+`bcede08a878ca5e64601e44a4a0561dd25835b1f250338fb965fb366fc63aef5`.
+Both source pins and the published artifact checksum match. The previous partial
+capture outputs were accounted for and discarded; terminal gameplay/audio/queue
+controls and the clean delivered ZIP checksum will follow from this image.
+
+The next leased Wine run (128-second wait, 37.979-second execution) exercised
+the restored catalog dispatch but stopped on a second erased-factory omission:
+`HudRenderManager.timerWarning` invoked an unretained anonymous
+`HudWarningPolicyProvider.isTimerWarning(int)`. Act Practice and Eggman's Sky,
+including all 122 final PCM samples, still passed. The 5e8961ffb image is likewise
+withheld from delivery; its builder/guard successes alone do not certify gameplay.
+
+Adding each anonymous class to the root list was rejected as brittle. The opt-in
+`--service-factories` generator now scans actual bytecode of retained Class-keyed
+factories whose erased descriptor is `(Class)Object`, repeating to a fixed point
+for newly discovered service-bearing classes. It uses the existing exact member/
+handle/constant reference scanner and preserves original class bytes. Normal
+generator mode and production engine/build/API inputs are unchanged. Explicit
+semantic roots still cover the world-policy graph; arbitrary string reflection
+and generated classes remain outside static inference. Execution coverage is
+therefore still mandatory, rather than treating metadata lookup as invocation.
+
+A new ASM fixture reproduces the omission before discovery, then requires its
+anonymous returned implementation's method and exact class bytes afterward. It
+also rejects retention of an unrelated class. The real bootstrap regression now
+constructs the module reflectively, obtains its HUD warning service through the
+actual factory, and checks timer/flash behavior alongside the prepared catalog.
+The final local control passed at 11:00:23Z with zero queue wait and 4.074 seconds
+of Maven execution under normal admission and the worktree lease:
+`maven_queue.py -B -Dmse=off exec:exec -Dexec.executable=python3
+-Dexec.args=target/run_factory_retention_final_checks.py`. Generator regressions,
+actual Java-25 bootstrap execution, a 20,821-entry/1,583-type bootstrap-only audit,
+exact HUD-member assertions, and all six portable packaging cases passed. The
+earlier discovery check also passed (65-second wait, 4.138-second execution).
+The next image must still pass actual Windows controls and full representative
+mod gameplay before the ZIP can be delivered.
+
+Factory discovery integrated and published as
+`d27d9cc0fa58e45429caf5d98d66e6a38ce5eaaa`, preserving the incoming
+prose/mirrored-skill-only `e80a8f85e` delta. Workflow
+[38554119961](https://github.com/OpenGGF/OpenGGF/actions/runs/38554119961)
+passed the actual catalog and anonymous HUD factory projections on Windows,
+all original bootstrap controls, 25 JVM/native registrations and batch startup
+checks. Its audit checks 22,197 entries/1,727 types; 1,610 engine class bodies are
+preserved. Fresh guards pass all 680 cases without failures/errors/skips (terminal
+Maven log 11:19:53Z, 12:59 minutes). The source/checksum-verified downloaded ZIP
+is `89b1739135ca2ff4a27dbd0fa5839f416ca32259a4e9fbfcd12b88d4ff1f2d8c`,
+with executable hash
+`25f43562ee8156ccd769a384f2f3a30ef6f19a3f26807a06e7853f08cb3c2f24`.
+Its one normal queued gameplay/audio/announcer request remains pending; the
+delivered ZIP is not yet qualified. The isolated display preflight requires a
+live private Xvfb and llvmpipe renderer, with ambient Wayland/Xauthority settings
+removed before any Engine launch.
+
+The admitted native gameplay run waited 761 seconds, then ran 1:46 minutes.
+Fourteen mods passed, including the previously failing mutator gameplay and all
+122 EggSky PCM clips. Starpost Valley stopped with the valid mod guard
+`Activity needs its retained scene session`: the probe selected the first owned
+zone, a festival, before opening the scene that owns that activity's admission.
+This is a diagnostic bootstrap error, not another missing native member. The
+shared probe now uses the backing game's initial zone for scene startup; direct
+level examples retain authored-zone coverage. Mod and engine code are unchanged.
+
+A matched real packaged-JAR JVM control compiles old/corrected probe bodies and
+uses original rehashed ROMs plus a live owned Xvfb/llvmpipe display. The old body
+reproduces the exact activity-session guard; the corrected body renders the farm,
+passes scene reopen/state roundtrip, and leaves no owner findings/disabled owner.
+The complete control passed at 11:58:39Z after 323 seconds of queue waiting and
+4.628 seconds of execution, under normal admission/worktree lease:
+`maven_queue.py -B -Dmse=off exec:exec -Dexec.executable=python3
+-Dexec.args=target/run_scene_bootstrap_complete_checks.py`. Two initial compile
+attempts omitted the test-kit classpath and then the scene-inspection helper;
+neither ran gameplay or receives behavioral qualification credit. The successful
+control includes the same dependencies used by the builders. Actual native
+gameplay must still complete on the rebuilt probe/image before final delivery.

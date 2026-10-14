@@ -23,6 +23,16 @@ GRAAL_SHA256 = "2733ea1331f1a98b05dd55a768b07347051dad48f030dbbfa191b11a2ccf4144
 GRAAL_URL = ("https://github.com/graalvm/graalvm-ce-builds/releases/download/graal-25.4.4.1.1/"
              "graalvm-community-jdk-25i4-25.0.4.1.1_windows-x64_bin.zip")
 MAIN = "com.openggf.tools.nativewindows.ExperimentalNativeEngine"
+# Engine-created implementations can arrive through erased getGameService calls.
+# Preserve the semantic policy seams, including future/anonymous implementations,
+# rather than assuming that creator bytecode names every concrete service.
+IMPLEMENTATION_ROOTS = (
+    "com.openggf.game.GameModule",
+    "com.openggf.game.mutators.PreparedMutatorConfiguration",
+    "com.openggf.game.mutators.TransientMutatorPolicySource",
+    "com.openggf.game.session.WorldSessionPolicyProvider",
+    "com.openggf.game.session.WorldSessionPolicyState",
+)
 
 
 def digest(path):
@@ -223,7 +233,7 @@ def build(args):
     scan_inputs = retention_inputs(inputs / "mods", work / "bootstrap-control.jar", work / "retention-inputs")
     contract = work / "contract"
     run([*java, "com.openggf.tools.NativeModMemberContract", engine, scan_inputs, contract,
-         "--implementation-root=com.openggf.game.GameModule", "--jdk-members"], work)
+         *("--implementation-root=" + root for root in IMPLEMENTATION_ROOTS), "--service-factories", "--jdk-members"], work)
     run([*java, "com.openggf.tools.NativeModMemberAudit", contract / "members.tsv"], work)
     metadata = work / "metadata"
     metadata.mkdir()
