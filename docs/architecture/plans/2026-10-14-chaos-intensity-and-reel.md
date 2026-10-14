@@ -137,6 +137,25 @@ treated as errors. The external example JAR is 80,855 bytes, SHA-256
 `e5460b29643b176683ba0a62eaeeff413a24d717aed112c9e84294ae36be1d02`;
 it contains no ROM bytes and targets the unchanged 0.7 candidate API.
 
+Later upstream `f076ef006` changes only the native qualification probe and
+prose: a registered `OwnedSceneFactory` now owns scene startup rather than a
+probe choosing an arbitrary authored act. Chaos does not register that factory,
+so its path is unchanged. Both independent implementation-pitfall additions are
+preserved in composed `293fdc902`. The required S3K identities were checked on
+that tree, resolving exact ROM/skip coverage separately from the interrupted
+broad accounting: **five classes, 60 tests passed, zero failures/errors/skips**.
+Maven completed in 27.366 seconds with all five XML reports inspected.
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Ds3k.rom.path=$OPENGGF_ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
 The completed second reel is 4,864 frames at 60 Hz, 1920×1080, lasting 81.067
 seconds with 45 chapters and **46 qualified effects**. Actual source CSV/picture
 review includes bumper contact, angled full-width rain, ring loss and subsequent
@@ -172,9 +191,93 @@ The continuation rederives the complete original selection and checks the exact
 source/tree fingerprint, completed-batch count and previous failure status.
 Every one of the 306 uncompleted candidates (seven original batches), followed
 by guards, uses the unchanged official runner and admission rules. Completed
-coverage remains attributed to the first invocation; no raw logs or pass cache
-are archived. The final record must report the two-command union and all skips.
-Continuation and engine integration/push remain pending at this checkpoint.
+coverage remains attributed to its completed invocation; no raw logs or pass
+cache are archived. That continuation also received an unrecorded termination
+signal while waiting for admission after four of its seven batches: 1,131 tests,
+one inherited failure, zero errors and three skips, 1,042.66 seconds of completed
+execution. Its contexts unwound and released. A final exact-tail invocation
+verified the same source/tree, previous result identities and complete original
+selection before running all 106 remaining candidates (three batches) and guards.
+
+The final tail completed all three batches: **762 tests passed, zero
+failures/errors/skips**, 107.70 seconds execution. Thus all 66 ordinary batches
+of the original **3,256-candidate smoke selection** completed across three
+attributed commands: **27,262 ordinary tests, one inherited failure, zero errors
+and 64 skips**. Both interrupted commands remain incomplete; this union is not
+reported as a single green run. Skips cover opt-in measurements/captures,
+unavailable inherited GL fixtures and a local BizHawk reference; affected new
+production-EGL cases pass without skips. Final guards completed separately:
+**680 tests, one new failure, zero errors/skips**, 268.01 seconds.
+
+The continuation's second batch repeats the inherited
+`TestCompleteRunAudioCli#freshJvmBootstrapsTheS1ProfileButItsUnavailableDispatcherEmitsNoStandardOutput`
+assertion at line 182. Expected exit status 4 and empty stdout pass before the
+first-byte stderr assertion. Its test blob `87c070511453f2b1447648269ddd8a747cce0206`,
+tool blob `20d8d2417cee8dba47e59ca8da7a48061fad669e` and production tree
+`a7e86e12af500d7018650188f338b9e2e2dca760` match the pre-task base, retained
+`543c076fd` and composed `293fdc902`. The
+[earlier matched baseline and subprocess controls](2026-10-13-s3k-playable-completion.md#inherited-child-launcher-prefix-and-preserved-graphics)
+attribute this exact inherited environment to Java's `JDK_JAVA_OPTIONS` notice
+preceding the correct unavailable-producer diagnostic. The current compact
+failure retains the assertion, not the actual child stderr bytes.
+
+A fresh exact-method control on `293fdc902`, with `JDK_JAVA_OPTIONS` unset and
+the same headless graphics setting passed as a Maven CLI property, passes:
+**one test, zero failures/errors/skips**, 24.271 seconds Maven, 0.402 seconds
+test, no queue wait. No executable or test edit is made. The broad environment
+keeps its required graphics setting and its inherited red result remains explicit.
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null \
+  python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  '-Dtest=TestCompleteRunAudioCli#freshJvmBootstrapsTheS1ProfileButItsUnavailableDispatcherEmitsNoStandardOutput' \
+  -Dopenggf.headless.gl=surfaceless-egl test -B
+```
+
+The new guard failure is
+`TestArchUnitRules#low_level_layers_do_not_depend_on_runtime_layers`: 27 new
+edges from the scoped graphics implementation to `level.Palette`. The rendered
+behaviour had passed, but storing that concrete runtime type in the low-level
+helper crossed the established architecture boundary. The repair uses the
+existing graphics `PaletteView` interface, captures all 48 RGB bytes per line
+into detached immutable values, and retains the same upload/fade/alpha ordering.
+The internal scoped bridge accepts `PaletteView[]`; supported public cache
+signatures remain unchanged. No frozen architecture baseline, rule, pin or test
+expectation was changed. Independent read-only review checked equivalence to
+`Palette.deepCopy`/`dataEquals`, black cleanup, pending uploads and owner lifetime.
+
+Narrow verification on composed `293fdc902` plus this three-file repair:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null \
+  python3 tools/testing/maven_queue.py -Dmse=off -Pguards \
+  '-Dtest=TestArchUnitRules' -Dopenggf.headless.gl=surfaceless-egl test -B
+
+env -u DISPLAY -u WAYLAND_DISPLAY -u JDK_JAVA_OPTIONS \
+  JAVA_HOME=/usr/lib/jvm/java-25-openjdk LUA_BIN=/usr/bin/lua5.4 \
+  EGL_PLATFORM=surfaceless ALSOFT_DRIVERS=null \
+  python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestRenderContext,TestScopedPaletteGraphicsAccess,TestUnderwaterPaletteUpload,TestScopedPalettePresentationRewind,TestPresentationSpritePixels,TestModApiSignatureSurface' \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Ds3k.rom.path=$OPENGGF_ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+The full architecture class passes **30 tests, zero failures/errors/skips**, with
+the formerly failing rule present; Maven took 74 seconds including compilation.
+The six affected classes pass **46 tests, zero failures/errors/skips** in 28.436
+seconds Maven. All six XML reports were inspected. These include actual GPU
+dry/water/deferred acquisition, preserved native pending colours, scoped-bank
+rewind, high ordinary palette rows, sprite pixels and the unchanged canonical
+candidate API. The other 679 guard checks passed on the retained source; the
+owned regression is repaired narrowly rather than repeating unchanged smoke.
+Consumed category diagnostics were acknowledged and deleted. Temporary exact-tail
+helpers are discarded after their method and accounting are recorded here.
+The published media retains its actual capture commits; this value-boundary
+repair preserves the colours rather than relabelling or regenerating footage.
 
 | Context | Added obligation | Limit |
 |---|---|---|
@@ -185,4 +288,5 @@ Continuation and engine integration/push remain pending at this checkpoint.
 | Final example/package | Stable catalogue/schema, assembly/history and SDK validation | No new streamer/voting capability |
 
 No trace frontier moved, and no timing optimization or measurement acceptance
-is claimed. Required S3K route/load checks remain part of final integration.
+is claimed. Required S3K route/load checks passed on the composed tree; complete
+act-route breadth and rebuilt native-image bundles remain separate obligations.

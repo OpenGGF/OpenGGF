@@ -1,7 +1,5 @@
 package com.openggf.graphics;
 
-import com.openggf.level.Palette;
-
 /** Engine-only, exact-owner palette handles. The numeric bank is derived GPU state and is never captured as gameplay state. */
 public final class ScopedPaletteGraphicsAccess {
     private ScopedPaletteGraphicsAccess() { }
@@ -17,7 +15,7 @@ public final class ScopedPaletteGraphicsAccess {
             this.graphics=graphics;this.owner=owner;this.base=base;generation=graphics.scopedPaletteGeneration(owner);
         }
     }
-    public static Bank acquire(GraphicsManager graphics,Object owner,Palette[] palettes) {
+    public static Bank acquire(GraphicsManager graphics,Object owner,PaletteView[] palettes) {
         engineCaller();return new Bank(graphics,owner,graphics.scopedPaletteBank(owner,palettes));
     }
     public static boolean valid(Bank bank,GraphicsManager graphics,Object owner) {

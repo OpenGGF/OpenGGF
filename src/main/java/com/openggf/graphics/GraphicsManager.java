@@ -794,7 +794,7 @@ public class GraphicsManager {
 		return patternAtlas.aliasEntry(aliasId, targetId);
 	}
 
-	int scopedPaletteBank(Object owner,Palette[] palettes) {
+	int scopedPaletteBank(Object owner,PaletteView[] palettes) {
 		if(owner==null || palettes==null || palettes.length!=4 || java.util.Arrays.stream(palettes).anyMatch(java.util.Objects::isNull))
 			throw new IllegalArgumentException("A scoped palette bank needs an owner and exactly four ROM palette lines");
 		var lease=scopedPaletteOwners.get(owner);
@@ -802,7 +802,7 @@ public class GraphicsManager {
 			Object token=new Object();int base=RenderContext.reserveScopedPaletteBank(token);
 			lease=new ScopedPaletteLease(token,base,++scopedPaletteGeneration);scopedPaletteOwners.put(owner,lease);
 		}
-		for(int line=0;line<4;line++) cachePaletteTexture(palettes[line],lease.base()+line);
+		for(int line=0;line<4;line++) cacheImmediatePaletteTexture(palettes[line],lease.base()+line);
         // A trusted resolver may upload between draws while the atlas unit is active.
         PatternRenderCommand.resetFrameState();
         scopedUnderwaterDirty=true;
@@ -817,9 +817,8 @@ public class GraphicsManager {
 	void releaseScopedPaletteBank(Object owner) {
 		var lease=scopedPaletteOwners.remove(owner);if(lease==null) return;
 		if(RenderContext.scopedPaletteBankValid(lease.token(),lease.base())) {
-			var blank=new Palette();
 			for(int line=lease.base();line<lease.base()+4;line++) {
-				uploadPaletteLine(blank,line);paletteTextureMap.remove("palette_"+line);
+				uploadPaletteLine(ScopedUnderwaterBasis.blankLine(),line);paletteTextureMap.remove("palette_"+line);
 				if(line<lastCachedPaletteLines.length)lastCachedPaletteLines[line]=null;
 				pendingPaletteUploads[line]=false;
 			}
@@ -858,6 +857,10 @@ public class GraphicsManager {
 	}
 
 	public void cachePaletteTexture(Palette palette, int paletteId) {
+		cacheImmediatePaletteTexture(palette, paletteId);
+	}
+
+	private void cacheImmediatePaletteTexture(PaletteView palette, int paletteId) {
 		rememberCachedPaletteLine(palette, paletteId);
 		if (paletteId >= 0 && paletteId < pendingPaletteUploads.length) {
 			pendingPaletteUploads[paletteId] = false;
@@ -1653,9 +1656,9 @@ public class GraphicsManager {
 		}
         return composeUnderwaterPaletteTexture(palettes,normalLine0,null);
     }
-    private Integer composeUnderwaterPaletteTexture(Palette[] palettes,Palette normalLine0,ScopedUnderwaterBasis publishedBasis) {
+    private Integer composeUnderwaterPaletteTexture(PaletteView[] palettes,PaletteView normalLine0,ScopedUnderwaterBasis publishedBasis) {
 		int totalLines = RenderContext.getTotalPaletteLines();
-		Palette underwaterLine0 = (palettes != null && palettes.length > 0) ? palettes[0] : null;
+		PaletteView underwaterLine0 = (palettes != null && palettes.length > 0) ? palettes[0] : null;
 		ensureUnderwaterPaletteSourceScratch(totalLines);
 		boolean hasDerivedDonorRow = false;
 		for (int row = 0; row < totalLines; row++) {

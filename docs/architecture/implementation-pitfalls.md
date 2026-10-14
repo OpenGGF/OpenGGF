@@ -920,6 +920,11 @@ Ordinary contexts already support atlas growth beyond sixteen contexts; applying
 the private pool's 64-row ceiling to them broke the sixteenth allocation that
 previously grew to 68 rows. Search complete unoccupied private ranges, preserve
 ordinary growth and check coexistence, high-row sampling, exhaustion and reuse.
+Keep the renderer's captured inputs at its existing `PaletteView` boundary.
+Storing concrete `level.Palette` rows in a new graphics helper introduced 27
+frozen architecture violations despite passing pixel checks. Detached RGB bytes
+preserve publication/value equality and pending writes without adding runtime
+layer dependencies; verify the architecture rule as well as actual water pixels.
 
 **CPU sprite state is not the presented SAT.** S3K `VInt_8_Cont` uploads
 `Sprite_table` to VRAM `$F800`; the resumed `LevelLoop` then runs objects and
