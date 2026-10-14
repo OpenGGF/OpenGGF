@@ -84,9 +84,39 @@ LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off \
 On `be206cd33`: 13 tests passed, zero failures/errors/skips, including actual
 surfaceless-EGL pixels at 320/640, 24-pose capture/restore and complete-bank
 exhaustion/reuse. These are child results, not final-union qualification.
-Java 25/Lua 5.4/PowerShell preflight passed on the root worktree. Final native
-palette/SAT restore checks, combined validation, package, captures and delivery
-remain pending at this checkpoint.
+Native child `fba7cef04fc5d7026e0080e2a6b284a9f82fac9f` is integrated as
+`352a2a40a`. Its final affected command was:
+
+```sh
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestScopedPalettePresentationRewind,TestUnderwaterPaletteUpload,TestScopedPaletteGraphicsAccess,TestPooledRenderCommandDiscard,TestModApiSignatureSurface' \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  "-Ds3k.rom.path=$OPENGGF_ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" test -B
+```
+
+On the committed inputs: 28 passed, zero failures/errors/skips. Three real GPU
+methods cover dry, priority-water and acquisition between draws. Nine water
+checks cover exact-world rebinding, published fade/basis and pending writes;
+command leases and canonical API signatures also pass. Earlier retained native
+runtime/ring checks passed 59 cases and bumper/ghost checks passed 23, with no
+skips. Shared public API signatures remain unchanged. A textual hook mistook a
+private nested record inside an annotated class for a supported API delta;
+private lease metadata was moved to an unannotated package-private record,
+retaining the actual canonical pin and passing the normal hook.
+
+Independent read-only review found a real underwater blocker before integration:
+private rows were absent from the expanded underwater texture. Below-water
+priority sprites sampled transparent rows. Adding those rows alone exposed two
+ordering defects: an ordinary batch could use the new row count with the old
+texture height, and deferred uploads could overwrite the active atlas binding
+while cached IDs prevented rebinding. Published native water/fade inputs now
+rebuild derived residency at execution boundaries, preserving pending native
+writes; scoped uploads/releases and rebuilds invalidate command binding caches.
+The failing real pixel cases were reproduced before the repairs and pass after.
+
+Java 25/Lua 5.4/PowerShell preflight passed on the root worktree. Final combined
+validation, package, corrected captures and delivery remain pending at this
+checkpoint.
 
 | Context | Added obligation | Limit |
 |---|---|---|

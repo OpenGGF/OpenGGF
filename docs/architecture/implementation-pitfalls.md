@@ -907,6 +907,14 @@ allocated in a different order. Retain an exact semantic owner/object/donor
 resolver with the subject and acquire current residency at the draw boundary.
 Validate an actual prepared/published table restore with changed bank order,
 not only the gameplay runtime's snapshot (2026-10-14).
+Private rows also belong in the expanded underwater texture. Changing the total
+row count while leaving an older texture changes sampling even for ordinary
+host rows; rebuilding only when the owned command runs is too late for a preceding
+native batch. Rebuild at execution boundaries from the last published native
+water/fade basis, preserving pending palette writes. Uploads can bind the active
+atlas texture unit: invalidate deferred-command binding caches even when texture
+IDs are unchanged. Real priority-water and acquisition-between-draws pixels
+caught both defects; dry-only palette tests did not.
 
 **CPU sprite state is not the presented SAT.** S3K `VInt_8_Cont` uploads
 `Sprite_table` to VRAM `$F800`; the resumed `LevelLoop` then runs objects and
