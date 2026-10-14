@@ -899,6 +899,15 @@ logical image while a physical restore is deferred. A snapshot graph comparison
 alone missed this because both graphs retained the same stale journal. Check
 actual pattern pixels and rendered consumers after restore as well (2026-09-24).
 
+**Private palette residency is not retained SAT state.** Chaos donor objects
+keep native palette bits in published `Tile` records. Adding a private GPU bank
+base in the producer would capture that row in `LevelSpritePresentation.Tables`;
+restore could then sample another owner's colours after banks are released and
+allocated in a different order. Retain an exact semantic owner/object/donor
+resolver with the subject and acquire current residency at the draw boundary.
+Validate an actual prepared/published table restore with changed bank order,
+not only the gameplay runtime's snapshot (2026-10-14).
+
 **CPU sprite state is not the presented SAT.** S3K `VInt_8_Cont` uploads
 `Sprite_table` to VRAM `$F800`; the resumed `LevelLoop` then runs objects and
 later `Render_Sprites` builds the next table. An emulator-frame screenshot can

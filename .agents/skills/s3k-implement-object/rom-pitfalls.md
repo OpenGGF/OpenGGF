@@ -5264,3 +5264,18 @@ publish one immutable cache only after success, and propagate invalid bytes
 before changing RAM/output. Cache construction during pure post-restore rebuild
 must not advance captured scroll state. Missing required data still fails; no
 fallback table or ROM-required fixture skip replaces that boundary.
+
+## Spawned donor art keeps its native palette line
+
+The 2026-10-14 Chaos revision exposed wrong-colour CNZ bumpers and SOZ ghosts
+in AIZ. A correct donor pattern sheet is insufficient when its native mapping
+still indexes the host act's CRAM. `Obj_Bumper` selects CNZ Misc + `$13`, palette
+2 (`sonic3k.asm:68828–68860`); `Hyudoro_init_tbl` selects ghost palette 1
+(`sonic3k.asm:196064`). Do not apply SOZ darkness to that line: `AnPal_SOZ2`
+updates `Normal_palette_line_3/4`, engine indices 2/3
+(`sonic3k.asm:3492–3550`), while the ghost's index 1 stays in `Pal_SOZ2`.
+Read runtime colours from the verified ROM, and preserve host/donor consumers
+with an owner-scoped private palette projection. Retained SAT records must keep
+native palette bits and semantic donor ownership, never a leased GPU row number;
+restore may allocate banks in a different order. Check actual ROM-backed pixels
+at native/wide viewports and unchanged ordinary actors, not only loaded art.

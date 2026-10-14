@@ -115,6 +115,16 @@ owner first loads, invalidating the run with ClassNotFoundException. Isolate all
 builds from live correctness runs as well as timing; separate Java input-plan
 compilation that only reads an already-built classpath from Maven rebuilding it.
 
+Prebuilt captures still need execution admission (2026-10-14, Chaos reel): a
+GameplayCaptureTool Java child read an immutable target/ while an exclusive S1
+allocator diagnostic held all worktree build locks. The diagnostic correctly
+stopped before launch; a built classpath alone provided no CPU isolation.
+Input authoring, gameplay captures, direct javac and SDK packagers must retain
+shared scheduler execution leases when coordinated measurements require them.
+Pass lease descriptors to child processes, release admission between bounded
+clips, and record each child's PID and actual UTC interval. Do not infer an
+exited PID's owning shot solely from adjacent log timestamps.
+
 Smoke is a selection, not a short-runtime guarantee (2026-10-13, queue contention):
 a ROM-backed smoke run executed 26,690 ordinary cases in about 59 minutes, then
 spent five more minutes on guards. Report candidate count and actual environment,

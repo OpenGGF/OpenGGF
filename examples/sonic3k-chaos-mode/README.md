@@ -52,6 +52,12 @@ Ring Pong, Ring Snake, Monitor Stack, Shield Beat and Badnik Defence implement b
 
 Dry gravity applies to dry native Sonic. Head scaling uses reviewed native head masks, with player/team scope. Ring Confetti only qualifies with more than 32 carried rings and makes full inventory hurt scatter recoverable; hurt still loses the full carried inventory. Sleepy Springs weakens qualified downward launches; upward/horizontal routes retain their native minimum unless the host has a reviewed weaker route contract. Team swap needs an eligible sidekick. Spawned solids, rescue platforms, vines, carry, checkpoint moves and local fluid require host-owned safe geometry and bounded native lifetimes. Bosses, anchored enemy graphs and mandatory route actions remain subject to native qualifications.
 
+Too Many Sonics retains up to 24 bright frozen native poses, sampled every three active presentations. Each pose keeps its admitted body/appendage art, flips and priority; it cannot reveal a suppressed player or change collision.
+
+It's Raining Rings showers the full viewport from its top edge, with a slight diagonal fall, native bounce and a separate 48-ring budget. Leaky Pockets drops two real rings per native second behind the player's movement. Dropped rings wait 24 native ticks before collection and remain recoverable for up to five native seconds, including after the effect ends. Spending happens only when the ring is admitted, and the last carried ring is preserved. These are actual ring inventory changes; expiry does not restore spent rings.
+
+Chaos-spawned Carnival Night bumpers and Sandopolis ghosts use their ROM donor palettes in private owner-scoped banks. The host act's palette remains owned by its native consumers. Rewind captures native palette bits and object identity, then resolves private GPU residency at drawing time.
+
 Wrong-Zone Scenery samples the prepared Act 1 backgrounds of AIZ, HCZ, LBZ and DEZ, excluding the current zone. The public scenery policy admits indices 0–13 for host qualification; the other donor indices currently have no prepared background and are not sampled by this mod.
 
 Jukebox Surprise has a timed source capped at three active presentation seconds and an independent 180-native-tick limit (three nominal seconds at 60 Hz). Native tick pacing affects that nominal duration; earlier native music intent, warnings or source expiry can end the override. Native priority owns admission and restoration.
