@@ -39,6 +39,9 @@ Unreleased. The earlier development themes remain in
   Monkey Dude and Bloominator projectiles activate in their own initialization pass,
   use native culling bounds and retain marked slots until the next dispatch,
   including the complete object-manager culling pass.
+  Rhinobot waits for its native placeholder render sign and keeps initialization
+  and delayed slot retirement as separate phases, including through rewind.
+  It remains dormant while vertically hidden.
 
 - **S3K breakable floors:** Cork's placed record becomes its first moving
   fragment, preserving checked sibling allocation, native motion and render

@@ -5459,3 +5459,23 @@ literal branch/table values, partial allocation and both-way recreation; a faile
 local approach is setup evidence, not grounds to change native contact.
 
 Origin: 2026-10-14 Cork parity follow-up over `d8025e094`.
+
+
+## Offscreen waiter sign and release have separate range phases
+
+`Obj_WaitOffscreen` installs an empty $20×$20 mapping; `loc_85AD2` reads its
+previous Render_Sprites sign, including Y and copied-camera bounds. The scan sets
+bit7 before checking a zero mapping count, so zero pixels do not mean no sign.
+A newly installed but undispatched object has not queued that scan. Preserve
+inclusive left/top and exclusive right/bottom edges, both placement flip bits,
+and the cleared priority word until the actual attribute-loader dispatch.
+
+`loc_85B02` restores the saved operation and RTS before any coarse-X tail. A new
+camera cutoff on that release pass cannot erase the object. The undrawn waiter
+uses immediate `loc_85AFC` clear; a later `Sprite_CheckDeleteTouchSlotted` tail
+publishes status7/Delete_Current code, then clears next dispatch. Keep captured
+semantic phases in the owning object and use the existing respawn bridge;
+manager culling must not collapse them. Test both-direction recreation across
+wait/publication/release/Init/delete markers, not just current visibility.
+
+Origin: 2026-10-14 Rhinobot parity slice over `6fc85aab8`.

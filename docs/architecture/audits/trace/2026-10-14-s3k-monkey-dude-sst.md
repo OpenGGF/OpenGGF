@@ -424,3 +424,80 @@ All commands retain Java25/surfaceless EGL and the verified absolute S3K ROM;
 unit-only checks use lean, traces/domain checks their normal lanes. No broad or
 release full-suite run occurred. Cork native pixels/audio, ICZ route/configuration
 breadth and the unchanged strict frontiers remain separate obligations.
+
+
+## Rhinobot prior-render waiter and native range phases
+
+Source context: `6fc85aab8` plus the local Rhinobot candidate, tested runtime
+source SHA256 `ad3f6534b265c8536d020e56b760fe334ad397a38480d6aaf409020112a7e8a8`.
+After qualification only three inherited setup-reference comment strings changed
+from the regular helper to `SetUp_ObjAttributesSlotted` (:178850–178896); noncomment
+source and line counts are identical. Committed source SHA256 is `51d88e7f958a0ed30ba82e023fb28045249923b7edcd13f71c08b74f8c60711a`.
+No movie, fixture, shared allocator, culling algorithm or clock changed.
+
+The previous sampled allocation-presence frontier was returned AIZ segment2
+row2133, native-only slot6. Its full native code is $85AD2, not a low-byte object
+ID: the physical waiter appears at1051 at($2820,$0320), stays in that operation
+through2133 and clears at2154. Native cameraY never falls below930 during
+1051..2153, while the $20-high placeholder ends at832. The engine's same placed
+Rhinobot began X-only patrol by1055 and retired early at2133.
+
+`Obj_WaitOffscreen` / `loc_85AD2` (:180271–180303) installs a $20×$20 zero-piece
+mapping and reads the preceding Render_Sprites sign bit. The scan uses copied
+camera coordinates, inclusive left/top and exclusive right/bottom bounds
+(:36340–36381); it sets the sign before rejecting Map_Offscreen's zero pieces.
+The corrected object captures dispatch and prior-sign state, suppresses body
+pixels while the placeholder is installed, and leaves its priority word0 until
+Init loads $280/bucket5 and dimensions $14/$10. `loc_85B02` restores the saved
+operation and returns before both range tails; Init owns the next dispatch.
+
+The independent review identified a release edge which Y-only tests missed:
+a prior visible sign followed by a large camera-X move still returns natively,
+but inherited post-routine culling deleted the owner. The local owner now keeps
+all three range phases distinct. An undrawn waiter takes `loc_85AFC`'s immediate
+clear; release bypasses range; Init/active `Sprite_CheckDeleteTouchSlotted` /
+`Go_Delete_SpriteSlotted` (:179047–179098) publishes status7/Delete_Current code
+and frees the physical slot on the following dispatch. The existing semantic
+respawn bridge clears the placement latch; captured pending retirement emits no
+touch or body draw. Shared manager culling and ordinary allocation are unchanged.
+
+Negative19716 on exact `6fc` runtime is8/8fail/0errors/0skip at14:43:04 BST,
+24.910s execution/0queue: five vertical dormancy cases plus initial/unpublished
+phase and premature body drawing. Prior21336 was a snapshot-helper draft
+compilation error, not behavioral evidence. First candidate77822 passes596/
+0/0/0 at14:49:53 BST,70s execution/198s queue. Additional exact header/release
+negative87004 is3/2fail/0errors/0skip at14:52:08 BST,24.439s execution/13s queue;
+immediate undrawn-waiter deletion is its passing control.
+
+Final affected8226 is599/0/0/0 at14:55:26 BST,76s execution/0queue. Selection:
+`TestRhinobotNativeWaitGraph,TestRhinobotBadnikInstance,TestS3kSelfContainedTransientRewind,TestScalarOnlyCodecDeletion,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`.
+The new class contributes20 component cases: the five declared camera widths
+320/352/400/528/800, literal render edges and both placement flips, empty-map
+body suppression, phase/header admission, immediate versus delayed deletion,
+and two-way recreation/two forward cycles including the 45-frame post-delete
+window. These are component camera oracles, not full preset/donor/roster or
+registered-world route certification. All four mandatory startup consumers pass.
+Commands retain Java25, surfaceless EGL and original absolute S3K ROM; the exact
+pure negative selectors use lean, the affected/domain run its normal lane.
+
+Canonical82836 is5/1fail/0errors/0skip at15:00:50 BST,98s execution/78s queue,
+using the same five-case25714 selector/profile, with output
+`target/rhinobot-wait-slot-occupancy`. Original AIZ, initial HCZ and both prefixes
+remain green. Chain segment6/8/11 raw totals stay189/12,719/82,067: physics189/
+12,604/69,393, animation0/115/12,674; first non-camera physics stays3319 P2X
+$31C1/$31CA,1583 P2X $366C/$3674,1510 Y $7D6/$7DF. Segment11 remains incomplete
+at input68,801/load-generation9. Alternate69538 is1/1fail/0errors/0skip at
+14:59:05 BST,35.067s execution/36s queue:60 grouped spans, first25589 animation
+$13/$05. No raw/grouped definition or first-animation measurement changed.
+Guards41681 passes111/0/0/0 at14:58:29 BST,35.089s execution/0queue, same four
+30177 source/rewind/timing classes/profile. No broad or full-suite run occurred.
+
+The read-only slot observer shows engine6 exactly($2820,$0320) at1051,1055,
+1688 and2133, then absent at2154, matching the actual native waiter lifecycle.
+Sampled allocation-presence, including reserved keys, advances2133→2897:
+native-only20, last preceding retained sample2881. This is neither whole native
+child dispatch nor strict trace closure. Ring25/flash17 versus native18/22
+remains. Earlier native/engine Monkey/projectile/HCZ images stay separately
+source-bounded; this slice adds no native pixel/audio qualification. Rhinobot
+charge/brake children, slotted art/DPLC pressure and the inherited dash-timeout
+fallback remain separate native-conformance limits, not claims from these tests.

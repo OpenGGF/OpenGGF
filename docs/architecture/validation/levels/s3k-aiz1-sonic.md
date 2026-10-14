@@ -687,3 +687,21 @@ source over `d8025e094`; strict original AIZ/initial HCZ/prefix2 remain green.
 Whole-act donor/roster/viewport physical contact, complete registered-world Cork
 windows and native rendered-pixel/audio parity remain unqualified. Allocation
 sampling improves1688→2133 but whole-chain and alternate AIZ frontiers remain red.
+
+
+## Rhinobot native waiter — 2026-10-14
+
+The placed Rhinobot's $20×$20 empty-map waiter now consumes the preceding full
+XY render sign, holds the cleared priority/header until Init, and distinguishes
+immediate waiter deletion, range-free release and Slotted next-dispatch clear.
+Native original-controller returned-AIZ slot6 at($2820,$0320) stays dormant
+1051..2133 and clears2154; the engine now matches those retained observations.
+20 independent component camera/header/recreation cases span declared widths
+320/352/400/528/800 and both native flips. The affected599 and guard111 checks
+pass, with the original AIZ/initial HCZ/two-prefix controls still green.
+[Exact scope and commands](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#rhinobot-prior-render-waiter-and-native-range-phases).
+Sampled allocation presence moves2133→2897; the alternate/whole-chain strict
+frontiers remain red. This does not certify physical contact/registered-world
+Rhinobot windows across products or native pixels/audio. Its charge/brake child
+owners, slotted art/DPLC pressure and inherited nonnative dash timeout remain
+separate source-conformance follow-ups.
