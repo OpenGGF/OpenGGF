@@ -112429,3 +112429,34 @@ closure. Ring25/flash17 versus native18/22 remains. Guard30177 passes111/0/0/0
 at14:30:04 BST (33.360s execution/0queue);65122 was canceled130 before tests,
 sender unattributed, then replaced only after no matching live request remained.
 No broad/full suite or new native-pixel/audio claim.
+
+
+### 2026-10-14 — Rhinobot prior render and Slotted lifetime; strict fields unchanged
+
+Owned `bugfix/ai-s3k-parity-trace`, source `6fc85aab8` plus Rhinobot runtime
+SHA256 `ad3f6534b265c8536d020e56b760fe334ad397a38480d6aaf409020112a7e8a8`.
+[Owning routines, negatives and source limits](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#rhinobot-prior-render-waiter-and-native-range-phases).
+`loc_85AD2` now consumes a dispatched placeholder's previous full-XY render sign,
+not current X alone. Release/Init remain separate; the cleared header retains
+priority0, release bypasses range, and the Slotted tail retains its native delete
+marker until the next dispatch. No controller, fixture, shared allocator/clock
+or manager-culling change. Affected8226 passes599/0/0/0 (20 new component cases);
+all mandatory startup, scalar and existing Rhinobot consumers pass.
+
+The exact canonical/alternate/guard commands are the three25714 commands in the
+preceding Cork entry, with the same Java25/EGL/absolute original-ROM environment.
+Canonical82836 completes5/1fail/0errors/0skip at15:00:50 BST (98s execution/78s
+queue): original AIZ, initial HCZ and both prefixes green. Chain raw totals
+segment6/8/11 remain189/12,719/82,067, physics189/12,604/69,393 and animation
+0/115/12,674. First non-camera physics remains3319 P2X $31C1/$31CA,
+1583 P2X $366C/$3674,1510 Y $7D6/$7DF; the input68,801/load-generation9 stop
+remains. Alternate69538 is1/1fail/0errors/0skip at14:59:05 BST (35.067s execution/
+36s queue),60 grouped spans, first25589 animation $13/$05. Guard41681 passes
+111/0/0/0 at14:58:29 BST (35.089s execution/0queue). No metric was relaxed.
+
+Observer output `target/rhinobot-wait-slot-occupancy` confirms original slot6
+stays($2820,$0320) through the native waiter then clears2154. Sampled allocation
+presence advances2133→2897, native-only20; last preceding sample2881. Existing
+reservations are included, so this is allocation evidence, not full child/type
+conformance or strict closure. Ring25/flash17 versus native18/22 remains. No new
+native rendered/audio or complete-game parity claim follows.
