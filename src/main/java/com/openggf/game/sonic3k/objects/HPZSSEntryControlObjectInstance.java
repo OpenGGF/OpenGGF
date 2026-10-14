@@ -3,6 +3,8 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.camera.Camera;
 import com.openggf.game.sonic3k.S3kEmeraldProgression;
+import com.openggf.game.sonic3k.S3kPaletteOwners;
+import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.S3kSanctuaryRuntimeState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -124,6 +126,35 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
         runtime = new S3kSanctuaryRuntimeState(progression, true, stageIndex, succeeded);
     }
 
+    /**
+     * Obj_HPZSSEntryControl loc_90998/loc_909B0 prepares the target bank in
+     * the initial Process_Sprites at Level loc_6468, before loc_64DC arms the
+     * black reveal. The engine represents that reveal as an RGB overlay on
+     * a prepared current bank, so publish the staged destination here.
+     * Results hosting has its own Normal/Target palette model and bypasses
+     * this publication. childrenSpawned captures the one-shot setup lifetime.
+     */
+    private void publishEntryPaletteUnderFade() {
+        if (tryServices() == null) {
+            return;
+        }
+        var registry = services().paletteOwnershipRegistryOrNull();
+        var levelManager = services().levelManager();
+        var level = levelManager != null ? levelManager.getCurrentLevel() : null;
+        if (registry == null || level == null) {
+            return;
+        }
+        for (int line = 1; line < 4; line++) {
+            S3kPaletteWriteSupport.applyLine(
+                    registry, level, services().graphicsManager(),
+                    S3kPaletteOwners.HPZ_PALETTE_CONTROL,
+                    S3kPaletteOwners.PRIORITY_ZONE_EVENT,
+                    line, registry.targetSegaData(line, 0, 16));
+        }
+        S3kPaletteWriteSupport.resolvePendingWritesNow(
+                registry, level, services().graphicsManager());
+    }
+
     public boolean isHostingSpecialStageResults() {
         return resultsBackdrop;
     }
@@ -147,6 +178,9 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
     public void update(int vIntRunCount, PlayableEntity player) {
         ensureState();
         if (!childrenSpawned) {
+            if (!resultsBackdrop) {
+                publishEntryPaletteUnderFade();
+            }
             spawnInitialChildren();
         }
         if (resultsBackdrop) {
