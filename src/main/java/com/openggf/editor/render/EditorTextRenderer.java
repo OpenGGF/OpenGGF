@@ -12,7 +12,11 @@ import java.util.List;
 import java.util.Objects;
 
 public class EditorTextRenderer {
-    public record TextCommand(String text, int x, int y, int lineHeight, DebugColor color, FontSize fontSize) {}
+    public record TextCommand(String text, int x, int y, int lineHeight, DebugColor color, FontSize fontSize, float scale) {
+        public TextCommand(String text,int x,int y,int lineHeight,DebugColor color,FontSize fontSize) {
+            this(text,x,y,lineHeight,color,fontSize,1f);
+        }
+    }
     public record PositionedLine(String text, int x, int y) {}
 
     private static final int DEFAULT_LINE_HEIGHT = 10;
@@ -40,6 +44,23 @@ public class EditorTextRenderer {
         if (!commands.isEmpty()) {
             graphicsManager.registerCommand(buildTextBatchCommand(commands));
         }
+    }
+
+    public void renderFittedLines(List<String> lines,int x,int y,int maxWidth,float scale,int lineHeight) {
+        List<TextCommand> commands=buildFittedTextCommands(lines,x,y,maxWidth,scale,lineHeight);
+        if(!commands.isEmpty())graphicsManager.registerCommand(buildTextBatchCommand(commands));
+    }
+    public List<TextCommand> buildFittedTextCommands(List<String> lines,int x,int y,int maxWidth,float scale,int lineHeight) {
+        List<TextCommand> result=new ArrayList<>();
+        for(String line:lines) {
+            if(line!=null&&!line.isBlank()) {
+                int maxChars=Math.max(1,(int)(maxWidth/(9f*scale)));
+                String fitted=line.length()>maxChars?line.substring(0,Math.max(0,maxChars-1))+"…":line;
+                result.add(new TextCommand(fitted,x,y,lineHeight,DEFAULT_COLOR,DEFAULT_FONT_SIZE,scale));
+            }
+            y+=lineHeight;
+        }
+        return List.copyOf(result);
     }
 
     public void renderPositionedLines(List<PositionedLine> lines) {
@@ -96,7 +117,8 @@ public class EditorTextRenderer {
                 textRenderer.setProjectionMatrix(projectionMatrix);
             }
             for (TextCommand command : commands) {
-                textRenderer.drawShadowedText(command.text(), command.x(), command.y(), command.color());
+                if(command.scale()==1f)textRenderer.drawShadowedText(command.text(),command.x(),command.y(),command.color());
+                else textRenderer.drawShadowedText(command.text(),command.x(),command.y(),command.color(),command.scale());
             }
         }
     }

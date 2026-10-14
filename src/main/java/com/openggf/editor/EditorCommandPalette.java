@@ -21,6 +21,17 @@ public final class EditorCommandPalette {
     private Runnable freshStart;
     private final Runnable filterAction;
     private List<ExtraCommand> extraCommands = List.of();
+    private List<HostCommand> hostCommands = List.of();
+    public record HostCommand(String label, Runnable action) {
+        public HostCommand {
+            java.util.Objects.requireNonNull(label, "label");
+            java.util.Objects.requireNonNull(action, "action");
+        }
+    }
+    public void setHostCommands(List<HostCommand> commands) {
+        hostCommands = List.copyOf(commands);
+        rebuildExtraCommands();
+    }
     private Consumer<MenuFeedback.Cue> feedback = cue -> { };
 
     public EditorCommandPalette() { this(null); }
@@ -41,6 +52,7 @@ public final class EditorCommandPalette {
     }
 
     public void close() { open = false; }
+    public void open() { open = true; }
 
     public static EditorCommandPalette forController(LevelEditorController controller) {
         return controller.commandPalette();
@@ -104,6 +116,7 @@ public final class EditorCommandPalette {
         if (filterAction != null) commands.add(new ExtraCommand("Toggle library filter", filterAction));
         if (playtest != null) commands.add(new ExtraCommand("Playtest current edits", playtest));
         if (freshStart != null) commands.add(new ExtraCommand("Fresh start", freshStart));
+        hostCommands.forEach(command -> commands.add(new ExtraCommand(command.label(), command.action())));
         extraCommands = List.copyOf(commands);
         selected = Math.min(selected, commandCount() - 1);
     }

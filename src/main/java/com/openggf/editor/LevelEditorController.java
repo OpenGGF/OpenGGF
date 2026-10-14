@@ -1,16 +1,12 @@
 package com.openggf.editor;
 
-import com.openggf.editor.commands.DeriveBlockFromChunksCommand;
-import com.openggf.editor.commands.DeriveChunkFromPatternsCommand;
 import com.openggf.editor.commands.PlaceBlockCommand;
 import com.openggf.editor.commands.DeleteObjectSpawnCommand;
 import com.openggf.editor.commands.DeleteRingSpawnCommand;
-import com.openggf.editor.commands.CycleCellCollisionModeCommand;
 import com.openggf.editor.commands.MoveObjectSpawnCommand;
 import com.openggf.editor.commands.MoveRingSpawnCommand;
 import com.openggf.editor.commands.PlaceObjectSpawnCommand;
 import com.openggf.editor.commands.PlaceRingSpawnCommand;
-import com.openggf.editor.commands.SetChunkSolidTileIndexCommand;
 import com.openggf.editor.persistence.EditorSaveManager;
 import com.openggf.editor.persistence.FullLevelExporter;
 import com.openggf.editor.render.EditorLibraryBrowserPane;
@@ -45,6 +41,10 @@ public final class LevelEditorController {
     private int selectedChunkCellX;
     private int selectedChunkCellY;
     private Integer selectedChunkDescriptorRaw;
+    private Integer chunkBrushRaw;
+    private Integer blockBrushIndex;
+    private final java.util.Set<Integer> ownedBlocks=new java.util.HashSet<>();
+    private final java.util.Set<Integer> ownedChunks=new java.util.HashSet<>();
     private Integer selectedPatternRaw;
     private int activeLayer;
     private MutableLevel level;
@@ -61,10 +61,54 @@ public final class LevelEditorController {
     private final EditorLibraryBrowserPane libraryBrowser = new EditorLibraryBrowserPane();
     private ObjectArtProvider objectArtProvider;
     private boolean libraryFilterInputActive;
+    private Runnable pendingEditsFinisher = () -> { };
+    private boolean cameraNavigationRequested = true;
+    private String statusText = "Ready";
+
+    public void setPendingEditsFinisher(Runnable finisher) {
+        pendingEditsFinisher = Objects.requireNonNull(finisher, "finisher");
+    }
+
+    public void finishPendingEdits() { pendingEditsFinisher.run(); }
+    public String statusText() { return statusText; }
+    public void setStatus(String text) { statusText = Objects.requireNonNull(text, "text"); }
+    public boolean consumeCameraNavigationRequest() {
+        boolean requested = cameraNavigationRequested;
+        cameraNavigationRequested = false;
+        return requested;
+    }
+    /** Pointer hover never asks the camera to follow itself. */
+    public void setPointerWorldCursor(EditorCursorState cursor) {
+        worldCursor = clampWorldCursor(cursor.x(), cursor.y());
+    }
+    public void focusRegion(EditorFocusRegion region) {
+        finishPendingEdits();
+        focusRegion = Objects.requireNonNull(region, "region");
+        libraryFilterInputActive = false;
+        refreshLibraryBrowser();
+    }
+    public void selectActiveCell(int x, int y) {
+        finishPendingEdits();
+        int side = activeGridSide();
+        if (depth == EditorHierarchyDepth.BLOCK) {
+            selectedBlockCellX = clamp(x, 0, side - 1);
+            selectedBlockCellY = clamp(y, 0, side - 1);
+        } else if (depth == EditorHierarchyDepth.CHUNK) {
+            selectedChunkCellX = clamp(x, 0, side - 1);
+            selectedChunkCellY = clamp(y, 0, side - 1);
+        }
+    }
 
     public void attachLevel(MutableLevel level) {
-        this.level = Objects.requireNonNull(level, "level");
+        Objects.requireNonNull(level, "level");
+        finishPendingEdits();
+        if (this.level == level) return;
+        this.level = level;
+        cameraNavigationRequested = true;
+        statusText = "Ready";
+        lastExportDirectory = null;
         history.clear();
+        ownedBlocks.clear();ownedChunks.clear();
         depth = EditorHierarchyDepth.WORLD;
         focusRegion = EditorFocusRegion.WORLD_CANVAS;
         selection = EditorSelectionState.empty();
@@ -75,6 +119,8 @@ public final class LevelEditorController {
         selectedChunkCellX = 0;
         selectedChunkCellY = 0;
         selectedChunkDescriptorRaw = null;
+        chunkBrushRaw = null;
+        blockBrushIndex = null;
         selectedPatternRaw = null;
         activeLayer = 0;
         spawnEditMode = EditorSpawnEditMode.TILES;
@@ -98,15 +144,29 @@ public final class LevelEditorController {
     public void configureSpawnEditing(ObjectRegistry registry, ObjectPlacementEncoding encoding,
                                       ObjectArtProvider objectArtProvider) {
         MutableLevel attachedLevel = requireLevel();
+        EditorStockObjectPalette previous=objectPalette;
         objectPalette = new EditorStockObjectPalette(registry);
+        if(previous!=null) {
+            if(previous.selectedIsKeyed()) {
+                try {objectPalette.setObjectKey(previous.selectedObjectKey());}catch(IllegalArgumentException missing){setStatus("Object brush dependency unavailable");}
+            } else objectPalette.setObjectId(previous.selectedObjectId());
+            objectPalette.setSubtype(previous.selectedSubtype());
+            if(previous.renderFlags()!=0)objectPalette.toggleRenderFlag(previous.renderFlags());
+            if(!previous.respawnTracked())objectPalette.toggleRespawnTracked();
+        }
         spawnFactory = new EditorSpawnFactory(encoding, new EditorPlacementIdAllocator(attachedLevel));
         this.objectArtProvider = objectArtProvider;
         refreshLibraryBrowser();
     }
 
     public void setSpawnEditMode(EditorSpawnEditMode mode) {
+        finishPendingEdits();
         libraryFilterInputActive=false;
         spawnEditMode = Objects.requireNonNull(mode, "mode");
+        if(mode!=EditorSpawnEditMode.TILES&&depth!=EditorHierarchyDepth.WORLD) {
+            depth=EditorHierarchyDepth.WORLD;focusRegion=EditorFocusRegion.WORLD_CANVAS;
+            selection=new EditorSelectionState(blockBrushIndex,null);
+        }
         selectedObjectSpawn = null;
         selectedRingSpawn = null;
         selectedRingBackingObject = null;
@@ -129,21 +189,24 @@ public final class LevelEditorController {
     }
 
     public void placeObjectSpawnAtCursor() {
+        finishPendingEdits();
         requireSpawnMode(EditorSpawnEditMode.OBJECTS);
         if (!objectPalette().selectedIsKeyed()
                 && !requireSpawnFactory().canCreateObject(objectPalette().selectedObjectId())) {
+            setStatus("This object id is reserved or unsupported; choose another object");
             return;
         }
         ObjectSpawn spawn = objectPalette().selectedIsKeyed()
                 ? requireSpawnFactory().createKeyedObjectSpawn(worldCursor.x(), worldCursor.y(),
-                        objectPalette().selectedObjectKey(), objectPalette().selectedSubtype(), 0, true)
+                        objectPalette().selectedObjectKey(), objectPalette().selectedSubtype(), objectPalette().renderFlags(), objectPalette().respawnTracked())
                 : requireSpawnFactory().createObjectSpawn(worldCursor.x(), worldCursor.y(),
-                        objectPalette().selectedObjectId(), objectPalette().selectedSubtype(), 0, true);
+                        objectPalette().selectedObjectId(), objectPalette().selectedSubtype(), objectPalette().renderFlags(), objectPalette().respawnTracked());
         history.execute(new PlaceObjectSpawnCommand(requireLevel(), spawn));
         selectedObjectSpawn = spawn;
     }
 
     public void placeRingSpawnAtCursor() {
+        finishPendingEdits();
         requireSpawnMode(EditorSpawnEditMode.RINGS);
         RingSpawn spawn = requireSpawnFactory().createRingSpawn(worldCursor.x(), worldCursor.y());
         ObjectSpawn backingObject = requireSpawnFactory().createRingBackingObject(spawn);
@@ -158,6 +221,7 @@ public final class LevelEditorController {
     }
 
     public void deleteSpawnAtCursor() {
+        finishPendingEdits();
         MutableLevel attachedLevel = requireLevel();
         if (spawnEditMode == EditorSpawnEditMode.OBJECTS) {
             ObjectSpawn spawn = findObjectAtCursor();
@@ -177,6 +241,7 @@ public final class LevelEditorController {
     }
 
     public void moveSelectedSpawn(int x, int y) {
+        finishPendingEdits();
         MutableLevel attachedLevel = requireLevel();
         if (spawnEditMode == EditorSpawnEditMode.OBJECTS && selectedObjectSpawn != null) {
             ObjectSpawn moved = requireSpawnFactory().moveObjectSpawn(selectedObjectSpawn, x, y);
@@ -200,26 +265,65 @@ public final class LevelEditorController {
     public void eyedropSpawnAtCursor() {
         if (spawnEditMode == EditorSpawnEditMode.OBJECTS) {
             selectedObjectSpawn = findObjectAtCursor();
-            if (selectedObjectSpawn != null) objectPalette().eyedrop(selectedObjectSpawn);
+            if (selectedObjectSpawn != null) {
+                try {objectPalette().eyedrop(selectedObjectSpawn);setStatus("Object selected; +/- subtype, H/J flip, R respawn");}
+                catch(IllegalArgumentException missing) {setStatus("Selected missing object dependency: "+selectedObjectSpawn.objectKey());}
+            } else setStatus("No object within 8 pixels of the cursor");
         } else if (spawnEditMode == EditorSpawnEditMode.RINGS) {
             selectedRingSpawn = findRingAtCursor();
             selectedRingBackingObject = selectedRingSpawn == null ? null : requireLevel().ringBackingObject(selectedRingSpawn);
         }
     }
 
-    private ObjectSpawn findObjectAtCursor() {
-        if (level == null) return null;
-        return level.getObjects().stream()
-                .filter(s -> s.x() == worldCursor.x() && s.y() == worldCursor.y())
-                .filter(s -> !level.ringObjectPlacementMapping().containsKey(s))
-                .findFirst().orElse(null);
+    private long cursorDistance(int x,int y) {
+        long dx=(short)(x-worldCursor.x()),dy=(short)(y-worldCursor.y());return dx*dx+dy*dy;
     }
-
+    private ObjectSpawn findObjectAtCursor() {
+        if(level==null)return null;
+        return level.getObjects().stream().filter(s -> !level.ringObjectPlacementMapping().containsKey(s))
+                .filter(s -> cursorDistance(s.x(),s.y())<=64)
+                .min(java.util.Comparator.comparingLong((ObjectSpawn s) -> cursorDistance(s.x(),s.y()))
+                        .thenComparingInt(ObjectSpawn::layoutIndex)).orElse(null);
+    }
     private RingSpawn findRingAtCursor() {
-        if (level == null) return null;
-        return level.getRings().stream()
-                .filter(s -> s.x() == worldCursor.x() && s.y() == worldCursor.y())
-                .findFirst().orElse(null);
+        if(level==null)return null;
+        return level.getRings().stream().filter(s -> cursorDistance(s.x(),s.y())<=64)
+                .min(java.util.Comparator.comparingLong((RingSpawn s) -> cursorDistance(s.x(),s.y()))
+                        .thenComparingInt(RingSpawn::placementId)).orElse(null);
+    }
+    public ObjectSpawn selectedObjectSpawn() {return selectedObjectSpawn;}
+    public RingSpawn selectedRingSpawn() {return selectedRingSpawn;}
+    public void editSelectedSpawnProperties(int subtype,int flags,boolean respawn) {
+        finishPendingEdits();
+        if(selectedObjectSpawn==null) {setStatus("Pick an object before changing its properties");return;}
+        ObjectSpawn changed=requireSpawnFactory().withProperties(selectedObjectSpawn,subtype,flags,respawn);
+        executeCommand(new MoveObjectSpawnCommand(requireLevel(),selectedObjectSpawn,changed));
+        selectedObjectSpawn=changed;setStatus("Updated selected object; brush preserved");
+    }
+    public void adjustSelectedSpawnSubtype(int delta) {
+        if(selectedObjectSpawn==null) {setStatus("Pick an object before changing its subtype");return;}
+        editSelectedSpawnProperties((selectedObjectSpawn.subtype()+delta)&255,selectedObjectSpawn.renderFlags(),selectedObjectSpawn.respawnTracked());
+    }
+    public void toggleSelectedSpawnFlag(int mask) {
+        if(selectedObjectSpawn==null) {setStatus("Pick an object before changing flags");return;}
+        editSelectedSpawnProperties(selectedObjectSpawn.subtype(),selectedObjectSpawn.renderFlags()^mask,selectedObjectSpawn.respawnTracked());
+    }
+    public void toggleSelectedSpawnRespawn() {
+        if(selectedObjectSpawn==null) {setStatus("Pick an object before changing respawn tracking");return;}
+        editSelectedSpawnProperties(selectedObjectSpawn.subtype(),selectedObjectSpawn.renderFlags(),!selectedObjectSpawn.respawnTracked());
+    }
+    public String brushSummary() {
+        if(spawnEditMode==EditorSpawnEditMode.RINGS)return "Rings";
+        if(spawnEditMode==EditorSpawnEditMode.OBJECTS&&objectPalette!=null)
+            return "Objects brush "+objectPalette.selectedLabel()+" :%02X F%d R%s".formatted(objectPalette.selectedSubtype(),objectPalette.renderFlags(),objectPalette.respawnTracked()?"1":"0");
+        return "Terrain brush B"+blockBrushIndex+" C"+(chunkBrushRaw==null?"-":chunkBrushRaw&1023)
+                +" P"+(selectedPatternRaw==null?"-":"%04X".formatted(selectedPatternRaw));
+    }
+    public String selectionSummary() {
+        if(selectedObjectSpawn!=null)return "Selected #"+selectedObjectSpawn.layoutIndex()+" "+selectedObjectSpawn.x()+","+selectedObjectSpawn.y()
+                +" :%02X F%d R%s".formatted(selectedObjectSpawn.subtype(),selectedObjectSpawn.renderFlags(),selectedObjectSpawn.respawnTracked()?"1":"0");
+        if(selectedRingSpawn!=null)return "Ring #"+selectedRingSpawn.placementId()+" "+selectedRingSpawn.x()+","+selectedRingSpawn.y();
+        return "Block "+selection.selectedBlock()+" Chunk "+selection.selectedChunk()+" cell "+selectedBlockCellX+","+selectedBlockCellY+" / "+selectedChunkCellX+","+selectedChunkCellY;
     }
 
     private EditorSpawnFactory requireSpawnFactory() {
@@ -232,12 +336,16 @@ public final class LevelEditorController {
     }
 
     public void placeBlock(int layer, int x, int y, int blockIndex) {
+        finishPendingEdits();
         MutableLevel attachedLevel = requireLevel();
+        if(blockIndex<0||blockIndex>=Math.min(256,attachedLevel.getBlockCount()))
+            throw new IllegalArgumentException("Block is outside the map's 8-bit library");
         int before = Byte.toUnsignedInt(attachedLevel.getMap().getValue(layer, x, y));
         history.execute(new PlaceBlockCommand(attachedLevel, layer, x, y, before, blockIndex));
     }
 
     public void executeCommand(EditorCommand command) {
+        finishPendingEdits();
         history.execute(command);
         refreshSelectionFromActiveTarget();
     }
@@ -257,6 +365,7 @@ public final class LevelEditorController {
     public FullLevelExporter.ExportResult exportLevel(FullLevelExporter exporter,
                                                        FullLevelExporter.ExportRequest request)
             throws java.io.IOException {
+        finishPendingEdits();
         if (level == null) throw new IllegalStateException("No mutable level is attached");
         FullLevelExporter.ExportResult result = exporter.export(level, request);
         lastExportDirectory = result.directory();
@@ -282,33 +391,66 @@ public final class LevelEditorController {
     }
 
     public void cycleSelectedCellCollisionMode() {
-        MutableLevel attachedLevel = level;
-        Integer blockIndex = selection.selectedBlock();
-        if (attachedLevel == null || blockIndex == null || depth != EditorHierarchyDepth.BLOCK
-                || !isValidBlockIndex(attachedLevel, blockIndex)) {
-            return;
-        }
-        Block block = attachedLevel.getBlock(blockIndex);
-        int cellIndex = selectedBlockCellY * block.getGridSide() + selectedBlockCellX;
-        executeCommand(new CycleCellCollisionModeCommand(
-                attachedLevel, blockIndex, cellIndex, collisionPath));
+        finishPendingEdits();
+        if (depth != EditorHierarchyDepth.BLOCK) { setStatus("Enter a block to edit cell collision"); return; }
+        int shift=collisionPath==EditorCollisionPath.PRIMARY?12:14;
+        editLocalComposition(raw -> (raw & ~(3<<shift)) | (((((raw>>>shift)&3)+1)&3)<<shift),null);
     }
 
     public void setSelectedChunkSolidTileIndex(int newIndex) {
-        MutableLevel attachedLevel = level;
-        Integer chunkIndex = selection.selectedChunk();
-        if (attachedLevel == null || chunkIndex == null || !isCollisionIndexEditingDepth()
-                || !isValidChunkIndex(attachedLevel, chunkIndex)) {
-            return;
+        finishPendingEdits();
+        if(level==null||!isCollisionIndexEditingDepth()) { setStatus("Enter a block or chunk to edit collision shape");return; }
+        if(newIndex<0||newIndex>=level.getSolidTileCount())throw new IllegalArgumentException("Collision shape is outside the library");
+        int stateIndex=Chunk.PATTERNS_PER_CHUNK+(collisionPath==EditorCollisionPath.PRIMARY?0:1);
+        editLocalComposition(null,state -> state[stateIndex]=newIndex);
+    }
+
+    /** Changes only the world placement being edited, preserving shared library definitions. */
+    private void editLocalComposition(java.util.function.IntUnaryOperator descriptorEdit,
+                                      java.util.function.Consumer<int[]> chunkEdit) {
+        MutableLevel attached=requireLevel();WorldMapPosition position=resolveWorldMapPosition(attached);
+        if(position==null||depth==EditorHierarchyDepth.WORLD) {setStatus("No composition target selected");return;}
+        int source=Byte.toUnsignedInt(attached.getMap().getValue(activeLayer,position.mapX(),position.mapY()));
+        if(!Objects.equals(selection.selectedBlock(),source)) {setStatus("Pick the block at the world cursor before editing");return;}
+        Block sourceBlock=attached.getBlock(source);
+        int blockTarget=ownedBlocks.contains(source)&&countBlockPlacements(source)==1?source:findUnreferencedBlockSlot(attached,source);
+        if(blockTarget<0) {setStatus("No free block slots; create a project with reserved editing space");return;}
+        int[] blockState=sourceBlock.saveState().clone();
+        int cell=selectedBlockCellY*sourceBlock.getGridSide()+selectedBlockCellX;
+        if(cell<0||cell>=blockState.length) {setStatus("No block cell selected");return;}
+        int chunkTarget=-1;int[] chunkState=null;
+        if(descriptorEdit!=null)blockState[cell]=descriptorEdit.applyAsInt(blockState[cell]);
+        if(chunkEdit!=null) {
+            int sourceChunk=blockState[cell]&CHUNK_INDEX_MASK;
+            if(depth==EditorHierarchyDepth.CHUNK&&!Objects.equals(selection.selectedChunk(),sourceChunk)) {
+                setStatus("Pick the chunk at the world target before editing");return;
+            }
+            if(!isValidChunkIndex(attached,sourceChunk)) {setStatus("Cell references a missing chunk");return;}
+            chunkTarget=blockTarget==source&&ownedChunks.contains(sourceChunk)&&countChunkReferences(sourceChunk)==1?sourceChunk
+                    :findUnreferencedChunkSlot(attached,sourceChunk);
+            if(chunkTarget<0) {setStatus("No free chunk slots; create a project with reserved editing space");return;}
+            chunkState=attached.getChunk(sourceChunk).saveState().clone();chunkEdit.accept(chunkState);
+            blockState[cell]=replaceChunkIndex(blockState[cell],chunkTarget);
         }
-        Chunk chunk = attachedLevel.getChunk(chunkIndex);
-        int current = collisionPath == EditorCollisionPath.PRIMARY
-                ? chunk.getSolidTileIndex() : chunk.getSolidTileAltIndex();
-        if (current == newIndex) {
-            return;
+        executeCommand(new com.openggf.editor.commands.LocalCompositionCommand(attached,activeLayer,
+                position.mapX(),position.mapY(),blockTarget,blockState,chunkTarget,chunkState));
+        ownedBlocks.add(blockTarget);if(chunkTarget>=0)ownedChunks.add(chunkTarget);
+        setStatus("Edited this placement; other placements preserved");
+    }
+    private int countBlockPlacements(int index) {
+        int count=0;var map=level.getMap();
+        for(int layer=0;layer<map.getLayerCount();layer++)for(int y=0;y<map.getHeight();y++)for(int x=0;x<map.getWidth();x++)
+            if(Byte.toUnsignedInt(map.getValue(layer,x,y))==index)count++;
+        return count;
+    }
+    private int countChunkReferences(int index) {
+        int count=0;
+        for(int b=0;b<level.getBlockCount();b++) {
+            Block block=level.getBlock(b);
+            for(int y=0;y<block.getGridSide();y++)for(int x=0;x<block.getGridSide();x++)
+                if(block.getChunkDesc(x,y).getChunkIndex()==index)count++;
         }
-        executeCommand(new SetChunkSolidTileIndexCommand(
-                attachedLevel, chunkIndex, collisionPath, newIndex));
+        return count;
     }
 
     public void adjustSelectedChunkSolidTileIndex(int delta) {
@@ -322,7 +464,9 @@ public final class LevelEditorController {
         int current = collisionPath == EditorCollisionPath.PRIMARY
                 ? chunk.getSolidTileIndex() : chunk.getSolidTileAltIndex();
         int maxIndex = Math.max(0, attachedLevel.getSolidTileCount() - 1);
-        setSelectedChunkSolidTileIndex(clamp(current + delta, 0, maxIndex));
+        int changed=clamp(current+delta,0,maxIndex);
+        if(current==changed)return;
+        setSelectedChunkSolidTileIndex(changed);
     }
 
     private boolean isCollisionIndexEditingDepth() {
@@ -330,6 +474,7 @@ public final class LevelEditorController {
     }
 
     public void undo() {
+        finishPendingEdits();
         if (history.undo()) {
             refreshSelectionFromActiveTarget();
             reconcileSpawnSelection();
@@ -337,6 +482,7 @@ public final class LevelEditorController {
     }
 
     public void redo() {
+        finishPendingEdits();
         if (history.redo()) {
             refreshSelectionFromActiveTarget();
             reconcileSpawnSelection();
@@ -371,6 +517,7 @@ public final class LevelEditorController {
     }
 
     public void toggleActiveLayer() {
+        finishPendingEdits();
         MutableLevel attachedLevel = requireLevel();
         int layerCount = attachedLevel.getMap().getLayerCount();
         if (layerCount < 2) {
@@ -387,6 +534,7 @@ public final class LevelEditorController {
     public void selectBlock(int blockIndex) {
         requireNonNegative(blockIndex, "blockIndex");
         selection = new EditorSelectionState(blockIndex, null);
+        blockBrushIndex = blockIndex;
         selectedChunkDescriptorRaw = null;
         if (depth == EditorHierarchyDepth.CHUNK) {
             depth = EditorHierarchyDepth.BLOCK;
@@ -401,6 +549,7 @@ public final class LevelEditorController {
         }
         selection = new EditorSelectionState(selection.selectedBlock(), chunkIndex);
         selectedChunkDescriptorRaw = unflaggedChunkDescriptorRaw(chunkIndex);
+        chunkBrushRaw = selectedChunkDescriptorRaw;
     }
 
     public Block selectedBlockPreview() {
@@ -430,6 +579,11 @@ public final class LevelEditorController {
             return null;
         }
         return attachedLevel.getChunk(chunkIndex);
+    }
+
+    public ChunkDesc selectedBlockChunkDescriptor(int x,int y) {
+        Block block=selectedBlockPreview();
+        return block==null?new ChunkDesc():new ChunkDesc(block.getChunkDesc(x,y).get());
     }
 
     public Chunk selectedBlockChunkPreview(int blockCellX, int blockCellY) {
@@ -463,11 +617,23 @@ public final class LevelEditorController {
     }
 
     public void descend() {
+        finishPendingEdits();
         libraryFilterInputActive=false;
+        if (isSpawnEditing()) {setStatus("Switch to terrain mode to edit composition");return;}
         if (depth == EditorHierarchyDepth.WORLD && selection.selectedBlock() != null) {
+            if(level!=null) {
+                WorldMapPosition p=resolveWorldMapPosition(level);
+                int target=Byte.toUnsignedInt(level.getMap().getValue(activeLayer,p.mapX(),p.mapY()));
+                selection=new EditorSelectionState(target,selection.selectedChunk());
+            }
             depth = EditorHierarchyDepth.BLOCK;
             focusRegion = EditorFocusRegion.BLOCK_PANE;
         } else if (depth == EditorHierarchyDepth.BLOCK && selection.selectedChunk() != null) {
+            if(level!=null) {
+                ChunkDesc target=selectedBlockChunkDescriptor(selectedBlockCellX,selectedBlockCellY);
+                selection=new EditorSelectionState(selection.selectedBlock(),target.getChunkIndex());
+                selectedChunkDescriptorRaw=target.get();
+            }
             depth = EditorHierarchyDepth.CHUNK;
             focusRegion = EditorFocusRegion.CHUNK_PANE;
         }
@@ -475,6 +641,7 @@ public final class LevelEditorController {
     }
 
     public void ascend() {
+        finishPendingEdits();
         libraryFilterInputActive=false;
         if (depth == EditorHierarchyDepth.CHUNK) {
             depth = EditorHierarchyDepth.BLOCK;
@@ -482,6 +649,7 @@ public final class LevelEditorController {
         } else if (depth == EditorHierarchyDepth.BLOCK) {
             depth = EditorHierarchyDepth.WORLD;
             focusRegion = EditorFocusRegion.WORLD_CANVAS;
+            selection = new EditorSelectionState(blockBrushIndex,null);
         }
         refreshLibraryBrowser();
     }
@@ -495,6 +663,7 @@ public final class LevelEditorController {
     }
 
     public void cycleFocusRegion() {
+        finishPendingEdits();
         libraryFilterInputActive=false;
         EditorFocusRegion[] cycle = activeFocusCycle();
         for (int i = 0; i < cycle.length; i++) {
@@ -509,6 +678,7 @@ public final class LevelEditorController {
     }
 
     public void applyPrimaryAction() {
+        if(focusRegion==EditorFocusRegion.TOOLBAR||focusRegion==EditorFocusRegion.COMMAND_STRIP) {commandPalette.open();return;}
         if (isLibraryBrowserFocused()) {
             selectLibraryEntry();
             return;
@@ -532,8 +702,9 @@ public final class LevelEditorController {
         if (focusRegion != EditorFocusRegion.WORLD_CANVAS) {
             return;
         }
-        Integer selectedBlock = selection.selectedBlock();
+        Integer selectedBlock = blockBrushIndex;
         if (selectedBlock == null) {
+            setStatus("Choose a block from the library first");
             return;
         }
         MutableLevel attachedLevel = level;
@@ -548,116 +719,46 @@ public final class LevelEditorController {
     }
 
     private void applyBlockPrimaryAction() {
-        if (focusRegion != EditorFocusRegion.BLOCK_PANE) {
-            return;
-        }
-        Integer selectedChunk = selection.selectedChunk();
-        if (selectedChunk == null) {
-            return;
-        }
-        MutableLevel attachedLevel = level;
-        if (attachedLevel == null || !isValidChunkIndex(attachedLevel, selectedChunk)) {
-            return;
-        }
-        WorldMapPosition mapPosition = resolveWorldMapPosition(attachedLevel);
-        if (mapPosition == null) {
-            return;
-        }
-        int sourceBlockIndex = Byte.toUnsignedInt(attachedLevel.getMap().getValue(activeLayer, mapPosition.mapX(), mapPosition.mapY()));
-        if (!Objects.equals(selection.selectedBlock(), sourceBlockIndex)
-                || !isValidBlockIndex(attachedLevel, sourceBlockIndex)
-                || !isBlockCellInBounds(attachedLevel.getBlock(sourceBlockIndex), selectedBlockCellX, selectedBlockCellY)) {
-            return;
-        }
-        int derivedBlockIndex = findUnreferencedBlockSlot(attachedLevel, sourceBlockIndex);
-        if (derivedBlockIndex < 0) {
-            return;
-        }
-        int[] derivedBlockBeforeState = attachedLevel.getBlock(derivedBlockIndex).saveState();
-        int replacementChunkRaw = selectedChunkDescriptorRaw != null
-                ? selectedChunkDescriptorRaw
-                : unflaggedChunkDescriptorRaw(selectedChunk);
-        history.execute(new DeriveBlockFromChunksCommand(
-                attachedLevel,
-                activeLayer,
-                mapPosition.mapX(),
-                mapPosition.mapY(),
-                sourceBlockIndex,
-                derivedBlockIndex,
-                derivedBlockBeforeState,
-                new ChunkDesc(replacementChunkRaw),
-                selectedBlockCellX,
-                selectedBlockCellY
-        ));
-        refreshSelectionFromActiveTarget();
+        if(focusRegion!=EditorFocusRegion.BLOCK_PANE) {setStatus("Focus the block canvas to apply a chunk");return;}
+        if(chunkBrushRaw==null) {setStatus("Choose a chunk from the library first");return;}
+        int replacement=chunkBrushRaw;
+        editLocalComposition(raw -> replacement,null);
     }
 
     private void applyChunkPrimaryAction() {
-        if (focusRegion != EditorFocusRegion.CHUNK_PANE || selectedPatternRaw == null) {
-            return;
-        }
-        Integer selectedBlock = selection.selectedBlock();
-        if (selectedBlock == null) {
-            return;
-        }
-        MutableLevel attachedLevel = level;
-        if (attachedLevel == null || !isValidBlockIndex(attachedLevel, selectedBlock)) {
-            return;
-        }
-        WorldMapPosition mapPosition = resolveWorldMapPosition(attachedLevel);
-        if (mapPosition == null) {
-            return;
-        }
-        int sourceBlockIndex = Byte.toUnsignedInt(attachedLevel.getMap().getValue(activeLayer, mapPosition.mapX(), mapPosition.mapY()));
-        if (sourceBlockIndex != selectedBlock || !isValidBlockIndex(attachedLevel, sourceBlockIndex)) {
-            return;
-        }
-        Block block = attachedLevel.getBlock(sourceBlockIndex);
-        if (!isBlockCellInBounds(block, selectedBlockCellX, selectedBlockCellY)) {
-            return;
-        }
-        ChunkDesc sourceChunkDesc = block.getChunkDesc(selectedBlockCellX, selectedBlockCellY);
-        int sourceChunkIndex = sourceChunkDesc.getChunkIndex();
-        if (!Objects.equals(selection.selectedChunk(), sourceChunkIndex)
-                || !isValidChunkIndex(attachedLevel, sourceChunkIndex)) {
-            return;
-        }
-        int derivedBlockIndex = findUnreferencedBlockSlot(attachedLevel, sourceBlockIndex);
-        if (derivedBlockIndex < 0) {
-            return;
-        }
-        int derivedChunkIndex = findUnreferencedChunkSlot(attachedLevel, sourceChunkIndex);
-        if (derivedChunkIndex < 0) {
-            return;
-        }
-        int[] derivedBlockBeforeState = attachedLevel.getBlock(derivedBlockIndex).saveState();
-        int[] derivedChunkBeforeState = attachedLevel.getChunk(derivedChunkIndex).saveState();
-        EditorCommand chunkCommand = new DeriveChunkFromPatternsCommand(
-                attachedLevel,
-                derivedBlockIndex,
-                selectedBlockCellX,
-                selectedBlockCellY,
-                sourceChunkIndex,
-                derivedChunkIndex,
-                derivedChunkBeforeState,
-                new PatternDesc(selectedPatternRaw),
-                selectedChunkCellX,
-                selectedChunkCellY
-        );
-        EditorCommand blockCommand = new DeriveBlockFromChunksCommand(
-                attachedLevel,
-                activeLayer,
-                mapPosition.mapX(),
-                mapPosition.mapY(),
-                sourceBlockIndex,
-                derivedBlockIndex,
-                derivedBlockBeforeState,
-                new ChunkDesc(replaceChunkIndex(sourceChunkDesc.get(), derivedChunkIndex)),
-                selectedBlockCellX,
-                selectedBlockCellY
-        );
-        history.execute(new CompositeEditorCommand(chunkCommand, blockCommand));
-        refreshSelectionFromActiveTarget();
+        if(focusRegion!=EditorFocusRegion.CHUNK_PANE) {setStatus("Focus the chunk canvas to apply a pattern");return;}
+        if(selectedPatternRaw==null) {setStatus("Choose a pattern from the library first");return;}
+        int replacement=selectedPatternRaw;
+        int cell=selectedChunkCellY*2+selectedChunkCellX;
+        editLocalComposition(null,state -> state[cell]=replacement);
+    }
+
+    public void eraseSelection() {
+        finishPendingEdits();
+        if(isSpawnEditing()) {deleteSpawnAtCursor();return;}
+        if(depth==EditorHierarchyDepth.WORLD) {
+            WorldMapPosition p=resolveWorldMapPosition(requireLevel());
+            if(p!=null)placeBlock(activeLayer,p.mapX(),p.mapY(),0);
+        } else if(depth==EditorHierarchyDepth.BLOCK)editLocalComposition(raw -> 0,null);
+        else {int cell=selectedChunkCellY*2+selectedChunkCellX;editLocalComposition(null,state -> state[cell]=0);}
+        setStatus("Cleared to library entry 0");
+    }
+    public void toggleDescriptorHFlip() { editDescriptorFlag(0); }
+    public void toggleDescriptorVFlip() { editDescriptorFlag(1); }
+    public void cyclePatternPalette() { editDescriptorFlag(2); }
+    public void togglePatternPriority() { editDescriptorFlag(3); }
+    private void editDescriptorFlag(int property) {
+        finishPendingEdits();
+        if(depth==EditorHierarchyDepth.BLOCK&&property<2)
+            editLocalComposition(raw -> raw ^ (property==0?0x400:0x800),null);
+        else if(depth==EditorHierarchyDepth.CHUNK) {
+            int cell=selectedChunkCellY*2+selectedChunkCellX;
+            editLocalComposition(null,state -> state[cell]=switch(property) {
+                case 0 -> state[cell]^0x800;case 1 -> state[cell]^0x1000;
+                case 2 -> (state[cell]&~0x6000)|((((state[cell]>>>13)+1)&3)<<13);
+                default -> state[cell]^0x8000;
+            });
+        } else setStatus("Enter a chunk for palette/priority, or a block for flips");
     }
 
     public void performEyedrop() {
@@ -706,6 +807,7 @@ public final class LevelEditorController {
         if (isValidChunkIndex(attachedLevel, chunkIndex)) {
             selection = new EditorSelectionState(selectedBlock, chunkIndex);
             selectedChunkDescriptorRaw = chunkDesc.get();
+            chunkBrushRaw = chunkDesc.get();
         }
     }
 
@@ -725,6 +827,7 @@ public final class LevelEditorController {
     public void setWorldCursor(EditorCursorState cursor) {
         Objects.requireNonNull(cursor, "cursor");
         this.worldCursor = clampWorldCursor(cursor.x(), cursor.y());
+        cameraNavigationRequested = true;
     }
 
     public EditorCursorState worldCursor() {
@@ -741,6 +844,7 @@ public final class LevelEditorController {
 
     public void moveWorldCursor(int dx, int dy) {
         worldCursor = clampWorldCursor(worldCursor.x() + dx, worldCursor.y() + dy);
+        cameraNavigationRequested = true;
     }
 
     public void moveActiveSelection(int dx, int dy) {
@@ -803,7 +907,7 @@ public final class LevelEditorController {
 
     public void backspaceLibraryFilter() {
         String current=libraryBrowser.filter();
-        if(!current.isEmpty())libraryBrowser.setFilter(current.substring(0,current.length()-1));
+        if(!current.isEmpty())libraryBrowser.setFilter(current.substring(0,current.offsetByCodePoints(current.length(),-1)));
     }
 
     public boolean isLibraryFilterInputActive(){return libraryFilterInputActive&&isLibraryBrowserFocused();}
@@ -821,6 +925,7 @@ public final class LevelEditorController {
         switch(entry.kind()) {
             case BLOCK -> selectBlock(entry.index());
             case CHUNK -> selectChunk(entry.index());
+            case PATTERN -> selectPattern(entry.index());
             case OBJECT -> {
                 if(entry.objectKey()!=null)objectPalette().setObjectKey(entry.objectKey());
                 else objectPalette().setObjectId(entry.stockObjectId());
@@ -831,7 +936,8 @@ public final class LevelEditorController {
     public boolean isLibraryBrowserFocused() {
         if(spawnEditMode==EditorSpawnEditMode.OBJECTS && focusRegion==EditorFocusRegion.SPAWN_PALETTE)return true;
         return (depth==EditorHierarchyDepth.WORLD && focusRegion==EditorFocusRegion.BLOCK_PANE)
-                || (depth==EditorHierarchyDepth.BLOCK && focusRegion==EditorFocusRegion.CHUNK_PANE);
+                || (depth==EditorHierarchyDepth.BLOCK && focusRegion==EditorFocusRegion.CHUNK_PANE)
+                || (depth==EditorHierarchyDepth.CHUNK && focusRegion==EditorFocusRegion.PATTERN_PANE);
     }
 
     private void refreshLibraryBrowser() {
@@ -840,11 +946,19 @@ public final class LevelEditorController {
         if(focusRegion==EditorFocusRegion.SPAWN_PALETTE&&objectPalette!=null)libraryBrowser.showObjects(objectPalette);
         else if(depth==EditorHierarchyDepth.WORLD)libraryBrowser.showBlocks(level);
         else if(depth==EditorHierarchyDepth.BLOCK&&focusRegion==EditorFocusRegion.CHUNK_PANE)libraryBrowser.showChunks(level);
+        else if(depth==EditorHierarchyDepth.CHUNK)libraryBrowser.showPatterns(level);
         libraryBrowser.setFilter(retainedFilter);
     }
 
+    public void selectPattern(int index) {
+        if(level==null||index<0||index>=level.getPatternCount()||index>0x7FF)
+            throw new IllegalArgumentException("Pattern is outside the loaded library");
+        selectedPatternRaw=(selectedPatternRaw==null?0:selectedPatternRaw&~0x7FF)|index;
+    }
+    public Integer selectedPatternRaw() { return selectedPatternRaw; }
+
     public Integer selectedBlockIndex() {
-        return selection.selectedBlock();
+        return blockBrushIndex;
     }
 
     public String breadcrumb() {
@@ -957,7 +1071,7 @@ public final class LevelEditorController {
     }
 
     private static int findUnreferencedBlockSlot(MutableLevel level, int sourceBlockIndex) {
-        for (int blockIndex = 0; blockIndex < level.getBlockCount(); blockIndex++) {
+        for (int blockIndex = 0; blockIndex < Math.min(256,level.getBlockCount()); blockIndex++) {
             if (blockIndex != sourceBlockIndex && !level.isBlockReferencedInMap(blockIndex)) {
                 return blockIndex;
             }
@@ -966,7 +1080,7 @@ public final class LevelEditorController {
     }
 
     private static int findUnreferencedChunkSlot(MutableLevel level, int sourceChunkIndex) {
-        for (int chunkIndex = 0; chunkIndex < level.getChunkCount(); chunkIndex++) {
+        for (int chunkIndex = 0; chunkIndex < Math.min(1024,level.getChunkCount()); chunkIndex++) {
             if (chunkIndex != sourceChunkIndex && !level.isChunkReferencedInBlocks(chunkIndex)) {
                 return chunkIndex;
             }
@@ -995,37 +1109,11 @@ public final class LevelEditorController {
             if (isValidChunkIndex(level, activeChunkIndex)) {
                 chunkIndex = activeChunkIndex;
                 chunkDescriptorRaw = activeChunkDesc.get();
-                if (depth == EditorHierarchyDepth.CHUNK) {
-                    selectedPatternRaw = level.getChunk(activeChunkIndex)
-                            .getPatternDesc(selectedChunkCellX, selectedChunkCellY)
-                            .get();
-                }
+
             }
         }
         selection = new EditorSelectionState(blockIndex, chunkIndex);
         selectedChunkDescriptorRaw = chunkDescriptorRaw;
-    }
-
-    private static final class CompositeEditorCommand implements EditorCommand {
-        private final EditorCommand first;
-        private final EditorCommand second;
-
-        private CompositeEditorCommand(EditorCommand first, EditorCommand second) {
-            this.first = Objects.requireNonNull(first, "first");
-            this.second = Objects.requireNonNull(second, "second");
-        }
-
-        @Override
-        public void apply() {
-            first.apply();
-            second.apply();
-        }
-
-        @Override
-        public void undo() {
-            second.undo();
-            first.undo();
-        }
     }
 
     private MutableLevel requireLevel() {
