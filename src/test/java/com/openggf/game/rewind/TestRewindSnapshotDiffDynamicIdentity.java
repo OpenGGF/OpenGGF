@@ -46,6 +46,61 @@ class TestRewindSnapshotDiffDynamicIdentity {
         assertDifferent(snapshot(first, second), snapshot(first, first), "duplicate object identity");
     }
 
+    @Test void hiddenSolidContactStateCannotBeOmittedFromWorldEquality() {
+        var state=new ObjectManagerSnapshot.SolidContactState(1,List.of(),List.of(),List.of(),List.of(),List.of(),List.of(),List.of(),List.of());
+        assertDifferent(withCaptured(snapshot(),state,null,null,null,null,null),snapshot(),"solidContactState");
+    }
+    @Test void capturedPlaneCrossingSideMustRemainCompared() {
+        var spawn=new com.openggf.level.objects.ObjectSpawn(0x200,0x300,1,0,0,false,0);
+        var state=new ObjectManagerSnapshot.PlaneSwitcherSnapshot(List.of(
+                new ObjectManagerSnapshot.PlaneSwitcherEntry(spawn,1,true,List.of())));
+        assertDifferent(withCaptured(snapshot(),null,state,null,null,null,null),snapshot(),"planeSwitchers");
+    }
+    @Test void capturedTouchBufferAndParityMustRemainCompared() {
+        var state=new ObjectManagerSnapshot.TouchResponseOverlapState(new int[]{6},new int[0],true,List.of());
+        assertDifferent(withCaptured(snapshot(),null,null,state,null,null,null),snapshot(),"touchResponseOverlap");
+    }
+    @Test void capturedNativeCollisionReadAndBuildListsMustRemainCompared() {
+        var state=new ObjectManagerSnapshot.CollisionResponseState(List.of(ObjectRefId.dynamic(6,0,1)),
+                List.of(),true,0,ObjectManagerSnapshot.CollisionBuildStage.PREVIOUS_READ_FROZEN);
+        assertDifferent(withCaptured(snapshot(),null,null,null,state,null,null),snapshot(),"collisionResponseState");
+    }
+    @Test void capturedNextDynamicIdentityCounterMustRemainCompared() {
+        assertDifferent(withCaptured(snapshot(),null,null,null,null,1,null),snapshot(),"dynamicObjectIdCounter");
+    }
+    @Test void capturedNativeExecutionCursorMustRemainCompared() {
+        assertDifferent(withCaptured(snapshot(),null,null,null,null,null,6),snapshot(),"currentExecSlot");
+    }
+    @Test void onlyDerivedRenderDirtinessAndAllocatorPeakTelemetryMayDiffer() {
+        var a=snapshot();
+        var b=new ObjectManagerSnapshot(a.usedSlotsBits(),a.slots(),a.frameCounter(),a.vblaCounter(),a.currentExecSlot(),
+                90,true,a.childSpawns(),a.dynamicObjects(),a.placement(),a.solidContactRiding(),a.solidContactState(),
+                a.planeSwitchers(),a.touchResponseOverlap(),a.dynamicObjectIdCounter(),a.collisionResponseState());
+        assertEquivalent(a,b);
+    }
+    @Test
+    void equalNonCachedScalarCountersDoNotAppearAsDiagnosticDifferences() {
+        var a = withCaptured(snapshot(), null, null, null, null, 200, 200);
+        var changed = new ObjectManagerSnapshot.SolidContactState(1, List.of(), List.of(),
+                List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
+        var b = withCaptured(a, changed, null, null, null, null, null);
+        assertDifferent(a, b, "solidContactState");
+        var differences = RewindSnapshotDiff.diffKey("object-manager", a, b);
+        assertFalse(differences.stream().anyMatch(diff -> diff.contains("dynamicObjectIdCounter")
+                || diff.contains("currentExecSlot")), differences.toString());
+    }
+
+    private static ObjectManagerSnapshot withCaptured(ObjectManagerSnapshot a,
+            ObjectManagerSnapshot.SolidContactState solids,ObjectManagerSnapshot.PlaneSwitcherSnapshot planes,
+            ObjectManagerSnapshot.TouchResponseOverlapState touch,ObjectManagerSnapshot.CollisionResponseState collision,
+            Integer counter,Integer cursor) {
+        return new ObjectManagerSnapshot(a.usedSlotsBits(),a.slots(),a.frameCounter(),a.vblaCounter(),
+                cursor==null?a.currentExecSlot():cursor,a.peakSlotCount(),a.bucketsDirty(),a.childSpawns(),a.dynamicObjects(),
+                a.placement(),a.solidContactRiding(),solids==null?a.solidContactState():solids,
+                planes==null?a.planeSwitchers():planes,touch==null?a.touchResponseOverlap():touch,
+                counter==null?a.dynamicObjectIdCounter():counter,collision==null?a.collisionResponseState():collision);
+    }
+
     private static DynamicObjectEntry entry(String className, int slot, int id, boolean destroyed) {
         var state = new PerObjectRewindSnapshot(destroyed, false, false, 0, 0,
                 0, 0, false, -1, false, true, slot, -1, null, null, null);
