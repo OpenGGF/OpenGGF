@@ -5,6 +5,8 @@ import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.NativeSstState;
+import com.openggf.level.objects.NativeSstStateSource;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
@@ -12,12 +14,16 @@ import com.openggf.level.objects.SpawnRewindRecreatable;
 import java.util.List;
 
 /** Independently allocated loc_5DF58, retained until the native clear-RAM owner erases it. */
-public final class EndingMasterPaletteObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public final class EndingMasterPaletteObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, NativeSstStateSource {
     @RewindTransient(reason="Captured explicitly as the object's additional palette-script state.")
     private final S3kEndingMasterPaletteState palette = new S3kEndingMasterPaletteState();
     public EndingMasterPaletteObjectInstance() { this(new ObjectSpawn(0,0,0,0,0,false,0)); }
     private EndingMasterPaletteObjectInstance(ObjectSpawn spawn) { super(spawn,"EndingMasterPalette"); }
     @Override public boolean isPersistent() { return true; }
+    // loc_5DF58 uses2E/2F for its palette timer/cursor, not sprite23/24.
+    @Override public com.openggf.level.objects.NativeSstState nativeSstState() {
+        return com.openggf.level.objects.NativeSstState.CLEARED;
+    }
     @Override public void update(int vIntRunCount, PlayableEntity player) {
         var state=(EndingZoneRuntimeState)services().zoneRuntimeState();
         int mode=(byte)state.screen().masterPaletteMode;

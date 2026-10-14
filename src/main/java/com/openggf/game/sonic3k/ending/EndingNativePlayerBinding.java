@@ -29,6 +29,8 @@ public final class EndingNativePlayerBinding {
     private SpriteAnimationProfile nativeProfile;
     private SpriteAnimationSet nativeAnimations;
     private SceneController nativeController;
+    /** Immutable fresh-construction RAM, never a progressed scene or trace row. */
+    private SuperStateController.RewindState initialNativeState;
     private TailsTailsController ordinaryTail;
     private TailsTailsController nativeTail;
 
@@ -37,6 +39,9 @@ public final class EndingNativePlayerBinding {
         if(active&&bound==player)return;
         if(player.getSuperStateController() instanceof Sonic3kSuperStateController)return;
         prepare(services,player);active=true;bindNormal();
+        // The controller is a cached resource while unbound, not an inactive RAM owner.
+        // A fresh entry must not inherit mutable state from a later restored scene.
+        nativeController.restoreRewindState(initialNativeState);
     }
     private void prepare(ObjectServices services,AbstractPlayableSprite player){
         if(bound==player&&nativeController!=null)return;
@@ -53,6 +58,7 @@ public final class EndingNativePlayerBinding {
                 nativeTail=new TailsTailsController(player,new PlayerSpriteRenderer(nativeArt.loadTailsTail(),services.graphicsManager()),true);
             nativeController=new SceneController(player,services);
             nativeController.loadRomData(services.romReader());nativeController.setRomDataPreLoaded(true);
+            initialNativeState=nativeController.captureRewindState();
         }catch(IOException failure){throw new UncheckedIOException(failure);}
     }
     private void bindNormal(){
@@ -75,12 +81,19 @@ public final class EndingNativePlayerBinding {
         var player=bound!=null?bound:GameServices.sprites().getMainPlayable();
         var tail=player==null?null:player.getTailsTailsController();
         var tailState=tail==null?null:tail.captureRewindState();
-        return active?new Value(true,nativeController.captureRewindState(),tailState)
-                :tailState==null?Value.EMPTY:new Value(false,null,tailState);
+        if(active)return new Value(true,nativeController.captureRewindState(),tailState);
+        var controller=player==null?null:player.getSuperStateController();
+        var ordinaryState=controller==null||controller instanceof Sonic3kSuperStateController
+                ?null:controller.captureRewindState();
+        return ordinaryState==null&&tailState==null?Value.EMPTY:new Value(false,ordinaryState,tailState);
     }
     private void restore(Value value,ObjectServices services){
         if(!value.active()){
             if(active)detach();
+            var player=services.playerQuery().mainPlayerOrNull();
+            if(value.controller()!=null&&player instanceof AbstractPlayableSprite playable
+                    &&playable.getSuperStateController()!=null)
+                playable.getSuperStateController().restoreRewindState(value.controller());
             restoreTail(value.tails(),services);
             return;
         }
@@ -97,7 +110,7 @@ public final class EndingNativePlayerBinding {
     public record Value(boolean active,SuperStateController.RewindState controller,TailsTailsController.RewindState tails){
         private static final Value EMPTY=new Value(false,null,null);
     }
-    /** Resource references are derived; captured controller/tail RAM is reapplied after rebinding. */
+    /** Resource references are derived; each matching owner's captured RAM is reapplied after rebinding. */
     public static final class Adapter implements RewindSnapshottable<Value>{
         @Override public String key(){return "s3k-ending-native-player-binding";}
         private EndingNativePlayerBinding current(){return S3kEndingCoordinator.current(GameServices.zoneRuntimeRegistry())
@@ -110,13 +123,20 @@ public final class EndingNativePlayerBinding {
     private static final class SceneController extends Sonic3kSuperStateController{
         private final ObjectServices services;
         SceneController(AbstractPlayableSprite player,ObjectServices services){super(player);this.services=services;}
+        @Override public void restoreRewindState(RewindState snapshot){
+            // The sprite adapter may still have this scene resource attached while
+            // restoring the ordinary owner's unset-tier RAM. Its matching binding
+            // applies that state after detach; never decode it as S3K packed fields.
+            if(snapshot==null||snapshot.presentationTier()==-1)return;
+            super.restoreRewindState(snapshot);bindNativeContext();
+        }
+        @Override protected boolean preservesScenePhysicsDuringRewind(){return true;}
         @Override protected PaletteTarget resolvePaletteTarget(int line){
             var level=services.currentLevel();var palette=level==null?null:level.getPalette(line);
             return palette==null?null:com.openggf.sprites.playable.PlayableSpriteInternalAccess.nativePaletteTarget(palette,line);
         }
         private void bindNativeContext(){var renderer=player.getSpriteRenderer();if(renderer!=null)renderer.setRenderContext(null);}
         @Override public void update(){super.update();bindNativeContext();}
-        @Override public void restoreRewindState(RewindState state){super.restoreRewindState(state);bindNativeContext();}
         @Override public void initializeEndingSuperSonic(){super.initializeEndingSuperSonic();bindNativeContext();}
         @Override public void initializeEndingHyperSonic(){super.initializeEndingHyperSonic();bindNativeContext();}
         @Override public void initializeEndingSuperTails(){super.initializeEndingSuperTails();bindNativeContext();}

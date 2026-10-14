@@ -266,3 +266,16 @@ they are not assumed from a snapshot that deliberately omits camera focus.
 Entry/reset is qualified; additional main/team, actual checkpoint/death, per-mechanic
 and new 352/528 full-route products, native pixels/audio and trace conformance remain
 separate obligations. Combined delivery is lead-owned and pending.
+
+## Native fresh-title ownership follow-up — 2026-10-14
+
+`TestS3kFreshTitleCardSstGraph` independently loads actual AIZ2 and HCZ1
+fresh boundaries: absolute SST8 and four following children precede placements,
+survive omitted presentation, and obey native wait/retirement order. Its graph
+restore/replay checks use the five actual production display presets
+320/352/400/528/800, with camera width verified before and after loading, two
+independent parent graphs and two complete registry replay cycles. D01 excludes
+the ordinary title graph. This is a bounded native entry/graph contract; it does
+not qualify the older route width inventory above or rendered pixels/audio.
+The [audit](../../audits/trace/2026-10-14-s3k-fresh-title-sst.md) records commands,
+negative evidence and the unchanged original AIZ/initial HCZ controls.

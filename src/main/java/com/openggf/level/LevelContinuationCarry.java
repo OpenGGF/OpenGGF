@@ -38,6 +38,11 @@ public final class LevelContinuationCarry {
                 && state.zone == zone && state.act == act ? state.phase(Phase.LOADING) : null;
     }
 
+    /** Read-only admission for fixed title actors during a native continuation load. */
+    public static boolean bypassesInitialPresentation(LevelManager manager) {
+        return bypassInitialPresentation(manager.getTransitions());
+    }
+
     static boolean bypassInitialPresentation(LevelTransitionCoordinator transitions) {
         State state = transitions.continuationCarry;
         return state != null && state.phase == Phase.LOADING;

@@ -13,7 +13,7 @@ import java.io.UncheckedIOException;
 import java.util.List;
 
 /** loc_5F94C / loc_5F986 / loc_5FA58: V-int emission, allocation before Random_Number. */
-public final class EndingCloudObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public final class EndingCloudObjectInstance extends AbstractObjectInstance implements RewindRecreatable, NativeSstStateSource {
     private int role,counter,xFixed,yFixed,xVelocity,yVelocity,mappingFrame;
     private boolean initialized;
     public EndingCloudObjectInstance(){this(new ObjectSpawn(0,0,0,0,0,false,0));}
@@ -27,6 +27,11 @@ public final class EndingCloudObjectInstance extends AbstractObjectInstance impl
     @Override public boolean isPersistent(){return true;}
     @Override public int getPriorityBucket(){return 6;}
     public boolean emitter(){return role==0;}
+    // loc_5F94C..5FA58 never writes cursor23/timer24/flags38; fresh SST RAM supplies zero.
+    @Override public NativeSstState nativeSstState() {
+        return new NativeSstState(0,xFixed&0xFFFF,yFixed&0xFFFF,mappingFrame,0,0,0,0,
+                role!=0&&initialized?0x300:0,role!=0&&initialized?(knuckles()?0x3B6:0x23B6):0);
+    }
     @Override public void update(int vIntRunCount,PlayableEntity player){
         var clouds=ending().clouds();
         if(role==0){

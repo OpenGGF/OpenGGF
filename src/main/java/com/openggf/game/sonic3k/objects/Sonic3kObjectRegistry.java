@@ -92,6 +92,12 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
     private final Map<Integer, List<FactoryEntry>> stockRomZoneFactoryEntries = new HashMap<>();
     private final Set<Integer> stockZoneBoundFactoryIds = new HashSet<>();
     private S3kObjectCreationContext activeCreationContext;
+    private final com.openggf.game.sonic3k.Sonic3kFreshTitleCardSst freshTitleCardSst;
+
+    public Sonic3kObjectRegistry() { this(null); }
+    public Sonic3kObjectRegistry(com.openggf.game.sonic3k.Sonic3kFreshTitleCardSst freshTitleCardSst) {
+        this.freshTitleCardSst=freshTitleCardSst;
+    }
 
     private record FactoryEntry(ObjectFactory factory,
                                 Predicate<S3kObjectCreationContext> compatibility) {}
@@ -114,6 +120,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
             int romZoneId,
             int act,
             FixedSstSlotSink slots) {
+        if (freshTitleCardSst!=null) freshTitleCardSst.install(romZoneId,act,slots);
         if (romZoneId == Sonic3kZoneIds.ZONE_HCZ) {
             // SpawnLevelMainSprites installs Obj_HCZWaterSplash subtype 1 at
             // Dynamic_object_RAM+2 (absolute SST slot 5). The player-facing

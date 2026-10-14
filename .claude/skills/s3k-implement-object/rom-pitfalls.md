@@ -5264,3 +5264,148 @@ publish one immutable cache only after success, and propagate invalid bytes
 before changing RAM/output. Cache construction during pure post-restore rebuild
 must not advance captured scroll state. Missing required data still fails; no
 fallback table or ROM-required fixture skip replaces that boundary.
+
+
+## Optional title presentation still occupies the native SST graph
+
+`Level/loc_62B6` writes `Obj_TitleCard` at `Dynamic_object_RAM+5` (absolute
+SST8), not absolute slot5. `Obj_TitleCardCreate` then allocates four children
+with `AllocateObjectAfterCurrent` before `loc_6468` loads ordinary placements.
+`loc_64DC` seeds the surviving owner's `$2E` wait with `$16` after the initial
+sprite pass. Omitting visual presentation does not retire those objects.
+Children consume their preceding `Render_Sprites` visibility; their lower-slot
+owner sees the final `$30` decrement only on its next dispatch. Preserve exact
+captured parent2 links and pure recreation without allocating another graph.
+
+Do not substitute the intro-controller slot: `Dynamic_object_RAM+2` is absolute
+SST5. D01's `Obj_TitleCardInit` deletes before child/art creation, leaving SST8
+for the ending owner. Use semantic fresh-level admission and the actual loaded
+destination; production `LevelLoadContext` zone/act can be unset.
+`loc_63C14/loc_7F310` set `Act3_flag` before `$1600/$1700`: `loc_62B6`
+bypasses the entire graph, not merely its visual presentation. Reuse the
+captured LOADING continuation admission without consuming it. Creating an
+owner on that path produces a later teardown with no runtime-art lease;
+do not hide it with a missing-lease fallback.
+
+The maintained `SlotOccupancyProbe` masks native code pointers to a low byte for
+its type display. Use that channel to compare occupancy only; identify native
+routines from the full auxiliary pointer or a source-backed native observation.
+The [2026-10-14 audit](../../../docs/architecture/audits/trace/2026-10-14-s3k-fresh-title-sst.md)
+records the matched graph repair and its unchanged strict trace frontier.
+## Unchecked AllocateObject keeps the last physical SST
+
+`Create_Continue_Sprite` (`$5FE1E`) deliberately ignores AllocateObject's failure
+branch. Retail `$1BAF2` preincrements Dynamic_object_RAM `$B0DE` in `$4A` strides:
+90 occupied probes leave A1 atglobal SST93 (`$CAE2`), not a null/zero destination.
+The caller writes only code, subtype/ordinal and X/Y words; fractions, mapping
+cursor/timer, flags, status, priority and art stay live until the new code writes
+them. An empty Java object or a skipped allocation changes shipped-ROM behavior.
+Prove both the literal byte-write footprint and actual old-owner residue.
+
+A code-pointer write is not delete/onUnload. Preserve occupied slot, numeric
+identity, existing child links and current ExecuteObjects cursor. A child holding
+parent3 must read the current physical SST owner after replacement, not stale
+Java fields. Children may execute before that new owner initializes, so copied
+status/priority/art cannot be borrowed from the replacement's eventual defaults.
+Test old→replacement→old full-world restoration and both earlier/later slot
+admission. Synthetic sentinels test the manager contract only; certify native
+scene pressure with the actual legal managed child types. Unknown consumed
+residue must never be silently replaced with zero or supplied by a trace.
+
+Pressure fixtures must retain the actual dispatch boundary. In the D01 small
+plane pass, director4 allocates while the large children are still occupied;
+those children consume flag4 and release their slots later in that same pass.
+An after-pass population of86 does not mean a missing admitted prefix. Likewise
+Master48 reads catcher93 before the latter's current update; compare the value
+available at that read, not the later live child position. The 2026-10-14 native
+graph pressure fixtures assert both boundaries before declaring later full-table
+occupancy. Never move gameplay clocks or suppress native retirement to preserve
+a pressure fixture's presumed population or position.
+
+## Scene controller RAM belongs to its active binding (2026-10-14)
+
+Preserving controller references is not preserving matching RAM. Generic
+playable restoration can temporarily target the resource attached in the future
+world before the scene adapter swaps it. Reapply ordinary/native RAM after
+detach/attach and reject the foreign unset/packed tier shape locally. Otherwise
+ordinary S2 state can become S3 quake255, or a scene snapshot can overwrite
+Tails' captured jump `$680` with `$800`. Packed S3 tiers can be signed-negative;
+compare the exact unset sentinel, not the sign.
+
+A bound scene owns presentation before its first powered writer sets a form
+flag, so restoration must preserve already captured player physics at that
+early boundary. While inactive its cached controller is a derived resource,
+not a RAM owner; fresh ensure must return to its own immutable constructor/load
+baseline, while active snapshots restore actual progressed RAM. The real
+17-frame palette→before-entry→first-frame replay catches this lifecycle risk.
+
+## Linked MonkeyDude arms read the current physical predecessor
+
+`CreateChild4_LinkListRepeated` gives `Obj_MonkeyDude` five actual SST actors;
+each arm/hand owns its dispatch, fractional position and native parent3 numeric
+address. `Child_Draw_Sprite` reads predecessor status7 only after that actor's
+routine, publishes its own pending deletion and clears on its next dispatch.
+A normal body `Sprite_CheckDeleteTouch/loc_85094` has the same delayed marker;
+its unreleased `Obj_WaitOffscreen/loc_85AFC` instead clears immediately.
+
+`Touch_EnemyNormal` overwrites the body's code/routine/status in place with
+`Obj_Explosion`. Arms can run before that lower slot initializes: its retained
+mapping remains the body byte until `loc_1E626` writes explosion frame0. Read the
+actual current owner by physical slot through the injected callback boundary;
+do not hold a stale Java body, recreate a nearest parent or claim a full native
+header producer when only Y/mapping/priority/status are verified. Empty cleared
+slots are zero; unknown live owners fail before movement mutation. Pure recreation
+restores captured numeric links without creating another graph.
+
+The trace label `aiz_2` denotes first AIZ1 special-stage return segment2, not
+runtime act2. The real `$1E58/$0490/$8E/$10` placement is AIZ1 record `$1E45E2`.
+See [the graph audit](../../../docs/architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md)
+for source, negative controls and unchanged strict frontiers.
+
+
+## MonkeyDude body orientation is the placement flip
+
+`Obj_MonkeyDude` dispatches WAIT to `loc_85652` (Animate_Raw/Obj_Wait) and ACTIVE
+to vertical Y stepping; neither writes body x_pos or render_flags bit0. Its
+`Sprite_CheckDeleteTouch` tail and `Touch_Width` consume literal body x_pos.
+`MonkeyDudeArm_CheckPlayerRange` uses Find_SonicTails on the independent root,
+not on the body. Keep both literal spawn orientations when P1 crosses sides;
+a synthetic body turn or32-pixel collision/render shift invents behavior.
+The [native graph audit](../../../docs/architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#separate-body-orientation-correction)
+records the negative old oracles and unchanged strict trace frontiers.
+
+
+## Fresh native Level entry clears RNG before sprite assembly
+
+`Level/loc_60DE` uses `clearRAM Lag_frame_count,$58`: `$F62A..$F681` includes
+`RNG_seed` `$F636`. This runs for stage returns, death/restart and ending Level
+loads, not preview or seamless in-place continuation. Clear the retained global
+RNG owner at semantic native fresh entry before Process_Sprites; art/title
+presentation admission is not the authority for this RAM clear. Preserve the
+V-int clock and AIZ vine angle outside this range.
+
+`Random_Number`'s returned folded D0 low word and its swapped stored seed low
+word differ: a cleared S3K seed returns `$8010` and stores `$8010B493`. Align
+PRE_ROW observers with completed native rows through the actual level counter
+and owner call ordinal, not movie-frame subtraction.
+
+Origin: 2026-10-14 S3K parity, fresh-entry RNG follow-up over `ddbc651e0`.
+
+
+## S3K projectile XY culling marks its SST before clearing
+
+`S3KBadnikProjectile_Init` reads ObjDat and sets shield bit3, then falls through
+Main/motion in the same dispatch. `CreateChild2_Complex` does not copy collision
+from the parent; it stays0 until Init. `Sprite_CheckDeleteTouchXY` accepts
+unsigned coarse X through `$280` and unsigned `(Y-CameraY+$80)` through `$200`,
+both inclusive. Its Y window is−128..384, not a visible-screen rectangle or
+symmetric margin. Retain the existing declared viewport extension only in X.
+
+The admitted path calls AddList/Draw independently of hurt flags; shield
+deflection must not hide the sprite. `Go_Delete_Sprite` sets status7 and the
+next code pointer without clearing that SST. The following `Delete_Current_Sprite`
+dispatch clears without another move. Capture INIT/pending retirement and replay
+both sides of the physical-slot boundary. A pointer-low-byte occupancy label
+is not a type oracle; exact RAM code and owning routine resolve it.
+
+Origin: 2026-10-14 S3K parity projectile slice over `85ca2a3c6`.

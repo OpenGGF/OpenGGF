@@ -1884,6 +1884,18 @@ public class ObjectManager {
         });
     }
 
+    AbstractObjectInstance currentNativeSstOwner(int slot) {
+        return ObjectNativeSstOverwrite.currentOwner(activeObjects.values(),dynamicObjects,objectCallbacks,slot);
+    }
+
+    AbstractObjectInstance createUncheckedDynamicObject(
+            java.util.function.Function<NativeSstState,AbstractObjectInstance> partialWriter) {
+        return ObjectNativeSstOverwrite.create(new ObjectNativeSstOverwrite.Surface(objectServices,
+                slotLayout,slotAllocator,activeObjects,instanceToSpawn,dynamicObjects,objectCallbacks,
+                dynamicOwnership,rewindObjectIds,deferredDynamicExecThisFrame,execOrder,this::execIndexForSlot,
+                updating,currentExecSlot,this::addDynamicObject,this::markRewindAdoptionDirty),partialWriter);
+    }
+
     public ObjectRewindDynamicCodecs.ExactAdoptionSurface exactRewindAdoptionSurface() {
         return new ObjectRewindDynamicCodecs.ExactAdoptionSurface(objectServices, slotLayout, slotAllocator, rewindObjectIds, dynamicObjects, dynamicOwnership.nonRewindableObjects(), execOrder, this::execIndexForSlot, slot -> objectIdInSlot(slot) >= 0, this::markRewindAdoptionDirty);
     }
@@ -1899,31 +1911,8 @@ public class ObjectManager {
      */
     public <T extends ObjectInstance> T createDynamicObjectAtSlot(
             Supplier<T> factory, int slotIndex) {
-        if (!isManagedDynamicSlot(slotIndex) || !slotAllocator.reserve(slotIndex)) {
-            return null;
-        }
-        return ObjectConstructionContext.construct(objectServices, () -> {
-            T object;
-            try {
-                object = factory.get();
-            } catch (RuntimeException | Error ex) {
-                releaseSlot(slotIndex);
-                throw ex;
-            }
-            if (object == null) {
-                releaseSlot(slotIndex);
-                return null;
-            }
-            if (!(object instanceof AbstractObjectInstance aoi)) {
-                releaseSlot(slotIndex);
-                throw new IllegalArgumentException(
-                        "Fixed-slot dynamic objects must extend AbstractObjectInstance");
-            }
-            registerInheritedCallbackOwner(object);
-            objectCallbacks.run(aoi, () -> aoi.setSlotIndex(slotIndex));
-            addDynamicObject(object);
-            return object;
-        });
+        return ObjectFixedSlotConstruction.create(objectServices,slotAllocator,this::isManagedDynamicSlot,
+                this::releaseSlot,objectCallbacks,this::registerInheritedCallbackOwner,this::addDynamicObject,factory,slotIndex);
     }
 
     /**

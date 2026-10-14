@@ -32,10 +32,12 @@ playable feature `c2103d5f7` are now implemented and locally qualified: IslandLi
 sprites/art, rescue/AIZ Master Emerald palette cycling and AIZ return-hold AnPal.
 The [resolved work record](status/s3k-known-bugs.md#native-ending-presentation-gaps-resolved)
 and [ending matrix](architecture/validation/levels/s3k-ending.md#repaired-native-presentation-owners--2026-10-13)
-record the50 affected focused checks and their limits. Full-table unchecked native
-allocation remains inherited unsupported missing emulation, not an intentional
-accepted deviation. Neither this repair nor the prior lifecycle results claim
-whole-scene native pixel parity.
+record the50 affected focused checks and their limits. The2026-10-14 follow-up
+implements retained-byte full-table continuation and managed rescue-plane child
+graphs, with41 distinct core cases and77 distinct composed graph/boundary cases.
+[Current qualification and remaining pressure/native-scene obligations](architecture/validation/levels/s3k-ending.md#remaining-parity-follow-up--2026-10-14)
+remain explicit. Neither these repairs nor prior lifecycle results claim
+whole-scene native pixel parity; no accepted deviation was added.
 
 **Ending scroll resource ownership:** a follow-up corrects eager ending-table
 reads that broke unrelated no-ROM provider registration. Both native banks are

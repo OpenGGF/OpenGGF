@@ -1391,7 +1391,22 @@ public class Sonic3kTitleCardManager
         }
     }
 
+    /** Called only by the surviving fresh owner at its native SST dispatch. */
+    public void retireFreshTitleCardSstOwner() {
+        if (GameServices.module().getObjectArtProvider() instanceof Sonic3kObjectArtProvider art
+                && art.retireSkippedFreshTitleCardSstOwner()) return;
+        consumeRuntimeArtAdmissionIfNeeded(true);
+    }
+
     private void consumeRuntimeArtAdmissionIfNeeded() {
+        consumeRuntimeArtAdmissionIfNeeded(false);
+    }
+
+    private void consumeRuntimeArtAdmissionIfNeeded(boolean freshSstDispatch) {
+        if (!freshSstDispatch && !inLevelMode && GameServices.level().getObjectManager()!=null
+                && GameServices.level().getObjectManager().activeObjectsOfType(
+                        com.openggf.game.sonic3k.objects.S3kFreshTitleCardOwnerObjectInstance.class)
+                        .stream().anyMatch(owner -> !owner.isDestroyed())) return;
         if (bonusMode || runtimeArtAdmissionConsumed) {
             return;
         }

@@ -48,6 +48,8 @@ class TestS3kEndingNativeObjectClear {
         assertSame(shield, fixture.sprite().getInstaShieldObject());
         assertFalse(shield.isDestroyed());
         var state = (EndingZoneRuntimeState) GameServices.zoneRuntimeState();
+        state.screen().catcherSlot = 93;
+        state.screen().catcherReady = true;
         state.screen().foregroundRoutine = nativeRoutine;
         state.screen().fadeTimer = 0; // next native subq expires the final Pal_ToBlack pass
         var registry = TestEnvironment.activeGameplayMode().getRewindRegistry();
@@ -55,6 +57,9 @@ class TestS3kEndingNativeObjectClear {
         var events = (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
 
         events.update();
+        assertEquals(93,state.screen().catcherSlot,
+                "loc_5ABC0/5AD8E clear sprite RAM up to Kos_decomp_buffer; global FAA4 survives");
+        assertTrue(state.screen().catcherReady);
         assertTrue(shield.isDestroyed(), "native clear never revives the erased owner");
         assertNull(fixture.sprite().getInstaShieldObject());
         assertFalse(fixture.sprite().captureRewindState().playerExtra().instaShieldRegistered());

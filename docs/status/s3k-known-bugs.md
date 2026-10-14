@@ -160,6 +160,27 @@ parity. Combined integration remains coordinator-owned. The original audit and
 rejected pixel premises are retained in the [ending design](../architecture/designs/2026-10-13-s3k-ending-lifecycle.md#native-presentation-repair--2026-10-13)
 and [ending matrix](../architecture/validation/levels/s3k-ending.md#repaired-native-presentation-owners--2026-10-13).
 
+## Ending Parity Follow-up — 2026-10-14
+
+The Knuckles flight wait's missing native quiet-wind request is repaired and
+qualified by16 affected object tests, including three independently red/green
+clock, expiry-order and restore/replay checks. `loc_5E80A` calls
+`Play_SFX_Continuous` before animation and timer expiry; native `$CE` admission
+uses `V_int_run_count & $F`. The [ending matrix](../architecture/validation/levels/s3k-ending.md#remaining-parity-follow-up--2026-10-14)
+records exact scope and commands. Request timing is not PCM acceptance.
+
+The rescue-plane groups from `loc_5DC2C`/`loc_5DD0E` and the fixed Tornado's
+pilot now have native managed slots and rewindable lifetimes. Parent lookup
+follows physical SST reuse; delayed deletion preserves native status/control
+bytes until the next dispatch. The global catcher pointer survives both sprite
+RAM clears.77 distinct focused graph/boundary cases qualify these changes;
+the independent continuation core qualifies41 distinct cases of retained-byte
+SST93 overwrite, identity and execution order. Complete composed child pressure,
+whole-scene native rendering/audio and supported matrix breadth remain open.
+No accepted deviation was added.
+
+---
+
 ## Blue Sphere FM Pickup Onset — Automated Parity Complete, Listening Gate Open
 
 **Location:** `YmServiceTimingProfile`, `YmWriteTimeline`, `SmpsDriver`, and
