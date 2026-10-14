@@ -30,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Production-load and death-reload coverage for every ROM-authored MHZ starpost. */
 @RequiresRom(SonicGame.SONIC_3K)
+@org.junit.jupiter.api.TestMethodOrder(org.junit.jupiter.api.MethodOrderer.OrderAnnotation.class)
 class TestMhzCheckpointRoutes {
     // Independent placement oracle: skdisasm Levels/MHZ/Object Pos/{1,2}.bin.
     // Scripted checkpoints (including Act 2 admission index 7) are not physical posts.
@@ -44,6 +45,7 @@ class TestMhzCheckpointRoutes {
             new CheckpointPlacement(1, 12, 0x2A98, 0x07A8, false),
             new CheckpointPlacement(1, 13, 0x3AF8, 0x02E8, false));
 
+    @org.junit.jupiter.api.Order(0)
     @Test
     void romDecodedActsExposeTheCompleteAuthoredStarpostSet() {
         List<CheckpointPlacement> checkpoints = Stream.of(0, 1)
@@ -63,6 +65,7 @@ class TestMhzCheckpointRoutes {
                 "MHZ checkpoint coverage must change when the ROM placement inventory changes");
     }
 
+    @org.junit.jupiter.api.Order(10)
     @ParameterizedTest(name = "{0} MHZ{1} starpost {2} physical activation")
     @MethodSource("checkpointTeamCases")
     void approachingEveryPlacedPostActivatesAndReplaysItsSave(
@@ -105,6 +108,7 @@ class TestMhzCheckpointRoutes {
         }
     }
 
+    @org.junit.jupiter.api.Order(20)
     @ParameterizedTest(name = "{0} MHZ{1} physical post {2}, width {4}, repeated death")
     @MethodSource("checkpointLifecycleCases")
     void physicalCheckpointSurvivesTwoRealDeathReloads(Team team, int act, int index,
@@ -112,10 +116,27 @@ class TestMhzCheckpointRoutes {
         runPhysicalCheckpointLifecycle(team, act, index, checkpoint, width, "off");
     }
 
+    @org.junit.jupiter.api.Order(20)
     @ParameterizedTest(name = "{5} {0} MHZ{1} physical post {2}, width {4}, repeated death")
     @MethodSource("donorCheckpointLifecycleCases")
     void supportedDonorTeamsKeepTheirRulesAndArtAcrossPhysicalCheckpointDeaths(Team team,
             int act, int index, CheckpointPlacement checkpoint, int width, String donor) {
+        runPhysicalCheckpointLifecycle(team, act, index, checkpoint, width, donor);
+    }
+
+    private static Stream<Arguments> firstIncomingCases() {
+        return Stream.of(0, 1).flatMap(act -> {
+            var checkpoint = AUTHORED_CHECKPOINTS.stream().filter(post -> post.act() == act).findFirst().orElseThrow();
+            return Stream.of(Arguments.of(Team.SONIC, act, checkpoint.index(), checkpoint, 320, "off"),
+                    Arguments.of(Team.TAILS, act, checkpoint.index(), checkpoint, 800, "s2"));
+        });
+    }
+
+    @org.junit.jupiter.api.Order(1)
+    @ParameterizedTest
+    @MethodSource("firstIncomingCases")
+    void firstPostOfEachActAndS2TailsReplaysTheIncomingWorld(Team team, int act, int index,
+            CheckpointPlacement checkpoint, int width, String donor) {
         runPhysicalCheckpointLifecycle(team, act, index, checkpoint, width, donor);
     }
 
@@ -164,15 +185,17 @@ class TestMhzCheckpointRoutes {
             input.setLogicalOverride(com.openggf.debug.playback.RecordedInputSnapshots.fromBk2(neutral, neutral));
             var loop = new com.openggf.GameLoop(input);
             loop.setGameplayMode(f.gameplayMode()); loop.setGameMode(com.openggf.game.GameMode.LEVEL);
+            assertTrue(loop.ownsGameplayFadeLifecycle(), "production loop owns each fade service");
             try {
                 for (int cycle = 0; cycle < 2; cycle++) {
-                    for (int n = 0; n < 30; n++) {f.gameplayMode().getFadeManager().update();loop.step();}
+                    for (int n = 0; n < 30; n++) {loop.step(); GameServices.graphics().runPendingRenderThreadTasks();}
                     var objects = GameServices.level().getObjectManager();
                     var runtime = GameServices.zoneRuntimeRegistry().current();
+                    int lives = GameServices.gameState().getLives();
                     assertTrue(GameServices.sprites().getMainPlayable().applyPitDeath());
                     long outgoing = 0; boolean loaded = false;
                     for (int n = 0; n < 1200; n++) {
-                        f.gameplayMode().getFadeManager().update(); loop.step();
+                        loop.step(); GameServices.graphics().runPendingRenderThreadTasks();
                         var rewind = f.gameplayMode().getRewindController();
                         if (GameServices.level().getObjectManager() != objects) {
                             loaded = true;
@@ -180,6 +203,7 @@ class TestMhzCheckpointRoutes {
                             assertEquals(act, GameServices.level().getCurrentAct());
                             assertEquals(index, GameServices.level().getCheckpointState().getLastCheckpointIndex());
                             var player = GameServices.sprites().getMainPlayable();
+                            assertEquals(lives - 1, GameServices.gameState().getLives(), "one actual life per death");
                             assertEquals(savedX, player.getCentreX() & 0xFFFF);
                             assertEquals(savedY, player.getCentreY() & 0xFFFF);
                             assertEquals(team.main(), player.getCode());
@@ -201,11 +225,13 @@ class TestMhzCheckpointRoutes {
                     assertTrue(loaded, "real GameLoop death reload cycle " + cycle);
                     boolean released = false;
                     for (int n = 0; n < 500; n++) {
-                        f.gameplayMode().getFadeManager().update(); loop.step();
+                        loop.step(); GameServices.graphics().runPendingRenderThreadTasks();
                         var title = GameServices.module().getTitleCardProvider();
                         if (loop.getCurrentGameMode() == com.openggf.game.GameMode.LEVEL
                                 && (title == null || title.isComplete())
                                 && !f.gameplayMode().getFadeManager().isActive()
+                                && !f.gameplayMode().getFadeManager().hasPendingCompletion()
+                                && !GameServices.level().hasPendingFreshLevelTransitionBoundary()
                                 && !GameServices.sprites().getMainPlayable().isControlLocked()) {
                             released = true; break;
                         }
@@ -213,6 +239,13 @@ class TestMhzCheckpointRoutes {
                     assertTrue(released, "title/fade must release controls");
                     assertFalse(GameServices.sprites().getMainPlayable().getDead());
                     assertDonorState(donor);
+                    assertEquals(lives - 1, GameServices.gameState().getLives(), "title release hides no restart");
+                    CheckpointIncomingReplay.verify(f, loop, input, index, () -> {
+                        assertEquals(team.main(), GameServices.sprites().getMainPlayable().getCode());
+                        assertEquals(followers, GameServices.sprites().getRegisteredSidekicks());
+                        assertEquals(width, GameServices.camera().getWidth() & 0xFFFF);
+                        assertDonorState(donor);
+                    });
                 }
             } finally {loop.closePresence();}
         } finally {config.clearSessionOverrides(); restore(savedConfig);}

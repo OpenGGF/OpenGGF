@@ -1103,3 +1103,20 @@ after each incoming world releases title/fade/control. The final class passes
 SSZ local saved-index1 setup remains distinct from the independent ordinary
 controller-only post2 contact. Wider cold route products, native presentation,
 other act obligations and overall parity qualification remain open.
+
+
+### MHZ/FBZ/DEZ incoming checkpoint-world replay — 2026-10-14
+
+Both acts' existing physical-post products now add exact life accounting and
+two full-registry45-input replay/reverse cycles after EACH actual death/reload,
+using the production fade owner. The [MHZ1](../architecture/validation/levels/s3k-mhz-act1.md#released-checkpoint-world-replay-follow-up-2026-10-14),
+[MHZ2](../architecture/validation/levels/s3k-mhz-act2.md#released-checkpoint-world-replay-follow-up-2026-10-14),
+[FBZ1](../architecture/validation/levels/s3k-fbz-act1.md#released-checkpoint-world-replay-follow-up-2026-10-14),
+[FBZ2](../architecture/validation/levels/s3k-fbz-act2.md#released-checkpoint-world-replay-follow-up-2026-10-14),
+[DEZ1](../architecture/validation/levels/s3k-dez-act1.md#released-checkpoint-world-replay-follow-up-2026-10-14)
+and [DEZ2](../architecture/validation/levels/s3k-dez-act2.md#released-checkpoint-world-replay-follow-up-2026-10-14)
+matrices record315/440/322 products respectively, all1077 passing without
+failures/errors/skips on composed262e9bbb1 plus the final test changes, completed
+13:13:31 UTC. Twelve independently ordered short witnesses also pass. This is
+local contact/death/released-world qualification; MHZ Knuckles, additional
+rosters/mechanics/routes and native presentation remain separate obligations.

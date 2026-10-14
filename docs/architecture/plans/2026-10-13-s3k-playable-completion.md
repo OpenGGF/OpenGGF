@@ -1412,3 +1412,42 @@ load/replay qualification, not full-suite, per-product cold route, native
 visual/audio or overall parity acceptance. Remaining source fixes, strict
 frontiers, combined smoke/guards, integration/push and cleanup remain pending.
 Consumed redirects are removed after this durable account.
+
+
+### Existing checkpoint driver qualification (2026-10-14)
+
+Source `262e9bbb10bb317d183dbf289dcfa8568fa0258c` plus four test-only files
+removes manual FadeManager updates from MHZ/FBZ/DEZ's actual-death drivers.
+Each loop asserts production fade ownership, drains pending rendering, waits
+through title/fade/pending completion/fresh assembly/control release, and
+checks exactly one life at assembly and release. `CheckpointIncomingReplay`
+then compares all registry keys around two forward/reverse45-input cycles
+after EACH death, checking current manager/runtime, alive leader, unchanged
+lives/post and configured owners; no raw branch crosses a load.
+
+The short first-post native320/S2-Tails800 witnesses pass12/0/0/0 in93678,
+completed12:58:56 UTC (1:20 Maven). Complete changed consumers in63733 pass
+1077/0/0/0 at13:13:31 UTC (3:32 Maven): MHZ315, FBZ440, DEZ322. The latter
+includes280 standard products plus42 duplicate-S1/trio cases and the actual
+placed inverted-gravity post5 branch. Queue waiting is separate. Original
+ROMs, normal admission, Java25, surfaceless EGL, unset desktop and null OpenAL
+match the prior checkpoint command. All requests are observed terminal0 before
+source writes. Other unchanged physical/contact checks are not repeated.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestMhzCheckpointRoutes#physicalCheckpointSurvivesTwoRealDeathReloads+supportedDonorTeamsKeepTheirRulesAndArtAcrossPhysicalCheckpointDeaths,TestFbzCheckpointRoutes#physicalCheckpointSurvivesTwoRealDeathReloads+supportedDonorTeamsKeepTheirRulesAndArtAcrossPhysicalCheckpointDeaths,TestDezCheckpointRoutes#physicalCheckpointSurvivesTwoRealDeathReloads+supportedDonorTeamsKeepTheirRulesAndArtAcrossPhysicalCheckpointDeaths+extendedTeamsSurviveRepeatedCheckpointReloads' "-Dsonic1.rom.path=$S1_TASK_ROM" "-Dsonic2.rom.path=$S2_TASK_ROM" "-Ds3k.rom.path=$S3K_TASK_ROM" test -B
+```
+
+Pilot selector uses each of those three classes' method
+`firstPostOfEachActAndS2TailsReplaysTheIncomingWorld`.
+SHA256s of the qualified test files are MHZ
+`a6939b3c717f7bc97e1ff06e0be60a4d251906fd0c5f2aa7db451b9fbb99d3b5`,
+FBZ`59cd8fb315c99224254d7cb9a8956bc74d196d9a3f120ba810db249fb5211594`,
+DEZ`8d90eccc2f335e37face11948942cd4ed1951f8daa2d55a8331a5323748d2176`,
+shared helper`bfb5effb0f65b2fe20fc091a54cface69ebb0ff4f514296d66670bb6dfcfc8e7`.
+This adds real incoming-world replay, not per-product cold traversal or native
+visual/audio certification. Existing MHZ enumerates Sonic/Tails/pair; Knuckles
+and additional roster products are the next gap, not silently counted here.
+SOZ/DDZ's older manual fade drivers and other remaining obligations still need
+their affected follow-up. Combined smoke/guards/integration/push/cleanup remain
+pending. Consumed local redirects are removed after this account.
