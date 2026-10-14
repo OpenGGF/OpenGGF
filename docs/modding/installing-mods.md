@@ -10,10 +10,18 @@ builds named by the author: the unpublished API can change without a version bum
 1. Use its distribution directory as the **working directory**.
    Launch the JVM jar with `cd /path/to/OpenGGF` followed by
    `java -jar /path/to/OpenGGF/engine.jar` (or the supplied universal jar).
-2. Create `mods/` in that **working directory** and copy the mod jar into it.
-   Open **MODS** and choose Apply to rescan newly copied jars. Nested directories and exploded
-   source projects are not installed mods.
-3. Reopen **MODS** on the master title. Select the mod and accept
+2. Choose **Advanced → Import content** on the master title, then drop the mod or
+   mutator `.jar` onto the window. **Browse files** uses the same importer. Review
+   the package name/type and confirm **Install disabled**. A ZIP can contain a
+   packed mod or one JAR at its root or inside one enclosing folder. Mutators
+   are distributed as mods; they use the same install and trust flow.
+   The importer creates `mods/` in the working directory and refreshes the title
+   catalog. It preserves existing files and refuses conflicting mod IDs or saved
+   preferences. Use the update procedure below for an existing mod.
+   You can also copy a JAR directly into `mods/`, then open **MODS** and choose
+   Apply to rescan. Nested directories and exploded source projects are not
+   installed mods.
+3. In **MODS**, which opens after import, select the mod and accept
    to enable it. Code mods ask you to review and trust the exact jar hash; accept
    again to grant trust. Validation is structural; code runs with full permissions.
 4. Install the named compatible dependencies first and trust each code dependency
@@ -26,6 +34,11 @@ If no mod appears, check working directory, `.jar` extension, JVM/native selecti
 and whether deterministic test/trace/time-attack mode excludes external mods.
 If a mod is blocked, read Details and the [finding catalogue](troubleshooting.md).
 An incompatible or missing dependency is not fixed by changing the load order.
+
+Dropping a package only inspects it; it does not enable or trust code. Imports
+of mods run at the master title. While editing, save or close the project and
+return to the title to install a mod or mutator. Deterministic launches exclude
+external content as before.
 
 ## Compatibility evidence
 

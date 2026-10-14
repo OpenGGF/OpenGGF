@@ -107,6 +107,41 @@ class TestEditorProjectWorkspace {
         assertTrue(host.finishCount > 0, "project boundaries must finalize pending edits");
     }
 
+    @ParameterizedTest(name = "{0}: a dropped project obeys cancel, discard and host publication barriers")
+    @EnumSource(value = GameId.class, names = {"S1", "S2", "S3K"})
+    void preparedProjectCannotReplaceUnsavedWorkUntilTheAuthorChooses(GameId game) throws Exception {
+        var host = start(game);
+        var workspace = host.workspace;
+        var original = workspace.document();
+        Path incomingFile = temporary.resolve("incoming.ogfproject");
+        new EditorProjectStore().save(incomingFile,
+                EditorProjectDocument.create(original.metadata().withName("Dropped project"), original.snapshot()));
+        var incoming = new EditorProjectStore().open(incomingFile);
+        assertTrue(original.isModified());
+
+        workspace.openProject(incoming);
+        assertEquals("Unsaved project", workspace.menu().title());
+        assertSame(original, workspace.document());
+        choose(workspace, fixture.input, 0);
+        assertSame(original, workspace.document(), "Continue editing keeps the original authored document");
+
+        host.failPresentation = true;
+        workspace.openProject(incoming);
+        choose(workspace, fixture.input, 2);
+        assertTrue(workspace.menu().error().contains("presentation failed"));
+        assertSame(original, workspace.document());
+        assertSame(original, host.shown);
+        assertTrue(original.isModified());
+
+        host.failPresentation = false;
+        workspace.openProject(incoming);
+        choose(workspace, fixture.input, 2);
+        assertSame(incoming, workspace.document());
+        assertSame(incoming, host.shown);
+        assertEquals(incomingFile.toAbsolutePath(), incoming.path());
+        assertFalse(incoming.isModified());
+    }
+
     @ParameterizedTest(name = "{0}: rejected document presentation leaves content, history and path intact")
     @EnumSource(value = GameId.class, names = {"S1", "S2", "S3K"})
     void structuralChangesPublishOnlyAfterTheHostAcceptsTheReplacement(GameId game) throws Exception {

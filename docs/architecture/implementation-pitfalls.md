@@ -14,6 +14,14 @@ headless tests, or audio. S3K-specific routing is in [AGENTS_S3K.md](../../AGENT
 
 The things that cost the most time when missed.
 
+**Editor rendering uses editor-owned managers.** Once an authored document enters
+`EDITOR`, `GameServices.camera()`, `level()` and `sprites()` require a gameplay
+mode and reject the call. Offscreen editor examples use the active
+`EditorModeContext` camera, level manager and sprite manager, matching Engine's
+retained managers. Global graphics ownership remains shared. Do not open a fake
+gameplay session just to satisfy these accessors; it would change the state being
+pictured (October 2026 editor-guide capture).
+
 **Native X words need unsigned comparison at the Java boundary.** Playable
 centre X and camera maximum X are exposed as signed Java shorts, while authored
 placements use unsigned words. In S1 Sign_Touch and S2 Obj0D_Main, native sub.w

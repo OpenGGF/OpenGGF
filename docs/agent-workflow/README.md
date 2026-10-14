@@ -28,6 +28,8 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 ## Tools
 
+- [Editor guide pictures](../../src/test/java/com/openggf/editor/project/TestEditorGuidePictures.java): refresh the current ROM-backed editor examples with `-Dtest=TestEditorGuidePictures -Dopenggf.editor.guidePictures=true -Dopenggf.headless.gl=surfaceless-egl -Dsonic2.rom.path=<absolute S2 REV01 ROM>` through the Maven queue; review `target/editor-guide/` before copying pictures to the guide.
+
 - [Category negative-case comparison](../../tools/testing/compare_category_outcomes.py): compares completed bounded runner failures and causal skips with an explicit source/run baseline, rejecting incomplete evidence and requiring opt-in for verified SSZ blob hashes (2026-10-08 Mutator Lab expansion); [limits and usage](../../tools/testing/README.md#bounded-category-result-comparison).
 
 - [Native Mutator stage probe](../../src/main/java/com/openggf/tools/MutatorStageProbeTool.java): bounded registered-mod interactive native clocks, input admission and offline PCM for all three special stages and S3K bonus stages (2026-10-08 Mutator Lab expansion); [setup and limits](../../tools/media/README.md#native-mutator-stage-observations).

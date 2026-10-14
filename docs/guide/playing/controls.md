@@ -136,7 +136,7 @@ native placement branches are unavailable.
 
 ## Experimental Level Editor
 
-Open **Tools → Editor projects** at the master title. To enter from ordinary
+Open **Advanced → Editor projects** at the master title. To enter from ordinary
 gameplay, set `debug.flags.editor: true` in `config.yaml`. See the
 [level editor guide](../creating/level-editor.md) for creation, hierarchy editing,
 properties, resizing, and export limits.

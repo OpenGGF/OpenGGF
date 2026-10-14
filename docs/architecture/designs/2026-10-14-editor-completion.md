@@ -4,6 +4,17 @@ The requested outcome is to create and edit playable levels for Sonic 1, Sonic 2
 and Sonic 3&K, with safe projects, playtesting, and usable export. The implementation
 starts from develop `4a0e714d5e29b65a5b1ba8e6cbb6a8223f560c75`.
 
+## Editor examples
+
+The [level-editor guide](../../guide/creating/level-editor.md) includes example
+pictures of project creation, world editing, focused block/chunk composition and
+level properties. These show the current editor with Sonic 2 Emerald Hill assets
+from the supplied ROM, rendered offscreen at 426×224 and enlarged exactly 2×.
+
+![World editing with the Emerald Hill block library and selected terrain.](../../guide/creating/images/level-editor/world.png)
+
+![Focused block composition with its chunk library and editable cells.](../../guide/creating/images/level-editor/block.png)
+
 ## Scope and acceptance
 
 An author can create a named blank level using a ROM-derived asset library, clone

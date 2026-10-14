@@ -155,6 +155,11 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	private final EditorOverlayRenderer editorOverlayRenderer;
 	private final EditorProjectWorkspace editorProjects;
 	private final EditorProjectMenuRenderer editorProjectMenuRenderer = new EditorProjectMenuRenderer();
+	private final ContentImportScreen contentImportScreen;
+	private final ContentImportScreenRenderer contentImportRenderer = new ContentImportScreenRenderer();
+	private final ContentImportWindowBridge contentImportWindow;
+	private boolean contentImportShutdown;
+	private boolean quitAfterContentInstall;
 	private EditorProjectDocument shownEditorProject;
 	private GameModule editorProjectBaseModule;
 	private GameModule editorProjectRootModule;
@@ -432,10 +437,37 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				? editorProjects.document().isModified()
 				: levelEditorController.currentLevel() != null && levelEditorController.currentLevel().isModifiedSinceLastSave());
 		levelEditorController.setCanvasNavigationSupplier(() -> editorProjects.document() != null || shownEditorProject != null);
+		this.contentImportScreen = new ContentImportScreen(new ContentImportService(Path.of("mods"), () ->
+				ModSubsystem.current().processCatalog().scanned().stream()
+						.filter(com.openggf.mods.ModDescriptor.class::isInstance)
+						.map(com.openggf.mods.ModDescriptor.class::cast)
+						.map(descriptor -> descriptor.manifest().id()).collect(java.util.stream.Collectors.toSet())),
+				new ContentImportScreen.Host() {
+					public void openProject(EditorProjectDocument candidate) { editorProjects.openProject(candidate); }
+					public void importLevel(com.openggf.mods.code.ModLevelDefinition level, GameId game) {
+						editorProjects.importLevel(level, game);
+					}
+					public boolean allowedToInstallMods() {
+						return getCurrentGameMode() == GameMode.MASTER_TITLE_SCREEN
+								&& ModSubsystem.current().policy().mayScanAtBoot();
+					}
+					public void modInstalled(Path installed) {
+						reloadExternalContentAtTitle();
+						TitleContentImportAccess.openMods(masterTitleScreen);
+					}
+					public void closed() { if (!contentImportShutdown && editorQuitView == null) editorProjects.restoreView(); }
+				});
+		this.contentImportWindow = new ContentImportWindowBridge(contentImportScreen::drop,
+				this::contentImportBlockedReason, message -> {
+					LOGGER.info(message);
+					levelEditorController.setStatus(message);
+				});
 
         com.openggf.editor.EditorCommandPalette.forController(levelEditorController)
                 .setHostActions(this::toggleEditorPlaytestMode, this::startGameplayFromBeginning);
-		com.openggf.editor.EditorCommandPalette.forController(levelEditorController).setHostCommands(editorProjects.commands());
+		var editorCommands = new ArrayList<>(editorProjects.commands());
+		editorCommands.add(new com.openggf.editor.EditorCommandPalette.HostCommand("Import content", this::openContentImport));
+		com.openggf.editor.EditorCommandPalette.forController(levelEditorController).setHostCommands(editorCommands);
         com.openggf.editor.EditorCommandPalette.forController(levelEditorController)
                 .setFeedback(cue -> audioManager.playSfx(MasterTitleScreen.AudioCue.valueOf(cue.name()).sfxName()));
 
@@ -448,7 +480,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			projectionWidth = realWidth;
 		});
 		gameLoop.setEditorInputHandler(editorInputHandler);
-		gameLoop.setEditorProjectInputHandler(editorProjects::update);
+		gameLoop.setEditorProjectInputHandler(input -> contentImportScreen.isOpen()
+				? contentImportScreen.update(input) : editorProjects.update(input));
 		gameLoop.setEditorProjectPlaytestSupplier(() -> editorProjectPlaytestActive);
 		gameLoop.setEditorPlaytestToggleHandler(() -> {
             if (!com.openggf.editor.EditorCommandPalette.forController(levelEditorController).isOpen()) toggleEditorPlaytestMode();
@@ -574,6 +607,12 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			}
 		});
 		installEditorTextInputCallback();
+		glfwSetDropCallback(window, (windowHandle, count, names) -> {
+			var paths = new ArrayList<String>(Math.min(count, 16));
+			// Copy callback-owned UTF-8 names before GLFW releases them; no files are read here.
+			for (int i = 0; i < Math.min(count, 16); i++) paths.add(GLFWDropCallback.getName(names, i));
+			contentImportWindow.receive(paths);
+		});
 		glfwSetCursorPosCallback(window, (windowHandle, x, y) -> {
 			if (inputHandler != null) {
 				inputHandler.handleMouseMove(x, y);
@@ -697,7 +736,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	private void installEditorTextInputCallback() {
 		glfwSetCharCallback(window, (windowHandle, codepoint) -> {
 			com.openggf.control.MenuInput.handleCharEvent(inputHandler, codepoint);
-			if (getCurrentGameMode() == GameMode.EDITOR && !editorProjects.menu().isOpen()) {
+			if (getCurrentGameMode() == GameMode.EDITOR && !editorProjects.menu().isOpen() && !contentImportScreen.isOpen()) {
 				editorInputHandler.handleTextInputCodepoint(codepoint);
 			}
 		});
@@ -1440,6 +1479,9 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	private void requestApplicationExit() {
 		if (editorQuitView != null) return;
+		if (contentImportScreen.installing()) { quitAfterContentInstall = true; return; }
+		quitAfterContentInstall = false;
+		contentImportScreen.close();
 		editorInputHandler.finishPendingEdits();
 		var document = editorProjects.document();
 		if (document == null || !document.isModified()) { closeApplicationWindow(); return; }
@@ -2003,6 +2045,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				masterTitleEntries(),
 				cue -> audioManager.playSfx(cue.sfxName()));
 		screen.setEditorProjectsOpenHandler(editorProjects::openMenu);
+		if (ModSubsystem.current().policy().mayScanAtBoot())
+			TitleContentImportAccess.bind(screen, this::openContentImport);
 		screen.setEnabledModsByGame(enabledTitleModsByGame());
 		com.openggf.game.MasterTitleCatalog.bind(screen, this::masterTitleEntries);
 		if (ModSubsystem.current().policy().mayScanAtBoot()) {
@@ -2845,6 +2889,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		}
 
 		profiler.beginSection("update");
+		contentImportWindow.update();
 		processDisplayShaderPackRescan();
 		handleLiveCaptureShortcut();
 		liveCaptureFailureReporter.observe(liveCaptureController);
@@ -2853,7 +2898,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				&& inputHandler.isKeyPressed(
 						configService.getInt(SonicConfiguration.FRAME_STEP_KEY));
 		boolean displayShaderPickerHandledInput = com.openggf.game.TitleInputOwnership.routeDisplay(
-				getCurrentGameMode(), masterTitleScreen, gameLoop != null && gameLoop.modSceneHost.capturesTextInput(),
+				getCurrentGameMode(), masterTitleScreen, globalShortcutInputClaimed(),
 				displayShaderPickerController != null && displayShaderPickerController.isOpen(),
 				this::updateDisplayShaderInput,
 				() -> { if (displayColorProfileController != null) displayColorProfileController.update(inputHandler); },
@@ -3209,7 +3254,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			return;
 		}
 		if (!com.openggf.game.TitleInputOwnership.routeCapture(getCurrentGameMode(), masterTitleScreen,
-				gameLoop != null && gameLoop.modSceneHost.capturesTextInput(),
+				globalShortcutInputClaimed(),
 				() -> shouldToggleLiveCapture(
 						configService.getKeyChord(SonicConfiguration.CAPTURE_TOGGLE_KEY),
 						liveCaptureChord, inputHandler))) {
@@ -3737,6 +3782,33 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	 */
 	public void update() {
 		gameLoop.stepPresentationFrame();
+		if (quitAfterContentInstall && !contentImportScreen.installing()) requestApplicationExit();
+	}
+
+	private void openContentImport() {
+		editorInputHandler.finishPendingEdits();
+		contentImportScreen.open();
+	}
+
+	private String contentImportBlockedReason() {
+		if (editorProjects.menu().isOpen() || editorQuitView != null)
+			return "Finish the current project dialog before importing content.";
+		if (displayShaderPickerController != null && displayShaderPickerController.isOpen())
+			return "Close the display shader picker before importing content.";
+		if (contentImportScreen.isOpen()) return null;
+		if (graphicsManager.getFadeManager().isActive()) return "Wait for the screen transition before importing content.";
+		if (getCurrentGameMode() == GameMode.EDITOR) {
+			editorInputHandler.finishPendingEdits();
+			return null;
+		}
+		if (getCurrentGameMode() == GameMode.MASTER_TITLE_SCREEN && ModSubsystem.current().policy().mayScanAtBoot()
+				&& TitleContentImportAccess.acceptsDrop(masterTitleScreen)) return null;
+		return "Return to the master title or editor and close other dialogs to import content.";
+	}
+
+	private boolean globalShortcutInputClaimed() {
+		return contentImportScreen.isOpen() || editorProjects.menu().isOpen() || editorQuitView != null
+				|| (gameLoop != null && gameLoop.modSceneHost.capturesTextInput());
 	}
 
 	/**
@@ -3851,6 +3923,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	private void drawMasterTitle() {
 		resetCameraForScreenSpaceIfPresent();
+		if (contentImportScreen.isOpen()) {
+			contentImportRenderer.render(contentImportScreen, getProjectionMatrixBuffer(), (int) realWidth);
+			return;
+		}
 		if (editorProjects.menu().isOpen()) {
 			editorProjectMenuRenderer.render(editorProjects.menu(), getProjectionMatrixBuffer(), (int) realWidth);
 			return;
@@ -3869,7 +3945,9 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		graphicsManager.flush();
 		graphicsManager.resetForFixedFunction();
 		prepareOverlayState();
-		if (editorProjects.menu().isOpen())
+		if (contentImportScreen.isOpen())
+			contentImportRenderer.render(contentImportScreen, getProjectionMatrixBuffer(), (int) realWidth);
+		else if (editorProjects.menu().isOpen())
 			editorProjectMenuRenderer.render(editorProjects.menu(), getProjectionMatrixBuffer(), (int) realWidth);
 		else editorOverlayRenderer.renderScreenSpaceOverlay();
 		graphicsManager.flushScreenSpace();
@@ -4089,6 +4167,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void cleanup() {
+		contentImportShutdown = true;
 		// First, while GL, audio and the session are intact: an open mod scene saves in ModScene.exit.
 		cleanupStep("mod scene", gameLoop.modSceneHost::cleanup);
 		cleanupStep("screenshots", screenshotWriter::close);
@@ -4105,6 +4184,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			}
 		});
 		cleanupStep("editor project menu", editorProjectMenuRenderer::close);
+		cleanupStep("content import", contentImportScreen::close);
+		cleanupStep("content import renderer", contentImportRenderer::close);
 		cleanupStep("trace HUD renderer", traceHudTextRenderer::cleanup);
 		cleanupStep("pause text renderer", pauseTextRenderer::cleanup);
 		cleanupStep("live capture text renderer", liveCaptureTextRenderer::cleanup);

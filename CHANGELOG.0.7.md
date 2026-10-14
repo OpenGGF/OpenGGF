@@ -715,7 +715,11 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Checkerboard geometry is batched and cached, catalog scans run in cancellable
   background tasks, unchanged ROM previews survive Apply, and settings presentation
   caches follow draft revisions. The experimental editor exposes a controller command
-  palette for editing, saving, exporting and playtesting.
+  palette for editing, saving, exporting and playtesting. **Import content** accepts
+  dropped editor projects, exported level folders or ZIPs, and mod/mutator packages;
+  authors review the detected content before opening or installing it. New mods
+  remain disabled until enabled through the mod manager. The level-editor guide
+  includes pictures of project creation, terrain libraries and focused composition.
 
 - **Widescreen presentation:** ordinary UI/HUD surfaces, titles, results, endings,
   diagnostics, all three special stages, scene effects, and trace-video capture.

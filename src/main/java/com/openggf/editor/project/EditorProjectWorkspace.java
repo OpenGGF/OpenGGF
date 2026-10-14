@@ -18,6 +18,7 @@ import com.openggf.io.ModInputLimits;
 import com.openggf.level.Level;
 import com.openggf.mods.code.BakedLevelRef;
 import com.openggf.mods.code.ModLevelDefinitionParser;
+import com.openggf.mods.code.ModLevelDefinition;
 import com.openggf.mods.code.ModLevelExportStagingValidator;
 import com.openggf.mods.code.ModZoneLoader;
 
@@ -55,6 +56,9 @@ public final class EditorProjectWorkspace {
     public EditorProjectWorkspace(Host host) { this.host = Objects.requireNonNull(host); }
     public EditorProjectDocument document() { return document; }
     public EditorProjectMenu menu() { return menu; }
+
+    /** A shared import can stage another host before validation; cancellation restores this document's view. */
+    public void restoreView() { if (!menu.isOpen()) host.menuClosed(document); }
 
     public boolean update(InputHandler input) {
         boolean wasOpen = menu.isOpen();
@@ -168,10 +172,45 @@ public final class EditorProjectWorkspace {
     private void openProjectForm() {
         menu.showForm("Open editor project", List.of(path("path", "Project", "projects/")), "Open", values -> io(() -> {
             var candidate = store.open(Path.of(values.get("path")));
-            host.selectGame(candidate.metadata().gameId());
-            replaceDocument(candidate);
-            host.status("Opened " + candidate.path());
+            publishProject(candidate);
         }));
+    }
+
+    /** Opens an already validated import through the same unsaved-document barrier as the project menu. */
+    public void openProject(EditorProjectDocument candidate) {
+        Objects.requireNonNull(candidate, "candidate");
+        beforeReplace(() -> io(() -> publishProject(candidate)));
+    }
+
+    private void publishProject(EditorProjectDocument candidate) throws IOException {
+        host.selectGame(candidate.metadata().gameId());
+        replaceDocument(candidate);
+        host.status("Opened " + candidate.path());
+    }
+
+    /** Parsed assets are self-contained; no archive or input file survives this handoff. */
+    public void importLevel(ModLevelDefinition parsed, GameId game) {
+        Objects.requireNonNull(parsed, "parsed");
+        Objects.requireNonNull(game, "game");
+        beforeReplace(() -> io(() -> publishImportedLevel(parsed, game)));
+    }
+
+    private void publishImportedLevel(ModLevelDefinition parsed, GameId game) throws IOException {
+        var module = host.selectGame(game);
+        var data = ModZoneLoader.prepareHostData(parsed);
+        module.getModZoneAdapter().validate("openggf-editor", data);
+        Level level = module.getModZoneAdapter().load("openggf-editor", data);
+        var music = parsed.music() instanceof ModLevelDefinition.StockMusic stock
+                ? new FullLevelExporter.ExportMusic.Stock(stock.stockId())
+                : new FullLevelExporter.ExportMusic.Track(
+                        ((ModLevelDefinition.TrackMusic) parsed.music()).trackKey().modId(),
+                        ((ModLevelDefinition.TrackMusic) parsed.music()).trackKey().localName());
+        var metadata = new EditorProjectMetadata(game, parsed.zoneName(), 0, 0, host.sourceFingerprint(),
+                parsed.start().x(), parsed.start().y(), parsed.bounds().minX(), parsed.bounds().maxX(),
+                parsed.bounds().minY(), parsed.bounds().maxY(), music,
+                parsed.hostMetadata().map(m -> m.objectZoneSet()).orElse(null));
+        replaceDocument(EditorProjectDocument.cloneLevel(metadata, level));
+        host.status("Imported " + parsed.zoneName() + ". Save it as a new editor project.");
     }
 
     private void chooseImportGame() {
@@ -185,22 +224,9 @@ public final class EditorProjectWorkspace {
                     Path supplied = Path.of(values.get("path")).toAbsolutePath().normalize();
                     Path root = Files.isDirectory(supplied) ? supplied : supplied.getParent();
                     String entry = Files.isDirectory(supplied) ? "level.json" : supplied.getFileName().toString();
-                    var module = host.selectGame(game);
                     try (var assets = ModAssetRoot.directory(root.getParent(), root, ModInputLimits.production(), DirectoryAccess.DEVELOPMENT)) {
                         var parsed = ModLevelDefinitionParser.read(assets, new BakedLevelRef(entry));
-                        var data = ModZoneLoader.prepareHostData(parsed);
-                        module.getModZoneAdapter().validate("openggf-editor", data);
-                        Level level = module.getModZoneAdapter().load("openggf-editor", data);
-                        var music = parsed.music() instanceof com.openggf.mods.code.ModLevelDefinition.StockMusic stock
-                                ? new FullLevelExporter.ExportMusic.Stock(stock.stockId())
-                                : new FullLevelExporter.ExportMusic.Track(
-                                        ((com.openggf.mods.code.ModLevelDefinition.TrackMusic) parsed.music()).trackKey().modId(),
-                                        ((com.openggf.mods.code.ModLevelDefinition.TrackMusic) parsed.music()).trackKey().localName());
-                        var metadata = new EditorProjectMetadata(game, parsed.zoneName(), 0, 0, host.sourceFingerprint(),
-                                parsed.start().x(), parsed.start().y(), parsed.bounds().minX(), parsed.bounds().maxX(),
-                                parsed.bounds().minY(), parsed.bounds().maxY(), music,
-                                parsed.hostMetadata().map(m -> m.objectZoneSet()).orElse(null));
-                        replaceDocument(EditorProjectDocument.cloneLevel(metadata, level));
+                        publishImportedLevel(parsed, game);
                     }
                     host.status("Imported " + supplied + ". Save it as a new editor project.");
                 }));
