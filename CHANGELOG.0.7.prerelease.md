@@ -56,7 +56,8 @@ Unreleased. The earlier development themes remain in
   and scene origins. Ending resource initialization preserves scroll handling
   in other zones. Donated Sonic 2 powered controllers restore
   palette and ring timing, current sparkle ownership and animation scripts through
-  rewind. Native ending bindings restore each controller's own RAM after rebinding
+  rewind, while normal Tails restores retain his body and balance profile.
+  Native ending bindings restore each controller's own RAM after rebinding
   and preserve incoming physics before the scene's powered writers run. Doomsday retires
   registered followers at its native entry and rebuilds restored scroll output
   without advancing the screen event.
