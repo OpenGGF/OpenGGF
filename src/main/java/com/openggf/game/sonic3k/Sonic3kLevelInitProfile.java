@@ -149,6 +149,12 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
                 "S3K Get_LevelSizeStart / HPZ special-stage hub camera",
                 () -> {
                     GameServices.level().initCameraForLevel();
+                    // Level loc_6404 sets Level_started_flag=1 for each fresh
+                    // load, before scene initialization/loc_6460 can suppress
+                    // it. In particular, a Saved2 origin return must not retain
+                    // the sanctuary's zero. Later AIZ/ending scene owners and
+                    // InitZonePlayerState retain their native clear authority.
+                    GameServices.camera().setLevelStarted(true);
                     int zone = GameServices.level().getCurrentZone();
                     int act = GameServices.level().getCurrentAct();
                     Sonic3kLevelResourceProfile profile =
