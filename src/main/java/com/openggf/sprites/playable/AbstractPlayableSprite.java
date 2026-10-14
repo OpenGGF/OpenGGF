@@ -915,6 +915,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.leftInputPressed = false;
                 this.rightInputPressed = false;
                 this.logicalInputState = 0;
+                // Scripted screens can project native coordinates through a
+                // temporary drawing origin. A fresh player returns to world space.
+                this.renderXOffset = 0;
+                this.renderYOffset = 0;
                 this.renderFlagWidthPixels = 0x18;
                 this.renderFlagOnScreen = true;
                 this.renderFlagOnScreenValid = false;
@@ -1257,7 +1261,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // Javadoc for the null contract subclasses must honor.
                 restoreSubclassRewindState(extra.subclassExtra());
                 instaShieldObject = PendingInstaShieldRewindExtra.restore(s.objectSubclassExtra(),
-                        instaShieldObject, powerUpSpawner != null
+                        instaShieldObject, instaShieldRegistered, powerUpSpawner != null
                                 ? () -> instaShieldObject = powerUpSpawner.createInstaShield(this) : null);
         }
 
@@ -1415,7 +1419,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         private void refreshPersistentInstaShieldRegistration(boolean registerNow) {
-                if (!hasPersistentInstaShieldAbility() || powerUpSpawner == null) {
+                if (!hasPersistentInstaShieldAbility() || powerUpSpawner == null
+                        || !PendingInstaShieldRewindExtra.permitsRefresh(registerNow, instaShieldObject)) {
                         return;
                 }
                 if (instaShieldObject == null || instaShieldObject.isDestroyed()) {

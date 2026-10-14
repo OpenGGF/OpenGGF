@@ -61,6 +61,53 @@ class TestSpriteManagerRewindCapture {
     }
 
     @Test
+    void scriptedRetirementRestoresPermanentDuplicateFollowersAndTheirLeaderChainBothWays() {
+        SpriteManager manager = new SpriteManager();
+        Sonic main = new Sonic("sonic", (short) 0x100, (short) 0x200);
+        Tails first = cpuTails("tails_p2", (short) 0x0E0, main);
+        Tails second = cpuTails("tails_p3", (short) 0x0C0, first);
+        manager.addSprite(main);
+        manager.addSprite(first, "tails");
+        manager.addSprite(second, "tails");
+        var rewind = manager.rewindSnapshottable();
+        var before = rewind.capture();
+        int firstX = first.getCentreX();
+        SpriteManagerInternalAccess.retireAllSidekicksForRewind(manager);
+        var retired = rewind.capture();
+        assertEquals(1, retired.sprites().length);
+        first.setCentreX((short) 0x500);
+        rewind.restore(before);
+        assertEquals(List.of(first, second), manager.getRegisteredSidekicks());
+        assertEquals(firstX, first.getCentreX());
+        assertSame(main, first.getCpuController().getLeader());
+        assertSame(first, second.getCpuController().getLeader());
+        assertEquals("tails", manager.getSidekickCharacterName(first));
+        assertTrue(com.openggf.game.rewind.RewindSnapshotDiff.diffKey(
+                "sprites", before, rewind.capture()).isEmpty());
+        rewind.restore(retired);
+        assertTrue(manager.getRegisteredSidekicks().isEmpty());
+        assertTrue(com.openggf.game.rewind.RewindSnapshotDiff.diffKey(
+                "sprites", retired, rewind.capture()).isEmpty());
+        rewind.restore(before);
+        assertEquals(List.of(first, second), manager.getRegisteredSidekicks());
+    }
+
+    @Test
+    void clearingTheWorldDropsScriptRetiredParticipantResources() {
+        SpriteManager manager = new SpriteManager();
+        Sonic main = new Sonic("sonic", (short) 0x100, (short) 0x200);
+        Tails follower = cpuTails("tails_p2", (short) 0x0E0, main);
+        manager.addSprite(main);
+        manager.addSprite(follower, "tails");
+        var rewind = manager.rewindSnapshottable();
+        var previousWorld = rewind.capture();
+        SpriteManagerInternalAccess.retireAllSidekicksForRewind(manager);
+        manager.clearAllSprites();
+        rewind.restore(previousWorld);
+        assertTrue(manager.getAllSprites().isEmpty(), "a previous world's retired resources must not leak");
+    }
+
+    @Test
     void canonicalOwnerCharacterCodeSurvivesProductionSpriteRewindRoundTrip() {
         SpriteManager manager = new SpriteManager();
         Sonic runner = new Sonic("owner:runner", (short) 0x100, (short) 0x200);

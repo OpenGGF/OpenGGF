@@ -150,6 +150,16 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
         };
     }
 
+    @Override
+    public void onUnload() {
+        // Sprite_CheckDeleteTouch -> loc_85094 sets status bit 7 before
+        // Delete_Current_Sprite. Publish the manager-owned offscreen exit so
+        // Child_Draw_Sprite cannot keep following an unregistered Java body.
+        if (!isDestroyed()) {
+            ObjectLifetimeOps.destroyRespawnableOffscreen(this);
+        }
+    }
+
     /**
      * {@code SetUp_ObjAttributes} is the only thing that writes {@code collision_flags}, and of the
      * three {@code ObjDat3} rows this object loads only {@code ObjDat3_919A6} carries one

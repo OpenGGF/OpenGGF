@@ -36,7 +36,8 @@ import java.util.List;
  * Generic {@code Obj_CutsceneKnuckles} subtype $30 for the S&K Knuckles-alone intro.
  *
  * <p>ROM reference: {@code CutsceneKnux_SKIntro}. The intro only runs for
- * Knuckles-alone from a fresh MHZ1 start; other teams delete the object.
+ * Knuckles from a fresh standalone S&K MHZ1 start. The supported locked-on
+ * ROM keeps SK_alone_flag clear and deletes this owner before it claims P1.
  */
 public final class CutsceneKnucklesSkIntroInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable {
@@ -64,6 +65,9 @@ public final class CutsceneKnucklesSkIntroInstance extends AbstractObjectInstanc
     private static final int POST_INTRO_RESTART_Y = 0x09EC;
     private static final int POST_INTRO_CHECKPOINT = 1;
 
+    // Native SK_alone_flag. Captured so a declared standalone object fixture
+    // retains its prerequisite through generic reconstruction. Runtime is locked-on.
+    private boolean skAlone;
     private int routine;
     private int timer;
     private int x;
@@ -81,7 +85,13 @@ public final class CutsceneKnucklesSkIntroInstance extends AbstractObjectInstanc
     private boolean bombAllocated;
 
     public CutsceneKnucklesSkIntroInstance(ObjectSpawn spawn) {
+        this(spawn, false);
+    }
+
+    /** Explicit native ROM-mode prerequisite for standalone component fixtures. */
+    CutsceneKnucklesSkIntroInstance(ObjectSpawn spawn, boolean skAlone) {
         super(spawn, "CutsceneKnuxSKIntro");
+        this.skAlone = skAlone;
         x = spawn.x();
         y = spawn.y();
         xSubpixel = x << 8;
@@ -114,7 +124,9 @@ public final class CutsceneKnucklesSkIntroInstance extends AbstractObjectInstanc
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (!initialized) {
             initialized = true;
-            if (!isKnucklesAlone() || lastStarPostHitIsSet()) {
+            // CutsceneKnux_SKIntro tests character_id=2, Last_star_post_hit=0,
+            // then SK_alone_flag!=0. Player character alone cannot admit it.
+            if (!isKnucklesAlone() || lastStarPostHitIsSet() || !skAlone) {
                 setDestroyed(true);
                 return;
             }

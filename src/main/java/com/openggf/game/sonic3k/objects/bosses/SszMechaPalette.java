@@ -8,14 +8,14 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 
 /** Mecha's single Palette_rotation_data entry, installed by sub_7C678. */
-final class SszMechaPalette implements RewindStateful<SszMechaPalette.Value> {
-    record Value(int header, int displacement, int delay, int counter) { }
+public final class SszMechaPalette implements RewindStateful<SszMechaPalette.Value> {
+    public record Value(int header, int displacement, int delay, int counter) { }
     private int header;
     private int displacement;
     private int delay;
     private int counter;
 
-    void install(ObjectServices services, int table) {
+    public void install(ObjectServices services, int table) {
         try {
             var rom = services.rom();
             displacement = rom.read16BitAddr(table) & 0xFFFF;
@@ -27,7 +27,7 @@ final class SszMechaPalette implements RewindStateful<SszMechaPalette.Value> {
     }
 
     /** Run_PalRotationScript / sub_859CE, including the callback's skipped colour write. */
-    void tick(ObjectServices services, Runnable customCallback) {
+    public void tick(ObjectServices services, Runnable customCallback) {
         var registry = services.paletteOwnershipRegistryOrNull();
         if (displacement == 0 || registry != null && registry.isPaletteRotationDisabled()) return;
         delay = (byte) (delay - 1);

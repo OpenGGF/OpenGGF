@@ -125,7 +125,7 @@ sound driver.
 |------|--------|
 | Sonic the Hedgehog (S1) | Broadest end-to-end coverage: all zones, bosses, special stages, title screen, ending, credits, and demo playback. |
 | Sonic the Hedgehog 2 (S2) | Most complete module by object coverage (122/122 checklist objects) and trace parity. Includes all zones, bosses, special stages, Tails AI, ending, and credits. |
-| Sonic 3 & Knuckles (S3K) | Work in progress. AIZ through LBZ have substantial route coverage, including shipped-ROM collision handling for the AIZ2 end boss, but this is not full parity: route/trace validation remains outstanding for the AIZ miniboss napalm FallingShot and AIZ2 end-boss splash children, while Knuckles' LBZ Big Arm handoff remains inert. |
+| Sonic 3 & Knuckles (S3K) | Work in progress. AIZ through LBZ have substantial route coverage, including shipped-ROM collision handling for the AIZ2 end boss, but this is not full parity: route/trace validation remains outstanding for the AIZ miniboss napalm FallingShot and AIZ2 end-boss splash children, Knuckles' placed Launch Base boss entry, Big Arm carrier handoff and native ending are implemented, while cold Launch Base traversal and broader native presentation remain unqualified. |
 
 Work is ongoing across all three games. See `CHANGELOG.md` for detailed, per-merge history.
 
@@ -243,7 +243,7 @@ racing, editor, loading, and audio foundations. The Mod API is still an
 unpublished candidate. [0.7's roadmap](docs/project/v0.7-roadmap.md) prioritizes
 complete campaigns before the feature/API publication gates in 0.8.
 
-See the [0.7 changelog](CHANGELOG.0.7.md),
+See the [0.7 changelog](CHANGELOG.0.7.prerelease.md),
 [development summary](docs/changelog/v0.7-release-summary.md), and
 [trace scope](docs/status/trace-scope-release-7.md).
 `next` is now `0.8.prerelease`; the published 0.6 snapshot is retained on

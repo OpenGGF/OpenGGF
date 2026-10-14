@@ -38,6 +38,7 @@ public class Sonic3kScrollHandlerProvider implements ScrollHandlerProvider {
     private SwScrlLrz3 lrzBossHandler;
     private SwScrlDdz ddzHandler;
     private SwScrlSsz sszHandler;
+    private SwScrlEnding endingHandler;
     private SwScrlS3kDez dezHandler;
     private SwScrlS3kDezFinalBoss dezFinalHandler;
     private SwScrlGumball gumballHandler;
@@ -89,6 +90,7 @@ public class Sonic3kScrollHandlerProvider implements ScrollHandlerProvider {
         lrzBossHandler = new SwScrlLrz3(rom);
         ddzHandler = new SwScrlDdz();
         sszHandler = new SwScrlSsz();
+        endingHandler = new SwScrlEnding(rom);
         dezHandler = new SwScrlS3kDez();
         dezFinalHandler = new SwScrlS3kDezFinalBoss();
         gumballHandler = new SwScrlGumball();
@@ -151,6 +153,7 @@ public class Sonic3kScrollHandlerProvider implements ScrollHandlerProvider {
             case Sonic3kZoneIds.ZONE_HPZ -> actIndex == 0 ? lrzBossHandler : hpzHandler;
             case Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA -> actIndex == 0 ? dezFinalHandler : hpzHandler;
             case Sonic3kZoneConstants.ZONE_SSZ -> sszHandler;
+            case 0x0D -> endingHandler; // Ending_BackgroundEvent, native $D01
             // Death Egg acts 1 and 2 use PlainDeformation with a static background;
             // the $1700 final-boss act is zone $17 and is not this handler.
             case Sonic3kZoneConstants.ZONE_DEZ -> dezHandler;

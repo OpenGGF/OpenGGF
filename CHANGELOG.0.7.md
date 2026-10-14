@@ -170,6 +170,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   the boss-entry gates. The final Mecha Sonic arena also holds its native
   horizontal origin on widescreen, keeping its attack box aligned with the terrain
   even when a wider camera deadzone would otherwise retain an offset.
+  Cold paired Sonic and Tails routes complete all three fights at native and
+  800px widths, then continue into Death Egg with ordinary control. Rewind retains
+  the transports and resets history at the real level handoff.
   Spawn-derived constants and
   restored carrier links declare their rewind policies without coverage exceptions.
   Player snapshots preserve tile priority and the independent sprite display

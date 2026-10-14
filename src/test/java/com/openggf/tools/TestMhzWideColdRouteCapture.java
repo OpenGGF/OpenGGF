@@ -25,10 +25,11 @@ class TestMhzWideColdRouteCapture {
                 800, "sonic", "", "off", null, null, null);
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/mhz2-sonic-incoming-800.bk2"));
-        assertEquals(25548, movie.getFrameCount());
+        assertEquals(29744, movie.getFrameCount());
         var spots = Set.of(11000, 12000, 13000, 13800, 14500, 15000, 16000,
                 17000, 18000, 18900, 19500, 20000, 21000, 21450, 22000, 22350);
         var checked = new HashSet<String>();
+        var health = new HashSet<Integer>();
         int reload = -1;
         // Preserve full drawing: MHZ replay controls cannot isolate a drawing gap.
         var drawing = new RouteFrameDrawing(true);
@@ -46,9 +47,11 @@ class TestMhzWideColdRouteCapture {
                 if (spots.contains(frame)) pending.add("wide-route-" + frame);
                 for (var boss : manager.activeObjectsOfType(MhzEndBossInstance.class)) {
                     if (boss.getCustomFlag(0x100) == 0) continue;
+                    health.add(boss.getState().hitCount);
+                    if (boss.isDefeated()) assertEquals(1, boss.getState().hitCount, "native terminal health");
                     if (boss.getState().hitCount == 9) pending.add("admission");
                     if (boss.getState().hitCount == 5) pending.add("chase-hit");
-                    if (boss.getState().hitCount == 1) pending.add("last-hit");
+                    if (boss.getState().hitCount == 1 && (boss.getCustomFlag(0x38) & 0x80) != 0) pending.add("last-hit");
                     if (boss.isDefeated()) pending.add("defeat");
                     if (boss.isDefeated() && GameServices.gameState().isEndOfLevelActive()) {
                         pending.add("capsule-results");
@@ -63,24 +66,33 @@ class TestMhzWideColdRouteCapture {
                     pending.add("weather-fade");
                 }
                 if (level.getCurrentZone() == 4 && reload < 0) reload = frame;
-                if (frame == 25500) {
+                if (frame == 29700) {
                     assertEquals(4, level.getCurrentZone());
                     pending.add("fbz-loaded");
                 }
                 pending.removeAll(checked);
                 if (pending.isEmpty()) continue;
+                assertEquals(com.openggf.game.GameMode.LEVEL,
+                        session.loop().getCurrentGameMode(),
+                        "level replay checkpoint entered another mode at " + frame);
                 int horizon = Math.min(pending.contains("weather-fade") ? 90 : 45,
                         movie.getFrameCount() - frame - 1);
                 // Keep registry replay on one side of the observed fresh load.
                 // This test does not substitute for live-history isolation checks.
-                if (frame < 25397) horizon = Math.min(horizon, 25396 - frame);
+                if (frame < 28981) horizon = Math.min(horizon, 28980 - frame);
                 assertTrue(horizon > 0, "independent replay interval for " + pending);
                 var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
                 drawing.checkpoint(session);
                 var saved = registry.capture();
+                var savedLevel = level.getCurrentLevel();
                 for (int n = 1; n <= horizon; n++) {
                     session.step(movie.getFrame(frame + n));
                     drawing.draw(session);
+                    assertEquals(com.openggf.game.GameMode.LEVEL,
+                            session.loop().getCurrentGameMode(),
+                            "level replay crossed a mode boundary at " + (frame + n));
+                    assertSame(savedLevel, level.getCurrentLevel(),
+                            "level replay crossed a fresh load at " + (frame + n));
                 }
                 var expected = registry.capture();
                 for (int cycle = 0; cycle < 2; cycle++) {
@@ -102,7 +114,9 @@ class TestMhzWideColdRouteCapture {
                     "capsule-results", "ship", "ship-carry", "fbz-loaded", "weather-fade"));
             spots.forEach(frame -> required.add("wide-route-" + frame));
             assertEquals(required, checked);
-            assertEquals(25397, reload);
+            assertEquals(Set.of(1, 2, 3, 4, 5, 6, 7, 8, 9), health,
+                    "loc_767F6 starts escape at one; no ninth hit to zero");
+            assertEquals(28981, reload);
             assertEquals(4, GameServices.level().getCurrentZone());
             assertEquals(0, GameServices.level().getCurrentAct());
             assertFalse(session.player().isObjectControlled());

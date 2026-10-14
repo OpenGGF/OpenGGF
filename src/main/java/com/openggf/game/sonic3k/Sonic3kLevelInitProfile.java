@@ -199,7 +199,17 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
     protected InitStep requestTitleCardStep(LevelLoadContext ctx) {
         return new InitStep("RequestTitleCard",
             "S3K: Obj_TitleCard",
-            () -> GameServices.level().requestTitleCardIfNeeded(ctx));
+            () -> {
+                if (ctx.getZone() == 0x0D && ctx.getAct() == 1) {
+                    // Obj_TitleCardInit deletes immediately at $D01. A caller
+                    // omitting animation must not manufacture the ordinary
+                    // omitted-title owner and its four KosM jobs first. Reach
+                    // the existing semantic-suppression boundary instead.
+                    var endingPresentation = new LevelLoadContext();
+                    endingPresentation.setShowTitleCard(true);
+                    GameServices.level().requestTitleCardIfNeeded(endingPresentation);
+                } else GameServices.level().requestTitleCardIfNeeded(ctx);
+            });
     }
 
     @Override

@@ -41,4 +41,35 @@ class TestLevelBoundsMaskGeometry {
         level.camera = camera;
         assertFalse(LevelScrollPresentation.captureArenaMask(level).visible(800));
     }
+
+    @Test void screenCoordinatePresentationUsesItsWindowWithoutRewritingWorldBounds() {
+        var level=mock(LevelManager.class);var camera=spy(new Camera());
+        doReturn((short)800).when(camera).getWidth();
+        camera.setMinX((short)459);camera.setMaxX((short)459);camera.setX((short)0);
+        level.camera=camera;
+        var provider=mock(com.openggf.game.ZoneFeatureProvider.class,
+                withSettings().extraInterfaces(com.openggf.game.internal.NativeArenaCameraFraming.class));
+        when(level.getZoneFeatureProvider()).thenReturn(provider);
+        var framing=(com.openggf.game.internal.NativeArenaCameraFraming)provider;
+        when(framing.presentationNativeHorizontalOrigin()).thenReturn(java.util.OptionalInt.of(240));
+        var mask=LevelScrollPresentation.captureArenaMask(level);
+        assertEquals(240,mask.left());assertEquals(560,mask.right());
+        assertEquals(459,camera.getMinX());assertEquals(459,camera.getMaxX());assertEquals(0,camera.getX());
+        when(framing.presentationNativeHorizontalOrigin()).thenReturn(java.util.OptionalInt.empty());
+        mask=LevelScrollPresentation.captureArenaMask(level);
+        assertEquals(459,mask.left());assertEquals(779,mask.right());
+    }
+    @Test void nativeScreenProjectionUsesPublishedCopiesAndShakeAtEveryPresetWidth() {
+        int[] widths={320,352,400,528,800},insets={0,16,40,104,240};
+        for(int i=0;i<widths.length;i++){
+            var camera=spy(new Camera());doReturn((short)widths[i]).when(camera).getWidth();
+            camera.setX((short)0);camera.setY((short)204);
+            camera.setXCopy((short)608);camera.setYCopy((short)269);camera.setShakeOffsets(3,-2);
+            assertEquals(611+insets[i],com.openggf.game.sonic3k.ending.EndingScreenProjection.nativeHorizontalOrigin(camera));
+            assertEquals(128+insets[i],com.openggf.game.sonic3k.ending.EndingScreenProjection.worldX(camera,256)-camera.getXWithShake());
+            assertEquals(96,com.openggf.game.sonic3k.ending.EndingScreenProjection.worldY(camera,224)-camera.getYWithShake());
+            assertEquals(0,camera.getX());assertEquals(204,camera.getY());
+            assertEquals(608,camera.getXCopy());assertEquals(269,camera.getYCopy());
+        }
+    }
 }

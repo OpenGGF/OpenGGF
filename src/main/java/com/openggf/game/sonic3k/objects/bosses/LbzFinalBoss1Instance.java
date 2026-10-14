@@ -13,6 +13,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.sonic3k.events.S3kTransitionWriteSupport;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.S3kBossExplosionChild;
 import com.openggf.game.sonic3k.objects.S3kBossExplosionController;
@@ -141,7 +142,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
     private int shiftedSegmentTrailAllocationMisses;
     private int detachedSegmentTrailAllocationMisses;
     private int mappingFrame = BODY_FRAME;
-    private int activationTimer = ACTIVATION_TIMER;
+    private int activationTimer;
     private int flags;
     private int statusBits;
     private int savedRoutine;
@@ -152,6 +153,9 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
     private int detachCount;
     private boolean renderXFlip;
     private boolean initialized;
+    /** Native $CD changes code in the same SST: 1=admission, 2=loc_85CA4, 0=CA. */
+    private int knucklesEntryPhase;
+    private final S3kSharedBossCameraGate knucklesEntryGate = new S3kSharedBossCameraGate();
     private boolean bossMusicStarted;
     private boolean deferChildrenSameFrame;
     /** The allocation pass has built the graph; the next dispatch is still ROM init. */
@@ -220,6 +224,12 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         super(spawn, "LBZFinalBoss1");
         this.x = spawn.x() & 0xFFFF;
         this.y = spawn.y() & 0xFFFF;
+        if (spawn.objectId() == Sonic3kObjectIds.LBZ_FINAL_BOSS_KNUX) {
+            knucklesEntryPhase = 1;
+            hp = 0;
+            collisionFlags = 0;
+            collisionBackup = 0;
+        }
     }
 
     @Override
@@ -254,7 +264,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
 
     @Override
     public boolean isPersistent() {
-        return true;
+        return knucklesEntryPhase != 1;
     }
 
     @Override
@@ -287,6 +297,10 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
+        if (knucklesEntryPhase != 0) {
+            updateKnucklesPlacedEntry();
+            return;
+        }
         serviceDeathEggSmallArtQueue();
         boolean wasInitialized = initialized;
         ensureInitialized();
@@ -325,6 +339,61 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         updateDynamicSpawn(getX(), getY());
     }
 
+    /** Obj_LBZFinalBossKnux / loc_73046 / loc_7304C, shipped FixBugs=0. */
+    private void updateKnucklesPlacedEntry() {
+        var camera = services().camera();
+        if (camera == null) return;
+        if (knucklesEntryPhase == 1) {
+            // The ordinary wide camera tracks screen centre; compare the
+            // centred native320 view before the owner opts into arena projection.
+            int cameraX = com.openggf.camera.NativeViewportFraming.nativeLeft(
+                    camera.getX(), camera.getWidth()) & 0xFFFF;
+            int cameraY = cameraY();
+            if (cameraY < knucklesEntryBoundsWord(0) || cameraY > knucklesEntryBoundsWord(2)
+                    || cameraX < knucklesEntryBoundsWord(4) || cameraX > knucklesEntryBoundsWord(6)) {
+                // Check_CameraInRange -> Delete_Sprite_If_Not_In_Range retains
+                // the placed owner while its coarse load window still admits it.
+                coarseXCullViewport(getX());
+                return;
+            }
+            if (services().gameState() != null) {
+                services().gameState().setCurrentBossId(Sonic3kObjectIds.LBZ_FINAL_BOSS_KNUX);
+            }
+            if (services().zoneRuntimeState() instanceof LbzZoneRuntimeState state) {
+                // Preserve native movement-wall words while projecting the arena
+                // left by half the extra viewport width, as existing native gates do.
+                state.setCenterNativeArenaCamera(true);
+            }
+            services().fadeOutMusic();
+            knucklesEntryGate.begin(camera, new S3kSharedBossCameraGate.LockBounds(
+                    knucklesEntryBoundsWord(8), knucklesEntryBoundsWord(10),
+                    knucklesEntryBoundsWord(12), knucklesEntryBoundsWord(14)), 2 * 60, cameraX);
+            knucklesEntryPhase = 2;
+            // Obj_LBZFinalBossKnux clears _unkFAA2 before its PLC submission.
+            if (services().waterSystem() != null) {
+                services().waterSystem().setDynamicWaterLocked(Sonic3kZoneIds.ZONE_LBZ, 1, false);
+            }
+            // This existing event bridge appends the same native PLC $71.
+            S3kTransitionWriteSupport.loadLbzBigArmPostGatePlc(services());
+            return; // initialization never falls through into loc_85CA4
+        }
+        if (knucklesEntryGate.update(camera, () -> services().playMusic(Sonic3kMusic.BOSS.id), cameraX())) {
+            // loc_7304C only changes the next code pointer; CA initializes on
+            // its following dispatch and inherits the negative $2E music timer.
+            activationTimer = knucklesEntryGate.captureRewindStateValue().musicWaitTimer();
+            knucklesEntryPhase = 0;
+        }
+    }
+
+    private int knucklesEntryBoundsWord(int byteOffset) {
+        try {
+            return services().romReader().readU16BE(
+                    Sonic3kConstants.LBZ_FINAL_BOSS_KNUX_BOUNDS_ADDR + byteOffset);
+        } catch (IOException ex) {
+            throw new IllegalStateException("Cannot read native LBZ Knuckles arena bounds", ex);
+        }
+    }
+
     /**
      * ROM Obj_LBZFinalBoss1 dispatches its current routine before sub_734FA
      * observes the collision_flags clear written by the earlier player slot.
@@ -346,13 +415,6 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             return;
         }
         initialized = true;
-        if (currentPlayerCharacter() == PlayerCharacter.KNUCKLES
-                && services().waterSystem() != null) {
-            // Obj_LBZFinalBoss1 is the route wrapper that precedes Big Arm;
-            // its Knuckles entry clears the retained ROM _unkFAA2 latch.
-            services().waterSystem().setDynamicWaterLocked(
-                    Sonic3kZoneIds.ZONE_LBZ, 1, false);
-        }
         collisionFlags = COLLISION_FLAGS;
         collisionBackup = COLLISION_FLAGS;
         hp = INITIAL_HP;
@@ -432,9 +494,6 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
     }
 
     private void updateActivationWait() {
-        if (currentPlayerCharacter() == PlayerCharacter.KNUCKLES) {
-            return;
-        }
         activationTimer--;
         if (activationTimer < 0) {
             activate();
@@ -1089,7 +1148,13 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
     }
 
     private int cameraX() {
-        return services().camera() == null ? 0 : Short.toUnsignedInt(services().camera().getX());
+        var camera = services().camera();
+        if (camera == null) return 0;
+        if (services().zoneRuntimeState() instanceof LbzZoneRuntimeState state
+                && state.centerNativeArenaCamera()) {
+            return com.openggf.camera.NativeViewportFraming.nativeLeft(camera.getX(), camera.getWidth()) & 0xFFFF;
+        }
+        return camera.getX() & 0xFFFF;
     }
 
     private int cameraY() {
@@ -1119,7 +1184,8 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (isDestroyed()) {
+        // $CD/loc_73046 never queues a sprite; CA owns the first draw after init.
+        if (!initialized || isDestroyed()) {
             return;
         }
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.ROBOTNIK_SHIP);
@@ -1288,13 +1354,12 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
      * Common boss child: tracks the boss at (dx, dy), renders one
      * Map_LBZFinalBoss1 frame, and deletes itself when the boss is defeated.
      */
-    public abstract static class BossChild extends AbstractObjectInstance implements RewindRecreatable {
-        @RewindTransient(reason = "Structural parent link; child graph is owned by the final boss reconstruction path.")
-        protected final LbzFinalBoss1Instance boss;
+    public abstract static class BossChild extends AbstractObjectInstance implements SpawnRewindRecreatable {
+        /** Exact parent identity is hydrated only after every rewind shell exists. */
+        protected LbzFinalBoss1Instance boss;
         protected int x;
         protected int y;
-        @RewindTransient(reason = "Constructor-derived parent-relative x offset.")
-        protected final int dx;
+        protected int dx;
         protected int dy;
         protected int mappingFrame;
         protected int collisionFlags;
@@ -1328,9 +1393,11 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             return true;
         }
 
-        @Override
-        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-            return null;
+        /** Phase-one shell: no gameplay initialization, allocation or parent lookup. */
+        protected BossChild(ObjectSpawn spawn, String name) {
+            super(spawn, name);
+            x = spawn.x() & 0xFFFF;
+            y = spawn.y() & 0xFFFF;
         }
 
         protected void refreshFromBoss() {
@@ -1409,6 +1476,8 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
 
     /** ROM Obj_RobotnikHead3 (Child1_MakeRoboHead3): Map_RobotnikShip frames 0/1, 2 on flash, 3 on defeat. */
     public static final class RobotnikHeadChild extends BossChild {
+
+        private RobotnikHeadChild(ObjectSpawn spawn) { super(spawn, "LBZFinalBoss1RobotnikHead"); }
         private int animTimer;
         private int rawFrame;
 
@@ -1449,6 +1518,8 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
 
     /** ROM loc_73164 (ChildObjDat_737F0): frame 2, deletes on parent defeat. */
     public static final class TopAttachmentChild extends BossChild {
+
+        private TopAttachmentChild(ObjectSpawn spawn) { super(spawn, "LBZFinalBoss1TopAttachment"); }
         private TopAttachmentChild(LbzFinalBoss1Instance boss) {
             super(boss, "LBZFinalBoss1TopAttachment", 0, -0x14);
             this.mappingFrame = 2;
@@ -1462,6 +1533,8 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
      * (ROM loc_730C0).
      */
     public static final class TurretSegmentChild extends BossChild implements TouchResponseProvider {
+
+        private TurretSegmentChild(ObjectSpawn spawn) { super(spawn, "LBZFinalBoss1TurretSegment"); }
         /** ROM ChildObjDat_7377A spray offsets (tags 0/1). */
         private static final int[][] SPRAY_OFFSETS_4 = {
                 {-0x10, -4}, {0x10, -4}, {-0x10, 0x10}, {0x10, 0x10}
@@ -1476,9 +1549,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
                 {0x200, -0x100}, {-0x300, -0x300}, {0x300, -0x300}
         };
 
-        @RewindTransient(reason = "Constructor-derived segment tag; initial boss child graph recreates it.")
-        private final int tag;
-        @RewindTransient(reason = "ROM segment init creates its nested children on the first segment routine pass.")
+        private int tag;
         private boolean nestedChildrenInitialized;
         private boolean detached;
         private boolean wasFlashing;
@@ -1584,6 +1655,8 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
      * the new frame is 4 and the head's flip matches the boss's flip.
      */
     public static final class LaserHeadChild extends BossChild {
+
+        private LaserHeadChild(ObjectSpawn spawn) { super(spawn, "LBZFinalBoss1LaserHead"); }
         private static final int[] FRAMES = {3, 4, 5, 6, 7, 8, 7, 6, 5, 4, 3, 0x2D};
         /** byte_734AA bit 7 per entry: x-flip set on the first six steps. */
         private static final boolean[] FRAME_XFLIP = {true, true, true, true, true, true,
@@ -1592,8 +1665,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         /** byte_734CE has 11 pairs; the parked step (frame $2D) reuses the last. */
         private static final int[] X_OFFSETS = {0x27, 0x24, 0x24, 0x14, 0x0C, 0, -0x0C, -0x14, -0x24, -0x24, -0x27, -0x27};
 
-        @RewindTransient(reason = "Structural sibling link; laser heads are recreated with their segment.")
-        private final TurretSegmentChild segment;
+        private TurretSegmentChild segment;
         private int step;
         private int stepTimer;
         private int flickerPhase;
@@ -1682,13 +1754,13 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
      * animation, then the bolt fires at ±$800 spawning a beam trail each frame.
      */
     public static final class MuzzleLaserChild extends BossChild implements TouchResponseProvider {
+
+        private MuzzleLaserChild(ObjectSpawn spawn) { super(spawn, "LBZFinalBoss1MuzzleLaser"); }
         /** byte_73849: charge anim frames at delay 0. */
         private static final int[] CHARGE_FRAMES = {0x17, 0x17, 0x18, 0x19, 0x1A, 0x1B};
 
-        @RewindTransient(reason = "Structural sibling link; muzzle state derives from the firing head.")
-        private final LaserHeadChild head;
-        @RewindTransient(reason = "Constructor-derived fire direction.")
-        private final boolean fireFlip;
+        private LaserHeadChild head;
+        private boolean fireFlip;
         private boolean detachedChainAtCreation;
         private int countdownTimer;
         private int countdownStep = 8;
@@ -1841,6 +1913,10 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
 
     /** Beam trail (loc_7333A): four 1-frame anim steps, then delete. */
     public static final class LaserTrailChild extends BossChild {
+        private LaserTrailChild(ObjectSpawn spawn) {
+            super(spawn, "LBZFinalBoss1LaserTrail");
+            frames = FRAMES_A.clone();
+        }
         private static final int[] FRAMES_A = {0x1C, 0x1C, 0x1D, 0x1E};
         private static final int[] FRAMES_B = {0x1C, 0x1F, 0x20, 0x21};
 
@@ -1851,7 +1927,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             super(boss, "LBZFinalBoss1LaserTrail", 0, 0);
             this.x = x & 0xFFFF;
             this.y = y & 0xFFFF;
-            this.frames = variantB ? FRAMES_B : FRAMES_A;
+            this.frames = variantB ? FRAMES_B.clone() : FRAMES_A.clone();
             this.mappingFrame = frames[0];
         }
 
@@ -1883,6 +1959,8 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
      * raw render-flag rotation each anim cycle.
      */
     public static final class OrbitingPodChild extends BossChild implements TouchResponseProvider {
+
+        private OrbitingPodChild(ObjectSpawn spawn) { super(spawn, "LBZFinalBoss1OrbitingPod"); }
         /** byte_7385D: frames C,D,E,D,C at delay 1, then the $F4 flag-rotate callback. */
         private static final int[] ANIM_FRAMES = {0x0C, 0x0D, 0x0E, 0x0D, 0x0C};
 
@@ -1943,6 +2021,8 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
 
     /** Gun pods (loc_73364, children of the bottom segment): anim 9/A/B, fire-shield immune. */
     public static final class GunPodChild extends BossChild implements TouchResponseProvider {
+
+        private GunPodChild(ObjectSpawn spawn) { super(spawn, "LBZFinalBoss1GunPod"); }
         private static final int SHIELD_REACTION_FIRE = 1 << 4;
         private static final int[] ANIM_FRAMES = {9, 0x0A, 0x0B};
         private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = new TouchResponseProfile(
@@ -1956,8 +2036,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
                 TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
                 TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
 
-        @RewindTransient(reason = "Structural sibling link; gun pods are recreated with their segment.")
-        private final TurretSegmentChild segment;
+        private TurretSegmentChild segment;
         private int animIndex;
         private int animTimer = 2;
 
@@ -2017,6 +2096,8 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
 
     /** Hit sparks (loc_73192): frames $10/$22 at ±$10, alive while the flash lasts. */
     public static final class HitSparkChild extends BossChild {
+
+        private HitSparkChild(ObjectSpawn spawn) { super(spawn, "LBZFinalBoss1HitSpark"); }
         private HitSparkChild(LbzFinalBoss1Instance boss, int dx, int dy, boolean alternate) {
             super(boss, "LBZFinalBoss1HitSpark", dx, dy);
             this.mappingFrame = alternate ? 0x22 : 0x10;
@@ -2034,6 +2115,8 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
 
     /** Segment debris (loc_73138): MoveSprite gravity $38 + $60-frame screen-lock life. */
     public static final class DebrisChild extends BossChild {
+
+        private DebrisChild(ObjectSpawn spawn) { super(spawn, "LBZFinalBoss1Debris"); }
         private int life = 0x60;
         private int xFixed;
         private int yFixed;
@@ -2072,7 +2155,12 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
 
     /** Child6_CreateBossExplosion wrapper (subtype 0/4/$C parameter sets). */
     public static final class ExplosionShowerChild extends BossChild {
-        private final transient S3kBossExplosionController controller;
+
+        private ExplosionShowerChild(ObjectSpawn spawn) { super(spawn, "LBZFinalBoss1ExplosionShower"); }
+        private transient S3kBossExplosionController controller;
+        private final com.openggf.game.rewind.RewindStateful<?> controllerRewind =
+                com.openggf.game.sonic3k.objects.S3kBossExplosionInternalAccess.rewindState(
+                        () -> controller, value -> controller = value, () -> services().rng());
 
         private ExplosionShowerChild(LbzFinalBoss1Instance boss, int x, int y, int subtype) {
             super(boss, "LBZFinalBoss1ExplosionShower", 0, 0);
@@ -2099,6 +2187,8 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
     }
 
     private static final class P2EndingPoseWatcherChild extends BossChild {
+
+        private P2EndingPoseWatcherChild(ObjectSpawn spawn) { super(spawn, "LBZFinalBoss1P2EndingPoseWatcher"); }
         private P2EndingPoseWatcherChild(LbzFinalBoss1Instance boss) {
             super(boss, "LBZFinalBoss1P2EndingPoseWatcher", 0, 0);
             this.visible = false;
@@ -2149,6 +2239,8 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
 
     /** ROM loc_863C0/loc_863D6: positive P2 lock plus per-frame logical-word clear. */
     private static final class TailsCpuReleaseChild extends BossChild {
+
+        private TailsCpuReleaseChild(ObjectSpawn spawn) { super(spawn, "LBZFinalBoss1TailsCpuRelease"); }
         private boolean playerControlRestored;
 
         private TailsCpuReleaseChild(LbzFinalBoss1Instance boss) {

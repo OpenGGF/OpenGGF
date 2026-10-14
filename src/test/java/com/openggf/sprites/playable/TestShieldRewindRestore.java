@@ -34,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestShieldRewindRestore {
@@ -94,6 +95,86 @@ class TestShieldRewindRestore {
         assertEquals(0, spawner.registerObjectCalls);
         sprite.tickStatus();
         assertEquals(1, spawner.registerObjectCalls);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void nativeRetiredInstaShieldStaysAbsentThroughRestoreAndStatus(boolean retainDestroyedHandle) {
+        TestablePlayableSprite sprite = instaShieldSprite();
+        RecordingInstaShield original = new RecordingInstaShield();
+        RecordingInstaShield unwantedReplacement = new RecordingInstaShield();
+        RecordingPowerUpSpawner spawner = new RecordingPowerUpSpawner();
+        spawner.instaShields.add(original);
+        spawner.instaShields.add(unwantedReplacement);
+        sprite.setPowerUpSpawner(spawner);
+        sprite.tickStatus();
+        assertEquals(1, spawner.registerObjectCalls);
+
+        PlayableSpriteInternalAccess.retirePersistentInstaShield(sprite);
+        assertTrue(original.isDestroyed());
+        assertNull(sprite.getInstaShieldObject());
+        var retired = sprite.captureRewindState();
+        assertFalse(retired.playerExtra().instaShieldRegistered());
+        assertNull(retired.objectSubclassExtra(), "retirement has no pending auxiliary snapshot");
+        if (retainDestroyedHandle) sprite.setInstaShieldObject(original);
+
+        sprite.restoreRewindState(retired);
+        sprite.refreshPowerUpObjectsAfterRewindRestore();
+        sprite.tickStatus();
+
+        assertEquals(1, spawner.registerObjectCalls,
+                "visual refresh preserves absence; the native null handle remains absent on status");
+        assertEquals(1, spawner.instaShields.size(), "visual refresh must not create a replacement");
+        assertFalse(sprite.captureRewindState().playerExtra().instaShieldRegistered());
+        assertNull(sprite.getInstaShieldObject(), "captured absence retires even an abandoned destroyed handle");
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void retiredAbsenceSurvivesRestorationFromLiveRegisteredAndPendingOwners(boolean registered) {
+        TestablePlayableSprite sprite = instaShieldSprite();
+        RecordingInstaShield original = new RecordingInstaShield();
+        RecordingInstaShield firstRecreated = new RecordingInstaShield();
+        RecordingInstaShield secondRecreated = new RecordingInstaShield();
+        RecordingPowerUpSpawner spawner = new RecordingPowerUpSpawner();
+        spawner.instaShields.add(original);
+        spawner.instaShields.add(firstRecreated);
+        spawner.instaShields.add(secondRecreated);
+        sprite.setPowerUpSpawner(spawner);
+        if (registered) sprite.tickStatus();
+        var live = sprite.captureRewindState();
+        assertEquals(registered, live.playerExtra().instaShieldRegistered());
+        assertEquals(!registered, live.objectSubclassExtra() instanceof PendingInstaShieldRewindExtra);
+        PlayableSpriteInternalAccess.retirePersistentInstaShield(sprite);
+        var absent = sprite.captureRewindState();
+
+        sprite.restoreRewindState(live);
+        sprite.refreshPowerUpObjectsAfterRewindRestore();
+        assertSame(firstRecreated, sprite.getInstaShieldObject());
+        assertFalse(firstRecreated.isDestroyed());
+        int registrations = spawner.registerObjectCalls;
+
+        sprite.restoreRewindState(absent);
+        sprite.refreshPowerUpObjectsAfterRewindRestore();
+        sprite.tickStatus();
+        assertTrue(firstRecreated.isDestroyed(), "retired snapshot removes the abandoned live owner");
+        assertNull(sprite.getInstaShieldObject());
+        assertFalse(sprite.captureRewindState().playerExtra().instaShieldRegistered());
+        assertNull(sprite.captureRewindState().objectSubclassExtra());
+        assertEquals(registrations, spawner.registerObjectCalls);
+        assertEquals(1, spawner.instaShields.size(), "absence does not recreate a pending owner");
+
+        sprite.restoreRewindState(live);
+        sprite.refreshPowerUpObjectsAfterRewindRestore();
+        assertSame(secondRecreated, sprite.getInstaShieldObject(),
+                "revisiting a captured live owner remains supported after retirement");
+        assertFalse(secondRecreated.isDestroyed());
+        assertEquals(registered, sprite.captureRewindState().playerExtra().instaShieldRegistered());
+        if (!registered) {
+            assertTrue(sprite.captureRewindState().objectSubclassExtra() instanceof PendingInstaShieldRewindExtra);
+            sprite.tickStatus();
+            assertTrue(sprite.captureRewindState().playerExtra().instaShieldRegistered());
+        }
     }
 
     @Test
@@ -361,15 +442,19 @@ class TestShieldRewindRestore {
         }
     }
 
-    private static final class RecordingInstaShield implements InstaShieldHandle {
-        private boolean destroyed;
+    private static final class RecordingInstaShield extends AbstractObjectInstance implements InstaShieldHandle {
         private int dplcInvalidations;
 
-        @Override
-        public void destroy() { destroyed = true; }
+        private RecordingInstaShield() {
+            super(new com.openggf.level.objects.ObjectSpawn(0, 0, 0, 0, 0, false, 0),
+                    "RecordingInstaShield");
+        }
 
         @Override
-        public boolean isDestroyed() { return destroyed; }
+        public void destroy() { setDestroyed(true); }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) { }
 
         @Override
         public void setVisible(boolean visible) { }

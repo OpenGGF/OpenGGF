@@ -75,7 +75,7 @@ final class LevelFrameRuntimeUpdater {
     }
 
     void recomputeParallaxAfterRewindRestore() {
-        recomputeParallaxOnlyForCurrentFrame();
+        refreshParallaxState(true);
     }
 
     void recomputeParallaxOnlyForCurrentFrame() {
@@ -83,10 +83,20 @@ final class LevelFrameRuntimeUpdater {
     }
 
     void refreshParallaxState() {
+        refreshParallaxState(false);
+    }
+
+    private void refreshParallaxState(boolean rebuild) {
         if (levelManager.parallaxManager == null || levelManager.camera == null) {
             return;
         }
-        levelManager.parallaxManager.update(
+        if (rebuild) levelManager.parallaxManager.rebuildDerivedOutput(
+                levelManager.currentZone,
+                levelManager.currentAct,
+                levelManager.camera,
+                levelManager.frameCounter,
+                levelManager.level);
+        else levelManager.parallaxManager.update(
                 levelManager.currentZone,
                 levelManager.currentAct,
                 levelManager.camera,

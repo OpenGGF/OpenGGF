@@ -39,7 +39,7 @@ import java.util.List;
  * S3K SKL object $93 - MHZ Act 2 end boss.
  *
  * <p>ROM reference: {@code Obj_MHZEndBoss}. The active core initializes with
- * collision size $0F and nine hits at {@code loc_76004}; this class ports the
+ * collision size $0F and initial health nine at {@code loc_76004}; this class ports the
  * arena setup, weather-machine gate, alternating dash loop, final defeat,
  * capsule handoff, and Robotnik ship escape onto the shared boss path.
  */
@@ -112,6 +112,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
     private boolean cameraRangePassed;
     private boolean paletteLoaded;
     private boolean arenaSetupApplied;
+    private boolean touchChildrenRetired;
     private int finalHitExplosionTimer;
     private int finalHitExplosionIntervalCounter;
 
@@ -133,6 +134,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         cameraRangePassed = false;
         paletteLoaded = false;
         arenaSetupApplied = false;
+        touchChildrenRetired = false;
         finalHitExplosionTimer = -1;
         finalHitExplosionIntervalCounter = FINAL_HIT_EXPLOSION_INTERVAL - 1;
     }
@@ -150,7 +152,6 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
             }
         }
         loadBossPalette();
-        updateMhzHitFlash();
         applyInitialArenaSetup();
         updateMhzSpikeArtQueue();
         if (state.defeated) {
@@ -181,6 +182,9 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
             updateAlternatingDashWait();
         }
         applyLevelRepeatOffset(mhzLevelRepeatOffset());
+        // loc_75FD4 runs sub_76782 after the current movement. A terminal
+        // flash installs loc_76164 here; its escape movement starts next update.
+        updateMhzHitFlash();
     }
 
     @Override
@@ -504,20 +508,35 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         if (state.x >= FINAL_DEFEAT_THRESHOLD_X) {
             startFinalDefeatFadeWait();
         }
+        // loc_761A4 runs after the unrebased $44D0 threshold comparison.
+        applyLevelRepeatOffset(mhzLevelRepeatOffset());
     }
 
     private void startFinalDefeatFadeWait() {
         finalDefeatPhase = FINAL_PHASE_WAIT_FADE_TO_LEVEL_MUSIC;
+        // loc_76164 sets status bit7 at $44D0. Child_AddToTouchList consumes
+        // that retirement signal while the parent continues its native escape.
+        touchChildrenRetired = true;
         var services = tryServices();
-        if (services != null) {
-            if (services.gameState() != null) {
-                services.gameState().setScreenShakeActive(true);
-            }
-            LevelState levelState = services.levelGamestate();
-            if (levelState != null) {
-                levelState.pauseTimer();
-            }
+        var gameState = services == null ? null : services.gameState();
+        if (gameState != null) {
+            gameState.setScreenShakeActive(true);
         }
+        // loc_76164 calls BossDefeated_StopTimer only after x_pos >= $44D0.
+        // Its fall-through first stops the HUD clock, then writes $2E=$3F,
+        // then awards the score through BossDefeated.
+        LevelState levelState = services == null ? null : services.levelGamestate();
+        if (levelState != null) {
+            levelState.pauseTimer();
+        }
+        setCustomFlag(TIMER_OFFSET, 0x3F);
+        if (gameState != null) {
+            gameState.addScore(1000);
+        }
+    }
+
+    boolean hasRetiredTouchChildren() {
+        return touchChildrenRetired;
     }
 
     private void updateFinalDefeatFadeWait() {
@@ -857,7 +876,8 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
             return;
         }
         state.x = (state.x - levelRepeatOffset) & 0xFFFF;
-        state.xFixed = state.x << 16;
+        // sub.w changes x_pos only; its fractional word survives the wrap.
+        state.xFixed = (state.x << 16) | (state.xFixed & 0xFFFF);
     }
 
     private void moveSpriteCustomGravity(int gravity) {
@@ -911,11 +931,17 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
 
     @Override
     public void onPlayerAttack(PlayableEntity player, com.openggf.level.objects.TouchResponseResult result) {
-        int previousHitCount = state.hitCount;
-        boolean wasInvulnerable = state.invulnerable;
-        boolean wasDefeated = state.defeated;
-        super.onPlayerAttack(player, result);
-        if (!wasInvulnerable && !wasDefeated && state.hitCount < previousHitCount && player != null) {
+        if (state.invulnerable || state.defeated) {
+            return;
+        }
+        // Accepted touch publishes the decremented count before the object pass.
+        // loc_767A0's pre-arena floor is checked after that pass's movement,
+        // which may itself set $38 bit7 through loc_760C4.
+        state.hitCount--;
+        state.invulnerabilityTimer = 0x20;
+        state.invulnerable = true;
+        services().playSfx(getBossHitSfxId());
+        if (player != null) {
             player.setXSpeed((short) 0);
         }
     }
@@ -939,6 +965,10 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         if (!state.invulnerable) {
             return;
         }
+        // loc_767A0 observes the post-dispatch arena bit, not its value at touch.
+        if ((getCustomFlag(STATE_FLAGS_OFFSET) & FLAG_ARENA_PASS) == 0 && state.hitCount <= 1) {
+            state.hitCount = 2;
+        }
         // ROM loc_767E8: btst #0,$20(a0) reads the countdown BEFORE it is decremented below.
         // Bit0 clear (even) selects the white/flash row; bit0 set (odd) selects the real-color
         // row, so the final write (at $20==1, odd) restores real colors as $20 underflows to 0.
@@ -955,6 +985,12 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         state.invulnerabilityTimer--;
         if (state.invulnerabilityTimer <= 0) {
             state.invulnerable = false;
+            if (state.hitCount == 1) {
+                // loc_767F6 selects loc_76822 at HP1 after all $20 flash ticks;
+                // the native counter stays1, rather than consuming a ninth hit.
+                state.defeated = true;
+                onDefeatStarted();
+            }
         }
     }
 

@@ -27,6 +27,23 @@ Executed qualification and remaining campaign/rewind frontiers belong in the
 [dated stock audit](architecture/audits/2026-10-07-stock-parity-gap-verification.md#continued-swarm-from-the-delivered-base)
 and [known-bug record](status/s3k-known-bugs.md), rather than new intentional entries.
 
+**Ending presentation scope, 2026-10-13:** the three effects omitted from
+playable feature `c2103d5f7` are now implemented and locally qualified: IslandLift
+sprites/art, rescue/AIZ Master Emerald palette cycling and AIZ return-hold AnPal.
+The [resolved work record](status/s3k-known-bugs.md#native-ending-presentation-gaps-resolved)
+and [ending matrix](architecture/validation/levels/s3k-ending.md#repaired-native-presentation-owners--2026-10-13)
+record the50 affected focused checks and their limits. Full-table unchecked native
+allocation remains inherited unsupported missing emulation, not an intentional
+accepted deviation. Neither this repair nor the prior lifecycle results claim
+whole-scene native pixel parity.
+
+**Ending scroll resource ownership:** a follow-up corrects eager ending-table
+reads that broke unrelated no-ROM provider registration. Both native banks are
+now deferred until actual ending use and fail closed before RAM/output changes;
+no fallback asset or intentional discrepancy is introduced. All 55 affected contract,
+scroll/RAM, lifecycle and pixel checks pass; scope is recorded in the
+[dated resource-boundary record](architecture/designs/2026-10-13-s3k-ending-lifecycle.md#deferred-ending-deformation-resources--2026-10-13).
+
 ## Table of Contents
 
 1. [YM Service Timing: Source-Relative Timeline Without Absolute VInt Phase](#ym-service-timing-source-relative-timeline-without-absolute-vint-phase)
@@ -558,6 +575,12 @@ takes on `SK_alone_flag` (standalone S&K entry, the pulley-lift cheat's direct
 `Level_select_flag` write, S&K-only title and level-select paths) is modelled with the
 flag clear. This is a product-scope decision, not a parity gap: the standalone image is
 not a supported input.
+
+Locked-on MHZ subtype `$30` follows that prerequisite before any P1 or camera
+claim (`CutsceneKnux_SKIntro`). The 2026-10-13 correction removes the former
+character-only admission. Five supported-width manager/restore cases and the
+existing cutscene cases pass; standalone component fixtures declare their mode
+explicitly. Full cold Knuckles traversal remains a separate route obligation.
 
 ---
 

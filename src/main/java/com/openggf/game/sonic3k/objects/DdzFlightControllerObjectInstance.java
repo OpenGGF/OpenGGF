@@ -176,7 +176,10 @@ public final class DdzFlightControllerObjectInstance extends AbstractDdzObjectIn
         ddz.setFlightBox(0x20, 0xC0, 0x20, 0xC0);
         camera.setMinY((short) 0);
         camera.setMaxY((short) 0x120);
-        // Player_2 is cleared: S3K's module suppresses the Doomsday sidekick.
+        // loc_815DC clears the whole Player_2 object. Zone suppression only
+        // hides CPU followers; this native writer must retire the actual roster.
+        com.openggf.sprites.managers.SpriteManagerInternalAccess
+                .retireAllSidekicksForRewind(services().spriteManager());
         spawnFreeChild(DdzMusicTempoObjectInstance::new);
     }
 

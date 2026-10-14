@@ -14,17 +14,320 @@ content errors corrected on 2026-09-17; labels stay authoritative) and the per-s
 [placement inventory](../research/s3k-zones/lrz-object-inventory.md) (1099 objects, 251 rows,
 byte-matched to the ROM; the `$1D`/`$A0` row was restored on 2026-09-17, see the evidence log). `loc_` labels are ROM addresses, never line numbers.
 
-## Current continuation checkpoint (2026-09-25)
+## Current continuation checkpoint (2026-10-13)
 
-The native320 Sonic+Tails cold route now completes LRZ1→2→3→playable HPZ
-in53047 inputs without deaths; the act matrices record185 Act1,81 Act2 and62
-boss-route full-registry replay spots. The original mandatory Tails-solo and
-Knuckles cold routes below remain open. Tails solo now clears Act1 and reaches
-playable Act2 in34128 ordinary inputs, with51 full-registry restore/replay spots
-and no gameplay-state seeding; its Act2→3→HPZ continuation remains open.
-Other roster/donor/width/lifecycle and native
-whole-scene obligations, final highlights and campaign integration remain open.
-Earlier execution checklists are historical where superseded by dated matrices.
+The native320 Sonic+Tails cold route completes LRZ1→2→3→playable HPZ
+in53,047 inputs without deaths. Ordinary native320 solo Tails now completes
+the same chain in62,524 inputs; its qualification spans58 Act1,25 Act2-middle,
+71 Act2-completion and62 boss/HPZ full-registry45-input replay spots plus
+actual seamless-history isolation. Native320 Knuckles completes its Act1→2→HPZ
+route, and the existing pair800 full chain also passes the fresh-boundary endpoint
+checks. See the dated follow-up below and the act matrices for exact runs.
+Broader roster/donor/width/lifecycle and native whole-scene obligations, final
+highlights and campaign integration remain open. Earlier checklists are historical
+where superseded by dated matrices; these route passes do not certify every product.
+
+## Playable-completion follow-up (2026-10-13)
+
+This follow-up starts from pinned develop `5e2f51f07917d5eff8ac120007dac55327f93f32`
+in `.worktrees/ai-s3k-finish-lrz`. The traversal families, events, scrolling,
+miniboss, end boss and both Hidden Palace exits already exist; the initial
+inventory below is historical, not a list of missing implementation.
+
+A Java 25 focused run reproduces four current inherited negatives with no
+errors or skips: solo Tails dies at input 19460, the native pair dies at
+36526 in Act 2, Knuckles' HPZ endpoint X is 899 rather than 1069, and the
+800px pair HPZ endpoint Y is 524 rather than 2796. Runtime source and route
+inputs were unchanged; temporary read-only diagnostics recorded the owning
+state. Reproduction command (`LRZ_S3K_ROM` is the discovered existing
+absolute locked-on ROM path; the observed identity is recorded below):
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestLrzTailsColdRouteCapture#coldTailsClearsActOneAndRestoresTraversalFightAndHandoff,TestLrzActTwoColdRouteCapture#coldTeamCompletesActTwoAndReachesBossActWithRepeatableWorldState,TestLrzKnucklesColdRouteCapture#coldKnucklesCompletesActTwoAndReachesPlayableHiddenPalace,TestLrzWideBossColdRouteCapture#coldWideTeamClearsBossAndReleasesHiddenPalaceWithRepeatableWorld' \
+  "-Ds3k.rom.path=$LRZ_S3K_ROM" test
+```
+
+The run completes in 55.344 seconds after 1004 seconds of queue waiting.
+The supplied ROM rehashes to CRC32 `63522553` and SHA-1
+`CFBF98C36C776677290A872547AC47C53D2761D6`. Tool preflight passes with
+`LUA_BIN=/usr/bin/lua5.4`; the default Lua launcher fails the version check,
+so it is not used for required Lua guards.
+
+The HPZ observations disprove a stale capture-player reference: the cached
+player, registered main player and camera focus remain the same object.
+Instead the fresh boundary remains pending after the omitted title. At the
+wide load, input 50538 parks the player at 0/0; 50540 reaches 2736/0 before
+normal physics has assembled HPZ's native start; the endpoint remains pending
+at 2845/524. Knuckles similarly parks at 0/0 at 49286 and ends at 899/748
+with the boundary still pending. The coordinator owns the shared capture
+boundary correction; the route assertions must retain their native-entry
+expectations.
+
+The controller investigation preserves the corrected Toxomister behavior.
+`Find_SonicTails` / `Change_FlipX` now breathes toward the native participant,
+and `Check_LRControllerShake` permits release after six changed nonzero
+left/right states inside its sixty-tick window. Suppressing cloud movement,
+ring drain or damage to rescue old inputs is rejected. The original Tails
+probe loses its first ring at 18619 after attachment, then dies to a later
+zero-ring contact. The original pair's coordinates match the earlier cold
+capture until 36421; the changed contact precedes its missed upper-platform
+jump and death. Six-frame pad alternatives and full continuations are being
+measured independently before publishing replacement routes. Probe output
+and diagnostic source are temporary, not completion or parity evidence.
+
+The extended two-case probe completes in 1 minute 51 seconds with no diagnostic
+errors or skips, but rejects a cloud-only repair. Tails' six changed states at
+18600/18620 pass the old death point and then die at 20568/20553 near 10170/949.
+The latter route loses its saved nine rings to a fragment contact at 19461,
+then the next cloud drains its smaller remaining ring supply. Braking before
+the rock approach is being checked against simply escaping the second cloud.
+For the pair, the 36430 shake does release the cloud at 36435, but has lost
+the run-up speed: the original 36445 jump starts at 7227 rather than 7271,
+hits the low ceiling at 7241/1428 and misses the upper step before dying 36526.
+Delaying that ordinary jump is being tested. Suppressing the native slowdown
+or changing ceiling collision to preserve the old movie is rejected.
+
+The coordinator's omitted-title assembly correction is now carried as
+`d9b11f7db` (cherry-pick of `8438d7040`), with its own seven focused checks
+passing. The complete Knuckles and 800px HPZ endpoint regressions pass on this
+dependency: two tests, zero failures/errors/skips, 46.445 seconds Maven time.
+The original 49,526/50,659-input movies, native endpoint X1069/Y2796 and
+full-registry restore/forward checks are unchanged. These close the two
+inherited HPZ negatives; Tails and the 320px pair still need controller-route
+repairs. The inactive ending-controller source used by this run is now
+committed as `60221d5c8` (blob `6ac3d60da28776fb511792a4fec64690dee885f4`).
+
+### Fresh ring publication and controller continuation
+
+The next controller-only pair candidate preserves the first 36,318 inputs,
+then jumps over the Toxomister body, uses a short jump against door 7's real
+side button, brakes and waits before the turbine bank, adjusts the door 5
+approach and retimes the final stair jump. Cloud-only shaking, delayed first
+jumps and the three spindash-release alternatives are rejected: they either
+miss the upper step or die to the placed flame. No slowdown, ceiling collision,
+damage or object state is changed to accommodate the input.
+
+One intermediate candidate reaches the final stairs but releases the boulder
+51 inputs late. Shifting the entire boss suffix by that delay still dies at
+45650; this is rejected. Retiming the earlier stair jump instead produces the
+real full load at 43566 and preserves the 43,761-input boss-act arrival at
+296/1196 with six rings. The complete 53,047-input candidate reaches HPZ alive
+at 393/2796. Both movie lengths and the existing route assertions are retained.
+These observations come from the existing production `GameplayInputBranchTool`,
+running cold with ordinary rendering from an immutable class snapshot copied
+under the worktree's build lock, a 1GiB heap/two active processors and surfaceless
+EGL with display variables absent. They do not certify the registry replay tests.
+
+The tool stops a branching candidate when the Level object changes. Its first
+LRZ boss-load row therefore shows the ordinary initial ring clear before the
+destination ScreenEvent. Treating that row's zero as erased carry was rejected:
+the full continuation shows ring 5 at 43560, zero at 43566, then five at 43567 and
+43570. Native `loc_63C14` saves `Act3_ring_count`/`Act3_timer` before
+`StartNewLevel`; `loc_59B1C` restores and clears that bank on the first destination
+ScreenEvent. An additional post-assembly carry hook was considered but never
+introduced. `LevelContinuationCarry` already models this ordering correctly.
+
+The uninterrupted HPZ result exposes a different, released-boundary defect:
+the boss approach naturally carries 28 rings, and HPZ ends with 31 rather than
+three. The ordinary `Obj_StartNewLevel`/`loc_86418` path has no Act3 bank;
+`StartNewLevel` clears `Last_star_post_hit`, and Level's `loc_63B4` clears rings
+after the title loop. `FreshLevelTransitionBoundaryController.load` temporarily
+restores the source count for that loop, but its playable snapshots do not
+capture `LevelState` rings. Releasing those snapshots leaves the source count
+live. Timer, score, lives and extra-life flags are not borrowed by this boundary
+and must not receive an arbitrary additional reset.
+
+The minimal correction captures the actual destination ring value alongside
+the deferred assembly. Initial publication, or direct omitted completion,
+publishes it once; the existing captured publication flag prevents a later
+completion from erasing a new counter write. The continuation path with no
+title owner remains untouched. A Java25 build completes in 55.912 seconds.
+Repeating the uninterrupted pair candidate on this compiled correction retains
+the valid LRZ 0→5 bank, clears HPZ 28→0 at 52926 and ends at 393/2796/ring 3 at 53046.
+On parent `83bb7f22c` plus the frozen correction (`15e898eb1`), the queued
+`TestFreshLevelBoundaryRewindHeadless,TestGameplayCaptureFreshLoad,TestS3kLevelContinuationHeadless,TestLevelContinuationCarry`
+check completes 14 tests with zero failures, errors or skips (26.833 seconds),
+using the absolute locked-on ROM path. The four mandatory S3K startup classes
+complete 60 tests, likewise without failures, errors or skips (25.273 seconds).
+The four selected LRZ route checks complete 4 tests with one failure and no
+errors or skips: the arrival route's `door6` fully-open assertion at 39980.
+The full pair HPZ, Knuckles HPZ and 800px HPZ identities pass without changed
+assertions. The arrival input remains provisional until its real button/open
+obligation is retimed or repaired; a successful endpoint does not erase that
+intermediate failure. These are focused checks, not a suite pass. Both temporary
+diagnostic JUnit probes completed and their source was removed.
+
+### Qualified native320 pair continuation
+
+The arrival failure is an intermediate door observation, not missing native
+travel. At39980 the real trigger6 door has risen63 pixels; at40030 it reaches
+64. `loc_42994` waits the full `$40` updates and uses the ROM sine table:
+index63 is255, index64 is256. The assertion still requires the real door to be
+fully open, and40030 adds a full-world45-input restore/forward spot. The
+controller-only arrival and full HPZ movies retain43,761/53,047 frames and their
+first36,318 controller rows. All native ring carry, shield, health and destination
+assertions are unchanged.
+
+From parent `f7d1aea0b` with these reviewed input/checkpoint changes, the unique
+replacement command completes on2026-10-13 at17:56 BST:
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" -Dmse=off \
+  '-Dtest=TestLrzActTwoColdRouteCapture#coldTeamCompletesActTwoAndReachesBossActWithRepeatableWorldState' \
+  "-Ds3k.rom.path=$LRZ_S3K_ROM" test
+```
+
+Result:1 test,0 failures/errors/skips;37.808 seconds Maven time (11.08 seconds
+in the class). The three unchanged HPZ identities from the preceding four-case
+run remain green: native320 pair, Knuckles and pair800. This replaces the sole
+red identity, rather than claiming that the earlier four-case command passed.
+The checks establish these native cold routes and their captured replay spots,
+not complete width/donor/team/lifecycle coverage or ROM pixel/trace parity.
+Solo Tails route recovery continues independently.
+
+### Qualified ordinary Tails Act1 continuation
+
+The repaired29,157-input solo Tails movie preserves the first18,560 inputs.
+Six alternating nonzero pad states release the native Toxomister cloud;
+ordinary braking avoids the next zero-ring collision. The fight uses the
+miniboss's native hover/rise/swing/drop/slam cycle: a charge-release dodge,
+paired ascent/descent body hits on three attacks and one ring retained through
+results. All health values0..6, the nine-ring approach, native `-$2C00` act
+rebase, ring1 carry and427/1973/ring0 playable Act2 endpoint are asserted.
+An earlier zero-ring final defeat is rejected because it did not meet the
+existing positive handoff carry obligation. No health, damage, attack clock,
+ring drain, collision or movement value is written to help the movie.
+
+The first selected run has1 error: the28500+45 replay window crosses the28507
+seamless load and `ZoneRuntimeRegistry.validateSnapshotIdentity` rejects the
+saved `$900` runtime against live `$901`. The Act1 route then qualifies 58
+full-registry spots with28450 before and28530 after that load. The original
+classification as inherited cross-act work is rejected: this seamless load
+intentionally retires outgoing history, as the existing wide cold-route test
+already asserts. A raw manual registry restore into the next act bypasses that
+history barrier and is an invalid test checkpoint. The final Tails qualification
+also enables real live history before the handoff, measures its outgoing frame
+and requires the destination earliest available frame to exceed it.
+
+From parent `12d6c372e` plus this controller/checkpoint candidate, the replacement
+finishes on2026-10-13 at18:09 BST:
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" -Dmse=off \
+  '-Dtest=TestLrzTailsColdRouteCapture#coldTailsClearsActOneAndRestoresTraversalFightAndHandoff' \
+  "-Ds3k.rom.path=$LRZ_S3K_ROM" test
+```
+
+Result:1 test,0 failures/errors/skips;32.012 seconds Maven time (8.395 seconds
+in the class), with the same verified locked-on ROM. The first movie is qualified;
+Act2/full-chain authoring continues independently. This is bounded route/replay
+validation, not broad product coverage or native pixel/trace parity.
+
+### Qualified ordinary Tails Act2 middle corridor
+
+The next36,714-input movie retains the entire qualified29,157-input Act1 prefix.
+Actual contacts, rather than screenshot overlap, establish the Act2 route:
+land on the red spring at2896/1694, climb the moving bank through flight,
+land again at4068/1520, fly left onto the vertical platform at3808 and ride it
+up, then enter and release both native turbines. Their owning `loc_44448` capture
+bands and `sub_4450A` release remain unchanged. The old flight timing missed the
+spring or the second climb; a two-input overshoot and native lift direction both
+mattered, so attributing every miss only to the changed global phase was rejected.
+
+Before the middle endpoint, long and short jumps still lose both rings at the
+real orbiting spike-ball pair anchored5288/976 and5288/1008. An earlier Fireworm
+attribution is rejected by its actual distant Y and the observed nearby owners.
+Six Left braking inputs plus eight neutral inputs avoid that contact. The endpoint
+remains5497/1008 at36713, now with two naturally earned rings. The test preserves
+a positive exact counter obligation by changing old ring1 to actual ring2; no
+counter hydration, hazard weakening or fitted runtime rule is introduced.
+
+From parent `d1f203e1a` plus this input/checkpoint candidate, the exact command
+finishes on2026-10-13 at18:26 BST:
+
+```bash
+python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" -Dmse=off \
+  '-Dtest=TestLrzTailsColdRouteCapture#coldTailsRestoresActTwoTraversalToTheMiddleCorridor' \
+  "-Ds3k.rom.path=$LRZ_S3K_ROM" test
+```
+
+Result:1 test,0 failures/errors/skips;31.133 seconds Maven time (6.241 seconds
+in the class). All25 retimed real traversal checkpoints restore the full registry
+and replay45 inputs. At this checkpoint the later boulder/boss suffix remained provisional: moving
+lifts required the actual downward departure, and corrected clouds/flames required
+fresh ordinary approach input. The subsequent completion below supersedes that
+route gap; broader width/donor/team/lifecycle/native-pixel products remain open.
+
+### Ordinary Tails boulder and boss continuation
+
+On parent `dd563ef67`, the final ordinary-controller movies contain53,259 inputs
+through playable LRZ boss-act arrival and62,524 through playable HPZ. Both
+round-trip through production `InputLogAuthorTool`; their first36,714 inputs
+exactly preserve the independently qualified middle route. No gameplay values,
+object fields or comparison rows supply input state.
+
+The selected moving-platform departure uses its actual downward phase. Ordinary
+jumping and six alternating Left/Right states release the two Toxomister clouds;
+a grounded wait and short jump clear the real side button and flame bank.
+An eastern turbine turn first matched position alone but retained ground speed36,
+so Left changed immediately to-$80 and hit its thin native blades (`Obj_LRZTurbineSprites`, collision byte `$A0`).
+Four Right inputs returned to the same nonzero speed and are rejected. One Right
+input plus three neutral inputs reaches native zero ground speed before the
+original safe suffix. This is controller alignment, not a collision override.
+
+Later flight exhausted before the cutscene gate. Landing on the real upper stair
+at13369/912 resets flight, then ordinary input reaches the native boulder box at
+52507. `Obj_LRZ2CutsceneKnuckles` routine0/`word_63B94` admits only
+`$38B0-$10 <= X < $38B0`, `0 <= Y < $240`; its next routine waits for
+X `$39B0`, then owns the ground/drop before `loc_63C14` saves the Act3 bank and
+requests `$1600`. An attempt below the Y gate ran off the right boundary; no
+admission widening, flight-energy override or fixture-based event rule is used.
+
+An intermediate branch taken during a callback-bearing load fade later threw
+“a native blocking fade is already active.” The coordinator's verified
+`GameplayInputBranchTool` guard rejects such fresh-pending or poisoned callback
+snapshots (integrated `1fab3806c`, source blob `ba7471202a3e23ddc408fc24da3b1b767b7f8e16`).
+Repeating the chosen full movie uninterrupted on immutable classes reaches HPZ
+and accepts the fully released endpoint. This disconfirms the proposed PLC/load
+runtime defect: the negative was an invalid branch checkpoint. The copied guard
+is a known dependency, excluded from this lane's commit.
+
+The fresh production run observes native boss-act load53058 after an ordinary
+zero-ring source carry; playable arrival53258 is296/1200/ring1. The placed fire
+monitor and12-ring approach remain required at55947. HPZ loads62402 with the
+source HUD temporarily borrowed, then releases62403 at48/2800/ring0 and ends
+62523 at393/2800/ring3. The prior destination-counter correction preserves
+native Act3 bank ownership and publishes HPZ's captured destination count.
+The CSV's boss sidecar covers `AbstractBossInstance` (the miniboss), so it is
+not evidence for the14-hit end boss. Actual boss health, capsule/results and
+no hurt after the earned fire-shield approach remain mandatory in JUnit.
+
+Final focused command, with Java25, display variables removed, surfaceless EGL
+and the same verified absolute locked-on ROM:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY LIBGL_ALWAYS_SOFTWARE=1 EGL_PLATFORM=surfaceless \
+  python3 "$OPENGGF_MAIN/tools/testing/maven_queue.py" --lean -Dmse=off \
+  -Dopenggf.headless.gl=surfaceless-egl \
+  '-Dtest=TestLrzTailsColdRouteCapture#coldTailsClearsActOneAndRestoresTraversalFightAndHandoff+coldTailsCompletesActTwoAndRestoresTheBoulderHandoff+coldTailsCompletesBossActAndReachesPlayableHiddenPalace' \
+  "-Ds3k.rom.path=$LRZ_S3K_ROM" test -B
+```
+
+On `dd563ef67` plus these final input/checkpoint changes and the identical known
+guard dependency, the command completes at19:02:16 BST on2026-10-13:3 tests,
+0 failures/errors/skips,37.95 seconds in the class and1:02 minutes Maven time
+(the separate9-second queue wait is excluded). All14 end-boss health values,
+placed fire shield/ring12, real capsule/results and the unchanged playable HPZ
+endpoint pass. No pristine-source JUnit red is claimed for this route repair;
+the earlier ordinary-input deaths and invalid-checkpoint negatives are the
+bounded measurements recorded above.
+The actual windows are58 Act1,71 Act2 completion and62 boss/HPZ, each capturing
+the full registry and comparing restore plus45-input forward replay. The middle
+route's separate25-window pass is unchanged. The Act1 check also requires actual
+history isolation. This is bounded native320 solo-route validation, not complete
+viewport/donor/team/lifecycle coverage or native visual/trace parity. Combined
+integration validation remains the coordinator's delivery gate.
 
 ## Goal and delivery rule
 

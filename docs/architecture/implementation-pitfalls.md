@@ -1,5 +1,14 @@
 # Shared implementation pitfalls
 
+Screen-relative sprites must cancel the camera origin that the renderer actually
+subtracts. S3K endings deliberately write `Camera_X_pos_copy`/`Camera_Y_pos_copy`
+independently of physical camera words: Tails departure can have physicalX0 and
+copy608 for hundreds of passes. Adding physical camera coordinates to a native
+bit2-clear sprite or fixed presentation mask hides the native scene. Project from
+copies plus shake, refresh derived playable offsets at the existing post-camera
+Render_Sprites boundary, and preserve both native words. See the
+[ending lifecycle evidence](designs/2026-10-13-s3k-ending-lifecycle.md).
+
 Read the relevant section when working on coordinates, objects, rendering, rewind,
 headless tests, or audio. S3K-specific routing is in [AGENTS_S3K.md](../../AGENTS_S3K.md).
 
@@ -848,6 +857,16 @@ explicit ring owners and background wrapping. Compare pixel bounds to the latche
 The LRZ seamless-handoff check caught this distinction at the last3pixels before
 camera X=0 (September23S&K completion campaign).
 
+**A screen-coordinate scene can outlive its world bounds.** S3K SSZ2
+`loc_58B7C` clears camera X for credits while preserving the final arena's
+native min/max. The wide bounds mask then used world459..779 and concealed
+terminal sprites in the centered240..560 window. Gray pixels with thousands
+of grain colors came from `shader_arena_mask.frag`, not a sixteen-color
+resident Pattern0. Use the internal presentation-origin policy for that
+screen window without rewriting gameplay bounds or changing unrelated plane
+wrapping. The initial flight's masked wide wings remain intentional.
+See the [ending ownership record](designs/2026-10-13-s3k-ending-lifecycle.md).
+
 **Retained SAT requires retained scroll.** S3K `VInt` writes `V_scroll_value`
 to VSRAM and `VInt_8_Cont` uploads `H_scroll_buffer` alongside the prepared
 sprite table. Retaining screen-relative sprites while sampling terrain with the
@@ -899,6 +918,24 @@ rewrites digits and advances the timer while the SAT still describes the
 previous `Render_HUD` geometry. Buffering the digit choice with that geometry
 adds a one-frame second-rollover error (21 pixels in FBZ B1 reverse). Lag,
 fade and title-card handlers do not run the same numeric update.
+
+Ending IslandLift evidence (2026-10-13, immutable jar `ed7dc650`, production
+Java `70c09903`) reproduces this distinction: the displayed table placed cells
+at X 516 while the next CPU RAM implied X 514. A manually created particle had no
+published tiles until its natural even-VInt preparation and following publication.
+Sample the producer's position, mapping and CRAM before that publication. In wide
+views also check the prepared mask: `LevelBoundsMaskTransition` deliberately
+crossfades edges in world space, and moving render copies left opacity 0.35973397
+at X 514 inside bounds 240..560. Exact RGB tests select a transparent prepared
+footprint; they do not fit a position/frame offset or weaken the color comparison.
+
+**Screen-only SAT words wrap per piece.** `Render_Sprites` bit2-clear skips the
+world camera clip; loc_1AF76 adds each mapping offset, masks X to 9 bits and replaces
+X 0 with 1. Ordinary Mode5 Y is 9 bits too. IslandLift subtype `$41` can hold raw Y `$FF44`
+after its camera threshold: native displayed center is 196. Preserve its raw word
+and fraction; normalize only the derived one-piece draw origin, after the offset.
+Passing 65348-style unsigned words straight to an integer renderer hides
+native visible particles. Qualify wrapped-Y and X 0→1 as well as the normal case.
 
 **S3K retained plane strip counts and clipping.** `Setup_TileRowDraw` and
 `Setup_TileColumnDraw` subtract one before DBF: callers supplying `$20`/`$10`
@@ -1486,6 +1523,17 @@ and retains the latter. Resetting both on act initialization makes the forest
 jump. Restore the accumulator only after the destination scroll handler's lazy
 initialization, then recompute deformation without another animation tick.
 
+**Provider registration is not every zone's resource-use boundary.** S3K's
+provider constructs all handlers before selecting a zone. Eager ending-band
+reads made unrelated FBZ/CNZ no-ROM registration tests fail and caused
+`ParallaxManager.load` to discard the entire provider on the same IOException.
+SOZ/LRZ3 already defer their native tables until relevant init/render. Store the
+ROM reference, validate the ending `$5B144`/`$5B15A` banks into one immutable pair
+on actual ending use, and fail before native RAM/output changes if either bank
+is unavailable or malformed. A first post-restore rebuild may populate that
+derived cache without consuming a scroll tick. Do not replace unrelated fixtures
+with ROM-required skips or supply fallback tables to hide this contract regression.
+
 MHZ2 pillar arithmetic (2026-09-27): successive `DIVU.W` operations at
 `loc_55586` are a 32-bit division assembled from two words, not independent
 word quotients. The first remainder stays in the upper half of D2 while MOVE.W
@@ -1623,3 +1671,30 @@ runtime-ready before resolving its world/module/policies; an eager global module
 lookup crashes startup even when no gameplay body is due. Bonus mode also does not
 imply interactive readiness: let its pending initial ProcessSprites setup finish
 at canonical cadence before spending a modified speed budget.
+
+**Resident patterns can change without changing identity.** KosM DMA updates
+`Sonic3kLevel` patterns in place. A sprite sheet decoded from resident VRAM
+must register its native source tile range with the object-art provider so
+`refreshAffectedRenderers` republishes its virtual atlas. A ready renderer and
+nonzero CPU patterns do not prove GPU pixels are current. The S3K ending
+Tornado at input600 had6845 nonzero pixels and a ready virtual base137948
+while remaining invisible: an identity-only cache missed the upload and the
+sheet lacked `levelArtTileRanges`. Use the existing range refresh owner, not
+a hash scan, extra art job or fitted delay (2026-10-13 ending lifecycle task).
+
+**External pad priming is not a production setup row.** The native initial
+`Process_Sprites` callback has no VInt, but GameLoop still admits its input row.
+`consumePendingInitialProcessSpritesPass()` executes that callback; do not infer
+a token-only skip from its name. S3K Knuckles ending authoring (2026-10-13)
+externally primed input0 then started at1, copying an older HeadlessTestRunner
+fixture, and died2096 before the first fight. Production input0 published the
+same SST4/5/6 and P1 as the fixture callback, with VInt unchanged, then matched
+all three boss milestones. Match the actual callback/slot/input boundary before
+reauthoring ordinary controls; never suppress setup or shift gameplay clocks.
+
+**A width override does not resize an already-created test camera.** The ROM
+Jupiter extension creates its gameplay managers before a test's session override.
+A local HeadlessTestFixture can retain that camera. Explicitly refresh its viewport
+before loading and assert the dimension, or create a fresh scenario context.
+Four wider S3K credit-plane vectors read shifted glyphs with a retained320 camera
+while the320 vector passed (2026-10-13). A width parameter is not width evidence.

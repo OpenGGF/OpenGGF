@@ -81,6 +81,8 @@ public class SpriteManager implements PlayableSstDispatcher {
 	private final Map<String, java.util.function.Supplier<AbstractPlayableSprite>>
 			temporarySidekickRecreators = new java.util.HashMap<>();
 
+	private final Map<String, RewindRetiredSidekick> rewindRetiredSidekicks = new java.util.LinkedHashMap<>();
+
 	private static final SensorConfiguration[][] MOVEMENT_MAPPING_ARRAY = createMovementMappingArray();
 
 	private static final int BUCKET_COUNT = RenderPriority.MAX - RenderPriority.MIN + 1;
@@ -199,6 +201,10 @@ public class SpriteManager implements PlayableSstDispatcher {
 			com.openggf.sprites.playable.PlayableSpriteInternalAccess.bindMutatorPolicies(playable, mutatorPolicySource);
 			if (playable.getMovementManager() instanceof PlayableSpriteMovement movement) movement.motionMutators = motionMutators;
 		}
+		var retired = rewindRetiredSidekicks.get(sprite.getCode());
+		if (retired != null && retired.sprite() != sprite) {
+			rewindRetiredSidekicks.remove(sprite.getCode());
+		}
 		Sprite previous = sprites.put(sprite.getCode(), sprite);
 		boolean replaced = previous != null;
 		if (previous instanceof AbstractPlayableSprite previousPlayable) {
@@ -249,6 +255,29 @@ public class SpriteManager implements PlayableSstDispatcher {
 		addTemporarySidekick(sprite, characterName);
 		if (sprite.isCpuControlled() && recreator != null) {
 			temporarySidekickRecreators.put(sprite.getCode(), recreator);
+		}
+	}
+
+	/** A scene may erase its followers while its same-world history still contains them. */
+	void retireAllSidekicksForRewind() {
+		for (var sidekick : new ArrayList<>(sidekicks)) {
+			rewindRetiredSidekicks.put(sidekick.getCode(), new RewindRetiredSidekick(
+					sidekick, sidekickCharacterNames.get(sidekick), temporarySidekicks.contains(sidekick)));
+			removeSprite(sidekick);
+		}
+	}
+
+	private void restoreRetiredSidekickRoster(Set<String> snapshotCodes) {
+		// Linked insertion order preserves the original CPU leader chain, including
+		// duplicate characters. Reapply per-sprite RAM in the ordinary restore below.
+		for (var entry : rewindRetiredSidekicks.entrySet()) {
+			var retired = entry.getValue();
+			if (!snapshotCodes.contains(entry.getKey())) {
+				if (getSprite(entry.getKey()) == retired.sprite()) removeSprite(retired.sprite());
+			} else if (getSprite(entry.getKey()) == null) {
+				if (retired.temporary()) addTemporarySidekick(retired.sprite(), retired.characterName());
+				else addSprite(retired.sprite(), retired.characterName());
+			}
 		}
 	}
 
@@ -304,6 +333,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 		sidekickCharacterNames.clear();
 		temporarySidekicks.clear();
 		temporarySidekickRecreators.clear();
+		rewindRetiredSidekicks.clear();
 		bucketsDirty = true;
 	}
 
@@ -2221,6 +2251,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 				for (com.openggf.game.rewind.snapshot.SpriteManagerSnapshot.SpriteEntry entry : s.sprites()) {
 					snapshotCodes.add(entry.code());
 				}
+				restoreRetiredSidekickRoster(snapshotCodes);
 				for (AbstractPlayableSprite sidekick : new ArrayList<>(temporarySidekicks)) {
 					if (!snapshotCodes.contains(sidekick.getCode())) {
 						removeSprite(sidekick);

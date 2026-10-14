@@ -87,6 +87,7 @@ Entries should include:
 
 ## Table of Contents
 
+0. [Native Ending Presentation Gaps (RESOLVED)](#native-ending-presentation-gaps-resolved)
 0. [AIZ1 Ledge — Ground Sensors and `checkFloorDist` Disagree About Solidity (OPEN — question, not yet a diagnosis)](#aiz1-ledge--ground-sensors-and-checkfloordist-disagree-about-solidity-open--question-not-yet-a-diagnosis)
 0. [Reverse Gravity — Native Route Qualification Remains Open](#reverse-gravity--native-route-qualification-remains-open)
 1. [Knuckles LBZ Big Arm — ROM Port (IMPLEMENTED; TRACE BOUNDARY OPEN)](#knuckles-lbz-big-arm--rom-port-implemented-trace-boundary-open)
@@ -137,6 +138,27 @@ Entries should include:
 46. [Object Art and Clock Reads Found by the Slay the Robotnik Sprite Research (SUSPECTED)](#object-art-and-clock-reads-found-by-the-slay-the-robotnik-sprite-research-suspected)
 
 ---
+
+<a id="native-ending-presentation-gaps-open"></a>
+## Native Ending Presentation Gaps (RESOLVED)
+
+**2026-10-13:** the source-only audit after `c2103d5f7` identified missing
+IslandLift decoration/art, rescue/AIZ Master Emerald palette cycling and the
+explicit AIZ return-hold AnPal owner. The bounded follow-up from integrated
+`772092298` implements all three with ROM assets and native allocation, timer,
+caller-fallthrough, palette-stop and rewind ownership. The prior playable ending
+qualification remains bounded to its original source; the new 50 focused checks
+qualify these changed owners, including actual 320/800 pixels, wrapped-Y drawing,
+full registry replay and all nine D01 lifecycles. No unresolved focused failure
+or ROM skip remains.
+
+The native full-table unchecked allocation/occupied-RAM overwrite remains an
+inherited unsupported missing-emulation edge. The repair retains the admitted
+prefix with no retries; ordinary/fragmented stock graphs are qualified. This is
+not an accepted intentional discrepancy or a claim of whole-scene native pixel
+parity. Combined integration remains coordinator-owned. The original audit and
+rejected pixel premises are retained in the [ending design](../architecture/designs/2026-10-13-s3k-ending-lifecycle.md#native-presentation-repair--2026-10-13)
+and [ending matrix](../architecture/validation/levels/s3k-ending.md#repaired-native-presentation-owners--2026-10-13).
 
 ## Blue Sphere FM Pickup Onset — Automated Parity Complete, Listening Gate Open
 

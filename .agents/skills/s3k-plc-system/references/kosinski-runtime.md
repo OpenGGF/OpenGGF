@@ -51,3 +51,13 @@ Focused validation:
 mvn "-Dtest=TestKosinskiModuleQueue,TestKosinskiModuleQueueGameplayIntegration" test "-Ds3k.rom.path=$S3K_ROM_PATH"
 mvn "-Dtest=TestS3kResultsKosQueueAndChildren,TestS3kResultsElementObjectInstance" test "-Ds3k.rom.path=$S3K_ROM_PATH"
 ```
+
+**Resident patterns can change without changing identity.** KosM DMA updates
+`Sonic3kLevel` patterns in place. A sprite sheet decoded from resident VRAM
+must register its native source tile range with the object-art provider so
+`refreshAffectedRenderers` republishes its virtual atlas. A ready renderer and
+nonzero CPU patterns do not prove GPU pixels are current. The S3K ending
+Tornado at input600 had6845 nonzero pixels and a ready virtual base137948
+while remaining invisible: an identity-only cache missed the upload and the
+sheet lacked `levelArtTileRanges`. Use the existing range refresh owner, not
+a hash scan, extra art job or fitted delay (2026-10-13 ending lifecycle task).
