@@ -1138,6 +1138,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Separate experimental Windows and Linux native friends bundles package the maintained
   example mods and launch shortcuts using GraalVM runtime class loading, with
   generated engine/JDK member retention, runtime bootstrap controls and startup checks.
+  Retention includes the separately loaded controls' bytecode dependencies, keeping
+  their callable JDK bodies available when example-mod references change.
   Windows shortcuts forward diagnostic arguments and are checked through the native executable.
   The Linux builder also exercises
   representative rendered gameplay, audio and scene lifecycle paths. The shared

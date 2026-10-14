@@ -839,3 +839,61 @@ will follow. Because the reported event was not remembered, these reproduced
 losses cannot be attributed to a specific announcement from the user's session.
 The intentional warning cooldowns, wanted-state coalescing and stale-message
 expiry still mean not every event produces an immediate spoken message.
+
+
+### Native retention follow-up
+
+The announcer correction integrated without conflict as
+`4a0e714d5e29b65a5b1ba8e6cbb6a8223f560c75`, with production/test input bytes
+identical to the 53-case focused run. Its first fresh Windows workflow
+[38540745692](https://github.com/OpenGGF/OpenGGF/actions/runs/38540745692)
+completed all 680 structural guard cases without failures/errors/skips but
+rejected the image before packaging:
+the runtime-loaded bootstrap control aborted with `Unable to call AOT method`
+for `java.nio.file.Path.of(String, String[])`. Metadata audit alone passed;
+the callable body was absent. This is a native build-input failure, separate
+from the confirmed mod queue faults, and no failed image was delivered.
+
+The contract had scanned only maintained mod JARs, while the separate runtime
+control's JDK calls depended on those mods continuing to reference their packages.
+Both experimental builders now scan a private union of shipped mod JARs and the
+compiled bootstrap-control JAR. This derives retention from the control's actual
+bytecode, including `Path.of`, instead of adding a guessed package whitelist.
+The control remains outside image analysis and outside the shipped mod/quick-mod
+sets. Shared staging preserves immutable input bytes, rejects name collisions,
+and is exercised by the packaging regression. This adds no normal engine/API/
+POM/workflow change. The 53-case mod result remains reusable on unchanged inputs;
+actual retention generation and native runtime controls validate the added build
+correction directly, with the workflow's fresh guard gate still mandatory.
+
+
+An initial standalone retention diagnostic ran without the worktree build lease
+or shared admission. Its `javac` PID 20164 was observed at 09:44:15Z and caused
+an independently owned native-memory diagnostic to stop safely. The compiler's
+exact process interval is unknown; generated class writes were at
+09:44:15.116–09:44:15.232Z. No foreign processes or locks were changed. Although
+the local script completed, its results are excluded from qualification. The
+same generator, bootstrap-only scan/audit and packaging checks are resubmitted
+through normal `maven_queue.py exec:exec` admission and the worktree lease.
+
+The bootstrap-only regression uses **zero shipped mod JARs**: it requires the
+exact `Path.of` method and `java.nio.file` preservation while excluding
+`nativecontrol` classes from retained engine members. This tests the observed
+missing dependency without incidental references from any current example.
+Windows and Linux packaging controls also check that the fixture enters retention
+inputs but never shipped mod/quick-mod directories. Build-only Java 25 packaging
+passed under the wrapper's worktree lease. No engine suite is repeated for this
+standalone input correction; a new Windows workflow must still qualify callable
+native bodies.
+
+The leased requalification completed 2026-10-14 09:58:45Z with Maven exit 0:
+`maven_queue.py -B -Dmse=off exec:exec -Dexec.executable=python3
+-Dexec.args=target/run_retention_checks.py`. It passed the generator's standalone
+regressions, bootstrap-only exact-member assertions and 16,431-entry/1,300-type
+audit, plus three Windows and three Linux packaging cases. The complete check
+held normal shared admission and the worktree lease; Maven execution was 2.436
+seconds, after queue waiting. The script and raw diagnostics are disposable
+outputs, not archived evidence. Changes integrated upstream since the announcer
+fix affect Second Strike and its S3K art/monitor consumers; the tested announcer
+and audio/test inputs remain unchanged. Those upstream changes are preserved
+in the next image and receive the workflow's own gates and native gameplay checks.

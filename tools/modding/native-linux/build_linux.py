@@ -17,7 +17,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "tools/modding/native-windows"))
-from build_windows import digest, run, extract_sdk, extract_jar, archive_bundle
+from build_windows import digest, run, extract_sdk, extract_jar, archive_bundle, retention_inputs
 from build_inputs import tool
 
 GRAAL_VERSION = "25.4.4.1.1+1.1"
@@ -142,11 +142,12 @@ def prepare(args):
     run([tool("javac"),"--release","25","-cp",os.pathsep.join(map(str,(engine,sdk,ROOT / "target/classes"))),"-d",classes,*sources],work)
     java=[tool("java"), "--enable-native-access=ALL-UNNAMED","-cp",os.pathsep.join(map(str,(classes,engine)))]
     run([*java,"com.openggf.tools.NativeModMemberContractTest",work / "fixtures"],work)
+    bootstrap_control(work,engine)
+    scan_inputs=retention_inputs(inputs / "mods",work / "bootstrap-control.jar",work / "retention-inputs")
     contract=work / "contract"
-    run([*java,"com.openggf.tools.NativeModMemberContract",engine,inputs / "mods",contract,
+    run([*java,"com.openggf.tools.NativeModMemberContract",engine,scan_inputs,contract,
         "--implementation-root=com.openggf.game.GameModule","--jdk-members"],work)
     run([*java,"com.openggf.tools.NativeModMemberAudit",contract / "members.tsv"],work)
-    bootstrap_control(work,engine)
     metadata=work / "metadata";metadata.mkdir()
     (metadata / "reflect-config.json").write_text('[{"name":"sun.net.www.protocol.jar.Handler","allDeclaredConstructors":true}]\n')
     deps=args.runtime_classpath.resolve(strict=True).read_text().strip()

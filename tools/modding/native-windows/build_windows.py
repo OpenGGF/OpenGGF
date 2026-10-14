@@ -157,6 +157,22 @@ def archive_bundle(bundle, output):
     output.with_suffix(".zip.sha256").write_text(f"{digest(output)}  {output.name}\n", encoding="ascii")
 
 
+def retention_inputs(mods, fixture, output):
+    """Scan shipped mods plus the separately runtime-loaded regression control.
+
+    The control must stay outside the image classpath and shipped mod directory,
+    but its direct JDK references still need callable retained bodies. Origin:
+    2026-10-14 Path.of abort after maintained mods stopped referencing its package.
+    """
+    if (mods / fixture.name).exists():
+        raise ValueError("Runtime control name collides with a shipped mod")
+    output.mkdir()
+    for jar in sorted(mods.glob("*.jar")):
+        shutil.copy2(jar, output / jar.name)
+    shutil.copy2(fixture, output / fixture.name)
+    return output
+
+
 def bootstrap_control(work, engine):
     # This shared regression source must never enter native image analysis.
     classes = work / "bootstrap-control-classes"
@@ -203,11 +219,12 @@ def build(args):
     classpath = os.pathsep.join(map(str, (classes, engine)))
     java = [tool("java"), "--enable-native-access=ALL-UNNAMED", "-cp", classpath]
     run([*java, "com.openggf.tools.NativeModMemberContractTest", work / "fixtures"], work)
+    bootstrap_control(work, engine)
+    scan_inputs = retention_inputs(inputs / "mods", work / "bootstrap-control.jar", work / "retention-inputs")
     contract = work / "contract"
-    run([*java, "com.openggf.tools.NativeModMemberContract", engine, inputs / "mods", contract,
+    run([*java, "com.openggf.tools.NativeModMemberContract", engine, scan_inputs, contract,
          "--implementation-root=com.openggf.game.GameModule", "--jdk-members"], work)
     run([*java, "com.openggf.tools.NativeModMemberAudit", contract / "members.tsv"], work)
-    bootstrap_control(work, engine)
     metadata = work / "metadata"
     metadata.mkdir()
     (metadata / "reflect-config.json").write_text(
