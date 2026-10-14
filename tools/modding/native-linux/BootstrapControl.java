@@ -75,6 +75,13 @@ public final class BootstrapControl implements GgfMod {
             if (((com.openggf.game.mutators.PreparedMutatorConfiguration) prepared).hasDefinitions()) {
                 throw new AssertionError("Empty prepared policy reported definitions");
             }
+            var module = (com.openggf.game.GameModule) Class.forName("com.openggf.game.sonic3k.Sonic3kGameModule")
+                    .getConstructor().newInstance();
+            var warning = module.getGameService(com.openggf.game.internal.HudWarningPolicyProvider.class);
+            if (warning == null || warning.isTimerWarning(0) || !warning.isTimerWarning(540)
+                    || !warning.isFlashFrame(0) || warning.isFlashFrame(8)) {
+                throw new AssertionError("Engine-created HUD policy dispatch failed");
+            }
         } catch (ReflectiveOperationException failure) {
             throw new AssertionError("Engine-created policy dispatch failed", failure);
         }

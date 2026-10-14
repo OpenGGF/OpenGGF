@@ -50,16 +50,18 @@ public final class NativeModMemberContract {
 
     public static void main(String[] args) throws Exception {
         if (args.length < 3) {
-            throw new IllegalArgumentException("Expected: <engine.jar> <mods-directory> <output-directory> [--references-only] [--implementation-root=engine.Type] [--jdk-static-fields | --jdk-members]");
+            throw new IllegalArgumentException("Expected: <engine.jar> <mods-directory> <output-directory> [--references-only] [--implementation-root=engine.Type] [--service-factories] [--jdk-static-fields | --jdk-members]");
         }
         boolean referencesOnly = false;
         var implementationRoots = new ArrayList<String>();
         boolean jdkStaticFields = false;
         boolean jdkMembers = false;
+        boolean serviceFactories = false;
         for (int i = 3; i < args.length; i++) {
             if (args[i].equals("--references-only")) referencesOnly = true;
             else if (args[i].equals("--jdk-static-fields")) jdkStaticFields = true;
             else if (args[i].equals("--jdk-members")) jdkMembers = true;
+            else if (args[i].equals("--service-factories")) serviceFactories = true;
             else if (args[i].startsWith("--implementation-root=")) {
                 String root = args[i].substring("--implementation-root=".length()).replace('.', '/');
                 if (!engine(root)) throw new IllegalArgumentException("Expected an engine implementation root");
@@ -69,11 +71,11 @@ public final class NativeModMemberContract {
         var generator = new NativeModMemberContract();
         generator.auditJdkStaticFields = jdkStaticFields || jdkMembers;
         generator.auditJdkMethods = jdkMembers;
-        generator.generate(Path.of(args[0]), Path.of(args[1]), Path.of(args[2]), referencesOnly, implementationRoots);
+        generator.generate(Path.of(args[0]), Path.of(args[1]), Path.of(args[2]), referencesOnly, implementationRoots, serviceFactories);
     }
 
     private void generate(Path engine, Path mods, Path output, boolean referencesOnly,
-                          List<String> implementationRoots) throws Exception {
+                          List<String> implementationRoots, boolean serviceFactories) throws Exception {
         try (var jar = new JarFile(engine.toFile())) {
             for (var entry : jar.stream().filter(e -> e.getName().startsWith("com/openggf/")
                     && e.getName().endsWith(".class")).toList()) {
@@ -116,6 +118,7 @@ public final class NativeModMemberContract {
                 }
             }
         }
+        if (serviceFactories) retainServiceFactories();
         Files.createDirectories(output);
         try (var jar = new JarOutputStream(Files.newOutputStream(output.resolve("preserved-engine.jar")))) {
             for (String name : retained) {
@@ -134,6 +137,30 @@ public final class NativeModMemberContract {
 
     private static boolean engine(String name) {
         return name != null && name.startsWith("com/openggf/");
+    }
+
+    private void retainServiceFactories() {
+        // Class-keyed engine factories erase their return type to Object. The
+        // API/descriptor closure therefore cannot see returned implementations,
+        // including anonymous HUD policies. Scan their actual bytecode, then
+        // repeat for newly discovered service-bearing classes. Origin: the
+        // 2026-10-14 native HudWarningPolicyProvider.isTimerWarning omission.
+        var scanned = new HashSet<String>();
+        while (true) {
+            var pending = retained.stream().filter(name -> !scanned.contains(name)).sorted().toList();
+            if (pending.isEmpty()) return;
+            for (String name : pending) {
+                scanned.add(name);
+                var references = referenceVisitor();
+                new ClassReader(bytes.get(name)).accept(new ClassVisitor(Opcodes.ASM9) {
+                    @Override public MethodVisitor visitMethod(int access, String method, String desc,
+                                                               String signature, String[] exceptions) {
+                        return desc.equals("(Ljava/lang/Class;)Ljava/lang/Object;")
+                                ? references.visitMethod(access, method, desc, signature, exceptions) : null;
+                    }
+                }, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+            }
+        }
     }
 
     private void jdkStaticField(String owner, String name, String descriptor) {
