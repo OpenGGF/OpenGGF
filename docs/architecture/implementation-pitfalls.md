@@ -1818,3 +1818,17 @@ from the backing game's initial zone, then let the scene own authored-act
 admission. A matched real-JAR control reproduces the old failure and renders the
 farm after the corrected bootstrap. Do not remove the mod's lifecycle guard or
 invent session state to make an arbitrary zone load.
+
+
+**KosM completion is a queued DMA, and equal descriptors are not FIFO identity.**
+Process_Kos_Module_Queue waits for the complete direct FIFO, then calls
+Add_To_DMA_Queue. The paired production pattern facade must wait for the actual
+submitted child receipts and publish only at a supported VInt. Keep receipts
+after parent claim and capture pending DMA separately from presented memory.
+Two identical source/destination entries need their admitted native FIFO
+position; Java identity is lost on copied snapshot restore and descriptor-only
+matching lets an unpaired predecessor borrow a later job's readiness. Shift
+only at actual archive retirement. Preflight both banks before admitting a
+global producer so failure cannot leave unpaired physical work. Preserve
+initial resident ingress separately: correct new upload timing does not prove
+retained pre-upload VRAM bytes. Origin: 2026-10-14 ending transfer69e4f51.
