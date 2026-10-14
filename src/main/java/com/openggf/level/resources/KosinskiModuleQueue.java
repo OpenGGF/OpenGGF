@@ -140,6 +140,13 @@ public final class KosinskiModuleQueue
     private Rom rom;
     private byte[] pendingModuleData;
     private DmaTarget dmaTarget;
+    private NativeKosModuleTransfer nativeTransfer;
+
+    void bindNativeTransfer(NativeKosModuleTransfer transfer) {
+        if (nativeTransfer != null && nativeTransfer != transfer)
+            throw new IllegalStateException("KosM physical queue already has a native transfer owner");
+        nativeTransfer = java.util.Objects.requireNonNull(transfer, "transfer");
+    }
     private final TreeMap<Integer, Byte> baselineBytes = new TreeMap<>();
     private final TreeMap<Integer, Byte> appliedBytes = new TreeMap<>();
     private List<DmaWriteState> pendingRestoreBaseline;
@@ -189,6 +196,7 @@ public final class KosinskiModuleQueue
             return;
         }
         if (phase == Phase.READY_TO_START) {
+            if (nativeTransfer != null && !nativeTransfer.mayStart(active)) return;
             StartResult started = startDecompression(active);
             archives.removeFirst();
             archives.addFirst(started.state());
@@ -200,16 +208,22 @@ public final class KosinskiModuleQueue
             throw new IllegalStateException("Non-empty KosM queue has phase " + phase);
         }
 
+        if (nativeTransfer != null && !nativeTransfer.mayComplete(active)) return;
+
         int remaining = active.modulesRemaining() - 1;
         int dmaWords = remaining == 0 ? active.lastModuleWords() : 0x800;
         int dmaBytes = dmaWords * 2;
         if (pendingModuleData == null || pendingModuleData.length < dmaBytes) {
             throw new IllegalStateException("KosM module completed without its decompressed DMA payload");
         }
-        if (!applyDma(new DmaChunk(active.destinationVramBytes(),
-                Arrays.copyOf(pendingModuleData, dmaBytes)))) {
-            // A completed native DMA remains pending until pattern memory is
-            // installed again; no queue counters or source/destination advance.
+        DmaChunk chunk = new DmaChunk(active.destinationVramBytes(),
+                Arrays.copyOf(pendingModuleData, dmaBytes));
+        if (nativeTransfer != null && nativeTransfer.owns(active)) {
+            // Process_Kos_Module_Queue calls Add_To_DMA_Queue. Pattern memory
+            // changes only when the following native VInt drains that queue.
+            nativeTransfer.queueDma(active, chunk);
+        } else if (!applyDma(chunk)) {
+            // Standalone queues retain their existing unavailable-target gate.
             return;
         }
         pendingModuleData = null;
@@ -225,6 +239,7 @@ public final class KosinskiModuleQueue
             return;
         }
 
+        if (nativeTransfer != null) nativeTransfer.archiveRetired();
         // ROM shifts the four queue entries, initializes the next archive, and
         // returns. It cannot begin that archive until the next gameplay frame.
         if (archives.isEmpty()) {
@@ -330,6 +345,7 @@ public final class KosinskiModuleQueue
     }
 
     public void clear() {
+        if (nativeTransfer != null) nativeTransfer.clear();
         archives.clear();
         phase = Phase.IDLE;
         pendingModuleData = null;

@@ -206,7 +206,9 @@ public final class SozMinibossInstance extends SozMinibossSprite implements Spaw
             var queue=services().kosinskiModuleQueue();
             if(queue!=null){Sonic3kPlcLoader.bindRuntimePatternDmaTarget(queue,services());
                 queue.enqueue(rom,Sonic3kConstants.ART_KOSM_SOZ_MINIBOSS_ADDR,0x3B5*32);
-                queue.enqueue(rom,Sonic3kConstants.ART_KOSM_SOZ_MINIBOSS_SAND_ADDR,0x4F3*32);}
+                queue.enqueue(rom,Sonic3kConstants.ART_KOSM_SOZ_MINIBOSS_SAND_ADDR,0x4F3*32);
+                com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.bindPatternModule(services(), bodyArtOrdinal);
+                com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.bindPatternModule(services(), sandArtOrdinal);}
         }catch(IOException failure){throw new IllegalStateException("Egg Golem art submission",failure);}
     }
     private void serviceArt(){

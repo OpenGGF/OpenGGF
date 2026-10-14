@@ -32,10 +32,12 @@ class TestDezFinalArtState {
         zone.art().queueModule(services,0x1607D8,0x49D); zone.art().queueModule(services,0x182ED8,0x100);
         assertEquals(2,zone.art().pendingCount()); assertEquals(0x1607D8,physical.queuedArchives().getFirst().archiveAddress());
         zone.art().service(services); assertEquals(2,zone.art().pendingCount(),"submission does not imply readiness");
-        var zoneSaved=zone.captureBytes(); var timingSaved=timing.capture(); var coordinationSaved=coordinator.capture(); var physicalSaved=physical.capture();
+        var resourceRegistry = new com.openggf.game.rewind.RewindRegistry(); resourceRegistry.register(timing);
+        coordinator.registerRewindAdapters(resourceRegistry); resourceRegistry.register(physical);
+        var zoneSaved=zone.captureBytes(); var resourceSaved=resourceRegistry.capture();
         int first=drain(zone.art(),services,physical,coordinator);
         assertPixels(rom,level,0x1607D8,0x49D); assertPixels(rom,level,0x182ED8,0x100);
-        timing.restore(timingSaved); coordinator.restore(coordinationSaved); physical.restore(physicalSaved);
+        resourceRegistry.restore(resourceSaved);
         var restored=new DezFinalBossZoneRuntimeState(PlayerCharacter.SONIC_ALONE); restored.restoreBytes(zoneSaved);
         assertEquals(2,restored.art().pendingCount()); assertEquals(first,drain(restored.art(),services,physical,coordinator));
         assertPixels(rom,level,0x1607D8,0x49D); assertPixels(rom,level,0x182ED8,0x100);
@@ -43,10 +45,12 @@ class TestDezFinalArtState {
     private int drain(DezFinalArtState art,ObjectServices services,KosinskiModuleQueue physical,S3kRuntimeArtCoordinator coordinator) {
         int pass=0;
         for(;pass<10000 && (!physical.isIdle() || art.pendingCount()!=0);pass++) {
+            coordinator.publishPatternModuleDma();
             physical.processNativeFrame(); coordinator.moduleQueue().prepareQueuedModuleBeforeVSync();
             coordinator.moduleQueue().beforeTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
             coordinator.moduleQueue().processModuleQueueAfterObjects(); art.service(services);
         }
+        coordinator.publishPatternModuleDma();
         assertTrue(physical.isIdle()); assertEquals(0,art.pendingCount()); assertTrue(pass<10000); return pass;
     }
     private void assertPixels(com.openggf.data.Rom rom,com.openggf.level.Level level,int address,int base) throws Exception {

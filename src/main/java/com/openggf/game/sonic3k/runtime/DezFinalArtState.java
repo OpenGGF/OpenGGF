@@ -27,7 +27,8 @@ public final class DezFinalArtState {
                 physical.enqueue(rom,source,tile*32);
             }
             try {
-                pending.add(S3kRuntimeArtCoordinator.from(services).moduleQueue().queue(rom,source,tile).ordinal());
+                pending.add(S3kRuntimeArtCoordinator.bindPatternModule(services,
+                        S3kRuntimeArtCoordinator.from(services).moduleQueue().queue(rom,source,tile)).ordinal());
             } catch(IllegalStateException unavailable) {
                 // Bare object fixtures may lack timing; production owns both queues.
                 if(!"runtime-art coordination is unavailable in these object services".equals(unavailable.getMessage())) throw unavailable;

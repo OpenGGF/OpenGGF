@@ -61,3 +61,29 @@ Tornado at input600 had6845 nonzero pixels and a ready virtual base137948
 while remaining invisible: an identity-only cache missed the upload and the
 sheet lacked `levelArtTileRanges`. Use the existing range refresh owner, not
 a hash scan, extra art job or fitted delay (2026-10-13 ending lifecycle task).
+
+
+### Paired physical/timed module publication
+
+The native module tail polls the complete direct FIFO, not merely a renderer or
+a parent handle. `S3kKosModuleQueue` emits its actual direct-child start/claim
+receipts; `S3kPatternModuleTransfer` binds them to an already admitted physical
+FIFO entry and retains them after the parent claim. The physical completion
+queues immutable ROM bytes for the next supported VInt DMA drain. Repeated
+rendering and completed parent claims do not upload them. Explicit standalone
+queues retain their separate declared contract.
+
+Capture admitted FIFO position as well as the actual submitted handle and
+fingerprint. Identical source/destination predecessors cannot safely be matched
+by descriptor alone, and copied snapshots cannot preserve Java entry identity.
+Shift positions only when the physical archive actually retires; a module
+advance, failed admission or clear must not invent a shift. Snapshot pending
+DMA independently from presented pattern writes, so both restore directions
+retain publication. Real duplicate-predecessor, multi-module, full-capacity,
+claim-race and320/800 full-world pixel tests cover these boundaries.
+
+A global producer without a sprite-owned handle still needs one actual timed
+job and a captured automatic claim. Preflight logical and physical capacity
+before mutation, and bind the resident DMA target. Timing-only terrain/title/
+fire-overlay jobs that own no physical journal entry must not be guessed into
+this pairing. Origin: 2026-10-14 ending Master publication, base69e4f51.

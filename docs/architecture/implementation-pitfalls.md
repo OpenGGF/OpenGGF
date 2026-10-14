@@ -1764,3 +1764,17 @@ native reunion's earlier wing legitimately covers20 of619 player pixels.
 Scripted status-facing does not imply render_flags-facing when object mappings
 bypass the ordinary playable mapper. See the
 [ending publication evidence](designs/2026-10-13-s3k-ending-lifecycle.md#source-owned-initial-and-published-ending-presentation-2026-10-14).
+
+
+**KosM completion is a queued DMA, and equal descriptors are not FIFO identity.**
+Process_Kos_Module_Queue waits for the complete direct FIFO, then calls
+Add_To_DMA_Queue. The paired production pattern facade must wait for the actual
+submitted child receipts and publish only at a supported VInt. Keep receipts
+after parent claim and capture pending DMA separately from presented memory.
+Two identical source/destination entries need their admitted native FIFO
+position; Java identity is lost on copied snapshot restore and descriptor-only
+matching lets an unpaired predecessor borrow a later job's readiness. Shift
+only at actual archive retirement. Preflight both banks before admitting a
+global producer so failure cannot leave unpaired physical work. Preserve
+initial resident ingress separately: correct new upload timing does not prove
+retained pre-upload VRAM bytes. Origin: 2026-10-14 ending transfer69e4f51.

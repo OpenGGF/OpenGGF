@@ -10,6 +10,7 @@ import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
 
 import java.util.List;
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 
 /**
  * Sonic 3&K level initialization profile.
@@ -82,6 +83,7 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
         if (GameServices.level().getAnimatedPatternManager() instanceof Sonic3kLevelAnimationManager animator) {
             animator.publishAniPlcAtVBlank();
         }
+        S3kRuntimeArtCoordinator.from(GameServices.runtimeArtCoordinator()).publishPatternModuleDma();
     }
 
     @Override
