@@ -358,8 +358,19 @@ Edits form a draft, counted in the footer. `Esc`/B with unsaved changes asks
 writes the draft atomically; save errors retain the draft for retry.
 
 **Details** (`F1` or the controller's north button) opens manually scrollable help,
-the complete value/error, and when the setting takes effect. Input bindings take
-effect after saving; other settings describe their next-use or restart boundary.
+the complete value/error, and when the setting takes effect: as soon as you save,
+when you next start a game, or after a restart.
+
+Settings that only take effect after you close and reopen OpenGGF carry an amber
+**RESTART** tag on their row, and their help reads *Needs a restart: close and reopen
+OpenGGF.* These are the frame rate, display shaders and their keys, the colour
+profile, the rewind VHS effect, Discord, the start-up screens and default ROM, test
+mode, window size, and turning sound off. After you save one with a new value, the
+Settings and game-shelf footers show **RESTART NEEDED** until you restart. The
+Settings tab row names the waiting changes (or counts them when the names do not
+fit). Saving a setting back to the value OpenGGF started with clears the notice.
+Everything else applies as soon as you save or when you next start a game; Details
+says which.
 Unchanged ROM previews are retained after saving. Current launch/session overrides
 remain authoritative until the next launch. YAML remains an optional editing route.
 

@@ -755,7 +755,12 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   crisp native fonts and controller navigation; catalog scans run in cancellable
   background tasks and unchanged ROM previews survive saving. The experimental
   editor exposes a controller command palette for editing, saving, exporting and
-  playtesting. `MasterTitleCaptureTool` renders these menus offscreen for review. Advanced also offers
+  playtesting. Settings that only apply after a restart (frame rate, display shaders,
+  colour profile, the rewind VHS effect, Discord, start-up screens, test mode, window
+  size and turning sound off) carry an amber RESTART tag and say so in their help;
+  once one is saved with a new value, the Settings and game-shelf footers read
+  RESTART NEEDED until OpenGGF restarts, and Details for every setting says whether
+  it applies on save, at the next game start or after a restart. `MasterTitleCaptureTool` renders these menus offscreen for review. Advanced also offers
   Editor Projects and Import Content for reviewing dropped editor projects, exported
   level folders or ZIPs, and mod/mutator packages before opening or installing them.
   Imported mods remain disabled until enabled through the mod manager. The

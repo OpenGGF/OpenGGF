@@ -379,3 +379,40 @@ surfaceless-EGL library on macOS, in palette-presentation classes this change do
 touch; they were not checked against a baseline. The skips need an offscreen GL context
 or opt-in properties. `-Pguards` passed 108 tests after the layering fix. These
 results are not a full smoke pass.
+
+
+## Restart-needed indicator (2026-10-15)
+
+James asked for a clear, user-friendly way to see which settings need a restart.
+
+- **`SettingTiming`** (`NOW`, `NEXT_GAME`, `RESTART`) classifies every
+  `SonicConfiguration` key from its readers. The switch has no default, so a new key
+  does not compile until it is classified. The audit found:
+  - **Restart:** frame rate (Engine constructor) and window size; display shaders,
+    their keys and phase (display initialisation; the shader picker changes them
+    live, Settings does not); the colour profile and its toggle key; the VHS rewind
+    pass; Discord (GameLoop constructor); start-up screens and default ROM; test
+    mode; and turning sound off. The title's audio backend survives launches, while
+    turning sound on works at the next launch.
+  - **`SCALE` has no runtime reader.** It is classed as restart with the window keys.
+  - **Next game:** audio driver settings, region, characters, Borrow from, rewind
+    tuning, aspect and load-time simulation.
+  - **Now:** everything read at use.
+- **`LiveSettings` now derives from it.** `NOW` settings always reach a paused game;
+  restart settings never do. Of the next-game settings, only the four a resume
+  refreshes reach it (rewind, debug, deadzone, autosize).
+- **UI.** An amber RESTART tag on restart rows, drawn only where it fits beside the
+  label. Those rows' second help line reads *Needs a restart: close and reopen
+  OpenGGF.* A *RESTART NEEDED* footer pill appears on Settings and the game shelf,
+  and the Settings tab row names the waiting settings, or counts them when the names
+  overflow. Other rows keep both description lines, a deliberate earlier design
+  pinned by `TestEngineSettingsScreen`; their timing is in Details. Always spending
+  the second line on timing was tried and rejected because it broke that design.
+- **`PendingRestart`** counts only Settings saves whose values differ from what
+  OpenGGF started with (captured in `Engine.init`). Engine writes such as
+  `DEFAULT_ROM` on every launch do not count.
+
+Validation: `TestSettingTiming` (classification, consistency with `LiveSettings`,
+pending rules) and the Settings screen test. The consumer selection passed 520 tests
+and `-Pguards` with the Mod API checks passed 143. `MasterTitleCaptureTool` scenes
+29–31 were inspected.

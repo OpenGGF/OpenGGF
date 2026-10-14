@@ -126,7 +126,7 @@ class TestSuspendedSettings {
                 SonicConfiguration.MAIN_CHARACTER_CODE, SonicConfiguration.SIDEKICK_CHARACTER_CODE,
                 SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, SonicConfiguration.CROSS_GAME_SOURCE,
                 SonicConfiguration.REGION, SonicConfiguration.AUDIO_ENABLED, SonicConfiguration.FPS,
-                SonicConfiguration.SONIC_2_ROM}) {
+                SonicConfiguration.DISPLAY_SHADER_SELECTION, SonicConfiguration.DISPLAY_SHADER_NEXT_KEY}) {
             assertFalse(LiveSettings.appliesOnResume(launchOnly, true), launchOnly.name());
         }
     }

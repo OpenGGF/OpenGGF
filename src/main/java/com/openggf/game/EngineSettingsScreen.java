@@ -4,6 +4,8 @@ import com.openggf.configuration.ConfigCatalog;
 import com.openggf.configuration.ConfigType;
 import com.openggf.configuration.EngineSettingsDraft;
 import com.openggf.configuration.GlfwKeyNameResolver;
+import com.openggf.configuration.PendingRestart;
+import com.openggf.configuration.SettingTiming;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
@@ -224,6 +226,37 @@ public final class EngineSettingsScreen {
         focusTicks = 0;
     }
 
+    /** Footer pill while Settings saved since start-up wait for a restart. */
+    static final String RESTART_STATUS = "RESTART NEEDED";
+    private static final String RESTART_TAG = "RESTART";
+
+    record Timing(String text, float[] color) { }
+
+    /**
+     * The status line for a row, or null to keep both description lines: a restart wins, then a
+     * paused game's view of the change. When the rest apply is in Details ({@link #effect}).
+     */
+    Timing status(SonicConfiguration key) {
+        if (SettingTiming.of(key) == SettingTiming.RESTART) {
+            return new Timing("Needs a restart: close and reopen OpenGGF.", MenuChrome.AMBER);
+        }
+        if (pausedGameTakes == null) return null;
+        return pausedGameTakes.test(key) ? new Timing("Your paused game takes this when it resumes.", MenuChrome.CYAN)
+                : new Timing("Applies when you next start a game.", MenuChrome.MUTED);
+    }
+
+    private static int restartTagWidth() {
+        return MenuChrome.compactWidth(RESTART_TAG) + 6;
+    }
+
+    /** A small amber tag on rows that only take effect after a restart. */
+    private void restartTag(int x, int y) {
+        int w = restartTagWidth();
+        MenuChrome.fill(font, x, y, w, 10, MenuChrome.NAVY, .95f);
+        MenuChrome.outline(font, x, y, w, 10, MenuChrome.AMBER, 1f, 1);
+        MenuChrome.compact(font, RESTART_TAG, x + 3, y + 1, MenuChrome.AMBER);
+    }
+
     private void flash(String text) {
         message = text;
         messageTicks = 180;
@@ -338,7 +371,11 @@ public final class EngineSettingsScreen {
             case LIVE_REWIND_ENABLED, DEBUG_VIEW_ENABLED, DISPLAY_ASPECT ->
                     "Used by every game whose Game Setup says Default. Takes effect at the next game start,"
                             + " or when a paused game resumes (aspect: a game paused in a level).";
-            default -> "Saved when you leave Settings. Restart the engine to ensure this setting takes effect.";
+            default -> switch (SettingTiming.of(key)) {
+                case NOW -> "Takes effect as soon as you save.";
+                case NEXT_GAME -> "Takes effect when you next start a game.";
+                case RESTART -> "Restart OpenGGF (close and reopen it) for this to take effect.";
+            };
         };
     }
 
@@ -452,7 +489,8 @@ public final class EngineSettingsScreen {
             renderRows(width, contentTop);
             renderDescription(width);
             int unsaved = draft.changedCount();
-            String status = message != null ? message : unsaved == 0 ? null : unsaved + " UNSAVED";
+            String status = message != null ? message : unsaved > 0 ? unsaved + " UNSAVED"
+                    : PendingRestart.current(config).isEmpty() ? null : RESTART_STATUS;
             List<MenuChrome.Hint> hints = new ArrayList<>();
             hints.add(MenuChrome.leftRight(tabsFocused ? "TAB" : "CHANGE"));
             if (tabsFocused) hints.add(MenuChrome.hint(MenuChrome.confirmKey(lastInput), "SETTINGS"));
@@ -510,10 +548,13 @@ public final class EngineSettingsScreen {
             float[] valueColor = nonDefault ? MenuChrome.AMBER : MenuChrome.WHITE;
             float[] labelColor = focused ? MenuChrome.WHITE : MenuChrome.TEXT;
             int valueX;
+            boolean restart = SettingTiming.of(key) == SettingTiming.RESTART;
             if (fullSize) {
                 valueX = right - MenuChrome.labelWidth(value);
                 MenuChrome.label(font, value, valueX, y, valueColor);
                 MenuChrome.label(font, labels.get(key), 18, y, labelColor);
+                int tagX = valueX - 10 - restartTagWidth();
+                if (restart && tagX >= 18 + MenuChrome.labelWidth(labels.get(key)) + 6) restartTag(tagX, y);
             } else {
                 // Values keep up to half the row; labels take what is left and scroll when focused.
                 int valueRoom = Math.max(30, (width - 40) / 2);
@@ -521,6 +562,10 @@ public final class EngineSettingsScreen {
                 valueX = right - MenuChrome.compactWidth(v);
                 MenuChrome.compact(font, v, valueX, y + 1, valueColor);
                 int labelRoom = valueX - 10 - 18;
+                if (restart) {
+                    restartTag(valueX - 10 - restartTagWidth(), y);
+                    labelRoom -= restartTagWidth() + 4;
+                }
                 MenuChrome.compact(font, window(labels.get(key), labelRoom / MenuChrome.COMPACT_ADVANCE, focused),
                         18, y + 1, labelColor);
             }
@@ -550,10 +595,19 @@ public final class EngineSettingsScreen {
         List<float[]> colors = new ArrayList<>();
         if (tabsFocused) {
             lines.add(tabSummary(tabs[category]));
-            lines.add(pausedGameTakes == null ? "These settings apply to every game."
-                    : "Every game; your paused game takes some on resume.");
+            List<SonicConfiguration> pending = PendingRestart.current(config);
             colors.add(null);
-            colors.add(MenuChrome.DIM);
+            if (!pending.isEmpty()) {
+                String named = "Restart OpenGGF to apply: " + String.join(", ",
+                        pending.stream().map(EngineSettingLabels::label).toList()) + ".";
+                lines.add(MenuChrome.compactWidth(named) <= width - 28 ? named : "Restart OpenGGF to apply "
+                        + pending.size() + (pending.size() == 1 ? " saved change." : " saved changes."));
+                colors.add(MenuChrome.AMBER);
+            } else {
+                lines.add(pausedGameTakes == null ? "These settings apply to every game."
+                        : "Every game; your paused game takes some on resume.");
+                colors.add(MenuChrome.DIM);
+            }
         } else {
             String description = ConfigCatalog.meta(selected()).description();
             if (!description.equals(descriptionText) || width != descriptionWidth) {
@@ -561,18 +615,19 @@ public final class EngineSettingsScreen {
                 descriptionWidth = width;
                 descriptionLines = MenuDetailsScreen.wrapText(MenuDetailsScreen.readable(description), (width - 28) / 6);
             }
-            // With a paused game the second line says whether it takes the change; Details has the rest.
-            int rows = pausedGameTakes == null ? 2 : 1;
+            // A setting that needs a restart, or a paused game's status, takes the second line;
+            // Details has the full description.
+            Timing status = status(selected());
+            int rows = status == null ? 2 : 1;
             for (int i = 0; i < rows && i < descriptionLines.size(); i++) lines.add(descriptionLines.get(i));
             if (descriptionLines.size() > rows) {
                 String last = lines.get(rows - 1);
                 lines.set(rows - 1, MenuChrome.fitCompact(last + "...", width - 28));
             }
-            if (pausedGameTakes != null) {
-                boolean live = pausedGameTakes.test(selected());
+            if (status != null) {
                 while (colors.size() < lines.size()) colors.add(null);
-                lines.add(live ? "Your paused game takes this when it resumes." : "Applies when you next start a game.");
-                colors.add(live ? MenuChrome.CYAN : MenuChrome.DIM);
+                lines.add(status.text());
+                colors.add(status.color());
             }
         }
         MenuChrome.descriptionBox(font, 8, DESC_Y, width - 16, DESC_H, lines, colors);

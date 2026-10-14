@@ -938,6 +938,11 @@ public class MasterTitleScreen {
                 : "Could not open " + action.toLowerCase(java.util.Locale.ROOT));
     }
 
+    /** Settings saved since start-up that only take effect after a restart. */
+    private boolean restartPending() {
+        return !com.openggf.configuration.PendingRestart.current(configService).isEmpty();
+    }
+
     /** The stock game a card sets up: its own, or the one a paused card holds. */
     private static MasterTitleEntry.Stock stockOf(MasterTitleEntry entry) {
         return entry instanceof MasterTitleEntry.Suspended paused ? paused.game()
@@ -1642,7 +1647,8 @@ public class MasterTitleScreen {
             MenuChrome.changedMarker(font, lx, LEGEND_Y + 2);
             MenuChrome.compact(font, legend, lx + 8, LEGEND_Y, MenuChrome.AMBER);
         }
-        MenuChrome.footer(font, w, null, hubHints(), MenuChrome.controller(menuInput));
+        MenuChrome.footer(font, w, restartPending() ? EngineSettingsScreen.RESTART_STATUS : null, hubHints(),
+                MenuChrome.controller(menuInput));
         if (state == State.CONFIRMING && confirmTicks < 14) {
             // A quick white flash as the game is chosen, before GameLoop's fade.
             box(0, 0, w, SCREEN_H, 1f, 1f, 1f, 0.55f * (1f - confirmTicks / 14f));
@@ -1685,7 +1691,8 @@ public class MasterTitleScreen {
             };
             case TABS -> switch (navigation.tab()) {
                 case MODS -> "Turn mods on or off for all games";
-                case SETTINGS -> suspended != null ? "For all games; some reach your paused game"
+                case SETTINGS -> restartPending() ? "Restart OpenGGF to finish applying saved settings"
+                        : suspended != null ? "For all games; some reach your paused game"
                         : "Display, sound, controls and more for all games";
                 case EXTRAS -> "Extra modes added by your mods";
                 case ADVANCED -> "Trace replays, advanced settings and help";

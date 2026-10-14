@@ -27,7 +27,8 @@ import static org.lwjgl.system.MemoryUtil.NULL;
  * Inputs: {@code <output-dir> [viewport-width=320] [scale=3] [paused-frame.png]}; the working
  * directory's ROM images supply the title logos exactly as at startup. A paused-frame PNG (any
  * gameplay capture) adds the suspended-game scenes: its card first on the shelf, the End game
- * prompt, and Quit with a paused game. On macOS run with {@code -XstartOnFirstThread}.
+ * prompt, and Quit with a paused game. The last three scenes show a restart-only setting and a
+ * saved frame-rate change waiting for a restart (hub notice and Settings summary). On macOS run with {@code -XstartOnFirstThread}.
  * Originating task: the 2026-10 master title redesign (branch
  * {@code feature/ai-master-title-redesign}); suspended scenes from the hold-Escape suspend task.
  */
@@ -80,7 +81,10 @@ public final class MasterTitleCaptureTool {
                 new Scene("25-paused-setup-rewind", List.of(down, right, enter, down, down, down, down), 20),
                 new Scene("26-paused-setup-character", List.of(down, right, enter), 20),
                 new Scene("27-paused-settings", List.of(up, right, enter), 20),
-                new Scene("28-paused-settings-row", List.of(up, right, enter, down), 20));
+                new Scene("28-paused-settings-row", List.of(up, right, enter, down), 20),
+                new Scene("29-settings-restart-row", List.of(up, right, enter, down, down, down, down, down, down, down), 20),
+                new Scene("30-hub-restart-pending", List.of(), 40),
+                new Scene("31-settings-restart-pending", List.of(up, right, enter, up), 20));
 
         GLFWErrorCallback.createPrint(System.err).set();
         if (!glfwInit()) throw new IllegalStateException("Unable to initialize GLFW");
@@ -104,10 +108,20 @@ public final class MasterTitleCaptureTool {
             float[] projection = new org.joml.Matrix4f().ortho2D(0, width, 0, 224).get(new float[16]);
             List<Scene> all = new java.util.ArrayList<>(scenes);
             if (paused != null) all.addAll(pausedScenes);
+            else all.addAll(pausedScenes.subList(pausedScenes.size() - 3, pausedScenes.size()));
             for (Scene scene : all) {
                 Path configDir = Files.createTempDirectory("master-title-capture");
                 SonicConfigurationService config = SonicConfigurationService.createStandalone(configDir);
                 config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
+                if (scene.name().contains("restart-pending")) {
+                    // A frame-rate change saved in Settings since start-up, which waits for a restart.
+                    com.openggf.configuration.PendingRestart.captureAtStart(config);
+                    var draft = new com.openggf.configuration.EngineSettingsDraft(config);
+                    draft.set(SonicConfiguration.FPS, "75");
+                    draft.apply();
+                } else {
+                    com.openggf.configuration.PendingRestart.captureAtStart(config);
+                }
                 MasterTitleScreen screen = new MasterTitleScreen(config);
                 screen.initialize();
                 screen.setEnabledModsByGame(Map.of(MasterTitleScreen.GameEntry.SONIC_2,

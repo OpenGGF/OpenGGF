@@ -211,6 +211,21 @@ class TestEngineSettingsScreen {
     }
 
     @Test
+    void settingsThatNeedARestartSayItOnTheRowAndInTheHelp() {
+        Fixture f = new Fixture(); // Display: aspect ratio first, frame rate further down
+        List<String> aspect = f.descriptionLines();
+        assertTrue(aspect.stream().noneMatch(line -> line.startsWith("Needs a restart")),
+                "a game-start setting keeps both description lines");
+        assertTrue(f.texts().contains("RESTART"), "restart-only rows on the page carry a tag");
+
+        int fpsRow = new EngineSettingsDraft(f.config).keys(EngineSettingsDraft.Category.DISPLAY).indexOf(FPS);
+        f.press(GLFW_KEY_DOWN, fpsRow);
+        assertTrue(f.descriptionLines().contains("Needs a restart: close and reopen OpenGGF."));
+        assertTrue(EngineSettingsScreen.effect(FPS).contains("Restart"));
+        assertEquals(com.openggf.configuration.SettingTiming.RESTART, com.openggf.configuration.SettingTiming.of(FPS));
+    }
+
+    @Test
     void playStationPromptsAppearAsKeyCaps() {
         Fixture f = new Fixture();
         f.padName = "DualSense Wireless Controller";

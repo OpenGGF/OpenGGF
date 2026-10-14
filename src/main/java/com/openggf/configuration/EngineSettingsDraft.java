@@ -173,6 +173,7 @@ public final class EngineSettingsDraft {
                 || changes.containsKey(SonicConfiguration.LIVE_REWIND_TAPE_COAST_MAX_STEPS)) && min > max)
             throw new IllegalArgumentException("Rewind minimum exceeds maximum");
         config.applySettings(changes);
+        PendingRestart.noteSaved(changes.keySet());
         initial.putAll(changes);
         changes.keySet().forEach(this::refresh);
         revision++;

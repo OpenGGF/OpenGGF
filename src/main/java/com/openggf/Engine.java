@@ -578,6 +578,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void init() {
+		com.openggf.configuration.PendingRestart.captureAtStart(configService);
 		initializeExternalContentAtBoot();
 		// === PHASE 1: Window, GL context, input (always runs) ===
 		// Setup an error callback
