@@ -7,7 +7,10 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.SpawnRewindRecreatable;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.PerObjectRewindSnapshot;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -33,7 +36,7 @@ import java.util.List;
  * ({@code loc_4A274}) and only proceeds once it reads clear.
  */
 public class PachinkoItemOrbObjectInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener, SpawnRewindRecreatable {
+        implements TouchResponseProvider, TouchResponseListener, RewindRecreatable {
 
     private static final int COLLISION_FLAGS = 0x40 | 0x17;
     private static final int[] ANIMATION = {0, 1, 2, 3, 4, 3, 2, 1};
@@ -85,6 +88,47 @@ public class PachinkoItemOrbObjectInstance extends AbstractObjectInstance
 
     public PachinkoItemOrbObjectInstance(ObjectSpawn spawn) {
         super(spawn, "PachinkoItemOrb");
+    }
+
+    /**
+     * loc_4A238 changes the same SST into loc_4A34C's reward. The Java
+     * delegate is embedded in this slot, so it must be captured by its owner,
+     * rather than encoded as a reference to another managed object.
+     */
+    private record RewardState(ObjectSpawn originalSpawn, ObjectSpawn rewardSpawn,
+                               PerObjectRewindSnapshot rewardState)
+            implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra { }
+
+    @Override
+    public PachinkoItemOrbObjectInstance recreateForRewind(RewindRecreateContext context) {
+        // getSpawn() exposes the live converted reward. Constructor ownership
+        // must still retain the original orb for a later reverse restore.
+        ObjectSpawn original = context.state() != null
+                && context.state().objectSubclassExtra() instanceof RewardState state
+                ? state.originalSpawn() : context.spawn();
+        return new PachinkoItemOrbObjectInstance(original);
+    }
+
+    @Override
+    public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
+        // Context overloads retain the inherited generic compact scalar path
+        // for armed/touch/animation state; only the embedded lifetime is added.
+        return super.captureRewindState(context).withObjectSubclassExtra(new RewardState(spawn,
+                rewardItem == null ? null : rewardItem.getSpawn(),
+                rewardItem == null ? null : rewardItem.captureRewindState(context)));
+    }
+
+    @Override
+    public void restoreRewindState(PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
+        super.restoreRewindState(snapshot, context);
+        // An absent delegate is an actual pre-conversion state; reverse restore
+        // must retire a later reward as well as hydrate a captured active one.
+        rewardItem = null;
+        if (snapshot.objectSubclassExtra() instanceof RewardState state && state.rewardState() != null) {
+            rewardItem = GumballItemObjectInstance.createPachinkoItem(state.rewardSpawn());
+            rewardItem.setServices(services());
+            rewardItem.restoreRewindState(state.rewardState(), context);
+        }
     }
 
     @Override

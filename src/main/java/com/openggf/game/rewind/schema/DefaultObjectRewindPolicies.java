@@ -830,7 +830,11 @@ final class DefaultObjectRewindPolicies {
             // byte per rider ($36(a0) for Player_1, $37(a0) for Player_2,
             // sonic3k.asm:96389-96397), so the engine carries one lock reference each.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.PachinkoFlipperObjectInstance", "lockedSidekick"), RewindFieldPolicy.CAPTURED),
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.PachinkoItemOrbObjectInstance", "rewardItem"), RewindFieldPolicy.DEFERRED),
+            // Native parent3 points to the actual container through item expiry/recreation.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.GumballItemObjectInstance", "parentRef"), RewindFieldPolicy.CAPTURED),
+            // Same-SST reward contents are owned by Pachinko's private RewardState,
+            // not an ObjectRef to a separately managed child. Other scalars remain compact.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.PachinkoItemOrbObjectInstance", "rewardItem"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.PachinkoMagnetOrbObjectInstance", "playerStates"), RewindFieldPolicy.CAPTURED),
             // Results children capture parentSlot and relink this structural SST pointer in
             // afterRewindRestoreSettled. The forced and in-place graph paths are covered by

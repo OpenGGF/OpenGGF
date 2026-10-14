@@ -62,7 +62,7 @@ and source hash are recorded in the [completion plan](../../plans/2026-10-13-s3k
 On coherente46f61820069f0d959e59220a46fba9a80aa4426 plus the test draft,
 `TestS3kBonusPortalMechanismProducts` qualifies425 distinct cases across two
 runs:2258 short pilots5/0/0/0 at20:46:52 UTC (28.313s Maven/5.876s class,
-0s queue), then41801 finite products420/0/0/0 at20:54:42 UTC
+0 s queue), then41801 finite products420/0/0/0 at20:54:42 UTC
 (5:06 Maven/280.8s class/69s queue). The finite140 supported configurations
 and three stage branches are the same admitted product set as above.
 
@@ -119,3 +119,57 @@ are not added as one green run. Current combined smoke remains pending.
 Whole Slot interior rewind remains unsupported in the portal fixture. The
 ROM-bank repair does not certify reward mechanisms, cold traversal, native
 pixels or PCM. Those obligations stay active.
+
+
+## Actual Gumball and Pachinko reward restoration — 2026-10-14
+
+`TestS3kGumballPachinkoRewardMechanics` adds three independent native 320,
+Sonic-solo/off checks on 06b0322a7 plus the scoped parent/delegate repair.
+Each uses the declared production logical bonus entry from SOZ1 and local
+free-P1 contacts. No RNG, reward subtype, timer, delegate, control or exit
+state is written; this is mechanism evidence, not a cold portal route.
+
+| Actual owner | Captured/restored lifetime |
+|---|---|
+| Gumball machine/container |Real activation, natural ball birth while docked, live parent3 release, actual pickup and natural collect/bottom expiry; deleted ball recreated before two forward replays|
+| Pachinko placed orb |Real touch arms, real release converts the same SST, reverse restore retires the later delegate; actual pickup/next-pass expiry then recreates the active reward, with two cycles in both directions|
+| Pachinko energy trap |Actual beam contact, native control and 18-step countdown; two complete-world cycles bounded before the exit callback|
+
+Native `loc_60EE0`/`loc_60EFC` reads the actual container parent3 SST on
+every ball pass. The final Java constructor callback formerly disappeared on
+recreation, leaving the captured dock-ineligible ball permanently ineligible.
+The production birth now captures/relinks that managed parent. Native
+`loc_4A238` changes the orb's same SST to `loc_4A34C`; its embedded reward
+contents now have a private captured extra, preserving the generic compact
+armed/touch/animation scalars and original orb spawn for reverse restoration.
+The former DEFERRED reward reference did not preserve this non-managed
+same-slot delegate. Neither change supplies gameplay from comparison data.
+
+Actual negative 55468 completes 23:49:00 BST/22:49:00 UTC: 3 tests,
+2 failures, 0 errors/skips. First forward contacts succeed; Gumball fails
+only after full-world recreation at dock release, and Pachinko fails at
+restored active reward presence. Trap passes. Corrected 48830 completes
+2026-10-15 00:00:47 BST/2026-10-14 23:00:47 UTC: 62/0/0/0,
+1:13 Maven,0 s queue; the new class contributes 3 cases and 59 affected
+pure/graph/schema cases pass. The added armed-to-converted reverse window
+also checks that absence and original ID $ED survive restoration over later
+ID $EB state. Complete-world comparisons use the composed private-field,
+six-manager-field and raw-Palette comparator, with no key filtering.
+
+Focused command from the owned HPZ tree, with the three original absolute
+ROM paths reproduced using `ROM_ROOT` for the existing ROM directory:
+
+```sh
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null python3 tools/testing/maven_queue.py --lean -Dmse=off \
+  '-Dtest=TestS3kGumballPachinkoRewardMechanics,TestGumballItemBoundaries,TestGumballItemPriority,TestPachinkoItemOrbObjectInstance,TestPachinkoEnergyTrapObjectInstance,TestPachinkoEnergyTrapRuntime,TestMutatorBonusRingProducers,TestS3kMgzMechanismGraphRewind,TestRewindSchemaRegistry,TestScalarOnlyCodecDeletion#s3kGumballGraphBatch233ClassesImplementRewindRecreatable+s3kMgzMechanismGraphBatch245ClassesImplementRewindRecreatable' \
+  "-Ds3k.rom.path=${ROM_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dsonic1.rom.path=${ROM_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Dsonic2.rom.path=${ROM_ROOT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  -Dopenggf.headless.gl=surfaceless-egl test
+```
+
+Finite five-preset/main/donor/roster mechanism products, every naturally
+selected reward branch, spring/dispenser/bumper and other Pachinko mechanics,
+cold traversal, native pictures and PCM remain separate active obligations.
+The trap window does not certify outgoing callback restoration; Root owns
+that shared bonus-exit lifecycle repair. Current combined smoke remains pending.

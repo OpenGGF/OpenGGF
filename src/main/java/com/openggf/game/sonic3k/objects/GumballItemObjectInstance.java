@@ -147,6 +147,9 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
      */
     private final java.util.function.IntSupplier parentYSupplier;
 
+    /** Native parent3(a0), kept as a managed reference through reward recreation. */
+    private AbstractObjectInstance parentRef;
+
     /**
      * True once the ball has fallen at least {@link #DOCK_ELIGIBLE_THRESHOLD} below its
      * spawning container's current y (ROM loc_60EFC gate on sub_610E0). Starts true for
@@ -235,6 +238,15 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
                 parentYSupplier);
     }
 
+    /** Actual loc_60E5C container birth; the generic object codec captures parent3. */
+    static GumballItemObjectInstance createEjectedItem(ObjectSpawn spawn, AbstractObjectInstance container) {
+        var item = new GumballItemObjectInstance(spawn, 0, MotionMode.GUMBALL_EJECT,
+                RewardMode.GUMBALL, null);
+        item.parentRef = java.util.Objects.requireNonNull(container, "container");
+        item.dockEligible = false;
+        return item;
+    }
+
     public static GumballItemObjectInstance createPachinkoItem(ObjectSpawn spawn) {
         return new GumballItemObjectInstance(spawn, 0, MotionMode.PACHINKO_FLOAT, RewardMode.PACHINKO, null);
     }
@@ -284,8 +296,11 @@ public class GumballItemObjectInstance extends AbstractObjectInstance
             // machine until the ball's own gravity fall outpaces it. Once past the clamp,
             // the ball is only reward-eligible ($10/16px further below the container) —
             // sub_610E0/Check_PlayerInRange is not even polled before that.
-            if (parentYSupplier != null) {
-                int parentY = parentYSupplier.getAsInt();
+            if (parentRef != null || parentYSupplier != null) {
+                // loc_60EE0 reads the live parent3 SST, not a constructor-owned
+                // callback to a former container. Scalar restoration remains
+                // generic; the parent reference is relinked with the whole graph.
+                int parentY = parentRef != null ? parentRef.getY() : parentYSupplier.getAsInt();
                 if (motionState.y < parentY) {
                     motionState.y = parentY;
                     dockEligible = false;

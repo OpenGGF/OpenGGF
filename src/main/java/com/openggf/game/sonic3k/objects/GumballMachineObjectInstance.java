@@ -699,6 +699,13 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
         LOGGER.fine("GumballMachine: container spawned ball, subtype=" + subtype);
     }
 
+    /** Native parent3 is the live container SST, captured with the ejected item. */
+    private void spawnBallFromContainer(ContainerDisplayChild container) {
+        int subtype = chooseBallSubtype();
+        ObjectSpawn item = new ObjectSpawn(container.getX(), container.getY(), 0xEB, subtype, 0, false, 0);
+        spawnChild(() -> GumballItemObjectInstance.createEjectedItem(item, container));
+    }
+
     /** ROM loc_60EA2: called by container when animation completes. */
     public void onContainerAnimComplete() {
         clearMachineBits1and3();
@@ -1062,8 +1069,7 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance impleme
                     // until the following frame's loc_60E8C call.
                     animStep = 0;
                     animTimer = 0;
-                    int spawnY = parent.getCurrentY() + offsetFromMachine;
-                    parent.onContainerSpawnBall(spawn.x(), spawnY, this::getY);
+                    parent.spawnBallFromContainer(this);
                 }
                 return;
             }
