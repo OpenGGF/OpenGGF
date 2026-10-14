@@ -1132,3 +1132,15 @@ separate Sonic-follower Bubbler identity failures and is not a passing delivery
 gate. [MHZ1](../architecture/validation/levels/s3k-mhz-act1.md#knuckles-physical-checkpoint-follow-up-2026-10-14)
 and [MHZ2](../architecture/validation/levels/s3k-mhz-act2.md#knuckles-physical-checkpoint-follow-up-2026-10-14)
 retain further roster/mechanic/cold-route/native limits.
+
+
+SOZ/DDZ incoming-world follow-up (2026-10-14): the older death drivers use
+one production fade owner and pending-render service. SOZ's300 solo and90
+team products pass in17992 at13:36:36 UTC, zero failures/errors/skips; each
+requires two actual life-loss reloads and full incoming-world replay after
+both releases. Doomsday's five-preset double ring-out and five ending-load
+cases pass in62555 at13:34:15 UTC; its unrelated legacy Bubbler fixture red
+is retained honestly and resolved separately. [SOZ1](../architecture/validation/levels/s3k-soz-act1.md#production-checkpoint-fade-and-incoming-world-replay-2026-10-14),
+[SOZ2](../architecture/validation/levels/s3k-soz-act2.md#production-checkpoint-fade-and-incoming-world-replay-2026-10-14)
+and [DDZ](../architecture/validation/levels/s3k-ddz.md#single-production-fade-owner-and-released-world-replay-2026-10-14)
+retain mechanic/cold-route/native and broader configuration obligations.

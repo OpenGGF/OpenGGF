@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** Consecutive real checkpoint death/reloads preserve mixed/duplicate CPU chains and isolate owners. */
 @RequiresRom(SonicGame.SONIC_3K)
+@org.junit.jupiter.api.TestMethodOrder(org.junit.jupiter.api.MethodOrderer.OrderAnnotation.class)
 class TestSozTeamCheckpointResetProduction {
     @AfterEach void reset() { SonicConfigurationService.getInstance().clearSessionOverrides();SessionManager.clear(); }
 
@@ -31,6 +32,18 @@ class TestSozTeamCheckpointResetProduction {
                     rows.add(Arguments.of(act,SozAcceptanceConfigurations.supportedFollowers(donor,followers),aspect,donor));
         return rows.stream();
     }
+    static Stream<Arguments> shortConfigurations() {
+        return Stream.of(Arguments.of(0,"tails",WidescreenAspect.NATIVE_4_3,"off"),
+                Arguments.of(1,"tails",WidescreenAspect.NATIVE_4_3,"off"),
+                Arguments.of(0,"sonic,sonic",WidescreenAspect.SUPER_32_9,"s1"),
+                Arguments.of(1,"tails,tails,sonic",WidescreenAspect.SUPER_32_9,"s2"));
+    }
+    @org.junit.jupiter.api.Order(1)
+    @ParameterizedTest @MethodSource("shortConfigurations")
+    void shortCheckpointTeamsReplayReleasedIncomingWorlds(int act,String followers,WidescreenAspect aspect,String donor) {
+        mixedAndDuplicateTeamsSurviveTwoConsecutiveCheckpointReloads(act,followers,aspect,donor);
+    }
+    @org.junit.jupiter.api.Order(20)
     @ParameterizedTest @MethodSource("configurations")
     void mixedAndDuplicateTeamsSurviveTwoConsecutiveCheckpointReloads(int act,String followers,WidescreenAspect aspect,String donor) {
         var config=SonicConfigurationService.getInstance();config.clearSessionOverrides();
@@ -61,18 +74,20 @@ class TestSozTeamCheckpointResetProduction {
         var neutral=new com.openggf.debug.playback.Bk2FrameInput(0,0,0,false,"");
         input.setLogicalOverride(com.openggf.debug.playback.RecordedInputSnapshots.fromBk2(neutral,neutral));
         var loop=new GameLoop(input);loop.setGameplayMode(f.gameplayMode());loop.setGameMode(GameMode.LEVEL);
+        assertTrue(loop.ownsGameplayFadeLifecycle());
         try {
             for(int cycle=0;cycle<2;cycle++) {
                 // Build a fresh outgoing timeline after each reload, without resetting the session.
-                for(int i=0;i<30;i++){f.gameplayMode().getFadeManager().update();loop.step();}
+                for(int i=0;i<30;i++){step(loop);}
                 var objects=GameServices.level().getObjectManager();
                 var runtime=assertInstanceOf(SozZoneRuntimeState.class,GameServices.zoneRuntimeRegistry().current());
+                int lives=GameServices.gameState().getLives();
                 // Explicit stale-owner stimulus: this SST pointer must not survive the death load.
                 runtime.publishPushableRockSlot(0x55);
                 assertTrue(GameServices.sprites().getMainPlayable().applyPitDeath());
                 int largestOldFrame=0;boolean loaded=false;
                 for(int i=0;i<1200;i++) {
-                    f.gameplayMode().getFadeManager().update();loop.step();
+                    step(loop);
                     var rewind=f.gameplayMode().getRewindController();
                     if(GameServices.level().getObjectManager()!=objects) {
                         loaded=true;
@@ -82,6 +97,7 @@ class TestSozTeamCheckpointResetProduction {
                         assertEquals(y,GameServices.sprites().getMainPlayable().getCentreY()&65535);
                         var next=assertInstanceOf(SozZoneRuntimeState.class,GameServices.zoneRuntimeRegistry().current());
                         assertNotSame(runtime,next);assertEquals(-1,next.pushableRockSlot());
+                        assertEquals(lives-1,GameServices.gameState().getLives(),"exact life loss at assembly");
                         assertTrue(largestOldFrame>10,"each death cycle must have its own outgoing history");
                         assertTrue(rewind==null||rewind.currentFrame()<largestOldFrame,"each load must reset the outgoing timeline");
                         assertTeam(followers,aspect,donor);break;
@@ -91,18 +107,25 @@ class TestSozTeamCheckpointResetProduction {
                 assertTrue(loaded,"GameLoop must reload cycle "+cycle);
                 boolean ready=false;
                 for(int i=0;i<500;i++) {
-                    f.gameplayMode().getFadeManager().update();loop.step();
+                    step(loop);
                     var title=GameServices.module().getTitleCardProvider();
                     if(loop.getCurrentGameMode()==GameMode.LEVEL&&(title==null||title.isComplete())
                             && !f.gameplayMode().getFadeManager().isActive()
+                            && !f.gameplayMode().getFadeManager().hasPendingCompletion()
+                            && !GameServices.level().hasPendingFreshLevelTransitionBoundary()
                             && !GameServices.sprites().getMainPlayable().isControlLocked()) {ready=true;break;}
                 }
                 assertTrue(ready,"native title/fade must release controls after cycle "+cycle);
                 assertTeam(followers,aspect,donor);assertFalse(GameServices.sprites().getMainPlayable().getDead());
+                assertEquals(lives-1,GameServices.gameState().getLives(),"release hides no restart");
+                CheckpointIncomingReplay.verify(f,loop,input,index,()->assertTeam(followers,aspect,donor));
             }
         } finally {loop.closePresence();}
     }
 
+    private static void step(GameLoop loop) {
+        loop.step();GameServices.graphics().runPendingRenderThreadTasks();
+    }
     private static void assertTeam(String names,WidescreenAspect aspect,String donor) {
         SozAcceptanceConfigurations.assertUsableTeam(donor);
         SozAcceptanceConfigurations.assertDisplay(aspect);

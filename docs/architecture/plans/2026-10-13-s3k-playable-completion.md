@@ -1497,3 +1497,43 @@ TestS3kUtilityMotionRewind,TestS3kBreathingBubbles`; first two pure negative
 runs use --lean, actual ROM consumers normal queued admission/surfaceless EGL
 with original absolute ROMs, Java25, no desktop and null OpenAL. The source
 is unchanged between the final typed pass and corrected legacy pass.
+
+
+### SOZ and Doomsday actual reload qualification (2026-10-14)
+
+Final three test drafts on d35fbaa41 plus the independent Bubbler owner repair
+replace manual FadeManager service with the asserted GameLoop owner and
+pending-render drain. Eight independent SOZ witnesses and ten DDZ cases pass
+in62555 at13:34:15 UTC; its only red is the separately corrected legacy
+bubble radius assertion. DDZ now has two actual natural ring-out/fall/kill
+reloads at every preset, exact life loss and released-flight full-world replay
+after both loads; five declared ending-boundary cases retain progression-save
+and actual ending-load isolation. These are not preceding-fight certifications.
+
+17992 completes terminal0 at13:36:36 UTC,396/0/0/0 (1:36 Maven): all300
+SOZ solo products (10 physical posts × six supported character/donor pairs ×
+five presets) and90 finite Sonic-led mixed/duplicate team products, plus six
+corrected legacy Bubbler tests. All SOZ products now use two actual deaths,
+exact life loss at assembly/release, fresh runtime/manager, old-history isolation
+and two complete forward/reverse45-tick world cycles after EACH release.
+Solo physical-contact replay also compares all keys twice. The independent
+short witnesses are ordered before the large products. No setup calls a post's
+save/activation or imports native gameplay values. Stale team rock pointer is
+an explicitly declared outgoing stimulus; native reload must clear it.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestBubblerObjectInstance,TestSozTeamCheckpointResetProduction#mixedAndDuplicateTeamsSurviveTwoConsecutiveCheckpointReloads,TestSozCheckpointReloadProduction#touchCheckpointThenDeathReloadsItsNativePosition+otherPlacedPostsActivateAndReload' "-Dsonic1.rom.path=$S1_TASK_ROM" "-Dsonic2.rom.path=$S2_TASK_ROM" "-Ds3k.rom.path=$S3K_TASK_ROM" test -B
+```
+
+Pilot selector is`TestBubblerCharacterIdentity,TestBubblerObjectInstance,
+TestS3kUtilityMotionRewind,TestS3kBreathingBubbles,
+TestSozTeamCheckpointResetProduction#shortCheckpointTeamsReplayReleasedIncomingWorlds,
+TestSozCheckpointReloadProduction#shortSoloCheckpointsReplayReleasedIncomingWorlds,
+TestS3kDdzLifecycleProduction`. Same actual Java25, original absolute three
+ROMs, normal admission and no desktop. Exact SHA256s: solo
+`a3af5378c0d894d42fb86e6f7aa0fa9665405677f3e4a5ddd98c64320542bfc7`, team
+`3d3bcc58d544e63b32c87620358e546c34c61a459cf86aecdfaacb62d51f9098`, DDZ
+`7580299b9f92bcbae446c9226013e6b475afb113550dd4bdfcd789b6d695ec01`.
+Actual terminal is observed before writes; consumed redirects are removed after
+this account. Broader mechanism/donor/roster/cold/native/auxiliary products,
+strict frontiers, combined smoke/guards, integration/push/cleanup remain pending.

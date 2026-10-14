@@ -726,3 +726,21 @@ checkpoint applicability, other object/phase/rewind and complete-route products 
 352/400/528, native pixels/audio and strict timing/conformance are still explicit.
 Only the finite entry/transformation/flight/roster and native five-preset short
 lifecycle obligations described here close; combined integration remains lead-owned.
+
+
+## Single production fade owner and released-world replay (2026-10-14)
+
+`TestS3kDdzLifecycleProduction` now drives only GameLoop and drains pending
+render work. At all five production presets, two real ring-outs end the
+powered form, execute the native controller's fall and pit kill, consume
+exactly one life per reload, install fresh managers/runtime/controllers,
+isolate old history and wait for actual title/fade/assembly and flight release.
+After EACH reload it restores/replays the complete registered incoming world
+twice over45 neutral ticks without another death or load. The separate five
+ending-request cases retain actual progression-save/load/history assertions
+with the repaired host; their declared post-white-fade boss setup does not
+certify the preceding fight. All ten cases pass in62555 at13:34:15 UTC,
+zero errors/skips; that mixed35-case pilot has one unrelated legacy bubble
+fixture red, explicitly accounted in the completion plan. Production DDZ
+is unchanged. Full roster/donor flight, asteroid/hurt/final-hit/progression
+and native visual/audio obligations remain separate, not closed by a restart.
