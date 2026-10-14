@@ -112549,3 +112549,22 @@ Sampled segment2 presence advances2910→2977 (native-only19, preceding2972),
 not strict or whole-type closure. The physical explosion-controller creation,
 shared native byte39 and cutscene FallingShot branch are next source-backed
 owners. No broad/full sweep, hydration, new rendered/audio parity claim.
+
+
+### 2026-10-14 — AIZ firing and drop selection share byte39
+
+Owned bugfix/ai-s3k-parity-trace, sourcea0b70f969 plus barrel d6f09b25/new test
+a858fe49/callback9281cb2a SHA256 candidates. [Native alias, literal negatives and commands](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-barrel-shared-native-byte39).
+One captured byte now serves FireShot and SetShotPosition; fourth$FF+4 wraps3,
+restoring literal normal/flipped drop columns. Negative76436:9/9fail/0errors/
+0skip; affected93869:655/0/0/0; guards45245:111/0/0/0. Same trace profiles,
+selectors, Java25/EGL/ROM; observer target/barrel-counter39-native-slot-occupancy.
+Canonical27022:5/1fail/0errors/0skip at17:35:39 BST (94s/80s): original AIZ,
+initial HCZ/two prefixes pass. Chain6/8/11 raw189/12,719/82,067; physics189/
+12,604/69,393, animation0/115/12,674. First non-camera3319 P2X$31C1/$31CA,
+1583 P2X$366C/$3674,1510 Y$7D6/$7DF; incomplete input68,801/loadgen9 unchanged.
+Alternate78687:1/1fail/0errors/0skip at17:33:32 BST (36.032s/11s),60 grouped
+spans, first25589 animation$13/$05. Guards45245 at17:36:13 (32.755s/174s).
+Presence remains2977 native-only19, preceding2972. Physical Special explosion
+owner and cutscene FallingShot remain required next work, not closure claims.
+No broad/full sweep, shared clock/allocator, fixture or hydration change.

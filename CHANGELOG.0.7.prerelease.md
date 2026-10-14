@@ -41,6 +41,8 @@ Unreleased. The earlier development themes remain in
   the shot's camera-relative position.
   Barrel waits allocate the next pair on native timer underflow, before their
   signed-counter return tail.
+  Firing and drop-position cycling share the native byte counter, including
+  signed reads and wrap, so both facing directions select their native columns.
 
 - **S3K breakable floors:** Cork's placed record becomes its first moving
   fragment, preserving checked sibling allocation, native motion and render

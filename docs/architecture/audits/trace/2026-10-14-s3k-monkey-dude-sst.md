@@ -750,3 +750,53 @@ first drop column than independent0+4→4. Counter==1 selects the native Falling
 table (:137890), while current cutscene selects a common-shot mode rather than
 the real FallingShot owner. No correction or qualification of these is claimed
 by this callback commit. Prior image/audio/projection limits remain.
+
+
+## AIZ barrel shared native byte39
+
+Source a0b70f969 plus barrel SHA256 `d6f09b25e3b3e92e82547dbca16f49f4eed72a534de6786d33efd640050d4e76`,
+new TestAizMinibossBarrelCounter39 `a858fe490f26b7f02a56c68fa7942bd2433f603b0d4f35f2a297c5f45ee1eb1f`,
+updated callback test `9281cb2a53304ee74f2c070a7988e86c54770558a03a08e89aac3e348eb1af82`.
+FireLoop/FireShot (:136991/136996) and SetShotPosition (:137688) own the same
+byte39. The former initializes3 and subtracts1 before each pair; the latter adds4
+with byte wrap, stores the result and masks$C for the drop table. Java's split
+cutsceneCounter/positionCounter was a real alias error. Fourth fire leaves$FF,
+so first Launch writes3/selects bank0, not independent0→4/bank4.
+
+One existing unsigned positionCounter now holds both roles; FireShot subtracts
+modulo256 and only the Wait signed test casts to byte. The duplicate captured
+scalar is removed. The previous callback test now reads this byte and expects
+$FF rather than Java -1, preserving all native allocation/closure assertions.
+No public API, shared schema algorithm, clock, allocator or controller changes.
+
+| Normal queue request | Terminal outcome | Timing BST |
+| --- | --- | --- |
+|76436 exact alias negative|9/9fail/0errors/0skip|17:25:46;23.443s execution/6s queue|
+|93869 affected646 plus nine new vectors|655/0/0/0|17:30:09;71s/25s|
+|27022 canonical five-case trace/slot observation|5/1fail/0errors/0skip|17:35:39;94s/80s|
+|78687 alternate trace-segments|1/1fail/0errors/0skip|17:33:32;36.032s/11s|
+|45245 four -Pguards classes|111/0/0/0|17:36:13;32.755s/174s|
+
+Matched negative observes first drop X12148→12068 normal and12276→12316 flipped;
+first fire-byte read2→0, fourth$FF→0 and launch3→4. Explicit$FE/$FF writes were
+ignored by the separate signed Wait counter. Five replay setups likewise lacked
+the pre-launch$FF. Positive tests retain literal normal/flipped columns, byte
+wrap, both-role visibility and forced manager recreation with two45-pass cycles
+at declared320/352/400/528/800 camera widths. Existing actual napalm/SecondStrike/
+scalar/startup consumers pass. These are component contracts, not full host,
+donor/team or registered-world route product certification.
+
+Affected command adds TestAizMinibossBarrelCounter39 to35308. The three standard
+canonical/alternate/guard commands retain Java25/EGL/original absolute ROM and
+profiles; observer output is target/barrel-counter39-native-slot-occupancy.
+Original AIZ/initial HCZ/two prefixes pass. Chain6/8/11 raw189/12,719/82,067;
+physics189/12,604/69,393 and animation0/115/12,674 are unchanged, first non-camera
+3319 P2X$31C1/$31CA,1583 P2X$366C/$3674,1510 Y$7D6/$7DF, with incomplete
+input68,801/loadgen9. Alternate60 grouped spans remains first25589 animation
+$13/$05. No metric, fixture, hydration or broad/full-suite change.
+
+Sampled segment2 presence remains2977 native-only19, preceding retained2972.
+This scalar slice repairs the native drop columns without claiming strict or
+whole-object closure. Physical Special explosion ownership at that creation
+boundary and the cutscene FallingShot branch remain required next owners;
+prior rendered/audio and arbitrary numeric-pressure limits remain separate.

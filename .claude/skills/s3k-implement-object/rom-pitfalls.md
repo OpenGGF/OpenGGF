@@ -5499,3 +5499,16 @@ then restore/replay both boundaries. First raw animation/FireLoop timing is a
 separate owner and must not be fitted to compensate the callback delay.
 
 Origin:2026-10-14 AIZ barrel callback over829588298; asm136996,137010,177949.
+
+
+## A byte reused by a later routine remains one captured field
+
+AIZ barrel FireLoop/FireShot and SetShotPosition share native byte39. Splitting
+burst count from position cycling changes the first drop column even when every
+burst time matches: fourth fire leavesFF; unsigned +4 wraps3, then masksC to0.
+Keep one unsigned captured byte and use signed casts only at owning signed
+branches. Test both-facing literal columns, negative writes seen by the wait
+tail, byte wrap and restore/replay across the role change. A Java -1 oracle is
+not the underlying native byte valueFF.
+
+Origin:2026-10-14 AIZ byte39 slice overa0b70f969; asm136991,136996,137688.

@@ -60,10 +60,9 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild implements Re
     private State state = State.INIT;
     private int timer;
     private int mappingFrame = 3;
-    private int cutsceneCounter;
     private int animIndex;
-    /** ROM: $39(a0) on the barrel — per-barrel counter for drop position cycling.
-     *  Incremented by 4 each time a shot enters the top-drop phase (sub_68EE4). */
+    /** Native byte $39: FireLoop/FireShot's signed burst counter and the
+     *  SAME byte read/written by SetShotPosition's unsigned +4 cycle. */
     private int positionCounter;
     // Lower render bits copied by this barrel's Refresh_ChildPositionAdjusted dispatch.
     private int nativeRenderFlags;
@@ -159,7 +158,7 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild implements Re
                 // Open animation complete — start firing
                 mappingFrame = 5;
                 if (cutsceneVariant) {
-                    cutsceneCounter = 3;
+                    positionCounter = 3;
                     state = State.FIRING_CUTSCENE;
                 } else {
                     state = State.FIRING_MINIBOSS;
@@ -182,7 +181,7 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild implements Re
                 if (--timer < 0) {
                     fireCutsceneShot();
                 }
-                if (cutsceneCounter < 0) {
+                if ((byte) positionCounter < 0) {
                     enterClosingAnimation();
                 }
             }
@@ -214,8 +213,8 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild implements Re
     private void fireCutsceneShot() {
         // FireShot publishes word2E before decrement/checked child allocation.
         timer = 0x1C;
-        cutsceneCounter--;
-        if (cutsceneCounter == 1) {
+        positionCounter = (positionCounter - 1) & 0xFF;
+        if (positionCounter == 1) {
             // loc_68C96 path spawned from ChildObjDat_690A8, but cutscene parent
             // clears collision_flags in loc_68CD0.
             spawnShot(AizMinibossBarrelShotChild.Mode.ADVANCED_NON_COLLIDING);

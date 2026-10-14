@@ -22,14 +22,14 @@ class TestAizMinibossBarrelWaitCallback {
     @Test void native1cWaitHoldsZeroThenAllocatesTheNextPairOnTheUnderflowPass() throws Exception {
         var h = harness(320);
         int first = firstBurst(h);
-        assertEquals(2, field(h.barrel(7), "cutsceneCounter"));
+        assertEquals(2, h.barrel(7).getPositionCounter());
         assertEquals(0x1C, field(h.barrel(7), "timer"));
         for (int pass = 1; pass <= 0x1C; pass++) h.step(first + pass);
         assertEquals(1, shots(h), "zero is still a held native wait");
         assertEquals(0, field(h.barrel(7), "timer"));
         h.step(first + 0x1D);
         assertEquals(2, shots(h), "Obj_Wait calls FireShot on this same underflow dispatch");
-        assertEquals(1, field(h.barrel(7), "cutsceneCounter"));
+        assertEquals(1, h.barrel(7).getPositionCounter());
         assertEquals(0x1C, field(h.barrel(7), "timer"));
         assertEquals("BETWEEN_SHOTS", field(h.barrel(7), "state").toString());
     }
@@ -39,11 +39,11 @@ class TestAizMinibossBarrelWaitCallback {
         int first = firstBurst(h);
         for (int pass = 1; pass < 3 * 0x1D; pass++) h.step(first + pass);
         assertEquals(3, shots(h));
-        assertEquals(0, field(h.barrel(7), "cutsceneCounter"));
+        assertEquals(0, h.barrel(7).getPositionCounter());
         assertEquals("BETWEEN_SHOTS", field(h.barrel(7), "state").toString());
         h.step(first + 3 * 0x1D);
         assertEquals(4, shots(h), "the fourth pair is allocated before WaitAfterShot's signed-counter tail");
-        assertEquals(-1, field(h.barrel(7), "cutsceneCounter"));
+        assertEquals(0xFF, h.barrel(7).getPositionCounter(), "native signed-negative byte $39");
         assertEquals("CLOSING", field(h.barrel(7), "state").toString(),
                 "native Return is selected on the callback's dispatch, not the next frame");
     }

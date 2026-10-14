@@ -711,3 +711,16 @@ listed delayed callback target is superseded; physical explosion-controller
 creation, shared native byte39 alias and real cutscene FallingShot admission
 remain source-backed next obligations. Rendered/audio limits remain separate.
 [Native sources and exact bounded qualification](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-barrel-same-dispatch-wait-callback).
+
+
+## AIZ barrel byte39 follow-up — 2026-10-14
+
+One native byte now supplies firing and drop-position cycling, including signed
+Wait reads and unsigned wrap. Nine independent normal/flipped column/header/
+replay cases plus consumers pass655; guards111 pass. Five declared component
+cameras/two-way/two45-pass manager cycles retain the prior full host/donor/team/
+registered-world limits. Original AIZ/HCZ/prefix2 pass; strict chain/alternate
+errors and sampled native-only19 at2977 remain. This supersedes the prior byte39
+alias obligation; physical Special explosion owner and cutscene FallingShot
+admission remain required. No new rendered/audio conformance claim.
+[Native source, negative and bounded qualification](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-barrel-shared-native-byte39).
