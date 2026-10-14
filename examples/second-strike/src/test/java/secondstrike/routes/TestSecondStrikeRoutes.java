@@ -41,30 +41,31 @@ public final class TestSecondStrikeRoutes {
     @Test void nativeForestBankKeepsAuthoredChoicesWithoutMovingRings() {
         assertEquals(104, forestRings.size());
         List<RingSpawn> selected = SecondStrikeRoutes.rings(forestRings, forestObjects);
-        assertEquals(68, selected.size());
+        assertEquals(3, selected.size());
         for (RingSpawn ring : selected) assertSame(forestRings.stream()
                 .filter(source -> source.placementId() == ring.placementId()).findFirst().orElseThrow(), ring);
-        assertTrue(selected.stream().filter(ring -> ring.x() == 0x1EB0 && ring.y() == 0x4C4).count() == 1,
-                "One native duplicate is deliberately retained as a recovery ring");
+        assertEquals(List.of(1, 35, 74), selected.stream().map(RingSpawn::placementId).toList());
+        assertEquals(selected, SecondStrikeRoutes.rings(selected, forestObjects));
         assertThrows(UnsupportedOperationException.class, () -> selected.clear());
     }
 
     @Test void physicalActTwoKeepsLaterCampaignRoutesUntouched() {
         assertEquals(306, fireRings.size());
         List<RingSpawn> selected = SecondStrikeRoutes.rings(fireRings, fireObjects);
-        assertEquals(45, selected.stream().filter(ring -> ring.x() < 0x1000).count());
+        assertEquals(List.of(12, 68), selected.stream().filter(ring -> ring.x() < 0x1000).map(RingSpawn::placementId).toList());
         assertEquals(fireRings.stream().filter(ring -> ring.x() >= 0x1000).toList(),
                 selected.stream().filter(ring -> ring.x() >= 0x1000).toList());
         assertEquals(selected, SecondStrikeRoutes.rings(selected, fireObjects),
                 "Repeat native loads and prepared installs must not thin an already selected bank again");
     }
 
-    @Test void unrecognisedLayoutsAndAddedRingIdentitiesArePreserved() {
+    @Test void unrecognisedLayoutsPassThroughButExtraOpeningRingsCannotEvadeTheBudget() {
         assertEquals(forestRings, SecondStrikeRoutes.rings(forestRings, List.of()));
         RingSpawn additional = new RingSpawn(0x2000, 0x220, 1000);
         List<RingSpawn> extended = java.util.stream.Stream.concat(forestRings.stream(),
                 java.util.stream.Stream.of(additional)).toList();
-        assertTrue(SecondStrikeRoutes.rings(extended, forestObjects).contains(additional));
+        assertFalse(SecondStrikeRoutes.rings(extended, forestObjects).contains(additional));
+        assertEquals(3, SecondStrikeRoutes.rings(extended, forestObjects).size());
     }
 
     @Test void nativeCheckpointSpecialEntryAndCharacterMechanicsAreNotEnemyBindings() {
@@ -77,12 +78,9 @@ public final class TestSecondStrikeRoutes {
                 .allMatch(binding -> binding.spawn().x() < 0x1000));
         assertEquals(List.of("sonic", "tails", "knuckles"),
                 SecondStrikeRoutes.opportunities().stream().map(SecondStrikeRoutes.Opportunity::character).toList());
-        // Retained native upper monitor #18 gives ten rings. With the eleven
-        // remaining opening rings, the first physical post still has a possible
-        // native twenty-ring bonus entry. This is a budget, not traversal proof.
+        assertEquals(5, SecondStrikeRoutes.rings(forestRings, forestObjects).size()
+                + SecondStrikeRoutes.rings(fireRings, fireObjects).stream().filter(ring -> ring.x() < 0x1000).count());
         assertTrue(forestObjects.stream().anyMatch(spawn -> spawn.objectId() == 0x01
-                && spawn.subtype() == 0x03 && spawn.x() == 0x1A90));
-        assertEquals(11, SecondStrikeRoutes.rings(forestRings, forestObjects).stream()
-                .filter(ring -> ring.x() < 0x1BC8).count());
+                && spawn.subtype() == 0x04 && spawn.x() == 0x1790), "Original shoes stay available");
     }
 }

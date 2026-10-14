@@ -6,11 +6,22 @@ results and onward progression. Lives, death, game over, saves, character abilit
 and stage rewards belong to the native game.
 
 The opening has three readable enemy roles: spotters alert nearby defenders;
-guards commit to a charge and expose themselves while braking; artillery locks
-its target before firing and then reloads. Remove the spotter, dodge the committed
-attack, and punish the opening. Existing vines, slopes, logs and landings shape
-the encounters. Ring banks reward detours while faster exposed lines offer less
-insurance. All monitors, checkpoints, giant rings and scripted actors remain.
+guards commit to a fast flaming charge and expose themselves while braking;
+artillery locks its target before firing and then reloads. Spotters and artillery
+take two separated hits, guards three. The guard is invulnerable during its dash;
+dodge its committed direction and punish the brake or slow return to its post.
+Three extra guards make the native
+vines, slopes, logs and landings more dangerous. Final blows retain native
+animals, score and destruction effects.
+
+Only **five original ring placements** remain across forest and fire together:
+three forest footholds and two fire-section pickups. Ring recollection still
+works. Non-speed-shoe ordinary monitors are visibly native Robotnik boxes and
+hurt their collector; the original speed-shoe box is retained. Six hidden native
+boss/results reward boxes remain unchanged; none contains rings. Checkpoints,
+giant rings, scripted actors and stage prizes keep their native behavior. Five
+placed rings alone cannot reach a checkpoint's twenty-ring bonus threshold.
+Stage rewards can raise the ring counter: this is scarcity, not a counter cap.
 
 Fire Breath gains a delayed, warned second wave after a breath cycle at three
 hits or fewer. The first Chaos Emerald board gains twelve turn gates; its blues,
@@ -58,5 +69,6 @@ is not part of this example.
 
 The cold-route driver supports `-Dsecondstrike.route.video=true` for continuous
 native FFV1/FLAC footage; its default records state with milestone images only.
-Use the phase-2 pair or solo recipe to show the late boss follow-up. A fast native
-kill may legitimately finish the boss before that extra attack is scheduled.
+The phase-2 pair and solo recipes record the earlier, gentler prototype. Their
+full-route movies do not certify the five-ring/multi-hit revision. A fast native
+kill may legitimately finish the boss before its extra attack is scheduled.
