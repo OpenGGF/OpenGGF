@@ -1040,5 +1040,59 @@ identity4). Command: `python3 tools/testing/maven_queue.py --lean -Dmse=off
 '-Dtest=TestRewindSnapshotDiffPrivateRecords,TestRewindSnapshotDiffTerrain,TestRewindSnapshotDiffPatterns,TestRewindSnapshotDiffDynamicIdentity' test`,
 JDK25 and the normal surfaceless-EGL environment. The gameplay handoff remains
 an uncommitted, separately qualifying candidate; this helper gate gives it no
-new native or strict-trace credit. Five omitted captured object-manager fields
+new native or strict-trace credit. Six omitted captured object-manager fields
 are a separate authorized comparator slice.
+
+
+## Complete captured ObjectManager comparison — 2026-10-14
+
+The existing custom comparator omitted six captured gameplay channels:
+solidContactState, planeSwitchers, touchResponseOverlap, collisionResponseState,
+dynamicObjectIdCounter and currentExecSlot. ObjectManager restores these values
+and uses them for contact admission, native list read/build selection, identity
+minting and after-current allocation. Independent mismatch vectors58765 all
+failed before repair:6 tests/6 failures/0 errors/skips,22:22:15 BST,25.838s Maven,
+0s queue, lean. The comparator now requires every one of those channels in both
+equality and diagnostic traversal. bucketsDirty remains excluded because restore
+explicitly invalidates the render buckets; peakSlotCount remains excluded because
+SlotAllocator only exposes it as telemetry and does not consult it for allocation.
+A separate positive changes only those two derived/telemetry values.
+
+First positive28642 passed21/0/0/0 at22:25:22 BST,1:07 Maven/0s queue. An additional
+independent diagnostic control27602 then failed1/1/0/0 at22:29:46 BST,24.676s/0s:
+equal boxed cursor/counter200 were printed alongside a genuine contact mismatch.
+Their diagnostic admission now checks primitive values first. This does not
+change gameplay or the snapshot/API shape; native AIZ handoff remains a separate
+unstaged candidate.
+
+Final focused69530 passes22/0/0/0 at22:31:31 BST,1:07 Maven/0s queue, lean:
+TestRewindSnapshotDiffPrivateRecords7, Terrain1, Patterns2 and DynamicIdentity12.
+The selector/environment are identical to77331 above; the two additional pure
+controls establish derived-cache/telemetry exclusion and correct equal-counter
+diagnostics. No broader gameplay or strict-trace claim follows from this gate.
+
+
+## Complete Palette snapshot leaf — 2026-10-14
+
+Route's actual placed-stage3/352px HPZ witness3988 completed21:27:31 UTC with
+all four original/restored Palette identities distinct and all192 raw RGB bytes
+identical. Each PaletteSnapshot capture and restore deep-copies its palettes;
+Palette's only instance field is its sixteen Color objects, each containing
+exactly byte r,g,b. Palette.dataEquals compares all48 raw bytes. The previous
+generic leaf comparison treated those defensive copies as state differences.
+This is a verification false positive, not an HPZ palette runtime correction.
+
+Independent pure5896 completed22:33:13 BST,23.882s Maven/0s queue, lean:
+50 tests/49 failures/0 errors/skips. The equal-copy positive failed; all48 literal
+raw-component changes already failed equality, but the diagnostic reported only
+Java identity instead of the changed component. Missing palette, array length
+and unrelated phase controls passed. The concrete Palette leaf now uses its
+complete dataEquals contract and diagnoses each colors[index].r/g/b raw byte.
+It does not normalize to Genesis3-bit channels, filter any key, or treat Palette
+subclasses with additional state as this concrete leaf.
+
+Final pure26472 passes72/0/0/0 at22:34:41 BST,1:09 Maven/0s queue, lean: existing
+private-record7/terrain1/pattern2/dynamic-identity12 plus Palette50. Exact selector
+adds TestRewindSnapshotDiffPalettes to69530 above with the same JDK25/EGL launch.
+Actual HPZ/ending consumer qualification is owned by those lanes and remains
+separate from this pure helper result. Native AIZ handoff is still unstaged.

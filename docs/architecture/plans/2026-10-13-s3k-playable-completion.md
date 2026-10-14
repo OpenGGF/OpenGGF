@@ -1929,3 +1929,23 @@ Complete Slot rewind/recreation, other physical rewards, cold stage traversal,
 native images/audio and composed smoke/guards are still active obligations.
 Consumed target redirects are removed after inspection; no validation receipts
 or copied raw logs are retained.
+
+## Complete captured gameplay comparator composition (2026-10-14)
+
+Qualified six-fieldd8da363885 and Palette7001b1eef0 are composed onto the
+Slot-resource root0f95ee5bb without conflicts. Object-manager equality now
+includes captured solid contact, plane switchers, touch overlap, collision
+response, dynamic identity counter and the actual allocation/execution cursor.
+Only source-proven cache dirtiness and peak allocator telemetry retain cosmetic
+exclusions. Palette leaves compare all16 rawRGB triples and report the exact
+changed component; no palette normalization or private-state filtering occurs.
+Independent negative vectors and final72-case worker qualification precede
+Root55826, which passes72/0/0/0 on this composed source at21:42:41 UTC,1:13
+Maven. Its normal queue waiting is distinct from execution. This closes the
+comparison-contract defects, not the gameplay replay mismatches that stricter
+comparison can reveal. HPZ finite980 selector and140Saved2 worlds now pass in
+the worker’s1510-case run, while283 ceremony/preowner published-scroll failures
+remain active owner work. Native AIZ cutscene/transition qualification likewise
+remains uncommitted while strict traces identify the next ROM lifecycle owner.
+Combined Root smoke/guards and destination delivery remain pending. Consumed
+Root comparator redirect is removed after inspection.
