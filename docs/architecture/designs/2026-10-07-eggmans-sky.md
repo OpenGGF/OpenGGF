@@ -1004,3 +1004,42 @@ exact HUD-member assertions, and all six portable packaging cases passed. The
 earlier discovery check also passed (65-second wait, 4.138-second execution).
 The next image must still pass actual Windows controls and full representative
 mod gameplay before the ZIP can be delivered.
+
+Factory discovery integrated and published as
+`d27d9cc0fa58e45429caf5d98d66e6a38ce5eaaa`, preserving the incoming
+prose/mirrored-skill-only `e80a8f85e` delta. Workflow
+[38554119961](https://github.com/OpenGGF/OpenGGF/actions/runs/38554119961)
+passed the actual catalog and anonymous HUD factory projections on Windows,
+all original bootstrap controls, 25 JVM/native registrations and batch startup
+checks. Its audit checks 22,197 entries/1,727 types; 1,610 engine class bodies are
+preserved. Fresh guards pass all 680 cases without failures/errors/skips (terminal
+Maven log 11:19:53Z, 12:59 minutes). The source/checksum-verified downloaded ZIP
+is `89b1739135ca2ff4a27dbd0fa5839f416ca32259a4e9fbfcd12b88d4ff1f2d8c`,
+with executable hash
+`25f43562ee8156ccd769a384f2f3a30ef6f19a3f26807a06e7853f08cb3c2f24`.
+Its one normal queued gameplay/audio/announcer request remains pending; the
+delivered ZIP is not yet qualified. The isolated display preflight requires a
+live private Xvfb and llvmpipe renderer, with ambient Wayland/Xauthority settings
+removed before any Engine launch.
+
+The admitted native gameplay run waited 761 seconds, then ran 1:46 minutes.
+Fourteen mods passed, including the previously failing mutator gameplay and all
+122 EggSky PCM clips. Starpost Valley stopped with the valid mod guard
+`Activity needs its retained scene session`: the probe selected the first owned
+zone, a festival, before opening the scene that owns that activity's admission.
+This is a diagnostic bootstrap error, not another missing native member. The
+shared probe now uses the backing game's initial zone for scene startup; direct
+level examples retain authored-zone coverage. Mod and engine code are unchanged.
+
+A matched real packaged-JAR JVM control compiles old/corrected probe bodies and
+uses original rehashed ROMs plus a live owned Xvfb/llvmpipe display. The old body
+reproduces the exact activity-session guard; the corrected body renders the farm,
+passes scene reopen/state roundtrip, and leaves no owner findings/disabled owner.
+The complete control passed at 11:58:39Z after 323 seconds of queue waiting and
+4.628 seconds of execution, under normal admission/worktree lease:
+`maven_queue.py -B -Dmse=off exec:exec -Dexec.executable=python3
+-Dexec.args=target/run_scene_bootstrap_complete_checks.py`. Two initial compile
+attempts omitted the test-kit classpath and then the scene-inspection helper;
+neither ran gameplay or receives behavioral qualification credit. The successful
+control includes the same dependencies used by the builders. Actual native
+gameplay must still complete on the rebuilt probe/image before final delivery.
