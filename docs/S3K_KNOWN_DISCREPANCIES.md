@@ -589,6 +589,18 @@ explicitly. Full cold Knuckles traversal remains a separate route obligation.
 
 
 
+## SSZ opening bridge top contact (resolved local owner, 2026-10-14)
+
+`sub_45026` passes SolidObjectTop d1/d2/d3=`$60/$10/$09`. New contact at
+`loc_1E44C` uses d3; `loc_1E45A` accepts unsigned word overlap`[-$10,-1]`
+and writes relative Y before Player_TouchFloor. The former generic profile
+selected d2 and a later absolute snap. Existing provider semantics now model
+that native call. Ten literal controls, original-controller full-world replay
+and existing bridge/profile consumers pass54/0/0/0. This fixes identified
+native poll1342 acquisition, not whole SSZ RGB/audio or campaign parity.
+
+---
+
 ## Large-bubble character branch (resolved local owner, 2026-10-14)
 
 `Obj_Bubbler` compares `Obj_Sonic` at sonic3k.asm:64719. Registration aliases

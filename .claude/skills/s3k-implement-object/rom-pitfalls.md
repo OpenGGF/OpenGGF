@@ -5087,6 +5087,17 @@ hand's previous position, before that child updates. `sub_87524` gates on
 absolute horizontal distance only. Followers propagate attack bit 1 and halve or
 double their delay (`sub_8756A`/`sub_87592`).
 
+## Native top helpers use the landing surface before floor reset
+
+`SolidObjectTop/loc_1E44C` subtracts caller d3 for NEW contact, not d2.
+`loc_1E45A` accepts unsigned negative word overlap`[-$10,-1]`, rejects zero
+and writes`y_pos += d0+3` before Player_TouchFloor. `sub_45026` supplies
+`$60/$10/$09`; using d2 misses Sky Sanctuary's16-pixel boundary. Select
+existing ground-height/reject-zero/relative-snap provider semantics, as
+FloatingPlatform does. PlatformObject's absolute post-radius snap differs.
+Test d2≠d3, both overlap boundaries, exclusive right edge, actual standing
+ownership and complete-world forward/reverse replay.
+
 ## Literal player radii may differ from character defaults
 
 `AIZTree_FallOff` writes x/y radii 9/`$13` for every character, and

@@ -1537,3 +1537,47 @@ ROMs, normal admission and no desktop. Exact SHA256s: solo
 Actual terminal is observed before writes; consumed redirects are removed after
 this account. Broader mechanism/donor/roster/cold/native/auxiliary products,
 strict frontiers, combined smoke/guards, integration/push/cleanup remain pending.
+
+
+## Native opening-bridge contact follow-up (2026-10-14)
+
+Independently fresh native320 Sonic+Tails and engine scenes consume original
+AD40 suffix448920 after a separate neutral initial ProcessSprites pass,
+polls0/LFC0. Losing that first ordinary row caused the earlier Death Egg X
+drift; it was a host-boundary issue. Native blue/gold circles are present in
+both captures; a player-row SAT count is not a circle-row overflow witness.
+Corrected P1 coordinates/camera agree through poll1341. At1342 the native
+bridge moves to894/3208 and acquires P1 at808/3179; engine had808/3192,
+airborne. Decision callbacks and full RAM identify the exact bridge standing
+bit, with no shared terrain landing. Updraft first moves P1 to3192; the native
+surface3208-9 gives d0=-16 and relative Y3179. The former d2=16 profile
+misses that contact. Existing provider flags now select d3, reject exact zero
+and preserve the relative snap before TouchFloor. Shared solver/clocks,
+allocator and fixture-directed runtime branches are unchanged.
+
+Literal `TestSszBridgeNativeTopContact` on656e21eb1 plus its test draft has
+10/6/0/0 in37975 at13:57:53 UTC. Final affected81009 is terminal0 at
+14:02:18 UTC,54/0/0/0 (1:26 Maven): ten controls, one original-controller
+contact/replay,13 profiles,25 bridge/death/reload capture products and five
+Knuckles bridge cases. The real original-input case compares every registry
+key twice around45 inputs, retaining current owners/lives and actual ride;
+no raw restore crosses a load. Normal queued admission, Java25, surfaceless
+EGL, original absolute ROMs, null OpenAL and no ambient desktop are used.
+
+Native/engine external task evidence: `native-ssz-contact-pair-ntsc-v1` and
+`ssz-contact-boundary-656e21eb1-e3b0c44298fc-v1` under the task spot-checks.
+Their provenance/command JSON pins exact argv, original ROM/BK2, immutable
+bf3c539 video host and passive decision instrumentation. Native762427 epochs
+1791985804.0648851–1791985816.9969594; Java762737/mainSszContactBoundaryProbe
+1791985817.4445887–1791985820.1126516, both0 (request8791 at13:50:20 UTC).
+Its C# adapter SHA256 is6c8bf0e09852af0ab0df216ff969a1a914c11841264e30f7b181fc6592c459c0.
+The callback CSV mislabeled06/07 as radii: those are visual height/width24.
+Actual9/19 is verified at1F/1E in unchanged raw RAM; no radius inference uses
+those mislabeled columns. OriginalRGB and prepared/published identities are
+retained. The prior14908 helper int/uint compile error is terminal1 at
+13:47:54 UTC, before emulator/engine-probe launch; engine compilation succeeds.
+Actual child intervals are relayed to the authorized performance coordinator.
+This is bounded owner/contact evidence, not whole-scene pixel/audio, every
+cold product, full suite or combined delivery. Maintained cold completions
+and corrected final engine spot captures follow. Consumed target redirects
+are removed after this durable account.
