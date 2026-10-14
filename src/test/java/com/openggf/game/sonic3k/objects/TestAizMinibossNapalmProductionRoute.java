@@ -208,10 +208,10 @@ class TestAizMinibossNapalmProductionRoute {
                 assertEquals(7, newcomers.size(),
                         "ChildObjDat_690D8 must allocate all seven explosion hitboxes");
                 AizMinibossNapalmProjectile source = before.stream()
-                        .filter(AbstractObjectInstance::isDestroyed)
+                        .filter(shot -> readObjectField(shot,"pendingDelete",Boolean.class))
                         .findFirst()
                         .orElseThrow(() -> new AssertionError(
-                                "explosion children must come from the FallingShot destroyed this entry"));
+                                "explosion children come from the FallingShot marked Go_Delete this entry"));
                 ExplosionGroup group = ExplosionGroup.created(harness.entryCount(), source, newcomers);
                 group.assertNativeCreationGraph();
                 groups.add(group);
@@ -478,10 +478,10 @@ class TestAizMinibossNapalmProductionRoute {
                 ExplosionTracker tracker = trackers.get(index);
                 assertEquals(EXPECTED_HARMFUL_START[index], tracker.firstHarmfulDispatch,
                         "subtype delays must stagger routine-4 collision by four object entries");
-                assertEquals(21, tracker.harmfulDispatches,
-                        "AniRaw_BossExplosion must publish `$97` for exactly 21 dispatches");
-                assertEquals(EXPECTED_HARMFUL_START[index] + 21, tracker.destroyedDispatch,
-                        "the child must delete on the dispatch after its final harmful animation hold");
+                assertEquals(22, tracker.harmfulDispatches,
+                        "AniRaw_BossExplosion must publish `$97` for21 mapping holds plus the F4 callback DrawAndTouch pass");
+                assertEquals(EXPECTED_HARMFUL_START[index] + 22, tracker.destroyedDispatch,
+                        "the child must delete on the dispatch after the final F4 callback touch/draw publication");
             }
         }
 

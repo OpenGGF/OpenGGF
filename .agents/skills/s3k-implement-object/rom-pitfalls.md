@@ -5642,3 +5642,42 @@ not pretend its controller occupies the independently observed cold slot4.
 Palette checks must advance real ownership epochs. Source: native allocation
 observer72373 and2026-10-14 arrival qualification on558e74833; palette asset
 words remain ROM-backed rather than copied from the disassembly.
+
+
+## A callback's Go_Delete marker does not clear its own outer draw/touch tail
+
+AIZ FallingShot dispatches its routine, then tests grandparent status7. Floor
+impact marks the shot itself, but that new bit does not satisfy the grandparent
+gate: the live-parent wrapper still adds touch/draw, and the next code-owner
+dispatch clears its physical SST. BossExplosionHitbox Animate similarly returns
+from F4/Go_Delete to Draw_And_Touch, retaining the final mapping/collision pass.
+Capture the terminal marker separately from destruction, and never substitute
+an immediate expire or a pre-routine parent test. Its cutscene Init compares
+the barrel operation and clears collision; seven Hitboxes copy that parent
+byte, retain their own stagger, and use low art priority without generic Init
+explosion sound. Clear raw cursor/timer on F4 while retaining the mapping byte.
+CreateChild1's child subtype02 is independent of the barrel subtype0/2/4.
+Qualify pure complete ctx.spawn shells, live links and forward/reverse world
+replay; logical links alone do not certify recycled physical-parent pressure.
+
+Origin:2026-10-14 FallingShot slice over1db1ebd89; asm137450–137586,176923,
+177563,178041,179136. Native Go_Delete marker versus next physical clear is
+visible at actual seg2 rows3067/3084; the latter remains the common-shot owner.
+
+
+## A hidden Draw_Sprite does not own a MoveWait lifetime
+
+AIZ common BarrelShot MoveWait runs Move_AnimateRaw_Wait then Draw_Sprite.
+Launch arms Go_Delete with a word60 wait; underflow completes move/animation,
+marks the code/status and still draws. Clear only on the next code-owner pass.
+Adding isOnScreen128 to the timer branch fits the locked-camera path while
+inventing an earlier retirement when the camera changes. Prove actual+copy Y
+versus merely copied Y, and isolate the first hidden update from the final
+marker assertion. Preserve manager culling and captured raw/position/marker
+state; test two-way graph and full-world replay around physical release.
+Low routine-code bytes at a scene boundary cannot distinguish actor families;
+resolve full pointers and the publication clock before fixing the next context.
+
+Origin:2026-10-14 common SIMPLE marker slice overcf19f8506; asm137079,137091,
+179136. Actual seg2 row3084 marker is repaired; next presence disagreement3244
+is transition-context evidence rather than proof of a particular teardown bug.

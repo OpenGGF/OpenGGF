@@ -8,7 +8,9 @@ import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.SpawnCoordinateSubtypeDefaultArgsRewindRecreatable;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.RewindRecreateContext;
+import java.io.IOException;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -24,15 +26,12 @@ import java.util.List;
  * animation starts.</p>
  */
 public final class AizMinibossNapalmExplosionChild extends AbstractObjectInstance
-        implements TouchResponseProvider, SpawnCoordinateSubtypeDefaultArgsRewindRecreatable {
+        implements TouchResponseProvider, RewindRecreatable {
     static final int[] X_OFFSETS = {0, 8, -8, 4, -4, 4, -4}; // ChildObjDat_690D8
     static final int[] Y_OFFSETS = {-0x24, -0x1C, -0x1C, -0x14, -0x14, -4, -4};
 
     private static final int COLLISION_FLAGS = 0x97; // ObjDat_BossExplosionHitbox
-    /* AniRaw_BossExplosion is (mapping_frame, timer) pairs.  The first pair
-     * at bytes 0/1 is skipped by Animate_RawMultiDelay's initial +2 step. */
-    private static final int[] ANIM_DELAYS = {1, 1, 2, 3, 4, 4};
-    private static final int[] ANIM_FRAMES = {0, 1, 2, 3, 4, 5};
+    private static final int RAW_SCRIPT = 0x83FCC; // AniRaw_BossExplosion frame/delay bank.
     private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE =
             TouchResponseProfile.standardEnemy();
 
@@ -51,27 +50,37 @@ public final class AizMinibossNapalmExplosionChild extends AbstractObjectInstanc
     private int delayTimer;
     private int animationIndex;
     private int animationTimer;
+    private int rawCursor;
+    private boolean pendingDelete;
 
     public AizMinibossNapalmExplosionChild(int x, int y, int subtype) {
         this(x, y, subtype, true);
     }
 
     public AizMinibossNapalmExplosionChild(int x, int y, int subtype, boolean hazardous) {
-        super(new ObjectSpawn(x, y, Sonic3kObjectIds.AIZ_MINIBOSS, subtype & 0xFF, 0, false, 0),
-                "AIZMinibossNapalmExplosion");
-        this.currentX = x;
-        this.currentY = y;
-        this.subtype = subtype & 0xFF;
-        this.hazardous = hazardous;
-        this.state = State.INIT;
-        // BossChild_SetSubtypeDelay: d1=$C; (d1 - subtype) << 1.
-        this.delayTimer = Math.max(0, (0x0C - this.subtype) * 2);
-        this.animationIndex = -1;
-        this.animationTimer = 0;
+        this(new ObjectSpawn(x, y, Sonic3kObjectIds.AIZ_MINIBOSS, subtype & 0xFF, 0, false, 0));
+        this.hazardous = hazardous; // native Init copies the parent's live collision byte.
+    }
+
+    private AizMinibossNapalmExplosionChild(ObjectSpawn spawn) {
+        super(spawn, "AIZMinibossNapalmExplosion");
+        currentX = spawn.x(); currentY = spawn.y(); subtype = spawn.subtype() & 0xFF;
+        state = State.INIT;
+        delayTimer = (0x0C - subtype) * 2; // BossChild_SetSubtypeDelay word counter.
+        animationIndex = 0; // cleared mapping byte; raw cursor is independent.
+    }
+
+    @Override
+    public AizMinibossNapalmExplosionChild recreateForRewind(RewindRecreateContext ctx) {
+        return new AizMinibossNapalmExplosionChild(ctx.spawn());
     }
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        if (pendingDelete) {
+            ObjectLifetimeOps.expireDynamic(this); // next physical Delete_Current_Sprite dispatch.
+            return;
+        }
         switch (state) {
             case INIT -> {
                 // BossExplosionHitbox_Init is a real routine-0 dispatch.  It
@@ -101,17 +110,29 @@ public final class AizMinibossNapalmExplosionChild extends AbstractObjectInstanc
     }
 
     private void advanceAnimation() {
-        // Animate_RawMultiDelay uses subq then bpl: a zero result still holds
-        // the current mapping, so a delay N occupies N+1 routine-4 dispatches.
-        if (--animationTimer >= 0) {
+        animationTimer = (animationTimer - 1) & 0xFF;
+        if ((byte) animationTimer >= 0) return;
+        rawCursor = (rawCursor + 2) & 0xFF;
+        int frame = rawByte(rawCursor);
+        if (frame == 0xF4) {
+            // Callback clears raw cursor/timer; Animate still tail-jumps Draw_And_Touch.
+            rawCursor = 0;
+            animationTimer = 0;
+            pendingDelete = true;
             return;
         }
-        animationIndex++;
-        if (animationIndex >= ANIM_FRAMES.length) {
-            ObjectLifetimeOps.expireDynamic(this);
-            return;
+        animationIndex = frame;
+        animationTimer = rawByte(rawCursor + 1);
+    }
+
+    private int rawByte(int offset) {
+        try {
+            var reader = services().romReader();
+            if (reader == null) throw new IllegalStateException("BossExplosionHitbox requires its ROM raw animation");
+            return reader.readU8(RAW_SCRIPT + offset);
+        } catch (IOException e) {
+            throw new IllegalStateException("BossExplosionHitbox requires its ROM raw animation", e);
         }
-        animationTimer = ANIM_DELAYS[animationIndex];
     }
 
     @Override
@@ -176,6 +197,6 @@ public final class AizMinibossNapalmExplosionChild extends AbstractObjectInstanc
         if (renderer == null || !renderer.isReady()) {
             return;
         }
-        renderer.drawFrameIndex(ANIM_FRAMES[animationIndex], currentX, currentY, false, false);
+        renderer.drawFrameIndex(animationIndex, currentX, currentY, false, false);
     }
 }

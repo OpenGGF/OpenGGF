@@ -215,9 +215,9 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild implements Re
         timer = 0x1C;
         positionCounter = (positionCounter - 1) & 0xFF;
         if (positionCounter == 1) {
-            // loc_68C96 path spawned from ChildObjDat_690A8, but cutscene parent
-            // clears collision_flags in loc_68CD0.
-            spawnShot(AizMinibossBarrelShotChild.Mode.ADVANCED_NON_COLLIDING);
+            // ChildObjDat_690A8 selects the real FallingShot owner. Its Init
+            // reads this barrel operation and clears collision for the cutscene.
+            spawnFallingShot();
         } else {
             // loc_68844 path from ChildObjDat_6909A.
             spawnShot(AizMinibossBarrelShotChild.Mode.SIMPLE);
@@ -265,6 +265,9 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild implements Re
     void setPositionCounter(int value) {
         this.positionCounter = value & 0xFF;
     }
+
+    /** FallingShot_Init compares the parent barrel's native operation pointer. */
+    boolean isCutsceneController() { return cutsceneVariant; }
 
     /** Narrow native header read for physical parent3 consumers; no status/lifetime inference. */
     int nativeRefreshRenderFlags() { return nativeRenderFlags; }

@@ -30,6 +30,12 @@ class TestAizMinibossBarrelWaitCallback {
         h.step(first + 0x1D);
         assertEquals(2, shots(h), "Obj_Wait calls FireShot on this same underflow dispatch");
         assertEquals(1, h.barrel(7).getPositionCounter());
+        assertEquals(1, h.manager.getActiveObjects().stream()
+                .filter(AizMinibossNapalmProjectile.class::isInstance)
+                .filter(o -> {
+                    try { return field(o,"barrel") == h.barrel(7); }
+                    catch(Exception e) { throw new AssertionError(e); }
+                }).count(), "the second callback's literal ChildObjDat selects FallingShot");
         assertEquals(0x1C, field(h.barrel(7), "timer"));
         assertEquals("BETWEEN_SHOTS", field(h.barrel(7), "state").toString());
     }
@@ -79,10 +85,7 @@ class TestAizMinibossBarrelWaitCallback {
 
     private static TestAizMinibossFlareNativeGraph.Harness harness(int width) {
         var h = new TestAizMinibossFlareNativeGraph.Harness(width);
-        var rom = mock(RomByteReader.class);
-        when(rom.slice(0x6913F, 13)).thenReturn(new byte[]{7,1,7,1,8,1,9,3,10,3,11,3,(byte)0xF4});
-        when(rom.slice(0x6914C, 4)).thenReturn(new byte[]{1,0x0C,0x0D,(byte)0xFC});
-        h.services.withRomReader(rom);
+        h.services.withRomReader(TestAizMinibossFallingShotNativeGraph.rawReader());
         h.boss().setCustomFlag(0x38, 2); // declared native StartSwing trigger, no barrel phase/clock seeding
         return h;
     }
@@ -99,7 +102,8 @@ class TestAizMinibossBarrelWaitCallback {
     private static int shots(TestAizMinibossFlareNativeGraph.Harness h) throws Exception {
         int count = 0;
         for (var object : h.manager.getActiveObjects()) {
-            if (object instanceof AizMinibossBarrelShotChild shot && field(shot, "barrel") == h.barrel(7)) count++;
+            if ((object instanceof AizMinibossBarrelShotChild || object instanceof AizMinibossNapalmProjectile)
+                    && field(object, "barrel") == h.barrel(7)) count++;
         }
         return count;
     }

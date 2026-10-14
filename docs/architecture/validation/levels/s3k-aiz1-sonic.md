@@ -797,3 +797,41 @@ strict fields remain unchanged red. Presence advances2977→3067 native-only21,
 preceding3066. Real cutscene FallingShot and its explosion-family/pending-clear
 remain required. Rendered/SAT/PCM and arbitrary recycled-header pressure stay
 unqualified. [Native sources and exact qualification](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-physical-special-explosion-owner).
+
+
+## AIZ real FallingShot and copied Hitbox lifecycle follow-up — 2026-10-14
+
+The cutscene selects the real FallingShot; Init clears its collision byte,
+seven independent Hitboxes copy that role, and floor/F4 callbacks retain their
+physical slots through final draw/touch before next-pass clearing. Full spawn
+metadata and exact live links survive pure recreation. Sixteen new literal/
+component/loaded-world vectors pass, alongside existing actual-ROM napalm4,
+standalone7 and startup consumers.692 unchanged affected identities pass in
+49960; seven repaired common-only family predicates pass84889 (runtime same),
+not one699green invocation. Guards111 pass. Five component cameras and one
+loaded-AIZ full registry/two45-pass replay retain cold-route/full viewport/
+donor/team, numerical reused-parent and rendered/SAT/PCM breadth limits.
+
+The preceding cutscene Falling/explosion-family omission is superseded. Original
+AIZ/initial HCZ/two prefixes pass; strict fields remain unchanged red. Segment2
+presence advances3067→3084, native-only18, preceding3081. A common-shot final
+Obj_Wait marker (native18 B6 versus engine cleared) is the next confirmed owner.
+[Native sources, exact bounded commands and outcomes](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-real-cutscene-fallingshot-and-copied-explosion-lifecycle).
+
+
+## AIZ common-shot final wait follow-up — 2026-10-14
+
+Common SIMPLE shots retain their native final Go_Delete marker through Draw,
+then clear on the next dispatch without movement. Their MoveWait has no local
+screen cutoff. Eight independent zero/underflow/offscreen/graph/loaded-world
+vectors and all previous699 consumers pass in one707-case focused invocation;
+guards111 pass. Five component cameras and declared full-registry two45-pass
+replay retain full cold-route/viewport/donor/team/rendered/audio and numeric
+parent-pressure limits. The preceding common-shot marker obligation is closed.
+
+Original AIZ/initial HCZ/two prefixes remain green; strict fields remain red and
+unchanged. Numeric slot presence advances3084→3244, preceding3209, at the AIZ
+transition context. Native-only24..37/engine-only4 need full pointer/scene-boundary
+attribution; low code bytes do not prove old actor survival. No transition fix
+or shared allocator/clock change is inferred. [Native owner, exact negatives,
+commands and outcomes](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-common-simple-shot-final-native-wait-and-physical-retirement).
