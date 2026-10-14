@@ -14,6 +14,8 @@ public class TestSonic3kLevelInitProfile {
         com.openggf.tests.HeadlessTestFixture.builder().withZoneAndAct(0x0D,1)
                 .withFreshLevelStartLifecycle().build();
         assertFalse(com.openggf.game.GameServices.level().isTitleCardRequested());
+        assertFalse(com.openggf.game.GameServices.camera().isLevelStarted(),
+                "Ending_ScreenInit retains native D01 HUD suppression after fresh initialization");
         var provider=com.openggf.game.GameServices.module().getTitleCardProvider();
         assertFalse(provider.ownsInLevelPlayerControlLock(),"$D01 must not retain a title PLC/player owner");
         var title=(com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager)provider;

@@ -7,15 +7,17 @@ Implementation predates this matrix (`feature/ai-s3k-super-emeralds`, routing re
 `56583f2dba`); this file records current bindings and gaps found during the HPZ bring-up.
 Status: partial. The finite fresh-ceremony products below qualify both controller branches.
 Seven native320 solo-Sonic physical pedestal entries and actual fresh-load palette publication
-are also qualified. Configured result/transport products, origin returns and remaining native
-presentation obligations stay separate.
+are also qualified. One native320 solo-Sonic real Saved2 origin-return path qualifies below.
+Configured result/transport/return products and remaining native presentation obligations
+stay separate.
 
 | Obligation + spot | Contract / oracle | Test binding | Implementation | Result | Gap / action |
 | --- | --- | --- | --- | --- | --- |
-| ENTRY: `$1701` resources, bounds, camera, no title card | Custom `HPZ_RESOURCES`; fresh `Get_LevelSizeStart` camera Y `$320`, native320 X `$15A0`; wider free-camera focus uses resolved half-width. The results backdrop separately writes Y `$240` | `TestSonic3kNonlinearHpzProfile#sanctuaryDescriptorSelectsRom1701Resources`, `TestSonic3kLevelLoading#superEmeraldSanctuaryLoadsRom1701LayoutBoundsAndObjectSet`, `TestS3kHpzSanctuaryLifecycleProduction` | implemented | Finite fresh-ceremony qualification below | Actual origin entry/return and results configuration products remain separate |
+| ENTRY: `$1701` resources, bounds, camera, no title card | Custom `HPZ_RESOURCES`; fresh `Get_LevelSizeStart` camera Y `$320`, native320 X `$15A0`; wider free-camera focus uses resolved half-width. The results backdrop separately writes Y `$240` | `TestSonic3kNonlinearHpzProfile#sanctuaryDescriptorSelectsRom1701Resources`, `TestSonic3kLevelLoading#superEmeraldSanctuaryLoadsRom1701LayoutBoundsAndObjectSet`, `TestS3kHpzSanctuaryLifecycleProduction` | implemented | Finite fresh-ceremony qualification below | One real native320 solo-Sonic origin entry/return is qualified below; configured origin/transport and results products remain separate |
 | OBJECT: controller, Master Emerald, pedestals, teleporter | `Obj_HPZSSEntryControl`, `Obj_HPZMasterEmerald`, `Obj_HPZSuperEmerald` (states 1 and 2 selectable, `loc_907A8`); native literal character tables use persistent character identity for physical P1/P2 | `TestHpzSanctuaryObjects` (27), `TestS3kHpzSanctuaryHeadless` (4 on `$17`), `TestS3kHpzSanctuaryLifecycleProduction` | implemented; state-1 selectability corrected `365ac485b`; native-pose presentation and P2 aliases corrected in this slice | Both fresh ceremony branches qualify across the finite products below | Seven native320 solo-Sonic placed pedestal contacts enter their matching Super stages; wider/donor/team contact products and exit transport products remain open |
 | PRESENT: `AnPal_HPZ`, `AniPLC_HPZ` | OffsAnPal / Offs_AniFunc entry 47 | `TestS3kHpzPatternAnimation` (`$17` row), `TestHpzZoneRuntimeStatePaletteCycle#masterEmeraldDelayHoldsTheCycleFor8000Passes` | implemented `362771221` | pass | Five genuine native320 NTSC fresh-ceremony snapshots and matched engine state/pose samples inspected; before/after art comparison has explicit nonzero pixel residuals. Actual current/target palette publication is qualified below; repaired palette screenshots and full native scene parity remain separate |
 | REWIND: controller graph, initial countdown, natural crystal expiry, released ceremony | Identity-table child recreation; entire registered-world equality twice, including deleted-child recreation and reversible native presentation lifetime | `TestS3kHpzGraphRewind#sanctuaryGraphRestoresFreshAndRelinksEveryControllerOwnedChild`, `TestS3kHpzSanctuaryLifecycleProduction` | implemented | Finite fresh-ceremony qualification below | Two eight-tick whole-world cycles cover native short pedestal selection; each actual special-stage entry retires hub history. Results retain their non-rewindable load boundary; incoming special-world, configured contact and origin exit/load products remain separate |
+| LOAD: real forced ring → sanctuary → Saved2 origin | Actual placed MHZ1 `$85/$81` owner/flash saves ring position and earned rings; actual pad/exit-band contact loads origin; rings, timer/HUD and current owners restored; outgoing histories retired; two45-tick world cycles in both incoming worlds | `TestS3kSanctuaryOriginReturnLifecycle` | ordinary fresh HUD-started ownership corrected in this slice | Native320 solo-Sonic local production pilot qualified below | Configured preset/donor/main/team products remain open; local contact setup does not certify a cold route |
 | LOAD: results reveal behind a Super Emerald stage | `SpecialStage_Results` $1701 rebuild and `Pal_FromWhite`; `Obj_SpecialStage_Results` routines `$E`/`$10`/`$12` (pan to `$320`, converging and expanding star rings, `ObjDat2_2E984` Hyper message, `loc_2E9D8`); `loc_2EAA6` state-1 indicator gate; level-select return rebuilds the hub without replaying the reveal | `TestS3kSpecialStageResultsReveal` (frame-exact routine timeline incl. native ss_14 timeline, 16), `TestS3kSanctuaryResultsBackdropHeadless` (backdrop, palette fade, pedestal FAC0, stars, FAC1 release, hub return, 3), `TestHpzSanctuaryObjects` star-ring cases | implemented `feature/ai-hpz-sanctuary-reveal` | pass | Results are not rewindable: the rebuild is a `LEVEL_LOAD` rewind boundary (isolation asserted). Native ss_14 (see table below) matches timing, fade steps and Master Emerald rotation onset, and is visually consistent for gems, flicker and stars; results exit fades to black with no exit SFX as in the ROM (`SpecialStageProvider.resultsExitFadesToWhite()`, S3K false; `TestSpecialStageRewindCapability`, capture 255→206→60→19); Knuckles message frames unit-tested; Tails, Knuckles palette and HYPERk word art neither tested nor captured |
 
 ### Native comparison: results reveal (2026-09-17)
@@ -302,3 +304,58 @@ independent results owner. They do not certify native pre-LFC dispatch phase,
 full-scene pixels, configured pedestal/exit transport, Saved2 origin reload or
 configured Tails/Knuckles result palette/HYPER word-art breadth. Those remain
 explicit next owners; no historical native result-reveal record is rewritten.
+
+
+## Real Saved2 inlet, exit pad and resumed origin HUD — 2026-10-14
+
+`TestS3kSanctuaryOriginReturnLifecycle` independently locates the actual MHZ1
+placement `$85/$81` at `(448,1664)` (Object Pos/1.bin offset30). Its negative
+subtype routes to the sanctuary with zero emerald progress, leaving the native
+exit gate eligible. A real placed ordinary ring is collected before entry; the
+Saved2 counter is never synthesized. The giant ring runs its formation/collision
+owner, the main physically contacts it, and the actual flash owns
+`Save_Level_Data2` and the full hub load. Saved2 records the flash/ring position,
+not the main's contact offset. No Saved2 or transition request is injected.
+
+After actual assembly/fade release, the hub pauses its timer and retires the
+source timeline. The natural intro releases control, then two complete45-tick
+registered-world restore/replay cycles preserve the saved return context.
+Ordinary right/left inputs leave and return through the real exit band and pad.
+The actual exit request switches input to neutral before destination observation.
+The released origin restores the saved X and earned ring count, its native timer
+bank, current configured main/roster/focus and ordinary HUD/timer ownership;
+Saved2 is consumed only after restore. The hub timeline is retired and two more
+complete45-tick world cycles qualify the incoming origin. Both legs continuously
+reject P1 death and lives lost. Local physical contact positions are declared
+scene setup; this remains separate from the maintained cold LRZ → HPZ → SSZ route.
+
+The first actual pilot completes **1 test /1 failure /0 errors /0 skips**, actual
+exit1 at **14:49:56 UTC**,28.407s Maven on `6eefa97f4`. It reaches the real released
+origin with restored rings and resumed timer, but `Camera.levelStarted` still
+contains the sanctuary's zero. Native Level `loc_6404` writes
+`Level_started_flag=1` for every fresh load before `loc_6460` clears it for
+`$D01/$1701`. The existing S3K InitCamera step now supplies that ordinary fresh
+assignment before InitLevelEvents and the later sanctuary-specific clear.
+Moving the assignment after scene initialization would overwrite the AIZ/ending
+owners and is rejected. Shared Camera reset, configuration, snapshot and API
+shapes remain unchanged. The existing D01 fresh test explicitly checks that its
+later scene owner still suppresses the HUD.
+
+On `6eefa97f4` plus this one-profile correction and test changes, the coherent
+focused command completes **362 tests /0 failures /0 errors /0 skips**, actual
+exit0 at **14:58:01 UTC**,2:30 Maven, using the earlier lean queue/EGL environment
+and all three absolute original ROM arguments:
+
+```text
+TestS3kSanctuaryOriginReturnLifecycle,TestSonic3kLevelInitProfile,
+TestS3kHpzSanctuaryLifecycleProduction,TestGameplayCaptureFreshLoad,
+TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,
+TestSonic3kDecodingUtils
+```
+
+The cases are one actual origin lifecycle, six initialization-profile contracts,
+all284 finite sanctuary ceremony/clock products,11 actual fresh-capture boundaries
+and60 required S3K loading/bootstrap/decoding/AIZ neighbors. Earlier independent
+palette, component, results and graph qualifications retain their exact source
+provenance. Finite configured inlet/exit, pedestal and results products plus
+matched repaired/native screenshots are the next explicit obligations.
