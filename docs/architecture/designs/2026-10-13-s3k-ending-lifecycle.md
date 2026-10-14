@@ -1142,3 +1142,55 @@ ordinary Advance passes video=false; a video-enabled capture/observation port
 must establish current framebuffer and publication semantics before pixel
 acceptance. Prepared RAM SAT/palette and published VRAM SAT/CRAM are distinct.
 Historical film, input, source-index and capture-index bytes remain untouched.
+
+
+### Capture boot preserves a native camera binding (2026-10-14)
+
+The declared Sonic Chaos scene's first 65-pass engine picture retained a water
+strip at x0–31, y35–132, where the native picture has black starfield and stars.
+The ROM-filled initial foreground ring matches all 2,048 native cells before
+ordinary dispatch; the later engine ring contains 272 extra terrain cells.
+The background's published ring matches all 2,048 cells at the sampled native
+publication producers. The full-layout/wrap hypothesis was rejected rather
+than changing the background shader.
+
+The immutable engine diagnostic jar
+`e33e629ce4dd208acd87e162adaae8cff970fef67794ded2865cd93704872aee`
+(HEAD `eea476471`, runtime-source SHA256
+`d7177d1804e3bf3a1b40d3747b358457eaa736fcab2e2a72bdfaa8240e617062`)
+shows capture boot already changed physical camera 512/512 to 0/204 while copies
+were 86/281. `HeadlessGameBoot` rebound the focused player after level load;
+`Camera.setFocusedSprite` itself replaces both physical and copy words with
+player top-left coordinates, and the following forced snap changed them again.
+The next ScreenEvents pass streamed the wrong columns/rows. The pending fresh
+boundary was false, so the initially suspected fresh-title snap was not on this
+path and was not changed.
+
+The capture host now keeps the entire native camera binding while frozen.
+Ordinary unfrozen entry still binds its leader and performs its existing forced
+snap. Ending_ScreenInit (`$5AAA2`) runs during load; SSZ1_ScreenInit (`$571F6`)
+runs while preparing initial Process_Sprites. Independent five-width vectors
+assert the actual owner boundary, the literal physical/copy words, frozen state
+and live leader identity. The first 10-case attempt had five genuine ending
+camera failures and five premature SSZ lock assertions. The next 12-case run
+passed the rendered strip check and existing fresh-load case but still failed
+all 10 new assertions: guarding only the forced snap left the focus-assignment
+overwrite, and the SSZ assertions still preceded its owning pass. Neither run
+qualified complete camera/pixel behavior.
+
+The corrected existing `TestGameplayCaptureFreshLoad` class passed 11 cases,
+zero failures/errors/skips, at12:40:11 BST (request 63693, 1:10 Maven), on
+`c92dae73a` plus the scoped host fix and pending ending-owner work. This closes
+the five actual viewport camera products and ordinary destination assembly;
+it does not certify whole native scene pixels. The separate rendered ring
+check and viewed full picture remain part of the ending presentation lane.
+
+```bash
+JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestGameplayCaptureFreshLoad' '-Ds3k.rom.path=<MAIN_WORKSPACE>/Sonic and Knuckles & Sonic 3 (W) [!].gen' test
+```
+
+No FreshLevelTransitionBoundaryController, gameplay clock, renderer projection
+or ROM state was changed for this host correction. Historical screenshots,
+films, source hashes and native prepared/published generation identities remain
+separate. Native nine-branch whole-scene/PAL/PCM and SAT 20-sprite/320-dot overflow
+acceptance remain open beyond the qualified allocation/graph checks.
