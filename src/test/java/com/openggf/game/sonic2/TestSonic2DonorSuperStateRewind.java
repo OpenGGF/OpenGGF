@@ -81,6 +81,24 @@ class TestSonic2DonorSuperStateRewind {
         }
     }
 
+    @Test void normalTailsRestoreKeepsTheCharacterPhysicsProfile() throws Exception {
+        var config=SonicConfigurationService.getInstance();
+        config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE,"tails");
+        config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE,"");
+        config.setSessionOverride(SonicConfiguration.SONIC_2_ROM,
+                java.util.Objects.requireNonNull(System.getProperty("sonic2.rom.path")));
+        var fixture=HeadlessTestFixture.builder().withCrossGameDonation("s2")
+                .withZoneAndAct(2,0).withFreshLevelStartLifecycle().build();
+        var player=fixture.sprite();
+        var owner=assertInstanceOf(Sonic2SuperStateController.class,player.getSuperStateController());
+        assertEquals(SuperState.NORMAL,owner.getState());
+        var normalProfile=player.getPhysicsProfile();
+        assertEquals(15,normalProfile.standYRadius(),"literal normal Tails body radius");
+        var before=owner.captureRewindState();
+        owner.restoreRewindState(before);
+        assertEquals(normalProfile,player.getPhysicsProfile(),"ordinary restore retains the matching character profile");
+    }
+
     @Test void midTransformationRestoresPaletteTimerDrainAndOrdinaryMapping() throws Exception {
         var run=boot();step(run,5);
         var state=run.controller().captureRewindState();assertNotNull(state,"S2 live controller RAM must be captured");

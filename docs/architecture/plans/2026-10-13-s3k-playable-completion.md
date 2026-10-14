@@ -1290,3 +1290,37 @@ The actual affected consumer is
 `TestS3kAiz2EntryMatrix#normalEntryAppliesTheProductionPresetAndEveryDeclaredParticipantThenReplaysTwice`,
 parameter140 in the worker's recorded row inventory. Preserve full world
 comparisons and actor identities; new/worsened failures still block delivery.
+
+### Normal S2 Tails profile and checkpoint setup attribution
+
+On composed `c92dae73a`, the first full physical checkpoint gate16301 runs
+882 tests:155 failures,0 errors/skips,727 passes at11:09:42 UTC. The new
+880 products expose95 S2-donor Tails replay differences (camera/body/balance)
+and60 LRZ1 post5 setup contacts. Neither is labeled an inherited failure.
+The derived S2 normal controller profile was always Sonic: native Obj02_Init
+/loc_1B8D8 retains Tails' $0F radius, single-facing balance and its object-balance
+shift. Captured live radius fields alone concealed the wrong derived profile
+until forward replay. Matching normal profile dispatch now follows the existing
+Sonic2PhysicsProvider character rule; KiS2 has its independent controller/profile.
+
+Independent red43014 completes5/5/0/0 at11:20:43 UTC. Its direct normal
+S2-donor Tails owner restore changes the entire literal profile from Tails to
+Sonic; the four recorded product failure kinds retain their comparisons.
+The repaired focused62698 completes92 tests,5 failures,0 errors/skips at
+11:37:20 UTC (1:16 Maven; queue waiting excluded). All84 controller/ending
+consumers pass: ordinary S2 owner4, shared super7, cross-game3, KiS2 3,
+spindash8, native ending11 and donor binding48. Three physical-product
+witnesses also pass, but5 stop before replay because the attempted universal
+64px approach leaves the intended ledge or behind terrain. That setup change
+is rejected. These87 passing identities are not a green92-case invocation,
+and the full880 corrected products remain pending. Independent read-only review
+confirms character/profile dispatch and the direct regression's narrow scope.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestLrzSszCheckpointRoutes#firstRecordedFailureOfEachKind+firstPostOfEachLayoutHasARealContactAndDeathBoundary,TestSonic2DonorSuperStateRewind,TestSuperStateController,TestCrossGameSuperSonic,TestKis2SuperStateController,TestSuperSpindashTable,TestS3kEndingDonorSceneEntry,TestSonic3kEndingSuperState' "-Dsonic1.rom.path=$S1_TASK_ROM" "-Dsonic2.rom.path=$S2_TASK_ROM" "-Ds3k.rom.path=$S3K_TASK_ROM" test -B
+```
+
+Original identity-verified absolute S1/S2/S3K paths execute without ROM skips.
+Only the normal S2 controller and its direct regression are committed in this
+repair; the physical matrix and its corrected production fade driver remain
+separate qualification work. No public API or snapshot shape changes.
