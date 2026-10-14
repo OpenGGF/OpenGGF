@@ -140,6 +140,25 @@ ROM-vs-engine columns.
 > still-standing player). The correct fix touches the object's state
 > machine, not the collision sensor.
 
+## Rendering An Existing Trace Segment
+
+`TraceCaptureTool` renders a supported existing fixture through its maintained
+replay bootstrap; it does not record native evidence or certify parity.
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off exec:java \
+  "-Dexec.mainClass=com.openggf.tools.TraceCaptureTool" \
+  "-Dexec.args=--trace <segment-dir> --clip frames:0:40 --out-dir <outside-repo-dir>"
+```
+
+An individual segment under a validated `run_manifest.json` may resolve that
+run's declared movie. Game/run/source identity, segment membership, offset,
+count and profile must match; unsafe source paths are rejected. Shared movie
+placement retains priority over the local run movie. This is single-segment
+capture with the existing bootstrap, not continuous joined-run capture.
+See the [trace-capture skill](../../../.agents/skills/trace-capture/SKILL.md)
+for graphics prerequisites, clipping, output and observation limits.
+
 ## Recording Or Refreshing A Trace
 
 The native BizHawk headless harness is the canonical recorder for all three

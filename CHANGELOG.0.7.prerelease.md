@@ -67,5 +67,7 @@ Unreleased. The earlier development themes remain in
   registered followers at its native entry and rebuilds restored scroll output
   without advancing the screen event.
 
-- **Controller authoring:** Input branches reject checkpoints whose pending
+- **Capture and controller tools:** Input branches reject checkpoints whose pending
   fresh assembly or transition callback cannot be restored by gameplay rewind.
+  An individual trace segment resolves its validated containing run's declared
+  movie, preserving shared-movie priority and rejecting unsafe source aliases.

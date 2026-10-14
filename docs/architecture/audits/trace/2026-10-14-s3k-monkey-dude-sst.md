@@ -252,3 +252,98 @@ animation), first25,589 animation `$13/$05`, then25,590 Tails subpixel
 `$7800/$6C00`, unchanged. Final90744 affected rewind/source/trace/hardware
 111 guards pass at12:47:40 BST,33.760s execution/108s queue. These are bounded
 owner/control checks, not strict whole-chain, pixel, waveform or campaign certification.
+
+
+## Containing-run movie resolution for single-segment capture
+
+Separate tooling prerequisite over coarse retirement `c46334247`: the
+maintained TraceCaptureTool accepted ordinary segment paths, but TraceCatalog
+could not find HCZ's movie at its containing run root. Optional copying/linking
+was rejected. The resolver now reuses `resolveRunBk2` after structural manifest
+validation and exact metadata game/run/source/index/member/offset/count/profile
+matching; shared movie priority and lexical containment checks are retained.
+An invalid containing run fails closed without borrowing another per-segment
+movie. No fixture, controller, row bootstrap or run-capture support changed.
+
+62426's catalogue negative establishes four actual failures: two missing
+containing-run movie resolutions and two accepted unsafe aliases. Three new
+mismatched-header cases already reject. Candidate33919 passes all36 catalogue/
+discovery/descriptor cases together with19 projectile cases; exact capture
+arguments12 pass99063, and source/rewind/trace/hardware guards111 pass90744.
+The exact catalogue selector is
+`TraceCatalogTest,TestTraceCatalogRunDiscovery,TestTraceCatalogDescriptorOwnership,TraceCatalogSpecialStageTest`.
+Those pure checks use the bounded lean lane. All actual ROM/trace/native
+capture consumers retain normal admission. The previously supplied nonexistent
+shortened arguments class has no coverage; `TraceCaptureToolArgsTest` is the
+actual checked class. Runtime source stayed identical through these gates.
+
+Native/engine screenshot36213 retained original AIZ Monkey/body clips and
+native HCZ observations, then stopped before HCZ engine boot with
+`No trace matched`. Only that missing clip and a correctly identified shared
+projectile spot are retried after committed-source qualification; completed
+images are retained. Whole joined-run capture remains unsupported, and a
+matching RAM row does not identify the currently published framebuffer scene.
+
+
+## Actual native and engine image spots
+
+Captured outside the repo under
+`$HOME/Videos/OGGF/s3k-parity-trace-2026-10-14/spot-checks/`:
+`ffb12d41a-v2` retains the initial four native publications and two original
+engine clips; `2f50c37c0-missing-v2` supplies only the missing HCZ engine clip
+and genuine shared-projectile native/engine pair. Every image below was actually
+inspected. PNGs retain the provider extent and colors; no repainting, fitted
+clock shift or color conversion was applied.
+
+Native host is verified TraceChaser video port `bf3c5391c` (immutable executable
+SHA256 `71b949a6b3ecb0709d4ba73f8cc0752d945a14c15c58f0326fc3adb7d4d4031b`),
+official owned BizHawk2.11 archive SHA256
+`cdaf9650d880bae660d63a388430f630b8d8a96b1ba59ebf0e0195a645c3bab8`.
+Managed Cores.dll `0144e6e2…` and native gpgx.wbx.zst `c4231296…` are distinct
+pins, checked by each launcher; the provenance JSON carries their complete
+hashes, ROM/movie/compiler/adapter pins, argv/PID/UTC launch/end and callback
+clocks. `AdvanceWithVideo` publishes exactly the completed hardware frame,
+and its VRAM/CRAM/VSRAM copies have explicit endian metadata. Native capture
+runs with the original movie SyncSettings and no RAM writes. Engine uses the
+maintained TraceCaptureTool, Java25/surfaceless EGL and isolated display-free
+environment. The native adapter source/executable are unchanged between retries.
+
+| Spot | Native publication / engine source | Observed image and context |
+| --- | --- | --- |
+| AIZ1 Monkey, row1680 |core2191,input2190,LFC `$056F`,VInt `$0869`; engine`ffb12d41a`| Real arm/hand graph and actors are visible; HUD broadly matches. Native provider348×240 has active320×224 at(14,8), engine320×224. Arm/hand poses and terrain/parallax pixels differ. |
+| AIZ1 body, row3224 |core3735,input3734,LFC `$0B77`; engine`ffb12d41a`| The retained filename says `aiz-projectile`, but native `$86D70` is Bloominator BODY. This image has no projectile qualification credit. Scene/HUD broadly matches. |
+| AIZ2 shared projectile, row6970 |core7481,input7480,LFC `$1A10`,VInt `$1D13`; engine`2f50c37c0`| Full SST30 is `$86D5E`,XY `$0E03/$02FC`,mapping4,flags `$84`,art `$252A`; the small projectile is visible beside rolling Sonic in both scenes. Native348×240/active320×224 at(14,8), engine320×224; colors and poses differ. |
+| HCZ entry, row0 |core53609,input53608,LFC1,VInt `$CF76`; native from full emerald movie, engine standalone`2f50c37c0`| Both providers320×224. Native currently publishes the black/red Hydrocity title; engine shows the waterfall. The current RAM gameplay row does not identify the published scene. |
+| HCZ entry, row30 |core53639,input53638,LFC `$1F`,VInt `$CF94`; same two source contexts| Waterfall, falling Sonic and Tails broadly correspond. Native still has a title edge; native full-movie HUD score255900/lives1 differs from standalone engine score0/lives3. This is not a joined-run HUD oracle or grounds for gameplay hydration. |
+
+At Monkey row1680 native producer1392 has prepared the next table while the
+published producer is1391. At projectile6970 the pair is6673/6672; HCZ0 is
+25631/25630 and HCZ30 is25661/25660. Prepared/published full640-byte SAT hashes
+differ at all these spots, but include unused table tails and do not establish
+that every active sprite differs. Monkey's prepared palette equals published
+CRAM, whereas the projectile and HCZ spots differ; snapshots preserve both.
+Existing RAW_RGB maps 3-bit channels to0..255; native GPGX uses the observed
+0/34/68…238 ramp. This is an existing documented display-profile difference,
+not evidence for changing a native palette writer. Tile/pose/parallax, active
+priority and publication-phase parity are unqualified; native audio was not
+captured, so engine MKV audio supplies no native waveform claim.
+
+35098 rejected a wrong320×224 provider-size assumption before accepting any
+image.36213, corrected only to preserve actual dimensions, completed initial
+native/AIZ captures then failed the missing containing-run movie resolution.
+62487 failed before any engine child because the new6970 selector wrongly
+required AIZ1; nearby actual native RAM matches the exact LFC/P1 in AIZ2.
+Only that declared scene label was corrected.34708 then completes normally0
+at12:59:15 BST,31.052s execution/3s queue, on clean committed`2f50c37c0`:
+native projectile15.486s, engine projectile12.483s and HCZ2.418s.
+Exact child intervals and hashes are in its provenance JSON. Completed native
+HCZ/Monkey/body images were reused, never recaptured. The command is normal
+queued `-Dmse=off exec:exec -Dexec.executable=python3` with owned
+`aiz-hcz-native-spots/run_missing_spots.py %classpath <exact clean SHA>`;
+no unqueued native loop or display fallback was used.
+
+This supplies bounded image corroboration for the actual Monkey/projectile
+owners and exposes the HCZ publication/standalone boundary. It does not certify
+fresh-return title pixels: that joined observer still needs accurate scene
+publication instrumentation. Strict fields remain as86861/74434, and the next
+physical graph owner remains cork-floor1688.
