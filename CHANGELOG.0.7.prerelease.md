@@ -33,6 +33,8 @@ Unreleased. The earlier development themes remain in
   while previews and seamless continuations preserve their sequence.
   Sky Sanctuary opening bridges use the native top-contact surface and exact
   overlap band, retaining the relative landing write before floor reset.
+  Its clouds and collapsing columns retain native foreground priority, and
+  the HUD RINGS label uses its dedicated ROM R glyph.
   Slot bonus-stage layouts, player starts, prize/reel tables and cell animations
   load from the runtime ROM, with no copied asset fallback; panel publication
   retains its allocation-free path.

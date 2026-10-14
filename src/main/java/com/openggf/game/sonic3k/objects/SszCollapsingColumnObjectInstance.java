@@ -197,6 +197,10 @@ public final class SszCollapsingColumnObjectInstance extends AbstractObjectInsta
     @Override public int getY() { return y; }
     @Override public SolidObjectParams getSolidParams() { return SOLID; }
     @Override public boolean isTopSolidOnly() { return true; }
+    // Obj_SSZCollapsingColumn / loc_44BCC set art_tile bit15, independently
+    // of the sprite-table priority bucket: make_art_tile(ArtTile_SSZMisc+$10,3,1).
+    @Override public boolean isHighPriority() { return true; }
+
     @Override public int getPriorityBucket() { return PRIORITY_BUCKET; }
     @Override public int getOnScreenHalfWidth() { return 0x10; }
     @Override public int getOnScreenHalfHeight() { return 0x21; }

@@ -231,6 +231,10 @@ public final class SszRoamingCloudObjectInstance extends AbstractObjectInstance
 
     @Override public int getX() { return worldX; }
     @Override public int getY() { return worldY; }
+    // The native art word owns VDP bit15 independently of the SAT bucket:
+    // make_art_tile(ArtTile_SSZMisc+$3C,3,1).
+    @Override public boolean isHighPriority() { return true; }
+
     @Override public int getPriorityBucket() { return PRIORITY_BUCKET; }
     @Override public int getOnScreenHalfWidth() { return HALF_WIDTH; }
     @Override public int getOnScreenHalfHeight() { return HALF_HEIGHT; }

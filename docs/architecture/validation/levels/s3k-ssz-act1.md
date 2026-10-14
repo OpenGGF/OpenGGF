@@ -1541,3 +1541,48 @@ owners must explain those residuals before a pixel-parity claim.
 
 Exact commands, clocks and source/probe hashes are in the
 [completion plan](../../plans/2026-10-13-s3k-playable-completion.md#native-ssz-arrival-owner-qualification-2026-10-14).
+
+
+## Native cloud priority and RINGS glyph (2026-10-14)
+
+Original current-poll SAT330 entries13/14 carry art wordsE310/E320. Verified
+`ArtTile_SSZMisc=$2D4` plus `$3C` identifies roaming clouds, not columns.
+`loc_57BB2`, the bouncy-cloud/puff art word and both collapsing-column paths
+set VDP bit15 independently of their SAT buckets. Five local overrides now
+preserve those native high-priority bits. The initial column-only attribution
+is rejected: its360 diagnostic pixels at330 remain unchanged. The HUD
+`Map_HUD` RINGS row starts at text tile8, whereas SCORE uses a distinct R at6;
+using the native ROM glyph removes the remaining two HUD pixels. S1/S2 HUD
+mappings and shared render/colour policy are unchanged.
+
+On committed da27f4f3d plus this production draft, focused10369 completes
+22:12:06 UTC:73 tests, zero failures/errors/skips,1:14 Maven. Exact selection
+is `TestHudStaticArtLivesFrameMappings,TestS3kSszColumnSpritePriority,`
+`TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,`
+`TestSonic3kDecodingUtils`, using the local normal queued wrapper, EGL,
+absolute original S3K ROM, null audio and unset ambient displays. Independent
+negative priority66895 (3/2/0/0), cloud66640 (3/3/0/0), and HUD38028
+(1/1/0/0) precede the owning fixes; traversal79239 passes12/0/0/0.
+
+Unchanged passive observer23561 completes22:15:19.727238 UTC, exit0.
+External task directory `ssz-arrival-boundary-da27f4f3d-f4b6b8b25b36-v1`
+pins production diff SHA256
+`f4b6b8b25b36997f8e6a90a121bbf4b199a572c22bb58ca3b9636bff8739cbe1`,
+observer6016797a066d4a595a996c82efcf3d6d76899610d737e0ecace6b5d45732a2bf
+and original ROM/AD40 movie. Original native/current engine images were viewed
+at330 and1342;330,680,1430 now have zero diagnostic three-bit bin differences.
+1342 retains475 differences at x267–306/y161–191, including the visible Tails
+pose. All four original RGB pictures still differ in71680 pixels because the
+colour expansion is distinct. Diagnostic bins identify an owner; they do not
+certify original RGB, native colour policy, other frames or whole-scene parity.
+No frame shift, fitted scroll or gameplay hydration is used. Exact compiler
+and JVM bounds/argv are retained beside the media and relayed to coordination;
+the normal parent retains the source/classes worktree lease for both children.
+
+Stronger whole-world sky replay23335 fails one of21 tests at22:00:22 UTC:
+`theSkySurvivesACaptureRestoreAndForwardReplay` reports prepared sprite tile
+count496 versus304. Matched unchanged-da27 arm39050 at22:07:53 UTC reports
+the identical failure (1/1/0/0); all five priority candidate files are restored
+byte-identically after attribution. This inherited publication failure remains
+active owner work. Combined smoke/guards and integration/push remain pending.
+Consumed owned Maven redirects are removed after this durable account.

@@ -1949,3 +1949,19 @@ remain active owner work. Native AIZ cutscene/transition qualification likewise
 remains uncommitted while strict traces identify the next ROM lifecycle owner.
 Combined Root smoke/guards and destination delivery remain pending. Consumed
 Root comparator redirect is removed after inspection.
+
+
+## Native SSZ cloud/HUD spot correction (2026-10-14)
+
+On complete-comparator da27f4f3d, original current-poll SAT and ROM mappings
+identify five missing local art-word high-priority bits and the dedicated
+RINGS R glyph. Column-only attribution did not fix330 and is explicitly
+rejected; the real native330 pair is roaming clouds at2D4+3C. Focused73
+passes with no failures/errors/skips in10369 at22:12:06 UTC. Final passive
+23561 matches diagnostic three-bit picture bins at330/680/1430;1342 retains
+475 Tails-area differences, and original RGB expansion remains unaccepted.
+The [SSZ matrix](../validation/levels/s3k-ssz-act1.md#native-cloud-priority-and-rings-glyph-2026-10-14)
+records negative controls, exact source/media hashes, commands and limits.
+Whole-world sky496→304 prepared-tile replay is independently reproduced on
+unchanged da27f4f3d and remains an active publication owner repair. No broader
+parity, combined validation or destination delivery is claimed.

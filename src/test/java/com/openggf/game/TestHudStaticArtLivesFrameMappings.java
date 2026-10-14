@@ -80,7 +80,13 @@ class TestHudStaticArtLivesFrameMappings {
                 new SpriteMappingPiece(16, 0, 1, 2, 20, false, false, 1),
                 new SpriteMappingPiece(24, 0, 1, 2, 22, false, false, 1)),
                 art.timeFrame().pieces(), "Map_HUD selects the dedicated TIME I, not the RINGS I");
-        assertRingsFrame(art.ringsFrame(), 1);
+        assertEquals(List.of(
+                new SpriteMappingPiece(0, 0, 1, 2, 8, false, false, 1),
+                new SpriteMappingPiece(8, 0, 1, 2, 10, false, false, 1),
+                new SpriteMappingPiece(16, 0, 1, 2, 12, false, false, 1),
+                new SpriteMappingPiece(24, 0, 1, 2, 14, false, false, 1),
+                new SpriteMappingPiece(32, 0, 1, 2, 0, false, false, 1)),
+                art.ringsFrame().pieces(), "Map_HUD selects the dedicated RINGS R, not the SCORE R");
         assertEquals(List.of(), art.timeFlashFrame().pieces());
         assertEquals(List.of(), art.ringsFlashFrame().pieces());
         assertLivesFrame(art.livesFrame(), 12, 1);
