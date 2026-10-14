@@ -1,6 +1,5 @@
 package com.openggf;
 
-import com.openggf.graphics.GLCommand;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -19,13 +18,9 @@ class TestDiagnosticWidescreenLayout {
     }
 
     @Test
-    void escapeProgressCommandsUseCenteredNativeRectangleOrigin() {
-        for (int width : new int[] {320, 352, 400}) {
-            var commands = Engine.escapeProgressRectCommands(width, 30, 0.5);
-            assertEquals(6, commands.size());
-            assertTrue(commands.stream().allMatch(command ->
-                    command.getCommandType() == GLCommand.CommandType.RECTI));
-            assertEquals((width - 320) / 2 + 4, commands.get(0).getX1());
-        }
+    void escapeToastSlidesFromAboveTheScreenToItsRestingRow() {
+        assertTrue(Engine.escapeToastY(0f) + com.openggf.game.MenuChrome.HOLD_TOAST_H < 0,
+                "a hidden toast sits entirely above the top edge");
+        assertEquals(6, Engine.escapeToastY(1f));
     }
 }

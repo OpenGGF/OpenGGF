@@ -32,6 +32,17 @@ public class PixelFontTextRenderer {
         this.fontVariant = Objects.requireNonNull(fontVariant, "fontVariant");
     }
 
+    /** A renderer over the host-menu typography, for drawing {@code MenuChrome} pieces over gameplay. */
+    public static PixelFontTextRenderer menu() {
+        return new PixelFontTextRenderer(new MenuPixelFont(), PixelFontVariant.PIXEL_FONT);
+    }
+
+    /** The initialized font, for callers that draw through the menu chrome helpers. */
+    public PixelFont font() {
+        ensureInitialized();
+        return font;
+    }
+
     public int lineHeight() {
         return lineHeight(1.0f);
     }

@@ -172,6 +172,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW);
 	private final PixelFontTextRenderer pauseTextRenderer =
 		new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW);
+	private final PixelFontTextRenderer menuOverlayTextRenderer = PixelFontTextRenderer.menu();
+	private static final int ESCAPE_TOAST_REST_Y = 6;
 	private final PixelFontTextRenderer liveCaptureTextRenderer =
 		new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW);
 	private static final String USER_PAUSE_INDICATOR_TEXT = "PAUSED";
@@ -3579,24 +3581,25 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			return;
 		}
 		EscapeToMasterTitleController controller = gameLoop.getEscapeToMasterTitleController();
-		if (controller == null || !controller.visible()) {
+		if (controller == null || controller.presence() <= 0f) {
 			return;
 		}
 		if (postFadeRecorder != null) {
 			postFadeRecorder.recordPostFadeDiagnostic("EscapeToMasterTitlePrompt");
 		}
-		float scale = 1.0f;
-		int x = centeredDiagnosticX((int) projectionWidth, 4);
-		int y = 4;
-		traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
-		traceHudTextRenderer.drawShadowedText(controller.message(), x, y, DebugColor.WHITE, scale);
-		renderEscapeProgressBar(y + traceHudTextRenderer.lineHeight(scale) + 2, controller.progress());
+		menuOverlayTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
+		PixelFont font = menuOverlayTextRenderer.font();
+		font.beginMegaBatch();
+		MenuChrome.holdToast(font, (int) projectionWidth, escapeToastY(controller.presence()), "Esc",
+				controller.message(), (float) controller.progress(), controller.transitionStarted(),
+				controller.shownFrames());
+		font.endMegaBatch();
 	}
 
-	private void renderEscapeProgressBar(int y, double progress) {
-		for (GLCommand command : escapeProgressRectCommands((int) projectionWidth, y, progress)) {
-			command.execute(0, 0, 0, 0);
-		}
+	/** Slides the hold toast down from above the top edge to its resting row. */
+	static int escapeToastY(float presence) {
+		int hidden = -MenuChrome.HOLD_TOAST_H - 2;
+		return Math.round(hidden + (ESCAPE_TOAST_REST_Y - hidden) * Math.clamp(presence, 0f, 1f));
 	}
 
 	static int centeredDiagnosticOrigin(int logicalWidth) {
@@ -3605,48 +3608,6 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	static int centeredDiagnosticX(int logicalWidth, int margin) {
 		return centeredDiagnosticOrigin(logicalWidth) + margin;
-	}
-
-	static List<GLCommand> escapeProgressRectCommands(int logicalWidth, int y, double progress) {
-		final int x = centeredDiagnosticX(logicalWidth, 4);
-		final int width = 144;
-		final int height = 6;
-		int fillWidth = (int) Math.round(Math.max(0.0, Math.min(1.0, progress)) * (width - 2));
-		List<GLCommand> commands = new ArrayList<>(6);
-
-		commands.add(escapeProgressRectCommand(x, y, x + width, y + height,
-				0.0f, 0.0f, 0.0f, 0.65f, GLCommand.BlendType.ONE_MINUS_SRC_ALPHA));
-		commands.add(escapeProgressRectCommand(x, y, x + width, y + 1,
-				1.0f, 1.0f, 1.0f, 1.0f, GLCommand.BlendType.SOLID));
-		commands.add(escapeProgressRectCommand(x, y + height - 1, x + width, y + height,
-				1.0f, 1.0f, 1.0f, 1.0f, GLCommand.BlendType.SOLID));
-		commands.add(escapeProgressRectCommand(x, y, x + 1, y + height,
-				1.0f, 1.0f, 1.0f, 1.0f, GLCommand.BlendType.SOLID));
-		commands.add(escapeProgressRectCommand(x + width - 1, y, x + width, y + height,
-				1.0f, 1.0f, 1.0f, 1.0f, GLCommand.BlendType.SOLID));
-		if (fillWidth > 0) {
-			commands.add(escapeProgressRectCommand(x + 1, y + 1, x + 1 + fillWidth, y + height - 1,
-					1.0f, 1.0f, 0.0f, 1.0f, GLCommand.BlendType.SOLID));
-		}
-		return commands;
-	}
-
-	private static GLCommand escapeProgressRectCommand(
-			int x1, int y1, int x2, int y2,
-			float red, float green, float blue, float alpha,
-			GLCommand.BlendType blendType) {
-		return new GLCommand(
-				GLCommand.CommandType.RECTI,
-				GL_TRIANGLE_FAN,
-				blendType,
-				red,
-				green,
-				blue,
-				alpha,
-				x1,
-				y1,
-				x2,
-				y2);
 	}
 
 	private boolean updateDisplayShaderInput() {

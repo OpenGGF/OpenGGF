@@ -353,8 +353,7 @@ public class GameLoop {
                 audioManager::fadeOutMusic, callback -> fadeManager.startFadeToBlack(callback));
         this.escapeToMasterTitleController = new EscapeToMasterTitleController(
                 () -> resolveFadeManager().isActive(),
-                () -> fadeOutTo(this::returnToMasterTitle),
-                () -> fadeOutTo(applicationExitHandler));
+                () -> fadeOutTo(this::returnToMasterTitle));
         this.presenceManager = new PresenceManager(
                 configService.getBoolean(SonicConfiguration.DISCORD_RICH_PRESENCE_ENABLED),
                 configService.getBoolean(SonicConfiguration.DISCORD_RICH_PRESENCE_SHOW_TIMER),
@@ -1254,7 +1253,9 @@ public class GameLoop {
         }
 
         if (currentGameMode == GameMode.MASTER_TITLE_SCREEN) {
-            escapeToMasterTitleController.update(currentGameMode, inputHandler);
+            // Escape belongs to the title: Back, then its Quit dialog. Clear any hold
+            // carried over from the game that just returned here.
+            escapeToMasterTitleController.reset();
             MasterTitleScreen masterScreen = currentMasterTitleScreen();
             bootScreenModeController.updateMasterTitle(
                     masterScreen,

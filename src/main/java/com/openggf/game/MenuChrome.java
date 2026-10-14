@@ -307,6 +307,39 @@ public final class MenuChrome {
         }
     }
 
+    public static final int HOLD_TOAST_H = 17;
+
+    /** Width of {@link #holdToast} for a key and label. */
+    public static int holdToastWidth(String key, String label) {
+        return 5 + keyCapWidth(key) + 5 + compactWidth(label) + 7;
+    }
+
+    /**
+     * A centred hold-to-confirm toast for shortcuts that work over gameplay: a key cap and
+     * label on a navy panel that fills from the left as {@code progress} rises. Holding
+     * lights the frame with the focus gold; {@code done} keeps it solid gold while the
+     * action runs. Draw it at the top edge, so it never covers the stage's playfield centre.
+     */
+    public static void holdToast(PixelFont font, int width, int y, String key, String label,
+                                 float progress, boolean done, int frame) {
+        float p = Math.clamp(progress, 0f, 1f);
+        int w = holdToastWidth(key, label);
+        int h = HOLD_TOAST_H;
+        int x = (width - w) / 2;
+        fill(font, x + 1, y + h, w, 1, new float[] {0, 0, 0}, .45f);
+        fill(font, x, y, w, h, NAVY, .96f);
+        int fillW = Math.round((w - 2) * p);
+        if (fillW > 0) {
+            fill(font, x + 1, y + 1, fillW, h - 2, FOCUS_FILL, .92f);
+            fill(font, x + 1, y + h - 3, fillW, 2, GOLD);
+            if (fillW < w - 2) fill(font, x + fillW, y + 1, 1, h - 2, mix(GOLD, WHITE, .5f), .85f);
+        }
+        float[] border = done ? GOLD : p > 0 ? mix(GOLD, WHITE, pulse(frame) * .35f) : EDGE;
+        outline(font, x, y, w, h, border, 1f, 1);
+        int cap = keyCap(font, x + 5, y + 3, key, false);
+        compact(font, label, x + 5 + cap + 5, y + 5, p > 0 || done ? WHITE : TEXT);
+    }
+
     /** Description box with up to three compact lines; colours per line. */
     public static void descriptionBox(PixelFont font, int x, int y, int w, int h,
                                       List<String> lines, List<float[]> colors) {

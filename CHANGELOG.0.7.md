@@ -702,7 +702,11 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   lettering regardless of name length. Footers show only
   the keys that work on the focused row as key caps or controller buttons, with
   status kept apart; a line under the buttons describes the focused item. Back
-  returns to the card before offering Quit. Mouse hover, click and wheel work across
+  returns to the card before offering Quit, and Escape no longer also runs a hidden
+  hold-to-exit timer behind that dialog. In a game, the old "hold ESC 2sec" debug text
+  becomes a menu-styled toast that slides in at the top (an Esc key cap with *Hold to
+  return to games*), fills gold over a one-second hold and reads *Returning to games*
+  while the screen fades. Mouse hover, click and wheel work across
   the shelf, buttons and tabs, and in the Mod Manager's list, buttons and
   prompts. Confirmation, cancel and error cues stay
   host-owned with soft fades and moderate volume; compact text and shapes share

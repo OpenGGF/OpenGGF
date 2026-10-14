@@ -204,6 +204,10 @@ list. Settings and text editors expose full manually scrollable Details with F1 
 the north controller button. Numeric values use a numeric keypad; Up from a path
 field opens the file browser. Mods requires explicit Apply to save drafts.
 
+During a game, tap **Escape** to see the *Hold to return to games* toast at the top
+of the screen; hold it for one second to fade back to the master title. At the
+master title Escape is Back: it returns to the game card, then opens **Quit OpenGGF?**.
+
 The experimental level editor opens its command palette with F1 or the north
 controller button. Directions choose a command, Confirm executes it, and Back
 closes the palette. It includes placement, hierarchy/focus, library/filter,

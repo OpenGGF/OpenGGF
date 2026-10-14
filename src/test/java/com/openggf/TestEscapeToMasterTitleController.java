@@ -18,13 +18,13 @@ class TestEscapeToMasterTitleController {
         InputHandler input = new InputHandler();
         EscapeToMasterTitleController controller = new EscapeToMasterTitleController(() -> false, () -> {});
 
-        assertEquals(120, EscapeToMasterTitleController.HOLD_FRAMES);
+        assertEquals(60, EscapeToMasterTitleController.HOLD_FRAMES);
         assertEquals(120, EscapeToMasterTitleController.PROMPT_MINIMUM_FRAMES);
 
         press(input, GLFW_KEY_ESCAPE);
         controller.update(GameMode.LEVEL, input);
         assertTrue(controller.visible());
-        assertEquals("hold ESC 2sec to return to title", controller.message());
+        assertEquals("HOLD TO RETURN TO GAMES", controller.message());
 
         release(input, GLFW_KEY_ESCAPE);
         for (int frame = 0; frame < EscapeToMasterTitleController.PROMPT_MINIMUM_FRAMES - 1; frame++) {
@@ -57,7 +57,7 @@ class TestEscapeToMasterTitleController {
     }
 
     @Test
-    void holdingEscapeForTwoSecondsTriggersTransitionOnce() {
+    void holdingEscapeForOneSecondTriggersTransitionOnce() {
         InputHandler input = new InputHandler();
         AtomicInteger transitions = new AtomicInteger();
         EscapeToMasterTitleController controller =
@@ -76,6 +76,7 @@ class TestEscapeToMasterTitleController {
         controller.update(GameMode.LEVEL, input);
         assertEquals(1, transitions.get());
         assertEquals(1.0, controller.progress(), 0.0001);
+        assertEquals(EscapeToMasterTitleController.LEAVING_MESSAGE, controller.message());
 
         for (int frame = 0; frame < 20; frame++) {
             controller.update(GameMode.LEVEL, input);
@@ -85,55 +86,61 @@ class TestEscapeToMasterTitleController {
     }
 
     @Test
-    void masterTitleModeShowsExitPromptAndTriggersExitAction() {
+    void masterTitleOwnsEscapeSoHoldNeverShowsOrTriggers() {
         InputHandler input = new InputHandler();
-        AtomicInteger returnTransitions = new AtomicInteger();
-        AtomicInteger exitTransitions = new AtomicInteger();
+        AtomicInteger transitions = new AtomicInteger();
         EscapeToMasterTitleController controller =
-                new EscapeToMasterTitleController(() -> false,
-                        returnTransitions::incrementAndGet, exitTransitions::incrementAndGet);
+                new EscapeToMasterTitleController(() -> false, transitions::incrementAndGet);
 
         press(input, GLFW_KEY_ESCAPE);
-        controller.update(GameMode.MASTER_TITLE_SCREEN, input);
-
-        assertTrue(controller.visible());
-        assertEquals("hold ESC 2sec to exit OpenGGF", controller.message());
-
-        input.update();
-        for (int frame = 1; frame < EscapeToMasterTitleController.HOLD_FRAMES; frame++) {
+        for (int frame = 0; frame < EscapeToMasterTitleController.HOLD_FRAMES * 2; frame++) {
             controller.update(GameMode.MASTER_TITLE_SCREEN, input);
             input.update();
         }
 
-        assertEquals(0, returnTransitions.get());
-        assertEquals(1, exitTransitions.get());
+        assertFalse(controller.visible());
+        assertEquals(0f, controller.presence());
+        assertEquals(0, transitions.get());
     }
 
     @Test
-    void modeChangeClearsHeldProgressBeforeMasterTitleCanStartExitHold() {
+    void returningToMasterTitleClearsHeldProgress() {
         InputHandler input = new InputHandler();
-        AtomicInteger returnTransitions = new AtomicInteger();
-        AtomicInteger exitTransitions = new AtomicInteger();
-        EscapeToMasterTitleController controller =
-                new EscapeToMasterTitleController(() -> false,
-                        returnTransitions::incrementAndGet, exitTransitions::incrementAndGet);
+        EscapeToMasterTitleController controller = new EscapeToMasterTitleController(() -> false, () -> {});
 
         press(input, GLFW_KEY_ESCAPE);
         for (int frame = 0; frame < EscapeToMasterTitleController.HOLD_FRAMES - 1; frame++) {
             controller.update(GameMode.LEVEL, input);
             input.update();
         }
-        assertEquals((EscapeToMasterTitleController.HOLD_FRAMES - 1)
-                        / (double) EscapeToMasterTitleController.HOLD_FRAMES,
-                controller.progress(), 0.0001);
-
         controller.update(GameMode.MASTER_TITLE_SCREEN, input);
 
-        assertEquals(0, returnTransitions.get());
-        assertEquals(0, exitTransitions.get());
-        assertEquals(1 / (double) EscapeToMasterTitleController.HOLD_FRAMES,
-                controller.progress(), 0.0001);
-        assertEquals(EscapeToMasterTitleController.EXIT_MESSAGE, controller.message());
+        assertFalse(controller.visible());
+        assertEquals(0.0, controller.progress(), 0.0001);
+    }
+
+    @Test
+    void toastSlidesInThenOutAtTheEndOfItsLinger() {
+        InputHandler input = new InputHandler();
+        EscapeToMasterTitleController controller = new EscapeToMasterTitleController(() -> false, () -> {});
+
+        press(input, GLFW_KEY_ESCAPE);
+        controller.update(GameMode.LEVEL, input);
+        float first = controller.presence();
+        assertTrue(first > 0f && first < 1f, "toast eases in rather than popping");
+
+        release(input, GLFW_KEY_ESCAPE);
+        for (int frame = 0; frame < EscapeToMasterTitleController.SLIDE_FRAMES; frame++) {
+            controller.update(GameMode.LEVEL, input);
+        }
+        assertEquals(1f, controller.presence(), 0.0001f);
+
+        while (controller.visible()) {
+            float before = controller.presence();
+            controller.update(GameMode.LEVEL, input);
+            assertTrue(controller.presence() <= before, "toast only leaves once lingering");
+        }
+        assertEquals(0f, controller.presence());
     }
 
     @Test
@@ -152,7 +159,7 @@ class TestEscapeToMasterTitleController {
         assertTrue(controller.visible());
         assertEquals(41 / (double) EscapeToMasterTitleController.HOLD_FRAMES,
                 controller.progress(), 0.0001);
-        assertEquals(EscapeToMasterTitleController.RETURN_MESSAGE, controller.message());
+        assertEquals(EscapeToMasterTitleController.MESSAGE, controller.message());
     }
 
     @Test

@@ -834,7 +834,7 @@ public class TestGameLoop {
     }
 
     @Test
-    void escapeHoldOnMasterTitleFadesAudioAndScreenBeforeExitingApplication() throws Exception {
+    void escapeHoldOnMasterTitleLeavesQuittingToTheTitleDialog() throws Exception {
         SessionManager.clear();
 
         AudioManager audioManager = mock(AudioManager.class);
@@ -867,34 +867,30 @@ public class TestGameLoop {
         loop.setApplicationExitHandler(() -> exitedApplication.set(true));
 
         input.handleKeyEvent(GLFW_KEY_ESCAPE, GLFW_PRESS);
-        for (int frame = 0; frame < EscapeToMasterTitleController.HOLD_FRAMES; frame++) {
+        for (int frame = 0; frame < EscapeToMasterTitleController.HOLD_FRAMES * 3; frame++) {
             loop.step();
         }
 
-        verify(audioManager).fadeOutMusic();
-        verify(fadeManager).startFadeToBlack(any());
-        assertFalse(exitedApplication.get(), "application exit should wait for fade-to-black callback");
-
-        assertNotNull(fadeCallback.get());
-        fadeCallback.get().run();
-        assertTrue(exitedApplication.get());
+        assertFalse(loop.getEscapeToMasterTitleController().visible(),
+                "the title's own Quit dialog owns Escape; no hold toast is drawn over it");
+        verify(audioManager, never()).fadeOutMusic();
+        assertNull(fadeCallback.get());
+        assertFalse(exitedApplication.get());
     }
 
     @Test
-    void escapePromptProgressRendersWithRectanglesInsteadOfTextBar() throws Exception {
+    void escapePromptRendersAsTheSharedMenuHoldToast() throws Exception {
         String source = Files.readString(Path.of("src/main/java/com/openggf/Engine.java"));
         int promptRenderer = source.indexOf("private void renderEscapeToMasterTitlePrompt");
-        int progressRenderer = source.indexOf("private void renderEscapeProgressBar");
-        int nextMethod = source.indexOf("private boolean updateDisplayShaderInput()");
+        int nextMethod = source.indexOf("static int escapeToastY(", promptRenderer);
 
         assertTrue(promptRenderer >= 0, "Engine must render the Escape prompt overlay");
-        assertTrue(progressRenderer > promptRenderer, "Escape progress must have a rectangle renderer");
-        assertTrue(nextMethod > progressRenderer, "Escape progress renderer must stay in the overlay section");
+        assertTrue(nextMethod > promptRenderer, "toast placement follows the prompt renderer");
         String escapeOverlaySource = source.substring(promptRenderer, nextMethod);
-        assertTrue(escapeOverlaySource.contains("GLCommand.CommandType.RECTI"),
-                "Escape progress should render with rectangle commands");
-        assertFalse(escapeOverlaySource.contains("buildEscapeProgressBar"),
-                "Escape progress should not render as an ASCII text bar");
+        assertTrue(escapeOverlaySource.contains("MenuChrome.holdToast"),
+                "Escape prompt should use the host-menu chrome, not diagnostic text");
+        assertFalse(escapeOverlaySource.contains("drawShadowedText"),
+                "Escape prompt should not render as debug HUD text");
     }
 
     @Test
