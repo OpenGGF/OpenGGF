@@ -2096,6 +2096,11 @@ public class SpriteManager implements PlayableSstDispatcher {
 	}
 
 	private static void applyScreenYWrapValueAfterControl(AbstractPlayableSprite playable) {
+		if (playable.getDead() && !playable.isCpuControlled()) {
+			// Main routine-6 owners use raw gravity primitives, not the control
+			// mask; preserve the same native dispatch as PlayableSpriteMovement.
+			return;
+		}
 		// ROM Obj02_Dead (docs/s2disasm/s2.asm:40736-40742) runs the dead CPU
 		// sidekick's fall through jsr (ObjectMoveAndFall).l directly and never
 		// applies the Screen_Y_wrap mask that the live control/hurt paths use, so
