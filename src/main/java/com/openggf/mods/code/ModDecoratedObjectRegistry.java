@@ -74,6 +74,10 @@ public final class ModDecoratedObjectRegistry implements ObjectRegistry, Mutator
     @Override public String getPrimaryName(int objectId) { return base.getPrimaryName(objectId); }
     @Override public ObjectSlotLayout objectSlotLayout() { return base.objectSlotLayout(); }
     @Override public ObjectWindowingStrategy objectWindowingStrategy() { return base.objectWindowingStrategy(); }
+    @Override public void installFixedSstObjects(int romZoneId, int act,
+                                               com.openggf.level.objects.FixedSstSlotSink slots) {
+        base.installFixedSstObjects(romZoneId, act, slots);
+    }
     @Override public List<String> getAliases(int objectId) { return base.getAliases(objectId); }
     @Override public boolean hasObjectKey(String objectKey) { return hasHostObjectKey(objectKey) || modKeys.contains(objectKey); }
     @Override public boolean hasHostObjectKey(String key) {

@@ -1,8 +1,7 @@
 package secondstrike.enemies;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.graphics.RenderPriority;
-import com.openggf.graphics.SpritePresentation;
+import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectReconstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
@@ -10,9 +9,42 @@ import com.openggf.level.objects.ObjectSpawn;
 /** Reinforced rhinobot: provoke its dash, dodge, then punish the long exposed brake. */
 public final class GuardBadnik extends SecondStrikeBadnik {
     private static final int WATCH = 0, WINDUP = 1, DASH = 2, RECOVER = 3, RETURN = 4;
+    // Previous full flat-floor travel was 90px: 150% further is 225px.
+    private static final int DASH_DISTANCE = 225, DASH_STEP = 10, RETURN_STEP = 2;
+    private static final int TELL_UPDATES = 36, BRAKE_UPDATES = 72;
+    private static final int PRIORITY_BUCKET = 5; // Native ObjSlot $280 / $80.
     private int dashAge;
+    private boolean companion;
+    private boolean parentDefeated;
+    private ObjectRefId parentIdentity;
+    // Placement identity deduplicates an ally across combat respawn; never grants lifetime authority.
+    private int parentAnchorX;
+    private int parentAnchorY;
+    private int parentLayoutIndex;
+
+    void attachToParent(ArtilleryBadnik parent, ObjectRefId identity) {
+        parentIdentity = java.util.Objects.requireNonNull(identity);
+        companion = true;
+        parentAnchorX = parent.anchorX; parentAnchorY = parent.anchorY;
+        parentLayoutIndex = parent.getSpawn().layoutIndex();
+    }
+    boolean companionOf(int x, int y, int layoutIndex) {
+        return companion && parentAnchorX == x && parentAnchorY == y && parentLayoutIndex == layoutIndex;
+    }
+    void releaseFromDefeatedParent(ObjectRefId identity) {
+        if (parentIdentity != null && parentIdentity.equals(identity)) parentDefeated = true;
+    }
+    @Override protected boolean hasLiveLifetimeOwner() {
+        if (!companion) return true;
+        if (!activeOnScreen()) return false;
+        if (parentDefeated) return true;
+        var parent = services().objectQuery().resolve(parentIdentity).orElse(null);
+        return parent instanceof ArtilleryBadnik artillery && !artillery.isDestroyed() && artillery.activeOnScreen();
+    }
 
     public GuardBadnik(ObjectSpawn spawn) { super(spawn, "Second Strike guard", 3); }
+
+    @Override public boolean supportsGroundedFieldMotion() { return true; }
 
     public boolean armed() { return phase == WINDUP || phase == DASH; }
     public boolean recovering() { return phase == RECOVER || phase == RETURN; }
@@ -23,11 +55,11 @@ public final class GuardBadnik extends SecondStrikeBadnik {
         age++;
         switch (phase) {
             case WATCH -> {
-                if (startTarget(nearestPlayer(updatePlayer), 144, 48)) {
+                if (startTarget(144, 48)) {
                     xVelocity = facingLeft ? -0xa00 : 0xa00;
                     if (canStartDash()) {
                         phase = WINDUP;
-                        timer = 36;
+                        timer = TELL_UPDATES;
                         services().playSfx(0x48); // sfx_Blast, native Rhinobot_StartChargePrep cue.
                     } else beginReturn();
                 }
@@ -36,20 +68,22 @@ public final class GuardBadnik extends SecondStrikeBadnik {
                 if (--timer <= 0) {
                     // The tell commits direction, but terrain may change before release.
                     if (canStartDash()) {
-                        phase = DASH; timer = 10; dashAge = 0;
+                        phase = DASH; timer = DASH_DISTANCE; dashAge = 0;
                         services().playSfx(0x43); // Native Sonic fire-shield dash attack cue.
                     } else recover();
                 }
             }
             case DASH -> {
-                int nextX = currentX + (xVelocity >> 8);
+                int steps = dashStride(timer);
                 // A dash stays on its natural ledge and never turns to chase the dodge.
-                if (Math.abs(nextX - anchorX) > 96 || !floorStrideAhead(10, 4)) {
+                if (steps == 0 || !floorStrideAhead(steps, 4)) {
                     recover();
                 } else {
+                    xVelocity = (facingLeft ? -steps : steps) << 8;
                     moveFixed();
                     dashAge++;
-                    if (--timer <= 0) recover();
+                    timer -= steps;
+                    if (timer <= 0) recover();
                 }
             }
             case RECOVER -> { if (--timer <= 0) beginReturn(); }
@@ -59,16 +93,32 @@ public final class GuardBadnik extends SecondStrikeBadnik {
     }
 
     private boolean canStartDash() {
-        if (Math.abs(currentX + (xVelocity >> 8) - anchorX) > 96) return false;
+        int steps = dashStride(DASH_DISTANCE);
+        if (steps == 0) return false;
         int previousY = currentY;
         // Admission is read-only: the actual stride still owns native floor following.
-        try { return floorStrideAhead(10, 4); }
+        try { return floorStrideAhead(steps, 4); }
         finally { currentY = previousY; }
+    }
+
+    private int dashStride(int remainingDistance) {
+        int direction = facingLeft ? -1 : 1;
+        int postLimit = anchorX + direction * DASH_DISTANCE;
+        return Math.min(Math.min(DASH_STEP, remainingDistance),
+                Math.max(0, (postLimit - currentX) * direction));
     }
 
     private boolean floorStrideAhead(int steps, int ahead) {
         int previousY = currentY;
         int direction = facingLeft ? -1 : 1;
+        // A front sensor cannot prove the first few feet of a newly reversed
+        // stride. Check that prefix too, so a hole beside the body is not skipped.
+        for (int step = 1; step <= ahead; step++) {
+            var floor = services().floorSurface(currentX + direction * step, currentY + 16,
+                    com.openggf.level.objects.TerrainSurface.Layer.FOREGROUND,
+                    com.openggf.level.objects.TerrainSurface.Path.PRIMARY);
+            if (!floor.foundSurface() || floor.distance() < -1 || floor.distance() >= 12) return false;
+        }
         // Probe every pixel of either stride: an endpoint alone skips small gaps.
         for (int step = 1; step <= steps; step++) {
             if (!floorAhead(currentX + direction * (step + ahead))) {
@@ -83,12 +133,12 @@ public final class GuardBadnik extends SecondStrikeBadnik {
         xVelocity = 0;
         if (currentX == anchorX) { phase = WATCH; timer = 0; return; }
         phase = RETURN;
-        timer = 64;
+        timer = (Math.abs(currentX - anchorX) + RETURN_STEP - 1) / RETURN_STEP;
         facingLeft = currentX > anchorX;
     }
 
     private void returnToPost() {
-        int steps = Math.min(2, Math.abs(anchorX - currentX));
+        int steps = Math.min(RETURN_STEP, Math.abs(anchorX - currentX));
         facingLeft = currentX > anchorX;
         // The charge ends aligned to its former front sensor. Return follows
         // centre-foot terrain one pixel at a time, avoiding an opposite-front
@@ -99,7 +149,7 @@ public final class GuardBadnik extends SecondStrikeBadnik {
             xVelocity = 0;
             return;
         }
-        // Walk toward the original post without overshooting or exceeding its96px radius.
+        // Walk toward the original post without overshooting, including an odd last pixel.
         xVelocity = (facingLeft ? -steps : steps) << 8;
         moveFixed();
         if (--timer <= 0 || currentX == anchorX) {
@@ -113,7 +163,7 @@ public final class GuardBadnik extends SecondStrikeBadnik {
 
     private void recover() {
         phase = RECOVER;
-        timer = 72;
+        timer = BRAKE_UPDATES;
         xVelocity = 0;
         services().playSfx(0x36); // sfx_Skid: armor disappears for the punish window.
     }
@@ -127,7 +177,7 @@ public final class GuardBadnik extends SecondStrikeBadnik {
         int flags = super.getCollisionFlags();
         return flags == 0 ? 0 : (armed() ? 0x80 : 0) | flags;
     }
-    @Override public int getPriorityBucket() { return RenderPriority.bucket(5); } // ObjSlot $280.
+    @Override public int getPriorityBucket() { return PRIORITY_BUCKET; } // ObjSlot $280.
     @Override public int getOnScreenHalfWidth() { return 24; }
     @Override public int getOnScreenHalfHeight() { return 32; }
 
@@ -143,12 +193,8 @@ public final class GuardBadnik extends SecondStrikeBadnik {
             if (flame != null) {
                 // Ani_FireShield script1: delay1, frames9..14 twice then SWITCH0.
                 // Fire shield's native right-facing art flips on LEFT, unlike Rhinobot body art.
-                var graphics = services().graphicsManager();
-                var subject = SpritePresentation.subject(graphics);
-                SpritePresentation.withSubject(graphics, new SpritePresentation.Subject(subject.id(),
-                        SpritePresentation.Part.ATTACHED_EFFECT, subject.suppressed()),
-                        () -> flame.drawFrameIndex(9 + ((dashAge / 2) % 6),
-                                currentX, currentY, facingLeft, false));
+                services().renderAttachedEffect(() -> flame.drawFrameIndex(9 + ((dashAge / 2) % 6),
+                        currentX, currentY, facingLeft, false));
             }
         }
         if (!recovering()) {

@@ -346,6 +346,8 @@ CF-ANNOTATION TYPE com.openggf.game.mutation.LevelMutationSurface visible @com.o
 CF-ANNOTATION TYPE com.openggf.game.mutation.MutationEffects visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.mutation.ZoneLayoutMutationPipeline visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.mutators.MonitorContent visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.mutators.NativeObjectFieldTarget visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.mutators.NativeObjectFieldTarget$Kind visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.mutators.ObjectHeadRole visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.palette.CustomZonePaletteBridge visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.palette.PaletteOwnershipRegistry visible @com.openggf.game.ModApi
@@ -518,6 +520,9 @@ CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.BlueSphereLayoutPolicy vi
 CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.BlueSphereLayoutPolicy visible @java.lang.FunctionalInterface
 CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.GumballSpringPolicy visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.GumballSpringPolicy visible @java.lang.FunctionalInterface
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.objects.Sonic3kMonitorFactory visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.objects.badniks.Sonic3kBadnikConfig visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.startup.DonatedDataSelectWarmupTask visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.zone.ZoneRuntimeRegistry visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.zone.ZoneRuntimeState visible @com.openggf.game.ModApi
@@ -639,6 +644,7 @@ CF-ANNOTATION TYPE com.openggf.level.objects.HudRow visible @com.openggf.game.Mo
 CF-ANNOTATION TYPE com.openggf.level.objects.HudStaticArt visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.HudWarningPolicy visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.ModRewindRecreatable visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.objects.ObjectCombatRules visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.ObjectFactory visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.ObjectFactory visible @java.lang.FunctionalInterface
 CF-ANNOTATION TYPE com.openggf.level.objects.ObjectInstance visible @com.openggf.game.ModApi
@@ -694,12 +700,15 @@ CF-ANNOTATION TYPE com.openggf.level.objects.PlayableSheetReader$Meta visible @c
 CF-ANNOTATION TYPE com.openggf.level.objects.PlayableSheetReader$PlayableSheet visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.PlayerBoundShieldRewindRecreatable visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.PoweredAttackSurface visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.objects.PoweredScreenAttackable visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.RewindClassResolver visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.RewindRecreatable visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.RewindRecreateContext visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.RingObjectPlacementMapping visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.RomObjectSnapshot visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.ShieldObjectInstance visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.objects.ShieldProjectileMotion visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.objects.ShieldProjectileMotion$Velocity visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.SolidContact visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.SolidExecutionMode visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.SolidObjectParams visible @com.openggf.game.ModApi
@@ -864,6 +873,7 @@ CF-ANNOTATION TYPE com.openggf.mods.mutators.TemporaryMutators$ActiveActivation 
 CF-ANNOTATION TYPE com.openggf.mods.mutators.TemporaryMutators$Availability visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.TransportPolicy visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.TransportPolicy$Kind visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.mods.objects.CaterkillerJrFactory visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.run.GhostPose visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.run.PlayerPose visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.run.RunEndReason visible @com.openggf.game.ModApi
@@ -1632,6 +1642,7 @@ CONSTRUCTOR com.openggf.level.objects.RewindRecreateContext public  <init>(com.o
 CONSTRUCTOR com.openggf.level.objects.RewindRecreateContext public  <init>(com.openggf.level.objects.ObjectSpawn,com.openggf.level.objects.PerObjectRewindSnapshot,com.openggf.level.objects.ObjectServices,com.openggf.level.objects.ObjectManager,com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry)
 CONSTRUCTOR com.openggf.level.objects.RomObjectSnapshot public  <init>(java.util.Map<java.lang.Integer,java.lang.Integer>,java.util.Map<java.lang.Integer,java.lang.Integer>)
 CONSTRUCTOR com.openggf.level.objects.ShieldObjectInstance public  <init>(com.openggf.game.PlayableEntity)
+CONSTRUCTOR com.openggf.level.objects.ShieldProjectileMotion$Velocity public  <init>(int,int)
 CONSTRUCTOR com.openggf.level.objects.SolidContact public  <init>(boolean,boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.level.objects.SolidContact public  <init>(boolean,boolean,boolean,boolean,boolean,int,boolean)
 CONSTRUCTOR com.openggf.level.objects.SolidObjectParams public  <init>(int,int,int)
@@ -2629,6 +2640,8 @@ FIELD com.openggf.game.mutators.MonitorContent public,static,final com.openggf.g
 FIELD com.openggf.game.mutators.MonitorContent public,static,final com.openggf.game.mutators.MonitorContent SUPER
 FIELD com.openggf.game.mutators.MonitorContent public,static,final com.openggf.game.mutators.MonitorContent S_MONITOR
 FIELD com.openggf.game.mutators.MonitorContent public,static,final com.openggf.game.mutators.MonitorContent TELEPORT
+FIELD com.openggf.game.mutators.NativeObjectFieldTarget$Kind public,static,final com.openggf.game.mutators.NativeObjectFieldTarget$Kind BADNIK
+FIELD com.openggf.game.mutators.NativeObjectFieldTarget$Kind public,static,final com.openggf.game.mutators.NativeObjectFieldTarget$Kind PROJECTILE
 FIELD com.openggf.game.mutators.ObjectHeadRole public,static,final com.openggf.game.mutators.ObjectHeadRole BADNIK
 FIELD com.openggf.game.mutators.ObjectHeadRole public,static,final com.openggf.game.mutators.ObjectHeadRole BOSS
 FIELD com.openggf.game.mutators.ObjectHeadRole public,static,final com.openggf.game.mutators.ObjectHeadRole NONE
@@ -2713,6 +2726,8 @@ FIELD com.openggf.game.solid.ContactKind public,static,final com.openggf.game.so
 FIELD com.openggf.game.solid.PlayerStandingState public,static,final com.openggf.game.solid.PlayerStandingState NONE
 FIELD com.openggf.game.solid.PostContactState public,static,final com.openggf.game.solid.PostContactState ZERO
 FIELD com.openggf.game.solid.PreContactState public,static,final com.openggf.game.solid.PreContactState ZERO
+FIELD com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe public,static,final com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe DOUBLE_LENGTH
+FIELD com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe public,static,final com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe STOCK
 FIELD com.openggf.graphics.FadeManager$FadeState public,static,final com.openggf.graphics.FadeManager$FadeState FADING_FROM_BLACK
 FIELD com.openggf.graphics.FadeManager$FadeState public,static,final com.openggf.graphics.FadeManager$FadeState FADING_FROM_WHITE
 FIELD com.openggf.graphics.FadeManager$FadeState public,static,final com.openggf.graphics.FadeManager$FadeState FADING_TO_BLACK
@@ -6342,6 +6357,7 @@ METHOD com.openggf.game.TitleScreenProvider public  com.openggf.game.TitleScreen
 METHOD com.openggf.game.TitleScreenProvider public  int startActIndex()
 METHOD com.openggf.game.TitleScreenProvider public  int startZoneIndex()
 METHOD com.openggf.game.TitleScreenProvider public  void drawFrozenForLevelSelect()
+METHOD com.openggf.game.TitleScreenProvider public  void drawOverlay(com.openggf.mods.ui.PixelCanvas)
 METHOD com.openggf.game.TitleScreenProvider public  void setExitToLevelHandler(java.lang.Runnable)
 METHOD com.openggf.game.TitleScreenProvider public,abstract  boolean isActive()
 METHOD com.openggf.game.TitleScreenProvider public,abstract  boolean isExiting()
@@ -6811,6 +6827,11 @@ METHOD com.openggf.game.mutation.ZoneLayoutMutationPipeline public,volatile  jav
 METHOD com.openggf.game.mutation.ZoneLayoutMutationPipeline public,volatile  void restore(java.lang.Object)
 METHOD com.openggf.game.mutators.MonitorContent public,static  com.openggf.game.mutators.MonitorContent valueOf(java.lang.String)
 METHOD com.openggf.game.mutators.MonitorContent public,static  com.openggf.game.mutators.MonitorContent[] values()
+METHOD com.openggf.game.mutators.NativeObjectFieldTarget public  boolean supportsGroundedFieldMotion()
+METHOD com.openggf.game.mutators.NativeObjectFieldTarget public,abstract  com.openggf.game.mutators.NativeObjectFieldTarget$Kind fieldKind()
+METHOD com.openggf.game.mutators.NativeObjectFieldTarget public,abstract  void displaceForField(int,int)
+METHOD com.openggf.game.mutators.NativeObjectFieldTarget$Kind public,static  com.openggf.game.mutators.NativeObjectFieldTarget$Kind valueOf(java.lang.String)
+METHOD com.openggf.game.mutators.NativeObjectFieldTarget$Kind public,static  com.openggf.game.mutators.NativeObjectFieldTarget$Kind[] values()
 METHOD com.openggf.game.mutators.ObjectHeadRole public,static  com.openggf.game.mutators.ObjectHeadRole valueOf(java.lang.String)
 METHOD com.openggf.game.mutators.ObjectHeadRole public,static  com.openggf.game.mutators.ObjectHeadRole[] values()
 METHOD com.openggf.game.palette.CustomZonePaletteBridge public,abstract  void submitFrameClaims(com.openggf.game.palette.PaletteOwnershipRegistry)
@@ -8133,6 +8154,10 @@ METHOD com.openggf.game.solid.SolidExecutionRegistry public,static  com.openggf.
 METHOD com.openggf.game.sonic3k.difficulty.AizMinibossAttackPolicy public,abstract  int followupDelayTicks(int)
 METHOD com.openggf.game.sonic3k.difficulty.BlueSphereLayoutPolicy public,abstract  byte[] transformLayout(int,byte[])
 METHOD com.openggf.game.sonic3k.difficulty.GumballSpringPolicy public,abstract  int[] springOffsets()
+METHOD com.openggf.game.sonic3k.objects.Sonic3kMonitorFactory public,static  com.openggf.level.objects.AbstractObjectInstance eggman(com.openggf.level.objects.ObjectSpawn)
+METHOD com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe public,static  com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe valueOf(java.lang.String)
+METHOD com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe public,static  com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe[] values()
+METHOD com.openggf.game.sonic3k.objects.badniks.Sonic3kBadnikConfig public,static  com.openggf.level.objects.DestructionEffects$DestructionConfig destruction()
 METHOD com.openggf.game.startup.DonatedDataSelectWarmupTask public,abstract  boolean isRunning()
 METHOD com.openggf.game.startup.DonatedDataSelectWarmupTask public,abstract  void start()
 METHOD com.openggf.game.zone.ZoneRuntimeRegistry public  com.openggf.game.rewind.snapshot.ZoneRuntimeSnapshot capture()
@@ -9885,6 +9910,7 @@ METHOD com.openggf.level.objects.BakedSheetReader$Palette public  int line()
 METHOD com.openggf.level.objects.BakedSheetReader$Palette public  int[] colors()
 METHOD com.openggf.level.objects.BakedSheetReader$Palette public,final  java.lang.String toString()
 METHOD com.openggf.level.objects.DestructionEffects public,static  com.openggf.level.objects.DestructionEffects$DestructionConfig deferredAnimalWithoutPopup(int,boolean)
+METHOD com.openggf.level.objects.DestructionEffects public,static  void defeatBadnik(com.openggf.level.objects.AbstractBadnikInstance,com.openggf.game.PlayableEntity,boolean)
 METHOD com.openggf.level.objects.DestructionEffects public,static  void destroyBadnik(int,int,com.openggf.level.objects.ObjectSpawn,com.openggf.game.PlayableEntity,com.openggf.level.objects.ObjectServices,com.openggf.level.objects.DestructionEffects$DestructionConfig)
 METHOD com.openggf.level.objects.DestructionEffects public,static  void destroyBadnik(int,int,com.openggf.level.objects.ObjectSpawn,int,com.openggf.game.PlayableEntity,com.openggf.level.objects.ObjectServices,com.openggf.level.objects.DestructionEffects$DestructionConfig)
 METHOD com.openggf.level.objects.DestructionEffects public,static  void destroyBadnikPowered(int,int,com.openggf.level.objects.ObjectSpawn,int,com.openggf.game.PlayableEntity,com.openggf.level.objects.ObjectServices,com.openggf.level.objects.DestructionEffects$DestructionConfig)
@@ -9960,6 +9986,9 @@ METHOD com.openggf.level.objects.HudWarningPolicy public,static  com.openggf.lev
 METHOD com.openggf.level.objects.HudWarningPolicy public,static  com.openggf.level.objects.HudWarningPolicy[] values()
 METHOD com.openggf.level.objects.ModRewindRecreatable public  com.openggf.level.objects.AbstractObjectInstance recreateForRewind(com.openggf.level.objects.RewindRecreateContext)
 METHOD com.openggf.level.objects.ModRewindRecreatable public,abstract  com.openggf.level.objects.AbstractObjectInstance recreateForRewind(com.openggf.level.objects.ObjectReconstructionContext)
+METHOD com.openggf.level.objects.ObjectCombatRules public,static  boolean permitsFiring(com.openggf.level.objects.ObjectServices,int)
+METHOD com.openggf.level.objects.ObjectCombatRules public,static  boolean permitsTargeting(com.openggf.level.objects.ObjectServices)
+METHOD com.openggf.level.objects.ObjectCombatRules public,static  int firingCooldown(com.openggf.level.objects.ObjectServices,int)
 METHOD com.openggf.level.objects.ObjectFactory public,abstract  com.openggf.level.objects.ObjectInstance create(com.openggf.level.objects.ObjectSpawn,com.openggf.level.objects.ObjectRegistry)
 METHOD com.openggf.level.objects.ObjectInstance public  boolean checksOutOfRangeAfterRoutine()
 METHOD com.openggf.level.objects.ObjectInstance public  boolean clearsRespawnStateOnCounterBasedOutOfRange()
@@ -10346,6 +10375,7 @@ METHOD com.openggf.level.objects.ObjectServices public  int resolveVIntRunCount(
 METHOD com.openggf.level.objects.ObjectServices public  java.util.Optional<com.openggf.level.SanctuaryReturnContext> sanctuaryReturnContext()
 METHOD com.openggf.level.objects.ObjectServices public  java.util.OptionalInt sanctuaryReentryStage()
 METHOD com.openggf.level.objects.ObjectServices public  void playMusicMailboxNativeRequest(int)
+METHOD com.openggf.level.objects.ObjectServices public  void renderAttachedEffect(java.lang.Runnable)
 METHOD com.openggf.level.objects.ObjectServices public  void requestActExit(com.openggf.game.ActExit,java.util.Map<java.lang.String,java.lang.String>)
 METHOD com.openggf.level.objects.ObjectServices public  void requestSanctuaryExit()
 METHOD com.openggf.level.objects.ObjectServices public  void requestSeamlessTransition(com.openggf.level.SeamlessLevelTransitionRequest)
@@ -10886,6 +10916,7 @@ METHOD com.openggf.level.objects.PlayableSheetReader$PlayableSheet public,final 
 METHOD com.openggf.level.objects.PlayerBoundShieldRewindRecreatable public  com.openggf.level.objects.AbstractObjectInstance recreateForRewind(com.openggf.level.objects.RewindRecreateContext)
 METHOD com.openggf.level.objects.PoweredAttackSurface public  java.util.List<com.openggf.level.objects.ObjectInstance> targetReadView()
 METHOD com.openggf.level.objects.PoweredAttackSurface public  void apply(com.openggf.game.PlayableEntity)
+METHOD com.openggf.level.objects.PoweredScreenAttackable public,abstract  void onPoweredScreenAttack(com.openggf.game.PlayableEntity)
 METHOD com.openggf.level.objects.RewindClassResolver public,abstract  java.util.Optional<java.lang.Class<?>> resolve(java.lang.String,java.lang.String)
 METHOD com.openggf.level.objects.RewindClassResolver public,abstract  java.util.Optional<java.lang.String> ownerOf(java.lang.Class<?>)
 METHOD com.openggf.level.objects.RewindRecreatable public,abstract  com.openggf.level.objects.AbstractObjectInstance recreateForRewind(com.openggf.level.objects.RewindRecreateContext)
@@ -10943,6 +10974,12 @@ METHOD com.openggf.level.objects.ShieldObjectInstance public  void appendRenderC
 METHOD com.openggf.level.objects.ShieldObjectInstance public  void destroy()
 METHOD com.openggf.level.objects.ShieldObjectInstance public  void setVisible(boolean)
 METHOD com.openggf.level.objects.ShieldObjectInstance public  void update(int,com.openggf.game.PlayableEntity)
+METHOD com.openggf.level.objects.ShieldProjectileMotion public,static  com.openggf.level.objects.ShieldProjectileMotion$Velocity awayFrom(int,int,int,int)
+METHOD com.openggf.level.objects.ShieldProjectileMotion$Velocity public  int x()
+METHOD com.openggf.level.objects.ShieldProjectileMotion$Velocity public  int y()
+METHOD com.openggf.level.objects.ShieldProjectileMotion$Velocity public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.level.objects.ShieldProjectileMotion$Velocity public,final  int hashCode()
+METHOD com.openggf.level.objects.ShieldProjectileMotion$Velocity public,final  java.lang.String toString()
 METHOD com.openggf.level.objects.SolidContact public  boolean movingInto()
 METHOD com.openggf.level.objects.SolidContact public  boolean pushing()
 METHOD com.openggf.level.objects.SolidContact public  boolean standing()
@@ -12140,6 +12177,7 @@ METHOD com.openggf.mods.mutators.TransportPolicy public,final  int hashCode()
 METHOD com.openggf.mods.mutators.TransportPolicy public,final  java.lang.String toString()
 METHOD com.openggf.mods.mutators.TransportPolicy$Kind public,static  com.openggf.mods.mutators.TransportPolicy$Kind valueOf(java.lang.String)
 METHOD com.openggf.mods.mutators.TransportPolicy$Kind public,static  com.openggf.mods.mutators.TransportPolicy$Kind[] values()
+METHOD com.openggf.mods.objects.CaterkillerJrFactory public,static  com.openggf.level.objects.AbstractBadnikInstance create(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe)
 METHOD com.openggf.mods.run.GhostPose public  com.openggf.mods.run.PlayerPose pose()
 METHOD com.openggf.mods.run.GhostPose public  float opacity()
 METHOD com.openggf.mods.run.GhostPose public  java.lang.String characterCode()
@@ -15262,6 +15300,7 @@ NESTED com.openggf.game.dataselect.HostSlotPreview com.openggf.game.dataselect.H
 NESTED com.openggf.game.mode.CourseControl com.openggf.game.mode.CourseControl$PlayerState
 NESTED com.openggf.game.modzone.ModZoneRuntimeProfile com.openggf.game.modzone.ModZoneRuntimeProfile$ScrollPolicy
 NESTED com.openggf.game.modzone.ModZoneRuntimeServices com.openggf.game.modzone.ModZoneRuntimeServices$Builder
+NESTED com.openggf.game.mutators.NativeObjectFieldTarget com.openggf.game.mutators.NativeObjectFieldTarget$Kind
 NESTED com.openggf.game.patch.LogicalRomResolver com.openggf.game.patch.LogicalRomResolver$CombinedRomBytesSource
 NESTED com.openggf.game.patch.ModuleResolutionService com.openggf.game.patch.ModuleResolutionService$LaunchPolicy
 NESTED com.openggf.game.patch.ModuleResolutionService com.openggf.game.patch.ModuleResolutionService$MainCharacterAvailability
@@ -15369,6 +15408,7 @@ NESTED com.openggf.level.objects.PlayableSheetReader com.openggf.level.objects.P
 NESTED com.openggf.level.objects.PlayableSheetReader com.openggf.level.objects.PlayableSheetReader$Frame
 NESTED com.openggf.level.objects.PlayableSheetReader com.openggf.level.objects.PlayableSheetReader$Meta
 NESTED com.openggf.level.objects.PlayableSheetReader com.openggf.level.objects.PlayableSheetReader$PlayableSheet
+NESTED com.openggf.level.objects.ShieldProjectileMotion com.openggf.level.objects.ShieldProjectileMotion$Velocity
 NESTED com.openggf.level.objects.SubpixelMotion com.openggf.level.objects.SubpixelMotion$State
 NESTED com.openggf.level.objects.TerrainSurface com.openggf.level.objects.TerrainSurface$Layer
 NESTED com.openggf.level.objects.TerrainSurface com.openggf.level.objects.TerrainSurface$Path
@@ -17282,6 +17322,8 @@ RECORD-COMPONENT com.openggf.level.objects.RewindRecreateContext objectManager c
 RECORD-COMPONENT com.openggf.level.objects.RewindRecreateContext objectServices com.openggf.level.objects.ObjectServices
 RECORD-COMPONENT com.openggf.level.objects.RewindRecreateContext spawn com.openggf.level.objects.ObjectSpawn
 RECORD-COMPONENT com.openggf.level.objects.RewindRecreateContext state com.openggf.level.objects.PerObjectRewindSnapshot
+RECORD-COMPONENT com.openggf.level.objects.ShieldProjectileMotion$Velocity x int
+RECORD-COMPONENT com.openggf.level.objects.ShieldProjectileMotion$Velocity y int
 RECORD-COMPONENT com.openggf.level.objects.SolidContact movingInto boolean
 RECORD-COMPONENT com.openggf.level.objects.SolidContact pushing boolean
 RECORD-COMPONENT com.openggf.level.objects.SolidContact sideDistX int
@@ -18698,6 +18740,8 @@ TYPE class public,final com.openggf.game.save.SaveSessionContext SUPER java.lang
 TYPE class public,final com.openggf.game.session.EngineContext SUPER java.lang.Object
 TYPE class public,final com.openggf.game.session.WorldSession SUPER java.lang.Object
 TYPE class public,final com.openggf.game.solid.ObjectSolidExecutionContext SUPER java.lang.Object
+TYPE class public,final com.openggf.game.sonic3k.objects.Sonic3kMonitorFactory SUPER java.lang.Object
+TYPE class public,final com.openggf.game.sonic3k.objects.badniks.Sonic3kBadnikConfig SUPER java.lang.Object
 TYPE class public,final com.openggf.game.zone.ZoneRuntimeRegistry SUPER java.lang.Object
 TYPE class public,final com.openggf.graphics.PaletteFadePresentation SUPER java.lang.Object
 TYPE class public,final com.openggf.io.ModInputLimits SUPER java.lang.Object
@@ -18707,6 +18751,7 @@ TYPE class public,final com.openggf.level.PatternDesc SUPER java.lang.Object
 TYPE class public,final com.openggf.level.SeamlessLevelTransitionRequest SUPER java.lang.Object
 TYPE class public,final com.openggf.level.objects.BakedSheetReader SUPER java.lang.Object
 TYPE class public,final com.openggf.level.objects.DestructionEffects SUPER java.lang.Object
+TYPE class public,final com.openggf.level.objects.ObjectCombatRules SUPER java.lang.Object
 TYPE class public,final com.openggf.level.objects.ObjectLifetimeOps SUPER java.lang.Object
 TYPE class public,final com.openggf.level.objects.ObjectPlayerQuery SUPER java.lang.Object
 TYPE class public,final com.openggf.level.objects.ObjectReconstructionContext SUPER java.lang.Object
@@ -18717,6 +18762,7 @@ TYPE class public,final com.openggf.level.objects.PlayableSheetMaterializer SUPE
 TYPE class public,final com.openggf.level.objects.PlayableSheetReader SUPER java.lang.Object
 TYPE class public,final com.openggf.level.objects.PoweredAttackSurface SUPER java.lang.Object
 TYPE class public,final com.openggf.level.objects.RomObjectSnapshot SUPER java.lang.Object
+TYPE class public,final com.openggf.level.objects.ShieldProjectileMotion SUPER java.lang.Object
 TYPE class public,final com.openggf.level.objects.SpringBounceHelper SUPER java.lang.Object
 TYPE class public,final com.openggf.level.objects.SubpixelMotion SUPER java.lang.Object
 TYPE class public,final com.openggf.level.resources.DeferredLevelResourceTracker SUPER java.lang.Object
@@ -18726,6 +18772,7 @@ TYPE class public,final com.openggf.mods.code.ModContext SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.code.ModLevelDefinition SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.code.StandaloneLevelLoader SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.mutators.MutatorConfigurationScreen SUPER java.lang.Object
+TYPE class public,final com.openggf.mods.objects.CaterkillerJrFactory SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.scene.SceneButtons SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.scene.SceneDraw SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.scene.SceneImage SUPER java.lang.Object
@@ -18838,6 +18885,7 @@ TYPE enum public,final com.openggf.game.rewind.identity.ObjectRefKind SUPER java
 TYPE enum public,final com.openggf.game.save.SaveReason SUPER java.lang.Enum<com.openggf.game.save.SaveReason>
 TYPE enum public,final com.openggf.game.save.SaveSlotState SUPER java.lang.Enum<com.openggf.game.save.SaveSlotState>
 TYPE enum public,final com.openggf.game.solid.ContactKind SUPER java.lang.Enum<com.openggf.game.solid.ContactKind>
+TYPE enum public,final com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe>
 TYPE enum public,final com.openggf.graphics.PatternAtlasRange SUPER java.lang.Enum<com.openggf.graphics.PatternAtlasRange>
 TYPE enum public,final com.openggf.graphics.SpriteMaskReplayRole SUPER java.lang.Enum<com.openggf.graphics.SpriteMaskReplayRole>
 TYPE enum public,final com.openggf.graphics.color.DisplayColorProfile SUPER java.lang.Enum<com.openggf.graphics.color.DisplayColorProfile>
@@ -18925,6 +18973,7 @@ TYPE enum public,static,final com.openggf.game.ZoneProgressionPlan$Completion SU
 TYPE enum public,static,final com.openggf.game.ZoneProgressionPlan$Credits SUPER java.lang.Enum<com.openggf.game.ZoneProgressionPlan$Credits>
 TYPE enum public,static,final com.openggf.game.dataselect.HostSlotPreview$HostSlotPreviewType SUPER java.lang.Enum<com.openggf.game.dataselect.HostSlotPreview$HostSlotPreviewType>
 TYPE enum public,static,final com.openggf.game.modzone.ModZoneRuntimeProfile$ScrollPolicy SUPER java.lang.Enum<com.openggf.game.modzone.ModZoneRuntimeProfile$ScrollPolicy>
+TYPE enum public,static,final com.openggf.game.mutators.NativeObjectFieldTarget$Kind SUPER java.lang.Enum<com.openggf.game.mutators.NativeObjectFieldTarget$Kind>
 TYPE enum public,static,final com.openggf.game.patch.ModuleResolutionService$LaunchPolicy SUPER java.lang.Enum<com.openggf.game.patch.ModuleResolutionService$LaunchPolicy>
 TYPE enum public,static,final com.openggf.game.presentation.PlayerPresentationPose$Kind SUPER java.lang.Enum<com.openggf.game.presentation.PlayerPresentationPose$Kind>
 TYPE enum public,static,final com.openggf.game.presentation.ScenePresentationFrame$Layer SUPER java.lang.Enum<com.openggf.game.presentation.ScenePresentationFrame$Layer>
@@ -19051,6 +19100,7 @@ TYPE interface public,abstract com.openggf.game.modzone.ModZoneAdapter SUPER <no
 TYPE interface public,abstract com.openggf.game.modzone.ModZoneRuntimeFactory SUPER <none>
 TYPE interface public,abstract com.openggf.game.mutation.LayoutMutationIntent SUPER <none>
 TYPE interface public,abstract com.openggf.game.mutation.LevelMutationSurface SUPER <none>
+TYPE interface public,abstract com.openggf.game.mutators.NativeObjectFieldTarget SUPER <none>
 TYPE interface public,abstract com.openggf.game.palette.CustomZonePaletteBridge SUPER <none>
 TYPE interface public,abstract com.openggf.game.patch.GamePatch SUPER <none>
 TYPE interface public,abstract com.openggf.game.patch.PatchEnablement SUPER <none>
@@ -19082,6 +19132,7 @@ TYPE interface public,abstract com.openggf.level.objects.ObjectRegistry SUPER <n
 TYPE interface public,abstract com.openggf.level.objects.ObjectServices SUPER <none>
 TYPE interface public,abstract com.openggf.level.objects.ObjectWindowingStrategy SUPER <none>
 TYPE interface public,abstract com.openggf.level.objects.PlayerBoundShieldRewindRecreatable SUPER <none>
+TYPE interface public,abstract com.openggf.level.objects.PoweredScreenAttackable SUPER <none>
 TYPE interface public,abstract com.openggf.level.objects.RewindClassResolver SUPER <none>
 TYPE interface public,abstract com.openggf.level.objects.RewindRecreatable SUPER <none>
 TYPE interface public,abstract com.openggf.level.objects.RingObjectPlacementMapping SUPER <none>
@@ -19498,6 +19549,7 @@ TYPE record public,static,final com.openggf.level.objects.PlayableSheetReader$Dp
 TYPE record public,static,final com.openggf.level.objects.PlayableSheetReader$Frame SUPER java.lang.Record
 TYPE record public,static,final com.openggf.level.objects.PlayableSheetReader$Meta SUPER java.lang.Record
 TYPE record public,static,final com.openggf.level.objects.PlayableSheetReader$PlayableSheet SUPER java.lang.Record
+TYPE record public,static,final com.openggf.level.objects.ShieldProjectileMotion$Velocity SUPER java.lang.Record
 TYPE record public,static,final com.openggf.level.objects.TouchResponseProvider$TouchRegion SUPER java.lang.Record
 TYPE record public,static,final com.openggf.level.render.PatternSpriteRenderer$FrameBounds SUPER java.lang.Record
 TYPE record public,static,final com.openggf.level.render.SpritePieceRenderer$FrameBounds SUPER java.lang.Record
@@ -20003,6 +20055,8 @@ TYPE-ANNOTATION com.openggf.game.mutation.LevelMutationSurface @com.openggf.game
 TYPE-ANNOTATION com.openggf.game.mutation.MutationEffects @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.mutation.ZoneLayoutMutationPipeline @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.mutators.MonitorContent @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.mutators.NativeObjectFieldTarget @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.mutators.NativeObjectFieldTarget$Kind @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.mutators.ObjectHeadRole @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.palette.CustomZonePaletteBridge @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.palette.PaletteOwnershipRegistry @com.openggf.game.ModApi
@@ -20175,6 +20229,9 @@ TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.BlueSphereLayoutPolicy @com.
 TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.BlueSphereLayoutPolicy @java.lang.FunctionalInterface
 TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.GumballSpringPolicy @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.GumballSpringPolicy @java.lang.FunctionalInterface
+TYPE-ANNOTATION com.openggf.game.sonic3k.objects.Sonic3kMonitorFactory @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.sonic3k.objects.badniks.Sonic3kBadnikConfig @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.startup.DonatedDataSelectWarmupTask @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.zone.ZoneRuntimeRegistry @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.zone.ZoneRuntimeState @com.openggf.game.ModApi
@@ -20296,6 +20353,7 @@ TYPE-ANNOTATION com.openggf.level.objects.HudRow @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.HudStaticArt @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.HudWarningPolicy @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.ModRewindRecreatable @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.objects.ObjectCombatRules @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.ObjectFactory @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.ObjectFactory @java.lang.FunctionalInterface
 TYPE-ANNOTATION com.openggf.level.objects.ObjectInstance @com.openggf.game.ModApi
@@ -20351,12 +20409,15 @@ TYPE-ANNOTATION com.openggf.level.objects.PlayableSheetReader$Meta @com.openggf.
 TYPE-ANNOTATION com.openggf.level.objects.PlayableSheetReader$PlayableSheet @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.PlayerBoundShieldRewindRecreatable @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.PoweredAttackSurface @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.objects.PoweredScreenAttackable @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.RewindClassResolver @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.RewindRecreatable @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.RewindRecreateContext @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.RingObjectPlacementMapping @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.RomObjectSnapshot @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.ShieldObjectInstance @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.objects.ShieldProjectileMotion @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.objects.ShieldProjectileMotion$Velocity @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.SolidContact @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.SolidExecutionMode @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.SolidObjectParams @com.openggf.game.ModApi
@@ -20521,6 +20582,7 @@ TYPE-ANNOTATION com.openggf.mods.mutators.TemporaryMutators$ActiveActivation @co
 TYPE-ANNOTATION com.openggf.mods.mutators.TemporaryMutators$Availability @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.TransportPolicy @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.TransportPolicy$Kind @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.mods.objects.CaterkillerJrFactory @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.run.GhostPose @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.run.PlayerPose @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.run.RunEndReason @com.openggf.game.ModApi

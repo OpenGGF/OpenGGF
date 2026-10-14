@@ -1,12 +1,10 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
-import com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInstance;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.AnimalObjectInstance;
 import com.openggf.level.objects.DestructionEffects;
 import com.openggf.level.objects.DestructionEffects.DestructionConfig;
 import com.openggf.level.objects.ObjectLifetimeOps;
@@ -119,14 +117,7 @@ abstract class AbstractS3kBadnikInstance extends AbstractBadnikInstance
      * {@code Touch_Enemy}-type badnik ({@code collision_flags $18}) that does not share this
      * class's shape, and {@code Touch_EnemyNormal} gives it the same destruction.
      */
-    static final DestructionConfig S3K_DESTRUCTION_CONFIG = new DestructionConfig(
-            Sonic3kSfx.BREAK.id,
-            (spawn, services) -> AnimalObjectInstance.deferredArtVariant(spawn, services, null),
-            false,  // useRespawnTracking (S3K always removeFromActiveSpawns)
-            (spawn, svc, pts) -> new Sonic3kPointsObjectInstance(spawn, svc, pts),
-            null,
-            false
-    );
+    static final DestructionConfig S3K_DESTRUCTION_CONFIG = Sonic3kBadnikConfig.destruction();
 
     protected final void defeat(AbstractPlayableSprite player) {
         destroyBadnik(player);

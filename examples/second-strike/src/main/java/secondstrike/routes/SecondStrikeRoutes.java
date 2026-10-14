@@ -41,9 +41,6 @@ public final class SecondStrikeRoutes {
     /** Authoring intention; native traversal evidence is recorded separately. */
     public record Opportunity(String character, String route, String reward, String tradeoff) { }
 
-    /** Binding request only. ModContext and the host supply verified factory ownership. */
-    public record EnemyBinding(ObjectSpawn spawn, String localFactoryKey) { }
-
     private static RingGroup group(String id, String decision, Integer... ids) {
         return new RingGroup(id, decision, Set.of(ids));
     }
@@ -105,22 +102,20 @@ public final class SecondStrikeRoutes {
         };
     }
 
-    /** Native anchor positions avoid inventing ground, removing routes, or moving scripted actors. */
-    public static List<EnemyBinding> enemyBindings(List<ObjectSpawn> objects) {
-        Bank bank = bank(objects);
-        if (bank == Bank.UNCHANGED) return List.of();
-        List<EnemyBinding> result = new ArrayList<>();
-        for (ObjectSpawn spawn : objects) {
-            if (spawn.ownerModId() != null || (bank == Bank.FIRE_CONTINUATION && spawn.x() >= 0x1000)) continue;
-            String key = switch (spawn.objectId()) {
-                case 0x8C -> "artillery";
-                case 0x8D -> "guard";
-                case 0x8E -> "spotter";
-                default -> null;
-            };
-            if (key != null) result.add(new EnemyBinding(spawn, key));
-        }
-        return List.copyOf(result);
+    public static boolean inOpening(Bank bank, ObjectSpawn spawn) {
+        return bank != Bank.UNCHANGED && spawn.ownerModId() == null
+                && (bank == Bank.FOREST || spawn.x() < 0x1000);
+    }
+    /** One selector owns the actual registered decoded enemy bindings. */
+    public static String enemyFactory(Bank bank, ObjectSpawn spawn) {
+        if (!inOpening(bank, spawn)) return null;
+        return switch (spawn.objectId()) {
+            case 0x8C -> "artillery";
+            case 0x8D -> "guard";
+            case 0x8E -> "spotter";
+            case 0x8F -> "caterkiller";
+            default -> null;
+        };
     }
 
     /** These are native capability opportunities, not assertions of certified route coverage. */

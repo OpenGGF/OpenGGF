@@ -563,3 +563,249 @@ not another suite result. All known unrelated files and dirty submodules
 retain their before-merge status and file hashes. No source tests were repeated
 on identical integrated inputs. This prose-only successor records delivery;
 publication and fully accounted task cleanup are the coordinator's final steps.
+
+
+## 2026-10-14 native/mod architecture review and enemy expansion
+
+This round is based on `develop` `485e89fbea5a2587b763052f0db115986ca681ce`.
+Two independent read-only reviews confirmed that placement admission retains the
+native level, and native physics, saves, checkpoints, rewards and progression
+remain the correct owners. The intentional enemy tactics stay in the mod. The
+stock game must not acquire Second Strike identity branches or difficulty values.
+
+The review also found a real decorator defect: `ModDecoratedObjectRegistry`
+forwarded slot layout but omitted `installFixedSstObjects`. Merely registering
+creator objects therefore removed HCZ's native slot 5 owner and MHZ's native slot 4
+owner beyond the authored AIZ slice. New manager tests failed on both absent
+owners, and a stacked-decorator/reset test failed before any layout allocation.
+The repair forwards the exact native hook to the underlying registry. Both native
+owners now precede dynamic allocation, reset reinstalls each exactly once, and
+ordinary rewind does not repeat initialization. The campaign badge also now uses
+the backing content patch's S3K eligibility; it cannot disappear merely because a
+custom character is selected. This aligns activation without certifying that
+character's traversal support. These eight selected architecture cases pass with no
+errors or skips after reproducing four failures before the repairs.
+
+"150% further" is implemented as 225 pixels: the previous flat-floor charge
+actually moved 90, despite its 96-pixel anchor limit. A distance budget replaces the
+ten-update expiry, preserving ten-pixel strides and allowing a five-pixel final
+stride. Return duration derives from the actual displacement at two pixels per
+update, including an odd final pixel. Terrain can still end the charge early.
+The longer range exposed a previously untested immediate-gap case: the front
+sensor skipped the first four pixels after reversing. That prefix is now queried
+with the same native surface/tolerance rules, rather than changing terrain or
+allowing a jump. Native interaction fixtures use a viewport containing the whole
+new range and a genuine grounded guard placement; an airborne synthetic placement
+cannot prove that a charge was admitted. The four affected distance/gap/native-return/
+powered-dispatch cases pass without skips. Broader composed qualification remains
+pending the Caterkiller and barrage integration.
+
+Powered full-screen attacks retain native eligibility: an armed HURT target or an
+ENEMY with nonzero collision property is not dispatched to its powered callback.
+Only the final eligible health point is cleared. The new test uses the production
+powered surface; the older direct-callback test is explicitly named as such.
+There is no generic touch/physics change or new mod-only exception in that owner.
+
+The composed expansion retains literal stock Caterkiller roles/delays and admits
+an explicit twelve-body preset: three firing tall, three non-firing middle, two
+thin and four tails. Exact head/body links and the recreation recipe survive
+rewind. Original-ROM inventory yields twenty forest bindings and eleven early-fire
+bindings (six badniks including three Caterkillers, five monitors); later canonical
+placements remain unchanged. Plants emit ten committed seeds per release, twice
+twelve updates apart, with twenty live seeds per exact owner, gravity `$18`,
+36-update tell, 108-update reload and 120-update TTL. Native Bloominator's unrelated
+allocation/parity observation remains untouched.
+
+The user's debt-cleanup steering supersedes the earlier twelve-warning acceptance.
+The current strict bundled package exits zero with zero findings; no warning
+suppression, budget relaxation or wholesale native AI export was used. The actual
+compiled candidate pin has 20,897 lines, 59 additions and no removals against
+`f36cc16c2`; descriptor and runtime version remain unpublished `0.7.0`.
+
+| Reviewed debt | Disposition in the lead composition |
+| --- | --- |
+| Twelve unsupported references | Native score/popup/animal recipe, tiny powered callback, monitor factory, title canvas and attached-effect seams; mod-owned valid priority constants. Strict packaging reports zero findings. |
+| Common-base enemy coupling | Guard owns companion state; Artillery overrides final-defeat release. Placement dedupe and exact captured lifetime ObjectRefId have distinct authority. Committed seeds survive combat defeat; unload retires them. |
+| Target eligibility | Existing native P1/P2 query filters alive and each role's range before nearest-X selection; swapped-role, dead and off-range participant regressions retain commitment/dodge. |
+| Repeated/dead control state | Supported SubpixelMotion replaces copied fixed-point arithmetic; obsolete origin coordinates, targetY, ID-zero rewrite and copied EnemyBinding oracle removed. Actual registration/decoded placements are asserted. |
+| Optional capabilities | Semantic body centres, native firing/field queries, attached effects and grounded creator derivatives compose under the original content owner. Collision state remains unchanged by picture transforms. Other capability/family support is not inferred. |
+| Copied stage admission | Authored twelve gates, empty-cell requirement and cloning remain; canonical host admission owns reachability/trailer/runway safety. Incomplete playback now writes its summary and fails; failure/results exits do not require an emerald. |
+| Builder snapshot/publication | One inherited build lease covers Maven/classpath/javac/strict publisher. A validated temporary candidate atomically replaces the prior jar; failed validation preserves it. Existing profile options are rejected explicitly, never overwritten. Five bounded Python tests include a competing writer. |
+| Creator-kit omission | Exact root two-path patch exports all sixteen authored ROM-free walkthroughs and explicit native-ROM Jupiter prerequisites. Twenty-one Python checks pass. SDK remains tools/templates paired with the same-source engine fatjar. |
+| Test setup/static state | One explicit test-only compiler/loader fixture replaces copied setup, without shared authority/cache. No mutable gameplay statics or unresolved TODOs were found. |
+
+Source accounting: exact child index trees `14a7a5a8` (eight paths) and `eea5f71f`
+(seven paths) were reviewed and applied as stable Git patches; child sources and
+history were retained. Root creator-kit commit `d1e8383a` contributes only
+`tools/modding/build_creator_kit.py` and `test_creator_kit.py`; both imported index
+blobs equal that clean peer. Rework after import is confined to the lead tree.
+
+A real manager negative-peak test reproduced the late-boss cue gap (three expected
+live flares, zero actual). The old out-of-Process_Sprites fixture hid the creation
+pass: a later-slot flare consumes its first animation update immediately, while
+the newly scheduled follow-up timer first decrements on the next parent update.
+Only opted-in warnings now include that birth update and hold the native final
+pose for longer admitted delays. Ordinary stock flare construction/sequence remains
+sixteen updates. Twelve boss checks verify every pre-wave render producer call,
+child-first/parent-first barrel slots, no-slot bounded failure, exact pending-wave
+rewind, defeat cancellation and policy-disabled graph/timing equality. Stock napalm,
+miniboss graph and AIZ2 codecs also pass (20-case prior composed warning run, no skips).
+
+Focused evidence before the combined run: the composed 164-case invocation had
+four fixture/assertion issues (array identity, two obsolete delay expectations and
+missing camera); the affected twenty cases pass after correction. Sixty mandatory
+S3K loading/bootstrap/decoding/AIZ checks passed without skips. Native floor, gap,
+collision, shield reflection, exhaustion, colocated identities, double graphs,
+registered owner/fault boundaries and restore/replay have focused coverage. The
+maintained builder and strict bundled `-Dopenggf.bundled.mods=examples/second-strike
+-DskipTests package` pass. Matched engine fatjar + SDK + testkit compile the actual
+exported example, strict-validate it with zero findings, and execute four public
+ModTestKit Jupiter placement cases without skips; SDK-only compilation is an
+expected negative, not a packaging-contract defect.
+
+Private upstream fetch pins `origin/develop` at `f076ef0063b4da24c52cb08038946e80d595b425`.
+Its native tooling retains native policy implementations/erased service factories
+and scene-owned startup. Intent composition is conflict-free and preserves original ancestry. Matched
+upstream checks compile the member contract/native gameplay probe with the actual
+engine + testkit, pass the bytecode contract controls and host-JVM bootstrap policy
+probe, and pass all six Linux/Windows packaging safety cases. The initial probe
+compile omitted the testkit/helper, executed no cases, and was corrected without
+production edits. This is no native-image portability qualification. Current
+strict artifacts, compiled pin and paired SDK source/Jupiter gates pass; short
+supplementary GPU/PCM witnesses and one change-based smoke run remain pending. No main integration/push has occurred in this private phase.
+Historical gentler full-route movies do not certify the harder cold campaign, and
+custom-character traversal and exhaustive/native-image portability remain unverified.
+
+### Receiver callback containment and supplementary witnesses
+
+The final source review of `31b9503d3` found raw calls to the new
+`NativeObjectFieldTarget` callbacks. A foreign receiver could throw outside a
+boundary during field selection, or inside a healthy caller's firing update and
+quarantine the wrong owner. Field classification, grounded capability,
+displacement and powered attack dispatch now use the existing
+`ObjectCallbackDispatch` with the exact receiving object. Nested
+`ModFaultBoundary.CallbackAborted` propagates unchanged: the receiver owns
+quarantine, the current frame stops, and host recovery discards unpublished state
+and returns to the title. No blanket callback-availability precheck was added;
+VM-fatal exceptions still escape without quarantining an owner.
+
+Six registered-owner regressions reproduced five failures before the repair
+(four wrong-owner aborts and one uncontained field-selection exception). The
+corrected six now pass without errors or skips. The first combined repair run
+also passed all eight existing engine abort/recovery cases and five healthy
+Second Strike composition cases, but exposed two new fixture omissions: a null
+registry windowing strategy and a destroyed receiver not actually retired from
+the manager. Only those fixture omissions were corrected before the final
+six-case run. The fixtures use a small synthetic ROM and do not certify native
+ROM behavior. The compiled 20,897-line API export remains byte-identical to its
+pin (SHA-256 `d997ec1568bea5fa83087421a74510276898c34f30af9c1e8d809dc4bef7eb0c`).
+The coordinator resumed the same private tree after the implementation task hit
+provider capacity; no duplicate build or replacement implementation was started.
+
+The `expansion-31b9503d3` captures are supplementary positioned witnesses, using
+offscreen rendering, original ROM bytes and offline PCM with no desktop input.
+The guard's flame charge and the plant's broad seed fan are visible; both short
+routes later die and are not completion evidence. Blue Sphere records 1,143 rows
+through twelve turn gates and a native return without an emerald. Gumball records
+593 rows, three springs consumed and a native return with lives increasing from
+three to four. A deliberately short Blue Sphere input fails with an incomplete
+summary instead of claiming completion.
+
+Cold and checkpoint AIZ2 positioning were rejected as Caterkiller witnesses:
+native apparent-act-one events clamp the player to `$F50`. A separate 180-row
+inherited-fire continuation explicitly sets apparent act zero before native
+events, retaining physical act one, actual fire placements, the native factory
+and ordinary GameLoop. It observes twelve linked bodies, a 116-pixel span at row
+136 and 144,000 stereo PCM frames. This declared supplementary setup is neither a
+cold-entry nor a whole-route qualification. These captures precede the receiver
+containment repair; fresh strict artifacts and change-based smoke validation are
+still required before integration.
+
+
+### Completed smoke and narrow architecture repairs
+
+The one frozen `60223c39ba81a32c7f272afe40233ca7d591f392` invocation,
+`20261014T151115Z-e5464144`, completed all 66 ordinary smoke batches: 3,264
+selected candidates, 3,234 reports, 27,294 cases, zero failures/errors and 64 skips.
+Ordinary Maven execution took 4,745.08 seconds. Fresh guards completed 680 cases
+with eight failures, no errors or skips, in 271.98 seconds. The source fingerprint
+remained `2ae721f8a8f7aac6aa30172013dd2f3034d4227a6bfbd4fd312a38b316c57b41`;
+no timeout or negative-row omission occurred. Root inspected the eight complete
+assertions and all 64 exact skip identities/causes, then acknowledged and deleted
+the diagnostics. The cycle assertion's full 4,686-character reported message was
+recovered from the runner detail rather than its capped short message.
+
+The eight failures are task regressions, not inherited failures:
+
+- The native Caterkiller preset lived in the mod implementation package, adding
+  a game/mod cycle and violating the explicit-contract boundary. It now lives
+  with the native badnik consumer; its two enum values and recipes are unchanged.
+- The S3K monitor factory violated matching-game placement. It now lives under
+  `game.sonic3k.objects`. Native destruction config moves to
+  `Sonic3kBadnikConfig.destruction()`, leaving shared effects dependent only on
+  their existing factory contracts; this removes the concrete-construction and
+  shared-game-dependency failures without changing the native reward sequence.
+- The body-to-head reference already restored exactly in adjacent-graph tests,
+  but lacked its explicit audit policy. The class-specific `CAPTURED` declaration
+  now documents that identity codec; no gap baseline is enlarged. The synthetic
+  filler update parameter now names `vIntRunCount`.
+- Registered-factory derivative admission moves intact from ObjectManager into
+  `RegisteredObjectDerivatives`. The manager's internal registry accessor serves
+  derivative admission and rewind recreation. The 3,086-line budget is unchanged.
+
+The 64 skipped cases remain unexecuted coverage: opt-in diagnostics/measurements,
+Infinite Sonic route applicability, graphics/EGL preconditions, local reference
+availability and a CPZ spin-tube assumption. No missing-ROM skip occurred. No
+baseline equivalence is inferred for these skips.
+
+The private intent merge now includes published `88fc03dacd9835437070d40109d62b97a665f944`.
+Its sole textual conflict is the runtime lease expiration branch: retain both
+producer/content-owner cancellation and upstream's early dead-root cleanup.
+New native ring leases have no separate content owner. Host-key registry routing,
+preview/browse delegation and fixed-SST forwarding all survive. A composed
+attached-effect test then reproduced loss of the new deferred palette replay;
+the attached subject now retains that replay while keeping its own part, native
+head scale and failure-safe outer-subject restoration.
+
+The actually compiled mutable API snapshot has 20,900 lines, SHA-256
+`c1ab9c6d18efc4d8094aabd46c6ebadc4327c75485f4e714d04ad8a608703f05`.
+Its private-checkpoint delta is 16 additions/13 removals due to the relocated
+unpublished roots; descriptor/runtime version stays candidate `0.7.0`, and no
+published pin changes. Final focused behavior, actual artifacts and full fresh
+guards remain pending on this composition. Completed ordinary coverage is not
+repeated merely for these package/extraction repairs; new overlap risks receive
+focused registry, ownership, palette, native-recipe and startup checks.
+
+
+The composed final focus then passed all 211 cases across the 29 selected classes,
+with zero skips. Strict bundled packaging, paired SDK/testkit/Javadoc artifact
+verification and the actual exported four-case Jupiter source gate also passed
+with zero findings or skips. All original eight guard failures are resolved.
+The 681-case fresh guard run exposed one extraction follow-up: the new helper
+retained a raw `addDynamicObject` call that was exempt only while inside the
+manager. It now admits the already-validated instance through the existing
+`createDynamicObject` path, under the same content-owner boundary and native
+construction context. Factory rejection still occurs before admission; no budget
+or guard exemption changes. Delta lifecycle/ownership checks and another fresh
+guard invocation are required; the other completed focus/artifact checks are not
+repeated as a ceremony.
+
+
+Final narrow repair qualification passed: the three-class lifecycle focus completed
+31 cases, and the complete fresh guard profile completed 681 cases, both with
+zero failures/errors/skips. Both Maven invocations used normal admission, Java 25,
+the explicit surfaceless-EGL flag, Lua 5.4 and the original three absolute ROM
+paths. Focused `verify` also rebuilt the strict bundled example and matching SDK,
+testkit and Javadoc artifacts with zero findings. The API snapshot remains
+byte-identical at 20,900 lines. Frozen build-input fingerprint
+`96911bc13650d9e87145290feffdfb3dd207ec707a7792bf6790b1f27fbd5b56`
+was unchanged across both gates; all nine observed blockers are resolved. Root
+consumed the exact reports and removed their generated diagnostics.
+
+Develop subsequently published `b649a3c9b87e8708f0428e51b3848c5c3712cdd1`,
+adding the shared content importer and its illustrated editor guide. The only
+executable path overlap is Engine: this task adds two title-overlay draw lines;
+the incoming change adds import-screen ownership and host UI away from that draw
+call. Final main composition must preserve both. Its title/import/overlay and
+native startup consumers plus affected structural guards receive bounded
+post-integration checks; the already completed ordinary smoke is not repeated.

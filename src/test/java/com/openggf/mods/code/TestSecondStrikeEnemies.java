@@ -17,10 +17,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import javax.tools.ToolProvider;
 import java.lang.reflect.Proxy;
 import java.net.URLClassLoader;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,14 +32,7 @@ class TestSecondStrikeEnemies {
     static URLClassLoader loader;
 
     @BeforeAll static void compileCreatorSource() throws Exception {
-        var output = Files.createDirectory(temporary.resolve("classes"));
-        var args = new ArrayList<>(List.of("--release", "25", "-cp", System.getProperty("java.class.path"),
-                "-d", output.toString()));
-        try (var sources = Files.walk(Path.of("examples/second-strike/src/main/java/secondstrike/enemies"))) {
-            sources.filter(p -> p.toString().endsWith(".java")).sorted().forEach(p -> args.add(p.toString()));
-        }
-        assertEquals(0, ToolProvider.getSystemJavaCompiler().run(null, null, null, args.toArray(String[]::new)));
-        loader = new URLClassLoader(new java.net.URL[]{output.toUri().toURL()}, TestSecondStrikeEnemies.class.getClassLoader());
+        loader = SecondStrikeSourceFixture.compile(temporary.resolve("classes"), SecondStrikeSourceFixture.ENEMIES);
     }
 
     @AfterAll static void closeCreatorLoader() throws Exception {
@@ -68,6 +59,28 @@ class TestSecondStrikeEnemies {
         }
     }
 
+    @Test void nearestTargetFiltersAliveAndRoleRangeBeforeComparingNativeParticipants() throws Exception {
+        for (String role : List.of("SpotterBadnik", "GuardBadnik", "ArtilleryBadnik")) {
+            for (boolean swapped : List.of(false, true)) for (boolean dead : List.of(false, true)) {
+                try (var fixture = new Fixture()) {
+                    var hidden = mock(PlayableEntity.class);
+                    when(hidden.getCentreX()).thenReturn((short)420); when(hidden.getCentreY()).thenReturn((short)(dead ? 200 : 500));
+                    when(hidden.getDead()).thenReturn(dead);
+                    var eligible = mock(PlayableEntity.class);
+                    when(eligible.getCentreX()).thenReturn((short)460); when(eligible.getCentreY()).thenReturn((short)200);
+                    fixture.services.withPlayerQuery(new ObjectPlayerQuery(() -> swapped ? eligible : hidden,
+                            () -> List.of(swapped ? hidden : eligible)));
+                    var enemy = fixture.enemy(role, role.equals("SpotterBadnik") ? "spotter" : role.equals("GuardBadnik") ? "guard" : "artillery", 400, 200);
+                    enemy.update(0, swapped ? eligible : hidden);
+                    var target = enemy.getClass().getSuperclass().getDeclaredField("targetX"); target.setAccessible(true);
+                    assertEquals(460, target.getInt(enemy), role + " must select the eligible participant before nearest-X ranking");
+                    when(eligible.getCentreX()).thenReturn((short)300); enemy.update(1, eligible);
+                    assertEquals(460, target.getInt(enemy), "a dodge cannot change the committed target");
+                }
+            }
+        }
+    }
+
     @Test void guardStopsAtNativeLedgeInsteadOfCrossingTheGap() throws Exception {
         try (var fixture = new Fixture()) {
             var guard = fixture.enemy("GuardBadnik", "guard", 400, 200);
@@ -77,6 +90,34 @@ class TestSecondStrikeEnemies {
             fixture.floorPresent = false;
             guard.update(40, fixture.player);
             assertEquals(400, guard.getX());
+            assertEquals(0x0b, touch(guard).getCollisionFlags());
+        }
+    }
+
+    @Test void chargeTravelsOneHundredFiftyPercentFurtherAndReturnsWithoutOvershooting() throws Exception {
+        try (var fixture = new Fixture()) {
+            var guard = fixture.enemy("GuardBadnik", "guard", 400, 200);
+            guard.update(0, fixture.player);
+            for (int tick = 0; tick < 36; tick++) guard.update(tick, fixture.player);
+            for (int stride = 0; stride < 22; stride++) {
+                int previousX = guard.getX();
+                guard.update(stride, fixture.player);
+                assertEquals(-10, guard.getX() - previousX);
+            }
+            guard.update(23, fixture.player);
+            assertEquals(175, guard.getX(), "225px is 150% further than the previous actual90px");
+            assertEquals(0x0b, touch(guard).getCollisionFlags());
+            for (int tick = 0; tick < 72; tick++) {
+                guard.update(tick, fixture.player);
+                assertEquals(175, guard.getX(), "the complete exposed brake stays stationary");
+            }
+            for (int tick = 0; tick < 112; tick++) {
+                int previousX = guard.getX();
+                guard.update(tick, fixture.player);
+                assertEquals(2, guard.getX() - previousX);
+            }
+            guard.update(113, fixture.player);
+            assertEquals(400, guard.getX(), "the final return stride is one pixel, with no teleport");
             assertEquals(0x0b, touch(guard).getCollisionFlags());
         }
     }
@@ -130,7 +171,7 @@ class TestSecondStrikeEnemies {
         }
     }
 
-    @Test void poweredWindupUsesMultiHitHealthWhileKeepingNativeHurtCollision() throws Exception {
+    @Test void directPoweredCallbackUsesMultiHitHealthWhileKeepingNativeHurtCollision() throws Exception {
         try (var fixture = new Fixture()) {
             var guard = fixture.enemy("GuardBadnik", "guard", 400, 200);
             guard.update(0, fixture.player);
@@ -156,8 +197,8 @@ class TestSecondStrikeEnemies {
             ((PoweredScreenAttackable) guard).onPoweredScreenAttack(fixture.player);
             assertFalse(guard.isDestroyed());
             assertEquals(2, touch(guard).getCollisionProperty(), "invulnerable dash cannot lose HP");
-            for (int tick = 0; tick < 12; tick++) guard.update(tick, fixture.player);
-            assertTrue(Math.abs(guard.getX() - 400) <= 96);
+            for (int tick = 0; tick < 24; tick++) guard.update(tick, fixture.player);
+            assertEquals(225, Math.abs(guard.getX() - 400));
             assertEquals(0x0b, touch(guard).getCollisionFlags());
             assertEquals(0, fixture.explosions());
             verifyNoInteractions(fixture.score);
@@ -181,18 +222,19 @@ class TestSecondStrikeEnemies {
             var guard = fixture.enemy("GuardBadnik", "guard", 400, 200);
             fixture.playerX = 260;
             finishGuardCharge(guard, fixture);
-            assertEquals(310, guard.getX());
+            assertEquals(175, guard.getX());
             for (int tick = 0; tick < 72; tick++) {
                 guard.update(tick, fixture.player);
-                assertEquals(310, guard.getX(), "all72 exposed brake updates remain stationary");
+                assertEquals(175, guard.getX(), "all72 exposed brake updates remain stationary");
                 assertEquals(0x0b, touch(guard).getCollisionFlags());
             }
-            for (int tick = 0; tick < 45; tick++) {
+            for (int tick = 0; tick < 112; tick++) {
                 int previousX = guard.getX();
                 guard.update(tick, fixture.player);
                 assertEquals(2, guard.getX() - previousX, "return is a walk, not a teleport or charge");
                 assertEquals(0x0b, touch(guard).getCollisionFlags(), "return stays vulnerable");
             }
+            guard.update(113, fixture.player);
             assertEquals(400, guard.getX());
             assertEquals(1, fixture.sounds.stream().filter(id -> id == 0x43).count());
             guard.update(0, fixture.player);
@@ -209,9 +251,9 @@ class TestSecondStrikeEnemies {
             fixture.playerX = 260;
             finishGuardCharge(guard, fixture);
             for (int tick = 0; tick < 84; tick++) guard.update(tick, fixture.player);
-            assertEquals(334, guard.getX());
+            assertEquals(199, guard.getX());
             assertReplay(guard, fixture, 8);
-            assertEquals(350, guard.getX());
+            assertEquals(215, guard.getX());
             assertEquals(0x0b, touch(guard).getCollisionFlags());
             attack(guard, fixture.player);
             assertFalse(guard.isDestroyed());
@@ -227,10 +269,10 @@ class TestSecondStrikeEnemies {
             fixture.playerX = 260;
             finishGuardCharge(guard, fixture);
             for (int tick = 0; tick < 72; tick++) guard.update(tick, fixture.player);
-            fixture.floorGapX = 311; // One-pixel hole before a clear2px return endpoint.
+            fixture.floorGapX = 176; // One-pixel hole before a clear2px return endpoint.
             for (int tick = 0; tick < 70; tick++) {
                 guard.update(tick, fixture.player);
-                assertEquals(310, guard.getX(), "a rejected stride cannot teleport toward the post");
+                assertEquals(175, guard.getX(), "a rejected stride cannot teleport toward the post");
                 assertEquals(0x0b, touch(guard).getCollisionFlags(), "blocked return must not re-arm");
             }
             assertEquals(1, fixture.sounds.stream().filter(id -> id == 0x43).count(),
@@ -253,7 +295,7 @@ class TestSecondStrikeEnemies {
     private static void finishGuardCharge(AbstractObjectInstance guard, Fixture fixture) {
         guard.update(0, fixture.player);
         for (int tick = 0; tick < 36; tick++) guard.update(tick, fixture.player);
-        for (int tick = 0; tick < 10; tick++) guard.update(tick, fixture.player);
+        for (int tick = 0; tick < 23; tick++) guard.update(tick, fixture.player);
     }
 
     @Test void oneFloorValidatedCompanionIsNonrecursiveAndRetiresWithAnUnloadedParent() throws Exception {
@@ -348,17 +390,17 @@ class TestSecondStrikeEnemies {
             caller.update(0, fixture.player);
             gunner.update(0, fixture.player);
             for (int i = 0; i < 36; i++) gunner.update(i, fixture.player);
-            assertEquals(1, fixture.shots().size(), "live nearby caller must enable a committed supporting volley");
+            assertEquals(10, fixture.shots().size(), "live nearby caller must enable a committed supporting volley");
 
             var other = fixture.enemy("ArtilleryBadnik", "artillery", 400, 200);
             caller.setDestroyed(true);
             for (int i = 0; i < 48; i++) other.update(i, fixture.player);
-            assertEquals(1, fixture.shots().size(), "destroyed caller cannot keep a hidden alert alive");
+            assertEquals(10, fixture.shots().size(), "destroyed caller cannot keep a hidden alert alive");
             assertEquals(0, touch(caller).getCollisionFlags());
         }
     }
 
-    @Test void gunnerLocksBothShotsBeforeTellAndCapsItsLiveChildren() throws Exception {
+    @Test void gunnerLocksBothFansBeforeTellAndCapsItsLiveChildren() throws Exception {
         try (var fixture = new Fixture()) {
             var gunner = fixture.enemy("ArtilleryBadnik", "artillery", 400, 200);
             fixture.playerX = 320;
@@ -367,14 +409,18 @@ class TestSecondStrikeEnemies {
             fixture.playerY = 100;
             for (int i = 0; i < 36; i++) gunner.update(i, fixture.player);
             for (int i = 0; i < 12; i++) gunner.update(i, fixture.player);
-            assertEquals(2, fixture.shots().size());
+            assertEquals(20, fixture.shots().size());
             int firstX = velocity(fixture.shots().getFirst(), "horizontalVelocity");
             int firstY = velocity(fixture.shots().getFirst(), "verticalVelocity");
             assertTrue(firstX < 0, "volley stays aimed left after the player dodges right");
-            assertEquals(firstX, velocity(fixture.shots().getLast(), "horizontalVelocity"));
-            assertEquals(firstY, velocity(fixture.shots().getLast(), "verticalVelocity"));
+            var firstFan = fixture.shots().subList(0, 10); var secondFan = fixture.shots().subList(10, 20);
+            for (int lane = 0; lane < 10; lane++) {
+                assertEquals(velocity(firstFan.get(lane), "horizontalVelocity"), velocity(secondFan.get(lane), "horizontalVelocity"));
+                assertEquals(velocity(firstFan.get(lane), "verticalVelocity"), velocity(secondFan.get(lane), "verticalVelocity"));
+            }
+            assertEquals(-0x80, firstY);
             for (int i = 0; i < 200; i++) gunner.update(i, fixture.player);
-            assertEquals(2, fixture.shots().size(), "unexpired shots cannot accumulate behind the player");
+            assertEquals(20, fixture.shots().size(), "unexpired shots cannot accumulate behind the player");
             assertEquals(0x23, touch(gunner).getCollisionFlags(), "the gunner's body remains punishable throughout");
         }
     }
@@ -396,7 +442,7 @@ class TestSecondStrikeEnemies {
         try (var fixture = new Fixture()) {
             var type = loader.loadClass("secondstrike.enemies.CommittedShot");
             var shot = (AbstractObjectInstance) type.getConstructor(ObjectSpawn.class, int.class,
-                    int.class, int.class, int.class).newInstance(spawn("shot", 400, 200), 640, 128, 400, 216);
+                    int.class).newInstance(spawn("shot", 400, 200), 640, 128);
             shot.setServices(fixture.services);
             for (int i = 0; i < 5; i++) shot.update(i, fixture.player);
             assertTrue(shot.isDestroyed(), "native floor contact removes low projectile hurt authority");
@@ -420,7 +466,7 @@ class TestSecondStrikeEnemies {
             }
             var shotType = loader.loadClass("secondstrike.enemies.CommittedShot");
             var shot = (AbstractObjectInstance) shotType.getConstructor(ObjectSpawn.class, int.class,
-                    int.class, int.class, int.class).newInstance(spawn("shot", 400, 200), -640, -123, 400, 216);
+                    int.class).newInstance(spawn("shot", 400, 200), -640, -123);
             shot.setServices(fixture.services);
             for (int i = 0; i < 3; i++) shot.update(i, fixture.player);
             assertReplay(shot, fixture, 16);
