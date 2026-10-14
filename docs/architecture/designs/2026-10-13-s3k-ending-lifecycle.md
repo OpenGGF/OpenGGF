@@ -1393,3 +1393,77 @@ open. In particular, CPU palette cells62/63 differ at those later sea spots
 while published CRAM matches native; a later-produced CPU bank must not be
 substituted for the framebuffer generation. Historical media/index bytes
 remain immutable.
+
+
+### First opaque player mapping piece and original RGB attribution (2026-10-14)
+
+The remaining34 early Tails image pixels were a mapping-piece priority error,
+not a failed palette hold. Native published SAT at input63 contains the four
+C4 pieces in ROM order; all20 player VRAM patterns match the engine's published
+DPLC versions exactly and all64 published CRAM words agree. An independent
+raster of the overlapping opaque pieces finds exactly34 differing-color
+pixels: every native pixel selects the first piece, every old engine pixel
+selects the final piece. Example source overlap is tile$6AE color7 versus
+tile$6A6 color9. No observed coordinates define an exclusion mask.
+
+PlayerSpriteRenderer drew mapping pieces forward on its direct painter path,
+unlike the existing PatternSpriteRenderer. It now emits painter pieces in
+reverse order while preserving native forward SAT collection and each original
+head-mask piece index. All public declarations, fields, state and snapshot
+shapes stay unchanged. Request32815 had four genuine painter negatives and
+four green SAT controls; its two GPU draft failures were an over-specific
+34-color-count premise. Different legitimate current body phases merge some
+colors, so the test instead derives its ROM opaque footprint and requires the
+actual first-owner colors at every distinguishable overlap. Corrected67341
+reproduced2/2 failures (8 expected /0 matching at320/800), zero errors/skips,
+24.298s. The full changed-owner request3509 passed54/0/0/0 at16:41:23 BST
+(1:35 Maven): new mapping-order8, ending GPU14 including full-world/pixel
+replay in both directions/two cycles, palette context2, native S1/S2/S3 head
+art6, SAT preparation2/replay2, presentation14 and lifecycle6.
+
+Production SHA256:3b9722f5ec586c0008e11bbbd3b2a342c1d2f05ca128e9c48e612e0127b998cd
+at bf7361a3a3ce2b6fc71256fc2059c29d8402f163 plus the scoped renderer fix.
+Engine-only v6 request42302 passed12.522s at16:52:17 BST. Its immutable jar is
+2fa8fafa27c8e1f1d7d69eefcc93f0bd18097847d06bd7f311d447f269478dd0,
+with unchanged native85099/reference specification and neutral controller
+input. Actual child UTC intervals were15:52:05.635152–15:52:11.358434 (Sonic)
+and15:52:11.372691–15:52:17.045934 (Tails); exact EndingEngineSpotProbe argv,
+1GiB/two-CPU/EGL options, source/input/jar hashes and ledgers are retained in
+new v6 provenance files. Helper compilation remained inside queued exec's
+intended worktree lease. Full native/engine frames were viewed: Tails31/63/511
+now has zero logical3-bit differences across320×224; the initial Tails negative
+falls1838→1804, while Sonic's1457 remains. Sonic31..6143 and Tails1023..4095
+retain zero logical differences. Later Tails5119/6143 remains122/140. Its VSRAM
+and216 of224 published HScroll words match, but native ROM VDP13=$3C points at
+VRAM$F000, whose rows196–199 and212–215 each differ by one background pixel.
+That remaining source bank/arithmetic/admission issue is not repaired by the
+player mapping fix. Original byte RGB still differs and has not been normalized
+into a passing comparison. Historical v1..v5 images remain preserved.
+
+The pinned reference RGB transfer is also now explained by primary source.
+BizHawk2.11 pins Genesis-Plus-GX051d430d3d1b54625f9900c8f152d7f232e06daf.
+Its32BPP Mode5 LUT doubles each3-bit normal component, then replicates the
+resulting nibble into both byte halves: output is34*v, maximum238. BizHawk's
+managed video provider copies those pixels verbatim and the actual host uses
+default settings without a LUT/gamma option. OpenGGF's public Palette.Color
+uses its canonical rounded255/7 transfer. This source-owned reference choice
+does not by itself establish analog hardware RGB or justify changing the
+public color operation; byte-RGB acceptance remains explicitly different.
+
+Primary source: [normal LUT and pixel format](https://github.com/TASEmulators/Genesis-Plus-GX/blob/051d430d3d1b54625f9900c8f152d7f232e06daf/core/vdp_render.c#L1001),
+[32BPP build selection](https://github.com/TASEmulators/BizHawk/blob/2.11/waterbox/gpgx/Makefile#L25),
+[verbatim video copy](https://github.com/TASEmulators/BizHawk/blob/2.11/src/BizHawk.Emulation.Cores/Consoles/Sega/gpgx64/GPGX.IVideoProvider.cs#L128).
+
+The initial Sonic input1 image's large incomplete shape was initially named
+Tornado incorrectly. Actual published SAT entries17–20 use C52E/CD2E:
+the visible owner is Master Emerald; initial Tornado is mostly offscreen.
+Native Master VRAM differs in2059/2176 bytes between input1 and settled31,
+while the engine already shows coherent art. This is an unresolved initial
+KosM/DMA publication question, with normal load-time profile/admission still
+to be checked before any timing repair. No fitted delay, RGB normalization or
+reference asset injection is proposed. All nine products/PAL/PCM, later sea
+and native SAT overflow remain separate obligations.
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl ALSOFT_DRIVERS=null python3 tools/testing/maven_queue.py -Dmse=off '-Ds3k.rom.path=<MAIN_WORKSPACE>/Sonic and Knuckles & Sonic 3 (W) [!].gen' '-Dsonic1.rom.path=<MAIN_WORKSPACE>/Sonic The Hedgehog (W) (REV01) [!].gen' '-Dsonic2.rom.path=<MAIN_WORKSPACE>/Sonic The Hedgehog 2 (W) (REV01) [!].gen' '-Dtest=TestPlayerSpriteRendererPiecePriority,TestS3kEndingScenePriorityPixels,TestPlayerSpriteRendererPaletteContext,TestPlayerHeadPresentation,TestSpritePieceRendererSatPreparation,TestGraphicsManagerSpriteSatReplay,TestSpritePresentation,TestLevelSpritePresentationLifecycle' test -B
+```
