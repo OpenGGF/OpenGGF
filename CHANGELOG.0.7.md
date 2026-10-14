@@ -1147,6 +1147,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   representative rendered gameplay, audio and scene lifecycle paths. The shared
   gameplay probe checks every declared one-shot sample through the production
   session wrapper into final mixed PCM, including Eggman's Sky's Vorbis voice bank.
+  Scene startup probes open the backing game's initial zone before the scene,
+  preserving scene-owned admission to authored activities.
   Gameplay qualification remains
   experimental; the normal native release policy is unchanged.
   Art overlays preserve their base provider's title-card and runtime-art admission
