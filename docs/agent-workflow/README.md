@@ -18,7 +18,10 @@ checks. Its first target is the [Sandopolis plan](../architecture/plans/2026-09-
   observations used as ROM corroboration or visual references.
 - [Gameplay highlights](../../.agents/skills/gameplay-highlights/SKILL.md) maintains
   the unified source archive and curates a reproducible, act-ordered moving reel.
-  It also replaces outdated excerpts after follow-up fixes.
+  It also replaces outdated excerpts after follow-up fixes. Every delivered reel,
+  promo or showcase must publish its production sources and external asset catalog
+  to [OpenGGF-Media](https://github.com/OpenGGF/OpenGGF-Media), with the production
+  link and archive commit included in delivery; large media files remain external.
 
 These skills apply the methodology and current repository policy; plans retain
 per-task decisions and evidence. Highlights do not certify uninterrupted routes.
