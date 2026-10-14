@@ -28,6 +28,8 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 ## Tools
 
+- [Trace SST occupancy probe](../../src/test/java/com/openggf/tests/trace/SlotOccupancyProbe.java): optional comparison-only `OGGF_SLOT_PROBE=1` diagnostics over existing V5 slot dumps; `OGGF_SLOT_PROBE_FULL=1` prints physical owner/phase labels, fails closed on duplicate SST owners, and writes only below `target/` (2026-10-14 AIZ retained results/title audit). Labels alone do not certify native code parity.
+
 - [Editor guide pictures](../../src/test/java/com/openggf/editor/project/TestEditorGuidePictures.java): refresh the current ROM-backed editor examples with `-Dtest=TestEditorGuidePictures -Dopenggf.editor.guidePictures=true -Dopenggf.headless.gl=surfaceless-egl -Dsonic2.rom.path=<absolute S2 REV01 ROM>` through the Maven queue; review `target/editor-guide/` before copying pictures to the guide.
 
 - [Category negative-case comparison](../../tools/testing/compare_category_outcomes.py): compares completed bounded runner failures and causal skips with an explicit source/run baseline, rejecting incomplete evidence and requiring opt-in for verified SSZ blob hashes (2026-10-08 Mutator Lab expansion); [limits and usage](../../tools/testing/README.md#bounded-category-result-comparison).

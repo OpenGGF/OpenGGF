@@ -5749,3 +5749,30 @@ array getters can still allocate on every draw: give package-owned read-only
 consumers stable immutable views and retain the independent allocation oracle.
 Origin:2026-10-14 Slot resource repair over0a05aa118; native SlotBonusLayout,
 Slots_CycleOptions, sub_4C7A2 and sub_4B592.
+
+
+### AIZ results keep a real title SST, not a reset countdown
+
+`loc_2DD06` replaces results code with `Obj_TitleCard` and returns; Init retains
+that physical owner. Create polls global `Kos_modules_left` before checked
+after-current allocation, preserving retry or admitted prefix. Real table
+children write `$34` even on their final `$10` move. The lower parent clears
+that latch and returns before a later stationary poll clears rings/timer.
+Wait2's90 and `$30`/prior-render retirement belong to that graph. A slotless24/
+VBlank correction can reset rings early while player physics matches. Pure
+recreation keeps exact parent2/ctx.spawn, not another results owner. Complete
+actual initial lease and admitted enemy FIFO before declaring later results;
+an empty fresh-SST query alone does not prove completion. [Native graph and
+strict closure](../../../docs/architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-retained-resultstitle-sst-and-real-child-latches--2026-10-14).
+
+
+## Same-SST code replacement must detach the obsolete Java handle
+
+Obj_HiddenMonitor loc_83760 changes the current SST to Obj_Monitor without
+freeing occupancy (sonic3k.asm176074–176099). Installing a new Java owner at
+that slot while the old handle still owns it lets its manager destruction tail
+free the live replacement. Use the existing detachSlotForTransfer before
+addReplacementAtTransferredSlot. Prove the old handle is detached, the new
+physical owner remains unique after cleanup, and the next allocation skips its
+occupied slot; capture/restore both sides and replay the full registered world.
+Do not conceal duplicate physical owners by selecting a convenient list entry.

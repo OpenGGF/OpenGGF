@@ -131,5 +131,9 @@ copies retain complete raw RGB comparison.
 
 The AIZ fire handoff retains its native scene slots and delayed retirement
 markers. Its transition floor preserves the native solid tail and prevents
-false edge balancing after the coordinate change. Continuous results-boundary
-qualification remains separate from these scoped native-owner checks.
+false edge balancing after the coordinate change. Its miniboss results retain
+that SST as the in-level title owner; real title children drive the ring reset,
+display hold and retirement through their native movement and visibility latches.
+Hidden-monitor conversion retains the occupied native SST through replacement
+cleanup. Both special-stage return prefixes pass; broader complete-route parity
+remains separate from these scoped native-owner checks.

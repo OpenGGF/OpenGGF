@@ -112679,3 +112679,49 @@ not delivery/integration/overall-green status. Adopt coherent Rootda27f4f3d,
 including df8 physical/timed RESULTS child/FIFO/VInt publication, before treating
 the newly earlier ring/results seam as an owning runtime fix. No fitted waits,
 fixture changes, hydration, shared clock/allocator or broad/full sweep.
+
+
+### 2026-10-14 — retained AIZ results/title closes the second-return prefix
+
+Owned bugfix/ai-s3k-parity-trace over d3ca6c022 (local689 +qualifiedRootda27/
+paireddf8). [Native owners, rejected premises, commands and source hashes](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-retained-resultstitle-sst-and-real-child-latches--2026-10-14).
+loc2DD06 keeps the results SST; real after-current ROM title children own reset/
+retirement latches, replacing this branch's24/VBlank reset prediction. Seven
+native graph/pressure/factory cases pass; affected16533 passes137 and guards
+32336 passes100, all0failure/error/skip. Five production presets prove successful
+ROM art and two45-pass full-registry cycles at birth/reset/retirement.
+
+Canonical48379 (-Ptrace-replay, unchanged50751 five-case selector, Java25/EGL/
+original absolute ROM) completes5/1fail/0errors/skips at23:38:43 BST (96s/0queue).
+OriginalAIZ,initialHCZ and BOTH return prefixes pass; segment4 raw51→0. Chain
+retains segment8 raw1765 (1686physics/79animation), first6000 P2X4997/4996, and
+segment11 walk-stop input68801/loadgen9. Alternate87590 (-Ptrace-segments,
+unchanged39702 selector) retains60 grouped25physics/35animation, first25589
+animation13/05, firstphysics25590 TailsSub7800/6C00 at23:40:31 (33.792s/140s).
+No full-chain/alternate closure. No hydration, fitted wait, shared clock/allocator
+or broad/full sweep. This supersedes pending dependency/ring-seam labels; other
+native pressure, Init cache, rendered/audio and product obligations remain.
+
+
+### 2026-10-15 — hidden monitor same-SST cleanup and fail-closed title labels
+
+Owned bugfix/ai-s3k-parity-trace over d3ca6c022 plus the retained-title slice;
+[native owners, exact commands and evidence](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#hidden-monitor-conversion-retains-its-physical-sst--2026-10-15).
+Physical-label21444 exposes a real slot24 monitor/title duplicate (one error,
+23:59:11 BST); no arbitrary claimant is selected. Native loc83760 rewrites the
+same occupied SST. The local Java conversion now detaches the old handle before
+replacement, so cleanup cannot free the live monitor's slot. Negative52375
+fails1; fixed51420 passes8 including five actual-manager production widths and
+two45-pass full-world cycles. Final24540 passes37/0/0/0 at00:21:45 BST (28.550s
+Maven/96s queue); prior identical title137 and structural100 remain qualified.
+
+Canonical45615 (-Ptrace-replay, unchanged five-case selector, Java25/EGL/original
+absolute ROM and optional physical probe) completes5/1failure/0errors/skips at
+00:20:13 (93s/0s queue). OriginalAIZ/initialHCZ/both prefixes pass, and the
+physical scan completes without duplicate-owner errors. Chain segment8 AIZ5
+retains raw1765=1686physics+79animation, first6000 P2X4997/4996; returned HCZ11
+still stops atinput68801/loadgen9. Alternate31147 (-Ptrace-segments, unchanged
+one-case selector) retains60 grouped25physics/35animation, first25589 animation
+13/05, firstphysics25590 TailsSub7800/6C00 at00:20:50 (35.879s/87s).
+This supersedes the physical-label ambiguity, not the remaining strict fronts.
+No hydration, fitted wait, shared clock/allocator or broad/full sweep.
