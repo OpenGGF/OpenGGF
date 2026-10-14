@@ -36,6 +36,15 @@ public final class S3kKosModuleQueue {
     private static final int INSPECTION_LIMIT = 0x40000;
     private static final String COMPRESSION_VARIANT = "kosinski_moduled";
 
+    interface ModuleTransferObserver {
+        void childSubmitted(HardwareWorkHandle handle, int index, int source, int compressedBytes);
+        void childClaimed(HardwareWorkHandle handle, int index);
+    }
+    private ModuleTransferObserver moduleTransferObserver;
+    void bindModuleTransferObserver(ModuleTransferObserver observer) {
+        moduleTransferObserver = Objects.requireNonNull(observer, "observer");
+    }
+
     private final HardwareTimingService timing;
     private final S3kKosDecompressionQueue directQueue;
     private final Map<HardwareWorkHandle, S3kKosModuleDescriptor> descriptors =
@@ -373,8 +382,19 @@ public final class S3kKosModuleQueue {
                 }
                 return;
             }
+            int priorCompleted = preparation.completedModules;
+            HardwareWorkHandle priorChild = preparation.activeChild;
             boolean completed = preparation.coordinate(
                     handle, directQueue, deferFirstChild);
+            if (moduleTransferObserver != null) {
+                if (priorChild == null && preparation.activeChild != null) {
+                    var child = directQueue.descriptor(preparation.activeChild);
+                    moduleTransferObserver.childSubmitted(handle, priorCompleted,
+                            child.sourceAddress(), child.compressedLength());
+                }
+                if (preparation.completedModules != priorCompleted)
+                    moduleTransferObserver.childClaimed(handle, priorCompleted);
+            }
             if (deferChildSubmission && completed) {
                 carryDeferredChildSubmissionForHeldLoopTail = true;
             }

@@ -234,3 +234,32 @@ separate bounded24-case run. Exact commands, failed candidate causes and
 coverage limits are in the [dated record](../../plans/2026-10-13-s3k-playable-completion.md#ordinary-s2-ram-and-matching-controller-binding-qualification).
 This is rewind/binding qualification, not stock S2 route, full native
 framebuffer/PCM or cross-product cold-campaign certification.
+
+## Paired KosM child and VInt publication qualification — 2026-10-14
+
+Qualified transfer `df8a26e936e54ae5503078e12d0ff9589846c92d` waits for
+the actual submitted direct-child FIFO receipts, then queues physical pattern
+DMA for the next supported VInt. Equal source/destination descriptors retain
+their admitted native FIFO position through copied restore; a preceding
+unpaired entry cannot borrow a later receipt. Claimed parent payloads, pending
+DMA and presented memory have distinct captured owners. Public queue snapshot
+and DMA interfaces retain their shapes. All paired production consumers use
+that owner; raw and synchronous unpaired operations retain their contracts.
+
+Worker56679 passes18 checks, including actual320/800 world/GPU boundaries.
+The final affected consumer selection qualifies289 distinct checks across
+248 unchanged passes in4922 and41 corrected cases in69069, not a single
+289-case green invocation. The earlier38 missing S1/S2 ROM prerequisites and
+three physical-camera fixture assumptions were corrected without runtime
+changes; final69069 passes60/0/0/0 with all three verified original ROMs.
+Initial archive-readiness and duplicate-FIFO negatives are preserved in the
+[owning design](../../designs/2026-10-13-s3k-ending-lifecycle.md).
+
+The native/engine v7 spots independently confirm actual child completion and
+VInt publication: old Master art persists through outer3 and the new payload
+publishes at4. Initial retained native VRAM differs from direct engine scene
+entry, and late Tails scroll/pixel differences remain under investigation.
+No initial-ingress, whole-scene RGB, PAL50, PCM or SAT-overflow acceptance is
+claimed. A separately discovered private-record comparison defect requires
+helper-corrected composed replay before full-registry equality credit; receipt,
+DMA-byte and published-pixel observations are independent evidence.

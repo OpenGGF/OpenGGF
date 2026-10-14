@@ -66,12 +66,14 @@ class TestDezMinibossResources {
         state.service(services);
         assertEquals(ordinal,state.captureRewindStateValue().ordinal(),"submission is not readiness");
         for (int pass=0; pass<10000 && (!physical.isIdle() || state.captureRewindStateValue().ordinal()>=0); pass++) {
+            coordinator.publishPatternModuleDma();
             physical.processNativeFrame();
             coordinator.moduleQueue().prepareQueuedModuleBeforeVSync();
             coordinator.moduleQueue().beforeTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
             coordinator.moduleQueue().processModuleQueueAfterObjects();
             state.service(services);
         }
+        coordinator.publishPatternModuleDma();
         assertTrue(physical.isIdle());
         assertEquals(-1,state.captureRewindStateValue().ordinal());
         byte[] expected = KosinskiReader.decompressModuled(rom.readBytes(0x1805A0,0x10000),0);

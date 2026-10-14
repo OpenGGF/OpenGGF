@@ -29,9 +29,9 @@ final class LrzRockCrusherArtState implements RewindStateful<LrzRockCrusherArtSt
                         Sonic3kConstants.ARTTILE_LRZ_ROCK_CRUSHER * 32);
             }
             try {
-                ordinal = S3kRuntimeArtCoordinator.from(services).moduleQueue().queue(rom,
+                ordinal = com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.bindPatternModule(services, S3kRuntimeArtCoordinator.from(services).moduleQueue().queue(rom,
                         Sonic3kConstants.ART_KOSM_LRZ_ROCK_CRUSHER_ADDR,
-                        Sonic3kConstants.ARTTILE_LRZ_ROCK_CRUSHER).ordinal();
+                        Sonic3kConstants.ARTTILE_LRZ_ROCK_CRUSHER)).ordinal();
             } catch (IllegalStateException unavailable) {
                 // Bare object fixtures have no timing coordinator. Production does.
                 if (!"runtime-art coordination is unavailable in these object services"

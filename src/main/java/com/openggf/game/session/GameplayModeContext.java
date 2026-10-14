@@ -239,6 +239,8 @@ public final class GameplayModeContext implements ModeContext {
         this.runtimeArtCoordinator = Objects.requireNonNullElse(
                 worldSession.getGameModule().createRuntimeArtCoordinator(hardwareTiming),
                 RuntimeArtCoordinator.NONE);
+        if (runtimeArtCoordinator instanceof com.openggf.game.internal.PatternModuleQueueOwner owner)
+            owner.bindPatternModuleQueue(kosinskiModuleQueue);
         this.seamlessTransitionResourceHandoffs =
                 new SeamlessTransitionResourceHandoffRegistry();
         this.dynamicArtLifecycle = new DynamicArtLifecycleService();

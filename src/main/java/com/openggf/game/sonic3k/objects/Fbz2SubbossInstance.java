@@ -241,8 +241,8 @@ public final class Fbz2SubbossInstance extends AbstractObjectInstance
         try {
             // loc_6FE94 is a physical Queue_Kos_Module producer. The legacy
             // pattern-DMA journal below does not submit to that timing ledger.
-            return com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.from(services()).moduleQueue()
-                    .queue(rom, entry.sourceAddress(), entry.destinationVramBytes() / 32).ordinal();
+            return com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.bindPatternModule(services(), com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.from(services()).moduleQueue()
+                    .queue(rom, entry.sourceAddress(), entry.destinationVramBytes() / 32)).ordinal();
         } catch (IllegalStateException unavailable) {
             if (!"runtime-art coordination is unavailable in these object services"
                     .equals(unavailable.getMessage())) throw unavailable;

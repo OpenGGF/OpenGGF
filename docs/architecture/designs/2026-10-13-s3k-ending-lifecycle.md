@@ -1467,3 +1467,164 @@ and native SAT overflow remain separate obligations.
 ```bash
 JAVA_HOME=/usr/lib/jvm/java-25-openjdk JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl ALSOFT_DRIVERS=null python3 tools/testing/maven_queue.py -Dmse=off '-Ds3k.rom.path=<MAIN_WORKSPACE>/Sonic and Knuckles & Sonic 3 (W) [!].gen' '-Dsonic1.rom.path=<MAIN_WORKSPACE>/Sonic The Hedgehog (W) (REV01) [!].gen' '-Dsonic2.rom.path=<MAIN_WORKSPACE>/Sonic The Hedgehog 2 (W) (REV01) [!].gen' '-Dtest=TestPlayerSpriteRendererPiecePriority,TestS3kEndingScenePriorityPixels,TestPlayerSpriteRendererPaletteContext,TestPlayerHeadPresentation,TestSpritePieceRendererSatPreparation,TestGraphicsManagerSpriteSatReplay,TestSpritePresentation,TestLevelSpritePresentationLifecycle' test -B
 ```
+
+
+### Qualified transfer owner and producer bindings
+
+`Process_Kos_Module_Queue` (sonic3k.asm2726–2794) starts a direct child, sets bit7,
+then waits for the complete direct FIFO to empty. Its completion calls
+`Add_To_DMA_Queue`; the next supported VInt drains the bytes. The existing
+S3K timed module preparation already enforces the complete direct FIFO gate
+(line682). The new bridge therefore consumes its real start/claim receipts,
+rather than creating another job or guessing a frame delay. S3K VInt8/C/10 and
+Do_ControllerPal retain their existing service/admission owner; render calls
+and parent claims cannot publish.
+
+`GameplayModeContext` injects the internal PatternModuleQueueOwner capability.
+The physical facade keeps its public Snapshot/ArchiveState/DmaTarget shapes;
+S3kRuntimeArtCoordinator registers a separate captured transfer adapter. Its
+immutable child receipt includes actual source and compressed end length;
+a pending DMA owns copied ROM bytes and destination. The bridge retains the
+actual submitted HardwareWorkHandle/fingerprint after the producer claims its
+parent. This is readiness authority only, with no comparison-derived values,
+scene keys, fixture keys, new work or gameplay hydration.
+
+Each paired entry also captures its admitted FIFO position. Two identical
+source/destination descriptors cannot distinguish an unpaired predecessor
+from a later submitted job. A copied physical snapshot also cannot retain Java
+entry identity. Position changes only on the actual final-archive shift; failed
+admission, module advancement and clear never invent a shift. Duplicate paired
+and unpaired predecessors are restored in both directions through two cycles.
+
+Explicit production bindings cover DEZ final/miniboss/endboss, LRZ rock crusher,
+miniboss, Death Egg, boulder, autoscroll and endboss, SSZ runtime art and launch,
+SOZ miniboss/endboss and FBZ miniboss/subboss/endboss. Results and the FBZ boss
+approach now submit one actual timed job with a captured automatic claim, since
+the native global producer retains no sprite-owned handle. Admission preflights
+both facades before mutation and binds the existing resident-pattern journal.
+The AIZ fire overlay remains timing-only prepared mutation; it has no physical
+journal entry to pair. Terrain/title/enemy timing-only preparations, explicit
+standalone generic queues and the declared FBZ visual executor remain outside
+this paired publication contract. No movie or zone identifier selects it.
+
+### Evidence and rejected approaches
+
+| Request | Observed result and owning correction |
+| --- | --- |
+|77880|One actual-ROM negative: physical queue reached IDLE before the submitted direct child completed. Production base69e4f51; no bridge yet.|
+|96287|Build-only all-source compile,1:16; zero tests.|
+|35625|50 cases/1 failure/0 errors/skips. Recording fixture was rebound by a real DMA target during failed fifth submission; prefix remained unchanged. The fixture now rebinds its declared sink in finally.|
+|22304|2 cases/1 failure/0 errors/skips. Actual identity-only association let an identical unpaired predecessor borrow a later job's readiness. Rejected; capture native FIFO position instead.|
+|56679|18 passed,0 failures/errors/skips,21:13:58 BST,1:05. Includes bridge8, actual320/800 registry/pixel replay2, generic physical6 and gameplay1, plus DEZ root1.|
+|89206|2 cases/0 failures/1 error/0 skips. Logical FIFO full was discovered after physical enqueue; preflight now rejects before either mutation.|
+|32003|112 cases/0 assertion failures/2 errors/0 skips,21:36:12 BST,1:10. Existing mocked FBZ coordinators had null private fields; static service binding now delegates through a package-private instance operation. Actual bridge11/world2/results and resource cases passed.|
+|4922|289 cases/41 assertion failures/0 errors/skips,21:45:15 BST,5:41.248 passed.38 donor entry failures were omitted explicit S1/S2 ROM properties;3 legacy departure assertions expected physicalX0 despite native Ending_ScreenInit's retained200 words.|
+|69069|60 passed,0 failures/errors/skips,21:49:09 BST,1:51. All57 AIZ/HCZ entry/reset rows use verified explicit donor ROMs; all3 departure mask/body/palette cases retain physical200/copy260, matching native initialization and the qualified capture guard.|
+
+The final production Java SHA256 is
+`1d16c7498d2b91d2d4ee37b982e278e3910a97dac9817e0abd9f64d3aa05b351`
+over sorted src/main/java paths, NUL, bytes, NUL on base69e4f51. The actual
+policy surface normalizer reports unchanged tagged KosinskiModuleQueue
+public/protected declarations; no descriptor, API version or signature pin
+change is needed. The new adapter changes only internal captured state.
+
+Focused current-consumer coverage includes the11 bridge vectors, pending VInt
+DMA, unserviced jobs, full FIFO, multi-module final size/source alignment,
+unavailable target, duplicate descriptors, parent-claim races, actual resident
+writes, captured auto claims, both full-world directions and replay. Actual
+boss/results producers,18 ending lifecycle cases, original GPU art cases,
+required startup owners, PLC mapping limits and sprite corruption guards pass.
+This is bounded component/consumer evidence, not smoke, release-suite or native
+whole-scene certification. Full commands and exact source limits remain in the
+dated artifact; no raw Maven logs are archived.
+
+### Published-domain fence and retained limits
+
+Pinned GPGX `system_frame_gen` begins with VBlank/VInt, then renders active lines
+0–223 and returns. It does not execute the next VBlank before Advance returns.
+The earlier conjecture that all end-of-Advance domains belonged to the next
+VInt is rejected. Compare the current completed native generation against
+current engine published buffers; only a witnessed active-display VDP write
+could require an intra-line observation. Do not globally shift rows. CPU
+prepared SAT/HScroll/Normal_palette remain separate from VRAM SAT/HScroll,
+CRAM and the framebuffer. Engine display observations are the immutable
+LevelSpritePresentation tiles/pattern versions/background scroll and actual
+uploaded combined palette texture, not a later live P1/deformation/palette.
+
+Original byte RGB remains different (engine public3-bit→255 policy versus the
+pinned core's normal34*level→238 transfer). The initial native Master2176 bytes
+retained from scene ingress differ from engine resident ingress before either
+new upload; this transfer repair cannot certify that residue. Late Tails eight
+published HScroll words remain a separate bank/admission question. All nine
+native branch products, complete PAL/PCM comparison and real SAT scanline
+20-sprite/320-dot overflow remain explicit obligations. Historical media and
+original domain/RGB/source/input bytes are preserved.
+
+
+### Engine-only transfer recapture v7 (2026-10-14)
+
+Request94002 finished at21:54:55 BST,12.470s, exit0. Maven's normal execution
+request retained this source/classes tree's build lease across the immutable
+snapshot, external javac and both child JVMs. The snapshot is
+`engine-paired-kos-module-transfer-v7.jar`, SHA256
+`4dd49f56d0f230f3075034f2c3ee5151f0642f09e6a7051858f75e78b3f8b52c`.
+It contains the qualified runtime Java SHA1d16c749 above from base69e4f51 plus
+the working patch. The unchanged comparison-only probe source is SHA256
+`b22966b531d35521abd650fb322d1628d0b4e452fb727cfaba7cd364036a95b2`.
+The two child intervals are20:54:45.562824–20:54:50.584139 UTC (Sonic Chaos)
+and20:54:50.597731–20:54:55.869116 UTC (Tails Super); each runs6144 ordinary
+neutral inputs after the separately declared initial setup. The observed
+VInt/RNG0 protocol and unchanged native85099 reference bytes remain intact.
+
+The actual Master2176 CPU SHA remains the ingress5626d9a8 through outer3.
+The real direct child completes and the physical module queues DMA at outer3;
+the existing supported VInt publishes settled0ae35f32 at outer4. The rejected
+unpaired facade had uploaded at outer2. This qualifies the runtime transfer
+boundary; the retained reference only samples native initial1 and settled31,
+so this observation does not establish cycle-exact native upload timing.
+
+Full viewed Tails pairs at native1/engine2,3071/3072 and6143/6144 retain their
+whole-scene geometry. The independent setup/producer ledger determines the
+N→N+1 pair, never an image-fit offset. Diagnostic3-bit differences are zero at
+31/63/3071 for both scenes and at5119/6143 for Sonic. Initial Sonic1267 and
+Tails1259 differences are confined to Master x126..189,y55..102: native
+pre-upload retained VRAM is different, and no reference bytes were imported.
+Tails late5119/6143 remains122/140 pixels at rows196..214; the same eight
+HScroll words remain open. Original byte RGB is separately retained, including
+the broad238-versus255 transfer difference. No native nine-branch, PAL, PCM,
+scanline overflow or cold campaign acceptance follows from these two scenes.
+
+Durable external outputs are `declared-engine-spots-sonic-chaos-320-v7` and
+`declared-engine-spots-tails-super-320-v7`, with per-case source/jar/probe/input/
+command/time/domain hashes; `paired-transfer-v7-comparison.json` records both
+original RGB and diagnostic counts. Earlier v1–v6 outputs, native references
+and historical highlights remain byte-identical. Reproduce from the committed
+source using `run_engine_scene_spots-v7.py %classpath` through the normal queued
+`exec:exec` launcher; historical worktree paths remain provenance, not a claim
+that those paths survive cleanup.
+
+The published-domain order comes from pinned GPGX
+[system_frame_gen](https://github.com/TASEmulators/Genesis-Plus-GX/blob/051d430d3d1b54625f9900c8f152d7f232e06daf/core/system.c#L347): VBlank/VInt precedes
+active display, with return after active display. The earlier universal
+end-domain-next-VInt conjecture is rejected; an actual active-display write
+would need its own line-boundary witness. Prepared CPU RAM and displayed
+VDP/engine immutable publication remain separate observations.
+
+
+Completed queued commands (Java25; S3K_PARITY_ROM, S1_PARITY_ROM and
+S2_PARITY_ROM were the independently discovered absolute ROM paths in the
+main workspace, with the AGENTS SHA1/CRC identities verified; placeholders
+here preserve the machine role rather than copying ROMs):
+
+```bash
+JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl ALSOFT_DRIVERS=null python3 tools/testing/maven_queue.py -Dmse=off "-Ds3k.rom.path=$S3K_PARITY_ROM" '-Dtest=TestS3kKosPatternPublication,TestS3kKosPatternWorldRestore,TestS3kEndingSceneResources,TestS3kResultsKosQueueAndChildren,TestS3kResultsElementObjectInstance,TestFbzEventsAct2,TestFbzAct1Miniboss,TestFbzAct2Subboss,TestFbz2SubbossRewind,TestFbzEndBossAudioAndPlc,TestFbzEndBossFormalCorrections' test -B
+JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl ALSOFT_DRIVERS=null python3 tools/testing/maven_queue.py -Dmse=off "-Ds3k.rom.path=$S3K_PARITY_ROM" '-Dtest=TestFbzAct2Subboss,TestFbzEndBossAudioAndPlc,TestS3kKosPatternPublication,TestLrzAutoscrollGraphHeadless,TestLrzDeathEggBackground,TestLrzEndBossEncounterHeadless,TestS3kLrzBoulderCutsceneHeadless,TestSozMinibossProduction,TestSozEndBossProduction,TestSszDeathEggCutscene,TestSszLaunchBackground,TestSszLaunchState,TestS3kEndingLifecycleCapture,TestS3kEndingSpriteDmaCapture,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestS3kAiz1EntryMatrix,TestS3kHcz1EntryMatrix,TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits,TestPatternSpriteRendererCorruptionGuard' test -B
+JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl ALSOFT_DRIVERS=null python3 tools/testing/maven_queue.py -Dmse=off "-Ds3k.rom.path=$S3K_PARITY_ROM" "-Dsonic1.rom.path=$S1_PARITY_ROM" "-Dsonic2.rom.path=$S2_PARITY_ROM" '-Dtest=TestS3kAiz1EntryMatrix,TestS3kHcz1EntryMatrix,TestS3kEndingSpriteDmaCapture#tailsSuperDepartureUsesRenderCopiesForItsNativeScreenPlane' test -B
+JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl ALSOFT_DRIVERS=null python3 tools/testing/maven_queue.py -Dmse=off exec:exec -Dexec.executable=/usr/bin/python3 '-Dexec.args=<CAPTURE_TASK_DIR>/run_engine_scene_spots-v7.py %classpath'
+```
+
+The first two invocations retain their red attribution above; the third closes
+only their missing donor prerequisites and changed camera premise. Native
+startup/boss/results/registry/render checks already green are retained instead
+of rerunning those unchanged classes. The lead owns composed smoke/guards and
+central current matrix/discrepancy/release prose.

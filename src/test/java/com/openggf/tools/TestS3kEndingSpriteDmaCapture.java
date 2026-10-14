@@ -42,7 +42,8 @@ class TestS3kEndingSpriteDmaCapture {
             session.step(null);var picture=session.render();var camera=GameServices.camera();
             var zone=(com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState)GameServices.zoneRuntimeState();
             assertEquals(2,zone.ending().progress());assertEquals(foreground,zone.screen().foregroundRoutine);
-            assertEquals(0,camera.getX());assertEquals(608,camera.getXCopy());
+            // Ending_ScreenInit retains physical $200; foregroundPosition updates only the copy.
+            assertEquals(0x200,camera.getX());assertEquals(608,camera.getXCopy());
             var framing=(com.openggf.game.internal.NativeArenaCameraFraming)GameServices.level().getZoneFeatureProvider();
             int origin=framing.presentationNativeHorizontalOrigin().orElseThrow();
             var mask=com.openggf.graphics.ArenaMaskState.fromBounds(origin,origin,camera.getXWithShake(),800,input,false);
@@ -75,7 +76,7 @@ class TestS3kEndingSpriteDmaCapture {
                 assertTrue(matches>samples*0.99,"native fade pixels replaced by mask grain: "+matches+"/"+samples);
             }
             // Projection must not repair native RAM into artificial equality.
-            assertEquals(0,camera.getX());assertEquals(608,camera.getXCopy());
+            assertEquals(0x200,camera.getX());assertEquals(608,camera.getXCopy());
         }
     }
 

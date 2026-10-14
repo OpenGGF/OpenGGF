@@ -104,7 +104,9 @@ Unreleased. The earlier development themes remain in
   scene. Scene resources, palette and animation owners, terminal Start input
   and rewind state remain inside the native level lifecycle. Island-lift sprites
   and the Master Emerald, waterfall and torch palette cycles follow their native
-  object and screen-event timing. Capture entry preserves native camera locks
+  object and screen-event timing. Paired pattern uploads wait for their actual
+  decompression child and publish at the supported VInt; duplicate descriptors
+  preserve FIFO ownership through rewind. Capture entry preserves native camera locks
   and scene origins, and capture fades retain their production owner. Ending resource initialization preserves scroll handling
   in other zones. Donated Sonic 2 powered controllers restore
   palette and ring timing, current sparkle ownership and animation scripts through
