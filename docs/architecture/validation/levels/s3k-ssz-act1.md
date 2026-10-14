@@ -1498,8 +1498,46 @@ row assumptions. Exact matched negative attribution, source hashes and
 commands are in the [completion plan](../../plans/2026-10-13-s3k-playable-completion.md#ssz-cold-boundaries-and-bonus-return-pilots-2026-10-14).
 
 The corrected original-input contact capture matches1432 native P1/camera/
-counter/ring observations. P2 retains one X discrepancy and74 Y discrepancies
-in the arrival window119–209. The allocation owner is still under investigation.
+counter/ring observations. The subsequent arrival-owner repair below removes the previously recorded
+one P2 X and74 P2 Y discrepancies in the arrival window119–209.
 These bounded routes/contact checks do not certify all viewport/character/
 donor/roster combinations, whole-scene original RGB/audio or entire campaign
 parity. Remaining matrix obligations retain their prior status.
+
+
+## Native arrival continuation and palette qualification (2026-10-14)
+
+On558e74833 plus the arrival candidate, request79082 executes143 cases:
+119 unchanged neighbors pass and18 of24 new cases pass. Its six failures
+are fixture premises: preloaded placements move the controller away from the
+independently cold native slot4, and direct update calls do not advance palette
+ownership epochs. The fixture retains helper3 behind its controller and uses
+ordinary frames for the settle check; production is unchanged. Corrected exact
+class request21831 completes20:09:21 UTC,24/0/0/0 (25.233s Maven;162s queue).
+Together these runs qualify143 distinct identities, not a single green143 run.
+
+Five widths verify helper3's next-pass start and twelve real dispatches,
+four-pass ROM light pairs, the Tails-main Player_mode branch and two all-key
+whole-world rewind/replay cycles. Three pressure cases cover live zero-ID
+occupants, the penultimate/last carried DBEQ probe and exhausted budget without
+fallback to slot33. The local settle inlet is explicitly declared; it proves
+24 final palette dispatches and next-pass retirement, not cold traversal.
+
+Passive original AD40 recapture25248 is terminal0 at20:12:52 UTC, using the
+unchanged production runtime and original1431 ordinary input polls after its
+one-shot initial ProcessSprites. All1432 rows now match native P1 and P2 X/Y,
+velocities, ground speed, mapping frame, both camera coordinates/copies, level
+clock and rings. The former one-X/74-Y P2 deficit is gone. Eight earlier native
+observer controls remain byte-identical; no gameplay values are imported.
+
+Viewed native and engine gameplay pictures remain bounded spot evidence,
+not whole-scene original-RGB acceptance. Native input0 still publishes its
+title-card presentation while the engine capture omits title cards. A global
+previous-row pixel shift is rejected: it worsens logical pixel differences
+rather than establishing a published VDP boundary. The native330/current-engine330
+pair retains360 logical three-bit pixel differences; original RGB expansion
+remains separately different. Full SAT/scroll/CRAM publication and other scene
+owners must explain those residuals before a pixel-parity claim.
+
+Exact commands, clocks and source/probe hashes are in the
+[completion plan](../../plans/2026-10-13-s3k-playable-completion.md#native-ssz-arrival-owner-qualification-2026-10-14).

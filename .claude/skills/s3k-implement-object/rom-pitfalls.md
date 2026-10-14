@@ -5624,3 +5624,21 @@ Independent opacity oracles and flip×SAT/painter controls reproduced the
 actual owner; full-world/pixel replay and S1/S2/S3 head-art consumers qualify
 the correction. Compare original RGB separately from logical palette indices.
 Origin: 2026-10-14 ending v6 over bf7361a3a3ce2b6fc71256fc2059c29d8402f163.
+
+
+**Continuation DBEQ state can belong to a preceding palette helper.**
+At SSZ loc_57D18, CreateNewSprite4 receives Player1 in A1 and the D0 word
+left by sub_45866, not the standard allocator's full-table count. Native
+byte39 divides the ROM light writes; word3A is the byte offset into word_4670C.
+Keep both captured. The native occupied collision-reset slot2 is not empty
+merely because the engine executes it implicitly. Scan through the carried
+budget, count live zero-ID owners and respect held slots; do not replace this
+local continuation with a shared allocator or fitted frame delay. A helper in
+slot3, behind parent4, naturally first runs next pass; higher pressure slots
+can run this pass. loc_57DB6 checks active byte38 and index3A before the final
+sub_45866 fallthrough, so writing cycle zero does not delete until next dispatch.
+A fixture which preloads placements must assert the execution relationship,
+not pretend its controller occupies the independently observed cold slot4.
+Palette checks must advance real ownership epochs. Source: native allocation
+observer72373 and2026-10-14 arrival qualification on558e74833; palette asset
+words remain ROM-backed rather than copied from the disassembly.

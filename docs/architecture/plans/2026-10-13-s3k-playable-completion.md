@@ -1703,3 +1703,60 @@ C# compilation additionally holds the native source/classes worktree lease
 and inherits its FD; normal Maven admission retains the baseline tree through
 all execution. Actual child bounds are relayed to the performance coordinator.
 No measurement credit, pause/preemption or foreign resource change is requested.
+
+
+## Native SSZ arrival owner qualification (2026-10-14)
+
+Candidate parent558e74833c2256688b4ef4bcb795006416056589.
+Native72373's literal registers establish the owning scan and missing light
+state. Production captures byte39/word3A, reads word_4670C from the ROM,
+uses the carried DBEQ budget through actual live/reserved owners, gates the
+helper on Sonic main/P2 and checks cycle zero before the settle light tail.
+Existing shared allocator, physics clocks and public snapshot shapes are unchanged.
+
+Matched pre-repair request38301 is terminal1 at19:32:10 UTC:21/21 failures,
+zero errors/skips, covering early higher-slot helper dispatch, absent light
+writes, erroneous Tails-led branch and immediate settle retirement. The three
+pressure cases were added later and receive no fabricated negative credit.
+Candidate79082 is terminal1 at19:54:33 UTC:143/6/0/0 (1:23 Maven,0s queue).
+All119 neighbor identities and18 new identities pass. Six new fixture failures
+are resolved without production changes: preloaded placement controller7/10
+must be behind helper3 rather than asserted at native cold slot4; settle must
+advance ordinary palette-ownership epochs instead of repeating direct updates.
+Corrected exact-class21831 is terminal0 at20:09:21 UTC,24/0/0/0,25.233s Maven,
+2.813s class execution,162s queue. All143 distinct affected identities are
+therefore green across two runs; this is not one green143-case invocation.
+An erroneously early unadmitted follow-up53114 is cancelled terminal130,
+verified zero children/no JVM; it supplies no evidence and no foreign request
+is changed. The retained writer5076 completes before21831 is submitted.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kSszArrivalContinuation,TestS3kSszArrivalHeadless,TestS3kSszKnucklesArrivalHeadless,TestS3kSszTeleporterPads,TestS3kHpzTeleporterHeadless,TestS3kHpzGraphRewind,TestObjectManagerFixedSstExecution,TestObjectManagerFixedSstInitialization,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' "-Dsonic1.rom.path=$S1_TASK_ROM" "-Dsonic2.rom.path=$S2_TASK_ROM" "-Ds3k.rom.path=$S3K_TASK_ROM" test -B
+# Corrected24 alone, after the actual fixture-writer completion:
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kSszArrivalContinuation' "-Dsonic1.rom.path=$S1_TASK_ROM" "-Dsonic2.rom.path=$S2_TASK_ROM" "-Ds3k.rom.path=$S3K_TASK_ROM" test -B
+```
+
+Passive recapture25248 terminal0 at20:12:52 UTC,3.242s Maven/170s queue:
+`-Dexec.executable=python3 '-Dexec.args=<task-scratch>/run_ssz_arrival_engine.py %classpath' exec:exec -B`
+through the same normal wrapper/cwd. Javac20:12:49.304367–20:12:49.669124 UTC
+(epoch1792008769.304361–1792008769.6691213), external output directory, retains
+the queued parent's source/classes worktree lease. Java main
+`SszArrivalBoundaryProbe`20:12:49.672490–20:12:52.240184 UTC
+(epoch1792008769.6724887–1792008772.2401783), JVM1647775 terminal0.
+Observer SHA2566016797a066d4a595a996c82efcf3d6d76899610d737e0ecace6b5d45732a2bf;
+production diff SHA2563f19b8b1d04c59c5174c2678f9af0016aad6a9cea0aaa5e3afa53cd9a649a976.
+Original ROM/AD40 hashes and exact complete argv are external capture provenance.
+No shadow runtime class, trace hydration or later input/gameplay write is used.
+
+Both complete1432-row arms match all recorded P1/P2 positions, velocities,
+ground speed, mapping frame, cameras/copies, level clock and rings. Prior P2
+one-X/74-Y deficits are removed. Pictures are inspected after reading state:
+title-card suppression differs at input0, and the native published-producer
+column is not sufficient to justify a global previous-row pixel shift.
+That rejected shift worsens differences. Native330/current-engine330 still
+has360 differing logical three-bit pixels; all71680 original-RGB pixels
+separately differ because the conversion ladders remain distinct. This is a
+bounded state/owner qualification, not full-scene pixel/audio, all campaign
+products, combined smoke/guards or integrated delivery credit. External output
+`ssz-arrival-boundary-558e74833-3f19b8b1d04c-v1` retains exact provenance.
+Consumed target redirects are deleted after this account, never archived.

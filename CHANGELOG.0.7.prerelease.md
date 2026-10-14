@@ -22,6 +22,9 @@ Unreleased. The earlier development themes remain in
   while previews and seamless continuations preserve their sequence.
   Sky Sanctuary opening bridges use the native top-contact surface and exact
   overlap band, retaining the relative landing write before floor reset.
+  Its arrival controller retains the native light divider and ROM palette cycle,
+  admits the P2 release helper through the native continuation scan and retires
+  after the final light write. Tails-led teams preserve their native branch.
   Initial touch publication follows each object's native range/deletion tail,
   and a full object-table reset retires both collision buffers before slot reuse.
   Identity-keyed participant contact maps encode stable team IDs through
