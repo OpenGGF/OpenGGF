@@ -2,7 +2,7 @@
 
 Canonical binding: `S3K_CARNIVAL_NIGHT_1`, engine zone 3/act 0, ROM `$0300`, S3KL object set.
 Edges: MGZ2 incoming full entry; CNZ2 outgoing structural/results handoff.
-Character routes: Solo Sonic has a native temporary Tails carry-in; configured teams retain their own followers. Literal carried-P1 mappings borrow host-ROM presentation resources while the script owns them, then return to configured donor resources. Tails and Knuckles have distinct entry and progression contexts.
+Character routes: Solo Sonic has a native temporary Tails carry-in; an incapable first configured follower retains its ordinary role alongside that intrinsic carrier. Configured teams retain all of their followers. Literal carried-P1 mappings borrow host-ROM presentation resources while the script owns them, then return to configured donor resources. Tails and Knuckles have distinct entry and progression contexts.
 
 Status: in progress. The bounded normal-entry and graph floor below is qualified; the act is not certified.
 Supported production presets are 320/352/400/528/800 via `WidescreenAspect` and `resolveDisplayAspect`. Configured main/donor support is off×{Sonic,Tails,Knuckles}, S1×Sonic and S2×{Sonic,Tails}. `LaunchProfile.sanitizedFor` owns configured fallback; script-created NPCs have their own native registration/art authority. Configured comma rosters are uncapped by `ActiveGameplayTeamResolver.parseConfiguredSidekicks`; pair, mixed, duplicate and declared large-roster examples do not establish a maximum.
@@ -83,3 +83,30 @@ Current native320 NTSC paired engine frame80, ordinary complete-run BK2 slice st
 The corrected S1 extension captures now start at the actual ROM entry P1(24,1536)/camera(0,1440), with 120 ordinary neutral inputs and no position/RAM setup. All 120 before/after state rows are equal, including literal carried mappings and motion: frame80 P1(109,1662), P2(109,1634), camera(0,1534), mapping146. Inspected before/after PNGs show the missing/white carried bodies corrected; frame119 is alive with ordinary S1 mapping9 after resource return. The before jar SHA-256 `a8fc493fa205437c64d683cba13990d82b6acd8c4f22df1d79ebf73befe9d322` is explicitly a mixed comparison baseline: gameplay `5b2ff8e78` plus exactly the current `HeadlessGameBoot` and `GameplayCaptureSession` host classes, so both sides reach the same real entry. It is not a pristine baseline pass or a native ROM donor counterpart. Historical failed late-registration/positioned attempts above are preserved as failed setups and are superseded only for this inspected carry spot.
 
 The same command's HPZ sparse cold capture failed before its intended scene: first P1 death44833 in LRZ, zero HPZ PNGs. Source inspection found the sparse CLI omits render-thread service on uncaptured frames; its cause remains unqualified until the actual drawing/service contract is exercised. This failed setup certifies no HPZ pixels or complete route and does not justify runtime/input fitting.
+
+
+## Native story-writer admission and incapable-first recreation — 2026-10-14
+
+The current entry/death floor is requalified on `d63bd6bc9` plus this commit's
+native Saved2 eligibility and intrinsic-carrier changes. `loc_13A10` is the sole
+`Obj_Tails` Player_2 story writer. The shared CPU consumes an engine-internal
+admission contract; S3K selects a capable first configured follower or an intrinsic
+native Tails. Incapable first participants and every extra CPU retain their configured
+identity, donor resources and leader chain. The intrinsic actor is appended, not
+substituted for generic native-P2 queries, and uses the existing native-art and
+recreation role. No participant cap or public snapshot/Mod API shape is introduced.
+
+The initial8-case authority negative had5 actual failures at20:23:04 UTC: four
+incapable-first configurations used a Sonic story writer and native solo MHZ had
+none. Request2571 is terminal0 at20:51:39 UTC: **399/0/0/0** with the queued lean
+wrapper, `-Dmse=off`, surfaceless EGL, unset DISPLAY/WAYLAND_DISPLAY, null OpenAL
+and all three original absolute ROM properties. The exact selection and complete
+case accounting are in [the sanctuary follow-up](s3k-hpz-sanctuary.md#saved2-cpu-eligibility-and-intrinsic-fresh-carrier--2026-10-14).
+CNZ contributes all140 entry products, all140 actual two-reload/incoming-world
+products and the earlier3 extra-follower controls. The independent carrier class
+adds10 native/default/donor/roster vectors including forced S2-Tails flight, plus
+2 S1/seven-Sonic CNZ/MHZ natural retirement→recreation→reverse-absence cases.
+Every restored live carrier replays45 whole-world ticks twice. Capture-host28
+checks preserve the original current P1 and configured CPU leaders while explicitly
+recognizing the intrinsic role. This requalifies those products; later mechanism,
+route, native audiovisual and viewport-edge obligations remain separate.

@@ -91,17 +91,28 @@ class TestGameplayCaptureDonorEntry {
     private static void assertRoster(Row row, AbstractPlayableSprite player) {
         var sprites = GameServices.sprites();
         var followers = sprites.getRegisteredSidekicks();
-        boolean npc = row.main().equals("sonic") && row.followers().isEmpty();
+        var configured = followers.stream().filter(follower ->
+                !SpriteManagerInternalAccess.usesNativeScriptedArt(sprites, follower)).toList();
         String[] names = row.followers().isEmpty() ? new String[0] : row.followers().split(",");
+        assertEquals(names.length, configured.size());
+        boolean npc = row.main().equals("sonic") && (configured.isEmpty()
+                || configured.getFirst().getSecondaryAbility() != com.openggf.sprites.playable.SecondaryAbility.FLY);
         assertEquals(names.length + (npc ? 1 : 0), followers.size());
         var leader = player;
-        for (int i = 0; i < followers.size(); i++) {
-            var follower = followers.get(i);
-            assertEquals(npc ? "tails" : names[i], follower.characterKey().persisted());
+        for (int i = 0; i < configured.size(); i++) {
+            var follower = configured.get(i);
+            assertEquals(names[i], follower.characterKey().persisted());
             assertTrue(follower.isCpuControlled());
             assertSame(leader, follower.getCpuController().getLeader(), "CPU references original current world roster");
-            assertEquals(npc, SpriteManagerInternalAccess.usesNativeScriptedArt(sprites, follower));
             leader = follower;
+        }
+        var intrinsic = followers.stream().filter(follower ->
+                SpriteManagerInternalAccess.usesNativeScriptedArt(sprites, follower)).toList();
+        assertEquals(npc ? 1 : 0, intrinsic.size());
+        for (var follower : intrinsic) {
+            assertEquals("tails", follower.characterKey().persisted());
+            assertTrue(follower.isCpuControlled());
+            assertSame(player, follower.getCpuController().getLeader());
         }
         var p2 = GameServices.level().getObjectManager().getObjectServices().playerQuery().nativeP2OrNull();
         if (followers.isEmpty()) assertNull(p2); else assertSame(followers.getFirst(), p2);

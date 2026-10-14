@@ -7,9 +7,10 @@ Implementation predates this matrix (`feature/ai-s3k-super-emeralds`, routing re
 `56583f2dba`); this file records current bindings and gaps found during the HPZ bring-up.
 Status: partial. The finite fresh-ceremony products below qualify both controller branches.
 Seven native320 solo-Sonic physical pedestal entries and actual fresh-load palette publication
-are also qualified. One native320 solo-Sonic real Saved2 origin-return path qualifies below.
-Configured result/transport/return products and remaining native presentation obligations
-stay separate.
+are also qualified. Eight representative real Saved2 inlet/exit products now qualify native mains, supported
+donors and two wide large-roster shapes. Eight representative placed-pedestal products
+qualify stage3 in addition to the seven native320 selectors. Complete finite result,
+selector and return products and remaining native presentation obligations stay separate.
 
 | Obligation + spot | Contract / oracle | Test binding | Implementation | Result | Gap / action |
 | --- | --- | --- | --- | --- | --- |
@@ -17,7 +18,7 @@ stay separate.
 | OBJECT: controller, Master Emerald, pedestals, teleporter | `Obj_HPZSSEntryControl`, `Obj_HPZMasterEmerald`, `Obj_HPZSuperEmerald` (states 1 and 2 selectable, `loc_907A8`); native literal character tables use persistent character identity for physical P1/P2 | `TestHpzSanctuaryObjects` (27), `TestS3kHpzSanctuaryHeadless` (4 on `$17`), `TestS3kHpzSanctuaryLifecycleProduction` | implemented; state-1 selectability corrected `365ac485b`; native-pose presentation and P2 aliases corrected in this slice | Both fresh ceremony branches qualify across the finite products below | Seven native320 solo-Sonic placed pedestal contacts enter their matching Super stages; wider/donor/team contact products and exit transport products remain open |
 | PRESENT: `AnPal_HPZ`, `AniPLC_HPZ` | OffsAnPal / Offs_AniFunc entry 47 | `TestS3kHpzPatternAnimation` (`$17` row), `TestHpzZoneRuntimeStatePaletteCycle#masterEmeraldDelayHoldsTheCycleFor8000Passes` | implemented `362771221` | pass | Five genuine native320 NTSC fresh-ceremony snapshots and matched engine state/pose samples inspected; before/after art comparison has explicit nonzero pixel residuals. Actual current/target palette publication is qualified below; repaired palette screenshots and full native scene parity remain separate |
 | REWIND: controller graph, initial countdown, natural crystal expiry, released ceremony | Identity-table child recreation; entire registered-world equality twice, including deleted-child recreation and reversible native presentation lifetime | `TestS3kHpzGraphRewind#sanctuaryGraphRestoresFreshAndRelinksEveryControllerOwnedChild`, `TestS3kHpzSanctuaryLifecycleProduction` | implemented | Finite fresh-ceremony qualification below | Two eight-tick whole-world cycles cover native short pedestal selection; each actual special-stage entry retires hub history. Results retain their non-rewindable load boundary; incoming special-world, configured contact and origin exit/load products remain separate |
-| LOAD: real forced ring → sanctuary → Saved2 origin | Actual placed MHZ1 `$85/$81` owner/flash saves ring position and earned rings; actual pad/exit-band contact loads origin; rings, timer/HUD and current owners restored; outgoing histories retired; two45-tick world cycles in both incoming worlds | `TestS3kSanctuaryOriginReturnLifecycle` | ordinary fresh HUD-started ownership corrected in this slice | Native320 solo-Sonic local production pilot qualified below | Configured preset/donor/main/team products remain open; local contact setup does not certify a cold route |
+| LOAD: real forced ring → sanctuary → Saved2 origin | Actual placed MHZ1 `$85/$81` owner/flash saves ring position and earned rings; actual pad/exit-band contact loads origin; rings, timer/HUD and current owners restored; outgoing histories retired; two45-tick world cycles in both incoming worlds | `TestS3kSanctuaryOriginReturnLifecycle` | ordinary fresh HUD-started ownership corrected in this slice | Native pilot and eight configured representative products qualified below | The complete140 supported products remain next; local contact setup does not certify a cold route |
 | LOAD: results reveal behind a Super Emerald stage | `SpecialStage_Results` $1701 rebuild and `Pal_FromWhite`; `Obj_SpecialStage_Results` routines `$E`/`$10`/`$12` (pan to `$320`, converging and expanding star rings, `ObjDat2_2E984` Hyper message, `loc_2E9D8`); `loc_2EAA6` state-1 indicator gate; level-select return rebuilds the hub without replaying the reveal | `TestS3kSpecialStageResultsReveal` (frame-exact routine timeline incl. native ss_14 timeline, 16), `TestS3kSanctuaryResultsBackdropHeadless` (backdrop, palette fade, pedestal FAC0, stars, FAC1 release, hub return, 3), `TestHpzSanctuaryObjects` star-ring cases | implemented `feature/ai-hpz-sanctuary-reveal` | pass | Results are not rewindable: the rebuild is a `LEVEL_LOAD` rewind boundary (isolation asserted). Native ss_14 (see table below) matches timing, fade steps and Master Emerald rotation onset, and is visually consistent for gems, flicker and stars; results exit fades to black with no exit SFX as in the ROM (`SpecialStageProvider.resultsExitFadesToWhite()`, S3K false; `TestSpecialStageRewindCapability`, capture 255→206→60→19); Knuckles message frames unit-tested; Tails, Knuckles palette and HYPERk word art neither tested nor captured |
 
 ### Native comparison: results reveal (2026-09-17)
@@ -359,3 +360,62 @@ and60 required S3K loading/bootstrap/decoding/AIZ neighbors. Earlier independent
 palette, component, results and graph qualifications retain their exact source
 provenance. Finite configured inlet/exit, pedestal and results products plus
 matched repaired/native screenshots are the next explicit obligations.
+
+
+## Saved2 CPU eligibility and intrinsic fresh carrier — 2026-10-14
+
+Source is `d63bd6bc9cd01a1e41787e7a0d13cec2889e4383` plus this commit's
+native entry/participant corrections. The real S1/800/seven-Sonic return loaded
+Saved2 at448/1664, then changed X to213 on its first ordinary player pass.
+The measured writer was `TailsCarryController.forceScriptedCarry`, reached from
+CPU routine zero after the Saved2 bank had already been consumed. Native
+`Tails_Init_Continued` copies `Last_star_post_hit` before returning
+(`sonic3k.asm:26155`), and `loc_13A10` bypasses both story inlets when that copy
+is nonzero (26390–26391). Fresh entry starts at zero; actual checkpoint/Saved2
+assembly publishes the existing captured eligibility flag. Sanctuary exit
+`loc_90C58` ORs$80 before Level (198045–198049). No new snapshot or Mod API
+field, fixture-fed state, donor exception or larger pickup rectangle is used.
+
+The separate fresh authority negative completed8 tests/5 failures/0 errors/0
+skips at20:23:04 UTC. Four incapable-first CNZ/MHZ configurations assigned the
+story writer to a Sonic with `INSTA_SHIELD`; solo-Sonic MHZ had no carrier.
+Native `loc_68C2` reaches `loc_68D8` for locked-on MHZ as well as CNZ
+(8180–8197), and `loc_13A10` belongs to `Obj_Tails`, not every configured CPU.
+An engine-internal admission port now selects the capable first configured
+P2 or the existing intrinsic native-art Tails role. An incapable-first roster
+retains every configured participant and ordinary leader; the intrinsic carrier
+is appended with the existing temporary recreation binding. Generic native-P2
+queries keep their first configured participant. Manual-flight availability does
+not select the native forced-flight owner.
+
+Two fixture premises were rejected by exact owners. Native Knuckles' lower
+MHZ start can expose the inlet before a local higher ring pickup; that inlet
+legitimately enters PLC-backed offscreen retirement. The test now waits only
+an actually observed non-MAIN retirement, checks physical respawnable deletion,
+and lets the native loader decide reentry on at-most128px Y crossings. Untouched
+`Obj_WaitOffscreen` owners are preserved. Choosing the same-height ring at1208/
+1640 instead was invalid local setup: `Mhz1CutsceneKnucklesInstance.routineWaitPlayer`
+actually clamped P1 X1208→905. The original real ring496/1328 is retained;
+the native encounter is not bypassed. All temporary X-setter instrumentation was
+restored byte-for-byte before ordinary qualification.
+
+Request2571 completed **399 tests/0 failures/0 errors/0 skips**, terminal0,
+20:51:39 UTC, Maven1m54s. Its exact selectors were
+`TestS3kCnz1EntryMatrix,TestGameplayCaptureDonorEntry,TestS3kScriptedIntroCarryAdmission,TestS3kSanctuaryOriginReturnLifecycle#configuredRepresentativeUsesTheActualSaved2OwnersAndIncomingWorldReplay,TestS3kSanctuaryPedestalLifecycle#configuredRepresentativePhysicallySelectsAndLoadsItsSuperStage,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`.
+The local queued lean wrapper used `-Dmse=off`, explicit surfaceless EGL,
+unset DISPLAY/WAYLAND_DISPLAY, null OpenAL and all three original absolute ROM
+properties. Counts: CNZ140 entry/140 real death-reload/3 earlier authority;
+capture boot28; fresh carrier10 plus natural incapable-first retirement/recreation2;
+actual Saved2 representatives8; actual stage3 pedestal representatives8;
+required S3K neighbors60. The new carrier and Saved2 snapshots each retain two
+whole-world45-tick forward cycles; natural retirement additionally restores the
+live actor and reverses to its actual absence without removing configured CPUs.
+The earlier88-case run separately kept72 trigger/coordinator/CPU/carry neighbors
+green; its one local-ring premise failure is recorded above, not hidden in399.
+
+This is qualified local behavior and current CNZ entry/death breadth, not all
+sanctuary products or native pixels. The complete140×7 physical selectors,
+140 Saved2 products, configured failure/success/final-Hyper results and repaired
+matched screenshots remain the next explicit owners. Historical fresh-ceremony,
+seven-selector, native-return and native-picture records above retain their own
+source and setup provenance.

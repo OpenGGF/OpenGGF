@@ -312,14 +312,15 @@ public class LevelTransitionCoordinator {
      * (sonic3k.asm:61763-61836) restore {@code Saved_} or, for
      * {@code Special_bonus_entry_flag}, {@code Saved2_}.
      * <p>
-     * {@code Save_Level_Data2} (sonic3k.asm:61735) leaves the flag alone, so it
-     * stays set here; {@code loc_618AC} (sonic3k.asm:128411-128417) writes
+     * {@code Save_Level_Data2} (sonic3k.asm:61735) leaves the flag alone, preserving
+     * a fresh zero or a published checkpoint value;
+     * {@code loc_618AC} (sonic3k.asm:128411-128417) writes
      * {@code move.b #0,(Last_star_post_hit).w} at sonic3k.asm:128414 when it
      * requests the Super Emerald arena restart, and the special-stage clear
      * re-sets bit 7 with {@code ori.b #$80,(Last_star_post_hit).w}
      * (sonic3k.asm:12119-12120 and 12673-12674) for the return leg.
      */
-    private boolean lastStarPostHitSet = true;
+    private boolean lastStarPostHitSet;
 
     /** ROM {@code move.b #0,(Last_star_post_hit).w} (sonic3k.asm:128414). */
     public void clearLastStarPostHit() {
@@ -369,6 +370,11 @@ public class LevelTransitionCoordinator {
             return false;
         }
         sanctuaryOriginRestorePending = true;
+        // loc_90C58 restores the origin and ORs $80 into Last_star_post_hit
+        // before restarting Level. Saved2 placement/respawn and Tails_Init's
+        // copied CPU star-post flag must be available during assembly, not
+        // only the later GameLoop restore of the visible player.
+        setLastStarPostHit();
         requestZoneAndAct(bigRingReturn.originZone(), bigRingReturn.originAct(), true);
         return true;
     }
@@ -1036,7 +1042,7 @@ public class LevelTransitionCoordinator {
         sanctuaryReturnContextExplicit = false;
         sanctuaryOriginRestorePending = false;
         bigRingReturnRespawnState = null;
-        lastStarPostHitSet = true;
+        lastStarPostHitSet = false;
         bonusStageRequested = null;
         bonusStageReturnCheckpointIndex = -1;
         titleCardRequested = false;

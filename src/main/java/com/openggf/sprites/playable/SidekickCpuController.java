@@ -1076,6 +1076,8 @@ public class SidekickCpuController {
                 int act = lm.getCurrentAct();
                 PlayerCharacter pc = resolvePlayerCharacter();
                 if (carryTrigger.shouldEnterCarry(zone, act, pc)
+                        && (!(carryTrigger instanceof com.openggf.game.internal.ScriptedCarryAdmission admission)
+                            || admission.admitsScriptedCarrier(sidekick, leader))
                         && carryTrigger.isLeaderAtIntroPosition(leader)) {
                     // ROM loc_13A10 (sonic3k.asm:26414) for CNZ act 0:
                     //   move.w #$C,(Tails_CPU_routine).w

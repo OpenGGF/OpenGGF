@@ -1837,3 +1837,34 @@ with impossible fixed8/48 and Knuckles-only victims excluded by native owners.
 Actual loc5DB76/5DD6A full-table dispatch and downstream scene composition are
 separate remaining qualification. Consumed root redirects are deleted after this
 account; combined smoke/guards and integrated delivery remain pending.
+
+
+## Native carry and Saved2 corrective composition (2026-10-14)
+
+Qualified workeraedc137a173f48ecf71ae76253731b52ff7645cb is merged after
+root585540848's actual portal/exit checks release. The merge has no conflicts;
+source review confirms the updated develop stock-ROM script guard remains
+ahead of HPZ initialization while the native fresh/checkpoint/selected-Saved2
+eligibility is published before player assembly and survives bank consumption.
+The engine-internal carry port retains every configured participant/order and
+uses a capable native P2 or the existing intrinsic native-art Tails role for
+native CNZ/MHZ story ownership. Public snapshot/Mod API shapes remain unchanged.
+
+Worker2571 is terminal0 at20:51:39 UTC,399/0/0/0 (1:54 Maven): CNZ140 entry
+and140 real two-reload/incoming-world products; authority3; capture-host28;
+native story10, including incapable-first natural retirement/recreation and
+reverse absence; real Saved2 representatives8; pedestal representatives8;
+mandatory S3K neighbors60. Earlier72 matched/pure carry neighbors retain their
+separate source scope. Source-owned negative and fixture-writer attribution
+are recorded in the owning CNZ/HPZ matrices; no native ring/camera writer is
+suppressed. Root build-only70500 passes compile on the union at21:09:01 UTC,
+51.439s,zero tests. Actual finite hub/outcome/palette qualification continues;
+composed smoke/guards and main integration remain pending.
+
+A separately discovered private-record diagnostic access bug in
+RewindSnapshotDiff.collectDiffs can conceal diffKey paths; keyEquals comparison
+and direct native state/load/receipt/pixel assertions remain distinct evidence.
+A bounded fail-closed helper repair is owned by the frontier lane and affected
+world assertions must be checked with that helper before final delivery credit.
+No valid queued/running request is cancelled because of this discovery.
+Consumed root build redirect is removed after the durable account.
