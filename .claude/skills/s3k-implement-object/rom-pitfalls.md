@@ -5281,6 +5281,11 @@ Do not substitute the intro-controller slot: `Dynamic_object_RAM+2` is absolute
 SST5. D01's `Obj_TitleCardInit` deletes before child/art creation, leaving SST8
 for the ending owner. Use semantic fresh-level admission and the actual loaded
 destination; production `LevelLoadContext` zone/act can be unset.
+`loc_63C14/loc_7F310` set `Act3_flag` before `$1600/$1700`: `loc_62B6`
+bypasses the entire graph, not merely its visual presentation. Reuse the
+captured LOADING continuation admission without consuming it. Creating an
+owner on that path produces a later teardown with no runtime-art lease;
+do not hide it with a missing-lease fallback.
 
 The maintained `SlotOccupancyProbe` masks native code pointers to a low byte for
 its type display. Use that channel to compare occupancy only; identify native

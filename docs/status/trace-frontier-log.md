@@ -112309,7 +112309,7 @@ projectile SST43; no strict trace closure is claimed. Second-entry ring/flash
 25/17 versus native18/22 remains. Actual incoming64382 passes five cold composed
 endings but errors in two positioned320/800 cases with a missing title-art lease.
 Matched38983 reproduces both identical errors on exact pre-RNG production ddbc;
-that inherited title consumer gap remains separate from this qualified RNG slice.
+that title consumer gap, already present on ddbc but not attributed to pinned5b2, remains separate from this qualified RNG slice.
 
 
 ## 2026-10-14 — S3K projectile native INIT/XY retirement
@@ -112339,3 +112339,28 @@ attribution and second-entry25/17 versus native18/22 remain unresolved. The two
 positioned title-art lease errors match pre-RNG ddbc, but are new/unresolved
 overall-task consumer blockers relative to pinned5b2 until repaired/attributed.
 No strict frontier closure or overall green delivery is claimed.
+
+
+## 2026-10-14 — Act3 title graph admission closes incoming lease errors
+
+Over projectile3ac656deb, `.worktrees/ai-s3k-parity-trace` now reads the existing
+LOADING continuation state when preparing fresh title actors. Native
+`loc_63C14/loc_7F310` set `Act3_flag` before `$1600/$1700`; `loc_62B6` bypasses
+both graph and presentation. The prior fresh-SST slice incorrectly created
+an orphan graph without an art lease. This is a correction to this task's new
+fresh-title code, not a pre-existing pinned5b2 failure or an RNG regression.
+The [existing audit](../architecture/audits/trace/2026-10-14-s3k-fresh-title-sst.md#act3-continuation-bypass--whole-graph-admission)
+records the native negative, read-only semantic gate and exact selectors.
+
+58480 completes119/0/0/0 at11:33:58 BST; actual two-destination/five-preset
+admission, carry state, graph/rewind, D01, API and mandatory startup checks pass.
+72545 completes32/0/0/0 at11:38:14: PLC25 plus all seven actual incoming DEZ
+cases, including both positioned320/800 fights and all five cold endings.
+No movie/oracle or lease fallback changed. Strict45693 completes5/1/0/0 at
+11:43:35; original AIZ/initial HCZ/prefix2 remain green. The continuous chain
+retains189/12,719/82,067 raw field mismatches and stop68,801. Alternate68188
+completes1/1/0/0 at11:47:19 with60 grouped spans, first25,589 animation`$13/$05`.
+Command/profile/source, execution/queue intervals and unresolved screenshot/
+strict parity breadth remain explicit in the audit; no frontier closure claimed.
+
+Final guards14085:111/0/0/0 at11:49:37 BST,33.532s execution/21s queue.

@@ -572,3 +572,16 @@ status7 pending-delete versus engine clear at1055 still needs exact clock
 attribution. The [existing audit](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#shared-s3k-projectile-native-init-and-retirement)
 distinguishes this local owner qualification from cold-route/pixel/audio parity
 and the newly unresolved positioned title-art consumer errors.
+
+
+### 2026-10-14 Act3 title admission follow-up
+
+The new fixed-title graph now honors native Act3 continuation bypass through
+existing LOADING carry state. Two internal destinations × actual production
+presets320/352/400/528/800 pass independent owner/child admission and48-input
+teardown negatives. Affected119 and PLC25 plus actual incoming DEZ7 pass;
+both positioned art-lease errors introduced by the earlier fresh-title slice
+are resolved without input/oracle changes. Original AIZ/initial HCZ/prefix2
+remain green; alternate60 and chain189/12,719/82,067 raw-field frontiers stay
+unchanged. [Native evidence and exact checks](../../audits/trace/2026-10-14-s3k-fresh-title-sst.md#act3-continuation-bypass--whole-graph-admission)
+do not certify native screenshot/audio or whole-act parity.

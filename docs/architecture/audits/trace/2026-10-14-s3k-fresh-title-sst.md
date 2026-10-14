@@ -170,8 +170,9 @@ error with `title owner is missing its runtime-art admission lease`. Matched
 38983 selects `TestDezIncomingFinalRouteCapture#incomingFinalFightRestoresAndReplaysEveryPhase`
 with this production profile restored to exact ddbc HEAD bytes; it completes
 2/0fail/2errors/0skip at10:59:19 BST,75s execution/66s queue, with the identical
-lease errors. This is an inherited fresh-title/positioned-art consumer gap,
-not an RNG regression and not a passing claim for the two positioned cases.
+lease errors. This is already present on ddbc and exonerates the RNG change only. It was
+not established as pre-existing on pinned5b2 and remained a new unresolved
+fresh-title consumer regression for this follow-up.
 
 Strict89375 uses the exact85471 selector/profile in the Monkey audit:5/1/0/0
 at10:55:02 BST,105s execution/145s queue. Original AIZ, initial HCZ and both
@@ -190,3 +191,61 @@ remains engine25/17 versus native18/22.
 Final profile/source/rewind/trace/hardware guards69781 pass111/0/0/0 at
 11:05:16 BST,76s execution/0s queue. This is affected validation, not a
 broad smoke or full-suite pass.
+
+
+## Act3 continuation bypass — whole graph admission
+
+The positioned DEZ cases exercise native `loc_63C14` and `loc_7F310`:
+`Act3_flag` is set before `StartNewLevel` for internal `$1600/$1700`.
+At `Level/loc_62B6` that flag skips the entire fixed title graph. The existing
+`LevelContinuationCarry` already retains the equivalent LOADING phase and
+uses it to suppress the initial presentation. The new fresh-SST collaborator
+had admitted SST8 and four children despite that bypass; their later teardown
+attempted to consume a title-art lease which the continuation never created.
+
+The repair exposes a read-only query of that existing semantic carry phase
+and uses it during S3K graph preparation. It adds no captured state, lease
+fallback, zone/frame/movie condition or queue behavior. Ordinary fresh entry,
+D01 exclusion, preview and seamless admission remain under their previous
+owners. REQUESTED/LOADING/LOADED assertions prove that the query neither
+consumes nor changes carry state.
+
+The first short draft2177 incorrectly expected a title graph after an ordinary
+positioned fixture boot; that boot deliberately requests no fresh runtime art.
+It failed2/2 and was discarded as a wrong oracle. Correct native-continuation
+negative37991 fails2/2 because actual `$1600/$1700` loads retain unwanted title
+objects. The final independent admission class checks both destinations at
+actual presets320/352/400/528/800, camera width before/after load, absence of
+both owner and children, no pending title/fresh boundary, and48 ordinary input
+updates without an orphan teardown. These declared bridge checks are separate
+from actual incoming fights.
+
+Completed candidate validation over projectile3ac656deb, retaining Java25,
+surfaceless EGL and the absolute verified locked-on ROM:
+
+- 58480:119/0/0/0 at11:33:58 BST,152s execution/316s queue. New admission10,
+ carry7, title graph10, fresh boundary2, RNG4, init profile6, API pins9,
+ ending lifecycle9/native clear2 and mandatory startup60.
+- 72545:32/0/0/0 at11:38:14 BST,129s execution/24s queue; exact
+ `TestSonic3kPlcArtRewindSnapshot`25 and `TestDezIncomingFinalRouteCapture`7.
+ Both actual positioned320/800 fights and all five cold compositions pass.
+ No movie, fight oracle, or lease fallback changed.
+- 45693:canonical strict five cases,5/1/0/0 at11:43:35 BST,98s execution/21s
+ queue. Original AIZ, initial HCZ and both prefixes pass. Chain segments6/8/11
+ retain189/12,719/82,067 raw mismatched fields, the same first fields and the
+ input68,801 LEVEL-ownership stop.
+- 68188:`-Ptrace-segments -Dtest=TestS3kAizZoneSliceTraceReplay#replayMatchesTrace`,
+ 1/1/0/0 at11:47:19 BST,37.436s execution/1s queue. Alternate retains60 grouped
+ spans, first25,589 animation`$13/$05`.
+
+58480's exact class selector was
+`TestS3kFreshTitleCardCaptureLifecycle,TestLevelContinuationCarry,TestS3kFreshTitleCardSstGraph,TestFreshLevelBoundaryRewindHeadless,TestS3kFreshLevelRngState,TestSonic3kLevelInitProfile,TestModApiSignatureSurface,TestS3kEndingLifecycleCapture,TestS3kEndingNativeObjectClear,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`.
+It also contained a nonexistent shortened PLC class name; that name supplied
+no coverage. Exact72545 separately supplies the real25 PLC cases. Strict45693
+uses the canonical selector/profile recorded in the Monkey audit. These are
+affected checks, not a broad smoke/full-suite or strict trace closure claim.
+
+Final affected source/rewind/trace/hardware guards14085 pass111/0/0/0 at
+11:49:37 BST,33.532s execution/21s queue. No new consumer or strict regression
+is introduced by this admission correction. Native screenshot spot checks
+remain separately pending.
