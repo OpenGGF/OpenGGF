@@ -1141,6 +1141,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Retention includes the separately loaded controls' bytecode dependencies, keeping
   their callable JDK bodies available when example-mod references change, and
   engine-created policy implementations returned through service factories.
+  Factory bytecode discovery includes returned anonymous service implementations.
   Windows shortcuts forward diagnostic arguments and are checked through the native executable.
   The Linux builder also exercises
   representative rendered gameplay, audio and scene lifecycle paths. The shared

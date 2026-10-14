@@ -957,3 +957,50 @@ matched omission/retention assertion for `hasDefinitions`, audited the corrected
 generator regressions and six Windows/Linux packaging cases. Actual Windows
 dispatch and all-mod gameplay on the rebuilt image remain pending; the prior
 image's successes do not qualify changed native bodies.
+
+The policy correction integrated and published as
+`5e8961ffbc4ea532edea159b23ce36c0ffb1ebf5`. Workflow
+[38550048115](https://github.com/OpenGGF/OpenGGF/actions/runs/38550048115)
+passed: fresh guards completed 10:45:05Z with 680 cases and zero failures/errors/
+skips; Windows completed 10:47:52Z after the actual reflected catalog projection,
+the original JDK bootstrap controls, 25 JVM/native registrations and shortcut
+checks passed. The generated contract retains 1,446 engine types with 19,461
+member entries; its scanned 26th JAR is again the unshipped fixture. The downloaded
+ZIP hash is `0771a40e298f02e3aaf3e29c6043f70861ff05c4b7f02dafa64cdeddc75ae4d4`,
+and the executable hash is
+`bcede08a878ca5e64601e44a4a0561dd25835b1f250338fb965fb366fc63aef5`.
+Both source pins and the published artifact checksum match. The previous partial
+capture outputs were accounted for and discarded; terminal gameplay/audio/queue
+controls and the clean delivered ZIP checksum will follow from this image.
+
+The next leased Wine run (128-second wait, 37.979-second execution) exercised
+the restored catalog dispatch but stopped on a second erased-factory omission:
+`HudRenderManager.timerWarning` invoked an unretained anonymous
+`HudWarningPolicyProvider.isTimerWarning(int)`. Act Practice and Eggman's Sky,
+including all 122 final PCM samples, still passed. The 5e8961ffb image is likewise
+withheld from delivery; its builder/guard successes alone do not certify gameplay.
+
+Adding each anonymous class to the root list was rejected as brittle. The opt-in
+`--service-factories` generator now scans actual bytecode of retained Class-keyed
+factories whose erased descriptor is `(Class)Object`, repeating to a fixed point
+for newly discovered service-bearing classes. It uses the existing exact member/
+handle/constant reference scanner and preserves original class bytes. Normal
+generator mode and production engine/build/API inputs are unchanged. Explicit
+semantic roots still cover the world-policy graph; arbitrary string reflection
+and generated classes remain outside static inference. Execution coverage is
+therefore still mandatory, rather than treating metadata lookup as invocation.
+
+A new ASM fixture reproduces the omission before discovery, then requires its
+anonymous returned implementation's method and exact class bytes afterward. It
+also rejects retention of an unrelated class. The real bootstrap regression now
+constructs the module reflectively, obtains its HUD warning service through the
+actual factory, and checks timer/flash behavior alongside the prepared catalog.
+The final local control passed at 11:00:23Z with zero queue wait and 4.074 seconds
+of Maven execution under normal admission and the worktree lease:
+`maven_queue.py -B -Dmse=off exec:exec -Dexec.executable=python3
+-Dexec.args=target/run_factory_retention_final_checks.py`. Generator regressions,
+actual Java-25 bootstrap execution, a 20,821-entry/1,583-type bootstrap-only audit,
+exact HUD-member assertions, and all six portable packaging cases passed. The
+earlier discovery check also passed (65-second wait, 4.138-second execution).
+The next image must still pass actual Windows controls and full representative
+mod gameplay before the ZIP can be delivered.

@@ -146,7 +146,7 @@ def prepare(args):
     scan_inputs=retention_inputs(inputs / "mods",work / "bootstrap-control.jar",work / "retention-inputs")
     contract=work / "contract"
     run([*java,"com.openggf.tools.NativeModMemberContract",engine,scan_inputs,contract,
-        *("--implementation-root="+root for root in IMPLEMENTATION_ROOTS),"--jdk-members"],work)
+        *("--implementation-root="+root for root in IMPLEMENTATION_ROOTS),"--service-factories","--jdk-members"],work)
     run([*java,"com.openggf.tools.NativeModMemberAudit",contract / "members.tsv"],work)
     metadata=work / "metadata";metadata.mkdir()
     (metadata / "reflect-config.json").write_text('[{"name":"sun.net.www.protocol.jar.Handler","allDeclaredConstructors":true}]\n')
