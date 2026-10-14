@@ -597,8 +597,8 @@ with the same native surface/tolerance rules, rather than changing terrain or
 allowing a jump. Native interaction fixtures use a viewport containing the whole
 new range and a genuine grounded guard placement; an airborne synthetic placement
 cannot prove that a charge was admitted. The four affected distance/gap/native-return/
-powered-dispatch cases pass without skips. Broader composed qualification remains
-pending the Caterkiller and barrage integration.
+powered-dispatch cases pass without skips. At this checkpoint broader composed qualification awaited
+the Caterkiller and barrage integration; completed results follow below.
 
 Powered full-screen attacks retain native eligibility: an armed HURT target or an
 ENEMY with nonzero collision property is not dispatched to its powered callback.
@@ -670,9 +670,9 @@ upstream checks compile the member contract/native gameplay probe with the actua
 engine + testkit, pass the bytecode contract controls and host-JVM bootstrap policy
 probe, and pass all six Linux/Windows packaging safety cases. The initial probe
 compile omitted the testkit/helper, executed no cases, and was corrected without
-production edits. This is no native-image portability qualification. Current
-strict artifacts, compiled pin and paired SDK source/Jupiter gates pass; short
-supplementary GPU/PCM witnesses and one change-based smoke run remain pending. No main integration/push has occurred in this private phase.
+production edits. This is no native-image portability qualification. At that private checkpoint, strict artifacts, the compiled pin and paired SDK
+source/Jupiter gates passed; supplementary GPU/PCM witnesses, change-based smoke
+and main integration were still pending. Their later results are recorded below.
 Historical gentler full-route movies do not certify the harder cold campaign, and
 custom-character traversal and exhaustive/native-image portability remain unverified.
 
@@ -718,8 +718,8 @@ events, retaining physical act one, actual fire placements, the native factory
 and ordinary GameLoop. It observes twelve linked bodies, a 116-pixel span at row
 136 and 144,000 stereo PCM frames. This declared supplementary setup is neither a
 cold-entry nor a whole-route qualification. These captures precede the receiver
-containment repair; fresh strict artifacts and change-based smoke validation are
-still required before integration.
+containment repair; subsequent strict artifacts and change-based smoke validation
+are recorded below rather than inferred from those captures.
 
 
 ### Completed smoke and narrow architecture repairs
@@ -771,8 +771,8 @@ The actually compiled mutable API snapshot has 20,900 lines, SHA-256
 `c1ab9c6d18efc4d8094aabd46c6ebadc4327c75485f4e714d04ad8a608703f05`.
 Its private-checkpoint delta is 16 additions/13 removals due to the relocated
 unpublished roots; descriptor/runtime version stays candidate `0.7.0`, and no
-published pin changes. Final focused behavior, actual artifacts and full fresh
-guards remain pending on this composition. Completed ordinary coverage is not
+published pin changes. At this composition checkpoint, final focused behavior, actual artifacts and full
+fresh guards were pending; their completed results follow below. Completed ordinary coverage is not
 repeated merely for these package/extraction repairs; new overlap risks receive
 focused registry, ownership, palette, native-recipe and startup checks.
 
@@ -787,8 +787,8 @@ manager. It now admits the already-validated instance through the existing
 `createDynamicObject` path, under the same content-owner boundary and native
 construction context. Factory rejection still occurs before admission; no budget
 or guard exemption changes. Delta lifecycle/ownership checks and another fresh
-guard invocation are required; the other completed focus/artifact checks are not
-repeated as a ceremony.
+guard invocation were required to close that checkpoint, as recorded below; the
+other completed focus/artifact checks were not repeated as a ceremony.
 
 
 Final narrow repair qualification passed: the three-class lifecycle focus completed
@@ -806,6 +806,95 @@ Develop subsequently published `b649a3c9b87e8708f0428e51b3848c5c3712cdd1`,
 adding the shared content importer and its illustrated editor guide. The only
 executable path overlap is Engine: this task adds two title-overlay draw lines;
 the incoming change adds import-screen ownership and host UI away from that draw
-call. Final main composition must preserve both. Its title/import/overlay and
-native startup consumers plus affected structural guards receive bounded
-post-integration checks; the already completed ordinary smoke is not repeated.
+call. The actual main composition preserves both. Its title/import/overlay and
+native startup consumers plus affected structural guards passed the bounded
+post-integration checks below; the completed ordinary smoke was not repeated.
+
+### Actual-main delivery selection
+
+The normal no-ff merge `a8221fb7d5eb48f5bb199602227ec6ab4bbbf945` composes the exact verified
+private `5d45451fa3fc3fe97321cb9fa73bf0c5ab8bc66e` with published
+`b649a3c9b87e8708f0428e51b3848c5c3712cdd1`. Git's three-way tree matches
+the actual main index/HEAD exactly; no conflict resolution was needed. Both
+Second Strike title-overlay lines and incoming import-screen ownership survive.
+The local change-based plan selected 3,287 ordinary smoke candidates against the pinned pre-task
+`485e89fbea5a2587b763052f0db115986ca681ce` was inspected without executing
+another category run, and actual-environment preflight passed. The completed
+27,294-case ordinary smoke and final fresh 681 guards cover this task's own
+algorithm/API/native inputs; incoming importer qualification is recorded in its
+dated design. The bounded remaining composition risk is Engine's title/import
+host and the campaign/startup consumers. Accordingly actual main ran the
+authorized 14 focused selectors through strict bundled `verify`, followed by a
+fresh JVM selecting the four affected architecture/physics guards. This
+proportionate selection replaces a broad repeat, without narrowing a category
+runner invocation. Any failure, material skip, missing selector or unexpected
+input change stops publication. Normal admission and resource budgets apply;
+no release-only full suite or extra creator-source qualification is claimed.
+
+### Actual-main results and publication boundary
+
+At main integration commit `a8221fb7d5eb48f5bb199602227ec6ab4bbbf945`, the exact
+14 focus selectors ran 15 classes (both packages' `TestSonic3kLevelLoading`)
+and passed **132 cases, zero failures/errors/skips**. The S3K startup/loading
+subset accounts for 60 of these cases. A separate Maven invocation and fresh
+Surefire JVM ran all four requested structural classes and passed **141 cases,
+zero failures/errors/skips**: object-physics standardization 33, ArchUnit 31,
+architectural review 5 and architectural source 72. Fresh XML class inventories,
+Java 25, surfaceless-EGL and all three absolute ROM properties were checked.
+There are no main-gate failures to attribute or material skips to excuse.
+
+The focus `verify` produced the actual integrated engine/fatjar, matching SDK,
+testkit and Javadoc artifacts. Second Strike strict bundling passed with **zero
+findings** and one bundled `second-strike` 0.1.0 entry; the artifact verifier
+passed. The actual fatjar's compiled API snapshot is byte-identical to the mutable
+20,900-line candidate pin, SHA-256
+`c1ab9c6d18efc4d8094aabd46c6ebadc4327c75485f4e714d04ad8a608703f05`.
+The unpublished 0.7.0 descriptor/runtime version and published pins are unchanged.
+
+The main build-input fingerprint
+`117f5b18a863e8b2ffbe3357d260beb904a9b7066ef0d0ceab89bcb5ff1deca9` (11,570 tracked input files)
+remained unchanged across both gates and compiled-pin inspection. Main's five
+untracked regular files, three dirty submodules (HEAD/index/diffs/untracked state),
+ROM/config bytes and symlink targets retain their initial exact snapshot. The
+tested source is this merge; this final evidence update changes only this plan.
+It does not rebuild artifacts merely to change their evidence-only commit identity.
+
+Commands used the local official `maven_slot(root, tree_fd=main_fd)` API under
+the retained `worktree_build_slot`, with inherited OS descriptors. Each gate
+used normal 7 GiB / 8-core admission and released shared admission afterward.
+Environment: `JDK_JAVA_OPTIONS`, `JAVA_TOOL_OPTIONS`, `DISPLAY` and
+`WAYLAND_DISPLAY` unset; `LUA_BIN=/usr/bin/lua5.4`,
+`ALSOFT_DRIVERS=null`. The following render the actual Maven argv with shell quoting. For portable
+documentation, `OPENGGF_ROOT` denotes the actual main checkout; the outside
+task summary retains the complete absolute argv and light results for the
+coordinator. This path substitution represents the same files and run:
+
+```bash
+mvn -Dmse=off -B -Dtest=TestSecondStrikeCampaign,TestTitleInputOwnership,TestTitleContentImportAccess,TestContentImportScreen,TestContentImportService,TestContentImportWindowBridge,TestEngineModCallbackAbortBoundary,TestModApiSignatureSurface,TestObjectAttachedEffect,TestSecondStrikePolicyComposition,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils "-Dsonic1.rom.path=${OPENGGF_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=${OPENGGF_ROOT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=${OPENGGF_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dopenggf.headless.gl=surfaceless-egl -Dopenggf.bundled.mods=examples/second-strike "-Dopenggf.surefire.reports=${OPENGGF_ROOT}/target/second-strike-main-focus-r1-reports" "-Dopenggf.test.tmpdir=${OPENGGF_ROOT}/target/second-strike-main-focus-r1-tmp" verify
+```
+
+```bash
+mvn -Dmse=off -B -Pguards -Dtest=TestArchUnitRules,TestArchitecturalReviewGuard,TestArchitecturalSourceGuard,TestObjectPhysicsStandardizationGuard "-Dsonic1.rom.path=${OPENGGF_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=${OPENGGF_ROOT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=${OPENGGF_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" -Dopenggf.headless.gl=surfaceless-egl "-Dopenggf.surefire.reports=${OPENGGF_ROOT}/target/second-strike-main-guards-r1-reports" "-Dopenggf.test.tmpdir=${OPENGGF_ROOT}/target/second-strike-main-guards-r1-tmp" test
+```
+
+Tool preflight was
+`python3 tools/testing/run_categories.py --base 485e89fbea5a2587b763052f0db115986ca681ce --preflight`;
+the same command without `--preflight` inspected selection only. The compiled
+export command was
+`java -cp ${OPENGGF_ROOT}/target/OpenGGF-0.7.prerelease-jar-with-dependencies.jar com.openggf.mods.code.ModApiSignatureSurface --snapshot`.
+
+Focus admission waited 745 seconds; Maven reported 1:35 execution. Guard admission
+waited zero reported seconds; Maven reported 36.848 seconds execution. These
+measurements are separate from source integration, inspection, documentation and
+cleanup time. Earlier private ordinary smoke retains its 64 documented
+unexecuted skips; no equivalence is inferred for them. The incoming importer's
+ordered editor-presentation/loading assertion is recorded in its own design and
+was not silently classified or rerun here. This is bounded main-composition
+qualification, not another ordinary/full-suite pass, cold harder-campaign clear,
+native-image portability or physical-speaker qualification.
+
+After this evidence-only commit and normal hook/push policy checks, publication
+targets only `origin refs/heads/develop`. No feature branch, tag or master
+publication is requested. Accounted task-tree removal follows a verified push;
+unknown Starpost save bytes are preserved outside the lead tree, and all main
+save copies and bootstrap targets remain untouched.
