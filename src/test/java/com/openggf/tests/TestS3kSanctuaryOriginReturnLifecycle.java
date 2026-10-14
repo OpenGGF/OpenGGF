@@ -344,7 +344,7 @@ class TestS3kSanctuaryOriginReturnLifecycle {
         }
     }
 
-    private static void waitForReleasedWorld(GameLoop loop, int lives, int zone, int act,
+    static void waitForReleasedWorld(GameLoop loop, int lives, int zone, int act,
                                             CanonicalEntryMatrixSupport.Row row) throws Exception {
         for (int frame = 0; frame < 400 && (loop.getCurrentGameMode() != GameMode.LEVEL
                 || GameServices.fade().isActive()
@@ -360,7 +360,7 @@ class TestS3kSanctuaryOriginReturnLifecycle {
         assertFalse(GameServices.level().hasPendingFreshLevelTransitionBoundary());
     }
 
-    private static void replayTwice(GameLoop loop, HeadlessTestFixture fixture,
+    static void replayTwice(GameLoop loop, HeadlessTestFixture fixture,
                                     CanonicalEntryMatrixSupport owner, CanonicalEntryMatrixSupport.Row row,
                                     int lives) {
         owner.assertOwners(row);

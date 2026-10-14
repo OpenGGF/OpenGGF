@@ -19,7 +19,8 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Actual sanctuary result/return owners, originating in the S3K parity task.
  * END/DEL are declared outcome stimuli, not Blue Sphere winning-input evidence.
- * The caller enters through a real placed MHZ ring and sanctuary pedestal.
+ * Callers use a real sanctuary pedestal, with either actual MHZ-ring Saved2
+ * entry or an explicitly declared direct developer scene without an origin.
  */
 final class SanctuaryResultsLifecycleProbe {
     enum Outcome {
@@ -131,9 +132,9 @@ final class SanctuaryResultsLifecycleProbe {
         assertEquals(outcome != Outcome.FAILURE, sawPan);
         assertEquals(outcome != Outcome.FAILURE, sawStars);
         assertEquals(outcome == Outcome.FINAL_SEVEN, sawHyperMessage);
-        assertNotSame(backdrop, GameServices.level().getObjectManager(), "results exit actually loads Saved2 origin");
-        assertEquals(7, GameServices.level().getCurrentZone());
-        assertEquals(0, GameServices.level().getCurrentAct());
+        assertNotSame(backdrop, GameServices.level().getObjectManager(), "results exit actually loads its owned destination");
+        assertEquals(saved == null ? 0x17 : 7, GameServices.level().getCurrentZone());
+        assertEquals(saved == null ? 1 : 0, GameServices.level().getCurrentAct());
         assertTrue(fixture.gameplayMode().getRewindController().currentFrame() <= 1,
                 "actual origin load starts a new live timeline");
         return stageHistory;

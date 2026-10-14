@@ -85,6 +85,81 @@ class TestS3kSanctuaryPedestalLifecycle {
         assertPhysicalEntry(row, stage);
     }
 
+    static Stream<org.junit.jupiter.params.provider.Arguments> nativeOutcomes() {
+        return TestS3kSanctuaryOriginReturnLifecycle.nativeOutcomes();
+    }
+
+    static Stream<org.junit.jupiter.params.provider.Arguments> supportedOutcomes() {
+        return TestS3kSanctuaryOriginReturnLifecycle.supportedOutcomes();
+    }
+
+    @ParameterizedTest(name = "actual no-Saved2 developer-scene return {0}/{1}")
+    @MethodSource("nativeOutcomes")
+    void nativeOutcomeOwnersReturnADeclaredDirectSceneWithoutInventingSaved2(
+            CanonicalEntryMatrixSupport.Row row, SanctuaryResultsLifecycleProbe.Outcome outcome)
+            throws Exception {
+        assertDirectSceneReturn(row, outcome);
+    }
+
+    @ParameterizedTest(name = "supported no-Saved2 developer-scene return {0}/{1}")
+    @MethodSource("supportedOutcomes")
+    void everySupportedDirectSceneOutcomeReturnsAndReplaysWithoutSaved2(
+            CanonicalEntryMatrixSupport.Row row, SanctuaryResultsLifecycleProbe.Outcome outcome)
+            throws Exception {
+        assertDirectSceneReturn(row, outcome);
+    }
+
+    private void assertDirectSceneReturn(CanonicalEntryMatrixSupport.Row row,
+            SanctuaryResultsLifecycleProbe.Outcome outcome) throws Exception {
+        // The shipped-style level-select table offers no1701 hub. This is the
+        // existing developer/capture direct-scene boundary, not a native menu route.
+        var fixture = support.boot(row);
+        GameServices.gameState().restoreS3kEmeraldProgress(outcome.initialProgress(), true);
+        var neutral = new Bk2FrameInput(0, 0, 0, false, "");
+        var input = new InputHandler();
+        input.setLogicalOverride(RecordedInputSnapshots.fromBk2(neutral, neutral));
+        var loop = new GameLoop(input);
+        loop.setGameplayMode(fixture.gameplayMode());loop.setGameMode(GameMode.LEVEL);
+        int lives = GameServices.gameState().getLives();
+        try {
+            assertFalse(GameServices.level().hasBigRingReturn(), "direct scene has no captured origin bank");
+            advance(loop, support, row, 200);
+            var provider = selectAndReplayIncomingStage(loop, input, fixture, support, row, 6, lives);
+            SanctuaryResultsLifecycleProbe.completeAndReturn(loop, provider, fixture, row, outcome, lives, null);
+            assertTrue(GameServices.gameState().getLives() >= lives);
+            lives = GameServices.gameState().getLives();
+            TestS3kSanctuaryOriginReturnLifecycle.waitForReleasedWorld(loop, lives, 0x17, 1, row);
+            support.assertOwners(row);
+            assertFalse(GameServices.level().hasBigRingReturn(), "fallback never fabricates Saved2");
+            assertFalse(GameServices.sprites().getMainPlayable().isObjectControlled());
+            assertTrue(GameServices.level().getLevelGamestate().isTimerPaused());
+            var hudGate = com.openggf.level.LevelManager.class.getDeclaredMethod("isHudSuppressed");
+            hudGate.setAccessible(true);
+            assertTrue((boolean) hudGate.invoke(GameServices.level()), "actual semantic HUD suppression");
+            var objects = GameServices.level().getObjectManager();
+            var controller = objects.activeObjectsOfType(
+                    com.openggf.game.sonic3k.objects.HPZSSEntryControlObjectInstance.class).getFirst();
+            assertFalse(controller.isHostingSpecialStageResults());
+            assertFalse(controller.resultsReturnTransformationActive(), "success reveal already belonged to results");
+            assertTrue(objects.activeObjectsOfType(
+                    com.openggf.game.sonic3k.objects.HPZSuperEmeraldReturnEffectObjectInstance.class).isEmpty());
+            assertTrue(objects.activeObjectsOfType(
+                    com.openggf.game.sonic3k.objects.HPZSanctuaryFallingCrystalObjectInstance.class).isEmpty());
+            var pedestal = objects.activeObjectsOfType(HPZSuperEmeraldObjectInstance.class).stream()
+                    .filter(object -> object.getSpawn().subtype() == 6).findFirst().orElseThrow();
+            assertEquals(outcome == SanctuaryResultsLifecycleProbe.Outcome.FAILURE
+                    ? HPZSuperEmeraldObjectInstance.Display.GRAY : HPZSuperEmeraldObjectInstance.Display.COLORED,
+                    pedestal.display());
+            assertEquals(outcome == SanctuaryResultsLifecycleProbe.Outcome.FAILURE, pedestal.isSelectable());
+            TestS3kSanctuaryOriginReturnLifecycle.replayTwice(loop, fixture, support, row, lives);
+            assertFalse(GameServices.level().getObjectManager().activeObjectsOfType(
+                    com.openggf.game.sonic3k.objects.HPZSSEntryControlObjectInstance.class).getFirst()
+                    .resultsReturnTransformationActive());
+            assertTrue(GameServices.level().getObjectManager().activeObjectsOfType(
+                    com.openggf.game.sonic3k.objects.HPZSuperEmeraldReturnEffectObjectInstance.class).isEmpty());
+        } finally {loop.closePresence();}
+    }
+
     private void assertPhysicalEntry(CanonicalEntryMatrixSupport.Row row, int stage) throws Exception {
         var fixture = support.boot(row);
         // Declared persistent progress only, before the controller first dispatch.
