@@ -21,6 +21,9 @@ Unreleased. The earlier development themes remain in
   tail, allowing ordinary movement after a fresh zone handoff. Publication also
   restores the destination ring count after the title boundary temporarily
   retains the source count, including rewind across that boundary.
+  Admitted title and save-menu ROM patterns survive the following level overlays,
+  retaining unwritten spans while newer zero/art uploads supersede them.
+  Prepared installation rejects detached art owners and stale generations.
   Native title-card objects retain their fixed slots and child lifetimes after
   omitted presentation, with exact graph restoration before gameplay placements.
   Initial touch publication follows each object's native range/deletion tail,
@@ -110,7 +113,8 @@ Unreleased. The earlier development themes remain in
   object and screen-event timing. Paired pattern uploads wait for their actual
   decompression child and publish at the supported VInt; duplicate descriptors
   preserve FIFO ownership through rewind. Capture entry preserves native camera locks
-  and scene origins, and capture fades retain their production owner. Ending resource initialization preserves scroll handling
+  and scene origins, and capture fades retain their production owner. Ending
+  resource initialization preserves scroll handling
   in other zones. Donated Sonic 2 powered controllers restore
   palette and ring timing, current sparkle ownership and animation scripts through
   rewind, while normal Tails restores retain his body and balance profile.

@@ -131,6 +131,12 @@ class TestGameplayCaptureDataSelectLaunch {
                 assertEquals(0, world.getCurrentZone());
                 assertEquals(0, world.getCurrentAct());
                 assertNotNull(GameServices.level().getCurrentLevel());
+                var nativeAssets=new com.openggf.game.sonic3k.dataselect.S3kDataSelectDataLoader(
+                        com.openggf.data.RomByteReader.fromRom(GameServices.rom().getRom()));
+                nativeAssets.loadData();byte[] expectedFont=new byte[64],actualFont=new byte[64];
+                nativeAssets.getTextPatterns()[0x20].copyInto(expectedFont,0);
+                GameServices.level().getCurrentLevel().getPattern(0x582).copyInto(actualFont,0);
+                assertArrayEquals(expectedFont,actualFont,"native font residency survives the actual NoSave/new-slot world replacement");
                 var slot = new SaveManager(saves).readSlotSummary("s3k", 1);
                 if (saving) {
                     assertEquals(1, world.getSaveSessionContext().activeSlot().orElseThrow());

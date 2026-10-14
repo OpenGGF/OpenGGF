@@ -1628,3 +1628,243 @@ only their missing donor prerequisites and changed camera premise. Native
 startup/boss/results/registry/render checks already green are retained instead
 of rerunning those unchanged classes. The lead owns composed smoke/guards and
 central current matrix/discrepancy/release prose.
+
+
+### Complete comparison recheck and source-owned ingress attribution (2026-10-14)
+
+The earlier transfer/route observations used the old snapshot diagnostic. Its
+private-record walk and omitted captured channels could return an empty diff
+for unequal worlds; copied Palette content also needed a concrete raw-RGB
+comparison. Direct child receipts, FIFO identities, resident bytes, displayed
+pixels and explicit literal assertions remain separate evidence. Complete
+whole-registry credit now uses the qualified helper chain c3d2e75b4,
+d8da36388 and 7001b1eef, with no snapshot/runtime shape change.
+
+Exactly one affected recheck, request 74100 on allocation a44e23e92, completed
+at 21:38:49 UTC: 14 cases, zero failures/errors/skips, 1:10 Maven and 24 seconds
+admission wait. The selector was TestS3kKosPatternPublication (11),
+TestS3kKosPatternWorldRestore (2 actual GPU widths 320/800), and
+TestS3kEndingSceneResources (1). It retained actual pending native DMA,
+render-without-publication, later VInt publication, both restore directions
+and two forward cycles, now comparing private captured transfer state, all
+captured manager decision/contact/identity fields and complete palette data.
+The command supplied the verified absolute locked-on ROM and surfaceless EGL.
+This repairs the comparator prerequisite for this bounded scope; it does not
+repeat or certify every earlier ending/route consumer on a future composition.
+
+The independent ROM-span probe establishes the initial native Master region's
+actual ingress owner. ArtNem_Title_S3Banner at ROM $35026C decompresses to
+6,848 bytes and uploads to native VRAM $A000. Its offset $5C0, length 2,176,
+is exactly the retained native VRAM $A5C0 span in both original scene references:
+SHA256 67309264bf856659a0d904d6c3afc6a7288db98227d27b3d3bf6d101a961f151.
+The engine ingress SHA5626d9a8 is exactly 2,176 zero bytes. No native bytes were
+used as engine state or fallback art. The earlier terrain/unspecified-residue
+attribution is superseded by this exact ROM identity, while its chronological
+uncertainty and original captures remain preserved.
+
+Read-only title attribution ran through normal queued exec and the intended
+source/classes courtesy lease. Its Java25 compiler interval was
+21:25:22.883621–21:25:23.197716 UTC; TitleRetainedRomAssetProbe JVM intervals
+were 21:25:23.213129–.251391 and 21:25:23.254905–.298830 UTC. Exact argv,
+source/class/native-domain hashes and ROM-span results are in external
+`title-retained-rom-attribution.json`; these short read-only probes establish
+identity, not a runtime retained-pattern handoff.
+
+A separately frozen actual-title ingress specification then exercised the
+existing GameplayCaptureSession title owner: 277 neutral steps to real ACTIVE,
+one ordinary Start event, 22 exit-neutral steps to DATA_SELECT, no ordinary
+DataSelect step, then one declared normal D01 destination/inventory selection.
+The title loader's actual CPU span hashes 67309264, but the newly loaded level
+hashes zero5626d9a8 before initial ProcessSprites and through outer3. Its proper
+new Master art first publishes at outer4. This confirms loss at the physical
+pattern resource boundary even with actual title ingress. The engine admits
+DataSelect initialization before its public mode-change callback; the native
+reference selects D01 at the preceding main dispatch. Therefore this probe
+is an ingress-contract diagnostic, not a synchronized scene/pixel or cold
+campaign acceptance.
+
+Request 90191 completed exit0 at 21:42:44 UTC, 1.813 seconds Maven, using the
+immutable qualified v7 jar4dd49f56. Java25 compiler bounds were
+21:42:42.570208–.934490 and TitleToEndingIngressProbe JVM bounds were
+21:42:42.936371–21:42:44.051669 UTC. The frozen spec SHA256 is
+31f64ecabd35ada5c7b981dcf7f89ab30cef5f83c086c20a954eb18e7299972f.
+External `title-to-ending-ingress-v1` contains observations/provenance with
+full commands and actual source/jar/spec hashes. No player, camera, palette,
+VDP, display, demo, pattern or reference-value writes were made. The next
+implementation must retain actual frontend ROM-uploaded physical bytes at
+resource overlays; an ending-specific banner reload would hide the owner.
+
+### Late Tails scroll follows the reunion resource boundary (2026-10-14)
+
+A read-only native CPU callback probe reused the independently declared natural
+Title Start/fixed-zero specification. It verified actual branch opcodes,
+observed SSZ queue readiness at loc_5AE0A and the eight foreground delayed-row
+calls at loc_5AE76, then the first loc_5B03A/sub_5B0A8 cloud publication. No
+reference gameplay values, fitted controller-row shifts, pixels or PCM were
+used. Ordinary video-disabled Advance is explicit; this is prepared CPU owner
+attribution, not a newly captured published framebuffer.
+
+Native and engine agree at the foreground40 entry, input4401. Native first
+passes the resource-ready gate at input4443, draws foreground rows4443–4450,
+and begins cloud deformation at input4450 with a cleared accumulator. Engine
+v7 installs at input4442 and begins cloud deformation at input4449. Thus native
+input5119 retains $14F000 (670 cloud advances), while corresponding engine
+outer5120 retains $14F800 (671). The late eight-word/122-pixel difference follows
+the one earlier resource-ready admission, rather than a proved scatter,
+rounding or cloud-counter defect. LOAD_TIME_SIMULATION=FAST is explicit in
+the engine provenance. Exact direct/module submission, service and retirement
+must explain this remaining boundary before a timing repair; a fixed scroll
+delay or global row shift is rejected.
+
+Request 41782 failed only observer compilation (variable callback address int
+needed uint); no native probe JVM or observations ran. Corrected request 78763
+completed exit0 at 21:45:27 UTC, 28.985 seconds Maven, with 6,144 actual controller
+polls, 6,145 ProcessSprites passes and 1,694 post-AIZ cloud calls. Compiler UTC
+21:44:59.114065–.681220 and native Mono UTC21:44:59.681461–21:45:27.732199 are
+recorded with exact commands in external `native-cloud-transition-tails-super-320-v1`.
+The initial failed compiler's exact CPU interval was not sampled and is not
+invented. Both compilers retained the intended allocation source/classes build
+lease through queued exec despite their external output directories.
+
+All original native/v1–v7 media bytes remain unchanged. Original RGB transfer,
+complete nine native branches, PAL/PCM, actual prepared/published SAT overflow
+and remaining resource timing still require their owning acceptance evidence.
+
+
+### Admitted frontend physical pattern handoff (2026-10-14)
+
+The bounded repair follows the source-owned title and SaveScreen upload owners,
+not an ending-specific banner reload. S3kFrontendPatternResidency retains a
+64 KiB bounded pattern-address bank only while actual frontend CPU uploads
+are active. Its first admission copies the current stock Level Pattern[]
+bytes, or starts zero in a fresh context; virtual atlases and native reference
+VRAM are never inputs. Title animation frames and final Nemesis ranges publish
+only from their real admitted CPU phase, independently of draw/cache calls.
+The final title packing retains null gaps as unwritten spans. SaveScreen's
+D000/1000 fill and its font562, background1, misc29F and extra454 uploads
+supersede older title bytes. Extra art150 ends4E9 and does not reach52E; the
+initial draft attribution to that art is rejected. The admitted font does
+replace the later part of the initial Master span. Dynamic selected-save
+icon DMA, untouched name tables/SAT and arbitrary ordinary level-to-level
+residue are outside this pattern-handoff slice.
+
+ResourceLoader overlays copied bytes at their original positions, including
+zero writes, while unwritten spans survive. The retained extent is separate
+from the existing append cursor. Detached previews and authored decoders keep
+their independent decode contract. Sonic3k freezes a copied resource seed
+before its async task and validates it before installed graphics publication;
+only real resource installation consumes it. No ongoing PLC/AniPLC/KosM Level
+patterns are mirrored into a second cache after consumption.
+
+NativeDataSelectLaunchFlow replaces its world while reusing the exact source.
+An unannotated capture-only handoff token binds that source, the intrinsic
+supported art owner class and byte format. It defensively copies the admitted
+bytes into the matching new owner's generation before the actual level load.
+Mismatched sources and unrelated owners advertising the same format fail
+before accepting bytes; independent fresh contexts remain zero. Ordinary
+title.reset does not reset physical pattern lifetime. The registered resource
+adapter captures both directions and resets only with a missing/fresh context.
+
+The first actual frontend negative74049 completed at21:57:45 UTC:3 cases,
+1 failure/1 error/0 skips. Natural title ACTIVE without drawing followed by
+ordinary reset and declaredD01 lost a nonzero independently decoded banner
+pattern. The separate extra-art oracle index218 exceeded the real150 tiles,
+so that setup error is not runtime evidence. Its correction uses the native
+font tile582/digit-zero ROM pattern, preserving the banner assertions.
+
+Build29717 completed test-compile at22:12:24 UTC in1:04; no tests were credited.
+Initial affected2965 passed26/0/0/0 at22:13:23 UTC in24.373 seconds: pure
+resource3, actual frontend4, zero-overlay/append/mod-source15, real native
+NoSave/new-slot launches2 and pending-DMA GPU worlds2. Root review then
+identified a missing installed-owner identity gate. Independent72262 retained
+equal generation and bytes in a detached old coordinator and failed exactly
+that authorization assertion:4/1/0/0 at22:21:36 UTC,25.994 seconds.
+Checking only the old owner's values is rejected.
+
+The correction validates current resource-owner identity as well as its
+generation/content before GPU work. Ticket construction is private to capture;
+source and owner provenance cannot be supplied by its caller. Current-owner
+90935 passed13/0/0/0 at22:24:27 UTC in1:06: actual frontend5, pure resource4,
+NoSave/new-slot2 and pending-DMA GPU worlds2. The new actual frontend case
+compares every registry key through two before/menu-after restore and replay
+cycles using the complete qualified diagnostic. It certifies the resource
+world, not every private title/UI presentation field.
+
+One affected existing-consumer run3228 then passed221/0/0/0 at22:29:36 UTC,
+1:53 Maven: AIZ1 entry21, HCZ1 entry36, both level-loading classes43, omitted
+AIZ startup8, detached overview1, bootstrap6/decoder3, DataSelect loader5/
+manager12/presentation73, title timing/audio4, prepared owner/fire/mod checks6,
+exact mapping1 and renderer corruption2. All three absolute verified ROM paths
+and surfaceless EGL were supplied; no cases skipped. ResourceLoader15 above
+remains unchanged. This is focused consumer qualification, not combined smoke
+or nine-branch/native scene acceptance. The lead owns composed smoke/guards.
+
+The final runtime Java SHA256 is
+4d401bcc5db23532c9e2bfd2a8e0666ba908a5038e4b6c48967b1fe91e2750a2
+on da27-composed allocation d0fabc3ef. Commands used the local normal
+maven_queue wrapper with -Dmse=off and exact selectors. The owner-identity
+negative alone used its bounded lean lane.
+
+Actual GameLoop title exit initializes DataSelect before its public mode-change
+callback, so those admitted menu uploads must remain newer authority. The
+older nativev3 selects D01 before SaveScreen; comparing these ingresses would
+be a premise mismatch. The separately frozen engine-title-owner-ingress-spec-v2
+uses supported startAtTitle/TitleScreenProvider APIs to consume actual neutral
+startup and one real Start, then declares normalD01 before invoking DataSelect.
+Its fixed VInt0/RNG0 authoring occurs only before initial ProcessSprites.
+That no-menu boundary mirrors the retained native reference; it is a declared
+scene protocol, never cold campaign certification. Original RGB and the late
+resource-ready one-input difference remain separate owning obligations.
+
+
+The no-menu visual recapture's first request90251 stopped before title startup
+inside GameplayCaptureSession.boot: setting initialVInt0 in the title-first
+Settings dereferenced the as-yet absent ObjectManager. It completed exit1 at
+22:31:13 UTC in2.622 seconds. No scene body ran. This was a harness prerequisite
+negative, not a residency defect; the frozen specification already sets zero
+only after destination load. The correction leaves boot's VInt override unset,
+then applies the declared zero at that actual pre-initial boundary. Failed
+source/output and immutable runtime identity remain in external
+engine-title-owner-ingress-v8-negative.json. That first launcher did not persist
+its sampled compiler/JVM micro-bounds before the exception; none are invented.
+
+Corrected72135 completed exit0 at22:33:27 UTC in11.859 seconds. Its immutable
+engine-frontend-pattern-residency-v8.jar SHA256 is
+0d9d48888561e5f1bda79c814080d710c3084fab48b46f0573599c5f5eb93d6b.
+The compiler ran22:33:15.814175–16.278821 UTC; EndingEngineSpotProbe children
+ran22:33:16.280995–21.501629 and22:33:21.502689–27.023802 UTC. The queued
+exec retained the intended allocation target/classes worktree build lease
+through snapshot, standalone Java25 compilation and both sequential1GiB/2CPU
+EGL children. Exact argv, source/spec/class/runtime hashes and bounds are in
+external engine-frontend-pattern-residency-v8r2-provenance.json.
+
+Both branches observed actual277 neutral title steps, one real logical Start,
+EXITING and no DataSelect initialization. The pre-initial Master2176 span now
+hashes exactly67309264 in both scenes, from the admitted ROM title owner.
+Each then executes one production initial setup and6,144 ordinary neutral
+inputs. Full initial, active-plane/player, return-island and late-credit pairs
+were viewed against unchanged native published originals. In the fixed22
+prepared-identity spots, Sonic's11 and Tails'first9 have zero three-bit
+diagnostic pixel differences. Original RGB remains different and authoritative;
+this diagnostic is owner attribution, not normalized acceptance. Tails5119
+retains122 and6143 retains140 diagnostic pixels, consistent with the separately
+observed one-early reunion resource-ready/cloud admission. No global row shift
+was searched or applied. All image/domain/ledger hashes and explicit clock
+pairs are in external frontend-residency-v8r2-comparison.json. Historical
+v1–v7/native captures and the61-second reel remain byte-identical.
+
+Reproduction of the focused resource gate (absolute ROM properties supplied
+from the discovered MAIN_WORKSPACE files, without copied ROMs):
+
+```bash
+JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl ALSOFT_DRIVERS=null python3 tools/testing/maven_queue.py -Dmse=off "-Ds3k.rom.path=$S3K_PARITY_ROM" '-Dtest=TestS3kFrontendPatternResidency,TestS3kFrontendPatternResidencyState,TestGameplayCaptureDataSelectLaunch#physicalNativeConfirmationLaunchesNoSaveAndNewSlotWithSelectedTeam,TestS3kKosPatternWorldRestore' test
+JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl ALSOFT_DRIVERS=null python3 tools/testing/maven_queue.py -Dmse=off "-Ds3k.rom.path=$S3K_PARITY_ROM" "-Dsonic1.rom.path=$S1_PARITY_ROM" "-Dsonic2.rom.path=$S2_PARITY_ROM" '-Dtest=TestSonic3kTitleScreenFrameLoadTiming,TestSonic3kTitleScreenIntroSkipAudio,TestS3kDataSelectDataLoader,TestS3kDataSelectManager,TestS3kDataSelectPresentation,TestLevelLoadPreparer,TestS3kAiz1FireTransitionPreparedReload,TestLevelManagerPreparedModLoading,TestSceneBackdropS3k#overviewPixelsAreBlockMeans,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestS3kAiz1EntryMatrix,TestS3kHcz1EntryMatrix,TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits,TestPatternSpriteRendererCorruptionGuard' test
+JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl ALSOFT_DRIVERS=null python3 tools/testing/maven_queue.py -Dmse=off exec:exec -Dexec.executable=/usr/bin/python3 '-Dexec.args=<CAPTURE_TASK_DIR>/run_engine_scene_spots-v8r2.py %classpath'
+```
+
+The existing historical capture jars remain immutable inputs to their old
+recipes. The v8r2 snapshot is this scoped candidate, not latest-integrated
+pixel parity. Complete native-nine products, PAL50, PCM, actual prepared/
+published scanline overflow and the late one-input resource boundary remain
+active obligations; this commit closes only admitted frontend pattern
+residency and its focused construction/installation/rewind consumers.

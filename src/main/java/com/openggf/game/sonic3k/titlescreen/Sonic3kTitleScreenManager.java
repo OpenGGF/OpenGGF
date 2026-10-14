@@ -750,6 +750,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
 
     /** The decoded frame's art, mappings and palette reach VRAM together. */
     private void presentAnimationFrame(int frame) {
+        dataLoader.publishNativeAnimationFrame(frame);
         dataLoader.cacheAnimationFrame(frame);
         displayedAnimFrame = frame;
     }
@@ -1009,6 +1010,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         // Load final frame
         currentAnimFrame = FINAL_FRAME_INDEX;
         displayedAnimFrame = FINAL_FRAME_INDEX;
+        dataLoader.publishNativeAnimationFrame(FINAL_FRAME_INDEX);
         dataLoader.cacheFinalScene();
 
         // Play title music if not already playing
@@ -1027,6 +1029,8 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         // Load the final scene art (frame D with full 4-line palette)
         dataLoader.cacheFinalScene();
 
+        // Native loc_4140 loads sprite art only after the final background art.
+        dataLoader.publishNativeFinalSprites();
         // Initialize interactive sprites
         initInteractiveSprites();
 

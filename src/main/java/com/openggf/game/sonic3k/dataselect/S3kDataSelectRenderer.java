@@ -27,6 +27,8 @@ import static org.lwjgl.opengl.GL11.glClearColor;
  */
 interface S3kDataSelectAssetSource {
     void loadData() throws java.io.IOException;
+    /** Native initial upload owner; synthetic/donated asset-only sources omit physical residency. */
+    default void publishNativePatterns() { }
     boolean isLoaded();
     int getMusicId();
     int[] getLayoutWords();
