@@ -294,6 +294,24 @@ class TestSonic3kEndingSuperState {
         }
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints={0,6,15,126,127})
+    void companionTimerRetainsItsWholeNativeByteWithoutChangingPriorOwnerFlags(int nativeTimer)throws Exception {
+        var controller=bind(new Tails("tails",(short)0,(short)0));controller.initializeEndingSuperTails();
+        var timer=Sonic3kSuperStateController.class.getDeclaredField("superTailsCompanionPaletteTimer");timer.setAccessible(true);
+        // Literal legal Palette_timer bytes: ordinary reloads and the ending
+        // wrapper's held127 / following AnPal126. No gameplay/reference hydration.
+        timer.setInt(controller,nativeTimer);var snapshot=controller.captureRewindState();
+        assertEquals(0x200,snapshot.transformFramesRemaining()&0xF00,"pre-existing ending-owner flag");
+        if(nativeTimer<=15){assertEquals(0,snapshot.transformFramesRemaining()&0xF000);
+            assertEquals(nativeTimer<<4,(snapshot.presentationTier()>>>24)&0xFF,"ordinary low-nibble representation remains identical");}
+        for(int cycle=0;cycle<2;cycle++) {
+            timer.setInt(controller,0);controller.restoreRewindState(snapshot);
+            assertEquals(nativeTimer,controller.superTailsCompanionPaletteTimerForTest(),"native timer byte was truncated on cycle"+cycle);
+            assertEquals(snapshot,controller.captureRewindState());
+        }
+    }
+
     private Sonic3kSuperStateController bind(AbstractPlayableSprite player) {
         GameServices.sprites().clearAllSprites();
         GameServices.sprites().addSprite(player, player.getCode());

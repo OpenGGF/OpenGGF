@@ -5427,3 +5427,15 @@ reproduced both publication and multipart defects at320/800 and retained exact
 original native RGB differences as pending rather than fitting color output.
 `loc_5E1F0` separately sets Player1 render_flags bit0; its status-facing write
 alone is insufficient when scripted object mappings bypass playable mapping.
+
+
+**Capture every legal palette-timer byte, not only ordinary reloads.**
+S3K `Palette_timer` belongs to Sonic and Tails' Flickies, while Tails' body uses
+`Palette_timer_Tails`. The rescue wrapper Obj_5D86A writes the former$7F every
+pass; only terminal reunion loc_5E4E2 repeats that hold. Holding the body timer
+or every reunion routine changes a different native owner. Existing four-bit
+companion snapshot packing silently truncated127→15 and126→14; retain source-
+legal byte breadth and verify pre-existing flag masks/ordinary representations
+when extending an internal packed word. The2026-10-14 ending tests independently
+check all three progress values, normal colors, live body cycling, both registry
+restore directions and ordinary0/6/15 versus held/released127/126.

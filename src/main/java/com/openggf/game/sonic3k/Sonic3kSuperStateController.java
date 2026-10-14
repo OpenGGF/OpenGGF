@@ -107,6 +107,10 @@ public class Sonic3kSuperStateController extends SuperStateController {
     private static final int ENDING_FORM_SNAPSHOT_BIT = 0x200;
     private static final int ENDING_REUNION_SNAPSHOT_BIT = 0x400;
     private static final int ENDING_REVERT_MAPPINGS_SNAPSHOT_BIT = 0x800;
+    // S3K's existing transformation word owns flags8..11 and otherwise has no
+    // countdown. Retain companion Palette_timer's high nibble in unused12..15;
+    // ordinary0..15 snapshots keep their exact previous representation.
+    private static final int COMPANION_TIMER_HIGH_SNAPSHOT_SHIFT = 12;
     private final HyperKnucklesWallQuake wallQuake = new HyperKnucklesWallQuake();
     private int hyperFlashFrames;
     private boolean hyperFlashRestorePending;
@@ -269,6 +273,11 @@ public class Sonic3kSuperStateController extends SuperStateController {
         initializeEndingForm(S3kFormTier.SUPER_TAILS);
         paletteFrame = 0;
         superTailsCompanionPaletteFrame = 0;
+    }
+
+    /** Obj_5D86A wrapper / loc_5E4E2: hold Sonic/Flicky Palette_timer, not Tails' body timer. */
+    public void holdEndingTailsCompanionPaletteTimer() {
+        superTailsCompanionPaletteTimer = 0x7F;
     }
 
     /** {@code loc_5E70E}: powered Knuckles flight keeps its cursor and writes timer $F. */
@@ -503,7 +512,8 @@ public class Sonic3kSuperStateController extends SuperStateController {
                 (doomsdayForm ? DOOMSDAY_FORM_SNAPSHOT_BIT : 0)
                         | (endingSceneForm ? ENDING_FORM_SNAPSHOT_BIT : 0)
                         | (endingReunionForm ? ENDING_REUNION_SNAPSHOT_BIT : 0)
-                        | (endingRescueRevertMappingsPending ? ENDING_REVERT_MAPPINGS_SNAPSHOT_BIT : 0),
+                        | (endingRescueRevertMappingsPending ? ENDING_REVERT_MAPPINGS_SNAPSHOT_BIT : 0)
+                        | (((superTailsCompanionPaletteTimer >>> 4) & 0xF) << COMPANION_TIMER_HIGH_SNAPSHOT_SHIFT),
                 activeFormTier.ordinal()
                         | (wallQuake.capture().framesRemaining() << 8)
                         | ((hyperFlashFrames | (hyperFlashRestorePending ? 0x80 : 0)) << 16)
@@ -536,7 +546,8 @@ public class Sonic3kSuperStateController extends SuperStateController {
         int companionState = (rewindState.presentationTier() >>> 24) & 0xFF;
         superTailsCompanionPaletteFrame =
                 (companionState & 0xF) * BYTES_PER_FRAME;
-        superTailsCompanionPaletteTimer = (companionState >>> 4) & 0xF;
+        superTailsCompanionPaletteTimer = ((companionState >>> 4) & 0xF)
+                | (((rewindState.transformFramesRemaining() >>> COMPANION_TIMER_HIGH_SNAPSHOT_SHIFT) & 0xF) << 4);
         transformationPaletteAdvancedThisFrame = false;
         configurePaletteForActiveTier();
         paletteFrame = rewindState.paletteFrame();
