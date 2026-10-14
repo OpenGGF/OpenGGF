@@ -71,6 +71,15 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Offscreen editor captures can leak pointer projection into later tests
+(2026-10-14, editor guide pictures). `GraphicsManager.cleanup()` and its test
+reset retain viewport/projection overrides. A 426px capture followed by a
+320px mouse-stroke test mapped the pointer into a different cell and made
+focus-loss commit appear broken. Save and restore viewport coordinates/dimensions,
+projection width/buffer and batching state in the capture's `finally`, including
+failed captures. The later focus-loss case passed after that restoration was
+added, even while the capture still exposed a separate editor-context error.
+
 A performance-only flock does not isolate shared-worktree test jobs
 (2026-10-13, P5 CPU audit). Another task's queued Maven run overlapped a
 negative timing pair; its result was excluded and a preliminary rejection
@@ -115,6 +124,16 @@ owner first loads, invalidating the run with ClassNotFoundException. Isolate all
 builds from live correctness runs as well as timing; separate Java input-plan
 compilation that only reads an already-built classpath from Maven rebuilding it.
 
+Prebuilt captures still need execution admission (2026-10-14, Chaos reel): a
+GameplayCaptureTool Java child read an immutable target/ while an exclusive S1
+allocator diagnostic held all worktree build locks. The diagnostic correctly
+stopped before launch; a built classpath alone provided no CPU isolation.
+Input authoring, gameplay captures, direct javac and SDK packagers must retain
+shared scheduler execution leases when coordinated measurements require them.
+Pass lease descriptors to child processes, release admission between bounded
+clips, and record each child's PID and actual UTC interval. Do not infer an
+exited PID's owning shot solely from adjacent log timestamps.
+
 Smoke is a selection, not a short-runtime guarantee (2026-10-13, queue contention):
 a ROM-backed smoke run executed 26,690 ordinary cases in about 59 minutes, then
 spent five more minutes on guards. Report candidate count and actual environment,
@@ -128,13 +147,22 @@ See [queue evidence](../architecture/research/2026-10-13-maven-queue-contention.
 Fork options and child-launcher output (2026-10-14, S3K composition): an admitted
 headless flag does not prove propagation into a test fork. With the current
 Maven3.9.16/Surefire3.2.5 POM, `MAVEN_OPTS` supplies parent JVM properties;
-CLI `-D` or inherited `JDK_JAVA_OPTIONS` reaches tests. The latter also adds a
-Java notice before child stderr, so a first-byte diagnostic assertion can fail
+CLI `-D` or inherited `JDK_JAVA_OPTIONS` reaches tests. Inherited
+`JAVA_TOOL_OPTIONS` also reaches tests and child JVMs. Both launcher environment
+variables add a Java notice before child stderr, so a first-byte diagnostic assertion can fail
 while its correct exit status and empty stdout pass. Confirm the actual fork's
 graphics setting and attribute the exact assertion/source/environment; tool
 preflight alone does not prove pixel coverage. Preserve required graphics when
 reporting a known launcher-prefix failure. See the
 [S3K composed record](../architecture/plans/2026-10-13-s3k-playable-completion.md#inherited-child-launcher-prefix-and-preserved-graphics).
+
+Reused test JVMs can lose inherited graphics properties (2026-10-14, editor smoke):
+`TestSurfacelessEglContext` clears `openggf.headless.gl` in its existing teardown.
+The later TraceCaptureBootDimensions cases then take the default GLFW path and
+fail before gameplay boot. Standalone baseline/current pairs pass; the ordered
+selection-plus-dimensions pair reproduces both errors on both commits. Check actual
+fork properties and predecessor cleanup before blaming engine changes or EGL.
+See the [editor evidence](../architecture/designs/2026-10-14-editor-completion.md#combined-validation-and-baseline-attribution).
 
 A released port is a global resource, not a socket-close oracle (2026-10-12,
 mod audit delivery): Golf's audio-fault teardown test received `BindException`

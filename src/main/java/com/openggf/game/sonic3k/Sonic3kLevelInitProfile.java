@@ -129,6 +129,10 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
         return new InitStep("InitZonePlayerState",
             "S3K: SpawnLevelMainSprites — zone-specific player animation/air state",
             () -> {
+                // SpawnLevelMainSprites chooses intro scripts from the native
+                // Current_zone_and_act word (sonic3k.asm:8143-8293). An authored
+                // host's logical zone index does not identify a ROM script.
+                if (!Sonic3kLevel.currentLevelHasStockRomZoneIdentity()) return;
                 // Level loc_6460 clears Update_HUD_timer and Level_started_flag
                 // before initial Process_Sprites for the $1701 hub. Existing
                 // level/camera snapshots already own both captured values.

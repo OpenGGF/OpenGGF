@@ -257,6 +257,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     private CollisionSystem collisionSystem;
     WaterSystem waterSystem;
     private GameStateManager gameState;
+
+    /** The retained level/editor renderer reads its injected owner, even while gameplay is parked. */
+    GameStateManager boundaryGameState() { return gameState; }
     SonicConfigurationService configService;
     DebugOverlayManager overlayManager;
     LevelDebugRenderer debugRenderer;

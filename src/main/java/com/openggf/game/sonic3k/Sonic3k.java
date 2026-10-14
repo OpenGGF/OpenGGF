@@ -256,6 +256,12 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
         if (!(currentLevel instanceof Sonic3kLevel loadedLevel)) {
             throw new IllegalStateException("Fresh S3K terrain requires an installed S3K level");
         }
+        // Authored native levels already contain their baked terrain and have no
+        // LoadLevelLoadBlock ROM selection. This producer owns only stock terrain
+        // KosM parents; player, object and results art keep their separate owners.
+        if (!loadedLevel.hasStockRomZoneIdentity()) {
+            return;
+        }
         var sources = loadedLevel.terrainArtSources();
         int primaryArtAddr = sources.primary();
         int secondaryArtAddr = sources.secondary();

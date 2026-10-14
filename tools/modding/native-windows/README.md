@@ -32,12 +32,25 @@ develop or manual dispatch, uploads the ZIP/checksum for three days and never
 publishes a release or tag.
 
 The builder derives exact-class retention from the canonical API, every concrete
-`GameModule` implementation (including anonymous wrappers), and all static mod
+`GameModule` implementation (including anonymous wrappers), engine-created
+prepared/transient mutator services and world-policy providers/states, and all static mod
 references. The shared contract generator scans direct JDK member references,
 including dormant callbacks, handles and nested constant-dynamic arguments, and
-derives the JDK packages to retain. Additional runtime bootstrap, reflection,
+derives the JDK packages to retain. The separately compiled runtime bootstrap
+control also enters that scan, so its callable JDK bodies remain available even
+when maintained mods stop referencing a package. Its classes stay outside image
+analysis and the shipped mod set. Additional runtime bootstrap, reflection,
 stream and charset packages cover interpreter-generated calls. `java.logging`
 is explicitly resolved during image building.
+
+Class-keyed service factories erase their return type to `Object`. The opt-in
+`--service-factories` scan follows those methods' actual bytecode in retained
+engine classes, repeating for newly discovered service-bearing classes. This
+retains returned anonymous implementations such as the HUD warning policy, without
+adding each concrete class to a list. A matched bytecode fixture checks discovery,
+exact class bytes and exclusion of unrelated classes; the runtime control invokes
+the actual catalog and HUD projections. String-based arbitrary reflection still
+requires explicit seams and execution coverage.
 
 It audits types/fields/methods before execution, rejects deliberate
 missing fields and methods with ordinary exit 1, compares JVM/native registration

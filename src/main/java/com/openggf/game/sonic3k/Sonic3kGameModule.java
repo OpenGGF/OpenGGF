@@ -310,7 +310,12 @@ public class Sonic3kGameModule implements GameModule {
         // Finish deferred ScreenInit before the coordinator captures its camera/load
         // window and walks the initial player slots. Ordinary pre-physics is too late:
         // Knuckles_Control would already run once before the SSZ arrival owns him.
-        levelEventManager.prepareInitialScreenObjects();
+        // SSZ ScreenInit belongs to a ROM zone's event script. An authored
+        // level retains native fixed SST dispatch below, but cannot inherit a
+        // previously selected stock zone's camera/arrival controller.
+        if (Sonic3kLevel.currentLevelHasStockRomZoneIdentity()) {
+            levelEventManager.prepareInitialScreenObjects();
+        }
         InitialWaveSplashSstOwner waveOwner =
                 zoneFeatures instanceof Sonic3kZoneFeatureProvider provider
                         ? provider.initialWaveSplashSstOwner()

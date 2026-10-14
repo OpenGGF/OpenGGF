@@ -192,9 +192,8 @@ public final class ModLevel extends AbstractLevel {
             blocks[i].fromSegaFormat(Arrays.copyOfRange(data, i * recordSize, (i + 1) * recordSize),
                     blockGridSide * blockGridSide);
         }
-        if (blockCount > 0) {
-            blocks[0] = new Block(blockGridSide);
-        }
+        // Authored payloads own every block, including zero. Native ROM decoders
+        // may clear their reserved zero block, but that is not an export-format rule.
     }
 
     private void decodePaletteLines(byte[][] lines) {

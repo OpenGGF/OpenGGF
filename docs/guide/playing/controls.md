@@ -134,14 +134,28 @@ The `D` mode is the engine's free-fly debug movement capability. It is not Sonic
 2's native `Debug_placement_mode`: ring/item placement and the other level-wide
 native placement branches are unavailable.
 
-## Experimental Editor
+## Experimental Level Editor
 
-These controls are only active when `debug.flags.editor` is `true` in `config.yaml`.
+Open **Advanced → Editor projects** at the master title. To enter from ordinary
+gameplay, set `debug.flags.editor: true` in `config.yaml`. See the
+[level editor guide](../creating/level-editor.md) for creation, hierarchy editing,
+properties, resizing, and export limits.
 
 | Key | Action |
 |-----|--------|
-| Shift+Tab | Toggle between gameplay and the experimental editor overlay |
-| F5 | Restart the playtest from editor mode |
+| Shift+Tab | Switch between the project editor and its playtest |
+| F5 | Fresh playtest of the current project at its authored start |
+| F1 / north controller button | Open the editor command palette |
+| Ctrl+S | Save the complete `.ogfproject` |
+| Ctrl+Shift+E | Export to a new chosen directory |
+| Ctrl+Z / Ctrl+Y | Undo / redo |
+| H / J | Flip a selected block/chunk cell or object |
+| G / T in Chunk view | Cycle pattern palette / toggle priority |
+| = / - with an object selected | Change the selected object's subtype |
+| R with an object selected | Toggle its respawn tracking |
+
+Playtest uses a fresh runtime copy and retains the authored document and history.
+It does not auto-save the project or write stock gameplay saves.
 
 ## Super Sonic / Emerald Debug
 
@@ -188,9 +202,11 @@ field opens the file browser. Mods requires explicit Apply to save drafts.
 
 The experimental level editor opens its command palette with F1 or the north
 controller button. Directions choose a command, Confirm executes it, and Back
-closes the palette. The palette includes placement, hierarchy/focus, library/filter,
-undo/redo, save/export, playtest and fresh-start commands. While it is open,
-underlying editor input and global playtest/fresh-start shortcuts are suppressed.
+closes the palette. It includes placement, hierarchy/focus, library/filter,
+undo/redo, Editor projects, Save project as, Level properties, Resize level,
+Playtest from level start/cursor, Export level, and Close project. Project forms
+use the shared text editor and file browser; their final action applies the fields and Back cancels the form. Modal input suppresses
+underlying painting and global playtest shortcuts.
 
 ## Knuckles in Sonic 2 title and sound-test codes
 

@@ -19,6 +19,8 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * Core routine mapping: Obj_Rhinobot (sonic3k.asm loc_86E7E..loc_8714A).
  */
 public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
+    @Override public boolean supportsGroundedFieldMotion() { return true; }
+
     private static final int COLLISION_SIZE_INDEX = 0x0B; // ObjSlot_Rhinobot flags $0B
     private static final int PRIORITY_BUCKET = 5;         // ObjSlot_Rhinobot priority $280
 

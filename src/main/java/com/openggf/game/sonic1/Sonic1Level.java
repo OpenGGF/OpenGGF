@@ -115,6 +115,32 @@ public class Sonic1Level extends AbstractLevel implements com.openggf.level.obje
         this.maxY = boundaries[3];
     }
 
+    /** Constructs the native geometry/ring view after bounded authoring resources were decoded. */
+    static Sonic1Level fromAuthoredLevel(ModLevel decoded,
+            java.util.Map<ObjectSpawn,List<RingSpawn>> ringMapping) {
+        return new Sonic1Level(decoded, ringMapping);
+    }
+
+    private Sonic1Level(ModLevel decoded, java.util.Map<ObjectSpawn,List<RingSpawn>> ringMapping) {
+        super(decoded.getZoneIndex());
+        patternCount=decoded.getPatternCount(); patterns=new Pattern[patternCount];
+        for(int i=0;i<patternCount;i++) patterns[i]=decoded.getPattern(i);
+        chunkCount=decoded.getChunkCount(); chunks=new Chunk[chunkCount];
+        for(int i=0;i<chunkCount;i++) chunks[i]=decoded.getChunk(i);
+        blockCount=decoded.getBlockCount(); blocks=new Block[blockCount];
+        for(int i=0;i<blockCount;i++) blocks[i]=decoded.getBlock(i);
+        solidTileCount=decoded.getSolidTileCount(); solidTiles=new SolidTile[solidTileCount];
+        for(int i=0;i<solidTileCount;i++) solidTiles[i]=decoded.getSolidTile(i);
+        palettes=new Palette[decoded.getPaletteCount()];
+        for(int i=0;i<palettes.length;i++) palettes[i]=decoded.getPalette(i);
+        map=decoded.getMap(); objects=decoded.getObjects(); rings=decoded.getRings();
+        ringSpriteSheet=decoded.getRingSpriteSheet();
+        minX=decoded.getMinX(); maxX=decoded.getMaxX(); minY=decoded.getMinY(); maxY=decoded.getMaxY();
+        logicalFgMapHeight=map.getHeight(); fgMapWidth=map.getWidth(); fgMapHeight=map.getHeight();
+        fgLoopFlags=new boolean[fgMapWidth*fgMapHeight];
+        setRingSpawnMapping(java.util.Map.copyOf(ringMapping));
+    }
+
     // ===== Level interface overrides =====
 
     @Override

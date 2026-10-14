@@ -15,8 +15,15 @@ public final class SecondStrikeEnemies {
     static final String MONKEY_ART = "aiz_monkey_dude";
     static final String GUARD_ART = "aiz_rhinobot";
     static final String GUNNER_ART = "aiz_bloominator";
+    static final String DASH_ART = "fire_shield_dash";
 
     private SecondStrikeEnemies() { }
+
+    /** Genuine native Bloom anchors on forest and early physical continuation platforms. */
+    static boolean reinforcedAnchor(int x, int y) {
+        return x == 0x1dc0 && y == 0x27c || x == 0x2370 && y == 0x37c
+                || x == 0x09f0 && y == 0x3fc || x == 0x0e10 && y == 0x33c;
+    }
 
     public static void register(ModContext context) {
         context.registerObject("spotter", (spawn, registry) -> new SpotterBadnik(spawn));
@@ -32,10 +39,4 @@ public final class SecondStrikeEnemies {
         return new ObjectSpawn(x, y, 0, 0, 0, false, y, layoutIndex, OWNER, key);
     }
 
-    /** Keep the stock placement identity, facing and subtype when replacing one badnik. */
-    public static ObjectSpawn replace(ObjectSpawn stock, String key) {
-        ownedSpawn(key, stock.x(), stock.y(), stock.layoutIndex());
-        return new ObjectSpawn(stock.x(), stock.y(), 0, stock.subtype(), stock.renderFlags(),
-                stock.respawnTracked(), stock.rawYWord(), stock.layoutIndex(), OWNER, key);
-    }
 }

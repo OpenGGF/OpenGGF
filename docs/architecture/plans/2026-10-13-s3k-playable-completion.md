@@ -1760,3 +1760,43 @@ bounded state/owner qualification, not full-scene pixel/audio, all campaign
 products, combined smoke/guards or integrated delivery credit. External output
 `ssz-arrival-boundary-558e74833-3f19b8b1d04c-v1` retains exact provenance.
 Consumed target redirects are deleted after this account, never archived.
+
+
+## Updated develop composition and conflict qualification (2026-10-14)
+
+Qualified AIZ FallingShot/common-shot tip1255286c3616a96ef36fce7efde5dd92e3b2263b
+is composed as774959d302c474d680c8b190e44e9787f93ad198. Both independently
+appended skill lessons are retained without replacing the root's earlier
+ending/SSZ lesson edits. Its worker707/0/0/0 and111/0/0/0 guards keep their
+recorded scope; strict four controls and unchanged chain/alternate deficits
+remain in the frontier audit. No unchanged broad check is repeated.
+
+The root then composes updated destination7277cef4040af3ae95d86a794bce7f75a16cc483.
+Five conflicts are resolved by owner intent: both S3K skill mirrors and both
+independent implementation-pitfall sections survive; the stock-ROM identity
+guard precedes the native HPZ timer/HUD initialization; the qualified raw/SST
+flare retains stock Init, F4 outer draw and next-pass clear. Only an opted-in
+warning has its captured bounded counter and absent-parent retirement. Its
+birth Init precedes the admitted16..60 delay and a longer warning retains the
+last raw pose, using ROM bytes rather than the old copied animation sequence.
+The old stock16-update assertion becomes the independently qualified18-retained/
+19th-clear native contract. Its mock fixture explicitly supplies byte_6913F.
+
+Two failed compilation launches69583/47327 are terminal1 with zero tests:
+wrong mock ROM-reader package, then an unnecessary checked exception handler.
+Neither receives test credit. After the verified test-only corrections,
+build-only23086 passes test-compile at20:37:45 UTC (24.596s, no tests).
+Corrected focused65772 is terminal0 at20:39:33 UTC:99/0/0/0,27.467s Maven,
+0s queue. Native flare19, SecondStrike policy12, profile8 and mandatory S3K
+startup/loading/bootstrap/decoder60 pass. Read-only frontier peer review
+confirms stock semantics, captured primitive warning state and both slot-order/
+post-F4 replay coverage. Composed smoke/guards and final integration are pending.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off test-compile -B
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestSecondStrikeBoss,TestAizMinibossFlareNativeGraph,TestSonic3kLevelInitProfile,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' "-Dsonic1.rom.path=$S1_TASK_ROM" "-Dsonic2.rom.path=$S2_TASK_ROM" "-Ds3k.rom.path=$S3K_TASK_ROM" test -B
+```
+
+Consumed root redirects are deleted after this account; no validation receipt
+or archived invocation log is retained. The original pre-task integration
+base5b2ff8e7851b99dd40998dfc41fbfd21c80031ef remains the combined validation base.

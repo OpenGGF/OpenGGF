@@ -181,6 +181,11 @@ class TestArchUnitRules {
             "editor -> game",
             "editor -> graphics",
             "editor -> level",
+            // Authored import/export reuses bounded assets and the strict baked-level
+            // data contract; editor_host_data_dependencies_use_only_explicit_owners
+            // keeps these two edges closed to general creator execution/registration.
+            "editor -> io",
+            "editor -> mods",
             "game -> architecture",
             "game -> audio",
             "game -> camera",
@@ -669,6 +674,47 @@ class TestArchUnitRules {
                 "core-runtime top-level dependency edges grew; route new dependencies through "
                         + "provider/service boundaries or consciously update the ratchet:\n  "
                         + String.join("\n  ", unexpectedEdges));
+    }
+
+    private static boolean approvedEditorHostDataDependency(String origin, String target) {
+        return switch (origin) {
+            case "com.openggf.editor.project.EditorProjectWorkspace" -> Set.of(
+                    "com.openggf.io.DirectoryAccess", "com.openggf.io.ModAssetRoot",
+                    "com.openggf.io.ModInputLimits", "com.openggf.mods.TrackKey",
+                    "com.openggf.mods.code.BakedLevelRef", "com.openggf.mods.code.ModLevelDefinition",
+                    "com.openggf.mods.code.ModLevelDefinitionParser", "com.openggf.mods.code.ModZoneLoader",
+                    "com.openggf.mods.code.ModLevelExportStagingValidator").contains(target)
+                    || target.startsWith("com.openggf.mods.code.ModLevelDefinition$");
+            case "com.openggf.editor.project.EditorProjectRuntimeModule" ->
+                    target.equals("com.openggf.mods.code.ModLevelExportStagingValidator");
+            case "com.openggf.editor.persistence.FullLevelExporter" ->
+                    target.equals("com.openggf.mods.code.ModLevelDefinitionParser");
+            default -> false;
+        };
+    }
+
+    @ArchTest
+    static void editor_host_data_dependencies_use_only_explicit_owners(JavaClasses classes) {
+        // Admitting these data edges grants neither general editor consumers nor
+        // creator execution/registration access, including from approved owners.
+        assertTrue(!approvedEditorHostDataDependency(
+                "com.openggf.editor.LevelEditorController", "com.openggf.io.ModAssetRoot"));
+        assertTrue(!approvedEditorHostDataDependency(
+                "com.openggf.editor.project.EditorProjectWorkspace", "com.openggf.mods.code.ModRuntime"));
+        Set<String> violations = new TreeSet<>();
+        for (JavaClass origin : classes) {
+            if (!"editor".equals(topLevelSlice(origin))) continue;
+            for (Dependency dependency : origin.getDirectDependenciesFromSelf()) {
+                String targetSlice = topLevelSlice(dependency.getTargetClass());
+                if (("io".equals(targetSlice) || "mods".equals(targetSlice))
+                        && !approvedEditorHostDataDependency(origin.getName(), dependency.getTargetClass().getName())) {
+                    violations.add(dependency.getDescription());
+                }
+            }
+        }
+        assertTrue(violations.isEmpty(),
+                "editor creator-data edges are restricted to bounded baked-level import, validation and staging:\n  "
+                        + String.join("\n  ", violations));
     }
 
     @ArchTest

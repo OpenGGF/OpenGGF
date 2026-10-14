@@ -3583,6 +3583,27 @@ whose high byte is zero.
 complete-emerald slices; 2026-10-07 S2 parity follow-up from `8dba700f3`,
 recorded in `docs/architecture/audits/2026-10-07-s2-parity-gap-verification.md`.
 
+## P88 -- Native goal comparisons use unsigned pixel words
+
+**Symptom.** An authored signpost above X $7FFF triggers behind the player,
+or the native walk-off fails near a 16-bit camera boundary.
+
+**Root cause.** Java short promotion sign-extends a native pixel word. S1
+Sign_Touch and S2 Obj0D_Main subtract words then use unsigned carry/range comparisons.
+Their walk-off paths add $128 to the camera maximum with add.w and compare
+with cmp.w/blo; an unbounded Java sum loses the ROM wrap.
+
+**Correct pattern.** Mask pixel words and subtract/add results with $FFFF
+before unsigned comparisons. Preserve the owning routine's comparison window.
+Test both $7FFF/$8000 and a wrapping camera maximum; do not constrain authored
+coordinates to hide the defect.
+
+**ROM citation.** S1 _incObj/0D Signpost.asm Sign_Touch and Sign_SonicRun;
+S2 s2.asm Obj0D_Main and Obj0D_Main_State3. The pixel-word rule is cross-game;
+these two native goal owners provide the verified comparisons.
+
+**Originating commit.** 82bf7929c, editor native goal-word regressions.
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

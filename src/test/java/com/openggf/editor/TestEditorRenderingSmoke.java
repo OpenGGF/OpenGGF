@@ -62,6 +62,7 @@ class TestEditorRenderingSmoke {
     @Test
     void commandPaletteBackdropUsesACoreProfilePrimitiveBeforeText() throws Exception {
         GraphicsManager graphics = org.mockito.Mockito.mock(GraphicsManager.class);
+        org.mockito.Mockito.when(graphics.getProjectionWidth()).thenReturn(320);
         EditorTextRenderer text = org.mockito.Mockito.mock(EditorTextRenderer.class);
         EditorLibraryPaneRenderer pane = new EditorLibraryPaneRenderer(null, graphics, text);
         List<String> lines = new EditorCommandPalette().lines();
@@ -69,7 +70,7 @@ class TestEditorRenderingSmoke {
         var captured = org.mockito.ArgumentCaptor.forClass(GLCommandable.class);
         var order = org.mockito.Mockito.inOrder(graphics, text);
         order.verify(graphics).registerCommand(captured.capture());
-        order.verify(text).renderLines(lines, 18, 42);
+        order.verify(text).renderFittedLines(lines,18,42,284,.65f,10);
         var group = (com.openggf.graphics.GLCommandGroup) captured.getValue();
         Field primitive = group.getClass().getDeclaredField("drawMethod");
         primitive.setAccessible(true);
@@ -237,9 +238,9 @@ class TestEditorRenderingSmoke {
 
         List<String> lines = renderer.buildLines();
 
-        assertTrue(lines.stream().anyMatch(line -> line.contains("World > Block 2")));
-        assertTrue(lines.stream().anyMatch(line -> line.contains("BLOCK_PANE")));
-        assertTrue(lines.stream().anyMatch(line -> line.contains("Block 2")));
+        assertTrue(lines.stream().anyMatch(line -> line.contains("World > Block 0")));
+        assertTrue(lines.stream().anyMatch(line -> line.contains("Terrain brush B2")));
+        assertTrue(lines.stream().anyMatch(line -> line.contains("Block 0")));
         assertTrue(lines.stream().anyMatch(line -> line.contains("Chunk 4")));
     }
 
@@ -268,7 +269,7 @@ class TestEditorRenderingSmoke {
 
         assertFalse(renderer.buildCommands().isEmpty());
         assertTrue(String.join(" ", renderer.buildLines()).contains("Block library"));
-        assertTrue(String.join(" ", renderer.buildLines()).contains("Block 2"));
+        assertTrue(String.join(" ", renderer.buildLines()).contains("Terrain brush B2"));
         assertTrue(String.join(" ", renderer.buildLines()).contains("Cursor"));
         assertFalse(renderer.buildTilePreview().isEmpty());
     }
@@ -397,7 +398,30 @@ class TestEditorRenderingSmoke {
         controller.descend();
         InspectableToolbarRenderer renderer = new InspectableToolbarRenderer(controller);
 
-        assertTextCommandsInsideChrome(renderer.buildTextCommands(), 4, 24);
+        var toolbar = new com.openggf.editor.render.EditorUiLayout(320,224).toolbar();
+        assertTextCommandsInsideChrome(renderer.buildTextCommands(), toolbar.top(), toolbar.bottom());
+    }
+
+    @Test
+    void compactEditorTextUsesNativeGlyphMetricsAndLeavesLibraryArtUncovered() {
+        var controller = createPreviewController();
+        controller.selectBlock(2);
+        controller.cycleFocusRegion();
+        class NativeLibrary extends EditorLibraryPaneRenderer {
+            NativeLibrary() { super(controller); }
+            List<EditorTextRenderer.TextCommand> nativeText() {
+                return buildLibraryTextCommands(com.openggf.editor.EditorHierarchyDepth.WORLD);
+            }
+        }
+        var commands = new NativeLibrary().nativeText();
+        assertEquals(3, commands.size());
+        for (var command : commands) {
+            assertTrue(command.scale() < 1, "small text must select the native compact face");
+            assertEquals(6, com.openggf.graphics.MenuPixelFont.glyphAdvance(command.scale()));
+            assertTrue(command.text().length() * 6 <= 128);
+            assertTrue(command.lineHeight() >= 9);
+            assertTrue(command.y() + command.lineHeight() < 82, "header must leave the thumbnail grid clear");
+        }
     }
 
     @Test
@@ -490,8 +514,10 @@ class TestEditorRenderingSmoke {
         assertEquals(controller.selectedChunkPreview().getPatternDesc(1, 0).get(), first.get(1).descriptor().get());
         assertEquals(controller.selectedChunkPreview().getPatternDesc(0, 1).get(), first.get(2).descriptor().get());
         assertEquals(controller.selectedChunkPreview().getPatternDesc(1, 1).get(), first.get(3).descriptor().get());
-        assertEquals(first.get(0).x() + 8, first.get(1).x());
-        assertEquals(first.get(0).y() + 8, first.get(2).y());
+        assertEquals(first.get(0).x() + 32, first.get(1).x());
+        assertEquals(first.get(0).y() + 32, first.get(2).y());
+        assertTrue(first.stream().allMatch(placement -> placement.size() == 32),
+                "Focused patterns must use integer 4x native pixels for readable composition editing");
 
         controller.selectChunk(4);
         List<FocusedEditorPaneRenderer.PreviewPlacement> second = renderer.buildChunkPreviewPlacements();

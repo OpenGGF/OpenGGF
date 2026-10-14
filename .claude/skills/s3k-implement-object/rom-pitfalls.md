@@ -2246,6 +2246,17 @@ overlap with Tails.
 
 ---
 
+**Opted-in warning presentation.** A parent timer scheduled after its timer-update
+step starts decrementing next pass, while a later-slot raw-animation child already
+consumes an update in its birth pass. Test through the real manager's native
+scheduling boundary and invoke the render producer after each pass; counting live
+children before updates can hide an invisible final pose. Second Strike's AIZ
+follow-up exposed a one-presentation gap with the ordinary sixteen-update flare.
+Its semantic opt-in cue captures a birth-update allowance and bounded final-pose
+hold; ordinary ROM flares retain their constructor and sequence. Verify exact
+anchor/remaining hold rewind, both parent/barrel slot orders, exhaustion and
+policy-disabled graph/timing equality. Origin: 2026-10-14 Second Strike expansion.
+
 ## P67 -- Solid checkpoints before same-entry deletion require manual execution
 
 **Symptom.** A player remains grounded and `Status_OnObj` stays set after the
@@ -5681,3 +5692,18 @@ resolve full pointers and the publication clock before fixing the next context.
 Origin:2026-10-14 common SIMPLE marker slice overcf19f8506; asm137079,137091,
 179136. Actual seg2 row3084 marker is repaired; next presence disagreement3244
 is transition-context evidence rather than proof of a particular teardown bug.
+
+## Spawned donor art keeps its native palette line
+
+The 2026-10-14 Chaos revision exposed wrong-colour CNZ bumpers and SOZ ghosts
+in AIZ. A correct donor pattern sheet is insufficient when its native mapping
+still indexes the host act's CRAM. `Obj_Bumper` selects CNZ Misc + `$13`, palette
+2 (`sonic3k.asm:68828–68860`); `Hyudoro_init_tbl` selects ghost palette 1
+(`sonic3k.asm:196064`). Do not apply SOZ darkness to that line: `AnPal_SOZ2`
+updates `Normal_palette_line_3/4`, engine indices 2/3
+(`sonic3k.asm:3492–3550`), while the ghost's index 1 stays in `Pal_SOZ2`.
+Read runtime colours from the verified ROM, and preserve host/donor consumers
+with an owner-scoped private palette projection. Retained SAT records must keep
+native palette bits and semantic donor ownership, never a leased GPU row number;
+restore may allocate banks in a different order. Check actual ROM-backed pixels
+at native/wide viewports and unchanged ordinary actors, not only loaded art.
