@@ -70,6 +70,10 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     private boolean clearMainPlayerRingsOnFirstUpdate;
     private boolean touchStateAlreadyPostMovement;
     private boolean deferFirstUpdateUntilOwnerPass;
+    // Temporary pickup owners keep their own lifetime; native hurt-spill rings retain the shared ROM owner.
+    private boolean independentLifetime;
+    private int independentInitialLifetime;
+    private int pickupDelayTicks;
 
     /**
      * Shared spin owner; the displayed frame = owner.frame() + phaseOffset. This is
@@ -182,6 +186,17 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         if (ctx.objectServices() != null && ctx.objectServices().ringManager() != null) {
             ring.setSpillAnimation(ctx.objectServices().ringManager().getSpillAnimationState());
         }
+        return ring;
+    }
+
+    static LostRingObjectInstance temporaryPickup(int x, int y, int xVelocity, int yVelocity,
+                                                 int phase, int lifetime, int pickupDelayTicks) {
+        if(lifetime<1 || lifetime>600 || pickupDelayTicks<0 || pickupDelayTicks>lifetime)
+            throw new IllegalArgumentException("Temporary ring lifetime or pickup delay is outside its bound");
+        var ring=spawn(x,y,xVelocity,yVelocity,phase,lifetime,null);
+        ring.independentLifetime=true;
+        ring.independentInitialLifetime=lifetime;
+        ring.pickupDelayTicks=pickupDelayTicks;
         return ring;
     }
 
@@ -300,6 +315,11 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         if (isDestroyed()) {
             return;
         }
+        if (independentLifetime && !collected && --lifetime < 0) {
+            setDestroyed(true);
+            return;
+        }
+        if (pickupDelayTicks>0) pickupDelayTicks--;
         if (deferFirstUpdateUntilOwnerPass) {
             deferFirstUpdateUntilOwnerPass = false;
             return;
@@ -358,7 +378,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
 
         // S1/S2 reach this from every movement branch; S3K reaches it only while
         // moving toward the active surface on the floor-probe cadence phase.
-        if (checksBoundary && spillAnimation != null && spillAnimation.counter() == 0) {
+        if (checksBoundary && !independentLifetime && spillAnimation != null && spillAnimation.counter() == 0) {
             setDestroyed(true);
             return;
         }
@@ -603,7 +623,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     public int getCollisionFlags() {
         // ROM Obj37: collision_flags = $47 while collectible; cleared on collection
         // (mirrors Sonic1RingInstance.java:167).
-        return collectionRoutineStarted || !com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(servicesOrNull())
+        return collectionRoutineStarted || pickupDelayTicks>0 || !com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(servicesOrNull())
                 ? 0 : LOST_RING_COLLISION_FLAGS;
     }
 
@@ -625,12 +645,12 @@ public class LostRingObjectInstance extends AbstractObjectInstance
      */
     @Override
     public boolean publishesTouchResponseListEntryThisFrame() {
-        return !collected && !isDestroyed()
+        return !collected && pickupDelayTicks==0 && !isDestroyed()
                 && com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(servicesOrNull());
     }
 
     public void markCollected(int frameCounter) {
-        if (!com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(servicesOrNull())) return;
+        if (pickupDelayTicks>0 || !com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(servicesOrNull())) return;
         collected = true;
     }
 
@@ -710,7 +730,8 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         SpillAnimationState animation = spillAnimation != null
                 ? spillAnimation
                 : ringManager.getSpillAnimationState();
-        int spinFrame = (animation != null ? animation.frame() : 0) + phaseOffset;
+        int spinFrame = (independentLifetime ? (independentInitialLifetime-lifetime)/4
+                : animation != null ? animation.frame() : 0) + phaseOffset;
         ringManager.drawRingFrameAt(getX(), getY(), spinFrame);
     }
 

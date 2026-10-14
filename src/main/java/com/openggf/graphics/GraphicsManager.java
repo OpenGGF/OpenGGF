@@ -58,6 +58,12 @@ public class GraphicsManager {
 	private final java.util.ArrayDeque<List<GLCommandable>> captureListPool = new java.util.ArrayDeque<>(2);
 	private final Queue<PendingRenderThreadTask<?>> pendingRenderThreadTasks = new ConcurrentLinkedQueue<>();
 
+	private final Map<Object,ScopedPaletteLease> scopedPaletteOwners=new java.util.IdentityHashMap<>();
+	private long scopedPaletteGeneration;
+    private ScopedUnderwaterBasis scopedUnderwaterBasis;
+    private boolean scopedUnderwaterDirty;
+    private int underwaterCompositionLines;
+    private Object scopedPaletteWorld;
 	private final Map<String, Integer> paletteTextureMap = new HashMap<>(); // Map for palette textures
 	// Last palette handed to cachePaletteTexture per line, so a palette fade change
 	// can re-upload the affected lines without asking their owners to write again.
@@ -278,6 +284,9 @@ public class GraphicsManager {
 			if (headlessMode || capturedCommands.isEmpty() || !glInitialized) {
 				return;
 			}
+			// A native batch can execute before the first scoped pattern command.
+			// Rebuild expanded rows from published CRAM inputs before either path samples them.
+			refreshScopedUnderwaterResidency();
 			PatternRenderCommand.resetFrameState();
 			frameStateActive = true;
 			for (int i = 0, n = capturedCommands.size(); i < n; i++) {
@@ -621,6 +630,7 @@ public class GraphicsManager {
 		}
 
 		// Reset pattern render state for new batch of commands
+		refreshScopedUnderwaterResidency();
 		PatternRenderCommand.resetFrameState();
 		int nextUnexecuted = 0;
 		try {
@@ -782,6 +792,69 @@ public class GraphicsManager {
 			return false;
 		}
 		return patternAtlas.aliasEntry(aliasId, targetId);
+	}
+
+	int scopedPaletteBank(Object owner,Palette[] palettes) {
+		if(owner==null || palettes==null || palettes.length!=4 || java.util.Arrays.stream(palettes).anyMatch(java.util.Objects::isNull))
+			throw new IllegalArgumentException("A scoped palette bank needs an owner and exactly four ROM palette lines");
+		var lease=scopedPaletteOwners.get(owner);
+		if(lease==null || !RenderContext.scopedPaletteBankValid(lease.token(),lease.base())) {
+			Object token=new Object();int base=RenderContext.reserveScopedPaletteBank(token);
+			lease=new ScopedPaletteLease(token,base,++scopedPaletteGeneration);scopedPaletteOwners.put(owner,lease);
+		}
+		for(int line=0;line<4;line++) cachePaletteTexture(palettes[line],lease.base()+line);
+        // A trusted resolver may upload between draws while the atlas unit is active.
+        PatternRenderCommand.resetFrameState();
+        scopedUnderwaterDirty=true;
+		return lease.base();
+	}
+	long scopedPaletteGeneration(Object owner) { return scopedPaletteOwners.get(owner).generation(); }
+	boolean scopedPaletteBankValid(Object owner,int base,long generation) {
+		var lease=scopedPaletteOwners.get(owner);
+		return lease!=null && lease.base()==base && lease.generation()==generation
+				&& RenderContext.scopedPaletteBankValid(lease.token(),base);
+	}
+	void releaseScopedPaletteBank(Object owner) {
+		var lease=scopedPaletteOwners.remove(owner);if(lease==null) return;
+		if(RenderContext.scopedPaletteBankValid(lease.token(),lease.base())) {
+			var blank=new Palette();
+			for(int line=lease.base();line<lease.base()+4;line++) {
+				uploadPaletteLine(blank,line);paletteTextureMap.remove("palette_"+line);
+				if(line<lastCachedPaletteLines.length)lastCachedPaletteLines[line]=null;
+				pendingPaletteUploads[line]=false;
+			}
+			RenderContext.releaseScopedPaletteBank(lease.token());
+		}
+		underwaterPaletteContentKeyValid=false;
+        PatternRenderCommand.resetFrameState();
+        scopedUnderwaterDirty=true;
+	}
+    void bindScopedPaletteWorld(Object world) {
+        if(scopedPaletteWorld!=null && scopedPaletteWorld!=world)clearScopedUnderwaterBasis();
+        scopedPaletteWorld=world;
+    }
+    void clearScopedUnderwaterBasis(Object world) {
+        if(scopedPaletteWorld==world) { clearScopedUnderwaterBasis();scopedPaletteWorld=null; }
+    }
+    private void clearScopedUnderwaterBasis() {
+        scopedUnderwaterBasis=null;scopedUnderwaterDirty=false;underwaterCompositionLines=0;
+    }
+    void refreshScopedUnderwaterResidency() {
+        var basis=scopedUnderwaterBasis;
+        if(basis!=null && (scopedUnderwaterDirty || underwaterCompositionLines!=RenderContext.getTotalPaletteLines())) {
+            composeUnderwaterPaletteTexture(basis.rows(),basis.normalLine0(),basis);
+            PatternRenderCommand.resetFrameState();
+        }
+    }
+    private PaletteView scopedPaletteForEffectiveLine(int row) {
+        for(var lease:scopedPaletteOwners.values())if(row>=lease.base() && row<lease.base()+4
+                && RenderContext.scopedPaletteBankValid(lease.token(),lease.base()))
+            return row<lastCachedPaletteLines.length?lastCachedPaletteLines[row]:null;
+        return null;
+    }
+	private void invalidateScopedPaletteBanks() {
+		for(var lease:scopedPaletteOwners.values())RenderContext.releaseScopedPaletteBank(lease.token());
+		scopedPaletteOwners.clear();
 	}
 
 	public void cachePaletteTexture(Palette palette, int paletteId) {
@@ -987,6 +1060,7 @@ public class GraphicsManager {
 			return;
 		}
 		if (headlessMode) return;
+        if(spritePresentationSubject.paletteReplay()!=null)flushPatternBatch();
 
 		ensurePatternAtlas();
 		PatternAtlas.Entry entry = patternAtlas != null ? patternAtlas.getEntry(patternId) : null;
@@ -1004,14 +1078,14 @@ public class GraphicsManager {
 		boolean usedBatch = false;
 		boolean restartBatchedAfterFallback = false;
 		int paletteIndex = desc.getPaletteIndex();
-		if (batchingEnabled && instancedBatchActive && instancedPatternRenderer != null) {
+		if (batchingEnabled && spritePresentationSubject.paletteReplay()==null && instancedBatchActive && instancedPatternRenderer != null) {
 			usedBatch = instancedPatternRenderer.addPattern(entry, paletteIndex, desc, x, y);
 			if (!usedBatch) {
 				flushPatternBatch();
 				restartPatternBatch(true, false, entry.atlasIndex());
 				usedBatch = instancedPatternRenderer.addPattern(entry, desc.getPaletteIndex(), desc, x, y);
 			}
-		} else if (batchingEnabled && batchedRenderer != null && batchedRenderer.isBatchActive()) {
+		} else if (batchingEnabled && spritePresentationSubject.paletteReplay()==null && batchedRenderer != null && batchedRenderer.isBatchActive()) {
 			if (entry.atlasIndex() == 0) {
 				usedBatch = batchedRenderer.addPattern(entry, paletteIndex, desc, x, y);
 			}
@@ -1063,6 +1137,7 @@ public class GraphicsManager {
 			return;
 		}
 		if (headlessMode) return;
+        if(spritePresentationSubject.paletteReplay()!=null)flushPatternBatch();
 
 		ensurePatternAtlas();
 		PatternAtlas.Entry entry = patternAtlas != null ? patternAtlas.getEntry(patternId) : null;
@@ -1072,7 +1147,7 @@ public class GraphicsManager {
 		}
 		boolean restartInstancedAfterDirect = false;
 		boolean restartBatchedAfterDirect = false;
-		if (batchingEnabled && instancedBatchActive && instancedPatternRenderer != null) {
+		if (batchingEnabled && spritePresentationSubject.paletteReplay()==null && instancedBatchActive && instancedPatternRenderer != null) {
 			if (instancedPatternRenderer.addPatternRows(entry, paletteIndex, hFlip, vFlip, priority, x, y, rowStart, rowEnd)) {
 				return;
 			}
@@ -1083,7 +1158,7 @@ public class GraphicsManager {
 			}
 			flushPatternBatch();
 			restartInstancedAfterDirect = true;
-		} else if (batchingEnabled && batchedRenderer != null && batchedRenderer.isBatchActive()) {
+		} else if (batchingEnabled && spritePresentationSubject.paletteReplay()==null && batchedRenderer != null && batchedRenderer.isBatchActive()) {
 			// The page-0 batcher only draws whole tiles; keep order by flushing first.
 			flushPatternBatch();
 			restartBatchedAfterDirect = true;
@@ -1129,6 +1204,7 @@ public class GraphicsManager {
 		if (headlessMode) {
 			return;
 		}
+        if(spritePresentationSubject.paletteReplay()!=null)flushPatternBatch();
 		ensurePatternAtlas();
 		PatternAtlas.Entry entry = patternAtlas != null ? patternAtlas.getEntry(patternId) : null;
 		Integer paletteTextureId = resolveEffectivePatternPaletteTextureId();
@@ -1140,7 +1216,7 @@ public class GraphicsManager {
 		int paletteIndex = desc.getPaletteIndex();
 		boolean restartInstancedAfterDirect = false;
 		boolean restartBatchedAfterDirect = false;
-		if (batchingEnabled && instancedBatchActive && instancedPatternRenderer != null) {
+		if (batchingEnabled && spritePresentationSubject.paletteReplay()==null && instancedBatchActive && instancedPatternRenderer != null) {
 			boolean added = instancedPatternRenderer.addStripPattern(entry, paletteIndex, desc, x, y, stripIndex);
 			if (!added) {
 				flushPatternBatch();
@@ -1153,7 +1229,7 @@ public class GraphicsManager {
 			} else {
 				return;
 			}
-		} else if (batchingEnabled && batchedRenderer != null && batchedRenderer.isBatchActive()) {
+		} else if (batchingEnabled && spritePresentationSubject.paletteReplay()==null && batchedRenderer != null && batchedRenderer.isBatchActive()) {
 			boolean added = entry.atlasIndex() == 0
 					&& batchedRenderer.addStripPattern(entry, paletteIndex, desc, x, y, stripIndex);
 			if (added) {
@@ -1515,6 +1591,8 @@ public class GraphicsManager {
 	 * game cannot render a frame with another game's stale palette rows.
 	 */
 	public void clearPaletteTextures() {
+		invalidateScopedPaletteBanks();
+        clearScopedUnderwaterBasis();scopedPaletteWorld=null;
 		paletteTextureMap.clear();
 		// This is a session boundary, so discard the Java-side presentation
 		// owners together with their native textures. Calling
@@ -1573,6 +1651,9 @@ public class GraphicsManager {
 			underwaterUploadPending = true;
 			return underwaterPaletteTextureId;
 		}
+        return composeUnderwaterPaletteTexture(palettes,normalLine0,null);
+    }
+    private Integer composeUnderwaterPaletteTexture(Palette[] palettes,Palette normalLine0,ScopedUnderwaterBasis publishedBasis) {
 		int totalLines = RenderContext.getTotalPaletteLines();
 		Palette underwaterLine0 = (palettes != null && palettes.length > 0) ? palettes[0] : null;
 		ensureUnderwaterPaletteSourceScratch(totalLines);
@@ -1588,12 +1669,16 @@ public class GraphicsManager {
 						rowCase = UNDERWATER_ROW_DIRECT;
 					} else {
 						source = getRenderContextPaletteForEffectiveLine(row);
+                        if(source==null)source=scopedPaletteForEffectiveLine(row);
 					}
 					if (source != null && rowCase != UNDERWATER_ROW_DIRECT) {
 						rowCase = UNDERWATER_ROW_DERIVED;
 						hasDerivedDonorRow = true;
 					}
-				}
+				} else {
+                    source=scopedPaletteForEffectiveLine(row);
+                    if(source!=null)rowCase=UNDERWATER_ROW_DIRECT;
+                }
 			}
 			underwaterPaletteRowSources[row] = source;
 			underwaterPaletteRowCases[row] = rowCase;
@@ -1619,14 +1704,17 @@ public class GraphicsManager {
 			// Rows below totalLines are effective palette lines; a fade on one of them
 			// (FadeIn_FromBlack also walks v_palette_water) transforms the composed
 			// bytes, and the content key built from them changes with each fade step.
-			boolean fadeRow = sourceIndex < totalLines && paletteFadePresentation.affects(sourceIndex);
+            var fadeMode=publishedBasis==null?paletteFadePresentation.mode():publishedBasis.fadeMode();
+            int fadeSteps=publishedBasis==null?paletteFadePresentation.steps():publishedBasis.fadeSteps();
+            int fadeMask=publishedBasis==null?paletteFadePresentation.lineMask():publishedBasis.fadeMask();
+            boolean fadeRow=sourceIndex<totalLines && sourceIndex<Integer.SIZE && fadeMode!=PaletteFadePresentation.Mode.NONE
+                    && (fadeMask&(1<<sourceIndex))!=0;
 			for (int colorIndex = 0; colorIndex < 16; colorIndex++) {
 				byte r = source.red(colorIndex);
 				byte g = source.green(colorIndex);
 				byte b = source.blue(colorIndex);
 				if (fadeRow) {
-					int faded = paletteFadePresentation.fadeRgb(
-							Byte.toUnsignedInt(r), Byte.toUnsignedInt(g), Byte.toUnsignedInt(b));
+                    int faded=PaletteFadePresentation.fadeRgb(Byte.toUnsignedInt(r),Byte.toUnsignedInt(g),Byte.toUnsignedInt(b),fadeMode,fadeSteps);
 					r = (byte) (faded >>> 16);
 					g = (byte) (faded >>> 8);
 					b = (byte) faded;
@@ -1642,7 +1730,10 @@ public class GraphicsManager {
 		pendingUnderwaterPaletteContentKeyLength = underwaterPaletteContentKeyWriteIndex;
 		underwaterPaletteContentKeyChanged |= underwaterPaletteContentKeyLength
 				!= pendingUnderwaterPaletteContentKeyLength;
+        if(publishedBasis==null && (scopedUnderwaterBasis==null || !scopedUnderwaterBasis.matches(palettes,normalLine0,paletteFadePresentation)))
+            scopedUnderwaterBasis=ScopedUnderwaterBasis.capture(palettes,normalLine0,paletteFadePresentation);
 		if (!underwaterPaletteContentKeyChanged) {
+            scopedUnderwaterDirty=false;underwaterCompositionLines=totalLines;
 			return underwaterPaletteTextureId;
 		}
 		underwaterPaletteContentKeyValid = false;
@@ -1721,6 +1812,7 @@ public class GraphicsManager {
 		underwaterPaletteUploadOps.uploadTexture(underwaterPaletteTextureId, totalLines, paletteBuffer);
 		underwaterPaletteContentKeyLength = pendingUnderwaterPaletteContentKeyLength;
 		underwaterPaletteContentKeyValid = true;
+        scopedUnderwaterDirty=false;underwaterCompositionLines=totalLines;
 		return underwaterPaletteTextureId;
 	}
 
@@ -2356,6 +2448,12 @@ public class GraphicsManager {
 					if (atlasEntry == null) {
 						return;
 					}
+                    if(entry.presentationSubject().paletteReplay()!=null) {
+                        prepareReplayDesc(entry,patternIndex,pieceHFlip,pieceVFlip,paletteIndex);
+                        flushSatReplayBatch();
+                        registerCommand(obtainReplayCommand(entry,atlasEntry,paletteTextureId,paletteIndex,
+                                pieceHFlip,pieceVFlip,drawX,drawY,rowStart,rowEnd));return;
+                    }
 					prepareReplayDesc(entry, patternIndex, pieceHFlip, pieceVFlip, paletteIndex);
 					if (addToSatReplayBatch(entry, atlasEntry, paletteIndex, pieceHFlip, pieceVFlip, drawX, drawY,
 							rowStart, rowEnd)) {
@@ -2393,15 +2491,15 @@ public class GraphicsManager {
 				satEntry.effectiveHighPriority(), drawX, drawY, rowStart, rowEnd);
 	}
 
-	private PatternRenderCommand obtainReplayCommand(SpriteSatEntry satEntry, PatternAtlas.Entry atlasEntry,
-			int paletteTextureId, int paletteIndex, boolean pieceHFlip, boolean pieceVFlip,
-			int drawX, int drawY, int rowStart, int rowEnd) {
-		if (rowStart == 0 && rowEnd == 8) {
-			return PatternRenderCommand.obtain(atlasEntry, paletteTextureId, reusableReplayDesc, drawX, drawY, this);
-		}
-		return PatternRenderCommand.obtainRows(atlasEntry, paletteTextureId, paletteIndex, pieceHFlip, pieceVFlip,
-				satEntry.effectiveHighPriority(), drawX, drawY, rowStart, rowEnd, this);
-	}
+	private PatternRenderCommand obtainReplayCommand(SpriteSatEntry satEntry,PatternAtlas.Entry atlasEntry,
+            int paletteTextureId,int paletteIndex,boolean pieceHFlip,boolean pieceVFlip,int drawX,int drawY,int rowStart,int rowEnd) {
+        PatternRenderCommand command=rowStart==0 && rowEnd==8
+                ?PatternRenderCommand.obtain(atlasEntry,paletteTextureId,reusableReplayDesc,drawX,drawY,this)
+                :PatternRenderCommand.obtainRows(atlasEntry,paletteTextureId,paletteIndex,pieceHFlip,pieceVFlip,
+                        satEntry.effectiveHighPriority(),drawX,drawY,rowStart,rowEnd,this);
+        command.paletteReplay(satEntry.presentationSubject().paletteReplay());
+        return command;
+    }
 
 	private void flushSatReplayBatch() {
 		if (!satReplayBatchOpen) {
@@ -2437,6 +2535,10 @@ public class GraphicsManager {
 		}
 		return reusableReplayCommands;
 	}
+
+    Integer scopedReplayPaletteTexture(boolean underwater) {
+        return underwater && underwaterPaletteTextureId!=null?underwaterPaletteTextureId:combinedPaletteTextureId;
+    }
 
 	private Integer resolveSpriteSatReplayPaletteTextureId() {
 		if (useUnderwaterPaletteForBackground && underwaterPaletteTextureId != null) {

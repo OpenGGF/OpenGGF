@@ -30,6 +30,9 @@ public class RenderContext {
     private static final Collection<RenderContext> donorContextView =
             Collections.unmodifiableCollection(donorContexts.values());
     private static final java.util.List<RenderContext> sidekickContexts = new java.util.ArrayList<>();
+    private static final Map<Object,Integer> scopedPaletteReservations=new java.util.IdentityHashMap<>();
+    // Keep texture height stable while released rows are reused; shrinking it without rebuilding the texture changes UVs.
+    private static int scopedPaletteHighWater=LINES_PER_CONTEXT;
     private static int nextPaletteBase = LINES_PER_CONTEXT; // first donor starts at line 4
 
     /**
@@ -38,8 +41,9 @@ public class RenderContext {
      */
     public static RenderContext getOrCreateDonor(GameId gameId) {
         return donorContexts.computeIfAbsent(gameId, id -> {
-            RenderContext ctx = new RenderContext(id, nextPaletteBase);
-            nextPaletteBase += LINES_PER_CONTEXT;
+            int base=allocatePaletteBase();
+            RenderContext ctx = new RenderContext(id, base);
+            nextPaletteBase=Math.max(nextPaletteBase,base+LINES_PER_CONTEXT);
             return ctx;
         });
     }
@@ -50,11 +54,34 @@ public class RenderContext {
      * each sidekick gets a unique context even if they share the same game.
      */
     public static RenderContext createSidekickContext(GameId gameId) {
-        RenderContext ctx = new RenderContext(gameId, nextPaletteBase);
-        nextPaletteBase += LINES_PER_CONTEXT;
+        int base=allocatePaletteBase();
+        RenderContext ctx = new RenderContext(gameId, base);
+        nextPaletteBase=Math.max(nextPaletteBase,base+LINES_PER_CONTEXT);
         sidekickContexts.add(ctx);
         return ctx;
     }
+
+    private static int allocatePaletteBase() {
+        for(int base=LINES_PER_CONTEXT;base<64;base+=LINES_PER_CONTEXT) {
+            final int candidate=base;
+            boolean busy=donorContexts.values().stream().anyMatch(c->c.paletteLineBase==candidate)
+                    || sidekickContexts.stream().anyMatch(c->c.paletteLineBase==candidate)
+                    || scopedPaletteReservations.values().stream().anyMatch(value->value==candidate);
+            if(!busy) return base;
+        }
+        throw new IllegalStateException("All bounded palette banks are reserved");
+    }
+    static int reserveScopedPaletteBank(Object token) {
+        int base=allocatePaletteBase();scopedPaletteReservations.put(token,base);
+        scopedPaletteHighWater=Math.max(scopedPaletteHighWater,base+LINES_PER_CONTEXT);
+        nextPaletteBase=Math.max(nextPaletteBase,scopedPaletteHighWater);
+        return base;
+    }
+    static boolean scopedPaletteBankValid(Object token,int base) {
+        Integer reserved=scopedPaletteReservations.get(token);
+        return reserved!=null && reserved==base;
+    }
+    static void releaseScopedPaletteBank(Object token) { scopedPaletteReservations.remove(token); }
 
     /**
      * Returns the total number of palette lines needed (base + all donors).
@@ -190,7 +217,7 @@ public class RenderContext {
         }
         sidekickContexts.clear();
         // Recompute nextPaletteBase: base (4) + donor contexts
-        nextPaletteBase = LINES_PER_CONTEXT;
+        nextPaletteBase = scopedPaletteHighWater;
         for (RenderContext ctx : donorContexts.values()) {
             int ctxEnd = ctx.paletteLineBase + LINES_PER_CONTEXT;
             if (ctxEnd > nextPaletteBase) {
@@ -205,6 +232,8 @@ public class RenderContext {
     public static void reset() {
         donorContexts.clear();
         sidekickContexts.clear();
+        scopedPaletteReservations.clear();
+        scopedPaletteHighWater=LINES_PER_CONTEXT;
         nextPaletteBase = LINES_PER_CONTEXT;
     }
 

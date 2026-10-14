@@ -219,6 +219,7 @@ public final class SpritePresentationRenderer {
                 float x = tile.x() + cameraX, y = tile.y() + cameraY;
                 var transform=runtime==null?com.openggf.game.mutators.SpritePictureTransform.IDENTITY:
                         com.openggf.game.mutators.SpritePictureTransform.forTile(tile,cameraX,cameraY,runtime.spritePolicies());
+                SpritePresentation.withSubject(graphics,tile.subject(),()-> {
                 if(!transform.identity()||opacity!=1) {
                     com.openggf.graphics.PresentationGraphicsAccess.render(graphics, tile.patternId(), tile.palette(),
                             tile.hFlip(), tile.vFlip(), tile.priority(), tile.rowStart(), tile.rowEnd(),
@@ -230,6 +231,7 @@ public final class SpritePresentationRenderer {
                 } else {
                     graphics.renderPatternWithIdScaled(tile.patternId(), desc, x, y, tile.width(), tile.height());
                 }
+                });
             }
         } finally {
             graphics.flushPatternBatch();
