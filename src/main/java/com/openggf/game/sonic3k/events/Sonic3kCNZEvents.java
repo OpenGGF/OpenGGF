@@ -24,6 +24,7 @@ import com.openggf.game.RuntimeArtAdmissionPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.Sprite;
 import com.openggf.sprites.managers.SpriteManager;
+import com.openggf.sprites.managers.SpriteManagerInternalAccess;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCarryTrigger;
 import com.openggf.sprites.playable.SidekickCpuController;
@@ -381,7 +382,10 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         // the carrier is alive can rebuild it after it has flown off and been
         // removed (ROM routine $10 self-delete). Without it, rewinding back into
         // the carry would leave Sonic object-controlled with no carrier.
-        sprites.addTemporarySidekick(carrier, "tails", this::recreateSoloCarryInTails);
+        // loc_68D8 creates Obj_Tails from this ROM even when the configured P1
+        // uses donor movement/art. This transient script actor is not a launch participant.
+        SpriteManagerInternalAccess.addNativeScriptedTemporarySidekick(
+                sprites, carrier, "tails", this::recreateSoloCarryInTails);
         refreshSoloCarryInTailsArt();
     }
 
@@ -420,7 +424,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         if (sprites == null || carrier == null) {
             return null;
         }
-        sprites.addTemporarySidekick(carrier, "tails");
+        SpriteManagerInternalAccess.addNativeScriptedTemporarySidekick(sprites, carrier, "tails", null);
         refreshSoloCarryInTailsArt();
         return carrier;
     }
