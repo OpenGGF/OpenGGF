@@ -251,8 +251,38 @@ class TestMhzCheckpointRoutes {
         } finally {config.clearSessionOverrides(); restore(savedConfig);}
     }
 
+    private static Stream<Team> nativeStandardTeams() {
+        return Stream.of(Team.SONIC, Team.TAILS, Team.SONIC_TAILS);
+    }
+
+    private static Stream<Arguments> knucklesPosts() {
+        return AUTHORED_CHECKPOINTS.stream().map(post ->
+                Arguments.of(Team.KNUCKLES, post.act(), post.index(), post));
+    }
+
+    private static Stream<Arguments> knucklesLifecycleCases() {
+        return AUTHORED_CHECKPOINTS.stream().flatMap(post -> Stream.of(320, 352, 400, 528, 800)
+                .map(width -> Arguments.of(Team.KNUCKLES, post.act(), post.index(), post, width)));
+    }
+
+    @org.junit.jupiter.api.Order(5)
+    @ParameterizedTest
+    @MethodSource("knucklesPosts")
+    void knucklesPhysicallyTouchesAndReplaysEveryPost(Team team, int act, int index,
+            CheckpointPlacement post) {
+        approachingEveryPlacedPostActivatesAndReplaysItsSave(team, act, index, post);
+    }
+
+    @org.junit.jupiter.api.Order(20)
+    @ParameterizedTest
+    @MethodSource("knucklesLifecycleCases")
+    void knucklesPreservesItsRouteAcrossBothDeathsAndIncomingWorlds(Team team, int act, int index,
+            CheckpointPlacement post, int width) {
+        runPhysicalCheckpointLifecycle(team, act, index, post, width, "off");
+    }
+
     private static Stream<Arguments> checkpointLifecycleCases() {
-        return AUTHORED_CHECKPOINTS.stream().flatMap(post -> Stream.of(Team.values())
+        return AUTHORED_CHECKPOINTS.stream().flatMap(post -> nativeStandardTeams()
                 .flatMap(team -> Stream.of(320, 352, 400, 528, 800)
                         .map(width -> Arguments.of(team, post.act(), post.index(), post, width))));
     }
@@ -295,7 +325,7 @@ class TestMhzCheckpointRoutes {
 
     private static Stream<Arguments> checkpointTeamCases() {
         return AUTHORED_CHECKPOINTS.stream().flatMap(checkpoint ->
-                Stream.of(Team.values()).map(team -> Arguments.of(
+                nativeStandardTeams().map(team -> Arguments.of(
                         team, checkpoint.act(), checkpoint.index(), checkpoint)));
     }
 
@@ -330,7 +360,8 @@ class TestMhzCheckpointRoutes {
     private enum Team {
         SONIC("sonic", "", PlayerCharacter.SONIC_ALONE),
         TAILS("tails", "", PlayerCharacter.TAILS_ALONE),
-        SONIC_TAILS("sonic", "tails", PlayerCharacter.SONIC_AND_TAILS);
+        SONIC_TAILS("sonic", "tails", PlayerCharacter.SONIC_AND_TAILS),
+        KNUCKLES("knuckles", "", PlayerCharacter.KNUCKLES);
 
         private final String main;
         private final String sidekicks;

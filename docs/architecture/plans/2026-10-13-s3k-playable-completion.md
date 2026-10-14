@@ -1451,3 +1451,20 @@ and additional roster products are the next gap, not silently counted here.
 SOZ/DDZ's older manual fade drivers and other remaining obligations still need
 their affected follow-up. Combined smoke/guards/integration/push/cleanup remain
 pending. Consumed local redirects are removed after this account.
+
+
+### MHZ Knuckles checkpoint qualification (2026-10-14)
+
+Source64f419a3b plus final test draft keeps the existing315 Sonic/Tails/pair
+and donor selectors explicit and adds two independent Knuckles methods:
+`knucklesPhysicallyTouchesAndReplaysEveryPost` (nine actual contact/replay
+cases) and `knucklesPreservesItsRouteAcrossBothDeathsAndIncomingWorlds`
+(45 real two-death/released-world products across all posts and five presets).
+Request50826, Java25/normal queued admission/surfaceless EGL/original three
+absolute ROMs, selects these methods plus`TestBubblerCharacterIdentity`.
+Terminal1 at13:19:59 UTC: MHZ54/0/0/0 (10.55s class); the separate Bubbler
+five cases have two literal Sonic registration-alias rolling failures.
+The latter prove a remaining Obj_Sonic-identity branch defect; MHZ's qualified
+360 distinct lifecycle products span this run and63733, not a fabricated
+single360 pass. Act1=200 and Act2=160. No new cold traversal/native acceptance.
+The source freeze ended before the subsequent owner correction.

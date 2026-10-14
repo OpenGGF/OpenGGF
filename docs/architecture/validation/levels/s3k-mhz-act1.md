@@ -336,5 +336,27 @@ ordinary movement and verifies the real inverted death and native cleared
 gravity after reload. This adds incoming-world replay to the previously
 qualified physical contact/death scope; other unchanged checks were not repeated.
 [Exact selectors and source hashes](../../plans/2026-10-13-s3k-playable-completion.md#existing-checkpoint-driver-qualification-2026-10-14)
-are in the completion plan. Knuckles, further roster and mechanic/cold-route products remain open. No native pixel/audio, overall act
+are in the completion plan. Further roster and mechanic/cold-route products remain open. No native pixel/audio, overall act
 certification, full-suite or combined delivery claim follows.
+
+
+### Knuckles physical checkpoint follow-up (2026-10-14)
+
+`TestMhzCheckpointRoutes.knucklesPhysicallyTouchesAndReplaysEveryPost` adds
+5 native Knuckles physical contacts in this act with two full-registry
+contact replay cycles. `knucklesPreservesItsRouteAcrossBothDeathsAndIncomingWorlds`
+adds25 products over every authored post and all five selectable widths.
+Each uses the qualified actual two-death driver, exact life loss, native character
+and retained route, fresh object manager, timeline isolation and two45-input
+forward/reverse full-world cycles after EACH released death. They are declared
+local approaches, not new cold traversals. Donor sanitization still excludes
+Knuckles from S1/S2 products.
+
+On source`64f419a3b3a0a9a81b9cfeeb26b55090114f2930` plus the final test draft,
+request50826 finishes at13:19:59 UTC: all54 added MHZ cases pass, zero errors
+or skips (10.55s class). Its separate five-case Bubbler identity regression
+contains two genuine failures; this mixed invocation is not a green delivery
+gate. Together with the distinct315 preceding MHZ death products, the current
+qualified lifecycle floor is360 (Act1=200,Act2=160), not a single pristine360
+invocation. Further rosters, mechanics, cold-route and native visual/audio
+breadth remain explicit obligations.

@@ -1118,5 +1118,17 @@ and [DEZ2](../architecture/validation/levels/s3k-dez-act2.md#released-checkpoint
 matrices record315/440/322 products respectively, all1077 passing without
 failures/errors/skips on composed262e9bbb1 plus the final test changes, completed
 13:13:31 UTC. Twelve independently ordered short witnesses also pass. This is
-local contact/death/released-world qualification; MHZ Knuckles, additional
+local contact/death/released-world qualification; additional
 rosters/mechanics/routes and native presentation remain separate obligations.
+
+
+MHZ Knuckles checkpoint follow-up (2026-10-14): source64f419a3b plus final
+`TestMhzCheckpointRoutes` draft adds all nine native Knuckles physical contacts
+and45 products (every authored post × five widths), all54 passing without
+errors/skips in50826 at13:19:59 UTC. Together with the separate315 preceding
+MHZ products, the qualified death floor is360, including two actual reloads
+and incoming full-world replay after each. The mixed59-test run has two
+separate Sonic-follower Bubbler identity failures and is not a passing delivery
+gate. [MHZ1](../architecture/validation/levels/s3k-mhz-act1.md#knuckles-physical-checkpoint-follow-up-2026-10-14)
+and [MHZ2](../architecture/validation/levels/s3k-mhz-act2.md#knuckles-physical-checkpoint-follow-up-2026-10-14)
+retain further roster/mechanic/cold-route/native limits.
