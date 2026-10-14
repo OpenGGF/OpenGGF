@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.camera.NativeViewportFraming;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.objects.S3kRawAnimation;
 import com.openggf.game.sonic3k.runtime.SszZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
@@ -72,6 +73,9 @@ public final class EndingKnucklesFlightObjectInstance extends AbstractObjectInst
         switch(routine) {
             case 0 -> initialize();
             case 2 -> {
+                // loc_5E80A calls Play_SFX_Continuous before animation and timer
+                // expiry; the helper reads V_int_run_count's low nibble.
+                if ((vIntRunCount & 0xF) == 0) services().playSfx(Sonic3kSfx.WIND_QUIET.id);
                 animate();
                 if((timer=(short)(timer-1))<0){routine=4;yVelocity=-0x6C0;
                     services().playMusic(services().getApparentLevelMusicId());}

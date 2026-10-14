@@ -153,3 +153,21 @@ claiming an uninterrupted cold campaign, whole-scene native pixel parity or
 latest-integrated pixel parity. Portable reconstruction uses the final pushed
 develop head recorded in the live `ending-capture-index.json`; historical
 source commands and hashes remain available beside that recipe.
+
+
+## Remaining-parity follow-up — 2026-10-14
+
+Knuckles' routine2 quiet-wind omission is repaired: `loc_5E80A` requests `$CE`
+before animation and timer expiry when `Play_SFX_Continuous` admits the native
+VInt low nibble. Three independent new request-clock, expiry/adjacent-routine
+and owner restore/replay cases fail on unchanged production and pass after the
+repair. The complete affected class passes16/0/0/0 at08:15:18 BST; exact
+commands and source context are in the [follow-up record](../../plans/2026-10-13-s3k-playable-completion.md#quiet-wind-repair-qualification).
+This does not qualify rendered PCM.
+
+The same audit confirms that rescue-plane flame/propeller/passenger/Master
+children from `loc_5DC2C` and `loc_5DD0E` need managed native-slot owners; current
+inline draw substitutes do not establish allocation or lifetime parity. That
+graph and the retained-byte full-table continuation contract remain open.
+Whole-scene native composition, NTSC/PAL branch breadth, donor incomplete
+progress and rendered audio remain pending in the broader follow-up.

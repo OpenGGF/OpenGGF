@@ -160,6 +160,23 @@ parity. Combined integration remains coordinator-owned. The original audit and
 rejected pixel premises are retained in the [ending design](../architecture/designs/2026-10-13-s3k-ending-lifecycle.md#native-presentation-repair--2026-10-13)
 and [ending matrix](../architecture/validation/levels/s3k-ending.md#repaired-native-presentation-owners--2026-10-13).
 
+## Ending Parity Follow-up — 2026-10-14
+
+The Knuckles flight wait's missing native quiet-wind request is repaired and
+qualified by16 affected object tests, including three independently red/green
+clock, expiry-order and restore/replay checks. `loc_5E80A` calls
+`Play_SFX_Continuous` before animation and timer expiry; native `$CE` admission
+uses `V_int_run_count & $F`. The [ending matrix](../architecture/validation/levels/s3k-ending.md#remaining-parity-follow-up--2026-10-14)
+records exact scope and commands. Request timing is not PCM acceptance.
+
+Remaining concrete source defects: rescue-plane children from `loc_5DC2C` and
+`loc_5DD0E` are partly represented by inline drawing instead of native managed
+slots, and full-table `Create_Continue_Sprite` lacks retained-byte overwrite
+emulation. These remain missing implementation, not accepted deviations.
+Whole-scene native rendering/audio and supported matrix breadth remain open.
+
+---
+
 ## Blue Sphere FM Pickup Onset — Automated Parity Complete, Listening Gate Open
 
 **Location:** `YmServiceTimingProfile`, `YmWriteTimeline`, `SmpsDriver`, and

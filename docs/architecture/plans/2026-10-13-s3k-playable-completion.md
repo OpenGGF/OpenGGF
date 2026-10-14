@@ -934,3 +934,70 @@ snapshot. Retain the ed7dc650 historical runtime jar/classpath and presentation
 rebuild drafts. A rebuilt movie is new evidence; the retained mixed-source
 films do not become latest-integrated or whole-scene native pixel parity.
 Formal route breadth and strict trace frontiers stay open as recorded.
+
+
+## Remaining parity and coverage follow-up — 2026-10-14
+
+The follow-up request is to complete the remaining recorded S3K parity and
+coverage limits. It starts from delivered develop
+`5b2ff8e7851b99dd40998dfc41fbfd21c80031ef`; the prior bounded delivery and
+historical captures remain qualified within their recorded scope. Main's normal
+fetch/fast-forward waits for the admitted runtime-memory pair5 lease and then
+completes unchanged. The separately excluded swapped performance cohort has no
+parity or performance acceptance credit. Four new isolated worktrees own the
+coordinator, HPZ breadth, native continuation allocation and trace diagnosis.
+
+| Obligation | Current actionable owner | Planned evidence |
+| --- | --- | --- |
+| Native ending wait audio | `loc_5E80A` / Knuckles flight | Native VInt low-nibble request, expiry ordering, adjacent-routine negative and replay, then separate production PCM/native acceptance |
+| Full-table continuation writes | `Create_Continue_Sprite` / native SST projection and manager slot transfer | Independent partial-write mask; retained live state, slot93 ownership, execution cursor, no synthetic unload and both restore directions; all legal scene occupants |
+| Configuration and lifecycle | Production presets and each owning act matrix | Entry/reload/death products, meaningful interactions and two-cycle replay across supported donors/characters/team contracts; preserve existing coverage and unique custom-width checks |
+| Route continuity | LRZ→HPZ→SSZ and remaining materially distinct paths | Ordinary cold inputs, actual loads/control release and full-world replay/history isolation; positioned success does not close a cold route |
+| Strict trace frontiers | Original/alternate AIZ and initial/returned HCZ, then downstream canonical lanes | Pinned matched source/fixtures, exact first-error field/row, separate bootstrap limits, ROM-owned fixes and another BK2 without hydration |
+| Native presentation/audio | Ending and distinct per-act presentation owners | Independent synchronized native320 NTSC/PAL scene checkpoints and contiguous transitions, actual SAT/CRAM publication, complete waveforms/requests; wide extensions remain separately specified behavior |
+
+The recorded gaps include absent AIZ2/HCZ2/MGZ/CNZ/ICZ matrices, LRZ/SSZ
+physical checkpoint products, MHZ/FBZ/SOZ/DEZ/DDZ remaining supported products,
+sanctuary/auxiliary dispositions, rendered native acceptance and strict trace
+frontiers. Existing MHZ/FBZ/SOZ/DEZ physical-post products and completed native
+route cases are retained. Historical pending labels do not reopen completed
+checks. Actual menu presets replace obsolete512/640 mandatory rows; those raw
+custom widths retain separate useful regression intent. Uncapped team admission
+requires general ownership properties and concrete large-roster evidence, not
+a fabricated participant maximum.
+
+First red qualification on unchanged production5b2ff8e78 is three tests,
+three exact failures, zero errors/skips; Maven1:17, completed08:10:46 BST.
+Native wind request is absent at aligned VInt0, replay observes no `$CE`
+requests, and expiry emits only music21 instead of wind before music. These
+new diagnostic checks use original ROM data and literal source predicates; no
+trace values supply gameplay state. Full follow-up completion remains pending
+until every applicable recorded obligation has actual evidence.
+
+### Quiet-wind repair qualification
+
+`loc_5E80A` now requests native `sfx_WindQuiet` (`$CE`) before animation and
+word-timer expiry, through `Play_SFX_Continuous`'s received
+`V_int_run_count & $F == 0` admission. The entire affected
+`TestS3kKnucklesEnding` class passes16 tests, zero failures/errors/skips;
+Maven1:14, completed08:15:18 BST. The three red checks become green, and all13
+existing native flight, viewport, palette and replay cases remain passing.
+This is request/owner timing evidence, not complete PCM or native scene parity.
+
+Both runs use the local updated wrapper, lean bounded memory, original locked-on
+ROM and explicit EGL property (without launcher notices):
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY -u JDK_JAVA_OPTIONS -u JAVA_TOOL_OPTIONS ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$MAIN_WORKSPACE/Sonic and Knuckles & Sonic 3 (W) [!].gen" '-Dtest=TestS3kKnucklesEnding#quietWindUsesOnlyTheNativeVIntLowNibbleDuringTheWait+expiryDispatchRequestsWindBeforeRestoringMusicAndAdjacentJumpDoesNot+restoringTheWaitingOwnerReplaysTheSameNativeWindRequests' test -B
+# After the native runtime correction:
+env -u DISPLAY -u WAYLAND_DISPLAY -u JDK_JAVA_OPTIONS -u JAVA_TOOL_OPTIONS ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl "-Ds3k.rom.path=$MAIN_WORKSPACE/Sonic and Knuckles & Sonic 3 (W) [!].gen" '-Dtest=TestS3kKnucklesEnding' test -B
+```
+
+The source audit also finds `loc_5DC2C`/`loc_5DD0E` rescue-plane child lists
+represented partly as inline drawing. Managed native flame, propeller, passenger
+and Master-child allocation/retirement is a new concrete parity obligation. It
+is coupled to legal full-table continuation residue and whole-scene SAT
+acceptance; selected earlier pixel tests do not establish this missing graph.
+The root owns that graph while the allocation worker owns live-SST projection
+and transfer. Source mutation uses normal worktree leases and waits for admitted
+controls; no foreign job is paused, restarted or preempted.

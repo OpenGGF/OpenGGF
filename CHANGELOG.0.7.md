@@ -402,7 +402,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   or ramming costs speed. The end boss runs both phases: turrets, launchers, missiles that can
   be steered back into the ship, the chase with bombs, rockets and the Master Emerald, the
   level wrap that repeats the field, and the defeat, explosions and white fade before the
-  handover to the ending act ($D01, not yet implemented). S3K transformations now release the
+  handover to the playable rescue and credits in the ending act ($D01). S3K transformations now release the
   player on the ROM palette-fade schedule.
   S3K level palette changes now appear on the frame the matching sprites do, one frame after
   the game writes them, as the hardware shows them, so boss hit flashes are no longer a frame early. S3K palette cycles (such as
@@ -724,7 +724,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   coverage across MHZ's accepted rosters, supported donors and five viewport presets,
   plus cold Tails completion of both acts and native-pair Act 1 completion with
   rewind-verified boss and act/zone handoffs; LBZ Big Arm, Super Emerald sanctuary/progression, and powered
-  effects. Sandopolis now implements its four quicksand variants, including
+  effects. Sonic, Tails and Knuckles endings continue through their progress-dependent
+  credits, terminal scenes and title return. Knuckles' flight wait requests quiet
+  wind on the native cadence and preserves its order before music restoration. Sandopolis now implements its four quicksand variants, including
   per-player capture, jump release, sand-slide movement and rewindable cooldowns,
   plus spring vines with shared tension, deforming surfaces, native landing boundaries and directional launches,
   sand rocks that break under rolling landings and release their riders,
