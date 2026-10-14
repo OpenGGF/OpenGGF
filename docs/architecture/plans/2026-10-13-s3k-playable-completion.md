@@ -6,6 +6,9 @@ acceptance claims. The integration base is develop
 `5e2f51f07917d5eff8ac120007dac55327f93f32`; unrelated main-workspace changes and
 other worktrees are preserved.
 
+The bounded playable-route/ending work is delivered on develop; final source,
+qualification and cleanup are recorded in [the delivery closure](#delivered-source-and-owned-cleanup).
+
 ## Work and acceptance
 
 | Lane | Initial blocker evidence | Required result |
@@ -891,7 +894,43 @@ do not erase the separately qualified owned ending pixels or certify those
 unrun graphics cases. Remaining donor/viewport/lifecycle/native-pixel products
 and strict trace frontiers stay explicitly open in the matrices.
 
-The original retained diagnostics are acknowledged/deleted. Composed diagnostics
-are now inspected and will be acknowledged before delivery; temporary Maven
-logs are discarded after their summaries are consumed. Final develop integration,
-push, portable media reconstruction targets and owned cleanup remain pending.
+Both retained diagnostic runs are inspected and acknowledged/deleted. Temporary
+Maven logs are discarded after their summaries are consumed. The completed
+source delivery and cleanup are recorded below.
+
+
+## Delivered source and owned cleanup
+
+Develop is fetched and fast-forwarded at `ea8c9c627`, already included in the
+qualified composition. Merge `f38e9b36e4235b9f526d83f5363f8363417a9d36` integrates
+`1d5efa71e` without conflicts and is pushed to `origin/develop`. Exact `src`,
+POM, testing-tool, hook and workflow trees match tested `aaff73747`; only
+qualification documentation follows it. The CI-style branch-policy validator
+and normal push hook pass. Main-workspace package command
+`python3 tools/testing/maven_queue.py -Dmse=off -DskipTests package -B` exits0,
+BUILD SUCCESS in1:18 at03:09:17 BST, compiling3,964 production and3,904 test
+sources with Java25 while executing no tests. Unchanged bounded coverage is
+not repeated as an integration ceremony. The inherited CLI failure and64
+skips remain exactly as qualified above; delivery is not a wholly green suite.
+
+All eight owned S3K task worktrees and local branches are removed after push.
+The baseline LBZ untracked draft is accounted by its committed stronger native
+viewport assertion. LRZ's nine commits are cherry-equivalent. SSZ's remaining
+intent-equivalent commits map to `71b357e7a`, `1fab3806c` and `c2103d5f7`;
+LBZ-dev maps to `976863de8`, `bed44fae6`, `b143f272e` and `f9ac22318`. Those
+three nonancestor branch tips are deleted only after this source/intent
+accounting; no synthetic merge is used. The remaining tips are ancestors.
+Known generated targets, links, caches and probe outputs are removed, along
+with34 approved scratch directories totaling607.43 MiB. Main's dirty
+disassembly submodules and unrelated files remain intact.
+
+The latest12-chapter61-second ending reel is identified in the
+[ending matrix](../validation/levels/s3k-ending.md#moving-evidence). The live
+external `ending-capture-index.json` records the final pushed develop
+reconstruction target and a Java25/POM-named fat-jar recipe. This changes
+current status and reconstruction pointers, never historical capture
+commands, source hashes,11 capture records or the immutable reel source-index
+snapshot. Retain the ed7dc650 historical runtime jar/classpath and presentation
+rebuild drafts. A rebuilt movie is new evidence; the retained mixed-source
+films do not become latest-integrated or whole-scene native pixel parity.
+Formal route breadth and strict trace frontiers stay open as recorded.

@@ -37,7 +37,7 @@ load/respawn and lifecycle breadth remain open. All seven actual incoming
 DEZ/DDZ ending scenarios pass in smoke on composed `aaff73747`, with no
 failures/errors/skips. The bounded [composed-source qualification](../../plans/2026-10-13-s3k-playable-completion.md#completed-composed-source-qualification)
 records the completed ordinary/guard result and separately attributed inherited
-CLI assertion. Develop integration, push and owned cleanup remain pending.
+CLI assertion. Develop source delivery and owned-worktree cleanup are complete.
 Nothing below certifies the act.
 
 LevelSizes (sonic3k.asm:38143): x `0`-`$6000`, y `$20`-`$20`. Level art

@@ -2,7 +2,7 @@
 
 This matrix belongs to the [2026-10-13 playable-completion work](../../plans/2026-10-13-s3k-playable-completion.md), against integration base `5e2f51f07917d5eff8ac120007dac55327f93f32`. Native Sonic/Tails endings remain inside `$0D01`; Knuckles continues inside `$0A01` after SSZ2. Locked-on `S3Credits` is an RTS, so a generic `GameMode.ENDING` would discard the actual scene owners. Resources, rejected approaches and run history are in the [ending lifecycle design](../../designs/2026-10-13-s3k-ending-lifecycle.md).
 
-Focused playable ending qualification is complete. The three source-confirmed presentation omissions were subsequently repaired and qualified below; whole-scene native pixel parity remains unclaimed. All seven actual incoming DEZ/DDZ scenarios execute in composed-source smoke on `aaff73747`, with seven tests and zero failures/errors/skips. The complete ordinary run records 27,200 tests, one separately attributed inherited CLI assertion, zero errors and 64 inspected skips; fresh guards pass 680 tests with zero failures/errors/skips. Develop integration, push, cleanup and media normalization remain pending. The evidence below distinguishes declared scene entry from an actual final-fight continuation.
+Focused playable ending qualification is complete. The three source-confirmed presentation omissions were subsequently repaired and qualified below; whole-scene native pixel parity remains unclaimed. All seven actual incoming DEZ/DDZ scenarios execute in composed-source smoke on `aaff73747`, with seven tests and zero failures/errors/skips. The complete ordinary run records 27,200 tests, one separately attributed inherited CLI assertion, zero errors and 64 inspected skips; fresh guards pass 680 tests with zero failures/errors/skips. Qualified source is integrated and pushed on develop as `f38e9b36e`; all eight owned task worktrees and local branches are retired. The live ending index records portable reconstruction separately from historical capture identities. The evidence below distinguishes declared scene entry from an actual final-fight continuation.
 
 ## Character routes
 
@@ -50,7 +50,7 @@ D01 registry windows cover rescue flight, AIZ return where applicable, reunion, 
 
 Supported presets are **320, 352, 400, 528 and 800**. Short donor, flight, credits and roster checks assert the actual camera width. The configured seven-follower scenario is a large roster, not a claimed parser maximum. Complete ending lifecycles cover all three progress values for native Sonic, Tails and Sonic+Tails, and the maintained Knuckles final fight at320/800. These checks do not claim a complete cold campaign for every donor/width/team combination.
 
-The donor30 pass predates the final type-independent unclaimed-origin restore correction. Native Rescue36/D01 nine qualify that correction; the completed change-based smoke includes the donor class on composed `aaff73747`. Existing ordinary S2 powered-controller RAM snapshot support is an inherited gap outside the native scene binding. Continuous incoming DEZ/DDZ coverage is tracked in the [final DEZ matrix](s3k-dez-final-boss.md) and [DDZ matrix](s3k-ddz.md), with SSZ continuity in [SSZ2](s3k-ssz-act2.md). The [completed composed-source qualification](../../plans/2026-10-13-s3k-playable-completion.md#completed-composed-source-qualification) records the bounded smoke/guard result and inherited CLI assertion; develop integration remains pending.
+The donor30 pass predates the final type-independent unclaimed-origin restore correction. Native Rescue36/D01 nine qualify that correction; the completed change-based smoke includes the donor class on composed `aaff73747`. Existing ordinary S2 powered-controller RAM snapshot support is an inherited gap outside the native scene binding. Continuous incoming DEZ/DDZ coverage is tracked in the [final DEZ matrix](s3k-dez-final-boss.md) and [DDZ matrix](s3k-ddz.md), with SSZ continuity in [SSZ2](s3k-ssz-act2.md). The [completed composed-source qualification](../../plans/2026-10-13-s3k-playable-completion.md#completed-composed-source-qualification) records the bounded smoke/guard result and inherited CLI assertion; develop source delivery and owned-worktree cleanup are complete.
 
 Native art/maps/palettes and moving output are verified at specific producer boundaries, not by whole-scene BizHawk pixel parity. Literal controller tests cover audio request absence; the retained films are silent and do not qualify rendered audio. No trace parity sweep or release-only full suite was run for this feature.
 
@@ -128,7 +128,7 @@ Durable sources are outside the repo at `~/Videos/OGGF/s3k-finish-endings-2026-1
 
 The original missing-plane movie is rejected: identity-only resident-art caching missed in-place DMA. The first Tails b2af film is also retained as negative evidence because physical camera0 versus renderCopy608 filled the center with mask grain. The corrected final Tails film uses source d1a298ec / immutable jar ed152e71, preserves the identical state CSV and visibly clears the native center through departure.
 
-A reproducible61-second silent highlights reel under `highlights/ending-reel-render-copy-d1a298ec789d` includes the corrected departure, AIZ restoration, reunion, credits, Knuckles flight/Mecha terminal and title. Its EDL retains exact native-input↔source-time mapping and honest scene-entry/final-fight labels; it does not present editorial cuts as a cold campaign. FFprobe, full xerror decode and representative temporal frames qualify the media artifact. Bounded smoke/guards complete on composed `aaff73747`, with the separately attributed inherited CLI assertion recorded above. Develop integration and final media reproduction normalization remain pending; these historical films retain their original capture-source identities.
+The historical61-second silent highlights reel under `highlights/ending-reel-render-copy-d1a298ec789d` includes the corrected departure, AIZ restoration, reunion, credits, Knuckles flight/Mecha terminal and title. Its EDL retains exact native-input↔source-time mapping and honest scene-entry/final-fight labels; it does not present editorial cuts as a cold campaign. FFprobe, full xerror decode and representative temporal frames qualify the media artifact. Bounded smoke/guards complete on composed `aaff73747`, with the separately attributed inherited CLI assertion recorded above. Develop source delivery and owned-worktree cleanup are complete; portable reconstruction follows the live ending index, and these historical films retain their original capture-source identities.
 
 Two 85-second presentation excerpts now supplement the historical films under
 `presentation-repair-70c099038943/`: Sonic Chaos 320 and Tails Super 800, each 6000
@@ -138,3 +138,18 @@ restoration/hold, not a cold campaign or terminal continuation. The external
 index preserves the older jar/source/video identities and adds the immutable
 repair jar ed7dc650 plus exact commands, CSV and media hashes. Both full xerror
 decodes and temporal still inspection pass.
+
+The latest61-second silent reel is
+`highlights/ending-reel-presentation-f664a1e1a/s3k-ending-highlights-presentation-repair-provisional.mp4`,
+under the same durable task directory. It has12 chapters at1600×520 and15fps,
+915 frames; output SHA-256 is
+`5f5cef9fabe730b58091c0f3b2b94a233b640edc902a27a6f783d3749ec2ecde`.
+Chapters1–6 use the qualified70c099/ed7dc650 Sonic Chaos320 and Tails Super800
+Island/AIZ presentation excerpts; chapters7–12 retain the b2af/a302
+credits, Knuckles and title sources. Its filename remains historical. The
+immutable source-index snapshot, original capture identities and mixed-source
+EDL remain unchanged. It shows the three repaired presentation owners without
+claiming an uninterrupted cold campaign, whole-scene native pixel parity or
+latest-integrated pixel parity. Portable reconstruction uses the final pushed
+develop head recorded in the live `ending-capture-index.json`; historical
+source commands and hashes remain available beside that recipe.

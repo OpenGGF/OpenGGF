@@ -17,7 +17,7 @@ full-registry 45-input restore/replay spots and no deaths, as recorded in the
 [October 13 current qualification](#current-route-qualification-2026-10-13). Other character/donor/width products,
 lifecycle coverage and native whole-scene acceptance remain open. The cold800
 native-pair route clears Act1 in25,650 inputs with115 two-cycle replay windows
-and seamless history isolation. Bounded [composed-source smoke/guard qualification](../../plans/2026-10-13-s3k-playable-completion.md#completed-composed-source-qualification) completes on `aaff73747`, with the separately attributed inherited CLI assertion; develop integration remains pending.
+and seamless history isolation. Bounded [composed-source smoke/guard qualification](../../plans/2026-10-13-s3k-playable-completion.md#completed-composed-source-qualification) completes on `aaff73747`, with the separately attributed inherited CLI assertion; develop source delivery and owned-worktree cleanup are complete.
 
 Incoming: level select / data select `$900`, SOZ2 end boss -> `$900` (verified as a request and
 load at the end of the campaign, not the route entry). Outgoing: seamless `$901`.
