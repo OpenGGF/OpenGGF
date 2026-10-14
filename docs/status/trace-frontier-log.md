@@ -112392,3 +112392,40 @@ Native `BreakObjectToPieces2` reuses parent35 and allocates N−1 higher pieces;
 that next source owner remains unresolved. Second-entry ring/flash25/17 versus
 18/22 is unchanged. Final90744 guards111/0/0/0 at12:47:40 BST. No strict trace
 closure or pixel/audio parity claimed; native screenshots remain a separate gate.
+
+
+### 2026-10-14 — Cork native same-record graph; strict frontiers unchanged
+
+Owned `bugfix/ai-s3k-parity-trace`, source `d8025e094` plus Cork SHA256
+`e221bbe2cd7e3289ccc46b7c91a3b774a03af11f99dddee70f6a1ae04272a448`.
+[Owning evidence and rejected setups](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#cork-same-record-fragment-and-icz-table-follow-up).
+`BreakObjectToPieces2` reuses a0 as piece0, allocates only N−1 checked
+AfterCurrent siblings, preserves native fractional motion and prior-render
+retirement. ICZ stores the nibble directly and indexes its separate high-launch
+velocity suffix; no fixtures, controller, shared allocator or clock changed.
+Affected74672 is607/0/0/0; native component/table/pressure/replay21 and mandatory
+startup, actual ICZ2 roll, CNZ exact-link and scalar recreation consumers pass.
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay '-Dtest=TestS3kAizTraceReplay#replayMatchesTrace,TestS3kSonicTailsHczSegmentTraceReplay#replayMatchesTrace,TestS3kSonicTailsCompleteEmeraldRunPrefix,TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds' "-Ds3k.rom.path=$S3K_ROM" test -B
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-segments '-Dtest=TestS3kAizZoneSliceTraceReplay#replayMatchesTrace' "-Ds3k.rom.path=$S3K_ROM" test -B
+python3 tools/testing/maven_queue.py -Dmse=off -Pguards '-Dtest=TestRewindArchitectureGuard,TestArchitecturalSourceGuard,TestTraceReplayInvariantGuard,TestHardwareTimingAuthorityGuard' test -B
+```
+
+Java25, exact surfaceless-EGL environment flag and original absolute verified
+ROM retained. Canonical25714 completes5/1/0/0 at14:27:09 BST (96s execution,
+97s queue), original AIZ/initial HCZ/prefix2 green. Chain raw field totals
+segment6/8/11 remain189/12,719/82,067; group physics189/12,604/69,393,
+animation0/115/12,674. First non-camera physics fields remain3319 TailsX
+$31C1/$31CA,1583 TailsX $366C/$3674,1510 Y $7D6/$7DF; cursor68,801,
+load generation9 remains the stop. Alternate10147 is1/1/0/0 at14:25:32 BST
+(34.046s execution/63s queue),60 grouped spans, first25589 animation $13/$05.
+No metric definition changed.
+
+The read-only slot observer now finds exact native Cork35+41..51 and all12 XY
+births at1688. Allocation-presence sampling (including existing reservations)
+advances1688→2133, native-only6; it is not whole-child-dispatch or strict trace
+closure. Ring25/flash17 versus native18/22 remains. Guard30177 passes111/0/0/0
+at14:30:04 BST (33.360s execution/0queue);65122 was canceled130 before tests,
+sender unattributed, then replaced only after no matching live request remained.
+No broad/full suite or new native-pixel/audio claim.

@@ -347,3 +347,80 @@ owners and exposes the HCZ publication/standalone boundary. It does not certify
 fresh-return title pixels: that joined observer still needs accurate scene
 publication instrumentation. Strict fields remain as86861/74434, and the next
 physical graph owner remains cork-floor1688.
+
+
+## Cork same-record fragment and ICZ table follow-up
+
+Source context: `d8025e094` plus the owned Cork implementation (SHA256
+`e221bbe2cd7e3289ccc46b7c91a3b774a03af11f99dddee70f6a1ae04272a448`),
+original selection base `5b2ff8e78`. No controller, fixture, shared allocator,
+collision algorithm or clock changed.
+
+`BreakObjectToPieces2` (sonic3k.asm:45786–45822) initializes piece0 with a1=a0,
+then allocates only N−1 checked AfterCurrent siblings. A failed allocation ends
+the admitted mapping prefix. The original Cork record now retains its typed
+identity as the first moving fragment: CNZ `loc_65D46` compares the saved child's
+code to `loc_2A5F8`, rather than waiting for an unrelated replacement. The parent
+moves once after the allocation walk, as `loc_2A5D8`/`loc_2A6BC` fall through.
+Motion preserves the fractional long and applies old velocity before +$18;
+retirement consumes the preceding Render_Sprites sign bit. The parent's $0080
+priority word is bucket1; the shipped byte copy leaves a cleared sibling's word0.
+Each static piece separately retains art bit15.
+
+ICZ is a separate correction within the same owner. Init stores the subtype
+nibble directly, including the bit4 small-floor branch. `loc_2A816` indexes
+`word_2A84C` by the pre-break frame*4: native0/2/4/6/8 select14/12/10/8/6
+pieces and the matching high-launch velocity suffix. The small frameA→B branch
+uses the four-entry `word_2A884`. Alternate-plane and signed-subtype admission
+remain unchanged.
+
+Rejected setup: the new declared five-tick AIZ rolling approaches never reached
+the real Cork checkpoint; 97527's five placement failures,13980,39557 and28193
+are setup failures, not runtime kill evidence. The latter two end at
+P1 10451/1086, unrolled/pushing with GS0. The draft was removed. Actual admission
+is supplied by the maintained controller-driven emerald chain: at1688 Tails
+breaks the placed Cork and stationary Sonic is dropped. Independent constructed
+bottom/top checkpoints are explicitly component oracles, not cold routes.
+
+The first candidate6255 (15/2fail/10errors/0skip) exposed a separate fixture
+error: mocked physical camera words400/480 lacked published X/Y-copy words,
+so the post-camera renderer correctly retired offscreen fragments. Corrected
+negative29909 on exact `d802` Cork is7/7fail/0errors/0skip at13:59:04 BST,
+70s execution/0queue. It covers partial higher-pool admission, parent retirement
+at five widths and absent static high-priority draw. The prior five role/count
+negatives remain separate. Common graph57499 passes15/0/0/0 at14:09:58 BST,
+70s execution/495s queue:12 new cases plus the existing CNZ exact-link3.
+
+ICZ negative63818 is9/7fail/0errors/0skip at14:19:22 BST,26.054s execution/
+468s queue; its two admission controls already pass. Corrected affected74672
+passes607/0/0/0 at14:22:00 BST,74s execution/23s queue:
+`TestCorkFloorNativeFragmentGraph,TestS3kCnzWaterLevelCorkFloorGraphRewind,TestS3kIcz2CorkFloorRegression,TestS3kCnzWaterHelpersHeadless,TestS3kSelfContainedTransientRewind,TestScalarOnlyCodecDeletion,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`.
+The new graph class contributes21 cases, including two-way recreation/two forward
+cycles, checked pressure, native table branches and both roles' render edges at
+320/352/400/528/800. These are declared component camera widths; actual ICZ's
+retained short roll route is not a whole-act/configuration qualification.
+
+Strict25714 uses the unchanged exact five-case86861 profile/selector above,
+with observer output `target/cork-slot-occupancy`;5/1/0/0 at14:27:09 BST,
+96s execution/97s queue. Original AIZ, initial HCZ and both prefixes still pass.
+Chain segment6/8/11 raw field totals remain189/12,719/82,067: physics189/
+12,604/69,393, animation0/115/12,674. First non-camera physics remains
+3319 TailsX $31C1/$31CA,1583 TailsX $366C/$3674,1510 Y $7D6/$7DF;
+the input68,801/load-generation9 stop remains. The report does not expose a
+fresh first-animation field for segment11; no new first-animation claim is made.
+At1688, original SST35 and all11 siblings41..51 now match the native aux XY
+births exactly. Allocation-presence observations, including existing reserved
+slots, match at all preceding retained samples; the first mismatch moves
+1688→2133, native-only6. This is not proof that every reserved native child dispatches.
+Second-entry ring25/flash17 versus native18/22 remains.
+
+Alternate10147 retains60 grouped spans, first25589 animation $13/$05,
+1/1/0/0 at14:25:32 BST,34.046s execution/63s queue. Replacement guard30177
+passes111/0/0/0 at14:30:04 BST,33.360s execution/0queue using the same four
+90744 classes/profile above. Initial65122 ended130 while waiting, with no tests;
+the wrapper's KeyboardInterrupt path also handles SIGTERM, and its sender is
+unattributed. No live matching request existed before the sole replacement.
+All commands retain Java25/surfaceless EGL and the verified absolute S3K ROM;
+unit-only checks use lean, traces/domain checks their normal lanes. No broad or
+release full-suite run occurred. Cork native pixels/audio, ICZ route/configuration
+breadth and the unchanged strict frontiers remain separate obligations.
