@@ -298,9 +298,9 @@ public final class GameplayCaptureSession implements AutoCloseable {
             GameServices.level().skipPendingInitialTitleCardPresentation();
         }
         UiRenderPipeline ui = GameServices.graphics().getUiRenderPipeline();
-        // Preserve the established direct-level capture driver. Title-first capture
-        // follows the normal loop's fade owner and must not advance it twice.
-        if (ui != null && (!startAtTitle || !loop.ownsGameplayFadeLifecycle())) {
+        // Match Engine's fade ownership: a runtime-ready loop services its
+        // own fade exactly once. The UI supplies only the pre-runtime fallback.
+        if (ui != null && !loop.ownsGameplayFadeLifecycle()) {
             ui.updateFade();
         }
         // Declared setup: the special-stage debug completion, requested on alternate frames
