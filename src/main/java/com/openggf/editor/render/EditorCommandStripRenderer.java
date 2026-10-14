@@ -50,29 +50,27 @@ public class EditorCommandStripRenderer {
         if (!commands.isEmpty()) {
             graphicsManager.registerCommand(new GLCommandGroup(GL_LINES, commands));
         }
-        textRenderer.renderLines(buildCommandLines(), TEXT_X, TEXT_Y);
+        textRenderer.renderFittedLines(buildCommandLines(),TEXT_X,TEXT_Y,graphicsManager.getProjectionWidth()-20,.6f,9);
     }
 
     protected void appendCommands(List<GLCommand> commands) {
-        EditorToolbarRenderer.appendRectOutline(commands, 4, 198, 316, 220,
-                CHROME_R, CHROME_G, CHROME_B);
-        EditorToolbarRenderer.appendLine(commands, 108, 198, 108, 220,
-                CHROME_R, CHROME_G, CHROME_B);
-        EditorToolbarRenderer.appendLine(commands, 212, 198, 212, 220,
+        var rect = new EditorUiLayout(graphicsManager.getProjectionWidth(),224).commands();
+        EditorToolbarRenderer.appendRectOutline(commands, rect.left(),rect.top(),rect.right(),rect.bottom(),
                 CHROME_R, CHROME_G, CHROME_B);
     }
 
     protected List<String> buildCommandLines() {
         EditorHierarchyDepth depth = controller == null ? EditorHierarchyDepth.WORLD : controller.depth();
-        String focusHint = "F1 / North button: Commands | Tab focus";
-        return switch (depth) {
-            case WORLD -> List.of(focusHint, "Space Place block | E Eyedrop | Enter Block");
-            case BLOCK -> List.of(focusHint, "Space Apply chunk | E Eyedrop | Esc World | Enter Chunk");
-            case CHUNK -> List.of(focusHint, "Space Apply pattern | E Eyedrop | Esc Block");
+        String hint=controller==null?"F1 Commands | Tab focus":controller.statusText();
+        if(controller!=null&&controller.isSpawnEditing())return List.of(hint,"Space Place | E Pick | M Move | Del Erase | F1 Commands");
+        return switch(depth) {
+            case WORLD -> List.of(hint,"Space Place block | E Pick | Enter Edit | F1 Commands");
+            case BLOCK -> List.of(hint,"Space Apply chunk | H/J Flip | V Collision | Esc Up");
+            case CHUNK -> List.of(hint,"Space Apply pattern | H/J Flip G Palette T Priority");
         };
     }
 
     protected List<EditorTextRenderer.TextCommand> buildCommandTextCommands() {
-        return textRenderer.buildTextCommands(buildCommandLines(), TEXT_X, TEXT_Y);
+        return textRenderer.buildFittedTextCommands(buildCommandLines(),TEXT_X,TEXT_Y,graphicsManager.getProjectionWidth()-20,.6f,9);
     }
 }

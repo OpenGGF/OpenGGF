@@ -184,8 +184,11 @@ debug:
     editor: true
 ```
 
-With that enabled, press `Shift+Tab` during gameplay to enter the experimental editor overlay,
-and press `Shift+Tab` again to resume playtesting.
+With that enabled, press `Shift+Tab` during gameplay to enter the experimental
+level editor. Project creation/open/import is also available from **Tools →
+Editor projects** at the master title. In a project, `Shift+Tab` switches between
+the authored document and its isolated playtest; `F5` restarts that project from
+its authored start. See the [level editor guide](../creating/level-editor.md).
 
 ## How do I enable live rewind?
 

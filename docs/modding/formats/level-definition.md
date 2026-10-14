@@ -6,10 +6,11 @@ Unknown, duplicate, or missing JSON fields are errors. Integer fields in the bin
 assets are big-endian, every reader requires exact lengths, and runtime-allocated mod
 indices are never persisted.
 
-## Format v1: Sonic 2 and standalone levels
+## Format v1: Sonic 1, Sonic 2, and standalone levels
 
-Format v1 is unchanged. It remains the format for additive Sonic 2 zones and
-game-agnostic standalone levels. Its exact inventory is:
+Format v1 is unchanged. It is the format for flat authored Sonic 1 levels,
+additive Sonic 2 zones, and game-agnostic standalone levels. Sonic 1 uses
+`blockGridSide: 16`; Sonic 2 uses `blockGridSide: 8`. Its exact inventory is:
 
 ```text
 level.json
@@ -29,6 +30,14 @@ palettes.bin
 The `assets` object must name `palettes.bin`, and `ggfmod convert level` rejects a v1
 export without that file. Objects use exactly one `stockObjectId` or namespaced
 `objectKey`; music uses exactly one stock id or owned track key.
+
+V1 placement words use the canonical export encoding. The selected host reconstructs
+its native placement semantics; S1's respawn flag and flip layout are not copied
+from Sonic 2 raw words. Individual exported rings become S1 object-backed ring
+placements at load time. Its primary/secondary collision assignments must agree
+because the S1 host has one profile path. The bounded S1 adapter supports flat
+scroll and independently usable stock factories; stock-zone events and loop
+collision remaps are rejected rather than approximated.
 
 ## Format v2: additive Sonic 3&K levels
 
@@ -99,6 +108,11 @@ modes and rewind adapters execute through their ordinary consumers and fault
 boundaries. `ZoneEventFactory` separately supplies fresh owned event handlers;
 `RewindableZoneEvents` adds capture, restore, missing reset and final reconciliation.
 Namespaced objects remain available for interactions and authored finish behavior.
+For the ordinary authored finish, the engine provides `openggf:authored-goal`.
+It is an engine-owned object key, available without a separate creator mod, and
+triggers the native signpost/results graph in a custom S3K level. Use that key
+instead of assigning authored finish behavior to a numeric stock object ID;
+creator code must not register or impersonate the engine key.
 See [content runtime and composition](../content-mods.md) and the executable
 [two-act campaign](../guides/two-act-campaign.md); these contracts do not inherit
 arbitrary stock-zone scripts or PLC programs.
@@ -110,6 +124,12 @@ enabled. If the owner is disabled or the key cannot be resolved, data select saf
 starts at AIZ1 (zone 0, act 0) rather than trusting a stale synthetic index. Historical
 numeric stock-zone payloads remain readable unchanged.
 
-Create either format through the in-engine exporter/importer path and
-`ggfmod convert level`; the converter parses the JSON first and enforces the
+Create either format through the [project editor](../../guide/creating/level-editor.md)
+and `ggfmod convert level`; the converter parses the JSON first and enforces the
 version-specific exact inventory before publishing its retained snapshot.
+
+An `.ogfproject` is the complete editable working document, not a baked level
+export or stock gameplay save. It retains exact RGB/native library data and
+unavailable keyed records. Export applies the tighter Genesis format limits,
+canonical placement encoding, palette ownership, and selected game-host checks;
+a successful project save alone does not establish that it can be exported.

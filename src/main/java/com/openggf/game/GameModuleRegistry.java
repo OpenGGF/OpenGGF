@@ -50,6 +50,19 @@ public final class GameModuleRegistry {
     }
 
     /**
+     * Creates an independent stock host for offline validation without changing
+     * the bootstrap default or any active world/session ownership.
+     */
+    public static GameModule createStockModule(GameId gameId) {
+        return switch (java.util.Objects.requireNonNull(gameId, "gameId")) {
+            case S1 -> new com.openggf.game.sonic1.Sonic1GameModule();
+            case S2 -> new Sonic2GameModule();
+            case S3K -> new com.openggf.game.sonic3k.Sonic3kGameModule();
+            case STANDALONE -> throw new IllegalArgumentException("Standalone has no stock game host");
+        };
+    }
+
+    /**
      * Returns the bootstrap default module without consulting session state.
      * Use this only for construction paths that intentionally run before a
      * gameplay world session or runtime exists.

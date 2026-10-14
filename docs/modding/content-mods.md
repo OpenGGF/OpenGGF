@@ -5,7 +5,7 @@ the [handbook index](index.md), which orders the six quickstarts by effort and l
 the format, trust, identity, troubleshooting, and sample references.
 
 OpenGGF Mod API 0.7 supports title-loaded music packs, code-backed objects,
-baked art, complete Sonic 2 and Sonic 3&K zones, playable characters, and no-ROM
+baked art, flat Sonic 1 levels, Sonic 2 and bounded Sonic 3&K zones, playable characters, and no-ROM
 standalone games. Mods are discovered from the
 process `mods/` directory at boot and when Apply is chosen at the title; executable mods must be enabled and granted
 trust in the Mod Manager before they run.
@@ -224,13 +224,29 @@ Once materialized, the sheet is served through the normal object-art path: call
 `getRenderer("<mod-id>:bird")` from object code exactly as you would for
 `registerObjectArt`.
 
+## Add a flat Sonic 1 level
+
+Use the [level editor project workflow](../guide/creating/level-editor.md) to
+create a blank ROM-derived library, clone a supported layout, or import an export.
+Save the editable source as `.ogfproject`, then export `ModLevelDefinition` v1
+with `blockGridSide: 16`. The same registration/conversion ownership rules below
+apply; the selected S1 host reconstructs native object flags and object-backed
+rings from canonical entries.
+
+The S1 adapter validates independently usable stock objects and requires matching
+primary/secondary collision-profile assignments. It supplies flat scroll without
+stock zone events. Native loop collision remaps and factories that depend on a
+real stock zone fail explicitly; use a blank library or an owned object factory
+instead. See the [format reference](formats/level-definition.md) for the portable
+contract.
+
 ## Add a Sonic 2 zone
 
-The format-v1 additive-zone path is intentionally Sonic 2 only; S3K uses format v2
-as described in the next section. In the editor, start from a level, make the desired
-changes, and use the full-level export into the mod project's source tree. A full
-export is different from the editor's sidecar/delta save: the
-export directory must contain these required files:
+Sonic 2 uses format v1 with 8×8 blocks; the S1 flat host also uses v1 with
+16×16 blocks. S3K uses format v2 as described below. In the editor, keep a complete
+`.ogfproject` as the editable source and export a checked directory into the mod
+project's source tree. A full export is distinct from a project save and legacy
+sidecars. The v1 export directory contains these required files:
 
 ```text
 level.json

@@ -14,7 +14,9 @@ disassemblies of titles in the Sonic the Hedgehog series. No copyrighted assets 
 this repository; a legally obtained ROM is required to run the engine.
 
 The engine also aims to provide modern tooling such as a level editor and an open framework for
-modding and customisation. The editor is an experimental, config-gated prototype. The `develop`
+modding and customisation. The experimental [level editor](docs/guide/creating/level-editor.md)
+authors playable levels for all three games with safe projects, isolated playtests
+and host-validated exports. Open it from title Tools; gameplay entry uses the editor debug flag. The `develop`
 branch carries the unpublished Mod API candidate promoted from `next`, documented in the
 [creator handbook](docs/modding/index.md); it is outside the 0.6 release scope.
 
@@ -92,8 +94,11 @@ can both open level select and toggle ring bounds while debug overlays are enabl
 
 | Key | Action |
 |-----|--------|
-| Shift+Tab | Toggle between gameplay and the experimental editor overlay (`debug.flags.editor` must be `true`) |
-| F5 | Restart the playtest from editor mode |
+| Shift+Tab | Enter from stock gameplay with `debug.flags.editor=true`, or return from an editor playtest |
+| F5 | Start a fresh playtest from the project's authored start while editing |
+
+Title **Tools → Editor projects** provides New/Open/Import. See the
+[level editor guide](docs/guide/creating/level-editor.md) for editing, saving and exporting.
 
 ## FAQ
 
@@ -239,7 +244,8 @@ next to the launcher.
 
 `develop` now carries the post-0.6 work previously staged on `next`, including
 widescreen presentation, further S3K campaign coverage, and existing modding,
-racing, editor, loading, and audio foundations. The Mod API is still an
+racing, loading and audio foundations. The editor supports all-game project
+authoring, safe saves, isolated playtesting and usable export. The Mod API is still an
 unpublished candidate. [0.7's roadmap](docs/project/v0.7-roadmap.md) prioritizes
 complete campaigns before the feature/API publication gates in 0.8.
 
@@ -308,7 +314,7 @@ in [the 0.6 changelog](CHANGELOG.0.6.md).
   presentation pipeline and can emit DNxHR SQ video with lossless 24-bit PCM
   for DaVinci Resolve on Linux.
 
-- **Development and validation tools:** level-editor foundations, ROM offset
+- **Development and validation tools:** all-game level projects and native playtesting, ROM offset
   and compression tools, headless gameplay tests, trace replay, visual/audio
   regression checks, and release/architecture guards. Trace recording, probing
   and publication live in [`OpenGGF/TraceChaser`](https://github.com/OpenGGF/TraceChaser),

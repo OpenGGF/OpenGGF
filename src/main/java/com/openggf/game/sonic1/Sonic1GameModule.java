@@ -106,6 +106,31 @@ public class Sonic1GameModule implements GameModule {
     private PhysicsProvider physicsProvider;
     private ObjectRegistry objectRegistry;
     private Sonic1PlcService plcService;
+    private Rom additiveRom;
+    private com.openggf.level.rings.RingSpriteSheet additiveRingSheet;
+    private final Sonic1ModZoneAdapter modZoneAdapter = new Sonic1ModZoneAdapter(this);
+
+    @Override
+    public com.openggf.game.modzone.ModZoneAdapter getModZoneAdapter() { return modZoneAdapter; }
+
+    @Override
+    public synchronized com.openggf.level.rings.RingSpriteSheet getAdditiveLevelRingSpriteSheet()
+            throws java.io.IOException {
+        if (additiveRom==null) throw new IllegalStateException("Sonic 1 game has not been created");
+        if (additiveRingSheet==null) additiveRingSheet=new Sonic1RingArt(additiveRom).load();
+        return additiveRingSheet;
+    }
+
+    Palette getAdditiveLevelCharacterPalette() throws java.io.IOException {
+        if (additiveRom==null) throw new IllegalStateException("Sonic 1 game has not been created");
+        String character=com.openggf.game.session.ActiveGameplayTeamResolver.resolveMainCharacterCode(GameServices.configuration());
+        if (com.openggf.game.CrossGameFeatureProvider.isActive()) {
+            Palette donated=GameServices.crossGameFeatures().loadHostCompatiblePalette(character);
+            if(donated!=null) return donated.deepCopy();
+        }
+        return java.util.Objects.requireNonNull(donorProvider.loadCharacterPalette(RomByteReader.fromRom(additiveRom),character)).deepCopy();
+    }
+
 
     @Override
     public String getIdentifier() {
@@ -135,6 +160,8 @@ public class Sonic1GameModule implements GameModule {
 
     @Override
     public Game createGame(Rom rom) {
+        additiveRom = java.util.Objects.requireNonNull(rom);
+        additiveRingSheet = null;
         plcService = new Sonic1PlcService(rom);
         return new Sonic1(rom);
     }
@@ -317,6 +344,20 @@ public class Sonic1GameModule implements GameModule {
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == com.openggf.game.internal.NativeFixedLevelObjectPass.class) {
+            // ExecuteObjects walks reserved v_endcard (SST23) before the
+            // allocatable v_lvlobjspace (SST32), independently of the zone's
+            // DynamicLevelEvents script (_inc/ExecuteObjects.asm:9-30;
+            // _Variables.asm:76-85). Authored hosts retain this native pass.
+            return (T) (com.openggf.game.internal.NativeFixedLevelObjectPass) () -> {
+                var level = GameServices.levelOrNull();
+                if (level == null || level.getObjectManager() == null) return;
+                var camera = GameServices.cameraOrNull();
+                com.openggf.game.sonic1.objects.Sonic1FixedEndCardSlot.updateFixedPass(
+                        level.getObjectManager(), level.getObjectManager().getVblaCounter(),
+                        camera == null ? null : camera.getFocusedSprite());
+            };
+        }
         if (type == com.openggf.level.render.ZonePictureSource.Factory.class) {
             // Public zone 0 / act 0 is Green Hill 1; its ROM level index is $80.
             return (T) (com.openggf.level.render.ZonePictureSource.Factory) rom ->

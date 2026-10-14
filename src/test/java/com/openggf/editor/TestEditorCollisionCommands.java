@@ -122,7 +122,7 @@ class TestEditorCollisionCommands {
 
     @Test
     void controllerInputActionsDriveCollisionCommandsAndOverlayToggle() {
-        MutableLevel level = level();
+        MutableLevel level = MutableLevel.snapshot(new CollisionLevel(true));
         LevelEditorController controller = new LevelEditorController();
         controller.attachLevel(level);
         controller.selectBlock(0);
@@ -135,11 +135,15 @@ class TestEditorCollisionCommands {
         input.handleAction(EditorInputHandler.Action.INCREMENT_SOLID_TILE_INDEX);
 
         assertTrue(controller.isCollisionOverlayEnabled());
-        assertEquals(CollisionMode.TOP_SOLID,
-                level.getBlock(0).getChunkDesc(0, 0).getPrimaryCollisionMode());
-        assertEquals(12, level.getChunk(0).getSolidTileIndex());
+        int editedBlock=Byte.toUnsignedInt(level.getMap().getValue(0,0,0));
+        int editedChunk=level.getBlock(editedBlock).getChunkDesc(0,0).getChunkIndex();
+        assertEquals(CollisionMode.TOP_SOLID,level.getBlock(editedBlock).getChunkDesc(0,0).getPrimaryCollisionMode());
+        assertEquals(CollisionMode.NO_COLLISION,level.getBlock(0).getChunkDesc(0,0).getPrimaryCollisionMode());
+        assertEquals(12,level.getChunk(editedChunk).getSolidTileIndex());
+        assertEquals(11,level.getChunk(0).getSolidTileIndex());
         controller.undo();
-        assertEquals(11, level.getChunk(0).getSolidTileIndex());
+        editedBlock=Byte.toUnsignedInt(level.getMap().getValue(0,0,0));
+        assertEquals(11,level.getChunk(level.getBlock(editedBlock).getChunkDesc(0,0).getChunkIndex()).getSolidTileIndex());
     }
 
     @Test
@@ -222,11 +226,12 @@ class TestEditorCollisionCommands {
     }
 
     private static final class CollisionLevel extends AbstractLevel {
-        CollisionLevel() {
+        CollisionLevel() {this(false);}
+        CollisionLevel(boolean reserveEditingSlots) {
             super(0);
             patternCount = 1;
             patterns = new Pattern[] { new Pattern() };
-            chunkCount = 4;
+            chunkCount = reserveEditingSlots?6:4;
             chunks = new Chunk[chunkCount];
             for (int i = 0; i < chunkCount; i++) {
                 chunks[i] = new Chunk();
@@ -234,8 +239,9 @@ class TestEditorCollisionCommands {
             chunks[0].restoreState(new int[] {0, 0, 0, 0, 11, 22});
             chunks[1].restoreState(new int[] {0, 0, 0, 0, 33, 44});
 
-            blockCount = 1;
-            blocks = new Block[] { new Block(2) };
+            blockCount = reserveEditingSlots?3:1;
+            blocks = new Block[blockCount];
+            for(int i=0;i<blockCount;i++)blocks[i]=new Block(2);
             blocks[0].setChunkDesc(0, 0, new ChunkDesc(0));
             blocks[0].setChunkDesc(1, 0, new ChunkDesc(1 | 0x1000));
             blocks[0].setChunkDesc(0, 1, new ChunkDesc(2));

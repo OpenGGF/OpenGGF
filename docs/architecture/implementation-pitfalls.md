@@ -14,6 +14,16 @@ headless tests, or audio. S3K-specific routing is in [AGENTS_S3K.md](../../AGENT
 
 The things that cost the most time when missed.
 
+**Native X words need unsigned comparison at the Java boundary.** Playable
+centre X and camera maximum X are exposed as signed Java shorts, while authored
+placements use unsigned words. In S1 Sign_Touch and S2 Obj0D_Main, native sub.w
+with blo/bcs and bhs compares the unsigned difference; do not subtract a signed
+centre from an unsigned placement. Sign_SonicRun and Obj0D_Main_State3 add.w the
+walk-off offset, then cmp.w/blo: truncate the sum to 16 bits and compare both
+words unsigned. Goals around 0x8000 and camera bounds around 0x7F00 exposed both
+errors during editor completion (host fixes 82bf7929c). Test activation, crossing
+the signed boundary, and native addition wrap separately.
+
 **Decoded storage capacity can differ from a layer's logical height.** S1's
 cleared eight-row background RAM must not enlarge foreground geometry merely
 because both layers share a `Map`. Keep the previous declared-layout maximum

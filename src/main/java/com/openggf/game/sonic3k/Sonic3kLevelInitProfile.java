@@ -110,10 +110,16 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
     protected InitStep initZonePlayerStateStep(LevelLoadContext ctx) {
         return new InitStep("InitZonePlayerState",
             "S3K: SpawnLevelMainSprites — zone-specific player animation/air state",
-            () -> levelEventManager.applyZonePlayerStateForLoad(
-                    ctx.hasCheckpoint()
-                            || GameServices.level().hasBigRingReturn()
-                            || GameServices.level().isBonusStageReturn()));
+            () -> {
+                // SpawnLevelMainSprites chooses intro scripts from the native
+                // Current_zone_and_act word (sonic3k.asm:8143-8293). An authored
+                // host's logical zone index does not identify a ROM script.
+                if (!Sonic3kLevel.currentLevelHasStockRomZoneIdentity()) return;
+                levelEventManager.applyZonePlayerStateForLoad(
+                        ctx.hasCheckpoint()
+                                || GameServices.level().hasBigRingReturn()
+                                || GameServices.level().isBonusStageReturn());
+            });
     }
 
     private InitStep initCameraStep(LevelLoadContext ctx) {

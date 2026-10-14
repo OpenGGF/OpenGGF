@@ -211,6 +211,13 @@ public class Sonic3kLevel extends AbstractLevel {
         return stockRomZoneIdentity;
     }
 
+    /** Post-load ROM event scripts require an installed native ROM zone identity. */
+    static boolean currentLevelHasStockRomZoneIdentity() {
+        var manager = GameServices.levelOrNull();
+        return manager != null && manager.getCurrentLevel() instanceof Sonic3kLevel loaded
+                && loaded.hasStockRomZoneIdentity();
+    }
+
     /** Strict builder for the prepared format-v2 S3K level payload. */
     public static final class InMemoryBuilder {
         private final int zoneIndex;
