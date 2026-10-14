@@ -16,6 +16,8 @@ Unreleased. The earlier development themes remain in
   teardown from consuming an absent art lease. Fresh native loads clear the
   retained random seed before sprite dispatch,
   while previews and seamless continuations preserve their sequence.
+  Initial touch publication follows each object's native range/deletion tail,
+  and a full object-table reset retires both collision buffers before slot reuse.
 
 - **S3K badniks:** Monkey Dude retains five independent arm and hand objects,
   their physical predecessor links, native dispatch and retirement order, and

@@ -118,6 +118,7 @@ final class InitialObjectDispatchController {
         }
         objects.executeObjectWithSolidContext(
                 object, dispatch.player, dispatch.sidekicks, false, false);
+        objects.publishInitialCollisionResponse(object);
     }
 
     private Scope require(InitialObjectDispatchScope scope) {
