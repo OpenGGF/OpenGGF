@@ -310,11 +310,13 @@ class TestLevelEditorController {
         controller.selectChunk(3);
         controller.descend();
         controller.performEyedrop();
+        controller.moveActiveSelection(1,1);
         controller.applyPrimaryAction();
 
         assertEquals(2, Byte.toUnsignedInt(level.getMap().getValue(0, 0, 0)));
         assertEquals(derivedChunkRaw, level.getBlock(2).getChunkDesc(0, 0).get());
         assertEquals(sourceChunkRaw, level.getBlock(1).getChunkDesc(0, 0).get());
+        assertEquals(31,level.getChunk(4).getPatternDesc(1,1).get());
     }
 
     @Test

@@ -181,4 +181,44 @@ class TestEditorInteractionSafety {
         }
     }
 
+    @Test void unchangedEraseAndApplyDoNotConsumeDefinitionsOrUndoEntries(){
+        MutableLevel level=level();LevelEditorController c=new LevelEditorController();c.attachLevel(level);c.selectBlock(0);c.selectChunk(0);
+        c.eraseSelection();assertFalse(c.hasUndoHistory());c.descend();c.applyPrimaryAction();c.eraseSelection();
+        assertFalse(c.hasUndoHistory());c.descend();c.selectPattern(0);c.applyPrimaryAction();c.eraseSelection();
+        assertFalse(c.hasUndoHistory());assertEquals(0,Byte.toUnsignedInt(level.getMap().getValue(0,0,0)));
+    }
+    @Test void eraseUsesTransparentDefinitionsWhenEntryZeroContainsArt(){
+        MutableLevel level=level();level.getPattern(0).setPixel(0,0,(byte)1);
+        for(int y=0;y<2;y++)for(int x=0;x<2;x++)level.setPatternDescInChunk(1,x,y,new PatternDesc(1));
+        for(int y=0;y<2;y++)for(int x=0;x<2;x++)level.setChunkInBlock(1,x,y,new ChunkDesc(1));
+        LevelEditorController c=new LevelEditorController();c.attachLevel(level);c.selectBlock(0);c.selectChunk(0);
+        c.eraseSelection();assertEquals(1,Byte.toUnsignedInt(level.getMap().getValue(0,0,0)));c.undo();
+        assertEquals(0,Byte.toUnsignedInt(level.getMap().getValue(0,0,0)));
+        c.descend();c.eraseSelection();int b=Byte.toUnsignedInt(level.getMap().getValue(0,0,0));
+        assertEquals(1,level.getBlock(b).getChunkDesc(0,0).getChunkIndex());c.undo();
+        c.selectChunk(0);c.descend();c.eraseSelection();b=Byte.toUnsignedInt(level.getMap().getValue(0,0,0));
+        int chunk=level.getBlock(b).getChunkDesc(0,0).getChunkIndex();
+        assertEquals(1,level.getChunk(chunk).getPatternDesc(0,0).getPatternIndex());
+        assertEquals(0,level.getChunk(0).getPatternDesc(0,0).getPatternIndex());
+    }
+    @Test void newDescriptorAndPropertyShortcutsAreSuppressedDuringFilterCapture(){
+        MutableLevel level=level();LevelEditorController c=new LevelEditorController();c.attachLevel(level);c.selectBlock(0);c.selectChunk(0);c.descend();c.descend();c.cycleFocusRegion();c.toggleLibraryFilterInput();
+        EditorInputHandler editor=new EditorInputHandler(c);InputHandler input=new InputHandler();
+        for(int key:new int[]{GLFW_KEY_H,GLFW_KEY_J,GLFW_KEY_G,GLFW_KEY_T,GLFW_KEY_R,GLFW_KEY_EQUAL,GLFW_KEY_MINUS}) {
+            input.handleKeyEvent(key,GLFW_PRESS);editor.update(input);input.update();input.handleKeyEvent(key,GLFW_RELEASE);editor.update(input);input.update();
+        }
+        assertFalse(c.hasUndoHistory());assertEquals(0,Byte.toUnsignedInt(level.getMap().getValue(0,0,0)));
+        assertEquals("Ready",c.statusText());
+    }
+
+    @Test void worldCursorUsesSignedCameraDomainAcrossNativeCoordinateBoundary(){
+        LevelEditorController c=new LevelEditorController();c.attachLevel(level());
+        Camera camera=new Camera(SonicConfigurationService.getInstance());camera.setX((short)0x8000);camera.setY((short)0x8000);
+        class Overlay extends com.openggf.editor.render.EditorWorldOverlayRenderer {
+            Overlay(){super(c,GraphicsManager.getInstance());}
+            EditorCursorState transformed(){return cursorInCameraDomain(new EditorCursorState(0x8010,0x8018),camera);}
+        }
+        var cursor=new Overlay().transformed();assertEquals(16,cursor.x()-camera.getX());assertEquals(24,cursor.y()-camera.getY());
+    }
+
 }

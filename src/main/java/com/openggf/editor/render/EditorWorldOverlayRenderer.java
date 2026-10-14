@@ -84,7 +84,7 @@ public class EditorWorldOverlayRenderer {
             return;
         }
         List<GLCommand> commands = new ArrayList<>();
-        appendWorldCommands(commands, editorMode.getCursor());
+        appendWorldCommands(commands,cursorInCameraDomain(editorMode.getCursor(),editorMode.getCamera()));
         SpawnOverlay spawnOverlay = currentSpawnOverlay(editorMode);
         commands.addAll(spawnOverlay.markerCommands());
         appendCollisionOverlayCommands(commands, currentCollisionOverlay(editorMode));
@@ -92,6 +92,12 @@ public class EditorWorldOverlayRenderer {
             graphicsManager.registerCommand(new GLCommandGroup(GL_LINES, commands));
         }
         renderSpawnLabels(spawnOverlay.labels(), editorMode.getCamera());
+    }
+
+    protected EditorCursorState cursorInCameraDomain(EditorCursorState cursor,Camera camera) {
+        if(camera==null)return cursor;
+        return new EditorCursorState(cameraDomainCoordinate(cursor.x(),camera.getXWithShake()),
+                cameraDomainCoordinate(cursor.y(),camera.getYWithShake()));
     }
 
     protected void appendWorldCommands(List<GLCommand> commands, EditorCursorState cursor) {
@@ -117,6 +123,13 @@ public class EditorWorldOverlayRenderer {
         int y = cursor.y();
         int outer = 16;
         int inner = 6;
+        if(controller!=null&&!controller.isSpawnEditing()&&controller.currentLevel()!=null) {
+            int size=controller.currentLevel().getBlockPixelSize();
+            if(size>0) {
+                int left=Math.floorDiv(x,size)*size,top=Math.floorDiv(y,size)*size;
+                appendRectOutline(commands,left,top,left+size,top+size,CURSOR_R,CURSOR_G,CURSOR_B);
+            }
+        }
 
         appendRectOutline(commands, x - outer, y - outer, x + outer, y + outer,
                 CURSOR_R, CURSOR_G, CURSOR_B);

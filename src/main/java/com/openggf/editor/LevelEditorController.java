@@ -315,7 +315,7 @@ public final class LevelEditorController {
     public String brushSummary() {
         if(spawnEditMode==EditorSpawnEditMode.RINGS)return "Rings";
         if(spawnEditMode==EditorSpawnEditMode.OBJECTS&&objectPalette!=null)
-            return "Objects brush "+objectPalette.selectedLabel()+" :%02X F%d R%s".formatted(objectPalette.selectedSubtype(),objectPalette.renderFlags(),objectPalette.respawnTracked()?"1":"0");
+            return "Objects :%02X F%d R%s ".formatted(objectPalette.selectedSubtype(),objectPalette.renderFlags(),objectPalette.respawnTracked()?"1":"0")+objectPalette.selectedLabel();
         return "Terrain brush B"+blockBrushIndex+" C"+(chunkBrushRaw==null?"-":chunkBrushRaw&1023)
                 +" P"+(selectedPatternRaw==null?"-":"%04X".formatted(selectedPatternRaw));
     }
@@ -341,6 +341,7 @@ public final class LevelEditorController {
         if(blockIndex<0||blockIndex>=Math.min(256,attachedLevel.getBlockCount()))
             throw new IllegalArgumentException("Block is outside the map's 8-bit library");
         int before = Byte.toUnsignedInt(attachedLevel.getMap().getValue(layer, x, y));
+        if (before == blockIndex) {setStatus("Cell already uses this block");return;}
         history.execute(new PlaceBlockCommand(attachedLevel, layer, x, y, before, blockIndex));
     }
 
@@ -408,33 +409,64 @@ public final class LevelEditorController {
     /** Changes only the world placement being edited, preserving shared library definitions. */
     private void editLocalComposition(java.util.function.IntUnaryOperator descriptorEdit,
                                       java.util.function.Consumer<int[]> chunkEdit) {
-        MutableLevel attached=requireLevel();WorldMapPosition position=resolveWorldMapPosition(attached);
-        if(position==null||depth==EditorHierarchyDepth.WORLD) {setStatus("No composition target selected");return;}
-        int source=Byte.toUnsignedInt(attached.getMap().getValue(activeLayer,position.mapX(),position.mapY()));
-        if(!Objects.equals(selection.selectedBlock(),source)) {setStatus("Pick the block at the world cursor before editing");return;}
-        Block sourceBlock=attached.getBlock(source);
-        int blockTarget=ownedBlocks.contains(source)&&countBlockPlacements(source)==1?source:findUnreferencedBlockSlot(attached,source);
-        if(blockTarget<0) {setStatus("No free block slots; create a project with reserved editing space");return;}
-        int[] blockState=sourceBlock.saveState().clone();
-        int cell=selectedBlockCellY*sourceBlock.getGridSide()+selectedBlockCellX;
-        if(cell<0||cell>=blockState.length) {setStatus("No block cell selected");return;}
-        int chunkTarget=-1;int[] chunkState=null;
-        if(descriptorEdit!=null)blockState[cell]=descriptorEdit.applyAsInt(blockState[cell]);
-        if(chunkEdit!=null) {
-            int sourceChunk=blockState[cell]&CHUNK_INDEX_MASK;
-            if(depth==EditorHierarchyDepth.CHUNK&&!Objects.equals(selection.selectedChunk(),sourceChunk)) {
-                setStatus("Pick the chunk at the world target before editing");return;
-            }
-            if(!isValidChunkIndex(attached,sourceChunk)) {setStatus("Cell references a missing chunk");return;}
-            chunkTarget=blockTarget==source&&ownedChunks.contains(sourceChunk)&&countChunkReferences(sourceChunk)==1?sourceChunk
-                    :findUnreferencedChunkSlot(attached,sourceChunk);
-            if(chunkTarget<0) {setStatus("No free chunk slots; create a project with reserved editing space");return;}
-            chunkState=attached.getChunk(sourceChunk).saveState().clone();chunkEdit.accept(chunkState);
-            blockState[cell]=replaceChunkIndex(blockState[cell],chunkTarget);
+        MutableLevel attached = requireLevel();
+        WorldMapPosition position = resolveWorldMapPosition(attached);
+        if (position == null || depth == EditorHierarchyDepth.WORLD) {
+            setStatus("No composition target selected");
+            return;
         }
-        executeCommand(new com.openggf.editor.commands.LocalCompositionCommand(attached,activeLayer,
-                position.mapX(),position.mapY(),blockTarget,blockState,chunkTarget,chunkState));
-        ownedBlocks.add(blockTarget);if(chunkTarget>=0)ownedChunks.add(chunkTarget);
+        int source = Byte.toUnsignedInt(attached.getMap().getValue(activeLayer, position.mapX(), position.mapY()));
+        if (!Objects.equals(selection.selectedBlock(), source)) {
+            setStatus("Pick the block at the world cursor before editing");
+            return;
+        }
+        Block sourceBlock = attached.getBlock(source);
+        int[] blockState = sourceBlock.saveState().clone();
+        int cell = selectedBlockCellY * sourceBlock.getGridSide() + selectedBlockCellX;
+        if (cell < 0 || cell >= blockState.length) {
+            setStatus("No block cell selected");
+            return;
+        }
+        if (descriptorEdit != null) blockState[cell] = descriptorEdit.applyAsInt(blockState[cell]);
+        int sourceChunk = blockState[cell] & CHUNK_INDEX_MASK;
+        int[] chunkState = null;
+        if (chunkEdit != null) {
+            if (depth == EditorHierarchyDepth.CHUNK && !Objects.equals(selection.selectedChunk(), sourceChunk)) {
+                setStatus("Pick the chunk at the world target before editing");
+                return;
+            }
+            if (!isValidChunkIndex(attached, sourceChunk)) {
+                setStatus("Cell references a missing chunk");
+                return;
+            }
+            chunkState = attached.getChunk(sourceChunk).saveState().clone();
+            chunkEdit.accept(chunkState);
+        }
+        if (java.util.Arrays.equals(sourceBlock.saveState(), blockState)
+                && (chunkState == null || java.util.Arrays.equals(attached.getChunk(sourceChunk).saveState(), chunkState))) {
+            setStatus("Cell already matches; no editing space consumed");
+            return;
+        }
+        int blockTarget = ownedBlocks.contains(source) && countBlockPlacements(source) == 1
+                ? source : findUnreferencedBlockSlot(attached, source);
+        if (blockTarget < 0) {
+            setStatus("No free block slots; create a project with reserved editing space");
+            return;
+        }
+        int chunkTarget = -1;
+        if (chunkState != null) {
+            chunkTarget = blockTarget == source && ownedChunks.contains(sourceChunk) && countChunkReferences(sourceChunk) == 1
+                    ? sourceChunk : findUnreferencedChunkSlot(attached, sourceChunk);
+            if (chunkTarget < 0) {
+                setStatus("No free chunk slots; create a project with reserved editing space");
+                return;
+            }
+            blockState[cell] = replaceChunkIndex(blockState[cell], chunkTarget);
+        }
+        executeCommand(new com.openggf.editor.commands.LocalCompositionCommand(attached, activeLayer,
+                position.mapX(), position.mapY(), blockTarget, blockState, chunkTarget, chunkState));
+        ownedBlocks.add(blockTarget);
+        if (chunkTarget >= 0) ownedChunks.add(chunkTarget);
         setStatus("Edited this placement; other placements preserved");
     }
     private int countBlockPlacements(int index) {
@@ -735,13 +767,53 @@ public final class LevelEditorController {
 
     public void eraseSelection() {
         finishPendingEdits();
-        if(isSpawnEditing()) {deleteSpawnAtCursor();return;}
-        if(depth==EditorHierarchyDepth.WORLD) {
-            WorldMapPosition p=resolveWorldMapPosition(requireLevel());
-            if(p!=null)placeBlock(activeLayer,p.mapX(),p.mapY(),0);
-        } else if(depth==EditorHierarchyDepth.BLOCK)editLocalComposition(raw -> 0,null);
-        else {int cell=selectedChunkCellY*2+selectedChunkCellX;editLocalComposition(null,state -> state[cell]=0);}
-        setStatus("Cleared to library entry 0");
+        if (isSpawnEditing()) {deleteSpawnAtCursor();return;}
+        MutableLevel attached = requireLevel();
+        // Imported libraries may have art at index zero. Select actual transparent
+        // data and no collision instead of assuming a particular numeric slot.
+        boolean[] transparentPatterns = new boolean[Math.min(0x800, attached.getPatternCount())];
+        for (int i = 0; i < transparentPatterns.length; i++) {
+            transparentPatterns[i] = true;
+            for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++)
+                if (attached.getPattern(i).getPixel(x, y) != 0) transparentPatterns[i] = false;
+        }
+        boolean[] transparentChunks = new boolean[Math.min(1024, attached.getChunkCount())];
+        for (int i = 0; i < transparentChunks.length; i++) {
+            transparentChunks[i] = true;
+            for (int y = 0; y < 2; y++) for (int x = 0; x < 2; x++) {
+                int pattern = attached.getChunk(i).getPatternDesc(x, y).getPatternIndex();
+                if (pattern >= transparentPatterns.length || !transparentPatterns[pattern]) transparentChunks[i] = false;
+            }
+        }
+        int empty = -1;
+        if (depth == EditorHierarchyDepth.WORLD) {
+            for (int i = 0; i < Math.min(256, attached.getBlockCount()) && empty < 0; i++) {
+                Block block = attached.getBlock(i);
+                boolean blank = true;
+                for (int y = 0; y < block.getGridSide(); y++) for (int x = 0; x < block.getGridSide(); x++) {
+                    ChunkDesc descriptor = block.getChunkDesc(x, y);
+                    int chunk = descriptor.getChunkIndex();
+                    if ((descriptor.get() & 0xF000) != 0 || chunk >= transparentChunks.length || !transparentChunks[chunk]) blank = false;
+                }
+                if (blank) empty = i;
+            }
+            if (empty < 0) {setStatus("No empty block in this library; create a project with empty definitions");return;}
+            WorldMapPosition position = resolveWorldMapPosition(attached);
+            placeBlock(activeLayer, position.mapX(), position.mapY(), empty);
+        } else if (depth == EditorHierarchyDepth.BLOCK) {
+            for (int i = 0; i < transparentChunks.length && empty < 0; i++)
+                if (transparentChunks[i] && attached.getChunk(i).getSolidTileIndex() == 0
+                        && attached.getChunk(i).getSolidTileAltIndex() == 0) empty = i;
+            if (empty < 0) {setStatus("No empty chunk in this library; create a project with empty definitions");return;}
+            int replacement = empty;
+            editLocalComposition(raw -> replacement, null);
+        } else {
+            for (int i = 0; i < transparentPatterns.length && empty < 0; i++) if (transparentPatterns[i]) empty = i;
+            if (empty < 0) {setStatus("No transparent pattern in this library; create a project with empty definitions");return;}
+            int replacement = empty;
+            int cell = selectedChunkCellY * 2 + selectedChunkCellX;
+            editLocalComposition(null, state -> state[cell] = replacement);
+        }
     }
     public void toggleDescriptorHFlip() { editDescriptorFlag(0); }
     public void toggleDescriptorVFlip() { editDescriptorFlag(1); }
