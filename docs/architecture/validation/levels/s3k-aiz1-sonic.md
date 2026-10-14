@@ -540,3 +540,19 @@ production presets. Negative40269 fails2/2; corrected54064 passes18/0/0/0.
 Strict39401 retains four green controls and the inherited continuous-chain
 failure; alternate80705 retains60 grouped errors. This body conformance repair
 adds no cold-route, native pixel/audio or strict-chain closure claim.
+
+
+## Native fresh-entry RNG — 2026-10-14
+
+`Level/loc_60DE` clears the retained RNG seed before fresh sprite assembly,
+including special-stage returns; preview and seamless continuation retain it.
+`TestS3kFreshLevelRngState` independently passes four real-entry/preservation/
+whole-world RNG replay cases, and the existing99 affected consumers remain
+qualified on identical production. Strict original AIZ/initial HCZ/both prefixes
+remain green; alternate60 spans and continuous-chain189/12,719/82,067 raw field
+mismatches are unchanged. Sampled presence gaps726/888 close; first remaining
+segment2 owner discrepancy is projectile SST43 at969. This is source/state
+conformance, not a native waveform/pixel or whole-route parity claim. The
+[existing audit](../../audits/trace/2026-10-14-s3k-fresh-title-sst.md#fresh-native-rng-clear--separate-follow-up-over-ddbc651e0)
+records exact checks and the independently reproduced positioned-ending title
+lease gap.

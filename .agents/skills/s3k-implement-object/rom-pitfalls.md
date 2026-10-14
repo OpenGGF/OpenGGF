@@ -5344,3 +5344,20 @@ not on the body. Keep both literal spawn orientations when P1 crosses sides;
 a synthetic body turn or32-pixel collision/render shift invents behavior.
 The [native graph audit](../../../docs/architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#separate-body-orientation-correction)
 records the negative old oracles and unchanged strict trace frontiers.
+
+
+## Fresh native Level entry clears RNG before sprite assembly
+
+`Level/loc_60DE` uses `clearRAM Lag_frame_count,$58`: `$F62A..$F681` includes
+`RNG_seed` `$F636`. This runs for stage returns, death/restart and ending Level
+loads, not preview or seamless in-place continuation. Clear the retained global
+RNG owner at semantic native fresh entry before Process_Sprites; art/title
+presentation admission is not the authority for this RAM clear. Preserve the
+V-int clock and AIZ vine angle outside this range.
+
+`Random_Number`'s returned folded D0 low word and its swapped stored seed low
+word differ: a cleared S3K seed returns `$8010` and stores `$8010B493`. Align
+PRE_ROW observers with completed native rows through the actual level counter
+and owner call ordinal, not movie-frame subtraction.
+
+Origin: 2026-10-14 S3K parity, fresh-entry RNG follow-up over `ddbc651e0`.

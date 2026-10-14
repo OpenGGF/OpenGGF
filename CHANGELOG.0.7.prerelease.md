@@ -12,6 +12,8 @@ Unreleased. The earlier development themes remain in
   retains the source count, including rewind across that boundary.
   Native title-card objects retain their fixed slots and child lifetimes after
   omitted presentation, with exact graph restoration before gameplay placements.
+  Fresh native loads clear the retained random seed before sprite dispatch,
+  while previews and seamless continuations preserve their sequence.
 
 - **S3K badniks:** Monkey Dude retains five independent arm and hand objects,
   their physical predecessor links, native dispatch and retirement order, and

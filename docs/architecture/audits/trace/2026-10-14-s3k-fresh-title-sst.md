@@ -124,3 +124,69 @@ the engine aggregates those parts inside the body. Ring25/flash17 still differs
 from native18/22. This title slice closes a native ownership omission but does
 not move a strict trace frontier. The next slice must implement those real
 MonkeyDude dispatch/lifetime owners before attributing the downstream flash.
+
+
+## Fresh native RNG clear — separate follow-up over ddbc651e0
+
+`Level/loc_60DE` unconditionally clears `Lag_frame_count,$58`: `$F62A..$F681`
+includes `RNG_seed` at `$F636`. This precedes new sprite dispatch and includes
+ordinary stage-return, death/restart and ending loads. Neither an in-place
+seamless continuation nor preview executes this native Level entry. The
+S3K profile uses the existing FULL/fresh-assembly semantic admission
+(`permitsInitialProcessSpritesRequest`) to clear the retained `GameRng` owner,
+without resetting V-int, the persistent AIZ vine angle, shared RNG arithmetic,
+or comparison data. The nine-line production candidate has SHA256
+`fec34929b7207acba3961f2b0cb883a5dd0938f24978452e511d3861dcef2639`.
+
+Read-only existing `aiz_2` aux evidence records fresh seed0, then native Monkey
+root at row159 produces `$8010B493`; an animal at176 produces `$6037B943`.
+The old engine inherits special-stage seed `$6E37EB8B` and consequently consumes
+a different air-bubble sequence. The temporary engine observer samples PRE_ROW,
+whereas native aux is completed-row state: align actual level counter and owner
+call, never subtract movie labels alone. `Random_Number` returns folded D0 low
+`$8010`, while the swapped stored seed is `$8010B493`; the first candidate test
+incorrectly expected stored low `$B493` as D0 and was corrected from source.
+
+`TestS3kFreshLevelRngState` covers actual HCZ1 and native D01 fresh entry, complete
+registered-world restoration and two RNG replay cycles, plus actual preview and
+AIZ seamless reload negatives. D01 deliberately has no ordinary title boundary;
+its seed clear remains owned by native Level entry. Baseline64532 is4/2/0/0;
+corrected3259 passes4/0/0/0 at10:49:57 BST,25.926s execution/59s queue.
+Candidate17153 has103 cases:99 affected consumers and the two preservation
+negatives pass; its two new replay cases fail only the incorrect D0 oracle.
+Those99 consumers include fresh boundary2, init profile6, golden RNG/rewind,
+title graph10, ending lifecycle9, native clear2 and mandatory startup60.
+The production candidate is unchanged between17153 and3259.
+
+Commands retain Java25, surfaceless EGL, verified absolute locked-on ROM and
+normal queued Maven:
+`python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestS3kFreshLevelRngState,TestFreshLevelBoundaryRewindHeadless,TestSonic3kLevelInitProfile,TestGameRngGoldenSequence,TestGameRngRewindSnapshot,TestS3kFreshTitleCardSstGraph,TestS3kEndingLifecycleCapture,TestS3kEndingNativeObjectClear,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' '-Ds3k.rom.path=<verified absolute ROM>' test -B`.
+3259 selects only the new RNG class.
+
+Actual incoming64382 (`-Dtest=TestDezIncomingFinalRouteCapture`) completes7 cases
+at10:52:39 BST,108s execution/0s queue: all five cold ordinary/team/Tails/wide/
+emerald ending compositions pass, but the two positioned320/800 fight cases
+error with `title owner is missing its runtime-art admission lease`. Matched
+38983 selects `TestDezIncomingFinalRouteCapture#incomingFinalFightRestoresAndReplaysEveryPhase`
+with this production profile restored to exact ddbc HEAD bytes; it completes
+2/0fail/2errors/0skip at10:59:19 BST,75s execution/66s queue, with the identical
+lease errors. This is an inherited fresh-title/positioned-art consumer gap,
+not an RNG regression and not a passing claim for the two positioned cases.
+
+Strict89375 uses the exact85471 selector/profile in the Monkey audit:5/1/0/0
+at10:55:02 BST,105s execution/145s queue. Original AIZ, initial HCZ and both
+prefixes pass. The continuous chain retains exactly189/12,719/82,067 raw field
+mismatches, the same first fields and input68,801 stop. Alternate33205 uses
+`-Ptrace-segments -Dtest=TestS3kAizZoneSliceTraceReplay#replayMatchesTrace`:1/1/0/0
+at10:53:16 BST,35.686s execution/107s queue,60 grouped spans and first25,589
+animation`$13/$05`. Closing the earlier presence gaps at726 and888 is causal
+graph improvement; no strict trace frontier closes. The first sampled remaining
+segment2 physical mismatch is native projectile SST43 at969, `$272B/$0444`,
+56px above cameraY`$047C`. Native `Sprite_CheckDeleteTouchXY` admits Y−128..384;
+the current Java projectile culls immediately outside48px. That owner is the
+next separately bounded source/lifetime slice. Second-entry ring/flash still
+remains engine25/17 versus native18/22.
+
+Final profile/source/rewind/trace/hardware guards69781 pass111/0/0/0 at
+11:05:16 BST,76s execution/0s queue. This is affected validation, not a
+broad smoke or full-suite pass.

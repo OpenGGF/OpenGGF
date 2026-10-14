@@ -112283,3 +112283,30 @@ with engineAirCountdown11; ring/flash placement remains25/17 versus18/22.
 The body conformance omission closes; no strict frontier moves. Fixed-air
 and RNG comparison channels already exist in this fixture and remain read-only
 evidence for the next owner, not gameplay hydration.
+
+
+## 2026-10-14 — fresh native RNG clear, strict frontiers retained
+
+Over body `ddbc651e0`, `.worktrees/ai-s3k-parity-trace` clears the retained RNG
+owner before native fresh sprite assembly according to `Level/loc_60DE`'s
+`Lag_frame_count,$58` range. Preview and seamless reload preserve the sequence.
+The [existing title audit](../architecture/audits/trace/2026-10-14-s3k-fresh-title-sst.md#fresh-native-rng-clear--separate-follow-up-over-ddbc651e0)
+records literal RAM/returned-word evidence, the corrected test oracle and exact
+selectors. New actual-entry/world-replay3259 passes4/0/0/0;99 unaffected consumer
+cases passed17153 on identical production, including mandatory startup60.
+
+Strict89375 repeats exact85471 five-case `-Ptrace-replay` selection:5/1/0/0
+at10:55:02 BST,105s execution/145s queue. Four controls pass; continuous-chain
+segment6/8/11 retains189/12,719/82,067 raw field mismatches, first TailsX3,319
+`$31C1/$31CA`, TailsX1,583`$366C/$3674`, mapping1,507`$63/$95`, Y1,510`$7D6/$7DF`,
+and LEVEL ownership loss at input68,801. Alternate33205 retains60 compressed
+spans, first25,589 animation`$13/$05` (1/1/0/0,10:53:16 BST). Commands use normal
+`python3 tools/testing/maven_queue.py -Dmse=off <profile> '-Dtest=<selectors>'
+'-Ds3k.rom.path=<absolute verified ROM>' test -B`, Java25 and surfaceless EGL.
+
+Native presence gaps726/888 close, but sampled segment2 row969 retains a missing
+projectile SST43; no strict trace closure is claimed. Second-entry ring/flash
+25/17 versus native18/22 remains. Actual incoming64382 passes five cold composed
+endings but errors in two positioned320/800 cases with a missing title-art lease.
+Matched38983 reproduces both identical errors on exact pre-RNG production ddbc;
+that inherited title consumer gap remains separate from this qualified RNG slice.

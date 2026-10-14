@@ -90,6 +90,15 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
         steps.addFirst(new InitStep("PrepareFreshTitleCardSst",
                 "Level/loc_62B6: fixed title owner precedes layout placement",
                 () -> freshTitleCardSst.prepare(ctx)));
+        if (ctx.permitsInitialProcessSpritesRequest()) {
+            // Level/loc_60DE clears Lag_frame_count ($F62A), $58 bytes:
+            // RNG_seed at $F636 lies inside it, before any new sprite dispatch.
+            // This includes ending/stage-return loads, but not preview, pure
+            // decode/restoration or seamless in-place continuation.
+            steps.addFirst(new InitStep("ClearFreshLevelRng",
+                    "Level/loc_60DE: clearRAM Lag_frame_count,$58 includes RNG_seed",
+                    () -> GameServices.rng().setSeed(0)));
+        }
         // Post-load assembly: only when requested
         if (ctx.isIncludePostLoadAssembly()) {
             steps.add(restoreCheckpointStep(ctx));
