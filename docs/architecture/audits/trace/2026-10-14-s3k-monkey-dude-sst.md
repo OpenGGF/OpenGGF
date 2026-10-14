@@ -1006,3 +1006,39 @@ it currently claims a complete timed archive into seamless prepared art without
 a physical journal entry. That workflow needs an actual native witness, not a
 guessed timing or state import. No unchanged trace rerun before a relevant
 composed dependency; no broad/full run, fixture/hydration/shared clock change.
+
+
+## Snapshot comparator contract diagnosis — 2026-10-14
+
+The declared 800px AIZ receiving-scene replay on `1255286c` plus the pending
+native handoff candidate exposed a comparator inconsistency, not a placed-spawn
+or native-slot mismatch. Every placed spawn resource retained Java identity;
+both captures had29 placed and13 dynamic entries, with no duplicate dynamic ID
+and no child reservation. The only differing equality leaf was a compact
+`RewindObjectStateBlob`; its opaque arrays were content-equal while the blob's
+ordinary equality retained opaque Java identity. The diagnostic walker already
+used deep content there. Separately, its private-record walker omitted explicit
+access and swallowed reflection failures, producing empty diffs for actual
+cross-package private-record mismatches.
+
+Independent negative59563 completed22:12:57 BST,24.130s Maven/0s queue:
+6 tests,2 failures,0 errors/skips, exposing equal top-level-array and opaque-blob
+false positives. Its same-package private-record premise was insufficient.
+After moving that owned test to a different package, only the three private
+mismatch methods ran in59072:3 failures,0 errors/skips,23.413s Maven/0s queue,
+completed22:14:19 BST. Those are five distinct negative contracts across two
+invocations, not a pristine five-case invocation. The throwing-accessor control
+passed before repair.
+
+`RewindSnapshotDiff` now uses the same complete captured-content comparison for
+arrays and blobs, explicitly accesses private record components, and throws if
+inspection or mismatch diagnosis cannot complete. It preserves schema,type,raw
+scalar bytes,all opaque values and every nested array member; no registry key is
+filtered. Pure focused77331 completed22:16:10 BST,1:04 Maven/0s queue,lean lane:
+14 tests,0 failures/errors/skips (new private-record7,terrain1,pattern2,dynamic
+identity4). Command: `python3 tools/testing/maven_queue.py --lean -Dmse=off
+'-Dtest=TestRewindSnapshotDiffPrivateRecords,TestRewindSnapshotDiffTerrain,TestRewindSnapshotDiffPatterns,TestRewindSnapshotDiffDynamicIdentity' test`,
+JDK25 and the normal surfaceless-EGL environment. The gameplay handoff remains
+an uncommitted, separately qualifying candidate; this helper gate gives it no
+new native or strict-trace credit. Five omitted captured object-manager fields
+are a separate authorized comparator slice.

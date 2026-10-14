@@ -1882,3 +1882,18 @@ the exact scoped runs documented in the ending matrix. No raw queue behavior
 or public snapshot signature is widened. Corrected helper replay, combined
 smoke/guards, destination integration and push remain pending. Consumed build
 redirect is removed after this account; durable native v7 media is external.
+
+## Captured-content comparator repair (2026-10-14)
+
+Qualified helperc3d2e75b41950961ec6300b38c30b02345a6143a is composed
+after paired transfer7cc10d369. Private record inspection is explicit and
+fail closed; top-level arrays and opaque state blobs compare their full nested
+content. Five independent failing vectors precede candidate77331, which
+passes14/0/0/0 at21:16:10 UTC,1:04 Maven,zero queue wait. No gameplay state
+is removed, hydrated or filtered. One measurement-hazard append conflict
+preserves both the unrelated editor projection lesson and the new comparator
+lesson. Six additionally omitted captured gameplay/identity manager fields
+are under a separate negative/regression repair; derived cache dirtiness and
+allocator telemetry require their own justified exclusion. Historical
+diffKey-only world equality remains provisional pending composed verification;
+independent direct lifecycle/state/DMA/pixel assertions retain their scope.
