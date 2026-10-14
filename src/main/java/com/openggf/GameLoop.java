@@ -218,6 +218,9 @@ public class GameLoop {
 
     private InputHandler inputHandler;
     private EditorInputHandler editorInputHandler;
+    private java.util.function.Predicate<InputHandler> editorProjectInputHandler;
+    private java.util.function.BooleanSupplier editorProjectPlaytestSupplier = () -> false;
+    private boolean editorProjectModalSuspended;
     private Runnable editorPlaytestToggleHandler;
     private Runnable editorFreshStartHandler;
     private Runnable applicationExitHandler = () -> {};
@@ -455,6 +458,20 @@ public class GameLoop {
         this.editorInputHandler = editorInputHandler;
     }
 
+    public void setEditorProjectInputHandler(java.util.function.Predicate<InputHandler> handler) {
+        editorProjectInputHandler = handler;
+    }
+
+    public void setEditorProjectPlaytestSupplier(java.util.function.BooleanSupplier supplier) {
+        editorProjectPlaytestSupplier = java.util.Objects.requireNonNull(supplier);
+    }
+
+    /** Retires an editor-owned playtest without invoking its completion callback. */
+    void stopEditorHostedRun() {
+        hostedRunReturn = ignored -> { };
+        hostedRuns.end(RunEndReason.ABORTED);
+    }
+
     void renderLiveRewindHud(PixelFontTextRenderer textRenderer, int viewportWidth) {
         liveRewindManager.renderHud(currentGameMode, textRenderer, viewportWidth);
     }
@@ -645,6 +662,12 @@ public class GameLoop {
         }
     }
 
+    /** A temporary project prompt suspends the current mode without leaving its runtime. */
+    void setEditorProjectModalMode(GameMode mode, boolean suspended) {
+        currentGameMode = Objects.requireNonNull(mode);
+        editorProjectModalSuspended = suspended;
+    }
+
     void installLiveRewindBoundaryReporter() {
         installLiveRewindBoundaryReporter(liveRewindManager::markBoundary);
     }
@@ -731,6 +754,8 @@ public class GameLoop {
      */
     public synchronized void pause() {
         if (!paused) {
+            if (currentGameMode == GameMode.EDITOR && editorInputHandler != null)
+                editorInputHandler.finishPendingEdits();
             paused = true;
             updateAudioPauseState();
         }
@@ -1117,6 +1142,15 @@ public class GameLoop {
     }
 
     private void stepInternal() {
+        // A quit decision must precede native fade/PLC service: a pending respawn
+        // or restart callback otherwise replaces the runtime hidden by the prompt.
+        if (editorProjectModalSuspended) {
+            requireInputHandler();
+            audioUpdatedThisStep = false;
+            if (editorProjectInputHandler != null) editorProjectInputHandler.test(inputHandler);
+            inputHandler.update();
+            return;
+        }
         continueScreen.beginIteration();
         levelIterationAdmission.beginIteration();
         refreshRuntimeBindings();
@@ -1237,6 +1271,13 @@ public class GameLoop {
             return;
         }
 
+        if ((currentGameMode == GameMode.MASTER_TITLE_SCREEN || currentGameMode == GameMode.EDITOR
+                || currentGameMode == GameMode.LEVEL)
+                && editorProjectInputHandler != null && editorProjectInputHandler.test(inputHandler)) {
+            inputHandler.update();
+            return;
+        }
+
         if (currentGameMode == GameMode.MASTER_TITLE_SCREEN) {
             escapeToMasterTitleController.update(currentGameMode, inputHandler);
             MasterTitleScreen masterScreen = currentMasterTitleScreen();
@@ -1256,7 +1297,8 @@ public class GameLoop {
                 && runPolicy().editorEntry()
                 && (currentGameMode == GameMode.EDITOR
                 || (currentGameMode == GameMode.LEVEL
-                && configService.getBoolean(SonicConfiguration.EDITOR_ENABLED)))
+                && (configService.getBoolean(SonicConfiguration.EDITOR_ENABLED)
+                        || editorProjectPlaytestSupplier.getAsBoolean())))
                 && inputHandler.isKeyPressed(GLFW_KEY_TAB)
                 && (inputHandler.isKeyDown(GLFW_KEY_LEFT_SHIFT)
                 || inputHandler.isKeyDown(GLFW_KEY_RIGHT_SHIFT))

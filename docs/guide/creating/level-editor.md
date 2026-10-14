@@ -103,7 +103,8 @@ uses existing collision data; this tool does not draw new height/width profiles.
 ## Properties and resizing
 
 Start X/Y and object/ring positions use their centers in level pixels. Bounds
-limit the playable/editor area. X uses the native unsigned 16-bit range; Y uses
+limit the gameplay camera; the editor can navigate the entire canvas. New levels
+reserve a native 320×224 final viewport beyond those limits. X uses the native unsigned 16-bit range; Y uses
 the native signed 16-bit range for bounds and the start. The start must lie inside
 ordered bounds and the bounds must fit the map.
 
@@ -119,7 +120,8 @@ requires an explicit crop choice. Cropping removes outside placements; an
 object-backed ring group is removed together if any part is cropped. Resizing
 keeps the start inside the resulting bounds by clamping it when necessary. It
 establishes a new editing checkpoint, so save a copy first if you need the older
-map dimensions and history. Changing bounds in **Level properties** also starts
+map dimensions and history. Resizing preserves the camera's margins from the map
+edges. Changing bounds in **Level properties** also starts
 a new undo checkpoint; name, start, and music changes remain undoable.
 
 The music field accepts `stock:<decimal id>` (for example, `stock:129`) or an
@@ -143,12 +145,21 @@ projects reports an error without rewriting or quarantining the file.
 The unsaved marker compares the complete document with its savepoint. Undoing
 back to saved content clears it. An unavailable keyed object or music dependency
 stays recorded in the project; reopening or saving never silently removes it.
+
+A stock asset library can contain shared definitions whose art belongs to another
+zone or a later native art upload. New blank projects include the available
+definitions and report any omitted chunks/blocks; they never invent replacement
+art. Choose another source library for unavailable definitions. A full layout
+clone remains strict and reports missing assets rather than changing its layout.
 Install/enable the matching dependency or explicitly edit the placement. Playtest
 refuses unavailable object keys and leaves the document intact.
 
 **Close project** asks about unsaved changes. **Save and continue** saves before
 closing; **Discard changes and continue** closes without saving; **Continue
 editing** keeps the document open. Replacing a project uses the same choices.
+Application quit and the window close button also offer **Save and quit**,
+**Quit without saving**, and **Cancel quit**. A failed save keeps the application
+open; cancelling restores the editor or active playtest.
 
 ## Playtest and return
 
@@ -169,6 +180,13 @@ object library. It triggers the native signpost/results flow in an
 authored level without assigning a new meaning to a stock numeric object ID. It
 does not require a separate mod installation. S1/S2 use their supported stock
 signpost objects.
+
+Place a native finish in the final camera view and keep its floor through the
+right edge of the map. S1/S2 signposts lock the camera at **Camera maximum X**
+and finish after the player walks another 296 pixels. For example, a 1024-pixel
+wide course can use camera maximum X=704, a goal around X=920, and floor through
+X=1023. Keep that runway when changing bounds; moving only the signpost earlier
+does not move the native camera limit.
 
 ## Export a playable level
 

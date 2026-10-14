@@ -54,11 +54,8 @@ public class EditorCommandStripRenderer {
     }
 
     protected void appendCommands(List<GLCommand> commands) {
-        EditorToolbarRenderer.appendRectOutline(commands, 4, 198, 316, 220,
-                CHROME_R, CHROME_G, CHROME_B);
-        EditorToolbarRenderer.appendLine(commands, 108, 198, 108, 220,
-                CHROME_R, CHROME_G, CHROME_B);
-        EditorToolbarRenderer.appendLine(commands, 212, 198, 212, 220,
+        var rect = new EditorUiLayout(graphicsManager.getProjectionWidth(),224).commands();
+        EditorToolbarRenderer.appendRectOutline(commands, rect.left(),rect.top(),rect.right(),rect.bottom(),
                 CHROME_R, CHROME_G, CHROME_B);
     }
 

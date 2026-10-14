@@ -8,6 +8,8 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.rings.RingSpawn;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import java.nio.file.Path;
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
@@ -76,6 +78,84 @@ class TestEditorProjectResize {
         before.getPattern(0).setPixel(0, 0, (byte) 8);
         assertEquals(0, document.level().getPattern(0).getPixel(0, 0));
         assertFalse(document.isModified());
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = GameId.class, names = {"S1", "S2", "S3K"})
+    void resizePreservesNativeCameraMarginsAndCropAuthorizationUntilRestoringTheSavepoint(GameId game) throws Exception {
+        var source = new TestEditorProjects.Fixture(game);
+        int size = source.getBlockPixelSize();
+        var metadata = TestEditorProjects.metadata(game, source)
+                .withBounds(32, 4 * size - 320, 16, 4 * size - 224)
+                .withStart(4 * size - 320, 4 * size - 224);
+        var document = EditorProjectDocument.create(metadata, source);
+        document.level().setBlockInMap(1, 3, 3, 1);
+        Path path = directory.resolve(game.code() + "-camera-margins.ogfproject");
+        new EditorProjectStore().save(path, document);
+        var saved = document.snapshot();
+
+        document.resize(6, 5, false);
+        assertEquals(320, 6 * size - document.metadata().maxX());
+        assertEquals(224, 5 * size - document.metadata().maxY());
+        assertEquals(metadata.startX(), document.metadata().startX());
+        assertEquals(metadata.startY(), document.metadata().startY());
+        assertEquals(1, document.level().getMap().getValue(1, 3, 3));
+        document.level().addObjectSpawn(new ObjectSpawn(4 * size + 8, 64, 3, 0, 0, false, 64, 15));
+        document.level().addRingSpawn(new RingSpawn(4 * size + 16, 64, 15));
+        var expanded = document.level();
+        var expandedMetadata = document.metadata();
+        assertThrows(IllegalArgumentException.class, () -> document.resize(3, 3, false));
+        assertSame(expanded, document.level());
+        assertEquals(expandedMetadata, document.metadata());
+
+        document.resize(3, 3, true);
+        assertEquals(320, 3 * size - document.metadata().maxX());
+        assertEquals(224, 3 * size - document.metadata().maxY());
+        assertEquals(32, document.metadata().minX()); assertEquals(16, document.metadata().minY());
+        assertEquals(document.metadata().maxX(), document.metadata().startX());
+        assertEquals(document.metadata().maxY(), document.metadata().startY());
+        assertEquals(document.metadata().maxX(), document.level().getMaxX());
+        assertEquals(document.metadata().maxY(), document.level().getMaxY());
+        assertFalse(document.level().getObjects().stream().anyMatch(o -> o.layoutIndex() == 15));
+        assertFalse(document.level().getRings().stream().anyMatch(r -> r.placementId() == 15));
+        assertEquals(path.toAbsolutePath(), document.path());
+        assertTrue(document.isModified());
+
+        document.replace(metadata, saved);
+        assertFalse(document.isModified(), "restoring original dimensions, margins and contents restores the complete savepoint");
+        assertEquals(4, document.level().getMap().getWidth()); assertEquals(4, document.level().getMap().getHeight());
+        assertEquals(1, document.level().getMap().getValue(1, 3, 3));
+        assertEquals(metadata, document.metadata());
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = GameId.class, names = {"S1", "S2", "S3K"})
+    void tinyCanvasClippingKeepsCanonicalCameraMarginsWhenGrowingAgain(GameId game) {
+        var source = new TestEditorProjects.Fixture(game);
+        int size = source.getBlockPixelSize();
+        var metadata = TestEditorProjects.metadata(game, source)
+                .withBounds(0, 4 * size - 320, 0, 4 * size - 224);
+        var resized = EditorProjectDocument.create(metadata, source);
+        resized.resize(1, 1, true);
+        assertEquals(Math.max(0, size - 320), resized.metadata().maxX());
+        assertEquals(Math.max(0, size - 224), resized.metadata().maxY());
+        resized.resize(4, 4, false);
+        assertEquals(4 * size - 320, resized.metadata().maxX());
+        assertEquals(4 * size - 224, resized.metadata().maxY());
+
+        // This is the same zero-clipped metadata used by New blank level.
+        var tinyLevel = EditorProjectLevel.blank(source, 1, 1);
+        var tinyMetadata = TestEditorProjects.metadata(game, tinyLevel)
+                .withBounds(0, Math.max(0, size - 320), 0, Math.max(0, size - 224));
+        var tiny = EditorProjectDocument.create(tinyMetadata, tinyLevel);
+        tiny.resize(4, 4, false);
+        assertEquals(4 * size - 320, tiny.metadata().maxX());
+        assertEquals(4 * size - 224, tiny.metadata().maxY());
+
+        var fullCanvas = EditorProjectDocument.create(TestEditorProjects.metadata(game, tinyLevel), tinyLevel);
+        fullCanvas.resize(4, 4, false);
+        assertEquals(4 * size - 1, fullCanvas.metadata().maxX(), "full-map bounds retain their zero inset");
+        assertEquals(4 * size - 1, fullCanvas.metadata().maxY());
     }
 
     @Test

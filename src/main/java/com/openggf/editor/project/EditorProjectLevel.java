@@ -16,11 +16,19 @@ import java.util.HashSet;
 public final class EditorProjectLevel extends AbstractLevel implements RingObjectPlacementMapping {
     private final int side;
     private final java.util.Map<ObjectSpawn, List<RingSpawn>> backing;
+    private final int omittedNativeChunks;
+    private final int omittedNativeBlocks;
 
     EditorProjectLevel(EditorProjectState state, RingSpriteSheet sheet) {
+        this(state, sheet, 0, 0);
+    }
+
+    private EditorProjectLevel(EditorProjectState state, RingSpriteSheet sheet, int omittedNativeChunks, int omittedNativeBlocks) {
         super(state.zoneIndex());
         state.validate();
         side = state.blockGridSide();
+        this.omittedNativeChunks = omittedNativeChunks;
+        this.omittedNativeBlocks = omittedNativeBlocks;
         patterns = new Pattern[state.patterns().length]; patternCount = patterns.length;
         for (int p = 0; p < patterns.length; p++) {
             patterns[p] = new Pattern();
@@ -67,17 +75,29 @@ public final class EditorProjectLevel extends AbstractLevel implements RingObjec
     public static EditorProjectLevel blank(Level library, int width, int height) {
         Objects.requireNonNull(library, "library");
         validateDimensions(library.getChunksPerBlockSide(), width, height);
-        // Capture assets without claiming to preserve the source's discarded native layout semantics.
-        EditorProjectLevel result = withSpareSlots(new EditorProjectLevel(EditorProjectState.capture(library), library.getRingSpriteSheet()));
+        // Asset extraction uses authored geometry immediately: native storage/camera
+        // bounds and placements belong to the layout this operation discards.
+        EditorProjectState.BlankCapture captured = EditorProjectState.captureBlankLibrary(library, width, height);
+        EditorProjectLevel result = withSpareSlots(new EditorProjectLevel(captured.state(), library.getRingSpriteSheet()));
         int emptyBlock = result.ensureEmptyBlock();
-        result.map = new com.openggf.level.Map(Math.max(2, library.getMap().getLayerCount()), width, height);
+        result.map = new com.openggf.level.Map(2, width, height);
         Arrays.fill(result.map.getData(), (byte) emptyBlock);
         result.objects = List.of(); result.rings = List.of();
         result.minX = 0; result.maxX = width * result.getBlockPixelSize() - 1;
         result.minY = 0; result.maxY = height * result.getBlockPixelSize() - 1;
         // Reconstruct to drop discarded ring groups and isolate every data array.
         EditorProjectState state = EditorProjectState.captureWithoutBacking(result);
-        return new EditorProjectLevel(state, result.ringSpriteSheet);
+        return new EditorProjectLevel(state, result.ringSpriteSheet, captured.omittedChunks(), captured.omittedBlocks());
+    }
+
+    public int omittedNativeChunkCount() { return omittedNativeChunks; }
+    public int omittedNativeBlockCount() { return omittedNativeBlocks; }
+
+    /** Creation feedback; snapshots persist the resulting valid library, not unavailable native definitions. */
+    public String blankLibraryNotice() {
+        return omittedNativeChunks == 0 && omittedNativeBlocks == 0 ? ""
+                : "Omitted " + omittedNativeChunks + " native chunks and " + omittedNativeBlocks
+                    + " blocks with unavailable art or composition data. Choose another asset library for those definitions.";
     }
 
     static EditorProjectLevel withSpareSlots(EditorProjectLevel source) {

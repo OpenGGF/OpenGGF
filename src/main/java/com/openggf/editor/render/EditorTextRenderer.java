@@ -6,6 +6,9 @@ import com.openggf.game.GameServices;
 import com.openggf.graphics.GLCommandable;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PixelFontTextRenderer;
+import com.openggf.graphics.MenuPixelFont;
+import com.openggf.graphics.PixelFontVariant;
+import com.openggf.graphics.PatternRenderCommand;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,11 +30,11 @@ public class EditorTextRenderer {
     private final PixelFontTextRenderer textRenderer;
 
     public EditorTextRenderer() {
-        this(GameServices.graphics(), new PixelFontTextRenderer());
+        this(GameServices.graphics(), new NativeEditorTextRenderer());
     }
 
     public EditorTextRenderer(GraphicsManager graphicsManager) {
-        this(graphicsManager, new PixelFontTextRenderer());
+        this(graphicsManager, new NativeEditorTextRenderer());
     }
 
     public EditorTextRenderer(GraphicsManager graphicsManager, PixelFontTextRenderer textRenderer) {
@@ -52,13 +55,16 @@ public class EditorTextRenderer {
     }
     public List<TextCommand> buildFittedTextCommands(List<String> lines,int x,int y,int maxWidth,float scale,int lineHeight) {
         List<TextCommand> result=new ArrayList<>();
+        int advance = MenuPixelFont.glyphAdvance(scale);
+        int fittedLineHeight = Math.max(lineHeight, MenuPixelFont.glyphLineHeight(scale) + 1);
         for(String line:lines) {
             if(line!=null&&!line.isBlank()) {
-                int maxChars=Math.max(1,(int)(maxWidth/(9f*scale)));
-                String fitted=line.length()>maxChars?line.substring(0,Math.max(0,maxChars-1))+"…":line;
-                result.add(new TextCommand(fitted,x,y,lineHeight,DEFAULT_COLOR,DEFAULT_FONT_SIZE,scale));
+                int maxChars=Math.max(1,maxWidth / advance);
+                String fitted=line.length()>maxChars
+                        ? (maxChars <= 3 ? ".".repeat(maxChars) : line.substring(0,maxChars-3)+"...") : line;
+                result.add(new TextCommand(fitted,x,y,fittedLineHeight,DEFAULT_COLOR,DEFAULT_FONT_SIZE,scale));
             }
-            y+=lineHeight;
+            y+=fittedLineHeight;
         }
         return List.copyOf(result);
     }
@@ -99,6 +105,11 @@ public class EditorTextRenderer {
         return new TextBatchCommand(List.copyOf(commands));
     }
 
+    /** Fractional size requests choose the authored 6x8 face rather than resampling 9x10 glyphs. */
+    private static final class NativeEditorTextRenderer extends PixelFontTextRenderer {
+        private NativeEditorTextRenderer() { super(new MenuPixelFont(), PixelFontVariant.PIXEL_FONT_NO_SHADOW); }
+    }
+
     private final class TextBatchCommand implements GLCommandable {
         private final List<TextCommand> commands;
 
@@ -116,9 +127,14 @@ public class EditorTextRenderer {
             if (projectionMatrix != null) {
                 textRenderer.setProjectionMatrix(projectionMatrix);
             }
-            for (TextCommand command : commands) {
-                if(command.scale()==1f)textRenderer.drawShadowedText(command.text(),command.x(),command.y(),command.color());
-                else textRenderer.drawShadowedText(command.text(),command.x(),command.y(),command.color(),command.scale());
+            try {
+                for (TextCommand command : commands) {
+                    if(command.scale()==1f)textRenderer.drawShadowedText(command.text(),command.x(),command.y(),command.color());
+                    else textRenderer.drawShadowedText(command.text(),command.x(),command.y(),command.color(),command.scale());
+                }
+            } finally {
+                // Text changes programs and texture bindings between preview batches. Rebind the following tiles.
+                PatternRenderCommand.resetFrameState();
             }
         }
     }

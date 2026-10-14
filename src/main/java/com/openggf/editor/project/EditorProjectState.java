@@ -8,6 +8,7 @@ import com.openggf.level.rings.RingSpawn;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Arrays;
 import java.util.Set;
 
 /** Complete on-disk data. Arrays are private to the project codec, never a runtime asset fallback. */
@@ -24,12 +25,24 @@ record EditorProjectState(int zoneIndex, int blockGridSide, byte[][] patterns, i
     static EditorProjectState capture(Level source) { return capture(source, true); }
     static EditorProjectState captureWithoutBacking(Level source) { return capture(source, false); }
     private static EditorProjectState capture(Level source, boolean includeBacking) {
+        return capture(source, includeBacking, false, 0, 0).state();
+    }
+
+    /** Blank authoring retains only resolvable definitions, without importing native layout geometry. */
+    static BlankCapture captureBlankLibrary(Level source, int width, int height) {
+        EditorProjectLevel.validateDimensions(source.getChunksPerBlockSide(), width, height);
+        return capture(source, false, true, width, height);
+    }
+
+    record BlankCapture(EditorProjectState state, int omittedChunks, int omittedBlocks) {}
+
+    private static BlankCapture capture(Level source, boolean includeBacking, boolean blank, int width, int height) {
         checkCount(source.getPatternCount(), MAX_PATTERNS, "patterns");
         checkCount(source.getChunkCount(), MAX_CHUNKS, "chunks");
         checkCount(source.getBlockCount(), 256, "blocks");
         checkCount(source.getSolidTileCount(), MAX_SOLIDS, "solid profiles");
         if (source.getPaletteCount() != 4) throw new IllegalArgumentException("Projects require the complete four-line palette bank");
-        EditorProjectLevel.validateDimensions(source.getChunksPerBlockSide(), source.getMap().getWidth(), source.getMap().getHeight());
+        if (!blank) EditorProjectLevel.validateDimensions(source.getChunksPerBlockSide(), source.getMap().getWidth(), source.getMap().getHeight());
         byte[][] patterns = new byte[source.getPatternCount()][64];
         for (int p = 0; p < patterns.length; p++) source.getPattern(p).copyInto(patterns[p], 0);
         int[][] chunks = new int[source.getChunkCount()][];
@@ -51,8 +64,8 @@ record EditorProjectState(int zoneIndex, int blockGridSide, byte[][] patterns, i
             Palette.Color color = source.getPalette(p).getColor(c);
             palettes[p][c * 3] = color.r; palettes[p][c * 3 + 1] = color.g; palettes[p][c * 3 + 2] = color.b;
         }
-        List<ObjectState> objects = source.getObjects().stream().map(ObjectState::capture).toList();
-        List<RingState> rings = source.getRings().stream().map(ring -> new RingState(ring.x(), ring.y(), ring.placementId())).toList();
+        List<ObjectState> objects = blank ? List.of() : source.getObjects().stream().map(ObjectState::capture).toList();
+        List<RingState> rings = blank ? List.of() : source.getRings().stream().map(ring -> new RingState(ring.x(), ring.y(), ring.placementId())).toList();
         List<BackingState> backing = new ArrayList<>();
         if (includeBacking && source instanceof RingObjectPlacementMapping provider) {
             provider.ringObjectPlacementMapping().forEach((object, group) -> {
@@ -62,12 +75,73 @@ record EditorProjectState(int zoneIndex, int blockGridSide, byte[][] patterns, i
                 backing.add(new BackingState(object.layoutIndex(), group.stream().mapToInt(RingSpawn::placementId).toArray()));
             });
         }
-        EditorProjectState state = new EditorProjectState(source.getZoneIndex(), source.getChunksPerBlockSide(),
-                patterns, chunks, blocks, solids, palettes, source.getMap().getLayerCount(),
-                source.getMap().getWidth(), source.getMap().getHeight(), source.getMap().getData().clone(),
-                objects, rings, List.copyOf(backing), source.getMinX(), source.getMaxX(), source.getMinY(), source.getMaxY());
+        int omittedChunks = 0, omittedBlocks = 0;
+        if (blank) {
+            // ROM libraries can share definitions with another zone's VRAM bank. A blank
+            // cannot invent their missing art, and its discarded stock map gives them no
+            // authored identity to preserve. Compact the resolvable definitions together.
+            int[] chunkIndices = new int[chunks.length];
+            Arrays.fill(chunkIndices, -1);
+            List<int[]> usableChunks = new ArrayList<>();
+            for (int i = 0; i < chunks.length; i++) {
+                int[] chunk = chunks[i];
+                if (chunk == null || chunk.length != 6) throw new IllegalArgumentException("Invalid project chunk length");
+                boolean available = true;
+                for (int j = 0; j < 4; j++) {
+                    unsigned(chunk[j], 0xFFFF, "pattern descriptor");
+                    available &= (chunk[j] & 0x7FF) < patterns.length;
+                }
+                for (int j = 4; j < 6; j++) {
+                    unsigned(chunk[j], 0xFFFF, "collision index");
+                    available &= chunk[j] < solids.length;
+                }
+                if (available) { chunkIndices[i] = usableChunks.size(); usableChunks.add(chunk); }
+                else omittedChunks++;
+            }
+            List<int[]> usableBlocks = new ArrayList<>();
+            for (int[] block : blocks) {
+                int[] remapped = block.clone();
+                boolean available = true;
+                for (int i = 0; i < block.length; i++) {
+                    unsigned(block[i], 0xFFFF, "chunk descriptor");
+                    int index = block[i] & 0x3FF;
+                    if (index >= chunkIndices.length || chunkIndices[index] < 0) available = false;
+                    else remapped[i] = (block[i] & ~0x3FF) | chunkIndices[index];
+                }
+                if (available) usableBlocks.add(remapped);
+                else omittedBlocks++;
+            }
+            if (usableChunks.isEmpty()) {
+                int transparent = -1;
+                for (int p = 0; p < Math.min(2048, patterns.length) && transparent < 0; p++) {
+                    boolean empty = true;
+                    for (byte pixel : patterns[p]) empty &= pixel == 0;
+                    if (empty) transparent = p;
+                }
+                if (transparent < 0) {
+                    if (patterns.length >= 2048) throw new IllegalArgumentException("Asset library has no transparent pattern or free pattern slot");
+                    transparent = patterns.length;
+                    patterns = Arrays.copyOf(patterns, patterns.length + 1);
+                    patterns[transparent] = new byte[64];
+                }
+                // This is an explicitly authored empty definition, never a substitute
+                // for any omitted native chunk or its unavailable art.
+                usableChunks.add(new int[] {transparent, transparent, transparent, transparent, 0, 0});
+            }
+            if (usableBlocks.isEmpty()) usableBlocks.add(new int[source.getChunksPerBlockSide() * source.getChunksPerBlockSide()]);
+            chunks = usableChunks.toArray(int[][]::new);
+            blocks = usableBlocks.toArray(int[][]::new);
+        }
+        int side = source.getChunksPerBlockSide();
+        EditorProjectState state = blank
+                ? new EditorProjectState(source.getZoneIndex(), side, patterns, chunks, blocks, solids, palettes,
+                    2, width, height, new byte[2 * width * height], List.of(), List.of(), List.of(),
+                    0, width * side * 16 - 1, 0, height * side * 16 - 1)
+                : new EditorProjectState(source.getZoneIndex(), side, patterns, chunks, blocks, solids, palettes,
+                    source.getMap().getLayerCount(), source.getMap().getWidth(), source.getMap().getHeight(), source.getMap().getData().clone(),
+                    objects, rings, List.copyOf(backing), source.getMinX(), source.getMaxX(), source.getMinY(), source.getMaxY());
         state.validate();
-        return state;
+        return new BlankCapture(state, omittedChunks, omittedBlocks);
     }
 
     void validate() {

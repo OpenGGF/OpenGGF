@@ -51,6 +51,7 @@ public final class LevelEditorController {
     private EditorSpawnEditMode spawnEditMode = EditorSpawnEditMode.TILES;
     private EditorStockObjectPalette objectPalette;
     private EditorSpawnFactory spawnFactory;
+    private EditorPlacementIdAllocator placementIds;
     private ObjectSpawn selectedObjectSpawn;
     private RingSpawn selectedRingSpawn;
     private ObjectSpawn selectedRingBackingObject;
@@ -64,6 +65,21 @@ public final class LevelEditorController {
     private Runnable pendingEditsFinisher = () -> { };
     private boolean cameraNavigationRequested = true;
     private String statusText = "Ready";
+    private java.util.function.BooleanSupplier modifiedState;
+    private java.util.function.BooleanSupplier canvasNavigation = () -> false;
+
+    public void setCanvasNavigationSupplier(java.util.function.BooleanSupplier supplier) {
+        canvasNavigation = Objects.requireNonNull(supplier, "supplier");
+    }
+
+    public void setModifiedStateSupplier(java.util.function.BooleanSupplier supplier) {
+        modifiedState = Objects.requireNonNull(supplier, "supplier");
+    }
+
+    public boolean isModified() {
+        return modifiedState != null ? modifiedState.getAsBoolean()
+                : level != null && level.isModifiedSinceLastSave();
+    }
 
     public void setPendingEditsFinisher(Runnable finisher) {
         pendingEditsFinisher = Objects.requireNonNull(finisher, "finisher");
@@ -126,6 +142,7 @@ public final class LevelEditorController {
         spawnEditMode = EditorSpawnEditMode.TILES;
         objectPalette = null;
         spawnFactory = null;
+        placementIds = null;
         objectArtProvider = null;
         selectedObjectSpawn = null;
         selectedRingSpawn = null;
@@ -143,9 +160,15 @@ public final class LevelEditorController {
 
     public void configureSpawnEditing(ObjectRegistry registry, ObjectPlacementEncoding encoding,
                                       ObjectArtProvider objectArtProvider) {
+        configureSpawnEditing(registry, encoding, objectArtProvider, registry::getPrimaryName);
+    }
+
+    public void configureSpawnEditing(ObjectRegistry registry, ObjectPlacementEncoding encoding,
+                                      ObjectArtProvider objectArtProvider,
+                                      java.util.function.IntFunction<String> names) {
         MutableLevel attachedLevel = requireLevel();
         EditorStockObjectPalette previous=objectPalette;
-        objectPalette = new EditorStockObjectPalette(registry);
+        objectPalette = new EditorStockObjectPalette(registry, names);
         if(previous!=null) {
             if(previous.selectedIsKeyed()) {
                 try {objectPalette.setObjectKey(previous.selectedObjectKey());}catch(IllegalArgumentException missing){setStatus("Object brush dependency unavailable");}
@@ -154,7 +177,8 @@ public final class LevelEditorController {
             if(previous.renderFlags()!=0)objectPalette.toggleRenderFlag(previous.renderFlags());
             if(!previous.respawnTracked())objectPalette.toggleRespawnTracked();
         }
-        spawnFactory = new EditorSpawnFactory(encoding, new EditorPlacementIdAllocator(attachedLevel));
+        if (placementIds == null) placementIds = new EditorPlacementIdAllocator(attachedLevel);
+        spawnFactory = new EditorSpawnFactory(encoding, placementIds);
         this.objectArtProvider = objectArtProvider;
         refreshLibraryBrowser();
     }
@@ -1056,6 +1080,11 @@ public final class LevelEditorController {
     private EditorCursorState clampWorldCursor(int x, int y) {
         if (level == null) {
             return new EditorCursorState(x, y);
+        }
+        if (canvasNavigation.getAsBoolean()) {
+            int maxCanvasX = level.getMap().getWidth() * level.getBlockPixelSize() - 1;
+            int maxCanvasY = level.getMap().getHeight() * level.getBlockPixelSize() - 1;
+            return new EditorCursorState(clamp(x, 0, maxCanvasX), clamp(y, 0, maxCanvasY));
         }
         int minX = level.getMinX();
         int maxX = level.getMaxX();

@@ -202,6 +202,9 @@ public class MasterTitleScreen {
     private EngineSettingsScreen settingsScreen;
     private float[] currentProjection;
     private boolean toolsOpen;
+    private Runnable editorProjectsOpenHandler;
+
+    public void setEditorProjectsOpenHandler(Runnable handler) { editorProjectsOpenHandler = handler; }
     private boolean gameBrowserOpen;
     private int gameBrowserIndex;
     private MenuLoadTask<?> catalogLoad;
@@ -863,9 +866,10 @@ public class MasterTitleScreen {
         if (navigation.back() || backClicked()) { toolsOpen = false; playCancelSound(); return; }
         int previous = toolIndex;
         if (navigation.up()) toolIndex = Math.max(0, toolIndex - 1);
-        if (navigation.down()) toolIndex = Math.min(1, toolIndex + 1);
+        int count = editorProjectsOpenHandler == null ? 2 : 3;
+        if (navigation.down()) toolIndex = Math.min(count - 1, toolIndex + 1);
         boolean clickedTool = false;
-        for (int i = 0; pointer != null && i < 2; i++) {
+        for (int i = 0; pointer != null && i < count; i++) {
             if (pointer.over(10, 49 + i * 27, viewportWidth - 20, 22) && (pointer.moved() || pointer.click())) {
                 toolIndex = i;
                 clickedTool |= pointer.click();
@@ -879,7 +883,8 @@ public class MasterTitleScreen {
                     .resolve(configService.getString(SonicConfiguration.TRACE_CATALOG_DIR)).normalize();
             openTraceCatalog(root);
             playConfirmSound();
-        } else { helpOpen = true; playConfirmSound(); }
+        } else if (toolIndex == 1) { helpOpen = true; playConfirmSound(); }
+        else { editorProjectsOpenHandler.run(); playConfirmSound(); }
     }
 
     private boolean openLaunchOptions() {
@@ -1252,7 +1257,9 @@ public class MasterTitleScreen {
         if (toolsOpen) focusBox(10, 49 + toolIndex * 27, viewportWidth - 20, 22);
         font.beginMegaBatch();
         font.drawText(toolsOpen ? "ADVANCED" : "CONTROLS / HELP", 10, 10, 1f, 1f, 1f, 1f);
-        String[] lines = toolsOpen ? new String[] { "Trace replays", "Controls / help" }
+        String[] lines = toolsOpen ? (editorProjectsOpenHandler == null
+                ? new String[] { "Trace replays", "Controls / help" }
+                : new String[] { "Trace replays", "Controls / help", "Editor projects" })
                 : new String[] { "Left/Right: choose game", "Up/Down: select action", confirmHint() + ": open action",
                     backHint() + ": return one screen", "Settings: draft, then Apply" };
         for (int i = 0; i < lines.length; i++) textFitted(lines[i], 17, 55 + i * 27,

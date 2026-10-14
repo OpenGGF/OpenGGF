@@ -132,6 +132,44 @@ class TestSonic1FixedEndCardSlot {
                 "the fixed SST owner, not ObjectManager's dynamic fallback, executes slot 23");
     }
 
+    @Test
+    void nativeModulePassAdvancesResultsWithoutCampaignEvents() throws Exception {
+        verifyNativeModulePass(false);
+    }
+
+    @Test
+    void stockCampaignAndDynamicPassesDoNotDoubleAdvanceNativeResults() throws Exception {
+        verifyNativeModulePass(true);
+    }
+
+    private void verifyNativeModulePass(boolean runCampaignHook) throws Exception {
+        Harness harness = new Harness();
+        var card = Sonic1FixedEndCardSlot.claim(harness.services,
+                new Sonic1FixedEndCardSlot.ResultsData(45, 50, 1, false)).requireCard();
+        card.markResultsPlcCommitted();
+        harness.objects.initVblaCounter(123);
+        var module = new com.openggf.game.sonic1.Sonic1GameModule();
+        var nativePass = module.getGameService(com.openggf.game.internal.NativeFixedLevelObjectPass.class);
+        org.junit.jupiter.api.Assertions.assertNotNull(nativePass);
+        var manager = org.mockito.Mockito.mock(com.openggf.level.LevelManager.class);
+        org.mockito.Mockito.when(manager.getObjectManager()).thenReturn(harness.objects);
+        var camera = new Camera();
+        int before = intField(card, "totalFrames");
+        try (var services = org.mockito.Mockito.mockStatic(com.openggf.game.GameServices.class)) {
+            services.when(com.openggf.game.GameServices::levelOrNull).thenReturn(manager);
+            services.when(com.openggf.game.GameServices::cameraOrNull).thenReturn(camera);
+            services.when(com.openggf.game.GameServices::camera).thenReturn(camera);
+            if (runCampaignHook) module.getLevelEventProvider().updateFixedInLevelObjectsBeforeDynamicObjects();
+            nativePass.beforeDynamicObjects();
+        }
+        assertEquals(before + 1, intField(card, "totalFrames"),
+                "native SST23 must execute once with or without a campaign event provider");
+        assertEquals(123, intField(card, "frameCounter"), "the card reads the native object V-int clock");
+        harness.objects.update(0, null, List.of(), 124, false);
+        assertEquals(before + 1, intField(card, "totalFrames"),
+                "the later dynamic SST pass must not execute the fixed card again");
+    }
+
     private static int intField(Object target, String fieldName) throws Exception {
         Class<?> type = target.getClass();
         while (type != null) {

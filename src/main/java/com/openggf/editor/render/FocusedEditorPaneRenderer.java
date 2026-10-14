@@ -256,9 +256,6 @@ public class FocusedEditorPaneRenderer {
                                     float g,
                                     float b) {
         EditorToolbarRenderer.appendRectOutline(commands, left, top, right, bottom, r, g, b);
-        EditorToolbarRenderer.appendLine(commands, left, top + 26, right, top + 26, r, g, b);
-        EditorToolbarRenderer.appendLine(commands, left, top + 98, right, top + 98, r, g, b);
-        EditorToolbarRenderer.appendLine(commands, left + 28, top + 26, left + 28, bottom, r, g, b);
     }
 
     private void appendBackdropCommand(List<GLCommand> commands, int left, int top, int right, int bottom) {

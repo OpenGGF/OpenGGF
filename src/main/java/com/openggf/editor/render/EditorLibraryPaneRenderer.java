@@ -47,19 +47,20 @@ public class EditorLibraryPaneRenderer {
 
     public void renderCommands(List<String> lines) {
         List<GLCommand> backdrop = new ArrayList<>();
-        for (int[] point : new int[][] {{8, 34}, {312, 34}, {312, 192}, {8, 192}}) {
+        for (int[] point : new int[][] {{8, 40}, {graphicsManager.getProjectionWidth()-8, 40},
+                {graphicsManager.getProjectionWidth()-8, 192}, {8, 192}}) {
             backdrop.add(new GLCommand(GLCommand.CommandType.VERTEX2I, -1,
                     GLCommand.BlendType.ONE_MINUS_SRC_ALPHA, 0.025f, 0.04f, 0.07f,
                     point[0], point[1], 0, 0));
         }
         graphicsManager.registerCommand(new GLCommandGroup(org.lwjgl.opengl.GL11.GL_TRIANGLE_FAN, backdrop));
-        textRenderer.renderLines(lines, 18, 42);
+        textRenderer.renderFittedLines(lines,18,42,graphicsManager.getProjectionWidth()-36,.65f,10);
     }
 
     public void render(EditorHierarchyDepth depth) {
         List<GLCommand> commands=new ArrayList<>();appendCommands(commands);
         graphicsManager.registerCommand(new GLCommandGroup(GL_LINES,commands));
-        textRenderer.renderFittedLines(buildLibraryLines(depth),18,38,128,.55f,8);
+        textRenderer.renderFittedLines(buildCompactLibraryLines(depth),18,44,128,.65f,9);
         if(controller==null)return;
         var browser=controller.libraryBrowser();var grid=layout().libraryGrid();
         int start=browser.cursor()/9*9;
@@ -77,7 +78,7 @@ public class EditorLibraryPaneRenderer {
             }
             String label=entry.kind()==EditorLibraryBrowserPane.Kind.OBJECT
                     ?(entry.stockObjectId()==null?"key":"%02X".formatted(entry.stockObjectId())):String.valueOf(entry.index());
-            textRenderer.renderFittedLines(List.of(label),x+2,y+27,32,.5f,6);
+            textRenderer.renderFittedLines(List.of(label),x+2,y+25,32,.65f,9);
         }
     }
     private EditorUiLayout layout(){return new EditorUiLayout(graphicsManager.getProjectionWidth(),224);}
@@ -98,6 +99,22 @@ public class EditorLibraryPaneRenderer {
             }
         }
     }
+    protected List<EditorTextRenderer.TextCommand> buildLibraryTextCommands(EditorHierarchyDepth depth) {
+        return textRenderer.buildFittedTextCommands(buildCompactLibraryLines(depth),18,44,128,.65f,9);
+    }
+
+    private List<String> buildCompactLibraryLines(EditorHierarchyDepth depth) {
+        if (controller == null) return List.of(libraryTitle(depth), "No controller");
+        var browser = controller.libraryBrowser();
+        var selected = browser.selected();
+        String title = selected != null && selected.kind() == EditorLibraryBrowserPane.Kind.OBJECT
+                ? "Object palette" : libraryTitle(depth);
+        return List.of(title + " " + (browser.cursor() + 1) + "/" + browser.visibleEntries().size(),
+                "Filter " + (controller.isLibraryFilterInputActive() ? "ON " : "OFF ")
+                        + (browser.filter().isEmpty() ? "(Insert)" : browser.filter()),
+                selected == null ? "No matching entries" : selected.label());
+    }
+
     protected List<String> buildLibraryLines(EditorHierarchyDepth depth) {
         if(controller==null)return List.of(libraryTitle(depth),"No controller");
         var browser=controller.libraryBrowser();var selected=browser.selected();

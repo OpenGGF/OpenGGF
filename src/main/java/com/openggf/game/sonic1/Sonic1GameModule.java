@@ -344,6 +344,20 @@ public class Sonic1GameModule implements GameModule {
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == com.openggf.game.internal.NativeFixedLevelObjectPass.class) {
+            // ExecuteObjects walks reserved v_endcard (SST23) before the
+            // allocatable v_lvlobjspace (SST32), independently of the zone's
+            // DynamicLevelEvents script (_inc/ExecuteObjects.asm:9-30;
+            // _Variables.asm:76-85). Authored hosts retain this native pass.
+            return (T) (com.openggf.game.internal.NativeFixedLevelObjectPass) () -> {
+                var level = GameServices.levelOrNull();
+                if (level == null || level.getObjectManager() == null) return;
+                var camera = GameServices.cameraOrNull();
+                com.openggf.game.sonic1.objects.Sonic1FixedEndCardSlot.updateFixedPass(
+                        level.getObjectManager(), level.getObjectManager().getVblaCounter(),
+                        camera == null ? null : camera.getFocusedSprite());
+            };
+        }
         if (type == com.openggf.level.render.ZonePictureSource.Factory.class) {
             // Public zone 0 / act 0 is Green Hill 1; its ROM level index is $80.
             return (T) (com.openggf.level.render.ZonePictureSource.Factory) rom ->

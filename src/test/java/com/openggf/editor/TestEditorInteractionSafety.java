@@ -112,10 +112,14 @@ class TestEditorInteractionSafety {
         c.moveWorldCursor(3,0);assertTrue(c.consumeCameraNavigationRequest());assertFalse(c.consumeCameraNavigationRequest());
     }
     @Test void nativeAndWideLayoutsReserveChromeAndFitPreviewGeometry(){
-        for(int width:new int[]{320,528}) {
+        for(int width:new int[]{320,426}) {
             var l=new com.openggf.editor.render.EditorUiLayout(width,224);
             var g=l.focusedGrid(EditorHierarchyDepth.BLOCK,8);var p=l.focused(EditorHierarchyDepth.BLOCK);
             assertTrue(p.contains(g.x(),g.y()));assertTrue(p.contains(g.bounds().right()-1,g.bounds().bottom()-1));
+            var chunkGrid=l.focusedGrid(EditorHierarchyDepth.CHUNK,2);var chunkPane=l.focused(EditorHierarchyDepth.CHUNK);
+            assertEquals(32,chunkGrid.cellSize());assertEquals(64,chunkGrid.bounds().width());
+            assertTrue(chunkPane.contains(chunkGrid.x(),chunkGrid.y()));
+            assertTrue(chunkPane.contains(chunkGrid.bounds().right()-1,chunkGrid.bounds().bottom()-1));
             assertTrue(l.library().contains(l.libraryGrid().bounds().right()-1,l.libraryGrid().bounds().bottom()-1));
             LevelEditorController c=new LevelEditorController();c.attachLevel(level());
             assertEquals(EditorFocusRegion.TOOLBAR,l.hit(c,40,10));
@@ -135,6 +139,34 @@ class TestEditorInteractionSafety {
         assertEquals(anchor,c.worldCursor());int b=Byte.toUnsignedInt(level.getMap().getValue(0,0,0));
         assertEquals(1,level.getBlock(b).getChunkDesc(0,0).getChunkIndex());
         assertEquals(0,Byte.toUnsignedInt(level.getMap().getValue(0,grid.x()/32,grid.y()/32)));
+    }
+    @Test void enlargedChunkPointerHitsAllPatternCellsAndUndoPreservesOtherPlacements(){
+        for(int width:new int[]{320,426}) {
+            MutableLevel level=level();LevelEditorController c=new LevelEditorController();c.attachLevel(level);
+            c.selectBlock(0);c.selectChunk(0);c.descend();c.descend();c.selectPattern(3);
+            c.focusRegion(EditorFocusRegion.CHUNK_PANE);EditorCursorState anchor=c.worldCursor();
+            Camera camera=new Camera(SonicConfigurationService.getInstance());camera.setX((short)0);camera.setY((short)0);
+            GraphicsManager graphics=GraphicsManager.getInstance();graphics.setViewport(0,0,width,224);graphics.setProjectionWidth(width);
+            EditorInputHandler editor=new EditorInputHandler(c,()->camera,()->graphics);InputHandler input=new InputHandler();
+            var grid=new com.openggf.editor.render.EditorUiLayout(width,224).focusedGrid(EditorHierarchyDepth.CHUNK,2);
+            // Each pattern is now 32px; these points exercise the enlarged area outside the former 16px whole chunk.
+            for(int y=0;y<2;y++)for(int x=0;x<2;x++) {
+                input.handleMouseMove(grid.x()+x*32+24,grid.y()+y*32+24);
+                input.handleMouseButton(GLFW_MOUSE_BUTTON_LEFT,GLFW_PRESS);editor.update(input);
+                input.handleMouseButton(GLFW_MOUSE_BUTTON_LEFT,GLFW_RELEASE);input.update();editor.update(input);
+                assertEquals(x,c.selectedChunkCellX());assertEquals(y,c.selectedChunkCellY());assertEquals(anchor,c.worldCursor());
+            }
+            int block=Byte.toUnsignedInt(level.getMap().getValue(0,0,0));
+            int chunk=level.getBlock(block).getChunkDesc(0,0).getChunkIndex();
+            for(int y=0;y<2;y++)for(int x=0;x<2;x++) {
+                assertEquals(3,level.getChunk(chunk).getPatternDesc(x,y).getPatternIndex());
+                assertEquals(0,level.getChunk(0).getPatternDesc(x,y).getPatternIndex());
+            }
+            assertEquals(0,Byte.toUnsignedInt(level.getMap().getValue(0,1,0)));
+            for(int i=0;i<4;i++)c.undo();
+            assertEquals(0,Byte.toUnsignedInt(level.getMap().getValue(0,0,0)));assertFalse(c.hasUndoHistory());
+        }
+        GraphicsManager.getInstance().setViewport(0,0,320,224);GraphicsManager.getInstance().setProjectionWidth(320);
     }
     @Test void exhaustedDefinitionBankFailsVisiblyWithoutMutatingAnotherPlacement(){
         MutableLevel level=level();for(int i=0;i<5;i++)level.setBlockInMap(0,i,0,i);

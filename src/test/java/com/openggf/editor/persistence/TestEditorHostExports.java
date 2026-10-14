@@ -87,6 +87,30 @@ class TestEditorHostExports {
         }
     }
 
+    @Test void authoredS3kFreshTerrainHandoffPreservesBakedArtWithoutStockQueueSubmission() throws Exception {
+        java.io.File file=RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(file!=null,"Configured S3K ROM required for authored runtime handoff");
+        try(Rom rom=new Rom()) {
+            assertTrue(rom.open(file.getAbsolutePath())); TestEnvironment.configureRomFixture(rom);
+            GameModule module=GameServices.module(); var nativeGame=module.createGame(rom);
+            var data=new FullLevelExporter(new ModLevelExportStagingValidator(module)).prepareHostData(
+                    MutableLevel.snapshot(new Fixture(GameId.S3K)),request(GameId.S3K,temp.resolve("fresh-art")));
+            var loaded=assertInstanceOf(com.openggf.game.sonic3k.Sonic3kLevel.class,
+                    module.getModZoneAdapter().load("editor",data));
+            assertFalse(loaded.hasStockRomZoneIdentity());
+            GameServices.level().setLevel(loaded);
+            var timingBefore=GameServices.hardwareTiming().capture();
+            var art=com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.current();
+            var artBefore=art.capture();
+            byte[] pixelsBefore=new byte[64]; loaded.getPattern(0).copyInto(pixelsBefore,0);
+            assertDoesNotThrow(()->nativeGame.queueFreshLevelRuntimeArt(0x400));
+            assertEquals(timingBefore,GameServices.hardwareTiming().capture());
+            assertEquals(artBefore,art.capture(),"Authored terrain has no stock KosM submission or deferred handoff");
+            byte[] pixelsAfter=new byte[64]; loaded.getPattern(0).copyInto(pixelsAfter,0);
+            assertArrayEquals(pixelsBefore,pixelsAfter);
+        }
+    }
+
     @ParameterizedTest
     @EnumSource(value=GameId.class,names={"S1","S2","S3K"})
     void authoredGoalRunsNativeResultsAndReturnsToItsHost(GameId game) throws Exception {

@@ -21,9 +21,14 @@ public final class EditorStockObjectPalette {
     public void toggleRespawnTracked(){respawnTracked=!respawnTracked;}
 
     public EditorStockObjectPalette(ObjectRegistry registry) {
+        this(registry, registry::getPrimaryName);
+    }
+
+    public EditorStockObjectPalette(ObjectRegistry registry, java.util.function.IntFunction<String> names) {
         this.registry = Objects.requireNonNull(registry, "registry");
+        Objects.requireNonNull(names, "names");
         java.util.ArrayList<Entry> built = new java.util.ArrayList<>(256 + registry.browsableObjectKeys().size());
-        for (int id = 0; id <= 0xFF; id++) built.add(Entry.stock(id, registry.getPrimaryName(id),
+        for (int id = 0; id <= 0xFF; id++) built.add(Entry.stock(id, names.apply(id),
                 registry.editorPreviewArtKey(id).orElse(null)));
         registry.browsableObjectKeys().forEach(key -> built.add(Entry.keyed(key,
                 registry.editorPreviewArtKey(key).orElse(null))));

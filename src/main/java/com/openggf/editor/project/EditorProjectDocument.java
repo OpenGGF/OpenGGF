@@ -34,6 +34,15 @@ public final class EditorProjectDocument {
     public EditorProjectMetadata metadata() { return metadata; }
     public Path path() { return path; }
 
+    /** Prepare a structural replacement without publishing it or losing its savepoint. */
+    EditorProjectDocument copyForReplacement() {
+        var candidate = create(metadata, level);
+        candidate.path = path;
+        candidate.savedMetadata = savedMetadata;
+        candidate.savedLevel = savedLevel;
+        return candidate;
+    }
+
     public void setMetadata(EditorProjectMetadata value) {
         Objects.requireNonNull(value, "metadata").validateAgainst(level);
         boolean boundsChanged = value.minX() != level.getMinX() || value.maxX() != level.getMaxX()
@@ -51,8 +60,23 @@ public final class EditorProjectDocument {
     }
 
     public void resize(int width, int height, boolean allowCrop) {
+        int size = level.getBlockPixelSize();
+        int rightMargin = retainedCameraInset(level.getMap().getWidth() * size, metadata.maxX(), 320);
+        int bottomMargin = retainedCameraInset(level.getMap().getHeight() * size, metadata.maxY(), 224);
         EditorProjectLevel resized = EditorProjectLevel.resized(level, width, height, allowCrop);
-        replace(metadata.withBounds(resized.getMinX(), resized.getMaxX(), resized.getMinY(), resized.getMaxY()), resized);
+        int maxX = Math.max(0, width * size - 1 - rightMargin);
+        int maxY = Math.max(0, height * size - 1 - bottomMargin);
+        replace(metadata.withBounds(Math.min(metadata.minX(), maxX), maxX,
+                Math.min(metadata.minY(), maxY), maxY), resized);
+    }
+
+    private static int retainedCameraInset(int canvasPixels, int maximum, int nativeViewportPixels) {
+        // A native camera cannot have a negative origin. On a canvas smaller than
+        // its viewport, zero is the clipped camera limit, not evidence that the
+        // viewport shrank. Recover the canonical inset when growing it again.
+        // Full-canvas bounds have a positive maximum and keep their zero inset.
+        return maximum == 0 && canvasPixels < nativeViewportPixels
+                ? nativeViewportPixels - 1 : canvasPixels - 1 - maximum;
     }
 
     public EditorProjectLevel snapshot() {

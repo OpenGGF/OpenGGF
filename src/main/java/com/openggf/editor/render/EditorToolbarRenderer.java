@@ -50,7 +50,7 @@ public class EditorToolbarRenderer {
         if (!commands.isEmpty()) {
             graphicsManager.registerCommand(new GLCommandGroup(GL_LINES, commands));
         }
-        textRenderer.renderFittedLines(buildStateLines(),TEXT_X,7,graphicsManager.getProjectionWidth()-20,.65f,7);
+        textRenderer.renderFittedLines(buildStateLines(),TEXT_X,6,graphicsManager.getProjectionWidth()-20,.65f,9);
     }
 
     protected void appendCommands(List<GLCommand> commands) {
@@ -68,12 +68,12 @@ public class EditorToolbarRenderer {
                 ? UNSUPPORTED_PERSISTENCE_PREFIX : "";
         return List.of(persistenceWarning + controller.breadcrumb()
                 + " | " + (controller.activeLayer()==0?"FG":"BG")
-                + " | " + (controller.currentLevel()!=null&&controller.currentLevel().isModifiedSinceLastSave()?"unsaved*":"saved"),
+                + " | " + (controller.isModified()?"unsaved*":"saved"),
                 controller.brushSummary(),controller.selectionSummary());
     }
 
     protected List<EditorTextRenderer.TextCommand> buildToolbarTextCommands() {
-        return textRenderer.buildFittedTextCommands(buildStateLines(),TEXT_X,7,graphicsManager.getProjectionWidth()-20,.65f,7);
+        return textRenderer.buildFittedTextCommands(buildStateLines(),TEXT_X,6,graphicsManager.getProjectionWidth()-20,.65f,9);
     }
 
     protected static void appendRectOutline(List<GLCommand> commands,

@@ -15,15 +15,16 @@ public record EditorUiLayout(int width, int height) {
         public int cellY(int py) { return (py-y)/cellSize; }
     }
     public EditorUiLayout { width=Math.max(320,width);height=Math.max(224,height); }
-    public Rect toolbar() { return new Rect(4,4,width-4,28); }
+    public Rect toolbar() { return new Rect(4,4,width-4,34); }
     public Rect commands() { return new Rect(4,height-26,width-4,height-4); }
-    public Rect library() { return new Rect(12,34,152,height-30); }
+    public Rect library() { return new Rect(12,40,152,height-30); }
     public Rect focused(EditorHierarchyDepth depth) {
-        return new Rect(width-(depth==EditorHierarchyDepth.BLOCK?124:144),34,width-4,height-30);
+        return new Rect(width-(depth==EditorHierarchyDepth.BLOCK?124:144),40,width-4,height-30);
     }
     public Grid focusedGrid(EditorHierarchyDepth depth,int side) {
         Rect pane=focused(depth);
-        int nativeCell=depth==EditorHierarchyDepth.BLOCK?16:8;
+        // The focused 2x2 pattern composition uses integer 4x native pixels; block composition remains native.
+        int nativeCell=depth==EditorHierarchyDepth.BLOCK?16:32;
         int cell=Math.max(2,Math.min(nativeCell,Math.min(pane.width()-8,pane.height()-8)/Math.max(1,side)));
         return new Grid(pane.left()+(pane.width()-side*cell)/2,
                 pane.top()+(pane.height()-side*cell)/2,cell,side);
