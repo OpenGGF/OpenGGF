@@ -1720,3 +1720,12 @@ A local HeadlessTestFixture can retain that camera. Explicitly refresh its viewp
 before loading and assert the dimension, or create a fresh scenario context.
 Four wider S3K credit-plane vectors read shifted glyphs with a retained320 camera
 while the320 vector passed (2026-10-13). A width parameter is not width evidence.
+
+**The first authored zone is not necessarily a scene mod's entry point.**
+Native friends qualification selected Starpost Valley's first owned zone, a
+festival, before opening its farm scene and hit the legitimate `Activity needs
+its retained scene session` guard (2026-10-14). Bootstrap scene-based diagnostics
+from the backing game's initial zone, then let the scene own authored-act
+admission. A matched real-JAR control reproduces the old failure and renders the
+farm after the corrected bootstrap. Do not remove the mod's lifecycle guard or
+invent session state to make an arbitrary zone load.
