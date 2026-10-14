@@ -41,7 +41,7 @@ public class RenderContext {
      */
     public static RenderContext getOrCreateDonor(GameId gameId) {
         return donorContexts.computeIfAbsent(gameId, id -> {
-            int base=allocatePaletteBase();
+            int base=nextPaletteBase;
             RenderContext ctx = new RenderContext(id, base);
             nextPaletteBase=Math.max(nextPaletteBase,base+LINES_PER_CONTEXT);
             return ctx;
@@ -54,14 +54,15 @@ public class RenderContext {
      * each sidekick gets a unique context even if they share the same game.
      */
     public static RenderContext createSidekickContext(GameId gameId) {
-        int base=allocatePaletteBase();
+        int base=nextPaletteBase;
         RenderContext ctx = new RenderContext(gameId, base);
         nextPaletteBase=Math.max(nextPaletteBase,base+LINES_PER_CONTEXT);
         sidekickContexts.add(ctx);
         return ctx;
     }
 
-    private static int allocatePaletteBase() {
+    // Ordinary contexts retain dynamic growth; only private encounter banks are bounded.
+    private static int allocateScopedPaletteBase() {
         for(int base=LINES_PER_CONTEXT;base<64;base+=LINES_PER_CONTEXT) {
             final int candidate=base;
             boolean busy=donorContexts.values().stream().anyMatch(c->c.paletteLineBase==candidate)
@@ -72,7 +73,7 @@ public class RenderContext {
         throw new IllegalStateException("All bounded palette banks are reserved");
     }
     static int reserveScopedPaletteBank(Object token) {
-        int base=allocatePaletteBase();scopedPaletteReservations.put(token,base);
+        int base=allocateScopedPaletteBase();scopedPaletteReservations.put(token,base);
         scopedPaletteHighWater=Math.max(scopedPaletteHighWater,base+LINES_PER_CONTEXT);
         nextPaletteBase=Math.max(nextPaletteBase,scopedPaletteHighWater);
         return base;
