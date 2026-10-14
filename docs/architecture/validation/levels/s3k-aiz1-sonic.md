@@ -667,3 +667,18 @@ whole-chain strict frontiers remain unchanged red. Sampled segment2 allocation
 advances2897→2910 (native-only17/21). Next callback allocation and shot birth
 movement remain concrete separate owners; native rendered/palette/SAT/priority
 and audio parity are not certified by these fields or prior-build spot images.
+
+
+## AIZ shot native INIT follow-up — 2026-10-14
+
+Stationary common/Falling Init and cleared ROM raw state preserve native birthY,
+Pause/Launch cursor/timer and$60 underflow ordering. Independent11 component
+cases plus existing consumers pass630; guards111 pass, with forced recreation
+and two45-entry cycles at declared320/352/400/528/800 camera widths. This does
+not expand full host/donor/team/world-route qualification. Original AIZ/initial
+HCZ/prefix2 pass; alternate/chain strict fields remain unchanged red. Actual
+segment2 shot18 birth now816; next missing pair17/21 remains2910. Pure cutscene
+shot recreation/exact links and barrel callback remain required next owners.
+[Native routines, negative attribution and exact qualification](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-shot-stationary-init-and-cleared-raw-state).
+Prior flare paragraph's shot-birth target is superseded by this qualified slice;
+its next callback target and rendered/audio/full-product limits remain.

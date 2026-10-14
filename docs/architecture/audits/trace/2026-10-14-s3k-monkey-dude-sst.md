@@ -595,3 +595,60 @@ before movement (:137065–137085), while current Java moves on its birth dispat
 These are explicit next targets, not a whole native graph or strict trace pass.
 Existing inspected native/engine images remain source-bounded to their recorded
 builds; this slice adds no rendered-pixel, SAT/priority or audio certification.
+
+
+## AIZ shot stationary INIT and cleared raw state
+
+Source6932189b9 plus shot SHA25621077a13d62832b2bc4a6e6cdfea05fe950b35858b17e557464c6cbb3c2116dd;
+new TestAizMinibossShotNativeInit SHA2565d184aa7ab0cdc73125abdcc125bb5d74d065d1d28a515debf0fd3221743b30f.
+`AIZMiniboss_BarrelShot_Init` (:137065–137085) loads attributes, SFX, script30,
+callback34, Y velocity−$400 and word2E=$60, then Draw_Sprite/RTS without movement.
+FallingShot_Init (:137474) likewise returns after the common Init. The following
+Move_AnimateRaw_Wait (:179640) moves, animates, then calls Obj_Wait; expiry finishes
+movement/animation before StartPause. Pause/Launch write routine, callback and
+counter but preserve the same raw script/cursor/timer (:137093–137126).
+
+Exact ROM$6914C bytes01,0C,0D,FC use Animate_RawNoSST (:177341), cleared cursor0/
+timer0. Init drawsC, then ordinary movement drawsD,D,C,C. The old moving Init
+consumed a primed timer and accidentally preserved this published sequence;
+merely delaying movement without restoring raw state would introduce a second
+error. The shot now captures the existing S3kRawAnimation.State, obtains its
+four bytes through injected ROM access, and preserves that bank through Pause/
+Launch. Native$60 wait holds zero on movement96, then movement97 underflows and
+publishes pause8 on the same pass. No fire delay, allocator, shared clock or
+fixture/controller change.
+
+Initial negative64359 is10/9fail/0errors/0skip at16:18:10 BST (24.219s execution/
+114s queue). Five forced cutscene-graph recreations additionally reveal the old
+shot factory returns null because it searches only fight parents; this is a
+separate required next slice. The common-Init fixture was explicitly changed to
+a typed inert fight parent, retaining full recreation and all comparisons.
+Matched14972 is10/4fail/0errors/0skip at16:24:28 BST (23.961s/94s): three mode
+birth-Y failures816→812 and the$60 dispatch failure; five full-recreation/replay
+controls and the old published C/D sequence pass. No missing child was waived.
+
+Final46911 passes630/0/0/0 at16:34:25 BST (73s execution/317s queue), the existing
+619 flare/actual napalm/scalar/SecondStrike/startup checks plus11 independent
+shot cases. Selection adds TestAizMinibossShotNativeInit to25518 above, retaining
+normal queue/Java25/EGL/absolute original ROM. The new component cases include
+all three modes, literal raw/counter/callback ordering and five declared camera
+widths320/352/400/528/800 with forced recreation and two45-entry cycles before/
+after Init. These are manager components, not full donor/host/route products.
+
+Canonical25467 uses the same five-case25714 trace profile/selection, observer
+OGGF_SLOT_PROBE=1, OGGF_SLOT_PROBE_FULL=1 and output target/shot-init-native-slot-occupancy.
+It completes5/1fail/0errors/0skip at16:47:30 BST,93s execution; queue duration is
+unavailable in the retained tool output. Original AIZ/initial HCZ/two prefixes
+pass. Chain6/8/11 raw189/12,719/82,067; physics189/12,604/69,393 and animation
+0/115/12,674 remain unchanged. First non-camera3319 P2X$31C1/$31CA,1583 P2X
+$366C/$3674,1510 Y$7D6/$7DF; segment11 ownership stops input68,801/loadgen9.
+Alternate27675 is1/1fail/0errors/0skip at16:43:21 BST (33.895s/145s):60 grouped
+spans, first25589 animation$13/$05. Guards19599 passes111/0/0/0 at16:45:56 BST
+(31.939s execution; queue unavailable). Same guard/alternate commands as25714.
+No broad/full run or hydration; unchanged strict reds remain open.
+
+The actual segment2 engine shot18 now draws at birthY816 on row2881, matching
+the native stationary Init. Subsequent sampled presence still first misses17/21
+at2910, where the barrel's deferred callback is the next allocation owner. Pure
+cutscene-shot recreation/exact links remains required next work. Existing image
+provenance remains source-bounded; these checks add no rendered/audio parity.

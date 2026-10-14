@@ -112491,3 +112491,25 @@ at2897. Sampled presence including reserved keys advances2897→2910, native-onl
 child/type parity. Following callback allocation and shot18 birth movement
 (engine812/native816) remain concrete next owners. Prior-build native/engine
 images stay source-bounded; no rendered/audio/full-game parity claim follows.
+
+
+### 2026-10-14 — AIZ shot INIT stationary; strict fields unchanged
+
+Owned bugfix/ai-s3k-parity-trace, source6932189b9 plus shot21077a13/test5d184aa7
+SHA256 candidates. [Native owners, matched negatives and commands](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-shot-stationary-init-and-cleared-raw-state).
+Common/Falling Init Draw/RTS is stationary; cleared ROM raw cursor/timer now
+survives Pause/Launch. Affected46911 passes630/0/0/0, including11 new component
+cases, actual napalm/SecondStrike/scalar and four mandatory startup consumers.
+Same canonical/alternate/guard25714 commands above, Java25/EGL/original ROM.
+Canonical25467 adds OGGF_SLOT_PROBE=1 OGGF_SLOT_PROBE_FULL=1 and output
+target/shot-init-native-slot-occupancy:5/1fail/0errors/0skip at16:47:30 BST,
+93s execution/queue unavailable. Original AIZ/initial HCZ/prefix2 pass.
+Chain6/8/11 raw189/12,719/82,067; physics189/12,604/69,393, animation0/115/
+12,674. First non-camera3319 P2X$31C1/$31CA,1583 P2X$366C/$3674,1510 Y$7D6/
+$7DF; input68,801/load-generation9 stop unchanged. Alternate27675:1/1fail/0/
+0 at16:43:21 BST,33.895s/145s,60 grouped spans, first25589 animation$13/$05.
+Guards19599:111/0/0/0 at16:45:56 BST,31.939s/queue unavailable. No metric,
+fixture/controller, shared allocator/clock or hydration change; no broad sweep.
+Actual segment2 shot18 now stays at native birthY816 on2881. Next sampled
+presence remains2910 native-only17/21. Cutscene-shot recreation/exact links and
+barrel callback are required separate next owners; no rendered/audio parity claim.

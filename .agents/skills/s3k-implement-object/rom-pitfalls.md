@@ -5457,3 +5457,17 @@ vectors cannot certify motion or constructor metadata.
 
 Origin: 2026-10-14 AIZ flare parity slice over8f7ec20a1; asm137029–137047,
 177300–177332,177563–177617,179136–179140.
+
+
+## Shot INIT can preserve a misleading primed animation sequence
+
+AIZ common and Falling shot Init load attributes/script and Draw/RTS without
+movement. Cleared Animate_RawNoSST cursor/timer advances on the first ordinary
+movement; a wrong birth move plus a primed delay can accidentally publish the
+same frames. Correct both owners together, using the exact ROM bytes. Obj_Wait
+expiry follows movement/animation; StartPause and Launch preserve script30,
+cursor and timer, so a new phase must not reset the raw delay. Test stationary
+birth, zero-versus-underflow dispatch and the first post-pause mapping separately.
+
+Origin:2026-10-14 AIZ shot INIT slice over6932189b9; asm137065–137126,
+137474,177341,179640.

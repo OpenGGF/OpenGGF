@@ -35,6 +35,8 @@ Unreleased. The earlier development themes remain in
   AIZ muzzle flares keep their native initialization, raw-animation and delayed
   retirement phases. Their physical parent link reads cleared or reused slots
   without borrowing a detached parent, and restores through rewind.
+  Barrel shots draw at their native stationary initialization position and retain
+  the cleared ROM raw-animation state through their pause and launch phases.
 
 - **S3K breakable floors:** Cork's placed record becomes its first moving
   fragment, preserving checked sibling allocation, native motion and render
