@@ -242,6 +242,18 @@ public class MasterTitleScreen {
     private int extrasIndex;
     private int standaloneActionIndex;
 
+    /** The game suspended with a held Escape: first on the shelf until it is resumed or ended. */
+    private MasterTitleEntry.Suspended suspended;
+    private MasterTitleRomPreview.Image suspendedImage;
+    private int suspendedTextureId;
+    private Runnable suspendedGameEndHandler = () -> { };
+    private boolean resumeRequested;
+    /** Asks before anything that would end the suspended game; {@link #endPromptThen} runs after. */
+    private boolean endPrompt;
+    private boolean endSelected;
+    private String endPromptDetail;
+    private Runnable endPromptThen;
+
     private static final class RomPreviewState {
         int textureId;
         int width;
@@ -402,6 +414,7 @@ public class MasterTitleScreen {
         if (catalogLoad != null) { updateCatalogLoad(); return; }
         if (gameBrowserOpen) { updateGameBrowser(); return; }
         if (quitPrompt) { updateQuitPrompt(); return; }
+        if (endPrompt) { updateEndPrompt(); return; }
         if (settingsScreen != null) {
             settingsScreen.update(inputHandler);
             if (settingsScreen.consumeApplied()) refreshRomPreviews();
@@ -528,7 +541,7 @@ public class MasterTitleScreen {
         int recordKey = configService.getInt(SonicConfiguration.RECORDING_RECORD_KEY);
         boolean recordingRequest = inputHandler.isKeyPressed(recordKey) && inputHandler.isShiftDown();
         if (recordingRequest) {
-            if (!handleUserRecordingMenuRequest(true)) showActionError("Recordings");
+            openRecordings();
             return;
         }
         if (inputHandler.isKeyPressed(GLFW_KEY_TAB) || inputHandler.isGamepadBackButtonPressed()) {
@@ -555,7 +568,7 @@ public class MasterTitleScreen {
         if (!navigation.accept()) return;
         switch (zone) {
             case CARD -> startSelectedEntry();
-            case ACTIONS -> runHubAction(navigation.action());
+            case ACTIONS -> runHubAction(focusedAction());
             case TABS -> runHubTab(navigation.tab());
         }
     }
@@ -564,8 +577,22 @@ public class MasterTitleScreen {
         switch (action) {
             case START -> startSelectedEntry();
             case SETUP -> { if (!openLaunchOptions(null)) showActionError("Game setup"); }
-            case RECORDINGS -> { if (!tryOpenUserRecordingMenuForSelectedGame()) showActionError("Recordings"); }
+            case RECORDINGS -> openRecordings();
+            case RESUME -> requestResume();
+            case END -> askToEndSuspended("Its progress will be lost", () -> { });
         }
+    }
+
+    /** The action under focus, from the selected card's own list (a paused game has its own). */
+    private TitleHubNavigation.Action focusedAction() {
+        List<TitleHubNavigation.Action> actions = hubActions();
+        return actions.get(Math.clamp(navigation.actionIndex(), 0, actions.size() - 1));
+    }
+
+    /** Playback from Recordings starts a session, so a paused game is ended first. */
+    private void openRecordings() {
+        if (askToEndSuspended("Watching recordings ends it", this::openRecordings)) return;
+        if (!tryOpenUserRecordingMenuForSelectedGame()) showActionError("Recordings");
     }
 
     private void runHubTab(TitleHubNavigation.Tab tab) {
@@ -599,6 +626,7 @@ public class MasterTitleScreen {
     }
 
     private void openTitleEntry(int index) {
+        if (askToEndSuspended("Opening extras ends it", () -> openTitleEntry(index))) return;
         List<String> games = entries.stream()
                 .filter(MasterTitleEntry.Stock.class::isInstance)
                 .map(MasterTitleEntry.Stock.class::cast)
@@ -647,6 +675,18 @@ public class MasterTitleScreen {
 
     boolean isQuitPromptOpenForTest() {
         return quitPrompt;
+    }
+
+    boolean isEndPromptOpenForTest() {
+        return endPrompt;
+    }
+
+    List<TitleHubNavigation.Action> hubActionsForTest() {
+        return hubActions();
+    }
+
+    int selectedIndexForTest() {
+        return selectedIndex;
     }
 
     private MasterTitlePointer readPointer(InputHandler input) {
@@ -707,7 +747,7 @@ public class MasterTitleScreen {
                 navigation.selectAction(i);
                 playNavigateSound();
             }
-            if (pointer.click()) runHubAction(navigation.action());
+            if (pointer.click()) runHubAction(focusedAction());
             return pointer.click();
         }
         if (layout.dots().contains(pointer) && pointer.click() && entries.size() > 1) {
@@ -886,7 +926,9 @@ public class MasterTitleScreen {
 
     private void showActionError(String action) {
         if (selectedEntry() == null) { showUnavailableAction("No games are available. Check Mods and Settings."); return; }
-        if (selectedEntry() instanceof MasterTitleEntry.Stock stock && !isEntryAvailable(stock)) {
+        if (selectedEntry() instanceof MasterTitleEntry.Suspended paused) {
+            showUnavailableAction(action + " is on the " + paused.menuLabel() + " card; changes apply to your next game");
+        } else if (selectedEntry() instanceof MasterTitleEntry.Stock stock && !isEntryAvailable(stock)) {
             launchErrorTitle = null;
             launchErrorDetail = null;
             state = State.ERROR_DISPLAY;
@@ -932,14 +974,22 @@ public class MasterTitleScreen {
                     .resolve(configService.getString(SonicConfiguration.TRACE_CATALOG_DIR)).normalize();
             openTraceCatalog(root);
         }));
+        actions.replaceAll(this::endingSuspendedFirst);
         actions.add(new ToolAction("Advanced settings", "Debug, Discord and other expert settings", () -> {
             settingsScreen = new EngineSettingsScreen(configService, font, EngineSettingsScreen.Scope.ADVANCED);
             childInputPending = true;
         }));
         actions.add(new ToolAction("Controls / help", "How the menus and shortcuts work", () -> helpOpen = true));
-        if (editorProjectsOpenHandler != null) actions.add(new ToolAction("Editor projects", "Create, open and edit level projects", editorProjectsOpenHandler));
-        if (contentImportOpenHandler != null) actions.add(new ToolAction("Import content", "Review and import projects or mod packages", contentImportOpenHandler));
+        if (editorProjectsOpenHandler != null) actions.add(endingSuspendedFirst(new ToolAction("Editor projects", "Create, open and edit level projects", editorProjectsOpenHandler)));
+        if (contentImportOpenHandler != null) actions.add(endingSuspendedFirst(new ToolAction("Import content", "Review and import projects or mod packages", contentImportOpenHandler)));
         return actions;
+    }
+
+    private ToolAction endingSuspendedFirst(ToolAction tool) {
+        return new ToolAction(tool.label(), tool.note(), () -> {
+            if (!askToEndSuspended("Opening " + tool.label().toLowerCase(java.util.Locale.ROOT) + " ends it",
+                    tool.callback())) tool.callback().run();
+        });
     }
 
     /** Opens Game Setup for the selected stock game, optionally focused on one row. */
@@ -957,6 +1007,9 @@ public class MasterTitleScreen {
     private void startSelectedEntry() {
         MasterTitleEntry entry = selectedEntry();
         if (entry == null) { showActionError("Start game"); return; }
+        if (entry instanceof MasterTitleEntry.Suspended) { requestResume(); return; }
+        if (isEntryAvailable(entry) && askToEndSuspended("Starting " + entry.menuLabel() + " ends it",
+                this::startSelectedEntry)) return;
         if (!isEntryAvailable(entry)) {
             launchErrorTitle = null;
             launchErrorDetail = null;
@@ -1107,6 +1160,11 @@ public class MasterTitleScreen {
             drawQuitPrompt();
             return;
         }
+        if (endPrompt) {
+            drawChoicePrompt("END " + suspended.menuLabel().toUpperCase(java.util.Locale.ROOT) + " GAME?",
+                    endPromptDetail, new String[] { "Keep it paused", "End game" }, endSelected, "BACK");
+            return;
+        }
 
         if (launchConfigPanel != null) {
             renderer.drawTexture(solidWhiteTextureId, 0, 0, viewportWidth, SCREEN_H,
@@ -1139,27 +1197,31 @@ public class MasterTitleScreen {
     }
 
     private void drawQuitPrompt() {
+        drawChoicePrompt("QUIT OPENGGF?", suspended == null ? "Return to your desktop" : "Your paused game will end",
+                new String[] { "Return to menu", "Quit" }, quitSelected, "STAY");
+    }
+
+    /** Two-row confirmation over the dimmed hub; the second row is the consequential one. */
+    private void drawChoicePrompt(String title, String detail, String[] options, boolean secondSelected, String backVerb) {
         int w = viewportWidth;
         font.beginMegaBatch();
         MenuChrome.fill(font, 0, 0, w, SCREEN_H, new float[] {0, 0, 0}, .62f);
         int bx = w / 2 - 96;
         MenuChrome.fill(font, bx, 56, 192, 92, MenuChrome.NAVY, .98f);
         MenuChrome.outline(font, bx, 56, 192, 92, MenuChrome.GOLD, 1f, 1);
-        String title = "QUIT OPENGGF?";
         MenuChrome.label(font, title, (w - MenuChrome.labelWidth(title)) / 2, 66, MenuChrome.GOLD);
-        String detail = "Return to your desktop";
+        detail = MenuChrome.fitCompact(detail, 184);
         MenuChrome.compact(font, detail, (w - MenuChrome.compactWidth(detail)) / 2, 80, MenuChrome.MUTED);
-        String[] options = { "Return to menu", "Quit" };
         for (int i = 0; i < 2; i++) {
             int y = 92 + i * 26;
-            boolean sel = quitSelected == (i == 1);
+            boolean sel = secondSelected == (i == 1);
             if (sel) MenuChrome.focus(font, w / 2 - 80, y, 160, 20, frameCounter);
             else MenuChrome.panel(font, w / 2 - 80, y, 160, 20);
             MenuChrome.label(font, options[i], (w - MenuChrome.labelWidth(options[i])) / 2, y + 5,
                     i == 1 ? MenuChrome.AMBER : MenuChrome.WHITE);
         }
         MenuChrome.footer(font, w, null, List.of(MenuChrome.hint(MenuChrome.confirmKey(menuInput), "SELECT"),
-                MenuChrome.hint(MenuChrome.backKey(menuInput), "STAY")), MenuChrome.controller(menuInput));
+                MenuChrome.hint(MenuChrome.backKey(menuInput), backVerb)), MenuChrome.controller(menuInput));
         font.endMegaBatch();
     }
 
@@ -1202,9 +1264,12 @@ public class MasterTitleScreen {
     }
 
     private List<TitleHubNavigation.Action> hubActions() {
+        if (selectedEntry() instanceof MasterTitleEntry.Suspended)
+            return List.of(TitleHubNavigation.Action.RESUME, TitleHubNavigation.Action.END);
         return selectedEntry() instanceof MasterTitleEntry.Standalone
                 ? List.of(TitleHubNavigation.Action.START)
-                : List.of(TitleHubNavigation.Action.values());
+                : List.of(TitleHubNavigation.Action.START, TitleHubNavigation.Action.SETUP,
+                        TitleHubNavigation.Action.RECORDINGS);
     }
 
     /** Chips for the selected game, read from the saved profile so they never go stale. */
@@ -1228,8 +1293,13 @@ public class MasterTitleScreen {
     }
 
     private int actionWidth(TitleHubNavigation.Action action) {
-        return action == TitleHubNavigation.Action.START
+        return primary(action)
                 ? MenuChrome.labelWidth(action.label) + 16 : MenuChrome.compactWidth(action.label) + 12;
+    }
+
+    /** Start and Resume are the gold buttons. */
+    private static boolean primary(TitleHubNavigation.Action action) {
+        return action == TitleHubNavigation.Action.START || action == TitleHubNavigation.Action.RESUME;
     }
 
     HubLayout hubLayout() {
@@ -1396,6 +1466,12 @@ public class MasterTitleScreen {
             PreviewLayout layout = cardLogoLayout(preview.width, preview.height, r.x() + 4, r.y() + 4, r.w() - 8, r.h() - 8);
             renderer.drawTexture(preview.textureId, layout.x(), layout.y(), layout.width(), layout.height());
         }
+        if (entry instanceof MasterTitleEntry.Suspended && suspendedImage != null) {
+            if (suspendedTextureId == 0) suspendedTextureId = MasterTitleRomPreview.uploadTexture(suspendedImage);
+            PreviewLayout layout = cardLogoLayout(suspendedImage.width(), suspendedImage.height(),
+                    r.x() + 3, r.y() + 3, r.w() - 6, r.h() - 6);
+            renderer.drawTexture(suspendedTextureId, layout.x(), layout.y(), layout.width(), layout.height());
+        }
         font.beginMegaBatch();
         if (!available && entry instanceof MasterTitleEntry.Stock stock) {
             String title = "ROM MISSING";
@@ -1419,6 +1495,21 @@ public class MasterTitleScreen {
             MenuChrome.fill(font, bx, by, MenuChrome.compactWidth(badge) + 8, 11, MenuChrome.NAVY);
             MenuChrome.outline(font, bx, by, MenuChrome.compactWidth(badge) + 8, 11, MenuChrome.CYAN, 1f, 1);
             MenuChrome.compact(font, badge, bx + 4, by + 2, MenuChrome.CYAN);
+        } else if (entry instanceof MasterTitleEntry.Suspended) {
+            if (suspendedImage == null) {
+                String name = entry.menuLabel().toUpperCase(java.util.Locale.ROOT);
+                MenuChrome.label(font, MenuChrome.fitLabel(name, r.w() - 8),
+                        r.x() + Math.max(4, (r.w() - MenuChrome.labelWidth(name)) / 2), r.y() + r.h() / 2 - 12, MenuChrome.WHITE);
+            }
+            String badge = "PAUSED";
+            int bw = MenuChrome.compactWidth(badge) + 14;
+            int bx = r.x() + (r.w() - bw) / 2;
+            int by = r.y() + r.h() - 16;
+            MenuChrome.fill(font, bx, by, bw, 11, MenuChrome.NAVY);
+            MenuChrome.outline(font, bx, by, bw, 11, MenuChrome.GOLD, 1f, 1);
+            MenuChrome.fill(font, bx + 4, by + 3, 1, 5, MenuChrome.GOLD);
+            MenuChrome.fill(font, bx + 6, by + 3, 1, 5, MenuChrome.GOLD);
+            MenuChrome.compact(font, badge, bx + 10, by + 2, MenuChrome.GOLD);
         } else if (preview == null && entry instanceof MasterTitleEntry.Stock) {
             String name = entry.menuLabel().toUpperCase(java.util.Locale.ROOT);
             MenuChrome.label(font, MenuChrome.fitLabel(name, r.w() - 8), r.x() + Math.max(4, (r.w() - MenuChrome.labelWidth(name)) / 2),
@@ -1475,6 +1566,10 @@ public class MasterTitleScreen {
         } else if (chips.isEmpty() && entry instanceof MasterTitleEntry.Standalone standalone) {
             String help = standalone.continueAvailable() ? "A saved game is ready to continue" : "A standalone game from your mods";
             MenuChrome.compact(font, help, (w - MenuChrome.compactWidth(help)) / 2, CHIP_Y + 2, MenuChrome.CYAN);
+        } else if (entry instanceof MasterTitleEntry.Suspended paused) {
+            String where = MenuChrome.fitCompact(paused.location().isBlank() ? "Paused where you left it"
+                    : "Paused in " + paused.location(), w - 16);
+            MenuChrome.compact(font, where, (w - MenuChrome.compactWidth(where)) / 2, CHIP_Y + 2, MenuChrome.CYAN);
         }
 
         int n = entries.size();
@@ -1496,7 +1591,7 @@ public class MasterTitleScreen {
             Rect r = layout.actions().get(i);
             TitleHubNavigation.Action action = actions.get(i);
             boolean focused = navigation.zone() == TitleHubNavigation.Zone.ACTIONS && navigation.actionIndex() == i;
-            if (action == TitleHubNavigation.Action.START) {
+            if (primary(action)) {
                 if (focused) MenuChrome.focus(font, r.x(), r.y(), r.w(), r.h(), frameCounter);
                 float[] gold = available ? MenuChrome.GOLD : new float[] {.45f, .4f, .25f};
                 MenuChrome.fill(font, r.x() + (focused ? 2 : 0), r.y() + (focused ? 2 : 0),
@@ -1516,6 +1611,10 @@ public class MasterTitleScreen {
         String summary = hubSummary(entry, chips);
         MenuChrome.compact(font, MenuChrome.fitCompact(summary, w - 16),
                 (w - Math.min(w - 16, MenuChrome.compactWidth(summary))) / 2, SUMMARY_Y, MenuChrome.MUTED);
+        if (entry instanceof MasterTitleEntry.Suspended) {
+            String legend = MenuChrome.fitCompact("Settings you change apply to your next game", w - 16);
+            MenuChrome.compact(font, legend, (w - MenuChrome.compactWidth(legend)) / 2, LEGEND_Y, MenuChrome.DIM);
+        }
         if (anyAmber && entry != null) {
             String legend = "SET FOR " + entry.menuLabel().toUpperCase(java.util.Locale.ROOT) + " ONLY";
             int lx = (w - MenuChrome.compactWidth(legend) - 8) / 2;
@@ -1546,18 +1645,23 @@ public class MasterTitleScreen {
     private String hubSummary(MasterTitleEntry entry, List<HubSetupChips.Chip> chips) {
         if (entry == null) return "Add a game in Settings > Files or Mods";
         String game = entry.menuLabel();
+        if (entry instanceof MasterTitleEntry.Suspended && navigation.zone() != TitleHubNavigation.Zone.TABS)
+            return navigation.zone() == TitleHubNavigation.Zone.ACTIONS && focusedAction() == TitleHubNavigation.Action.END
+                    ? "End your paused " + game + " game" : "Carry on with " + game + " where you left it";
         return switch (navigation.zone()) {
             case CARD -> entry instanceof MasterTitleEntry.Stock && isEntryAvailable(entry)
                     ? HubSetupChips.startSummary(game, chips) : "Start " + game;
-            case ACTIONS -> switch (navigation.action()) {
+            case ACTIONS -> switch (focusedAction()) {
                 case START -> entry instanceof MasterTitleEntry.Stock && isEntryAvailable(entry)
                         ? HubSetupChips.startSummary(game, chips) : "Start " + game;
                 case SETUP -> "Players, screen and extras for " + game + " only";
                 case RECORDINGS -> "Watch and manage your " + game + " recordings";
+                case RESUME, END -> "";
             };
             case TABS -> switch (navigation.tab()) {
                 case MODS -> "Turn mods on or off for all games";
-                case SETTINGS -> "Display, sound, controls and more for all games";
+                case SETTINGS -> suspended != null ? "For all games; your paused game keeps its own"
+                        : "Display, sound, controls and more for all games";
                 case EXTRAS -> "Extra modes added by your mods";
                 case ADVANCED -> "Trace replays, advanced settings and help";
                 case QUIT -> "Close OpenGGF";
@@ -1569,11 +1673,14 @@ public class MasterTitleScreen {
         String ok = MenuChrome.confirmKey(menuInput);
         String back = MenuChrome.backKey(menuInput);
         return switch (navigation.zone()) {
-            case CARD -> List.of(MenuChrome.leftRight("GAME"), MenuChrome.hint(ok, "START"), MenuChrome.hint(back, "QUIT"));
-            case ACTIONS -> List.of(MenuChrome.leftRight("BUTTON"), MenuChrome.hint(ok, switch (navigation.action()) {
+            case CARD -> List.of(MenuChrome.leftRight("GAME"), MenuChrome.hint(ok,
+                    selectedEntry() instanceof MasterTitleEntry.Suspended ? "RESUME" : "START"), MenuChrome.hint(back, "QUIT"));
+            case ACTIONS -> List.of(MenuChrome.leftRight("BUTTON"), MenuChrome.hint(ok, switch (focusedAction()) {
                 case START -> "START";
                 case SETUP -> "OPEN SETUP";
                 case RECORDINGS -> "OPEN RECORDINGS";
+                case RESUME -> "RESUME";
+                case END -> "END GAME";
             }), MenuChrome.hint(back, "GAMES"));
             case TABS -> List.of(MenuChrome.leftRight("TAB"), MenuChrome.hint(ok, "OPEN " + navigation.tab().label),
                     MenuChrome.hint(back, "GAMES"));
@@ -1801,7 +1908,7 @@ public class MasterTitleScreen {
     }
 
     private boolean isEntryAvailable(MasterTitleEntry entry) {
-        return entry instanceof MasterTitleEntry.Standalone
+        return entry instanceof MasterTitleEntry.Standalone || entry instanceof MasterTitleEntry.Suspended
                 || entry instanceof MasterTitleEntry.Stock stock
                 && stockAvailability.getOrDefault(stock.game(), false);
     }
@@ -1840,19 +1947,23 @@ public class MasterTitleScreen {
 
     /** Reconcile a host catalog snapshot by game identity, never by an obsolete slot. */
     void replaceEntries(List<MasterTitleEntry> replacement) {
-        List<MasterTitleEntry> next = List.copyOf(replacement);
         java.util.Set<String> ids = new java.util.HashSet<>();
-        for (MasterTitleEntry entry : next) {
+        for (MasterTitleEntry entry : replacement) {
             if (!ids.add(entry.gameId())) throw new IllegalArgumentException("Duplicate title game: " + entry.gameId());
         }
+        List<MasterTitleEntry> next = withSuspendedFirst(replacement);
         if (entries.equals(next)) return;
+        MasterTitleEntry selected = selectedEntry();
         String selectedId = getSelectedGameId();
         int previousIndex = selectedIndex;
         entries = next;
         selectedIndex = Math.max(0, Math.min(previousIndex, entries.size() - 1));
+        int match = -1;
         for (int i = 0; i < entries.size(); i++) {
-            if (entries.get(i).gameId().equals(selectedId)) { selectedIndex = i; break; }
+            if (entries.get(i).equals(selected)) { match = i; break; }
+            if (match < 0 && entries.get(i).gameId().equals(selectedId)) match = i;
         }
+        if (match >= 0) selectedIndex = match;
         previewAnimationFrame = 0;
         if (renderer != null) refreshRomPreviews();
     }
@@ -1922,6 +2033,139 @@ public class MasterTitleScreen {
 
     public MasterTitleEntry.Launch getSelectedLaunch() { return selectedLaunch; }
 
+    /**
+     * Shows a suspended game first on the shelf and selects it. {@code rgba} is its last frame,
+     * top row first, or null for a card without a picture.
+     */
+    public void setSuspendedGame(MasterTitleEntry.Suspended card, int width, int height, byte[] rgba) {
+        suspended = Objects.requireNonNull(card, "card");
+        suspendedImage = rgba == null ? null
+                : fitThumbnail(new MasterTitleRomPreview.Image(width, height, rgba), CARD_W - 6, CARD_H - 6);
+        deleteSuspendedTexture();
+        entries = withSuspendedFirst(entries);
+        selectedIndex = 0;
+        navigation.focus(TitleHubNavigation.Zone.CARD);
+    }
+
+    /** Ends the suspended game in the host; the card is then removed. */
+    public void setSuspendedGameEndHandler(Runnable handler) {
+        suspendedGameEndHandler = Objects.requireNonNull(handler, "handler");
+    }
+
+    public boolean hasSuspendedGame() {
+        return suspended != null;
+    }
+
+    /** True once after Resume; the host fades the title out and brings the game back. */
+    public boolean consumeResumeRequest() {
+        boolean requested = resumeRequested;
+        resumeRequested = false;
+        return requested;
+    }
+
+    private void requestResume() {
+        resumeRequested = true;
+        state = State.CONFIRMING;
+        playConfirmSound();
+    }
+
+    /**
+     * Asks before an action that would end the suspended game, then runs {@code then} once it has
+     * ended. Returns false (and asks nothing) when no game is suspended, so the caller proceeds.
+     */
+    private boolean askToEndSuspended(String detail, Runnable then) {
+        if (suspended == null) return false;
+        endPrompt = true;
+        endSelected = false;
+        endPromptDetail = detail;
+        endPromptThen = then;
+        playConfirmSound();
+        return true;
+    }
+
+    private void updateEndPrompt() {
+        if (navigation.back() || backClicked()) { endPrompt = false; playCancelSound(); return; }
+        if (pointer != null) {
+            for (int option = 0; option < 2; option++) {
+                if (!pointer.over(viewportWidth / 2 - 80, 92 + option * 26, 160, 20)) continue;
+                boolean end = option == 1;
+                if (pointer.moved() && endSelected != end) { endSelected = end; playNavigateSound(); }
+                if (pointer.click()) { endSelected = end; confirmEndPrompt(); return; }
+            }
+        }
+        if (navigation.left() || navigation.right() || navigation.up() || navigation.down()) {
+            endSelected = !endSelected;
+            playNavigateSound();
+        } else if (navigation.accept()) {
+            confirmEndPrompt();
+        }
+    }
+
+    private void confirmEndPrompt() {
+        endPrompt = false;
+        if (!endSelected) { playCancelSound(); return; }
+        Runnable then = endPromptThen;
+        endPromptThen = null;
+        suspendedGameEndHandler.run();
+        clearSuspendedGame();
+        playConfirmSound();
+        then.run();
+    }
+
+    /** Removes the suspended card once its game has ended, selecting the same stock game. */
+    void clearSuspendedGame() {
+        if (suspended == null) return;
+        MasterTitleEntry.Stock game = suspended.game();
+        boolean wasSelected = selectedEntry() instanceof MasterTitleEntry.Suspended;
+        suspended = null;
+        suspendedImage = null;
+        deleteSuspendedTexture();
+        entries = entries.stream().filter(entry -> !(entry instanceof MasterTitleEntry.Suspended)).toList();
+        int stock = entries.indexOf(game);
+        selectedIndex = wasSelected && stock >= 0 ? stock
+                : Math.clamp(selectedIndex - 1, 0, Math.max(0, entries.size() - 1));
+        navigation.focus(TitleHubNavigation.Zone.CARD);
+    }
+
+    private List<MasterTitleEntry> withSuspendedFirst(List<MasterTitleEntry> catalog) {
+        List<MasterTitleEntry> next = new ArrayList<>();
+        if (suspended != null) next.add(suspended);
+        catalog.stream().filter(entry -> !(entry instanceof MasterTitleEntry.Suspended)).forEach(next::add);
+        return List.copyOf(next);
+    }
+
+    private void deleteSuspendedTexture() {
+        if (suspendedTextureId != 0) PngTextureLoader.deleteTexture(suspendedTextureId);
+        suspendedTextureId = 0;
+    }
+
+    /** Area-averages the frame down to the card so the shelf shows a clean miniature. */
+    static MasterTitleRomPreview.Image fitThumbnail(MasterTitleRomPreview.Image source, int maxWidth, int maxHeight) {
+        double scale = Math.min(1.0, Math.min((double) maxWidth / source.width(), (double) maxHeight / source.height()));
+        int width = Math.max(1, (int) Math.floor(source.width() * scale));
+        int height = Math.max(1, (int) Math.floor(source.height() * scale));
+        if (width == source.width() && height == source.height()) return source;
+        byte[] out = new byte[width * height * 4];
+        byte[] in = source.rgba();
+        for (int y = 0; y < height; y++) {
+            int y0 = y * source.height() / height, y1 = Math.max(y0 + 1, (y + 1) * source.height() / height);
+            for (int x = 0; x < width; x++) {
+                int x0 = x * source.width() / width, x1 = Math.max(x0 + 1, (x + 1) * source.width() / width);
+                long[] sum = new long[4];
+                for (int sy = y0; sy < y1; sy++) {
+                    for (int sx = x0; sx < x1; sx++) {
+                        int i = (sy * source.width() + sx) * 4;
+                        for (int c = 0; c < 4; c++) sum[c] += in[i + c] & 0xFF;
+                    }
+                }
+                int count = (y1 - y0) * (x1 - x0);
+                int o = (y * width + x) * 4;
+                for (int c = 0; c < 4; c++) out[o + c] = (byte) (sum[c] / count);
+            }
+        }
+        return new MasterTitleRomPreview.Image(width, height, out);
+    }
+
     public void setModManagerOpenHandler(Runnable handler) {
         modManagerOpenHandler = Objects.requireNonNull(handler, "handler");
     }
@@ -1960,6 +2204,7 @@ public class MasterTitleScreen {
     }
 
     private void openModManager(String gameId) {
+        if (askToEndSuspended("Changing mods ends it", () -> openModManager(gameId))) return;
         if (modManagerScreenFactory != null) {
             modManagerScreen = Objects.requireNonNull(
                     modManagerScreenFactory.create(font), "mod manager screen");
@@ -2092,6 +2337,7 @@ public class MasterTitleScreen {
         PngTextureLoader.deleteTexture(cloudLargeTextureId);
         PngTextureLoader.deleteTexture(cloudSmallTextureId);
         romPreviews.values().forEach(preview -> PngTextureLoader.deleteTexture(preview.textureId));
+        deleteSuspendedTexture();
         if (renderer != null) renderer.cleanup();
         userRecordingMenu = null;
         settingsScreen = null;

@@ -156,6 +156,7 @@ public class GameLoop {
             new BonusStageTransitionCoordinator();
     private final PresenceManager presenceManager;
     private final EscapeToMasterTitleController escapeToMasterTitleController;
+    final GameLoopSuspension suspension = new GameLoopSuspension(this);
     private MasterTitleLaunchCoordinator masterTitleLaunchCoordinator;
     private final MasterTitleExitCoordinator masterTitleExitCoordinator;
 
@@ -228,7 +229,7 @@ public class GameLoop {
     private Consumer<com.openggf.game.dataselect.DataSelectAction> dataSelectActionHandler;
     private GameplayTeamBootstrapContext gameplayTeamBootstrapContext =
             GameplayTeamBootstrapContext.registryOnly();
-    private final UserRecordingSessionLauncher userRecordingSessionLauncher;
+    final UserRecordingSessionLauncher userRecordingSessionLauncher;
     private final UserRecordingRuntimeControls userRecordingControls;
     final HostedRunController hostedRuns;
     private Consumer<RunEndReason> hostedRunReturn = reason -> { };
@@ -289,7 +290,7 @@ public class GameLoop {
     private EndingProvider endingProvider;
 
     // Listener for game mode changes (used by Engine to update projection)
-    private GameModeChangeListener gameModeChangeListener;
+    GameModeChangeListener gameModeChangeListener;
 
     // Optional trace camera focus controller — ticked at the top of every stepInternal()
     private TraceCameraFocusController traceCameraFocusController;
@@ -352,8 +353,7 @@ public class GameLoop {
                 () -> requestSessionSave(SaveReason.PROGRESSION_SAVE), pending -> endingTransitionPending = pending,
                 audioManager::fadeOutMusic, callback -> fadeManager.startFadeToBlack(callback));
         this.escapeToMasterTitleController = new EscapeToMasterTitleController(
-                () -> resolveFadeManager().isActive(),
-                () -> fadeOutTo(this::returnToMasterTitle));
+                () -> resolveFadeManager().isActive(), suspension::leave, suspension::modOwnsEscapeTap);
         this.presenceManager = new PresenceManager(
                 configService.getBoolean(SonicConfiguration.DISCORD_RICH_PRESENCE_ENABLED),
                 configService.getBoolean(SonicConfiguration.DISCORD_RICH_PRESENCE_SHOW_TIMER),
@@ -381,7 +381,7 @@ public class GameLoop {
         installLiveRewindBoundaryReporter();
     }
 
-    private void refreshRuntimeBindings() {
+    void refreshRuntimeBindings() {
         GameplayModeContext currentGameplayMode = resolveGameplayModeContext();
         if (currentGameplayMode == null || !currentGameplayMode.isGameplayRuntimeReady()) {
             bindScheduledPlaybackInputPublisher(null);
@@ -435,7 +435,7 @@ public class GameLoop {
     }
 
     GameplayModeContext resolveGameplayModeContext() {
-        return gameplayMode != null ? gameplayMode : SessionManager.getCurrentGameplayMode();
+        return suspension.parked() ? null : gameplayMode != null ? gameplayMode : SessionManager.getCurrentGameplayMode();
     }
 
     public void resetModuleScopedProviders() {
@@ -1261,6 +1261,7 @@ public class GameLoop {
                     masterScreen,
                     inputHandler,
                     this::exitMasterTitleScreen);
+            suspension.routeResume(masterScreen);
             if (!resolveFadeManager().isActive()) {
                 com.openggf.game.TitleInputOwnership.routeQuit(masterScreen, () -> fadeOutTo(applicationExitHandler));
             }

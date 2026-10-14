@@ -250,3 +250,69 @@ Validation: with Java 25,
 passed 183 tests. Three ROM-preview tests were skipped because no ROM paths were
 configured. This is focused validation of menu-only input changes. It is not a
 smoke-suite or full-suite pass.
+
+
+## Suspend to the hub on held Escape (2026-10-14)
+
+Holding Escape in an ordinary Sonic 1, 2 or 3&K session now parks the game behind
+the master title instead of tearing it down. Requested by James as a "minimise"
+that sits beside the stock games on the shelf, with settings changes deferred to
+the next launch.
+
+- **One paused slot, first on the shelf.** `MasterTitleEntry.Suspended` is its own
+  card (last frame, a PAUSED badge, "Paused in Emerald Hill, Act 1") with Resume and
+  End game, rather than a fourth stock-styled card that would make "Sonic 2" ambiguous.
+  The catalog never contains it; `MasterTitleScreen` prepends it, so catalog refreshes
+  keep their duplicate-id check.
+- **Keep the session, unbind it.** `GameLoopSuspension` (outside the line-budgeted
+  GameLoop) makes `resolveGameplayModeContext` return null while parked. The hub then
+  runs exactly as with no game: bootstrap camera and fade, Engine-ticked fades, no
+  gameplay frames. The session stays published in `SessionManager`; mode changes use
+  `changeGameModeWithoutRewindBoundary`, so rewind history survives the round trip.
+  `park()` returns the mode it left, because outside levels the game can change mode
+  during the fade-out.
+- **What the hub would otherwise change** is held by `SuspendedGame`: the music (an
+  `AudioLogicalSnapshot` captured before `fadeOutMusic`, restored on resume, since the
+  shadow presentation is the only speaker path), the camera position (the hub's
+  screen-space draw zeroes the gameplay camera), and the settings.
+- **Settings freeze** (`SuspendedSettings`) uses only the public configuration
+  surface, so the `@ModApi` `SonicConfigurationService` signature pins are unchanged.
+  Suspend records overrides and effective values and clears overrides, so the hub
+  shows saved preferences as after a normal return. Resume restores the overrides and
+  pins each value saved since. Window size and derived pixel sizes are not pinned.
+- **Ending it** goes through the existing `resetForGameplayFromMasterTitle`. That
+  method also drops a parked game first, so every launch route (Start, recordings,
+  editor projects, traces, mod reload) ends it even without the UI prompt.
+- **Eligibility.** Traces, hosted runs, user recordings and playback, mod scenes and
+  scene acts, editor playtests, standalone games and test mode keep the full return:
+  each owns its own ending, and standalone games were out of scope.
+- **Mod Escape.** Mod scenes, their acts and standalone games read a short Escape
+  press themselves. While one is running the toast stays hidden for a tap and appears
+  after 15 frames of holding; the 60-frame hold is unchanged. The mod still receives
+  the tap, as `SceneKeys` documents.
+
+Rejected:
+
+- Snapshotting every runtime singleton, or keeping several games in memory. The
+  engine runs one game at a time, and parking needs no copy.
+- Pausing the audio sink: hub cues share it, so the menu would go silent.
+- Keeping GameLoop bound to the parked session. Engine skips its own fade tick while
+  a gameplay runtime owns fading, so the hub's fade-in would never progress.
+- Freezing settings with new public methods on `SonicConfigurationService`: that
+  would change the pinned Mod API surface.
+- Suspending from the Mutators overlay's *Return to game hub*. That is an explicit
+  quit and still tears down.
+
+Validation, Java 25, with the root S1, S2 and S3&K ROM paths:
+`python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=com.openggf.TestGameLoop*,com.openggf.TestEngine*,com.openggf.TestMasterTitle*,com.openggf.TestEscape*,com.openggf.TestModScene*,com.openggf.TestTraceSessionLauncher*,com.openggf.TestTitle*,com.openggf.TestSuspended*,com.openggf.game.TestMasterTitle*,com.openggf.game.TestTitle*,com.openggf.game.TestHub*,com.openggf.game.TestLaunch*,com.openggf.game.launch.*' test`
+passed 554 tests with no skips. `TestGameLoopSuspension` holds Escape in a real Sonic 2
+Emerald Hill run. It parks, runs 300 hub frames with input held, then resumes with
+the player, camera, rings and timer unchanged, and the level runs again. A second
+case stops the zone music and plays a hub cue, and the restore returns the same music
+slot. `-Pguards` `TestArchitecturalSourceGuard`, `TestArchitecturalReviewGuard` and
+`TestArchUnitRules` passed 108 tests (GameLoop at 3,303 of 3,313 effective lines).
+`MasterTitleCaptureTool` with an Emerald Hill frame rendered the paused-card scenes,
+and the stock-card scenes were inspected for regressions. The change-based plan selects all 3,293 smoke classes because
+GameLoop and Engine are shared, so this is focused consumer validation, not a smoke
+or full-suite pass. Engine's GL-side suspend, thumbnail and resume path has no
+automated test; it needs an interactive playtest.

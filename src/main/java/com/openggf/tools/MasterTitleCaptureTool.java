@@ -3,7 +3,9 @@ package com.openggf.tools;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
+import com.openggf.game.MasterTitleEntry;
 import com.openggf.game.MasterTitleScreen;
+import com.openggf.graphics.RgbaImage;
 import com.openggf.graphics.ScreenshotCapture;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.opengl.GL;
@@ -22,10 +24,12 @@ import static org.lwjgl.system.MemoryUtil.NULL;
  *
  * <p>Purpose: render the pre-game menus in a hidden GLFW window with scripted
  * {@link InputHandler} key events (never desktop input) and write one PNG per scene.
- * Inputs: {@code <output-dir> [viewport-width=320] [scale=3]}; the working directory's
- * ROM images supply the title logos exactly as at startup. On macOS run with
- * {@code -XstartOnFirstThread}. Originating task: the 2026-10 master title redesign
- * (branch {@code feature/ai-master-title-redesign}).
+ * Inputs: {@code <output-dir> [viewport-width=320] [scale=3] [paused-frame.png]}; the working
+ * directory's ROM images supply the title logos exactly as at startup. A paused-frame PNG (any
+ * gameplay capture) adds the suspended-game scenes: its card first on the shelf, the End game
+ * prompt, and Quit with a paused game. On macOS run with {@code -XstartOnFirstThread}.
+ * Originating task: the 2026-10 master title redesign (branch
+ * {@code feature/ai-master-title-redesign}); suspended scenes from the hold-Escape suspend task.
  */
 public final class MasterTitleCaptureTool {
 
@@ -35,12 +39,13 @@ public final class MasterTitleCaptureTool {
 
     public static void main(String[] args) throws Exception {
         if (args.length < 1) {
-            System.err.println("usage: MasterTitleCaptureTool <output-dir> [viewport-width] [scale]");
+            System.err.println("usage: MasterTitleCaptureTool <output-dir> [viewport-width] [scale] [paused-frame.png]");
             System.exit(2);
         }
         Path out = Path.of(args[0]);
         int width = args.length > 1 ? Integer.parseInt(args[1]) : 320;
         int scale = args.length > 2 ? Integer.parseInt(args[2]) : 3;
+        RgbaImage paused = args.length > 3 ? ScreenshotCapture.loadPNG(Path.of(args[3])) : null;
         Files.createDirectories(out);
 
         int up = GLFW_KEY_UP, down = GLFW_KEY_DOWN, left = GLFW_KEY_LEFT, right = GLFW_KEY_RIGHT;
@@ -65,6 +70,12 @@ public final class MasterTitleCaptureTool {
                 new Scene("16-help", List.of(up, right, right, enter, down, down, enter), 20),
                 new Scene("17-quit", List.of(esc), 20),
                 new Scene("18-confirm", List.of(enter), 3));
+        List<Scene> pausedScenes = List.of(
+                new Scene("19-paused-card", List.of(), 40),
+                new Scene("20-paused-end-button", List.of(down, right), 40),
+                new Scene("21-paused-start-other", List.of(right, enter), 20),
+                new Scene("22-paused-quit", List.of(esc), 20),
+                new Scene("23-paused-resume-flash", List.of(enter), 3));
 
         GLFWErrorCallback.createPrint(System.err).set();
         if (!glfwInit()) throw new IllegalStateException("Unable to initialize GLFW");
@@ -86,7 +97,9 @@ public final class MasterTitleCaptureTool {
             glfwMakeContextCurrent(window);
             GL.createCapabilities();
             float[] projection = new org.joml.Matrix4f().ortho2D(0, width, 0, 224).get(new float[16]);
-            for (Scene scene : scenes) {
+            List<Scene> all = new java.util.ArrayList<>(scenes);
+            if (paused != null) all.addAll(pausedScenes);
+            for (Scene scene : all) {
                 Path configDir = Files.createTempDirectory("master-title-capture");
                 SonicConfigurationService config = SonicConfigurationService.createStandalone(configDir);
                 config.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
@@ -94,6 +107,11 @@ public final class MasterTitleCaptureTool {
                 screen.initialize();
                 screen.setEnabledModsByGame(Map.of(MasterTitleScreen.GameEntry.SONIC_2,
                         List.of("Widescreen+", "HUD Tweaks")));
+                if (paused != null && scene.name().contains("paused")) {
+                    screen.setSuspendedGame(new MasterTitleEntry.Suspended(
+                                    new MasterTitleEntry.Stock(MasterTitleScreen.GameEntry.SONIC_2), "Emerald Hill, Act 1"),
+                            paused.width(), paused.height(), rgba(paused));
+                }
                 InputHandler input = new InputHandler();
                 for (int i = 0; i < 20; i++) screen.update(input);
                 for (int key : scene.keys()) press(screen, input, key);
@@ -116,6 +134,21 @@ public final class MasterTitleCaptureTool {
             if (window != NULL) glfwDestroyWindow(window);
             glfwTerminate();
         }
+    }
+
+    private static byte[] rgba(RgbaImage image) {
+        byte[] bytes = new byte[image.width() * image.height() * 4];
+        for (int y = 0; y < image.height(); y++) {
+            for (int x = 0; x < image.width(); x++) {
+                int argb = image.argb(x, y);
+                int i = (y * image.width() + x) * 4;
+                bytes[i] = (byte) (argb >>> 16);
+                bytes[i + 1] = (byte) (argb >>> 8);
+                bytes[i + 2] = (byte) argb;
+                bytes[i + 3] = (byte) 0xFF;
+            }
+        }
+        return bytes;
     }
 
     private static void press(MasterTitleScreen screen, InputHandler input, int key) {

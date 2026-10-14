@@ -208,6 +208,21 @@ During a game, tap **Escape** to see the *Hold to return to games* toast at the 
 of the screen; hold it for one second to fade back to the master title. At the
 master title Escape is Back: it returns to the game card, then opens **Quit OpenGGF?**.
 
+Sonic 1, Sonic 2 and Sonic 3 & Knuckles games are paused rather than closed: the game
+waits as a **Paused** card, showing the moment you left, first on the game shelf.
+**Resume** (or Enter on the card) carries on from exactly that moment, music included;
+**End game** closes it. Starting another game, watching a recording, changing mods or
+opening an extra, trace replays, editor projects or content import asks before ending
+the paused game, and **Keep it paused** is the default. Settings and Game Setup can be
+changed while a game is paused; the paused game keeps the settings it was running
+with, and the changes apply to the next game you start. Recordings, trace replays,
+editor playtests, mod scenes and standalone mod games still close when you hold Escape.
+
+Mod scenes and standalone mod games often use a tap of Escape themselves (for
+example, to open their own pause menu). While one is running, a tap reaches the mod
+and shows no toast; the toast appears once Escape has been held for a quarter of a
+second, and the full one-second hold still returns to the master title.
+
 The experimental level editor opens its command palette with F1 or the north
 controller button. Directions choose a command, Confirm executes it, and Back
 closes the palette. It includes placement, hierarchy/focus, library/filter,

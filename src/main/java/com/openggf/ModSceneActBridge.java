@@ -98,6 +98,9 @@ final class ModSceneActBridge {
 
     boolean isTransitioning() { return transitioning; }
 
+    /** True while a scene's act is loaded or loading; the scene owns that run's return. */
+    boolean ownsAct() { return active != null || transitioning; }
+
     void retire() { reset(); loop.modSceneHost.close(); }
 
     void reset() {

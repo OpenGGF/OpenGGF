@@ -194,6 +194,68 @@ class TestEscapeToMasterTitleController {
         assertEquals(1.0, controller.progress(), 0.0001);
     }
 
+    @Test
+    void modOwnedTapShowsNoToastSoTheModsOwnEscapeMenuIsUncovered() {
+        InputHandler input = new InputHandler();
+        AtomicInteger transitions = new AtomicInteger();
+        EscapeToMasterTitleController controller =
+                new EscapeToMasterTitleController(() -> false, transitions::incrementAndGet, () -> true);
+
+        press(input, GLFW_KEY_ESCAPE);
+        controller.update(GameMode.MOD_SCENE, input);
+        assertTrue(input.isKeyPressed(GLFW_KEY_ESCAPE), "the tap still reaches the scene");
+        input.update();
+        release(input, GLFW_KEY_ESCAPE);
+        for (int frame = 0; frame < EscapeToMasterTitleController.PROMPT_MINIMUM_FRAMES; frame++) {
+            controller.update(GameMode.MOD_SCENE, input);
+            assertFalse(controller.visible(), "no toast after a mod-owned tap, frame " + frame);
+            input.update();
+        }
+        assertEquals(0, transitions.get());
+    }
+
+    @Test
+    void modOwnedHoldShowsTheToastAfterAQuarterSecondAndStillLeavesAfterOne() {
+        InputHandler input = new InputHandler();
+        AtomicInteger transitions = new AtomicInteger();
+        EscapeToMasterTitleController controller =
+                new EscapeToMasterTitleController(() -> false, transitions::incrementAndGet, () -> true);
+
+        press(input, GLFW_KEY_ESCAPE);
+        for (int frame = 1; frame < EscapeToMasterTitleController.MOD_TAP_FRAMES; frame++) {
+            controller.update(GameMode.LEVEL, input);
+            assertFalse(controller.visible(), "still a possible tap at frame " + frame);
+            input.update();
+        }
+        controller.update(GameMode.LEVEL, input);
+        assertTrue(controller.visible(), "a deliberate hold shows the toast");
+        input.update();
+        for (int frame = EscapeToMasterTitleController.MOD_TAP_FRAMES;
+             frame < EscapeToMasterTitleController.HOLD_FRAMES; frame++) {
+            controller.update(GameMode.LEVEL, input);
+            input.update();
+        }
+        assertEquals(1, transitions.get(), "the full hold takes the same time from the press");
+    }
+
+    @Test
+    void modOwnedHoldReleasedEarlyLingersLikeATap() {
+        InputHandler input = new InputHandler();
+        EscapeToMasterTitleController controller =
+                new EscapeToMasterTitleController(() -> false, () -> {}, () -> true);
+
+        press(input, GLFW_KEY_ESCAPE);
+        for (int frame = 0; frame < EscapeToMasterTitleController.MOD_TAP_FRAMES + 5; frame++) {
+            controller.update(GameMode.LEVEL, input);
+            input.update();
+        }
+        release(input, GLFW_KEY_ESCAPE);
+        controller.update(GameMode.LEVEL, input);
+
+        assertTrue(controller.visible(), "the toast eases out instead of vanishing");
+        assertEquals(0.0, controller.progress(), 0.0001);
+    }
+
     private static void press(InputHandler input, int key) {
         input.handleKeyEvent(key, GLFW_PRESS);
     }

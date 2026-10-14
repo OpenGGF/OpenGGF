@@ -706,7 +706,18 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   hold-to-exit timer behind that dialog. In a game, the old "hold ESC 2sec" debug text
   becomes a menu-styled toast that slides in at the top (an Esc key cap with *Hold to
   return to games*), fills gold over a one-second hold and reads *Returning to games*
-  while the screen fades. Mouse hover, click and wheel work across
+  while the screen fades. Holding Escape in a Sonic 1, 2 or 3&K game now suspends it
+  instead of closing it: the game stays loaded behind a **Paused** card first on the
+  shelf, showing its last frame and where it was, with **Resume** and **End game**.
+  Resume returns to the same frame, camera and music position. Anything that would
+  replace the paused game (another game's Start, Recordings, Mods, Extras, trace
+  replays, editor projects, content import) asks first, defaulting to *Keep it paused*,
+  and Quit warns that the paused game will end. Settings and Game Setup stay
+  available; the paused game keeps the settings it was running with and changes
+  apply to the next launch. Recordings, traces, hosted runs, editor playtests, mod
+  scenes and standalone games keep the full return. In mod scenes and standalone mod
+  games a tap of Escape reaches the mod without the toast, which appears only after a
+  quarter-second hold. Mouse hover, click and wheel work across
   the shelf, buttons and tabs, and in the Mod Manager's list, buttons and
   prompts. Confirmation, cancel and error cues stay
   host-owned with soft fades and moderate volume; compact text and shapes share

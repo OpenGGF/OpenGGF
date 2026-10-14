@@ -20,9 +20,12 @@ final class TitleHubNavigation {
         Tab(String label) { this.label = label; }
     }
 
-    /** Per-game actions under the selected card. */
+    /**
+     * Per-game actions under the selected card. The screen lists which apply to the selected card
+     * and maps the focused index through that list: a suspended game offers Resume and End game.
+     */
     enum Action {
-        START("START"), SETUP("GAME SETUP"), RECORDINGS("RECORDINGS");
+        START("START"), SETUP("GAME SETUP"), RECORDINGS("RECORDINGS"), RESUME("RESUME"), END("END GAME");
         final String label;
         Action(String label) { this.label = label; }
     }
