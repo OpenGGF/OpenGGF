@@ -65,7 +65,7 @@ and carried owners; it is part of this act's completion contract.
 | 400/512/640/800-pixel Sonic + Tails | `TestFbzAct1ColdRoute#fourHundredPixelColdRouteReachesReleasedAct2` and `#widerNativeColdRoutesReachReleasedAct2`: actual camera/viewport width and physical boss/results/title/control-release assertions | All four pass in the combined nine-case run below; other width/donor/team combinations remain open |
 | S1 Sonic solo, 320px | `TestFbzAct1ColdRoute#sonic1DonorColdRouteReachesReleasedAct2`: real donor ROM and no-spindash assertions; ordinary run/jump controller | FAIL at the lower curved-wall transfer; exact matched baseline/current failure below. Full S1 traversal remains open |
 | Width/donor/team lifecycle | `TestFbzAct1RouteHeadless#resultsOwnedReloadAndTitleLifecycleSupportsWidthsDonationsAndEveryTeamShape`: seeded boss-boundary fixture, real results/reload/title lifecycle; widths 320/352/400/512/528/640/800 × off/S1/S2 × five team shapes (105 cases), then native reset | 105-case product plus final native reset PASS in focused validation below. Not full traversal or rendered-width evidence |
-| Current standard width/team/donor axes | `TestFbzCompatibilityMatrix#configuredTeamSynchronousTransitionPreflight`, `viewportSynchronousTransitionPreflight`, `donorSynchronousTransitionPreflight` | The separate 30-row entry/reload/reset product below closes that specific load-isolation obligation; independent axis sweeps alone do not prove traversal |
+| Current standard width/team/donor axes | `TestFbzCompatibilityMatrix#configuredTeamSynchronousTransitionPreflight`, `viewportSynchronousTransitionPreflight`, `donorSynchronousTransitionPreflight` | The current30 production-preset rows plus12 separate512/640 geometry rows are qualified below; historical30 raw-width rows retain their dated scope. Other supported main/team and actual death products remain open; entry/reset does not prove traversal |
 
 ## Obligation map
 
@@ -636,3 +636,46 @@ state/pixel controls and their limits are described in the
 [headless testing guide](../../../guide/contributing/headless-testing.md).
 This performance change supplies no new native reference, full-route visual
 certification or missing viewport/donor/character coverage; inherited gaps remain.
+
+
+## Production-preset entry and repeated load ownership — 2026-10-14
+
+Lane `feature/ai-s3k-parity-hpz`, runtime base
+`5b2ff8e7851b99dd40998dfc41fbfd21c80031ef`, preceding lane HEAD `f4414cd52`.
+`TestFbzEntryReloadResetMatrix` now has 30 production rows: both acts × all five
+`WidescreenAspect` presets 320/352/400/528/800 × off/S1/S2. It applies an actual
+supported launch profile and production aspect resolution, without injecting
+raw width. Native/S2 use Sonic+Tails; S1 uses explicitly supported Sonic+Sonic,
+with decoded donor renderer/animation and independent CPU/native-P2 authority.
+Every initial production entry requests the fresh lifecycle. Every row then makes
+two real act-switch/reset cycles after explicitly contaminating source event,
+plane/shake and contact state. Replacement objects/runtime/events, source contact
+retirement, native ROM destination start, actual main/camera focus, donor rules,
+CPU leader/native-P2, configured/camera/logical-render width and restored event
+state are asserted after each load. The current main is resolved after replacement;
+a cached fixture player is not used as destination evidence.
+
+Twelve separate 512/640 custom-geometry rows retain the old physical CPU fixture,
+initialization and full reset assertions. The S1 Tails fixture has no donated
+Tails art and is explicitly outside production-profile/usable-team certification;
+it is preserved only as the inherited local geometry/control experiment.
+The viewport is set only for the headless renderer; camera width comes from the
+production configuration. These field/resource checks do not prove native pixels.
+
+Queued normal shared-admission qualification with the two DDZ classes finishes
+10:27:26 BST: 149 tests, 0 failures/errors/skips, 42.477 Maven seconds. This class is
+**42 tests, 0 failures/errors/skips**, 5.955 case seconds: 30 production and 12 custom.
+Java 25, unset desktop display variables, null OpenAL backend and surfaceless EGL
+are used with all three existing original ROM paths. Exact command from the tree:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null   python3 tools/testing/maven_queue.py -Dmse=off   '-Dtest=TestFbzEntryReloadResetMatrix,TestS3kDdzCompatibilityMatrix,TestS3kDdzLifecycleProduction'   -Dopenggf.headless.gl=surfaceless-egl   "-Ds3k.rom.path=$PROJECT_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen"   "-Dsonic1.rom.path=$PROJECT_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen"   "-Dsonic2.rom.path=$PROJECT_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" test
+```
+
+No runtime change, fixture-fed traversal, new native recording or media claim
+belongs to this slice. Repeated load/reset and actual supported-profile/preset
+entry are qualified; other main/team products, physical checkpoints and deaths,
+per-mechanic rewind/culling, 352/528 full traversal and synchronized native
+presentation/oracle obligations remain open. Historical route/transition records
+above are retained rather than globally relabelled. Combined integration and
+qualification remain lead-owned.

@@ -16,12 +16,13 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -40,17 +41,15 @@ class TestS3kDdzLifecycleProduction {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {320, 800})
-    void ringOutEndsTheFormFallsAndReloadsDoomsday(int width) {
+    @EnumSource(WidescreenAspect.class)
+    void ringOutEndsTheFormFallsAndReloadsDoomsday(WidescreenAspect aspect) {
         var config = SonicConfigurationService.getInstance();
         config.clearSessionOverrides();
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
         config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
         config.setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, true);
         config.setSessionOverride(SonicConfiguration.DISCORD_RICH_PRESENCE_ENABLED, false);
-        config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, WidescreenAspect.NATIVE_4_3.name());
-        config.resolveDisplayAspect();
-        config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS, width);
+        SozAcceptanceConfigurations.selectDisplay(aspect);
         CrossGameFeatureProvider.getInstance().resetState();
         SessionManager.clear();
         TestEnvironment.activeGameplayMode();
@@ -119,7 +118,9 @@ class TestS3kDdzLifecycleProduction {
             assertEquals(0, GameServices.level().getCurrentAct());
             var focused = GameServices.camera().getFocusedSprite();
             assertFalse(focused.getDead());
-            assertEquals(width, GameServices.camera().getWidth() & 0xFFFF);
+            SozAcceptanceConfigurations.assertDisplay(aspect);
+            assertSame(GameServices.sprites().getMainPlayable(), focused);
+            assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
             assertTrue(S3kRuntimeStates.currentDdz(GameServices.zoneRuntimeRegistry()).isPresent(),
                     "the reload installs fresh Doomsday runtime words");
             assertEquals(1, GameServices.level().getObjectManager().getActiveObjects().stream()
@@ -130,17 +131,15 @@ class TestS3kDdzLifecycleProduction {
         }
     }
     @ParameterizedTest
-    @ValueSource(ints = {320, 800})
-    void endingRequestSavesProgressAndStartsAnIsolatedTimeline(int width) throws Exception {
+    @EnumSource(WidescreenAspect.class)
+    void endingRequestSavesProgressAndStartsAnIsolatedTimeline(WidescreenAspect aspect) throws Exception {
         var config = SonicConfigurationService.getInstance();
         config.clearSessionOverrides();
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
         config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
         config.setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, true);
         config.setSessionOverride(SonicConfiguration.DISCORD_RICH_PRESENCE_ENABLED, false);
-        config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, WidescreenAspect.NATIVE_4_3.name());
-        config.resolveDisplayAspect();
-        config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS, width);
+        SozAcceptanceConfigurations.selectDisplay(aspect);
         CrossGameFeatureProvider.getInstance().resetState();
         SessionManager.clear();
         TestEnvironment.activeGameplayMode();
@@ -189,6 +188,8 @@ class TestS3kDdzLifecycleProduction {
             assertTrue(loaded, "loc_81CA4's ending request is consumed by GameLoop");
             assertEquals(0x0D, GameServices.level().getCurrentZone());
             assertEquals(1, GameServices.level().getCurrentAct());
+            SozAcceptanceConfigurations.assertDisplay(aspect);
+            assertSame(GameServices.sprites().getMainPlayable(), GameServices.camera().getFocusedSprite());
             var endingRewind = fixture.gameplayMode().getRewindController();
             assertTrue(endingRewind == null || endingRewind.currentFrame() < outgoingFrame,
                     "the ending load cannot continue the outgoing DDZ timeline");
