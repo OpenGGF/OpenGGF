@@ -628,11 +628,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   sprite publication retains only the current mapping's art, so S3K main-player
   Tails keeps his tail artwork when body animations leave unused bank slots.
   Donated Tails tails and powered Sonic teammates retain independent art banks,
-  including the larger Super Sonic sprite capacity. Sonic 2 powered controllers
-  restore palette and ring timing, current sparkle ownership and animation scripts
-  through rewind; native ending bindings restore each controller's own RAM after
-  rebinding and preserve incoming physics before the scene's powered writers run.
-  Independently animated shields
+  including the larger Super Sonic sprite capacity. Independently animated shields
   keep per-player art, including staggered insta-shields and donor playback.
   Bent pipes retain their ROM placement flips. Stage rings retain the native
   animation timer across level-counter resets and seamless reloads, including rewind.

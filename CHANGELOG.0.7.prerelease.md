@@ -35,7 +35,10 @@ Unreleased. The earlier development themes remain in
   and rewind state remain inside the native level lifecycle. Island-lift sprites
   and the Master Emerald, waterfall and torch palette cycles follow their native
   object and screen-event timing. Ending resource initialization preserves
-  scroll handling in other zones. Doomsday retires
+  scroll handling in other zones. Donated Sonic 2 powered controllers restore
+  palette and ring timing, current sparkle ownership and animation scripts through
+  rewind. Native ending bindings restore each controller's own RAM after rebinding
+  and preserve incoming physics before the scene's powered writers run. Doomsday retires
   registered followers at its native entry and rebuilds restored scroll output
   without advancing the screen event.
 
