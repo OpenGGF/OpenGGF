@@ -112283,3 +112283,84 @@ with engineAirCountdown11; ring/flash placement remains25/17 versus18/22.
 The body conformance omission closes; no strict frontier moves. Fixed-air
 and RNG comparison channels already exist in this fixture and remain read-only
 evidence for the next owner, not gameplay hydration.
+
+
+## 2026-10-14 — fresh native RNG clear, strict frontiers retained
+
+Over body `ddbc651e0`, `.worktrees/ai-s3k-parity-trace` clears the retained RNG
+owner before native fresh sprite assembly according to `Level/loc_60DE`'s
+`Lag_frame_count,$58` range. Preview and seamless reload preserve the sequence.
+The [existing title audit](../architecture/audits/trace/2026-10-14-s3k-fresh-title-sst.md#fresh-native-rng-clear--separate-follow-up-over-ddbc651e0)
+records literal RAM/returned-word evidence, the corrected test oracle and exact
+selectors. New actual-entry/world-replay3259 passes4/0/0/0;99 unaffected consumer
+cases passed17153 on identical production, including mandatory startup60.
+
+Strict89375 repeats exact85471 five-case `-Ptrace-replay` selection:5/1/0/0
+at10:55:02 BST,105s execution/145s queue. Four controls pass; continuous-chain
+segment6/8/11 retains189/12,719/82,067 raw field mismatches, first TailsX3,319
+`$31C1/$31CA`, TailsX1,583`$366C/$3674`, mapping1,507`$63/$95`, Y1,510`$7D6/$7DF`,
+and LEVEL ownership loss at input68,801. Alternate33205 retains60 compressed
+spans, first25,589 animation`$13/$05` (1/1/0/0,10:53:16 BST). Commands use normal
+`python3 tools/testing/maven_queue.py -Dmse=off <profile> '-Dtest=<selectors>'
+'-Ds3k.rom.path=<absolute verified ROM>' test -B`, Java25 and surfaceless EGL.
+
+Native presence gaps726/888 close, but sampled segment2 row969 retains a missing
+projectile SST43; no strict trace closure is claimed. Second-entry ring/flash
+25/17 versus native18/22 remains. Actual incoming64382 passes five cold composed
+endings but errors in two positioned320/800 cases with a missing title-art lease.
+Matched38983 reproduces both identical errors on exact pre-RNG production ddbc;
+that title consumer gap, already present on ddbc but not attributed to pinned5b2, remains separate from this qualified RNG slice.
+
+
+## 2026-10-14 — S3K projectile native INIT/XY retirement
+
+Over RNG85ca2a3c6, `.worktrees/ai-s3k-parity-trace` replaces the shared
+Monkey/Bloominator projectile's immediate48px cull with native
+`S3KBadnikProjectile_Init/Main → Sprite_CheckDeleteTouchXY → Go_Delete_Sprite`.
+INIT activates touch/draw and falls through movement; native inclusive Y−128..384
+and unsigned coarse-X admission retain a marked physical record until its next
+dispatch. Short native-contract negative64281 fails13/13; changed-owner63437
+passes613 of614 cases, with its sole stale removed-anchor inventory corrected
+by exact73701 (1/0/0/0). The [owning audit](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#shared-s3k-projectile-native-init-and-retirement)
+records selectors, retirement graph replay and scope.
+
+Strict76116 (`-Ptrace-replay`, exact85471 five-case selector) is5/1/0/0 at
+11:13:37 BST,101s execution/16s queue: original AIZ, initial HCZ and both prefixes
+pass, chain189/12,719/82,067 raw field mismatches and all first fields remain
+unchanged, including input68,801 loss of LEVEL ownership. Alternate90350
+(`-Ptrace-segments -Dtest=TestS3kAizZoneSliceTraceReplay#replayMatchesTrace`) is
+1/1/0/0 at11:15:54 BST,37.454s execution/63s queue;60 compressed spans, first
+25,589 animation`$13/$05`. Commands retain normal queue, Java25, surfaceless EGL
+and verified absolute locked-on ROM.
+
+Sampled segment2 presence matches through1054, closing the969 projectile gap.
+First1055 retains native pending-delete SST43 while engine is clear; this timing
+attribution and second-entry25/17 versus native18/22 remain unresolved. The two
+positioned title-art lease errors match pre-RNG ddbc, but are new/unresolved
+overall-task consumer blockers relative to pinned5b2 until repaired/attributed.
+No strict frontier closure or overall green delivery is claimed.
+
+
+## 2026-10-14 — Act3 title graph admission closes incoming lease errors
+
+Over projectile3ac656deb, `.worktrees/ai-s3k-parity-trace` now reads the existing
+LOADING continuation state when preparing fresh title actors. Native
+`loc_63C14/loc_7F310` set `Act3_flag` before `$1600/$1700`; `loc_62B6` bypasses
+both graph and presentation. The prior fresh-SST slice incorrectly created
+an orphan graph without an art lease. This is a correction to this task's new
+fresh-title code, not a pre-existing pinned5b2 failure or an RNG regression.
+The [existing audit](../architecture/audits/trace/2026-10-14-s3k-fresh-title-sst.md#act3-continuation-bypass--whole-graph-admission)
+records the native negative, read-only semantic gate and exact selectors.
+
+58480 completes119/0/0/0 at11:33:58 BST; actual two-destination/five-preset
+admission, carry state, graph/rewind, D01, API and mandatory startup checks pass.
+72545 completes32/0/0/0 at11:38:14: PLC25 plus all seven actual incoming DEZ
+cases, including both positioned320/800 fights and all five cold endings.
+No movie/oracle or lease fallback changed. Strict45693 completes5/1/0/0 at
+11:43:35; original AIZ/initial HCZ/prefix2 remain green. The continuous chain
+retains189/12,719/82,067 raw field mismatches and stop68,801. Alternate68188
+completes1/1/0/0 at11:47:19 with60 grouped spans, first25,589 animation`$13/$05`.
+Command/profile/source, execution/queue intervals and unresolved screenshot/
+strict parity breadth remain explicit in the audit; no frontier closure claimed.
+
+Final guards14085:111/0/0/0 at11:49:37 BST,33.532s execution/21s queue.

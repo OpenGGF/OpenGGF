@@ -5281,6 +5281,11 @@ Do not substitute the intro-controller slot: `Dynamic_object_RAM+2` is absolute
 SST5. D01's `Obj_TitleCardInit` deletes before child/art creation, leaving SST8
 for the ending owner. Use semantic fresh-level admission and the actual loaded
 destination; production `LevelLoadContext` zone/act can be unset.
+`loc_63C14/loc_7F310` set `Act3_flag` before `$1600/$1700`: `loc_62B6`
+bypasses the entire graph, not merely its visual presentation. Reuse the
+captured LOADING continuation admission without consuming it. Creating an
+owner on that path produces a later teardown with no runtime-art lease;
+do not hide it with a missing-lease fallback.
 
 The maintained `SlotOccupancyProbe` masks native code pointers to a low byte for
 its type display. Use that channel to compare occupancy only; identify native
@@ -5368,3 +5373,39 @@ not on the body. Keep both literal spawn orientations when P1 crosses sides;
 a synthetic body turn or32-pixel collision/render shift invents behavior.
 The [native graph audit](../../../docs/architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#separate-body-orientation-correction)
 records the negative old oracles and unchanged strict trace frontiers.
+
+
+## Fresh native Level entry clears RNG before sprite assembly
+
+`Level/loc_60DE` uses `clearRAM Lag_frame_count,$58`: `$F62A..$F681` includes
+`RNG_seed` `$F636`. This runs for stage returns, death/restart and ending Level
+loads, not preview or seamless in-place continuation. Clear the retained global
+RNG owner at semantic native fresh entry before Process_Sprites; art/title
+presentation admission is not the authority for this RAM clear. Preserve the
+V-int clock and AIZ vine angle outside this range.
+
+`Random_Number`'s returned folded D0 low word and its swapped stored seed low
+word differ: a cleared S3K seed returns `$8010` and stores `$8010B493`. Align
+PRE_ROW observers with completed native rows through the actual level counter
+and owner call ordinal, not movie-frame subtraction.
+
+Origin: 2026-10-14 S3K parity, fresh-entry RNG follow-up over `ddbc651e0`.
+
+
+## S3K projectile XY culling marks its SST before clearing
+
+`S3KBadnikProjectile_Init` reads ObjDat and sets shield bit3, then falls through
+Main/motion in the same dispatch. `CreateChild2_Complex` does not copy collision
+from the parent; it stays0 until Init. `Sprite_CheckDeleteTouchXY` accepts
+unsigned coarse X through `$280` and unsigned `(Y-CameraY+$80)` through `$200`,
+both inclusive. Its Y window is−128..384, not a visible-screen rectangle or
+symmetric margin. Retain the existing declared viewport extension only in X.
+
+The admitted path calls AddList/Draw independently of hurt flags; shield
+deflection must not hide the sprite. `Go_Delete_Sprite` sets status7 and the
+next code pointer without clearing that SST. The following `Delete_Current_Sprite`
+dispatch clears without another move. Capture INIT/pending retirement and replay
+both sides of the physical-slot boundary. A pointer-low-byte occupancy label
+is not a type oracle; exact RAM code and owning routine resolve it.
+
+Origin: 2026-10-14 S3K parity projectile slice over `85ca2a3c6`.

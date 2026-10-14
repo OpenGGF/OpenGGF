@@ -598,3 +598,48 @@ production presets. Negative40269 fails2/2; corrected54064 passes18/0/0/0.
 Strict39401 retains four green controls and the inherited continuous-chain
 failure; alternate80705 retains60 grouped errors. This body conformance repair
 adds no cold-route, native pixel/audio or strict-chain closure claim.
+
+
+## Native fresh-entry RNG — 2026-10-14
+
+`Level/loc_60DE` clears the retained RNG seed before fresh sprite assembly,
+including special-stage returns; preview and seamless continuation retain it.
+`TestS3kFreshLevelRngState` independently passes four real-entry/preservation/
+whole-world RNG replay cases, and the existing99 affected consumers remain
+qualified on identical production. Strict original AIZ/initial HCZ/both prefixes
+remain green; alternate60 spans and continuous-chain189/12,719/82,067 raw field
+mismatches are unchanged. Sampled presence gaps726/888 close; first remaining
+segment2 owner discrepancy is projectile SST43 at969. This is source/state
+conformance, not a native waveform/pixel or whole-route parity claim. The
+[existing audit](../../audits/trace/2026-10-14-s3k-fresh-title-sst.md#fresh-native-rng-clear--separate-follow-up-over-ddbc651e0)
+records exact checks and the independently reproduced positioned-ending title
+lease gap.
+
+
+## Native shared projectile lifetime — 2026-10-14
+
+`TestS3kBadnikProjectileNativeLifetime` verifies real higher-slot hand birth,
+INIT→motion fallthrough, native inclusive Y/coarse-X cull boundaries and
+registered object-manager restoration/replay before, during and after delayed
+slot clearing. All13 pass with Monkey/Bloominator/touch/transient consumers and
+mandatory startup60 in63437; its one stale anchor inventory passes corrected
+73701. Actual placed Monkey graph remains qualified at320/352/400/528/800.
+Strict controls remain green, but alternate60 spans and chain189/12,719/82,067
+raw mismatches do not move. Sampled physical presence improves969→1055; native
+status7 pending-delete versus engine clear at1055 still needs exact clock
+attribution. The [existing audit](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#shared-s3k-projectile-native-init-and-retirement)
+distinguishes this local owner qualification from cold-route/pixel/audio parity
+and the newly unresolved positioned title-art consumer errors.
+
+
+### 2026-10-14 Act3 title admission follow-up
+
+The new fixed-title graph now honors native Act3 continuation bypass through
+existing LOADING carry state. Two internal destinations × actual production
+presets320/352/400/528/800 pass independent owner/child admission and48-input
+teardown negatives. Affected119 and PLC25 plus actual incoming DEZ7 pass;
+both positioned art-lease errors introduced by the earlier fresh-title slice
+are resolved without input/oracle changes. Original AIZ/initial HCZ/prefix2
+remain green; alternate60 and chain189/12,719/82,067 raw-field frontiers stay
+unchanged. [Native evidence and exact checks](../../audits/trace/2026-10-14-s3k-fresh-title-sst.md#act3-continuation-bypass--whole-graph-admission)
+do not certify native screenshot/audio or whole-act parity.

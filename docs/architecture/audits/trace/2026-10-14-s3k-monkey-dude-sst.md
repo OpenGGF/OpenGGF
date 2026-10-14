@@ -129,3 +129,70 @@ fields and input68,801 stop. Alternate80705 repeats the exact40737 selector:
 animation`$13/$05`. Sampled occupancy still first differs at726 with extra
 engineAirCountdown11. This closes a source-confirmed body conformance omission
 and moves no strict frontier. No rendered pixel or audio parity is asserted.
+
+
+## Shared S3K projectile native INIT and retirement
+
+Separate slice over RNG85ca2a3c6: `CreateChild2_Complex` copies mappings/art,
+positions and word velocities into a cleared higher SST; collision remains0.
+`S3KBadnikProjectile_Init` `$86D4A` reads ObjDat and sets shield-reaction bit3,
+then falls through `$86D5E` Main, its movement callback, and
+`Sprite_CheckDeleteTouchXY`. The tail checks unsigned coarse X against `$280`
+at native width and unsigned `(Y-CameraY+$80)` against `$200`, inclusive: Y
+relative−128..384 independently of screen height. The existing declared wider
+coarse-X viewport extension is preserved. The admitted path independently
+calls AddList and Draw even after shield deflection clears hurt flags.
+`Go_Delete_Sprite` publishes status7/code`Delete_Current_Sprite` now; the next
+slot dispatch clears without another movement. Two captured booleans retain
+INIT/pending deletion through pure recreation, without a fake full native header
+projection, generic allocator/timing changes or fixture gates.
+
+Actual native segment2 row969 has projectile SST43 `$272B/$0444`, cameraY`$047C`:
+56px above the viewport, inside the native−128 boundary. The previous 48px
+rectangle deleted it immediately. The short test additionally drives the
+ordinary real Monkey body/five-arm/hand graph to its once-only throw with the
+coconut56px above the viewport; the higher projectile moves in that same pass.
+Other cases verify literal Y/coarse-X equality and adjacent failures, unsigned
+Y wrap, full manager snapshots before/pending/after clear with two replay
+cycles, and rendering independent of shield-deflected touch.
+
+New `TestS3kBadnikProjectileNativeLifetime`: baseline64281 fails13/13/0/0
+at11:08:27 BST,26.822s execution/0s queue. An initial test-only stream typing
+error caused compile failure90570, which is not native negative evidence.
+Candidate63437 completes614/1/0/0 at11:10:26 BST,71s execution/0s queue:
+all13 new checks and the remaining runtime consumers pass; the sole red scalar inventory
+`TestScalarOnlyCodecDeletion#batch170S3kBadnikCutsceneScalarsAreMutableForCompactRestore`
+that still named the synthetic `treeAnchorX` removed by ddbc. Removing only that
+absent field, with its native X rationale, passes exact73701:1/0/0/0 at11:11:26
+BST,25.626s execution/0s queue. No allowance or unrelated inventory changes.
+
+Normal affected selector:
+`TestS3kBadnikProjectileNativeLifetime,TestBloominatorBadnikInstance,TestMonkeyDudeBadnikInstance,TestMonkeyDudeNativeSstGraph,TestS3kMonkeyDudePlacedGraph,TestS3kBadnikTouchResponseProfiles,TestS3kSelfContainedTransientRewind,TestS3kRewindFixBatch1Codecs,TestScalarOnlyCodecDeletion,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`.
+The exact scalar-only method rerun uses the bounded `--lean` lane; all ROM/trace
+checks retain normal admission. Commands use Java25, surfaceless EGL,
+`python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=<selector>'
+'-Ds3k.rom.path=<absolute verified ROM>' test -B`.
+
+Strict76116 repeats exact85471 selector/profile with read-only occupancy enabled:
+5/1/0/0 at11:13:37 BST,101s execution/16s queue. Original AIZ, initial HCZ and
+both prefixes pass. Chain189/12,719/82,067 raw field mismatches, first fields
+and input68,801 stop are unchanged. Alternate90350 repeats exact40737 selector:
+1/1/0/0 at11:15:54 BST,37.454s execution/63s queue,60 compressed spans and first
+25,589 animation`$13/$05`. The observer uses `OGGF_SLOT_PROBE=1`,
+`OGGF_SLOT_PROBE_FULL=1`, output only under this tree's target. Presence now
+matches through sampled segment2 row1054, closing the earlier969 absence;
+at1055 native SST43 is still `Delete_Current_Sprite` `$1ABB6` at `$267F/$04BF`,
+while the engine has cleared it. ROM bytes`22487011720022C151C8FFFC32C14E75`
+corroborate that clear routine; this remaining dispatch/clock boundary is not
+a fitted extra wait. At second entry3981 engine ring25/flash17 versus18/22
+remains. No strict trace closure, native pixel/audio parity or full projectile
+header conformity is asserted.
+
+The two positioned ending lease errors are inherited only relative to pre-RNG
+ddbc. They are NEW/unresolved delivery blockers until matched against pinned5b2
+or fixed at the fresh title owner/art lifecycle; prior delivered seven-case
+incoming qualification is not superseded by a five-cold/two-error green claim.
+
+Final affected guards28232 pass111/0/0/0 at11:18:31 BST,32.393s
+execution/29s queue. This is bounded owner/consumer validation, not broad smoke
+or release full-suite coverage.

@@ -19,6 +19,10 @@ public final class Sonic3kFreshTitleCardSst {
                 && context.isIncludePostLoadAssembly()
                 && context.getLoadMode()==LevelLoadMode.FULL
                 && context.getAssemblyKind()==LevelAssemblyKind.FRESH_LEVEL_ASSEMBLY;
+        // loc_63C14/loc_7F310 set Act3_flag before StartNewLevel. loc_62B6
+        // bypasses the whole fixed title graph, not only its presentation.
+        if (com.openggf.level.LevelContinuationCarry.bypassesInitialPresentation(
+                GameServices.level())) installing=false;
         // loc_62B6 bypasses $1701. Obj_TitleCardInit deletes at $D01 and
         // competition zones $E..$12 before creating archives or children.
         if ((zone==0x17 && act==1) || (zone==0x0D && act==1)
