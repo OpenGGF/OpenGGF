@@ -474,7 +474,6 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossGeyserCutscene", "artHandle"), RewindFieldPolicy.TRANSIENT),
             // The ship child rebinds to the nearest recreated live ship; its accumulator remains captured.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Lbz2RobotnikShipInstance$GradualCameraMaxXChild", "parent"), RewindFieldPolicy.TRANSIENT),
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossCutsceneInstance", "explosionController"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossInstance", "defeatExplosionController"), RewindFieldPolicy.DEFERRED),
             // Three live AIZ miniboss barrels make nearest-object reconstruction
             // ambiguous after FallingShot teleports to its camera-relative drop.
@@ -482,7 +481,12 @@ final class DefaultObjectRewindPolicies {
             // recreate hooks retain nearest-object lookup only as a phase-one seed.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossNapalmProjectile", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossNapalmProjectile", "barrel"), RewindFieldPolicy.CAPTURED),
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossBarrelShotFlareChild", "anchor"), RewindFieldPolicy.CAPTURED),
+            // Common/falling shots can belong to the cutscene or fight graph. Their
+            // camera-relative launch XY cannot identify the firing barrel/boss.
+            // A pure spawn shell binds these exact live ObjectRefs in phase two.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossBarrelShotChild", "parent"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossBarrelShotChild", "barrel"), RewindFieldPolicy.CAPTURED),
+            // Barrel-shot flares capture numeric parent3: cleared/recycled SST headers remain readable.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$FallingLogChild", "linkedSplash"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$SplashChild", "linkedLog"), RewindFieldPolicy.CAPTURED),
             // Ride-vine link chains carry the rendered swing/deploy state of a ride mechanic.

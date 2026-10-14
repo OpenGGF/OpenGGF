@@ -60,11 +60,12 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild implements Re
     private State state = State.INIT;
     private int timer;
     private int mappingFrame = 3;
-    private int cutsceneCounter;
     private int animIndex;
-    /** ROM: $39(a0) on the barrel — per-barrel counter for drop position cycling.
-     *  Incremented by 4 each time a shot enters the top-drop phase (sub_68EE4). */
+    /** Native byte $39: FireLoop/FireShot's signed burst counter and the
+     *  SAME byte read/written by SetShotPosition's unsigned +4 cycle. */
     private int positionCounter;
+    // Lower render bits copied by this barrel's Refresh_ChildPositionAdjusted dispatch.
+    private int nativeRenderFlags;
 
     public AizMinibossFlameBarrelChild(AbstractBossInstance parent, int barrelIndex, boolean cutsceneVariant) {
         super(parent, "AIZMinibossBarrel" + barrelIndex, 4, 0x90);
@@ -95,12 +96,14 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild implements Re
         }
         int xOffset = BARREL_OFFSETS[barrelIndex][0];
         int yOffset = BARREL_OFFSETS[barrelIndex][1];
-        boolean hFlip = (parent.getState().renderFlags & 1) != 0;
+        nativeRenderFlags = parent.getState().renderFlags & 3;
+        boolean hFlip = (nativeRenderFlags & 1) != 0;
         if (hFlip) {
             xOffset = -xOffset;
         }
         this.currentX = parent.getX() + xOffset;
-        this.currentY = parent.getY() + yOffset;
+        if ((nativeRenderFlags & 2) != 0) yOffset = -yOffset;
+        this.currentY = (parent.getY() + yOffset) & 0xFFFF;
     }
 
     @Override
@@ -155,7 +158,7 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild implements Re
                 // Open animation complete — start firing
                 mappingFrame = 5;
                 if (cutsceneVariant) {
-                    cutsceneCounter = 3;
+                    positionCounter = 3;
                     state = State.FIRING_CUTSCENE;
                 } else {
                     state = State.FIRING_MINIBOSS;
@@ -163,7 +166,6 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild implements Re
             }
             case FIRING_CUTSCENE -> {
                 fireCutsceneShot();
-                timer = 0x1C;
                 state = State.BETWEEN_SHOTS;
             }
             case FIRING_MINIBOSS -> {
@@ -173,16 +175,15 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild implements Re
                 enterClosingAnimation();
             }
             case BETWEEN_SHOTS -> {
-                // ROM loc_687DC: checks tst.b $39 EVERY frame during wait,
-                // exits immediately once counter goes negative after 4th shot
-                if (cutsceneCounter < 0) {
+                // WaitAfterShot calls Obj_Wait, whose signed word underflow
+                // jumps directly to FireShot. Its pair and $39 decrement belong
+                // to this dispatch; the signed-counter tail then selects Return.
+                if (--timer < 0) {
+                    fireCutsceneShot();
+                }
+                if ((byte) positionCounter < 0) {
                     enterClosingAnimation();
-                    break;
                 }
-                if (--timer >= 0) {
-                    break;
-                }
-                state = State.FIRING_CUTSCENE;
             }
             case CLOSING -> {
                 if (--timer > 0) {
@@ -210,9 +211,10 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild implements Re
     }
 
     private void fireCutsceneShot() {
-        // loc_687B6: counter decremented before child selection.
-        cutsceneCounter--;
-        if (cutsceneCounter == 1) {
+        // FireShot publishes word2E before decrement/checked child allocation.
+        timer = 0x1C;
+        positionCounter = (positionCounter - 1) & 0xFF;
+        if (positionCounter == 1) {
             // loc_68C96 path spawned from ChildObjDat_690A8, but cutscene parent
             // clears collision_flags in loc_68CD0.
             spawnShot(AizMinibossBarrelShotChild.Mode.ADVANCED_NON_COLLIDING);
@@ -264,6 +266,9 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild implements Re
         this.positionCounter = value & 0xFF;
     }
 
+    /** Narrow native header read for physical parent3 consumers; no status/lifetime inference. */
+    int nativeRefreshRenderFlags() { return nativeRenderFlags; }
+
     /** ROM render_flags(a1) read by AIZMiniboss_SetShotPosition. */
     boolean isFacingFlipped() {
         return parent != null && (parent.getState().renderFlags & 1) != 0;
@@ -294,7 +299,7 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild implements Re
         if (renderer == null || !renderer.isReady()) {
             return;
         }
-        boolean hFlip = (parent != null) && ((parent.getState().renderFlags & 1) != 0);
-        renderer.drawFrameIndex(mappingFrame, currentX, currentY, hFlip, false);
+        renderer.drawFrameIndex(mappingFrame, currentX, currentY,
+                (nativeRenderFlags & 1) != 0, (nativeRenderFlags & 2) != 0);
     }
 }

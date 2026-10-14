@@ -501,3 +501,371 @@ remains. Earlier native/engine Monkey/projectile/HCZ images stay separately
 source-bounded; this slice adds no native pixel/audio qualification. Rhinobot
 charge/brake children, slotted art/DPLC pressure and the inherited dash-timeout
 fallback remain separate native-conformance limits, not claims from these tests.
+
+
+## AIZ barrel flare raw lifetime and physical parent3
+
+Source context: `8f7ec20a1` plus local flare SHA256
+`2d292933cffc459cb0a6e3e79ebc9e21fe7985c606c38096c5d57bffda742eb3`,
+barrel `5ebe04009423b8001b586a7cc33538c36f01e5c4f90c6c95a83194b6738be343`
+and owning policy `fdb281a21a362102e494d69be4d18da5d04c7ce1a1a8258822dc28655374210b`.
+New component test hash `df8337b7e26140da076fcd89b1225e087bf88b40687f1e30a52bb39eea40d265`;
+updated actual-ROM napalm test `cb13b075166ffef388d2610833f6084cd7e55d62648f52d3945a7905efdf0d87`.
+
+The owning allocation ledger is returned AIZ **segment2**, separately from the
+first strict physics reds in segments6/8/11. Original-controller row2881 creates
+flare17/shot18 in both engines. Native keeps flare17 until Go_Delete at2898 and
+physical clear2899, so barrel1 at2897 allocates19/20. The old Java sequence freed
+17 early, placing that next pair in17/19 and leaving20 absent. The existing $10
+barrel stagger is therefore not evidence for a fitted fire-delay correction.
+
+`AIZMiniboss_BarrelShotFlare` (:137029–137047) refreshes physical parent3, dispatches
+its routine, then Draw_Sprite. Init publishes frame7/priority$200/dimensions8 and
+returns without animation. The exact13 ROM bytes at$6913F match
+`AniRaw_AIZMiniboss_BarrelShotFlare` (:137954):7/1,7/1,8/1,9/3,A/3,B/3,F4.
+The existing ROM-backed raw interpreter applies `Animate_RawMultiDelay`
+(:177563–177617): cursor0 skips the first pair on the first animation call, signed
+byte underflow advances, and F4 invokes Go_Delete_Sprite. That marker still draws
+B in its wrapper on birth+17; Delete_Current clears the following dispatch.
+The local wrapper has no coarse-X deletion tail, so shared manager culling is
+locally bypassed without changing the manager or checked allocation.
+
+`Refresh_ChildPositionAdjusted` (:177300–177332) reads the current numeric SST,
+not the original parent object, copies lower-two render bits and negates the
+signed offsets. The flare now captures the physical parent3 slot; a pure
+ctx.spawn shell restores the birth metadata, raw cursor and numeric link.
+The barrel's existing refresh stores its copied bits/signed Y offset. Empty
+slots provide genuinely cleared XY/flags. Live barrel/flare projections and
+existing NativeSstStateSource provide only consumed header data; an unknown
+nonempty owner fails before any position/animation mutation. No fake full-header
+projection or unknown zero default was added. Arbitrary pressure residue remains
+unsupported, not certified by the literal recycled-header vector.
+
+Draft99161/52600 terminated at test compilation, with no behavioral credit.
+Draft49556 ran19 setup errors because its fixed placement attempted reserved
+player SST0..3; dynamic admission correctly rejected it. Corrected negative72464
+on8f completes19/13fail/0errors/0skip at15:38:30 BST,26.753s execution/36s queue.
+First candidate84527 is619/5fail/0errors/0skip at15:42:09 BST,73s/20s: three live
+flip vectors still had an idle FrozenBoss without its native dispatch stamp;
+two actual-ROM consumer helpers still reflected removed anchor/cursor fields.
+The initial five moving passes were also idle-barrel controls, not proof that
+phase-two restoration compensates wrong birth metadata.
+
+The corrected matched nine-vector negative29122 restores only the exact8f
+flare/barrel/policy runtime, retaining declared test inputs. It completes9/
+8fail/0errors/0skip at15:48:47 BST,65s execution/144s queue: all five genuinely
+moving cases lose flare birth metadata (12320/816→nearest-barrel12329/820), while
+flip1/2/3 fail and flip0 passes. Exact candidate hashes were restored and the
+three temporary source backups removed. Consumer helpers now resolve numeric
+parent3 to the actual live owner identity and compare initialized/delete,
+mapping, cursor and timer state, without filtering comparisons.
+
+Final affected25518 is619/0/0/0 at15:54:05 BST,71s execution/148s queue:
+`TestAizMinibossFlareNativeGraph,TestS3kAizMinibossGraphRewind,TestAizMinibossNapalmRoute,TestAizMinibossNapalmProductionRoute,TestAizMinibossBarrelShotChild,TestSecondStrikeBoss,TestS3kSelfContainedTransientRewind,TestScalarOnlyCodecDeletion,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`.
+The19 new component cases cover literal INIT/raw/deletion/header/two-pair
+allocation, five declared camera widths320/352/400/528/800, both-way recreation
+and two45-frame forward cycles, live/cleared/recycled parent3, all flip bits and
+unknown-header rejection. These are component cameras, not full host preset,
+donor/roster/registered-world route certification. Actual AIZ2 napalm production
+consumers, SecondStrike and all four mandatory startup consumers pass.
+
+Canonical40282 uses the same25714 trace selector/profile plus documented
+`OGGF_SLOT_PROBE=1 OGGF_SLOT_PROBE_FULL=1 OGGF_SLOT_PROBE_OUT=target/flare-native-slot-occupancy`.
+A misspelled observer-only request54825 was canceled while waiting, terminal130,
+no tests; only the corrected request ran. Canonical40282 completes5/1fail/
+0errors/0skip at15:58:37 BST,96s execution/29s queue: original AIZ, initial HCZ
+and two prefixes green. Segment6/8/11 raw totals remain189/12,719/82,067;
+physics189/12,604/69,393 and animation0/115/12,674. First non-camera physics
+remains3319 P2X$31C1/$31CA,1583 P2X$366C/$3674,1510 Y$7D6/$7DF. Segment11 still
+loses ownership before closure at input68,801/load-generation9. No additional
+first-animation field is exposed by these chain summaries.
+
+Alternate34650 completes1/1fail/0errors/0skip at15:56:25 BST,34.901s/26s:60
+grouped spans (25physics/35animation), first25589 animation$13/$05; first physics
+25590 tails_x_sub$7800/$6C00. Guards91291 passes111/0/0/0 at15:56:59 BST,
+33.758s/62s, the same four source/rewind/timing classes/profile as41681. All
+commands retain Java25, exact surfaceless EGL and the absolute verified original
+S3K ROM. No broad/full-suite sweep, controller change or comparison hydration.
+
+The segment2 observer now shows actual flare/shot19/20 at2897. Including reserved
+keys, sampled allocation-presence advances2897→2910, native-only17/21; preceding
+sample2898. That following callback's allocation remains a separate owner.
+Shot18 is still born at engineY812 versus native816: native shot Init draws/RTS
+before movement (:137065–137085), while current Java moves on its birth dispatch.
+These are explicit next targets, not a whole native graph or strict trace pass.
+Existing inspected native/engine images remain source-bounded to their recorded
+builds; this slice adds no rendered-pixel, SAT/priority or audio certification.
+
+
+## AIZ shot stationary INIT and cleared raw state
+
+Source6932189b9 plus shot SHA25621077a13d62832b2bc4a6e6cdfea05fe950b35858b17e557464c6cbb3c2116dd;
+new TestAizMinibossShotNativeInit SHA2565d184aa7ab0cdc73125abdcc125bb5d74d065d1d28a515debf0fd3221743b30f.
+`AIZMiniboss_BarrelShot_Init` (:137065–137085) loads attributes, SFX, script30,
+callback34, Y velocity−$400 and word2E=$60, then Draw_Sprite/RTS without movement.
+FallingShot_Init (:137474) likewise returns after the common Init. The following
+Move_AnimateRaw_Wait (:179640) moves, animates, then calls Obj_Wait; expiry finishes
+movement/animation before StartPause. Pause/Launch write routine, callback and
+counter but preserve the same raw script/cursor/timer (:137093–137126).
+
+Exact ROM$6914C bytes01,0C,0D,FC use Animate_RawNoSST (:177341), cleared cursor0/
+timer0. Init drawsC, then ordinary movement drawsD,D,C,C. The old moving Init
+consumed a primed timer and accidentally preserved this published sequence;
+merely delaying movement without restoring raw state would introduce a second
+error. The shot now captures the existing S3kRawAnimation.State, obtains its
+four bytes through injected ROM access, and preserves that bank through Pause/
+Launch. Native$60 wait holds zero on movement96, then movement97 underflows and
+publishes pause8 on the same pass. No fire delay, allocator, shared clock or
+fixture/controller change.
+
+Initial negative64359 is10/9fail/0errors/0skip at16:18:10 BST (24.219s execution/
+114s queue). Five forced cutscene-graph recreations additionally reveal the old
+shot factory returns null because it searches only fight parents; this is a
+separate required next slice. The common-Init fixture was explicitly changed to
+a typed inert fight parent, retaining full recreation and all comparisons.
+Matched14972 is10/4fail/0errors/0skip at16:24:28 BST (23.961s/94s): three mode
+birth-Y failures816→812 and the$60 dispatch failure; five full-recreation/replay
+controls and the old published C/D sequence pass. No missing child was waived.
+
+Final46911 passes630/0/0/0 at16:34:25 BST (73s execution/317s queue), the existing
+619 flare/actual napalm/scalar/SecondStrike/startup checks plus11 independent
+shot cases. Selection adds TestAizMinibossShotNativeInit to25518 above, retaining
+normal queue/Java25/EGL/absolute original ROM. The new component cases include
+all three modes, literal raw/counter/callback ordering and five declared camera
+widths320/352/400/528/800 with forced recreation and two45-entry cycles before/
+after Init. These are manager components, not full donor/host/route products.
+
+Canonical25467 uses the same five-case25714 trace profile/selection, observer
+OGGF_SLOT_PROBE=1, OGGF_SLOT_PROBE_FULL=1 and output target/shot-init-native-slot-occupancy.
+It completes5/1fail/0errors/0skip at16:47:30 BST,93s execution; queue duration is
+unavailable in the retained tool output. Original AIZ/initial HCZ/two prefixes
+pass. Chain6/8/11 raw189/12,719/82,067; physics189/12,604/69,393 and animation
+0/115/12,674 remain unchanged. First non-camera3319 P2X$31C1/$31CA,1583 P2X
+$366C/$3674,1510 Y$7D6/$7DF; segment11 ownership stops input68,801/loadgen9.
+Alternate27675 is1/1fail/0errors/0skip at16:43:21 BST (33.895s/145s):60 grouped
+spans, first25589 animation$13/$05. Guards19599 passes111/0/0/0 at16:45:56 BST
+(31.939s execution; queue unavailable). Same guard/alternate commands as25714.
+No broad/full run or hydration; unchanged strict reds remain open.
+
+The actual segment2 engine shot18 now draws at birthY816 on row2881, matching
+the native stationary Init. Subsequent sampled presence still first misses17/21
+at2910, where the barrel's deferred callback is the next allocation owner. Pure
+cutscene-shot recreation/exact links remains required next work. Existing image
+provenance remains source-bounded; these checks add no rendered/audio parity.
+
+
+## AIZ shot pure recreation and exact live links
+
+Source `a06056a0b` plus shot SHA256 `bbb2459141faf1353959104c58f213d8d1cf3cb3b5b01a3e323e9bf046a74f6e`,
+policy `e5c9f9af5619c4fcb902b3ee9b1025b129e130b1c2825758ce12d0b8b01ba206`,
+TestAizMinibossShotNativeGraph `b56ca3eee67a043d23b5558ef7ca016ad9aedb24243f29e3060522f39cef3d38`.
+The normal constructor and dispatch are unchanged. Native Launch reads its
+firing barrel through parent3 (:137110); FallingShot reads the boss through that
+barrel (:137450). Camera-relative shot XY cannot identify either live owner.
+The former factory searched only AizMinibossInstance, dropping legitimate
+cutscene shots, and selected the nearest barrel when a fight graph was present.
+
+Matched negative99092 completes 9/9fail/0errors/0skip at 16:56:27 BST, 24.450s
+execution/12s queue. Three pure ctx.spawn shells return null; all five moving
+cutscene manager restorations lose shot slot9. Independent cutscene/fight graphs
+change captured shot subtype2 to another barrel's4. No graph difference was
+filtered or accepted. The pure shell now retains every ctx.spawn field without
+live lookup, child allocation, SFX or animation advancement. Two explicit local
+CAPTURED ObjectRef policies hydrate mutable parent/barrel fields in phase two,
+along with existing mode/state/needsInitSfx/raw fields, before any dispatch.
+
+Affected37849 passes 639/0/0/0 at 16:59:09 BST, 73s execution/23s queue, the
+46911 selection plus TestAizMinibossShotNativeGraph. Its nine cases cover all
+three shell modes, five declared camera widths320/352/400/528/800, moving
+metadata, forced recreation and two45-entry forward cycles in both directions,
+and independent exact two-parent/three-barrel identity. Existing actual AIZ2
+napalm/SecondStrike/scalar and four mandatory startup consumers remain green.
+Guards9839 passes 111/0/0/0 at 17:01:12 BST, 31.854s/20s with the existing four
+-Pguards selectors, Java25/EGL environment. These are full manager components,
+not whole registered-world/donor/host/cold-route product certification.
+
+No ordinary gameplay trajectory changes in this factory-only slice; the source-
+bounded canonical25467/alternate27675 strict observations remain the preceding
+INIT slice's qualification, rather than a new strict pass. Following barrel
+callback allocation at2910 remains the next ordinary-dispatch target. Exact
+logical ObjectRefs do not certify native reads after numeric parent3 is cleared
+or recycled. No new pixel/audio or full-pressure claim follows.
+
+
+## AIZ barrel same-dispatch wait callback
+
+Source829588298 plus barrel SHA256 `fa6e08895832f64e2ace94af1b8acaeb3c4b76a30f0dc1c47dce8710893d57ca`,
+new TestAizMinibossBarrelWaitCallback `0a716f6b6cb2f330cc1d21017ffbb58973f28d15893336bdc1f1bfd996491f3f`.
+WaitAfterShot (:137010) calls Obj_Wait (:177949), which decrements word2E and
+jumps directly to callback34 on signed underflow. FireShot (:136996) publishes
+$1C, decrements byte39 and performs checked AfterCurrent allocation on this same
+dispatch. Only then does the WaitAfterShot signed-counter tail select Return
+for the fourth shot's 0→$FF. Old BETWEEN_SHOTS only scheduled FIRING_CUTSCENE,
+creating the pair one dispatch late and delaying its return tail.
+
+The new ordinary-activation fixture declares only native parent StartSwing bit1,
+then executes the real manager until its first burst; it never seeds barrel
+phase/timer or assumes a fitted first-birth frame. Literal $1C holds zero for28
+passes and underflows on29. Fourth-pair allocation precedes immediate Return.
+First OPENING/FireLoop and array animation remain unchanged, so this qualifies
+the steady wait/callback contract rather than all initial raw animation.
+
+| Exact normal queue request | Terminal outcome | Timing BST |
+| --- | --- | --- |
+|23527 negative seven literal/graph cases|7/7fail/0errors/0skip|17:06:12;25.353s execution/100s queue|
+|35308 affected639 plus new seven cases|646/0/0/0|17:09:12;71s/11s|
+|35562 same canonical five-case trace selection|5/1fail/0errors/0skip|17:14:07;96s/78s|
+|31635 same alternate trace-segments selection|1/1fail/0errors/0skip|17:12:02;35.323s/12s|
+|70444 same four -Pguards selectors|111/0/0/0|17:17:33;32.483s/345s|
+
+Affected selection adds TestAizMinibossBarrelWaitCallback to37849 above. Five
+declared component cameras320/352/400/528/800 force recreation at second/fourth
+callback boundaries, complete snapshot equality and two45-pass cycles in both
+directions. Actual napalm/SecondStrike/scalar and mandatory startup consumers
+pass. This is not full host/donor/roster/registered-world route certification.
+All commands retain Java25/EGL/original absolute ROM and existing profiles;
+canonical adds OGGF_SLOT_PROBE=1 OGGF_SLOT_PROBE_FULL=1 with output
+target/barrel-callback-native-slot-occupancy. No controller, fixture, global
+clock, allocator or hydration change; no broad/full sweep.
+
+Original AIZ/initial HCZ/two prefixes remain green. Chain6/8/11 raw189/12,719/
+82,067, physics189/12,604/69,393 and animation0/115/12,674 remain unchanged.
+First non-camera3319 P2X$31C1/$31CA,1583 P2X$366C/$3674,1510 Y$7D6/$7DF;
+input68,801/loadgen9 is still the incomplete stop. Alternate60 grouped spans
+(25physics/35animation), first25589 animation$13/$05, first physics25590
+P2Xsub$7800/$6C00. No strict frontier was closed or metric changed.
+
+Segment2 pair17/21 now exists on2910. Sampled presence including reserved keys
+advances2910→2977, native-only19, preceding retained2972. Low code byte$8A is
+the post-Init Obj_Wait pointer, not a unique type identifier. The owning parent
+swing-expiry table creates Obj_BossExplosionSpecial (:137926/176817), whereas
+current onSwingComplete retains only a Java explosion helper without a physical
+SST owner. That source/creation context is the next graph attribution, not a
+full runtime-type certification from the low byte alone.
+
+Two additional source-confirmed local contracts remain separate: FireLoop/
+FireShot and SetShotPosition (:137688) share byte39, but Java cutsceneCounter/
+positionCounter are split; after fourth fire native$FF+4→3 selects a different
+first drop column than independent0+4→4. Counter==1 selects the native FallingShot
+table (:137890), while current cutscene selects a common-shot mode rather than
+the real FallingShot owner. No correction or qualification of these is claimed
+by this callback commit. Prior image/audio/projection limits remain.
+
+
+## AIZ barrel shared native byte39
+
+Source a0b70f969 plus barrel SHA256 `d6f09b25e3b3e92e82547dbca16f49f4eed72a534de6786d33efd640050d4e76`,
+new TestAizMinibossBarrelCounter39 `a858fe490f26b7f02a56c68fa7942bd2433f603b0d4f35f2a297c5f45ee1eb1f`,
+updated callback test `9281cb2a53304ee74f2c070a7988e86c54770558a03a08e89aac3e348eb1af82`.
+FireLoop/FireShot (:136991/136996) and SetShotPosition (:137688) own the same
+byte39. The former initializes3 and subtracts1 before each pair; the latter adds4
+with byte wrap, stores the result and masks$C for the drop table. Java's split
+cutsceneCounter/positionCounter was a real alias error. Fourth fire leaves$FF,
+so first Launch writes3/selects bank0, not independent0→4/bank4.
+
+One existing unsigned positionCounter now holds both roles; FireShot subtracts
+modulo256 and only the Wait signed test casts to byte. The duplicate captured
+scalar is removed. The previous callback test now reads this byte and expects
+$FF rather than Java -1, preserving all native allocation/closure assertions.
+No public API, shared schema algorithm, clock, allocator or controller changes.
+
+| Normal queue request | Terminal outcome | Timing BST |
+| --- | --- | --- |
+|76436 exact alias negative|9/9fail/0errors/0skip|17:25:46;23.443s execution/6s queue|
+|93869 affected646 plus nine new vectors|655/0/0/0|17:30:09;71s/25s|
+|27022 canonical five-case trace/slot observation|5/1fail/0errors/0skip|17:35:39;94s/80s|
+|78687 alternate trace-segments|1/1fail/0errors/0skip|17:33:32;36.032s/11s|
+|45245 four -Pguards classes|111/0/0/0|17:36:13;32.755s/174s|
+
+Matched negative observes first drop X12148→12068 normal and12276→12316 flipped;
+first fire-byte read2→0, fourth$FF→0 and launch3→4. Explicit$FE/$FF writes were
+ignored by the separate signed Wait counter. Five replay setups likewise lacked
+the pre-launch$FF. Positive tests retain literal normal/flipped columns, byte
+wrap, both-role visibility and forced manager recreation with two45-pass cycles
+at declared320/352/400/528/800 camera widths. Existing actual napalm/SecondStrike/
+scalar/startup consumers pass. These are component contracts, not full host,
+donor/team or registered-world route product certification.
+
+Affected command adds TestAizMinibossBarrelCounter39 to35308. The three standard
+canonical/alternate/guard commands retain Java25/EGL/original absolute ROM and
+profiles; observer output is target/barrel-counter39-native-slot-occupancy.
+Original AIZ/initial HCZ/two prefixes pass. Chain6/8/11 raw189/12,719/82,067;
+physics189/12,604/69,393 and animation0/115/12,674 are unchanged, first non-camera
+3319 P2X$31C1/$31CA,1583 P2X$366C/$3674,1510 Y$7D6/$7DF, with incomplete
+input68,801/loadgen9. Alternate60 grouped spans remains first25589 animation
+$13/$05. No metric, fixture, hydration or broad/full-suite change.
+
+Sampled segment2 presence remains2977 native-only19, preceding retained2972.
+This scalar slice repairs the native drop columns without claiming strict or
+whole-object closure. Physical Special explosion ownership at that creation
+boundary and the cutscene FallingShot branch remain required next owners;
+prior rendered/audio and arbitrary numeric-pressure limits remain separate.
+
+
+## AIZ physical Special explosion owner
+
+Source6661b9b8b plus new owner SHA256 `28499bf571df30929fabbf8a595003ed78481137ce289e27a9fbf4e5e93ac5f0`,
+parent `b57cc1ef6f31ee26499f4e543543ac9096abc67b922ce32015b4ab0bf7cebfa8`,
+policy `54e7157a3864495cbdb608aea218e6cdc88fc74a66e98f2532c76aec55ebd7d5`,
+new TestAizMinibossSpecialExplosionOwner `8e17c1ab43840327a3fffa9adca12ed025f4fca15444d5fc8e10d271390e7def`.
+The existing parent swing-expiry callback creates ChildObjDat_AIZMinibossCutscene_Explosion
+(:136870/:137926) through checked AfterCurrent allocation. The former plain Java
+helper had no SST and used its own deferred state. The new owner captures its
+position, Init/operation state, word wait and byte count in its own physical slot;
+pure ctx.spawn recreation creates no children, sound or random work.
+
+Obj_BossExplosionSpecial (:176817) writes physical camera+160/+112, word2E=2 and
+subtype2; Obj_CreateBossExplosion (:176661) selects CreateBossExp02 count$28,
+ranges$80, routine-set$18, then tail-jumps Obj_Wait. Init consumes2→1; next pass
+holds0; following underflow uses Obj_BossExpControl2. The finite controller emits
+39 accepted attempts and marks Go_Delete on the40th callback at birth+119; its
+slot clears next dispatch+120. Failed child attempts consume the same count/wait
+without RNG or child-init sound. Checked AfterCurrent allocation precedes
+Random_Number; sub_83E90 uses low16 for X and SWAP/high16 for Y, with word wrap.
+The existing ROM-backed S3kBossExplosionChild owns same-pass native-init SFX,
+raw animation and next-dispatch retirement. Its exact15-byte ROM bank at$83FCC
+was read and verified; no disassembly/runtime fallback art or raw data added.
+
+The owner is independent of parent liveness, has no range/draw/touch gate and
+uses the original320/2 centre even at wider declared cameras. The AIZ2 reload
+clears this one-shot SST just like its parent; the local carry callback retires
+it, with restoration around the clear. Removing the old parent helper also
+removes its obsolete central DEFERRED policy. Other helper consumers, shared
+allocation/RNG algorithms, Child implementation and art provider are untouched.
+
+| Normal queue request | Terminal outcome | Timing BST |
+| --- | --- | --- |
+|16515 actual callback/physical owner negative|13/12fail/0errors/0skip; full initial-pool control passes|17:54:37;23.928s execution/276s queue|
+|38085 first real-SST candidate|13/0/0/0|18:03:58;70s/72s|
+|27598 affected655 plus16 new and5 existing cutscene/seamless consumers|676/0/0/0|18:08:40;31.355s/20s|
+|30405 canonical five-case trace/slot observation|5/1fail/0errors/0skip|18:22:12;97s/497s|
+|50339 alternate trace-segments|1/1fail/0errors/0skip|18:22:48;35.518s/595s|
+|11033 four -Pguards classes|111/0/0/0|18:23:21;31.624s/queue unavailable in retained output|
+
+Sixteen local cases cover actual parent callback admission at declared cameras
+320/352/400/528/800, physical-versus-copy origin, first native wait/high-word RNG,
+child-init sound, initial/partial pressure, independent lifetime/terminal marker,
+pure metadata, act-clear restoration and two45-pass cycles with manager plus
+real GameRng adapters. The callback is a declared component boundary, not a cold
+boss route or whole production registry. Existing helper-count test is now
+explicitly an independent legacy-helper control; it no longer implies that
+helper-only counts qualify AIZ's actual physical owner. Existing cutscene music/
+fade/seamless, actual napalm/SecondStrike/scalar and startup consumers pass.
+
+Affected command adds TestAizMinibossSpecialExplosionOwner,TestAizMinibossCutsceneInstance,
+TestAizMinibossSeamlessTransition to93869. The three standard profiles/selectors
+retain Java25/EGL/original absolute ROM; slot output is target/special-explosion-native-slot-occupancy.
+Original AIZ/initial HCZ/two prefixes pass. Chain6/8/11 raw189/12,719/82,067,
+physics189/12,604/69,393, animation0/115/12,674 remain unchanged. First non-camera
+3319 P2X$31C1/$31CA,1583 P2X$366C/$3674,1510 Y$7D6/$7DF; incomplete source stop
+input68,801/loadgen9. Alternate60 spans remains first25589 animation$13/$05.
+No fixture, metric, global clock, hydration or broad/full-suite change.
+
+Native19 is now present at2977. Sampled segment2 presence advances2977→3067,
+native-only21, preceding retained3066. The same row has native low-code$88
+BossExplosionHitbox context versus engine ImpactFlame children39..45, and a
+retained native21 at low-code$B6 where engine's common-shot mode has cleared.
+Low code bytes are not unique type proof; the source FallingShot floor/Go_Delete
+and creation-table context supplies this next attribution. Real cutscene
+FallingShot admission/collision/lifetime remains required next work. No new
+rendered-pixel, SAT/priority, PCM or arbitrary reused-header pressure certification.

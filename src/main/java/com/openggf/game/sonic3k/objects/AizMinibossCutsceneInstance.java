@@ -76,7 +76,6 @@ public class AizMinibossCutsceneInstance extends AbstractBossInstance
     private final AizMinibossSwingMotion swingMotion = new AizMinibossSwingMotion();
 
     private int waitTimer = -1;
-    private S3kBossExplosionController explosionController;
     private WaitCallback waitCallback = WaitCallback.NONE;
     private int savedCameraMaxX;
 
@@ -205,7 +204,6 @@ public class AizMinibossCutsceneInstance extends AbstractBossInstance
             default -> {
             }
         }
-        tickExplosionController();
         updateCustomFlash();
     }
 
@@ -296,24 +294,10 @@ public class AizMinibossCutsceneInstance extends AbstractBossInstance
     private void onSwingComplete() {
         // ROM: loc_6862E — directly after swing, spawn explosion and set pre-exit wait
         setWait(PRE_EXIT_TIME, WaitCallback.PRE_EXIT_COMPLETE);
-        // ROM: Obj_BossExplosionSpecial positions at screen center (overrides child offset)
-        var camera = services().camera();
-        explosionController = new S3kBossExplosionController(
-                camera.getX() + 160, camera.getY() + 112, 2, services().rng());
-    }
-
-    private void tickExplosionController() {
-        if (explosionController == null || explosionController.isFinished()) {
-            return;
-        }
-        explosionController.tick();
-        for (var pending : explosionController.drainPendingExplosions()) {
-            // ROM: sub_52850 plays sfx_Explode when spawning each child
-            if (pending.playSfx()) {
-                services().playSfx(Sonic3kSfx.EXPLODE.id);
-            }
-            spawnChild(() -> new S3kBossExplosionChild(pending.x(), pending.y()));
-        }
+        // ChildObjDat_AIZMinibossCutscene_Explosion uses checked AfterCurrent
+        // allocation. The real owner initializes/dispatches in its own SST pass,
+        // independently of this parent's later escape and lifetime.
+        spawnChild(() -> new AizMinibossSpecialExplosionOwner(state.x, state.y));
     }
 
     private void onPreExitComplete() {

@@ -112460,3 +112460,133 @@ presence advances2133→2897, native-only20; last preceding sample2881. Existing
 reservations are included, so this is allocation evidence, not full child/type
 conformance or strict closure. Ring25/flash17 versus native18/22 remains. No new
 native rendered/audio or complete-game parity claim follows.
+
+
+### 2026-10-14 — AIZ flare physical lifetime; strict frontiers unchanged
+
+Owned bugfix/ai-s3k-parity-trace, source8f7ec20a1 plus exact flare2d292933,
+barrel5ebe0400/policyfdb281a2 SHA256 candidates.
+[Native owners, qualified hashes and rejected premises](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-barrel-flare-raw-lifetime-and-physical-parent3).
+Init/raw/F4/following-clear now retain the real muzzle SST lifetime and priority;
+physical parent3 consumes the current verified XY/flip header through recreation.
+Unknown nonempty headers reject before mutation. No shared allocator/clock,
+fixture/controller or hydration change. Affected25518 passes619/0/0/0 (new19
+component cases, actual AIZ2 napalm, scalar/SecondStrike and mandatory startup).
+
+The exact three25714 commands/profiles above are reused. Canonical40282 adds
+`OGGF_SLOT_PROBE=1 OGGF_SLOT_PROBE_FULL=1 OGGF_SLOT_PROBE_OUT=target/flare-native-slot-occupancy`;
+misspelled observer54825 canceled waiting130/no tests, sole corrected request.
+Java25/EGL/original absolute ROM retained. Canonical40282 is5/1fail/0errors/0skip
+at15:58:37 BST (96s execution/29s queue): original AIZ/initial HCZ/two prefixes
+remain green. Chain6/8/11 raw totals remain189/12,719/82,067; physics189/12,604/
+69,393, animation0/115/12,674. First non-camera physics3319 P2X$31C1/$31CA,
+1583 P2X$366C/$3674,1510 Y$7D6/$7DF; incomplete stop68801/load-generation9.
+Alternate34650 is1/1fail/0errors/0skip at15:56:25 BST (34.901s/26s),60 grouped
+spans, first25589 animation$13/$05. Guards91291 passes111/0/0/0 at15:56:59 BST
+(33.758s/62s). Metrics and source-closure rules unchanged; no broad/full sweep.
+
+In the **segment2** allocation ledger, the actual second pair19/20 is present
+at2897. Sampled presence including reserved keys advances2897→2910, native-only
+17/21, preceding sample2898. This is not first whole-chain presence or complete
+child/type parity. Following callback allocation and shot18 birth movement
+(engine812/native816) remain concrete next owners. Prior-build native/engine
+images stay source-bounded; no rendered/audio/full-game parity claim follows.
+
+
+### 2026-10-14 — AIZ shot INIT stationary; strict fields unchanged
+
+Owned bugfix/ai-s3k-parity-trace, source6932189b9 plus shot21077a13/test5d184aa7
+SHA256 candidates. [Native owners, matched negatives and commands](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-shot-stationary-init-and-cleared-raw-state).
+Common/Falling Init Draw/RTS is stationary; cleared ROM raw cursor/timer now
+survives Pause/Launch. Affected46911 passes630/0/0/0, including11 new component
+cases, actual napalm/SecondStrike/scalar and four mandatory startup consumers.
+Same canonical/alternate/guard25714 commands above, Java25/EGL/original ROM.
+Canonical25467 adds OGGF_SLOT_PROBE=1 OGGF_SLOT_PROBE_FULL=1 and output
+target/shot-init-native-slot-occupancy:5/1fail/0errors/0skip at16:47:30 BST,
+93s execution/queue unavailable. Original AIZ/initial HCZ/prefix2 pass.
+Chain6/8/11 raw189/12,719/82,067; physics189/12,604/69,393, animation0/115/
+12,674. First non-camera3319 P2X$31C1/$31CA,1583 P2X$366C/$3674,1510 Y$7D6/
+$7DF; input68,801/load-generation9 stop unchanged. Alternate27675:1/1fail/0/
+0 at16:43:21 BST,33.895s/145s,60 grouped spans, first25589 animation$13/$05.
+Guards19599:111/0/0/0 at16:45:56 BST,31.939s/queue unavailable. No metric,
+fixture/controller, shared allocator/clock or hydration change; no broad sweep.
+Actual segment2 shot18 now stays at native birthY816 on2881. Next sampled
+presence remains2910 native-only17/21. Cutscene-shot recreation/exact links and
+barrel callback are required separate next owners; no rendered/audio parity claim.
+
+
+### 2026-10-14 — AIZ shot recreation preserves exact live graph
+
+Owned bugfix/ai-s3k-parity-trace, source a06056a0b plus shot bbb24591/policy
+e5c9f9af/test b56ca3ee SHA256 candidates. [Native links, matched red and commands](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-shot-pure-recreation-and-exact-live-links).
+Pure ctx.spawn recreation replaces nearest fight/barrel lookup; local CAPTURED
+ObjectRefs restore legitimate cutscene ownership and exact moving metadata.
+Matched99092: 9/9fail/0errors/0skip. Affected37849: 639/0/0/0 at 16:59:09 BST,
+73s execution/23s queue; guards9839: 111/0/0/0 at 17:01:12 BST,31.854s/20s.
+Commands add TestAizMinibossShotNativeGraph to46911 and reuse the four -Pguards
+selectors, with Java25/EGL/original ROM for affected consumers. Normal production
+construction/dispatch and controller are unchanged; no new strict trajectory
+run is claimed. The preceding25467/27675 source-bounded strict errors/counts
+remain open. Barrel callback2910 is next; recycled numeric parent pressure and
+rendered/audio conformance remain separate. No broad/full sweep or hydration.
+
+
+### 2026-10-14 — AIZ barrel callback allocation same dispatch
+
+Owned bugfix/ai-s3k-parity-trace, source829588298 plus barrel fa6e0889/test0a716f6b
+SHA256 candidates. [Native callback, negatives, commands and next owners](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-barrel-same-dispatch-wait-callback).
+Obj_Wait underflow now performs FireShot allocation before the signed-counter
+Return tail. Matched23527 is7/7fail/0errors/0skip; affected35308 passes646/0/0/0,
+guards70444 passes111/0/0/0. Same canonical/alternate/guard commands as25467,
+observer output target/barrel-callback-native-slot-occupancy; Java25/EGL/ROM.
+Canonical35562:5/1fail/0errors/0skip at17:14:07 BST (96s/78s); original AIZ,
+initial HCZ/two prefixes green. Chain6/8/11 raw189/12,719/82,067, physics189/
+12,604/69,393, animation0/115/12,674; first non-camera3319 P2X$31C1/$31CA,
+1583 P2X$366C/$3674,1510 Y$7D6/$7DF; incomplete input68,801/loadgen9 unchanged.
+Alternate31635:1/1fail/0errors/0skip at17:12:02 BST (35.323s/12s),60 grouped
+spans, first25589 animation$13/$05. Guard70444:17:17:33 BST (32.483s/345s).
+Sampled segment2 presence advances2910→2977 (native-only19, preceding2972),
+not strict or whole-type closure. The physical explosion-controller creation,
+shared native byte39 and cutscene FallingShot branch are next source-backed
+owners. No broad/full sweep, hydration, new rendered/audio parity claim.
+
+
+### 2026-10-14 — AIZ firing and drop selection share byte39
+
+Owned bugfix/ai-s3k-parity-trace, sourcea0b70f969 plus barrel d6f09b25/new test
+a858fe49/callback9281cb2a SHA256 candidates. [Native alias, literal negatives and commands](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-barrel-shared-native-byte39).
+One captured byte now serves FireShot and SetShotPosition; fourth$FF+4 wraps3,
+restoring literal normal/flipped drop columns. Negative76436:9/9fail/0errors/
+0skip; affected93869:655/0/0/0; guards45245:111/0/0/0. Same trace profiles,
+selectors, Java25/EGL/ROM; observer target/barrel-counter39-native-slot-occupancy.
+Canonical27022:5/1fail/0errors/0skip at17:35:39 BST (94s/80s): original AIZ,
+initial HCZ/two prefixes pass. Chain6/8/11 raw189/12,719/82,067; physics189/
+12,604/69,393, animation0/115/12,674. First non-camera3319 P2X$31C1/$31CA,
+1583 P2X$366C/$3674,1510 Y$7D6/$7DF; incomplete input68,801/loadgen9 unchanged.
+Alternate78687:1/1fail/0errors/0skip at17:33:32 BST (36.032s/11s),60 grouped
+spans, first25589 animation$13/$05. Guards45245 at17:36:13 (32.755s/174s).
+Presence remains2977 native-only19, preceding2972. Physical Special explosion
+owner and cutscene FallingShot remain required next work, not closure claims.
+No broad/full sweep, shared clock/allocator, fixture or hydration change.
+
+
+### 2026-10-14 — AIZ Special explosion owns its physical SST
+
+Owned bugfix/ai-s3k-parity-trace, source6661b9b8b plus owner28499bf5/parentb57cc1ef/
+policy54e7157a/test8e17c1ab SHA256 candidates. [Native lifecycle, negatives and commands](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-physical-special-explosion-owner).
+Actual swing-expiry callback now creates a real checked AfterCurrent owner;
+its wait/count, allocation-before-RNG, high-word Y, child-init sound and delayed
+clear survive manager/RNG replay. Shared helper consumers remain unchanged.
+Negative16515:13/12fail/0errors/0skip; candidate38085:13/0/0/0; affected27598:
+676/0/0/0; guards11033:111/0/0/0. Standard canonical/alternate/guard commands,
+Java25/EGL/ROM; observer target/special-explosion-native-slot-occupancy.
+Canonical30405:5/1fail/0errors/0skip at18:22:12 BST (97s/497s), original AIZ,
+initial HCZ/two prefixes pass. Chain6/8/11 raw189/12,719/82,067; physics189/
+12,604/69,393, animation0/115/12,674; first3319 P2X$31C1/$31CA,1583 P2X$366C/
+$3674,1510 Y$7D6/$7DF; incomplete input68,801/loadgen9 unchanged. Alternate50339:
+1/1fail/0errors/0skip at18:22:48 (35.518s/595s),60 spans/first25589 animation13/05.
+Guard11033 at18:23:21 (31.624s/queue unavailable in retained output).
+Sampled segment2 presence advances2977→3067 native-only21, preceding3066;
+FallingShot pending-floor retirement and wrong cutscene explosion-family context
+are next owners. Not strict/full-type closure; no broad/full run, hydration or
+new rendered/audio certification.

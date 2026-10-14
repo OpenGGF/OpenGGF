@@ -19,13 +19,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestAizMinibossCutsceneInstance {
     @Test
-    void cutsceneStaysPersistentSoSpecialExplosionControllerExhaustsRomDrawCount() throws Exception {
+    void cutsceneStaysPersistentAndLegacyHelperHasItsIndependentRomDrawCount() throws Exception {
         AizMinibossCutsceneInstance cutscene = buildCutscene(new TestObjectServices());
 
         assertTrue(cutscene.isPersistent(),
                 "Obj_AIZMinibossCutscene has no normal out-of-range deletion in its active/exit flow "
                         + "(sonic3k.asm:136734-136896)");
 
+        // Legacy helper consumer control; actual AIZ physical admission/RNG/lifetime
+        // is qualified independently in TestAizMinibossSpecialExplosionOwner.
         S3kBossExplosionController controller = new S3kBossExplosionController(0, 0, 2);
         int spawnCount = 0;
         for (int frame = 0; frame < 200 && !controller.isFinished(); frame++) {

@@ -5509,3 +5509,95 @@ legal byte breadth and verify pre-existing flag masks/ordinary representations
 when extending an internal packed word. The2026-10-14 ending tests independently
 check all three progress values, normal colors, live body cycling, both registry
 restore directions and ordinary0/6/15 versus held/released127/126.
+
+## Raw-animation F4 and physical child links retain their own dispatch
+
+The AIZ flare wrapper refreshes numeric parent3, calls its routine, then draws.
+Init only loads attributes/script and returns; Animate_RawMultiDelay starts at
+cleared cursor/timer0, skips the first pair, and advances on signed underflow.
+F4 calls Go_Delete_Sprite; that dispatch still draws the last frame, while the
+next Delete_Current clears the physical slot. Premature clear changes a later
+AfterCurrent pair even if its firing clock already matches.
+
+Refresh_ChildPositionAdjusted has no destroyed-parent gate. Read the current
+physical SST XY/lower-two flip bits and signed offsets; a cleared slot is zero,
+a recycled verified header is its new data, and unknown nonempty residue must
+not silently become zero. Capture the numeric parent link and raw state, recreate
+from ctx.spawn without a nearest-parent seed, and test moving metadata plus
+live/cleared/recycled restoration. A declared inert boss checkpoint must publish
+its native lastUpdatedVIntRunCount for real children to execute; idle child
+vectors cannot certify motion or constructor metadata.
+
+Origin: 2026-10-14 AIZ flare parity slice over8f7ec20a1; asm137029–137047,
+177300–177332,177563–177617,179136–179140.
+
+
+## Shot INIT can preserve a misleading primed animation sequence
+
+AIZ common and Falling shot Init load attributes/script and Draw/RTS without
+movement. Cleared Animate_RawNoSST cursor/timer advances on the first ordinary
+movement; a wrong birth move plus a primed delay can accidentally publish the
+same frames. Correct both owners together, using the exact ROM bytes. Obj_Wait
+expiry follows movement/animation; StartPause and Launch preserve script30,
+cursor and timer, so a new phase must not reset the raw delay. Test stationary
+birth, zero-versus-underflow dispatch and the first post-pause mapping separately.
+
+Origin:2026-10-14 AIZ shot INIT slice over6932189b9; asm137065–137126,
+137474,177341,179640.
+
+
+## A shared shot factory must retain both native live graphs
+
+Common AIZ barrel shots can belong to the cutscene or fight boss. Searching only
+the fight type drops legitimate cutscene objects; nearest-barrel inference after
+camera-relative launch can select another graph and corrupt immutable metadata.
+Use a pure ctx.spawn shell with no SFX, allocation or animation advancement,
+then capture exact logical live parent/barrel ObjectRefs for phase-two hydration
+before dispatch. Test distinct graphs, movement, every spawn field and complete
+restore/replay. This proves exact live dependencies, not numeric parent reads
+after physical slot reuse; keep that pressure contract separate.
+
+Origin:2026-10-14 AIZ shot recreation over a06056a0b; asm137110,137450.
+
+
+## Obj_Wait tail-jumps are callbacks on the current dispatch
+
+AIZ WaitAfterShot calls Obj_Wait, then tests byte39 every pass. On word2E signed
+underflow, Obj_Wait jumps to callback34 and returns to the caller's tail. Execute
+FireShot's timer publication, signed-byte decrement and checked child allocation
+immediately; scheduling a future firing state adds a pass and delays Return.
+The fourth callback allocates before its negative-counter tail selects Return.
+Qualify zero-versus-underflow and same-pass closure through ordinary activation,
+then restore/replay both boundaries. First raw animation/FireLoop timing is a
+separate owner and must not be fitted to compensate the callback delay.
+
+Origin:2026-10-14 AIZ barrel callback over829588298; asm136996,137010,177949.
+
+
+## A byte reused by a later routine remains one captured field
+
+AIZ barrel FireLoop/FireShot and SetShotPosition share native byte39. Splitting
+burst count from position cycling changes the first drop column even when every
+burst time matches: fourth fire leavesFF; unsigned +4 wraps3, then masksC to0.
+Keep one unsigned captured byte and use signed casts only at owning signed
+branches. Test both-facing literal columns, negative writes seen by the wait
+tail, byte wrap and restore/replay across the role change. A Java -1 oracle is
+not the underlying native byte valueFF.
+
+Origin:2026-10-14 AIZ byte39 slice overa0b70f969; asm136991,136996,137688.
+
+
+## A nondrawing controller still owns and dispatches a real SST
+
+AIZ's ChildObjDat cutscene explosion creates Obj_BossExplosionSpecial as a real
+AfterCurrent actor. Replacing it with a parent-ticked helper changes slot
+occupancy, child scan origin, RNG ordering and recreation even without pixels.
+Special writes physical camera+160/+112 and wait2, then tail-enters Obj_Wait in
+Init. Preserve subtype02's39 attempts, consumed allocation failures, low/high
+random words, child-owned sound and terminal marker before next-pass clear.
+A cleared-parent gate is absent for this independent Obj_Wait operation. Apply
+native act-clear ownership separately, and test real admission/metadata plus
+manager and RNG restoration. Helper-only draw counts cannot prove composition.
+
+Origin:2026-10-14 AIZ physical Special owner over6661b9b8b; asm136870,137926,
+176661–176835. Shared legacy helper consumers are outside this local repair.
