@@ -5,20 +5,21 @@ Game / slot: S3K `S3K_SPECIAL_STAGE_ARENA`, engine zone `$17` act index 1, ROM `
 Chaos Emeralds in an S&K level (`sonic3k.asm:128417`); exit back to the origin level.
 Implementation predates this matrix (`feature/ai-s3k-super-emeralds`, routing recovery
 `56583f2dba`); this file records current bindings and gaps found during the HPZ bring-up.
-Status: partial. The finite fresh-ceremony products below qualify both controller branches.
-Seven native320 solo-Sonic physical pedestal entries and actual fresh-load palette publication
-are also qualified. Eight representative real Saved2 inlet/exit products now qualify native mains, supported
-donors and two wide large-roster shapes. Eight representative placed-pedestal products
-qualify stage3 in addition to the seven native320 selectors. Complete finite result,
-selector and return products and remaining native presentation obligations stay separate.
+Status: partial. Both fresh-ceremony branches and their reverse-owner replay are qualified
+across the finite supported products below. All140 real Saved2 inlet/exit products and
+all980 physical pedestal products (140 configurations × seven selectors) now have actual
+load/history isolation and two incoming-world replay cycles, with the separate source
+scopes recorded in the latest qualification below. Configured failure/success/all-seven
+results and remaining native presentation obligations are still open; this is no blanket
+viewport/donor/team, native-pixel or cold-route certificate.
 
 | Obligation + spot | Contract / oracle | Test binding | Implementation | Result | Gap / action |
 | --- | --- | --- | --- | --- | --- |
-| ENTRY: `$1701` resources, bounds, camera, no title card | Custom `HPZ_RESOURCES`; fresh `Get_LevelSizeStart` camera Y `$320`, native320 X `$15A0`; wider free-camera focus uses resolved half-width. The results backdrop separately writes Y `$240` | `TestSonic3kNonlinearHpzProfile#sanctuaryDescriptorSelectsRom1701Resources`, `TestSonic3kLevelLoading#superEmeraldSanctuaryLoadsRom1701LayoutBoundsAndObjectSet`, `TestS3kHpzSanctuaryLifecycleProduction` | implemented | Finite fresh-ceremony qualification below | One real native320 solo-Sonic origin entry/return is qualified below; configured origin/transport and results products remain separate |
-| OBJECT: controller, Master Emerald, pedestals, teleporter | `Obj_HPZSSEntryControl`, `Obj_HPZMasterEmerald`, `Obj_HPZSuperEmerald` (states 1 and 2 selectable, `loc_907A8`); native literal character tables use persistent character identity for physical P1/P2 | `TestHpzSanctuaryObjects` (27), `TestS3kHpzSanctuaryHeadless` (4 on `$17`), `TestS3kHpzSanctuaryLifecycleProduction` | implemented; state-1 selectability corrected `365ac485b`; native-pose presentation and P2 aliases corrected in this slice | Both fresh ceremony branches qualify across the finite products below | Seven native320 solo-Sonic placed pedestal contacts enter their matching Super stages; wider/donor/team contact products and exit transport products remain open |
-| PRESENT: `AnPal_HPZ`, `AniPLC_HPZ` | OffsAnPal / Offs_AniFunc entry 47 | `TestS3kHpzPatternAnimation` (`$17` row), `TestHpzZoneRuntimeStatePaletteCycle#masterEmeraldDelayHoldsTheCycleFor8000Passes` | implemented `362771221` | pass | Five genuine native320 NTSC fresh-ceremony snapshots and matched engine state/pose samples inspected; before/after art comparison has explicit nonzero pixel residuals. Actual current/target palette publication is qualified below; repaired palette screenshots and full native scene parity remain separate |
-| REWIND: controller graph, initial countdown, natural crystal expiry, released ceremony | Identity-table child recreation; entire registered-world equality twice, including deleted-child recreation and reversible native presentation lifetime | `TestS3kHpzGraphRewind#sanctuaryGraphRestoresFreshAndRelinksEveryControllerOwnedChild`, `TestS3kHpzSanctuaryLifecycleProduction` | implemented | Finite fresh-ceremony qualification below | Two eight-tick whole-world cycles cover native short pedestal selection; each actual special-stage entry retires hub history. Results retain their non-rewindable load boundary; incoming special-world, configured contact and origin exit/load products remain separate |
-| LOAD: real forced ring → sanctuary → Saved2 origin | Actual placed MHZ1 `$85/$81` owner/flash saves ring position and earned rings; actual pad/exit-band contact loads origin; rings, timer/HUD and current owners restored; outgoing histories retired; two45-tick world cycles in both incoming worlds | `TestS3kSanctuaryOriginReturnLifecycle` | ordinary fresh HUD-started ownership corrected in this slice | Native pilot and eight configured representative products qualified below | The complete140 supported products remain next; local contact setup does not certify a cold route |
+| ENTRY: `$1701` resources, bounds, camera, no title card | Custom `HPZ_RESOURCES`; fresh `Get_LevelSizeStart` camera Y `$320`, native320 X `$15A0`; wider free-camera focus uses resolved half-width. The results backdrop separately writes Y `$240` | `TestSonic3kNonlinearHpzProfile#sanctuaryDescriptorSelectsRom1701Resources`, `TestSonic3kLevelLoading#superEmeraldSanctuaryLoadsRom1701LayoutBoundsAndObjectSet`, `TestS3kHpzSanctuaryLifecycleProduction` | implemented | Finite fresh-ceremony qualification below | All140 supported local inlet/exit products are qualified below; cold-route and configured results products remain separate |
+| OBJECT: controller, Master Emerald, pedestals, teleporter | `Obj_HPZSSEntryControl`, `Obj_HPZMasterEmerald`, `Obj_HPZSuperEmerald` (states 1 and 2 selectable, `loc_907A8`); native literal character tables use persistent character identity for physical P1/P2 | `TestHpzSanctuaryObjects` (33), `TestS3kHpzSanctuaryHeadless` (4 on `$17`), `TestS3kHpzSanctuaryLifecycleProduction` | implemented; state-1 selectability corrected `365ac485b`; native-pose presentation and P2 aliases corrected in this slice | Both fresh ceremony branches qualify across the finite products below | All980 supported placed-pedestal products enter their matching Super stages; all140 real origin/exit products are qualified below. Configured results outcomes remain open |
+| PRESENT: `AnPal_HPZ`, `AniPLC_HPZ` | OffsAnPal / Offs_AniFunc entry 47 | `TestS3kHpzPatternAnimation` (`$17` row), `TestHpzZoneRuntimeStatePaletteCycle#masterEmeraldDelayHoldsTheCycleFor8000Passes` | implemented `362771221` | pass | Five genuine native320 NTSC fresh-ceremony snapshots and matched engine state/pose samples inspected; before/after art comparison has explicit nonzero pixel residuals. Actual current/target palette publication is qualified below; repaired pictures include one released native320 NTSC logical-color match, with earlier publication/effect residuals. Full native scene parity remains separate |
+| REWIND: controller graph, initial countdown, natural crystal expiry, released ceremony | Identity-table child recreation; entire registered-world equality twice, including deleted-child recreation and reversible native presentation lifetime | `TestS3kHpzGraphRewind#sanctuaryGraphRestoresFreshAndRelinksEveryControllerOwnedChild`, `TestS3kHpzSanctuaryLifecycleProduction` | implemented | Finite fresh-ceremony qualification below | Two eight-tick whole-world cycles cover native short pedestal selection; each actual special-stage entry retires hub history. Results retain their non-rewindable load boundary; all980 released incoming special-world products and all140 local origin exit/load products now have two45-tick cycles. Configured results outcomes remain separate |
+| LOAD: real forced ring → sanctuary → Saved2 origin | Actual placed MHZ1 `$85/$81` owner/flash saves ring position and earned rings; actual pad/exit-band contact loads origin; rings, timer/HUD and current owners restored; outgoing histories retired; two45-tick world cycles in both incoming worlds | `TestS3kSanctuaryOriginReturnLifecycle` | ordinary fresh HUD-started ownership corrected in this slice | All140 supported products qualified below | Declared local contact setup does not certify a cold route; configured results returns remain separate |
 | LOAD: results reveal behind a Super Emerald stage | `SpecialStage_Results` $1701 rebuild and `Pal_FromWhite`; `Obj_SpecialStage_Results` routines `$E`/`$10`/`$12` (pan to `$320`, converging and expanding star rings, `ObjDat2_2E984` Hyper message, `loc_2E9D8`); `loc_2EAA6` state-1 indicator gate; level-select return rebuilds the hub without replaying the reveal | `TestS3kSpecialStageResultsReveal` (frame-exact routine timeline incl. native ss_14 timeline, 16), `TestS3kSanctuaryResultsBackdropHeadless` (backdrop, palette fade, pedestal FAC0, stars, FAC1 release, hub return, 3), `TestHpzSanctuaryObjects` star-ring cases | implemented `feature/ai-hpz-sanctuary-reveal` | pass | Results are not rewindable: the rebuild is a `LEVEL_LOAD` rewind boundary (isolation asserted). Native ss_14 (see table below) matches timing, fade steps and Master Emerald rotation onset, and is visually consistent for gems, flicker and stars; results exit fades to black with no exit SFX as in the ROM (`SpecialStageProvider.resultsExitFadesToWhite()`, S3K false; `TestSpecialStageRewindCapability`, capture 255→206→60→19); Knuckles message frames unit-tested; Tails, Knuckles palette and HYPERk word art neither tested nor captured |
 
 ### Native comparison: results reveal (2026-09-17)
@@ -419,3 +420,101 @@ sanctuary products or native pixels. The complete140×7 physical selectors,
 matched screenshots remain the next explicit owners. Historical fresh-ceremony,
 seven-selector, native-return and native-picture records above retain their own
 source and setup provenance.
+
+
+## Complete finite selectors, real Saved2 returns and native dispatch owners — 2026-10-14
+
+The short physical selector contract now spans140 distinct supported production
+products × seven actual gray-pedestal contacts, split into196 native-width and784
+wider cases without duplicate discovery. Products use resolved presets320/352/400/
+528/800, admitted native mains and S1/S2 donors, solo/pair/mixed/duplicate/seven-CPU
+rosters; the generator deduplicates donor-normalized products rather than claiming
+an actor cap. All140 Saved2 cases retain the real MHZ1 ring/flash, sanctuary exit
+pad and origin load owners from the representative checks above. Neither path
+seeds selection, saved counters, routine timers or a transition request. Pedestal
+contact is explicitly a local falling-contact fixture, not ordinary cold navigation.
+
+Each selector proves native$81 control and actual top snap, two eight-tick full-world
+selection cycles before fade, actual selected Super-stage load, outgoing history
+retirement, resolved incoming presentation width, and two45-tick incoming special-
+world cycles after fade/readiness release. Sparse drawing invokes Engine's actual
+viewport binding from the resolved projection. Results retain their separate
+non-rewindable boundary; these checks do not certify successful Blue Sphere play.
+Saved2 cases each retain two45-tick cycles in both released destination worlds,
+actual current player/team/focus and restored rings/timer/HUD with no hidden P1 restart.
+
+The first finite request92005 ended1 at21:09:15 UTC:1120tests/784fail/0errors/skips.
+All140 Saved2 and196 native selectors passed;784 wider cases stopped at the sparse
+host's default320 special-stage presentation. Corrected driver80926 ended1 at
+21:23:44 UTC:791tests/784fail/0errors/skips; seven real Engine viewport controls
+passed and every wider load/width reached its incoming restore. The fail-closed
+private-record helper then exposed four Palette Java identities. Actual one-case
+3988 ended1 at21:27:31 UTC: all192 captured/restored raw RGB bytes independently
+matched across fresh identities before strict graph comparison rejected them.
+The shared helper now compares all Palette components, private records and all
+captured manager fields (`c3d2e75b4`, `d8da36388`, `7001b1eef`), without color
+quantization, registry-key filtering or reduced diagnostics. Earlier diff-empty-
+only private-record claims retain historical provenance and are not new strict credit.
+
+Native screenshot/SST inspection identified separate actual owners. Level
+loc_64DC writes$16 to Dynamic_object_RAM+5+$2E (asm7880); the real B5 occupies
+physical SST8, so that common fade write aliases its loc_90A10 intro countdown.
+The initial walk now publishes the existing captured intro timer through that
+actual slot. B5 setup and loc_90B32's conversion-pan setup return before their next
+operations. Crystal loc_90CA2 likewise returns before the first+$10; loc_90CF4
+stores the unsigned word sum and retains an eight-pixel overshoot at targets ending
+in8. Its setup lifetime is captured and recreated, while the raw callback13/
+physical-clear14 contract remains unchanged after setup. Native850 independently
+records subtype4 atY$2E0, not its target$2D8. These are literal owners, not fitted clocks.
+
+Independent negative53246 ended1 at21:34:08 UTC (25.702s):6tests/6fail/0errors/skips,
+covering actual B5slot8/timer21 versus29, setup-only crystal dispatch, and four native
+overshooting targets. Pan negative42266 ended1 at21:35:46 UTC (23.810s):1/1/0/0,
+showing camera movement in the setup that native sub_90B84's return ends.
+
+Coherent46242 on`0aaeacde3` (complete helper) plus this native owner/test candidate
+ended1 at21:42:33 UTC (4m47s):1510tests/283fail/0errors/skips. All980 selectors,
+all140 Saved2,33 object cases,60 required S3K startup cases, two initial fixed-slot
+and10 fresh-title graph controls, plus HUD/initial-countdown controls passed.
+The sole283 failures were280 ceremony products and three P2 identity vectors at
+reverse pre-owner→first-step published scroll. All their natural active/released
+cycles had already passed. Exact three-case95909 ended1 at21:43:51 UTC, exposing
+zero initial foreground/background scroll and period512 versus rebuilt800/486/
+2048, with an all-zero versus actual packed horizontal table.
+
+Level loc_6310 calls DeformBgLayer before the initial Process_Sprites walk
+(asm7759-7760). A profile-owned internal port now performs that native dispatch
+once before the initial walk: admission is the existing FULL+post-load+fresh-
+assembly token, and the S3K profile additionally checks actual stock-ROM level
+identity. Decode, preview, restoration and non-level scene loops gain no dispatch;
+a real stock D01 Level assembly retains the source-owned call. No shared zone check,
+public snapshot/Mod API change or extra post-restore logical tick was added.
+The former zero first publication now agrees with reverse-owner replay.
+
+Final affected11111 ended0 at21:50:12 UTC (2m39s):382tests/0fail/0errors/0skips.
+It covers all283 failed ceremony/P2 cases and99 initial lifecycle/epoch/partial/
+profile/fixed/title/capture/startup controls. Exact selectors are
+`TestS3kHpzSanctuaryLifecycleProduction#ceremonyUsesItsLiteralNativeResourcesAndReplaysBeforeActiveAndReleasedWorlds+nativeP2UsesItsCharacterIdentityWithoutBorrowingTheAdditionalFollowers,TestInitialProcessSpritesPartialRewind,TestInitialProcessSpritesCoordinator,TestInitialProcessSpritesArmingEpoch,TestSonic3kLevelInitProfile,TestS3kInitialFixedSstDispatcher,TestS3kFreshTitleCardSstGraph,TestGameplayCaptureFreshLoad,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`.
+The retained1120 physical-product pass is the preceding46242 source; this is not
+one pristine all-current1510 pass. Lead composed validation covers the final shared
+initial-scroll source. All requests used the own-tree queued lean wrapper with
+Java25, `-Dmse=off`, surfaceless EGL, DISPLAY/WAYLAND unset, null OpenAL and the
+three verified absolute root ROM properties. No broad/full-suite run was submitted.
+
+Current matched images39895 ended0 at21:09:28 UTC on sealed`aedc137a1`, before the
+new native dispatch repair. Native references are the genuine bf3c539 GPGX
+publications recorded above; originals remain unchanged. Both engine products
+retain950 LEVEL/alive rows. Five native/off/S1-extension originals were inspected.
+With the explicitly documented engine `(channel*7+127)//255` and native
+`(channel+17)//34` logical-color conversion, off-pair full-publication residuals at
+80/500/850/900 are187/432/4512/0 of71680, versus prior21ac5097/5331/8172/4910.
+The fixed[96,64,224,198) scene region is187/276/0/0 of17152. All seven sampled
+P1/P2/camera/pose fields match; released900 is one native320 NTSC logical-color
+publication match. First native publication is white versus standalone engine
+black, and850 retains native beams missing in this older engine phase; these are
+not blanket ingress/phase/PAL/wide/donor/native-pixel passes. S1 is a solo donor
+extension rather than the paired native product. Exact original hashes/argv/UTC
+child bounds and rectangle protocol remain outside the repo under the existing
+`hpz-sanctuary-ceremony/engine-scenes-aedc137a1/` task directory. The qualified
+native-dispatch candidate's matched pictures and finite configured failure/success/
+all-seven results remain the next explicit obligations.

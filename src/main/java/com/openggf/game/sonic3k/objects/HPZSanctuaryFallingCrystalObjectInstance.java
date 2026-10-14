@@ -49,6 +49,7 @@ public final class HPZSanctuaryFallingCrystalObjectInstance extends AbstractObje
     private int rawAnimationIndex;
     private int mappingFrame = 8;
     private int lastFrameCounter;
+    private boolean initialized;
     private boolean midpointPublished;
     private boolean published;
 
@@ -56,7 +57,7 @@ public final class HPZSanctuaryFallingCrystalObjectInstance extends AbstractObje
             ObjectRefId parentId, int subtype, int x, int y, int landingTimer,
             int rawAnimationTimer, int rawAnimationIndex, int mappingFrame,
             int lastFrameCounter,
-            boolean midpointPublished, boolean published)
+            boolean initialized, boolean midpointPublished, boolean published)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
     public HPZSanctuaryFallingCrystalObjectInstance(
@@ -96,6 +97,12 @@ public final class HPZSanctuaryFallingCrystalObjectInstance extends AbstractObje
             return;
         }
         if (parentRef == null) return;
+        // loc_90CA2 sets attributes/coordinates and returns. loc_90CF4's
+        // first +$10 belongs to the following native object dispatch.
+        if (!initialized) {
+            initialized = true;
+            return;
+        }
         if (rawAnimationTimer >= 0) {
             if (rawAnimationIndex < RAW_LANDING_FRAMES.length) {
                 mappingFrame = RAW_LANDING_FRAMES[rawAnimationIndex++];
@@ -109,9 +116,10 @@ public final class HPZSanctuaryFallingCrystalObjectInstance extends AbstractObje
             return;
         }
         if (landingTimer < 0) {
-            y += 0x10;
+            // loc_90CF4 stores the word sum before its unsigned target
+            // comparison. Targets ending in8 retain the eight-pixel overshoot.
+            y = (y + 0x10) & 0xFFFF;
             if (y >= TARGET_Y[subtype]) {
-                y = TARGET_Y[subtype];
                 landingTimer = 0x3F;
                 writeLandingScreenShakeFlag();
                 if (tryServices() != null) {
@@ -158,7 +166,7 @@ public final class HPZSanctuaryFallingCrystalObjectInstance extends AbstractObje
         return super.captureRewindState(context).withObjectSubclassExtra(new RewindExtra(
                 parentId, subtype, x, y, landingTimer, rawAnimationTimer,
                 rawAnimationIndex, mappingFrame,
-                lastFrameCounter, midpointPublished, published));
+                lastFrameCounter, initialized, midpointPublished, published));
     }
 
     @Override
@@ -177,6 +185,7 @@ public final class HPZSanctuaryFallingCrystalObjectInstance extends AbstractObje
             rawAnimationIndex = extra.rawAnimationIndex();
             mappingFrame = extra.mappingFrame();
             lastFrameCounter = extra.lastFrameCounter();
+            initialized = extra.initialized();
             midpointPublished = extra.midpointPublished();
             published = extra.published();
         }

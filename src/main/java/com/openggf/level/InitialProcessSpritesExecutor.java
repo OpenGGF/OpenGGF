@@ -23,6 +23,13 @@ final class InitialProcessSpritesExecutor {
             ZoneFeatureProvider zoneFeatureProvider,
             AnimatedPatternManager animatedPatternManager,
             int frameCounter) {
+        // Optional game/profile ownership: S3K Level/loc_6310 deforms the
+        // initial scene before its loc_6468 player/object setup walk. This
+        // executor is reached only by an admitted fresh-assembly token.
+        if (gameModule.getLevelInitProfile()
+                instanceof com.openggf.game.internal.InitialLevelScrollPreparation preparation) {
+            preparation.prepareInitialLevelScroll();
+        }
         InitialFixedSstDispatcher fixed =
                 gameModule.createInitialFixedSstDispatcher(
                         spriteManager, objectManager, zoneFeatureProvider);

@@ -1965,3 +1965,20 @@ records negative controls, exact source/media hashes, commands and limits.
 Whole-world sky496→304 prepared-tile replay is independently reproduced on
 unchanged da27f4f3d and remains an active publication owner repair. No broader
 parity, combined validation or destination delivery is claimed.
+
+
+## Native sanctuary and initial-scroll composition (2026-10-14)
+
+Qualified route d726c82d4 is composed after cloud/HUD0b4b31967. One
+measurement-hazard append conflict preserves both editor projection and
+complete-comparator lessons. The S3K initialization profile keeps the develop
+authored/stock guard, native Saved2 flag, pending paired DMA publication and
+adds the admitted fresh stock-only initial deformation before Process_Sprites.
+Native slot8 title setup and crystal setup-only/overshoot are retained. The
+worker's1120 actual pedestal/Saved2 products pass with the complete comparator
+in its1510-case run; all283 initially failing ceremony/preowner-scroll cases
+plus99 affected setup neighbors pass382/0/0/0 in11111 at21:50:12 UTC,2:39.
+These are separately qualified selections, not one current green1510 run.
+Native d726 screenshots retain missing beams at850 and do not certify original
+whole-scene pixels. Root affected verification and existing sky publication
+repair follow this composition; combined smoke/guards and delivery are pending.

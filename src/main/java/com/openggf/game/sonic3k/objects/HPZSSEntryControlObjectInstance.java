@@ -127,6 +127,15 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
     }
 
     /**
+     * Native Level/loc_64DC's fixed-slot fade word aliases this controller's
+     * loc_90A10 intro countdown when B5 occupies Dynamic_object_RAM+5 (SST8).
+     */
+    public void enterLevelLoop() {
+        ensureState();
+        runtime.enterLevelLoop();
+    }
+
+    /**
      * Obj_HPZSSEntryControl loc_90998/loc_909B0 prepares the target bank in
      * the initial Process_Sprites at Level loc_6468, before loc_64DC arms the
      * black reveal. The engine represents that reveal as an RGB overlay on
@@ -177,7 +186,8 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         ensureState();
-        if (!childrenSpawned) {
+        boolean initialDispatch = !childrenSpawned;
+        if (initialDispatch) {
             if (!resultsBackdrop) {
                 publishEntryPaletteUnderFade();
             }
@@ -193,6 +203,9 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
             playersLocked = true;
             freshLockApplied = true;
         }
+        // loc_90A10/sub_90A4C's setup dispatch ends in rts. The next
+        // operation, loc_90A72, owns the first intro countdown decrement.
+        if (initialDispatch) return;
 
         if (runtime.phase() == S3kSanctuaryRuntimeState.Phase.INTRO_WAIT) {
             if (runtime.updateIntro() && !introCrystalSpawned) {
@@ -337,6 +350,9 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
                 cameraTargetX = conversionCameraTarget(subtype);
                 applyConversionPlayerMappings(subtype);
             }
+            // loc_90B32 installs loc_90BD2 and tail-calls sub_90B84 for
+            // Player_2; its rts ends this dispatch before the camera pan.
+            return;
         }
         if (!panCameraForTest(services().camera(), cameraTargetX)) {
             return;

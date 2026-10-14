@@ -47,6 +47,23 @@ class TestS3kHpzSanctuaryLifecycleProduction {
         assertTrue(GameServices.level().getLevelGamestate().isTimerPaused());
     }
 
+    @org.junit.jupiter.api.Test
+    void nativeInitialAssemblyPublishesTheFixedSlotFadeCountdownBeforeLevelLoop() throws Exception {
+        var row = new CanonicalEntryMatrixSupport.Row("sonic", WidescreenAspect.NATIVE_4_3, "off", "tails");
+        var fixture = support.boot(row);
+        GameServices.gameState().restoreS3kEmeraldProgress(List.of(1,1,1,1,1,1,1), false);
+        advance(fixture, row, 1);
+        var controller = GameServices.level().getObjectManager().activeObjectsOfType(
+                com.openggf.game.sonic3k.objects.HPZSSEntryControlObjectInstance.class).getFirst();
+        assertEquals(8, controller.getSlotIndex(), "native B5 shares Dynamic_object_RAM+5");
+        var field = controller.getClass().getDeclaredField("runtime");
+        field.setAccessible(true);
+        var runtime = (com.openggf.game.sonic3k.S3kSanctuaryRuntimeState) field.get(controller);
+        assertEquals(0x15, runtime.capture().introTimer(),
+                "loc_64DC writes slot8 objoff2E=$16 after setup; LevelLoop decrements once");
+        replayTwice(fixture, row, "native fixed-slot fade countdown", 45);
+    }
+
     static Stream<Arguments> finiteCeremonyProducts() {
         // Both actual controller branches apply the raw midpoint pose; one
         // converts seven Chaos Emeralds, the other releases without conversion.
