@@ -724,3 +724,18 @@ errors and sampled native-only19 at2977 remain. This supersedes the prior byte39
 alias obligation; physical Special explosion owner and cutscene FallingShot
 admission remain required. No new rendered/audio conformance claim.
 [Native source, negative and bounded qualification](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-barrel-shared-native-byte39).
+
+
+## AIZ physical Special explosion follow-up — 2026-10-14
+
+The actual parent callback creates an independent SST owner for Special/Exp02,
+with native Init wait, finite count, checked allocation before RNG, high-word Y,
+child-init SFX and next-pass clear. Sixteen local callback/pressure/metadata/
+act-clear/manager+real-RNG replay cases and existing consumers pass676; guards111
+pass. Five declared camera widths/two45-pass cycles are component evidence,
+not full host/donor/team/cold-route/registered-world certification. The previous
+physical-controller omission is superseded. Original AIZ/HCZ/prefix2 pass;
+strict fields remain unchanged red. Presence advances2977→3067 native-only21,
+preceding3066. Real cutscene FallingShot and its explosion-family/pending-clear
+remain required. Rendered/SAT/PCM and arbitrary recycled-header pressure stay
+unqualified. [Native sources and exact qualification](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-physical-special-explosion-owner).

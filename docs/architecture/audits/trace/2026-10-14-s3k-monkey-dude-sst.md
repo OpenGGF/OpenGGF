@@ -800,3 +800,72 @@ This scalar slice repairs the native drop columns without claiming strict or
 whole-object closure. Physical Special explosion ownership at that creation
 boundary and the cutscene FallingShot branch remain required next owners;
 prior rendered/audio and arbitrary numeric-pressure limits remain separate.
+
+
+## AIZ physical Special explosion owner
+
+Source6661b9b8b plus new owner SHA256 `28499bf571df30929fabbf8a595003ed78481137ce289e27a9fbf4e5e93ac5f0`,
+parent `b57cc1ef6f31ee26499f4e543543ac9096abc67b922ce32015b4ab0bf7cebfa8`,
+policy `54e7157a3864495cbdb608aea218e6cdc88fc74a66e98f2532c76aec55ebd7d5`,
+new TestAizMinibossSpecialExplosionOwner `8e17c1ab43840327a3fffa9adca12ed025f4fca15444d5fc8e10d271390e7def`.
+The existing parent swing-expiry callback creates ChildObjDat_AIZMinibossCutscene_Explosion
+(:136870/:137926) through checked AfterCurrent allocation. The former plain Java
+helper had no SST and used its own deferred state. The new owner captures its
+position, Init/operation state, word wait and byte count in its own physical slot;
+pure ctx.spawn recreation creates no children, sound or random work.
+
+Obj_BossExplosionSpecial (:176817) writes physical camera+160/+112, word2E=2 and
+subtype2; Obj_CreateBossExplosion (:176661) selects CreateBossExp02 count$28,
+ranges$80, routine-set$18, then tail-jumps Obj_Wait. Init consumes2→1; next pass
+holds0; following underflow uses Obj_BossExpControl2. The finite controller emits
+39 accepted attempts and marks Go_Delete on the40th callback at birth+119; its
+slot clears next dispatch+120. Failed child attempts consume the same count/wait
+without RNG or child-init sound. Checked AfterCurrent allocation precedes
+Random_Number; sub_83E90 uses low16 for X and SWAP/high16 for Y, with word wrap.
+The existing ROM-backed S3kBossExplosionChild owns same-pass native-init SFX,
+raw animation and next-dispatch retirement. Its exact15-byte ROM bank at$83FCC
+was read and verified; no disassembly/runtime fallback art or raw data added.
+
+The owner is independent of parent liveness, has no range/draw/touch gate and
+uses the original320/2 centre even at wider declared cameras. The AIZ2 reload
+clears this one-shot SST just like its parent; the local carry callback retires
+it, with restoration around the clear. Removing the old parent helper also
+removes its obsolete central DEFERRED policy. Other helper consumers, shared
+allocation/RNG algorithms, Child implementation and art provider are untouched.
+
+| Normal queue request | Terminal outcome | Timing BST |
+| --- | --- | --- |
+|16515 actual callback/physical owner negative|13/12fail/0errors/0skip; full initial-pool control passes|17:54:37;23.928s execution/276s queue|
+|38085 first real-SST candidate|13/0/0/0|18:03:58;70s/72s|
+|27598 affected655 plus16 new and5 existing cutscene/seamless consumers|676/0/0/0|18:08:40;31.355s/20s|
+|30405 canonical five-case trace/slot observation|5/1fail/0errors/0skip|18:22:12;97s/497s|
+|50339 alternate trace-segments|1/1fail/0errors/0skip|18:22:48;35.518s/595s|
+|11033 four -Pguards classes|111/0/0/0|18:23:21;31.624s/queue unavailable in retained output|
+
+Sixteen local cases cover actual parent callback admission at declared cameras
+320/352/400/528/800, physical-versus-copy origin, first native wait/high-word RNG,
+child-init sound, initial/partial pressure, independent lifetime/terminal marker,
+pure metadata, act-clear restoration and two45-pass cycles with manager plus
+real GameRng adapters. The callback is a declared component boundary, not a cold
+boss route or whole production registry. Existing helper-count test is now
+explicitly an independent legacy-helper control; it no longer implies that
+helper-only counts qualify AIZ's actual physical owner. Existing cutscene music/
+fade/seamless, actual napalm/SecondStrike/scalar and startup consumers pass.
+
+Affected command adds TestAizMinibossSpecialExplosionOwner,TestAizMinibossCutsceneInstance,
+TestAizMinibossSeamlessTransition to93869. The three standard profiles/selectors
+retain Java25/EGL/original absolute ROM; slot output is target/special-explosion-native-slot-occupancy.
+Original AIZ/initial HCZ/two prefixes pass. Chain6/8/11 raw189/12,719/82,067,
+physics189/12,604/69,393, animation0/115/12,674 remain unchanged. First non-camera
+3319 P2X$31C1/$31CA,1583 P2X$366C/$3674,1510 Y$7D6/$7DF; incomplete source stop
+input68,801/loadgen9. Alternate60 spans remains first25589 animation$13/$05.
+No fixture, metric, global clock, hydration or broad/full-suite change.
+
+Native19 is now present at2977. Sampled segment2 presence advances2977→3067,
+native-only21, preceding retained3066. The same row has native low-code$88
+BossExplosionHitbox context versus engine ImpactFlame children39..45, and a
+retained native21 at low-code$B6 where engine's common-shot mode has cleared.
+Low code bytes are not unique type proof; the source FallingShot floor/Go_Delete
+and creation-table context supplies this next attribution. Real cutscene
+FallingShot admission/collision/lifetime remains required next work. No new
+rendered-pixel, SAT/priority, PCM or arbitrary reused-header pressure certification.

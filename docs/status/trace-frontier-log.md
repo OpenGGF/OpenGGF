@@ -112568,3 +112568,25 @@ spans, first25589 animation$13/$05. Guards45245 at17:36:13 (32.755s/174s).
 Presence remains2977 native-only19, preceding2972. Physical Special explosion
 owner and cutscene FallingShot remain required next work, not closure claims.
 No broad/full sweep, shared clock/allocator, fixture or hydration change.
+
+
+### 2026-10-14 — AIZ Special explosion owns its physical SST
+
+Owned bugfix/ai-s3k-parity-trace, source6661b9b8b plus owner28499bf5/parentb57cc1ef/
+policy54e7157a/test8e17c1ab SHA256 candidates. [Native lifecycle, negatives and commands](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-physical-special-explosion-owner).
+Actual swing-expiry callback now creates a real checked AfterCurrent owner;
+its wait/count, allocation-before-RNG, high-word Y, child-init sound and delayed
+clear survive manager/RNG replay. Shared helper consumers remain unchanged.
+Negative16515:13/12fail/0errors/0skip; candidate38085:13/0/0/0; affected27598:
+676/0/0/0; guards11033:111/0/0/0. Standard canonical/alternate/guard commands,
+Java25/EGL/ROM; observer target/special-explosion-native-slot-occupancy.
+Canonical30405:5/1fail/0errors/0skip at18:22:12 BST (97s/497s), original AIZ,
+initial HCZ/two prefixes pass. Chain6/8/11 raw189/12,719/82,067; physics189/
+12,604/69,393, animation0/115/12,674; first3319 P2X$31C1/$31CA,1583 P2X$366C/
+$3674,1510 Y$7D6/$7DF; incomplete input68,801/loadgen9 unchanged. Alternate50339:
+1/1fail/0errors/0skip at18:22:48 (35.518s/595s),60 spans/first25589 animation13/05.
+Guard11033 at18:23:21 (31.624s/queue unavailable in retained output).
+Sampled segment2 presence advances2977→3067 native-only21, preceding3066;
+FallingShot pending-floor retirement and wrong cutscene explosion-family context
+are next owners. Not strict/full-type closure; no broad/full run, hydration or
+new rendered/audio certification.

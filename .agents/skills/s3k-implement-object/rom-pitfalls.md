@@ -5512,3 +5512,19 @@ tail, byte wrap and restore/replay across the role change. A Java -1 oracle is
 not the underlying native byte valueFF.
 
 Origin:2026-10-14 AIZ byte39 slice overa0b70f969; asm136991,136996,137688.
+
+
+## A nondrawing controller still owns and dispatches a real SST
+
+AIZ's ChildObjDat cutscene explosion creates Obj_BossExplosionSpecial as a real
+AfterCurrent actor. Replacing it with a parent-ticked helper changes slot
+occupancy, child scan origin, RNG ordering and recreation even without pixels.
+Special writes physical camera+160/+112 and wait2, then tail-enters Obj_Wait in
+Init. Preserve subtype02's39 attempts, consumed allocation failures, low/high
+random words, child-owned sound and terminal marker before next-pass clear.
+A cleared-parent gate is absent for this independent Obj_Wait operation. Apply
+native act-clear ownership separately, and test real admission/metadata plus
+manager and RNG restoration. Helper-only draw counts cannot prove composition.
+
+Origin:2026-10-14 AIZ physical Special owner over6661b9b8b; asm136870,137926,
+176661–176835. Shared legacy helper consumers are outside this local repair.

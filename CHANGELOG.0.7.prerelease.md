@@ -43,6 +43,8 @@ Unreleased. The earlier development themes remain in
   signed-counter return tail.
   Firing and drop-position cycling share the native byte counter, including
   signed reads and wrap, so both facing directions select their native columns.
+  The cutscene explosion controller owns a real sprite-table slot, preserving
+  allocation-before-RNG, both random words and native retirement through rewind.
 
 - **S3K breakable floors:** Cork's placed record becomes its first moving
   fragment, preserving checked sibling allocation, native motion and render
