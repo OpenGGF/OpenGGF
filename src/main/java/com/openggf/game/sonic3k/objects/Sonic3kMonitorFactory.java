@@ -1,7 +1,6 @@
-package com.openggf.mods.objects;
+package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.ModApi;
-import com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 

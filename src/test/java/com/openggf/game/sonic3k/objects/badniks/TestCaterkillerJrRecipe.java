@@ -10,7 +10,6 @@ import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.*;
 import com.openggf.mods.objects.CaterkillerJrFactory;
-import com.openggf.mods.objects.CaterkillerJrRecipe;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.*;
 
@@ -368,8 +367,8 @@ class TestCaterkillerJrRecipe {
     }
     private void activate(CaterkillerJrHeadInstance head) { head.update(0, player); head.update(1, player); }
     private void tickGraphs(int frames) {
-        for (int frame = 0; frame < frames; frame++) {
-            for (var object : List.copyOf(manager.getActiveObjects())) if (!object.isDestroyed()) object.update(frame, player);
+        for (int vIntRunCount = 0; vIntRunCount < frames; vIntRunCount++) {
+            for (var object : List.copyOf(manager.getActiveObjects())) if (!object.isDestroyed()) object.update(vIntRunCount, player);
         }
     }
     @SuppressWarnings("unchecked") private static List<CaterkillerJrBodyInstance> segments(CaterkillerJrHeadInstance head) {
@@ -398,7 +397,7 @@ class TestCaterkillerJrRecipe {
     }
     public static final class Filler extends AbstractObjectInstance implements SpawnRewindRecreatable {
         public Filler(ObjectSpawn spawn) { super(spawn, "filler"); }
-        @Override public void update(int frame, com.openggf.game.PlayableEntity player) { }
+        @Override public void update(int vIntRunCount, com.openggf.game.PlayableEntity player) { }
         @Override public void appendRenderCommands(List<com.openggf.graphics.GLCommand> commands) { }
     }
 }

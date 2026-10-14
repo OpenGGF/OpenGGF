@@ -15,7 +15,6 @@ import com.openggf.graphics.SpritePresentation;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.*;
 import com.openggf.mods.objects.CaterkillerJrFactory;
-import com.openggf.mods.objects.CaterkillerJrRecipe;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.Sonic;

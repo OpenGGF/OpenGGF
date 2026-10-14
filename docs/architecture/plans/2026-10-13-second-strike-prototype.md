@@ -720,3 +720,92 @@ and ordinary GameLoop. It observes twelve linked bodies, a 116-pixel span at row
 cold-entry nor a whole-route qualification. These captures precede the receiver
 containment repair; fresh strict artifacts and change-based smoke validation are
 still required before integration.
+
+
+### Completed smoke and narrow architecture repairs
+
+The one frozen `60223c39ba81a32c7f272afe40233ca7d591f392` invocation,
+`20261014T151115Z-e5464144`, completed all 66 ordinary smoke batches: 3,264
+selected candidates, 3,234 reports, 27,294 cases, zero failures/errors and 64 skips.
+Ordinary Maven execution took 4,745.08 seconds. Fresh guards completed 680 cases
+with eight failures, no errors or skips, in 271.98 seconds. The source fingerprint
+remained `2ae721f8a8f7aac6aa30172013dd2f3034d4227a6bfbd4fd312a38b316c57b41`;
+no timeout or negative-row omission occurred. Root inspected the eight complete
+assertions and all 64 exact skip identities/causes, then acknowledged and deleted
+the diagnostics. The cycle assertion's full 4,686-character reported message was
+recovered from the runner detail rather than its capped short message.
+
+The eight failures are task regressions, not inherited failures:
+
+- The native Caterkiller preset lived in the mod implementation package, adding
+  a game/mod cycle and violating the explicit-contract boundary. It now lives
+  with the native badnik consumer; its two enum values and recipes are unchanged.
+- The S3K monitor factory violated matching-game placement. It now lives under
+  `game.sonic3k.objects`. Native destruction config moves to
+  `Sonic3kBadnikConfig.destruction()`, leaving shared effects dependent only on
+  their existing factory contracts; this removes the concrete-construction and
+  shared-game-dependency failures without changing the native reward sequence.
+- The body-to-head reference already restored exactly in adjacent-graph tests,
+  but lacked its explicit audit policy. The class-specific `CAPTURED` declaration
+  now documents that identity codec; no gap baseline is enlarged. The synthetic
+  filler update parameter now names `vIntRunCount`.
+- Registered-factory derivative admission moves intact from ObjectManager into
+  `RegisteredObjectDerivatives`. The manager's internal registry accessor serves
+  derivative admission and rewind recreation. The 3,086-line budget is unchanged.
+
+The 64 skipped cases remain unexecuted coverage: opt-in diagnostics/measurements,
+Infinite Sonic route applicability, graphics/EGL preconditions, local reference
+availability and a CPZ spin-tube assumption. No missing-ROM skip occurred. No
+baseline equivalence is inferred for these skips.
+
+The private intent merge now includes published `88fc03dacd9835437070d40109d62b97a665f944`.
+Its sole textual conflict is the runtime lease expiration branch: retain both
+producer/content-owner cancellation and upstream's early dead-root cleanup.
+New native ring leases have no separate content owner. Host-key registry routing,
+preview/browse delegation and fixed-SST forwarding all survive. A composed
+attached-effect test then reproduced loss of the new deferred palette replay;
+the attached subject now retains that replay while keeping its own part, native
+head scale and failure-safe outer-subject restoration.
+
+The actually compiled mutable API snapshot has 20,900 lines, SHA-256
+`c1ab9c6d18efc4d8094aabd46c6ebadc4327c75485f4e714d04ad8a608703f05`.
+Its private-checkpoint delta is 16 additions/13 removals due to the relocated
+unpublished roots; descriptor/runtime version stays candidate `0.7.0`, and no
+published pin changes. Final focused behavior, actual artifacts and full fresh
+guards remain pending on this composition. Completed ordinary coverage is not
+repeated merely for these package/extraction repairs; new overlap risks receive
+focused registry, ownership, palette, native-recipe and startup checks.
+
+
+The composed final focus then passed all 211 cases across the 29 selected classes,
+with zero skips. Strict bundled packaging, paired SDK/testkit/Javadoc artifact
+verification and the actual exported four-case Jupiter source gate also passed
+with zero findings or skips. All original eight guard failures are resolved.
+The 681-case fresh guard run exposed one extraction follow-up: the new helper
+retained a raw `addDynamicObject` call that was exempt only while inside the
+manager. It now admits the already-validated instance through the existing
+`createDynamicObject` path, under the same content-owner boundary and native
+construction context. Factory rejection still occurs before admission; no budget
+or guard exemption changes. Delta lifecycle/ownership checks and another fresh
+guard invocation are required; the other completed focus/artifact checks are not
+repeated as a ceremony.
+
+
+Final narrow repair qualification passed: the three-class lifecycle focus completed
+31 cases, and the complete fresh guard profile completed 681 cases, both with
+zero failures/errors/skips. Both Maven invocations used normal admission, Java 25,
+the explicit surfaceless-EGL flag, Lua 5.4 and the original three absolute ROM
+paths. Focused `verify` also rebuilt the strict bundled example and matching SDK,
+testkit and Javadoc artifacts with zero findings. The API snapshot remains
+byte-identical at 20,900 lines. Frozen build-input fingerprint
+`96911bc13650d9e87145290feffdfb3dd207ec707a7792bf6790b1f27fbd5b56`
+was unchanged across both gates; all nine observed blockers are resolved. Root
+consumed the exact reports and removed their generated diagnostics.
+
+Develop subsequently published `b649a3c9b87e8708f0428e51b3848c5c3712cdd1`,
+adding the shared content importer and its illustrated editor guide. The only
+executable path overlap is Engine: this task adds two title-overlay draw lines;
+the incoming change adds import-screen ownership and host UI away from that draw
+call. Final main composition must preserve both. Its title/import/overlay and
+native startup consumers plus affected structural guards receive bounded
+post-integration checks; the already completed ordinary smoke is not repeated.

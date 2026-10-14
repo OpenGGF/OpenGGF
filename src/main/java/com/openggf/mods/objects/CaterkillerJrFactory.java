@@ -2,6 +2,7 @@ package com.openggf.mods.objects;
 
 import com.openggf.game.ModApi;
 import com.openggf.game.sonic3k.objects.badniks.CaterkillerJrHeadInstance;
+import com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe;
 import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.level.objects.ObjectSpawn;
 

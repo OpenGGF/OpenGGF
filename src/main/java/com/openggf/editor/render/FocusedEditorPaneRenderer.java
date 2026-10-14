@@ -15,7 +15,9 @@ import java.util.List;
 import static org.lwjgl.opengl.GL11.GL_LINES;
 
 public class FocusedEditorPaneRenderer {
-    public record PreviewPlacement(PatternDesc descriptor, int x, int y) {}
+    public record PreviewPlacement(PatternDesc descriptor,int x,int y,int size) {
+        public PreviewPlacement(PatternDesc descriptor,int x,int y){this(descriptor,x,y,8);}
+    }
 
     private static final float BLOCK_R = 0.96f;
     private static final float BLOCK_G = 0.64f;
@@ -73,23 +75,27 @@ public class FocusedEditorPaneRenderer {
     }
 
     protected void appendBlockPaneCommands(List<GLCommand> commands) {
-        appendPaneCommands(commands, 196, 34, 316, 194, BLOCK_R, BLOCK_G, BLOCK_B);
+        var pane=layout().focused(com.openggf.editor.EditorHierarchyDepth.BLOCK);
+        appendPaneCommands(commands,pane.left(),pane.top(),pane.right(),pane.bottom(),BLOCK_R,BLOCK_G,BLOCK_B);
         renderPreviewPlacements(buildBlockPreviewPlacements());
         appendBlockActiveCellHighlight(commands, buildBlockPreviewLayout());
     }
 
     protected void appendChunkPaneCommands(List<GLCommand> commands) {
-        appendPaneCommands(commands, 176, 34, 316, 194, CHUNK_R, CHUNK_G, CHUNK_B);
+        var pane=layout().focused(com.openggf.editor.EditorHierarchyDepth.CHUNK);
+        appendPaneCommands(commands,pane.left(),pane.top(),pane.right(),pane.bottom(),CHUNK_R,CHUNK_G,CHUNK_B);
         renderPreviewPlacements(buildChunkPreviewPlacements());
         appendChunkActiveCellHighlight(commands, buildChunkPreviewLayout());
     }
 
     protected void appendBlockBackdropCommands(List<GLCommand> commands) {
-        appendBackdropCommand(commands, 196, 34, 316, 194);
+        var pane=layout().focused(com.openggf.editor.EditorHierarchyDepth.BLOCK);
+        appendBackdropCommand(commands,pane.left(),pane.top(),pane.right(),pane.bottom());
     }
 
     protected void appendChunkBackdropCommands(List<GLCommand> commands) {
-        appendBackdropCommand(commands, 176, 34, 316, 194);
+        var pane=layout().focused(com.openggf.editor.EditorHierarchyDepth.CHUNK);
+        appendBackdropCommand(commands,pane.left(),pane.top(),pane.right(),pane.bottom());
     }
 
     protected List<PreviewPlacement> buildBlockPreviewPlacements() {
@@ -112,10 +118,10 @@ public class FocusedEditorPaneRenderer {
                 if (chunk == null) {
                     continue;
                 }
-                appendChunkPlacements(placements, chunk,
-                        layout.originX + cellX * layout.chunkCellSize,
-                        layout.originY + cellY * layout.chunkCellSize,
-                        layout.patternCellSize);
+                var descriptor=controller.selectedBlockChunkDescriptor(cellX,cellY);
+                appendChunkPlacements(placements,chunk,layout.originX+cellX*layout.chunkCellSize,
+                        layout.originY+cellY*layout.chunkCellSize,layout.patternCellSize,
+                        descriptor.getHFlip(),descriptor.getVFlip());
             }
         }
         return placements;
@@ -192,23 +198,21 @@ public class FocusedEditorPaneRenderer {
         }
         for (PreviewPlacement placement : placements) {
             PatternDesc descriptor = placement.descriptor();
-            graphicsManager.renderPatternWithId(descriptor.getPatternIndex(), descriptor, placement.x(), placement.y());
+            if(placement.size()==8)graphicsManager.renderPatternWithId(descriptor.getPatternIndex(),descriptor,placement.x(),placement.y());
+            else graphicsManager.renderPatternWithIdScaled(descriptor.getPatternIndex(),descriptor,
+                    placement.x(),placement.y(),placement.size(),placement.size());
         }
     }
 
+    private EditorUiLayout layout() { return new EditorUiLayout(graphicsManager.getProjectionWidth(),224); }
     protected PreviewLayout buildBlockPreviewLayout() {
-        if (controller == null) {
-            return new PreviewLayout(196, 34, Chunk.CHUNK_WIDTH, Chunk.CHUNK_WIDTH / 2);
-        }
-        Block block = controller.selectedBlockPreview();
-        int gridSide = block != null ? Math.max(1, block.getGridSide()) : 1;
-        return buildPreviewLayout(196, 34, 316, 194, gridSide * Chunk.CHUNK_WIDTH, gridSide * Chunk.CHUNK_WIDTH,
-                Chunk.CHUNK_WIDTH, Chunk.CHUNK_WIDTH / 2);
+        int side=controller==null?1:controller.blockGridSide();
+        var grid=layout().focusedGrid(com.openggf.editor.EditorHierarchyDepth.BLOCK,side);
+        return new PreviewLayout(grid.x(),grid.y(),grid.cellSize(),Math.max(1,grid.cellSize()/2));
     }
-
     protected PreviewLayout buildChunkPreviewLayout() {
-        return buildPreviewLayout(176, 34, 316, 194, Chunk.CHUNK_WIDTH, Chunk.CHUNK_HEIGHT,
-                Chunk.CHUNK_WIDTH, Chunk.CHUNK_WIDTH / 2);
+        var grid=layout().focusedGrid(com.openggf.editor.EditorHierarchyDepth.CHUNK,2);
+        return new PreviewLayout(grid.x(),grid.y(),grid.cellSize()*2,grid.cellSize());
     }
 
     protected PreviewLayout buildPreviewLayout(int left,
@@ -229,13 +233,14 @@ public class FocusedEditorPaneRenderer {
                                          int originX,
                                          int originY,
                                          int patternCellSize) {
-        for (int cellY = 0; cellY < Chunk.PATTERNS_PER_CHUNK / 2; cellY++) {
-            for (int cellX = 0; cellX < Chunk.PATTERNS_PER_CHUNK / 2; cellX++) {
-                PatternDesc descriptor = chunk.getPatternDesc(cellX, cellY);
-                int x = originX + cellX * patternCellSize;
-                int y = originY + cellY * patternCellSize;
-                placements.add(new PreviewPlacement(descriptor, x, y));
-            }
+        appendChunkPlacements(placements,chunk,originX,originY,patternCellSize,false,false);
+    }
+    private void appendChunkPlacements(List<PreviewPlacement> placements,Chunk chunk,int originX,int originY,
+                                       int size,boolean hFlip,boolean vFlip) {
+        for(int y=0;y<2;y++)for(int x=0;x<2;x++) {
+            PatternDesc source=chunk.getPatternDesc(hFlip?1-x:x,vFlip?1-y:y);
+            int raw=source.get()^(hFlip?0x800:0)^(vFlip?0x1000:0);
+            placements.add(new PreviewPlacement(new PatternDesc(raw),originX+x*size,originY+y*size,size));
         }
     }
 
@@ -251,9 +256,6 @@ public class FocusedEditorPaneRenderer {
                                     float g,
                                     float b) {
         EditorToolbarRenderer.appendRectOutline(commands, left, top, right, bottom, r, g, b);
-        EditorToolbarRenderer.appendLine(commands, left, top + 26, right, top + 26, r, g, b);
-        EditorToolbarRenderer.appendLine(commands, left, top + 98, right, top + 98, r, g, b);
-        EditorToolbarRenderer.appendLine(commands, left + 28, top + 26, left + 28, bottom, r, g, b);
     }
 
     private void appendBackdropCommand(List<GLCommand> commands, int left, int top, int right, int bottom) {

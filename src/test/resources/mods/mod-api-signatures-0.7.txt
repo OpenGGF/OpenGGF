@@ -520,6 +520,9 @@ CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.BlueSphereLayoutPolicy vi
 CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.BlueSphereLayoutPolicy visible @java.lang.FunctionalInterface
 CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.GumballSpringPolicy visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.sonic3k.difficulty.GumballSpringPolicy visible @java.lang.FunctionalInterface
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.objects.Sonic3kMonitorFactory visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.sonic3k.objects.badniks.Sonic3kBadnikConfig visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.startup.DonatedDataSelectWarmupTask visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.zone.ZoneRuntimeRegistry visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.zone.ZoneRuntimeState visible @com.openggf.game.ModApi
@@ -871,8 +874,6 @@ CF-ANNOTATION TYPE com.openggf.mods.mutators.TemporaryMutators$Availability visi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.TransportPolicy visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.mutators.TransportPolicy$Kind visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.objects.CaterkillerJrFactory visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.mods.objects.CaterkillerJrRecipe visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.mods.objects.Sonic3kMonitorFactory visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.run.GhostPose visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.run.PlayerPose visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.mods.run.RunEndReason visible @com.openggf.game.ModApi
@@ -2725,6 +2726,8 @@ FIELD com.openggf.game.solid.ContactKind public,static,final com.openggf.game.so
 FIELD com.openggf.game.solid.PlayerStandingState public,static,final com.openggf.game.solid.PlayerStandingState NONE
 FIELD com.openggf.game.solid.PostContactState public,static,final com.openggf.game.solid.PostContactState ZERO
 FIELD com.openggf.game.solid.PreContactState public,static,final com.openggf.game.solid.PreContactState ZERO
+FIELD com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe public,static,final com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe DOUBLE_LENGTH
+FIELD com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe public,static,final com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe STOCK
 FIELD com.openggf.graphics.FadeManager$FadeState public,static,final com.openggf.graphics.FadeManager$FadeState FADING_FROM_BLACK
 FIELD com.openggf.graphics.FadeManager$FadeState public,static,final com.openggf.graphics.FadeManager$FadeState FADING_FROM_WHITE
 FIELD com.openggf.graphics.FadeManager$FadeState public,static,final com.openggf.graphics.FadeManager$FadeState FADING_TO_BLACK
@@ -3150,8 +3153,6 @@ FIELD com.openggf.mods.mutators.SpritePresentationPolicy$Target public,static,fi
 FIELD com.openggf.mods.mutators.TransportPolicy$Kind public,static,final com.openggf.mods.mutators.TransportPolicy$Kind CARRY
 FIELD com.openggf.mods.mutators.TransportPolicy$Kind public,static,final com.openggf.mods.mutators.TransportPolicy$Kind COMPANION
 FIELD com.openggf.mods.mutators.TransportPolicy$Kind public,static,final com.openggf.mods.mutators.TransportPolicy$Kind RIDE
-FIELD com.openggf.mods.objects.CaterkillerJrRecipe public,static,final com.openggf.mods.objects.CaterkillerJrRecipe DOUBLE_LENGTH
-FIELD com.openggf.mods.objects.CaterkillerJrRecipe public,static,final com.openggf.mods.objects.CaterkillerJrRecipe STOCK
 FIELD com.openggf.mods.run.RunEndReason public,static,final com.openggf.mods.run.RunEndReason ABORTED
 FIELD com.openggf.mods.run.RunEndReason public,static,final com.openggf.mods.run.RunEndReason ACT_COMPLETED
 FIELD com.openggf.mods.run.RunEndReason public,static,final com.openggf.mods.run.RunEndReason LEFT
@@ -8153,6 +8154,10 @@ METHOD com.openggf.game.solid.SolidExecutionRegistry public,static  com.openggf.
 METHOD com.openggf.game.sonic3k.difficulty.AizMinibossAttackPolicy public,abstract  int followupDelayTicks(int)
 METHOD com.openggf.game.sonic3k.difficulty.BlueSphereLayoutPolicy public,abstract  byte[] transformLayout(int,byte[])
 METHOD com.openggf.game.sonic3k.difficulty.GumballSpringPolicy public,abstract  int[] springOffsets()
+METHOD com.openggf.game.sonic3k.objects.Sonic3kMonitorFactory public,static  com.openggf.level.objects.AbstractObjectInstance eggman(com.openggf.level.objects.ObjectSpawn)
+METHOD com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe public,static  com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe valueOf(java.lang.String)
+METHOD com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe public,static  com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe[] values()
+METHOD com.openggf.game.sonic3k.objects.badniks.Sonic3kBadnikConfig public,static  com.openggf.level.objects.DestructionEffects$DestructionConfig destruction()
 METHOD com.openggf.game.startup.DonatedDataSelectWarmupTask public,abstract  boolean isRunning()
 METHOD com.openggf.game.startup.DonatedDataSelectWarmupTask public,abstract  void start()
 METHOD com.openggf.game.zone.ZoneRuntimeRegistry public  com.openggf.game.rewind.snapshot.ZoneRuntimeSnapshot capture()
@@ -9905,7 +9910,6 @@ METHOD com.openggf.level.objects.BakedSheetReader$Palette public  int line()
 METHOD com.openggf.level.objects.BakedSheetReader$Palette public  int[] colors()
 METHOD com.openggf.level.objects.BakedSheetReader$Palette public,final  java.lang.String toString()
 METHOD com.openggf.level.objects.DestructionEffects public,static  com.openggf.level.objects.DestructionEffects$DestructionConfig deferredAnimalWithoutPopup(int,boolean)
-METHOD com.openggf.level.objects.DestructionEffects public,static  com.openggf.level.objects.DestructionEffects$DestructionConfig sonic3kBadnik()
 METHOD com.openggf.level.objects.DestructionEffects public,static  void defeatBadnik(com.openggf.level.objects.AbstractBadnikInstance,com.openggf.game.PlayableEntity,boolean)
 METHOD com.openggf.level.objects.DestructionEffects public,static  void destroyBadnik(int,int,com.openggf.level.objects.ObjectSpawn,com.openggf.game.PlayableEntity,com.openggf.level.objects.ObjectServices,com.openggf.level.objects.DestructionEffects$DestructionConfig)
 METHOD com.openggf.level.objects.DestructionEffects public,static  void destroyBadnik(int,int,com.openggf.level.objects.ObjectSpawn,int,com.openggf.game.PlayableEntity,com.openggf.level.objects.ObjectServices,com.openggf.level.objects.DestructionEffects$DestructionConfig)
@@ -12173,10 +12177,7 @@ METHOD com.openggf.mods.mutators.TransportPolicy public,final  int hashCode()
 METHOD com.openggf.mods.mutators.TransportPolicy public,final  java.lang.String toString()
 METHOD com.openggf.mods.mutators.TransportPolicy$Kind public,static  com.openggf.mods.mutators.TransportPolicy$Kind valueOf(java.lang.String)
 METHOD com.openggf.mods.mutators.TransportPolicy$Kind public,static  com.openggf.mods.mutators.TransportPolicy$Kind[] values()
-METHOD com.openggf.mods.objects.CaterkillerJrFactory public,static  com.openggf.level.objects.AbstractBadnikInstance create(com.openggf.level.objects.ObjectSpawn,com.openggf.mods.objects.CaterkillerJrRecipe)
-METHOD com.openggf.mods.objects.CaterkillerJrRecipe public,static  com.openggf.mods.objects.CaterkillerJrRecipe valueOf(java.lang.String)
-METHOD com.openggf.mods.objects.CaterkillerJrRecipe public,static  com.openggf.mods.objects.CaterkillerJrRecipe[] values()
-METHOD com.openggf.mods.objects.Sonic3kMonitorFactory public,static  com.openggf.level.objects.AbstractObjectInstance eggman(com.openggf.level.objects.ObjectSpawn)
+METHOD com.openggf.mods.objects.CaterkillerJrFactory public,static  com.openggf.level.objects.AbstractBadnikInstance create(com.openggf.level.objects.ObjectSpawn,com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe)
 METHOD com.openggf.mods.run.GhostPose public  com.openggf.mods.run.PlayerPose pose()
 METHOD com.openggf.mods.run.GhostPose public  float opacity()
 METHOD com.openggf.mods.run.GhostPose public  java.lang.String characterCode()
@@ -18739,6 +18740,8 @@ TYPE class public,final com.openggf.game.save.SaveSessionContext SUPER java.lang
 TYPE class public,final com.openggf.game.session.EngineContext SUPER java.lang.Object
 TYPE class public,final com.openggf.game.session.WorldSession SUPER java.lang.Object
 TYPE class public,final com.openggf.game.solid.ObjectSolidExecutionContext SUPER java.lang.Object
+TYPE class public,final com.openggf.game.sonic3k.objects.Sonic3kMonitorFactory SUPER java.lang.Object
+TYPE class public,final com.openggf.game.sonic3k.objects.badniks.Sonic3kBadnikConfig SUPER java.lang.Object
 TYPE class public,final com.openggf.game.zone.ZoneRuntimeRegistry SUPER java.lang.Object
 TYPE class public,final com.openggf.graphics.PaletteFadePresentation SUPER java.lang.Object
 TYPE class public,final com.openggf.io.ModInputLimits SUPER java.lang.Object
@@ -18770,7 +18773,6 @@ TYPE class public,final com.openggf.mods.code.ModLevelDefinition SUPER java.lang
 TYPE class public,final com.openggf.mods.code.StandaloneLevelLoader SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.mutators.MutatorConfigurationScreen SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.objects.CaterkillerJrFactory SUPER java.lang.Object
-TYPE class public,final com.openggf.mods.objects.Sonic3kMonitorFactory SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.scene.SceneButtons SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.scene.SceneDraw SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.scene.SceneImage SUPER java.lang.Object
@@ -18883,6 +18885,7 @@ TYPE enum public,final com.openggf.game.rewind.identity.ObjectRefKind SUPER java
 TYPE enum public,final com.openggf.game.save.SaveReason SUPER java.lang.Enum<com.openggf.game.save.SaveReason>
 TYPE enum public,final com.openggf.game.save.SaveSlotState SUPER java.lang.Enum<com.openggf.game.save.SaveSlotState>
 TYPE enum public,final com.openggf.game.solid.ContactKind SUPER java.lang.Enum<com.openggf.game.solid.ContactKind>
+TYPE enum public,final com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe SUPER java.lang.Enum<com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe>
 TYPE enum public,final com.openggf.graphics.PatternAtlasRange SUPER java.lang.Enum<com.openggf.graphics.PatternAtlasRange>
 TYPE enum public,final com.openggf.graphics.SpriteMaskReplayRole SUPER java.lang.Enum<com.openggf.graphics.SpriteMaskReplayRole>
 TYPE enum public,final com.openggf.graphics.color.DisplayColorProfile SUPER java.lang.Enum<com.openggf.graphics.color.DisplayColorProfile>
@@ -18910,7 +18913,6 @@ TYPE enum public,final com.openggf.level.scroll.BgTilemapUpdateMode SUPER java.l
 TYPE enum public,final com.openggf.mods.code.RomArtCompression SUPER java.lang.Enum<com.openggf.mods.code.RomArtCompression>
 TYPE enum public,final com.openggf.mods.mutators.MutatorCapability SUPER java.lang.Enum<com.openggf.mods.mutators.MutatorCapability>
 TYPE enum public,final com.openggf.mods.mutators.MutatorScope SUPER java.lang.Enum<com.openggf.mods.mutators.MutatorScope>
-TYPE enum public,final com.openggf.mods.objects.CaterkillerJrRecipe SUPER java.lang.Enum<com.openggf.mods.objects.CaterkillerJrRecipe>
 TYPE enum public,final com.openggf.mods.run.RunEndReason SUPER java.lang.Enum<com.openggf.mods.run.RunEndReason>
 TYPE enum public,final com.openggf.mods.scene.art.StockSceneArt SUPER java.lang.Enum<com.openggf.mods.scene.art.StockSceneArt>
 TYPE enum public,final com.openggf.mods.state.ModSaveWriteResult SUPER java.lang.Enum<com.openggf.mods.state.ModSaveWriteResult>
@@ -20227,6 +20229,9 @@ TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.BlueSphereLayoutPolicy @com.
 TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.BlueSphereLayoutPolicy @java.lang.FunctionalInterface
 TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.GumballSpringPolicy @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.sonic3k.difficulty.GumballSpringPolicy @java.lang.FunctionalInterface
+TYPE-ANNOTATION com.openggf.game.sonic3k.objects.Sonic3kMonitorFactory @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.sonic3k.objects.badniks.Sonic3kBadnikConfig @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.startup.DonatedDataSelectWarmupTask @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.zone.ZoneRuntimeRegistry @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.zone.ZoneRuntimeState @com.openggf.game.ModApi
@@ -20578,8 +20583,6 @@ TYPE-ANNOTATION com.openggf.mods.mutators.TemporaryMutators$Availability @com.op
 TYPE-ANNOTATION com.openggf.mods.mutators.TransportPolicy @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.mutators.TransportPolicy$Kind @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.objects.CaterkillerJrFactory @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.mods.objects.CaterkillerJrRecipe @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.mods.objects.Sonic3kMonitorFactory @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.run.GhostPose @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.run.PlayerPose @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.mods.run.RunEndReason @com.openggf.game.ModApi

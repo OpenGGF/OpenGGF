@@ -117,7 +117,7 @@ abstract class AbstractS3kBadnikInstance extends AbstractBadnikInstance
      * {@code Touch_Enemy}-type badnik ({@code collision_flags $18}) that does not share this
      * class's shape, and {@code Touch_EnemyNormal} gives it the same destruction.
      */
-    static final DestructionConfig S3K_DESTRUCTION_CONFIG = DestructionEffects.sonic3kBadnik();
+    static final DestructionConfig S3K_DESTRUCTION_CONFIG = Sonic3kBadnikConfig.destruction();
 
     protected final void defeat(AbstractPlayableSprite player) {
         destroyBadnik(player);

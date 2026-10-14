@@ -20,12 +20,12 @@ public final class ObjectCallbackDispatch {
 
     /** Verified creator content origin, independent of a policy producer's callback scope. */
     public static String registeredContentOwner(ObjectManager manager, ObjectInstance source) {
-        return manager == null ? null : manager.registeredContentOwner(source);
+        return manager == null ? null : RegisteredObjectDerivatives.registeredContentOwner(manager, source);
     }
 
     /** Engine-only fresh factory derivative; it never selects a constructor by a creator class name. */
     public static AbstractObjectInstance createRegisteredDerivative(ObjectManager manager, ObjectInstance source, int x, int y) {
-        return manager == null ? null : manager.createRegisteredDerivative(source, x, y);
+        return manager == null ? null : RegisteredObjectDerivatives.createRegisteredDerivative(manager, source, x, y);
     }
 
     public static void inheritOwners(ObjectManager target, ObjectManager source,

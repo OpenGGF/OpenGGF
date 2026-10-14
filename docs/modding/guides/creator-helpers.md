@@ -103,10 +103,12 @@ screen transitions and button actions. Map keyboard/pad input through
 `CaterkillerJrFactory.create(spawn, CaterkillerJrRecipe.STOCK)` retains the native
 six-body roles and delays. `DOUBLE_LENGTH` uses twelve explicit native roles and
 delays. The returned badnik remains native; recipes and exact links restore with
-its graph. `Sonic3kMonitorFactory.eggman(spawn)` retains the placement and native
+its graph. The preset belongs to `com.openggf.game.sonic3k.objects.badniks`;
+`Sonic3kMonitorFactory` belongs to `com.openggf.game.sonic3k.objects`.
+`Sonic3kMonitorFactory.eggman(spawn)` retains the placement and native
 shell, contents, hurt, respawn and rewind behavior without subclassing native AI.
 
-Use `DestructionEffects.sonic3kBadnik()` with `defeatBadnik` for the native score,
+Use `Sonic3kBadnikConfig.destruction()` with `DestructionEffects.defeatBadnik` for the native score,
 points popup, deferred animal and destruction order. A no-popup animal recipe
 is a different effect. `ObjectCombatRules` exposes admitted native targeting,
 firing and cooldown decisions. `PoweredScreenAttackable` supplies the small
@@ -124,7 +126,7 @@ reuses the registered factory under its exact content owner, with native slot,
 floor, lifetime and replay bounds; implementing a callback does not enable every
 mutator or grant native AI identity. Publish `ObjectPresentationMetadata` for body
 transforms. Draw attached flames/effects through `services().renderAttachedEffect`
-so they retain their own presentation subject and restore the enclosing body state.
+so they retain their own presentation subject, deferred palette replay and enclosing body state.
 `TitleScreenProvider.drawOverlay(PixelCanvas)` draws a title badge on the host's
 current canvas without finding global renderer services.
 

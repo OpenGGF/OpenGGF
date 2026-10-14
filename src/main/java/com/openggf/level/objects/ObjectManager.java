@@ -349,37 +349,6 @@ public class ObjectManager {
                 : instance instanceof AbstractObjectInstance object ? object.managedSpawn() : null;
     }
 
-    String registeredContentOwner(ObjectInstance source) {
-        if (source == null || objectQuery().identityOf(source).isEmpty()
-                || objectCallbacks.call(source, source::isDestroyed)) return null;
-        ObjectSpawn placement = managedSpawn(source);
-        String owner = objectCallbacks.owner(source);
-        return placement != null && owner != null && owner.equals(placement.ownerModId())
-                && registry != null && registry.hasObjectKey(placement.objectKey()) ? owner : null;
-    }
-
-    AbstractObjectInstance createRegisteredDerivative(ObjectInstance source, int x, int y) {
-        String owner = registeredContentOwner(source);
-        if (owner == null || !hasFreeDynamicSlot() || x < 0 || x > 0xFFFF || y < 0 || y > 0x0FFF) return null;
-        ObjectSpawn placement = managedSpawn(source);
-        ObjectSpawn derivative = new ObjectSpawn(x, y, placement.objectId(), placement.subtype(), placement.renderFlags(),
-                false, placement.rawFlags() | y, -1, owner, placement.objectKey());
-        // Construction AND admission run as the registered content owner, even
-        // when a different creator's mutator callback caused this allocation.
-        return objectCallbacks.construct(owner, () -> ObjectConstructionContext.construct(objectServices, () -> {
-            ObjectInstance created = registry.create(derivative);
-            if (!(created instanceof AbstractObjectInstance object) || !(created instanceof RewindRecreatable)
-                    || created.getClass() != source.getClass() || object.isDestroyed() || object.getSlotIndex() >= 0
-                    || !derivative.equals(object.managedSpawn())
-                    || objectQuery().identityOf(created).isPresent()
-                    || !(created instanceof com.openggf.game.mutators.NativeObjectFieldTarget target)
-                    || target.fieldKind() != com.openggf.game.mutators.NativeObjectFieldTarget.Kind.BADNIK
-                    || !target.supportsGroundedFieldMotion()) return null;
-            addDynamicObject(object);
-            return object.getSlotIndex() < 0 || object.isDestroyed() ? null : object;
-        }));
-    }
-
     private void registerInheritedCallbackOwner(ObjectInstance instance) {
         objectCallbacks.registerInherited(instance);
         if (objectCallbacks.owner(instance) == null) {
@@ -4631,9 +4600,9 @@ public class ObjectManager {
     /**
      * Returns the game-specific {@link ObjectRegistry} for use by
      * {@link ObjectRewindDynamicCodecs#genericRecreate} during rewind restore.
-     * Package-private: accessed only through {@link DynamicObjectRecreateContext#objectRegistry()}.
+     * Package-private: shared by verified derivative admission and rewind recreation.
      */
-    ObjectRegistry rewindObjectRegistry() {
+    ObjectRegistry objectRegistry() {
         return registry;
     }
 

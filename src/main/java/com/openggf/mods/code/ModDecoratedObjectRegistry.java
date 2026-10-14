@@ -14,7 +14,7 @@ import java.util.Objects;
 
 /** Routes tagged mod spawns by namespaced key while leaving stock registry behavior untouched. */
 public final class ModDecoratedObjectRegistry implements ObjectRegistry, MutatorPlacementClassifier,
-        java.util.function.Supplier<Object> {
+        java.util.function.Supplier<Object>, com.openggf.level.objects.HostObjectKeyRegistry {
     private final ObjectRegistry base;
     private final ModObjectKeyRegistry modKeys;
     private final java.util.Map<String,String> previewArtKeys;
@@ -54,6 +54,7 @@ public final class ModDecoratedObjectRegistry implements ObjectRegistry, Mutator
         if (spawn.objectKey() == null) {
             return base.create(spawn);
         }
+        if(hasHostObjectKey(spawn.objectKey())) return base.create(spawn);
         String owner = spawn.ownerModId();
         ObjectFactory factory = modKeys.requireFactory(owner, spawn.objectKey());
         if (boundary == null) return factory.create(spawn, this);
@@ -78,13 +79,24 @@ public final class ModDecoratedObjectRegistry implements ObjectRegistry, Mutator
         base.installFixedSstObjects(romZoneId, act, slots);
     }
     @Override public List<String> getAliases(int objectId) { return base.getAliases(objectId); }
-    @Override public boolean hasObjectKey(String objectKey) { return modKeys.contains(objectKey); }
-    @Override public List<String> browsableObjectKeys() { return modKeys.keys(); }
+    @Override public boolean hasObjectKey(String objectKey) { return hasHostObjectKey(objectKey) || modKeys.contains(objectKey); }
+    @Override public boolean hasHostObjectKey(String key) {
+        var authority=com.openggf.level.objects.HostObjectKeyRegistry.trusted(base);
+        return authority!=null && authority.hasHostObjectKey(key);
+    }
+    @Override public boolean ownsHostObject(ObjectSpawn spawn,ObjectInstance instance) {
+        var authority=com.openggf.level.objects.HostObjectKeyRegistry.trusted(base);
+        return authority!=null && authority.ownsHostObject(spawn,instance);
+    }
+    @Override public List<String> browsableObjectKeys() {
+        var keys=new java.util.LinkedHashSet<String>(base.browsableObjectKeys()); keys.addAll(modKeys.keys());
+        return List.copyOf(keys);
+    }
     @Override public java.util.Optional<String> editorPreviewArtKey(int stockObjectId) {
         return base.editorPreviewArtKey(stockObjectId);
     }
     @Override public java.util.Optional<String> editorPreviewArtKey(String objectKey) {
-        return java.util.Optional.ofNullable(previewArtKeys.get(objectKey));
+        return hasHostObjectKey(objectKey)?base.editorPreviewArtKey(objectKey):java.util.Optional.ofNullable(previewArtKeys.get(objectKey));
     }
 
     @Override public Object get() {

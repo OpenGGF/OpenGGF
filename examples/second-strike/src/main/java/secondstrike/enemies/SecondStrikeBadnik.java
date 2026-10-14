@@ -1,6 +1,7 @@
 package secondstrike.enemies;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic3k.objects.badniks.Sonic3kBadnikConfig;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.level.objects.DestructionEffects;
@@ -174,7 +175,7 @@ abstract class SecondStrikeBadnik extends AbstractBadnikInstance
 
     @Override protected DestructionEffects.DestructionConfig getDestructionConfig() {
         // Host recipe retains native explosion, animal, points popup and score order.
-        return DestructionEffects.sonic3kBadnik();
+        return Sonic3kBadnikConfig.destruction();
     }
 
     protected final void draw(String key, int frame, int x, int y) {

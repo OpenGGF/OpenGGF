@@ -167,7 +167,8 @@ public class Sonic1SignpostObjectInstance extends AbstractObjectInstance
      * The check is: playerCenterX - signpostCenterX >= 0 AND < $20.
      */
     private void checkPlayerPass(AbstractPlayableSprite player) {
-        int dx = player.getCentreX() - spawn.x();
+        // Sign_Touch: sub.w / blo rejects unsigned underflow before the unsigned $20 test.
+        int dx = (player.getCentreX() & 0xFFFF) - (spawn.x() & 0xFFFF);
         if (dx < 0 || dx >= ACTIVATION_X_RANGE) {
             return;
         }
@@ -352,8 +353,9 @@ public class Sonic1SignpostObjectInstance extends AbstractObjectInstance
         // v_limitright2 = camera maxX (level boundary, unchanged by lock)
         Camera camera = services().camera();
         if (camera != null && !resultsSpawned) {
-            int rightLimit = camera.getMaxX() + WALK_OFF_OFFSET;
-            if (player.getCentreX() >= rightLimit) {
+            // Sign_SonicRun: addi.w truncates, and cmp.w / blo compares unsigned words.
+            int rightLimit = ((camera.getMaxX() & 0xFFFF) + WALK_OFF_OFFSET) & 0xFFFF;
+            if ((player.getCentreX() & 0xFFFF) >= rightLimit) {
                 triggerGotThroughAct(player);
             }
         }

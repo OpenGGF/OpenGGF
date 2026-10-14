@@ -137,8 +137,8 @@ class TestSonic3kMonitorContentOverride {
         services.withDirectObjectManager(manager);
         var spawnA = new ObjectSpawn(100, 100, 1, 3, 0, false, 100, 40);
         var spawnB = new ObjectSpawn(100, 100, 1, 9, 0, false, 100, 41);
-        var a = (Sonic3kMonitorObjectInstance) com.openggf.mods.objects.Sonic3kMonitorFactory.eggman(spawnA);
-        var b = (Sonic3kMonitorObjectInstance) com.openggf.mods.objects.Sonic3kMonitorFactory.eggman(spawnB);
+        var a = (Sonic3kMonitorObjectInstance) Sonic3kMonitorFactory.eggman(spawnA);
+        var b = (Sonic3kMonitorObjectInstance) Sonic3kMonitorFactory.eggman(spawnB);
         manager.addDynamicObject(a); manager.addDynamicObject(b);
         var hit = new TouchResponseResult(0, 14, 14, TouchCategory.SPECIAL);
         a.onTouchResponse(player, hit, 0); b.onTouchResponse(player, hit, 0);

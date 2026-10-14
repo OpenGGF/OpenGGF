@@ -300,6 +300,7 @@ public class CnzBumperObjectInstance extends AbstractObjectInstance
         }
         boolean hFlip = (spawn.renderFlags() & 0x1) != 0;
         boolean vFlip = (spawn.renderFlags() & 0x2) != 0;
-        renderer.drawFrameIndex(animFrame, currentX, currentY, hFlip, vFlip);
+        com.openggf.game.sonic3k.mutators.NativeEncounterPaletteAccess.draw(tryServices(),this,Sonic3kObjectArtKeys.CNZ_BUMPER,
+                ()->renderer.drawFrameIndex(animFrame,currentX,currentY,hFlip,vFlip));
     }
 }

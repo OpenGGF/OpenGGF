@@ -40,11 +40,13 @@ import java.util.function.Supplier;
 public final class NativeMutatorRuntime implements WorldSessionPolicyState,
         RewindSnapshottable<NativeMutatorRuntime.State>, NativeObjectPolicyPort, com.openggf.game.mutators.NativeCompanionControlSource {
     private static final int MAX_OWNED_ROOTS = 16;
+    private static final int MAX_OWNED_RINGS = 48;
     private static final java.util.concurrent.atomic.AtomicLong GENERATIONS = new java.util.concurrent.atomic.AtomicLong();
     private final long generation = GENERATIONS.incrementAndGet();
     private long assemblyEpoch;
     private boolean retired;
     private final WorldSession world;
+    private final NativeEncounterPalettes encounterPalettes;
     private ObjectServices services;
     private SpriteManager sprites;
     private List<TransientMutatorPolicySource.Entry> entries = List.of();
@@ -85,7 +87,9 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
                         Set<ObjectRefId> budded, Set<ObjectRefId> impacts, boolean lastAir, List<Companion> companions,List<Ride> rides,
                         List<CheckpointDestination> encounteredCheckpoints) { }
 
-    public NativeMutatorRuntime(WorldSession world) { this.world = java.util.Objects.requireNonNull(world); }
+    public NativeMutatorRuntime(WorldSession world) {
+        this.world=java.util.Objects.requireNonNull(world);encounterPalettes=new NativeEncounterPalettes(world);
+    }
     @Override public <T> T getService(Class<T> type) {
         return type.isInstance(this) ? type.cast(this) : null;
     }
@@ -105,12 +109,13 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
     }
     @Override public void resetForMissingSnapshot() { reset(); }
     private void reset() {
+        encounterPalettes.clear();
         admitted.clear(); owned.clear(); clocks.clear(); tasks.clear(); opportunities.clear(); fieldTargets.clear(); ownedChildren.clear(); pendingReplacements.clear(); projectileAges.clear(); budded.clear(); impacts.clear();
         entries = List.of(); chainDispatch = false; lastAir = false; companions.clear(); rides.clear(); encounteredCheckpoints.clear(); landmarkThumbnail=null; landmarkSheet=null; landmarkPalette=null; landmarkVisible=false;
     }
     @Override public void beforeAssembly(LevelLoadCause cause) {
         if (cause == LevelLoadCause.DECODE_ONLY || cause == LevelLoadCause.PREVIEW) return;
-        releaseOwned(); reset(); services = null; assemblyEpoch++;
+        encounterPalettes.leaveAssembly();releaseOwned(); reset(); services = null; assemblyEpoch++;
     }
     @Override public void failedAssembly(LevelLoadCause cause) { beforeAssembly(cause); }
     @Override public void bindRoster(SpriteManager sprites) { this.sprites = sprites; }
@@ -123,7 +128,7 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
         if(services!=null) for(var lease:owned) terminateOwnedGraph(lease);
         releaseOwned(); reset();
     }
-    @Override public void retire() { leaveOrdinaryGameplay(com.openggf.game.GameplayObservation.Phase.CLOSED); retired=true; services = null; sprites = null; }
+    @Override public void retire() { encounterPalettes.leaveAssembly();leaveOrdinaryGameplay(com.openggf.game.GameplayObservation.Phase.CLOSED); retired=true; services = null; sprites = null; }
 
     @Override public void beforeNativeTick(LevelFrameContext context, LogicalInputSnapshot input) {
         if(retired) return;
@@ -196,6 +201,7 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
                 if (input.player1().actionPressedMask() != 0) firePlayerShot(entry, player);
             }
         }
+        prepareEncounterPalettes();
         prepareLandmarkThumbnail();
     }
     @Override public void afterNativeTick(LevelFrameContext context, LogicalInputSnapshot input) {
@@ -212,6 +218,7 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
         }
         for(var lease:List.copyOf(companions)) if(!ownerAvailable(lease.owner())) ownerRetired(lease.owner());
         for(var lease:List.copyOf(rides)) if(!ownerAvailable(lease.owner())) ownerRetired(lease.owner());
+        prepareEncounterPalettes();
         prepareLandmarkThumbnail();
     }
     private void observeCheckpoint() {
@@ -258,10 +265,18 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
     private boolean art(String key) {
         if (services.renderManager() == null) return false;
         if (!(services.renderManager().getArtProvider() instanceof Sonic3kObjectArtProvider provider)) return false;
-        return provider.ensureEncounterArtLoaded(world.getDataSource().rom().orElse(null), services.graphicsManager(), key);
+        if(!provider.ensureEncounterArtLoaded(world.getDataSource().rom().orElse(null),services.graphicsManager(),key))return false;
+        if(key.equals(Sonic3kObjectArtKeys.CNZ_BUMPER) || key.equals(Sonic3kObjectArtKeys.SOZ_GHOSTS)) {
+            Set<String> needed=encounterPaletteKeys();needed.add(key);
+            encounterPalettes.prepare(world.getDataSource().rom().orElse(null),services.graphicsManager(),needed);
+            return encounterPalettes.base(key,services.graphicsManager())>=0;
+        }
+        return true;
     }
     private <T extends AbstractObjectInstance> T spawn(long activation, int ticks, Supplier<T> factory) {
-        if (owned.size() >= MAX_OWNED_ROOTS) return null;
+        long roots=owned.stream().filter(lease->services.objectQuery().resolve(lease.identity())
+                .filter(LostRingObjectInstance.class::isInstance).isEmpty()).count();
+        if (roots >= MAX_OWNED_ROOTS) return null;
         T object = services.objectManager().createDynamicObject(factory);
         if (object != null) services.objectQuery().identityOf(object)
                 .ifPresent(id -> owned.add(new Owned(activation, owner(activation), null, id, ticks, cancellationBound(activation))));
@@ -374,13 +389,13 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
             var object=services.objectQuery().resolve(lease.identity()).orElse(null);
             boolean cancelled=lease.cancelOnRemoval() && entries.stream().noneMatch(e->e.activationId()==lease.activationId());
             if(!ownerAvailable(lease.owner()) || lease.contentOwner()!=null && !ownerAvailable(lease.contentOwner())) { terminateOwnedGraph(lease); owned.remove(i); }
-            else if (lease.remainingTicks() <= 0 || cancelled) {
+            else if((object==null || object.isDestroyed()) && !ownedChildren.containsKey(lease.identity())) {
+                owned.remove(i);
+            } else if (lease.remainingTicks() <= 0 || cancelled) {
                 if(object!=null) expire(object); else releaseChildren(lease.identity());
                 if(object instanceof NativeGhostEncounterObjectInstance)
                     owned.set(i,new Owned(lease.activationId(),lease.owner(),lease.contentOwner(),lease.identity(),0,lease.cancelOnRemoval()));
                 else owned.remove(i);
-            } else if((object==null || object.isDestroyed()) && !ownedChildren.containsKey(lease.identity())) {
-                owned.remove(i);
             } else owned.set(i,new Owned(lease.activationId(),lease.owner(),lease.contentOwner(),lease.identity(),lease.remainingTicks()-1,lease.cancelOnRemoval()));
         }
     }
@@ -696,20 +711,57 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
             if (hit && ++hits>=maxHits) break;
         }
     }
+    private LostRingObjectInstance ringPickup(long activation,int x,int y,int xVelocity,int yVelocity,
+                                               int phase,int lifetime,int pickupDelayTicks) {
+        if(!com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(world,
+                com.openggf.game.mutators.RingAcquisitionDomain.MAIN_LEVEL)) return null;
+        long count=owned.stream().filter(lease->services.objectQuery().resolve(lease.identity())
+                .filter(object->object instanceof LostRingObjectInstance && !object.isDestroyed()).isPresent()).count();
+        if(count>=MAX_OWNED_RINGS) return null;
+        var ring=services.objectManager().createDynamicObject(()->com.openggf.level.rings.LostRingMutatorAccess
+                .spawn(x,y,xVelocity,yVelocity,phase,lifetime,pickupDelayTicks));
+        boolean spilled=entries.stream().anyMatch(e->e.activationId()==activation
+                && e.policy() instanceof RingEconomyPolicy policy && policy.kind()==RingEconomyPolicy.Kind.LEAK);
+        if(ring!=null) services.objectQuery().identityOf(ring)
+                .ifPresent(id->owned.add(new Owned(activation,owner(activation),null,id,lifetime,!spilled && cancellationBound(activation))));
+        return ring;
+    }
     private void rain(long activation,int x,int y,int count) {
-        if(!com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(world,com.openggf.game.mutators.RingAcquisitionDomain.MAIN_LEVEL)) return;
-        for (int i=0;i<count;i++) {
-            final int px=x+(i-count/2)*16;
-            spawn(activation,240,()->LostRingObjectInstance.spawn(px,y,0,0,0,240,null));
+        for(int i=0;i<count;i++) ringPickup(activation,x+(i-count/2)*16,y,0,0,i,240,0);
+    }
+    private void screenRain(long activation,int tick) {
+        var camera=services.camera();
+        if(camera==null) return;
+        int width=camera.getWidth()&0xFFFF;
+        if(width<1 || width>2048) return;
+        int count=(width+95)/96;
+        int left=camera.getX()&0xFFFF,top=(camera.getY()&0xFFFF)+4;
+        int wave=(tick-1)/18;
+        for(int i=0;i<count;i++) {
+            int cellStart=i*width/count,cellEnd=(i+1)*width/count;
+            int inset=8,span=Math.max(1,cellEnd-cellStart-inset*2);
+            int x=left+cellStart+inset+(wave*37+i*11)%span;
+            // Actual Obj_Bouncing_Ring integration and terrain bounce; a modest diagonal, not a picture overlay.
+            ringPickup(activation,x,top,0x60,0x300,(wave+i)&7,108,0);
         }
+    }
+    private void leakRing(long activation,AbstractPlayableSprite player) {
+        if(player.getRingCount()<=1 || player.isObjectControlled() || player.isHurt()) return;
+        int velocity=player.getXSpeed()!=0?player.getXSpeed():player.getGSpeed();
+        int direction=velocity==0?(player.getDirection()==Direction.LEFT?-1:1):Integer.signum(velocity);
+        int behind=player.getXRadius()+24;
+        var ring=ringPickup(activation,player.getCentreX()-direction*behind,player.getCentreY()-4,
+                -direction*0x80,-0x180,0,300,24);
+        // A rejected native slot must never spend inventory. Returning to the dropped ring can recover it normally.
+        if(ring!=null) player.setRingCount(player.getRingCount()-1);
     }
     private void economy(TransientMutatorPolicySource.Entry entry,RingEconomyPolicy policy,AbstractPlayableSprite player) {
         int tick=policy.kind()==RingEconomyPolicy.Kind.RAIN || policy.kind()==RingEconomyPolicy.Kind.LEAK
                 ?clocks.merge(entry.activationId(),1,Integer::sum):0;
         switch(policy.kind()) {
-            case RAIN -> { if (tick%20==1) rain(entry.activationId(),player.getCentreX(),player.getCentreY()-72,2); }
+            case RAIN -> { if (tick%18==1) screenRain(entry.activationId(),tick); }
             case LEAK -> {
-                if (tick%60==0 && player.getRingCount()>1) { player.setRingCount(player.getRingCount()-1); rain(entry.activationId(),player.getCentreX(),player.getCentreY(),1); }
+                if (tick%30==0) leakRing(entry.activationId(),player);
             }
             case BALANCE -> {
                 if (!admitted.contains(entry.activationId())) {
@@ -784,6 +836,49 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
         }
         if (complete && policy.kind()!=ChallengePolicy.Kind.SKILL_CHAIN) rain(entry.activationId(),player.getCentreX(),player.getCentreY()-48,5);
     }
+    private Set<String> encounterPaletteKeys() {
+        Set<String> needed=new HashSet<>();
+        if(services!=null) for(var lease:owned) {
+            var object=services.objectQuery().resolve(lease.identity()).orElse(null);
+            if(object instanceof CnzBumperObjectInstance && !object.isDestroyed())needed.add(Sonic3kObjectArtKeys.CNZ_BUMPER);
+            if(object instanceof NativeGhostEncounterObjectInstance && !object.isDestroyed())needed.add(Sonic3kObjectArtKeys.SOZ_GHOSTS);
+        }
+        return needed;
+    }
+    private void prepareEncounterPalettes() {
+        encounterPalettes.prepare(world.getDataSource().rom().orElse(null),services==null?null:services.graphicsManager(),encounterPaletteKeys());
+    }
+    private record EncounterPaletteReplay(NativeMutatorRuntime runtime,long assemblyEpoch,ObjectRefId identity,String key)
+            implements com.openggf.graphics.SpritePresentation.PaletteReplay {
+        @Override public int palette(com.openggf.graphics.GraphicsManager graphics,int nativePalette) {
+            if(runtime.retired || runtime.assemblyEpoch!=assemblyEpoch || runtime.services==null
+                    || graphics!=runtime.services.graphicsManager() || !runtime.belongsToOwnedGraph(identity)
+                    || nativePalette<0 || nativePalette>3)return -1;
+            var object=runtime.services.objectQuery().resolve(identity).orElse(null);
+            if(object==null || object.isDestroyed())return -1;
+            int base=runtime.encounterPalettes.base(key,graphics);
+            if(base<0) { runtime.prepareEncounterPalettes();base=runtime.encounterPalettes.base(key,graphics); }
+            return base<0?-1:base+nativePalette;
+        }
+    }
+    private ObjectRefId encounterPaletteIdentity(ObjectServices requester,ObjectInstance object,String key) {
+        if(retired || services==null || requester==null || requester.worldSession()!=world
+                || requester.graphicsManager()!=services.graphicsManager())return null;
+        boolean qualified=key.equals(Sonic3kObjectArtKeys.CNZ_BUMPER) && object instanceof CnzBumperObjectInstance
+                || key.equals(Sonic3kObjectArtKeys.SOZ_GHOSTS) && (object instanceof SozHyudoroBodyObjectInstance
+                || object instanceof NativeGhostEncounterObjectInstance);
+        if(!qualified)return null;
+        var id=services.objectQuery().identityOf(object).orElse(null);
+        return id!=null && services.objectQuery().resolve(id).orElse(null)==object && belongsToOwnedGraph(id)?id:null;
+    }
+    com.openggf.graphics.SpritePresentation.PaletteReplay encounterPaletteReplay(ObjectServices requester,ObjectInstance object,String key) {
+        var identity=encounterPaletteIdentity(requester,object,key);
+        // Ownership is distinct from residency: an owned retained subject must never borrow host colours.
+        return identity==null?null:new EncounterPaletteReplay(this,assemblyEpoch,identity,key);
+    }
+    int encounterPaletteBase(ObjectServices requester,ObjectInstance object,String key) {
+        return encounterPaletteIdentity(requester,object,key)==null?-1:encounterPalettes.base(key,services.graphicsManager());
+    }
     private void prepareLandmarkThumbnail() {
         landmarkVisible=!retired && entries.stream().anyMatch(e->e.policy() instanceof ChallengePolicy p && p.kind()==ChallengePolicy.Kind.LANDMARK
                 && tasks.containsKey(e.activationId()) && !tasks.get(e.activationId()).complete());
@@ -804,7 +899,7 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
     }
     @Override public void onPresentation(com.openggf.game.session.GameplayModeContext context,LogicalInputSnapshot input,
             com.openggf.game.GameplayObservation.Phase phase) {
-        if(!retired) prepareLandmarkThumbnail();
+        if(!retired) { prepareEncounterPalettes();prepareLandmarkThumbnail(); }
     }
     @Override public void drawOverlay(com.openggf.mods.ui.PixelCanvas canvas) {
         if(retired || !landmarkVisible || landmarkThumbnail==null) return;

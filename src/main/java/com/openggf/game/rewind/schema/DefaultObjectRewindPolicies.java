@@ -226,6 +226,9 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEndBossFlameChild", "weapon"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEndBossShipExplosionController", "ship"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEndBossShipFlameChild", "ship"), RewindFieldPolicy.CAPTURED),
+            // S3K Caterkiller bodies retain their exact head identity; the head's
+            // structural list is rebuilt only after these references resolve.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.CaterkillerJrBodyInstance", "ownerRef"), RewindFieldPolicy.CAPTURED),
             // The prison button is a separate SST object. Preserve its exact parent
             // identity through the compact ObjectReferenceCodec; never infer a parent
             // from coordinates or neighbouring slots after restore.

@@ -9,7 +9,7 @@ infer badnik/pickup identity from object classes.
 ## Implemented behavior
 
 - 4: smooth private sprite hue rotation; native palette textures remain owned.
-- 10: at most four admitted native body/appendage poses, at most 256 tiles per
+- 10: at most 24 admitted native body/appendage poses, at most 256 tiles per
   pose, with frozen DPLC versions and exact admitted rows/flips/priority.
 - 37–40: producer-anchored whole-object scale, rotation and area-preserving
   squash. Reviewed anatomy composition happens before whole-picture geometry;
@@ -37,7 +37,10 @@ retirement release only its resources and clear its contributions.
 
 Keeping old DPLC addresses for trails was rejected: queued GL commands would
 all sample the last upload at those addresses. Each owner instead leases one
-1,024-slot private bank, with separate slots for each of the four poses.
+6,144-slot private bank, with separate slots for each of the 24 poses.
+The initial implementation used four faint poses and a 1,024-slot bank; the
+[2026-10-14 revision](../plans/2026-10-14-chaos-intensity-and-reel.md) expands
+the logical history and residency together, retaining ten complete owner banks.
 Engine caller identity and a host/owner/generation-bound handle gate access.
 Expiry releases exactly that bank; restoring a prior logical snapshot can
 reacquire residency from the frozen versions without restoring gameplay.
@@ -162,13 +165,16 @@ LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off \
   '-Dtest=TestLivePresentationRuntime,TestPresentationGraphicsAccess' test -B
 ```
 
-This bounded CPU follow-up is pending. Unchanged completed GL/HUD/geometry/ROM
-checks are not repeated; the candidate remains red until the affected runtime
-and bank ownership checks complete.
+The bounded CPU follow-up completed on `2538ca2ccab65372fbe58aecc0eaf9db195bc4f1`:
+all seven runtime and three bank checks passed, zero failures/errors/skips.
+Queue waiting took 4,189 seconds and Maven execution 27.144 seconds. Unchanged
+completed GL/HUD/geometry/ROM checks were not repeated. This closes the two
+owned failures; final-root load guards and union qualification are recorded
+separately in the [integration plan](../plans/2026-10-13-sonic3k-chaos-mode-implementation.md).
 The coordinator requested a compiled bank repair checkpoint while that sole
 CPU request waited. Build-only `test-compile -B` passed on the numeric allocator
 and corrected fixtures (Maven reported 1 minute 5 seconds), executing no tests.
-The CPU result remains pending; this compilation is not behavior qualification.
+This compilation was not behavior qualification; the completed CPU result above is the subsequent evidence.
 The coordinator requested a second compiled checkpoint while that sole request
 waited for admission. The same build-only `test-compile -B` command passed on
 all repair sources (Maven reported 1 minute 8 seconds), with no test execution.

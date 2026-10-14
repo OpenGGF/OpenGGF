@@ -49,12 +49,12 @@ class TestPresentationGraphicsAccess {
         var first=PresentationGraphicsAccess.acquire(graphics,firstOwner);
         var second=PresentationGraphicsAccess.acquire(graphics,secondOwner);
         int a=PresentationGraphicsAccess.base(first,graphics,firstOwner),b=PresentationGraphicsAccess.base(second,graphics,secondOwner);
-        assertEquals(a+1024,b,"identity owner keys must not turn numeric reservation checks into identity comparisons");
+        assertEquals(a+6144,b,"each owner reserves all 24 poses' 256 private DPLC slots");
         var red=new com.openggf.level.Pattern();red.setPixel(0,0,(byte)1);
         var blue=new com.openggf.level.Pattern();blue.setPixel(0,0,(byte)2);
-        for(int offset:new int[]{0,1023}) {graphics.cachePatternTexture(red,a+offset);graphics.cachePatternTexture(blue,b+offset);}
+        for(int offset:new int[]{0,1023,1024,6143}) {graphics.cachePatternTexture(red,a+offset);graphics.cachePatternTexture(blue,b+offset);}
         PresentationGraphicsAccess.release(first,firstOwner);
-        for(int offset:new int[]{0,1023}) {
+        for(int offset:new int[]{0,1023,1024,6143}) {
             assertNull(SpritePresentation.patternSample(graphics,a+offset));
             assertEquals(2,SpritePresentation.patternSample(graphics,b+offset).a()&15);
         }
@@ -65,5 +65,30 @@ class TestPresentationGraphicsAccess {
         PresentationGraphicsAccess.release(reused,nextOwner);
         PresentationGraphicsAccess.release(second,secondOwner);
         graphics.cleanup();
+    }
+    @Test void ownerBudgetRejectsAnIncompleteBankAndReleasedCrowdCapacityCanBeReused() {
+        var graphics=new GraphicsManager();
+        var owners=new java.util.ArrayList<Object>();
+        var banks=new java.util.ArrayList<PresentationGraphicsAccess.TrailBank>();
+        try {
+            for(int i=0;i<10;i++) {
+                Object owner=new Object();owners.add(owner);
+                var bank=PresentationGraphicsAccess.acquire(graphics,owner);banks.add(bank);
+                int base=PresentationGraphicsAccess.base(bank,graphics,owner);
+                assertEquals(PatternAtlasRange.PRESENTATION_TRAILS.base()+i*6144,base);
+                assertTrue(PatternAtlasRange.PRESENTATION_TRAILS.contains(base+6143),"every admitted owner has a complete crowd bank");
+            }
+            assertThrows(IllegalStateException.class,()->PresentationGraphicsAccess.acquire(graphics,new Object()),
+                    "the remaining 4096 slots cannot fit another complete crowd");
+            int released=PresentationGraphicsAccess.base(banks.get(4),graphics,owners.get(4));
+            PresentationGraphicsAccess.release(banks.get(4),owners.get(4));
+            Object replacement=new Object();owners.add(replacement);
+            var bank=PresentationGraphicsAccess.acquire(graphics,replacement);banks.add(bank);
+            assertEquals(released,PresentationGraphicsAccess.base(bank,graphics,replacement));
+            assertFalse(PresentationGraphicsAccess.valid(banks.get(4),graphics,owners.get(4)));
+        } finally {
+            for(int i=0;i<banks.size();i++)PresentationGraphicsAccess.release(banks.get(i),owners.get(i));
+            graphics.cleanup();
+        }
     }
 }

@@ -120,7 +120,7 @@ class TestModApiSignatureSurface {
     void boundedNativeEnemyHelpersAreCandidateRootsWithoutExportingNativeAi() {
         var roots = ModApiSurfaceInventory.rootTypes();
         assertTrue(roots.contains(com.openggf.mods.objects.CaterkillerJrFactory.class));
-        assertTrue(roots.contains(com.openggf.mods.objects.CaterkillerJrRecipe.class));
+        assertTrue(roots.contains(com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe.class));
         assertTrue(roots.contains(com.openggf.level.objects.ShieldProjectileMotion.class));
         var surface = ModApiSignatureSurface.recursiveTypes();
         assertTrue(surface.contains(com.openggf.level.objects.ShieldProjectileMotion.Velocity.class));

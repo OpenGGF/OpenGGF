@@ -82,9 +82,10 @@ public final class ModApiVersion {
      * and release policy. Atlas fonts can opt into exact-case glyphs and explicit fallback.
      * Native object presentation metadata identifies semantic roles and producer anchors;
      * frozen admitted player trails have a separate bounded atlas namespace.
-     * Creator enemies share bounded native Caterkiller/monitor recipes, shipped S3K
+     * Creator enemies share game-owned bounded Caterkiller/monitor recipes, shipped S3K
      * destruction rewards, exact lifetime identity, powered eligibility and targeting/firing
-     * admission. Host-supplied title canvases and attached-effect rendering preserve native
+     * admission. Native preset/config types stay with their game; shared effects take factories.
+     * Host-supplied title canvases and attached-effect rendering preserve native
      * ownership and whole-picture transforms without exposing implementation classes.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");

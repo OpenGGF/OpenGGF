@@ -21,6 +21,31 @@ public class TestSonic3kLevelInitProfile {
         assertTrue(title.capture().artHandles().isEmpty(),"native early deletion submits no title archives");
     }
 
+    @Test
+    void authoredNativeLevelDoesNotDispatchAStaleStockPlayerIntro() {
+        verifyPlayerIntroOwnership(false);
+    }
+
+    @Test
+    void stockNativeLevelRetainsItsPlayerIntroDispatch() {
+        verifyPlayerIntroOwnership(true);
+    }
+
+    private void verifyPlayerIntroOwnership(boolean stockIdentity) {
+        var events = org.mockito.Mockito.mock(Sonic3kLevelEventManager.class);
+        var manager = org.mockito.Mockito.mock(com.openggf.level.LevelManager.class);
+        var loaded = org.mockito.Mockito.mock(Sonic3kLevel.class);
+        org.mockito.Mockito.when(manager.getCurrentLevel()).thenReturn(loaded);
+        org.mockito.Mockito.when(loaded.hasStockRomZoneIdentity()).thenReturn(stockIdentity);
+        try (var services = org.mockito.Mockito.mockStatic(com.openggf.game.GameServices.class)) {
+            services.when(com.openggf.game.GameServices::levelOrNull).thenReturn(manager);
+            services.when(com.openggf.game.GameServices::level).thenReturn(manager);
+            new Sonic3kLevelInitProfile(events).initZonePlayerStateStep(new LevelLoadContext()).execute();
+        }
+        if (stockIdentity) org.mockito.Mockito.verify(events).applyZonePlayerStateForLoad(false);
+        else org.mockito.Mockito.verifyNoInteractions(events);
+    }
+
     private final Sonic3kLevelInitProfile profile =
             new Sonic3kLevelInitProfile(new Sonic3kLevelEventManager());
 

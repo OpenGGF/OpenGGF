@@ -78,7 +78,7 @@ public interface ObjectServices {
         com.openggf.graphics.SpritePresentation.withSubject(graphics,
                 new com.openggf.graphics.SpritePresentation.Subject(subject.id(),
                         com.openggf.graphics.SpritePresentation.Part.ATTACHED_EFFECT, subject.suppressed(),
-                        100, null, subject.body()), producer);
+                        100, null, subject.body(), subject.paletteReplay()), producer);
     }
 
     // Level state

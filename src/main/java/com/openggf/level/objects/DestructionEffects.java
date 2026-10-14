@@ -125,14 +125,6 @@ public final class DestructionEffects {
         destroyBadnik(instance.getX(), instance.getY(), instance.spawn, slot, player, services, config, powered);
     }
 
-    /** Shipped S3K Touch_EnemyNormal recipe, including the native animal and points child order. */
-    public static DestructionConfig sonic3kBadnik() {
-        return new DestructionConfig(com.openggf.game.sonic3k.audio.Sonic3kSfx.BREAK.id,
-                (spawn, services) -> AnimalObjectInstance.deferredArtVariant(spawn, services, null), false,
-                (spawn, services, points) -> new com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInstance(
-                        spawn, services, points), null, false);
-    }
-
     /** Called by the badnik owner before slot transfer; returns a silent copy so shared effects cannot replay it. */
     static DestructionConfig prepareBeforeLatch(DestructionConfig config,ObjectServices services) {
         if(config.sound()!=null&&config.sound().order()==SoundOrder.BEFORE_LATCH) {

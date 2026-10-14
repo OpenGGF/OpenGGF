@@ -26,7 +26,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   native movement, objects, audio and presentation; accepted decisions, deadlines
   and cleanup participate in rewind. Native target, art, route and control
   qualifications constrain effects, including bounded Cluckoid gusts and ghost
-  encounters. Offscreen title captures share the native save-selection launch,
+  encounters. Too Many Sonics leaves up to 24 bright native poses; viewport-wide
+  diagonal ring rain and recoverable Leaky Pockets drops use native ring physics.
+  Spawned bumpers and ghosts retain their ROM donor colours without changing the
+  host palette. Offscreen title captures share the native save-selection launch,
   retain the selected team and prepare fresh mod callbacks for the new world.
   Stream voting remains a future extension.
 
@@ -44,6 +47,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   stage policies validate isolated data.
   Bounded creator helpers preserve native destruction, shields, monitor contents
   and presentation; exact lifetime links survive rewind and colocated placements.
+  Game-owned recipes keep native construction out of shared effects.
   Field and powered callbacks retain the receiving creator's fault boundary,
   aborting a failed frame without blaming another mod that invoked the receiver.
   The example passes strict packaging without unsupported engine references.

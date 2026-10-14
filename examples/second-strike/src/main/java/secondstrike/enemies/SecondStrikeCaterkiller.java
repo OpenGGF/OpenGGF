@@ -2,7 +2,7 @@ package secondstrike.enemies;
 
 import com.openggf.mods.code.ModContext;
 import com.openggf.mods.objects.CaterkillerJrFactory;
-import com.openggf.mods.objects.CaterkillerJrRecipe;
+import com.openggf.game.sonic3k.objects.badniks.CaterkillerJrRecipe;
 
 /** Owned longer Caterkiller recipe; native code owns movement, contacts and its body graph. */
 public final class SecondStrikeCaterkiller {

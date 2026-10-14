@@ -15,6 +15,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestModManifestParser {
+    @Test void engineOwnerCannotBeDeclaredByACreatorManifest() {
+        assertThrows(ModManifestException.class,()->parser().parse(bytes(
+                canonicalPatch().replace("id: example-music", "id: openggf"))));
+    }
+
     @Test
     void canonicalPatchManifestRetainsDisplayDependencyAndOverrideMetadata() throws Exception {
         ModManifest manifest = parser().parse(canonicalPatch().getBytes(StandardCharsets.UTF_8));

@@ -1,4 +1,4 @@
-package com.openggf.mods.objects;
+package com.openggf.game.sonic3k.objects.badniks;
 
 import com.openggf.game.ModApi;
 
