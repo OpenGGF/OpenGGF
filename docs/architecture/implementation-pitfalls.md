@@ -1748,3 +1748,19 @@ fallback. The same rule applies to death/reload helpers: external manual fade
 ticks can trigger fresh assembly outside its logical iteration. Preserve input
 cadence and requalify affected cold routes after repairing a driver; do not fit
 runtime timing or silently retain the accelerated protocol for old inputs.
+
+
+**Replay the displayed plane generation and the complete multipart order.**
+A B-high overlay must use the same immutable horizontal/vertical/column scroll
+buffers as the rear tile pass, including after rewind and lazy redraw. Reading
+current CPU deformation later in the frame shifts only the replayed high tiles.
+S3K ending overlap tests reproduced this at both320 and800 without changing
+native scroll values. Also reverse the entire native main/sub2/sub3 group for
+painter emission: reversing pieces inside each mapping alone lets a later
+propeller mapping overwrite an earlier main-body wheel. Keep SAT collection in
+native main-first order (`Render_Sprites` `$1AEE4/$1AF2A`). Independently reconstruct
+opaque ROM overlap and priority before excluding a covered player pixel; the
+native reunion's earlier wing legitimately covers20 of619 player pixels.
+Scripted status-facing does not imply render_flags-facing when object mappings
+bypass the ordinary playable mapper. See the
+[ending publication evidence](designs/2026-10-13-s3k-ending-lifecycle.md#source-owned-initial-and-published-ending-presentation-2026-10-14).

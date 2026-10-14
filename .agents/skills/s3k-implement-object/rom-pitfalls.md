@@ -5479,3 +5479,21 @@ manager culling must not collapse them. Test both-direction recreation across
 wait/publication/release/Init/delete markers, not just current visibility.
 
 Origin: 2026-10-14 Rhinobot parity slice over `6fc85aab8`.
+
+
+## Multipart SAT order and displayed scroll generation (2026-10-14)
+
+`Render_Sprites` loc_1AEE4 draws the main mapping before loc_1AF2A draws
+sub2/sub3. Earlier opaque SAT entries win. For a direct painter path, reverse
+the complete group as well as the pieces within each mapping; main-first frame
+calls otherwise hide the Tornado wheel behind its later propeller. Preserve
+native collection order. Use actual ROM mapping/pattern opacity for overlap
+oracles; never mask coordinates selected from an image difference.
+
+A high-background replay also needs the same published scroll as the rear
+plane draw, not the CPU deformation produced later in that frame. Rebuild pure
+restored output without advancing captured scroll RAM. The S3K ending repair
+reproduced both publication and multipart defects at320/800 and retained exact
+original native RGB differences as pending rather than fitting color output.
+`loc_5E1F0` separately sets Player1 render_flags bit0; its status-facing write
+alone is insufficient when scripted object mappings bypass playable mapping.
