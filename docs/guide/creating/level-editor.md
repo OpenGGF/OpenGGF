@@ -120,8 +120,10 @@ requires an explicit crop choice. Cropping removes outside placements; an
 object-backed ring group is removed together if any part is cropped. Resizing
 keeps the start inside the resulting bounds by clamping it when necessary. It
 establishes a new editing checkpoint, so save a copy first if you need the older
-map dimensions and history. Resizing preserves the camera's margins from the map
-edges. Changing bounds in **Level properties** also starts
+map dimensions and history. Resizing preserves camera margins while they fit.
+If a map is reduced below the native viewport, growing it again restores the
+standard 320×224 margins; review any custom camera bounds afterward. Changing
+bounds in **Level properties** also starts
 a new undo checkpoint; name, start, and music changes remain undoable.
 
 The music field accepts `stock:<decimal id>` (for example, `stock:129`) or an
@@ -145,14 +147,14 @@ projects reports an error without rewriting or quarantining the file.
 The unsaved marker compares the complete document with its savepoint. Undoing
 back to saved content clears it. An unavailable keyed object or music dependency
 stays recorded in the project; reopening or saving never silently removes it.
+Install/enable the matching dependency or explicitly edit the placement. Playtest
+refuses unavailable object keys and leaves the document intact.
 
 A stock asset library can contain shared definitions whose art belongs to another
 zone or a later native art upload. New blank projects include the available
 definitions and report any omitted chunks/blocks; they never invent replacement
 art. Choose another source library for unavailable definitions. A full layout
 clone remains strict and reports missing assets rather than changing its layout.
-Install/enable the matching dependency or explicitly edit the placement. Playtest
-refuses unavailable object keys and leaves the document intact.
 
 **Close project** asks about unsaved changes. **Save and continue** saves before
 closing; **Discard changes and continue** closes without saving; **Continue
@@ -164,8 +166,10 @@ open; cancelling restores the editor or active playtest.
 ## Playtest and return
 
 Choose **Playtest from level start** for the authored start or **Playtest from
-cursor** for a validated cursor position. `F5` starts a fresh playtest of the current project
-from its authored start. `Shift+Tab` switches between the editor and its playtest;
+cursor** for a validated cursor position. Cursor launches use the same camera
+bounds and body-clearance checks as the authored start, so the final runway beyond
+Camera maximum X cannot be a launch point. `F5` starts a fresh playtest of the
+current project from its authored start. `Shift+Tab` switches between the editor and its playtest;
 when entering from ordinary gameplay, enable `debug.flags.editor` first.
 
 Each playtest builds a fresh runtime snapshot. Rings collected, objects destroyed,
@@ -183,9 +187,9 @@ signpost objects.
 
 Place a native finish in the final camera view and keep its floor through the
 right edge of the map. S1/S2 signposts lock the camera at **Camera maximum X**
-and finish after the player walks another 296 pixels. For example, a 1024-pixel
-wide course can use camera maximum X=704, a goal around X=920, and floor through
-X=1023. Keep that runway when changing bounds; moving only the signpost earlier
+and finish when the player's center reaches that maximum plus 296 pixels. For
+example, a 1024-pixel wide course can use camera maximum X=704, a goal around X=920,
+a finish threshold at X=1000, and floor through X=1023. Keep that runway when changing bounds; moving only the signpost earlier
 does not move the native camera limit.
 
 ## Export a playable level
@@ -206,8 +210,8 @@ reads back the staged directory through the strict parser, and validates the
 selected game host before publishing it.
 
 Projects retain exact RGB data and can store a larger native asset library than
-a portable export permits. Export requires exact Genesis-representable colors
-and the format's asset limits. For S3K, reachable terrain art must use creator
+a portable export permits. Playtest and export require exact Genesis-representable
+colors and the format's asset limits. For S3K, reachable terrain art must use creator
 palette cells: character line 0 and HUD-reserved cells belong to the host. An
 export error identifies the incompatible data; it does not change the project
 or leave a partially published destination.

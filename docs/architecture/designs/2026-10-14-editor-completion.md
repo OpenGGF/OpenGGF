@@ -135,7 +135,8 @@ Gameplay camera bounds are camera origins, so a 1024px canvas uses maximum X
 through camera maximum plus $128; placing a goal against full-canvas camera
 bounds made actual Engine completion impossible. New projects reserve the native
 320×224 final viewport, full-canvas editor navigation stays independent, and
-resize preserves the inset even after shrinking below that viewport.
+resize preserves custom insets while they fit. After clipping below that viewport,
+later growth restores the canonical 320×224 insets; custom bounds need review.
 
 Fresh S3K terrain scheduling originally assumed every native level had stock
 KosM sources. Authored native levels already have baked terrain; the stock terrain
@@ -171,7 +172,9 @@ This repairs the actual authored Engine path and additive export hosts.
 All runs used Java 25 and the normal Maven queue. ROM-backed selections received
 the original absolute root paths via sonic1.rom.path, sonic2.rom.path and
 s3k.rom.path; their CRC32/SHA-1 identities match repository guidance.
-No ROM was copied, renamed or linked by this task.
+Validation used existing verified main-workspace ROM files, without creating or
+replacing ROM assets. The native worktree bootstrap's asset/config/reference
+links are setup artifacts; cleanup unlinks them while preserving their targets.
 
 - session96515: 80 tests, one S3K landing failure, no errors/skips
   (queue189s/Maven79s). All-game create/edit/save/reopen/clone/export host loading
