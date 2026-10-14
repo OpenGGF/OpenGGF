@@ -1800,3 +1800,40 @@ env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 py
 Consumed root redirects are deleted after this account; no validation receipt
 or archived invocation log is retained. The original pre-task integration
 base5b2ff8e7851b99dd40998dfc41fbfd21c80031ef remains the combined validation base.
+
+
+## Bonus portal and mechanism qualification (2026-10-14)
+
+Source parente46f61820069f0d959e59220a46fba9a80aa4426; new test SHA256
+6f381f29976a71c2aa9b60f0a9736a9d937c83de0cb18f30851da2782b2814a0.
+Build-only13838 passes test-compile at20:44:54 UTC,22.906s,zero tests.
+Short2258 completes20:46:52 UTC,5/0/0/0,28.313s Maven/5.876s class/0s queue.
+Finite41801 completes20:54:42 UTC,420/0/0/0,5:06 Maven/280.8s class/69s queue.
+These are425 distinct physical-owner products across two invocations, not one
+single425 run; no unchanged logical products are rerun for this qualification.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off test-compile -B
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kBonusPortalMechanismProducts#shortPortalAndMechanismPilotsLoadAndReturnThroughRealBoundaries' "-Dsonic1.rom.path=$S1_TASK_ROM" "-Dsonic2.rom.path=$S2_TASK_ROM" "-Ds3k.rom.path=$S3K_TASK_ROM" test -B
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kBonusPortalMechanismProducts#finitePortalAndExitProductsRetainRosterAndBothLoadBoundaries' "-Dsonic1.rom.path=$S1_TASK_ROM" "-Dsonic2.rom.path=$S2_TASK_ROM" "-Ds3k.rom.path=$S3K_TASK_ROM" test -B
+```
+
+Real SOZ1 post1 activation and four-star orbit/lifetime precede actual portal
+overlap; only declared position/carried-ring inlets are seeded. Gumball exit
+range, Pachinko captured countdown and actual Slot goal-cell collision request
+their own exits; no logical entry/exit test hooks are used. Both actual loads,
+ordered roster/resources, all-key interior/returned replay and timeline floors
+are checked. Complete cold stage traversal, reward mechanisms, native pixels/
+audio and whole-Slot rewind are not credited. Its copied runtime board/reel/
+reward/animation tables expose an additional concrete ROM-pipeline obligation:
+matched original layout1024B at1E4084 (SHA256e5fbad9116c0febbfb792fad5ed0445291c1f49ebfd2bf04b81c187cb32dfe2d),
+start4B at1E4080, prize word4C8A4, target4C8B4, reels4C8CC/4C8D4/4C8DC,
+transient scripts4B5EC/4B622/4B656/4B688. Only addresses/hashes are inventoried;
+no disassembly asset is used as runtime fallback. These remain active work.
+
+The ending matrix's stale blanket pressure statement is corrected to existing
+17 real-child cases (19591 plus two unchanged43234 pilots) and separate11-core7093,
+with impossible fixed8/48 and Knuckles-only victims excluded by native owners.
+Actual loc5DB76/5DD6A full-table dispatch and downstream scene composition are
+separate remaining qualification. Consumed root redirects are deleted after this
+account; combined smoke/guards and integrated delivery remain pending.

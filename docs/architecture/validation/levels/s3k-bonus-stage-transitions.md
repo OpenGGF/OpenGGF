@@ -55,3 +55,39 @@ cases. These are actual logical-entry/declared-exit boundary products, not
 physical portal approach, winning/reward, whole-interior native picture/audio
 or all-mechanism certification. Those obligations remain open. Exact command
 and source hash are recorded in the [completion plan](../../plans/2026-10-13-s3k-playable-completion.md#finite-bonus-boundary-qualification-2026-10-14).
+
+
+## Real portal and exit-mechanism products (2026-10-14)
+
+On coherente46f61820069f0d959e59220a46fba9a80aa4426 plus the test draft,
+`TestS3kBonusPortalMechanismProducts` qualifies425 distinct cases across two
+runs:2258 short pilots5/0/0/0 at20:46:52 UTC (28.313s Maven/5.876s class,
+0s queue), then41801 finite products420/0/0/0 at20:54:42 UTC
+(5:06 Maven/280.8s class/69s queue). The finite140 supported configurations
+and three stage branches are the same admitted product set as above.
+
+Every case starts at a declared SOZ1 local inlet outside the real placed
+post1, walks into it with ordinary controller input and seeds only the declared
+carried ring count20/35/50. The actual post creates four orbital stars. Their
+ordinary lifetime reaches collision enable; a declared local approach targets
+the observed live orbit position without writing its angle/lifetime/request.
+Actual overlap consumes the checkpoint portal and the real GameLoop load follows.
+Gumball's placed exit range, Pachinko's live trap capture/countdown and Slot's
+actual loaded goal-cell collision own the exits; no requestExit/startGoal hook
+is called by this test. Local free-movement exit inlets are declared scenarios,
+not cold whole-stage routes or reward/win certifications.
+
+Actual stage loads and returned origin loads retain fresh managers, retired
+history, exact ordered/configured main/roster/camera identity, width, lives and
+usable native/donor resources. Gumball/Pachinko retain two18-tick all-key world
+replay cycles and each returned origin retains two45-tick cycles. Slot still
+performs18 ordinary interior ticks and asserts its current unsupported whole-
+stage rewind contract. Those interior limitations remain active work.
+
+The loaded Slot board/reward/reel/animation tables are currently copied into
+runtime code (`S3kSlotRomData`), so goal-cell contact is not a ROM-pipeline
+qualification of those resources. Original-ROM byte matches identify the
+layout at1E4084 and its player start at1E4080; production migration and complete
+Slot snapshot/recreation remain open, alongside other reward/stage mechanisms,
+cold traversal and matched native images/audio. Exact commands/source hash are
+in the [completion plan](../../plans/2026-10-13-s3k-playable-completion.md#bonus-portal-and-mechanism-qualification-2026-10-14).

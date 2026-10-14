@@ -174,8 +174,13 @@ there is no claimed single pristine77-case invocation. Both native sprite-clear
 boundaries retain the global catcher pointer, including two complete registry
 restore/replay cycles. Exact commands and corrected premises are in the follow-up
 record. The independent continuation core qualifies41 distinct cases, preserving
-SST93 residue/identity and execution cursor without unload. Complete composed
-native-child pressure qualification and native scene comparison remain open.
+SST93 residue/identity and execution cursor without unload. Managed ending graph continuation pressure qualifies17 distinct real-child
+cases: corrected15-case19591 (08:35:55 UTC,31.519s Maven) plus two unchanged
+pilots from43234. Core7093 separately passes11/0/0/0 (08:38:14 UTC,26.058s).
+The fixed plane8/Master48 and Knuckles-only groups are excluded as impossible
+SST93 continuation victims by native placement/Player_mode3 gates. Actual
+full-table loc5DB76/loc5DD6A trigger dispatch and downstream scene composition
+remain separately unqualified. See the [real-child pressure evidence](../../designs/2026-10-13-s3k-ending-lifecycle.md#actual-managed-ending-graph-under-continuation-pressure-2026-10-14).
 Whole-scene native composition, NTSC/PAL branch breadth, donor incomplete
 progress and rendered audio remain pending in the broader follow-up.
 
