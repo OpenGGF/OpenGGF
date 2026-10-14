@@ -50,7 +50,7 @@ final class LevelScrollPresentation {
         int currentMaxX = camera.getMaxX();
         var rules = level.gameModule == null ? null : level.gameModule.getRules().playerMovement();
         if (rules != null && !rules.levelBoundaryRightStrict()) {
-            var state = com.openggf.game.GameServices.gameState();
+            var state = level.boundaryGameState();
             boolean locked = rules.levelBoundaryLockUsesScreenLockFlag()
                     ? state.isScreenLocked() : state.isBossFightActive();
             // S1/S2 permit another $40 pixels in ordinary play. Do not conceal

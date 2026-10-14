@@ -5,7 +5,7 @@ using assets from your supplied ROMs or an imported level. It supports foregroun
 and background layouts, block/chunk composition, collision assignments,
 object/ring placement, launch properties, project saves, and playtesting.
 
-Start at **Tools → Editor projects** on the master title. The same project
+Start at **Advanced → Editor projects** on the master title. The same project
 commands are available from the editor command palette. The editor remains
 experimental; pixel-art painting, collision-profile shape drawing, native stock
 cutscenes/boss scripts, and campaign packaging are separate workflows.
@@ -19,6 +19,11 @@ cutscenes/boss scripts, and campaign packaging are separate workflows.
    S3K also needs an object family: `S3KL` for Sonic 3 objects or `SKL` for Sonic &
    Knuckles objects. The family selects the meaning of stock object IDs.
 4. Use **Save project as** to choose an `.ogfproject` file before your first save.
+
+![The New blank level form with the name Emerald Practice, width 8 blocks, height 4 blocks, and Create level action.](images/level-editor/new-project.png)
+
+*New blank level after choosing Sonic 2 and an Emerald Hill asset library.
+Dimensions count map cells; an 8×4 Sonic 2 canvas is 1024×512 pixels.*
 
 To begin from a supported stock layout, enable `debug.flags.editor`, load the
 zone/act in gameplay, and press `Shift+Tab`. The editor adopts it as a project.
@@ -37,6 +42,27 @@ export directory containing `level.json` and its binary assets; choose its host
 game so native geometry and object semantics can be checked. Import creates an
 editable project rather than overwriting the export.
 
+**Advanced → Import content** also accepts `.ogfproject` files, level folders,
+`level.json`, and level ZIPs. A level ZIP can hold the exported files at its root
+or inside one enclosing folder. Drop one item onto the idle master title or
+editor window, or use **Browse files**, then review the detected name, game and
+action. **Import level into editor** creates a new editable project;
+**Open project in editor** reopens the project file. Both preserve the current document until any required
+save/discard/cancel choice is resolved. Invalid content reports an error without
+changing the source.
+
+The shared screen also installs mod and mutator packages at the master title.
+They remain disabled, and **MODS** opens for enablement, code trust and Apply.
+See [installing mods](../../modding/installing-mods.md) for packages and updates.
+Finish the current dialog or return from gameplay before dropping content.
+
+![The shared Import content landing page with a drop area for a level, project, mod or mutator and a Browse files action.](images/level-editor/import-content.png)
+
+*Open **Advanced → Import content** at the master title, or **Import content** in the
+editor command palette. Drop one project, level folder/ZIP, or mod/mutator package
+onto the window, or use **Browse files**. Review the detected content before
+applying it.*
+
 ## Edit the level
 
 The hierarchy is **World → Block → Chunk**. World cells select blocks, block
@@ -44,6 +70,13 @@ cells select 16×16 chunks, and chunk cells select 8×8 patterns. Select a libra
 entry as the brush, focus the destination canvas, and place it. `Enter` descends
 into the selected content and `Escape` returns to its parent. The active layer
 is shown as FG or BG.
+
+![The Emerald Practice sample course in World view, with the Emerald Hill block library on the left and the selected terrain cell outlined in the world.](images/level-editor/world.png)
+
+*World view of a blank Sonic 2 project with a sample floor assembled from decoded
+Emerald Hill art. The left pane browses ROM-backed block thumbnails. Choose the
+brush there, then focus the world to place it. These screenshots use a 426×224
+viewport enlarged exactly 2×.*
 
 Erase chooses actual transparent terrain with no collision; it does not assume
 library entry zero is empty. If the library lacks an appropriate empty definition,
@@ -57,6 +90,16 @@ Local composition edits derive definitions for the selected placement instead
 of changing every placement that shares a block or chunk. The editor reports
 capacity exhaustion when it cannot allocate a free definition. Undo the change,
 reuse an existing definition, or start from a library with spare capacity.
+
+![Block view with the Emerald Hill chunk library on the left and the sample floor block composition on the right, including the highlighted chunk cell.](images/level-editor/block.png)
+
+*Press Enter from World to edit a block. Its 8×8 chunk cells appear in the right
+pane; the left library supplies the 16×16 chunks used to compose it.*
+
+![Chunk view with the pattern library on the left and an enlarged four-pattern terrain chunk on the right, including the highlighted pattern cell.](images/level-editor/chunk.png)
+
+*Press Enter again to edit a chunk's four 8×8 patterns. Use G for its palette,
+H/J for flips, and T for priority. Escape returns to Block, then World.*
 
 | Input | Action |
 |---|---|
@@ -130,6 +173,12 @@ The music field accepts `stock:<decimal id>` (for example, `stock:129`) or an
 owned track such as `owner:localName`. S3K projects must deliberately choose the object family that
 matches their stock objects. Changing the family can make existing object IDs
 mean different things; validate the result with a fresh playtest.
+
+![The Level properties form for Emerald Practice, showing Name, Start X and Y, four camera bounds, and the stock music field.](images/level-editor/properties.png)
+
+*Level properties keeps the authored start, camera bounds, and music together.
+Choose a row to edit it, then scroll to **Apply properties**. S3K projects also
+show the object-family field.*
 
 ## Save and reopen safely
 

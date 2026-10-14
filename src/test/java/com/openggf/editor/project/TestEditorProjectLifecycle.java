@@ -439,6 +439,72 @@ class TestEditorProjectLifecycle {
         assertEquals(0, document.level().getRings().size(), "cancelled native exit cannot discard editor history");
     }
 
+    @Test
+    void importModalOwnsEditorShortcutsAndCannotHideUnsavedQuit() throws Exception {
+        start(GameId.S2);
+        var workspace = engine.getEditorProjectWorkspace();
+        createBlank(workspace, fixture.input, GameId.S2, "Import quit protection");
+        var original = workspace.document();
+        var importerField = Engine.class.getDeclaredField("contentImportScreen");
+        importerField.setAccessible(true);
+        var importer = (com.openggf.ContentImportScreen) importerField.get(engine);
+        importer.open();
+        var globalClaim = Engine.class.getDeclaredMethod("globalShortcutInputClaimed");
+        globalClaim.setAccessible(true);
+        assertEquals(true, globalClaim.invoke(engine), "Import owns configurable shortcuts before GameLoop dispatch");
+        pressEngine(GLFW_KEY_F5);
+        pressEngine(GLFW_KEY_LEFT_SHIFT, GLFW_KEY_TAB);
+        assertEquals(GameMode.EDITOR, engine.getCurrentGameMode());
+        assertSame(original, workspace.document());
+        assertTrue(importer.isOpen());
+
+        var requestExit = Engine.class.getDeclaredMethod("requestApplicationExit");
+        requestExit.setAccessible(true);
+        requestExit.invoke(engine);
+        assertFalse(importer.isOpen(), "The importer must relinquish both drawing and input to the quit prompt");
+        assertEquals("Unsaved project", workspace.menu().title());
+        assertEquals(GameMode.MASTER_TITLE_SCREEN, engine.getCurrentGameMode());
+        pressEngine(GLFW_KEY_ESCAPE);
+        assertEquals(GameMode.EDITOR, engine.getCurrentGameMode());
+        assertSame(original, workspace.document());
+        assertTrue(original.isModified());
+        assertFalse(workspace.menu().isOpen());
+    }
+
+    @Test
+    void cancellingARejectedCrossGameImportRestoresTheSavedEditorDocument() throws Exception {
+        start(GameId.S2);
+        File sonic1 = RomTestUtils.ensureSonic1RomAvailable();
+        assumeTrue(sonic1 != null, "Cross-game import restoration also needs the S1 ROM");
+        SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.SONIC_1_ROM, sonic1.getAbsolutePath());
+        var workspace = engine.getEditorProjectWorkspace();
+        createBlank(workspace, fixture.input, GameId.S2, "Import restoration");
+        var original = workspace.document();
+        authorCourse(original, engine.getLevelEditorController(), GameId.S2);
+        saveAs(workspace, temporary.resolve("retained.ogfproject"));
+        workspace.export();
+        Path exported = temporary.resolve("retained-export");
+        workspace.menu().setValue("path", exported.toString()); workspace.menu().submit();
+        assertNull(workspace.menu().error());
+
+        var importerField = Engine.class.getDeclaredField("contentImportScreen");
+        importerField.setAccessible(true);
+        var importer = (com.openggf.ContentImportScreen) importerField.get(engine);
+        importer.open();
+        try (var inspected = new com.openggf.ContentImportService(temporary.resolve("mods")).inspect(exported)) {
+            // Deliberately select an incompatible native host to exercise failure after the host switch.
+            assertThrows(com.openggf.game.modzone.ModZoneRegistrationException.class,
+                    () -> workspace.importLevel(inspected.level(), GameId.S1));
+        }
+        assertSame(original, workspace.document());
+        importer.close();
+        assertEquals(GameMode.EDITOR, engine.getCurrentGameMode());
+        assertSame(original, workspace.document());
+        assertSame(original.level(), engine.getLevelEditorController().currentLevel());
+        assertFalse(original.isModified());
+        assertEquals(GameId.S2, GameServices.module().getGameId());
+    }
+
     private void start(GameId game) throws Exception {
         fixture = Fixture.open(game);
         engine = new Engine();

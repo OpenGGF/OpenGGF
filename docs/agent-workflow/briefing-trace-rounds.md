@@ -71,6 +71,15 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Offscreen editor captures can leak pointer projection into later tests
+(2026-10-14, editor guide pictures). `GraphicsManager.cleanup()` and its test
+reset retain viewport/projection overrides. A 426px capture followed by a
+320px mouse-stroke test mapped the pointer into a different cell and made
+focus-loss commit appear broken. Save and restore viewport coordinates/dimensions,
+projection width/buffer and batching state in the capture's `finally`, including
+failed captures. The later focus-loss case passed after that restoration was
+added, even while the capture still exposed a separate editor-context error.
+
 A performance-only flock does not isolate shared-worktree test jobs
 (2026-10-13, P5 CPU audit). Another task's queued Maven run overlapped a
 negative timing pair; its result was excluded and a preliminary rejection

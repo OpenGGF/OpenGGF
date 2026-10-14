@@ -161,4 +161,28 @@ class TestTitleInputOwnership {
         assertEquals(1, colour.get(), "without a text claim the scene keeps global shortcuts");
         assertTrue(TitleInputOwnership.routeCapture(GameMode.MOD_SCENE, null, false, () -> true));
     }
+
+    @Test
+    void editorImportAndProjectDialogsOwnDisplayKeysWhileCaptureEdgesStayCurrent() {
+        var picker = new AtomicInteger();
+        var color = new AtomicInteger();
+        var shaders = new AtomicInteger();
+        assertFalse(TitleInputOwnership.routeDisplay(GameMode.EDITOR, null, true, false,
+                () -> { picker.incrementAndGet(); return true; }, color::incrementAndGet, shaders::incrementAndGet));
+        assertEquals(0, picker.get(), "Typing a path must not open the shader picker");
+        assertEquals(0, color.get()); assertEquals(0, shaders.get());
+        var input = new InputHandler();
+        var detector = new LiveCaptureChord();
+        var chord = KeyChord.of(GLFW_KEY_C);
+        java.util.function.BooleanSupplier updateChord = () -> detector.update(chord,
+                input.isPhysicalKeyDown(GLFW_KEY_C), false, false, false, false);
+        input.handleKeyEvent(GLFW_KEY_C, GLFW_PRESS);
+        assertFalse(TitleInputOwnership.routeCapture(GameMode.EDITOR, null, true, updateChord));
+        assertFalse(TitleInputOwnership.routeCapture(GameMode.EDITOR, null, false, updateChord),
+                "Closing the importer while holding a suppressed key cannot start capture");
+        input.handleKeyEvent(GLFW_KEY_C, GLFW_RELEASE);
+        assertFalse(TitleInputOwnership.routeCapture(GameMode.EDITOR, null, false, updateChord));
+        input.handleKeyEvent(GLFW_KEY_C, GLFW_PRESS);
+        assertTrue(TitleInputOwnership.routeCapture(GameMode.EDITOR, null, false, updateChord));
+    }
 }

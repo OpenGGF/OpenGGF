@@ -152,7 +152,7 @@ that the module can work.
 
 ### Level authoring projects
 
-The experimental editor is available from **Tools → Editor projects** at the
+The experimental editor is available from **Advanced → Editor projects** at the
 master title; `debug.flags.editor` enables gameplay entry with `Shift+Tab`.
 It supports named blank levels and supported layout clones for S1, S2 and S3K,
 canonical imports, foreground/background painting, local block/chunk composition,

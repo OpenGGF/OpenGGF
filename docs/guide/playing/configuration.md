@@ -185,7 +185,7 @@ debug:
 ```
 
 With that enabled, press `Shift+Tab` during gameplay to enter the experimental
-level editor. Project creation/open/import is also available from **Tools →
+level editor. Project creation/open/import is also available from **Advanced →
 Editor projects** at the master title. In a project, `Shift+Tab` switches between
 the authored document and its isolated playtest; `F5` restarts that project from
 its authored start. See the [level editor guide](../creating/level-editor.md).
