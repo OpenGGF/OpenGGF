@@ -148,6 +148,18 @@ constructor's observed default reuse was true on this host, and the controlled
 TIME_WAIT check permitted the original rebind.
 The actual full-run contender remained unobserved.
 
+
+A rendered ending frame has producer and published generations (2026-10-14).
+Sample SAT geometry, CRAM and plane scroll from the same completed producer;
+the later CPU Normal_palette and deformation can already describe the next
+frame. Actual GPU palette bytes, published tiles and the selected draw-scroll
+bridge distinguished that boundary in jar55d2131f/sourcebc5f53dc. Do not fit a
+per-frame offset or hide mismatch pixels. Infer the setup/no-poll boundary from
+RecordingFrameDriver and native Process_Sprites/controller-poll callers. An
+opaque player mask must come from independently reconstructed earlier native
+SAT pieces; the reunion wing covered20 of619 player pixels in both native and
+engine. Logical3-bit comparison is a diagnostic, never original byte-RGB parity.
+
 A headless palette owner check needs the renderer's resolution boundary
 (2026-10-10, Starpost seasonal acts): HeadlessTestRunner queues palette writes
 but does not draw, so ownerAt still reports none and live RGB remains unchanged.

@@ -79,6 +79,32 @@ class TestS3kEndingSpriteDmaCapture {
         }
     }
 
+    @org.junit.jupiter.api.Test
+    void initialNativeStarfieldDoesNotSampleSeaInLeftRingColumns() throws Exception {
+        var settings=new GameplayCaptureSession.Settings(320,"sonic","","off",null,null,null,"1111111",false,false,0,null);
+        try(var session=new GameplayCaptureSession(settings)){
+            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(),13,1,settings);
+            GameServices.rng().setSeed(0); // Declared common authoring setup, before initial Process_Sprites only.
+            for(int outer=0;outer<65;outer++){session.step(null);session.renderFrame();}
+            var image=session.render();
+            var state=(com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState)GameServices.zoneRuntimeState();
+            assertEquals(0,state.screen().foregroundRoutine);assertEquals(0,state.screen().backgroundRoutine);
+            assertEquals(65,GameServices.level().getObjectManager().getFrameCounter());
+            // Native declared-spec-v2, published input63: this unobstructed left
+            // footprint is black starfield with blue/cyan stars, not the sea rows.
+            // Its native pixels have no red component and3056/3136 are black.
+            // Keep exact engine RGB; the core DAC transfer is a separate limit.
+            int black=0;
+            for(int y=35;y<133;y++)for(int x=0;x<32;x++){
+                int rgb=image.argb(x,y)&0xFFFFFF;
+                assertEquals(0,(rgb>>>16)&255,"sea leaked into native starfield at "+x+","+y);
+                if(rgb==0)black++;
+            }
+            assertTrue(black>=3000,"native starfield footprint lost: black="+black);
+            assertTrue(black<3136,"ROM stars must still be visible");
+        }
+    }
+
     private static void assertDeparturePlanePixels(com.openggf.graphics.RgbaImage picture,
             EndingRescueDirectorObjectInstance owner,int frameIndex,int paletteBase,boolean flip,int[][] palette) throws Exception {
         var level=GameServices.level().getCurrentLevel();

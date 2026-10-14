@@ -1194,3 +1194,110 @@ or ROM state was changed for this host correction. Historical screenshots,
 films, source hashes and native prepared/published generation identities remain
 separate. Native nine-branch whole-scene/PAL/PCM and SAT 20-sprite/320-dot overflow
 acceptance remain open beyond the qualified allocation/graph checks.
+
+
+### Source-owned initial and published ending presentation (2026-10-14)
+
+This follow-up uses an independently declared native scene, not a cold campaign
+or trace-row bootstrap. Specification v2 (`7711c315a9b10fa7cb94fa9c3465fb280509a338d18cf8ebfa0d80ad3fcfc7cb`)
+lets the real Title Start path enable display and leave demo mode before the
+one-time normal-level destination/player/progress selection. The initial
+`Process_Sprites` return at `$6484` owns the declared VInt0/RNG0 publication;
+subsequent controller ordinal0 starts at the first ROM controller poll. No
+camera, actor, palette, VDP or demo-flag values are supplied. Specification v1
+is retained as rejected startup-prerequisite evidence. Clock410766 came from an
+older comparison row and is not reused to establish this independent setup.
+
+The separately committed native port `bf3c5391c` preserves ordinary Advance's
+video-disabled behavior and adds an explicit video-enabled advance. Capture
+rejects stale output after ordinary/audio attempts and same-frame savestate
+loads, and copies current pixels plus VRAM/CRAM/VSRAM. Its13 registered cases
+pass. The exact official BizHawk2.11 archive and immutable host
+`71b949a6b3ecb0709d4ba73f8cc0752d945a14c15c58f0326fc3adb7d4d4031b`
+are pinned outside the repository. Native scene output remains comparison-only.
+
+The initial native palette owner is Level `$64DC`: D01 fills lines1–3 white,
+starts the22-pass palette fade and leaves line0 to the actor. Animate_Palette's
+signed timer gate runs before `Process_Sprites`; its negative event byte blocks
+AnPal, while the initial FACE signed countdown reloads2. `Pal_DecColor2` only
+reduces components above their target, preserving below-target components.
+Powered palette advancement now belongs to AnPal admission before objects;
+P1 still owns form, physics, rings and auxiliaries. There is no controller-local
+22-frame delay. Later ScreenEvents ST/CLR suspends and resumes the same captured
+timer, including derived palette reapplication. The e973 matching-controller
+snapshot rejection and native construction baseline remain intact. The added
+initial delay is an internal ScreenRam serialization field, not a V5 or Mod API
+schema change.
+
+Initial foreground/background ring filling now follows the native full32-block
+rows and first background redraw, retaining all2,048 cells of each plane. The
+first foreground signal only resets its rounded cursor before ordinary row/
+column streaming. The earlier left-side water strip was capture-host camera
+rebinding, diagnosed and repaired separately above. For AIZ return, the native
+AIZ1_Deform bank inherits its `$3C` long before adding `$2000`, emits six backward
+wave stores and thirteen slope stores, and uses word camera origins. The delayed
+background redraw and subsequent row tails consume that bank; pure restore
+rebuilds output without advancing it. `loc_5B03A` replaces only background row7,
+columns4–7, with `$1A,$1B,$1A,$1B` through the mutation pipeline. These authored
+chunks expose the existing two dolphin owners; the old rabbit field name is
+retained for snapshot compatibility, not used to invent new scene actors.
+
+Three independently reproduced presentation defects were repaired:
+
+- The reunion's explicit `render_flags` H-flip is separate from its status-facing
+  write. `loc_5E1F0` sets the actual P1 render flip; `loc_5E2C2` clears it at launch.
+  All ten five-width Sonic/Tails field vectors failed before this correction.
+- Native B-high sea must replay the same published scroll selected by the rear
+  plane pass. Four actual320/800 overlap vectors failed when the effect read
+  later CPU deformation. An immutable internal background-scroll bridge now
+  carries displayed horizontal/vertical/column/period data; existing HCZ callers
+  retain their previous path. Lazy refresh and restored publication are checked.
+- `Render_Sprites` `$1AEE4/$1AF2A` emits the Tornado main mapping, then sub2 and
+  sub3; earlier opaque SAT pixels win. Separate painter calls in that order
+  instead overwrote its wheel with the propeller. Two first-entry GPU negatives
+  independently reconstructed101 different-color opaque overlaps from ROM
+  mappings and found0 correct body pixels. Only the local multipart painter
+  emission is reversed; collection retains native order. The positive vectors
+  also check both actual plane facings, signed sub_86458 offsets, the six-pass
+  nose table and VInt-selected propeller frame. Arbitrary V-flipped parent
+  headers are not visually certified by natural C0/C1 scene examples.
+
+Focused evidence is attributed to each completed command, not accumulated into
+one pristine run. The initial palette/AnPal/controller/donor/resource set passed
+100 cases (`91638`, zero failures/errors/skips). On the later shared presentation
+candidate, `74972` completed66 cases with4 oracle-premise failures: old island
+checks sampled live rather than producer scroll, and P1's619 opaque ROM pixels
+included20 legitimately occluded by earlier native plane-wing pieces. These
+masks are now derived from actual ROM geometry/opacity and native ordering, not
+observed mismatch coordinates. The corrected ten pixel cases passed `25068`.
+Finally `61216` passed28 affected cases, zero failures/errors/skips, at15:10:04
+BST (1:34 Maven): pixel12, reunion whole-registry10 and publication/lazy-refresh6.
+The other earlier shared consumers remain attributed to their frozen sources.
+There is no worker broad/full-suite claim.
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl ALSOFT_DRIVERS=null python3 tools/testing/maven_queue.py -Dmse=off '-Ds3k.rom.path=<MAIN_WORKSPACE>/Sonic and Knuckles & Sonic 3 (W) [!].gen' '-Dtest=TestS3kEndingScenePriorityPixels#tornadoMultipartKeepsMainSatPiecesAheadOfItsNoseAndPropeller' test -B
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl ALSOFT_DRIVERS=null python3 tools/testing/maven_queue.py -Dmse=off '-Ds3k.rom.path=<MAIN_WORKSPACE>/Sonic and Knuckles & Sonic 3 (W) [!].gen' '-Dtest=TestS3kEndingScenePriorityPixels,TestS3kEndingReunionPresentation,TestLevelSpritePresentationLifecycle' test -B
+```
+
+The second command uses production source SHA256
+`bc5f53dca106435f4914def564e8ee9f213a2112df116724923f5d2d6faa0c8d`
+at parent HEAD `9db593c82` plus the scoped owners. Engine-only recapture `42038`
+passed12.568s at15:11:04 BST from immutable jar
+`55d2131fdc572d3071a7a69a6bdedbfd96189e55b00aeef8c3fbbc13f9b36faa`,
+using unchanged native `85099` output, specification and neutral inputs. Full
+images were viewed, not only slot/counter summaries. Sonic rescue1535 and
+reunion4095/5119/6143, and Tails AIZ restoration4095, have zero logical3-bit
+pixel diagnostic differences across320×224. This is not byte RGB acceptance:
+original native levels0..238 still differ from the engine's0..255 output.
+
+Remaining observed negatives include earliest scene input1 (Sonic1,457 and
+Tails1,838 logical pixel differences), Tails31/63/511 (34 pixels; published CRAM
+cells2–4), the small island figure at3071 (Sonic79/Tails75), and later Tails sea
+pixels at5119/6143 (122/140). Their owners still require attribution. All nine
+native branch products, other widths, PAL framebuffer/50Hz behavior, complete
+PCM, and a native SAT20-sprite/320-dot scanline-overflow witness remain open.
+The old61-second films/reel/index and every intermediate native/engine source,
+jar/input hash and negative observation are preserved separately. The stable
+observer protocol still needs promotion from its owned external prototype;
+none of these diagnostic generations certifies a complete cold campaign.

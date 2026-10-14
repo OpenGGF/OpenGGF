@@ -377,8 +377,7 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
                     |(ending.flag(3)?1L<<31:0)|(origin&0xFFFFL);
         }
         if (GameServices.zoneRuntimeState() instanceof com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState endingZone
-                && endingZone.ending().scene().foreground().revision() != 0
-                && endingZone.ending().scene().foreground().remaining() >= 0)
+                && endingZone.ending().scene().foreground().revision() != 0)
             return endingZone.ending().scene().foreground().revision();
         if (GameServices.hasRuntime() && GameServices.zoneRuntimeState() instanceof
                 com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz && ssz.actIndex() == 1)
@@ -443,8 +442,7 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
                 .current(GameServices.zoneRuntimeRegistry()).orElse(null);
         if (ending != null && ending.postCreditsStarted() && ending.flag(3)) return Long.MIN_VALUE;
         if (GameServices.zoneRuntimeState() instanceof com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState endingZone
-                && endingZone.ending().scene().background().revision() != 0
-                && endingZone.ending().scene().background().remaining() >= 0)
+                && endingZone.ending().scene().background().revision() != 0)
             return endingZone.ending().scene().background().revision();
         if (GameServices.hasRuntime() && GameServices.zoneRuntimeState() instanceof
                 com.openggf.game.sonic3k.runtime.SszZoneRuntimeState ssz
@@ -1038,6 +1036,8 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
                 registry.register(aizBattleshipRenderFeature);
             }
         }
+        if(zoneIndex==0x0D&&actIndex==1)
+            registry.register(new com.openggf.game.sonic3k.render.EndingBackgroundPriorityEffect());
         if (zoneIndex == Sonic3kZoneIds.ZONE_SOZ) {
             registry.register(new com.openggf.game.sonic3k.render.SozBgHighPriorityForegroundOverlayEffect());
             registry.register(com.openggf.game.sonic3k.render.SozBgHighPriorityForegroundOverlayEffect.spritePriorityMask());

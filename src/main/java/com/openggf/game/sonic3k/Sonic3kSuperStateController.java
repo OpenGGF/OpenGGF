@@ -394,6 +394,17 @@ public class Sonic3kSuperStateController extends SuperStateController {
     }
 
     private void updateEndingForm() {
+        if(!endingPaletteUsesAnPalClock())advanceEndingPaletteAtAnPal();
+        if (endingReunionForm && isSuperTailsFormActive()) {
+            var level = player.currentLevelManagerIfAvailable();
+            ensureSuperTailsFlickies(level != null ? level.getObjectManager() : null);
+        }
+        // P1 retains its ending auxiliary/form owners; AnPal owns the palette dispatch.
+    }
+
+    /** Native ending palettes/transformation release at AnPal_Load, before Process_Sprites. */
+    public void advanceEndingPaletteAtAnPal() {
+        if(!endingSceneForm)return;
         if (getState() == SuperState.TRANSFORMING) {
             boolean finished;
             if (player instanceof Tails) {
@@ -425,12 +436,14 @@ public class Sonic3kSuperStateController extends SuperStateController {
             updateSuperPalette();
             updateEndingRevertPalette();
         }
-        if (endingReunionForm && isSuperTailsFormActive()) {
-            var level = player.currentLevelManagerIfAvailable();
-            ensureSuperTailsFlickies(level != null ? level.getObjectManager() : null);
-        }
-        // The ending script owns control, life and ring timing. Only the native
-        // palette/transformation owner runs here, once through ordinary update().
+    }
+
+    private boolean endingPaletteUsesAnPalClock() {
+        var level=player.currentLevelManagerIfAvailable();
+        if(level==null||!(level.getAnimatedPatternManager() instanceof Sonic3kLevelAnimationManager))return false;
+        var registry=GameServices.zoneRuntimeRegistryOrNull();
+        return registry!=null && com.openggf.game.sonic3k.ending.S3kEndingCoordinator.current(registry)
+                .map(com.openggf.game.sonic3k.ending.S3kEndingState::initialized).orElse(false);
     }
 
     private void updateEndingRevertPalette() {

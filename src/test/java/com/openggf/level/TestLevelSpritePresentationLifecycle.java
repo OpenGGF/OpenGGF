@@ -29,10 +29,14 @@ class TestLevelSpritePresentationLifecycle {
         assertNotNull(before.preparedScroll());
         assertEquals(before.preparedScroll(), tables.publishedScroll(),
                 "VBlank must publish the scroll registers/buffers paired with SAT");
+        assertArrayEquals(before.preparedScroll().horizontal(),LevelSpritePresentation.backgroundScrollForDraw(level).horizontal(),
+                "effects must read the same real published draw generation");
         assertEquals(before.prepared(), tables.published(), "VBlank must upload the preceding loop's table");
         var next = tables.capture();
         registry.restore(composite);
         assertEquals(before, tables.capture(), "rewind must restore pending, displayed and counter presentation");
+        assertArrayEquals(before.publishedScroll().horizontal(),LevelSpritePresentation.backgroundScrollForDraw(level).horizontal(),
+                "the restored effect bridge must not advance live scroll before its first redraw");
         fixture.stepFrame(false, false, false, true, false);
         assertEquals(next, tables.capture(), "forward replay after restore must reproduce all presentation buffers");
         level.resetZoneScopedRegistriesForLevelLoad();

@@ -52,6 +52,12 @@ final class HczBgHighPriorityTileRenderer {
     }
 
     static void render(SpecialRenderEffectContext context, boolean wrapY, boolean priorityMask) {
+        render(context, wrapY, priorityMask, null);
+    }
+
+    /** Explicit displayed buffers for an effect that shares the level's published tile passes. */
+    static void render(SpecialRenderEffectContext context, boolean wrapY, boolean priorityMask,
+            com.openggf.level.LevelSpritePresentation.BackgroundScroll displayed) {
         GraphicsManager graphicsManager = context.graphicsManager();
         if (graphicsManager.isHeadlessMode() || !graphicsManager.isGlInitialized()) {
             return;
@@ -68,13 +74,15 @@ final class HczBgHighPriorityTileRenderer {
             return;
         }
 
-        ParallaxManager parallaxManager = GameServices.parallax();
-        int[] hScrollData = parallaxManager.getHScrollForShader();
+        // Ordinary callers retain their original live reads after the resource guards.
+        ParallaxManager parallax = displayed == null ? GameServices.parallax() : null;
+        int[] hScrollData = displayed == null ? parallax.getHScrollForShader() : displayed.horizontal();
+        float bgWorldOffsetY = displayed == null ? parallax.getVscrollFactorBG() : displayed.y();
+        short[] columns = displayed == null ? parallax.getVScrollPerColumnBGForShader() : displayed.columns();
+        int backgroundPeriod = displayed == null ? parallax.getBgPeriodWidth() : displayed.period();
         if (hScrollData == null || hScrollData.length == 0) {
             return;
         }
-
-        float bgWorldOffsetY = parallaxManager.getVscrollFactorBG();
 
         SonicConfigurationService configService = GameServices.configuration();
         int screenW = configService.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS);
@@ -102,7 +110,7 @@ final class HczBgHighPriorityTileRenderer {
             bgScrollBias = tilemapManager.getBgTilemapBaseX();
             planePeriodWrapTiles = computePlanePeriodWrapTiles(screenW,
                     tilemapManager.getBackgroundTilemapWidthTiles(),
-                    parallaxManager.getBgPeriodWidth());
+                    backgroundPeriod);
         }
 
         OverlayCommand command = COMMAND_POOL.pollFirst();
@@ -112,7 +120,7 @@ final class HczBgHighPriorityTileRenderer {
                 graphicsManager.getPatternAtlasWidth(),
                 graphicsManager.getPatternAtlasHeight(), atlasId, paletteId, uwPalId,
                 useUnderwaterPalette, waterlineScreenY).withVerticalWrap(wrapY).withPriorityMask(priorityMask)
-                .withColumns(parallaxManager.getVScrollPerColumnBGForShader()));
+                .withColumns(columns));
     }
 
     /**
