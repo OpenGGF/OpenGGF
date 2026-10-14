@@ -834,9 +834,10 @@ plus all three rehashed original absolute ROM properties. The reported Maven
 execution time is 47.128 seconds; queue waiting was separate (approximately five
 minutes by the wrapper notices).
 
-Terminal Windows qualification, publication and refreshed ZIP evidence
-will follow. Because the reported event was not remembered, these reproduced
-losses cannot be attributed to a specific announcement from the user's session.
+Terminal Windows qualification and refreshed ZIP evidence are recorded
+[below](#terminal-announcer-and-windows-bundle-qualification). Because the reported
+event was not remembered, these reproduced losses cannot be attributed to a
+specific announcement from the user's session.
 The intentional warning cooldowns, wanted-state coalescing and stale-message
 expiry still mean not every event produces an immediate spoken message.
 
@@ -1043,3 +1044,83 @@ attempts omitted the test-kit classpath and then the scene-inspection helper;
 neither ran gameplay or receives behavioral qualification credit. The successful
 control includes the same dependencies used by the builders. Actual native
 gameplay must still complete on the rebuilt probe/image before final delivery.
+
+
+### Terminal announcer and Windows bundle qualification
+
+The scene-bootstrap correction integrated and published as
+`f076ef0063b4da24c52cb08038946e80d595b425`. The final image and all mod JARs
+are pinned to that exact source. [Windows workflow 38561039426](https://github.com/OpenGGF/OpenGGF/actions/runs/38561039426)
+is terminal success: Windows completed 12:21:26Z, and the independent guard job
+completed 12:18:50Z on October 14. Its fresh 88 reports contain 680 cases, zero
+failures/errors/skips, Maven exit 0 (13:29 minutes). The actual Windows image
+passes the 22,197-entry/1,727-type member audit, deliberate missing field/method
+controls with ordinary exit 1, the separately loaded JDK/catalog/HUD bootstrap
+controls, all 25 JVM/native registrations, all 23 code-mod engine boots and every
+normal/mod batch shortcut. The disposable 26th scan input is not shipped.
+
+The downloaded immutable ZIP hash is
+`e6212e7f7b89083a0ed3e77126367c5ac7f4b70bec8a0f2a6be352d793794f75`.
+Its PE hash is `5934da902a291bfaec5ce2c82d4d3301a3507998a7c44e28c6621b93b9831b96`.
+`maven_queue.py -B -Dmse=off exec:exec -Dexec.executable=python3
+-Dexec.args=target/run_owned_windows_checks.py` held normal shared admission and
+the worktree lease. It waited 309 seconds, then all 25 actual-PE representative
+rendered gameplay checks passed under Wine 11.19 using original rehashed ROMs
+and a live owned Xvfb/llvmpipe display. Every shortcut forwards arguments from
+an extracted path containing spaces. Checks include module state roundtrip and
+scene reopen where applicable, with no owner findings/disabled owners. The
+previously failing mutator dispatch and Starpost Valley startup both pass.
+
+All 122 Eggman's Sky voice clips produced final mixed PCM through the prepared
+production session path: exact provenance frame counts, 48,000 Hz mono, minimum
+peak 17,272 and minimum range 26,146. All encoded Ogg bytes match source and
+provenance; encoded content totals 3,014,069 bytes. No voice WAV masters remain.
+The Windows-built Eggman's Sky JAR hash is
+`1e3c9391c8238cd56e4767561ee782f18674aa1738aa60ab84519b9c1cda0b1f`.
+The unchanged five-suite/53-case announcer and gameplay qualification above
+remains applicable; its tested mod/audio/test input bytes are unchanged.
+
+The first native command ended after 1:52 minutes because the additional
+**temporary control** could not compile against the selected SDK-only
+classpath. A follow-up compiled against the owned complete engine JAR but
+rejected its incomplete fixture manifest before registration. Neither setup
+attempt receives announcer-control credit; completed all-mod gameplay is not
+invalidated or repeated. The final disposable manifest uses the validated
+packaged schema. `maven_queue.py -B -Dmse=off exec:exec
+-Dexec.executable=python3 -Dexec.args=target/run_owned_voice_remaining_checks.py`
+waited 343 seconds and ran 18.846 seconds under normal admission/worktree lease.
+It loaded exact packaged announcer classes outside native-image analysis. A
+matched fixture replacing only the announcer classes with October 9 bytes
+returns ordinary exit 1 with `Voice retry control failed: original trigger disappeared`;
+the corrected classes return 0 and pass retry, hull/shield/pulse after mute, and
+pulse after queue pressure. Those controls record accepted requests; the
+separate 122-clip check proves real PCM. Both controls and all owned Wine/display
+processes are terminal.
+
+The final command's subsequent archive audit falsely treated native-image's
+9,216-byte `jvm.dll` compatibility shim as a bundled JDK. The corrected read-only
+audit requires its exact immutable-builder bytes, retains the no-ROM/Java-launcher
+checks, and passes CRC, complete per-file SHA-256 coverage, all 25 mod JARs and
+quick-mod copies, all launchers, both source pins and every voice provenance/PCM
+comparison. This was an audit correction, not an executable or mod change; the
+combined Maven invocation remains exit 1, with the successful controls and the
+separate passing integrity audit attributed explicitly.
+
+The clean delivered ZIP is 121,536,760 bytes / 1,987 files, SHA-256
+`ba247ad1cc641421ab171444b6845aebd6785203a74e9f49bb184f7f17377877`.
+It includes the native executable, all 25 mods and their quick `.bat` launchers,
+licences and configuration expecting `s1.gen`, `s2.gen`, `s3k.gen`. No ROMs,
+Java installation or disposable control JARs are included. The ZIP/checksum,
+light qualification JSON, 105 PNGs and 31 state/PCM CSVs remain in the explicit
+October 14 Windows voice-trigger capture directory outside the repository.
+Generated repositories/storage/saves were removed. Earlier delivered ZIPs are
+preserved unchanged.
+
+Qualification is bounded: Microsoft Windows builder/registration checks plus
+representative Windows-PE gameplay under Wine and software GL. It does not
+certify all gameplay routes, network sessions, physical Windows graphics/audio
+devices, or all 122 gameplay trigger conditions. No whole-suite or performance
+claim is made. Later integrated Chaos/palette changes through `7acbe1bcf` are
+preserved on develop but are outside this explicitly pinned image. This terminal
+evidence follow-up changes only this design Markdown; it does not require an
+unchanged image or engine check to be repeated.
