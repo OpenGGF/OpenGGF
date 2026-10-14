@@ -112261,3 +112261,25 @@ therefore same-pass flash initialization and the downstream extra Level pass
 remain unresolved. Body player-facing/32-pixel anchoring is a separately verified
 source omission queued for the next slice; shared points/SFX death ordering is
 not qualified by this graph repair.
+
+
+## 2026-10-14 — MonkeyDude immutable body flip and native touch origin
+
+Separate follow-up over graph8653f9232 removes the body's inherited P1-facing
+writer and synthetic±32 anchor. Native WAIT/ACTIVE preserve placement flip and
+x_pos; only the independent root arm calls Find_SonicTails. Literal flip0/1
+negative40269 fails2/2/0/0 (oldtouchX132/68 vs100). Corrected component/graph/
+actualfivepreset placement54064 passes18/0/0/0 at10:30:59 BST,71s execution/
+113s queue. Commands/selectors and native owners are in the
+[existing graph audit](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#separate-body-orientation-correction).
+
+Strict39401 (`-Ptrace-replay`, exact85471 five-case selector) completes5/1/0/0
+at10:33:01 BST,96s execution/0s queue: originalAIZ, initialHCZ and both prefixes
+pass; chain189/12,719/82,067 raw field mismatches, firstfields and input68,801
+stop are unchanged. Alternate80705 (`-Ptrace-segments`, exact40737 selector)
+completes1/1/0/0 at10:33:36 BST,34.562s execution/97s queue:60 grouped spans,
+first25,589 animation`$13/$05`. Sampled segment2 occupancy first differs at726
+with engineAirCountdown11; ring/flash placement remains25/17 versus18/22.
+The body conformance omission closes; no strict frontier moves. Fixed-air
+and RNG comparison channels already exist in this fixture and remain read-only
+evidence for the next owner, not gameplay hydration.

@@ -532,3 +532,11 @@ pass111. Strict originalAIZ/initialHCZ/both prefixes remain green, but the
 continuous chain and alternateAIZ retain their prior frontiers. The
 [owning audit](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md) distinguishes
 physical occupancy evidence from the remaining body-facing and death-order limits.
+
+The separate body correction replaces the old synthetic turning/32-pixel tests
+with literal flip0/1 and native X/touch/render origins across both player sides
+and two replay cycles. The real placement checks flip1 and X`$1E58` at all five
+production presets. Negative40269 fails2/2; corrected54064 passes18/0/0/0.
+Strict39401 retains four green controls and the inherited continuous-chain
+failure; alternate80705 retains60 grouped errors. This body conformance repair
+adds no cold-route, native pixel/audio or strict-chain closure claim.

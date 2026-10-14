@@ -5332,3 +5332,15 @@ The trace label `aiz_2` denotes first AIZ1 special-stage return segment2, not
 runtime act2. The real `$1E58/$0490/$8E/$10` placement is AIZ1 record `$1E45E2`.
 See [the graph audit](../../../docs/architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md)
 for source, negative controls and unchanged strict frontiers.
+
+
+## MonkeyDude body orientation is the placement flip
+
+`Obj_MonkeyDude` dispatches WAIT to `loc_85652` (Animate_Raw/Obj_Wait) and ACTIVE
+to vertical Y stepping; neither writes body x_pos or render_flags bit0. Its
+`Sprite_CheckDeleteTouch` tail and `Touch_Width` consume literal body x_pos.
+`MonkeyDudeArm_CheckPlayerRange` uses Find_SonicTails on the independent root,
+not on the body. Keep both literal spawn orientations when P1 crosses sides;
+a synthetic body turn or32-pixel collision/render shift invents behavior.
+The [native graph audit](../../../docs/architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#separate-body-orientation-correction)
+records the negative old oracles and unchanged strict trace frontiers.

@@ -90,10 +90,42 @@ returnedHCZ mapping1,507 `$63/$95`, firstY1,510 `$7D6/$7DF`, and LEVEL ownership
 loss at input68,801 after5,725/14,208 returnedHCZ rows. Standalone counts are
 compressed spans; these chain counts are not. No strict frontier moves.
 
-The body still contains an inherited synthetic player-facing/±32 anchor absent
+At graph commit `8653f9232`, the body still contains an inherited synthetic
+player-facing/±32 anchor absent
 from its native routine; that separately authorized next slice must use literal
 spawn orientation and native body X/collision origin. This graph preserves the
 existing shared S3K death recipe: nativeExplosion allocates Animal, whose INIT
 then creates EnemyScore after deferred RNG, whereas the shared recipe creates
 points in the explosion pass. BREAK request ownership is likewise not qualified
 here. Those limits are neither waived by graph replay nor silently changed.
+
+
+## Separate body orientation correction
+
+`Obj_MonkeyDude` never calls Find_SonicTails. Its WAIT jumps to `loc_85652`
+(Animate_Raw then Obj_Wait); ACTIVE changes Y only. The routine tail
+`Sprite_CheckDeleteTouch` and `Touch_Width` read literal body `x_pos`. Placement
+render_flags bit0 stays fixed; the arm root's player-side attack check does not
+turn or displace the body. The previous two legacy tests asserted a synthetic
+32-pixel shift and are replaced with literal flip0/1 oracles across both P1
+sides, body animation and two capture/replay cycles. The existing actual
+placement test additionally checks ROM flip1 and body/touch X`$1E58` at all
+five production presets.
+
+40269 is the negative:2/2/0/0 at10:27:37 BST,23.724s execution/0s queue; old
+touch X is132/68 instead of100. The source removes only the body player-facing
+writer, synthetic offsets and now-unused fields, preserving arm targeting,
+animation, placement and shared clocks.54064 passes18/0/0/0 at10:30:59 BST,
+71s execution/113s queue, with
+`TestMonkeyDudeBadnikInstance,TestMonkeyDudeNativeSstGraph,TestS3kMonkeyDudePlacedGraph`
+in the normal ROM-backed lane. The negative uses the two new body methods with
+`--lean`; production checks retain the normal lane.
+
+Strict39401 repeats the exact85471 selector/profile on the changed body:
+5/1/0/0 at10:33:01 BST,96s execution/0s queue. Four controls remain green;
+continuous chain remains189/12,719/82,067 raw mismatched fields, the same first
+fields and input68,801 stop. Alternate80705 repeats the exact40737 selector:
+1/1/0/0 at10:33:36 BST,34.562s execution/97s queue;60 grouped spans, first25,589
+animation`$13/$05`. Sampled occupancy still first differs at726 with extra
+engineAirCountdown11. This closes a source-confirmed body conformance omission
+and moves no strict frontier. No rendered pixel or audio parity is asserted.

@@ -10,7 +10,6 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
-import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
 
@@ -19,7 +18,7 @@ import java.util.List;
  * Core routine mapping: Obj_MonkeyDude (sonic3k.asm loc_87172..loc_876BD).
  *
  * This implementation preserves the key gameplay behavior: alternating wait/active
- * cycles, subtype-driven vertical stepping, player-facing checks, and coconut throws.
+ * cycles, subtype-driven vertical stepping and independently dispatched coconut throws.
  */
 public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
     private static final int COLLISION_SIZE_INDEX = 0x0B; // ObjDat_MonkeyDude flags $0B
@@ -27,7 +26,6 @@ public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance im
 
     private static final int WAIT_FRAMES = 60 - 1;        // loc_87172, loc_87218
     private static final int STEP_PIXELS = 8;             // loc_87218 branches
-    private static final int FLIPPED_RENDER_X_OFFSET = 32; // 4 patterns
 
     // byte_876B4: (7) 0,1 loop
     private static final int[] WAIT_FRAMES_SEQ = {0, 1};
@@ -43,7 +41,6 @@ public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance im
 
     private int activeStepCount;
     private int firstStepCount;
-    private int treeAnchorX;
     private boolean initialFacingLeft;
     private boolean nativeRetirementPending;
     private boolean armRootActivated;
@@ -53,7 +50,6 @@ public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance im
      * routine table runs MonkeyDude_Init, not MonkeyDude_Wait.
      */
     private boolean initPending = true;
-    private boolean lastFacingLeft;
 
     private State state = State.WAIT;
     private int stateTimer = WAIT_FRAMES;
@@ -74,17 +70,14 @@ public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance im
         int subtypeShift2 = Math.max(1, (spawn.subtype() & 0xFF) >> 2);
         this.activeStepCount = subtypeShift2;
         this.firstStepCount = Math.max(1, subtypeShift2 >> 1);
-        this.treeAnchorX = spawn.x();
         this.initialFacingLeft = facingLeft;
         this.remainingVerticalSteps = firstStepCount;
         this.mappingFrame = WAIT_FRAMES_SEQ[0];
         this.animTimer = 0;
-        this.lastFacingLeft = facingLeft;
     }
 
     @Override
     protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // ROM entry point begins with Obj_WaitOffscreen, so the state machine,
         // arm animation, and throw cadence must not advance until visible.
         if (isDestroyed()) return;
@@ -138,7 +131,9 @@ public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance im
         // Obj_WaitOffscreen restores the continuation ($8715A) once, so the
         // body and children keep running offscreen until normal unload.
 
-        updateFacingAndOffset(player);
+        // MonkeyDude_Wait/loc_85652 and MonkeyDude_Active never write body
+        // render_flags or x_pos. Preserve the literal placement flip and X;
+        // only the independent arm root uses Find_SonicTails to select attacks.
         // Process_Sprites dispatches the body before its newly allocated children.
         switch (state) {
             case WAIT -> updateWait();
@@ -227,17 +222,6 @@ public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance im
         setAnimation(WAIT_FRAMES_SEQ, WAIT_DELAYS);
     }
 
-    private void updateFacingAndOffset(AbstractPlayableSprite player) {
-        if (player == null) {
-            return;
-        }
-        boolean nextFacingLeft = player.getCentreX() < treeAnchorX;
-        facingLeft = nextFacingLeft;
-        if (facingLeft != lastFacingLeft) {
-            lastFacingLeft = facingLeft;
-        }
-    }
-
     private void createNativeArmChain() {
         if (tryServices()==null || services().objectManager()==null) return;
         int previous=getSlotIndex();
@@ -306,26 +290,4 @@ public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance im
         renderer.drawFrameIndex(mappingFrame, anchorX, currentY, hFlip, false);
     }
 
-    /**
-     * The live collision/debug anchor follows the same facing-dependent origin as
-     * the body sprite. Keep the inherited frame-start anchor: S3K's player touch
-     * pass reads the object's frame-start {@code x_pos}, while the ROM's render
-     * flip does not move that field (sonic3k.asm:20655-20681).
-     */
-    @Override
-    public int getCollisionX() {
-        return facingAdjustedX(facingLeft);
-    }
-
-    @Override
-    protected int getRenderAnchorX() {
-        return facingAdjustedX(facingLeft);
-    }
-
-    private int facingAdjustedX(boolean facingLeft) {
-        if (facingLeft == initialFacingLeft) {
-            return currentX;
-        }
-        return currentX + (initialFacingLeft ? FLIPPED_RENDER_X_OFFSET : -FLIPPED_RENDER_X_OFFSET);
-    }
 }

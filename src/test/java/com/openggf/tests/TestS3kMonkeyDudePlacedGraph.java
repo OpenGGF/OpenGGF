@@ -40,7 +40,10 @@ class TestS3kMonkeyDudePlacedGraph {
                 .stream().filter(o->o.getSpawn().x()==0x1E58 && o.getSpawn().y()==0x490)
                 .findFirst().orElseThrow();
         assertEquals(0x8E,body.getSpawn().objectId());assertEquals(0x10,body.getSpawn().subtype());
+        assertEquals(1,body.getSpawn().renderFlags()&1,"literal ROM placement flip bit");
         fixture.stepIdleFrames(4);
+        assertEquals(0x1E58,body.getX());
+        assertEquals(0x1E58,body.getCollisionX(),"native Touch_Width origin is the body SST X");
         var arms=GameServices.level().getObjectManager().activeObjectsOfType(MonkeyDudeArmObjectInstance.class)
                 .stream().filter(o->!o.isDestroyed() && o.getSpawn().x()==0x1E58 && o.getSpawn().y()==0x490).toList();
         assertEquals(5,arms.size());

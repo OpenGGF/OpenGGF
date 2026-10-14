@@ -18,43 +18,39 @@ class TestMonkeyDudeBadnikInstance {
     }
 
     @Test
-    void collisionAnchorFollowsFacingOffsetWhenMonkeyTurnsRightAndBack() {
-        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
-        MonkeyDudeBadnikInstance monkey = new MonkeyDudeBadnikInstance(
-                new ObjectSpawn(100, 100, 0x8E, 0x04, 0, false, 0));
-        TestPlayer player = player(140, 100);
-
-        runVisibleInitFrames(monkey, player);
-        assertEquals(100, monkey.getCollisionX(), "Initial left-facing collision anchor");
-
-        monkey.updateMovement(0, player);
-        assertEquals(132, monkey.getCollisionX(),
-                "Collision anchor must follow the rendered body when MonkeyDude turns right");
-
-        player.setCentreX((short) 60);
-        monkey.updateMovement(0, player);
-        assertEquals(100, monkey.getCollisionX(),
-                "Collision anchor must return with the rendered body when MonkeyDude turns left");
+    void unflippedBodyKeepsItsNativeXAndOrientationWhenPlayerCrossesBothSides() {
+        bodyKeepsNativeSpawnOrientationAcrossPlayerSidesAndReplay(0);
     }
 
     @Test
-    void collisionAnchorFollowsFacingOffsetWhenMonkeyTurnsLeftAndBack() {
+    void flippedBodyKeepsItsNativeXAndOrientationWhenPlayerCrossesBothSides() {
+        bodyKeepsNativeSpawnOrientationAcrossPlayerSidesAndReplay(1);
+    }
+
+    private static void bodyKeepsNativeSpawnOrientationAcrossPlayerSidesAndReplay(int flip) {
         AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
         MonkeyDudeBadnikInstance monkey = new MonkeyDudeBadnikInstance(
-                new ObjectSpawn(100, 100, 0x8E, 0x04, 1, false, 0));
-        TestPlayer player = player(60, 100);
-
+                new ObjectSpawn(100, 100, 0x8E, 0x10, flip, false, 0));
+        TestPlayer player = player(flip == 0 ? 140 : 60, 100);
         runVisibleInitFrames(monkey, player);
-        assertEquals(100, monkey.getCollisionX(), "Initial right-facing collision anchor");
-
-        monkey.updateMovement(0, player);
-        assertEquals(68, monkey.getCollisionX(),
-                "Collision anchor must follow the rendered body when MonkeyDude turns left");
-
-        player.setCentreX((short) 140);
-        monkey.updateMovement(0, player);
-        assertEquals(100, monkey.getCollisionX(),
-                "Collision anchor must return with the rendered body when MonkeyDude turns right");
+        var before = monkey.captureRewindState();
+        for (int cycle = 0; cycle < 2; cycle++) {
+            if (cycle != 0) monkey.restoreRewindState(before);
+            for (int side : new int[]{140, 60, 140}) {
+                player.setCentreX((short) side);
+                for (int frame = 0; frame < 24; frame++) {
+                    monkey.updateMovement(frame, player);
+                    // Body WAIT/ACTIVE have no Find_SonicTails or render_flags
+                    // writer; native Touch_Width uses the unchanged x_pos.
+                    assertEquals(100, monkey.getX(), "native body SST X");
+                    assertEquals(100, monkey.getCollisionX(), "touch origin stays at x_pos");
+                    assertEquals(100, monkey.getRenderAnchorX(), "Draw_Sprite origin stays at x_pos");
+                    assertEquals(flip == 0, monkey.badnikFacingLeft(),
+                            "literal spawn render_flags bit0 is independent of the player's side");
+                    assertEquals(flip, monkey.getSpawn().renderFlags());
+                }
+            }
+        }
     }
 
     @Test
