@@ -191,7 +191,7 @@ class TestHostObjectKeys {
     }
     private static final class Dummy extends AbstractObjectInstance {
         Dummy(ObjectSpawn spawn) { super(spawn,"dummy"); }
-        @Override public void update(int frame,com.openggf.game.PlayableEntity player) { }
+        @Override public void update(int vIntRunCount,com.openggf.game.PlayableEntity player) { }
         @Override public void appendRenderCommands(List<com.openggf.graphics.GLCommand> commands) { }
     }
 }
