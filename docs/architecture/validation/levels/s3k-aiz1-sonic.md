@@ -669,3 +669,21 @@ engine0 the waterfall; native full-movie HUD carry differs from standalone
 bootstrap. [Exact images and limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#actual-native-and-engine-image-spots)
 are bounded corroboration, not pixel/priority/waveform parity or joined fresh-
 return title certification. No extra native wait or gameplay hydration was used.
+
+
+## Cork native fragment graph — 2026-10-14
+
+The placed Cork at($28C0,$047C) now retains its own SST as fragment0 and only
+allocates N−1 checked higher siblings. Original-controller emerald-chain row1688
+has the actual Tails break: source35+41..51 and all12 integer XY births match
+the native aux record, including stationary Sonic's release. Independently
+constructed native checkpoints cover pressure, old-velocity/fractional movement,
+prior-render deletion and two-way recreation/two forward cycles; the component
+camera edges cover320/352/400/528/800. A failed declared five-tick physical
+approach was rejected and removed, rather than changing contact behavior.
+Affected607 checks and111 source/rewind/timing guards pass on the owned Cork
+source over `d8025e094`; strict original AIZ/initial HCZ/prefix2 remain green.
+[Exact commands, negatives and limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#cork-same-record-fragment-and-icz-table-follow-up).
+Whole-act donor/roster/viewport physical contact, complete registered-world Cork
+windows and native rendered-pixel/audio parity remain unqualified. Allocation
+sampling improves1688→2133 but whole-chain and alternate AIZ frontiers remain red.

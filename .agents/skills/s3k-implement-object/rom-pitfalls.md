@@ -5423,3 +5423,28 @@ association assertions. A pointer-low-byte occupancy label
 is not a type oracle; exact RAM code and owning routine resolve it.
 
 Origin: 2026-10-14 S3K parity projectile slice over `85ca2a3c6`.
+
+
+## Cork fragments keep a0, its typed link, and the prior render phase
+
+`BreakObjectToPieces2` initializes a1=a0 before N−1 checked
+AllocateObjectAfterCurrent calls. A partial pool admits a mapping prefix; failure
+never borrows a lower free slot. `loc_2A5D8`/`loc_2A6BC` then move a0 once in the
+same dispatch through `loc_2A5F8`. Retain the Cork Java identity as a captured
+fragment role: CNZ loc_65D46 compares its saved child to this native code owner.
+Do not keep an inert parent plus N new fragments or replace its typed link.
+
+MoveSprite2 uses the old velocity on the full fractional long; +$18 is for the
+next dispatch. Deletion reads the previous Render_Sprites sign bit, after motion.
+The post-camera phase reads Camera_X/Y_pos_copy: fixture mocks must publish
+those words as well as physical coordinates. Parent priority word$0080 is
+bucket1; the shipped high-byte copy leaves a cleared sibling's word0, while art
+bit15 is independent. Each static mapping selects one piece.
+
+ICZ Init stores the subtype nibble directly. loc_2A816 offsets word_2A84C by the
+pre-break frame*4; frames0/2/4/6/8 select14/12/10/8/6 pieces and the high-launch
+suffix. The bit4 small-floor branch uses word_2A884, including frameA→B. Check
+literal branch/table values, partial allocation and both-way recreation; a failed
+local approach is setup evidence, not grounds to change native contact.
+
+Origin: 2026-10-14 Cork parity follow-up over `d8025e094`.

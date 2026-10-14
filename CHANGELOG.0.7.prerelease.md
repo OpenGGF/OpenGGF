@@ -38,6 +38,11 @@ Unreleased. The earlier development themes remain in
   use native culling bounds and retain marked slots until the next dispatch,
   including the complete object-manager culling pass.
 
+- **S3K breakable floors:** Cork's placed record becomes its first moving
+  fragment, preserving checked sibling allocation, native motion and render
+  retirement through rewind. Ice Cap uses the native mapping nibble and its
+  separate fragment velocity table.
+
 - **S3K Knuckles routes:** Locked-on Mushroom Hill deletes the standalone S&K
   intro before it can freeze the camera and take player control. Its native
   `SK_alone_flag` prerequisite is kept separate from the selected character.
