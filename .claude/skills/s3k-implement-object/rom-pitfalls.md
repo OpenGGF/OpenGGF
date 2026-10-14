@@ -5264,3 +5264,24 @@ publish one immutable cache only after success, and propagate invalid bytes
 before changing RAM/output. Cache construction during pure post-restore rebuild
 must not advance captured scroll state. Missing required data still fails; no
 fallback table or ROM-required fixture skip replaces that boundary.
+
+
+## Unchecked AllocateObject keeps the last physical SST
+
+`Create_Continue_Sprite` (`$5FE1E`) deliberately ignores AllocateObject's failure
+branch. Retail `$1BAF2` preincrements Dynamic_object_RAM `$B0DE` in `$4A` strides:
+90 occupied probes leave A1 atglobal SST93 (`$CAE2`), not a null/zero destination.
+The caller writes only code, subtype/ordinal and X/Y words; fractions, mapping
+cursor/timer, flags, status, priority and art stay live until the new code writes
+them. An empty Java object or a skipped allocation changes shipped-ROM behavior.
+Prove both the literal byte-write footprint and actual old-owner residue.
+
+A code-pointer write is not delete/onUnload. Preserve occupied slot, numeric
+identity, existing child links and current ExecuteObjects cursor. A child holding
+parent3 must read the current physical SST owner after replacement, not stale
+Java fields. Children may execute before that new owner initializes, so copied
+status/priority/art cannot be borrowed from the replacement's eventual defaults.
+Test old→replacement→old full-world restoration and both earlier/later slot
+admission. Synthetic sentinels test the manager contract only; certify native
+scene pressure with the actual legal managed child types. Unknown consumed
+residue must never be silently replaced with zero or supplied by a trace.

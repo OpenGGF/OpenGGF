@@ -1001,3 +1001,81 @@ acceptance; selected earlier pixel tests do not establish this missing graph.
 The root owns that graph while the allocation worker owns live-SST projection
 and transfer. Source mutation uses normal worktree leases and waits for admitted
 controls; no foreign job is paused, restarted or preempted.
+
+#### Native D01 child-graph regression boundary (2026-10-14 follow-up)
+
+On `feature/ai-s3k-parity-coverage`, production bytes at `d34e4fc8c`, new
+`TestS3kRescueFlightChildren` was run through the local queued lean wrapper
+with Java25, explicit surfaceless EGL and the original absolute locked-on ROM.
+Session30523 completed exit1 at07:40:43UTC: three tests, three failures,
+zero errors/skips,1.761s test time and24.832s Maven. All three actual production
+RESCUE phase22 entries reached their own boundary; none had a managed child,
+against native groups of4 (Sonic incomplete) or5 (Sonic super/Tails hyper).
+Command: `env -u DISPLAY -u WAYLAND_DISPLAY -u JDK_JAVA_OPTIONS -u JAVA_TOOL_OPTIONS ALSOFT_DRIVERS=null LUA_BIN=lua5.4 python3 tools/testing/maven_queue.py --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Ds3k.rom.path=<repository-root>/Sonic and Knuckles & Sonic 3 (W) [!].gen' '-Dtest=TestS3kRescueFlightChildren' test -B`.
+
+Implementation follows `loc_5DC2C`'s independent CreateChild6/1 groups,
+`loc_5DD0E`'s small-plane group, `loc_5DD34`'s flag5 and palette helper, and
+`loc_5DE1A`'s flag1. Native `Child_Draw_Sprite2` schedules deletion for the
+following dispatch: the initial test's immediate-retirement premise was corrected
+from the helper body before qualification. Existing Knuckles child tests likewise
+now assert the pending status/code-owner pass before slot release.
+Native AIZ return uses the same two flames and propeller, without a passenger.
+All parent reads resolve the current physical SST code owner; no comparison RAM
+or old Java parent reference supplies gameplay. Qualification remains pending.
+
+#### Composed child graph and native lifetime qualification
+
+The coordinator merged independent core `ae632fe2a6eec9bece7cafb4f2643c74365565c3`
+into local `d34e4fc8c`, resolving the director projection by actual writers.
+The core's41 distinct passing cases and their overlaps are recorded in the
+existing ending lifecycle design. Native rendered/audio parity and complete
+composed pressure are not inferred from those tests.
+
+The source-frozen composed invocation (session51235,07:57:02UTC,90s Maven,24s
+queue wait) ran75 cases:72 passed, three Knuckles small-propeller retirements
+failed, zero errors/skips. Breakdown: continuation status1; Rescue36; Knuckles
+ending16; child graph6 (three failures); actual rescue/AIZ return16. The
+failed getter omitted `loc_5E9E2`'s flags38 bit1 and invented a D01-only bit5;
+pre-init render flags also now remain cleared. No gameplay timer or position
+was tuned. Exact affected three phase cases plus one full-registry changing-graph
+replay pass4/0/0/0 in session8687 (07:59:47UTC,73s Maven,0.660s tests).
+These are complementary completed checks, not one pristine75-case run.
+
+Independent palette-flash delayed-deletion regression fails1/1/0/0 in60405
+(08:04:00UTC,23.462s Maven): expected retained owner, actual immediate delete.
+Both sprite-clear regressions fail2/2/0/0 in68032 (08:06:56UTC,23.435s):
+expected retained global `_unkFAA4` slot93, actual reset−1.
+`loc_5FC78`/`Go_Delete_Sprite` now retain status7/code ownership for one dispatch;
+`loc_5ABC0`/`loc_5AD8E` clear only sprite RAM through Kos_decomp_buffer, preserving
+the global catcher address. The correction run55930 passes13/0/0/0
+(08:10:39UTC,81s Maven): palette1, clear2 (two full-registry replay cycles each),
+and all10 Sonic/Tails×production-preset actual hyper AIZ handoffs.
+The graph/boundary qualification totals77 distinct cases, with overlaps retained
+and not double counted. Root source guards pass3/0/0/0 in47749
+(08:20:10UTC,25.468s Maven): extracted facade budget, critical class budgets,
+and no concrete Sonic dependency in ObjectManager.
+
+All engine runs used the local `maven_queue.py --lean`, known bounded exact
+selectors, `-Dmse=off`, original absolute `-Ds3k.rom.path`, explicit
+`-Dopenggf.headless.gl=surfaceless-egl`, `ALSOFT_DRIVERS=null`, Lua5.4 and no
+ambient display or launcher-option variables. Completed diagnostics were
+consumed/deleted under the exclusive worktree lease. These checks are focused
+validation, not smoke or full-suite acceptance.
+
+Selectors (each with `test -B`):
+
+- 51235: `TestS3kRescueFlightChildren,TestS3kEndingRescue,TestS3kKnucklesEnding,TestS3kKnucklesEndingChildren,TestS3kEndingContinuationPressure#nativeDirectorStatusRetirementDoesNotInventControlBitOne`.
+- 8687: `TestS3kKnucklesEndingChildren#nativePhaseListsAreManagedAndRetireOnTheirOwningFlags+completeRegistryRestoresParentLinksAndReplaysTheChangingGraph`.
+- 60405: `TestS3kKnucklesEndingChildren#allocatedPaletteFlashPreservesColorZeroAndReplaysTheNativeHold`.
+- 68032: `TestS3kEndingNativeObjectClear`.
+- 55930: `TestS3kEndingNativeObjectClear,TestS3kKnucklesEndingChildren#allocatedPaletteFlashPreservesColorZeroAndReplaysTheNativeHold,TestS3kRescueFlightChildren#actualHyperSceneHandoffAllocatesOnlyTheNativeAizReturnGroups`.
+- 47749: `TestArchitecturalSourceGuard#releaseCriticalLargeClassesDoNotGrowWithoutExtraction+objectManagerFacadeStaysWithinExtractedCollaboratorBudget+objectManagerDoesNotGainConcreteSonicDependencies` (no ROM/EGL/audio requirement).
+
+Native reference prerequisites use the separately owned archive-pinned official
+BizHawk2.11 setup, qualified through normal admission in55641, not an assumed
+installed version. Independent future declared-scene comparisons use fixed
+VInt0/RNG0 before the first production object pass. Historical Knuckles fixture
+clock410766 is comparison-derived (2026-09-17 SSZ plan, native RAM observation)
+and is preserved with its historical declared-entry scope; it is not repurposed
+as an independent pixel setup. Natural cold full-chain comparisons remain
+separate. Historical ending media/index bytes are unchanged.

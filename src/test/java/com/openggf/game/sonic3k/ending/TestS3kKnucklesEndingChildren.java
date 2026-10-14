@@ -60,6 +60,8 @@ class TestS3kKnucklesEndingChildren {
     @ParameterizedTest @ValueSource(ints={-2,0,2})
     void nativePhaseListsAreManagedAndRetireOnTheirOwningFlags(int progress){
         var f=boot(progress);GameServices.level().getObjectManager().createDynamicObject(EndingKnucklesFlightObjectInstance::new);
+        assertEquals(com.openggf.level.objects.NativeSstState.CLEARED,owner().nativeSstState(),
+                "new AllocateObject SST has no attributes before Obj_5E6C0 initializes it");
         tick(f,0);
         assertEquals(progress>=0?3:2,children().size());
         assertEquals(1,children().stream().filter(c->c.role()==0).count());
@@ -68,23 +70,32 @@ class TestS3kKnucklesEndingChildren {
         var plane=children().stream().filter(c->c.role()==0).findFirst().orElseThrow();
         assertEquals(owner().getX()-0x20,plane.getX());assertEquals(owner().getY()+0x2B,plane.getY());
         advanceTo(f,10);
-        assertEquals(java.util.List.of(3,4,4,5),children().stream().map(c->c.role()).sorted().toList());
+        assertEquals(progress>=0?3:2,children().stream().filter(c->c.role()<3).count(),
+                "Child_Draw_Sprite changes code/status and retains its SST until the next dispatch");
+        assertTrue(children().stream().filter(c->c.role()<3).allMatch(c->
+                (c.nativeSstState().status()&0x80)!=0&&!c.submittedForDraw()));
+        assertEquals(java.util.List.of(3,4,4,5),children().stream().filter(c->c.role()>=3).map(c->c.role()).sorted().toList());
         assertEquals(java.util.List.of(0,2),children().stream().filter(c->c.role()==4).map(c->c.subtype()).sorted().toList());
         assertEquals(progress>=0?0x15:0x14,children().stream().filter(c->c.role()==4&&c.subtype()==2)
                 .findFirst().orElseThrow().mappingFrame());
-        tick(f,1); // loc_5EC4E/sub_6008A starts after the initializer's return.
+        tick(f,1); // Delete_Current_Sprite releases the old graph; the new initializer returned previously.
+        assertEquals(java.util.List.of(3,4,4,5),children().stream().map(c->c.role()).sorted().toList());
         var pose=children().stream().filter(c->c.role()==3).findFirst().orElseThrow();
         assertEquals(owner().getX()+0xA,pose.getX());assertEquals(owner().getY()+0xC,pose.getY());
         advanceTo(f,12);
         assertEquals(java.util.List.of(6),children().stream().map(c->c.role()).toList());
         assertEquals(0,children().getFirst().isHighPriority()?1:0,"small prop inherits native low priority");
         advanceTo(f,14);
+        assertEquals(0,owner().nativeSstState().flags38()&0x20,
+                "loc_5E98A does not write the D01 small-emerald bit5");
         assertEquals(progress>=0?1:0,GameServices.level().getObjectManager()
                 .activeObjectsOfType(EndingKnucklesPaletteFlashObjectInstance.class).size());
         var state=(SszZoneRuntimeState)GameServices.zoneRuntimeState();state.setEndingCloudAligned(true);
         advanceTo(f,16);owner().refreshPostCameraRenderState();
         for(int i=0;i<1000&&owner().routine()!=18;i++){tick(f,i);owner().refreshPostCameraRenderState();}
-        assertEquals(18,owner().routine());assertTrue(children().isEmpty());
+        assertEquals(18,owner().routine());
+        assertEquals(2,owner().nativeSstState().flags38()&2,"loc_5E9E2 writes native small-propeller bit1");
+        assertTrue(children().isEmpty());
     }
     @Test void nativeAfterCurrentAllocationDoesNotInventChildrenInFreeEarlierSlots(){
         var f=boot(0);var manager=GameServices.level().getObjectManager();
@@ -119,11 +130,15 @@ class TestS3kKnucklesEndingChildren {
         var timeline=TestEnvironment.activeGameplayMode().getRewindRegistry();var saved=timeline.capture();
         for(int i=13;i<32;i++)flash.update(i,f.sprite());assertEquals(0x888,colorWord(1));
         flash.update(32,f.sprite());assertEquals(0x666,colorWord(1));
-        for(int i=33;i<=40;i++)flash.update(i,f.sprite());assertEquals(0x222,colorWord(1));assertTrue(flash.isDestroyed());
+        for(int i=33;i<=40;i++)flash.update(i,f.sprite());assertEquals(0x222,colorWord(1));assertFalse(flash.isDestroyed());
+        assertEquals(0x80,flash.nativeSstState().status(),"loc_5FC78 schedules Go_Delete_Sprite, retaining status7 and the SST");
+        flash.update(41,f.sprite());assertTrue(flash.isDestroyed());
         timeline.restore(saved);
         flash=GameServices.level().getObjectManager().activeObjectsOfType(EndingKnucklesPaletteFlashObjectInstance.class).getFirst();
         for(int i=13;i<=40;i++)flash.update(i,f.sprite());
-        assertEquals(0x222,colorWord(1));assertEquals(0xACE,colorWord(0));assertTrue(flash.isDestroyed());
+        assertEquals(0x222,colorWord(1));assertEquals(0xACE,colorWord(0));assertFalse(flash.isDestroyed());
+        assertEquals(0x80,flash.nativeSstState().status());
+        flash.update(41,f.sprite());assertTrue(flash.isDestroyed());
     }
     private int colorWord(int color){return com.openggf.game.palette.PaletteWriteSupport.segaWordFromColor(
             GameServices.level().getCurrentLevel().getPalette(2).getColor(color));}

@@ -726,7 +726,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   rewind-verified boss and act/zone handoffs; LBZ Big Arm, Super Emerald sanctuary/progression, and powered
   effects. Sonic, Tails and Knuckles endings continue through their progress-dependent
   credits, terminal scenes and title return. Knuckles' flight wait requests quiet
-  wind on the native cadence and preserves its order before music restoration. Sandopolis now implements its four quicksand variants, including
+  wind on the native cadence and preserves its order before music restoration.
+  Rescue and return plane attachments use rewindable native child slots;
+  full-table continuation retains the overwritten slot's native residue, and
+  delayed deletion follows the ROM's dispatch boundary. Sandopolis now implements its four quicksand variants, including
   per-player capture, jump release, sand-slide movement and rewindable cooldowns,
   plus spring vines with shared tension, deforming surfaces, native landing boundaries and directional launches,
   sand rocks that break under rolling landings and release their riders,

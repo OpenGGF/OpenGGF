@@ -109,7 +109,8 @@ public final class Sonic3kEndingEvents extends Sonic3kZoneEvents {
         // registration intent for the auxiliary object that native RAM erased.
         if(services.playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite player)
             com.openggf.sprites.playable.PlayableSpriteInternalAccess.retirePersistentInstaShield(player);
-        state().screen().catcherReady=false;
+        // _unkFAA4 is outside the cleared Player_2..Kos_decomp_buffer range.
+        // Its physical parent address survives both native dynamic-sprite clears.
     }
     private void beginReunion(){objectServices().objectManager().createDynamicObject(
             ()->new EndingRescueDirectorObjectInstance(EndingRescueDirectorObjectInstance.REUNION));

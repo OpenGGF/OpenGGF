@@ -165,9 +165,16 @@ repair. The complete affected class passes16/0/0/0 at08:15:18 BST; exact
 commands and source context are in the [follow-up record](../../plans/2026-10-13-s3k-playable-completion.md#quiet-wind-repair-qualification).
 This does not qualify rendered PCM.
 
-The same audit confirms that rescue-plane flame/propeller/passenger/Master
-children from `loc_5DC2C` and `loc_5DD0E` need managed native-slot owners; current
-inline draw substitutes do not establish allocation or lifetime parity. That
-graph and the retained-byte full-table continuation contract remain open.
+The rescue/return flame, propeller, passenger, Master Emerald and fixed-plane
+pilot are now managed native SST owners. Birth dispatches, native screen/world
+coordinates, physical parent-slot reuse, small-plane flags and delayed delete
+owners participate in rewind. The composed ending graph qualifies77 distinct
+focused cases across the source-frozen75-case invocation and bounded corrections;
+there is no claimed single pristine77-case invocation. Both native sprite-clear
+boundaries retain the global catcher pointer, including two complete registry
+restore/replay cycles. Exact commands and corrected premises are in the follow-up
+record. The independent continuation core qualifies41 distinct cases, preserving
+SST93 residue/identity and execution cursor without unload. Complete composed
+native-child pressure qualification and native scene comparison remain open.
 Whole-scene native composition, NTSC/PAL branch breadth, donor incomplete
 progress and rendered audio remain pending in the broader follow-up.

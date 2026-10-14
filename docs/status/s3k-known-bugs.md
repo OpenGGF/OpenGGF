@@ -169,11 +169,15 @@ clock, expiry-order and restore/replay checks. `loc_5E80A` calls
 uses `V_int_run_count & $F`. The [ending matrix](../architecture/validation/levels/s3k-ending.md#remaining-parity-follow-up--2026-10-14)
 records exact scope and commands. Request timing is not PCM acceptance.
 
-Remaining concrete source defects: rescue-plane children from `loc_5DC2C` and
-`loc_5DD0E` are partly represented by inline drawing instead of native managed
-slots, and full-table `Create_Continue_Sprite` lacks retained-byte overwrite
-emulation. These remain missing implementation, not accepted deviations.
-Whole-scene native rendering/audio and supported matrix breadth remain open.
+The rescue-plane groups from `loc_5DC2C`/`loc_5DD0E` and the fixed Tornado's
+pilot now have native managed slots and rewindable lifetimes. Parent lookup
+follows physical SST reuse; delayed deletion preserves native status/control
+bytes until the next dispatch. The global catcher pointer survives both sprite
+RAM clears.77 distinct focused graph/boundary cases qualify these changes;
+the independent continuation core qualifies41 distinct cases of retained-byte
+SST93 overwrite, identity and execution order. Complete composed child pressure,
+whole-scene native rendering/audio and supported matrix breadth remain open.
+No accepted deviation was added.
 
 ---
 
