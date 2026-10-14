@@ -1079,3 +1079,47 @@ clock410766 is comparison-derived (2026-09-17 SSZ plan, native RAM observation)
 and is preserved with its historical declared-entry scope; it is not repurposed
 as an independent pixel setup. Natural cold full-chain comparisons remain
 separate. Historical ending media/index bytes are unchanged.
+
+### Production presets, incomplete donors and PAL credits qualification
+
+On source `1c8cfbe33` plus test-only follow-up, the actual production
+`DISPLAY_ASPECT` resolver is selected before donor entry and asserted again after
+the fresh load. The nine S1 Sonic / S2 Sonic / S2 Tails progress -2/0/+2
+combinations run at all five presets320/352/400/528/800:45 cases, including15 new
+incomplete-progress entries. Each verifies native body/tail ownership, the
+progress-specific transformation gate, whole-registry replay, both binding
+restore directions and ordinary fresh-load donor rebinding. These are declared
+reunion entries, not nine cold campaigns.
+
+The first focused command completed08:40:03 UTC (09:40:03 BST), session18273,
+Maven1:24 plus5s queue wait:64 tests, zero failures/errors/skips. It comprises
+donor45, actual-preset Hyper AIZ return10 and nine literal locked-on PAL credit
+tables. PAL tables cover signed delay expiry, both text parts, two replay cycles
+and a single completion edge. The revised AIZ return10 establishes production
+preset selection; the earlier matching raw-width checks remain historical
+geometry evidence.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kCreditsState#everyLockedOnPalTableReplaysDelayBothTextPartsAndSingleCompletion,TestS3kEndingDonorSceneEntry,TestS3kRescueFlightChildren#actualHyperSceneHandoffAllocatesOnlyTheNativeAizReturnGroups' "-Dsonic1.rom.path=$S1_TASK_ROM" "-Dsonic2.rom.path=$S2_TASK_ROM" "-Ds3k.rom.path=$S3K_TASK_ROM" test -B
+```
+
+A separate production-region lifecycle check completed08:44:17 UTC (09:44:17
+BST), session78089, Maven1:33 plus57s queue wait:12 tests, zero
+failures/errors/skips. Nine declared D01 Sonic/Tails/team progress entries and
+three actual SSZ2 Knuckles final-fight continuations select REGION=PAL before
+boot, assert the literal PAL speed through the production coordinator, replay
+real phases, complete both credit parts and reach their actual title-return
+boundary. Knuckles retains the existing declared410766 VInt/prefix; this does
+not promote that comparison-derived historical clock to an independent native
+reference. Audio is disabled in these GPU lifecycle checks. They establish
+PAL-table production selection and per-frame lifecycle behavior, not a 50Hz
+wall-clock, PCM or whole-scene BizHawk parity claim.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kEndingLifecycleCapture#palEndingCompletesBothCreditPartsAndReturnsToTitleWithPhaseReplay,TestS3kKnucklesEndingLifecycleCapture#palFinalFightDepartsThroughBothCreditPartsAndTheActualTerminalWithPhaseReplay' "-Ds3k.rom.path=$S3K_TASK_ROM" test -B
+```
+
+Both commands use the original, identity-verified absolute S1 REV01, S2 REV01
+and locked-on S3K paths as applicable. No runtime source changed in this slice;
+combined follow-up validation and integration remain pending. Consumed local
+redirects are removed after this summary.

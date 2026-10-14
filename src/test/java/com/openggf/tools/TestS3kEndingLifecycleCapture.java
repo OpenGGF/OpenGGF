@@ -28,6 +28,20 @@ class TestS3kEndingLifecycleCapture {
             "sonic,tails,0000000,-2", "sonic,tails,1111111,0", "sonic,tails,3333333,2"})
     void nativeEndingCompletesBothCreditPartsAndReturnsToTitleWithPhaseReplay(
             String character, String sidekick, String emeralds, int progress) throws Exception {
+        runEnding(character, sidekick, emeralds, progress, false);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"sonic,,0000000,-2", "sonic,,1111111,0", "sonic,,3333333,2",
+            "tails,,0000000,-2", "tails,,1111111,0", "tails,,3333333,2",
+            "sonic,tails,0000000,-2", "sonic,tails,1111111,0", "sonic,tails,3333333,2"})
+    void palEndingCompletesBothCreditPartsAndReturnsToTitleWithPhaseReplay(
+            String character, String sidekick, String emeralds, int progress) throws Exception {
+        runEnding(character, sidekick, emeralds, progress, true);
+    }
+
+    private void runEnding(String character, String sidekick, String emeralds, int progress,
+                           boolean pal) throws Exception {
         var settings = new GameplayCaptureSession.Settings(320, character, sidekick, "off",
                 null, null, null, emeralds, false, false);
         boolean pair = "tails".equals(sidekick);
@@ -37,6 +51,8 @@ class TestS3kEndingLifecycleCapture {
         boolean startIssued = false;
         String lastPhase = "entry";
         try (var session = new GameplayCaptureSession(settings)) {
+            GameServices.configuration().setSessionOverride(
+                    com.openggf.configuration.SonicConfiguration.REGION, pal ? "PAL" : "NTSC");
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 13, 1, settings);
             var entryRegistry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
             var beforeEntry = pair ? entryRegistry.capture() : null;
@@ -94,6 +110,10 @@ class TestS3kEndingLifecycleCapture {
                     }
                 }
                 var credits = state.ending().credits();
+                if (pal && credits.active()) {
+                    int speed = progress < 2 ? 0xF5 : "tails".equals(character) ? 0xFB : 0xFD;
+                    assertEquals(speed << 8, credits.speed(), "production beginCredits selects the PAL half");
+                }
                 if (credits.routine() == 4 && credits.rowIndex() > 0)
                     spot = credits.partIndex() == 0 ? "credits-part-one" : "credits-part-two";
                 if (post != null) {

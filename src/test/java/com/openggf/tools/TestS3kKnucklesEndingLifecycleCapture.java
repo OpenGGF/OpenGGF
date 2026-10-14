@@ -29,6 +29,17 @@ class TestS3kKnucklesEndingLifecycleCapture {
             "800,0000000,-2","800,1111111,0","800,3333333,2"})
     void finalFightDepartsThroughBothCreditPartsAndTheActualTerminalWithPhaseReplay(
             int width,String emeralds,int progress) throws Exception {
+        runEnding(width, emeralds, progress, false);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0000000,-2", "1111111,0", "3333333,2"})
+    void palFinalFightDepartsThroughBothCreditPartsAndTheActualTerminalWithPhaseReplay(
+            String emeralds, int progress) throws Exception {
+        runEnding(320, emeralds, progress, true);
+    }
+
+    private void runEnding(int width, String emeralds, int progress, boolean pal) throws Exception {
         var movie=new Bk2MovieLoader().loadMovieOrInputLog(Path.of("src/test/resources/routes/s3k/ssz2-final-defeat.bk2"));
         assertEquals(8704,movie.getFrameCount());
         var settings=new GameplayCaptureSession.Settings(width,"knuckles","","off",null,null,null,
@@ -36,6 +47,8 @@ class TestS3kKnucklesEndingLifecycleCapture {
         var checked=new HashSet<String>();boolean creditsComplete=false,postSeen=false,start=false;
         String phase="fight";int flightFrame=-1;
         try(var session=new GameplayCaptureSession(settings)){
+            GameServices.configuration().setSessionOverride(
+                    com.openggf.configuration.SonicConfiguration.REGION, pal ? "PAL" : "NTSC");
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(),10,1,settings);
             assertTrue(GameServices.level().hasPendingInitialProcessSpritesPass());
             assertEquals(410766,GameServices.level().getObjectManager().getVblaCounter());
@@ -80,6 +93,10 @@ class TestS3kKnucklesEndingLifecycleCapture {
                 if(frame==8156){assertEquals(1,bosses.size());assertEquals(0,bosses.getFirst().getCollisionProperty(),
                         "matched maintained final-defeat prefix");}
                 var state=(SszZoneRuntimeState)GameServices.zoneRuntimeState();
+                if (pal && state.ending().credits().active()) {
+                    assertEquals((progress < 0 ? 0xF2 : 0xE2) << 8, state.ending().credits().speed(),
+                            "production beginCredits selects the Knuckles PAL half");
+                }
                 var flight=manager.activeObjectsOfType(EndingKnucklesFlightObjectInstance.class).stream().findFirst().orElse(null);
                 var post=manager.activeObjectsOfType(S3kPostCreditsObjectInstance.class).stream().findFirst().orElse(null);
                 if(flight!=null){if(flightFrame<0)flightFrame=frame;assertTrue(bosses.isEmpty(),"native Mecha deleted at admission");

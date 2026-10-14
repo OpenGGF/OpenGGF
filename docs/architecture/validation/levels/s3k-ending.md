@@ -178,3 +178,24 @@ SST93 residue/identity and execution cursor without unload. Complete composed
 native-child pressure qualification and native scene comparison remain open.
 Whole-scene native composition, NTSC/PAL branch breadth, donor incomplete
 progress and rendered audio remain pending in the broader follow-up.
+
+## Production presets and PAL lifecycle follow-up — 2026-10-14
+
+On `1c8cfbe33` plus test-only follow-up, donor entry now has45 passing cases:
+S1 Sonic, S2 Sonic and S2 Tails at progress -2/0/+2 across all actual presets
+320/352/400/528/800. The production aspect resolver, camera, usable native scene
+body/tail banks, progress-specific transformation, both binding restore
+directions and fresh-load donor restoration are asserted. Hyper Sonic/Tails
+AIZ return has ten passing actual-preset handoff/replay cases. This replaces
+raw-width setup as the preset evidence, while retaining its historical scope.
+
+Nine literal PAL table/delay/two-part/two-cycle cases pass. Twelve separate
+REGION=PAL lifecycle cases pass through production credit selection and actual
+title return: nine declared D01 Sonic/Tails/team entries and three Knuckles
+final-fight continuations. The latter retains its historical410766 declared
+clock. All76 focused cases have zero failures/errors/skips; the
+[exact commands and limits](../../plans/2026-10-13-s3k-playable-completion.md#production-presets-incomplete-donors-and-pal-credits-qualification)
+record completion times, source and queue waits. No native framebuffer, PCM,
+50Hz wall-clock or additional cold-campaign certification follows from these
+local cases. The inherited ordinary S2 powered-controller RAM gap remains
+separately tracked until its own regression is repaired.

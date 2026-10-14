@@ -25,7 +25,7 @@ class TestS3kEndingDonorSceneEntry {
     @AfterEach void reset(){SonicConfigurationService.getInstance().clearSessionOverrides();
         CrossGameFeatureProvider.getInstance().resetState();SessionManager.clear();}
     static Stream<Arguments> supportedDonorEntries() {
-        String[][] entries={{"s1","sonic","0"},{"s1","sonic","2"},{"s2","sonic","0"},
+        String[][] entries={{"s1","sonic","-2"},{"s2","sonic","-2"},{"s2","tails","-2"},{"s1","sonic","0"},{"s1","sonic","2"},{"s2","sonic","0"},
                 {"s2","sonic","2"},{"s2","tails","0"},{"s2","tails","2"}};
         return Stream.of(entries).flatMap(entry -> java.util.Arrays.stream(new int[]{320,352,400,528,800})
                 .mapToObj(width -> Arguments.of(entry[0],entry[1],Integer.parseInt(entry[2]),width)));
@@ -33,7 +33,9 @@ class TestS3kEndingDonorSceneEntry {
     @ParameterizedTest @MethodSource("supportedDonorEntries")
     void supportedDonorReunionReleasesTheNativeGateAndAdmitsPostCredits(String donor,String character,int progress,int width) throws Exception {
         var config=SonicConfigurationService.getInstance();
-        config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS,width);
+        var aspect=java.util.Arrays.stream(com.openggf.configuration.WidescreenAspect.values())
+                .filter(value -> value.pixelWidth()==width).findFirst().orElseThrow();
+        com.openggf.tests.SozAcceptanceConfigurations.selectDisplay(aspect);
         // RequiresRom constructs Camera before per-vector session overrides.
         GameServices.camera().refreshViewportDimensions(config);
         assertEquals(width,GameServices.camera().getWidth());
@@ -45,12 +47,13 @@ class TestS3kEndingDonorSceneEntry {
                 .withFreshLevelStartLifecycle().build();
         assertTrue(CrossGameFeatureProvider.isActive());
         assertEquals(width,GameServices.camera().getWidth(),"native entry uses the declared viewport");
+        com.openggf.tests.SozAcceptanceConfigurations.assertDisplay(aspect);
         assertEquals(character,f.sprite().getCode(),"supported donor character must not fall back");
         int nativeBank=character.equals("tails")?0x6A0:0x680;
         var ordinaryController=f.sprite().getSuperStateController();var ordinaryRenderer=f.sprite().getSpriteRenderer();
         var ordinaryTail=f.sprite().getTailsTailsController();
         var registry=TestEnvironment.activeGameplayMode().getRewindRegistry();var before=registry.capture();
-        var state=(EndingZoneRuntimeState)GameServices.zoneRuntimeState();state.ending().initializeProgress(7,progress==2?7:0);
+        var state=(EndingZoneRuntimeState)GameServices.zoneRuntimeState();state.ending().initializeProgress(progress<0?0:7,progress==2?7:0);
         // Declare Obj_Ending's entry after the native clear-RAM terrain handoff.
         var manager=GameServices.level().getObjectManager();
         for(var old:manager.activeObjectsOfType(EndingRescueDirectorObjectInstance.class))ObjectLifetimeOps.deleteNoRespawn(old);
@@ -60,7 +63,7 @@ class TestS3kEndingDonorSceneEntry {
             state.ending().credits().step(TestEnvironment.objectServices().romReader());
         assertTrue(state.ending().credits().complete());
         owner.update(0,f.sprite());boolean transformed=false,replayed=false;
-        boolean needsTransformation=!character.equals("tails")||progress==2;
+        boolean needsTransformation=progress>=0&&(!character.equals("tails")||progress==2);
         com.openggf.game.rewind.CompositeSnapshot activeCheckpoint=null;
         assertInstanceOf(com.openggf.game.sonic3k.Sonic3kSuperStateController.class,f.sprite().getSuperStateController());
         assertEquals(nativeBank,f.sprite().getSpriteRenderer().patternBankBase(),"native S3K P1 presentation bank");
@@ -103,6 +106,7 @@ class TestS3kEndingDonorSceneEntry {
         GameServices.level().loadZoneAndAct(0,0);
         var fresh=GameServices.sprites().getMainPlayable();
         assertEquals(width,GameServices.camera().getWidth(),"fresh load retains the declared viewport");
+        com.openggf.tests.SozAcceptanceConfigurations.assertDisplay(aspect);
         if(ordinaryController==null)assertNull(fresh.getSuperStateController());
         else assertEquals(ordinaryController.getClass(),fresh.getSuperStateController().getClass(),"fresh load uses ordinary delegation");
         assertEquals(ordinaryRenderer.headProfileId(),fresh.getSpriteRenderer().headProfileId(),"fresh load restores donor artwork");

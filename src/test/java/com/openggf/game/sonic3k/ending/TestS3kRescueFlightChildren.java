@@ -26,12 +26,16 @@ class TestS3kRescueFlightChildren {
     private HeadlessTestFixture boot(String main,int progress){return boot(main,progress,320);}
     private HeadlessTestFixture boot(String main, int progress, int width) {
         var config = SonicConfigurationService.getInstance();
-        config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS, width);
+        var aspect=java.util.Arrays.stream(com.openggf.configuration.WidescreenAspect.values())
+                .filter(value -> value.pixelWidth()==width).findFirst().orElseThrow();
+        com.openggf.tests.SozAcceptanceConfigurations.selectDisplay(aspect);
         GameServices.camera().refreshViewportDimensions(config);
+        com.openggf.tests.SozAcceptanceConfigurations.assertDisplay(aspect);
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, main);
         config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
         var fixture = HeadlessTestFixture.builder().withZoneAndAct(13, 1)
                 .withFreshLevelStartLifecycle().build();
+        com.openggf.tests.SozAcceptanceConfigurations.assertDisplay(aspect);
         var game = GameServices.gameState();
         game.configureSpecialStageProgress(7, 7);
         for (int i = 0; i < 7 && progress >= 0; i++) {
