@@ -106,6 +106,31 @@ public class Sonic1GameModule implements GameModule {
     private PhysicsProvider physicsProvider;
     private ObjectRegistry objectRegistry;
     private Sonic1PlcService plcService;
+    private Rom additiveRom;
+    private com.openggf.level.rings.RingSpriteSheet additiveRingSheet;
+    private final Sonic1ModZoneAdapter modZoneAdapter = new Sonic1ModZoneAdapter(this);
+
+    @Override
+    public com.openggf.game.modzone.ModZoneAdapter getModZoneAdapter() { return modZoneAdapter; }
+
+    @Override
+    public synchronized com.openggf.level.rings.RingSpriteSheet getAdditiveLevelRingSpriteSheet()
+            throws java.io.IOException {
+        if (additiveRom==null) throw new IllegalStateException("Sonic 1 game has not been created");
+        if (additiveRingSheet==null) additiveRingSheet=new Sonic1RingArt(additiveRom).load();
+        return additiveRingSheet;
+    }
+
+    Palette getAdditiveLevelCharacterPalette() throws java.io.IOException {
+        if (additiveRom==null) throw new IllegalStateException("Sonic 1 game has not been created");
+        String character=com.openggf.game.session.ActiveGameplayTeamResolver.resolveMainCharacterCode(GameServices.configuration());
+        if (com.openggf.game.CrossGameFeatureProvider.isActive()) {
+            Palette donated=GameServices.crossGameFeatures().loadHostCompatiblePalette(character);
+            if(donated!=null) return donated.deepCopy();
+        }
+        return java.util.Objects.requireNonNull(donorProvider.loadCharacterPalette(RomByteReader.fromRom(additiveRom),character)).deepCopy();
+    }
+
 
     @Override
     public String getIdentifier() {
@@ -135,6 +160,8 @@ public class Sonic1GameModule implements GameModule {
 
     @Override
     public Game createGame(Rom rom) {
+        additiveRom = java.util.Objects.requireNonNull(rom);
+        additiveRingSheet = null;
         plcService = new Sonic1PlcService(rom);
         return new Sonic1(rom);
     }
