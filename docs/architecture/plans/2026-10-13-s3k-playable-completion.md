@@ -1635,3 +1635,29 @@ Qualified test hashes:
 - `src/test/java/com/openggf/tools/TestSszColdRouteCapture.java`: SHA256`d2c7be7a67708b0ab1ab9f54b9e604508f79df498d054b994c1bdb73cb7b946c`.
 - `src/test/java/com/openggf/tools/TestSszWidePairedColdRouteCapture.java`: SHA256`2d23891c38affa20014278c385d080700faae1bf455efb5975e399149bf2a5c7`.
 - `src/test/java/com/openggf/tests/TestS3kBonusStageReturnProducts.java`: SHA256`37ac77e5fbb8e44c720696317afc002fbf5c9d4ce6a9b280cdfbf191eeb7fefe`.
+
+
+## Finite bonus boundary qualification (2026-10-14)
+
+Coherent69e4f51d3 plus `TestS3kBonusStageReturnProducts` final draft passes
+425/0/0/0 in70993, terminal0 at19:17:41 UTC. Maven4:51, class218.0s,733s
+queue waiting is excluded. Five independent pilots run before the420 finite
+products (existing140 generator × three stages). All five viewports including
+528, all six admitted main/donor pairs and the finite solo/mixed/duplicate/
+seven-follower rosters now traverse real production loads and returns. Ordered
+CPU chains and distinct duplicate identities are checked before entry and
+after return, along with ROM-backed renderer/animation resources. Every returned
+world compares all registry keys in two45-tick cycles and both restore
+directions; interior rewind follows the advertised two-supported/Slot-unsupported
+contract. Per-case configuration and donor/session globals are restored.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kBonusStageReturnProducts' "-Dsonic1.rom.path=$S1_TASK_ROM" "-Dsonic2.rom.path=$S2_TASK_ROM" "-Ds3k.rom.path=$S3K_TASK_ROM" test -B
+```
+
+Final test SHA256`318a460ca946bdfe420eb31c95ad253360f56a68ceb01b8edaeb02d0821436be`. This closes the finite logical load/return
+product; physical portal contact, actual reward/exit mechanisms, matched native
+whole-interior pictures/audio and wider campaign obligations are still separate.
+Consumed Maven redirect is deleted after this durable summary; no validation
+receipt or archived test log is retained. This is focused qualification, not
+combined smoke/guards, full-suite or integrated delivery credit.

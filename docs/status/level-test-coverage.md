@@ -5,8 +5,9 @@ Remaining S3K parity follow-up (2026-10-14, delivery in progress): the
 qualifies corrected native320 and paired800 cold incoming-world boundaries,
 with50/44 whole-world replay windows; the native companion arrival discrepancy
 remains open. The [bonus transition matrix](../architecture/validation/levels/s3k-bonus-stage-transitions.md)
-records five actual load/return pilots and the unsupported whole-Slot rewind
-contract. These bounded checks expand the previous delivery's evidence;
+records five short pilots plus420 actual load/return products across the140
+supported configurations and all three stages, with the unsupported whole-Slot
+rewind contract preserved. These bounded checks expand the previous delivery's evidence;
 composed validation, integration/push and broader parity/products are pending.
 
 S3K playable completion (2026-10-13, delivery in progress): the [native ending matrix](../architecture/validation/levels/s3k-ending.md)
