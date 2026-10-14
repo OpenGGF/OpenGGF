@@ -1800,3 +1800,152 @@ env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 py
 Consumed root redirects are deleted after this account; no validation receipt
 or archived invocation log is retained. The original pre-task integration
 base5b2ff8e7851b99dd40998dfc41fbfd21c80031ef remains the combined validation base.
+
+
+## Bonus portal and mechanism qualification (2026-10-14)
+
+Source parente46f61820069f0d959e59220a46fba9a80aa4426; new test SHA256
+6f381f29976a71c2aa9b60f0a9736a9d937c83de0cb18f30851da2782b2814a0.
+Build-only13838 passes test-compile at20:44:54 UTC,22.906s,zero tests.
+Short2258 completes20:46:52 UTC,5/0/0/0,28.313s Maven/5.876s class/0s queue.
+Finite41801 completes20:54:42 UTC,420/0/0/0,5:06 Maven/280.8s class/69s queue.
+These are425 distinct physical-owner products across two invocations, not one
+single425 run; no unchanged logical products are rerun for this qualification.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off test-compile -B
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kBonusPortalMechanismProducts#shortPortalAndMechanismPilotsLoadAndReturnThroughRealBoundaries' "-Dsonic1.rom.path=$S1_TASK_ROM" "-Dsonic2.rom.path=$S2_TASK_ROM" "-Ds3k.rom.path=$S3K_TASK_ROM" test -B
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestS3kBonusPortalMechanismProducts#finitePortalAndExitProductsRetainRosterAndBothLoadBoundaries' "-Dsonic1.rom.path=$S1_TASK_ROM" "-Dsonic2.rom.path=$S2_TASK_ROM" "-Ds3k.rom.path=$S3K_TASK_ROM" test -B
+```
+
+Real SOZ1 post1 activation and four-star orbit/lifetime precede actual portal
+overlap; only declared position/carried-ring inlets are seeded. Gumball exit
+range, Pachinko captured countdown and actual Slot goal-cell collision request
+their own exits; no logical entry/exit test hooks are used. Both actual loads,
+ordered roster/resources, all-key interior/returned replay and timeline floors
+are checked. Complete cold stage traversal, reward mechanisms, native pixels/
+audio and whole-Slot rewind are not credited. Its copied runtime board/reel/
+reward/animation tables expose an additional concrete ROM-pipeline obligation:
+matched original layout1024B at1E4084 (SHA256e5fbad9116c0febbfb792fad5ed0445291c1f49ebfd2bf04b81c187cb32dfe2d),
+start4B at1E4080, prize word4C8A4, target4C8B4, reels4C8CC/4C8D4/4C8DC,
+transient scripts4B5EC/4B622/4B656/4B688. Only addresses/hashes are inventoried;
+no disassembly asset is used as runtime fallback. These remain active work.
+
+The ending matrix's stale blanket pressure statement is corrected to existing
+17 real-child cases (19591 plus two unchanged43234 pilots) and separate11-core7093,
+with impossible fixed8/48 and Knuckles-only victims excluded by native owners.
+Actual loc5DB76/5DD6A full-table dispatch and downstream scene composition are
+separate remaining qualification. Consumed root redirects are deleted after this
+account; combined smoke/guards and integrated delivery remain pending.
+
+
+## Native carry and Saved2 corrective composition (2026-10-14)
+
+Qualified workeraedc137a173f48ecf71ae76253731b52ff7645cb is merged after
+root585540848's actual portal/exit checks release. The merge has no conflicts;
+source review confirms the updated develop stock-ROM script guard remains
+ahead of HPZ initialization while the native fresh/checkpoint/selected-Saved2
+eligibility is published before player assembly and survives bank consumption.
+The engine-internal carry port retains every configured participant/order and
+uses a capable native P2 or the existing intrinsic native-art Tails role for
+native CNZ/MHZ story ownership. Public snapshot/Mod API shapes remain unchanged.
+
+Worker2571 is terminal0 at20:51:39 UTC,399/0/0/0 (1:54 Maven): CNZ140 entry
+and140 real two-reload/incoming-world products; authority3; capture-host28;
+native story10, including incapable-first natural retirement/recreation and
+reverse absence; real Saved2 representatives8; pedestal representatives8;
+mandatory S3K neighbors60. Earlier72 matched/pure carry neighbors retain their
+separate source scope. Source-owned negative and fixture-writer attribution
+are recorded in the owning CNZ/HPZ matrices; no native ring/camera writer is
+suppressed. Root build-only70500 passes compile on the union at21:09:01 UTC,
+51.439s,zero tests. Actual finite hub/outcome/palette qualification continues;
+composed smoke/guards and main integration remain pending.
+
+A separately discovered private-record diagnostic access bug in
+RewindSnapshotDiff.collectDiffs can conceal diffKey paths; keyEquals comparison
+and direct native state/load/receipt/pixel assertions remain distinct evidence.
+A bounded fail-closed helper repair is owned by the frontier lane and affected
+world assertions must be checked with that helper before final delivery credit.
+No valid queued/running request is cancelled because of this discovery.
+Consumed root build redirect is removed after the durable account.
+
+## Paired pattern transfer composition (2026-10-14)
+
+After actual carry merge3e080ca11 releases, qualified workerdf8a26e936 is
+composed. Three documentation append conflicts preserve both independent
+lessons, including byte-identical object-skill mirrors. The profile retains
+the updated develop stock-ROM guard and Saved2 assembly contract; its VInt
+tail additionally publishes pending paired pattern DMA. Build-only29114
+passes on the composed tree at21:19:22 UTC,1:09 Maven,zero tests. The worker
+qualifies18 transfer/world checks and289 distinct affected consumers across
+the exact scoped runs documented in the ending matrix. No raw queue behavior
+or public snapshot signature is widened. Corrected helper replay, combined
+smoke/guards, destination integration and push remain pending. Consumed build
+redirect is removed after this account; durable native v7 media is external.
+
+## Captured-content comparator repair (2026-10-14)
+
+Qualified helperc3d2e75b41950961ec6300b38c30b02345a6143a is composed
+after paired transfer7cc10d369. Private record inspection is explicit and
+fail closed; top-level arrays and opaque state blobs compare their full nested
+content. Five independent failing vectors precede candidate77331, which
+passes14/0/0/0 at21:16:10 UTC,1:04 Maven,zero queue wait. No gameplay state
+is removed, hydrated or filtered. One measurement-hazard append conflict
+preserves both the unrelated editor projection lesson and the new comparator
+lesson. Six additionally omitted captured gameplay/identity manager fields
+are under a separate negative/regression repair; derived cache dirtiness and
+allocator telemetry require their own justified exclusion. Historical
+diffKey-only world equality remains provisional pending composed verification;
+independent direct lifecycle/state/DMA/pixel assertions retain their scope.
+
+## Slot asset ownership corrective qualification (2026-10-14)
+
+Root0a05aa118 is the composed base for the immutable Slot ROM bank. Runtime
+start/layout1E4080/1E4084, signed prize words4C8A4, target rows4C8B4,
+reels4C8CC/4C8D4/4C8DC and cell scripts4B5EC/4B622/4B656/4B688 come from
+the ROM pipeline. Byte identity and the native labels/routine pointers were
+checked against the original locked-on ROM; no reference bytes hydrate gameplay.
+Pure fixtures explicitly inject their separate synthetic bank. All consumed
+literal asset arrays are removed from production, including the older optional
+cell animator. Provider registration remains independent of unselected assets.
+
+Actual build23604 passes at21:26:54 UTC,1:09,zero tests. Focused5254 reports
+166/1/0/0 at21:27:47 UTC,28.461s,zero wait: the new immutable getters introduced
+a real warmed-draw allocation regression, detected by the existing oracle.
+The package read-only view repair yields27/0/0/0 in14603 at21:29:53 UTC,1:18.
+Actual bonus portals/exit owners plus mandatory60 and cell/resource neighbors
+pass75/0/0/0 in28066 at21:32:10 UTC,1:20. Complete first-zero termination
+checks pass13/0/0/0 in71315 at21:35:24 UTC,1:14. All queued waits are zero;
+all declared ROM tests execute, with zero skips. Exact selections are
+`TestS3kSlot*` named mechanics/objects plus `TestMutatorBonusRingProducers`
+for5254; allocation/resource/option/display for14603; resource/legacy animation,
+`TestS3kBonusPortalMechanismProducts#shortPortalAndMechanismPilotsLoadAndReturnThroughRealBoundaries`
+and the four mandatory S3K classes for28066; resource/render-buffer/legacy
+animation for71315. Commands use the local normal wrapper, EGL, null audio,
+unset ambient displays and absolute original-ROM properties; only bounded
+14603/71315 use lean. Overlapping run totals retain separate source scopes.
+
+Complete Slot rewind/recreation, other physical rewards, cold stage traversal,
+native images/audio and composed smoke/guards are still active obligations.
+Consumed target redirects are removed after inspection; no validation receipts
+or copied raw logs are retained.
+
+## Complete captured gameplay comparator composition (2026-10-14)
+
+Qualified six-fieldd8da363885 and Palette7001b1eef0 are composed onto the
+Slot-resource root0f95ee5bb without conflicts. Object-manager equality now
+includes captured solid contact, plane switchers, touch overlap, collision
+response, dynamic identity counter and the actual allocation/execution cursor.
+Only source-proven cache dirtiness and peak allocator telemetry retain cosmetic
+exclusions. Palette leaves compare all16 rawRGB triples and report the exact
+changed component; no palette normalization or private-state filtering occurs.
+Independent negative vectors and final72-case worker qualification precede
+Root55826, which passes72/0/0/0 on this composed source at21:42:41 UTC,1:13
+Maven. Its normal queue waiting is distinct from execution. This closes the
+comparison-contract defects, not the gameplay replay mismatches that stricter
+comparison can reveal. HPZ finite980 selector and140Saved2 worlds now pass in
+the worker’s1510-case run, while283 ceremony/preowner published-scroll failures
+remain active owner work. Native AIZ cutscene/transition qualification likewise
+remains uncommitted while strict traces identify the next ROM lifecycle owner.
+Combined Root smoke/guards and destination delivery remain pending. Consumed
+Root comparator redirect is removed after inspection.

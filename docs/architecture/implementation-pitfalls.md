@@ -1819,7 +1819,6 @@ admission. A matched real-JAR control reproduces the old failure and renders the
 farm after the corrected bootstrap. Do not remove the mod's lifecycle guard or
 invent session state to make an arbitrary zone load.
 
-
 **KosM completion is a queued DMA, and equal descriptors are not FIFO identity.**
 Process_Kos_Module_Queue waits for the complete direct FIFO, then calls
 Add_To_DMA_Queue. The paired production pattern facade must wait for the actual

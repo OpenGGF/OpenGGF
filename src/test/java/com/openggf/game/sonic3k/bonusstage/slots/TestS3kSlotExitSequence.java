@@ -7,7 +7,8 @@ class TestS3kSlotExitSequence {
 
     @Test
     void windDownPhaseLastsExpectedFrames() {
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
         S3kSlotExitSequence exit = new S3kSlotExitSequence(controller);
 
@@ -23,7 +24,8 @@ class TestS3kSlotExitSequence {
 
     @Test
     void fadePhaseLasts60Frames() {
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
         S3kSlotExitSequence exit = new S3kSlotExitSequence(controller);
 
@@ -42,7 +44,8 @@ class TestS3kSlotExitSequence {
 
     @Test
     void totalExitSequenceIs156Frames() {
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
         S3kSlotExitSequence exit = new S3kSlotExitSequence(controller);
 
@@ -56,7 +59,8 @@ class TestS3kSlotExitSequence {
 
     @Test
     void completedSequenceStaysComplete() {
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
         S3kSlotExitSequence exit = new S3kSlotExitSequence(controller);
 
@@ -70,7 +74,8 @@ class TestS3kSlotExitSequence {
 
     @Test
     void fadeProgressAdvancesDuringFade() {
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
         S3kSlotExitSequence exit = new S3kSlotExitSequence(controller);
 
@@ -87,7 +92,8 @@ class TestS3kSlotExitSequence {
 
     @Test
     void scalarIndexKeepsAcceleratingDuringFade() {
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
         S3kSlotExitSequence exit = new S3kSlotExitSequence(controller);
 

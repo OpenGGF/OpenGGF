@@ -3,11 +3,13 @@
 Remaining S3K parity follow-up (2026-10-14, delivery in progress): the
 [SSZ matrix](../architecture/validation/levels/s3k-ssz-act1.md#corrected-cold-incoming-world-qualification-2026-10-14)
 qualifies corrected native320 and paired800 cold incoming-world boundaries,
-with50/44 whole-world replay windows; the native companion arrival discrepancy
-remains open. The [bonus transition matrix](../architecture/validation/levels/s3k-bonus-stage-transitions.md)
-records five short pilots plus420 actual load/return products across the140
-supported configurations and all three stages, with the unsupported whole-Slot
-rewind contract preserved. These bounded checks expand the previous delivery's evidence;
+with50/44 whole-world replay windows. The subsequent native companion arrival
+repair has24 focused cases and an exact1432-row native state comparison;
+whole-scene pixel limits remain explicit. The [bonus transition matrix](../architecture/validation/levels/s3k-bonus-stage-transitions.md)
+records logical load/return425 and separately real portal/exit-mechanism425
+cases across140 supported configurations and all three stages. Declared local
+inlets, Slot's unsupported whole-stage rewind and copied runtime table resources
+retain their scope; cold traversal, rewards and native pictures/audio remain open. These bounded checks expand the previous delivery's evidence;
 composed validation, integration/push and broader parity/products are pending.
 
 S3K playable completion (2026-10-13, delivery in progress): the [native ending matrix](../architecture/validation/levels/s3k-ending.md)

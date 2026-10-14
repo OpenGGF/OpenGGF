@@ -9,7 +9,7 @@ class TestS3kSlotLayoutAnimator {
     void ringSparkleAnimatesThroughFramesThenClearsCell() {
         byte[] layout = new byte[32 * 32];
         layout[100] = 8; // ring tile
-        S3kSlotLayoutAnimator animator = new S3kSlotLayoutAnimator();
+        S3kSlotLayoutAnimator animator = new S3kSlotLayoutAnimator(S3kSlotRomTestData.resources());
 
         animator.queueRingSparkle(layout, 100);
         // First frame applied immediately
@@ -29,7 +29,7 @@ class TestS3kSlotLayoutAnimator {
     void bumperBounceAnimatesAndRestoresTile5() {
         byte[] layout = new byte[32 * 32];
         layout[50] = 5; // bumper tile
-        S3kSlotLayoutAnimator animator = new S3kSlotLayoutAnimator();
+        S3kSlotLayoutAnimator animator = new S3kSlotLayoutAnimator(S3kSlotRomTestData.resources());
 
         animator.queueBumperBounce(layout, 50);
         assertEquals(0x0A, layout[50]); // first frame
@@ -46,7 +46,7 @@ class TestS3kSlotLayoutAnimator {
     void spikeAnimationRestoresTile6() {
         byte[] layout = new byte[32 * 32];
         layout[75] = 6; // spike tile
-        S3kSlotLayoutAnimator animator = new S3kSlotLayoutAnimator();
+        S3kSlotLayoutAnimator animator = new S3kSlotLayoutAnimator(S3kSlotRomTestData.resources());
 
         animator.queueSpikeAnimation(layout, 75);
         assertEquals(0x0C, layout[75]); // first frame
@@ -61,7 +61,7 @@ class TestS3kSlotLayoutAnimator {
     @Test
     void multipleAnimationsRunConcurrently() {
         byte[] layout = new byte[32 * 32];
-        S3kSlotLayoutAnimator animator = new S3kSlotLayoutAnimator();
+        S3kSlotLayoutAnimator animator = new S3kSlotLayoutAnimator(S3kSlotRomTestData.resources());
 
         animator.queueRingSparkle(layout, 10);
         animator.queueBumperBounce(layout, 20);
@@ -76,7 +76,7 @@ class TestS3kSlotLayoutAnimator {
     @Test
     void queueReturnsFalseWhenAllSlotsFull() {
         byte[] layout = new byte[32 * 32];
-        S3kSlotLayoutAnimator animator = new S3kSlotLayoutAnimator();
+        S3kSlotLayoutAnimator animator = new S3kSlotLayoutAnimator(S3kSlotRomTestData.resources());
 
         for (int i = 0; i < 32; i++) {
             assertTrue(animator.queueRingSparkle(layout, i));

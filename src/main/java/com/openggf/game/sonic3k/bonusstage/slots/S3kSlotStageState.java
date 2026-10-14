@@ -8,6 +8,14 @@ public final class S3kSlotStageState {
     private static final int DEFAULT_EVENTS_BG_X = 0x10;
     private static final int DEFAULT_EVENTS_BG_Y = 0x2D;
 
+    private final S3kSlotResources romData;
+
+    private S3kSlotStageState(S3kSlotResources romData) {
+        this.romData = java.util.Objects.requireNonNull(romData, "romData");
+    }
+
+    S3kSlotResources romData() { return romData; }
+
     private int statTable;
     private int scalarIndex1;
     private int scalarIndex2;
@@ -48,7 +56,11 @@ public final class S3kSlotStageState {
     private final Deque<int[]> pendingSpikeRewardPositions = new ArrayDeque<>();
 
     public static S3kSlotStageState bootstrap() {
-        S3kSlotStageState state = new S3kSlotStageState();
+        return bootstrap(S3kSlotResources.fromActiveRom());
+    }
+
+    public static S3kSlotStageState bootstrap(S3kSlotResources romData) {
+        S3kSlotStageState state = new S3kSlotStageState(romData);
         state.scalarIndex1 = 0x40;
         state.eventsBgX = DEFAULT_EVENTS_BG_X;
         state.eventsBgY = DEFAULT_EVENTS_BG_Y;

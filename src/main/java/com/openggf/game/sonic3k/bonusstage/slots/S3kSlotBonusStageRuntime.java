@@ -37,6 +37,14 @@ public final class S3kSlotBonusStageRuntime {
     private static final int GLASS_PRIORITY_HALF_EXTENT_Y = 0x30;
     private static final int PRIORITY_BIT = 0x8000;
 
+    private final S3kSlotResources suppliedResources;
+
+    public S3kSlotBonusStageRuntime() { this(null); }
+
+    public S3kSlotBonusStageRuntime(S3kSlotResources resources) {
+        suppliedResources = resources;
+    }
+
     private boolean initialized;
     private GameplayModeContext bootstrapGameplayMode;
     private AbstractPlayableSprite originalPlayer;
@@ -71,6 +79,7 @@ public final class S3kSlotBonusStageRuntime {
     // V_int_run_count at the end of the previous update: see previousIterationVIntRunCount().
     private Integer lastIterationVIntRunCount;
     public void bootstrap() {
+        S3kSlotResources romData = suppliedResources != null ? suppliedResources : S3kSlotResources.fromActiveRom();
         initialized = false;
         originalPlayer = null;
         slotPlayer = null;
@@ -85,8 +94,8 @@ public final class S3kSlotBonusStageRuntime {
         lastFrameCounter = -1;
         suppressedSidekicks.clear();
         lastIterationVIntRunCount = null;
-        slotStageState = S3kSlotStageState.bootstrap();
-        slotRenderBuffers = S3kSlotRenderBuffers.fromRomData();
+        slotStageState = S3kSlotStageState.bootstrap(romData);
+        slotRenderBuffers = S3kSlotRenderBuffers.fromRomData(romData);
         optionCycleSystem.bootstrap(slotStageState);
         slotCollisionSystem = new S3kSlotCollisionSystem(slotRenderBuffers, slotStageState);
         slotPlayerRuntime = new S3kSlotPlayerRuntime(slotStageState, slotCollisionSystem);
@@ -111,8 +120,8 @@ public final class S3kSlotBonusStageRuntime {
         String mainCode = ActiveGameplayTeamResolver.resolveMainCharacterCode(GameServices.configuration());
         if (bootstrapGameplayMode.getSpriteManager().getSprite(mainCode) instanceof AbstractPlayableSprite mainPlayer) {
             originalPlayer = mainPlayer;
-            short slotStartX = S3kSlotRomData.SLOT_BONUS_PLAYER_START_X;
-            short slotStartY = S3kSlotRomData.SLOT_BONUS_PLAYER_START_Y;
+            short slotStartX = romData.playerStartX();
+            short slotStartY = romData.playerStartY();
             short centerX = S3kSlotRomData.SLOT_BONUS_CAGE_CENTER_X;
             short centerY = S3kSlotRomData.SLOT_BONUS_CAGE_CENTER_Y;
             slotPlayer = S3kSlotBonusPlayer.create(mainCode, slotStartX, slotStartY, slotPlayerRuntime);

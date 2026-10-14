@@ -103,6 +103,24 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
         }
         // Post-load assembly: only when requested
         if (ctx.isIncludePostLoadAssembly()) {
+            steps.add(new InitStep("PublishNativeCpuSavedEntryFlag",
+                    "Tails_Init/loc13A10: native fresh or saved entry eligibility",
+                    () -> {
+                        var level = GameServices.level();
+                        var saved = level.getBigRingReturn();
+                        boolean selectedSaved2 = saved != null
+                                && level.getTransitions().isLastStarPostHitSet()
+                                && saved.originZone() == level.getCurrentZone()
+                                && saved.originAct() == level.getCurrentAct();
+                        // Fresh/LevelSelect clears Last_star_post_hit (asm10039);
+                        // real checkpoint/Saved2 return publishes its nonzero
+                        // bank before Tails_Init copies it (asm26155). The
+                        // existing captured flag must outlive bank consumption
+                        // because the engine defers CPU routine zero until
+                        // the following ordinary player pass.
+                        if (ctx.hasCheckpoint() || selectedSaved2) level.setLastStarPostHit();
+                        else level.clearLastStarPostHit();
+                    }));
             steps.add(restoreCheckpointStep(ctx));
             steps.add(spawnPlayerStep(ctx));
             steps.add(resetPlayerStateStep(ctx));

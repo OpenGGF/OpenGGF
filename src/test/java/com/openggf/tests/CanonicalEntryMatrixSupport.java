@@ -135,23 +135,37 @@ abstract class CanonicalEntryMatrixSupport {
         assertParticipant(main, row.main(), row.donor());
         assertSame(main, GameServices.camera().getFocusedSprite(), "current main owns focus");
         var followers = GameServices.sprites().getRegisteredSidekicks();
-        boolean carrier = act.zone() == 3 && act.act() == 0 && row.main().equals("sonic")
-                && row.followers().isEmpty();
+        var configuredFollowers = followers.stream().filter(player ->
+                !SpriteManagerInternalAccess.usesNativeScriptedArt(GameServices.sprites(), player)).toList();
         String[] configured = row.followers().isEmpty() ? new String[0] : row.followers().split(",");
-        assertEquals(configured.length + (carrier ? 1 : 0), followers.size(), "no admitted participant cap");
+        assertEquals(configured.length, configuredFollowers.size(), "no admitted participant cap");
         Set<AbstractPlayableSprite> identities = Collections.newSetFromMap(new IdentityHashMap<>());
         identities.add(main);
         var previous = main;
-        for (int i = 0; i < followers.size(); i++) {
-            var follower = followers.get(i);
+        for (int i = 0; i < configuredFollowers.size(); i++) {
+            var follower = configuredFollowers.get(i);
             assertTrue(identities.add(follower), "duplicate character keys retain independent identities");
-            assertParticipant(follower, carrier ? "tails" : configured[i], carrier ? "off" : row.donor());
-            assertEquals(carrier, SpriteManagerInternalAccess.usesNativeScriptedArt(GameServices.sprites(), follower));
+            assertParticipant(follower, configured[i], row.donor());
             assertTrue(follower.isCpuControlled());
             assertNotNull(follower.getCpuController());
             assertSame(previous, follower.getCpuController().getLeader(), "configured CPU leader order");
-            assertEquals(carrier, follower.getCpuController().isTransientCarrySidekick());
+            assertFalse(follower.getCpuController().isTransientCarrySidekick());
             previous = follower;
+        }
+        var intrinsic = followers.stream().filter(player ->
+                SpriteManagerInternalAccess.usesNativeScriptedArt(GameServices.sprites(), player)).toList();
+        boolean carrier = (act.zone() == 3 || act.zone() == 7) && act.act() == 0 && row.main().equals("sonic")
+                && !GameServices.level().getTransitions().isLastStarPostHitSet()
+                && (configuredFollowers.isEmpty() || configuredFollowers.getFirst().getSecondaryAbility()
+                    != com.openggf.sprites.playable.SecondaryAbility.FLY);
+        assertEquals(carrier ? 1 : 0, intrinsic.size(), "native script role is separate from configured P2");
+        for (var follower : intrinsic) {
+            assertTrue(identities.add(follower));
+            assertParticipant(follower, "tails", "off");
+            assertTrue(follower.isCpuControlled());
+            assertNotNull(follower.getCpuController());
+            assertSame(main, follower.getCpuController().getLeader(), "intrinsic native carrier follows P1");
+            assertTrue(follower.getCpuController().isTransientCarrySidekick());
         }
         var nativeP2 = GameServices.level().getObjectManager().getObjectServices().playerQuery().nativeP2OrNull();
         if (followers.isEmpty()) assertNull(nativeP2);

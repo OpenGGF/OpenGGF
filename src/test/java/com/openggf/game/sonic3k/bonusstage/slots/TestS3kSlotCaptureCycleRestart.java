@@ -8,7 +8,8 @@ class TestS3kSlotCaptureCycleRestart {
 
     @Test
     void captureRestartUsesRomSpinInitStateInsteadOfPassiveSettleState() {
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
 
         S3kSlotStageState state = controller.stageStateForTest();

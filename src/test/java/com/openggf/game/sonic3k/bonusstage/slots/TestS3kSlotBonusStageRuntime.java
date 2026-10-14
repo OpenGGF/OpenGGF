@@ -73,7 +73,7 @@ class TestS3kSlotBonusStageRuntime {
         sidekick.setCpuControlled(true);
         GameServices.sprites().addSprite(sidekick, "sonic");
 
-        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
+        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(S3kSlotRomTestData.resources());
         runtime.bootstrap();
 
         assertTrue(runtime.isInitialized());
@@ -118,7 +118,7 @@ class TestS3kSlotBonusStageRuntime {
         GameServices.sprites().addSprite(originalPlayer);
         GameServices.camera().setFocusedSprite(originalPlayer);
 
-        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
+        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(S3kSlotRomTestData.resources());
         runtime.bootstrap();
 
         AbstractPlayableSprite slotPlayer = assertInstanceOf(
@@ -149,7 +149,7 @@ class TestS3kSlotBonusStageRuntime {
         GameServices.sprites().addSprite(originalPlayer);
         GameServices.camera().setFocusedSprite(originalPlayer);
 
-        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
+        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(S3kSlotRomTestData.resources());
         runtime.bootstrap();
 
         runtime.queueRingReward();
@@ -170,7 +170,7 @@ class TestS3kSlotBonusStageRuntime {
         GameServices.sprites().addSprite(originalPlayer);
         GameServices.camera().setFocusedSprite(originalPlayer);
 
-        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
+        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(S3kSlotRomTestData.resources());
         runtime.bootstrap();
 
         runtime.queueSpikeReward();
@@ -192,7 +192,7 @@ class TestS3kSlotBonusStageRuntime {
         GameServices.sprites().addSprite(originalPlayer);
         GameServices.camera().setFocusedSprite(originalPlayer);
 
-        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
+        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(S3kSlotRomTestData.resources());
         runtime.bootstrap();
 
         AbstractPlayableSprite slotPlayer = assertInstanceOf(
@@ -212,7 +212,7 @@ class TestS3kSlotBonusStageRuntime {
         GameServices.sprites().addSprite(originalPlayer);
         GameServices.camera().setFocusedSprite(originalPlayer);
 
-        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
+        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(S3kSlotRomTestData.resources());
         runtime.bootstrap();
 
         AbstractPlayableSprite slotPlayer = assertInstanceOf(
@@ -230,7 +230,7 @@ class TestS3kSlotBonusStageRuntime {
         GameServices.sprites().addSprite(originalPlayer);
         GameServices.camera().setFocusedSprite(originalPlayer);
 
-        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
+        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(S3kSlotRomTestData.resources());
         runtime.bootstrap();
 
         AbstractPlayableSprite slotPlayer = assertInstanceOf(
@@ -260,7 +260,7 @@ class TestS3kSlotBonusStageRuntime {
         GameServices.sprites().addSprite(originalPlayer);
         GameServices.camera().setFocusedSprite(originalPlayer);
 
-        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
+        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(S3kSlotRomTestData.resources());
         runtime.bootstrap();
 
         AbstractPlayableSprite slotPlayer = assertInstanceOf(
@@ -303,7 +303,7 @@ class TestS3kSlotBonusStageRuntime {
         GameServices.sprites().addSprite(originalPlayer);
         GameServices.camera().setFocusedSprite(originalPlayer);
 
-        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
+        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(S3kSlotRomTestData.resources());
         runtime.bootstrap();
 
         AbstractPlayableSprite slotPlayer = assertInstanceOf(
@@ -365,7 +365,7 @@ class TestS3kSlotBonusStageRuntime {
         GameServices.sprites().addSprite(originalPlayer);
         GameServices.camera().setFocusedSprite(originalPlayer);
 
-        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
+        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(S3kSlotRomTestData.resources());
         runtime.bootstrap();
 
         AbstractPlayableSprite slotPlayer = assertInstanceOf(
@@ -385,7 +385,7 @@ class TestS3kSlotBonusStageRuntime {
         GameServices.sprites().addSprite(originalPlayer);
         GameServices.camera().setFocusedSprite(originalPlayer);
 
-        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
+        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(S3kSlotRomTestData.resources());
         runtime.bootstrap();
         runtime.update(0);
 
@@ -414,7 +414,7 @@ class TestS3kSlotBonusStageRuntime {
         GameServices.sprites().addSprite(originalPlayer);
         GameServices.camera().setFocusedSprite(originalPlayer);
 
-        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
+        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(S3kSlotRomTestData.resources());
         runtime.bootstrap();
         runtime.update(0);
 
@@ -438,7 +438,7 @@ class TestS3kSlotBonusStageRuntime {
         GameServices.sprites().addSprite(originalPlayer);
         GameServices.camera().setFocusedSprite(originalPlayer);
 
-        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
+        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(S3kSlotRomTestData.resources());
         runtime.bootstrap();
         runtime.update(0);
 
@@ -463,7 +463,7 @@ class TestS3kSlotBonusStageRuntime {
         GameServices.sprites().addSprite(originalPlayer);
         GameServices.camera().setFocusedSprite(originalPlayer);
 
-        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
+        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(S3kSlotRomTestData.resources());
         runtime.bootstrap();
         runtime.startGoalExitForTest();
 
@@ -489,7 +489,7 @@ class TestS3kSlotBonusStageRuntime {
         RecordingRenderer renderer = new RecordingRenderer();
         installRenderer(renderer, Sonic3kObjectArtKeys.SLOT_MACHINE_FACE);
 
-        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
+        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(S3kSlotRomTestData.resources());
         runtime.bootstrap();
         runtime.update(0);
         runtime.renderSlotLayout(GameServices.camera());
@@ -506,7 +506,7 @@ class TestS3kSlotBonusStageRuntime {
         GameServices.sprites().addSprite(originalPlayer);
         GameServices.camera().setFocusedSprite(originalPlayer);
 
-        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
+        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(S3kSlotRomTestData.resources());
         runtime.bootstrap();
 
         assertTrue(GameServices.sprites().getSprite("tails") instanceof S3kSlotBonusPlayer);
@@ -531,7 +531,7 @@ class TestS3kSlotBonusStageRuntime {
         GameServices.sprites().addSprite(originalPlayer);
         GameServices.camera().setFocusedSprite(originalPlayer);
 
-        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
+        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(S3kSlotRomTestData.resources());
         runtime.bootstrap();
 
         assertTrue(bootstrapMode.getSpriteManager().getSprite("tails") instanceof S3kSlotBonusPlayer);
@@ -564,7 +564,7 @@ class TestS3kSlotBonusStageRuntime {
         GameServices.sprites().addSprite(originalPlayer);
         GameServices.camera().setFocusedSprite(originalPlayer);
 
-        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
+        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(S3kSlotRomTestData.resources());
         runtime.bootstrap();
 
         assertTrue(runtime.isInitialized());
@@ -591,7 +591,7 @@ class TestS3kSlotBonusStageRuntime {
     void bootstrapWithoutGameplayRuntimeDoesNotMarkInitialized() {
         SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "tails");
 
-        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
+        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(S3kSlotRomTestData.resources());
         runtime.bootstrap();
 
         assertFalse(runtime.isInitialized());

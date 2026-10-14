@@ -19,7 +19,7 @@ class TestS3kSlotOptionCycleSystem {
         Class<?> systemClass = Class.forName(
                 "com.openggf.game.sonic3k.bonusstage.slots.S3kSlotOptionCycleSystem");
         Object system = systemClass.getConstructor().newInstance();
-        S3kSlotStageState state = S3kSlotStageState.bootstrap();
+        S3kSlotStageState state = S3kSlotStageState.bootstrap(S3kSlotRomTestData.resources());
 
         systemClass.getMethod("bootstrap", S3kSlotStageState.class).invoke(system, state);
 
@@ -53,7 +53,7 @@ class TestS3kSlotOptionCycleSystem {
         Class<?> systemClass = Class.forName(
                 "com.openggf.game.sonic3k.bonusstage.slots.S3kSlotOptionCycleSystem");
         Object system = systemClass.getConstructor().newInstance();
-        S3kSlotStageState state = S3kSlotStageState.bootstrap();
+        S3kSlotStageState state = S3kSlotStageState.bootstrap(S3kSlotRomTestData.resources());
 
         systemClass.getMethod("bootstrap", S3kSlotStageState.class).invoke(system, state);
         systemClass.getMethod("tick", S3kSlotStageState.class, int.class).invoke(system, state, 0);
@@ -68,7 +68,7 @@ class TestS3kSlotOptionCycleSystem {
         Class<?> systemClass = Class.forName(
                 "com.openggf.game.sonic3k.bonusstage.slots.S3kSlotOptionCycleSystem");
         Object system = systemClass.getConstructor().newInstance();
-        S3kSlotStageState state = S3kSlotStageState.bootstrap();
+        S3kSlotStageState state = S3kSlotStageState.bootstrap(S3kSlotRomTestData.resources());
 
         systemClass.getMethod("bootstrap", S3kSlotStageState.class).invoke(system, state);
         systemClass.getMethod("tick", S3kSlotStageState.class, int.class).invoke(system, state, 0);
@@ -89,7 +89,7 @@ class TestS3kSlotOptionCycleSystem {
         Class<?> systemClass = Class.forName(
                 "com.openggf.game.sonic3k.bonusstage.slots.S3kSlotOptionCycleSystem");
         Object system = systemClass.getConstructor().newInstance();
-        S3kSlotStageState state = S3kSlotStageState.bootstrap();
+        S3kSlotStageState state = S3kSlotStageState.bootstrap(S3kSlotRomTestData.resources());
 
         systemClass.getMethod("bootstrap", S3kSlotStageState.class).invoke(system, state);
         systemClass.getMethod("tick", S3kSlotStageState.class, int.class).invoke(system, state, 0);
@@ -111,7 +111,7 @@ class TestS3kSlotOptionCycleSystem {
         Class<?> systemClass = Class.forName(
                 "com.openggf.game.sonic3k.bonusstage.slots.S3kSlotOptionCycleSystem");
         Object system = systemClass.getConstructor().newInstance();
-        S3kSlotStageState state = S3kSlotStageState.bootstrap();
+        S3kSlotStageState state = S3kSlotStageState.bootstrap(S3kSlotRomTestData.resources());
 
         systemClass.getMethod("bootstrap", S3kSlotStageState.class).invoke(system, state);
         state.setOptionCycleState(24);
@@ -133,7 +133,7 @@ class TestS3kSlotOptionCycleSystem {
         Class<?> systemClass = Class.forName(
                 "com.openggf.game.sonic3k.bonusstage.slots.S3kSlotOptionCycleSystem");
         Object system = systemClass.getConstructor().newInstance();
-        S3kSlotStageState state = S3kSlotStageState.bootstrap();
+        S3kSlotStageState state = S3kSlotStageState.bootstrap(S3kSlotRomTestData.resources());
 
         systemClass.getMethod("bootstrap", S3kSlotStageState.class).invoke(system, state);
         state.setOptionCycleState(0x08);
@@ -162,7 +162,7 @@ class TestS3kSlotOptionCycleSystem {
         Class<?> systemClass = Class.forName(
                 "com.openggf.game.sonic3k.bonusstage.slots.S3kSlotOptionCycleSystem");
         Object system = systemClass.getConstructor().newInstance();
-        S3kSlotStageState state = S3kSlotStageState.bootstrap();
+        S3kSlotStageState state = S3kSlotStageState.bootstrap(S3kSlotRomTestData.resources());
 
         systemClass.getMethod("bootstrap", S3kSlotStageState.class).invoke(system, state);
         for (int frame = 0; frame < 4; frame++) {
@@ -184,7 +184,7 @@ class TestS3kSlotOptionCycleSystem {
         Class<?> systemClass = Class.forName(
                 "com.openggf.game.sonic3k.bonusstage.slots.S3kSlotOptionCycleSystem");
         Object system = systemClass.getConstructor().newInstance();
-        S3kSlotStageState state = S3kSlotStageState.bootstrap();
+        S3kSlotStageState state = S3kSlotStageState.bootstrap(S3kSlotRomTestData.resources());
 
         systemClass.getMethod("bootstrap", S3kSlotStageState.class).invoke(system, state);
         state.setOptionCycleState(0x08);
@@ -204,7 +204,7 @@ class TestS3kSlotOptionCycleSystem {
     @Test
     void randomTargetSelectionUsesS3kRandomNumberAndFrameCounter() {
         S3kSlotOptionCycleSystem system = new S3kSlotOptionCycleSystem();
-        S3kSlotStageState state = S3kSlotStageState.bootstrap();
+        S3kSlotStageState state = S3kSlotStageState.bootstrap(S3kSlotRomTestData.resources());
         GameRng rng = new GameRng(GameRng.Flavour.S3K);
 
         state.setOptionCycleState(0x08);
@@ -218,7 +218,7 @@ class TestS3kSlotOptionCycleSystem {
     @Test
     void resolvedPrizeMatchesFinalDisplayedSymbols() {
         S3kSlotOptionCycleSystem system = new S3kSlotOptionCycleSystem();
-        S3kSlotStageState state = S3kSlotStageState.bootstrap();
+        S3kSlotStageState state = S3kSlotStageState.bootstrap(S3kSlotRomTestData.resources());
         GameRng rng = new GameRng(GameRng.Flavour.S3K);
 
         state.setOptionCycleState(0x08);
@@ -227,7 +227,7 @@ class TestS3kSlotOptionCycleSystem {
         }
 
         int[] displaySymbols = S3kSlotMachineDisplayState.fromState(state, 0, 0).faces();
-        int displayedPrize = S3kSlotPrizeCalculator.calculate(displaySymbols[2],
+        int displayedPrize = S3kSlotPrizeCalculator.calculate(S3kSlotRomTestData.resources(), displaySymbols[2],
                 (byte) ((displaySymbols[1] << 4) | displaySymbols[0]));
 
         assertEquals(displayedPrize, state.optionCycleLastPrize());
@@ -236,7 +236,7 @@ class TestS3kSlotOptionCycleSystem {
     @Test
     void settledJackpotSonicRingRemainsDisplayedAndAwardsNothing() {
         S3kSlotOptionCycleSystem system = new S3kSlotOptionCycleSystem();
-        S3kSlotStageState state = S3kSlotStageState.bootstrap();
+        S3kSlotStageState state = S3kSlotStageState.bootstrap(S3kSlotRomTestData.resources());
         GameRng rng = new GameRng(GameRng.Flavour.S3K);
 
         state.setOptionCycleState(0x08);
@@ -256,7 +256,7 @@ class TestS3kSlotOptionCycleSystem {
     @Test
     void displayDoesNotJumpWhenLockedReelsEnterResolvedIdle() {
         S3kSlotOptionCycleSystem system = new S3kSlotOptionCycleSystem();
-        S3kSlotStageState state = S3kSlotStageState.bootstrap();
+        S3kSlotStageState state = S3kSlotStageState.bootstrap(S3kSlotRomTestData.resources());
         GameRng rng = new GameRng(GameRng.Flavour.S3K);
 
         state.setOptionCycleState(0x08);
@@ -291,13 +291,13 @@ class TestS3kSlotOptionCycleSystem {
         S3kSlotOptionCycleSystem system = new S3kSlotOptionCycleSystem();
         GameRng rng = new GameRng(GameRng.Flavour.S3K);
 
-        S3kSlotStageState frame0 = S3kSlotStageState.bootstrap();
+        S3kSlotStageState frame0 = S3kSlotStageState.bootstrap(S3kSlotRomTestData.resources());
         frame0.setOptionCycleState(0x08);
         system.tick(frame0, 0x0000, rng);
         assertEquals(0x2C, frame0.optionCycleReelVelocities()[1],
                 "frameCounter=0x0000 is the one input where the old and new formulas coincide");
 
-        S3kSlotStageState frameFF = S3kSlotStageState.bootstrap();
+        S3kSlotStageState frameFF = S3kSlotStageState.bootstrap(S3kSlotRomTestData.resources());
         frameFF.setOptionCycleState(0x08);
         system.tick(frameFF, 0x00FF, rng);
         assertEquals(0x33, frameFF.optionCycleReelVelocities()[1],

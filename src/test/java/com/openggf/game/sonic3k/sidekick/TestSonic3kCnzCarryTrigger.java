@@ -3,6 +3,13 @@ package com.openggf.game.sonic3k.sidekick;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import org.junit.jupiter.api.Test;
+import com.openggf.level.BigRingReturnState;
+import com.openggf.level.LevelManager;
+import com.openggf.level.LevelTransitionCoordinator;
+import com.openggf.game.RespawnState;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -76,6 +83,47 @@ class TestSonic3kCnzCarryTrigger {
     @Test
     void mgzAct1SonicAndTailsDoesNotFire() {
         assertFalse(trigger.shouldEnterCarry(ZONE_MGZ, 0, PlayerCharacter.SONIC_AND_TAILS));
+    }
+
+    @Test
+    void savedOriginAtAFormerPickupRectangleCannotRestartTheNativeCarry() {
+        var level = mock(LevelManager.class);
+        var leader = mock(AbstractPlayableSprite.class);
+        when(leader.currentLevelManagerIfAvailable()).thenReturn(level);
+        when(leader.getCentreX()).thenReturn((short)448);
+        when(leader.getCentreY()).thenReturn((short)1664);
+        when(level.getCurrentZone()).thenReturn(ZONE_MHZ);
+        when(level.getCurrentAct()).thenReturn(0);
+        var transitions = mock(LevelTransitionCoordinator.class);
+        when(level.getTransitions()).thenReturn(transitions);
+        assertTrue(trigger.isLeaderAtIntroPosition(leader), "fresh inlets remain eligible");
+        var saved = new BigRingReturnState(448,1664,192,1568,1,(byte)12,(byte)13,
+                2048,0,0,ZONE_MHZ,0,-1,0,0,0,0,0);
+        when(level.getBigRingReturn()).thenReturn(saved);
+        assertTrue(trigger.isLeaderAtIntroPosition(leader), "unselected Saved2 bank is not a return");
+        when(transitions.isLastStarPostHitSet()).thenReturn(true);
+        assertFalse(trigger.isLeaderAtIntroPosition(leader), "native nonzero CPU star-post flag bypasses carry");
+        when(level.getBigRingReturn()).thenReturn(null);
+        assertFalse(trigger.isLeaderAtIntroPosition(leader), "native copied eligibility survives bank consumption");
+        when(transitions.isLastStarPostHitSet()).thenReturn(false);
+        assertTrue(trigger.isLeaderAtIntroPosition(leader), "next fresh assembly republishes zero");
+    }
+
+    @Test
+    void aRealCheckpointBypassesCarryAndFreshPlacementStillUsesTheNativeInlet() {
+        var level = mock(LevelManager.class);
+        var leader = mock(AbstractPlayableSprite.class);
+        var checkpoint = mock(RespawnState.class);
+        when(leader.currentLevelManagerIfAvailable()).thenReturn(level);
+        when(leader.getCentreX()).thenReturn((short)24);
+        when(leader.getCentreY()).thenReturn((short)1536);
+        when(level.getCheckpointState()).thenReturn(checkpoint);
+        when(level.getTransitions()).thenReturn(mock(LevelTransitionCoordinator.class));
+        assertTrue(trigger.isLeaderAtIntroPosition(leader));
+        when(checkpoint.isActive()).thenReturn(true);
+        assertFalse(trigger.isLeaderAtIntroPosition(leader));
+        when(checkpoint.isActive()).thenReturn(false);
+        assertTrue(trigger.isLeaderAtIntroPosition(leader));
     }
 
     @Test

@@ -19,7 +19,7 @@ class TestS3kSlotBonusCageObjectInstance {
 
     @Test
     void spikePayoutClockIncludesBlockedSpawnsAndFinalChildrenButExcludesEjection() throws Exception {
-        var state = com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap();
+        var state = com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources());
         var controller = new S3kSlotStageController(state);
         controller.latchResolvedPrizeForCapture(-4);
         forceOptionCycleState(controller, 0x0C);
@@ -49,7 +49,8 @@ class TestS3kSlotBonusCageObjectInstance {
     @Test
     void captureCentersNearbyPlayableAndLocksControl() {
         ObjectSpawn spawn = new ObjectSpawn(0x460, 0x430, 0x00, 0x00, 0x00, false, 0);
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
 
         S3kSlotBonusCageObjectInstance cage = new S3kSlotBonusCageObjectInstance(spawn, controller);
@@ -84,7 +85,8 @@ class TestS3kSlotBonusCageObjectInstance {
     @Test
     void debugPlayableUpdatesAnimatedAnchorButDoesNotCapture() {
         ObjectSpawn spawn = new ObjectSpawn(0x460, 0x430, 0x00, 0x00, 0x00, false, 0);
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
         controller.setScalarIndex(0x4000);
         controller.tick();
@@ -117,7 +119,8 @@ class TestS3kSlotBonusCageObjectInstance {
     @Test
     void captureLatchesPositiveResolvedPrizeIntoRingPayout() throws Exception {
         ObjectSpawn spawn = new ObjectSpawn(0x460, 0x430, 0x00, 0x00, 0x00, false, 0);
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
         controller.latchResolvedPrizeForCapture(6);
         forceOptionCycleState(controller, 0x0C);
@@ -138,7 +141,8 @@ class TestS3kSlotBonusCageObjectInstance {
     @Test
     void captureLatchesNegativeResolvedPrizeIntoFixedSpikePenaltyBudget() throws Exception {
         ObjectSpawn spawn = new ObjectSpawn(0x460, 0x430, 0x00, 0x00, 0x00, false, 0);
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
         controller.latchResolvedPrizeForCapture(-4);
         forceOptionCycleState(controller, 0x0C);
@@ -158,7 +162,8 @@ class TestS3kSlotBonusCageObjectInstance {
     @Test
     void captureDoesNotStartRewardSpawnWhileOptionCycleIsStillUnresolved() throws Exception {
         ObjectSpawn spawn = new ObjectSpawn(0x460, 0x430, 0x00, 0x00, 0x00, false, 0);
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
         controller.latchResolvedPrizeForCapture(6);
         forceOptionCycleState(controller, 0x0C);
@@ -176,7 +181,8 @@ class TestS3kSlotBonusCageObjectInstance {
     @Test
     void appendRenderCommandsSuppressesUnusedCageVisual() {
         ObjectSpawn spawn = new ObjectSpawn(0x460, 0x430, 0x00, 0x00, 0x00, false, 0);
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
 
         S3kSlotBonusCageObjectInstance cage = new S3kSlotBonusCageObjectInstance(spawn, controller);
@@ -195,7 +201,8 @@ class TestS3kSlotBonusCageObjectInstance {
     @Test
     void releaseClearsObjectControlProfileAfterPayoutCompletes() throws Exception {
         ObjectSpawn spawn = new ObjectSpawn(0x460, 0x430, 0x00, 0x00, 0x00, false, 0);
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
         controller.latchResolvedPrizeForCapture(0);
         forceOptionCycleState(controller, 0x0C);
