@@ -598,3 +598,16 @@ chain189/12,719/82,067 raw fields remain red. Sampled presence improves1055→16
 where native cork-floor reused-parent allocation differs; second-entry ring/
 flash order remains unresolved. [Exact source and evidence](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#manager-dispatch-preserves-the-native-coarse-x-retirement)
 separate local owner qualification from pixel/audio and whole-route parity.
+
+
+### 2026-10-14 actual image spot evidence
+
+Native/engine Monkey1680 and genuine AIZ2 shared-projectile6970 images are
+captured and inspected; the old3224 `aiz-projectile` filename is a Bloominator
+BODY and earns no projectile credit. Original movie/core hashes, actual provider
+bounds, prepared/published SAT/palette and source clocks are retained. HCZ0/30
+engine clips now resolve without fixture copies: native0 publishes the title,
+engine0 the waterfall; native full-movie HUD carry differs from standalone
+bootstrap. [Exact images and limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#actual-native-and-engine-image-spots)
+are bounded corroboration, not pixel/priority/waveform parity or joined fresh-
+return title certification. No extra native wait or gameplay hydration was used.
