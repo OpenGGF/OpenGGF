@@ -763,11 +763,12 @@ World-mode pieces keep their native world positioning plus the existing display
 inset. The renderer uses the existing registered resident-VRAM range/DMA refresh
 helper; drawing neither reloads art nor submits substitute jobs.
 
-Create_Continue_Sprite has no failure test. At full native dynamic RAM it can
-write over the last occupied SST. This inherited missing-emulation edge remains
-unsupported/unqualified; it is not accepted as an intentional deviation. The
-typed manager retains the admitted prefix in one pass, with no retries/healing.
-Ordinary and fragmented stock admission and reconstruction are covered.
+At this presentation repair's source, Create_Continue_Sprite had no failure
+test. Full native dynamic RAM could overwrite the last occupied SST; the typed
+manager instead retained only the admitted prefix. This was inherited missing
+emulation, not an accepted intentional deviation. The subsequent allocation
+parity slice below supersedes that bounded implementation decision, while
+complete legal child-graph pressure qualification remains separate.
 
 `loc_5D9EE` and `loc_5E08A` admit one independently managed palette owner after normal
 color 1 becomes `$EEE`. The local guard is set before the one allocation attempt.
@@ -940,3 +941,124 @@ python3 "$OPENGGF_REPOSITORY_ROOT/tools/testing/maven_queue.py" --lean -Dmse=off
 python3 "$OPENGGF_REPOSITORY_ROOT/tools/testing/maven_queue.py" --lean -Dmse=off "-Ds3k.rom.path=$S3K_ENDING_ROM" '-Dtest=TestSwScrlEndingResources,TestSwScrlEnding,TestParallaxRewindSnapshot,TestFbzScrollHandler#providerReloadCreatesFreshFbzAccumulatorOwner,TestSonic3kCnzScroll#providerReturnsCnzHandlerForCnzZone,SwScrlMhzTest#providerUsesMhzDeformForMushroomHill,SwScrlLbzTest#providerRoutesLbzToDedicatedHandler,SwScrlHpzTest#providerRoutesHpzToDedicatedHandler+giantRingDestinationUsesSanctuaryScrollButBossActKeepsFallback,TestS3kSszScrollBands#providerRoutesSkySanctuaryToItsOwnHandler,SwScrlIczTest#providerRoutesIczToDedicatedHandler,SwScrlLrzTest#providerRoutesBothLavaReefActsToTheDedicatedHandler+bossActsNoLongerBorrowTheHiddenPalaceHandler+zoneOnlyLookupStillReturnsTheHiddenPalaceHandler+initForZoneMakesTheZoneOnlyLookupActAware,SwScrlSlotsTest#providerRoutesSlotsToDedicatedHandler,SwScrlHczTest#providerRoutesHczToDedicatedHandler,SwScrlMgzTest#providerRoutesMgzToDedicatedHandler,TestSwScrlS3kDezFinalBoss#providerSeparatesFinalBossFromSanctuary' test
 JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl python3 "$OPENGGF_REPOSITORY_ROOT/tools/testing/maven_queue.py" -Dmse=off "-Ds3k.rom.path=$S3K_ENDING_ROM" '-Dtest=TestS3kEndingLifecycleCapture,TestS3kEndingSceneResources,TestS3kEndingClouds,TestS3kEndingSceneState,TestS3kEndingPresentationCapture#nativeRescueAllocatesBothIslandGroupsAndKeepsTheirArtAndPhaseReplay+nativeSuperAizHoldOwnsWaterfallTorchClockAndIndependentMasterPaletteWithReplay' test
 ```
+
+
+## 2026-10-14 continuation overwrite core
+
+Base `5b2ff8e7851b99dd40998dfc41fbfd21c80031ef`, isolated
+`bugfix/ai-s3k-parity-allocation`. This is the allocation transfer core, not a
+new certification of native whole-scene pixels/audio or every live child graph.
+The coordinator owns the missing managed D01 flight graph and its composition
+with these projections, current matrix/discrepancies and 0.7 release prose.
+
+### Independent byte-RAM oracle and consumed residue
+
+`Create_Continue_Sprite` ROM `$5FE1E` calls `AllocateObject` `$1BAF2` without testing
+failure. The literal opcode oracle verifies the complete 42-byte writer and the
+allocator header/loop before executing its independent 64 KiB byte-RAM model.
+The allocator preincrements Dynamic_object_RAM `$B0DE` by `$4A`, checks 90 slots
+(global SST4 through93), and leaves A1=`$CAE2` after all occupied probes. Each
+writer changes only code pointer0..3, subtype2C, ordinal2D, X word10..11 and
+Y word14..15. Every other nonzero byte in the last-SST oracle remains intact;
+neighbor92 is unchanged. Repeated full-table entries overwrite93 in table order,
+while one earlier hole admits one entry and all subsequent entries overwrite93.
+There is one scan per entry, with no retries or backfilling.
+
+The runtime bridge uses live engine-owned `NativeSstStateSource`, not ROM trace
+snapshots, fixture hydration or disassembly assets. Its verified consumed fields
+are render flags, low X/Y fractions, mapping/cursor/timer22/23/24, flags38, status2A,
+priority08 and art_tile0A. Unknown consumed residue fails before any registration
+mutation. This is not a claimed export of arbitrary 74-byte object RAM. The
+new IslandLift owner retains the supplied fields until its actual first dispatch;
+`loc_5EDAC` then writes priority `$300` and art `$E2FF` while leaving status intact.
+Types45–47 retain mapping22 in `loc_5EE86`, as well as the cursor. Both low flip
+bits reach the existing ROM-backed rendering helper. The old script30 is not
+needed by this owner:41/42 use literal scripts and43–47 overwrite it in init.
+
+Native replacement changes a dispatch owner without invoking delete, onUnload,
+respawn retirement or a new numeric identity. The package-private registration
+collaborator retains the physical allocation and its ObjectRefId, preserves
+placed-object links and publishes the successor at the existing execution
+cursor. A later slot executes once in the current pass; an already visited slot
+waits until the next pass. Ordinary checked AllocateObject still rejects a full
+table. `NativeSstSlotAccess.currentOwner(manager, absoluteSlot)` resolves the live
+physical SST each time: a child must retain the native parent slot and read its
+current owner, rather than continue reading a displaced Java parent. Status,
+priority and art can be consumed by existing children before replacement init.
+The coordinator's child owner will use this port; that graph's full-pressure
+acceptance remains open until composed tests prove its real legal occupants.
+
+### Observed focused evidence and rejected premises
+
+The first two-case oracle/engine run was RED on the base behavior: raw-RAM oracle
+passed; engine SST93 remained subtype41 instead of native subtype42. Command:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestS3kEndingContinuationPressure' \
+  '-Ds3k.rom.path=MAIN_WORKSPACE/Sonic and Knuckles & Sonic 3 (W) [!].gen' test
+```
+
+`MAIN_WORKSPACE` is the actual absolute main workspace, not a new ROM copy/link.
+The supplied 4 MiB locked-on ROM was independently checked as CRC32 `63522553`,
+SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`. The initial core passed31 cases.
+The expanded six-case run had one fixture error: fixed construction correctly
+rejects support109, so the declared later-cursor writer must use the existing
+`addDynamicObjectAtSlot`; the other five passed. This was not a runtime allocator
+failure. A rejected source note confused `clr.b5(a0)` with render_flags; constants
+prove byte5 is routine and byte4 is render_flags. No raw-flags behavior was
+changed from that interpretation.
+
+Core/header selector finished2026-10-14 08:40:21 BST,38 cases with zero
+failures/errors/skips,1:08 Maven:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestS3kEndingContinuationPressure,TestS3kEndingIslandLift,TestObjectManagerFixedSstExecution,TestObjectManagerFixedSstInitialization,TestArchitecturalSourceGuard#objectManagerFacadeStaysWithinExtractedCollaboratorBudget' \
+  '-Ds3k.rom.path=MAIN_WORKSPACE/Sonic and Knuckles & Sonic 3 (W) [!].gen' test
+```
+
+Pressure9 includes an actual native cloud at93 with nonzero live fractions,
+retained header/cursor state and stable identity; complete registered-world
+capture is restored cloud→IslandLift→cloud and replayed30 steps without filtered
+comparisons. Synthetic nonzero occupants prove only the manager partial-write,
+no-unload and cursor contract; they do not certify native scene pressure. The
+other checks are existing IslandLift22, fixed execution2, fixed initialization4
+and the exact manager facade guard1. Existing fixed construction was extracted
+unchanged into a small package-private rollback collaborator; public/protected
+manager declarations and snapshot fields remain unchanged. No broad suite,
+canonical trace, native audiovisual capture or full-capacity real D01 graph pass
+is claimed by this slice.
+
+
+The commit hook then exposed a declaration-normalizer false positive: the new
+package-private generic method's `extends AbstractObjectInstance` matched its
+type-declaration filter. The exact reported delta contained only that internal
+method and its continuation. No public/protected declaration changed. The
+manager bridge now returns AbstractObjectInstance; the factory's guaranteed T
+cast remains in the unannotated typed port. No pin, descriptor, API version,
+policy bypass or budget increase was used. Exact hook-normalized manager output
+is byte-identical to the base. The changed pressure10 + facade1 + exact current
+0.7 signature-pin1 selector passed12/0/0/0 at08:46:07 BST (1:03 Maven), including a
+real PaletteFlash at93 and cross-class full-world restore in both directions.
+`loc_5FC1E..5FC78` writes only code, timer2E and steps39 before native deletion;
+its live consumed sprite fields remain zero from actual fresh-SST provenance.
+
+A further owning-source check corrected the director projection: `loc_5DC02`
+writes status2A bit7, not flags38 bit1. A literal `BSET #7,$2A(a0)` opcode gate at
+ROM `$5DC16` and the exact projection case passed1/0/0/0 at08:49:37 BST (1:02 Maven):
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestS3kEndingContinuationPressure#nativeDirectorStatusRetirementDoesNotInventControlBitOne' \
+  '-Ds3k.rom.path=MAIN_WORKSPACE/Sonic and Knuckles & Sonic 3 (W) [!].gen' test
+```
+
+The gate was initially placed at routine-entry `$5DC02`; direct opcode inspection
+caught that draft-premise error during compilation. Only that owned obsolete
+job was canceled before tests, and the corrected instruction-address case ran.
+The coordinator will supply actual new child flags38 writes in its graph owner;
+this core does not claim absent child progression from derived parent defaults.
+Across these focused selectors there are41 distinct cases (repeated pressure and
+facade checks are not new coverage). Whole legal graph pressure and native scene
+pixel/audio comparison remain pending; this evidence does not close them.

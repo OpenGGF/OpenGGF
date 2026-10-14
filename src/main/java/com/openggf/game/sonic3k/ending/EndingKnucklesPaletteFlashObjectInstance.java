@@ -9,7 +9,7 @@ import com.openggf.level.objects.*;
 import java.util.List;
 
 /** loc_5FC1E: three white steps, a twenty-pass hold, then three target steps. */
-public final class EndingKnucklesPaletteFlashObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public final class EndingKnucklesPaletteFlashObjectInstance extends AbstractObjectInstance implements SpawnRewindRecreatable, NativeSstStateSource {
     private int phase,timer,steps=2;
     public EndingKnucklesPaletteFlashObjectInstance(){this(new ObjectSpawn(0,0,0,0,0,false,0));}
     public EndingKnucklesPaletteFlashObjectInstance(ObjectSpawn spawn){super(spawn,"KnucklesEndingPaletteFlash");}
@@ -36,6 +36,8 @@ public final class EndingKnucklesPaletteFlashObjectInstance extends AbstractObje
             else ObjectLifetimeOps.deleteNoRespawn(this);
         }
     }
+    // loc5FC1E..5FC78 writes only code, timer2E and steps39, not consumed sprite fields.
+    @Override public NativeSstState nativeSstState(){return NativeSstState.CLEARED;}
     @Override public boolean isPersistent(){return true;}
     @Override public void appendRenderCommands(List<GLCommand> commands){ }
 }

@@ -28,6 +28,12 @@ public final class EndingSpriteRenderSupport {
     public static void draw(ObjectServices services, String key, int mappingAddress,
                             int tileBase, int paletteBase, int frame, int worldX, int worldY,
                             boolean flipX, boolean highPriority, int priorityBucket) {
+        draw(services,key,mappingAddress,tileBase,paletteBase,frame,worldX,worldY,flipX,false,highPriority,priorityBucket);
+    }
+
+    public static void draw(ObjectServices services, String key, int mappingAddress,
+                            int tileBase, int paletteBase, int frame, int worldX, int worldY,
+                            boolean flipX, boolean flipY, boolean highPriority, int priorityBucket) {
         if (!(services.currentLevel() instanceof Sonic3kLevel level)) return;
         if (!(services.levelManager().getGameModule().getObjectArtProvider()
                 instanceof Sonic3kObjectArtProvider provider)) return;
@@ -57,7 +63,7 @@ public final class EndingSpriteRenderSupport {
         try {
             // Mapping-piece priority is retained. art_tile's high bit composes
             // through the ordinary sprite context, independently of SAT bucket.
-            renderer.drawFrameIndex(frame, worldX, worldY, flipX, false, paletteBase);
+            renderer.drawFrameIndex(frame, worldX, worldY, flipX, flipY, paletteBase);
         } finally {
             graphics.setCurrentSpriteTileOcclusionPaletteMask(previousMask);
         }
