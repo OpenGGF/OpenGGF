@@ -934,3 +934,62 @@ snapshot. Retain the ed7dc650 historical runtime jar/classpath and presentation
 rebuild drafts. A rebuilt movie is new evidence; the retained mixed-source
 films do not become latest-integrated or whole-scene native pixel parity.
 Formal route breadth and strict trace frontiers stay open as recorded.
+
+### Initial collision publication and real checkpoint boundaries
+
+Root's `feature/ai-s3k-parity-coverage`, parent `9f6475aa0`, found a real
+LRZ2 checkpoint death/title-boundary capture error: erased horizontal spike
+balls from SST5..12 remained in both collision views; SST5 already held a
+star-post child and SST6..12 were empty. The capturing adapter belonged to the
+current manager. This was not a stale world or a missing recreation factory.
+The shared execution wrapper published before its caller's range deletion,
+whereas `Sprite_CheckDeleteTouch3` / `loc_1B666` checks range before AddList.
+Publication now follows the actual caller's deletion/range tail, preserving
+routine execution, solid completion, slot order and the list owner's native
+pending-delete eligibility. Fixed initial handlers publish after their wrapper.
+A separate full-reset regression proves that retaining collision buffers while
+clearing actor identities is also invalid; reset now retires both views. No
+public API, snapshot shape or slot encoding changes.
+
+Rejected diagnostics: 29060 (5 tests,1 failure,1 error),38099 (1 error),
+7748 (25 tests,1 failure,1 error;23 pure cases pass),72498 (2 tests,1 failure,
+1 error),20644 and34187 (each2 tests,1 failure,1 error) kept the LRZ missing-owner
+error or exposed invalid SSZ setup assumptions.64116 is the independent pure
+full-reset red (1 test,1 failure).68890 and22572 stopped at test compilation
+and ran zero cases. The reset-only candidate did not close the LRZ error.
+A diagnostic that checked only the previous list missed initial-build removals
+from the current list; all temporary instrumentation was removed.
+
+Corrected focused gate94957 completes90 tests with1 new SSZ opening assertion
+failure,0 errors/skips at10:39:13 UTC (31.502s Maven). Its89 passing cases are
+84 manager/collision/reference-closure and startup consumers, the independent
+15-placement census, and four local layout contact/two-death witnesses. The
+failed new opening assertion stopped at the arrival script's saved index1;
+this is not contact with the authored subtype2 post. Replacement9651 and
+47382 each run1 test with1 no-contact bound failure; the latter uses the
+already maintained cold-complete320 inputs and remains alive through6000.
+96786 uses the existing upper-walkway boundary7911 and passes1/0/0/0 at
+10:45:09 UTC (26.005s Maven), naturally saving literal post2 ($640,$5E8) in
+`GameplayCaptureSession` with no position or checkpoint writes. Thus90 distinct
+focused identities pass across retained89 plus corrected1; this is not one
+pristine90-case invocation. The harness now drains pending render tasks after
+each production step, matching the established route helper; this final harness
+contract will be included in the pending product qualification.
+
+All checks use normal queued Maven, Java25, explicit surfaceless EGL, unset
+DISPLAY/WAYLAND_DISPLAY, null OpenAL driver and original absolute identity-
+verified ROM paths. The gate selection is:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestObjectManagerRewindSnapshot,TestObjectCollisionResponseList,TestObjectManagerRewindReferenceClosure,TestLrzSszCheckpointRoutes#independentPlacementInventoryIncludesTheNoPostKnucklesFinalArena+firstPostOfEachLayoutHasARealContactAndDeathBoundary+ordinarySszOpeningPhysicallySavesTheFirstAuthoredPost,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' "-Dsonic1.rom.path=$S1_TASK_ROM" "-Dsonic2.rom.path=$S2_TASK_ROM" "-Ds3k.rom.path=$S3K_TASK_ROM" test -B
+```
+
+The corrected standalone selector is
+`TestLrzSszCheckpointRoutes#ordinarySszOpeningPhysicallySavesTheFirstAuthoredPost`.
+The separate local SSZ products declare saved index1 before initial dispatch to
+select the no-arrival branch. Their physical posts2..4 remain unseeded; this
+synthetic local bootstrap is not an authored post1 or a cold-route claim. Full
+880 products, composed source guards/traces, combined smoke, integration and
+push remain pending. User-requested emulator screenshot spot checks are added
+to this follow-up; unchanged verified native screenshots can be reused, while
+current engine pictures retain exact source/input and observation provenance.

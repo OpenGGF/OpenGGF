@@ -74,7 +74,6 @@ final class ObjectExecutionController {
             if (instance instanceof AbstractObjectInstance object) {
                 object.clearAwaitingFirstTouchExecution();
             }
-            objects.publishInitialCollisionResponse(instance);
             if (mode == SolidExecutionMode.AUTO_AFTER_UPDATE && !instance.isDestroyed()) {
                 registry.publishCheckpoint(objects.processCompatibilitySolidCheckpoint(
                         instance, player, sidekicks, solidPostMovement));

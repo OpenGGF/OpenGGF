@@ -10,6 +10,8 @@ Unreleased. The earlier development themes remain in
   tail, allowing ordinary movement after a fresh zone handoff. Publication also
   restores the destination ring count after the title boundary temporarily
   retains the source count, including rewind across that boundary.
+  Initial touch publication follows each object's native range/deletion tail,
+  and a full object-table reset retires both collision buffers before slot reuse.
 
 - **S3K Knuckles routes:** Locked-on Mushroom Hill deletes the standalone S&K
   intro before it can freeze the camera and take player control. Its native

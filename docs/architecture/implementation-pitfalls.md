@@ -1698,3 +1698,14 @@ A local HeadlessTestFixture can retain that camera. Explicitly refresh its viewp
 before loading and assert the dimension, or create a fresh scenario context.
 Four wider S3K credit-plane vectors read shifted glyphs with a retained320 camera
 while the320 vector passed (2026-10-13). A width parameter is not width evidence.
+
+**Initial touch publication follows the native range tail.** An object routine can
+finish before its caller performs the native out-of-range deletion. Publish the
+initial collision response only after that caller keeps the actor. LRZ2
+`Sprite_CheckDeleteTouch3` / `loc_1B666` checks the anchor range before AddList;
+publishing inside the shared update wrapper retained erased spike-ball owners
+in both collision buffers after a real checkpoint death/title boundary
+(2026-10-14 S3K follow-up). A full SST reset must also retire both buffers before
+clearing identity tables and reusing slots. Do not hide missing identities,
+replace them with new slot occupants, or suppress every native pending-delete
+actor: the response-list eligibility owner retains its own native predicate.
