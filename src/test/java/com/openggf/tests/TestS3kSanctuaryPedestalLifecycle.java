@@ -1,5 +1,6 @@
 package com.openggf.tests;
 
+import com.openggf.Engine;
 import com.openggf.GameLoop;
 import com.openggf.configuration.WidescreenAspect;
 import com.openggf.control.InputHandler;
@@ -7,6 +8,7 @@ import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.RecordedInputSnapshots;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
+import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.sonic3k.objects.HPZSuperEmeraldObjectInstance;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageProvider;
@@ -54,6 +56,35 @@ class TestS3kSanctuaryPedestalLifecycle {
         assertPhysicalEntry(row, 3);
     }
 
+    static Stream<org.junit.jupiter.params.provider.Arguments> supportedNativeSelectors() {
+        return selectors(true);
+    }
+
+    static Stream<org.junit.jupiter.params.provider.Arguments> supportedWiderSelectors() {
+        return selectors(false);
+    }
+
+    private static Stream<org.junit.jupiter.params.provider.Arguments> selectors(boolean nativeWidth) {
+        return CanonicalEntryMatrixSupport.configurations()
+                .filter(row -> (row.aspect() == WidescreenAspect.NATIVE_4_3) == nativeWidth)
+                .flatMap(row -> java.util.stream.IntStream.range(0, 7).mapToObj(stage ->
+                        org.junit.jupiter.params.provider.Arguments.of(row, stage)));
+    }
+
+    @ParameterizedTest(name = "actual native-width selector {0}/stage{1}")
+    @MethodSource("supportedNativeSelectors")
+    void everyNativeWidthProductPhysicallySelectsAllSevenNativeStageOwners(
+            CanonicalEntryMatrixSupport.Row row, int stage) throws Exception {
+        assertPhysicalEntry(row, stage);
+    }
+
+    @ParameterizedTest(name = "actual wider selector {0}/stage{1}")
+    @MethodSource("supportedWiderSelectors")
+    void everyWiderProductPhysicallySelectsAllSevenNativeStageOwners(
+            CanonicalEntryMatrixSupport.Row row, int stage) throws Exception {
+        assertPhysicalEntry(row, stage);
+    }
+
     private void assertPhysicalEntry(CanonicalEntryMatrixSupport.Row row, int stage) throws Exception {
         var fixture = support.boot(row);
         // Declared persistent progress only, before the controller first dispatch.
@@ -64,6 +95,7 @@ class TestS3kSanctuaryPedestalLifecycle {
         var loop = new GameLoop(input);
         loop.setGameplayMode(fixture.gameplayMode());
         loop.setGameMode(GameMode.LEVEL);
+        int lives=GameServices.gameState().getLives();
         try {
             for (int frame = 0; frame < 200; frame++) advance(loop, row, 1);
             var main = GameServices.sprites().getMainPlayable();
@@ -120,10 +152,34 @@ class TestS3kSanctuaryPedestalLifecycle {
             assertEquals(GameMode.SPECIAL_STAGE,loop.getCurrentGameMode(),"actual stage load"+stage);
             var provider=assertInstanceOf(Sonic3kSpecialStageProvider.class,loop.getActiveSpecialStageProvider());
             assertEquals(stage,provider.getCurrentStage());
+            // Scene drawing is omitted in this sparse lifecycle driver. Invoke
+            // Engine's actual presentation binding with the resolved preset,
+            // without constructing another engine/loop or changing gameplay RAM.
+            bindIncomingPresentation(provider, support.config.getInt(
+                    com.openggf.configuration.SonicConfiguration.SCREEN_WIDTH_PIXELS));
             assertTrue(provider.hasSpecialStages());assertTrue(provider.supportsRewind());
             var incoming=fixture.gameplayMode().getRewindController();
             assertTrue(incoming==null || incoming.currentFrame()<outgoing,"special world retires outgoing hub history");
             assertFalse(main.getDead());
+            // The actual incoming provider/fade owns readiness. Raw restoration
+            // begins only after that boundary releases, within this one special
+            // world; no native return/results callback is crossed.
+            for (int frame=0;frame<160 && (!provider.isEntryPresentationReady()
+                    ||GameServices.fade().isActive()||GameServices.fade().hasPendingCompletion());frame++)
+                advanceSpecial(loop,provider,stage,lives,1);
+            assertTrue(provider.isEntryPresentationReady());
+            assertFalse(GameServices.fade().isActive());
+            assertFalse(GameServices.fade().hasPendingCompletion());
+            assertEquals(support.config.getInt(com.openggf.configuration.SonicConfiguration.SCREEN_WIDTH_PIXELS),
+                    provider.getSpecialStageViewport().logicalWidth(), "actual resolved incoming presentation width");
+            var specialBefore=registry.capture();
+            advanceSpecial(loop,provider,stage,lives,45);var specialAfter=registry.capture();
+            for(int cycle=0;cycle<2;cycle++) {
+                registry.restore(specialBefore);
+                TestS3kCanonicalEntryLifecycle.assertSameWorld(specialBefore,registry.capture(),"incoming Super-stage restore",45);
+                advanceSpecial(loop,provider,stage,lives,45);
+                TestS3kCanonicalEntryLifecycle.assertSameWorld(specialAfter,registry.capture(),"incoming Super-stage replay",45);
+            }
         } finally {loop.closePresence();}
     }
 
@@ -184,6 +240,30 @@ class TestS3kSanctuaryPedestalLifecycle {
             }
             assertTrue(errors.isEmpty(),()->"actual native B5 target/current publication: "+errors);
         } finally {loop.closePresence();}
+    }
+
+    private static void bindIncomingPresentation(SpecialStageProvider provider, int width)
+            throws ReflectiveOperationException {
+        Engine presentation = org.mockito.Mockito.mock(Engine.class,
+                org.mockito.Mockito.CALLS_REAL_METHODS);
+        var projection = Engine.class.getDeclaredField("projectionWidth");
+        projection.setAccessible(true);
+        projection.setDouble(presentation, width);
+        var bind = Engine.class.getDeclaredMethod("applySpecialStageViewport", SpecialStageProvider.class);
+        bind.setAccessible(true);
+        bind.invoke(presentation, provider);
+    }
+
+    private static void advanceSpecial(GameLoop loop,Sonic3kSpecialStageProvider provider,
+                                       int stage,int lives,int frames) {
+        for(int frame=0;frame<frames;frame++) {
+            loop.step();GameServices.graphics().runPendingRenderThreadTasks();
+            assertEquals(GameMode.SPECIAL_STAGE,loop.getCurrentGameMode(),"bounded incoming special-world window");
+            assertSame(provider,loop.getActiveSpecialStageProvider());
+            assertEquals(stage,provider.getCurrentStage());
+            assertFalse(GameServices.sprites().getMainPlayable().getDead());
+            assertEquals(lives,GameServices.gameState().getLives(),"no hidden reload during incoming replay");
+        }
     }
 
     private void advance(GameLoop loop,CanonicalEntryMatrixSupport.Row row,int frames) {

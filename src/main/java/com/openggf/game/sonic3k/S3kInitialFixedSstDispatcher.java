@@ -86,6 +86,13 @@ final class S3kInitialFixedSstDispatcher implements InitialFixedSstDispatcher {
         } else {
             empty(109);
         }
+        // Level loc_64DC writes Dynamic_object_RAM+5+$2E unconditionally,
+        // including the sanctuary B5 that occupies that same physical SST8.
+        // Select the actual occupant, never a zone or fitted frame clock.
+        for (var controller : objects.activeObjectsOfType(
+                com.openggf.game.sonic3k.objects.HPZSSEntryControlObjectInstance.class)) {
+            if (!controller.isDestroyed() && controller.getSlotIndex() == 8) controller.enterLevelLoop();
+        }
     }
 
     private static PowerUpObject selectP1Shield(AbstractPlayableSprite player) {

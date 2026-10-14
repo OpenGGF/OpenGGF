@@ -24,7 +24,8 @@ import com.openggf.game.GameServices;
  */
 public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
         implements com.openggf.game.internal.QueuedPatternDmaPublication,
-        com.openggf.game.internal.SpriteTablePublication {
+        com.openggf.game.internal.SpriteTablePublication,
+        com.openggf.game.internal.InitialLevelScrollPreparation {
     private final Sonic3kLevelEventManager levelEventManager;
     private final Sonic3kFreshTitleCardSst freshTitleCardSst = new Sonic3kFreshTitleCardSst();
 
@@ -197,6 +198,21 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
 
     static int hpzReturnCameraX(int stageIndex) {
         return S3kSanctuaryRuntimeState.resultsCameraX(stageIndex);
+    }
+
+    @Override
+    public void prepareInitialLevelScroll() {
+        var level = GameServices.level();
+        // An authored host's logical index is not a native ROM script identity.
+        // Only Level: fresh stock assembly admitted the owning setup token;
+        // special/results/preview/restoration loops carry no such admission.
+        if (!(level.getCurrentLevel() instanceof Sonic3kLevel loaded)
+                || !loaded.hasStockRomZoneIdentity()) return;
+        // Level loc_6310 (asm:7759-7760) calls DeformBgLayer before LevelSetup and
+        // the initial Process_Sprites/Render_Sprites pair. Reproduce the real
+        // dispatch once so its first published scroll is already initialized;
+        // post-restore derived reconstruction then observes the same state.
+        level.recomputeParallaxOnlyForCurrentFrame();
     }
 
     @Override

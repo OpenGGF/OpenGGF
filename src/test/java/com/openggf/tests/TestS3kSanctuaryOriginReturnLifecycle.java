@@ -84,6 +84,17 @@ class TestS3kSanctuaryOriginReturnLifecycle {
         assertOriginReturn(row);
     }
 
+    static Stream<CanonicalEntryMatrixSupport.Row> configurations() {
+        return CanonicalEntryMatrixSupport.configurations();
+    }
+
+    @ParameterizedTest(name = "actual Saved2 supported product {0}")
+    @MethodSource("configurations")
+    void everySupportedProductUsesRealInletExitAndBothIncomingWorlds(
+            CanonicalEntryMatrixSupport.Row row) throws Exception {
+        assertOriginReturn(row);
+    }
+
     private void assertOriginReturn(CanonicalEntryMatrixSupport.Row row) throws Exception {
         var fixture = origin.boot(row);
         GameServices.gameState().restoreS3kEmeraldProgress(List.of(0, 0, 0, 0, 0, 0, 0), false);

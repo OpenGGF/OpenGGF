@@ -104,6 +104,11 @@ public final class S3kSanctuaryRuntimeState {
         return phase;
     }
 
+    /** Level loc_64DC writes $16 to fixed SST8's $2E after initial Process_Sprites. */
+    public void enterLevelLoop() {
+        if (phase == Phase.INTRO_WAIT) introTimer = 0x16;
+    }
+
     public boolean updateIntro() {
         if (phase != Phase.INTRO_WAIT) {
             return false;
