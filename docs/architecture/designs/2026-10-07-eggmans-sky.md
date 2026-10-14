@@ -897,3 +897,63 @@ outputs, not archived evidence. Changes integrated upstream since the announcer
 fix affect Second Strike and its S3K art/monitor consumers; the tested announcer
 and audio/test inputs remain unchanged. Those upstream changes are preserved
 in the next image and receive the workflow's own gates and native gameplay checks.
+
+### Refreshed Windows image qualification
+
+The retention correction integrated conflict-free and published as
+`485e89fbea5a2587b763052f0db115986ca681ce`, after preserving the separately
+integrated Second Strike changes. Windows workflow
+[38546428448](https://github.com/OpenGGF/OpenGGF/actions/runs/38546428448)
+completed successfully: the Windows job finished 10:12:24Z and fresh guards
+finished 10:14:09Z, with 680 cases and zero failures/errors/skips. The new
+executable passes the actual separately loaded bootstrap control, including
+file operations; the previously absent `Path.of` body is therefore exercised
+on Microsoft Windows. Its 18,192-entry/1,469-type audit passes, deliberate missing
+field/method controls fail with ordinary exit 1, all 25 shipped mods match their
+JVM registration results, and native development-source boot/batch launcher
+checks pass. The scanned 26th JAR is the disposable bootstrap fixture, not a
+shipped mod.
+
+The downloaded immutable artifact is source-pinned to that commit and SHA-256
+`e303626fbb6690a8023b017b75efc5195d20ab96a2dc668bb2a772769ca718e6`.
+Its Windows executable SHA-256 is
+`123610afc2574cf048dc2a054a9794981850d0c12365e775a24a644679e0277c`.
+Representative rendered gameplay, full voice-bank PCM and matched old/corrected
+announcer controls are submitted together through normal admission and the
+worktree lease, using an owned isolated Xvfb display rather than the shared
+desktop. Terminal results and the delivered ZIP checksum remain pending.
+
+The first leased Wine run admitted after 121 seconds and stopped with ordinary
+exit 1 after 38.185 seconds, at the same immutable Windows image. Act Practice
+and Eggman's Sky passed; all 122 voice clips reached final mixed PCM (minimum
+peak 17,272, minimum range 26,146). The next mod, Example Mutators, threw
+`AbstractMethodError` at `Sonic3kMutatorPolicyProvider.open`: its prepared catalog
+projection invokes `MutatorCatalog.hasDefinitions`, whose implementation was
+absent from the retention manifest. Registration and metadata for directly named
+members do not cover this engine-created service dispatch. This image is not
+qualified as a complete friends bundle and is not delivered.
+
+Both builders now include every implementation of the semantic prepared/transient
+mutator service and world-policy provider/state interfaces, alongside `GameModule`.
+The existing generator includes anonymous/unreferenced implementations and their
+method-owning ancestors automatically; this is not a concrete-class whitelist.
+A bootstrap-only matched contract control confirms that the old selection omits
+`MutatorCatalog.hasDefinitions()Z`, and that the new policy roots retain and audit
+it. It passed under normal admission at 10:21:27Z (Maven 3.332 seconds), with the
+standalone generator controls and six portable packaging cases. A further shared
+runtime bootstrap regression constructs the engine catalog reflectively and
+invokes its prepared policy projection, so the Windows builder exercises this
+callable body without ROMs. Its implementation class is named only as a string;
+creator bytecode therefore cannot incidentally supply its retention. Native
+gameplay of the full updated bundle is still required.
+
+The final updated fixture/selection check passed at 10:29:22Z under normal
+admission and the worktree lease, after 353 seconds of queue waiting and 3.408
+seconds of Maven execution. `maven_queue.py -B -Dmse=off exec:exec
+-Dexec.executable=python3 -Dexec.args=target/run_policy_retention_final_checks.py`
+compiled and executed the actual bootstrap fixture on Java 25, passed the
+matched omission/retention assertion for `hasDefinitions`, audited the corrected
+17,999-entry/1,413-type bootstrap-only contract, and passed the standalone
+generator regressions and six Windows/Linux packaging cases. Actual Windows
+dispatch and all-mod gameplay on the rebuilt image remain pending; the prior
+image's successes do not qualify changed native bodies.
