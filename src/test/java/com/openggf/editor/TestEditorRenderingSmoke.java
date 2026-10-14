@@ -237,9 +237,9 @@ class TestEditorRenderingSmoke {
 
         List<String> lines = renderer.buildLines();
 
-        assertTrue(lines.stream().anyMatch(line -> line.contains("World > Block 2")));
-        assertTrue(lines.stream().anyMatch(line -> line.contains("BLOCK_PANE")));
-        assertTrue(lines.stream().anyMatch(line -> line.contains("Block 2")));
+        assertTrue(lines.stream().anyMatch(line -> line.contains("World > Block 0")));
+        assertTrue(lines.stream().anyMatch(line -> line.contains("Terrain brush B2")));
+        assertTrue(lines.stream().anyMatch(line -> line.contains("Block 0")));
         assertTrue(lines.stream().anyMatch(line -> line.contains("Chunk 4")));
     }
 
@@ -268,7 +268,7 @@ class TestEditorRenderingSmoke {
 
         assertFalse(renderer.buildCommands().isEmpty());
         assertTrue(String.join(" ", renderer.buildLines()).contains("Block library"));
-        assertTrue(String.join(" ", renderer.buildLines()).contains("Block 2"));
+        assertTrue(String.join(" ", renderer.buildLines()).contains("Terrain brush B2"));
         assertTrue(String.join(" ", renderer.buildLines()).contains("Cursor"));
         assertFalse(renderer.buildTilePreview().isEmpty());
     }
@@ -397,7 +397,7 @@ class TestEditorRenderingSmoke {
         controller.descend();
         InspectableToolbarRenderer renderer = new InspectableToolbarRenderer(controller);
 
-        assertTextCommandsInsideChrome(renderer.buildTextCommands(), 4, 24);
+        assertTextCommandsInsideChrome(renderer.buildTextCommands(), 4, 28);
     }
 
     @Test

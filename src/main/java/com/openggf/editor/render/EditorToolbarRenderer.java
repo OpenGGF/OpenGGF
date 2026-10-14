@@ -50,14 +50,12 @@ public class EditorToolbarRenderer {
         if (!commands.isEmpty()) {
             graphicsManager.registerCommand(new GLCommandGroup(GL_LINES, commands));
         }
-        textRenderer.renderLines(buildStateLines(), TEXT_X, TEXT_Y);
+        textRenderer.renderFittedLines(buildStateLines(),TEXT_X,7,graphicsManager.getProjectionWidth()-20,.65f,7);
     }
 
     protected void appendCommands(List<GLCommand> commands) {
-        appendRectOutline(commands, 4, 4, 316, 24, CHROME_R, CHROME_G, CHROME_B);
-        appendLine(commands, 84, 4, 84, 24, CHROME_R, CHROME_G, CHROME_B);
-        appendLine(commands, 164, 4, 164, 24, CHROME_R, CHROME_G, CHROME_B);
-        appendLine(commands, 244, 4, 244, 24, CHROME_R, CHROME_G, CHROME_B);
+        var rect=new EditorUiLayout(graphicsManager.getProjectionWidth(),224).toolbar();
+        appendRectOutline(commands,rect.left(),rect.top(),rect.right(),rect.bottom(),CHROME_R,CHROME_G,CHROME_B);
     }
 
     protected List<String> buildStateLines() {
@@ -69,18 +67,13 @@ public class EditorToolbarRenderer {
                 == com.openggf.editor.persistence.EditorSaveManager.ApplyResult.UNSUPPORTED
                 ? UNSUPPORTED_PERSISTENCE_PREFIX : "";
         return List.of(persistenceWarning + controller.breadcrumb()
-                + " | Focus " + controller.focusRegion()
-                + " | Layer " + (controller.activeLayer() == 0 ? "FG" : "BG")
-                + " | " + (controller.currentLevel() != null && controller.currentLevel().isModifiedSinceLastSave()
-                ? "unsaved*" : "saved")
-                + " | Block " + valueOrNone(controller.selection().selectedBlock())
-                + " Chunk " + valueOrNone(controller.selection().selectedChunk())
-                + " | B " + controller.selectedBlockCellX() + "," + controller.selectedBlockCellY()
-                + " C " + controller.selectedChunkCellX() + "," + controller.selectedChunkCellY());
+                + " | " + (controller.activeLayer()==0?"FG":"BG")
+                + " | " + (controller.currentLevel()!=null&&controller.currentLevel().isModifiedSinceLastSave()?"unsaved*":"saved"),
+                controller.brushSummary(),controller.selectionSummary());
     }
 
     protected List<EditorTextRenderer.TextCommand> buildToolbarTextCommands() {
-        return textRenderer.buildTextCommands(buildStateLines(), TEXT_X, TEXT_Y);
+        return textRenderer.buildFittedTextCommands(buildStateLines(),TEXT_X,7,graphicsManager.getProjectionWidth()-20,.65f,7);
     }
 
     protected static void appendRectOutline(List<GLCommand> commands,

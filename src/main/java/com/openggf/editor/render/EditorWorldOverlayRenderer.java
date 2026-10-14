@@ -146,7 +146,12 @@ public class EditorWorldOverlayRenderer {
                     cameraDomainCoordinate(spawn.y(), cameraY),
                     OBJECT_MARKER_RADIUS,
                     OBJECT_R, OBJECT_G, OBJECT_B);
-            labels.add(new SpawnLabel(String.format("%02X:%02X", spawn.objectId(), spawn.subtype()),
+            if(controller!=null&&controller.selectedObjectSpawn()!=null
+                    &&controller.selectedObjectSpawn().layoutIndex()==spawn.layoutIndex())
+                appendRectOutline(markers,cameraDomainCoordinate(spawn.x(),cameraX)-9,
+                        cameraDomainCoordinate(spawn.y(),cameraY)-9,cameraDomainCoordinate(spawn.x(),cameraX)+9,
+                        cameraDomainCoordinate(spawn.y(),cameraY)+9,1f,1f,.2f);
+            labels.add(new SpawnLabel(spawn.objectKey()==null?String.format("%02X:%02X", spawn.objectId(), spawn.subtype()):spawn.objectKey(),
                     spawn.x(), spawn.y()));
         }
         for (RingSpawn spawn : level.getRings()) {
@@ -157,6 +162,11 @@ public class EditorWorldOverlayRenderer {
                     cameraDomainCoordinate(spawn.y(), cameraY),
                     RING_MARKER_RADIUS,
                     RING_R, RING_G, RING_B);
+            if(controller!=null&&controller.selectedRingSpawn()!=null
+                    &&controller.selectedRingSpawn().placementId()==spawn.placementId())
+                appendRectOutline(markers,cameraDomainCoordinate(spawn.x(),cameraX)-7,
+                        cameraDomainCoordinate(spawn.y(),cameraY)-7,cameraDomainCoordinate(spawn.x(),cameraX)+7,
+                        cameraDomainCoordinate(spawn.y(),cameraY)+7,1f,1f,.2f);
         }
         return new SpawnOverlay(markers, labels);
     }
