@@ -40,9 +40,13 @@ unless a row records a later disposition; current implementation takes precedenc
 S3K's bounded format-v2 host adapter has since landed (including object-set and
 palette ownership, tagged saves, and a deliberately empty/flat-scroll runtime).
 That delivers the bounded adapter commitment, not arbitrary stock zone events or
-editor live re-apply. Base-game streamed SFX overrides and the S1 zone adapter
-remain scheduled 0.8 follow-ons. Their public additions must be reviewed before
-API publication; the roadmap alone changes no API version or compatibility rule.
+native stock-zone editor re-apply. The editor completion workstream also supplies
+the bounded S1 v1 flat host and complete all-game project workflow; see the
+[level editor guide](../guide/creating/level-editor.md) and
+[level format contract](formats/level-definition.md). Base-game streamed SFX
+overrides remain a scheduled follow-on. Candidate additions still require review
+before API publication; the roadmap alone changes no API version or compatibility
+rule.
 
 ## Audit basis and sweep inventory
 
@@ -113,7 +117,7 @@ spec commitments.
 | Item | Original source | Owner | Evidence and cost/risk | Verdict |
 |---|---|---|---|---|
 | Base-game streamed SFX overrides | Root design §1 manifest override maps and §4 audio; Phase 1 non-goals; shared contract §1 audio manifest | Audio/mod runtime | The standalone sample proves bounded WAV one-shot decode/mix, reducing implementation risk, but base-game identity, manifest vocabulary, conflict reporting, and SMPS fallback remain unsolved. | **Schedule**. [Workstream A](../architecture/plans/2026-07-13-mod-support-original-scope-follow-ons.md#workstream-a--base-game-streamed-sfx-overrides). |
-| Sonic 1 new-zone adapter | Root design §8 Phase 2; Phase 0 §B; Phase 2 goal/out-of-scope | S1 level loading/mod zones | Original scope explicitly retained it. S1 bypasses the S2 plan seam, so a safe adapter needs dedicated architecture and parity gates. | **Schedule**. [Workstream B](../architecture/plans/2026-07-13-mod-support-original-scope-follow-ons.md#workstream-b--sonic-1-mod-zone-adapter). |
+| Sonic 1 new-zone adapter | Root design §8 Phase 2; Phase 0 §B; Phase 2 goal/out-of-scope | S1 level loading/mod zones | The editor completion implements a v1/16×16 flat host, native object/ring reconstruction, one collision path, and explicit incompatible-factory/loop rejection. | **Delivered** in the mutable candidate; see the [current format contract](formats/level-definition.md), `Sonic1ModZoneAdapter`, and `TestEditorHostExports`. The original [Workstream B](../architecture/plans/2026-07-13-mod-support-original-scope-follow-ons.md#workstream-b--sonic-1-mod-zone-adapter) remains historical scope provenance. |
 | Sonic 3&K new-zone adapter | Root design §8 Phase 2; Phase 2 goal/§D | S3K level/runtime frameworks | Bounded format-v2 adapter landed after the audit: selected object set, host palette ownership, tagged save identity and flat-scroll/no-stock-events runtime. | **Delivered** in the inspected `next` tree (`ed652eefa`); see the [current contract](formats/level-definition.md) and `Sonic3kModZoneAdapter`. The original [Workstream C](../architecture/plans/2026-07-13-mod-support-original-scope-follow-ons.md#workstream-c--sonic-3k-mod-zone-adapter) remains scope provenance, not a second adapter to build. |
 
 The schedule above is the required disposition; none of these commitments is silently
@@ -175,7 +179,7 @@ reclassified as optional.
 
 | Item | Source | Owner | Evidence and cost/risk | Verdict |
 |---|---|---|---|---|
-| S3K editor runtime re-apply | Phase 0 §C/non-goals; Phase 2 out-of-scope | Editor/S3K overlays | Persistence is supported, but live re-apply is explicitly blocked because S3K overlays and registries need coordinated rebuild. No gallery sample depends on it. | **Keep parked** until the S3K zone-adapter design can define safe rebuild ownership. |
+| Native stock-zone S3K editor runtime re-apply | Phase 0 §C/non-goals; Phase 2 out-of-scope | Editor/S3K overlays | Legacy stock-zone sidecars remain gated because native overlays/events need coordinated ownership. Complete authored projects instead save full data and build isolated native-host playtests with explicit family/palette validation. | **Keep parked** for arbitrary stock-zone overlay re-apply. The authored project workflow is delivered separately; see the [editor guide](../guide/creating/level-editor.md). |
 | Pattern/8×8 art painting | Phase 0 §C Non-goals | Editor art tooling | The maintained samples use converter/Tiled inputs for authored pixels. In-engine painting requires palette-line validation, pattern ownership, undo, persistence, and VRAM-safe preview. | **Keep parked** on the editor roadmap, not as a mod-release blocker. |
 | Map-write block-flag editing | Phase 0 §C Non-goals | Editor block/map tooling | No sample requires editing the remaining map-write flags. The UI must define flag semantics, copy-on-write, persistence, undo, and visual feedback before exposing them. | **Keep parked** on the editor roadmap pending a concrete flag-editing fixture. |
 | Free camera pan/zoom | Phase 0 §C Non-goals | Editor camera/input UX | The samples can be authored through current focus/viewport behavior and Tiled. Pan/zoom needs coordinate transforms, input arbitration, bounds, and overlay hit-testing changes. | **Keep parked** on the editor roadmap pending measured navigation friction. |
@@ -198,6 +202,8 @@ normative landed contracts, not deferrals. Phase 4's GUI-implementation non-goal
 owned by the [GUI tooling evaluation](GUI_TOOLING_EVALUATION.md), not silently omitted
 from this triage. The KiS2
 content follow-on belongs to its own feature roadmap rather than mod support. Phase 0
-blank-slate/new-zone authoring was superseded by the Phase 2 mod-zone/scaffold path;
-the S1 adapter remains scheduled, while the bounded S3K adapter is delivered as
-recorded above.
+blank-slate/new-zone authoring first moved into the Phase 2 mod-zone/scaffold path;
+the complete project editor now provides blank creation, safe save/reopen, isolated
+playtests, and host-validated exports. The bounded S1 and S3K adapters are delivered
+as recorded above. Pixel-art/profile-shape painting and a general packaging studio
+remain separate from this level-authoring scope.
