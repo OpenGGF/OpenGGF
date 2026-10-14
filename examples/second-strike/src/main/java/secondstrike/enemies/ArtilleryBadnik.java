@@ -11,11 +11,14 @@ public final class ArtilleryBadnik extends SecondStrikeBadnik {
     private static final int WATCH = 0, WINDUP = 1, VOLLEY = 2, RELOAD = 3;
     private int committedXVelocity;
     private int committedYVelocity;
+    private boolean companionAttempted;
 
-    public ArtilleryBadnik(ObjectSpawn spawn) { super(spawn, "Second Strike artillery"); }
+    public ArtilleryBadnik(ObjectSpawn spawn) { super(spawn, "Second Strike artillery", 2); }
 
     @Override protected void updateMovement(int vIntRunCount, PlayableEntity updatePlayer) {
+        if (!updateHitAndLifetime(updatePlayer)) return;
         if (!activeOnScreen()) return;
+        admitCompanion();
         age++;
         switch (phase) {
             case WATCH -> {
@@ -40,6 +43,30 @@ public final class ArtilleryBadnik extends SecondStrikeBadnik {
             default -> throw new IllegalStateException("artillery phase " + phase);
         }
     }
+
+    private void admitCompanion() {
+        if (companionAttempted || !SecondStrikeEnemies.reinforcedAnchor(anchorX, anchorY)) return;
+        companionAttempted = true; // One bounded allocation attempt per native parent lifetime.
+        if (services().objectQuery().activeObjectsOfType(GuardBadnik.class).stream()
+                .anyMatch(ally -> !ally.isDestroyed()
+                        && ally.companionOf(anchorX, anchorY, getSpawn().layoutIndex()))) return;
+        int floorY = anchorY;
+        for (int offset = 4; offset <= 48; offset += 4) {
+            var floor = services().floorSurface(anchorX + offset, floorY + 16,
+                    com.openggf.level.objects.TerrainSurface.Layer.FOREGROUND,
+                    com.openggf.level.objects.TerrainSurface.Path.PRIMARY);
+            if (!floor.foundSurface() || floor.distance() < -1 || floor.distance() >= 12) return;
+            floorY += floor.distance();
+        }
+        var allySpawn = SecondStrikeEnemies.ownedSpawn(SecondStrikeEnemies.GUARD, anchorX + 48, floorY, -1);
+        spawnChild(() -> {
+            var ally = new GuardBadnik(allySpawn);
+            ally.attachToParent(this);
+            return ally;
+        });
+    }
+
+    @Override protected void onNonfatalHit() { phase = RELOAD; timer = 108; }
 
     private void fire() {
         var manager = services().objectManager();
@@ -69,7 +96,7 @@ public final class ArtilleryBadnik extends SecondStrikeBadnik {
         // Twin muzzle seeds give the gunner a different outline even while idle.
         if (phase != RELOAD) {
             draw(SecondStrikeEnemies.GUNNER_ART, 4, currentX - 12, currentY - 25);
-            draw(SecondStrikeEnemies.GUNNER_ART, 4, currentX + 12, currentY - 25);
+            if (remainingHits > 1) draw(SecondStrikeEnemies.GUNNER_ART, 4, currentX + 12, currentY - 25);
         }
     }
 

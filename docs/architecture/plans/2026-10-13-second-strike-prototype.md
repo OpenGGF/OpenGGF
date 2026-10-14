@@ -19,7 +19,7 @@ controller, instant retry menu, forced fresh position or scripted victory.
 | --- | --- | --- |
 | Badnik roles | Native-art spotter, guard and artillery replacements | Cooperation changes a real encounter; destroying the caller ends new assistance |
 | Provoke/dodge/punish | Committed dash/volleys, visible brake/reload openings | Native attacking, shield deflection, hurt, destruction, score and life behavior |
-| Meaningful rings | Curated original ring groups and recovery footholds | Real scarcity, usable safe/exposed routes, attainable native bonus entry |
+| Meaningful rings | Five original ring placements across forest and fire together | Severe scarcity with native hurt/recollection; stage-entry thresholds remain native |
 | Dangerous shortcuts | Hardened enemies on existing fast/upper paths | Readable fast solution and viable cautious alternative |
 | Environmental combinations | Native enemies beside existing vines, logs, slopes and landings | Native terrain/mechanics and transition objects stay intact |
 | Boss second trick | A bounded delayed extra breath wave late in Fire Breath | Native HP, arena, defeat, results and transition; cancellation on killing hit |
@@ -351,3 +351,215 @@ and playable Act 2, the local character opportunities and first-stage variants.
 The smoke run's twenty-six ordinary failures are stock-attributed; the repaired
 fresh guards and focused compositions pass. This is a verified prototype with
 the support limits above, not full campaign coverage or a green full-suite claim.
+
+## Harsher AIZ1 revision
+
+The user requested a stronger difficulty layer after that delivery. Its pinned
+integration base is `5d9dd81381b05db66f530f55b8627f90ad1b88cc`. The requested
+economy is at most five original placed rings across the forest and its physical
+fire continuation together. Ordinary non-speed-shoe monitors become visibly
+native Robotnik boxes; speed shoes remain unchanged. Native stage prizes and
+ring recollection are not a ring-counter cap. The twenty-ring checkpoint bonus
+threshold remains native, so those five placed rings alone cannot qualify it.
+The later playable Act 2 and other zones remain outside this authored slice.
+The six hidden boss/results-region monitors remain native: physical table
+records 162/164/167/168/170/174 at `$1130`–`$11E8` have contents
+8/8/7/5/1/7, none a ring or super monitor. Fifteen ordinary boxes become
+Robotnik traps, one keeps speed shoes, and those six remain hidden rewards.
+This implements the requested majority of hostile monitors without changing
+the native signpost's reward-spawning graph.
+
+Enemy durability is two separated accepted hits for spotters/artillery and
+three for guards, with bounded hit recovery and final-hit-only native rewards.
+Extra allies are admitted from verified enemy ground anchors, with bounded
+population, lifetime and replay state. Guard dash speed rises from four to ten
+pixels per update, preserving its committed direction, readable wind-up,
+native floor/ledge checks and recovery opening. While dashing it is invulnerable
+and uses the native fire-shield dash art; no invented fallback sprite is used.
+
+The reported strange sound near vines was investigated without changing stock
+audio or vine behavior. The added spotter used S3K Whistle `$46`, a 48-tick
+modulated FM tone. Stock Monkey Dude instead uses Missile Throw `$51` when
+throwing a coconut (`MonkeyDudeArm_ThrowCoconut`). The native vine grab uses
+Grab `$4A` at its successful grab edge (`AIZRideVineHandle_CheckGrab`), and the
+guard's Blast `$48` matches `Rhinobot_StartChargePrep`. All numeric IDs and
+the S3K bank path agree with the disassembly. The prior route records spotter
+CALL entries at 2473, 2577 and 2752; native unload/recreation explains the short
+first interval. There is no per-frame cue loop or established bank-routing bug.
+The spotter cue will use `$51` at the same CALL-entry edge. Mixed prior PCM does
+not establish which sound the user heard; this is creator cue polish.
+
+The native floor audit admits three additional guard companions: both forest
+artillery anchors and the first early-fire anchor. The fourth candidate has a
+real gap at its proposed feet and is rejected rather than changing terrain or
+relaxing the floor sensor. Guards probe every pixel of their ten-pixel stride,
+stop within their bounded charge range and expose a seventy-two-update brake.
+They then return toward their post at at most two pixels per update, with a
+sixty-four-update cap and normal vulnerable collision. A dry first-stride check
+prevents a blocked tell from flashing a stationary flame charge. The return
+samples native centre-foot terrain at each pixel: opposite-front sampling
+rejected a continuous native slope after the prior charge's front sensor set Y.
+The acceptance range is unchanged; no terrain, position or fixture is fitted.
+The native flame attack cue is `$43`; dash immunity includes powered attacks,
+while the native wind-up contact behavior remains intact.
+
+A supplementary direct-level observation positions solo Sonic at
+`($1BC0,$3B0)` with neutral input. The candidate produced 300 native GPU frames
+and 240,000 stereo PCM frames at 48 kHz. Inspected frames 35/40/45/60 show the
+wind-up, moving flame-shield dash and exposed brake. It uses surfaceless EGL,
+an owned profile and the null host-audio backend; it neither proves physical
+speaker output nor a cold campaign completion. The native pixel oracle checks
+all six dash frames and flips against ROM DPLCs, independently of player-shield
+bank changes. The compiled candidate surface has 20,123 signatures and exactly
+matches the existing unpublished `0.7` pin; these internal helpers do not expand
+the supported Mod API.
+
+The original continuous movie and full-route evidence above describe the
+previous ring economy and enemy behavior. They are historical evidence, not
+validation of this revision. New focused native monitor/damage/art/rewind
+checks, the actual change-based smoke plan and a fresh gameplay witness are
+required before integrating it. Isolated worktrees and the updated batched
+category runner are used; no shared-desktop automation is permitted.
+
+### Focused revision evidence and route limits
+
+The final combined nineteen-class check used the normal Maven wrapper with
+all three original absolute ROM properties and `verify dependency:build-classpath`.
+It passed 167 cases without failures, errors or skips in 52.806 seconds,
+including native monitors, contact/floor/slot rewind, ROM pixels, all required
+S3K startup classes, API pins and SDK/Javadoc/binary artifact verification.
+The subsequent return-to-post polish passed twenty-two affected unit/native
+cases without skips; unchanged art, monitor and API checks were not repeated.
+
+The final ROM-free jar builds with twelve explicit unsupported-internals
+warnings and no package errors. Its new offscreen witness is external
+`second-strike-hard-mode-20261013/guard-final-capture/flaming-rhino.mp4`:
+300 decoded 960x672 frames and five seconds of native stereo audio. Inspected
+frames 40/130/205 show the first flaming charge, slow return and another full
+charge. Both video and audio decode completely. These are positioned visual
+observations; native contact/immunity and return replay have separate tests.
+
+A controller-only cold exploration retained the native intro, reached the
+physical fire reload and checkpoint three, and showed actual separated
+multi-hit losses and ten-pixel dash strides. It did not reach the boss/results:
+the controller repeatedly hopped beside the native tree/wall near `$F35`.
+Two ordinary-input retreat heuristics did not clear that obstacle and were
+discarded. No observed death, enemy crash or terrain change explains that
+controller limitation. The earlier complete campaign movie stays historical;
+this revision does not claim a new full cold campaign completion.
+
+The combined change-based smoke run and final destination integration are
+pending. Existing twenty-six stock-attributed negatives are the comparison
+reference; new or worsened failures remain delivery blockers.
+
+
+## Hard-mode delivery qualification and updated-base composition (2026-10-14)
+
+The initial `32df1e98c9dfd0b9813b69323731b772a9af73e0` candidate used
+pinned base `5d9dd81381b05db66f530f55b8627f90ad1b88cc`. The complete
+3,187-candidate smoke plan had 64 ordinary batches. Its supervising transport
+exited 143 after 58 completed batches; the cause is unknown. The surviving
+59th batch subsequently ended without a captured exit and was not counted.
+After exact process reconciliation, only the 287 unfinished candidates were
+retried through the unchanged local category runner and normal admission.
+The prefix plus run `20261013T232622Z-2173fecd` covers the original selection;
+it is not a narrower selection or a repeated full baseline. Original and
+continuation diagnostics were inspected, acknowledged and deleted.
+
+Combined ordinary outcome: 3,157 reports, 26,700 cases, 27 assertions, zero
+errors and 64 inspected skips, in 4,185.85 seconds of completed execution.
+All 26 historical negative identities/types match: 25 complete assertions
+literally, and the full SSZ Tails diagnostic after only its two verified
+`RewindObjectStateBlob@hex` identity tokens. The missing complete historical
+SSZ text was recovered from the original runtime-compatibility tool output,
+not recreated from truncated prose. No gameplay field was normalized.
+The historical exact skip inventory is unavailable; this does not claim
+literal whole-skip equality. Current skips are opt-in work, graphics
+prerequisites, Infinite Sonic platform/flyer prerequisites, the CPZ tube
+assumption and local audio reference/capture prerequisites. None is a
+missing-ROM skip; one generic graphics assumption has an opaque cause.
+Fresh guards passed: 88 reports / 678 cases, zero failures/errors/skips,
+261.54 seconds. This remains inherited-failure-qualified smoke, not a green
+whole-suite or public-release full-suite result.
+
+The additional audio CLI assertion is launcher-environment contamination.
+The exact `TestCompleteRunAudioCli#freshJvmBootstrapsTheS1ProfileButItsUnavailableDispatcherEmitsNoStandardOutput`
+case reproduced on clean pinned `5d9dd813`: one failure with
+`JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl`, one pass with that
+variable unset; zero errors/skips in both. Java 25 prints a leading `NOTE`
+before the application's expected `PRODUCER_UNAVAILABLE:` stderr prefix.
+The same unchanged candidate case passed with launcher-option variables
+unset. No product/test source was changed to suppress the assertion.
+The merged native checks pass the graphics property as a Maven property,
+with both launcher-option variables unset.
+
+Develop subsequently advanced to
+`5b2ff8e7851b99dd40998dfc41fbfd21c80031ef`. Private intent composition
+preserves native encounter monitor disguise/metadata and level-VRAM ending
+refreshes alongside our canonical content constructor and independent flame
+sheet. Ending scene identity remains canonical and never re-enters the AIZ
+placement patch. Fresh-load destination ring publication is preserved once;
+our five placed records do not become an inventory reset or clamp. No new
+enemy implementation adjustment was required. Optional combined mutator packs
+can change dynamic rings or generic truce behavior; native field/firing rules
+and whole-picture badnik transforms do not automatically target our variants.
+Standalone hard mode is the supported qualification here.
+
+The updated-base planner selects all 3,256 smoke candidates because the
+example paths conservatively select all categories. Another unchanged broad
+run would be disproportionate after the completed own smoke: new overlap is
+bounded to the native monitor/art provider and identified load, hurt, rewind,
+child-lifetime, presentation and audio consumers. The explicit 33-class/method
+union below passed all 212 cases with no skips, including a real
+Second Strike-resolved `WorldSession` proving no opt-in mutator graph is
+installed while difficulty services remain available. Java 25 compiled 3,965
+production sources; `verify` also passed binary SDK, Javadoc and artifact
+checks. Fresh actual-composition guards passed 88 reports / 680 cases with
+zero failures/errors/skips. This is bounded composition validation, not a
+whole updated-base smoke-suite claim.
+
+Exact focused selector union (comma-separated, supplied as `-Dtest`):
+
+```text
+com.openggf.audio.TestAudioMutatorAccess#internalLeasePreservesExternalObserverAndJournalsNativeRomRequests+noBindingLeavesNativeCommandAndOverridePathsUnchanged+replayRetainsLogicalNativeIntentWithoutDoublePhysicalSubmissions,com.openggf.game.mutators.TestSpritePictureTransform#anatomyCompositionRetainsWholePictureMetadataAndUsesSeparateAnchors+semanticTargetingAndStealthTakePrecedenceOverEveryWholePictureEffect,com.openggf.game.session.TestWorldPolicyHistory#disabledHistoryDoesNotCaptureOrAccumulateStageBoundariesAndArmingStartsFresh+zeroTickCleanupReplaysItsNativeDeletionWithoutRepeatingCreatorCallbacks,com.openggf.game.sonic3k.TestSecondStrikeEnemiesNativeArt,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits,com.openggf.game.sonic3k.audio.TestSonic3kSpeedShoesCommandSemantics#monitorPickupAndTimerExpiryUseSemanticEightAndOneWithoutSystemCommands+shorterNativeGrantRetainsStockDurationAndRewindRestoresBehavioralExpiry,com.openggf.game.sonic3k.mutators.TestNativeMutatorRuntime#nativeAllocationHelpersCaptureOwnedTailsAfterRootRemovalAndLeaveIndependentSiblingsAlone+nativeDefeatReplacementAndDestructionChildrenBelongOnlyToTheExactOwnedGraph,com.openggf.game.sonic3k.objects.TestSonic3kMonitorContentOverride,com.openggf.game.sonic3k.objects.TestSonic3kMonitorObjectInstance,com.openggf.level.objects.TestSecondStrikeEnemiesNative,com.openggf.level.rings.TestRingManagerRewindSnapshot#restoreSparseAttractedRingsClearsPreviousActiveSlots+roundTripAttractedRingSlot+roundTripCollectedBitSet,com.openggf.mods.TestModApiPinPolicy,com.openggf.mods.TestModApiSignatureSurface,com.openggf.mods.code.TestSecondStrikeBoss,com.openggf.mods.code.TestSecondStrikeCampaign,com.openggf.mods.code.TestSecondStrikeEnemies,com.openggf.mods.code.TestSecondStrikeStages,com.openggf.sprites.managers.TestPlayableHurtObjectControlMovement,com.openggf.sprites.playable.TestPlayableHurtLandingObjectControl,com.openggf.sprites.playable.TestShieldRewindRestore#pendingRealInstaShieldRestoreDiscardsAbandonedAttackAndSlotState+registeredInstaShieldRestoreStillRebindsAndInvalidatesItsArt+restoreBeforeFirstStatusTickKeepsInstaShieldRegistrationPending,com.openggf.tests.TestFreshLevelBoundaryRewindHeadless#restoredBoundaryRetainsPublicationPhaseAndDispatchesDeferredAssembly,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kMonitorObjectInstance,com.openggf.tools.TestGameplayCaptureDataSelectLaunch#captureRelaunchRegistersFreshCreatorStateAgainstTheChosenNativeTeam,com.openggf.tools.TestGameplayCaptureFreshLoad#omittedDestinationTitleFinishesDeferredAssemblyAndReleasesTheLivePlayer,com.openggf.tools.audio.completerun.TestCompleteRunAudioCli#freshJvmBootstrapsTheS1ProfileButItsUnavailableDispatcherEmitsNoStandardOutput,com.openggf.tools.modsdk.TestGgfModCliCommands,com.openggf.tools.modsdk.TestModApiJavadocTool,com.openggf.tools.modsdk.TestModApiSdkPackager
+```
+
+Both focused and guard invocations use `python3 tools/testing/maven_queue.py`,
+`-Dmse=off`, `-Dopenggf.headless.gl=surfaceless-egl`, the original three
+absolute ROM properties, Java 25 and Lua 5.4. Focus ends with
+`verify dependency:build-classpath -Dmdep.outputFile=target/second-strike-classpath.txt -B`;
+guards use `-Pguards test -B`. Fresh compiled API export is 20,838 lines,
+byte-equal to the candidate pin, SHA-256
+`c0a84d671d8cba5c69423fe5616e6b4940851e12d530ce2fbccf0c6350c002a3`.
+Our additions expose no new supported API surface or version.
+
+The rebuilt creator jar retains its 12 explicit native-internal compatibility
+warnings and has no errors or ROM assets. A new maintained
+`GameplayCaptureTool` run uses only the actual merged classes, the rebuilt jar,
+private profile, surfaceless EGL and null audio driver: AIZ1 at `(0x1BC0,0x3B0)`,
+300 neutral BK2 rows, `--frames 300 --audio`. All 300 GPU PNGs, state CSV and
+240,000 stereo 48 kHz PCM frames are byte-identical to the accepted final
+hard-mode capture. Fresh images 40/130/205 show first flame dash, exposed
+return and second flame dash. `guard-composed-capture/flaming-rhino.mp4` fully
+decodes and is a continuous five-second clip, without desktop input automation.
+It remains positioned supplementary evidence, not a new cold campaign clear
+or a physical-speaker observation. The earlier harder cold controller still
+stalls at the documented later wall/tree; no full harder-route completion is
+claimed. Main integration, build, push and owned cleanup follow this checkpoint.
+
+The final destination then advanced to
+`4a0e714d5e29b65a5b1ba8e6cbb6a8223f560c75`. Its six-path EggSky announcement
+recovery changes only that independent example, its two tests and prose;
+engine, our test/creator sources, POM, testing tools and API inputs are unchanged.
+Private intent composition retains both changelog entries. The completed
+212-case focus, 680 fresh guards, compiled pin and native clip retain their
+precise executable-input attribution; no unchanged engine run was repeated.
+
+Main develop integration is `60fe182da136c5bb0ceb5af9477c9802903f138c`,
+with a tracked tree exactly equal to verified private `c9122c74b`. The main
+worktree build/test lease covers the merge and build. Main
+`mvn -Dmse=off -DskipTests package -B` passed in 82 seconds; this is a build,
+not another suite result. All known unrelated files and dirty submodules
+retain their before-merge status and file hashes. No source tests were repeated
+on identical integrated inputs. This prose-only successor records delivery;
+publication and fully accounted task cleanup are the coordinator's final steps.

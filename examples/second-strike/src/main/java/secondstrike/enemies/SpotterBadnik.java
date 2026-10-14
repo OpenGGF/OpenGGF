@@ -6,15 +6,16 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectReconstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
 
-/** Monkey caller: a raised coconut and whistle advertise a committed group alert. */
+/** Monkey caller: a raised coconut and native throw cue advertise a committed group alert. */
 public final class SpotterBadnik extends SecondStrikeBadnik {
     private static final int WATCH = 0, CALL = 1, REST = 2;
 
-    public SpotterBadnik(ObjectSpawn spawn) { super(spawn, "Second Strike spotter"); }
+    public SpotterBadnik(ObjectSpawn spawn) { super(spawn, "Second Strike spotter", 2); }
 
     public boolean isCalling() { return phase == CALL && !isDestroyed(); }
 
     @Override protected void updateMovement(int vIntRunCount, PlayableEntity updatePlayer) {
+        if (!updateHitAndLifetime(updatePlayer)) return;
         if (!activeOnScreen()) return;
         age++;
         PlayableEntity player = nearestPlayer(updatePlayer);
@@ -24,7 +25,7 @@ public final class SpotterBadnik extends SecondStrikeBadnik {
                     commitTarget(player);
                     phase = CALL;
                     timer = 48;
-                    services().playSfx(0x46); // sonic3k.constants.asm: sfx_Whistle.
+                    services().playSfx(0x51); // Native MonkeyDude sfx_MissileThrow, one cue at call entry.
                 }
             }
             case CALL -> {
@@ -34,6 +35,8 @@ public final class SpotterBadnik extends SecondStrikeBadnik {
             default -> throw new IllegalStateException("spotter phase " + phase);
         }
     }
+
+    @Override protected void onNonfatalHit() { phase = REST; timer = 120; }
 
     @Override protected void updateAnimation(int vIntRunCount) {
         // Obj_MonkeyDude: body frames 0/1 wait, 2 active; frame 6 is the coconut.
@@ -50,7 +53,7 @@ public final class SpotterBadnik extends SecondStrikeBadnik {
         // Paired raised coconuts distinguish this caller from the stock climbing monkey.
         int lift = isCalling() ? 32 + ((age & 8) == 0 ? 3 : 0) : 25;
         draw(SecondStrikeEnemies.MONKEY_ART, 6, currentX - 11, currentY - lift);
-        draw(SecondStrikeEnemies.MONKEY_ART, 6, currentX + 11, currentY - lift);
+        if (remainingHits > 1) draw(SecondStrikeEnemies.MONKEY_ART, 6, currentX + 11, currentY - lift);
     }
 
     @Override public AbstractObjectInstance recreateForRewind(ObjectReconstructionContext context) {

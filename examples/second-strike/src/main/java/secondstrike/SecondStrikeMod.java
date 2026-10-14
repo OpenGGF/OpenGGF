@@ -16,6 +16,7 @@ import com.openggf.mods.code.GgfMod;
 import com.openggf.mods.code.ModContext;
 import secondstrike.boss.SecondStrikeBosses;
 import secondstrike.enemies.SecondStrikeEnemies;
+import secondstrike.monitors.SecondStrikeMonitors;
 import secondstrike.routes.SecondStrikeRoutes;
 import secondstrike.stages.SecondStrikeStages;
 
@@ -26,6 +27,7 @@ import java.util.Set;
 public final class SecondStrikeMod implements GgfMod {
     @Override public void register(ModContext context) {
         SecondStrikeEnemies.register(context);
+        SecondStrikeMonitors.register(context);
         context.decodedLevelPatch("forest", nativeOpening(SecondStrikeRoutes.Bank.FOREST));
         context.decodedLevelPatch("fire", nativeOpening(SecondStrikeRoutes.Bank.FIRE_CONTINUATION));
         context.registerServiceBundle("difficulty", () -> {
@@ -47,6 +49,7 @@ public final class SecondStrikeMod implements GgfMod {
                 .select(spawn -> eligible.test(spawn) && spawn.objectId() == 0x8E).bind("spotter")
                 .select(spawn -> eligible.test(spawn) && spawn.objectId() == 0x8D).bind("guard")
                 .select(spawn -> eligible.test(spawn) && spawn.objectId() == 0x8C).bind("artillery")
+                .select(spawn -> eligible.test(spawn) && SecondStrikeMonitors.replaces(spawn)).bind("robotnik-monitor")
                 .retainRings(SecondStrikeRoutes::rings);
     }
 

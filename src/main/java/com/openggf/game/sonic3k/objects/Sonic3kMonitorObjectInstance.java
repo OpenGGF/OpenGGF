@@ -122,8 +122,17 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
     // (Icon rising state is managed by AbstractMonitorObjectInstance)
 
     public Sonic3kMonitorObjectInstance(ObjectSpawn spawn) {
+        this(spawn, spawn.subtype());
+    }
+
+    /**
+     * Chooses native contents while retaining the canonical immutable placement.
+     * Placement persistence compares the whole spawn record, so a content layer
+     * must not synthesize another subtype/identity for the shell or its children.
+     */
+    protected Sonic3kMonitorObjectInstance(ObjectSpawn spawn, int contentSubtype) {
         super(spawn, "Monitor");
-        this.type = MonitorType.fromSubtype(spawn.subtype());
+        this.type = MonitorType.fromSubtype(contentSubtype);
         this.animationState = new ObjectAnimationState(currentMonitorAnimations(), type.animId, 0);
         this.motion = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, 0);
     }

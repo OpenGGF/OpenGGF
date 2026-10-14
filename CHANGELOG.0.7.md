@@ -32,7 +32,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 - **Second Strike prototype:** a source-first difficulty patch follows the native
   S3K Angel Island opening with cooperating spotters, committed guards/artillery,
-  curated original ring banks, a warned late Fire Breath follow-up, first-board
+  five original rings across forest/fire, hostile Robotnik monitors with speed
+  shoes retained, multi-hit enemies and invulnerable flame-shield rhino charges,
+  a warned late Fire Breath follow-up, first-board
   Blue Sphere turn gates and a three-spring Gumball variant. The normal campaign
   retains terrain, physics, lives, checkpoints, save UI, stage rewards and act
   progression. An opt-in decoded placement contract preserves the native level
@@ -1136,6 +1138,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Separate experimental Windows and Linux native friends bundles package the maintained
   example mods and launch shortcuts using GraalVM runtime class loading, with
   generated engine/JDK member retention, runtime bootstrap controls and startup checks.
+  Retention includes the separately loaded controls' bytecode dependencies, keeping
+  their callable JDK bodies available when example-mod references change, and
+  engine-created policy implementations returned through service factories.
   Windows shortcuts forward diagnostic arguments and are checked through the native executable.
   The Linux builder also exercises
   representative rendered gameplay, audio and scene lifecycle paths. The shared

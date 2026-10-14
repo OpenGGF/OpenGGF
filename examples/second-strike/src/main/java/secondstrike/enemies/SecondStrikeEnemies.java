@@ -15,8 +15,15 @@ public final class SecondStrikeEnemies {
     static final String MONKEY_ART = "aiz_monkey_dude";
     static final String GUARD_ART = "aiz_rhinobot";
     static final String GUNNER_ART = "aiz_bloominator";
+    static final String DASH_ART = "fire_shield_dash";
 
     private SecondStrikeEnemies() { }
+
+    /** Genuine native Bloom anchors on forest and early physical continuation platforms. */
+    static boolean reinforcedAnchor(int x, int y) {
+        return x == 0x1dc0 && y == 0x27c || x == 0x2370 && y == 0x37c
+                || x == 0x09f0 && y == 0x3fc || x == 0x0e10 && y == 0x33c;
+    }
 
     public static void register(ModContext context) {
         context.registerObject("spotter", (spawn, registry) -> new SpotterBadnik(spawn));
