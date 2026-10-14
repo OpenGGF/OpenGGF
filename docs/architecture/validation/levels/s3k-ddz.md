@@ -29,7 +29,8 @@ incoming movie prefixes have27122/27224 inputs. All three continue through actua
 native D01 rescue/AIZ return/reunion, both credit parts, post-credits and controller
 Start/title, retaining fight/wrap replay and live load/history isolation. These
 prefix lengths are not terminal totals. Death-reload and seeded ending-load
-history isolation also pass at320/800. Remaining supported viewport/donor/team,
+history isolation now pass at all five production presets in the October14
+short-lifecycle qualification below. Remaining supported donor/main/team lifecycle,
 lifecycle and native-pixel breadth stays open. Nothing below certifies the zone.
 
 Incoming: DEZ final boss → `$C00` verified at320/800, including a positioned
@@ -41,28 +42,34 @@ qualification supersedes the older request-only scope below. The
 [ending matrix](s3k-ending.md) owns native rescue, AIZ restoration, reunion,
 credits and terminal continuation.
 
-Widths / donors / characters / teams (support authority `LaunchProfile.sanitizedFor`, same roster
-as HPZ): widths 320/400/512/640/800; supported character/donor pairs off×{Sonic,Tails,Knuckles},
-S1×Sonic, S2×{Sonic,Tails}; teams: solo, Sonic+Tails, S1 Sonic+Sonic duplicate, S2 Sonic+Tails,
-Sonic+Tails+Knuckles at 800 (every follower suppressed in the zone). The controller has no character
-branch; only Sonic is the native route.
+Widths / donors / characters / teams (support authority `LaunchProfile.sanitizedFor`
+and the separate comma-roster parser, same finite examples as HPZ): all five
+production presets320/352/400/528/800 resolve through their owner. Twelve separate
+512/640 geometry rows preserve the older widths. Supported individual main/donor
+pairs are off×{Sonic,Tails,Knuckles}, S1×Sonic and S2×{Sonic,Tails}; finite team
+examples include solo, supported pair, mixed, duplicate and seven-follower rosters
+at each preset. Seven does not establish a parser maximum. Every configured
+follower is suppressed by native DDZ policy; native P2 must be absent after entry
+and restoration. The controller has no character branch, but only Sonic is the
+shipped campaign route. Other admitted main/donor forms are existing level-select
+extensions; their field/behavior evidence is not native character-route parity.
 
 ## Obligations
 
 | Obligation + spot | Contract / oracle | Config cases | Test binding | Implementation | Result (revision) | Gap / action |
 | --- | --- | --- | --- | --- | --- | --- |
 | ENTRY: controller, Player 2 clear, fall-in, transformation timing, release | `loc_81554`/`loc_8160A`/`loc_8167C`; `SuperHyper_PalCycle`; native pass-1 frames 1/24/49/50/51 | native, Sonic + Super Emeralds | `TestS3kDdzFlightControllerHeadless` | implemented; native behaviour matched | pass | — |
-| ENTRY breadth: fall-in, transformation, release, 400 flight frames through the asteroid field | same | 34 width × character/donor/team rows | `TestS3kDdzCompatibilityMatrix` | implemented | see execution evidence | Hyper upgrade asserted only on the Sonic route |
+| ENTRY breadth: fall-in, transformation, release, 400 flight frames through the asteroid field | same | 85 production-preset/supported-main/donor/finite-roster rows plus12 custom geometry rows | `TestS3kDdzCompatibilityMatrix` | implemented | 97/0/0/0 in October14 qualification below | Native campaign is Sonic; other admitted characters/donor forms are existing extensions, not native route parity |
 | ROUTE (Sonic cold, seeded clocks): entry → both phases → three wraps → defeat → `$D01` request | Complete-run BK2 input from movie frame 514214 (`zone0c` row 0); physics rows compared every frame; declared inherited `V_int_run_count` 512489 and camera fraction `$2700` | native 320, Sonic (+Tails configured, suppressed) | `TestS3kDdzColdRoutes#seededNativeRouteMatchesPositionsCameraAndRingsThroughTheExitRequest` | implemented; native behaviour matched (player x/y, camera x/y and rings identical for all 10058 gameplay rows; boss exit routines on the native frames) | see execution evidence | Without the seeds the route diverges at 4178 (turret aim phase) and dies in phase 1 |
 | ROUTE (Sonic cold, seeded clocks, Super): entry through `$D01` | Same controller movie with declared Chaos-only progression; no Hyper-trace parity claim | 320 | `TestS3kDdzColdRoutes#seededSuperRouteCompletesWithItsFixedStarsAndReplaysTheFight` | implemented | passes, with fight/wrap/fade restore checks | 800px reuse of the native movie dies6340; independent fresh routes below now complete both widths |
 | ROUTE / REWIND (fresh Super): entry → both phases → wraps → `$D01` | Authored controller-only BK2; seven Chaos Emeralds, no inherited clock/fraction/position seed; restore and 45-frame replay at first body damage, first chase wrap and exit | Sonic solo, donor off, actual320/800 | `TestS3kDdzAuthoredRoutes` | implemented | 2 passed, no skips, 2026-09-23 19:08 BST | Completion evidence, not native parity or full incoming DEZ continuity |
 | REWIND: phase-1 fight, first wrap, exit fade | Restore equals capture (object graph summary); 45 divergent frames discarded; recorded route continues with exact native parity to the exit | native 320 | `TestS3kDdzColdRoutes#rewindAtBossWrapAndExitRestoresTheNativeRoute` | implemented | see execution evidence | Hurt spin, asteroid split and final-hit spots are covered only inside these windows |
-| REWIND: mid-transformation, mid-flight | Registry restore equals capture; forward replay equals original | 34 rows × 2 spots | `TestS3kDdzCompatibilityMatrix` | implemented | see execution evidence | — |
+| REWIND: mid-transformation, mid-flight | Registry restore equals capture; forward replay equals original | 97 rows × 2 spots × 2 restore/replay cycles | `TestS3kDdzCompatibilityMatrix` | implemented | 97/0/0/0 below; entire-registry equality, actual main/camera/roster/preset ownership | These are bounded transformation/flight spots, not every local object/phase/complete route |
 | PRESENT: background bands, FG-plane boss body, explosions, wrap | `sub_596EA` six speeds from `Events_bg+6`, `DDZ_BGDeformArray`; `DDZ_ScreenEvent` stages 0/4/8/`$C`; `PLC_BossExplosion` | native 320 every frame at entry, boss arrival, first wrap, exit | side-by-side clips `30-33-ddz-native-vs-engine-*.mp4` (engine capture exact to native positions) | implemented | historical whole-scene inspection left Hyper sparkle/HUD entry and Master Emerald flicker phase / white-fade tint; Hyper queue phase and HUD entry now have matching native follow-ups below | Pixel comparison not automated |
 | OBJECT: asteroids, missiles, boss graph, slot/load order | `Obj_DDZAsteroid`, `Obj_DDZMissile`, `Obj_DDZEndBoss`; native slot histories `probe-slots0/1` | native route | seeded route test (slot order drives hit order) | implemented; native behaviour matched through the route | pass | Super branch now has `loc_8242A/82452` fixed-slot stars and six ROM frames; Hyper owner now waits for native art-queue completion;506 entry child rows match (dated follow-up below) |
-| LIFE: ring-out death and restart | Ring drain ends the form; `loc_8179E` fall below `Camera_Y + $F0`; `Kill_Character`; death countdown reload with one fresh controller | 320, 800 | `TestS3kDdzLifecycleProduction` | implemented | pass, 2 | Live history isolation now asserted at both widths (follow-up below); donor/team rows only through the breadth matrix |
+| LIFE: ring-out death and restart | Ring drain ends the form; `loc_8179E` fall below `Camera_Y + $F0`; `Kill_Character`; death countdown reload with one fresh controller | Native Sonic, all five production presets | `TestS3kDdzLifecycleProduction#ringOutEndsTheFormFallsAndReloadsDoomsday` | implemented | 5/0/0/0 below | Actual ring-out/fall/reload and live-history isolation; donor/main extensions and remaining death causes remain separate |
 | LOAD: `$D01` handover freeze | `StartNewLevel` leaves the level loop; native fade frozen | GameLoop and recording driver | `TestS3kDdzColdRoutes` | recording driver now honors the shared inactive-transition flag | focused route check passes | Exit fade freezes source gameplay while palette work continues |
-| LOAD / HISTORY: ending `$D01` | `loc_81CA4` progression-save request, real load and outgoing timeline reset | 320, 800; declared post-white-fade boss state | `TestS3kDdzLifecycleProduction#endingRequestSavesProgressAndStartsAnIsolatedTimeline` | implemented | 2 passed, no skips (2026-09-25 follow-up) | Seeded boundary evidence; no on-disk save or ending-scene claim |
+| LOAD / HISTORY: ending `$D01` | `loc_81CA4` progression-save request, real load and outgoing timeline reset | Native Sonic, all five production presets; declared post-white-fade boss state | `TestS3kDdzLifecycleProduction#endingRequestSavesProgressAndStartsAnIsolatedTimeline` | implemented | 5/0/0/0 below | Declared boundary fixture; no on-disk save or ending-scene claim |
 | ORACLE: strict segment replay | `TestS3kSonicTailsZone0cSegmentTraceReplay` | — | `-Ptrace-segments` | — | red: bootstrap camera Y and missing clock seeds (plan evidence) | Replay harness bootstrap |
 | LOAD: DEZ → `$C00` incoming | `loc_803D6` and source camera-policy retirement | solo320/800 direct final-DEZ routes | `TestDezFinalScreenEntry`, capture115 | connected | corrected load/initial flight;30-case destination selection passes without skips (2026-09-23) | Full cold native320 team incoming continuity is now recorded below; remaining roster/width breadth stays open |
 
@@ -680,3 +687,42 @@ ending dependency's private derived helper is being relocated by its owner
 to avoid an approximate API-surface false positive, without gameplay changes;
 final integration and combined smoke remain the coordinator's obligation.
 No cold donor/team/viewport sweep or native pixel parity is claimed.
+
+
+## Production presets, native roster suppression and short lifecycle — 2026-10-14
+
+Lane `feature/ai-s3k-parity-hpz`, runtime base
+`5b2ff8e7851b99dd40998dfc41fbfd21c80031ef`, preceding lane HEAD `f4414cd52`.
+`TestS3kDdzCompatibilityMatrix` shares the already qualified HPZ finite scenario
+inventory: 30 solo main/donor/preset rows and 55 deduplicated supported pair/mixed/
+duplicate/seven-follower examples, plus 12 separately labelled 512/640 geometry rows.
+The production rows select actual `WidescreenAspect` and resolve configuration;
+they never inject raw camera width. Launch-supported individual character/donor
+pairs and direct comma-roster configuration are distinct contracts. Configuration
+is input to the real bootstrap, not a claim that DDZ keeps participants: native
+`loc_81554` clears all followers. Actual main character, ROM renderer/animation,
+current main/camera focus, native-P2 absence, empty runtime follower list and
+resolved width are asserted; the latter ownership/preset checks repeat after both
+whole-registry restore/replay cycles at transformation and flight. Every row runs
+400 ordinary right/dash inputs through the actual asteroid field. Existing declared
+seven-Super-Emerald local setup is retained; no cold campaign or extra native
+character/form conformance is inferred from that fixture.
+
+`TestS3kDdzLifecycleProduction` now uses all five production presets for its two
+existing native Sonic scenarios. Ring-out remains an explicit local stimulus after
+real transformation/flight/live history; native fall, death countdown, actual reload,
+fresh controller/roster/current focus and configured/camera width are verified.
+The second scenario retains its declared post-white-fade boss exit state and verifies
+real progression-save request, D01 load and history retirement. It does not substitute
+for the unseeded fight or native ending lifecycle checks owned elsewhere.
+
+The same normal queued command recorded in the [FBZ matrix](s3k-fbz-act1.md#production-preset-entry-and-repeated-load-ownership--2026-10-14)
+finishes 10:27:26 BST: **149 tests, 0 failures/errors/skips**, 42.477 Maven seconds.
+DDZ compatibility is **97/0/0/0**, 11.98 case seconds; DDZ lifecycle is
+**10/0/0/0**, 1.014 seconds. All expected identities execute; no missing-ROM skip
+supplies coverage. No production Java change or new native capture belongs to this
+slice. Remaining mandatory main/donor lifecycle and actual death-cause checks,
+checkpoint applicability, other object/phase/rewind and complete-route products at
+352/400/528, native pixels/audio and strict timing/conformance are still explicit.
+Only the finite entry/transformation/flight/roster and native five-preset short
+lifecycle obligations described here close; combined integration remains lead-owned.

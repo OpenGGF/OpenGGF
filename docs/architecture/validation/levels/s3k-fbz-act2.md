@@ -62,7 +62,7 @@ See [Act 1](s3k-fbz-act1.md) for shared transition and visual-tooling evidence.
 | Knuckles solo | `TestFbzMainCharacterCompletion#knucklesCompletesColdAct2ThroughCapsuleAndSandopolisRequest`; concrete native Knuckles leader, cold ROM start, all mandatory interactions, boss defeat, capsule and SOZ request | PASS on `190cbd408` plus setup/boss/controller changes, zero skips. Native lower jump/glide inputs use live geometry; total route remains below 35,400 frames. Broader visual/rewind obligations remain open |
 | Width axes | `TestFbzCompatibilityMatrix#viewportKeepsWorldThresholdsCullingAndBossContainment`: additional 400/512/640/800 complete routes; 320 represented by native team route | All four additional-width rows PASS; pixel width/culling acceptance remains separate from camera and gameplay assertions |
 | Donor axes | `donatedMovementProfileCanReachTheMandatoryBossEntryWithoutSpindash`: S1/S2 ordinary-input complete route, actual donated rules and assist evidence; off covered by solo team | S1/S2 focused complete routes PASS (ledger below), replacing the inherited S1 squeeze frontier. Ordinary crossing must consume no assist and preserve no-spindash and acquired/exited-car evidence |
-| Short lifecycle breadth | Standalone synchronous transition preflights sweep teams, widths 320/400/512/640/800 and off/S1/S2; Act 1 results test now includes 512/640 in its passing 105-case product plus native reset | `TestFbzEntryReloadResetMatrix` passes the full 2-act × 5-width × off/S1/S2 cold-entry/reload/reset product with concrete Sonic+Tails and two reset cycles per row. Other main-character/team products, checkpoint/death and traversal remain separate; see Act 1 matrix |
+| Short lifecycle breadth | Standalone synchronous transition preflights sweep teams, widths 320/400/512/640/800 and off/S1/S2; Act 1 results test now includes 512/640 in its passing 105-case product plus native reset | `TestFbzEntryReloadResetMatrix` now qualifies both acts × five actual production presets × off/S1/S2, with donor-supported CPU art and two reset cycles per row; twelve separately labelled512/640 custom rows retain prior geometry. Other main/team, checkpoint/death and traversal remain separate; see the October14 qualification below |
 
 ## Obligation map
 
@@ -314,3 +314,46 @@ DEZ reloads: pending/published SAT and HUD counters survive, while fresh loads
 still clear them. Shared validation and exact route limitations are recorded in
 [the campaign audit](../../audits/2026-09-22-sk-zone-bring-up.md#seamless-sprite-publication-and-mhz-scroll-carry--2026-09-27).
 This adds transition coverage, not another whole-act or native-pixel certification.
+
+
+## Production-preset entry and repeated load ownership — 2026-10-14
+
+Lane `feature/ai-s3k-parity-hpz`, runtime base
+`5b2ff8e7851b99dd40998dfc41fbfd21c80031ef`, preceding lane HEAD `f4414cd52`.
+`TestFbzEntryReloadResetMatrix` now has 30 production rows: both acts × all five
+`WidescreenAspect` presets 320/352/400/528/800 × off/S1/S2. It applies an actual
+supported launch profile and production aspect resolution, without injecting
+raw width. Native/S2 use Sonic+Tails; S1 uses explicitly supported Sonic+Sonic,
+with decoded donor renderer/animation and independent CPU/native-P2 authority.
+Every initial production entry requests the fresh lifecycle. Every row then makes
+two real act-switch/reset cycles after explicitly contaminating source event,
+plane/shake and contact state. Replacement objects/runtime/events, source contact
+retirement, native ROM destination start, actual main/camera focus, donor rules,
+CPU leader/native-P2, configured/camera/logical-render width and restored event
+state are asserted after each load. The current main is resolved after replacement;
+a cached fixture player is not used as destination evidence.
+
+Twelve separate 512/640 custom-geometry rows retain the old physical CPU fixture,
+initialization and full reset assertions. The S1 Tails fixture has no donated
+Tails art and is explicitly outside production-profile/usable-team certification;
+it is preserved only as the inherited local geometry/control experiment.
+The viewport is set only for the headless renderer; camera width comes from the
+production configuration. These field/resource checks do not prove native pixels.
+
+Queued normal shared-admission qualification with the two DDZ classes finishes
+10:27:26 BST: 149 tests, 0 failures/errors/skips, 42.477 Maven seconds. This class is
+**42 tests, 0 failures/errors/skips**, 5.955 case seconds: 30 production and 12 custom.
+Java 25, unset desktop display variables, null OpenAL backend and surfaceless EGL
+are used with all three existing original ROM paths. Exact command from the tree:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null   python3 tools/testing/maven_queue.py -Dmse=off   '-Dtest=TestFbzEntryReloadResetMatrix,TestS3kDdzCompatibilityMatrix,TestS3kDdzLifecycleProduction'   -Dopenggf.headless.gl=surfaceless-egl   "-Ds3k.rom.path=$PROJECT_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen"   "-Dsonic1.rom.path=$PROJECT_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen"   "-Dsonic2.rom.path=$PROJECT_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" test
+```
+
+No runtime change, fixture-fed traversal, new native recording or media claim
+belongs to this slice. Repeated load/reset and actual supported-profile/preset
+entry are qualified; other main/team products, physical checkpoints and deaths,
+per-mechanic rewind/culling, 352/528 full traversal and synchronized native
+presentation/oracle obligations remain open. Historical route/transition records
+above are retained rather than globally relabelled. Combined integration and
+qualification remain lead-owned.

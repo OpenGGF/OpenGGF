@@ -55,6 +55,11 @@ class TestS3kHcz1RouteRewind {
     }
 
     static void replayTwice(Hcz1Route route, int count, String context) {
+        replayTwice(route, count, context, () -> { });
+    }
+
+    /** Additional owner assertions whose references are deliberately absent from the snapshot. */
+    static void replayTwice(Hcz1Route route, int count, String context, Runnable assertOwners) {
         var fixture = route.fixture;
         int captureFrame = route.frames;
         int previousMask = route.previousMask;
@@ -72,12 +77,14 @@ class TestS3kHcz1RouteRewind {
                     (previousMask & 16) == 0 ? 0 : 1, false, ""));
             TestS3kAiz1RouteRewind.assertSnapshotsMatch(before, registry.capture(),
                     context + " restore cycle=" + cycle, captureFrame, count);
+            assertOwners.run();
             for (int mask : masks) {
                 InputProgram.step(fixture, mask);
                 assertFalse(fixture.sprite().getDead() || fixture.sprite().isDrowningDeath());
             }
             TestS3kAiz1RouteRewind.assertSnapshotsMatch(expected, registry.capture(),
                     context + " replay cycle=" + cycle, captureFrame, count);
+            assertOwners.run();
         }
         System.out.printf("HCZREWIND spot=%s frame=%d replay=%d cycles=2%n", context, captureFrame, count);
     }

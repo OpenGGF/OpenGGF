@@ -115,6 +115,12 @@ class TestS3kAiz1RoutePilot {
     record RouteResult(int frames, boolean continuationUsed) { }
 
     static RouteSetup prepareRoute(Configuration configuration) throws IOException {
+        return prepareRoute(configuration, "tails", false);
+    }
+
+    /** Production entry checks can use a supported donated CPU without changing old route fixtures. */
+    static RouteSetup prepareRoute(Configuration configuration, String followerCharacter,
+                                    boolean freshEntry) throws IOException {
         TraceData trace = TraceData.load(FIXTURE_DIRECTORY);
         Bk2Movie movie = new Bk2MovieLoader().load(findBk2(FIXTURE_DIRECTORY));
         int preLevelRows = TraceReplayBootstrap.preLevelFrameCountForTraceReplay(trace);
@@ -124,18 +130,24 @@ class TestS3kAiz1RoutePilot {
                 movie, offset + preLevelRows, offset + recordedReloadRow);
         TraceReplaySessionBootstrap.prepareConfiguration(trace, trace.metadata());
         configuration.apply();
-        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+        var builder = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_AIZ, 0)
                 .withCrossGameDonation(GameServices.configuration().getBoolean(
                         com.openggf.configuration.SonicConfiguration.CROSS_GAME_FEATURES_ENABLED)
                         ? GameServices.configuration().getString(
-                                com.openggf.configuration.SonicConfiguration.CROSS_GAME_SOURCE) : null)
-                .build();
+                                com.openggf.configuration.SonicConfiguration.CROSS_GAME_SOURCE) : null);
+        if (freshEntry) builder.withFreshLevelStartLifecycle();
+        HeadlessTestFixture fixture = builder.build();
         org.junit.jupiter.api.Assertions.assertInstanceOf(
                 com.openggf.sprites.playable.Sonic.class, fixture.sprite());
         org.junit.jupiter.api.Assertions.assertEquals(1, GameServices.sprites().getSidekicks().size());
-        org.junit.jupiter.api.Assertions.assertInstanceOf(com.openggf.sprites.playable.Tails.class,
-                GameServices.sprites().getSidekicks().getFirst());
+        var follower = GameServices.sprites().getSidekicks().getFirst();
+        org.junit.jupiter.api.Assertions.assertEquals(followerCharacter, follower.characterKey().persisted());
+        if (followerCharacter.equals("sonic")) {
+            org.junit.jupiter.api.Assertions.assertInstanceOf(com.openggf.sprites.playable.Sonic.class, follower);
+        } else {
+            org.junit.jupiter.api.Assertions.assertInstanceOf(com.openggf.sprites.playable.Tails.class, follower);
+        }
         return new RouteSetup(fixture, program, preLevelRows, recordedReloadRow);
     }
 

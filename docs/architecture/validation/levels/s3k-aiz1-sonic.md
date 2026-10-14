@@ -31,11 +31,17 @@ and the CNZ/LRZ/DEZ/HPZ cold intro offsets are outside this fix.
 
 ## Configuration inventory
 
-The representative row is native/off, 320px, Sonic with CPU Tails. Width axes
-are 320/400/512/640/800, and movement donors are off/S1/S2, as resolved by
-`WidescreenAspect` and `CrossGameFeatureProvider`. Remaining main-character
-routes and team shapes require separate obligations; no configuration is
-classified unsupported merely because this matrix has not exercised it.
+The representative route is native/off, 320px, Sonic with CPU Tails. Current
+short entry checks resolve every production `WidescreenAspect` preset
+320/352/400/528/800 through `LaunchProfileApplier` and the display resolver,
+crossed with off/S1/S2 donation. S1 uses an explicitly supported Sonic CPU;
+native/S2 use Tails. Actual ROM renderer/animation, CPU chain and restored main/
+camera ownership are checked. The older 512/640 checks remain separately labelled
+custom geometry. Historical raw-width full-route and custom fixtures retain their
+original Sonic+Tails setup, including S1's physical Tails without donated Tails art;
+they are not production-profile or rendered-team certification. Remaining main-
+character routes and team shapes require separate obligations; no configuration
+is classified unsupported merely because this matrix has not exercised it.
 
 ## Obligations and evidence
 
@@ -45,7 +51,7 @@ classified unsupported merely because this matrix has not exercised it.
 | EVENT / REWIND intro and Knuckles | Independent fresh fixtures reach live intro/cutscene routines and completion; capture A, advance 90 pad inputs, restore A, replay twice | `TestS3kAiz1RouteRewind#liveSpotRestoresAndReplaysTwice`, parameter identities in execution record | Pass: INTRO_HANDOFF, KNUCKLES_WAIT, KNUCKLES_ACTIVE, INTRO_COMPLETE. Initial red run exposed missing palette-helper timer/frame; fixed through RewindStateful. |
 | CAMERA / OBJECT / REWIND hollow tree | Approach before ROM capture threshold $2C99; active camera lock $2C60; released bounds $1300..$4000; snapshot comparison includes object graph and world state | Same parameterized test, independent TREE_APPROACH / TREE_LOCK / TREE_RELEASE | Pass: TREE_APPROACH, TREE_LOCK, TREE_RELEASE. Initial red run exposed uncaptured static Events_fg_4; registered a dedicated adapter. |
 | LOAD / REWIND AIZ2 | Production seamless reload and new-timeline restore/replay; old timeline rejected under the production boundary policy | `TestS3kAiz1ReloadRewind#seamlessReloadIsolatesHistoryAndNewActReplays`, ordinary | Pass: production root at frame 5,174; backward seek clamps to AIZ2; two 30-frame replays match. The older `TestRewindAcrossActBoundary` is only a smoke check, not evidence for this edge. |
-| ENTRY / LIFE / LOAD breadth | Short width × donor lifecycle cross-product, checkpoints, death/restart, reset behavior and team ownership | `TestS3kAiz1EntryMatrix`, explicit `openggf.aiz1.entry=true` | All 15 width × donor entry cases pass; intro ownership and two 30-frame rewind replays. Checkpoints, death/restart and load breadth remain missing. |
+| ENTRY / LIFE / LOAD breadth | Actual fresh intro and production preset × supported-donor entry, with donor-supported CPU art/ownership; separate legacy geometry | `TestS3kAiz1EntryMatrix`, ordinary independent checks | Fifteen production cases plus six legacy512/640 cases qualified below; actual input/control release, two whole-world30-frame replay cycles and explicit main/camera identity. Checkpoints, death/restart, repeated reset and additional main/team products remain open. |
 | ROUTE breadth | Every width and donor, supported main routes and team shapes | `TestS3kAiz1CompatibilityRoutes#axisRouteCompletes`, explicit `openggf.aiz1.routes=true` | All seven axis routes reach the AIZ2 reload alive; see the green-route continuation below. Full width × donor route cross-product and other teams/main routes remain missing. |
 | OBJECT / REWIND opposing spring chain | Live two-spring approach, RIGHT-only rejection, spring-aware crossing, two whole-state replays | `TestS3kAiz1SpringRecovery`, explicit `openggf.aiz1.recovery=true` | 640/off, 800/off and 320/S1; see spring-chain continuation below. Full routes now complete; the independent negative-control/rewind obligation remains. |
 | OBJECT / EVENT / CAMERA local boundaries | Per-mechanic before/at/after, negative activation, authority, culling and release checks | Existing `TestS3kAiz1SkipHeadless` is a source reference, not new execution evidence | Full obligation audit pending; route completion alone does not discharge local checks. |
@@ -514,3 +520,56 @@ frames; this proves determinism, not native waveform/pixel parity. Matched
 updated-base validation is pending; the
 [performance validation record](../performance/2026-10-12-runtime-performance-series.md)
 records exact commands and scope. No performance score is frozen or claimed.
+
+
+## Production-preset and actual launch-profile entry — 2026-10-14
+
+Lane `feature/ai-s3k-parity-hpz`, runtime base
+`5b2ff8e7851b99dd40998dfc41fbfd21c80031ef`, prior lane HEAD `e0036138a`.
+New preset overloads apply the production launch profile and resolve its aspect;
+they do not inject raw width. The new AIZ1 entry path requests the actual fresh
+level lifecycle, consumes only recorded controller input and waits for the live
+intro owner to admit input. Every production row has an actual donor-supported
+CPU and decoded ROM art/animation. Historical integer/full-route helper calls
+retain their old initialization, input program, CPU fixture and geometry; no
+existing route is silently relabelled as a production preset or retuned.
+The short independent entry class is now in ordinary validation; its old
+`slow-suite`/`openggf.aiz1.entry` opt-in no longer gates this mandatory entry floor.
+Expensive full routes retain their existing deeper selection.
+
+The two-act entry cohort first passes 57 cases at 10:05:41 BST (1:51 Maven time):
+AIZ1 21 cases/25.20 seconds, HCZ1 36/60.83 seconds, all with zero failures/errors/
+skips. Additional production-owner checks pass 45 cases at 10:10:56 BST (1:34),
+including all 30 HCZ1 production entry/reset rows and all 15 AIZ1 released-focus rows.
+The final AIZ1 immediate-restore and per-cycle focus checks pass the affected 15
+cases at 10:14:15 BST (43.523 Maven seconds, 18.45 case seconds). Thus the final
+scoped qualification accounts for 57 distinct identities: current 15 AIZ1 plus
+current 30 HCZ1 production rows and 12 unchanged custom geometry rows, not one
+final-source whole-57 invocation. A new typed-assertion compilation error was
+corrected before any tests executed; it was not a runtime/route failure.
+
+The actual production product is five presets × off/S1/S2. S1's explicit Sonic
+CPU is supported by `LaunchProfile`; requesting S1 Tails instead normalizes to
+None, independently verified in the [HPZ matrix](s3k-hpz-act.md#actual-launch-profile-normalization-and-hpz-entry--2026-10-14).
+Both snapshots compare every registered owner; the existing title-card `Pattern`
+normalization compares all 64 pixel bytes and omits no field/pixel. Explicit focus
+checks cover the live main reference deliberately absent from `CameraSnapshot`.
+This is entry and short replay evidence, not raster parity or complete act coverage.
+
+All requests run from the intended worktree through normal shared admission,
+Java 25, surfaceless EGL, and original absolute S3K/S1/S2 ROM paths:
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null   python3 tools/testing/maven_queue.py -Dmse=off   '-Dtest=TestS3kAiz1EntryMatrix,TestS3kHcz1EntryMatrix'   -Dopenggf.headless.gl=surfaceless-egl   "-Ds3k.rom.path=$PROJECT_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen"   "-Dsonic1.rom.path=$PROJECT_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen"   "-Dsonic2.rom.path=$PROJECT_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen" test
+```
+
+The owner follow-up substitutes
+`TestS3kAiz1EntryMatrix#introReleasesInputAndEntryReplaysTwice,TestS3kHcz1EntryMatrix#entryAdmitsMovementAndReplays+repeatedLoadsReplaceOwnersAndRetainPlayableConfiguration`;
+the final affected selector is
+`TestS3kAiz1EntryMatrix#introReleasesInputAndEntryReplaysTwice`.
+Normal worktree-lease and admission waits are separate from these execution times.
+No broad/full-suite, new native recording or campaign conformance claim belongs to
+this slice. Real checkpoint/death/reset, all supported main/team paths, the new
+352/528 complete-route products and remaining per-mechanic/boss/presentation
+obligations remain explicit and are not discharged by the short entry checks.
+Combined validation/integration remain lead-owned.
