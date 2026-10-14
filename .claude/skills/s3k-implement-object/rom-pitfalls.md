@@ -5286,6 +5286,16 @@ admission. Synthetic sentinels test the manager contract only; certify native
 scene pressure with the actual legal managed child types. Unknown consumed
 residue must never be silently replaced with zero or supplied by a trace.
 
+Pressure fixtures must retain the actual dispatch boundary. In the D01 small
+plane pass, director4 allocates while the large children are still occupied;
+those children consume flag4 and release their slots later in that same pass.
+An after-pass population of86 does not mean a missing admitted prefix. Likewise
+Master48 reads catcher93 before the latter's current update; compare the value
+available at that read, not the later live child position. The 2026-10-14 native
+graph pressure fixtures assert both boundaries before declaring later full-table
+occupancy. Never move gameplay clocks or suppress native retirement to preserve
+a pressure fixture's presumed population or position.
+
 ## Scene controller RAM belongs to its active binding (2026-10-14)
 
 Preserving controller references is not preserving matching RAM. Generic
