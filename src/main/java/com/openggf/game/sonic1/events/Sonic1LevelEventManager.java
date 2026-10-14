@@ -86,6 +86,14 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
     }
 
     @Override
+    public boolean isBossActive() {
+        // S1 Sonic_Display and ResumeMusic test f_lockscreen, not the later
+        // games' Boss_flag. DLE latches this lock when it starts the boss song;
+        // it remains set after defeat until the prison/LZ boss releases it.
+        return Sonic1ZoneEvents.isScreenLocked();
+    }
+
+    @Override
     protected void onInitLevel(int zone, int act) {
         // Reset all zone handlers (only one is active at a time,
         // but reset all for clean state)

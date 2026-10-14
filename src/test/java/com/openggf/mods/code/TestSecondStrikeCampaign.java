@@ -3,6 +3,10 @@ package com.openggf.mods.code;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameModule;
 import com.openggf.game.TitleScreenProvider;
+import com.openggf.game.mutators.TransientMutatorPolicyAccess;
+import com.openggf.game.session.WorldSession;
+import com.openggf.game.session.WorldSessionPolicyAccess;
+import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.Sonic3kObjectPlacement;
 import com.openggf.game.sonic3k.Sonic3kRingPlacement;
 import com.openggf.game.sonic3k.difficulty.AizMinibossAttackPolicy;
@@ -10,6 +14,7 @@ import com.openggf.game.sonic3k.difficulty.BlueSphereLayoutPolicy;
 import com.openggf.game.sonic3k.difficulty.GumballSpringPolicy;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance;
+import com.openggf.game.sonic3k.mutators.NativeMutatorRuntime;
 import com.openggf.io.ModAssetRoot;
 import com.openggf.level.AbstractLevel;
 import com.openggf.level.objects.TestObjectServices;
@@ -176,6 +181,21 @@ class TestSecondStrikeCampaign {
         patched.getTitleScreenProvider().setExitToLevelHandler(() -> { });
         patched.getTitleScreenProvider().reset();
         verify(title).initialize(); verify(title).setExitToLevelHandler(any()); verify(title).reset();
+    }
+
+    @Test void resolvedSecondStrikeWorldKeepsNativePolicyAssemblyWithoutAnOptInMutatorGraph() throws Exception {
+        var plan = registration();
+        var nativeModule = new Sonic3kGameModule();
+        var faults = new ModFaultBoundary(Map.of(), new ModRuntimeFindingStore(),
+                ignored -> new ModStateSaveResult.Saved(), ignored -> { });
+        GameModule resolved = new ModBackedGamePatch(plan, faults).apply(nativeModule, null);
+        for (var patch : plan.explicitPatches()) resolved = patch.apply(resolved, null);
+        var world = new WorldSession(nativeModule, resolved, null);
+
+        assertFalse(WorldSessionPolicyAccess.hasPolicies(world));
+        assertNull(TransientMutatorPolicyAccess.source(world));
+        assertNull(WorldSessionPolicyAccess.getService(world, NativeMutatorRuntime.class));
+        assertEquals(20, world.getGameModule().getGameService(AizMinibossAttackPolicy.class).followupDelayTicks(3));
     }
 
     @Test void otherZonesKeepTheirExactNativeTables() throws Exception {

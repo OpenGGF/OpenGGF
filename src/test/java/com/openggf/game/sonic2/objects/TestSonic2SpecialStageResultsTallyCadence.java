@@ -99,6 +99,8 @@ class TestSonic2SpecialStageResultsTallyCadence {
         // (s2.asm:6779-6781, 28389-28392) => 100 draining passes plus the
         // exhausted one.
         assertEquals(101, tallyPasses(screen(40, 30, true)));
+        assertEquals(17000, services.gameState().getScore(),
+                "1000 native emerald units plus 700 ring units award 17000 displayed points");
     }
 
     @Test

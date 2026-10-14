@@ -1299,6 +1299,16 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
      */
     private void registerLevelArtSheet(String key, ObjectSpriteSheet sheet, Sonic3kObjectArt art) {
         registerSheet(key, sheet);
+        recordLevelArtTileRanges(key, sheet, art);
+    }
+
+    /** Runtime ROM mappings retain their VRAM ranges so module DMA refreshes GPU consumers. */
+    public void refreshLevelArtSheet(String key, ObjectSpriteSheet sheet, Sonic3kObjectArt art) {
+        refreshSheetPatterns(key, sheet);
+        recordLevelArtTileRanges(key, sheet, art);
+    }
+
+    private void recordLevelArtTileRanges(String key, ObjectSpriteSheet sheet, Sonic3kObjectArt art) {
         if (sheet != null && art.getLastBuildStartTile() >= 0) {
             List<Sonic3kPlcLoader.TileRange> ranges = art.getLastBuildTileRanges();
             if (ranges.isEmpty()) {
@@ -2647,6 +2657,44 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             return renderer.isReady();
         } catch (IOException e) {
             LOG.warning("Failed to ensure standalone art '" + key + "': " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Bounded encounter admission from explicit user-ROM data and injected graphics. Cold
+     * level-art sheets are decoded in a detached source act, never from the live tile buffer.
+     */
+    public boolean ensureEncounterArtLoaded(Rom rom, GraphicsManager graphics, String key) {
+        if (sheets.containsKey(key)) return true;
+        if (rom == null) return false;
+        try {
+            Sonic3kObjectArt art = new Sonic3kObjectArt(null, RomByteReader.fromRom(rom));
+            ObjectSpriteSheet sheet = null;
+            outer: for (int zone = 0; zone <= 12; zone++) {
+                for (int act = 0; act < 2; act++) {
+                    var plan = Sonic3kPlcArtRegistry.getPlan(zone, act);
+                    for (var entry : plan.standaloneArt()) {
+                        if (key.equals(entry.key())) {
+                            sheet = art.loadStandaloneSheet(rom, entry);
+                            break outer;
+                        }
+                    }
+                    for (var entry : plan.levelArt()) {
+                        if (key.equals(entry.key())) {
+                            sheet = new Sonic3kZoneArt(rom).objectArt(zone, act, key);
+                            break outer;
+                        }
+                    }
+                }
+            }
+            if (sheet == null) return false;
+            registerSheet(key, sheet);
+            registerStandaloneAnimations(key);
+            if (graphics != null) ensurePatternsCached(graphics, PatternAtlasRange.OBJECTS.base());
+            return true;
+        } catch (IOException | RuntimeException failure) {
+            LOG.warning("Encounter art unavailable '" + key + "': " + failure.getMessage());
             return false;
         }
     }

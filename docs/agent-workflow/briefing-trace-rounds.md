@@ -125,6 +125,17 @@ Bounded category batches now yield shared admission while retaining target/
 ownership. This creates opportunities for short jobs, not a per-batch time bound.
 See [queue evidence](../architecture/research/2026-10-13-maven-queue-contention.md).
 
+Fork options and child-launcher output (2026-10-14, S3K composition): an admitted
+headless flag does not prove propagation into a test fork. With the current
+Maven3.9.16/Surefire3.2.5 POM, `MAVEN_OPTS` supplies parent JVM properties;
+CLI `-D` or inherited `JDK_JAVA_OPTIONS` reaches tests. The latter also adds a
+Java notice before child stderr, so a first-byte diagnostic assertion can fail
+while its correct exit status and empty stdout pass. Confirm the actual fork's
+graphics setting and attribute the exact assertion/source/environment; tool
+preflight alone does not prove pixel coverage. Preserve required graphics when
+reporting a known launcher-prefix failure. See the
+[S3K composed record](../architecture/plans/2026-10-13-s3k-playable-completion.md#inherited-child-launcher-prefix-and-preserved-graphics).
+
 A released port is a global resource, not a socket-close oracle (2026-10-12,
 mod audit delivery): Golf's audio-fault teardown test received `BindException`
 while trying to bind the former host port. Both unchanged baseline/current cases
@@ -551,6 +562,17 @@ and `GameplayInputBranchTool`'s contact CSV. Filter standing-latch candidates to
 spawn-derived latch key, so querying every active object falsely labels the
 chain display as a second physical support. The separate riding owner is the
 actual carrier; shared latch-key observations alone do not establish contact.
+
+SOZ fixed-input repair (2026-10-13, GitHub issue #188): native Hurt gravity
+continues after object control takes the player. Its first integer-position
+difference can reconverge while later contacts still change. Read the owning
+solid routine through its narrow-width and forced-top branches; a permissive
+vertical catch alone does not prove landing. Preserve X/Y fractions, actual
+riding ownership and button-edge history in engine-owned authoring snapshots.
+Directional input prevents the native roll entry, so Down plus Right is not a
+roll instruction. Freeze successful controller choices into ordinary input,
+then verify them in a fresh cold session with the unchanged replay/load checks.
+See [the issue audit](../architecture/validation/2026-10-13-github-issues.md).
 
 Live rewind recording versus route-driver snapshots (2026-09-27): enabling
 LIVE_REWIND_ENABLED in a RecordingFrameDriver/HeadlessTestFixture route does not

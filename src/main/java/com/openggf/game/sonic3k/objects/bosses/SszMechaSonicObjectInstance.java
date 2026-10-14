@@ -93,7 +93,7 @@ import java.util.List;
  * results and launch handover.
  */
 public final class SszMechaSonicObjectInstance extends AbstractBossInstance
-        implements SpawnRewindRecreatable, SszBossExplosionController.StopFlag {
+        implements SpawnRewindRecreatable, SszBossExplosionController.StopFlag, SszMechaSparkHost {
 
     // --- ObjSlot_MechaSonic ------------------------------------------------------------------
 
@@ -1118,10 +1118,12 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
             }
             case 4 -> {
                 updateFinalDefeatSound();
-                // Accepted SSZ scope ends immediately before loc_7BCFC would allocate
-                // loc_5E6C0/loc_85EE6 and change Player_mode to3. Hold at that cold stop
-                // until the separately scoped ending owner exists; never pretend it ran.
-                if (timer > 0) timer--;
+                // loc_7BCFC: preserve the signed predecrement, independent
+                // AllocateObject calls, and delete only after both attempts.
+                if ((timer = (short) (timer - 1)) >= 0) return;
+                spawnFreeChild(com.openggf.game.sonic3k.ending.EndingKnucklesFlightObjectInstance::new);
+                spawnFreeChild(com.openggf.game.sonic3k.ending.EndingWhiteRestoreObjectInstance::new);
+                ObjectLifetimeOps.deleteNoRespawn(this);
             }
             default -> throw new IllegalStateException("Invalid SSZ final defeat stage");
         }
@@ -1532,7 +1534,8 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
 
     boolean superGlowActive() { return (flags & 0x40) != 0; }
 
-    boolean stopsSparks() { return (flags & 0x40) != 0; }
+    @Override public boolean stopsSparks() { return (flags & 0x40) != 0; }
+    @Override public boolean sparkFlipX() { return renderFlippedForTest(); }
 
     /** {@code Obj_Wait}: {@code subq.w #1,$2E(a0)} and, when it goes negative, {@code jmp $34}. */
     private void objWait() {

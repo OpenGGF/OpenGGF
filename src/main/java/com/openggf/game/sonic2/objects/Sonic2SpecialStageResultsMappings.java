@@ -279,7 +279,7 @@ public final class Sonic2SpecialStageResultsMappings {
                     hud(-0x10, 0, 1, 2, 0x6CA, 1),      // separator
                     results(-0x14, 0, 2, 2, 0x5A0, 0),  // icon
                     numbers(0x38, 0, 4, 2, 0x520, 0),   // number digits
-                    hud(0x58, 0, 1, 2, 0x6F0, 0),       // trailing blank
+                    hud(0x58, 0, 1, 2, 0x6F0, 0),       // fixed trailing zero
             },
             // Frame 17 (Map_obj6F_03AA): Total display
             {
@@ -289,7 +289,7 @@ public final class Sonic2SpecialStageResultsMappings {
                     hud(-0x10, 0, 1, 2, 0x6CA, 1),      // separator
                     results(-0x14, 0, 2, 2, 0x5A0, 0),  // icon
                     numbers(0x38, 0, 4, 2, 0x528, 0),   // number digits
-                    hud(0x58, 0, 1, 2, 0x6F0, 0),       // trailing blank
+                    hud(0x58, 0, 1, 2, 0x6F0, 0),       // fixed trailing zero
             },
             // Frame 18 (Map_obj6F_027E): Ring bonus with zero
             {
@@ -298,7 +298,7 @@ public final class Sonic2SpecialStageResultsMappings {
                     hud(-0x30, 0, 4, 2, 0x6D2, 1),      // "BONUS" text
                     hud(-0x10, 0, 1, 2, 0x6CA, 1),      // separator
                     results(-0x14, 0, 2, 2, 0x5A0, 0),  // icon
-                    hud(0x58, 0, 1, 2, 0x6F0, 0),       // trailing blank (zero)
+                    hud(0x58, 0, 1, 2, 0x6F0, 0),       // fixed trailing zero
             },
             // Frame 19 (Map_obj6F_0314): Score zero 1
             {
@@ -307,7 +307,7 @@ public final class Sonic2SpecialStageResultsMappings {
                     hud(-0x30, 0, 4, 2, 0x6D2, 1),      // "BONUS" text
                     hud(-0x10, 0, 1, 2, 0x6CA, 1),      // separator
                     results(-0x14, 0, 2, 2, 0x5A0, 0),  // icon
-                    hud(0x58, 0, 1, 2, 0x6F0, 0),       // trailing blank (zero)
+                    hud(0x58, 0, 1, 2, 0x6F0, 0),       // fixed trailing zero
             },
             // Frame 20 (Map_obj6F_0346): Score zero 2
             {
@@ -316,12 +316,12 @@ public final class Sonic2SpecialStageResultsMappings {
                     hud(-0x30, 0, 4, 2, 0x6D2, 1),      // "BONUS" text
                     hud(-0x10, 0, 1, 2, 0x6CA, 1),      // separator
                     results(-0x14, 0, 2, 2, 0x5A0, 0),  // icon
-                    hud(0x58, 0, 1, 2, 0x6F0, 0),       // trailing blank (zero)
+                    hud(0x58, 0, 1, 2, 0x6F0, 0),       // fixed trailing zero
             },
             // Frame 21 (Map_obj6F_03E4): Score numbers only
             {
                     numbers(0x38, 0, 4, 2, 0x528, 0),   // number digits
-                    hud(0x58, 0, 1, 2, 0x6F0, 0),       // trailing blank
+                    hud(0x58, 0, 1, 2, 0x6F0, 0),       // fixed trailing zero
             },
             // Frame 22 (Map_obj6F_03F6): "SONIC HAS ALL THE"
             {

@@ -355,8 +355,11 @@ public final class LiveRewindManager {
             // recording (via the controller's own AudioManager collaborator,
             // not GameServices) so held rewind has history to play back.
             rewindController.setRewindHistoryArmed(true);
+            com.openggf.game.session.WorldSessionPolicyAccess.setHistoryRecording(gameplayMode.getWorldSession(),true);
             return true;
         }
+        if(installedGameplayMode!=null)
+            com.openggf.game.session.WorldSessionPolicyAccess.setHistoryRecording(installedGameplayMode.getWorldSession(),false);
         inputSource = new LiveRewindInputSource();
         EngineStepper stepper = requiredKind == StepperKind.SPECIAL_STAGE
                 ? new SpecialStageStepper(
@@ -385,6 +388,7 @@ public final class LiveRewindManager {
         rewinding = false;
         if (rewindController != null) {
             rewindController.setRewindHistoryArmed(true);
+            com.openggf.game.session.WorldSessionPolicyAccess.setHistoryRecording(gameplayMode.getWorldSession(),true);
         }
         return rewindController != null;
     }
@@ -622,6 +626,8 @@ public final class LiveRewindManager {
     }
 
     private boolean clear() {
+        if(installedGameplayMode!=null)
+            com.openggf.game.session.WorldSessionPolicyAccess.setHistoryRecording(installedGameplayMode.getWorldSession(),false);
         if (rewinding && rewindController != null) {
             if (!cleanupPresentationAfterRealtimeRewind(
                     AudioPresentationPolicy.STOP_ALL_PRESENTATION)) {

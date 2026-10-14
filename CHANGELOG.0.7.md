@@ -6,6 +6,30 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Gameplay and presentation
 
+- **Stock-game results and issue fixes:** act and special-stage bonuses award
+  the full native point totals, with S1/S2 trailing-zero art and S3K bonus digits
+  matching the score. Locked title cards consume the unpause press. Sonic 1
+  retains boss music through invincibility expiry, shows its special-stage Continue
+  award, and preserves Spring Yard's cleared lower background rows while keeping
+  the original foreground layout dimensions. Sonic 2 hurt
+  recovery releases pipe control at the native landing boundary. Ice Cap's broken
+  chain detaches into rewindable falling links, Carnival Night's escape flame
+  stays behind Robotnik, and Marble Garden's head triggers, platform skid sound
+  and raised-background sprite occlusion follow their ROM paths. Standalone
+  background passes preserve their caller's framebuffer, viewport and blend state
+  while retaining priority metadata.
+
+- **Sonic3K Chaos Mode:** a maintained code mod adds 105 selectable effects over
+  ordinary native S3K, with available/selected lists, interval and duration controls,
+  severity-weighted scheduling and five optional ROM-art sidegames. Owner-scoped
+  temporary mutators and immutable gameplay observations keep scheduling alongside
+  native movement, objects, audio and presentation; accepted decisions, deadlines
+  and cleanup participate in rewind. Native target, art, route and control
+  qualifications constrain effects, including bounded Cluckoid gusts and ghost
+  encounters. Offscreen title captures share the native save-selection launch,
+  retain the selected team and prepare fresh mod callbacks for the new world.
+  Stream voting remains a future extension.
+
 - **Second Strike prototype:** a source-first difficulty patch follows the native
   S3K Angel Island opening with cooperating spotters, committed guards/artillery,
   five original rings across forest/fire, hostile Robotnik monitors with speed
@@ -148,6 +172,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   the boss-entry gates. The final Mecha Sonic arena also holds its native
   horizontal origin on widescreen, keeping its attack box aligned with the terrain
   even when a wider camera deadzone would otherwise retain an offset.
+  Cold paired Sonic and Tails routes complete all three fights at native and
+  800px widths, then continue into Death Egg with ordinary control. Rewind retains
+  the transports and resets history at the real level handoff.
   Spawn-derived constants and
   restored carrier links declare their rewind policies without coverage exceptions.
   Player snapshots preserve tile priority and the independent sprite display

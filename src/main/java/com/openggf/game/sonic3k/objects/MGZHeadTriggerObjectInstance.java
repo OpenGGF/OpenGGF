@@ -44,7 +44,7 @@ import java.util.List;
  * clear = watches and fires LEFT; set = watches and fires RIGHT.
  *
  * <p>When destroyed, the column (child frame 6) keeps rendering as scenery and
- * the face frame becomes an empty mapping. Re-entering the head's spawn window
+ * the main face sprite is suppressed by mapping frame zero. Re-entering the head's spawn window
  * after level respawn sees the trigger-array flag still set, so the head comes
  * back up already shattered (ROM loc_34364 early-out).
  */
@@ -75,9 +75,8 @@ public class MGZHeadTriggerObjectInstance extends AbstractObjectInstance
     // ROM: sub2_mapframe init value 6 (3-piece column: capital + shaft + base).
     private static final int BODY_FRAME = 6;
     // ROM: move.b #0,mapping_frame(a0) when the trigger is already spent and again
-    // on the final hit. This frame shares art with the projectile, but it does not
-    // look the same on the head because the head keeps make_art_tile(...,1,1)
-    // while the projectile masks its copied art_tile with drawing_mask first.
+    // on the final hit. Draw_Sprite's multisprite branch suppresses main frame
+    // zero; ordinary projectile slots draw that same frame as an arrow.
     private static final int FACE_FRAME_TRIGGERED = 0;
     // Frame 7 is the empty mapping used by anim 2's stone-chip flicker child.
     private static final int FACE_FRAME_EMPTY = 7;
@@ -438,9 +437,12 @@ public class MGZHeadTriggerObjectInstance extends AbstractObjectInstance
         // the face being shattered off.
         renderer.drawFrameIndex(BODY_FRAME, spawn.x(), spawn.y(), flipped, false);
 
-        // The face overlay keeps rendering after the trigger completes so the
-        // broken-gem state remains visible on top of the pillar body.
-        renderer.drawFrameIndex(mappingFrame, spawn.x(), spawn.y(), flipped, false);
+        // Draw_Sprite's render_flags bit 6 path skips a zero main frame while
+        // keeping sub2_mapframe=6 visible. Drawing ordinary mapping0 here adds
+        // the projectile arrow to the defeated head.
+        if (mappingFrame != 0) {
+            renderer.drawFrameIndex(mappingFrame, spawn.x(), spawn.y(), flipped, false);
+        }
     }
 
     @Override

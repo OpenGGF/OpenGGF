@@ -98,6 +98,8 @@ public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance impl
         speedCallback = SpeedCallback.REACH_TURN_POINT;
     }
 
+    @Override protected boolean independentPresentationBody() { return true; }
+
     @Override
     protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
@@ -192,7 +194,7 @@ public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance impl
     }
 
     private boolean shouldStartCharge(AbstractPlayableSprite updatePlayer) {
-        PlayableEntity target = closestNativePlayerByHorizontalDistance(updatePlayer);
+        PlayableEntity target = com.openggf.game.mutators.NativeObjectPolicyAccess.permitsTargeting(services()) ? closestNativePlayerByHorizontalDistance(updatePlayer) : null;
         if (!(target instanceof AbstractPlayableSprite player)) {
             return false;
         }

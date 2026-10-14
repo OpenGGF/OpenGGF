@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.game.mutators.PlayerFluidContextAccess;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.objects.HczHarmfulExplosionObjectInstance;
@@ -143,7 +144,7 @@ public final class JawzBadnikInstance extends AbstractS3kBadnikInstance
             int ability = player.getDoubleJumpFlag();
             return ability == 1 || ability == 3;
         }
-        if (player instanceof Tails tails && player.getDoubleJumpFlag() != 0 && !tails.isInWater()) {
+        if (player instanceof Tails tails && player.getDoubleJumpFlag() != 0 && !PlayerFluidContextAccess.movementUnderwater(tails)) {
             int dx = (short) (player.getCentreX() - currentX);
             int dy = (short) (player.getCentreY() - currentY);
             int angle = (int) Math.round(Math.atan2(dy, dx) * 128.0 / Math.PI) & 0xFF;

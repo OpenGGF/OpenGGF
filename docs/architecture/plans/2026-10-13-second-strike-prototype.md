@@ -451,3 +451,98 @@ this revision does not claim a new full cold campaign completion.
 The combined change-based smoke run and final destination integration are
 pending. Existing twenty-six stock-attributed negatives are the comparison
 reference; new or worsened failures remain delivery blockers.
+
+
+## Hard-mode delivery qualification and updated-base composition (2026-10-14)
+
+The initial `32df1e98c9dfd0b9813b69323731b772a9af73e0` candidate used
+pinned base `5d9dd81381b05db66f530f55b8627f90ad1b88cc`. The complete
+3,187-candidate smoke plan had 64 ordinary batches. Its supervising transport
+exited 143 after 58 completed batches; the cause is unknown. The surviving
+59th batch subsequently ended without a captured exit and was not counted.
+After exact process reconciliation, only the 287 unfinished candidates were
+retried through the unchanged local category runner and normal admission.
+The prefix plus run `20261013T232622Z-2173fecd` covers the original selection;
+it is not a narrower selection or a repeated full baseline. Original and
+continuation diagnostics were inspected, acknowledged and deleted.
+
+Combined ordinary outcome: 3,157 reports, 26,700 cases, 27 assertions, zero
+errors and 64 inspected skips, in 4,185.85 seconds of completed execution.
+All 26 historical negative identities/types match: 25 complete assertions
+literally, and the full SSZ Tails diagnostic after only its two verified
+`RewindObjectStateBlob@hex` identity tokens. The missing complete historical
+SSZ text was recovered from the original runtime-compatibility tool output,
+not recreated from truncated prose. No gameplay field was normalized.
+The historical exact skip inventory is unavailable; this does not claim
+literal whole-skip equality. Current skips are opt-in work, graphics
+prerequisites, Infinite Sonic platform/flyer prerequisites, the CPZ tube
+assumption and local audio reference/capture prerequisites. None is a
+missing-ROM skip; one generic graphics assumption has an opaque cause.
+Fresh guards passed: 88 reports / 678 cases, zero failures/errors/skips,
+261.54 seconds. This remains inherited-failure-qualified smoke, not a green
+whole-suite or public-release full-suite result.
+
+The additional audio CLI assertion is launcher-environment contamination.
+The exact `TestCompleteRunAudioCli#freshJvmBootstrapsTheS1ProfileButItsUnavailableDispatcherEmitsNoStandardOutput`
+case reproduced on clean pinned `5d9dd813`: one failure with
+`JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl`, one pass with that
+variable unset; zero errors/skips in both. Java 25 prints a leading `NOTE`
+before the application's expected `PRODUCER_UNAVAILABLE:` stderr prefix.
+The same unchanged candidate case passed with launcher-option variables
+unset. No product/test source was changed to suppress the assertion.
+The merged native checks pass the graphics property as a Maven property,
+with both launcher-option variables unset.
+
+Develop subsequently advanced to
+`5b2ff8e7851b99dd40998dfc41fbfd21c80031ef`. Private intent composition
+preserves native encounter monitor disguise/metadata and level-VRAM ending
+refreshes alongside our canonical content constructor and independent flame
+sheet. Ending scene identity remains canonical and never re-enters the AIZ
+placement patch. Fresh-load destination ring publication is preserved once;
+our five placed records do not become an inventory reset or clamp. No new
+enemy implementation adjustment was required. Optional combined mutator packs
+can change dynamic rings or generic truce behavior; native field/firing rules
+and whole-picture badnik transforms do not automatically target our variants.
+Standalone hard mode is the supported qualification here.
+
+The updated-base planner selects all 3,256 smoke candidates because the
+example paths conservatively select all categories. Another unchanged broad
+run would be disproportionate after the completed own smoke: new overlap is
+bounded to the native monitor/art provider and identified load, hurt, rewind,
+child-lifetime, presentation and audio consumers. The explicit 33-class/method
+union below passed all 212 cases with no skips, including a real
+Second Strike-resolved `WorldSession` proving no opt-in mutator graph is
+installed while difficulty services remain available. Java 25 compiled 3,965
+production sources; `verify` also passed binary SDK, Javadoc and artifact
+checks. Fresh actual-composition guards passed 88 reports / 680 cases with
+zero failures/errors/skips. This is bounded composition validation, not a
+whole updated-base smoke-suite claim.
+
+Exact focused selector union (comma-separated, supplied as `-Dtest`):
+
+```text
+com.openggf.audio.TestAudioMutatorAccess#internalLeasePreservesExternalObserverAndJournalsNativeRomRequests+noBindingLeavesNativeCommandAndOverridePathsUnchanged+replayRetainsLogicalNativeIntentWithoutDoublePhysicalSubmissions,com.openggf.game.mutators.TestSpritePictureTransform#anatomyCompositionRetainsWholePictureMetadataAndUsesSeparateAnchors+semanticTargetingAndStealthTakePrecedenceOverEveryWholePictureEffect,com.openggf.game.session.TestWorldPolicyHistory#disabledHistoryDoesNotCaptureOrAccumulateStageBoundariesAndArmingStartsFresh+zeroTickCleanupReplaysItsNativeDeletionWithoutRepeatingCreatorCallbacks,com.openggf.game.sonic3k.TestSecondStrikeEnemiesNativeArt,com.openggf.game.sonic3k.TestSonic3kBootstrapResolver,com.openggf.game.sonic3k.TestSonic3kDecodingUtils,com.openggf.game.sonic3k.TestSonic3kLevelLoading,com.openggf.game.sonic3k.TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits,com.openggf.game.sonic3k.audio.TestSonic3kSpeedShoesCommandSemantics#monitorPickupAndTimerExpiryUseSemanticEightAndOneWithoutSystemCommands+shorterNativeGrantRetainsStockDurationAndRewindRestoresBehavioralExpiry,com.openggf.game.sonic3k.mutators.TestNativeMutatorRuntime#nativeAllocationHelpersCaptureOwnedTailsAfterRootRemovalAndLeaveIndependentSiblingsAlone+nativeDefeatReplacementAndDestructionChildrenBelongOnlyToTheExactOwnedGraph,com.openggf.game.sonic3k.objects.TestSonic3kMonitorContentOverride,com.openggf.game.sonic3k.objects.TestSonic3kMonitorObjectInstance,com.openggf.level.objects.TestSecondStrikeEnemiesNative,com.openggf.level.rings.TestRingManagerRewindSnapshot#restoreSparseAttractedRingsClearsPreviousActiveSlots+roundTripAttractedRingSlot+roundTripCollectedBitSet,com.openggf.mods.TestModApiPinPolicy,com.openggf.mods.TestModApiSignatureSurface,com.openggf.mods.code.TestSecondStrikeBoss,com.openggf.mods.code.TestSecondStrikeCampaign,com.openggf.mods.code.TestSecondStrikeEnemies,com.openggf.mods.code.TestSecondStrikeStages,com.openggf.sprites.managers.TestPlayableHurtObjectControlMovement,com.openggf.sprites.playable.TestPlayableHurtLandingObjectControl,com.openggf.sprites.playable.TestShieldRewindRestore#pendingRealInstaShieldRestoreDiscardsAbandonedAttackAndSlotState+registeredInstaShieldRestoreStillRebindsAndInvalidatesItsArt+restoreBeforeFirstStatusTickKeepsInstaShieldRegistrationPending,com.openggf.tests.TestFreshLevelBoundaryRewindHeadless#restoredBoundaryRetainsPublicationPhaseAndDispatchesDeferredAssembly,com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSonic3kLevelLoading,com.openggf.tests.TestSonic3kMonitorObjectInstance,com.openggf.tools.TestGameplayCaptureDataSelectLaunch#captureRelaunchRegistersFreshCreatorStateAgainstTheChosenNativeTeam,com.openggf.tools.TestGameplayCaptureFreshLoad#omittedDestinationTitleFinishesDeferredAssemblyAndReleasesTheLivePlayer,com.openggf.tools.audio.completerun.TestCompleteRunAudioCli#freshJvmBootstrapsTheS1ProfileButItsUnavailableDispatcherEmitsNoStandardOutput,com.openggf.tools.modsdk.TestGgfModCliCommands,com.openggf.tools.modsdk.TestModApiJavadocTool,com.openggf.tools.modsdk.TestModApiSdkPackager
+```
+
+Both focused and guard invocations use `python3 tools/testing/maven_queue.py`,
+`-Dmse=off`, `-Dopenggf.headless.gl=surfaceless-egl`, the original three
+absolute ROM properties, Java 25 and Lua 5.4. Focus ends with
+`verify dependency:build-classpath -Dmdep.outputFile=target/second-strike-classpath.txt -B`;
+guards use `-Pguards test -B`. Fresh compiled API export is 20,838 lines,
+byte-equal to the candidate pin, SHA-256
+`c0a84d671d8cba5c69423fe5616e6b4940851e12d530ce2fbccf0c6350c002a3`.
+Our additions expose no new supported API surface or version.
+
+The rebuilt creator jar retains its 12 explicit native-internal compatibility
+warnings and has no errors or ROM assets. A new maintained
+`GameplayCaptureTool` run uses only the actual merged classes, the rebuilt jar,
+private profile, surfaceless EGL and null audio driver: AIZ1 at `(0x1BC0,0x3B0)`,
+300 neutral BK2 rows, `--frames 300 --audio`. All 300 GPU PNGs, state CSV and
+240,000 stereo 48 kHz PCM frames are byte-identical to the accepted final
+hard-mode capture. Fresh images 40/130/205 show first flame dash, exposed
+return and second flame dash. `guard-composed-capture/flaming-rhino.mp4` fully
+decodes and is a continuous five-second clip, without desktop input automation.
+It remains positioned supplementary evidence, not a new cold campaign clear
+or a physical-speaker observation. The earlier harder cold controller still
+stalls at the documented later wall/tree; no full harder-route completion is
+claimed. Main integration, build, push and owned cleanup follow this checkpoint.

@@ -37,6 +37,13 @@ public class SwScrlAiz extends AbstractZoneScrollHandler {
         return scroll;
     }
 
+    /** A scene owner supplies its captured wave origin without consulting campaign event RAM. */
+    void setDetachedWaveOriginFrame(int frame) {
+        if (!detachedPresentation) throw new IllegalStateException("Only detached presentation has an external wave owner");
+        waveBaseFrame = frame;
+        waveBaseFrameSet = true;
+    }
+
 
     private static final Logger LOG = Logger.getLogger(SwScrlAiz.class.getName());
 

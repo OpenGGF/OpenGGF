@@ -15,7 +15,8 @@ class TestSkippedPresentationPlcTraceIsolationGuard {
             Path.of("src/main/java/com/openggf/game/LevelInitProfile.java"),
             Path.of("src/main/java/com/openggf/game/sonic1/Sonic1LevelInitProfile.java"),
             Path.of("src/main/java/com/openggf/game/sonic2/Sonic2LevelInitProfile.java"),
-            Path.of("src/main/java/com/openggf/level/LevelManager.java"));
+            Path.of("src/main/java/com/openggf/level/LevelManager.java"),
+            Path.of("src/main/java/com/openggf/level/LevelPlayableArtInitializer.java"));
 
     @Test
     void productionSkipContractHasNoTraceInputs() throws IOException {

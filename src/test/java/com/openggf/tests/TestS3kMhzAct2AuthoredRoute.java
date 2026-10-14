@@ -33,7 +33,7 @@ class TestS3kMhzAct2AuthoredRoute {
     }
 
     @ParameterizedTest
-    @CsvSource({"sonic,23775", "tails,35814", "team,40630"})
+    @CsvSource({"sonic,23775", "tails,35815", "team,44004"})
     void incomingRoutesCompleteActTwoWithLiveRewindBoundaries(String route, int inputCount)
             throws Exception {
         boolean pair = route.equals("team");
@@ -57,6 +57,7 @@ class TestS3kMhzAct2AuthoredRoute {
         assertEquals(320, fixture.camera().getWidth());
         fixture.runner().primeInputState(movie.getFrame(0));
         var checked = new HashSet<String>();
+        var health = new HashSet<Integer>();
         // Captures omit title-card presentation; the recording driver retains
         // the native title owner. Allow neutral input for that destination tail.
         int frameLimit = movie.getFrameCount() + 600;
@@ -69,9 +70,11 @@ class TestS3kMhzAct2AuthoredRoute {
             var boss = manager.activeObjectsOfType(MhzEndBossInstance.class).stream().findFirst().orElse(null);
             String spot = null;
             if (boss != null && boss.getCustomFlag(0x100) != 0) {
+                health.add(boss.getState().hitCount);
+                if (boss.isDefeated()) assertEquals(1, boss.getState().hitCount, "native terminal health");
                 if (boss.getState().hitCount == 9) spot = "admission";
                 if (boss.getState().hitCount == 5) spot = "chase-hit";
-                if (boss.getState().hitCount == 1) spot = "last-hit";
+                if (boss.getState().hitCount == 1 && (boss.getCustomFlag(0x38) & 0x80) != 0) spot = "last-hit";
                 if (boss.isDefeated()) spot = "defeat";
                 if (boss.isDefeated() && GameServices.gameState().isEndOfLevelActive()) spot = "capsule-results";
                 if (!manager.activeObjectsOfType(MhzShipSequenceControllerInstance.class).isEmpty()) spot = "ship";
@@ -82,30 +85,38 @@ class TestS3kMhzAct2AuthoredRoute {
                 spot = "weather-fade";
             }
             if (character.equals("tails") && level.getCurrentZone() == 7 && level.getCurrentAct() == 1) {
-                if (frame == 29300) {
+                if (frame == 29301) {
                     assertTrue(fixture.sprite().isObjectControlled(), "late pulley owns Tails");
                     spot = "pulley-climb";
                 }
-                if (frame == 31750) {
+                if (frame == 31751) {
                     assertTrue(fixture.sprite().getAir(), "Tails is airborne over the final mushroom");
                     spot = "upper-flight";
                 }
             }
             if (pair && level.getCurrentZone() == 7 && level.getCurrentAct() == 1) {
                 spot = switch (frame) {
-                    case 28030 -> "opening-catapult";
-                    case 29370 -> "first-pulley";
+                    case 28031 -> "opening-catapult";
+                    case 29371 -> "first-pulley";
                     case 32140 -> "lower-loop";
-                    case 33554 -> "swing-vine";
-                    case 34650 -> "shared-pulley-pull";
-                    case 35000 -> "shared-pulley-climb";
-                    case 36600 -> "final-catapult";
+                    case 33840 -> "swing-vine";
+                    case 35100 -> "shared-pulley-pull";
+                    case 35600 -> "shared-pulley-climb";
+                    case 37675 -> "final-catapult";
                     default -> spot;
                 };
-                if (frame == 34650 || frame == 35000) {
+                if (frame == 33840) {
+                    assertTrue(fixture.sprite().isObjectControlled(), "swing vine owns Sonic");
+                    assertTrue(GameServices.sprites().getSidekicks().getFirst().isObjectControlled(),
+                            "swing vine also owns the native follower");
+                }
+                if (frame == 35100 || frame == 35600) {
                     assertTrue(fixture.sprite().isObjectControlled(), "late pulley owns Sonic");
                     assertTrue(GameServices.sprites().getSidekicks().getFirst().isObjectControlled(),
                             "late pulley owns the native follower on the shared handle");
+                    var follower = GameServices.sprites().getSidekicks().getFirst();
+                    assertEquals(fixture.sprite().getCentreX(), follower.getCentreX(), "shared handle X");
+                    assertEquals(fixture.sprite().getCentreY(), follower.getCentreY(), "shared handle Y");
                 }
             }
             // The fresh-load row still belongs to the non-rewindable title/fade
@@ -141,6 +152,8 @@ class TestS3kMhzAct2AuthoredRoute {
         if (pair) required.addAll(Set.of("opening-catapult", "first-pulley", "lower-loop",
                 "swing-vine", "shared-pulley-pull", "shared-pulley-climb", "final-catapult"));
         assertEquals(required, checked);
+        assertEquals(Set.of(1, 2, 3, 4, 5, 6, 7, 8, 9), health,
+                "loc_767F6 starts escape at one; no ninth hit to zero");
         assertEquals(4, GameServices.level().getCurrentZone());
         assertEquals(0, GameServices.level().getCurrentAct());
         assertFalse(GameServices.sprites().getMainPlayable().isObjectControlled());

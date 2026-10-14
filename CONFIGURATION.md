@@ -1004,6 +1004,25 @@ These keys are only active while a Special Stage is running.
 
 ---
 
+## Sonic3K Chaos Mode example
+
+The [Chaos Mode mod](examples/sonic3k-chaos-mode/README.md) stores its own settings
+through owner-local mod storage, separately from `config.yaml`. Its title and pause
+menus provide Available/Selected effect lists and apply settings only after a
+successful save. The interval is 5–120 seconds (default 30); effect duration is
+0.25–3× in quarter steps (default 1×). Individual effects retain their own bounded
+base duration. Five optional sidegames and five demanding context effects start
+unselected; an empty selected pool is valid.
+
+The versioned `settings.txt` and `settings-backup.txt` contain `interval`,
+`durationQuarters`, stable selected effect IDs, `enabled` and `seed`. A seed of zero
+uses the mod's fixed deterministic initial seed. Unrecoverable corrupt or incompatible
+preferences remain preserved until explicit Reset defaults; a valid backup can be
+recovered automatically. Gameplay rewind
+restores the admitted scheduler and effects, while saved player preferences remain
+the latest successful publication. The development launcher uses
+`target/sonic3k-chaos-mode/player-settings`, or an explicit `--save-root`.
+
 ## Install location and bundled mods
 
 These JVM system properties (`-D<name>=<value>` on the `java` command line) are not

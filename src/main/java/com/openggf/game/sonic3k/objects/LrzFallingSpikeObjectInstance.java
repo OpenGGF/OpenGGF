@@ -77,6 +77,9 @@ public final class LrzFallingSpikeObjectInstance extends AbstractObjectInstance
     private Phase phase = Phase.WAITING;
     private final SubpixelMotion.State motion;
 
+    private int encounterWarningTicks;
+    public void giveEncounterWarning() { encounterWarningTicks = 30; }
+
     public LrzFallingSpikeObjectInstance(ObjectSpawn spawn) {
         super(spawn, "LRZFallingSpike");
         this.triggerDistance = spawn.subtype() & 0xFF;
@@ -114,6 +117,7 @@ public final class LrzFallingSpikeObjectInstance extends AbstractObjectInstance
 
     /** {@code loc_42898} (sonic3k.asm:87958-87981). */
     private void updateWaiting(PlayableEntity playerEntity) {
+        if (encounterWarningTicks > 0) { encounterWarningTicks--; return; }
         int distance = Math.min(
                 horizontalSeparation(playerEntity),
                 horizontalSeparation(nativeP2OrNull()));

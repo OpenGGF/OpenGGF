@@ -92,10 +92,10 @@ public final class EggRoboGunArmChildInstance extends AbstractObjectInstance
         x = (parent.getX() + (hFlip ? -CHILD_DX : CHILD_DX)) & 0xFFFF;
         y = (parent.childAnchorY() + CHILD_DY) & 0xFFFF;
         updateDynamicSpawn(x, y);
-        if (!parent.gunArmed()) {
+        if (!parent.gunArmed() || !com.openggf.game.mutators.NativeObjectPolicyAccess.permitsFiring(services(), parent.getX())) {
             return;
         }
-        cooldown = FIRE_COOLDOWN;
+        cooldown = com.openggf.game.mutators.NativeObjectPolicyAccess.firingCooldown(services(), FIRE_COOLDOWN);
         int shotX = (x + (hFlip ? -SHOT_DX : SHOT_DX)) & 0xFFFF;
         int shotY = (y + SHOT_DY) & 0xFFFF;
         boolean facingLeft = !hFlip;

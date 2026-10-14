@@ -7,6 +7,11 @@ final class LevelBoundsMaskGeometry {
     record Bounds(int minX, int maxX) { }
 
     static Bounds select(LevelManager level, int currentMaxX) {
+        if (level.getZoneFeatureProvider() instanceof
+                com.openggf.game.internal.NativeArenaCameraFraming framing) {
+            var origin = framing.presentationNativeHorizontalOrigin();
+            if (origin.isPresent()) return new Bounds(origin.getAsInt(), origin.getAsInt());
+        }
         // The ROM shared boss gate (loc_85D06/loc_85D28) first ratchets a
         // temporary boundary with the camera. loc_85D36 installs the final arena
         // only when reached. In widescreen those intermediate boundaries are

@@ -253,6 +253,8 @@ public final class LevelFrameStep {
             return LevelFrameResult.SETUP_ONLY;
         }
 
+        if (phase == PlcLifecyclePhase.ORDINARY_LEVEL)
+            com.openggf.game.session.WorldSessionPolicyAccess.beforeNativeTick(context);
         frame.claim(phase);
         if (frame.consumedHeldLoopTailPreparation()) {
             context.runtimeArtCoordinator()
@@ -553,6 +555,8 @@ public final class LevelFrameStep {
                 spriteManager.refreshPlayableRenderFlags(camera);
             }
             LevelSpritePresentation.prepare(levelManager, spriteManager);
+            if (phase == PlcLifecyclePhase.ORDINARY_LEVEL)
+                com.openggf.game.session.WorldSessionPolicyAccess.afterNativeTick(context);
             return LevelFrameResult.GAMEPLAY_FRAME;
         }
 
@@ -599,6 +603,8 @@ public final class LevelFrameStep {
         // independently of whether this host iteration will draw a framebuffer.
         LevelSpritePresentation.prepare(levelManager, spriteManager);
         levelManager.clearSidekickRomVisibleReloadFrameCounterBridge();
+        if (phase == PlcLifecyclePhase.ORDINARY_LEVEL)
+            com.openggf.game.session.WorldSessionPolicyAccess.afterNativeTick(context);
         return LevelFrameResult.GAMEPLAY_FRAME;
     }
 

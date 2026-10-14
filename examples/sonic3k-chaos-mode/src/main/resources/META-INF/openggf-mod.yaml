@@ -1,0 +1,14 @@
+formatVersion: 1
+id: sonic3k-chaos-mode
+name: Sonic3K Chaos Mode
+version: 0.1.0
+authors:
+  - OpenGGF contributors
+description: A mod-owned 105-effect Chaos catalogue over native Sonic 3 & Knuckles, with captured scheduling, title/pause pool selection and optional bounded sidegames.
+engineApiRange: ">=0.7.0 <0.8.0"
+type: patch
+baseGame: s3k
+entrypoint: chaos.ChaosMod
+dependencies: []
+audioOverrides: {}
+artOverrides: {}

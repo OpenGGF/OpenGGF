@@ -4665,6 +4665,14 @@ Do not assume mirrored branches share equality: `sub_6F8F2` accepts left
 `angle <= $80`, but right `angle > $80`, before clamping. Test before, at,
 and across each boundary, including odd angles and repeated clamped updates.
 
+ICZ swinging-platform release (2026-10-13, GitHub #203): `loc_8AD5C` and
+`loc_8ADE6` compare the velocity **word unsigned** with `$200` and use `bhs`.
+A negative word passes even when its absolute magnitude is below `$200`.
+Replacing this with `Math.abs(velocity)` suppresses flipped detachment; a
+signed positive-only test also loses unflipped release on the return arc.
+Keep the angle comparisons unsigned too, and exercise a negative-velocity
+release alongside its neighboring angle/positive-velocity non-trigger.
+
 Follow every pointer hop before translating a control-bit write. In
 `sub_6F85A`, `$44 -> arm -> parent3 -> root` publishes root bit 2; it does
 not publish arm bit 2. The terminal recycle tail at `loc_6F64E` owns arm
@@ -5092,6 +5100,14 @@ child movement latch clears. It does not rewrite the owner's `$2E`. Retained
 owners must wait for the real ROM art and the final stationary child poll, and
 keep their presentation clock running.
 
+## Standalone mode gates can precede a retained locked-on placement
+
+`CutsceneKnux_SKIntro` tests character 2 and a clear checkpoint, then BEQ-deletes
+when `SK_alone_flag` is zero before camera/P1 writes. The locked-on placement still
+contains subtype `$30`; player identity and placement presence do not authorize
+the standalone intro. Keep the supported ROM-mode prerequisite and declare a
+standalone mode explicitly in component fixtures; capture it through recreation.
+
 ## AIZ post-boss owners keep their native dispatch slots
 
 `Obj_AIZEndBossWait` has no range-delete tail. Retain its original SST through
@@ -5112,3 +5128,139 @@ routine checkpoint, consume manual checkpoint results (which omit compatibility
 listener callbacks), and capture the rider latch for rewind. A transient list
 cannot be rebuilt during the countdown. Functional test setups need a real solid
 registry and an in-range owner before establishing the first contact.
+
+## A fixed-slot address includes its object-RAM base
+
+Ending `loc_5D96A` writes Tornado and Master Emerald owners at
+`Dynamic_object_RAM+object_size*5` and `*45`, not at `Object_RAM+...`.
+The locked-on constants place `Dynamic_object_RAM` three SSTs after
+`Object_RAM`, so those native writes target global slots 8 and 48. The current
+S3K object manager takes global slot indexes directly. Preserve the base before
+translating the offset; neither subtracting three nor treating the relative
+5/45 as global indexes is correct. The short ending-init test exposed this as a
+missing Tornado owner (one actor instead of two), before any flight timing test.
+See the 2026-10-13 ending lifecycle design for the rejected translations and
+the production fixed-role/rewind checks.
+
+
+## Native P2 erasure requires roster retirement, not presentation suppression
+
+`loc_815DC` clears the whole Player_2 SST in DDZ. A module's CPU/input/render
+suppression can hide that sprite while leaving the registered follower alive.
+The owning object must retire the actual roster through injected services; a
+short before-init snapshot must restore its same identity and replay the native
+erasure. Scene-local retirement uses the internal rewind bridge, not a shared
+zone-name branch. Also keep post-restore scroll reconciliation pure:
+`sub_59648/DDZ_ScreenEvent` advances foreground RAM, so `SwScrlDdz` rebuilds
+output from saved words without dispatching it a second time. This matters
+for valid snapshots taken before the first ordinary controller/scroll update.
+Origin: 2026-10-13 S3K playable completion, DDZ native-entry and composed-route lane.
+
+## A placed prelude can change code without resetting the native wait
+
+LBZ `Obj_LBZFinalBossKnux` (`$CD`) uses the first `word_72FEA` record for
+unsigned camera admission and the following record for the arena lock.
+`loc_7304C` changes the same SST code pointer to CA; its negative music timer
+survives into CA init and `Obj_Wait`. Do not seed CA's Sonic delay for Knuckles
+or return before that wait can dispatch. `loc_7498E` reads the second record's
+FAB0 (`$328`), so its carrier threshold is `$528`, not the admission word plus
+`$200`. Camera comparisons use native coordinates before viewport projection.
+
+Pure CA child reconstruction needs exact captured parent/sibling object IDs;
+retaining the slots alone leaves null gameplay links. Register each owning edge
+explicitly and clone captured arrays. Reconstruction must not allocate children,
+run gameplay init or consume shared RNG. Snapshot the defeat explosion helper
+and rebind its RNG separately from its parent-child links.
+
+## Route selection can retire a parent before its switch child dispatch
+
+MHZ2 `loc_6311A` allocates `ChildObjDat_665BC` and deletes the press actor for
+Knuckles. `loc_632CA` gives that child `Sprite_OnScreen_Test`, its own position,
+frame 0, palette 0 and a one-time copied respawn index. It never enters the
+parent-reading `loc_63308` branch. Holding the deleted Java parent therefore
+adds a gameplay dependency absent from the ROM and makes live rewind capture
+fail with an unregistered ObjectRef. Detach the Knuckles child's parent authority;
+recreate a pure shell from its own spawn. Sonic/Tails keep `Child_Draw_Sprite`
+and require exact captured parent identity, not a nearest-parent reconstruction.
+The five-width actual MHZ2 entry regression reproduces the deleted-parent error
+before the fix and verifies fresh child recreation plus whole-registry replay.
+
+### MHZ end boss finishes at native health one after the hit flash
+
+`Obj_MHZEndBoss` initializes `collision_property=9`, but that is not nine
+required attacks. `sub_76782` / `loc_767A0` clamps accepted damage to two until
+`loc_760C4` sets `$38` bit7 for the camera chase. An accepted vehicle hit from
+two to one disables both touch slots and starts the `$20` countdown at `$20`.
+`loc_767F6` selects `loc_76822` only when that 32-update flash expires, retaining
+health one. The old routine movement and `Level_repeat_offset` run first in
+`loc_75FD4`; escape movement starts on the next update. Knuckles escapes at
+`$500`, Sonic/Tails at `$400`. `loc_76164` awards the boss score and stops the
+clock at `x_pos >= $44D0`, not on the last accepted attack.
+
+The generic zero-health boss handler caused a real cold Knuckles route to
+remain vulnerable at health one 75 inputs after its legitimate terminal hit.
+Older component fixtures seeded one and attacked to zero, accidentally proving
+the same mistake. Keep encounter damage and delayed escape local; test the
+pre-chase floor, disabled hit proxy, exact flash expiry, all three character
+speeds, and fresh object recreation/replay through a mid-flash snapshot.
+
+The clamp reads the arena bit at the routine tail: an accepted touch may
+transiently publish health one before the same movement dispatch sets bit7.
+A touch-time clamp silently rejects that admitted final hit. After escape,
+`loc_761A4` subtracts `Level_repeat_offset` once, after the unrebased threshold
+comparison, while preserving `x_pos`'s fractional word. This boss owns that
+subtraction; it does not opt into the manager's generic repeat shift.
+
+`BossDefeated_StopTimer` falls through `BossDefeated`: stop the HUD timer,
+write `$2E=$3F`, then add the score. `Wait_FadeToLevelMusic` holds for 63 updates
+and allocates its music-fade helper on the 64th signed-underflow update. The
+old component oracle expected that helper on the next dispatch from a borrowed
+zero dash timer. Short negatives independently expose the admission edge,
+borrowed timer, both escape wrap boundaries and destructive fractional reset;
+requalification must observe new route/load windows rather than retain old
+frame numbers.
+
+`loc_764C4` follows a specific `parent3`, not the nearest ship. A fresh proxy
+must retain its captured immutable spawn and resolve its captured parent
+identity after constructing a pure shell. A two-boss negative catches the
+old nearest-parent shortcut. Update both moving actors in component replay:
+leaving the proxy undispatched creates stale spawn metadata and can falsely
+attribute a fixture error to production restoration. Keep immediate full-object
+capture equality and the subsequent forward replay, including that metadata.
+
+`loc_76164` also sets parent `status` bit7 at that threshold. The hit proxy's
+`Child_AddToTouchList` and both spike children's `loc_76674` / `loc_766C4`
+consume it and delete those children while the escape body and Robotnik head
+remain live; the head consumes parent `$38` bit5 instead. Terminal damage alone
+does not retire these children. Capture this semantic signal separately from
+Java object destruction. A fixture that only calls `setDestroyed(true)` does
+not prove the native status-bit boundary. Restore and replay both the
+pre-threshold linked graph and post-threshold absent-child graph. Include the
+production RNG when continuing through randomized explosion allocations.
+Both spike subtypes also need pure captured placement and exact `parent3`
+restoration: independent two-parent negatives prove that the old nearest-boss
+factory can attach either spike to the wrong retirement owner. This is distinct
+from the passing single-parent boundary replay and earlier partial-dispatch
+proxy fixture error; do not describe either as a demonstrated metadata defect.
+
+## Screen-only sprite coordinates are completed SAT fields
+
+`Render_Sprites` bit2-clear bypasses world/camera clipping. `loc_1AF76` adds the
+mapping piece offset, masks X to 9 bits and changes X 0 to 1; ordinary Mode5 Y is also
+9-bit. IslandLift subtype `$41`'s camera conversion can retain native Y `$FF44`, which
+still displays at 196. Preserve raw words/fractions and normalize the derived
+one-piece origin after its mapping offset. Test natural even-VInt admission and
+publication: current CPU positions/mappings need not describe the published SAT.
+The 2026-10-13 ending repair tests both wrapping and the completed piece X 0 edge.
+
+## Registration does not consume every zone's ROM tables
+
+Applies across game providers; observed in S3K ending bring-up. The scroll
+provider creates every zone handler during load. Eager ending tables therefore
+broke unrelated FBZ/CNZ registration, which intentionally accepts an unopened
+ROM until a relevant native owner uses it. Follow the existing SOZ/LRZ3 pattern:
+retain the ROM reference, read and validate both ending banks on actual use,
+publish one immutable cache only after success, and propagate invalid bytes
+before changing RAM/output. Cache construction during pure post-restore rebuild
+must not advance captured scroll state. Missing required data still fails; no
+fallback table or ROM-required fixture skip replaces that boundary.

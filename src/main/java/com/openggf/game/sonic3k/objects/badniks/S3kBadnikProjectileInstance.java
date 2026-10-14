@@ -21,7 +21,7 @@ import java.util.List;
  */
 public final class S3kBadnikProjectileInstance
         extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable {
+        implements TouchResponseProvider, RewindRecreatable, com.openggf.game.mutators.NativeObjectFieldTarget {
     private static final int SHIELD_REACTION_BOUNCE = 1 << 3;
     private static final int DEFLECT_SPEED = 0x800;
     private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = TouchResponseProfile.fromCanonical(
@@ -103,6 +103,13 @@ public final class S3kBadnikProjectileInstance
                 ? ctx.spawn()
                 : new ObjectSpawn(0, 0, 0, 0, 0, false, 0);
         return forRewindRecreate(spawn);
+    }
+
+    @Override public Kind fieldKind() { return Kind.PROJECTILE; }
+    @Override public void displaceForField(int dx, int dy) {
+        currentX = (currentX + dx) & 0xFFFF;
+        currentY = (currentY + dy) & 0xFFFF;
+        updateDynamicSpawn(currentX, currentY);
     }
 
     @Override

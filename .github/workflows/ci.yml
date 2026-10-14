@@ -88,6 +88,13 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      # Pixel tests create a Mesa surfaceless EGL context without a desktop.
+      - name: Install offscreen rendering dependencies
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes libegl1 libegl-mesa0 libgl1 libgl1-mesa-dri
+
       - name: Verify test category selection and retention
         run: python3 -m unittest discover -s tools/testing -p 'test_run_categor*.py'
 
@@ -182,6 +189,13 @@ jobs:
           java-version: '25'
           distribution: 'temurin'
           cache: maven
+
+      # Pixel tests create a Mesa surfaceless EGL context without a desktop.
+      - name: Install offscreen rendering dependencies
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes libegl1 libegl-mesa0 libgl1 libgl1-mesa-dri
 
       - name: Verify test category selection and retention
         run: python3 -m unittest discover -s tools/testing -p 'test_run_categor*.py'

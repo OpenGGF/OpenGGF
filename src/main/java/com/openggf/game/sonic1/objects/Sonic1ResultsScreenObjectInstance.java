@@ -730,7 +730,7 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
      * Each digit occupies 2 tiles (column-major: top + bottom).
      */
     private void writeBonusValue(Pattern[] dest, int startIndex, int value, Pattern[] digits) {
-        NumericPatternWriter.writeBonus(dest, startIndex, value, digits, blankDigit);
+        NumericPatternWriter.writeBonusWithFixedZero(dest, startIndex, value, digits, blankDigit);
     }
 
 
@@ -739,14 +739,15 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
             return;
         }
 
-        int clampedScore = Math.min(score, 9_999_999);
+        // Map_Got's seven columns end in the fixed zero at HUD tile $170;
+        // the six writable columns contain AddPoints' tens-of-points value.
+        int clampedScore = Math.min(score, 9_999_999) / 10;
         int divisor = 100_000;
         boolean hasDigit = false;
         for (int i = 0; i < SCORE_DIGITS_COUNT; i++) {
             int digit = (clampedScore / divisor) % 10;
             int tileIndex = SCORE_DIGITS_START_INDEX + (i * 2);
-            boolean isLastDigit = (i == SCORE_DIGITS_COUNT - 1);
-            if (digit != 0 || hasDigit || isLastDigit) {
+            if (digit != 0 || hasDigit) {
                 hasDigit = true;
                 NumericPatternWriter.copyDigit(dest, tileIndex, digit, digits);
             } else {

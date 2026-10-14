@@ -90,10 +90,10 @@ public final class SszAct2CameraController extends AbstractObjectInstance implem
         if ((camera.getY() & 0xFFFF) < 0x7D0) return;
         cloudSpeed -= 0x98;
         if (cloudSpeed >= 0 || (camera.getY() & 0xFFFF) != 0x804) return;
-        // Native loc_591CE deletes this controller after attempting Obj_5EF68.
-        // That object starts the actual ending, outside the retained SSZ island
-        // presentation. Preserve this controller's motion/lifetime but stop at
-        // that documented boundary instead of fabricating an ending owner.
+        // loc_59194: the bad-ending island settles exactly at $804 before
+        // attempting Obj_5EF68. Good/super endings allocate it in loc_5B2B8.
+        if (state.ending().initialized())
+            com.openggf.game.sonic3k.ending.S3kEndingCoordinator.beginPostCredits(services());
         com.openggf.level.objects.ObjectLifetimeOps.deleteNoRespawn(this);
     }
 

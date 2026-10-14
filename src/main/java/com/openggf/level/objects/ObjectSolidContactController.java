@@ -5382,6 +5382,8 @@ public final class ObjectSolidContactController {
         }
         player.setGroundMode(GroundMode.GROUND);
 
+        if (playableSprite != null) com.openggf.game.mutators.PlayableAudioEvents.landed(playableSprite);
+
         if (wasHurt) {
             // ROM object/platform landing clears Status_InAir here, but
             // routine 4 and its velocities survive until Sonic_HurtStop runs

@@ -85,6 +85,7 @@ final class LiveRewindStepper implements RewindSeekAwareEngineStepper {
         var recorded = RecordedInputSnapshots.fromBk2(input, previous);
         liveInput.setLogicalOverride(metadata == null ? recorded : metadata.admitted(recorded, gameplayMode, null));
         try {
+            if(metadata!=null)metadata.restoreBeforeTick(gameplayMode,null);
             sprites.publishHeldInputForLevelEvents(liveInput);
             var result = LevelFrameStep.execute(
                     context, lifecycleFrame, PlcLifecyclePhase.ORDINARY_LEVEL,
@@ -93,6 +94,7 @@ final class LiveRewindStepper implements RewindSeekAwareEngineStepper {
             if (metadata != null) metadata.restoreAfterTick(gameplayMode, null);
             return result;
         } finally {
+            if(metadata!=null)metadata.endReplay(gameplayMode);
             liveInput.clearLogicalOverride();
         }
     }

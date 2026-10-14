@@ -12,6 +12,12 @@ import com.openggf.sprites.managers.SpriteManager;
 public final class LevelSpritePresentation {
     private LevelSpritePresentation() { }
 
+    /** Immutable displayed SAT, read by captured presentation consumers independently of GPU drawing. */
+    public static SpritePresentation.Frame published(LevelManager level) {
+        var renderer = level == null ? null : level.spritePresentationRenderer();
+        return renderer == null ? SpritePresentation.Frame.empty() : renderer.spriteTables.published();
+    }
+
     static final class Tables implements RewindSnapshottable<Tables.State> {
         record State(SpritePresentation.Frame prepared, SpritePresentation.Frame published,
                      SpritePresentation.Frame counters, LevelScrollPresentation preparedScroll,

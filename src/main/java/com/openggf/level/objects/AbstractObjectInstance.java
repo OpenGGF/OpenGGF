@@ -1194,6 +1194,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
                     om.registerRewindReconstructionChild(object);
                 } else {
                     om.addDynamicObjectAfterCurrent(object);
+                    notifyOwnedChild(object);
                 }
             }
         } catch (IllegalStateException e) {
@@ -1233,6 +1234,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
                     om.registerRewindReconstructionChild(object);
                 } else {
                     om.addDynamicObject(object);
+                    notifyOwnedChild(object);
                 }
             }
         } catch (IllegalStateException e) {
@@ -1260,7 +1262,17 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * @param <T> the child type
      */
     protected <T extends AbstractObjectInstance> T spawnChild(java.util.function.Supplier<T> factory) {
-        return allocateAfterCurrent(factory);
+        T child=allocateAfterCurrent(factory);
+        notifyOwnedChild(child);
+        return child;
+    }
+
+    /** Report structural children only after their native allocation and outside rewind probes. */
+    private void notifyOwnedChild(ObjectInstance child) {
+        if(!ObjectConstructionContext.isProbeConstruction() && !ObjectConstructionContext.isRewindActiveRestore()) {
+            var policies=com.openggf.game.mutators.NativeObjectPolicyAccess.port(services());
+            if(policies!=null && child!=null) policies.childSpawned(this,child);
+        }
     }
 
     /**
@@ -1292,6 +1304,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
                 } else {
                     manager.addDynamicObjectAfterCurrent(child);
                 }
+                notifyOwnedChild(child);
             }
             return child;
         });
@@ -1356,6 +1369,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
                 } else {
                     om.addDynamicObject(child);
                 }
+                notifyOwnedChild(child);
             }
             return child;
         });

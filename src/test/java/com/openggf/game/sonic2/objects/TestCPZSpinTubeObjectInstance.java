@@ -16,6 +16,34 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestCPZSpinTubeObjectInstance {
 
     @Test
+    void hurtCapturePreservesTheShippedRoutineUntilLandingClearsTubeControl() {
+        ObjectSpawn spawn = new ObjectSpawn(0x0780, 0x0380, 0x1E, 0x02, 0, false, 0);
+        var player = new TestablePlayableSprite("sonic", (short) spawn.x(), (short) spawn.y());
+        player.setGameRulesForTest(GameRules.SONIC_2);
+        player.setAir(true);
+        player.setHurt(true);
+        player.setInvulnerableFrames(0x78);
+        var tube = new CPZSpinTubeObjectInstance(spawn, "CPZSpinTube");
+        tube.setServices(new TestObjectServices());
+
+        tube.update(0, player);
+
+        // loc_22688's `move.b #2,routine(a1)` is guarded by fixBugs=1. Shipped
+        // fixBugs=0 preserves Hurt, including the native displacement inside a pipe.
+        assertTrue(player.isHurt());
+        assertTrue(player.isObjectControlled());
+        assertEquals(Sonic2AnimationIds.ROLL.id(), player.getAnimationId());
+        assertEquals(0x78, player.getInvulnerableFrames());
+
+        player.setAir(false);
+
+        assertFalse(player.isHurt());
+        assertFalse(player.isObjectControlled(), "Sonic_HurtStop clears obj_control after landing");
+        assertFalse(player.isObjectControlSuppressesMovement());
+        assertEquals(0x78, player.getInvulnerableFrames());
+    }
+
+    @Test
     void velocityUsesQuantizedDurationAndAllowsSubFrameSegments() throws Exception {
         var tube = new CPZSpinTubeObjectInstance(
                 new ObjectSpawn(0, 0, 0x1E, 0, 0, false, 0), "CPZSpinTube");

@@ -9,7 +9,10 @@ import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.MultiPieceSolidProvider;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -19,6 +22,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -28,6 +32,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 
 class TestS3kIczSwingingPlatformObject {
 
@@ -163,6 +172,7 @@ class TestS3kIczSwingingPlatformObject {
     void releasedPlatformPreservesCircularFixedPointFraction() {
         IczSwingingPlatformObjectInstance platform = new IczSwingingPlatformObjectInstance(
                 new ObjectSpawn(0x1200, 0x0700, Sonic3kObjectIds.ICZ_SWINGING_PLATFORM, 1, 0, false, 0));
+        platform.setServices(new StubObjectServices());
         PlayableEntity player = mock(PlayableEntity.class);
         when(player.getXSpeed()).thenReturn((short) 0x0800);
 
@@ -178,6 +188,87 @@ class TestS3kIczSwingingPlatformObject {
                 "MoveSprite must retain the half-pixel produced by MoveSprite_CircularSimple");
         assertEquals(0x1283, platform.getOutOfRangeReferenceX(),
                 "Sprite_CheckDeleteTouch2 checks the moving x_pos, including after chain release");
+    }
+
+    @Test
+    void releaseUsesUnsignedNativeVelocityWordInBothFacingBranches() throws Exception {
+        for (boolean flip : new boolean[] {true, false}) {
+            RecordingServices services = new RecordingServices();
+            var platform = new IczSwingingPlatformObjectInstance(new ObjectSpawn(
+                    0x1200, 0x700, Sonic3kObjectIds.ICZ_SWINGING_PLATFORM, 1, flip ? 1 : 0, false, 0));
+            platform.setServices(services);
+            PlayableEntity rider = mock(PlayableEntity.class);
+            when(rider.getXSpeed()).thenReturn((short) (flip ? -0x800 : 0x800));
+            platform.onPieceContact(0, rider, standingContact(), 0);
+            platform.update(1, rider);
+            setInt(platform, "angleAccumulator", flip ? -0x4700 : 0x4900);
+            setInt(platform, "swingVelocity", flip ? -0x180 : 0);
+            platform.update(2, rider);
+            assertEquals(8, services.debris.size(),
+                    "cmp.w #$200/bhs accepts the negative velocity word in either native facing branch");
+        }
+    }
+
+    @Test
+    void neighboringAngleOrPositiveVelocityDoesNotReleaseEarly() throws Exception {
+        for (boolean flip : new boolean[] {true, false}) {
+            RecordingServices services = new RecordingServices();
+            var platform = new IczSwingingPlatformObjectInstance(new ObjectSpawn(
+                    0x1200, 0x700, Sonic3kObjectIds.ICZ_SWINGING_PLATFORM, 1, flip ? 1 : 0, false, 0));
+            platform.setServices(services);
+            PlayableEntity rider = mock(PlayableEntity.class);
+            when(rider.getXSpeed()).thenReturn((short) (flip ? -0x800 : 0x800));
+            platform.onPieceContact(0, rider, standingContact(), 0);
+            platform.update(1, rider);
+            setInt(platform, "angleAccumulator", flip ? -0x4600 : 0x4700);
+            setInt(platform, "swingVelocity", flip ? -0x180 : 0x180);
+            platform.update(2, rider);
+            assertTrue(services.debris.isEmpty(), flip
+                    ? "bhi skips the release before the negative angle threshold"
+                    : "positive velocity below $200 still fails the unsigned bhs test");
+        }
+    }
+
+    @Test
+    void releasingChainReplacesSuspendedLinksWithIndependentFallingDebris() {
+        for (boolean flip : new boolean[] {false, true}) {
+            PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
+            var platform = new TestableIczSwingingPlatform(
+                    new ObjectSpawn(0x1200, 0x0700, Sonic3kObjectIds.ICZ_SWINGING_PLATFORM,
+                            1, flip ? 1 : 0, false, 0), renderer);
+            RecordingServices services = new RecordingServices();
+            platform.setServices(services);
+            PlayableEntity player = mock(PlayableEntity.class);
+            when(player.getXSpeed()).thenReturn((short) (flip ? -0x0800 : 0x0800));
+            platform.onPieceContact(0, player, standingContact(), 0);
+            for (int frame = 1; frame < 50 && services.debris.isEmpty(); frame++) {
+                platform.update(frame, player);
+            }
+            assertEquals(8, services.debris.size(), "ChildObjDat_8B178 allocates eight links once");
+            platform.appendRenderCommands(new ArrayList<>());
+            verify(renderer).drawFrameIndex(8, 0x1200, 0x0680, flip, false, 2);
+            clearInvocations(renderer);
+            platform.update(50, player);
+            platform.appendRenderCommands(new ArrayList<>());
+            verify(renderer, never()).drawFrameIndex(
+                    org.mockito.ArgumentMatchers.eq(8), anyInt(), anyInt(), anyBoolean(), anyBoolean(), anyInt());
+            AbstractObjectInstance link = (AbstractObjectInstance) services.debris.get(7);
+            int oldX = link.getX();
+            int oldY = link.getY();
+            assertEquals(5, link.getPriorityBucket(), "ObjDat3_8B14C uses priority word $280");
+            assertEquals(0, link.getSpawn().renderFlags(), "CreateChild6_Simple does not copy render flips");
+            AbstractObjectInstance.updateCameraBounds(0x1100, 0x0600, 320, 224, 0);
+            link.update(50, null);
+            assertEquals(oldX, link.getX(), "loc_8AF3E initializes and returns before MoveChkDel");
+            link.update(51, null);
+            assertEquals(oldX + (flip ? -4 : 4), link.getX());
+            assertEquals(oldY - 4, link.getY(), "word_8AF86's eighth velocity is -$400 vertically");
+            clearInvocations(renderer);
+            platform.appendRenderCommands(new ArrayList<>());
+            verify(renderer, never()).drawFrameIndex(
+                    org.mockito.ArgumentMatchers.eq(8), anyInt(), anyInt(), anyBoolean(), anyBoolean(), anyInt());
+            assertEquals(8, services.debris.size(), "detachment must not create links again");
+        }
     }
 
     @Test
@@ -206,6 +297,12 @@ class TestS3kIczSwingingPlatformObject {
         return new SolidContact(true, false, false, true, false);
     }
 
+    private static void setInt(Object target, String name, int value) throws Exception {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.setInt(target, value);
+    }
+
     private static final class TestableIczSwingingPlatform extends IczSwingingPlatformObjectInstance {
         private final PatternSpriteRenderer renderer;
 
@@ -231,5 +328,21 @@ class TestS3kIczSwingingPlatformObject {
         protected int currentRomZoneId() {
             return Sonic3kZoneIds.ZONE_ICZ;
         }
+    }
+
+    private static final class RecordingServices extends StubObjectServices {
+        private final List<ObjectInstance> debris = new ArrayList<>();
+        private final ObjectManager objectManager = mock(ObjectManager.class);
+
+        private RecordingServices() {
+            doAnswer(invocation -> {
+                ObjectInstance child = invocation.getArgument(0);
+                ((AbstractObjectInstance) child).setServices(this);
+                debris.add(child);
+                return null;
+            }).when(objectManager).addDynamicObjectAfterCurrent(any());
+        }
+
+        @Override public ObjectManager objectManager() { return objectManager; }
     }
 }

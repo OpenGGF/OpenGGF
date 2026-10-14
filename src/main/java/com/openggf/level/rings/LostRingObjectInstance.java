@@ -338,6 +338,8 @@ public class LostRingObjectInstance extends AbstractObjectInstance
                 playable.addRings(1);
             }
             if (services != null) {
+                var policies = com.openggf.game.mutators.NativeObjectPolicyAccess.port(services);
+                if (policies != null) policies.ringAcquired(player);
                 services.playSfx(com.openggf.audio.GameSound.RING);
             }
             sparkleStartFrame = executedFrame;

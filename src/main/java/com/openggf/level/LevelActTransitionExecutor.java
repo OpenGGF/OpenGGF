@@ -119,7 +119,7 @@ final class LevelActTransitionExecutor {
         // and LoadSolids only, so Reverse_gravity_flag ($FFFFF7C6) carries into the
         // next act. resetForLevel() models Level_ClrRam's `clearRAM
         // Tails_CPU_interact,$100` (:7621) and must not fire here.
-        boolean reverseGravityActive = gameState.isReverseGravityActive();
+        boolean reverseGravityActive = com.openggf.game.GameStateInternalAccess.nativeReverseGravity(gameState);
         gameState.resetForLevel();
         gameState.setReverseGravityActive(reverseGravityActive);
         if (request.preserveEndOfLevelActive()) {

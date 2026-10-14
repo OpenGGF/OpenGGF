@@ -377,7 +377,8 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
         }
 
         if (totalIncrement > 0) {
-            GameServices.gameState().addScore(totalIncrement);
+            // HUD_AddToScore stores tens of points; the engine score uses points.
+            GameServices.gameState().addScore(totalIncrement * 10);
             // Tick sound every 4 frames (ROM line 63382-63384)
             if ((frameCounter & 3) == 0) {
                 playSfx(Sonic3kSfx.SWITCH.id);
@@ -1208,7 +1209,8 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
         int x = elem.screenX() - 0x38;
         int y = elem.screenY();
         boolean hasNonZero = false;
-        int remaining = value;
+        // Shared native LevResults_DisplayScore appends the seventh zero nibble.
+        int remaining = value * 10;
 
         for (int i = 0; i < 7; i++) {
             int digit = remaining / DIVISORS[i];

@@ -54,7 +54,7 @@ final class PlayerHeadPresentation {
             // Each draw owns 256 cutout companions; native admission still determines source pixels.
             if (generated + 1 + (changed ? 1 : 0) + (foregroundChanged ? 1 : 0) > head.fragmentBase() + 256)
                 throw new IllegalStateException("Head presentation fragment limit exceeded");
-            Subject subject = new Subject(tile.subject().id(), tile.subject().part(), false);
+            Subject subject = new Subject(tile.subject().id(), tile.subject().part(), false, 100, null, tile.subject().body());
             versions.put(generated, SpritePresentationRenderer.version(body));
             tiles.add(copy(tile, generated++, tile.x(), tile.y(), 8, 8, tile.rowStart(), tile.rowEnd(), subject));
             if (changed) {
@@ -92,7 +92,7 @@ final class PlayerHeadPresentation {
     }
     private static Tile withoutHead(Tile tile) {
         return copy(tile, tile.patternId(), tile.x(), tile.y(), tile.width(), tile.height(), tile.rowStart(), tile.rowEnd(),
-                new Subject(tile.subject().id(), tile.subject().part(), tile.subject().suppressed()));
+                new Subject(tile.subject().id(), tile.subject().part(), tile.subject().suppressed(), 100, null, tile.subject().body()));
     }
     private static Tile copy(Tile source, int id, float x, float y, float width, float height,
                              int rowStart, int rowEnd, Subject subject) {

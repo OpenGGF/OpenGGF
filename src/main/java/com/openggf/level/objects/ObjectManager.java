@@ -830,6 +830,17 @@ public class ObjectManager {
         return slotLayout.firstDynamicSlot();
     }
 
+    /**
+     * Admits a newly allocated native contact encounter before the player slot. The native
+     * collision dispatcher latches contact; the object's own later slot resolves its response.
+     */
+    public boolean admitTransientContactBeforePlayer(AbstractObjectInstance object) {
+        if (object == null || object.isDestroyed() || object.getSlotIndex() < 0
+                || objectQuery().identityOf(object).isEmpty()) return false;
+        object.snapshotTouchResponseState();
+        return collisionResponseList.admitBeforePlayer(object);
+    }
+
     ObjectCollisionResponseList initialCollisionResponseList() {
         return collisionResponseList;
     }

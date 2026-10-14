@@ -81,6 +81,8 @@ public final class PenguinatorBadnikInstance extends AbstractS3kBadnikInstance i
                 Sonic3kObjectArtKeys.ICZ_PENGUINATOR, COLLISION_SIZE_INDEX, PRIORITY_BUCKET);
     }
 
+    @Override protected boolean independentPresentationBody() { return true; }
+
     @Override
     protected void updateMovement(int vIntRunCount, PlayableEntity player) {
         if (isDestroyed()) {

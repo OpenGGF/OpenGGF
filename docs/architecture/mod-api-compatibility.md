@@ -45,6 +45,13 @@ Creator manifests should declare the maintained candidate range:
 engineApiRange: ">=0.7.0 <0.8.0"
 ```
 
+`PlayerLandingRules.hurtLandingClearsObjectControl` selects the shipped S2/S3K
+hurt-landing release; S1 leaves that byte intact. The five-argument constructor
+sets this gate explicitly, while the existing four-argument constructor retains
+the former behavior. Its accessor, component and constructor extend the mutable
+`0.7` signature pin. The descriptor and runtime description remain aligned at
+unpublished candidate `0.7.0`.
+
 Manifest `formatVersion: 1` is a separate wire-format version. It does not mean
 Mod API 1.x and must not be used to infer compiled-code compatibility.
 
@@ -129,6 +136,27 @@ into place like text, and reads return a fresh copy. `SceneStorage` inherits bot
 methods, so creator test doubles implementing it must add them. These are additions
 to the unpublished `0.7.0` candidate; the runtime description and normalized pin are
 updated together and the descriptor is unchanged.
+
+The Chaos Mode additions expose captured gameplay observers, callback-scoped
+transient mutator leases, typed motion/input/native encounter/presentation/audio
+policies, bounded native ROM art and terminal outcomes. Native object presentation
+metadata qualifies post-SAT transforms, and private trail atlas ranges retain
+historical poses. The source timing contract admits one instantaneous action per
+zero-duration lease and bounded positive timed bundles. These extend the mutable
+`0.7` signature pin and runtime candidate description; `0.7.0` remains unpublished
+and the release descriptor and published baselines are unchanged. Rebuild compiled
+mods against the current candidate. See the [mutator guide](../modding/guides/mutators.md)
+and [Chaos implementation](plans/2026-10-13-sonic3k-chaos-mode-implementation.md).
+
+The runtime intentionally consumes exact detached Mod API policy records, support
+contracts, `TemporaryMutators`, `PixelCanvas` and `SceneImage`. The architecture
+ratchet enumerates these targets rather than allowing a general dependency on
+mod host implementations. Verified observer snapshots and prepared-policy presence
+cross game-owned service projections; save-launch error translation stays in the
+outer host, and ROM mapping pixels use the shared level rasterizer. Graphics accepts
+resolved palette/flip/priority values and the renderer receives already resolved
+input intent. Caller provenance uses the existing stateless internal utility.
+
 
 ## What the 0.7 candidate includes
 
@@ -444,7 +472,7 @@ Mod scenes add the `com.openggf.mods.scene` package to the candidate surface:
 `GameMode.MOD_SCENE`. The mouse wheel stays off the pinned `InputHandler`: the engine-internal
 `control.MouseWheel` (one per input handler, `MouseWheel.of(input)`) collects scroll movement
 for whichever screen reads the mouse, the master title or a scene. The engine finds the registered scene as the effective module's
-`getGameService(OwnedSceneFactory.class)`, so the `game` package never depends on mod types.
+`getGameService(OwnedSceneFactory.class)`, so native scene discovery does not depend on mod host implementation types.
 `mods.code.OwnedSceneFactory` is engine-internal and only that package can construct it, so a
 patch cannot forge a scene's owner or run one outside the owner's fault boundary; a
 `ModSceneFactory` served under its own type is ignored. The creator package holds only the API;
