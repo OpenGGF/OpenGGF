@@ -7,7 +7,9 @@ import java.util.Objects;
 
 public final class ModApiVersion {
     /**
-     * Current unpublished compiled-mod API candidate, including the 0.7
+     * Current unpublished compiled-mod API candidate, including native decoded
+     * factory binding and original-ring retention on class-preserving levels,
+     * and bounded S3K boss/special/bonus-stage difficulty policies. The 0.7 candidate also includes
      * widescreen presentation, KiS2 movement/touch/checkpoint/menu handoff contracts,
      * deferred SMPS header construction, explicit dynamic solid-contact rewind binding,
      * opt-in whole-game presentation pacing, modal level input ownership, controlled level admission and opaque
@@ -66,6 +68,25 @@ public final class ModApiVersion {
      * and is resumed when each ends, learn a game's run fingerprint before launching, and
      * claim keyboard text input so global shortcuts stay quiet while the player types.
      * Owner storage also keeps bounded, atomically replaced binary files beside its text.
+     * Typed text save slots preserve incompatible/corrupt generations, validate recovery
+     * and report failed primary/backup publication with exact-checkpoint retries.
+     * Pure sprite compositions share bounds/emission, and scoped canvas transforms
+     * preserve nested opacity, full-viewport clears and the previous clip.
+     * Landing rules expose the native hurt-recovery control-release gate; the
+     * previous four-argument constructor retains its original behavior.
+     * Gameplay observers receive immutable native observations and scoped owner-bound
+     * temporary mutator leases, including acknowledged one-shot work, replacement
+     * envelopes, modal holds, bounded native sidegame completion rewards, scoped
+     * supplied-ROM art, captured bounded terminal outcomes and semantic presentation/native policy families.
+     * Provider title-card positions share choreography while callers retain clocks
+     * and release policy. Atlas fonts can opt into exact-case glyphs and explicit fallback.
+     * Native object presentation metadata identifies semantic roles and producer anchors;
+     * frozen admitted player trails have a separate bounded atlas namespace.
+     * Creator enemies share game-owned bounded Caterkiller/monitor recipes, shipped S3K
+     * destruction rewards, exact lifetime identity, powered eligibility and targeting/firing
+     * admission. Native preset/config types stay with their game; shared effects take factories.
+     * Host-supplied title canvases and attached-effect rendering preserve native
+     * ownership and whole-picture transforms without exposing implementation classes.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");
     public static final List<SemanticVersion> SUPPORTED_CONTRACTS = List.of(CURRENT);

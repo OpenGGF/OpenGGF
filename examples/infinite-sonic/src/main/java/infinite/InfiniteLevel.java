@@ -6,14 +6,13 @@ import com.openggf.level.rings.*;
 import java.util.List;
 
 /** Borrows all art and collision data from the ROM; owns only a small layout. */
-public final class InfiniteLevel implements Level {
-    private final Level source;
+public final class InfiniteLevel extends DelegatingLevel {
     private final TerrainLibrary library;
     private final com.openggf.level.Map map;
     /** Source background blocks, compacted after the generated foreground blocks. */
     private final int[] background;
     public InfiniteLevel(Level source, TerrainLibrary library) {
-        this.source = source;
+        super(source);
         this.library = library;
         background = TerrainLibrary.backgroundBlocks(source);
         if (library.blockCount() + background.length > 256) {
@@ -37,25 +36,11 @@ public final class InfiniteLevel implements Level {
         return List.of(new ObjectSpawn(128, 944, 0, 0, 0, false, 944, 0,
                 "infinite-sonic", "infinite-sonic:controller"));
     }
-    @Override public int getPaletteCount() { return source.getPaletteCount(); }
-    @Override public Palette getPalette(int index) { return source.getPalette(index); }
-    @Override public void setPalette(int index, Palette palette) { source.setPalette(index, palette); }
-    @Override public int getPatternCount() { return source.getPatternCount(); }
-    @Override public Pattern getPattern(int index) { return source.getPattern(index); }
-    @Override public void ensurePatternCapacity(int minCount) { source.ensurePatternCapacity(minCount); }
-    @Override public int getChunkCount() { return source.getChunkCount(); }
-    @Override public Chunk getChunk(int index) { return source.getChunk(index); }
     @Override public int getBlockCount() { return library.blockCount() + background.length; }
     @Override public Block getBlock(int index) {
         return index < library.blockCount() ? library.block(index) : source.getBlock(background[index - library.blockCount()]);
     }
-    @Override public int getSolidTileCount() { return source.getSolidTileCount(); }
-    @Override public SolidTile getSolidTile(int index) { return source.getSolidTile(index); }
-    @Override public RingSpriteSheet getRingSpriteSheet() { return source.getRingSpriteSheet(); }
     // LZ3 and SBZ2 wrap vertically (negative minimum); the course never does.
     @Override public int getMinY() { return 0; }
     @Override public int getMaxY() { return 1536; }
-    @Override public int getZoneIndex() { return source.getZoneIndex(); }
-    @Override public int getBlockPixelSize() { return source.getBlockPixelSize(); }
-    @Override public int getChunksPerBlockSide() { return source.getChunksPerBlockSide(); }
 }

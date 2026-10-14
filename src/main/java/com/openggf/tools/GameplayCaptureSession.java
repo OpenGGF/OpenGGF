@@ -100,6 +100,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
     }
 
     private boolean startAtTitle;
+    private com.openggf.mods.code.DevelopmentPatchLoader.PreparedDecorator developmentMod;
     /** Capture production title initialization and its ordinary GameLoop launch transition. */
     public void startAtTitle() { startAtTitle = true; boot.setBootToTitle(true); }
     /** Enable the existing ROM-backed SMPS presentation producer before boot. */
@@ -110,7 +111,11 @@ public final class GameplayCaptureSession implements AutoCloseable {
 
     /** Boots with a packaged patch mod applied, as if it were enabled in the launcher. */
     public void applyMod(Path modJar) throws IOException {
-        boot.setModuleDecorator(com.openggf.mods.code.DevelopmentPatchLoader.fromJar(modJar));
+        if (loop != null) throw new IllegalStateException("capture session is already booted");
+        var next = com.openggf.mods.code.DevelopmentPatchLoader.openJar(modJar);
+        if (developmentMod != null) developmentMod.close();
+        developmentMod = next;
+        boot.setLaunchModuleDecorator(developmentMod::apply);
     }
 
     /** Boots the level, consumes the title card, and optionally teleports the leader. */
@@ -315,6 +320,18 @@ public final class GameplayCaptureSession implements AutoCloseable {
         seedSidekickPosition();
     }
 
+    /** Optional interactive owner; one input-log row is one presentation, including menu and hold rows. */
+    void stepPresentation(Bk2FrameInput input, MutatorGameplayCaptureTool.PresentationInput driver) {
+        requireBooted();
+        driver.step(loop, input, showTitleCard);
+        previousInput = input;
+        if (startAtTitle) {
+            var focused = GameServices.camera().getFocusedSprite();
+            if (focused != null) player = focused;
+        }
+        seedSidekickPosition();
+    }
+
     /** Renders the current frame through the gameplay renderer and reads it back. */
     public RgbaImage render() {
         return render(true);
@@ -347,8 +364,22 @@ public final class GameplayCaptureSession implements AutoCloseable {
         if (loop.getCurrentGameMode() == GameMode.TITLE_SCREEN) {
             var title = loop.getTitleScreenProvider();
             title.setClearColor(); glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            title.draw(); graphics.flushScreenSpace();
+            title.draw();
+            title.drawOverlay(new com.openggf.mods.ui.LevelOverlayCanvas(graphics,
+                    graphics.getProjectionWidth(), graphics.getConfiguredScreenHeightPx()));
+            graphics.flushScreenSpace();
             if (graphics.getUiRenderPipeline()!=null) graphics.getUiRenderPipeline().renderFadePass();
+            loop.renderHostedRunOverlay();
+            glFinish(); return;
+        }
+        if (loop.getCurrentGameMode() == GameMode.DATA_SELECT) {
+            var dataSelect = loop.getDataSelectProvider();
+            dataSelect.setViewportWidth(width);
+            dataSelect.setClearColor(); glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            graphics.resetForFixedFunction();
+            dataSelect.draw(); graphics.flushScreenSpace();
+            if (graphics.getUiRenderPipeline()!=null) graphics.getUiRenderPipeline().renderFadePass();
+            loop.renderHostedRunOverlay();
             glFinish(); return;
         }
         level.setClearColor();
@@ -385,6 +416,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
                     width, HEIGHT, graphics.getViewportX(), graphics.getViewportY(),
                     graphics.getViewportWidth(), graphics.getViewportHeight());
         }
+        loop.renderHostedRunOverlay();
         glFinish();
     }
 
@@ -411,6 +443,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
         if (ui != null) {
             ui.renderFadePass();
         }
+        loop.renderHostedRunOverlay();
         glFinish();
     }
 
@@ -512,9 +545,20 @@ public final class GameplayCaptureSession implements AutoCloseable {
             // current, or a second session in the same process renders black frames.
             com.openggf.game.session.WorldSessionPolicyAccess.closeScreens(com.openggf.game.session.SessionManager.getCurrentWorldSession());
             GraphicsManager.destroyForReinit();
-            boot.close();
         } finally {
-            GameServices.configuration().clearSessionOverrides();
+            try {
+                // Retire creator callbacks before releasing the jar loader that defines them.
+                boot.close();
+            } finally {
+                try {
+                    if (developmentMod != null) developmentMod.close();
+                } catch (IOException failure) {
+                    throw new java.io.UncheckedIOException("Failed to close capture mod loader", failure);
+                } finally {
+                    developmentMod = null;
+                    GameServices.configuration().clearSessionOverrides();
+                }
+            }
         }
     }
 

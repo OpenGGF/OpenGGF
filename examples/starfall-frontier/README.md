@@ -114,6 +114,20 @@ Mining tiers, shrine rewards and the equipment/quest progression stay shared
 across the regions. The native terrain samples preserve solid rectangular
 blocks, with original resource highlights marking copper, iron and shards.
 
+Starfall's 39 material samples across 13 act variants now come from exact 16-pixel crops of
+`SceneRomArt.levelKit` layout blocks, with the native flips retained. A local channel conversion
+preserves the existing artwork: level-kit palette channels round `(n*255+3)/7`, while the
+example's original `SceneRomArt.palette` channels truncate `n*255/7`. The canonical locked-on
+ROM regression compares every material pixel to the original native 16-pixel block decoder.
+Launch Base 1, Hydrocity 1 and Sky Sanctuary 1 backdrops are also exact existing-provider images.
+
+The other ten backdrop variants retain their private ROM decoder. Their plane dimensions,
+first-frame AniPLC/direct uploads or IceCap outdoor origin/palette differ from current kit
+output. This decoder is presentation-only, bounded by its ROM table checks, and never writes
+live level art or animation clocks. Shared named sprite recipes cover reused ship, ring,
+monitor, rock, Bloominator, Monkey Dude, Orbinaut and Egg Robo banks; palette and pose choices
+remain Starfall's own. These are qualified identities, not a promise of live stock-zone animation.
+
 ## Build, install and launch
 
 From the repository root, with Java 25, Maven and Python 3 on PATH:
@@ -238,13 +252,15 @@ song restarts, boss overrides, saved-region music, recoil-safe enemy facing,
 terrain generation, tile collision, platforms, mining
 tiers, tree harvesting, station/cost rules, placement, shelter, weapons,
 healing, death, shrine rewards, quest progression, bounded saves and forward
-replay after save restoration. Production scene tests cover packaged loading,
+replay after save restoration. Camp completion uses the generated surface anchor for Small,
+Medium, Large and compact legacy worlds, consumes one core once, and remains deterministic
+after save restoration and forward replay. Production scene tests cover packaged loading,
 panels, pause, draw purity, save recovery and debug isolation. The engine bridge
 also checks ROM terrain/characters and every major screen; a cold production
 startup regression verifies both music and the isolated jump effect in PCM:
 
 ```sh
-python3 tools/testing/maven_queue.py --lean -Dmse=off \
+python3 tools/testing/maven_queue.py -Dmse=off \
   '-Dtest=TestStarfallFrontierExample,TestStarfallFrontierScene,TestModSceneLauncherAudio' \
   '-Ds3k.rom.path=/absolute/path/to/sonic3k.gen' test
 ```

@@ -48,7 +48,7 @@ class TestSlayTheRobotnikExample {
         Path main = Files.createDirectories(work.resolve("main"));
         Path tests = Files.createDirectories(work.resolve("tests"));
         compile(PROJECT.resolve("src/main/java"), System.getProperty("java.class.path"), main);
-        copyResources(PROJECT.resolve("src/main/resources"), tests);
+        copyResources(PROJECT.resolve("src/main/resources"), main);
         compile(PROJECT.resolve("src/test/java"), main + java.io.File.pathSeparator
                 + System.getProperty("java.class.path"), tests);
         loader = new URLClassLoader(new java.net.URL[] {tests.toUri().toURL(), main.toUri().toURL()},

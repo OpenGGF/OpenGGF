@@ -76,7 +76,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
     private HudStaticArt hudStaticArt;
     private int animalTypeA = AnimalType.RABBIT.ordinal();
     private int animalTypeB = AnimalType.FLICKY.ordinal();
-    private int currentZoneIndex = -1;
+    private int currentZoneIndex = Integer.MIN_VALUE;
 
     private final Map<String, PatternSpriteRenderer> renderers = new HashMap<>();
     private final Map<String, ObjectSpriteSheet> sheets = new HashMap<>();
@@ -841,18 +841,16 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
             return;
         }
 
-        // Tile pair $6E2-$6E3 is "E" (from Nem_Hud), followed by six "0" pairs.
-        // The final pair at $6F0-$6F1 is forced blank; results mappings use it as trailing blank.
+        // Hud_Base_Score initializes E______0. Hud_Score writes only six
+        // variable digits; Map_Got/Map_SSR and both bonuses reuse the fixed
+        // trailing zero at $6F0-$6F1.
         copyPatternPair(dest, startIndex, hudTextPatterns, HUD_TEXT_E_PAIR_INDEX);
         for (int pair = 1; pair < RESULTS_SCORE_DIGIT_PAIR_COUNT - 1; pair++) {
-            copyPatternPair(dest, startIndex + (pair * 2), hudDigitPatterns, 0);
+            dest[startIndex + pair * 2].copyFrom(new Pattern());
+            dest[startIndex + pair * 2 + 1].copyFrom(new Pattern());
         }
-        // Explicitly clear trailing pair in case HUD source art has non-blank data there.
         int trailingPairIndex = startIndex + ((RESULTS_SCORE_DIGIT_PAIR_COUNT - 1) * 2);
-        if (trailingPairIndex >= 0 && trailingPairIndex + 1 < dest.length) {
-            dest[trailingPairIndex].copyFrom(new Pattern());
-            dest[trailingPairIndex + 1].copyFrom(new Pattern());
-        }
+        copyPatternPair(dest, trailingPairIndex, hudDigitPatterns, 0);
     }
 
     private void copyPatternPair(Pattern[] dest, int destIndex, Pattern[] src, int srcIndex) {

@@ -159,9 +159,11 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
     private static void updateAct2Foreground(com.openggf.level.objects.ObjectServices services,
                                              SszZoneRuntimeState state) {
         if (state.foregroundRoutine() == 0x10) {
-            // loc_58B9E also calls sub_5B18E, the excluded actual ending owner.
-            // Retain only its independently seedable island presentation tail;
-            // no fabricated ending progress supplies Events_fg_4 or _unkFAAE.
+            // loc_58B9E calls the real shared credits owner before choosing
+            // the good/bad island tail. Declared presentation-only seeds do
+            // not initialize ending RAM, so retain their independent contract.
+            if (state.ending().initialized())
+                com.openggf.game.sonic3k.ending.S3kEndingCoordinator.updateCredits(services);
             if (services.gameState().hasAllSuperEmeralds() || services.gameState().hasAllEmeralds()) {
                 int offset = state.endingPlane().advanceEmeraldPalette();
                 if (offset >= 0) {
@@ -171,6 +173,17 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
                                 "ssz-ending-emerald", com.openggf.game.sonic3k.S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,
                                 3, 11, services.rom().readBytes(0x5931A + offset, 4));
                     } catch (java.io.IOException failure) { throw new java.io.UncheckedIOException(failure); }
+                }
+                // loc_58BD6: locked-on credits settle at $1660. Only then
+                // switch Plane B to the lifted island's second palette.
+                if (state.ending().credits().complete()
+                        && (services.camera().getY() & 0xFFFF) == 0x1660
+                        && state.backgroundRoutine() == 0) {
+                    state.setBackgroundCameraY(state.backgroundCameraY() + 0x100);
+                    for (int line = 1; line < 4; line++)
+                        com.openggf.game.sonic3k.ending.S3kEndingPalette.loadLine(services,line,
+                                com.openggf.game.sonic3k.ending.S3kEndingResources.PAL_ENDING_GOOD_ISLAND+(line-1)*32);
+                    state.setBackgroundRoutine(4);
                 }
                 return;
             }

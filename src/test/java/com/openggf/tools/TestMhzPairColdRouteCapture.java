@@ -27,8 +27,12 @@ class TestMhzPairColdRouteCapture {
     @Test void pairedColdCompletionIsolatesTheLiveTimelineAtTheActualFbzLoad() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/mhz2-team-incoming-320.bk2"));
-        assertEquals(40630, movie.getFrameCount());
+        assertEquals(44004, movie.getFrameCount());
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "tails", "off", null, null, null);
+        // Authored input 41705 is the live capsule approach, before ship carry and
+        // the actual FBZ load. The released FBZ tail is longer than
+        // 480 inputs, so an end-relative activation would begin after that load.
+        int beginOutgoingHistory = 41705;
         long outgoingHistory = 0;
         boolean isolatedHistory = false;
         // Preserve full drawing: MHZ replay controls cannot isolate a drawing gap.
@@ -39,7 +43,7 @@ class TestMhzPairColdRouteCapture {
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
                 // All independent registry replay spots are covered by the authored-route test.
                 // Start recording shortly before the actual outgoing boundary, not in the title tail.
-                if (frame == movie.getFrameCount() - 480) {
+                if (frame == beginOutgoingHistory) {
                     GameServices.configuration().setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, true);
                 }
                 session.step(movie.getFrame(frame));
@@ -49,7 +53,7 @@ class TestMhzPairColdRouteCapture {
                 var followers = GameServices.sprites().getSidekicks();
                 assertEquals(1, followers.size(), "native follower remains registered through the load");
                 assertEquals(CharacterKey.TAILS, followers.getFirst().characterKey());
-                if (frame < movie.getFrameCount() - 480) continue;
+                if (frame < beginOutgoingHistory) continue;
                 var rewind = SessionManager.getCurrentGameplayMode().getRewindController();
                 if (GameServices.level().getCurrentZone() == 7 && rewind != null) {
                     outgoingHistory = Math.max(outgoingHistory, rewind.currentFrame());

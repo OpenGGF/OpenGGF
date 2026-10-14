@@ -127,6 +127,11 @@ public final class ModLevelDefinitionParser {
                 heights.count(), hostMetadata, paletteClaims);
     }
 
+    /** Validates generated editor metadata through the same production JSON bounds as disk imports. */
+    public static void validateMetadataJson(byte[] json) throws IOException {
+        parseJson(Objects.requireNonNull(json, "json"), ModInputLimits.production());
+    }
+
     private static JsonNode parseJson(byte[] json, ModInputLimits limits) throws IOException {
         if (json.length > limits.maxMetadataBytes()) fail("level.json exceeds metadata byte limit");
         try {

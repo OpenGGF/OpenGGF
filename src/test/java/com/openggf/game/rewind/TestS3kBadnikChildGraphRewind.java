@@ -14,6 +14,8 @@ import com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.game.sonic3k.objects.Sonic3kCollapsingPlatformObjectInstance;
 import com.openggf.game.sonic3k.objects.TensionBridgeObjectInstance;
+import com.openggf.game.sonic3k.objects.IczSwingingPlatformObjectInstance;
+import com.openggf.game.sonic3k.objects.IczSwingingPlatformChainLinkInstance;
 import com.openggf.game.sonic3k.objects.badniks.CaterkillerJrHeadInstance;
 import com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance;
@@ -32,6 +34,7 @@ import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.AfterEach;
@@ -606,6 +609,60 @@ class TestS3kBadnikChildGraphRewind {
                 "arrow B parent must resolve to restored layout-slot B Cluckoid");
         assertEquals(2, liveByClassName(objectManager, CLUCKOID_ARROW_CHILD).size(),
                 "restore must keep exactly the captured Cluckoid arrows");
+    }
+
+    @Test
+    void iczDetachedChainRestoresVisibilityAndForwardDebrisMotion() {
+        for (boolean flip : new boolean[] {false, true}) {
+            ObjectManager objectManager = Harness.create(new IczTestRegistry(), List.of(
+                    new ObjectSpawn(0x180, 0x200, Sonic3kObjectIds.ICZ_SWINGING_PLATFORM,
+                            1, flip ? 1 : 0, false, 0))).objectManager();
+            AbstractObjectInstance.updateCameraBounds(0, 0, 1024, 768, 0);
+            var platform = liveByType(objectManager, IczSwingingPlatformObjectInstance.class).getFirst();
+            TestablePlayableSprite rider = player();
+            rider.setXSpeed((short) (flip ? -0x800 : 0x800));
+            platform.onPieceContact(0, rider, new SolidContact(true, false, false, true, false), 0);
+            RewindRegistry rewind = registryFor(objectManager);
+            CompositeSnapshot suspended = rewind.capture();
+            for (int frame = 1; frame < 50 && !((Boolean) readObjectField(platform, "chainDetached")); frame++) {
+                platform.update(frame, rider);
+            }
+            assertTrue((Boolean) readObjectField(platform, "chainDetached"));
+            assertTrue((Boolean) readObjectField(platform, "chainVisible"), "the retirement dispatch retains its final draw");
+            platform.update(50, rider);
+            assertFalse((Boolean) readObjectField(platform, "chainVisible"));
+            var links = liveByType(objectManager, IczSwingingPlatformChainLinkInstance.class);
+            assertEquals(8, links.size());
+            for (var link : links) {
+                link.update(50, null);
+                link.update(51, null);
+            }
+            CompositeSnapshot detached = rewind.capture();
+            links = liveByType(objectManager, IczSwingingPlatformChainLinkInstance.class);
+            assertEquals(8, links.size(), "the out-of-range native sub9 source retains its slot until next dispatch");
+            for (var link : links) link.update(52, null);
+            List<String> expected = liveByType(objectManager, IczSwingingPlatformChainLinkInstance.class)
+                    .stream().map(link -> link.getX() + "," + link.getY()).toList();
+
+            rewind.restore(suspended);
+            assertTrue(liveByType(objectManager, IczSwingingPlatformChainLinkInstance.class).isEmpty());
+            assertFalse((Boolean) readObjectField(
+                    liveByType(objectManager, IczSwingingPlatformObjectInstance.class).getFirst(), "chainDetached"));
+            assertTrue((Boolean) readObjectField(
+                    liveByType(objectManager, IczSwingingPlatformObjectInstance.class).getFirst(), "chainVisible"));
+
+            rewind.restore(detached);
+            assertTrue((Boolean) readObjectField(
+                    liveByType(objectManager, IczSwingingPlatformObjectInstance.class).getFirst(), "chainDetached"));
+            assertFalse((Boolean) readObjectField(
+                    liveByType(objectManager, IczSwingingPlatformObjectInstance.class).getFirst(), "chainVisible"));
+            for (var link : liveByType(objectManager, IczSwingingPlatformChainLinkInstance.class)) {
+                link.update(52, null);
+            }
+            assertEquals(expected, liveByType(objectManager, IczSwingingPlatformChainLinkInstance.class)
+                    .stream().map(link -> link.getX() + "," + link.getY()).toList(),
+                    "restored debris must preserve velocity, subpixels and dispatch phase in either direction");
+        }
     }
 
     @Test
@@ -1866,6 +1923,10 @@ class TestS3kBadnikChildGraphRewind {
         protected int currentRomZoneId() {
             return Sonic3kZoneIds.ZONE_MGZ;
         }
+    }
+
+    private static final class IczTestRegistry extends Sonic3kObjectRegistry {
+        @Override protected int currentRomZoneId() { return Sonic3kZoneIds.ZONE_ICZ; }
     }
 
     private static final class GumballTestRegistry extends Sonic3kObjectRegistry {

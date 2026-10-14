@@ -110,10 +110,16 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
     protected InitStep initZonePlayerStateStep(LevelLoadContext ctx) {
         return new InitStep("InitZonePlayerState",
             "S3K: SpawnLevelMainSprites — zone-specific player animation/air state",
-            () -> levelEventManager.applyZonePlayerStateForLoad(
-                    ctx.hasCheckpoint()
-                            || GameServices.level().hasBigRingReturn()
-                            || GameServices.level().isBonusStageReturn()));
+            () -> {
+                // SpawnLevelMainSprites chooses intro scripts from the native
+                // Current_zone_and_act word (sonic3k.asm:8143-8293). An authored
+                // host's logical zone index does not identify a ROM script.
+                if (!Sonic3kLevel.currentLevelHasStockRomZoneIdentity()) return;
+                levelEventManager.applyZonePlayerStateForLoad(
+                        ctx.hasCheckpoint()
+                                || GameServices.level().hasBigRingReturn()
+                                || GameServices.level().isBonusStageReturn());
+            });
     }
 
     private InitStep initCameraStep(LevelLoadContext ctx) {
@@ -199,7 +205,17 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
     protected InitStep requestTitleCardStep(LevelLoadContext ctx) {
         return new InitStep("RequestTitleCard",
             "S3K: Obj_TitleCard",
-            () -> GameServices.level().requestTitleCardIfNeeded(ctx));
+            () -> {
+                if (ctx.getZone() == 0x0D && ctx.getAct() == 1) {
+                    // Obj_TitleCardInit deletes immediately at $D01. A caller
+                    // omitting animation must not manufacture the ordinary
+                    // omitted-title owner and its four KosM jobs first. Reach
+                    // the existing semantic-suppression boundary instead.
+                    var endingPresentation = new LevelLoadContext();
+                    endingPresentation.setShowTitleCard(true);
+                    GameServices.level().requestTitleCardIfNeeded(endingPresentation);
+                } else GameServices.level().requestTitleCardIfNeeded(ctx);
+            });
     }
 
     @Override

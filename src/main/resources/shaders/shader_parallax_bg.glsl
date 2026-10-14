@@ -45,6 +45,8 @@ uniform float ViewportOffsetX;
 uniform float ViewportOffsetY;
 uniform vec3 BackdropColor;
 uniform float FillTransparentWithBackdrop;
+uniform int PriorityMetadata;
+uniform int PriorityMaskOutput;
 
 // FBO allocation width (actual GPU texture size, may be larger than BGTextureWidth)
 uniform float FBOAllocationWidth;
@@ -139,6 +141,7 @@ void main()
         if (fboX < 0.0) fboX += BGTextureWidth;
         fboY -= round(texelFetch(ColumnRemapY, column, 0).r * 32767.0);
         if (fboY < 0.0 || fboY >= BGTextureHeight) {
+            if (PriorityMaskOutput != 0) discard;
             FragColor = vec4(BackdropColor, 1.0);
             return;
         }
@@ -158,6 +161,15 @@ void main()
 
     vec4 color = texture(BackgroundTexture, vec2(fboU, fboV));
 
+    if (PriorityMaskOutput != 0) {
+        // Only nontransparent high tiles in the completed background image
+        // cover low sprites. Decode the palette line for palette-aware masks.
+        if (color.a < 0.49) discard;
+        float paletteIndex = clamp(round((color.a - 0.5) * 8.0), 0.0, 3.0);
+        FragColor = vec4(1.0, paletteIndex / 3.0, 0.0, 1.0);
+        return;
+    }
+
     // Alpha test
     if (color.a < 0.1) {
         if (FillTransparentWithBackdrop > 0.5) {
@@ -167,5 +179,5 @@ void main()
         discard;
     }
 
-    FragColor = color;
+    FragColor = vec4(color.rgb, PriorityMetadata != 0 ? 1.0 : color.a);
 }

@@ -830,6 +830,17 @@ public class ObjectManager {
         return slotLayout.firstDynamicSlot();
     }
 
+    /**
+     * Admits a newly allocated native contact encounter before the player slot. The native
+     * collision dispatcher latches contact; the object's own later slot resolves its response.
+     */
+    public boolean admitTransientContactBeforePlayer(AbstractObjectInstance object) {
+        if (object == null || object.isDestroyed() || object.getSlotIndex() < 0
+                || objectQuery().identityOf(object).isEmpty()) return false;
+        object.snapshotTouchResponseState();
+        return collisionResponseList.admitBeforePlayer(object);
+    }
+
     ObjectCollisionResponseList initialCollisionResponseList() {
         return collisionResponseList;
     }
@@ -4589,9 +4600,9 @@ public class ObjectManager {
     /**
      * Returns the game-specific {@link ObjectRegistry} for use by
      * {@link ObjectRewindDynamicCodecs#genericRecreate} during rewind restore.
-     * Package-private: accessed only through {@link DynamicObjectRecreateContext#objectRegistry()}.
+     * Package-private: shared by verified derivative admission and rewind recreation.
      */
-    ObjectRegistry rewindObjectRegistry() {
+    ObjectRegistry objectRegistry() {
         return registry;
     }
 

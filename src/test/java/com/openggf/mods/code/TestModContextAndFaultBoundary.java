@@ -167,6 +167,50 @@ class TestModContextAndFaultBoundary {
         registry.restore(captured); assertEquals(1, made.getLast().value);
         assertEquals("mod:owner:services/session/controller", secondController.key());
     }
+    static final class CapturedObserver implements com.openggf.game.GameplayObserver,
+            com.openggf.game.rewind.RewindSnapshottable<Integer> {
+        int value; boolean fail;
+        @Override public String key(){return "ignored";}
+        @Override public Integer capture(){return value;}
+        @Override public void restore(Integer value){this.value=value;}
+        @Override public void onPresentation(com.openggf.game.GameplayObservation observation,
+                com.openggf.mods.mutators.TemporaryMutators mutators) {
+            if(fail)throw new IllegalStateException("observer fault"); value++;
+        }
+    }
+    @Test void gameplayObserversAccumulateVerifiedOwnersAndRetainCapturedIdentity() {
+        var boundary=testBoundary(new ModRuntimeFindingStore());
+        var observer=new CapturedObserver();
+        var context=new ModContext("owner","s2",ModAssetRoot.forTests("owner"));
+        context.registerServiceBundle("observer",()->com.openggf.game.GameServiceBundle.builder()
+                .gameplayObserver("state",observer).build());
+        var first=OwnedModServices.decorate(new com.openggf.game.sonic2.Sonic2GameModule(),context.freeze(),boundary);
+        var secondObserver=new CapturedObserver();
+        var other=new ModContext("other","s2",ModAssetRoot.forTests("other"));
+        other.registerServiceBundle("observer",()->com.openggf.game.GameServiceBundle.builder()
+                .gameplayObserver("state",secondObserver).build());
+        var second=OwnedModServices.decorate(first,other.freeze(),boundary);
+        var registry=second.getGameService(GameplayObserverRegistry.class);
+        assertEquals(java.util.List.of("owner","other"),registry.entries().stream().map(GameplayObserverRegistry.Entry::owner).toList());
+        assertSame(registry.entries().getFirst().observer(),registry.entries().getFirst().adapter());
+        assertTrue(second.rewindAdapters().contains(registry.entries().getFirst().adapter()));
+        registry.entries().getFirst().observer().onPresentation(null,null);
+        assertEquals(1,observer.value);assertEquals(0,secondObserver.value);
+        observer.fail=true;
+        assertThrows(ModFaultBoundary.CallbackAborted.class,()->registry.entries().getFirst().observer().onPresentation(null,null));
+        assertFalse(boundary.isOwnerAvailable("owner"));assertFalse(boundary.isOwnerAvailable("dependent"));
+        assertTrue(boundary.isOwnerAvailable("other"));
+    }
+    @Test void gameplayObserverCannotUseDynamicOrUncapturedState() {
+        var boundary=testBoundary(new ModRuntimeFindingStore());
+        var context=new ModContext("owner","s2",ModAssetRoot.forTests("owner"));
+        context.registerServiceBundle("observer",()->com.openggf.game.GameServiceBundle.builder()
+                .service(com.openggf.game.GameplayObserver.class,new com.openggf.game.GameplayObserver(){}).build());
+        assertThrows(ModFaultBoundary.CallbackAborted.class,()->OwnedModServices.decorate(
+                new com.openggf.game.sonic2.Sonic2GameModule(),context.freeze(),boundary));
+        assertFalse(boundary.isOwnerAvailable("owner"));
+    }
+
     @Test void newCapturedBundleCannotRepublishAnotherOwnersBoundControllerOrAdapter() {
         var context=new ModContext("owner","s2",ModAssetRoot.forTests("owner"));
         context.registerServiceBundle("original",()->com.openggf.game.GameServiceBundle.builder()

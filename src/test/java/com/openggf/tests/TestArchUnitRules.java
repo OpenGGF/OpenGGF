@@ -93,6 +93,35 @@ class TestArchUnitRules {
     private static final String SPECIAL_RENDER_EFFECT_REGISTRY = SpecialRenderEffectRegistry.class.getName();
     private static final String ADVANCED_RENDER_MODE_CONTROLLER = AdvancedRenderModeController.class.getName();
     private static final String REWIND_REGISTRY = RewindRegistry.class.getName();
+    // Chaos consumers interpret immutable policy values and callback-scoped API ports.
+    // Exact names keep concrete mod hosts, catalogues and future unrelated contracts
+    // outside this exception; neither an entire package nor every @ModApi type is allowed.
+    private static final Set<String> GAME_MUTATOR_CONTRACT_TYPES = Set.of(
+            "MutatorPolicy", "MutatorPolicy$DrySonicGravity", "MutatorPolicy$PlayerStealth",
+            "MutatorPolicy$Ringfall", "MutatorPolicy$BigHead", "MutatorPolicy$MonitorFilter",
+            "MutatorPolicy$NoCheckpoints", "MutatorPolicy$NoRings", "MutatorPolicy$GameplaySpeed",
+            "MutatorPolicy$NoSpecialStages", "MutatorPolicy$NoBonusStages",
+            "MutatorPolicy$DefeatKnockback", "MutatorPolicy$Target", "MutatorPolicy$HeadTarget",
+            "AudioEffectPolicy", "AudioEffectPolicy$Mode",
+            "ChallengePolicy", "ChallengePolicy$Kind",
+            "EncounterPolicy", "EncounterPolicy$Kind", "EncounterPolicy$Side",
+            "EnemyRulePolicy", "EnemyRulePolicy$Kind", "FluidContextPolicy", "GameplayHoldPolicy",
+            "HudPresentationPolicy", "HudPresentationPolicy$Mode",
+            "InputControlPolicy", "InputControlPolicy$Mode",
+            "NativePowerupPolicy", "NativePowerupPolicy$Kind",
+            "ObjectFieldPolicy", "ObjectFieldPolicy$Target", "ObjectFieldPolicy$Mode",
+            "OverlayPolicy", "OverlayPolicy$Mode", "PlayerMotionPolicy", "PlayerMotionPolicy$Mode",
+            "ProjectileRulePolicy", "ProjectileRulePolicy$Kind",
+            "RelocationPolicy", "RelocationPolicy$Kind", "RingEconomyPolicy", "RingEconomyPolicy$Kind",
+            "ScenePresentationPolicy", "ScenePresentationPolicy$Mode", "SignedGravityPolicy",
+            "SpringResponsePolicy", "SpritePresentationPolicy", "SpritePresentationPolicy$Mode",
+            "SpritePresentationPolicy$Target", "TransportPolicy", "TransportPolicy$Kind",
+            "MutatorCapability", "MutatorSupportProfile", "TemporaryMutators",
+            "TemporaryMutators$ActivationResult", "TemporaryMutators$ActiveActivation",
+            "TemporaryMutators$Availability", "TemporaryMutators$ActivationOutcome");
+    private static final Set<String> LEVEL_MUTATOR_CONTRACT_TYPES = Set.of(
+            "MutatorPolicy", "ObjectFieldPolicy", "ObjectFieldPolicy$Target", "ObjectFieldPolicy$Mode",
+            "ScenePresentationPolicy", "ScenePresentationPolicy$Mode");
     private static final java.util.Set<String> CORE_RUNTIME_CYCLE_CLUSTER_SLICES = java.util.Set.of(
             "audio",
             "camera",
@@ -115,6 +144,9 @@ class TestArchUnitRules {
             "audio -> data",
             "audio -> debug",
             "audio -> game",
+            // Exact-owner native audio intake reuses stateless caller provenance;
+            // this grants no runtime lookup and introduces no audio -> mods edge.
+            "audio -> util",
             // Offline benchmark harness. `bench` is a leaf: it consumes the
             // profiler's raw-sample interface from `debug` and depends on
             // nothing else in the runtime, and only the CLI tools consume it.
@@ -149,6 +181,11 @@ class TestArchUnitRules {
             "editor -> game",
             "editor -> graphics",
             "editor -> level",
+            // Authored import/export reuses bounded assets and the strict baked-level
+            // data contract; editor_host_data_dependencies_use_only_explicit_owners
+            // keeps these two edges closed to general creator execution/registration.
+            "editor -> io",
+            "editor -> mods",
             "game -> architecture",
             "game -> audio",
             "game -> camera",
@@ -159,6 +196,9 @@ class TestArchUnitRules {
             "game -> ghost",
             "game -> graphics",
             "game -> level",
+            // GameplayObserver ports and host-interpreted policy values are canonical
+            // Mod API contracts. The exact-target guard below rejects mod host types.
+            "game -> mods",
             "game -> physics",
             "game -> sprites",
             "game -> testmode",
@@ -186,6 +226,9 @@ class TestArchUnitRules {
             "level -> game",
             "level -> graphics",
             "level -> io",
+            // Ring fields and scene composition consume only the explicitly listed
+            // immutable semantic policies; creator host implementations stay outside.
+            "level -> mods",
             "level -> physics",
             "level -> sprites",
             "level -> testmode",
@@ -249,6 +292,9 @@ class TestArchUnitRules {
             "sprites -> physics",
             "sprites -> timer",
             "sprites -> trace",
+            // Engine-only motion bindings share the same stateless caller check as
+            // audio; the helper supplies provenance, never mutable runtime services.
+            "sprites -> util",
             "testmode -> camera",
             "testmode -> configuration",
             "testmode -> control",
@@ -356,6 +402,33 @@ class TestArchUnitRules {
             @Override
             public boolean test(JavaClass input) {
                 return input.getName().equals(ModApi.class.getName());
+            }
+        };
+    }
+
+    private static boolean approvedGameplayModContractTarget(String originSlice, JavaClass target) {
+        String name = target.getName();
+        if (originSlice.equals("game") && Set.of(
+                "com.openggf.mods.ui.PixelCanvas", "com.openggf.mods.scene.SceneImage").contains(name)) {
+            return true;
+        }
+        String prefix = "com.openggf.mods.mutators.";
+        if (!name.startsWith(prefix)) {
+            return false;
+        }
+        String type = name.substring(prefix.length());
+        return switch (originSlice) {
+            case "game" -> GAME_MUTATOR_CONTRACT_TYPES.contains(type);
+            case "level" -> LEVEL_MUTATOR_CONTRACT_TYPES.contains(type);
+            default -> false;
+        };
+    }
+
+    private static DescribedPredicate<JavaClass> gameplayModContractTargets(String originSlice) {
+        return new DescribedPredicate<>("explicit " + originSlice + "-owned Mod API contract targets") {
+            @Override
+            public boolean test(JavaClass input) {
+                return approvedGameplayModContractTarget(originSlice, input);
             }
         };
     }
@@ -495,6 +568,9 @@ class TestArchUnitRules {
                             .ignoreDependency(inTopLevelSlice("game"), inTopLevelSlice("debug"))
                             .ignoreDependency(inTopLevelSlice("game"), inTopLevelSlice("graphics"))
                             .ignoreDependency(inTopLevelSlice("game"), inTopLevelSlice("level"))
+                            // Policy/API values form an intentional callback contract. Concrete
+                            // mod hosts remain dependencies and are also rejected below.
+                            .ignoreDependency(inTopLevelSlice("game"), gameplayModContractTargets("game"))
                             .ignoreDependency(inTopLevelSlice("game"), inTopLevelSlice("physics"))
                             .ignoreDependency(inTopLevelSlice("game"), inTopLevelSlice("sprites"))
                             .ignoreDependency(inTopLevelSlice("game"), inTopLevelSlice("testmode"))
@@ -521,6 +597,7 @@ class TestArchUnitRules {
                             .ignoreDependency(inTopLevelSlice("level"), inTopLevelSlice("editor"))
                             .ignoreDependency(inTopLevelSlice("level"), inTopLevelSlice("game"))
                             .ignoreDependency(inTopLevelSlice("level"), inTopLevelSlice("graphics"))
+                            .ignoreDependency(inTopLevelSlice("level"), gameplayModContractTargets("level"))
                             .ignoreDependency(inTopLevelSlice("level"), inTopLevelSlice("physics"))
                             .ignoreDependency(inTopLevelSlice("level"), inTopLevelSlice("sprites"))
                             .ignoreDependency(inTopLevelSlice("level"), inTopLevelSlice("testmode"))
@@ -597,6 +674,69 @@ class TestArchUnitRules {
                 "core-runtime top-level dependency edges grew; route new dependencies through "
                         + "provider/service boundaries or consciously update the ratchet:\n  "
                         + String.join("\n  ", unexpectedEdges));
+    }
+
+    private static boolean approvedEditorHostDataDependency(String origin, String target) {
+        return switch (origin) {
+            case "com.openggf.editor.project.EditorProjectWorkspace" -> Set.of(
+                    "com.openggf.io.DirectoryAccess", "com.openggf.io.ModAssetRoot",
+                    "com.openggf.io.ModInputLimits", "com.openggf.mods.TrackKey",
+                    "com.openggf.mods.code.BakedLevelRef", "com.openggf.mods.code.ModLevelDefinition",
+                    "com.openggf.mods.code.ModLevelDefinitionParser", "com.openggf.mods.code.ModZoneLoader",
+                    "com.openggf.mods.code.ModLevelExportStagingValidator").contains(target)
+                    || target.startsWith("com.openggf.mods.code.ModLevelDefinition$");
+            case "com.openggf.editor.project.EditorProjectRuntimeModule" ->
+                    target.equals("com.openggf.mods.code.ModLevelExportStagingValidator");
+            case "com.openggf.editor.persistence.FullLevelExporter" ->
+                    target.equals("com.openggf.mods.code.ModLevelDefinitionParser");
+            default -> false;
+        };
+    }
+
+    @ArchTest
+    static void editor_host_data_dependencies_use_only_explicit_owners(JavaClasses classes) {
+        // Admitting these data edges grants neither general editor consumers nor
+        // creator execution/registration access, including from approved owners.
+        assertTrue(!approvedEditorHostDataDependency(
+                "com.openggf.editor.LevelEditorController", "com.openggf.io.ModAssetRoot"));
+        assertTrue(!approvedEditorHostDataDependency(
+                "com.openggf.editor.project.EditorProjectWorkspace", "com.openggf.mods.code.ModRuntime"));
+        Set<String> violations = new TreeSet<>();
+        for (JavaClass origin : classes) {
+            if (!"editor".equals(topLevelSlice(origin))) continue;
+            for (Dependency dependency : origin.getDirectDependenciesFromSelf()) {
+                String targetSlice = topLevelSlice(dependency.getTargetClass());
+                if (("io".equals(targetSlice) || "mods".equals(targetSlice))
+                        && !approvedEditorHostDataDependency(origin.getName(), dependency.getTargetClass().getName())) {
+                    violations.add(dependency.getDescription());
+                }
+            }
+        }
+        assertTrue(violations.isEmpty(),
+                "editor creator-data edges are restricted to bounded baked-level import, validation and staging:\n  "
+                        + String.join("\n  ", violations));
+    }
+
+    @ArchTest
+    static void gameplay_consumers_depend_only_on_explicit_mod_contracts(JavaClasses classes) {
+        Set<String> violations = new TreeSet<>();
+        for (JavaClass origin : classes) {
+            String originSlice = topLevelSlice(origin);
+            if (!"game".equals(originSlice) && !"level".equals(originSlice)) {
+                continue;
+            }
+            for (Dependency dependency : origin.getDirectDependenciesFromSelf()) {
+                JavaClass target = dependency.getTargetClass();
+                if ("mods".equals(topLevelSlice(target))
+                        && !approvedGameplayModContractTarget(originSlice, target)) {
+                    violations.add(dependency.getDescription());
+                }
+            }
+        }
+        assertTrue(violations.isEmpty(),
+                "gameplay consumers may interpret the named policy/API contracts, but mod host "
+                        + "implementations require a game-owned provider boundary:\n  "
+                        + String.join("\n  ", violations));
     }
 
     @ArchTest

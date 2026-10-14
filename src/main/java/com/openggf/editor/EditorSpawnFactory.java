@@ -36,6 +36,12 @@ public final class EditorSpawnFactory {
         return encoding.move(spawn, x, y);
     }
 
+    public ObjectSpawn withProperties(ObjectSpawn spawn,int subtype,int flags,boolean respawn) {
+        return spawn.objectKey()==null
+                ? encoding.create(spawn.x(),spawn.y(),spawn.objectId(),subtype,flags,respawn,spawn.layoutIndex())
+                : encoding.createKeyed(spawn.x(),spawn.y(),spawn.objectKey(),subtype,flags,respawn,spawn.layoutIndex());
+    }
+
     public RingSpawn createRingSpawn(int x, int y) {
         if (x < 0 || x >= 0xFFFF || y < 0 || y > 0x0FFF) {
             throw new IllegalArgumentException("ring coordinates exceed stock placement encoding");

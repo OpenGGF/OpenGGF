@@ -79,8 +79,10 @@ ROM's explosion and fades the music.
 [`Records`](../../../../examples/flappy-tails/src/main/java/flappytails/Records.java) keeps
 bests per mode, the furthest zone reached and lifetime totals in `records.txt`, as
 `VersionedSettings`: ordered `key=value` lines with a format version. Reading a file whose
-version it does not know, it starts empty rather than trusting it. A **practice** flight
-(started past Angel Island) counts towards the totals but never sets a best.
+version it does not know, it starts empty in memory and preserves the original file
+without automatic replacement. A **practice** flight is selected by the Practice
+command, including at Angel Island; it counts towards totals but never sets a best
+or earns medals. A normal Play command at Angel Island remains eligible for both.
 
 ## Try it
 

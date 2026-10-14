@@ -59,6 +59,12 @@ public final class CaterkillerJrBodyInstance extends AbstractObjectInstance
     private static final int[] PROJ_ANIM_FRAMES = {2, 2, 3, 4};
     private static final int PROJ_FIRE_COOLDOWN = 0x1A;
 
+    enum SegmentRole { TALL, MIDDLE, THIN, TAIL }
+
+    // Exact captured identity, not a structural nearest-parent reconstruction.
+    // Movement remains independent as in loc_8778C; this reference owns teardown.
+    private CaterkillerJrHeadInstance ownerRef;
+
     // Non-final so the generic field capturer reapplies them after a rewind
     // recreate. segmentIndex (and the art/collision/fire flags it derives) is not
     // recoverable from the body's own spawn, which carries only position.
@@ -93,19 +99,30 @@ public final class CaterkillerJrBodyInstance extends AbstractObjectInstance
 
     CaterkillerJrBodyInstance(ObjectSpawn headSpawn,
                               int segmentIndex, int waitDelay) {
+        this(headSpawn, segmentIndex, waitDelay, stockRole(segmentIndex), null);
+    }
+
+    static SegmentRole stockRole(int index) {
+        return index <= 2 ? SegmentRole.TALL : index == 3 ? SegmentRole.THIN : SegmentRole.TAIL;
+    }
+
+    CaterkillerJrBodyInstance(ObjectSpawn headSpawn, int segmentIndex, int waitDelay,
+                              SegmentRole role, CaterkillerJrHeadInstance ownerRef) {
         super(headSpawn, "CaterKillerJrBody");
+        this.ownerRef = ownerRef;
         this.segmentIndex = segmentIndex;
         this.currentX = headSpawn.x();
         this.currentY = headSpawn.y();
         this.facingLeft = (headSpawn.renderFlags() & 0x01) == 0;
 
-        // Select art and collision based on segment type (off_877C6 table)
-        if (segmentIndex <= 2) {
+        // Stock roles follow off_877C6. The explicit creator MIDDLE role uses
+        // tall art/contact without extending the native three firing segments.
+        if (role == SegmentRole.TALL || role == SegmentRole.MIDDLE) {
             this.rendererKey = Sonic3kObjectArtKeys.CATERKILLER_JR;
             this.mappingFrame = 1;
             this.collisionFlags = COLLISION_BODY;
-            this.canFire = true;
-        } else if (segmentIndex == 3) {
+            this.canFire = role == SegmentRole.TALL;
+        } else if (role == SegmentRole.THIN) {
             this.rendererKey = Sonic3kObjectArtKeys.CATERKILLER_JR;
             this.mappingFrame = 2;
             this.collisionFlags = COLLISION_BODY;
@@ -128,15 +145,7 @@ public final class CaterkillerJrBodyInstance extends AbstractObjectInstance
         this(spawn, 0, 0);
     }
 
-    /**
-     * Rewind recreate factory. The body holds no live parent reference, so a
-     * structurally-valid instance positioned at the captured spawn is enough; the
-     * non-final differentiator fields (segmentIndex, rendererKey, mappingFrame,
-     * collisionFlags, canFire) and the in-flight motion/animation scalars are
-     * reapplied by the generic field capturer immediately after recreate, so
-     * placeholders are passed here. Exposed publicly so {@code Sonic3kObjectRegistry}
-     * (in the parent package) can reach the package-private constructor.
-     */
+    /** Detached placeholder; the compact capture restores role-derived scalars and owner identity. */
     public static CaterkillerJrBodyInstance forRewindRecreate(ObjectSpawn spawn) {
         return new CaterkillerJrBodyInstance(spawn, 0, 0);
     }
@@ -147,12 +156,7 @@ public final class CaterkillerJrBodyInstance extends AbstractObjectInstance
         if (capturedSpawn == null) {
             capturedSpawn = new ObjectSpawn(0, 0, 0, 0, 0, false, 0);
         }
-        CaterkillerJrBodyInstance restored = forRewindRecreate(capturedSpawn);
-        CaterkillerJrHeadInstance liveHead = CaterkillerJrHeadInstance.findLiveHeadForRewind(ctx);
-        if (liveHead != null) {
-            liveHead.attachBodySegmentForRewind(restored);
-        }
-        return restored;
+        return forRewindRecreate(capturedSpawn);
     }
 
     @Override
@@ -275,9 +279,24 @@ public final class CaterkillerJrBodyInstance extends AbstractObjectInstance
         projAnimTimer = PROJ_ANIM_DELAYS[projAnimStep];
     }
 
+    boolean belongsTo(CaterkillerJrHeadInstance owner) { return ownerRef == owner; }
+
+    int segmentIndex() { return segmentIndex; }
+
     void onHeadDestroyed() {
         destroyed = true;
         setDestroyed(true);
+        // Removed heads have already lost their manager identity. Destroyed
+        // bodies can still be captured before the next manager cleanup pass.
+        ownerRef = null;
+    }
+
+    @Override
+    protected void onRemovedFromObjectManager() {
+        if (ownerRef != null) {
+            ownerRef.detachBodySegment(this);
+            ownerRef = null;
+        }
     }
 
     @Override

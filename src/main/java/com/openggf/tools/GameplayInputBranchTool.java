@@ -1,5 +1,7 @@
 package com.openggf.tools;
 
+import com.openggf.game.rewind.CompositeSnapshot;
+import com.openggf.graphics.FadeManagerSnapshot;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
@@ -21,6 +23,8 @@ import java.util.List;
  * the complete prefix in its script/BK2/CSV; PNGs sample the candidate every30 frames.
  * The SOZ cold-route repair (2026-09-27) added read-only riding/standing owners
  * to distinguish actual contact from apparent overlap in sampled screenshots.
+ * S3K cold-route recovery (2026-10-13) added read-only native boss observations
+ * so controller authoring can distinguish a dodge from an actual attack.
  * Candidates stop on death, level replacement or a game-mode transition.
  * A chosen candidate still needs a fresh uninterrupted replay and route certification.
  */
@@ -55,6 +59,7 @@ public final class GameplayInputBranchTool {
             }
         }
         var prefixRows = new StringBuilder(GameplayCaptureSession.stateHeader()).append('\n');
+        var prefixBosses = new StringBuilder("frame,type,x,y,routine,hit_count,collision_flags,defeated\n");
         try (var session = new GameplayCaptureSession(settings)) {
             session.boot(rom, zone, act, settings);
             for (int frame = 0; frame < prefix; frame++) {
@@ -62,6 +67,7 @@ public final class GameplayInputBranchTool {
                 session.step(pad);
                 session.render();
                 prefixRows.append(session.stateLine(frame, pad)).append('\n');
+                appendBosses(prefixBosses, frame);
                 if (session.player().getDead()) {
                     throw new IllegalStateException("Cold prefix died at input " + frame);
                 }
@@ -73,6 +79,8 @@ public final class GameplayInputBranchTool {
             if (checkpointMode != com.openggf.game.GameMode.LEVEL) {
                 throw new IllegalStateException("Branch checkpoint must be in LEVEL mode: " + checkpointMode);
             }
+            requireRestorableCheckpoint(checkpoint,
+                    GameServices.level().hasPendingFreshLevelTransitionBoundary());
             var previousInput = prefix == 0 ? null : baseMovie.getFrame(prefix - 1);
             var objects = new StringBuilder();
             for (var object : GameServices.level().getObjectManager().getActiveObjects()) {
@@ -98,12 +106,14 @@ public final class GameplayInputBranchTool {
                 var movie = loader.loadMovieOrInputLog(Path.of(stem + ".bk2"));
                 var rows = new StringBuilder(prefixRows);
                 var contacts = new StringBuilder("frame,riding,standing\n");
+                var bosses = new StringBuilder(prefixBosses);
                 for (int frame = prefix; frame < movie.getFrameCount(); frame++) {
                     var pad = movie.getFrame(frame);
                     session.step(pad);
                     var picture = session.render();
                     rows.append(session.stateLine(frame, pad)).append('\n');
                     appendContacts(contacts, frame, session);
+                    appendBosses(bosses, frame);
                     boolean terminal = session.player().getDead()
                             || !checkpointWorldIsActive(session, checkpointLevel, checkpointMode);
                     if ((frame - prefix) % 30 == 0 || frame == movie.getFrameCount() - 1 || terminal) {
@@ -116,7 +126,34 @@ public final class GameplayInputBranchTool {
                 }
                 Files.writeString(Path.of(stem + ".csv"), rows, StandardOpenOption.CREATE_NEW);
                 Files.writeString(Path.of(stem + "-contacts.csv"), contacts, StandardOpenOption.CREATE_NEW);
+                Files.writeString(Path.of(stem + "-bosses.csv"), bosses, StandardOpenOption.CREATE_NEW);
             }
+        }
+    }
+
+    private static void appendBosses(StringBuilder rows, int frame) {
+        for (var object : GameServices.level().getObjectManager().getActiveObjects()) {
+            if (object instanceof com.openggf.level.objects.boss.AbstractBossInstance boss) {
+                var state = boss.getState();
+                rows.append(frame).append(',').append(boss.getClass().getSimpleName()).append(',')
+                        .append(boss.getX()).append(',').append(boss.getY()).append(',')
+                        .append(state.routine).append(',').append(boss.getCollisionProperty()).append(',')
+                        .append(boss.getCollisionFlags()).append(',').append(state.defeated).append('\n');
+            }
+        }
+    }
+
+    /** Match the production rewind exclusion before any raw candidate restore. */
+    static void requireRestorableCheckpoint(CompositeSnapshot checkpoint, boolean pendingFreshAssembly) {
+        if (pendingFreshAssembly) {
+            throw new IllegalStateException("Branch checkpoint has pending fresh level assembly; "
+                    + "continue ordinary input until destination ownership is released");
+        }
+        if (checkpoint.get("fademanager") instanceof FadeManagerSnapshot fade && fade.isPoisoned()) {
+            // GameLoop.isRewindBlocked rejects this window: FadeManager.restore
+            // clears its transient callback, which would orphan the load or mode change.
+            throw new IllegalStateException("Branch checkpoint has a callback-bearing fade; "
+                    + "choose a checkpoint before the fade or after the destination is released");
         }
     }
 

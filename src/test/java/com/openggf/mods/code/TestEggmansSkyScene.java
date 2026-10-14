@@ -4,6 +4,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_BACKSPACE;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_C;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER;
@@ -51,12 +56,122 @@ class TestEggmansSkyScene {
         }
     }
 
-    private ExampleModHarness open() throws Exception {
+    private ExampleModHarness open() throws Exception { return open(work); }
+
+    private ExampleModHarness open(Path scenario) throws Exception {
+        if (level != null) level.dispose();
         level = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
-        ExampleModHarness harness = ExampleModHarness.build(PROJECT, work.resolve("build"));
+        ExampleModHarness harness = ExampleModHarness.build(PROJECT, scenario.resolve("build"));
         GameModule effective = harness.apply(GameServices.module());
-        harness.open(effective, work.resolve("saves"), 400, 224);
+        harness.open(effective, scenario.resolve("saves"), 400, 224);
         return harness;
+    }
+
+    @Test
+    void rejectedStoredSaveSurvivesTitleReturnAndOwnedSceneExit() throws Exception {
+        List<java.util.function.UnaryOperator<String>> rejected = List.of(text -> "arbitrary prose",
+                text -> text.replace("version=1", "version=999"),
+                text -> text.replace("bonusSlots=0", "bonusSlots=1000000"),
+                text -> text.replaceAll("(?m)^system=.*$", "system=0").replace("planet=0", "planet=4"),
+                text -> "x".repeat(1048577));
+        for (int index=0; index<rejected.size(); index++) {
+            Path scenario=work.resolve("rejected-"+index);
+            try (ExampleModHarness harness = open(scenario)) {
+                assertTrue(harness.debugJump("new:42"));play(harness,320);
+                Object game = harness.scene().getClass().getMethod("game").invoke(harness.scene());
+                Object active = game.getClass().getField("player").get(game);
+                String text = rejected.get(index).apply((String)active.getClass().getMethod("encode").invoke(active));
+                Object activePlanet = game.getClass().getMethod("planet").invoke(game);
+                Path save = findSave(scenario.resolve("saves"));Files.writeString(save,text);
+                assertTrue(harness.debugJump("title"));play(harness,2);
+                Object title=game.getClass().getMethod("mode").invoke(game);
+                var options=title.getClass().getDeclaredField("options");options.setAccessible(true);
+                assertFalse(((List<?>)options.get(title)).contains("CONTINUE"),"Continue requires a usable save");
+                String before=(String)active.getClass().getMethod("encode").invoke(active);
+                play(harness,12);
+                assertSame(active,game.getClass().getField("player").get(game));
+                assertSame(activePlanet,game.getClass().getMethod("planet").invoke(game));
+                assertEquals(before,active.getClass().getMethod("encode").invoke(active));
+                harness.host().close();
+                assertNull(harness.scene(),"the host revoked this scene visit");
+                assertEquals(text,Files.readString(save),"owned exit cannot overwrite rejected bytes");
+                assertEquals(Map.of(),harness.findings());
+            }
+        }
+    }
+
+    @Test
+    void galaxyChangesReplaceSameCoordinatePlanetAndBoundDerivedImages() throws Exception {
+        try (ExampleModHarness harness = open()) {
+            Object game = harness.scene().getClass().getMethod("game").invoke(harness.scene());
+            Class<?> type = game.getClass();
+            type.getMethod("newExpedition", long.class, int.class, harness.loader().loadClass("eggsky.game.Player"))
+                    .invoke(game, 42L, 1, null);
+            Object player = type.getField("player").get(game);
+            player.getClass().getField("systemId").setLong(player, 0L);
+            Object first = type.getMethod("buildPlanet", int.class).invoke(game, 0);
+            Object originalSpec = first.getClass().getField("spec").get(first);
+            Object orbit = orbitalTexture(harness, game);
+            type.getMethod("newExpedition", long.class, int.class, player.getClass()).invoke(game, 73L, 2, null);
+            player = type.getField("player").get(game);
+            player.getClass().getField("systemId").setLong(player, 0L);
+            Object second = type.getMethod("buildPlanet", int.class).invoke(game, 0);
+            assertNotSame(first, second, "same coordinate in another galaxy gets another planet");
+            Object spec = second.getClass().getField("spec").get(second);
+            assertNotEquals(originalSpec.getClass().getField("seed").getLong(originalSpec), spec.getClass().getField("seed").getLong(spec));
+            Object secondOrbit = orbitalTexture(harness, game);
+            assertNotSame(orbit, secondOrbit);
+            Object fresh = type.getConstructor().newInstance();
+            var ctx = (com.openggf.mods.scene.SceneContext)type.getField("ctx").get(game);
+            type.getMethod("start",com.openggf.mods.scene.SceneContext.class).invoke(fresh,ctx);
+            type.getMethod("newExpedition",long.class,int.class,player.getClass()).invoke(fresh,73L,2,null);
+            Object freshPlayer = type.getField("player").get(fresh);
+            freshPlayer.getClass().getField("systemId").setLong(freshPlayer,0L);
+            Object expected = type.getMethod("buildPlanet",int.class).invoke(fresh,0);
+            assertArrayEquals(((com.openggf.mods.scene.SceneImage)expected.getClass().getField("backdrop").get(expected)).pixels(),
+                    ((com.openggf.mods.scene.SceneImage)second.getClass().getField("backdrop").get(second)).pixels());
+            Object expectedOrbit = orbitalTexture(harness,fresh);
+            assertArrayEquals((int[])expectedOrbit.getClass().getField("surface").get(expectedOrbit),
+                    (int[])secondOrbit.getClass().getField("surface").get(secondOrbit));
+            Object expectedMineral = ((List<?>)expected.getClass().getField("minerals").get(expected)).getFirst();
+            Object actualMineral = ((List<?>)second.getClass().getField("minerals").get(second)).getFirst();
+            var expectedSprites = (com.openggf.mods.scene.SceneSprite[])expectedMineral.getClass().getField("sprites").get(expectedMineral);
+            var actualSprites = (com.openggf.mods.scene.SceneSprite[])actualMineral.getClass().getField("sprites").get(actualMineral);
+            for(int i=0;i<expectedSprites.length;i++) assertArrayEquals(expectedSprites[i].image().pixels(),actualSprites[i].image().pixels());
+            type.getMethod("land",int.class,boolean.class).invoke(game,0,false);
+            play(harness,6);
+            Object art = type.getField("art").get(game);
+            Class<?> recolor = harness.loader().loadClass("eggsky.core.Recolor");
+            Object scheme = recolor.getConstructor(float.class,float.class,float.class,int.class,float.class).newInstance(60f,1f,1f,0,0f);
+            var sprite = new com.openggf.mods.scene.SceneSprite(new com.openggf.mods.scene.SceneImage(1,1,new int[]{0xFFFF0000}),0,0);
+            var recolored = art.getClass().getMethod("recolored", com.openggf.mods.scene.SceneSprite.class,recolor,String.class);
+            var active = (com.openggf.mods.scene.SceneSprite) recolored.invoke(art,sprite,scheme,"active");
+            int[] pixels = active.image().pixels();
+            for(int i=0;i<600;i++) recolored.invoke(art,sprite,scheme,"explored:"+i);
+            var tinted = art.getClass().getDeclaredField("tinted");tinted.setAccessible(true);
+            assertTrue(((Map<?,?>) tinted.get(art)).size()<=256,"recolour references have a fixed bound");
+            assertArrayEquals(pixels,active.image().pixels(),"evicting a lookup keeps displayed images valid");
+            harness.host().draw(null,null);
+            assertFalse(harness.host().recordedFrame().isEmpty(),"active planet still draws after lookup eviction");
+            // Continue publishes a validated generation and recreates its derived art.
+            assertEquals(true,type.getMethod("save").invoke(game));
+            assertEquals(true,type.getMethod("load").invoke(game));
+            Object continued = type.getMethod("buildPlanet",int.class).invoke(game,0);
+            assertNotSame(second,continued);
+            assertArrayEquals(((com.openggf.mods.scene.SceneImage)second.getClass().getField("backdrop").get(second)).pixels(),
+                    ((com.openggf.mods.scene.SceneImage)continued.getClass().getField("backdrop").get(continued)).pixels());
+            assertEquals(Map.of(),harness.findings());
+        }
+    }
+
+    private Object orbitalTexture(ExampleModHarness harness,Object game) throws Exception {
+        Class<?> type=harness.loader().loadClass("eggsky.space.SpaceMode");
+        Object mode=type.getConstructor(int.class,int.class).newInstance(0,0);
+        type.getMethod("enter",game.getClass()).invoke(mode,game);
+        var bodies=type.getDeclaredField("bodies");bodies.setAccessible(true);
+        Object body=((List<?>)bodies.get(mode)).getFirst();
+        var build=type.getDeclaredMethod("buildTexture",game.getClass(),body.getClass());build.setAccessible(true);build.invoke(mode,game,body);
+        return body.getClass().getField("texture").get(body);
     }
 
     @Test

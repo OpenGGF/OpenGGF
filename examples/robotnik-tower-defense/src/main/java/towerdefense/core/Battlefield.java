@@ -8,6 +8,10 @@ import java.util.List;
 public final class Battlefield {
     public static final String PREP = "PREP", WAVE = "WAVE", WON = "WON", LOST = "LOST";
     public static final int SITES = 10, DOOR_MAX = 200, DOOR_X = 347, BOMB_RELOAD = 1200;
+    private final Catalog.Prepared definitions;
+    public Battlefield() { this(new Catalog.Prepared()); }
+    public Battlefield(Catalog.Prepared definitions) { this.definitions = java.util.Objects.requireNonNull(definitions); }
+
     private final Tower[] towers = new Tower[SITES];
     final List<Flicky> birds = new ArrayList<>();
     private final List<Effect> effects = new ArrayList<>();
@@ -31,22 +35,22 @@ public final class Battlefield {
     public int bombCooldown() { return bombCooldown; }
     public int score() { return kills * 10 + wave * 100 + (phase.equals(WON) ? doorHp * 5 : 0); }
     public boolean finished() { return phase.equals(WON) || phase.equals(LOST); }
-    public Catalog.Wave preview() { return Catalog.wave(Math.min(Catalog.WAVES, wave + (phase.equals(PREP) ? 1 : 0))); }
+    public Catalog.Wave preview() { return definitions.wave(Math.min(Catalog.WAVES, wave + (phase.equals(PREP) ? 1 : 0))); }
     public int remainingSpawns() { return activeWave == null ? 0 : activeWave.spawns().size() - spawnIndex; }
     private boolean validSite(int site) { return site >= 0 && site < SITES; }
 
     public boolean build(int site, int kind) {
         if (finished() || !validSite(site) || towers[site] != null || kind < 0 || kind > 5) return false;
-        int cost = Catalog.defense(kind).cost();
+        int cost = definitions.defense(kind).cost();
         if (scrap < cost) return false;
         scrap -= cost;
-        towers[site] = new Tower(site, kind);
+        towers[site] = new Tower(site, kind, definitions.defense(kind));
         return true;
     }
 
     public int upgradeCost(int site) {
         Tower t = tower(site);
-        return t == null || t.level >= 3 ? 0 : Catalog.defense(t.kind).cost() * (t.level + 1) / 2;
+        return t == null || t.level >= 3 ? 0 : definitions.defense(t.kind).cost() * (t.level + 1) / 2;
     }
 
     public boolean upgrade(int site) {
@@ -78,7 +82,7 @@ public final class Battlefield {
     public boolean startWave() {
         if (!phase.equals(PREP)) return false;
         wave++;
-        activeWave = Catalog.wave(wave);
+        activeWave = definitions.wave(wave);
         waveTicks = spawnIndex = 0;
         phase = WAVE;
         return true;
@@ -172,7 +176,7 @@ public final class Battlefield {
     private void fire(Tower t, Flicky target) {
         t.cooldown = t.reload();
         shots++;
-        int color = Catalog.defense(t.kind).color();
+        int color = definitions.defense(t.kind).color();
         effect("shot", t.x(), t.y(), target.x, target.y, color, 9);
         if (t.kind == Catalog.MORTAR || t.kind == Catalog.ORBINAUT) {
             int radius = t.kind == Catalog.MORTAR ? 25 + t.level * 3 : t.range();

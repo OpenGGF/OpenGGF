@@ -11,6 +11,9 @@ import starpost.art.Art;
 import starpost.art.ItemIcons;
 import starpost.art.Tone;
 import starpost.core.Item;
+import starpost.art.AssetFailures;
+import com.openggf.mods.scene.art.SceneArtCache;
+import java.util.List;
 
 /**
  * The museum's pictures, from the ROMs. Badniks are their Sonic 1 objects' first frames in their
@@ -29,6 +32,9 @@ final class MuseumArt {
     private static final int PAL_HCZ1_WATER = 0x0A8E5C;  // Pal_HCZ1_Water (sonic3k.lst)
 
     private final Art art;
+    private final AssetFailures failures;
+    private final Map<SceneRomArt, SceneArtCache> spriteBanks = new java.util.IdentityHashMap<>();
+    public List<AssetFailures.Failure> failures() { return failures.failures(); }
     private final Map<String, SceneSpriteSet> badniks = new HashMap<>();
     private final Map<String, SceneImage> pictures = new HashMap<>();
     private final Map<String, SceneImage> icons = new HashMap<>();
@@ -37,16 +43,18 @@ final class MuseumArt {
 
     MuseumArt(Art art) {
         this.art = art;
+        art.requireOpen(); failures = new AssetFailures(art.owner(), art::ticks);
     }
 
     // ------------------------------------------------------------------ badniks
 
     /** A badnik's sprite set by key ("motobug", "red_chopper"...), loaded on first use; null when missing. */
     SceneSpriteSet badnik(String key) {
+        art.requireOpen();
         if (badniks.containsKey(key)) {
             return badniks.get(key);
         }
-        SceneSpriteSet set = switch (key) {
+        SceneSpriteSet set = failures.load("museum:badnik:" + key, () -> switch (key) {
             case "motobug" -> art.motobug;
             case "buzz_bomber" -> art.buzzBomber;
             case "caterkiller" -> art.caterkiller;
@@ -61,36 +69,24 @@ final class MuseumArt {
             case "jawz" -> load(art.s3k, RomSpriteRequest.of(0x36A552, Compression.KOSINSKI_MODULED, 0x361364, 1), hcz());
             case "blastoid" -> load(art.s3k, RomSpriteRequest.of(0x36A7C6, Compression.KOSINSKI_MODULED, 0x360DD0, 1), hcz());
             default -> null;
-        };
-        badniks.put(key, set);
+        });
+        if (set != null) badniks.put(key, set);
         return set;
     }
 
     /** Sonic 1's palette with a zone's three lines (Sonic's own line from Green Hill's). */
     private int[] s1(int address) {
         int[] palette = art.ghzPalette.clone();
-        try {
-            System.arraycopy(art.s1.palette(address, 48), 0, palette, 16, 48);
-        } catch (RuntimeException e) {
-            // keep Green Hill's colours
-        }
+        System.arraycopy(art.s1.palette(address, 48), 0, palette, 16, 48);
         return palette;
     }
 
     private int[] hcz() {
-        try {
-            return art.s3k.palette(PAL_HCZ1_WATER, 64);
-        } catch (RuntimeException e) {
-            return art.aizPalette;
-        }
+        return art.s3k.palette(PAL_HCZ1_WATER, 64);
     }
 
-    private static SceneSpriteSet load(SceneRomArt rom, RomSpriteRequest request, int[] palette) {
-        try {
-            return rom.sprites(request, palette);
-        } catch (RuntimeException e) {
-            return null;
-        }
+    private SceneSpriteSet load(SceneRomArt rom, RomSpriteRequest request, int[] palette) {
+        return spriteBanks.computeIfAbsent(rom, source -> new SceneArtCache(source, 16)).sprites(request, palette);
     }
 
     /** The badnik key an exhibit item shows ({@code "part:motobug"}, {@code "badnik:jawz"}), or null. */
@@ -107,6 +103,7 @@ final class MuseumArt {
 
     /** A badnik's first frame as a picture (the Red Chopper's in deeper reds), or null. */
     SceneImage badnikPicture(String key) {
+        art.requireOpen();
         String cacheKey = "badnik:" + key;
         if (pictures.containsKey(cacheKey)) {
             return pictures.get(cacheKey);
@@ -114,16 +111,17 @@ final class MuseumArt {
         SceneSpriteSet set = badnik(key);
         SceneImage image = null;
         if (set != null && set.frameCount() > 0) {
-            try {
-                image = set.frame(0).image();
+            image = failures.load("museum:frame:" + key, () -> {
+                var sprite = set.frame(0);
+                SceneImage picture = sprite == null ? null : sprite.image();
+                if (picture == null) return null;
                 if (key.equals("red_chopper")) {
-                    image = crimson(image);
+                    picture = crimson(picture);
                 }
-            } catch (RuntimeException e) {
-                image = null;
-            }
+                return picture;
+            });
         }
-        pictures.put(cacheKey, image);
+        if (image != null) pictures.put(cacheKey, image);
         return image;
     }
 
@@ -151,17 +149,16 @@ final class MuseumArt {
 
     /** A relic's picture at the ROM's size (null for unknown ids). */
     SceneImage relic(String id) {
+        art.requireOpen();
         if (pictures.containsKey(id)) {
             return pictures.get(id);
         }
-        SceneImage image;
-        try {
-            image = switch (id) {
+        SceneImage image = failures.load("museum:relic:" + id, () -> switch (id) {
                 case "totem_chip" -> trim(totem().crop(16, 30, 16, 14));
                 case "totem_wing" -> trim(totem().crop(0, 0, 15, 12));
                 case "totem_face" -> trim(totem().crop(14, 10, 20, 20));
                 case "ring_mould" -> stone(frame(art.ring, 0));
-                case "giant_ring_shard" -> trim(frame(art.s1.sprites(RomSpriteRequest.uncompressed(0x6A2E4, 0xC40, 0xA654, 1),
+                case "giant_ring_shard" -> trim(frame(load(art.s1, RomSpriteRequest.uncompressed(0x6A2E4, 0xC40, 0xA654, 1),
                         art.ghzPalette), 0).crop(32, 24, 32, 40));       // Art_BigRing, Map_GRing (Tile_Pal2)
                 case "spring_coil" -> frame(art.spring, 13);
                 case "old_monitor" -> frame(art.monitor, 11);
@@ -169,11 +166,8 @@ final class MuseumArt {
                 case "lamppost_globe" -> frame(art.lamppost, 2);
                 case MuseumContent.CAP -> frame(art.starpost, 2);
                 default -> null;
-            };
-        } catch (RuntimeException e) {
-            image = null;
-        }
-        pictures.put(id, image);
+            });
+        if (image != null) pictures.put(id, image);
         return image;
     }
 
@@ -203,6 +197,7 @@ final class MuseumArt {
 
     /** Icons for the museum's items: badnik parts, relics, Records. Null for other items. */
     SceneImage icon(Item item) {
+        art.requireOpen();
         String icon = item.icon();
         if (!icon.startsWith(MuseumContent.PART_ICON) && !icon.startsWith(MuseumContent.RELIC_ICON)
                 && MuseumContent.recordSong(item.id()) == null) {
@@ -222,7 +217,7 @@ final class MuseumArt {
             SceneImage picture = icon.startsWith(MuseumContent.PART_ICON) ? badnikPicture(badnikKey(item)) : relic(item.id());
             image = picture == null ? null : fit(picture);
         }
-        icons.put(item.id(), image);
+        if (image != null) icons.put(item.id(), image);
         return image;
     }
 
@@ -258,6 +253,7 @@ final class MuseumArt {
 
     /** The annex in a season's colours (built once a season). */
     SceneImage annex(int season) {
+        art.requireOpen();
         if (annex[season] == null) {
             annex[season] = new Tone(season).apply(buildAnnex());
         }

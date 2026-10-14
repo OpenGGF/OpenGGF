@@ -411,15 +411,15 @@ class TestLbzFinalBoss1Instance {
     }
 
     @Test
-    void knucklesWrapperInitializationClearsStaleLbz2DynamicWaterLock() {
+    void knucklesCaInitializationPreservesThePlacedCdWaterLatch() {
         HarnessServices services = new HarnessServices(PlayerCharacter.KNUCKLES);
         services.water.setDynamicWaterLocked(Sonic3kZoneIds.ZONE_LBZ, 1, true);
         LbzFinalBoss1Instance boss = newBoss(services);
 
         boss.update(0, null);
 
-        assertFalse(services.water.isDynamicWaterLocked(Sonic3kZoneIds.ZONE_LBZ, 1),
-                "Obj_LBZFinalBoss1 owns the _unkFAA2 clear before handing off to object $CC");
+        assertTrue(services.water.isDynamicWaterLocked(Sonic3kZoneIds.ZONE_LBZ, 1),
+                "Obj_LBZFinalBossKnux clears _unkFAA2; CA initialization does not repeat that writer");
     }
 
     @Test

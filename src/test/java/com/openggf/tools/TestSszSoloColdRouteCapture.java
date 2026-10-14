@@ -30,9 +30,9 @@ class TestSszSoloColdRouteCapture {
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off", null, null, null);
         var spots = Set.of(2888, 3440, 3540, 3818, 4168, 4400, 4700, 4930,
                 5020, 5070, 5328, 5470, 5630, 6200, 6400, 6600, 6800, 7000,
-                7199, 7339, 7450, 7750, 7800, 7850, 7920, 7970, 8150, 8430,
+                7199, 7339, 7450, 7740, 7800, 7850, 7920, 7995, 8150, 8430,
                 8458, 8570, 8626, 8690, 8890, 9040, 9300, 9600, 9840, 10000,
-                10300, 10410, 10500, 11050);
+                9344, 9950, 10200, 10300, 10410, 10500, 11050);
         var checked = new HashSet<Integer>();
         int ghzHealth = 8, mtzHealth = 8, ghzHits = 0, mtzHits = 0;
         boolean ghzSeen = false, mtzSeen = false;
@@ -90,9 +90,10 @@ class TestSszSoloColdRouteCapture {
                     .activeObjectsOfType(SszMtzBossObjectInstance.class).isEmpty());
             assertEquals(10, GameServices.level().getCurrentZone());
             assertEquals(0, GameServices.level().getCurrentAct());
-            assertEquals(28, session.player().getRingCount());
-            assertEquals(5887, session.player().getCentreX());
-            assertEquals(1068, session.player().getCentreY());
+            assertEquals(26, session.player().getRingCount());
+            assertEquals(5888, session.player().getCentreX());
+            assertEquals(140, session.player().getCentreY(), "second receiving platform after transport");
+            assertFalse(session.player().isObjectControlled());
         }
     }
 
@@ -100,14 +101,15 @@ class TestSszSoloColdRouteCapture {
     void coldSoloSonicDefeatsMechaAndLoadsDezWithIsolatedHistory() throws Exception {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/ssz1-sonic-solo-cold-complete-320.bk2"));
-        assertEquals(19845, movie.getFrameCount());
+        assertEquals(17600, movie.getFrameCount());
+        int historyStart = movie.getFrameCount() - 120;
         var settings = new GameplayCaptureSession.Settings(320, "sonic", "", "off", null, null, null);
-        var spots = Set.of(11200, 11542, 12000, 12500, 12860, 12920,
-                13200, 13542, 13700, 13912, 14230, 14310, 14484, 14600,
-                14885, 15200, 15500, 15875, 16000, 16260, 16306, 16426,
-                16486, 16516, 16600, 16660, 16720, 16800, 16900, 17026,
-                17116, 17200, 17300, 17416, 17506, 17566, 17800, 18286,
-                18700, 19300, 19700);
+        var spots = Set.of(11200, 11334, 11850, 11911, 11971, 12031, 12061,
+                12131, 12191, 12221, 12259, 12309, 12339, 12459, 12579, 12750,
+                12790, 13000, 13200, 13239, 13400, 13596, 13680, 13800, 13980,
+                14050, 14226, 14350, 14510, 14550, 14660, 14750, 14850, 15000,
+                15126, 15246, 15298, 15400, 15600, 15850, 16000, 16260, 16400,
+                16600, 16743, 16900, 17150, 17300, movie.getFrameCount() - 170);
         var checked = new HashSet<Integer>();
         boolean seen = false;
         int health = 8, hits = 0;
@@ -117,7 +119,7 @@ class TestSszSoloColdRouteCapture {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 10, 0, settings);
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
                 // Enable live history after the independent registry replay windows.
-                if (frame == 19750) GameServices.configuration().setSessionOverride(
+                if (frame == historyStart) GameServices.configuration().setSessionOverride(
                         com.openggf.configuration.SonicConfiguration.LIVE_REWIND_ENABLED, true);
                 session.step(movie.getFrame(frame)); drawing.afterStep(session);
                 assertFalse(session.player().getDead(), "death at " + frame);
@@ -131,7 +133,7 @@ class TestSszSoloColdRouteCapture {
                     assertTrue(next <= health, "Mecha cannot regain health");
                     hits += health - next; health = next;
                 }
-                if (frame >= 19750 && GameServices.level().getCurrentZone() == 10) {
+                if (frame >= historyStart && GameServices.level().getCurrentZone() == 10) {
                     var rewind = SessionManager.getCurrentGameplayMode().getRewindController();
                     if (rewind != null) outgoingHistory = Math.max(outgoingHistory, rewind.currentFrame());
                 }
@@ -154,10 +156,22 @@ class TestSszSoloColdRouteCapture {
             assertTrue(seen); assertEquals(8, hits); assertEquals(0, health);
             assertEquals(11, GameServices.level().getCurrentZone(), "actual DEZ load");
             assertEquals(0, GameServices.level().getCurrentAct());
+            // loc_6468: the next omitted-presentation dispatch releases the parked entry.
+            var neutral = new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, "");
+            if (GameServices.level().hasPendingFreshLevelTransitionBoundary()
+                    || GameServices.level().getTransitions().isTitleCardRequested()) {
+                session.step(neutral); drawing.draw(session);
+            }
+            assertFalse(GameServices.level().hasPendingFreshLevelTransitionBoundary());
+            assertFalse(GameServices.level().getTransitions().isTitleCardRequested());
+            assertSame(GameServices.sprites().getMainPlayable(), session.player());
+            assertSame(session.player(), GameServices.camera().getFocusedSprite());
+            assertFalse(session.player().isObjectControlled());
+            assertEquals(0, session.player().getRingCount(), "loc_63B4 publishes fresh DEZ rings");
+            assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
             assertEquals(48, session.player().getCentreX());
             assertEquals(2476, session.player().getCentreY());
             assertTrue(outgoingHistory > 10, "outgoing SSZ history must actually exist");
-            var neutral = new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, "");
             for (int n = 0; n < 30; n++) {session.step(neutral);drawing.draw(session);}
             var rewind = SessionManager.getCurrentGameplayMode().getRewindController();
             assertNotNull(rewind);

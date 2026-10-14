@@ -15,6 +15,8 @@ import com.openggf.level.objects.SpawnRewindRecreatable;
  */
 public final class ButterdroidBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
 
+    @Override public boolean supportsGroundedFieldMotion() { return true; }
+
     private static final int COLLISION_SIZE_INDEX = 0x17;
     private static final int PRIORITY_BUCKET = 5;
     private static final int RENDER_HALF_WIDTH = 0x0C;
@@ -38,6 +40,8 @@ public final class ButterdroidBadnikInstance extends AbstractS3kBadnikInstance i
         animationTimer = 0;
     }
 
+    @Override protected boolean independentPresentationBody() { return true; }
+
     @Override
     protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         if (isDestroyed()) {
@@ -59,7 +63,7 @@ public final class ButterdroidBadnikInstance extends AbstractS3kBadnikInstance i
             return;
         }
 
-        PlayableEntity target = closestNativePlayerByHorizontalDistance(playerEntity);
+        PlayableEntity target = com.openggf.game.mutators.NativeObjectPolicyAccess.permitsTargeting(services()) ? closestNativePlayerByHorizontalDistance(playerEntity) : null;
         if (target != null) {
             facingLeft = !findSonicTailsTargetIsRight(target);
             chase(target.getCentreX(), target.getCentreY());

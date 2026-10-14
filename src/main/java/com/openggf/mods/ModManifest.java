@@ -29,6 +29,8 @@ public record ModManifest(int formatVersion, String id, String name,
         composition.requireDistinctOwner(id);
         if (formatVersion != 1) throw new IllegalArgumentException("formatVersion must be 1");
         id = ModKeySyntax.requireManifestId(id);
+        if(com.openggf.level.objects.HostObjectKeyRegistry.RESERVED_OWNER.equals(id))
+            throw new IllegalArgumentException("The openggf owner is reserved for engine-provided content");
         name = requireDisplayText(name, "name");
         Objects.requireNonNull(version, "version");
         authors = List.copyOf(Objects.requireNonNull(authors, "authors"));

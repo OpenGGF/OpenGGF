@@ -35,3 +35,17 @@ must not replace classification by purpose.
 define researched prototype, MVP and polished-product stages, with detailed
 lifecycle, engine ownership, authoring and validation gates. These are proposed
 implementations, not claims of delivered gameplay or APIs.
+
+[Runtime mod compatibility evidence](designs/2026-10-13-mod-runtime-compatibility.md)
+records the implemented diagnostic levels, warning-first policy and validation.
+
+[Sonic3K Chaos Mode](designs/2026-10-13-sonic3k-chaos-mode.md) proposes a
+55-effect catalogue, including moving HUDs, object fields and temporary native
+encounters, with configurable random scheduling, rare displacement and later
+streamer voting. It distinguishes current mutator/native-code reuse from required
+host API additions.
+
+The [top 50 additional Chaos candidates](research/2026-10-13-chaos-effect-shortlist.md)
+rank distinct adaptations from Zolika's other published catalogues, with source
+links, Sonic behavior, severity and qualification boundaries. This shortlist
+does not automatically expand the proposed pool.

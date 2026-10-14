@@ -9,7 +9,7 @@ import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
-import com.openggf.physics.TrigLookupTable;
+import com.openggf.level.objects.ShieldProjectileMotion;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.PlayableEntity;
 
@@ -21,9 +21,8 @@ import java.util.List;
  */
 public final class S3kBadnikProjectileInstance
         extends AbstractObjectInstance
-        implements TouchResponseProvider, RewindRecreatable {
+        implements TouchResponseProvider, RewindRecreatable, com.openggf.game.mutators.NativeObjectFieldTarget {
     private static final int SHIELD_REACTION_BOUNCE = 1 << 3;
-    private static final int DEFLECT_SPEED = 0x800;
     private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = TouchResponseProfile.fromCanonical(
             new com.openggf.game.profiles.touchresponse.TouchResponseProfile(
                     com.openggf.game.profiles.touchresponse.TouchCategoryDecodeMode.NORMAL,
@@ -103,6 +102,13 @@ public final class S3kBadnikProjectileInstance
                 ? ctx.spawn()
                 : new ObjectSpawn(0, 0, 0, 0, 0, false, 0);
         return forRewindRecreate(spawn);
+    }
+
+    @Override public Kind fieldKind() { return Kind.PROJECTILE; }
+    @Override public void displaceForField(int dx, int dy) {
+        currentX = (currentX + dx) & 0xFFFF;
+        currentY = (currentY + dy) & 0xFFFF;
+        updateDynamicSpawn(currentX, currentY);
     }
 
     @Override
@@ -192,14 +198,11 @@ public final class S3kBadnikProjectileInstance
             return false;
         }
 
-        int dx = player.getCentreX() - currentX;
-        int dy = player.getCentreY() - currentY;
-        int angle = TrigLookupTable.calcAngle(saturateToShort(dx), saturateToShort(dy));
-
-        // ROM: Touch_ChkHurt_Bounce_Projectile / ShieldTouchResponse
-        // d1 -> x_vel, d0 -> y_vel after GetSineCosine.
-        xVelocity = -((TrigLookupTable.cosHex(angle) * DEFLECT_SPEED) >> 8);
-        yVelocity = -((TrigLookupTable.sinHex(angle) * DEFLECT_SPEED) >> 8);
+        // ROM: Touch_ChkHurt_Bounce_Projectile / ShieldTouchResponse.
+        var reflected = ShieldProjectileMotion.awayFrom(currentX, currentY,
+                player.getCentreX(), player.getCentreY());
+        xVelocity = reflected.x();
+        yVelocity = reflected.y();
         collisionEnabled = false;
         return true;
     }
@@ -217,13 +220,4 @@ public final class S3kBadnikProjectileInstance
         renderer.drawFrameIndex(mappingFrame, currentX, currentY, hFlip, false);
     }
 
-    private static short saturateToShort(int value) {
-        if (value > Short.MAX_VALUE) {
-            return Short.MAX_VALUE;
-        }
-        if (value < Short.MIN_VALUE) {
-            return Short.MIN_VALUE;
-        }
-        return (short) value;
-    }
 }

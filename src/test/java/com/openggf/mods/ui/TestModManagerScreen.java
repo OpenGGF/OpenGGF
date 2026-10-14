@@ -16,6 +16,7 @@ import com.openggf.mods.EffectiveCatalogBuilder;
 import com.openggf.mods.InvalidModEntry;
 import com.openggf.mods.ModCatalog;
 import com.openggf.mods.ModCatalogEntry;
+import com.openggf.mods.ModCompatibilityDiagnostic;
 import com.openggf.mods.ModDependency;
 import com.openggf.mods.ModDescriptor;
 import com.openggf.mods.ModEligibility;
@@ -641,6 +642,186 @@ class TestModManagerScreen {
                 && line.contains("S2_LEGACY_ZONE_OUT_OF_RANGE")));
         assertFalse(screen.bannerLines().stream().anyMatch(line -> line.contains("ROW_WARNING")),
                 "catalog owners retain their row badge/detail path and must not duplicate globally");
+    }
+
+    @Test
+    void compatibilityLevelsAppearForEveryParticipantWithoutChangingOrSavingPendingState() {
+        ModDescriptor one = descriptor("pack-one", "One", List.of(), List.of(
+                finding(ModFindingSeverity.WARNING, "STATIC_WARNING", "Static notice")));
+        ModDescriptor two = descriptor("pack-two", "Two", List.of(), List.of());
+        ModState startup = state(true, true, "pack-one", "pack-two");
+        ModCatalog catalog = new EffectiveCatalogBuilder().build(List.of(one, two), startup);
+        Path root = temp.resolve("compatibility-display");
+        PendingModStateEditor editor = new PendingModStateEditor(startup, catalog.scanned(),
+                new ModStateStore(root.toAbsolutePath().normalize()));
+        ModRuntimeFindingStore runtime = new ModRuntimeFindingStore();
+        runtime.beginCompatibilityContext("active-configuration");
+        runtime.replaceOwner("pack-two", List.of(
+                finding(ModFindingSeverity.WARNING, "RUNTIME_WARNING", "Runtime notice"),
+                finding(ModFindingSeverity.ERROR, "RUNTIME_FAILURE", "Runtime failure")));
+        RecordingFont font = new RecordingFont();
+        ModManagerScreen screen = new ModManagerScreen(catalog, editor, runtime, textSink(font));
+        record Presentation(ModCompatibilityDiagnostic.Level level, String badge, String label) { }
+        List<Presentation> presentations = List.of(
+                new Presentation(ModCompatibilityDiagnostic.Level.OBSERVED_OVERLAP,
+                        "OVERLAP", "Observed overlap"),
+                new Presentation(ModCompatibilityDiagnostic.Level.SUSPECTED_INCOMPATIBILITY,
+                        "POSSIBLE CONFLICT", "Suspected incompatibility"),
+                new Presentation(ModCompatibilityDiagnostic.Level.VERIFIED_BLOCKER,
+                        "PLAY BLOCKED", "Verified blocker"));
+
+        for (Presentation presentation : presentations) {
+            runtime.replaceCompatibility("runtime", List.of(new ModCompatibilityDiagnostic(
+                    presentation.level(), "SHARED_TARGET", "s2:zone:ehz:act:1",
+                    List.of("pack-one", "pack-two"), "Two mods touch the same target",
+                    List.of("Both registrations were observed"))));
+
+            assertTrue(screen.rows().get(0).badges().contains("WARN"));
+            assertTrue(screen.rows().get(1).badges().contains("RUNTIME WARN"));
+            assertTrue(screen.rows().get(1).badges().contains("RUNTIME ERROR"));
+            for (int owner = 0; owner < 2; owner++) {
+                assertTrue(screen.rows().get(owner).badges().contains(presentation.badge()));
+                assertTrue(screen.rows().get(owner).enabled());
+                List<String> details = screen.detailLines();
+                assertTrue(details.stream().anyMatch(line -> line.contains(presentation.label())
+                        && line.contains("SHARED_TARGET")));
+                assertTrue(details.contains("Target: s2:zone:ehz:act:1"));
+                assertTrue(details.contains("Participants: pack-one, pack-two"));
+                assertTrue(details.stream().anyMatch(line -> line.contains("Two mods touch the same target")));
+                assertTrue(details.contains("Evidence: Both registrations were observed"));
+                assertTrue(details.contains("Active mod configuration: active-configuration"));
+                if (owner == 0) press(screen, Action.DOWN);
+            }
+            press(screen, Action.UP);
+            screen.render();
+            assertEquals(startup, editor.pendingState());
+            assertFalse(editor.dirty());
+            assertFalse(editor.restartRequired());
+            assertFalse(Files.exists(root.resolve("modstate.json")));
+        }
+    }
+
+    @Test
+    void verifiedFailureBlocksOnlyAffectedContentOwnersWhileRelatedParticipantsStayEnabled() {
+        ModDescriptor dependent = descriptor("pack-dependent", "Dependent", List.of(), List.of());
+        ModDescriptor provider = descriptor("pack-provider", "Provider", List.of(), List.of());
+        ModState startup = state(true, true, "pack-dependent", "pack-provider");
+        ModCatalog catalog = new EffectiveCatalogBuilder().build(List.of(dependent, provider), startup);
+        Path root = temp.resolve("affected-content-owners");
+        PendingModStateEditor editor = new PendingModStateEditor(startup, catalog.scanned(),
+                new ModStateStore(root.toAbsolutePath().normalize()));
+        ModRuntimeFindingStore runtime = new ModRuntimeFindingStore();
+        runtime.beginCompatibilityContext("active-dependent-and-provider");
+        runtime.replaceCompatibility("dependency", List.of(new ModCompatibilityDiagnostic(
+                ModCompatibilityDiagnostic.Level.VERIFIED_BLOCKER, "DEPENDENCY_VERSION",
+                "dependency:pack-provider", List.of("pack-dependent", "pack-provider"),
+                "Dependent requires an unavailable provider version",
+                List.of("Required >=2.0.0; active provider is 1.2.3"), List.of("pack-dependent"))));
+        RecordingFont font = new RecordingFont();
+        ModManagerScreen screen = new ModManagerScreen(catalog, editor, runtime, textSink(font));
+
+        assertTrue(screen.rows().get(0).badges().contains("PLAY BLOCKED"));
+        assertFalse(screen.rows().get(0).badges().contains("RELATED BLOCKER"));
+        assertTrue(screen.rows().get(1).badges().contains("RELATED BLOCKER"));
+        assertFalse(screen.rows().get(1).badges().contains("PLAY BLOCKED"));
+        assertTrue(screen.detailLines().contains("Participants: pack-dependent, pack-provider"));
+        assertTrue(screen.detailLines().contains("Affected content owners: pack-dependent"));
+        press(screen, Action.DOWN);
+        assertTrue(screen.detailLines().contains("Participants: pack-dependent, pack-provider"));
+        assertTrue(screen.detailLines().contains("Affected content owners: pack-dependent"));
+        screen.render();
+
+        assertTrue(font.drawn.stream().anyMatch(line -> line.contains("Dependent [PLAY BLOCKED]")));
+        assertTrue(font.drawn.stream().anyMatch(line -> line.contains("Provider [RELATED BLOCKER]")));
+        assertTrue(enabled(screen, "pack-dependent"));
+        assertTrue(enabled(screen, "pack-provider"));
+        assertEquals(startup, editor.pendingState());
+        assertFalse(editor.dirty());
+        assertFalse(editor.restartRequired());
+        assertFalse(Files.exists(root.resolve("modstate.json")));
+    }
+
+    @Test
+    void compatibilityNoticesIncludeAllLevelsAndOrphanEvidenceOnceWithReadableWrapping() {
+        ModDescriptor one = descriptor("pack-one", "One", List.of(), List.of());
+        ModDescriptor two = descriptor("pack-two", "Two", List.of(), List.of());
+        ModRuntimeFindingStore runtime = new ModRuntimeFindingStore();
+        String context = "a".repeat(48) + "0123456789abcdef";
+        runtime.beginCompatibilityContext(context);
+        ModCompatibilityDiagnostic overlap = new ModCompatibilityDiagnostic(
+                ModCompatibilityDiagnostic.Level.OBSERVED_OVERLAP, "KNOWN_OVERLAP", "s2:zone:ehz",
+                List.of("pack-one", "pack-two"), "Registrations overlap", List.of("Overlap evidence"));
+        ModCompatibilityDiagnostic suspected = new ModCompatibilityDiagnostic(
+                ModCompatibilityDiagnostic.Level.SUSPECTED_INCOMPATIBILITY, "POSSIBLE_INTERACTION",
+                "s2:object:monitor", List.of("pack-one", "pack-two"), "Callbacks may interact",
+                List.of("Callback registration evidence"));
+        ModCompatibilityDiagnostic orphan = new ModCompatibilityDiagnostic(
+                ModCompatibilityDiagnostic.Level.VERIFIED_BLOCKER, "ORPHAN_FAILURE", "s2:zone:ehz:act:1",
+                List.of("pack-one", "missing-pack"), "Failure\nobserved",
+                List.of("Full evidence with useful details ".repeat(5) + "EVIDENCE_END"));
+        runtime.replaceCompatibility("primary", List.of(overlap, suspected, orphan));
+        runtime.replaceCompatibility("duplicate", List.of(overlap, suspected, orphan));
+        RecordingFont font = new RecordingFont();
+        Path root = temp.resolve("compatibility-notices");
+        ModManagerScreen screen = screen(catalog(List.of(one, two)),
+                state(true, true, "pack-one", "pack-two"), runtime, font, root);
+
+        assertEquals(1, screen.bannerLines().stream().filter(line -> line.contains("ORPHAN_FAILURE")).count());
+        assertFalse(screen.bannerLines().stream().anyMatch(line -> line.contains("KNOWN_OVERLAP")));
+        assertTrue(screen.bannerLines().contains("Participants: missing-pack, pack-one"));
+        assertTrue(screen.bannerLines().contains("Active mod configuration: " + context));
+        assertEquals(1, screen.detailLines().stream().filter(line -> line.contains("KNOWN_OVERLAP")).count());
+
+        press(screen, Action.RIGHT); // Actions, Details.
+        press(screen, Action.RIGHT); // Order.
+        press(screen, Action.RIGHT); // Notices.
+        press(screen, Action.ACCEPT);
+        for (int page = 0; page < 8; page++) {
+            screen.render();
+            press(screen, Action.RIGHT);
+        }
+
+        assertTrue(font.drawn.contains("MOD NOTICES"));
+        assertTrue(font.drawn.stream().anyMatch(line -> line.contains("Observed overlap")));
+        assertTrue(font.drawn.stream().anyMatch(line -> line.contains("Suspected incompatibility")));
+        assertTrue(font.drawn.stream().anyMatch(line -> line.contains("Verified blocker")));
+        assertTrue(font.drawn.stream().anyMatch(line -> line.contains("Failure observed")));
+        assertTrue(font.drawn.stream().anyMatch(line -> line.contains("missing-pack")));
+        assertTrue(font.drawn.stream().anyMatch(line -> line.contains("s2:object:monitor")));
+        assertTrue(font.drawn.stream().anyMatch(line -> line.contains("EVIDENCE_END")));
+        assertTrue(font.drawn.contains("23456789abcdef"));
+        assertTrue(font.lines.stream().allMatch(line -> !line.value().contains("\n")
+                && line.x() + line.value().length() * (line.scale() < 1 ? 6 : 9) <= 320));
+        assertFalse(screen.restartRequired());
+        assertFalse(Files.exists(root.resolve("modstate.json")));
+    }
+
+    @Test
+    void pendingModChangesRemainDistinctFromActiveCompatibilityEvidence() {
+        ModDescriptor one = descriptor("pack-one", "One", List.of(), List.of());
+        ModDescriptor two = descriptor("pack-two", "Two", List.of(), List.of());
+        ModRuntimeFindingStore runtime = new ModRuntimeFindingStore();
+        runtime.beginCompatibilityContext("enabled-one-and-two");
+        runtime.replaceCompatibility("runtime", List.of(new ModCompatibilityDiagnostic(
+                ModCompatibilityDiagnostic.Level.OBSERVED_OVERLAP, "ACTIVE_OVERLAP", "s2:zone:ehz",
+                List.of("pack-one", "pack-two"), "Active registrations overlap", List.of("Active evidence"))));
+        RecordingFont font = new RecordingFont();
+        Path root = temp.resolve("pending-compatibility");
+        ModManagerScreen screen = screen(catalog(List.of(one, two)),
+                state(true, true, "pack-one", "pack-two"), runtime, font, root);
+
+        press(screen, Action.ACCEPT); // Disable only the pending selection.
+        screen.render();
+
+        assertFalse(enabled(screen, "pack-one"));
+        assertTrue(enabled(screen, "pack-two"));
+        assertTrue(screen.rows().getFirst().badges().contains("OVERLAP"));
+        assertTrue(screen.detailLines().contains("Active mod configuration: enabled-one-and-two"));
+        assertTrue(screen.detailLines().stream().anyMatch(line -> line.contains("pending changes")));
+        assertTrue(screen.bannerLines().contains("Changes await Apply"));
+        assertTrue(font.drawn.contains("DRAFT: choose Apply to save"));
+        assertEquals("enabled-one-and-two", runtime.compatibilityContext());
+        assertFalse(Files.exists(root.resolve("modstate.json")));
     }
 
     @Test

@@ -384,6 +384,12 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
             copyPatterns(hudPatterns, hudOffset);
             LOGGER.fine("Copied " + hudPatterns.length + " HUD patterns to index " + hudOffset + " (0x" + Integer.toHexString(hudOffset) + ")");
 
+            // Hud_Base initializes its fixed trailing zero at $6F0 from Art_Hud
+            // (s2.asm:88158,88219); static ArtNem_HUD alone does not contain it.
+            if (sourceDigitPatterns.length >= 2) {
+                copyPatterns(new Pattern[]{sourceDigitPatterns[0], sourceDigitPatterns[1]}, 0x6F0 - VRAM_BASE);
+            }
+
             if (presentationData != null) {
                 presentationData.patchResultsPatterns(combinedPatterns, VRAM_BASE, titleCard2Patterns);
             }
@@ -761,7 +767,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
         int totalIncrement = 0;
 
         // Decrement ring count by 1, add multiplied value (10) to score
-        // This matches original game behavior: display shows ring count, score gets 10 pts per ring
+        // Display shows ring count; ten native score units award 100 points per ring.
         if (displayedRingCount > 0) {
             displayedRingCount--;
             totalIncrement += Sonic2SpecialStageConstants.RESULTS_RING_MULTIPLIER;
@@ -789,7 +795,8 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
         totalBonus += totalIncrement;
 
         if (totalIncrement > 0) {
-            services().gameState().addScore(totalIncrement);
+            // AddPoints stores tens of points; GameStateManager stores points.
+            services().gameState().addScore(totalIncrement * 10);
         }
 
         // Play tick sound every N frames while tallying
@@ -1024,7 +1031,8 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
 
         if (useRomArt) {
             // Render bonus lines with slide-in animation
-            // All numbers rendered at X offset 0x38 (56) from center for consistency
+            // Obj6F uses four variable score/gems digits at $38 plus a fixed zero
+            // at $58; ring rows show the raw ring count at $40 with no fixed zero.
             int numbersXOffset = 0x38;
 
             // Line 1: Y=136 - "SCORE" - distance = 528 (688 - 160)
@@ -1033,7 +1041,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
             renderMappingFrameWithoutNumbers(Sonic2SpecialStageResultsMappings.FRAME_EMERALD_BONUS,
                     scoreX, SCORE_LINE_Y);
             // Numbers always visible with the label
-            renderBonusNumber(scoreX + numbersXOffset, SCORE_LINE_Y, totalBonus);
+            renderBonusNumber(scoreX + numbersXOffset, SCORE_LINE_Y, totalBonus, true);
 
             // Line 2: Y=152 - "SONIC RINGS" - distance = 544 (704 - 160)
             int ringsOffset = getSlideOffset(544);
@@ -1041,7 +1049,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
             renderMappingFrameWithoutNumbers(Sonic2SpecialStageResultsMappings.FRAME_RING_BONUS,
                     ringsX, SONIC_RINGS_Y);
             // Numbers always visible with the label
-            renderBonusNumber(ringsX + numbersXOffset, SONIC_RINGS_Y, displayedRingCount);
+            renderBonusNumber(ringsX + 0x40, SONIC_RINGS_Y, displayedRingCount);
 
             // Obj6F frame 14 is the separate Miles Rings row in two-player
             // mode (s2.asm Map_obj6F_02B0). A positive P2 tally identifies that
@@ -1051,7 +1059,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
                 int milesX = xOff + SCREEN_CENTER_X + milesOffset;
                 renderMappingFrameWithoutNumbers(Sonic2SpecialStageResultsMappings.FRAME_SCORE_AREA_1,
                         milesX, MILES_RINGS_Y);
-                renderBonusNumber(milesX + numbersXOffset, MILES_RINGS_Y, displayedRingCountP2);
+                renderBonusNumber(milesX + 0x40, MILES_RINGS_Y, displayedRingCountP2);
             }
 
             // Line 3: Y=184 - "GEMS BONUS" - distance = 576 (736 - 160)
@@ -1062,7 +1070,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
                         gemsX, ringsCollectedP2 > 0 ? GEMS_BONUS_TWO_PLAYER_Y : GEMS_BONUS_Y);
                 // Numbers always visible with the label
                 renderBonusNumber(gemsX + numbersXOffset,
-                        ringsCollectedP2 > 0 ? GEMS_BONUS_TWO_PLAYER_Y : GEMS_BONUS_Y, emeraldBonus);
+                        ringsCollectedP2 > 0 ? GEMS_BONUS_TWO_PLAYER_Y : GEMS_BONUS_Y, emeraldBonus, true);
             }
         } else {
             // Placeholder rendering with slide-in
@@ -1342,6 +1350,10 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
      * @param value The numeric value to display (0-9999)
      */
     private void renderBonusNumber(int x, int y, int value) {
+        renderBonusNumber(x, y, value, false);
+    }
+
+    private void renderBonusNumber(int x, int y, int value, boolean fixedTrailingZero) {
         if (!artLoaded || combinedPatterns == null || sourceDigitPatterns == null) {
             return;
         }
@@ -1362,8 +1374,9 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
             // Calculate X position for this digit (each digit is 8 pixels wide)
             int digitX = x + (i * 8);
 
-            // Always show the last digit (ones place), even if value is 0
-            boolean isLastDigit = (i == divisors.length - 1);
+            // Raw ring counts need an explicit zero; score/gems retain Hud_Base's
+            // fixed zero at $58 after all four variable columns become blank.
+            boolean isLastDigit = !fixedTrailingZero && (i == divisors.length - 1);
 
             if (digit != 0 || hasDigit || isLastDigit) {
                 hasDigit = true;

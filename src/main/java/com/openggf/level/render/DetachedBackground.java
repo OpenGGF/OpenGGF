@@ -9,6 +9,29 @@ public final class DetachedBackground {
     private final ZoneScrollHandler scroll;
     private final int act, periodWidth, periodHeight;
     private final int[] words = new int[224];
+    private final int[] sourceYs = new int[224];
+
+    /** Logical native scroll state and the exact published scanline outputs. */
+    public record State(Object scroll, int[] words, int[] sourceYs, boolean initialized,
+                        int lastX, int lastY, long lastTick) {
+        public State {
+            if (words.length != 224 || sourceYs.length != 224) throw new IllegalArgumentException("Native scroll requires 224 scanlines");
+            words = words.clone(); sourceYs = sourceYs.clone();
+        }
+        @Override public int[] words() { return words.clone(); }
+        @Override public int[] sourceYs() { return sourceYs.clone(); }
+        @Override public boolean equals(Object other) {
+            return other instanceof State state && Objects.equals(scroll, state.scroll)
+                    && java.util.Arrays.equals(words, state.words) && java.util.Arrays.equals(sourceYs, state.sourceYs)
+                    && initialized == state.initialized && lastX == state.lastX && lastY == state.lastY && lastTick == state.lastTick;
+        }
+        @Override public int hashCode() {
+            int hash = Objects.hash(scroll, initialized, lastX, lastY, lastTick);
+            hash = 31 * hash + java.util.Arrays.hashCode(words);
+            return 31 * hash + java.util.Arrays.hashCode(sourceYs);
+        }
+    }
+
     private java.util.function.IntBinaryOperator horizontalExtension;
     private ZonePictureSource.Picture expanded;
     private boolean initialized;
@@ -25,6 +48,7 @@ public final class DetachedBackground {
         this.act = act;
         this.periodWidth = periodWidth;
         this.periodHeight = periodHeight;
+        for (int y = 0; y < sourceYs.length; y++) sourceYs[y] = y;
     }
 
     public DetachedBackground withHorizontalExtension(java.util.function.IntBinaryOperator extension) {
@@ -58,6 +82,9 @@ public final class DetachedBackground {
         if (initialized && cameraX == lastX && cameraY == lastY && tick == lastTick) return;
         if (!initialized) scroll.init(act, cameraX, cameraY);
         scroll.update(words, cameraX, cameraY, (int) tick, act);
+        short[] offsets = scroll.getPerLineVScrollBG();
+        int vertical = scroll.getVscrollFactorBG();
+        for (int y = 0; y < sourceYs.length; y++) sourceYs[y] = y + vertical + (offsets == null ? 0 : offsets[y]);
         initialized = true;
         lastX = cameraX;
         lastY = cameraY;
@@ -65,8 +92,14 @@ public final class DetachedBackground {
     }
 
     public int sourceX(int line) { return -(short) words[line]; }
-    public int sourceY(int line) {
-        short[] offsets = scroll.getPerLineVScrollBG();
-        return line + scroll.getVscrollFactorBG() + (offsets == null ? 0 : offsets[line]);
+    public int sourceY(int line) { return sourceYs[line]; }
+
+    public State capture() { return new State(scroll.captureRewindState(), words, sourceYs, initialized, lastX, lastY, lastTick); }
+    public void restore(State state) {
+        if (state.initialized() && !initialized) scroll.init(act, state.lastX(), state.lastY());
+        scroll.restoreRewindState(state.scroll());
+        System.arraycopy(state.words(), 0, words, 0, words.length);
+        System.arraycopy(state.sourceYs(), 0, sourceYs, 0, sourceYs.length);
+        initialized = state.initialized(); lastX = state.lastX(); lastY = state.lastY(); lastTick = state.lastTick();
     }
 }

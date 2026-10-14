@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.tests.TestEnvironment;
+
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
@@ -10,7 +12,6 @@ import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
-import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.ShieldType;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.graphics.GLCommand;
@@ -371,7 +372,7 @@ class TestFbzWireCages {
         // Player_TouchFloor can call BubbleShield_Bounce before loc_3A314.
         // Native loc_3A31C then branches on Status_InAir alone and releases
         // through loc_3A36E (sonic3k.asm:77963-78006).
-        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+        TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
         Sonic p=new Sonic("sonic",(short)0,(short)0);
         p.setCentreX((short)(0x1000-0xB8));p.setCentreY((short)0x800);
         p.setXSpeed((short)0x600);p.setGSpeed((short)0x400);p.setDoubleJumpFlag(1);p.giveShield(ShieldType.BUBBLE);
@@ -578,7 +579,7 @@ class TestFbzWireCages {
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
     void movingCageEntryWritesWalkAndPreviousRun(boolean vertical) {
-        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+        TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
         TestSprite player = new TestSprite("sonic");
         player.setCentreX((short) (vertical ? 0x1070 : 0x1000));
         player.setCentreY((short) (vertical ? 0x800 : 0x826));
@@ -598,7 +599,7 @@ class TestFbzWireCages {
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
     void stationaryCageReleaseWritesAnimationWordWithoutAdvancingScript(boolean slow) {
-        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+        TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
         TestSprite player = new TestSprite("sonic");
         player.setCentreX((short) (0x1000 - 0xB8));
         player.setCentreY((short) 0x800);

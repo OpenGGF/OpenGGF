@@ -10,7 +10,8 @@ public final class LakeView {
  private final int surface;
  private final SceneImage[] fall=new SceneImage[4],pool=new SceneImage[4];
  private int cycledSeason=-1,poolBed;
- public LakeView(Art source) { this.source=source; fishArt=new FishArt(source); surface=LakeOverlay.poolY(source)-128; }
+ public LakeView(Art source) { this(source, source::ticks); }
+ public LakeView(Art source, java.util.function.LongSupplier clock) { this.source=source; fishArt=new FishArt(source, clock); surface=LakeOverlay.poolY(source)-128; }
  public void draw(Shell shell,SceneCanvas canvas,int cx,int cy,long ticks,java.util.function.IntUnaryOperator floor) {
   cycle(shell.game.calendar.season()); int step=(int)(ticks/6%4); var tint=starpost.scene.PlayScreen.lightTint(shell.game.calendar.light());
   canvas.drawRegion(fall[step],0,0,256,surface,512-cx,128-cy,256,surface,tint);

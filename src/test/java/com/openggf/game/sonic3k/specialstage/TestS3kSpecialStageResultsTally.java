@@ -181,6 +181,8 @@ class TestS3kSpecialStageResultsTally {
                 "Ring bonus must drain to 0 during the tally countdown");
         assertEquals(0, screen.timeBonusForTest(),
                 "Time bonus must drain to 0 during the tally countdown");
+        assertEquals(55000, GameServices.gameState().getScore(),
+                "5000 native perfect-bonus units plus 500 ring units award 55000 points");
     }
 
     @Test
@@ -196,6 +198,8 @@ class TestS3kSpecialStageResultsTally {
         screen.update(362, null);
         assertEquals(490, screen.ringBonusForTest(),
                 "First tally frame removes 10 from the 500 ring bonus");
+        assertEquals(100, GameServices.gameState().getScore(),
+                "one ten-unit native decrement awards 100 displayed points");
     }
     @Test
     void chaosContinueTimersFallThroughOnTheTallyAndIconCreationPasses() {

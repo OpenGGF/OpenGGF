@@ -37,6 +37,10 @@ public class AizMinibossBarrelShotFlareChild extends AbstractObjectInstance impl
     private int currentY;
     private int sequenceIndex;
     private int frameTimer;
+    // Only policy warnings include the creation pass and hold the last native
+    // pose until their bounded release. Ordinary ROM flares keep their sequence.
+    private boolean warningCreationUpdatePending;
+    private int warningHoldTicks;
 
     public AizMinibossBarrelShotFlareChild(AbstractObjectInstance anchor) {
         super(new ObjectSpawn(
@@ -52,6 +56,14 @@ public class AizMinibossBarrelShotFlareChild extends AbstractObjectInstance impl
         this.sequenceIndex = 0;
         this.frameTimer = DURATIONS[0];
         syncToAnchor();
+    }
+
+    static AizMinibossBarrelShotFlareChild warning(AbstractObjectInstance anchor, int delayTicks) {
+        if (delayTicks < 16 || delayTicks > 60) throw new IllegalArgumentException("Warning delay must be 16..60 updates");
+        var flare = new AizMinibossBarrelShotFlareChild(anchor);
+        flare.warningCreationUpdatePending = true;
+        flare.warningHoldTicks = delayTicks - 16; // byte_6913F native sequence totals 16 updates.
+        return flare;
     }
 
     private AizMinibossBarrelShotFlareChild(ObjectSpawn spawn) {
@@ -79,12 +91,23 @@ public class AizMinibossBarrelShotFlareChild extends AbstractObjectInstance impl
 
         syncToAnchor();
 
+        if (warningCreationUpdatePending) {
+            warningCreationUpdatePending = false;
+            return;
+        }
+
         if (--frameTimer > 0) {
             return;
         }
 
         sequenceIndex++;
         if (sequenceIndex >= FRAMES.length) {
+            if (warningHoldTicks > 0) {
+                warningHoldTicks--;
+                sequenceIndex = FRAMES.length - 1;
+                frameTimer = 1;
+                return;
+            }
             setDestroyed(true);
             return;
         }

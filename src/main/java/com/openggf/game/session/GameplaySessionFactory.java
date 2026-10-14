@@ -84,5 +84,6 @@ public final class GameplaySessionFactory {
                 advancedRenderModeController, zoneLayoutMutationPipeline);
         gameplayMode.attachBackgroundPlaneCollisionProvider(
                 gameplayMode.createDefaultBackgroundPlaneCollisionProvider());
+        WorldSessionPolicyAccess.bindGameplay(gameplayMode);
     }
 }

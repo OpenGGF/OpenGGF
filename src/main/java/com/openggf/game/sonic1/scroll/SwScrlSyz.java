@@ -41,8 +41,8 @@ public class SwScrlSyz extends AbstractZoneScrollHandler {
     private final ScrollEffectComposer composer = new ScrollEffectComposer();
 
     public void init(int cameraX, int cameraY) {
-        // BgScroll_SYZ: bgscreenposy = screenposy * 48 / 256
-        int initialBgY = (cameraY * 48) >> 8;
+        // BgScroll_SYZ REV01 adds one pixel after screenposy * 48 / 256.
+        int initialBgY = ((cameraY * 48) >> 8) + 1;
         bgYPos = (long) initialBgY << 16;
         lastCameraY = cameraY;
         initialized = true;

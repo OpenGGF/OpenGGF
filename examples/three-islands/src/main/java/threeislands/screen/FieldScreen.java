@@ -186,15 +186,17 @@ public final class FieldScreen implements Screen {
                 game.progress.restAll();
                 game.progress.setResume(zone, spot.id.equals("sanctuary") ? 2 : spot.id.equals("waypoint") ? 3 : 1);
                 game.progress.setResumeDungeon(field.dungeon != null);
-                game.save();
+                boolean saved = game.save();
                 game.audio.sfx(Audio.SFX_STARPOST);
                 if (field.dungeon != null) {
-                    say("Party restored. Journey saved inside the dungeon.");
+                    say(saved ? "Party restored. Journey saved inside the dungeon."
+                            : "Party restored. Could not save; progress kept in memory.");
                     return;
                 }
                 game.playStory(zone.key + "-camp", this, () -> {
-                    game.save();
-                    say("Party restored. Journey saved.");
+                    boolean published = game.save();
+                    say(published ? "Party restored. Journey saved."
+                            : "Party restored. Could not save; progress kept in memory.");
                     game.swap(this);
                 });
             }

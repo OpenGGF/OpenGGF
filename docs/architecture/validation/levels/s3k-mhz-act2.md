@@ -11,7 +11,7 @@ historically; current campaign act certification pending.
 | --- | --- |
 | Implemented | Historical source review missed composition gaps; the campaign has corrected entry/boss lifetime, shared defeat acknowledgement, results ownership and the ship Plane A consumer. |
 | Cold-reachable | Actual fresh MHZ1 incoming native320 Sonic solo route traverses Act2 and reaches FBZ1 without gameplay seeds or deaths (2026-09-23). |
-| Completable | The23775-input cold production capture includes all9 hits, actual capsule/results, ship carry and playable FBZ1. Other route products remain open. |
+| Completable | Cold native Sonic/Tails/pair and800px Sonic reach actual capsule/results, ship carry and released FBZ1. Native320 Knuckles now completes the full cold chain with terminal health one; current evidence below supersedes the historical ninth-hit-to-zero assumption. Other route products remain open. |
 | Native-accurate | Direct ROM review/local corrections; no complete native visual or frame-perfect claim. |
 | Rewind/standard | Native320 incoming route now passes all eight complete-registry restore/45-input replay spots through released FBZ1; five-preset entry/admission have independent short checks. Other breadth and lifecycle obligations remain incomplete. |
 
@@ -34,15 +34,17 @@ historically; current campaign act certification pending.
 ## Scope and evidence limits
 
 Locked-on S3&K ROM, native `FixBugs=0`; Sonic, Tails and Sonic with Tails are the
-accepted implementation scope. The [original completion audit](../../research/s3k-zones/mhz-completion-audit.md)
+September implementation scope. The [original completion audit](../../research/s3k-zones/mhz-completion-audit.md)
 records the user's exclusions: no further Knuckles-route work after the camera
 correction, no standalone S&K entry, and no further trace-driven development.
-These are accepted scope limits, **not evidence that Knuckles is unsupported**.
+Those are historical task limits, **not evidence that Knuckles is unsupported**.
+The October 13 playable-completion request reopens native locked-on Knuckles
+routes; standalone and strict-trace exclusions remain in place.
 The console pulley debug-menu unlock is excluded; engine debug controls remain.
-Do not restart excluded trace work or expand the route scope by implication.
+Do not restart the excluded trace work.
 
 This matrix was assembled on 2026-09-23 from current test source and historical
-validation records. **Current component execution:498 cases pass, zero skips, on2026-09-23 at19:21 BST**
+validation records. **Historical component execution:498 cases pass, zero skips, on2026-09-23 at19:21 BST**
 (`b6c1147a2` plus campaign edits;37 explicitly selected non-trace MHZ classes).
 The campaign audit records the selection and limits; cold route authoring is ongoing. Existing
 unit/graph tests are candidates for the listed contracts, not proof of complete
@@ -57,7 +59,7 @@ baseline. They cannot be relabelled a green campaign baseline.
 | --- | --- |
 | Width | Current selectable presets are320/352/400/528/800. Entry and endboss admission are checked at all five presets; complete native320 traversal is observed. The same cold320 input at800 dies in MHZ1 at3523, before Act2, and is not an Act2 failure or wide completion proof. Donor/lifecycle breadth remains open. |
 | Donor | Native plus every currently supported S3K movement donor; resolve support from production before selecting cases. No per-act donor certification from the reviewed records. |
-| Main | Sonic and Tails, plus Sonic/Tails native pairing; Knuckles implementation expansion is excluded as above. Existing locked-on Knuckles camera test remains a regression, not route coverage. |
+| Main | Sonic and Tails, plus Sonic/Tails native pairing; October13 adds complete cold native320 Knuckles traversal. The September exclusion above is historical; other route products remain unqualified. |
 | Team | Solo/native pair are reviewed implementation paths. Mixed, duplicate and maximum participant shapes need current contract-derived authority/lifecycle checks; absence of evidence is not an unsupported classification. |
 | Lifecycle | Checkpoint respawn, death/restart, alternate entry where applicable, repeated loads, and exit behavior need their own short cases and width × supported-donor coverage. |
 
@@ -419,3 +421,111 @@ state/pixel controls and their limits are described in the
 [headless testing guide](../../../guide/contributing/headless-testing.md).
 This performance change supplies no new native reference, full-route visual
 certification or missing viewport/donor/character coverage; inherited gaps remain.
+
+## 2026-10-13 — current incoming controller repair
+
+The untouched five-case reproduction fails the Tails/team late-pulley owner
+assertions, paired FBZ history isolation and wide frame19500 deformation restore.
+The wide route actually enters `SPECIAL_STAGE` at input19466 while retaining the
+outgoing level object; restoring only that level registry against the new mode's
+camera is an invalid world composition. Replay checkpoints now require LEVEL
+and the same current level on both sides of their forward interval. No MHZ
+scroll arithmetic or physics constants are changed.
+
+Re-authored ordinary inputs complete fresh incoming Tails320 (35815 inputs),
+Sonic/Tails320 (44004) and Sonic800 (29744) through MHZ1/MHZ2 and into released
+FBZ1. Independent uninterrupted production playback observes load inputs
+35454, 43234 and 28981 respectively, with no deaths. The team catches the actual
+shared handle at35047 and reaches its top at35734; the two replay spots require
+both players to be controlled and share its native X/Y. Its swing-vine spot
+also requires both native participants to be controlled. Scripts/BK2s retain
+ordinary controllers only, with CPU-controlled P2. They were authored against
+immutable runtime `8438d7040` and the verified locked-on ROM, not seeded state
+or trace data.
+
+Earlier qualification on `2e992da7d` plus these route changes passes all three
+`TestS3kMhzAct2AuthoredRoute` cases (2026-10-13 17:51 BST, zero skips).
+The changed `TestMhzPairColdRouteCapture` passes at 18:04:43 BST (one case,
+zero skips). It activates live history at the capsule approach, input 41705,
+before the actual FBZ load at 43234. The first attempt activated after that load
+because its old end-relative offset did not account for the longer FBZ tail.
+Outgoing-history and actual destination isolation assertions are retained.
+These bounded passes do not certify the remaining inherited breadth.
+
+
+The revised wide controller qualification completed on 2026-10-13 at 16:42:43 BST:
+`TestMhzWideColdRouteCapture` passes one case with zero failures, errors or skips,
+retaining all 25 named whole-world spots, two cycles and forward replay horizons.
+It observes the real FBZ load at 28981 and released movement. This is the queued
+ROM-backed regression in `ai-s3k-playable-finish`, with the verified absolute
+S3K ROM and `python3 tools/testing/maven_queue.py -Dmse=off
+-Dtest=TestMhzWideColdRouteCapture test -B`. Native Sonic/Tails/team and paired
+history qualification is recorded above.
+
+
+### Knuckles switch ownership at actual entry, 2026-10-13
+
+The actual cold MHZ1→2 live-history check exposed a real switch-child ownership
+defect: after `loc_6311A` erases the press actor, the independent `loc_632CA` /
+`Sprite_OnScreen_Test` child retained a Java parent reference and capture rejected
+it. Five short actual-ROM entry widths reproduce that error on `efbef3d38` (five
+errors, no assertion failures/skips). Native Object Pos/2.bin row14 is
+`04E8 07EC 8220`; the child retains its own `04E0/07EC`, frame0/palette0 and copied
+respawn index. Only Sonic/Tails keep `loc_63308` / `Child_Draw_Sprite` and a live
+parent. Commit `3596237c3`, integrated as `bed44fae6`, uses pure child recreation
+and preserves that exact captured parent policy for the normal branch.
+
+The focused five-width admission/recreation, existing entry/cutscene/graph and
+mandatory loading gate passes 173 cases without failures/errors/skips at
+19:08:47 BST (77 seconds Maven, isolated `ai-s3k-finish-lbz-knux-dev`). Its
+`maven_queue.py --lean -Dmse=off` selector is
+`TestS3kMhzAct2EntryHeadless,TestS3kMhzCutsceneGraphRewind,TestMhz1CutsceneObjects,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`
+with `"-Ds3k.rom.path=$S3K_TASK_ROM" test -B`.
+The actual cold native320 Knuckles Act1→released Act2 rerun subsequently passes
+43 two-cycle whole-world windows and real seamless history isolation at
+19:16:41 BST. Later cold Act2→FBZ completion and broader products remain pending.
+
+The command records normalize only machine-local paths: `S3K_TASK_QUEUE` is
+the updated main-workspace focused wrapper, and `S3K_TASK_ROM` is the absolute
+existing locked-on ROM path with the documented supported SHA-1.
+
+
+### Native terminal flow and full cold Knuckles completion, 2026-10-13
+
+Current native ownership is `f9ac22318` (`e3dc92ea5` / `2688b2cf1` integrated).
+`sub_76782` runs after movement/arena admission; its pre-arena floor preserves
+health two, and `loc_767F6` starts escape at health one after32 flash dispatches.
+Earlier descriptions of nine hits to zero reflected the old Java terminal
+assumption. Clock-stop/score ordering, character escape speed, `$3F` underflow
+wait and fractional arena-repeat position now follow their native owners.
+The proxy and both spikes retire on parent status-seven semantics at `$44D0`,
+while the boss body and head remain live. Fresh recreation preserves captured
+placement and exact parent identity, including independent two-parent negatives.
+The174-case native/component/graph/schema gate passes without failures,
+errors/skips at21:11:56 BST; the [dated record](../../plans/2026-10-13-s3k-playable-completion.md#mhz-native-terminal-ownership-and-current-route-replay)
+contains commands and negative-fixture attribution.
+
+`TestMhzKnucklesColdRouteCapture#coldKnucklesCompletesActTwoAndIsolatesTheFbzTimeline`
+passes on the integrated owner plus its new controller contract at21:15:27 BST,
+with the existing wide test (two cases, no failures/errors/skips). The66271-input
+`mhz2-knuckles-cold-complete-320` script/BK2 preserves the qualified30000-input
+Act1 prefix exactly. True cold native320 solo Knuckles covers thirteen fixed
+Act2 vine/loop/wall/ring/pulley/jump/glide spots plus nine dynamic boss/terminal/
+capsule/ship/weather/FBZ spots. All22 windows restore the entire world and
+replay twice; weather uses90 inputs and the other windows45, clamped before the
+actual fresh load. Every native health value9..1 is observed, escape remains at
+one, no death/transformation/hidden respawn occurs, and live history enabled at
+63600 resets at actual FBZ66053. Released destination movement ends grounded at
+`(779,1388)` with seven earned rings. The independent Act1 contract retains43
+windows and its seamless history barrier. This is cold traversal, rather than a
+positioned encounter or a movie whose raw parked load substitutes for control.
+
+The800px Sonic test retains25 two-cycle world windows and released FBZ control,
+actual load28981 and health9..1. Native Sonic/Tails/team and paired history pass
+four cases on preceding`b143f272e` at21:05:03 BST; consolidated smoke must cover
+them after the retirement follow-up. Other selectable widths, supported donors,
+team products and native whole-scene conformance remain inherited obligations.
+One inspected conformance follow-up is spike`loc_76674` status-six hit-flash
+suppression and separate draw/touch admission: current Java still combines its
+draw gate with touch flags. This bounded terminal/parent repair does not certify
+that branch or full native parity, and adds no accepted discrepancy.

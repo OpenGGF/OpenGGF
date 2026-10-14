@@ -279,7 +279,8 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0xC9, // LBZMiniboss
             0xCA, // LBZFinalBoss1
             0xCB, // LBZEndBoss
-            0xCC // LBZFinalBoss2
+            0xCC, // LBZFinalBoss2
+            0xCD // Obj_LBZFinalBossKnux: placed prelude changes to CA in the same slot
     );
 
     // SKL-only implementations (zones 7-13: MHZ through DDZ), on top of SHARED.

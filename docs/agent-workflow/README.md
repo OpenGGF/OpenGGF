@@ -18,12 +18,17 @@ checks. Its first target is the [Sandopolis plan](../architecture/plans/2026-09-
   observations used as ROM corroboration or visual references.
 - [Gameplay highlights](../../.agents/skills/gameplay-highlights/SKILL.md) maintains
   the unified source archive and curates a reproducible, act-ordered moving reel.
-  It also replaces outdated excerpts after follow-up fixes.
+  It also replaces outdated excerpts after follow-up fixes. Every delivered reel,
+  promo or showcase must publish its production sources and external asset catalog
+  to [OpenGGF-Media](https://github.com/OpenGGF/OpenGGF-Media), with the production
+  link and archive commit included in delivery; large media files remain external.
 
 These skills apply the methodology and current repository policy; plans retain
 per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 ## Tools
+
+- [Editor guide pictures](../../src/test/java/com/openggf/editor/project/TestEditorGuidePictures.java): refresh the current ROM-backed editor examples with `-Dtest=TestEditorGuidePictures -Dopenggf.editor.guidePictures=true -Dopenggf.headless.gl=surfaceless-egl -Dsonic2.rom.path=<absolute S2 REV01 ROM>` through the Maven queue; review `target/editor-guide/` before copying pictures to the guide.
 
 - [Category negative-case comparison](../../tools/testing/compare_category_outcomes.py): compares completed bounded runner failures and causal skips with an explicit source/run baseline, rejecting incomplete evidence and requiring opt-in for verified SSZ blob hashes (2026-10-08 Mutator Lab expansion); [limits and usage](../../tools/testing/README.md#bounded-category-result-comparison).
 
@@ -77,7 +82,7 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 - [Native reference capture](../../tools/bizhawk/README.md) runs explicit zone-owned Lua exporters/plans with an isolated BizHawk 2.11 configuration, source hashes and failed-export detection. The FBZ command remains a compatibility profile (2026-09-15 SOZ methodology v2).
 
-Nine `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each `-D...` property).
+The following `com.openggf.tools` CLIs. Maven examples quote each `-D...` property. Runtime measurements invoke Java directly from an already-built classpath.
 
 | Tool | Purpose | Invocation |
 |------|---------|------------|
@@ -87,11 +92,14 @@ Nine `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each
 | `TraceTriageTool` | Reads `target/trace-reports/<game>_<zone>_report.json` and prints a first-divergence brief (frame/field, ROM vs engine, likely owning subsystem, disasm search terms). Comparison-only; never hydrates engine state. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.TraceTriageTool" "-Dexec.args=s2 mtz1"` |
 | `ZoneSpecNormalizerTool` | Normalizes an `s3k-zone-analysis` spec into the stable 13-section layout (palette cycling vs mutation kept separate; `(not analyzed)` placeholders for gaps). | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.ZoneSpecNormalizerTool" "-Dexec.args=<path-to-zone-analysis-spec.md>"` |
 | `TraceBenchmarkTool` | Replays a trace headlessly with no pacing and reports per-subsystem frame-time percentiles, for comparing JVMs or catching a performance regression. Writes a JSON report. Never quote its numbers without checking the trajectory digest matched. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.TraceBenchmarkTool" "-Dexec.args=--trace aiz1 --json target/bench/temurin21-g1.json"` |
+| `RuntimeInputPlan` | Compile v5 controller inputs, structural loop admission and dedicated hardware readiness into a comparison-free plan for the complete runtime benchmark (2026-10-12 task). | `java -cp "$OPENGGF_RUNTIME_CLASSPATH" com.openggf.tools.RuntimeInputPlan TRACE_DIR ZONE ACT START COUNT PLAN_JSON` |
+| `RuntimeEngineBenchmarkTool` | Run the normal paced Engine window/render/audio/filled-rewind workload; reports total-process CPU and presentation intervals. External process sampling supplies RSS/peak and DRM residency. Optional final CSV is qualification-only; `--load GAME ZONE ACT ROM_ROOT REPORT_JSON` measures a separate LIVE fresh load through its first gameplay presentation. | `java --enable-native-access=ALL-UNNAMED -Xmx3g -cp "$OPENGGF_RUNTIME_CLASSPATH" com.openggf.tools.RuntimeEngineBenchmarkTool PLAN_JSON ROM_ROOT REPORT_JSON MEASURE_FROM MEASURE_TO` |
+| `tools/performance/sample_runtime.py` | Sample an owned runtime process outside its marked measurement window and within filled history; append steady RSS/peak and deduplicated resident GPU counters to the runtime report. | `python3 tools/performance/sample_runtime.py --pid PID --log LOG --report REPORT_JSON` |
 | `BenchmarkCompareTool` | Renders a Markdown comparison from two or more benchmark reports; the first is the baseline. Pure post-processing, so it can run under any JVM. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.BenchmarkCompareTool" "-Dexec.args=--out target/bench/comparison.md target/bench/a.json target/bench/b.json"` |
 | `InputLogAuthorTool` | Compiles a short controller script (`60 R; 1 D+R; repeat 3 { 1 A ; 1 - }`) into a BizHawk `Input Log.txt` or minimal `.bk2`, then re-parses it with `Bk2MovieLoader` so the file is proven loadable. Skill: `bk2-input-authoring`. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.InputLogAuthorTool" "-Dexec.args=--inline '60 R; 1 A' --out target/capture/run.txt"` |
 | `DezFinalRouteAuthorTool` | Observes the final DEZ encounter and authors controller-only input through hands, core and escape. Declared solo Sonic boot: 200 rings, seven Super Emeralds. Optional DEZ2 input starts at ($34B0,$300), traverses its boss/real final-arena load and continues without reseeding. A fifth argument (`cold-solo`, `cold-team`, `cold-team-emeralds`) instead plays an input prefix from the real DEZ1 start without position/ring seeds. Writes input script/state CSV; no post-boot gameplay-state injection or parity claim. | `DezFinalRouteAuthorTool <ROM> <width> <output-prefix> [input [cold-solo\|cold-team\|cold-team-emeralds]]` (same Java classpath as gameplay capture) |
 | `DdzIncomingRouteAuthorTool` | Replays an actual DEZ incoming movie, then authors controller-only DDZ ring collection and both boss phases. The complete native movie supplies input buttons only; no state hydration. Declared positioned or cold-team boot; complete input script and observed state CSV. | `DdzIncomingRouteAuthorTool <ROM> <width> <incoming.bk2> <reference.bk2> <output-prefix> [cold-team]` |
-| `GameplayInputBranchTool` | Cold-replays one input prefix, then tries controller-only scripts from its engine-owned rewind state. Writes full-prefix BK2/scripts/state CSVs, nearby object inventory, per-input riding/standing contact owners and sampled PNGs. Preserves both controllers and input-edge history; refuses existing outputs and cross-load restores. Chosen routes require fresh uninterrupted verification. Origin: LRZ2 bring-up, 2026-09-24. | `GameplayInputBranchTool <ROM> s3k lrz 1 320 sonic tails <input.bk2> <prefix> <output-dir> '30 R+A;60 R' '12 R;30 R+A;60 R'` (gameplay-capture Java classpath) |
+| `GameplayInputBranchTool` | Cold-replays one input prefix, then tries controller-only scripts from its engine-owned rewind state. Writes full-prefix BK2/scripts/state CSVs, nearby object inventory, per-input riding/standing contact owners, read-only boss routine/health/position CSVs and sampled PNGs. Preserves both controllers and input-edge history; refuses existing outputs, cross-load restores, callback-bearing fade checkpoints and pending fresh assembly. Chosen routes require fresh uninterrupted verification. Origin: LRZ2 bring-up, 2026-09-24. | `GameplayInputBranchTool <ROM> s3k lrz 1 320 sonic tails <input.bk2> <prefix> <output-dir> '30 R+A;60 R' '12 R;30 R+A;60 R'` (gameplay-capture Java classpath) |
 | `SszBossInputAuthorTool` | Cold-replays an SSZ input prefix, then tries controller policies from whole-registry rewind snapshots with held-input restoration. Supports GHZ/MTZ/Mecha, selectable width and roster; writes complete script/BK2/state CSV and an explicit defeat/death/limit result. Refuses existing outputs and cross-load restore; selected inputs require fresh uninterrupted replay. Origin: solo Tails S&K campaign,75c9caf16. | `SszBossInputAuthorTool <ROM> <width> <main> <sidekick-or-none> <input.bk2> <prefix> ghz\|mtz\|mecha <new-output-dir> [max-new-inputs]` (gameplay-capture Java classpath) |
 | `DezMinibossInputAuthorTool` | Cold-prefix controller search for both native eight-hit DEZ1 phases. Reads the eye and native hit counter, restores held input with whole-world snapshots, and records complete script/BK2/state CSV. Includes jump release/repress policies; no position/ring/health seeds. A result requires independent uninterrupted replay. Origin: 2026-09-28 widescreen campaign. | `DezMinibossInputAuthorTool <ROM> <width> <main> <sidekick-or-none> <input.bk2> <prefix> <new-output-dir> [max-new-inputs]` (gameplay-capture Java classpath) |
 | `GameplayCaptureTool` | Pictures or films any gameplay section: boots a zone/act on the production path (`HeadlessGameBoot` + `GameLoop.step()`), teleports the leader, drives it from an input log or `.bk2`, and writes PNG frames, `state.csv`, and an MP4. Widths, donors and teams are flags; `--mod <jar>` applies a packaged patch mod (via `DevelopmentPatchLoader`) to film mod gameplay. Skill: `gameplay-capture`. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.GameplayCaptureTool" "-Dexec.args=--game s3k --zone fbz --act 2 --x 0x1CF0 --y 0x76C --input target/capture/run.txt --out-dir target/capture/fbz2"` |
@@ -309,8 +317,21 @@ Local Maven tests: [`tools/testing/maven_queue.py`](../../tools/testing/maven_qu
   input/tick pump, offline PCM and policy/checkpoint/monitor observations
   (2026-10-10, source `379b66413`); see [capture contract](../../tools/media/README.md#mutator-gameplay-showcase-captures).
 
+- `GameplayCaptureTool --interactive-pacing` reuses that production presentation
+  owner for ordinary capture, including title menus and Chaos Mode scheduling
+  (Sonic3K Chaos Mode, 2026-10-13). Canonical one-native-tick capture remains the
+  default. A canonical capture freezes presentation observers and cannot qualify
+  their countdowns or menus; use the explicit flag and inspect `state.csv` before
+  selecting images. See [gameplay-capture](../../.agents/skills/gameplay-capture/SKILL.md).
+
 - `ggfmod head-inventory` and `object-head-inventory` (Big Head polish,
   2026-10-11) export original-ROM indexed pixels, mapping coordinates and CPU
   production mask panels without GL, windows, input or audio. Player output also
   reviews ROM animation-frame sequences in fresh DPLC banks; standalone mapping
   order is diagnostic and can contain stale art in no-upload frames.
+
+- `TestEggmansSkyArtPreparation`: bounded owned-visit Egg preparation timing probe (three seeded fresh scenes; originating mod audit remediation 2026-10-12); headless warmed measurements only.
+
+- `com.openggf.tools.RuntimeEngineVisualControl`: lossless production-presented framebuffer and PCM qualification with compiled controller plans; separate from runtime acceptance timing (2026-10-12 performance series).
+
+- `tools/performance/run_isolated.py`: OS-leased exclusion of linked-worktree builds/tests plus a bypass-process guard for prebuilt measurements; writes an isolation audit (2026-10-13 P5 timing correction). Acquire build leases before shared admission so retained category batches can finish.

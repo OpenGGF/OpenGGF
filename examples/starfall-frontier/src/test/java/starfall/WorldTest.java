@@ -138,25 +138,25 @@ class WorldTest {
         w.x=sx*12+6;w.y=sy*12;assertFalse(w.interact(sx,sy));assertEquals(1,w.count(SIGIL));
     }
     @Test void allQuestStagesAndFinalCoreCanCompleteThroughProductionRules() {
-        World w=new World(73,true,256,96);w.add(WOOD,40);w.advanceQuests();assertEquals(1,w.quest);
-        assertTrue(w.craft(recipe(w,BENCH)));assertTrue(w.place(43,28,BENCH));assertEquals(2,w.quest);
-        w.add(STONE,40);assertTrue(w.craft(recipe(w,FURNACE)));w.actionCooldown=0;assertTrue(w.place(44,28,FURNACE));assertEquals(3,w.quest);
+        World w=new World(73,WorldSize.SMALL);int cy=w.campTileY()-1;w.add(WOOD,40);w.advanceQuests();assertEquals(1,w.quest);
+        assertTrue(w.craft(recipe(w,BENCH)));assertTrue(w.place(43,cy,BENCH));assertEquals(2,w.quest);
+        w.add(STONE,40);assertTrue(w.craft(recipe(w,FURNACE)));w.actionCooldown=0;assertTrue(w.place(44,cy,FURNACE));assertEquals(3,w.quest);
         w.add(COPPER,12);for(int i=0;i<4;i++)assertTrue(w.craft(recipe(w,COPPER_BAR)));
         assertTrue(w.craft(recipe(w,COPPER_PICK)));assertEquals(4,w.quest);
         w.add(IRON,27);for(int i=0;i<9;i++)assertTrue(w.craft(recipe(w,IRON_BAR)));
-        assertTrue(w.craft(recipe(w,ANVIL)));w.actionCooldown=0;assertTrue(w.place(45,28,ANVIL));
+        assertTrue(w.craft(recipe(w,ANVIL)));w.actionCooldown=0;assertTrue(w.place(45,cy,ANVIL));
         assertTrue(w.craft(recipe(w,IRON_PICK)));assertEquals(5,w.quest);
         w.add(CRYSTAL,21);w.add(GEL,15);w.add(IRON_SWORD,1);
         for(int i=0;i<3;i++) {
-            w.x=44*12;w.y=28*12;assertTrue(w.craft(recipe(w,SIGIL)));
+            w.x=44*12;w.y=cy*12;assertTrue(w.craft(recipe(w,SIGIL)));
             w.x=w.shrineX[i]*12;w.y=(w.shrineY[i]-1)*12;assertTrue(w.interact(w.shrineX[i],w.shrineY[i]-1));
             World.Enemy boss=w.enemies.stream().filter(e->e.hp>0&&e.kind==3).findFirst().orElseThrow();
             w.x=boss.x-16;w.y=boss.y;boss.hp=1;w.actionCooldown=0;w.attack(boss.x,boss.y,IRON_SWORD);
             w.step(new World.Input(0,false,false));
         }
         w.advanceQuests();assertEquals(6,w.quest);assertEquals(3,w.count(RELIC));
-        w.x=44*12;w.y=28*12;w.add(IRON_BAR,6);assertTrue(w.craft(recipe(w,BEACON)));
-        w.x=40*12+6;w.y=28*12;assertTrue(w.interact(40,27));assertTrue(w.won);assertEquals(7,w.quest);
+        w.x=44*12;w.y=cy*12;w.add(IRON_BAR,6);assertTrue(w.craft(recipe(w,BEACON)));
+        w.x=w.campTileX()*12+6;w.y=cy*12;assertTrue(w.interact(w.campTileX(),w.campTileY()-2));assertTrue(w.won);assertEquals(7,w.quest);
         assertEquals(0,w.count(BEACON));assertEquals(0,w.count(RELIC));
     }
     @Test void saveRestoresTilesInventoryCombatAndDeterministicForwardReplay() {

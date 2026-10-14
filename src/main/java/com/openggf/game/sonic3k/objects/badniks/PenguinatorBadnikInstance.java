@@ -23,6 +23,8 @@ import java.util.List;
  * belly slide, emits snow dust every four slide frames, then brakes and flips.
  */
 public final class PenguinatorBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
+    @Override public boolean supportsGroundedFieldMotion() { return true; }
+
     private static final int COLLISION_SIZE_INDEX = 0x1A; // ObjSlot_Penguinator collision_flags.
     private static final int PRIORITY_BUCKET = 5;         // ObjSlot_Penguinator priority $280.
     private static final int WAIT_OFFSCREEN_HALF_SIZE = 0x20;
@@ -80,6 +82,8 @@ public final class PenguinatorBadnikInstance extends AbstractS3kBadnikInstance i
         super(spawn, "Penguinator",
                 Sonic3kObjectArtKeys.ICZ_PENGUINATOR, COLLISION_SIZE_INDEX, PRIORITY_BUCKET);
     }
+
+    @Override protected boolean independentPresentationBody() { return true; }
 
     @Override
     protected void updateMovement(int vIntRunCount, PlayableEntity player) {

@@ -111,6 +111,16 @@ retired — prefer explicit dependencies from `GameplayModeContext`, `GameServic
 
 ## Level editor
 
+`com.openggf.editor.project` owns complete authored documents (`EditorProjectDocument`),
+validated atomic `.ogfproject` storage, project menus and the snapshot-only
+`EditorProjectRuntimeModule`. **Tools → Editor projects** supports S1/S2/S3K
+create/open/import/save/playtest/export. Authored data and history survive temporary
+playtesting; native game hosts run without campaign events or stock save writes.
+`FullLevelExporter` validates parser and selected native host before publication.
+See the [editor guide](../guide/creating/level-editor.md) and
+[completion design](designs/2026-10-14-editor-completion.md).
+
+The legacy in-game sidecar flow remains separate:
 `com.openggf.editor` + `GameMode.EDITOR`: `LevelEditorController`, `EditorInputHandler`,
 `EditorMouseTransform`, `EditorHistory` (+ `commands.*` undoable strokes),
 `persistence.EditorSaveManager` / `EditorSaveEnvelope` / per-version payload DTOs

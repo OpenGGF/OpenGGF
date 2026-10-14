@@ -105,6 +105,78 @@ with handle_termination():
         self.processes.append(process)
         return process, run
 
+    def test_retained_worktree_lock_releases_shared_admission_between_batches(self):
+        code = '''
+import sys, time
+from pathlib import Path
+sys.path.insert(0, sys.argv[1])
+from maven_queue import maven_slot, worktree_build_slot
+import maven_schedule
+maven_schedule.AGING_SECONDS = .1
+root, marker = map(Path, sys.argv[2:4])
+with worktree_build_slot(root) as tree_fd:
+    for number in (1, 2):
+        with maven_slot(root, estimate=30, tree_fd=tree_fd):
+            marker.with_name(marker.name + f'-{number}').with_suffix('.started').touch()
+            while not marker.with_suffix(f'.{number}.release').exists():
+                time.sleep(.02)
+        marker.with_suffix(f'.{number}.released').touch()
+        if number == 1:
+            while not marker.with_suffix('.next').exists():
+                time.sleep(.02)
+'''
+        marker = Path(self.temp.name) / 'batched'
+        process = subprocess.Popen([sys.executable, '-c', code, str(TOOLS), str(self.root), str(marker)],
+                                   stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        self.processes.append(process)
+        self.wait_started(process, marker.with_name(marker.name + '-1'))
+        same, same_marker = self.launch('same-tree', estimate=30, aging_seconds=.1)
+        self.wait_queued(1)
+        other, other_marker = self.launch('other-tree', self.linked, estimate=30)
+        self.wait_queued(2)
+        time.sleep(.2)  # Aged same-tree waiters cannot prevent their holder resuming.
+        marker.with_suffix('.1.release').touch()
+        self.wait_started(other, other_marker)
+        self.assertFalse(same_marker.with_suffix('.started').exists())
+        marker.with_suffix('.next').touch()
+        self.wait_queued(2)
+        self.assertFalse(marker.with_name(marker.name + '-2').with_suffix('.started').exists())
+        other_marker.with_suffix('.release').touch()
+        other.wait(timeout=5)
+        self.wait_started(process, marker.with_name(marker.name + '-2'))
+        self.assertFalse(same_marker.with_suffix('.started').exists())
+        marker.with_suffix('.2.release').touch()
+        self.assertEqual(0, process.wait(timeout=5), process.communicate()[0])
+        self.wait_started(same, same_marker)
+        same_marker.with_suffix('.release').touch()
+        self.assertEqual(0, same.wait(timeout=5))
+
+    def test_retained_descriptor_must_belong_to_the_requested_worktree(self):
+        from maven_queue import maven_slot
+        with (self.root / 'unrelated-file').open('w+b') as unrelated:
+            with self.assertRaisesRegex(ValueError, 'worktree'):
+                with maven_slot(self.root, tree_fd=unrelated.fileno()):
+                    self.fail('foreign lease accepted')
+        for descriptor in (True, -1, '1'):
+            with self.subTest(descriptor=descriptor), self.assertRaises(ValueError):
+                with maven_slot(self.root, tree_fd=descriptor):
+                    self.fail('invalid lease accepted')
+
+    @unittest.skipUnless(os.name == 'posix', 'POSIX open-file-description leases')
+    def test_unowned_descriptor_cannot_bypass_a_foreign_worktree_holder(self):
+        from contextlib import ExitStack
+        from maven_queue import _execution_leases
+        holder, marker = self.launch('holder')
+        self.wait_started(holder, marker)
+        lock = self.root / '.git/maven-worktree.lock'
+        request = dict(tree=str(lock), auto=False)
+        with lock.open('a+b') as unowned, ExitStack() as stack:
+            import maven_schedule
+            self.assertIs(maven_schedule.WORKTREE_BUSY,
+                          _execution_leases(stack, self.root / '.git', request, {}, tree_fd=unowned.fileno()))
+        self.assertIsNone(holder.poll())
+        marker.with_suffix('.release').touch()
+
     @unittest.skipUnless(sys.platform == 'linux', 'Linux resource admission')
     def test_acknowledgment_overlaps_another_worktree_job(self):
         os.environ['OPENGGF_MAVEN_QUEUE'] = 'auto'

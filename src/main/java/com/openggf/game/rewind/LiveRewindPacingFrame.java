@@ -18,7 +18,7 @@ record LiveRewindPacingFrame(GameplayModeContext context, WorldSession world, Le
                              SpecialStageProvider special, long specialEpoch,
                              BonusStageProvider bonus, long bonusEpoch,
                              GameplayMutatorPacing pacing, PlayerInputState player1, PlayerInputState player2,
-                             GameplayMutatorPacing.Snapshot afterTick) {
+                             GameplayMutatorPacing.Snapshot afterTick,Object policyHistory) {
     static LiveRewindPacingFrame capture(GameMode mode, GameplayModeContext context,
                                          SpecialStageProvider special, InputHandler input) {
         if (context == null || !context.isGameplayRuntimeReady()) return null;
@@ -35,7 +35,7 @@ record LiveRewindPacingFrame(GameplayModeContext context, WorldSession world, Le
         return new LiveRewindPacingFrame(context, world, context.getLevelManager().getCurrentLevel(),
                 special, specialOwner == null ? 0 : specialOwner.pacingState().entryEpoch(),
                 bonus, bonusOwner == null ? 0 : bonusOwner.pacingEntryEpoch(), pacing,
-                input.logical().player1(), input.logical().player2(), pacing.capture());
+                input.logical().player1(), input.logical().player2(), pacing.capture(),WorldSessionPolicyAccess.captureHistory(world));
     }
 
     LogicalInputSnapshot admitted(LogicalInputSnapshot recorded, GameplayModeContext current,
@@ -47,8 +47,18 @@ record LiveRewindPacingFrame(GameplayModeContext context, WorldSession world, Le
                 recorded.debugShiftDown(), recorded.debugControlDown(), recorded.debugAltDown(), recorded.debugSuperDown());
     }
 
+    void restoreBeforeTick(GameplayModeContext current,SpecialStageProvider provider) {
+        if(matches(current,provider))WorldSessionPolicyAccess.restoreHistoryBefore(world,policyHistory);
+    }
+    void endReplay(GameplayModeContext current) {
+        if(current!=null)WorldSessionPolicyAccess.endHistoryReplay(current.getWorldSession());
+    }
+
     void restoreAfterTick(GameplayModeContext current, SpecialStageProvider provider) {
-        if (matches(current, provider)) pacing.restore(afterTick);
+        if (matches(current, provider)) {
+            pacing.restore(afterTick);
+            WorldSessionPolicyAccess.restoreHistoryAfter(world,policyHistory);
+        }
     }
 
     private boolean matches(GameplayModeContext current, SpecialStageProvider provider) {

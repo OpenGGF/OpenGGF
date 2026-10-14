@@ -18,8 +18,8 @@ public final class ActivityPresentation {
     private final starpost.fishing.LakeOverlay lake;
     private final starpost.fishing.LakeView lakeView;
     public ActivityPresentation(ActivitySession s) {
-        festivalArt=new FestivalArt(s.shell().art,s.shell().ctx.art().rom("s2"));
-        peopleArt=new PeopleArt(s.shell().art); lake=new starpost.fishing.LakeOverlay(s.shell().art); lakeView=new starpost.fishing.LakeView(s.shell().art);
+        festivalArt=new FestivalArt(s.shell().art,s.shell().ctx.art().rom("s2"), () -> s.ticks());
+        peopleArt=new PeopleArt(s.shell().art); lake=new starpost.fishing.LakeOverlay(s.shell().art, () -> s.ticks()); lakeView=new starpost.fishing.LakeView(s.shell().art, () -> s.ticks());
     }
     private SceneCanvas canvas(ObjectServices services) {
         return new LevelPictureCanvas(new LevelOverlayCanvas(services.graphicsManager(),services.camera().getWidth(),services.camera().getHeight()),images);

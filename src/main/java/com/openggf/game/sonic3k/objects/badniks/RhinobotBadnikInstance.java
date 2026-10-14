@@ -15,6 +15,8 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * Core routine mapping: Obj_Rhinobot (sonic3k.asm loc_86E7E..loc_8714A).
  */
 public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
+    @Override public boolean supportsGroundedFieldMotion() { return true; }
+
     private static final int COLLISION_SIZE_INDEX = 0x0B; // ObjSlot_Rhinobot flags $0B
     private static final int PRIORITY_BUCKET = 5;         // ObjSlot_Rhinobot priority $280
 
@@ -97,6 +99,8 @@ public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance impl
         mappingFrame = FRAME_SLOW;
         speedCallback = SpeedCallback.REACH_TURN_POINT;
     }
+
+    @Override protected boolean independentPresentationBody() { return true; }
 
     @Override
     protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
@@ -192,7 +196,7 @@ public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance impl
     }
 
     private boolean shouldStartCharge(AbstractPlayableSprite updatePlayer) {
-        PlayableEntity target = closestNativePlayerByHorizontalDistance(updatePlayer);
+        PlayableEntity target = com.openggf.game.mutators.NativeObjectPolicyAccess.permitsTargeting(services()) ? closestNativePlayerByHorizontalDistance(updatePlayer) : null;
         if (!(target instanceof AbstractPlayableSprite player)) {
             return false;
         }

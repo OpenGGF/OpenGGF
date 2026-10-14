@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.game.mutators.PlayerFluidContextAccess;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kLevelTriggerManager;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -311,7 +312,7 @@ public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance
             return ability == 1 || ability == 3;
         }
         if (player instanceof Tails tails) {
-            if (player.getDoubleJumpFlag() == 0 || tails.isInWater()) {
+            if (player.getDoubleJumpFlag() == 0 || PlayerFluidContextAccess.movementUnderwater(tails)) {
                 return false;
             }
             int dx = (short) (player.getCentreX() - currentX);

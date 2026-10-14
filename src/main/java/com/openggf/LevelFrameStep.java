@@ -60,6 +60,11 @@ public final class LevelFrameStep {
         // Utility class
     }
 
+    private static void runNativeFixedObjectsBeforeDynamic(LevelFrameContext context, StepWrapper wrapper) {
+        var owner = com.openggf.game.internal.NativeFixedLevelObjectPass.forModule(context.gameModule());
+        if (owner != null) wrapper.wrap("native-fixed-objects-pre", owner::beforeDynamicObjects);
+    }
+
     public static FrameAdmission admit(
             LevelFrameContext context, LevelManager levelManager,
             boolean startEdgePressed) {
@@ -253,6 +258,8 @@ public final class LevelFrameStep {
             return LevelFrameResult.SETUP_ONLY;
         }
 
+        if (phase == PlcLifecyclePhase.ORDINARY_LEVEL)
+            com.openggf.game.session.WorldSessionPolicyAccess.beforeNativeTick(context);
         frame.claim(phase);
         if (frame.consumedHeldLoopTailPreparation()) {
             context.runtimeArtCoordinator()
@@ -349,6 +356,7 @@ public final class LevelFrameStep {
             if (fixedSlotEvents != null) {
                 wrapper.wrap("fixed-objects-pre", fixedSlotEvents::updateFixedInLevelObjectsBeforeDynamicObjects);
             }
+            runNativeFixedObjectsBeforeDynamic(context, wrapper);
 
             // 3. Object execution after player physics, with inline solid checkpoints
             //    so later objects see earlier contact adjustments.
@@ -366,6 +374,7 @@ public final class LevelFrameStep {
             if (fixedSlotEvents != null) {
                 wrapper.wrap("fixed-objects-pre", fixedSlotEvents::updateFixedInLevelObjectsBeforeDynamicObjects);
             }
+            runNativeFixedObjectsBeforeDynamic(context, wrapper);
 
             // 2. Legacy compatibility path keeps objects before physics. Touch
             //    responses are still deferred to tickPlayablePhysics after movement.
@@ -553,6 +562,8 @@ public final class LevelFrameStep {
                 spriteManager.refreshPlayableRenderFlags(camera);
             }
             LevelSpritePresentation.prepare(levelManager, spriteManager);
+            if (phase == PlcLifecyclePhase.ORDINARY_LEVEL)
+                com.openggf.game.session.WorldSessionPolicyAccess.afterNativeTick(context);
             return LevelFrameResult.GAMEPLAY_FRAME;
         }
 
@@ -599,6 +610,8 @@ public final class LevelFrameStep {
         // independently of whether this host iteration will draw a framebuffer.
         LevelSpritePresentation.prepare(levelManager, spriteManager);
         levelManager.clearSidekickRomVisibleReloadFrameCounterBridge();
+        if (phase == PlcLifecyclePhase.ORDINARY_LEVEL)
+            com.openggf.game.session.WorldSessionPolicyAccess.afterNativeTick(context);
         return LevelFrameResult.GAMEPLAY_FRAME;
     }
 

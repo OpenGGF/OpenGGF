@@ -1,5 +1,6 @@
 """Creator kit contracts: reproducibility, identity and authored-source boundaries."""
 import hashlib
+import importlib.util
 import io
 import json
 from pathlib import Path
@@ -14,6 +15,174 @@ import build_project
 
 
 class CreatorKitTest(unittest.TestCase):
+    def test_starter_templates_have_separate_pinned_test_profile_and_nonempty_discovery(self):
+        templates = Path(__file__).resolve().parents[2] / "src/main/resources/META-INF/openggf-mod-sdk/templates"
+        namespace = {"m": "http://maven.apache.org/POM/4.0.0"}
+        for name in ("pom.xml.template", "simple-pom.xml.template"):
+            with self.subTest(template=name):
+                text = (templates / name).read_text().replace("{{CONVERSION}}", "")
+                document = ET.fromstring(text)
+                profiles = {p.findtext("m:id", namespaces=namespace): p
+                            for p in document.findall("m:profiles/m:profile", namespace)}
+                self.assertIn("creator-tests", profiles)
+                profile = profiles["creator-tests"]
+                self.assertEqual("false", profile.findtext("m:properties/m:skipTests", namespaces=namespace))
+                dependencies = profile.findall("m:dependencies/m:dependency", namespace)
+                self.assertTrue(all(d.findtext("m:scope", namespaces=namespace) == "test" for d in dependencies))
+                self.assertIn("<failIfNoTests>true</failIfNoTests>", text)
+
+    def test_shared_example_builder_preserves_legacy_output_and_run_arguments(self):
+        script = Path(__file__).resolve().parents[2] / "examples/build_example.py"
+        spec = importlib.util.spec_from_file_location("example_builder", script)
+        builder = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(builder)
+        project = self.root / "examples/infinite-sonic"
+        manifest = project / "src/main/resources/META-INF/openggf-mod.yaml"
+        manifest.parent.mkdir(parents=True)
+        manifest.write_text("id: infinite-sonic\n")
+        (project / "src/main/java").mkdir(parents=True)
+        (self.root / "target/examples-classpath.txt").write_text("dependencies")
+        legacy = self.root / "target/infinite-sonic"
+        with patch.object(builder, "ROOT", self.root), patch.object(builder.subprocess, "run") as run:
+            jar = builder.build("infinite-sonic", run=True, skip_engine=True, output=legacy)
+        self.assertEqual(legacy / "infinite-sonic.jar", jar)
+        package, launch = run.call_args_list[-2:]
+        self.assertEqual(["package", "--input", str(legacy / "classes"), "--out", str(jar)],
+                         package.args[0][-5:])
+        self.assertEqual(["run", str(legacy / "classes")], launch.args[0][-2:])
+
+    def test_exports_every_authored_test_resource_and_source_generator(self):
+        project = self.root / "examples/model-demo"
+        inputs = {
+            "src/main/resources/META-INF/openggf-mod.yaml": "id: model-demo\n",
+            "src/test/java/demo/ModelTest.java": "// portable Jupiter test\n",
+            "src/test/resources/fixture.txt": "authored fixture\n",
+            "tools/generate_maps.py": "# reproducible source generator\n",
+            "generate_resources.py": "# shared launcher's authored resource generator\n",
+            "tools/__pycache__/stale.pyc": "not an authored input\n",
+            "target/test-classes/demo/ModelTest.class": "not an authored input\n",
+        }
+        for relative, text in inputs.items():
+            path = project / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text)
+        entries = kit.export_examples(self.root)
+        for relative in ("src/test/java/demo/ModelTest.java", "src/test/resources/fixture.txt",
+                         "tools/generate_maps.py", "generate_resources.py"):
+            self.assertEqual((project / relative).read_bytes(), entries["examples/model-demo/" + relative])
+        self.assertFalse(any("__pycache__" in name or "target/test-classes" in name for name in entries))
+        readme = entries["examples/model-demo/README.md"].decode()
+        self.assertIn("--test", readme)
+        pom = ET.fromstring(entries["examples/model-demo/pom.xml"])
+        ns = {"m": "http://maven.apache.org/POM/4.0.0"}
+        execution = next(e for e in pom.findall("m:build/m:plugins/m:plugin/m:executions/m:execution", ns)
+                         if e.findtext("m:id", namespaces=ns) == "generate-authored-resources")
+        self.assertEqual("process-resources", execution.findtext("m:phase", namespaces=ns))
+        self.assertEqual("${openggf.python}", execution.findtext("m:configuration/m:executable", namespaces=ns))
+
+    def test_actual_export_includes_every_portable_example_test_and_three_islands_generator(self):
+        root = Path(__file__).resolve().parents[2]
+        entries = kit.export_examples(root)
+        for name, project in kit.exported_projects(root).items():
+            for file in (project / "src/test").rglob("*"):
+                if file.is_file():
+                    self.assertEqual(file.read_bytes(), entries["examples/" + name + "/" + file.relative_to(project).as_posix()])
+        self.assertIn("examples/three-islands/tools/generate_maps.py", entries)
+
+    def test_archive_preserves_authored_walkthroughs_without_runtime_outputs(self):
+        project = self.root / "examples/walkthrough-demo"
+        inputs = {
+            "src/main/resources/META-INF/openggf-mod.yaml": b"id: walkthrough-demo\nbaseGame: s3k\n",
+            "walkthroughs/routes/cold.script": b"frames 20 RIGHT\n",
+            "walkthroughs/routes/cold.bk2": b"authored controller movie\n",
+            "walkthroughs/characters/README.md": b"# Authored character inputs\n",
+            "walkthroughs/player.gen": b"private ROM bytes",
+            "walkthroughs/config.yaml": b"private paths",
+            "walkthroughs/frames/001.png": b"generated image",
+            "walkthroughs/target/recorded.bk2": b"generated movie",
+            "walkthroughs/saves/checkpoint.script": b"private save",
+            "walkthroughs/.private/input.script": b"private workflow input",
+            "walkthroughs/__pycache__/stale.script": b"not an authored input",
+        }
+        for relative, data in inputs.items():
+            path = project / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(data)
+        entries = kit.collect(self.root, "abcdef123456")
+        archive = self.root / "creator-kit.zip"
+        kit.write_zip(entries, archive)
+        expected = {"walkthroughs/routes/cold.script", "walkthroughs/routes/cold.bk2",
+                    "walkthroughs/characters/README.md"}
+        prefix = "examples/walkthrough-demo/"
+        with zipfile.ZipFile(archive) as exported:
+            actual = {name.removeprefix(prefix) for name in exported.namelist()
+                      if name.startswith(prefix + "walkthroughs/")}
+            self.assertEqual(expected, actual)
+            manifest = json.loads(exported.read("creator-kit.json"))
+            for relative in expected:
+                name = prefix + relative
+                self.assertEqual(inputs[relative], exported.read(name))
+                self.assertEqual(hashlib.sha256(inputs[relative]).hexdigest(), manifest["sha256"][name])
+
+    def test_walkthrough_export_does_not_follow_symlinked_inputs(self):
+        project = self.root / "examples/link-demo"
+        manifest = project / "src/main/resources/META-INF/openggf-mod.yaml"
+        manifest.parent.mkdir(parents=True)
+        manifest.write_text("id: link-demo\n")
+        walkthroughs = project / "walkthroughs"
+        walkthroughs.mkdir()
+        (walkthroughs / "local.script").write_text("authored input")
+        private = self.root / "private.gen"
+        private.write_bytes(b"private ROM")
+        try:
+            (walkthroughs / "linked.bk2").symlink_to(private)
+        except (OSError, NotImplementedError) as error:
+            self.skipTest("Host does not permit creating symlinks: " + str(error))
+        entries = kit.export_examples(self.root)
+        self.assertTrue("examples/link-demo/walkthroughs/local.script" in entries,
+                        "The ordinary authored input must be exported")
+        self.assertFalse("examples/link-demo/walkthroughs/linked.bk2" in entries,
+                         "A symlink must not supply controller input bytes")
+        (walkthroughs / "linked.bk2").unlink()
+        (walkthroughs / "local.script").unlink()
+        walkthroughs.rmdir()
+        private_directory = self.root / "private-inputs"
+        private_directory.mkdir()
+        (private_directory / "linked.script").write_text("private input")
+        walkthroughs.symlink_to(private_directory, target_is_directory=True)
+        self.assertFalse(any(name.startswith("examples/link-demo/walkthroughs/")
+                             for name in kit.export_examples(self.root)))
+
+    def test_generated_test_command_supplies_declared_base_game_rom(self):
+        for game in ("s1", "s2", "s3k", None):
+            with self.subTest(base_game=game):
+                name = "native-" + game if game else "standalone-demo"
+                manifest = self.root / "examples" / name / "src/main/resources/META-INF/openggf-mod.yaml"
+                manifest.parent.mkdir(parents=True)
+                manifest.write_text("id: " + name + "\n" + ("baseGame: " + game + "\n" if game else ""))
+                readme = kit.export_examples(self.root)["examples/" + name + "/README.md"].decode()
+                command = next(line for line in readme.splitlines()
+                               if line.startswith("python3 ../../tools/build_project.py . --test "))
+                expected = "python3 ../../tools/build_project.py . --test --testkit ../../mod-testkit.jar"
+                if game:
+                    expected += " --" + game + " /absolute/own-" + game + ".gen"
+                self.assertEqual(expected, command)
+                self.assertIn("other tested games or donors", readme)
+
+    def test_actual_second_strike_export_preserves_documented_controller_recipes(self):
+        root = Path(__file__).resolve().parents[2]
+        project = root / "examples/second-strike"
+        inputs = sorted((project / "walkthroughs").rglob("*.script"))
+        inputs += sorted((project / "walkthroughs").rglob("*.bk2"))
+        self.assertTrue(inputs, "The maintained example must provide its documented inputs")
+        entries = kit.export_examples(root)
+        for source in inputs:
+            name = "examples/second-strike/" + source.relative_to(project).as_posix()
+            self.assertTrue(name in entries, "Missing authored controller recipe: " + name)
+            self.assertEqual(source.read_bytes(), entries[name])
+        self.assertIn(b"--test --testkit ../../mod-testkit.jar --s3k /absolute/own-s3k.gen",
+                      entries["examples/second-strike/README.md"])
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)

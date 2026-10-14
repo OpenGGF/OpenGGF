@@ -68,11 +68,27 @@ public final class SpritePresentation {
             patterns = Map.copyOf(patterns);
         }
     }
-    public record Subject(String id, Part part, boolean suppressed, int headScalePercent, HeadTransform head) {
+    public enum Role { NONE, LEADER, TEAM, BADNIK, PICKUP }
+    /** Whole-picture anchor independent of reviewed anatomy masks. Coordinates belong to the producer. */
+    public record Body(Role role, int anchorX, int anchorY) {
+        public Body { java.util.Objects.requireNonNull(role, "role"); }
+    }
+    /** Trusted source identity resolves its derived GPU row only when the deferred command executes. */
+    @FunctionalInterface public interface PaletteReplay {
+        int palette(GraphicsManager graphics,int nativePalette);
+    }
+    public record Subject(String id, Part part, boolean suppressed, int headScalePercent, HeadTransform head, Body body,
+                          PaletteReplay paletteReplay) {
+        public Subject(String id, Part part, boolean suppressed, int headScalePercent, HeadTransform head, Body body) {
+            this(id,part,suppressed,headScalePercent,head,body,null);
+        }
         public static final Subject WORLD = new Subject("", Part.WORLD, false);
-        public Subject(String id, Part part, boolean suppressed) { this(id, part, suppressed, 100, null); }
+        public Subject(String id, Part part, boolean suppressed) { this(id, part, suppressed, 100, null, null); }
         public Subject(String id, Part part, boolean suppressed, int headScalePercent) {
-            this(id, part, suppressed, headScalePercent, null);
+            this(id, part, suppressed, headScalePercent, null, null);
+        }
+        public Subject(String id, Part part, boolean suppressed, int headScalePercent, HeadTransform head) {
+            this(id, part, suppressed, headScalePercent, head, null);
         }
         public Subject {
             java.util.Objects.requireNonNull(id, "subject id");
@@ -222,7 +238,7 @@ public final class SpritePresentation {
     public static void withHead(GraphicsManager graphics, HeadTransform head, Runnable producer) {
         Subject subject = graphics.spritePresentationSubject;
         withSubject(graphics, new Subject(subject.id(), subject.part(), subject.suppressed(),
-                subject.headScalePercent(), head), producer);
+                subject.headScalePercent(), head, subject.body()), producer);
     }
 
     public static void bindPatternVersions(GraphicsManager graphics, Map<Integer, PatternVersion> versions) {

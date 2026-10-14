@@ -37,6 +37,7 @@ public final class WorldSession {
     private Level currentLevel;
     PatternWindowState patternWindowState = PatternWindowState.EMPTY;
     final WorldSessionPolicyState policies;
+    final WorldPolicyHistory policyHistory = new WorldPolicyHistory();
 
     public WorldSession(GameModule gameModule) {
         this(gameModule, null);

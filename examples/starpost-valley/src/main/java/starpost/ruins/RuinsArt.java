@@ -11,6 +11,10 @@ import com.openggf.mods.scene.art.StockSceneArt;
 import java.util.HashMap;
 import java.util.Map;
 import starpost.art.Art;
+import starpost.art.AssetFailures;
+import com.openggf.mods.scene.art.SceneArtCache;
+import java.util.List;
+import java.util.function.LongSupplier;
 
 /**
  * The Ruins' pictures, all from the player's ROMs: Sonic 1's Marble, Labyrinth and Scrap Brain
@@ -26,6 +30,9 @@ public final class RuinsArt implements ChamberGen.Kits {
 
     public final Art art;
     public final SceneRomArt s1;
+    private final AssetFailures failures;
+    private final SceneArtCache sprites;
+    public List<AssetFailures.Failure> failures() { return failures.failures(); }
     private final Map<Integer, RomKit> kits = new HashMap<>();
     private final Map<Long, SceneImage> blocks = new HashMap<>();
     private final Map<Integer, Map<Integer, Integer>> waterMaps = new HashMap<>();
@@ -40,8 +47,14 @@ public final class RuinsArt implements ChamberGen.Kits {
     private final SceneImage[] magma = new SceneImage[3];
 
     public RuinsArt(Art art) {
+        this(art, art::ticks);
+    }
+    public RuinsArt(Art art, LongSupplier clock) {
         this.art = art;
+        art.requireOpen();
         this.s1 = art.s1;
+        this.failures = new AssetFailures(art.owner(), clock);
+        this.sprites = new SceneArtCache(s1, 32);
         this.explosion = art.s3k.sprites(StockSceneArt.S3K_EXPLOSION.request(art.s3k), art.aizPalette);
     }
 
@@ -51,18 +64,22 @@ public final class RuinsArt implements ChamberGen.Kits {
     }
 
     public RomKit romKit(int zone, int act) {
+        art.requireOpen();
         int key = zone * 8 + act;
         RomKit kit = kits.get(key);
-        if (kit == null && !kits.containsKey(key)) {
-            SceneLevelKit stock = s1.levelKit(zone, act);
-            kit = stock == null ? null : new RomKit(stock);
-            kits.put(key, kit);
+        if (kit == null) {
+            kit = failures.load("ruins:kit:" + zone + ":" + act, () -> {
+                SceneLevelKit stock = s1.levelKit(zone, act);
+                return stock == null ? null : new RomKit(stock);
+            });
+            if (kit != null) kits.put(key, kit);
         }
         return kit;
     }
 
     /** A block's picture, recoloured with Labyrinth's underwater palette when {@code wet}. */
     public SceneImage block(int zone, int act, int id, boolean wet) {
+        art.requireOpen();
         long key = ((long) zone * 8 + act) << 32 | (long) id << 1 | (wet ? 1 : 0);
         SceneImage image = blocks.get(key);
         if (image == null) {
@@ -124,9 +141,10 @@ public final class RuinsArt implements ChamberGen.Kits {
      * line 1). Art and mappings from sonic.lst.
      */
     public SceneSpriteSet badnik(int kind, int band) {
+        art.requireOpen();
         int key = kind * 4 + band;
         SceneSpriteSet set = badniks.get(key);
-        if (set == null && !badniks.containsKey(key)) {
+        if (set == null) {
             RomSpriteRequest request = switch (kind) {
                 case Badnik.CATERKILLER -> RomSpriteRequest.of(0x39076, Compression.NEMESIS, 0x1751A, 1); // Nem_Cater, Map_Cat
                 case Badnik.BATBRAIN -> RomSpriteRequest.of(0x386BC, Compression.NEMESIS, 0x108CA, 0);   // Nem_Basaran, Map_Bas
@@ -139,25 +157,28 @@ public final class RuinsArt implements ChamberGen.Kits {
                 default -> RomSpriteRequest.of(0x35AF0, Compression.NEMESIS, 0x94E0, 1);                 // Nem_BallHog, Map_Hog
             };
             set = load(request, palette(band));
-            badniks.put(key, set);
+            if (set != null) badniks.put(key, set);
         }
         return set;
     }
 
     /** The Buzz Bomber's missile (Map_Missile, palette line 1). */
     public SceneSpriteSet missile(int band) {
+        art.requireOpen();
         return missiles.computeIfAbsent(band, b -> load(RomSpriteRequest.of(0x3639E, Compression.NEMESIS, 0xA184, 1),
                 palette(b)));
     }
 
     /** Upright spikes (Nem_Spikes, Map_Spike). */
     public SceneSpriteSet spikes(int band) {
+        art.requireOpen();
         return spikes.computeIfAbsent(band, b -> load(RomSpriteRequest.of(0x2FCFE, Compression.NEMESIS, 0xD676, 0),
                 palette(b)));
     }
 
     /** Labyrinth's air bubbles and countdown numbers (Nem_Bubbles, Map_Bub). */
     public SceneSpriteSet bubbles() {
+        art.requireOpen();
         if (bubbles == null) {
             bubbles = load(RomSpriteRequest.of(0x30EE8, Compression.NEMESIS, 0x130A0, 0), palette(RuinsRules.LABYRINTH));
         }
@@ -166,6 +187,7 @@ public final class RuinsArt implements ChamberGen.Kits {
 
     /** Labyrinth's water surface (Nem_Water, Map_Surf, palette line 2). */
     public SceneSpriteSet surface() {
+        art.requireOpen();
         if (surface == null) {
             surface = load(RomSpriteRequest.of(0x302E6, Compression.NEMESIS, 0x11840, 2), palette(RuinsRules.LABYRINTH));
         }
@@ -174,6 +196,7 @@ public final class RuinsArt implements ChamberGen.Kits {
 
     /** Marble Zone's smashable green block (Nem_MzBlock, Map_Smab, palette line 2). */
     public SceneSpriteSet greenBlock() {
+        art.requireOpen();
         if (greenBlock == null) {
             greenBlock = load(RomSpriteRequest.of(0x33670, Compression.NEMESIS, 0x10460, 2), palette(RuinsRules.MARBLE));
         }
@@ -185,6 +208,7 @@ public final class RuinsArt implements ChamberGen.Kits {
      * palette line 3), which AniArt_MZ swaps every 20 frames. The kit leaves these tiles blank.
      */
     public SceneImage lavaSurface(int frame) {
+        art.requireOpen();
         if (lavaSurface[frame] == null) {
             lavaSurface[frame] = lavaTiles(0x67516, frame * 8, 2);
         }
@@ -193,6 +217,7 @@ public final class RuinsArt implements ChamberGen.Kits {
 
     /** The magma under it (Art_MzLava2: 4x4 tiles a frame, following the surface's frame). */
     public SceneImage magma(int frame) {
+        art.requireOpen();
         if (magma[frame] == null) {
             magma[frame] = lavaTiles(0x67816, frame * 16, 4);
         }
@@ -202,18 +227,13 @@ public final class RuinsArt implements ChamberGen.Kits {
     private SceneImage lavaTiles(int address, int first, int heightTiles) {
         int[] line = new int[16];
         System.arraycopy(palette(RuinsRules.MARBLE), 48, line, 0, 16);
-        try {
-            return s1.tiles(address, Compression.UNCOMPRESSED, first, 4, heightTiles, true, line);
-        } catch (RuntimeException e) {
-            return null;
-        }
+        return failures.load("ruins:tiles:" + address + ":" + first,
+                () -> s1.tiles(address, Compression.UNCOMPRESSED, first, 4, heightTiles, true, line));
     }
 
     private SceneSpriteSet load(RomSpriteRequest request, int[] palette) {
-        try {
-            return s1.sprites(request, palette);
-        } catch (RuntimeException e) {
-            return null;
-        }
+        art.requireOpen();
+        return failures.load("ruins:sprites:" + request + ":" + java.util.Arrays.hashCode(palette),
+                () -> sprites.sprites(request, palette));
     }
 }

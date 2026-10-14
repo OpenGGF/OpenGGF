@@ -87,7 +87,7 @@ import java.util.function.Predicate;
  * use SK Set 1 as the canonical source; S3-only remappings share the
  * same underlying object names in most cases.
  */
-public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com.openggf.level.objects.MutatorPlacementClassifier {
+public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com.openggf.level.objects.MutatorPlacementClassifier, com.openggf.level.objects.HostObjectKeyRegistry {
     private final Map<Integer, FactoryEntry> factoryEntries = new HashMap<>();
     private final Map<Integer, List<FactoryEntry>> stockRomZoneFactoryEntries = new HashMap<>();
     private final Set<Integer> stockZoneBoundFactoryIds = new HashSet<>();
@@ -95,6 +95,19 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
 
     private record FactoryEntry(ObjectFactory factory,
                                 Predicate<S3kObjectCreationContext> compatibility) {}
+
+    @Override public boolean hasObjectKey(String key) { return hasHostObjectKey(key); }
+    @Override public boolean hasHostObjectKey(String key) { return S3kAuthoredGoalInstance.OBJECT_KEY.equals(key); }
+    @Override public boolean ownsHostObject(ObjectSpawn spawn,ObjectInstance instance) {
+        return spawn!=null && hasHostObjectKey(spawn.objectKey())
+                && instance instanceof S3kAuthoredGoalInstance
+                && instance.getClass().getClassLoader()==Sonic3kObjectRegistry.class.getClassLoader()
+                && spawn.equals(instance.getSpawn());
+    }
+    @Override public List<String> browsableObjectKeys() { return List.of(S3kAuthoredGoalInstance.OBJECT_KEY); }
+    @Override public java.util.Optional<String> editorPreviewArtKey(String key) {
+        return hasHostObjectKey(key)?java.util.Optional.of(com.openggf.game.sonic3k.Sonic3kObjectArtKeys.END_SIGN):java.util.Optional.empty();
+    }
 
     @Override public java.util.Optional<String> editorPreviewArtKey(int objectId) {
         return switch(objectId) {
@@ -1492,6 +1505,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
         registerStockZoneBound(Sonic3kObjectIds.LBZ_FINAL_BOSS_KNUX,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
+                    if (zoneSet == S3kZoneSet.S3KL && currentRomZoneId() == Sonic3kZoneIds.ZONE_LBZ) {
+                        return new LbzFinalBoss1Instance(spawn);
+                    }
                     return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
                 });
         registerStockZoneBound(Sonic3kObjectIds.LBZ_MINIBOSS_BOX,
@@ -1784,6 +1800,10 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry implements com
 
     @Override
     public ObjectInstance create(ObjectSpawn spawn) {
+        if(spawn.objectKey()!=null) {
+            if(!hasHostObjectKey(spawn.objectKey())) throw new IllegalArgumentException("No host factory registered for "+spawn.objectKey());
+            return new S3kAuthoredGoalInstance(spawn);
+        }
         ensureLoaded();
         S3kObjectCreationContext context = currentCreationContext();
         FactoryEntry entry = stockRomZoneFactoryEntries.getOrDefault(spawn.objectId(), List.of()).stream()

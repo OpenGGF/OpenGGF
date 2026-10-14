@@ -411,7 +411,11 @@ class TestSonicSurvivors {
         fixture.stepIdleFrames(30);
         assertEquals(CAMP, phase());
         assertFalse((boolean) get(run(), "active"));
-        assertTrue(fixture.sprite().isObjectControlled(), "camp holds Sonic still");
+        int campX = fixture.sprite().getCentreX(), campY = fixture.sprite().getCentreY();
+        fixture.stepFrame(false, false, false, true, true);
+        assertEquals(campX, fixture.sprite().getCentreX());
+        assertEquals(campY, fixture.sprite().getCentreY(), "camp holds the whole native world");
+        assertFalse(fixture.sprite().isObjectControlled(), "a menu preserves native control state");
         tapEnter(fixture);
         assertTrue((boolean) get(run(), "active"));
         assertEquals(50, fixture.sprite().getRingCount(), "runs start with six base tolls");
@@ -447,6 +451,55 @@ class TestSonicSurvivors {
     static Stream<Arguments> routeTeams() {
         return routeActs().flatMap(args -> Stream.of("sonic", "tails").map(main ->
                 Arguments.of(args.get()[0], args.get()[1], main)));
+    }
+
+    @ParameterizedTest(name = "zone {0} act {1} native floor equivalence")
+    @MethodSource("routeActs")
+    void arenaFloorQueryPreservesNativeProbesResultsAndRandomStream(int zone, int act) throws Exception {
+        launch(zone, act);
+        Object arena = arena(), stage = stage();
+        ObjectServices services = (ObjectServices) call(stage, "services");
+        int top = arenaValue("floorTop"), bottom = arenaValue("floorBottom");
+        int left = arenaValue("left"), right = arenaValue("right");
+        Object randomBefore = call(call(run(), "capture"), "rng");
+        for (int x = left; x <= right; x += 8) {
+            int expected = top;
+            boolean accepted = false;
+            for (int y = top - 16; y <= bottom + 48; y += 16) {
+                var nativeFloor = com.openggf.physics.ObjectTerrainUtils.checkFloorDist(services.levelManager(), x, y);
+                var semanticFloor = services.floorSurface(x, y, TerrainSurface.Layer.FOREGROUND, TerrainSurface.Path.PRIMARY);
+                assertEquals(nativeFloor.foundSurface(), semanticFloor.foundSurface(), "surface at " + x + "," + y);
+                if (nativeFloor.foundSurface())
+                    assertEquals(nativeFloor.distance(), semanticFloor.distance(), "distance at " + x + "," + y);
+                if (!accepted && nativeFloor.foundSurface() && nativeFloor.distance() >= 0 && nativeFloor.distance() < 16) {
+                    expected = y + nativeFloor.distance(); accepted = true;
+                }
+            }
+            assertEquals(expected, call(stage, "floorBelow", x, arena), "first nonnegative floor at " + x);
+        }
+        assertEquals(randomBefore, call(call(run(), "capture"), "rng"), "terrain lookup cannot consume the run RNG");
+    }
+
+    @Test void arenaFloorKeepsSixteenPixelCadenceAndRejectsNegativeAndSixteenDistances() throws Exception {
+        launch(0, 0);
+        int top = arenaValue("floorTop");
+        var origins = new ArrayList<Integer>();
+        ObjectServices services = new StubObjectServices() {
+            @Override public TerrainSurface floorSurface(int x, int y, TerrainSurface.Layer layer, TerrainSurface.Path path) {
+                assertEquals(TerrainSurface.Layer.FOREGROUND, layer); assertEquals(TerrainSurface.Path.PRIMARY, path);
+                origins.add(y);
+                int distance = switch (origins.size()) { case 1 -> -1; case 2 -> 16; default -> 15; };
+                return new TerrainSurface(true, y + distance, distance, 0);
+            }
+        };
+        Object controller = ObjectConstructionContext.construct(services, () -> {
+            try { return loader.loadClass("survivors.Stage").getConstructor(ObjectSpawn.class)
+                    .newInstance(new ObjectSpawn(0, 0, 0, 0, 0, false, 0)); }
+            catch (ReflectiveOperationException failure) { throw new AssertionError(failure); }
+        });
+        ((AbstractObjectInstance) controller).setServices(services);
+        assertEquals(top + 31, call(controller, "floorBelow", 320, arena()));
+        assertEquals(List.of(top - 16, top, top + 16), origins);
     }
 
     @ParameterizedTest(name = "zone {0} act {1} as {2}")
@@ -717,6 +770,314 @@ class TestSonicSurvivors {
         assertEquals(55, getInt(reloaded, "bank"));
     }
 
+    @Test void deathSettlementCannotCreditTheSameRunAfterProductionRewind() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        var registry = fixture.runtime().getRewindRegistry();
+        var beforeDeath = registry.capture();
+        for (int replay = 0; replay < 2; replay++) {
+            if (replay != 0) registry.restore(beforeDeath);
+            set(run(), "ringsCollected", 200);
+            set(run(), "kills", 50);
+            set(run(), "elitesDefeated", 3);
+            ((int[]) get(run(), "speciesKills"))[0] = 50;
+            fixture.sprite().setRingCount(0);
+            fixture.sprite().applyCrushDeath();
+            for (int frame = 0; frame < 200 && phase() != DEAD; frame++) fixture.stepIdleFrames(1);
+            assertEquals(DEAD, phase());
+            assertFalse((boolean) get(run(), "active"));
+            assertEquals(55, getInt(profile(), "bank"), "rewinding the same run cannot bank it twice");
+            assertEquals(55, getInt(profile(), "bankedTotal"));
+            assertEquals(50, getInt(profile(), "totalKills"));
+            assertEquals(3, getInt(profile(), "totalElites"));
+            assertEquals(50, ((int[]) get(profile(), "speciesKills"))[0]);
+            assertEquals(1, getInt(profile(), "runs"));
+            assertEquals(0, getInt(profile(), "wins"));
+        }
+    }
+
+    @Test void restoringCampCannotCountTheSameStartCommandTwice() throws Exception {
+        var fixture = launch(0, 0);
+        fixture.stepIdleFrames(30);
+        var registry = fixture.runtime().getRewindRegistry();
+        var camp = registry.capture();
+        tapEnter(fixture);
+        assertEquals(1, getInt(profile(), "runs"));
+        registry.restore(camp);
+        assertEquals(CAMP, phase());
+        tapEnter(fixture);
+        assertEquals(1, getInt(profile(), "runs"), "restored run-start replay counts once");
+    }
+
+    @Test void restoringResultsAndReplayingTryAgainCannotCountAnotherRun() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        call(stage(), "die");
+        fixture.stepIdleFrames(80);
+        var registry = fixture.runtime().getRewindRegistry();
+        var results = registry.capture();
+        for (int replay = 0; replay < 2; replay++) {
+            if (replay != 0) registry.restore(results);
+            // Exercise the semantic menu command before the driver's fade starts; this
+            // regression checks its captured identity, independently of entry presentation.
+            var input = new com.openggf.control.InputHandler();
+            input.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER, org.lwjgl.glfw.GLFW.GLFW_PRESS);
+            assertTrue(GameServices.module().getGameService(LevelInputOverlay.class).handleInput(input));
+            call(stage(), "deadMenu", fixture.sprite());
+            assertEquals(0, GameServices.level().getRequestedZone());
+            assertTrue(GameServices.level().consumeZoneActRequest());
+            input.handleKeyEvent(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER, org.lwjgl.glfw.GLFW.GLFW_RELEASE);
+            GameServices.level().loadZoneAndAct(0, 0);
+            startRun(fixture);
+            assertEquals(2, getInt(profile(), "runs"), "the captured retry command has one successor identity");
+        }
+    }
+
+    @Test void tryAgainCompletesThroughHeldNativeTransitionRows() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        long first = (long) get(run(), "id");
+        Object oldStage = stage();
+        assertTrue(fixture.sprite().applyCrushDeath());
+        fixture.stepIdleFrames(65);
+        assertEquals(DEAD, phase());
+        fixture.runner().stepFrame(false, false, false, false, false, true);
+        for (int row = 0; row < 90 && stage() == oldStage; row++) fixture.stepIdleFrames(1);
+        assertNotSame(oldStage, stage(), "held rows must finish the requested native fade/load");
+        fixture.stepIdleFrames(1);
+        assertEquals(CAMP, phase());
+        fixture.stepIdleFrames(30);
+        assertFalse(fixture.runtime().getFadeManager().isActive(), "retry reveals the new camp");
+        assertArrayEquals(new float[]{0, 0, 0}, fixture.runtime().getFadeManager().getFadeColor());
+        assertEquals(first + 1, get(run(), "id"));
+        assertEquals(1, getInt(profile(), "runs"), "camp has not started the new run yet");
+        startRun(fixture);
+        assertEquals(2, getInt(profile(), "runs"));
+    }
+
+    @Test void routeConfirmationLoadsTheNextArenaWithoutChangingTheRunIdentity() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        long id = (long) get(run(), "id");
+        call(stage(), "openClear");
+        fixture.stepIdleFrames(30);
+        fixture.runner().stepFrame(false, false, false, false, false, true);
+        for (int row = 0; row < 90 && GameServices.level().getCurrentZone() == 0; row++) fixture.stepIdleFrames(1);
+        assertEquals(1, GameServices.level().getCurrentZone());
+        fixture.stepIdleFrames(1);
+        assertEquals(INTRO, phase());
+        assertEquals(id, get(run(), "id"));
+        assertEquals(1, getInt(profile(), "runs"));
+    }
+
+    @Test void heldStartSelectsOneCardUntilTheButtonIsReleased() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        call(run(), "gainXp", 1000);
+        fixture.stepIdleFrames(1);
+        int pending = getInt(run(), "pendingLevels");
+        assertTrue(pending > 2);
+        fixture.runner().stepFrame(false, false, false, false, false, true);
+        assertEquals(pending - 1, getInt(run(), "pendingLevels"));
+        for (int row = 0; row < 20; row++) fixture.runner().stepFrame(false, false, false, false, false, true);
+        assertEquals(pending - 1, getInt(run(), "pendingLevels"));
+        fixture.runner().stepFrame(false, false, false, false, false, false);
+        fixture.runner().stepFrame(false, false, false, false, false, true);
+        assertEquals(pending - 2, getInt(run(), "pendingLevels"));
+    }
+
+    static Stream<String> settlementPaths() { return Stream.of("victory", "retire"); }
+
+    @ParameterizedTest @MethodSource("settlementPaths")
+    void settlementCannotCreditTheSameRunAfterProductionRewind(String ending) throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        set(run(), "ringsCollected", 200);
+        set(run(), "kills", 50);
+        set(run(), "elitesDefeated", 3);
+        ((int[]) get(run(), "speciesKills"))[0] = 50;
+        if (ending.equals("retire")) {
+            set(stage(), "phase", CLEAR);
+            fixture.sprite().setRingCount(100);
+        }
+        var registry = fixture.runtime().getRewindRegistry();
+        var before = registry.capture();
+        for (int replay = 0; replay < 2; replay++) {
+            if (replay != 0) registry.restore(before);
+            if (ending.equals("retire")) call(stage(), "retire", false);
+            else call(stage(), "victory");
+            assertEquals(ending.equals("retire") ? 105 : 355, getInt(profile(), "bank"));
+            assertEquals(50, getInt(profile(), "totalKills"));
+            assertEquals(3, getInt(profile(), "totalElites"));
+            assertEquals(50, ((int[]) get(profile(), "speciesKills"))[0]);
+            assertEquals(ending.equals("victory") ? 1 : 0, getInt(profile(), "wins"));
+            assertEquals(1, getInt(profile(), "runs"));
+        }
+    }
+
+    @Test void distinctRunsRemainPayableWhenAnOlderUnsettledRunIsRestored() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        set(run(), "ringsCollected", 100);
+        var registry = fixture.runtime().getRewindRegistry();
+        var older = registry.capture();
+        // The module also uses end() when a debug route jump abandons a run without payout.
+        call(run(), "end");
+        call(run(), "prepareNext", profile());
+        GameServices.level().loadZoneAndAct(0, 0);
+        startRun(fixture);
+        set(run(), "ringsCollected", 200);
+        call(stage(), "die");
+        assertEquals(50, getInt(profile(), "bank"));
+        var newer = registry.capture();
+        registry.restore(older);
+        call(stage(), "die");
+        assertEquals(75, getInt(profile(), "bank"), "a gap below a newer settled ID remains payable");
+        registry.restore(newer);
+        call(stage(), "die");
+        registry.restore(older);
+        call(stage(), "die");
+        assertEquals(75, getInt(profile(), "bank"));
+        assertEquals(2, getInt(profile(), "runs"));
+    }
+
+    @Test void runCaptureRejectsAForeignServiceGraphBeforeMutatingTheRun() throws Exception {
+        launch(0, 0);
+        var constructor = loader.loadClass("survivors.RunState").getDeclaredConstructor();
+        constructor.setAccessible(true);
+        Object otherRun = constructor.newInstance();
+        Object foreign = call(otherRun, "capture");
+        var failure = assertThrows(java.lang.reflect.InvocationTargetException.class,
+                () -> call(run(), "restore", foreign));
+        assertInstanceOf(IllegalArgumentException.class, failure.getCause());
+        assertFalse((boolean) get(run(), "active"));
+    }
+
+    private static Object reloadProfile(com.openggf.mods.ModStorage storage) throws Exception {
+        var constructor = loader.loadClass("survivors.Profile").getDeclaredConstructor(com.openggf.mods.ModStorage.class);
+        constructor.setAccessible(true);
+        Object result = constructor.newInstance(storage);
+        call(result, "load");
+        return result;
+    }
+
+    @Test void legacyProfileMigratesAndANewGraphCannotReuseItsPreviousRunIds() throws Exception {
+        launch(0, 0);
+        var storage = (com.openggf.mods.ModStorage) get(profile(), "storage");
+        assertTrue(storage.write("profile.txt", "bank=42\nruns=7\nshopVersion=2\n"));
+        Object legacy = reloadProfile(storage);
+        assertEquals(42, getInt(legacy, "bank"));
+        assertEquals(7, getInt(legacy, "runs"));
+        long first = (long) call(legacy, "reserveRun");
+        call(legacy, "startRun", first);
+        assertEquals(8, getInt(legacy, "runs"));
+        assertTrue(storage.read("profile.txt").orElseThrow().contains("formatVersion=1\n"));
+        Object reloaded = reloadProfile(storage);
+        call(reloaded, "startRun", first);
+        assertEquals(8, getInt(reloaded, "runs"), "previous graph IDs are closed, never counted again");
+        long second = (long) call(reloaded, "reserveRun");
+        assertTrue(second > first);
+        call(reloaded, "startRun", second);
+        assertEquals(9, getInt(reloaded, "runs"));
+        assertEquals(42, getInt(reloaded, "bank"));
+    }
+
+    @Test void settlementIntervalsMergeNeighborsWithoutClosingAnUnpaidGap() throws Exception {
+        var constructor = loader.loadClass("survivors.Profile$RunIds").getDeclaredConstructor();
+        constructor.setAccessible(true);
+        Object ids = constructor.newInstance();
+        assertEquals(true, call(ids, "add", 2L));
+        assertEquals(true, call(ids, "add", 4L));
+        assertEquals("2:2,4:4", call(ids, "encode"));
+        assertEquals(false, call(ids, "contains", 3L));
+        assertEquals(true, call(ids, "add", 3L));
+        assertEquals("2:4", call(ids, "encode"));
+        assertEquals(true, call(ids, "add", 1L));
+        assertEquals("1:4", call(ids, "encode"));
+        assertEquals(false, call(ids, "add", 2L));
+        assertEquals(false, call(ids, "contains", 5L));
+    }
+
+    @Test void freshRunLineageReusesItsChildAndRejectsAllocationOverflow() throws Exception {
+        launch(0, 0);
+        long first = (long) get(run(), "id");
+        long second = (long) call(profile(), "successor", first);
+        long third = (long) call(profile(), "successor", second);
+        assertEquals(first + 1, second);
+        assertEquals(second + 1, third);
+        assertEquals(second, call(profile(), "successor", first));
+        assertEquals(third, get(profile(), "issuedRuns"));
+        set(profile(), "issuedRuns", Long.MAX_VALUE - 1);
+        var failure = assertThrows(java.lang.reflect.InvocationTargetException.class,
+                () -> call(profile(), "reserveRun"));
+        assertInstanceOf(IllegalStateException.class, failure.getCause());
+        assertEquals(Long.MAX_VALUE - 1, get(profile(), "issuedRuns"));
+    }
+
+    @Test void replayingASettledRunCannotCountItsKillsAgainForAMilestone() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        set(run(), "kills", 200);
+        var registry = fixture.runtime().getRewindRegistry();
+        var before = registry.capture();
+        call(stage(), "die");
+        int zap = field(loader.loadClass("survivors.Upgrades"), "CHAIN_ZAP").getInt(null);
+        assertEquals(200, getInt(profile(), "totalKills"));
+        assertEquals(0, getInt(profile(), "announcedUnlocks") & 1 << zap);
+        registry.restore(before);
+        call(stage(), "openClear");
+        assertEquals(200, getInt(profile(), "totalKills"));
+        assertEquals(0, getInt(profile(), "announcedUnlocks") & 1 << zap,
+                "the same settled 200 kills cannot become a 300-kill lifetime milestone");
+    }
+
+    static Stream<Boolean> failedWriteKinds() { return Stream.of(false, true); }
+
+    @ParameterizedTest @MethodSource("failedWriteKinds")
+    void failedSettlementPublicationRetriesTheWholeAwardWithoutDuplicatingIt(boolean throwsOnWrite) throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        var actual = (com.openggf.mods.ModStorage) get(profile(), "storage");
+        var rejecting = new FailingProfileStorage(actual, throwsOnWrite);
+        set(profile(), "storage", rejecting);
+        set(run(), "ringsCollected", 200);
+        set(run(), "kills", 50);
+        var registry = fixture.runtime().getRewindRegistry();
+        var before = registry.capture();
+        for (int replay = 0; replay < 2; replay++) {
+            if (replay != 0) registry.restore(before);
+            call(stage(), "die");
+            assertEquals(55, getInt(profile(), "bank"));
+            assertEquals(50, getInt(profile(), "totalKills"));
+            assertEquals(0, getInt(reloadProfile(actual), "bank"), "failed write leaves the previous generation intact");
+        }
+        rejecting.reject = false;
+        fixture.stepIdleFrames(65);
+        assertEquals(55, getInt(reloadProfile(actual), "bank"));
+        assertEquals(50, getInt(reloadProfile(actual), "totalKills"));
+        assertTrue(actual.read("profile.txt").orElseThrow().contains("runSettled="),
+                "settlement and award publish in the same atomic profile write");
+    }
+
+    private static final class FailingProfileStorage implements com.openggf.mods.ModStorage {
+        final com.openggf.mods.ModStorage delegate;
+        final boolean throwsOnWrite;
+        boolean reject = true;
+        FailingProfileStorage(com.openggf.mods.ModStorage delegate, boolean throwsOnWrite) {
+            this.delegate = delegate;
+            this.throwsOnWrite = throwsOnWrite;
+        }
+        public Optional<String> read(String name) { return delegate.read(name); }
+        public boolean write(String name, String text) {
+            if (reject && throwsOnWrite) throw new IllegalStateException("injected profile failure");
+            return !reject && delegate.write(name, text);
+        }
+        public Optional<byte[]> readBytes(String name) { return delegate.readBytes(name); }
+        public boolean writeBytes(String name, byte[] bytes) { return !reject && delegate.writeBytes(name, bytes); }
+        public boolean delete(String name) { return delegate.delete(name); }
+        public List<String> list() { return delegate.list(); }
+    }
+
     @Test void campShopSpendsTheBank() throws Exception {
         var fixture = launch(0, 0);
         fixture.stepIdleFrames(30);
@@ -849,7 +1210,7 @@ class TestSonicSurvivors {
         fixture.stepFrame(false, false, false, false, true);
         int pending = getInt(run(), "pendingLevels");
         assertTrue((boolean) get(run(), "paused"));
-        assertTrue(fixture.sprite().isObjectControlled());
+        assertFalse(fixture.sprite().isObjectControlled(), "world HOLD needs no player control override");
         int x = fixture.sprite().getCentreX(), y = fixture.sprite().getCentreY();
         int remaining = getInt(stage(), "stageFrames");
         for (int i = 0; i < 15; i++) fixture.stepFrame(false, false, false, true, i % 2 == 0);
@@ -1379,7 +1740,7 @@ class TestSonicSurvivors {
         int whisp = field(loader.loadClass("survivors.Species"), "WHISP").getInt(null);
         var manager = GameServices.level().getObjectManager();
         int freeSlot = manager.firstFreeDynamicSlot();
-        for (int i = 0; i < 100; i++) call(stage(), "spawnEnemy", new int[0], new int[]{whisp}, 2, false);
+        for (int i = 0; i < 100; i++) call(stage(), "spawnEnemy", List.of(), List.of(whisp), 2, false);
         assertEquals(300, objects("Enemy").size());
         assertEquals(freeSlot, manager.firstFreeDynamicSlot(), "hordes cannot starve native power-up visuals");
         set(stage(), "eliteTimer", 1);
@@ -1547,6 +1908,68 @@ class TestSonicSurvivors {
         tapEnter(fixture);
         fixture.stepIdleFrames(5);
         assertTrue(player.getInvincibleFrames() > protection - 10);
+    }
+
+    @Test void levelUpEntryHoldsSpeedShoesBeforeTheFirstWorldClock() throws Exception {
+        var fixture = launch(0, 0);
+        startRun(fixture);
+        var player = fixture.sprite();
+        player.giveSpeedShoes();
+        var timers = fixture.runtime().getTimerManager();
+        int before = timers.getTimerForCode("SpeedShoes-" + player.getCode()).getTicks();
+        call(run(), "gainXp", 6);
+        fixture.stepIdleFrames(1);
+        assertEquals(1, getInt(stage(), "overlay"));
+        assertEquals(before, timers.getTimerForCode("SpeedShoes-" + player.getCode()).getTicks(),
+                "menu admission must precede native timer service on its first row");
+        fixture.stepIdleFrames(600);
+        assertTrue(player.hasSpeedShoes());
+        assertEquals(before, timers.getTimerForCode("SpeedShoes-" + player.getCode()).getTicks());
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"sonic", "tails"})
+    void modalRowsPreserveNativeMovementProtectionAndObjectLifetimesAcrossRewind(String main) throws Exception {
+        var fixture = launch(0, 0, main, "");
+        startRun(fixture);
+        clearEnemies();
+        var player = fixture.sprite();
+        player.giveSpeedShoes(); player.setInvincibleFrames(70); player.setInvulnerableFrames(45);
+        player.setAir(true); player.setHurt(true); player.setRolling(true); player.setOnObject(true);
+        player.setXSpeed((short) 0x180); player.setYSpeed((short) -0x240); player.setGSpeed((short) 0x100);
+        var enemy = spawnEnemy(0, player.getCentreX(), player.getCentreY(), false, 500);
+        var reward = spawnPickup(0, 5, player.getCentreX(), player.getCentreY());
+        set(reward, "rewardAge", 100);
+        call(stage(), "projectile", 1, player.getCentreX() + 100, player.getCentreY(), 0, 0, 60, 2, 1);
+        call(run(), "gainXp", 6);
+        var registry = fixture.runtime().getRewindRegistry();
+        var before = registry.capture();
+        int x = player.getCentreX(), y = player.getCentreY(), rings = player.getRingCount();
+        int levelClock = GameServices.level().getFrameCounter(), spriteClock = GameServices.sprites().getFrameCounter();
+        int stageClock = getInt(stage(), "frameTick");
+        int shoes = GameServices.timers().getTimerForCode("SpeedShoes-" + main).getTicks();
+        long rngAfterOpen = 0;
+        for (int replay = 0; replay < 2; replay++) {
+            if (replay > 0) { registry.restore(before); player = fixture.sprite(); }
+            fixture.stepIdleFrames(1);
+            Object random = get(run(), "random");
+            long opened = (long) call(random, "snapshot");
+            if (replay == 0) rngAfterOpen = opened;
+            else assertEquals(rngAfterOpen, opened, "card choices replay from captured RNG");
+            fixture.stepIdleFrames(120);
+            assertEquals(opened, call(get(run(), "random"), "snapshot"));
+            assertEquals(x, player.getCentreX()); assertEquals(y, player.getCentreY());
+            assertEquals(0x180, player.getXSpeed()); assertEquals(-0x240, player.getYSpeed()); assertEquals(0x100, player.getGSpeed());
+            assertTrue(player.getAir()); assertTrue(player.isHurt()); assertTrue(player.getRolling()); assertTrue(player.isOnObject());
+            assertEquals(70, player.getInvincibleFrames()); assertEquals(45, player.getInvulnerableFrames());
+            assertEquals(shoes, GameServices.timers().getTimerForCode("SpeedShoes-" + main).getTicks());
+            assertEquals(rings, player.getRingCount(), "overlapping enemy/reward touch cannot run on modal rows");
+            assertEquals(0, getInt(objects("Enemy").getFirst(), "ticks"));
+            assertEquals(100, getInt(objects("Pickup").getFirst(), "rewardAge"));
+            assertEquals(levelClock, GameServices.level().getFrameCounter());
+            assertEquals(spriteClock, GameServices.sprites().getFrameCounter());
+            assertEquals(stageClock, getInt(stage(), "frameTick"));
+        }
     }
 
     @Test void weaponProjectilesGrowAndRewindWithoutDroppingAttacks() throws Exception {
@@ -1788,6 +2211,12 @@ class TestSonicSurvivors {
         startRun(fixture);
         boolean tails = main.equals("tails");
         assertEquals(tails, get(run(), "tails"));
+        assertEquals(main, fixture.sprite().characterKey().persisted());
+        var registry = fixture.runtime().getRewindRegistry();
+        var checkpoint = registry.capture();
+        set(run(), "tails", !tails);
+        registry.restore(checkpoint);
+        assertEquals(tails, get(run(), "tails"), "semantic leader perks survive restore");
         assertEquals(tails ? 12 : 10, call(run(), "feverCharge"));
         assertEquals(tails ? 52 : 28, call(run(), "magnetRadius"));
         set(run(), "combo", 5);
@@ -1847,7 +2276,7 @@ class TestSonicSurvivors {
         var fixture = launch(0, 0);
         startRun(fixture);
         fixture.sprite().setInvulnerableFrames(100000);
-        for (int i = 0; i < 160; i++) call(stage(), "spawnEnemy", new int[0], new int[]{0}, 0, false);
+        for (int i = 0; i < 160; i++) call(stage(), "spawnEnemy", List.of(), List.of(0), 0, false);
         int count = objects("Enemy").size();
         set(stage(), "eliteTimer", 100000);
         boolean elite = false;

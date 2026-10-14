@@ -3,6 +3,7 @@ package com.openggf.mods.ui;
 import com.openggf.mods.InvalidModEntry;
 import com.openggf.mods.ModCatalog;
 import com.openggf.mods.ModCatalogEntry;
+import com.openggf.mods.ModCompatibilityDiagnostic;
 import com.openggf.mods.EffectiveCatalogBuilder;
 import com.openggf.mods.ModDependency;
 import com.openggf.mods.ModDescriptor;
@@ -389,7 +390,7 @@ public final class ModManagerScreen {
     private List<String> noticeLines() {
         List<String> lines = new ArrayList<>();
         if (!statusMessage.isBlank()) lines.add(statusMessage);
-        lines.addAll(bannerLines());
+        lines.addAll(bannerLines(true));
         if (lines.isEmpty()) lines.add(editor.editable() ? "No notices. Apply reloads mods at title."
                 : "No notices. Mods are fixed for this launch.");
         return wrapped(lines);
@@ -444,6 +445,10 @@ public final class ModManagerScreen {
     }
 
     public List<String> bannerLines() {
+        return bannerLines(false);
+    }
+
+    private List<String> bannerLines(boolean includeCatalogCompatibility) {
         List<String> banners = new ArrayList<>();
         if (!editor.editable()) banners.add("Mods are fixed for this launch");
         for (RepositoryScanFailure failure : repositoryFailures) {
@@ -459,10 +464,15 @@ public final class ModManagerScreen {
                         + " [" + owner + "] " + finding.code() + ": " + finding.message());
             }
         });
+        List<ModCompatibilityDiagnostic> compatibility = runtimeFindings.compatibilitySnapshot().stream()
+                .filter(diagnostic -> includeCatalogCompatibility || diagnostic.participants().stream()
+                        .anyMatch(owner -> !catalogOwners.contains(owner)))
+                .toList();
+        appendCompatibility(banners, compatibility);
         if (editor.restartRequired()) banners.add("Changes await Apply");
         if (saveFailure != null) banners.add("Save failed: " + saveFailure);
         if (reloadFailure != null) banners.add("Reload failed: " + reloadFailure);
-        return List.copyOf(banners);
+        return immutableSafeLines(banners);
     }
 
     public int selectedIndex() { return selectedIndex; }
@@ -890,6 +900,13 @@ public final class ModManagerScreen {
         if (notLoaded) badges.add("UNSUPPORTED");
         addFindingBadges(badges, descriptor.findings(), false);
         addFindingBadges(badges, runtimeFindings.findingsFor(id), true);
+        for (ModCompatibilityDiagnostic diagnostic : runtimeFindings.compatibilityFor(id)) {
+            badges.add(switch (diagnostic.level()) {
+                case OBSERVED_OVERLAP -> "OVERLAP";
+                case SUSPECTED_INCOMPATIBILITY -> "POSSIBLE CONFLICT";
+                case VERIFIED_BLOCKER -> diagnostic.blocksPlayFor(id) ? "PLAY BLOCKED" : "RELATED BLOCKER";
+            });
+        }
         String label = descriptorCounts.getOrDefault(id, 0) > 1
                 ? descriptor.manifest().name() + " (" + filename(descriptor.jarPath()) + ")"
                 : descriptor.manifest().name();
@@ -949,6 +966,7 @@ public final class ModManagerScreen {
         }
         appendFindings(lines, descriptor.findings());
         appendFindings(lines, runtimeFindings.findingsFor(manifest.id()));
+        appendCompatibility(lines, runtimeFindings.compatibilityFor(manifest.id()));
         return immutableSafeLines(lines);
     }
 
@@ -965,6 +983,29 @@ public final class ModManagerScreen {
     private static void appendFindings(List<String> lines, List<ModFinding> findings) {
         for (ModFinding finding : findings) {
             lines.add(finding.severity() + " " + finding.code() + ": " + finding.message());
+        }
+    }
+
+    private void appendCompatibility(List<String> lines, List<ModCompatibilityDiagnostic> diagnostics) {
+        if (diagnostics.isEmpty()) return;
+        for (ModCompatibilityDiagnostic diagnostic : new LinkedHashSet<>(diagnostics)) {
+            String level = switch (diagnostic.level()) {
+                case OBSERVED_OVERLAP -> "Observed overlap";
+                case SUSPECTED_INCOMPATIBILITY -> "Suspected incompatibility";
+                case VERIFIED_BLOCKER -> "Verified blocker";
+            };
+            lines.add(level + " " + diagnostic.code() + ": " + diagnostic.summary());
+            lines.add("Target: " + diagnostic.target());
+            lines.add("Participants: " + String.join(", ", diagnostic.participants()));
+            if (diagnostic.blocksPlay()) {
+                lines.add("Affected content owners: " + String.join(", ", diagnostic.blockedOwners()));
+            }
+            for (String evidence : diagnostic.evidence()) lines.add("Evidence: " + evidence);
+        }
+        String context = runtimeFindings.compatibilityContext();
+        lines.add(context.isBlank() ? "Active mod configuration" : "Active mod configuration: " + context);
+        if (editor.restartRequired()) {
+            lines.add("Compatibility evidence covers active mods; pending changes await Apply.");
         }
     }
 

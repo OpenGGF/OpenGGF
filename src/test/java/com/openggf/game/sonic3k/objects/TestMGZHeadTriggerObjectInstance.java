@@ -10,6 +10,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.TouchCategory;
 import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.tests.FullReset;
 import com.openggf.tests.SingletonResetExtension;
 import com.openggf.tests.TestablePlayableSprite;
@@ -33,6 +34,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 @ExtendWith(SingletonResetExtension.class)
 @FullReset
@@ -54,6 +57,24 @@ class TestMGZHeadTriggerObjectInstance {
     void tearDown() {
         Sonic3kLevelTriggerManager.reset();
         SessionManager.clear();
+    }
+
+    @Test
+    void spentMultispriteDrawsColumnWithoutProjectileFrameZero() {
+        Sonic3kLevelTriggerManager.setBit(3, 0);
+        PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
+        MGZHeadTriggerObjectInstance head = new MGZHeadTriggerObjectInstance(
+                new ObjectSpawn(0x180, 0x100, Sonic3kObjectIds.MGZ_HEAD_TRIGGER, 0x03, 0, false, 0)) {
+            @Override
+            protected PatternSpriteRenderer getRenderer(String artKey) {
+                return renderer;
+            }
+        };
+
+        head.appendRenderCommands(new ArrayList<>());
+
+        verify(renderer).drawFrameIndex(6, 0x180, 0x100, false, false);
+        verifyNoMoreInteractions(renderer);
     }
 
     @Test
@@ -120,7 +141,7 @@ class TestMGZHeadTriggerObjectInstance {
     }
 
     @Test
-    void thirdHitSetsLevelTriggerAndLeavesTriggeredFrameVisible() throws Exception {
+    void thirdHitSetsLevelTriggerAndSuppressesMainFrame() throws Exception {
         RecordingServices services = new RecordingServices();
         MGZHeadTriggerObjectInstance head = new MGZHeadTriggerObjectInstance(
                 new ObjectSpawn(0x180, 0x100, Sonic3kObjectIds.MGZ_HEAD_TRIGGER, 0x02, 0, false, 0));

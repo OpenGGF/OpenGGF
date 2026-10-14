@@ -165,7 +165,9 @@ public abstract class AbstractResultsScreen extends AbstractObjectInstance imple
         TallyResult result = performTallyStep();
 
         if (result.totalIncrement > 0) {
-            services().gameState().addScore(result.totalIncrement);
+            // AddPoints/HUD_AddToScore store tens of points in the ROM; its
+            // HUD supplies the final zero. GameStateManager stores points.
+            services().gameState().addScore(result.totalIncrement * 10);
         }
 
         // Play tick sound every N frames while tallying
@@ -185,7 +187,7 @@ public abstract class AbstractResultsScreen extends AbstractObjectInstance imple
      * Perform one step of the tally countdown.
      * Subclasses implement this to decrement their specific bonus counters.
      *
-     * @return TallyResult indicating if any bonuses remain and total points added
+     * @return remaining-bonus status and the increment in native ten-point units
      */
     protected abstract TallyResult performTallyStep();
 

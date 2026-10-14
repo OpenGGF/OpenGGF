@@ -1,5 +1,6 @@
-# Cold MHZ1 Tails solo through MHZ2 and the ship handoff into FBZ1.
-# P1 inputs only; native320, donor off, no gameplay seeds.
+# Cold MHZ1 -> MHZ2 -> released FBZ1; ordinary controller input only.
+# Reauthored 2026-10-13 against fresh-load assembly completion.
+# Delay first Act2 jump by one held-right input; retain the remaining route.
 20 R+A / -
 20 R / -
 20 R+A / -
@@ -1442,6 +1443,7 @@
 15 L+A / -
 3 A / -
 1500 R / -
+1 R
 1 R+A / -
 7 R / -
 1 R+A / -
@@ -2475,6 +2477,5 @@
 30 R+A / -
 30 R / -
 28 R+A / -
-
 240 -
 120 R

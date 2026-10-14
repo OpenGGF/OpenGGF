@@ -78,7 +78,9 @@ public final class OwnerBoundCallbacks {
                 if (canonical[0] != null && method.getName().equals("key") && method.getParameterCount() == 0)
                     return canonical[0];
                 return boundary.call(owner, () -> {
-                    Object result = OwnerBoundInitialization.returned(owner,boundary,limit,value,method,invoke(value,method,args));
+                    Object admitted = OwnerBoundDifficultyPolicies.invoke(value,method,args,
+                            offeredArgs -> invoke(value,method,offeredArgs));
+                    Object result = OwnerBoundInitialization.returned(owner,boundary,limit,value,method,admitted);
                     if (value instanceof RewindSnapshottable<?> && method.getName().equals("capture")
                             && method.getParameterCount() == 0)
                         result = Objects.requireNonNull(result,"Owned rewind snapshot");
@@ -86,6 +88,8 @@ public final class OwnerBoundCallbacks {
                         result = Objects.requireNonNull(result,"Owned zone runtime snapshot");
                     if (value instanceof com.openggf.game.render.SpecialRenderEffect && method.getName().equals("stage"))
                         result = Objects.requireNonNull(result,"Owned render effect stage");
+                    if (value instanceof com.openggf.game.mode.GameplayFrameController && method.getName().equals("beforeFrame"))
+                        result = Objects.requireNonNull(result,"Owned gameplay frame disposition");
                     if (value instanceof com.openggf.game.save.SaveSnapshotProvider && method.getName().equals("captureSaveFields"))
                         return com.openggf.game.save.RuntimeSaveCapture.freezeFields(saveFields(result));
                     Class<?> returned = method.getReturnType();

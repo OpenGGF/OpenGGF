@@ -187,3 +187,32 @@ variants; all **18 scene PNGs at both 320 and 400** were byte-identical between
 pre-atlas/pre-streaming and final rendering, including confirmation-flash alpha
 and order. Temporary comparators, screenshots and JFR data were removed after
 inspection. No full ordinary or structural-guard pass is claimed.
+
+
+## Develop merge on 2026-10-14
+
+Merged develop `7277cef404` into the title branch at `e8c1712297`. The title
+conflict combines develop's dynamic Editor Projects and Import Content callbacks
+with the redesigned Advanced settings and help rows. All five rows use the same
+30-pixel spacing for drawing and pointer selection. The no-argument mod-manager
+entry remains package-visible for content import and delegates to the redesigned
+game-filtered entry. The changelog retains the redesigned hub and imported editor
+capabilities; taking either side wholesale would drop one set of actions.
+
+Java 25 tool preflight passed. The plan against the pre-merge head selects 3,289
+ordinary classes plus guards across the imported develop history. Focused
+validation covers the merge's bounded title/menu integration rather than
+revalidating all imported subsystems; this is not full-suite or graphics-capture
+validation. With Java 25,
+`python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestMasterTitle*,TestTitleHubNavigation,TestTitleContentImportAccess,TestModManagerScreen' test`
+passed 149 tests with three ROM-preview skips caused by unconfigured ROM paths.
+The content-import navigation regression follows the redesigned header tabs and
+checks single activation under held confirmation, settings/drop ownership, and
+the existing mod-manager neutral-input boundary.
+
+The follow-up
+`python3 tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestMasterTitleRomPreview' test`
+with `sonic1.rom.path`, `sonic2.rom.path` and `s3k.rom.path` set to the existing
+absolute root ROM paths passed all 31 preview tests with no skips. Both completed
+runs measured the resolved merge tree before its merge commit; no production
+changes followed those runs.

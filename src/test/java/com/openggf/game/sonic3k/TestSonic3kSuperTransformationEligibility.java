@@ -28,7 +28,7 @@ class TestSonic3kSuperTransformationEligibility {
 
     @BeforeEach
     void setUp() {
-        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+        TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
         TestEnvironment.activeGameplayMode();
         GameServices.level().resetLevelGamestate(GameModuleRegistry.getCurrent().createLevelState());
     }

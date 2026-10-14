@@ -19,6 +19,7 @@ import com.openggf.level.Pattern;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteMappingFrame;
+import com.openggf.level.resources.PlcParser;
 import com.openggf.util.PatternDecompressor;
 
 import java.io.IOException;
@@ -113,10 +114,13 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
     private static final int RING_TARGET_X = 0x120;
     private static final int OVAL_START_X = 0x1EC;
     private static final int OVAL_TARGET_X = 0x11C;
+    private static final int CONTINUE_START_X = 0x3A0;
+    private static final int CONTINUE_TARGET_X = 0x120;
     private static final int TEXT_Y = 0xC4;
     private static final int SCORE_Y = 0x118;
     private static final int RING_Y = 0x128;
     private static final int OVAL_Y = 0xC4;
+    private static final int CONTINUE_Y = 0x138;
 
     // Obj7F emerald positions.
     private static final int[] EMERALD_X_POSITIONS = {0x110, 0x128, 0xF8, 0x140, 0xE0, 0x158};
@@ -131,7 +135,7 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
     };
 
     // Score digit layout in the composite results sheet.
-    // Sonic 1 score is 6 digits max (clamped to 999999 in AddPoints).
+    // AddPoints stores six tens-of-points digits; the mapping adds a fixed 0.
     private static final int SCORE_DIGITS_COUNT = 6;
     private static final int SCORE_DIGIT_TILES = SCORE_DIGITS_COUNT * 2;
     private static final int SCORE_DIGITS_START_INDEX =
@@ -140,6 +144,7 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
     // GPU cache base IDs (avoids collision with level 0x20000, SS 0x10000, HUD 0x28000).
     private static final int PATTERN_BASE = PatternAtlasRange.TITLE_CARDS.base();
     private static final int EMERALD_PATTERN_BASE = PatternAtlasRange.TITLE_CARDS.base() + 0x1000;
+    private static final int CONTINUE_PATTERN_BASE = PatternAtlasRange.TITLE_CARDS.base() + 0x2000;
 
     // Score digit copy constants (matching Sonic1ObjectArtProvider).
     private static final int RESULTS_SCORE_DIGIT_PAIR_COUNT = 8;
@@ -171,6 +176,9 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
     private int scoreX = SCORE_START_X;
     private int ringX = RING_START_X;
     private int ovalX = OVAL_START_X;
+    private int continueX = CONTINUE_START_X;
+    // Map_SSR frames 4/5 (animated icon) and 6 (text only), remapped to 0/1/2.
+    private int continueFrame = 2;
 
     private int ringBonus;
 
@@ -183,6 +191,7 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
     private Pattern[] sourceDigitPatterns;
     private PatternSpriteRenderer resultsRenderer;
     private PatternSpriteRenderer emeraldRenderer;
+    private PatternSpriteRenderer continueRenderer;
     private boolean artLoaded;
     private boolean artCached;
 
@@ -234,6 +243,17 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
             case STATE_EXIT -> complete = true;
             default -> complete = true;
         }
+
+        if (ringsCollected >= CONTINUE_RINGS) {
+            // SSR_Move belongs to each element independently: the continue row
+            // arrives four frames after the controlling ring-bonus row.
+            continueX = moveTowards(continueX, CONTINUE_TARGET_X, SLIDE_SPEED_PIXELS_PER_FRAME);
+            // SSR_Continue changes the frame before the later continue slot
+            // runs SSR_ContAni, which toggles on the native VBlank byte.
+            if (continueAwarded && (frameCounter & 0xF) == 0) {
+                continueFrame ^= 1;
+            }
+        }
     }
 
     private void updateSlideIn() {
@@ -266,7 +286,10 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
 
         int decrement = Math.min(TALLY_DECREMENT, ringBonus);
         ringBonus -= decrement;
-        GameServices.gameState().addScore(decrement);
+        // SSR_RingBonus passes ROM tens-of-points units to AddPoints. The
+        // engine game state stores displayed points; retain the raw counter
+        // for cadence and its mapping's fixed trailing zero.
+        GameServices.gameState().addScore(decrement * 10);
 
         if ((stateTimer % TALLY_TICK_INTERVAL) == 0) {
             playTickSound();
@@ -304,6 +327,7 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
             return;
         }
         continueAwarded = true;
+        continueFrame = 0;
         playContinueSound();
         state = STATE_CONTINUE_DELAY;
         stateTimer = 0;
@@ -367,6 +391,11 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
 
         resultsRenderer.drawFrameIndex(FRAME_RING_BONUS,
                 toWorldX(ringX, camera), toWorldY(RING_Y, camera), false, false);
+
+        if (ringsCollected >= CONTINUE_RINGS && continueRenderer != null) {
+            continueRenderer.drawFrameIndex(continueFrame,
+                    toWorldX(continueX, camera), toWorldY(CONTINUE_Y, camera), false, false);
+        }
 
         appendEmeraldIndicators(commands, camera);
 
@@ -458,6 +487,7 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
 
             // Load emerald art and create emerald renderer
             loadEmeraldArt(rom);
+            continueRenderer = new PatternSpriteRenderer(loadContinueSheet(rom));
 
             artLoaded = true;
             LOGGER.info("S1 SS results art loaded: " + totalSize + " composite patterns, "
@@ -467,6 +497,17 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
             LOGGER.warning("Failed to load S1 SS results art: " + e.getMessage());
             combinedPatterns = null;
         }
+    }
+
+    static ObjectSpriteSheet loadContinueSheet(Rom rom) throws IOException {
+        // PLC_SSResult (index 27) supplies Nem_MiniSonic at ArtTile_Mini_Sonic
+        // $551. The same ROM bank contains CONTINUE and both foot-tap poses.
+        PlcParser.PlcEntry entry = PlcParser.parse(rom, Sonic1Constants.ART_LOAD_CUES_ADDR, 27)
+                .entries().stream()
+                .filter(candidate -> candidate.tileIndex() == 0x551)
+                .findFirst().orElseThrow(() -> new IOException("SS results PLC lacks mini-Sonic art"));
+        return new ObjectSpriteSheet(PlcParser.decompressEntry(rom, entry),
+                Sonic1ResultsMappingLoader.loadContinueFrames(RomByteReader.fromRom(rom)), 0, 1);
     }
 
     private void loadEmeraldArt(Rom rom) {
@@ -519,6 +560,9 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
         // Cache emerald patterns
         if (emeraldRenderer != null) {
             emeraldRenderer.ensurePatternsCached(graphicsManager, EMERALD_PATTERN_BASE);
+        }
+        if (continueRenderer != null) {
+            continueRenderer.ensurePatternsCached(graphicsManager, CONTINUE_PATTERN_BASE);
         }
 
         // Restore palettes as the ROM does for palid_SSResult.
@@ -694,8 +738,7 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
             int digit = value / divisor;
             value %= divisor;
             int tileIndex = startIndex + (i * 2);
-            boolean isLastDigit = i == divisors.length - 1;
-            if (digit != 0 || hasDigit || isLastDigit) {
+            if (digit != 0 || hasDigit) {
                 hasDigit = true;
                 copyDigit(destination, tileIndex, digit, digits);
             } else {
@@ -706,14 +749,15 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
     }
 
     private void writeScoreValue(Pattern[] destination, int score, Pattern[] digits) {
-        int clampedScore = Math.min(score, 9_999_999);
+        // Hud_Score consumes the ROM's score/10; Map_SSR appends the fixed
+        // Hud_Base_Score zero at $6F0, making seven displayed columns.
+        int clampedScore = Math.min(Math.max(0, score / 10), 999_999);
         int divisor = 100_000;
         boolean hasDigit = false;
         for (int i = 0; i < SCORE_DIGITS_COUNT; i++) {
             int digit = (clampedScore / divisor) % 10;
             int tileIndex = SCORE_DIGITS_START_INDEX + (i * 2);
-            boolean isLastDigit = i == SCORE_DIGITS_COUNT - 1;
-            if (digit != 0 || hasDigit || isLastDigit) {
+            if (digit != 0 || hasDigit) {
                 hasDigit = true;
                 copyDigit(destination, tileIndex, digit, digits);
             } else {
@@ -735,8 +779,8 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
 
     /**
      * Copies the initial score digit tiles into the composite array.
-     * Tile pair at startIndex is "E" (from HUD text), followed by six "0" pairs.
-     * The final pair at $6F0-$6F1 is forced blank for trailing blank mappings.
+     * Hud_Base_Score loads E______0: six variable columns and a fixed zero.
+     * Score and bonus mappings both reuse the final pair at $6F0-$6F1.
      */
     private static void copyResultsScoreDigitTiles(Pattern[] dest, int startIndex,
             Pattern[] hudTextPatterns, Pattern[] hudDigitPatterns) {
@@ -745,16 +789,13 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
         }
         // "E" pair from HUD text
         copyPatternPair(dest, startIndex, hudTextPatterns, HUD_TEXT_E_PAIR_INDEX);
-        // Six "0" pairs from digit patterns.
+        // Six initially blank variable pairs.
         for (int pair = 1; pair < RESULTS_SCORE_DIGIT_PAIR_COUNT - 1; pair++) {
-            copyPatternPair(dest, startIndex + (pair * 2), hudDigitPatterns, 0);
+            dest[startIndex + pair * 2].copyFrom(new Pattern());
+            dest[startIndex + pair * 2 + 1].copyFrom(new Pattern());
         }
-        // Explicitly clear trailing pair in case source HUD art has non-blank data there.
         int trailingPairIndex = startIndex + ((RESULTS_SCORE_DIGIT_PAIR_COUNT - 1) * 2);
-        if (trailingPairIndex >= 0 && trailingPairIndex + 1 < dest.length) {
-            dest[trailingPairIndex].copyFrom(new Pattern());
-            dest[trailingPairIndex + 1].copyFrom(new Pattern());
-        }
+        copyPatternPair(dest, trailingPairIndex, hudDigitPatterns, 0);
     }
 
     private static void copyPatternPair(Pattern[] dest, int destIndex, Pattern[] src, int srcIndex) {

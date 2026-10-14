@@ -310,7 +310,12 @@ public class Sonic3kGameModule implements GameModule {
         // Finish deferred ScreenInit before the coordinator captures its camera/load
         // window and walks the initial player slots. Ordinary pre-physics is too late:
         // Knuckles_Control would already run once before the SSZ arrival owns him.
-        levelEventManager.prepareInitialScreenObjects();
+        // SSZ ScreenInit belongs to a ROM zone's event script. An authored
+        // level retains native fixed SST dispatch below, but cannot inherit a
+        // previously selected stock zone's camera/arrival controller.
+        if (Sonic3kLevel.currentLevelHasStockRomZoneIdentity()) {
+            levelEventManager.prepareInitialScreenObjects();
+        }
         InitialWaveSplashSstOwner waveOwner =
                 zoneFeatures instanceof Sonic3kZoneFeatureProvider provider
                         ? provider.initialWaveSplashSstOwner()
@@ -486,6 +491,9 @@ public class Sonic3kGameModule implements GameModule {
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == com.openggf.game.session.WorldSessionPolicyProvider.class) {
+            return type.cast(com.openggf.game.sonic3k.mutators.Sonic3kMutatorPolicyProvider.INSTANCE);
+        }
         if (type == Sonic3kCheatFlags.class) {
             return (T) cheatFlags;
         }
@@ -512,6 +520,25 @@ public class Sonic3kGameModule implements GameModule {
         if (type == Sonic3kLevelTitlePlcService.class
                 || type == com.openggf.game.resources.PlcLifecycleService.class)
             return (T) levelTitlePlcService;
+        if (type == com.openggf.game.LevelInputOverlay.class) {
+            return (T) (com.openggf.game.LevelInputOverlay) input -> {
+                var ending = com.openggf.game.sonic3k.ending.S3kEndingCoordinator
+                        .current(GameServices.zoneRuntimeRegistry()).orElse(null);
+                // $0D01 owns input from entry, before Obj_5D86A's first pass.
+                // An ordinary SSZ level still permits its normal pause until
+                // the actual native ending owner has initialized there.
+                if (ending == null || (!ending.initialized()
+                        && !(GameServices.zoneRuntimeState() instanceof
+                        com.openggf.game.sonic3k.runtime.EndingZoneRuntimeState))) return false;
+                ending.setStartHeld(input.logical().player1().startHeld() || input.logical().player2().startHeld());
+                return true; // native ending owns Start; it is not a level-pause request
+            };
+        }
+        if (type == com.openggf.game.internal.LevelEntryPresentation.class) {
+            // Level loc_5FFC selects PaletteWhiteOut for the ending scene.
+            return (T) (com.openggf.game.internal.LevelEntryPresentation)
+                    (zone, act) -> zone == 0x0D && act == 1;
+        }
         if (type == Sonic3kLevelEventManager.class) return (T) levelEventManager;
         if (type == Sonic3kTitleCardManager.class) return (T) titleCardManager;
         if (type == Sonic3kZoneRegistry.class) return (T) zoneRegistry;

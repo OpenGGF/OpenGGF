@@ -5,7 +5,6 @@ import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic1.Sonic1LoopManager;
 import com.openggf.game.sonic1.Sonic1StomperDoorSingletonRewindAdapter;
 import com.openggf.game.sonic1.resources.Sonic1PlcService;
-import com.openggf.game.sonic1.objects.Sonic1FixedEndCardSlot;
 import com.openggf.game.sonic1.scroll.Sonic1ZoneConstants;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectManager;
@@ -86,6 +85,14 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
     }
 
     @Override
+    public boolean isBossActive() {
+        // S1 Sonic_Display and ResumeMusic test f_lockscreen, not the later
+        // games' Boss_flag. DLE latches this lock when it starts the boss song;
+        // it remains set after defeat until the prison/LZ boss releases it.
+        return Sonic1ZoneEvents.isScreenLocked();
+    }
+
+    @Override
     protected void onInitLevel(int zone, int act) {
         // Reset all zone handlers (only one is active at a time,
         // but reset all for clean state)
@@ -128,13 +135,6 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
         // element's Card_Wait/Card_MoveOut tail re-queues the explosion and
         // animal art (docs/s1disasm/_incObj/34 Title Cards.asm:122-168).
         fixedTitleCardManager.update();
-        LevelManager level = levelManager();
-        if (level != null && level.getObjectManager() != null) {
-            Sonic1FixedEndCardSlot.updateFixedPass(
-                    level.getObjectManager(),
-                    level.getObjectManager().getVblaCounter(),
-                    Sonic1ZoneEvents.focusedSpriteOrNull());
-        }
     }
 
     /** ROM {@code act3} (docs/s1disasm/sonic.asm:3186); acts are 0-based here. */

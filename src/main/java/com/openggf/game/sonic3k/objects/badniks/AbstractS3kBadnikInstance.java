@@ -1,12 +1,10 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
-import com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInstance;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.AnimalObjectInstance;
 import com.openggf.level.objects.DestructionEffects;
 import com.openggf.level.objects.DestructionEffects.DestructionConfig;
 import com.openggf.level.objects.ObjectLifetimeOps;
@@ -27,7 +25,7 @@ import java.util.List;
  * position/collision, and sprite rendering.
  */
 abstract class AbstractS3kBadnikInstance extends AbstractBadnikInstance
-        implements TouchResponseProvider, TouchResponseAttackable, PoweredScreenAttackable {
+        implements TouchResponseProvider, TouchResponseAttackable, PoweredScreenAttackable, com.openggf.game.mutators.NativeObjectFieldTarget {
 
     private final String rendererKey;
     private int collisionSizeIndex;
@@ -53,6 +51,19 @@ abstract class AbstractS3kBadnikInstance extends AbstractBadnikInstance
         this.planePriority = planePriority;
         // S3K render_flags bit 0 mirrors horizontally. Clear = face left, set = face right.
         this.facingLeft = (spawn.renderFlags() & 0x01) == 0;
+    }
+
+    protected boolean independentPresentationBody() { return false; }
+    @Override public com.openggf.level.objects.ObjectPresentationMetadata presentationMetadata() {
+        if (!independentPresentationBody()) return com.openggf.level.objects.ObjectPresentationMetadata.NONE;
+        return new com.openggf.level.objects.ObjectPresentationMetadata(
+                com.openggf.level.objects.ObjectPresentationMetadata.Role.BADNIK, getBodyAnchorX(), getBodyAnchorY());
+    }
+    @Override public Kind fieldKind() { return Kind.BADNIK; }
+    @Override public void displaceForField(int dx, int dy) {
+        currentX = (currentX + dx) & 0xFFFF;
+        currentY = (currentY + dy) & 0xFFFF;
+        updateDynamicSpawn(resolveDynamicSpawnX(), resolveDynamicSpawnY());
     }
 
     @Override
@@ -86,6 +97,8 @@ abstract class AbstractS3kBadnikInstance extends AbstractBadnikInstance
         if (instance.isDestroyed()) {
             return;
         }
+        var policies = com.openggf.game.mutators.NativeObjectPolicyAccess.port(services);
+        if (policies != null) policies.badnikDefeated(instance, player);
         int mySlot = ObjectLifetimeOps.detachSlotForTransfer(instance);
         instance.setDestroyed(true);
         if (powered) {
@@ -104,14 +117,7 @@ abstract class AbstractS3kBadnikInstance extends AbstractBadnikInstance
      * {@code Touch_Enemy}-type badnik ({@code collision_flags $18}) that does not share this
      * class's shape, and {@code Touch_EnemyNormal} gives it the same destruction.
      */
-    static final DestructionConfig S3K_DESTRUCTION_CONFIG = new DestructionConfig(
-            Sonic3kSfx.BREAK.id,
-            (spawn, services) -> AnimalObjectInstance.deferredArtVariant(spawn, services, null),
-            false,  // useRespawnTracking (S3K always removeFromActiveSpawns)
-            (spawn, svc, pts) -> new Sonic3kPointsObjectInstance(spawn, svc, pts),
-            null,
-            false
-    );
+    static final DestructionConfig S3K_DESTRUCTION_CONFIG = Sonic3kBadnikConfig.destruction();
 
     protected final void defeat(AbstractPlayableSprite player) {
         destroyBadnik(player);

@@ -9,6 +9,29 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestTimeAttackRuntime {
+    @Test
+    void failedAndRejectedBestWritesHaveVisibleHonestOutcomes(@TempDir Path root) throws Exception {
+        Path rejectedRoot=root.resolve("rejected");
+        java.nio.file.Files.createDirectories(rejectedRoot.resolve("s3k"));
+        Path primary=rejectedRoot.resolve("s3k/0-0-sonic.ggfghost");
+        byte[] rejected="future-or-corrupt-ghost".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        java.nio.file.Files.write(primary,rejected);
+        TimeAttackRuntime preserved=new TimeAttackRuntime(new GhostStore(rejectedRoot),root.resolve("identity-a"),()->false);
+        preserved.armForLaunch(new TimeAttackLaunchRequest("s3k",0,0,"sonic",java.util.List.of()));
+        preserved.beginAttemptForTest("fp");
+        preserved.tickForTest(0x08,false,true,-1,frame(10));
+        assertTrue(preserved.hudState().finished());assertFalse(preserved.hudState().newBest());
+        assertEquals("EXISTING RECORD PRESERVED",preserved.hudState().saveNotice());
+        assertArrayEquals(rejected,java.nio.file.Files.readAllBytes(primary));
+
+        Path failedRoot=root.resolve("failed");java.nio.file.Files.createDirectories(failedRoot);
+        java.nio.file.Files.write(failedRoot.resolve("s3k"),new byte[]{0});
+        TimeAttackRuntime failed=new TimeAttackRuntime(new GhostStore(failedRoot),root.resolve("identity-b"),()->false);
+        failed.armForLaunch(new TimeAttackLaunchRequest("s3k",0,0,"sonic",java.util.List.of()));
+        failed.beginAttemptForTest("fp");failed.tickForTest(0x08,false,true,-1,frame(10));
+        assertTrue(failed.hudState().finished());assertFalse(failed.hudState().newBest());
+        assertEquals("SAVE NOT CONFIRMED",failed.hudState().saveNotice());
+    }
     private static GhostFrame frame(int x) {
         return new GhostFrame(x, 100, 1, false, false, false, 2, false);
     }

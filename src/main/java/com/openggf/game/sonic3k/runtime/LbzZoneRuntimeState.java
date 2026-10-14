@@ -40,6 +40,12 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
     private static final int LAUNCH_FLAG_LBZ1_KNUX_CONTROL_LOCKED = 1 << 14;
     private static final int LAUNCH_FLAG_LBZ1_KNUX_BOMB_SHAKE_ACTIVE = 1 << 15;
     private static final int LAUNCH_FLAG_LBZ1_KNUX_BOUNDARY_PUBLISH_PENDING = 1 << 16;
+    private static final int LAUNCH_FLAG_CENTER_NATIVE_FINAL_ARENA_CAMERA = 1 << 17;
+
+    /** Widescreen projection selected by the native placed Knuckles final-arena owner. */
+    private boolean centerNativeFinalArenaCamera;
+    public boolean centerNativeArenaCamera() { return centerNativeFinalArenaCamera; }
+    public void setCenterNativeArenaCamera(boolean value) { centerNativeFinalArenaCamera = value; }
 
     private final int actIndex;
     private final PlayerCharacter playerCharacter;
@@ -712,6 +718,8 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
                 (flags & LAUNCH_FLAG_LBZ1_KNUX_BOMB_SHAKE_ACTIVE) != 0;
         lbz1KnucklesBoundaryPublishPending =
                 (flags & LAUNCH_FLAG_LBZ1_KNUX_BOUNDARY_PUBLISH_PENDING) != 0;
+        centerNativeFinalArenaCamera =
+                (flags & LAUNCH_FLAG_CENTER_NATIVE_FINAL_ARENA_CAMERA) != 0;
     }
 
     private void restoreLaunchInts(ByteBuffer buffer,
@@ -733,6 +741,7 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
     }
 
     private void clearLaunchState() {
+        centerNativeFinalArenaCamera = false;
         launchActive = false;
         deathEggRumble = false;
         fgLaunchSpeed = 0;
@@ -825,6 +834,9 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         }
         if (lbz1KnucklesBoundaryPublishPending) {
             flags |= LAUNCH_FLAG_LBZ1_KNUX_BOUNDARY_PUBLISH_PENDING;
+        }
+        if (centerNativeFinalArenaCamera) {
+            flags |= LAUNCH_FLAG_CENTER_NATIVE_FINAL_ARENA_CAMERA;
         }
         return flags;
     }

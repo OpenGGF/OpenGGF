@@ -79,7 +79,7 @@ def worktree_build_slot(root):
                 next_notice = now + 30
             time.sleep(.2)
         stack.callback(_unlock, lease)
-        print(f'Build-only Maven command; shared test queue bypassed: {root}', flush=True)
+        print(f'Worktree build/test lock acquired (shared test admission is separate): {root}', flush=True)
         yield lease.fileno()
 
 
@@ -113,16 +113,26 @@ def worktree_metadata_slot(root):
         yield
 
 
-def _execution_leases(stack, common, request, config):
+def _execution_leases(stack, common, request, config, tree_fd=None):
     """Probe capacity under the admission lock; retain leases in stack on success."""
     from maven_resources import GIB, snapshot, admits
     from maven_running import live_load
     from maven_schedule import WORKTREE_BUSY
 
-    tree = _open_lock(stack, Path(request['tree']))
-    if not _acquire(tree):
-        return WORKTREE_BUSY
-    stack.callback(_unlock, tree)
+    if tree_fd is None:
+        tree = _open_lock(stack, Path(request['tree']))
+        if not _acquire(tree):
+            return WORKTREE_BUSY
+        stack.callback(_unlock, tree)
+    else:
+        # Category batches retain target/ ownership between admissions. The
+        # duplicate shares the existing OS lease; never unlock the caller's
+        # retained lease when releasing this batch's shared resource slots.
+        tree = stack.enter_context(os.fdopen(os.dup(tree_fd), 'a+b'))
+        if os.name == 'posix' and not _acquire(tree):
+            # A matching inode alone is not permission to bypass a foreign
+            # holder. flock on our retained open-file description is idempotent.
+            return WORKTREE_BUSY
     legacy = _open_lock(stack, common / 'maven-queue.lock')
     if not _acquire(legacy, shared=request['auto']):
         return None
@@ -152,7 +162,7 @@ def _execution_leases(stack, common, request, config):
 
 
 @contextmanager
-def maven_slot(root, *, exclusive=False, estimate=900, kind='maven', reservation=None):
+def maven_slot(root, *, exclusive=False, estimate=900, kind='maven', reservation=None, tree_fd=None):
     """Automatically schedule waiters, then retain OS-owned execution leases.
 
     Short estimates win until five-minute aging promotes arrival order. Blocked
@@ -161,6 +171,10 @@ def maven_slot(root, *, exclusive=False, estimate=900, kind='maven', reservation
     Older clients retain lock compatibility but not priority.
     While running, a usage lease lets later admissions credit this job's realised
     RSS/CPU; the finished job appends one telemetry line.
+
+    ``tree_fd`` is an already-held worktree_build_slot lease. Validate its inode
+    against this root, retain it for Maven, and release only shared admission at
+    the end of a batch. Other waiters still probe the locked tree normally.
     """
     from maven_resources import GIB, policy, snapshot
     from maven_running import RunningLease, UsageSampler, append_log, trim_log
@@ -177,6 +191,14 @@ def maven_slot(root, *, exclusive=False, estimate=900, kind='maven', reservation
         cwd=root, text=True).strip()).resolve()
     git_dir = Path(subprocess.check_output(
         ['git', 'rev-parse', '--absolute-git-dir'], cwd=root, text=True).strip()).resolve()
+    if tree_fd is not None:
+        try:
+            matches = (type(tree_fd) is int and tree_fd >= 0
+                       and os.path.samestat(os.fstat(tree_fd), (git_dir / 'maven-worktree.lock').stat()))
+        except OSError:
+            matches = False
+        if not matches:
+            raise ValueError('Retained descriptor must belong to this worktree build/test lock')
     mode = os.environ.get('OPENGGF_MAVEN_QUEUE', 'auto')
     if mode not in ('auto', 'serial'):
         raise ValueError('OPENGGF_MAVEN_QUEUE must be auto or serial')
@@ -200,13 +222,15 @@ def maven_slot(root, *, exclusive=False, estimate=900, kind='maven', reservation
                         if request is None:
                             request = WaitingRequest(common, dict(
                                 tree=str(git_dir / 'maven-worktree.lock'), auto=auto,
+                                retained_tree=tree_fd is not None,
                                 estimate=estimate, enqueued=started, reservation=reservation), _acquire)
 
                         def fits(record):
                             nonlocal execution, leases
                             candidate = ExitStack()
                             try:
-                                found = _execution_leases(candidate, common, record, config)
+                                found = _execution_leases(candidate, common, record, config,
+                                    tree_fd=tree_fd if record['id'] == request.record['id'] else None)
                                 if found is WORKTREE_BUSY:
                                     return found
                                 if found and record['id'] == request.record['id']:
@@ -360,6 +384,20 @@ def build_only(args):
     return bool(goals) and (skip or all(goal in before_tests for goal in goals))
 
 
+def _jvm_environment_requires_exclusive():
+    # This exact runtime flag selects the supported isolated graphics backend;
+    # it changes neither JVM heaps nor fork/thread counts. Keep all unmeasured
+    # options conservative, including a safe flag mixed with an unsafe one.
+    allowed = {'-Dopenggf.headless.gl=surfaceless-egl'}
+    for key in ('JAVA_TOOL_OPTIONS', 'JDK_JAVA_OPTIONS', 'MAVEN_OPTS'):
+        try:
+            if set(shlex.split(os.environ.get(key, ''))) - allowed:
+                return True
+        except ValueError:
+            return True
+    return False
+
+
 def needs_exclusive(args):
     """Unmeasured fork/heap/profile overrides retain the serial contract."""
     from maven_schedule import profiles_of
@@ -368,7 +406,7 @@ def needs_exclusive(args):
         return True
     profiles, following_profile = profiles_of(args)
     return (following_profile or bool(set(profiles) - SHARED_PROFILES)
-            or any(os.environ.get(key) for key in ('JAVA_TOOL_OPTIONS', 'JDK_JAVA_OPTIONS', 'MAVEN_OPTS')))
+            or _jvm_environment_requires_exclusive())
 
 
 def lean_command(args):
@@ -398,7 +436,8 @@ def lean_command(args):
     if sys.platform == 'darwin':
         line = '-XstartOnFirstThread ' + line
     return [*args, '-Dsurefire.argLine=' + line, '-Dsurefire.forkCount=1',
-            '-Dsurefire.reuseForks=true'], dict(os.environ, MAVEN_OPTS='-Xmx1g')
+            '-Dsurefire.reuseForks=true'], dict(os.environ,
+                MAVEN_OPTS=(os.environ.get('MAVEN_OPTS', '').strip() + ' -Xmx1g').strip())
 
 
 def main(argv=None):

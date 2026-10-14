@@ -17,6 +17,7 @@ import com.openggf.mods.ModDescriptor;
 import com.openggf.mods.ModRuntimeFindingStore;
 import com.openggf.mods.ModStateSaveResult;
 import com.openggf.mods.PcmDecoder;
+import com.openggf.mods.scene.SceneAudio;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
@@ -30,6 +31,64 @@ import org.junit.jupiter.api.parallel.Isolated;
 @Isolated
 class TestEggmansSkyVoiceAssets {
     @TempDir Path work;
+
+    @Test void anAnnouncementRequestedBeforeAudioIsReadyEventuallyReachesFinalPcm() throws Exception {
+        try (ExampleModHarness harness = ExampleModHarness.build(Path.of("examples/eggmans-sky"), work)) {
+            Path root = work.toAbsolutePath().normalize();
+            var validation = new ModCatalogValidator(root, ModInputLimits.production(), (game, id) -> true)
+                    .validate(new DefaultModRepositoryScanner().scan(root));
+            assertEquals(1, validation.entries().size());
+            ModDescriptor descriptor = assertInstanceOf(ModDescriptor.class, validation.entries().getFirst());
+            assertFalse(descriptor.hasErrors(), () -> descriptor.findings().toString());
+            var effective = new EffectiveModCatalog(List.of(descriptor));
+            var preparer = new ModAudioPreparer(root, ModInputLimits.production(), new ModRuntimeFindingStore(),
+                    owners -> new ModStateSaveResult.Saved());
+            try (var view = ModSubsystem.preparedAudioFactory(preparer, effective, validation.registry(),
+                    validation.sfxRegistry()).prepare(48_000, "s3k")) {
+                AudioManager audio = AudioManager.getInstance();
+                audio.resetState();
+                audio.setBackend(new NullAudioBackend());
+                SceneAudio sceneAudio = new SceneAudio() {
+                    @Override public boolean playSfx(String localName) {
+                        return audio.playNamespacedSfx(new StreamedMusicPort.SfxRef("eggmans-sky", localName));
+                    }
+                    @Override public void playMusic(int id) { }
+                    @Override public void playSfx(int id) { }
+                    @Override public void fadeOutMusic() { }
+                    @Override public void stopMusic() { }
+                };
+                Class<?> voiceType = harness.loader().loadClass("eggsky.core.Voice");
+                Class<?> lineType = harness.loader().loadClass("eggsky.core.VoiceLine");
+                Object voice = voiceType.getConstructor().newInstance();
+                voiceType.getMethod("say", lineType).invoke(voice, lineType.getField("SYSTEMS_ONLINE").get(null));
+                var update = voiceType.getMethod("update", SceneAudio.class, long.class);
+                try {
+                    // Same trigger crosses the real host's unavailable-to-prepared boundary.
+                    update.invoke(voice, sceneAudio, 1L);
+                    audio.installStreamedMusicPort(view.streamedMusicPort());
+                    try (var capture = audio.beginLiveCaptureAudio(audio.presentationFrameRate())) {
+                        update.invoke(voice, sceneAudio, 2L);
+                        short[] samples = new short[capture.maxStereoFramesPerPacket() * 2];
+                        boolean audible = false;
+                        for (int tick = 0; tick < 12; tick++) {
+                            audio.presentFrame(PresentationMode.FORWARD);
+                            audio.update();
+                            int count = capture.drainPresentationFrame(samples);
+                            int min = Short.MAX_VALUE, max = Short.MIN_VALUE;
+                            for (int i = 0; i < count * 2; i++) {
+                                min = Math.min(min, samples[i]);
+                                max = Math.max(max, samples[i]);
+                            }
+                            audible |= count > 0 && max - min > 32;
+                        }
+                        assertTrue(audible, "the original scene announcement must reach mixed PCM after audio becomes ready");
+                    }
+                } finally {
+                    audio.resetState();
+                }
+            }
+        }
+    }
 
     @Test void everyDeclaredClipIsVerifiedDecodableAudibleAndHasAnAccurateQueueLease() throws Exception {
         Path project = Path.of("examples/eggmans-sky");

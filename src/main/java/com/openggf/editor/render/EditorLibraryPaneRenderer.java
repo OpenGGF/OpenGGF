@@ -47,87 +47,121 @@ public class EditorLibraryPaneRenderer {
 
     public void renderCommands(List<String> lines) {
         List<GLCommand> backdrop = new ArrayList<>();
-        for (int[] point : new int[][] {{8, 34}, {312, 34}, {312, 192}, {8, 192}}) {
+        for (int[] point : new int[][] {{8, 40}, {graphicsManager.getProjectionWidth()-8, 40},
+                {graphicsManager.getProjectionWidth()-8, 192}, {8, 192}}) {
             backdrop.add(new GLCommand(GLCommand.CommandType.VERTEX2I, -1,
                     GLCommand.BlendType.ONE_MINUS_SRC_ALPHA, 0.025f, 0.04f, 0.07f,
                     point[0], point[1], 0, 0));
         }
         graphicsManager.registerCommand(new GLCommandGroup(org.lwjgl.opengl.GL11.GL_TRIANGLE_FAN, backdrop));
-        textRenderer.renderLines(lines, 18, 42);
+        textRenderer.renderFittedLines(lines,18,42,graphicsManager.getProjectionWidth()-36,.65f,10);
     }
 
     public void render(EditorHierarchyDepth depth) {
-        List<GLCommand> commands = new ArrayList<>();
-        appendCommands(commands);
-        if (!commands.isEmpty()) {
-            graphicsManager.registerCommand(new GLCommandGroup(GL_LINES, commands));
+        List<GLCommand> commands=new ArrayList<>();appendCommands(commands);
+        graphicsManager.registerCommand(new GLCommandGroup(GL_LINES,commands));
+        textRenderer.renderFittedLines(buildCompactLibraryLines(depth),18,44,128,.65f,9);
+        if(controller==null)return;
+        var browser=controller.libraryBrowser();var grid=layout().libraryGrid();
+        int start=browser.cursor()/9*9;
+        for(int i=start;i<Math.min(start+9,browser.visibleEntries().size());i++) {
+            int cell=i-start,x=grid.x()+(cell%3)*grid.cellSize(),y=grid.y()+(cell/3)*grid.cellSize();
+            var entry=browser.visibleEntries().get(i);
+            for(PreviewPlacement placement:tilePreview(entry,x+2,y+2))renderTile(placement);
+            if(entry.kind()==EditorLibraryBrowserPane.Kind.OBJECT&&entry.previewArtKey()!=null) {
+                var renderer=controller.libraryObjectPreviewRenderer(entry.previewArtKey());
+                if(renderer!=null) {
+                    var bounds=renderer.getFrameBoundsForIndex(0);
+                    if(bounds.maxX()-bounds.minX()<=28&&bounds.maxY()-bounds.minY()<=24)
+                        renderer.drawFrameIndex(0,x+4-bounds.minX(),y+2-bounds.minY());
+                }
+            }
+            String label=entry.kind()==EditorLibraryBrowserPane.Kind.OBJECT
+                    ?(entry.stockObjectId()==null?"key":"%02X".formatted(entry.stockObjectId())):String.valueOf(entry.index());
+            textRenderer.renderFittedLines(List.of(label),x+2,y+25,32,.65f,9);
         }
-        textRenderer.renderLines(buildLibraryLines(depth), 18, 48);
-        renderSelectedPreview();
     }
-
+    private EditorUiLayout layout(){return new EditorUiLayout(graphicsManager.getProjectionWidth(),224);}
     protected void appendCommands(List<GLCommand> commands) {
-        EditorToolbarRenderer.appendRectOutline(commands, 12, 34, 152, 194, CHROME_R, CHROME_G, CHROME_B);
-        EditorToolbarRenderer.appendLine(commands, 12, 60, 152, 60, CHROME_R, CHROME_G, CHROME_B);
-        EditorToolbarRenderer.appendLine(commands, 12, 90, 152, 90, CHROME_R, CHROME_G, CHROME_B);
-        EditorToolbarRenderer.appendLine(commands, 54, 90, 54, 194, CHROME_R, CHROME_G, CHROME_B);
-        EditorToolbarRenderer.appendLine(commands, 96, 90, 96, 194, CHROME_R, CHROME_G, CHROME_B);
-        EditorToolbarRenderer.appendLine(commands, 12, 128, 152, 128, CHROME_R, CHROME_G, CHROME_B);
-        EditorToolbarRenderer.appendLine(commands, 12, 164, 152, 164, CHROME_R, CHROME_G, CHROME_B);
-        if(controller!=null) {
-            EditorLibraryBrowserPane.Entry selected=controller.libraryBrowser().selected();
-            if(selected!=null&&selected.kind()==EditorLibraryBrowserPane.Kind.OBJECT&&!hasExactObjectArtPreview()) {
-                EditorToolbarRenderer.appendRectOutline(commands,62,98,102,138,.7f,.7f,.7f);
-                EditorToolbarRenderer.appendLine(commands,62,98,102,138,.7f,.7f,.7f);
-                EditorToolbarRenderer.appendLine(commands,102,98,62,138,.7f,.7f,.7f);
+        var pane=layout().library();
+        EditorToolbarRenderer.appendRectOutline(commands,pane.left(),pane.top(),pane.right(),pane.bottom(),CHROME_R,CHROME_G,CHROME_B);
+        if(controller==null)return;
+        var grid=layout().libraryGrid();var browser=controller.libraryBrowser();int start=browser.cursor()/9*9;
+        for(int i=start;i<Math.min(start+9,browser.visibleEntries().size());i++) {
+            int cell=i-start,x=grid.x()+cell%3*grid.cellSize(),y=grid.y()+cell/3*grid.cellSize();
+            boolean selected=i==browser.cursor();
+            EditorToolbarRenderer.appendRectOutline(commands,x,y,x+grid.cellSize()-2,y+grid.cellSize()-2,
+                    selected?1f:.4f,selected?.95f:.5f,selected?.2f:.6f);
+            if(browser.visibleEntries().get(i).kind()==EditorLibraryBrowserPane.Kind.OBJECT) {
+                EditorToolbarRenderer.appendRectOutline(commands,x+8,y+5,x+26,y+23,.7f,.7f,.7f);
+                EditorToolbarRenderer.appendLine(commands,x+8,y+5,x+26,y+23,.7f,.7f,.7f);
+                EditorToolbarRenderer.appendLine(commands,x+26,y+5,x+8,y+23,.7f,.7f,.7f);
             }
         }
     }
-
-    protected List<String> buildLibraryLines(EditorHierarchyDepth depth) {
-        if (controller == null) {
-            return List.of(libraryTitle(depth), "No controller");
-        }
-
-        List<String> lines = new ArrayList<>();
-        EditorLibraryBrowserPane browser=controller.libraryBrowser();
-        EditorLibraryBrowserPane.Entry selected=browser.selected();
-        lines.add(selected==null?libraryTitle(depth):switch(selected.kind()) {
-            case BLOCK -> "Block library"; case CHUNK -> "Chunk library"; case OBJECT -> "Object palette";
-        });
-        lines.add("Focus " + controller.focusRegion());
-        lines.add("Filter " + (browser.filter().isEmpty()?"-":browser.filter()));
-        lines.add("Filter input "+(controller.isLibraryFilterInputActive()?"ON":"OFF (Insert)"));
-        lines.add("Cursor " + browser.cursor() + "/" + browser.visibleEntries().size());
-        if(selected!=null)lines.add(selected.kind()==EditorLibraryBrowserPane.Kind.OBJECT
-                ? (hasExactObjectArtPreview()?"Preview exact object art":"Preview [generic object]")
-                : "Preview loaded tileset #"+selected.index());
-        int start=Math.max(0,browser.cursor()-1),end=Math.min(browser.visibleEntries().size(),start+5);
-        for(int i=start;i<end;i++)lines.add((i==browser.cursor()?"> ":"  ")+browser.visibleEntries().get(i).label());
-        return lines;
+    protected List<EditorTextRenderer.TextCommand> buildLibraryTextCommands(EditorHierarchyDepth depth) {
+        return textRenderer.buildFittedTextCommands(buildCompactLibraryLines(depth),18,44,128,.65f,9);
     }
 
+    private List<String> buildCompactLibraryLines(EditorHierarchyDepth depth) {
+        if (controller == null) return List.of(libraryTitle(depth), "No controller");
+        var browser = controller.libraryBrowser();
+        var selected = browser.selected();
+        String title = selected != null && selected.kind() == EditorLibraryBrowserPane.Kind.OBJECT
+                ? "Object palette" : libraryTitle(depth);
+        return List.of(title + " " + (browser.cursor() + 1) + "/" + browser.visibleEntries().size(),
+                "Filter " + (controller.isLibraryFilterInputActive() ? "ON " : "OFF ")
+                        + (browser.filter().isEmpty() ? "(Insert)" : browser.filter()),
+                selected == null ? "No matching entries" : selected.label());
+    }
+
+    protected List<String> buildLibraryLines(EditorHierarchyDepth depth) {
+        if(controller==null)return List.of(libraryTitle(depth),"No controller");
+        var browser=controller.libraryBrowser();var selected=browser.selected();
+        String title=selected==null?libraryTitle(depth):switch(selected.kind()) {
+            case BLOCK->"Block library";case CHUNK->"Chunk library";case PATTERN->"Pattern library";case OBJECT->"Object palette";
+        };
+        return List.of(title+" | Cursor "+(browser.cursor()+1)+"/"+browser.visibleEntries().size(),
+                "Filter "+(controller.isLibraryFilterInputActive()?"ON ":"OFF ")+(browser.filter().isEmpty()?"(Insert)":browser.filter()),
+                selected==null?"No matching entries":selected.label(),
+                selected!=null&&selected.kind()==EditorLibraryBrowserPane.Kind.OBJECT
+                        ?(hasExactObjectArtPreview()?"Preview exact object art":"Preview [generic object]")
+                        :controller.brushSummary(),"Focus "+controller.focusRegion());
+    }
     protected List<PreviewPlacement> buildSelectedTilePreview() {
-        if(controller==null)return List.of();
-        EditorLibraryBrowserPane.Entry entry=controller.libraryBrowser().selected();
-        if(entry==null||entry.kind()==EditorLibraryBrowserPane.Kind.OBJECT)return List.of();
+        if(controller==null||controller.libraryBrowser().selected()==null)return List.of();
+        int cell=controller.libraryBrowser().cursor()%9;var grid=layout().libraryGrid();
+        return tilePreview(controller.libraryBrowser().selected(),grid.x()+cell%3*grid.cellSize()+2,grid.y()+cell/3*grid.cellSize()+2);
+    }
+    private List<PreviewPlacement> tilePreview(EditorLibraryBrowserPane.Entry entry,int x,int y) {
         List<PreviewPlacement> placements=new ArrayList<>();
-        if(entry.kind()==EditorLibraryBrowserPane.Kind.CHUNK) {
-            appendChunk(placements,controller.libraryPreviewChunk(entry.index()),64,108);
-        } else {
+        if(entry.kind()==EditorLibraryBrowserPane.Kind.PATTERN)
+            placements.add(new PreviewPlacement(new PatternDesc(entry.index()),x+8,y+4,16));
+        else if(entry.kind()==EditorLibraryBrowserPane.Kind.CHUNK)
+            appendChunk(placements,controller.libraryPreviewChunk(entry.index()),x+8,y+4,8,false,false);
+        else if(entry.kind()==EditorLibraryBrowserPane.Kind.BLOCK) {
             Block block=controller.libraryPreviewBlock(entry.index());
-            if(block!=null)for(int y=0;y<Math.min(8,block.getGridSide());y++)for(int x=0;x<Math.min(8,block.getGridSide());x++) {
-                int chunkIndex=block.getChunkDesc(x,y).getChunkIndex();
-                appendChunk(placements,controller.libraryPreviewChunk(chunkIndex),16+x*16,64+y*16);
+            if(block!=null) {
+                int patternSize=Math.max(1,Math.min(8,24/(block.getGridSide()*2)));
+                for(int cy=0;cy<block.getGridSide();cy++)for(int cx=0;cx<block.getGridSide();cx++) {
+                    var desc=block.getChunkDesc(cx,cy);
+                    appendChunk(placements,controller.libraryPreviewChunk(desc.getChunkIndex()),
+                            x+cx*patternSize*2,y+cy*patternSize*2,patternSize,desc.getHFlip(),desc.getVFlip());
+                }
             }
         }
         return List.copyOf(placements);
     }
-
-    private static void appendChunk(List<PreviewPlacement> placements,Chunk chunk,int originX,int originY) {
+    private static void appendChunk(List<PreviewPlacement> placements,Chunk chunk,int x,int y,int size,boolean hFlip,boolean vFlip) {
         if(chunk==null)return;
-        for(int y=0;y<2;y++)for(int x=0;x<2;x++)placements.add(
-                new PreviewPlacement(chunk.getPatternDesc(x,y),originX+x*8,originY+y*8));
+        for(int cy=0;cy<2;cy++)for(int cx=0;cx<2;cx++) {
+            PatternDesc source=chunk.getPatternDesc(hFlip?1-cx:cx,vFlip?1-cy:cy);
+            placements.add(new PreviewPlacement(new PatternDesc(source.get()^(hFlip?0x800:0)^(vFlip?0x1000:0)),x+cx*size,y+cy*size,size));
+        }
+    }
+    private void renderTile(PreviewPlacement placement) {
+        graphicsManager.renderPatternWithIdScaled(placement.descriptor().getPatternIndex(),placement.descriptor(),
+                placement.x(),placement.y(),placement.size(),placement.size());
     }
 
     protected boolean hasExactObjectArtPreview() {
@@ -137,18 +171,9 @@ public class EditorLibraryPaneRenderer {
                 &&controller.libraryObjectPreviewRenderer(selected.previewArtKey())!=null;
     }
 
-    private void renderSelectedPreview() {
-        for(PreviewPlacement placement:buildSelectedTilePreview())graphicsManager.renderPatternWithId(
-                placement.descriptor().getPatternIndex(),placement.descriptor(),placement.x(),placement.y());
-        if(controller==null)return;
-        EditorLibraryBrowserPane.Entry selected=controller.libraryBrowser().selected();
-        if(selected!=null&&selected.previewArtKey()!=null) {
-            var renderer=controller.libraryObjectPreviewRenderer(selected.previewArtKey());
-            if(renderer!=null)renderer.drawFrameIndex(0,82,112);
-        }
+    protected record PreviewPlacement(PatternDesc descriptor,int x,int y,int size) {
+        public PreviewPlacement(PatternDesc descriptor,int x,int y){this(descriptor,x,y,8);}
     }
-
-    protected record PreviewPlacement(PatternDesc descriptor,int x,int y) {}
 
     private static String libraryTitle(EditorHierarchyDepth depth) {
         return switch (depth) {

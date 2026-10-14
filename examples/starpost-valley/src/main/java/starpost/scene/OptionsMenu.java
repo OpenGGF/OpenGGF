@@ -17,23 +17,24 @@ final class OptionsMenu implements Screen {
         return true;
     }
 
-    private int rows() {
-        return inGame ? 4 : 3;
+    private int rows(Settings settings) {
+        return 3 + (settings.replacementRequired() ? 1 : 0) + (inGame ? 1 : 0);
     }
 
     @Override
     public void update(Shell shell) {
         Settings s = shell.settings;
+        cursor = Math.min(cursor, rows(s) - 1);
         if (shell.in.back || shell.in.menu && !shell.in.confirm) {
-            s.save(shell.ctx.storage());
+            s.flush();
             shell.apply();
             shell.pop();
             return;
         }
         if (shell.in.downPressed) {
-            cursor = (cursor + 1) % rows();
+            cursor = (cursor + 1) % rows(s);
         } else if (shell.in.upPressed) {
-            cursor = (cursor + rows() - 1) % rows();
+            cursor = (cursor + rows(s) - 1) % rows(s);
         }
         boolean change = shell.in.confirm || shell.in.leftPressed || shell.in.rightPressed;
         if (!change) {
@@ -46,23 +47,31 @@ final class OptionsMenu implements Screen {
             case 2 -> s.stamina = !s.stamina;
             default -> {
                 if (shell.in.confirm) {
-                    shell.pop();
-                    shell.push(new ConfirmMenu("QUIT? TODAY IS LOST SINCE MORNING.", () -> shell.go(new TitleScreen())));
+                    if (s.replacementRequired() && cursor == 3) {
+                        shell.push(new ConfirmMenu("REPLACE STORED OPTIONS?", () -> s.replaceStoredOptions()));
+                    } else {
+                        shell.pop();
+                        shell.push(new ConfirmMenu("QUIT? TODAY IS LOST SINCE MORNING.", () -> shell.go(new TitleScreen())));
+                    }
                 }
+                return;
             }
         }
+        s.save();
         shell.apply();
     }
 
     @Override
     public void draw(Shell shell, SceneCanvas canvas) {
         Settings s = shell.settings;
-        int w = 280, h = 40 + rows() * 18 + 24, x = (canvas.width() - w) / 2, y = 50;
+        int w = 280, h = 40 + rows(s) * 18 + 24, x = (canvas.width() - w) / 2, y = 50;
         Text.panel(canvas, x, y, w, h);
         Text.shadow(canvas, "OPTIONS", x + 10, y + 8, Text.YELLOW);
-        String[] labels = {"MUSIC", "DAY LENGTH", "ENERGY", "QUIT TO TITLE"};
-        String[] values = {s.music ? "ON" : "OFF", s.dayMinutes + " MIN", s.stamina ? "STAMINA" : "MOMENTUM", ""};
-        for (int i = 0; i < rows(); i++) {
+        String[] labels = s.replacementRequired()
+                ? new String[]{"MUSIC", "DAY LENGTH", "ENERGY", "REPLACE STORED OPTIONS", "QUIT TO TITLE"}
+                : new String[]{"MUSIC", "DAY LENGTH", "ENERGY", "QUIT TO TITLE"};
+        String[] values = {s.music ? "ON" : "OFF", s.dayMinutes + " MIN", s.stamina ? "STAMINA" : "MOMENTUM", "", ""};
+        for (int i = 0; i < rows(s); i++) {
             int ry = y + 28 + i * 18;
             int colour = i == cursor ? Text.YELLOW : Text.WHITE;
             Text.shadow(canvas, (i == cursor ? "> " : "  ") + labels[i], x + 12, ry, colour);

@@ -1,5 +1,6 @@
 package com.openggf.sprites.playable;
 
+import com.openggf.game.mutators.PlayerFluidContextAccess;
 import com.openggf.game.ModApi;
 
 import com.openggf.camera.Camera;
@@ -26,7 +27,6 @@ import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.PlayerCapabilityRules;
 import com.openggf.game.rules.PlayerMovementRules;
 import com.openggf.game.rewind.RewindTransient;
-import com.openggf.timer.Timer;
 import com.openggf.timer.TimerManager;
 
 import com.openggf.audio.GameAudioProfile;
@@ -915,6 +915,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.leftInputPressed = false;
                 this.rightInputPressed = false;
                 this.logicalInputState = 0;
+                // Scripted screens can project native coordinates through a
+                // temporary drawing origin. A fresh player returns to world space.
+                this.renderXOffset = 0;
+                this.renderYOffset = 0;
                 this.renderFlagWidthPixels = 0x18;
                 this.renderFlagOnScreen = true;
                 this.renderFlagOnScreenValid = false;
@@ -942,7 +946,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.statusTertiary = 0;
                 resetBaseSpeeds(); // Reset speeds to default
                 instaShieldRegistered = false; // Force re-registration with new ObjectManager on level load
-                resolvePhysicsProfile(GameServices.bootstrapGameModule());
+                // Fresh level assembly runs before tickStatus refreshes cached rules.
+                resolvePhysicsProfile(GameServices.currentOrBootstrapGameModule());
                 // ROM: Obj01_Init unconditionally sets y_radius=$13, x_radius=9.
                 // Since we reuse the sprite rather than recreating it, we must
                 // explicitly restore standing dimensions and sensor offsets here.
@@ -1256,7 +1261,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // Javadoc for the null contract subclasses must honor.
                 restoreSubclassRewindState(extra.subclassExtra());
                 instaShieldObject = PendingInstaShieldRewindExtra.restore(s.objectSubclassExtra(),
-                        instaShieldObject, powerUpSpawner != null
+                        instaShieldObject, instaShieldRegistered, powerUpSpawner != null
                                 ? () -> instaShieldObject = powerUpSpawner.createInstaShield(this) : null);
         }
 
@@ -1414,7 +1419,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         private void refreshPersistentInstaShieldRegistration(boolean registerNow) {
-                if (!hasPersistentInstaShieldAbility() || powerUpSpawner == null) {
+                if (!hasPersistentInstaShieldAbility() || powerUpSpawner == null
+                        || !PendingInstaShieldRewindExtra.permitsRefresh(registerNow, instaShieldObject)) {
                         return;
                 }
                 if (instaShieldObject == null || instaShieldObject.isDestroyed()) {
@@ -1585,6 +1591,12 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public void giveSpeedShoes() {
+                giveSpeedShoes(SpeedShoesTimer.ROM_DURATION_FRAMES);
+        }
+
+        /** Grants native shoes with a bounded duration, without shortening an existing pickup. */
+        public void giveSpeedShoes(int durationFrames) {
+                SpeedShoesTimer admitted = PlayableSpeedShoesLifecycle.admit(this, durationFrames);
                 // S3K: shoes activation uses absolute values from canonical base ($C00/$18/$80),
                 // not 2x of Character_Speeds init values (sonic3k.asm:40823-40825)
                 clearInitOverride();
@@ -1592,7 +1604,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // Register speed shoes timer using the existing timer framework
                 // Duration is 1200 frames (20 seconds @ 60fps) per SPG Sonic 2
                 currentTimerManager().registerTimer(
-                                new SpeedShoesTimer("SpeedShoes-" + getCode(), this));
+                                admitted);
         }
 
         /**
@@ -1611,11 +1623,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * Zero when speed shoes are not active.
          */
         private int currentSpeedShoesRemainingTicks() {
-                if (!speedShoes) {
-                        return 0;
-                }
-                Timer timer = currentTimerManager().getTimerForCode("SpeedShoes-" + getCode());
-                return timer != null ? timer.getTicks() : 0;
+                return PlayableSpeedShoesLifecycle.remainingTicks(this, speedShoes);
         }
 
         /**
@@ -1631,19 +1639,19 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * RewindRegistry's cross-subsystem restore ordering.
          */
         private void restoreSpeedShoesTimer(int remainingTicks) {
-                TimerManager timerManager = currentTimerManager();
-                String code = "SpeedShoes-" + getCode();
-                if (!speedShoes) {
-                        timerManager.removeTimerForCode(code);
-                        return;
-                }
-                SpeedShoesTimer replacement = new SpeedShoesTimer(code, this);
-                replacement.setTicks(remainingTicks > 0 ? remainingTicks : SpeedShoesTimer.ROM_DURATION_FRAMES);
-                timerManager.registerTimer(replacement);
+                PlayableSpeedShoesLifecycle.restoreTimer(this, speedShoes, remainingTicks);
         }
 
         public void giveInvincibility() {
-                setInvincibleFrames(1200); // 20 seconds @ 60fps
+                giveInvincibility(1200); // 20 seconds @ 60fps
+        }
+
+        /** Grants native protection/stars while retaining any longer existing protection. */
+        public void giveInvincibility(int durationFrames) {
+                if (durationFrames < 1 || durationFrames > 3600) {
+                        throw new IllegalArgumentException("Invincibility duration must be 1..3600 native frames");
+                }
+                setInvincibleFrames(Math.max(getInvincibleFrames(), durationFrames));
                 if (shieldObject != null) {
                         shieldObject.setVisible(false);
                 }
@@ -1773,6 +1781,15 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.spriteRenderer = spriteRenderer;
         }
 
+        /**
+         * Submits the current standard art pose when visible and installed. The host retains
+         * renderer/bank ownership; this helper changes no movement, sensors, or animation state.
+         * Native playable draws may keep their additional ROM-specific presentation rules.
+         */
+        protected final void drawStandardArt() {
+                PlayableSpriteArtPresentation.drawStandardArt(this);
+        }
+
         public int getMappingFrame() {
                 return mappingFrame;
         }
@@ -1801,12 +1818,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 if (isHidden()) {
                         return false;
                 }
-                int displayTimer = invulnerableFrames
-                        + (invulnerabilityDisplayTimerDecrementedThisFrame ? 1 : 0);
-                return isHurt()
-                        || hurtRoutineOwnedDisplayThisFrame
-                        || displayTimer <= 0
-                        || (displayTimer & 0x04) != 0;
+                return PlayableSpriteArtPresentation.nativeBodyVisible(
+                        invulnerableFrames, invulnerabilityDisplayTimerDecrementedThisFrame,
+                        isHurt(), hurtRoutineOwnedDisplayThisFrame);
         }
 
         /** Clears HurtStop's one-frame direct-display ownership after BuildSprites. */
@@ -1990,6 +2004,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // (invulnerableFrames already set in applyHurt() per ROM behavior)
                 if (!air && this.air && hurt) {
                         hurt = false;
+                        PlayableHurtRecovery.clearObjectControlAfterLanding(this);
                         forcedAnimationId = -1;
                         // HurtStop's direct draw path delays decrementing the reset timer by one frame.
                         invulnerableFrames = 0x78;
@@ -2106,10 +2121,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 controller.markHurtRecoveryCompleted();
                 invulnerableFrames = 0x78;
                 suppressNextInvulnerabilityDecrement = true;
-                setXSpeed((short) 0);
-                setYSpeed((short) 0);
-                setGSpeed((short) 0);
-                setSpindash(false);
+                PlayableHurtRecovery.stop(this);
         }
 
         public boolean isJumping() {
@@ -2556,10 +2568,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public short getJump() {
                 if (physicsModifiers != null) {
-                        return physicsModifiers.effectiveJump(jump, inWater);
+                        return physicsModifiers.effectiveJump(jump, PlayerFluidContextAccess.movementUnderwater(this));
                 }
                 // Fallback: Water reduced jump force (ROM s2.asm line 37019: 0x380 vs normal 0x680)
-                if (inWater) {
+                if (PlayerFluidContextAccess.movementUnderwater(this)) {
                         return 0x380;
                 }
                 return jump;
@@ -4000,7 +4012,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // Must define speeds before creating Manager (it will read speeds upon
                 // instantiation).
                 resetBaseSpeeds();
-                resolvePhysicsProfile(GameServices.bootstrapGameModule());
+                // Runtime construction belongs to the selected world; pre-session
+                // construction still uses the bootstrap default through this accessor.
+                resolvePhysicsProfile(GameServices.currentOrBootstrapGameModule());
 
                 if (specification != null) {
                         setWidth((standXRadius + 1) * 2);
@@ -4026,11 +4040,12 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         /**
          * Returns the stable identity persisted in launch profiles, saves, and rewind
-         * state. Registered mod subclasses must return the same owner-scoped key as
-         * their {@code CharacterDefinition}; the construction boundary validates it.
+         * state. A registered factory binds its definition's key independently of runtime
+         * sprite names. Expert overrides must declare that same key; the boundary validates it.
+         * Unregistered construction retains the native class's built-in fallback.
          */
         public CharacterKey characterKey() {
-                return PlayableCharacterIdentity.defaultFor(this);
+                return boundCharacterKey;
         }
 
         /**
@@ -4283,10 +4298,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // (s2.asm:36014 — expiry code restores Super values, confirming this design)
                 boolean effectiveShoes = hasSpeedShoes() && !isSuperSonic();
                 if (physicsModifiers != null) {
-                        return physicsModifiers.effectiveAccel(runAccel, waterPhysicsActive, effectiveShoes);
+                        return physicsModifiers.effectiveAccel(runAccel, PlayerFluidContextAccess.speedConstantsUnderwater(this, waterPhysicsActive), effectiveShoes);
                 }
                 // Fallback: Water overrides shoes (ROM sets absolute values on water entry)
-                if (waterPhysicsActive) {
+                if (PlayerFluidContextAccess.speedConstantsUnderwater(this, waterPhysicsActive)) {
                         return (short) (runAccel / 2);
                 }
                 if (effectiveShoes) {
@@ -4298,10 +4313,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public short getRunDecel() {
                 boolean effectiveShoes = hasSpeedShoes() && !isSuperSonic();
                 if (physicsModifiers != null) {
-                        return physicsModifiers.effectiveDecel(runDecel, waterPhysicsActive, effectiveShoes);
+                        return physicsModifiers.effectiveDecel(runDecel, PlayerFluidContextAccess.speedConstantsUnderwater(this, waterPhysicsActive), effectiveShoes);
                 }
                 // Fallback: Water overrides shoes
-                if (waterPhysicsActive) {
+                if (PlayerFluidContextAccess.speedConstantsUnderwater(this, waterPhysicsActive)) {
                         return (short) (runDecel / 2);
                 }
                 return runDecel;
@@ -4322,10 +4337,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public short getFriction() {
                 boolean effectiveShoes = hasSpeedShoes() && !isSuperSonic();
                 if (physicsModifiers != null) {
-                        return physicsModifiers.effectiveFriction(friction, waterPhysicsActive, effectiveShoes);
+                        return physicsModifiers.effectiveFriction(friction, PlayerFluidContextAccess.speedConstantsUnderwater(this, waterPhysicsActive), effectiveShoes);
                 }
                 // Fallback: Water overrides shoes (ROM sets absolute values on water entry)
-                if (waterPhysicsActive) {
+                if (PlayerFluidContextAccess.speedConstantsUnderwater(this, waterPhysicsActive)) {
                         return (short) (friction / 2);
                 }
                 if (effectiveShoes) {
@@ -4337,10 +4352,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public short getMax() {
                 boolean effectiveShoes = hasSpeedShoes() && !isSuperSonic();
                 if (physicsModifiers != null) {
-                        return physicsModifiers.effectiveMax(max, waterPhysicsActive, effectiveShoes);
+                        return physicsModifiers.effectiveMax(max, PlayerFluidContextAccess.speedConstantsUnderwater(this, waterPhysicsActive), effectiveShoes);
                 }
                 // Fallback: Water overrides shoes (ROM sets absolute values on water entry)
-                if (waterPhysicsActive) {
+                if (PlayerFluidContextAccess.speedConstantsUnderwater(this, waterPhysicsActive)) {
                         return (short) (max / 2);
                 }
                 if (effectiveShoes) {
@@ -5210,7 +5225,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         // Bubble shield prevents drowning (s3.asm: Player_ResetAirTimer)
                         PlayerCapabilityRules capabilityRules = playerCapabilityRulesOrNull();
                         if (capabilityRules != null && capabilityRules.elementalShieldsEnabled()
-                                        && shield && shieldType == ShieldType.BUBBLE) {
+                                        && shield && shieldType == ShieldType.BUBBLE
+                                        || PlayerFluidContextAccess.breathProtected(this)) {
                                 controller.getDrowning().replenishAir();
                         } else if (fixedLevelObjectOwnsDrowningBubbleCadence()) {
                                 // S3K installs Breathing_bubbles/Breathing_bubbles_P2
@@ -5543,14 +5559,14 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         public short getEffectiveRunAccel() {
                 return PlayablePhysicsValueResolver.runAcceleration(
-                                runAccel, waterPhysicsActive, speedShoes);
+                                runAccel, PlayerFluidContextAccess.speedConstantsUnderwater(this, waterPhysicsActive), speedShoes);
         }
 
         /**
          * Returns effective run deceleration, accounting for modifiers.
          */
         public short getEffectiveRunDecel() {
-                return PlayablePhysicsValueResolver.runDeceleration(runDecel, waterPhysicsActive);
+                return PlayablePhysicsValueResolver.runDeceleration(runDecel, PlayerFluidContextAccess.speedConstantsUnderwater(this, waterPhysicsActive));
         }
 
         /**
@@ -5558,7 +5574,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         public short getEffectiveFriction() {
                 return PlayablePhysicsValueResolver.friction(
-                                friction, waterPhysicsActive, speedShoes);
+                                friction, PlayerFluidContextAccess.speedConstantsUnderwater(this, waterPhysicsActive), speedShoes);
         }
 
         /**
@@ -5566,7 +5582,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         public short getEffectiveMax() {
                 return PlayablePhysicsValueResolver.maximumSpeed(
-                                max, waterPhysicsActive, speedShoes);
+                                max, PlayerFluidContextAccess.speedConstantsUnderwater(this, waterPhysicsActive), speedShoes);
         }
 
         /**
@@ -5574,7 +5590,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * ROM s2.asm line 37019: Underwater = 0x380 (896), Normal = 0x680 (1664)
          */
         public short getEffectiveJump() {
-                return PlayablePhysicsValueResolver.jumpForce(jump, inWater);
+                return PlayablePhysicsValueResolver.jumpForce(jump, PlayerFluidContextAccess.movementUnderwater(this));
         }
 
         /**
@@ -5583,7 +5599,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * Underwater: 0x10 (16 subpixels)
          */
         public short getEffectiveGravity() {
-                return PlayablePhysicsValueResolver.gravity(inWater);
+                return PlayablePhysicsValueResolver.gravity(PlayerFluidContextAccess.movementUnderwater(this));
         }
 
         /**
@@ -5592,6 +5608,6 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * Underwater: -0x200
          */
         public short getEffectiveAirDragThreshold() {
-                return PlayablePhysicsValueResolver.airDragThreshold(inWater);
+                return PlayablePhysicsValueResolver.airDragThreshold(PlayerFluidContextAccess.movementUnderwater(this));
         }
 }

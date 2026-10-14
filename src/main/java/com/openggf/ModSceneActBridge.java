@@ -29,7 +29,7 @@ final class ModSceneActBridge {
     }
 
     void updateScene(com.openggf.control.InputHandler input) {
-        if (transitioning) { input.update(); return; }
+        if (transitioning) return; // MenuScreenModeController advances the scene row's input once.
         loop.modSceneHost.update(input);
         admitLaunch();
     }

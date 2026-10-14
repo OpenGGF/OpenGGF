@@ -12,7 +12,7 @@ import tempfile
 import unittest
 import zipfile
 
-from build_windows import archive_bundle, assemble, digest, extract_jar, pe_x64, run
+from build_windows import archive_bundle, assemble, digest, extract_jar, pe_x64, run, retention_inputs
 from qualify_wine import verify_bundle
 
 
@@ -45,6 +45,14 @@ class PackagingTests(unittest.TestCase):
                 jar.writestr("content/sample.bin", b"unchanged")
             (inputs / "build-info.json").write_text(json.dumps({"sourceCommit": "a" * 40,
                 "mods": [{"slug": "hello-scene", "id": "hello-scene", "jarSha256": digest(mod)}]}))
+            fixture = root / "bootstrap-control.jar"
+            with zipfile.ZipFile(fixture, "w") as jar:
+                jar.writestr("control.txt", "runtime-only regression")
+            scan_inputs = retention_inputs(inputs / "mods", fixture, root / "retention-inputs")
+            self.assertEqual({mod.name, fixture.name}, {p.name for p in scan_inputs.iterdir()})
+            self.assertEqual(digest(fixture), digest(scan_inputs / fixture.name))
+            self.assertEqual(digest(mod), digest(scan_inputs / mod.name))
+            self.assertFalse((inputs / "mods" / fixture.name).exists())
             contract = root / "contract"
             contract.mkdir()
             (contract / "members.tsv").write_text("C\tcom.openggf.Engine\n")
@@ -55,6 +63,8 @@ class PackagingTests(unittest.TestCase):
                 (graal / name).write_text("retained")
             bundle = root / "bundle"
             assemble(bundle, image, engine, inputs, contract, graal, {}, "b" * 40)
+            self.assertFalse((bundle / "mods" / fixture.name).exists())
+            self.assertFalse((bundle / "quick-mods/bootstrap-control").exists())
             self.assertEqual("b" * 40, json.loads((bundle / "build-info.json").read_text())["nativeBuildSourceCommit"])
             self.assertIn("/tree/" + "b" * 40, (bundle / "README.txt").read_text())
             launcher = (bundle / "_launch.bat").read_text()

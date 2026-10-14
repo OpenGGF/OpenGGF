@@ -474,7 +474,14 @@ class TestSszAct2MechaEntry {
             assertTrue(fixture.sprite().isObjectControlled());
             assertEquals(0, fixture.sprite().getMappingFrame());
             for (int i = 0; i < 119; i++) boss.update(i, fixture.sprite());
-            assertEquals(0, boss.timerForTest(), "accepted cold stop before ending allocation");
+            assertEquals(0, boss.timerForTest(), "last held tick before loc_7BCFC allocation");
+            assertFalse(boss.isDestroyed());
+            boss.update(119, fixture.sprite());
+            assertTrue(boss.isDestroyed(), "loc_7BD2A deletes the defeated boss after both allocation attempts");
+            assertEquals(1,manager.activeObjectsOfType(
+                    com.openggf.game.sonic3k.ending.EndingKnucklesFlightObjectInstance.class).size());
+            assertEquals(1,manager.activeObjectsOfType(
+                    com.openggf.game.sonic3k.ending.EndingWhiteRestoreObjectInstance.class).size());
         }
 
 

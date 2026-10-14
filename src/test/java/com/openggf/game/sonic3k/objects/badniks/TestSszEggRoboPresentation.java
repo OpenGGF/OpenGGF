@@ -19,6 +19,61 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestSszEggRoboPresentation {
     @ParameterizedTest
     @ValueSource(ints = {0, 1})
+    void parentRetirementSignalsBothChildrenAndRestoredGraphFollowsItsLiveOwner(int flags) {
+        var fixture = HeadlessTestFixture.builder().withZoneAndAct(10, 0).build();
+        var services = TestEnvironment.objectServices();
+        var manager = services.objectManager();
+        ((SszZoneRuntimeState) services.zoneRuntimeState()).markEggRoboFlyByPassed(0);
+        AbstractObjectInstance.updateCameraBounds(0x100, 0xB80, 0x240, 0xC60, 0x1000);
+        var robo = new EggRoboBadnikInstance(new ObjectSpawn(0x200, 0xC00, 0xA0, 2, flags, false, 0));
+        robo.setServices(services);
+        manager.addDynamicObject(robo);
+        robo.update(0, fixture.sprite());
+        var gun = manager.activeObjectsOfType(EggRoboGunArmChildInstance.class).getFirst();
+        var flame = manager.activeObjectsOfType(EggRoboJetFlameChildInstance.class).getFirst();
+        gun.update(0, fixture.sprite());
+        flame.update(0, fixture.sprite());
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        var saved = registry.capture();
+
+        // Sprite_CheckDeleteTouch -> loc_85094 publishes status bit 7 before
+        // scheduling Delete_Current_Sprite; Child_Draw_Sprite reads that bit.
+        manager.removeDynamicObject(robo);
+        assertTrue(robo.isDestroyed(), "manager retirement must publish the native child-exit signal");
+        gun.update(1, fixture.sprite());
+        flame.update(1, fixture.sprite());
+        assertTrue(gun.isDestroyed());
+        assertTrue(flame.isDestroyed());
+
+        registry.restore(saved);
+        assertTrue(com.openggf.game.rewind.RewindSnapshotDiff.diffKey("object-manager",
+                saved.get("object-manager"), registry.capture().get("object-manager")).isEmpty(),
+                "recreate the live body and both exact child links");
+        var restoredBody = manager.activeObjectsOfType(EggRoboBadnikInstance.class).getFirst();
+        var restoredGun = manager.activeObjectsOfType(EggRoboGunArmChildInstance.class).getFirst();
+        var restoredFlame = manager.activeObjectsOfType(EggRoboJetFlameChildInstance.class).getFirst();
+        restoredGun.update(1, fixture.sprite());
+        restoredFlame.update(1, fixture.sprite());
+        assertFalse(restoredGun.isDestroyed(), "restored gun follows the recreated live owner");
+        assertFalse(restoredFlame.isDestroyed(), "restored flame follows the recreated live owner");
+
+        manager.removeDynamicObject(restoredBody);
+        var retired = registry.capture();
+        restoredGun.update(2, fixture.sprite());
+        restoredFlame.update(2, fixture.sprite());
+        assertTrue(restoredGun.isDestroyed());
+        assertTrue(restoredFlame.isDestroyed());
+        registry.restore(retired);
+        var orphanGun = manager.activeObjectsOfType(EggRoboGunArmChildInstance.class).getFirst();
+        var orphanFlame = manager.activeObjectsOfType(EggRoboJetFlameChildInstance.class).getFirst();
+        orphanGun.update(2, fixture.sprite());
+        orphanFlame.update(2, fixture.sprite());
+        assertTrue(orphanGun.isDestroyed(), "orphan retirement repeats after rewind");
+        assertTrue(orphanFlame.isDestroyed(), "orphan retirement repeats after rewind");
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, 1})
     void movingBodyGunAndFlameShareNativeAnchorsAndFlipsAfterRecreation(int flags) throws Exception {
         var fixture = HeadlessTestFixture.builder().withZoneAndAct(10, 0).build();
         fixture.stepIdleFrames(2);

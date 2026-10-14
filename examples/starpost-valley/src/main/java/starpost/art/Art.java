@@ -23,7 +23,13 @@ import java.util.Map;
  * Knuckles; the signpost, animals and badniks from Sonic 1, in Green Hill's palette. Terrain is
  * recoloured per season by {@link Tone}; built once in the scene's {@code enter}, never in draw.
  */
-public final class Art {
+public final class Art implements AutoCloseable {
+    private final java.util.function.LongSupplier clock;
+    private final String owner;
+    private boolean closed;
+    public long ticks() { return clock.getAsLong(); }
+    public String owner() { return owner; }
+    public void requireOpen() { if (closed) throw new IllegalStateException("Starpost art is closed"); }
     // Sonic 3 & Knuckles palettes (sonic3k.lst).
     private static final int PAL_SONIC_TAILS = 0x0A8A3C;  // Pal_SonicTails
     private static final int PAL_AIZ = 0x0A8B7C;          // Pal_AIZ
@@ -154,12 +160,17 @@ public final class Art {
     }
 
     public Art(SceneRomArt s1, SceneRomArt s3k) {
+        this(s1, s3k, () -> 0, "starpost-valley");
+    }
+
+    public Art(SceneRomArt s1, SceneRomArt s3k, java.util.function.LongSupplier clock, String owner) {
+        this.clock = java.util.Objects.requireNonNull(clock);
+        this.owner = java.util.Objects.requireNonNull(owner);
         this.s1 = s1;
         this.s3k = s3k;
         kit = s1.levelKit(0, 0);
-        if (kit == null || kit.blockSize() != BLOCK) {
-            throw new IllegalStateException("Green Hill's level kit is unavailable");
-        }
+        if (kit == null) throw new UnsupportedOperationException("Green Hill's level kit is unavailable");
+        if (kit.blockSize() != BLOCK) throw AssetFailures.invalidData("Green Hill's level kit must use 256-pixel blocks");
         ghzPalette = kit.palette();
         solidity = new byte[kit.blockCount()][];
 
@@ -252,11 +263,13 @@ public final class Art {
     }
 
     public SceneSpriteSet farmer(String code) {
+        requireOpen();
         return farmers.getOrDefault(code, farmers.get("sonic"));
     }
 
     /** The dust Obj_DashDust draws for this farmer (spin dash cloud, skid puffs). */
     public SceneSpriteSet dust(String code) {
+        requireOpen();
         return dust.getOrDefault(code, dust.get("sonic"));
     }
 
@@ -272,7 +285,7 @@ public final class Art {
         int relative = (offset[0] & 0xFF) << 8 | offset[1] & 0xFF;
         byte[] cue = rom.read(source.dplcAddress() + relative, 4);
         if (cue[0] != 0 || cue[1] != 1) {
-            throw new IllegalStateException("The skid preload must contain one tile-bank cue");
+            throw AssetFailures.invalidData("The skid preload must contain one tile-bank cue");
         }
         int entry = (cue[2] & 0xFF) << 8 | cue[3] & 0xFF;
         return RomSpriteRequest.uncompressed(source.artAddress() + (entry & 0xFFF) * 32,
@@ -299,19 +312,23 @@ public final class Art {
 
     /** A new dust object for one farmer, playing the ROM's Ani_DashSplashDrown. */
     public Dust newDust() {
+        requireOpen();
         return new Dust(dustScripts);
     }
 
     /** A new tail object for Tails, playing the ROM's Obj_Tails_Tail_AniSelection and AniTails_Tail. */
     public TailsTails newTails() {
+        requireOpen();
         return new TailsTails(tailsSelection, tailsScripts);
     }
 
     public SceneSpriteSet animal(String name) {
+        requireOpen();
         return animals.get(name);
     }
 
     public Seasonal season(int season) {
+        requireOpen();
         if (seasons[season] == null) {
             seasons[season] = new Seasonal(new Tone(season));
         }
@@ -320,6 +337,7 @@ public final class Art {
 
     /** Whether a pixel of a block is solid (top-solid floors count). Rows beyond the block are solid below. */
     public boolean solid(int block, int x, int y) {
+        requireOpen();
         if (y >= BLOCK) {
             return true;
         }
@@ -330,6 +348,14 @@ public final class Art {
             solidity[block] = kit.blockSolidity(block);
         }
         return solidity[block][y * BLOCK + x] != SceneLevelKit.EMPTY;
+    }
+
+    /** Retire local caches; the scene host owns ROM views and uploaded image resources. */
+    @Override public void close() {
+        if (closed) return;
+        closed = true;
+        dustBanks.close(); farmers.clear(); dust.clear(); animals.clear();
+        java.util.Arrays.fill(seasons, null); java.util.Arrays.fill(solidity, null);
     }
 
     /**

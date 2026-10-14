@@ -44,6 +44,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BooleanSupplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -156,6 +157,68 @@ class TestRaceSession {
     private static boolean roomThreadAlive(int port) {
         return Thread.getAllStackTraces().keySet().stream()
                 .anyMatch(thread -> thread.getName().equals("race-room-host-" + port) && thread.isAlive());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void refusedOrThrownInvitePublicationDoesNotAbortHostingAndExitRetriesIt(boolean throwing) throws Exception {
+        MemoryModStorage storage = new MemoryModStorage();
+        storage.failures = 1;
+        storage.throwWrites = throwing;
+        TimeAttackSettings settings = new TimeAttackSettings();
+        settings.setHostPort(freePort());
+        RaceSession host = session("invite-host-" + throwing, settings, storage, new Launches());
+        host.hostLan(SETUP, FP);
+        assertDoesNotThrow(() -> pollUntil("host lobby", () -> host.state() == RaceSession.State.LOBBY, host));
+        String notice = host.consumeNotice();
+        assertNotNull(notice, "host must report refused invite publication");
+        assertTrue(notice.toLowerCase().contains("save"));
+        String invite = host.lanInvite();
+        host.close();
+        assertEquals(invite + "\n", storage.read(RaceSession.INVITE_FILE).orElseThrow());
+        assertEquals(2, storage.writes);
+    }
+
+    @Test
+    void inviteRetriesKeepTheIssuedSnapshotAndBoundPublicationCadence() throws Exception {
+        MemoryModStorage storage = new MemoryModStorage();
+        storage.failures = 2;
+        RaceSession host = session("invite-retry", settings(freePort()), storage, new Launches());
+        host.hostLan(SETUP, FP);
+        pollUntil("host lobby", () -> host.state() == RaceSession.State.LOBBY, host);
+        String issued = host.lanInvite();
+        for (int i = 0; i < 59; i++) host.poll();
+        assertEquals(1, storage.writes);
+        host.poll();
+        assertEquals(2, storage.writes);
+        for (int i = 0; i < 60; i++) host.poll();
+        assertEquals(3, storage.writes);
+        assertEquals(issued + "\n", storage.read(RaceSession.INVITE_FILE).orElseThrow());
+        host.close();
+        assertEquals(3, storage.writes, "confirmed publication does not repeat on close");
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void successfulLanJoinKeepsSettingsDirtyWhenPublicationIsRefusedOrThrows(boolean throwing) throws Exception {
+        int port = freePort();
+        RaceSession host = session("publication-host", settings(port), new MemoryModStorage(), new Launches());
+        host.hostLan(SETUP, FP);
+        pollUntil("host lobby", () -> host.state() == RaceSession.State.LOBBY, host);
+        String invite = host.lanInvite().replace("HOST_IP", "127.0.0.1");
+        MemoryModStorage storage = new MemoryModStorage();
+        storage.failures = 1;
+        storage.throwWrites = throwing;
+        RaceSession guest = session("publication-guest-" + throwing, settings(port), storage, new Launches());
+        guest.joinLan(invite, "tails", FP);
+        assertDoesNotThrow(() -> pollUntil("guest lobby", () -> guest.state() == RaceSession.State.LOBBY, guest));
+        String notice = guest.consumeNotice();
+        assertNotNull(notice, "a successful join must report refused settings publication");
+        assertTrue(notice.toLowerCase().contains("save"));
+        for (int tick = 0; tick < 120; tick++) guest.poll();
+        assertEquals(invite, TimeAttackSettings.load(storage).lastJoinAddress());
+        assertTrue(storage.writes >= 2 && storage.writes <= 4);
+        guest.close();
     }
 
     @Test

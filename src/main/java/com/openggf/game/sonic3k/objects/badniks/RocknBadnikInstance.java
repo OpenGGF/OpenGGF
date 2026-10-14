@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.game.mutators.PlayerFluidContextAccess;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.level.objects.*;
@@ -58,7 +59,7 @@ public final class RocknBadnikInstance extends AbstractS3kBadnikInstance impleme
         if (dx < -0x29 || dx >= 0x29 || dy < -16 || dy >= 16) return;
         boolean attack = player.getInvincibleFrames() > 0 || player.isSuperSonic() || player.getAnimationId() == 9 || player.getAnimationId() == 2;
         if (player instanceof Knuckles) attack |= player.getDoubleJumpFlag() == 1 || player.getDoubleJumpFlag() == 3;
-        if (player instanceof Tails && player.getDoubleJumpFlag() != 0 && !player.isInWater()) {
+        if (player instanceof Tails && player.getDoubleJumpFlag() != 0 && !PlayerFluidContextAccess.movementUnderwater(player)) {
             int angle = TrigLookupTable.calcAngle((short)dx, (short)dy);
             attack |= ((angle - 0x20) & 255) < 0x40;
         }

@@ -1063,6 +1063,34 @@ class TestSidekickCpuControllerCarry {
     }
 
     @Test
+    void mgzPlayerSteeredCarryPublishesSonicFacingAfterCarrierChangesDirection() {
+        AbstractPlayableSprite[] pair = prepareCarry(alwaysOnJumpPulseTrigger());
+        AbstractPlayableSprite sonic = pair[0];
+        AbstractPlayableSprite tails = pair[1];
+        fixture.camera().setY((short) (tails.getCentreY() - 0x90));
+        controller.update(1);
+        controller.update(2);
+        controller.finishCarryAfterCarrierMovement();
+
+        int frame = 3;
+        for (Direction direction : new Direction[] {Direction.LEFT, Direction.RIGHT, Direction.LEFT}) {
+            sonic.setDirectionalInputPressed(false, false, direction == Direction.LEFT,
+                    direction == Direction.RIGHT);
+            controller.update(frame++);
+            assertEquals(direction == Direction.LEFT, controller.getInputLeft());
+            assertEquals(direction == Direction.RIGHT, controller.getInputRight());
+            // Tails_Move_FlySwim publishes this status bit during the carrier
+            // body, before the later Tails_Carry_Sonic pass at loc_14492.
+            tails.setDirection(direction);
+            controller.finishCarryAfterCarrierMovement();
+            assertTrue(sonic.isObjectMappingFrameControl());
+            assertEquals(direction, sonic.getDirection());
+            assertEquals(direction == Direction.LEFT, sonic.getRenderHFlip(),
+                    "the skipped Sonic animator cannot repair a stale carried render flag");
+        }
+    }
+
+    @Test
     void mgzCarryIntroSwitchesToPlayerSteeredFlightAtCameraY90() {
         AbstractPlayableSprite[] pair = prepareCarry(alwaysOnJumpPulseTrigger());
         AbstractPlayableSprite tails = pair[1];

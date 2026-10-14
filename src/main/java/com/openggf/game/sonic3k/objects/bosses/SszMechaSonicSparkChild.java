@@ -24,6 +24,7 @@ public final class SszMechaSonicSparkChild extends AbstractObjectInstance
     private boolean alternate;
     private boolean visible;
     private boolean flipped;
+    private boolean screenRelative;
     private int mappingFrame = 4;
 
     public SszMechaSonicSparkChild(int x, int y) {
@@ -34,7 +35,7 @@ public final class SszMechaSonicSparkChild extends AbstractObjectInstance
         spawnFor(services, parentSlot, x, y, 0);
     }
 
-    static void spawnFor(ObjectServices services, int parentSlot, int x, int y, int subtype) {
+    public static void spawnFor(ObjectServices services, int parentSlot, int x, int y, int subtype) {
         var manager = services.objectManager();
         if (manager == null) return;
         int slot = ObjectLifetimeOps.reserveFindNextFreeChildSlot(manager, parentSlot);
@@ -43,7 +44,9 @@ public final class SszMechaSonicSparkChild extends AbstractObjectInstance
             var child = ObjectConstructionContext.with(services, slot,
                     () -> new SszMechaSonicSparkChild(x, y));
             child.parentSlot = parentSlot;
-            child.subtypeOffset = subtype;
+            // Native setup bclr7 consumes the coordinate selector before table lookup.
+            child.screenRelative = (subtype & 0x80) != 0;
+            child.subtypeOffset = subtype & 0x7F;
             ObjectLifetimeOps.addDynamicAtReservedSlot(manager, child, slot);
         } catch (RuntimeException | Error failure) {
             manager.releaseDynamicSlot(slot);
@@ -65,7 +68,7 @@ public final class SszMechaSonicSparkChild extends AbstractObjectInstance
                 }
             }
         }
-        if (parent instanceof SszMechaSonicObjectInstance mecha && mecha.stopsSparks()) {
+        if (parent instanceof SszMechaSparkHost mecha && mecha.stopsSparks()) {
             ObjectLifetimeOps.deleteNoRespawn(this); // loc_7C8F8, not deferred Go_Delete.
             return;
         }
@@ -82,8 +85,7 @@ public final class SszMechaSonicSparkChild extends AbstractObjectInstance
             int dx = (byte) reader.readU8(row);
             int dy = (byte) reader.readU8(row + 1);
             mappingFrame = reader.readU8(row + 2);
-            flipped = parent instanceof SszMechaSonicObjectInstance mecha
-                    && mecha.renderFlippedForTest();
+            flipped = parent instanceof SszMechaSparkHost mecha && mecha.sparkFlipX();
             // The ROM has no parent-liveness test. A freed SST supplies zero position;
             // after reuse the new occupant supplies position. Arbitrary replacement
             // $38/render-flags are not exposed by the semantic object API.
@@ -110,7 +112,11 @@ public final class SszMechaSonicSparkChild extends AbstractObjectInstance
         if (!visible || isDestroyed()) return;
         var renderer = getRenderer(Sonic3kObjectArtKeys.MECHA_SONIC_SPARKS);
         if (renderer != null && renderer.isReady()) {
-            renderer.drawFrameIndex(mappingFrame, getX(), getY(), flipped, false, 1);
+            int x=getX(),y=getY();
+            if(screenRelative){var camera=services().camera();
+                x=com.openggf.game.sonic3k.ending.EndingScreenProjection.worldX(camera,x);
+                y=com.openggf.game.sonic3k.ending.EndingScreenProjection.worldY(camera,y);}
+            renderer.drawFrameIndex(mappingFrame, x, y, flipped, false, 1);
         }
     }
 }

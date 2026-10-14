@@ -20,7 +20,7 @@ public final class DestructionEffects {
     /**
      * Functional interface for game-specific points popup creation.
      * S2 creates {@code PointsObjectInstance}, S1 creates {@code Sonic1PointsObjectInstance},
-     * S3K passes {@code null} (no popup).
+     * S3K retains its native {@code Sonic3kPointsObjectInstance} popup.
      */
     @FunctionalInterface
     @com.openggf.game.ModApi
@@ -67,8 +67,72 @@ public final class DestructionEffects {
             boolean useRespawnTracking,
             PointsFactory pointsFactory,
             ExplosionFactory explosionFactory,
-            boolean pointsAllocatedBeforeAnimal
+            boolean pointsAllocatedBeforeAnimal,
+            SoundCue sound
     ) {
+        public DestructionConfig(int sfxId,AnimalFactory animalFactory,boolean useRespawnTracking,
+                PointsFactory pointsFactory,ExplosionFactory explosionFactory,boolean pointsAllocatedBeforeAnimal) {
+            this(sfxId,animalFactory,useRespawnTracking,pointsFactory,explosionFactory,pointsAllocatedBeforeAnimal,null);
+        }
+        public DestructionConfig withSound(SoundCue cue) {
+            return new DestructionConfig(sfxId,animalFactory,useRespawnTracking,pointsFactory,
+                    explosionFactory,pointsAllocatedBeforeAnimal,java.util.Objects.requireNonNull(cue,"sound"));
+        }
+    }
+
+    @com.openggf.game.ModApi
+    public enum SoundOrder { BEFORE_LATCH, AFTER_EFFECTS }
+
+    /** Typed immutable sound route. Legacy configurations keep their existing native id/order. */
+    @com.openggf.game.ModApi
+    public record SoundCue(com.openggf.audio.StreamedMusicPort.SfxRef namespaced,
+            com.openggf.audio.GameSound semantic,SoundOrder order) {
+        public SoundCue {
+            java.util.Objects.requireNonNull(order,"sound order");
+            if((namespaced==null)==(semantic==null))throw new IllegalArgumentException("Choose one sound route");
+        }
+        public static SoundCue namespaced(com.openggf.audio.StreamedMusicPort.SfxRef sound,SoundOrder order) {
+            return new SoundCue(java.util.Objects.requireNonNull(sound,"sound"),null,order);
+        }
+        public static SoundCue semantic(com.openggf.audio.GameSound sound,SoundOrder order) {
+            return new SoundCue(null,java.util.Objects.requireNonNull(sound,"sound"),order);
+        }
+        void play(ObjectServices services) {
+            if(namespaced!=null)services.playSfx(namespaced);else services.playSfx(semantic);
+        }
+    }
+
+    /**
+     * Generic ROM animal released from the explosion's first update, with no deferred points child.
+     * Suitable for the S2/S3K shared animal owner; S1's ExplosionItem/animal recipe remains distinct.
+     * Caller chooses respawn policy and sound. Scoring and transferred explosion slots stay shared.
+     */
+    public static DestructionConfig deferredAnimalWithoutPopup(int sfxId,boolean respawnTracking) {
+        return new DestructionConfig(sfxId,(spawn,services)->AnimalObjectInstance.deferredArtVariant(spawn,services,null),
+                respawnTracking,null,null,false);
+    }
+
+    /** Final enemy defeat with native policy notification before identity/slot retirement, exactly once. */
+    public static void defeatBadnik(AbstractBadnikInstance instance, PlayableEntity player, boolean powered) {
+        java.util.Objects.requireNonNull(instance, "instance");
+        if (instance.isDestroyed()) return;
+        var services = instance.services();
+        var config = prepareBeforeLatch(instance.getDestructionConfig(), services);
+        var policies = com.openggf.game.mutators.NativeObjectPolicyAccess.port(services);
+        if (policies != null) policies.badnikDefeated(instance, player);
+        int slot = ObjectLifetimeOps.detachSlotForTransfer(instance);
+        ObjectLifetimeOps.destroyLatched(instance);
+        destroyBadnik(instance.getX(), instance.getY(), instance.spawn, slot, player, services, config, powered);
+    }
+
+    /** Called by the badnik owner before slot transfer; returns a silent copy so shared effects cannot replay it. */
+    static DestructionConfig prepareBeforeLatch(DestructionConfig config,ObjectServices services) {
+        if(config.sound()!=null&&config.sound().order()==SoundOrder.BEFORE_LATCH) {
+            if(services!=null)config.sound().play(services);
+            return new DestructionConfig(-1,config.animalFactory(),config.useRespawnTracking(),config.pointsFactory(),
+                    config.explosionFactory(),config.pointsAllocatedBeforeAnimal());
+        }
+        return config;
     }
 
     /**
@@ -107,6 +171,7 @@ public final class DestructionEffects {
             PlayableEntity player, ObjectServices services,
             DestructionConfig config, boolean poweredAttack) {
 
+        config=prepareBeforeLatch(config,services);
         // --- Respawn tracking ---
         var objectManager = services != null ? services.objectManager() : null;
         if (objectManager != null) {
@@ -146,11 +211,14 @@ public final class DestructionEffects {
                             pointsValue,
                             config.pointsAllocatedBeforeAnimal());
             ObjectLifetimeOps.addReplacementAtTransferredSlot(objectManager, explosion, badnikSlot);
+            var policies=com.openggf.game.mutators.NativeObjectPolicyAccess.port(services);
+            if(policies!=null) policies.replacementSpawned(badnikSlot,explosion);
         }
 
         // --- Play explosion SFX ---
         if (services != null) {
-            services.playSfx(config.sfxId());
+            if(config.sound()!=null)config.sound().play(services);
+            else if(config.sfxId()>=0)services.playSfx(config.sfxId());
         }
     }
 

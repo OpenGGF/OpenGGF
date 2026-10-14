@@ -272,6 +272,11 @@ void main()
     // palette priority to place a sprite between two high-priority tile groups.
     if (MaskOutput == 1) {
         FragColor = vec4(1.0, paletteIndex / 3.0, 0.0, 1.0);
+    } else if (PriorityPass == -2) {
+        // Internal combined background pass: keep tile priority and palette in
+        // unused alpha so color and sprite-mask replay share one sampled image.
+        // Zero pixels were discarded above and remain fully transparent.
+        FragColor = vec4(color.rgb, priority < 0.5 ? 0.25 : 0.5 + paletteIndex / 8.0);
     } else {
         FragColor = color;
     }

@@ -52,6 +52,24 @@ class SchedulingTests(unittest.TestCase):
         self.assertEqual(180, schedule.maven_estimate(['--activate-profiles', 'guards', 'test']))
         self.assertLess(schedule.plan_estimate(dict(full=False, tests=list(range(1000)), guards=True)), 900)
 
+    def test_retained_tree_continuation_can_resume_past_its_aged_waiter(self):
+        for auto in (False, True):
+            requests = [dict(self.request('blocked', 30), tree='held', auto=auto),
+                        dict(self.request('other', 30, 1), tree='free', auto=True),
+                        dict(self.request('continuation', 30, 400), tree='held', auto=auto, retained_tree=True)]
+            visited = []
+            def fits(request):
+                visited.append(request['id'])
+                if request['id'] == 'blocked':
+                    return schedule.WORKTREE_BUSY
+                return request['id'] == 'continuation'
+            # The higher-priority unrelated request still blocks on capacity.
+            self.assertIsNone(schedule.choose(requests, 401, fits))
+            requests.pop(1)
+            visited.clear()
+            self.assertEqual('continuation', schedule.choose(requests, 401, fits)['id'])
+            self.assertEqual(['blocked', 'continuation'], visited)
+
     def test_category_estimates_follow_selected_scope_and_guards(self):
         self.assertEqual(30, schedule.plan_estimate(dict(full=False, tests=['one'], guards=False)))
         self.assertEqual(32.7, schedule.plan_estimate(dict(full=False, tests=list(range(10)), guards=False)))

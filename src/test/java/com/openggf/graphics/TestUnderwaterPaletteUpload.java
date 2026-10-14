@@ -150,6 +150,49 @@ class TestUnderwaterPaletteUpload {
         assertEquals(9, graphics.getUnderwaterDerivedRowRecomputeCount());
     }
 
+    @Test
+    void scopedPublishedBasisTracksNativePublicationAndExactWorldLifetime() throws Exception {
+        graphics = new GraphicsManager();
+        graphics.initHeadless();
+        RecordingUnderwaterUploadOps uploads = new RecordingUnderwaterUploadOps();
+        graphics.setUnderwaterPaletteUploadOps(uploads);
+        Object world = new Object();
+        graphics.bindScopedPaletteWorld(world);
+        Palette normal = paletteWithColor(1, 200, 100, 50);
+        Palette[] water = fourRows();
+        water[0] = paletteWithColor(1, 100, 50, 25);
+        graphics.cacheUnderwaterPaletteTexture(water, normal);
+        Object owner = new Object();
+        Palette row = paletteWithColor(1, 180, 80, 40);
+        graphics.scopedPaletteBank(owner, new Palette[]{row, row, row, row});
+        graphics.refreshScopedUnderwaterResidency();
+        assertArrayEquals(new int[]{90, 40, 20, 255}, rgbaAt(uploadBuffer(graphics), 4 * 16 + 1));
+
+        // Derived residency uses the fade at publication; a new native cache updates that basis.
+        graphics.setPaletteFadePresentation(PaletteFadePresentation.Mode.TO_BLACK, 1, 1);
+        graphics.scopedPaletteBank(owner, new Palette[]{row, row, row, row});
+        graphics.refreshScopedUnderwaterResidency();
+        assertArrayEquals(new int[]{90, 40, 20, 255}, rgbaAt(uploadBuffer(graphics), 4 * 16 + 1));
+        graphics.cacheUnderwaterPaletteTexture(water, normal);
+        ScopedUnderwaterBasis published = (ScopedUnderwaterBasis) fieldValue(graphics, "scopedUnderwaterBasis");
+        assertEquals(PaletteFadePresentation.Mode.TO_BLACK, published.fadeMode());
+        assertEquals(1, published.fadeSteps());
+
+        graphics.clearScopedUnderwaterBasis(new Object());
+        assertSame(published, fieldValue(graphics, "scopedUnderwaterBasis"), "another world cannot clear this publication");
+        graphics.bindScopedPaletteWorld(new Object());
+        assertNull(fieldValue(graphics, "scopedUnderwaterBasis"), "world rebinding drops the prior water basis");
+        int count = uploads.uploadCount;
+        graphics.scopedPaletteBank(owner, new Palette[]{row, row, row, row});
+        graphics.refreshScopedUnderwaterResidency();
+        assertEquals(count, uploads.uploadCount, "no stale water publication is replayed in the new world");
+        graphics.cacheUnderwaterPaletteTexture(water, normal);
+        assertNotNull(fieldValue(graphics, "scopedUnderwaterBasis"));
+        graphics.clearPaletteTextures();
+        assertNull(fieldValue(graphics, "scopedUnderwaterBasis"));
+        assertNull(fieldValue(graphics, "scopedPaletteWorld"));
+    }
+
     private static void assertSingleNewUpload(RecordingUnderwaterUploadOps uploads, Runnable cacheCall) {
         int before = uploads.uploadCount;
         cacheCall.run();

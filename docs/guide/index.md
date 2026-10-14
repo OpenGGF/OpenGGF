@@ -48,6 +48,10 @@ You want to add objects, bosses, zones, or engine improvements.
 - [Testing](contributing/testing.md) -- Writing and running tests
 - [Trace Replay Testing](contributing/trace-replay.md) -- BizHawk recordings, replay tests, and divergence analysis
 
+### I want to create levels
+
+- [Level Editor](creating/level-editor.md) -- Create, edit, save, reopen, playtest, and export levels for all three games
+
 ### I want to create mods
 
 Start with the [creator handbook](../modding/index.md) for the maintained workflow,

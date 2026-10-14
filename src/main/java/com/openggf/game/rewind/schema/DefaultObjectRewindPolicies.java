@@ -226,6 +226,9 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEndBossFlameChild", "weapon"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEndBossShipExplosionController", "ship"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEndBossShipFlameChild", "ship"), RewindFieldPolicy.CAPTURED),
+            // S3K Caterkiller bodies retain their exact head identity; the head's
+            // structural list is rebuilt only after these references resolve.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.CaterkillerJrBodyInstance", "ownerRef"), RewindFieldPolicy.CAPTURED),
             // The prison button is a separate SST object. Preserve its exact parent
             // identity through the compact ObjectReferenceCodec; never infer a parent
             // from coordinates or neighbouring slots after restore.
@@ -450,9 +453,9 @@ final class DefaultObjectRewindPolicies {
             // stranded rider off; ejectedPlayers guards a knocked-off rider from re-standing/double-ejecting.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance", "standingPlayers"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance", "ejectedPlayers"), RewindFieldPolicy.CAPTURED),
-            // AIZ draw bridge stays a live solid surface for the whole collapse countdown, so onSolidContact
-            // refills standingPlayers every frame the player stands — the set is re-derived, not durable state.
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizDrawBridgeObjectInstance", "standingPlayers"), RewindFieldPolicy.TRANSIENT),
+            // AIZ drawbridge loc_2B452 returns without a solid pass throughout its countdown.
+            // Retain the native standing latch, including riders who jumped, for the delayed eject.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizDrawBridgeObjectInstance", "standingPlayers"), RewindFieldPolicy.CAPTURED),
             // AIZ flipping bridge never terminates; each per-segment solid frame re-adds standing players via
             // onSolidContact, so an empty list self-heals next frame (mirrors SeesawObjectInstance standing refs).
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizFlippingBridgeObjectInstance", "standingPlayers"), RewindFieldPolicy.TRANSIENT),
@@ -507,6 +510,10 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CutsceneKnuxCnz2WallInstance", "owner"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesLiftChild", "player"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance$Mhz2KnucklesRouteSwitchChild", "parent"), RewindFieldPolicy.CAPTURED),
+            // loc_764C4 follows the exact native parent3; proximity is never reconstruction authority.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.MhzEndBossHitProxyChild", "parent"), RewindFieldPolicy.CAPTURED),
+            // loc_76674 retires spikes through that same exact parent status owner.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.MhzEndBossSpikeChild", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.MadmoleBadnikInstance$SideDrillChild", "capturedPlayer"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.MadmoleBadnikInstance$SideDrillChild", "releaseTargetPlayer"), RewindFieldPolicy.CAPTURED),
             // Per-frame TouchResponse scratch, cleared at the start of every update before any snapshot
@@ -623,6 +630,12 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossWaterColumn", "extensionGrabbed"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossBladeImpactExplosion", "boss"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleButton", "parent"), RewindFieldPolicy.CAPTURED),
+            // The preceding native CA turret graph restores the same exact SST
+            // parent/sibling edges. Constructor-only links would orphan its shells.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$BossChild", "boss"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$LaserHeadChild", "segment"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$MuzzleLaserChild", "head"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss1Instance$GunPodChild", "segment"), RewindFieldPolicy.CAPTURED),
             // LBZ Big Arm is a native multi-slot graph. These fields must use
             // ObjectRefId capture; geometric/nearest reconstruction is
             // ambiguous for the two arm segments and the later explosion set.
@@ -828,6 +841,8 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SuperTailsFlickyFlockObjectInstance", "owner"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance", "animationState"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance", "monitorContentsSlot"), RewindFieldPolicy.CAPTURED),
+            // Contents retain an exact managed shell identity; nearest/structural reconstruction merges colocated shells.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance$MonitorContentsSlot", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance", "p1SolidContact"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance", "p2SolidContact"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance", "p2RecentlyClearedSolidContact"), RewindFieldPolicy.DEFERRED),

@@ -6,13 +6,13 @@ name: CI
 #                         had no push for 30 minutes (see the smoke job). Enough
 #                         to show the code is broken or a release build is likely
 #                         to fail.
-#   non-draft PR          full CI: branch policy, the complete ordinary suite and
+#   non-draft PR          routine CI: branch policy, the bounded smoke suite and
 #                         the structural guards. Draft PRs run nothing until they
 #                         are marked ready for review.
 #   master push           nothing here; release.yml runs full validation, builds
 #                         the native packages and publishes.
 #   feature/bugfix push   nothing. Open a PR, or run the workflow by hand.
-#   manual dispatch       full CI on the chosen ref, plus the ROM-fixture develop
+#   manual dispatch       routine CI on the chosen ref, plus the ROM-fixture develop
 #                         trace replay when trace_replay is ticked.
 #
 # Native packaging is not built here; release.yml builds it on master pushes.
@@ -61,17 +61,10 @@ jobs:
           HEAD_REF: ${{ github.head_ref }}
         run: bash .githooks/validate-policy.sh ci-pr "$BASE_SHA" "$HEAD_SHA" "$BASE_REF" "$HEAD_REF"
 
-  # Basic CI for develop and next pushes.
-  #
-  # `-Psmoke` is the default suite minus the @Tag("slow-suite") classes and the
-  # other groups excluded by the profile in pom.xml, which were most of its wall
-  # clock. What remains still executes every other test class in the tree, so this
-  # is a real regression check rather than a token compile, and it finishes in
-  # about seven minutes. Pull requests run the full `test` job instead, which is a
-  # superset.
-  #
-  # Structural guards are not part of basic CI; they run on pull requests and in
-  # release.yml. Run `mvn -Dmse=off -Pguards test -B` locally before delivery.
+  # The bounded smoke suite is also Maven's default. PR/manual checks use
+  # the same suite; only the Release workflow opts into full-suite.
+  # Structural guards run separately on PRs/manual CI and before release.
+  # Run `mvn -Dmse=off -Pguards test -B` locally before delivery.
   #
   # Quiet period: the ci-quiet-period environment (repository settings ->
   # Environments) has a 30-minute wait timer and admits only develop and next. The
@@ -94,6 +87,13 @@ jobs:
           java-version: '25'
           distribution: 'temurin'
           cache: maven
+
+      # Pixel tests create a Mesa surfaceless EGL context without a desktop.
+      - name: Install offscreen rendering dependencies
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes libegl1 libegl-mesa0 libgl1 libgl1-mesa-dri
 
       - name: Verify test category selection and retention
         run: python3 -m unittest discover -s tools/testing -p 'test_run_categor*.py'
@@ -134,7 +134,7 @@ jobs:
           print(f"Smoke coverage: executed={executed} total={total} skipped={skipped}")
           PY
 
-  # Structural guards: the invariants no trace fixture can prove. Full CI only
+  # Structural guards: the invariants no trace fixture can prove. PR/manual CI only
   # (non-draft pull requests and manual dispatch); release.yml runs them again
   # before publishing.
   guards:
@@ -172,8 +172,8 @@ jobs:
       - name: Run structural guards
         run: mvn -Dmse=off -Pguards test -B
 
-  # The complete ordinary suite, including the tagged classes `smoke` drops. Full
-  # CI only (non-draft pull requests and manual dispatch).
+  # Maven defaults to the bounded smoke suite for PRs and manual dispatch.
+  # Exhaustive ordinary sweeps are reserved for the Release workflow.
   #
   # ROM-free either way: ROM-gated classes error only when a path is supplied.
   test:
@@ -189,6 +189,13 @@ jobs:
           java-version: '25'
           distribution: 'temurin'
           cache: maven
+
+      # Pixel tests create a Mesa surfaceless EGL context without a desktop.
+      - name: Install offscreen rendering dependencies
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes libegl1 libegl-mesa0 libgl1 libgl1-mesa-dri
 
       - name: Verify test category selection and retention
         run: python3 -m unittest discover -s tools/testing -p 'test_run_categor*.py'
@@ -220,7 +227,7 @@ jobs:
               skipped += int(root.attrib.get("skipped", "0"))
 
           executed = total - skipped
-          minimum = 1000
+          minimum = 10000
           if executed < minimum:
               print(
                   f"Default CI executed too few tests: executed={executed} "

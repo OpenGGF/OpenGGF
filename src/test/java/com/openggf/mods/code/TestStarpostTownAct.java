@@ -42,7 +42,7 @@ class TestStarpostTownAct {
 
     @BeforeAll static void compile() throws Exception {
         Path project=Path.of("examples/starpost-valley"), classes=Files.createDirectories(temp.resolve("classes"));
-        var args=new ArrayList<>(List.of("--release","21","-cp",System.getProperty("java.class.path"),"-d",classes.toString()));
+        var args=new ArrayList<>(List.of("--release","25","-cp",System.getProperty("java.class.path"),"-d",classes.toString()));
         try (var files=Files.walk(project.resolve("src/main/java"))) {
             files.filter(p->p.toString().endsWith(".java")).sorted().forEach(p->args.add(p.toString()));
         }

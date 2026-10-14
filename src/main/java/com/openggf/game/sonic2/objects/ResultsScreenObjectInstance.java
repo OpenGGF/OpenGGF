@@ -417,7 +417,7 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen
     }
 
     private void writeBonusValue(Pattern[] dest, int startIndex, int value, Pattern[] digits) {
-        NumericPatternWriter.writeBonus(dest, startIndex, value, digits, blankDigit);
+        NumericPatternWriter.writeBonusWithFixedZero(dest, startIndex, value, digits, blankDigit);
     }
 
 

@@ -8,6 +8,7 @@ import com.openggf.game.GroundMode;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.ShieldType;
+import com.openggf.game.mutators.PlayableAudioEvents;
 import com.openggf.sprites.animation.SpriteAnimationEndAction;
 import com.openggf.sprites.animation.SpriteAnimationScript;
 import com.openggf.sprites.animation.SpriteAnimationSet;
@@ -27,6 +28,8 @@ import java.util.function.Consumer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.times;
 
 @ExtendWith(SingletonResetExtension.class)
 @FullReset
@@ -348,10 +351,14 @@ class TestCollisionSystemAirLanding {
                 AbstractPlayableSprite.class,
                 SensorResult[].class);
         method.setAccessible(true);
-        method.invoke(collisionSystem, sprite, new SensorResult[] {
-                new SensorResult((byte) 0xB8, (byte) -1, 14, Direction.UP),
-                new SensorResult((byte) 0xFF, (byte) 2, 14, Direction.UP)
-        });
+        try (var events = mockStatic(PlayableAudioEvents.class)) {
+            method.invoke(collisionSystem, sprite, new SensorResult[] {
+                    new SensorResult((byte) 0xB8, (byte) -1, 14, Direction.UP),
+                    new SensorResult((byte) 0xFF, (byte) 2, 14, Direction.UP)
+            });
+            events.verify(() -> PlayableAudioEvents.landed(sprite), times(1));
+            events.verifyNoMoreInteractions();
+        }
 
         assertTrue(sprite.getAir(), "BubbleShield_Bounce must re-arm Status_InAir");
         assertTrue(sprite.getRolling(), "BubbleShield_Bounce must restore rolling radii/state");
@@ -363,6 +370,91 @@ class TestCollisionSystemAirLanding {
         assertEquals((short) -0x0249, sprite.getYSpeed());
         assertEquals((short) 0x0249, sprite.getGSpeed(),
                 "The angled-ceiling tail samples the post-bounce y_vel");
+    }
+
+    @Test
+    void audioFloorEventRequiresAcceptedProbeAdmission() throws Exception {
+        AbstractPlayableSprite sprite = newTestSprite();
+        sprite.setAir(true);
+        CollisionSystem collisions = new CollisionSystem(new TerrainCollisionManager());
+        Method floor = CollisionSystem.class.getDeclaredMethod("doTerrainCollisionAir",
+                AbstractPlayableSprite.class, SensorResult[].class, Consumer.class);
+        floor.setAccessible(true);
+        Consumer<AbstractPlayableSprite> relaunch = player -> { player.setAir(false); player.setAir(true); };
+        try (var events = mockStatic(PlayableAudioEvents.class)) {
+            sprite.setYSpeed((short) -0x100);
+            floor.invoke(collisions, sprite, negativeSurfaceContactResults(), relaunch);
+            sprite.setYSpeed((short) 0x100);
+            floor.invoke(collisions, sprite, exactSurfaceContactResults(), relaunch);
+            floor.invoke(collisions, sprite, new SensorResult[] { null, null }, relaunch);
+            floor.invoke(collisions, sprite, new SensorResult[] {
+                    new SensorResult((byte) 0, (byte) -50, 14, Direction.DOWN),
+                    new SensorResult((byte) 0, (byte) -50, 14, Direction.DOWN) }, relaunch);
+            events.verifyNoInteractions();
+            floor.invoke(collisions, sprite, negativeSurfaceContactResults(), relaunch);
+            events.verify(() -> PlayableAudioEvents.landed(sprite), times(1));
+            events.verifyNoMoreInteractions();
+            assertTrue(sprite.getAir(), "accepted contact still emits when its native tail re-launches");
+        }
+    }
+
+    @Test
+    void audioDirectFloorIncludesForcedRisingAdmissionButRejectsExactContact() throws Exception {
+        AbstractPlayableSprite sprite = newTestSprite();
+        sprite.setAir(true); sprite.setYSpeed((short) -0x100);
+        CollisionSystem collisions = new CollisionSystem(new TerrainCollisionManager());
+        Method floor = CollisionSystem.class.getDeclaredMethod("doTerrainCollisionAirDirect",
+                AbstractPlayableSprite.class, SensorResult[].class, Consumer.class, boolean.class);
+        floor.setAccessible(true);
+        try (var events = mockStatic(PlayableAudioEvents.class)) {
+            floor.invoke(collisions, sprite, negativeSurfaceContactResults(), landingHandler(new AtomicBoolean()), false);
+            floor.invoke(collisions, sprite, exactSurfaceContactResults(), landingHandler(new AtomicBoolean()), true);
+            events.verifyNoInteractions();
+            floor.invoke(collisions, sprite, negativeSurfaceContactResults(), landingHandler(new AtomicBoolean()), true);
+            events.verify(() -> PlayableAudioEvents.landed(sprite), times(1));
+            events.verifyNoMoreInteractions();
+            assertFalse(sprite.getAir());
+        }
+    }
+
+    @Test
+    void audioCeilingEventExcludesBumpsAndSideSeparationButIncludesAcceptedHurtWallLanding() throws Exception {
+        AbstractPlayableSprite sprite = newTestSprite();
+        sprite.setAir(true); sprite.setYSpeed((short) -0x200);
+        CollisionSystem collisions = new CollisionSystem(new TerrainCollisionManager());
+        Method ceiling = CollisionSystem.class.getDeclaredMethod("doCeilingCollision",
+                AbstractPlayableSprite.class, SensorResult[].class);
+        Method sideCeiling = CollisionSystem.class.getDeclaredMethod("doCeilingCollisionInternal",
+                AbstractPlayableSprite.class, SensorResult[].class);
+        ceiling.setAccessible(true); sideCeiling.setAccessible(true);
+        SensorResult[] wall = { new SensorResult((byte) 0x40, (byte) -1, 14, Direction.UP), null };
+        try (var events = mockStatic(PlayableAudioEvents.class)) {
+            ceiling.invoke(collisions, sprite, new SensorResult[] {
+                    new SensorResult((byte) 0x80, (byte) -1, 14, Direction.UP), null });
+            sideCeiling.invoke(collisions, sprite, wall);
+            events.verifyNoInteractions(); assertTrue(sprite.getAir());
+            sprite.setHurt(true);
+            ceiling.invoke(collisions, sprite, wall);
+            events.verify(() -> PlayableAudioEvents.landed(sprite), times(1));
+            events.verifyNoMoreInteractions();
+            assertFalse(sprite.getAir()); assertEquals(GroundMode.LEFTWALL, sprite.getGroundMode());
+        }
+    }
+
+    @Test
+    void nativeGroundRestorationAndResetHelpersCannotSynthesizeAudioLanding() throws Exception {
+        AbstractPlayableSprite sprite = newTestSprite(); sprite.setAir(true);
+        var airborne = sprite.captureRewindState();
+        CollisionSystem collisions = new CollisionSystem(new TerrainCollisionManager());
+        Method reset = CollisionSystem.class.getDeclaredMethod("resetWallCeilingLandingState",
+                AbstractPlayableSprite.class, int.class);
+        reset.setAccessible(true);
+        try (var events = mockStatic(PlayableAudioEvents.class)) {
+            sprite.setAir(false);
+            sprite.restoreRewindState(airborne);
+            reset.invoke(collisions, sprite, 0x40);
+            events.verifyNoInteractions();
+        }
     }
 
     private static AbstractPlayableSprite newTestSprite() {

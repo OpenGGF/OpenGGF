@@ -9,6 +9,7 @@ import com.openggf.mods.scene.SceneRomArt;
 import com.openggf.mods.scene.SceneSpriteSet;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
 import threeislands.core.HeroId;
 import threeislands.core.Zone;
 
@@ -23,7 +24,7 @@ import threeislands.core.Zone;
  * Knuckles art uses the stock zone and boss palettes listed below (from sonic3k.lst), as
  * Slay the Robotnik's {@code RomSprites} does.
  */
-public final class Art {
+public final class Art implements AutoCloseable {
     // S3K palettes.
     private static final int PAL_SONIC_TAILS = 0x0A8A3C;      // Pal_SonicTails (line 0)
     private static final int PAL_AIZ = 0x0A8B7C;              // Pal_AIZ (lines 1-3)
@@ -42,27 +43,46 @@ public final class Art {
     private static final int PALCYCLE_SUPER_SONIC = 0x00398E; // PalCycle_SuperSonic
 
     private final SceneArt art;
+    private final java.util.function.LongSupplier ticks;
+    private final String owner;
+    private final java.util.LinkedHashMap<String, Failure> failures = new java.util.LinkedHashMap<>();
+    private final Map<SceneRomArt, com.openggf.mods.scene.art.SceneArtCache> spriteCaches = new java.util.IdentityHashMap<>();
+    private boolean closed;
     private final Map<String, SceneRomArt> roms = new HashMap<>();
     private final Map<String, SceneLevelKit> kits = new HashMap<>();
     private final Map<String, SceneSpriteSet> sets = new HashMap<>();
     private final Map<String, int[]> palettes = new HashMap<>();
 
-    public Art(SceneArt art) {
+    /** Pure callers retain the compatible constructor; scenes supply their advancing logic clock. */
+    public Art(SceneArt art) { this(art, () -> 0, "three-islands"); }
+
+    public Art(SceneArt art, java.util.function.LongSupplier ticks, String owner) {
         this.art = art;
+        this.ticks = java.util.Objects.requireNonNull(ticks, "logic clock");
+        this.owner = java.util.Objects.requireNonNull(owner, "scene owner");
     }
 
     /** The supplied ROM for "s1", "s2" or "s3k", or null when that game is not installed. */
     public SceneRomArt rom(String game) {
-        if (roms.containsKey(game)) return roms.get(game);
-        SceneRomArt rom = null;
-        try {
-            if (art != null && art.availableGames().contains(game)) rom = art.rom(game);
-            if (rom == null && art != null && art.rom() != null && game.equals(art.rom().gameId())) rom = art.rom();
-        } catch (RuntimeException unavailable) {
-            rom = null;
+        requireOpen();
+        if (!List.of("s1", "s2", "s3k").contains(game))
+            throw new IllegalArgumentException("Unknown stock game: " + game);
+        SceneRomArt found = roms.get(game);
+        if (found == null) {
+            found = attempt("rom:" + game, () -> {
+                SceneRomArt supplied = art == null ? null : art.rom(game);
+                if (supplied == null) throw new MissingRom(game);
+                return supplied;
+            });
+            if (found != null) roms.put(game, found);
         }
-        roms.put(game, rom);
-        return rom;
+        return found;
+    }
+
+    private SceneRomArt requireRom(String game) {
+        SceneRomArt supplied = rom(game);
+        if (supplied == null) throw dependency("rom:" + game);
+        return supplied;
     }
 
     public boolean has(String game) {
@@ -75,39 +95,41 @@ public final class Art {
     }
 
     public SceneLevelKit kit(String game, int zone, int act) {
+        requireOpen();
         String key = game + ":" + zone + ":" + act;
-        if (kits.containsKey(key)) return kits.get(key);
-        SceneRomArt rom = rom(game);
-        SceneLevelKit kit = rom != null && rom.hasLevelKit(zone, act) ? rom.levelKit(zone, act) : null;
-        kits.put(key, kit);
-        return kit;
+        SceneLevelKit found = kits.get(key);
+        if (found == null) {
+            found = attempt("kit:" + key, () -> {
+                SceneRomArt supplied = requireRom(game);
+                return supplied.hasLevelKit(zone, act) ? supplied.levelKit(zone, act) : null;
+            });
+            if (found != null) kits.put(key, found);
+        }
+        return found;
     }
 
     /** A hero's sprites from {@code game}'s player art, with its animation scripts. */
     public SceneSpriteSet hero(String game, HeroId hero) {
         return cached(game + ":hero:" + hero.code(), () -> {
-            SceneRomArt rom = rom(game);
-            return rom == null ? null : rom.character(hero.code());
+            return requireRom(game).character(hero.code());
         });
     }
 
     /** Tails' separate tails object (Sonic 3 &amp; Knuckles only; Sonic 2 draws them from Tails' own frames). */
     public SceneSpriteSet tailsAccessory(String game) {
         return cached(game + ":tails-tails", () -> {
-            SceneRomArt rom = rom(game);
-            return rom == null ? null : rom.characterAccessory("tails");
+            return requireRom(game).characterAccessory("tails");
         });
     }
 
     /** Super Sonic's body frames (Map_SuperSonic) in palette-cycle colour {@code entry} 6..8. */
     public SceneSpriteSet superSonic(int entry) {
         return cached("s3k:super:" + entry, () -> {
-            SceneRomArt rom = rom("s3k");
-            if (rom == null) return null;
+            SceneRomArt rom = requireRom("s3k");
             int[] palette = s3k(rom, PAL_AIZ);
             // PalCycle_SuperSonic: three colours per step written to Normal_palette+4.
             System.arraycopy(rom.palette(PALCYCLE_SUPER_SONIC + entry * 6, 3), 0, palette, 2, 3);
-            return rom.sprites(RomSpriteRequest.streamed(
+            return cachedSprites(rom, RomSpriteRequest.streamed(
                     0x100000, 0x40060,                  // ArtUnc_Sonic
                     0x146816, 0x148378,                 // Map_SuperSonic, PLC_SuperSonic
                     DplcLayout.PLAYER, 0), palette);
@@ -124,10 +146,11 @@ public final class Art {
 
     private SceneSpriteSet load(String key) {
         int colon = key.indexOf(':');
+        if (colon <= 0 || colon == key.length() - 1)
+            throw new IllegalArgumentException("Sprite key must contain game:name");
         String game = key.substring(0, colon);
         String name = key.substring(colon + 1);
-        SceneRomArt rom = rom(game.equals("boss") ? "s3k" : game);
-        if (rom == null) return null;
+        SceneRomArt rom = requireRom(game.equals("boss") ? "s3k" : game);
         return switch (game) {
             case "s1" -> sonic1(rom, name);
             case "s2" -> sonic2(rom, name);
@@ -157,12 +180,12 @@ public final class Art {
             case "rocky" -> s1(rom, 0x3BCB4, 0x9AFC, 0, 0);            // Nem_Seal
             case "ricky" -> s1(rom, 0x3C040, 0x9B14, 0, 0);            // Nem_Squirrel
             case "picky" -> s1(rom, 0x3BDD0, 0x9B14, 0, 0);            // Nem_Pig
-            default -> throw new IllegalArgumentException("Unknown Sonic 1 art " + name);
+            default -> throw new UnsupportedOperationException("Unknown Sonic 1 art " + name);
         };
     }
 
     private SceneSpriteSet s1(SceneRomArt rom, int art, int map, int line, int homeZone) {
-        return rom.sprites(RomSpriteRequest.of(art, Compression.NEMESIS, map, line), kitPalette("s1", homeZone));
+        return cachedSprites(rom, RomSpriteRequest.of(art, Compression.NEMESIS, map, line), requireKitPalette("s1", homeZone));
     }
 
     // Sonic 2 (s2disasm labels). Zone ids: 0 EHZ, 1 CPZ, 2 ARZ, 3 CNZ, 5 MCZ, 6 OOZ, 7 MTZ.
@@ -179,14 +202,14 @@ public final class Art {
             case "pocky" -> s2(rom, 0x7FDD2, 0x11EAC, 0, 0);           // ArtNem_Rabbit
             case "tocky" -> s2(rom, 0x7FADE, 0x11E40, 0, 0);           // ArtNem_Turtle
             // Silver Sonic (ArtNem_SilverSonic, Obj_AF mappings) on the Death Egg palette.
-            case "silver" -> rom.sprites(RomSpriteRequest.of(0x8BE12, Compression.NEMESIS, 0x39E68, 1),
+            case "silver" -> cachedSprites(rom, RomSpriteRequest.of(0x8BE12, Compression.NEMESIS, 0x39E68, 1),
                     s2PalettePointer(rom, 0x12));
-            default -> throw new IllegalArgumentException("Unknown Sonic 2 art " + name);
+            default -> throw new UnsupportedOperationException("Unknown Sonic 2 art " + name);
         };
     }
 
     private SceneSpriteSet s2(SceneRomArt rom, int art, int map, int line, int homeZone) {
-        return rom.sprites(RomSpriteRequest.of(art, Compression.NEMESIS, map, line), kitPalette("s2", homeZone));
+        return cachedSprites(rom, RomSpriteRequest.of(art, Compression.NEMESIS, map, line), requireKitPalette("s2", homeZone));
     }
 
     /**
@@ -205,14 +228,14 @@ public final class Art {
     private SceneSpriteSet sonic3k(SceneRomArt rom, String name) {
         return switch (name) {
             // Angel Island badniks (line 1).
-            case "rhinobot" -> rom.sprites(RomSpriteRequest.streamed(0x36732A, 0xAA0, // ArtUnc_AIZRhinobot
+            case "rhinobot" -> cachedSprites(rom, RomSpriteRequest.streamed(0x36732A, 0xAA0, // ArtUnc_AIZRhinobot
                     0x3615A8, 0x36156E, DplcLayout.OBJECT, 1), s3k(rom, PAL_AIZ)); // Map/DPLC_Rhinobot
             case "bloominator" -> kosm(rom, 0x367DCA, 0x3616C0, 1, s3k(rom, PAL_AIZ));   // ArtKosM_AIZ_Bloominator
             case "monkeydude" -> kosm(rom, 0x36800C, 0x361776, 1, s3k(rom, PAL_AIZ));    // ArtKosM_AIZ_MonkeyDude
             // Hydrocity badniks.
             case "jawz" -> kosm(rom, 0x36A552, 0x361364, 1, s3k(rom, PAL_HCZ));          // ArtKosM_Jawz
             case "blastoid" -> kosm(rom, 0x36A7C6, 0x360DD0, 1, s3k(rom, PAL_HCZ));      // ArtKosM_Blastoid
-            case "buggernaut" -> rom.sprites(RomSpriteRequest.of(0x36A3E0, Compression.NEMESIS, // ArtNem_HCZDragonfly
+            case "buggernaut" -> cachedSprites(rom, RomSpriteRequest.of(0x36A3E0, Compression.NEMESIS, // ArtNem_HCZDragonfly
                     0x360EB4, 1), s3k(rom, PAL_HCZ));                                       // Map_Buggernaut
             case "turbospiker" -> kosm(rom, 0x36A968, 0x361212, 1, s3k(rom, PAL_HCZ));   // ArtKosM_TurboSpiker
             case "megachopper" -> kosm(rom, 0x36A6C4, 0x360F26, 1, s3k(rom, PAL_HCZ));   // ArtKosM_MegaChopper
@@ -221,50 +244,50 @@ public final class Art {
             case "snaleblaster" -> kosm(rom, 0x377996, 0x360400, 1, s3k(rom, PAL_LBZ));  // ArtKosM_SnaleBlaster
             case "orbinaut" -> kosm(rom, 0x377D1A, 0x3604A4, 1, s3k(rom, PAL_LBZ));      // ArtKosM_Orbinaut
             case "ribot" -> kosm(rom, 0x377BE8, 0x3604B8, 1, s3k(rom, PAL_LBZ));         // ArtKosM_Ribot
-            case "flybot" -> rom.sprites(RomSpriteRequest.streamed(0x377EBE, 0x1320,     // ArtUnc_Flybot767
+            case "flybot" -> cachedSprites(rom, RomSpriteRequest.streamed(0x377EBE, 0x1320,     // ArtUnc_Flybot767
                     0x36065A, 0x3607EC, DplcLayout.OBJECT, 1), s3k(rom, PAL_LBZ));
             // Bosses and their parts.
-            case "ship_aiz" -> rom.sprites(ship(), s3k(rom, PAL_AIZ_FIRE));
-            case "ship_hcz" -> rom.sprites(ship(), s3k(rom, PAL_HCZ));
-            case "ship_lbz" -> rom.sprites(ship(), s3k(rom, PAL_LBZ));
-            case "ship" -> rom.sprites(ship(), s3k(rom, PAL_AIZ));
+            case "ship_aiz" -> cachedSprites(rom, ship(), s3k(rom, PAL_AIZ_FIRE));
+            case "ship_hcz" -> cachedSprites(rom, ship(), s3k(rom, PAL_HCZ));
+            case "ship_lbz" -> cachedSprites(rom, ship(), s3k(rom, PAL_LBZ));
+            case "ship" -> cachedSprites(rom, ship(), s3k(rom, PAL_AIZ));
             case "aiz_end_boss" -> kosm(rom, 0x365260, 0x361FD6, 1,                     // ArtKosM_AIZEndBoss
                     boss(rom, PAL_AIZ_FIRE, PAL_AIZ_END_BOSS));                            // Map_AIZEndBoss
-            case "hcz_end_boss" -> rom.sprites(RomSpriteRequest.of(0x36929E, Compression.NEMESIS, // ArtNem_HCZEndBoss
+            case "hcz_end_boss" -> cachedSprites(rom, RomSpriteRequest.of(0x36929E, Compression.NEMESIS, // ArtNem_HCZEndBoss
                     0x3634D4, 1), boss(rom, PAL_HCZ, PAL_HCZ_END_BOSS));                   // Map_HCZEndBoss
-            case "lbz_boss1" -> rom.sprites(RomSpriteRequest.of(0x37599C, Compression.NEMESIS, // ArtNem_LBZFinalBoss1
+            case "lbz_boss1" -> cachedSprites(rom, RomSpriteRequest.of(0x37599C, Compression.NEMESIS, // ArtNem_LBZFinalBoss1
                     0x3645A8, 1), boss(rom, PAL_LBZ, PAL_LBZ_FINAL_BOSS1));                // Map_LBZFinalBoss1
-            case "lbz_boss1_l0" -> rom.sprites(RomSpriteRequest.of(0x37599C, Compression.NEMESIS,
+            case "lbz_boss1_l0" -> cachedSprites(rom, RomSpriteRequest.of(0x37599C, Compression.NEMESIS,
                     0x3645A8, 0), boss(rom, PAL_LBZ, PAL_LBZ_FINAL_BOSS1));                // thruster flames, line 0
             case "lbz_boss2" -> kosm(rom, 0x376874, 0x364A96, 1,                        // ArtKosM_LBZFinalBoss2
                     boss(rom, PAL_LBZ, PAL_LBZ_FINAL_BOSS2));                              // Map_LBZFinalBoss2
             case "lbz_boss2_l0" -> kosm(rom, 0x376874, 0x364A96, 0, boss(rom, PAL_LBZ, PAL_LBZ_FINAL_BOSS2));
             case "egg_robo" -> kosm(rom, 0x17B17E, 0x184F34, 0,                          // ArtKosM_EggRoboBadnik
                     rom.palette(PAL_CONTINUE, 64));                                         // Map_EggRobo
-            case "mecha" -> rom.sprites(RomSpriteRequest.streamed(0x175A9E, 0x56E0,      // ArtUnc_MechaSonic
+            case "mecha" -> cachedSprites(rom, RomSpriteRequest.streamed(0x175A9E, 0x56E0,      // ArtUnc_MechaSonic
                     0x1853AA, 0x185852, DplcLayout.OBJECT, 1), boss(rom, PAL_SSZ, PAL_MECHA)); // Map/DPLC_MechaSonic
             // Props.
-            case "monitor" -> rom.sprites(RomSpriteRequest.of(0x190F4A, Compression.NEMESIS, // ArtNem_Monitors
+            case "monitor" -> cachedSprites(rom, RomSpriteRequest.of(0x190F4A, Compression.NEMESIS, // ArtNem_Monitors
                     0x01DBA2, 0), s3k(rom, PAL_AIZ));          // Map_Monitor (box 0, icons 1-10, broken 11)
-            case "ring" -> rom.sprites(RomSpriteRequest.of(0x192AEE, Compression.NEMESIS, // ArtNem_RingHUDText
+            case "ring" -> cachedSprites(rom, RomSpriteRequest.of(0x192AEE, Compression.NEMESIS, // ArtNem_RingHUDText
                     0x01A99A, 1), s3k(rom, PAL_AIZ));          // Map_Ring (spin 0-3, sparkle 4-7)
-            case "explosion" -> rom.sprites(RomSpriteRequest.of(0x19200A, Compression.NEMESIS, // ArtNem_Explosion
+            case "explosion" -> cachedSprites(rom, RomSpriteRequest.of(0x19200A, Compression.NEMESIS, // ArtNem_Explosion
                     0x01E758, 0), s3k(rom, PAL_AIZ));          // Map_Explosion
-            case "starpost" -> rom.sprites(RomSpriteRequest.of(0x192D2A, Compression.NEMESIS, // ArtNem_EnemyPtsStarPost
+            case "starpost" -> cachedSprites(rom, RomSpriteRequest.of(0x192D2A, Compression.NEMESIS, // ArtNem_EnemyPtsStarPost
                     0x02D348, 0).withTileOffset(-8), s3k(rom, PAL_AIZ)); // Map_StarPost (art_tile ArtTile_StarPost+8)
             case "emeralds" -> kosm(rom, 0x387CA6, 0x364562, 3, emeraldPalette(rom)); // ArtKosM_AIZIntroEmeralds
             case "tornado" -> kosm(rom, 0x382624, 0x364470, 0, s3k(rom, PAL_AIZ));    // ArtKosM_AIZIntroPlane
-            case "big_ring" -> rom.sprites(RomSpriteRequest.streamed(0x0D8766, 0x2700, // ArtUnc_SSEntryRing
+            case "big_ring" -> cachedSprites(rom, RomSpriteRequest.streamed(0x0D8766, 0x2700, // ArtUnc_SSEntryRing
                     0x0619E0, 0x061ABE, DplcLayout.OBJECT, 0), s3k(rom, PAL_AIZ)); // Map/DPLC_SSEntryRing
-            case "sphere" -> rom.sprites(RomSpriteRequest.of(0x0AD904, Compression.NEMESIS, // ArtNem_SStageSphere
+            case "sphere" -> cachedSprites(rom, RomSpriteRequest.of(0x0AD904, Compression.NEMESIS, // ArtNem_SStageSphere
                     0x00A464, 2), rom.palette(PAL_SSTAGE, 64)); // Map_SStageSphere, blue spheres on line 2
-            case "flicky" -> rom.sprites(RomSpriteRequest.of(0x1931D6, Compression.NEMESIS, // ArtNem_BlueFlicky
+            case "flicky" -> cachedSprites(rom, RomSpriteRequest.of(0x1931D6, Compression.NEMESIS, // ArtNem_BlueFlicky
                     0x02CEBA, 0), s3k(rom, PAL_AIZ));          // Map_Animals1
-            case "pocky" -> rom.sprites(RomSpriteRequest.of(0x193706, Compression.NEMESIS, // ArtNem_Rabbit
+            case "pocky" -> cachedSprites(rom, RomSpriteRequest.of(0x193706, Compression.NEMESIS, // ArtNem_Rabbit
                     0x02CF32, 0), s3k(rom, PAL_AIZ));          // Map_Animals5
-            case "ricky" -> rom.sprites(RomSpriteRequest.of(0x1935A8, Compression.NEMESIS, // ArtNem_Squirrel
+            case "ricky" -> cachedSprites(rom, RomSpriteRequest.of(0x1935A8, Compression.NEMESIS, // ArtNem_Squirrel
                     0x02CED8, 0), s3k(rom, PAL_AIZ));          // Map_Animals2
-            default -> throw new IllegalArgumentException("Unknown S3K art " + name);
+            default -> throw new UnsupportedOperationException("Unknown S3K art " + name);
         };
     }
 
@@ -273,8 +296,8 @@ public final class Art {
         return RomSpriteRequest.of(0x0D771E, Compression.NEMESIS, 0x06820C, 0);
     }
 
-    private static SceneSpriteSet kosm(SceneRomArt rom, int art, int map, int line, int[] palette) {
-        return rom.sprites(RomSpriteRequest.of(art, Compression.KOSINSKI_MODULED, map, line), palette);
+    private SceneSpriteSet kosm(SceneRomArt rom, int art, int map, int line, int[] palette) {
+        return cachedSprites(rom, RomSpriteRequest.of(art, Compression.KOSINSKI_MODULED, map, line), palette);
     }
 
     /** Pal_SonicTails on line 0 with a 48-colour zone palette on lines 1-3. */
@@ -302,25 +325,114 @@ public final class Art {
 
     /** The palette an act loads with, from its level kit (line 0 is the player palette). */
     public int[] kitPalette(String game, int zone) {
-        return palettes.computeIfAbsent(game + ":kit:" + zone, key -> {
-            SceneLevelKit kit = kit(game, zone, 0);
-            return kit == null ? new int[64] : kit.palette();
-        }).clone();
+        requireOpen();
+        int[] palette = kitPaletteOrNull(game, zone);
+        return palette == null ? new int[64] : palette.clone(); // Uncached presentation fallback only.
     }
 
-    private interface Loader {
-        SceneSpriteSet load();
+    private int[] requireKitPalette(String game, int zone) {
+        int[] palette = kitPaletteOrNull(game, zone);
+        if (palette == null) throw dependency("palette:" + game + ":kit:" + zone);
+        return palette.clone();
     }
+
+    private int[] kitPaletteOrNull(String game, int zone) {
+        String key = game + ":kit:" + zone;
+        int[] found = palettes.get(key);
+        if (found == null) {
+            found = attempt("palette:" + key, () -> {
+                SceneLevelKit supplied = kit(game, zone, 0);
+                if (supplied == null) throw dependency("kit:" + game + ":" + zone + ":0");
+                return supplied.palette();
+            });
+            if (found != null) palettes.put(key, found);
+        }
+        return found;
+    }
+
+    private interface Loader { SceneSpriteSet load(); }
 
     private SceneSpriteSet cached(String key, Loader loader) {
-        if (sets.containsKey(key)) return sets.get(key);
-        SceneSpriteSet set;
-        try {
-            set = loader.load();
-        } catch (RuntimeException failure) {
-            set = null;
+        requireOpen();
+        SceneSpriteSet set = sets.get(key);
+        if (set == null) {
+            set = attempt("sprite:" + key, loader::load);
+            if (set != null) sets.put(key, set);
         }
-        sets.put(key, set);
         return set;
     }
+
+    private SceneSpriteSet cachedSprites(SceneRomArt rom, RomSpriteRequest request, int[] palette) {
+        return spriteCaches.computeIfAbsent(rom, supplied -> new com.openggf.mods.scene.art.SceneArtCache(supplied, 32))
+                .sprites(request, palette);
+    }
+
+    public enum FailureKind { OPTIONAL_ROM_MISSING, UNSUPPORTED, INVALID_REQUEST, UNAVAILABLE }
+    public record Failure(String request, String owner, FailureKind kind, String cause, long retryAt) { }
+
+    /** At most 64 bounded entries, independent of successful images and without retained exception graphs. */
+    public List<Failure> failures() { return List.copyOf(failures.values()); }
+
+    private <T> T attempt(String request, java.util.function.Supplier<T> loader) {
+        requireOpen();
+        String id = bounded(request);
+        Failure prior = failures.get(id);
+        if (prior != null && ticks.getAsLong() < prior.retryAt()) return null;
+        try {
+            T value = loader.get();
+            if (value == null) record(id, FailureKind.UNSUPPORTED, "No art for this request");
+            else failures.remove(id);
+            return value;
+        } catch (DependencyFailure unavailable) {
+            Failure source = unavailable.failure;
+            record(id, source.kind(), source.cause(), source.retryAt());
+        } catch (MissingRom missing) {
+            record(id, FailureKind.OPTIONAL_ROM_MISSING, "ROM unavailable: " + missing.game);
+        } catch (UnsupportedOperationException unsupported) {
+            record(id, FailureKind.UNSUPPORTED, detail(unsupported));
+        } catch (IllegalArgumentException invalid) {
+            record(id, FailureKind.INVALID_REQUEST, detail(invalid));
+        } catch (IllegalStateException state) {
+            if (!(state.getCause() instanceof java.io.IOException)) throw state;
+            record(id, FailureKind.UNAVAILABLE, detail(state));
+        }
+        return null;
+    }
+
+    private void record(String request, FailureKind kind, String cause) {
+        long now = ticks.getAsLong();
+        long retryAt = now > Long.MAX_VALUE - 120 ? Long.MAX_VALUE : now + 120;
+        record(request, kind, cause, retryAt);
+    }
+    private void record(String request, FailureKind kind, String cause, long retryAt) {
+        if (!failures.containsKey(request) && failures.size() == 64)
+            failures.remove(failures.keySet().iterator().next());
+        failures.put(request, new Failure(request, owner, kind, bounded(cause), retryAt));
+    }
+    private static String detail(RuntimeException cause) {
+        return cause.getClass().getSimpleName() + ": " + cause.getMessage();
+    }
+    private static String bounded(String value) { return value.length() <= 256 ? value : value.substring(0, 256); }
+    private void requireOpen() { if (closed) throw new IllegalStateException("Art facade is closed"); }
+    private DependencyFailure dependency(String request) {
+        Failure source = failures.get(bounded(request));
+        if (source == null) throw new AssertionError("Missing asset failure status: " + request);
+        return new DependencyFailure(source);
+    }
+    private static final class DependencyFailure extends RuntimeException {
+        final Failure failure;
+        DependencyFailure(Failure failure) { this.failure = failure; }
+    }
+    private static final class MissingRom extends RuntimeException {
+        final String game;
+        MissingRom(String game) { this.game = game; }
+    }
+
+    @Override public void close() {
+        if (closed) return;
+        closed = true;
+        spriteCaches.values().forEach(com.openggf.mods.scene.art.SceneArtCache::close);
+        spriteCaches.clear(); roms.clear(); kits.clear(); sets.clear(); palettes.clear(); failures.clear();
+    }
+
 }
