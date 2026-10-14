@@ -1062,7 +1062,6 @@ this core does not claim absent child progression from derived parent defaults.
 Across these focused selectors there are41 distinct cases (repeated pressure and
 facade checks are not new coverage). Whole legal graph pressure and native scene
 pixel/audio comparison remain pending; this evidence does not close them.
-
 ### Ordinary donor RAM follow-up — 2026-10-14
 
 The [matching-controller qualification](../plans/2026-10-13-s3k-playable-completion.md#ordinary-s2-ram-and-matching-controller-binding-qualification)

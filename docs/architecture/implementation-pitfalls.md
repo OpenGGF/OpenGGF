@@ -14,6 +14,16 @@ headless tests, or audio. S3K-specific routing is in [AGENTS_S3K.md](../../AGENT
 
 The things that cost the most time when missed.
 
+**Optional presentation does not erase native object ownership.** S3K `Level`
+writes the title owner at `Dynamic_object_RAM+5`, absolute SST8, and creates
+four higher-slot children before `Load_Sprites`. Omitting its visible loop still
+retains the `$16` wait, child retirement and next-pass owner teardown. Intro
+controllers at `Dynamic_object_RAM+2` use absolute SST5 instead. Capture the
+actual parent links and surviving graph; freeing these slots changes ordinary
+later allocation. A production `LevelLoadContext` may leave zone/act unset, so
+an entry owner must use the admitted destination rather than those unset values.
+See the [fresh-title audit](audits/trace/2026-10-14-s3k-fresh-title-sst.md).
+
 **Decoded storage capacity can differ from a layer's logical height.** S1's
 cleared eight-row background RAM must not enlarge foreground geometry merely
 because both layers share a `Map`. Keep the previous declared-layout maximum

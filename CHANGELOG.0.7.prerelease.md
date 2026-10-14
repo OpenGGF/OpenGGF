@@ -10,6 +10,14 @@ Unreleased. The earlier development themes remain in
   tail, allowing ordinary movement after a fresh zone handoff. Publication also
   restores the destination ring count after the title boundary temporarily
   retains the source count, including rewind across that boundary.
+  Native title-card objects retain their fixed slots and child lifetimes after
+  omitted presentation, with exact graph restoration before gameplay placements.
+
+- **S3K badniks:** Monkey Dude retains five independent arm and hand objects,
+  their physical predecessor links, native dispatch and retirement order, and
+  the body's explosion state before initialization. The complete graph restores
+  and replays without creating duplicate children. Its body preserves the ROM
+  placement flip and collision origin independently of the player's side.
 
 - **S3K Knuckles routes:** Locked-on Mushroom Hill deletes the standalone S&K
   intro before it can freeze the camera and take player control. Its native

@@ -129,7 +129,7 @@ public class Sonic3kGameModule implements GameModule {
             new com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageManager();
     private final Sonic3kSpecialStageProvider specialStageProvider =
             new Sonic3kSpecialStageProvider(specialStageManager);
-    private final LevelInitProfile levelInitProfile = new Sonic3kLevelInitProfile(levelEventManager);
+    private final Sonic3kLevelInitProfile levelInitProfile = new Sonic3kLevelInitProfile(levelEventManager);
     private final SidekickCarryTrigger sidekickCarryTrigger = new Sonic3kCnzCarryTrigger();
     private final CrossGameDonorProvider donorProvider = new Sonic3kCrossGameDonorProvider();
     private final Sonic3kModZoneAdapter modZoneAdapter = new Sonic3kModZoneAdapter(this);
@@ -260,7 +260,7 @@ public class Sonic3kGameModule implements GameModule {
     @Override
     public ObjectRegistry createObjectRegistry() {
         if (objectRegistry == null) {
-            objectRegistry = new Sonic3kObjectRegistry();
+            objectRegistry = new Sonic3kObjectRegistry(levelInitProfile.freshTitleCardSst());
         }
         return objectRegistry;
     }

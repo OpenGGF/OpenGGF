@@ -96,6 +96,12 @@ abstract class AbstractS3kBadnikInstance extends AbstractBadnikInstance
      */
     static void destroyAsS3kBadnik(AbstractObjectInstance instance, int x, int y,
             ObjectSpawn spawn, PlayableEntity player, ObjectServices services, boolean powered) {
+        destroyAsS3kBadnik(instance,x,y,spawn,player,services,powered,S3K_DESTRUCTION_CONFIG);
+    }
+
+    static void destroyAsS3kBadnik(AbstractObjectInstance instance,int x,int y,
+            ObjectSpawn spawn,PlayableEntity player,ObjectServices services,boolean powered,
+            DestructionConfig config) {
         if (instance.isDestroyed()) {
             return;
         }
@@ -104,11 +110,9 @@ abstract class AbstractS3kBadnikInstance extends AbstractBadnikInstance
         int mySlot = ObjectLifetimeOps.detachSlotForTransfer(instance);
         instance.setDestroyed(true);
         if (powered) {
-            DestructionEffects.destroyBadnikPowered(x, y, spawn, mySlot, player, services,
-                    S3K_DESTRUCTION_CONFIG);
+            DestructionEffects.destroyBadnikPowered(x, y, spawn, mySlot, player, services,config);
         } else {
-            DestructionEffects.destroyBadnik(x, y, spawn, mySlot, player, services,
-                    S3K_DESTRUCTION_CONFIG);
+            DestructionEffects.destroyBadnik(x, y, spawn, mySlot, player, services,config);
         }
     }
 

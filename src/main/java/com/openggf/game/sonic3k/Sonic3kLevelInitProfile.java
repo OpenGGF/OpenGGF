@@ -26,6 +26,9 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
         implements com.openggf.game.internal.QueuedPatternDmaPublication,
         com.openggf.game.internal.SpriteTablePublication {
     private final Sonic3kLevelEventManager levelEventManager;
+    private final Sonic3kFreshTitleCardSst freshTitleCardSst = new Sonic3kFreshTitleCardSst();
+
+    Sonic3kFreshTitleCardSst freshTitleCardSst() { return freshTitleCardSst; }
 
     public Sonic3kLevelInitProfile(Sonic3kLevelEventManager levelEventManager) {
         this.levelEventManager = levelEventManager;
@@ -84,6 +87,9 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
     @Override
     public List<InitStep> levelLoadSteps(LevelLoadContext ctx) {
         List<InitStep> steps = buildCoreSteps(ctx);
+        steps.addFirst(new InitStep("PrepareFreshTitleCardSst",
+                "Level/loc_62B6: fixed title owner precedes layout placement",
+                () -> freshTitleCardSst.prepare(ctx)));
         // Post-load assembly: only when requested
         if (ctx.isIncludePostLoadAssembly()) {
             steps.add(restoreCheckpointStep(ctx));
@@ -98,6 +104,9 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
                 steps.add(requestTitleCardStep(ctx));
             }
         }
+        steps.add(new InitStep("FinishFreshTitleCardSstInstallation",
+                "End the load-only fixed-slot installation scope",
+                freshTitleCardSst::finishInstallation));
         return List.copyOf(steps);
     }
 

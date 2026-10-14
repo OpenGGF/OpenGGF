@@ -112197,3 +112197,89 @@ preserves baseline scores, source hashes, complete-runtime/media evidence and
 rejected hypotheses. Broad C1–C7 matching validation had 26 inherited failures and
 64 identical skips, with passing separate guards; C8/tools combined updated-base
 validation, integration, push and cleanup remain pending.
+
+
+## 2026-10-14 — current S3K baselines and fresh-title SST slice
+
+Matched source `5b2ff8e78`, `.worktrees/ai-s3k-parity-trace`, verified locked-on
+ROM, Java25 and normal queued trace profiles. The [native title audit](../architecture/audits/trace/2026-10-14-s3k-fresh-title-sst.md)
+records exact selectors, native core/movie pins, negative checks and scope.
+Original AIZ20,463 and initialHCZ3,519 compared observations pass with both
+canonical prefixes (11784:4/0/0/0). `-Ptrace-segments` with
+`TestS3kAizZoneSliceTraceReplay#replayMatchesTrace,TestS3kSonicTailsHcz2SegmentTraceReplay#replayMatchesTrace`
+fails2/2/0/0: alternateAIZ has60 spans, first25,589 animation`$13/$05`;
+standalone returnedHCZ has3,433, firstrow0 Y-speed`$00/$0E`. The old59 figure
+is historical; no standalone bootstrap hydrates a returned campaign.
+
+`-Ptrace-replay` with
+`TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds`
+fails1/1/0/0: segment6 retains189 raw field mismatches, first3,319 TailsX`$31C1/$31CA`;
+segment8 retains12,719, first1,583 TailsX`$366C/$3674`; segment9 initialHCZ is
+green. Segment11 retains82,067, firstmapping1,507`$63/$95`, firstY1,510
+`$7D6/$7DF`; only5,725/14,208rows complete, losing LEVEL ownership atinput68,801.
+Commands use `python3 tools/testing/maven_queue.py -Dmse=off <profile>
+'-Dtest=<selectors>' '-Ds3k.rom.path=<absolute verified ROM>' test -B`,
+`JAVA_HOME=/usr/lib/jvm/java-25-openjdk` and the documented surfaceless EGL flag.
+
+The candidate restores fresh title owner SST8 and real children9–12 before
+placements, retaining native wait/retirement and exact graph replay after
+omitted visual presentation. Actual production preset graph checks45290 pass
+10/0/0/0 at09:32:19 BST; focused controls2446 pass3/0/0/0; strictpost-title
+8113 passes the two-return prefix but leaves the chain profile andinput68,801
+stop unchanged. Native presence now matches through AIZ return segment2 row126; the next
+measured omission is five MonkeyDude arm children atrow127. Ring/flash placement
+remains engine25/17 vsnative18/22, so no trace-frontier closure is claimed.
+
+
+## 2026-10-14 — MonkeyDude native arm and replacement SST graph
+
+Over fresh-title `92d376187` plus qualified continuation dependency `9fa71e966`,
+`.worktrees/ai-s3k-parity-trace` replaces the body's aggregate arm with five real
+SST dispatch owners. Numeric predecessor links read the actual physical owner,
+including a killed body before its replacement explosion initializes. Native
+status7 publishes retirement now and clears on the following dispatch; an
+unreleased `Obj_WaitOffscreen` clears immediately at its separate coarse boundary.
+The [MonkeyDude audit](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md)
+records native labels, exact selectors, negative evidence and remaining limits.
+
+Frozen Java-content digest
+`007d9f765821d4cbc0e0408d5c015eae7483ee665a5dca1590b41c822a4757c6`:
+36090 passes104/0/0/0 at10:12:19 BST;90457 passes111/0/0/0 guards at10:18:17.
+Strict85471 passes originalAIZ, initialHCZ and both prefixes, but retains the
+continuous-chain failure189/12,719/82,067 **raw field mismatches**, with exactly
+the earlier first fields and input68,801 ownership loss. AlternateAIZ40737
+retains60 compressed spans, first25,589 animation`$13/$05` (1/1/0/0,10:23:19).
+No trace frontier moves. Standalone counts and chain counts use different units:
+`DivergenceReport` compresses spans; `LiveTraceComparator` counts per-row fields.
+
+In the actual AIZ1 first special-stage return (segment2), sampled occupied-slot
+sets now match through row725; the former row127 missing-arm gap is closed.
+Row726 first retains extra engineSST11 `S3kAirCountdownObjectInstance`, while
+native occupies10 only. This observer's pointer-low-byte labels are not type
+oracles. Second-entry3981 still has engine ring25/flash17 versus native18/22;
+therefore same-pass flash initialization and the downstream extra Level pass
+remain unresolved. Body player-facing/32-pixel anchoring is a separately verified
+source omission queued for the next slice; shared points/SFX death ordering is
+not qualified by this graph repair.
+
+
+## 2026-10-14 — MonkeyDude immutable body flip and native touch origin
+
+Separate follow-up over graph8653f9232 removes the body's inherited P1-facing
+writer and synthetic±32 anchor. Native WAIT/ACTIVE preserve placement flip and
+x_pos; only the independent root arm calls Find_SonicTails. Literal flip0/1
+negative40269 fails2/2/0/0 (oldtouchX132/68 vs100). Corrected component/graph/
+actualfivepreset placement54064 passes18/0/0/0 at10:30:59 BST,71s execution/
+113s queue. Commands/selectors and native owners are in the
+[existing graph audit](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#separate-body-orientation-correction).
+
+Strict39401 (`-Ptrace-replay`, exact85471 five-case selector) completes5/1/0/0
+at10:33:01 BST,96s execution/0s queue: originalAIZ, initialHCZ and both prefixes
+pass; chain189/12,719/82,067 raw field mismatches, firstfields and input68,801
+stop are unchanged. Alternate80705 (`-Ptrace-segments`, exact40737 selector)
+completes1/1/0/0 at10:33:36 BST,34.562s execution/97s queue:60 grouped spans,
+first25,589 animation`$13/$05`. Sampled segment2 occupancy first differs at726
+with engineAirCountdown11; ring/flash placement remains25/17 versus18/22.
+The body conformance omission closes; no strict frontier moves. Fixed-air
+and RNG comparison channels already exist in this fixture and remain read-only
+evidence for the next owner, not gameplay hydration.

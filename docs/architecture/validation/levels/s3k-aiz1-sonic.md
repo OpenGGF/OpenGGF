@@ -573,3 +573,28 @@ this slice. Real checkpoint/death/reset, all supported main/team paths, the new
 352/528 complete-route products and remaining per-mechanic/boss/presentation
 obligations remain explicit and are not discharged by the short entry checks.
 Combined validation/integration remain lead-owned.
+
+## Native MonkeyDude local graph — 2026-10-14
+
+`TestS3kMonkeyDudePlacedGraph` loads the real AIZ1 ROM placement
+`X=$1E58,Y=$0490,id=$8E,subtype=$10,flip=1` from table `$1E44DA`, record
+`$1E45E2`, admits its five independent arm records and restores/replays the
+whole registry for45 ordinary inputs twice at actual production presets
+320/352/400/528/800. These are positioned local graph checks; no cold route,
+donor/team breadth, rendered pixels/audio or whole-badnik parity is implied.
+`TestMonkeyDudeNativeSstGraph` separately covers both orientations, checked
+allocation, predecessor identity, offscreen retirement, normal/power replacement
+before and after its own INIT, unknown-header rejection and forward replay.
+Focused36090 passes104 cases including these13; source/rewind/trace guards90457
+pass111. Strict originalAIZ/initialHCZ/both prefixes remain green, but the
+continuous chain and alternateAIZ retain their prior frontiers. The
+[owning audit](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md) distinguishes
+physical occupancy evidence from the remaining body-facing and death-order limits.
+
+The separate body correction replaces the old synthetic turning/32-pixel tests
+with literal flip0/1 and native X/touch/render origins across both player sides
+and two replay cycles. The real placement checks flip1 and X`$1E58` at all five
+production presets. Negative40269 fails2/2; corrected54064 passes18/0/0/0.
+Strict39401 retains four green controls and the inherited continuous-chain
+failure; alternate80705 retains60 grouped errors. This body conformance repair
+adds no cold-route, native pixel/audio or strict-chain closure claim.

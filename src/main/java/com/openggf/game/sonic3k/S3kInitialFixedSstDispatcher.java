@@ -60,6 +60,12 @@ final class S3kInitialFixedSstDispatcher implements InitialFixedSstDispatcher {
 
     @Override
     public void processPostDynamicFixedSlots(ProcessSpritesEpoch epoch) {
+        // loc_64DC follows the initial assembly pass, resetting the surviving
+        // native title owner to $16 before its first LevelLoop dispatch.
+        for (var title : objects.activeObjectsOfType(
+                com.openggf.game.sonic3k.objects.S3kFreshTitleCardOwnerObjectInstance.class)) {
+            if (!title.isDestroyed()) title.enterLevelLoop();
+        }
         levelEvents.processInitialFixedAirSlot(0, p1);       // 94 Breathing_bubbles
         levelEvents.processInitialFixedAirSlot(1, p2);       // 95 Breathing_bubbles_P2
         empty(96);                                           // Tails_tails_2P

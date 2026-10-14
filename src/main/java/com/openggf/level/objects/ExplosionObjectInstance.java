@@ -129,6 +129,9 @@ public class ExplosionObjectInstance extends AbstractObjectInstance implements S
         this.pointsAllocatedBeforeAnimal = pointsAllocatedBeforeAnimal;
     }
 
+    /** Actual mapping index published by appendRenderCommands, not an animation cursor. */
+    protected final int currentMappingFrame() { return animFrame; }
+
     private void playPendingSfxIfPossible() {
         if (pendingSfxId < 0) {
             return;

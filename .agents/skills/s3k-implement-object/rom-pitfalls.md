@@ -5266,6 +5266,27 @@ must not advance captured scroll state. Missing required data still fails; no
 fallback table or ROM-required fixture skip replaces that boundary.
 
 
+## Optional title presentation still occupies the native SST graph
+
+`Level/loc_62B6` writes `Obj_TitleCard` at `Dynamic_object_RAM+5` (absolute
+SST8), not absolute slot5. `Obj_TitleCardCreate` then allocates four children
+with `AllocateObjectAfterCurrent` before `loc_6468` loads ordinary placements.
+`loc_64DC` seeds the surviving owner's `$2E` wait with `$16` after the initial
+sprite pass. Omitting visual presentation does not retire those objects.
+Children consume their preceding `Render_Sprites` visibility; their lower-slot
+owner sees the final `$30` decrement only on its next dispatch. Preserve exact
+captured parent2 links and pure recreation without allocating another graph.
+
+Do not substitute the intro-controller slot: `Dynamic_object_RAM+2` is absolute
+SST5. D01's `Obj_TitleCardInit` deletes before child/art creation, leaving SST8
+for the ending owner. Use semantic fresh-level admission and the actual loaded
+destination; production `LevelLoadContext` zone/act can be unset.
+
+The maintained `SlotOccupancyProbe` masks native code pointers to a low byte for
+its type display. Use that channel to compare occupancy only; identify native
+routines from the full auxiliary pointer or a source-backed native observation.
+The [2026-10-14 audit](../../../docs/architecture/audits/trace/2026-10-14-s3k-fresh-title-sst.md)
+records the matched graph repair and its unchanged strict trace frontier.
 ## Unchecked AllocateObject keeps the last physical SST
 
 `Create_Continue_Sprite` (`$5FE1E`) deliberately ignores AllocateObject's failure
@@ -5312,3 +5333,38 @@ early boundary. While inactive its cached controller is a derived resource,
 not a RAM owner; fresh ensure must return to its own immutable constructor/load
 baseline, while active snapshots restore actual progressed RAM. The real
 17-frame palette→before-entry→first-frame replay catches this lifecycle risk.
+
+## Linked MonkeyDude arms read the current physical predecessor
+
+`CreateChild4_LinkListRepeated` gives `Obj_MonkeyDude` five actual SST actors;
+each arm/hand owns its dispatch, fractional position and native parent3 numeric
+address. `Child_Draw_Sprite` reads predecessor status7 only after that actor's
+routine, publishes its own pending deletion and clears on its next dispatch.
+A normal body `Sprite_CheckDeleteTouch/loc_85094` has the same delayed marker;
+its unreleased `Obj_WaitOffscreen/loc_85AFC` instead clears immediately.
+
+`Touch_EnemyNormal` overwrites the body's code/routine/status in place with
+`Obj_Explosion`. Arms can run before that lower slot initializes: its retained
+mapping remains the body byte until `loc_1E626` writes explosion frame0. Read the
+actual current owner by physical slot through the injected callback boundary;
+do not hold a stale Java body, recreate a nearest parent or claim a full native
+header producer when only Y/mapping/priority/status are verified. Empty cleared
+slots are zero; unknown live owners fail before movement mutation. Pure recreation
+restores captured numeric links without creating another graph.
+
+The trace label `aiz_2` denotes first AIZ1 special-stage return segment2, not
+runtime act2. The real `$1E58/$0490/$8E/$10` placement is AIZ1 record `$1E45E2`.
+See [the graph audit](../../../docs/architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md)
+for source, negative controls and unchanged strict frontiers.
+
+
+## MonkeyDude body orientation is the placement flip
+
+`Obj_MonkeyDude` dispatches WAIT to `loc_85652` (Animate_Raw/Obj_Wait) and ACTIVE
+to vertical Y stepping; neither writes body x_pos or render_flags bit0. Its
+`Sprite_CheckDeleteTouch` tail and `Touch_Width` consume literal body x_pos.
+`MonkeyDudeArm_CheckPlayerRange` uses Find_SonicTails on the independent root,
+not on the body. Keep both literal spawn orientations when P1 crosses sides;
+a synthetic body turn or32-pixel collision/render shift invents behavior.
+The [native graph audit](../../../docs/architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#separate-body-orientation-correction)
+records the negative old oracles and unchanged strict trace frontiers.

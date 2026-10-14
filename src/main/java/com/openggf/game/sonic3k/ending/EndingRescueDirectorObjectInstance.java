@@ -361,6 +361,7 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
         private EndingRescueRevertObjectInstance(ObjectSpawn spawn){super(spawn,"EndingRescueRevert");}
         @Override public EndingRescueRevertObjectInstance recreateForRewind(RewindRecreateContext c){return new EndingRescueRevertObjectInstance(c.spawn());}
         @Override public boolean isPersistent(){return true;}
+        // Obj_Ending_RevertSuperSonic modifies only code and timer2E in its own SST.
         @Override public NativeSstState nativeSstState(){return NativeSstState.CLEARED;}
         @Override public void update(int vIntRunCount,PlayableEntity player){
             if(!(services().playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite p)

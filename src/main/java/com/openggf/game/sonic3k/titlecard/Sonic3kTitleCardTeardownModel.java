@@ -110,14 +110,7 @@ public final class Sonic3kTitleCardTeardownModel {
 
         /** Render_Sprites bounds test for a render_flags $40 sprite — 36444-36468. */
         private boolean visible() {
-            int logicalWidth = viewportWidth();
-            int xOffset = (logicalWidth - SCREEN_WIDTH) / 2;
-            int dx = x - SCREEN_ORIGIN + xOffset;
-            if (dx + width < 0 || dx - width >= logicalWidth) {
-                return false;
-            }
-            int dy = y - SCREEN_ORIGIN;
-            return dy + height >= 0 && dy - height < SCREEN_HEIGHT;
+            return screenElementVisible(x,y,width,height);
         }
 
         /**
@@ -160,16 +153,37 @@ public final class Sonic3kTitleCardTeardownModel {
      * {@code objoff_46} once the entry animation finishes.
      */
     private static Element[] newStandardCard() {
-        return new Element[] {
-                // Obj_TitleCardName: $46=$120, width $80, $28=3
-                new Element(0x120, 0xE0, 0x80, 0, 3, false),
-                // Obj_TitleCardElement: $46=$17C, width $24, $28=5
-                new Element(0x17C, 0x100, 0x24, 0, 5, false),
-                // Obj_TitleCardAct: $46=$184, width $1C, $28=7
-                new Element(0x184, 0x120, 0x1C, 0, 7, false),
-                // Obj_TitleCardRedBanner: $46=$C0 on y, width 0, $28=1
-                new Element(0xE0, 0xC0, 0, RED_BANNER_HEIGHT, 1, true),
-        };
+        Element[] elements=new Element[4];
+        for (int index=0;index<elements.length;index++) {
+            var seed=standardElementSeed(index);
+            elements[index]=new Element(seed.x(),seed.y(),seed.width(),seed.height(),
+                    seed.stagger(),seed.exitOnY());
+        }
+        return elements;
+    }
+
+    /** ObjArray_TtlCard's resting screen words, bounds and $28 exit thresholds. */
+    public record ElementSeed(int x,int y,int width,int height,int stagger,boolean exitOnY) {}
+    private static final ElementSeed[] STANDARD_ELEMENTS = {
+            new ElementSeed(0x120,0xE0,0x80,0,3,false),
+            new ElementSeed(0x17C,0x100,0x24,0,5,false),
+            new ElementSeed(0x184,0x120,0x1C,0,7,false),
+            new ElementSeed(0xE0,0xC0,0,RED_BANNER_HEIGHT,1,true)
+    };
+    public static ElementSeed standardElementSeed(int index) {
+        if (index<0 || index>=STANDARD_ELEMENTS.length)
+            throw new IllegalArgumentException("title element "+index);
+        return STANDARD_ELEMENTS[index];
+    }
+
+    /** Render_Sprites' $40 screen-coordinate bounds, also used without visual presentation. */
+    public static boolean screenElementVisible(int x,int y,int width,int height) {
+        int logicalWidth=viewportWidth();
+        int xOffset=(logicalWidth-SCREEN_WIDTH)/2;
+        int dx=x-SCREEN_ORIGIN+xOffset;
+        if (dx+width<0 || dx-width>=logicalWidth) return false;
+        int dy=y-SCREEN_ORIGIN;
+        return dy+height>=0 && dy-height<SCREEN_HEIGHT;
     }
 
     public Sonic3kTitleCardTeardownModel() {
