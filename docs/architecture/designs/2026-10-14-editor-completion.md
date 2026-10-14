@@ -200,4 +200,120 @@ Offscreen surfaceless EGL captures at 320×224 and 426×224 were manually inspec
 readable whole-pixel text, library/focused art, selected-cell borders, forms and
 visible error/details prompts. Pixel assertions distinguish real cached art from
 blue chrome. Captures and Maven reports are temporary target outputs, not runtime
-performance evidence. Combined smoke/guards and final integration remain pending.
+performance evidence. Combined smoke/guards and subsequent attribution follow below.
+
+## Combined validation and baseline attribution
+
+Implementation `9627e29b1` plus upstream `60700c205` was frozen for the complete
+selection. Preflight checked Java 25, Lua 5.4 and PowerShell in this exact launch
+environment. The 3,270 candidate classes ran as 66 batches of at most 50, followed
+by a fresh guards JVM:
+
+Commands normalize the recorded absolute main-workspace path as
+`OPENGGF_EDITOR_MAIN`; set it to your existing main checkout. ROM filenames,
+selectors, flags and lifecycle arguments are preserved. No ROM setup is performed.
+
+```bash
+LUA_BIN=/usr/bin/lua5.4 JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl DISPLAY= WAYLAND_DISPLAY= \
+python3 tools/testing/run_categories.py \
+  --base 4a0e714d5e29b65a5b1ba8e6cbb6a8223f560c75 \
+  --rom-directory "${OPENGGF_EDITOR_MAIN}" --max-minutes 180 --run
+```
+
+Run `20261014T125054Z-ade2f786` completed all batches: ordinary 27,373 tests,
+3 failures, 2 errors, 85 skips, 4,683.68s execution; guards 680 tests, 4 failures,
+0 errors/skips, 273.04s execution. This is bounded smoke coverage, not a green
+full-suite or graphics/performance certification. Guards waited 522s for admission;
+queue waiting is separate from execution. The retained editor worktree lease was
+observed released at 15:53:45 UTC and relayed to the diagnostic owner. All failure
+and skip details were inspected (none omitted); diagnostics were then acknowledged.
+
+The ordinary red cases were resolved or attributed by identity:
+
+| Case | Evidence and disposition |
+|---|---|
+| TestRemainingRewindTailInventory#remainingRoundTripTailMatchesInventory | S3kAuthoredGoalInstance adds one actual passing round trip: 1,321 classes/1,078 passes, 243 graph-covered, 0 no-codec. Commit `aa6e42902` updates the inventory; its focused inventory, real goal restore/replay and rewind coverage checks passed 3/3 without skips. |
+| TestHczMinibossNativeRendering#allOrbitPhasesMatchRomSpriteCompositionInNativePixels | Matched pinned `4a0e714d5` / current `60700c205` each 1 failure, 0 errors/skips: GLFW must initialize for pixel verification, expected true / actual false at line 53. Native pixels were not verified by these runs. |
+| TraceCaptureBootDimensionsTest#realBootKeepsNativeGameplayCameraAndWidePresentationCaches(int)[1] and [2] | Standalone clean pairs pass 2/2 on both commits. The causal ordered pair below gives identical 2 errors on both: Unable to initialize GLFW at HeadlessGameBoot:302, before boot assertions. TestSurfacelessEglContext's existing AfterEach clears the inherited backend property in the reused JVM. |
+| TestCompleteRunAudioCli#freshJvmBootstrapsTheS1ProfileButItsUnavailableDispatcherEmitsNoStandardOutput | Matched clean pairs each 1 failure, 0 errors/skips at line 182. Both children exit 4 with empty stdout; byte-identical stderr begins with Picked up JAVA_TOOL_OPTIONS, before PRODUCER_UNAVAILABLE. The fixed producer is unavailable before capture; no gameplay/audio producer was exercised. |
+
+All matched pairs used Java 25.0.4.1, the required EGL flag and empty display
+variables, normal admission, identical effective classpaths, and verified existing
+main ROM files. Owning test/tool/POM sources are unchanged between pinned baseline
+and `60700c205`. No unrelated helper, donor, graphics flag or audio path was changed
+to force a pass. Both arms of each matched pair used the same exact command
+from the projects or interaction worktree, respectively:
+
+```bash
+env JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl DISPLAY= WAYLAND_DISPLAY= LUA_BIN=/usr/bin/lua5.4 python3 "${OPENGGF_EDITOR_MAIN}/tools/testing/maven_queue.py" -Dmse=off '-Dtest=com.openggf.game.sonic3k.objects.TestHczMinibossNativeRendering#allOrbitPhasesMatchRomSpriteCompositionInNativePixels' "-Dsonic1.rom.path=${OPENGGF_EDITOR_MAIN}/s1.gen" "-Dsonic2.rom.path=${OPENGGF_EDITOR_MAIN}/s2.gen" "-Ds3k.rom.path=${OPENGGF_EDITOR_MAIN}/s3k.gen" test -B
+
+JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl DISPLAY= WAYLAND_DISPLAY= LUA_BIN=/usr/bin/lua5.4 python3 "${OPENGGF_EDITOR_MAIN}/tools/testing/maven_queue.py" -Dmse=off -B '-Dtest=TestCompleteRunAudioCli#freshJvmBootstrapsTheS1ProfileButItsUnavailableDispatcherEmitsNoStandardOutput' "-Dsonic1.rom.path=${OPENGGF_EDITOR_MAIN}/s1.gen" "-Dsonic2.rom.path=${OPENGGF_EDITOR_MAIN}/s2.gen" "-Ds3k.rom.path=${OPENGGF_EDITOR_MAIN}/s3k.gen" clean test
+```
+
+The ordered pair used the exact batch profile and all four ROM properties:
+
+```bash
+env JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl DISPLAY= WAYLAND_DISPLAY= LUA_BIN=/usr/bin/lua5.4 \
+python3 "${OPENGGF_EDITOR_MAIN}/tools/testing/maven_queue.py" -Dmse=off -Psmoke \
+'-Dtest=com.openggf.tools.TestSurfacelessEglContext#selectionIsOptInAndRejectsUnknownBackends,com.openggf.tools.TraceCaptureBootDimensionsTest#realBootKeepsNativeGameplayCameraAndWidePresentationCaches' \
+"-Dkis2.rom.path=${OPENGGF_EDITOR_MAIN}/kis2.gen" \
+"-Ds3k.rom.path=${OPENGGF_EDITOR_MAIN}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+"-Dsonic1.rom.path=${OPENGGF_EDITOR_MAIN}/Sonic The Hedgehog (W) (REV01) [!].gen" \
+"-Dsonic2.rom.path=${OPENGGF_EDITOR_MAIN}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" test -B
+```
+
+Sessions 79790/current and 98355/baseline each ran 3 cases: selection passed,
+dimensions 400/528 each errored identically, 0 skips. Non-clean lifecycle and
+alphabetical reused-fork ordering were matched. Queue waits 400s/current and 575s/
+baseline are separate from Maven 24.137s/current and approximately 64s/baseline.
+
+The 85 skips include opt-in benchmarks/soaks/captures, unavailable native graphics
+checks and optional local audio references. 32 InfiniteSonic cases lacked applicable
+platform/flyer stretches; CPZ spin-tube capture/release did not satisfy its scenario
+prerequisite. These are coverage limits, not passes or missing-ROM excuses. All-game
+editor lifecycle and owned offscreen editor pixels passed in the focused runs above.
+
+## Guard corrections and updated upstream
+
+Commit `d769f6611` routes export host creation through the existing composition-root
+registry's pure factory, with fresh-host and unchanged bootstrap/world ownership
+checks. The two intentional editor-to-io/mods data edges reuse bounded asset and
+strict baked-level parsing contracts. A new guard restricts exact owners and types;
+general creator execution/registration stays rejected. Edge pairs increase 125→127;
+constructor baseline 0, cycle baseline 1 and the 16-slice cluster remain unchanged.
+Duplicating parsing/sandbox logic or widening the cycle waiver was rejected.
+Session 24969 passed 77 checks, 0 failures/errors/skips, including all three ROM-backed
+export hosts, 31 ArchUnit cases and V-int terminology (queue 32s/Maven 133s).
+
+Commit `3c0c93237` extracts `GameLoopEditorController` without changing public APIs,
+editor gates or the early native-frame suspension barrier. GameLoop shrinks from
+3,345 to 3,303 effective lines against the unchanged 3,313 budget. Session 14868 passed 17
+checks, 0 failures/errors/skips: the real quit/cancel/pending-fade callback, all-game
+modal shortcuts, focus loss, routing and offscreen presentation (queue 35s/Maven 77s).
+Increasing the large-class budget was rejected.
+
+Upstream develop `1a038f53c` adds native/scoped-palette graphics behavior. Its merge
+`3773c5bd7` resolved implementation-pitfalls prose cleanly and preserves both sets of
+findings. Correction merges `fb1899219` and `958a3cb4a` are clean. Because that
+combination was not covered by the earlier smoke source, a final normal focused
+request will cover the affected guards, owned editor pixels and actual native goal
+completion for all three games. Unchanged broad smoke is not repeated.
+
+Final request session35058 tested production/test source `958a3cb4a` with the four
+owned evidence/architecture prose files uncommitted and frozen. It passed 38 cases,
+0 failures/errors/skips: 31 ArchUnit, 1 size, 1 clock, 1 actual pixel, and 4 native
+lifecycle cases (all three goals plus S2 quit/cancel). Queue 22s/Maven 133s. Actual
+XML identities and zero skips were inspected; native 320px pattern and 426px form
+captures were inspected again after the graphics merge. No extra broad baseline,
+post-integration or release full-suite run is justified for this unchanged source.
+
+```bash
+LUA_BIN=/usr/bin/lua5.4 JAVA_TOOL_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl DISPLAY= WAYLAND_DISPLAY= python3 tools/testing/maven_queue.py -Dmse=off -B -Pguards '-Dtest=TestArchUnitRules,TestArchitecturalSourceGuard#releaseCriticalLargeClassesDoNotGrowWithoutExtraction,TestObjectUpdateClockTerminologyGuard,TestEditorProjectPresentation,TestEditorProjectLifecycle#playtestOwnsIndependentRuntimeAndNativeGoalReturnsToEditor+cancellingNativeExitModalRestoresTheSameHeadlessPlaytestAndEditorView' "-Dsonic1.rom.path=${OPENGGF_EDITOR_MAIN}/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=${OPENGGF_EDITOR_MAIN}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds3k.rom.path=${OPENGGF_EDITOR_MAIN}/Sonic and Knuckles & Sonic 3 (W) [!].gen" test
+```
+
+All editor-introduced failures are corrected and the four remaining ordinary red
+cases match the pinned baseline. The delivery therefore retains those explicit
+headless/test-environment limits; it is not described as an entirely green suite.
+Final documentation checks cover shell syntax, local links, mirrored guidance,
+diff whitespace and commit policy. Integration/push/cleanup follow the repository
+workflow and are reported separately in the delivery result.

@@ -138,13 +138,22 @@ See [queue evidence](../architecture/research/2026-10-13-maven-queue-contention.
 Fork options and child-launcher output (2026-10-14, S3K composition): an admitted
 headless flag does not prove propagation into a test fork. With the current
 Maven3.9.16/Surefire3.2.5 POM, `MAVEN_OPTS` supplies parent JVM properties;
-CLI `-D` or inherited `JDK_JAVA_OPTIONS` reaches tests. The latter also adds a
-Java notice before child stderr, so a first-byte diagnostic assertion can fail
+CLI `-D` or inherited `JDK_JAVA_OPTIONS` reaches tests. Inherited
+`JAVA_TOOL_OPTIONS` also reaches tests and child JVMs. Both launcher environment
+variables add a Java notice before child stderr, so a first-byte diagnostic assertion can fail
 while its correct exit status and empty stdout pass. Confirm the actual fork's
 graphics setting and attribute the exact assertion/source/environment; tool
 preflight alone does not prove pixel coverage. Preserve required graphics when
 reporting a known launcher-prefix failure. See the
 [S3K composed record](../architecture/plans/2026-10-13-s3k-playable-completion.md#inherited-child-launcher-prefix-and-preserved-graphics).
+
+Reused test JVMs can lose inherited graphics properties (2026-10-14, editor smoke):
+`TestSurfacelessEglContext` clears `openggf.headless.gl` in its existing teardown.
+The later TraceCaptureBootDimensions cases then take the default GLFW path and
+fail before gameplay boot. Standalone baseline/current pairs pass; the ordered
+selection-plus-dimensions pair reproduces both errors on both commits. Check actual
+fork properties and predecessor cleanup before blaming engine changes or EGL.
+See the [editor evidence](../architecture/designs/2026-10-14-editor-completion.md#combined-validation-and-baseline-attribution).
 
 A released port is a global resource, not a socket-close oracle (2026-10-12,
 mod audit delivery): Golf's audio-fault teardown test received `BindException`

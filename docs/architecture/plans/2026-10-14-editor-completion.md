@@ -78,9 +78,9 @@ integration tests, documentation.
 
 - [x] Run focused acceptance with explicit verified absolute ROM paths and inspect
       skips. Review high-risk persistence/runtime integration once.
-- [ ] Inspect smoke selection/preflight, run complete selected batches and guards,
+- [x] Inspect smoke selection/preflight, run complete selected batches and guards,
       inspect summaries, narrowly attribute any disputed baseline failures.
-- [ ] Acknowledge diagnostics and record commands/results/coverage limits.
+- [x] Acknowledge diagnostics and record commands/results/coverage limits.
 - [ ] Verify commit trailers, integrate into updated main develop and push it.
 - [ ] Account for all changes, remove merged worktrees/branches, prune metadata.
 
@@ -94,27 +94,28 @@ reloading the wrong level; declarations of passes whose ROM tests actually skipp
 
 ## Checkpoint
 
-2026-10-14: root HEAD ebcc5f6c9 includes all worker commits and develop d27d9cc0f.
-Root owns the final uncommitted implementation, tests and documentation; all worker
-branches are already merged and all workers are idle. Main stays develop with its
-dirty disassemblies/untracked user files preserved. Current upstream f076ef006 is
-fetched and in main; its merge was safely rejected because this task has
-uncommitted implementation-pitfalls prose. Commit our owned verified changes, then
-merge upstream by intent before combined validation.
+2026-10-14 16:13 UTC: implementation and bounded verification complete. Root
+`958a3cb4a` combines implementation `9627e29b1`, current develop `1a038f53c`,
+inventory `aa6e42902`, host boundary `d769f6611` and editor extraction `3c0c93237`.
+The final documentation-only commit records these results. Main remains develop;
+its dirty disassemblies and untracked user files are preserved.
 
-Actual create/edit/save/reopen/export/load and native movement/ring/results return
-are verified for S1/S2/S3K. session55809 passed42, no errors/skips, queue0s/Maven72s.
-session80469 passed6 affected enlarged-preview/pointer/pixel checks, no errors/skips,
-queue353s/Maven70s. Stock S3K AIZ/loading/bootstrap/decoding and changed intro/fixed
-slot controls passed in session85572. Quit suspension/camera-copy preservation
-passed in session97691. Earlier failures and fixes are recorded in the design.
+Complete smoke: 3,270 classes / 66 ordinary batches, 27,373 ordinary cases,
+3 failures, 2 errors, 85 skips; fresh guards 680 cases, 4 failures, no errors/skips.
+All failure/skip details were inspected and diagnostics acknowledged. The four
+inherited ordinary cases match the pinned baseline exactly. Inventory correction
+passed 3 focused cases; host/guard correction passed 77; extraction passed 17;
+final upstream+correction combination passed 38. Focused runs had no skips. Exact
+commands, identities, source contexts and coverage limits are in the design.
 
-All source writes use worktree_build_slot. No live task Maven/source job.
-Inventory remains four editor trees; runtime triplet2 released leases at12:35:09UTC
-and triplet3 may reacquire them normally. No cancellation/preemption/hold.
+Workers are idle, their branches merged, and no owned validation jobs remain.
+Category lease release was relayed at 15:53:45 UTC; final focused completion was
+observed at 16:13:01 UTC and relayed. Four-tree inventory is stable. No source,
+publication or cleanup hold was requested. Normal leases protect final writes and
+will exclude any admitted all-tree diagnostic before inventory removal.
 
-Next: commit the owned implementation, merge current develop, inspect final smoke
-selection/preflight and run complete batches/guards with verified ROMs. Expect about
-3270 candidate classes; no release-only full suite. Inspect exact failures/skips,
-attribute disputed failures narrowly, acknowledge diagnostics, record final evidence,
-integrate/push develop and remove only accounted trees/branches.
+Lead's remaining delivery actions at this checkpoint: commit the evidence prose,
+verify current upstream, integrate/push develop, preserve the unknown Starpost
+Valley save outside the trees, then remove the four accounted trees and fully
+merged local branches. Final delivery reports the actual push and cleanup state;
+no unchanged smoke rerun or release-only full suite.
