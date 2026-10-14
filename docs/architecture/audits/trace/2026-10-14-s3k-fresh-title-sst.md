@@ -20,9 +20,12 @@ python3 tools/testing/maven_queue.py -Dmse=off <profile> \
 | --- | --- | --- |
 | `TestS3kAizTraceReplay#replayMatchesTrace,TestS3kSonicTailsHczSegmentTraceReplay#replayMatchesTrace,TestS3kSonicTailsCompleteEmeraldRunPrefix`, `-Ptrace-replay` | 11784: 4/0/0/0, 08:09:38 BST | Original AIZ 20,463 and initial HCZ 3,519 compared observations: no errors/warnings/bootstrap differences; both prefixes pass. |
 | `TestS3kAizZoneSliceTraceReplay#replayMatchesTrace,TestS3kSonicTailsHcz2SegmentTraceReplay#replayMatchesTrace`, `-Ptrace-segments` | 51040: 2/2/0/0, 08:12:35 BST | Alternate AIZ: 60 spans (25 physics, 35 animation), row25,589 animation `$13/$05`. Standalone returned HCZ: 3,433 spans, row0 Y-speed `$00/$0E`; this bootstrap is not the actual returned chain. |
-| `TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds`, `-Ptrace-replay` | 23744: 1/1/0/0, 08:18:10 BST | Segment6: 189 physics spans, row3,319 Tails X `$31C1/$31CA`. Segment8: 12,719 (12,604 physics,115 animation), row1,583 Tails X `$366C/$3674`. Initial HCZ segment9 is green. Returned HCZ segment11: 82,067, mapping row1,507 `$63/$95`, Y row1,510 `$7D6/$7DF`; stops after5,725/14,208 rows at input68,801 after losing LEVEL ownership. |
+| `TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds`, `-Ptrace-replay` | 23744: 1/1/0/0, 08:18:10 BST | Segment6: 189 physics field mismatches, row3,319 Tails X `$31C1/$31CA`. Segment8: 12,719 (12,604 physics,115 animation), row1,583 Tails X `$366C/$3674`. Initial HCZ segment9 is green. Returned HCZ segment11: 82,067, mapping row1,507 `$63/$95`, Y row1,510 `$7D6/$7DF`; stops after5,725/14,208 rows at input68,801 after losing LEVEL ownership. |
 
-Counts are compressed mismatch spans, not numbers of distinct incorrect rows.
+Standalone `DivergenceReport.totalErrorCount()` counts compressed mismatch spans.
+The continuous chain `LiveTraceComparator.errorCount()` counts each mismatched
+field on each row; its 189/12,719/82,067 totals are raw field mismatches. Neither
+metric counts distinct incorrect rows.
 The October12/13 alternate count59 is historical; current matched baseline is60.
 No later standalone bootstrap is substituted for continuous-chain evidence.
 
@@ -53,7 +56,7 @@ wait passes (`$20` through underflow). Changing this wait or forcing all flashes
 AfterCurrent is rejected.
 
 The first earlier occupancy gap is native fresh title SST8 plus children9–12
-at the AIZ2 return. Native `Level/loc_62B6` writes `Dynamic_object_RAM+5` before
+at the AIZ1 special-stage return (run segment2). Native `Level/loc_62B6` writes `Dynamic_object_RAM+5` before
 `loc_6468 Load_Sprites`; the dynamic base is absolute3. Initial sprite dispatch
 is followed by `loc_64DC` seeding `$2E=$16`. `Obj_TitleCardWait2` reads the child
 count before higher-slot children; each child consumes previous draw visibility,
@@ -115,7 +118,7 @@ Actual incoming seven ending cases remain lead-owned composed-consumer coverage.
 
 Post-repair strict job8113 completes2 cases/one expected chain failure at09:10:58
 BST. The two-return prefix passes. The chain retains exactly189/12,719/82,067
-spans and the input68,801 stop. Fresh SST presence now matches through AIZ2
+raw field mismatches and the input68,801 stop. Fresh SST presence now matches through AIZ return segment2
 row126, but at127 native MonkeyDude has five actual arm recordsSST10–14 while
 the engine aggregates those parts inside the body. Ring25/flash17 still differs
 from native18/22. This title slice closes a native ownership omission but does

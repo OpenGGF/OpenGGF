@@ -5308,3 +5308,27 @@ Test old→replacement→old full-world restoration and both earlier/later slot
 admission. Synthetic sentinels test the manager contract only; certify native
 scene pressure with the actual legal managed child types. Unknown consumed
 residue must never be silently replaced with zero or supplied by a trace.
+
+
+## Linked MonkeyDude arms read the current physical predecessor
+
+`CreateChild4_LinkListRepeated` gives `Obj_MonkeyDude` five actual SST actors;
+each arm/hand owns its dispatch, fractional position and native parent3 numeric
+address. `Child_Draw_Sprite` reads predecessor status7 only after that actor's
+routine, publishes its own pending deletion and clears on its next dispatch.
+A normal body `Sprite_CheckDeleteTouch/loc_85094` has the same delayed marker;
+its unreleased `Obj_WaitOffscreen/loc_85AFC` instead clears immediately.
+
+`Touch_EnemyNormal` overwrites the body's code/routine/status in place with
+`Obj_Explosion`. Arms can run before that lower slot initializes: its retained
+mapping remains the body byte until `loc_1E626` writes explosion frame0. Read the
+actual current owner by physical slot through the injected callback boundary;
+do not hold a stale Java body, recreate a nearest parent or claim a full native
+header producer when only Y/mapping/priority/status are verified. Empty cleared
+slots are zero; unknown live owners fail before movement mutation. Pure recreation
+restores captured numeric links without creating another graph.
+
+The trace label `aiz_2` denotes first AIZ1 special-stage return segment2, not
+runtime act2. The real `$1E58/$0490/$8E/$10` placement is AIZ1 record `$1E45E2`.
+See [the graph audit](../../../docs/architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md)
+for source, negative controls and unchanged strict frontiers.

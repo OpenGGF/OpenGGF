@@ -514,3 +514,21 @@ frames; this proves determinism, not native waveform/pixel parity. Matched
 updated-base validation is pending; the
 [performance validation record](../performance/2026-10-12-runtime-performance-series.md)
 records exact commands and scope. No performance score is frozen or claimed.
+
+
+## Native MonkeyDude local graph — 2026-10-14
+
+`TestS3kMonkeyDudePlacedGraph` loads the real AIZ1 ROM placement
+`X=$1E58,Y=$0490,id=$8E,subtype=$10,flip=1` from table `$1E44DA`, record
+`$1E45E2`, admits its five independent arm records and restores/replays the
+whole registry for45 ordinary inputs twice at actual production presets
+320/352/400/528/800. These are positioned local graph checks; no cold route,
+donor/team breadth, rendered pixels/audio or whole-badnik parity is implied.
+`TestMonkeyDudeNativeSstGraph` separately covers both orientations, checked
+allocation, predecessor identity, offscreen retirement, normal/power replacement
+before and after its own INIT, unknown-header rejection and forward replay.
+Focused36090 passes104 cases including these13; source/rewind/trace guards90457
+pass111. Strict originalAIZ/initialHCZ/both prefixes remain green, but the
+continuous chain and alternateAIZ retain their prior frontiers. The
+[owning audit](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md) distinguishes
+physical occupancy evidence from the remaining body-facing and death-order limits.
