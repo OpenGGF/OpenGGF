@@ -1086,3 +1086,20 @@ Starpost Valley Real Ruins (2026-10-10): the
 tracks generated native Marble/Labyrinth/Scrap Brain chamber routes, scene return,
 health/faint/drowning and rewind. Broader width/donor/team/forty-chamber lifecycle
 obligations remain explicit gaps; creator reachability is not native-route certification.
+
+
+### LRZ/SSZ physical checkpoint products — 2026-10-14
+
+The [Act1 LRZ matrix](../architecture/validation/levels/s3k-lrz-act1.md#physical-checkpoint-products-and-incoming-replay-2026-10-14),
+[Act2 LRZ matrix](../architecture/validation/levels/s3k-lrz-act2.md#physical-checkpoint-products-and-incoming-replay-2026-10-14),
+[LRZ boss matrix](../architecture/validation/levels/s3k-lrz-boss.md#physical-checkpoint-products-and-incoming-replay-2026-10-14)
+and [SSZ Act1 matrix](../architecture/validation/levels/s3k-ssz-act1.md#physical-checkpoint-products-and-incoming-replay-2026-10-14)
+now bind all15 authored posts to880 local physical-contact products at the five
+actual viewport presets. Supported solo donor/character cases and six finite
+uncapped-API roster examples verify two real deaths each, exact life accounting,
+fresh load/history isolation and two full-registry45-input replay/reverse cycles
+after each incoming world releases title/fade/control. The final class passes
+888/0/0/0 on composed `a8c9f892e` plus its final test at12:40:30 UTC (request99024).
+SSZ local saved-index1 setup remains distinct from the independent ordinary
+controller-only post2 contact. Wider cold route products, native presentation,
+other act obligations and overall parity qualification remain open.

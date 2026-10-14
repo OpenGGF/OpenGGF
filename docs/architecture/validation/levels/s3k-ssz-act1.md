@@ -1397,3 +1397,44 @@ records this combined-source command. Subsequent bounded
 completes on `aaff73747`, with the separately attributed inherited CLI assertion
 and 680 passing guard tests. Develop source delivery and owned-worktree cleanup are complete; the inherited
 breadth above remains open.
+
+
+## Physical checkpoint products and incoming replay (2026-10-14)
+
+All three placed posts2/3/4 receive165 products:75 supported Sonic/Tails solo
+and90 explicit-roster cases. Local approaches declare saved index1 before the
+initial dispatch solely to select the ROM no-arrival branch; posts2..4 remain
+untouched until physical contact. This is not a cold or physically authored
+post1 claim. A separate maintained controller-only cold opening, with no
+position/checkpoint writes, naturally touches post2 at($640,$5E8) before input
+7912. The independent placement census also proves the Knuckles final arena
+(SSZ Act2) has no authored star posts.
+
+Each product approaches the literal ROM-placed star post through ordinary
+movement, captures the full registered world on both sides of contact, and
+replays and reverses it twice. It then invokes the production pit-death owner
+twice, waits for actual GameLoop reload/title/fade/control release, and verifies
+one lost life, saved coordinates/index, fresh runtime/object manager, retained
+ordered roster/CPU leader identities, donor art and retired outgoing history.
+Each incoming world independently captures and replays a45-input neutral window
+twice in both restore directions, without hiding a second death or life loss.
+All comparisons retain every registry key; no incoming raw restore crosses a
+load. The configured rosters include duplicate names and seven followers;
+these are finite examples of the uncapped API, not proof of every possible team.
+
+The five cases per configuration use the actual320/352/400/528/800 presets.
+Supported solo pairs are off×{Sonic,Tails,Knuckles}, S1×Sonic and
+S2×{Sonic,Tails}, where the act has that character route. Six explicit configured
+rosters cover native mixed/duplicate/large teams, S1 duplicate Sonic, and S2
+mixed/large teams. The common test is `TestLrzSszCheckpointRoutes`; independent
+census, layout witnesses and an S2 Tails/seven-follower800 witness run before
+the long product method. The combined class passes888 tests, zero failures,
+errors or skips, on `a8c9f892e855855f96c7ecad368e127880c9af3e` plus the final
+class (SHA256`3ed4c7346c79cd06d694e7fc17cf625aaa941d4951db606702734d631115f818`),
+request99024, completed2026-10-14 12:40:30 UTC. Exact commands, prerequisites,
+rejected setups and the distinction from earlier qualification are recorded in
+[the completion plan](../../plans/2026-10-13-s3k-playable-completion.md#checkpoint-product-qualification-2026-10-14).
+
+This qualifies local physical contact and reload/replay products. It supplies
+no cold route for every configuration, native whole-scene/audio acceptance or
+combined smoke/guard/integration claim. Other matrix obligations stay open.

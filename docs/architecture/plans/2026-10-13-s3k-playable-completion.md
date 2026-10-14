@@ -1363,3 +1363,52 @@ independent ordinary SSZ opening and the long product method. The four duplicate
 frontier diagnostic parameters are removed; the distinct post5 terrain witness
 remains. This source repair does not certify historical movies under the new
 driver or native whole-scene/PCM parity.
+
+
+### Checkpoint product qualification (2026-10-14)
+
+The final `TestLrzSszCheckpointRoutes` is test-only on composed
+`a8c9f892e855855f96c7ecad368e127880c9af3e`; test SHA256 is
+`3ed4c7346c79cd06d694e7fc17cf625aaa941d4951db606702734d631115f818`.
+Its15-post literal census contains six LRZ1, five LRZ2, one LRZ boss and three
+SSZ1 posts; SSZ2 Knuckles has zero.880 products comprise430 supported solo
+and450 six-roster examples across320/352/400/528/800. Every contact is ordinary
+movement from outside the native8px touch box. LRZ1 post5 approaches from its
+open right ledge; the rejected universal left64px setup misses five contacts,
+and its left32px variant misses this terrain-specific post. These are setup
+negatives, not a reason to enlarge collision or write the target checkpoint.
+SSZ local saved index1 selects the no-arrival branch before initial objects;
+physical posts2..4 stay unseeded. Its independent maintained cold opening
+saves post2 through ordinary input with no position or checkpoint writes.
+
+The previous composed565257d23 gate90158 passes931/0/0/0 at11:55:43 UTC:
+887 checkpoint cases plus28 donor,1 capture-fade,11 fresh-load and4 ending-entry
+consumers (4:01 Maven execution). That version does not yet capture/replay a
+released incoming world. Read-only review identifies that missing obligation
+rather than accepting graph existence as enough. The final helper checks one
+lost life at assembly and title release, then captures the full newly loaded
+world and runs two forward/reverse45-input cycles after EACH actual death,
+requiring an alive leader, unchanged lives/index and usable configured owners.
+It waits through actual LEVEL/title/fade/control and fresh-assembly gates;
+no snapshot-key filtering, retired-world restore or hidden restart is accepted.
+
+Six independent pilot cases pass6/0/0/0 in request4813 at12:30:40 UTC (1:16
+Maven). The complete final class request99024 passes888/0/0/0 at12:40:30 UTC,
+269.8s in class /4:54 Maven; queue waiting is separate. It includes the880
+products, census, four layout witnesses, distinct post5 witness, S2 Tails with
+seven followers at800 witness and independent cold SSZ post2 contact. The
+short witnesses are ordered before the cold route and large matrix.
+
+```bash
+env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.headless.gl=surfaceless-egl '-Dtest=TestLrzSszCheckpointRoutes' "-Dsonic1.rom.path=$S1_TASK_ROM" "-Dsonic2.rom.path=$S2_TASK_ROM" "-Ds3k.rom.path=$S3K_TASK_ROM" test -B
+```
+
+Pilot selector is
+`TestLrzSszCheckpointRoutes#firstPostOfEachLayoutHasARealContactAndDeathBoundary+lrz1PostFiveHasARealContactAndDeathBoundary+s2TailsWithSevenFollowersReplaysAfterEachCheckpointDeath`.
+Both commands use Java25, normal queued admission, original absolute
+identity-verified ROMs from root AGENTS.md and no ambient desktop. Each process
+is observed terminal0 before source writes. This is focused local contact and
+load/replay qualification, not full-suite, per-product cold route, native
+visual/audio or overall parity acceptance. Remaining source fixes, strict
+frontiers, combined smoke/guards, integration/push and cleanup remain pending.
+Consumed redirects are removed after this durable account.
