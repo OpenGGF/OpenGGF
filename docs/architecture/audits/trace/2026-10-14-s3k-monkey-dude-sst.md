@@ -690,3 +690,63 @@ INIT slice's qualification, rather than a new strict pass. Following barrel
 callback allocation at2910 remains the next ordinary-dispatch target. Exact
 logical ObjectRefs do not certify native reads after numeric parent3 is cleared
 or recycled. No new pixel/audio or full-pressure claim follows.
+
+
+## AIZ barrel same-dispatch wait callback
+
+Source829588298 plus barrel SHA256 `fa6e08895832f64e2ace94af1b8acaeb3c4b76a30f0dc1c47dce8710893d57ca`,
+new TestAizMinibossBarrelWaitCallback `0a716f6b6cb2f330cc1d21017ffbb58973f28d15893336bdc1f1bfd996491f3f`.
+WaitAfterShot (:137010) calls Obj_Wait (:177949), which decrements word2E and
+jumps directly to callback34 on signed underflow. FireShot (:136996) publishes
+$1C, decrements byte39 and performs checked AfterCurrent allocation on this same
+dispatch. Only then does the WaitAfterShot signed-counter tail select Return
+for the fourth shot's 0→$FF. Old BETWEEN_SHOTS only scheduled FIRING_CUTSCENE,
+creating the pair one dispatch late and delaying its return tail.
+
+The new ordinary-activation fixture declares only native parent StartSwing bit1,
+then executes the real manager until its first burst; it never seeds barrel
+phase/timer or assumes a fitted first-birth frame. Literal $1C holds zero for28
+passes and underflows on29. Fourth-pair allocation precedes immediate Return.
+First OPENING/FireLoop and array animation remain unchanged, so this qualifies
+the steady wait/callback contract rather than all initial raw animation.
+
+| Exact normal queue request | Terminal outcome | Timing BST |
+| --- | --- | --- |
+|23527 negative seven literal/graph cases|7/7fail/0errors/0skip|17:06:12;25.353s execution/100s queue|
+|35308 affected639 plus new seven cases|646/0/0/0|17:09:12;71s/11s|
+|35562 same canonical five-case trace selection|5/1fail/0errors/0skip|17:14:07;96s/78s|
+|31635 same alternate trace-segments selection|1/1fail/0errors/0skip|17:12:02;35.323s/12s|
+|70444 same four -Pguards selectors|111/0/0/0|17:17:33;32.483s/345s|
+
+Affected selection adds TestAizMinibossBarrelWaitCallback to37849 above. Five
+declared component cameras320/352/400/528/800 force recreation at second/fourth
+callback boundaries, complete snapshot equality and two45-pass cycles in both
+directions. Actual napalm/SecondStrike/scalar and mandatory startup consumers
+pass. This is not full host/donor/roster/registered-world route certification.
+All commands retain Java25/EGL/original absolute ROM and existing profiles;
+canonical adds OGGF_SLOT_PROBE=1 OGGF_SLOT_PROBE_FULL=1 with output
+target/barrel-callback-native-slot-occupancy. No controller, fixture, global
+clock, allocator or hydration change; no broad/full sweep.
+
+Original AIZ/initial HCZ/two prefixes remain green. Chain6/8/11 raw189/12,719/
+82,067, physics189/12,604/69,393 and animation0/115/12,674 remain unchanged.
+First non-camera3319 P2X$31C1/$31CA,1583 P2X$366C/$3674,1510 Y$7D6/$7DF;
+input68,801/loadgen9 is still the incomplete stop. Alternate60 grouped spans
+(25physics/35animation), first25589 animation$13/$05, first physics25590
+P2Xsub$7800/$6C00. No strict frontier was closed or metric changed.
+
+Segment2 pair17/21 now exists on2910. Sampled presence including reserved keys
+advances2910→2977, native-only19, preceding retained2972. Low code byte$8A is
+the post-Init Obj_Wait pointer, not a unique type identifier. The owning parent
+swing-expiry table creates Obj_BossExplosionSpecial (:137926/176817), whereas
+current onSwingComplete retains only a Java explosion helper without a physical
+SST owner. That source/creation context is the next graph attribution, not a
+full runtime-type certification from the low byte alone.
+
+Two additional source-confirmed local contracts remain separate: FireLoop/
+FireShot and SetShotPosition (:137688) share byte39, but Java cutsceneCounter/
+positionCounter are split; after fourth fire native$FF+4→3 selects a different
+first drop column than independent0+4→4. Counter==1 selects the native FallingShot
+table (:137890), while current cutscene selects a common-shot mode rather than
+the real FallingShot owner. No correction or qualification of these is claimed
+by this callback commit. Prior image/audio/projection limits remain.

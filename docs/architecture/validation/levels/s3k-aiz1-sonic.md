@@ -696,3 +696,18 @@ numeric cleared/recycled-parent pressure remain unqualified. The factory-only
 change leaves ordinary dispatch unchanged; strict evidence remains scoped to
 the preceding INIT source, and barrel callback2910 is required next work.
 [Native links, exact negative and qualification](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-shot-pure-recreation-and-exact-live-links).
+
+
+## AIZ barrel wait callback follow-up — 2026-10-14
+
+Native $1C zero/underflow now allocates on the callback dispatch, before the
+fourth-shot signed-counter Return tail. Seven independent activation/threshold/
+manager replay cases plus consumers pass646; guards111 pass. Five declared
+camera widths and two-way/two45-pass snapshot cycles are component evidence,
+not full viewport/donor/team/registered-world route certification. Original
+AIZ/initial HCZ/prefix2 remain green; chain/alternate strict errors unchanged.
+Sampled segment2 presence advances2910→2977, native-only19. The previously
+listed delayed callback target is superseded; physical explosion-controller
+creation, shared native byte39 alias and real cutscene FallingShot admission
+remain source-backed next obligations. Rendered/audio limits remain separate.
+[Native sources and exact bounded qualification](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-barrel-same-dispatch-wait-callback).

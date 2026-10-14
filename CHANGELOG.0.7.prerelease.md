@@ -39,6 +39,8 @@ Unreleased. The earlier development themes remain in
   the cleared ROM raw-animation state through their pause and launch phases.
   Their exact live cutscene and fight parent links restore independently of
   the shot's camera-relative position.
+  Barrel waits allocate the next pair on native timer underflow, before their
+  signed-counter return tail.
 
 - **S3K breakable floors:** Cork's placed record becomes its first moving
   fragment, preserving checked sibling allocation, native motion and render

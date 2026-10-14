@@ -5485,3 +5485,17 @@ restore/replay. This proves exact live dependencies, not numeric parent reads
 after physical slot reuse; keep that pressure contract separate.
 
 Origin:2026-10-14 AIZ shot recreation over a06056a0b; asm137110,137450.
+
+
+## Obj_Wait tail-jumps are callbacks on the current dispatch
+
+AIZ WaitAfterShot calls Obj_Wait, then tests byte39 every pass. On word2E signed
+underflow, Obj_Wait jumps to callback34 and returns to the caller's tail. Execute
+FireShot's timer publication, signed-byte decrement and checked child allocation
+immediately; scheduling a future firing state adds a pass and delays Return.
+The fourth callback allocates before its negative-counter tail selects Return.
+Qualify zero-versus-underflow and same-pass closure through ordinary activation,
+then restore/replay both boundaries. First raw animation/FireLoop timing is a
+separate owner and must not be fitted to compensate the callback delay.
+
+Origin:2026-10-14 AIZ barrel callback over829588298; asm136996,137010,177949.

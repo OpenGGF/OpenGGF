@@ -167,7 +167,6 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild implements Re
             }
             case FIRING_CUTSCENE -> {
                 fireCutsceneShot();
-                timer = 0x1C;
                 state = State.BETWEEN_SHOTS;
             }
             case FIRING_MINIBOSS -> {
@@ -177,16 +176,15 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild implements Re
                 enterClosingAnimation();
             }
             case BETWEEN_SHOTS -> {
-                // ROM loc_687DC: checks tst.b $39 EVERY frame during wait,
-                // exits immediately once counter goes negative after 4th shot
+                // WaitAfterShot calls Obj_Wait, whose signed word underflow
+                // jumps directly to FireShot. Its pair and $39 decrement belong
+                // to this dispatch; the signed-counter tail then selects Return.
+                if (--timer < 0) {
+                    fireCutsceneShot();
+                }
                 if (cutsceneCounter < 0) {
                     enterClosingAnimation();
-                    break;
                 }
-                if (--timer >= 0) {
-                    break;
-                }
-                state = State.FIRING_CUTSCENE;
             }
             case CLOSING -> {
                 if (--timer > 0) {
@@ -214,7 +212,8 @@ public class AizMinibossFlameBarrelChild extends AbstractBossChild implements Re
     }
 
     private void fireCutsceneShot() {
-        // loc_687B6: counter decremented before child selection.
+        // FireShot publishes word2E before decrement/checked child allocation.
+        timer = 0x1C;
         cutsceneCounter--;
         if (cutsceneCounter == 1) {
             // loc_68C96 path spawned from ChildObjDat_690A8, but cutscene parent

@@ -112529,3 +112529,23 @@ construction/dispatch and controller are unchanged; no new strict trajectory
 run is claimed. The preceding25467/27675 source-bounded strict errors/counts
 remain open. Barrel callback2910 is next; recycled numeric parent pressure and
 rendered/audio conformance remain separate. No broad/full sweep or hydration.
+
+
+### 2026-10-14 — AIZ barrel callback allocation same dispatch
+
+Owned bugfix/ai-s3k-parity-trace, source829588298 plus barrel fa6e0889/test0a716f6b
+SHA256 candidates. [Native callback, negatives, commands and next owners](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-barrel-same-dispatch-wait-callback).
+Obj_Wait underflow now performs FireShot allocation before the signed-counter
+Return tail. Matched23527 is7/7fail/0errors/0skip; affected35308 passes646/0/0/0,
+guards70444 passes111/0/0/0. Same canonical/alternate/guard commands as25467,
+observer output target/barrel-callback-native-slot-occupancy; Java25/EGL/ROM.
+Canonical35562:5/1fail/0errors/0skip at17:14:07 BST (96s/78s); original AIZ,
+initial HCZ/two prefixes green. Chain6/8/11 raw189/12,719/82,067, physics189/
+12,604/69,393, animation0/115/12,674; first non-camera3319 P2X$31C1/$31CA,
+1583 P2X$366C/$3674,1510 Y$7D6/$7DF; incomplete input68,801/loadgen9 unchanged.
+Alternate31635:1/1fail/0errors/0skip at17:12:02 BST (35.323s/12s),60 grouped
+spans, first25589 animation$13/$05. Guard70444:17:17:33 BST (32.483s/345s).
+Sampled segment2 presence advances2910→2977 (native-only19, preceding2972),
+not strict or whole-type closure. The physical explosion-controller creation,
+shared native byte39 and cutscene FallingShot branch are next source-backed
+owners. No broad/full sweep, hydration, new rendered/audio parity claim.
