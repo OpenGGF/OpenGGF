@@ -112364,3 +112364,31 @@ Command/profile/source, execution/queue intervals and unresolved screenshot/
 strict parity breadth remain explicit in the audit; no frontier closure claimed.
 
 Final guards14085:111/0/0/0 at11:49:37 BST,33.532s execution/21s queue.
+
+
+## 2026-10-14 — Manager culling no longer clears pending projectile SST
+
+Over `bca64bb0b` in `.worktrees/ai-s3k-parity-trace`, the local shared S3K
+projectile opts into its native `Sprite_CheckDeleteTouchXY → Go_Delete_Sprite`
+lifetime. The ordinary manager no longer clears it again at the same coarse-X
+tail. Corrected full-manager negative61600 fails both X edges; candidate33919
+passes projectile19/catalogue36, and affected99063 passes613/0/0/0 including
+required startup60 and exact capture-arguments12. No shared cull, clock, input
+or allocator changed. [Owning evidence and exact commands](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#manager-dispatch-preserves-the-native-coarse-x-retirement)
+retain the discarded identity-oracle draft and source/coverage limits.
+
+Strict86861 (`-Ptrace-replay`, exact85471 five-case selection) completes5/1/0/0
+at12:42:36 BST,98s execution/143s queue: original AIZ/initial HCZ/prefix2 pass.
+Chain6/8/11 stays189/12,719/82,067 raw mismatched fields, first physics fields
+3,319 TailsX `$31C1/$31CA`,1,583 TailsX `$366C/$3674`,1,510 Y `$7D6/$7DF`,
+and ownership stop input68,801. Alternate74434 (`-Ptrace-segments`, exact
+`TestS3kAizZoneSliceTraceReplay#replayMatchesTrace`) stays60 grouped spans,
+first25,589 animation `$13/$05` (1/1/0/0 at12:44:33,36.163s execution/58s queue).
+All use normal queue, Java25, surfaceless EGL and verified absolute S3K ROM.
+
+Sampled segment2 physical presence improves1055→1688: the pending projectile
+now matches, while the cork-floor graph retains an extra engine fragment52.
+Native `BreakObjectToPieces2` reuses parent35 and allocates N−1 higher pieces;
+that next source owner remains unresolved. Second-entry ring/flash25/17 versus
+18/22 is unchanged. Final90744 guards111/0/0/0 at12:47:40 BST. No strict trace
+closure or pixel/audio parity claimed; native screenshots remain a separate gate.

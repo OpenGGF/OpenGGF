@@ -20,6 +20,10 @@ Unreleased. The earlier development themes remain in
   teardown from consuming an absent art lease. Fresh native loads clear the
   retained random seed before sprite dispatch,
   while previews and seamless continuations preserve their sequence.
+  Initial touch publication follows each object's native range/deletion tail,
+  and a full object-table reset retires both collision buffers before slot reuse.
+  Identity-keyed participant contact maps encode stable team IDs through
+  recreation while preserving their live associations and ordered-map behavior.
 
 - **S3K badniks:** Monkey Dude retains five independent arm and hand objects,
   their physical predecessor links, native dispatch and retirement order, and
@@ -27,7 +31,8 @@ Unreleased. The earlier development themes remain in
   and replays without creating duplicate children. Its body preserves the ROM
   placement flip and collision origin independently of the player's side.
   Monkey Dude and Bloominator projectiles activate in their own initialization pass,
-  use native culling bounds and retain marked slots until the next dispatch.
+  use native culling bounds and retain marked slots until the next dispatch,
+  including the complete object-manager culling pass.
 
 - **S3K Knuckles routes:** Locked-on Mushroom Hill deletes the standalone S&K
   intro before it can freeze the camera and take player control. Its native

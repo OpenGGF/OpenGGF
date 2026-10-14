@@ -150,6 +150,85 @@ class TestS3kBadnikProjectileNativeLifetime {
         verify(renderer).drawFrameIndex(6, 0x500, 0x500, false, false);
     }
 
+    @ParameterizedTest @CsvSource({"897,-1", "1662,1"})
+    void normalManagerRetainsTheMarkedCoarseXRecordAtBothEdgesAndReplays(int beforeX, int direction) {
+        var h = new TestMonkeyDudeNativeSstGraph.Harness();
+        when(h.camera.getX()).thenReturn((short)0x400);
+        when(h.camera.getY()).thenReturn((short)0x500);
+        h.manager.reset(0x400);
+        h.manager.createDynamicObjectAtSlot(
+                () -> projectile(beforeX - direction, 0x500, direction * 0x100, 0, 0), 43);
+        h.manager.update(0x400, h.main, java.util.List.of(), 1);
+        var rewind = h.manager.rewindSnapshottable();
+        var before = rewind.capture();
+        assertEquals(beforeX, NativeSstSlotAccess.currentOwner(h.manager, 43).getX());
+        assertListOwnsProjectile(before, true);
+        h.manager.update(0x400, h.main, java.util.List.of(), 2);
+        var inclusive = rewind.capture();
+        assertEquals(beforeX + direction, NativeSstSlotAccess.currentOwner(h.manager, 43).getX());
+        assertListOwnsProjectile(inclusive, true);
+        h.manager.update(0x400, h.main, java.util.List.of(), 3);
+        var pendingOwner = NativeSstSlotAccess.currentOwner(h.manager, 43);
+        assertNotNull(pendingOwner,
+                "Sprite_CheckDeleteTouchXY writes Delete_Current_Sprite; generic culling cannot clear it now");
+        assertEquals(beforeX + 2 * direction, pendingOwner.getX());
+        assertFalse(pendingOwner.isDestroyed());
+        assertFalse(pendingOwner.publishesTouchResponseListEntryThisFrame());
+        var pending = rewind.capture();
+        assertListOwnsProjectile(pending, false);
+        h.manager.update(0x400, h.main, java.util.List.of(), 4);
+        assertNull(NativeSstSlotAccess.currentOwner(h.manager, 43));
+        var after = rewind.capture();
+        for (int cycle = 0; cycle < 2; cycle++) {
+            rewind.restore(before); assertSnapshot(before, rewind.capture());
+            h.manager.update(0x400, h.main, java.util.List.of(), 2);
+            assertSnapshot(inclusive, rewind.capture());
+            h.manager.update(0x400, h.main, java.util.List.of(), 3);
+            assertSnapshot(pending, rewind.capture());
+            rewind.restore(pending); assertSnapshot(pending, rewind.capture());
+            h.manager.update(0x400, h.main, java.util.List.of(), 4);
+            assertSnapshot(after, rewind.capture());
+        }
+    }
+
+    @ParameterizedTest @CsvSource({"-129,false", "-128,true", "384,true", "385,false"})
+    void normalManagerHonorsLiteralYAdmissionAndPendingRetirementReplay(int dy, boolean admitted) {
+        var h = new TestMonkeyDudeNativeSstGraph.Harness();
+        when(h.camera.getX()).thenReturn((short)0x400);
+        when(h.camera.getY()).thenReturn((short)0x500);
+        h.manager.reset(0x400);
+        h.manager.createDynamicObjectAtSlot(() -> projectile(0x500, 0x500 + dy, 0, 0, 0), 43);
+        var rewind = h.manager.rewindSnapshottable();
+        var before = rewind.capture();
+        h.manager.update(0x400, h.main, java.util.List.of(), 1);
+        assertNotNull(NativeSstSlotAccess.currentOwner(h.manager, 43));
+        assertEquals(admitted, NativeSstSlotAccess.currentOwner(h.manager, 43)
+                .publishesTouchResponseListEntryThisFrame());
+        var first = rewind.capture(); assertListOwnsProjectile(first, admitted);
+        h.manager.update(0x400, h.main, java.util.List.of(), 2);
+        assertEquals(admitted, NativeSstSlotAccess.currentOwner(h.manager, 43) != null);
+        var after = rewind.capture();
+        for (int cycle = 0; cycle < 2; cycle++) {
+            rewind.restore(before); assertSnapshot(before, rewind.capture());
+            h.manager.update(0x400, h.main, java.util.List.of(), 1);
+            assertSnapshot(first, rewind.capture());
+            rewind.restore(first); assertSnapshot(first, rewind.capture());
+            h.manager.update(0x400, h.main, java.util.List.of(), 2);
+            assertSnapshot(after, rewind.capture());
+        }
+    }
+
+    private static void assertListOwnsProjectile(
+            com.openggf.game.rewind.snapshot.ObjectManagerSnapshot snapshot, boolean expected) {
+        var id = snapshot.dynamicObjects().stream().filter(entry -> entry.slotIndex() == 43)
+                .findFirst().orElseThrow().objectId();
+        // Spawn-stable refs need not encode a physical slot. Compare the actual
+        // captured owner's identity rather than reinterpreting its fields.
+        assertNotNull(id);
+        assertEquals(expected, snapshot.collisionResponseState().currentCollisionBuildObjectIds().contains(id));
+        assertEquals(expected, snapshot.collisionResponseState().previousCollisionObjectIds().contains(id));
+    }
+
     private static void camera(int x, int y) {
         AbstractObjectInstance.updateCameraBounds(x, y, x + 320, y + 224, 0);
     }
