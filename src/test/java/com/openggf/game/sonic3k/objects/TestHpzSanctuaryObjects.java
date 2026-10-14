@@ -367,7 +367,7 @@ class TestHpzSanctuaryObjects {
                 gsm, List.of(1, 1, 1, 1, 1, 1, 1), false);
         HPZSSEntryControlObjectInstance controller = controller(progression, false);
         AbstractPlayableSprite sonic = mock(AbstractPlayableSprite.class);
-        when(sonic.getCode()).thenReturn("sonic");
+        when(sonic.characterKey()).thenReturn(com.openggf.game.CharacterKey.SONIC);
         ObjectServices services = mock(ObjectServices.class);
         var players = mock(com.openggf.level.objects.ObjectPlayerQuery.class);
         when(services.playerQuery()).thenReturn(players);
@@ -409,6 +409,7 @@ class TestHpzSanctuaryObjects {
                 gsm, List.of(2, 2, 2, 2, 2, 2, 2), true);
         HPZSSEntryControlObjectInstance controller = controller(progression, false);
         AbstractPlayableSprite sonic = mock(AbstractPlayableSprite.class);
+        when(sonic.characterKey()).thenReturn(com.openggf.game.CharacterKey.SONIC);
         ObjectServices services = mock(ObjectServices.class);
         var players = mock(com.openggf.level.objects.ObjectPlayerQuery.class);
         when(services.playerQuery()).thenReturn(players);
@@ -476,7 +477,9 @@ class TestHpzSanctuaryObjects {
         ObjectServices services = mock(ObjectServices.class);
         var query = mock(com.openggf.level.objects.ObjectPlayerQuery.class);
         AbstractPlayableSprite tails = mock(AbstractPlayableSprite.class);
-        when(tails.getCode()).thenReturn("tails");
+        // Registration aliases do not select the native character_id table.
+        when(tails.getCode()).thenReturn("tails_p2");
+        when(tails.characterKey()).thenReturn(com.openggf.game.CharacterKey.TAILS);
         when(tails.getCentreY()).thenReturn((short) 0x300);
         when(services.playerQuery()).thenReturn(query);
         when(query.playersFor(any())).thenReturn(List.of(tails));

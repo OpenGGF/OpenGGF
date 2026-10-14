@@ -231,7 +231,8 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
         for (PlayableEntity entity : services().playerQuery().playersFor(
                 com.openggf.level.objects.ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
             if (entity instanceof AbstractPlayableSprite sprite) {
-                String code = sprite.getCode();
+                // ROM reads character_id, not the engine registration code (e.g. tails_p2).
+                String code = sprite.characterKey().persisted();
                 int mapping = "tails".equalsIgnoreCase(code) ? 0xAD
                         : "knuckles".equalsIgnoreCase(code) ? 0x56 : 0xBA;
                 if ("tails".equalsIgnoreCase(code)) {
@@ -249,7 +250,8 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
         for (PlayableEntity entity : services().playerQuery().playersFor(
                 com.openggf.level.objects.ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
             if (entity instanceof AbstractPlayableSprite sprite) {
-                String code = sprite.getCode();
+                // ROM reads character_id, not the engine registration code (e.g. tails_p2).
+                String code = sprite.characterKey().persisted();
                 sprite.setRenderFlips(false, false);
                 sprite.setMappingFrame("tails".equalsIgnoreCase(code) ? 0xAD
                         : "knuckles".equalsIgnoreCase(code) ? 0x56 : 0xBA);
@@ -344,7 +346,8 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
         for (PlayableEntity entity : services().playerQuery().playersFor(
                 com.openggf.level.objects.ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
             if (entity instanceof AbstractPlayableSprite sprite) {
-                String code = sprite.getCode();
+                // ROM reads character_id, not the engine registration code (e.g. tails_p2).
+                String code = sprite.characterKey().persisted();
                 int base = flipAndVariant[1] == 0
                         ? ("tails".equalsIgnoreCase(code) ? 0xAD
                         : "knuckles".equalsIgnoreCase(code) ? 0x56 : 0xBA)
@@ -388,6 +391,14 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
             // player mappings.
             superState.debugDeactivate();
         }
+        // sub_90A4C begins literal host-ROM mapping ownership. Keep the
+        // native table/timers while borrowing presentation only; configured
+        // rules, physics and powered/controller RAM remain the participant's.
+        if (tryServices() != null && services().spriteManager() != null
+                && player.currentLevelManagerIfAvailable() != null && player.getSpriteRenderer() != null) {
+            com.openggf.sprites.managers.SpriteManagerInternalAccess.borrowNativePlayerArt(
+                    services().spriteManager(), player);
+        }
         NativePositionOps.writeXPosPreserveSubpixel(player, 0x1640);
         NativePositionOps.writeYPosPreserveSubpixel(player, 0x3A3);
         // ROM writes $83. Its sign bit makes Tails_CPU_Control skip the normal
@@ -413,6 +424,13 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
     void releaseFreshLockForTest(AbstractPlayableSprite player) {
         ObjectControlState.none().applyTo(player);
         player.setObjectMappingFrameControl(false);
+        // loc_90C16 releases control after the final native pose. The shared
+        // RETURN lifetime keeps that pose drawable until Animate actually
+        // publishes an ordinary mapping, then returns configured donor art.
+        if (tryServices() != null && services().spriteManager() != null) {
+            com.openggf.sprites.managers.SpriteManagerInternalAccess.releaseNativePlayerArt(
+                    services().spriteManager(), player);
+        }
     }
 
     private void releaseFreshLockFromParticipants(AbstractPlayableSprite primary) {

@@ -142,7 +142,8 @@ public final class HPZSanctuarySmallEmeraldCeremonyObjectInstance
         for (PlayableEntity entity : services().playerQuery().playersFor(
                 com.openggf.level.objects.ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
             if (entity instanceof com.openggf.sprites.playable.AbstractPlayableSprite sprite) {
-                String code = sprite.getCode();
+                // loc_90DA2 reads character_id; registered Player_2 uses aliases such as tails_p2.
+                String code = sprite.characterKey().persisted();
                 sprite.setMappingFrame("tails".equalsIgnoreCase(code) ? 0xB0
                         : "knuckles".equalsIgnoreCase(code) ? 0xD6 : 0xC4);
             }
