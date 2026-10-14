@@ -550,8 +550,13 @@ public final class HeadlessGameBoot implements AutoCloseable {
         }
         GameServices.level().loadZoneAndAct(zone, act);
 
-        GameServices.camera().setFocusedSprite(team.mainSprite());
-        GameServices.camera().updatePosition(true);
+        // ScreenInit may already own Scroll_lock and both camera words.
+        // setFocusedSprite itself resets those words, so retain the entire
+        // game-owned camera binding while frozen, not only its forced snap.
+        if (!GameServices.camera().getFrozen()) {
+            GameServices.camera().setFocusedSprite(team.mainSprite());
+            GameServices.camera().updatePosition(true);
+        }
 
         return loop;
     }

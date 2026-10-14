@@ -9,6 +9,15 @@ copies plus shake, refresh derived playable offsets at the existing post-camera
 Render_Sprites boundary, and preserve both native words. See the
 [ending lifecycle evidence](designs/2026-10-13-s3k-ending-lifecycle.md).
 
+Capture boot must preserve an existing native camera binding. After ScreenInit
+sets `Scroll_lock`, even `Camera.setFocusedSprite` resets physical and render-copy
+coordinates; guarding only the following forced snap leaves that overwrite.
+Keep both operations inside the unfrozen entry path. Assert each scene at its
+actual initialization boundary: D01 during load, SSZ arrival before initial
+Process_Sprites. A first-row image can pass while terrain corruption moves into
+another column, so retain physical/copy and full-scene checks. See the
+[ending capture diagnosis](designs/2026-10-13-s3k-ending-lifecycle.md#capture-boot-preserves-a-native-camera-binding-2026-10-14).
+
 Read the relevant section when working on coordinates, objects, rendering, rewind,
 headless tests, or audio. S3K-specific routing is in [AGENTS_S3K.md](../../AGENTS_S3K.md).
 
