@@ -317,3 +317,10 @@ headless/test-environment limits; it is not described as an entirely green suite
 Final documentation checks cover shell syntax, local links, mirrored guidance,
 diff whitespace and commit policy. Integration/push/cleanup follow the repository
 workflow and are reported separately in the delivery result.
+
+Delivery completed on develop `605d0c431`: its tree exactly matches the validated
+feature tree `48d29f95d`, and the remote SHA was verified after push. All four owned
+trees/merged local branches were removed at the 16:21 UTC checkpoint under normal
+leases. Main dirty disassemblies and unrelated files remain intact. The unknown
+3,065-byte Starpost Valley save was preserved outside the repository before removal;
+its SHA-256 remains `fb947efe9990ae65a4cbbacb6efadfa8faa6caa57c9353ce8752eb30a38ce156`.

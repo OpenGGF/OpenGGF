@@ -81,8 +81,8 @@ integration tests, documentation.
 - [x] Inspect smoke selection/preflight, run complete selected batches and guards,
       inspect summaries, narrowly attribute any disputed baseline failures.
 - [x] Acknowledge diagnostics and record commands/results/coverage limits.
-- [ ] Verify commit trailers, integrate into updated main develop and push it.
-- [ ] Account for all changes, remove merged worktrees/branches, prune metadata.
+- [x] Verify commit trailers, integrate into updated main develop and push it.
+- [x] Account for all changes, remove merged worktrees/branches, prune metadata.
 
 ## Review focus
 
@@ -92,30 +92,25 @@ mutations contaminating documents; S1 synthetic zones entering ROM header lookup
 S3K palette/object family ownership; asset-capacity exhaustion; restart/respawn
 reloading the wrong level; declarations of passes whose ROM tests actually skipped.
 
-## Checkpoint
+## Completion checkpoint
 
-2026-10-14 16:13 UTC: implementation and bounded verification complete. Root
-`958a3cb4a` combines implementation `9627e29b1`, current develop `1a038f53c`,
-inventory `aa6e42902`, host boundary `d769f6611` and editor extraction `3c0c93237`.
-The final documentation-only commit records these results. Main remains develop;
-its dirty disassemblies and untracked user files are preserved.
+2026-10-14 16:21 UTC: all implementation, validation, integration, push and cleanup
+steps are complete. Develop integration `605d0c431` exactly matches feature
+`48d29f95d`; its remote SHA was verified after push. The final production/test
+source matches the 38-case passing combined request. The closing prose adds no
+runtime or test changes.
 
-Complete smoke: 3,270 classes / 66 ordinary batches, 27,373 ordinary cases,
-3 failures, 2 errors, 85 skips; fresh guards 680 cases, 4 failures, no errors/skips.
-All failure/skip details were inspected and diagnostics acknowledged. The four
-inherited ordinary cases match the pinned baseline exactly. Inventory correction
-passed 3 focused cases; host/guard correction passed 77; extraction passed 17;
-final upstream+correction combination passed 38. Focused runs had no skips. Exact
-commands, identities, source contexts and coverage limits are in the design.
+Complete smoke ran 27,373 ordinary cases and 680 guards. All editor-introduced
+failures were corrected and checked narrowly; four inherited failures/errors match
+the pinned baseline. Focused correction checks passed 3, 77 and 17 cases; the final
+upstream combination passed 38, all without skips. Exact commands, cases, source
+contexts and coverage limits are recorded in the design. Diagnostics were consumed
+and acknowledged; no release full suite or unchanged broad rerun was performed.
 
-Workers are idle, their branches merged, and no owned validation jobs remain.
-Category lease release was relayed at 15:53:45 UTC; final focused completion was
-observed at 16:13:01 UTC and relayed. Four-tree inventory is stable. No source,
-publication or cleanup hold was requested. Normal leases protect final writes and
-will exclude any admitted all-tree diagnostic before inventory removal.
-
-Lead's remaining delivery actions at this checkpoint: commit the evidence prose,
-verify current upstream, integrate/push develop, preserve the unknown Starpost
-Valley save outside the trees, then remove the four accounted trees and fully
-merged local branches. Final delivery reports the actual push and cleanup state;
-no unchanged smoke rerun or release-only full suite.
+All four task trees and fully merged local branches were removed after their
+tracked, untracked, ignored and initialized-submodule contents were accounted for.
+The unknown Starpost Valley save was preserved outside the repository and verified
+byte-for-byte. Bootstrap links and generated outputs were discarded while preserving
+their targets. Main remains develop with the user's dirty disassemblies and unrelated
+files intact. Normal EX main/all-four-tree leases protected inventory removal;
+release was relayed to the diagnostic owner. No editor jobs or cleanup work remain.
