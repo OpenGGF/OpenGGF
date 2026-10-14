@@ -1255,3 +1255,38 @@ synthetic local bootstrap is not an authored post1 or a cold-route claim. Full
 push remain pending. User-requested emulator screenshot spot checks are added
 to this follow-up; unchanged verified native screenshots can be reused, while
 current engine pictures retain exact source/input and observation provenance.
+
+### Stable player-key association encoding
+
+The route worker's eight-act gate (1186 tests,1 failure,8 setup errors,0 skips)
+found AIZ2 production entry row140: S2-donor Tails at800 with seven Sonic
+followers. Immediately restoring its six-tick world snapshot swapped
+AutoSpin's serialized refs5/3 at scalar bytes26/61. The live associations were
+unchanged. Independent source review traced `RewindCodecs.MapCodec.capture`
+to `IdentityHashMap.entrySet()` bucket order; clear/reinsert and recreated Java
+identities can change that order. Root owns the shared repair; the worker owns
+the actual AIZ2 consumer and the separately corrected mock-art setup.
+
+On `eea476471`, a deterministic replacement-identity/bucket-order regression
+49321 fails1/1/0/0 at10:56:08 UTC, scalar byte4 expected1/actual0. Its prior
+69723 attempt stopped at a missing test import, zero behavioral credit. The
+fixture preserves two distinct players with the same character label, a null
+key, all three values, the final map instance and actual live iteration order.
+Capture now orders only player-keyed `IdentityHashMap` associations by their
+existing `PlayerRefId`; it changes neither the live map nor linked/sorted map
+ordering, public API or snapshot schema. An independent ordered-map negative
+retains sidekick-before-main order. Other map shapes remain unchanged.
+
+Coherent lean request29652 passes27/0/0/0 at10:59:18 UTC (1:23 Maven): player
+references5, collections8, object references4, helpers6, records2 and field
+scratch2. This is a pure serialization qualification, not yet the actual
+AIZ2 replacement or combined smoke. The command is:
+
+```bash
+python3 tools/testing/maven_queue.py --lean -Dmse=off '-Dtest=TestRewindPlayerReferenceCodecs,TestRewindCollectionCodecs,TestRewindObjectReferenceCodecs,TestRewindHelperCodecs,TestRewindRecordCodecs,TestRewindCodecFieldScratchReuse' test -B
+```
+
+The actual affected consumer is
+`TestS3kAiz2EntryMatrix#normalEntryAppliesTheProductionPresetAndEveryDeclaredParticipantThenReplaysTwice`,
+parameter140 in the worker's recorded row inventory. Preserve full world
+comparisons and actor identities; new/worsened failures still block delivery.

@@ -939,7 +939,18 @@ public final class RewindCodecs {
             if (map == null) {
                 return;
             }
-            for (Map.Entry<?, ?> entry : map.entrySet()) {
+            Iterable<? extends Map.Entry<?, ?>> entries = map.entrySet();
+            if (map instanceof IdentityHashMap<?, ?> && isPlayerReferenceType(keyType) && map.size() > 1) {
+                // Identity-hash bucket order changes when rewind recreates participants.
+                // Encode their associations in stable participant-ID order without
+                // changing the live map or the order of explicitly ordered maps.
+                List<Map.Entry<?, ?>> stableEntries = new ArrayList<>(map.entrySet());
+                stableEntries.sort((left, right) -> Integer.compare(
+                        encodePlayerRef((PlayableEntity) left.getKey(), context).encoded(),
+                        encodePlayerRef((PlayableEntity) right.getKey(), context).encoded()));
+                entries = stableEntries;
+            }
+            for (Map.Entry<?, ?> entry : entries) {
                 writeCollectionValue(keyType, entry.getKey(), scalarData, opaqueValues, context);
                 writeCollectionValue(valueType, entry.getValue(), scalarData, opaqueValues, context);
             }
