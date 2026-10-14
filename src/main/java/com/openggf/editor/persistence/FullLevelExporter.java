@@ -7,9 +7,6 @@ import com.openggf.game.ModKeySyntax;
 import com.openggf.game.GameId;
 import com.openggf.game.modzone.*;
 import com.openggf.game.common.CommonObjectPlacementEncoding;
-import com.openggf.game.sonic1.Sonic1GameModule;
-import com.openggf.game.sonic2.Sonic2GameModule;
-import com.openggf.game.sonic3k.Sonic3kGameModule;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -182,12 +179,8 @@ public final class FullLevelExporter {
                 s3k?paletteClaims(level):List.of(),canonicalObjects(level),level.getRings(),
                 level.getPatternCount(),count,level.getBlockCount());
         if(request.gameId()!=null) {
-            ModZoneAdapter adapter=switch(request.gameId()) {
-                case S1 -> new Sonic1GameModule().getModZoneAdapter();
-                case S2 -> new Sonic2GameModule().getModZoneAdapter();
-                case S3K -> new Sonic3kGameModule().getModZoneAdapter();
-                case STANDALONE -> throw new IllegalArgumentException("Standalone exports use the generic v1 contract, not a stock game host");
-            };
+            ModZoneAdapter adapter = com.openggf.game.GameModuleRegistry
+                    .createStockModule(request.gameId()).getModZoneAdapter();
             adapter.validate("editor",data);
         }
         stagingValidator.validateHostData(data);
