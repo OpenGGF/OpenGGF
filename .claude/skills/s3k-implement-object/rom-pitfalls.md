@@ -5720,3 +5720,15 @@ only at actual archive retirement. Preflight both banks before admitting a
 global producer so failure cannot leave unpaired physical work. Preserve
 initial resident ingress separately: correct new upload timing does not prove
 retained pre-upload VRAM bytes. Origin: 2026-10-14 ending transfer69e4f51.
+
+
+## A ROM bank must preserve both resource ownership and the steady draw contract
+
+Slot layouts/start words and prize/reel/cell-animation tables belong to the
+active immutable ROM reader, not copied disassembly arrays. Preflight all banks
+before mutating bootstrap state; terminate animations at their first zero.
+Explicit synthetic banks belong only to pure test fixtures. Public defensive
+array getters can still allocate on every draw: give package-owned read-only
+consumers stable immutable views and retain the independent allocation oracle.
+Origin:2026-10-14 Slot resource repair over0a05aa118; native SlotBonusLayout,
+Slots_CycleOptions, sub_4C7A2 and sub_4B592.

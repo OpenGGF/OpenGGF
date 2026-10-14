@@ -1897,3 +1897,35 @@ are under a separate negative/regression repair; derived cache dirtiness and
 allocator telemetry require their own justified exclusion. Historical
 diffKey-only world equality remains provisional pending composed verification;
 independent direct lifecycle/state/DMA/pixel assertions retain their scope.
+
+## Slot asset ownership corrective qualification (2026-10-14)
+
+Root0a05aa118 is the composed base for the immutable Slot ROM bank. Runtime
+start/layout1E4080/1E4084, signed prize words4C8A4, target rows4C8B4,
+reels4C8CC/4C8D4/4C8DC and cell scripts4B5EC/4B622/4B656/4B688 come from
+the ROM pipeline. Byte identity and the native labels/routine pointers were
+checked against the original locked-on ROM; no reference bytes hydrate gameplay.
+Pure fixtures explicitly inject their separate synthetic bank. All consumed
+literal asset arrays are removed from production, including the older optional
+cell animator. Provider registration remains independent of unselected assets.
+
+Actual build23604 passes at21:26:54 UTC,1:09,zero tests. Focused5254 reports
+166/1/0/0 at21:27:47 UTC,28.461s,zero wait: the new immutable getters introduced
+a real warmed-draw allocation regression, detected by the existing oracle.
+The package read-only view repair yields27/0/0/0 in14603 at21:29:53 UTC,1:18.
+Actual bonus portals/exit owners plus mandatory60 and cell/resource neighbors
+pass75/0/0/0 in28066 at21:32:10 UTC,1:20. Complete first-zero termination
+checks pass13/0/0/0 in71315 at21:35:24 UTC,1:14. All queued waits are zero;
+all declared ROM tests execute, with zero skips. Exact selections are
+`TestS3kSlot*` named mechanics/objects plus `TestMutatorBonusRingProducers`
+for5254; allocation/resource/option/display for14603; resource/legacy animation,
+`TestS3kBonusPortalMechanismProducts#shortPortalAndMechanismPilotsLoadAndReturnThroughRealBoundaries`
+and the four mandatory S3K classes for28066; resource/render-buffer/legacy
+animation for71315. Commands use the local normal wrapper, EGL, null audio,
+unset ambient displays and absolute original-ROM properties; only bounded
+14603/71315 use lean. Overlapping run totals retain separate source scopes.
+
+Complete Slot rewind/recreation, other physical rewards, cold stage traversal,
+native images/audio and composed smoke/guards are still active obligations.
+Consumed target redirects are removed after inspection; no validation receipts
+or copied raw logs are retained.

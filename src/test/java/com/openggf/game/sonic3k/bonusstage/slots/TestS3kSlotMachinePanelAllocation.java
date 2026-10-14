@@ -137,7 +137,7 @@ class TestS3kSlotMachinePanelAllocation {
     }
 
     private static S3kSlotBonusStageRuntime runtimeWithState(S3kSlotStageState state) throws Exception {
-        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
+        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(S3kSlotRomTestData.resources());
         Field field = S3kSlotBonusStageRuntime.class.getDeclaredField("slotStageState");
         field.setAccessible(true);
         field.set(runtime, state);
@@ -152,14 +152,14 @@ class TestS3kSlotMachinePanelAllocation {
     }
 
     private static Scenario[] scenarios() {
-        S3kSlotStageState fallback = S3kSlotStageState.bootstrap();
+        S3kSlotStageState fallback = S3kSlotStageState.bootstrap(S3kSlotRomTestData.resources());
         fallback.setOptionCycleDisplaySymbols(3, 4, 6);
         fallback.setOptionCycleOffsets(0, 8, 248);
 
-        S3kSlotStageState spinning = S3kSlotStageState.bootstrap();
+        S3kSlotStageState spinning = S3kSlotStageState.bootstrap(S3kSlotRomTestData.resources());
         spinning.setOptionCycleReelWords(0x00F8, 0x0108, 0x0200);
 
-        S3kSlotStageState resolved = S3kSlotStageState.bootstrap();
+        S3kSlotStageState resolved = S3kSlotStageState.bootstrap(S3kSlotRomTestData.resources());
         resolved.setOptionCycleState(0x18);
         resolved.setOptionCycleLastPrize(0);
         resolved.setOptionCycleTargetPackedBC(0x21);

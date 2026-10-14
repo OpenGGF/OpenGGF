@@ -84,10 +84,38 @@ replay cycles and each returned origin retains two45-tick cycles. Slot still
 performs18 ordinary interior ticks and asserts its current unsupported whole-
 stage rewind contract. Those interior limitations remain active work.
 
-The loaded Slot board/reward/reel/animation tables are currently copied into
-runtime code (`S3kSlotRomData`), so goal-cell contact is not a ROM-pipeline
-qualification of those resources. Original-ROM byte matches identify the
-layout at1E4084 and its player start at1E4080; production migration and complete
-Slot snapshot/recreation remain open, alongside other reward/stage mechanisms,
-cold traversal and matched native images/audio. Exact commands/source hash are
+The Slot board, player start, prize/target/reel and cell-animation assets now
+load from an immutable `S3kSlotResources` bank over the actual runtime ROM.
+Instruction-owned geometry and timer constants remain separate. Original-ROM
+byte matches identify layout1E4084 and start1E4080; alternate declared banks
+reach real layout/reel/prize/animation consumers and malformed banks fail
+before bootstrap mutations. Complete Slot snapshot/recreation remains open,
+alongside other reward/stage mechanisms, cold traversal and matched native
+images/audio. Exact commands/source hash are
 in the [completion plan](../../plans/2026-10-13-s3k-playable-completion.md#bonus-portal-and-mechanism-qualification-2026-10-14).
+
+## Slot ROM bank qualification — 2026-10-14
+
+Root0a05aa118 plus the resource candidate replaces every consumed copied
+board/reward/reel/animation table with ROM reads. The explicit pure mechanics
+fixture is test-only and never a runtime fallback. `TestS3kSlotRomData` checks
+alternate start/layout bytes, signed prize words, target rows, three real reel
+consumers, cell animation publication/first-zero termination, malformed banks,
+defensive copies and the verified original layout hash. Warmed panel draws
+use package-owned read-only reel views; public array reads retain copies.
+
+Build23604 passes test-compile at21:26:54 UTC,1:09,zero tests. First focused
+5254 completes166/1 failure/0 errors/skips at21:27:47 UTC,28.461s,zero wait:
+165 checks pass and the warmed panel allocation oracle catches defensive
+copies on every draw. Corrected14603 passes27/0/0/0 at21:29:53 UTC,1:18,
+zero wait, including that independent allocation gate. Actual normal-lane
+28066 passes75/0/0/0 at21:32:10 UTC,1:20,zero wait: five physical portal/exit
+pilots, five resource contracts, five legacy cell-animation consumers and
+60 mandatory S3K loading/assembly/decode neighbors with all three absolute
+original-ROM properties. Final first-zero parser71315 passes13/0/0/0 at
+21:35:24 UTC,1:14,zero wait. These scoped invocations overlap; their totals
+are not added as one green run. Current combined smoke remains pending.
+
+Whole Slot interior rewind remains unsupported in the portal fixture. The
+ROM-bank repair does not certify reward mechanisms, cold traversal, native
+pixels or PCM. Those obligations stay active.

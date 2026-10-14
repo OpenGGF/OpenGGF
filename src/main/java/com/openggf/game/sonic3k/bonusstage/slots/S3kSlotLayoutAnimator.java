@@ -9,41 +9,51 @@ public final class S3kSlotLayoutAnimator {
     private static final int MAX_SLOTS = 32;
 
     // Type 1: ring sparkle (byte_4B5EC)
-    private static final byte[] RING_SPARKLE_FRAMES = {0x10, 0x11, 0x12, 0x13, 0};
     private static final int RING_SPARKLE_DELAY = 5;
     private static final byte RING_SPARKLE_RESTORE = 0; // ring consumed
 
     // Type 2: bumper bounce (byte_4B622)
-    private static final byte[] BUMPER_BOUNCE_FRAMES = {0x0A, 0x0B, 0};
     private static final int BUMPER_BOUNCE_DELAY = 1;
     private static final byte BUMPER_BOUNCE_RESTORE = 5; // restore bumper tile
 
     // Type 4: R-label/spike animation (byte_4B656)
-    private static final byte[] SPIKE_ANIM_FRAMES = {0x0C, 0x06, 0x0C, 0};
     private static final int SPIKE_ANIM_DELAY = 7;
     private static final byte SPIKE_ANIM_RESTORE = 6; // restore spike tile
 
+    private final S3kSlotResources suppliedResources;
+
     private final AnimSlot[] slots = new AnimSlot[MAX_SLOTS];
 
-    public S3kSlotLayoutAnimator() {
+    public S3kSlotLayoutAnimator() { this(null); }
+
+    public S3kSlotLayoutAnimator(S3kSlotResources resources) {
+        suppliedResources = resources;
         for (int i = 0; i < MAX_SLOTS; i++) {
             slots[i] = new AnimSlot();
         }
     }
 
+    private S3kSlotResources resources() {
+        return suppliedResources != null ? suppliedResources : S3kSlotResources.fromActiveRom();
+    }
+
+    private static byte[] terminated(byte[] frames) {
+        return java.util.Arrays.copyOf(frames, frames.length + 1);
+    }
+
     /** Queue ring sparkle animation at the given layout index */
     public boolean queueRingSparkle(byte[] layout, int layoutIndex) {
-        return allocate(layout, layoutIndex, RING_SPARKLE_FRAMES, RING_SPARKLE_DELAY, RING_SPARKLE_RESTORE);
+        return allocate(layout, layoutIndex, terminated(resources().ringFrames()), RING_SPARKLE_DELAY, RING_SPARKLE_RESTORE);
     }
 
     /** Queue bumper bounce animation at the given layout index */
     public boolean queueBumperBounce(byte[] layout, int layoutIndex) {
-        return allocate(layout, layoutIndex, BUMPER_BOUNCE_FRAMES, BUMPER_BOUNCE_DELAY, BUMPER_BOUNCE_RESTORE);
+        return allocate(layout, layoutIndex, terminated(resources().bumperFrames()), BUMPER_BOUNCE_DELAY, BUMPER_BOUNCE_RESTORE);
     }
 
     /** Queue spike/R-label animation at the given layout index */
     public boolean queueSpikeAnimation(byte[] layout, int layoutIndex) {
-        return allocate(layout, layoutIndex, SPIKE_ANIM_FRAMES, SPIKE_ANIM_DELAY, SPIKE_ANIM_RESTORE);
+        return allocate(layout, layoutIndex, terminated(resources().spikeFrames()), SPIKE_ANIM_DELAY, SPIKE_ANIM_RESTORE);
     }
 
     /** Tick all active animation slots, updating layout tiles */
