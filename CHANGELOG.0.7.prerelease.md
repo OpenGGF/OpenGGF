@@ -12,6 +12,8 @@ Unreleased. The earlier development themes remain in
   retains the source count, including rewind across that boundary.
   Initial touch publication follows each object's native range/deletion tail,
   and a full object-table reset retires both collision buffers before slot reuse.
+  Identity-keyed participant contact maps encode stable team IDs through
+  recreation while preserving their live associations and ordered-map behavior.
 
 - **S3K Knuckles routes:** Locked-on Mushroom Hill deletes the standalone S&K
   intro before it can freeze the camera and take player control. Its native
