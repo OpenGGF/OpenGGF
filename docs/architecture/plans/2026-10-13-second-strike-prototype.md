@@ -546,3 +546,11 @@ It remains positioned supplementary evidence, not a new cold campaign clear
 or a physical-speaker observation. The earlier harder cold controller still
 stalls at the documented later wall/tree; no full harder-route completion is
 claimed. Main integration, build, push and owned cleanup follow this checkpoint.
+
+The final destination then advanced to
+`4a0e714d5e29b65a5b1ba8e6cbb6a8223f560c75`. Its six-path EggSky announcement
+recovery changes only that independent example, its two tests and prose;
+engine, our test/creator sources, POM, testing tools and API inputs are unchanged.
+Private intent composition retains both changelog entries. The completed
+212-case focus, 680 fresh guards, compiled pin and native clip retain their
+precise executable-input attribution; no unchanged engine run was repeated.
