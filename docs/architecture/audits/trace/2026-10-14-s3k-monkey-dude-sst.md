@@ -196,3 +196,59 @@ incoming qualification is not superseded by a five-cold/two-error green claim.
 Final affected guards28232 pass111/0/0/0 at11:18:31 BST,32.393s
 execution/29s queue. This is bounded owner/consumer validation, not broad smoke
 or release full-suite coverage.
+
+
+## Manager dispatch preserves the native coarse-X retirement
+
+Separate follow-up over `bca64bb0b` (Act3 `e580b1be9`, collision `ffb12d41a`
+and stable identity-map dependency): native `S3KBadnikProjectile_Main →
+Sprite_CheckDeleteTouchXY → Go_Delete_Sprite` owns both bounds and delayed
+clear. Although direct projectile updates retained status7, the ordinary
+ObjectManager pass subsequently applied its generic camera cull and released
+SST43 in the same pass. The local projectile now declares its custom lifetime;
+its own update alone admits or clears it. Shared manager culling, clocks,
+allocator and viewport extension remain unchanged.
+
+The corrected normal-manager negative61600 is6/2/0/0 at12:15:54 BST,
+25.445s execution (queue interval not retained): both coarse-X sides fail at
+the pending physical record, while four literal Y-boundary/list/replay controls
+pass. The first draft62426 also found the catalogue bug, but its four projectile
+failures stopped at a wrong new identity oracle: stable ObjectRefId does not
+encode a dynamic object's current physical slot. Corrected tests resolve the
+captured dynamic record's exact object ID; that draft is not coarse-X kill evidence.
+
+The two new X cases move from admitted inclusive `$380/$67F` to pending
+`$37F/$680`, and then clear on the next dispatch. Four Y cases cover−129/−128/
+384/385 through the complete normal manager. They assert physical slot43,
+collision-list association, exact restore and two forward cycles before,
+pending and after clear. Pure33919 completes55/0/0/0 at12:21:54 BST,
+70s execution: all19 projectile cases and36 catalogue/descriptor cases pass.
+The supplied nonexistent shortened capture-arguments selector contributed no
+coverage; exact `TraceCaptureToolArgsTest`12 is supplied below.
+
+Affected99063 passes613/0/0/0 at12:37:50 BST,29.176s execution/806s queue:
+`TestBloominatorBadnikInstance,TestMonkeyDudeBadnikInstance,TestMonkeyDudeNativeSstGraph,TestS3kMonkeyDudePlacedGraph,TestS3kBadnikTouchResponseProfiles,TestS3kSelfContainedTransientRewind,TestS3kRewindFixBatch1Codecs,TestScalarOnlyCodecDeletion,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TraceCaptureToolArgsTest`.
+The two distinct loading classes supply36+7 cases; mandatory S3K startup60
+and actual capture arguments12 are covered. Normal commands retain Java25,
+surfaceless EGL and the verified absolute ROM; no broad/full suite ran.
+
+Strict86861 uses the exact five-case85471 selector/profile with
+`OGGF_SLOT_PROBE=1 OGGF_SLOT_PROBE_FULL=1
+OGGF_SLOT_PROBE_OUT=target/coarse-x-slot-occupancy`. It completes5/1/0/0 at
+12:42:36 BST,98s execution/143s queue. Original AIZ, initial HCZ and both
+prefixes pass. Chain segments6/8/11 retain189/12,719/82,067 raw mismatched
+fields, first physics fields3,319 TailsX `$31C1/$31CA`,1,583 TailsX
+`$366C/$3674`,1,510 Y `$7D6/$7DF`, and the input68,801 ownership stop.
+The sampled physical-presence frontier moves1055→1688: pending projectile
+SST43 at1055 now exists, and samples agree through1687. At1688 native cork-floor
+fragment code `$2A5F8` occupies35 and41..51; engine keeps inert CorkFloor35 plus
+12 new fragments41..52. `BreakObjectToPieces2` reuses a0, then calls checked
+`AllocateObjectAfterCurrent` for N−1 pieces; this is the next source owner,
+not a trace closure. Second-entry ring25/flash17 versus native18/22 remains.
+
+Alternate74434 uses the exact40737 profile/selector and completes1/1/0/0 at
+12:44:33 BST,36.163s execution/58s queue:60 grouped spans (25 physics/35
+animation), first25,589 animation `$13/$05`, then25,590 Tails subpixel
+`$7800/$6C00`, unchanged. Final90744 affected rewind/source/trace/hardware
+111 guards pass at12:47:40 BST,33.760s execution/108s queue. These are bounded
+owner/control checks, not strict whole-chain, pixel, waveform or campaign certification.

@@ -150,6 +150,19 @@ public final class S3kBadnikProjectileInstance
     }
 
     @Override
+    public boolean usesCustomOutOfRangeCheck() {
+        // Sprite_CheckDeleteTouchXY owns the exact XY tail. A generic
+        // second coarse-X check would erase Go_Delete_Sprite's marked SST
+        // before Delete_Current_Sprite can run on its following dispatch.
+        return true;
+    }
+
+    @Override
+    public boolean isCustomOutOfRange(int cameraX) {
+        return false;
+    }
+
+    @Override
     public int getCollisionFlags() {
         if (initPending || nativeRetirementPending || !collisionEnabled) {
             return 0;

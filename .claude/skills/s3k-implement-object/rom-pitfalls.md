@@ -5381,7 +5381,12 @@ The admitted path calls AddList/Draw independently of hurt flags; shield
 deflection must not hide the sprite. `Go_Delete_Sprite` sets status7 and the
 next code pointer without clearing that SST. The following `Delete_Current_Sprite`
 dispatch clears without another move. Capture INIT/pending retirement and replay
-both sides of the physical-slot boundary. A pointer-low-byte occupancy label
+both sides of the physical-slot boundary through the full manager: a direct
+object update cannot prove that subsequent generic camera culling preserves the
+marked record. Declare the native owner's custom lifetime rather than adding a
+wait or changing shared culling. Stable ObjectRefId does not encode a dynamic
+object's current physical slot; resolve its captured dynamic record for list
+association assertions. A pointer-low-byte occupancy label
 is not a type oracle; exact RAM code and owning routine resolve it.
 
 Origin: 2026-10-14 S3K parity projectile slice over `85ca2a3c6`.

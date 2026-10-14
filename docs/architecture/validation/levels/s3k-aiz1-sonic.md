@@ -585,3 +585,16 @@ are resolved without input/oracle changes. Original AIZ/initial HCZ/prefix2
 remain green; alternate60 and chain189/12,719/82,067 raw-field frontiers stay
 unchanged. [Native evidence and exact checks](../../audits/trace/2026-10-14-s3k-fresh-title-sst.md#act3-continuation-bypass--whole-graph-admission)
 do not certify native screenshot/audio or whole-act parity.
+
+
+### 2026-10-14 full-manager projectile follow-up
+
+The complete manager now leaves native pending-delete projectile SST43 alive
+at the coarse-X tail until its next dispatch. Two negative X edges plus four Y
+controls, full-slot/collision-list restore and two replay cycles pass in the19
+projectile checks; affected613 and guards111 pass. Actual original AIZ, initial
+HCZ and both run prefixes remain green. Strict alternate60 grouped spans and
+chain189/12,719/82,067 raw fields remain red. Sampled presence improves1055→1688,
+where native cork-floor reused-parent allocation differs; second-entry ring/
+flash order remains unresolved. [Exact source and evidence](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#manager-dispatch-preserves-the-native-coarse-x-retirement)
+separate local owner qualification from pixel/audio and whole-route parity.
