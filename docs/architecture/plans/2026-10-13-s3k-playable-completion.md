@@ -1661,3 +1661,45 @@ whole-interior pictures/audio and wider campaign obligations are still separate.
 Consumed Maven redirect is deleted after this durable summary; no validation
 receipt or archived test log is retained. This is focused qualification, not
 combined smoke/guards, full-suite or integrated delivery credit.
+
+
+## Qualified native video port integration (2026-10-14)
+
+TraceChaser diagnostic sourcebf3c5391c948dbf31018f8779e805437fd1621bf
+is integrated into origin/main as4fdf73880f93a3172d23bf9e157b15de3c78fc32
+and the exact remote SHA is verified. Integration uses a separate owned main
+worktree; the shared detached native checkout is preserved. The merged file
+tree is byte-identical to the qualified feature tip. Its13 native host cases
+and32 Python policy cases retain their prior scope; repository, reachable
+history and documentation scanners pass on the integration tree, including
+the new merge commit. Root independently reviews current-generation invalidation,
+owned array copies and strict domain lengths. No canonical fixture, generic
+callback port, recorder profile or ordinary Advance flags change. This is
+focused diagnostic-port qualification, not a full recorder/engine suite or
+ending pixel acceptance. The parent gitlink records the pushed integrated SHA.
+
+Additional passive SSZ observer72373 completes terminal0 at19:19:47 UTC
+(16.324s Maven execution). Native main `SszArrivalAllocationProbe` launches
+at1792005572.151551 /19:19:32.151558 UTC and ends1792005587.5887856 /
+19:19:47.588791 UTC. Its adapter SHA256 is
+`84adead99db9a42e4efb699220d22ea0d544c45fb5dc4e6e4fc1dcdbd633d3bf`.
+Same original ROM/AD40 movie, title/bootstrap setup and1431 ordinary polls
+as the retained contact pair; eight full state/VDP/image controls, including
+complete1432-row state.csv, are byte-identical. The observer adds read-only
+allocation registers and snapshots118/119/120, not gameplay writes.
+
+Atpoll/LFC109, loc57D18 has A0=B128(slot4), A1=B000(Player1),
+D0lowword20, byte38=FF,byte39=03,word3A=0020. Collision-reset slot2
+(code6C2C) is occupied; slot3 is empty. CreateNewSprite4 returnsB0DE(slot3)
+and D0low1D. Obj57DCC first executes atpoll/LFC110, the following object
+pass. These are literal native register/slot facts supporting a local
+continuation scan; they do not justify a fitted birth delay or shared allocator
+change. Root arrival light/cycle retirement remain the same owning routine's
+missing state. Engine repair and negative/green qualification follow separately.
+
+Output `native-ssz-arrival-allocation-ntsc-v1` remains under the explicit
+external task spot-check directory with exact argv/spec hashes/provenance.
+C# compilation additionally holds the native source/classes worktree lease
+and inherits its FD; normal Maven admission retains the baseline tree through
+all execution. Actual child bounds are relayed to the performance coordinator.
+No measurement credit, pause/preemption or foreign resource change is requested.
