@@ -62,9 +62,20 @@ public final class Voice {
         if (!enabled || now < busyUntil || queue.isEmpty()) return;
         Pending next = queue.stream().max(java.util.Comparator.<Pending>comparingInt(p -> p.line.priority)
                 .thenComparingLong(p -> -p.requested)).orElseThrow();
+        // An unavailable host has not consumed the event or begun its cooldown.
+        // Keep the bounded, expiring request so it can play when audio is ready.
+        if (!audio.playSfx(next.line.asset)) return;
         queue.remove(next);
         lastPlayed.put(next.line, now);
-        if (audio.playSfx(next.line.asset)) busyUntil = now+next.line.durationTicks+12;
+        busyUntil = now+next.line.durationTicks+12;
+        // Latch edge-triggered warnings only after accepted playback. A queued
+        // warning can still be evicted, expire or be cleared when speech is muted.
+        switch (next.line) {
+            case HULL_CRITICAL -> hullLow = true;
+            case SHIELD_EMPTY -> shieldEmpty = true;
+            case PULSE_LOW -> pulseLow = true;
+            default -> { }
+        }
     }
 
     /** Clear warnings as soon as their condition resolves; hysteresis keeps threshold chatter quiet. */
@@ -79,15 +90,12 @@ public final class Voice {
         if (!space || p.pulse > 30) { pulseLow = false; cancel(VoiceLine.PULSE_LOW); }
         if (!live) return;
         if (p.hull > 0 && p.hull <= p.maxHull()*.25f && !hullLow) {
-            hullLow = true;
             say(VoiceLine.HULL_CRITICAL);
         }
         if (space && p.shipShield <= 0 && !shieldEmpty) {
-            shieldEmpty = true;
             say(VoiceLine.SHIELD_EMPTY);
         }
         if (space && p.pulse <= 20 && !pulseLow) {
-            pulseLow = true;
             say(VoiceLine.PULSE_LOW);
         }
     }

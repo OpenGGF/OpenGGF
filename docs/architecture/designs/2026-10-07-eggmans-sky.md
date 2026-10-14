@@ -768,3 +768,74 @@ contracts remain unchanged. It is not a whole-suite qualification.
   lock after inspecting the classpath plugin's no-fork lifecycle descriptor;
   the earlier queued build was cancelled before execution. Byte checks cover
   every packaged Ogg, preserved provenance and absence of shipped WAV masters.
+
+
+## Announcement trigger recovery — 2026-10-14
+
+The user's Windows ZIP feedback concerned missing announcements without a
+remembered specific event. The preceding native bank check proved all 122 Ogg
+clips could decode and produce final PCM when played individually; it did not
+prove gameplay queue admission. The new investigation pins base
+`5b2ff8e7851b99dd40998dfc41fbfd21c80031ef`. All 122 lines have source trigger
+references, and the announcer source is unchanged from the delivered October 9
+ZIP. Two independent loss paths were reproduced in the actual packaged mod:
+
+- `Voice.update` removed a request and began its cooldown even when
+  `SceneAudio.playSfx` returned false. A single startup event could disappear
+  before the prepared host accepted it. The original request now remains in
+  the existing bounded/expiring queue; only accepted playback starts its lease
+  and cooldown.
+- Hull/shield/pulse hysteresis flags were set when the condition was observed,
+  before the queue admitted or played the clip. A crowded queue or muting pending
+  speech could therefore suppress the ongoing warning until the system recovered.
+  The flags now latch only after accepted playback. Existing recovery thresholds,
+  priorities, duplicate coalescing, queue size, expiry, mute and clip spacing remain.
+
+Baseline `maven_queue.py --lean -B -Dmse=off
+-Dtest=TestEggmansSkyVoice,TestEggmansSkyVoiceAssets test` passed nine cases
+without failures/errors/skips. Three added regressions then failed on unchanged
+production code: rejected one-time playback remained silent, re-enabled speech
+lost the queued hull warning, and persistent low pulse was forgotten after equal-
+priority queue pressure. The mute regression also checks shield and pulse states
+in its successful run. With the correction, those two suites passed 12 cases.
+
+A further integration control uses the real validator, preparation factory,
+session view, namespaced engine request and final live PCM capture. It requests
+`SYSTEMS_ONLINE` before installation, then installs the prepared bank without
+reissuing the event. Restoring only the baseline `Voice.java` produces one
+ordinary assertion failure: the original announcement never reaches mixed PCM
+(two asset-suite cases, one failure, zero errors/skips). The unchanged 122-clip
+bank check still passes in that negative control. The first attempt at the added
+integration control had a test-setup descriptor type error and executed no tests;
+it was corrected before the behavioral negative was measured.
+
+The change-based runner selects all 3,253 smoke candidate classes through its
+unclassified example fallback. Focused validation is proportionate here: only
+this mod's private announcer changes; engine/audio algorithms, SDK/API, timing,
+POM, workflows, decoder and all encoded clip bytes are unchanged. Five focused
+suites cover queue regression, cold-to-prepared final PCM, the full bank, scene
+lifecycle, expedition/UI behavior and ROM-backed startup audio. Java 25 / Lua 5.4 /
+PowerShell preflight passes with `LUA_BIN=lua5.4`; default Lua was rejected before
+tests. ROM-backed checks use rehashed original absolute paths, and routine GL
+checks use `-Dopenggf.headless.gl=surfaceless-egl`. This is bounded validation,
+not a release full-suite claim. No full suite is requested or run.
+
+The final five-suite command completed 2026-10-14 09:04:36Z, Maven exit 0:
+53 cases, zero failures/errors/skips, at the pinned base plus the corrected mod
+and two regression test files. Exact fresh suite identities were read from its
+terminal log and matched to reports; earlier negative-control reports are not
+counted. `TestEggmansSkyVoice` has 11 cases, the asset/real-PCM suite has two,
+and the remaining 40 exercise scene, quality-of-life and original-ROM startup
+paths. The actual cold-to-prepared PCM regression passes with the correction.
+The command uses `maven_queue.py --lean -B -Dmse=off
+-Dopenggf.headless.gl=surfaceless-egl
+-Dtest=TestEggmansSkyVoice,TestEggmansSkyVoiceAssets,TestEggmansSkyScene,TestEggmansSkyQualityOfLife,TestEggmansSkyStartupAudio test`,
+plus all three rehashed original absolute ROM properties. The reported Maven
+execution time is 47.128 seconds; queue waiting was separate (approximately five
+minutes by the wrapper notices).
+
+Terminal Windows qualification, publication and refreshed ZIP evidence
+will follow. Because the reported event was not remembered, these reproduced
+losses cannot be attributed to a specific announcement from the user's session.
+The intentional warning cooldowns, wanted-state coalescing and stale-message
+expiry still mean not every event produces an immediate spoken message.
