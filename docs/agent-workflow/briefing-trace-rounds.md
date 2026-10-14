@@ -82,7 +82,10 @@ cursors and every contact, plane-crossing and double-buffered touch channel.
 Its only local omissions are the render-bucket dirty cache (restore invalidates
 it deliberately) and allocator peak telemetry (allocation reads occupancy, not
 that peak). A scalar diagnostic must compare values before reporting boxed
-references, including counters beyond Java's small-integer cache.
+references, including counters beyond Java's small-integer cache. A concrete
+Palette leaf is copied defensively by native-stage capture/restore: compare all
+sixteen raw RGB triples through its dataEquals contract, including low bits.
+Neither Java copy identity nor a normalized 3-bit color word is that contract.
 
 A performance-only flock does not isolate shared-worktree test jobs
 (2026-10-13, P5 CPU audit). Another task's queued Maven run overlapped a

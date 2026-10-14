@@ -5,6 +5,7 @@ import com.openggf.game.rewind.snapshot.LevelSnapshot;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.rewind.schema.RewindObjectStateBlob;
 import com.openggf.level.Pattern;
+import com.openggf.level.Palette;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -212,6 +213,10 @@ public final class RewindSnapshotDiff {
             collectDiffs(path + ".pixels", patternPixels(pa), patternPixels(pb), diffs);
             return;
         }
+        if (cls == Palette.class) {
+            collectPaletteDiffs(path, (Palette) av, (Palette) bv, diffs);
+            return;
+        }
         if (av instanceof GenericObjectSnapshot ga && bv instanceof GenericObjectSnapshot gb) {
             collectGenericObjectSnapshotDiffs(path, ga, gb, diffs);
             return;
@@ -380,6 +385,19 @@ public final class RewindSnapshotDiff {
         }
     }
 
+    private static void collectPaletteDiffs(String path, Palette a, Palette b, List<String> diffs) {
+        // Palette owns exactly sixteen RGB triples. Report raw bytes without
+        // quantizing them back to Genesis color words or comparing copy identity.
+        for (int i = 0; i < Palette.PALETTE_SIZE && diffs.size() < 20; i++) {
+            var ac = a.colors[i];
+            var bc = b.colors[i];
+            String color = path + ".colors[" + i + "]";
+            if (ac.r != bc.r) collectDiffs(color + ".r", ac.r, bc.r, diffs);
+            if (ac.g != bc.g) collectDiffs(color + ".g", ac.g, bc.g, diffs);
+            if (ac.b != bc.b) collectDiffs(color + ".b", ac.b, bc.b, diffs);
+        }
+    }
+
     private static String unsignedHex(byte value) {
         return String.format("0x%02X", value & 0xFF);
     }
@@ -423,6 +441,12 @@ public final class RewindSnapshotDiff {
             return a.schemaId() == b.schemaId() && a.type() == b.type()
                     && Arrays.equals(a.scalarData(), b.scalarData())
                     && fieldContentEqual(a.opaqueValues(), b.opaqueValues());
+        }
+        // The concrete Palette snapshot leaf has no state beyond its RGB
+        // array. Subclasses are not admitted here: additional state must retain
+        // its own equality contract rather than inheriting this narrow leaf.
+        if (av.getClass() == Palette.class && bv.getClass() == Palette.class) {
+            return ((Palette) av).dataEquals((Palette) bv);
         }
         Class<?> cls = av.getClass();
         if (cls.isArray()) {
