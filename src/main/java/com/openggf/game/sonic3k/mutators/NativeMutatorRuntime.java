@@ -40,11 +40,13 @@ import java.util.function.Supplier;
 public final class NativeMutatorRuntime implements WorldSessionPolicyState,
         RewindSnapshottable<NativeMutatorRuntime.State>, NativeObjectPolicyPort, com.openggf.game.mutators.NativeCompanionControlSource {
     private static final int MAX_OWNED_ROOTS = 16;
+    private static final int MAX_OWNED_RINGS = 48;
     private static final java.util.concurrent.atomic.AtomicLong GENERATIONS = new java.util.concurrent.atomic.AtomicLong();
     private final long generation = GENERATIONS.incrementAndGet();
     private long assemblyEpoch;
     private boolean retired;
     private final WorldSession world;
+    private final NativeEncounterPalettes encounterPalettes;
     private ObjectServices services;
     private SpriteManager sprites;
     private List<TransientMutatorPolicySource.Entry> entries = List.of();
@@ -72,7 +74,7 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
     private int[] landmarkPalette;
     private boolean landmarkVisible;
 
-    public record Owned(long activationId, String owner, ObjectRefId identity, int remainingTicks, boolean cancelOnRemoval) { }
+    public record Owned(long activationId, String owner, String contentOwner, ObjectRefId identity, int remainingTicks, boolean cancelOnRemoval) { }
     public record Companion(long activationId,String owner,String code,int ticks,boolean cancelOnRemoval,boolean carry,int landingX,int landingY) { }
     public record FieldTargets(List<ObjectRefId> identities,int acquired) {
         public FieldTargets { identities=List.copyOf(identities); }
@@ -85,7 +87,9 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
                         Set<ObjectRefId> budded, Set<ObjectRefId> impacts, boolean lastAir, List<Companion> companions,List<Ride> rides,
                         List<CheckpointDestination> encounteredCheckpoints) { }
 
-    public NativeMutatorRuntime(WorldSession world) { this.world = java.util.Objects.requireNonNull(world); }
+    public NativeMutatorRuntime(WorldSession world) {
+        this.world=java.util.Objects.requireNonNull(world);encounterPalettes=new NativeEncounterPalettes(world);
+    }
     @Override public <T> T getService(Class<T> type) {
         return type.isInstance(this) ? type.cast(this) : null;
     }
@@ -105,12 +109,13 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
     }
     @Override public void resetForMissingSnapshot() { reset(); }
     private void reset() {
+        encounterPalettes.clear();
         admitted.clear(); owned.clear(); clocks.clear(); tasks.clear(); opportunities.clear(); fieldTargets.clear(); ownedChildren.clear(); pendingReplacements.clear(); projectileAges.clear(); budded.clear(); impacts.clear();
         entries = List.of(); chainDispatch = false; lastAir = false; companions.clear(); rides.clear(); encounteredCheckpoints.clear(); landmarkThumbnail=null; landmarkSheet=null; landmarkPalette=null; landmarkVisible=false;
     }
     @Override public void beforeAssembly(LevelLoadCause cause) {
         if (cause == LevelLoadCause.DECODE_ONLY || cause == LevelLoadCause.PREVIEW) return;
-        releaseOwned(); reset(); services = null; assemblyEpoch++;
+        encounterPalettes.leaveAssembly();releaseOwned(); reset(); services = null; assemblyEpoch++;
     }
     @Override public void failedAssembly(LevelLoadCause cause) { beforeAssembly(cause); }
     @Override public void bindRoster(SpriteManager sprites) { this.sprites = sprites; }
@@ -123,7 +128,7 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
         if(services!=null) for(var lease:owned) terminateOwnedGraph(lease);
         releaseOwned(); reset();
     }
-    @Override public void retire() { leaveOrdinaryGameplay(com.openggf.game.GameplayObservation.Phase.CLOSED); retired=true; services = null; sprites = null; }
+    @Override public void retire() { encounterPalettes.leaveAssembly();leaveOrdinaryGameplay(com.openggf.game.GameplayObservation.Phase.CLOSED); retired=true; services = null; sprites = null; }
 
     @Override public void beforeNativeTick(LevelFrameContext context, LogicalInputSnapshot input) {
         if(retired) return;
@@ -196,6 +201,7 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
                 if (input.player1().actionPressedMask() != 0) firePlayerShot(entry, player);
             }
         }
+        prepareEncounterPalettes();
         prepareLandmarkThumbnail();
     }
     @Override public void afterNativeTick(LevelFrameContext context, LogicalInputSnapshot input) {
@@ -206,9 +212,13 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
         observeCheckpoint();
         if(player.getAir() && player.isJumping() && !lastAir) advanceTasks(ChallengePolicy.Kind.SKILL_CHAIN,player,2);
         lastAir=player.getAir();
-        for(var lease:List.copyOf(owned)) if(!ownerAvailable(lease.owner())) ownerRetired(lease.owner());
+        for(var lease:List.copyOf(owned)) {
+            if(!ownerAvailable(lease.owner())) ownerRetired(lease.owner());
+            else if(lease.contentOwner()!=null && !ownerAvailable(lease.contentOwner())) ownerRetired(lease.contentOwner());
+        }
         for(var lease:List.copyOf(companions)) if(!ownerAvailable(lease.owner())) ownerRetired(lease.owner());
         for(var lease:List.copyOf(rides)) if(!ownerAvailable(lease.owner())) ownerRetired(lease.owner());
+        prepareEncounterPalettes();
         prepareLandmarkThumbnail();
     }
     private void observeCheckpoint() {
@@ -255,13 +265,21 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
     private boolean art(String key) {
         if (services.renderManager() == null) return false;
         if (!(services.renderManager().getArtProvider() instanceof Sonic3kObjectArtProvider provider)) return false;
-        return provider.ensureEncounterArtLoaded(world.getDataSource().rom().orElse(null), services.graphicsManager(), key);
+        if(!provider.ensureEncounterArtLoaded(world.getDataSource().rom().orElse(null),services.graphicsManager(),key))return false;
+        if(key.equals(Sonic3kObjectArtKeys.CNZ_BUMPER) || key.equals(Sonic3kObjectArtKeys.SOZ_GHOSTS)) {
+            Set<String> needed=encounterPaletteKeys();needed.add(key);
+            encounterPalettes.prepare(world.getDataSource().rom().orElse(null),services.graphicsManager(),needed);
+            return encounterPalettes.base(key,services.graphicsManager())>=0;
+        }
+        return true;
     }
     private <T extends AbstractObjectInstance> T spawn(long activation, int ticks, Supplier<T> factory) {
-        if (owned.size() >= MAX_OWNED_ROOTS) return null;
+        long roots=owned.stream().filter(lease->services.objectQuery().resolve(lease.identity())
+                .filter(LostRingObjectInstance.class::isInstance).isEmpty()).count();
+        if (roots >= MAX_OWNED_ROOTS) return null;
         T object = services.objectManager().createDynamicObject(factory);
         if (object != null) services.objectQuery().identityOf(object)
-                .ifPresent(id -> owned.add(new Owned(activation, owner(activation), id, ticks, cancellationBound(activation))));
+                .ifPresent(id -> owned.add(new Owned(activation, owner(activation), null, id, ticks, cancellationBound(activation))));
         return object;
     }
     private static ObjectSpawn at(int x, int y, int id, int subtype, int flags) {
@@ -370,15 +388,15 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
             Owned lease=owned.get(i);
             var object=services.objectQuery().resolve(lease.identity()).orElse(null);
             boolean cancelled=lease.cancelOnRemoval() && entries.stream().noneMatch(e->e.activationId()==lease.activationId());
-            if(!ownerAvailable(lease.owner())) { terminateOwnedGraph(lease); owned.remove(i); }
-            else if (lease.remainingTicks() <= 0 || cancelled) {
+            if(!ownerAvailable(lease.owner()) || lease.contentOwner()!=null && !ownerAvailable(lease.contentOwner())) { terminateOwnedGraph(lease); owned.remove(i); }
+            else if((object==null || object.isDestroyed()) && !ownedChildren.containsKey(lease.identity())) {
+                owned.remove(i);
+            } else if (lease.remainingTicks() <= 0 || cancelled) {
                 if(object!=null) expire(object); else releaseChildren(lease.identity());
                 if(object instanceof NativeGhostEncounterObjectInstance)
-                    owned.set(i,new Owned(lease.activationId(),lease.owner(),lease.identity(),0,lease.cancelOnRemoval()));
+                    owned.set(i,new Owned(lease.activationId(),lease.owner(),lease.contentOwner(),lease.identity(),0,lease.cancelOnRemoval()));
                 else owned.remove(i);
-            } else if((object==null || object.isDestroyed()) && !ownedChildren.containsKey(lease.identity())) {
-                owned.remove(i);
-            } else owned.set(i,new Owned(lease.activationId(),lease.owner(),lease.identity(),lease.remainingTicks()-1,lease.cancelOnRemoval()));
+            } else owned.set(i,new Owned(lease.activationId(),lease.owner(),lease.contentOwner(),lease.identity(),lease.remainingTicks()-1,lease.cancelOnRemoval()));
         }
     }
     private void expire(ObjectInstance object) {
@@ -419,7 +437,7 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
         return source!=null && source.ownerAvailable(owner);
     }
     public void ownerRetired(String owner) {
-        if(services!=null) for(int i=owned.size()-1;i>=0;i--) if(owned.get(i).owner().equals(owner)) {
+        if(services!=null) for(int i=owned.size()-1;i>=0;i--) if(owned.get(i).owner().equals(owner) || owner.equals(owned.get(i).contentOwner())) {
             terminateOwnedGraph(owned.get(i)); owned.remove(i);
         }
         for(int i=companions.size()-1;i>=0;i--) if(companions.get(i).owner().equals(owner)) {
@@ -521,12 +539,12 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
     }
     @Override public boolean permitsRoutine(ObjectInstance object, PlayableEntity player) {
         if (!(object instanceof AbstractBadnikInstance)) return true;
-        if (enemyRule(EnemyRulePolicy.Kind.STASIS) && movableBadnik(object)) {
+        if (enemyRule(EnemyRulePolicy.Kind.STASIS) && groundedMotionTarget(object)) {
             // A native init/wait release with no contact byte must establish its stock body first.
-            if(object instanceof TouchResponseProvider touch && touch.getCollisionFlags()==0) return true;
+            if(object instanceof TouchResponseProvider touch && receiverCall(object,touch::getCollisionFlags)==0) return true;
             return services.objectQuery().activeObjectsOfType(AbstractBadnikInstance.class).stream()
-                    .filter(NativeMutatorRuntime::movableBadnik)
-                    .filter(enemy->player!=null && Math.abs(enemy.getX()-player.getCentreX())<=256)
+                    .filter(this::groundedMotionTarget)
+                    .filter(enemy->receiverCall(enemy,()->player!=null && Math.abs(enemy.getX()-player.getCentreX())<=256))
                     .limit(4).noneMatch(enemy->enemy==object);
         }
         return true;
@@ -536,23 +554,36 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
         if (enemyRule(EnemyRulePolicy.Kind.TRUCE)) return false;
         return true;
     }
-    private static boolean movableBadnik(ObjectInstance object) {
+    private boolean groundedMotionTarget(ObjectInstance object) {
+        return receiverCall(object,()->object instanceof NativeObjectFieldTarget target
+                && target.fieldKind() == NativeObjectFieldTarget.Kind.BADNIK && target.supportsGroundedFieldMotion());
+    }
+    private NativeObjectFieldTarget.Kind fieldKind(ObjectInstance object) {
+        return receiverCall(object,()->object instanceof NativeObjectFieldTarget target ? target.fieldKind() : null);
+    }
+    /** Foreign targets own their callbacks; an abort retains that receiver's owner and stops the frame. */
+    private <T> T receiverCall(ObjectInstance object,Supplier<T> callback) {
+        return ObjectCallbackDispatch.call(services==null?null:services.objectManager(),object,callback);
+    }
+    /** Native duplication retains the four bounded constructor recipes, independent of motion admission. */
+    private static boolean clonableNativeBadnik(ObjectInstance object) {
         return object instanceof ButterdroidBadnikInstance || object instanceof RhinobotBadnikInstance
                 || object instanceof PenguinatorBadnikInstance || object instanceof MushmeanieBadnikInstance;
     }
+
     private void selectFieldTargets(AbstractPlayableSprite player) {
         for(var entry:entries) if(entry.policy() instanceof ObjectFieldPolicy field && field.target()!=ObjectFieldPolicy.Target.RING) {
             int cap=field.target()==ObjectFieldPolicy.Target.BADNIK?4:6;
             var previous=fieldTargets.getOrDefault(entry.activationId(),new FieldTargets(List.of(),0));
             var selected=new ArrayList<>(previous.identities());
             selected.removeIf(id->{var object=services.objectQuery().resolve(id).orElse(null);
-                return object==null || object.isDestroyed() || Math.abs(object.getX()-player.getCentreX())>256 || Math.abs(object.getY()-player.getCentreY())>160;});
+                return object==null || receiverCall(object,()->object.isDestroyed() || Math.abs(object.getX()-player.getCentreX())>256 || Math.abs(object.getY()-player.getCentreY())>160);});
             int acquired=previous.acquired();
             var candidates=services.objectQuery().activeObjectsOfType(ObjectInstance.class).stream()
-                    .filter(object->!object.isDestroyed() && (field.target()==ObjectFieldPolicy.Target.BADNIK?movableBadnik(object)
-                            :object instanceof NativeObjectFieldTarget target && target.fieldKind()==NativeObjectFieldTarget.Kind.PROJECTILE))
-                    .filter(object->Math.abs(object.getX()-player.getCentreX())<=160 && Math.abs(object.getY()-player.getCentreY())<=96)
-                    .sorted(java.util.Comparator.<ObjectInstance>comparingInt(object->Math.abs(object.getX()-player.getCentreX())+Math.abs(object.getY()-player.getCentreY()))
+                    .filter(object->receiverCall(object,()->!object.isDestroyed() && (field.target()==ObjectFieldPolicy.Target.BADNIK?groundedMotionTarget(object)
+                            :object instanceof NativeObjectFieldTarget target && target.fieldKind()==NativeObjectFieldTarget.Kind.PROJECTILE)))
+                    .filter(object->receiverCall(object,()->Math.abs(object.getX()-player.getCentreX())<=160 && Math.abs(object.getY()-player.getCentreY())<=96))
+                    .sorted(java.util.Comparator.<ObjectInstance>comparingInt(object->receiverCall(object,()->Math.abs(object.getX()-player.getCentreX())+Math.abs(object.getY()-player.getCentreY())))
                             .thenComparingInt(object->services.objectQuery().identityOf(object).map(ObjectRefId::dynamicId).orElse(Integer.MAX_VALUE))
                             .thenComparingInt(object->services.objectQuery().identityOf(object).map(ObjectRefId::spawnId).orElse(Integer.MAX_VALUE))).toList();
             for(var object:candidates) {
@@ -564,7 +595,11 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
         }
     }
     @Override public void afterRoutine(ObjectInstance object, PlayableEntity player) {
-        if (services == null || player == null || object.isDestroyed()) return;
+        if (services == null || player == null) return;
+        receiverCall(object,()->{applyAfterRoutine(object,player);return null;});
+    }
+    private void applyAfterRoutine(ObjectInstance object,PlayableEntity player) {
+        if (object.isDestroyed()) return;
         if (object instanceof NativeObjectFieldTarget target) {
             int fieldX=0,fieldY=0;
             for (var entry : entries) if (entry.policy() instanceof ObjectFieldPolicy field) {
@@ -579,7 +614,7 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
             if(fieldX!=0 || fieldY!=0) {
                 int dx=Math.clamp(fieldX,-2,2),dy=Math.clamp(fieldY,-2,2);
                 boolean clear=true;
-                if(movableBadnik(object)) {
+                if(groundedMotionTarget(object)) {
                     int flags=((TouchResponseProvider)object).getCollisionFlags();
                     clear=touchSizes!=null && NativeEncounterGeometry.clear(services,new NativeEncounterGeometry.Body(object.getX()+dx,object.getY()+dy,
                             touchSizes.getWidthRadius(flags&63),Math.max(1,touchSizes.getHeightRadius(flags&63)-1)),null);
@@ -608,7 +643,9 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
             int awarded=clocks.getOrDefault(e.activationId(),0);
             if(awarded<18) { rain(e.activationId(),object.getX(),object.getY(),3); clocks.put(e.activationId(),awarded+3); }
         }
-        if (movableBadnik(object) && enemyRule(EnemyRulePolicy.Kind.BUDDING)) {
+        String contentOwner = groundedMotionTarget(object)
+                ? ObjectCallbackDispatch.registeredContentOwner(services.objectManager(), object) : null;
+        if ((clonableNativeBadnik(object) || contentOwner != null && ownerAvailable(contentOwner)) && enemyRule(EnemyRulePolicy.Kind.BUDDING)) {
             var identity=services.objectQuery().identityOf(object).orElse(null);
             var activation=entries.stream().filter(e->e.policy() instanceof EnemyRulePolicy p && p.kind()==EnemyRulePolicy.Kind.BUDDING).findFirst().orElse(null);
             if(identity!=null && activation!=null && budded.add(identity) && clocks.getOrDefault(activation.activationId(),0)<2) {
@@ -617,15 +654,25 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
                 int halfWidth=touchSizes==null?0:touchSizes.getWidthRadius(flags&63);
                 int halfHeight=touchSizes==null?0:touchSizes.getHeightRadius(flags&63);
                 boolean clear=halfWidth>0 && halfHeight>0 && NativeEncounterGeometry.ordinary(services,sprite) && !bossActive && owned.size()+2<=MAX_OWNED_ROOTS;
-                for(int side:new int[]{-1,1}) clear &= NativeEncounterGeometry.clear(services,
-                        new NativeEncounterGeometry.Body(object.getX()+side*48,object.getY(),halfWidth,Math.max(1,halfHeight-1)),null);
+                for(int side:new int[]{-1,1}) {
+                    int x=object.getX()+side*48;
+                    clear &= NativeEncounterGeometry.clear(services,
+                            new NativeEncounterGeometry.Body(x,object.getY(),halfWidth,Math.max(1,halfHeight-1)),null);
+                    if(contentOwner!=null) {
+                        var floor=services.floorSurface(x,object.getY()+halfHeight,TerrainSurface.Layer.FOREGROUND,TerrainSurface.Path.PRIMARY);
+                        clear &= floor.foundSurface() && floor.distance()>=-1 && floor.distance()<12;
+                    }
+                }
                 if(!clear) {
                     TransientMutatorPolicyAccess.report(world,activation.activationId(),"Failed: the defeated badnik has no clear native child positions");
                     acknowledge(activation); return;
                 }
                 for(int side:new int[]{-1,1}) {
                     ObjectSpawn cloneSpawn=at(object.getX()+side*48,object.getY(),source.objectId(),source.subtype(),source.renderFlags());
-                    var clone=spawn(activation.activationId(),360,()->cloneMovable(object,cloneSpawn));
+                    var clone=contentOwner==null ? spawn(activation.activationId(),360,()->cloneMovable(object,cloneSpawn))
+                            : ObjectCallbackDispatch.createRegisteredDerivative(services.objectManager(),object,cloneSpawn.x(),cloneSpawn.y());
+                    if(clone!=null && contentOwner!=null) services.objectQuery().identityOf(clone).ifPresent(id ->
+                            owned.add(new Owned(activation.activationId(),activation.owner(),contentOwner,id,360,cancellationBound(activation.activationId()))));
                     if(clone!=null) services.objectQuery().identityOf(clone).ifPresent(budded::add);
                 }
                 clocks.put(activation.activationId(),2);
@@ -655,25 +702,66 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
     private void blast(int x,int y,int radius,int maxHits,PlayableEntity player,ObjectInstance exclude) {
         int hits=0;
         for (var target:services.objectQuery().activeObjectsOfType(AbstractBadnikInstance.class)) {
-            if (!(target instanceof NativeObjectFieldTarget nativeTarget) || nativeTarget.fieldKind()!=NativeObjectFieldTarget.Kind.BADNIK
-                    || target==exclude || target.isDestroyed() || Math.abs(target.getX()-x)>radius || Math.abs(target.getY()-y)>radius) continue;
-            if (target instanceof PoweredScreenAttackable attackable) { attackable.onPoweredScreenAttack(player); if (++hits>=maxHits) break; }
+            boolean hit=receiverCall(target,()->{
+                if (!(target instanceof NativeObjectFieldTarget nativeTarget) || nativeTarget.fieldKind()!=NativeObjectFieldTarget.Kind.BADNIK
+                        || target==exclude || target.isDestroyed() || Math.abs(target.getX()-x)>radius || Math.abs(target.getY()-y)>radius) return false;
+                if (!(target instanceof PoweredScreenAttackable attackable)) return false;
+                attackable.onPoweredScreenAttack(player);return true;
+            });
+            if (hit && ++hits>=maxHits) break;
         }
     }
+    private LostRingObjectInstance ringPickup(long activation,int x,int y,int xVelocity,int yVelocity,
+                                               int phase,int lifetime,int pickupDelayTicks) {
+        if(!com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(world,
+                com.openggf.game.mutators.RingAcquisitionDomain.MAIN_LEVEL)) return null;
+        long count=owned.stream().filter(lease->services.objectQuery().resolve(lease.identity())
+                .filter(object->object instanceof LostRingObjectInstance && !object.isDestroyed()).isPresent()).count();
+        if(count>=MAX_OWNED_RINGS) return null;
+        var ring=services.objectManager().createDynamicObject(()->com.openggf.level.rings.LostRingMutatorAccess
+                .spawn(x,y,xVelocity,yVelocity,phase,lifetime,pickupDelayTicks));
+        boolean spilled=entries.stream().anyMatch(e->e.activationId()==activation
+                && e.policy() instanceof RingEconomyPolicy policy && policy.kind()==RingEconomyPolicy.Kind.LEAK);
+        if(ring!=null) services.objectQuery().identityOf(ring)
+                .ifPresent(id->owned.add(new Owned(activation,owner(activation),null,id,lifetime,!spilled && cancellationBound(activation))));
+        return ring;
+    }
     private void rain(long activation,int x,int y,int count) {
-        if(!com.openggf.game.mutators.LevelMutatorPolicyAccess.ringsAllowed(world,com.openggf.game.mutators.RingAcquisitionDomain.MAIN_LEVEL)) return;
-        for (int i=0;i<count;i++) {
-            final int px=x+(i-count/2)*16;
-            spawn(activation,240,()->LostRingObjectInstance.spawn(px,y,0,0,0,240,null));
+        for(int i=0;i<count;i++) ringPickup(activation,x+(i-count/2)*16,y,0,0,i,240,0);
+    }
+    private void screenRain(long activation,int tick) {
+        var camera=services.camera();
+        if(camera==null) return;
+        int width=camera.getWidth()&0xFFFF;
+        if(width<1 || width>2048) return;
+        int count=(width+95)/96;
+        int left=camera.getX()&0xFFFF,top=(camera.getY()&0xFFFF)+4;
+        int wave=(tick-1)/18;
+        for(int i=0;i<count;i++) {
+            int cellStart=i*width/count,cellEnd=(i+1)*width/count;
+            int inset=8,span=Math.max(1,cellEnd-cellStart-inset*2);
+            int x=left+cellStart+inset+(wave*37+i*11)%span;
+            // Actual Obj_Bouncing_Ring integration and terrain bounce; a modest diagonal, not a picture overlay.
+            ringPickup(activation,x,top,0x60,0x300,(wave+i)&7,108,0);
         }
+    }
+    private void leakRing(long activation,AbstractPlayableSprite player) {
+        if(player.getRingCount()<=1 || player.isObjectControlled() || player.isHurt()) return;
+        int velocity=player.getXSpeed()!=0?player.getXSpeed():player.getGSpeed();
+        int direction=velocity==0?(player.getDirection()==Direction.LEFT?-1:1):Integer.signum(velocity);
+        int behind=player.getXRadius()+24;
+        var ring=ringPickup(activation,player.getCentreX()-direction*behind,player.getCentreY()-4,
+                -direction*0x80,-0x180,0,300,24);
+        // A rejected native slot must never spend inventory. Returning to the dropped ring can recover it normally.
+        if(ring!=null) player.setRingCount(player.getRingCount()-1);
     }
     private void economy(TransientMutatorPolicySource.Entry entry,RingEconomyPolicy policy,AbstractPlayableSprite player) {
         int tick=policy.kind()==RingEconomyPolicy.Kind.RAIN || policy.kind()==RingEconomyPolicy.Kind.LEAK
                 ?clocks.merge(entry.activationId(),1,Integer::sum):0;
         switch(policy.kind()) {
-            case RAIN -> { if (tick%20==1) rain(entry.activationId(),player.getCentreX(),player.getCentreY()-72,2); }
+            case RAIN -> { if (tick%18==1) screenRain(entry.activationId(),tick); }
             case LEAK -> {
-                if (tick%60==0 && player.getRingCount()>1) { player.setRingCount(player.getRingCount()-1); rain(entry.activationId(),player.getCentreX(),player.getCentreY(),1); }
+                if (tick%30==0) leakRing(entry.activationId(),player);
             }
             case BALANCE -> {
                 if (!admitted.contains(entry.activationId())) {
@@ -748,6 +836,49 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
         }
         if (complete && policy.kind()!=ChallengePolicy.Kind.SKILL_CHAIN) rain(entry.activationId(),player.getCentreX(),player.getCentreY()-48,5);
     }
+    private Set<String> encounterPaletteKeys() {
+        Set<String> needed=new HashSet<>();
+        if(services!=null) for(var lease:owned) {
+            var object=services.objectQuery().resolve(lease.identity()).orElse(null);
+            if(object instanceof CnzBumperObjectInstance && !object.isDestroyed())needed.add(Sonic3kObjectArtKeys.CNZ_BUMPER);
+            if(object instanceof NativeGhostEncounterObjectInstance && !object.isDestroyed())needed.add(Sonic3kObjectArtKeys.SOZ_GHOSTS);
+        }
+        return needed;
+    }
+    private void prepareEncounterPalettes() {
+        encounterPalettes.prepare(world.getDataSource().rom().orElse(null),services==null?null:services.graphicsManager(),encounterPaletteKeys());
+    }
+    private record EncounterPaletteReplay(NativeMutatorRuntime runtime,long assemblyEpoch,ObjectRefId identity,String key)
+            implements com.openggf.graphics.SpritePresentation.PaletteReplay {
+        @Override public int palette(com.openggf.graphics.GraphicsManager graphics,int nativePalette) {
+            if(runtime.retired || runtime.assemblyEpoch!=assemblyEpoch || runtime.services==null
+                    || graphics!=runtime.services.graphicsManager() || !runtime.belongsToOwnedGraph(identity)
+                    || nativePalette<0 || nativePalette>3)return -1;
+            var object=runtime.services.objectQuery().resolve(identity).orElse(null);
+            if(object==null || object.isDestroyed())return -1;
+            int base=runtime.encounterPalettes.base(key,graphics);
+            if(base<0) { runtime.prepareEncounterPalettes();base=runtime.encounterPalettes.base(key,graphics); }
+            return base<0?-1:base+nativePalette;
+        }
+    }
+    private ObjectRefId encounterPaletteIdentity(ObjectServices requester,ObjectInstance object,String key) {
+        if(retired || services==null || requester==null || requester.worldSession()!=world
+                || requester.graphicsManager()!=services.graphicsManager())return null;
+        boolean qualified=key.equals(Sonic3kObjectArtKeys.CNZ_BUMPER) && object instanceof CnzBumperObjectInstance
+                || key.equals(Sonic3kObjectArtKeys.SOZ_GHOSTS) && (object instanceof SozHyudoroBodyObjectInstance
+                || object instanceof NativeGhostEncounterObjectInstance);
+        if(!qualified)return null;
+        var id=services.objectQuery().identityOf(object).orElse(null);
+        return id!=null && services.objectQuery().resolve(id).orElse(null)==object && belongsToOwnedGraph(id)?id:null;
+    }
+    com.openggf.graphics.SpritePresentation.PaletteReplay encounterPaletteReplay(ObjectServices requester,ObjectInstance object,String key) {
+        var identity=encounterPaletteIdentity(requester,object,key);
+        // Ownership is distinct from residency: an owned retained subject must never borrow host colours.
+        return identity==null?null:new EncounterPaletteReplay(this,assemblyEpoch,identity,key);
+    }
+    int encounterPaletteBase(ObjectServices requester,ObjectInstance object,String key) {
+        return encounterPaletteIdentity(requester,object,key)==null?-1:encounterPalettes.base(key,services.graphicsManager());
+    }
     private void prepareLandmarkThumbnail() {
         landmarkVisible=!retired && entries.stream().anyMatch(e->e.policy() instanceof ChallengePolicy p && p.kind()==ChallengePolicy.Kind.LANDMARK
                 && tasks.containsKey(e.activationId()) && !tasks.get(e.activationId()).complete());
@@ -768,7 +899,7 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
     }
     @Override public void onPresentation(com.openggf.game.session.GameplayModeContext context,LogicalInputSnapshot input,
             com.openggf.game.GameplayObservation.Phase phase) {
-        if(!retired) prepareLandmarkThumbnail();
+        if(!retired) { prepareEncounterPalettes();prepareLandmarkThumbnail(); }
     }
     @Override public void drawOverlay(com.openggf.mods.ui.PixelCanvas canvas) {
         if(retired || !landmarkVisible || landmarkThumbnail==null) return;
@@ -906,32 +1037,37 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
         if(shot!=null) tasks.put(entry.activationId(),new Task(0,0,0,tick,previous==null?1:previous.progress()+1,false));
     }
     @Override public void projectileImpact(ObjectInstance shot,PlayableEntity player) {
-        if(services==null || !(shot instanceof NativeObjectFieldTarget target)
-                || target.fieldKind()!=NativeObjectFieldTarget.Kind.PROJECTILE) return;
+        if(services==null || fieldKind(shot)!=NativeObjectFieldTarget.Kind.PROJECTILE) return;
         var activation=entries.stream().filter(e->ownerAvailable(e.owner()) && e.policy() instanceof ProjectileRulePolicy p
                 && p.kind()==ProjectileRulePolicy.Kind.IMPACT_BLAST).findFirst().orElse(null);
         if(activation==null || clocks.getOrDefault(activation.activationId(),0)>=6) return;
         var identity=services.objectQuery().identityOf(shot).orElse(null);
         if(identity==null || !impacts.add(identity)) return;
         clocks.merge(activation.activationId(),1,Integer::sum);
-        spawn(activation.activationId(),64,()->new ExplosionObjectInstance(0x27,shot.getX(),shot.getY(),
+        int x=receiverCall(shot,shot::getX),y=receiverCall(shot,shot::getY);
+        spawn(activation.activationId(),64,()->new ExplosionObjectInstance(0x27,x,y,
                 services.renderManager(),com.openggf.game.sonic3k.audio.Sonic3kSfx.BREAK.id));
-        if(!enemyRule(EnemyRulePolicy.Kind.TRUCE)) blast(shot.getX(),shot.getY(),64,2,player,null);
+        if(!enemyRule(EnemyRulePolicy.Kind.TRUCE)) blast(x,y,64,2,player,null);
     }
     @Override public boolean playerProjectileStep(ObjectInstance shot,PlayableEntity player) {
         if(touchSizes==null || player==null || enemyRule(EnemyRulePolicy.Kind.TRUCE)) return false;
+        int x=receiverCall(shot,shot::getX),y=receiverCall(shot,shot::getY);
         for(var target:services.objectManager().poweredAttacks().targetReadView()) {
-            if(!(target instanceof NativeObjectFieldTarget nativeTarget) || nativeTarget.fieldKind()!=NativeObjectFieldTarget.Kind.BADNIK
-                    || !(target instanceof TouchResponseProvider provider)
-                    || target.isDestroyed() || !(target instanceof PoweredScreenAttackable attackable)) continue;
-            int flags=provider.getCollisionFlags();
-            if(flags==0 || (flags&0xC0)!=0) continue;
-            int width=touchSizes.getWidthRadius(flags&63);
-            int height=touchSizes.getHeightRadius(flags&63);
-            if(Math.abs(target.getX()-shot.getX())>width+touchSizes.getWidthRadius(0x1C) || Math.abs(target.getY()-shot.getY())>height+touchSizes.getHeightRadius(0x1C)) continue;
-            attackable.onPoweredScreenAttack(player);
-            if(projectileRule(ProjectileRulePolicy.Kind.IMPACT_BLAST)) blast(shot.getX(),shot.getY(),64,2,player,target);
-            return true;
+            boolean hit=receiverCall(target,()->{
+                if(!(target instanceof NativeObjectFieldTarget nativeTarget) || nativeTarget.fieldKind()!=NativeObjectFieldTarget.Kind.BADNIK
+                        || !(target instanceof TouchResponseProvider provider)
+                        || target.isDestroyed() || !(target instanceof PoweredScreenAttackable attackable)) return false;
+                int flags=provider.getCollisionFlags();
+                if(flags==0 || (flags&0xC0)!=0) return false;
+                int width=touchSizes.getWidthRadius(flags&63);
+                int height=touchSizes.getHeightRadius(flags&63);
+                if(Math.abs(target.getX()-x)>width+touchSizes.getWidthRadius(0x1C) || Math.abs(target.getY()-y)>height+touchSizes.getHeightRadius(0x1C)) return false;
+                attackable.onPoweredScreenAttack(player);return true;
+            });
+            if(hit){
+                if(projectileRule(ProjectileRulePolicy.Kind.IMPACT_BLAST)) blast(x,y,64,2,player,target);
+                return true;
+            }
         }
         return false;
     }

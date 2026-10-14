@@ -256,6 +256,12 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
         if (!(currentLevel instanceof Sonic3kLevel loadedLevel)) {
             throw new IllegalStateException("Fresh S3K terrain requires an installed S3K level");
         }
+        // Authored native levels already contain their baked terrain and have no
+        // LoadLevelLoadBlock ROM selection. This producer owns only stock terrain
+        // KosM parents; player, object and results art keep their separate owners.
+        if (!loadedLevel.hasStockRomZoneIdentity()) {
+            return;
+        }
         var sources = loadedLevel.terrainArtSources();
         int primaryArtAddr = sources.primary();
         int secondaryArtAddr = sources.secondary();
@@ -718,8 +724,17 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
             return;
         }
         try {
-            // ROM: lea (Pal_HPZ+$20),a1 / target destination
-            // Normal_palette_line_3. Character and target line 2 are untouched.
+            // Obj_HPZSSEntryControl loc_90998 stages Target_palette_line_2:
+            // Player_mode 3 borrows Pal_SonicTails; all other modes borrow
+            // Pal_CutsceneKnux. Target line 1 remains the player's own palette.
+            int secondaryPalette = com.openggf.game.session.ActiveGameplayTeamResolver
+                    .resolvePlayerCharacter(GameServices.configuration())
+                    == com.openggf.game.PlayerCharacter.KNUCKLES
+                    ? Sonic3kConstants.PAL_SONIC_TAILS_ADDR
+                    : Sonic3kConstants.PAL_CUTSCENE_KNUX_ADDR;
+            registry.applyTargetPatch(S3kPaletteOwners.HPZ_PALETTE_CONTROL,
+                    1, 0, rom.readBytes(secondaryPalette, Palette.PALETTE_SIZE_IN_ROM));
+            // loc_909B0 stages the two scenery lines from Pal_HPZ+$20.
             byte[] mainPalette = rom.readBytes(
                     resources.sanctuaryPaletteAddress(true)
                             + Palette.PALETTE_SIZE_IN_ROM,

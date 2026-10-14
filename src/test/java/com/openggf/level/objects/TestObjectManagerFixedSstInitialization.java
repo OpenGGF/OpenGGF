@@ -2,7 +2,14 @@ package com.openggf.level.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
+import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
+import com.openggf.game.sonic3k.objects.HCZWaterSkimSlotObjectInstance;
+import com.openggf.game.sonic3k.objects.MhzPollenSpawnerInstance;
+import com.openggf.mods.code.ModDecoratedObjectRegistry;
+import com.openggf.mods.code.ModObjectKeyRegistry;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -13,6 +20,51 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class TestObjectManagerFixedSstInitialization {
+
+    @Test
+    void stackedModRegistriesKeepFixedInitializationBeforePlacementsAndAcrossReset() {
+        AtomicInteger installs = new AtomicInteger();
+        ObjectRegistry base = registry((zone, act, slots) -> {
+            installs.incrementAndGet();
+            slots.install(4, FixedObject::new);
+        });
+        ObjectRegistry decorated = new ModDecoratedObjectRegistry(
+                new ModDecoratedObjectRegistry(base, new ModObjectKeyRegistry(List.of())),
+                new ModObjectKeyRegistry(List.of()));
+        ObjectManager manager = manager(List.of(new ObjectSpawn(0, 0, 1, 0, 0, false, 0)), decorated);
+        for (int reset = 1; reset <= 2; reset++) {
+            manager.reset(0);
+            assertEquals(reset, installs.get());
+            assertEquals(4, only(manager, FixedObject.class).getExecutionSlotIndex());
+            assertEquals(5, only(manager, LayoutObject.class).getExecutionSlotIndex());
+        }
+        var snapshot = manager.rewindSnapshottable().capture();
+        manager.rewindSnapshottable().restore(snapshot);
+        assertEquals(2, installs.get(), "restore must not rerun level-entry initialization");
+        assertEquals(4, only(manager, FixedObject.class).getExecutionSlotIndex());
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {1, 7}) // Native HCZ and MHZ fixed owners, outside Second Strike's AIZ slice.
+    void modRegistryRetainsNativeHczAndMhzSlotsBeforeLaterAllocation(int zone) {
+        ObjectRegistry decorated = new ModDecoratedObjectRegistry(
+                new Sonic3kObjectRegistry(), new ModObjectKeyRegistry(List.of()));
+        ObjectManager manager = manager(List.of(), decorated, zone);
+        for (int reset = 0; reset < 2; reset++) {
+            manager.reset(0);
+            if (zone == 1) {
+                assertEquals(5, only(manager, HCZWaterSkimSlotObjectInstance.class).getExecutionSlotIndex());
+                assertEquals(4, manager.createDynamicObject(() -> new LayoutObject(
+                        new ObjectSpawn(0, 0, 1, 0, 0, false, 0))).getExecutionSlotIndex());
+                assertEquals(6, manager.createDynamicObject(() -> new LayoutObject(
+                        new ObjectSpawn(0, 0, 1, 0, 0, false, 0))).getExecutionSlotIndex());
+            } else {
+                assertEquals(4, only(manager, MhzPollenSpawnerInstance.class).getExecutionSlotIndex());
+                assertEquals(5, manager.createDynamicObject(() -> new LayoutObject(
+                        new ObjectSpawn(0, 0, 1, 0, 0, false, 0))).getExecutionSlotIndex());
+            }
+        }
+    }
 
     @Test
     void fixedSstObjectsInstallBeforeInitialPlacementWindow() {
@@ -81,8 +133,12 @@ class TestObjectManagerFixedSstInitialization {
     }
 
     private static ObjectManager manager(List<ObjectSpawn> spawns, ObjectRegistry registry) {
+        return manager(spawns, registry, 7);
+    }
+
+    private static ObjectManager manager(List<ObjectSpawn> spawns, ObjectRegistry registry, int zone) {
         ObjectServices services = mock(ObjectServices.class);
-        when(services.romZoneId()).thenReturn(7);
+        when(services.romZoneId()).thenReturn(zone);
         when(services.currentAct()).thenReturn(0);
         return new ObjectManager(spawns, registry, 0, null, null, null, null, services);
     }

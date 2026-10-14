@@ -29,9 +29,9 @@ final class LrzMinibossArtState implements RewindStateful<LrzMinibossArtState.Va
                         Sonic3kConstants.ARTTILE_LRZ_MINIBOSS * 32);
             }
             try {
-                ordinal = S3kRuntimeArtCoordinator.from(services).moduleQueue().queue(rom,
+                ordinal = com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.bindPatternModule(services, S3kRuntimeArtCoordinator.from(services).moduleQueue().queue(rom,
                         Sonic3kConstants.ART_KOSM_LRZ_MINIBOSS_ADDR,
-                        Sonic3kConstants.ARTTILE_LRZ_MINIBOSS).ordinal();
+                        Sonic3kConstants.ARTTILE_LRZ_MINIBOSS)).ordinal();
             } catch (IllegalStateException unavailable) {
                 // Bare object fixtures have no timing coordinator. Production does.
                 if (!"runtime-art coordination is unavailable in these object services"

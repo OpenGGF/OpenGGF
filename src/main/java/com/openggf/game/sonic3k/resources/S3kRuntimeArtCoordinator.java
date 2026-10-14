@@ -18,6 +18,7 @@ import java.util.logging.Logger;
 
 /** S3K-owned facade for the direct Kosinski FIFO and KosM parent queue. */
 public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
+        com.openggf.game.internal.PatternModuleQueueOwner,
         RewindSnapshottable<S3kRuntimeArtCoordinator.Snapshot> {
     public static final String REWIND_KEY = "s3k-runtime-art-coordinator";
 
@@ -26,6 +27,7 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
 
     private final S3kKosDecompressionQueue directQueue;
     private final S3kKosModuleQueue moduleQueue;
+    private final S3kPatternModuleTransfer patternTransfer = new S3kPatternModuleTransfer();
     private FreshLevelRuntimeArtRequest deferredFreshLevelRuntimeArt;
     private boolean deferredFreshLevelPublicationBlockedReported;
 
@@ -47,6 +49,7 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
         directQueue = new S3kKosDecompressionQueue(
                 Objects.requireNonNull(timing, "timing"));
         moduleQueue = new S3kKosModuleQueue(timing, directQueue);
+        moduleQueue.bindModuleTransferObserver(patternTransfer);
     }
 
     public static S3kRuntimeArtCoordinator from(
@@ -65,6 +68,59 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
     public static S3kRuntimeArtCoordinator from(ObjectServices services) {
         return from(services.runtimeArtCoordinator());
     }
+
+    @Override public void bindPatternModuleQueue(com.openggf.level.resources.KosinskiModuleQueue queue) {
+        patternTransfer.attach(queue);
+    }
+
+    /** Pairs an admitted physical entry with its actual already-submitted ROM job. */
+    public static HardwareWorkHandle bindPatternModule(ObjectServices services, HardwareWorkHandle handle) {
+        var physical = services.kosinskiModuleQueue();
+        if (physical != null) {
+            from(services).bindAdmittedPatternModule(physical, handle);
+        }
+        return handle;
+    }
+
+    void bindAdmittedPatternModule(com.openggf.level.resources.KosinskiModuleQueue physical,
+            HardwareWorkHandle handle) {
+        patternTransfer.bind(physical, handle, moduleQueue.descriptor(handle));
+    }
+
+    /** Explicit binding when the producer retained its submitted ordinal before physical enqueue. */
+    public static void bindPatternModule(ObjectServices services, long ordinal) {
+        if (ordinal < 0) return; // Explicit bare object fixture without runtime timing.
+        var handle = services.hardwareTiming().pendingHandle(
+                com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE, ordinal).orElseThrow();
+        bindPatternModule(services, handle);
+    }
+
+    /** A native physical producer whose global queue has no sprite-owned claim handle. */
+    public static boolean queueGlobalPatternModule(ObjectServices services, int source, int destinationVramBytes)
+            throws java.io.IOException {
+        var physical = services.kosinskiModuleQueue();
+        if (physical == null) throw new IllegalStateException("Native global module has no physical queue");
+        S3kRuntimeArtCoordinator owner;
+        try {
+            owner = from(services);
+        } catch (IllegalStateException unavailable) {
+            if (!"runtime-art coordination is unavailable in these object services".equals(unavailable.getMessage()))
+                throw unavailable;
+            return physical.enqueue(services.rom(), source, destinationVramBytes);
+        }
+        // Both facades represent the same four-entry native FIFO. A full
+        // timing-only predecessor bank must reject before physical mutation.
+        if (!owner.moduleQueue.hasCapacity()) return false;
+        if (!physical.enqueue(services.rom(), source, destinationVramBytes)) return false;
+        com.openggf.game.sonic3k.Sonic3kPlcLoader.bindRuntimePatternDmaTarget(physical, services);
+        var handle = owner.moduleQueue.queue(services.rom(), source, destinationVramBytes / 32);
+        bindPatternModule(services, handle);
+        owner.patternTransfer.claimAutomatically(handle);
+        return true;
+    }
+
+    /** Existing VInt DMA service is the only ordinary publication authority. */
+    public void publishPatternModuleDma() { patternTransfer.publish(); }
 
     public S3kKosDecompressionQueue directQueue() {
         return directQueue;
@@ -165,6 +221,7 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
             moduleQueue.stepDeferredChildAfterDirectTail();
         }
         moduleQueue.claimReadyFreshLevelHandoffs();
+        patternTransfer.claimReady(moduleQueue);
         if (boundary == HardwareServiceBoundary.PRE_MAIN_LOOP
                 && deferredFreshLevelRuntimeArt != null) {
             FreshLevelRuntimeArtRequest request = deferredFreshLevelRuntimeArt;
@@ -288,16 +345,19 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator,
     public void registerRewindAdapters(RewindRegistry registry) {
         registry.register(directQueue);
         registry.register(this);
+        registry.register(patternTransfer);
     }
 
     @Override
     public void deregisterRewindAdapters(RewindRegistry registry) {
         registry.deregister(REWIND_KEY);
+        registry.deregister(S3kPatternModuleTransfer.REWIND_KEY);
         registry.deregister(S3kKosDecompressionQueue.REWIND_KEY);
     }
 
     @Override
     public void resetForMissingSnapshot() {
+        patternTransfer.clear();
         directQueue.resetForMissingSnapshot();
         moduleQueue.resetForMissingSnapshot();
         deferredFreshLevelRuntimeArt = null;

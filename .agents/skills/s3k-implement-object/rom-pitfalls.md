@@ -2246,6 +2246,17 @@ overlap with Tails.
 
 ---
 
+**Opted-in warning presentation.** A parent timer scheduled after its timer-update
+step starts decrementing next pass, while a later-slot raw-animation child already
+consumes an update in its birth pass. Test through the real manager's native
+scheduling boundary and invoke the render producer after each pass; counting live
+children before updates can hide an invisible final pose. Second Strike's AIZ
+follow-up exposed a one-presentation gap with the ordinary sixteen-update flare.
+Its semantic opt-in cue captures a birth-update allowance and bounded final-pose
+hold; ordinary ROM flares retain their constructor and sequence. Verify exact
+anchor/remaining hold rewind, both parent/barrel slot orders, exhaustion and
+policy-disabled graph/timing equality. Origin: 2026-10-14 Second Strike expansion.
+
 ## P67 -- Solid checkpoints before same-entry deletion require manual execution
 
 **Symptom.** A player remains grounded and `Status_OnObj` stays set after the
@@ -5087,11 +5098,31 @@ hand's previous position, before that child updates. `sub_87524` gates on
 absolute horizontal distance only. Followers propagate attack bit 1 and halve or
 double their delay (`sub_8756A`/`sub_87592`).
 
+## Native top helpers use the landing surface before floor reset
+
+`SolidObjectTop/loc_1E44C` subtracts caller d3 for NEW contact, not d2.
+`loc_1E45A` accepts unsigned negative word overlap`[-$10,-1]`, rejects zero
+and writes`y_pos += d0+3` before Player_TouchFloor. `sub_45026` supplies
+`$60/$10/$09`; using d2 misses Sky Sanctuary's16-pixel boundary. Select
+existing ground-height/reject-zero/relative-snap provider semantics, as
+FloatingPlatform does. PlatformObject's absolute post-radius snap differs.
+Test d2≠d3, both overlap boundaries, exclusive right edge, actual standing
+ownership and complete-world forward/reverse replay.
+
 ## Literal player radii may differ from character defaults
 
 `AIZTree_FallOff` writes x/y radii 9/`$13` for every character, and
 `Tails_TouchFloor` restores the defaults on landing. Restoring Tails' standing
 `$0F` at release shortens the falling sensors.
+
+`Obj_Bubbler` has the inverse trap: its `cmpi.l #Obj_Sonic,(a1)` branch
+(sonic3k.asm:64719) clears Sonic's Roll and writes9/19,Y−5, whereas
+`loc_2FC5A` retains Roll and writes9/15,Y−1 even for Knuckles. Do not
+substitute each character's ordinary standing radii. Resolve native character
+identity independently of registration aliases such as`sonic_p2`; a generic
+unit sprite named`tails` still identifies as Sonic unless its typed identity
+is explicitly provided. Compare literal radii and native center displacement
+with actual character subclasses and both main/follower registration names.
 
 ## Global title resets do not restart the owner clock
 
@@ -5292,8 +5323,6 @@ its type display. Use that channel to compare occupancy only; identify native
 routines from the full auxiliary pointer or a source-backed native observation.
 The [2026-10-14 audit](../../../docs/architecture/audits/trace/2026-10-14-s3k-fresh-title-sst.md)
 records the matched graph repair and its unchanged strict trace frontier.
-
-
 ## Unchecked AllocateObject keeps the last physical SST
 
 `Create_Continue_Sprite` (`$5FE1E`) deliberately ignores AllocateObject's failure
@@ -5314,6 +5343,32 @@ admission. Synthetic sentinels test the manager contract only; certify native
 scene pressure with the actual legal managed child types. Unknown consumed
 residue must never be silently replaced with zero or supplied by a trace.
 
+Pressure fixtures must retain the actual dispatch boundary. In the D01 small
+plane pass, director4 allocates while the large children are still occupied;
+those children consume flag4 and release their slots later in that same pass.
+An after-pass population of86 does not mean a missing admitted prefix. Likewise
+Master48 reads catcher93 before the latter's current update; compare the value
+available at that read, not the later live child position. The 2026-10-14 native
+graph pressure fixtures assert both boundaries before declaring later full-table
+occupancy. Never move gameplay clocks or suppress native retirement to preserve
+a pressure fixture's presumed population or position.
+
+## Scene controller RAM belongs to its active binding (2026-10-14)
+
+Preserving controller references is not preserving matching RAM. Generic
+playable restoration can temporarily target the resource attached in the future
+world before the scene adapter swaps it. Reapply ordinary/native RAM after
+detach/attach and reject the foreign unset/packed tier shape locally. Otherwise
+ordinary S2 state can become S3 quake255, or a scene snapshot can overwrite
+Tails' captured jump `$680` with `$800`. Packed S3 tiers can be signed-negative;
+compare the exact unset sentinel, not the sign.
+
+A bound scene owns presentation before its first powered writer sets a form
+flag, so restoration must preserve already captured player physics at that
+early boundary. While inactive its cached controller is a derived resource,
+not a RAM owner; fresh ensure must return to its own immutable constructor/load
+baseline, while active snapshots restore actual progressed RAM. The real
+17-frame palette→before-entry→first-frame replay catches this lifecycle risk.
 
 ## Linked MonkeyDude arms read the current physical predecessor
 
@@ -5437,6 +5492,35 @@ wait/publication/release/Init/delete markers, not just current visibility.
 Origin: 2026-10-14 Rhinobot parity slice over `6fc85aab8`.
 
 
+## Multipart SAT order and displayed scroll generation (2026-10-14)
+
+`Render_Sprites` loc_1AEE4 draws the main mapping before loc_1AF2A draws
+sub2/sub3. Earlier opaque SAT entries win. For a direct painter path, reverse
+the complete group as well as the pieces within each mapping; main-first frame
+calls otherwise hide the Tornado wheel behind its later propeller. Preserve
+native collection order. Use actual ROM mapping/pattern opacity for overlap
+oracles; never mask coordinates selected from an image difference.
+
+A high-background replay also needs the same published scroll as the rear
+plane draw, not the CPU deformation produced later in that frame. Rebuild pure
+restored output without advancing captured scroll RAM. The S3K ending repair
+reproduced both publication and multipart defects at320/800 and retained exact
+original native RGB differences as pending rather than fitting color output.
+`loc_5E1F0` separately sets Player1 render_flags bit0; its status-facing write
+alone is insufficient when scripted object mappings bypass playable mapping.
+
+
+**Capture every legal palette-timer byte, not only ordinary reloads.**
+S3K `Palette_timer` belongs to Sonic and Tails' Flickies, while Tails' body uses
+`Palette_timer_Tails`. The rescue wrapper Obj_5D86A writes the former$7F every
+pass; only terminal reunion loc_5E4E2 repeats that hold. Holding the body timer
+or every reunion routine changes a different native owner. Existing four-bit
+companion snapshot packing silently truncated127→15 and126→14; retain source-
+legal byte breadth and verify pre-existing flag masks/ordinary representations
+when extending an internal packed word. The2026-10-14 ending tests independently
+check all three progress values, normal colors, live body cycling, both registry
+restore directions and ordinary0/6/15 versus held/released127/126.
+
 ## Raw-animation F4 and physical child links retain their own dispatch
 
 The AIZ flare wrapper refreshes numeric parent3, calls its routine, then draws.
@@ -5530,6 +5614,47 @@ Origin:2026-10-14 AIZ physical Special owner over6661b9b8b; asm136870,137926,
 176661–176835. Shared legacy helper consumers are outside this local repair.
 
 
+**PalLoad line suffixes are zero-based.** Native `PalLoad_Line1` ($85940,
+sonic3k.asm:180037) selects `Normal_palette_line_2` and copies16 words. Ending
+loc_5DD0E/loc_5E984 therefore load Pal_SmallPlane into engine line1, preserving
+player line0. Reading the helper name as a one-based label corrupted both
+lines and the small island figure. Literal destination/retained-line tests
+and full viewed frame comparisons caught it; retain CPU versus published
+CRAM separately, since a matching counter or later-produced palette does
+not prove framebuffer pixels. Origin: 2026-10-14 ending v5 follow-up over
+a66ccb0cbd62febf5618c1867c93e7e4d2172577.
+
+
+**Playable mapping order must distinguish native SAT and painter output.**
+Render_Sprites/sub_1B070 emits mapping pieces in their ROM order; the first
+opaque piece wins. PlayerSpriteRenderer's painter path must reverse complete
+pieces, like PatternSpriteRenderer, while SAT collection stays forward and
+head masks keep each original piece index. A Tails C4 pose had34 differing
+shoe pixels despite identical published native/engine patterns and CRAM.
+Independent opacity oracles and flip×SAT/painter controls reproduced the
+actual owner; full-world/pixel replay and S1/S2/S3 head-art consumers qualify
+the correction. Compare original RGB separately from logical palette indices.
+Origin: 2026-10-14 ending v6 over bf7361a3a3ce2b6fc71256fc2059c29d8402f163.
+
+
+**Continuation DBEQ state can belong to a preceding palette helper.**
+At SSZ loc_57D18, CreateNewSprite4 receives Player1 in A1 and the D0 word
+left by sub_45866, not the standard allocator's full-table count. Native
+byte39 divides the ROM light writes; word3A is the byte offset into word_4670C.
+Keep both captured. The native occupied collision-reset slot2 is not empty
+merely because the engine executes it implicitly. Scan through the carried
+budget, count live zero-ID owners and respect held slots; do not replace this
+local continuation with a shared allocator or fitted frame delay. A helper in
+slot3, behind parent4, naturally first runs next pass; higher pressure slots
+can run this pass. loc_57DB6 checks active byte38 and index3A before the final
+sub_45866 fallthrough, so writing cycle zero does not delete until next dispatch.
+A fixture which preloads placements must assert the execution relationship,
+not pretend its controller occupies the independently observed cold slot4.
+Palette checks must advance real ownership epochs. Source: native allocation
+observer72373 and2026-10-14 arrival qualification on558e74833; palette asset
+words remain ROM-backed rather than copied from the disassembly.
+
+
 ## A callback's Go_Delete marker does not clear its own outer draw/touch tail
 
 AIZ FallingShot dispatches its routine, then tests grandparent status7. Floor
@@ -5583,3 +5708,44 @@ than resetting player facing or changing shared collision math. Exact source,
 negative/replay evidence and pending composed RESULTS dependency are in the
 2026-10-14 s3k-monkey-dude-sst audit; this local owner proof is not a whole trace
 or cold-route pass.
+
+
+## Spawned donor art keeps its native palette line
+
+The 2026-10-14 Chaos revision exposed wrong-colour CNZ bumpers and SOZ ghosts
+in AIZ. A correct donor pattern sheet is insufficient when its native mapping
+still indexes the host act's CRAM. `Obj_Bumper` selects CNZ Misc + `$13`, palette
+2 (`sonic3k.asm:68828–68860`); `Hyudoro_init_tbl` selects ghost palette 1
+(`sonic3k.asm:196064`). Do not apply SOZ darkness to that line: `AnPal_SOZ2`
+updates `Normal_palette_line_3/4`, engine indices 2/3
+(`sonic3k.asm:3492–3550`), while the ghost's index 1 stays in `Pal_SOZ2`.
+Read runtime colours from the verified ROM, and preserve host/donor consumers
+with an owner-scoped private palette projection. Retained SAT records must keep
+native palette bits and semantic donor ownership, never a leased GPU row number;
+restore may allocate banks in a different order. Check actual ROM-backed pixels
+at native/wide viewports and unchanged ordinary actors, not only loaded art.
+
+**KosM completion is a queued DMA, and equal descriptors are not FIFO identity.**
+Process_Kos_Module_Queue waits for the complete direct FIFO, then calls
+Add_To_DMA_Queue. The paired production pattern facade must wait for the actual
+submitted child receipts and publish only at a supported VInt. Keep receipts
+after parent claim and capture pending DMA separately from presented memory.
+Two identical source/destination entries need their admitted native FIFO
+position; Java identity is lost on copied snapshot restore and descriptor-only
+matching lets an unpaired predecessor borrow a later job's readiness. Shift
+only at actual archive retirement. Preflight both banks before admitting a
+global producer so failure cannot leave unpaired physical work. Preserve
+initial resident ingress separately: correct new upload timing does not prove
+retained pre-upload VRAM bytes. Origin: 2026-10-14 ending transfer69e4f51.
+
+
+## A ROM bank must preserve both resource ownership and the steady draw contract
+
+Slot layouts/start words and prize/reel/cell-animation tables belong to the
+active immutable ROM reader, not copied disassembly arrays. Preflight all banks
+before mutating bootstrap state; terminate animations at their first zero.
+Explicit synthetic banks belong only to pure test fixtures. Public defensive
+array getters can still allocate on every draw: give package-owned read-only
+consumers stable immutable views and retain the independent allocation oracle.
+Origin:2026-10-14 Slot resource repair over0a05aa118; native SlotBonusLayout,
+Slots_CycleOptions, sub_4C7A2 and sub_4B592.

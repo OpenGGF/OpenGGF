@@ -34,9 +34,12 @@ class TestS3kEndingSceneResources {
         assertFalse(queue.hasPendingPhysicalModules());
     }
     private void service(){
+        var services=TestEnvironment.objectServices();
+        S3kRuntimeArtCoordinator.from(services).publishPatternModuleDma();
         HardwareBoundaryPump.service(HardwareServiceBoundary.POST_OBJECTS);
         HardwareBoundaryPump.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
         HardwareBoundaryPump.service(HardwareServiceBoundary.VINT_SERVICE);
+        services.kosinskiModuleQueue().processNativeFrame();
     }
     private void ready(){var s=TestEnvironment.objectServices();
         for(int i=0;i<512&&!EndingSceneResourceHandoff.ready(s);i++)service();

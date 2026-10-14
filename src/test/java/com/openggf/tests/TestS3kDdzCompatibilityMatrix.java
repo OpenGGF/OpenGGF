@@ -19,7 +19,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.stream.Stream;
@@ -27,6 +26,8 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -40,25 +41,23 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kDdzCompatibilityMatrix {
-    record Scenario(String main, int width, String donor, String followers) {}
+    record Scenario(String main, WidescreenAspect aspect, String donor, String followers, int customWidth) {
+        Scenario(String main, WidescreenAspect aspect, String donor, String followers) {
+            this(main, aspect, donor, followers, 0);
+        }
+        int width() { return aspect == null ? customWidth : aspect.pixelWidth(); }
+    }
 
     static Stream<Scenario> scenarios() {
-        List<Scenario> rows = new ArrayList<>();
-        for (String donor : List.of("off", "s1", "s2")) {
-            for (String main : List.of("sonic", "tails", "knuckles")) {
-                if (!SozAcceptanceConfigurations.supportsCharacter(donor, main)) {
-                    continue;
-                }
-                for (int width : new int[]{320, 400, 512, 640, 800}) {
-                    rows.add(new Scenario(main, width, donor, ""));
-                }
-            }
-        }
-        rows.add(new Scenario("sonic", 320, "off", "tails"));
-        rows.add(new Scenario("sonic", 320, "s1", SozAcceptanceConfigurations.supportedFollowers("s1", "sonic")));
-        rows.add(new Scenario("sonic", 400, "s2", "tails"));
-        rows.add(new Scenario("sonic", 800, "off", "tails,knuckles"));
-        return rows.stream();
+        // Same finite supported main/individual-donor and uncapped-roster examples as HPZ.
+        // DDZ must suppress all configured followers, not silently cap the declared input.
+        return TestS3kHpzCompatibilityMatrix.scenarios().map(row ->
+                new Scenario(row.main(), row.aspect(), row.donor(), row.followers()));
+    }
+
+    static Stream<Scenario> legacyGeometryScenarios() {
+        return TestS3kHpzCompatibilityMatrix.legacyGeometryScenarios().map(row ->
+                new Scenario(row.main(), null, row.donor(), "", row.customWidth()));
     }
 
     private final EnumMap<SonicConfiguration, Object> saved = new EnumMap<>(SonicConfiguration.class);
@@ -88,9 +87,11 @@ class TestS3kDdzCompatibilityMatrix {
         config.clearSessionOverrides();
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, row.main());
         config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, row.followers());
-        config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, WidescreenAspect.NATIVE_4_3.name());
-        config.resolveDisplayAspect();
-        config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS, row.width());
+        if (row.aspect() != null) SozAcceptanceConfigurations.selectDisplay(row.aspect());
+        else {
+            SozAcceptanceConfigurations.selectDisplay(WidescreenAspect.NATIVE_4_3);
+            config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS, row.customWidth());
+        }
         config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, !row.donor().equals("off"));
         config.setSessionOverride(SonicConfiguration.CROSS_GAME_SOURCE, row.donor());
         if (!row.donor().equals("off")) {
@@ -114,6 +115,12 @@ class TestS3kDdzCompatibilityMatrix {
         // Followers are suppressed for the zone (loc_81554), so only the leader needs a renderer.
         assertNotNull(GameServices.sprites().getMainPlayable().getSpriteRenderer(), "ROM-backed leader renderer");
         assertEquals(row.width(), fixture.camera().getWidth() & 0xFFFF);
+        assertSame(GameServices.sprites().getMainPlayable(), fixture.camera().getFocusedSprite());
+        if (row.aspect() != null) SozAcceptanceConfigurations.assertDisplay(row.aspect());
+        assertNotNull(GameServices.sprites().getMainPlayable().getAnimationProfile());
+        assertNotNull(GameServices.sprites().getMainPlayable().getAnimationSet());
+        assertTrue(GameServices.sprites().getMainPlayable().getAnimationFrameCount() > 0);
+        assertEquals(row.main(), GameServices.sprites().getMainPlayable().characterKey().persisted());
         assertEquals(!row.donor().equals("off"), CrossGameFeatureProvider.isActive());
         return fixture;
     }
@@ -121,6 +128,16 @@ class TestS3kDdzCompatibilityMatrix {
     @ParameterizedTest
     @MethodSource("scenarios")
     void controllerTransformsReleasesAndFliesThroughTheAsteroidField(Scenario row) {
+        verify(row);
+    }
+
+    @ParameterizedTest(name = "legacy custom geometry controller/flight {0}")
+    @MethodSource("legacyGeometryScenarios")
+    void legacyCustomWidthsRetainTransformationAndFlightGeometry(Scenario row) {
+        verify(row);
+    }
+
+    private void verify(Scenario row) {
         var fixture = boot(row);
         var player = fixture.sprite();
         var ddz = S3kRuntimeStates.currentDdz(GameServices.zoneRuntimeRegistry()).orElseThrow();
@@ -132,6 +149,8 @@ class TestS3kDdzCompatibilityMatrix {
         assertEquals(row.main().equals("knuckles") ? 0x20 : 0xC0, player.getCentreY() & 0xFFFF,
                 "frame-1 y from the DDZ start location");
         assertTrue(GameServices.sprites().getSidekicks().isEmpty(), "loc_81554 clears Player_2");
+        assertNull(GameServices.level().getObjectManager().getObjectServices().playerQuery().nativeP2OrNull());
+        SozAcceptanceConfigurations.assertUsableTeam(row.donor());
         assertTrue(player.isObjectControlled(), "loc_81554 object_control $81");
         assertTrue(liveController(), "ScreenInit allocates the flight controller");
 
@@ -144,7 +163,7 @@ class TestS3kDdzCompatibilityMatrix {
                 "loc_8160A transforms at frame 24 when the character has an S3K powered form");
         CompositeSnapshot transforming = fixture.gameplayMode().getRewindRegistry().capture();
         fixture.stepFrame(false, false, false, false, false);
-        replay(fixture, transforming, "mid-transformation");
+        replay(fixture, transforming, "mid-transformation", row);
 
         fixture.stepIdleFrames(30);
         // loc_8167C waits for object_control to clear, then sets $38 bit 2 and hands flight control over.
@@ -166,7 +185,7 @@ class TestS3kDdzCompatibilityMatrix {
 
         CompositeSnapshot flying = fixture.gameplayMode().getRewindRegistry().capture();
         fixture.stepFrame(false, false, false, true, false);
-        replay(fixture, flying, "mid-flight");
+        replay(fixture, flying, "mid-flight", row);
     }
 
     private static int controllerFlags() {
@@ -182,14 +201,24 @@ class TestS3kDdzCompatibilityMatrix {
                 .anyMatch(o -> o instanceof DdzFlightControllerObjectInstance);
     }
 
-    private static void replay(HeadlessTestFixture fixture, CompositeSnapshot before, String label) {
+    private static void replay(HeadlessTestFixture fixture, CompositeSnapshot before, String label, Scenario row) {
         var registry = fixture.gameplayMode().getRewindRegistry();
         var after = registry.capture();
-        registry.restore(before);
-        same(before, registry.capture(), label + " restore");
-        fixture.runner().primeInputState(new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, ""));
-        fixture.stepFrame(false, false, false, label.equals("mid-flight"), false);
-        same(after, registry.capture(), label + " forward");
+        for (int cycle = 0; cycle < 2; cycle++) {
+            registry.restore(before);
+            same(before, registry.capture(), label + " restore " + cycle);
+            assertSame(GameServices.sprites().getMainPlayable(), fixture.camera().getFocusedSprite());
+            assertEquals(row.main(), GameServices.sprites().getMainPlayable().characterKey().persisted());
+            SozAcceptanceConfigurations.assertUsableTeam(row.donor());
+            assertNull(GameServices.level().getObjectManager().getObjectServices().playerQuery().nativeP2OrNull());
+            assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty(), "native DDZ suppression survives restore");
+            if (row.aspect() != null) SozAcceptanceConfigurations.assertDisplay(row.aspect());
+            fixture.runner().primeInputState(new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, ""));
+            fixture.stepFrame(false, false, false, label.equals("mid-flight"), false);
+            same(after, registry.capture(), label + " forward " + cycle);
+            assertSame(GameServices.sprites().getMainPlayable(), fixture.camera().getFocusedSprite());
+            if (row.aspect() != null) SozAcceptanceConfigurations.assertDisplay(row.aspect());
+        }
     }
 
     private static void same(CompositeSnapshot a, CompositeSnapshot b, String label) {

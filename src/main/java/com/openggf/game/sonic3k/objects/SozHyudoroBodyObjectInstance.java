@@ -172,5 +172,8 @@ public final class SozHyudoroBodyObjectInstance extends AbstractObjectInstance
     @Override public boolean usesCustomOutOfRangeCheck(){return true;}
     @Override public boolean isCustomOutOfRange(int cameraX){return false;}
     @Override public void appendRenderCommands(List<GLCommand> commands){var r=getRenderer(Sonic3kObjectArtKeys.SOZ_GHOSTS);
-        if(r!=null&&r.isReady())r.drawFrameIndexForcedPriority(frame,getX(),getY(),!facingLeft,false,-1,true);}
+        if(r!=null&&r.isReady()) {
+            com.openggf.game.sonic3k.mutators.NativeEncounterPaletteAccess.draw(services(),this,Sonic3kObjectArtKeys.SOZ_GHOSTS,
+                    ()->r.drawFrameIndexForcedPriority(frame,getX(),getY(),!facingLeft,false,-1,true));
+        }}
 }

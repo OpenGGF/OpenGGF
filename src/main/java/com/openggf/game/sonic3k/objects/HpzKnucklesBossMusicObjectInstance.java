@@ -39,6 +39,11 @@ public final class HpzKnucklesBossMusicObjectInstance extends AbstractObjectInst
         this.fromRight = fromRight;
     }
 
+    /** Rewind probe only; the captured direction bits and wait word are restored afterward. */
+    private HpzKnucklesBossMusicObjectInstance() {
+        this(false, false);
+    }
+
     @Override
     public HpzKnucklesBossMusicObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new HpzKnucklesBossMusicObjectInstance(false, false);

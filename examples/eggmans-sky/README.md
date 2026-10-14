@@ -156,6 +156,10 @@ emulation. A small consonant recovery mix preserves intelligibility, with no roo
 Speech uses one bounded priority queue. Emergencies precede routine confirmations and discoveries;
 repeated warnings have a 30-second cooldown, obsolete confirmations expire after 15 seconds,
 and resolved vital warnings are removed. The queue waits for each clip's actual PCM duration.
+An unavailable audio host leaves the announcement queued until playback is accepted
+or the request expires; rejected playback does not start its cooldown. Low hull,
+shield and pulse warnings count as announced only after playback is accepted, so
+queue pressure or muting pending speech cannot permanently silence an ongoing warning.
 Choose **SYSTEM → VOICE: ON/OFF** to mute announcements separately from ROM music/effects.
 This setting persists in `settings.txt`; an already playing short clip finishes when muted.
 

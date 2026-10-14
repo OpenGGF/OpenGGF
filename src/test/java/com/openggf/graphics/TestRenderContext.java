@@ -126,6 +126,29 @@ public class TestRenderContext {
     }
 
     @Test
+    public void ordinarySidekickAndDonorContextsGrowBeyondSixtyFourRows() {
+        RenderContext last = null;
+        for (int i = 0; i < 16; i++) {
+            last = RenderContext.createSidekickContext(GameId.S3K);
+            assertEquals((i + 1) * 4, last.getPaletteLineBase());
+        }
+        assertEquals(64, last.getPaletteLineBase());
+        assertEquals(68, RenderContext.getTotalPaletteLines());
+        Palette highRow = new Palette();
+        last.setPalette(3, highRow);
+        assertSame(highRow, last.getPalette(3));
+        last.setUnderwaterPalette(3, highRow);
+        assertSame(highRow, RenderContext.getUnderwaterPaletteForEffectiveLine(67));
+
+        RenderContext donor = RenderContext.getOrCreateDonor(GameId.S1);
+        assertEquals(68, donor.getPaletteLineBase());
+        assertSame(donor, RenderContext.getOrCreateDonor(GameId.S1));
+        assertEquals(72, RenderContext.getTotalPaletteLines());
+        assertEquals(72, RenderContext.createSidekickContext(GameId.S2).getPaletteLineBase());
+        assertEquals(76, RenderContext.getTotalPaletteLines());
+    }
+
+    @Test
     public void clearSidekickContexts_reclaimsSlots() {
         RenderContext donor = RenderContext.getOrCreateDonor(GameId.S2);
         assertEquals(4, donor.getPaletteLineBase());

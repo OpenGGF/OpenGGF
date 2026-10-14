@@ -24,6 +24,10 @@ import com.openggf.editor.LevelEditorController;
 import com.openggf.editor.persistence.EditorSaveManager;
 import com.openggf.editor.persistence.FullLevelExporter;
 import com.openggf.editor.render.EditorOverlayRenderer;
+import com.openggf.editor.project.EditorProjectDocument;
+import com.openggf.editor.project.EditorProjectWorkspace;
+import com.openggf.editor.project.EditorProjectRuntimeModule;
+import com.openggf.editor.project.EditorProjectMenuRenderer;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.DebugFailAfterFramesAudioHandle;
 import com.openggf.audio.LWJGLAudioBackend;
@@ -149,6 +153,20 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	private EditorSaveManager editorSaveManager;
 	private final EditorInputHandler editorInputHandler;
 	private final EditorOverlayRenderer editorOverlayRenderer;
+	private final EditorProjectWorkspace editorProjects;
+	private final EditorProjectMenuRenderer editorProjectMenuRenderer = new EditorProjectMenuRenderer();
+	private final ContentImportScreen contentImportScreen;
+	private final ContentImportScreenRenderer contentImportRenderer = new ContentImportScreenRenderer();
+	private final ContentImportWindowBridge contentImportWindow;
+	private boolean contentImportShutdown;
+	private boolean quitAfterContentInstall;
+	private EditorProjectDocument shownEditorProject;
+	private GameModule editorProjectBaseModule;
+	private GameModule editorProjectRootModule;
+	private GameDataSource editorProjectDataSource;
+	private boolean editorProjectPlaytestActive;
+	private EditorQuitView editorQuitView;
+	private record EditorQuitView(GameMode mode, Camera camera, short x, short y, short renderX, short renderY) { }
 	// Match the rest of the debug overlay — no drop shadow.
 	private final PixelFontTextRenderer traceHudTextRenderer =
 		new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW);
@@ -386,9 +404,70 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		this.editorInputHandler = new EditorInputHandler(
 				levelEditorController, () -> camera, () -> graphicsManager, this::saveCurrentEditorLevel,
 				this::exportCurrentEditorLevel);
+		this.editorProjects = new EditorProjectWorkspace(new EditorProjectWorkspace.Host() {
+			public GameModule selectGame(GameId game) throws IOException { return selectEditorProjectGame(game); }
+			public GameModule currentModule() { return editorProjectBaseModule != null ? editorProjectBaseModule : GameServices.module(); }
+			public Level loadLibrary(int zone, int act) throws IOException { return loadEditorAssetLibrary(zone, act); }
+			public String sourceFingerprint() {
+				var world = SessionManager.getCurrentWorldSession();
+				return world == null ? "unknown" : world.getDataSource().identity();
+			}
+			public EditorCursorState cursor() { return levelEditorController.worldCursor(); }
+			public void finishPendingEdits() { editorInputHandler.finishPendingEdits(); }
+			public void showDocument(EditorProjectDocument document) throws IOException { showEditorProject(document); }
+			public void playtest(EditorProjectDocument document, boolean fromCursor) throws IOException { startEditorProjectPlaytest(document, fromCursor); }
+			public void closeDocument() { returnToMasterTitleScreen(); shownEditorProject = null; }
+			public void menuClosed(EditorProjectDocument document) {
+				if (editorQuitView != null) { restoreEditorQuitView(); return; }
+				if (editorProjectPlaytestActive) return;
+				var world = SessionManager.getCurrentWorldSession();
+				boolean restoreDocument = document != null && (getCurrentGameMode() != GameMode.EDITOR
+						|| world == null || world.getCurrentLevel() != document.level());
+				boolean restoreTitle = document == null && getCurrentGameMode() == GameMode.MASTER_TITLE_SCREEN
+						&& masterTitleScreen == null;
+				if (!restoreDocument && !restoreTitle) return;
+				try { if (restoreDocument) showEditorProject(document); else returnToMasterTitleScreen(); }
+				catch (IOException | RuntimeException failure) { reportEditorProjectFailure(failure); }
+			}
+			public void execute(com.openggf.editor.EditorCommand command) { levelEditorController.executeCommand(command); }
+			public void status(String message) { levelEditorController.setStatus(message); }
+			public void metadataChanged(EditorProjectDocument document) { configureEditorProjectSpawnEditing(document); }
+		});
+		levelEditorController.setModifiedStateSupplier(() -> editorProjects.document() != null
+				? editorProjects.document().isModified()
+				: levelEditorController.currentLevel() != null && levelEditorController.currentLevel().isModifiedSinceLastSave());
+		levelEditorController.setCanvasNavigationSupplier(() -> editorProjects.document() != null || shownEditorProject != null);
+		this.contentImportScreen = new ContentImportScreen(new ContentImportService(Path.of("mods"), () ->
+				ModSubsystem.current().processCatalog().scanned().stream()
+						.filter(com.openggf.mods.ModDescriptor.class::isInstance)
+						.map(com.openggf.mods.ModDescriptor.class::cast)
+						.map(descriptor -> descriptor.manifest().id()).collect(java.util.stream.Collectors.toSet())),
+				new ContentImportScreen.Host() {
+					public void openProject(EditorProjectDocument candidate) { editorProjects.openProject(candidate); }
+					public void importLevel(com.openggf.mods.code.ModLevelDefinition level, GameId game) {
+						editorProjects.importLevel(level, game);
+					}
+					public boolean allowedToInstallMods() {
+						return getCurrentGameMode() == GameMode.MASTER_TITLE_SCREEN
+								&& ModSubsystem.current().policy().mayScanAtBoot();
+					}
+					public void modInstalled(Path installed) {
+						reloadExternalContentAtTitle();
+						TitleContentImportAccess.openMods(masterTitleScreen);
+					}
+					public void closed() { if (!contentImportShutdown && editorQuitView == null) editorProjects.restoreView(); }
+				});
+		this.contentImportWindow = new ContentImportWindowBridge(contentImportScreen::drop,
+				this::contentImportBlockedReason, message -> {
+					LOGGER.info(message);
+					levelEditorController.setStatus(message);
+				});
 
         com.openggf.editor.EditorCommandPalette.forController(levelEditorController)
                 .setHostActions(this::toggleEditorPlaytestMode, this::startGameplayFromBeginning);
+		var editorCommands = new ArrayList<>(editorProjects.commands());
+		editorCommands.add(new com.openggf.editor.EditorCommandPalette.HostCommand("Import content", this::openContentImport));
+		com.openggf.editor.EditorCommandPalette.forController(levelEditorController).setHostCommands(editorCommands);
         com.openggf.editor.EditorCommandPalette.forController(levelEditorController)
                 .setFeedback(cue -> audioManager.playSfx(MasterTitleScreen.AudioCue.valueOf(cue.name()).sfxName()));
 
@@ -401,6 +480,9 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			projectionWidth = realWidth;
 		});
 		gameLoop.setEditorInputHandler(editorInputHandler);
+		gameLoop.setEditorProjectInputHandler(input -> contentImportScreen.isOpen()
+				? contentImportScreen.update(input) : editorProjects.update(input));
+		gameLoop.setEditorProjectPlaytestSupplier(() -> editorProjectPlaytestActive);
 		gameLoop.setEditorPlaytestToggleHandler(() -> {
             if (!com.openggf.editor.EditorCommandPalette.forController(levelEditorController).isOpen()) toggleEditorPlaytestMode();
         });
@@ -525,6 +607,12 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			}
 		});
 		installEditorTextInputCallback();
+		glfwSetDropCallback(window, (windowHandle, count, names) -> {
+			var paths = new ArrayList<String>(Math.min(count, 16));
+			// Copy callback-owned UTF-8 names before GLFW releases them; no files are read here.
+			for (int i = 0; i < Math.min(count, 16); i++) paths.add(GLFWDropCallback.getName(names, i));
+			contentImportWindow.receive(paths);
+		});
 		glfwSetCursorPosCallback(window, (windowHandle, x, y) -> {
 			if (inputHandler != null) {
 				inputHandler.handleMouseMove(x, y);
@@ -555,6 +643,12 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				resizePendingSnap = true;
 				lastResizeTimeNanos = System.nanoTime();
 			}
+		});
+
+		// Setup window focus callback
+		glfwSetWindowCloseCallback(window, windowHandle -> {
+			glfwSetWindowShouldClose(windowHandle, false);
+			requestApplicationExit();
 		});
 
 		// Setup window focus callback
@@ -642,7 +736,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	private void installEditorTextInputCallback() {
 		glfwSetCharCallback(window, (windowHandle, codepoint) -> {
 			com.openggf.control.MenuInput.handleCharEvent(inputHandler, codepoint);
-			if (getCurrentGameMode() == GameMode.EDITOR) {
+			if (getCurrentGameMode() == GameMode.EDITOR && !editorProjects.menu().isOpen() && !contentImportScreen.isOpen()) {
 				editorInputHandler.handleTextInputCodepoint(codepoint);
 			}
 		});
@@ -1384,6 +1478,35 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void requestApplicationExit() {
+		if (editorQuitView != null) return;
+		if (contentImportScreen.installing()) { quitAfterContentInstall = true; return; }
+		quitAfterContentInstall = false;
+		contentImportScreen.close();
+		editorInputHandler.finishPendingEdits();
+		var document = editorProjects.document();
+		if (document == null || !document.isModified()) { closeApplicationWindow(); return; }
+		editorQuitView = new EditorQuitView(getCurrentGameMode(), camera,
+				camera == null ? 0 : camera.getX(), camera == null ? 0 : camera.getY(),
+				camera == null ? 0 : camera.getXCopy(), camera == null ? 0 : camera.getYCopy());
+		gameLoop.setEditorProjectModalMode(GameMode.MASTER_TITLE_SCREEN, true);
+		editorProjects.requestQuit(this::closeApplicationWindow);
+	}
+
+	private void restoreEditorQuitView() {
+		var previous = editorQuitView;
+		editorQuitView = null;
+		camera = previous.camera();
+		if (camera != null) {
+			camera.setX(previous.x()); camera.setY(previous.y());
+			camera.setXCopy(previous.renderX()); camera.setYCopy(previous.renderY());
+		}
+		gameLoop.setEditorProjectModalMode(previous.mode(), false);
+		var fade = gameLoop.resolveFadeManager();
+		if (fade.getState() == com.openggf.graphics.FadeManager.FadeState.HOLD_BLACK
+				&& !fade.hasPendingCompletion()) fade.startFadeFromBlack(null);
+	}
+
+	private void closeApplicationWindow() {
 		if (window != NULL) {
 			glfwSetWindowShouldClose(window, true);
 		}
@@ -1475,6 +1598,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void resetForGameplayFromMasterTitle() {
+		if (editorProjectPlaytestActive) {
+			gameLoop.stopEditorHostedRun();
+			editorProjectPlaytestActive = false;
+		}
 		gameLoop.retireModScene();
 		var worldSession = SessionManager.getCurrentWorldSession();
 		if (worldSession != null) {
@@ -1526,29 +1653,36 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	public void enterEditorFromCurrentPlayer(EditorPlaytestStash stash, int playerX, int playerY) {
-		if (!isEditorEnabled()) {
+		if (!isEditorEnabled() && !editorProjectPlaytestActive) {
 			throw new IllegalStateException("Level editor is disabled by configuration.");
 		}
 		ensureRuntimeBound();
-		prepareMutableEditorLevel();
-		primeEditorSelection(playerX, playerY);
-		levelEditorController.setWorldCursor(new EditorCursorState(playerX, playerY));
-		// Camera bounds are world-derived but stored on the gameplay-mode
-		// camera, which gets reset when the gameplay mode is destroyed.
-		short savedMinX = camera != null ? camera.getMinX() : 0;
-		short savedMaxX = camera != null ? camera.getMaxX() : 0;
-		short savedMinY = camera != null ? camera.getMinY() : 0;
-		short savedMaxY = camera != null ? camera.getMaxY() : 0;
-		Level editorLevel = levelEditorController.currentLevel();
-		SessionManager.enterEditorMode(new EditorCursorState(playerX, playerY), stash);
-		gameplayMode = null;
-		gameLoop.setGameplayMode(null);
-		bindEditorLevelView(editorLevel, savedMinX, savedMaxX, savedMinY, savedMaxY);
-		syncEditorState();
-		gameLoop.setGameMode(GameMode.EDITOR);
+		try {
+			if (editorProjects.document() != null) {
+				showEditorProject(editorProjects.document());
+			} else {
+				var world = SessionManager.getCurrentWorldSession();
+				editorProjectBaseModule = world.getGameModule();
+				editorProjectRootModule = world.rootGameModule();
+				editorProjectDataSource = world.getDataSource();
+				editorProjects.adoptLoadedLevel(editorProjectBaseModule, levelManager.getCurrentLevel(),
+						world.getCurrentZone(), world.getCurrentAct());
+				levelEditorController.setWorldCursor(new EditorCursorState(playerX, playerY));
+				syncEditorState();
+			}
+			return;
+		} catch (IOException | RuntimeException failure) {
+			reportEditorProjectFailure(failure);
+			return;
+		}
 	}
 
 	public void resumePlaytestFromEditor() {
+		if (editorProjects.document() != null) {
+			try { editorProjects.playtest(true); }
+			catch (RuntimeException failure) { reportEditorProjectFailure(failure); }
+			return;
+		}
 		editorInputHandler.finishActiveStroke();
 		if (!saveCurrentEditorLevel()) {
 			return;
@@ -1575,6 +1709,10 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private boolean saveCurrentEditorLevel() {
+		if (editorProjects.document() != null) {
+			try { editorProjects.save(); return true; }
+			catch (RuntimeException failure) { reportEditorProjectFailure(failure); return false; }
+		}
 		MutableLevel mutableLevel = levelEditorController.currentLevel();
 		if (mutableLevel == null) {
 			return true;
@@ -1602,6 +1740,11 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	 * and the effective (already patched) game module.
 	 */
 	private void exportCurrentEditorLevel() {
+		if (editorProjects.document() != null) {
+			try { editorProjects.export(); }
+			catch (RuntimeException failure) { reportEditorProjectFailure(failure); }
+			return;
+		}
 		MutableLevel level = levelEditorController.currentLevel();
 		com.openggf.game.session.WorldSession session = SessionManager.getCurrentWorldSession();
 		if (level == null || session == null) return;
@@ -1633,11 +1776,156 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	public void startGameplayFromBeginning() {
+		editorInputHandler.finishPendingEdits();
+		if (editorProjects.document() != null) {
+			try { editorProjects.playtest(false); }
+			catch (RuntimeException failure) { reportEditorProjectFailure(failure); }
+			return;
+		}
 		GameplayModeContext gameplay = SessionManager.restartGameplayFromBeginning();
 		initializeGameplayRuntime(gameplay, false);
-		loadDefaultStartingLevel(false);
+		try { gameplay.getLevelManager().restoreInheritedLevel(); }
+		catch (IOException failure) { throw new IllegalStateException("Unable to restart the edited act", failure); }
 		gameLoop.setGameMode(GameMode.LEVEL);
 	}
+
+	private GameModule selectEditorProjectGame(GameId game) throws IOException {
+		if (TraceSessionLauncher.active() != null) throw new IOException("Editor projects are unavailable during a trace session");
+		var currentWorld = SessionManager.getCurrentWorldSession();
+		if (currentWorld != null && currentWorld.getGameModule().getGameId() == game) {
+			GameModule active = currentWorld.getGameModule();
+			editorProjectBaseModule = active instanceof EditorProjectRuntimeModule project ? project.base() : active;
+			editorProjectRootModule = currentWorld.rootGameModule();
+			editorProjectDataSource = currentWorld.getDataSource();
+		} else {
+			// Read and identify the selected ROM before retiring an open project's runtime.
+			Rom candidateRom = romManager.getSecondaryRom(game.code());
+			var detected = romDetectionService.detectAndCreateModule(candidateRom);
+			if (detected.isEmpty() || detected.orElseThrow().getGameId() != game)
+				throw new IOException("Configure a supported " + game.code() + " ROM before creating this project");
+			if (masterTitleScreen != null) { masterTitleScreen.cleanup(); masterTitleScreen = null; }
+			refreshLaunchSessionCachedConfig();
+			configService.setConfigValue(SonicConfiguration.DEFAULT_ROM, game.code());
+			resetForGameplayFromMasterTitle();
+			initializeGame();
+			var world = SessionManager.getCurrentWorldSession();
+			if (world == null || world.getGameModule().getGameId() != game)
+				throw new IOException("Configure a supported " + game.code() + " ROM before creating this project");
+			editorProjectBaseModule = world.getGameModule();
+			editorProjectRootModule = world.rootGameModule();
+			editorProjectDataSource = world.getDataSource();
+			gameLoop.setGameMode(GameMode.MASTER_TITLE_SCREEN);
+		}
+		return editorProjectBaseModule;
+	}
+
+	private Level loadEditorAssetLibrary(int zone, int act) throws IOException {
+		var gameplay = SessionManager.openGameplaySession(editorProjectRootModule, editorProjectBaseModule,
+				editorProjectDataSource, null);
+		initializeGameplayRuntime(gameplay, false);
+		levelManager.setEditorSaveManager(null);
+		levelManager.loadZoneAndAct(zone, act, LevelLoadMode.PREVIEW_CAPTURE);
+		gameLoop.setGameMode(GameMode.MASTER_TITLE_SCREEN);
+		return levelManager.getCurrentLevel();
+	}
+
+	private void showEditorProject(EditorProjectDocument document) throws IOException {
+		editorInputHandler.finishPendingEdits();
+		if (editorProjectPlaytestActive) { gameLoop.stopEditorHostedRun(); editorProjectPlaytestActive = false; }
+		selectEditorProjectGame(document.metadata().gameId());
+		if (masterTitleScreen != null) { masterTitleScreen.cleanup(); masterTitleScreen = null; }
+		EditorCursorState cursor = shownEditorProject == document ? levelEditorController.worldCursor()
+				: new EditorCursorState(document.metadata().startX(), document.metadata().startY());
+		var gameplay = SessionManager.openGameplaySession(editorProjectRootModule, editorProjectBaseModule,
+				editorProjectDataSource, null);
+		initializeGameplayRuntime(gameplay, false);
+		var world = gameplay.getWorldSession();
+		int zone = Math.clamp(document.metadata().sourceZone(), 0, editorProjectBaseModule.getZoneRegistry().getZoneCount() - 1);
+		int act = Math.clamp(document.metadata().sourceAct(), 0, editorProjectBaseModule.getZoneRegistry().getActCount(zone) - 1);
+		world.setCurrentZone(zone); world.setCurrentAct(act); world.setApparentAct(act);
+		world.setCurrentLevel(document.level());
+		SessionManager.enterEditorMode(cursor);
+		gameplayMode = null; gameLoop.setGameplayMode(null);
+		Level level = document.level();
+		// Editor navigation covers authored cells independently of native gameplay camera limits.
+		bindEditorLevelView(level, (short) 0,
+				(short) Math.max(0, level.getMap().getWidth() * level.getBlockPixelSize() - camera.getWidth()),
+				(short) 0, (short) Math.max(0, level.getMap().getHeight() * level.getBlockPixelSize() - camera.getHeight()));
+		levelManager.setEditorSaveManager(null);
+		if (graphicsManager.isGlInitialized()) {
+			for (int p = 0; p < level.getPaletteCount(); p++) graphicsManager.cachePaletteTexture(level.getPalette(p), p);
+			graphicsManager.beginPatternAtlasBatch();
+			try { for (int p = 0; p < level.getPatternCount(); p++) graphicsManager.cachePatternTexture(level.getPattern(p), p); }
+			finally { graphicsManager.endPatternAtlasBatch(); }
+		}
+		boolean newLevel = levelEditorController.currentLevel() != document.level();
+		levelEditorController.attachLevel(document.level());
+		configureEditorProjectSpawnEditing(document);
+		levelEditorController.setPersistenceStatus(EditorSaveManager.ApplyResult.APPLIED);
+		if (newLevel) {
+			levelEditorController.setWorldCursor(cursor);
+			primeEditorSelection(cursor.x(), cursor.y());
+		}
+		shownEditorProject = document;
+		gameLoop.setGameMode(GameMode.EDITOR);
+		syncEditorState();
+	}
+
+	private void configureEditorProjectSpawnEditing(EditorProjectDocument document) {
+		var registry = editorProjectBaseModule.createObjectRegistry();
+		java.util.function.IntFunction<String> names = registry::getPrimaryName;
+		if (document.metadata().objectZoneSet() != null
+				&& editorProjectRootModule.createObjectRegistry() instanceof com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry nativeRegistry) {
+			var family = com.openggf.game.sonic3k.constants.S3kZoneSet.valueOf(document.metadata().objectZoneSet().name());
+			names = id -> nativeRegistry.getPrimaryName(id, family);
+		}
+		levelEditorController.configureSpawnEditing(registry, editorProjectBaseModule.getObjectPlacementEncoding(),
+				editorProjectBaseModule.getObjectArtProvider(), names);
+	}
+
+	private void startEditorProjectPlaytest(EditorProjectDocument document, boolean fromCursor) throws IOException {
+		editorInputHandler.finishPendingEdits();
+		EditorCursorState cursor = fromCursor ? levelEditorController.worldCursor()
+				: new EditorCursorState(document.metadata().startX(), document.metadata().startY());
+		var module = EditorProjectRuntimeModule.prepare(editorProjectBaseModule, document, cursor.x(), cursor.y());
+		try {
+		var gameplay = SessionManager.openGameplaySession(editorProjectRootModule, module, editorProjectDataSource, null);
+		initializeGameplayRuntime(gameplay, false);
+		levelManager.setEditorSaveManager(null);
+		var policy = new com.openggf.game.session.GameplayRunPolicy(false, false,
+				com.openggf.game.session.GameplayRunPolicy.ActCompletion.RETURN_TO_HOST, true, true);
+		gameplay.beginGameplayRun(policy, 0, 0);
+		gameLoop.beginHostedRun(new com.openggf.mods.run.RunSpec(module.getGameId().code(), 0, 0,
+				configService.getString(SonicConfiguration.MAIN_CHARACTER_CODE), policy), new com.openggf.mods.run.RunHost() {},
+				reason -> {
+					editorProjectPlaytestActive = false;
+					try { showEditorProject(document); levelEditorController.setStatus("Playtest finished: " + reason); }
+					catch (IOException | RuntimeException failure) { reportEditorProjectFailure(failure); }
+				});
+			levelManager.loadZoneAndActForFreshRuntime(0, 0);
+			gameplay.initializeFreshGameplayState();
+			editorProjectPlaytestActive = true;
+			gameLoop.announceHostedRunLevelReady();
+			gameLoop.setGameMode(GameMode.LEVEL);
+		} catch (IOException | RuntimeException failure) {
+			gameLoop.stopEditorHostedRun();
+			editorProjectPlaytestActive = false;
+			try { showEditorProject(document); }
+			catch (IOException | RuntimeException restoreFailure) { failure.addSuppressed(restoreFailure); }
+			throw failure;
+		}
+	}
+
+	private void reportEditorProjectFailure(Throwable failure) {
+		LOGGER.warning("Editor project: " + failure.getMessage());
+		levelEditorController.setStatus("Project error: " + failure.getMessage());
+		if (getCurrentGameMode() == GameMode.EDITOR || getCurrentGameMode() == GameMode.MASTER_TITLE_SCREEN
+				|| getCurrentGameMode() == GameMode.LEVEL) {
+			editorProjects.openMenu(); editorProjects.menu().report(failure);
+		}
+	}
+
+	public EditorProjectWorkspace getEditorProjectWorkspace() { return editorProjects; }
 
 	private void initializeGameplayRuntime(GameplayModeContext gameplayMode, boolean initializeGlobalGameplayServices) {
 		GameModule module = gameplayMode.getWorldSession().getGameModule();
@@ -1756,6 +2044,9 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 						configService, moduleResolutionService, preparedLaunch),
 				masterTitleEntries(),
 				cue -> audioManager.playSfx(cue.sfxName()));
+		screen.setEditorProjectsOpenHandler(editorProjects::openMenu);
+		if (ModSubsystem.current().policy().mayScanAtBoot())
+			TitleContentImportAccess.bind(screen, this::openContentImport);
 		screen.setEnabledModsByGame(enabledTitleModsByGame());
 		com.openggf.game.MasterTitleCatalog.bind(screen, this::masterTitleEntries);
 		if (ModSubsystem.current().policy().mayScanAtBoot()) {
@@ -2151,7 +2442,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			return;
 		}
 		boolean traceActive = TraceSessionLauncher.active() != null;
-		if (!editorEntryAllowed(isEditorEnabled(), traceActive)) {
+		if (!editorEntryAllowed(isEditorEnabled() || editorProjectPlaytestActive, traceActive)) {
 			if (traceActive) {
 				LOGGER.warning("Editor entry is unavailable during an active trace session.");
 			}
@@ -2292,9 +2583,12 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		editorMode.setCursor(cursor);
 		synchronizeEditorOverlayDepth();
 
-		if (levelEditorController.depth() == EditorHierarchyDepth.WORLD && camera != null) {
-			camera.setX(clampCameraAxisWithWrap(cursor.x() - 152, camera.getMinX(), camera.getMaxX()));
-			camera.setY(clampCameraAxisWithWrap(cursor.y() - 96, camera.getMinY(), camera.getMaxY()));
+		if (levelEditorController.consumeCameraNavigationRequest()
+				&& levelEditorController.depth() == EditorHierarchyDepth.WORLD && camera != null) {
+			camera.setX(editorProjects.document() != null || shownEditorProject != null
+					? (short) Math.clamp(cursor.x() - camera.getWidth() / 2, camera.getMinX() & 0xFFFF, camera.getMaxX() & 0xFFFF)
+					: clampCameraAxisWithWrap(cursor.x() - camera.getWidth() / 2, camera.getMinX(), camera.getMaxX()));
+			camera.setY(clampCameraAxisWithWrap(cursor.y() - camera.getHeight() / 2, camera.getMinY(), camera.getMaxY()));
 		}
 	}
 
@@ -2589,12 +2883,13 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		// that callbacks (e.g. credits transition flags) are available to step()
 		// in the same frame, preventing 1-frame gaps where the overlay would drop.
 		var uiPipeline = graphicsManager.getUiRenderPipeline();
-		if (uiPipeline != null
+		if (uiPipeline != null && editorQuitView == null
 				&& (gameLoop == null || !gameLoop.ownsGameplayFadeLifecycle())) {
 			uiPipeline.updateFade();
 		}
 
 		profiler.beginSection("update");
+		contentImportWindow.update();
 		processDisplayShaderPackRescan();
 		handleLiveCaptureShortcut();
 		liveCaptureFailureReporter.observe(liveCaptureController);
@@ -2603,7 +2898,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				&& inputHandler.isKeyPressed(
 						configService.getInt(SonicConfiguration.FRAME_STEP_KEY));
 		boolean displayShaderPickerHandledInput = com.openggf.game.TitleInputOwnership.routeDisplay(
-				getCurrentGameMode(), masterTitleScreen, gameLoop != null && gameLoop.modSceneHost.capturesTextInput(),
+				getCurrentGameMode(), masterTitleScreen, globalShortcutInputClaimed(),
 				displayShaderPickerController != null && displayShaderPickerController.isOpen(),
 				this::updateDisplayShaderInput,
 				() -> { if (displayColorProfileController != null) displayColorProfileController.update(inputHandler); },
@@ -2639,7 +2934,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		profiler.endSection("render");
 
 		// Render screen fade overlay via unified UI render pipeline
-		if (uiPipeline != null && !userRecordingSceneSuppressed) {
+		if (uiPipeline != null && editorQuitView == null && !userRecordingSceneSuppressed) {
 			uiPipeline.renderFadePass();
 		}
 		// VHS picture-search effect while live rewind is active. Runs BEFORE the
@@ -2959,7 +3254,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 			return;
 		}
 		if (!com.openggf.game.TitleInputOwnership.routeCapture(getCurrentGameMode(), masterTitleScreen,
-				gameLoop != null && gameLoop.modSceneHost.capturesTextInput(),
+				globalShortcutInputClaimed(),
 				() -> shouldToggleLiveCapture(
 						configService.getKeyChord(SonicConfiguration.CAPTURE_TOGGLE_KEY),
 						liveCaptureChord, inputHandler))) {
@@ -3191,7 +3486,13 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		@Override public void titleCard() { drawTitleCardMode(); }
 		@Override public void debugPatterns() { drawDebugPatterns(); }
 		@Override public void debugBlocks() { drawDebugBlocks(); }
-		@Override public void level() { drawLevel(); }
+		@Override public void level() {
+			drawLevel();
+			if (editorProjects.menu().isOpen()) {
+				prepareOverlayState();
+				editorProjectMenuRenderer.render(editorProjects.menu(), getProjectionMatrixBuffer(), (int) realWidth);
+			}
+		}
 	}
 
 	private void renderDisplayColorProfileNotification() {
@@ -3481,6 +3782,33 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	 */
 	public void update() {
 		gameLoop.stepPresentationFrame();
+		if (quitAfterContentInstall && !contentImportScreen.installing()) requestApplicationExit();
+	}
+
+	private void openContentImport() {
+		editorInputHandler.finishPendingEdits();
+		contentImportScreen.open();
+	}
+
+	private String contentImportBlockedReason() {
+		if (editorProjects.menu().isOpen() || editorQuitView != null)
+			return "Finish the current project dialog before importing content.";
+		if (displayShaderPickerController != null && displayShaderPickerController.isOpen())
+			return "Close the display shader picker before importing content.";
+		if (contentImportScreen.isOpen()) return null;
+		if (graphicsManager.getFadeManager().isActive()) return "Wait for the screen transition before importing content.";
+		if (getCurrentGameMode() == GameMode.EDITOR) {
+			editorInputHandler.finishPendingEdits();
+			return null;
+		}
+		if (getCurrentGameMode() == GameMode.MASTER_TITLE_SCREEN && ModSubsystem.current().policy().mayScanAtBoot()
+				&& TitleContentImportAccess.acceptsDrop(masterTitleScreen)) return null;
+		return "Return to the master title or editor and close other dialogs to import content.";
+	}
+
+	private boolean globalShortcutInputClaimed() {
+		return contentImportScreen.isOpen() || editorProjects.menu().isOpen() || editorQuitView != null
+				|| (gameLoop != null && gameLoop.modSceneHost.capturesTextInput());
 	}
 
 	/**
@@ -3595,6 +3923,14 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 
 	private void drawMasterTitle() {
 		resetCameraForScreenSpaceIfPresent();
+		if (contentImportScreen.isOpen()) {
+			contentImportRenderer.render(contentImportScreen, getProjectionMatrixBuffer(), (int) realWidth);
+			return;
+		}
+		if (editorProjects.menu().isOpen()) {
+			editorProjectMenuRenderer.render(editorProjects.menu(), getProjectionMatrixBuffer(), (int) realWidth);
+			return;
+		}
 		if (masterTitleScreen != null) {
 			masterTitleScreen.setViewportWidth((int) realWidth);
 			masterTitleScreen.setProjectionMatrix(getProjectionMatrixBuffer());
@@ -3609,7 +3945,11 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		graphicsManager.flush();
 		graphicsManager.resetForFixedFunction();
 		prepareOverlayState();
-		editorOverlayRenderer.renderScreenSpaceOverlay();
+		if (contentImportScreen.isOpen())
+			contentImportRenderer.render(contentImportScreen, getProjectionMatrixBuffer(), (int) realWidth);
+		else if (editorProjects.menu().isOpen())
+			editorProjectMenuRenderer.render(editorProjects.menu(), getProjectionMatrixBuffer(), (int) realWidth);
+		else editorOverlayRenderer.renderScreenSpaceOverlay();
 		graphicsManager.flushScreenSpace();
 	}
 
@@ -3673,6 +4013,8 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 		TitleScreenProvider titleScreen = gameLoop.getTitleScreenProvider();
 		if (titleScreen != null) {
 			titleScreen.draw();
+			titleScreen.drawOverlay(new com.openggf.mods.ui.LevelOverlayCanvas(graphicsManager,
+					graphicsManager.getProjectionWidth(), graphicsManager.getConfiguredScreenHeightPx()));
 		}
 	}
 
@@ -3827,6 +4169,7 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 	}
 
 	private void cleanup() {
+		contentImportShutdown = true;
 		// First, while GL, audio and the session are intact: an open mod scene saves in ModScene.exit.
 		cleanupStep("mod scene", gameLoop.modSceneHost::cleanup);
 		cleanupStep("screenshots", screenshotWriter::close);
@@ -3842,6 +4185,9 @@ public class Engine implements com.openggf.graphics.RenderProjection {
 				masterTitleScreen = null;
 			}
 		});
+		cleanupStep("editor project menu", editorProjectMenuRenderer::close);
+		cleanupStep("content import", contentImportScreen::close);
+		cleanupStep("content import renderer", contentImportRenderer::close);
 		cleanupStep("trace HUD renderer", traceHudTextRenderer::cleanup);
 		cleanupStep("pause text renderer", pauseTextRenderer::cleanup);
 		cleanupStep("live capture text renderer", liveCaptureTextRenderer::cleanup);

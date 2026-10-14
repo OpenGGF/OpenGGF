@@ -27,6 +27,6 @@ public record DynamicObjectRecreateContext(ObjectManager objectManager,
      * objects via {@code registry.create(spawn)} without referencing game-specific packages.
      */
     public ObjectRegistry objectRegistry() {
-        return objectManager.rewindObjectRegistry();
+        return objectManager.objectRegistry();
     }
 }

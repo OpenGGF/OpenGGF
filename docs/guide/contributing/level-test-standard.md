@@ -34,7 +34,7 @@ Use these minimum dimensions for every implemented act:
 
 | Dimension | Required cases |
 | --- | --- |
-| Viewport width | 320, 400, 512, 640, 800 logical pixels; resolve each through the supported viewport configuration and assert the resulting camera/render width |
+| Viewport width | Every current `WidescreenAspect` preset: 320, 352, 400, 528 and 800 logical pixels; select the production preset, resolve configuration, and assert the resulting camera/render width |
 | Movement donation | Native/off and every supported donor for the receiving game; verify the actual supported configuration rather than assuming all games accept all donors |
 | Main character | Every supported main character; separate routes when geometry, events, bosses or progression differ |
 | Team | Solo, native pair, mixed followers, maximum supported participant count, duplicate-character followers; adapt the concrete names to supported game/session rules |
@@ -45,6 +45,19 @@ Unsupported configurations need an authoritative policy/code reference and a tes
 of the documented rejection or fallback when that behavior is part of the API.
 Derive maxima and donor support from current production contracts. Update the matrix
 when those contracts change; do not preserve an obsolete fixed list silently.
+
+Raw `SCREEN_WIDTH_PIXELS` overrides at512/640 may retain useful custom-width
+geometry regressions. They do not cover the production352/528 presets or the
+configuration-resolution path. Keep those custom-width checks distinct when
+migrating existing evidence; do not discard unique assertions merely because
+the supported preset inventory changed.
+
+The team parser currently accepts an uncapped follower list. Where production
+has no finite participant maximum, record that contract explicitly rather than
+invent a cap or call one tested roster the maximum. Require independent
+ownership, participant-order, duplicate and repeated load/restore properties,
+with bounded large-roster cases across applicable boundaries. A later admission
+limit must add boundary and rejection coverage and update the owning matrices.
 
 The breadth is required even when complete routes are expensive:
 

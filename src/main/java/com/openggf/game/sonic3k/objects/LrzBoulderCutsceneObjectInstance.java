@@ -49,8 +49,8 @@ public final class LrzBoulderCutsceneObjectInstance extends AbstractObjectInstan
                         Sonic3kPlcLoader.bindRuntimePatternDmaTarget(queue, services());
                         queue.enqueue(services().rom(), 0x172214, 0x500 * 32);
                     }
-                    artOrdinal = S3kRuntimeArtCoordinator.from(services()).moduleQueue()
-                            .queue(services().rom(), 0x172214, 0x500).ordinal();
+                    artOrdinal = com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.bindPatternModule(services(), S3kRuntimeArtCoordinator.from(services()).moduleQueue()
+                            .queue(services().rom(), 0x172214, 0x500)).ordinal();
                 } catch (IOException ex) { throw new IllegalStateException("LRZ boulder art", ex); }
             }
             case 2 -> {

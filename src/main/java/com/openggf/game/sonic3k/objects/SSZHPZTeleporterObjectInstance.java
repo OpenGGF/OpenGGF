@@ -76,10 +76,7 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
     private static final SolidObjectParams SOLID =
             SolidObjectParams.of(0x23, 0x10, 0x10);
     /** {@code word_4670C}: (colour 2, colour 1) pairs written by {@code sub_45866}. */
-    private static final int[] LIGHT_CYCLE = {
-            0x408, 0x40C, 0x60A, 0x60C, 0x80C, 0x80E, 0xA0E, 0xC0E, 0xC0E, 0xE0E,
-            0xE0E, 0xE0E, 0xC0E, 0xE0E, 0xA0E, 0xC0E, 0x80C, 0x80E, 0x60A, 0x60C
-    };
+    private static final int LIGHT_CYCLE_ROM_ADDRESS = 0x4670C;
     private static final String LIGHT_OWNER = "s3k.hpz.teleporterLight";
     private static final String SSZ_LIGHT_OWNER = "s3k.ssz.teleporterLight";
     private static final int KNUCKLES_SUBTYPE = 0x4A;
@@ -627,7 +624,7 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
         }
         lightIndex = next;
         if (isHiddenPalace()) {
-            writeLineFourColours(LIGHT_CYCLE[lightIndex / 2 + 1], LIGHT_CYCLE[lightIndex / 2]);
+            writeLineFourColours(readLightWord(services(), lightIndex + 2), readLightWord(services(), lightIndex));
         } else if (isSkySanctuary()) {
             writeSszLightColours(services(), SSZ_LIGHT_OWNER, lightIndex);
         }
@@ -641,8 +638,8 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
      * opposite order, which is why the two cannot share one write.
      */
     static void writeSszLightColours(ObjectServices services, String owner, int lightIndex) {
-        int first = LIGHT_CYCLE[lightIndex / 2];
-        int second = LIGHT_CYCLE[lightIndex / 2 + 1];
+        int first = readLightWord(services, lightIndex);
+        int second = readLightWord(services, lightIndex + 2);
         byte[] words = {
                 (byte) (first >> 8), (byte) first,
                 (byte) (second >> 8), (byte) second
@@ -656,8 +653,16 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
                 2, 0xC, words);
     }
 
+    private static int readLightWord(ObjectServices services, int byteOffset) {
+        try {
+            return services.romReader().readU16BE(LIGHT_CYCLE_ROM_ADDRESS + byteOffset);
+        } catch (java.io.IOException failure) {
+            throw new IllegalStateException("Cannot read native teleporter light table", failure);
+        }
+    }
+
     /**
-     * {@code sub_45866} exactly: a three-frame divider in {@code $39(a0)} and a byte index in
+     * {@code sub_45866} exactly: a three-frame divider in {@code $39(a0)} and a word byte-offset index in
      * {@code $3A(a0)} that advances by 4 and wraps at {@code $28}. The cycle runs only while the
      * index has left zero or {@code $38(a0)} is non-zero, so an idle pad holds its base colours.
      *

@@ -185,7 +185,7 @@ public abstract class SuperStateController {
 
     /** Restores a complete controller snapshot without replaying activation effects. */
     public void restoreRewindState(RewindState rewindState) {
-        // Default deliberately unsupported: S2 owns a live stars-object reference.
+        // Controllers without a complete RAM contract deliberately remain unsupported.
     }
 
     protected final RewindState createRewindState(int paletteState, int paletteFrame,

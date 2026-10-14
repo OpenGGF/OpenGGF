@@ -782,6 +782,14 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	private void applyScreenYWrapValueAfterControl() {
+		if (sprite.getDead() && !sprite.isCpuControlled()) {
+			// Main death dispatch uses raw ObjectFall (S1), ObjectMoveAndFall
+			// (S2) or MoveSprite_TestGravity (S3K loc_123AA), not the normal
+			// control mask. Wrapping a corpse below Camera_Y+$100 can prevent
+			// its native restart-row crossing forever. CPU dead dispatch retains
+			// its separately owned policy below. These are shipped FixBugs=0 paths.
+			return;
+		}
 		SidekickCpuController cpu = sprite.getCpuController();
 		if (sprite.isCpuControlled()
 				&& sprite.getDead()

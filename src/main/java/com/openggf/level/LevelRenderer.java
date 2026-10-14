@@ -941,6 +941,19 @@ public final class LevelRenderer {
         return LevelSpritePresentation.enabled(lm) ? spriteTables.publishedScroll() : null;
     }
 
+    LevelSpritePresentation.BackgroundScroll backgroundScrollForDraw() {
+        var displayed = currentScrollPresentation == null ? scrollForDraw() : currentScrollPresentation;
+        if (displayed != null) {
+            return new LevelSpritePresentation.BackgroundScroll(displayed.horizontal(),
+                    backgroundVScroll(displayed.renderMode(), displayed.registers().backgroundY()),
+                    displayed.backgroundColumns(), displayed.registers().backgroundPeriod());
+        }
+        if (lm.parallaxManager == null || lm.parallaxManager.getHScrollForShader() == null) return null;
+        return new LevelSpritePresentation.BackgroundScroll(lm.parallaxManager.getHScrollForShader(),
+                backgroundVScroll(currentAdvancedRenderFrameState, lm.parallaxManager.getVscrollFactorBG()),
+                lm.parallaxManager.getVScrollPerColumnBGForShader(), lm.parallaxManager.getBgPeriodWidth());
+    }
+
     private int presentationCameraX() {
         return currentScrollPresentation == null ? lm.camera.getX()
                 : currentScrollPresentation.registers().cameraX();

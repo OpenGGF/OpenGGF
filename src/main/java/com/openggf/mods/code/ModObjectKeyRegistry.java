@@ -21,6 +21,8 @@ public final class ModObjectKeyRegistry {
                 throw new IllegalArgumentException("Object registration owner is required");
             }
             String owner = ModKeySyntax.requireManifestId(registration.ownerModId());
+            if(com.openggf.level.objects.HostObjectKeyRegistry.RESERVED_OWNER.equals(owner))
+                throw new IllegalArgumentException("Engine-provided object keys cannot be registered by creators");
             String key = ModKeySyntax.requireDisplayKey(registration.namespacedKey());
             if (!key.startsWith(owner + ":")) {
                 throw new IllegalArgumentException("Object key owner does not match registration owner");

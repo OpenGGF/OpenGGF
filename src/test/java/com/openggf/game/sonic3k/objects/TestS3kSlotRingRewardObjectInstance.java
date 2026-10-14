@@ -26,7 +26,8 @@ class TestS3kSlotRingRewardObjectInstance {
     @Test
     void grantingRingDecrementsActiveCountImmediatelyNotAtSparkleEnd() {
         ObjectSpawn spawn = new ObjectSpawn(0x460, 0x430, 0x00, 0x00, 0x00, false, 0);
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
         controller.onRewardSpawned();
         assertEquals(1, controller.activeRewardObjects());

@@ -60,6 +60,11 @@ public final class LevelFrameStep {
         // Utility class
     }
 
+    private static void runNativeFixedObjectsBeforeDynamic(LevelFrameContext context, StepWrapper wrapper) {
+        var owner = com.openggf.game.internal.NativeFixedLevelObjectPass.forModule(context.gameModule());
+        if (owner != null) wrapper.wrap("native-fixed-objects-pre", owner::beforeDynamicObjects);
+    }
+
     public static FrameAdmission admit(
             LevelFrameContext context, LevelManager levelManager,
             boolean startEdgePressed) {
@@ -351,6 +356,7 @@ public final class LevelFrameStep {
             if (fixedSlotEvents != null) {
                 wrapper.wrap("fixed-objects-pre", fixedSlotEvents::updateFixedInLevelObjectsBeforeDynamicObjects);
             }
+            runNativeFixedObjectsBeforeDynamic(context, wrapper);
 
             // 3. Object execution after player physics, with inline solid checkpoints
             //    so later objects see earlier contact adjustments.
@@ -368,6 +374,7 @@ public final class LevelFrameStep {
             if (fixedSlotEvents != null) {
                 wrapper.wrap("fixed-objects-pre", fixedSlotEvents::updateFixedInLevelObjectsBeforeDynamicObjects);
             }
+            runNativeFixedObjectsBeforeDynamic(context, wrapper);
 
             // 2. Legacy compatibility path keeps objects before physics. Touch
             //    responses are still deferred to tickPlayablePhysics after movement.

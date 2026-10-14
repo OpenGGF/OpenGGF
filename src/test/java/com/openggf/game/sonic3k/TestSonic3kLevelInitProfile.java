@@ -14,11 +14,38 @@ public class TestSonic3kLevelInitProfile {
         com.openggf.tests.HeadlessTestFixture.builder().withZoneAndAct(0x0D,1)
                 .withFreshLevelStartLifecycle().build();
         assertFalse(com.openggf.game.GameServices.level().isTitleCardRequested());
+        assertFalse(com.openggf.game.GameServices.camera().isLevelStarted(),
+                "Ending_ScreenInit retains native D01 HUD suppression after fresh initialization");
         var provider=com.openggf.game.GameServices.module().getTitleCardProvider();
         assertFalse(provider.ownsInLevelPlayerControlLock(),"$D01 must not retain a title PLC/player owner");
         var title=(com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager)provider;
         assertFalse(title.ownsOmittedFreshLevelPresentation());
         assertTrue(title.capture().artHandles().isEmpty(),"native early deletion submits no title archives");
+    }
+
+    @Test
+    void authoredNativeLevelDoesNotDispatchAStaleStockPlayerIntro() {
+        verifyPlayerIntroOwnership(false);
+    }
+
+    @Test
+    void stockNativeLevelRetainsItsPlayerIntroDispatch() {
+        verifyPlayerIntroOwnership(true);
+    }
+
+    private void verifyPlayerIntroOwnership(boolean stockIdentity) {
+        var events = org.mockito.Mockito.mock(Sonic3kLevelEventManager.class);
+        var manager = org.mockito.Mockito.mock(com.openggf.level.LevelManager.class);
+        var loaded = org.mockito.Mockito.mock(Sonic3kLevel.class);
+        org.mockito.Mockito.when(manager.getCurrentLevel()).thenReturn(loaded);
+        org.mockito.Mockito.when(loaded.hasStockRomZoneIdentity()).thenReturn(stockIdentity);
+        try (var services = org.mockito.Mockito.mockStatic(com.openggf.game.GameServices.class)) {
+            services.when(com.openggf.game.GameServices::levelOrNull).thenReturn(manager);
+            services.when(com.openggf.game.GameServices::level).thenReturn(manager);
+            new Sonic3kLevelInitProfile(events).initZonePlayerStateStep(new LevelLoadContext()).execute();
+        }
+        if (stockIdentity) org.mockito.Mockito.verify(events).applyZonePlayerStateForLoad(false);
+        else org.mockito.Mockito.verifyNoInteractions(events);
     }
 
     private final Sonic3kLevelInitProfile profile =

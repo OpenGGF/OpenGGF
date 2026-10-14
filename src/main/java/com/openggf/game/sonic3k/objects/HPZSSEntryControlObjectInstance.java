@@ -3,6 +3,8 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.camera.Camera;
 import com.openggf.game.sonic3k.S3kEmeraldProgression;
+import com.openggf.game.sonic3k.S3kPaletteOwners;
+import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.S3kSanctuaryRuntimeState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -124,6 +126,35 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
         runtime = new S3kSanctuaryRuntimeState(progression, true, stageIndex, succeeded);
     }
 
+    /**
+     * Obj_HPZSSEntryControl loc_90998/loc_909B0 prepares the target bank in
+     * the initial Process_Sprites at Level loc_6468, before loc_64DC arms the
+     * black reveal. The engine represents that reveal as an RGB overlay on
+     * a prepared current bank, so publish the staged destination here.
+     * Results hosting has its own Normal/Target palette model and bypasses
+     * this publication. childrenSpawned captures the one-shot setup lifetime.
+     */
+    private void publishEntryPaletteUnderFade() {
+        if (tryServices() == null) {
+            return;
+        }
+        var registry = services().paletteOwnershipRegistryOrNull();
+        var levelManager = services().levelManager();
+        var level = levelManager != null ? levelManager.getCurrentLevel() : null;
+        if (registry == null || level == null) {
+            return;
+        }
+        for (int line = 1; line < 4; line++) {
+            S3kPaletteWriteSupport.applyLine(
+                    registry, level, services().graphicsManager(),
+                    S3kPaletteOwners.HPZ_PALETTE_CONTROL,
+                    S3kPaletteOwners.PRIORITY_ZONE_EVENT,
+                    line, registry.targetSegaData(line, 0, 16));
+        }
+        S3kPaletteWriteSupport.resolvePendingWritesNow(
+                registry, level, services().graphicsManager());
+    }
+
     public boolean isHostingSpecialStageResults() {
         return resultsBackdrop;
     }
@@ -147,6 +178,9 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
     public void update(int vIntRunCount, PlayableEntity player) {
         ensureState();
         if (!childrenSpawned) {
+            if (!resultsBackdrop) {
+                publishEntryPaletteUnderFade();
+            }
             spawnInitialChildren();
         }
         if (resultsBackdrop) {
@@ -231,7 +265,8 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
         for (PlayableEntity entity : services().playerQuery().playersFor(
                 com.openggf.level.objects.ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
             if (entity instanceof AbstractPlayableSprite sprite) {
-                String code = sprite.getCode();
+                // ROM reads character_id, not the engine registration code (e.g. tails_p2).
+                String code = sprite.characterKey().persisted();
                 int mapping = "tails".equalsIgnoreCase(code) ? 0xAD
                         : "knuckles".equalsIgnoreCase(code) ? 0x56 : 0xBA;
                 if ("tails".equalsIgnoreCase(code)) {
@@ -249,7 +284,8 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
         for (PlayableEntity entity : services().playerQuery().playersFor(
                 com.openggf.level.objects.ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
             if (entity instanceof AbstractPlayableSprite sprite) {
-                String code = sprite.getCode();
+                // ROM reads character_id, not the engine registration code (e.g. tails_p2).
+                String code = sprite.characterKey().persisted();
                 sprite.setRenderFlips(false, false);
                 sprite.setMappingFrame("tails".equalsIgnoreCase(code) ? 0xAD
                         : "knuckles".equalsIgnoreCase(code) ? 0x56 : 0xBA);
@@ -344,7 +380,8 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
         for (PlayableEntity entity : services().playerQuery().playersFor(
                 com.openggf.level.objects.ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
             if (entity instanceof AbstractPlayableSprite sprite) {
-                String code = sprite.getCode();
+                // ROM reads character_id, not the engine registration code (e.g. tails_p2).
+                String code = sprite.characterKey().persisted();
                 int base = flipAndVariant[1] == 0
                         ? ("tails".equalsIgnoreCase(code) ? 0xAD
                         : "knuckles".equalsIgnoreCase(code) ? 0x56 : 0xBA)
@@ -388,6 +425,14 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
             // player mappings.
             superState.debugDeactivate();
         }
+        // sub_90A4C begins literal host-ROM mapping ownership. Keep the
+        // native table/timers while borrowing presentation only; configured
+        // rules, physics and powered/controller RAM remain the participant's.
+        if (tryServices() != null && services().spriteManager() != null
+                && player.currentLevelManagerIfAvailable() != null && player.getSpriteRenderer() != null) {
+            com.openggf.sprites.managers.SpriteManagerInternalAccess.borrowNativePlayerArt(
+                    services().spriteManager(), player);
+        }
         NativePositionOps.writeXPosPreserveSubpixel(player, 0x1640);
         NativePositionOps.writeYPosPreserveSubpixel(player, 0x3A3);
         // ROM writes $83. Its sign bit makes Tails_CPU_Control skip the normal
@@ -413,6 +458,13 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
     void releaseFreshLockForTest(AbstractPlayableSprite player) {
         ObjectControlState.none().applyTo(player);
         player.setObjectMappingFrameControl(false);
+        // loc_90C16 releases control after the final native pose. The shared
+        // RETURN lifetime keeps that pose drawable until Animate actually
+        // publishes an ordinary mapping, then returns configured donor art.
+        if (tryServices() != null && services().spriteManager() != null) {
+            com.openggf.sprites.managers.SpriteManagerInternalAccess.releaseNativePlayerArt(
+                    services().spriteManager(), player);
+        }
     }
 
     private void releaseFreshLockFromParticipants(AbstractPlayableSprite primary) {

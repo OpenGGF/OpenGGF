@@ -98,6 +98,38 @@ The Tower Defence title menu uses this shared navigation while retaining its
 screen transitions and button actions. Map keyboard/pad input through
 [named actions](action-bindings.md), then call `move`, `hit` or `focus`.
 
+## Native object recipes and callback composition
+
+`CaterkillerJrFactory.create(spawn, CaterkillerJrRecipe.STOCK)` retains the native
+six-body roles and delays. `DOUBLE_LENGTH` uses twelve explicit native roles and
+delays. The returned badnik remains native; recipes and exact links restore with
+its graph. The preset belongs to `com.openggf.game.sonic3k.objects.badniks`;
+`Sonic3kMonitorFactory` belongs to `com.openggf.game.sonic3k.objects`.
+`Sonic3kMonitorFactory.eggman(spawn)` retains the placement and native
+shell, contents, hurt, respawn and rewind behavior without subclassing native AI.
+
+Use `Sonic3kBadnikConfig.destruction()` with `DestructionEffects.defeatBadnik` for the native score,
+points popup, deferred animal and destruction order. A no-popup animal recipe
+is a different effect. `ObjectCombatRules` exposes admitted native targeting,
+firing and cooldown decisions. `PoweredScreenAttackable` supplies the small
+semantic callback; stock collision category/property eligibility still precedes it.
+
+`ShieldProjectileMotion.awayFrom(dx, dy)` returns the native radial velocity.
+`NativeObjectFieldTarget` supplies semantic body/projectile centres and displacement;
+opt into grounded field motion only when the object supports it. Field queries,
+displacement and powered callbacks run under the receiving object's verified
+content owner. A callback fault quarantines that owner and aborts the current
+frame through the existing host recovery boundary; another mod's caller does not
+inherit the fault. Healthy gameplay resumes after host retirement and reassembly,
+not by continuing a partially updated frame. Creator budding
+reuses the registered factory under its exact content owner, with native slot,
+floor, lifetime and replay bounds; implementing a callback does not enable every
+mutator or grant native AI identity. Publish `ObjectPresentationMetadata` for body
+transforms. Draw attached flames/effects through `services().renderAttachedEffect`
+so they retain their own presentation subject, deferred palette replay and enclosing body state.
+`TitleScreenProvider.drawOverlay(PixelCanvas)` draws a title badge on the host's
+current canvas without finding global renderer services.
+
 ## ROM art without repeated decoding
 
 Get the ROM handle from the scene's art service. Named `StockSceneArt` recipes

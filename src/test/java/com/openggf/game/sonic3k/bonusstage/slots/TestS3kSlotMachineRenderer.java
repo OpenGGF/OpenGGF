@@ -9,7 +9,7 @@ class TestS3kSlotMachineRenderer {
 
     @Test
     void displayStateUsesCurrentReelFacesAndOffsets() {
-        S3kSlotStageState state = S3kSlotStageState.bootstrap();
+        S3kSlotStageState state = S3kSlotStageState.bootstrap(S3kSlotRomTestData.resources());
         S3kSlotOptionCycleSystem cycleSystem = new S3kSlotOptionCycleSystem();
         cycleSystem.bootstrap(state);
         state.setOptionCycleDisplaySymbols(3, 1, 5);
@@ -26,7 +26,7 @@ class TestS3kSlotMachineRenderer {
 
     @Test
     void reelWordDisplayOrderMatchesPhysicalLeftToRightSequenceTables() {
-        S3kSlotStageState state = S3kSlotStageState.bootstrap();
+        S3kSlotStageState state = S3kSlotStageState.bootstrap(S3kSlotRomTestData.resources());
         state.setOptionCycleReelWords(
                 (6 << 8) | 0x20,
                 (6 << 8) | 0x40,
@@ -35,21 +35,21 @@ class TestS3kSlotMachineRenderer {
         S3kSlotMachineDisplayState displayState = S3kSlotMachineDisplayState.fromState(state, 0x460, 0x430);
 
         assertArrayEquals(new int[] {
-                S3kSlotRomData.REEL_SEQUENCE_A[6] & 0xFF,
-                S3kSlotRomData.REEL_SEQUENCE_B[6] & 0xFF,
-                S3kSlotRomData.REEL_SEQUENCE_C[6] & 0xFF
+                S3kSlotRomTestData.REEL_SEQUENCE_A[6] & 0xFF,
+                S3kSlotRomTestData.REEL_SEQUENCE_B[6] & 0xFF,
+                S3kSlotRomTestData.REEL_SEQUENCE_C[6] & 0xFF
         }, displayState.faces());
         assertArrayEquals(new int[] {
-                S3kSlotRomData.REEL_SEQUENCE_A[7] & 0xFF,
-                S3kSlotRomData.REEL_SEQUENCE_B[7] & 0xFF,
-                S3kSlotRomData.REEL_SEQUENCE_C[7] & 0xFF
+                S3kSlotRomTestData.REEL_SEQUENCE_A[7] & 0xFF,
+                S3kSlotRomTestData.REEL_SEQUENCE_B[7] & 0xFF,
+                S3kSlotRomTestData.REEL_SEQUENCE_C[7] & 0xFF
         }, displayState.nextFaces());
         assertArrayEquals(new float[] {0x20 / 256f, 0x40 / 256f, 0x60 / 256f}, displayState.offsets());
     }
 
     @Test
     void displayedResolvedFacesMatchPrizeWordOrdering() {
-        S3kSlotStageState state = S3kSlotStageState.bootstrap();
+        S3kSlotStageState state = S3kSlotStageState.bootstrap(S3kSlotRomTestData.resources());
         state.setOptionCycleTargetReelA(3);
         state.setOptionCycleTargetPackedBC(0x15);
         state.setOptionCycleReelWords(
@@ -60,8 +60,8 @@ class TestS3kSlotMachineRenderer {
         S3kSlotMachineDisplayState displayState = S3kSlotMachineDisplayState.fromState(state, 0x460, 0x430);
 
         assertArrayEquals(new int[] {5, 1, 3}, displayState.faces());
-        assertEquals(S3kSlotPrizeCalculator.calculate(3, (byte) 0x15),
-                S3kSlotPrizeCalculator.calculate(displayState.faces()[2],
+        assertEquals(S3kSlotPrizeCalculator.calculate(S3kSlotRomTestData.resources(), 3, (byte) 0x15),
+                S3kSlotPrizeCalculator.calculate(S3kSlotRomTestData.resources(), displayState.faces()[2],
                         (byte) ((displayState.faces()[1] << 4) | displayState.faces()[0])));
     }
 

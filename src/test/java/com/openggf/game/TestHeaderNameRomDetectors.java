@@ -140,6 +140,24 @@ class TestHeaderNameRomDetectors {
     }
 
     @Test
+    void offlineStockHostsAreFreshAndPreserveBootstrapAndWorldOwnership() {
+        GameModule bootstrap = GameModuleRegistry.getBootstrapDefault();
+        var world = com.openggf.game.session.SessionManager.getCurrentWorldSession();
+        for (GameId gameId : new GameId[]{GameId.S1, GameId.S2, GameId.S3K}) {
+            GameModule first = GameModuleRegistry.createStockModule(gameId);
+            GameModule second = GameModuleRegistry.createStockModule(gameId);
+            assertEquals(gameId, first.getGameId());
+            assertNotSame(first, second, "offline hosts cannot share mutable game state");
+            assertSame(bootstrap, GameModuleRegistry.getBootstrapDefault());
+            assertSame(world, com.openggf.game.session.SessionManager.getCurrentWorldSession());
+        }
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+                () -> GameModuleRegistry.createStockModule(GameId.STANDALONE));
+        assertSame(bootstrap, GameModuleRegistry.getBootstrapDefault());
+        assertSame(world, com.openggf.game.session.SessionManager.getCurrentWorldSession());
+    }
+
+    @Test
     void applyDetectedModuleInstallsTheDetectedBootstrapModule() {
         GameModule detectedModule = new Sonic1GameModule();
 

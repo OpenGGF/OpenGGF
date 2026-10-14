@@ -188,7 +188,8 @@ class TestSecondStrikeStages {
         source[1024] = (byte) 0x80;
         source[1026] = 2;
         source[1028] = 2;
-        assertThrows(IllegalArgumentException.class, () -> boards.transformLayout(0, source));
+        assertThrows(IllegalArgumentException.class, () -> S3kDifficultyRules.blueSphereLayout(source, boards.transformLayout(0, source)),
+                "the canonical native owner, rather than copied creator safety logic, rejects lost reachability");
     }
 
     @Test
@@ -349,13 +350,8 @@ class TestSecondStrikeStages {
     }
 
     static URLClassLoader compilePolicies(Path directory) throws Exception {
-        Path output = Files.createDirectories(directory.resolve("policies"));
-        List<String> args = List.of("--release", "25", "-cp", System.getProperty("java.class.path"),
-                "-d", output.toString(),
-                "examples/second-strike/src/main/java/secondstrike/boss/SecondStrikeBosses.java",
-                "examples/second-strike/src/main/java/secondstrike/stages/SecondStrikeStages.java");
-        assertEquals(0, ToolProvider.getSystemJavaCompiler().run(null, null, null, args.toArray(String[]::new)));
-        return new URLClassLoader(new java.net.URL[] {output.toUri().toURL()},
-                TestSecondStrikeStages.class.getClassLoader());
+        return SecondStrikeSourceFixture.compile(directory.resolve("policies"),
+                SecondStrikeSourceFixture.MAIN.resolve("secondstrike/boss/SecondStrikeBosses.java"),
+                SecondStrikeSourceFixture.MAIN.resolve("secondstrike/stages/SecondStrikeStages.java"));
     }
 }

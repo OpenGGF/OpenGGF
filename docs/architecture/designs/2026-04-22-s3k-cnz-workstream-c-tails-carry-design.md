@@ -733,3 +733,9 @@ Exact file references for reviewers and implementer subagents:
 | `AniRaw_Tails_Carry` | Carry animation cycle table | ~27334-27335 |
 
 Implementer must cite the exact disassembly lines in each commit message alongside the RomOffsetFinder output.
+
+## 2026-10-14 donor presentation extension
+
+The historical physics-only scope above is unchanged as a record. The later finite configuration product found a separate literal-mapping resource mismatch: S1 Sonic has 88 mapping frames while `Tails_Carry_Sonic` writes $91/$90/$92 from `AniRaw_Tails_Carry`. A generic internal reversible host-art binding now preserves those raw bytes, their native timer/table, and the configured participant's physics/rules/controller RAM. ACTIVE and RETURN for the last native pose phases are captured separately. P2 releases after P1 Animate, so immediately swapping to the shorter donor renderer was rejected; return occurs only when the ordinary animator actually publishes its next mapping. Resource release also verifies the old borrower still owns the renderer, preventing it from overwriting a later scripted presentation owner. The [CNZ1 owning matrix](../validation/levels/s3k-cnz-act1.md) records focused qualification, exact visual identity and inherited limits. No recorded trace row supplies gameplay.
+
+The subsequent actual capture-host witness also found late donor re-registration could leave CPU/event parent references on the old P1 and miss the native entry position. The configured donor now resolves between replay reset and original team construction, preserving the original native entry owners. This corrects the harness rather than patching position, controls or a movie. The owning matrix records the 49-case capture-host gate and preserves failed visual setup identities.

@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.camera.NativeViewportFraming;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.objects.S3kRawAnimation;
 import com.openggf.game.sonic3k.runtime.SszZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
@@ -67,8 +68,8 @@ public final class EndingKnucklesFlightObjectInstance extends AbstractObjectInst
     public int routine(){return routine;}
 
     @Override public NativeSstState nativeSstState() {
-        int flags=4|(flipX?1:0);
-        int control=(swingReverse?1:0)|(planeMode>=2?0x10:0)|(routine>=14?0x20:0);
+        int flags=(routine==0?0:4)|(flipX?1:0);
+        int control=(swingReverse?1:0)|(planeMode>=2?0x10:0)|(routine>=18?2:0);
         return new NativeSstState(flags,xFixed&0xFFFF,yFixed&0xFFFF,animation.mappingFrame,
                 animation.animFrame,animation.animFrameTimer,control,retireFlag?0x80:0,routine==0?0:0x200,
                 routine==0?0:planeMode==0?0x8310:planeMode==1?0x826E:0x226E);
@@ -79,6 +80,9 @@ public final class EndingKnucklesFlightObjectInstance extends AbstractObjectInst
         switch(routine) {
             case 0 -> initialize();
             case 2 -> {
+                // loc_5E80A calls Play_SFX_Continuous before animation and timer
+                // expiry; the helper reads V_int_run_count's low nibble.
+                if ((vIntRunCount & 0xF) == 0) services().playSfx(Sonic3kSfx.WIND_QUIET.id);
                 animate();
                 if((timer=(short)(timer-1))<0){routine=4;yVelocity=-0x6C0;
                     services().playMusic(services().getApparentLevelMusicId());}
@@ -114,7 +118,7 @@ public final class EndingKnucklesFlightObjectInstance extends AbstractObjectInst
                     routine=12;planeMode=2;flipX=false;animation.mappingFrame=6;
                     setY(state().cloudOscillator()+0x448);xVelocity=0x100;yVelocity=0;
                     makeChild(EndingKnucklesFlightChildObjectInstance.SMALL_PROPELLER,0,-6,7);
-                    S3kEndingPalette.loadLine(services(),0,S3kEndingResources.PAL_SMALL_PLANE);
+                    S3kEndingPalette.loadLine(services(),1,S3kEndingResources.PAL_SMALL_PLANE); // loc_5E984 PalLoad_Line1 writes Normal_palette_line_2.
                 }
             }
             case 12 -> {
@@ -201,6 +205,7 @@ public final class EndingKnucklesFlightObjectInstance extends AbstractObjectInst
     private EndingKnucklesFlightChildObjectInstance makeChild(int role,int subtype,int dx,int dy){
         return spawnChild(()->new EndingKnucklesFlightChildObjectInstance(this,role,subtype,dx,dy));
     }
+    @Override public int flightPlayerMode(){return 3;}
     @Override public boolean flightFlipX(){return flipX;}
     @Override public boolean flightChildRetired(){return retireFlag;}
     @Override public boolean flightChildSmall(){return planeMode==2;}

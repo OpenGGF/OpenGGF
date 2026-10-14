@@ -528,6 +528,15 @@ public final class HeadlessGameBoot implements AutoCloseable {
         // which cascades into a player-path desync (e.g. AIZ landing at trace
         // ~2170 lands 3px off and snowballs).
         TraceReplaySessionBootstrap.resetLevelSubsystemsForReplay();
+        SonicConfigurationService configService = GameServices.configuration();
+        if (configService.getBoolean(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED)) {
+            // The reset retires the previous donor. Resolve the configured
+            // presentation/ability provider before the original team and native
+            // entry owners bind, as Engine's gameplay initialization does. A
+            // later P1 replacement would leave CPU/event parents on the old actor.
+            GameServices.crossGameFeatures().initialize(
+                    configService.getString(SonicConfiguration.CROSS_GAME_SOURCE));
+        }
         if (initialRngSeed != null) {
             GameServices.rng().setSeed(initialRngSeed);
         }
@@ -538,7 +547,6 @@ public final class HeadlessGameBoot implements AutoCloseable {
         // camera's focusedSprite ends up null / the player is never spawned at
         // the start position). This mirrors the trace-replay test fixture and
         // the live TraceReplayDriver bootstrap order.
-        SonicConfigurationService configService = GameServices.configuration();
         GameplayTeamBootstrap.BootstrappedTeam team =
                 GameplayTeamBootstrap.registerActiveTeam(
                         module, GameServices.sprites(), configService);
@@ -550,8 +558,13 @@ public final class HeadlessGameBoot implements AutoCloseable {
         }
         GameServices.level().loadZoneAndAct(zone, act);
 
-        GameServices.camera().setFocusedSprite(team.mainSprite());
-        GameServices.camera().updatePosition(true);
+        // ScreenInit may already own Scroll_lock and both camera words.
+        // setFocusedSprite itself resets those words, so retain the entire
+        // game-owned camera binding while frozen, not only its forced snap.
+        if (!GameServices.camera().getFrozen()) {
+            GameServices.camera().setFocusedSprite(team.mainSprite());
+            GameServices.camera().updatePosition(true);
+        }
 
         return loop;
     }

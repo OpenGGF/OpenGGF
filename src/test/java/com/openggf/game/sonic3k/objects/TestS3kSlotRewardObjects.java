@@ -33,7 +33,8 @@ class TestS3kSlotRewardObjects {
     @Test
     void spikeSoundsConsumePayoutTicksRatherThanCountingImpacts() {
         TrackingBonusStageServices services = new TrackingBonusStageServices();
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
         // Four payout updates are insufficient, even after several impacts.
         for (int i = 0; i < 4; i++) controller.advanceSpikePayout();
@@ -62,7 +63,8 @@ class TestS3kSlotRewardObjects {
     @Test
     void ringRewardAddsOneBonusStageRingToPlayableOnExpiry() {
         TrackingBonusStageServices services = new TrackingBonusStageServices();
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
 
         TrackingPlayableSprite player = new TrackingPlayableSprite(0);
@@ -95,7 +97,8 @@ class TestS3kSlotRewardObjects {
     @Test
     void spikeRewardConsumesOneAvailableBonusStageRingAndUpdatesPlayableOnExpiry() {
         TrackingBonusStageServices services = new TrackingBonusStageServices();
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
         controller.addRewardRing();
 
@@ -123,7 +126,8 @@ class TestS3kSlotRewardObjects {
     @Test
     void spikeRewardConsumesOneCarriedRingWhenNoRewardCounterExists() {
         TrackingBonusStageServices services = new TrackingBonusStageServices(5);
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
 
         S3kSlotSpikeRewardObjectInstance reward = new S3kSlotSpikeRewardObjectInstance(
@@ -142,7 +146,8 @@ class TestS3kSlotRewardObjects {
     @Test
     void spikeRewardDoesNotUnderflowWhenNoBonusStageRingIsAvailable() {
         TrackingBonusStageServices services = new TrackingBonusStageServices();
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
 
         S3kSlotSpikeRewardObjectInstance reward = new S3kSlotSpikeRewardObjectInstance(
@@ -165,7 +170,8 @@ class TestS3kSlotRewardObjects {
     @Test
     void ringRewardInterpolatesPositionTowardCenterEachFrame() {
         TrackingBonusStageServices services = new TrackingBonusStageServices();
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
 
         int spawnX = 0x500, spawnY = 0x500;
@@ -200,7 +206,8 @@ class TestS3kSlotRewardObjects {
     @Test
     void ringRewardConvergesOnCenterOverMultipleFrames() {
         TrackingBonusStageServices services = new TrackingBonusStageServices();
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
 
         int spawnX = 0x500, spawnY = 0x500;
@@ -234,7 +241,8 @@ class TestS3kSlotRewardObjects {
     @Test
     void ringRewardNoArgActivateDoesNotChangePosition() {
         TrackingBonusStageServices services = new TrackingBonusStageServices();
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
 
         int spawnX = 0x460, spawnY = 0x430;
@@ -260,7 +268,8 @@ class TestS3kSlotRewardObjects {
     @Test
     void spikeRewardInterpolatesPositionTowardCenterEachFrame() {
         TrackingBonusStageServices services = new TrackingBonusStageServices();
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
         controller.addRewardRing();
 
@@ -295,7 +304,8 @@ class TestS3kSlotRewardObjects {
     void ringRewardAppendRenderCommandsUsesRingManagerAtInterpolatedPosition() {
         RingManager ringManager = mock(RingManager.class);
         TrackingBonusStageServices services = new TrackingBonusStageServices().withRingManager(ringManager);
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
 
         S3kSlotRingRewardObjectInstance reward = new S3kSlotRingRewardObjectInstance(
@@ -314,7 +324,8 @@ class TestS3kSlotRewardObjects {
         RecordingRenderer renderer = new RecordingRenderer();
         TrackingBonusStageServices services = installRenderer(renderer, Sonic3kObjectArtKeys.SLOT_SPIKE_REWARD);
 
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
 
         S3kSlotSpikeRewardObjectInstance reward = new S3kSlotSpikeRewardObjectInstance(

@@ -76,7 +76,7 @@ public class Sonic1ObjectArtProvider implements ObjectArtProvider {
     private HudStaticArt hudStaticArt;
     private int animalTypeA = AnimalType.RABBIT.ordinal();
     private int animalTypeB = AnimalType.FLICKY.ordinal();
-    private int currentZoneIndex = -1;
+    private int currentZoneIndex = Integer.MIN_VALUE;
 
     private final Map<String, PatternSpriteRenderer> renderers = new HashMap<>();
     private final Map<String, ObjectSpriteSheet> sheets = new HashMap<>();

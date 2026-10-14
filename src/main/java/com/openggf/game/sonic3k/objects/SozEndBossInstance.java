@@ -90,8 +90,8 @@ public final class SozEndBossInstance extends AbstractObjectInstance
             if(queue==null)return -1;
             Sonic3kPlcLoader.bindRuntimePatternDmaTarget(queue,services());
             queue.enqueue(services().rom(),source,tile*32);
-            return com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.from(services())
-                    .moduleQueue().queue(services().rom(),source,tile).ordinal();
+            return com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.bindPatternModule(services(), com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.from(services())
+                    .moduleQueue().queue(services().rom(),source,tile)).ordinal();
         } catch(IOException e){throw new UncheckedIOException(e);}
     }
     /** Claims a finished Queue_Kos_Module job so the timing ledger retires it. */

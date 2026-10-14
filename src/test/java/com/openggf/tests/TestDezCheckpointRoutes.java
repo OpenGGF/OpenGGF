@@ -30,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Production-load and death-reload coverage for every ROM-authored DEZ starpost. */
 @RequiresRom(SonicGame.SONIC_3K)
+@org.junit.jupiter.api.TestMethodOrder(org.junit.jupiter.api.MethodOrderer.OrderAnnotation.class)
 class TestDezCheckpointRoutes {
     // Independent placement oracle: skdisasm Levels/DEZ/Object Pos/{1,2}.bin.
     private static final List<CheckpointPlacement> AUTHORED_CHECKPOINTS = List.of(
@@ -41,6 +42,7 @@ class TestDezCheckpointRoutes {
             new CheckpointPlacement(1, 7, 0x24C0, 0x0868, false),
             new CheckpointPlacement(1, 8, 0x326C, 0x04A8, false));
 
+    @org.junit.jupiter.api.Order(0)
     @Test
     void romDecodedActsExposeTheCompleteAuthoredStarpostSet() {
         List<CheckpointPlacement> checkpoints = Stream.of(0, 1)
@@ -60,6 +62,7 @@ class TestDezCheckpointRoutes {
                 "DEZ checkpoint coverage must change when the ROM placement inventory changes");
     }
 
+    @org.junit.jupiter.api.Order(10)
     @ParameterizedTest(name = "{0} DEZ{1} starpost {2} physical activation")
     @MethodSource("checkpointTeamCases")
     void approachingEveryPlacedPostActivatesAndReplaysItsSave(
@@ -102,6 +105,7 @@ class TestDezCheckpointRoutes {
         }
     }
 
+    @org.junit.jupiter.api.Order(20)
     @ParameterizedTest(name = "{0} DEZ{1} physical post {2}, width {4}, repeated death")
     @MethodSource("checkpointLifecycleCases")
     void physicalCheckpointSurvivesTwoRealDeathReloads(Team team, int act, int index,
@@ -109,10 +113,27 @@ class TestDezCheckpointRoutes {
         runPhysicalCheckpointLifecycle(team, act, index, checkpoint, width, "off");
     }
 
+    @org.junit.jupiter.api.Order(20)
     @ParameterizedTest(name = "{5} {0} DEZ{1} physical post {2}, width {4}, repeated death")
     @MethodSource("donorCheckpointLifecycleCases")
     void supportedDonorTeamsKeepTheirRulesAndArtAcrossPhysicalCheckpointDeaths(Team team,
             int act, int index, CheckpointPlacement checkpoint, int width, String donor) {
+        runPhysicalCheckpointLifecycle(team, act, index, checkpoint, width, donor);
+    }
+
+    private static Stream<Arguments> firstIncomingCases() {
+        return Stream.of(0, 1).flatMap(act -> {
+            var checkpoint = AUTHORED_CHECKPOINTS.stream().filter(post -> post.act() == act).findFirst().orElseThrow();
+            return Stream.of(Arguments.of(Team.SONIC, act, checkpoint.index(), checkpoint, 320, "off"),
+                    Arguments.of(Team.TAILS, act, checkpoint.index(), checkpoint, 800, "s2"));
+        });
+    }
+
+    @org.junit.jupiter.api.Order(1)
+    @ParameterizedTest
+    @MethodSource("firstIncomingCases")
+    void firstPostOfEachActAndS2TailsReplaysTheIncomingWorld(Team team, int act, int index,
+            CheckpointPlacement checkpoint, int width, String donor) {
         runPhysicalCheckpointLifecycle(team, act, index, checkpoint, width, donor);
     }
 
@@ -166,9 +187,10 @@ class TestDezCheckpointRoutes {
             input.setLogicalOverride(com.openggf.debug.playback.RecordedInputSnapshots.fromBk2(neutral, neutral));
             var loop = new com.openggf.GameLoop(input);
             loop.setGameplayMode(f.gameplayMode()); loop.setGameMode(com.openggf.game.GameMode.LEVEL);
+            assertTrue(loop.ownsGameplayFadeLifecycle(), "production loop owns each fade service");
             try {
                 for (int cycle = 0; cycle < 2; cycle++) {
-                    for (int n = 0; n < 30; n++) {f.gameplayMode().getFadeManager().update();loop.step();}
+                    for (int n = 0; n < 30; n++) {loop.step(); GameServices.graphics().runPendingRenderThreadTasks();}
                     var objects = GameServices.level().getObjectManager();
                     var runtime = GameServices.zoneRuntimeRegistry().current();
                     if (act == 1 && index == 5) {
@@ -178,16 +200,17 @@ class TestDezCheckpointRoutes {
                         var right = new com.openggf.debug.playback.Bk2FrameInput(0, com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_RIGHT, 0, false, "");
                         input.setLogicalOverride(com.openggf.debug.playback.RecordedInputSnapshots.fromBk2(right, neutral));
                         for (int n = 0; n < 180 && !GameServices.gameState().isReverseGravityActive(); n++) {
-                            f.gameplayMode().getFadeManager().update(); loop.step();
+                            loop.step(); GameServices.graphics().runPendingRenderThreadTasks();
                         }
                         input.setLogicalOverride(com.openggf.debug.playback.RecordedInputSnapshots.fromBk2(neutral, neutral));
                         assertTrue(GameServices.gameState().isReverseGravityActive(),
                                 "ordinary movement through the placed gravity swap");
                     }
+                    int lives = GameServices.gameState().getLives();
                     assertTrue(GameServices.sprites().getMainPlayable().applyPitDeath());
                     long outgoing = 0; boolean loaded = false;
                     for (int n = 0; n < 1200; n++) {
-                        f.gameplayMode().getFadeManager().update(); loop.step();
+                        loop.step(); GameServices.graphics().runPendingRenderThreadTasks();
                         var rewind = f.gameplayMode().getRewindController();
                         if (GameServices.level().getObjectManager() != objects) {
                             loaded = true;
@@ -195,6 +218,7 @@ class TestDezCheckpointRoutes {
                             assertEquals(act, GameServices.level().getCurrentAct());
                             assertEquals(index, GameServices.level().getCheckpointState().getLastCheckpointIndex());
                             var player = GameServices.sprites().getMainPlayable();
+                            assertEquals(lives - 1, GameServices.gameState().getLives(), "one actual life per death");
                             assertEquals(savedX, player.getCentreX() & 0xFFFF);
                             assertEquals(savedY, player.getCentreY() & 0xFFFF);
                             // loc_60DE clears $F700-$F7FF, including gravity at $F7C6;
@@ -218,11 +242,13 @@ class TestDezCheckpointRoutes {
                     assertTrue(loaded, "real GameLoop death reload cycle " + cycle);
                     boolean released = false;
                     for (int n = 0; n < 500; n++) {
-                        f.gameplayMode().getFadeManager().update(); loop.step();
+                        loop.step(); GameServices.graphics().runPendingRenderThreadTasks();
                         var title = GameServices.module().getTitleCardProvider();
                         if (loop.getCurrentGameMode() == com.openggf.game.GameMode.LEVEL
                                 && (title == null || title.isComplete())
                                 && !f.gameplayMode().getFadeManager().isActive()
+                                && !f.gameplayMode().getFadeManager().hasPendingCompletion()
+                                && !GameServices.level().hasPendingFreshLevelTransitionBoundary()
                                 && !GameServices.sprites().getMainPlayable().isControlLocked()) {
                             released = true; break;
                         }
@@ -230,11 +256,19 @@ class TestDezCheckpointRoutes {
                     assertTrue(released, "title/fade must release controls");
                     assertFalse(GameServices.sprites().getMainPlayable().getDead());
                     assertDonorState(donor);
+                    assertEquals(lives - 1, GameServices.gameState().getLives(), "title release hides no restart");
+                    CheckpointIncomingReplay.verify(f, loop, input, index, () -> {
+                        assertEquals(team.main(), GameServices.sprites().getMainPlayable().getCode());
+                        assertEquals(followers, GameServices.sprites().getRegisteredSidekicks());
+                        assertEquals(width, GameServices.camera().getWidth() & 0xFFFF);
+                        assertDonorState(donor);
+                    });
                 }
             } finally {loop.closePresence();}
         } finally {config.clearSessionOverrides(); restore(savedConfig);}
     }
 
+    @org.junit.jupiter.api.Order(10)
     @ParameterizedTest(name = "{0} extra team post {2}, width {4}, donor {5}")
     @MethodSource("extraTeamCases")
     void extendedTeamsSurviveRepeatedCheckpointReloads(Team team, int act, int index,

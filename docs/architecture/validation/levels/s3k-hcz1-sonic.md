@@ -3,8 +3,13 @@
 Canonical game/zone/act: Sonic 3 & Knuckles, Hydrocity, act 1.
 Runtime slots: zone 1, act 0; outgoing production reload: zone 1, act 1.
 Representative configuration: native 320px Sonic with CPU Tails, movement donor off.
-Maintained full routes cover 320/400/512/640/800px crossed with off/S1/S2 donors.
-This is Sonic-with-CPU-Tails route coverage, not full level certification or trace-physics parity.
+Historical raw-width full routes cover320/400/512/640/800px crossed with off/S1/S2
+donors. They retain their original Sonic+CPU-Tails fixture, including S1 Tails
+without donated Tails art. Current short production entry/reset checks resolve
+320/352/400/528/800 presets and use an explicitly supported Sonic CPU for S1,
+Tails for native/S2, with actual donor ROM renderer/animation and current main/
+camera ownership. Legacy512/640 geometry remains separately labelled. This is
+bounded configuration/route evidence, not full level certification or trace parity.
 
 ## Obligations and current evidence
 
@@ -15,8 +20,8 @@ This is Sonic-with-CPU-Tails route coverage, not full level certification or tra
 | REWIND / local hazards | `TestS3kHcz1RouteRewind`, ten independent cases | Water entry, bubble shield, both early bridges, fan lift, conveyor ride, spring ascent, boss active/hit/defeated. Each reaches its own live spot, captures all registered owners, advances 30 ordinary-input frames and checks immediate restore plus forward replay twice. |
 | LOAD / fresh live handoff | `TestGameLoopFreshLevelHandoff`, ROM-backed focused lane | Real fade callback retains PALETTE_FADE and defers four title archives to the next iteration; recording and live drivers restore destination slots before the no-VInt initial sprite pass and ordinary gameplay. Pause and two consecutive loads are covered. Pending fresh transitions exclude rewind; broader viewport/donor/team handoff coverage remains open. |
 | LOAD / timeline boundary | `TestS3kHcz1ReloadRewind` | Actual act-2 reload replaces object ownership and clamps live rewind history to the new root; 30 new-act frames restore/replay twice. Checkpoint/death-restart remains open. |
-| Configuration entry and reset | `TestS3kHcz1EntryMatrix`, 30 cases | Full cross product of 320/400/512/640/800px and off/S1/S2 donor: movement admission plus two 30-frame replay cycles; two repeated production resets retain width, donor, player and CPU-team ownership. This is entry/reset breadth, not full-route breadth. |
-| Full-route configuration axes | `TestS3kHcz1CompatibilityRoutes`, 15 cases | All five supported widths × off/S1/S2 complete with ordinary pad inputs, no P1 death/drowning, CPU lifecycle checks, six-hit defeat and actual reload. Other main characters/teams remain open. |
+| Configuration entry and reset | `TestS3kHcz1EntryMatrix`,30 production cases plus6 legacy geometry cases | Five production presets × off/S1/S2: actual movement admission, two entire-world30-frame replay cycles and two repeated production resets. Actual donor-supported CPU art/chain, main/camera focus and configured/resolved width are checked after restore/replay/load. Separate512/640 rows preserve the original custom geometry/reset assertions. Exact scoped qualification below; additional supported main/team and death/checkpoint products remain open. |
+| Full-route configuration axes | `TestS3kHcz1CompatibilityRoutes`, 15 cases | All five historical raw widths × off/S1/S2 complete with ordinary pad inputs, no P1 death/drowning, CPU lifecycle checks, six-hit defeat and actual reload. Other main characters/teams remain open. |
 | REWIND / horizontal arena admission | `TestS3kHcz1RouteRewind`, five independent width cases | Capture before the horizontal lock; 30 saved-input frames must cross it, then immediate restore and forward replay twice must match all registered owners. Native ROM min/max X bounds remain `3680`. This late checkpoint uses donor off; donor entry replay is covered separately. |
 | Arena trigger boundaries | `TestHczMinibossRomParity` | Initial camera window and horizontal admission checked on both sides at all five widths, retaining vertical-gate independence and native world-bound writes. |
 | PRESENT / ORACLE | Separate trace/native lanes | No pixels/audio or trace comparison is claimed. |
@@ -236,6 +241,31 @@ giant-ring handoff succeeds. The newly reached segment11 is incomplete, first
 row1510 Y07D6/07DF; AIZ frontiers remain unchanged. This does not establish
 native pixel, dynamic-art or audio parity beyond the fixture's comparisons.
 
+
+## Production presets, actual CPU art and repeated reset — 2026-10-14
+
+The [paired AIZ1/HCZ1 cohort record](s3k-aiz1-sonic.md#production-preset-and-actual-launch-profile-entry--2026-10-14)
+retains exact source, selectors, environment, ROM paths and all execution limits.
+There are 30 mandatory production cases: 15 movement/entry/two-cycle30-frame replay
+rows and 15 repeated-reset rows, each crossing the five actual presets with off/S1/S2.
+Six 512/640 custom-geometry cases retain entry replay and the complete prior two-reset
+contract, including ROM start, actual movement after reset, donor/CPU/contact state
+and replacement object ownership. New preset overloads never inject raw width and
+use the actual launch applier; old integer full-route/custom fixture initialization
+and controller behavior are unchanged. An explicitly supported S1 Sonic CPU has
+real donor art rather than treating the old invisible S1 Tails fixture as a
+production-compatible participant. The old fixture remains explicitly historical.
+
+The first full two-entry-class cohort passes 57/0/0/0 at 10:05:41 BST; HCZ1 is 36 cases,
+60.83 seconds. The affected production-owner follow-up passes 45/0/0/0 at 10:10:56 BST;
+HCZ1 is 30 cases, 51.98 seconds. Those 30 current rows plus six unchanged custom rows
+account for all 36 HCZ1 identities. The later sole-AIZ immediate-focus follow-up
+changes no HCZ1 source/behavior. Camera focus and CPU leader references are asserted
+immediately after both production restores, after both replays and each reset;
+they are not assumed from a snapshot that deliberately omits camera focus.
+Entry/reset is qualified; additional main/team, actual checkpoint/death, per-mechanic
+and new 352/528 full-route products, native pixels/audio and trace conformance remain
+separate obligations. Combined delivery is lead-owned and pending.
 
 ## Native fresh-title ownership follow-up — 2026-10-14
 

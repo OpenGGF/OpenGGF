@@ -386,7 +386,7 @@ appendage on reverse boundaries. The two Tails vectors advance that real
 appendage, assert its literal native bank and verify both registry directions
 and ordinary fresh-load artwork. No donor-name runtime branch is introduced.
 
-The ordinary S2 donor powered controller's lack of snapshot support is inherited:
+At this original repair, the ordinary S2 donor powered controller's lack of snapshot support was inherited:
 `Sonic2SuperStateController` leaves the base null snapshot hook because of its
 live stars reference. The new ending adapter captures the native S3K scene
 controller; it does not qualify preexisting S2 powered-controller RAM history
@@ -1062,3 +1062,569 @@ this core does not claim absent child progression from derived parent defaults.
 Across these focused selectors there are41 distinct cases (repeated pressure and
 facade checks are not new coverage). Whole legal graph pressure and native scene
 pixel/audio comparison remain pending; this evidence does not close them.
+### Ordinary donor RAM follow-up — 2026-10-14
+
+The [matching-controller qualification](../plans/2026-10-13-s3k-playable-completion.md#ordinary-s2-ram-and-matching-controller-binding-qualification)
+closes the inherited S2 snapshot limitation with unchanged public snapshot
+shapes, current world-owned sparkle lookup and silent script/physics
+reconciliation. Each actual controller's RAM is restored after its resource
+binding changes; foreign packed/unset-tier shapes cannot mutate the temporarily
+attached owner. The private scene preserves captured physics before any native
+powered writer, and inactive re-entry uses its own immutable fresh-construction
+RAM. A coherent64-case check includes actual transforming/Super and
+progressed-scene first-entry replay with two registry cycles. This does not
+retroactively broaden the original donor30 or native capture claims.
+
+### Actual managed ending graph under continuation pressure (2026-10-14)
+
+The allocation worker fast-forwarded its clean tree from core
+`ae632fe2a6eec9bece7cafb4f2643c74365565c3` to the coordinator's qualified native
+child graph `1c8cfbe33`. New `TestS3kEndingNativeGraphPressure` uses real D01
+production phases and fills only free slots with actual IslandLift owners.
+Fragmentation admits the native prefix once, with the final child at global
+SST93: two flame subtypes, propeller, passenger, Master passenger, small
+propeller, small Master, and the fixed Tornado's separately allocated pilot,
+for both Sonic and Tails. Attributes are literal retail values from
+`Obj_5EB32`, `loc_5ECB4`, `word_600F2/600F8/600FE/60110` and the native parent
+copy rules, independently of the field projection being tested. The byte-RAM
+oracle binds the five partial writes in `Create_Continue_Sprite`; the engine
+retains the child's actual headers/cursor/fractions and numeric identity.
+Every case executes two old-owner/replacement full-world restore cycles and
+forward replay. No synthetic sentinel supplies scene residue.
+
+The physical-alias case admits catcher93 through the real fixed Tornado8,
+then follows native `_unkFAA4` into Master48's parent3. Master reads the
+replacement's X/Y before and after the new IslandLift initializer, rather than
+the displaced catcher's Java fields. Two full-registry class/identity restore
+cycles retain the alias. Displacement leaves the old object undestroyed and
+keeps its numeric object identity; it does not call native deletion/onUnload.
+This is declared allocation-pressure evidence, not an observed cold campaign
+or arbitrary 74-byte SST export. Fixed Tornado8/Master48 cannot be SST93 victims
+at these D01 calls. Knuckles-only primary children have no continuation caller:
+`loc_5DD6A` explicitly skips Player_mode3. The existing real cloud and palette
+helper pressure cases remain separate complementary evidence.
+
+The first request43234 on `1c8cfbe33` plus test blob
+`6c0215f1ef0610339c5361ae2863faa549485d65` completed at09:33:32 BST:17 tests,
+12 passed, five assertion failures, zero errors/skips;1:13 Maven. Four failures
+were fixture assumptions that all90 owners remain after small-group admission:
+the native flag4 retires four earlier large children later in that same object
+pass, leaving86. The fifth compared catcher93's just-updated Y against
+Master48's earlier read. The corrected fixture asserts the four real
+retirements, declares the subsequent full-table helper boundary explicitly,
+and compares the catcher value actually available before Master48 executes.
+No runtime timing, state or allocation behavior changed.
+
+Corrected test blob `a790f70589fad4c003f4f53322426589aadb58f9` passed all15
+affected cases in19591 at09:35:55 BST,31.519s Maven, zero failures/errors/skips.
+The two unchanged pilot cases already passed43234; these results qualify17
+distinct graph-pressure cases, not32 new cases. On the identical composed
+runtime, the complete existing continuation core class passes11/0/0/0 in7093
+at09:38:14 BST,26.058s Maven. All commands used Java25, the local normal queued
+wrapper and the original locked-on ROM through its absolute property; no
+smoke/full suite or graphics acceptance is claimed.
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestS3kEndingNativeGraphPressure' '-Ds3k.rom.path=<MAIN_WORKSPACE>/Sonic and Knuckles & Sonic 3 (W) [!].gen' test
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestS3kEndingNativeGraphPressure#admittedNativeGroupPreservesRealChildResidueAndBothRewindDirections+nativeMasterCatcherAliasReadsPhysicalSuccessorBeforeAndAfterFirstDispatchAndRestoresTwice' '-Ds3k.rom.path=<MAIN_WORKSPACE>/Sonic and Knuckles & Sonic 3 (W) [!].gen' test
+python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestS3kEndingContinuationPressure' '-Ds3k.rom.path=<MAIN_WORKSPACE>/Sonic and Knuckles & Sonic 3 (W) [!].gen' test
+```
+
+Native scene pixels, PAL and full PCM acceptance remain open. The independently
+specified VInt0/RNG0 setup was frozen before observations in the owned external
+`declared-scene-spec-v1.json` (SHA256
+`82b6458c4e86a5b0d63fa8b25f3513b02675f4aa5c5e5d3f8493430c95320f68`).
+The historical SSZ input clock410766 originated from a native RAM comparison
+and is not reused as an independent setup. The exact official BizHawk2.11
+archive (`cdaf9650d880bae660d63a388430f630b8d8a96b1ba59ebf0e0195a645c3bab8`)
+and immutable host/core bytes are separately owned/pinned. The trace host's
+ordinary Advance passes video=false; a video-enabled capture/observation port
+must establish current framebuffer and publication semantics before pixel
+acceptance. Prepared RAM SAT/palette and published VRAM SAT/CRAM are distinct.
+Historical film, input, source-index and capture-index bytes remain untouched.
+
+
+### Capture boot preserves a native camera binding (2026-10-14)
+
+The declared Sonic Chaos scene's first 65-pass engine picture retained a water
+strip at x0–31, y35–132, where the native picture has black starfield and stars.
+The ROM-filled initial foreground ring matches all 2,048 native cells before
+ordinary dispatch; the later engine ring contains 272 extra terrain cells.
+The background's published ring matches all 2,048 cells at the sampled native
+publication producers. The full-layout/wrap hypothesis was rejected rather
+than changing the background shader.
+
+The immutable engine diagnostic jar
+`e33e629ce4dd208acd87e162adaae8cff970fef67794ded2865cd93704872aee`
+(HEAD `eea476471`, runtime-source SHA256
+`d7177d1804e3bf3a1b40d3747b358457eaa736fcab2e2a72bdfaa8240e617062`)
+shows capture boot already changed physical camera 512/512 to 0/204 while copies
+were 86/281. `HeadlessGameBoot` rebound the focused player after level load;
+`Camera.setFocusedSprite` itself replaces both physical and copy words with
+player top-left coordinates, and the following forced snap changed them again.
+The next ScreenEvents pass streamed the wrong columns/rows. The pending fresh
+boundary was false, so the initially suspected fresh-title snap was not on this
+path and was not changed.
+
+The capture host now keeps the entire native camera binding while frozen.
+Ordinary unfrozen entry still binds its leader and performs its existing forced
+snap. Ending_ScreenInit (`$5AAA2`) runs during load; SSZ1_ScreenInit (`$571F6`)
+runs while preparing initial Process_Sprites. Independent five-width vectors
+assert the actual owner boundary, the literal physical/copy words, frozen state
+and live leader identity. The first 10-case attempt had five genuine ending
+camera failures and five premature SSZ lock assertions. The next 12-case run
+passed the rendered strip check and existing fresh-load case but still failed
+all 10 new assertions: guarding only the forced snap left the focus-assignment
+overwrite, and the SSZ assertions still preceded its owning pass. Neither run
+qualified complete camera/pixel behavior.
+
+The corrected existing `TestGameplayCaptureFreshLoad` class passed 11 cases,
+zero failures/errors/skips, at12:40:11 BST (request 63693, 1:10 Maven), on
+`c92dae73a` plus the scoped host fix and pending ending-owner work. This closes
+the five actual viewport camera products and ordinary destination assembly;
+it does not certify whole native scene pixels. The separate rendered ring
+check and viewed full picture remain part of the ending presentation lane.
+
+```bash
+JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestGameplayCaptureFreshLoad' '-Ds3k.rom.path=<MAIN_WORKSPACE>/Sonic and Knuckles & Sonic 3 (W) [!].gen' test
+```
+
+No FreshLevelTransitionBoundaryController, gameplay clock, renderer projection
+or ROM state was changed for this host correction. Historical screenshots,
+films, source hashes and native prepared/published generation identities remain
+separate. Native nine-branch whole-scene/PAL/PCM and SAT 20-sprite/320-dot overflow
+acceptance remain open beyond the qualified allocation/graph checks.
+
+
+### Source-owned initial and published ending presentation (2026-10-14)
+
+This follow-up uses an independently declared native scene, not a cold campaign
+or trace-row bootstrap. Specification v2 (`7711c315a9b10fa7cb94fa9c3465fb280509a338d18cf8ebfa0d80ad3fcfc7cb`)
+lets the real Title Start path enable display and leave demo mode before the
+one-time normal-level destination/player/progress selection. The initial
+`Process_Sprites` return at `$6484` owns the declared VInt0/RNG0 publication;
+subsequent controller ordinal0 starts at the first ROM controller poll. No
+camera, actor, palette, VDP or demo-flag values are supplied. Specification v1
+is retained as rejected startup-prerequisite evidence. Clock410766 came from an
+older comparison row and is not reused to establish this independent setup.
+
+The separately committed native port `bf3c5391c` preserves ordinary Advance's
+video-disabled behavior and adds an explicit video-enabled advance. Capture
+rejects stale output after ordinary/audio attempts and same-frame savestate
+loads, and copies current pixels plus VRAM/CRAM/VSRAM. Its13 registered cases
+pass. The exact official BizHawk2.11 archive and immutable host
+`71b949a6b3ecb0709d4ba73f8cc0752d945a14c15c58f0326fc3adb7d4d4031b`
+are pinned outside the repository. Native scene output remains comparison-only.
+
+The initial native palette owner is Level `$64DC`: D01 fills lines1–3 white,
+starts the22-pass palette fade and leaves line0 to the actor. Animate_Palette's
+signed timer gate runs before `Process_Sprites`; its negative event byte blocks
+AnPal, while the initial FACE signed countdown reloads2. `Pal_DecColor2` only
+reduces components above their target, preserving below-target components.
+Powered palette advancement now belongs to AnPal admission before objects;
+P1 still owns form, physics, rings and auxiliaries. There is no controller-local
+22-frame delay. Later ScreenEvents ST/CLR suspends and resumes the same captured
+timer, including derived palette reapplication. The e973 matching-controller
+snapshot rejection and native construction baseline remain intact. The added
+initial delay is an internal ScreenRam serialization field, not a V5 or Mod API
+schema change.
+
+Initial foreground/background ring filling now follows the native full32-block
+rows and first background redraw, retaining all2,048 cells of each plane. The
+first foreground signal only resets its rounded cursor before ordinary row/
+column streaming. The earlier left-side water strip was capture-host camera
+rebinding, diagnosed and repaired separately above. For AIZ return, the native
+AIZ1_Deform bank inherits its `$3C` long before adding `$2000`, emits six backward
+wave stores and thirteen slope stores, and uses word camera origins. The delayed
+background redraw and subsequent row tails consume that bank; pure restore
+rebuilds output without advancing it. `loc_5B03A` replaces only background row7,
+columns4–7, with `$1A,$1B,$1A,$1B` through the mutation pipeline. These authored
+chunks expose the existing two dolphin owners; the old rabbit field name is
+retained for snapshot compatibility, not used to invent new scene actors.
+
+Three independently reproduced presentation defects were repaired:
+
+- The reunion's explicit `render_flags` H-flip is separate from its status-facing
+  write. `loc_5E1F0` sets the actual P1 render flip; `loc_5E2C2` clears it at launch.
+  All ten five-width Sonic/Tails field vectors failed before this correction.
+- Native B-high sea must replay the same published scroll selected by the rear
+  plane pass. Four actual320/800 overlap vectors failed when the effect read
+  later CPU deformation. An immutable internal background-scroll bridge now
+  carries displayed horizontal/vertical/column/period data; existing HCZ callers
+  retain their previous path. Lazy refresh and restored publication are checked.
+- `Render_Sprites` `$1AEE4/$1AF2A` emits the Tornado main mapping, then sub2 and
+  sub3; earlier opaque SAT pixels win. Separate painter calls in that order
+  instead overwrote its wheel with the propeller. Two first-entry GPU negatives
+  independently reconstructed101 different-color opaque overlaps from ROM
+  mappings and found0 correct body pixels. Only the local multipart painter
+  emission is reversed; collection retains native order. The positive vectors
+  also check both actual plane facings, signed sub_86458 offsets, the six-pass
+  nose table and VInt-selected propeller frame. Arbitrary V-flipped parent
+  headers are not visually certified by natural C0/C1 scene examples.
+
+Focused evidence is attributed to each completed command, not accumulated into
+one pristine run. The initial palette/AnPal/controller/donor/resource set passed
+100 cases (`91638`, zero failures/errors/skips). On the later shared presentation
+candidate, `74972` completed66 cases with4 oracle-premise failures: old island
+checks sampled live rather than producer scroll, and P1's619 opaque ROM pixels
+included20 legitimately occluded by earlier native plane-wing pieces. These
+masks are now derived from actual ROM geometry/opacity and native ordering, not
+observed mismatch coordinates. The corrected ten pixel cases passed `25068`.
+Finally `61216` passed28 affected cases, zero failures/errors/skips, at15:10:04
+BST (1:34 Maven): pixel12, reunion whole-registry10 and publication/lazy-refresh6.
+The other earlier shared consumers remain attributed to their frozen sources.
+There is no worker broad/full-suite claim.
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl ALSOFT_DRIVERS=null python3 tools/testing/maven_queue.py -Dmse=off '-Ds3k.rom.path=<MAIN_WORKSPACE>/Sonic and Knuckles & Sonic 3 (W) [!].gen' '-Dtest=TestS3kEndingScenePriorityPixels#tornadoMultipartKeepsMainSatPiecesAheadOfItsNoseAndPropeller' test -B
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl ALSOFT_DRIVERS=null python3 tools/testing/maven_queue.py -Dmse=off '-Ds3k.rom.path=<MAIN_WORKSPACE>/Sonic and Knuckles & Sonic 3 (W) [!].gen' '-Dtest=TestS3kEndingScenePriorityPixels,TestS3kEndingReunionPresentation,TestLevelSpritePresentationLifecycle' test -B
+```
+
+The second command uses production source SHA256
+`bc5f53dca106435f4914def564e8ee9f213a2112df116724923f5d2d6faa0c8d`
+at parent HEAD `9db593c82` plus the scoped owners. Engine-only recapture `42038`
+passed12.568s at15:11:04 BST from immutable jar
+`55d2131fdc572d3071a7a69a6bdedbfd96189e55b00aeef8c3fbbc13f9b36faa`,
+using unchanged native `85099` output, specification and neutral inputs. Full
+images were viewed, not only slot/counter summaries. Sonic rescue1535 and
+reunion4095/5119/6143, and Tails AIZ restoration4095, have zero logical3-bit
+pixel diagnostic differences across320×224. This is not byte RGB acceptance:
+original native levels0..238 still differ from the engine's0..255 output.
+
+Remaining observed negatives include earliest scene input1 (Sonic1,457 and
+Tails1,838 logical pixel differences), Tails31/63/511 (34 pixels; published CRAM
+cells2–4), the small island figure at3071 (Sonic79/Tails75), and later Tails sea
+pixels at5119/6143 (122/140). Their owners still require attribution. All nine
+native branch products, other widths, PAL framebuffer/50Hz behavior, complete
+PCM, and a native SAT20-sprite/320-dot scanline-overflow witness remain open.
+The old61-second films/reel/index and every intermediate native/engine source,
+jar/input hash and negative observation are preserved separately. The stable
+observer protocol still needs promotion from its owned external prototype;
+none of these diagnostic generations certifies a complete cold campaign.
+
+
+### Tails' separate Sonic/Flicky palette timer (2026-10-14)
+
+The34 early Tails pixels were not an RGB conversion effect: native published
+CRAM2–4 remains `$E66,$C42,$822` at ordinary31/63/511, while the engine advances
+that Sonic/Flicky palette. `Obj_5D86A` writes `Palette_timer=$7F` after every
+rescue dispatch for Player_mode2; `loc_5E4E2` repeats it only in terminal reunion
+routine18. Neither writer holds Tails' separate `Palette_timer_Tails`, whose
+body cycle still precedes the Sonic/Flicky cycle in AnPal. Both omitted writers
+now call the internal companion-timer operation at those exact owner boundaries.
+Earlier reunion swing and AIZ return do not gain an invented blanket hold.
+
+The existing S3 snapshot only retained the companion timer's low nibble. Literal
+126/127 restored as14/15. The high nibble now occupies unused bits12–15 of S3's
+existing transformation owner word; flags8–11 and the previous low-nibble
+presentation encoding remain intact. All word consumers were inspected: S3's
+four flag masks and two full-word copies preserve it, the base core restore
+ignores the word, and S2 has no reader. Public RewindState/Value shapes, ordinary
+0/6/15 representations and S2 matching-owner rejection remain unchanged.
+
+Request78374 completed9 cases with6 genuine failures, zero errors/skips:
+three actual rescue holds and the terminal writer were missing, and both larger
+timer values truncated; ordinary low timers passed. Corrected request42899
+passed126 cases, zero failures/errors/skips, at15:33:01 BST (1:11 Maven), on
+production SHA256 `130b8e4d2d095882642d4bc8f6b2a210d016c68e8b4e730e16e62c71007a1649`:
+initial palette15 including all three progress values, actual body/held-cell
+checks and two complete registry cycles; ending literal16; ordinary S3/generic43;
+ordinary S2 donor4; and native binding48. This qualifies the owner and byte
+capture, not a new native screenshot generation or complete scene acceptance.
+The historical v4 Tails pictures remain negative evidence until the next
+coherent palette-owner capture. Native small-plane palette destination and
+other listed visual/RGB/PAL/PCM obligations remain open at this checkpoint.
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk python3 tools/testing/maven_queue.py -Dmse=off '-Ds3k.rom.path=<MAIN_WORKSPACE>/Sonic and Knuckles & Sonic 3 (W) [!].gen' '-Dsonic1.rom.path=<MAIN_WORKSPACE>/Sonic The Hedgehog (W) (REV01) [!].gen' '-Dsonic2.rom.path=<MAIN_WORKSPACE>/Sonic The Hedgehog 2 (W) (REV01) [!].gen' '-Dtest=TestSonic3kEndingSuperState,TestS3kEndingInitialPalette,TestSonic3kSuperStateRewind,TestSonic3kSuperTransformationEligibility,TestSuperStateController,TestSonic3kModSuperFormGate,TestSonic2DonorSuperStateRewind,TestS3kEndingDonorSceneEntry' test -B
+```
+
+
+### Native small-plane palette destination and v5 published evidence (2026-10-14)
+
+`loc_5DD0E` and Knuckles `loc_5E984` call `PalLoad_Line1` ($85940).
+The helper at sonic3k.asm:180037 selects `Normal_palette_line_2`, not the
+first line: its suffix is zero-based. Both ending callers now load the ROM
+`Pal_SmallPlane` ($60A9A, 16 words) into engine line1, preserving player line0.
+The previous line0 upload explains the small island figure's 79 Sonic / 75
+Tails logical-color pixel differences at native input3071. No tile, mapping,
+clock, actor coordinate or palette conversion was fitted.
+
+A first draft failed test compilation only (request7220, inherited protected
+restore hook access); no tests ran. The corrected independent native branch
+fixture reached the actual handoff and request71011 failed all18 cases on the
+wrong destination, zero errors/skips (23.247s, 15:45:47 BST). After the two
+source-line corrections, request76849 passed46 cases, zero failures/errors/skips
+(1:33 Maven, 15:52:52 BST): 18 small-plane literal ROM palette/world vectors,
+16 Knuckles ending consumers and 12 scene priority GPU cases. The new vectors
+cover320/800, all three characters and progress−2/0/+2; exact16 color words,
+line0 preservation, both complete-world restore directions and two cycles.
+Their declared routine setup is component evidence, not a cold fight/movie
+product or an independent wide-flight geometry oracle.
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl ALSOFT_DRIVERS=null python3 tools/testing/maven_queue.py -Dmse=off '-Ds3k.rom.path=<MAIN_WORKSPACE>/Sonic and Knuckles & Sonic 3 (W) [!].gen' '-Dtest=TestS3kEndingSmallPlanePalette,TestS3kKnucklesEnding,TestS3kEndingScenePriorityPixels' test -B
+```
+
+Production SHA256 is
+`6c6d053cbf30b9d7a5fead8e98c63476a226cadebedeab624f76438b7cce70ca`
+at parent `a66ccb0cbd62febf5618c1867c93e7e4d2172577` plus these two changes.
+Engine-only request81929 passed11.422s at16:05:37 BST, using immutable jar
+`6791d7a5562aaf5a64fe19ad38ebc99b8b4911bfcc8970dc91cfa46fa2492b92`,
+unchanged native85099 captures, fixed specification, neutral inputs and the
+explicit setup/poll ledger. External standalone compilation was inside the
+queued exec's intended worktree lease. The v5 source/provenance and all older
+negative generations remain under the owned ending-native-reference-prerequisites
+directory; no native capture was repeated. Actual child intervals were
+15:05:26.744833–15:05:31.766734 UTC (Sonic) and
+15:05:31.783352–15:05:37.055753 UTC (Tails); both used EndingEngineSpotProbe,
+1GiB, two CPUs and surfaceless EGL with exact argv in their provenance.json.
+
+Viewed native input3071 versus engine outer3072 now has zero logical3-bit
+pixel differences over320×224 for both characters. This remains a diagnostic,
+not original byte-RGB acceptance. The companion hold from the preceding
+checkpoint also makes all64 published and CPU CRAM words match native at
+Tails31/63/511, but34 image pixels remain: that is a separate unresolved
+sprite tile/palette-selection or projection owner, not evidence that the
+companion timer failed. Initial input1 (Sonic1457/Tails1838), Tails later sea
+pixels5119/6143 (122/140), original native0..238 versus engine0..255 RGB, all
+nine branch products, remaining widths, PAL/PCM and SAT overflow are still
+open. In particular, CPU palette cells62/63 differ at those later sea spots
+while published CRAM matches native; a later-produced CPU bank must not be
+substituted for the framebuffer generation. Historical media/index bytes
+remain immutable.
+
+
+### First opaque player mapping piece and original RGB attribution (2026-10-14)
+
+The remaining34 early Tails image pixels were a mapping-piece priority error,
+not a failed palette hold. Native published SAT at input63 contains the four
+C4 pieces in ROM order; all20 player VRAM patterns match the engine's published
+DPLC versions exactly and all64 published CRAM words agree. An independent
+raster of the overlapping opaque pieces finds exactly34 differing-color
+pixels: every native pixel selects the first piece, every old engine pixel
+selects the final piece. Example source overlap is tile$6AE color7 versus
+tile$6A6 color9. No observed coordinates define an exclusion mask.
+
+PlayerSpriteRenderer drew mapping pieces forward on its direct painter path,
+unlike the existing PatternSpriteRenderer. It now emits painter pieces in
+reverse order while preserving native forward SAT collection and each original
+head-mask piece index. All public declarations, fields, state and snapshot
+shapes stay unchanged. Request32815 had four genuine painter negatives and
+four green SAT controls; its two GPU draft failures were an over-specific
+34-color-count premise. Different legitimate current body phases merge some
+colors, so the test instead derives its ROM opaque footprint and requires the
+actual first-owner colors at every distinguishable overlap. Corrected67341
+reproduced2/2 failures (8 expected /0 matching at320/800), zero errors/skips,
+24.298s. The full changed-owner request3509 passed54/0/0/0 at16:41:23 BST
+(1:35 Maven): new mapping-order8, ending GPU14 including full-world/pixel
+replay in both directions/two cycles, palette context2, native S1/S2/S3 head
+art6, SAT preparation2/replay2, presentation14 and lifecycle6.
+
+Production SHA256:3b9722f5ec586c0008e11bbbd3b2a342c1d2f05ca128e9c48e612e0127b998cd
+at bf7361a3a3ce2b6fc71256fc2059c29d8402f163 plus the scoped renderer fix.
+Engine-only v6 request42302 passed12.522s at16:52:17 BST. Its immutable jar is
+2fa8fafa27c8e1f1d7d69eefcc93f0bd18097847d06bd7f311d447f269478dd0,
+with unchanged native85099/reference specification and neutral controller
+input. Actual child UTC intervals were15:52:05.635152–15:52:11.358434 (Sonic)
+and15:52:11.372691–15:52:17.045934 (Tails); exact EndingEngineSpotProbe argv,
+1GiB/two-CPU/EGL options, source/input/jar hashes and ledgers are retained in
+new v6 provenance files. Helper compilation remained inside queued exec's
+intended worktree lease. Full native/engine frames were viewed: Tails31/63/511
+now has zero logical3-bit differences across320×224; the initial Tails negative
+falls1838→1804, while Sonic's1457 remains. Sonic31..6143 and Tails1023..4095
+retain zero logical differences. Later Tails5119/6143 remains122/140. Its VSRAM
+and216 of224 published HScroll words match, but native ROM VDP13=$3C points at
+VRAM$F000, whose rows196–199 and212–215 each differ by one background pixel.
+That remaining source bank/arithmetic/admission issue is not repaired by the
+player mapping fix. Original byte RGB still differs and has not been normalized
+into a passing comparison. Historical v1..v5 images remain preserved.
+
+The pinned reference RGB transfer is also now explained by primary source.
+BizHawk2.11 pins Genesis-Plus-GX051d430d3d1b54625f9900c8f152d7f232e06daf.
+Its32BPP Mode5 LUT doubles each3-bit normal component, then replicates the
+resulting nibble into both byte halves: output is34*v, maximum238. BizHawk's
+managed video provider copies those pixels verbatim and the actual host uses
+default settings without a LUT/gamma option. OpenGGF's public Palette.Color
+uses its canonical rounded255/7 transfer. This source-owned reference choice
+does not by itself establish analog hardware RGB or justify changing the
+public color operation; byte-RGB acceptance remains explicitly different.
+
+Primary source: [normal LUT and pixel format](https://github.com/TASEmulators/Genesis-Plus-GX/blob/051d430d3d1b54625f9900c8f152d7f232e06daf/core/vdp_render.c#L1001),
+[32BPP build selection](https://github.com/TASEmulators/BizHawk/blob/2.11/waterbox/gpgx/Makefile#L25),
+[verbatim video copy](https://github.com/TASEmulators/BizHawk/blob/2.11/src/BizHawk.Emulation.Cores/Consoles/Sega/gpgx64/GPGX.IVideoProvider.cs#L128).
+
+The initial Sonic input1 image's large incomplete shape was initially named
+Tornado incorrectly. Actual published SAT entries17–20 use C52E/CD2E:
+the visible owner is Master Emerald; initial Tornado is mostly offscreen.
+Native Master VRAM differs in2059/2176 bytes between input1 and settled31,
+while the engine already shows coherent art. This is an unresolved initial
+KosM/DMA publication question, with normal load-time profile/admission still
+to be checked before any timing repair. No fitted delay, RGB normalization or
+reference asset injection is proposed. All nine products/PAL/PCM, later sea
+and native SAT overflow remain separate obligations.
+
+```bash
+JAVA_HOME=/usr/lib/jvm/java-25-openjdk JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl ALSOFT_DRIVERS=null python3 tools/testing/maven_queue.py -Dmse=off '-Ds3k.rom.path=<MAIN_WORKSPACE>/Sonic and Knuckles & Sonic 3 (W) [!].gen' '-Dsonic1.rom.path=<MAIN_WORKSPACE>/Sonic The Hedgehog (W) (REV01) [!].gen' '-Dsonic2.rom.path=<MAIN_WORKSPACE>/Sonic The Hedgehog 2 (W) (REV01) [!].gen' '-Dtest=TestPlayerSpriteRendererPiecePriority,TestS3kEndingScenePriorityPixels,TestPlayerSpriteRendererPaletteContext,TestPlayerHeadPresentation,TestSpritePieceRendererSatPreparation,TestGraphicsManagerSpriteSatReplay,TestSpritePresentation,TestLevelSpritePresentationLifecycle' test -B
+```
+
+
+### Qualified transfer owner and producer bindings
+
+`Process_Kos_Module_Queue` (sonic3k.asm2726–2794) starts a direct child, sets bit7,
+then waits for the complete direct FIFO to empty. Its completion calls
+`Add_To_DMA_Queue`; the next supported VInt drains the bytes. The existing
+S3K timed module preparation already enforces the complete direct FIFO gate
+(line682). The new bridge therefore consumes its real start/claim receipts,
+rather than creating another job or guessing a frame delay. S3K VInt8/C/10 and
+Do_ControllerPal retain their existing service/admission owner; render calls
+and parent claims cannot publish.
+
+`GameplayModeContext` injects the internal PatternModuleQueueOwner capability.
+The physical facade keeps its public Snapshot/ArchiveState/DmaTarget shapes;
+S3kRuntimeArtCoordinator registers a separate captured transfer adapter. Its
+immutable child receipt includes actual source and compressed end length;
+a pending DMA owns copied ROM bytes and destination. The bridge retains the
+actual submitted HardwareWorkHandle/fingerprint after the producer claims its
+parent. This is readiness authority only, with no comparison-derived values,
+scene keys, fixture keys, new work or gameplay hydration.
+
+Each paired entry also captures its admitted FIFO position. Two identical
+source/destination descriptors cannot distinguish an unpaired predecessor
+from a later submitted job. A copied physical snapshot also cannot retain Java
+entry identity. Position changes only on the actual final-archive shift; failed
+admission, module advancement and clear never invent a shift. Duplicate paired
+and unpaired predecessors are restored in both directions through two cycles.
+
+Explicit production bindings cover DEZ final/miniboss/endboss, LRZ rock crusher,
+miniboss, Death Egg, boulder, autoscroll and endboss, SSZ runtime art and launch,
+SOZ miniboss/endboss and FBZ miniboss/subboss/endboss. Results and the FBZ boss
+approach now submit one actual timed job with a captured automatic claim, since
+the native global producer retains no sprite-owned handle. Admission preflights
+both facades before mutation and binds the existing resident-pattern journal.
+The AIZ fire overlay remains timing-only prepared mutation; it has no physical
+journal entry to pair. Terrain/title/enemy timing-only preparations, explicit
+standalone generic queues and the declared FBZ visual executor remain outside
+this paired publication contract. No movie or zone identifier selects it.
+
+### Evidence and rejected approaches
+
+| Request | Observed result and owning correction |
+| --- | --- |
+|77880|One actual-ROM negative: physical queue reached IDLE before the submitted direct child completed. Production base69e4f51; no bridge yet.|
+|96287|Build-only all-source compile,1:16; zero tests.|
+|35625|50 cases/1 failure/0 errors/skips. Recording fixture was rebound by a real DMA target during failed fifth submission; prefix remained unchanged. The fixture now rebinds its declared sink in finally.|
+|22304|2 cases/1 failure/0 errors/skips. Actual identity-only association let an identical unpaired predecessor borrow a later job's readiness. Rejected; capture native FIFO position instead.|
+|56679|18 passed,0 failures/errors/skips,21:13:58 BST,1:05. Includes bridge8, actual320/800 registry/pixel replay2, generic physical6 and gameplay1, plus DEZ root1.|
+|89206|2 cases/0 failures/1 error/0 skips. Logical FIFO full was discovered after physical enqueue; preflight now rejects before either mutation.|
+|32003|112 cases/0 assertion failures/2 errors/0 skips,21:36:12 BST,1:10. Existing mocked FBZ coordinators had null private fields; static service binding now delegates through a package-private instance operation. Actual bridge11/world2/results and resource cases passed.|
+|4922|289 cases/41 assertion failures/0 errors/skips,21:45:15 BST,5:41.248 passed.38 donor entry failures were omitted explicit S1/S2 ROM properties;3 legacy departure assertions expected physicalX0 despite native Ending_ScreenInit's retained200 words.|
+|69069|60 passed,0 failures/errors/skips,21:49:09 BST,1:51. All57 AIZ/HCZ entry/reset rows use verified explicit donor ROMs; all3 departure mask/body/palette cases retain physical200/copy260, matching native initialization and the qualified capture guard.|
+
+The final production Java SHA256 is
+`1d16c7498d2b91d2d4ee37b982e278e3910a97dac9817e0abd9f64d3aa05b351`
+over sorted src/main/java paths, NUL, bytes, NUL on base69e4f51. The actual
+policy surface normalizer reports unchanged tagged KosinskiModuleQueue
+public/protected declarations; no descriptor, API version or signature pin
+change is needed. The new adapter changes only internal captured state.
+
+Focused current-consumer coverage includes the11 bridge vectors, pending VInt
+DMA, unserviced jobs, full FIFO, multi-module final size/source alignment,
+unavailable target, duplicate descriptors, parent-claim races, actual resident
+writes, captured auto claims, both full-world directions and replay. Actual
+boss/results producers,18 ending lifecycle cases, original GPU art cases,
+required startup owners, PLC mapping limits and sprite corruption guards pass.
+This is bounded component/consumer evidence, not smoke, release-suite or native
+whole-scene certification. Full commands and exact source limits remain in the
+dated artifact; no raw Maven logs are archived.
+
+### Published-domain fence and retained limits
+
+Pinned GPGX `system_frame_gen` begins with VBlank/VInt, then renders active lines
+0–223 and returns. It does not execute the next VBlank before Advance returns.
+The earlier conjecture that all end-of-Advance domains belonged to the next
+VInt is rejected. Compare the current completed native generation against
+current engine published buffers; only a witnessed active-display VDP write
+could require an intra-line observation. Do not globally shift rows. CPU
+prepared SAT/HScroll/Normal_palette remain separate from VRAM SAT/HScroll,
+CRAM and the framebuffer. Engine display observations are the immutable
+LevelSpritePresentation tiles/pattern versions/background scroll and actual
+uploaded combined palette texture, not a later live P1/deformation/palette.
+
+Original byte RGB remains different (engine public3-bit→255 policy versus the
+pinned core's normal34*level→238 transfer). The initial native Master2176 bytes
+retained from scene ingress differ from engine resident ingress before either
+new upload; this transfer repair cannot certify that residue. Late Tails eight
+published HScroll words remain a separate bank/admission question. All nine
+native branch products, complete PAL/PCM comparison and real SAT scanline
+20-sprite/320-dot overflow remain explicit obligations. Historical media and
+original domain/RGB/source/input bytes are preserved.
+
+
+### Engine-only transfer recapture v7 (2026-10-14)
+
+Request94002 finished at21:54:55 BST,12.470s, exit0. Maven's normal execution
+request retained this source/classes tree's build lease across the immutable
+snapshot, external javac and both child JVMs. The snapshot is
+`engine-paired-kos-module-transfer-v7.jar`, SHA256
+`4dd49f56d0f230f3075034f2c3ee5151f0642f09e6a7051858f75e78b3f8b52c`.
+It contains the qualified runtime Java SHA1d16c749 above from base69e4f51 plus
+the working patch. The unchanged comparison-only probe source is SHA256
+`b22966b531d35521abd650fb322d1628d0b4e452fb727cfaba7cd364036a95b2`.
+The two child intervals are20:54:45.562824–20:54:50.584139 UTC (Sonic Chaos)
+and20:54:50.597731–20:54:55.869116 UTC (Tails Super); each runs6144 ordinary
+neutral inputs after the separately declared initial setup. The observed
+VInt/RNG0 protocol and unchanged native85099 reference bytes remain intact.
+
+The actual Master2176 CPU SHA remains the ingress5626d9a8 through outer3.
+The real direct child completes and the physical module queues DMA at outer3;
+the existing supported VInt publishes settled0ae35f32 at outer4. The rejected
+unpaired facade had uploaded at outer2. This qualifies the runtime transfer
+boundary; the retained reference only samples native initial1 and settled31,
+so this observation does not establish cycle-exact native upload timing.
+
+Full viewed Tails pairs at native1/engine2,3071/3072 and6143/6144 retain their
+whole-scene geometry. The independent setup/producer ledger determines the
+N→N+1 pair, never an image-fit offset. Diagnostic3-bit differences are zero at
+31/63/3071 for both scenes and at5119/6143 for Sonic. Initial Sonic1267 and
+Tails1259 differences are confined to Master x126..189,y55..102: native
+pre-upload retained VRAM is different, and no reference bytes were imported.
+Tails late5119/6143 remains122/140 pixels at rows196..214; the same eight
+HScroll words remain open. Original byte RGB is separately retained, including
+the broad238-versus255 transfer difference. No native nine-branch, PAL, PCM,
+scanline overflow or cold campaign acceptance follows from these two scenes.
+
+Durable external outputs are `declared-engine-spots-sonic-chaos-320-v7` and
+`declared-engine-spots-tails-super-320-v7`, with per-case source/jar/probe/input/
+command/time/domain hashes; `paired-transfer-v7-comparison.json` records both
+original RGB and diagnostic counts. Earlier v1–v6 outputs, native references
+and historical highlights remain byte-identical. Reproduce from the committed
+source using `run_engine_scene_spots-v7.py %classpath` through the normal queued
+`exec:exec` launcher; historical worktree paths remain provenance, not a claim
+that those paths survive cleanup.
+
+The published-domain order comes from pinned GPGX
+[system_frame_gen](https://github.com/TASEmulators/Genesis-Plus-GX/blob/051d430d3d1b54625f9900c8f152d7f232e06daf/core/system.c#L347): VBlank/VInt precedes
+active display, with return after active display. The earlier universal
+end-domain-next-VInt conjecture is rejected; an actual active-display write
+would need its own line-boundary witness. Prepared CPU RAM and displayed
+VDP/engine immutable publication remain separate observations.
+
+
+Completed queued commands (Java25; S3K_PARITY_ROM, S1_PARITY_ROM and
+S2_PARITY_ROM were the independently discovered absolute ROM paths in the
+main workspace, with the AGENTS SHA1/CRC identities verified; placeholders
+here preserve the machine role rather than copying ROMs):
+
+```bash
+JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl ALSOFT_DRIVERS=null python3 tools/testing/maven_queue.py -Dmse=off "-Ds3k.rom.path=$S3K_PARITY_ROM" '-Dtest=TestS3kKosPatternPublication,TestS3kKosPatternWorldRestore,TestS3kEndingSceneResources,TestS3kResultsKosQueueAndChildren,TestS3kResultsElementObjectInstance,TestFbzEventsAct2,TestFbzAct1Miniboss,TestFbzAct2Subboss,TestFbz2SubbossRewind,TestFbzEndBossAudioAndPlc,TestFbzEndBossFormalCorrections' test -B
+JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl ALSOFT_DRIVERS=null python3 tools/testing/maven_queue.py -Dmse=off "-Ds3k.rom.path=$S3K_PARITY_ROM" '-Dtest=TestFbzAct2Subboss,TestFbzEndBossAudioAndPlc,TestS3kKosPatternPublication,TestLrzAutoscrollGraphHeadless,TestLrzDeathEggBackground,TestLrzEndBossEncounterHeadless,TestS3kLrzBoulderCutsceneHeadless,TestSozMinibossProduction,TestSozEndBossProduction,TestSszDeathEggCutscene,TestSszLaunchBackground,TestSszLaunchState,TestS3kEndingLifecycleCapture,TestS3kEndingSpriteDmaCapture,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestS3kAiz1EntryMatrix,TestS3kHcz1EntryMatrix,TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits,TestPatternSpriteRendererCorruptionGuard' test -B
+JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl ALSOFT_DRIVERS=null python3 tools/testing/maven_queue.py -Dmse=off "-Ds3k.rom.path=$S3K_PARITY_ROM" "-Dsonic1.rom.path=$S1_PARITY_ROM" "-Dsonic2.rom.path=$S2_PARITY_ROM" '-Dtest=TestS3kAiz1EntryMatrix,TestS3kHcz1EntryMatrix,TestS3kEndingSpriteDmaCapture#tailsSuperDepartureUsesRenderCopiesForItsNativeScreenPlane' test -B
+JDK_JAVA_OPTIONS=-Dopenggf.headless.gl=surfaceless-egl ALSOFT_DRIVERS=null python3 tools/testing/maven_queue.py -Dmse=off exec:exec -Dexec.executable=/usr/bin/python3 '-Dexec.args=<CAPTURE_TASK_DIR>/run_engine_scene_spots-v7.py %classpath'
+```
+
+The first two invocations retain their red attribution above; the third closes
+only their missing donor prerequisites and changed camera premise. Native
+startup/boss/results/registry/render checks already green are retained instead
+of rerunning those unchanged classes. The lead owns composed smoke/guards and
+central current matrix/discrepancy/release prose.

@@ -50,7 +50,7 @@ D01 registry windows cover rescue flight, AIZ return where applicable, reunion, 
 
 Supported presets are **320, 352, 400, 528 and 800**. Short donor, flight, credits and roster checks assert the actual camera width. The configured seven-follower scenario is a large roster, not a claimed parser maximum. Complete ending lifecycles cover all three progress values for native Sonic, Tails and Sonic+Tails, and the maintained Knuckles final fight at320/800. These checks do not claim a complete cold campaign for every donor/width/team combination.
 
-The donor30 pass predates the final type-independent unclaimed-origin restore correction. Native Rescue36/D01 nine qualify that correction; the completed change-based smoke includes the donor class on composed `aaff73747`. Existing ordinary S2 powered-controller RAM snapshot support is an inherited gap outside the native scene binding. Continuous incoming DEZ/DDZ coverage is tracked in the [final DEZ matrix](s3k-dez-final-boss.md) and [DDZ matrix](s3k-ddz.md), with SSZ continuity in [SSZ2](s3k-ssz-act2.md). The [completed composed-source qualification](../../plans/2026-10-13-s3k-playable-completion.md#completed-composed-source-qualification) records the bounded smoke/guard result and inherited CLI assertion; develop source delivery and owned-worktree cleanup are complete.
+The donor30 pass predates the final type-independent unclaimed-origin restore correction. Native Rescue36/D01 nine qualify that correction; the completed change-based smoke includes the donor class on composed `aaff73747`. The inherited ordinary S2 powered-controller RAM gap is closed by the [matching-owner follow-up](#ordinary-s2-controller-and-native-binding-rewind-follow-up--2026-10-14), with local controller/world and binding replay evidence. Continuous incoming DEZ/DDZ coverage is tracked in the [final DEZ matrix](s3k-dez-final-boss.md) and [DDZ matrix](s3k-ddz.md), with SSZ continuity in [SSZ2](s3k-ssz-act2.md). The [completed composed-source qualification](../../plans/2026-10-13-s3k-playable-completion.md#completed-composed-source-qualification) records the bounded smoke/guard result and inherited CLI assertion; develop source delivery and owned-worktree cleanup are complete.
 
 Native art/maps/palettes and moving output are verified at specific producer boundaries, not by whole-scene BizHawk pixel parity. Literal controller tests cover audio request absence; the retained films are silent and do not qualify rendered audio. No trace parity sweep or release-only full suite was run for this feature.
 
@@ -153,3 +153,113 @@ claiming an uninterrupted cold campaign, whole-scene native pixel parity or
 latest-integrated pixel parity. Portable reconstruction uses the final pushed
 develop head recorded in the live `ending-capture-index.json`; historical
 source commands and hashes remain available beside that recipe.
+
+
+## Remaining-parity follow-up — 2026-10-14
+
+Knuckles' routine2 quiet-wind omission is repaired: `loc_5E80A` requests `$CE`
+before animation and timer expiry when `Play_SFX_Continuous` admits the native
+VInt low nibble. Three independent new request-clock, expiry/adjacent-routine
+and owner restore/replay cases fail on unchanged production and pass after the
+repair. The complete affected class passes16/0/0/0 at08:15:18 BST; exact
+commands and source context are in the [follow-up record](../../plans/2026-10-13-s3k-playable-completion.md#quiet-wind-repair-qualification).
+This does not qualify rendered PCM.
+
+The rescue/return flame, propeller, passenger, Master Emerald and fixed-plane
+pilot are now managed native SST owners. Birth dispatches, native screen/world
+coordinates, physical parent-slot reuse, small-plane flags and delayed delete
+owners participate in rewind. The composed ending graph qualifies77 distinct
+focused cases across the source-frozen75-case invocation and bounded corrections;
+there is no claimed single pristine77-case invocation. Both native sprite-clear
+boundaries retain the global catcher pointer, including two complete registry
+restore/replay cycles. Exact commands and corrected premises are in the follow-up
+record. The independent continuation core qualifies41 distinct cases, preserving
+SST93 residue/identity and execution cursor without unload. Managed ending graph continuation pressure qualifies17 distinct real-child
+cases: corrected15-case19591 (08:35:55 UTC,31.519s Maven) plus two unchanged
+pilots from43234. Core7093 separately passes11/0/0/0 (08:38:14 UTC,26.058s).
+The fixed plane8/Master48 and Knuckles-only groups are excluded as impossible
+SST93 continuation victims by native placement/Player_mode3 gates. Actual
+full-table loc5DB76/loc5DD6A trigger dispatch and downstream scene composition
+remain separately unqualified. See the [real-child pressure evidence](../../designs/2026-10-13-s3k-ending-lifecycle.md#actual-managed-ending-graph-under-continuation-pressure-2026-10-14).
+Whole-scene native composition, NTSC/PAL branch breadth, donor incomplete
+progress and rendered audio remain pending in the broader follow-up.
+
+## Production presets and PAL lifecycle follow-up — 2026-10-14
+
+On `1c8cfbe33` plus test-only follow-up, donor entry now has45 passing cases:
+S1 Sonic, S2 Sonic and S2 Tails at progress -2/0/+2 across all actual presets
+320/352/400/528/800. The production aspect resolver, camera, usable native scene
+body/tail banks, progress-specific transformation, both binding restore
+directions and fresh-load donor restoration are asserted. Hyper Sonic/Tails
+AIZ return has ten passing actual-preset handoff/replay cases. This replaces
+raw-width setup as the preset evidence, while retaining its historical scope.
+
+Nine literal PAL table/delay/two-part/two-cycle cases pass. Twelve separate
+REGION=PAL lifecycle cases pass through production credit selection and actual
+title return: nine declared D01 Sonic/Tails/team entries and three Knuckles
+final-fight continuations. The latter retains its historical410766 declared
+clock. All76 focused cases have zero failures/errors/skips; the
+[exact commands and limits](../../plans/2026-10-13-s3k-playable-completion.md#production-presets-incomplete-donors-and-pal-credits-qualification)
+record completion times, source and queue waits. No native framebuffer, PCM,
+50Hz wall-clock or additional cold-campaign certification follows from these
+local cases. The ordinary S2 controller RAM obligation is qualified separately below.
+
+## Ordinary S2 controller and native binding rewind follow-up — 2026-10-14
+
+`Sonic2SuperStateController` now captures its core state, drain countdown and
+palette state/frame/timer, preserving shipped signed cadence and the `$F8`
+residual palette byte. Revert resolves current world-owned stars rather than a
+stale Java reference. Immutable ordinary animation scripts survive revert and
+are reconciled silently on restore. The existing public snapshot shape is
+unchanged.
+
+The native binding reapplies each matching controller's RAM after attachment or
+detachment. Its scene controller preserves captured player physics before any
+powered writer runs, rejects the ordinary owner's unset tier, and returns to
+its own fresh-construction RAM when re-entering from an inactive snapshot.
+Active snapshots retain their actual progressed RAM. Constructor RAM is a
+derived resource baseline, never comparison data or a copied future scene.
+
+A coherent64-case focused run passes with zero failures/errors/skips: ordinary
+S2 world/replay3; donor/native binding48 (the45 preset/progress rows plus
+TRANSFORMING, actual SUPER and actual progressed-scene→fresh-entry vectors);
+native ending-controller11; ordinary jump trigger1 and debug grant1. All new
+world/binding cases use two complete registry cycles and real forward frames.
+The SUPER entry vector declares an incoming running HUD timer before native
+dispatch; it is an owner-boundary test, not a cold donor campaign.
+
+Completed09:26:06 UTC (10:26:06 BST), Maven32.626s, no queue wait, on `99bfb689d`
+plus this repair. Existing KiS2/default/spindash neighbors also passed in a
+separate bounded24-case run. Exact commands, failed candidate causes and
+coverage limits are in the [dated record](../../plans/2026-10-13-s3k-playable-completion.md#ordinary-s2-ram-and-matching-controller-binding-qualification).
+This is rewind/binding qualification, not stock S2 route, full native
+framebuffer/PCM or cross-product cold-campaign certification.
+
+## Paired KosM child and VInt publication qualification — 2026-10-14
+
+Qualified transfer `df8a26e936e54ae5503078e12d0ff9589846c92d` waits for
+the actual submitted direct-child FIFO receipts, then queues physical pattern
+DMA for the next supported VInt. Equal source/destination descriptors retain
+their admitted native FIFO position through copied restore; a preceding
+unpaired entry cannot borrow a later receipt. Claimed parent payloads, pending
+DMA and presented memory have distinct captured owners. Public queue snapshot
+and DMA interfaces retain their shapes. All paired production consumers use
+that owner; raw and synchronous unpaired operations retain their contracts.
+
+Worker56679 passes18 checks, including actual320/800 world/GPU boundaries.
+The final affected consumer selection qualifies289 distinct checks across
+248 unchanged passes in4922 and41 corrected cases in69069, not a single
+289-case green invocation. The earlier38 missing S1/S2 ROM prerequisites and
+three physical-camera fixture assumptions were corrected without runtime
+changes; final69069 passes60/0/0/0 with all three verified original ROMs.
+Initial archive-readiness and duplicate-FIFO negatives are preserved in the
+[owning design](../../designs/2026-10-13-s3k-ending-lifecycle.md).
+
+The native/engine v7 spots independently confirm actual child completion and
+VInt publication: old Master art persists through outer3 and the new payload
+publishes at4. Initial retained native VRAM differs from direct engine scene
+entry, and late Tails scroll/pixel differences remain under investigation.
+No initial-ingress, whole-scene RGB, PAL50, PCM or SAT-overflow acceptance is
+claimed. A separately discovered private-record comparison defect requires
+helper-corrected composed replay before full-registry equality credit; receipt,
+DMA-byte and published-pixel observations are independent evidence.

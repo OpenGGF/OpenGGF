@@ -1,5 +1,17 @@
 # Level test coverage backlog
 
+Remaining S3K parity follow-up (2026-10-14, delivery in progress): the
+[SSZ matrix](../architecture/validation/levels/s3k-ssz-act1.md#corrected-cold-incoming-world-qualification-2026-10-14)
+qualifies corrected native320 and paired800 cold incoming-world boundaries,
+with50/44 whole-world replay windows. The subsequent native companion arrival
+repair has24 focused cases and an exact1432-row native state comparison;
+whole-scene pixel limits remain explicit. The [bonus transition matrix](../architecture/validation/levels/s3k-bonus-stage-transitions.md)
+records logical load/return425 and separately real portal/exit-mechanism425
+cases across140 supported configurations and all three stages. Declared local
+inlets, Slot's unsupported whole-stage rewind and copied runtime table resources
+retain their scope; cold traversal, rewards and native pictures/audio remain open. These bounded checks expand the previous delivery's evidence;
+composed validation, integration/push and broader parity/products are pending.
+
 S3K playable completion (2026-10-13, delivery in progress): the [native ending matrix](../architecture/validation/levels/s3k-ending.md)
 records Sonic/Tails `$0D01`, Knuckles SSZ2 and all native emerald-progress branches.
 Bounded native lifecycle, roster, donor and whole-world replay checks pass; seven
@@ -16,7 +28,7 @@ ICZ/MGZ/CNZ interactions, and shared score/pause/priority obligations. Whole-act
 viewport, donor, team, load/respawn and composed rewind coverage remains inherited;
 executed commands and limits belong in the dated validation record.
 
-Sonic3K Chaos Mode (2026-10-13): the [affected-context matrix](../architecture/plans/2026-10-13-sonic3k-chaos-mode-implementation.md#affected-context-matrix) separates native mechanic and picture checks from complete act routes. Catalogue/schema preparation covers 105 choices; route, character/team, viewport and target qualifications require their recorded behavioral checks. Cross-game donors are unavailable, and existing stock act/respawn/whole-route gaps remain inherited.
+Sonic3K Chaos Mode (2026-10-13): the [affected-context matrix](../architecture/plans/2026-10-13-sonic3k-chaos-mode-implementation.md#affected-context-matrix) separates native mechanic and picture checks from complete act routes. Catalogue/schema preparation covers 105 choices; route, character/team, viewport and target qualifications require their recorded behavioral checks. Cross-game donors are unavailable, and existing stock act/respawn/whole-route gaps remain inherited. The [2026-10-14 intensity revision](../architecture/plans/2026-10-14-chaos-intensity-and-reel.md) adds bounded native ring and private donor-palette checks; these do not close complete act or character/team route gaps.
 
 Starpost Valley phase 4 (2026-10-10): the [festival and lake matrix](../architecture/designs/2026-10-09-starpost-valley.md#festival-and-lake-route-matrix) adds native solo Sonic/Tails/Knuckles at 320/400 through Race, Ring Hunt, snowboard, lake and Ice Cap fishing with result consumption and whole-registry restore/replay. Wider viewport/donor/team, load/respawn and interaction-boundary obligations remain open.
 
@@ -1086,3 +1098,61 @@ Starpost Valley Real Ruins (2026-10-10): the
 tracks generated native Marble/Labyrinth/Scrap Brain chamber routes, scene return,
 health/faint/drowning and rewind. Broader width/donor/team/forty-chamber lifecycle
 obligations remain explicit gaps; creator reachability is not native-route certification.
+
+
+### LRZ/SSZ physical checkpoint products — 2026-10-14
+
+The [Act1 LRZ matrix](../architecture/validation/levels/s3k-lrz-act1.md#physical-checkpoint-products-and-incoming-replay-2026-10-14),
+[Act2 LRZ matrix](../architecture/validation/levels/s3k-lrz-act2.md#physical-checkpoint-products-and-incoming-replay-2026-10-14),
+[LRZ boss matrix](../architecture/validation/levels/s3k-lrz-boss.md#physical-checkpoint-products-and-incoming-replay-2026-10-14)
+and [SSZ Act1 matrix](../architecture/validation/levels/s3k-ssz-act1.md#physical-checkpoint-products-and-incoming-replay-2026-10-14)
+now bind all15 authored posts to880 local physical-contact products at the five
+actual viewport presets. Supported solo donor/character cases and six finite
+uncapped-API roster examples verify two real deaths each, exact life accounting,
+fresh load/history isolation and two full-registry45-input replay/reverse cycles
+after each incoming world releases title/fade/control. The final class passes
+888/0/0/0 on composed `a8c9f892e` plus its final test at12:40:30 UTC (request99024).
+SSZ local saved-index1 setup remains distinct from the independent ordinary
+controller-only post2 contact. Wider cold route products, native presentation,
+other act obligations and overall parity qualification remain open.
+
+
+### MHZ/FBZ/DEZ incoming checkpoint-world replay — 2026-10-14
+
+Both acts' existing physical-post products now add exact life accounting and
+two full-registry45-input replay/reverse cycles after EACH actual death/reload,
+using the production fade owner. The [MHZ1](../architecture/validation/levels/s3k-mhz-act1.md#released-checkpoint-world-replay-follow-up-2026-10-14),
+[MHZ2](../architecture/validation/levels/s3k-mhz-act2.md#released-checkpoint-world-replay-follow-up-2026-10-14),
+[FBZ1](../architecture/validation/levels/s3k-fbz-act1.md#released-checkpoint-world-replay-follow-up-2026-10-14),
+[FBZ2](../architecture/validation/levels/s3k-fbz-act2.md#released-checkpoint-world-replay-follow-up-2026-10-14),
+[DEZ1](../architecture/validation/levels/s3k-dez-act1.md#released-checkpoint-world-replay-follow-up-2026-10-14)
+and [DEZ2](../architecture/validation/levels/s3k-dez-act2.md#released-checkpoint-world-replay-follow-up-2026-10-14)
+matrices record315/440/322 products respectively, all1077 passing without
+failures/errors/skips on composed262e9bbb1 plus the final test changes, completed
+13:13:31 UTC. Twelve independently ordered short witnesses also pass. This is
+local contact/death/released-world qualification; additional
+rosters/mechanics/routes and native presentation remain separate obligations.
+
+
+MHZ Knuckles checkpoint follow-up (2026-10-14): source64f419a3b plus final
+`TestMhzCheckpointRoutes` draft adds all nine native Knuckles physical contacts
+and45 products (every authored post × five widths), all54 passing without
+errors/skips in50826 at13:19:59 UTC. Together with the separate315 preceding
+MHZ products, the qualified death floor is360, including two actual reloads
+and incoming full-world replay after each. The mixed59-test run has two
+separate Sonic-follower Bubbler identity failures and is not a passing delivery
+gate. [MHZ1](../architecture/validation/levels/s3k-mhz-act1.md#knuckles-physical-checkpoint-follow-up-2026-10-14)
+and [MHZ2](../architecture/validation/levels/s3k-mhz-act2.md#knuckles-physical-checkpoint-follow-up-2026-10-14)
+retain further roster/mechanic/cold-route/native limits.
+
+
+SOZ/DDZ incoming-world follow-up (2026-10-14): the older death drivers use
+one production fade owner and pending-render service. SOZ's300 solo and90
+team products pass in17992 at13:36:36 UTC, zero failures/errors/skips; each
+requires two actual life-loss reloads and full incoming-world replay after
+both releases. Doomsday's five-preset double ring-out and five ending-load
+cases pass in62555 at13:34:15 UTC; its unrelated legacy Bubbler fixture red
+is retained honestly and resolved separately. [SOZ1](../architecture/validation/levels/s3k-soz-act1.md#production-checkpoint-fade-and-incoming-world-replay-2026-10-14),
+[SOZ2](../architecture/validation/levels/s3k-soz-act2.md#production-checkpoint-fade-and-incoming-world-replay-2026-10-14)
+and [DDZ](../architecture/validation/levels/s3k-ddz.md#single-production-fade-owner-and-released-world-replay-2026-10-14)
+retain mechanic/cold-route/native and broader configuration obligations.

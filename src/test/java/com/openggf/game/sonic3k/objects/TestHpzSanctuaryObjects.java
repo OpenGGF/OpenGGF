@@ -367,7 +367,7 @@ class TestHpzSanctuaryObjects {
                 gsm, List.of(1, 1, 1, 1, 1, 1, 1), false);
         HPZSSEntryControlObjectInstance controller = controller(progression, false);
         AbstractPlayableSprite sonic = mock(AbstractPlayableSprite.class);
-        when(sonic.getCode()).thenReturn("sonic");
+        when(sonic.characterKey()).thenReturn(com.openggf.game.CharacterKey.SONIC);
         ObjectServices services = mock(ObjectServices.class);
         var players = mock(com.openggf.level.objects.ObjectPlayerQuery.class);
         when(services.playerQuery()).thenReturn(players);
@@ -409,6 +409,7 @@ class TestHpzSanctuaryObjects {
                 gsm, List.of(2, 2, 2, 2, 2, 2, 2), true);
         HPZSSEntryControlObjectInstance controller = controller(progression, false);
         AbstractPlayableSprite sonic = mock(AbstractPlayableSprite.class);
+        when(sonic.characterKey()).thenReturn(com.openggf.game.CharacterKey.SONIC);
         ObjectServices services = mock(ObjectServices.class);
         var players = mock(com.openggf.level.objects.ObjectPlayerQuery.class);
         when(services.playerQuery()).thenReturn(players);
@@ -476,7 +477,9 @@ class TestHpzSanctuaryObjects {
         ObjectServices services = mock(ObjectServices.class);
         var query = mock(com.openggf.level.objects.ObjectPlayerQuery.class);
         AbstractPlayableSprite tails = mock(AbstractPlayableSprite.class);
-        when(tails.getCode()).thenReturn("tails");
+        // Registration aliases do not select the native character_id table.
+        when(tails.getCode()).thenReturn("tails_p2");
+        when(tails.characterKey()).thenReturn(com.openggf.game.CharacterKey.TAILS);
         when(tails.getCentreY()).thenReturn((short) 0x300);
         when(services.playerQuery()).thenReturn(query);
         when(query.playersFor(any())).thenReturn(List.of(tails));
@@ -527,7 +530,7 @@ class TestHpzSanctuaryObjects {
     }
 
     @Test
-    void subtypeSevenFallingCrystalPublishesTheProductionIntroSignalAtNativeBoundary() {
+    void subtypeSevenFallingCrystalPublishesTheProductionIntroSignalAtNativeBoundary() throws Exception {
         GameStateManager gsm = new GameStateManager();
         S3kEmeraldProgression progression = S3kEmeraldProgression.restore(
                 gsm, List.of(0, 0, 0, 0, 0, 0, 0), false);
@@ -541,15 +544,30 @@ class TestHpzSanctuaryObjects {
                 new HPZSanctuaryFallingCrystalObjectInstance(controller, 2)
                         .renderPaletteLineForTest());
 
-        for (int i = 0; i < 101; i++) {
+        // loc_90D30 falls through loc_90D42 immediately after the $20
+        // midpoint call. It does not wait another 33 decrements for negative.
+        for (int i = 0; i < 55; i++) {
             crystal.update(i, null);
             assertFalse(controller.introSignalReceivedForTest());
-            if (i == 54) {
-                assertTrue(crystal.midpointPublishedForTest());
-            }
         }
-        crystal.update(101, null);
+        assertTrue(crystal.midpointPublishedForTest());
+        // Cleared SST anim_frame starts0. Animate_RawNoSST increments
+        // before lookup, so byte90FF6's first1D is not republished.
+        assertEquals(12, crystal.rawAnimationTimerForTest(), "midpoint arms byte_90FF6");
+        var mapping = HPZSanctuaryFallingCrystalObjectInstance.class.getDeclaredField("mappingFrame");
+        mapping.setAccessible(true);
+        int[] nativeFrames = {0x1F,0x1D,0x20,0x1D,0x21,0x1D,0x22,0x1D,0x23,0x1D,0x24,0x1D};
+        for (int i = 0; i < nativeFrames.length; i++) {
+            crystal.update(55 + i, null);
+            assertEquals(nativeFrames[i], mapping.getInt(crystal));
+            assertFalse(controller.introSignalReceivedForTest());
+        }
+        crystal.update(67, null);
         assertTrue(controller.introSignalReceivedForTest());
+        assertFalse(crystal.isDestroyed(), "Go_Delete_Sprite leaves its marker occupied");
+        assertTrue(crystal.shouldDrawForTest(68), "callback still falls through parity Draw_Sprite");
+        crystal.update(68, null);
+        assertTrue(crystal.isDestroyed(), "following dispatch runs Delete_Current_Sprite");
     }
 
     @Test

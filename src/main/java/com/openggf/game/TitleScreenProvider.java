@@ -57,6 +57,9 @@ public interface TitleScreenProvider {
      */
     void draw();
 
+    /** Optional screen-space decoration, supplied by the host after native title drawing. */
+    default void drawOverlay(com.openggf.mods.ui.PixelCanvas canvas) { }
+
     /**
      * Sets the OpenGL clear color to the title screen backdrop color.
      */

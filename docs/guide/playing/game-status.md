@@ -150,18 +150,24 @@ that the module can work.
 
 ## Experimental Tooling
 
-### Level Editor Overlay
+### Level authoring projects
 
-An experimental editor overlay is now available behind `debug.flags.editor` in `config.yaml`.
-When enabled, use `Shift+Tab` during gameplay to park the current playtest and enter the editor
-overlay, then use the same shortcut to resume. The current snapshot supports:
+The experimental editor is available from **Advanced → Editor projects** at the
+master title; `debug.flags.editor` enables gameplay entry with `Shift+Tab`.
+It supports named blank levels and supported layout clones for S1, S2 and S3K,
+canonical imports, foreground/background painting, local block/chunk composition,
+pattern descriptor flags, collision assignments, object/ring editing, and
+project properties/resizing.
 
-- World cursor and grid navigation.
-- Focused block and chunk previews.
-- Tile placement, undo/redo, persistence, and early derive/edit flows for live level data.
-- Resume and restart handling around editor playtests.
+Complete `.ogfproject` saves reopen independently of stock gameplay saves.
+Playtests use fresh runtime copies and preserve the document, selection and
+history. Export checks the destination game: S1/S2 use v1 and S3K uses v2 with
+explicit object family and palette ownership. Missing keys and unsupported native
+features produce visible errors without discarding project data.
 
-This is still a development tool rather than a polished end-user level editor.
+This is a bounded level authoring tool, not a pixel-art editor or a native zone
+script/campaign studio. See the [level editor guide](../creating/level-editor.md)
+for the workflow and limits.
 
 ---
 

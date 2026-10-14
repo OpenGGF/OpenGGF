@@ -1397,3 +1397,147 @@ records this combined-source command. Subsequent bounded
 completes on `aaff73747`, with the separately attributed inherited CLI assertion
 and 680 passing guard tests. Develop source delivery and owned-worktree cleanup are complete; the inherited
 breadth above remains open.
+
+
+## Physical checkpoint products and incoming replay (2026-10-14)
+
+All three placed posts2/3/4 receive165 products:75 supported Sonic/Tails solo
+and90 explicit-roster cases. Local approaches declare saved index1 before the
+initial dispatch solely to select the ROM no-arrival branch; posts2..4 remain
+untouched until physical contact. This is not a cold or physically authored
+post1 claim. A separate maintained controller-only cold opening, with no
+position/checkpoint writes, naturally touches post2 at($640,$5E8) before input
+7912. The independent placement census also proves the Knuckles final arena
+(SSZ Act2) has no authored star posts.
+
+Each product approaches the literal ROM-placed star post through ordinary
+movement, captures the full registered world on both sides of contact, and
+replays and reverses it twice. It then invokes the production pit-death owner
+twice, waits for actual GameLoop reload/title/fade/control release, and verifies
+one lost life, saved coordinates/index, fresh runtime/object manager, retained
+ordered roster/CPU leader identities, donor art and retired outgoing history.
+Each incoming world independently captures and replays a45-input neutral window
+twice in both restore directions, without hiding a second death or life loss.
+All comparisons retain every registry key; no incoming raw restore crosses a
+load. The configured rosters include duplicate names and seven followers;
+these are finite examples of the uncapped API, not proof of every possible team.
+
+The five cases per configuration use the actual320/352/400/528/800 presets.
+Supported solo pairs are off×{Sonic,Tails,Knuckles}, S1×Sonic and
+S2×{Sonic,Tails}, where the act has that character route. Six explicit configured
+rosters cover native mixed/duplicate/large teams, S1 duplicate Sonic, and S2
+mixed/large teams. The common test is `TestLrzSszCheckpointRoutes`; independent
+census, layout witnesses and an S2 Tails/seven-follower800 witness run before
+the long product method. The combined class passes888 tests, zero failures,
+errors or skips, on `a8c9f892e855855f96c7ecad368e127880c9af3e` plus the final
+class (SHA256`3ed4c7346c79cd06d694e7fc17cf625aaa941d4951db606702734d631115f818`),
+request99024, completed2026-10-14 12:40:30 UTC. Exact commands, prerequisites,
+rejected setups and the distinction from earlier qualification are recorded in
+[the completion plan](../../plans/2026-10-13-s3k-playable-completion.md#checkpoint-product-qualification-2026-10-14).
+
+This qualifies local physical contact and reload/replay products. It supplies
+no cold route for every configuration, native whole-scene/audio acceptance or
+combined smoke/guard/integration claim. Other matrix obligations stay open.
+
+
+## Native opening-bridge contact follow-up (2026-10-14)
+
+Independently fresh native320 Sonic+Tails and engine scenes consume original
+AD40 suffix448920 after a separate neutral initial ProcessSprites pass,
+polls0/LFC0. Losing that first ordinary row caused the earlier Death Egg X
+drift; it was a host-boundary issue. Native blue/gold circles are present in
+both captures; a player-row SAT count is not a circle-row overflow witness.
+Corrected P1 coordinates/camera agree through poll1341. At1342 the native
+bridge moves to894/3208 and acquires P1 at808/3179; engine had808/3192,
+airborne. Decision callbacks and full RAM identify the exact bridge standing
+bit, with no shared terrain landing. Updraft first moves P1 to3192; the native
+surface3208-9 gives d0=-16 and relative Y3179. The former d2=16 profile
+misses that contact. Existing provider flags now select d3, reject exact zero
+and preserve the relative snap before TouchFloor. Shared solver/clocks,
+allocator and fixture-directed runtime branches are unchanged.
+
+Literal `TestSszBridgeNativeTopContact` on656e21eb1 plus its test draft has
+10/6/0/0 in37975 at13:57:53 UTC. Final affected81009 is terminal0 at
+14:02:18 UTC,54/0/0/0 (1:26 Maven): ten controls, one original-controller
+contact/replay,13 profiles,25 bridge/death/reload capture products and five
+Knuckles bridge cases. The real original-input case compares every registry
+key twice around45 inputs, retaining current owners/lives and actual ride;
+no raw restore crosses a load. Normal queued admission, Java25, surfaceless
+EGL, original absolute ROMs, null OpenAL and no ambient desktop are used.
+
+Native/engine external task evidence: `native-ssz-contact-pair-ntsc-v1` and
+`ssz-contact-boundary-656e21eb1-e3b0c44298fc-v1` under the task spot-checks.
+Their provenance/command JSON pins exact argv, original ROM/BK2, immutable
+bf3c539 video host and passive decision instrumentation. Native762427 epochs
+1791985804.0648851–1791985816.9969594; Java762737/mainSszContactBoundaryProbe
+1791985817.4445887–1791985820.1126516, both0 (request8791 at13:50:20 UTC).
+Its C# adapter SHA256 is6c8bf0e09852af0ab0df216ff969a1a914c11841264e30f7b181fc6592c459c0.
+The callback CSV mislabeled06/07 as radii: those are visual height/width24.
+Actual9/19 is verified at1F/1E in unchanged raw RAM; no radius inference uses
+those mislabeled columns. OriginalRGB and prepared/published identities are
+retained. The prior14908 helper int/uint compile error is terminal1 at
+13:47:54 UTC, before emulator/engine-probe launch; engine compilation succeeds.
+Actual child intervals are relayed to the authorized performance coordinator.
+This is bounded owner/contact evidence, not whole-scene pixel/audio, every
+cold product, full suite or combined delivery. Maintained cold completions
+and corrected final engine spot captures follow. Consumed target redirects
+are removed after this durable account.
+
+
+## Corrected cold incoming-world qualification (2026-10-14)
+
+On b930df4868 plus the qualified route drafts, request12506 is terminal0 at
+15:17:45 UTC: native320 completion and upper route, paired800 completion,
+and five independent bonus pilots pass8/0/0/0. The native completion has50
+and paired800 has44 two-cycle45-input whole-registry windows, including actual
+DEZ assembly and released incoming worlds, with outgoing history retired.
+The320 movie preserves its original20540 rows and appends180 neutral rows.
+Actual load/assembly is20550/20551 at320 and20874/20875 at800; both fades
+take22 presentations. Semantic load predicates replace obsolete double-fade
+row assumptions. Exact matched negative attribution, source hashes and
+commands are in the [completion plan](../../plans/2026-10-13-s3k-playable-completion.md#ssz-cold-boundaries-and-bonus-return-pilots-2026-10-14).
+
+The corrected original-input contact capture matches1432 native P1/camera/
+counter/ring observations. The subsequent arrival-owner repair below removes the previously recorded
+one P2 X and74 P2 Y discrepancies in the arrival window119–209.
+These bounded routes/contact checks do not certify all viewport/character/
+donor/roster combinations, whole-scene original RGB/audio or entire campaign
+parity. Remaining matrix obligations retain their prior status.
+
+
+## Native arrival continuation and palette qualification (2026-10-14)
+
+On558e74833 plus the arrival candidate, request79082 executes143 cases:
+119 unchanged neighbors pass and18 of24 new cases pass. Its six failures
+are fixture premises: preloaded placements move the controller away from the
+independently cold native slot4, and direct update calls do not advance palette
+ownership epochs. The fixture retains helper3 behind its controller and uses
+ordinary frames for the settle check; production is unchanged. Corrected exact
+class request21831 completes20:09:21 UTC,24/0/0/0 (25.233s Maven;162s queue).
+Together these runs qualify143 distinct identities, not a single green143 run.
+
+Five widths verify helper3's next-pass start and twelve real dispatches,
+four-pass ROM light pairs, the Tails-main Player_mode branch and two all-key
+whole-world rewind/replay cycles. Three pressure cases cover live zero-ID
+occupants, the penultimate/last carried DBEQ probe and exhausted budget without
+fallback to slot33. The local settle inlet is explicitly declared; it proves
+24 final palette dispatches and next-pass retirement, not cold traversal.
+
+Passive original AD40 recapture25248 is terminal0 at20:12:52 UTC, using the
+unchanged production runtime and original1431 ordinary input polls after its
+one-shot initial ProcessSprites. All1432 rows now match native P1 and P2 X/Y,
+velocities, ground speed, mapping frame, both camera coordinates/copies, level
+clock and rings. The former one-X/74-Y P2 deficit is gone. Eight earlier native
+observer controls remain byte-identical; no gameplay values are imported.
+
+Viewed native and engine gameplay pictures remain bounded spot evidence,
+not whole-scene original-RGB acceptance. Native input0 still publishes its
+title-card presentation while the engine capture omits title cards. A global
+previous-row pixel shift is rejected: it worsens logical pixel differences
+rather than establishing a published VDP boundary. The native330/current-engine330
+pair retains360 logical three-bit pixel differences; original RGB expansion
+remains separately different. Full SAT/scroll/CRAM publication and other scene
+owners must explain those residuals before a pixel-parity claim.
+
+Exact commands, clocks and source/probe hashes are in the
+[completion plan](../../plans/2026-10-13-s3k-playable-completion.md#native-ssz-arrival-owner-qualification-2026-10-14).

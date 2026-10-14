@@ -5,6 +5,17 @@ Unreleased. The earlier development themes remain in
 
 ## Gameplay and presentation
 
+- **Level authoring:** Named projects create, edit and reopen complete authored
+  levels for Sonic 1, Sonic 2 and Sonic 3&K using ROM-derived asset libraries.
+  Atomic saves retain placements and missing dependency records; close and quit
+  protect unsaved work. Start/cursor
+  playtests use fresh native runtime snapshots and return to the authored
+  document with selection and undo history. Host-validated exports support
+  S1/S2 v1 and S3K v2, including a native results goal for S3K. Title Tools and
+  the editor command palette expose creation, import, properties, resizing and
+  Save As; pattern browsing, descriptor controls, local collision edits, erase
+  and spawn inspection complete layout authoring.
+
 - **S3K level entry:** Captures that omit the title presentation complete the
   destination's deferred player assembly before its animation and art-loading
   tail, allowing ordinary movement after a fresh zone handoff. Publication also
@@ -12,14 +23,30 @@ Unreleased. The earlier development themes remain in
   retains the source count, including rewind across that boundary.
   Native title-card objects retain their fixed slots and child lifetimes after
   omitted presentation, with exact graph restoration before gameplay placements.
-  Native Act3 continuations bypass the whole title graph, preventing orphan
-  teardown from consuming an absent art lease. Fresh native loads clear the
-  retained random seed before sprite dispatch,
-  while previews and seamless continuations preserve their sequence.
   Initial touch publication follows each object's native range/deletion tail,
   and a full object-table reset retires both collision buffers before slot reuse.
   Identity-keyed participant contact maps encode stable team IDs through
   recreation while preserving their live associations and ordered-map behavior.
+  Native Act3 continuations bypass the whole title graph, preventing orphan
+  teardown from consuming an absent art lease. Fresh native loads clear the
+  retained random seed before sprite dispatch,
+  while previews and seamless continuations preserve their sequence.
+  Sky Sanctuary opening bridges use the native top-contact surface and exact
+  overlap band, retaining the relative landing write before floor reset.
+  Slot bonus-stage layouts, player starts, prize/reel tables and cell animations
+  load from the runtime ROM, with no copied asset fallback; panel publication
+  retains its allocation-free path.
+  Its arrival controller retains the native light divider and ROM palette cycle,
+  admits the P2 release helper through the native continuation scan and retires
+  after the final light write. Tails-led teams preserve their native branch.
+  Initial touch publication follows each object's native range/deletion tail,
+  and a full object-table reset retires both collision buffers before slot reuse.
+  Identity-keyed participant contact maps encode stable team IDs through
+  recreation while preserving their live associations and ordered-map behavior.
+
+- **S3K underwater objects:** Large-bubble pickup follows persistent character
+  identity for leaders and followers. Sonic clears the rolling state; Tails
+  and Knuckles retain it with the ROM's literal radii and position adjustment.
 
 - **S3K objects:** Monkey Dude retains five independent arm and hand objects,
   their physical predecessor links, native dispatch and retirement order, and
@@ -80,8 +107,15 @@ Unreleased. The earlier development themes remain in
   scene. Scene resources, palette and animation owners, terminal Start input
   and rewind state remain inside the native level lifecycle. Island-lift sprites
   and the Master Emerald, waterfall and torch palette cycles follow their native
-  object and screen-event timing. Ending resource initialization preserves
-  scroll handling in other zones. Doomsday retires
+  object and screen-event timing. Paired pattern uploads wait for their actual
+  decompression child and publish at the supported VInt; duplicate descriptors
+  preserve FIFO ownership through rewind. Capture entry preserves native camera locks
+  and scene origins, and capture fades retain their production owner. Ending resource initialization preserves scroll handling
+  in other zones. Donated Sonic 2 powered controllers restore
+  palette and ring timing, current sparkle ownership and animation scripts through
+  rewind, while normal Tails restores retain his body and balance profile.
+  Native ending bindings restore each controller's own RAM after rebinding
+  and preserve incoming physics before the scene's powered writers run. Doomsday retires
   registered followers at its native entry and rebuilds restored scroll output
   without advancing the screen event.
 

@@ -32,10 +32,12 @@ playable feature `c2103d5f7` are now implemented and locally qualified: IslandLi
 sprites/art, rescue/AIZ Master Emerald palette cycling and AIZ return-hold AnPal.
 The [resolved work record](status/s3k-known-bugs.md#native-ending-presentation-gaps-resolved)
 and [ending matrix](architecture/validation/levels/s3k-ending.md#repaired-native-presentation-owners--2026-10-13)
-record the50 affected focused checks and their limits. Full-table unchecked native
-allocation remains inherited unsupported missing emulation, not an intentional
-accepted deviation. Neither this repair nor the prior lifecycle results claim
-whole-scene native pixel parity.
+record the50 affected focused checks and their limits. The2026-10-14 follow-up
+implements retained-byte full-table continuation and managed rescue-plane child
+graphs, with41 distinct core cases and77 distinct composed graph/boundary cases.
+[Current qualification and remaining pressure/native-scene obligations](architecture/validation/levels/s3k-ending.md#remaining-parity-follow-up--2026-10-14)
+remain explicit. Neither these repairs nor prior lifecycle results claim
+whole-scene native pixel parity; no accepted deviation was added.
 
 **Ending scroll resource ownership:** a follow-up corrects eager ending-table
 reads that broke unrelated no-ROM provider registration. Both native banks are
@@ -586,6 +588,40 @@ explicitly. Full cold Knuckles traversal remains a separate route obligation.
 
 
 
+
+## SSZ opening bridge top contact (resolved local owner, 2026-10-14)
+
+`sub_45026` passes SolidObjectTop d1/d2/d3=`$60/$10/$09`. New contact at
+`loc_1E44C` uses d3; `loc_1E45A` accepts unsigned word overlap`[-$10,-1]`
+and writes relative Y before Player_TouchFloor. The former generic profile
+selected d2 and a later absolute snap. Existing provider semantics now model
+that native call. Ten literal controls, original-controller full-world replay
+and existing bridge/profile consumers pass54/0/0/0. This fixes identified
+native poll1342 acquisition, not whole SSZ RGB/audio or campaign parity.
+
+The corrected passive capture now matches all1432 native P1/camera/counter/
+ring observations. Maintained320/800 completions retain50/44 two-cycle
+whole-world windows and actual DEZ incoming history retirement. The separate
+P2 arrival discrepancy remains open: one X row and74 Y rows within119–209.
+Native continuation allocation and dispatch order still need exact ownership;
+no fitted delay or accepted intentional difference is claimed.
+
+
+---
+
+## Large-bubble character branch (resolved local owner, 2026-10-14)
+
+`Obj_Bubbler` compares `Obj_Sonic` at sonic3k.asm:64719. Registration aliases
+such as`sonic_p2` are not native character routines. Sonic's rolling branch
+clears Roll and restores9/19 with Y−5; `loc_2FC5A` retains Roll and writes
+literal9/15 with Y−1 for other native characters, including Knuckles whose
+usual standing radius is19. The local object now uses persistent identity
+and preserves the native center-word adjustment. Seven actual Sonic/Tails/
+Knuckles alias vectors pass, as do six legacy pickup/priority/RNG cases and
+two recreation checks. These focused checks do not certify HCZ routes, native
+whole-scene/audio parity or every supported donor/team interaction.
+
+---
 
 ## Air Countdown Digits: Rebuilt Mapping Frames Instead of VRAM DMA
 

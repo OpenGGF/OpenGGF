@@ -89,7 +89,13 @@ public final class HPZSanctuaryFallingCrystalObjectInstance extends AbstractObje
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         lastFrameCounter = vIntRunCount;
-        if (published || parentRef == null) return;
+        if (published) {
+            // loc_90D5E tail-calls Go_Delete_Sprite, which only installs the
+            // delete operation/status marker. Its next dispatch clears the SST.
+            ObjectLifetimeOps.expireDynamic(this);
+            return;
+        }
+        if (parentRef == null) return;
         if (rawAnimationTimer >= 0) {
             if (rawAnimationIndex < RAW_LANDING_FRAMES.length) {
                 mappingFrame = RAW_LANDING_FRAMES[rawAnimationIndex++];
@@ -97,7 +103,8 @@ public final class HPZSanctuaryFallingCrystalObjectInstance extends AbstractObje
             } else {
                 published = true;
                 parentRef.onFallingCrystalAnimationComplete(subtype);
-                ObjectLifetimeOps.expireDynamic(this);
+                // loc_90D52 still falls through parity Draw_Sprite after the
+                // $F4 callback. Keep this occupied marker until the next tick.
             }
             return;
         }
@@ -118,9 +125,14 @@ public final class HPZSanctuaryFallingCrystalObjectInstance extends AbstractObje
             midpointPublished = true;
             parentRef.onFallingCrystalMidpoint(subtype);
         }
-        if (landingTimer < 0) {
-            rawAnimationTimer = RAW_LANDING_FRAMES.length;
-            rawAnimationIndex = 0;
+        // Shipped loc_90D30 falls through loc_90D42 after the $20
+        // midpoint call. It arms raw animation immediately, not after the
+        // remaining 33 timer decrements (sonic3k.asm:198104-198116).
+        if (landingTimer < 0 || landingTimer == 0x20) {
+            // Cleared-slot anim_frame=0 is incremented before Animate_RawNoSST
+            // reads 1(a1,d0), so the first byte_90FF6 mapping published is $1F.
+            rawAnimationTimer = RAW_LANDING_FRAMES.length - 1;
+            rawAnimationIndex = 1;
         }
     }
 
@@ -187,7 +199,7 @@ public final class HPZSanctuaryFallingCrystalObjectInstance extends AbstractObje
     }
 
     boolean shouldDrawForTest(int frameCounter) {
-        return !published && (frameCounter & 1) == 0;
+        return !isDestroyed() && (frameCounter & 1) == 0;
     }
 
     int renderPaletteLineForTest() {
