@@ -530,7 +530,7 @@ class TestHpzSanctuaryObjects {
     }
 
     @Test
-    void subtypeSevenFallingCrystalPublishesTheProductionIntroSignalAtNativeBoundary() {
+    void subtypeSevenFallingCrystalPublishesTheProductionIntroSignalAtNativeBoundary() throws Exception {
         GameStateManager gsm = new GameStateManager();
         S3kEmeraldProgression progression = S3kEmeraldProgression.restore(
                 gsm, List.of(0, 0, 0, 0, 0, 0, 0), false);
@@ -551,14 +551,23 @@ class TestHpzSanctuaryObjects {
             assertFalse(controller.introSignalReceivedForTest());
         }
         assertTrue(crystal.midpointPublishedForTest());
-        assertEquals(13, crystal.rawAnimationTimerForTest(), "midpoint arms byte_90FF6");
-        for (int i = 55; i < 68; i++) {
-            crystal.update(i, null);
+        // Cleared SST anim_frame starts0. Animate_RawNoSST increments
+        // before lookup, so byte90FF6's first1D is not republished.
+        assertEquals(12, crystal.rawAnimationTimerForTest(), "midpoint arms byte_90FF6");
+        var mapping = HPZSanctuaryFallingCrystalObjectInstance.class.getDeclaredField("mappingFrame");
+        mapping.setAccessible(true);
+        int[] nativeFrames = {0x1F,0x1D,0x20,0x1D,0x21,0x1D,0x22,0x1D,0x23,0x1D,0x24,0x1D};
+        for (int i = 0; i < nativeFrames.length; i++) {
+            crystal.update(55 + i, null);
+            assertEquals(nativeFrames[i], mapping.getInt(crystal));
             assertFalse(controller.introSignalReceivedForTest());
         }
-        crystal.update(68, null);
+        crystal.update(67, null);
         assertTrue(controller.introSignalReceivedForTest());
-        assertTrue(crystal.isDestroyed(), "loc_90D5E signals then Go_Delete_Sprite");
+        assertFalse(crystal.isDestroyed(), "Go_Delete_Sprite leaves its marker occupied");
+        assertTrue(crystal.shouldDrawForTest(68), "callback still falls through parity Draw_Sprite");
+        crystal.update(68, null);
+        assertTrue(crystal.isDestroyed(), "following dispatch runs Delete_Current_Sprite");
     }
 
     @Test

@@ -199,3 +199,39 @@ counter seed or fitted phase adjustment follows. The native raw-animation cursor
 actual initial fade/target-palette publication and a new rendered HUD observation
 remain explicit follow-up obligations; this gate is not full choreography or
 whole-scene visual parity.
+
+## Raw landing cursor and deferred deletion marker — 2026-10-14
+
+A bounded independent shipped-source review confirms the cleared free-slot entry
+context for both `loc_90CA2` paths. `SetUp_ObjAttributes` does not change
+`anim_frame` or its timer. `Animate_RawNoSST` decrements timer0, increments cursor0
+to1, then reads `1(a1,d0)`; `byte_90FF6` therefore first publishes `$1F`, not the
+leading `$1D`. Twelve mappings precede `$F4` on the thirteenth raw call
+(sonic3k.asm:197833–197840,197990–198000,176901–176919,177341–177388).
+Allocation scans an already-cleared slot; no new allocator clearing is invented.
+
+The callback publishes the parent signal and tail-calls `Go_Delete_Sprite`,
+which installs a deletion operation and status bit7 without clearing the slot.
+`loc_90D52` still falls through its parity draw tail on that pass; the following
+fourteenth dispatch runs `Delete_Current_Sprite` and physically retires the child
+(179136–179140). The prior fourteen-call immediate deletion could accidentally
+match physical removal while publishing the signal one call late and drawing an
+extra leading `$1D`. The existing captured `published` flag now represents that
+pending deletion operation. No snapshot or public API field is added.
+
+The independent native contract completes **1 test /1 failure /0 errors /0 skips**
+at13:59:36 UTC before the runtime correction, expected12 remaining raw mappings
+but actual13. It now checks every literal mapping, callback timing, occupied parity
+marker and subsequent physical deletion. The affected selection
+`TestS3kHpzSanctuaryLifecycleProduction,TestHpzSanctuaryObjects,TestS3kHpzGraphRewind`
+completes **312 tests /0 failures /0 errors /0 skips**, observed whole-command
+exit0 at **14:02:59 UTC**,2:31 Maven time, using the earlier queue/EGL/ROM recipe.
+This includes all284 finite ceremony/clock cases and their two complete world
+cycles across natural child expiry/recreation,27 components and1 graph. Source
+is `fae39a7fb` plus the crystal/test changes in this commit. The unchanged
+HUD/profile/loading/results/art neighbors retain their separate422-source
+qualification; combined delivery validation remains lead-owned.
+
+The repaired callback and captured pending deletion lifetime do not certify the
+native pre-LFC loading/fade passes, staged target-palette publication, actual
+origin return, or full scene/pixel timing. Those remain the next concrete owners.
