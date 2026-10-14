@@ -118,3 +118,6 @@ Unreleased. The earlier development themes remain in
   fresh assembly or transition callback cannot be restored by gameplay rewind.
   An individual trace segment resolves its validated containing run's declared
   movie, preserving shared-movie priority and rejecting unsafe source aliases.
+
+Rewind verification compares private records and complete captured opaque arrays
+by content, with explicit failures when snapshot inspection cannot complete.

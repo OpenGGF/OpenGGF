@@ -43,9 +43,12 @@ public final class RewindSnapshotDiff {
         if (keyEquals(key, av, bv)) return diffs;
         if ("object-manager".equals(key)) {
             collectObjectManagerDiffs(key, av, bv, diffs);
-            return diffs;
+        } else {
+            collectDiffs(key, av, bv, diffs);
         }
-        collectDiffs(key, av, bv, diffs);
+        if (diffs.isEmpty()) {
+            throw new IllegalStateException("Snapshot mismatch had no inspectable difference: " + key);
+        }
         return diffs;
     }
 
@@ -170,7 +173,7 @@ public final class RewindSnapshotDiff {
         return switch (key) {
             case "level" -> compareLevel(a, b);
             case "object-manager" -> compareObjectManager(a, b);
-            default -> recordsContentEqual(a, b);
+            default -> fieldContentEqual(a, b);
         };
     }
 
@@ -206,12 +209,17 @@ public final class RewindSnapshotDiff {
         if (cls.isRecord()) {
             for (var c : cls.getRecordComponents()) {
                 try {
-                    Object aV = c.getAccessor().invoke(av);
-                    Object bV = c.getAccessor().invoke(bv);
+                    var accessor = c.getAccessor();
+                    accessor.setAccessible(true);
+                    Object aV = accessor.invoke(av);
+                    Object bV = accessor.invoke(bv);
                     if (!fieldContentEqual(aV, bV)) {
                         collectDiffs(path + "." + c.getName(), aV, bV, diffs);
                     }
-                } catch (ReflectiveOperationException ignored) {}
+                } catch (ReflectiveOperationException | RuntimeException failure) {
+                    throw new IllegalStateException("Cannot inspect snapshot component "
+                            + path + "." + c.getName(), failure);
+                }
             }
             return;
         }
@@ -395,8 +403,16 @@ public final class RewindSnapshotDiff {
         if (av instanceof Pattern pa && bv instanceof Pattern pb) {
             return Arrays.equals(patternPixels(pa), patternPixels(pb));
         }
+        if (av instanceof RewindObjectStateBlob a && bv instanceof RewindObjectStateBlob b) {
+            // Blob.equals preserves opaque Java identity. Verification instead
+            // compares every captured channel, matching the diagnostic walker.
+            return a.schemaId() == b.schemaId() && a.type() == b.type()
+                    && Arrays.equals(a.scalarData(), b.scalarData())
+                    && fieldContentEqual(a.opaqueValues(), b.opaqueValues());
+        }
         Class<?> cls = av.getClass();
         if (cls.isArray()) {
+            if (cls != bv.getClass()) return false;
             Class<?> elem = cls.getComponentType();
             if (elem == byte.class)    return Arrays.equals((byte[]) av,    (byte[]) bv);
             if (elem == short.class)   return Arrays.equals((short[]) av,   (short[]) bv);
