@@ -556,3 +556,19 @@ conformance, not a native waveform/pixel or whole-route parity claim. The
 [existing audit](../../audits/trace/2026-10-14-s3k-fresh-title-sst.md#fresh-native-rng-clear--separate-follow-up-over-ddbc651e0)
 records exact checks and the independently reproduced positioned-ending title
 lease gap.
+
+
+## Native shared projectile lifetime — 2026-10-14
+
+`TestS3kBadnikProjectileNativeLifetime` verifies real higher-slot hand birth,
+INIT→motion fallthrough, native inclusive Y/coarse-X cull boundaries and
+registered object-manager restoration/replay before, during and after delayed
+slot clearing. All13 pass with Monkey/Bloominator/touch/transient consumers and
+mandatory startup60 in63437; its one stale anchor inventory passes corrected
+73701. Actual placed Monkey graph remains qualified at320/352/400/528/800.
+Strict controls remain green, but alternate60 spans and chain189/12,719/82,067
+raw mismatches do not move. Sampled physical presence improves969→1055; native
+status7 pending-delete versus engine clear at1055 still needs exact clock
+attribution. The [existing audit](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#shared-s3k-projectile-native-init-and-retirement)
+distinguishes this local owner qualification from cold-route/pixel/audio parity
+and the newly unresolved positioned title-art consumer errors.

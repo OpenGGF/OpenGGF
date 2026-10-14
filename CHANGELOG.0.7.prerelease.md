@@ -20,6 +20,8 @@ Unreleased. The earlier development themes remain in
   the body's explosion state before initialization. The complete graph restores
   and replays without creating duplicate children. Its body preserves the ROM
   placement flip and collision origin independently of the player's side.
+  Monkey Dude and Bloominator projectiles activate in their own initialization pass,
+  use native culling bounds and retain marked slots until the next dispatch.
 
 - **S3K Knuckles routes:** Locked-on Mushroom Hill deletes the standalone S&K
   intro before it can freeze the camera and take player control. Its native

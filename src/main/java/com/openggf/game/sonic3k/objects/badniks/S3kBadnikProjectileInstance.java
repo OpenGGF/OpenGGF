@@ -55,6 +55,8 @@ public final class S3kBadnikProjectileInstance
     private int xSubpixel;
     private int ySubpixel;
     private boolean collisionEnabled = true;
+    private boolean initPending = true;
+    private boolean nativeRetirementPending;
 
     S3kBadnikProjectileInstance(ObjectSpawn ownerSpawn,
             String rendererKey,
@@ -114,7 +116,15 @@ public final class S3kBadnikProjectileInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        if (nativeRetirementPending) {
+            // Go_Delete_Sprite wrote Delete_Current_Sprite/status7 last pass;
+            // this dispatch clears the physical record without another move.
+            setDestroyed(true);
+            return;
+        }
+        // S3KBadnikProjectile_Init reads ObjDat, enables collision and shield
+        // reaction, then falls through Main/motion in this same dispatch.
+        initPending = false;
         // MoveSprite / MoveSprite_LightGravity order:
         // use old y_vel for movement this frame, then apply gravity.
         int oldYVel = yVelocity;
@@ -129,18 +139,30 @@ public final class S3kBadnikProjectileInstance
         xSubpixel = xPos24 & 0xFF;
         ySubpixel = yPos24 & 0xFF;
 
-        if (!isOnScreen(48)) {
-            setDestroyed(true);
+        // Sprite_CheckDeleteTouchXY: unsigned coarse X <= $280 (native
+        // width), then unsigned (y_pos - Camera_Y_pos + $80) <= $200.
+        // Preserve the existing declared viewport extension for coarse X;
+        // the Y window is the native -128..384, independent of screen height.
+        if (isCoarseXOutOfRange(currentX, cameraLeft(), coarseXCullRange())
+                || ((currentY - cameraTop() + 0x80) & 0xFFFF) > 0x200) {
+            nativeRetirementPending = true;
         }
     }
 
     @Override
     public int getCollisionFlags() {
-        if (!collisionEnabled) {
+        if (initPending || nativeRetirementPending || !collisionEnabled) {
             return 0;
         }
         // HURT category + collision size index (ObjDat3 flags: $98).
         return 0x80 | (collisionSizeIndex & 0x3F);
+    }
+
+    @Override
+    public boolean publishesTouchResponseListEntryThisFrame() {
+        // The XY tail calls Add_SpriteToCollisionResponseList and Draw_Sprite
+        // only on the admitted path, even when shield deflection cleared hurt.
+        return !initPending && !nativeRetirementPending;
     }
 
     @Override
@@ -213,6 +235,9 @@ public final class S3kBadnikProjectileInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        if (initPending || nativeRetirementPending) {
+            return;
+        }
         ObjectRenderManager renderManager = services().renderManager();
         if (renderManager == null) {
             return;

@@ -112310,3 +112310,32 @@ projectile SST43; no strict trace closure is claimed. Second-entry ring/flash
 endings but errors in two positioned320/800 cases with a missing title-art lease.
 Matched38983 reproduces both identical errors on exact pre-RNG production ddbc;
 that inherited title consumer gap remains separate from this qualified RNG slice.
+
+
+## 2026-10-14 — S3K projectile native INIT/XY retirement
+
+Over RNG85ca2a3c6, `.worktrees/ai-s3k-parity-trace` replaces the shared
+Monkey/Bloominator projectile's immediate48px cull with native
+`S3KBadnikProjectile_Init/Main → Sprite_CheckDeleteTouchXY → Go_Delete_Sprite`.
+INIT activates touch/draw and falls through movement; native inclusive Y−128..384
+and unsigned coarse-X admission retain a marked physical record until its next
+dispatch. Short native-contract negative64281 fails13/13; changed-owner63437
+passes613 of614 cases, with its sole stale removed-anchor inventory corrected
+by exact73701 (1/0/0/0). The [owning audit](../architecture/audits/trace/2026-10-14-s3k-monkey-dude-sst.md#shared-s3k-projectile-native-init-and-retirement)
+records selectors, retirement graph replay and scope.
+
+Strict76116 (`-Ptrace-replay`, exact85471 five-case selector) is5/1/0/0 at
+11:13:37 BST,101s execution/16s queue: original AIZ, initial HCZ and both prefixes
+pass, chain189/12,719/82,067 raw field mismatches and all first fields remain
+unchanged, including input68,801 loss of LEVEL ownership. Alternate90350
+(`-Ptrace-segments -Dtest=TestS3kAizZoneSliceTraceReplay#replayMatchesTrace`) is
+1/1/0/0 at11:15:54 BST,37.454s execution/63s queue;60 compressed spans, first
+25,589 animation`$13/$05`. Commands retain normal queue, Java25, surfaceless EGL
+and verified absolute locked-on ROM.
+
+Sampled segment2 presence matches through1054, closing the969 projectile gap.
+First1055 retains native pending-delete SST43 while engine is clear; this timing
+attribution and second-entry25/17 versus native18/22 remain unresolved. The two
+positioned title-art lease errors match pre-RNG ddbc, but are new/unresolved
+overall-task consumer blockers relative to pinned5b2 until repaired/attributed.
+No strict frontier closure or overall green delivery is claimed.

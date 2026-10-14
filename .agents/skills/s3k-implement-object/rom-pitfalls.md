@@ -5361,3 +5361,22 @@ PRE_ROW observers with completed native rows through the actual level counter
 and owner call ordinal, not movie-frame subtraction.
 
 Origin: 2026-10-14 S3K parity, fresh-entry RNG follow-up over `ddbc651e0`.
+
+
+## S3K projectile XY culling marks its SST before clearing
+
+`S3KBadnikProjectile_Init` reads ObjDat and sets shield bit3, then falls through
+Main/motion in the same dispatch. `CreateChild2_Complex` does not copy collision
+from the parent; it stays0 until Init. `Sprite_CheckDeleteTouchXY` accepts
+unsigned coarse X through `$280` and unsigned `(Y-CameraY+$80)` through `$200`,
+both inclusive. Its Y window is−128..384, not a visible-screen rectangle or
+symmetric margin. Retain the existing declared viewport extension only in X.
+
+The admitted path calls AddList/Draw independently of hurt flags; shield
+deflection must not hide the sprite. `Go_Delete_Sprite` sets status7 and the
+next code pointer without clearing that SST. The following `Delete_Current_Sprite`
+dispatch clears without another move. Capture INIT/pending retirement and replay
+both sides of the physical-slot boundary. A pointer-low-byte occupancy label
+is not a type oracle; exact RAM code and owning routine resolve it.
+
+Origin: 2026-10-14 S3K parity projectile slice over `85ca2a3c6`.
