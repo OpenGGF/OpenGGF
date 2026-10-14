@@ -1,6 +1,7 @@
 package com.openggf.game.mutators;
 
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.ObjectCallbackDispatch;
 import com.openggf.game.session.WorldSessionPolicyAccess;
 import com.openggf.mods.mutators.EnemyRulePolicy;
 import com.openggf.mods.mutators.ProjectileRulePolicy;
@@ -25,8 +26,9 @@ public final class NativeObjectPolicyAccess {
                 .anyMatch(e -> e.policy() instanceof EnemyRulePolicy rule && rule.kind() == EnemyRulePolicy.Kind.FIRE_CADENCE);
         if (overdrive) {
             long shots = services.objectQuery().activeObjectsOfType(com.openggf.level.objects.ObjectInstance.class).stream()
-                    .filter(o -> !o.isDestroyed() && o instanceof NativeObjectFieldTarget target
-                            && target.fieldKind() == NativeObjectFieldTarget.Kind.PROJECTILE).count();
+                    .filter(o -> ObjectCallbackDispatch.call(services.objectManager(), o,
+                            () -> !o.isDestroyed() && o instanceof NativeObjectFieldTarget target
+                                    && target.fieldKind() == NativeObjectFieldTarget.Kind.PROJECTILE)).count();
             if (shots >= 16) return false;
         }
         if (!gated) return true;

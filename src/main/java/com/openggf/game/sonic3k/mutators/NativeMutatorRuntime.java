@@ -526,10 +526,10 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
         if (!(object instanceof AbstractBadnikInstance)) return true;
         if (enemyRule(EnemyRulePolicy.Kind.STASIS) && groundedMotionTarget(object)) {
             // A native init/wait release with no contact byte must establish its stock body first.
-            if(object instanceof TouchResponseProvider touch && touch.getCollisionFlags()==0) return true;
+            if(object instanceof TouchResponseProvider touch && receiverCall(object,touch::getCollisionFlags)==0) return true;
             return services.objectQuery().activeObjectsOfType(AbstractBadnikInstance.class).stream()
-                    .filter(NativeMutatorRuntime::groundedMotionTarget)
-                    .filter(enemy->player!=null && Math.abs(enemy.getX()-player.getCentreX())<=256)
+                    .filter(this::groundedMotionTarget)
+                    .filter(enemy->receiverCall(enemy,()->player!=null && Math.abs(enemy.getX()-player.getCentreX())<=256))
                     .limit(4).noneMatch(enemy->enemy==object);
         }
         return true;
@@ -539,9 +539,16 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
         if (enemyRule(EnemyRulePolicy.Kind.TRUCE)) return false;
         return true;
     }
-    private static boolean groundedMotionTarget(ObjectInstance object) {
-        return object instanceof NativeObjectFieldTarget target && target.fieldKind() == NativeObjectFieldTarget.Kind.BADNIK
-                && target.supportsGroundedFieldMotion();
+    private boolean groundedMotionTarget(ObjectInstance object) {
+        return receiverCall(object,()->object instanceof NativeObjectFieldTarget target
+                && target.fieldKind() == NativeObjectFieldTarget.Kind.BADNIK && target.supportsGroundedFieldMotion());
+    }
+    private NativeObjectFieldTarget.Kind fieldKind(ObjectInstance object) {
+        return receiverCall(object,()->object instanceof NativeObjectFieldTarget target ? target.fieldKind() : null);
+    }
+    /** Foreign targets own their callbacks; an abort retains that receiver's owner and stops the frame. */
+    private <T> T receiverCall(ObjectInstance object,Supplier<T> callback) {
+        return ObjectCallbackDispatch.call(services==null?null:services.objectManager(),object,callback);
     }
     /** Native duplication retains the four bounded constructor recipes, independent of motion admission. */
     private static boolean clonableNativeBadnik(ObjectInstance object) {
@@ -555,13 +562,13 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
             var previous=fieldTargets.getOrDefault(entry.activationId(),new FieldTargets(List.of(),0));
             var selected=new ArrayList<>(previous.identities());
             selected.removeIf(id->{var object=services.objectQuery().resolve(id).orElse(null);
-                return object==null || object.isDestroyed() || Math.abs(object.getX()-player.getCentreX())>256 || Math.abs(object.getY()-player.getCentreY())>160;});
+                return object==null || receiverCall(object,()->object.isDestroyed() || Math.abs(object.getX()-player.getCentreX())>256 || Math.abs(object.getY()-player.getCentreY())>160);});
             int acquired=previous.acquired();
             var candidates=services.objectQuery().activeObjectsOfType(ObjectInstance.class).stream()
-                    .filter(object->!object.isDestroyed() && (field.target()==ObjectFieldPolicy.Target.BADNIK?groundedMotionTarget(object)
-                            :object instanceof NativeObjectFieldTarget target && target.fieldKind()==NativeObjectFieldTarget.Kind.PROJECTILE))
-                    .filter(object->Math.abs(object.getX()-player.getCentreX())<=160 && Math.abs(object.getY()-player.getCentreY())<=96)
-                    .sorted(java.util.Comparator.<ObjectInstance>comparingInt(object->Math.abs(object.getX()-player.getCentreX())+Math.abs(object.getY()-player.getCentreY()))
+                    .filter(object->receiverCall(object,()->!object.isDestroyed() && (field.target()==ObjectFieldPolicy.Target.BADNIK?groundedMotionTarget(object)
+                            :object instanceof NativeObjectFieldTarget target && target.fieldKind()==NativeObjectFieldTarget.Kind.PROJECTILE)))
+                    .filter(object->receiverCall(object,()->Math.abs(object.getX()-player.getCentreX())<=160 && Math.abs(object.getY()-player.getCentreY())<=96))
+                    .sorted(java.util.Comparator.<ObjectInstance>comparingInt(object->receiverCall(object,()->Math.abs(object.getX()-player.getCentreX())+Math.abs(object.getY()-player.getCentreY())))
                             .thenComparingInt(object->services.objectQuery().identityOf(object).map(ObjectRefId::dynamicId).orElse(Integer.MAX_VALUE))
                             .thenComparingInt(object->services.objectQuery().identityOf(object).map(ObjectRefId::spawnId).orElse(Integer.MAX_VALUE))).toList();
             for(var object:candidates) {
@@ -573,7 +580,11 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
         }
     }
     @Override public void afterRoutine(ObjectInstance object, PlayableEntity player) {
-        if (services == null || player == null || object.isDestroyed()) return;
+        if (services == null || player == null) return;
+        receiverCall(object,()->{applyAfterRoutine(object,player);return null;});
+    }
+    private void applyAfterRoutine(ObjectInstance object,PlayableEntity player) {
+        if (object.isDestroyed()) return;
         if (object instanceof NativeObjectFieldTarget target) {
             int fieldX=0,fieldY=0;
             for (var entry : entries) if (entry.policy() instanceof ObjectFieldPolicy field) {
@@ -676,9 +687,13 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
     private void blast(int x,int y,int radius,int maxHits,PlayableEntity player,ObjectInstance exclude) {
         int hits=0;
         for (var target:services.objectQuery().activeObjectsOfType(AbstractBadnikInstance.class)) {
-            if (!(target instanceof NativeObjectFieldTarget nativeTarget) || nativeTarget.fieldKind()!=NativeObjectFieldTarget.Kind.BADNIK
-                    || target==exclude || target.isDestroyed() || Math.abs(target.getX()-x)>radius || Math.abs(target.getY()-y)>radius) continue;
-            if (target instanceof PoweredScreenAttackable attackable) { attackable.onPoweredScreenAttack(player); if (++hits>=maxHits) break; }
+            boolean hit=receiverCall(target,()->{
+                if (!(target instanceof NativeObjectFieldTarget nativeTarget) || nativeTarget.fieldKind()!=NativeObjectFieldTarget.Kind.BADNIK
+                        || target==exclude || target.isDestroyed() || Math.abs(target.getX()-x)>radius || Math.abs(target.getY()-y)>radius) return false;
+                if (!(target instanceof PoweredScreenAttackable attackable)) return false;
+                attackable.onPoweredScreenAttack(player);return true;
+            });
+            if (hit && ++hits>=maxHits) break;
         }
     }
     private void rain(long activation,int x,int y,int count) {
@@ -927,32 +942,37 @@ public final class NativeMutatorRuntime implements WorldSessionPolicyState,
         if(shot!=null) tasks.put(entry.activationId(),new Task(0,0,0,tick,previous==null?1:previous.progress()+1,false));
     }
     @Override public void projectileImpact(ObjectInstance shot,PlayableEntity player) {
-        if(services==null || !(shot instanceof NativeObjectFieldTarget target)
-                || target.fieldKind()!=NativeObjectFieldTarget.Kind.PROJECTILE) return;
+        if(services==null || fieldKind(shot)!=NativeObjectFieldTarget.Kind.PROJECTILE) return;
         var activation=entries.stream().filter(e->ownerAvailable(e.owner()) && e.policy() instanceof ProjectileRulePolicy p
                 && p.kind()==ProjectileRulePolicy.Kind.IMPACT_BLAST).findFirst().orElse(null);
         if(activation==null || clocks.getOrDefault(activation.activationId(),0)>=6) return;
         var identity=services.objectQuery().identityOf(shot).orElse(null);
         if(identity==null || !impacts.add(identity)) return;
         clocks.merge(activation.activationId(),1,Integer::sum);
-        spawn(activation.activationId(),64,()->new ExplosionObjectInstance(0x27,shot.getX(),shot.getY(),
+        int x=receiverCall(shot,shot::getX),y=receiverCall(shot,shot::getY);
+        spawn(activation.activationId(),64,()->new ExplosionObjectInstance(0x27,x,y,
                 services.renderManager(),com.openggf.game.sonic3k.audio.Sonic3kSfx.BREAK.id));
-        if(!enemyRule(EnemyRulePolicy.Kind.TRUCE)) blast(shot.getX(),shot.getY(),64,2,player,null);
+        if(!enemyRule(EnemyRulePolicy.Kind.TRUCE)) blast(x,y,64,2,player,null);
     }
     @Override public boolean playerProjectileStep(ObjectInstance shot,PlayableEntity player) {
         if(touchSizes==null || player==null || enemyRule(EnemyRulePolicy.Kind.TRUCE)) return false;
+        int x=receiverCall(shot,shot::getX),y=receiverCall(shot,shot::getY);
         for(var target:services.objectManager().poweredAttacks().targetReadView()) {
-            if(!(target instanceof NativeObjectFieldTarget nativeTarget) || nativeTarget.fieldKind()!=NativeObjectFieldTarget.Kind.BADNIK
-                    || !(target instanceof TouchResponseProvider provider)
-                    || target.isDestroyed() || !(target instanceof PoweredScreenAttackable attackable)) continue;
-            int flags=provider.getCollisionFlags();
-            if(flags==0 || (flags&0xC0)!=0) continue;
-            int width=touchSizes.getWidthRadius(flags&63);
-            int height=touchSizes.getHeightRadius(flags&63);
-            if(Math.abs(target.getX()-shot.getX())>width+touchSizes.getWidthRadius(0x1C) || Math.abs(target.getY()-shot.getY())>height+touchSizes.getHeightRadius(0x1C)) continue;
-            attackable.onPoweredScreenAttack(player);
-            if(projectileRule(ProjectileRulePolicy.Kind.IMPACT_BLAST)) blast(shot.getX(),shot.getY(),64,2,player,target);
-            return true;
+            boolean hit=receiverCall(target,()->{
+                if(!(target instanceof NativeObjectFieldTarget nativeTarget) || nativeTarget.fieldKind()!=NativeObjectFieldTarget.Kind.BADNIK
+                        || !(target instanceof TouchResponseProvider provider)
+                        || target.isDestroyed() || !(target instanceof PoweredScreenAttackable attackable)) return false;
+                int flags=provider.getCollisionFlags();
+                if(flags==0 || (flags&0xC0)!=0) return false;
+                int width=touchSizes.getWidthRadius(flags&63);
+                int height=touchSizes.getHeightRadius(flags&63);
+                if(Math.abs(target.getX()-x)>width+touchSizes.getWidthRadius(0x1C) || Math.abs(target.getY()-y)>height+touchSizes.getHeightRadius(0x1C)) return false;
+                attackable.onPoweredScreenAttack(player);return true;
+            });
+            if(hit){
+                if(projectileRule(ProjectileRulePolicy.Kind.IMPACT_BLAST)) blast(x,y,64,2,player,target);
+                return true;
+            }
         }
         return false;
     }

@@ -675,3 +675,48 @@ strict artifacts, compiled pin and paired SDK source/Jupiter gates pass; short
 supplementary GPU/PCM witnesses and one change-based smoke run remain pending. No main integration/push has occurred in this private phase.
 Historical gentler full-route movies do not certify the harder cold campaign, and
 custom-character traversal and exhaustive/native-image portability remain unverified.
+
+### Receiver callback containment and supplementary witnesses
+
+The final source review of `31b9503d3` found raw calls to the new
+`NativeObjectFieldTarget` callbacks. A foreign receiver could throw outside a
+boundary during field selection, or inside a healthy caller's firing update and
+quarantine the wrong owner. Field classification, grounded capability,
+displacement and powered attack dispatch now use the existing
+`ObjectCallbackDispatch` with the exact receiving object. Nested
+`ModFaultBoundary.CallbackAborted` propagates unchanged: the receiver owns
+quarantine, the current frame stops, and host recovery discards unpublished state
+and returns to the title. No blanket callback-availability precheck was added;
+VM-fatal exceptions still escape without quarantining an owner.
+
+Six registered-owner regressions reproduced five failures before the repair
+(four wrong-owner aborts and one uncontained field-selection exception). The
+corrected six now pass without errors or skips. The first combined repair run
+also passed all eight existing engine abort/recovery cases and five healthy
+Second Strike composition cases, but exposed two new fixture omissions: a null
+registry windowing strategy and a destroyed receiver not actually retired from
+the manager. Only those fixture omissions were corrected before the final
+six-case run. The fixtures use a small synthetic ROM and do not certify native
+ROM behavior. The compiled 20,897-line API export remains byte-identical to its
+pin (SHA-256 `d997ec1568bea5fa83087421a74510276898c34f30af9c1e8d809dc4bef7eb0c`).
+The coordinator resumed the same private tree after the implementation task hit
+provider capacity; no duplicate build or replacement implementation was started.
+
+The `expansion-31b9503d3` captures are supplementary positioned witnesses, using
+offscreen rendering, original ROM bytes and offline PCM with no desktop input.
+The guard's flame charge and the plant's broad seed fan are visible; both short
+routes later die and are not completion evidence. Blue Sphere records 1,143 rows
+through twelve turn gates and a native return without an emerald. Gumball records
+593 rows, three springs consumed and a native return with lives increasing from
+three to four. A deliberately short Blue Sphere input fails with an incomplete
+summary instead of claiming completion.
+
+Cold and checkpoint AIZ2 positioning were rejected as Caterkiller witnesses:
+native apparent-act-one events clamp the player to `$F50`. A separate 180-row
+inherited-fire continuation explicitly sets apparent act zero before native
+events, retaining physical act one, actual fire placements, the native factory
+and ordinary GameLoop. It observes twelve linked bodies, a 116-pixel span at row
+136 and 144,000 stereo PCM frames. This declared supplementary setup is neither a
+cold-entry nor a whole-route qualification. These captures precede the receiver
+containment repair; fresh strict artifacts and change-based smoke validation are
+still required before integration.

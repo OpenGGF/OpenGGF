@@ -44,6 +44,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   stage policies validate isolated data.
   Bounded creator helpers preserve native destruction, shields, monitor contents
   and presentation; exact lifetime links survive rewind and colocated placements.
+  Field and powered callbacks retain the receiving creator's fault boundary,
+  aborting a failed frame without blaming another mod that invoked the receiver.
   The example passes strict packaging without unsupported engine references.
   Its launcher preserves a separate native save/config profile and atomically
   publishes only a validated build; creator kits include ROM-free walkthroughs.

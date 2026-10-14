@@ -114,7 +114,12 @@ semantic callback; stock collision category/property eligibility still precedes 
 
 `ShieldProjectileMotion.awayFrom(dx, dy)` returns the native radial velocity.
 `NativeObjectFieldTarget` supplies semantic body/projectile centres and displacement;
-opt into grounded field motion only when the object supports it. Creator budding
+opt into grounded field motion only when the object supports it. Field queries,
+displacement and powered callbacks run under the receiving object's verified
+content owner. A callback fault quarantines that owner and aborts the current
+frame through the existing host recovery boundary; another mod's caller does not
+inherit the fault. Healthy gameplay resumes after host retirement and reassembly,
+not by continuing a partially updated frame. Creator budding
 reuses the registered factory under its exact content owner, with native slot,
 floor, lifetime and replay bounds; implementing a callback does not enable every
 mutator or grant native AI identity. Publish `ObjectPresentationMetadata` for body
