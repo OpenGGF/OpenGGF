@@ -25,6 +25,10 @@ Unreleased. The earlier development themes remain in
   Identity-keyed participant contact maps encode stable team IDs through
   recreation while preserving their live associations and ordered-map behavior.
 
+- **S3K underwater objects:** Large-bubble pickup follows persistent character
+  identity for leaders and followers. Sonic clears the rolling state; Tails
+  and Knuckles retain it with the ROM's literal radii and position adjustment.
+
 - **S3K badniks:** Monkey Dude retains five independent arm and hand objects,
   their physical predecessor links, native dispatch and retirement order, and
   the body's explosion state before initialization. The complete graph restores

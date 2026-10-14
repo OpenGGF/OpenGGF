@@ -5093,6 +5093,15 @@ double their delay (`sub_8756A`/`sub_87592`).
 `Tails_TouchFloor` restores the defaults on landing. Restoring Tails' standing
 `$0F` at release shortens the falling sensors.
 
+`Obj_Bubbler` has the inverse trap: its `cmpi.l #Obj_Sonic,(a1)` branch
+(sonic3k.asm:64719) clears Sonic's Roll and writes9/19,Y−5, whereas
+`loc_2FC5A` retains Roll and writes9/15,Y−1 even for Knuckles. Do not
+substitute each character's ordinary standing radii. Resolve native character
+identity independently of registration aliases such as`sonic_p2`; a generic
+unit sprite named`tails` still identifies as Sonic unless its typed identity
+is explicitly provided. Compare literal radii and native center displacement
+with actual character subclasses and both main/follower registration names.
+
 ## Global title resets do not restart the owner clock
 
 `Obj_TitleCardWait/loc_2D810` resets Timer, Ring_count, air and music after the

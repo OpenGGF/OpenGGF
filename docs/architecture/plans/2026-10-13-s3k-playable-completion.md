@@ -1468,3 +1468,32 @@ The latter prove a remaining Obj_Sonic-identity branch defect; MHZ's qualified
 360 distinct lifecycle products span this run and63733, not a fabricated
 single360 pass. Act1=200 and Act2=160. No new cold traversal/native acceptance.
 The source freeze ended before the subsequent owner correction.
+
+
+### Bubbler persistent identity and literal radii (2026-10-14)
+
+Source64f419a3b plus five literal tests gives two genuine follower-Sonic
+rolling failures in50826 at13:19:59 UTC. Replacing registration-name authority
+with CharacterKey makes all five pass in14102 at13:28:25 UTC; its one legacy
+red is a Tails-named generic sprite that still declares Sonic identity.
+After explicitly declaring that fixture's identity, seven actual character
+vectors add Knuckles controls:59172 at13:30:17 UTC has two genuine native
+radius15/Java19 failures, while all six legacy and two recreation cases pass.
+Native`Obj_Bubbler`64719/`loc_2FC5A` owns both branches: Sonic clears Roll,
+9/19,Y−5; non-Sonic retains Roll,9/15,Y−1. No frame/fixture/gameplay-row fit.
+The object uses NativePositionOps for the non-Sonic word adjustment and keeps
+all eligibility, pickup ordering, clocks and consumed-state owners unchanged.
+
+Final production SHA256`3e7fa18a88a569edf34a078978a4d4dcccb9d43273bd20c4faf71b79b60c88b7`
+has seven typed vectors, two full object recreation cases and two ROM HCZ
+breathing consumers green in62555 at13:34:15 UTC. That35-case mixed pilot
+has one remaining legacy radius assertion copied from its generic standing
+default. Only that test premise changes:17992 at13:36:36 UTC passes all six
+legacy cases plus390 SOZ products,396/0/0/0. Queue waiting is separate;
+actual terminal results precede every source edit. These are focused scopes,
+not a fabricated green35 invocation, full suite or native whole-scene credit.
+Selectors are`TestBubblerCharacterIdentity,TestBubblerObjectInstance,
+TestS3kUtilityMotionRewind,TestS3kBreathingBubbles`; first two pure negative
+runs use --lean, actual ROM consumers normal queued admission/surfaceless EGL
+with original absolute ROMs, Java25, no desktop and null OpenAL. The source
+is unchanged between the final typed pass and corrected legacy pass.
