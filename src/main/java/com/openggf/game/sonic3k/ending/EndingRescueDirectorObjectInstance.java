@@ -57,7 +57,7 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
     @Override public int flightFrame(){return mappingFrame;}
     @Override public boolean flightPowered(){return ending().progress()>=0;}
     @Override public NativeSstState nativeSstState() {
-        int control=(swingReverse?1:0)|(planeReleased?8:0)
+        int control=(swingReverse?1:0)|(planeReleased?(sequence==REUNION?4:8):0)
                 |childFlags|(paletteHelperAdmitted?0x80:0);
         int priority=routine==0?0:sequence==REUNION?(routine>=8?0x100:0):
                 sequence==AIZ_RETURN?(routine>=4?0x180:0x380):0x200;
@@ -80,9 +80,15 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
     @Override public void update(int vIntRunCount, PlayableEntity player) {
         nativeVInt=vIntRunCount;
         ending().art().service(services());
-        if(sequence==RESCUE) rescue(); else if(sequence==AIZ_RETURN) aizReturn(); else reunion();
+        if(sequence==RESCUE){rescue();holdTailsCompanionPalette();}
+        else if(sequence==AIZ_RETURN)aizReturn();else reunion();
         if(sequence==REUNION) ram().scrollXFixed-=2<<16;
         if(sequence!=AIZ_RETURN)publishPlayer();
+    }
+    private void holdTailsCompanionPalette() {
+        // Obj_5D86A's post-dispatch writer applies even without a powered form.
+        var p=mainPlayer();if(tails()&&p!=null&&p.getSuperStateController() instanceof Sonic3kSuperStateController powered)
+            powered.holdEndingTailsCompanionPaletteTimer();
     }
     private void rescue() {
         switch(routine) {
@@ -135,7 +141,7 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
                 swing(8);move();if(getX()>=0x140)animatePlane();
                 if(getX()>0x220){routine=26;smallPlane=true;flipX=true;childFlags|=0x10;setY(getY()-8);
                     xVelocity=-0x80;yVelocity=0;mappingFrame=tails()?6:5;
-                    S3kEndingPalette.loadLine(services(),0,S3kEndingResources.PAL_SMALL_PLANE);
+                    S3kEndingPalette.loadLine(services(),1,S3kEndingResources.PAL_SMALL_PLANE); // loc_5DD0E PalLoad_Line1 writes Normal_palette_line_2.
                     flightChild(EndingKnucklesFlightChildObjectInstance.SMALL_PROPELLER,0,-6,7);
                     if(ending().progress()>=0)
                         flightChild(EndingKnucklesFlightChildObjectInstance.SMALL_MASTER,0,-0x10,5);}
@@ -171,6 +177,14 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
                 }else if(ending().progress()>0){p.setAnimationId(0);
                     if(tails())powered.initializeEndingSuperTails();else powered.initializeEndingHyperSonic();}
             }
+        }
+        // loc_5D95C writes the Sonic rescue body cells after either powered initializer.
+        if(!tails()&&ending().progress()>=0){
+            for(int color=2;color<=4;color++)S3kEndingCoordinator.paletteWord(services(),0,color,0xEEE);
+            // A RAM write is observable within this initial dispatch; no ordinary
+            // palette tail follows setup before the next queue begins.
+            com.openggf.game.sonic3k.S3kPaletteWriteSupport.resolvePendingWritesNow(
+                    services().paletteOwnershipRegistryOrNull(),services().currentLevel(),services().graphicsManager());
         }
         // loc_5D96A writes Dynamic_object_RAM+object_size*5 and *45.
         // That base follows three Object_RAM slots (constants.asm:303-307),
@@ -237,7 +251,9 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
                 swingMaximum=0xC0;yVelocity=0xC0;flipX=true;
                 if(ending().progress()!=2)services().playMusicMailboxNativeRequest(0xDC); // loc_5E1F0
                 var p=mainPlayer();if(p!=null){ObjectControlState.nativeBit7FullControl().applyTo(p);
-                    p.setDirection(com.openggf.physics.Direction.LEFT);p.setHighPriority(false);
+                    p.setDirection(com.openggf.physics.Direction.LEFT);
+                    p.setRenderFlips(true,p.getRenderVFlip()); // loc_5E1F0 bset#0 render_flags, independent of status.
+                    p.setHighPriority(false);
                     p.setObjectMappingFrameControl(true);p.setAnimationId(5);p.setMappingFrame(tails()?0xAD:0xBA);}
                 spawnChild(()->new Actor(Actor.REUNION_PLANE,getSlotIndex()));
                 if(ending().progress()>=0){
@@ -253,8 +269,9 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
                     var p=mainPlayer();if(p!=null){p.setMappingFrame(0x58);p.setAnimationId(0);}}
             }
             case 4 -> {
-                if((timer=(short)(timer-1))<0){routine=6;planeReleased=true;flipX=false;xVelocity=0x300;yVelocity=-0x600;
+                if((timer=(short)(timer-1))<0){routine=6;planeReleased=true;xVelocity=0x300;yVelocity=-0x600;
                     var p=mainPlayer();if(p!=null){p.setDirection(com.openggf.physics.Direction.RIGHT);
+                        p.setRenderFlips(false,p.getRenderVFlip()); // loc_5E2C2 bclr#0 render_flags.
                         p.setAnimationId(2);p.setObjectMappingFrameControl(false);}
                     int source=tails()?S3kEndingResources.TAILS_POSE:ending().progress()<0?
                             S3kEndingResources.SONIC_POSE:S3kEndingResources.SUPER_SONIC_POSE;
@@ -271,7 +288,7 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
                         var p=mainPlayer();if(p!=null&&p.getSuperStateController() instanceof Sonic3kSuperStateController powered)
                             powered.startEndingReunionTransformation();
                     }
-                    else{routine=8;timer=5;flipX=tails();}}
+                    else{routine=8;timer=5;if(tails())flipX=true;}}
             }
             case 8 -> { if((timer=(short)(timer-1))<0){routine=18;mappingFrame++;S3kEndingCoordinator.beginPostCredits(services());} }
             case 10 -> {
@@ -284,7 +301,8 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
             case 12 -> {setX(getX()+4);if(getX()>=0x200){routine=14;timer=0x1F;}}
             case 14 -> {if((timer=(short)(timer-1))<0){routine=16;mappingFrame=2;flipX=false;hidePlayer=true;}}
             case 16 -> {setX(getX()-8);if(getX()<=0x160){routine=18;setX(0x160);S3kEndingCoordinator.beginPostCredits(services());}}
-            case 18 -> {if(ending().flag(3))ObjectLifetimeOps.deleteNoRespawn(this);}
+            case 18 -> {holdTailsCompanionPalette(); // loc_5E4E2 only, not the earlier reunion routines.
+                if(ending().flag(3))ObjectLifetimeOps.deleteNoRespawn(this);}
             default -> { }
         }
     }
@@ -397,6 +415,7 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
         static final int TORNADO=0,MASTER=1,CATCHER=2,REUNION_PLANE=3,MASTER_AIZ=4;
         private int role,routine,xFixed,yFixed,xVelocity,yVelocity,baseY,phase,timer,dx=-0x40;
         private int noseCounter, nativeVInt, nativeStatus, parentSlot=-1;
+        private int planeRenderFlags, planePriority, planeArtTile;
         private boolean deletePending, submittedForDraw=true;
         public Actor(int role){this(new ObjectSpawn(0,0,0,role,0,false,0));}
         private Actor(int role,int parentSlot){this(role);this.parentSlot=parentSlot;}
@@ -405,24 +424,25 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
         @Override public int getX(){return xFixed>>>16;}
         @Override public int getY(){return yFixed>>>16;}
         @Override public boolean isPersistent(){return true;}
-        @Override public int getPriorityBucket(){return role==MASTER?5:role==MASTER_AIZ?6:4;}
+        @Override public int getPriorityBucket(){return role==TORNADO||role==REUNION_PLANE?planePriority>>>7:role==MASTER?5:role==MASTER_AIZ?6:4;}
+        @Override public boolean isHighPriority(){return role==TORNADO||role==REUNION_PLANE?(planeArtTile&0x8000)!=0:role!=MASTER_AIZ;}
         private EndingRescueDirectorObjectInstance owner(){return services().objectManager()
                 .activeObjectsOfType(EndingRescueDirectorObjectInstance.class).stream().filter(o->!o.isDestroyed()).findFirst().orElse(null);}
         @Override public NativeSstState nativeSstState(){
             boolean plane=role==TORNADO||role==REUNION_PLANE;
             // sub_60038 aliases propeller mapping23 to the ordinary anim_frame byte.
             int frame=routine==0?0:plane?1:role==CATCHER?7:2;
-            return new NativeSstState(plane&&routine!=0?0x40:0,xFixed&0xFFFF,
+            return new NativeSstState(plane?planeRenderFlags:0,xFixed&0xFFFF,
                     plane&&routine!=0?2:yFixed&0xFFFF,frame,plane&&routine!=0?6+(nativeVInt&1):0,0,
-                    plane&&routine==0?4:0,nativeStatus,routine==0?0:role==MASTER?0x280:role==MASTER_AIZ?0x300:0x200,
-                    routine==0?0:role==MASTER?0xC52E:role==MASTER_AIZ?0x252E:plane?0x81E3:0x826E);
+                    plane&&routine==0?4:0,nativeStatus,routine==0?0:plane?planePriority:role==MASTER?0x280:role==MASTER_AIZ?0x300:0x200,
+                    routine==0?0:plane?planeArtTile:role==MASTER?0xC52E:role==MASTER_AIZ?0x252E:0x826E);
         }
         @Override public int flightPlayerMode(){
             var state=(EndingZoneRuntimeState)services().zoneRuntimeState();
             return state.playerCharacter()==PlayerCharacter.TAILS_ALONE?2:
                     state.playerCharacter()==PlayerCharacter.KNUCKLES?3:1;
         }
-        @Override public boolean flightFlipX(){return false;}
+        @Override public boolean flightFlipX(){return (planeRenderFlags&1)!=0;}
         @Override public boolean flightChildRetired(){return (nativeStatus&0x80)!=0;}
         @Override public boolean flightChildSmall(){return false;}
         @Override public boolean flightChildHidden(){return false;}
@@ -441,7 +461,8 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
         }
         private void plane(EndingRescueDirectorObjectInstance o){
             noseCounter=(noseCounter+1)%6; // sub_60038 increments the object's $44 byte
-            if(routine==0){routine=4;setX(0x40);setY(0x10B);baseY=getY();
+            if(routine==0){routine=4;planeRenderFlags=0x40;planePriority=0x200;planeArtTile=0x81E3;
+                setX(0x40);setY(0x10B);baseY=getY();
                 if(role==REUNION_PLANE){routine=2;setX(o.getX()-0x20);setY(o.getY()+(o.tails()?0x27:0x2B));}
                 else if(o.ending().progress()>=0)spawnChild(()->new Actor(CATCHER,getSlotIndex()));
                 spawnChild(()->new EndingKnucklesFlightChildObjectInstance(this,
@@ -449,8 +470,20 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
             if(routine==4){if(o.planeReleased)routine=6;return;} // loc_5EB02 returns after selecting6
             if(routine==6){if(o.ending().flag(0)){routine=2;return;}setX(getX()+2);bob();return;}
             if(routine==2){
-                if(role==REUNION_PLANE&&o.planeReleased){routine=8;baseY=getY();return;}
-                setX(o.getX()-0x20);setY(o.getY()+(o.tails()?0x27:0x2B));return;}
+                // loc_5EADC: Child_GetPriority runs before the parent's bit2 gate.
+                // Resolve the physical parent3 slot, not a retained Java owner.
+                var parent=NativeSstSlotAccess.currentOwner(services().objectManager(),parentSlot);
+                NativeSstState header=NativeSstState.CLEARED;
+                if(parent!=null){
+                    if(!(parent instanceof NativeSstStateSource source))throw new IllegalStateException("Ending plane parent lacks live SST projection");
+                    header=source.nativeSstState();
+                }
+                planePriority=header.priority();planeArtTile=(planeArtTile&0x7FFF)|(header.artTile()&0x8000);
+                if((header.flags38()&4)!=0){routine=8;baseY=getY();return;}
+                planeRenderFlags=(planeRenderFlags&~3)|(header.renderFlags()&3);
+                setX((parent==null?0:parent.getX())+((planeRenderFlags&1)!=0?0x20:-0x20));
+                int dy=o.tails()?0x27:0x2B;
+                setY((parent==null?0:parent.getY())+((planeRenderFlags&2)!=0?-dy:dy));return;}
             if(routine==8)bob();
         }
         private void master(EndingRescueDirectorObjectInstance o){
@@ -496,8 +529,8 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
                 var reader=services().romReader();int offsets=S3kEndingResources.TORNADO_SUBSPRITE_OFFSETS;
                 // sub_86458 adds signed byte offsets to the same SST's main coordinates.
                 return List.of(new Subsprite(reader.readU8(S3kEndingResources.TORNADO_NOSE_FRAMES+noseCounter),
-                                getX()+(byte)reader.readU8(offsets),getY()+(byte)reader.readU8(offsets+1)),
-                        new Subsprite(6+(nativeVInt&1),getX()+(byte)reader.readU8(offsets+2),
+                                getX()+((planeRenderFlags&1)!=0?-1:1)*(byte)reader.readU8(offsets),getY()+(byte)reader.readU8(offsets+1)),
+                        new Subsprite(6+(nativeVInt&1),getX()+((planeRenderFlags&1)!=0?-1:1)*(byte)reader.readU8(offsets+2),
                                 getY()+(byte)reader.readU8(offsets+3)));
             }catch(IOException failure){throw new UncheckedIOException(failure);}
         }
@@ -507,11 +540,18 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
                     role==MASTER_AIZ?1:2,2,getX(),getY(),false,role==MASTER,getPriorityBucket(),"ending-master");
             else if(role==CATCHER)o.draw(S3kEndingResources.MAP_ENDING_PLANE_EXTRA,0x26E,0,7,getX(),getY(),false,true,4,"ending-catcher");
             else{
-                o.draw(S3kEndingResources.MAP_ENDING_PLANE,0x1E3,0,1,getX(),getY(),false,true,4,"ending-tornado");
-                // sub_60038: six-pass nose cycle and alternating propeller piece.
-                for(var part:subsprites())o.draw(S3kEndingResources.MAP_ENDING_PLANE,0x1E3,0,
-                        part.frame(),part.x(),part.y(),false,true,4,"ending-tornado");
-
+                var parts=subsprites();
+                boolean collecting=services().graphicsManager().isSpriteSatCollectionActive();
+                // Render_Sprites loc_1AEE4/1AF2A emits main, sub2, sub3. Earlier
+                // opaque SAT pieces win; painter replay reverses the whole multipart
+                // group, just as PatternSpriteRenderer reverses each mapping's pieces.
+                for(int emission=0;emission<=parts.size();emission++){
+                    int nativeIndex=collecting?emission:parts.size()-emission;
+                    int frame=1,x=getX(),y=getY();
+                    if(nativeIndex!=0){var part=parts.get(nativeIndex-1);frame=part.frame();x=part.x();y=part.y();}
+                    o.draw(S3kEndingResources.MAP_ENDING_PLANE,0x1E3,0,frame,x,y,
+                            flightFlipX(),isHighPriority(),getPriorityBucket(),"ending-tornado");
+                }
             }
         }
     }

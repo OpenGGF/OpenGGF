@@ -13,6 +13,15 @@ Have the relevant user-supplied ROM discoverable by `RomManager`, `ffmpeg` on
 `PATH`, and an existing trace directory. Do not rename/copy a ROM to satisfy an
 example. The trace catalog defaults to `src/test/resources/traces`.
 
+
+An individual segment path beneath `run_manifest.json` resolves only the movie
+of its validated containing run. Its metadata must match the declared run and
+segment; shared `_movies` placement has the same priority as a run launch.
+Traversal/absolute source aliases are rejected. This does not make whole joined
+run capture available: select an individual supported segment, whose existing
+bootstrap still applies. A scene publication is not established by matching
+post-step physics fields alone.
+
 ```bash
 python3 tools/testing/maven_queue.py exec:java "-Dexec.mainClass=com.openggf.tools.TraceCaptureTool" \
   "-Dexec.args=--trace <id|name|dir> --out-dir target/trace-videos"

@@ -4,6 +4,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.openggf.game.ModKeySyntax;
+import com.openggf.game.GameId;
+import com.openggf.game.modzone.*;
+import com.openggf.game.common.CommonObjectPlacementEncoding;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 import com.openggf.level.*;
 import com.openggf.level.objects.ObjectSpawn;
 
@@ -17,7 +24,7 @@ import java.util.HashSet;
 import java.nio.charset.StandardCharsets;
 import java.util.logging.Logger;
 
-/** Deterministic complete MutableLevel export using the canonical ModLevelDefinition v1 directory. */
+/** Complete staged exports and in-memory playtest data using the same selected-host contract. */
 public final class FullLevelExporter {
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final Logger LOG = Logger.getLogger(FullLevelExporter.class.getName());
@@ -30,7 +37,7 @@ public final class FullLevelExporter {
     public ExportResult export(MutableLevel level, ExportRequest request) throws IOException {
         Objects.requireNonNull(level, "level");
         Objects.requireNonNull(request, "request");
-        preflight(level, request);
+        prepareHostData(level, request);
         Path target = request.outputDirectory().toAbsolutePath().normalize();
         Path parent = Objects.requireNonNull(target.getParent(), "export target parent");
         Files.createDirectories(parent);
@@ -76,10 +83,19 @@ public final class FullLevelExporter {
                 || level.getMap().getHeight() < 1 || level.getMap().getHeight() > 4096
                 || (long) level.getMap().getWidth() * level.getMap().getHeight() > 4_194_304L)
             throw new IllegalArgumentException("map dimensions must be positive");
-        if (level.getMinX() > level.getMaxX() || level.getMinY() > level.getMaxY()
+        if (level.getMinX() < 0 || level.getMaxX() > 0xFFFF
+                || level.getMinY() < Short.MIN_VALUE || level.getMaxY() > Short.MAX_VALUE
+                || level.getMinX() > level.getMaxX() || level.getMinY() > level.getMaxY()
                 || request.startX() < level.getMinX() || request.startX() > level.getMaxX()
                 || request.startY() < level.getMinY() || request.startY() > level.getMaxY())
             throw new IllegalArgumentException("start must lie inside ordered level bounds");
+        for (int i=0;i<level.getSolidTileCount();i++) {
+            SolidTile profile=level.getSolidTile(i);
+            if(profile==null || profile.heights==null || profile.widths==null
+                    || profile.heights.length!=SolidTile.TILE_SIZE_IN_ROM
+                    || profile.widths.length!=SolidTile.TILE_SIZE_IN_ROM)
+                throw new IllegalArgumentException("collision profiles require exactly 16 heights and widths");
+        }
         for (int p=0;p<level.getPatternCount();p++) for(int y=0;y<8;y++) for(int x=0;x<8;x++) {
             int pixel = Byte.toUnsignedInt(level.getPattern(p).getPixel(x,y));
             if (pixel > 15) throw new IllegalArgumentException("pattern pixels must be exact 4-bit indices");
@@ -117,9 +133,8 @@ public final class FullLevelExporter {
                     || spawn.objectId() < 0 || spawn.objectId() > 0xFF
                     || spawn.subtype() < 0 || spawn.subtype() > 0xFF
                     || spawn.renderFlags() < 0 || spawn.renderFlags() > 3
-                    || spawn.rawYWord() != (spawn.y() | (spawn.renderFlags() << 13)
-                    | (spawn.respawnTracked() ? 0x8000 : 0)))
-                throw new IllegalArgumentException("object spawn is not a lossless Sonic 2 v1 placement");
+                    || spawn.rawYWord() != nativeRawY(spawn, request.gameId()))
+                throw new IllegalArgumentException("object spawn does not match the selected native placement encoding");
             if (spawn.objectKey() != null) ModKeySyntax.requireDisplayKey(spawn.objectKey());
         }
         Set<Integer> ringIds = new HashSet<>();
@@ -132,6 +147,87 @@ public final class FullLevelExporter {
         if (metadataBytes.length > (1 << 20) || request.zoneName().length() > 65_536
                 || request.zoneName().getBytes(StandardCharsets.UTF_8).length > (1 << 20))
             throw new IllegalArgumentException("level metadata exceeds ModLevelDefinition v1 limits");
+        com.openggf.mods.code.ModLevelDefinitionParser.validateMetadataJson(metadataBytes);
+    }
+
+    /** Creates exactly the canonical data exported to disk, without touching the filesystem. */
+    public ModZoneLevelData prepareHostData(MutableLevel level, ExportRequest request) throws IOException {
+        Objects.requireNonNull(level); Objects.requireNonNull(request);
+        preflight(level,request);
+        if(request.gameId()==GameId.S1) {
+            for(int y=0;y<level.getMap().getHeight();y++) for(int x=0;x<level.getMap().getWidth();x++) {
+                int block=Byte.toUnsignedInt(level.getMap().getValue(0,x,y));
+                if(level.resolveCollisionBlockIndex(block,x,y)!=block)
+                    throw new IllegalArgumentException("Sonic 1 native loop flag at map cell ("+x+","+y+") cannot be represented by a flat authored level; clear or replace the native template feature first");
+            }
+        }
+        int count=level.getChunkCount(); int[] primary=new int[count],secondary=new int[count];
+        for(int i=0;i<count;i++) { primary[i]=level.getChunk(i).getSolidTileIndex(); secondary[i]=level.getChunk(i).getSolidTileAltIndex(); }
+        boolean s3k=request.gameId()==GameId.S3K;
+        byte[][] lines=s3k ? new byte[0][] : new byte[4][32];
+        if(!s3k) {
+            byte[] paletteBytes=palettes(level);
+            for(int i=0;i<level.getPaletteCount();i++)
+                lines[i]=Arrays.copyOfRange(paletteBytes,12+i*32,12+(i+1)*32);
+        }
+        ModZoneLevelData data=new ModZoneLevelData(s3k?2:1,request.zoneIndex(),level.getChunksPerBlockSide(),
+                level.getMap().getWidth(),level.getMap().getHeight(),level.getMinX(),level.getMaxX(),level.getMinY(),level.getMaxY(),
+                raw(patterns(level),12),raw(chunks(level),12),raw(blocks(level),12),raw(map(level,0),16),
+                level.getMap().getLayerCount()>1?raw(map(level,1),16):null,
+                raw(profiles(level,true),12),raw(profiles(level,false),12),raw(angles(level),12),primary,secondary,
+                lines,s3k?Optional.of(new ModZoneHostMetadata(request.objectZoneSet())):Optional.empty(),
+                s3k?paletteClaims(level):List.of(),canonicalObjects(level),level.getRings(),
+                level.getPatternCount(),count,level.getBlockCount());
+        if(request.gameId()!=null) {
+            ModZoneAdapter adapter = com.openggf.game.GameModuleRegistry
+                    .createStockModule(request.gameId()).getModZoneAdapter();
+            adapter.validate("editor",data);
+        }
+        stagingValidator.validateHostData(data);
+        return data;
+    }
+
+    private static byte[] raw(byte[] bytes,int header) { return Arrays.copyOfRange(bytes,header,bytes.length); }
+
+    private static int nativeRawY(ObjectSpawn spawn, GameId game) {
+        return game==GameId.S1 ? spawn.y() | (spawn.renderFlags()<<14)
+                : spawn.y() | (spawn.renderFlags()<<13) | (spawn.respawnTracked()?0x8000:0);
+    }
+
+    private static List<ObjectSpawn> canonicalObjects(MutableLevel level) {
+        var codec=new CommonObjectPlacementEncoding();
+        return exportedObjects(level).stream().map(spawn -> codec.move(spawn,spawn.x(),spawn.y())).toList();
+    }
+
+    /** Claims only colors reachable from the authored layouts; unused ROM library art has no owner. */
+    private static List<ModPaletteClaim> paletteClaims(MutableLevel level) {
+        boolean[][] used=new boolean[4][16];
+        for(int layer=0;layer<level.getMap().getLayerCount();layer++)
+            for(int y=0;y<level.getMap().getHeight();y++) for(int x=0;x<level.getMap().getWidth();x++) {
+                Block block=level.getBlock(Byte.toUnsignedInt(level.getMap().getValue(layer,x,y)));
+                for(int cy=0;cy<block.getGridSide();cy++) for(int cx=0;cx<block.getGridSide();cx++) {
+                    Chunk chunk=level.getChunk(block.getChunkDesc(cx,cy).getChunkIndex());
+                    for(int py=0;py<2;py++) for(int px=0;px<2;px++) {
+                        PatternDesc desc=chunk.getPatternDesc(px,py);
+                        Pattern pattern=level.getPattern(desc.getPatternIndex());
+                        for(int iy=0;iy<8;iy++) for(int ix=0;ix<8;ix++) {
+                            int color=Byte.toUnsignedInt(pattern.getPixel(ix,iy));
+                            if(color==0) used[2][0]=true;
+                            else if(desc.getPaletteIndex()==0) throw new IllegalArgumentException(
+                                    "S3K reachable art uses host-owned character palette line 0, color "+color+"; choose a creator palette line before playtest/export");
+                            else used[desc.getPaletteIndex()][color]=true;
+                        }
+                    }
+                }
+            }
+        List<ModPaletteClaim> claims=new ArrayList<>();
+        for(int line=1;line<4;line++) for(int color=0;color<16;color++) if(used[line][color]) {
+            if(line>=level.getPaletteCount()) throw new IllegalArgumentException("Missing reachable palette line "+line);
+            Palette.Color c=level.getPalette(line).getColor(color);
+            int r=(Byte.toUnsignedInt(c.r)*7+127)/255,g=(Byte.toUnsignedInt(c.g)*7+127)/255,b=(Byte.toUnsignedInt(c.b)*7+127)/255;
+            claims.add(new ModPaletteClaim(line,color,(b<<9)|(g<<5)|(r<<1)));
+        }
+        return List.copyOf(claims);
     }
 
     private static void requireGenesisColor(byte component) {
@@ -150,13 +246,13 @@ public final class FullLevelExporter {
         write(root, "solid-angles.bin", angles(level));
         write(root, "collision-primary.bin", collisions(level, false));
         write(root, "collision-secondary.bin", collisions(level, true));
-        write(root, "palettes.bin", palettes(level));
+        if (request.gameId()!=GameId.S3K) write(root, "palettes.bin", palettes(level));
         Files.write(root.resolve("level.json"), JSON.writeValueAsBytes(metadata(level, request)));
     }
 
     private ObjectNode metadata(MutableLevel level, ExportRequest r) {
         ObjectNode root = JSON.createObjectNode();
-        root.put("formatVersion", 1); root.put("zoneName", r.zoneName());
+        root.put("formatVersion", r.gameId()==GameId.S3K ? 2 : 1); root.put("zoneName", r.zoneName());
         root.put("zoneIndex", r.zoneIndex()); root.put("levelIndex", r.levelIndex());
         root.put("blockGridSide", level.getChunksPerBlockSide());
         root.put("width", level.getMap().getWidth()); root.put("height", level.getMap().getHeight());
@@ -172,9 +268,18 @@ public final class FullLevelExporter {
         assets.put("foregroundMap", "fg-map.bin"); if (level.getMap().getLayerCount() > 1) assets.put("backgroundMap", "bg-map.bin");
         assets.put("solidHeights", "solid-heights.bin"); assets.put("solidWidths", "solid-widths.bin");
         assets.put("solidAngles", "solid-angles.bin"); assets.put("collisionPrimary", "collision-primary.bin");
-        assets.put("collisionSecondary", "collision-secondary.bin"); assets.put("palettes", "palettes.bin");
+        assets.put("collisionSecondary", "collision-secondary.bin");
+        if(r.gameId()!=GameId.S3K) assets.put("palettes", "palettes.bin");
+        else {
+            root.putObject("hostMetadata").putObject("s3k").put("objectZoneSet", r.objectZoneSet().name());
+            ArrayNode claims=root.putArray("paletteClaims");
+            for(ModPaletteClaim claim:paletteClaims(level)) {
+                ObjectNode node=claims.addObject(); node.put("line",claim.line());
+                node.put("color",claim.color()); node.put("sega",claim.segaColor());
+            }
+        }
         ArrayNode objects = root.putArray("objects");
-        for (ObjectSpawn spawn : exportedObjects(level)) {
+        for (ObjectSpawn spawn : canonicalObjects(level)) {
             ObjectNode node = objects.addObject(); node.put("placementId", spawn.layoutIndex()); node.put("x", spawn.x()); node.put("y", spawn.y());
             if (spawn.objectKey() == null) node.put("stockObjectId", spawn.objectId()); else node.put("objectKey", spawn.objectKey());
             node.put("subtype", spawn.subtype()); node.put("renderFlags", spawn.renderFlags());
@@ -224,7 +329,21 @@ public final class FullLevelExporter {
         return failure;
     }
 
-    public record ExportRequest(Path outputDirectory,String zoneName,int zoneIndex,int levelIndex,int startX,int startY,ExportMusic music){public ExportRequest{Objects.requireNonNull(outputDirectory);Objects.requireNonNull(zoneName);Objects.requireNonNull(music);if(zoneName.isBlank()||zoneIndex<0x40||levelIndex<0x400)throw new IllegalArgumentException("nonblank name and reserved mod ids required");}}
+    public record ExportRequest(Path outputDirectory, String zoneName, int zoneIndex, int levelIndex,
+                                int startX, int startY, ExportMusic music,
+                                GameId gameId, ModObjectZoneSet objectZoneSet) {
+        /** Legacy generic v1 export; new editor projects always select an explicit host. */
+        public ExportRequest(Path outputDirectory,String zoneName,int zoneIndex,int levelIndex,
+                             int startX,int startY,ExportMusic music) {
+            this(outputDirectory,zoneName,zoneIndex,levelIndex,startX,startY,music,null,ModObjectZoneSet.S3KL);
+        }
+        public ExportRequest {
+            Objects.requireNonNull(outputDirectory); Objects.requireNonNull(zoneName); Objects.requireNonNull(music);
+            if (gameId == GameId.S3K) Objects.requireNonNull(objectZoneSet, "S3K object family");
+            if(zoneName.isBlank() || zoneIndex<0x40 || levelIndex<0x400)
+                throw new IllegalArgumentException("nonblank name and reserved mod ids required");
+        }
+    }
     public sealed interface ExportMusic permits ExportMusic.Stock,ExportMusic.Track{
         record Stock(int id)implements ExportMusic{public Stock{if(id<0||id>0xFFFF)throw new IllegalArgumentException("stock music id must be unsigned 16-bit");}}
         record Track(String owner,String localName)implements ExportMusic{public Track{ModKeySyntax.requireOwnedKey(owner,localName);}}

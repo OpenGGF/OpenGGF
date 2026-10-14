@@ -21,23 +21,23 @@ public record S3kSlotMachineDisplayState(
                     state.optionCycleTargetReelA() & 0x0F
             };
             int[] nextFaces = {
-                    nextSymbolFor(faces[0], S3kSlotRomData.REEL_SEQUENCE_A),
-                    nextSymbolFor(faces[1], S3kSlotRomData.REEL_SEQUENCE_B),
-                    nextSymbolFor(faces[2], S3kSlotRomData.REEL_SEQUENCE_C)
+                    nextSymbolFor(faces[0], state.romData().reel(0)),
+                    nextSymbolFor(faces[1], state.romData().reel(1)),
+                    nextSymbolFor(faces[2], state.romData().reel(2))
             };
             return new S3kSlotMachineDisplayState(worldX, worldY, faces, nextFaces, new float[] {0f, 0f, 0f});
         }
         int[] reelWords = state.optionCycleReelWords();
         if (hasActiveReelWords(reelWords)) {
             int[] faces = {
-                    faceForReelWord(reelWords[0], S3kSlotRomData.REEL_SEQUENCE_A),
-                    faceForReelWord(reelWords[1], S3kSlotRomData.REEL_SEQUENCE_B),
-                    faceForReelWord(reelWords[2], S3kSlotRomData.REEL_SEQUENCE_C)
+                    faceForReelWord(reelWords[0], state.romData().reel(0)),
+                    faceForReelWord(reelWords[1], state.romData().reel(1)),
+                    faceForReelWord(reelWords[2], state.romData().reel(2))
             };
             int[] nextFaces = {
-                    nextFaceForReelWord(reelWords[0], S3kSlotRomData.REEL_SEQUENCE_A),
-                    nextFaceForReelWord(reelWords[1], S3kSlotRomData.REEL_SEQUENCE_B),
-                    nextFaceForReelWord(reelWords[2], S3kSlotRomData.REEL_SEQUENCE_C)
+                    nextFaceForReelWord(reelWords[0], state.romData().reel(0)),
+                    nextFaceForReelWord(reelWords[1], state.romData().reel(1)),
+                    nextFaceForReelWord(reelWords[2], state.romData().reel(2))
             };
             float[] offsets = {
                     ((reelWords[0] & 0xF8) / 256f),
@@ -48,9 +48,9 @@ public record S3kSlotMachineDisplayState(
         }
         int[] faces = state.optionCycleDisplaySymbols().clone();
         int[] nextFaces = {
-                nextSymbolFor(faces[0], S3kSlotRomData.REEL_SEQUENCE_A),
-                nextSymbolFor(faces[1], S3kSlotRomData.REEL_SEQUENCE_B),
-                nextSymbolFor(faces[2], S3kSlotRomData.REEL_SEQUENCE_C)
+                nextSymbolFor(faces[0], state.romData().reel(0)),
+                nextSymbolFor(faces[1], state.romData().reel(1)),
+                nextSymbolFor(faces[2], state.romData().reel(2))
         };
         int[] rawOffsets = state.optionCycleOffsets();
         float[] offsets = {
@@ -72,21 +72,21 @@ public record S3kSlotMachineDisplayState(
             int face2 = state.optionCycleTargetReelA() & 0x0F;
             animator.syncPanelPatterns(
                     face0, face1, face2,
-                    nextSymbolFor(face0, S3kSlotRomData.REEL_SEQUENCE_A),
-                    nextSymbolFor(face1, S3kSlotRomData.REEL_SEQUENCE_B),
-                    nextSymbolFor(face2, S3kSlotRomData.REEL_SEQUENCE_C),
+                    nextSymbolFor(face0, state.romData().reel(0)),
+                    nextSymbolFor(face1, state.romData().reel(1)),
+                    nextSymbolFor(face2, state.romData().reel(2)),
                     0f, 0f, 0f);
             return;
         }
         int[] reelWords = state.optionCycleReelWords();
         if (hasActiveReelWords(reelWords)) {
             animator.syncPanelPatterns(
-                    faceForReelWord(reelWords[0], S3kSlotRomData.REEL_SEQUENCE_A),
-                    faceForReelWord(reelWords[1], S3kSlotRomData.REEL_SEQUENCE_B),
-                    faceForReelWord(reelWords[2], S3kSlotRomData.REEL_SEQUENCE_C),
-                    nextFaceForReelWord(reelWords[0], S3kSlotRomData.REEL_SEQUENCE_A),
-                    nextFaceForReelWord(reelWords[1], S3kSlotRomData.REEL_SEQUENCE_B),
-                    nextFaceForReelWord(reelWords[2], S3kSlotRomData.REEL_SEQUENCE_C),
+                    faceForReelWord(reelWords[0], state.romData().reel(0)),
+                    faceForReelWord(reelWords[1], state.romData().reel(1)),
+                    faceForReelWord(reelWords[2], state.romData().reel(2)),
+                    nextFaceForReelWord(reelWords[0], state.romData().reel(0)),
+                    nextFaceForReelWord(reelWords[1], state.romData().reel(1)),
+                    nextFaceForReelWord(reelWords[2], state.romData().reel(2)),
                     (reelWords[0] & 0xF8) / 256f,
                     (reelWords[1] & 0xF8) / 256f,
                     (reelWords[2] & 0xF8) / 256f);
@@ -96,9 +96,9 @@ public record S3kSlotMachineDisplayState(
         int[] rawOffsets = state.optionCycleOffsets();
         animator.syncPanelPatterns(
                 faces[0], faces[1], faces[2],
-                nextSymbolFor(faces[0], S3kSlotRomData.REEL_SEQUENCE_A),
-                nextSymbolFor(faces[1], S3kSlotRomData.REEL_SEQUENCE_B),
-                nextSymbolFor(faces[2], S3kSlotRomData.REEL_SEQUENCE_C),
+                nextSymbolFor(faces[0], state.romData().reel(0)),
+                nextSymbolFor(faces[1], state.romData().reel(1)),
+                nextSymbolFor(faces[2], state.romData().reel(2)),
                 (rawOffsets[0] & 0xFF) / 256f,
                 (rawOffsets[1] & 0xFF) / 256f,
                 (rawOffsets[2] & 0xFF) / 256f);

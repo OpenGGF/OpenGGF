@@ -103,7 +103,11 @@ public class PlayerSpriteRenderer {
         var versions = head ? com.openggf.level.render.SpritePresentationRenderer.patternVersions(
                 patternBank.getBasePatternIndex(), patternBank.getPatterns(), frame) : java.util.Map.<Integer,
                 com.openggf.graphics.SpritePresentation.PatternVersion>of();
-        for (int i = 0; i < frame.pieces().size(); i++) {
+        boolean collectingSat = graphicsManager.isSpriteSatCollectionActive();
+        // Earlier opaque VDP pieces win. Collect in native order, but emit
+        // painter pieces back-to-front, as PatternSpriteRenderer already does.
+        for (int ordinal = 0; ordinal < frame.pieces().size(); ordinal++) {
+            int i = collectingSat ? ordinal : frame.pieces().size() - 1 - ordinal;
             var piece = frame.pieces().get(i);
             Runnable nativeDraw = () -> {
                 if (graphicsManager.isSpriteSatCollectionActive()) {

@@ -228,6 +228,9 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEndBossFlameChild", "weapon"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEndBossShipExplosionController", "ship"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEndBossShipFlameChild", "ship"), RewindFieldPolicy.CAPTURED),
+            // S3K Caterkiller bodies retain their exact head identity; the head's
+            // structural list is rebuilt only after these references resolve.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.CaterkillerJrBodyInstance", "ownerRef"), RewindFieldPolicy.CAPTURED),
             // The prison button is a separate SST object. Preserve its exact parent
             // identity through the compact ObjectReferenceCodec; never infer a parent
             // from coordinates or neighbouring slots after restore.
@@ -474,7 +477,6 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.HczEndBossGeyserCutscene", "artHandle"), RewindFieldPolicy.TRANSIENT),
             // The ship child rebinds to the nearest recreated live ship; its accumulator remains captured.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Lbz2RobotnikShipInstance$GradualCameraMaxXChild", "parent"), RewindFieldPolicy.TRANSIENT),
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossCutsceneInstance", "explosionController"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossInstance", "defeatExplosionController"), RewindFieldPolicy.DEFERRED),
             // Three live AIZ miniboss barrels make nearest-object reconstruction
             // ambiguous after FallingShot teleports to its camera-relative drop.
@@ -482,7 +484,12 @@ final class DefaultObjectRewindPolicies {
             // recreate hooks retain nearest-object lookup only as a phase-one seed.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossNapalmProjectile", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossNapalmProjectile", "barrel"), RewindFieldPolicy.CAPTURED),
-            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossBarrelShotFlareChild", "anchor"), RewindFieldPolicy.CAPTURED),
+            // Common/falling shots can belong to the cutscene or fight graph. Their
+            // camera-relative launch XY cannot identify the firing barrel/boss.
+            // A pure spawn shell binds these exact live ObjectRefs in phase two.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossBarrelShotChild", "parent"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizMinibossBarrelShotChild", "barrel"), RewindFieldPolicy.CAPTURED),
+            // Barrel-shot flares capture numeric parent3: cleared/recycled SST headers remain readable.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$FallingLogChild", "linkedSplash"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AizFallingLogObjectInstance$SplashChild", "linkedLog"), RewindFieldPolicy.CAPTURED),
             // Ride-vine link chains carry the rendered swing/deploy state of a ride mechanic.
@@ -840,6 +847,8 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SuperTailsFlickyFlockObjectInstance", "owner"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance", "animationState"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance", "monitorContentsSlot"), RewindFieldPolicy.CAPTURED),
+            // Contents retain an exact managed shell identity; nearest/structural reconstruction merges colocated shells.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance$MonitorContentsSlot", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance", "p1SolidContact"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance", "p2SolidContact"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kMonitorObjectInstance", "p2RecentlyClearedSolidContact"), RewindFieldPolicy.DEFERRED),

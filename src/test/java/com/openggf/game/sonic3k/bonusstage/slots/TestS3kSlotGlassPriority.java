@@ -34,7 +34,7 @@ class TestS3kSlotGlassPriority {
         assertFalse(hasAnyHighPriorityGlassTile(level, false),
                 "The loaded slot machine glass descriptors are low-priority in source level data");
 
-        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
+        S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime(S3kSlotRomTestData.resources());
         runtime.bootstrap();
 
         assertTrue(runtime.isInitialized());

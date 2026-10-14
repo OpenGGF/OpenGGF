@@ -1061,7 +1061,8 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
             if (queue == null || index < 0 || index >= entries.size()) return;
             Sonic3kPlcLoader.bindRuntimePatternDmaTarget(queue, objectServices());
             var entry = entries.get(index);
-            queue.enqueue(rom(), entry.sourceAddress(), entry.destinationVramBytes());
+            com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.queueGlobalPatternModule(
+                    objectServices(), entry.sourceAddress(), entry.destinationVramBytes());
         } catch (IOException failure) {
             throw new IllegalStateException("Failed to queue FBZ boss approach art", failure);
         }

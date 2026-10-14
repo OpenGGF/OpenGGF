@@ -149,7 +149,7 @@ class TestAizMinibossNapalmProductionRoute {
                         projectile, "barrel", AizMinibossFlameBarrelChild.class);
                 AizMinibossBarrelShotFlareChild flare = live(
                         harness.manager(), AizMinibossBarrelShotFlareChild.class).stream()
-                        .filter(candidate -> readObjectField(candidate, "anchor", ObjectInstance.class) == barrel)
+                        .filter(candidate -> readIntField(candidate, "parentSlot") == barrel.getSlotIndex())
                         .findFirst()
                         .orElseThrow(() -> new AssertionError(
                                 "FallingShot must be allocated after its native flare sibling"));
@@ -176,8 +176,7 @@ class TestAizMinibossNapalmProductionRoute {
                     pair.projectile(), "parent", AbstractBossInstance.class));
             assertSame(pair.barrel(), readObjectField(
                     pair.projectile(), "barrel", AizMinibossFlameBarrelChild.class));
-            assertSame(pair.barrel(), readObjectField(
-                    pair.flare(), "anchor", ObjectInstance.class));
+            assertEquals(pair.barrel().getSlotIndex(), readIntField(pair.flare(), "parentSlot"));
         }
     }
 
@@ -209,10 +208,10 @@ class TestAizMinibossNapalmProductionRoute {
                 assertEquals(7, newcomers.size(),
                         "ChildObjDat_690D8 must allocate all seven explosion hitboxes");
                 AizMinibossNapalmProjectile source = before.stream()
-                        .filter(AbstractObjectInstance::isDestroyed)
+                        .filter(shot -> readObjectField(shot,"pendingDelete",Boolean.class))
                         .findFirst()
                         .orElseThrow(() -> new AssertionError(
-                                "explosion children must come from the FallingShot destroyed this entry"));
+                                "explosion children come from the FallingShot marked Go_Delete this entry"));
                 ExplosionGroup group = ExplosionGroup.created(harness.entryCount(), source, newcomers);
                 group.assertNativeCreationGraph();
                 groups.add(group);
@@ -479,10 +478,10 @@ class TestAizMinibossNapalmProductionRoute {
                 ExplosionTracker tracker = trackers.get(index);
                 assertEquals(EXPECTED_HARMFUL_START[index], tracker.firstHarmfulDispatch,
                         "subtype delays must stagger routine-4 collision by four object entries");
-                assertEquals(21, tracker.harmfulDispatches,
-                        "AniRaw_BossExplosion must publish `$97` for exactly 21 dispatches");
-                assertEquals(EXPECTED_HARMFUL_START[index] + 21, tracker.destroyedDispatch,
-                        "the child must delete on the dispatch after its final harmful animation hold");
+                assertEquals(22, tracker.harmfulDispatches,
+                        "AniRaw_BossExplosion must publish `$97` for21 mapping holds plus the F4 callback DrawAndTouch pass");
+                assertEquals(EXPECTED_HARMFUL_START[index] + 22, tracker.destroyedDispatch,
+                        "the child must delete on the dispatch after the final F4 callback touch/draw publication");
             }
         }
 
@@ -543,7 +542,8 @@ class TestAizMinibossNapalmProductionRoute {
             }
             List<LinkedObject> flares = live(manager, AizMinibossBarrelShotFlareChild.class)
                     .stream().map(flare -> {
-                        ObjectInstance anchor = readObjectField(flare, "anchor", ObjectInstance.class);
+                        ObjectInstance anchor = com.openggf.level.objects.NativeSstSlotAccess.currentOwner(
+                                manager, readIntField(flare, "parentSlot"));
                         return new LinkedObject(objectId(manager, flare), flare.getSlotIndex(),
                                 objectId(manager, anchor));
                     }).toList();
@@ -575,8 +575,8 @@ class TestAizMinibossNapalmProductionRoute {
                 AizMinibossFlameBarrelChild owner = objectById(
                         manager, AizMinibossFlameBarrelChild.class, expected.ownerId());
                 assertEquals(expected.slot(), flare.getSlotIndex());
-                assertSame(owner, readObjectField(flare, "anchor", ObjectInstance.class),
-                        "flare anchor must resolve by captured ObjectRefId, not nearest geometry");
+                assertEquals(owner.getSlotIndex(), readIntField(flare, "parentSlot"),
+                        "flare must retain the exact physical parent3 slot through restoration");
             }
             for (LinkedObject expected : projectiles) {
                 AizMinibossNapalmProjectile projectile = objectById(
@@ -610,8 +610,11 @@ class TestAizMinibossNapalmProductionRoute {
             ObjectRefId anchorId,
             int x,
             int y,
-            int sequenceIndex,
-            int frameTimer) {
+            boolean initialized,
+            boolean pendingDelete,
+            int mappingFrame,
+            int animationCursor,
+            int animationTimer) {
     }
 
     private record ProjectileFrame(
@@ -657,12 +660,16 @@ class TestAizMinibossNapalmProductionRoute {
                     .toList();
             List<FlareFrame> flares = live(manager, AizMinibossBarrelShotFlareChild.class).stream()
                     .map(flare -> {
-                        ObjectInstance anchor = readObjectField(flare, "anchor", ObjectInstance.class);
+                        ObjectInstance anchor = com.openggf.level.objects.NativeSstSlotAccess.currentOwner(
+                                manager, readIntField(flare, "parentSlot"));
                         return new FlareFrame(
                                 table.idFor(flare), flare.getSlotIndex(), table.idFor(anchor),
                                 flare.getX(), flare.getY(),
-                                readIntField(flare, "sequenceIndex"),
-                                readIntField(flare, "frameTimer"));
+                                readObjectField(flare, "initialized", Boolean.class),
+                                readObjectField(flare, "pendingDelete", Boolean.class),
+                                readObjectField(flare, "animation", S3kRawAnimation.State.class).mappingFrame,
+                                readObjectField(flare, "animation", S3kRawAnimation.State.class).animFrame,
+                                readObjectField(flare, "animation", S3kRawAnimation.State.class).animFrameTimer);
                     }).toList();
             List<ProjectileFrame> projectiles = live(manager, AizMinibossNapalmProjectile.class)
                     .stream().map(projectile -> {

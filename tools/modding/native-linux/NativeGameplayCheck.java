@@ -109,7 +109,11 @@ public final class NativeGameplayCheck {
                     EngineServices.current().roms().setRom(ownedRom);
                     GameModule root=EngineServices.current().romDetection().detectAndCreateModule(ownedRom).orElseThrow();
                     module=kit.launch(root,new GameplayLaunchRequest(game,character,List.of()));
-                    int zone=ownedZone(module,manifest.id());
+                    // A startup scene owns admission to its authored acts. An
+                    // arbitrary first owned zone may require a retained scene
+                    // session (for example a festival). Bootstrap the backing
+                    // game's initial zone before opening that scene instead.
+                    int zone=module.getGameService(OwnedSceneFactory.class)!=null?0:ownedZone(module,manifest.id());
                     var launch=com.openggf.game.save.SaveSessionContext.noSave(game,
                             new com.openggf.game.save.SelectedTeam(character,List.of()),zone,0);
                     var requiredTeam=module.getGameplayPolicyProvider()

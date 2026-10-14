@@ -84,7 +84,8 @@ final class SszLaunchWorld {
             int[] tiles = {0x73, 0x348};
             for (int i = 0; i < 2; i++) {
                 services.kosinskiModuleQueue().enqueue(services.rom(), sources[i], tiles[i] * 32);
-                state.launch().setJob(i + 2, art.moduleQueue().queue(services.rom(), sources[i], tiles[i]).ordinal());
+                state.launch().setJob(i + 2, S3kRuntimeArtCoordinator.bindPatternModule(services,
+                        art.moduleQueue().queue(services.rom(), sources[i], tiles[i])).ordinal());
             }
             var level = services.currentLevel();
             var context = new LayoutMutationContext(LevelMutationSurface.forLevel(level),

@@ -41,69 +41,21 @@ public final class SecondStrikeRoutes {
     /** Authoring intention; native traversal evidence is recorded separately. */
     public record Opportunity(String character, String route, String reward, String tradeoff) { }
 
-    /** Binding request only. ModContext and the host supply verified factory ownership. */
-    public record EnemyBinding(ObjectSpawn spawn, String localFactoryKey) { }
-
     private static RingGroup group(String id, String decision, Integer... ids) {
         return new RingGroup(id, decision, Set.of(ids));
     }
 
     private static List<RingGroup> forestGroups() {
         return List.of(
-            group("opening", "Three rings before the first tell, then spaced slope crumbs; running costs protection",
-                    1, 2, 3, 4, 6, 8, 9, 11, 12, 13, 14),
-            group("upper-rock-ledge", "Leave the lower path to collect the native upper ledge bank",
-                    15, 16, 17, 18, 20),
-            group("lower-recovery", "A three-ring recovery foothold beyond the first physical post",
-                    21, 22, 24),
-            group("high-guard-approach", "Three rings lead onto the native guard and spotter plateau",
-                    25, 26, 27),
-            group("high-vine-bank", "Commit to the exposed long native upper vine line for a large bank",
-                    28, 33, 36, 39, 40, 41, 42, 44, 47, 48, 49, 50, 51, 53, 58),
-            group("low-vine-shortcut", "Take the faster lower vine branch for only three protection rings",
-                    29, 35, 38),
-            group("water-pocket", "Recover three rings in the native low pocket instead of committing to the upper line",
-                    52, 55, 56),
-            group("crown-approach", "Native elevated footholds lead toward the second physical post",
-                    57, 59, 60, 61, 62, 63, 65),
-            group("crown", "All seven crown rings reward reaching the native high platform",
-                    71, 72, 73, 74, 75, 76, 77),
-            group("crown-exit", "A short upper bank follows the crown; the native guard remains below it",
-                    78, 79, 83),
-            group("low-checkpoint-recovery", "The lower approach retains a three-ring recovery group",
-                    87, 88, 89),
-            group("fire-approach", "Five native slope rings leave a recoverable approach to the ordinary fire cutscene",
-                    100, 101, 102, 103, 104));
+                group("opening", "One native opening ring protects the first committed enemy encounter", 1),
+                group("lower-vine", "One ring rewards taking the native lower vine branch", 35),
+                group("high-crown", "One elevated crown ring rewards committing to the exposed upper platform", 74));
     }
 
     private static List<RingGroup> fireGroups() {
         return List.of(
-            group("fire-first-respite", "Three slope rings after the seamless reload's physical checkpoint",
-                    1, 2, 7),
-            group("fire-upper-columns", "Eight native column rings reward the upper approach beside the giant ring",
-                    3, 4, 5, 6, 8, 9, 10, 11),
-            group("fire-spring-ledge", "Three rings mark the native upper spring ledge",
-                    12, 13, 14),
-            group("fire-bridge-bank", "Four rings on the native collapsing bridge reward a dangerous lower shortcut",
-                    15, 16, 17, 18),
-            group("fire-ramp", "Three spaced ramp rings reward retained momentum",
-                    19, 20, 22),
-            group("fire-lower-guard", "The lower guard approach keeps three protection rings",
-                    21, 23, 24),
-            group("fire-upper-line", "The exposed upper line is sparse; use speed to cross it",
-                    25, 27, 29),
-            group("fire-loop-entrance", "Three rings preserve the readable native loop entrance",
-                    30, 31, 33),
-            group("fire-lower-pocket", "Four low rings offer a detour below the exposed artillery platform",
-                    34, 35, 37, 38),
-            group("fire-water-drop", "Three deep recovery rings reward the longer lower branch",
-                    48, 49, 50),
-            group("fire-last-low-pocket", "A two-ring foothold remains beyond the lower obstacles",
-                    54, 55),
-            group("fire-preboss-pocket", "Three native low rings reward keeping the lower approach alive",
-                    58, 59, 60),
-            group("fire-boss-approach", "Three final native slope rings protect the ordinary miniboss approach",
-                    67, 68, 69));
+                group("fire-spring-ledge", "One ring rewards reaching the native upper spring ledge after the fire handoff", 12),
+                group("fire-boss-approach", "One final native slope ring protects the miniboss approach", 68));
     }
 
     private static Set<Integer> identities(List<RingGroup> groups) {
@@ -125,19 +77,18 @@ public final class SecondStrikeRoutes {
     }
 
     /**
-     * Keeps authored native groups without moving any ring. Later physical Act 2
-     * rings and unfamiliar added identities pass through, allowing the ordinary
-     * next act to remain playable. Applying the plan twice is harmless.
+     * Keeps five original ring records across the advertised first act: three
+     * forest and two physical-fire records. Later physical Act 2 rings pass
+     * through unchanged. Extra opening identities cannot bypass this budget.
+     * Applying the plan twice is harmless; native stage prizes are separate.
      */
     public static List<RingSpawn> rings(List<RingSpawn> source, List<ObjectSpawn> objects) {
         Objects.requireNonNull(source);
         Bank selected = bank(objects);
         Set<Integer> keep = identities(groups(selected));
         return switch (selected) {
-            case FOREST -> source.stream().filter(ring -> ring.placementId() < 1
-                    || ring.placementId() > 104 || keep.contains(ring.placementId())).toList();
+            case FOREST -> source.stream().filter(ring -> keep.contains(ring.placementId())).toList();
             case FIRE_CONTINUATION -> source.stream().filter(ring -> ring.x() >= 0x1000
-                    || ring.placementId() < 1 || ring.placementId() > 69
                     || keep.contains(ring.placementId())).toList();
             case UNCHANGED -> List.copyOf(source);
         };
@@ -151,32 +102,30 @@ public final class SecondStrikeRoutes {
         };
     }
 
-    /** Native anchor positions avoid inventing ground, removing routes, or moving scripted actors. */
-    public static List<EnemyBinding> enemyBindings(List<ObjectSpawn> objects) {
-        Bank bank = bank(objects);
-        if (bank == Bank.UNCHANGED) return List.of();
-        List<EnemyBinding> result = new ArrayList<>();
-        for (ObjectSpawn spawn : objects) {
-            if (spawn.ownerModId() != null || (bank == Bank.FIRE_CONTINUATION && spawn.x() >= 0x1000)) continue;
-            String key = switch (spawn.objectId()) {
-                case 0x8C -> "artillery";
-                case 0x8D -> "guard";
-                case 0x8E -> "spotter";
-                default -> null;
-            };
-            if (key != null) result.add(new EnemyBinding(spawn, key));
-        }
-        return List.copyOf(result);
+    public static boolean inOpening(Bank bank, ObjectSpawn spawn) {
+        return bank != Bank.UNCHANGED && spawn.ownerModId() == null
+                && (bank == Bank.FOREST || spawn.x() < 0x1000);
+    }
+    /** One selector owns the actual registered decoded enemy bindings. */
+    public static String enemyFactory(Bank bank, ObjectSpawn spawn) {
+        if (!inOpening(bank, spawn)) return null;
+        return switch (spawn.objectId()) {
+            case 0x8C -> "artillery";
+            case 0x8D -> "guard";
+            case 0x8E -> "spotter";
+            case 0x8F -> "caterkiller";
+            default -> null;
+        };
     }
 
     /** These are native capability opportunities, not assertions of certified route coverage. */
     public static List<Opportunity> opportunities() {
         return List.of(
                 new Opportunity("sonic", "Native lower loop and slope below the $2200 ride vine",
-                        "A quick lower crossing with three protection rings", "The richer fifteen-ring upper vine bank costs a detour and passes upper defenders"),
+                        "One lower-branch protection ring", "The high crown offers one separate ring but costs a detour past upper defenders"),
                 new Opportunity("tails", "Native upper ledges and crown at $2754–$279C",
-                        "Seven crown rings; existing elevated ten-ring monitors remain", "Flight avoids lower hazards but exposes the landing to upper defenders"),
+                        "One crown protection ring", "Flight avoids lower hazards but exposes the landing to upper defenders and native Robotnik boxes"),
                 new Opportunity("knuckles", "Native rock interactions and lower fire-continuation route",
-                        "Existing breakable passages, giant rings and lower recovery banks remain", "Lower detours give protection while preserving Knuckles' separate native boss arena"));
+                        "Existing breakable passages and giant rings remain", "Lower detours preserve Knuckles' separate native boss arena; only two placed rings remain in the fire continuation"));
     }
 }

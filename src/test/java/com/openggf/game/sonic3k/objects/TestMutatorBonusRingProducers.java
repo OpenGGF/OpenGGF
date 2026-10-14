@@ -25,7 +25,8 @@ class TestMutatorBonusRingProducers {
     @Test void mainLevelSlotRewardRetiresWithoutGrantSparkleSoundOrPendingCount() {
         var services = new Services(BonusStageType.NONE);
         services.policy(NO_RINGS);
-        var controller = new S3kSlotStageController();
+        var controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
         controller.onRewardSpawned();
         var reward = new S3kSlotRingRewardObjectInstance(spawn(0),controller);
@@ -44,7 +45,8 @@ class TestMutatorBonusRingProducers {
     @Test void activeSlotInteriorPreservesNativeGrantAndPendingCountTiming() {
         var services = new Services(BonusStageType.SLOT_MACHINE);
         services.policy(NO_RINGS);
-        var controller = new S3kSlotStageController();
+        var controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
         controller.onRewardSpawned();
         var reward = new S3kSlotRingRewardObjectInstance(spawn(0),controller);

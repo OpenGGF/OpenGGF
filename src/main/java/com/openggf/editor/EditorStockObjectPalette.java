@@ -13,11 +13,22 @@ public final class EditorStockObjectPalette {
     private final java.util.List<Entry> entries;
     private int cursor;
     private int subtype;
+    private int renderFlags;
+    private boolean respawnTracked=true;
+    public int renderFlags(){return renderFlags;}
+    public boolean respawnTracked(){return respawnTracked;}
+    public void toggleRenderFlag(int mask){renderFlags^=mask&3;}
+    public void toggleRespawnTracked(){respawnTracked=!respawnTracked;}
 
     public EditorStockObjectPalette(ObjectRegistry registry) {
+        this(registry, registry::getPrimaryName);
+    }
+
+    public EditorStockObjectPalette(ObjectRegistry registry, java.util.function.IntFunction<String> names) {
         this.registry = Objects.requireNonNull(registry, "registry");
+        Objects.requireNonNull(names, "names");
         java.util.ArrayList<Entry> built = new java.util.ArrayList<>(256 + registry.browsableObjectKeys().size());
-        for (int id = 0; id <= 0xFF; id++) built.add(Entry.stock(id, registry.getPrimaryName(id),
+        for (int id = 0; id <= 0xFF; id++) built.add(Entry.stock(id, names.apply(id),
                 registry.editorPreviewArtKey(id).orElse(null)));
         registry.browsableObjectKeys().forEach(key -> built.add(Entry.keyed(key,
                 registry.editorPreviewArtKey(key).orElse(null))));
@@ -57,6 +68,7 @@ public final class EditorStockObjectPalette {
     public void eyedrop(ObjectSpawn spawn) {
         if (spawn.objectKey() == null) setObjectId(spawn.objectId()); else setObjectKey(spawn.objectKey());
         subtype = spawn.subtype();
+        renderFlags=spawn.renderFlags();respawnTracked=spawn.respawnTracked();
     }
     public record Entry(Integer stockObjectId, String objectKey, String label, String previewArtKey) {
         static Entry stock(int id, String name,String preview) { return new Entry(id, null, "%02X: %s".formatted(id, name),preview); }

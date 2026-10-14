@@ -13,7 +13,7 @@ import java.util.*;
 
 /** World-owned presentation clock and bounded immutable trail history. GPU draws never advance it. */
 public final class LivePresentationRuntime implements WorldSessionPolicyState, RewindSnapshottable<LivePresentationRuntime.State> {
-    public static final int MAX_TRAIL_POSES = 4;
+    public static final int MAX_TRAIL_POSES = 24;
     public static final int MAX_TRAIL_TILES = 256;
     public record Pose(SpritePresentation.Frame frame, int cameraX, int cameraY) { }
     public record State(Object owner,long activePresentations, LogicalInputSnapshot input,

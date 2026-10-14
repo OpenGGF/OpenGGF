@@ -23,6 +23,16 @@ GRAAL_SHA256 = "2733ea1331f1a98b05dd55a768b07347051dad48f030dbbfa191b11a2ccf4144
 GRAAL_URL = ("https://github.com/graalvm/graalvm-ce-builds/releases/download/graal-25.4.4.1.1/"
              "graalvm-community-jdk-25i4-25.0.4.1.1_windows-x64_bin.zip")
 MAIN = "com.openggf.tools.nativewindows.ExperimentalNativeEngine"
+# Engine-created implementations can arrive through erased getGameService calls.
+# Preserve the semantic policy seams, including future/anonymous implementations,
+# rather than assuming that creator bytecode names every concrete service.
+IMPLEMENTATION_ROOTS = (
+    "com.openggf.game.GameModule",
+    "com.openggf.game.mutators.PreparedMutatorConfiguration",
+    "com.openggf.game.mutators.TransientMutatorPolicySource",
+    "com.openggf.game.session.WorldSessionPolicyProvider",
+    "com.openggf.game.session.WorldSessionPolicyState",
+)
 
 
 def digest(path):
@@ -157,6 +167,22 @@ def archive_bundle(bundle, output):
     output.with_suffix(".zip.sha256").write_text(f"{digest(output)}  {output.name}\n", encoding="ascii")
 
 
+def retention_inputs(mods, fixture, output):
+    """Scan shipped mods plus the separately runtime-loaded regression control.
+
+    The control must stay outside the image classpath and shipped mod directory,
+    but its direct JDK references still need callable retained bodies. Origin:
+    2026-10-14 Path.of abort after maintained mods stopped referencing its package.
+    """
+    if (mods / fixture.name).exists():
+        raise ValueError("Runtime control name collides with a shipped mod")
+    output.mkdir()
+    for jar in sorted(mods.glob("*.jar")):
+        shutil.copy2(jar, output / jar.name)
+    shutil.copy2(fixture, output / fixture.name)
+    return output
+
+
 def bootstrap_control(work, engine):
     # This shared regression source must never enter native image analysis.
     classes = work / "bootstrap-control-classes"
@@ -203,11 +229,12 @@ def build(args):
     classpath = os.pathsep.join(map(str, (classes, engine)))
     java = [tool("java"), "--enable-native-access=ALL-UNNAMED", "-cp", classpath]
     run([*java, "com.openggf.tools.NativeModMemberContractTest", work / "fixtures"], work)
-    contract = work / "contract"
-    run([*java, "com.openggf.tools.NativeModMemberContract", engine, inputs / "mods", contract,
-         "--implementation-root=com.openggf.game.GameModule", "--jdk-members"], work)
-    run([*java, "com.openggf.tools.NativeModMemberAudit", contract / "members.tsv"], work)
     bootstrap_control(work, engine)
+    scan_inputs = retention_inputs(inputs / "mods", work / "bootstrap-control.jar", work / "retention-inputs")
+    contract = work / "contract"
+    run([*java, "com.openggf.tools.NativeModMemberContract", engine, scan_inputs, contract,
+         *("--implementation-root=" + root for root in IMPLEMENTATION_ROOTS), "--service-factories", "--jdk-members"], work)
+    run([*java, "com.openggf.tools.NativeModMemberAudit", contract / "members.tsv"], work)
     metadata = work / "metadata"
     metadata.mkdir()
     (metadata / "reflect-config.json").write_text(

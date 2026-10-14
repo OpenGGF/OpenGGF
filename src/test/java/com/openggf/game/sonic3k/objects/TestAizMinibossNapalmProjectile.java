@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mockStatic;
@@ -39,6 +40,9 @@ class TestAizMinibossNapalmProjectile {
     void fallingShotPublishesNativeHazardAndPostMovementTouchState() {
         AizMinibossNapalmProjectile projectile = new AizMinibossNapalmProjectile(100, 160);
 
+        projectile.setServices(new TestObjectServices().withCamera(camera)
+                .withRomReader(TestAizMinibossFallingShotNativeGraph.rawReader()));
+        projectile.update(0,null); // native SetUp_ObjAttributes owns initial collision publication.
         TouchResponseProvider touch = assertInstanceOf(TouchResponseProvider.class, projectile);
         assertEquals(0x98, touch.getCollisionFlags(), "ObjDat_AIZMiniboss_BarrelShot collision byte");
         assertTrue(projectile.usesCurrentTouchResponseState(),
@@ -48,7 +52,7 @@ class TestAizMinibossNapalmProjectile {
     @Test
     void risingPhaseUsesRomVelocityAndWaitWindow() {
         AizMinibossNapalmProjectile projectile = new AizMinibossNapalmProjectile(100, 160);
-        projectile.setServices(new TestObjectServices().withCamera(camera));
+        projectile.setServices(new TestObjectServices().withCamera(camera).withRomReader(TestAizMinibossFallingShotNativeGraph.rawReader()));
 
         projectile.update(0, null);
         assertEquals(160, projectile.getY(), "the init routine does not move before Rise dispatch");
@@ -67,7 +71,7 @@ class TestAizMinibossNapalmProjectile {
     @Test
     void firstRiseDispatchAdvancesRawAnimationImmediately() throws Exception {
         AizMinibossNapalmProjectile projectile = new AizMinibossNapalmProjectile(100, 160);
-        projectile.setServices(new TestObjectServices().withCamera(camera));
+        projectile.setServices(new TestObjectServices().withCamera(camera).withRomReader(TestAizMinibossFallingShotNativeGraph.rawReader()));
 
         projectile.update(0, null); // FallingShot_Init
         assertEquals(0x0C, readIntField(projectile, "mappingFrame"));
@@ -125,13 +129,15 @@ class TestAizMinibossNapalmProjectile {
 
             projectile.update(108, null);
 
-            assertTrue(projectile.isDestroyed(), "ObjHitFloor_DoRoutine calls the explode callback");
+            assertFalse(projectile.isDestroyed(), "ObjHitFloor callback marks Go_Delete before the next physical clear");
             assertEquals(-0x1F, projectile.getY(),
                     "the native floor distance is added after MoveSprite2");
             assertEquals(List.of(Sonic3kSfx.PROJECTILE.id, Sonic3kSfx.MISSILE_EXPLODE.id),
                     services.playedSfx,
                     "floor impact adds only MissileExplode after the projectile init sound");
             terrain.verify(() -> ObjectTerrainUtils.checkFloorDist(36, -0x1C, 8));
+            projectile.update(109,null);
+            assertTrue(projectile.isDestroyed(), "next Delete_Current_Sprite dispatch clears without a floor probe");
         }
     }
 
@@ -139,6 +145,7 @@ class TestAizMinibossNapalmProjectile {
     void explosionChildrenUseNativeStaggerAndHazardWindow() throws Exception {
         AizMinibossNapalmExplosionChild child =
                 new AizMinibossNapalmExplosionChild(200, 100, 0, true);
+        child.setServices(new TestObjectServices().withRomReader(TestAizMinibossFallingShotNativeGraph.rawReader()));
         assertInstanceOf(RewindRecreatable.class, child);
         assertEquals(0, child.getCollisionFlags(), "BossExplosionHitbox waits before animation");
 
@@ -174,6 +181,7 @@ class TestAizMinibossNapalmProjectile {
         @Override
         public RecordingObjectServices withCamera(Camera camera) {
             super.withCamera(camera);
+            super.withRomReader(TestAizMinibossFallingShotNativeGraph.rawReader());
             return this;
         }
 

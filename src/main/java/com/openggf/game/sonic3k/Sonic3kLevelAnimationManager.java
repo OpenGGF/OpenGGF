@@ -31,6 +31,7 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
     private final Sonic3kPatternAnimator patternAnimator;
     private final Sonic3kPaletteCycler paletteCycler;
     private final Sonic3kGlobalAnimationState globalAnimationState;
+    private final boolean endingScene;
 
     public Sonic3kLevelAnimationManager(RomByteReader reader, Level level,
                                         int zoneIndex, int actIndex, boolean isSkipIntro) {
@@ -41,6 +42,7 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
     Sonic3kLevelAnimationManager(RomByteReader reader, Level level,
                                  int zoneIndex, int actIndex, boolean isSkipIntro,
                                  Sonic3kGlobalAnimationState globalAnimationState) {
+        this.endingScene=zoneIndex==0x0D&&actIndex==1;
         this.patternAnimator = new Sonic3kPatternAnimator(reader, level,
                 zoneIndex, actIndex, isSkipIntro);
         // Resolve the palette ownership registry from the active gameplay mode
@@ -69,7 +71,7 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
 
     /** ROM {@code Palette_fade_timer} is still counting down the fresh-level fade. */
     public boolean paletteFadeTimerRunning() {
-        return globalAnimationState.paletteFadeTimer() > 0;
+        return globalAnimationState.paletteFadeTimer() != 0;
     }
 
     void resetFreshLevelRingAnimation() {
@@ -80,13 +82,44 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
     @Override
     public void update() {
         patternAnimator.update();
-        paletteCycler.update(!globalAnimationState.consumePaletteFadeFrame());
+        // D01 Animate_Palette belongs before Process_Sprites. Its AnPal entry
+        // is empty; retain late object writes here without consuming the timer twice.
+        paletteCycler.update(!endingScene&&!globalAnimationState.consumePaletteFadeFrame());
         applyPoweredFormPaletteUploadVInt();
         // LevelLoop runs Process_Sprites before ChangeRingFrame
         // (sonic3k.asm:7888-7910). LevelFrameRuntimeUpdater calls this combined
         // manager after the object pass, so this is the runtime owner for the
         // independent AIZ_vine_angle word advanced at sonic3k.asm:9680-9694.
         globalAnimationState.advanceChangeRingFrame();
+    }
+
+    /** D01's source-ordered Animate_Palette call, using the existing captured global timer. */
+    public void advanceEndingInitialPalette(com.openggf.level.objects.ObjectServices services) {
+        if(!endingScene)throw new IllegalStateException("Ending palette operation on an ordinary animator");
+        if(globalAnimationState.paletteFadeTimer()<0)return; // Animate_Palette BMI: event ST writes $FF00.
+        if(globalAnimationState.consumePaletteFadeFrame()) {
+            com.openggf.game.sonic3k.ending.S3kEndingPalette.advanceInitialSceneFromWhite(services);
+            return;
+        }
+        advanceEndingPoweredPaletteAtAnPal(services);
+    }
+
+    /** ScreenEvents ST/CLR of the existing Palette_fade_timer word, captured by this animator. */
+    public void setEndingScreenPaletteFadeBlocked(boolean blocked) {
+        if(!endingScene)throw new IllegalStateException("Ending fade flag on an ordinary animator");
+        globalAnimationState.restorePaletteFadeTimer(blocked?0xFF00:0);
+    }
+
+    /** The SSZ ending shares AnPal_Load without owning D01's fresh white fade. */
+    public void advanceEndingPoweredPaletteAtAnPal(com.openggf.level.objects.ObjectServices services) {
+        if(globalAnimationState.paletteFadeTimer()!=0)return;
+        if(services.playerQuery().mainPlayerOrNull() instanceof com.openggf.sprites.playable.AbstractPlayableSprite player
+                && player.getSuperStateController() instanceof Sonic3kSuperStateController controller){
+            controller.advanceEndingPaletteAtAnPal();
+            // Native Normal_palette changes precede object reads and later writes.
+            S3kPaletteWriteSupport.resolvePendingWritesNow(services.paletteOwnershipRegistryOrNull(),
+                    services.currentLevel(),services.graphicsManager());
+        }
     }
 
     private static void applyPoweredFormPaletteUploadVInt() {

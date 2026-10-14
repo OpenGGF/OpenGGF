@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.GameRng;
+import com.openggf.game.CharacterKey;
 import com.openggf.game.PlayableEntity;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.ObjectPlayerQuery;
@@ -130,8 +131,8 @@ class TestBubblerObjectInstance {
         assertEquals(1, tails.replenishAirCalls);
         assertEquals(true, tails.getRolling(),
                 "Obj_Bubbler's non-Obj_Sonic branch restores radii without clearing Status_Roll");
-        assertEquals(tails.getStandXRadius(), tails.getXRadius());
-        assertEquals(tails.getStandYRadius(), tails.getYRadius());
+        assertEquals(9, tails.getXRadius(), "loc_2FC5A literal x_radius");
+        assertEquals(15, tails.getYRadius(), "loc_2FC5A literal y_radius, not test-double defaults");
     }
 
     private static BubblerObjectInstance largeBubbleAt(int x, int y) {
@@ -166,12 +167,17 @@ class TestBubblerObjectInstance {
 
     private static final class TrackingPlayer extends TestablePlayableSprite {
         private int replenishAirCalls;
+        private final CharacterKey character;
 
         private TrackingPlayer(String code, int x, int y) {
             super(code, (short) x, (short) y);
+            character = CharacterKey.builtin(code);
             setCentreX((short) x);
             setCentreY((short) y);
         }
+
+        @Override
+        public CharacterKey characterKey() { return character; }
 
         @Override
         public void replenishAir() {

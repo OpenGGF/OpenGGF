@@ -788,6 +788,10 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                     Sonic3kConstants.ANI_FIRE_SHIELD_ADDR, Sonic3kConstants.ANI_FIRE_SHIELD_COUNT,
                     Sonic3kConstants.ART_TILE_SHIELD, 0);
 
+            // Independent effects reuse ROM pixels without sharing a player's mutable shield bank.
+            registerSheet(FireShieldDashArt.KEY,
+                    FireShieldDashArt.sheet(shieldArtSets.get(Sonic3kObjectArtKeys.FIRE_SHIELD)));
+
             loadSingleShieldArt(reader, Sonic3kObjectArtKeys.LIGHTNING_SHIELD,
                     Sonic3kConstants.ART_UNC_LIGHTNING_SHIELD_ADDR, Sonic3kConstants.ART_UNC_LIGHTNING_SHIELD_SIZE,
                     Sonic3kConstants.MAP_LIGHTNING_SHIELD_ADDR, Sonic3kConstants.DPLC_LIGHTNING_SHIELD_ADDR,

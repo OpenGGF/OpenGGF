@@ -2,9 +2,13 @@ package com.openggf.game.sonic3k.objects.badniks;
 
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.PlayableEntity;
+import com.openggf.graphics.GLCommand;
+
+import java.util.List;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
@@ -15,6 +19,8 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * Core routine mapping: Obj_Rhinobot (sonic3k.asm loc_86E7E..loc_8714A).
  */
 public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance implements SpawnRewindRecreatable {
+    @Override public boolean supportsGroundedFieldMotion() { return true; }
+
     private static final int COLLISION_SIZE_INDEX = 0x0B; // ObjSlot_Rhinobot flags $0B
     private static final int PRIORITY_BUCKET = 5;         // ObjSlot_Rhinobot priority $280
 
@@ -31,7 +37,9 @@ public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance impl
 
     private static final int DETECT_X = 0x60;             // sub_870A4 d2 horizontal compare
     private static final int DETECT_Y = 0x20;             // sub_870A4 d3 vertical compare
-    private static final int WAIT_OFFSCREEN_MARGIN = 0x20; // Obj_WaitOffscreen width_pixels
+    private static final int WAIT_OFFSCREEN_HALF_SIZE = 0x20; // Obj_WaitOffscreen width/height_pixels
+    private static final int RENDER_HALF_WIDTH = 0x14;     // ObjSlot_Rhinobot width_pixels
+    private static final int RENDER_HALF_HEIGHT = 0x10;    // ObjSlot_Rhinobot height_pixels
 
     private static final int FRAME_SLOW = 0;
     private static final int FRAME_RUN = 1;
@@ -57,6 +65,11 @@ public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance impl
     private State state = State.PATROL;
     /** ROM loc_85B02 restores the saved operation pointer exactly once. */
     private boolean waitOffscreenReleased;
+    private boolean waitOffscreenDispatched;
+    /** Prior Render_Sprites sign bit for the empty $20 by $20 placeholder. */
+    private boolean placeholderRenderedOnscreen;
+    /** Native status7/Delete_Current_Sprite marker; the physical SST clears next dispatch. */
+    private boolean nativeRetirementPending;
     private int statusFlags;
     private int accelStep;
     private int targetSpeed;
@@ -78,8 +91,8 @@ public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance impl
 
     /**
      * Rhinobot_Init (sonic3k.asm:182389-182408): loads ObjSlot_Rhinobot through
-     * SetUp_ObjAttributesSlotted (whose shared tail is
-     * `addq.b #2,routine(a0)` then `rts`, sonic3k.asm:176901-176919), sets
+     * SetUp_ObjAttributesSlotted (whose own tail is
+     * `addq.b #2,routine(a0)` then `rts`, sonic3k.asm:178880-178896), sets
      * x_radius/y_radius, picks d0/d1 = -$10/-$300 (negated, with $38 bits 2 and 3
      * set, when render_flags bit 0 is set), stores them in $40/$3E and points
      * $34 at Rhinobot_ReverseAcceleration — then `rts`. It does NOT fall through
@@ -106,17 +119,23 @@ public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance impl
         if (isDestroyed()) {
             return;
         }
-        // Obj_WaitOffscreen (docs/skdisasm/sonic3k.asm:180271-180305) publishes a
-        // $20-wide placeholder before restoring the real routine, so render
-        // visibility begins at the placeholder's bounds rather than only when
-        // x_pos enters the viewport. It is a ONE-SHOT latch: loc_85B02 does
-        // `move.l $34(a0),(a0) / rts`, restoring the saved operation pointer
-        // permanently, so the badnik keeps running once released whether or not
-        // it is still on screen. Re-testing visibility every frame instead let
-        // the rhinobot resume its patrol acceleration from a different frame,
-        // leaving it ~7 px left of the ROM by the time it charges.
+        if (nativeRetirementPending) {
+            ObjectLifetimeOps.destroyRespawnableOffscreen(this);
+            return;
+        }
+        // Obj_WaitOffscreen / loc_85AD2 (sonic3k.asm:180271-180301)
+        // queues Map_Offscreen, then consumes the preceding Render_Sprites
+        // sign bit. X-only current bounds would start a vertically hidden
+        // Rhinobot. loc_85B02 restores the saved operation and returns; Init
+        // still owns a separate following dispatch.
         if (!waitOffscreenReleased) {
-            if (!isOnScreenX(WAIT_OFFSCREEN_MARGIN)) {
+            waitOffscreenDispatched = true;
+            if (!placeholderRenderedOnscreen) {
+                // loc_85AFC clears the physical slot immediately while waiting.
+                if (isOutsideNativeCoarseWindow()) {
+                    ObjectLifetimeOps.releaseSpawnForRespawn(services().objectManager(), this, spawn);
+                    ObjectLifetimeOps.destroyRespawnableOffscreen(this);
+                }
                 return;
             }
             waitOffscreenReleased = true;
@@ -126,6 +145,7 @@ public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance impl
         if (initPending) {
             initPending = false;
             runInit();
+            checkNativeRetirement();
             return;
         }
 
@@ -134,7 +154,26 @@ public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance impl
             case CHARGE_PREP -> updateChargePrep();
             case CHARGE_DASH -> updateChargeDash();
         }
+        checkNativeRetirement();
     }
+
+    private void checkNativeRetirement() {
+        // Sprite_CheckDeleteTouchSlotted / Go_Delete_SpriteSlotted
+        // (sonic3k.asm:179086-179095,179056-179064) marks status7/code now,
+        // after routine and DPLC work, and clears on the next slot dispatch.
+        if (isOutsideNativeCoarseWindow()) {
+            nativeRetirementPending = true;
+            ObjectLifetimeOps.releaseSpawnForRespawn(services().objectManager(), this, spawn);
+        }
+    }
+
+    private boolean isOutsideNativeCoarseWindow() {
+        return tryServices() != null && services().camera() != null
+                && isCoarseXOutOfRange(currentX, services().camera().getX(), coarseXCullRange());
+    }
+
+    @Override public boolean usesCustomOutOfRangeCheck() { return true; }
+    @Override public boolean isCustomOutOfRange(int cameraX) { return false; }
 
     private void updatePatrol(AbstractPlayableSprite player) {
         if (shouldStartCharge(player)) {
@@ -299,12 +338,45 @@ public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance impl
     }
 
     @Override
+    public void refreshPostCameraRenderState() {
+        // Only a dispatched Draw_Sprite queues the placeholder for the scan;
+        // merely installing a fresh slot before its first pass sets no sign.
+        if (waitOffscreenDispatched && !waitOffscreenReleased) {
+            placeholderRenderedOnscreen = isWithinRenderSpriteBounds(
+                    WAIT_OFFSCREEN_HALF_SIZE, WAIT_OFFSCREEN_HALF_SIZE);
+        }
+    }
+
+    @Override
+    public int getOnScreenHalfWidth() {
+        return initPending ? WAIT_OFFSCREEN_HALF_SIZE : RENDER_HALF_WIDTH;
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        return initPending ? WAIT_OFFSCREEN_HALF_SIZE : RENDER_HALF_HEIGHT;
+    }
+
+    @Override
+    public int getPriorityBucket() {
+        // The cleared waiter has priority word0; only Init loads $280.
+        return initPending ? 0 : super.getPriorityBucket();
+    }
+
+    @Override
+    public void appendRenderCommands(List<GLCommand> commands) {
+        // Map_Offscreen has zero pieces until Rhinobot_Init installs its body.
+        if (!initPending && !nativeRetirementPending) {
+            super.appendRenderCommands(commands);
+        }
+    }
+
+    @Override
     public int getCollisionFlags() {
-        // collision_flags is written by SetUp_ObjAttributesSlotted inside
-        // Rhinobot_Init (sonic3k.asm:176910), so the SST slot still reads zero
-        // for the whole Init dispatch: the frame's touch scan runs at the player
-        // slot before this object's routine.
-        return initPending ? 0 : super.getCollisionFlags();
+        // SetUp_ObjAttributesSlotted writes collision_flags inside Init
+        // (sonic3k.asm:178890), after this pass's player-slot touch scan. The
+        // waiter and restored-but-undispatched continuation still read zero.
+        return initPending || nativeRetirementPending ? 0 : super.getCollisionFlags();
     }
 
     private void maybeTriggerBrakeEffect() {

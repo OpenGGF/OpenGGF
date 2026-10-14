@@ -4,6 +4,7 @@ import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.game.GameServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.rewind.RewindSnapshotDiff;
+import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.sonic3k.objects.bosses.SszGhzBossObjectInstance;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
@@ -29,8 +30,11 @@ class TestSszColdRouteCapture {
         var movie = new Bk2MovieLoader().loadMovieOrInputLog(Path.of(
                 "src/test/resources/routes/s3k/ssz1-sonic-tails-cold-"
                         + (complete ? "complete" : "upper") + "-320.bk2"));
-        int historyStart = movie.getFrameCount() - 120;
-        int lastReplaySpot = movie.getFrameCount() - 170;
+        // Keep the qualified SSZ branch/history inlet; the independent neutral
+        // tail allows a full one-owner fade and native DEZ entrance release.
+        int routePrefixFrames = movie.getFrameCount() - (complete ? 180 : 0);
+        int historyStart = routePrefixFrames - 120;
+        int lastReplaySpot = routePrefixFrames - 170;
         var previousInput = GameplayCaptureSession.class.getDeclaredField("previousInput");
         previousInput.setAccessible(true);
         var drawing = new RouteFrameDrawing();
@@ -40,6 +44,11 @@ class TestSszColdRouteCapture {
             boolean sawMtzBoss = false; boolean sawMtzDefeat = false;
             long largestOutgoingRewindFrame = 0;
             boolean sawMecha = false; boolean sawMechaDefeat = false;
+            int destinationLoaded = -1, destinationAssembled = -1, checkedWindows = 0;
+            boolean isolatedHistory = false;
+            var incomingWindows = new java.util.HashSet<String>();
+            var outgoingManager = GameServices.level().getObjectManager();
+            var outgoingRuntime = GameServices.zoneRuntimeState();
             for (int frame = 0; frame < movie.getFrameCount(); frame++) {
                 // Arm live history only after the independent snapshot replay spots.
                 // This exercises the real SSZ→DEZ boundary without storing the entire route.
@@ -65,6 +74,42 @@ class TestSszColdRouteCapture {
                         com.openggf.game.sonic3k.objects.bosses.SszMechaSonicObjectInstance.class);
                 sawMecha |= !mecha.isEmpty();
                 sawMechaDefeat |= mecha.stream().anyMatch(b -> b.getCollisionProperty() == 0);
+                String incomingSpot = null;
+                if (complete && GameServices.level().getCurrentZone() == 11) {
+                    var level = GameServices.level();
+                    var manager = level.getObjectManager();
+                    if (destinationLoaded < 0) destinationLoaded = frame;
+                    if (destinationAssembled < 0 && !level.hasPendingFreshLevelTransitionBoundary()
+                            && !level.getTransitions().isTitleCardRequested()) {
+                        destinationAssembled = frame;
+                        assertNotSame(outgoingManager, manager);
+                        assertNotSame(outgoingRuntime, GameServices.zoneRuntimeState());
+                        assertSame(GameServices.sprites().getMainPlayable(), session.player());
+                        assertSame(session.player(), GameServices.camera().getFocusedSprite());
+                        assertFalse(session.player().isObjectControlled());
+                        assertTrue(session.player().isControlLocked(), "loc_44A26 owns the DEZ entrance");
+                        assertEquals(0, session.player().getRingCount(), "loc_63B4 publishes fresh rings");
+                        assertEquals(1, GameServices.sprites().getRegisteredSidekicks().size());
+                        assertEquals(48, session.player().getCentreX());
+                        assertEquals(2476, session.player().getCentreY());
+                        assertFalse(manager.activeObjectsOfType(
+                                com.openggf.game.sonic3k.objects.LevelIntroPlayerRunInstance.class).isEmpty());
+                        incomingSpot = "dez-intro";
+                    }
+                    var rewind = SessionManager.getCurrentGameplayMode().getRewindController();
+                    if (!isolatedHistory && rewind != null) {
+                        assertTrue(largestOutgoingRewindFrame > 10, "outgoing SSZ history exists");
+                        assertTrue(rewind.currentFrame() < largestOutgoingRewindFrame,
+                                "DEZ starts a fresh timeline at its actual boundary");
+                        isolatedHistory = true;
+                    }
+                    if (destinationAssembled >= 0 && !session.player().isControlLocked()
+                            && manager.activeObjectsOfType(
+                                com.openggf.game.sonic3k.objects.LevelIntroPlayerRunInstance.class).isEmpty()
+                            && !incomingWindows.contains("dez-released")) {
+                        incomingSpot = "dez-released";
+                    }
+                }
                 if (complete && frame == 19683) {
                     assertFalse(session.player().getRenderHFlip(),
                             "loc_58016 clears render_flags bits 0/1 before the fixed spiral mappings");
@@ -101,7 +146,7 @@ class TestSszColdRouteCapture {
                             .stream().anyMatch(bar -> bar.holdingForTest(0)), "ordinary elevator-bar grab");
                 }
                 // Traversal, encounter, transport ascent, elevator hold/release and swinging carrier.
-                if (frame != 2888 && frame != 3440 && frame != 3540 && frame != 3818
+                if (incomingSpot == null && frame != 2888 && frame != 3440 && frame != 3540 && frame != 3818
                         && frame != 4168 && frame != 4400 && frame != 4700
                         && frame != 4930 && frame != 5320 && frame != 5400
                         && frame != 6300 && frame != 6459 && frame != 7087
@@ -114,22 +159,36 @@ class TestSszColdRouteCapture {
                         && frame != 14450 && frame != 14840 && frame != 15050
                         && frame != 15890 && frame != 16925 && frame != 17220
                         && frame != 18000 && frame != 19683 && frame != 19350 && (!complete || frame != lastReplaySpot)) continue;
-                var registry = SessionManager.getCurrentGameplayMode().getRewindRegistry();
+                var level = GameServices.level();
+                var mode = SessionManager.getCurrentGameplayMode();
+                assertFalse(level.hasPendingFreshLevelTransitionBoundary());
+                assertFalse(mode.getFadeManager().hasPendingCompletion());
+                var registry = mode.getRewindRegistry();
                 drawing.checkpoint(session);
                 var saved = registry.capture();
-                for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); drawing.draw(session); }
+                var world = level.getCurrentLevel();
+                var manager = level.getObjectManager();
+                var runtime = GameServices.zoneRuntimeState();
+                int lives = GameServices.gameState().getLives();
+                for (int n = 1; n <= 45; n++) {
+                    session.step(movie.getFrame(frame + n)); drawing.draw(session);
+                    sameWorld(session, world, manager, runtime, lives);
+                }
                 var forward = registry.capture();
-                registry.restore(saved);
-                // External controller held-button history is not part of gameplay rewind.
-                previousInput.set(session, movie.getFrame(frame));
-                for (int n = 1; n <= 45; n++) { session.step(movie.getFrame(frame + n)); drawing.draw(session); }
-                var replay = registry.capture();
-                assertEquals(forward.entries().keySet(), replay.entries().keySet());
-                for (String key : forward.entries().keySet()) {
-                    var differences = RewindSnapshotDiff.diffKey(key, forward.get(key), replay.get(key));
-                    assertTrue(differences.isEmpty(), "input " + frame + " " + key + ": " + differences);
+                for (int cycle = 0; cycle < 2; cycle++) {
+                    registry.restore(saved);
+                    same(saved, registry.capture(), "restore at " + frame + " cycle " + cycle);
+                    // External held-button history belongs to the input driver.
+                    previousInput.set(session, movie.getFrame(frame));
+                    for (int n = 1; n <= 45; n++) {
+                        session.step(movie.getFrame(frame + n)); drawing.draw(session);
+                        sameWorld(session, world, manager, runtime, lives);
+                    }
+                    same(forward, registry.capture(), "replay at " + frame + " cycle " + cycle);
                 }
                 registry.restore(saved); previousInput.set(session, movie.getFrame(frame));
+                checkedWindows++;
+                if (incomingSpot != null) incomingWindows.add(incomingSpot);
             }
             drawing.checkpoint(session);
             assertTrue(sawBoss && sawDefeat, "cold encounter must reach the killing hit");
@@ -139,30 +198,37 @@ class TestSszColdRouteCapture {
                 assertTrue(sawMecha && sawMechaDefeat, "cold route must defeat the final Mecha Sonic");
                 assertEquals(11, GameServices.level().getCurrentZone(), "actual DEZ load, not just a request");
                 assertEquals(0, GameServices.level().getCurrentAct());
-                // loc_6468 releases the destination on its ordinary entry dispatch.
-                var neutral = new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, "");
-                if (GameServices.level().hasPendingFreshLevelTransitionBoundary()
-                        || GameServices.level().getTransitions().isTitleCardRequested()) {
-                    session.step(neutral); drawing.draw(session);
-                }
+                assertEquals(destinationLoaded + 1, destinationAssembled,
+                        "loc_6468 ordinary destination assembly follows the actual load");
                 assertFalse(GameServices.level().hasPendingFreshLevelTransitionBoundary());
                 assertFalse(GameServices.level().getTransitions().isTitleCardRequested());
                 assertSame(GameServices.sprites().getMainPlayable(), session.player());
-                assertSame(session.player(), GameServices.camera().getFocusedSprite());
                 assertFalse(session.player().isObjectControlled());
-                assertEquals(0, session.player().getRingCount(), "loc_63B4 publishes fresh DEZ rings");
-                assertEquals(1, GameServices.sprites().getRegisteredSidekicks().size());
-                assertEquals(48, session.player().getCentreX());
-                assertEquals(2476, session.player().getCentreY());
-                assertTrue(largestOutgoingRewindFrame > 10, "outgoing SSZ history was actually recorded");
-                // The handover clears the old timeline; step the incoming level so a fresh
-                // controller is installed even when the transition fade retired the old one.
-                for (int n = 0; n < 30; n++) { session.step(neutral); drawing.draw(session); }
-                var rewind = SessionManager.getCurrentGameplayMode().getRewindController();
-                assertNotNull(rewind, "DEZ starts a new rewind timeline");
-                assertTrue(rewind.currentFrame() < largestOutgoingRewindFrame,
-                        "the incoming timeline cannot retain the outgoing SSZ history");
+                assertFalse(session.player().isControlLocked());
+                assertEquals(java.util.Set.of("dez-intro", "dez-released"), incomingWindows);
+                assertTrue(isolatedHistory, "incoming history was observed at its fresh boundary");
+                assertNotNull(SessionManager.getCurrentGameplayMode().getRewindController());
+                System.out.println("SSZ320 complete: " + checkedWindows
+                        + " two-cycle45 whole-world windows; actual DEZ load/assembly "
+                        + destinationLoaded + "/" + destinationAssembled);
             }
+        }
+    }
+
+    private static void sameWorld(GameplayCaptureSession session, Object world,
+            Object manager, Object runtime, int lives) {
+        assertSame(world, GameServices.level().getCurrentLevel());
+        assertSame(manager, GameServices.level().getObjectManager());
+        assertSame(runtime, GameServices.zoneRuntimeState());
+        assertFalse(session.player().getDead());
+        assertTrue(GameServices.gameState().getLives() >= lives);
+    }
+
+    private static void same(CompositeSnapshot expected, CompositeSnapshot actual, String context) {
+        assertEquals(expected.entries().keySet(), actual.entries().keySet(), context);
+        for (String key : expected.entries().keySet()) {
+            var differences = RewindSnapshotDiff.diffKey(key, expected.get(key), actual.get(key));
+            assertTrue(differences.isEmpty(), context + " " + key + ": " + differences);
         }
     }
 }

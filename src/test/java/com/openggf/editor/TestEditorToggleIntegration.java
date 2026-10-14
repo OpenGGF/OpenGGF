@@ -1,6 +1,5 @@
 package com.openggf.editor;
 
-import com.openggf.tests.TestTempFiles;
 import com.openggf.Engine;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
@@ -10,11 +9,10 @@ import com.openggf.data.Rom;
 import com.openggf.data.RomManager;
 import com.openggf.editor.persistence.EditorSaveManager;
 import com.openggf.game.GameMode;
-import com.openggf.game.ZoneFeatureProvider;
+import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.session.EditorCursorState;
 import com.openggf.game.session.EditorPlaytestStash;
 import com.openggf.game.session.GameplayModeContext;
-import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
@@ -24,15 +22,16 @@ import com.openggf.level.Block;
 import com.openggf.level.Chunk;
 import com.openggf.level.ChunkDesc;
 import com.openggf.level.Level;
+import com.openggf.level.LevelManager;
 import com.openggf.level.Map;
 import com.openggf.level.MutableLevel;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
+import com.openggf.level.PatternDesc;
 import com.openggf.level.SolidTile;
-import com.openggf.level.LevelManager;
-import com.openggf.level.ParallaxManager;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.Sonic;
+import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,113 +46,41 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_F5;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_E;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_TAB;
-import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
-import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
+import static org.mockito.Mockito.*;
+import static org.lwjgl.glfw.GLFW.*;
 
+/** Engine input/rendering integration over valid authored geometry; native playtests use the configured ROM. */
 @Isolated
 class TestEditorToggleIntegration {
-
-    @TempDir
-    Path tempSaves;
-
-    private static final ParallaxManager SINGLE_CHUNK_BG_PERIOD = new ParallaxManager() {
-        @Override
-        public int getBgPeriodWidth() {
-            return 16;
-        }
-    };
-
-    private static final ZoneFeatureProvider BG_WRAPPING_ZONE_FEATURES = new ZoneFeatureProvider() {
-        @Override
-        public void initZoneFeatures(Rom rom, int zoneIndex, int actIndex, int cameraX) {
-        }
-
-        @Override
-        public void update(com.openggf.sprites.playable.AbstractPlayableSprite player, int cameraX, int zoneIndex) {
-        }
-
-        @Override
-        public void reset() {
-        }
-
-        @Override
-        public boolean hasCollisionFeatures(int zoneIndex) {
-            return false;
-        }
-
-        @Override
-        public boolean hasWater(int zoneIndex) {
-            return false;
-        }
-
-        @Override
-        public int getWaterLevel(int zoneIndex, int actIndex) {
-            return Integer.MAX_VALUE;
-        }
-
-        @Override
-        public void render(com.openggf.camera.Camera camera, int frameCounter) {
-        }
-
-        @Override
-        public int ensurePatternsCached(GraphicsManager graphicsManager, int baseIndex) {
-            return baseIndex;
-        }
-
-        @Override
-        public boolean bgWrapsHorizontally() {
-            return true;
-        }
-    };
+    @TempDir Path tempSaves;
+    private Rom fixtureRom;
 
     @BeforeEach
     void setUp() {
         RomManager.getInstance().setRom(null);
         TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
+        GraphicsManager.getInstance().initHeadless();
     }
 
     @AfterEach
-    void tearDown() {
-        RomManager.getInstance().setRom(null);
-        TestEnvironment.resetAll();
-        // See TestEngine.tearDown: a leaked Engine static poisons the fork.
-        com.openggf.Engine.clearGlobalInstance();
-        SonicConfigurationService.getInstance().resetToDefaults();
+    void tearDown() throws Exception {
         SessionManager.clear();
+        if (fixtureRom != null) fixtureRom.close();
+        RomManager.getInstance().setRom(null);
+        Engine.clearGlobalInstance();
+        TestEnvironment.resetAll();
+        SonicConfigurationService.getInstance().resetToDefaults();
         GameModuleRegistry.reset();
     }
 
     @Test
     void enterEditorFromCurrentPlayer_whenEditorDisabled_rejectsActivation() {
-        Engine engine = new Engine();
+        var engine = new Engine();
         createGameplayMode(engine);
-        EditorPlaytestStash stash = new EditorPlaytestStash(100, 200, 9, -3, true, 47, 1);
-
-        IllegalStateException error = assertThrows(IllegalStateException.class,
-                () -> engine.enterEditorFromCurrentPlayer(stash, 100, 200));
-
-        assertEquals("Level editor is disabled by configuration.", error.getMessage());
+        var failure = assertThrows(IllegalStateException.class, () -> enter(engine, 100, 200));
+        assertEquals("Level editor is disabled by configuration.", failure.getMessage());
         assertEquals(GameMode.LEVEL, engine.getCurrentGameMode());
         assertNull(SessionManager.getCurrentEditorMode());
         assertNotNull(SessionManager.getCurrentGameplayMode());
@@ -161,16 +88,10 @@ class TestEditorToggleIntegration {
 
     @Test
     void shiftTabInGameplay_whenEditorDisabled_doesNotEnterEditor() {
-        Engine engine = new Engine();
+        var engine = new Engine();
         createGameplayMode(engine);
-        InputHandler inputHandler = new InputHandler();
-        engine.setInputHandler(inputHandler);
-
-        inputHandler.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS);
-        inputHandler.handleKeyEvent(GLFW_KEY_TAB, GLFW_PRESS);
-
-        engine.getGameLoop().step();
-
+        var input = inputFor(engine);
+        press(engine, input, GLFW_KEY_LEFT_SHIFT, GLFW_KEY_TAB);
         assertEquals(GameMode.LEVEL, engine.getCurrentGameMode());
         assertNull(SessionManager.getCurrentEditorMode());
         assertNotNull(SessionManager.getCurrentGameplayMode());
@@ -178,1030 +99,450 @@ class TestEditorToggleIntegration {
 
     @Test
     void createGameplayMode_createsRuntimeBeforeConstructingPlayer() {
-        Engine engine = new Engine();
-
-        GameplayModeContext gameplayMode = assertDoesNotThrow(() -> createGameplayMode(engine));
-
-        assertNotNull(gameplayMode);
-        assertSame(gameplayMode, SessionManager.getCurrentGameplayMode());
-        assertNotNull(gameplayMode.getSpriteManager().getSprite("sonic"));
+        var engine = new Engine();
+        var mode = assertDoesNotThrow(() -> createGameplayMode(engine));
+        assertSame(mode, SessionManager.getCurrentGameplayMode());
+        assertNotNull(mode.getSpriteManager().getSprite("sonic"));
+        assertNotNull(mode.getLevelManager().getCurrentLevel());
     }
 
-    // Removed: 3 tests that exercised the old gameplay-mode parking path.
-    // Editor entry/exit now uses proper teardown+rebuild with level
-    // restoration; the parking mechanism has been removed entirely. The
-    // editor round-trip behavior is covered by
-    // enterEditorFromCurrentPlayer_thenResumePlaytestFromEditor_roundTripsStashAndSpawn
-    // and editorRoundTrip_preservesMutableLevelMutations below.
-
     @Test
-    void enterEditorFromCurrentPlayer_thenResumePlaytestFromEditor_roundTripsStashAndSpawn() throws Exception {
+    void editorEntryCreatesIndependentDocumentAndDiscardsParkedGameplayStash() {
         enableEditor();
-        Engine engine = new Engine();
-        createGameplayMode(engine);
-        EditorPlaytestStash stash = new EditorPlaytestStash(100, 200, 9, -3, true, 47, 1);
-
+        var engine = new Engine();
+        var gameplay = createGameplayMode(engine);
+        var source = gameplay.getLevelManager().getCurrentLevel();
+        var world = gameplay.getWorldSession();
+        var stash = new EditorPlaytestStash(100, 200, 9, -3, true, 47, 1);
         engine.enterEditorFromCurrentPlayer(stash, 100, 200);
-
         assertEquals(GameMode.EDITOR, engine.getCurrentGameMode());
-        assertNotNull(SessionManager.getCurrentEditorMode());
-        assertEquals(100, SessionManager.getCurrentEditorMode().getCursor().x());
-        assertEquals(200, SessionManager.getCurrentEditorMode().getCursor().y());
-        assertSame(stash, SessionManager.getCurrentEditorMode().getPlaytestStash());
+        var document = engine.getEditorProjectWorkspace().document();
+        assertNotNull(document);
+        assertNotSame(source, document.level());
+        assertNotSame(world, SessionManager.getCurrentWorldSession());
+        assertSame(document.level(), SessionManager.getCurrentWorldSession().getCurrentLevel());
         assertNull(SessionManager.getCurrentGameplayMode());
+        assertEquals(new EditorCursorState(100, 200), SessionManager.getCurrentEditorMode().getCursor());
+        assertNull(SessionManager.getCurrentEditorMode().getPlaytestStash());
+        assertTrue(document.isModified());
+    }
 
+    @Test
+    void resumePlaytestUsesIndependentAuthoredSnapshotAndFreshCounters() throws Exception {
+        requireS2Rom();
+        enableEditor();
+        var engine = new Engine();
+        var originalGameplay = createGameplayMode(engine);
+        var originalLevel = originalGameplay.getLevelManager().getCurrentLevel();
+        originalGameplay.getGameStateManager().addScore(7777);
+        enter(engine, 100, 200);
+        var document = engine.getEditorProjectWorkspace().document();
+        engine.getLevelEditorController().placeBlock(0, 2, 2, 1);
+        engine.getLevelEditorController().setWorldCursor(new EditorCursorState(320, 448));
         engine.resumePlaytestFromEditor();
-
-        // Post-migration: editor exit rebuilds a fresh gameplay mode over the
-        // surviving WorldSession (no longer the same instance).
         assertEquals(GameMode.LEVEL, engine.getCurrentGameMode());
-        assertNotNull(SessionManager.getCurrentGameplayMode());
-        assertEquals(100, SessionManager.getCurrentGameplayMode().getSpawnX());
-        assertEquals(200, SessionManager.getCurrentGameplayMode().getSpawnY());
-        assertSame(stash, SessionManager.getCurrentGameplayMode().getResumeStash().orElseThrow());
+        var runtime = SessionManager.getCurrentGameplayMode();
+        assertNotSame(originalGameplay, runtime);
+        assertNotSame(originalGameplay.getWorldSession(), runtime.getWorldSession());
+        assertNotSame(document.level(), runtime.getLevelManager().getCurrentLevel());
+        assertEquals(1, runtime.getLevelManager().getCurrentLevel().getMap().getValue(0, 2, 2) & 0xFF);
+        assertEquals(0, originalLevel.getMap().getValue(0, 2, 2) & 0xFF);
+        assertTrue(runtime.getResumeStash().isEmpty());
+        assertEquals(0, runtime.getGameStateManager().getScore());
+        var player = (Sonic) runtime.getSpriteManager().getSprite("sonic");
+        assertEquals(320, player.getCentreX());
+        assertEquals(448, player.getCentreY());
+        assertEquals(0, player.getRingCount());
+        assertSame(player, runtime.getCamera().getFocusedSprite());
+        assertFalse(Files.exists(new EditorSaveManager(tempSaves).editPath(
+                com.openggf.game.GameId.S2, 0, 0)), "playtesting must not auto-publish a gameplay sidecar");
+        engine.toggleEditorPlaytestMode();
+        assertEquals(GameMode.EDITOR, engine.getCurrentGameMode());
+        assertSame(document, engine.getEditorProjectWorkspace().document());
+        assertSame(document.level(), engine.getLevelEditorController().currentLevel());
+        engine.getLevelEditorController().undo();
+        assertEquals(0, document.level().getMap().getValue(0, 2, 2) & 0xFF);
     }
 
     @Test
-    void editorRoundTrip_preservesMutableLevelMutations() throws Exception {
-        assumeS2RomAvailableForResumeReload();
+    void enteringEditorPreservesPriorTerrainInItsCopyAndRetiresOldRuntime() {
         enableEditor();
-        Engine engine = new Engine();
-        GameplayModeContext gameplayMode = createGameplayMode(engine);
-
-        // Install a synthetic MutableLevel via setLevel(), which writes
-        // through to WorldSession (per the session ownership migration).
-        MutableLevel mutable = MutableLevel.snapshot(new SyntheticLevel());
-        gameplayMode.getLevelManager().setLevel(mutable);
-
-        com.openggf.game.session.WorldSession worldSession = gameplayMode.getWorldSession();
-        assertSame(mutable, worldSession.getCurrentLevel(),
-                "precondition: setLevel must write through to WorldSession");
-
-        // Mutate a map cell to an unambiguous value.
-        int newBlockIndex = (mutable.getMap().getValue(0, 0, 0) & 0xFF) ^ 0xAA;
-        mutable.setBlockInMap(0, 0, 0, newBlockIndex);
-
-        engine.enterEditorFromCurrentPlayer(
-                new EditorPlaytestStash(50, 50, 0, 0, true, 0, 1),
-                100, 200);
-        engine.resumePlaytestFromEditor();
-
-        // After the editor round trip, WorldSession's Level reference should
-        // still be the same MutableLevel and the mutation should still be
-        // present â€” proving editor enter/exit does not throw away world data.
-        assertSame(mutable, worldSession.getCurrentLevel(),
-                "MutableLevel must survive editor round trip on WorldSession");
-        assertEquals(newBlockIndex,
-                ((MutableLevel) worldSession.getCurrentLevel()).getMap().getValue(0, 0, 0) & 0xFF,
-                "mutation made before editor entry must persist through the round trip");
+        var engine = new Engine();
+        var gameplay = createGameplayMode(engine);
+        var source = (MutableLevel) gameplay.getLevelManager().getCurrentLevel();
+        source.setBlockInMap(0, 0, 0, 1);
+        var oldSprites = gameplay.getSpriteManager();
+        enter(engine, 100, 200);
+        var document = engine.getEditorProjectWorkspace().document();
+        assertEquals(1, document.level().getMap().getValue(0, 0, 0) & 0xFF);
+        assertNotSame(source, document.level());
+        document.level().setBlockInMap(0, 0, 0, 0);
+        assertEquals(1, source.getMap().getValue(0, 0, 0) & 0xFF);
+        assertNull(gameplay.getSpriteManager());
+        assertDoesNotThrow(oldSprites::drawLowPriority);
     }
 
     @Test
-    void resumePlaytestFromEditor_savesEditorControllerMutableLevelAfterRuntimeTeardown() throws Exception {
-        assumeS2RomAvailableForResumeReload();
+    void enterEditorRestoresIndependentRenderableViewWithoutGameplayObjects() throws Exception {
         enableEditor();
-        Engine engine = new Engine();
-        EditorSaveManager saveManager = new EditorSaveManager(tempSaves);
-        setPrivateField(engine, "editorSaveManager", saveManager);
-        GameplayModeContext gameplayMode = createGameplayMode(engine);
-        MutableLevel mutable = MutableLevel.snapshot(new SyntheticLevel());
-        gameplayMode.getLevelManager().setLevel(mutable);
-        int zone = 1;
-        int act = 1;
-        gameplayMode.getWorldSession().setCurrentZone(zone);
-        gameplayMode.getWorldSession().setCurrentAct(act);
-        Path saveFile = saveManager.editPath(gameplayMode.getWorldSession().getGameModule().getGameId(), zone, act);
-
-        engine.enterEditorFromCurrentPlayer(
-                new EditorPlaytestStash(50, 50, 0, 0, true, 0, 1),
-                100, 200);
-        engine.getLevelEditorController().placeBlock(0, 1, 1, 1);
-
-        engine.resumePlaytestFromEditor();
-
-        assertTrue(Files.exists(saveFile),
-                "editor resume should save the MutableLevel attached to LevelEditorController");
-        MutableLevel fresh = MutableLevel.snapshot(new SyntheticLevel());
-        assertEquals(EditorSaveManager.ApplyResult.APPLIED,
-                saveManager.tryApplyEdits(gameplayMode.getWorldSession().getGameModule().getGameId(),
-                        gameplayMode.getWorldSession().getGameModule().getObjectPlacementEncoding(),
-                        zone, act, fresh));
-        assertEquals(1, Byte.toUnsignedInt(fresh.getMap().getValue(0, 1, 1)));
-    }
-
-    @Test
-    void engineSaveKeepsUnsupportedS3kPersistenceStatusVisibleToEditor() throws Exception {
-        Engine engine = new Engine();
-        EditorSaveManager saveManager = new EditorSaveManager(tempSaves);
-        setPrivateField(engine, "editorSaveManager", saveManager);
-        GameplayModeContext gameplayMode = SessionManager.openGameplaySession(new Sonic3kGameModule());
-        gameplayMode.getWorldSession().setCurrentZone(1);
-        gameplayMode.getWorldSession().setCurrentAct(0);
-        engine.getLevelEditorController().attachLevel(MutableLevel.snapshot(new SyntheticLevel()));
-
-        Method saveCurrentEditorLevel = Engine.class.getDeclaredMethod("saveCurrentEditorLevel");
-        saveCurrentEditorLevel.setAccessible(true);
-        assertEquals(true, saveCurrentEditorLevel.invoke(engine));
-
-        assertEquals(EditorSaveManager.ApplyResult.UNSUPPORTED,
-                engine.getLevelEditorController().persistenceStatus());
-        assertTrue(Files.exists(saveManager.editPath(
-                gameplayMode.getWorldSession().getGameModule().getGameId(), 1, 0)));
-    }
-
-    @Test
-    void enterEditor_restoresLevelManagerViewForEditorRenderingAfterRuntimeTeardown() throws Exception {
-        enableEditor();
-        Engine engine = new Engine();
-        GameplayModeContext gameplayMode = createGameplayMode(engine);
-        MutableLevel mutable = MutableLevel.snapshot(new SyntheticLevel());
-        gameplayMode.getLevelManager().setLevel(mutable);
-
-        engine.enterEditorFromCurrentPlayer(
-                new EditorPlaytestStash(50, 50, 0, 0, true, 0, 1),
-                100, 128);
-
-        LevelManager editorLevelManager = engineLevelManager(engine);
-        assertNull(SessionManager.getCurrentGameplayMode(),
-                "entering editor must still tear down the gameplay mode");
-        assertSame(mutable, engine.getLevelEditorController().currentLevel(),
-                "pre-mode editor controller level should survive gameplay mode teardown");
-        assertSame(mutable, editorLevelManager.getCurrentLevel(),
-                "Engine's level manager must keep a renderable editor view after teardown");
-        assertNotNull(editorLevelManager.getTilemapManager(),
-                "editor view restore must rebuild tilemap rendering state");
-        assertEquals(0, editorLevelManager.getCurrentZone());
-        assertEquals(0, editorLevelManager.getCurrentAct());
-        assertNull(editorLevelManager.getObjectManager(),
-                "editor view restore must not initialize gameplay object systems");
-        assertNull(editorLevelManager.getRingManager(),
-                "editor view restore must not initialize gameplay ring systems");
-        assertSame(mutable.getBlock(0), lookupBlock(editorLevelManager, (byte) 0, 0, 0));
+        var engine = new Engine();
+        var gameplay = createGameplayMode(engine);
+        var source = gameplay.getLevelManager().getCurrentLevel();
+        enter(engine, 100, 128);
+        var view = engineLevelManager(engine);
+        var authored = engine.getEditorProjectWorkspace().document().level();
+        assertNull(SessionManager.getCurrentGameplayMode());
+        assertNotSame(source, authored);
+        assertSame(authored, engine.getLevelEditorController().currentLevel());
+        assertSame(authored, view.getCurrentLevel());
+        assertNotNull(view.getTilemapManager());
+        assertNull(view.getObjectManager());
+        assertNull(view.getRingManager());
+        assertSame(authored.getBlock(0), lookupBlock(view, (byte) 0, 0, 0));
     }
 
     @Test
     void editorDrawPathFlushesMutableLevelDirtyRegionsBeforeRendering() throws Exception {
-        enableEditor();
-        Engine engine = new Engine();
-        LevelManager levelManager = mock(LevelManager.class);
-        SpriteManager spriteManager = mock(SpriteManager.class);
-        RuntimeException sentinel = new RuntimeException("dirty-region flush reached");
+        var engine = new Engine();
+        var levelManager = mock(LevelManager.class);
+        var sprites = mock(SpriteManager.class);
+        var sentinel = new RuntimeException("dirty-region flush reached");
         doThrow(sentinel).when(levelManager).processDirtyRegions();
         setPrivateField(engine, "levelManager", levelManager);
-        setPrivateField(engine, "spriteManager", spriteManager);
+        setPrivateField(engine, "spriteManager", sprites);
         engine.getGameLoop().setGameMode(GameMode.EDITOR);
-
-        RuntimeException thrown = assertThrows(RuntimeException.class, engine::draw);
-
-        assertSame(sentinel, thrown);
+        assertSame(sentinel, assertThrows(RuntimeException.class, engine::draw));
         verify(levelManager).processDirtyRegions();
-        verify(levelManager, never()).drawWithSpritePriority(spriteManager);
+        verify(levelManager, never()).drawWithSpritePriority(sprites);
     }
 
     @Test
-    void editorRoundTrip_preservesWorldSessionAndResetsGameplayCounters() throws Exception {
+    void syncEditorStateKeepsSessionCursorAlignedWithControllerCursor() {
         enableEditor();
-        Engine engine = new Engine();
-        GameplayModeContext gameplayMode = createGameplayMode(engine);
-
-        // Capture the durable world state on WorldSession before editor entry.
-        com.openggf.game.session.WorldSession worldSession = gameplayMode.getWorldSession();
-        com.openggf.level.Level loadedLevelBefore = worldSession.getCurrentLevel();
-        int zoneBefore = worldSession.getCurrentZone();
-        int actBefore = worldSession.getCurrentAct();
-
-        // Set a session counter to a non-default value; the design requires
-        // it to reset on editor exit.
-        gameplayMode.getGameStateManager().addScore(7777);
-        int scoreBefore = gameplayMode.getGameStateManager().getScore();
-        assertTrue(scoreBefore > 0, "score precondition: must be non-zero before editor entry");
-
-        engine.enterEditorFromCurrentPlayer(
-                new EditorPlaytestStash(50, 50, 0, 0, true, 0, 1),
-                100, 200);
-        engine.resumePlaytestFromEditor();
-
-        // World survived the round trip: same WorldSession instance, same
-        // loaded Level, same zone/act metadata.
-        GameplayModeContext resumedGameplayMode = SessionManager.getCurrentGameplayMode();
-        assertNotNull(resumedGameplayMode, "editor exit must restore gameplay mode");
-        assertSame(worldSession, resumedGameplayMode.getWorldSession(),
-                "WorldSession must survive editor round trip");
-        assertSame(loadedLevelBefore, worldSession.getCurrentLevel(),
-                "Loaded Level must survive editor round trip on WorldSession");
-        assertEquals(zoneBefore, worldSession.getCurrentZone(),
-                "currentZone must be preserved on WorldSession");
-        assertEquals(actBefore, worldSession.getCurrentAct(),
-                "currentAct must be preserved on WorldSession");
-
-        // Gameplay counters were reset per the design (editor exit reinit).
-        assertEquals(0, resumedGameplayMode.getGameStateManager().getScore(),
-                "score must reset on editor exit (was " + scoreBefore + ")");
-    }
-
-    @Test
-    void editorRoundTrip_rebuildsCameraBoundsAndFocusedSpriteAtCursor() throws Exception {
-        enableEditor();
-        Engine engine = new Engine();
-        GameplayModeContext gameplayMode = createGameplayMode(engine);
-        // Set non-trivial bounds on the gameplay-mode camera so we can check
-        // they survive (or are correctly re-derived) across the round trip.
-        gameplayMode.getCamera().setMinX((short) 0);
-        gameplayMode.getCamera().setMaxX((short) 1024);
-        gameplayMode.getCamera().setMinY((short) 0);
-        gameplayMode.getCamera().setMaxY((short) 768);
-
-        engine.enterEditorFromCurrentPlayer(
-                new EditorPlaytestStash(50, 50, 0, 0, true, 0, 1), 100, 200);
-        // Move cursor to a deliberate spawn target before exiting editor.
-        engine.getLevelEditorController().setWorldCursor(new EditorCursorState(384, 256));
-        engine.resumePlaytestFromEditor();
-
-        // After teardown+rebuild, the gameplay mode is a fresh instance and the
-        // sprite/camera are too. Re-resolve the active sprite + camera and
-        // assert the rebuild produced sensible state at the cursor position.
-        GameplayModeContext resumed = SessionManager.getCurrentGameplayMode();
-        assertNotNull(resumed, "rebuild must produce a fresh gameplay mode");
-        Sonic resumedPlayer = (Sonic) resumed.getSpriteManager().getSprite("sonic");
-        assertNotNull(resumedPlayer, "rebuild must spawn the main character");
-        assertEquals(384, resumedPlayer.getCentreX(),
-                "rebuilt player should be at cursor X (applyResumedPlaytestState)");
-        assertEquals(256, resumedPlayer.getCentreY(),
-                "rebuilt player should be at cursor Y (applyResumedPlaytestState)");
-        assertSame(resumedPlayer, resumed.getCamera().getFocusedSprite(),
-                "rebuilt camera should focus on the resumed player");
-    }
-
-    @Test
-    void syncEditorState_keepsSessionCursorAlignedWithControllerCursor() {
-        enableEditor();
-        Engine engine = new Engine();
+        var engine = new Engine();
         createGameplayMode(engine);
-
-        engine.enterEditorFromCurrentPlayer(new EditorPlaytestStash(100, 200, 0, 0, true, 0, 0), 100, 200);
+        enter(engine, 100, 200);
         engine.getLevelEditorController().setWorldCursor(new EditorCursorState(160, 224));
         engine.syncEditorState();
-
-        assertEquals(160, SessionManager.getCurrentEditorMode().getCursor().x());
-        assertEquals(224, SessionManager.getCurrentEditorMode().getCursor().y());
+        assertEquals(new EditorCursorState(160, 224), SessionManager.getCurrentEditorMode().getCursor());
     }
 
     @Test
-    void gameLoop_editorModeStepSyncsSessionCursorWithoutRender() {
+    void editorInputStepSynchronizesCursorWithoutRendering() {
         enableEditor();
-        Engine engine = new Engine();
+        var engine = new Engine();
         createGameplayMode(engine);
-        InputHandler inputHandler = new InputHandler();
-        engine.setInputHandler(inputHandler);
-
-        engine.enterEditorFromCurrentPlayer(new EditorPlaytestStash(100, 200, 0, 0, true, 0, 0), 100, 200);
-        inputHandler.handleKeyEvent(GLFW_KEY_RIGHT, GLFW_PRESS);
-
-        engine.getGameLoop().step();
-
-        assertEquals(103, engine.getLevelEditorController().worldCursor().x());
-        assertEquals(103, SessionManager.getCurrentEditorMode().getCursor().x());
-        assertEquals(200, SessionManager.getCurrentEditorMode().getCursor().y());
+        var input = inputFor(engine);
+        enter(engine, 100, 200);
+        press(engine, input, GLFW_KEY_RIGHT);
+        assertEquals(new EditorCursorState(103, 200), engine.getLevelEditorController().worldCursor());
+        assertEquals(new EditorCursorState(103, 200), SessionManager.getCurrentEditorMode().getCursor());
     }
 
     @Test
-    void editorEntryTearsDownParkedRuntimeSpriteManager() {
-        enableEditor();
-        Engine engine = new Engine();
-        GameplayModeContext gameplayMode = createGameplayMode(engine);
-        SpriteManager oldSpriteManager = gameplayMode.getSpriteManager();
-
-        engine.enterEditorFromCurrentPlayer(new EditorPlaytestStash(100, 200, 0, 0, true, 0, 0), 100, 200);
-
-        assertNull(SessionManager.getCurrentGameplayMode());
-        assertNull(gameplayMode.getSpriteManager(),
-                "editor entry should detach the old runtime sprite manager");
-        assertDoesNotThrow(oldSpriteManager::drawLowPriority,
-                "the cleared old sprite manager should remain safe if a stale reference is rendered");
-    }
-
-    // Removed: parkedRuntimeBackgroundTilemapBuild_doesNotRequireActiveGameServicesRuntime
-    // Tested the parking mechanism, which is no longer
-    // used by the editor flow â€” editor entry now does a proper teardown+rebuild
-    // per the session ownership migration design.
-
-    @Test
-    void gameLoop_f5InEditorModeInvokesFreshStartHandler() {
-        enableEditor();
-        Engine engine = new Engine();
+    void f5EditorInputInvokesItsInstalledFreshStartHandler() {
+        var engine = new Engine();
         createGameplayMode(engine);
-        InputHandler inputHandler = new InputHandler();
-        engine.setInputHandler(inputHandler);
-        int[] freshStartCount = {0};
-
-        engine.getGameLoop().setEditorFreshStartHandler(() -> freshStartCount[0]++);
+        var input = inputFor(engine);
+        int[] starts = {0};
+        engine.getGameLoop().setEditorFreshStartHandler(() -> starts[0]++);
         engine.getGameLoop().setGameMode(GameMode.EDITOR);
-
-        inputHandler.handleKeyEvent(GLFW_KEY_F5, GLFW_PRESS);
-
-        engine.getGameLoop().step();
-
-        assertEquals(1, freshStartCount[0]);
-        assertFalse(inputHandler.isKeyPressed(GLFW_KEY_F5));
+        press(engine, input, GLFW_KEY_F5);
+        assertEquals(1, starts[0]);
+        assertFalse(input.isKeyPressed(GLFW_KEY_F5));
     }
 
     @Test
-    void gameLoop_f5InEditorModeUsesEngineFreshStartHandlerByDefault() {
-        assumeS2RomAvailableForResumeReload();
+    void f5StartsAtAuthoredLevelStartWithNoParkedStash() throws Exception {
+        requireS2Rom();
         enableEditor();
-        Engine engine = new Engine();
-        GameplayModeContext gameplayMode = createGameplayMode(engine);
-        InputHandler inputHandler = new InputHandler();
-        engine.setInputHandler(inputHandler);
-
-        engine.enterEditorFromCurrentPlayer(new EditorPlaytestStash(100, 200, 9, -3, true, 47, 1), 100, 200);
-        inputHandler.handleKeyEvent(GLFW_KEY_F5, GLFW_PRESS);
-
-        engine.getGameLoop().step();
-
-        assertEquals(GameMode.LEVEL, engine.getCurrentGameMode());
-        assertNotSame(gameplayMode, SessionManager.getCurrentGameplayMode());
-        assertEquals(0, SessionManager.getCurrentGameplayMode().getSpawnX());
-        assertEquals(0, SessionManager.getCurrentGameplayMode().getSpawnY());
-        assertTrue(SessionManager.getCurrentGameplayMode().getResumeStash().isEmpty());
-    }
-
-    @Test
-    void gameLoop_f5InEditorModeUsesExplicitFixtureAfterLeakedGarbageRomState() throws Exception {
-        injectLeakedGarbageRom();
-        assumeS2RomAvailableForResumeReload();
-        enableEditor();
-        Engine engine = new Engine();
-        GameplayModeContext gameplayMode = createGameplayMode(engine);
-        InputHandler inputHandler = new InputHandler();
-        engine.setInputHandler(inputHandler);
-
-        engine.enterEditorFromCurrentPlayer(new EditorPlaytestStash(100, 200, 9, -3, true, 47, 1), 100, 200);
-        inputHandler.handleKeyEvent(GLFW_KEY_F5, GLFW_PRESS);
-
-        assertDoesNotThrow(() -> engine.getGameLoop().step());
-
-        assertEquals(GameMode.LEVEL, engine.getCurrentGameMode());
-        assertNotSame(gameplayMode, SessionManager.getCurrentGameplayMode());
-        assertEquals(0, SessionManager.getCurrentGameplayMode().getSpawnX());
-        assertEquals(0, SessionManager.getCurrentGameplayMode().getSpawnY());
-        assertTrue(SessionManager.getCurrentGameplayMode().getResumeStash().isEmpty());
-    }
-
-    @Test
-    void gameLoop_f5OutsideEditorModeDoesNotInvokeFreshStartHandler() {
-        enableEditor();
-        Engine engine = new Engine();
-        createGameplayMode(engine);
-        InputHandler inputHandler = new InputHandler();
-        engine.setInputHandler(inputHandler);
-        int[] freshStartCount = {0};
-
-        engine.getGameLoop().setEditorFreshStartHandler(() -> freshStartCount[0]++);
-        engine.getGameLoop().pause();
-        inputHandler.handleKeyEvent(GLFW_KEY_F5, GLFW_PRESS);
-
-        engine.getGameLoop().step();
-
-        assertEquals(0, freshStartCount[0]);
-    }
-
-    @Test
-    void syncEditorState_inWorldDepthCentersCameraOnEditorCursorWhenInsideBounds() {
-        enableEditor();
-        Engine engine = new Engine();
-        GameplayModeContext gameplayMode = createGameplayMode(engine);
-        gameplayMode.getCamera().setMinX((short) 0);
-        gameplayMode.getCamera().setMaxX((short) 1024);
-        gameplayMode.getCamera().setMinY((short) 0);
-        gameplayMode.getCamera().setMaxY((short) 1024);
-
-        engine.enterEditorFromCurrentPlayer(new EditorPlaytestStash(100, 200, 0, 0, true, 0, 0), 100, 200);
-        engine.getLevelEditorController().setWorldCursor(new EditorCursorState(512, 384));
-        engine.syncEditorState();
-
-        Camera editorCamera = engineCamera(engine);
-        assertEquals(360, editorCamera.getX());
-        assertEquals(288, editorCamera.getY());
-    }
-
-    @Test
-    void syncEditorState_inWorldDepthClampsCameraToEditorCursorWhenCenterWouldExceedBounds() {
-        enableEditor();
-        Engine engine = new Engine();
-        GameplayModeContext gameplayMode = createGameplayMode(engine);
-        gameplayMode.getCamera().setMinX((short) 64);
-        gameplayMode.getCamera().setMaxX((short) 80);
-        gameplayMode.getCamera().setMinY((short) 0);
-        gameplayMode.getCamera().setMaxY((short) 160);
-
-        engine.enterEditorFromCurrentPlayer(new EditorPlaytestStash(100, 200, 0, 0, true, 0, 0), 100, 200);
-        engine.getLevelEditorController().setWorldCursor(new EditorCursorState(192, 288));
-        engine.syncEditorState();
-
-        Camera editorCamera = engineCamera(engine);
-        assertEquals(64, editorCamera.getX());
-        assertEquals(160, editorCamera.getY());
-    }
-
-    @Test
-    void resumePlaytestFromEditor_usesMovedControllerCursorForGameplaySpawn() {
-        enableEditor();
-        Engine engine = new Engine();
-        createGameplayMode(engine);
-        EditorPlaytestStash stash = new EditorPlaytestStash(100, 200, 9, -3, true, 47, 1);
-
-        engine.enterEditorFromCurrentPlayer(stash, 100, 200);
+        var engine = new Engine();
+        var oldGameplay = createGameplayMode(engine);
+        var input = inputFor(engine);
+        enter(engine, 100, 200);
+        var document = engine.getEditorProjectWorkspace().document();
         engine.getLevelEditorController().setWorldCursor(new EditorCursorState(320, 448));
-
-        engine.resumePlaytestFromEditor();
-
-        // Post-migration: editor exit rebuilds a fresh gameplay mode; assert non-null
-        // rather than instance identity.
+        press(engine, input, GLFW_KEY_F5);
         assertEquals(GameMode.LEVEL, engine.getCurrentGameMode());
-        assertNotNull(SessionManager.getCurrentGameplayMode());
-        assertEquals(320, SessionManager.getCurrentGameplayMode().getSpawnX());
-        assertEquals(448, SessionManager.getCurrentGameplayMode().getSpawnY());
-        assertSame(stash, SessionManager.getCurrentGameplayMode().getResumeStash().orElseThrow());
+        var gameplay = SessionManager.getCurrentGameplayMode();
+        assertNotSame(oldGameplay, gameplay);
+        assertEquals(document.metadata().startX(), player(gameplay).getCentreX());
+        assertEquals(document.metadata().startY(), player(gameplay).getCentreY());
+        assertTrue(gameplay.getResumeStash().isEmpty());
+        assertNotSame(document.level(), gameplay.getLevelManager().getCurrentLevel());
     }
 
     @Test
-    void resumePlaytestFromEditor_repairsProgrammaticOutOfBoundsCursorBeforeApplyingSpawn() throws Exception {
-        assumeS2RomAvailableForResumeReload();
-        enableEditor();
-        Engine engine = new Engine();
-        createGameplayMode(engine, (short) 100, (short) 180);
-        com.openggf.game.GameServices.level().setLevel(MutableLevel.snapshot(new SyntheticLevel()));
-        com.openggf.game.GameServices.camera().setMinX((short) 0);
-        com.openggf.game.GameServices.camera().setMaxX((short) 255);
-        com.openggf.game.GameServices.camera().setMinY((short) 0);
-        com.openggf.game.GameServices.camera().setMaxY((short) 191);
-
-        engine.enterEditorFromCurrentPlayer(new EditorPlaytestStash(100, 180, 0, 0, true, 0, 0), 100, 180);
-        forceControllerCursor(engine.getLevelEditorController(), new EditorCursorState(999, -99));
-
-        engine.resumePlaytestFromEditor();
-
-        // Post-migration: editor exit rebuilds a fresh gameplay mode; resolve the
-        // active sprite to read its position rather than using the stale ref.
-        assertEquals(GameMode.LEVEL, engine.getCurrentGameMode());
-        GameplayModeContext resumedRuntime = SessionManager.getCurrentGameplayMode();
-        assertNotNull(resumedRuntime);
-        Sonic resumedPlayer = (Sonic) resumedRuntime.getSpriteManager().getSprite("sonic");
-        assertNotNull(resumedPlayer);
-        assertEquals(255, SessionManager.getCurrentGameplayMode().getSpawnX());
-        assertEquals(0, SessionManager.getCurrentGameplayMode().getSpawnY());
-        assertEquals(255, resumedPlayer.getCentreX());
-        assertEquals(0, resumedPlayer.getCentreY());
-        assertSame(resumedPlayer, resumedRuntime.getCamera().getFocusedSprite());
-    }
-
-    @Test
-    void movedEditorCursor_becomesResumePositionWhenReturningToGameplay() {
-        enableEditor();
-        Engine engine = new Engine();
-        GameplayModeContext gameplayMode = createGameplayMode(engine);
-        Sonic player = (Sonic) gameplayMode.getSpriteManager().getSprite("sonic");
-        InputHandler inputHandler = new InputHandler();
-        engine.setInputHandler(inputHandler);
-
-        inputHandler.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS);
-        inputHandler.handleKeyEvent(GLFW_KEY_TAB, GLFW_PRESS);
-        engine.getGameLoop().step();
-
-        assertEquals(GameMode.EDITOR, engine.getCurrentGameMode());
-        assertEquals(player.getCentreX(), SessionManager.getCurrentEditorMode().getCursor().x());
-        assertEquals(player.getCentreY(), SessionManager.getCurrentEditorMode().getCursor().y());
-
-        inputHandler.handleKeyEvent(GLFW_KEY_RIGHT, GLFW_PRESS);
-        inputHandler.handleKeyEvent(GLFW_KEY_DOWN, GLFW_PRESS);
-        engine.getGameLoop().step();
-        EditorCursorState movedCursor = engine.getLevelEditorController().worldCursor();
-
-        inputHandler.handleKeyEvent(GLFW_KEY_TAB, GLFW_RELEASE);
-        inputHandler.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_RELEASE);
-        inputHandler.update();
-        inputHandler.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS);
-        inputHandler.handleKeyEvent(GLFW_KEY_TAB, GLFW_PRESS);
-        engine.getGameLoop().step();
-
-        // Post-migration: editor exit rebuilds a fresh gameplay mode; re-resolve
-        // the active sprite to read its position.
-        assertEquals(GameMode.LEVEL, engine.getCurrentGameMode());
-        GameplayModeContext resumedRuntime = SessionManager.getCurrentGameplayMode();
-        assertNotNull(resumedRuntime);
-        Sonic resumedPlayer = (Sonic) resumedRuntime.getSpriteManager().getSprite("sonic");
-        assertNotNull(resumedPlayer);
-        assertEquals(movedCursor.x(), SessionManager.getCurrentGameplayMode().getSpawnX());
-        assertEquals(movedCursor.y(), SessionManager.getCurrentGameplayMode().getSpawnY());
-        assertEquals(movedCursor.x(), resumedPlayer.getCentreX());
-        assertEquals(movedCursor.y(), resumedPlayer.getCentreY());
-    }
-
-    @Test
-    void outOfBoundsEditorMovement_resumesFromClampedCursorPosition() {
-        assumeS2RomAvailableForResumeReload();
-        enableEditor();
-        Engine engine = new Engine();
-        createGameplayMode(engine, (short) 100, (short) 180);
-        com.openggf.game.GameServices.level().setLevel(MutableLevel.snapshot(new SyntheticLevel()));
-        com.openggf.game.GameServices.camera().setMinX((short) 0);
-        com.openggf.game.GameServices.camera().setMaxX((short) 255);
-        com.openggf.game.GameServices.camera().setMinY((short) 0);
-        com.openggf.game.GameServices.camera().setMaxY((short) 191);
-        InputHandler inputHandler = new InputHandler();
-        engine.setInputHandler(inputHandler);
-
-        inputHandler.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS);
-        inputHandler.handleKeyEvent(GLFW_KEY_TAB, GLFW_PRESS);
-        engine.getGameLoop().step();
-
-        engine.getLevelEditorController().setWorldCursor(new EditorCursorState(255, 191));
-        inputHandler.handleKeyEvent(GLFW_KEY_RIGHT, GLFW_PRESS);
-        inputHandler.handleKeyEvent(GLFW_KEY_DOWN, GLFW_PRESS);
-        engine.getGameLoop().step();
-
-        EditorCursorState boundedCursor = engine.getLevelEditorController().worldCursor();
-        assertEquals(255, boundedCursor.x());
-        assertEquals(191, boundedCursor.y());
-        assertEquals(255, SessionManager.getCurrentEditorMode().getCursor().x());
-        assertEquals(191, SessionManager.getCurrentEditorMode().getCursor().y());
-        SessionManager.getCurrentEditorMode().setCursor(new EditorCursorState(12, 34));
-        assertEquals(12, SessionManager.getCurrentEditorMode().getCursor().x());
-        assertEquals(34, SessionManager.getCurrentEditorMode().getCursor().y());
-
-        inputHandler.handleKeyEvent(GLFW_KEY_TAB, GLFW_RELEASE);
-        inputHandler.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_RELEASE);
-        inputHandler.update();
-        inputHandler.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS);
-        inputHandler.handleKeyEvent(GLFW_KEY_TAB, GLFW_PRESS);
-        engine.getGameLoop().step();
-
-        // Post-migration: editor exit rebuilds a fresh gameplay mode; resolve the
-        // active sprite to read its position rather than using the stale ref.
-        Sonic resumedPlayer = (Sonic) SessionManager.getCurrentGameplayMode().getSpriteManager().getSprite("sonic");
-        assertNotNull(resumedPlayer);
-        assertEquals(255, SessionManager.getCurrentGameplayMode().getSpawnX());
-        assertEquals(191, SessionManager.getCurrentGameplayMode().getSpawnY());
-        assertEquals(255, resumedPlayer.getCentreX());
-        assertEquals(191, resumedPlayer.getCentreY());
-    }
-
-    @Test
-    void startGameplayFromBeginning_discardsResumeStashAndReturnsToCanonicalSpawn() throws Exception {
-        assumeS2RomAvailableForResumeReload();
-        enableEditor();
-        Engine engine = new Engine();
-        createGameplayMode(engine);
-        EditorPlaytestStash stash = new EditorPlaytestStash(100, 200, 9, -3, true, 47, 1);
-
-        engine.enterEditorFromCurrentPlayer(stash, 100, 200);
-
-        engine.startGameplayFromBeginning();
-
-        assertEquals(GameMode.LEVEL, engine.getCurrentGameMode());
-        assertEquals(0, SessionManager.getCurrentGameplayMode().getSpawnX());
-        assertEquals(0, SessionManager.getCurrentGameplayMode().getSpawnY());
-        assertTrue(SessionManager.getCurrentGameplayMode().getResumeStash().isEmpty());
-        GameplayModeContext restartedRuntime = SessionManager.getCurrentGameplayMode();
-        assertNotNull(restartedRuntime);
-        assertNotNull(restartedRuntime.getSpriteManager().getSprite("sonic"));
-        assertSame(restartedRuntime.getSpriteManager().getSprite("sonic"),
-                restartedRuntime.getCamera().getFocusedSprite());
-        if (RomManager.getInstance().isRomAvailable()) {
-            assertNotNull(restartedRuntime.getLevelManager().getCurrentLevel());
+    void explicitRomFixtureReplacesLeakedGarbageBeforeHostedFreshStart() throws Exception {
+        Path garbage = tempSaves.resolve("garbage.gen");
+        Files.write(garbage, new byte[512 * 1024]);
+        try (var leaked = new Rom()) {
+            assertTrue(leaked.open(garbage.toString()));
+            RomManager.getInstance().setRom(leaked);
+            requireS2Rom();
+            enableEditor();
+            var engine = new Engine();
+            createGameplayMode(engine);
+            enter(engine, 100, 200);
+            var document = engine.getEditorProjectWorkspace().document();
+            assertDoesNotThrow(engine::startGameplayFromBeginning);
+            assertEquals(GameMode.LEVEL, engine.getCurrentGameMode());
+            assertEquals(document.metadata().startX(), player(SessionManager.getCurrentGameplayMode()).getCentreX());
+            assertEquals(document.metadata().startY(), player(SessionManager.getCurrentGameplayMode()).getCentreY());
         }
     }
 
     @Test
-    void shiftTabInGameplayTogglesEditorAndBackThroughEngineHelpers() {
-        enableEditor();
-        Engine engine = new Engine();
-        GameplayModeContext gameplayMode = createGameplayMode(engine);
-        Sonic player = (Sonic) gameplayMode.getSpriteManager().getSprite("sonic");
-        InputHandler inputHandler = new InputHandler();
-        engine.setInputHandler(inputHandler);
-
-        inputHandler.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS);
-        inputHandler.handleKeyEvent(GLFW_KEY_TAB, GLFW_PRESS);
-
-        engine.getGameLoop().step();
-
-        assertEquals(GameMode.EDITOR, engine.getCurrentGameMode());
-        assertNotNull(SessionManager.getCurrentEditorMode());
-        assertEquals(player.getCentreX(), SessionManager.getCurrentEditorMode().getCursor().x());
-        assertEquals(player.getCentreY(), SessionManager.getCurrentEditorMode().getCursor().y());
-
-        inputHandler.handleKeyEvent(GLFW_KEY_TAB, GLFW_RELEASE);
-        inputHandler.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_RELEASE);
-        inputHandler.update();
-        inputHandler.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS);
-        inputHandler.handleKeyEvent(GLFW_KEY_TAB, GLFW_PRESS);
-
-        engine.getGameLoop().step();
-
-        assertEquals(GameMode.LEVEL, engine.getCurrentGameMode());
-        assertEquals(player.getCentreX(), SessionManager.getCurrentGameplayMode().getSpawnX());
-        assertEquals(player.getCentreY(), SessionManager.getCurrentGameplayMode().getSpawnY());
-        assertTrue(SessionManager.getCurrentGameplayMode().getResumeStash().isPresent());
+    void f5OutsideEditorModeDoesNotInvokeItsFreshStartHandler() {
+        var engine = new Engine();
+        createGameplayMode(engine);
+        var input = inputFor(engine);
+        int[] starts = {0};
+        engine.getGameLoop().setEditorFreshStartHandler(() -> starts[0]++);
+        engine.getGameLoop().pause();
+        press(engine, input, GLFW_KEY_F5);
+        assertEquals(0, starts[0]);
     }
 
     @Test
-    void preRuntimePlayer_roundTripsThroughEditorModeAndResumesAtEditorCursor() {
+    void keyboardOwnedWorldNavigationCentersCameraWithinAuthoredBounds() {
         enableEditor();
-        Engine engine = new Engine();
-        createGameplayMode(engine, (short) 144, (short) 288);
-        EditorPlaytestStash stash = new EditorPlaytestStash(144, 288, 9, -3, true, 47, 1);
+        var engine = new Engine();
+        createGameplayMode(engine);
+        enter(engine, 100, 200);
+        engine.getLevelEditorController().setWorldCursor(new EditorCursorState(512, 384));
+        engine.syncEditorState();
+        var camera = engineCamera(engine);
+        assertEquals(512, camera.getX() + camera.getWidth() / 2);
+        assertEquals(384, camera.getY() + camera.getHeight() / 2);
+    }
 
-        engine.enterEditorFromCurrentPlayer(stash, 320, 448);
+    @Test
+    void cameraNavigationClampsAtAuthoredMinimum() {
+        enableEditor();
+        var engine = new Engine();
+        createGameplayMode(engine);
+        enter(engine, 100, 200);
+        engine.getLevelEditorController().setWorldCursor(new EditorCursorState(64, 64));
+        engine.syncEditorState();
+        assertEquals(0, engineCamera(engine).getX());
+        assertEquals(0, engineCamera(engine).getY());
+    }
 
-        assertEquals(GameMode.EDITOR, engine.getCurrentGameMode());
-        assertNull(SessionManager.getCurrentGameplayMode());
-        assertEquals(320, SessionManager.getCurrentEditorMode().getCursor().x());
-        assertEquals(448, SessionManager.getCurrentEditorMode().getCursor().y());
-
+    @Test
+    void unsafeProgrammaticCursorIsRejectedWithoutRetiringTheEditorDocument() throws Exception {
+        requireS2Rom();
+        enableEditor();
+        var engine = new Engine();
+        createGameplayMode(engine);
+        enter(engine, 100, 200);
+        var document = engine.getEditorProjectWorkspace().document();
+        setPrivateField(engine.getLevelEditorController(), "worldCursor", new EditorCursorState(9999, -99));
         engine.resumePlaytestFromEditor();
-
-        // Post-migration: editor exit rebuilds a fresh gameplay mode over the
-        // surviving WorldSession, so mode/player references from before
-        // the editor detour are stale. Re-resolve the active sprite.
-        assertEquals(GameMode.LEVEL, engine.getCurrentGameMode());
-        GameplayModeContext resumedRuntime = SessionManager.getCurrentGameplayMode();
-        assertNotNull(resumedRuntime);
-        Sonic resumedPlayer = (Sonic) resumedRuntime.getSpriteManager().getSprite("sonic");
-        assertNotNull(resumedPlayer);
-        assertSame(resumedPlayer, resumedRuntime.getCamera().getFocusedSprite());
-        assertEquals(320, resumedPlayer.getCentreX());
-        assertEquals(448, resumedPlayer.getCentreY());
-        assertEquals(320, SessionManager.getCurrentGameplayMode().getSpawnX());
-        assertEquals(448, SessionManager.getCurrentGameplayMode().getSpawnY());
-        assertSame(stash, SessionManager.getCurrentGameplayMode().getResumeStash().orElseThrow());
-    }
-
-    @Test
-    void editorMvpFlow_shiftTabMoveEyedropApplyResumeAndFreshStartRemainConnected() {
-        assumeS2RomAvailableForResumeReload();
-        enableEditor();
-        Engine engine = new Engine();
-        GameplayModeContext gameplayMode = createGameplayMode(engine, (short) 0, (short) 0);
-        Sonic player = (Sonic) gameplayMode.getSpriteManager().getSprite("sonic");
-        player.setCentreX((short) 1);
-        player.setCentreY((short) 1);
-        MutableLevel level = MutableLevel.snapshot(new EditorMvpFlowLevel());
-        gameplayMode.getLevelManager().setLevel(level);
-        gameplayMode.getCamera().setMinX((short) 0);
-        gameplayMode.getCamera().setMaxX((short) 7);
-        gameplayMode.getCamera().setMinY((short) 0);
-        gameplayMode.getCamera().setMaxY((short) 7);
-        InputHandler inputHandler = new InputHandler();
-        engine.setInputHandler(inputHandler);
-
-        inputHandler.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS);
-        inputHandler.handleKeyEvent(GLFW_KEY_TAB, GLFW_PRESS);
-        engine.getGameLoop().step();
-
         assertEquals(GameMode.EDITOR, engine.getCurrentGameMode());
-        assertEquals(new EditorCursorState(1, 1), engine.getLevelEditorController().worldCursor());
+        assertSame(document, engine.getEditorProjectWorkspace().document());
+        assertSame(document.level(), engine.getLevelEditorController().currentLevel());
+        assertTrue(engine.getEditorProjectWorkspace().menu().isOpen());
+        assertTrue(engine.getEditorProjectWorkspace().menu().error().contains("bounds"));
+        assertNull(SessionManager.getCurrentGameplayMode());
+    }
 
-        releaseAndAdvance(inputHandler, GLFW_KEY_TAB);
-        releaseAndAdvance(inputHandler, GLFW_KEY_LEFT_SHIFT);
-        inputHandler.handleKeyEvent(GLFW_KEY_RIGHT, GLFW_PRESS);
-        inputHandler.handleKeyEvent(GLFW_KEY_DOWN, GLFW_PRESS);
-        engine.getGameLoop().step();
-        releaseAndAdvance(inputHandler, GLFW_KEY_RIGHT);
-        releaseAndAdvance(inputHandler, GLFW_KEY_DOWN);
+    @Test
+    void shiftTabAndKeyboardMovementReturnThroughIndependentCursorPlaytest() throws Exception {
+        requireS2Rom();
+        enableEditor();
+        var engine = new Engine();
+        createGameplayMode(engine, (short) 100, (short) 200);
+        var input = inputFor(engine);
+        press(engine, input, GLFW_KEY_LEFT_SHIFT, GLFW_KEY_TAB);
+        assertEquals(GameMode.EDITOR, engine.getCurrentGameMode());
+        press(engine, input, GLFW_KEY_RIGHT, GLFW_KEY_DOWN);
+        var cursor = engine.getLevelEditorController().worldCursor();
+        var document = engine.getEditorProjectWorkspace().document();
+        press(engine, input, GLFW_KEY_LEFT_SHIFT, GLFW_KEY_TAB);
+        assertEquals(GameMode.LEVEL, engine.getCurrentGameMode());
+        var gameplay = SessionManager.getCurrentGameplayMode();
+        assertEquals(cursor.x(), player(gameplay).getCentreX());
+        assertEquals(cursor.y(), player(gameplay).getCentreY());
+        assertTrue(gameplay.getResumeStash().isEmpty());
+        assertNotSame(document.level(), gameplay.getLevelManager().getCurrentLevel());
+        press(engine, input, GLFW_KEY_LEFT_SHIFT, GLFW_KEY_TAB);
+        assertEquals(GameMode.EDITOR, engine.getCurrentGameMode());
+        assertSame(document, engine.getEditorProjectWorkspace().document());
+        assertEquals(cursor, engine.getLevelEditorController().worldCursor());
+    }
 
-        assertEquals(new EditorCursorState(4, 4), engine.getLevelEditorController().worldCursor());
+    @Test
+    void worldMovementClampsCursorToTheActualProjectBounds() {
+        enableEditor();
+        var engine = new Engine();
+        createGameplayMode(engine);
+        var input = inputFor(engine);
+        enter(engine, 100, 200);
+        var level = engine.getEditorProjectWorkspace().document().level();
+        engine.getLevelEditorController().setWorldCursor(new EditorCursorState(level.getMaxX(), level.getMaxY()));
+        press(engine, input, GLFW_KEY_RIGHT, GLFW_KEY_DOWN);
+        assertEquals(new EditorCursorState(level.getMaxX(), level.getMaxY()), SessionManager.getCurrentEditorMode().getCursor());
+    }
 
-        inputHandler.handleKeyEvent(GLFW_KEY_E, GLFW_PRESS);
-        engine.getGameLoop().step();
-        releaseAndAdvance(inputHandler, GLFW_KEY_E);
+    @Test
+    void absentLoadedLevelFailsVisiblyWithoutCreatingAnIncompleteDocument() {
+        enableEditor();
+        var engine = new Engine();
+        createGameplayMode(engine, (short) 100, (short) 200, false);
+        enter(engine, 100, 200);
+        assertEquals(GameMode.LEVEL, engine.getCurrentGameMode());
+        assertNull(engine.getEditorProjectWorkspace().document());
+        assertNotNull(SessionManager.getCurrentGameplayMode());
+        assertTrue(engine.getLevelEditorController().statusText().startsWith("Project error:"));
+    }
 
+    @Test
+    void editorMoveEyedropApplyCursorPlaytestAndFreshStartRemainConnected() throws Exception {
+        requireS2Rom();
+        enableEditor();
+        var engine = new Engine();
+        var original = createGameplayMode(engine, (short) 125, (short) 125);
+        var source = original.getLevelManager().getCurrentLevel();
+        var input = inputFor(engine);
+        press(engine, input, GLFW_KEY_LEFT_SHIFT, GLFW_KEY_TAB);
+        var document = engine.getEditorProjectWorkspace().document();
+        assertEquals(new EditorCursorState(125, 125), engine.getLevelEditorController().worldCursor());
+        press(engine, input, GLFW_KEY_RIGHT, GLFW_KEY_DOWN);
+        assertEquals(new EditorCursorState(128, 128), engine.getLevelEditorController().worldCursor());
+        press(engine, input, GLFW_KEY_E);
         assertEquals(1, engine.getLevelEditorController().selection().selectedBlock());
-
-        inputHandler.handleKeyEvent(GLFW_KEY_RIGHT, GLFW_PRESS);
-        inputHandler.handleKeyEvent(GLFW_KEY_DOWN, GLFW_PRESS);
-        engine.getGameLoop().step();
-        releaseAndAdvance(inputHandler, GLFW_KEY_RIGHT);
-        releaseAndAdvance(inputHandler, GLFW_KEY_DOWN);
-
-        inputHandler.handleKeyEvent(GLFW_KEY_SPACE, GLFW_PRESS);
-        engine.getGameLoop().step();
-        releaseAndAdvance(inputHandler, GLFW_KEY_SPACE);
-
-        assertEquals(new EditorCursorState(7, 7), engine.getLevelEditorController().worldCursor());
-        assertEquals(1, Byte.toUnsignedInt(level.getMap().getValue(0, 7, 7)));
-
-        inputHandler.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS);
-        inputHandler.handleKeyEvent(GLFW_KEY_TAB, GLFW_PRESS);
-        engine.getGameLoop().step();
-
-        // Post-migration: editor exit rebuilds a fresh gameplay mode; resolve the
-        // active sprite to read its position rather than using the stale ref.
+        engine.getLevelEditorController().setWorldCursor(new EditorCursorState(253, 253));
+        press(engine, input, GLFW_KEY_RIGHT, GLFW_KEY_DOWN);
+        press(engine, input, GLFW_KEY_SPACE);
+        assertEquals(1, document.level().getMap().getValue(0, 2, 2) & 0xFF);
+        assertEquals(0, source.getMap().getValue(0, 2, 2) & 0xFF);
+        press(engine, input, GLFW_KEY_LEFT_SHIFT, GLFW_KEY_TAB);
         assertEquals(GameMode.LEVEL, engine.getCurrentGameMode());
-        GameplayModeContext resumedRuntime = SessionManager.getCurrentGameplayMode();
-        assertNotNull(resumedRuntime);
-        Sonic resumedPlayer = (Sonic) resumedRuntime.getSpriteManager().getSprite("sonic");
-        assertNotNull(resumedPlayer);
-        assertEquals(7, SessionManager.getCurrentGameplayMode().getSpawnX());
-        assertEquals(7, SessionManager.getCurrentGameplayMode().getSpawnY());
-        assertEquals(7, resumedPlayer.getCentreX());
-        assertEquals(7, resumedPlayer.getCentreY());
-        assertTrue(SessionManager.getCurrentGameplayMode().getResumeStash().isPresent());
-
-        releaseAndAdvance(inputHandler, GLFW_KEY_TAB);
-        releaseAndAdvance(inputHandler, GLFW_KEY_LEFT_SHIFT);
-        inputHandler.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS);
-        inputHandler.handleKeyEvent(GLFW_KEY_TAB, GLFW_PRESS);
-        engine.getGameLoop().step();
-        releaseAndAdvance(inputHandler, GLFW_KEY_TAB);
-        releaseAndAdvance(inputHandler, GLFW_KEY_LEFT_SHIFT);
-        inputHandler.handleKeyEvent(GLFW_KEY_F5, GLFW_PRESS);
-        engine.getGameLoop().step();
-
+        assertEquals(256, player(SessionManager.getCurrentGameplayMode()).getCentreX());
+        assertEquals(256, player(SessionManager.getCurrentGameplayMode()).getCentreY());
+        press(engine, input, GLFW_KEY_LEFT_SHIFT, GLFW_KEY_TAB);
+        assertEquals(GameMode.EDITOR, engine.getCurrentGameMode());
+        press(engine, input, GLFW_KEY_F5);
         assertEquals(GameMode.LEVEL, engine.getCurrentGameMode());
-        assertNotSame(gameplayMode, SessionManager.getCurrentGameplayMode());
-        assertEquals(0, SessionManager.getCurrentGameplayMode().getSpawnX());
-        assertEquals(0, SessionManager.getCurrentGameplayMode().getSpawnY());
-        assertTrue(SessionManager.getCurrentGameplayMode().getResumeStash().isEmpty());
+        assertEquals(document.metadata().startX(), player(SessionManager.getCurrentGameplayMode()).getCentreX());
+        assertEquals(document.metadata().startY(), player(SessionManager.getCurrentGameplayMode()).getCentreY());
     }
 
     @Test
-    void levelManagerAppliesPersistedEditorEditsThroughInjectedSaveManager() throws IOException {
-        String source = Files.readString(Path.of("src/main/java/com/openggf/level/LevelManager.java"));
-
-        assertFalse(source.contains("new EditorSaveManager(Path.of(\"saves\"))"),
-                "LevelManager must not create a process-root save manager that can quarantine real user saves in tests");
-        assertTrue(source.contains("editorSaveManager.tryApplyEdits("),
-                "LevelManager should apply persisted edits through the save manager injected by Engine");
+    void engineSaveKeepsLegacyUnsupportedS3kPersistenceStatusVisible() throws Exception {
+        var engine = new Engine();
+        var saves = new EditorSaveManager(tempSaves);
+        setPrivateField(engine, "editorSaveManager", saves);
+        var gameplay = SessionManager.openGameplaySession(new Sonic3kGameModule());
+        gameplay.getWorldSession().setCurrentZone(1);
+        gameplay.getWorldSession().setCurrentAct(0);
+        engine.getLevelEditorController().attachLevel(MutableLevel.snapshot(new SyntheticLevel()));
+        var method = Engine.class.getDeclaredMethod("saveCurrentEditorLevel");
+        method.setAccessible(true);
+        assertEquals(true, method.invoke(engine));
+        assertEquals(EditorSaveManager.ApplyResult.UNSUPPORTED, engine.getLevelEditorController().persistenceStatus());
+        assertTrue(Files.exists(saves.editPath(gameplay.getWorldSession().getGameModule().getGameId(), 1, 0)));
     }
 
     @Test
-    void levelManagerDoesNotApplyPersistedS3kEditorEditsUntilRuntimeOverlaysAreMutableLevelSafe() throws IOException {
-        String levelManager = Files.readString(Path.of("src/main/java/com/openggf/level/LevelManager.java"));
-        String saveManager = Files.readString(Path.of("src/main/java/com/openggf/editor/persistence/EditorSaveManager.java"));
-
-        assertTrue(levelManager.contains("editorSaveManager.tryApplyEdits("),
-                "LevelManager must let the editor save manager validate persisted S3K envelope versions");
-        assertTrue(saveManager.contains("return gameId != GameId.S3K;"),
-                "S3K persisted editor saves must be gated while S3K events require Sonic3kLevel runtime overlay support");
+    void legacySidecarLoadingUsesTheInjectedManagerAndRetainsItsS3kGate() throws IOException {
+        String manager = Files.readString(Path.of("src/main/java/com/openggf/level/LevelManager.java"));
+        String save = Files.readString(Path.of("src/main/java/com/openggf/editor/persistence/EditorSaveManager.java"));
+        assertFalse(manager.contains("new EditorSaveManager(Path.of(\"saves\"))"));
+        assertTrue(manager.contains("editorSaveManager.tryApplyEdits("));
+        assertTrue(save.contains("return gameId != GameId.S3K;"));
     }
 
     private GameplayModeContext createGameplayMode(Engine engine) {
         return createGameplayMode(engine, (short) 100, (short) 200);
     }
 
-    private GameplayModeContext createGameplayMode(Engine engine, short playerX, short playerY) {
-        installTempEditorSaveManager(engine);
-        GameplayModeContext gameplayMode = SessionManager.openGameplaySession(new Sonic2GameModule());
+    private GameplayModeContext createGameplayMode(Engine engine, short x, short y) {
+        return createGameplayMode(engine, x, y, true);
+    }
+
+    private GameplayModeContext createGameplayMode(Engine engine, short x, short y, boolean loaded) {
+        try { setPrivateField(engine, "editorSaveManager", new EditorSaveManager(tempSaves)); }
+        catch (ReflectiveOperationException failure) { throw new AssertionError(failure); }
+        var mode = SessionManager.openGameplaySession(new Sonic2GameModule());
         TestEnvironment.activeGameplayMode();
-        SpriteManager spriteManager = gameplayMode.getSpriteManager();
-        Sonic player = new Sonic("sonic", playerX, playerY);
-        spriteManager.addSprite(player);
-        gameplayMode.getCamera().setFocusedSprite(player);
-        engine.getGameLoop().setGameplayMode(gameplayMode);
-        return gameplayMode;
+        var player = new Sonic("sonic", x, y);
+        com.openggf.sprites.NativePositionOps.writeXPosResetSubpixel(player, x);
+        com.openggf.sprites.NativePositionOps.writeYPosResetSubpixel(player, y);
+        mode.getSpriteManager().addSprite(player);
+        mode.getCamera().setFocusedSprite(player);
+        mode.getCamera().setMinX((short) 0);
+        mode.getCamera().setMaxX((short) 1023);
+        mode.getCamera().setMinY((short) 0);
+        mode.getCamera().setMaxY((short) 1023);
+        if (loaded) mode.getLevelManager().setLevel(MutableLevel.snapshot(new SyntheticLevel()));
+        engine.getGameLoop().setGameplayMode(mode);
+        return mode;
     }
 
-    private void installTempEditorSaveManager(Engine engine) {
-        try {
-            setPrivateField(engine, "editorSaveManager", new EditorSaveManager(tempSaves));
-        } catch (ReflectiveOperationException e) {
-            throw new AssertionError("Failed to install test editor save manager", e);
-        }
+    private void requireS2Rom() throws IOException {
+        var file = RomTestUtils.ensureSonic2RomAvailable();
+        assumeTrue(file != null, "Configured S2 ROM required for native hosted playtest");
+        fixtureRom = new Rom();
+        assertTrue(fixtureRom.open(file.getAbsolutePath()), "configured S2 ROM must be readable");
+        TestEnvironment.configureRomFixture(fixtureRom);
+        GraphicsManager.getInstance().initHeadless();
     }
 
-    private static void assumeS2RomAvailableForResumeReload() {
-        var romFile = com.openggf.tests.RomTestUtils.ensureSonic2RomAvailable();
-        assumeTrue(romFile != null, "S2 ROM is not available in this environment");
-        Rom rom = new Rom();
-        assumeTrue(rom.open(romFile.getAbsolutePath()), "S2 ROM could not be opened in this environment");
-        TestEnvironment.configureRomFixture(rom);
+    private static Sonic player(GameplayModeContext mode) {
+        return (Sonic) mode.getSpriteManager().getSprite("sonic");
     }
-
-    private static void injectLeakedGarbageRom() throws IOException {
-        Path romPath = TestTempFiles.createTempFile("editor-toggle-garbage-rom", ".bin");
-        Files.write(romPath, new byte[512 * 1024]);
-        romPath.toFile().deleteOnExit();
-        Rom rom = new Rom();
-        assertTrue(rom.open(romPath.toString()), "Expected garbage ROM temp file to open");
-        RomManager.getInstance().setRom(rom);
+    private static InputHandler inputFor(Engine engine) {
+        var input = new InputHandler(); engine.setInputHandler(input); return input;
     }
-
-    private static void releaseAndAdvance(InputHandler inputHandler, int key) {
-        inputHandler.handleKeyEvent(key, GLFW_RELEASE);
-        inputHandler.update();
+    private static void press(Engine engine, InputHandler input, int... keys) {
+        for (int key : keys) input.handleKeyEvent(key, GLFW_PRESS);
+        engine.getGameLoop().step();
+        for (int key : keys) input.handleKeyEvent(key, GLFW_RELEASE);
+        input.update();
     }
-
-    private static Block lookupBlock(LevelManager levelManager, byte layer, int x, int y) {
-        try {
-            Method getBlockAtPosition = LevelManager.class.getDeclaredMethod("getBlockAtPosition", byte.class, int.class, int.class);
-            getBlockAtPosition.setAccessible(true);
-            return (Block) getBlockAtPosition.invoke(levelManager, layer, x, y);
-        } catch (ReflectiveOperationException e) {
-            throw new AssertionError("Failed to invoke LevelManager block lookup", e);
-        }
+    private static void enter(Engine engine, int x, int y) {
+        engine.enterEditorFromCurrentPlayer(new EditorPlaytestStash(x, y, 9, -3, true, 47, 1), x, y);
     }
-
-    private static LevelManager engineLevelManager(Engine engine) {
-        try {
-            Field field = Engine.class.getDeclaredField("levelManager");
-            field.setAccessible(true);
-            return (LevelManager) field.get(engine);
-        } catch (ReflectiveOperationException e) {
-            throw new AssertionError("Failed to read Engine level manager", e);
-        }
+    private static Block lookupBlock(LevelManager manager, byte layer, int x, int y) throws Exception {
+        var method = LevelManager.class.getDeclaredMethod("getBlockAtPosition", byte.class, int.class, int.class);
+        method.setAccessible(true); return (Block) method.invoke(manager, layer, x, y);
     }
-
-    private static Camera engineCamera(Engine engine) {
-        try {
-            Field field = Engine.class.getDeclaredField("camera");
-            field.setAccessible(true);
-            return (Camera) field.get(engine);
-        } catch (ReflectiveOperationException e) {
-            throw new AssertionError("Failed to read Engine camera", e);
-        }
+    private static LevelManager engineLevelManager(Engine engine) { return (LevelManager) field(engine, "levelManager"); }
+    private static Camera engineCamera(Engine engine) { return (Camera) field(engine, "camera"); }
+    private static Object field(Object target, String name) {
+        try { var field = target.getClass().getDeclaredField(name); field.setAccessible(true); return field.get(target); }
+        catch (ReflectiveOperationException failure) { throw new AssertionError(failure); }
     }
-
-    private static void forceControllerCursor(LevelEditorController controller, EditorCursorState cursor) throws Exception {
-        Field field = LevelEditorController.class.getDeclaredField("worldCursor");
-        field.setAccessible(true);
-        field.set(controller, cursor);
+    private static void setPrivateField(Object target, String name, Object value) throws ReflectiveOperationException {
+        var field = target.getClass().getDeclaredField(name); field.setAccessible(true); field.set(target, value);
     }
-
-    private static void setPrivateField(Object target, String fieldName, Object value) throws ReflectiveOperationException {
-        Field field = target.getClass().getDeclaredField(fieldName);
-        field.setAccessible(true);
-        field.set(target, value);
-    }
-
     private static void enableEditor() {
         SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.EDITOR_ENABLED, true);
-        assertTrue(SonicConfigurationService.getInstance().getBoolean(SonicConfiguration.EDITOR_ENABLED));
     }
 
-    private static final class EditorMvpFlowLevel extends AbstractLevel {
-        private EditorMvpFlowLevel() {
-            super(0);
-            patternCount = 1;
-            patterns = new Pattern[] { new Pattern() };
-
-            chunkCount = 1;
-            chunks = new Chunk[] { new Chunk() };
-
-            blockCount = 2;
-            blocks = new Block[blockCount];
-            for (int i = 0; i < blockCount; i++) {
-                blocks[i] = new Block(1);
-                blocks[i].setChunkDesc(0, 0, new ChunkDesc(0));
-            }
-
-            solidTileCount = 1;
-            solidTiles = new SolidTile[] {
-                    new SolidTile(0, new byte[SolidTile.TILE_SIZE_IN_ROM], new byte[SolidTile.TILE_SIZE_IN_ROM], (byte) 0)
-            };
-
-            map = new Map(2, 8, 8);
-            map.setValue(0, 4, 4, (byte) 1);
-
-            palettes = new Palette[PALETTE_COUNT];
-            for (int i = 0; i < PALETTE_COUNT; i++) {
-                palettes[i] = new Palette();
-            }
-
-            objects = List.of();
-            rings = List.of();
-            minX = 0;
-            maxX = 7;
-            minY = 0;
-            maxY = 7;
-        }
-
-        @Override
-        public int getChunksPerBlockSide() {
-            return 1;
-        }
-
-        @Override
-        public int getBlockPixelSize() {
-            return 1;
-        }
-    }
-
-    private static final class BackgroundTilemapLevel extends AbstractLevel {
-        private BackgroundTilemapLevel() {
-            super(0);
-            patternCount = 1;
-            patterns = new Pattern[patternCount];
-            patterns[0] = new Pattern();
-            patterns[0].setPixel(0, 0, (byte) 1);
-
-            chunkCount = 1;
-            chunks = new Chunk[chunkCount];
-            chunks[0] = new Chunk();
-            chunks[0].restoreState(new int[8 * 8]);
-
-            blockCount = 1;
-            blocks = new Block[blockCount];
-            blocks[0] = new Block(8);
-            for (int y = 0; y < 8; y++) {
-                for (int x = 0; x < 8; x++) {
-                    blocks[0].setChunkDesc(x, y, new ChunkDesc(0));
-                }
-            }
-
-            solidTileCount = 1;
-            solidTiles = new SolidTile[] {
-                    new SolidTile(0, new byte[SolidTile.TILE_SIZE_IN_ROM], new byte[SolidTile.TILE_SIZE_IN_ROM], (byte) 0)
-            };
-
-            map = new Map(2, 1, 1);
-            map.setValue(0, 0, 0, (byte) 0);
-            map.setValue(1, 0, 0, (byte) 0);
-
-            palettes = new Palette[PALETTE_COUNT];
-            for (int i = 0; i < PALETTE_COUNT; i++) {
-                palettes[i] = new Palette();
-            }
-
-            objects = List.of();
-            rings = List.of();
-            minX = 0;
-            maxX = 127;
-            minY = 0;
-            maxY = 127;
-        }
-
-        @Override
-        public int getChunksPerBlockSide() {
-            return 8;
-        }
-
-        @Override
-        public int getBlockPixelSize() {
-            return 128;
-        }
-    }
-
+    /** S2's actual 8x8 chunk/block contract and bounds that contain its stock source start. */
     private static final class SyntheticLevel extends AbstractLevel {
-        private SyntheticLevel() {
+        SyntheticLevel() {
             super(0);
-            patternCount = 1;
-            patterns = new Pattern[patternCount];
-            patterns[0] = new Pattern();
-            patterns[0].setPixel(0, 0, (byte) 1);
-
-            chunkCount = 1;
-            chunks = new Chunk[chunkCount];
-            chunks[0] = new Chunk();
-            chunks[0].restoreState(new int[] { 0, 0, 0, 0, 0, 0 });
-
-            blockCount = 2;
-            blocks = new Block[blockCount];
-            for (int i = 0; i < blockCount; i++) {
-                blocks[i] = new Block(2);
-                blocks[i].setChunkDesc(0, 0, new ChunkDesc(0));
-                blocks[i].setChunkDesc(1, 0, new ChunkDesc(0));
-                blocks[i].setChunkDesc(0, 1, new ChunkDesc(0));
-                blocks[i].setChunkDesc(1, 1, new ChunkDesc(0));
+            patternCount = 2; patterns = new Pattern[] {new Pattern(), new Pattern()};
+            patterns[1].setPixel(0, 0, (byte) 1);
+            chunkCount = 2; chunks = new Chunk[] {new Chunk(), new Chunk()};
+            chunks[1].setPatternDesc(0, 0, new PatternDesc(1));
+            blockCount = 2; blocks = new Block[] {new Block(8), new Block(8)};
+            for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++) {
+                blocks[1].setChunkDesc(x, y, new ChunkDesc(1));
             }
-
             solidTileCount = 1;
-            solidTiles = new SolidTile[] {
-                    new SolidTile(0, new byte[SolidTile.TILE_SIZE_IN_ROM], new byte[SolidTile.TILE_SIZE_IN_ROM], (byte) 0)
-            };
-
-            map = new Map(2, 4, 3);
-            for (int layer = 0; layer < 2; layer++) {
-                for (int y = 0; y < 3; y++) {
-                    for (int x = 0; x < 4; x++) {
-                        map.setValue(layer, x, y, (byte) 0);
-                    }
-                }
-            }
-
+            solidTiles = new SolidTile[] {new SolidTile(0, new byte[16], new byte[16], (byte) 0)};
+            map = new Map(2, 8, 8); map.setValue(0, 1, 1, (byte) 1);
             palettes = new Palette[PALETTE_COUNT];
-            for (int i = 0; i < PALETTE_COUNT; i++) {
-                palettes[i] = new Palette();
-            }
-
-            objects = List.of();
-            rings = List.of();
-            minX = 0;
-            maxX = 255;
-            minY = 0;
-            maxY = 191;
+            for (int i = 0; i < PALETTE_COUNT; i++) palettes[i] = new Palette();
+            objects = List.of(); rings = List.of();
+            minX = 0; maxX = 1023; minY = 0; maxY = 1023;
         }
-
-        @Override
-        public int getChunksPerBlockSide() {
-            return 2;
-        }
-
-        @Override
-        public int getBlockPixelSize() {
-            return 64;
-        }
+        @Override public int getChunksPerBlockSide() { return 8; }
+        @Override public int getBlockPixelSize() { return 128; }
     }
-
 }

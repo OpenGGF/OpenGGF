@@ -42,6 +42,7 @@ import com.openggf.game.sonic3k.runtime.MgzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.sonic3k.runtime.S3kZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.SozZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.SszZoneRuntimeState;
 import com.openggf.game.sonic3k.sidekick.Sonic3kSidekickFollowContext;
 import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
@@ -751,6 +752,13 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
 
     @Override
     public void updatePrePhysics() {
+        // D01 Animate_Palette precedes SpecialEvents/Process_Sprites. The
+        // ordinary animator's post-object tail retains only its late resolution.
+        if(endingEvents!=null && currentZone==0x0D && currentAct==1)
+            endingEvents.animateInitialPaletteBeforeObjects();
+        else if(GameServices.zoneRuntimeState() instanceof SszZoneRuntimeState ssz && ssz.ending().initialized()
+                && GameServices.level().getAnimatedPatternManager() instanceof Sonic3kLevelAnimationManager animation)
+            animation.advanceEndingPoweredPaletteAtAnPal(GameServices.level().getObjectManager().getObjectServices());
         if (currentZone == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA && currentAct == 0
                 && GameServices.zoneRuntimeState() instanceof
                 com.openggf.game.sonic3k.runtime.DezFinalBossZoneRuntimeState state) {

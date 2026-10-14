@@ -125,7 +125,8 @@ public final class NativeStagePlayback {
                     session.step(input);
                     session.loop().presentOuterFrame(false,false); // One normal outer SMPS boundary; null host audio backend.
                     GameMode mode=session.loop().getCurrentGameMode();
-                    if(mode==GameMode.SPECIAL_STAGE||mode==GameMode.BONUS_STAGE)seenStage=true;
+                    if(stage.equals("blue") ? mode==GameMode.SPECIAL_STAGE
+                            : mode==GameMode.BONUS_STAGE && bonus()!=null && bonus().getActiveType()==BonusStageType.GUMBALL)seenStage=true;
                     if(mode==GameMode.SPECIAL_STAGE_RESULTS)seenResults=true;
                     var special=session.loop().getActiveSpecialStageProvider() instanceof Sonic3kSpecialStageProvider p?p:null;
                     var comparison=special==null?null:special.getManager().captureComparisonState();
@@ -182,6 +183,7 @@ public final class NativeStagePlayback {
                     if(returnedAt>=0&&frame>=returnedAt+120)break;
                 }
                 Files.writeString(out.resolve("summary.txt"),"direct_entry_supplementary=true\nrequested="+requested+"\nseen_stage="+seenStage
+                        +"\ncomplete="+(requested&&seenStage&&returnedAt>=0)
                         +"\nseen_results="+seenResults+"\nreturned_frame="+returnedAt+"\nlast_frame="+last+"\npad_stage_frames="+stageFrame
                         +"\nobserved_turn="+sawTurn+"\nobserved_jump="+sawJump+"\nmax_added_red_gates="+maxGates
                         +"\nmax_live_springs="+maxSprings+"\nmin_live_springs="+(minSprings==Integer.MAX_VALUE?-1:minSprings)
@@ -199,6 +201,8 @@ public final class NativeStagePlayback {
         }
         Files.delete(raw);
         System.out.println(summary);
+        if (!summary.lines().anyMatch("complete=true"::equals))
+            throw new IllegalStateException("Incomplete direct stage route: native request, intended stage and ready return are required; see summary.txt");
     }
 
     private static boolean levelReady(GameplayCaptureSession session) {

@@ -181,7 +181,10 @@ class TestRemainingRewindTailInventory {
         // NativeBreakableWallObjectInstance, NativeGhostEncounterObjectInstance and
         // NativeGustObjectInstance each pass the real isolated ObjectManager round-trip;
         // their spawn recreation and owned scalar state add three passes, with no bucket growth.
-        return new TailInventory(1320, 1077, 243, 0, buckets);
+        // S3kAuthoredGoalInstance adds one isolated pass. Its triggered scalar and
+        // tagged placement also restore/replay through the real ObjectManager in
+        // TestHostObjectKeys.goalRewindPreservesTaggedPlacementAndPreventsDuplicateNativeFinishGraphs.
+        return new TailInventory(1321, 1078, 243, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {

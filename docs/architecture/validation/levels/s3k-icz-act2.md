@@ -55,3 +55,25 @@ This is the independently executed native 320/Sonic restart floor, not the remai
 After each title/fade/fresh-assembly release, the complete registered world is captured, advanced for 45 neutral logical ticks, restored immediately and replayed twice. Each forward tick checks P1 survival, unchanged lives and actual configured owners. Intrinsic intro control remains native-owned; this is not a forced unlock or a raw restore across the load. Physical pit traversal, physical post capture/respawn, completion edges and later mechanic lifetimes remain separate.
 
 One coherent focused invocation qualified all eight acts: command session54147 on runtime `e57236d519a861c9fbc43ba867230793dbd6fb0d` plus this commit's nine test-only deltas, 1120 tests / 0 failures / 0 errors / 0 skips (each act 140/0/0/0), actual terminal exit0 at 13:42:47 BST (12:42:47 UTC), Maven 3m05s. Exact selection: `TestS3kAiz2EntryMatrix`, `TestS3kHcz2EntryMatrix`, `TestS3kMgz1EntryMatrix`, `TestS3kMgz2EntryMatrix`, `TestS3kCnz1EntryMatrix`, `TestS3kCnz2EntryMatrix`, `TestS3kIcz1EntryMatrix`, `TestS3kIcz2EntryMatrix`, each restricted with `#actualDeathReloadPreservesTheSupportedProductAndReplaysEachIncomingWorldTwice` in the comma-separated `-Dtest` selector. Command prefix: `env -u DISPLAY -u WAYLAND_DISPLAY ALSOFT_DRIVERS=null python3 tools/testing/maven_queue.py --lean -Dmse=off -Dopenggf.headless.gl=surfaceless-egl`; original absolute S1/S2/S3K ROM properties were supplied, followed by `test`. Entry rows were not rerun merely to repeat their unchanged evidence. This is finite lifecycle qualification, not complete act, native-pixel, strict-trace or arbitrary roster certification; combined smoke/integration/push remain lead-owned.
+
+
+## Cork frame/table and fragment lifetime — 2026-10-14
+
+This appends to the canonical matrix from `d13585237`, preserving its qualified
+140 normal-entry/140 restart product records and their exact source limits.
+Cork Init now stores the subtype nibble directly. `loc_2A816` uses pre-break
+frame*4 to select `word_2A84C`'s high-launch suffix: native0/2/4/6/8 mapping
+indices produce14/12/10/8/6 pieces. The bit4 small-floor frameA→B branch retains
+the four-entry `word_2A884`; alternate-plane/signed-subtype admission is unchanged.
+The original SST is piece0, sibling allocation stops on checked failure, and
+native fractional motion, byte-copy priority and prior-render deletion restore
+without ghost allocations.
+
+Independent literal checkpoint tests cover those branches, partial pressure and
+two-way recreation/two forward cycles. The retained `TestS3kIcz2CorkFloorRegression`
+physical rolling-loop route passes within affected74672's607/0/0/0 on the owned
+Cork source over `d8025e094`;111 structural/source/timing guards pass. This does
+not rerun or expand the dated140-product qualifications. [Exact evidence](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#cork-same-record-fragment-and-icz-table-follow-up).
+Cork-specific physical contact/registered-world replay across all presets,
+donors/rosters, whole-act completion/load/history and native pixels/audio remain
+separate obligations; no ICZ strict sweep or full level certification is claimed.

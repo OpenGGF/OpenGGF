@@ -529,3 +529,50 @@ One inspected conformance follow-up is spike`loc_76674` status-six hit-flash
 suppression and separate draw/touch admission: current Java still combines its
 draw gate with touch flags. This bounded terminal/parent repair does not certify
 that branch or full native parity, and adds no accepted discrepancy.
+
+
+## Released checkpoint-world replay follow-up (2026-10-14)
+
+The existing physical-post death driver now uses only the production GameLoop
+fade owner and services pending render work after each tick. It checks exactly
+one life lost at fresh assembly and after actual title/fade/control release,
+then captures and replays the complete registered incoming world twice in both
+restore directions after EACH of two real deaths. Every45-input branch requires
+an alive leader, unchanged lives/post, retained roster/donor/viewport and the
+same current runtime/object manager; a raw restore never crosses a load.
+Short independent native320/S2-Tails800 witnesses precede the product methods.
+
+This act contributes140 products over all its authored posts and all five
+production presets, using native Sonic, Tails and Sonic+Tails; S1 Sonic and S2 Sonic/Tails/pair. The composed
+`262e9bbb10bb317d183dbf289dcfa8568fa0258c` plus final test changes passes the
+12 short witnesses in request93678 at12:58:56 UTC, then all1077 affected
+products in63733 at13:13:31 UTC, zero failures/errors/skips (3:32 Maven,
+queue wait separate). DEZ2 post5 still reaches its placed gravity writer through
+ordinary movement and verifies the real inverted death and native cleared
+gravity after reload. This adds incoming-world replay to the previously
+qualified physical contact/death scope; other unchanged checks were not repeated.
+[Exact selectors and source hashes](../../plans/2026-10-13-s3k-playable-completion.md#existing-checkpoint-driver-qualification-2026-10-14)
+are in the completion plan. Further roster and mechanic/cold-route products remain open. No native pixel/audio, overall act
+certification, full-suite or combined delivery claim follows.
+
+
+### Knuckles physical checkpoint follow-up (2026-10-14)
+
+`TestMhzCheckpointRoutes.knucklesPhysicallyTouchesAndReplaysEveryPost` adds
+4 native Knuckles physical contacts in this act with two full-registry
+contact replay cycles. `knucklesPreservesItsRouteAcrossBothDeathsAndIncomingWorlds`
+adds20 products over every authored post and all five selectable widths.
+Each uses the qualified actual two-death driver, exact life loss, native character
+and retained route, fresh object manager, timeline isolation and two45-input
+forward/reverse full-world cycles after EACH released death. They are declared
+local approaches, not new cold traversals. Donor sanitization still excludes
+Knuckles from S1/S2 products.
+
+On source`64f419a3b3a0a9a81b9cfeeb26b55090114f2930` plus the final test draft,
+request50826 finishes at13:19:59 UTC: all54 added MHZ cases pass, zero errors
+or skips (10.55s class). Its separate five-case Bubbler identity regression
+contains two genuine failures; this mixed invocation is not a green delivery
+gate. Together with the distinct315 preceding MHZ death products, the current
+qualified lifecycle floor is360 (Act1=200,Act2=160), not a single pristine360
+invocation. Further rosters, mechanics, cold-route and native visual/audio
+breadth remain explicit obligations.

@@ -39,4 +39,23 @@ class TestSwScrlEnding {
         assertTrue(state.screen().foregroundSignal);assertEquals((short)0xA500,state.screen().hScrollWords[139]);
         assertArrayEquals(saved,state.captureBytes());
     }
+    @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    @Test void aizReturnConsumesTheRetainedCloudRampLongInsteadOfAZeroWaveOrigin() throws Exception {
+        com.openggf.tests.TestEnvironment.configureGameModuleFixture(com.openggf.tests.rules.SonicGame.SONIC_3K);
+        try {
+            var state=new EndingZoneRuntimeState(PlayerCharacter.TAILS_ALONE);
+            com.openggf.game.GameServices.zoneRuntimeRegistry().install(state);
+            var ram=state.screen();ram.backgroundRoutine=16;ram.hScrollWords[30]=0x1234;ram.hScrollWords[31]=0x5678;
+            var handler=new SwScrlEnding(com.openggf.game.GameServices.rom().getRom());
+            int[] output=new int[224];handler.update(output,0x1EB8,0x1E0,1,1);
+            assertArrayEquals(new short[]{28477,23723,18969,14215,9461,4707},java.util.Arrays.copyOfRange(ram.hScrollWords,4,10),
+                    "literal AIZ1_Deform 32-bit add/swap/decrement transcript");
+            assertEquals(0x1234,ram.hScrollWords[30]);assertEquals(0x7678,ram.hScrollWords[31]);
+            assertEquals(0xF0,ram.backgroundCameraY);
+            byte[] saved=state.captureBytes();int[] expected=output.clone();
+            handler.update(output,0x1EB8,0x1E0,1,1);assertArrayEquals(saved,state.captureBytes(),"one event admission per native loop");
+            new SwScrlEnding(com.openggf.game.GameServices.rom().getRom()).rebuildOutput(output,0x1EB8,0x1E0,1,1);
+            assertArrayEquals(saved,state.captureBytes());assertArrayEquals(expected,output);
+        } finally {com.openggf.tests.TestEnvironment.resetAll();}
+    }
 }

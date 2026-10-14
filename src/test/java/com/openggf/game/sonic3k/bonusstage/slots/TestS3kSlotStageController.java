@@ -13,7 +13,7 @@ class TestS3kSlotStageController {
 
     @Test
     void spikeSoundCounterUsesUnsignedWordAndResetsOnStageBootstrap() {
-        S3kSlotStageState state = S3kSlotStageState.bootstrap();
+        S3kSlotStageState state = S3kSlotStageState.bootstrap(S3kSlotRomTestData.resources());
         S3kSlotStageController controller = new S3kSlotStageController(state);
         state.setScalarIndex2(0xFFFF);
         controller.advanceSpikePayout();
@@ -28,7 +28,8 @@ class TestS3kSlotStageController {
 
     @Test
     void bootstrapResetsAngleStateAfterMovement() {
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         AbstractPlayableSprite player = S3kSlotBonusPlayer.create("tails", (short) 0, (short) 0, newRuntime());
 
         controller.bootstrap();
@@ -49,7 +50,8 @@ class TestS3kSlotStageController {
 
     @Test
     void leftAndRightInputsDoNotSkipJumpWhenBothPressed() {
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         AbstractPlayableSprite player = S3kSlotBonusPlayer.create("tails", (short) 0, (short) 0, newRuntime());
 
         controller.bootstrap();
@@ -73,7 +75,8 @@ class TestS3kSlotStageController {
 
     @Test
     void angleWraparoundIsMaskedToEightBits() {
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
 
         controller.bootstrap();
         // Stat_table is a 16-bit accumulator; the byte angle is its high byte.
@@ -86,7 +89,8 @@ class TestS3kSlotStageController {
 
     @Test
     void jumpLaunchesPlayerUsingCurrentAngleAndSetsAirborneState() {
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         AbstractPlayableSprite player = S3kSlotBonusPlayer.create("tails", (short) 0, (short) 0, newRuntime());
 
         controller.bootstrap();
@@ -105,7 +109,8 @@ class TestS3kSlotStageController {
 
     @Test
     void heldJumpDoesNotRelaunchAfterTheFirstPress() {
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         AbstractPlayableSprite player = S3kSlotBonusPlayer.create("tails", (short) 0, (short) 0, newRuntime());
 
         controller.bootstrap();
@@ -126,14 +131,16 @@ class TestS3kSlotStageController {
 
     @Test
     void bootstrapInitializesScalarIndexTo0x40() {
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
         assertEquals(0x40, controller.scalarIndex());
     }
 
     @Test
     void tickAccumulatesStatTableByScalarIndex() {
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
         assertEquals(0, controller.angle());
 
@@ -153,7 +160,8 @@ class TestS3kSlotStageController {
 
     @Test
     void negateScalarReversesRotationDirection() {
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
 
         controller.tick(); // angle = 0x40
@@ -170,7 +178,8 @@ class TestS3kSlotStageController {
 
     @Test
     void jumpOnlyWorksWhenGrounded() {
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
         AbstractPlayableSprite player = S3kSlotBonusPlayer.create("sonic", (short) 0, (short) 0, newRuntime());
 
@@ -187,7 +196,8 @@ class TestS3kSlotStageController {
 
     @Test
     void restartCaptureCycleRestartsVisibleSpinFromResolvedIdle() {
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
 
         S3kSlotStageState state = controller.stageStateForTest();
@@ -203,7 +213,8 @@ class TestS3kSlotStageController {
 
     @Test
     void negativePayoutUsesRomFixedHundredSpikeBudget() throws Exception {
-        S3kSlotStageController controller = new S3kSlotStageController();
+        S3kSlotStageController controller = new S3kSlotStageController(com.openggf.game.sonic3k.bonusstage.slots.S3kSlotStageState.bootstrap(
+                com.openggf.game.sonic3k.bonusstage.slots.S3kSlotRomTestData.resources()));
         controller.bootstrap();
         AbstractPlayableSprite player = S3kSlotBonusPlayer.create("sonic",
                 S3kSlotRomData.SLOT_BONUS_CAGE_CENTER_X,
@@ -227,9 +238,9 @@ class TestS3kSlotStageController {
     }
 
     private static S3kSlotPlayerRuntime newRuntime() {
-        S3kSlotStageState state = S3kSlotStageState.bootstrap();
+        S3kSlotStageState state = S3kSlotStageState.bootstrap(S3kSlotRomTestData.resources());
         S3kSlotCollisionSystem collisionSystem = new S3kSlotCollisionSystem(
-                S3kSlotRenderBuffers.fromRomData(), state);
+                S3kSlotRenderBuffers.fromRomData(S3kSlotRomTestData.resources()), state);
         return new S3kSlotPlayerRuntime(state, collisionSystem);
     }
 

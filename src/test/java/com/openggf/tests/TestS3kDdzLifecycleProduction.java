@@ -23,6 +23,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -58,77 +59,79 @@ class TestS3kDdzLifecycleProduction {
                 .withFreshLevelStartLifecycle()
                 .build();
         GameServices.gameState().restoreS3kEmeraldProgress(List.of(3, 3, 3, 3, 3, 3, 3), true);
-        var manager = GameServices.level().getObjectManager();
-        var player = fixture.sprite();
         var input = new InputHandler();
         var neutral = new com.openggf.debug.playback.Bk2FrameInput(0, 0, 0, false, "");
-        input.setLogicalOverride(
-                com.openggf.debug.playback.RecordedInputSnapshots.fromBk2(neutral, neutral));
-        var loop = new GameLoop(input);
-        loop.setGameplayMode(fixture.gameplayMode());
-        loop.setGameMode(GameMode.LEVEL);
+        input.setLogicalOverride(com.openggf.debug.playback.RecordedInputSnapshots.fromBk2(neutral, neutral));
+        var loop = new GameLoop(input);loop.setGameplayMode(fixture.gameplayMode());loop.setGameMode(GameMode.LEVEL);
+        assertTrue(loop.ownsGameplayFadeLifecycle());
         try {
-            // Drive the live loop before ring-out so the history being discarded is real.
-            for (int frame = 0; frame < 60; frame++) {
-                fixture.gameplayMode().getFadeManager().update();
-                loop.step();
-            }
-            assertTrue(player.isSuperSonic(), "transformed and released");
-            var outgoingRewind = fixture.gameplayMode().getRewindController();
-            assertTrue(outgoingRewind != null && outgoingRewind.currentFrame() > 10,
-                    "flight built live rewind history before ring-out");
-
-            player.setRingCount(0);
-            int fallFrame = -1;
-            for (int frame = 0; frame < 240 && !player.getDead(); frame++) {
-                fixture.gameplayMode().getFadeManager().update();
-                loop.step();
-                if (fallFrame < 0 && !player.isSuperSonic()) {
-                    fallFrame = frame;
+            awaitReleasedFlight(fixture,loop);
+            for(int cycle=0;cycle<2;cycle++) {
+                for(int frame=0;frame<30;frame++)step(loop);
+                var manager=GameServices.level().getObjectManager();
+                var runtime=GameServices.zoneRuntimeRegistry().current();
+                var player=GameServices.sprites().getMainPlayable();
+                int lives=GameServices.gameState().getLives();
+                var outgoing=fixture.gameplayMode().getRewindController();
+                assertTrue(outgoing!=null&&outgoing.currentFrame()>10,"actual outgoing flight history");
+                player.setRingCount(0); // Declared ring-out stimulus; native controller owns fall and death.
+                int fallFrame=-1;
+                for(int frame=0;frame<240&&!player.getDead();frame++) {
+                    step(loop);
+                    if(fallFrame<0&&!player.isSuperSonic())fallFrame=frame;
                 }
-            }
-            assertTrue(fallFrame >= 0, "Sonic_Super ends the form with no rings");
-            assertTrue(player.getDead(), "loc_8179E calls Kill_Character below Camera_Y + $F0");
-            assertTrue((player.getCentreY() & 0xFFFF) > ((GameServices.camera().getY() & 0xFFFF) + 0xF0),
-                    "the fall passes the camera bottom before the kill");
-
-            boolean reloaded = false;
-            int largestOutgoingFrame = outgoingRewind.currentFrame();
-            for (int i = 0; i < 1200 && !reloaded; i++) {
-                fixture.gameplayMode().getFadeManager().update();
-                loop.step();
-                reloaded = GameServices.level().getObjectManager() != manager;
-                var rewind = fixture.gameplayMode().getRewindController();
-                if (reloaded) {
-                    assertTrue(largestOutgoingFrame > 10,
-                            "the outgoing death countdown built a real timeline to isolate");
-                    assertTrue(rewind == null || rewind.currentFrame() < largestOutgoingFrame,
-                            "Doomsday reload must discard the outgoing death timeline");
-                } else if (rewind != null) {
-                    largestOutgoingFrame = Math.max(largestOutgoingFrame, rewind.currentFrame());
+                assertTrue(fallFrame>=0,"Sonic_Super ends the form with no rings");
+                assertTrue(player.getDead(),"loc_8179E kills below Camera_Y + $F0");
+                assertTrue((player.getCentreY()&0xFFFF)>((GameServices.camera().getY()&0xFFFF)+0xF0));
+                boolean reloaded=false;int largestOutgoingFrame=outgoing.currentFrame();
+                for(int frame=0;frame<1200;frame++) {
+                    step(loop);var rewind=fixture.gameplayMode().getRewindController();
+                    if(GameServices.level().getObjectManager()!=manager) {
+                        reloaded=true;
+                        assertEquals(lives-1,GameServices.gameState().getLives(),"exact life loss at assembly");
+                        assertNotSame(runtime,GameServices.zoneRuntimeRegistry().current());
+                        assertTrue(largestOutgoingFrame>10);
+                        assertTrue(rewind==null||rewind.currentFrame()<largestOutgoingFrame,"isolated incoming timeline");
+                        assertDdzOwners(aspect);break;
+                    }
+                    if(rewind!=null)largestOutgoingFrame=Math.max(largestOutgoingFrame,rewind.currentFrame());
                 }
+                assertTrue(reloaded,"actual DDZ ring-out reload cycle "+cycle);
+                awaitReleasedFlight(fixture,loop);
+                assertEquals(lives-1,GameServices.gameState().getLives(),"release hides no restart");
+                int checkpoint=GameServices.level().getCheckpointState().getLastCheckpointIndex();
+                CheckpointIncomingReplay.verify(fixture,loop,input,checkpoint,()->assertDdzOwners(aspect));
             }
-            var p = GameServices.camera().getFocusedSprite();
-            String where = "mode=" + loop.getCurrentGameMode() + " dead=" + p.getDead() + " y=" + Integer.toHexString(p.getCentreY() & 0xFFFF)
-                    + " camY=" + Integer.toHexString(GameServices.camera().getY() & 0xFFFF) + " ctl=" + p.isObjectControlled()
-                    + " inactive=" + GameServices.level().isLevelInactiveForTransition() + " yspd=" + p.getYSpeed()
-                    + " lives=" + GameServices.gameState().getLives();
-            assertTrue(reloaded, "the death countdown reaches the GameLoop reload: " + where);
-            assertEquals(Sonic3kZoneIds.ZONE_DDZ, GameServices.level().getCurrentZone());
-            assertEquals(0, GameServices.level().getCurrentAct());
-            var focused = GameServices.camera().getFocusedSprite();
-            assertFalse(focused.getDead());
-            SozAcceptanceConfigurations.assertDisplay(aspect);
-            assertSame(GameServices.sprites().getMainPlayable(), focused);
-            assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
-            assertTrue(S3kRuntimeStates.currentDdz(GameServices.zoneRuntimeRegistry()).isPresent(),
-                    "the reload installs fresh Doomsday runtime words");
-            assertEquals(1, GameServices.level().getObjectManager().getActiveObjects().stream()
-                    .filter(o -> o instanceof DdzFlightControllerObjectInstance).count(),
-                    "DDZ_ScreenInit allocates exactly one flight controller");
-        } finally {
-            loop.closePresence();
+        }finally{loop.closePresence();}
+    }
+    private static void step(GameLoop loop) {
+        loop.step();GameServices.graphics().runPendingRenderThreadTasks();
+    }
+    private static void awaitReleasedFlight(HeadlessTestFixture fixture,GameLoop loop) {
+        boolean released=false;
+        for(int frame=0;frame<500;frame++) {
+            step(loop);var title=GameServices.module().getTitleCardProvider();
+            var player=GameServices.sprites().getMainPlayable();
+            if(loop.getCurrentGameMode()==GameMode.LEVEL&&(title==null||title.isComplete())
+                    &&!fixture.gameplayMode().getFadeManager().isActive()
+                    &&!fixture.gameplayMode().getFadeManager().hasPendingCompletion()
+                    &&!GameServices.level().hasPendingFreshLevelTransitionBoundary()
+                    &&player.isSuperSonic()&&player.getXSpeed()==0x1000) {released=true;break;}
         }
+        assertTrue(released,"actual DDZ title/fade and loc_8167C flight release");
+        assertFalse(GameServices.sprites().getMainPlayable().getDead());
+    }
+    private static void assertDdzOwners(WidescreenAspect aspect) {
+        assertEquals(Sonic3kZoneIds.ZONE_DDZ,GameServices.level().getCurrentZone());
+        assertEquals(0,GameServices.level().getCurrentAct());
+        var player=GameServices.sprites().getMainPlayable();
+        assertSame(player,GameServices.camera().getFocusedSprite());assertFalse(player.getDead());
+        assertEquals(com.openggf.game.CharacterKey.SONIC,player.characterKey());
+        assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
+        SozAcceptanceConfigurations.assertDisplay(aspect);
+        assertTrue(S3kRuntimeStates.currentDdz(GameServices.zoneRuntimeRegistry()).isPresent());
+        assertEquals(1,GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(o->o instanceof DdzFlightControllerObjectInstance).count());
     }
     @ParameterizedTest
     @EnumSource(WidescreenAspect.class)
@@ -154,10 +157,10 @@ class TestS3kDdzLifecycleProduction {
         var loop = new GameLoop(input);
         loop.setGameplayMode(fixture.gameplayMode());
         loop.setGameMode(GameMode.LEVEL);
+        assertTrue(loop.ownsGameplayFadeLifecycle());
         try {
             for (int frame = 0; frame < 60; frame++) {
-                fixture.gameplayMode().getFadeManager().update();
-                loop.step();
+                step(loop);
             }
             var rewind = fixture.gameplayMode().getRewindController();
             assertTrue(rewind != null && rewind.currentFrame() > 10,
@@ -179,8 +182,7 @@ class TestS3kDdzLifecycleProduction {
             routine.setInt(boss, 6);
             boolean loaded = false;
             for (int frame = 0; frame < 240 && !loaded; frame++) {
-                fixture.gameplayMode().getFadeManager().update();
-                loop.step();
+                step(loop);
                 loaded = GameServices.level().getObjectManager() != objects;
             }
             org.mockito.Mockito.verify(services).requestSessionSave(

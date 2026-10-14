@@ -39,6 +39,8 @@ public final class S3kEndingSceneState {
         public int revision() { return revision; }
         public int remaining() { return remaining; }
         public int descriptor(int x, int y) { return cells[index(x, y)] & 0xFFFF; }
+        /** Reset_TileOffsetPositionActual parks draw cursors without refilling native cells. */
+        public void resetScrollPosition(int x,int y){sourceX=x&0xFFF0;sourceY=y&0xFF0;}
         /** Reset_TileOffsetPositionActual followed by Draw_delayed_position=$E0+roundedY. */
         public void begin(int x, int y) {
             sourceX = x & ~15; sourceY = y & 0xFF0;
@@ -58,12 +60,43 @@ public final class S3kEndingSceneState {
             return remaining < 0;
         }
         public void fill(int x, int y, IntBinaryOperator source) {
+            sourceX=x&0xFFF0;sourceY=y&0xFF0;
             for (int row = 0; row < 16; row++) writeRow(x & ~15, (y & ~15) + row * 16, source);
         }
+        /** Draw_TileRow retains the old ring, with the native byte direction/two-write cap. */
+        public void streamRows(int x,int y,int blocks,IntBinaryOperator source) {
+            streamRowsComplex(row->x,y,blocks,source);
+        }
+        /** Get_DeformDrawPosVert selects source X from the same native band as its incoming row. */
+        public void streamRowsComplex(IntUnaryOperator sourceXForY,int y,int blocks,IntBinaryOperator source) {
+            int next=y&0xFF0,difference=(short)(sourceY-next),row=next;
+            if((byte)difference<0){difference=-difference;row=(sourceY+0xF0)&0xFF0;}
+            sourceY=next;if(difference==0)return;
+            writeRow(sourceXForY.applyAsInt(row),row,blocks,source);
+            if((difference&0x30)!=0x10){row=(row+16)&0xFF0;writeRow(sourceXForY.applyAsInt(row),row,blocks,source);}
+        }
+        /** DrawTilesAsYouMove draws columns first, then the 21-block incoming rows. */
+        public void drawAsYouMove(int x,int y,IntBinaryOperator source) {
+            int next=x&0xFFF0,difference=(short)(sourceX-next),column=next;
+            if((byte)difference<0){column=(sourceX+0x150)&0xFFFF;difference=-difference;}
+            sourceX=next;
+            if(difference!=0){
+                writeColumn(column,y,source);
+                if((difference&0x30)!=0x10)writeColumn(column+16,y,source);
+            }
+            streamRows(x,y,21,source);
+        }
+        private void writeColumn(int x,int y,IntBinaryOperator source) {
+            x=(short)x&~15;y=(short)y&~15;
+            for(int dy=0;dy<15*16;dy+=8)for(int dx=0;dx<16;dx+=8)
+                cells[index(x+dx,y+dy)]=(short)source.applyAsInt(x+dx,y+dy);
+            revision++;
+        }
         private static int index(int x, int y) { return ((y >>> 3) & 31) * 64 + ((x >>> 3) & 63); }
-        private void writeRow(int x, int y, IntBinaryOperator source) {
-            x &= ~15;
-            for (int dy = 0; dy < 16; dy += 8) for (int dx = 0; dx < 512; dx += 8)
+        private void writeRow(int x, int y, IntBinaryOperator source) { writeRow(x,y,32,source); }
+        private void writeRow(int x, int y, int blocks, IntBinaryOperator source) {
+            x=(short)x&~15;y=(short)y&~15;
+            for (int dy = 0; dy < 16; dy += 8) for (int dx = 0; dx < blocks*16; dx += 8)
                 cells[index(x + dx, y + dy)] = (short) source.applyAsInt(x + dx, y + dy);
             revision++;
         }

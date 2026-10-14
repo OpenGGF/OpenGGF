@@ -58,7 +58,7 @@ final class Sonic3kGlobalAnimationState {
     }
 
     int paletteFadeTimer() { return paletteFadeTimer; }
-    void restorePaletteFadeTimer(int value) { paletteFadeTimer = Math.max(0, value); }
+    void restorePaletteFadeTimer(int value) { paletteFadeTimer = (short)value; }
 
     int aizVineAngleWord() {
         return aizVineAngle;

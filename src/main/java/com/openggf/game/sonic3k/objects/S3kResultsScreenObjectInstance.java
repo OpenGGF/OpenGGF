@@ -338,7 +338,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
 
     private void enqueueRequiredKosArchive(Rom rom, int sourceAddress, int destinationVramBytes) {
         try {
-            if (!services().kosinskiModuleQueue().enqueue(rom, sourceAddress, destinationVramBytes)) {
+            if (!com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.queueGlobalPatternModule(
+                    services(), sourceAddress, destinationVramBytes)) {
                 throw new IllegalStateException("S3K KosM queue capacity exhausted while queuing results art");
             }
         } catch (java.io.IOException e) {

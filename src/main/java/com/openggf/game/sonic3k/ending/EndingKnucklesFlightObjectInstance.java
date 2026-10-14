@@ -118,7 +118,7 @@ public final class EndingKnucklesFlightObjectInstance extends AbstractObjectInst
                     routine=12;planeMode=2;flipX=false;animation.mappingFrame=6;
                     setY(state().cloudOscillator()+0x448);xVelocity=0x100;yVelocity=0;
                     makeChild(EndingKnucklesFlightChildObjectInstance.SMALL_PROPELLER,0,-6,7);
-                    S3kEndingPalette.loadLine(services(),0,S3kEndingResources.PAL_SMALL_PLANE);
+                    S3kEndingPalette.loadLine(services(),1,S3kEndingResources.PAL_SMALL_PLANE); // loc_5E984 PalLoad_Line1 writes Normal_palette_line_2.
                 }
             }
             case 12 -> {

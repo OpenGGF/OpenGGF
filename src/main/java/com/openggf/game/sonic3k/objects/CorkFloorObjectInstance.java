@@ -27,6 +27,8 @@ import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteMappingFrame;
+import com.openggf.level.render.SpriteMappingPiece;
+import com.openggf.level.render.SpriteMappingPieces;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -78,6 +80,17 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
             {-0x060, -0x0C0}, {0x060, -0x0C0},
     };
 
+    /** word_2A84C: loc_2A816 advances this pointer by the pre-break frame * 4. */
+    private static final int[][] VEL_TABLE_ICZ_SLOPED = {
+            {-0x140, -0xA00}, {0x140, -0xA00},
+            {-0x120, -0x900}, {0x120, -0x900},
+            {-0x100, -0x800}, {0x100, -0x800},
+            {-0x0E0, -0x700}, {0x0E0, -0x700},
+            {-0x0C0, -0x600}, {0x0C0, -0x600},
+            {-0x0A0, -0x580}, {0x0A0, -0x580},
+            {-0x080, -0x500}, {0x080, -0x500}
+    };
+
     private static final int[][] VEL_TABLE_LARGE = {
             {-0x400, -0x400}, {-0x200, -0x400}, {0x200, -0x400}, {0x400, -0x400},
             {-0x3C0, -0x3C0}, {-0x1C0, -0x3C0}, {0x1C0, -0x3C0}, {0x3C0, -0x3C0},
@@ -124,6 +137,10 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
     private final int[][] effectiveVelTable;
 
     private boolean broken;
+    /** loc_2A5F8 runs in the original SST; CNZ retains this exact typed owner. */
+    private boolean fragmentActive;
+    private boolean romRenderFlag;
+    private final SubpixelMotion.State fragmentMotion = new SubpixelMotion.State(0, 0, 0, 0, 0, 0);
     private boolean playerStanding;
     private int savedPreContactYSpeed;
     private boolean savedPreContactRolling;
@@ -145,10 +162,10 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
             this.mode = Mode.ROLL_TO_BREAK;
         }
 
-        this.mappingFrame = config.iczPlaneMode ? (subtype & 0x0F) * 2 : 0;
-        this.effectiveVelTable = config.iczPlaneMode && (subtype & 0x10) != 0
-                ? VEL_TABLE_SMALL
-                : config.velTable;
+        // Obj_CorkFloor stores the low nibble directly, including the
+        // bit4 small-floor branch; native placements already use even frames.
+        this.mappingFrame = config == ICZ_CONFIG || config == ICZ_SMALL_CONFIG ? subtype & 0x0F : 0;
+        this.effectiveVelTable = mode == Mode.ICZ_PLANE_SWITCH ? VEL_TABLE_ICZ_SLOPED : config.velTable;
     }
 
     @Override
@@ -238,6 +255,9 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (broken) {
+            if (fragmentActive) {
+                advanceFragment();
+            }
             return;
         }
 
@@ -414,17 +434,25 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
         }
         broken = true;
 
-        int brokenFrame = mappingFrame + 1;
-
-        if (isOnScreen()) {
-            try {
-                services().playSfx(Sonic3kSfx.COLLAPSE.id);
-            } catch (Exception e) {
-                // Ignore audio failures.
-            }
+        // loc_2A816 indexes four bytes per velocity pair using the old
+        // mapping byte; other break paths take their table from entry zero.
+        int firstVelocity = mode == Mode.ICZ_PLANE_SWITCH ? mappingFrame : 0;
+        mappingFrame++;
+        fragmentActive = true;
+        fragmentMotion.x = x;
+        fragmentMotion.y = y;
+        fragmentMotion.xVel = effectiveVelTable[firstVelocity][0];
+        fragmentMotion.yVel = effectiveVelTable[firstVelocity][1];
+        try {
+            services().playSfx(Sonic3kSfx.COLLAPSE.id);
+        } catch (Exception e) {
+            // Ignore audio failures.
         }
 
-        spawnFragments(brokenFrame);
+        spawnFragments(mappingFrame, firstVelocity);
+        // loc_2A5D8/loc_2A6BC fall through to loc_2A5F8 after the complete
+        // allocation walk, so a0 moves exactly once in the breaking dispatch.
+        advanceFragment();
         markRemembered();
 
         try {
@@ -437,7 +465,7 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private void spawnFragments(int brokenFrameIndex) {
+    private void spawnFragments(int brokenFrameIndex, int firstVelocity) {
         ObjectRenderManager renderManager = getRenderManager();
         if (renderManager == null) {
             return;
@@ -452,14 +480,33 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
 
         SpriteMappingFrame brokenFrame = sheet.getFrame(brokenFrameIndex);
         int pieceCount = brokenFrame.pieces().size();
-        int maxFragments = Math.min(pieceCount, effectiveVelTable.length);
+        int maxFragments = Math.min(pieceCount, effectiveVelTable.length - firstVelocity);
 
-        for (int i = 0; i < maxFragments; i++) {
-            int xVel = effectiveVelTable[i][0];
-            int yVel = effectiveVelTable[i][1];
+        // BreakObjectToPieces2 first assigns a1=a0. Only pieces1..N-1
+        // call AllocateObjectAfterCurrent; a failed checked allocation ends
+        // the mapping prefix and never borrows a lower free SST.
+        for (int i = 1; i < maxFragments; i++) {
             CorkFloorFragment fragment = new CorkFloorFragment(
-                    x, y, brokenFrameIndex, i, xVel, yVel, config.artKey, hFlip);
+                    x, y, brokenFrameIndex, i, effectiveVelTable[firstVelocity + i][0], effectiveVelTable[firstVelocity + i][1],
+                    config.artKey, hFlip, config.halfWidth, config.halfHeight, romRenderFlag);
             spawnDynamicObject(fragment);
+            if (fragment.isDestroyed()) {
+                break;
+            }
+        }
+    }
+
+    private void advanceFragment() {
+        fragmentMotion.x = x;
+        fragmentMotion.y = y;
+        // MoveSprite2 changes the full position long using the old velocity;
+        // loc_2A5F8 then adds $18 to the velocity word for the next dispatch.
+        SubpixelMotion.objectFallXY(fragmentMotion, FRAGMENT_GRAVITY);
+        fragmentMotion.yVel = (short) fragmentMotion.yVel;
+        x = (short) fragmentMotion.x;
+        y = (short) fragmentMotion.y;
+        if (!romRenderFlag) {
+            setDestroyed(true);
         }
     }
 
@@ -474,6 +521,10 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        if (fragmentActive) {
+            drawFragmentPiece(getRenderManager(), config.artKey, mappingFrame, 0, x, y, hFlip);
+            return;
+        }
         if (broken) {
             return;
         }
@@ -501,7 +552,49 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
 
     @Override
     public int getPriorityBucket() {
-        return RenderPriority.clamp(PRIORITY);
+        // BreakObjectToPieces writes the original priority word $80.
+        return fragmentActive ? RenderPriority.fromS3kWord(0x80) : RenderPriority.clamp(PRIORITY);
+    }
+
+    @Override
+    public int getOnScreenHalfWidth() { return config.halfWidth; }
+
+    @Override
+    public int getOnScreenHalfHeight() { return config.halfHeight; }
+
+    @Override
+    public void refreshPostCameraRenderState() {
+        if (!broken || fragmentActive) {
+            romRenderFlag = isWithinRenderSpriteBounds(config.halfWidth, config.halfHeight);
+        }
+    }
+
+    @Override
+    public boolean usesCustomOutOfRangeCheck() { return fragmentActive; }
+
+    @Override
+    public boolean isCustomOutOfRange(int cameraX) { return false; }
+
+    @Override
+    public boolean isPersistent() { return fragmentActive && !isDestroyed(); }
+
+    @Override
+    public boolean isHighPriority() { return fragmentActive; }
+
+    private static void drawFragmentPiece(ObjectRenderManager renderManager, String artKey,
+            int frameIndex, int pieceIndex, int x, int y, boolean hFlip) {
+        if (renderManager == null) return;
+        var sheet = renderManager.getSheet(artKey);
+        var renderer = renderManager.getRenderer(artKey);
+        if (sheet == null || renderer == null || !renderer.isReady()
+                || frameIndex < 0 || frameIndex >= sheet.getFrameCount()) return;
+        var pieces = sheet.getFrame(frameIndex).pieces();
+        if (pieceIndex < 0 || pieceIndex >= pieces.size()) return;
+        SpriteMappingPiece piece = pieces.get(pieceIndex);
+        // Static mappings point to one six-byte piece; art_tile bit15 is
+        // ORed independently of the native priority bucket in the helper.
+        renderer.drawPieces(List.of(SpriteMappingPieces.withAttributes(piece, piece.tileIndex(),
+                piece.hFlip(), piece.vFlip(), piece.paletteIndex(), true)), x, y, hFlip, false);
     }
 
     private ObjectManager getObjectManager() {
@@ -547,12 +640,22 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
         private int pieceIndex;
         private String artKey;
         private boolean hFlip;
+        private int renderHalfWidth;
+        private int renderHalfHeight;
+        private boolean romRenderFlag;
         private final SubpixelMotion.State motionState;
 
         public CorkFloorFragment(int parentX, int parentY,
                                  int fragmentFrameIndex, int pieceIndex,
                                  int xVel, int yVel,
                                  String artKey, boolean hFlip) {
+            this(parentX, parentY, fragmentFrameIndex, pieceIndex, xVel, yVel,
+                    artKey, hFlip, 0x10, 0x28, true);
+        }
+
+        private CorkFloorFragment(int parentX, int parentY, int fragmentFrameIndex, int pieceIndex,
+                int xVel, int yVel, String artKey, boolean hFlip,
+                int renderHalfWidth, int renderHalfHeight, boolean romRenderFlag) {
             super(new ObjectSpawn(parentX, parentY, Sonic3kObjectIds.CORK_FLOOR,
                     0, hFlip ? 1 : 0, false, 0), "CorkFloorFragment");
             this.currentX = parentX;
@@ -561,6 +664,9 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
             this.pieceIndex = pieceIndex;
             this.artKey = artKey;
             this.hFlip = hFlip;
+            this.renderHalfWidth = renderHalfWidth;
+            this.renderHalfHeight = renderHalfHeight;
+            this.romRenderFlag = romRenderFlag;
             this.motionState = new SubpixelMotion.State(
                     currentX, currentY, 0, 0, xVel, yVel);
         }
@@ -600,33 +706,51 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
         public void update(int vIntRunCount, PlayableEntity playerEntity) {
             motionState.x = currentX;
             motionState.y = currentY;
-            SubpixelMotion.moveSprite(motionState, FRAGMENT_GRAVITY);
-            currentX = motionState.x;
-            currentY = motionState.y;
+            SubpixelMotion.objectFallXY(motionState, FRAGMENT_GRAVITY);
+            motionState.yVel = (short) motionState.yVel;
+            currentX = (short) motionState.x;
+            currentY = (short) motionState.y;
 
-            if (!isOnScreen(128)) {
+            // loc_2A5F8 observes the preceding Render_Sprites sign bit,
+            // after motion, rather than doing a new padded visibility test.
+            if (!romRenderFlag) {
                 setDestroyed(true);
             }
         }
 
         @Override
         public void appendRenderCommands(List<GLCommand> commands) {
-            ObjectRenderManager renderManager = getRenderManager();
-            if (renderManager == null) {
-                return;
-            }
-
-            PatternSpriteRenderer renderer = renderManager.getRenderer(artKey);
-            if (renderer != null && renderer.isReady()) {
-                renderer.drawFramePieceByIndex(fragmentFrameIndex, pieceIndex,
-                        currentX, currentY, hFlip, false);
-            }
+            drawFragmentPiece(getRenderManager(), artKey, fragmentFrameIndex, pieceIndex,
+                    currentX, currentY, hFlip);
         }
 
         @Override
         public int getPriorityBucket() {
-            return RenderPriority.clamp(PRIORITY);
+            // The shipped helper uses move.b priority(a0),priority(a1):
+            // only the high byte of $0080 reaches a cleared sibling.
+            // Its low byte remains zero, rather than a word copy of $0080.
+            return RenderPriority.fromS3kWord(0);
         }
+
+        @Override
+        public int getOnScreenHalfWidth() { return renderHalfWidth; }
+
+        @Override
+        public int getOnScreenHalfHeight() { return renderHalfHeight; }
+
+        @Override
+        public void refreshPostCameraRenderState() {
+            romRenderFlag = isWithinRenderSpriteBounds(renderHalfWidth, renderHalfHeight);
+        }
+
+        @Override
+        public boolean usesCustomOutOfRangeCheck() { return true; }
+
+        @Override
+        public boolean isCustomOutOfRange(int cameraX) { return false; }
+
+        @Override
+        public boolean isHighPriority() { return true; }
 
         @Override
         public boolean isPersistent() {

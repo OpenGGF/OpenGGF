@@ -44,7 +44,7 @@ and the remaining qualification work. This does not change native mod support.
 | Object reskin | Baked sheet over exact stock provider key | Preserve host palette indices and all consumed mapping frames; no playable-character reskin |
 | Object/character | Owned factories, injected services, character specifications, landing/reset hooks, saves and rewind | JVM; no arbitrary static gameplay state or mod super form |
 | Stock-level edits | Immutable decoded placement operations, including owned object bindings | JVM; preserves the stock load pipeline; live editor application is separate |
-| New zone or campaign | Sonic 2 v1 and bounded S3K v2 adapters, ordered acts and owned runtime providers | S1 adapter planned; S3K does not inherit arbitrary stock zone events |
+| New zone or campaign | Flat S1/S2 v1 and bounded S3K v2 adapters, ordered acts and owned runtime providers | S1/S3K validate stock-object compatibility; native stock zone scripts are not inherited |
 | Scene/whole-screen game | Startup scene with input, audio, storage and canvas | JVM; ROM-backed scenes require the relevant supplied ROM |
 | Original standalone game | No-ROM levels, characters, audio and progression | JVM; no standalone patch stacking, bonus/special-stage or roster UI |
 | Shared UI and input | [Fonts, layout/focus and overlays](guides/creator-helpers.md); [named remappable actions](guides/action-bindings.md) | Logical pixels and explicit input edges; game rules and visual styling stay in the mod |
@@ -141,6 +141,7 @@ See the detailed guides for narrower contracts; roadmap entries do not imply imp
 - [Custom action bindings and remappable input](guides/action-bindings.md)
 - [Manifest v1](formats/manifest.md)
 - [Baked art containers](formats/baked-containers.md)
+- [Level editor projects](../guide/creating/level-editor.md) — create, save, reopen, playtest, and export for all three hosts
 - [`ModLevelDefinition` formats v1 and v2](formats/level-definition.md)
 - [Content mods and Mod API 0.7](content-mods.md)
 - [Audio manifest v1](formats/audio-manifest.md)

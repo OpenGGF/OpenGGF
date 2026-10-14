@@ -436,6 +436,10 @@ public final class TraceCatalog {
      * {@code null} when no movie can be resolved (the trace is then skipped).
      */
     private static Path resolveBk2(Path dir, TraceMetadata meta) {
+        Path containingRun = dir.getParent();
+        if (containingRun != null && Files.isRegularFile(containingRun.resolve("run_manifest.json"))) {
+            return resolveRunSegmentBk2(dir, meta, containingRun);
+        }
         if (meta.sourceBk2() != null && !meta.sourceBk2().isBlank()) {
             Path parent = dir.getParent();
             if (parent != null) {
@@ -456,6 +460,39 @@ public final class TraceCatalog {
             return null;
         }
         return bk2s.size() == 1 ? bk2s.get(0) : null;
+    }
+
+    /** A standalone segment borrows only the movie declared by its validated containing run. */
+    private static Path resolveRunSegmentBk2(Path dir, TraceMetadata meta, Path containingRun) {
+        try {
+            TraceRunManifest manifest = TraceRunManifest.load(containingRun.resolve("run_manifest.json"));
+            manifest.validate(containingRun);
+            Integer index = meta.segmentIndex();
+            if (index == null || index < 0 || index >= manifest.segments().size()
+                    || !Objects.equals(manifest.game(), meta.game())
+                    || !Objects.equals(manifest.runId(), meta.runId())
+                    || !Objects.equals(manifest.sourceBk2(), meta.sourceBk2())) {
+                return null;
+            }
+            var member = manifest.segments().get(index);
+            Path memberPath = Path.of(member.dir());
+            Path runRoot = containingRun.toAbsolutePath().normalize();
+            Path memberDirectory = runRoot.resolve(memberPath).normalize();
+            if (memberPath.isAbsolute() || containsParentTraversal(memberPath)
+                    || !memberDirectory.startsWith(runRoot)
+                    || !memberDirectory.equals(dir.toAbsolutePath().normalize())
+                    || member.bk2FrameOffset() != meta.bk2FrameOffset()
+                    || member.traceFrameCount() != meta.traceFrameCount()
+                    || !Objects.equals(member.traceProfile(), meta.traceProfile())) {
+                return null;
+            }
+            // Reuse the run's contained-path and shared-before-local movie authority;
+            // no copied fixture, inferred movie, or alternate replay bootstrap.
+            return resolveRunBk2(containingRun, manifest);
+        } catch (IOException | RuntimeException failure) {
+            LOGGER.log(Level.FINE, "Could not resolve containing run movie for " + dir, failure);
+            return null;
+        }
     }
 
     /**

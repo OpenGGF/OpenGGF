@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.CharacterKey;
 import com.openggf.game.GameRng;
 import com.openggf.game.ShieldType;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -14,6 +15,7 @@ import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.NativePositionOps;
 
 import java.util.List;
 
@@ -303,10 +305,20 @@ public class BubblerObjectInstance extends AbstractObjectInstance implements Rew
             return false;
         }
 
-        if ("sonic".equalsIgnoreCase(player.getCode())) {
+        // Obj_Bubbler compares the Obj_Sonic routine, not the player slot or name
+        // (sonic3k.asm:64719). Sonic clears Roll; other characters retain it.
+        if (CharacterKey.SONIC.equals(player.characterKey())) {
             player.replenishAir();
         } else {
+            boolean wasRolling = player.getRolling();
+            int collectedFromY = player.getCentreY();
             player.replenishAirPreservingRollingStatus();
+            if (wasRolling) {
+                // loc_2FC5A writes literal radii $09/$0F and y_pos -= 1 even for
+                // Knuckles, whose usual standing radius is $13. Keep Status_Roll.
+                player.applyCustomRadii(9, 15);
+                NativePositionOps.writeYPosPreserveSubpixel(player, collectedFromY - 1);
+            }
         }
         services().playSfx(Sonic3kSfx.BUBBLE.id);
         consumed = true;

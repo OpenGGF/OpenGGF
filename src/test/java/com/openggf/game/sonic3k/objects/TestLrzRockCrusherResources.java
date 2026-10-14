@@ -69,12 +69,14 @@ class TestLrzRockCrusherResources {
         state.service(services);
         assertEquals(ordinal,state.captureRewindStateValue().ordinal(),"submission is not readiness");
         for (int pass=0; pass<10000 && (!physical.isIdle() || state.captureRewindStateValue().ordinal()>=0); pass++) {
+            coordinator.publishPatternModuleDma();
             physical.processNativeFrame();
             coordinator.moduleQueue().prepareQueuedModuleBeforeVSync();
             coordinator.moduleQueue().beforeTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
             coordinator.moduleQueue().processModuleQueueAfterObjects();
             state.service(services);
         }
+        coordinator.publishPatternModuleDma();
         assertTrue(physical.isIdle());
         assertEquals(-1,state.captureRewindStateValue().ordinal());
         state.restoreRewindStateValue(saved);
@@ -91,7 +93,8 @@ class TestLrzRockCrusherResources {
                 physical.restore(physicalBefore);
                 assertFalse(physical.isIdle());
                 for (int pass = 0; pass < 100 && !physical.isIdle(); pass++) physical.processNativeFrame();
-                assertTrue(physical.isIdle());
+                coordinator.publishPatternModuleDma();
+        assertTrue(physical.isIdle());
             }
             for (int i=0; i<expected.length; i++) {
                 var tile = level.getPattern(0x52E+i/32); int pixel=(i%32)*2;

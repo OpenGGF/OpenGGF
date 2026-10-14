@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.bonusstage.slots;
 import java.util.Arrays;
 
 public final class S3kSlotRenderBuffers {
+    private final S3kSlotResources romData;
     private final byte[] layout;
     private final byte[] expandedLayout;
     private final int layoutStrideBytes;
@@ -15,8 +16,9 @@ public final class S3kSlotRenderBuffers {
     private final VisibleCells[] visibleCellFrames = {new VisibleCells(16), new VisibleCells(16)};
     private int nextVisibleCellFrame;
 
-    private S3kSlotRenderBuffers(byte[] layout, byte[] expandedLayout,
+    private S3kSlotRenderBuffers(S3kSlotResources romData, byte[] layout, byte[] expandedLayout,
                                  int layoutStrideBytes, int layoutRows, int layoutColumns) {
+        this.romData = java.util.Objects.requireNonNull(romData, "romData");
         this.layout = layout;
         this.expandedLayout = expandedLayout;
         this.layoutStrideBytes = layoutStrideBytes;
@@ -29,9 +31,13 @@ public final class S3kSlotRenderBuffers {
     }
 
     public static S3kSlotRenderBuffers fromRomData() {
-        return new S3kSlotRenderBuffers(
-                S3kSlotRomData.SLOT_BONUS_LAYOUT.clone(),
-                S3kSlotRomData.buildExpandedLayoutBuffer(),
+        return fromRomData(S3kSlotResources.fromActiveRom());
+    }
+
+    public static S3kSlotRenderBuffers fromRomData(S3kSlotResources romData) {
+        return new S3kSlotRenderBuffers(romData,
+                romData.layout(),
+                romData.expandedLayout(),
                 S3kSlotRomData.SLOT_EXPANDED_STRIDE,
                 S3kSlotRomData.SLOT_EXPANDED_STRIDE,
                 S3kSlotRomData.SLOT_EXPANDED_STRIDE);
@@ -87,28 +93,28 @@ public final class S3kSlotRenderBuffers {
 
     public boolean startRingAnimationAt(int layoutIndex) {
         return startTransientAnimation(layoutIndex,
-                S3kSlotRomData.RING_SPARKLE_FRAMES,
+                romData.ringFrames(),
                 S3kSlotRomData.RING_SPARKLE_DELAY,
                 (byte) 0x00);
     }
 
     public boolean startBumperAnimationAt(int layoutIndex) {
         return startTransientAnimation(layoutIndex,
-                S3kSlotRomData.BUMPER_BOUNCE_FRAMES,
+                romData.bumperFrames(),
                 S3kSlotRomData.BUMPER_BOUNCE_DELAY,
                 (byte) 0x05);
     }
 
     public boolean startSpikeAnimationAt(int layoutIndex) {
         return startTransientAnimation(layoutIndex,
-                S3kSlotRomData.SPIKE_ANIMATION_FRAMES,
+                romData.spikeFrames(),
                 S3kSlotRomData.SPIKE_ANIMATION_DELAY,
                 (byte) 0x06);
     }
 
     public boolean startSlotWallAnimationAt(int layoutIndex, int finalTileId) {
         return startTransientAnimation(layoutIndex,
-                S3kSlotRomData.SLOT_WALL_COLOR_FRAMES,
+                romData.wallFrames(),
                 S3kSlotRomData.SLOT_WALL_COLOR_DELAY,
                 (byte) finalTileId);
     }

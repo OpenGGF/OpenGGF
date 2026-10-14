@@ -170,14 +170,22 @@ class TestS3kEndingDonorSceneEntry {
         var nativeController=assertInstanceOf(com.openggf.game.sonic3k.Sonic3kSuperStateController.class,
                 f.sprite().getSuperStateController());var firstRam=nativeController.captureRewindState();
         for(int cycle=0;cycle<2;cycle++) {
-            for(int n=0;n<17;n++)f.stepFrame(false,false,false,false,false);
-            assertNotEquals(firstRam,nativeController.captureRewindState(),"real scene advanced its own palette RAM");
+            // Native Animate_Palette suppresses AnPal through the initial22
+            // calls. Observe genuine admission, not an assumed17-step progress.
+            for(int n=0;n<64&&firstRam.equals(nativeController.captureRewindState());n++)
+                f.stepFrame(false,false,false,false,false);
+            assertNotEquals(firstRam,nativeController.captureRewindState(),"real scene advanced its own palette RAM after AnPal admission");
             registry.restore(before);same(before,registry.capture(),"before progressed scene"+cycle);
             f.stepFrame(false,false,false,false,false);same(after,registry.capture(),"fresh native replay"+cycle);
         }
     }
 
     private static void advancePlayer(com.openggf.sprites.playable.AbstractPlayableSprite player){
+        // Component director fixture explicitly dispatches its ROM AnPal owner
+        // before P1; whole production-entry vectors above use the ordinary frame step.
+        if(GameServices.level().getAnimatedPatternManager() instanceof
+                com.openggf.game.sonic3k.Sonic3kLevelAnimationManager animation)
+            animation.advanceEndingInitialPalette(GameServices.level().getObjectManager().getObjectServices());
         if(player.getSuperStateController()!=null)player.getSuperStateController().update();
         if(player.getTailsTailsController()!=null)player.getTailsTailsController().update();
     }

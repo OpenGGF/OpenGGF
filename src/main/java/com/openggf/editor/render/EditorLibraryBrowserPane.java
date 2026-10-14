@@ -10,7 +10,7 @@ import java.util.Objects;
 
 /** Pure browse/filter/select model shared by keyboard input and the editor library renderer. */
 public final class EditorLibraryBrowserPane {
-    public enum Kind { BLOCK, CHUNK, OBJECT }
+    public enum Kind { BLOCK, CHUNK, PATTERN, OBJECT }
 
     public record Entry(Kind kind, int index, Integer stockObjectId, String objectKey, String label,
                         String previewArtKey) {
@@ -33,6 +33,16 @@ public final class EditorLibraryBrowserPane {
         ArrayList<Entry> built = new ArrayList<>(level.getChunkCount());
         for (int i=0;i<level.getChunkCount();i++) built.add(new Entry(Kind.CHUNK,i,null,null,"Chunk " + i,null));
         replace(built);
+    }
+
+    public void showPatterns(MutableLevel level) {
+        ArrayList<Entry> built = new ArrayList<>();
+        for(int i=0;i<Math.min(0x800,level.getPatternCount());i++)
+            built.add(new Entry(Kind.PATTERN,i,null,null,"Pattern "+i,null));
+        replace(built);
+    }
+    public void selectCursor(int index) {
+        cursor=Math.max(0,index);clampCursor();
     }
 
     public void showObjects(EditorStockObjectPalette palette) {

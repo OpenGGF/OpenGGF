@@ -41,6 +41,8 @@ public class PatternRenderCommand implements GLCommandable {
     private float v1;
     private int atlasIndex;
     private int paletteIndex;
+    private SpritePresentation.PaletteReplay paletteReplay;
+    private boolean paletteReplayUnderwater;
     private boolean hFlip;
     private boolean vFlip;
     private boolean textureCoordinatesResolved;
@@ -63,6 +65,7 @@ public class PatternRenderCommand implements GLCommandable {
     private static int lastAtlasTextureId = -1;
     private static int lastPaletteTextureId = -1;
     private static int lastPaletteIndex = -1;
+    private static int lastTotalPaletteLines = -1;
     private static int lastPriorityShaderProgramId = -1;
     private static int lastPriorityTileTextureId = -1;
     private static int lastPriorityUnderwaterPaletteId = -1;
@@ -170,6 +173,8 @@ public class PatternRenderCommand implements GLCommandable {
         cmd.paletteTextureId = paletteTextureId;
         cmd.atlasIndex = entry.atlasIndex();
         cmd.paletteIndex = paletteIndex;
+        cmd.paletteReplay=SpritePresentation.subject(graphicsManager).paletteReplay();
+        cmd.paletteReplayUnderwater=graphicsManager.isUseUnderwaterPaletteForBackground();
         cmd.hFlip = hFlip;
         cmd.vFlip = vFlip;
         cmd.piecePriority = piecePriority;
@@ -217,6 +222,8 @@ public class PatternRenderCommand implements GLCommandable {
         this.v1 = entry.v1();
         this.atlasIndex = entry.atlasIndex();
         this.paletteIndex = desc.getPaletteIndex();
+        this.paletteReplay=SpritePresentation.subject(graphicsManager).paletteReplay();
+        this.paletteReplayUnderwater=graphicsManager.isUseUnderwaterPaletteForBackground();
         this.hFlip = desc.getHFlip();
         this.vFlip = desc.getVFlip();
         this.textureCoordinatesResolved = false;
@@ -234,6 +241,8 @@ public class PatternRenderCommand implements GLCommandable {
         this.y = resolveDisplayHeight(graphicsManager) - y - height;
     }
 
+    void paletteReplay(SpritePresentation.PaletteReplay replay) { paletteReplay=replay; }
+
     /**
      * Return this command to the pool for reuse.
      */
@@ -243,6 +252,7 @@ public class PatternRenderCommand implements GLCommandable {
         }
         leased = false;
         graphicsManager = null;
+        paletteReplay=null;
         presentationQuad=null;
         if (pool.size() < 512) { // Cap pool size to prevent unbounded growth
             pool.offerFirst(this);
@@ -262,6 +272,7 @@ public class PatternRenderCommand implements GLCommandable {
         lastAtlasTextureId = -1;
         lastPaletteTextureId = -1;
         lastPaletteIndex = -1;
+        lastTotalPaletteLines=-1;
         lastPriorityShaderProgramId = -1;
         lastPriorityTileTextureId = -1;
         lastPriorityUnderwaterPaletteId = -1;
@@ -309,6 +320,14 @@ public class PatternRenderCommand implements GLCommandable {
 
     private void executeLeased(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
         GraphicsManager graphicsManager = this.graphicsManager;
+        int effectivePalette=paletteReplay==null?paletteIndex:paletteReplay.palette(graphicsManager,paletteIndex);
+        if(effectivePalette<0)return;
+        graphicsManager.refreshScopedUnderwaterResidency();
+        if(paletteReplay!=null) {
+            Integer current=graphicsManager.scopedReplayPaletteTexture(paletteReplayUnderwater);
+            if(current==null)return;
+            paletteTextureId=current;
+        }
         ShaderProgram shaderProgram = presentationQuad==null?graphicsManager.getShaderProgram():
                 graphicsManager.presentationShader(presentationPriorityShader);
         if(lastExecutedShaderProgramId!=shaderProgram.getProgramId()) {
@@ -366,6 +385,10 @@ public class PatternRenderCommand implements GLCommandable {
             stateInitialized = true;
         }
 
+        int totalLines=RenderContext.getTotalPaletteLines();
+        if(lastTotalPaletteLines!=totalLines) {
+            shaderProgram.setTotalPaletteLines((float)totalLines);lastTotalPaletteLines=totalLines;
+        }
         if (shaderProgram instanceof SpritePriorityShaderProgram priorityShader) {
             int programId = shaderProgram.getProgramId();
             TilePriorityFBO fbo = graphicsManager.getTilePriorityFBO();
@@ -451,9 +474,9 @@ public class PatternRenderCommand implements GLCommandable {
         }
 
         // Only update palette line uniform if it changed
-        if (paletteIndex != lastPaletteIndex) {
-            shaderProgram.setPaletteLine(paletteIndex);
-            lastPaletteIndex = paletteIndex;
+        if (effectivePalette != lastPaletteIndex) {
+            shaderProgram.setPaletteLine(effectivePalette);
+            lastPaletteIndex = effectivePalette;
         }
 
         if (ghostEffectActive != lastGhostEffectActive || ghostAlpha != lastGhostAlpha) {
@@ -511,7 +534,7 @@ public class PatternRenderCommand implements GLCommandable {
 
         // Fill palette coordinate buffer (same palette index for all 4 vertices)
         paletteBuffer.clear();
-        paletteBuffer.put(paletteIndex).put(paletteIndex).put(paletteIndex).put(paletteIndex);
+        paletteBuffer.put(effectivePalette).put(effectivePalette).put(effectivePalette).put(effectivePalette);
         paletteBuffer.flip();
 
         // Upload and bind vertex data

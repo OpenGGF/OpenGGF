@@ -643,3 +643,195 @@ are resolved without input/oracle changes. Original AIZ/initial HCZ/prefix2
 remain green; alternate60 and chain189/12,719/82,067 raw-field frontiers stay
 unchanged. [Native evidence and exact checks](../../audits/trace/2026-10-14-s3k-fresh-title-sst.md#act3-continuation-bypass--whole-graph-admission)
 do not certify native screenshot/audio or whole-act parity.
+
+
+### 2026-10-14 full-manager projectile follow-up
+
+The complete manager now leaves native pending-delete projectile SST43 alive
+at the coarse-X tail until its next dispatch. Two negative X edges plus four Y
+controls, full-slot/collision-list restore and two replay cycles pass in the19
+projectile checks; affected613 and guards111 pass. Actual original AIZ, initial
+HCZ and both run prefixes remain green. Strict alternate60 grouped spans and
+chain189/12,719/82,067 raw fields remain red. Sampled presence improves1055→1688,
+where native cork-floor reused-parent allocation differs; second-entry ring/
+flash order remains unresolved. [Exact source and evidence](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#manager-dispatch-preserves-the-native-coarse-x-retirement)
+separate local owner qualification from pixel/audio and whole-route parity.
+
+
+### 2026-10-14 actual image spot evidence
+
+Native/engine Monkey1680 and genuine AIZ2 shared-projectile6970 images are
+captured and inspected; the old3224 `aiz-projectile` filename is a Bloominator
+BODY and earns no projectile credit. Original movie/core hashes, actual provider
+bounds, prepared/published SAT/palette and source clocks are retained. HCZ0/30
+engine clips now resolve without fixture copies: native0 publishes the title,
+engine0 the waterfall; native full-movie HUD carry differs from standalone
+bootstrap. [Exact images and limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#actual-native-and-engine-image-spots)
+are bounded corroboration, not pixel/priority/waveform parity or joined fresh-
+return title certification. No extra native wait or gameplay hydration was used.
+
+
+## Cork native fragment graph — 2026-10-14
+
+The placed Cork at($28C0,$047C) now retains its own SST as fragment0 and only
+allocates N−1 checked higher siblings. Original-controller emerald-chain row1688
+has the actual Tails break: source35+41..51 and all12 integer XY births match
+the native aux record, including stationary Sonic's release. Independently
+constructed native checkpoints cover pressure, old-velocity/fractional movement,
+prior-render deletion and two-way recreation/two forward cycles; the component
+camera edges cover320/352/400/528/800. A failed declared five-tick physical
+approach was rejected and removed, rather than changing contact behavior.
+Affected607 checks and111 source/rewind/timing guards pass on the owned Cork
+source over `d8025e094`; strict original AIZ/initial HCZ/prefix2 remain green.
+[Exact commands, negatives and limits](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#cork-same-record-fragment-and-icz-table-follow-up).
+Whole-act donor/roster/viewport physical contact, complete registered-world Cork
+windows and native rendered-pixel/audio parity remain unqualified. Allocation
+sampling improves1688→2133 but whole-chain and alternate AIZ frontiers remain red.
+
+
+## Rhinobot native waiter — 2026-10-14
+
+The placed Rhinobot's $20×$20 empty-map waiter now consumes the preceding full
+XY render sign, holds the cleared priority/header until Init, and distinguishes
+immediate waiter deletion, range-free release and Slotted next-dispatch clear.
+Native original-controller returned-AIZ slot6 at($2820,$0320) stays dormant
+1051..2133 and clears2154; the engine now matches those retained observations.
+20 independent component camera/header/recreation cases span declared widths
+320/352/400/528/800 and both native flips. The affected599 and guard111 checks
+pass, with the original AIZ/initial HCZ/two-prefix controls still green.
+[Exact scope and commands](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#rhinobot-prior-render-waiter-and-native-range-phases).
+Sampled allocation presence moves2133→2897; the alternate/whole-chain strict
+frontiers remain red. This does not certify physical contact/registered-world
+Rhinobot windows across products or native pixels/audio. Its charge/brake child
+owners, slotted art/DPLC pressure and inherited nonnative dash timeout remain
+separate source-conformance follow-ups.
+
+
+## AIZ muzzle-flare native owner — 2026-10-14
+
+Flare Init now precedes the ROM-backed raw cursor; F4 retains its final frame and
+physical slot until the next dispatch. Its captured numeric parent3 reads live,
+cleared and verified recycled headers with signed offsets/flip bits, and pure
+recreation preserves birth metadata. The actual second returned-AIZ barrel pair
+now uses19/20 at2897. Independent component19, existing actual-ROM napalm and
+scalar/startup/SecondStrike consumers total619 passing checks; source/rewind/
+timing guards111 pass on the exact owned candidate over8f7ec20a1.
+[Native routines, matched negatives and commands](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-barrel-flare-raw-lifetime-and-physical-parent3).
+The five declared component camera widths are320/352/400/528/800, with two-way
+recreation/two45-frame cycles; this does not extend full donor/team/product or
+registered-world physical route qualification. Unknown nonempty parent headers
+remain unsupported. Original AIZ/initial HCZ/prefix2 are green; alternate and
+whole-chain strict frontiers remain unchanged red. Sampled segment2 allocation
+advances2897→2910 (native-only17/21). Next callback allocation and shot birth
+movement remain concrete separate owners; native rendered/palette/SAT/priority
+and audio parity are not certified by these fields or prior-build spot images.
+
+
+## AIZ shot native INIT follow-up — 2026-10-14
+
+Stationary common/Falling Init and cleared ROM raw state preserve native birthY,
+Pause/Launch cursor/timer and$60 underflow ordering. Independent11 component
+cases plus existing consumers pass630; guards111 pass, with forced recreation
+and two45-entry cycles at declared320/352/400/528/800 camera widths. This does
+not expand full host/donor/team/world-route qualification. Original AIZ/initial
+HCZ/prefix2 pass; alternate/chain strict fields remain unchanged red. Actual
+segment2 shot18 birth now816; next missing pair17/21 remains2910. Pure cutscene
+shot recreation/exact links and barrel callback remain required next owners.
+[Native routines, negative attribution and exact qualification](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-shot-stationary-init-and-cleared-raw-state).
+Prior flare paragraph's shot-birth target is superseded by this qualified slice;
+its next callback target and rendered/audio/full-product limits remain.
+
+
+## AIZ shot exact live graph follow-up — 2026-10-14
+
+Pure captured-spawn recreation and explicit exact parent/barrel ObjectRefs now
+retain cutscene and fight shots independently of their camera-relative XY.
+Nine new component cases plus existing consumers pass639; guards111 pass.
+Moving metadata, both-way forced manager recreation, two45-entry cycles and
+five declared320/352/400/528/800 cameras are covered. This supersedes the prior
+shot factory gap, while full host/donor/roster/registered-world cold-route and
+numeric cleared/recycled-parent pressure remain unqualified. The factory-only
+change leaves ordinary dispatch unchanged; strict evidence remains scoped to
+the preceding INIT source, and barrel callback2910 is required next work.
+[Native links, exact negative and qualification](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-shot-pure-recreation-and-exact-live-links).
+
+
+## AIZ barrel wait callback follow-up — 2026-10-14
+
+Native $1C zero/underflow now allocates on the callback dispatch, before the
+fourth-shot signed-counter Return tail. Seven independent activation/threshold/
+manager replay cases plus consumers pass646; guards111 pass. Five declared
+camera widths and two-way/two45-pass snapshot cycles are component evidence,
+not full viewport/donor/team/registered-world route certification. Original
+AIZ/initial HCZ/prefix2 remain green; chain/alternate strict errors unchanged.
+Sampled segment2 presence advances2910→2977, native-only19. The previously
+listed delayed callback target is superseded; physical explosion-controller
+creation, shared native byte39 alias and real cutscene FallingShot admission
+remain source-backed next obligations. Rendered/audio limits remain separate.
+[Native sources and exact bounded qualification](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-barrel-same-dispatch-wait-callback).
+
+
+## AIZ barrel byte39 follow-up — 2026-10-14
+
+One native byte now supplies firing and drop-position cycling, including signed
+Wait reads and unsigned wrap. Nine independent normal/flipped column/header/
+replay cases plus consumers pass655; guards111 pass. Five declared component
+cameras/two-way/two45-pass manager cycles retain the prior full host/donor/team/
+registered-world limits. Original AIZ/HCZ/prefix2 pass; strict chain/alternate
+errors and sampled native-only19 at2977 remain. This supersedes the prior byte39
+alias obligation; physical Special explosion owner and cutscene FallingShot
+admission remain required. No new rendered/audio conformance claim.
+[Native source, negative and bounded qualification](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-barrel-shared-native-byte39).
+
+
+## AIZ physical Special explosion follow-up — 2026-10-14
+
+The actual parent callback creates an independent SST owner for Special/Exp02,
+with native Init wait, finite count, checked allocation before RNG, high-word Y,
+child-init SFX and next-pass clear. Sixteen local callback/pressure/metadata/
+act-clear/manager+real-RNG replay cases and existing consumers pass676; guards111
+pass. Five declared camera widths/two45-pass cycles are component evidence,
+not full host/donor/team/cold-route/registered-world certification. The previous
+physical-controller omission is superseded. Original AIZ/HCZ/prefix2 pass;
+strict fields remain unchanged red. Presence advances2977→3067 native-only21,
+preceding3066. Real cutscene FallingShot and its explosion-family/pending-clear
+remain required. Rendered/SAT/PCM and arbitrary recycled-header pressure stay
+unqualified. [Native sources and exact qualification](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-physical-special-explosion-owner).
+
+
+## AIZ real FallingShot and copied Hitbox lifecycle follow-up — 2026-10-14
+
+The cutscene selects the real FallingShot; Init clears its collision byte,
+seven independent Hitboxes copy that role, and floor/F4 callbacks retain their
+physical slots through final draw/touch before next-pass clearing. Full spawn
+metadata and exact live links survive pure recreation. Sixteen new literal/
+component/loaded-world vectors pass, alongside existing actual-ROM napalm4,
+standalone7 and startup consumers.692 unchanged affected identities pass in
+49960; seven repaired common-only family predicates pass84889 (runtime same),
+not one699green invocation. Guards111 pass. Five component cameras and one
+loaded-AIZ full registry/two45-pass replay retain cold-route/full viewport/
+donor/team, numerical reused-parent and rendered/SAT/PCM breadth limits.
+
+The preceding cutscene Falling/explosion-family omission is superseded. Original
+AIZ/initial HCZ/two prefixes pass; strict fields remain unchanged red. Segment2
+presence advances3067→3084, native-only18, preceding3081. A common-shot final
+Obj_Wait marker (native18 B6 versus engine cleared) is the next confirmed owner.
+[Native sources, exact bounded commands and outcomes](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-real-cutscene-fallingshot-and-copied-explosion-lifecycle).
+
+
+## AIZ common-shot final wait follow-up — 2026-10-14
+
+Common SIMPLE shots retain their native final Go_Delete marker through Draw,
+then clear on the next dispatch without movement. Their MoveWait has no local
+screen cutoff. Eight independent zero/underflow/offscreen/graph/loaded-world
+vectors and all previous699 consumers pass in one707-case focused invocation;
+guards111 pass. Five component cameras and declared full-registry two45-pass
+replay retain full cold-route/viewport/donor/team/rendered/audio and numeric
+parent-pressure limits. The preceding common-shot marker obligation is closed.
+
+Original AIZ/initial HCZ/two prefixes remain green; strict fields remain red and
+unchanged. Numeric slot presence advances3084→3244, preceding3209, at the AIZ
+transition context. Native-only24..37/engine-only4 need full pointer/scene-boundary
+attribution; low code bytes do not prove old actor survival. No transition fix
+or shared allocator/clock change is inferred. [Native owner, exact negatives,
+commands and outcomes](../../audits/trace/2026-10-14-s3k-monkey-dude-sst.md#aiz-common-simple-shot-final-native-wait-and-physical-retirement).

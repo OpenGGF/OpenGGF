@@ -182,7 +182,8 @@ public class SignpostObjectInstance extends BoxObjectInstance implements PostPla
      * bhs.s  ...           ; skip if >= $20 (player too far past)
      */
     private boolean checkPlayerPass(AbstractPlayableSprite player) {
-        int dx = player.getCentreX() - spawn.x();
+        // Obj0D_Main: sub.w / bcs rejects unsigned underflow before the unsigned $20 test.
+        int dx = (player.getCentreX() & 0xFFFF) - (spawn.x() & 0xFFFF);
         if (dx >= 0 && dx < 0x20) {
             activateSignpost();
             return true;
@@ -351,8 +352,9 @@ public class SignpostObjectInstance extends BoxObjectInstance implements PostPla
         //      blo.w  return
         Camera camera = services().camera();
         if (camera != null && !resultsSpawned) {
-            int triggerX = camera.getMaxX() + WALK_OFF_OFFSET;
-            if (player.getCentreX() >= triggerX) {
+            // Obj0D_Main_State3: addi.w truncates before the unsigned cmp.w / blo.
+            int triggerX = ((camera.getMaxX() & 0xFFFF) + WALK_OFF_OFFSET) & 0xFFFF;
+            if ((player.getCentreX() & 0xFFFF) >= triggerX) {
                 spawnResultsScreen(player);
             }
         }

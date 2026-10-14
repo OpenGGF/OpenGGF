@@ -22,6 +22,8 @@ import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.List;
 
 /**
@@ -38,7 +40,9 @@ public class AizMinibossBarrelShotChild extends AbstractObjectInstance
     private static final int SHIELD_REACTION_BOUNCE = 1 << 3;
     private static final int SHIELD_REACTION_FLAGS = SHIELD_REACTION_BOUNCE | (1 << 4);
     private static final int FRAME_RISE_A = 0x0C;
-    private static final int FRAME_RISE_B = 0x0D;
+    // AniRaw_AIZMiniboss_BarrelShot: delay1,C,D,FC in the shipped ROM.
+    private static final int RAW_SCRIPT = 0x6914C;
+    private static final int RAW_SCRIPT_SIZE = 4;
     private static final int PROJECTILE_PALETTE = 0;
     private static final int Y_RADIUS = 8; // ROM loc_68CE4: y_radius
     private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = new TouchResponseProfile(
@@ -77,11 +81,12 @@ public class AizMinibossBarrelShotChild extends AbstractObjectInstance
         TOP_DROP_SIMPLE,
         TOP_DROP_ADVANCED
     }
-    private final AbstractBossInstance parent;
+    private AbstractBossInstance parent;
     /** ROM: parent3 of the shot = the barrel that spawned it. */
-    private final AizMinibossFlameBarrelChild barrel;
-    // barrelSubtype/mode are non-final so the rewind field capturer reapplies them
-    // after the recreate hook rebuilds the shot with placeholders; parent/barrel are relinked.
+    private AizMinibossFlameBarrelChild barrel;
+    // The pure rewind shell restores scalar state and exact live parent3 links
+    // in phase two, before any ordinary dispatch. Native recycled-slot reads
+    // remain a separate header contract from these live logical dependencies.
     private int barrelSubtype;
     private Mode mode;
 
@@ -91,19 +96,20 @@ public class AizMinibossBarrelShotChild extends AbstractObjectInstance
     private int yFixed;
     private int xVel;
     private int yVel;
-    private int frame;
-    private int animTimer;
+    private final S3kRawAnimation.State animation = new S3kRawAnimation.State();
+    private transient S3kRawAnimation animator;
     private int timer;
     private State state;
     private boolean vFlip;
     private boolean needsInitSfx;
+    private boolean pendingDelete;
 
     public AizMinibossBarrelShotChild(AbstractBossInstance parent,
                                       AizMinibossFlameBarrelChild barrel,
                                       int x,
                                       int y,
                                       Mode mode) {
-        super(new ObjectSpawn(x, y, 0x90, barrel.getBarrelSubtype(), 0, false, 0), "AIZMinibossBarrelShot");
+        super(new ObjectSpawn(x, y, 0x90, 2, 0, false, 0), "AIZMinibossBarrelShot");
         this.parent = parent;
         this.barrel = barrel;
         this.barrelSubtype = barrel.getBarrelSubtype() & 0xFF;
@@ -117,8 +123,8 @@ public class AizMinibossBarrelShotChild extends AbstractObjectInstance
         // sub_6885A equivalent
         this.xVel = 0;
         this.yVel = -0x400;
-        this.frame = FRAME_RISE_A;
-        this.animTimer = 2;
+        this.animation.mappingFrame = FRAME_RISE_A;
+        this.animation.script = RAW_SCRIPT;
         this.timer = 0x60;
         this.state = State.PRELAUNCH;
         this.vFlip = false;
@@ -137,8 +143,8 @@ public class AizMinibossBarrelShotChild extends AbstractObjectInstance
         this.yFixed = currentY << 16;
         this.xVel = 0;
         this.yVel = -0x400;
-        this.frame = FRAME_RISE_A;
-        this.animTimer = 2;
+        this.animation.mappingFrame = FRAME_RISE_A;
+        this.animation.script = RAW_SCRIPT;
         this.timer = 0x60;
         this.state = State.PRELAUNCH;
         this.vFlip = false;
@@ -147,21 +153,19 @@ public class AizMinibossBarrelShotChild extends AbstractObjectInstance
 
     @Override
     public AizMinibossBarrelShotChild recreateForRewind(RewindRecreateContext ctx) {
-        AizMinibossInstance boss = AizMinibossRewindLinks.nearestBoss(ctx);
-        AizMinibossFlameBarrelChild restoredBarrel = AizMinibossRewindLinks.nearestBarrel(ctx);
-        if (boss == null || restoredBarrel == null || ctx.spawn() == null) {
-            return null;
-        }
-        return new AizMinibossBarrelShotChild(
-                boss,
-                restoredBarrel,
-                ctx.spawn().x(),
-                ctx.spawn().y(),
-                Mode.SIMPLE);
+        // Native Launch reads the firing barrel's parent3, and FallingShot reads
+        // its exact boss through that barrel. XY can be far from either owner.
+        // Do not perform live lookup, fire SFX or advance the raw bank in phase one.
+        return ctx.spawn() == null ? null : new AizMinibossBarrelShotChild(ctx.spawn());
     }
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        if (pendingDelete) {
+            setDestroyed(true); // native Delete_Current_Sprite, without another MoveWait/Draw.
+            return;
+        }
+        boolean initDispatch = needsInitSfx;
         if (needsInitSfx) {
             needsInitSfx = false;
             services().playSfx(Sonic3kSfx.PROJECTILE.id);
@@ -171,6 +175,10 @@ public class AizMinibossBarrelShotChild extends AbstractObjectInstance
             setDestroyed(true);
             return;
         }
+
+        // AIZMiniboss_BarrelShot_Init ends at Draw_Sprite. Its $60 wait and
+        // cleared raw cursor/timer are consumed only by the following MoveWait.
+        if (initDispatch) return;
 
         switch (state) {
             case PRELAUNCH -> updatePrelaunch();
@@ -221,8 +229,11 @@ public class AizMinibossBarrelShotChild extends AbstractObjectInstance
     private void updateTopDropSimple() {
         move();
         animateRise();
-        if (--timer < 0 || !isOnScreen(128)) {
-            setDestroyed(true);
+        // AIZMiniboss_BarrelShot_MoveWait calls Obj_Wait then Draw_Sprite.
+        // Go_Delete rewrites the code/status on underflow; this dispatch still
+        // draws and occupies the SST. No screen/range tail exists in that owner.
+        if (--timer < 0) {
+            pendingDelete = true;
         }
     }
 
@@ -271,7 +282,7 @@ public class AizMinibossBarrelShotChild extends AbstractObjectInstance
 
         yVel = 0x400;
         xVel = 0;
-        animTimer = 2;
+        // Native Launch changes neither $30 nor the held raw-animation fields.
         vFlip = true; // bset #1, render_flags in loc_688B0 / loc_68D1C
         services().playSfx(Sonic3kSfx.MISSILE_THROW.id);
     }
@@ -305,11 +316,11 @@ public class AizMinibossBarrelShotChild extends AbstractObjectInstance
     }
 
     private void animateRise() {
-        if (--animTimer > 0) {
-            return;
+        if (animator == null) {
+            try { animator = S3kRawAnimation.load(services().romReader(), RAW_SCRIPT, RAW_SCRIPT_SIZE); }
+            catch (IOException failure) { throw new UncheckedIOException(failure); }
         }
-        animTimer = 2;
-        frame = (frame == FRAME_RISE_A) ? FRAME_RISE_B : FRAME_RISE_A;
+        animator.animateNoSst(animation, RAW_SCRIPT, () -> { });
     }
 
     @Override
@@ -373,7 +384,7 @@ public class AizMinibossBarrelShotChild extends AbstractObjectInstance
         if (renderer == null || !renderer.isReady()) {
             return;
         }
-        renderer.drawFrameIndex(frame, currentX, currentY, false, vFlip, PROJECTILE_PALETTE);
+        renderer.drawFrameIndex(animation.mappingFrame, currentX, currentY, false, vFlip, PROJECTILE_PALETTE);
     }
 
     @Override
