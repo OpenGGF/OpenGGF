@@ -53,12 +53,13 @@ class TestLivePresentationRuntime {
     }
     @Test void trailPosesAreBoundedFrozenAndRestoreThenReplayExactly() {
         var f=fixture();trail(f,1);
-        for(int i=0;i<8;i++)f.runtime.remember(frame(i,i+1,false),100,200);
-        assertEquals(4,f.runtime.trails().size());assertEquals(4,f.runtime.trails().getFirst().frame().tiles().getFirst().x());
+        for(int i=0;i<32;i++)f.runtime.remember(frame(i,1+i%15,false),100,200);
+        assertEquals(24,f.runtime.trails().size(),"a moving leader must leave a crowd rather than four faint afterimages");
+        assertEquals(8,f.runtime.trails().getFirst().frame().tiles().getFirst().x());
         var saved=f.runtime.capture();
         f.runtime.remember(frame(9,9,false),100,200);var forward=f.runtime.capture();
         f.runtime.restore(saved);f.runtime.remember(frame(9,9,false),100,200);assertEquals(forward,f.runtime.capture());
-        assertEquals(5,SpritePresentationRenderer.pattern(saved.trails().getFirst().frame().patternVersions().get(42)).getPixel(0,0));
+        assertEquals(9,SpritePresentationRenderer.pattern(saved.trails().getFirst().frame().patternVersions().get(42)).getPixel(0,0));
         for(var pose:f.runtime.trails()) { var tile=pose.frame().tiles().getFirst();assertEquals(2,tile.rowStart());assertEquals(7,tile.rowEnd());assertTrue(tile.hFlip());assertTrue(tile.priority()); }
     }
     @Test void decodeAndPreviewKeepActiveCapturedPicturesAndRenderOwnership() {
