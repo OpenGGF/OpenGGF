@@ -217,15 +217,9 @@ public class GameLoop {
     private TitleCardProvider titleCardProvider;
 
     private InputHandler inputHandler;
-    private EditorInputHandler editorInputHandler;
-    private java.util.function.Predicate<InputHandler> editorProjectInputHandler;
-    private java.util.function.BooleanSupplier editorProjectPlaytestSupplier = () -> false;
-    private boolean editorProjectModalSuspended;
-    private Runnable editorPlaytestToggleHandler;
-    private Runnable editorFreshStartHandler;
+    private final GameLoopEditorController editorMode = new GameLoopEditorController();
     private Runnable applicationExitHandler = () -> {};
     private GameMode currentGameMode = GameMode.LEVEL;
-    private Runnable editorStateSyncHandler;
     private Supplier<MasterTitleScreen> masterTitleScreenSupplier;
     private Supplier<LegalDisclaimerScreen> legalDisclaimerSupplier;
     private Runnable legalDisclaimerExitHandler;
@@ -455,15 +449,15 @@ public class GameLoop {
     }
 
     public void setEditorInputHandler(EditorInputHandler editorInputHandler) {
-        this.editorInputHandler = editorInputHandler;
+        editorMode.setInputHandler(editorInputHandler);
     }
 
     public void setEditorProjectInputHandler(java.util.function.Predicate<InputHandler> handler) {
-        editorProjectInputHandler = handler;
+        editorMode.setProjectInputHandler(handler);
     }
 
     public void setEditorProjectPlaytestSupplier(java.util.function.BooleanSupplier supplier) {
-        editorProjectPlaytestSupplier = java.util.Objects.requireNonNull(supplier);
+        editorMode.setProjectPlaytestSupplier(supplier);
     }
 
     /** Retires an editor-owned playtest without invoking its completion callback. */
@@ -546,7 +540,7 @@ public class GameLoop {
     }
 
     public void setEditorPlaytestToggleHandler(Runnable editorPlaytestToggleHandler) {
-        this.editorPlaytestToggleHandler = editorPlaytestToggleHandler;
+        editorMode.setPlaytestToggleHandler(editorPlaytestToggleHandler);
     }
 
     public void setDataSelectActionHandler(Consumer<com.openggf.game.dataselect.DataSelectAction> dataSelectActionHandler) {
@@ -554,7 +548,7 @@ public class GameLoop {
     }
 
     public void setEditorFreshStartHandler(Runnable editorFreshStartHandler) {
-        this.editorFreshStartHandler = editorFreshStartHandler;
+        editorMode.setFreshStartHandler(editorFreshStartHandler);
     }
 
     public void setApplicationExitHandler(Runnable applicationExitHandler) {
@@ -562,7 +556,7 @@ public class GameLoop {
     }
 
     public void setEditorStateSyncHandler(Runnable editorStateSyncHandler) {
-        this.editorStateSyncHandler = editorStateSyncHandler;
+        editorMode.setStateSyncHandler(editorStateSyncHandler);
     }
 
     public void setMasterTitleScreenSupplier(Supplier<MasterTitleScreen> masterTitleScreenSupplier) {
@@ -613,15 +607,6 @@ public class GameLoop {
         this.nativeModNoticeExitHandler = handler;
     }
 
-    private void updateEditorMode() {
-        if (editorInputHandler != null) {
-            editorInputHandler.update(inputHandler);
-        }
-        if (editorStateSyncHandler != null) {
-            editorStateSyncHandler.run();
-        }
-    }
-
     /**
      * Gets the title card provider, lazily initializing it from the current
      * GameModule.
@@ -665,7 +650,7 @@ public class GameLoop {
     /** A temporary project prompt suspends the current mode without leaving its runtime. */
     void setEditorProjectModalMode(GameMode mode, boolean suspended) {
         currentGameMode = Objects.requireNonNull(mode);
-        editorProjectModalSuspended = suspended;
+        editorMode.setModalSuspended(suspended);
     }
 
     void installLiveRewindBoundaryReporter() {
@@ -754,8 +739,7 @@ public class GameLoop {
      */
     public synchronized void pause() {
         if (!paused) {
-            if (currentGameMode == GameMode.EDITOR && editorInputHandler != null)
-                editorInputHandler.finishPendingEdits();
+            editorMode.finishPendingEdits(currentGameMode);
             paused = true;
             updateAudioPauseState();
         }
@@ -1142,13 +1126,7 @@ public class GameLoop {
     }
 
     private void stepInternal() {
-        // A quit decision must precede native fade/PLC service: a pending respawn
-        // or restart callback otherwise replaces the runtime hidden by the prompt.
-        if (editorProjectModalSuspended) {
-            requireInputHandler();
-            audioUpdatedThisStep = false;
-            if (editorProjectInputHandler != null) editorProjectInputHandler.test(inputHandler);
-            inputHandler.update();
+        if (editorMode.consumeSuspendedFrame(inputHandler, () -> audioUpdatedThisStep = false)) {
             return;
         }
         continueScreen.beginIteration();
@@ -1271,10 +1249,7 @@ public class GameLoop {
             return;
         }
 
-        if ((currentGameMode == GameMode.MASTER_TITLE_SCREEN || currentGameMode == GameMode.EDITOR
-                || currentGameMode == GameMode.LEVEL)
-                && editorProjectInputHandler != null && editorProjectInputHandler.test(inputHandler)) {
-            inputHandler.update();
+        if (editorMode.consumeProjectInput(currentGameMode, inputHandler)) {
             return;
         }
 
@@ -1293,29 +1268,8 @@ public class GameLoop {
             return;
         }
 
-        if (!isPaused()
-                && runPolicy().editorEntry()
-                && (currentGameMode == GameMode.EDITOR
-                || (currentGameMode == GameMode.LEVEL
-                && (configService.getBoolean(SonicConfiguration.EDITOR_ENABLED)
-                        || editorProjectPlaytestSupplier.getAsBoolean())))
-                && inputHandler.isKeyPressed(GLFW_KEY_TAB)
-                && (inputHandler.isKeyDown(GLFW_KEY_LEFT_SHIFT)
-                || inputHandler.isKeyDown(GLFW_KEY_RIGHT_SHIFT))
-                && editorPlaytestToggleHandler != null) {
-            editorPlaytestToggleHandler.run();
-            inputHandler.update();
-            return;
-        }
-
-        if (currentGameMode == GameMode.EDITOR) {
-            if (inputHandler.isKeyPressed(GLFW_KEY_F5) && editorFreshStartHandler != null) {
-                editorFreshStartHandler.run();
-                inputHandler.update();
-                return;
-            }
-            updateEditorMode();
-            inputHandler.update();
+        if (editorMode.consumeEditorFrame(currentGameMode, inputHandler, this::isPaused,
+                () -> runPolicy().editorEntry(), () -> configService.getBoolean(SonicConfiguration.EDITOR_ENABLED))) {
             return;
         }
 
