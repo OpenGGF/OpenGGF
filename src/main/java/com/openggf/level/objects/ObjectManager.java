@@ -455,6 +455,9 @@ public class ObjectManager {
         frameCounter = 0;
         dynamicObjectIdCounter = 0;
         rewindObjectIds.clear();
+        // A full SST reset also retires both collision buffers. They cannot
+        // retain erased Java owners or alias replacement actors in reused slots.
+        collisionResponseList.restoreRewindState(null, ignored -> null);
         s2LatchedObjectManagerCameraX = cameraX;
         twoAxisCameraYCoarse = Integer.MIN_VALUE;
         placement.reset(cameraX, persistentRespawnState);
@@ -889,6 +892,8 @@ public class ObjectManager {
                 instance, player, sidekicks, solidPostMovement);
     }
 
+    // Initial dispatch callers publish only after their native delete/range tail.
+    // Sprite_CheckDeleteTouch3 (loc_1B666) rejects range before Add_SpriteToCollisionResponseList.
     void publishInitialCollisionResponse(ObjectInstance instance) {
         if (initialDispatch.isActive()) {
             collisionResponseList.addToCurrentBuild(instance);
@@ -1025,6 +1030,8 @@ public class ObjectManager {
                         removeDynamicObjectInstance(instance);
                     }
                     objectsRemoved = true;
+                } else {
+                    publishInitialCollisionResponse(instance);
                 }
             }
 
@@ -1052,6 +1059,8 @@ public class ObjectManager {
                     objectCallbacks.runAndUnregister(inst, inst::onUnload);
                     removeDynamicObjectInstance(inst);
                     objectsRemoved = true;
+                } else {
+                    publishInitialCollisionResponse(inst);
                 }
             }
             // Fallback: process active objects without valid slots
@@ -1086,6 +1095,8 @@ public class ObjectManager {
                     dispatchDestroyRemoveFromActive(inst, spawn);
                     removeActiveObject(spawn);
                     objectsRemoved = true;
+                } else {
+                    publishInitialCollisionResponse(inst);
                 }
             }
         } finally {
@@ -1211,6 +1222,8 @@ public class ObjectManager {
                         removeDynamicObjectInstance(instance);
                     }
                     objectsRemoved = true;
+                } else {
+                    publishInitialCollisionResponse(instance);
                 }
             }
 
@@ -1239,6 +1252,8 @@ public class ObjectManager {
                     objectCallbacks.runAndUnregister(inst, inst::onUnload);
                     removeDynamicObjectInstance(inst);
                     objectsRemoved = true;
+                } else {
+                    publishInitialCollisionResponse(inst);
                 }
             }
             populateActiveFallbackScratch();
@@ -1278,6 +1293,8 @@ public class ObjectManager {
                     dispatchDestroyRemoveFromActive(inst, spawn);
                     removeActiveObject(spawn);
                     objectsRemoved = true;
+                } else {
+                    publishInitialCollisionResponse(inst);
                 }
             }
         } finally {

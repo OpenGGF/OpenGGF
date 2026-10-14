@@ -164,6 +164,62 @@ class TestObjectManagerRewindSnapshot {
     // Tests
     // ------------------------------------------------------------------
 
+    private static final class RangeTailPublisher extends AbstractObjectInstance implements TouchResponseProvider {
+        int updates;
+        RangeTailPublisher() {super(spawn(100, 200), "RangeTailPublisher");}
+        @Override public void update(int frame, PlayableEntity player) {updates++;}
+        @Override public boolean usesCustomOutOfRangeCheck() {return true;}
+        @Override public boolean isCustomOutOfRange(int cameraX) {return true;}
+        @Override public int getCollisionFlags() {return 0x47;}
+        @Override public int getCollisionProperty() {return 0;}
+        @Override public void appendRenderCommands(List<GLCommand> commands) { }
+    }
+
+    @Test
+    void initialDispatchDoesNotPublishAResponderDeletedByItsRangeTail() {
+        ObjectManager manager = makeManager(List.of(), new TrackingRegistry());
+        RangeTailPublisher publisher = new RangeTailPublisher();
+        manager.addDynamicObject(publisher);
+        try (var scope = manager.beginInitialProcessSprites(0, null, List.of())) {
+            manager.processInitialDynamicSlots(scope);
+            manager.finishInitialProcessSprites(scope);
+        }
+        assertEquals(1, publisher.updates, "the routine executes before its range tail");
+        assertTrue(manager.objectQuery().identityOf(publisher).isEmpty());
+        var snapshot = assertDoesNotThrow(() -> manager.rewindSnapshottable().capture());
+        var collision = snapshot.collisionResponseState();
+        assertTrue(collision.previousCollisionObjectIds().isEmpty());
+        assertTrue(collision.currentCollisionBuildObjectIds().isEmpty());
+        assertEquals(0, collision.currentCollisionBuildCursor());
+    }
+
+    @Test
+    void fullResetRetiresBothCollisionBuffersBeforeReusingSlots() {
+        ObjectManager manager = makeManager(List.of(), new TrackingRegistry());
+        ReservedTouchPublisher publisher = new ReservedTouchPublisher(spawn(100, 200));
+        manager.addDynamicObject(publisher);
+        var list = manager.initialCollisionResponseList();
+        list.captureCompletedBuild(List.of(publisher));
+        list.resetCurrentBuild();
+        list.addToCurrentBuild(publisher);
+        var before = manager.rewindSnapshottable().capture().collisionResponseState();
+        assertEquals(1, before.previousCollisionObjectIds().size());
+        assertEquals(1, before.currentCollisionBuildObjectIds().size());
+
+        manager.reset(0);
+        var empty = assertDoesNotThrow(() -> manager.rewindSnapshottable().capture());
+        assertEquals(ObjectManagerSnapshot.CollisionResponseState.empty(), empty.collisionResponseState());
+        assertTrue(list.playerReadView().isEmpty());
+        assertTrue(list.currentBuildView().isEmpty());
+        ReservedTouchPublisher replacement = new ReservedTouchPublisher(spawn(120, 200));
+        manager.addDynamicObject(replacement);
+        list.addToCurrentBuild(replacement);
+        var replaced = manager.rewindSnapshottable().capture().collisionResponseState();
+        assertTrue(replaced.previousCollisionObjectIds().isEmpty());
+        assertEquals(List.of(manager.objectQuery().identityOf(replacement).orElseThrow()),
+                replaced.currentCollisionBuildObjectIds());
+    }
+
     @Test
     void reservedChildTouchPublisherHasIdentityWhenCollisionListIsCaptured() {
         ObjectManager manager = makeManager(List.of(), new TrackingRegistry());
