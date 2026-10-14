@@ -128,10 +128,20 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
     protected InitStep initZonePlayerStateStep(LevelLoadContext ctx) {
         return new InitStep("InitZonePlayerState",
             "S3K: SpawnLevelMainSprites — zone-specific player animation/air state",
-            () -> levelEventManager.applyZonePlayerStateForLoad(
-                    ctx.hasCheckpoint()
-                            || GameServices.level().hasBigRingReturn()
-                            || GameServices.level().isBonusStageReturn()));
+            () -> {
+                // Level loc_6460 clears Update_HUD_timer and Level_started_flag
+                // before initial Process_Sprites for the $1701 hub. Existing
+                // level/camera snapshots already own both captured values.
+                if (Sonic3kLevelResourceProfile.isHpzSanctuary(
+                        GameServices.level().getCurrentZone(), GameServices.level().getCurrentAct())) {
+                    GameServices.level().getLevelGamestate().pauseTimer();
+                    GameServices.camera().setLevelStarted(false);
+                }
+                levelEventManager.applyZonePlayerStateForLoad(
+                        ctx.hasCheckpoint()
+                                || GameServices.level().hasBigRingReturn()
+                                || GameServices.level().isBonusStageReturn());
+            });
     }
 
     private InitStep initCameraStep(LevelLoadContext ctx) {

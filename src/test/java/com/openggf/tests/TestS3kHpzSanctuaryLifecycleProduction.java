@@ -34,6 +34,19 @@ class TestS3kHpzSanctuaryLifecycleProduction {
     @BeforeEach void saveConfiguration() { support.saveConfiguration(); }
     @AfterEach void restoreConfiguration() { support.restoreConfiguration(); }
 
+    @org.junit.jupiter.api.Test
+    void nativeFreshSanctuaryKeepsItsOrdinaryHudTimerInactiveThroughWorldReplay() throws Exception {
+        var row = new CanonicalEntryMatrixSupport.Row("sonic", WidescreenAspect.NATIVE_4_3, "off", "");
+        var fixture = support.boot(row);
+        assertFalse(GameServices.camera().isLevelStarted(), "Level loc_6460");
+        assertTrue(GameServices.level().getLevelGamestate().isTimerPaused(), "Update_HUD_timer=0");
+        long timer = GameServices.level().getLevelGamestate().getTimerFrames();
+        replayTwice(fixture, row, "fresh inactive HUD clock", 45);
+        advance(fixture, row, 150);
+        assertEquals(timer, GameServices.level().getLevelGamestate().getTimerFrames());
+        assertTrue(GameServices.level().getLevelGamestate().isTimerPaused());
+    }
+
     static Stream<Arguments> finiteCeremonyProducts() {
         // Both actual controller branches apply the raw midpoint pose; one
         // converts seven Chaos Emeralds, the other releases without conversion.
@@ -213,6 +226,8 @@ class TestS3kHpzSanctuaryLifecycleProduction {
             assertFalse(GameServices.sprites().getMainPlayable().getDead(), row.toString());
             assertEquals(lives, GameServices.gameState().getLives(), "no hidden P1 reload");
             support.assertOwners(row);
+            assertFalse(GameServices.camera().isLevelStarted(), "sanctuary keeps ordinary HUD inactive");
+            assertTrue(GameServices.level().getLevelGamestate().isTimerPaused(), "native inactive sanctuary timer");
             for (var participant : nativeParticipants()) {
                 if (!participant.isObjectMappingFrameControl()) continue;
                 int pose = participant.getMappingFrame();

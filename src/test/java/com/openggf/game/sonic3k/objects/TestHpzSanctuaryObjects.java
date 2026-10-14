@@ -544,15 +544,21 @@ class TestHpzSanctuaryObjects {
                 new HPZSanctuaryFallingCrystalObjectInstance(controller, 2)
                         .renderPaletteLineForTest());
 
-        for (int i = 0; i < 101; i++) {
+        // loc_90D30 falls through loc_90D42 immediately after the $20
+        // midpoint call. It does not wait another 33 decrements for negative.
+        for (int i = 0; i < 55; i++) {
             crystal.update(i, null);
             assertFalse(controller.introSignalReceivedForTest());
-            if (i == 54) {
-                assertTrue(crystal.midpointPublishedForTest());
-            }
         }
-        crystal.update(101, null);
+        assertTrue(crystal.midpointPublishedForTest());
+        assertEquals(13, crystal.rawAnimationTimerForTest(), "midpoint arms byte_90FF6");
+        for (int i = 55; i < 68; i++) {
+            crystal.update(i, null);
+            assertFalse(controller.introSignalReceivedForTest());
+        }
+        crystal.update(68, null);
         assertTrue(controller.introSignalReceivedForTest());
+        assertTrue(crystal.isDestroyed(), "loc_90D5E signals then Go_Delete_Sprite");
     }
 
     @Test

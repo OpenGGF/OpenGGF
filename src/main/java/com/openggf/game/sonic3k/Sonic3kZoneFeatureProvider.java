@@ -1134,6 +1134,9 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Lev
 
     @Override
     public boolean shouldSuppressHud(int zoneIndex, int actIndex) {
+        // Level loc_6460 clears Level_started_flag for this scene;
+        // Render_Sprites skips Render_HUD at loc_1AD4A (sonic3k.asm:36326).
+        if (Sonic3kLevelResourceProfile.isHpzSanctuary(zoneIndex, actIndex)) return true;
         if(zoneIndex==0x0D&&actIndex==1)return true; // Level loc_6460 disables the native HUD timer.
         var ending = com.openggf.game.sonic3k.ending.S3kEndingCoordinator
                 .current(GameServices.zoneRuntimeRegistryOrNull()).orElse(null);

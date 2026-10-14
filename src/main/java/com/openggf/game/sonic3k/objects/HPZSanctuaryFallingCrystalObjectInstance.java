@@ -118,7 +118,10 @@ public final class HPZSanctuaryFallingCrystalObjectInstance extends AbstractObje
             midpointPublished = true;
             parentRef.onFallingCrystalMidpoint(subtype);
         }
-        if (landingTimer < 0) {
+        // Shipped loc_90D30 falls through loc_90D42 after the $20
+        // midpoint call. It arms raw animation immediately, not after the
+        // remaining 33 timer decrements (sonic3k.asm:198104-198116).
+        if (landingTimer < 0 || landingTimer == 0x20) {
             rawAnimationTimer = RAW_LANDING_FRAMES.length;
             rawAnimationIndex = 0;
         }
