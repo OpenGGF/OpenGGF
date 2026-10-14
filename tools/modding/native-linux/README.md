@@ -50,6 +50,9 @@ Class-keyed factories with erased `Object` returns, including returned anonymous
 implementations. It repeats discovery for new service-bearing classes. Runtime
 bootstrap controls exercise the actual prepared catalog and HUD policy dispatch
 without ROMs; rendered gameplay remains a separate required check when supplied.
+Scene-based examples bootstrap the backing game's initial zone, then open their
+scene; the first listed authored zone can be a guarded activity that requires
+that scene's retained session. Direct level examples still exercise owned zones.
 Direct JDK method, constructor and static-field references also enter the contract,
 including dormant callbacks and method handles. Their declaring packages are
 preserved automatically. The image explicitly resolves `java.logging` so its
