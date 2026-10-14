@@ -33,12 +33,14 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 - **Second Strike prototype:** a source-first difficulty patch follows the native
   S3K Angel Island opening with cooperating spotters, committed guards/artillery,
   five original rings across forest/fire, hostile Robotnik monitors with speed
-  shoes retained, multi-hit enemies and invulnerable flame-shield rhino charges,
+  shoes retained, multi-hit enemies and invulnerable flame-shield rhino charges
+  with a 225-pixel budget and bounded vulnerable return,
   a warned late Fire Breath follow-up, first-board
   Blue Sphere turn gates and a three-spring Gumball variant. The normal campaign
   retains terrain, physics, lives, checkpoints, save UI, stage rewards and act
   progression. An opt-in decoded placement contract preserves the native level
-  class and transition owners; owner-bound stage policies validate isolated data.
+  class, fixed object-slot initialization and transition owners; owner-bound
+  stage policies validate isolated data.
   The example launcher uses a separate native save/config profile.
 
 - **Mutator Lab catalogue:** one JVM boot-prepared package exposes eleven effects

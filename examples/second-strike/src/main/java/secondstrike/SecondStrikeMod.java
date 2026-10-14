@@ -58,8 +58,9 @@ public final class SecondStrikeMod implements GgfMod {
         @Override public String displayName() { return "Second Strike"; }
         @Override public String baseGameId() { return "s3k"; }
         @Override public boolean activatesFor(GameplayLaunchRequest request) {
-            return request.gameId().equals("s3k")
-                    && Set.of("sonic", "tails", "knuckles").contains(request.mainCharacter());
+            // Match the backing content patch: every selected S3K character sees
+            // the same campaign identity. Native-character route qualification is separate.
+            return request.gameId().equals("s3k");
         }
         @Override public Set<LogicalRom> romPrerequisites() { return Set.of(LogicalRom.S3K); }
         @Override public List<String> providedMainCharacters() { return List.of(); }

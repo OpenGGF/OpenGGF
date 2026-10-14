@@ -204,4 +204,18 @@ class TestSecondStrikeCampaign {
         assertSame(source, services(registration()).transformDecodedLevel(source));
         assertSame(objects, source.getObjects()); assertSame(rings, source.getRings());
     }
+
+    @Test void campaignIdentityAndContentHaveTheSameCharacterEligibility() {
+        var plan = registration();
+        var content = new ModBackedGamePatch(plan, new ModFaultBoundary(Map.of(),
+                new ModRuntimeFindingStore(), ignored -> new ModStateSaveResult.Saved(), ignored -> { }));
+        var presentation = plan.explicitPatches().getFirst();
+        for (String character : List.of("sonic", "tails", "knuckles", "example:runner")) {
+            var request = new com.openggf.game.patch.GameplayLaunchRequest("s3k", character, List.of());
+            assertEquals(content.activatesFor(request), presentation.activatesFor(request), character);
+        }
+        var otherGame = new com.openggf.game.patch.GameplayLaunchRequest("s2", "sonic", List.of());
+        assertFalse(content.activatesFor(otherGame));
+        assertFalse(presentation.activatesFor(otherGame));
+    }
 }

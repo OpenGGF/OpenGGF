@@ -186,9 +186,9 @@ class TestSecondStrikeEnemiesNative {
 
     @Test void nativeGuardMidReturnKeepsItsFloorSlotIdentityAndOrdinaryAttackBounce() throws Exception {
         setup(0);
-        when(services.camera().getX()).thenReturn((short) 0x1ba0);
+        when(services.camera().getX()).thenReturn((short) 0x1aa0);
         when(services.camera().getY()).thenReturn((short) 0x350);
-        AbstractObjectInstance.updateCameraBounds(0x1ba0, 0x350, 0x1f24, 0x544, 0);
+        AbstractObjectInstance.updateCameraBounds(0x1aa0, 0x350, 0x1f24, 0x544, 0);
         NativePositionOps.writeXPosPreserveSubpixel(sonic, 0x1c40 - 140);
         NativePositionOps.writeYPosPreserveSubpixel(sonic, 0x3c0);
         NativePositionOps.writeXPosPreserveSubpixel(tails, 0x1c40 - 240);
@@ -197,10 +197,14 @@ class TestSecondStrikeEnemiesNative {
         int slot = guard.getSlotIndex();
         guard.update(0, sonic);
         for (int tick = 0; tick < 36; tick++) guard.update(tick, sonic);
-        for (int tick = 0; tick < 10; tick++) guard.update(tick, sonic);
-        assertEquals(0x1c40 - 90, guard.getX());
+        for (int tick = 0; tick < 23; tick++) guard.update(tick, sonic);
+        int brakeX = guard.getX();
+        assertTrue(brakeX < 0x1c40 && brakeX >= 0x1c40 - 225,
+                "the real slope may end a charge before its225px budget");
+        assertEquals(0x0b, touch(guard).getCollisionFlags());
         for (int tick = 0; tick < 84; tick++) guard.update(tick, sonic);
-        assertEquals(0x1c40 - 66, guard.getX(), () -> "real ROM slope admits a slow return; native primary probes="
+        assertTrue(guard.getX() > brakeX && guard.getX() <= brakeX + 24,
+                () -> "real ROM slope admits a bounded slow return; native primary probes="
                 + java.util.stream.IntStream.rangeClosed(-4, 6).mapToObj(offset -> offset + ":"
                 + services.floorSurface(guard.getX() + offset, guard.getY() + 16,
                 TerrainSurface.Layer.FOREGROUND, TerrainSurface.Path.PRIMARY)).toList());
@@ -229,6 +233,42 @@ class TestSecondStrikeEnemiesNative {
         assertEquals(-0x280, sonic.getGSpeed());
         assertEquals(slot, restored.getSlotIndex());
         assertEquals(0, score.getScore());
+    }
+
+    @Test void nativePoweredScreenDispatchKeepsStockArmourEligibilityAndOnlyDefeatsTheFinalHit() throws Exception {
+        setup(0);
+        when(services.camera().getX()).thenReturn((short) 0x1aa0);
+        when(services.camera().getY()).thenReturn((short) 0x350);
+        AbstractObjectInstance.updateCameraBounds(0x1aa0, 0x350, 0x1f24, 0x544, 0);
+        NativePositionOps.writeXPosPreserveSubpixel(sonic, 0x1c40 - 140);
+        NativePositionOps.writeYPosPreserveSubpixel(sonic, 0x3c0);
+        NativePositionOps.writeXPosPreserveSubpixel(tails, 0x1c40 - 240);
+        var guard = enemy("GuardBadnik", "guard", 0x1c40, 0x3c0, 21);
+        var gunner = enemy("ArtilleryBadnik", "artillery", 0x1ce0, 0x3c0, 22);
+        manager.update(0x1aa0, sonic, List.of(tails), 1, false);
+        assertEquals(0x8b, touch(guard).getCollisionFlags());
+        assertEquals(1, touch(gunner).getCollisionProperty());
+        manager.poweredAttacks().apply(sonic);
+        assertEquals(2, touch(guard).getCollisionProperty(), "armed HURT targets are not screen-attack enemies");
+        assertEquals(1, touch(gunner).getCollisionProperty(), "native screen attacks skip multi-hit armour");
+        assertEquals(0, score.getScore());
+
+        // Separately admit one ordinary hit, then exercise the actual screen dispatcher
+        // at property0. A direct powered callback alone does not prove that eligibility.
+        ((TouchResponseAttackable) gunner).onPlayerAttack(sonic,
+                new TouchResponseResult(0, 16, 16, TouchCategory.ENEMY));
+        NativePositionOps.writeXPosPreserveSubpixel(sonic, 0x1d90);
+        NativePositionOps.writeXPosPreserveSubpixel(tails, 0x1d90);
+        for (int tick = 0; tick < 24; tick++) gunner.update(tick, sonic);
+        manager.update(0x1aa0, sonic, List.of(tails), 2, false);
+        assertEquals(0, touch(gunner).getCollisionProperty());
+        assertEquals(0x23, touch(gunner).getCollisionFlags());
+        manager.poweredAttacks().apply(sonic);
+        assertTrue(gunner.isDestroyed());
+        assertFalse(guard.isDestroyed());
+        assertEquals(100, score.getScore());
+        manager.poweredAttacks().apply(sonic);
+        assertEquals(100, score.getScore(), "the final defeat cannot repeat rewards");
     }
 
     @Test void companionSlotGraphRestoresWithoutDuplicationAndRangeRetirementReleasesItsSlot() throws Exception {

@@ -8,7 +8,10 @@ and stage rewards belong to the native game.
 The opening has three readable enemy roles: spotters alert nearby defenders;
 guards commit to a fast flaming charge and expose themselves while braking;
 artillery locks its target before firing and then reloads. Spotters and artillery
-take two separated hits, guards three. The guard is invulnerable during its dash;
+take two separated hits, guards three. The guard charges up to 225 pixels at ten
+pixels per update, with a shorter final stride; native floor and gap checks can
+end it earlier. This is 150% further than the previous actual 90-pixel charge.
+The guard is invulnerable during its dash;
 dodge its committed direction and punish the brake or slow return to its post.
 Three extra guards make the native
 vines, slopes, logs and landings more dangerous. Final blows retain native
@@ -46,6 +49,9 @@ Use `--profile /your/owned/directory` to retain a profile outside build output.
 Sonic defaults to CPU Tails; `--solo` disables him when creating a new profile.
 `--character tails` or `--character knuckles` sets a new profile's selection.
 Existing profiles retain their settings; change characters through the launch UI.
+Difficulty content and the title badge apply to every selected S3K character.
+Observed route support remains limited to the native Sonic, Tails and Knuckles
+cells in the evidence matrix; custom-character compatibility is not certified.
 
 Move, jump, spindash, fly and glide use your normal engine bindings. No custom
 retry button is needed: death and checkpoint respawn follow the game. Removing

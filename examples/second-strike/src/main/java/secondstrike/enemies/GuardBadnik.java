@@ -10,6 +10,8 @@ import com.openggf.level.objects.ObjectSpawn;
 /** Reinforced rhinobot: provoke its dash, dodge, then punish the long exposed brake. */
 public final class GuardBadnik extends SecondStrikeBadnik {
     private static final int WATCH = 0, WINDUP = 1, DASH = 2, RECOVER = 3, RETURN = 4;
+    // Previous full flat-floor travel was 90px: 150% further is 225px.
+    private static final int DASH_DISTANCE = 225, DASH_STEP = 10, RETURN_STEP = 2;
     private int dashAge;
 
     public GuardBadnik(ObjectSpawn spawn) { super(spawn, "Second Strike guard", 3); }
@@ -36,20 +38,22 @@ public final class GuardBadnik extends SecondStrikeBadnik {
                 if (--timer <= 0) {
                     // The tell commits direction, but terrain may change before release.
                     if (canStartDash()) {
-                        phase = DASH; timer = 10; dashAge = 0;
+                        phase = DASH; timer = DASH_DISTANCE; dashAge = 0;
                         services().playSfx(0x43); // Native Sonic fire-shield dash attack cue.
                     } else recover();
                 }
             }
             case DASH -> {
-                int nextX = currentX + (xVelocity >> 8);
+                int steps = dashStride(timer);
                 // A dash stays on its natural ledge and never turns to chase the dodge.
-                if (Math.abs(nextX - anchorX) > 96 || !floorStrideAhead(10, 4)) {
+                if (steps == 0 || !floorStrideAhead(steps, 4)) {
                     recover();
                 } else {
+                    xVelocity = (facingLeft ? -steps : steps) << 8;
                     moveFixed();
                     dashAge++;
-                    if (--timer <= 0) recover();
+                    timer -= steps;
+                    if (timer <= 0) recover();
                 }
             }
             case RECOVER -> { if (--timer <= 0) beginReturn(); }
@@ -59,16 +63,32 @@ public final class GuardBadnik extends SecondStrikeBadnik {
     }
 
     private boolean canStartDash() {
-        if (Math.abs(currentX + (xVelocity >> 8) - anchorX) > 96) return false;
+        int steps = dashStride(DASH_DISTANCE);
+        if (steps == 0) return false;
         int previousY = currentY;
         // Admission is read-only: the actual stride still owns native floor following.
-        try { return floorStrideAhead(10, 4); }
+        try { return floorStrideAhead(steps, 4); }
         finally { currentY = previousY; }
+    }
+
+    private int dashStride(int remainingDistance) {
+        int direction = facingLeft ? -1 : 1;
+        int postLimit = anchorX + direction * DASH_DISTANCE;
+        return Math.min(Math.min(DASH_STEP, remainingDistance),
+                Math.max(0, (postLimit - currentX) * direction));
     }
 
     private boolean floorStrideAhead(int steps, int ahead) {
         int previousY = currentY;
         int direction = facingLeft ? -1 : 1;
+        // A front sensor cannot prove the first few feet of a newly reversed
+        // stride. Check that prefix too, so a hole beside the body is not skipped.
+        for (int step = 1; step <= ahead; step++) {
+            var floor = services().floorSurface(currentX + direction * step, currentY + 16,
+                    com.openggf.level.objects.TerrainSurface.Layer.FOREGROUND,
+                    com.openggf.level.objects.TerrainSurface.Path.PRIMARY);
+            if (!floor.foundSurface() || floor.distance() < -1 || floor.distance() >= 12) return false;
+        }
         // Probe every pixel of either stride: an endpoint alone skips small gaps.
         for (int step = 1; step <= steps; step++) {
             if (!floorAhead(currentX + direction * (step + ahead))) {
@@ -83,12 +103,12 @@ public final class GuardBadnik extends SecondStrikeBadnik {
         xVelocity = 0;
         if (currentX == anchorX) { phase = WATCH; timer = 0; return; }
         phase = RETURN;
-        timer = 64;
+        timer = (Math.abs(currentX - anchorX) + RETURN_STEP - 1) / RETURN_STEP;
         facingLeft = currentX > anchorX;
     }
 
     private void returnToPost() {
-        int steps = Math.min(2, Math.abs(anchorX - currentX));
+        int steps = Math.min(RETURN_STEP, Math.abs(anchorX - currentX));
         facingLeft = currentX > anchorX;
         // The charge ends aligned to its former front sensor. Return follows
         // centre-foot terrain one pixel at a time, avoiding an opposite-front
@@ -99,7 +119,7 @@ public final class GuardBadnik extends SecondStrikeBadnik {
             xVelocity = 0;
             return;
         }
-        // Walk toward the original post without overshooting or exceeding its96px radius.
+        // Walk toward the original post without overshooting, including an odd last pixel.
         xVelocity = (facingLeft ? -steps : steps) << 8;
         moveFixed();
         if (--timer <= 0 || currentX == anchorX) {

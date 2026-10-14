@@ -563,3 +563,65 @@ not another suite result. All known unrelated files and dirty submodules
 retain their before-merge status and file hashes. No source tests were repeated
 on identical integrated inputs. This prose-only successor records delivery;
 publication and fully accounted task cleanup are the coordinator's final steps.
+
+
+## 2026-10-14 native/mod architecture review and enemy expansion
+
+This round is based on `develop` `485e89fbea5a2587b763052f0db115986ca681ce`.
+Two independent read-only reviews confirmed that placement admission retains the
+native level, and native physics, saves, checkpoints, rewards and progression
+remain the correct owners. The intentional enemy tactics stay in the mod. The
+stock game must not acquire Second Strike identity branches or difficulty values.
+
+The review also found a real decorator defect: `ModDecoratedObjectRegistry`
+forwarded slot layout but omitted `installFixedSstObjects`. Merely registering
+creator objects therefore removed HCZ's native slot 5 owner and MHZ's native slot 4
+owner beyond the authored AIZ slice. New manager tests failed on both absent
+owners, and a stacked-decorator/reset test failed before any layout allocation.
+The repair forwards the exact native hook to the underlying registry. Both native
+owners now precede dynamic allocation, reset reinstalls each exactly once, and
+ordinary rewind does not repeat initialization. The campaign badge also now uses
+the backing content patch's S3K eligibility; it cannot disappear merely because a
+custom character is selected. This aligns activation without certifying that
+character's traversal support. These eight selected architecture cases pass with no
+errors or skips after reproducing four failures before the repairs.
+
+"150% further" is implemented as 225 pixels: the previous flat-floor charge
+actually moved 90, despite its 96-pixel anchor limit. A distance budget replaces the
+ten-update expiry, preserving ten-pixel strides and allowing a five-pixel final
+stride. Return duration derives from the actual displacement at two pixels per
+update, including an odd final pixel. Terrain can still end the charge early.
+The longer range exposed a previously untested immediate-gap case: the front
+sensor skipped the first four pixels after reversing. That prefix is now queried
+with the same native surface/tolerance rules, rather than changing terrain or
+allowing a jump. Native interaction fixtures use a viewport containing the whole
+new range and a genuine grounded guard placement; an airborne synthetic placement
+cannot prove that a charge was admitted. The four affected distance/gap/native-return/
+powered-dispatch cases pass without skips. Broader composed qualification remains
+pending the Caterkiller and barrage integration.
+
+Powered full-screen attacks retain native eligibility: an armed HURT target or an
+ENEMY with nonzero collision property is not dispatched to its powered callback.
+Only the final eligible health point is cleared. The new test uses the production
+powered surface; the older direct-callback test is explicitly named as such.
+There is no generic touch/physics change or new mod-only exception in that owner.
+
+The remaining prototype debt is explicit. The example still compiles against
+unsupported native internals; the last delivered packager reported 12 warnings,
+not a supported-API-only creator example. Optional native field/firing and whole
+picture mutators do not automatically target all replacements. The common enemy
+base also knows artillery/guard relationships, and existing companion/projectile
+keys partly use coordinates. The expansion will keep budgets and lifetime identity
+separate, move family-specific responsibilities out of the common base, and use a
+small validated native-family recipe/factory for the longer Caterkiller. It will
+not export entire native implementation classes or add a general difficulty bag.
+
+The requested 12-segment Caterkiller and two wider bounded plant fans are separate
+isolated implementation tasks and are not yet delivered by this checkpoint.
+Stock Caterkiller roles/delays must remain literal; the longer preset uses explicit
+roles/delays and exact reconstructed owner links. The plant keeps the committed
+warning/reload role, bounds live seeds per exact owner and emits one release cue
+only after successful slot admission. Native Bloominator's allocation/parity
+observation is outside the current mod-projectile repair; it is not silently
+changed or reported fixed. New slots, teardown, rewind, ROM pixels and composed
+package/API checks remain required before integration and publication.

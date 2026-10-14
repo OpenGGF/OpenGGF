@@ -81,6 +81,34 @@ class TestSecondStrikeEnemies {
         }
     }
 
+    @Test void chargeTravelsOneHundredFiftyPercentFurtherAndReturnsWithoutOvershooting() throws Exception {
+        try (var fixture = new Fixture()) {
+            var guard = fixture.enemy("GuardBadnik", "guard", 400, 200);
+            guard.update(0, fixture.player);
+            for (int tick = 0; tick < 36; tick++) guard.update(tick, fixture.player);
+            for (int stride = 0; stride < 22; stride++) {
+                int previousX = guard.getX();
+                guard.update(stride, fixture.player);
+                assertEquals(-10, guard.getX() - previousX);
+            }
+            guard.update(23, fixture.player);
+            assertEquals(175, guard.getX(), "225px is 150% further than the previous actual90px");
+            assertEquals(0x0b, touch(guard).getCollisionFlags());
+            for (int tick = 0; tick < 72; tick++) {
+                guard.update(tick, fixture.player);
+                assertEquals(175, guard.getX(), "the complete exposed brake stays stationary");
+            }
+            for (int tick = 0; tick < 112; tick++) {
+                int previousX = guard.getX();
+                guard.update(tick, fixture.player);
+                assertEquals(2, guard.getX() - previousX);
+            }
+            guard.update(113, fixture.player);
+            assertEquals(400, guard.getX(), "the final return stride is one pixel, with no teleport");
+            assertEquals(0x0b, touch(guard).getCollisionFlags());
+        }
+    }
+
     @Test void reinforcedEnemiesRequireSeparatedHitsAndRewardOnlyTheFinalContact() throws Exception {
         for (String[] definition : List.of(new String[]{"SpotterBadnik", "spotter", "2"},
                 new String[]{"ArtilleryBadnik", "artillery", "2"},
@@ -130,7 +158,7 @@ class TestSecondStrikeEnemies {
         }
     }
 
-    @Test void poweredWindupUsesMultiHitHealthWhileKeepingNativeHurtCollision() throws Exception {
+    @Test void directPoweredCallbackUsesMultiHitHealthWhileKeepingNativeHurtCollision() throws Exception {
         try (var fixture = new Fixture()) {
             var guard = fixture.enemy("GuardBadnik", "guard", 400, 200);
             guard.update(0, fixture.player);
@@ -156,8 +184,8 @@ class TestSecondStrikeEnemies {
             ((PoweredScreenAttackable) guard).onPoweredScreenAttack(fixture.player);
             assertFalse(guard.isDestroyed());
             assertEquals(2, touch(guard).getCollisionProperty(), "invulnerable dash cannot lose HP");
-            for (int tick = 0; tick < 12; tick++) guard.update(tick, fixture.player);
-            assertTrue(Math.abs(guard.getX() - 400) <= 96);
+            for (int tick = 0; tick < 24; tick++) guard.update(tick, fixture.player);
+            assertEquals(225, Math.abs(guard.getX() - 400));
             assertEquals(0x0b, touch(guard).getCollisionFlags());
             assertEquals(0, fixture.explosions());
             verifyNoInteractions(fixture.score);
@@ -181,18 +209,19 @@ class TestSecondStrikeEnemies {
             var guard = fixture.enemy("GuardBadnik", "guard", 400, 200);
             fixture.playerX = 260;
             finishGuardCharge(guard, fixture);
-            assertEquals(310, guard.getX());
+            assertEquals(175, guard.getX());
             for (int tick = 0; tick < 72; tick++) {
                 guard.update(tick, fixture.player);
-                assertEquals(310, guard.getX(), "all72 exposed brake updates remain stationary");
+                assertEquals(175, guard.getX(), "all72 exposed brake updates remain stationary");
                 assertEquals(0x0b, touch(guard).getCollisionFlags());
             }
-            for (int tick = 0; tick < 45; tick++) {
+            for (int tick = 0; tick < 112; tick++) {
                 int previousX = guard.getX();
                 guard.update(tick, fixture.player);
                 assertEquals(2, guard.getX() - previousX, "return is a walk, not a teleport or charge");
                 assertEquals(0x0b, touch(guard).getCollisionFlags(), "return stays vulnerable");
             }
+            guard.update(113, fixture.player);
             assertEquals(400, guard.getX());
             assertEquals(1, fixture.sounds.stream().filter(id -> id == 0x43).count());
             guard.update(0, fixture.player);
@@ -209,9 +238,9 @@ class TestSecondStrikeEnemies {
             fixture.playerX = 260;
             finishGuardCharge(guard, fixture);
             for (int tick = 0; tick < 84; tick++) guard.update(tick, fixture.player);
-            assertEquals(334, guard.getX());
+            assertEquals(199, guard.getX());
             assertReplay(guard, fixture, 8);
-            assertEquals(350, guard.getX());
+            assertEquals(215, guard.getX());
             assertEquals(0x0b, touch(guard).getCollisionFlags());
             attack(guard, fixture.player);
             assertFalse(guard.isDestroyed());
@@ -227,10 +256,10 @@ class TestSecondStrikeEnemies {
             fixture.playerX = 260;
             finishGuardCharge(guard, fixture);
             for (int tick = 0; tick < 72; tick++) guard.update(tick, fixture.player);
-            fixture.floorGapX = 311; // One-pixel hole before a clear2px return endpoint.
+            fixture.floorGapX = 176; // One-pixel hole before a clear2px return endpoint.
             for (int tick = 0; tick < 70; tick++) {
                 guard.update(tick, fixture.player);
-                assertEquals(310, guard.getX(), "a rejected stride cannot teleport toward the post");
+                assertEquals(175, guard.getX(), "a rejected stride cannot teleport toward the post");
                 assertEquals(0x0b, touch(guard).getCollisionFlags(), "blocked return must not re-arm");
             }
             assertEquals(1, fixture.sounds.stream().filter(id -> id == 0x43).count(),
@@ -253,7 +282,7 @@ class TestSecondStrikeEnemies {
     private static void finishGuardCharge(AbstractObjectInstance guard, Fixture fixture) {
         guard.update(0, fixture.player);
         for (int tick = 0; tick < 36; tick++) guard.update(tick, fixture.player);
-        for (int tick = 0; tick < 10; tick++) guard.update(tick, fixture.player);
+        for (int tick = 0; tick < 23; tick++) guard.update(tick, fixture.player);
     }
 
     @Test void oneFloorValidatedCompanionIsNonrecursiveAndRetiresWithAnUnloadedParent() throws Exception {
