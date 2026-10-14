@@ -1,6 +1,8 @@
 package com.openggf;
 
 import com.openggf.game.EndingProvider;
+import com.openggf.game.GameModule;
+import com.openggf.game.internal.LevelEntryPresentation;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.session.GameplayModeContext;
@@ -34,6 +36,22 @@ final class GameLoopPlcLifecycle {
                     case POST_CREDITS, FINISHED -> PlcLifecyclePhase.POST_CREDITS;
                     case CUTSCENE -> PlcLifecyclePhase.ENDING;
                 });
+    }
+
+    /** Samples the current module at the caller's pre-load or post-load boundary. */
+    static boolean usesWhiteLevelEntry(GameModule module, int zone, int act) {
+        var presentation = module.getGameService(LevelEntryPresentation.class);
+        return presentation != null && presentation.usesWhiteTransition(zone, act);
+    }
+
+    /** Keeps the entry decision sampled before the caller's log and music fade. */
+    static void startToLevelEntry(GameplayModeContext context, FadeManager fade,
+                                  boolean white, Runnable completion) {
+        if (white) {
+            startToWhite(context, fade, completion);
+        } else {
+            startToBlack(context, fade, completion);
+        }
     }
 
     static void startToBlack(GameplayModeContext context, FadeManager fade, Runnable completion) {

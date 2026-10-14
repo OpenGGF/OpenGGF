@@ -1260,17 +1260,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // subclasses without a captured payload): see restoreSubclassRewindState()
                 // Javadoc for the null contract subclasses must honor.
                 restoreSubclassRewindState(extra.subclassExtra());
-                if (!instaShieldRegistered
-                        && !(s.objectSubclassExtra() instanceof PendingInstaShieldRewindExtra)) {
-                        // No registered SST and no captured pending owner means absence.
-                        // A live handle from another timeline must not become pending now.
-                        if (instaShieldObject != null && !instaShieldObject.isDestroyed()) {
-                                instaShieldObject.destroy();
-                        }
-                        instaShieldObject = null;
-                }
                 instaShieldObject = PendingInstaShieldRewindExtra.restore(s.objectSubclassExtra(),
-                        instaShieldObject, powerUpSpawner != null
+                        instaShieldObject, instaShieldRegistered, powerUpSpawner != null
                                 ? () -> instaShieldObject = powerUpSpawner.createInstaShield(this) : null);
         }
 
@@ -1428,13 +1419,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         private void refreshPersistentInstaShieldRegistration(boolean registerNow) {
-                if (!hasPersistentInstaShieldAbility() || powerUpSpawner == null) {
-                        return;
-                }
-                if (!registerNow && (instaShieldObject == null || instaShieldObject.isDestroyed())) {
-                        // Native object-RAM clears can retire this auxiliary owner.
-                        // PendingInstaShieldRewindExtra restores an explicitly captured
-                        // pending handle before this visual refresh; absence stays absent.
+                if (!hasPersistentInstaShieldAbility() || powerUpSpawner == null
+                        || !PendingInstaShieldRewindExtra.permitsRefresh(registerNow, instaShieldObject)) {
                         return;
                 }
                 if (instaShieldObject == null || instaShieldObject.isDestroyed()) {

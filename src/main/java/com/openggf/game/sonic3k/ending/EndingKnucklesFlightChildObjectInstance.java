@@ -43,8 +43,8 @@ public final class EndingKnucklesFlightChildObjectInstance extends AbstractObjec
             high=e.high();draw=e.draw();
         }
     }
-    @Override public void update(int vInt,PlayableEntity player){
-        nativeVInt=vInt;draw=true;
+    @Override public void update(int vIntRunCount,PlayableEntity player){
+        nativeVInt=vIntRunCount;draw=true;
         if(parent==null||parent.isDestroyed()){ObjectLifetimeOps.deleteNoRespawn(this);return;}
         if(!initialized){
             initialized=true;
@@ -65,7 +65,7 @@ public final class EndingKnucklesFlightChildObjectInstance extends AbstractObjec
             case PASSENGER -> {
                 if(parent.flightChildSmall()){ObjectLifetimeOps.deleteNoRespawn(this);return;}
                 readOffset(0x5EC8E+(parent.flightFrame()-1)*2);refresh(true);
-                frame=(vInt&2)==0?0x16:0x17;
+                frame=(vIntRunCount&2)==0?0x16:0x17;
             }
             case FLAME -> {
                 if(parent.flightChildSmall()){ObjectLifetimeOps.deleteNoRespawn(this);return;}
@@ -79,12 +79,12 @@ public final class EndingKnucklesFlightChildObjectInstance extends AbstractObjec
             case PROPELLER -> {
                 refresh(true);
                 if(parent.flightChildSmall()){ObjectLifetimeOps.deleteNoRespawn(this);return;}
-                draw=(vInt&2)==0;
+                draw=(vIntRunCount&2)==0;
             }
             case SMALL_PROPELLER -> {
                 refresh(true);
                 if(parent.flightChildHidden()){ObjectLifetimeOps.deleteNoRespawn(this);return;}
-                frame=(vInt&2)==0?0x18:0x19;
+                frame=(vIntRunCount&2)==0?0x18:0x19;
             }
             default -> throw new IllegalStateException("Ending flight child "+role);
         }

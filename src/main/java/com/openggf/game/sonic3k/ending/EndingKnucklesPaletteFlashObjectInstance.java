@@ -13,7 +13,7 @@ public final class EndingKnucklesPaletteFlashObjectInstance extends AbstractObje
     private int phase,timer,steps=2;
     public EndingKnucklesPaletteFlashObjectInstance(){this(new ObjectSpawn(0,0,0,0,0,false,0));}
     public EndingKnucklesPaletteFlashObjectInstance(ObjectSpawn spawn){super(spawn,"KnucklesEndingPaletteFlash");}
-    @Override public void update(int vInt,PlayableEntity player){
+    @Override public void update(int vIntRunCount,PlayableEntity player){
         if((timer=(short)(timer-1))>=0)return;
         timer=phase==0?5:3;
         var registry=services().paletteOwnershipRegistryOrNull();

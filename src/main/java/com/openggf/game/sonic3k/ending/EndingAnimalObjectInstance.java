@@ -31,7 +31,7 @@ public final class EndingAnimalObjectInstance extends AbstractObjectInstance imp
     @Override public boolean isPersistent(){return true;}
     @Override public int getPriorityBucket(){return rabbit?5:7;}
     public int routine(){return routine;}
-    @Override public void update(int vInt,PlayableEntity player){
+    @Override public void update(int vIntRunCount,PlayableEntity player){
         if(ending().flag(3)){ObjectLifetimeOps.deleteNoRespawn(this);return;}
         if(routine==0){initialize();return;}
         if(rabbit)rabbit();else bird();

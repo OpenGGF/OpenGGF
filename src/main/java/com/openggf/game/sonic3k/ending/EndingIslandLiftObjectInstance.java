@@ -49,7 +49,7 @@ public final class EndingIslandLiftObjectInstance extends AbstractObjectInstance
     @Override public boolean isPersistent() { return true; }
     @Override public boolean isHighPriority() { return highPriority; }
     @Override public int getPriorityBucket() { return 6; } // loc_5EDAC: priority=$300
-    @Override public void update(int vInt,PlayableEntity player) {
+    @Override public void update(int vIntRunCount,PlayableEntity player) {
         drawAdmitted=false;
         if(routine==0) { initialize(); return; } // init dispatch has no Draw_Sprite
         if(routine==1 || routine==2) {
@@ -58,7 +58,7 @@ public final class EndingIslandLiftObjectInstance extends AbstractObjectInstance
                 setX(getX()-(services().camera().getXCopy()&0xFFFF)+0x80);
                 setY(getY()-(services().camera().getYCopy()&0xFFFF)+0x80);
             } else if(routine==2) yFixed+=yVelocity<<8;
-            animate(0x60276); drawAdmitted=(vInt&1)==0; return;
+            animate(0x60276); drawAdmitted=(vIntRunCount&1)==0; return;
         }
         if(routine==3) {
             animate(0x6027C);

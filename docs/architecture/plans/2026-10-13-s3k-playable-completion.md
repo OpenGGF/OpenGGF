@@ -727,3 +727,121 @@ run, including fresh guards, actually releases. Defer the not-yet-submitted
 Keep source stable and submit no additional tests/builds during that opportunity;
 report its actual start/deadline to the runtime-memory coordinator. Another
 retained-tree obstacle does not extend the window implicitly.
+
+
+## Completed retained run and guard follow-up
+
+The original frozen `7d0a9acbb` run `20261013T202202Z-d4bd5b37` completes all
+65 ordinary batches: **26,921 tests, one assertion failure, 17 errors and
+64 skips**, 4,740.81 seconds execution. Its fresh guard lane completes **678
+tests, four failures, zero errors/skips**, 264 seconds execution. The runner
+is terminal with exit1; observed lease release is23:57:02 UTC on October13
+(00:57:02 BST on October14). This is a completed red smoke/guard result, not a
+full-suite or green delivery claim. The 17 resource/fixture errors have the
+qualified corrections recorded above; the CLI-prefix assertion is exactly
+attributed to the original base and passes the controlled current invocation.
+
+All64 skips are inspected with no omitted identities. They include optional
+measurement/capture jobs,32 conditional Infinite Sonic terrain scenarios,
+six graphics-context assumptions, three optional native graphics checks and
+the optional slots-glass capture, the S1 local-reference audio capture and its
+unrequested timeline capture. `TestCPZObjectBugs#testSpinTubeForcesRolling`
+aborts because its tube fixture does not capture/release Sonic; this is an
+unverified fixture premise, not a pass. Existing ROM paths are present and
+verified; none of these skips is claimed as missing-ROM coverage.
+
+The four exact guard obligations are owned by this task:
+
+- `TestArchitecturalSourceGuard#releaseCriticalLargeClassesDoNotGrowWithoutExtraction`:
+  the actual strip/filter counter is original5e2/oldmain5d9 3,258, retained7d0
+  3,270, upstreamea8 3,255, and composed02f39 3,267, against unchanged budget
+  3,258. The ending additions contribute12 lines; upstream saves3. Raising the
+  allowance or compressing unrelated code is rejected. Existing package-private
+  `PendingInstaShieldRewindExtra` now owns captured-absence destruction before
+  hydration and a pure refresh-admission predicate. The facade becomes3,258
+  with unchanged public/protected declarations, fields and one-field snapshot
+  record payload. The existing Shield16, sprite-rewind14 and reset/ground5
+  cases are the meaningful behavior checks, alongside the exact size guard.
+- `TestRewindArchitectureGuard#objectRewindAnnotationsDoNotGrowWithoutExplicitBaselineTriage`:
+  delete only the two stale MHZ proxy/spike transient-count1 entries; change
+  LBZ final-boss1 count13 to5. `efbef` captured four exact object links centrally
+  and four scalar fields generically; `e3dc`/`2688` captured exact MHZ parent
+  identities and recreation metadata. Their qualified graph evidence is already
+  recorded above. Retain every other annotation/resource inventory and budget.
+- `TestObjectUpdateClockTerminologyGuard#objectUpdateClockUsesVIntRunCountTerminologyAcrossBoundaryAndFrameworkHooks`:
+  rename the seven ending update parameters from `vInt` to `vIntRunCount` and
+  their six uses. Captured `nativeVInt` fields, values, arithmetic and clocks
+  remain unchanged. The guard launches a2GiB attribution child and needs normal
+  focused admission, not the lean lane.
+- `TestSonic3kObjectProfileRegistryGuard#profileImplementedIdsMatchRegistryForEveryZone`:
+  the registry is the guard's expected set and the profile its actual set.
+  The concrete LBZ `$CD` registry owner added by `976863de8` was absent from
+  `Sonic3kObjectProfile.LBZ_ONLY_IDS`. Add only that implemented metadata and
+  extend the existing LBZ-positive/MHZ-negative profile regression. Native
+  record `$1F11CC` places the `$CD` prelude; `Obj_LBZFinalBossKnux` has a camera
+  gate and changes to `$CA` in the same slot, without a character-admission
+  branch. Registry admission, probe context and guard comparison stay intact.
+
+The requested five-minute opportunity has deadline00:02:02 UTC on October14.
+The user reports the original RSS control complete and releases the unused
+portion early; observed acknowledgment is00:01:40 UTC. A separate subsequently
+admitted diagnostic briefly holds linked source leases. Normal EX writers reject
+mutation until its reported terminal release; no lease/process is forced and
+no stale-source tests/builds are submitted. All guard edits are consolidated
+under the normal worktree lock before lead-owned focused validation.
+
+### Consolidated guard/helper check and additional composition growth
+
+The normal focused request completes on October14 at01:19:40 BST, session27573
+exit1, after258 seconds queued and130 seconds Maven execution. On committed
+`02f39f8bc` plus the12 consolidated owned edits, the exact four guard methods
+and full `TestSonic3kObjectProfile`, `TestShieldRewindRestore`,
+`TestAbstractPlayableSpriteRewindCapture` and `TestPlayableGroundTransitions`
+classes execute **46 tests: one failure, zero errors/skips**. The same headless
+JDK flag, Lua5.4, null audio and all three verified absolute ROM properties are
+used. The35 shield/sprite/ground cases, seven profile cases and three other
+guards pass. The size guard accepts AbstractPlayableSprite blob
+`4b4b2b86b2da0594fc782b3d74e190c881674b0b` and its helper blob
+`f6666d0c32aba1a645c2b7b855b83b164b22932a`.
+
+That guard exposes additional composed owners: GameLoop is3,319 against3,313
+(blob `8f29efd4b0b1941f65c32b2567d2bf397b3edd0e`) and LevelManager is3,145
+against3,144 (blob `02c795c31b51c60bba2fc69c73cbd6698d94e4be`). This is a
+new composition blocker, not a qualified pass. Keep budgets unchanged. Original
+5e2/retained7d0/upstreamea8 counts are3,295/3,305/3,309 for GameLoop and
+3,140/3,141/3,144 for LevelManager: both separate branches fit, their union
+does not. Raising budgets or compressing unrelated lines is rejected.
+
+The existing GameLoopPlcLifecycle now owns the same pre-/post-load presentation
+predicate and sampled white/black entry dispatch. Module lookup boundaries,
+logging/music order, fade deferral, wrapping and callbacks remain unchanged.
+GameLoop becomes3,312. The skipped-presentation player animation method and
+native-order comments move verbatim into existing LevelPlayableArtInitializer,
+which already owns the identical injected SpriteManager; its sole caller
+delegates directly and LevelManager becomes3,120. No runtime fields, public
+APIs, snapshot records or rewind state change. The trace-isolation owner list
+follows the moved production owner. Four bounded observable-order cases cover
+main/follower leading object passes before VBlank, absent/inactive service and
+zero passes; existing presentation tests did not exercise the positive loop.
+The already-passing unrelated focused methods need no ceremonial repeat.
+
+### Presentation extraction qualification
+
+The consolidated follow-up completes October14 at01:27:11 BST, session27132
+exit0, zero queue wait and73 seconds Maven execution: **21 tests, zero failures,
+errors or skips**. Command uses normal `maven_queue.py -Dmse=off`, the retained
+headless JDK/Lua5.4/null-audio environment and all three verified absolute ROM
+properties, with this exact selector and `test -B`:
+
+```text
+com.openggf.tests.TestArchitecturalSourceGuard#releaseCriticalLargeClassesDoNotGrowWithoutExtraction,com.openggf.TestS3kEndingTransitionPresentation,com.openggf.TestGameLoopFreshLevelHandoff,com.openggf.game.resources.TestNativePlcFadeOwnerCoverage,com.openggf.level.TestLevelManagerInitialPresentationPlcLifecycle,com.openggf.tests.TestFreshLevelBoundaryRewindHeadless,com.openggf.tools.TestGameplayCaptureFreshLoad,com.openggf.trace.TestSkippedPresentationPlcTraceIsolationGuard
+```
+
+This qualifies the unchanged size ratchet, three actual native white-entry
+cases, four generic/fresh handoff cases, two native fade-owner contracts, six
+initial-presentation cases (including the four new order/zero/service cases),
+two boundary/rewind cases, one real capture fresh-load case and two production
+trace-isolation guards. All owned source writers are terminal. The35 existing
+shield/sprite/ground checks, seven profile checks and three other guard passes
+from the prior completed46-case invocation remain qualified on unchanged owners.
+Full composed smoke still remains a separate pending delivery gate.

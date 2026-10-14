@@ -185,7 +185,7 @@ public class TestSonic3kObjectProfile {
                 .findFirst()
                 .orElseThrow();
 
-        int[] implementedLbz2Ids = {0xC6, 0xC8, 0xCA, 0xCB};
+        int[] implementedLbz2Ids = {0xC6, 0xC8, 0xCA, 0xCB, 0xCD};
         for (int objectId : implementedLbz2Ids) {
             assertTrue(profile.getImplementedIds(lbz2).contains(objectId),
                     "LBZ2 object $" + Integer.toHexString(objectId) + " should be reported as implemented");

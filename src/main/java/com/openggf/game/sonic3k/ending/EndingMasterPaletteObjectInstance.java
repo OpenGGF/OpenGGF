@@ -18,7 +18,7 @@ public final class EndingMasterPaletteObjectInstance extends AbstractObjectInsta
     public EndingMasterPaletteObjectInstance() { this(new ObjectSpawn(0,0,0,0,0,false,0)); }
     private EndingMasterPaletteObjectInstance(ObjectSpawn spawn) { super(spawn,"EndingMasterPalette"); }
     @Override public boolean isPersistent() { return true; }
-    @Override public void update(int vInt, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         var state=(EndingZoneRuntimeState)services().zoneRuntimeState();
         int mode=(byte)state.screen().masterPaletteMode;
         if(state.ending().progress()>0 && mode!=0) palette.tick(services(),mode>0?2:1);

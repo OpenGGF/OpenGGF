@@ -23,11 +23,14 @@ with seven Super Emeralds) → free flight through the autoscrolling asteroid fi
 defeat → exit fade → `StartNewLevel $D01`. Owning plan:
 [DDZ bring-up](../../plans/2026-09-17-ddz-bring-up.md).
 Status: fresh Super and positioned DEZ2-incoming Hyper routes reach both boss
-phases and the accepted ending request at320/800. A new native320 Sonic+Tails
-route starts at cold DEZ1 and reaches the same request after64648 controller
-frames, with emeralds declared only at boot; its replay verification is recorded
-in the dated follow-up below. Native scene matching, remaining roster/donor breadth remain open. Death-reload and seeded ending-load
-history isolation now pass at320/800. Nothing below certifies the zone.
+phases at320/800. The selected cold native320 emerald-team movie starts at DEZ1
+with emeralds declared only at boot and has a59722-input prefix; positioned320/800
+incoming movie prefixes have27122/27224 inputs. All three continue through actual
+native D01 rescue/AIZ return/reunion, both credit parts, post-credits and controller
+Start/title, retaining fight/wrap replay and live load/history isolation. These
+prefix lengths are not terminal totals. Death-reload and seeded ending-load
+history isolation also pass at320/800. Remaining supported viewport/donor/team,
+lifecycle and native-pixel breadth stays open. Nothing below certifies the zone.
 
 Incoming: DEZ final boss → `$C00` verified at320/800, including a positioned
 DEZ2-boss start with no reseeding across either load. Full cold DEZ1→DEZ2→final

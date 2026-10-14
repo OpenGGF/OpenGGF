@@ -323,7 +323,7 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
         private EndingRescueRevertObjectInstance(ObjectSpawn spawn){super(spawn,"EndingRescueRevert");}
         @Override public EndingRescueRevertObjectInstance recreateForRewind(RewindRecreateContext c){return new EndingRescueRevertObjectInstance(c.spawn());}
         @Override public boolean isPersistent(){return true;}
-        @Override public void update(int vInt,PlayableEntity player){
+        @Override public void update(int vIntRunCount,PlayableEntity player){
             if(!(services().playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite p)
                     ||!(p.getSuperStateController() instanceof Sonic3kSuperStateController powered))return;
             if(routine==0){routine=2;timer=119;}
@@ -377,8 +377,8 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
         @Override public int getPriorityBucket(){return role==MASTER?5:role==MASTER_AIZ?6:4;}
         private EndingRescueDirectorObjectInstance owner(){return services().objectManager()
                 .activeObjectsOfType(EndingRescueDirectorObjectInstance.class).stream().filter(o->!o.isDestroyed()).findFirst().orElse(null);}
-        @Override public void update(int vInt,PlayableEntity player){
-            nativeVInt=vInt;
+        @Override public void update(int vIntRunCount,PlayableEntity player){
+            nativeVInt=vIntRunCount;
             var owner=owner();if(owner==null){ObjectLifetimeOps.deleteNoRespawn(this);return;}
             if(role==TORNADO||role==REUNION_PLANE)plane(owner);
             else if(role==MASTER||role==MASTER_AIZ)master(owner);else catcher(owner);

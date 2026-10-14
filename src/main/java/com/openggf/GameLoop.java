@@ -4471,21 +4471,13 @@ public class GameLoop {
      * Starts the fade-to-black transition for a specific zone/act.
      */
     private void startZoneActFade(int zone, int act, int postLoadMusicId) {
-        boolean white = usesWhiteLevelEntry(zone, act);
+        boolean white = GameLoopPlcLifecycle.usesWhiteLevelEntry(GameServices.module(), zone, act);
         LOGGER.info("Starting fade-to-" + (white ? "white" : "black") + " for zone " + zone + " act " + act);
 
         audioManager.fadeOutMusic();
 
-        if (white) GameLoopPlcLifecycle.startToWhite(resolveGameplayModeContext(), fadeManager,
+        GameLoopPlcLifecycle.startToLevelEntry(resolveGameplayModeContext(), fadeManager, white,
                 () -> doZoneAct(zone, act, postLoadMusicId));
-        else GameLoopPlcLifecycle.startToBlack(resolveGameplayModeContext(), fadeManager,
-                () -> doZoneAct(zone, act, postLoadMusicId));
-    }
-
-    private boolean usesWhiteLevelEntry(int zone, int act) {
-        var presentation = GameServices.module().getGameService(
-                com.openggf.game.internal.LevelEntryPresentation.class);
-        return presentation != null && presentation.usesWhiteTransition(zone, act);
     }
 
     /**
@@ -4531,7 +4523,7 @@ public class GameLoop {
         // one on mid-run, so the host hears about it with the level start.
         hostedRuns.onLevelReady(debugOverlayManager.isEnabled(DebugOverlayToggle.OVERLAY));
 
-        if (usesWhiteLevelEntry(zone, act)) {
+        if (GameLoopPlcLifecycle.usesWhiteLevelEntry(GameServices.module(), zone, act)) {
             GameLoopPlcLifecycle.startFromWhite(resolveGameplayModeContext(), fadeManager, null);
         } else if (levelManager.hasPendingFreshLevelTransitionBoundary()
                 && getTitleCardProviderLazy() instanceof com.openggf.game.internal.FreshLevelTitleBoundaryPublication boundary

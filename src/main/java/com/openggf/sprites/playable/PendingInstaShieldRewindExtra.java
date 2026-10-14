@@ -18,8 +18,23 @@ record PendingInstaShieldRewindExtra(PerObjectRewindSnapshot shieldState)
         return null;
     }
 
+    /** An erased SST stays absent during visual refresh; ordinary registration may recreate it. */
+    static boolean permitsRefresh(boolean registerNow, InstaShieldHandle handle) {
+        return registerNow || (handle != null && !handle.isDestroyed());
+    }
+
     static InstaShieldHandle restore(PerObjectRewindSnapshot.ObjectSubclassRewindExtra extra,
-                                    InstaShieldHandle handle, Supplier<InstaShieldHandle> recreate) {
+                                    InstaShieldHandle handle, boolean registered,
+                                    Supplier<InstaShieldHandle> recreate) {
+        if (!registered && !(extra instanceof PendingInstaShieldRewindExtra)) {
+            // No registered SST and no captured pending owner means absence.
+            // Destroy the abandoned live owner before publishing null; no
+            // pending hydration or recreation may run for this captured state.
+            if (handle != null && !handle.isDestroyed()) {
+                handle.destroy();
+            }
+            return null;
+        }
         if (!(extra instanceof PendingInstaShieldRewindExtra pending)) {
             return handle;
         }
