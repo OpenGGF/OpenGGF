@@ -16,7 +16,7 @@ import java.io.UncheckedIOException;
 import java.util.List;
 
 /** loc_5E6C0: Knuckles jumps from the collapsing island and leaves on the Tornado. */
-public final class EndingKnucklesFlightObjectInstance extends AbstractObjectInstance implements RewindRecreatable, EndingFlightChildHost {
+public final class EndingKnucklesFlightObjectInstance extends AbstractObjectInstance implements RewindRecreatable, EndingFlightChildHost, NativeSstStateSource {
     private int routine;
     private int timer;
     private int xFixed, yFixed;
@@ -66,6 +66,13 @@ public final class EndingKnucklesFlightObjectInstance extends AbstractObjectInst
     @Override public int getPriorityBucket(){return 4;} // ObjDat3_600C2=$200
     public int routine(){return routine;}
 
+    @Override public NativeSstState nativeSstState() {
+        int flags=4|(flipX?1:0);
+        int control=(swingReverse?1:0)|(planeMode>=2?0x10:0)|(routine>=14?0x20:0);
+        return new NativeSstState(flags,xFixed&0xFFFF,yFixed&0xFFFF,animation.mappingFrame,
+                animation.animFrame,animation.animFrameTimer,control,retireFlag?0x80:0,routine==0?0:0x200,
+                routine==0?0:planeMode==0?0x8310:planeMode==1?0x826E:0x226E);
+    }
     @Override public void update(int vIntRunCount,PlayableEntity player) {
         ending().art().service(services());
         int dispatchedRoutine=routine;

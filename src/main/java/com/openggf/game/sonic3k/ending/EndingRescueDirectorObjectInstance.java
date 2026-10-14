@@ -15,7 +15,7 @@ import java.io.UncheckedIOException;
 import java.util.List;
 
 /** Obj_5D86A / Obj_5DFEE / Obj_Ending, in the native $D01 level. */
-public final class EndingRescueDirectorObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+public final class EndingRescueDirectorObjectInstance extends AbstractObjectInstance implements RewindRecreatable, NativeSstStateSource {
     public static final int RESCUE = 0, AIZ_RETURN = 1, REUNION = 2;
     private int sequence, routine, timer, xFixed, yFixed, xVelocity, yVelocity;
     private int baseY, bobPhase, swingMaximum = 0x80, mappingFrame, animationCounter, animationFrame;
@@ -49,6 +49,14 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
     @Override public boolean isHighPriority() { return !smallPlane; }
     @Override public int getPriorityBucket() { return sequence==AIZ_RETURN?7:4; }
 
+    @Override public NativeSstState nativeSstState() {
+        int control=(swingReverse?1:0)|(planeReleased?8:0)
+                |(smallPlane?0x10:0)|(routine>=28?0x20:0)|(paletteHelperAdmitted?0x80:0);
+        int priority=routine==0?0:sequence==REUNION?(routine>=8?0x100:0):sequence==AIZ_RETURN?(routine>=4?0x180:0x380):0x200;
+        int tile=routine==0?0:sequence==REUNION?(routine>=8?0x4347:0):sequence==AIZ_RETURN?(routine>=4?0x84DA:0x26E):smallPlane?0x226E:0x826E;
+        return new NativeSstState(flipX?1:0,xFixed&0xFFFF,yFixed&0xFFFF,mappingFrame,
+                animationFrame,animationCounter,control,retired?0x80:0,priority,tile);
+    }
     @Override public void update(int vIntRunCount, PlayableEntity player) {
         nativeVInt=vIntRunCount;
         ending().art().service(services());
@@ -317,12 +325,14 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
     }
 
     /** Obj_Ending_RevertSuperSonic is independently allocated and runs after its owner. */
-    public static final class EndingRescueRevertObjectInstance extends AbstractObjectInstance implements RewindRecreatable {
+    public static final class EndingRescueRevertObjectInstance extends AbstractObjectInstance implements RewindRecreatable, NativeSstStateSource {
         private int routine,timer;
         public EndingRescueRevertObjectInstance(){this(new ObjectSpawn(0,0,0,0,0,false,0));}
         private EndingRescueRevertObjectInstance(ObjectSpawn spawn){super(spawn,"EndingRescueRevert");}
         @Override public EndingRescueRevertObjectInstance recreateForRewind(RewindRecreateContext c){return new EndingRescueRevertObjectInstance(c.spawn());}
         @Override public boolean isPersistent(){return true;}
+        // Obj_Ending_RevertSuperSonic modifies only code and timer2E in its own SST.
+        @Override public NativeSstState nativeSstState(){return NativeSstState.CLEARED;}
         @Override public void update(int vIntRunCount,PlayableEntity player){
             if(!(services().playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite p)
                     ||!(p.getSuperStateController() instanceof Sonic3kSuperStateController powered))return;
@@ -364,7 +374,7 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
     }
 
     /** Native fixed plane/master and allocated catcher, each with a managed SST identity. */
-    public static final class Actor extends AbstractObjectInstance implements RewindRecreatable {
+    public static final class Actor extends AbstractObjectInstance implements RewindRecreatable, NativeSstStateSource {
         static final int TORNADO=0,MASTER=1,CATCHER=2,REUNION_PLANE=3,MASTER_AIZ=4;
         private int role,routine,xFixed,yFixed,xVelocity,yVelocity,baseY,phase,timer,dx=-0x40;
         private int noseCounter, nativeVInt;
@@ -377,6 +387,15 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
         @Override public int getPriorityBucket(){return role==MASTER?5:role==MASTER_AIZ?6:4;}
         private EndingRescueDirectorObjectInstance owner(){return services().objectManager()
                 .activeObjectsOfType(EndingRescueDirectorObjectInstance.class).stream().filter(o->!o.isDestroyed()).findFirst().orElse(null);}
+        @Override public NativeSstState nativeSstState(){
+            boolean plane=role==TORNADO||role==REUNION_PLANE;
+            // sub_60038 aliases propeller mapping23 to the ordinary anim_frame byte.
+            int frame=routine==0?0:plane?1:role==CATCHER?7:2;
+            return new NativeSstState(plane&&routine!=0?0x40:0,xFixed&0xFFFF,
+                    plane&&routine!=0?2:yFixed&0xFFFF,frame,plane&&routine!=0?6+(nativeVInt&1):0,0,
+                    plane&&routine==0?4:0,0,routine==0?0:role==MASTER?0x280:role==MASTER_AIZ?0x300:0x200,
+                    routine==0?0:role==MASTER?0xC52E:role==MASTER_AIZ?0x252E:plane?0x81E3:0x826E);
+        }
         @Override public void update(int vIntRunCount,PlayableEntity player){
             nativeVInt=vIntRunCount;
             var owner=owner();if(owner==null){ObjectLifetimeOps.deleteNoRespawn(this);return;}
