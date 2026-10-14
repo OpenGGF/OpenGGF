@@ -114,9 +114,67 @@ rebuild derived residency at execution boundaries, preserving pending native
 writes; scoped uploads/releases and rebuilds invalidate command binding caches.
 The failing real pixel cases were reproduced before the repairs and pass after.
 
-Java 25/Lua 5.4/PowerShell preflight passed on the root worktree. Final combined
-validation, package, corrected captures and delivery remain pending at this
-checkpoint.
+The private-palette change initially imposed a 64-row limit on ordinary donor
+contexts. A matched baseline/candidate probe reproduced the regression: the
+sixteenth ordinary context previously grew the atlas to 68 rows, whereas the
+candidate threw. Child `04d183234` is integrated as `45fff2130`; ordinary contexts
+retain dynamic growth, while private banks scan only complete, unoccupied ranges
+within their bounded pool. The two kinds coexist without reserving the same
+rows. Focused tests cover more than sixteen ordinary contexts, high-row lookup,
+fifteen private banks, exhaustion and safe reuse.
+
+Current `develop` was composed at `97880ca2f`. Read-only upstream review retained
+creator service-factory and callable-dependency discovery. The final composed
+focused run selected fourteen affected classes, including ordinary/donor palette
+allocation, live presentation, native ring actors, scoped palette/SAT rewind,
+actual underwater pixels, API signatures and Second Strike monitor/art seams:
+**74 tests passed, zero failures/errors/skips**. It used Java 25, Lua 5.4, the
+verified absolute S3K ROM and actual production surfaceless EGL. These checks
+qualify those consumers, not every act or a rebuilt Windows native bundle.
+
+SDK packaging on the same host commit passed with **zero findings** and warnings
+treated as errors. The external example JAR is 80,855 bytes, SHA-256
+`e5460b29643b176683ba0a62eaeeff413a24d717aed112c9e84294ae36be1d02`;
+it contains no ROM bytes and targets the unchanged 0.7 candidate API.
+
+The completed second reel is 4,864 frames at 60 Hz, 1920×1080, lasting 81.067
+seconds with 45 chapters and **46 qualified effects**. Actual source CSV/picture
+review includes bumper contact, angled full-width rain, ring loss and subsequent
+native recollection, and the correctly coloured ghost reveal. Split-screen
+panels use independent captures rather than implying simultaneous policies in
+one world. Buddy arrival and board movement are shown without claiming a rescue
+or a completed minigame. Every cut and midpoint was inspected in the decoded
+export; full video/audio decode, cadence, chapters and source intervals pass.
+The continuous HCZ2 bed and explicit editorial ROM cues measure −14.28 LUFS and
+−1.45 dBTP in the final AAC. Listening review is not claimed. The audio remux
+preserved all 4,864 encoded H.264 packets and their timestamps.
+
+Thirty-six new lossless masters were compared against every captured RGB frame
+and native PCM sample before redundant raw outputs were removed. Authored input,
+state CSV, initial conditions, original masters and both reels remain in the
+external task archive. The public production sources and external asset catalogue
+are published in [OpenGGF-Media](https://github.com/OpenGGF/OpenGGF-Media/tree/main/projects/sonic3k-chaos-mode)
+at `494a17f2a38aa775aef5fab1a5aedd4444bcc409`. That publication preserves 451
+Chaos sources, including the unchanged first reel and prior draft. Repository
+catalogue checks verified 6,515 source hashes/sizes and 14,118 external entries;
+eight public committed paths were fetched and matched byte-for-byte. Footage,
+ROM assets, JAR and source ZIP remain external.
+
+Java 25/Lua 5.4/PowerShell preflight passed for the complete change-based smoke
+selection of 3,256 candidate classes and separate guards. The first invocation
+on `543c076fd` completed 59 of 66 ordinary batches: 25,369 tests, zero
+failures/errors and 61 explicit skips. It then exited 130 through the signal
+handler before batch 60 completed; no execution/idle timeout was reported and
+the signal's origin was not independently recorded. This is an incomplete run,
+not a smoke pass. Its owned children and retained worktree lease released.
+
+The continuation rederives the complete original selection and checks the exact
+source/tree fingerprint, completed-batch count and previous failure status.
+Every one of the 306 uncompleted candidates (seven original batches), followed
+by guards, uses the unchanged official runner and admission rules. Completed
+coverage remains attributed to the first invocation; no raw logs or pass cache
+are archived. The final record must report the two-command union and all skips.
+Continuation and engine integration/push remain pending at this checkpoint.
 
 | Context | Added obligation | Limit |
 |---|---|---|

@@ -915,6 +915,11 @@ water/fade basis, preserving pending palette writes. Uploads can bind the active
 atlas texture unit: invalidate deferred-command binding caches even when texture
 IDs are unchanged. Real priority-water and acquisition-between-draws pixels
 caught both defects; dry-only palette tests did not.
+Bound the private pool without capping ordinary donor/sidekick allocation.
+Ordinary contexts already support atlas growth beyond sixteen contexts; applying
+the private pool's 64-row ceiling to them broke the sixteenth allocation that
+previously grew to 68 rows. Search complete unoccupied private ranges, preserve
+ordinary growth and check coexistence, high-row sampling, exhaustion and reuse.
 
 **CPU sprite state is not the presented SAT.** S3K `VInt_8_Cont` uploads
 `Sprite_table` to VRAM `$F800`; the resumed `LevelLoop` then runs objects and
