@@ -12,62 +12,54 @@ import java.util.Locale;
 
 /**
  * The setup chips under the selected game on the hub: what Start will launch.
- * Amber chips are values set for this game only. Keyboard and pad focus passes over
- * them; hovering one describes it and clicking it opens Game Setup on its row (or the
- * mod manager for the mods chip).
+ * Amber chips are values set for this game only. Chips are status only; they take
+ * no focus and run no action, so changes go through Game Setup.
  */
 final class HubSetupChips {
     private HubSetupChips() { }
 
     /** {@code row} is null for the mods chip. */
-    record Chip(String label, boolean thisGameOnly, LaunchProfile.Row row, String description) { }
+    record Chip(String label, boolean thisGameOnly, LaunchProfile.Row row) { }
 
     static List<Chip> forStock(MasterTitleScreen.GameEntry game, LaunchProfile profile, LaunchProfileStore store,
                                SonicConfigurationService config, int modCount) {
         List<Chip> chips = new ArrayList<>();
-        String name = game.menuLabel;
         if (profile.usesS3kDataSelectCharacters()) {
-            chips.add(new Chip("TEAM ON SAVE SCREEN", true, LaunchProfile.Row.CROSS_GAME,
-                    "The Sonic 3&K save screen picks your team"));
+            chips.add(new Chip("TEAM ON SAVE SCREEN", true, LaunchProfile.Row.CROSS_GAME));
         } else {
             String main = store.displayValue(profile, LaunchProfile.Row.MAIN_CHARACTER, game);
             String side = store.displayValue(profile, LaunchProfile.Row.SIDEKICK, game);
             String team = "none".equals(profile.sidekick()) ? main : main + " & " + side;
             boolean stockTeam = profile.isStock(LaunchProfile.Row.MAIN_CHARACTER, game)
                     && profile.isStock(LaunchProfile.Row.SIDEKICK, game);
-            chips.add(new Chip(team.toUpperCase(Locale.ROOT), !stockTeam, LaunchProfile.Row.MAIN_CHARACTER,
-                    stockTeam ? "Players: the stock team for " + name : "Players: set for " + name + " only"));
+            chips.add(new Chip(team.toUpperCase(Locale.ROOT), !stockTeam, LaunchProfile.Row.MAIN_CHARACTER));
         }
         boolean aspectOverride = !"global".equals(profile.aspect());
         String aspect = aspectOverride
                 ? store.displayValue(profile, LaunchProfile.Row.WIDESCREEN, game)
                 : aspectLabel(config.getString(SonicConfiguration.DISPLAY_ASPECT));
-        chips.add(new Chip(aspect, aspectOverride, LaunchProfile.Row.WIDESCREEN,
-                aspectOverride ? "Screen: " + aspect + " for " + name + " only" : "Screen: " + aspect + " from Settings"));
+        chips.add(new Chip(aspect, aspectOverride, LaunchProfile.Row.WIDESCREEN));
         if (!"off".equals(profile.crossGameSource())) {
             String donor = LaunchConfigPanel.borrowLabel(profile.crossGameSource());
-            chips.add(new Chip("FROM " + donor, true, LaunchProfile.Row.CROSS_GAME,
-                    "Borrowing sprites and moves from " + titleCase(donor)));
+            chips.add(new Chip("FROM " + donor, true, LaunchProfile.Row.CROSS_GAME));
         }
         addToggle(chips, "REWIND", profile.rewind(), config.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED),
-                LaunchProfile.Row.REWIND, name);
+                LaunchProfile.Row.REWIND);
         addToggle(chips, "DEBUG", profile.debugTools(), config.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED),
-                LaunchProfile.Row.DEBUG_TOOLS, name);
+                LaunchProfile.Row.DEBUG_TOOLS);
         if (modCount > 0) {
-            chips.add(new Chip(modCount == 1 ? "1 MOD" : modCount + " MODS", false, null,
-                    modCount == 1 ? "1 mod is on for " + name : modCount + " mods are on for " + name));
+            chips.add(new Chip(modCount == 1 ? "1 MOD" : modCount + " MODS", false, null));
         }
         return List.copyOf(chips);
     }
 
     /** A switch earns a chip when it is on, or when this game overrides it. */
     private static void addToggle(List<Chip> chips, String label, LaunchToggle toggle, boolean allGames,
-                                  LaunchProfile.Row row, String game) {
+                                  LaunchProfile.Row row) {
         boolean effective = toggle.resolve(allGames);
         if (!effective && toggle.isDefault()) return;
         String text = label + (effective ? " ON" : " OFF");
-        chips.add(new Chip(text, !toggle.isDefault(), row,
-                toggle.isDefault() ? titleCase(text) + " from Settings" : titleCase(text) + " for " + game + " only"));
+        chips.add(new Chip(text, !toggle.isDefault(), row));
     }
 
     static String aspectLabel(String aspect) {
@@ -96,11 +88,6 @@ final class HubSetupChips {
                     .append(part);
         }
         return text.toString();
-    }
-
-    private static String titleCase(String text) {
-        String lower = text.toLowerCase(Locale.ROOT);
-        return lower.isEmpty() ? lower : Character.toUpperCase(lower.charAt(0)) + lower.substring(1);
     }
 
     private static String titleCaseWords(String text) {

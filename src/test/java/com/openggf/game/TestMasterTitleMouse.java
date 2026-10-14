@@ -116,12 +116,15 @@ class TestMasterTitleMouse {
     }
 
     @Test
-    void clickingTheCentreCardStartsAndAChipOpensItsSetupRow() {
+    void clickingTheCentreCardStartsAndTheSetupChipsAreStatusOnly() {
         var screen = screen();
-        int[] chip = centre(screen.hubLayout().chips().get(1));
-        click(screen, chip[0], chip[1], GLFW_MOUSE_BUTTON_LEFT);
-        assertTrue(screen.isLaunchConfigPanelOpenForTest());
-        assertEquals(com.openggf.game.launch.LaunchProfile.Row.WIDESCREEN, screen.launchPanelRowForTest());
+        for (var rect : screen.hubLayout().chips()) {
+            int[] chip = centre(rect);
+            click(screen, chip[0], chip[1], GLFW_MOUSE_BUTTON_LEFT);
+            assertFalse(screen.isLaunchConfigPanelOpenForTest(), "a chip click opens nothing");
+            assertFalse(screen.isGameSelected());
+            assertEquals(TitleHubNavigation.Zone.CARD, screen.hubZoneForTest(), "a chip never takes focus");
+        }
 
         var other = screen();
         int[] centre = card(other, 0);

@@ -141,7 +141,7 @@ class TestMasterTitleHub {
         press(screen, GLFW_KEY_DOWN);
         press(screen, GLFW_KEY_DOWN);
         assertEquals(TitleHubNavigation.Zone.ACTIONS, screen.hubZoneForTest(),
-                "chips are reached by pointer only; clicking one is covered by TestMasterTitleMouse");
+                "chips never take focus; pointer clicks are covered by TestMasterTitleMouse");
     }
 
     @Test void cancelledLaunchDraftDoesNotWriteAndFailedSaveCanBeRetried() {

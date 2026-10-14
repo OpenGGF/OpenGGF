@@ -4,15 +4,14 @@ import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
 
 /**
- * Focus model for the cartridge-shelf hub. Four rows from top to bottom: engine-wide
- * header tabs, the game card, the setup chips and the per-game action bar. Up/Down
- * moves between rows; Left/Right moves within a row, and on the card changes game.
- * The setup chips only report what Start will launch, so Up/Down passes over them;
- * the pointer can still focus one ({@link #selectChip}) to read or open it.
- * Physical/replay input authority remains in InputHandler.
+ * Focus model for the cartridge-shelf hub. Three rows from top to bottom: engine-wide
+ * header tabs, the game card and the per-game action bar. Up/Down moves between rows;
+ * Left/Right moves within a row, and on the card changes game. The setup chips drawn
+ * between the card and the actions only report what Start will launch and never take
+ * focus. Physical/replay input authority remains in InputHandler.
  */
 final class TitleHubNavigation {
-    enum Zone { TABS, CARD, CHIPS, ACTIONS }
+    enum Zone { TABS, CARD, ACTIONS }
 
     /** Engine-wide header tabs. Extras appears only when mods register title entries. */
     enum Tab {
@@ -32,10 +31,8 @@ final class TitleHubNavigation {
     private final boolean[] pressed = new boolean[6];
     private Zone zone = Zone.CARD;
     private int tab;
-    private int chip;
     private int action;
     private boolean extrasVisible;
-    private int chipCount;
     private int actionCount = Action.values().length;
 
     void capture(InputHandler input) {
@@ -71,9 +68,6 @@ final class TitleHubNavigation {
     Tab tab() { return tabs()[Math.clamp(tab, 0, tabs().length - 1)]; }
     void selectTab(int index) { tab = Math.clamp(index, 0, tabs().length - 1); zone = Zone.TABS; }
 
-    int chipIndex() { return chip; }
-    void selectChip(int index) { chip = Math.clamp(index, 0, Math.max(0, chipCount - 1)); zone = Zone.CHIPS; }
-
     int actionIndex() { return action; }
     Action action() { return Action.values()[Math.clamp(action, 0, actionCount - 1)]; }
     void selectAction(int index) { action = Math.clamp(index, 0, actionCount - 1); zone = Zone.ACTIONS; }
@@ -86,9 +80,8 @@ final class TitleHubNavigation {
         for (int i = 0; i < tabs.length; i++) if (tabs[i] == current) tab = i;
     }
 
-    /** Chips and actions depend on the selected game; empty rows are skipped. */
-    void setRowSizes(int chips, int actions) {
-        chipCount = Math.max(0, chips);
+    /** The actions depend on the selected game. */
+    void setActionCount(int actions) {
         actionCount = Math.clamp(actions, 1, Action.values().length);
         clampIndices();
     }
@@ -96,11 +89,8 @@ final class TitleHubNavigation {
     /** Moves focus one row; returns true when the focus changed. */
     boolean moveRow(int delta) {
         Zone[] order = Zone.values();
-        int index = zone.ordinal();
-        do {
-            index += delta;
-            if (index < 0 || index >= order.length) return false;
-        } while (order[index] == Zone.CHIPS);
+        int index = zone.ordinal() + delta;
+        if (index < 0 || index >= order.length) return false;
         zone = order[index];
         clampIndices();
         return true;
@@ -110,7 +100,6 @@ final class TitleHubNavigation {
     boolean moveWithin(int delta) {
         return switch (zone) {
             case TABS -> { int next = Math.clamp(tab + delta, 0, tabs().length - 1); boolean m = next != tab; tab = next; yield m; }
-            case CHIPS -> { int next = Math.clamp(chip + delta, 0, Math.max(0, chipCount - 1)); boolean m = next != chip; chip = next; yield m; }
             case ACTIONS -> { int next = Math.clamp(action + delta, 0, actionCount - 1); boolean m = next != action; action = next; yield m; }
             case CARD -> false;
         };
@@ -118,8 +107,6 @@ final class TitleHubNavigation {
 
     private void clampIndices() {
         tab = Math.clamp(tab, 0, tabs().length - 1);
-        chip = Math.clamp(chip, 0, Math.max(0, chipCount - 1));
         action = Math.clamp(action, 0, actionCount - 1);
-        if (zone == Zone.CHIPS && chipCount == 0) zone = Zone.CARD;
     }
 }

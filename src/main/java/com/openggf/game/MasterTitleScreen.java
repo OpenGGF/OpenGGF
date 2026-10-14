@@ -555,7 +555,6 @@ public class MasterTitleScreen {
         if (!navigation.accept()) return;
         switch (zone) {
             case CARD -> startSelectedEntry();
-            case CHIPS -> openChip(navigation.chipIndex());
             case ACTIONS -> runHubAction(navigation.action());
             case TABS -> runHubTab(navigation.tab());
         }
@@ -577,15 +576,6 @@ public class MasterTitleScreen {
             case ADVANCED -> { toolsOpen = true; toolIndex = 0; playConfirmSound(); }
             case QUIT -> openQuitPrompt();
         }
-    }
-
-    /** Clicking a setup chip opens Game Setup on that row, or the mod manager for the mods chip. */
-    private void openChip(int index) {
-        List<HubSetupChips.Chip> chips = hubChips();
-        if (index < 0 || index >= chips.size()) return;
-        HubSetupChips.Chip chip = chips.get(index);
-        if (chip.row() == null) { openModManager(selectedEntry().gameId()); return; }
-        if (!openLaunchOptions(chip.row())) showActionError("Game setup");
     }
 
     /**
@@ -680,7 +670,8 @@ public class MasterTitleScreen {
     }
 
     /**
-     * Mouse on the hub: hovering a tab, chip or action focuses it and clicking runs it;
+     * Mouse on the hub: hovering a tab or action focuses it and clicking runs it (the setup
+     * chips are status only);
      * side cards change game, the centre card starts it, the page dots open the game
      * browser, the wheel changes game and the right button goes back. Rectangles come
      * from {@link #hubLayout()}, the same geometry drawHub uses.
@@ -708,15 +699,6 @@ public class MasterTitleScreen {
                 playNavigateSound();
             }
             if (pointer.click()) runHubTab(navigation.tab());
-            return pointer.click();
-        }
-        for (int i = 0; i < layout.chips().size(); i++) {
-            if (!layout.chips().get(i).contains(pointer)) continue;
-            if (navigation.zone() != TitleHubNavigation.Zone.CHIPS || navigation.chipIndex() != i) {
-                navigation.selectChip(i);
-                playNavigateSound();
-            }
-            if (pointer.click()) openChip(i);
             return pointer.click();
         }
         for (int i = 0; i < layout.actions().size(); i++) {
@@ -1234,7 +1216,7 @@ public class MasterTitleScreen {
     }
 
     private void refreshHubRows() {
-        navigation.setRowSizes(hubChips().size(), hubActions().size());
+        navigation.setActionCount(hubActions().size());
     }
 
     private String tabLabel(TitleHubNavigation.Tab tab) {
@@ -1485,8 +1467,7 @@ public class MasterTitleScreen {
             Rect r = layout.chips().get(i);
             HubSetupChips.Chip chip = chips.get(i);
             anyAmber |= chip.thisGameOnly();
-            boolean focused = navigation.zone() == TitleHubNavigation.Zone.CHIPS && navigation.chipIndex() == i;
-            MenuChrome.chip(font, r.x(), r.y(), chip.label(), chip.thisGameOnly(), focused, frameCounter);
+            MenuChrome.chip(font, r.x(), r.y(), chip.label(), chip.thisGameOnly());
         }
         if (chips.isEmpty() && entry instanceof MasterTitleEntry.Stock stock && !isEntryAvailable(stock)) {
             String help = "Add " + expectedRomFilename(stock.game()) + " in Settings > Files to play";
@@ -1568,7 +1549,6 @@ public class MasterTitleScreen {
         return switch (navigation.zone()) {
             case CARD -> entry instanceof MasterTitleEntry.Stock && isEntryAvailable(entry)
                     ? HubSetupChips.startSummary(game, chips) : "Start " + game;
-            case CHIPS -> chips.isEmpty() ? "" : chips.get(navigation.chipIndex()).description();
             case ACTIONS -> switch (navigation.action()) {
                 case START -> entry instanceof MasterTitleEntry.Stock && isEntryAvailable(entry)
                         ? HubSetupChips.startSummary(game, chips) : "Start " + game;
@@ -1590,12 +1570,6 @@ public class MasterTitleScreen {
         String back = MenuChrome.backKey(menuInput);
         return switch (navigation.zone()) {
             case CARD -> List.of(MenuChrome.leftRight("GAME"), MenuChrome.hint(ok, "START"), MenuChrome.hint(back, "QUIT"));
-            case CHIPS -> {
-                List<HubSetupChips.Chip> chips = hubChips();
-                HubSetupChips.Chip chip = chips.isEmpty() ? null : chips.get(navigation.chipIndex());
-                String what = chip == null ? "OPEN" : chip.row() == null ? "MANAGE MODS" : "EDIT " + chipVerb(chip.row());
-                yield List.of(MenuChrome.leftRight("CHIP"), MenuChrome.hint(ok, what), MenuChrome.hint(back, "GAMES"));
-            }
             case ACTIONS -> List.of(MenuChrome.leftRight("BUTTON"), MenuChrome.hint(ok, switch (navigation.action()) {
                 case START -> "START";
                 case SETUP -> "OPEN SETUP";
@@ -1603,16 +1577,6 @@ public class MasterTitleScreen {
             }), MenuChrome.hint(back, "GAMES"));
             case TABS -> List.of(MenuChrome.leftRight("TAB"), MenuChrome.hint(ok, "OPEN " + navigation.tab().label),
                     MenuChrome.hint(back, "GAMES"));
-        };
-    }
-
-    private static String chipVerb(com.openggf.game.launch.LaunchProfile.Row row) {
-        return switch (row) {
-            case MAIN_CHARACTER, SIDEKICK -> "PLAYERS";
-            case WIDESCREEN -> "SCREEN";
-            case REWIND -> "REWIND";
-            case DEBUG_TOOLS -> "DEBUG";
-            case CROSS_GAME -> "BORROW";
         };
     }
 

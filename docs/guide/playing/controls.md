@@ -56,9 +56,8 @@ The startup disclaimer, master title, and S3K-style data select accept
 controller input. On data select screens, east/C is Back; A, B, and Start
 confirm.
 
-The master title also takes the mouse: point at a tab, chip or button to highlight it
-and click to open it (the setup chips are only reachable this way; the keyboard and
-controller pass over them), click a side card (or roll the wheel) to change game, click the
+The master title also takes the mouse: point at a tab or button to highlight it
+and click to open it (the setup chips are status only and do not respond), click a side card (or roll the wheel) to change game, click the
 centre card to start it, click the page dots to browse the list, and right-click to go
 back. The game browser, quit prompt, tools and start choices answer clicks the same way.
 Settings and Game Setup accept hover and click on their rows, tabs and prompt buttons.

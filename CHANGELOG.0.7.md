@@ -695,16 +695,15 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 - **Master title hub:** a cartridge shelf of game cards shows each game's original
   animated ROM logo, sliding between games, with missing ROMs named on their card.
   Setup chips under the selected game say what Start will launch (players, aspect,
-  rewind, borrowed features, debug, mods); amber chips are set for that game only. The keyboard
-  and controller pass over the chips to the buttons below; hovering a chip explains it
-  and clicking opens Game Setup on its row. Start, Game Setup and Recordings follow; Mods,
+  rewind, borrowed features, debug, mods); amber chips are set for that game only. Chips are
+  status only: they take no focus and are changed through Game Setup. Start, Game Setup and Recordings follow; Mods,
   Settings, Extras, Advanced and Quit are engine-wide header tabs. Opening Mods from
   a game filters the list to applicable mods; catalog entries use consistent compact
   lettering regardless of name length. Footers show only
   the keys that work on the focused row as key caps or controller buttons, with
   status kept apart; a line under the buttons describes the focused item. Back
   returns to the card before offering Quit. Mouse hover, click and wheel work across
-  the shelf, chips, buttons and tabs, and in the Mod Manager's list, buttons and
+  the shelf, buttons and tabs, and in the Mod Manager's list, buttons and
   prompts. Confirmation, cancel and error cues stay
   host-owned with soft fades and moderate volume; compact text and shapes share
   an atlas batch, and streamed quad buffers avoid GPU waits during drawing and

@@ -258,15 +258,11 @@ public final class MenuChrome {
         hints(font, width - 8 - hintsWidth(shown), FOOTER_Y + 4, shown, controller, TEXT);
     }
 
-    /** A rounded-feel pill; amber marks a value set for this game only. Returns its width. */
-    public static int chip(PixelFont font, int x, int y, String text, boolean amber, boolean focused, int frame) {
+    /** A status pill that never takes focus; amber marks a value set for this game only. Returns its width. */
+    public static int chip(PixelFont font, int x, int y, String text, boolean amber) {
         int w = compactWidth(text) + 10;
-        if (focused) {
-            focus(font, x, y, w, 12, frame);
-        } else {
-            fill(font, x, y, w, 12, NAVY, .94f);
-            outline(font, x, y, w, 12, amber ? new float[] {.72f, .5f, .14f} : EDGE, 1f, 1);
-        }
+        fill(font, x, y, w, 12, NAVY, .94f);
+        outline(font, x, y, w, 12, amber ? new float[] {.72f, .5f, .14f} : EDGE, 1f, 1);
         compact(font, text, x + 5, y + 2, amber ? AMBER : TEXT);
         return w;
     }

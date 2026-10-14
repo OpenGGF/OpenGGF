@@ -54,7 +54,7 @@ class TestHubSetupChips {
         var store = new LaunchProfileStore(config);
         var chips = HubSetupChips.forStock(SONIC_2,
                 new LaunchProfile(LaunchToggle.ON, "off", LaunchToggle.DEFAULT, "global", "sonic", "tails"), store, config, 1);
-        assertNull(chips.getLast().row(), "the mods chip opens the mod manager, not a setup row");
+        assertNull(chips.getLast().row(), "the mods chip reports mods, not a setup row");
         assertEquals("1 MOD", chips.getLast().label());
         assertEquals("Start Sonic 2 as Sonic & Tails, 4:3, rewind on", HubSetupChips.startSummary("Sonic 2", chips));
     }

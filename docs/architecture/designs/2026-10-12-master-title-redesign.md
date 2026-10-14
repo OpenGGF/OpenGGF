@@ -220,10 +220,13 @@ changes followed those runs.
 
 ## Playtest feedback follow-up on 2026-10-14
 
-- **Setup chips leave the keyboard path.** Moving Down from the card had to step
-  through the chip row before reaching Start, Game Setup and Recordings. Up/Down
-  now passes over the chips, so they work as a status line under the card. Hover
-  still describes a chip and a click still opens its Game Setup row. Rejected:
+- **Setup chips are status only.** Moving Down from the card had to step through
+  the chip row before reaching Start, Game Setup and Recordings. The hub no longer
+  has a chip focus zone: the keyboard, controller and pointer all pass over the
+  chips, a click on one does nothing, and their per-chip descriptions and footer
+  hints are gone. An intermediate version, `c19cbcb70b`, kept mouse hover and click
+  on chips; it was rejected because the chips still looked and acted like
+  controls. Rejected:
   making Left/Right cycle a chip's value in place. That would edit a per-game
   profile from the hub without Game Setup's draft and Save / Discard prompt, and
   it would keep the extra row on the path to the buttons.

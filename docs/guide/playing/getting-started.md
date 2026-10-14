@@ -90,14 +90,14 @@ When the engine starts, you will see:
 1. **Master title screen** -- A shelf of game cards with each game's original
    animated title logo. Left/right changes game and Enter (A) starts it. Under the card,
    **setup chips** show what Start will launch, such as `SONIC & TAILS`, `4:3` or
-   `REWIND ON`; amber chips are set for that game only. Down passes over the chips to
-   **Start**, **Game Setup** and **Recordings**; with the mouse, hovering a chip
-   explains it and clicking it opens its row in **Game Setup**. Up reaches the engine-wide tabs: **Mods**, **Settings**,
+   `REWIND ON`; amber chips are set for that game only. The chips are status only;
+   change them in **Game Setup**. Down goes to **Start**, **Game Setup** and
+   **Recordings**. Up reaches the engine-wide tabs: **Mods**, **Settings**,
    **Extras** (mod-added modes such as the bundled **Time Attack** mod), **Advanced**
    and **Quit**. The footer shows only the keys that work on the focused row, as key
    caps or your controller's buttons. Back returns to the game card; on the card it
    asks whether to quit. Games without a ROM stay on the shelf and name the file to
-   add. Opening Mods from a game's mods chip or Game Setup shows mods for that
+   add. Opening Mods from Game Setup shows mods for that
    game, including shared mods. The header Mods tab shows the full catalog.
    The Mods list labels each installed mod with its target game: S1, S2, S3K,
    S1/S2/S3K for all three, or Standalone. When audio is enabled, navigation,
