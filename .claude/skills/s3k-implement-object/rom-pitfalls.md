@@ -5439,3 +5439,14 @@ legal byte breadth and verify pre-existing flag masks/ordinary representations
 when extending an internal packed word. The2026-10-14 ending tests independently
 check all three progress values, normal colors, live body cycling, both registry
 restore directions and ordinary0/6/15 versus held/released127/126.
+
+
+**PalLoad line suffixes are zero-based.** Native `PalLoad_Line1` ($85940,
+sonic3k.asm:180037) selects `Normal_palette_line_2` and copies16 words. Ending
+loc_5DD0E/loc_5E984 therefore load Pal_SmallPlane into engine line1, preserving
+player line0. Reading the helper name as a one-based label corrupted both
+lines and the small island figure. Literal destination/retained-line tests
+and full viewed frame comparisons caught it; retain CPU versus published
+CRAM separately, since a matching counter or later-produced palette does
+not prove framebuffer pixels. Origin: 2026-10-14 ending v5 follow-up over
+a66ccb0cbd62febf5618c1867c93e7e4d2172577.
