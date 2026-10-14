@@ -41,6 +41,8 @@ Unreleased. The earlier development themes remain in
   the shot's camera-relative position.
   Barrel waits allocate the next pair on native timer underflow, before their
   signed-counter return tail.
+  Common shots retain their final wait's deletion marker through the draw pass,
+  clear on the next dispatch and keep their native lifetime while offscreen.
   Firing and drop-position cycling share the native byte counter, including
   signed reads and wrap, so both facing directions select their native columns.
   The cutscene explosion controller owns a real sprite-table slot, preserving

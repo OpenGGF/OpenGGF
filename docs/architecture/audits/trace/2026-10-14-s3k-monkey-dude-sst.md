@@ -949,3 +949,60 @@ common-shot final Obj_Wait→Go_Delete occupancy owner; low code bytes alone do
 not certify complete type identity. No fixture/metric/hydration change, broad
 run or new rendered/SAT/PCM parity claim. Native screenshot scope remains the
 previously inspected source-bounded AIZ/HCZ spot pairs.
+
+
+## AIZ common SIMPLE shot final native wait and physical retirement
+
+Sourcecf19f8506 plus one local CommonShot runtime candidate, SHA256
+fa21d0070920161b06410ea6d87330177f6cf488030660e44467d607678764d4. AIZMiniboss_BarrelShot_MoveWait (:137079) tail-calls
+Move_AnimateRaw_Wait then Draw_Sprite. Launch (:137091) writes callbackGo_Delete
+and word2E60. The last Move/Animate runs on signed underflow and its code/status
+marker still draws/occupies the SST; the following Delete_Current_Sprite clears
+it without another movement/animation/Init sound. Neither MoveWait nor its
+caller has a range/delete-touch tail. Removing the Java isOnScreen128 condition
+is a local owner repair, with shared manager culling unchanged. Parent/numeric
+pressure semantics and legacy advanced-mode geometry remain separate limits.
+
+| Normal queue request | Terminal outcome | Timing BST |
+| --- | --- | --- |
+|74033 matched native terminal/graph/world negative|8/8fail/0errors/0skip|20:52:25;25.908s execution/0s queue|
+|16779 independent actual+copy camera-Y departure negative|1/1fail/0errors/0skip at the first hidden MoveWait|20:56:13;25.459s/125s|
+|51679 affected699 plus8 new vectors|707/0/0/0|21:04:49;72s/0s|
+|91214 canonical five-case trace/slots|5/1fail/0errors/0skip; four controls pass|21:07:37;96s/0s|
+|36977 alternate trace-segments|1/1fail/0errors/0skip; unchanged60 spans|21:08:37;37.111s/119s|
+|47500 four -Pguards selectors|111/0/0/0|21:09:53;31.256s/201s|
+
+The first screen setup changed copied Y only and therefore reproduced the final
+marker failure rather than isolating the extra range branch. The corrected
+single-method negative changes both actual/copy Y after Launch and fails on the
+very first hidden update; no runtime/contact/clock fitting. Eight final cases
+cover zero/underflow, retained final D/draw/position, next-pass clear/no movement,
+that independent X-visible/Y-hidden control, five component cameras and forced
+graph recreation, and a separately declared loaded-AIZ full registry. Both
+registry scopes replay before/marked/released states for two45-pass cycles with
+no snapshot filtering. This is local lifecycle evidence, not full cold-route/
+viewport/donor/team or rendering/audio certification. All699 existing consumer
+identities, including previous real Falling/ROM napalm/startup controls, pass
+on the changed owner in one707green invocation.
+
+Exact focused selector adds TestAizMinibossCommonShotRetirement to49960;
+16779 selects only verticalCameraDepartureDoesNotOverrideTheNativeWaitOrCreateAnEarlyDelete.
+Canonical/alternate/guard profiles/selectors remain those of49498/31590/85181,
+Java25/EGL/absolute original ROM; slot output target/common-shot-native-slot-occupancy.
+The original controller and V5 comparison-only contract are unchanged. Chain
+6/8/11 raw189/12,719/82,067, physics189/12,604/69,393, animation0/115/12,674 retain
+first3319 P2X31C1/31CA,1583 P2X366C/3674,1510 Y7D6/7DF. Incomplete source stop
+input68,801/loadgen9 remains. Alternate60 spans25physics/35anim, first25589
+animation13/05 and firstphysics25590TailsSub7800/6C00. Four controls stay green.
+
+Actual source18 now agrees at3084's native B6 marker; both clear by3087. Sampled
+presence advances3084→3244, preceding3209: native-only24..37 and engine-only4.
+Engine records new AIZ2 scenery4..20/pathswap21/Cork22/ring23; the native low
+code bytes90/8C/5A do not uniquely identify actor types or prove that old actors
+remain. This is a transition-context frontier, not a diagnosed clear/clock bug.
+Resolve full native pointers and prepared/published scene boundaries before a
+correction. Ending's paired KosM bridge does not bind the AIZ fireOverlay caller:
+it currently claims a complete timed archive into seamless prepared art without
+a physical journal entry. That workflow needs an actual native witness, not a
+guessed timing or state import. No unchanged trace rerun before a relevant
+composed dependency; no broad/full run, fixture/hydration/shared clock change.

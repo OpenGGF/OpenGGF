@@ -102,6 +102,7 @@ public class AizMinibossBarrelShotChild extends AbstractObjectInstance
     private State state;
     private boolean vFlip;
     private boolean needsInitSfx;
+    private boolean pendingDelete;
 
     public AizMinibossBarrelShotChild(AbstractBossInstance parent,
                                       AizMinibossFlameBarrelChild barrel,
@@ -160,6 +161,10 @@ public class AizMinibossBarrelShotChild extends AbstractObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        if (pendingDelete) {
+            setDestroyed(true); // native Delete_Current_Sprite, without another MoveWait/Draw.
+            return;
+        }
         boolean initDispatch = needsInitSfx;
         if (needsInitSfx) {
             needsInitSfx = false;
@@ -224,8 +229,11 @@ public class AizMinibossBarrelShotChild extends AbstractObjectInstance
     private void updateTopDropSimple() {
         move();
         animateRise();
-        if (--timer < 0 || !isOnScreen(128)) {
-            setDestroyed(true);
+        // AIZMiniboss_BarrelShot_MoveWait calls Obj_Wait then Draw_Sprite.
+        // Go_Delete rewrites the code/status on underflow; this dispatch still
+        // draws and occupies the SST. No screen/range tail exists in that owner.
+        if (--timer < 0) {
+            pendingDelete = true;
         }
     }
 

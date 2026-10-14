@@ -5549,3 +5549,21 @@ replay; logical links alone do not certify recycled physical-parent pressure.
 Origin:2026-10-14 FallingShot slice over1db1ebd89; asm137450–137586,176923,
 177563,178041,179136. Native Go_Delete marker versus next physical clear is
 visible at actual seg2 rows3067/3084; the latter remains the common-shot owner.
+
+
+## A hidden Draw_Sprite does not own a MoveWait lifetime
+
+AIZ common BarrelShot MoveWait runs Move_AnimateRaw_Wait then Draw_Sprite.
+Launch arms Go_Delete with a word60 wait; underflow completes move/animation,
+marks the code/status and still draws. Clear only on the next code-owner pass.
+Adding isOnScreen128 to the timer branch fits the locked-camera path while
+inventing an earlier retirement when the camera changes. Prove actual+copy Y
+versus merely copied Y, and isolate the first hidden update from the final
+marker assertion. Preserve manager culling and captured raw/position/marker
+state; test two-way graph and full-world replay around physical release.
+Low routine-code bytes at a scene boundary cannot distinguish actor families;
+resolve full pointers and the publication clock before fixing the next context.
+
+Origin:2026-10-14 common SIMPLE marker slice overcf19f8506; asm137079,137091,
+179136. Actual seg2 row3084 marker is repaired; next presence disagreement3244
+is transition-context evidence rather than proof of a particular teardown bug.
