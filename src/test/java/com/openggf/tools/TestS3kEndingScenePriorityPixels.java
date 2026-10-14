@@ -241,6 +241,58 @@ class TestS3kEndingScenePriorityPixels {
         // nonzero wing pixels win overlap; no observed mismatch coordinates enter this mask.
         return opaque;
     }
+    @ParameterizedTest @ValueSource(ints={320,800})
+    void tailsEntryPoseKeepsEarlierOpaqueMappingPiecesInFront(int width)throws Exception{
+        var settings=new GameplayCaptureSession.Settings(width,"tails","","off",null,null,null,"3333333",false,false,0,null);
+        try(var session=new GameplayCaptureSession(settings)){
+            session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(),13,1,settings);GameServices.rng().setSeed(0);
+            // Declared native setup + ordinary controller polls. This completed
+            // producer is published by the following VInt, with no fitted shift.
+            for(int outer=0;outer<63;outer++){session.step(null);session.renderFrame();}
+            var player=session.player();assertEquals(0xC4,player.getMappingFrame());
+            var art=new com.openggf.game.sonic3k.Sonic3kPlayerArt(
+                    com.openggf.data.RomByteReader.fromRom(GameServices.rom().getRom())).loadTails();
+            var bank=new com.openggf.level.Pattern[art.bankSize()];int destination=0;
+            for(var request:art.dplcFrames().get(0xC4).requests())for(int i=0;i<request.count();i++)
+                bank[destination++]=art.artTiles()[request.startTile()+i];
+            int[] first=new int[width*224],last=new int[width*224];java.util.Arrays.fill(first,-1);java.util.Arrays.fill(last,-1);
+            int ox=player.getCentreX()-128+(width-320)/2,oy=player.getCentreY()-128;
+            for(var piece:art.mappingFrames().get(0xC4).pieces())
+                for(int col=0;col<piece.widthTiles();col++)for(int row=0;row<piece.heightTiles();row++){
+                    var pattern=bank[piece.tileIndex()+col*piece.heightTiles()+row];
+                    for(int py=0;py<8;py++)for(int px=0;px<8;px++){
+                        int nibble=pattern.getPixel(px,py)&15;if(nibble==0)continue;
+                        int x=ox+piece.xOffset()+(piece.hFlip()?piece.widthTiles()*8-1-col*8-px:col*8+px);
+                        int y=oy+piece.yOffset()+(piece.vFlip()?piece.heightTiles()*8-1-row*8-py:row*8+py);
+                        if(x<0||x>=width||y<0||y>=224)continue;
+                        int index=y*width+x,color=rgb(piece.paletteIndex(),nibble);
+                        if(first[index]<0)first[index]=color;last[index]=color;
+                    }
+                }
+            var registry=com.openggf.game.session.SessionManager.getCurrentGameplayMode().getRewindRegistry();
+            var before=registry.capture();
+            session.step(null);var image=session.render();var after=registry.capture();int overlaps=0,matches=0;
+            for(int y=0;y<224;y++)for(int x=0;x<width;x++){
+                int index=y*width+x;if(first[index]<0||first[index]==last[index])continue;
+                overlaps++;if((image.argb(x,y)&0xFFFFFF)==first[index])matches++;
+            }
+            assertTrue(overlaps>0,"the actual ROM pose must admit nontransparent overlap with distinct current colors");
+            assertEquals(overlaps,matches,"the first native SAT piece must win, including the shoe over the final leg piece");
+            for(int cycle=0;cycle<2;cycle++){
+                registry.restore(before);sameWorld(before,registry.capture());session.step(null);var replay=session.render();
+                sameWorld(after,registry.capture());
+                for(int y=0;y<224;y++)for(int x=0;x<width;x++)assertEquals(image.argb(x,y),replay.argb(x,y),
+                        "restored published player order at "+x+","+y);
+                registry.restore(before);sameWorld(before,registry.capture());registry.restore(after);sameWorld(after,registry.capture());
+            }
+        }
+    }
+
+    private static void sameWorld(com.openggf.game.rewind.CompositeSnapshot expected,com.openggf.game.rewind.CompositeSnapshot actual){
+        assertEquals(expected.entries().keySet(),actual.entries().keySet());
+        for(var key:expected.entries().keySet())assertTrue(com.openggf.game.rewind.RewindSnapshotDiff.diffKey(
+                key,expected.get(key),actual.get(key)).isEmpty(),"published order world restore "+key);
+    }
     private static int patternNibble(com.openggf.level.Level level,int descriptor,int x,int y){
         int px=x&7,py=y&7;if((descriptor&0x800)!=0)px=7-px;if((descriptor&0x1000)!=0)py=7-py;
         return level.getPattern(descriptor&0x7FF).getPixel(px,py)&15;

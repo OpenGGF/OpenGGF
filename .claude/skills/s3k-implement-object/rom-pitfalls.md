@@ -5601,3 +5601,26 @@ manager and RNG restoration. Helper-only draw counts cannot prove composition.
 
 Origin:2026-10-14 AIZ physical Special owner over6661b9b8b; asm136870,137926,
 176661–176835. Shared legacy helper consumers are outside this local repair.
+
+
+**PalLoad line suffixes are zero-based.** Native `PalLoad_Line1` ($85940,
+sonic3k.asm:180037) selects `Normal_palette_line_2` and copies16 words. Ending
+loc_5DD0E/loc_5E984 therefore load Pal_SmallPlane into engine line1, preserving
+player line0. Reading the helper name as a one-based label corrupted both
+lines and the small island figure. Literal destination/retained-line tests
+and full viewed frame comparisons caught it; retain CPU versus published
+CRAM separately, since a matching counter or later-produced palette does
+not prove framebuffer pixels. Origin: 2026-10-14 ending v5 follow-up over
+a66ccb0cbd62febf5618c1867c93e7e4d2172577.
+
+
+**Playable mapping order must distinguish native SAT and painter output.**
+Render_Sprites/sub_1B070 emits mapping pieces in their ROM order; the first
+opaque piece wins. PlayerSpriteRenderer's painter path must reverse complete
+pieces, like PatternSpriteRenderer, while SAT collection stays forward and
+head masks keep each original piece index. A Tails C4 pose had34 differing
+shoe pixels despite identical published native/engine patterns and CRAM.
+Independent opacity oracles and flip×SAT/painter controls reproduced the
+actual owner; full-world/pixel replay and S1/S2/S3 head-art consumers qualify
+the correction. Compare original RGB separately from logical palette indices.
+Origin: 2026-10-14 ending v6 over bf7361a3a3ce2b6fc71256fc2059c29d8402f163.

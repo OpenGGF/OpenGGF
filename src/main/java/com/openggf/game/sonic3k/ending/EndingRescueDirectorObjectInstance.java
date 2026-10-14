@@ -141,7 +141,7 @@ public final class EndingRescueDirectorObjectInstance extends AbstractObjectInst
                 swing(8);move();if(getX()>=0x140)animatePlane();
                 if(getX()>0x220){routine=26;smallPlane=true;flipX=true;childFlags|=0x10;setY(getY()-8);
                     xVelocity=-0x80;yVelocity=0;mappingFrame=tails()?6:5;
-                    S3kEndingPalette.loadLine(services(),0,S3kEndingResources.PAL_SMALL_PLANE);
+                    S3kEndingPalette.loadLine(services(),1,S3kEndingResources.PAL_SMALL_PLANE); // loc_5DD0E PalLoad_Line1 writes Normal_palette_line_2.
                     flightChild(EndingKnucklesFlightChildObjectInstance.SMALL_PROPELLER,0,-6,7);
                     if(ending().progress()>=0)
                         flightChild(EndingKnucklesFlightChildObjectInstance.SMALL_MASTER,0,-0x10,5);}
